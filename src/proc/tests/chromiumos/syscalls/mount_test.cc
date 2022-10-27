@@ -126,7 +126,7 @@ TEST_F(MountTest, RecursiveBind) {
   ASSERT_TRUE(FileExists("b/1/2"));
 }
 
-TEST_F(MountTest, DISABLED_BindIgnoresSharingFlags) {
+TEST_F(MountTest, BindIgnoresSharingFlags) {
   ASSERT_SUCCESS(MakeDir("a"));
   // The bind mount should ignore the MS_SHARED flag, so we should end up with non-shared mounts.
   ASSERT_SUCCESS(Mount("1", "a", MS_BIND | MS_SHARED));
@@ -138,7 +138,7 @@ TEST_F(MountTest, DISABLED_BindIgnoresSharingFlags) {
   ASSERT_FALSE(FileExists("b/1/2"));
 }
 
-TEST_F(MountTest, DISABLED_BasicSharing) {
+TEST_F(MountTest, BasicSharing) {
   ASSERT_SUCCESS(MakeDir("a"));
   ASSERT_SUCCESS(Mount("1", "a", MS_BIND));
   // Must be done in two steps! MS_BIND | MS_SHARED just ignores the MS_SHARED
@@ -150,6 +150,12 @@ TEST_F(MountTest, DISABLED_BasicSharing) {
   ASSERT_TRUE(FileExists("a/1/2"));
   ASSERT_TRUE(FileExists("b/1/2"));
   ASSERT_FALSE(FileExists("1/1/2"));
+}
+
+TEST_F(MountTest, FlagVerification) {
+  ASSERT_THAT(Mount(nullptr, "1", MS_SHARED | MS_PRIVATE), SyscallFailsWithErrno(EINVAL));
+  ASSERT_THAT(Mount(nullptr, "1", MS_SHARED | MS_NOUSER), SyscallFailsWithErrno(EINVAL));
+  ASSERT_THAT(Mount(nullptr, "1", MS_SHARED | MS_SILENT), SyscallSucceeds());
 }
 
 // Quiz question B from https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt
@@ -187,7 +193,7 @@ TEST_F(MountTest, DISABLED_QuizCPropagation) {
   ASSERT_TRUE(FileExists("1/1/test/2"));
 }
 
-TEST_F(MountTest, DISABLED_PropagateOntoMountRoot) {
+TEST_F(MountTest, PropagateOntoMountRoot) {
   ASSERT_SUCCESS(Mount(nullptr, "1", MS_SHARED));
   ASSERT_SUCCESS(MakeDir("1/1/1"));
   ASSERT_SUCCESS(MakeDir("a"));
@@ -195,7 +201,6 @@ TEST_F(MountTest, DISABLED_PropagateOntoMountRoot) {
   // The propagation of this should be equivalent to shadowing the "a" mount.
   ASSERT_SUCCESS(Mount("2", "1/1", MS_BIND));
   ASSERT_TRUE(FileExists("a/2"));
-  DumpMountinfo();
 }
 
 }  // namespace

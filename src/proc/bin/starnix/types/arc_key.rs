@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 use ref_cast::RefCast;
-use std::sync::Arc;
+use std::borrow::Borrow;
+use std::sync::{Arc, Weak};
 
-/// A wrapper around Arc with Hash implemented based on Arc::as_ptr().
+/// A wrapper around Arc with Hash implemented based on Arc::as_ptr.
 #[derive(RefCast)]
 #[repr(transparent)]
 pub struct ArcKey<T>(pub Arc<T>);
@@ -37,3 +38,29 @@ impl<T: std::fmt::Debug> std::fmt::Debug for ArcKey<T> {
         self.0.fmt(f)
     }
 }
+
+/// A wrapper around Weak with Hash implemented based on Weak::as_ptr.
+pub struct WeakKey<T>(pub Weak<T>, *const T);
+impl<T> WeakKey<T> {
+    pub fn from(arc: &Arc<T>) -> Self {
+        Self(Arc::downgrade(arc), Arc::as_ptr(arc))
+    }
+}
+impl<T> PartialEq for WeakKey<T> {
+    fn eq(&self, other: &Self) -> bool {
+        Weak::ptr_eq(&self.0, &other.0)
+    }
+}
+impl<T> Eq for WeakKey<T> {}
+impl<T> std::hash::Hash for WeakKey<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        Weak::as_ptr(&self.0).hash(state);
+    }
+}
+impl<T> Borrow<*const T> for WeakKey<T> {
+    fn borrow(&self) -> &*const T {
+        &self.1
+    }
+}
+unsafe impl<T> Sync for WeakKey<T> {}
+unsafe impl<T> Send for WeakKey<T> {}

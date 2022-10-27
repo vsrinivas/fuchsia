@@ -1135,47 +1135,113 @@ pub fn sys_mount(
         errno!(EINVAL)
     })?;
 
-    if flags.contains(MountFlags::SLAVE)
-        || flags.contains(MountFlags::SHARED)
-        || flags.contains(MountFlags::PRIVATE)
-    {
-        not_implemented!(current_task, "unsupported mount flag: {:#x}. Faking success", flags);
-        return Ok(());
-    }
-
     let target = lookup_at(current_task, FdNumber::AT_FDCWD, target_addr, LookupFlags::default())?;
 
-    let what_to_mount = if flags.contains(MountFlags::BIND) {
-        strace!(current_task, "mount(MS_BIND)");
-        let source =
-            lookup_at(current_task, FdNumber::AT_FDCWD, source_addr, LookupFlags::default())?;
-        WhatToMount::Bind(source)
+    if flags.contains(MountFlags::BIND) {
+        do_mount_bind(current_task, source_addr, target, flags)
+    } else if flags.intersects(MountFlags::SHARED | MountFlags::PRIVATE | MountFlags::DOWNSTREAM) {
+        do_mount_change_propagation_type(current_task, target, flags)
     } else {
-        let mut buf = [0u8; PATH_MAX as usize];
-        let source = if source_addr.is_null() {
-            b""
-        } else {
-            current_task.mm.read_c_string(source_addr, &mut buf)?
-        };
-        let mut buf = [0u8; PATH_MAX as usize];
-        let fs_type = current_task.mm.read_c_string(filesystemtype_addr, &mut buf)?;
-        let mut buf = [0u8; PATH_MAX as usize];
-        let data = if data_addr.is_null() {
-            b""
-        } else {
-            current_task.mm.read_c_string(data_addr, &mut buf)?
-        };
-        strace!(
-            current_task,
-            "mount(source={:?}, type={:?}, data={:?})",
-            String::from_utf8_lossy(source),
-            String::from_utf8_lossy(fs_type),
-            String::from_utf8_lossy(data)
-        );
+        do_mount_create(current_task, source_addr, target, filesystemtype_addr, data_addr, flags)
+    }
+}
 
-        create_filesystem(current_task, source, fs_type, data)?
+fn do_mount_bind(
+    current_task: &CurrentTask,
+    source_addr: UserCString,
+    target: NamespaceNode,
+    flags: MountFlags,
+) -> Result<(), Errno> {
+    let source = lookup_at(current_task, FdNumber::AT_FDCWD, source_addr, LookupFlags::default())?;
+    strace!(
+        current_task,
+        "mount(source={:?}, target={:?}, flags={:?})",
+        String::from_utf8_lossy(&source.path()),
+        String::from_utf8_lossy(&target.path()),
+        flags
+    );
+    target.mount(WhatToMount::Bind(source), flags)
+}
+
+fn do_mount_change_propagation_type(
+    current_task: &CurrentTask,
+    target: NamespaceNode,
+    flags: MountFlags,
+) -> Result<(), Errno> {
+    strace!(
+        current_task,
+        "mount(target={:?}, flags={:?})",
+        String::from_utf8_lossy(&target.path()),
+        flags
+    );
+
+    // Flag validation. Of the three propagation type flags, exactly one must be passed. The only
+    // valid flags other than propagation type are MS_SILENT and MS_REC.
+    //
+    // Use if statements to find the first propagation type flag, then check for valid flags using
+    // only the first propagation flag and MS_REC / MS_SILENT as valid flags.
+    let propagation_flag = if flags.contains(MountFlags::SHARED) {
+        MountFlags::SHARED
+    } else if flags.contains(MountFlags::PRIVATE) {
+        MountFlags::PRIVATE
+    } else if flags.contains(MountFlags::DOWNSTREAM) {
+        MountFlags::DOWNSTREAM
+    } else {
+        return error!(EINVAL);
     };
-    target.mount(what_to_mount, flags)
+    if flags.intersects(!(propagation_flag | MountFlags::REC | MountFlags::SILENT)) {
+        return error!(EINVAL);
+    }
+
+    if flags.contains(MountFlags::REC) {
+        not_implemented!(current_task, "mount propagation with MS_REC");
+        return error!(EINVAL);
+    }
+
+    let mount = target.mount_if_root()?;
+    match propagation_flag {
+        MountFlags::SHARED => mount.write().make_shared(),
+        MountFlags::PRIVATE => mount.write().make_private(),
+        _ => {
+            not_implemented!(current_task, "mount propagation {:?}", propagation_flag);
+            return error!(EINVAL);
+        }
+    }
+    Ok(())
+}
+
+fn do_mount_create(
+    current_task: &CurrentTask,
+    source_addr: UserCString,
+    target: NamespaceNode,
+    filesystemtype_addr: UserCString,
+    data_addr: UserCString,
+    flags: MountFlags,
+) -> Result<(), Errno> {
+    let mut buf = [0u8; PATH_MAX as usize];
+    let source = if source_addr.is_null() {
+        b""
+    } else {
+        current_task.mm.read_c_string(source_addr, &mut buf)?
+    };
+    let mut buf = [0u8; PATH_MAX as usize];
+    let fs_type = current_task.mm.read_c_string(filesystemtype_addr, &mut buf)?;
+    let mut buf = [0u8; PATH_MAX as usize];
+    let data = if data_addr.is_null() {
+        b""
+    } else {
+        current_task.mm.read_c_string(data_addr, &mut buf)?
+    };
+    strace!(
+        current_task,
+        "mount(source={:?}, target={:?}, type={:?}, data={:?})",
+        String::from_utf8_lossy(source),
+        String::from_utf8_lossy(&target.path()),
+        String::from_utf8_lossy(fs_type),
+        String::from_utf8_lossy(data)
+    );
+
+    target.mount(create_filesystem(current_task, source, fs_type, data)?, flags)
 }
 
 pub fn sys_umount2(

@@ -12,13 +12,14 @@ bitflags! {
         const NOEXEC = uapi::MS_NOEXEC;
         const NOSUID = uapi::MS_NOSUID;
         const NODEV = uapi::MS_NODEV;
+        const SILENT = uapi::MS_SILENT;
         const BIND = uapi::MS_BIND;
         const REC = uapi::MS_REC;
-        const SLAVE = uapi::MS_SLAVE;
+        const DOWNSTREAM = uapi::MS_SLAVE;
         const SHARED = uapi::MS_SHARED;
         const PRIVATE = uapi::MS_PRIVATE;
 
         /// Flags that can be stored in Mount state.
-        const STORED_FLAGS = Self::RDONLY.bits | Self::NOEXEC.bits | Self::NOSUID.bits | Self::NODEV.bits | Self::SHARED.bits;
+        const STORED_FLAGS = Self::RDONLY.bits | Self::NOEXEC.bits | Self::NOSUID.bits | Self::NODEV.bits;
     }
 }

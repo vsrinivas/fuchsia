@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Weak};
@@ -19,6 +19,7 @@ use super::*;
 use crate::bpf::BpfFs;
 use crate::device::BinderFs;
 use crate::lock::RwLock;
+use crate::mutable_state::*;
 use crate::selinux::selinux_fs;
 use crate::task::CurrentTask;
 use crate::types::*;
@@ -55,7 +56,7 @@ impl fmt::Debug for Namespace {
 /// At a mount, path traversal switches from one filesystem to another.
 /// The client sees a composed directory structure that glues together the
 /// directories from the underlying FsNodes from those filesystems.
-struct Mount {
+pub struct Mount {
     mountpoint: OnceCell<(Weak<Mount>, DirEntryHandle)>,
     root: DirEntryHandle,
     flags: MountFlags,
@@ -72,7 +73,7 @@ struct Mount {
 type MountHandle = Arc<Mount>;
 
 #[derive(Default)]
-struct MountState {
+pub struct MountState {
     // The keys of this map are always descendants of this mount's root.
     //
     // Each directory entry can only have one mount attached. Mount shadowing works by using the
@@ -80,6 +81,15 @@ struct MountState {
     // mounting filesystem B on /foo will create the mount as a child of the A mount, attached to
     // A's root, instead of the root mount.
     submounts: HashMap<ArcKey<DirEntry>, MountHandle>,
+    peer_group: Option<Arc<PeerGroup>>,
+}
+
+/// A group of mounts. Setting MS_SHARED on a mount puts it in its own peer group. Any bind mounts
+/// of a mount in the group are also added to the group. A mount created in any mount in a peer
+/// group will be automatically propagated (recreated) in every other mount in the group.
+#[derive(Default)]
+struct PeerGroup {
+    mounts: RwLock<HashSet<WeakKey<Mount>>>,
 }
 
 pub enum WhatToMount {
@@ -114,6 +124,52 @@ impl Mount {
         })
     }
 
+    /// A namespace node referring to the root of the mount.
+    pub fn root(self: &MountHandle) -> NamespaceNode {
+        NamespaceNode { mount: Some(Arc::clone(self)), entry: Arc::clone(&self.root) }
+    }
+
+    /// The NamespaceNode on which this Mount is mounted.
+    fn mountpoint(&self) -> Option<NamespaceNode> {
+        let (ref mount, ref node) = &self.mountpoint.get()?;
+        Some(NamespaceNode { mount: Some(mount.upgrade()?), entry: node.clone() })
+    }
+
+    /// Add the specified mount as a child. Also propagate it to the mount's peer group.
+    fn add_submount(self: &MountHandle, dir: &DirEntryHandle, mount: MountHandle) {
+        let peers = {
+            let state = self.read();
+
+            // TODO(tbodt): test this
+            if state.is_shared() {
+                mount.write().make_shared();
+            }
+
+            // TODO(tbodt): Making a copy here is necessary for lock ordering, because the peer
+            // group lock nests inside all mount locks (it would be impractical to reverse this
+            // because you need to lock a mount to get its peer group.) But it opens the door to
+            // race conditions where if a peer are concurrently being added, the mount might not get
+            // propagated to the new peer. The only true solution to this is bigger locks, somehow
+            // using the same lock for the peer group and all of the mounts in the group. Since
+            // peer groups are fluid and can have mounts constantly joining and leaving and then
+            // joining other groups, the only sensible locking option is to use a single global
+            // lock for all mounts and peer groups. This is almost impossible to express in rust.
+            // Help.
+            state.peer_group.as_ref().map(|g| g.copy_peers()).unwrap_or_default()
+        };
+
+        for peer in peers {
+            if Arc::ptr_eq(self, &peer) {
+                continue;
+            }
+            peer.write().add_submount_internal(dir, mount.clone_mount_recursive());
+        }
+
+        self.write().add_submount_internal(dir, mount)
+    }
+
+    /// Create a new mount with the same filesystem, flags, and peer group. Used to implement bind
+    /// mounts.
     fn clone_mount(&self, new_root: &DirEntryHandle, flags: MountFlags) -> MountHandle {
         assert!(new_root.is_descendant_of(&self.root));
         // According to mount(2) on bind mounts, all flags other than MS_REC are ignored when doing
@@ -123,57 +179,93 @@ impl Mount {
         if flags.contains(MountFlags::REC) {
             // This is two steps because the alternative (locking clone.state while iterating over
             // self.state.submounts) trips tracing_mutex. The lock ordering is parent -> child, and
-            // if the clone is eventually made a child of the parent, this looks like an ordering
+            // if the clone is eventually made a child of self, this looks like an ordering
             // violation. I'm not convinced it's a real issue, but I can't convince myself it's not
             // either.
             let mut submounts = vec![];
             for (dir, mount) in &self.state.read().submounts {
                 submounts.push((dir.clone(), mount.clone_mount_recursive()));
             }
-            let mut clone_state = clone.state.write();
+            let mut clone_state = clone.write();
             for (dir, submount) in submounts {
-                clone.add_submount_locked(&mut clone_state, &dir, submount);
+                clone_state.add_submount_internal(&dir, submount);
             }
         }
+
+        // Put the clone in the same peer group
+        if let Some(peer_group) = self.state.read().peer_group.clone() {
+            peer_group.add(&clone);
+            clone.write().peer_group = Some(peer_group);
+        }
+
         clone
     }
 
+    /// Do a clone of the full mount hierarchy below this mount. Used for creating mount
+    /// namespaces and creating copies to use for propagation.
     fn clone_mount_recursive(&self) -> MountHandle {
         self.clone_mount(&self.root, MountFlags::REC)
     }
 
-    fn add_submount(self: &MountHandle, dir: &DirEntryHandle, mount: MountHandle) {
-        self.add_submount_locked(&mut self.state.write(), dir, mount)
-    }
+    state_accessor!(Mount, state);
+}
 
-    fn add_submount_locked(
-        self: &MountHandle,
-        state: &mut MountState,
-        dir: &DirEntryHandle,
-        mount: MountHandle,
-    ) {
-        if !dir.is_descendant_of(&self.root) {
+state_implementation!(Mount, MountState, {
+    /// Add a child mount *without propagating it to the peer group*. For internal use only.
+    fn add_submount_internal(&mut self, dir: &DirEntryHandle, mount: MountHandle) {
+        if !dir.is_descendant_of(&self.base.root) {
             return;
         }
 
         dir.register_mount();
         mount
             .mountpoint
-            .set((Arc::downgrade(self), Arc::clone(dir)))
+            .set((Arc::downgrade(self.base), Arc::clone(dir)))
             .expect("add_submount can only take a newly created mount");
         // Mount shadowing is implemented by mounting onto the root of the first mount, not by
         // creating two mounts on the same mountpoint.
-        let old_mount = state.submounts.insert(ArcKey(dir.clone()), mount);
+        let old_mount = self.submounts.insert(ArcKey(dir.clone()), mount);
         assert!(old_mount.is_none(), "can't create two mounts on the same mount point");
     }
 
-    pub fn root(self: &MountHandle) -> NamespaceNode {
-        NamespaceNode { mount: Some(Arc::clone(self)), entry: Arc::clone(&self.root) }
+    /// Is the mount in a peer group? Corresponds to MS_SHARED.
+    pub fn is_shared(&self) -> bool {
+        self.peer_group.is_some()
     }
 
-    fn mountpoint(&self) -> Option<NamespaceNode> {
-        let (ref mount, ref node) = &self.mountpoint.get()?;
-        Some(NamespaceNode { mount: Some(mount.upgrade()?), entry: node.clone() })
+    /// Put the mount in a peer group. Implements MS_SHARED.
+    pub fn make_shared(&mut self) {
+        if self.is_shared() {
+            return;
+        }
+        let peer_group = PeerGroup::new();
+        peer_group.add(self.base);
+        self.peer_group = Some(peer_group);
+    }
+
+    /// Take the mount out of its peer group. Implements MS_PRIVATE
+    pub fn make_private(&mut self) {
+        if let Some(peer_group) = self.peer_group.take() {
+            peer_group.remove(&**self.base);
+        }
+    }
+});
+
+impl PeerGroup {
+    fn new() -> Arc<Self> {
+        Default::default()
+    }
+
+    fn add(&self, mount: &Arc<Mount>) {
+        self.mounts.write().insert(WeakKey::from(mount));
+    }
+
+    fn remove(&self, mount: impl std::borrow::Borrow<Mount>) {
+        self.mounts.write().remove(&(mount.borrow() as *const Mount));
+    }
+
+    fn copy_peers(&self) -> Vec<MountHandle> {
+        self.mounts.read().iter().filter_map(|m| m.0.upgrade()).collect()
     }
 }
 
@@ -181,6 +273,10 @@ impl Drop for Mount {
     fn drop(&mut self) {
         if let Some((_mount, node)) = self.mountpoint.get() {
             node.unregister_mount()
+        }
+        let mut state = self.state.write();
+        if let Some(peer_group) = &mut state.peer_group {
+            peer_group.remove(&*self);
         }
     }
 }
@@ -231,8 +327,6 @@ pub fn create_filesystem(
 
 /// The `SymlinkMode` enum encodes how symlinks are followed during path traversal.
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]
-
-/// Whether to follow a symlink at the end of a path resolution.
 pub enum SymlinkMode {
     /// Follow a symlink at the end of a path resolution.
     Follow,
@@ -487,17 +581,22 @@ impl NamespaceNode {
         mountpoint_or_self
     }
 
+    /// If this node is the root of a mount, return it. Otherwise EINVAL.
+    pub fn mount_if_root(&self) -> Result<&MountHandle, Errno> {
+        if let Some(mount) = &self.mount {
+            if Arc::ptr_eq(&self.entry, &mount.root) {
+                return Ok(mount);
+            }
+        }
+        error!(EINVAL)
+    }
+
     /// Returns the mountpoint at this location in the namespace.
     ///
     /// If this node is mounted in another node, this function returns the node
     /// at which this node is mounted. Otherwise, returns None.
     fn mountpoint(&self) -> Option<NamespaceNode> {
-        if let Some(mount) = &self.mount {
-            if Arc::ptr_eq(&self.entry, &mount.root) {
-                return mount.mountpoint();
-            }
-        }
-        None
+        self.mount_if_root().ok()?.mountpoint()
     }
 
     /// The path from the root of the namespace to this node.
