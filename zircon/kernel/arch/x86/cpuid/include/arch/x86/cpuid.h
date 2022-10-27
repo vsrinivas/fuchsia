@@ -12,8 +12,6 @@
 #include <cstdint>
 #include <cstring>
 
-#include <ktl/optional.h>
-
 namespace cpu_id {
 
 struct Registers {
@@ -108,7 +106,6 @@ class Features {
     LEAF7,  // Structured Extended Feature Flags
     LEAF8_01,
     LEAF8_07,
-    LEAF8_08,
     INVALID_SET = 254,
   };
 
@@ -178,7 +175,6 @@ class Features {
   static constexpr Feature AVX = {.leaf = LEAF1, .reg = Registers::ECX, .bit = 28};
   static constexpr Feature F16C = {.leaf = LEAF1, .reg = Registers::ECX, .bit = 29};
   static constexpr Feature RDRAND = {.leaf = LEAF1, .reg = Registers::ECX, .bit = 30};
-  static constexpr Feature HYPERVISOR = {.leaf = LEAF1, .reg = Registers::ECX, .bit = 31};
 
   static constexpr Feature TURBO = {.leaf = LEAF6, .reg = Registers::EAX, .bit = 1};
   static constexpr Feature HWP = {.leaf = LEAF6, .reg = Registers::EAX, .bit = 7};
@@ -199,7 +195,6 @@ class Features {
   static constexpr Feature INVPCID = {.leaf = LEAF7, .reg = Registers::EBX, .bit = 10};
   static constexpr Feature RTM = {.leaf = LEAF7, .reg = Registers::EBX, .bit = 11};
   static constexpr Feature PQM = {.leaf = LEAF7, .reg = Registers::EBX, .bit = 12};
-  static constexpr Feature MPX = {.leaf = LEAF7, .reg = Registers::EBX, .bit = 14};
   static constexpr Feature PQE = {.leaf = LEAF7, .reg = Registers::EBX, .bit = 15};
   static constexpr Feature AVX512F = {.leaf = LEAF7, .reg = Registers::EBX, .bit = 16};
   static constexpr Feature AVX512DQ = {.leaf = LEAF7, .reg = Registers::EBX, .bit = 17};
@@ -207,7 +202,6 @@ class Features {
   static constexpr Feature ADX = {.leaf = LEAF7, .reg = Registers::EBX, .bit = 19};
   static constexpr Feature SMAP = {.leaf = LEAF7, .reg = Registers::EBX, .bit = 20};
   static constexpr Feature AVX512IFMA = {.leaf = LEAF7, .reg = Registers::EBX, .bit = 21};
-  static constexpr Feature PCOMMIT = {.leaf = LEAF7, .reg = Registers::EBX, .bit = 22};
   static constexpr Feature CLWB = {.leaf = LEAF7, .reg = Registers::EBX, .bit = 24};
   static constexpr Feature INTEL_PT = {.leaf = LEAF7, .reg = Registers::EBX, .bit = 25};
   static constexpr Feature AVX512PF = {.leaf = LEAF7, .reg = Registers::EBX, .bit = 26};
@@ -220,7 +214,6 @@ class Features {
   static constexpr Feature AVX512VBMI = {.leaf = LEAF7, .reg = Registers::ECX, .bit = 1};
   static constexpr Feature UMIP = {.leaf = LEAF7, .reg = Registers::ECX, .bit = 2};
   static constexpr Feature PKU = {.leaf = LEAF7, .reg = Registers::ECX, .bit = 3};
-  static constexpr Feature OSPKE = {.leaf = LEAF7, .reg = Registers::ECX, .bit = 4};
   static constexpr Feature AVX512VBMI2 = {.leaf = LEAF7, .reg = Registers::ECX, .bit = 6};
   static constexpr Feature GFNI = {.leaf = LEAF7, .reg = Registers::ECX, .bit = 8};
   static constexpr Feature VAES = {.leaf = LEAF7, .reg = Registers::ECX, .bit = 9};
@@ -229,19 +222,13 @@ class Features {
   static constexpr Feature AVX512BITALG = {.leaf = LEAF7, .reg = Registers::ECX, .bit = 12};
   static constexpr Feature AVX512VPOPCNTDQ = {.leaf = LEAF7, .reg = Registers::ECX, .bit = 14};
   static constexpr Feature RDPID = {.leaf = LEAF7, .reg = Registers::ECX, .bit = 22};
-  static constexpr Feature SGX_LC = {.leaf = LEAF7, .reg = Registers::ECX, .bit = 30};
   static constexpr Feature AVX512_4VNNIW = {.leaf = LEAF7, .reg = Registers::EDX, .bit = 2};
   static constexpr Feature AVX512_4FMAPS = {.leaf = LEAF7, .reg = Registers::EDX, .bit = 3};
   static constexpr Feature MD_CLEAR = {.leaf = LEAF7, .reg = Registers::EDX, .bit = 10};
-  static constexpr Feature PCONFIG = {.leaf = LEAF7, .reg = Registers::EDX, .bit = 18};
   static constexpr Feature CLFLUSH = {.leaf = LEAF7, .reg = Registers::EDX, .bit = 19};
-  static constexpr Feature IBRS_IBPB = {.leaf = LEAF7, .reg = Registers::EDX, .bit = 26};
-  static constexpr Feature STIBP = {.leaf = LEAF7, .reg = Registers::EDX, .bit = 27};
   static constexpr Feature ARCH_CAPABILITIES = {.leaf = LEAF7, .reg = Registers::EDX, .bit = 29};
-  static constexpr Feature SSBD = {.leaf = LEAF7, .reg = Registers::EDX, .bit = 31};
 
   static constexpr Feature LAHF = {.leaf = LEAF8_01, .reg = Registers::ECX, .bit = 0};
-  static constexpr Feature IA64 = {.leaf = LEAF8_01, .reg = Registers::EDX, .bit = 29};
   static constexpr Feature RDTSCP = {.leaf = LEAF8_01, .reg = Registers::EDX, .bit = 27};
   static constexpr Feature PDPE1GB = {.leaf = LEAF8_01, .reg = Registers::EDX, .bit = 26};
   static constexpr Feature XD = {.leaf = LEAF8_01, .reg = Registers::EDX, .bit = 20};
@@ -249,21 +236,8 @@ class Features {
 
   static constexpr Feature CPB = {.leaf = LEAF8_07, .reg = Registers::EDX, .bit = 9};
 
-  static constexpr Feature CLZERO = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 0};
-  static constexpr Feature AMD_IBPB = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 12};
-  static constexpr Feature AMD_IBRS = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 14};
-  static constexpr Feature AMD_STIBP = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 15};
-  static constexpr Feature AMD_IBRS_ALWAYS_ON = {
-      .leaf = LEAF8_08, .reg = Registers::EBX, .bit = 16};
-  static constexpr Feature AMD_STIBP_ALWAYS_ON = {
-      .leaf = LEAF8_08, .reg = Registers::EBX, .bit = 17};
-  static constexpr Feature AMD_PREFER_IBRS = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 18};
-  static constexpr Feature AMD_SSBD = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 24};
-  static constexpr Feature AMD_VIRT_SSBD = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 25};
-  static constexpr Feature AMD_SSB_NO = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 26};
-
   Features(Registers leaf1, Registers leaf6, Registers leaf7, Registers leaf8_01,
-           Registers leaf8_07, Registers leaf8_08);
+           Registers leaf8_07);
 
   inline bool HasFeature(Feature feature) const {
     DEBUG_ASSERT_MSG(

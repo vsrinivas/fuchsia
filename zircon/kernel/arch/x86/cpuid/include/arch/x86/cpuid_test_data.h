@@ -22,7 +22,6 @@ struct TestDataSet {
   Registers leaf8_0;
   Registers leaf8_1;
   Registers leaf8_7;
-  Registers leaf8_8;
   Registers leaf8_1D;
   Registers leaf8_1E;
 };
@@ -52,7 +51,6 @@ const TestDataSet kTestDataCorei5_6260U = {
     .leaf8_0 = {.reg = {0x80000008, 0x0, 0x0, 0x0}},
     .leaf8_1 = {.reg = {0x0, 0x0, 0x121, 0x2c100800}},
     .leaf8_7 = {},
-    .leaf8_8 = {.reg = {0x3027, 0x0, 0x0, 0x0}},
     .leaf8_1D = {.reg = {0x708, 0xb54, 0x64, 0x0}},
     .leaf8_1E = {.reg = {0x708, 0xb54, 0x64, 0x0}},
 };
@@ -86,7 +84,6 @@ const TestDataSet kTestDataXeon2690v4 = {
     .leaf8_0 = {.reg = {0x80000008, 0x0, 0x0, 0x0}},
     .leaf8_1 = {.reg = {0x0, 0x0, 0x121, 0x2C100800}},
     .leaf8_7 = {},
-    .leaf8_8 = {.reg = {0x302E, 0x0, 0x0, 0x0}},
     .leaf8_1D = {.reg = {0x0, 0x1, 0x1, 0x0}},
     .leaf8_1E = {.reg = {0x0, 0x1, 0x1, 0x0}},
 };
@@ -98,7 +95,7 @@ const TestDataSet kTestDataThreadRipper2970wx = {
                  Features::CX8,   Features::APIC, Features::SEP,      Features::MTRR,
                  Features::PGE,   Features::MCA,  Features::CMOV,     Features::PAT,
                  Features::PSE36, Features::MMX,  Features::FSGSBASE, Features::FXSR,
-                 Features::SSE,   Features::SSE2, Features::CLZERO,   Features::CPB},
+                 Features::SSE,   Features::SSE2, Features::CPB},
     .missing_features =
         {
             Features::PSN,
@@ -114,7 +111,6 @@ const TestDataSet kTestDataThreadRipper2970wx = {
     .leaf8_0 = {.reg = {0x8000001F, 0x68747541, 0x444D4163, 0x69746E65}},
     .leaf8_1 = {.reg = {0x800F82, 0x70000000, 0x35C233FF, 0x2FD3FBFF}},
     .leaf8_7 = {.reg = {0x0, 0x1b, 0x0, 0x6799}},
-    .leaf8_8 = {.reg = {0x3030, 0x1007, 0x602F, 0x0}},
     .leaf8_1D = {.reg = {0x14163, 0x3C0003F, 0x1FFF, 0x1}},
     .leaf8_1E = {.reg = {0x34, 0x102, 0x303, 0x0}},
 };
@@ -131,7 +127,7 @@ const TestDataSet kTestDataAmdA49120C = {
                  Features::MOVBE, Features::MPERFAPERF},
     // Sample of CPU features we do not expect to find.
     .missing_features = {Features::SGX, Features::RTM, Features::PCID, Features::RDPID,
-                         Features::CLZERO, Features::HWP},
+                         Features::HWP},
     .leaf0 = {.reg = {0xd, 0x68747541, 0x444d4163, 0x69746e65}},
     .leaf1 = {.reg = {0x670f00, 0x20800, 0x7ed8320b, 0x178bfbff}},
     .leaf4 = {.reg = {0x0, 0x0, 0x0, 0x0}},
@@ -140,7 +136,6 @@ const TestDataSet kTestDataAmdA49120C = {
     .leaf8_0 = {.reg = {0x8000001e, 0x68747541, 0x444d4163, 0x69746e65}},
     .leaf8_1 = {.reg = {0x670f00, 0x40000000, 0x2fabbfff, 0x2fd3fbff}},
     .leaf8_7 = {.reg = {0x0, 0x5, 0x400, 0x37d9}},
-    .leaf8_8 = {.reg = {0x3030, 0x1000, 0x4001, 0x0}},
     .leaf8_1D = {.reg = {0x121, 0x1c0003f, 0x3f, 0x0}},
     .leaf8_1E = {.reg = {0x10, 0x100, 0x0, 0x0}},
 };
@@ -157,7 +152,6 @@ const TestDataSet kTestDataCeleronJ3455 = {
     .leaf8_0 = {.reg = {0x80000008, 0x0, 0x0, 0x0}},
     .leaf8_1 = {.reg = {0x0, 0x0, 0x101, 0x2c100800}},
     .leaf8_7 = {},
-    .leaf8_8 = {.reg = {0x3027, 0x0, 0x0, 0x0}},
     .leaf8_1D = {.reg = {0x3, 0xea, 0x124f800, 0x0}},
     .leaf8_1E = {.reg = {0x3, 0xea, 0x124f800, 0x0}},
 };
@@ -173,8 +167,7 @@ class FakeCpuId : public CpuId {
   ProcessorId ReadProcessorId() const override { return ProcessorId(data_.leaf1); }
 
   Features ReadFeatures() const override {
-    return Features(data_.leaf1, data_.leaf6, data_.leaf7, data_.leaf8_1, data_.leaf8_7,
-                    data_.leaf8_8);
+    return Features(data_.leaf1, data_.leaf6, data_.leaf7, data_.leaf8_1, data_.leaf8_7);
   }
 
  private:
