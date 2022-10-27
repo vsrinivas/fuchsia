@@ -454,6 +454,10 @@ impl<T: ServiceDependencies> Service<T> {
                                     debug!("GetItem response: {:?}", &result);
                                     responder.send(&mut result)?;
                                 },
+                                fclip::ReaderRequest::Watch { .. } => {
+                                    // TODO(fxbug.dev/110935): Implement Watch()
+                                    unimplemented!()
+                                },
                             }
                             // Keep looping
                         },

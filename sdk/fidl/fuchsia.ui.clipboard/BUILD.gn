@@ -12,5 +12,8 @@ fidl("fuchsia.ui.clipboard") {
     "errors.fidl",
     "focused.fidl",
   ]
-  public_deps = [ "//sdk/fidl/fuchsia.ui.views" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.views",
+    "//zircon/vdso/zx",
+  ]
 }

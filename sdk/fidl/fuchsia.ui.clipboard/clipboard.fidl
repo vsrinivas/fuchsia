@@ -4,6 +4,8 @@
 
 library fuchsia.ui.clipboard;
 
+using zx;
+
 /// A single item on the clipboard, consisting of a MIME type and a payload.
 type ClipboardItem = resource table {
     /// MIME type of the data, according to the client that placed the data on the clipboard.
@@ -20,12 +22,44 @@ type ClipboardItemData = flexible resource union {
     1: text string:MAX_TEXT_LENGTH;
 };
 
+/// Metadata about the current state of the clipboard contents.
+type ClipboardMetadata = table {
+    /// The time at which the clipboard was last written to or cleared.
+    ///
+    /// If the clipboard has not yet been modified, this will contain a past timestamp from around
+    /// when the clipboard service was most recently launched.
+    1: last_modified zx.time;
+    // In future revisions, this will likely also contain a list of MIME types on the clipboard.
+};
+
 /// Allows data to be read from the clipboard, i.e. pasted.
 protocol Reader {
     /// Reads a single item from the clipboard. If the client's `View` does not have input focus, an
     /// error will be returned. If there is no item on the clipboard, `ClipboardError.EMPTY` will
     /// be returned.
     GetItem(table {}) -> (ClipboardItem) error ClipboardError;
+
+    /// Watches for changes to the clipboard using a hanging-get pattern.
+    ///
+    /// 1.  The first call from a given client returns immediately.
+    ///
+    ///     a.  If the client's `View` is focused, it will receive the actual clipboard metadata.
+    ///
+    ///     b.  If the client's `View` is _not_ focused, it will receive
+    ///         `ClipboardError.UNAUTHORIZED`.
+    ///
+    /// 2.  Subsequent calls from a given client will only return when the clipboard contents
+    ///     change.
+    ///
+    ///     a.  If the client's `View` is focused when the clipboard is modified, the method will
+    ///         return right after the modification happens.
+    ///
+    ///     b.  If the client's `View` is _not_ focused, the service will further wait for the
+    ///         client's `View` to become focused before returning a value (instead of returning an
+    ///         error). This allows clients to easily be notified if the clipboard has been
+    ///         modified as soon as they become eligible to do so.
+    ///
+    Watch(table {}) -> (ClipboardMetadata) error ClipboardError;
 };
 
 /// Allows data to be written to the clipboard, i.e. copied.
