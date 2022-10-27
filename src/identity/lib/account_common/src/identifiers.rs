@@ -148,7 +148,7 @@ impl AccountId {
             Ok(id) => {
                 let ret = Self::new(id);
                 // Double check s is the true canonical representation
-                if s == &ret.to_canonical_string() {
+                if s == ret.to_canonical_string() {
                     Some(ret)
                 } else {
                     None

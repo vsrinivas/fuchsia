@@ -6,6 +6,7 @@ use anyhow::{format_err, Error};
 use fidl_fuchsia_auth::Status::{self as TokenManagerStatus, *};
 use fidl_fuchsia_identity_account::Error as AccountApiError;
 use fidl_fuchsia_identity_authentication::Error as AuthenticationApiError;
+use fidl_fuchsia_identity_authentication::ErrorUnknown as AuthenticationApiErrorUnknown;
 use thiserror::Error;
 
 /// An extension trait to simplify conversion of results based on general errors to
@@ -88,6 +89,7 @@ impl From<TokenManagerStatus> for AccountManagerError {
     }
 }
 
+#[allow(clippy::wildcard_in_or_patterns)]
 impl From<AuthenticationApiError> for AccountManagerError {
     fn from(authentication_error: AuthenticationApiError) -> Self {
         AccountManagerError {
@@ -96,11 +98,12 @@ impl From<AuthenticationApiError> for AccountManagerError {
                 AuthenticationApiError::InvalidAuthContext => AccountApiError::InvalidRequest,
                 AuthenticationApiError::InvalidRequest => AccountApiError::InvalidRequest,
                 AuthenticationApiError::Resource => AccountApiError::Resource,
-                AuthenticationApiError::UnsupportedOperation => AccountApiError::UnsupportedOperation,
-
-                AuthenticationApiError::InvalidDataFormat
-                | AuthenticationApiError::Aborted // TODO(dnordstrom): Needs a non-generic error
-                | AuthenticationApiError::Unknown | _ => AccountApiError::Unknown,
+                AuthenticationApiError::UnsupportedOperation => {
+                    AccountApiError::UnsupportedOperation
+                }
+                AuthenticationApiError::Unknown
+                | AuthenticationApiError::Aborted
+                | AuthenticationApiErrorUnknown!() => AccountApiError::Unknown, // TODO(dnordstrom): Needs a non-generic error
             },
             fatal: false,
             cause: Some(format_err!("Authenticator error: {:?}", authentication_error)),
@@ -110,7 +113,7 @@ impl From<AuthenticationApiError> for AccountManagerError {
 
 impl Into<AccountApiError> for AccountManagerError {
     fn into(self) -> AccountApiError {
-        self.api_error.clone()
+        self.api_error
     }
 }
 

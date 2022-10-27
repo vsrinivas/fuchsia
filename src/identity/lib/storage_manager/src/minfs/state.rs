@@ -75,7 +75,7 @@ impl<T> State<T> {
     /// non-AVAILABLE state.
     pub fn get_internals(&self) -> Option<&T> {
         match self {
-            Self::Available { internals } => Some(&internals),
+            Self::Available { internals } => Some(internals),
             Self::Locked | Self::Uninitialized => None,
         }
     }

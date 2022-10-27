@@ -68,6 +68,7 @@ enum TaskGroupState {
 
 impl TaskGroup {
     /// Create a new blank task group, ready for task spawning.
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         let (sender, receiver) = oneshot::channel();
         let state = TaskGroupState::Active {
@@ -116,7 +117,7 @@ impl TaskGroup {
     ///
     /// If a TaskGroup cancellation is (2) already in progress or (3) completed,
     /// `Err(TaskGroupError::AlreadyCancelled)` will be returned.
-    pub fn cancel<'a>(&'a self) -> BoxFuture<'a, Result<(), TaskGroupError>> {
+    pub fn cancel(&self) -> BoxFuture<'_, Result<(), TaskGroupError>> {
         // Since this method is recursive, we cannot use `async fn` directly, hence the BoxFuture.
         let state = self.state.clone();
         async move {
@@ -149,7 +150,7 @@ impl TaskGroup {
     ///
     /// If a TaskGroup cancellation is (2) already in progress or (3) completed,
     /// `Err(TaskGroupError::AlreadyCancelled)` will be returned.
-    pub fn cancel_no_wait<'a>(&'a self) -> BoxFuture<'a, Result<(), TaskGroupError>> {
+    pub fn cancel_no_wait(&self) -> BoxFuture<'_, Result<(), TaskGroupError>> {
         // Since this method is recursive, we cannot use `async fn` directly, hence the BoxFuture.
         let state = self.state.clone();
         async move {

@@ -4,6 +4,9 @@
 
 //! Types that are shared across more than one Account Management crate.
 #![deny(missing_docs)]
+#![warn(clippy::all)]
+#![allow(clippy::expect_fun_call)]
+#![allow(clippy::from_over_into)]
 
 /// An error type for problems encountered in the account manager and account handler.
 mod error;

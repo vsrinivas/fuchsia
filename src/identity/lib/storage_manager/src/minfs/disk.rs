@@ -1105,7 +1105,7 @@ pub mod test {
 
         // Build a zxcrypt block device that points to our mock zxcrypt driver node, emulating
         // bind_to_encrypted_block.
-        let key = Box::new(TEST_SCRYPT_KEY.clone());
+        let key = Box::new(TEST_SCRYPT_KEY);
         let encrypted_block_device =
             EncryptedDevBlockDevice(serve_mock_devfs(&scope, mock_encrypted_block_dir));
         encrypted_block_device.format(&key).await.expect("format");
@@ -1145,7 +1145,7 @@ pub mod test {
 
         // Build a zxcrypt block device that points to our mock zxcrypt driver node, emulating
         // bind_to_encrypted_block.
-        let key = Box::new(TEST_SCRYPT_KEY.clone());
+        let key = Box::new(TEST_SCRYPT_KEY);
         let encrypted_block_device =
             EncryptedDevBlockDevice(serve_mock_devfs(&scope, mock_encrypted_block_dir));
 

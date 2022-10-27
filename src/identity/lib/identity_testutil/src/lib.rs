@@ -4,6 +4,9 @@
 
 //! Contains testing utilities.
 
+#![warn(clippy::all)]
+#![allow(clippy::expect_fun_call)]
+
 use async_trait::async_trait;
 use fuchsia_zircon::Status;
 use futures::lock::Mutex;
@@ -109,7 +112,7 @@ impl DiskManager for MockDiskManager {
     }
 
     async fn format_minfs(&self, _block_dev: &MockBlockDevice) -> Result<(), DiskError> {
-        self.format_minfs_behavior.clone().map_err(|err_factory| err_factory())
+        self.format_minfs_behavior.map_err(|err_factory| err_factory())
     }
 
     async fn serve_minfs(&self, _block_dev: MockBlockDevice) -> Result<MockMinfs, DiskError> {
@@ -305,14 +308,14 @@ impl EncryptedBlockDevice for MockEncryptedBlockDevice {
     type BlockDevice = MockBlockDevice;
 
     async fn format(&self, _key: &Key) -> Result<(), DiskError> {
-        self.format_behavior.clone().map_err(|err_factory| err_factory())
+        self.format_behavior.map_err(|err_factory| err_factory())
     }
 
     async fn unseal(&self, key: &Key) -> Result<MockBlockDevice, DiskError> {
         match &self.unseal_behavior {
             UnsealBehavior::AcceptAnyKey(b) => Ok(*b.clone()),
             UnsealBehavior::AcceptExactKeys((keys, b)) => {
-                if keys.contains(&key) {
+                if keys.contains(key) {
                     Ok(*b.clone())
                 } else {
                     Err(DiskError::FailedToUnsealZxcrypt(Status::ACCESS_DENIED))
@@ -327,6 +330,6 @@ impl EncryptedBlockDevice for MockEncryptedBlockDevice {
     }
 
     async fn shred(&self) -> Result<(), DiskError> {
-        self.shred_behavior.clone().map_err(|err_factory| err_factory())
+        self.shred_behavior.map_err(|err_factory| err_factory())
     }
 }

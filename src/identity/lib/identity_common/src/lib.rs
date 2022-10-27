@@ -4,6 +4,11 @@
 
 //! Types that are shared across more than one crate in the Fuchsia identity stack.
 #![deny(missing_docs)]
+#![warn(clippy::all)]
+// Using `let () = ...` is often idiomatic in Fuchsia, since it asserts that the
+// return type is (), and the compiler will flag if the return type ever changes
+// (and needs to be used).
+#![allow(clippy::let_unit_value)]
 
 // Async task management.
 mod task_group;

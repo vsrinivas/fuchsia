@@ -96,7 +96,7 @@ impl StorageManager for InsecureKeyDirectoryStorageManager {
                 *state_lock = StorageManagerState::Available;
                 Ok(())
             }
-            ref invalid_state @ _ => Err(AccountManagerError::new(ApiError::FailedPrecondition)
+            ref invalid_state => Err(AccountManagerError::new(ApiError::FailedPrecondition)
                 .with_cause(format_err!(
                     "StorageManager provision called in the {:?} state",
                     invalid_state
@@ -112,7 +112,7 @@ impl StorageManager for InsecureKeyDirectoryStorageManager {
                 *state_lock = StorageManagerState::Available;
                 Ok(())
             }
-            ref invalid_state @ _ => Err(AccountManagerError::new(ApiError::FailedPrecondition)
+            ref invalid_state => Err(AccountManagerError::new(ApiError::FailedPrecondition)
                 .with_cause(format_err!(
                     "StorageManager unlock called in the {:?} state",
                     invalid_state
@@ -127,7 +127,7 @@ impl StorageManager for InsecureKeyDirectoryStorageManager {
                 *state_lock = StorageManagerState::Locked;
                 Ok(())
             }
-            ref invalid_state @ _ => Err(AccountManagerError::new(ApiError::FailedPrecondition)
+            ref invalid_state => Err(AccountManagerError::new(ApiError::FailedPrecondition)
                 .with_cause(format_err!(
                     "StorageManager lock called in the {:?} state",
                     invalid_state
@@ -165,7 +165,7 @@ impl StorageManager for InsecureKeyDirectoryStorageManager {
                 *state_lock = StorageManagerState::Uninitialized;
                 Ok(())
             }
-            ref invalid_state @ _ => Err(AccountManagerError::new(ApiError::FailedPrecondition)
+            ref invalid_state => Err(AccountManagerError::new(ApiError::FailedPrecondition)
                 .with_cause(format_err!(
                     "StorageManager destroy called in the {:?} state",
                     invalid_state
@@ -182,7 +182,7 @@ impl StorageManager for InsecureKeyDirectoryStorageManager {
                 fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             )
             .account_manager_error(ApiError::Resource),
-            ref invalid_state @ _ => Err(AccountManagerError::new(ApiError::FailedPrecondition)
+            ref invalid_state => Err(AccountManagerError::new(ApiError::FailedPrecondition)
                 .with_cause(format_err!(
                     "StorageManager get_root_dir called in the {:?} state",
                     invalid_state
@@ -221,7 +221,7 @@ impl InsecureKeyDirectoryStorageManager {
         })?;
         let key_file = fuchsia_fs::open_file(
             &self.managed_dir,
-            &Path::new(KEY_FILE_PATH),
+            Path::new(KEY_FILE_PATH),
             fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .map_err(|e| {
@@ -238,7 +238,7 @@ impl InsecureKeyDirectoryStorageManager {
     async fn check_unlock_key(&self, key: &Key) -> Result<(), AccountManagerError> {
         let file_proxy = fuchsia_fs::open_file(
             &self.managed_dir,
-            &Path::new(KEY_FILE_PATH),
+            Path::new(KEY_FILE_PATH),
             fio::OpenFlags::RIGHT_READABLE,
         )
         .map_err(|e| {
@@ -270,7 +270,7 @@ mod test {
 
     lazy_static! {
         static ref CUSTOM_KEY_CONTENTS: [u8; 32] = [8u8; 32];
-        static ref CUSTOM_KEY: Key = Key::Key256Bit(CUSTOM_KEY_CONTENTS.clone());
+        static ref CUSTOM_KEY: Key = Key::Key256Bit(*CUSTOM_KEY_CONTENTS);
     }
 
     /// Creates a TempDir and DirectoryProxy handle to it.  The TempDir must
@@ -314,7 +314,7 @@ mod test {
         Fut: Future<Output = ()>,
     {
         test_fn(Key::NoSpecifiedKey).await;
-        test_fn(Key::Key256Bit(CUSTOM_KEY_CONTENTS.clone())).await;
+        test_fn(Key::Key256Bit(*CUSTOM_KEY_CONTENTS)).await;
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -401,14 +401,14 @@ mod test {
         manager.provision(&Key::NoSpecifiedKey).await.unwrap();
         manager.lock_storage().await.unwrap();
         assert_eq!(
-            manager.unlock_storage(&*CUSTOM_KEY).await.unwrap_err().api_error,
+            manager.unlock_storage(&CUSTOM_KEY).await.unwrap_err().api_error,
             ApiError::FailedAuthentication
         );
 
         // NoSpecifiedKey given when Key256Bit expected
         let (_dir, dir_proxy) = create_temp_directory();
         let manager = InsecureKeyDirectoryStorageManager::new(dir_proxy).await.unwrap();
-        manager.provision(&*CUSTOM_KEY).await.unwrap();
+        manager.provision(&CUSTOM_KEY).await.unwrap();
         manager.lock_storage().await.unwrap();
         assert_eq!(
             manager.unlock_storage(&Key::NoSpecifiedKey).await.unwrap_err().api_error,
@@ -418,7 +418,7 @@ mod test {
         // Wrong Key256Bit given
         let (_dir, dir_proxy) = create_temp_directory();
         let manager = InsecureKeyDirectoryStorageManager::new(dir_proxy).await.unwrap();
-        manager.provision(&*CUSTOM_KEY).await.unwrap();
+        manager.provision(&CUSTOM_KEY).await.unwrap();
         manager.lock_storage().await.unwrap();
         let wrong_key = [99; 32];
         assert_eq!(

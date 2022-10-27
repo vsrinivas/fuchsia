@@ -79,14 +79,14 @@ impl<'a> StagedFile<'a> {
         dir_proxy: &'a fio::DirectoryProxy,
         tempfile_prefix: &str,
     ) -> Result<StagedFile<'a>, StagedFileError> {
-        if tempfile_prefix.len() == 0 {
+        if tempfile_prefix.is_empty() {
             return Err(StagedFileError::InvalidArguments(String::from(
                 "filename_prefix must not be empty",
             )));
         }
         let temp_filename = generate_tempfile_name(tempfile_prefix);
         let file_proxy = fuchsia_fs::directory::open_file(
-            &dir_proxy,
+            dir_proxy,
             &temp_filename,
             fio::OpenFlags::RIGHT_READABLE
                 | fio::OpenFlags::RIGHT_WRITABLE
@@ -129,7 +129,7 @@ impl<'a> StagedFile<'a> {
 
         fuchsia_fs::directory::rename(self.dir_proxy, &self.temp_filename, target_filename)
             .await
-            .map_err(|s| StagedFileError::RenameError(s))?;
+            .map_err(StagedFileError::RenameError)?;
         Ok(())
     }
 
@@ -140,7 +140,7 @@ impl<'a> StagedFile<'a> {
         tempfile_prefix: &str,
     ) -> Result<(), Vec<StagedFileError>> {
         let dirents_res = fuchsia_fs::directory::readdir(dir_proxy).await;
-        let dirents = dirents_res.map_err(|err| vec![StagedFileError::ReaddirError(err.into())])?;
+        let dirents = dirents_res.map_err(|err| vec![StagedFileError::ReaddirError(err)])?;
         let mut failures = Vec::new();
 
         for d in dirents.iter() {
@@ -148,9 +148,9 @@ impl<'a> StagedFile<'a> {
             // For filenames that are known to be temporary, try to remove them.
             if name.starts_with(tempfile_prefix) {
                 warn!("Removing unexpected file '{}' from directory", &name);
-                let fidl_res = dir_proxy.unlink(&name, fio::UnlinkOptions::EMPTY).await;
+                let fidl_res = dir_proxy.unlink(name, fio::UnlinkOptions::EMPTY).await;
                 match fidl_res {
-                    Err(x) => failures.push(StagedFileError::FidlError(x.into())),
+                    Err(x) => failures.push(StagedFileError::FidlError(x)),
                     Ok(unlink_res) => {
                         if let Err(unlink_err) = unlink_res {
                             failures.push(StagedFileError::UnlinkError(zx::Status::from_raw(
@@ -183,7 +183,7 @@ fn generate_tempfile_name(prefix: &str) -> String {
         .map(char::from)
         .take(TEMPFILE_RANDOM_LENGTH)
         .for_each(|c| buf.push(c));
-    return buf;
+    buf
 }
 
 #[cfg(test)]
@@ -199,7 +199,7 @@ mod test {
         )
         .expect("could not open temp dir");
         let mut staged_file = StagedFile::new(&dir, "prefix-").await.unwrap();
-        staged_file.write(&b"this is some file content".to_vec()).await.unwrap();
+        staged_file.write(b"this is some file content".as_ref()).await.unwrap();
         staged_file.commit("target_file_01").await.unwrap();
 
         // Check that target_file_01 has been created.
@@ -227,8 +227,8 @@ mod test {
 
     async fn write_test_file_content(dir_proxy: &fio::DirectoryProxy, filename: &str, data: &[u8]) {
         let file_proxy = fuchsia_fs::directory::open_file(
-            &dir_proxy,
-            &filename,
+            dir_proxy,
+            filename,
             fio::OpenFlags::RIGHT_READABLE
                 | fio::OpenFlags::RIGHT_WRITABLE
                 | fio::OpenFlags::CREATE,
@@ -244,7 +244,7 @@ mod test {
         expected_data: &[u8],
     ) -> bool {
         let file =
-            fuchsia_fs::directory::open_file(&dir_proxy, &filename, fio::OpenFlags::RIGHT_READABLE)
+            fuchsia_fs::directory::open_file(dir_proxy, filename, fio::OpenFlags::RIGHT_READABLE)
                 .await
                 .expect("could not open file");
         let bytes = fuchsia_fs::file::read(&file).await.expect("could not read file data");
@@ -261,12 +261,12 @@ mod test {
         .expect("could not open temp dir");
 
         // Write a variety of staged and non-staged files to the directory.
-        write_test_file_content(&dir, "staged-001", &b"staged-001".to_vec()).await;
-        write_test_file_content(&dir, "real-001", &b"real-001".to_vec()).await;
-        write_test_file_content(&dir, "staged-002", &b"staged-002".to_vec()).await;
-        write_test_file_content(&dir, "real-002", &b"real-002".to_vec()).await;
-        write_test_file_content(&dir, "staged-003", &b"staged-003".to_vec()).await;
-        write_test_file_content(&dir, "004", &b"004".to_vec()).await;
+        write_test_file_content(&dir, "staged-001", b"staged-001".as_ref()).await;
+        write_test_file_content(&dir, "real-001", b"real-001".as_ref()).await;
+        write_test_file_content(&dir, "staged-002", b"staged-002".as_ref()).await;
+        write_test_file_content(&dir, "real-002", b"real-002".as_ref()).await;
+        write_test_file_content(&dir, "staged-003", b"staged-003".as_ref()).await;
+        write_test_file_content(&dir, "004", b"004".as_ref()).await;
 
         // Clean up stale files.
         StagedFile::cleanup_stale_files(&dir, "staged-").await.unwrap();
@@ -274,9 +274,9 @@ mod test {
         // Ensure that only the non-staged files remain.
         let dirents = fuchsia_fs::directory::readdir(&dir).await.unwrap();
         assert_eq!(dirents.len(), 3);
-        assert!(file_exists_with_data(&dir, "real-001", &b"real-001".to_vec()).await);
-        assert!(file_exists_with_data(&dir, "real-002", &b"real-002".to_vec()).await);
-        assert!(file_exists_with_data(&dir, "004", &b"004".to_vec()).await);
+        assert!(file_exists_with_data(&dir, "real-001", b"real-001".as_ref()).await);
+        assert!(file_exists_with_data(&dir, "real-002", b"real-002".as_ref()).await);
+        assert!(file_exists_with_data(&dir, "004", b"004".as_ref()).await);
     }
 
     #[test]
