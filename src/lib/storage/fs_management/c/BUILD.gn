@@ -5,10 +5,6 @@
 static_library("fvm") {
   sources = [ "fvm.cc" ]
   deps = [ "//src/lib/storage/fs_management" ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 group("c") {

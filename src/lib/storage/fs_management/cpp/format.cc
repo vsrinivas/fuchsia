@@ -37,9 +37,8 @@ class Registry {
     auto iter = map_.find(format);
     if (iter == map_.end()) {
       return nullptr;
-    } else {
-      return iter->second.get();
     }
+    return iter->second.get();
   }
 
  private:
@@ -48,7 +47,7 @@ class Registry {
   std::unordered_map<int, std::unique_ptr<CustomDiskFormat>> map_ FXL_GUARDED_BY(mutex_);
 };
 
-static Registry& GetRegistry() {
+Registry& GetRegistry() {
   static Registry& registry = *new Registry;
   return registry;
 }
@@ -60,7 +59,7 @@ enum DiskFormatLogVerbosity {
 
 DiskFormat DetectDiskFormatImpl(int fd, DiskFormatLogVerbosity verbosity) {
   fdio_cpp::UnownedFdioCaller caller(fd);
-  auto resp = fidl::WireCall<fblock::Block>(caller.channel())->GetInfo();
+  auto resp = fidl::WireCall(caller.borrow_as<fblock::Block>())->GetInfo();
   if (!resp.ok() || resp.value().status != ZX_OK) {
     fprintf(stderr, "DetectDiskFormat: Could not acquire block device info\n");
     return kDiskFormatUnknown;
@@ -235,11 +234,11 @@ __EXPORT DiskFormat DiskFormatFromString(std::string_view str) {
     }
     return formats;
   }();
-  if (auto iter = formats->find(str); iter == formats->end()) {
+  auto iter = formats->find(str);
+  if (iter == formats->end()) {
     return kDiskFormatUnknown;
-  } else {
-    return iter->second;
   }
+  return iter->second;
 }
 
 __EXPORT std::string_view DiskFormatComponentUrl(DiskFormat fs_type) {

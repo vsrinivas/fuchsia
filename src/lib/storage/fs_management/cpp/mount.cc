@@ -45,26 +45,22 @@
 #include "src/lib/storage/fs_management/cpp/component.h"
 #include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/fs_management/cpp/options.h"
-#include "src/lib/storage/fs_management/cpp/path.h"
 #include "src/lib/storage/fs_management/cpp/volumes.h"
-#include "zircon/status.h"
 
 namespace fs_management {
 namespace {
 
-namespace fio = fuchsia_io;
-
 using Directory = fuchsia_io::Directory;
 
-zx::result<fidl::ClientEnd<Directory>> InitNativeFs(const char* binary, zx::channel device,
-                                                    const MountOptions& options,
-                                                    LaunchCallback cb) {
+zx::result<fidl::ClientEnd<Directory>> InitNativeFs(
+    const char* binary, fidl::ClientEnd<fuchsia_hardware_block::Block> device,
+    const MountOptions& options, LaunchCallback cb) {
   zx_status_t status;
   auto outgoing_directory_or = fidl::CreateEndpoints<Directory>();
   if (outgoing_directory_or.is_error())
     return outgoing_directory_or.take_error();
   std::vector<std::pair<uint32_t, zx::handle>> handles;
-  handles.emplace_back(FS_HANDLE_BLOCK_DEVICE_ID, std::move(device));
+  handles.emplace_back(FS_HANDLE_BLOCK_DEVICE_ID, device.TakeChannel());
   handles.emplace_back(PA_DIRECTORY_REQUEST, outgoing_directory_or->server.TakeChannel());
 
   if (status = cb(options.as_argv(binary), std::move(handles)); status != ZX_OK) {
@@ -96,7 +92,8 @@ zx::result<fidl::ClientEnd<Directory>> InitNativeFs(const char* binary, zx::chan
   return zx::ok(std::move(outgoing_directory_or->client));
 }
 
-zx::result<> StartFsComponent(fidl::UnownedClientEnd<Directory> exposed_dir, zx::channel device,
+zx::result<> StartFsComponent(fidl::UnownedClientEnd<Directory> exposed_dir,
+                              fidl::ClientEnd<fuchsia_hardware_block::Block> device,
                               const MountOptions& options) {
   auto startup_client_end = component::ConnectAt<fuchsia_fs_startup::Startup>(exposed_dir);
   if (startup_client_end.is_error())
@@ -116,8 +113,9 @@ zx::result<> StartFsComponent(fidl::UnownedClientEnd<Directory> exposed_dir, zx:
   return zx::ok();
 }
 
-zx::result<fidl::ClientEnd<Directory>> InitFsComponent(zx::channel device, DiskFormat df,
-                                                       const MountOptions& options) {
+zx::result<fidl::ClientEnd<Directory>> InitFsComponent(
+    fidl::ClientEnd<fuchsia_hardware_block::Block> device, DiskFormat df,
+    const MountOptions& options) {
   std::string_view url =
       options.component_url.empty() ? DiskFormatComponentUrl(df) : options.component_url;
   auto exposed_dir_or =
@@ -147,9 +145,8 @@ std::string StripTrailingSlash(const char* in) {
   std::string_view view(in, strlen(in));
   if (!view.empty() && view.back() == '/') {
     return std::string(view.substr(0, view.length() - 1));
-  } else {
-    return std::string(view);
   }
+  return std::string(view);
 }
 
 }  // namespace
@@ -315,18 +312,16 @@ zx::result<StartedSingleVolumeFilesystem> Mount(fbl::unique_fd device_fd, DiskFo
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
-  // get the device handle from the device_fd
-  zx_status_t status;
-  zx::channel device;
-  status = fdio_get_service_handle(device_fd.release(), device.reset_and_get_address());
-  if (status != ZX_OK) {
-    return zx::error(status);
+  fdio_cpp::FdioCaller caller(std::move(device_fd));
+  zx::result device = caller.take_as<fuchsia_hardware_block::Block>();
+  if (device.is_error()) {
+    return device.take_error();
   }
 
   StartedSingleVolumeFilesystem fs;
   if (options.component_child_name) {
     // Componentized filesystem
-    auto exposed_dir = InitFsComponent(std::move(device), df, options);
+    auto exposed_dir = InitFsComponent(std::move(device.value()), df, options);
     if (exposed_dir.is_error()) {
       return exposed_dir.take_error();
     }
@@ -337,7 +332,7 @@ zx::result<StartedSingleVolumeFilesystem> Mount(fbl::unique_fd device_fd, DiskFo
     if (binary.empty()) {
       return zx::error(ZX_ERR_NOT_SUPPORTED);
     }
-    auto export_root = InitNativeFs(binary.c_str(), std::move(device), options, cb);
+    auto export_root = InitNativeFs(binary.c_str(), std::move(device.value()), options, cb);
     if (export_root.is_error()) {
       return export_root.take_error();
     }
@@ -355,15 +350,13 @@ zx::result<StartedMultiVolumeFilesystem> MountMultiVolume(fbl::unique_fd device_
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
-  // get the device handle from the device_fd
-  zx_status_t status;
-  zx::channel device;
-  status = fdio_get_service_handle(device_fd.release(), device.reset_and_get_address());
-  if (status != ZX_OK) {
-    return zx::error(status);
+  fdio_cpp::FdioCaller caller(std::move(device_fd));
+  zx::result device = caller.take_as<fuchsia_hardware_block::Block>();
+  if (device.is_error()) {
+    return device.take_error();
   }
 
-  auto outgoing_dir = InitFsComponent(std::move(device), df, options);
+  auto outgoing_dir = InitFsComponent(std::move(device.value()), df, options);
   if (outgoing_dir.is_error()) {
     return outgoing_dir.take_error();
   }
@@ -378,15 +371,13 @@ zx::result<StartedSingleVolumeMultiVolumeFilesystem> MountMultiVolumeWithDefault
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
-  // get the device handle from the device_fd
-  zx_status_t status;
-  zx::channel device;
-  status = fdio_get_service_handle(device_fd.release(), device.reset_and_get_address());
-  if (status != ZX_OK) {
-    return zx::error(status);
+  fdio_cpp::FdioCaller caller(std::move(device_fd));
+  zx::result device = caller.take_as<fuchsia_hardware_block::Block>();
+  if (device.is_error()) {
+    return device.take_error();
   }
 
-  auto outgoing_dir_or = InitFsComponent(std::move(device), df, options);
+  auto outgoing_dir_or = InitFsComponent(std::move(device.value()), df, options);
   if (outgoing_dir_or.is_error()) {
     return outgoing_dir_or.take_error();
   }

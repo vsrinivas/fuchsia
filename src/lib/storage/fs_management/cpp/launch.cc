@@ -12,6 +12,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zx/process.h>
 #include <stdarg.h>
@@ -23,8 +24,6 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
-
-#include "src/lib/storage/fs_management/cpp/mount.h"
 
 namespace fs_management {
 namespace {
@@ -43,31 +42,18 @@ void InitActions(std::vector<std::pair<uint32_t, zx::handle>> handles,
 
 constexpr size_t kMaxStdioActions = 1;
 
-zx_handle_t RetriveWriteOnlyDebuglogHandle() {
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    fprintf(stderr, "fs-management: Cannot create channel: %d (%s)\n", status,
-            zx_status_get_string(status));
-    return ZX_HANDLE_INVALID;
+zx::result<zx::debuglog> RetriveWriteOnlyDebuglogHandle() {
+  zx::result local = component::Connect<fboot::WriteOnlyLog>();
+  if (local.is_error()) {
+    return local.take_error();
   }
 
-  status = fdio_service_connect(fidl::DiscoverableProtocolDefaultPath<fboot::WriteOnlyLog>,
-                                remote.release());
-  if (status != ZX_OK) {
-    fprintf(stderr, "fs-management: Failed to connect to WriteOnlyLog: %d (%s)\n", status,
-            zx_status_get_string(status));
-    return ZX_HANDLE_INVALID;
+  fidl::WireResult result = fidl::WireCall(local.value())->Get();
+  if (!result.ok()) {
+    return zx::error(result.status());
   }
 
-  auto resp = fidl::WireCall<fboot::WriteOnlyLog>(zx::unowned(local))->Get();
-  if (!resp.ok()) {
-    fprintf(stderr, "fs-management: WriteOnlyLogGet failed: %d (%s)\n", resp.status(),
-            zx_status_get_string(resp.status()));
-    return ZX_HANDLE_INVALID;
-  }
-
-  return resp.value().log.release();
+  return zx::ok(std::move(result.value().log));
 }
 
 // Initializes Stdio.
@@ -81,11 +67,14 @@ void InitStdio(const LaunchOptions& options, fdio_spawn_action_t* actions, size_
                uint32_t* flags) {
   switch (options.logging) {
     case LaunchOptions::Logging::kSyslog: {
-      zx_handle_t h = RetriveWriteOnlyDebuglogHandle();
-      if (h != ZX_HANDLE_INVALID) {
+      zx::result h = RetriveWriteOnlyDebuglogHandle();
+      if (h.is_error()) {
+        fprintf(stderr, "fs-management: Failed to retrieve WriteOnlyLog: %d (%s)\n",
+                h.status_value(), h.status_string());
+      } else {
         actions[*action_count].action = FDIO_SPAWN_ACTION_ADD_HANDLE;
         actions[*action_count].h.id = PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO);
-        actions[*action_count].h.handle = h;
+        actions[*action_count].h.handle = h.value().release();
         *action_count += 1;
       }
       *flags &= ~FDIO_SPAWN_CLONE_STDIO;
@@ -104,10 +93,12 @@ void InitStdio(const LaunchOptions& options, fdio_spawn_action_t* actions, size_
 //
 // Optionally blocks, waiting for the process to terminate, depending
 // the value provided in |block|.
-zx_status_t Spawn(const LaunchOptions& options, uint32_t flags, std::vector<std::string> argv,
-                  size_t action_count, const fdio_spawn_action_t* actions) {
+zx_status_t Spawn(const LaunchOptions& options, uint32_t flags,
+                  const std::vector<std::string>& argv, size_t action_count,
+                  const fdio_spawn_action_t* actions) {
   std::vector<const char*> argv_cstr;
 
+  argv_cstr.reserve(argv.size() + 1);
   for (const std::string& arg : argv) {
     argv_cstr.push_back(arg.c_str());
   }
@@ -148,7 +139,7 @@ zx_status_t Spawn(const LaunchOptions& options, uint32_t flags, std::vector<std:
 }  // namespace
 
 __EXPORT
-zx_status_t Launch(std::vector<std::string> argv,
+zx_status_t Launch(const std::vector<std::string>& argv,
                    std::vector<std::pair<uint32_t, zx::handle>> handles,
                    const LaunchOptions& options) {
   size_t action_count = handles.size();
@@ -158,41 +149,41 @@ zx_status_t Launch(std::vector<std::string> argv,
   uint32_t flags = FDIO_SPAWN_CLONE_ALL;
   InitStdio(options, actions, &action_count, &flags);
 
-  return Spawn(options, flags, std::move(argv), action_count, actions);
+  return Spawn(options, flags, argv, action_count, actions);
 }
 
 __EXPORT
-zx_status_t LaunchSilentSync(std::vector<std::string> args,
+zx_status_t LaunchSilentSync(const std::vector<std::string>& args,
                              std::vector<std::pair<uint32_t, zx::handle>> handles) {
-  return Launch(std::move(args), std::move(handles),
+  return Launch(args, std::move(handles),
                 LaunchOptions{.sync = true, .logging = LaunchOptions::Logging::kSilent});
 }
 
 __EXPORT
-zx_status_t LaunchSilentAsync(std::vector<std::string> args,
+zx_status_t LaunchSilentAsync(const std::vector<std::string>& args,
                               std::vector<std::pair<uint32_t, zx::handle>> handles) {
-  return Launch(std::move(args), std::move(handles),
+  return Launch(args, std::move(handles),
                 LaunchOptions{.sync = false, .logging = LaunchOptions::Logging::kSilent});
 }
 
 __EXPORT
-zx_status_t LaunchStdioSync(std::vector<std::string> args,
+zx_status_t LaunchStdioSync(const std::vector<std::string>& args,
                             std::vector<std::pair<uint32_t, zx::handle>> handles) {
-  return Launch(std::move(args), std::move(handles),
+  return Launch(args, std::move(handles),
                 LaunchOptions{.sync = true, .logging = LaunchOptions::Logging::kStdio});
 }
 
 __EXPORT
-zx_status_t LaunchStdioAsync(std::vector<std::string> args,
+zx_status_t LaunchStdioAsync(const std::vector<std::string>& args,
                              std::vector<std::pair<uint32_t, zx::handle>> handles) {
-  return Launch(std::move(args), std::move(handles),
+  return Launch(args, std::move(handles),
                 LaunchOptions{.sync = false, .logging = LaunchOptions::Logging::kStdio});
 }
 
 __EXPORT
-zx_status_t LaunchLogsAsync(std::vector<std::string> args,
+zx_status_t LaunchLogsAsync(const std::vector<std::string>& args,
                             std::vector<std::pair<uint32_t, zx::handle>> handles) {
-  return Launch(std::move(args), std::move(handles),
+  return Launch(args, std::move(handles),
                 LaunchOptions{.sync = false, .logging = LaunchOptions::Logging::kSyslog});
 }
 

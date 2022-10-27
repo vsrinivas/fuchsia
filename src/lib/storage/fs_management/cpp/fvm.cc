@@ -10,9 +10,6 @@
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <fuchsia/hardware/block/c/fidl.h>
-#include <fuchsia/hardware/block/partition/c/fidl.h>
-#include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -102,16 +99,17 @@ zx_status_t DestroyFvmAndWait(int devfs_root_fd, fbl::unique_fd parent_fd, fbl::
 
 // Helper function to overwrite FVM given the slice_size
 zx_status_t FvmOverwriteImpl(const fbl::unique_fd& fd, size_t slice_size) {
-  fuchsia_hardware_block_BlockInfo block_info;
-  fdio_cpp::UnownedFdioCaller disk_connection(fd.get());
-  zx::unowned_channel channel(disk_connection.borrow_channel());
-  zx_status_t status;
-  zx_status_t io_status = fuchsia_hardware_block_BlockGetInfo(channel->get(), &status, &block_info);
-  if (io_status != ZX_OK) {
-    return io_status;
-  } else if (status != ZX_OK) {
+  fdio_cpp::UnownedFdioCaller caller(fd.get());
+  const fidl::WireResult result =
+      fidl::WireCall(caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+  if (!result.ok()) {
+    return result.status();
+  }
+  const fidl::WireResponse response = result.value();
+  if (zx_status_t status = response.status; status != ZX_OK) {
     return status;
   }
+  const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
 
   size_t disk_size = block_info.block_count * block_info.block_size;
   fvm::Header header = fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, disk_size, slice_size);
@@ -127,11 +125,15 @@ zx_status_t FvmOverwriteImpl(const fbl::unique_fd& fd, size_t slice_size) {
     return ZX_ERR_IO;
   }
 
-  io_status = fuchsia_hardware_block_BlockRebindDevice(channel->get(), &status);
-  if (io_status != ZX_OK) {
-    return io_status;
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(caller.borrow_as<fuchsia_hardware_block::Block>())->RebindDevice();
+    if (!result.ok()) {
+      return result.status();
+    }
+    const fidl::WireResponse response = result.value();
+    return response.status;
   }
-  return status;
 }
 
 zx_status_t FvmAllocatePartitionImpl(int fvm_fd, const alloc_req_t* request) {
@@ -188,9 +190,7 @@ zx::result<fbl::unique_fd> OpenPartitionImpl(DIR* dir, std::string_view out_path
   info.out_partition.reset();
 
   auto cb = [](int dirfd, int event, const char* fn, void* cookie) {
-    if (event != WATCH_EVENT_ADD_FILE) {
-      return ZX_OK;
-    } else if ((strcmp(fn, ".") == 0) || strcmp(fn, "..") == 0) {
+    if (event != WATCH_EVENT_ADD_FILE || std::string_view{fn} == ".") {
       return ZX_OK;
     }
     auto info = static_cast<AllocHelperInfo*>(cookie);
@@ -331,11 +331,12 @@ zx_status_t FvmInitPreallocated(int fd, uint64_t initial_volume_size, uint64_t m
   if (slice_size % fvm::kBlockSize != 0) {
     // Alignment
     return ZX_ERR_INVALID_ARGS;
-  } else if ((slice_size * fvm::kMaxVSlices) / fvm::kMaxVSlices != slice_size) {
+  }
+  if ((slice_size * fvm::kMaxVSlices) / fvm::kMaxVSlices != slice_size) {
     // Overflow
     return ZX_ERR_INVALID_ARGS;
-  } else if (initial_volume_size > max_volume_size || initial_volume_size == 0 ||
-             max_volume_size == 0) {
+  }
+  if (initial_volume_size > max_volume_size || initial_volume_size == 0 || max_volume_size == 0) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -394,9 +395,11 @@ zx_status_t FvmInit(int fd, size_t slice_size) {
       fuchsia_hardware_block_BlockGetInfo(disk_connection.borrow_channel(), &status, &block_info);
   if (io_status != ZX_OK) {
     return io_status;
-  } else if (status != ZX_OK) {
+  }
+  if (status != ZX_OK) {
     return status;
-  } else if (slice_size == 0 || slice_size % block_info.block_size) {
+  }
+  if (slice_size == 0 || slice_size % block_info.block_size) {
     return ZX_ERR_BAD_STATE;
   }
 
@@ -485,17 +488,16 @@ __EXPORT
 zx::result<fuchsia_hardware_block_volume::wire::VolumeManagerInfo> FvmQuery(int fvm_fd) {
   fdio_cpp::UnownedFdioCaller caller(fvm_fd);
 
-  auto response =
-      fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager>(
-                         caller.borrow_channel()))
-          ->GetInfo();
-
-  if (response.status() != ZX_OK)
-    return zx::error(response.status());
-  if (response.value().status != ZX_OK)
-    return zx::error(response.value().status);
-
-  return zx::ok(*response.value().info);
+  const fidl::WireResult result =
+      fidl::WireCall(caller.borrow_as<fuchsia_hardware_block_volume::VolumeManager>())->GetInfo();
+  if (!result.ok()) {
+    return zx::error(result.status());
+  }
+  const fidl::WireResponse response = result.value();
+  if (zx_status_t status = response.status; status != ZX_OK) {
+    return zx::error(status);
+  }
+  return zx::ok(*response.info);
 }
 
 __EXPORT

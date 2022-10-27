@@ -126,8 +126,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/lib/loader_service:loader_service_test",
     "//src/lib/loader_service:loader_service_test_fixture",
     "//src/lib/storage/block_client/cpp",
-    "//src/lib/storage/fs_management/cpp:fs-management",
-    "//src/lib/storage/fs_management/cpp:fs-management-test",
     "//src/media/audio/drivers/lib/intel-hda",
     "//src/media/audio/drivers/usb-audio:shared",
     "//src/media/audio/drivers/usb-audio:usb-audio-driver",

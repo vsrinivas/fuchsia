@@ -25,31 +25,31 @@ struct LaunchOptions {
 };
 
 // Callback that will launch the requested program.
-using LaunchCallback = zx_status_t (*)(std::vector<std::string> args,
+using LaunchCallback = zx_status_t (*)(const std::vector<std::string>& args,
                                        std::vector<std::pair<uint32_t, zx::handle>> handles);
 
-zx_status_t Launch(std::vector<std::string> args,
+zx_status_t Launch(const std::vector<std::string>& args,
                    std::vector<std::pair<uint32_t, zx::handle>> handles,
                    const LaunchOptions& options);
 
 // Creates no logs, waits for process to terminate.
-zx_status_t LaunchSilentSync(std::vector<std::string> args,
+zx_status_t LaunchSilentSync(const std::vector<std::string>& args,
                              std::vector<std::pair<uint32_t, zx::handle>> handles);
 
 // Creates no logs, does not wait for process to terminate.
-zx_status_t LaunchSilentAsync(std::vector<std::string> args,
+zx_status_t LaunchSilentAsync(const std::vector<std::string>& args,
                               std::vector<std::pair<uint32_t, zx::handle>> handles);
 
 // Creates stdio logs, waits for process to terminate.
-zx_status_t LaunchStdioSync(std::vector<std::string> args,
+zx_status_t LaunchStdioSync(const std::vector<std::string>& args,
                             std::vector<std::pair<uint32_t, zx::handle>> handles);
 
 // Creates stdio logs, does not wait for process to terminate.
-zx_status_t LaunchStdioAsync(std::vector<std::string> args,
+zx_status_t LaunchStdioAsync(const std::vector<std::string>& args,
                              std::vector<std::pair<uint32_t, zx::handle>> handles);
 
 // Creates kernel logs, does not wait for process to terminate.
-zx_status_t LaunchLogsAsync(std::vector<std::string> args,
+zx_status_t LaunchLogsAsync(const std::vector<std::string>& args,
                             std::vector<std::pair<uint32_t, zx::handle>> handles);
 
 }  // namespace fs_management

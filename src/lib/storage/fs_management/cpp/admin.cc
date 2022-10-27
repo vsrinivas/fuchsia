@@ -16,27 +16,25 @@
 
 #include <fbl/vector.h>
 
-#include "src/lib/storage/fs_management/cpp/component.h"
-#include "src/lib/storage/fs_management/cpp/mount.h"
-#include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
-
 namespace fs_management {
 
 __EXPORT
 zx::result<fidl::ClientEnd<fuchsia_io::Directory>> FsRootHandle(
     fidl::UnownedClientEnd<fuchsia_io::Directory> export_root, fuchsia_io::wire::OpenFlags flags) {
-  zx::channel root_client, root_server;
-  auto status = zx::make_result(zx::channel::create(0, &root_client, &root_server));
-  if (status.is_error()) {
-    return status.take_error();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (endpoints.is_error()) {
+    return endpoints.take_error();
+  }
+  auto& [client, server] = endpoints.value();
+
+  const fidl::WireResult result =
+      fidl::WireCall(export_root)
+          ->Open(flags, 0, "root", fidl::ServerEnd<fuchsia_io::Node>(server.TakeChannel()));
+  if (!result.ok()) {
+    return zx::error(result.status());
   }
 
-  auto resp = fidl::WireCall(export_root)->Open(flags, 0, "root", std::move(root_server));
-  if (!resp.ok()) {
-    return zx::error(resp.status());
-  }
-
-  return zx::ok(fidl::ClientEnd<fuchsia_io::Directory>(std::move(root_client)));
+  return zx::ok(std::move(client));
 }
 
 }  // namespace fs_management

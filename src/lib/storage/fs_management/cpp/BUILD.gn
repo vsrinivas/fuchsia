@@ -34,7 +34,6 @@ if (is_fuchsia) {
       "volumes.cc",
     ]
     public_deps = [
-      "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
       "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_cpp",
       "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
       "//sdk/lib/fidl",
@@ -46,10 +45,8 @@ if (is_fuchsia) {
       "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp_wire",
       "//sdk/fidl/fuchsia.component:fuchsia.component_cpp_wire",
       "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
-      "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
       "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_cpp_wire",
-      "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_c",
-      "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
+      "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_cpp_wire",
       "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_cpp_wire",
       "//sdk/lib/sys/component/cpp",
       "//src/lib/digest",
@@ -66,15 +63,6 @@ if (is_fuchsia) {
       "//zircon/system/ulib/zx",
       "//zircon/system/ulib/zxc",
     ]
-
-    # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-    # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-    # See linked bug for details.
-    configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
-
-    # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-    # Consider switching to the C++ bindings. See linked bug for details.
-    public_configs = [ "//build/c:fidl-deprecated-c-bindings" ]
   }
 } else {
   source_set("fs-management") {
@@ -83,10 +71,6 @@ if (is_fuchsia) {
       "fvm.h",
       "launch.h",
     ]
-
-    # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-    # Consider switching to the C++ bindings. See linked bug for details.
-    public_configs = [ "//build/c:fidl-deprecated-c-bindings" ]
   }
 }
 
@@ -109,10 +93,6 @@ test("fs-management-unittest") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fdio-caller",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_unittest_component("fs-management-unittest-component") {
@@ -158,10 +138,6 @@ test("fs-management-test") {
     "//zircon/third_party/uapp/fsck-msdosfs",
     "//zircon/third_party/uapp/mkfs-msdosfs",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_component("fs-management-test-component") {
