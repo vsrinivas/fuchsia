@@ -262,10 +262,7 @@ impl NetworkSelector {
     /// Only networks that are both saved and visible in the most recent scan results are eligible
     /// for consideration. Among those, the "best" network based on compatibility and quality (e.g.
     /// RSSI, recent failures) is selected.
-    pub(crate) async fn find_best_connection_candidate(
-        &self,
-        ignore_list: &Vec<types::NetworkIdentifier>,
-    ) -> Option<types::ScannedCandidate> {
+    pub(crate) async fn find_best_connection_candidate(&self) -> Option<types::ScannedCandidate> {
         // Log a metric for scan age
         let last_scan_result_time = *self.last_scan_result_time.lock().await;
         let scan_age = zx::Time::get_monotonic() - last_scan_result_time;
@@ -304,11 +301,7 @@ impl NetworkSelector {
         };
 
         let mut inspect_node = self.inspect_node_for_network_selections.lock().await;
-        let result = match select_best_connection_candidate(
-            candidate_networks,
-            ignore_list,
-            &mut inspect_node,
-        ) {
+        let result = match select_best_connection_candidate(candidate_networks, &mut inspect_node) {
             Some((selected, channel, bssid)) => Some(
                 augment_bss_with_active_scan(selected, channel, bssid, self.scan_requester.clone())
                     .await,
@@ -342,17 +335,16 @@ impl NetworkSelector {
                 )
                 .await;
                 let num_candidates = Ok(networks.len());
-                let ignore_list = vec![];
                 let mut inspect_node = self.inspect_node_for_network_selections.lock().await;
-                let result =
-                    select_best_connection_candidate(networks, &ignore_list, &mut inspect_node)
-                        .map(|(mut scanned_candidate, _, _)| {
-                            // Strip out the information about passive vs active scan, because we can't know
-                            // if this network would have been observed in a passive scan (since we never
-                            // performed a passive scan).
-                            scanned_candidate.observation = types::ScanObservation::Unknown;
-                            scanned_candidate
-                        });
+                let result = select_best_connection_candidate(networks, &mut inspect_node).map(
+                    |(mut scanned_candidate, _, _)| {
+                        // Strip out the information about passive vs active scan, because we can't know
+                        // if this network would have been observed in a passive scan (since we never
+                        // performed a passive scan).
+                        scanned_candidate.observation = types::ScanObservation::Unknown;
+                        scanned_candidate
+                    },
+                );
                 (result, num_candidates)
             }
         };
@@ -408,7 +400,6 @@ async fn merge_saved_networks_and_scan_data(
 
 fn select_best_connection_candidate(
     bss_list: Vec<InternalBss>,
-    ignore_list: &Vec<types::NetworkIdentifier>,
     inspect_node: &mut AutoPersist<InspectBoundedListNode>,
 ) -> Option<(types::ScannedCandidate, types::WlanChan, types::Bssid)> {
     if bss_list.is_empty() {
@@ -428,11 +419,6 @@ fn select_best_connection_candidate(
                 trace!("BSS is incompatible, filtering: {:?}", bss);
                 return false;
             };
-            // Filter out networks we've been told to ignore
-            if ignore_list.contains(&bss.saved_network_info.network_id) {
-                trace!("Network is ignored, filtering: {:?}", bss);
-                return false;
-            }
             true
         })
         .max_by_key(|&bss| bss.score());
@@ -1157,7 +1143,7 @@ mod tests {
 
         // there's a network on 5G, it should get a boost and be selected
         assert_eq!(
-            select_best_connection_candidate(networks.clone(), &vec![], &mut inspect_node),
+            select_best_connection_candidate(networks.clone(), &mut inspect_node),
             Some((
                 types::ScannedCandidate {
                     network: test_id_1.clone(),
@@ -1181,7 +1167,7 @@ mod tests {
 
         // all networks are 2.4GHz, strongest RSSI network returned
         assert_eq!(
-            select_best_connection_candidate(networks.clone(), &vec![], &mut inspect_node),
+            select_best_connection_candidate(networks.clone(), &mut inspect_node),
             Some((
                 types::ScannedCandidate {
                     network: test_id_2.clone(),
@@ -1267,7 +1253,7 @@ mod tests {
 
         // stronger network returned
         assert_eq!(
-            select_best_connection_candidate(networks.clone(), &vec![], &mut inspect_node),
+            select_best_connection_candidate(networks.clone(), &mut inspect_node),
             Some((
                 types::ScannedCandidate {
                     network: test_id_1.clone(),
@@ -1291,7 +1277,7 @@ mod tests {
 
         // weaker network (with no failures) returned
         assert_eq!(
-            select_best_connection_candidate(networks.clone(), &vec![], &mut inspect_node),
+            select_best_connection_candidate(networks.clone(), &mut inspect_node),
             Some((
                 types::ScannedCandidate {
                     network: test_id_2.clone(),
@@ -1312,7 +1298,7 @@ mod tests {
 
         // stronger network returned
         assert_eq!(
-            select_best_connection_candidate(networks.clone(), &vec![], &mut inspect_node),
+            select_best_connection_candidate(networks.clone(), &mut inspect_node),
             Some((
                 types::ScannedCandidate {
                     network: test_id_1.clone(),
@@ -1418,7 +1404,7 @@ mod tests {
 
         // stronger network returned
         assert_eq!(
-            select_best_connection_candidate(networks.clone(), &vec![], &mut inspect_node),
+            select_best_connection_candidate(networks.clone(), &mut inspect_node),
             Some((
                 types::ScannedCandidate {
                     network: test_id_2.clone(),
@@ -1442,7 +1428,7 @@ mod tests {
 
         // other network returned
         assert_eq!(
-            select_best_connection_candidate(networks.clone(), &vec![], &mut inspect_node),
+            select_best_connection_candidate(networks.clone(), &mut inspect_node),
             Some((
                 types::ScannedCandidate {
                     network: test_id_1.clone(),
@@ -1454,109 +1440,6 @@ mod tests {
                 },
                 networks[0].scanned_bss.channel,
                 networks[0].scanned_bss.bssid
-            ))
-        );
-    }
-
-    #[fuchsia::test]
-    fn select_best_connection_candidate_ignore_list() {
-        let _executor = fasync::TestExecutor::new();
-        // generate Inspect nodes
-        let inspector = inspect::Inspector::new();
-        let mut inspect_node = AutoPersist::new(
-            InspectBoundedListNode::new(inspector.root().create_child("test"), 10),
-            "sample-persistence-tag",
-            create_inspect_persistence_channel().0,
-        );
-        // build networks list
-        let test_id_1 = types::NetworkIdentifier {
-            ssid: types::Ssid::try_from("foo").unwrap(),
-            security_type: types::SecurityType::Wpa3,
-        };
-        let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
-        let test_id_2 = types::NetworkIdentifier {
-            ssid: types::Ssid::try_from("bar").unwrap(),
-            security_type: types::SecurityType::Wpa,
-        };
-        let credential_2 = Credential::Password("bar_pass".as_bytes().to_vec());
-
-        let mut networks = vec![];
-
-        let mutual_security_protocols_1 = [SecurityDescriptor::WPA2_PERSONAL];
-        let bss_1 = types::Bss {
-            compatibility: Compatibility::expect_some(mutual_security_protocols_1),
-            rssi: -100,
-            ..generate_random_bss()
-        };
-        networks.push(InternalBss {
-            security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
-            saved_network_info: InternalSavedNetworkData {
-                network_id: test_id_1.clone(),
-                credential: credential_1.clone(),
-                has_ever_connected: true,
-                recent_failures: Vec::new(),
-                past_connections: PastConnectionsByBssid::new(),
-            },
-            scanned_bss: bss_1.clone(),
-            multiple_bss_candidates: false,
-            hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
-        });
-
-        let mutual_security_protocols_2 = [SecurityDescriptor::WPA2_PERSONAL];
-        let bss_2 = types::Bss {
-            compatibility: Compatibility::expect_some(mutual_security_protocols_2),
-            rssi: -12,
-            ..generate_random_bss()
-        };
-        networks.push(InternalBss {
-            security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
-            saved_network_info: InternalSavedNetworkData {
-                network_id: test_id_2.clone(),
-                credential: credential_2.clone(),
-                has_ever_connected: true,
-                recent_failures: Vec::new(),
-                past_connections: PastConnectionsByBssid::new(),
-            },
-            scanned_bss: bss_2.clone(),
-            multiple_bss_candidates: false,
-            hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
-        });
-
-        // stronger network returned
-        assert_eq!(
-            select_best_connection_candidate(networks.clone(), &vec![], &mut inspect_node),
-            Some((
-                types::ScannedCandidate {
-                    network: test_id_2.clone(),
-                    credential: credential_2.clone(),
-                    bss_description: bss_2.bss_description.clone(),
-                    observation: networks[1].scanned_bss.observation,
-                    has_multiple_bss_candidates: false,
-                    mutual_security_protocols: mutual_security_protocols_2.into_iter().collect(),
-                },
-                bss_2.channel,
-                bss_2.bssid
-            ))
-        );
-
-        // ignore the stronger network, other network returned
-        assert_eq!(
-            select_best_connection_candidate(
-                networks.clone(),
-                &vec![test_id_2.clone()],
-                &mut inspect_node
-            ),
-            Some((
-                types::ScannedCandidate {
-                    network: test_id_1.clone(),
-                    credential: credential_1.clone(),
-                    bss_description: bss_1.bss_description.clone(),
-                    observation: networks[0].scanned_bss.observation,
-                    has_multiple_bss_candidates: false,
-                    mutual_security_protocols: mutual_security_protocols_1.into_iter().collect(),
-                },
-                bss_1.channel,
-                bss_1.bssid
             ))
         );
     }
@@ -1649,7 +1532,7 @@ mod tests {
 
         // stronger network returned
         assert_eq!(
-            select_best_connection_candidate(networks.clone(), &vec![], &mut inspect_node),
+            select_best_connection_candidate(networks.clone(), &mut inspect_node),
             Some((
                 types::ScannedCandidate {
                     network: test_id_2.clone(),
@@ -1819,8 +1702,7 @@ mod tests {
         );
 
         // Kick off network selection
-        let ignore_list = vec![];
-        let network_selection_fut = network_selector.find_best_connection_candidate(&ignore_list);
+        let network_selection_fut = network_selector.find_best_connection_candidate();
         pin_mut!(network_selection_fut);
         // Check that nothing is returned
         assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Ready(None));
@@ -1970,8 +1852,7 @@ mod tests {
         ])));
 
         // Check that we pick a network
-        let ignore_list = vec![];
-        let network_selection_fut = network_selector.find_best_connection_candidate(&ignore_list);
+        let network_selection_fut = network_selector.find_best_connection_candidate();
         pin_mut!(network_selection_fut);
         let results = exec.run_singlethreaded(&mut network_selection_fut);
         assert_eq!(
@@ -2002,62 +1883,18 @@ mod tests {
             vec![(test_id_1.ssid.clone(), Some(vec![channel_1.primary]))]
         );
 
-        // Ignore that network, check that we pick the other one
-        let ignore_list = vec![test_id_1.clone()];
-        let network_selection_fut = network_selector.find_best_connection_candidate(&ignore_list);
-        pin_mut!(network_selection_fut);
-
-        exec.run_singlethreaded(
-            test_values.scan_requester.add_scan_result(Ok(mock_passive_scan_results.clone())),
-        );
-
-        // An additional directed active scan should be made for the selected network
-        let bss_desc2_active = random_fidl_bss_description!();
-        exec.run_singlethreaded(test_values.scan_requester.add_scan_result(Ok(vec![
-            types::ScanResult {
-                ssid: test_id_2.ssid.clone(),
-                security_type_detailed: types::SecurityTypeDetailed::Wpa1,
-                compatibility: types::Compatibility::Supported,
-                entries: vec![types::Bss {
-                    compatibility: wlan_common::scan::Compatibility::expect_some(
-                        mutual_security_protocols_2,
-                    ),
-                    bssid: bssid_2,
-                    bss_description: bss_desc2_active.clone(),
-                    ..generate_random_bss()
-                }],
-            },
-            generate_random_scan_result(),
-        ])));
-
-        let results = exec.run_singlethreaded(&mut network_selection_fut);
-        assert_eq!(
-            results,
-            Some(types::ScannedCandidate {
-                network: test_id_2.clone(),
-                credential: credential_2.clone(),
-                bss_description: bss_desc2_active,
-                observation: types::ScanObservation::Passive,
-                has_multiple_bss_candidates: false,
-                mutual_security_protocols: [SecurityDescriptor::WPA1].into_iter().collect(),
-            })
-        );
-
         // Check that the right scan requests were sent
         // Both initial passive scans
         assert_eq!(
             *exec.run_singlethreaded(test_values.scan_requester.scan_requests.lock()),
-            vec![scan::ScanReason::NetworkSelection, scan::ScanReason::NetworkSelection]
+            vec![scan::ScanReason::NetworkSelection]
         );
         // Both directed active scans
         assert_eq!(
             *exec.run_singlethreaded(
                 test_values.scan_requester.directed_active_scan_requests.lock()
             ),
-            vec![
-                (test_id_1.ssid.clone(), Some(vec![channel_1.primary])),
-                (test_id_2.ssid.clone(), Some(vec![channel_2.primary]))
-            ]
+            vec![(test_id_1.ssid.clone(), Some(vec![channel_1.primary])),]
         );
 
         // Check the network selections were logged
@@ -2081,23 +1918,6 @@ mod tests {
                             score: inspect::testing::AnyProperty,
                         },
                     },
-                    "1": {
-                        "@time": inspect::testing::AnyProperty,
-                        "candidates": {
-                            "0": contains {
-                                bssid_hash: inspect::testing::AnyProperty,
-                                score: inspect::testing::AnyProperty,
-                            },
-                            "1": contains {
-                                bssid_hash: inspect::testing::AnyProperty,
-                                score: inspect::testing::AnyProperty,
-                            },
-                        },
-                        "selected": contains {
-                            bssid_hash: inspect::testing::AnyProperty,
-                            score: inspect::testing::AnyProperty,
-                        },
-                    }
                 }
             },
         });
@@ -2109,22 +1929,6 @@ mod tests {
                 ctx: "network_selection::record_metrics_on_scan",
                 ..
             }))
-        );
-        assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
-            assert_variant!(event, TelemetryEvent::NetworkSelectionDecision {
-                network_selection_type: telemetry::NetworkSelectionType::Undirected,
-                num_candidates: Ok(2),
-                selected_any: true,
-            });
-        });
-
-        assert_variant!(telemetry_receiver.try_next(), Ok(Some(TelemetryEvent::LogMetricEvents { events, ctx: "NetworkSelector::perform_scan" })) => {
-            assert_eq!(events.len(), 1);
-            assert_eq!(events[0].metric_id, LAST_SCAN_AGE_WHEN_SCAN_REQUESTED_MIGRATED_METRIC_ID);
-        });
-        assert_variant!(
-            telemetry_receiver.try_next(),
-            Ok(Some(TelemetryEvent::LogMetricEvents { .. }))
         );
         assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
             assert_variant!(event, TelemetryEvent::NetworkSelectionDecision {

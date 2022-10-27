@@ -941,10 +941,7 @@ async fn initiate_network_selection(
             .telemetry_sender
             .send(TelemetryEvent::StartEstablishConnection { reset_start_time: false });
         info!("Initiating network selection for idle client interface.");
-        let fut = async move {
-            let ignore_list = vec![];
-            network_selector.find_best_connection_candidate(&ignore_list).await
-        };
+        let fut = async move { network_selector.find_best_connection_candidate().await };
         iface_manager.network_selection_futures.push(fut.boxed());
     }
 }
