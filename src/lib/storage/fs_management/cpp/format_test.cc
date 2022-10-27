@@ -4,8 +4,11 @@
 
 #include "src/lib/storage/fs_management/cpp/format.h"
 
+#include <fcntl.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/vmo.h>
 
+#include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
 #include "src/storage/testing/ram_disk.h"
@@ -15,8 +18,8 @@ namespace {
 
 constexpr uint32_t kBlockSize = ZX_PAGE_SIZE;
 
-static constexpr uint8_t kGptMagic[] = {0x45, 0x46, 0x49, 0x20, 0x50, 0x41, 0x52, 0x54,
-                                        0x00, 0x00, 0x01, 0x00, 0x5c, 0x00, 0x00, 0x00};
+constexpr uint8_t kGptMagic[] = {0x45, 0x46, 0x49, 0x20, 0x50, 0x41, 0x52, 0x54,
+                                 0x00, 0x00, 0x01, 0x00, 0x5c, 0x00, 0x00, 0x00};
 
 TEST(FormatDetectionTest, TestInvalidGptIgnored) {
   zx::vmo vmo;
@@ -24,7 +27,9 @@ TEST(FormatDetectionTest, TestInvalidGptIgnored) {
   vmo.write(kGptMagic, 0x200, sizeof(kGptMagic));
   auto ramdisk_or = storage::RamDisk::CreateWithVmo(std::move(vmo), kBlockSize);
   ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
-  ASSERT_EQ(DetectDiskFormat(ramdisk_get_block_fd(ramdisk_or->client())), kDiskFormatUnknown);
+  zx::result channel = component::Connect<fuchsia_hardware_block::Block>(ramdisk_or.value().path());
+  ASSERT_TRUE(channel.is_ok()) << channel.status_string();
+  ASSERT_EQ(DetectDiskFormat(channel.value()), kDiskFormatUnknown);
 }
 
 TEST(FormatDetectionTest, TestGptWithUnusualBlockSize) {
@@ -33,7 +38,9 @@ TEST(FormatDetectionTest, TestGptWithUnusualBlockSize) {
   vmo.write(kGptMagic, ZX_PAGE_SIZE, sizeof(kGptMagic));
   auto ramdisk_or = storage::RamDisk::CreateWithVmo(std::move(vmo), kBlockSize);
   ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
-  ASSERT_EQ(DetectDiskFormat(ramdisk_get_block_fd(ramdisk_or->client())), kDiskFormatGpt);
+  zx::result channel = component::Connect<fuchsia_hardware_block::Block>(ramdisk_or.value().path());
+  ASSERT_TRUE(channel.is_ok()) << channel.status_string();
+  ASSERT_EQ(DetectDiskFormat(channel.value()), kDiskFormatGpt);
 }
 
 TEST(FormatDetectionTest, TestVbmetaRecognised) {
@@ -53,7 +60,9 @@ TEST(FormatDetectionTest, TestVbmetaRecognised) {
 
   auto ramdisk_or = storage::RamDisk::CreateWithVmo(std::move(vmo), kBlockSize);
   ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
-  ASSERT_EQ(DetectDiskFormat(ramdisk_get_block_fd(ramdisk_or->client())), kDiskFormatVbmeta);
+  zx::result channel = component::Connect<fuchsia_hardware_block::Block>(ramdisk_or.value().path());
+  ASSERT_TRUE(channel.is_ok()) << channel.status_string();
+  ASSERT_EQ(DetectDiskFormat(channel.value()), kDiskFormatVbmeta);
 }
 
 }  // namespace

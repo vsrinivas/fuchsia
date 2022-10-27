@@ -29,26 +29,31 @@ fuchsia_hardware_nand::wire::RamNandInfo BuildConfig() {
 
 class NandDevice {
  public:
-  explicit NandDevice(fuchsia_hardware_nand::wire::RamNandInfo config = BuildConfig()) {
-    if (ramdevice_client::RamNand::Create(std::move(config), &ram_nand_) == ZX_OK) {
-      // caller_ want's to own the device, so we re-open it even though
-      // ram_nand_ already has it open.
-      fbl::unique_fd device(dup(ram_nand_->fd().get()));
-      caller_.reset(std::move(device));
+  static zx::result<NandDevice> Create(
+      fuchsia_hardware_nand::wire::RamNandInfo config = BuildConfig()) {
+    std::optional<ramdevice_client::RamNand> ram_nand;
+    if (zx_status_t status = ramdevice_client::RamNand::Create(std::move(config), &ram_nand);
+        status != ZX_OK) {
+      return zx::error(status);
     }
+    return zx::ok(NandDevice(std::move(ram_nand.value())));
   }
+
+  NandDevice(const NandDevice&) = delete;
+  NandDevice& operator=(const NandDevice&) = delete;
+
+  NandDevice(NandDevice&&) = default;
+  NandDevice& operator=(NandDevice&&) = default;
 
   ~NandDevice() = default;
 
-  bool IsValid() const { return static_cast<bool>(caller_); }
-
-  const char* path() { return ram_nand_->path(); }
-  const char* filename() { return ram_nand_->filename(); }
+  const char* path() { return ram_nand_.path(); }
+  const char* filename() { return ram_nand_.filename(); }
 
  private:
-  std::optional<ramdevice_client::RamNand> ram_nand_;
-  fdio_cpp::FdioCaller caller_;
-  DISALLOW_COPY_ASSIGN_AND_MOVE(NandDevice);
+  explicit NandDevice(ramdevice_client::RamNand ram_nand) : ram_nand_(std::move(ram_nand)) {}
+
+  ramdevice_client::RamNand ram_nand_;
 };
 
 TEST(RamNandCtlTest, TrivialLifetime) {
@@ -60,8 +65,9 @@ TEST(RamNandCtlTest, TrivialLifetime) {
   fbl::String path;
   fbl::String filename;
   {
-    NandDevice device;
-    ASSERT_TRUE(device.IsValid());
+    zx::result result = NandDevice::Create();
+    ASSERT_OK(result.status_value());
+    NandDevice& device = result.value();
     path = fbl::String(device.path());
     filename = fbl::String(device.filename());
   }
@@ -75,24 +81,24 @@ TEST(RamNandCtlTest, ExportConfig) {
   fuchsia_hardware_nand::wire::RamNandInfo config = BuildConfig();
   config.export_nand_config = true;
 
-  NandDevice device(std::move(config));
-  ASSERT_TRUE(device.IsValid());
+  zx::result device = NandDevice::Create(std::move(config));
+  ASSERT_OK(device.status_value());
 }
 
 TEST(RamNandCtlTest, ExportPartitions) {
   fuchsia_hardware_nand::wire::RamNandInfo config = BuildConfig();
   config.export_partition_map = true;
 
-  NandDevice device(std::move(config));
-  ASSERT_TRUE(device.IsValid());
+  zx::result device = NandDevice::Create(std::move(config));
+  ASSERT_OK(device.status_value());
 }
 
 TEST(RamNandCtlTest, CreateFailure) {
   fuchsia_hardware_nand::wire::RamNandInfo config = BuildConfig();
   config.nand_info.num_blocks = 0;
 
-  NandDevice device(std::move(config));
-  ASSERT_FALSE(device.IsValid());
+  zx::result device = NandDevice::Create(std::move(config));
+  ASSERT_STATUS(device.status_value(), ZX_ERR_INVALID_ARGS);
 }
 
 }  // namespace

@@ -42,12 +42,10 @@ void TestDdkGetSize(Volume::Version version, bool fvm) {
   TestDevice device;
   ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
   ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
-  fbl::unique_fd parent = device.parent();
-  fbl::unique_fd zxcrypt = device.zxcrypt();
 
   struct stat parent_buf, zxcrypt_buf;
-  ASSERT_EQ(fstat(parent.get(), &parent_buf), 0, "%s", strerror(errno));
-  ASSERT_EQ(fstat(zxcrypt.get(), &zxcrypt_buf), 0, "%s", strerror(errno));
+  ASSERT_EQ(fstat(device.parent().get(), &parent_buf), 0, "%s", strerror(errno));
+  ASSERT_EQ(fstat(device.zxcrypt().get(), &zxcrypt_buf), 0, "%s", strerror(errno));
 
   ASSERT_GT(parent_buf.st_size, zxcrypt_buf.st_size);
   EXPECT_EQ((parent_buf.st_size - zxcrypt_buf.st_size) / device.block_size(),

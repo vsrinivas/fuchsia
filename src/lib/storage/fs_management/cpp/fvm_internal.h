@@ -11,8 +11,10 @@
 
 namespace fs_management {
 
-// Checks that |partition_channel| is a partition which matches |matcher|.
-bool PartitionMatches(zx::unowned_channel& partition_channel, const PartitionMatcher& matcher);
+// Checks that |channel| is a partition which matches |matcher|.
+bool PartitionMatches(
+    fidl::UnownedClientEnd<fuchsia_hardware_block_partition::PartitionAndDevice> channel,
+    const PartitionMatcher& matcher);
 
 }  // namespace fs_management
 

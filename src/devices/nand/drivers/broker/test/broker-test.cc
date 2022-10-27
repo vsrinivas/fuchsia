@@ -32,64 +32,95 @@ constexpr uint32_t kMinBlockSize = 4;
 constexpr uint32_t kMinNumBlocks = 5;
 constexpr uint32_t kInMemoryPages = 20;
 
-using BrokerData = struct {
-  fbl::unique_fd fd;
-  fbl::String filename;
-};
-
-fbl::unique_fd OpenBroker(const char* path, fbl::String* out_filename) {
-  BrokerData broker_data;
-
-  auto callback = [](int dir_fd, int event, const char* filename, void* cookie) {
-    if (event != WATCH_EVENT_ADD_FILE || strcmp(filename, "broker") != 0) {
-      return ZX_OK;
-    }
-    BrokerData* broker_data = reinterpret_cast<BrokerData*>(cookie);
-    broker_data->fd.reset(openat(dir_fd, filename, O_RDWR));
-    broker_data->filename = fbl::String(filename);
-    return ZX_ERR_STOP;
-  };
-
-  fbl::unique_fd dir(open(path, O_RDONLY | O_DIRECTORY));
-  if (dir) {
-    zx_time_t deadline = zx_deadline_after(ZX_SEC(5));
-    fdio_watch_directory(dir.get(), callback, deadline, &broker_data);
-  }
-  *out_filename = broker_data.filename;
-  return std::move(broker_data.fd);
-}
-
 // The device under test.
 class NandDevice {
  public:
-  NandDevice();
-  ~NandDevice() {
-    if (linked_) {
-      // Since WATCH_EVENT_ADD_FILE used by OpenBroker may pick up existing files,
-      // we need to make sure the (device) file has been completely removed before returning.
-      std::unique_ptr<device_watcher::DirWatcher> watcher;
+  static zx::result<NandDevice> Create() {
+    ParentDevice& parent = *g_parent_device_;
 
-      fbl::unique_fd dir_fd(open(parent_->Path(), O_RDONLY | O_DIRECTORY));
-      ASSERT_TRUE(dir_fd);
-      ASSERT_EQ(device_watcher::DirWatcher::Create(std::move(dir_fd), &watcher), ZX_OK);
+    MaybeOwned<fuchsia_device::Controller> controller;
+    if (parent.IsBroker()) {
+      controller = parent.controller().borrow();
+    } else {
+      constexpr char kBroker[] = "nand-broker.so";
+      const fidl::WireResult result =
+          fidl::WireCall(parent.controller().borrow())->Rebind(fidl::StringView(kBroker));
+      if (!result.ok()) {
+        return zx::error(result.status());
+      }
+      const fit::result response = result.value();
+      if (response.is_error()) {
+        return zx::error(response.error_value());
+      }
 
-      // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
-      (void)fidl::WireCall(controller())->ScheduleUnbind();
-
-      ASSERT_EQ(watcher->WaitForRemoval(static_cast<std::string_view>(filename_), zx::sec(5)),
-                ZX_OK);
+      // Get the new child.
+      fbl::unique_fd dir(open(parent.Path(), O_RDONLY | O_DIRECTORY));
+      fbl::unique_fd fd;
+      if (zx_status_t status = device_watcher::RecursiveWaitForFile(dir, "broker", &fd);
+          status != ZX_OK) {
+        return zx::error(status);
+      }
+      fdio_cpp::FdioCaller caller(std::move(fd));
+      zx::result child = caller.take_as<fuchsia_device::Controller>();
+      if (child.is_error()) {
+        return child.take_error();
+      }
+      controller = std::move(child.value());
     }
+
+    if (parent.IsExternal()) {
+      // This looks like using code under test to setup the test, but this
+      // path is for external devices, not really the broker. The issue is that
+      // ParentDevice cannot query a nand device for the actual parameters.
+      const fidl::WireResult result =
+          fidl::WireCall(fidl::UnownedClientEnd<fuchsia_nand::Broker>(Get(controller).channel()))
+              ->GetInfo();
+      if (!result.ok()) {
+        printf("failed to query nand device: %s\n", result.FormatDescription().c_str());
+        return zx::error(result.status());
+      }
+      const fidl::WireResponse response = result.value();
+      if (zx_status_t status = response.status; status != ZX_OK) {
+        printf("failed to query nand device: %s\n", zx_status_get_string(status));
+        return zx::error(status);
+      }
+      parent.SetInfo(*response.info);
+    }
+
+    if (parent.Info().oob_size < kMinOobSize) {
+      fprintf(stderr, "%s:%d parent=%d min=%d\n", __FILE_NAME__, __LINE__, parent.Info().oob_size,
+              kMinOobSize);
+      return zx::error(ZX_ERR_INVALID_ARGS);
+    }
+    if (parent.Info().pages_per_block < kMinBlockSize) {
+      fprintf(stderr, "%s:%d\n", __FILE_NAME__, __LINE__);
+      return zx::error(ZX_ERR_INVALID_ARGS);
+    }
+    if (parent.NumBlocks() < kMinNumBlocks) {
+      fprintf(stderr, "%s:%d parent=%d min=%d\n", __FILE_NAME__, __LINE__, parent.NumBlocks(),
+              kMinNumBlocks);
+      return zx::error(ZX_ERR_INVALID_ARGS);
+    }
+    if (parent.NumBlocks() + parent.FirstBlock() > parent.Info().num_blocks) {
+      fprintf(stderr, "%s:%d\n", __FILE_NAME__, __LINE__);
+      return zx::error(ZX_ERR_INVALID_ARGS);
+    }
+
+    uint32_t num_blocks = parent.NumBlocks();
+    ;
+    bool full_device = num_blocks == parent.Info().num_blocks;
+    if (!full_device) {
+      // Not using the whole device, don't need to test all limits.
+      num_blocks = std::min(num_blocks, kMinNumBlocks);
+    }
+    return zx::ok(NandDevice(parent, std::move(controller), num_blocks, full_device));
   }
 
-  bool IsValid() const { return is_valid_; }
-
-  fidl::UnownedClientEnd<fuchsia_device::Controller> controller() {
-    return caller_.borrow_as<fuchsia_device::Controller>();
-  }
+  fidl::UnownedClientEnd<fuchsia_device::Controller> controller() { return Get(controller_); }
 
   // Provides a channel to issue fidl calls.
   fidl::UnownedClientEnd<fuchsia_nand::Broker> channel() {
-    return caller_.borrow_as<fuchsia_nand::Broker>();
+    return fidl::UnownedClientEnd<fuchsia_nand::Broker>(controller().channel());
   }
 
   // Wrappers for "queue" operations that take care of preserving the vmo's handle
@@ -107,61 +138,52 @@ class NandDevice {
   // pattern for the desired number of pages, skipping the pages before start.
   bool CheckPattern(uint8_t expected, int start, int num_pages, const void* memory) const;
 
-  const fuchsia_hardware_nand::wire::Info& Info() const { return parent_->Info(); }
+  const fuchsia_hardware_nand::wire::Info& Info() const { return parent_.Info(); }
 
-  uint32_t PageSize() const { return parent_->Info().page_size; }
-  uint32_t OobSize() const { return parent_->Info().oob_size; }
-  uint32_t BlockSize() const { return parent_->Info().pages_per_block; }
+  uint32_t PageSize() const { return parent_.Info().page_size; }
+  uint32_t OobSize() const { return parent_.Info().oob_size; }
+  uint32_t BlockSize() const { return parent_.Info().pages_per_block; }
   uint32_t NumBlocks() const { return num_blocks_; }
-  uint32_t NumPages() const { return num_blocks_ * BlockSize(); }
+  uint32_t NumPages() const { return NumBlocks() * BlockSize(); }
   uint32_t MaxBufferSize() const { return kInMemoryPages * (PageSize() + OobSize()); }
 
   // True when the whole device under test can be modified.
   bool IsFullDevice() const { return full_device_; }
 
  private:
-  bool ValidateNandDevice();
+  template <typename Protocol>
+  using MaybeOwned = std::variant<fidl::ClientEnd<Protocol>, fidl::UnownedClientEnd<Protocol>>;
 
-  ParentDevice* parent_ = g_parent_device_;
-  fbl::String filename_;
-  fdio_cpp::FdioCaller caller_;
-  uint32_t num_blocks_ = 0;
-  uint32_t first_block_ = 0;
-  bool full_device_ = true;
-  bool linked_ = false;
-  bool is_valid_ = false;
-};
+  NandDevice(ParentDevice& parent, MaybeOwned<fuchsia_device::Controller> controller,
+             uint32_t num_blocks, bool full_device)
+      : parent_(parent),
+        controller_(std::move(controller)),
+        num_blocks_(num_blocks),
+        full_device_(full_device) {}
 
-NandDevice::NandDevice() {
-  ZX_ASSERT(parent_->IsValid());
-  if (parent_->IsBroker()) {
-    caller_.reset(fbl::unique_fd(open(parent_->Path(), O_RDWR)));
-  } else {
-    fdio_cpp::UnownedFdioCaller caller(parent_->get());
-    const char kBroker[] = "nand-broker.so";
-    auto resp = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
-                    ->Bind(::fidl::StringView(kBroker));
-    zx_status_t status = resp.status();
-    zx_status_t call_status = ZX_OK;
-    if (resp->is_error()) {
-      call_status = resp->error_value();
-    }
-    if (status == ZX_OK) {
-      status = call_status;
-    }
-    if (status != ZX_OK) {
-      printf("Failed to bind broker\n");
-      return;
-    }
-    linked_ = true;
-    caller_.reset(OpenBroker(parent_->Path(), &filename_));
+  template <typename Protocol>
+  static fidl::UnownedClientEnd<Protocol> Get(const MaybeOwned<Protocol>& variant) {
+    return std::visit(
+        [](auto&& arg) -> fidl::UnownedClientEnd<Protocol> {
+          using T = std::decay_t<decltype(arg)>;
+          if constexpr (std::is_same_v<T, fidl::ClientEnd<Protocol>>) {
+            return arg;
+          } else if constexpr (std::is_same_v<T, fidl::UnownedClientEnd<Protocol>>) {
+            return arg;
+          }
+        },
+        variant);
   }
-  is_valid_ = ValidateNandDevice();
-}
+
+  ParentDevice& parent_;
+  MaybeOwned<fuchsia_device::Controller> controller_;
+  const uint32_t num_blocks_;
+  const bool full_device_;
+};
 
 zx_status_t NandDevice::Read(const zx::vmo& vmo, fuchsia_nand::wire::BrokerRequestData request) {
   if (!full_device_) {
-    request.offset_nand = request.offset_nand + first_block_ * BlockSize();
+    request.offset_nand = request.offset_nand + parent_.FirstBlock() * BlockSize();
     ZX_DEBUG_ASSERT(request.offset_nand < NumPages());
     ZX_DEBUG_ASSERT(request.offset_nand + request.length <= NumPages());
   }
@@ -181,8 +203,8 @@ zx_status_t NandDevice::Read(const zx::vmo& vmo, fuchsia_nand::wire::BrokerReque
 zx_status_t NandDevice::ReadBytes(const zx::vmo& vmo,
                                   fuchsia_nand::wire::BrokerRequestDataBytes request) {
   if (!full_device_) {
-    request.offset_nand =
-        request.offset_nand + static_cast<uint64_t>(first_block_) * BlockSize() * PageSize();
+    request.offset_nand = request.offset_nand +
+                          static_cast<uint64_t>(parent_.FirstBlock()) * BlockSize() * PageSize();
     ZX_DEBUG_ASSERT(request.offset_nand < NumPages());
     ZX_DEBUG_ASSERT(request.offset_nand + request.length <= NumPages());
   }
@@ -201,7 +223,7 @@ zx_status_t NandDevice::ReadBytes(const zx::vmo& vmo,
 
 zx_status_t NandDevice::Write(const zx::vmo& vmo, fuchsia_nand::wire::BrokerRequestData request) {
   if (!full_device_) {
-    request.offset_nand = request.offset_nand + first_block_ * BlockSize();
+    request.offset_nand = request.offset_nand + parent_.FirstBlock() * BlockSize();
     ZX_DEBUG_ASSERT(request.offset_nand < static_cast<uint64_t>(NumPages()) * PageSize());
     ZX_DEBUG_ASSERT(request.offset_nand + request.length <=
                     static_cast<uint64_t>(NumPages()) * PageSize());
@@ -222,8 +244,8 @@ zx_status_t NandDevice::Write(const zx::vmo& vmo, fuchsia_nand::wire::BrokerRequ
 zx_status_t NandDevice::WriteBytes(const zx::vmo& vmo,
                                    fuchsia_nand::wire::BrokerRequestDataBytes request) {
   if (!full_device_) {
-    request.offset_nand =
-        request.offset_nand + static_cast<uint64_t>(first_block_) * BlockSize() * PageSize();
+    request.offset_nand = request.offset_nand +
+                          static_cast<uint64_t>(parent_.FirstBlock()) * BlockSize() * PageSize();
     ZX_DEBUG_ASSERT(request.offset_nand < static_cast<uint64_t>(NumPages()) * PageSize());
     ZX_DEBUG_ASSERT(request.offset_nand + request.length <=
                     static_cast<uint64_t>(NumPages()) * PageSize());
@@ -243,7 +265,7 @@ zx_status_t NandDevice::WriteBytes(const zx::vmo& vmo,
 
 zx_status_t NandDevice::Erase(fuchsia_nand::wire::BrokerRequestData request) {
   if (!full_device_) {
-    request.offset_nand = request.offset_nand + first_block_;
+    request.offset_nand = request.offset_nand + parent_.FirstBlock();
     ZX_DEBUG_ASSERT(request.offset_nand < NumBlocks());
     ZX_DEBUG_ASSERT(request.offset_nand + request.length <= NumBlocks());
   }
@@ -274,65 +296,36 @@ bool NandDevice::CheckPattern(uint8_t expected, int start, int num_pages,
   return true;
 }
 
-bool NandDevice::ValidateNandDevice() {
-  if (parent_->IsExternal()) {
-    // This looks like using code under test to setup the test, but this
-    // path is for external devices, not really the broker. The issue is that
-    // ParentDevice cannot query a nand device for the actual parameters.
-    const fidl::WireResult result = fidl::WireCall(channel())->GetInfo();
-    if (!result.ok()) {
-      printf("failed to query nand device: %s\n", result.status_string());
-      return false;
-    }
-    const fidl::WireResponse response = result.value();
-    if (zx_status_t status = response.status; status != ZX_OK) {
-      printf("failed to query nand device: %s\n", zx_status_get_string(status));
-      return false;
-    }
-    parent_->SetInfo(*response.info);
-  }
-
-  num_blocks_ = parent_->NumBlocks();
-  first_block_ = parent_->FirstBlock();
-  if (OobSize() < kMinOobSize || BlockSize() < kMinBlockSize || num_blocks_ < kMinNumBlocks ||
-      num_blocks_ + first_block_ > parent_->Info().num_blocks) {
-    printf("Invalid nand device parameters\n");
-    return false;
-  }
-  if (num_blocks_ != parent_->Info().num_blocks) {
-    // Not using the whole device, don't need to test all limits.
-    num_blocks_ = std::min(num_blocks_, kMinNumBlocks);
-    full_device_ = false;
-  }
-  return true;
-}
-
 TEST(NandBrokerTest, TrivialLifetime) {
-  NandDevice device;
-  ASSERT_TRUE(device.IsValid());
+  zx::result<NandDevice> result = NandDevice::Create();
+  ASSERT_OK(result.status_value());
 }
 
 TEST(NandBrokerTest, Query) {
-  NandDevice device;
-  ASSERT_TRUE(device.IsValid());
+  zx::result result = NandDevice::Create();
+  ASSERT_OK(result.status_value());
+  NandDevice& device = result.value();
 
-  const fidl::WireResult result = fidl::WireCall(device.channel())->GetInfo();
-  ASSERT_OK(result.status());
-  const fidl::WireResponse response = result.value();
-  ASSERT_OK(response.status);
-  const fuchsia_hardware_nand::wire::Info& info = *response.info;
+  {
+    const fidl::WireResult result = fidl::WireCall(device.channel())->GetInfo();
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+    const fuchsia_hardware_nand::wire::Info& info = *response.info;
 
-  EXPECT_EQ(device.Info().page_size, info.page_size);
-  EXPECT_EQ(device.Info().oob_size, info.oob_size);
-  EXPECT_EQ(device.Info().pages_per_block, info.pages_per_block);
-  EXPECT_EQ(device.Info().num_blocks, info.num_blocks);
-  EXPECT_EQ(device.Info().ecc_bits, info.ecc_bits);
-  EXPECT_EQ(device.Info().nand_class, info.nand_class);
+    EXPECT_EQ(device.Info().page_size, info.page_size);
+    EXPECT_EQ(device.Info().oob_size, info.oob_size);
+    EXPECT_EQ(device.Info().pages_per_block, info.pages_per_block);
+    EXPECT_EQ(device.Info().num_blocks, info.num_blocks);
+    EXPECT_EQ(device.Info().ecc_bits, info.ecc_bits);
+    EXPECT_EQ(device.Info().nand_class, info.nand_class);
+  }
 }
 
 TEST(NandBrokerTest, ReadWriteLimits) {
-  NandDevice device;
-  ASSERT_TRUE(device.IsValid());
+  zx::result result = NandDevice::Create();
+  ASSERT_OK(result.status_value());
+  NandDevice& device = result.value();
 
   fzl::VmoMapper mapper;
   zx::vmo vmo;
@@ -389,8 +382,9 @@ TEST(NandBrokerTest, ReadWriteLimits) {
 }
 
 TEST(NandBrokerTest, EraseLimits) {
-  NandDevice device;
-  ASSERT_TRUE(device.IsValid());
+  zx::result result = NandDevice::Create();
+  ASSERT_OK(result.status_value());
+  NandDevice& device = result.value();
 
   EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, device.Erase({}));
 
@@ -413,8 +407,10 @@ TEST(NandBrokerTest, EraseLimits) {
 }
 
 TEST(NandBrokerTest, ReadWrite) {
-  NandDevice device;
-  ASSERT_TRUE(device.IsValid());
+  zx::result result = NandDevice::Create();
+  ASSERT_OK(result.status_value());
+  NandDevice& device = result.value();
+
   ASSERT_OK(device.EraseBlock(0));
 
   fzl::VmoMapper mapper;
@@ -440,8 +436,10 @@ TEST(NandBrokerTest, ReadWrite) {
 }
 
 TEST(NandBrokerTest, ReadWriteOob) {
-  NandDevice device;
-  ASSERT_TRUE(device.IsValid());
+  zx::result result = NandDevice::Create();
+  ASSERT_OK(result.status_value());
+  NandDevice& device = result.value();
+
   ASSERT_OK(device.EraseBlock(0));
 
   fzl::VmoMapper mapper;
@@ -476,8 +474,10 @@ TEST(NandBrokerTest, ReadWriteOob) {
 }
 
 TEST(NandBrokerTest, ReadWriteDataAndOob) {
-  NandDevice device;
-  ASSERT_TRUE(device.IsValid());
+  zx::result result = NandDevice::Create();
+  ASSERT_OK(result.status_value());
+  NandDevice& device = result.value();
+
   ASSERT_OK(device.EraseBlock(0));
 
   fzl::VmoMapper mapper;
@@ -513,8 +513,9 @@ TEST(NandBrokerTest, ReadWriteDataAndOob) {
 }
 
 TEST(NandBrokerTest, Erase) {
-  NandDevice device;
-  ASSERT_TRUE(device.IsValid());
+  zx::result result = NandDevice::Create();
+  ASSERT_OK(result.status_value());
+  NandDevice& device = result.value();
 
   fzl::VmoMapper mapper;
   zx::vmo vmo;
@@ -550,8 +551,10 @@ TEST(NandBrokerTest, Erase) {
 }
 
 TEST(NandBrokerTest, ReadWriteDataBytes) {
-  NandDevice device;
-  ASSERT_TRUE(device.IsValid());
+  zx::result result = NandDevice::Create();
+  ASSERT_OK(result.status_value());
+  NandDevice& device = result.value();
+
   ASSERT_OK(device.EraseBlock(0));
 
   fzl::VmoMapper mapper;

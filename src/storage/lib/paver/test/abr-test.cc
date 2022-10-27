@@ -136,7 +136,8 @@ class ChromebookX64AbrTests : public zxtest::Test {
     ASSERT_OK(pauser);
 
     std::unique_ptr<gpt::GptDevice> gpt;
-    ASSERT_OK(gpt::GptDevice::Create(disk_->fd(), /*blocksize=*/disk_->block_size(),
+    ASSERT_OK(gpt::GptDevice::Create(disk_->block_interface(),
+                                     /*blocksize=*/disk_->block_size(),
                                      /*blocks=*/disk_->block_count(), &gpt));
     ASSERT_OK(gpt->Sync());
     // 2 (GPT header and MBR header) blocks + number of blocks in entry array.
@@ -178,8 +179,9 @@ class ChromebookX64AbrTests : public zxtest::Test {
     fake_svc_.fake_boot_args().GetArgumentsMap().emplace("zvb.current_slot", current_slot);
     ASSERT_OK(gpt->Sync());
 
-    fdio_cpp::UnownedFdioCaller caller(disk_->fd());
-    auto result2 = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
+    // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+    auto result2 = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_device::Controller>(
+                                      disk_->block_interface().channel()))
                        ->Rebind(fidl::StringView("gpt.so"));
     ASSERT_TRUE(result2.ok());
     ASSERT_FALSE(result2->is_error());
@@ -258,7 +260,8 @@ TEST_F(ChromebookX64AbrTests, AbrAlwaysMarksRSuccessful) {
   ASSERT_OK(client->Flush().status_value());
 
   std::unique_ptr<gpt::GptDevice> gpt;
-  ASSERT_OK(gpt::GptDevice::Create(disk_->fd(), /*blocksize=*/disk_->block_size(),
+  ASSERT_OK(gpt::GptDevice::Create(disk_->block_interface(),
+                                   /*blocksize=*/disk_->block_size(),
                                    /*blocks=*/disk_->block_count(), &gpt));
   gpt_partition_t* part = GetPartitionByName(gpt, GPT_ZIRCON_R_NAME);
   ASSERT_NE(part, nullptr);
@@ -286,15 +289,17 @@ class CurrentSlotUuidTest : public zxtest::Test {
   }
 
   void CreateDiskWithPartition(const char* partition) {
-    ASSERT_OK(gpt::GptDevice::Create(disk_->fd(), /*blocksize=*/disk_->block_size(),
+    ASSERT_OK(gpt::GptDevice::Create(disk_->block_interface(),
+                                     /*blocksize=*/disk_->block_size(),
                                      /*blocks=*/disk_->block_count(), &gpt_));
     ASSERT_OK(gpt_->Sync());
     ASSERT_OK(gpt_->AddPartition(partition, kZirconType, kTestUuid,
                                  2 + gpt_->EntryArrayBlockCount(), 10, 0));
     ASSERT_OK(gpt_->Sync());
 
-    fdio_cpp::UnownedFdioCaller caller(disk_->fd());
-    auto result = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
+    // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+    auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_device::Controller>(
+                                     disk_->block_interface().channel()))
                       ->Rebind(fidl::StringView("gpt.so"));
     ASSERT_TRUE(result.ok());
     ASSERT_FALSE(result->is_error());

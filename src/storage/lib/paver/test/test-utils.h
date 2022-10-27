@@ -47,8 +47,10 @@ class BlockDevice {
 
   ~BlockDevice() { ramdisk_destroy(client_); }
 
-  // Does not transfer ownership of the file descriptor.
-  int fd() const { return ramdisk_get_block_fd(client_); }
+  fidl::UnownedClientEnd<fuchsia_hardware_block::Block> block_interface() const {
+    return fidl::UnownedClientEnd<fuchsia_hardware_block::Block>(
+        ramdisk_get_block_interface(client_));
+  }
 
   // Block count and block size of this device.
   uint64_t block_count() const { return block_count_; }

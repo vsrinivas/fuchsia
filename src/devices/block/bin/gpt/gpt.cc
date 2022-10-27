@@ -137,7 +137,8 @@ std::unique_ptr<GptDevice> Init(const char* dev) {
   printf("blocksize=0x%X blocks=%" PRIu64 "\n", info.block_size, info.block_count);
 
   std::unique_ptr<GptDevice> gpt;
-  status = GptDevice::Create(fd.get(), info.block_size, info.block_count, &gpt);
+  status = GptDevice::Create(disk_caller.borrow_as<fuchsia_hardware_block::Block>(),
+                             info.block_size, info.block_count, &gpt);
   if (status != ZX_OK) {
     fprintf(stderr, "error initializing GPT\n");
     return nullptr;

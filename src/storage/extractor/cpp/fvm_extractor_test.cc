@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/spawn.h>
 #include <lib/zx/process.h>
 #include <stdlib.h>
@@ -28,8 +29,6 @@
 #include "src/storage/extractor/c/extractor.h"
 #include "src/storage/extractor/cpp/extractor.h"
 #include "src/storage/fvm/format.h"
-#include "src/storage/lib/utils/topological_path.h"
-#include "src/storage/testing/fvm.h"
 #include "src/storage/testing/ram_disk.h"
 
 namespace extractor {
@@ -44,9 +43,11 @@ void CreateInputAndOutputStream(storage::RamDisk& ramdisk, fbl::unique_fd& input
                                 fbl::unique_fd& output) {
   input.reset(open(ramdisk.path().c_str(), O_RDWR));
 
-  ASSERT_EQ(fs_management::FvmInitPreallocated(
-                input.get(), static_cast<uint64_t>(kBlockCount) * kBlockSize,
-                static_cast<uint64_t>(kBlockCount) * kBlockSize, kSliceSize),
+  fdio_cpp::UnownedFdioCaller caller(input);
+  ASSERT_EQ(fs_management::FvmInitPreallocated(caller.borrow_as<fuchsia_hardware_block::Block>(),
+                                               static_cast<uint64_t>(kBlockCount) * kBlockSize,
+                                               static_cast<uint64_t>(kBlockCount) * kBlockSize,
+                                               kSliceSize),
             ZX_OK);
   ASSERT_TRUE(input);
   char out_path[] = "/tmp/fvm-extraction.XXXXXX";

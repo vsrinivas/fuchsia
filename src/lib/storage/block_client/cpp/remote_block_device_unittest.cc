@@ -293,17 +293,16 @@ TEST(RemoteBlockDeviceTest, WriteTransactionReadResponse) {
 // Tests that the RemoteBlockDevice is capable of transmitting and receiving
 // messages with the block device.
 TEST(RemoteBlockDeviceTest, WriteReadBlock) {
-  zx::channel client, server;
-  ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_block::Block>();
+  ASSERT_TRUE(endpoints.is_ok()) << endpoints.status_string();
+  auto& [client, server] = endpoints.value();
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
   MockBlockDevice mock_device;
-  ASSERT_EQ(mock_device.Bind(loop.dispatcher(), std::move(server)), ZX_OK);
+  ASSERT_EQ(mock_device.Bind(loop.dispatcher(), server.TakeChannel()), ZX_OK);
 
-  int client_fd;
-  ASSERT_EQ(fdio_fd_create(client.get(), &client_fd), ZX_OK);
   constexpr size_t max_count = 3;
 
   std::vector<uint8_t> write_buffer(kBlockSize * max_count + 5),
@@ -313,22 +312,22 @@ TEST(RemoteBlockDeviceTest, WriteReadBlock) {
     write_buffer[i] = static_cast<uint8_t>(i % 251);
   }
   // Test that unaligned counts and offsets result in failures:
-  ASSERT_NE(SingleWriteBytes(client_fd, write_buffer.data(), 5, 0), ZX_OK);
-  ASSERT_NE(SingleWriteBytes(client_fd, write_buffer.data(), kBlockSize, 5), ZX_OK);
-  ASSERT_NE(SingleWriteBytes(client_fd, nullptr, kBlockSize, 0), ZX_OK);
-  ASSERT_NE(SingleReadBytes(client_fd, read_buffer.data(), 5, 0), ZX_OK);
-  ASSERT_NE(SingleReadBytes(client_fd, read_buffer.data(), kBlockSize, 5), ZX_OK);
-  ASSERT_NE(SingleReadBytes(client_fd, nullptr, kBlockSize, 0), ZX_OK);
+  ASSERT_NE(SingleWriteBytes(client, write_buffer.data(), 5, 0), ZX_OK);
+  ASSERT_NE(SingleWriteBytes(client, write_buffer.data(), kBlockSize, 5), ZX_OK);
+  ASSERT_NE(SingleWriteBytes(client, nullptr, kBlockSize, 0), ZX_OK);
+  ASSERT_NE(SingleReadBytes(client, read_buffer.data(), 5, 0), ZX_OK);
+  ASSERT_NE(SingleReadBytes(client, read_buffer.data(), kBlockSize, 5), ZX_OK);
+  ASSERT_NE(SingleReadBytes(client, nullptr, kBlockSize, 0), ZX_OK);
 
   // test multiple counts, multiple offsets
   for (uint64_t count = 1; count < max_count; ++count) {
     for (uint64_t offset = 0; offset < 2; ++offset) {
       size_t buffer_offset = count + 10 * offset;
-      ASSERT_EQ(SingleWriteBytes(client_fd, write_buffer.data() + buffer_offset, kBlockSize * count,
+      ASSERT_EQ(SingleWriteBytes(client, write_buffer.data() + buffer_offset, kBlockSize * count,
                                  kBlockSize * offset),
                 ZX_OK);
       ASSERT_EQ(
-          SingleReadBytes(client_fd, read_buffer.data(), kBlockSize * count, kBlockSize * offset),
+          SingleReadBytes(client, read_buffer.data(), kBlockSize * count, kBlockSize * offset),
           ZX_OK);
       ASSERT_EQ(memcmp(write_buffer.data() + buffer_offset, read_buffer.data(), kBlockSize * count),
                 0);

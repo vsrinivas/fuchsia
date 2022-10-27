@@ -1,20 +1,22 @@
 // Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 #include <fcntl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/result.h>
+#include <zircon/errors.h>
 
 #include <utility>
 
 #include <fbl/unique_fd.h>
+#include <gtest/gtest.h>
 
-#include "gtest/gtest.h"
 #include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/storage/fs_test/fs_test_fixture.h"
 #include "storage/buffer/owned_vmoid.h"
-#include "zircon/errors.h"
 
 namespace fs_test {
 namespace {
@@ -30,8 +32,11 @@ void CreateFxFile(const std::string& file_name, const off_t file_size = 1024 * 1
 
 TEST_P(DeviceTest, TestValidDiskFormat) {
   ASSERT_TRUE(fs().Unmount().is_ok());
-  fbl::unique_fd device_fd(open(fs().DevicePath()->c_str(), O_RDWR));
-  ASSERT_EQ(fs_management::DetectDiskFormat(device_fd.get()), fs_management::kDiskFormatFxfs);
+  zx::result path = fs().DevicePath();
+  ASSERT_TRUE(path.is_ok());
+  zx::result channel = component::Connect<fuchsia_hardware_block::Block>(path.value());
+  ASSERT_TRUE(channel.is_ok());
+  ASSERT_EQ(fs_management::DetectDiskFormat(channel.value()), fs_management::kDiskFormatFxfs);
 }
 
 TEST_P(DeviceTest, TestWriteThenRead) {

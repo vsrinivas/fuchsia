@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_STORAGE_BLOCK_CLIENT_CPP_REMOTE_BLOCK_DEVICE_H_
 #define SRC_LIB_STORAGE_BLOCK_CLIENT_CPP_REMOTE_BLOCK_DEVICE_H_
 
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
@@ -57,8 +58,10 @@ class RemoteBlockDevice final : public BlockDevice {
 // buffer_size and offset are considered sizes in bytes, although
 // reading and writing can only be done in whole block increments.
 // buffer must be pre-allocated to the correct size.
-zx_status_t SingleReadBytes(int fd, void* buffer, size_t buffer_size, size_t offset);
-zx_status_t SingleWriteBytes(int fd, void* buffer, size_t buffer_size, size_t offset);
+zx_status_t SingleReadBytes(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device,
+                            void* buffer, size_t buffer_size, size_t offset);
+zx_status_t SingleWriteBytes(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device,
+                             void* buffer, size_t buffer_size, size_t offset);
 
 }  // namespace block_client
 

@@ -10,6 +10,7 @@
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <stddef.h>
@@ -84,44 +85,40 @@ class TestDevice final {
   // Returns the size of the zxcrypt volume.
   size_t size() const { return block_count_ * block_size_; }
 
-  // Returns a duplicated file descriptor representing the zxcrypt volume's underlying device;
-  // that is, the ramdisk or FVM partition.
-  fbl::unique_fd parent() const {
-    if (fvm_part_) {
-      return fvm_part_.duplicate();
-    } else {
-      return fbl::unique_fd(dup(ramdisk_get_block_fd(ramdisk_)));
-    }
-  }
+  const fbl::unique_fd& parent() const { return parent_; }
 
-  fbl::unique_fd devfs_root() const { return devmgr_.devfs_root().duplicate(); }
+  const fbl::unique_fd& devfs_root() const { return devmgr_.devfs_root(); }
 
-  // Returns a duplicated file descriptor representing t the zxcrypt volume.
-  fbl::unique_fd zxcrypt() const { return zxcrypt_.duplicate(); }
+  const fbl::unique_fd& zxcrypt() const { return zxcrypt_; }
 
   // Returns a connection to the parent device.
   fidl::UnownedClientEnd<fuchsia_device::Controller> parent_controller() const {
-    return parent_caller_.borrow_as<fuchsia_device::Controller>();
+    fdio_cpp::UnownedFdioCaller caller(parent_);
+    return caller.borrow_as<fuchsia_device::Controller>();
   }
 
   // Returns a connection to the parent device.
   fidl::UnownedClientEnd<fuchsia_hardware_block::Block> parent_block() const {
-    return parent_caller_.borrow_as<fuchsia_hardware_block::Block>();
+    fdio_cpp::UnownedFdioCaller caller(parent_);
+    return caller.borrow_as<fuchsia_hardware_block::Block>();
   }
 
   // Returns a connection to the parent device.
   fidl::UnownedClientEnd<fuchsia_hardware_block_volume::Volume> parent_volume() const {
-    return parent_caller_.borrow_as<fuchsia_hardware_block_volume::Volume>();
+    fdio_cpp::UnownedFdioCaller caller(parent_);
+    return caller.borrow_as<fuchsia_hardware_block_volume::Volume>();
   }
 
   // Returns a connection to the zxcrypt device.
   fidl::UnownedClientEnd<fuchsia_hardware_block::Block> zxcrypt_block() const {
-    return zxcrypt_caller_.borrow_as<fuchsia_hardware_block::Block>();
+    fdio_cpp::UnownedFdioCaller caller(zxcrypt_);
+    return caller.borrow_as<fuchsia_hardware_block::Block>();
   }
 
   // Returns a connection to the zxcrypt device.
   fidl::UnownedClientEnd<fuchsia_hardware_block_volume::Volume> zxcrypt_volume() const {
-    return zxcrypt_caller_.borrow_as<fuchsia_hardware_block_volume::Volume>();
+    fdio_cpp::UnownedFdioCaller caller(zxcrypt_);
+    return caller.borrow_as<fuchsia_hardware_block_volume::Volume>();
   }
 
   // Returns the block size of the zxcrypt device.
@@ -133,12 +130,12 @@ class TestDevice final {
   // Returns space reserved for metadata
   size_t reserved_blocks() const {
     std::unique_ptr<FdioVolume> volume;
-    FdioVolume::Unlock(parent(), key_, 0, &volume);
+    FdioVolume::Unlock(parent().duplicate(), key_, 0, &volume);
     return volume->reserved_blocks();
   }
   size_t reserved_slices() const {
     std::unique_ptr<FdioVolume> volume;
-    FdioVolume::Unlock(parent(), key_, 0, &volume);
+    FdioVolume::Unlock(parent().duplicate(), key_, 0, &volume);
     return volume->reserved_slices();
   }
 
@@ -262,12 +259,8 @@ class TestDevice final {
 
   // The pathname of the FVM partition.
   char fvm_part_path_[PATH_MAX];
-  // A channel-exposing wrapper around the parent device.
-  fdio_cpp::UnownedFdioCaller parent_caller_;
-  // A channel-exposing wrapper around the zxcrypt device.
-  fdio_cpp::UnownedFdioCaller zxcrypt_caller_;
   // File descriptor for the (optional) underlying FVM partition.
-  fbl::unique_fd fvm_part_;
+  fbl::unique_fd parent_;
   // File descriptor for the zxcrypt volume.
   fbl::unique_fd zxcrypt_;
   // The zxcrypt volume

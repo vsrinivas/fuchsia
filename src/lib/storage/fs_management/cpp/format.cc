@@ -57,9 +57,9 @@ enum DiskFormatLogVerbosity {
   Verbose,
 };
 
-DiskFormat DetectDiskFormatImpl(int fd, DiskFormatLogVerbosity verbosity) {
-  fdio_cpp::UnownedFdioCaller caller(fd);
-  auto resp = fidl::WireCall(caller.borrow_as<fblock::Block>())->GetInfo();
+DiskFormat DetectDiskFormatImpl(fidl::UnownedClientEnd<fblock::Block> device,
+                                DiskFormatLogVerbosity verbosity) {
+  auto resp = fidl::WireCall(device)->GetInfo();
   if (!resp.ok() || resp.value().status != ZX_OK) {
     fprintf(stderr, "DetectDiskFormat: Could not acquire block device info\n");
     return kDiskFormatUnknown;
@@ -88,7 +88,7 @@ DiskFormat DetectDiskFormatImpl(int fd, DiskFormatLogVerbosity verbosity) {
   ZX_DEBUG_ASSERT_MSG(buffer_size > 0, "Expected buffer_size to be greater than 0\n");
 
   uint8_t data[buffer_size];
-  auto result = block_client::SingleReadBytes(fd, data, buffer_size, 0);
+  auto result = block_client::SingleReadBytes(device, data, buffer_size, 0);
   if (result != ZX_OK) {
     fprintf(stderr, "DetectDiskFormat: Error reading block device.\n");
     return kDiskFormatUnknown;
@@ -163,13 +163,13 @@ DiskFormat DetectDiskFormatImpl(int fd, DiskFormatLogVerbosity verbosity) {
 }  // namespace
 
 __EXPORT
-DiskFormat DetectDiskFormat(int fd) {
-  return DetectDiskFormatImpl(fd, DiskFormatLogVerbosity::Silent);
+DiskFormat DetectDiskFormat(fidl::UnownedClientEnd<fblock::Block> device) {
+  return DetectDiskFormatImpl(device, DiskFormatLogVerbosity::Silent);
 }
 
 __EXPORT
-DiskFormat DetectDiskFormatLogUnknown(int fd) {
-  return DetectDiskFormatImpl(fd, DiskFormatLogVerbosity::Verbose);
+DiskFormat DetectDiskFormatLogUnknown(fidl::UnownedClientEnd<fblock::Block> device) {
+  return DetectDiskFormatImpl(device, DiskFormatLogVerbosity::Verbose);
 }
 
 DiskFormat CustomDiskFormat::Register(std::unique_ptr<CustomDiskFormat> format) {

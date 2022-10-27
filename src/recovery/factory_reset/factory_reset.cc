@@ -107,9 +107,10 @@ zx_status_t FactoryReset::Shred() const {
     if (!block_fd) {
       continue;
     }
+    fdio_cpp::UnownedFdioCaller caller(block_fd);
 
     zx_status_t status = ZX_OK;
-    switch (fs_management::DetectDiskFormat(block_fd.get())) {
+    switch (fs_management::DetectDiskFormat(caller.borrow_as<fuchsia_hardware_block::Block>())) {
       case fs_management::kDiskFormatZxcrypt: {
         status = ShredZxcryptDevice(std::move(block_fd), dev_fd_.duplicate());
         break;

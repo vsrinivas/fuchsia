@@ -174,12 +174,10 @@ RemoteBlockDevice::RemoteBlockDevice(zx::channel device, zx::fifo fifo)
 
 RemoteBlockDevice::~RemoteBlockDevice() { BlockCloseFifo(device_); }
 
-zx_status_t ReadWriteBlocks(int fd, void* buffer, size_t buffer_length, size_t offset, bool write) {
-  zx_status_t status;
-  fdio_cpp::UnownedFdioCaller caller(fd);
-  zx_handle_t device = caller.borrow_channel();
-
+zx_status_t ReadWriteBlocks(zx_handle_t device, void* buffer, size_t buffer_length, size_t offset,
+                            bool write) {
   // Get the Block info for block size calculations:
+  zx_status_t status;
   fuchsia_hardware_block_BlockInfo info;
   zx_status_t io_status = fuchsia_hardware_block_BlockGetInfo(device, &status, &info);
   if (io_status != ZX_OK) {
@@ -230,11 +228,13 @@ zx_status_t ReadWriteBlocks(int fd, void* buffer, size_t buffer_length, size_t o
   return ZX_OK;
 }
 
-zx_status_t SingleReadBytes(int fd, void* buffer, size_t buffer_size, size_t offset) {
-  return ReadWriteBlocks(fd, buffer, buffer_size, offset, false);
+zx_status_t SingleReadBytes(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device,
+                            void* buffer, size_t buffer_size, size_t offset) {
+  return ReadWriteBlocks(device.channel()->get(), buffer, buffer_size, offset, false);
 }
 
-zx_status_t SingleWriteBytes(int fd, void* buffer, size_t buffer_size, size_t offset) {
-  return ReadWriteBlocks(fd, buffer, buffer_size, offset, true);
+zx_status_t SingleWriteBytes(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device,
+                             void* buffer, size_t buffer_size, size_t offset) {
+  return ReadWriteBlocks(device.channel()->get(), buffer, buffer_size, offset, true);
 }
 }  // namespace block_client

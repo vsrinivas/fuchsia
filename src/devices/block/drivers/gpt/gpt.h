@@ -17,9 +17,6 @@
 
 #include <ddk/metadata/gpt.h>
 #include <ddktl/device.h>
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
-#include <fbl/vector.h>
 #include <gpt/c/gpt.h>
 #include <gpt/gpt.h>
 

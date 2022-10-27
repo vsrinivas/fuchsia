@@ -173,7 +173,9 @@ zx::result<fbl::unique_fd> GetFvmBlockDevice(std::string_view ignore_prefix) {
 
     // TODO(fxbug.dev/100049): Try using the partition protocol first to avoid content sniffing. If
     // that fails for some reason, then fall back to content sniffing.
-    if (fs_management::DetectDiskFormat(fd.get()) == fs_management::DiskFormat::kDiskFormatFvm) {
+    fdio_cpp::UnownedFdioCaller caller(fd);
+    if (fs_management::DetectDiskFormat(caller.borrow_as<fuchsia_hardware_block::Block>()) ==
+        fs_management::DiskFormat::kDiskFormatFvm) {
       FX_LOGS(INFO) << "Found FVM block device: " << topo_path;
       fvm_device = std::move(fd);
       break;
@@ -199,9 +201,10 @@ zx::result<fs_management::StartedSingleVolumeFilesystem> WipeStorage(
     return status.take_error();
   }
 
+  fdio_cpp::UnownedFdioCaller caller(fvm_block_device);
   FX_LOGS(INFO) << "Initializing FVM (slice size = " << config.fvm_slice_size() << ").";
-  if (const zx_status_t status =
-          fs_management::FvmInit(fvm_block_device.get(), config.fvm_slice_size());
+  if (const zx_status_t status = fs_management::FvmInit(
+          caller.borrow_as<fuchsia_hardware_block::Block>(), config.fvm_slice_size());
       status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to initialize FVM: " << zx_status_get_string(status);
     return zx::error(status);

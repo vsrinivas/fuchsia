@@ -306,7 +306,9 @@ DiskFormat BlockDevice::content_format() const {
   if (content_format_ != fs_management::kDiskFormatUnknown) {
     return content_format_;
   }
-  content_format_ = fs_management::DetectDiskFormat(fd_.get());
+  fdio_cpp::UnownedFdioCaller caller(fd_);
+  content_format_ =
+      fs_management::DetectDiskFormat(caller.borrow_as<fuchsia_hardware_block::Block>());
   return content_format_;
 }
 

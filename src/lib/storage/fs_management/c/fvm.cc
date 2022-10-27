@@ -4,6 +4,11 @@
 
 #include "src/lib/storage/fs_management/c/fvm.h"
 
+#include <lib/fdio/cpp/caller.h>
+
 #include "src/lib/storage/fs_management/cpp/fvm.h"
 
-zx_status_t fvm_init(int fd, size_t slice_size) { return fs_management::FvmInit(fd, slice_size); }
+zx_status_t fvm_init(int fd, size_t slice_size) {
+  fdio_cpp::UnownedFdioCaller caller(fd);
+  return fs_management::FvmInit(caller.borrow_as<fuchsia_hardware_block::Block>(), slice_size);
+}

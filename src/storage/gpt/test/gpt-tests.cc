@@ -7,6 +7,7 @@
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <lib/cksum.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <zircon/assert.h>
 
 #include <algorithm>
@@ -30,7 +31,6 @@ namespace gpt {
 namespace {
 
 using gpt::GptDevice;
-using gpt::KnownGuid;
 
 constexpr uint64_t kHoleSize = 10;
 
@@ -72,7 +72,8 @@ void UpdateHeaderCrcs(gpt_header_t* header, uint8_t* entries_array, size_t size)
   header->crc32 = CalculateCrc(*header);
 }
 
-void destroy_gpt(int fd, uint64_t block_size, uint64_t offset, uint64_t block_count) {
+void destroy_gpt(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device, uint64_t block_size,
+                 uint64_t offset, uint64_t block_count) {
   char zero[block_size];
   memset(zero, 0, sizeof(zero));
 
@@ -83,7 +84,7 @@ void destroy_gpt(int fd, uint64_t block_size, uint64_t offset, uint64_t block_co
   uint64_t last = offset + block_count - 1;
 
   for (uint64_t i = first; i <= last; i++) {
-    ASSERT_OK(block_client::SingleWriteBytes(fd, zero, sizeof(zero), block_size * i),
+    ASSERT_OK(block_client::SingleWriteBytes(device, zero, sizeof(zero), block_size * i),
               "Failed to pwrite");
   }
   // fsync is not supported in rpc-server.cpp
@@ -96,7 +97,7 @@ void destroy_gpt(int fd, uint64_t block_size, uint64_t offset, uint64_t block_co
 // changes to this class so that we can verify a set of changes.
 class Partitions {
  private:
-  void IncrementGuid(uint8_t* guid) { guid[6]++; }
+  static void IncrementGuid(uint8_t* guid) { guid[6]++; }
 
  public:
   Partitions(uint32_t count, uint64_t first, uint64_t last) {
@@ -251,14 +252,11 @@ class Partitions {
     // compare.
     char name[GPT_NAME_LEN];
     memset(name, 0, GPT_NAME_LEN);
-    utf16_to_cstring(name, (const uint16_t*)on_disk_partition->name, GPT_NAME_LEN / 2);
+    utf16_to_cstring(name, reinterpret_cast<const uint16_t*>(on_disk_partition->name),
+                     GPT_NAME_LEN / 2);
 
-    if (strncmp(name, reinterpret_cast<const char*>(in_mem_partition->name), GPT_NAME_LEN / 2) !=
-        0) {
-      return false;
-    }
-
-    return true;
+    return strncmp(name, reinterpret_cast<const char*>(in_mem_partition->name), GPT_NAME_LEN / 2) ==
+           0;
   }
 
  private:
@@ -322,7 +320,7 @@ class LibGptTest {
     // device. We also ignore any backup copies on the device.
     // Once there exists an api in libgpt to get size and location(s) of gpt,
     // we can setup/cleanup before/after running tests in a better way.
-    destroy_gpt(result->fd_.get(), result->GetBlockSize(), 0, result->GptMetadataBlocksCount());
+    destroy_gpt(result->device_, result->GetBlockSize(), 0, result->GptMetadataBlocksCount());
 
     result->Reset();
 
@@ -360,13 +358,10 @@ class LibGptTest {
   void Reset() {
     std::unique_ptr<GptDevice> gpt;
 
-    // explicitly close the fd, if open, before we attempt to reopen it.
-    fd_.reset();
-
-    fd_.reset(open(disk_path_, O_RDWR));
-
-    ASSERT_TRUE(fd_.is_valid(), "Could not open block device");
-    ASSERT_OK(GptDevice::Create(fd_.get(), GetBlockSize(), GetBlockCount(), &gpt));
+    zx::result device = component::Connect<fuchsia_hardware_block::Block>(disk_path_);
+    ASSERT_OK(device);
+    device_ = std::move(device.value());
+    ASSERT_OK(GptDevice::Create(device_, GetBlockSize(), GetBlockCount(), &gpt));
     gpt_ = std::move(gpt);
   }
 
@@ -403,7 +398,7 @@ class LibGptTest {
 
     // Read the block containing the MBR.
     char buff[blk_size_];
-    if (block_client::SingleReadBytes(fd_.get(), buff, blk_size_, 0) != ZX_OK) {
+    if (block_client::SingleReadBytes(device_, buff, blk_size_, 0) != ZX_OK) {
       return ZX_ERR_IO;
     }
 
@@ -483,16 +478,14 @@ class LibGptTest {
   }
 
  private:
-  LibGptTest() {}
+  LibGptTest() = default;
 
   // Initialize a physical media.
   void InitDisk(const char* disk_path) {
     strlcpy(disk_path_, disk_path, sizeof(disk_path_));
-    fbl::unique_fd fd(open(disk_path_, O_RDWR));
-    ASSERT_TRUE(fd.is_valid(), "Could not open block device to fetch info");
-    fdio_cpp::UnownedFdioCaller disk_caller(fd.get());
-    auto info_res =
-        fidl::WireCall(disk_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+    zx::result device = component::Connect<fuchsia_hardware_block::Block>(disk_path_);
+    ASSERT_OK(device);
+    auto info_res = fidl::WireCall(device.value())->GetInfo();
     ASSERT_OK(info_res.status());
     ASSERT_OK(info_res.value().status);
 
@@ -500,7 +493,7 @@ class LibGptTest {
     blk_count_ = info_res.value().info->block_count;
 
     ASSERT_GE(GetDiskSize(), kAcceptableMinimumSize, "Insufficient disk space for tests");
-    fd_ = std::move(fd);
+    device_ = std::move(device.value());
   }
 
   // Create and initialize and ramdisk.
@@ -522,7 +515,7 @@ class LibGptTest {
   std::unique_ptr<gpt::GptDevice> gpt_;
 
   // Open file descriptor to block device.
-  fbl::unique_fd fd_;
+  fidl::ClientEnd<fuchsia_hardware_block::Block> device_;
 
   // An optional ramdisk structure.
   ramdisk_client_t* ramdisk_ = nullptr;

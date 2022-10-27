@@ -20,15 +20,18 @@
 namespace fs_management {
 
 // Format a block device to be an empty FVM.
-zx_status_t FvmInit(int fd, size_t slice_size);
+zx_status_t FvmInit(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device,
+                    size_t slice_size);
 
 // Format a block device to be an empty FVM of |disk_size| size.
-zx_status_t FvmInitWithSize(int fd, uint64_t disk_size, size_t slice_size);
+zx_status_t FvmInitWithSize(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device,
+                            uint64_t disk_size, size_t slice_size);
 
 // Format a block device to be an empty FVM. The FVM will initially be formatted as if the block
 // device had |initial_volume_size| and leave gap for metadata extension up to |max_volume_size|.
 // Note: volume sizes are assumed to be multiples of the underlying block device block size.
-zx_status_t FvmInitPreallocated(int fd, uint64_t initial_volume_size, uint64_t max_volume_size,
+zx_status_t FvmInitPreallocated(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device,
+                                uint64_t initial_volume_size, uint64_t max_volume_size,
                                 size_t slice_size);
 
 // Queries driver to obtain slice_size, then overwrites and unbinds an FVM
@@ -74,10 +77,10 @@ struct PartitionMatcher {
 // At least one of the GUIDs must be non-null.
 //
 // Returns an open fd to the partition on success, -1 on error.
-zx::result<fbl::unique_fd> OpenPartition(const PartitionMatcher* matcher, zx_duration_t timeout,
+zx::result<fbl::unique_fd> OpenPartition(const PartitionMatcher& matcher, zx_duration_t timeout,
                                          std::string* out_path);
 zx::result<fbl::unique_fd> OpenPartitionWithDevfs(int devfs_root_fd,
-                                                  const PartitionMatcher* matcher,
+                                                  const PartitionMatcher& matcher,
                                                   zx_duration_t timeout,
                                                   std::string* out_path_relative);
 

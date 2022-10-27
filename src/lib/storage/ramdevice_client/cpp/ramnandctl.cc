@@ -34,31 +34,34 @@ zx_status_t RamNandCtl::Create(std::unique_ptr<RamNandCtl>* out) {
   args.board_name = "astro";
 
   driver_integration_test::IsolatedDevmgr devmgr;
-  zx_status_t st = driver_integration_test::IsolatedDevmgr::Create(&args, &devmgr);
-  if (st != ZX_OK) {
-    fprintf(stderr, "Could not create ram_nand_ctl device, %d\n", st);
-    return st;
+  if (zx_status_t status = driver_integration_test::IsolatedDevmgr::Create(&args, &devmgr);
+      status != ZX_OK) {
+    fprintf(stderr, "Could not create ram_nand_ctl device: %s\n", zx_status_get_string(status));
+    return status;
   }
 
-  fbl::unique_fd ctl;
-  st = device_watcher::RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/00:00:2e/nand-ctl",
-                                            &ctl);
-  if (st != ZX_OK) {
-    fprintf(stderr, "ram_nand_ctl device failed enumerated, %d\n", st);
-    return st;
+  fbl::unique_fd fd;
+  if (zx_status_t status = device_watcher::RecursiveWaitForFile(
+          devmgr.devfs_root(), "sys/platform/00:00:2e/nand-ctl", &fd);
+      status != ZX_OK) {
+    fprintf(stderr, "ram_nand_ctl device failed enumerated: %s\n", zx_status_get_string(status));
+    return status;
+  }
+  fdio_cpp::FdioCaller caller(std::move(fd));
+  zx::result ctl = caller.take_as<fuchsia_hardware_nand::RamNandCtl>();
+  if (ctl.is_error()) {
+    fprintf(stderr, "Failed to get ram_nand_ctl device channel: %s\n", ctl.status_string());
+    return ctl.status_value();
   }
 
-  *out = std::unique_ptr<RamNandCtl>(new RamNandCtl(std::move(devmgr), std::move(ctl)));
+  *out = std::unique_ptr<RamNandCtl>(new RamNandCtl(std::move(devmgr), std::move(ctl.value())));
   return ZX_OK;
 }
 
 __EXPORT
 zx_status_t RamNandCtl::CreateRamNand(fuchsia_hardware_nand::wire::RamNandInfo config,
-                                      std::optional<RamNand>* out) {
-  fdio_cpp::UnownedFdioCaller caller(fd());
-  const fidl::WireResult result =
-      fidl::WireCall(caller.borrow_as<fuchsia_hardware_nand::RamNandCtl>())
-          ->CreateDevice(std::move(config));
+                                      std::optional<ramdevice_client::RamNand>* out) const {
+  const fidl::WireResult result = fidl::WireCall(ctl())->CreateDevice(std::move(config));
   if (!result.ok()) {
     fprintf(stderr, "Could not create ram_nand device: %s\n", result.status_string());
     return result.status();
@@ -80,14 +83,20 @@ zx_status_t RamNandCtl::CreateRamNand(fuchsia_hardware_nand::wire::RamNandInfo c
       status != ZX_OK) {
     return status;
   }
+  fdio_cpp::FdioCaller caller(std::move(fd));
+  zx::result ram_nand = caller.take_as<fuchsia_device::Controller>();
+  if (ram_nand.is_error()) {
+    fprintf(stderr, "Failed to get ram_nand device channel: %s\n", ram_nand.status_string());
+    return ram_nand.status_value();
+  }
 
-  *out = RamNand(std::move(fd));
+  *out = ramdevice_client::RamNand(std::move(ram_nand.value()));
   return ZX_OK;
 }
 
 __EXPORT
 zx_status_t RamNandCtl::CreateWithRamNand(fuchsia_hardware_nand::wire::RamNandInfo config,
-                                          std::optional<RamNand>* out) {
+                                          std::optional<ramdevice_client::RamNand>* out) {
   std::unique_ptr<RamNandCtl> ctl;
   if (zx_status_t status = RamNandCtl::Create(&ctl); status != ZX_OK) {
     return status;

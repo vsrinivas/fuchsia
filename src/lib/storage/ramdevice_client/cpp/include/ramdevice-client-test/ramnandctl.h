@@ -10,30 +10,30 @@
 
 namespace ramdevice_client_test {
 
-using ramdevice_client::RamNand;
-
 class RamNandCtl {
  public:
   // Creates an isolated devmgr and spawns a ram_nand_ctl device in it.
   static zx_status_t Create(std::unique_ptr<RamNandCtl>* out);
 
   static zx_status_t CreateWithRamNand(fuchsia_hardware_nand::wire::RamNandInfo config,
-                                       std::optional<RamNand>* out);
+                                       std::optional<ramdevice_client::RamNand>* out);
 
   zx_status_t CreateRamNand(fuchsia_hardware_nand::wire::RamNandInfo config,
-                            std::optional<RamNand>* out);
+                            std::optional<ramdevice_client::RamNand>* out) const;
 
   ~RamNandCtl() = default;
 
-  const fbl::unique_fd& fd() { return ctl_; }
-  const fbl::unique_fd& devfs_root() { return devmgr_.devfs_root(); }
+  const fidl::ClientEnd<fuchsia_hardware_nand::RamNandCtl>& ctl() const { return ctl_; }
+
+  const fbl::unique_fd& devfs_root() const { return devmgr_.devfs_root(); }
 
  private:
-  RamNandCtl(driver_integration_test::IsolatedDevmgr devmgr, fbl::unique_fd ctl)
+  RamNandCtl(driver_integration_test::IsolatedDevmgr devmgr,
+             fidl::ClientEnd<fuchsia_hardware_nand::RamNandCtl> ctl)
       : devmgr_(std::move(devmgr)), ctl_(std::move(ctl)) {}
 
   driver_integration_test::IsolatedDevmgr devmgr_;
-  fbl::unique_fd ctl_;
+  const fidl::ClientEnd<fuchsia_hardware_nand::RamNandCtl> ctl_;
 };
 
 }  // namespace ramdevice_client_test

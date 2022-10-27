@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/lib/storage/fs_management/cpp/mount.h"
-
 #include <dirent.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
@@ -32,8 +30,6 @@
 #include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/lib/storage/fs_management/cpp/admin.h"
 #include "src/storage/minfs/format.h"
-#include "src/storage/minfs/fsck.h"
-#include "src/storage/minfs/minfs.h"
 #include "src/storage/minfs/runner.h"
 #include "src/storage/testing/ram_disk.h"
 
@@ -53,11 +49,12 @@ class MountTestTemplate : public testing::Test {
                                   fs_management::LaunchStdioSync, fs_management::MkfsOptions()),
               0);
 
-    int ramdisk_block_fd = ramdisk_get_block_fd(ramdisk_->client());
-    zx::channel block_channel;
-    ASSERT_EQ(fdio_fd_clone(ramdisk_block_fd, block_channel.reset_and_get_address()), ZX_OK);
+    // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+    zx::result block_channel = ramdisk_->channel();
+    ASSERT_TRUE(block_channel.is_ok()) << zx_status_get_string(block_channel.status_value());
     std::unique_ptr<block_client::RemoteBlockDevice> device;
-    ASSERT_EQ(block_client::RemoteBlockDevice::Create(std::move(block_channel), &device), ZX_OK);
+    ASSERT_EQ(block_client::RemoteBlockDevice::Create(std::move(block_channel.value()), &device),
+              ZX_OK);
     auto bcache_or = minfs::CreateBcache(std::move(device));
     ASSERT_TRUE(bcache_or.is_ok());
     ASSERT_FALSE(bcache_or->is_read_only);

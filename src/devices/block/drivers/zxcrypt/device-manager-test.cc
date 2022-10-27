@@ -9,20 +9,20 @@
 #include <lib/fdio/watcher.h>
 #include <lib/fidl/cpp/wire/channel.h>
 #include <lib/inspect/cpp/reader.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <zircon/errors.h>
 
 #include <condition_variable>
 #include <ostream>
 
 #include <fbl/string.h>
+#include <fbl/unique_fd.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
 
-#include "fbl/unique_fd.h"
-#include "fuchsia/io/cpp/fidl.h"
-#include "lib/fdio/directory.h"
+#include "src/security/fcrypto/digest.h"
+#include "src/security/fcrypto/secret.h"
 #include "src/security/zxcrypt/client.h"
-#include "src/security/zxcrypt/volume.h"
 
 namespace {
 constexpr zx::duration kTimeout = zx::sec(3);
@@ -44,15 +44,15 @@ std::string GetInspectInstanceGuid(const zx::vmo& inspect_vmo) {
 
 zx::vmo GetInspectVMOHandle(const fbl::unique_fd& devfs_root) {
   fbl::unique_fd fd;
-  zx_status_t rc;
-  if ((rc = device_watcher::RecursiveWaitForFileReadOnly(
-           devfs_root, "diagnostics/class/zxcrypt/000.inspect", &fd)) != ZX_OK) {
-    printf("Failed in wait for inspect file: %d\n", rc);
+  if (zx_status_t status = device_watcher::RecursiveWaitForFileReadOnly(
+          devfs_root, "diagnostics/class/zxcrypt/000.inspect", &fd);
+      status != ZX_OK) {
+    printf("Failed in wait for inspect file: %s\n", zx_status_get_string(status));
     return zx::vmo();
   }
   zx_handle_t out_vmo = ZX_HANDLE_INVALID;
-  if ((rc = fdio_get_vmo_clone(fd.get(), &out_vmo)) != ZX_OK) {
-    printf("Failed to clone inspect VMO: %d\n", rc);
+  if (zx_status_t status = fdio_get_vmo_clone(fd.get(), &out_vmo); status != ZX_OK) {
+    printf("Failed to clone inspect VMO: %s\n", zx_status_get_string(status));
     return zx::vmo();
   }
   return zx::vmo(out_vmo);
@@ -75,7 +75,15 @@ TEST(ZxcryptInspect, ExportsGuid) {
   ASSERT_OK(ramdisk_create_at(devmgr.devfs_root().get(), kBlockSz, kBlockCnt, &ramdisk));
   fbl::unique_fd ramdisk_ignored;
   device_watcher::RecursiveWaitForFile(devfs_root_fd, ramdisk_get_path(ramdisk), &ramdisk_ignored);
-  fbl::unique_fd ramdisk_fd = fbl::unique_fd(dup(ramdisk_get_block_fd(ramdisk)));
+  fbl::unique_fd ramdisk_fd;
+  {
+    // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+    fidl::UnownedClientEnd<fuchsia_io::Node> client(ramdisk_get_block_interface(ramdisk));
+    zx::result owned = component::Clone(client);
+    ASSERT_OK(owned.status_value());
+    ASSERT_OK(
+        fdio_fd_create(owned.value().TakeChannel().release(), ramdisk_fd.reset_and_get_address()));
+  }
 
   // Create a new zxcrypt volume manager using the ramdisk.
   auto vol_mgr =

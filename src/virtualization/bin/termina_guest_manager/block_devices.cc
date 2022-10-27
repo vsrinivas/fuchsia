@@ -94,15 +94,16 @@ zx::result<std::tuple<VolumeHandle, ManagerHandle>> FindPartitions(DIR* dir) {
     status = partition->GetTypeGuid(&guid_status, &guid);
     if (status != ZX_OK || guid_status != ZX_OK || !guid) {
       continue;
-    } else if (std::equal(kGuestPartitionGuid.begin(), kGuestPartitionGuid.end(),
-                          guid->value.begin())) {
+    }
+    if (std::equal(kGuestPartitionGuid.begin(), kGuestPartitionGuid.end(), guid->value.begin())) {
       // If we find the guest FVM partition, then we can break out of the loop.
       // We only need to find the FVM GPT partition if there is no guest FVM
       // partition, in order to create the guest FVM partition.
       volume.set_channel(partition.Unbind().TakeChannel());
       break;
-    } else if (std::equal(kFvmGuid.begin(), kFvmGuid.end(), guid->value.begin()) ||
-               std::equal(kGptFvmGuid.begin(), kGptFvmGuid.end(), guid->value.begin())) {
+    }
+    if (std::equal(kFvmGuid.begin(), kFvmGuid.end(), guid->value.begin()) ||
+        std::equal(kGptFvmGuid.begin(), kGptFvmGuid.end(), guid->value.begin())) {
       fuchsia::device::ControllerSyncPtr controller;
       controller.Bind(partition.Unbind().TakeChannel());
       fuchsia::device::Controller_GetTopologicalPath_Result topo_result;
@@ -385,15 +386,6 @@ zx::result<> WipeStatefulPartition(size_t bytes_to_zero, uint8_t value) {
     return zx::error(ZX_ERR_NOT_FOUND);
   }
 
-  // The block_client API operats on file descriptors and not channels. This just creates a
-  // compatible fd from the volume handle.
-  fbl::unique_fd fd;
-  zx_status_t status = fdio_fd_create(volume.TakeChannel().release(), fd.reset_and_get_address());
-  if (status != ZX_OK || fd.get() < 0) {
-    FX_LOGS(ERROR) << "Failed to create fd";
-    return zx::error(ZX_ERR_INTERNAL);
-  }
-
   // For devices that support TRIM, there is a more efficient path we could take. Since we expect
   // to move the stateful partition to fxfs before too long we keep this logic simple and don't
   // attempt to optimize for devices that support TRIM.
@@ -401,8 +393,9 @@ zx::result<> WipeStatefulPartition(size_t bytes_to_zero, uint8_t value) {
   uint8_t bytes[kWipeBufferSize];
   memset(&bytes, value, kWipeBufferSize);
   for (size_t offset = 0; offset < bytes_to_zero; offset += kWipeBufferSize) {
-    status = block_client::SingleWriteBytes(
-        fd.get(), bytes, std::min(bytes_to_zero - offset, kWipeBufferSize), offset);
+    zx_status_t status = block_client::SingleWriteBytes(
+        fidl::UnownedClientEnd<fuchsia_hardware_block::Block>(volume.channel().borrow()), bytes,
+        std::min(bytes_to_zero - offset, kWipeBufferSize), offset);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to write bytes";
       return zx::error(ZX_ERR_IO);

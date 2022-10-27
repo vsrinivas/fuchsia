@@ -29,10 +29,7 @@
 #include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
 
-#include "src/lib/fxl/test/test_settings.h"
 #include "src/lib/storage/fs_management/cpp/admin.h"
-#include "src/lib/storage/fs_management/cpp/fvm.h"
-#include "src/storage/fvm/format.h"
 #include "src/storage/testing/fvm.h"
 #include "src/storage/testing/ram_disk.h"
 
@@ -301,7 +298,7 @@ TEST_F(PartitionOverFvmWithRamdiskCase, MkfsMinfsWithMinFvmSlices) {
                          &allocated_slices);
   EXPECT_GE(allocated_slices, base_slices + 10);
 
-  DiskFormat actual_format = DetectDiskFormat(partition_fd.get());
+  DiskFormat actual_format = DetectDiskFormat(caller.borrow_as<fuchsia_hardware_block::Block>());
   ASSERT_EQ(actual_format, kDiskFormatMinfs);
 }
 

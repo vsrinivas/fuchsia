@@ -13,9 +13,9 @@ zx_library("gpt") {
     "gpt/guid.h",
   ]
   public_deps = [
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_cpp_wire",
     "//sdk/lib/fit-promise",
     "//src/lib/uuid",
-    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zxc",
   ]
 
@@ -29,6 +29,7 @@ zx_library("gpt") {
       "//sdk/lib/fit",
       "//src/lib/storage/block_client/cpp",
       "//src/lib/utf_conversion",
+      "//zircon/system/ulib/fbl",
       "//zircon/system/ulib/mbr",
       "//zircon/system/ulib/range",
       "//zircon/third_party/ulib/cksum",

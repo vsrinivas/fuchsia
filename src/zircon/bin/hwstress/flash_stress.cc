@@ -270,7 +270,7 @@ std::unique_ptr<TemporaryFvmPartition> TemporaryFvmPartition::Create(int fvm_fd,
       .type_guid = kTestPartGUID.bytes(),
       .instance_guid = unique_guid.bytes(),
   };
-  if (auto fd_or = fs_management::OpenPartition(&matcher, 0, &partition_path); fd_or.is_error()) {
+  if (auto fd_or = fs_management::OpenPartition(matcher, 0, &partition_path); fd_or.is_error()) {
     fs_management::DestroyPartition(unique_guid.bytes(), kTestPartGUID.bytes());
     fprintf(stderr, "Could not locate FVM partition\n");
     return nullptr;

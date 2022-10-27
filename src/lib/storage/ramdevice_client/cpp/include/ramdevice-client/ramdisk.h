@@ -60,10 +60,10 @@ zx_status_t ramdisk_create_at_from_vmo_with_params(int dev_root_fd, zx_handle_t 
                                                    uint64_t block_size, const uint8_t* type_guid,
                                                    size_t guid_len, ramdisk_client_t** out);
 
-// Returns the file descriptor to the block device interface of the client.
+// Returns the handle to the block device interface of the client.
 //
-// Does not transfer ownership of the file descriptor.
-int ramdisk_get_block_fd(const ramdisk_client_t* client);
+// Does not transfer ownership of the handle.
+zx_handle_t ramdisk_get_block_interface(const ramdisk_client_t* client);
 
 // Returns the path to the full block device interface of the ramdisk.
 const char* ramdisk_get_path(const ramdisk_client_t* client);

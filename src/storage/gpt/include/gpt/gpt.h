@@ -5,12 +5,12 @@
 #ifndef SRC_STORAGE_GPT_INCLUDE_GPT_GPT_H_
 #define SRC_STORAGE_GPT_INCLUDE_GPT_GPT_H_
 
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <lib/fpromise/result.h>
 #include <lib/zx/result.h>
 
 #include <memory>
 
-#include <fbl/unique_fd.h>
 #include <gpt/c/gpt.h>
 
 namespace gpt {
@@ -123,7 +123,8 @@ zx::result<> GetPartitionName(const gpt_entry_t& entry, char* name, size_t capac
 
 class GptDevice {
  public:
-  static zx_status_t Create(int fd, uint32_t blocksize, uint64_t blocks,
+  static zx_status_t Create(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device,
+                            uint32_t blocksize, uint64_t blocks,
                             std::unique_ptr<GptDevice>* out_dev);
 
   // Loads gpt header and gpt entries array from |buffer| of length |size|
@@ -237,7 +238,8 @@ class GptDevice {
   zx_status_t FinalizeAndSync(bool persist);
 
   // read the partition table from the device.
-  static zx_status_t Init(int fd, uint32_t blocksize, uint64_t block_count,
+  static zx_status_t Init(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device,
+                          uint32_t blocksize, uint64_t block_count,
                           std::unique_ptr<GptDevice>* out_dev);
 
   zx_status_t LoadEntries(const uint8_t* buffer, uint64_t buffer_size, uint64_t block_count);
@@ -253,8 +255,9 @@ class GptDevice {
   // pointer to a list of partitions
   gpt_partition_t* partitions_[kPartitionCount] = {};
 
-  // device to use
-  fbl::unique_fd fd_ = {};
+#ifdef __Fuchsia__
+  std::optional<fidl::UnownedClientEnd<fuchsia_hardware_block::Block>> device_ = {};
+#endif
 
   // block size in bytes
   uint64_t blocksize_ = 0;

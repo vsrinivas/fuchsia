@@ -73,8 +73,9 @@ TEST(BlockDeviceTest, CreateZxcryptVolumeWorks) {
   auto zxcrypt_path = CreateZxcryptVolume(fvm_volume->path());
   ASSERT_OK(zxcrypt_path.status_value());
 
-  fbl::unique_fd volume_fd(open(fvm_volume->path().c_str(), O_RDWR));
-  fs_management::DiskFormat format = fs_management::DetectDiskFormat(volume_fd.get());
+  zx::result channel = component::Connect<fuchsia_hardware_block::Block>(fvm_volume->path());
+  ASSERT_TRUE(channel.is_ok()) << channel.status_string();
+  fs_management::DiskFormat format = fs_management::DetectDiskFormat(channel.value());
   EXPECT_EQ(format, fs_management::kDiskFormatZxcrypt);
 }
 
@@ -91,8 +92,9 @@ TEST(BlockDeviceTest, FormatBlockDeviceWorks) {
   auto status = FormatBlockDevice(fvm_volume->path(), fs_management::kDiskFormatMinfs);
   ASSERT_OK(status.status_value());
 
-  fbl::unique_fd volume_fd(open(fvm_volume->path().c_str(), O_RDWR));
-  fs_management::DiskFormat format = fs_management::DetectDiskFormat(volume_fd.get());
+  zx::result channel = component::Connect<fuchsia_hardware_block::Block>(fvm_volume->path());
+  ASSERT_TRUE(channel.is_ok()) << channel.status_string();
+  fs_management::DiskFormat format = fs_management::DetectDiskFormat(channel.value());
   EXPECT_EQ(format, fs_management::kDiskFormatMinfs);
 }
 
@@ -111,8 +113,9 @@ TEST(BlockDeviceTest, FormatBlockDeviceWithZxcryptWorks) {
   auto status = FormatBlockDevice(*zxcrypt_path, fs_management::kDiskFormatMinfs);
   ASSERT_OK(status.status_value());
 
-  fbl::unique_fd minfs_fd(open(zxcrypt_path->c_str(), O_RDWR));
-  fs_management::DiskFormat format = fs_management::DetectDiskFormat(minfs_fd.get());
+  zx::result channel = component::Connect<fuchsia_hardware_block::Block>(zxcrypt_path.value());
+  ASSERT_TRUE(channel.is_ok()) << channel.status_string();
+  fs_management::DiskFormat format = fs_management::DetectDiskFormat(channel.value());
   EXPECT_EQ(format, fs_management::kDiskFormatMinfs);
 }
 

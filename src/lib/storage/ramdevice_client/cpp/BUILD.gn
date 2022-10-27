@@ -21,6 +21,9 @@ shared_library("ramdevice-client") {
     "ramnand.cc",
   ]
   public_deps = [
+    # <ramdevice-client/ramnand.h> has #include <fidl/fuchsia.device/cpp/wire.h>
+    "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
+
     # <ramdevice-client/ramnand.h> has #include <fidl/fuchsia.hardware.nand/cpp/wire.h>
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_cpp_wire",
   ]
@@ -61,6 +64,9 @@ shared_library("ramdevice-client-test-lib") {
     # <ramdevice-client-test/ramnandctl.h> has #include <lib/driver-integration-test/fixture.h>
     ":ramdevice-client",
 
+    # <ramdevice-client/ramnand.h> has #include <fidl/fuchsia.device/cpp/wire.h>
+    "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
+
     # <ramdevice-client/ramnand.h> has #include <fidl/fuchsia.hardware.nand/cpp/wire.h>
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_cpp_wire",
     "//sdk/lib/sys/component/cpp/testing:cpp",
@@ -93,6 +99,9 @@ static_library("ramdevice-client-static") {
     "ramnand.cc",
   ]
   public_deps = [
+    # <ramdevice-client/ramnand.h> has #include <fidl/fuchsia.device/cpp/wire.h>
+    "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
+
     # <ramdevice-client/ramnand.h> has #include <fidl/fuchsia.hardware.nand/cpp/wire.h>
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_cpp_wire",
   ]

@@ -11,8 +11,6 @@
 
 #include <gtest/gtest.h>
 
-#include "lib/zx/channel.h"
-#include "src/lib/fxl/test/test_settings.h"
 #include "src/lib/storage/fs_management/cpp/fvm_internal.h"
 
 namespace fs_management {
@@ -51,7 +49,7 @@ class FakePartition
     memcpy(guid.value.data_, type_guid_, 16);
     auto guid_object =
         fidl::ObjectView<fuchsia_hardware_block_partition::wire::Guid>(allocator_, guid);
-    completer.Reply(ZX_OK, std::move(guid_object));
+    completer.Reply(ZX_OK, guid_object);
   }
 
   void GetInstanceGuid(GetInstanceGuidCompleter::Sync& completer) override {
@@ -59,12 +57,12 @@ class FakePartition
     memcpy(guid.value.data(), instance_guid_, 16);
     auto guid_object =
         fidl::ObjectView<fuchsia_hardware_block_partition::wire::Guid>(allocator_, guid);
-    completer.Reply(ZX_OK, std::move(guid_object));
+    completer.Reply(ZX_OK, guid_object);
   }
 
   void GetName(GetNameCompleter::Sync& completer) override {
     auto label_object = fidl::StringView(allocator_, label_);
-    completer.Reply(ZX_OK, std::move(label_object));
+    completer.Reply(ZX_OK, label_object);
   }
 
   void GetTopologicalPath(GetTopologicalPathCompleter::Sync& completer) override {
@@ -109,29 +107,29 @@ class PartitionMatchesTest : public testing::Test {
 
 TEST_F(PartitionMatchesTest, TestTypeMatch) {
   PartitionMatcher matcher = {.type_guid = kValidTypeGUID};
-  zx::unowned_channel channel = client_.borrow().channel();
-  ASSERT_TRUE(PartitionMatches(channel, matcher));
+  ASSERT_TRUE(PartitionMatches(client_, matcher));
 }
 
 TEST_F(PartitionMatchesTest, TestInstanceMatch) {
   PartitionMatcher matcher = {.instance_guid = kValidInstanceGUID};
-  zx::unowned_channel channel = client_.borrow().channel();
-  ASSERT_TRUE(PartitionMatches(channel, matcher));
+  ASSERT_TRUE(PartitionMatches(client_, matcher));
 }
 
 TEST_F(PartitionMatchesTest, TestTypeAndInstanceMatch) {
   PartitionMatcher matcher = {.type_guid = kValidTypeGUID, .instance_guid = kValidInstanceGUID};
-  zx::unowned_channel channel = client_.borrow().channel();
-  ASSERT_TRUE(PartitionMatches(channel, matcher));
+  ASSERT_TRUE(PartitionMatches(client_, matcher));
 }
 
 TEST_F(PartitionMatchesTest, TestParentMatch) {
-  PartitionMatcher matcher = {.parent_device = kParent};
-  zx::unowned_channel channel = client_.borrow().channel();
-  ASSERT_TRUE(PartitionMatches(channel, matcher));
+  {
+    PartitionMatcher matcher = {.parent_device = kParent};
+    ASSERT_TRUE(PartitionMatches(client_, matcher));
+  }
 
-  matcher = {.parent_device = kNotParent};
-  ASSERT_FALSE(PartitionMatches(channel, matcher));
+  {
+    PartitionMatcher matcher = {.parent_device = kNotParent};
+    ASSERT_FALSE(PartitionMatches(client_, matcher));
+  }
 }
 
 TEST_F(PartitionMatchesTest, TestSingleLabelMatch) {
@@ -142,8 +140,7 @@ TEST_F(PartitionMatchesTest, TestSingleLabelMatch) {
       .labels = kLabels.data(),
       .num_labels = kLabels.size(),
   };
-  zx::unowned_channel channel = client_.borrow().channel();
-  ASSERT_TRUE(PartitionMatches(channel, matcher));
+  ASSERT_TRUE(PartitionMatches(client_, matcher));
 }
 
 TEST_F(PartitionMatchesTest, TestMultiLabelMatch) {
@@ -156,8 +153,7 @@ TEST_F(PartitionMatchesTest, TestMultiLabelMatch) {
       .labels = kLabels.data(),
       .num_labels = kLabels.size(),
   };
-  zx::unowned_channel channel = client_.borrow().channel();
-  ASSERT_TRUE(PartitionMatches(channel, matcher));
+  ASSERT_TRUE(PartitionMatches(client_, matcher));
 }
 
 TEST_F(PartitionMatchesTest, TestTypeAndLabelMatch) {
@@ -169,20 +165,17 @@ TEST_F(PartitionMatchesTest, TestTypeAndLabelMatch) {
       .labels = kLabels.data(),
       .num_labels = kLabels.size(),
   };
-  zx::unowned_channel channel = client_.borrow().channel();
-  ASSERT_TRUE(PartitionMatches(channel, matcher));
+  ASSERT_TRUE(PartitionMatches(client_, matcher));
 }
 
 TEST_F(PartitionMatchesTest, TestTypeMismatch) {
   PartitionMatcher matcher = {.type_guid = kInvalidGUID1};
-  zx::unowned_channel channel = client_.borrow().channel();
-  ASSERT_FALSE(PartitionMatches(channel, matcher));
+  ASSERT_FALSE(PartitionMatches(client_, matcher));
 }
 
 TEST_F(PartitionMatchesTest, TestInstanceMismatch) {
   PartitionMatcher matcher = {.type_guid = kValidTypeGUID, .instance_guid = kInvalidGUID2};
-  zx::unowned_channel channel = client_.borrow().channel();
-  ASSERT_FALSE(PartitionMatches(channel, matcher));
+  ASSERT_FALSE(PartitionMatches(client_, matcher));
 }
 
 TEST_F(PartitionMatchesTest, TestLabelMismatch) {
@@ -195,8 +188,7 @@ TEST_F(PartitionMatchesTest, TestLabelMismatch) {
       .labels = kLabels.data(),
       .num_labels = kLabels.size(),
   };
-  zx::unowned_channel channel = client_.borrow().channel();
-  ASSERT_FALSE(PartitionMatches(channel, matcher));
+  ASSERT_FALSE(PartitionMatches(client_, matcher));
 }
 
 }  // namespace

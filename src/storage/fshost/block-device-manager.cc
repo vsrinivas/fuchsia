@@ -10,6 +10,7 @@
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <inttypes.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/wire/channel.h>
 #include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>

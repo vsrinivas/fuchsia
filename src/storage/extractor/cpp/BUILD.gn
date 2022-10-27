@@ -23,6 +23,7 @@ test("fvm_extractor_unit_test") {
     "//src/storage/lib/utils:topological_path",
     "//src/storage/testing:storage_driver_test_support",
     "//third_party/googletest:gtest",
+    "//zircon/system/ulib/fdio-caller",
   ]
 
   # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.

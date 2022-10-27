@@ -6,6 +6,8 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
@@ -189,10 +191,17 @@ int main(int argc, char** argv) {
     }
     zx_status_t status = ramdisk_create(512, total / 512, &ramdisk);
     if (status != ZX_OK) {
-      fprintf(stderr, "error: cannot create %zu-byte ramdisk\n", total);
+      fprintf(stderr, "error: cannot create %zu-byte ramdisk: %s\n", total,
+              zx_status_get_string(status));
       goto done;
     }
-    fd = ramdisk_get_block_fd(ramdisk);
+    zx_handle_t handle = ramdisk_get_block_interface(ramdisk);
+    // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+    zx_handle_t cloned = fdio_service_clone(handle);
+    if (zx_status_t status = fdio_fd_create(cloned, &fd); status != ZX_OK) {
+      fprintf(stderr, "error: cannot create ramdisk fd: %s\n", zx_status_get_string(status));
+      goto done;
+    }
   } else {
     if ((fd = open(argv[3], is_read ? O_RDONLY : O_WRONLY)) < 0) {
       fprintf(stderr, "error: cannot open '%s'\n", argv[3]);

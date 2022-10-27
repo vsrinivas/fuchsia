@@ -118,6 +118,16 @@ class FvmTest : public zxtest::Test {
 
   fbl::unique_fd ramdisk_device() const { return fbl::unique_fd(open(ramdisk_path_, O_RDWR)); }
 
+  fidl::UnownedClientEnd<fuchsia_device::Controller> ramdisk_controller_interface() const {
+    return fidl::UnownedClientEnd<fuchsia_device::Controller>(
+        ramdisk_get_block_interface(ramdisk_));
+  }
+
+  fidl::UnownedClientEnd<fuchsia_hardware_block::Block> ramdisk_block_interface() const {
+    return fidl::UnownedClientEnd<fuchsia_hardware_block::Block>(
+        ramdisk_get_block_interface(ramdisk_));
+  }
+
   const ramdisk_client* ramdisk() const { return ramdisk_; }
 
   const char* ramdisk_path() const { return ramdisk_path_; }
@@ -135,7 +145,7 @@ class FvmTest : public zxtest::Test {
   zx::result<fbl::unique_fd> WaitForPartition(
       const fs_management::PartitionMatcher& matcher,
       zx::duration timeout = zx::duration::infinite()) const {
-    return fs_management::OpenPartitionWithDevfs(devfs_root().get(), &matcher, timeout.get(),
+    return fs_management::OpenPartitionWithDevfs(devfs_root().get(), matcher, timeout.get(),
                                                  nullptr);
   }
 
@@ -179,15 +189,11 @@ void FvmTest::CreateRamdisk(uint64_t block_size, uint64_t block_count) {
 void FvmTest::CreateFVM(uint64_t block_size, uint64_t block_count, uint64_t slice_size) {
   CreateRamdisk(block_size, block_count);
 
-  fbl::unique_fd fd(open(ramdisk_path_, O_RDWR));
-  ASSERT_TRUE(fd);
-
-  ASSERT_OK(fs_management::FvmInitPreallocated(fd.get(), block_count * block_size,
+  ASSERT_OK(fs_management::FvmInitPreallocated(ramdisk_block_interface(), block_count * block_size,
                                                block_count * block_size, slice_size));
 
-  fdio_cpp::UnownedFdioCaller caller(fd);
-  auto resp = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
-                  ->Bind(fidl::StringView(FVM_DRIVER_LIB));
+  auto resp =
+      fidl::WireCall(ramdisk_controller_interface())->Bind(fidl::StringView(FVM_DRIVER_LIB));
   ASSERT_OK(resp.status());
   ASSERT_TRUE(resp->is_ok());
 
@@ -196,10 +202,8 @@ void FvmTest::CreateFVM(uint64_t block_size, uint64_t block_count, uint64_t slic
 }
 
 void FvmTest::FVMRebind() {
-  fdio_cpp::UnownedFdioCaller disk_caller(ramdisk_get_block_fd(ramdisk_));
-
-  auto resp = fidl::WireCall(disk_caller.borrow_as<fuchsia_device::Controller>())
-                  ->Rebind(fidl::StringView(FVM_DRIVER_LIB));
+  auto resp =
+      fidl::WireCall(ramdisk_controller_interface())->Rebind(fidl::StringView(FVM_DRIVER_LIB));
   ASSERT_OK(resp.status());
   ASSERT_TRUE(resp->is_ok());
 
@@ -459,14 +463,15 @@ void CheckWriteReadBlock(int fd, size_t block, size_t count) {
   CheckRead(fd, off, len, in.get());
 }
 
-void CheckWriteReadBytesFifo(int fd, size_t off, size_t len) {
+void CheckWriteReadBytesFifo(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device,
+                             size_t off, size_t len) {
   std::unique_ptr<uint8_t[]> write_buf(new uint8_t[len]);
   memset(write_buf.get(), 0xa3, len);
 
-  ASSERT_EQ(block_client::SingleWriteBytes(fd, write_buf.get(), len, off), ZX_OK);
+  ASSERT_EQ(block_client::SingleWriteBytes(device, write_buf.get(), len, off), ZX_OK);
   std::unique_ptr<uint8_t[]> read_buf(new uint8_t[len]);
   memset(read_buf.get(), 0, len);
-  ASSERT_EQ(block_client::SingleReadBytes(fd, read_buf.get(), len, off), ZX_OK);
+  ASSERT_EQ(block_client::SingleReadBytes(device, read_buf.get(), len, off), ZX_OK);
   EXPECT_EQ(memcmp(write_buf.get(), read_buf.get(), len), 0);
 }
 
@@ -521,7 +526,7 @@ TEST_F(FvmTest, TestTooSmall) {
   fbl::unique_fd fd(ramdisk_device());
   ASSERT_TRUE(fd);
   size_t slice_size = block_size * block_count;
-  ASSERT_EQ(fs_management::FvmInit(fd.get(), slice_size), ZX_ERR_NO_SPACE);
+  ASSERT_EQ(fs_management::FvmInit(ramdisk_block_interface(), slice_size), ZX_ERR_NO_SPACE);
   ValidateFVM(ramdisk_device(), ValidationResult::Corrupted);
 }
 
@@ -547,7 +552,7 @@ TEST_F(FvmTest, TestLarge) {
   const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
   ASSERT_LT(block_info.max_transfer_size, fvm_header.GetMetadataAllocatedBytes());
 
-  ASSERT_EQ(fs_management::FvmInit(fd.get(), kSliceSize), ZX_OK);
+  ASSERT_EQ(fs_management::FvmInit(ramdisk_block_interface(), kSliceSize), ZX_OK);
 
   auto resp = fidl::WireCall(disk_connection.borrow_as<fuchsia_device::Controller>())
                   ->Bind(fidl::StringView(FVM_DRIVER_LIB));
@@ -621,20 +626,21 @@ TEST_F(FvmTest, TestReadWriteSingle) {
   CreateFVM(kBlockSize, kBlockCount, kSliceSize);
 
   // Allocate one VPart
-  auto vp_fd_or = AllocatePartition({
+  zx::result vp_fd = AllocatePartition({
       .type = kTestPartDataGuid,
       .guid = kTestUniqueGuid1,
       .name = kTestPartDataName,
   });
-  ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
-  fbl::unique_fd vp_fd = *std::move(vp_fd_or);
+  ASSERT_OK(vp_fd);
+  fdio_cpp::FdioCaller caller(std::move(vp_fd.value()));
 
   // Check that we can read from / write to it.
-  CheckWriteReadBytesFifo(vp_fd.get(), 0, kBlockSize);
+  CheckWriteReadBytesFifo(caller.borrow_as<fuchsia_hardware_block::Block>(), 0, kBlockSize);
   // Check with an offset
-  CheckWriteReadBytesFifo(vp_fd.get(), kBlockSize * 7, kBlockSize * 4);
+  CheckWriteReadBytesFifo(caller.borrow_as<fuchsia_hardware_block::Block>(), kBlockSize * 7,
+                          kBlockSize * 4);
 
-  ASSERT_EQ(close(vp_fd.release()), 0);
+  ASSERT_EQ(close(caller.release().release()), 0);
   FVMCheckSliceSize(fvm_device(), kSliceSize);
   ValidateFVM(ramdisk_device());
 }
@@ -1840,7 +1846,7 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
             ZX_OK);
 
   auto vp_fd_or =
-      fs_management::OpenPartitionWithDevfs(devfs_root.get(), &kPartition1Matcher, 0, nullptr);
+      fs_management::OpenPartitionWithDevfs(devfs_root.get(), kPartition1Matcher, 0, nullptr);
   ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
   fbl::unique_fd vp_fd(*std::move(vp_fd_or));
   fuchsia_hardware_block_volume_VsliceRange
@@ -1899,7 +1905,7 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
 
   {
     vp_fd_or =
-        fs_management::OpenPartitionWithDevfs(devfs_root.get(), &kPartition1Matcher, 0, nullptr);
+        fs_management::OpenPartitionWithDevfs(devfs_root.get(), kPartition1Matcher, 0, nullptr);
     ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
     vp_fd = *std::move(vp_fd_or);
 
@@ -1957,7 +1963,7 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
             ZX_OK);
 
   vp_fd_or =
-      fs_management::OpenPartitionWithDevfs(devfs_root.get(), &kPartition1Matcher, 0, nullptr);
+      fs_management::OpenPartitionWithDevfs(devfs_root.get(), kPartition1Matcher, 0, nullptr);
   ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
   vp_fd = *std::move(vp_fd_or);
   fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
@@ -2581,17 +2587,15 @@ TEST_F(FvmTest, TestAbortDriverLoadSmallDevice) {
   constexpr uint64_t kFvmPartitionSize = 4 * kGB;
 
   CreateRamdisk(kBlockSize, kBlockCount);
-  fbl::unique_fd ramdisk_fd(ramdisk_device());
 
   // Init fvm with a partition bigger than the underlying disk.
-  fs_management::FvmInitWithSize(ramdisk_fd.get(), kFvmPartitionSize, kSliceSize);
+  fs_management::FvmInitWithSize(ramdisk_block_interface(), kFvmPartitionSize, kSliceSize);
 
   // Try to bind an fvm to the disk.
-  fdio_cpp::UnownedFdioCaller caller(ramdisk_fd);
-
+  //
   // Bind should return ZX_ERR_IO when the load of a driver fails.
-  auto resp = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
-                  ->Bind(fidl::StringView(FVM_DRIVER_LIB));
+  auto resp =
+      fidl::WireCall(ramdisk_controller_interface())->Bind(fidl::StringView(FVM_DRIVER_LIB));
   ASSERT_OK(resp.status());
   ASSERT_FALSE(resp->is_ok());
   ASSERT_EQ(resp->error_value(), ZX_ERR_INTERNAL);
@@ -2603,8 +2607,8 @@ TEST_F(FvmTest, TestAbortDriverLoadSmallDevice) {
   // unloaded but Controller::Bind above does not wait until
   // the device is removed. Controller::Rebind ensures nothing is
   // bound to the device, before it tries to bind the driver again.
-  auto resp2 = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
-                   ->Rebind(fidl::StringView(FVM_DRIVER_LIB));
+  auto resp2 =
+      fidl::WireCall(ramdisk_controller_interface())->Rebind(fidl::StringView(FVM_DRIVER_LIB));
   ASSERT_OK(resp2.status());
   ASSERT_TRUE(resp2->is_ok());
   char fvm_path[PATH_MAX];

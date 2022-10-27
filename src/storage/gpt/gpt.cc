@@ -24,14 +24,12 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/vector.h>
-#include <gpt/gpt.h>
 #include <gpt/guid.h>
 #include <mbr/mbr.h>
 #include <range/range.h>
 #include <safemath/checked_math.h>
 #include <src/lib/uuid/uuid.h>
 
-#include "gpt.h"
 #include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/lib/utf_conversion/utf_conversion.h"
 
@@ -64,10 +62,11 @@ void print_array(const gpt_partition_t* const partitions[kPartitionCount], int c
 
 // Write a block to device "fd", writing "size" bytes followed by zero-byte padding to the next
 // block size.
-zx_status_t write_partial_block(int fd, void* data, size_t size, off_t offset, size_t blocksize) {
+zx_status_t write_partial_block(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device,
+                                void* data, size_t size, off_t offset, size_t blocksize) {
   // If input block is already rounded to blocksize, just directly write from our buffer.
   if (size % blocksize == 0) {
-    if (block_client::SingleWriteBytes(fd, data, size, offset) != ZX_OK) {
+    if (block_client::SingleWriteBytes(device, data, size, offset) != ZX_OK) {
       return ZX_ERR_IO;
     }
     return ZX_OK;
@@ -78,7 +77,7 @@ zx_status_t write_partial_block(int fd, void* data, size_t size, off_t offset, s
   std::unique_ptr<uint8_t[]> block(new uint8_t[new_size]);
   memcpy(block.get(), data, size);
   memset(block.get() + size, 0, new_size - size);
-  if (block_client::SingleWriteBytes(fd, block.get(), new_size, offset) != ZX_OK) {
+  if (block_client::SingleWriteBytes(device, block.get(), new_size, offset) != ZX_OK) {
     return ZX_ERR_IO;
   }
   return ZX_OK;
@@ -96,8 +95,8 @@ void partition_init(gpt_partition_t* part, const char* name, const uint8_t* type
                    sizeof(part->name) / num_utf16_bits);
 }
 
-zx_status_t gpt_sync_current(int fd, uint64_t blocksize, gpt_header_t* header,
-                             gpt_partition_t* ptable) {
+zx_status_t gpt_sync_current(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device,
+                             uint64_t blocksize, gpt_header_t* header, gpt_partition_t* ptable) {
   // Check all offset calculations are valid
   off_t table_offset;
   if (!safemath::CheckMul(header->entries, blocksize).Cast<off_t>().AssignIfValid(&table_offset)) {
@@ -115,13 +114,13 @@ zx_status_t gpt_sync_current(int fd, uint64_t blocksize, gpt_header_t* header,
   }
 
   // Write partition table first
-  zx_status_t status = write_partial_block(fd, ptable, ptable_size, table_offset, blocksize);
+  zx_status_t status = write_partial_block(device, ptable, ptable_size, table_offset, blocksize);
   if (status != ZX_OK) {
     return status;
   }
 
   // Then write the header
-  return write_partial_block(fd, header, sizeof(*header), header_offset, blocksize);
+  return write_partial_block(device, header, sizeof(*header), header_offset, blocksize);
 }
 
 int compare(const void* ls, const void* rs) {
@@ -494,19 +493,19 @@ zx_status_t GptDevice::FinalizeAndSync(bool persist) {
     // Write protective MBR.
     mbr::Mbr mbr = MakeProtectiveMbr(blocks_);
     zx_status_t status =
-        write_partial_block(fd_.get(), &mbr, sizeof(mbr), /*offset=*/0, blocksize_);
+        write_partial_block(device_.value(), &mbr, sizeof(mbr), /*offset=*/0, blocksize_);
     if (status != ZX_OK) {
       return status;
     }
 
     // write backup to disk
-    status = gpt_sync_current(fd_.get(), blocksize_, &header, buf.get());
+    status = gpt_sync_current(device_.value(), blocksize_, &header, buf.get());
     if (status != ZX_OK) {
       return status;
     }
 
     // write primary copy to disk
-    status = gpt_sync_current(fd_.get(), blocksize_, &header_, buf.get());
+    status = gpt_sync_current(device_.value(), blocksize_, &header_, buf.get());
     if (status != ZX_OK) {
       return status;
     }
@@ -587,7 +586,6 @@ zx_status_t GptDevice::ValidateEntries(const uint8_t* buffer, uint64_t block_cou
 
 zx_status_t GptDevice::LoadEntries(const uint8_t* buffer, uint64_t buffer_size,
                                    uint64_t block_count) {
-  zx_status_t status;
   size_t entries_size = static_cast<size_t>(header_.entries_count) * kEntrySize;
 
   // Ensure that we have large buffer that can contain all the
@@ -596,7 +594,7 @@ zx_status_t GptDevice::LoadEntries(const uint8_t* buffer, uint64_t buffer_size,
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
 
-  if ((status = ValidateEntries(buffer, block_count)) != ZX_OK) {
+  if (zx_status_t status = ValidateEntries(buffer, block_count); status != ZX_OK) {
     return status;
   }
 
@@ -656,15 +654,10 @@ zx_status_t GptDevice::GetDiffs(uint32_t idx, uint32_t* diffs) const {
   return ZX_OK;
 }
 
-zx_status_t GptDevice::Init(int fd, uint32_t blocksize, uint64_t block_count,
+zx_status_t GptDevice::Init(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device,
+                            uint32_t blocksize, uint64_t block_count,
                             std::unique_ptr<GptDevice>* out_dev) {
   off_t offset;
-
-  fbl::unique_fd fdp(dup(fd));
-  if (!fdp.is_valid()) {
-    G_PRINTF("failed to dup the fd\n");
-    return ZX_ERR_INTERNAL;
-  }
 
   uint8_t block[blocksize];
 
@@ -679,7 +672,7 @@ zx_status_t GptDevice::Init(int fd, uint32_t blocksize, uint64_t block_count,
   }
 
   offset = 0;
-  if (block_client::SingleReadBytes(fdp.get(), block, blocksize, offset) != ZX_OK) {
+  if (block_client::SingleReadBytes(device, block, blocksize, offset) != ZX_OK) {
     return ZX_ERR_IO;
   }
 
@@ -687,7 +680,7 @@ zx_status_t GptDevice::Init(int fd, uint32_t blocksize, uint64_t block_count,
   offset = static_cast<off_t>(kPrimaryHeaderStartBlock) * blocksize;
   size_t size = MinimumBytesPerCopy(blocksize).value();
   std::unique_ptr<uint8_t[]> buffer(new uint8_t[size]);
-  if (block_client::SingleReadBytes(fdp.get(), buffer.get(), size, offset) != ZX_OK) {
+  if (block_client::SingleReadBytes(device, buffer.get(), size, offset) != ZX_OK) {
     return ZX_ERR_IO;
   }
 
@@ -701,14 +694,15 @@ zx_status_t GptDevice::Init(int fd, uint32_t blocksize, uint64_t block_count,
     dev->blocksize_ = blocksize;
     dev->blocks_ = block_count;
   }
-  dev->fd_ = std::move(fdp);
+  dev->device_ = device;
   *out_dev = std::move(dev);
   return ZX_OK;
 }
 
-zx_status_t GptDevice::Create(int fd, uint32_t blocksize, uint64_t blocks,
+zx_status_t GptDevice::Create(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device,
+                              uint32_t blocksize, uint64_t blocks,
                               std::unique_ptr<GptDevice>* out) {
-  return Init(fd, blocksize, blocks, out);
+  return Init(device, blocksize, blocks, out);
 }
 
 zx_status_t GptDevice::Load(const uint8_t* buffer, uint64_t buffer_size, uint32_t blocksize,
@@ -725,15 +719,16 @@ zx_status_t GptDevice::Load(const uint8_t* buffer, uint64_t buffer_size, uint32_
     return ZX_ERR_INVALID_ARGS;
   }
 
-  zx_status_t status = ValidateHeader(reinterpret_cast<const gpt_header_t*>(buffer), blocks);
-  if (status != ZX_OK) {
+  if (zx_status_t status = ValidateHeader(reinterpret_cast<const gpt_header_t*>(buffer), blocks);
+      status != ZX_OK) {
     return status;
   }
 
   std::unique_ptr<GptDevice> dev(new GptDevice());
   memcpy(&dev->header_, buffer, sizeof(gpt_header_t));
 
-  if ((status = dev->LoadEntries(&buffer[blocksize], buffer_size - blocksize, blocks)) != ZX_OK) {
+  if (zx_status_t status = dev->LoadEntries(&buffer[blocksize], buffer_size - blocksize, blocks);
+      status != ZX_OK) {
     return status;
   }
 
@@ -743,7 +738,7 @@ zx_status_t GptDevice::Load(const uint8_t* buffer, uint64_t buffer_size, uint32_
   dev->valid_ = true;
   *out = std::move(dev);
 
-  return status;
+  return ZX_OK;
 }
 
 zx_status_t GptDevice::Finalize() { return FinalizeAndSync(false); }
@@ -846,7 +841,7 @@ zx_status_t GptDevice::ClearPartition(uint64_t offset, uint64_t blocks) {
       return ZX_ERR_OUT_OF_RANGE;
     }
 
-    auto status = block_client::SingleWriteBytes(fd_.get(), zero, sizeof(zero), offset);
+    auto status = block_client::SingleWriteBytes(device_.value(), zero, sizeof(zero), offset);
     if (status != ZX_OK) {
       G_PRINTF("Failed to write to block %zu; errno: %d\n", i, status);
       return ZX_ERR_IO;
@@ -932,10 +927,9 @@ zx_status_t GptDevice::SetPartitionRange(uint32_t partition_index, uint64_t star
     return p.error_value();
   }
 
-  zx_status_t ret;
   uint64_t block_start, block_end;
-  if ((ret = Range(&block_start, &block_end)) != ZX_OK) {
-    return ret;
+  if (zx_status_t status = Range(&block_start, &block_end); status != ZX_OK) {
+    return status;
   }
 
   if ((start < block_start) || (end > block_end) || (start >= end)) {

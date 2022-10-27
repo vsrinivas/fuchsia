@@ -34,18 +34,14 @@
 #include "pave-logging.h"
 #include "src/lib/storage/block_client/cpp/client.h"
 #include "src/lib/storage/fs_management/cpp/fvm.h"
-#include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/lib/uuid/uuid.h"
 #include "src/security/zxcrypt/client.h"
 #include "src/storage/fshost/constants.h"
 #include "src/storage/fvm/format.h"
-#include "src/storage/fvm/fvm.h"
 #include "src/storage/fvm/fvm_sparse.h"
 
 namespace paver {
 namespace {
-
-using uuid::Uuid;
 
 namespace block = fuchsia_hardware_block;
 namespace partition = fuchsia_hardware_block_partition;
@@ -191,7 +187,8 @@ zx_status_t StreamFvmPartition(fvm::SparseReader* reader, PartitionInfo* part,
       if (vmo_sz == 0) {
         ERROR("Read nothing from src_fd; %zu bytes left\n", bytes_left);
         return ZX_ERR_IO;
-      } else if (vmo_sz % block_size != 0) {
+      }
+      if (vmo_sz % block_size != 0) {
         ERROR("Cannot write non-block size multiple: %zu\n", vmo_sz);
         return ZX_ERR_IO;
       }
@@ -205,10 +202,9 @@ zx_status_t StreamFvmPartition(fvm::SparseReader* reader, PartitionInfo* part,
       request->vmo_offset = 0;
       request->dev_offset = offset / block_size;
 
-      ssize_t r;
-      if ((r = client.Transaction(request, 1)) != ZX_OK) {
+      if (zx_status_t status = client.Transaction(request, 1); status != ZX_OK) {
         ERROR("Error writing partition data\n");
-        return static_cast<zx_status_t>(r);
+        return status;
       }
 
       offset += vmo_sz;
@@ -231,8 +227,7 @@ zx_status_t StreamFvmPartition(fvm::SparseReader* reader, PartitionInfo* part,
       request->vmo_offset = 0;
       request->dev_offset = offset / block_size;
 
-      zx_status_t status;
-      if ((status = client.Transaction(request, 1)) != ZX_OK) {
+      if (zx_status_t status = client.Transaction(request, 1); status != ZX_OK) {
         ERROR("Error writing trailing zeroes length:%u dev_offset:%lu vmo_offset:%lu\n",
               request->length, request->dev_offset, request->vmo_offset);
         return status;
@@ -299,8 +294,10 @@ fbl::unique_fd FvmPartitionFormat(const fbl::unique_fd& devfs_root, fbl::unique_
   if (format_result != nullptr) {
     *format_result = FormatResult::kUnknown;
   }
+  fdio_cpp::UnownedFdioCaller partition_connection(partition_fd.get());
+  fidl::UnownedClientEnd partition_device = partition_connection.borrow_as<block::Block>();
   if (option == BindOption::TryBind) {
-    fs_management::DiskFormat df = fs_management::DetectDiskFormat(partition_fd.get());
+    fs_management::DiskFormat df = fs_management::DetectDiskFormat(partition_device);
     if (df == fs_management::kDiskFormatFvm) {
       fvm_fd = TryBindToFvmDriver(devfs_root, partition_fd, zx::sec(3));
       if (fvm_fd) {
@@ -342,9 +339,7 @@ fbl::unique_fd FvmPartitionFormat(const fbl::unique_fd& devfs_root, fbl::unique_
       *format_result = FormatResult::kReformatted;
     }
 
-    fdio_cpp::UnownedFdioCaller partition_connection(partition_fd.get());
-    auto block_info_result =
-        fidl::WireCall<block::Block>(partition_connection.channel())->GetInfo();
+    auto block_info_result = fidl::WireCall(partition_device)->GetInfo();
     if (!block_info_result.ok()) {
       ERROR("Failed to query block info: %s\n", zx_status_get_string(block_info_result.status()));
       return fbl::unique_fd();
@@ -355,8 +350,9 @@ fbl::unique_fd FvmPartitionFormat(const fbl::unique_fd& devfs_root, fbl::unique_
     uint64_t max_disk_size =
         (header.maximum_disk_size == 0) ? initial_disk_size : header.maximum_disk_size;
 
-    zx_status_t status = fs_management::FvmInitPreallocated(partition_fd.get(), initial_disk_size,
-                                                            max_disk_size, header.slice_size);
+    zx_status_t status =
+        fs_management::FvmInitPreallocated(partition_connection.borrow_as<block::Block>(),
+                                           initial_disk_size, max_disk_size, header.slice_size);
     if (status != ZX_OK) {
       ERROR("Failed to initialize fvm: %s\n", zx_status_get_string(status));
       return fbl::unique_fd();
@@ -373,8 +369,6 @@ namespace {
 // On success, returns a file descriptor to an FVM.
 // On failure, returns -1
 zx_status_t ZxcryptCreate(PartitionInfo* part) {
-  zx_status_t status;
-
   // TODO(security): fxbug.dev/31073. We need to bind with channel in order to pass a key here.
   // TODO(security): fxbug.dev/31733. The created volume must marked as needing key rotation.
 
@@ -382,23 +376,24 @@ zx_status_t ZxcryptCreate(PartitionInfo* part) {
 
   zxcrypt::VolumeManager zxcrypt_manager(std::move(part->new_part), std::move(devfs_root));
   zx::channel client_chan;
-  if ((status = zxcrypt_manager.OpenClient(zx::sec(3), client_chan)) != ZX_OK) {
+  if (zx_status_t status = zxcrypt_manager.OpenClient(zx::sec(3), client_chan); status != ZX_OK) {
     ERROR("Could not open zxcrypt volume manager\n");
     return status;
   }
   zxcrypt::EncryptedVolumeClient zxcrypt_client(std::move(client_chan));
   uint8_t slot = 0;
-  if ((status = zxcrypt_client.FormatWithImplicitKey(slot)) != ZX_OK) {
+  if (zx_status_t status = zxcrypt_client.FormatWithImplicitKey(slot); status != ZX_OK) {
     ERROR("Could not create zxcrypt volume\n");
     return status;
   }
 
-  if ((status = zxcrypt_client.UnsealWithImplicitKey(slot)) != ZX_OK) {
+  if (zx_status_t status = zxcrypt_client.UnsealWithImplicitKey(slot); status != ZX_OK) {
     ERROR("Could not unseal zxcrypt volume\n");
     return status;
   }
 
-  if ((status = zxcrypt_manager.OpenInnerBlockDevice(zx::sec(3), &part->new_part)) != ZX_OK) {
+  if (zx_status_t status = zxcrypt_manager.OpenInnerBlockDevice(zx::sec(3), &part->new_part);
+      status != ZX_OK) {
     ERROR("Could not open zxcrypt volume\n");
     return status;
   }
@@ -410,15 +405,16 @@ zx_status_t ZxcryptCreate(PartitionInfo* part) {
 zx_status_t FvmPartitionIsChild(const fbl::unique_fd& fvm_fd, const fbl::unique_fd& partition_fd) {
   char fvm_path[PATH_MAX];
   char part_path[PATH_MAX];
-  zx_status_t status;
-  if ((status = GetTopoPathFromFd(fvm_fd, fvm_path, sizeof(fvm_path))) != ZX_OK) {
+  if (zx_status_t status = GetTopoPathFromFd(fvm_fd, fvm_path, sizeof(fvm_path)); status != ZX_OK) {
     ERROR("Couldn't get topological path of FVM\n");
     return status;
-  } else if ((status = GetTopoPathFromFd(partition_fd, part_path, sizeof(part_path))) != ZX_OK) {
+  }
+  if (zx_status_t status = GetTopoPathFromFd(partition_fd, part_path, sizeof(part_path));
+      status != ZX_OK) {
     ERROR("Couldn't get topological path of partition\n");
     return status;
   }
-  if (strncmp(fvm_path, part_path, strlen(fvm_path))) {
+  if (strncmp(fvm_path, part_path, strlen(fvm_path)) != 0) {
     ERROR("Partition does not exist within FVM\n");
     return ZX_ERR_BAD_STATE;
   }
@@ -487,13 +483,15 @@ zx_status_t PreProcessPartitions(const fbl::unique_fd& fvm_fd,
       if (ext.magic != fvm::kExtentDescriptorMagic) {
         ERROR("Bad extent magic\n");
         return ZX_ERR_IO;
-      } else if (ext.slice_count == 0) {
+      }
+      if (ext.slice_count == 0) {
         ERROR("Extents must have > 0 slices\n");
         return ZX_ERR_IO;
-      } else if (ext.extent_length > ext.slice_count * hdr->slice_size) {
+      }
+      if (ext.extent_length > ext.slice_count * hdr->slice_size) {
         char name[BLOCK_NAME_LEN + 1];
         name[BLOCK_NAME_LEN] = '\0';
-        memcpy(&name, parts[p].aligned_pd.name, sizeof(BLOCK_NAME_LEN));
+        memcpy(&name, parts[p].aligned_pd.name, BLOCK_NAME_LEN);
         ERROR("Partition(%s) extent length(%lu) must fit within allocated slice count(%lu * %lu)\n",
               name, ext.extent_length, ext.slice_count, hdr->slice_size);
         return ZX_ERR_IO;
@@ -594,8 +592,8 @@ struct FvmPartition {
 zx_status_t WipeAllFvmPartitionsWithGuid(const fbl::unique_fd& fvm_fd, const uint8_t type_guid[]) {
   char fvm_topo_path[PATH_MAX] = {0};
   fbl::unique_fd old_part;
-  zx_status_t status;
-  if ((status = GetTopoPathFromFd(fvm_fd, fvm_topo_path, sizeof(fvm_topo_path))) != ZX_OK) {
+  if (zx_status_t status = GetTopoPathFromFd(fvm_fd, fvm_topo_path, sizeof(fvm_topo_path));
+      status != ZX_OK) {
     ERROR("Couldn't get topological path of FVM!\n");
     return status;
   }
@@ -606,7 +604,7 @@ zx_status_t WipeAllFvmPartitionsWithGuid(const fbl::unique_fd& fvm_fd, const uin
   };
   for (;;) {
     std::string name;
-    auto old_part_or = fs_management::OpenPartition(&matcher, ZX_MSEC(500), &name);
+    auto old_part_or = fs_management::OpenPartition(matcher, ZX_MSEC(500), &name);
     if (old_part_or.is_error())
       break;
     old_part = *std::move(old_part_or);

@@ -102,6 +102,7 @@ test("device-manager-test-bin") {
   output_name = "device-manager-test"
   sources = [ "device-manager-test.cc" ]
   deps = [
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//src/devices/block/drivers/ramdisk",
     "//src/devices/block/drivers/zxcrypt",

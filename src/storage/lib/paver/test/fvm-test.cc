@@ -5,6 +5,9 @@
 #include "src/storage/lib/paver/fvm.h"
 
 #include <lib/driver-integration-test/fixture.h>
+#include <lib/fdio/fd.h>
+#include <lib/sys/component/cpp/service_client.h>
+#include <lib/zx/result.h>
 
 #include <zxtest/zxtest.h>
 
@@ -54,9 +57,22 @@ class FvmTest : public zxtest::Test {
     ASSERT_TRUE(device_);
   }
 
-  int borrow_fd() { return device_->fd(); }
+  fidl::UnownedClientEnd<fuchsia_hardware_block::Block> block_interface() {
+    return device_->block_interface();
+  }
 
-  fbl::unique_fd fd() { return fbl::unique_fd(dup(device_->fd())); }
+  zx::result<fbl::unique_fd> fd() {
+    // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+    fidl::UnownedClientEnd client = device_->block_interface();
+    zx::result owned = component::Clone(client, component::AssumeProtocolComposesNode);
+    if (owned.is_error()) {
+      return owned.take_error();
+    }
+    fbl::unique_fd fd;
+    zx_status_t status =
+        fdio_fd_create(owned.value().TakeChannel().release(), fd.reset_and_get_address());
+    return zx::make_result(status, std::move(fd));
+  }
 
   const fbl::unique_fd& devfs_root() { return devmgr_.devfs_root(); }
 
@@ -67,42 +83,59 @@ class FvmTest : public zxtest::Test {
 
 TEST_F(FvmTest, FormatFvmEmpty) {
   ASSERT_NO_FAILURES(CreateRamdisk());
-  fbl::unique_fd fvm_part = FvmPartitionFormat(
-      devfs_root(), fd(), SparseHeaderForSliceSize(kSliceSize), paver::BindOption::Reformat);
+  zx::result fd = this->fd();
+  ASSERT_OK(fd.status_value());
+  fbl::unique_fd fvm_part =
+      FvmPartitionFormat(devfs_root(), std::move(fd.value()), SparseHeaderForSliceSize(kSliceSize),
+                         paver::BindOption::Reformat);
   ASSERT_TRUE(fvm_part.is_valid());
 }
 
 TEST_F(FvmTest, TryBindEmpty) {
   ASSERT_NO_FAILURES(CreateRamdisk());
-  fbl::unique_fd fvm_part = FvmPartitionFormat(
-      devfs_root(), fd(), SparseHeaderForSliceSize(kSliceSize), paver::BindOption::TryBind);
+  zx::result fd = this->fd();
+  ASSERT_OK(fd.status_value());
+  fbl::unique_fd fvm_part =
+      FvmPartitionFormat(devfs_root(), std::move(fd.value()), SparseHeaderForSliceSize(kSliceSize),
+                         paver::BindOption::TryBind);
   ASSERT_TRUE(fvm_part.is_valid());
 }
 
 TEST_F(FvmTest, TryBindAlreadyFormatted) {
   ASSERT_NO_FAILURES(CreateRamdisk());
-  ASSERT_OK(fs_management::FvmInit(borrow_fd(), kSliceSize));
-  fbl::unique_fd fvm_part = FvmPartitionFormat(
-      devfs_root(), fd(), SparseHeaderForSliceSize(kSliceSize), paver::BindOption::TryBind);
+  ASSERT_OK(fs_management::FvmInit(block_interface(), kSliceSize));
+  zx::result fd = this->fd();
+  ASSERT_OK(fd.status_value());
+  fbl::unique_fd fvm_part =
+      FvmPartitionFormat(devfs_root(), std::move(fd.value()), SparseHeaderForSliceSize(kSliceSize),
+                         paver::BindOption::TryBind);
   ASSERT_TRUE(fvm_part.is_valid());
 }
 
 TEST_F(FvmTest, TryBindAlreadyBound) {
   ASSERT_NO_FAILURES(CreateRamdisk());
-  fbl::unique_fd fvm_part = FvmPartitionFormat(
-      devfs_root(), fd(), SparseHeaderForSliceSize(kSliceSize), paver::BindOption::Reformat);
+  zx::result fd1 = fd();
+  ASSERT_OK(fd1.status_value());
+  fbl::unique_fd fvm_part =
+      FvmPartitionFormat(devfs_root(), std::move(fd1.value()), SparseHeaderForSliceSize(kSliceSize),
+                         paver::BindOption::Reformat);
   ASSERT_TRUE(fvm_part.is_valid());
 
-  fvm_part = FvmPartitionFormat(devfs_root(), fd(), SparseHeaderForSliceSize(kSliceSize),
-                                paver::BindOption::TryBind);
+  zx::result fd2 = fd();
+  ASSERT_OK(fd2.status_value());
+  fvm_part = FvmPartitionFormat(devfs_root(), std::move(fd2.value()),
+                                SparseHeaderForSliceSize(kSliceSize), paver::BindOption::TryBind);
   ASSERT_TRUE(fvm_part.is_valid());
 }
 
 TEST_F(FvmTest, TryBindAlreadyFormattedWrongSliceSize) {
   ASSERT_NO_FAILURES(CreateRamdisk());
-  ASSERT_OK(fs_management::FvmInit(borrow_fd(), kSliceSize * 2));
-  fbl::unique_fd fvm_part = FvmPartitionFormat(
-      devfs_root(), fd(), SparseHeaderForSliceSize(kSliceSize), paver::BindOption::TryBind);
+  zx::result fd = this->fd();
+  ASSERT_OK(fd.status_value());
+  ASSERT_OK(fs_management::FvmInit(block_interface(), kSliceSize * 2));
+  fbl::unique_fd fvm_part =
+      FvmPartitionFormat(devfs_root(), std::move(fd.value()), SparseHeaderForSliceSize(kSliceSize),
+                         paver::BindOption::TryBind);
   ASSERT_TRUE(fvm_part.is_valid());
 }
 
@@ -110,15 +143,17 @@ TEST_F(FvmTest, TryBindAlreadyFormattedWithSmallerSize) {
   constexpr size_t kBlockDeviceInitialSize = 1000 * kSliceSize;
   constexpr size_t kBlockDeviceMaxSize = 100000 * kSliceSize;
   ASSERT_NO_FAILURES(CreateRamdiskWithBlockCount(kBlockDeviceMaxSize / kBlockSize));
-  ASSERT_OK(fs_management::FvmInitPreallocated(borrow_fd(), kBlockDeviceInitialSize,
+  ASSERT_OK(fs_management::FvmInitPreallocated(block_interface(), kBlockDeviceInitialSize,
                                                kBlockDeviceMaxSize, kSliceSize));
   // Same slice size but can reference up to 200 Slices, which is far less than what the
   // preallocated can have.
   fvm::SparseImage header =
       SparseHeaderForSliceSizeAndMaxDiskSize(kSliceSize, 2 * kBlockDeviceInitialSize);
   paver::FormatResult result;
-  fbl::unique_fd fvm_part =
-      FvmPartitionFormat(devfs_root(), fd(), header, paver::BindOption::TryBind, &result);
+  zx::result fd = this->fd();
+  ASSERT_OK(fd.status_value());
+  fbl::unique_fd fvm_part = FvmPartitionFormat(devfs_root(), std::move(fd.value()), header,
+                                               paver::BindOption::TryBind, &result);
   ASSERT_TRUE(fvm_part.is_valid());
   ASSERT_EQ(paver::FormatResult::kPreserved, result);
 }
@@ -127,22 +162,27 @@ TEST_F(FvmTest, TryBindAlreadyFormattedWithBiggerSize) {
   constexpr size_t kBlockDeviceInitialSize = 1000 * kSliceSize;
   constexpr size_t kBlockDeviceMaxSize = 100000 * kSliceSize;
   ASSERT_NO_FAILURES(CreateRamdiskWithBlockCount(kBlockDeviceMaxSize / kBlockSize));
-  ASSERT_OK(fs_management::FvmInitPreallocated(borrow_fd(), kBlockDeviceInitialSize,
+  ASSERT_OK(fs_management::FvmInitPreallocated(block_interface(), kBlockDeviceInitialSize,
                                                kBlockDeviceMaxSize / 100, kSliceSize));
   // Same slice size but can reference up to 200 Slices, which is far less than what the
   // preallocated can have.
   fvm::SparseImage header = SparseHeaderForSliceSizeAndMaxDiskSize(kSliceSize, kBlockDeviceMaxSize);
   paver::FormatResult result;
-  fbl::unique_fd fvm_part =
-      FvmPartitionFormat(devfs_root(), fd(), header, paver::BindOption::TryBind, &result);
+  zx::result fd = this->fd();
+  ASSERT_OK(fd.status_value());
+  fbl::unique_fd fvm_part = FvmPartitionFormat(devfs_root(), std::move(fd.value()), header,
+                                               paver::BindOption::TryBind, &result);
   ASSERT_TRUE(fvm_part.is_valid());
   ASSERT_EQ(paver::FormatResult::kReformatted, result);
 }
 
 TEST_F(FvmTest, AllocateEmptyPartitions) {
   ASSERT_NO_FAILURES(CreateRamdisk());
-  fbl::unique_fd fvm_part = FvmPartitionFormat(
-      devfs_root(), fd(), SparseHeaderForSliceSize(kSliceSize), paver::BindOption::Reformat);
+  zx::result fd = this->fd();
+  ASSERT_OK(fd.status_value());
+  fbl::unique_fd fvm_part =
+      FvmPartitionFormat(devfs_root(), std::move(fd.value()), SparseHeaderForSliceSize(kSliceSize),
+                         paver::BindOption::Reformat);
   ASSERT_TRUE(fvm_part.is_valid());
 
   ASSERT_OK(paver::AllocateEmptyPartitions(devfs_root(), fvm_part));
@@ -160,11 +200,14 @@ TEST_F(FvmTest, AllocateEmptyPartitions) {
 
 TEST_F(FvmTest, WipeWithMultipleFvm) {
   ASSERT_NO_FAILURES(CreateRamdisk());
-  fbl::unique_fd fvm_part = FvmPartitionFormat(
-      devfs_root(), fd(), SparseHeaderForSliceSize(kSliceSize), paver::BindOption::Reformat);
-  ASSERT_TRUE(fvm_part.is_valid());
+  zx::result fd1 = fd();
+  ASSERT_OK(fd1.status_value());
+  fbl::unique_fd fvm_part1 =
+      FvmPartitionFormat(devfs_root(), std::move(fd1.value()), SparseHeaderForSliceSize(kSliceSize),
+                         paver::BindOption::Reformat);
+  ASSERT_TRUE(fvm_part1.is_valid());
 
-  ASSERT_OK(paver::AllocateEmptyPartitions(devfs_root(), fvm_part));
+  ASSERT_OK(paver::AllocateEmptyPartitions(devfs_root(), fvm_part1));
 
   {
     fbl::unique_fd blob(openat(devfs_root().get(),
@@ -180,10 +223,13 @@ TEST_F(FvmTest, WipeWithMultipleFvm) {
 
   // Save the old device.
   std::unique_ptr<BlockDevice> first_device = std::move(device_);
-  ASSERT_NO_FAILURES(CreateRamdisk());
 
-  fbl::unique_fd fvm_part2 = FvmPartitionFormat(
-      devfs_root(), fd(), SparseHeaderForSliceSize(kSliceSize), paver::BindOption::Reformat);
+  ASSERT_NO_FAILURES(CreateRamdisk());
+  zx::result fd2 = fd();
+  ASSERT_OK(fd2.status_value());
+  fbl::unique_fd fvm_part2 =
+      FvmPartitionFormat(devfs_root(), std::move(fd2.value()), SparseHeaderForSliceSize(kSliceSize),
+                         paver::BindOption::Reformat);
   ASSERT_TRUE(fvm_part2.is_valid());
 
   ASSERT_OK(paver::AllocateEmptyPartitions(devfs_root(), fvm_part2));
@@ -222,8 +268,11 @@ TEST_F(FvmTest, WipeWithMultipleFvm) {
 
 TEST_F(FvmTest, Unbind) {
   ASSERT_NO_FAILURES(CreateRamdisk());
-  fbl::unique_fd fvm_part = FvmPartitionFormat(
-      devfs_root(), fd(), SparseHeaderForSliceSize(kSliceSize), paver::BindOption::Reformat);
+  zx::result fd = this->fd();
+  ASSERT_OK(fd.status_value());
+  fbl::unique_fd fvm_part =
+      FvmPartitionFormat(devfs_root(), std::move(fd.value()), SparseHeaderForSliceSize(kSliceSize),
+                         paver::BindOption::Reformat);
   ASSERT_TRUE(fvm_part.is_valid());
 
   ASSERT_OK(paver::AllocateEmptyPartitions(devfs_root(), fvm_part));
@@ -245,8 +294,11 @@ TEST_F(FvmTest, Unbind) {
 
 TEST_F(FvmTest, UnbindInvalidPath) {
   ASSERT_NO_FAILURES(CreateRamdisk());
-  fbl::unique_fd fvm_part = FvmPartitionFormat(
-      devfs_root(), fd(), SparseHeaderForSliceSize(kSliceSize), paver::BindOption::Reformat);
+  zx::result fd = this->fd();
+  ASSERT_OK(fd.status_value());
+  fbl::unique_fd fvm_part =
+      FvmPartitionFormat(devfs_root(), std::move(fd.value()), SparseHeaderForSliceSize(kSliceSize),
+                         paver::BindOption::Reformat);
   ASSERT_TRUE(fvm_part.is_valid());
 
   ASSERT_OK(paver::AllocateEmptyPartitions(devfs_root(), fvm_part));

@@ -14,6 +14,7 @@
 #include <lib/fdio/watcher.h>
 #include <lib/fit/defer.h>
 #include <lib/zircon-internal/debug.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
@@ -118,7 +119,7 @@ void TestDevice::Create(size_t device_size, size_t block_size, bool fvm, Volume:
 void TestDevice::Bind(Volume::Version version, bool fvm) {
   ASSERT_NO_FATAL_FAILURE(Create(kDeviceSize, kBlockSize, fvm, version));
 
-  zxcrypt::VolumeManager volume_manager(parent(), devfs_root());
+  zxcrypt::VolumeManager volume_manager(parent().duplicate(), devfs_root().duplicate());
   zx::channel zxc_client_chan;
   ASSERT_OK(volume_manager.OpenClient(kTimeout, zxc_client_chan));
   EncryptedVolumeClient volume_client(std::move(zxc_client_chan));
@@ -129,9 +130,12 @@ void TestDevice::Bind(Volume::Version version, bool fvm) {
 
 void TestDevice::BindFvmDriver() {
   // Binds the FVM driver to the active ramdisk_.
-  const fdio_cpp::UnownedFdioCaller caller(ramdisk_get_block_fd(ramdisk_));
-  const fidl::WireResult result = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
-                                      ->Bind(fidl::StringView::FromExternal(kFvmDriver));
+  //
+  // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+  const fidl::UnownedClientEnd<fuchsia_device::Controller> channel(
+      ramdisk_get_block_interface(ramdisk_));
+  const fidl::WireResult result =
+      fidl::WireCall(channel)->Bind(fidl::StringView::FromExternal(kFvmDriver));
   ASSERT_OK(result.status());
   const fit::result response = result.value();
   ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
@@ -143,25 +147,32 @@ void TestDevice::Rebind() {
 
   Disconnect();
   zxcrypt_.reset();
-  fvm_part_.reset();
+  parent_.reset();
 
   if (strlen(fvm_part_path_) != 0) {
     // We need to explicitly rebind FVM here, since now that we're not
     // relying on the system-wide block-watcher, the driver won't rebind by
     // itself.
-    const fdio_cpp::UnownedFdioCaller caller(ramdisk_get_block_fd(ramdisk_));
-    const fidl::WireResult result = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
-                                        ->Rebind(fidl::StringView::FromExternal(kFvmDriver));
+    //
+    // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+    const fidl::UnownedClientEnd<fuchsia_device::Controller> channel(
+        ramdisk_get_block_interface(ramdisk_));
+    const fidl::WireResult result =
+        fidl::WireCall(channel)->Rebind(fidl::StringView::FromExternal(kFvmDriver));
     ASSERT_OK(result.status());
     const fit::result response = result.value();
     ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
 
-    fbl::unique_fd dev_root = devfs_root();
-    ASSERT_EQ(device_watcher::RecursiveWaitForFile(dev_root, fvm_part_path_, &fvm_part_), ZX_OK);
-    parent_caller_.reset(fvm_part_.get());
+    ASSERT_EQ(device_watcher::RecursiveWaitForFile(devfs_root(), fvm_part_path_, &parent_), ZX_OK);
   } else {
     ASSERT_EQ(ramdisk_rebind(ramdisk_), ZX_OK);
-    parent_caller_.reset(ramdisk_get_block_fd(ramdisk_));
+
+    // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+    fidl::UnownedClientEnd<fuchsia_io::Node> client(ramdisk_get_block_interface(ramdisk_));
+    zx::result owned = component::Clone(client);
+    ASSERT_OK(owned.status_value());
+    ASSERT_OK(
+        fdio_fd_create(owned.value().TakeChannel().release(), parent_.reset_and_get_address()));
   }
   ASSERT_NO_FATAL_FAILURE(Connect());
 }
@@ -246,20 +257,19 @@ void TestDevice::WriteVmo(zx_off_t off, size_t len) {
 void TestDevice::Corrupt(uint64_t blkno, key_slot_t slot) {
   uint8_t block[block_size_];
 
-  fbl::unique_fd fd = parent();
-  ASSERT_OK(ToStatus(::lseek(fd.get(), blkno * block_size_, SEEK_SET)));
-  ASSERT_OK(ToStatus(::read(fd.get(), block, block_size_)));
+  ASSERT_OK(ToStatus(::lseek(parent().get(), blkno * block_size_, SEEK_SET)));
+  ASSERT_OK(ToStatus(::read(parent().get(), block, block_size_)));
 
   std::unique_ptr<FdioVolume> volume;
-  ASSERT_OK(FdioVolume::Unlock(parent(), key_, 0, &volume));
+  ASSERT_OK(FdioVolume::Unlock(parent().duplicate(), key_, 0, &volume));
 
   zx_off_t off;
   ASSERT_OK(volume->GetSlotOffset(slot, &off));
   int flip = 1U << (rand() % 8);
   block[off] ^= static_cast<uint8_t>(flip);
 
-  ASSERT_OK(ToStatus(::lseek(fd.get(), blkno * block_size_, SEEK_SET)));
-  ASSERT_OK(ToStatus(::write(fd.get(), block, block_size_)));
+  ASSERT_OK(ToStatus(::lseek(parent().get(), blkno * block_size_, SEEK_SET)));
+  ASSERT_OK(ToStatus(::write(parent().get(), block, block_size_)));
 }
 
 // Private methods
@@ -277,13 +287,16 @@ void TestDevice::CreateRamdisk(size_t device_size, size_t block_size) {
   ASSERT_TRUE(ac.check());
   memset(as_read_.get(), 0, block_size);
 
-  fbl::unique_fd devfs_root_fd = devfs_root();
-  ASSERT_EQ(ramdisk_create_at(devfs_root_fd.get(), block_size, count, &ramdisk_), ZX_OK);
+  ASSERT_EQ(ramdisk_create_at(devfs_root().get(), block_size, count, &ramdisk_), ZX_OK);
 
   fbl::unique_fd ramdisk_ignored;
-  device_watcher::RecursiveWaitForFile(devfs_root_fd, ramdisk_get_path(ramdisk_), &ramdisk_ignored);
+  device_watcher::RecursiveWaitForFile(devfs_root(), ramdisk_get_path(ramdisk_), &ramdisk_ignored);
 
-  parent_caller_.reset(ramdisk_get_block_fd(ramdisk_));
+  // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+  fidl::UnownedClientEnd<fuchsia_io::Node> client(ramdisk_get_block_interface(ramdisk_));
+  zx::result owned = component::Clone(client);
+  ASSERT_OK(owned.status_value());
+  ASSERT_OK(fdio_fd_create(owned.value().TakeChannel().release(), parent_.reset_and_get_address()));
 
   block_size_ = block_size;
   block_count_ = count;
@@ -306,7 +319,9 @@ void TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
   ASSERT_NO_FATAL_FAILURE(CreateRamdisk(fvm_header.fvm_partition_size, block_size));
 
   // Format the ramdisk as FVM
-  ASSERT_OK(fs_management::FvmInit(ramdisk_get_block_fd(ramdisk_), fvm::kBlockSize));
+  const fidl::UnownedClientEnd<fuchsia_hardware_block::Block> channel(
+      ramdisk_get_block_interface(ramdisk_));
+  ASSERT_OK(fs_management::FvmInit(channel, fvm::kBlockSize));
 
   // Bind the FVM driver to the now-formatted disk
   ASSERT_NO_FATAL_FAILURE(BindFvmDriver());
@@ -314,9 +329,8 @@ void TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
   // Wait for the FVM driver to expose a block device, then open it
   char path[PATH_MAX];
   snprintf(path, sizeof(path), "%s/fvm", ramdisk_get_path(ramdisk_));
-  fbl::unique_fd dev_root = devfs_root();
   fbl::unique_fd fvm_fd;
-  ASSERT_EQ(device_watcher::RecursiveWaitForFile(dev_root, path, &fvm_fd), ZX_OK);
+  ASSERT_EQ(device_watcher::RecursiveWaitForFile(devfs_root(), path, &fvm_fd), ZX_OK);
 
   // Allocate a FVM partition with the last slice unallocated.
   alloc_req_t req;
@@ -328,10 +342,9 @@ void TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
   }
   snprintf(req.name, BLOCK_NAME_LEN, "data");
   auto fvm_part_or =
-      fs_management::FvmAllocatePartitionWithDevfs(dev_root.get(), fvm_fd.get(), &req);
+      fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(), fvm_fd.get(), &req);
   ASSERT_EQ(fvm_part_or.status_value(), ZX_OK);
-  fvm_part_ = *std::move(fvm_part_or);
-  parent_caller_.reset(fvm_part_.get());
+  parent_ = *std::move(fvm_part_or);
 
   // Save the topological path for rebinding.  The topological path will be
   // consistent after rebinding the ramdisk, whereas the
@@ -354,7 +367,8 @@ void TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
 void TestDevice::Connect() {
   ZX_DEBUG_ASSERT(!zxcrypt_);
 
-  volume_manager_ = std::make_unique<zxcrypt::VolumeManager>(parent(), devfs_root());
+  volume_manager_ =
+      std::make_unique<zxcrypt::VolumeManager>(parent().duplicate(), devfs_root().duplicate());
   zx::channel zxc_client_chan;
   ASSERT_OK(volume_manager_->OpenClient(kTimeout, zxc_client_chan));
 
@@ -366,7 +380,6 @@ void TestDevice::Connect() {
   rc = volume_client.Unseal(key_.get(), key_.len(), 0);
   ASSERT_TRUE(rc == ZX_OK || rc == ZX_ERR_BAD_STATE);
   ASSERT_OK(volume_manager_->OpenInnerBlockDevice(kTimeout, &zxcrypt_));
-  zxcrypt_caller_.reset(zxcrypt_.get());
 
   {
     const fidl::WireResult result = fidl::WireCall(zxcrypt_block())->GetInfo();

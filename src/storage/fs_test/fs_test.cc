@@ -366,10 +366,11 @@ zx::result<std::pair<RamDevice, std::string>> OpenRamDevice(const TestFilesystem
 
   if (options.use_fvm) {
     // Now bind FVM to it.
-    fbl::unique_fd ftl_device(open(device_path.c_str(), O_RDWR));
-    if (!ftl_device)
-      return zx::error(ZX_ERR_BAD_STATE);
-    auto status = storage::BindFvm(ftl_device.get());
+    zx::result device = component::Connect<fuchsia_device::Controller>(device_path.c_str());
+    if (device.is_error()) {
+      return device.take_error();
+    }
+    auto status = storage::BindFvm(device.value());
     if (status.is_error()) {
       std::cout << "Unable to bind FVM: " << status.status_string() << std::endl;
       return status.take_error();

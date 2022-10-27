@@ -36,8 +36,15 @@ namespace {
 
 using usb_virtual::BusLauncher;
 
-zx_status_t (&BRead)(int, void*, size_t, size_t) = block_client::SingleReadBytes;
-zx_status_t (&BWrite)(int, void*, size_t, size_t) = block_client::SingleWriteBytes;
+zx_status_t BRead(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device, void* buffer,
+                  size_t buffer_size, size_t offset) {
+  return block_client::SingleReadBytes(device, buffer, buffer_size, offset);
+}
+
+zx_status_t BWrite(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device, void* buffer,
+                   size_t buffer_size, size_t offset) {
+  return block_client::SingleWriteBytes(device, buffer, buffer_size, offset);
+}
 
 namespace usb_peripheral = fuchsia_hardware_usb_peripheral;
 namespace usb_peripheral_block = fuchsia_hardware_usb_peripheral_block;
@@ -169,7 +176,6 @@ class UmsTest : public zxtest::Test {
     fbl::unique_fd fd(openat(bus_->GetRootFd(), "class/block", O_RDONLY));
     while (fdio_watch_directory(fd.get(), WaitForAnyFile, ZX_TIME_INFINITE, devpath) !=
            ZX_ERR_STOP) {
-      continue;
     }
     *devpath = fbl::String::Concat({fbl::String("class/block/"), *devpath});
   }
@@ -189,11 +195,12 @@ class UmsTest : public zxtest::Test {
       DIR* dir_handle = fdopendir(fd.get());
       auto release_dir = fit::defer([=]() { closedir(dir_handle); });
       for (dirent* ent = readdir(dir_handle); ent; ent = readdir(dir_handle)) {
-        if (strcmp(ent->d_name, ".") && strcmp(ent->d_name, "..")) {
-          last_known_devpath_ =
-              fbl::String::Concat({fbl::String("class/block/"), fbl::String(ent->d_name)});
-          return last_known_devpath_;
+        std::string_view name(ent->d_name);
+        if (name == ".") {
+          continue;
         }
+        last_known_devpath_ = fbl::String::Concat({fbl::String("class/block/"), name});
+        return last_known_devpath_;
       }
     }
   }
@@ -238,18 +245,19 @@ TEST_F(UmsTest, DISABLED_CachedWriteWithNoFlushShouldBeDiscarded) {
   ASSERT_NO_FATAL_FAILURE(controller.EnableWritebackCache());
   fbl::unique_fd fd(openat(bus_->GetRootFd(), GetTestdevPath().c_str(), O_RDWR));
   ASSERT_GE(fd.get(), 0);
+  fdio_cpp::UnownedFdioCaller caller(fd);
 
   uint32_t blk_size;
   {
-    fdio_cpp::UnownedFdioCaller caller(fd.get());
-    auto result = fidl::WireCall<fuchsia_hardware_block::Block>(caller.channel())->GetInfo();
+    auto result = fidl::WireCall(caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
     ASSERT_NO_FATAL_FAILURE(ValidateResult(result));
     blk_size = result.value().info->block_size;
   }
 
   std::unique_ptr<uint8_t[]> write_buffer(new uint8_t[blk_size]);
   std::unique_ptr<uint8_t[]> read_buffer(new uint8_t[blk_size]);
-  ASSERT_EQ(ZX_OK, BRead(fd.get(), read_buffer.get(), blk_size, 0));
+  ASSERT_EQ(ZX_OK, BRead(caller.borrow_as<fuchsia_hardware_block::Block>(), read_buffer.get(),
+                         blk_size, 0));
   fd.reset(openat(bus_->GetRootFd(), GetTestdevPath().c_str(), O_RDWR));
   ASSERT_GE(fd.get(), 0);
   // Create a pattern to write to the block device
@@ -257,7 +265,8 @@ TEST_F(UmsTest, DISABLED_CachedWriteWithNoFlushShouldBeDiscarded) {
     write_buffer.get()[i] = static_cast<unsigned char>(i);
   }
   // Write the data to the block device
-  ASSERT_EQ(ZX_OK, BWrite(fd.get(), write_buffer.get(), blk_size, 0));
+  ASSERT_EQ(ZX_OK, BWrite(caller.borrow_as<fuchsia_hardware_block::Block>(), write_buffer.get(),
+                          blk_size, 0));
   ASSERT_EQ(-1, fsync(fd.get()));
   fd.reset();
   // Disconnect the block device without flushing the cache.
@@ -266,7 +275,8 @@ TEST_F(UmsTest, DISABLED_CachedWriteWithNoFlushShouldBeDiscarded) {
   ASSERT_NO_FATAL_FAILURE(controller.Connect());
   fd.reset(openat(bus_->GetRootFd(), GetTestdevPath().c_str(), O_RDWR));
   ASSERT_GE(fd.get(), 0);
-  ASSERT_EQ(ZX_OK, BRead(fd.get(), write_buffer.get(), blk_size, 0));
+  ASSERT_EQ(ZX_OK, BRead(caller.borrow_as<fuchsia_hardware_block::Block>(), write_buffer.get(),
+                         blk_size, 0));
   ASSERT_NE(0, memcmp(read_buffer.get(), write_buffer.get(), blk_size));
 }
 
@@ -279,11 +289,11 @@ TEST_F(UmsTest, DISABLED_UncachedWriteShouldBePersistedToBlockDevice) {
   ASSERT_NO_FATAL_FAILURE(controller.DisableWritebackCache());
   fbl::unique_fd fd(openat(bus_->GetRootFd(), GetTestdevPath().c_str(), O_RDWR));
   ASSERT_GE(fd.get(), 0);
+  fdio_cpp::UnownedFdioCaller caller(fd.get());
 
   uint32_t blk_size;
   {
-    fdio_cpp::UnownedFdioCaller caller(fd.get());
-    auto result = fidl::WireCall<fuchsia_hardware_block::Block>(caller.channel())->GetInfo();
+    auto result = fidl::WireCall(caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
     ASSERT_NO_FATAL_FAILURE(ValidateResult(result));
     blk_size = result.value().info->block_size;
   }
@@ -294,7 +304,8 @@ TEST_F(UmsTest, DISABLED_UncachedWriteShouldBePersistedToBlockDevice) {
   for (size_t i = 0; i < blk_size; i++) {
     write_buffer.get()[i] = static_cast<unsigned char>(i);
   }
-  ASSERT_EQ(ZX_OK, BWrite(fd.get(), write_buffer.get(), blk_size, 0));
+  ASSERT_EQ(ZX_OK, BWrite(caller.borrow_as<fuchsia_hardware_block::Block>(), write_buffer.get(),
+                          blk_size, 0));
   memset(write_buffer.get(), 0, blk_size);
   fd.reset();
   // Disconnect and re-connect the block device
@@ -304,7 +315,8 @@ TEST_F(UmsTest, DISABLED_UncachedWriteShouldBePersistedToBlockDevice) {
   ASSERT_GE(fd.get(), 0);
   // Read back the pattern, which should match what was written
   // since writeback caching was disabled.
-  ASSERT_EQ(ZX_OK, BRead(fd.get(), write_buffer.get(), blk_size, 0));
+  ASSERT_EQ(ZX_OK, BRead(caller.borrow_as<fuchsia_hardware_block::Block>(), write_buffer.get(),
+                         blk_size, 0));
   for (size_t i = 0; i < blk_size; i++) {
     ASSERT_EQ(write_buffer.get()[i], static_cast<unsigned char>(i));
   }

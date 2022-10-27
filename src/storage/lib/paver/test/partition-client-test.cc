@@ -386,8 +386,11 @@ class FixedOffsetBlockPartitionClientTest : public zxtest::Test {
     constexpr uint8_t kEmptyType[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
     ASSERT_NO_FATAL_FAILURE(
         BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, 2, 512, &gpt_dev_));
-    ASSERT_OK(fdio_get_service_handle(gpt_dev_->fd(),
-                                      service_channel_.channel().reset_and_get_address()));
+    // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+    zx::result gpt_chan =
+        component::Clone(gpt_dev_->block_interface(), component::AssumeProtocolComposesNode);
+    ASSERT_OK(gpt_chan.status_value());
+    service_channel_ = std::move(gpt_chan.value());
   }
 
   // Creates a BlockPartitionClient which will read/write the entire device.

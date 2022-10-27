@@ -145,9 +145,9 @@ int main(int argc, char** argv) {
     }
   }
 
-  ParentDevice parent(config);
-  if (!parent.IsValid()) {
-    printf("Unable to open the nand device\n");
+  zx::result parent = ParentDevice::Create(config);
+  if (parent.is_error()) {
+    printf("Unable to open the nand device: %s\n", parent.status_string());
     return -1;
   }
 
@@ -159,7 +159,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  g_parent_device_ = &parent;
+  g_parent_device_ = &parent.value();
 
   return RUN_ALL_TESTS(argc, argv);
 }

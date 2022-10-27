@@ -8,6 +8,7 @@
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <zircon/hw/gpt.h>
 
 #include <fbl/unique_fd.h>
@@ -31,11 +32,11 @@ namespace {
 constexpr std::string_view sparse_image_path = "/pkg/data/test_fvm.sparse.blk";
 
 zx::result<std::string> AttachFvm(const std::string& device_path) {
-  fbl::unique_fd fd(open(device_path.c_str(), O_RDWR));
-  if (!fd) {
-    return zx::error(ZX_ERR_BAD_STATE);
+  zx::result device = component::Connect<fuchsia_device::Controller>(device_path.c_str());
+  if (device.is_error()) {
+    return device.take_error();
   }
-  if (auto status = storage::BindFvm(fd.get()); status.is_error())
+  if (auto status = storage::BindFvm(device.value()); status.is_error())
     return status.take_error();
   std::string fvm_disk_path = device_path + "/fvm";
   if (auto status = zx::make_result(wait_for_device(fvm_disk_path.c_str(), zx::sec(3).get()));
@@ -133,16 +134,16 @@ TEST(FvmSparseImageReaderTest, PartitionsInImagePassFsck) {
       .type_guid = minfs_guid,
   };
 
-  ASSERT_EQ(fs_management::OpenPartition(&matcher, zx::duration::infinite().get(), nullptr)
-                .status_value(),
-            ZX_OK);
+  ASSERT_EQ(
+      fs_management::OpenPartition(matcher, zx::duration::infinite().get(), nullptr).status_value(),
+      ZX_OK);
 
   // Attempt to fsck minfs.
   {
     std::string path;
-    ASSERT_EQ(fs_management::OpenPartition(&matcher, zx::duration::infinite().get(), &path)
-                  .status_value(),
-              ZX_OK);
+    ASSERT_EQ(
+        fs_management::OpenPartition(matcher, zx::duration::infinite().get(), &path).status_value(),
+        ZX_OK);
 
     // And finally run fsck on the volume.
     fs_management::FsckOptions options{
@@ -163,9 +164,9 @@ TEST(FvmSparseImageReaderTest, PartitionsInImagePassFsck) {
     fs_management::PartitionMatcher matcher{
         .type_guid = blobfs_guid,
     };
-    ASSERT_EQ(fs_management::OpenPartition(&matcher, zx::duration::infinite().get(), &path)
-                  .status_value(),
-              ZX_OK);
+    ASSERT_EQ(
+        fs_management::OpenPartition(matcher, zx::duration::infinite().get(), &path).status_value(),
+        ZX_OK);
 
     // And finally run fsck on the volume.
     fs_management::FsckOptions options{
@@ -184,7 +185,8 @@ TEST(FvmSparseImageReaderTest, PartitionsInImagePassFsck) {
 
 class NullWriter : public Writer {
  public:
-  fpromise::result<void, std::string> Write(uint64_t offset, cpp20::span<const uint8_t> buffer) {
+  fpromise::result<void, std::string> Write(uint64_t offset,
+                                            cpp20::span<const uint8_t> buffer) override {
     return fpromise::ok();
   }
 };

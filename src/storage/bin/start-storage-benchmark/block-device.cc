@@ -212,7 +212,7 @@ zx::result<FvmVolume> FvmVolume::Create(fidl::ClientEnd<VolumeManager> &fvm_clie
       .instance_guid = instance_guid.value.data(),
   };
   std::string path;
-  auto fd = fs_management::OpenPartition(&matcher, ZX_SEC(10), &path);
+  auto fd = fs_management::OpenPartition(matcher, ZX_SEC(10), &path);
   if (fd.is_error()) {
     fprintf(stderr, "Failed to find newly created volume\n");
     return zx::error(ZX_ERR_TIMED_OUT);
@@ -222,11 +222,12 @@ zx::result<FvmVolume> FvmVolume::Create(fidl::ClientEnd<VolumeManager> &fvm_clie
 
 zx::result<std::string> FindFvmBlockDevicePath() {
   for (const auto &block_device : std::filesystem::directory_iterator("/dev/class/block")) {
-    fbl::unique_fd fd(open(block_device.path().c_str(), O_RDWR));
-    if (!fd.is_valid()) {
+    zx::result channel =
+        component::Connect<fuchsia_hardware_block::Block>(block_device.path().string());
+    if (channel.is_error()) {
       continue;
     }
-    auto disk_format = fs_management::DetectDiskFormat(fd.get());
+    auto disk_format = fs_management::DetectDiskFormat(channel.value());
     if (disk_format == fs_management::DiskFormat::kDiskFormatFvm) {
       return zx::ok(block_device.path());
     }

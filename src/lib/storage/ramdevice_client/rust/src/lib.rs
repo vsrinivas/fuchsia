@@ -42,12 +42,8 @@ mod ramdevice_sys;
 
 use {
     anyhow::Error,
-    fdio, fuchsia_zircon as zx,
-    std::{
-        ffi, fs,
-        os::unix::io::{AsRawFd, RawFd},
-        ptr,
-    },
+    fuchsia_zircon as zx,
+    std::{ffi, fs, os::unix::io::AsRawFd as _, ptr},
     zx::HandleBased,
 };
 enum DevRoot {
@@ -90,13 +86,14 @@ impl VmoRamdiskClientBuilder {
 
     /// Create the ramdisk.
     pub fn build(self) -> Result<RamdiskClient, zx::Status> {
-        let vmo_handle = self.vmo.into_raw();
+        let Self { vmo, block_size, dev_root, guid } = self;
+        let vmo_handle = vmo.into_raw();
         let mut ramdisk: *mut ramdevice_sys::ramdisk_client_t = ptr::null_mut();
-        let block_size = self.block_size.unwrap_or(0);
+        let block_size = block_size.unwrap_or(0);
         let type_guid: *const u8 =
-            if let Some(guid) = self.guid.as_ref() { guid.as_ptr() } else { std::ptr::null() };
+            if let Some(guid) = guid.as_ref() { guid.as_ptr() } else { std::ptr::null() };
 
-        let status = if let Some(dev_root) = &self.dev_root {
+        let status = if let Some(dev_root) = dev_root {
             let dev_root_fd = match &dev_root {
                 DevRoot::Provided(f) => f.as_raw_fd(),
             };
@@ -108,7 +105,7 @@ impl VmoRamdiskClientBuilder {
                     vmo_handle,
                     block_size,
                     type_guid,
-                    GUID_LEN,
+                    GUID_LEN.try_into().unwrap(),
                     &mut ramdisk,
                 )
             }
@@ -118,7 +115,7 @@ impl VmoRamdiskClientBuilder {
                     vmo_handle,
                     block_size,
                     type_guid,
-                    GUID_LEN,
+                    GUID_LEN.try_into().unwrap(),
                     &mut ramdisk,
                 )
             }
@@ -158,13 +155,12 @@ impl RamdiskClientBuilder {
 
     /// Create the ramdisk.
     pub fn build(&mut self) -> Result<RamdiskClient, zx::Status> {
-        let block_size = self.block_size;
-        let block_count = self.block_count;
+        let Self { block_size, block_count, dev_root, guid } = self;
         let type_guid: *const u8 =
-            if let Some(guid) = self.guid.as_ref() { guid.as_ptr() } else { std::ptr::null() };
+            if let Some(guid) = guid.as_ref() { guid.as_ptr() } else { std::ptr::null() };
         let mut ramdisk: *mut ramdevice_sys::ramdisk_client_t = ptr::null_mut();
 
-        let status = if let Some(dev_root) = &self.dev_root {
+        let status = if let Some(dev_root) = dev_root {
             let dev_root_fd = match &dev_root {
                 DevRoot::Provided(f) => f.as_raw_fd(),
             };
@@ -172,20 +168,20 @@ impl RamdiskClientBuilder {
             unsafe {
                 ramdevice_sys::ramdisk_create_at_with_guid(
                     dev_root_fd,
-                    block_size,
-                    block_count,
+                    *block_size,
+                    *block_count,
                     type_guid,
-                    GUID_LEN,
+                    GUID_LEN.try_into().unwrap(),
                     &mut ramdisk,
                 )
             }
         } else {
             unsafe {
                 ramdevice_sys::ramdisk_create_with_guid(
-                    block_size,
-                    block_count,
+                    *block_size,
+                    *block_count,
                     type_guid,
-                    GUID_LEN,
+                    GUID_LEN.try_into().unwrap(),
                     &mut ramdisk,
                 )
             }
@@ -221,8 +217,9 @@ impl RamdiskClient {
     /// Get the device path of the associated ramdisk. Note that if this ramdisk was created with a
     /// custom dev_root, the returned path will be relative to that handle.
     pub fn get_path(&self) -> &str {
+        let Self { ramdisk } = self;
         unsafe {
-            let raw_path = ramdevice_sys::ramdisk_get_path(self.ramdisk);
+            let raw_path = ramdevice_sys::ramdisk_get_path(*ramdisk);
             // We can trust this path to be valid UTF-8
             ffi::CStr::from_ptr(raw_path).to_str().expect("ramdisk path was not utf8?")
         }
@@ -230,25 +227,33 @@ impl RamdiskClient {
 
     /// Get an open channel to the underlying ramdevice.
     pub fn open(&self) -> Result<zx::Channel, zx::Status> {
-        struct UnownedFd(RawFd);
-        impl AsRawFd for UnownedFd {
-            fn as_raw_fd(&self) -> RawFd {
-                self.0
+        let Self { ramdisk } = self;
+        let handle = unsafe { ramdevice_sys::ramdisk_get_block_interface(*ramdisk) };
+        // TODO(https://fxbug.dev/89811): Remove this when we're not restricted
+        // to this FFI interface. Unfortunately there is no public API that
+        // allows us to clone an unowned handle. We could expose this function
+        // from fdio::fdio_sys, but it seems better to keep this hack localized.
+        //
+        // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+        extern "C" {
+            pub fn fdio_service_clone(node: zx::sys::zx_handle_t) -> zx::sys::zx_handle_t;
+        }
+        let handle = unsafe { fdio_service_clone(handle) };
+        match handle {
+            zx::sys::ZX_HANDLE_INVALID => Err(zx::Status::NOT_SUPPORTED),
+            handle => {
+                let handle = unsafe { zx::Handle::from_raw(handle) };
+                Ok(zx::Channel::from(handle))
             }
         }
-
-        // Safe because self.ramdisk is valid and the borrowed fd is not borrowed beyond this
-        // method call.
-        let fd = unsafe { ramdevice_sys::ramdisk_get_block_fd(self.ramdisk) };
-        let client_chan = fdio::clone_channel(&UnownedFd(fd))?;
-        Ok(client_chan)
     }
 
     /// Remove the underlying ramdisk. This deallocates all resources for this ramdisk, which will
     /// remove all data written to the associated ramdisk.
     pub fn destroy(self) -> Result<(), zx::Status> {
+        let Self { ramdisk } = self;
         // we are doing the same thing as the `Drop` impl, so tell rust not to drop it
-        let status = unsafe { ramdevice_sys::ramdisk_destroy(self.ramdisk) };
+        let status = unsafe { ramdevice_sys::ramdisk_destroy(ramdisk) };
         std::mem::forget(self);
         zx::Status::ok(status)
     }
@@ -266,16 +271,16 @@ unsafe impl Sync for RamdiskClient {}
 
 impl Drop for RamdiskClient {
     fn drop(&mut self) {
-        let _ = unsafe { ramdevice_sys::ramdisk_destroy(self.ramdisk) };
+        let Self { ramdisk } = self;
+        let _ = unsafe { ramdevice_sys::ramdisk_destroy(*ramdisk) };
     }
 }
 
 /// Wait for no longer than |duration| for the device at |path| to appear.
 pub fn wait_for_device(path: &str, duration: std::time::Duration) -> Result<(), Error> {
     let c_path = ffi::CString::new(path)?;
-    Ok(zx::Status::ok(unsafe {
-        ramdevice_sys::wait_for_device(c_path.as_ptr(), duration.as_nanos() as u64)
-    })?)
+    let nanos = duration.as_nanos().try_into()?;
+    Ok(zx::Status::ok(unsafe { ramdevice_sys::wait_for_device(c_path.as_ptr(), nanos) })?)
 }
 
 /// Wait for no longer than |duration| for the device at |path| relative to |dirfd| to appear.
@@ -285,20 +290,15 @@ pub fn wait_for_device_at(
     duration: std::time::Duration,
 ) -> Result<(), Error> {
     let c_path = ffi::CString::new(path)?;
+    let nanos = duration.as_nanos().try_into()?;
     Ok(zx::Status::ok(unsafe {
-        ramdevice_sys::wait_for_device_at(
-            dirfd.as_raw_fd(),
-            c_path.as_ptr(),
-            duration.as_nanos() as u64,
-        )
+        ramdevice_sys::wait_for_device_at(dirfd.as_raw_fd(), c_path.as_ptr(), nanos)
     })?)
 }
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*, assert_matches::assert_matches, fidl_fuchsia_io as fio, fuchsia_async as fasync,
-    };
+    use {super::*, fidl_fuchsia_io as fio, fuchsia_async as fasync};
 
     // Note that if these tests flake, all downstream tests that depend on this crate may too.
 
@@ -309,8 +309,8 @@ mod tests {
 
     const WAIT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
 
-    #[fasync::run_singlethreaded(test)]
-    async fn create_get_path_destroy() {
+    #[test]
+    fn create_get_path_destroy() {
         wait_for_device("/dev/sys/platform/00:00:2d/ramctl", WAIT_TIMEOUT)
             .expect("ramctl did not appear");
         // just make sure all the functions are hooked up properly.
@@ -319,8 +319,8 @@ mod tests {
         assert_eq!(ramdisk.destroy(), Ok(()));
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn create_with_dev_root_and_guid_get_path_destroy() {
+    #[test]
+    fn create_with_dev_root_and_guid_get_path_destroy() {
         wait_for_device("/dev/sys/platform/00:00:2d/ramctl", WAIT_TIMEOUT)
             .expect("ramctl did not appear");
         let devroot = std::fs::File::open("/dev").unwrap();
@@ -333,8 +333,8 @@ mod tests {
         assert_eq!(ramdisk.destroy(), Ok(()));
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn create_with_guid_get_path_destroy() {
+    #[test]
+    fn create_with_guid_get_path_destroy() {
         wait_for_device("/dev/sys/platform/00:00:2d/ramctl", WAIT_TIMEOUT)
             .expect("ramctl did not appear");
         let ramdisk = RamdiskClient::builder(512, 2048)
@@ -345,12 +345,12 @@ mod tests {
         assert_eq!(ramdisk.destroy(), Ok(()));
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn create_open_destroy() {
+    #[test]
+    fn create_open_destroy() {
         wait_for_device("/dev/sys/platform/00:00:2d/ramctl", WAIT_TIMEOUT)
             .expect("ramctl did not appear");
         let ramdisk = RamdiskClient::create(512, 2048).unwrap();
-        assert_matches!(ramdisk.open(), Ok(_));
+        let _: zx::Channel = ramdisk.open().unwrap();
         assert_eq!(ramdisk.destroy(), Ok(()));
     }
 

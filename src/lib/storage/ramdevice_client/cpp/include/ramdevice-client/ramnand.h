@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_STORAGE_RAMDEVICE_CLIENT_CPP_INCLUDE_RAMDEVICE_CLIENT_RAMNAND_H_
 #define SRC_LIB_STORAGE_RAMDEVICE_CLIENT_CPP_INCLUDE_RAMDEVICE_CLIENT_RAMNAND_H_
 
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.hardware.nand/cpp/wire.h>
 #include <inttypes.h>
 #include <lib/zx/channel.h>
@@ -13,10 +14,7 @@
 #include <memory>
 #include <optional>
 
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
 #include <fbl/string.h>
-#include <fbl/unique_fd.h>
 
 namespace ramdevice_client {
 
@@ -41,8 +39,8 @@ class RamNand {
   // Don't unbind in destructor.
   void NoUnbind() { unbind = false; }
 
-  const fbl::unique_fd& fd() { return fd_; }
-  const char* path() {
+  const fidl::ClientEnd<fuchsia_device::Controller>& controller() const { return controller_; }
+  const char* path() const {
     if (path_) {
       return path_->c_str();
     }
@@ -56,14 +54,15 @@ class RamNand {
     return nullptr;
   }
 
-  explicit RamNand(fbl::unique_fd fd)
-      : fd_(std::move(fd)), path_(std::nullopt), filename_(std::nullopt) {}
+  explicit RamNand(fidl::ClientEnd<fuchsia_device::Controller> controller)
+      : controller_(std::move(controller)), path_(std::nullopt), filename_(std::nullopt) {}
 
  private:
-  RamNand(fbl::unique_fd fd, fbl::String path, fbl::String filename)
-      : fd_(std::move(fd)), path_(path), filename_(filename) {}
+  RamNand(fidl::ClientEnd<fuchsia_device::Controller> controller, fbl::String path,
+          fbl::String filename)
+      : controller_(std::move(controller)), path_(path), filename_(filename) {}
 
-  fbl::unique_fd fd_;
+  fidl::ClientEnd<fuchsia_device::Controller> controller_;
   bool unbind = true;
 
   // Only valid if not spawned in an isolated devmgr.

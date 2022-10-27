@@ -84,29 +84,35 @@ zx_status_t RamNand::Create(fuchsia_hardware_nand::wire::RamNandInfo config,
     return ZX_ERR_INTERNAL;
   }
 
-  fbl::unique_fd ram_nand;
-  if (zx_status_t status = WaitForFile(ram_nand_ctl, fbl::String(name).c_str(), &ram_nand);
+  fbl::unique_fd fd;
+  if (zx_status_t status = WaitForFile(ram_nand_ctl, fbl::String(name).c_str(), &fd);
       status != ZX_OK) {
     fprintf(stderr, "could not open ram_nand: %s\n", zx_status_get_string(status));
     return status;
   }
+  fdio_cpp::FdioCaller caller(std::move(fd));
+  zx::result ram_nand = caller.take_as<fuchsia_device::Controller>();
+  if (ram_nand.is_error()) {
+    return ram_nand.status_value();
+  }
 
-  *out = RamNand(std::move(ram_nand), fbl::String::Concat({kBasePath, "/", name}), name);
+  *out = RamNand(std::move(ram_nand.value()), fbl::String::Concat({kBasePath, "/", name}), name);
 
   return ZX_OK;
 }
 
 __EXPORT
 RamNand::~RamNand() {
-  if (unbind && fd_) {
-    fdio_cpp::FdioCaller caller(std::move(fd_));
-    auto resp = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())->ScheduleUnbind();
-    zx_status_t status = resp.status();
-    if (status == ZX_OK && resp->is_error()) {
-      status = resp->error_value();
+  if (unbind) {
+    const fidl::WireResult result = fidl::WireCall(controller_)->ScheduleUnbind();
+    if (!result.ok()) {
+      fprintf(stderr, "Could not unbind ram_nand: %s\n", result.FormatDescription().c_str());
+      return;
     }
-    if (status != ZX_OK) {
-      fprintf(stderr, "Could not unbind ram_nand, %d\n", status);
+    const fit::result response = result.value();
+    if (response.is_error()) {
+      fprintf(stderr, "Could not unbind ram_nand: %s\n",
+              zx_status_get_string(response.error_value()));
     }
   }
 }

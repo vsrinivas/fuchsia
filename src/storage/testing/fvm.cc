@@ -8,6 +8,7 @@
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fdio.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <fbl/unique_fd.h>
@@ -23,9 +24,8 @@ constexpr uint8_t kTestPartGUID[] = {0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0
 constexpr uint8_t kTestUniqueGUID[] = {0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
                                        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
 
-zx::result<> BindFvm(int fd) {
-  fdio_cpp::UnownedFdioCaller caller(fd);
-  auto resp = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())->Bind("fvm.so");
+zx::result<> BindFvm(fidl::UnownedClientEnd<fuchsia_device::Controller> device) {
+  auto resp = fidl::WireCall(device)->Bind("fvm.so");
   auto status = zx::make_result(resp.status());
   if (status.is_ok()) {
     if (resp->is_error()) {
@@ -40,17 +40,18 @@ zx::result<> BindFvm(int fd) {
 }
 
 zx::result<std::string> CreateFvmInstance(const std::string& device_path, size_t slice_size) {
-  fbl::unique_fd fd(open(device_path.c_str(), O_RDWR));
-  if (!fd) {
-    FX_LOGS(ERROR) << "Could not open test disk";
-    return zx::error(ZX_ERR_BAD_STATE);
+  zx::result device = component::Connect<fuchsia_hardware_block::Block>(device_path.c_str());
+  if (device.is_error()) {
+    return device.take_error();
   }
-  auto status = zx::make_result(fs_management::FvmInit(fd.get(), slice_size));
+  auto status = zx::make_result(fs_management::FvmInit(device.value(), slice_size));
   if (status.is_error()) {
     FX_LOGS(ERROR) << "Could not format disk with FVM";
     return status.take_error();
   }
-  status = BindFvm(fd.get());
+  // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+  status = BindFvm(
+      fidl::UnownedClientEnd<fuchsia_device::Controller>(device.value().borrow().channel()));
   if (status.is_error())
     return status.take_error();
   std::string fvm_disk_path = device_path + "/fvm";
@@ -99,7 +100,7 @@ zx::result<std::string> CreateFvmPartition(const std::string& device_path, size_
       .type_guid = request.type,
       .instance_guid = kTestUniqueGUID,
   };
-  if (auto fd_or = fs_management::OpenPartition(&matcher, 0, &partition_path); fd_or.is_error()) {
+  if (auto fd_or = fs_management::OpenPartition(matcher, 0, &partition_path); fd_or.is_error()) {
     FX_LOGS(ERROR) << "Could not locate FVM partition";
     return fd_or.take_error();
   }

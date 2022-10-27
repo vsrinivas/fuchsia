@@ -1925,8 +1925,9 @@ TEST_F(PaverServiceBlockTest, DISABLED_InitializePartitionTables) {
   ASSERT_NO_FATAL_FAILURE(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count, &gpt_dev));
 
-  fdio_cpp::FdioCaller caller(fbl::unique_fd(dup(gpt_dev->fd())));
-  zx::result gpt_chan = caller.clone_as<fuchsia_hardware_block::Block>();
+  fidl::UnownedClientEnd block_interface = gpt_dev->block_interface();
+  // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+  zx::result gpt_chan = component::Clone(block_interface, component::AssumeProtocolComposesNode);
   ASSERT_OK(gpt_chan.status_value());
   ASSERT_NO_FATAL_FAILURE(UseBlockDevice(std::move(gpt_chan.value())));
 
@@ -1944,8 +1945,9 @@ TEST_F(PaverServiceBlockTest, DISABLED_InitializePartitionTablesMultipleDevices)
   ASSERT_NO_FATAL_FAILURE(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count, &gpt_dev2));
 
-  fdio_cpp::FdioCaller caller(fbl::unique_fd(dup(gpt_dev1->fd())));
-  zx::result gpt_chan = caller.clone_as<fuchsia_hardware_block::Block>();
+  fidl::UnownedClientEnd block_interface = gpt_dev1->block_interface();
+  // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+  zx::result gpt_chan = component::Clone(block_interface, component::AssumeProtocolComposesNode);
   ASSERT_OK(gpt_chan.status_value());
   ASSERT_NO_FATAL_FAILURE(UseBlockDevice(std::move(gpt_chan.value())));
 
@@ -1961,8 +1963,9 @@ TEST_F(PaverServiceBlockTest, DISABLED_WipePartitionTables) {
   ASSERT_NO_FATAL_FAILURE(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count, &gpt_dev));
 
-  fdio_cpp::FdioCaller caller(fbl::unique_fd(dup(gpt_dev->fd())));
-  zx::result gpt_chan = caller.clone_as<fuchsia_hardware_block::Block>();
+  fidl::UnownedClientEnd block_interface = gpt_dev->block_interface();
+  // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+  zx::result gpt_chan = component::Clone(block_interface, component::AssumeProtocolComposesNode);
   ASSERT_OK(gpt_chan.status_value());
   ASSERT_NO_FATAL_FAILURE(UseBlockDevice(std::move(gpt_chan.value())));
 
@@ -1982,8 +1985,9 @@ TEST_F(PaverServiceBlockTest, DISABLED_WipeVolume) {
   ASSERT_NO_FATAL_FAILURE(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count, &gpt_dev));
 
-  fdio_cpp::FdioCaller caller(fbl::unique_fd(dup(gpt_dev->fd())));
-  zx::result gpt_chan = caller.clone_as<fuchsia_hardware_block::Block>();
+  fidl::UnownedClientEnd block_interface = gpt_dev->block_interface();
+  // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+  zx::result gpt_chan = component::Clone(block_interface, component::AssumeProtocolComposesNode);
   ASSERT_OK(gpt_chan.status_value());
   ASSERT_NO_FATAL_FAILURE(UseBlockDevice(std::move(gpt_chan.value())));
 
@@ -2052,8 +2056,8 @@ class PaverServiceGptDeviceTest : public PaverServiceTest {
     ASSERT_OK(pauser);
 
     std::unique_ptr<gpt::GptDevice> gpt;
-    ASSERT_OK(
-        gpt::GptDevice::Create(gpt_dev->fd(), gpt_dev->block_size(), gpt_dev->block_count(), &gpt));
+    ASSERT_OK(gpt::GptDevice::Create(gpt_dev->block_interface(), gpt_dev->block_size(),
+                                     gpt_dev->block_count(), &gpt));
     ASSERT_OK(gpt->Sync());
 
     for (const auto& part : init_partitions) {
@@ -2064,8 +2068,9 @@ class PaverServiceGptDeviceTest : public PaverServiceTest {
 
     ASSERT_OK(gpt->Sync());
 
-    fdio_cpp::UnownedFdioCaller caller(gpt_dev->fd());
-    auto result = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
+    fidl::UnownedClientEnd block_interface = gpt_dev->block_interface();
+    auto result = fidl::WireCall(
+                      fidl::UnownedClientEnd<fuchsia_device::Controller>(block_interface.channel()))
                       ->Rebind(fidl::StringView("gpt.so"));
     ASSERT_TRUE(result.ok());
     ASSERT_FALSE(result->is_error());
@@ -2125,12 +2130,15 @@ TEST_F(PaverServiceLuisTest, FindGPTDevicesIgnoreFvmPartitions) {
   // Initialize the primary block solely as FVM and allocate sub-partitions.
   fvm::SparseImage header = {};
   header.slice_size = 1 << 20;
-  zx::channel gpt_chan;
-  ASSERT_OK(fdio_fd_clone(gpt_dev_->fd(), gpt_chan.reset_and_get_address()));
-  int block_fd;
-  ASSERT_TRUE(zx::make_result(fdio_fd_create(gpt_chan.release(), &block_fd)).is_ok());
-  fbl::unique_fd block_unique_fd(block_fd);
-  fbl::unique_fd fvm_fd(FvmPartitionFormat(devmgr_.devfs_root(), std::move(block_unique_fd), header,
+  fidl::UnownedClientEnd block_interface = gpt_dev_->block_interface();
+  // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+  zx::result gpt_chan = component::Clone(block_interface, component::AssumeProtocolComposesNode);
+  ASSERT_OK(gpt_chan.status_value());
+  fbl::unique_fd block_fd;
+  ASSERT_TRUE(zx::make_result(fdio_fd_create(gpt_chan.value().TakeChannel().release(),
+                                             block_fd.reset_and_get_address()))
+                  .is_ok());
+  fbl::unique_fd fvm_fd(FvmPartitionFormat(devmgr_.devfs_root(), std::move(block_fd), header,
                                            paver::BindOption::Reformat));
   ASSERT_TRUE(fvm_fd);
   auto status = paver::AllocateEmptyPartitions(devmgr_.devfs_root(), fvm_fd);
@@ -2151,8 +2159,9 @@ TEST_F(PaverServiceLuisTest, WriteOpaqueVolume) {
   auto& [local, remote] = endpoints.value();
 
   {
-    fdio_cpp::FdioCaller caller(fbl::unique_fd(dup(gpt_dev_->fd())));
-    zx::result gpt_chan = caller.clone_as<fuchsia_hardware_block::Block>();
+    fidl::UnownedClientEnd block_interface = gpt_dev_->block_interface();
+    // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+    zx::result gpt_chan = component::Clone(block_interface, component::AssumeProtocolComposesNode);
     ASSERT_OK(gpt_chan.status_value());
     ASSERT_OK(client_->UseBlockDevice(std::move(gpt_chan.value()), std::move(remote)));
   }
@@ -2176,8 +2185,10 @@ TEST_F(PaverServiceLuisTest, WriteOpaqueVolume) {
   ASSERT_OK(result.status());
 
   // Create a block partition client to read the written content directly.
-  fdio_cpp::FdioCaller caller(fbl::unique_fd(dup(gpt_dev_->fd())));
-  zx::result block_service_channel = caller.clone_as<fuchsia_hardware_block::Block>();
+  fidl::UnownedClientEnd block_interface = gpt_dev_->block_interface();
+  // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+  zx::result block_service_channel =
+      component::Clone(block_interface, component::AssumeProtocolComposesNode);
   ASSERT_OK(block_service_channel.status_value());
   std::unique_ptr<paver::BlockPartitionClient> block_client =
       std::make_unique<paver::BlockPartitionClient>(std::move(block_service_channel.value()));

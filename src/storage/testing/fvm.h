@@ -5,6 +5,7 @@
 #ifndef SRC_STORAGE_TESTING_FVM_H_
 #define SRC_STORAGE_TESTING_FVM_H_
 
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <lib/zx/result.h>
 #include <zircon/device/block.h>
 
@@ -35,7 +36,7 @@ zx::result<std::string> CreateFvmPartition(const std::string& device_path, size_
                                            const FvmOptions& options = {});
 
 // Binds the FVM driver to the given device.
-zx::result<> BindFvm(int fd);
+zx::result<> BindFvm(fidl::UnownedClientEnd<fuchsia_device::Controller> device);
 
 }  // namespace storage
 

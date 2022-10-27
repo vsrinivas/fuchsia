@@ -6,6 +6,7 @@
 #include <lib/fdio/namespace.h>
 #include <lib/sys/component/cpp/service_client.h>
 #include <zircon/hw/gpt.h>
+#include <zircon/status.h>
 
 #include <sdk/lib/device-watcher/cpp/device-watcher.h>
 #include <zxtest/zxtest.h>
@@ -49,62 +50,66 @@ ParentDevice* g_parent_device_;
 
 int main(int argc, char** argv) {
   // Connect to DriverTestRealm.
-  auto client_end = component::Connect<fuchsia_driver_test::Realm>();
-  if (!client_end.is_ok()) {
-    fprintf(stderr, "Failed to connect to Realm FIDL: %d", client_end.error_value());
-    return client_end.status_value();
+  zx::result client_end = component::Connect<fuchsia_driver_test::Realm>();
+  if (client_end.is_error()) {
+    fprintf(stderr, "Failed to connect to Realm FIDL: %s\n", client_end.status_string());
+    return -1;
   }
-  fidl::WireSyncClient client{std::move(*client_end)};
+  fidl::WireSyncClient client{std::move(client_end.value())};
 
   // Start the DriverTestRealm with correct arguments.
   fidl::Arena arena;
-  fuchsia_driver_test::wire::RealmArgs realm_args(arena);
-  realm_args.set_root_driver(arena, "fuchsia-boot:///#driver/platform-bus.so");
-  auto wire_result = client->Start(realm_args);
-  if (!wire_result.ok()) {
-    fprintf(stderr, "Failed to call to Realm:Start: %d", wire_result.status());
-    return wire_result.status();
+  const fidl::WireResult result =
+      client->Start(fuchsia_driver_test::wire::RealmArgs::Builder(arena)
+                        .root_driver("fuchsia-boot:///#driver/platform-bus.so")
+                        .Build());
+  if (!result.ok()) {
+    fprintf(stderr, "Failed to call to Realm::Start: %s\n", result.FormatDescription().c_str());
+    return -1;
   }
-  if (wire_result->is_error()) {
-    fprintf(stderr, "Realm:Start failed: %d", wire_result->error_value());
-    return wire_result->error_value();
+  const fit::result response = result.value();
+  if (response.is_error()) {
+    fprintf(stderr, "Realm::Start failed: %s\n", zx_status_get_string(response.error_value()));
+    return -1;
   }
   fbl::unique_fd dir_fd;
-  device_watcher::RecursiveWaitForFile(ramdevice_client::RamNand::kBasePath, &dir_fd);
-
-  ParentDevice::TestConfig config = {};
-  config.info = kNandInfo;
-  config.partition_map = kPartitionMap;
-
-  ParentDevice parent(config);
-  if (!parent.IsValid()) {
-    printf("Unable to create ram-nand device\n");
+  if (zx_status_t status =
+          device_watcher::RecursiveWaitForFile(ramdevice_client::RamNand::kBasePath, &dir_fd);
+      status != ZX_OK) {
+    fprintf(stderr, "Failed to wait for device: %s\n", zx_status_get_string(status));
+    return -1;
+  }
+  zx::result parent = ParentDevice::Create({
+      .info = kNandInfo,
+      .partition_map = kPartitionMap,
+  });
+  if (parent.is_error()) {
+    fprintf(stderr, "Failed to create ram-nand device: %s\n", parent.status_string());
     return -1;
   }
 
   // Construct path to nandpart partition.
-  char path[PATH_MAX];
-  strcpy(path, parent.Path());
-  strcat(path, "/test");
+  fbl::String path = fbl::String::Concat({
+      parent.value().Path(),
+      "/test",
+  });
 
   // Wait for nandpart to spawn.
   fbl::unique_fd nandpart;
-  zx_status_t status = device_watcher::RecursiveWaitForFile(path, &nandpart);
-  if (status != ZX_OK) {
-    fprintf(stderr, "Unable to attach to device: %d\n", status);
+  if (zx_status_t status = device_watcher::RecursiveWaitForFile(path.c_str(), &nandpart);
+      status != ZX_OK) {
+    fprintf(stderr, "Failed to attach to device: %s\n", zx_status_get_string(status));
     return status;
   }
-
-  ParentDevice::TestConfig nandpart_config = {};
-  nandpart_config.path = path;
-
-  ParentDevice nandpart_parent(nandpart_config);
-  if (!nandpart_parent.IsValid()) {
-    printf("Unable to attach to device\n");
+  zx::result nandpart_parent = ParentDevice::Create({
+      .path = path.c_str(),
+  });
+  if (nandpart_parent.is_error()) {
+    fprintf(stderr, "Failed to attach to device: %s\n", nandpart_parent.status_string());
     return -1;
   }
 
-  g_parent_device_ = &nandpart_parent;
+  g_parent_device_ = &nandpart_parent.value();
 
   return RUN_ALL_TESTS(argc, argv);
 }

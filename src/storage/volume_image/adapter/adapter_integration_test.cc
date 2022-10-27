@@ -25,20 +25,17 @@
 #include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
 
+#include "fidl/fuchsia.device/cpp/markers.h"
 #include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/lib/storage/fs_management/cpp/admin.h"
 #include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/fs_management/cpp/fvm.h"
-#include "src/lib/storage/fs_management/cpp/mount.h"
-#include "src/storage/blobfs/common.h"
-#include "src/storage/blobfs/format.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/testing/fvm.h"
 #include "src/storage/testing/ram_disk.h"
 #include "src/storage/volume_image/adapter/blobfs_partition.h"
 #include "src/storage/volume_image/adapter/empty_partition.h"
 #include "src/storage/volume_image/adapter/minfs_partition.h"
-#include "src/storage/volume_image/address_descriptor.h"
 #include "src/storage/volume_image/fvm/fvm_descriptor.h"
 #include "src/storage/volume_image/fvm/fvm_sparse_image.h"
 #include "src/storage/volume_image/fvm/options.h"
@@ -213,8 +210,10 @@ fpromise::result<storage::RamDisk, std::string> LaunchFvm(zx::vmo& fvm_vmo) {
   }
   auto ramdisk = std::move(ramdisk_or.value());
 
-  int fvm_dev_fd = ramdisk_get_block_fd(ramdisk.client());
-  auto fvm_bind_result = BindFvm(fvm_dev_fd);
+  // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+  fidl::UnownedClientEnd<fuchsia_device::Controller> device(
+      ramdisk_get_block_interface(ramdisk.client()));
+  auto fvm_bind_result = BindFvm(device);
   if (fvm_bind_result.is_error()) {
     return fpromise::error("Failed to bind FVM to ramdisk. Error: " +
                            std::string(fvm_bind_result.status_string()) + ".");
@@ -230,7 +229,7 @@ void CheckPartitionsInRamdisk(const FvmDescriptor& fvm_descriptor) {
         .type_guid = partition.volume().type.data(),
     };
     auto partition_fd_or =
-        fs_management::OpenPartition(&matcher, zx::sec(10).get(), &partition_path);
+        fs_management::OpenPartition(matcher, zx::sec(10).get(), &partition_path);
     ASSERT_EQ(partition_fd_or.status_value(), ZX_OK);
 
     if (partition.volume().name == "my-empty-partition") {

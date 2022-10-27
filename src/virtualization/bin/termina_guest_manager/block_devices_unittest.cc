@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/block/partition/cpp/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
@@ -59,7 +60,8 @@ class BlockDevicesTest : public ::testing::Test {
     fvm_path_ = std::move(fvm_path.value());
   }
 
-  zx::result<std::array<uint8_t, GPT_GUID_LEN>> ReadPartitionTypeGuid(const std::string& path) {
+  static zx::result<std::array<uint8_t, GPT_GUID_LEN>> ReadPartitionTypeGuid(
+      const std::string& path) {
     fuchsia::hardware::block::partition::PartitionSyncPtr partition;
     zx_status_t status =
         fdio_service_connect(path.c_str(), partition.NewRequest().TakeChannel().release());
@@ -77,7 +79,7 @@ class BlockDevicesTest : public ::testing::Test {
     return zx::ok(guid->value);
   }
 
-  std::optional<std::string> FindPartitionWithGuid(std::array<uint8_t, GPT_GUID_LEN> guid) {
+  static std::optional<std::string> FindPartitionWithGuid(std::array<uint8_t, GPT_GUID_LEN> guid) {
     std::vector<std::string> contents;
     bool result = files::ReadDirContents("/dev/class/block", &contents);
     FX_CHECK(result) << "Failed to read block device directory: " << std::strerror(errno);
@@ -97,7 +99,7 @@ class BlockDevicesTest : public ::testing::Test {
     uint64_t size;
     std::string partition_name;
   };
-  zx::result<VolumeInfo> QueryVolumeInfo(const std::string& path) {
+  static zx::result<VolumeInfo> QueryVolumeInfo(const std::string& path) {
     fuchsia::hardware::block::partition::PartitionSyncPtr partition;
     zx_status_t status =
         fdio_service_connect(path.c_str(), partition.NewRequest().TakeChannel().release());
@@ -131,17 +133,16 @@ class BlockDevicesTest : public ::testing::Test {
     });
   }
 
-  void CheckSlice(const std::string& volume, size_t slice, uint8_t expected_value) {
+  static void CheckSlice(const std::string& volume, size_t slice, uint8_t expected_value) {
     uint8_t expected_data[kFvmSliceSize];
     memset(expected_data, expected_value, sizeof(expected_data));
 
-    fbl::unique_fd fd;
-    fd.reset(open(volume.c_str(), O_RDWR));
-    FX_CHECK(fd.get() >= 0);
+    zx::result channel = component::Connect<fuchsia_hardware_block::Block>(volume);
+    ASSERT_TRUE(channel.is_ok()) << channel.status_string();
 
     uint8_t actual_data[kFvmSliceSize] = {};
-    FX_CHECK(ZX_OK == block_client::SingleReadBytes(fd.get(), actual_data, sizeof(actual_data),
-                                                    kFvmSliceSize * slice));
+    FX_CHECK(ZX_OK == block_client::SingleReadBytes(channel.value(), actual_data,
+                                                    sizeof(actual_data), kFvmSliceSize * slice));
     for (size_t i = 0; i < kFvmSliceSize; ++i) {
       FX_CHECK(actual_data[i] == expected_data[i])
           << "Mismatch at byte " << i << " in slice " << slice << ". Values 0x" << std::hex

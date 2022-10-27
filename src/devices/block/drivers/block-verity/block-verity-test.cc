@@ -105,9 +105,11 @@ class BlockVerityTest : public zxtest::Test {
     fbl::Array<uint8_t> write_buf(new uint8_t[kBlockSize], kBlockSize);
     memset(write_buf.get(), 0, write_buf.size());
     for (uint64_t block = 0; block < kBlockCount; block++) {
-      fbl::unique_fd fd(openat(ramdisk_->devfs_root_fd().get(), ramdisk_->path(), O_RDWR));
-      ASSERT_TRUE(fd.is_valid(), "%s", strerror(errno));
-      ASSERT_OK(BWrite(fd.get(), write_buf.get(), write_buf.size(), block * kBlockSize));
+      fdio_cpp::UnownedFdioCaller caller(ramdisk_->devfs_root_fd());
+      zx::result channel =
+          component::ConnectAt<fuchsia_hardware_block::Block>(caller.directory(), ramdisk_->path());
+      ASSERT_OK(channel);
+      ASSERT_OK(BWrite(channel.value(), write_buf.get(), write_buf.size(), block * kBlockSize));
     }
   }
 
@@ -138,6 +140,7 @@ TEST_F(BlockVerityTest, BasicWrites) {
   // Open for authoring
   fbl::unique_fd mutable_block_fd;
   OpenForAuthoring(mutable_block_fd);
+  fdio_cpp::UnownedFdioCaller caller(mutable_block_fd);
 
   // Zero out the underlying ramdisk.
   ZeroUnderlyingRamdisk();
@@ -158,7 +161,8 @@ TEST_F(BlockVerityTest, BasicWrites) {
     // Seek to start of block
     off_t offset = block * kBlockSize;
     // Verify read succeed
-    ASSERT_OK(BRead(mutable_block_fd.get(), read_buf.get(), read_buf.size(), offset));
+    ASSERT_OK(BRead(caller.borrow_as<fuchsia_hardware_block::Block>(), read_buf.get(),
+                    read_buf.size(), offset));
     // Expect to read all zeroes.
     ASSERT_EQ(memcmp(zero_buf.get(), read_buf.get(), zero_buf.size()), 0);
   }
@@ -170,29 +174,35 @@ TEST_F(BlockVerityTest, BasicWrites) {
   }
 
   // Write the first block on the mutable device with that pattern.
-  ASSERT_OK(BWrite(mutable_block_fd.get(), write_buf.get(), write_buf.size(), 0));
+  ASSERT_OK(BWrite(caller.borrow_as<fuchsia_hardware_block::Block>(), write_buf.get(),
+                   write_buf.size(), 0));
 
   // Read it back.
-  ASSERT_OK(BRead(mutable_block_fd.get(), read_buf.get(), read_buf.size(), 0));
+  ASSERT_OK(
+      BRead(caller.borrow_as<fuchsia_hardware_block::Block>(), read_buf.get(), read_buf.size(), 0));
   ASSERT_EQ(memcmp(write_buf.get(), read_buf.get(), read_buf.size()), 0);
 
-  fbl::unique_fd fd(openat(ramdisk_->devfs_root_fd().get(), ramdisk_->path(), O_RDWR));
-  ASSERT_TRUE(fd.is_valid(), "%s", strerror(errno));
-
   // Find a block that matches from the underlying device.
-  bool found = false;
-  for (uint64_t block = 0; block < kBlockCount; block++) {
-    // Seek to start of block
-    off_t offset = block * kBlockSize;
-    ASSERT_OK(BRead(fd.get(), read_buf.get(), read_buf.size(), offset));
-    if (memcmp(read_buf.get(), write_buf.get(), read_buf.size()) == 0) {
-      found = true;
-      // Expect to find the block at block 66 (after one superblock & 65 integrity blocks)
-      ASSERT_EQ(block, kDataStartBlock);
-      break;
+  {
+    fdio_cpp::UnownedFdioCaller caller(ramdisk_->devfs_root_fd());
+    zx::result channel =
+        component::ConnectAt<fuchsia_hardware_block::Block>(caller.directory(), ramdisk_->path());
+    ASSERT_OK(channel.status_value());
+
+    bool found = false;
+    for (uint64_t block = 0; block < kBlockCount; block++) {
+      // Seek to start of block
+      off_t offset = block * kBlockSize;
+      ASSERT_OK(BRead(channel.value(), read_buf.get(), read_buf.size(), offset));
+      if (memcmp(read_buf.get(), write_buf.get(), read_buf.size()) == 0) {
+        found = true;
+        // Expect to find the block at block 66 (after one superblock & 65 integrity blocks)
+        ASSERT_EQ(block, kDataStartBlock);
+        break;
+      }
     }
+    ASSERT_TRUE(found);
   }
-  ASSERT_TRUE(found);
 
   // Close the device cleanly
   Close();
@@ -278,14 +288,16 @@ TEST_F(BlockVerityTest, BasicSeal) {
   memcpy(expected_root_integrity_block.get() + (32 * 63), final_tier_0_integrity_block_hash, 32);
   memset(expected_root_integrity_block.get() + (32 * 64), 0, kBlockSize - (32 * 64));
 
-  fbl::unique_fd fd(openat(ramdisk_->devfs_root_fd().get(), ramdisk_->path(), O_RDWR));
-  ASSERT_TRUE(fd.is_valid(), "%s", strerror(errno));
+  fdio_cpp::UnownedFdioCaller caller(ramdisk_->devfs_root_fd());
+  zx::result channel =
+      component::ConnectAt<fuchsia_hardware_block::Block>(caller.directory(), ramdisk_->path());
+  ASSERT_OK(channel.status_value());
 
   fbl::Array<uint8_t> read_buf(new uint8_t[kBlockSize], kBlockSize);
   for (size_t integrity_block_index = 0; integrity_block_index < 65; integrity_block_index++) {
     size_t absolute_block_index = integrity_block_index + 1;
     off_t offset = absolute_block_index * kBlockSize;
-    ASSERT_OK(BRead(fd.get(), read_buf.get(), read_buf.size(), offset));
+    ASSERT_OK(BRead(channel.value(), read_buf.get(), read_buf.size(), offset));
     uint8_t* expected_block;
     if (integrity_block_index < 63) {
       expected_block = expected_early_tier_0_integrity_block.get();
@@ -334,7 +346,7 @@ TEST_F(BlockVerityTest, BasicSeal) {
       // * 4032 zero bytes padding the rest of the block, autofilled by compiler.
   };
 
-  ASSERT_OK(BRead(fd.get(), read_buf.get(), read_buf.size(), 0));
+  ASSERT_OK(BRead(channel.value(), read_buf.get(), read_buf.size(), 0));
   EXPECT_EQ(memcmp(expected_superblock, read_buf.get(), kBlockSize), 0,
             "superblock did not contain expected contents");
 
@@ -366,6 +378,10 @@ TEST_F(BlockVerityTest, SealAndVerifiedRead) {
 
   const fuchsia_hardware_block_verified::wire::Seal& seal = result.seal;
   fbl::unique_fd verified_block_fd;
+  auto verified_block_channel = [&verified_block_fd]() {
+    fdio_cpp::UnownedFdioCaller verified_block_caller(verified_block_fd);
+    return verified_block_caller.borrow_as<fuchsia_hardware_block::Block>();
+  };
 
   // Prepare to read every block.
   ASSERT_OK(OpenForVerifiedRead(seal, verified_block_fd));
@@ -389,51 +405,53 @@ TEST_F(BlockVerityTest, SealAndVerifiedRead) {
   for (uint64_t verified_block = 0; verified_block < inner_block_count; verified_block++) {
     memset(read_buf.get(), 0xcc, kBlockSize);
     off_t offset = verified_block * kBlockSize;
-    ASSERT_OK(BRead(verified_block_fd.get(), read_buf.get(), read_buf.size(), offset),
+    ASSERT_OK(BRead(verified_block_channel(), read_buf.get(), read_buf.size(), offset),
               "read failed on block %lu", verified_block);
     EXPECT_EQ(0, memcmp(zero_block.get(), read_buf.get(), kBlockSize),
               "verified data block %lu did not contain expected contents", verified_block);
   }
 
   // Writes should fail.  This is a readonly device.
-  ASSERT_NE(BWrite(verified_block_fd.get(), read_buf.get(), read_buf.size(), 0), ZX_OK);
+  ASSERT_NE(BWrite(verified_block_channel(), read_buf.get(), read_buf.size(), 0), ZX_OK);
 
   Close();
   verified_block_fd.release();
 
-  fbl::unique_fd fd(openat(ramdisk_->devfs_root_fd().get(), ramdisk_->path(), O_RDWR));
-  ASSERT_TRUE(fd.is_valid(), "%s", strerror(errno));
+  fdio_cpp::UnownedFdioCaller caller(ramdisk_->devfs_root_fd());
+  zx::result channel =
+      component::ConnectAt<fuchsia_hardware_block::Block>(caller.directory(), ramdisk_->path());
+  ASSERT_OK(channel.status_value());
 
   // Corrupt a data block (the 0th data block) on the underlying ramdisk, then attempt to read it in
   // verified read mode.
   fbl::Array<uint8_t> one_block(new uint8_t[kBlockSize], kBlockSize);
   memset(one_block.get(), 0xff, kBlockSize);
   off_t data_start = kDataStartBlock * kBlockSize;
-  ASSERT_OK(BWrite(fd.get(), one_block.get(), one_block.size(), data_start));
+  ASSERT_OK(BWrite(channel.value(), one_block.get(), one_block.size(), data_start));
   ASSERT_OK(OpenForVerifiedRead(seal, verified_block_fd));
 
   // Verify that attempting to read that block returns failure
-  ASSERT_NE(BRead(verified_block_fd.get(), read_buf.get(), read_buf.size(), 0), ZX_OK);
+  ASSERT_NE(BRead(verified_block_channel(), read_buf.get(), read_buf.size(), 0), ZX_OK);
 
   // Verify that reading a different (uncorrupted) block still works.
-  ASSERT_OK(BRead(verified_block_fd.get(), read_buf.get(), read_buf.size(), kBlockSize));
+  ASSERT_OK(BRead(verified_block_channel(), read_buf.get(), read_buf.size(), kBlockSize));
   Close();
   verified_block_fd.release();
 
   // Corrupt an integrity block, and attempt to perform reads guarded by it.
   off_t integrity_start = kIntegrityStartBlock * kBlockSize;
-  ASSERT_OK(BWrite(fd.get(), one_block.get(), one_block.size(), integrity_start));
+  ASSERT_OK(BWrite(channel.value(), one_block.get(), one_block.size(), integrity_start));
   ASSERT_OK(OpenForVerifiedRead(seal, verified_block_fd));
 
   // Verify that read of each block under that integrity block returns failure.
   for (uint64_t data_block = 0; data_block < kBlockSize / 32; data_block++) {
     off_t offset = data_block * kBlockSize;
-    ASSERT_NE(BRead(verified_block_fd.get(), read_buf.get(), read_buf.size(), offset), ZX_OK);
+    ASSERT_NE(BRead(verified_block_channel(), read_buf.get(), read_buf.size(), offset), ZX_OK);
   }
 
   // Other block reads should succeed.  Try one.
   off_t first_uncorrupted_data_block = (kBlockSize / 32) * kBlockSize;
-  ASSERT_OK(BRead(verified_block_fd.get(), read_buf.get(), read_buf.size(),
+  ASSERT_OK(BRead(verified_block_channel(), read_buf.get(), read_buf.size(),
                   first_uncorrupted_data_block));
 
   Close();
@@ -452,10 +470,10 @@ TEST_F(BlockVerityTest, SealAndVerifiedRead) {
   // Expect OpenForVerifiedRead to fail.
   fbl::Array<uint8_t> superblock_buf(new uint8_t[kBlockSize], kBlockSize);
   // Load up the superblock.
-  ASSERT_OK(BRead(fd.get(), superblock_buf.get(), superblock_buf.size(), 0));
+  ASSERT_OK(BRead(channel.value(), superblock_buf.get(), superblock_buf.size(), 0));
   // Corrupt the root integrity hash.
   memset(superblock_buf.data() + 32, 0, 32);
-  ASSERT_OK(BWrite(fd.get(), superblock_buf.get(), superblock_buf.size(), 0));
+  ASSERT_OK(BWrite(channel.value(), superblock_buf.get(), superblock_buf.size(), 0));
   ASSERT_EQ(OpenForVerifiedRead(seal, verified_block_fd), ZX_ERR_IO_DATA_INTEGRITY);
 }
 

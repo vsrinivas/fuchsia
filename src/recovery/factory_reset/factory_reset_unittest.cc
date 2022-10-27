@@ -16,6 +16,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/vmo.h>
 #include <zircon/hw/gpt.h>
 
@@ -82,8 +83,13 @@ class FactoryResetTest : public Test {
   void TearDown() override { ASSERT_EQ(ramdisk_destroy(ramdisk_client_), ZX_OK); }
 
   bool PartitionHasFormat(fs_management::DiskFormat format) {
-    fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), fvm_block_path_.c_str(), O_RDONLY));
-    return fs_management::DetectDiskFormat(fd.get()) == format;
+    fdio_cpp::UnownedFdioCaller caller(devmgr_.devfs_root());
+    zx::result channel =
+        component::ConnectAt<fuchsia_hardware_block::Block>(caller.directory(), fvm_block_path_);
+    if (channel.is_error()) {
+      return false;
+    }
+    return fs_management::DetectDiskFormat(channel.value()) == format;
   }
 
   void CreateZxcrypt() {
@@ -243,29 +249,23 @@ class FactoryResetTest : public Test {
     WaitForDevice(kRamCtlPath, &ramctl);
     ASSERT_EQ(ramdisk_create_at(devfs_root().get(), kBlockSize, kBlockCount, &ramdisk_client_),
               ZX_OK);
-    ASSERT_EQ(fs_management::FvmInitPreallocated(ramdisk_get_block_fd(ramdisk_client_), kDeviceSize,
-                                                 kDeviceSize, kSliceSize),
-              ZX_OK);
-  }
-
-  static zx_status_t AttachDriver(const fbl::unique_fd& fd, std::string_view driver) {
-    fdio_cpp::UnownedFdioCaller connection(fd.get());
-    zx_status_t call_status = ZX_OK;
-    auto resp = fidl::WireCall(connection.borrow_as<fuchsia_device::Controller>())
-                    ->Bind(::fidl::StringView::FromExternal(driver.data(), driver.length()));
-    zx_status_t io_status = resp.status();
-    if (io_status != ZX_OK) {
-      return io_status;
-    }
-    if (resp->is_error()) {
-      call_status = resp->error_value();
-    }
-    return call_status;
+    ASSERT_EQ(
+        fs_management::FvmInitPreallocated(fidl::UnownedClientEnd<fuchsia_hardware_block::Block>(
+                                               ramdisk_get_block_interface(ramdisk_client_)),
+                                           kDeviceSize, kDeviceSize, kSliceSize),
+        ZX_OK);
   }
 
   void BindFvm() {
-    fbl::unique_fd ramdisk_fd(ramdisk_get_block_fd(ramdisk_client_));
-    ASSERT_EQ(AttachDriver(ramdisk_fd, "fvm.so"), ZX_OK);
+    const std::string_view driver = "fvm.so";
+    // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+    fidl::UnownedClientEnd<fuchsia_device::Controller> channel(
+        ramdisk_get_block_interface(ramdisk_client_));
+    const fidl::WireResult result =
+        fidl::WireCall(channel)->Bind(fidl::StringView::FromExternal(driver));
+    ASSERT_TRUE(result->is_ok()) << result.FormatDescription();
+    const fit::result response = result.value();
+    ASSERT_TRUE(response.is_ok()) << zx_status_get_string(response.error_value());
   }
 
   void CreateFvmPartition() {

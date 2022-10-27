@@ -100,15 +100,13 @@ bool FilterByTypeAndName(const gpt_partition_t& part, const Uuid& type, std::str
   return type == Uuid(part.type) && FilterByName(part, name);
 }
 
-zx::result<> RebindGptDriver(
-    fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
-    zx::unowned_channel chan) {  // NOLINT(performance-unnecessary-value-param)
+zx::result<> RebindGptDriver(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
+                             fidl::UnownedClientEnd<fuchsia_device::Controller> controller) {
   auto pauser = BlockWatcherPauser::Create(svc_root);
   if (pauser.is_error()) {
     return pauser.take_error();
   }
-  auto result = fidl::WireCall<fuchsia_device::Controller>(std::move(chan))
-                    ->Rebind(fidl::StringView("gpt.so"));
+  auto result = fidl::WireCall(controller)->Rebind(fidl::StringView("gpt.so"));
   return zx::make_result(result.ok() ? (result->is_error() ? result->error_value() : ZX_OK)
                                      : result.status());
 }
@@ -163,7 +161,7 @@ bool GptDevicePartitioner::FindGptDevices(const fbl::unique_fd& devfs_root, GptD
     // partition itself.
     if (path_str.find("part-") == std::string::npos &&
         path_str.find("/fvm/") == std::string::npos) {
-      found_devices.push_back(std::make_pair(path_str, caller.release()));
+      found_devices.emplace_back(path_str, caller.release());
     }
   }
 
@@ -185,7 +183,8 @@ zx::result<std::unique_ptr<GptDevicePartitioner>> GptDevicePartitioner::Initiali
     return pauser.take_error();
   }
   fdio_cpp::UnownedFdioCaller caller(gpt_device.get());
-  auto result = fidl::WireCall<block::Block>(caller.channel())->GetInfo();
+  fidl::UnownedClientEnd device = caller.borrow_as<block::Block>();
+  auto result = fidl::WireCall(device)->GetInfo();
   if (!result.ok()) {
     ERROR("Warning: Could not acquire GPT block info: %s\n", zx_status_get_string(result.status()));
     return zx::error(result.status());
@@ -197,8 +196,8 @@ zx::result<std::unique_ptr<GptDevicePartitioner>> GptDevicePartitioner::Initiali
   }
 
   std::unique_ptr<GptDevice> gpt;
-  if (GptDevice::Create(gpt_device.get(), response.info->block_size, response.info->block_count,
-                        &gpt) != ZX_OK) {
+  if (GptDevice::Create(device, response.info->block_size, response.info->block_count, &gpt) !=
+      ZX_OK) {
     ERROR("Failed to get GPT info\n");
     return zx::error(ZX_ERR_BAD_STATE);
   }
@@ -246,8 +245,9 @@ zx::result<GptDevicePartitioner::InitializeGptResult> GptDevicePartitioner::Init
 
   std::unique_ptr<GptDevicePartitioner> gpt_partitioner;
   for (auto& [_, gpt_device] : gpt_devices) {
-    fdio_cpp::UnownedFdioCaller caller(gpt_device.get());
-    auto result = fidl::WireCall<block::Block>(caller.channel())->GetInfo();
+    fdio_cpp::UnownedFdioCaller caller(gpt_device);
+    fidl::UnownedClientEnd device = caller.borrow_as<block::Block>();
+    auto result = fidl::WireCall(device)->GetInfo();
     if (!result.ok()) {
       ERROR("Warning: Could not acquire GPT block info: %s\n",
             zx_status_get_string(result.status()));
@@ -265,8 +265,8 @@ zx::result<GptDevicePartitioner::InitializeGptResult> GptDevicePartitioner::Init
     }
 
     std::unique_ptr<GptDevice> gpt;
-    if (GptDevice::Create(gpt_device.get(), response.info->block_size, response.info->block_count,
-                          &gpt) != ZX_OK) {
+    if (GptDevice::Create(device, response.info->block_size, response.info->block_count, &gpt) !=
+        ZX_OK) {
       ERROR("Failed to get GPT info\n");
       return zx::error(ZX_ERR_BAD_STATE);
     }
@@ -382,12 +382,12 @@ zx::result<Uuid> GptDevicePartitioner::CreateGptPartition(const char* name, cons
                                                           uint64_t offset, uint64_t blocks) const {
   Uuid guid = Uuid::Generate();
 
-  zx_status_t status;
-  if ((status = gpt_->AddPartition(name, type.bytes(), guid.bytes(), offset, blocks, 0)) != ZX_OK) {
+  if (zx_status_t status = gpt_->AddPartition(name, type.bytes(), guid.bytes(), offset, blocks, 0);
+      status != ZX_OK) {
     ERROR("Failed to add partition\n");
     return zx::error(ZX_ERR_IO);
   }
-  if ((status = gpt_->Sync()) != ZX_OK) {
+  if (zx_status_t status = gpt_->Sync(); status != ZX_OK) {
     ERROR("Failed to sync GPT\n");
     return zx::error(ZX_ERR_IO);
   }

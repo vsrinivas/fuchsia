@@ -34,7 +34,8 @@ if (is_fuchsia) {
       "volumes.cc",
     ]
     public_deps = [
-      "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_cpp",
+      "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_cpp_wire",
+      "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_cpp_wire",
       "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
       "//sdk/lib/fidl",
       "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup_cpp_wire",
@@ -76,7 +77,6 @@ if (is_fuchsia) {
 
 test("fs-management-unittest") {
   sources = [
-    "fvm.cc",
     "fvm_test.cc",
     "options_test.cc",
   ]

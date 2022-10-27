@@ -206,7 +206,7 @@ std::unique_ptr<VPartitionAdapter> VPartitionAdapter::Create(const fbl::unique_f
       .type_guid = type.data(),
       .instance_guid = guid.data(),
   };
-  zx::result device_fd_or = fs_management::OpenPartitionWithDevfs(devfs_root.get(), &matcher,
+  zx::result device_fd_or = fs_management::OpenPartitionWithDevfs(devfs_root.get(), matcher,
                                                                   kDeviceWaitTime.get(), &out_path);
   if (device_fd_or.is_error()) {
     ADD_FAILURE("Unable to obtain handle for partition.");
@@ -235,7 +235,7 @@ zx_status_t VPartitionAdapter::Reconnect() {
       .type_guid = type_.data(),
       .instance_guid = guid_.data(),
   };
-  zx::result fd = fs_management::OpenPartitionWithDevfs(devfs_root_.get(), &matcher,
+  zx::result fd = fs_management::OpenPartitionWithDevfs(devfs_root_.get(), matcher,
                                                         zx::duration::infinite().get(), &path_);
   if (fd.is_error()) {
     return fd.status_value();
@@ -260,28 +260,38 @@ std::unique_ptr<FvmAdapter> FvmAdapter::CreateGrowable(const fbl::unique_fd& dev
     return nullptr;
   }
 
-  fbl::unique_fd fd(openat(device->devfs_root_fd().get(), device->path(), O_RDWR));
-  if (!fd.is_valid()) {
-    ADD_FAILURE("openat(_, %s): %s", device->path(), strerror(errno));
-    return nullptr;
+  {
+    zx::result channel = GetChannel<fuchsia_hardware_block::Block>(device);
+    if (channel.is_error()) {
+      ADD_FAILURE("ConnectAt(%s): %s", device->path(), channel.status_string());
+      return nullptr;
+    }
+    if (zx_status_t status =
+            fs_management::FvmInitPreallocated(channel.value(), initial_block_count * block_size,
+                                               maximum_block_count * block_size, slice_size);
+        status != ZX_OK) {
+      ADD_FAILURE("FvmInitPreallocated(%s): %s", device->path(), zx_status_get_string(status));
+      return nullptr;
+    }
   }
 
-  if (fs_management::FvmInitPreallocated(fd.get(), initial_block_count * block_size,
-                                         maximum_block_count * block_size, slice_size) != ZX_OK) {
-    return nullptr;
-  }
-
-  fdio_cpp::FdioCaller caller(std::move(fd));
-  const fidl::WireResult result = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
-                                      ->Bind(fidl::StringView(kFvmDriverLib));
-  if (!result.ok()) {
-    ADD_FAILURE("Binding FVM driver failed: %s", result.FormatDescription().c_str());
-    return nullptr;
-  }
-  const fit::result response = result.value();
-  if (response.is_error()) {
-    ADD_FAILURE("Binding FVM driver failed: %s", zx_status_get_string(response.error_value()));
-    return nullptr;
+  {
+    zx::result channel = GetChannel<fuchsia_device::Controller>(device);
+    if (channel.is_error()) {
+      ADD_FAILURE("ConnectAt(%s): %s", device->path(), channel.status_string());
+      return nullptr;
+    }
+    const fidl::WireResult result =
+        fidl::WireCall(channel.value())->Bind(fidl::StringView(kFvmDriverLib));
+    if (!result.ok()) {
+      ADD_FAILURE("Binding FVM driver failed: %s", result.FormatDescription().c_str());
+      return nullptr;
+    }
+    const fit::result response = result.value();
+    if (response.is_error()) {
+      ADD_FAILURE("Binding FVM driver failed: %s", zx_status_get_string(response.error_value()));
+      return nullptr;
+    }
   }
 
   fbl::StringBuffer<kPathMax> fvm_path;

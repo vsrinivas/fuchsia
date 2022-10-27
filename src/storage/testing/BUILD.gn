@@ -40,6 +40,7 @@ source_set("storage_driver_test_support") {
     "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
     "//sdk/fidl/fuchsia.device:fuchsia.device_hlcpp",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_hlcpp",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/storage/fs_management/cpp:fs-management",

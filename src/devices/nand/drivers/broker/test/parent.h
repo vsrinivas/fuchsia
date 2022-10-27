@@ -8,6 +8,8 @@
 #include <fidl/fuchsia.hardware.nand/cpp/wire.h>
 #include <limits.h>
 
+#include <variant>
+
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <ramdevice-client/ramnand.h>
@@ -26,17 +28,26 @@ class ParentDevice {
     uint32_t first_block;  // First block to use.
   };
 
-  explicit ParentDevice(const TestConfig& config);
+  static zx::result<ParentDevice> Create(const TestConfig& config);
+
+  // Not copyable.
+  ParentDevice(const ParentDevice&) = delete;
+  ParentDevice& operator=(const ParentDevice&) = delete;
+
+  // Movable.
+  ParentDevice(ParentDevice&&) = default;
+  ParentDevice& operator=(ParentDevice&&) = default;
+
   ~ParentDevice() = default;
 
-  const char* Path() const { return path_.c_str(); }
+  const char* Path() const;
 
-  bool IsValid() const { return ram_nand_ || device_; }
-  bool IsExternal() const { return device_.is_valid(); }
+  bool IsExternal() const {
+    return std::holds_alternative<fidl::ClientEnd<fuchsia_device::Controller>>(device_);
+  }
   bool IsBroker() const { return config_.is_broker; }
 
-  // Returns a file descriptor for the device.
-  int get() { return ram_nand_ ? ram_nand_->fd().get() : device_.get(); }
+  const fidl::ClientEnd<fuchsia_device::Controller>& controller() const;
 
   const fuchsia_hardware_nand::wire::Info& Info() const { return config_.info; }
   void SetInfo(const fuchsia_hardware_nand::wire::Info& info);
@@ -50,10 +61,11 @@ class ParentDevice {
   uint32_t FirstBlock() const { return config_.first_block; }
 
  private:
-  std::optional<ramdevice_client::RamNand> ram_nand_;
-  fbl::unique_fd device_;
+  ParentDevice(fidl::ClientEnd<fuchsia_device::Controller> controller, const TestConfig& config);
+  ParentDevice(ramdevice_client::RamNand ram_nand, const TestConfig& config);
+
+  std::variant<fidl::ClientEnd<fuchsia_device::Controller>, ramdevice_client::RamNand> device_;
   TestConfig config_;
-  fbl::StringBuffer<PATH_MAX> path_;
 };
 
 extern ParentDevice* g_parent_device_;

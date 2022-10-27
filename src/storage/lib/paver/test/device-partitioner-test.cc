@@ -401,7 +401,8 @@ class GptDevicePartitionerTests : public zxtest::Test {
 
   // Create GPT from a device.
   static void CreateGptDevice(BlockDevice* device, std::unique_ptr<gpt::GptDevice>* gpt) {
-    ASSERT_OK(gpt::GptDevice::Create(device->fd(), /*blocksize=*/device->block_size(),
+    ASSERT_OK(gpt::GptDevice::Create(device->block_interface(),
+                                     /*blocksize=*/device->block_size(),
                                      /*blocks=*/device->block_count(), gpt));
     ASSERT_OK((*gpt)->Sync());
   }
@@ -416,8 +417,8 @@ class GptDevicePartitionerTests : public zxtest::Test {
     ASSERT_OK(pauser);
 
     std::unique_ptr<gpt::GptDevice> gpt;
-    ASSERT_OK(
-        gpt::GptDevice::Create(gpt_dev->fd(), gpt_dev->block_size(), gpt_dev->block_count(), &gpt));
+    ASSERT_OK(gpt::GptDevice::Create(gpt_dev->block_interface(), gpt_dev->block_size(),
+                                     gpt_dev->block_count(), &gpt));
     ASSERT_OK(gpt->Sync());
 
     for (const auto& part : init_partitions) {
@@ -428,8 +429,9 @@ class GptDevicePartitionerTests : public zxtest::Test {
 
     ASSERT_OK(gpt->Sync());
 
-    fdio_cpp::UnownedFdioCaller caller(gpt_dev->fd());
-    auto result = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
+    // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+    auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_device::Controller>(
+                                     gpt_dev->block_interface().channel()))
                       ->Rebind(fidl::StringView("gpt.so"));
     ASSERT_TRUE(result.ok());
     ASSERT_FALSE(result->is_error());
@@ -437,9 +439,10 @@ class GptDevicePartitionerTests : public zxtest::Test {
 
   void ReadBlocks(const BlockDevice* blk_dev, size_t offset_in_blocks, size_t size_in_blocks,
                   uint8_t* out) const {
-    fidl::ClientEnd<fuchsia_hardware_block::Block> gpt_chan;
-    ASSERT_OK(fdio_fd_clone(blk_dev->fd(), gpt_chan.channel().reset_and_get_address()));
-    auto block_client = std::make_unique<paver::BlockPartitionClient>(std::move(gpt_chan));
+    fidl::UnownedClientEnd client = blk_dev->block_interface();
+    zx::result owned = component::Clone(client, component::AssumeProtocolComposesNode);
+    ASSERT_OK(owned.status_value());
+    auto block_client = std::make_unique<paver::BlockPartitionClient>(std::move(owned.value()));
 
     zx::vmo vmo;
     const size_t vmo_size = size_in_blocks * block_size_;
@@ -450,9 +453,10 @@ class GptDevicePartitionerTests : public zxtest::Test {
 
   void WriteBlocks(const BlockDevice* blk_dev, size_t offset_in_blocks, size_t size_in_blocks,
                    uint8_t* buffer) const {
-    fidl::ClientEnd<fuchsia_hardware_block::Block> gpt_chan;
-    ASSERT_OK(fdio_fd_clone(blk_dev->fd(), gpt_chan.channel().reset_and_get_address()));
-    auto block_client = std::make_unique<paver::BlockPartitionClient>(std::move(gpt_chan));
+    fidl::UnownedClientEnd client = blk_dev->block_interface();
+    zx::result owned = component::Clone(client, component::AssumeProtocolComposesNode);
+    ASSERT_OK(owned.status_value());
+    auto block_client = std::make_unique<paver::BlockPartitionClient>(std::move(owned.value()));
 
     zx::vmo vmo;
     const size_t vmo_size = size_in_blocks * block_size_;
@@ -499,7 +503,13 @@ TEST_F(GptDevicePartitionerTests, AddPartitionAtLargeOffset) {
   }
 
   // Iniitialize paver gpt device partitioner
-  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+  //
+  // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+  fidl::UnownedClientEnd client = gpt_dev->block_interface();
+  zx::result owned = component::Clone(client, component::AssumeProtocolComposesNode);
+  ASSERT_OK(owned.status_value());
+  fbl::unique_fd gpt_fd;
+  ASSERT_OK(fdio_fd_create(owned.value().TakeChannel().release(), gpt_fd.reset_and_get_address()));
   auto status = paver::GptDevicePartitioner::InitializeGpt(devmgr_.devfs_root().duplicate(),
                                                            GetSvcRoot(), gpt_fd);
   ASSERT_OK(status);
@@ -537,7 +547,7 @@ TEST_F(EfiDevicePartitionerTests, InitializeWithoutFvmSucceeds) {
 
   // Set up a valid GPT.
   std::unique_ptr<gpt::GptDevice> gpt;
-  ASSERT_OK(gpt::GptDevice::Create(gpt_dev->fd(), kBlockSize, kBlockCount, &gpt));
+  ASSERT_OK(gpt::GptDevice::Create(gpt_dev->block_interface(), kBlockSize, kBlockCount, &gpt));
   ASSERT_OK(gpt->Sync());
 
   ASSERT_OK(CreatePartitioner(kDummyDevice));
@@ -556,18 +566,32 @@ TEST_F(EfiDevicePartitionerTests, InitializeTwoCandidatesWithoutFvmFails) {
 
   // Set up a valid GPT.
   std::unique_ptr<gpt::GptDevice> gpt2;
-  ASSERT_OK(gpt::GptDevice::Create(gpt_dev->fd(), kBlockSize, kBlockCount, &gpt2));
+  ASSERT_OK(gpt::GptDevice::Create(gpt_dev->block_interface(), kBlockSize, kBlockCount, &gpt2));
   ASSERT_OK(gpt2->Sync());
 
   ASSERT_NOT_OK(CreatePartitioner(kDummyDevice));
 }
 
+zx::result<fbl::unique_fd> fd(const BlockDevice& gpt_dev) {
+  // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+  fidl::UnownedClientEnd client = gpt_dev.block_interface();
+  zx::result owned = component::Clone(client, component::AssumeProtocolComposesNode);
+  if (owned.is_error()) {
+    return owned.take_error();
+  }
+  fbl::unique_fd fd;
+  zx_status_t status =
+      fdio_fd_create(owned.value().TakeChannel().release(), fd.reset_and_get_address());
+  return zx::make_result(status, std::move(fd));
+}
+
 TEST_F(EfiDevicePartitionerTests, AddPartitionZirconB) {
   std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURE(CreateDiskWithGpt(128 * kMebibyte, &gpt_dev));
-  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
 
-  auto status = CreatePartitioner(gpt_fd);
+  auto status = CreatePartitioner(gpt_fd.value());
   ASSERT_OK(status);
 
   ASSERT_OK(status->AddPartition(PartitionSpec(paver::Partition::kZirconB)));
@@ -576,9 +600,10 @@ TEST_F(EfiDevicePartitionerTests, AddPartitionZirconB) {
 TEST_F(EfiDevicePartitionerTests, AddPartitionFvm) {
   std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURE(CreateDiskWithGpt(56 * kGibibyte, &gpt_dev));
-  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
 
-  auto status = CreatePartitioner(gpt_fd);
+  auto status = CreatePartitioner(gpt_fd.value());
   ASSERT_OK(status);
 
   ASSERT_OK(status->AddPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager)));
@@ -587,9 +612,10 @@ TEST_F(EfiDevicePartitionerTests, AddPartitionFvm) {
 TEST_F(EfiDevicePartitionerTests, AddPartitionTooSmall) {
   std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURE(CreateDisk(&gpt_dev));
-  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
 
-  auto status = CreatePartitioner(gpt_fd);
+  auto status = CreatePartitioner(gpt_fd.value());
   ASSERT_OK(status);
 
   ASSERT_NOT_OK(status->AddPartition(PartitionSpec(paver::Partition::kZirconB)));
@@ -598,9 +624,10 @@ TEST_F(EfiDevicePartitionerTests, AddPartitionTooSmall) {
 TEST_F(EfiDevicePartitionerTests, AddedPartitionIsFindable) {
   std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURE(CreateDiskWithGpt(128 * kMebibyte, &gpt_dev));
-  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
 
-  auto status = CreatePartitioner(gpt_fd);
+  auto status = CreatePartitioner(gpt_fd.value());
   ASSERT_OK(status);
 
   ASSERT_OK(status->AddPartition(PartitionSpec(paver::Partition::kZirconB)));
@@ -611,9 +638,10 @@ TEST_F(EfiDevicePartitionerTests, AddedPartitionIsFindable) {
 TEST_F(EfiDevicePartitionerTests, InitializePartitionsWithoutExplicitDevice) {
   std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURE(CreateDiskWithGpt(56 * kGibibyte, &gpt_dev));
-  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
 
-  auto status = CreatePartitioner(gpt_fd);
+  auto status = CreatePartitioner(gpt_fd.value());
   ASSERT_OK(status);
 
   ASSERT_OK(status->AddPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager)));
@@ -626,18 +654,20 @@ TEST_F(EfiDevicePartitionerTests, InitializePartitionsWithoutExplicitDevice) {
 TEST_F(EfiDevicePartitionerTests, InitializeWithMultipleCandidateGPTsFailsWithoutExplicitDevice) {
   std::unique_ptr<BlockDevice> gpt_dev1, gpt_dev2;
   ASSERT_NO_FATAL_FAILURE(CreateDiskWithGpt(56 * kGibibyte, &gpt_dev1));
-  fbl::unique_fd gpt_fd(dup(gpt_dev1->fd()));
+  zx::result gpt_fd1 = fd(*gpt_dev1);
+  ASSERT_OK(gpt_fd1.status_value());
 
-  auto status = CreatePartitioner(gpt_fd);
+  auto status = CreatePartitioner(gpt_fd1.value());
   ASSERT_OK(status);
 
   ASSERT_OK(status->AddPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager)));
   status.value().reset();
 
   ASSERT_NO_FATAL_FAILURE(CreateDiskWithGpt(56 * kGibibyte, &gpt_dev2));
-  gpt_fd.reset(dup(gpt_dev2->fd()));
+  zx::result gpt_fd2 = fd(*gpt_dev2);
+  ASSERT_OK(gpt_fd2.status_value());
 
-  auto status2 = CreatePartitioner(gpt_fd);
+  auto status2 = CreatePartitioner(gpt_fd2.value());
   ASSERT_OK(status2);
   ASSERT_OK(status2->AddPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager)));
   status2.value().reset();
@@ -649,18 +679,20 @@ TEST_F(EfiDevicePartitionerTests, InitializeWithMultipleCandidateGPTsFailsWithou
 TEST_F(EfiDevicePartitionerTests, InitializeWithTwoCandidateGPTsSucceedsAfterWipingOne) {
   std::unique_ptr<BlockDevice> gpt_dev1, gpt_dev2;
   ASSERT_NO_FATAL_FAILURE(CreateDiskWithGpt(56 * kGibibyte, &gpt_dev1));
-  fbl::unique_fd gpt_fd(dup(gpt_dev1->fd()));
+  zx::result gpt_fd1 = fd(*gpt_dev1);
+  ASSERT_OK(gpt_fd1.status_value());
 
-  auto status = CreatePartitioner(gpt_fd);
+  auto status = CreatePartitioner(gpt_fd1.value());
   ASSERT_OK(status);
 
   ASSERT_OK(status->AddPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager)));
   status.value().reset();
 
   ASSERT_NO_FATAL_FAILURE(CreateDiskWithGpt(56 * kGibibyte, &gpt_dev2));
-  gpt_fd.reset(dup(gpt_dev2->fd()));
+  zx::result gpt_fd2 = fd(*gpt_dev2);
+  ASSERT_OK(gpt_fd2.status_value());
 
-  auto status2 = CreatePartitioner(gpt_fd);
+  auto status2 = CreatePartitioner(gpt_fd2.value());
   ASSERT_OK(status2);
   ASSERT_OK(status2->AddPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager)));
   ASSERT_OK(status2->WipePartitionTables());
@@ -673,9 +705,10 @@ TEST_F(EfiDevicePartitionerTests, InitializeWithTwoCandidateGPTsSucceedsAfterWip
 TEST_F(EfiDevicePartitionerTests, AddedPartitionRemovedAfterWipePartitions) {
   std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURE(CreateDiskWithGpt(128 * kMebibyte, &gpt_dev));
-  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
 
-  auto status = CreatePartitioner(gpt_fd);
+  auto status = CreatePartitioner(gpt_fd.value());
   ASSERT_OK(status);
 
   ASSERT_OK(status->AddPartition(PartitionSpec(paver::Partition::kZirconB)));
@@ -703,14 +736,16 @@ TEST_F(EfiDevicePartitionerTests, FindOldBootloaderPartitionName) {
     ASSERT_OK(gpt->Sync());
   }
 
-  fdio_cpp::UnownedFdioCaller caller(gpt_dev->fd());
-  auto result = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
-                    ->Rebind(fidl::StringView("gpt.so"));
+  // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+  fidl::UnownedClientEnd<fuchsia_device::Controller> channel(
+      gpt_dev->block_interface().channel()->get());
+  auto result = fidl::WireCall(channel)->Rebind(fidl::StringView("gpt.so"));
   ASSERT_TRUE(result.ok());
   ASSERT_FALSE(result->is_error());
 
-  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
-  auto partitioner = CreatePartitioner(gpt_fd);
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
+  auto partitioner = CreatePartitioner(gpt_fd.value());
   ASSERT_OK(partitioner);
   ASSERT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloaderA)));
 }
@@ -753,8 +788,9 @@ TEST_F(EfiDevicePartitionerTests, InitPartitionTables) {
   }
 
   // Create EFI device partitioner and initialise partition tables.
-  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
-  auto status = CreatePartitioner(gpt_fd);
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
+  auto status = CreatePartitioner(gpt_fd.value());
   ASSERT_OK(status);
   std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
   ASSERT_OK(partitioner->InitPartitionTables());
@@ -799,9 +835,10 @@ TEST_F(EfiDevicePartitionerTests, InitPartitionTables) {
 TEST_F(EfiDevicePartitionerTests, SupportsPartition) {
   std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURE(CreateDisk(1 * kGibibyte, &gpt_dev));
-  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
 
-  auto status = CreatePartitioner(gpt_fd);
+  auto status = CreatePartitioner(gpt_fd.value());
   ASSERT_OK(status);
   std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
 
@@ -829,9 +866,10 @@ TEST_F(EfiDevicePartitionerTests, SupportsPartition) {
 TEST_F(EfiDevicePartitionerTests, ValidatePayload) {
   std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURE(CreateDisk(1 * kGibibyte, &gpt_dev));
-  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
 
-  auto status = CreatePartitioner(gpt_fd);
+  auto status = CreatePartitioner(gpt_fd.value());
   ASSERT_OK(status);
   std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
 
@@ -855,10 +893,11 @@ class CrosDevicePartitionerTests : public GptDevicePartitionerTests {
   // Create a DevicePartition for a device.
   void CreatePartitioner(BlockDevice* device,
                          std::unique_ptr<paver::DevicePartitioner>* partitioner) {
+    zx::result gpt_fd = fd(*device);
+    ASSERT_OK(gpt_fd.status_value());
     fidl::ClientEnd<fuchsia_io::Directory> svc_root = GetSvcRoot();
-    auto status = paver::CrosDevicePartitioner::Initialize(devmgr_.devfs_root().duplicate(),
-                                                           svc_root, paver::Arch::kX64,
-                                                           fbl::unique_fd{dup(device->fd())});
+    zx::result status = paver::CrosDevicePartitioner::Initialize(
+        devmgr_.devfs_root().duplicate(), svc_root, paver::Arch::kX64, gpt_fd.value());
     ASSERT_OK(status);
     *partitioner = std::move(status.value());
   }
@@ -1218,9 +1257,10 @@ TEST_F(SherlockPartitionerTests, InitializeWithoutFvmSucceeds) {
 TEST_F(SherlockPartitionerTests, AddPartitionNotSupported) {
   std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURE(CreateDisk(64 * kMebibyte, &gpt_dev));
-  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
 
-  auto status = CreatePartitioner(gpt_fd);
+  auto status = CreatePartitioner(gpt_fd.value());
   ASSERT_OK(status);
 
   ASSERT_STATUS(status->AddPartition(PartitionSpec(paver::Partition::kZirconB)),
@@ -1261,14 +1301,16 @@ TEST_F(SherlockPartitionerTests, InitializePartitionTable) {
     ASSERT_OK(gpt->Sync());
   }
 
-  fdio_cpp::UnownedFdioCaller caller(gpt_dev->fd());
-  auto result = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
+  // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_device::Controller>(
+                                   gpt_dev->block_interface().channel()))
                     ->Rebind(fidl::StringView("gpt.so"));
   ASSERT_TRUE(result.ok());
   ASSERT_FALSE(result->is_error());
 
-  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
-  auto status = CreatePartitioner(gpt_fd);
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
+  auto status = CreatePartitioner(gpt_fd.value());
   ASSERT_OK(status);
   std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
 
@@ -1328,8 +1370,9 @@ TEST_F(SherlockPartitionerTests, FindPartitionNewGuids) {
   };
   ASSERT_NO_FATAL_FAILURE(InitializeStartingGPTPartitions(gpt_dev.get(), kSherlockNewPartitions));
 
-  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
-  auto status = CreatePartitioner(gpt_fd);
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
+  auto status = CreatePartitioner(gpt_fd.value());
   ASSERT_OK(status);
   std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
 
@@ -1364,8 +1407,9 @@ TEST_F(SherlockPartitionerTests, FindPartitionNewGuidsWithWrongTypeGUIDS) {
   };
   ASSERT_NO_FATAL_FAILURE(InitializeStartingGPTPartitions(gpt_dev.get(), kSherlockNewPartitions));
 
-  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
-  auto status = CreatePartitioner(gpt_fd);
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
+  auto status = CreatePartitioner(gpt_fd.value());
   ASSERT_OK(status);
   std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
 
@@ -1397,8 +1441,9 @@ TEST_F(SherlockPartitionerTests, FindPartitionSecondary) {
   };
   ASSERT_NO_FATAL_FAILURE(InitializeStartingGPTPartitions(gpt_dev.get(), kSherlockNewPartitions));
 
-  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
-  auto status = CreatePartitioner(gpt_fd);
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
+  auto status = CreatePartitioner(gpt_fd.value());
   ASSERT_OK(status);
   std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
 
@@ -1423,8 +1468,9 @@ TEST_F(SherlockPartitionerTests, ShouldNotFindPartitionBoot) {
   };
   ASSERT_NO_FATAL_FAILURE(InitializeStartingGPTPartitions(gpt_dev.get(), kSherlockNewPartitions));
 
-  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
-  auto status = CreatePartitioner(gpt_fd);
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
+  auto status = CreatePartitioner(gpt_fd.value());
   ASSERT_OK(status);
   std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
 
@@ -1440,8 +1486,9 @@ TEST_F(SherlockPartitionerTests, FindBootloader) {
   std::unique_ptr<gpt::GptDevice> gpt;
   ASSERT_NO_FATAL_FAILURE(CreateGptDevice(gpt_dev.get(), &gpt));
 
-  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
-  auto status = CreatePartitioner(gpt_fd);
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
+  auto status = CreatePartitioner(gpt_fd.value());
   ASSERT_OK(status);
   std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
 
@@ -1461,9 +1508,10 @@ TEST_F(SherlockPartitionerTests, FindBootloader) {
 TEST_F(SherlockPartitionerTests, SupportsPartition) {
   std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURE(CreateDisk(64 * kMebibyte, &gpt_dev));
-  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
 
-  auto status = CreatePartitioner(gpt_fd);
+  auto status = CreatePartitioner(gpt_fd.value());
   ASSERT_OK(status);
   std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
 
@@ -1529,9 +1577,10 @@ TEST_F(LuisPartitionerTests, InitializeWithoutFvmSucceeds) {
 TEST_F(LuisPartitionerTests, AddPartitionNotSupported) {
   std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURE(CreateDisk(64 * kMebibyte, &gpt_dev));
-  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
 
-  auto status = CreatePartitioner(gpt_fd);
+  auto status = CreatePartitioner(gpt_fd.value());
   ASSERT_OK(status);
 
   ASSERT_STATUS(status->AddPartition(PartitionSpec(paver::Partition::kZirconB)),
@@ -1566,8 +1615,9 @@ TEST_F(LuisPartitionerTests, FindPartition) {
   };
   ASSERT_NO_FATAL_FAILURE(InitializeStartingGPTPartitions(gpt_dev.get(), kLuisStartingPartitions));
 
-  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
-  auto status = CreatePartitioner(gpt_fd);
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
+  auto status = CreatePartitioner(gpt_fd.value());
   ASSERT_OK(status);
   std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
 
@@ -1608,9 +1658,10 @@ TEST_F(LuisPartitionerTests, CreateAbrClient) {
 TEST_F(LuisPartitionerTests, SupportsPartition) {
   std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURE(CreateDisk(64 * kMebibyte, &gpt_dev));
-  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
 
-  auto status = CreatePartitioner(gpt_fd);
+  auto status = CreatePartitioner(gpt_fd.value());
   ASSERT_OK(status);
   std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
 
@@ -1671,9 +1722,10 @@ class NelsonPartitionerTests : public GptDevicePartitionerTests {
     std::unique_ptr<BlockDevice> gpt_dev, boot0, boot1;
     ASSERT_NO_FATAL_FAILURE(InitializeBlockDeviceForBootloaderTest(&gpt_dev, &boot0, &boot1));
 
-    fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+    zx::result gpt_fd = fd(*gpt_dev);
+    ASSERT_OK(gpt_fd.status_value());
 
-    auto status = CreatePartitioner(gpt_fd);
+    auto status = CreatePartitioner(gpt_fd.value());
     ASSERT_OK(status);
     std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
     {
@@ -1736,8 +1788,9 @@ class NelsonPartitionerTests : public GptDevicePartitionerTests {
           WriteBlocks(info.blk_dev, info.start_block, info.size_in_blocks, data.data()));
     }
 
-    fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
-    auto status = CreatePartitioner(gpt_fd);
+    zx::result gpt_fd = fd(*gpt_dev);
+    ASSERT_OK(gpt_fd.status_value());
+    auto status = CreatePartitioner(gpt_fd.value());
     ASSERT_OK(status);
     std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
 
@@ -1809,9 +1862,10 @@ TEST_F(NelsonPartitionerTests, InitializeWithoutFvmSucceeds) {
 TEST_F(NelsonPartitionerTests, AddPartitionNotSupported) {
   std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURE(CreateDisk(64 * kMebibyte, &gpt_dev));
-  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
 
-  auto status = CreatePartitioner(gpt_fd);
+  auto status = CreatePartitioner(gpt_fd.value());
   ASSERT_OK(status);
 
   ASSERT_STATUS(status->AddPartition(PartitionSpec(paver::Partition::kZirconB)),
@@ -1848,8 +1902,9 @@ TEST_F(NelsonPartitionerTests, FindPartition) {
   ASSERT_NO_FATAL_FAILURE(
       InitializeStartingGPTPartitions(gpt_dev.get(), kNelsonStartingPartitions));
 
-  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
-  auto status = CreatePartitioner(gpt_fd);
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
+  auto status = CreatePartitioner(gpt_fd.value());
   ASSERT_OK(status);
   std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
 
@@ -1895,9 +1950,10 @@ TEST_F(NelsonPartitionerTests, CreateAbrClient) {
 TEST_F(NelsonPartitionerTests, SupportsPartition) {
   std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURE(CreateDisk(64 * kMebibyte, &gpt_dev));
-  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
 
-  auto status = CreatePartitioner(gpt_fd);
+  auto status = CreatePartitioner(gpt_fd.value());
   ASSERT_OK(status);
   std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
 
@@ -1928,9 +1984,10 @@ TEST_F(NelsonPartitionerTests, SupportsPartition) {
 TEST_F(NelsonPartitionerTests, ValidatePayload) {
   std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURE(CreateDisk(64 * kMebibyte, &gpt_dev));
-  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
 
-  auto status = CreatePartitioner(gpt_fd);
+  auto status = CreatePartitioner(gpt_fd.value());
   ASSERT_OK(status);
   std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
 
@@ -2039,9 +2096,10 @@ TEST_F(Vim3PartitionerTests, InitializeWithoutFvmSucceeds) {
 TEST_F(Vim3PartitionerTests, AddPartitionNotSupported) {
   std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURE(CreateDisk(64 * kMebibyte, &gpt_dev));
-  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
 
-  auto status = CreatePartitioner(gpt_fd);
+  auto status = CreatePartitioner(gpt_fd.value());
   ASSERT_OK(status);
 
   ASSERT_STATUS(status->AddPartition(PartitionSpec(paver::Partition::kZirconB)),
@@ -2068,8 +2126,9 @@ TEST_F(Vim3PartitionerTests, FindPartition) {
   }
   ASSERT_NO_FATAL_FAILURE(InitializeStartingGPTPartitions(gpt_dev.get(), vim3_partitions));
 
-  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
-  auto status = CreatePartitioner(gpt_fd);
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
+  auto status = CreatePartitioner(gpt_fd.value());
   ASSERT_OK(status);
   std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
 
@@ -2108,9 +2167,10 @@ TEST_F(Vim3PartitionerTests, CreateAbrClient) {
 TEST_F(Vim3PartitionerTests, SupportsPartition) {
   std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURE(CreateDisk(64 * kMebibyte, &gpt_dev));
-  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
 
-  auto status = CreatePartitioner(gpt_fd);
+  auto status = CreatePartitioner(gpt_fd.value());
   ASSERT_OK(status);
   std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
 
