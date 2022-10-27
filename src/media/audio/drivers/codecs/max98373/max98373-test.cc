@@ -36,7 +36,8 @@ class Max98373Test : public zxtest::Test {
         .ExpectReadStop({0x43})                // Get revision id.
         .ExpectWriteStop({0x20, 0xff, 0x01})   // Global enable.
         .ExpectWriteStop({0x20, 0x43, 0x01})   // Speaker enable.
-        .ExpectWriteStop({0x20, 0x3d, 0x28})   // Set gain to -20dB.
+        .ExpectWriteStop({0x20, 0x3d, 0x28})   // Set digital gain to -20dB.
+        .ExpectWriteStop({0x20, 0x3e, 0x05})   // Set analog gain to +13dB.
         .ExpectWriteStop({0x20, 0x2b, 0x01});  // Data in enable.
 
     loop_.StartThread();
@@ -126,7 +127,8 @@ TEST_F(Max98373Test, Reset) {
       .ExpectReadStop({0x43})                // Get revision id.
       .ExpectWriteStop({0x20, 0xff, 0x01})   // Global enable.
       .ExpectWriteStop({0x20, 0x43, 0x01})   // Speaker enable.
-      .ExpectWriteStop({0x20, 0x3d, 0x28})   // Set gain to -20dB.
+      .ExpectWriteStop({0x20, 0x3d, 0x28})   // Set digital gain to -20dB.
+      .ExpectWriteStop({0x20, 0x3e, 0x05})   // Set analog gain to +13dB.
       .ExpectWriteStop({0x20, 0x2b, 0x01});  // Data in enable.
 
   ASSERT_OK(client_.Reset());

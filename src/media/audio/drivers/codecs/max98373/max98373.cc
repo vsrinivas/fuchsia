@@ -27,6 +27,7 @@ constexpr uint16_t kRegPcmInterfaceSampleRate       = 0x2027;
 constexpr uint16_t kRegPcmInterfaceDigitalMonoMixer = 0x2029;
 constexpr uint16_t kRegPcmInterfaceInput            = 0x202b;
 constexpr uint16_t kRegDigitalVol                   = 0x203d;
+constexpr uint16_t kRegOutputLevel                  = 0x203e;
 constexpr uint16_t kRegSpkPathAndDspEnable          = 0x2043;
 constexpr uint16_t kRegRevId                        = 0x21ff;
 
@@ -91,6 +92,7 @@ zx_status_t Max98373::Reset() {
       {kRegGlobalEnable, kRegGlobalEnableOn},
       {kRegSpkPathAndDspEnable, kRegSpkPathAndDspEnableSpkOn},
       {kRegDigitalVol, static_cast<uint8_t>(-initial_gain * 2.f)},
+      {kRegOutputLevel, 0x05},        // 9.65VP (+13dB).
       {kRegPcmInterfaceInput, 0x01},  // PCM DIN enable.
   };
   for (auto& i : kDefaults) {
