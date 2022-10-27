@@ -1492,6 +1492,113 @@ fn process_options<B: ByteSlice, IaNaChecker: IaChecker, IaPdChecker: IaChecker>
     })
 }
 
+struct StatefulMessageBuilder<'a, IaNaIter, IaPdIter> {
+    transaction_id: [u8; 3],
+    message_type: v6::MessageType,
+    client_id: &'a [u8],
+    server_id: Option<&'a [u8]>,
+    elapsed_time_in_centisecs: u16,
+    options_to_request: &'a [v6::OptionCode],
+    ia_nas: IaNaIter,
+    ia_pds: IaPdIter,
+}
+
+impl<
+        'a,
+        IaNaIter: Iterator<Item = (v6::IAID, Option<Ipv6Addr>)>,
+        IaPdIter: Iterator<Item = (v6::IAID, Option<Subnet<Ipv6Addr>>)>,
+    > StatefulMessageBuilder<'a, IaNaIter, IaPdIter>
+{
+    fn build(self) -> Vec<u8> {
+        let StatefulMessageBuilder {
+            transaction_id,
+            message_type,
+            client_id,
+            server_id,
+            elapsed_time_in_centisecs,
+            options_to_request,
+            ia_nas,
+            ia_pds,
+        } = self;
+
+        debug_assert!(!options_to_request.contains(&v6::OptionCode::SolMaxRt));
+        let oro = [v6::OptionCode::SolMaxRt]
+            .into_iter()
+            .chain(options_to_request.into_iter().cloned())
+            .collect::<Vec<_>>();
+
+        // Adds IA_{NA,PD} options: one IA_{NA,PD} per hint, plus options
+        // without hints, up to the configured count, as described in
+        // RFC 8415, section 6.6:
+        //
+        //   A client can explicitly request multiple addresses by sending
+        //   multiple IA_NA options (and/or IA_TA options; see Section 21.5).  A
+        //   client can send multiple IA_NA (and/or IA_TA) options in its initial
+        //   transmissions. Alternatively, it can send an extra Request message
+        //   with additional new IA_NA (and/or IA_TA) options (or include them in
+        //   a Renew message).
+        //
+        //   The same principle also applies to prefix delegation. In principle,
+        //   DHCP allows a client to request new prefixes to be delegated by
+        //   sending additional IA_PD options (see Section 21.21). However, a
+        //   typical operator usually prefers to delegate a single, larger prefix.
+        //   In most deployments, it is recommended that the client request a
+        //   larger prefix in its initial transmissions rather than request
+        //   additional prefixes later on.
+        let iaaddr_options = ia_nas
+            .map(|(iaid, inner)| {
+                (
+                    iaid,
+                    inner.map(|addr| {
+                        [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(addr, 0, 0, &[]))]
+                    }),
+                )
+            })
+            .collect::<HashMap<_, _>>();
+        let iaprefix_options = ia_pds
+            .map(|(iaid, inner)| {
+                (
+                    iaid,
+                    inner.map(|prefix| {
+                        [v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(0, 0, prefix, &[]))]
+                    }),
+                )
+            })
+            .collect::<HashMap<_, _>>();
+
+        let options = server_id
+            .into_iter()
+            .map(v6::DhcpOption::ServerId)
+            .chain([
+                v6::DhcpOption::ClientId(client_id),
+                v6::DhcpOption::ElapsedTime(elapsed_time_in_centisecs),
+                v6::DhcpOption::Oro(&oro),
+            ])
+            .chain(iaaddr_options.iter().map(|(iaid, iaddr_opt)| {
+                v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                    *iaid,
+                    0,
+                    0,
+                    iaddr_opt.as_ref().map_or(&[], AsRef::as_ref),
+                ))
+            }))
+            .chain(iaprefix_options.iter().map(|(iaid, iaprefix_opt)| {
+                v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
+                    *iaid,
+                    0,
+                    0,
+                    iaprefix_opt.as_ref().map_or(&[], AsRef::as_ref),
+                ))
+            }))
+            .collect::<Vec<_>>();
+
+        let builder = v6::MessageBuilder::new(message_type, transaction_id, &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        builder.serialize(&mut buf);
+        buf
+    }
+}
+
 /// Provides methods for handling state transitions from server discovery
 /// state.
 #[derive(Debug)]
@@ -1589,89 +1696,68 @@ impl ServerDiscovery {
             collected_advertise,
             collected_sol_max_rt,
         } = self;
-        let options = [v6::DhcpOption::ClientId(&client_id)].into_iter();
 
         let (start_time, elapsed_time) = match first_solicit_time {
             None => (now, 0),
             Some(start_time) => (start_time, elapsed_time_in_centisecs(start_time, now)),
         };
-        let options = options.chain([v6::DhcpOption::ElapsedTime(elapsed_time)]);
 
-        // TODO(https://fxbug.dev/86945): remove `address_hint` construction
-        // once `IanaSerializer::new()` takes options by value.
-        let address_hint = configured_non_temporary_addresses
-            .iter()
-            .map(|(iaid, addr)| {
-                (
-                    *iaid,
-                    addr.map(|addr| {
-                        [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(addr, 0, 0, &[]))]
-                    }),
-                )
-            })
-            .collect::<HashMap<_, _>>();
-        let prefix_hint = configured_delegated_prefixes
-            .iter()
-            .map(|(iaid, prefix)| {
-                (
-                    *iaid,
-                    prefix.map(|prefix| {
-                        [v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(
-                            0, /* preferred_lifetime_secs */
-                            0, /* valid_lifetime_secs */
-                            prefix,
-                            &[],
-                        ))]
-                    }),
-                )
-            })
-            .collect::<HashMap<_, _>>();
-
-        // Adds IA_{NA,PD} options: one IA_{NA,PD} per hint, plus options
-        // without hints, up to the configured count, as described in
-        // RFC 8415, section 6.6:
+        // Per RFC 8415, section 18.2.1:
         //
-        //   A client can explicitly request multiple addresses by sending
-        //   multiple IA_NA options (and/or IA_TA options; see Section 21.5).  A
-        //   client can send multiple IA_NA (and/or IA_TA) options in its initial
-        //   transmissions. Alternatively, it can send an extra Request message
-        //   with additional new IA_NA (and/or IA_TA) options (or include them in
-        //   a Renew message).
+        //   The client sets the "msg-type" field to SOLICIT. The client
+        //   generates a transaction ID and inserts this value in the
+        //   "transaction-id" field.
         //
-        //   The same principle also applies to prefix delegation. In principle,
-        //   DHCP allows a client to request new prefixes to be delegated by
-        //   sending additional IA_PD options (see Section 21.21). However, a
-        //   typical operator usually prefers to delegate a single, larger prefix.
-        //   In most deployments, it is recommended that the client request a
-        //   larger prefix in its initial transmissions rather than request
-        //   additional prefixes later on.
-        let options = options
-            .chain(address_hint.iter().map(|(iaid, hint)| {
-                v6::DhcpOption::Iana(v6::IanaSerializer::new(
-                    *iaid,
-                    0,
-                    0,
-                    hint.as_ref().map_or(&[], AsRef::as_ref),
-                ))
-            }))
-            .chain(prefix_hint.iter().map(|(iaid, hint)| {
-                v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
-                    *iaid,
-                    0, /* t1 */
-                    0, /* t2 */
-                    hint.as_ref().map_or(&[], AsRef::as_ref),
-                ))
-            }));
-
-        let oro = [v6::OptionCode::SolMaxRt]
-            .into_iter()
-            .chain(options_to_request.into_iter().cloned())
-            .collect::<Vec<_>>();
-        let options = options.chain([v6::DhcpOption::Oro(&oro)]).collect::<Vec<_>>();
-
-        let builder = v6::MessageBuilder::new(v6::MessageType::Solicit, transaction_id, &options);
-        let mut buf = vec![0; builder.bytes_len()];
-        builder.serialize(&mut buf);
+        //   The client MUST include a Client Identifier option (see Section
+        //   21.2) to identify itself to the server. The client includes IA
+        //   options for any IAs to which it wants the server to assign leases.
+        //
+        //   The client MUST include an Elapsed Time option (see Section 21.9)
+        //   to indicate how long the client has been trying to complete the
+        //   current DHCP message exchange.
+        //
+        //   The client uses IA_NA options (see Section 21.4) to request the
+        //   assignment of non-temporary addresses, IA_TA options (see
+        //   Section 21.5) to request the assignment of temporary addresses, and
+        //   IA_PD options (see Section 21.21) to request prefix delegation.
+        //   IA_NA, IA_TA, or IA_PD options, or a combination of all, can be
+        //   included in DHCP messages. In addition, multiple instances of any
+        //   IA option type can be included.
+        //
+        //   The client MAY include addresses in IA Address options (see
+        //   Section 21.6) encapsulated within IA_NA and IA_TA options as hints
+        //   to the server about the addresses for which the client has a
+        //   preference.
+        //
+        //   The client MAY include values in IA Prefix options (see
+        //   Section 21.22) encapsulated within IA_PD options as hints for the
+        //   delegated prefix and/or prefix length for which the client has a
+        //   preference. See Section 18.2.4 for more on prefix-length hints.
+        //
+        //   The client MUST include an Option Request option (ORO) (see
+        //   Section 21.7) to request the SOL_MAX_RT option (see Section 21.24)
+        //   and any other options the client is interested in receiving. The
+        //   client MAY additionally include instances of those options that are
+        //   identified in the Option Request option, with data values as hints
+        //   to the server about parameter values the client would like to have
+        //   returned.
+        //
+        //   ...
+        //
+        //   The client MUST NOT include any other options in the Solicit message,
+        //   except as specifically allowed in the definition of individual
+        //   options.
+        let buf = StatefulMessageBuilder {
+            transaction_id,
+            message_type: v6::MessageType::Solicit,
+            server_id: None,
+            client_id: &client_id,
+            elapsed_time_in_centisecs: elapsed_time,
+            options_to_request,
+            ia_nas: configured_non_temporary_addresses.iter().map(|(iaid, ia)| (*iaid, *ia)),
+            ia_pds: configured_delegated_prefixes.iter().map(|(iaid, ia)| (*iaid, *ia)),
+        }
+        .build();
 
         let retrans_timeout =
             ServerDiscovery::retransmission_timeout(retrans_timeout, solicit_max_rt, rng);
@@ -3009,84 +3095,54 @@ impl Requesting {
         } = self;
         let retrans_timeout = Self::retransmission_timeout(prev_retrans_timeout, rng);
 
-        // Per RFC 8415, section 18.2.2:
-        //
-        //    The client MUST include the identifier of the destination server
-        //    in a Server Identifier option (see Section 21.3).
-        //
-        //    The client MUST include a Client Identifier option (see Section
-        //    21.2) to identify itself to the server.  The client adds any other
-        //    appropriate options, including one or more IA options.
-        let options = [v6::DhcpOption::ServerId(&server_id), v6::DhcpOption::ClientId(&client_id)]
-            .into_iter();
-
-        let iaaddr_options = non_temporary_addresses
-            .iter()
-            .map(|(iaid, ia)| {
-                (
-                    *iaid,
-                    ia.value().map(|addr| {
-                        [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(addr, 0, 0, &[]))]
-                    }),
-                )
-            })
-            .collect::<HashMap<_, _>>();
-        let iaprefix_options = delegated_prefixes
-            .iter()
-            .map(|(iaid, ia)| {
-                (
-                    *iaid,
-                    ia.value().map(|prefix| {
-                        [v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(0, 0, prefix, &[]))]
-                    }),
-                )
-            })
-            .collect::<HashMap<_, _>>();
-        let options = options
-            .chain(iaaddr_options.iter().map(|(iaid, iaddr_opt)| {
-                v6::DhcpOption::Iana(v6::IanaSerializer::new(
-                    *iaid,
-                    0,
-                    0,
-                    iaddr_opt.as_ref().map_or(&[], AsRef::as_ref),
-                ))
-            }))
-            .chain(iaprefix_options.iter().map(|(iaid, iaprefix_opt)| {
-                v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
-                    *iaid,
-                    0,
-                    0,
-                    iaprefix_opt.as_ref().map_or(&[], AsRef::as_ref),
-                ))
-            }));
-
-        // Per RFC 8415, section 18.2.2:
-        //
-        //    The client MUST include an Elapsed Time option (see Section 21.9)
-        //    to indicate how long the client has been trying to complete the
-        //    current DHCP message exchange.
         let mut elapsed_time = 0;
         let first_request_time = Some(first_request_time.map_or(now, |start_time| {
             elapsed_time = elapsed_time_in_centisecs(start_time, now);
             retrans_count += 1;
             start_time
         }));
-        let options = options.chain([v6::DhcpOption::ElapsedTime(elapsed_time)]);
 
         // Per RFC 8415, section 18.2.2:
         //
-        //    The client MUST include an Option Request option (ORO) (see
-        //    Section 21.7) to request the SOL_MAX_RT option (see Section 21.24)
-        //    and any other options the client is interested in receiving.
-        assert!(!options_to_request.contains(&v6::OptionCode::SolMaxRt));
-        let oro = std::iter::once(v6::OptionCode::SolMaxRt)
-            .chain(options_to_request.iter().cloned())
-            .collect::<Vec<_>>();
-        let options = options.chain([v6::DhcpOption::Oro(&oro)]).collect::<Vec<_>>();
-
-        let builder = v6::MessageBuilder::new(v6::MessageType::Request, transaction_id, &options);
-        let mut buf = vec![0; builder.bytes_len()];
-        builder.serialize(&mut buf);
+        //   The client uses a Request message to populate IAs with leases and
+        //   obtain other configuration information. The client includes one or
+        //   more IA options in the Request message. The server then returns
+        //   leases and other information about the IAs to the client in IA
+        //   options in a Reply message.
+        //
+        //   The client sets the "msg-type" field to REQUEST. The client
+        //   generates a transaction ID and inserts this value in the
+        //   "transaction-id" field.
+        //
+        //   The client MUST include the identifier of the destination server in
+        //   a Server Identifier option (see Section 21.3).
+        //
+        //   The client MUST include a Client Identifier option (see Section
+        //   21.2) to identify itself to the server. The client adds any other
+        //   appropriate options, including one or more IA options.
+        //
+        //   The client MUST include an Elapsed Time option (see Section 21.9)
+        //   to indicate how long the client has been trying to complete the
+        //   current DHCP message exchange.
+        //
+        //   The client MUST include an Option Request option (see Section 21.7)
+        //   to request the SOL_MAX_RT option (see Section 21.24) and any other
+        //   options the client is interested in receiving. The client MAY
+        //   additionally include instances of those options that are identified
+        //   in the Option Request option, with data values as hints to the
+        //   server about parameter values the client would like to have
+        //   returned.
+        let buf = StatefulMessageBuilder {
+            transaction_id,
+            message_type: v6::MessageType::Request,
+            server_id: Some(&server_id),
+            client_id: &client_id,
+            elapsed_time_in_centisecs: elapsed_time,
+            options_to_request,
+            ia_nas: non_temporary_addresses.iter().map(|(iaid, ia)| (*iaid, ia.value())),
+            ia_pds: delegated_prefixes.iter().map(|(iaid, ia)| (*iaid, ia.value())),
+        }
+        .build();
 
         Transition {
             state: ClientState::Requesting(Requesting {
@@ -3649,10 +3705,48 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
             Some(start_time) => (start_time, elapsed_time_in_centisecs(start_time, now)),
         };
 
-        let oro = std::iter::once(v6::OptionCode::SolMaxRt)
-            .chain(options_to_request.iter().cloned())
-            .collect::<Vec<_>>();
-
+        // As per RFC 8415 section 18.2.4,
+        //
+        //   The client sets the "msg-type" field to RENEW. The client generates
+        //   a transaction ID and inserts this value in the "transaction-id"
+        //   field.
+        //
+        //   The client MUST include a Server Identifier option (see Section
+        //   21.3) in the Renew message, identifying the server with which the
+        //   client most recently communicated.
+        //
+        //   The client MUST include a Client Identifier option (see Section
+        //   21.2) to identify itself to the server. The client adds any
+        //   appropriate options, including one or more IA options.
+        //
+        //   The client MUST include an Elapsed Time option (see Section 21.9)
+        //   to indicate how long the client has been trying to complete the
+        //   current DHCP message exchange.
+        //
+        //   For IAs to which leases have been assigned, the client includes a
+        //   corresponding IA option containing an IA Address option for each
+        //   address assigned to the IA and an IA Prefix option for each prefix
+        //   assigned to the IA. The client MUST NOT include addresses and
+        //   prefixes in any IA option that the client did not obtain from the
+        //   server or that are no longer valid (that have a valid lifetime of
+        //   0).
+        //
+        //   The client MAY include an IA option for each binding it desires but
+        //   has been unable to obtain. In this case, if the client includes the
+        //   IA_PD option to request prefix delegation, the client MAY include
+        //   the IA Prefix option encapsulated within the IA_PD option, with the
+        //   "IPv6-prefix" field set to 0 and the "prefix-length" field set to
+        //   the desired length of the prefix to be delegated. The server MAY
+        //   use this value as a hint for the prefix length. The client SHOULD
+        //   NOT include an IA Prefix option with the "IPv6-prefix" field set to
+        //   0 unless it is supplying a hint for the prefix length.
+        //
+        //   The client includes an Option Request option (see Section 21.7) to
+        //   request the SOL_MAX_RT option (see Section 21.24) and any other
+        //   options the client is interested in receiving. The client MAY
+        //   include options with data values as hints to the server about
+        //   parameter values the client would like to have returned.
+        //
         // As per RFC 8415 section 18.2.5,
         //
         //   The client constructs the Rebind message as described in Section
@@ -3662,67 +3756,24 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
         //
         //   -  The client does not include the Server Identifier option (see
         //      Section 21.3) in the Rebind message.
-        let (message_type, maybe_server_id_opt) = if IS_REBINDING {
+        let (message_type, maybe_server_id) = if IS_REBINDING {
             (v6::MessageType::Rebind, None)
         } else {
-            (v6::MessageType::Renew, Some(v6::DhcpOption::ServerId(&server_id)))
+            (v6::MessageType::Renew, Some(server_id.as_slice()))
         };
 
-        // TODO(https://fxbug.dev/86945): remove `iaaddr_options` construction
-        // once `IanaSerializer::new()` takes options by value.
-        // TODO(https://fxbug.dev/74324): all addresses in the map should be
-        // valid; invalid addresses to be removed part of the
-        // AddressStateProvider work.
-        let iaaddr_options = non_temporary_addresses
-            .iter()
-            .map(|(iaid, addr_entry)| {
-                (
-                    *iaid,
-                    addr_entry.value().map(|addr| {
-                        [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(addr, 0, 0, &[]))]
-                    }),
-                )
-            })
-            .collect::<HashMap<_, _>>();
-        let iaprefix_options = delegated_prefixes
-            .iter()
-            .map(|(iaid, prefix_entry)| {
-                (
-                    *iaid,
-                    prefix_entry.value().map(|prefix| {
-                        [v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(0, 0, prefix, &[]))]
-                    }),
-                )
-            })
-            .collect::<HashMap<_, _>>();
-        let options = maybe_server_id_opt
-            .into_iter()
-            .chain([
-                v6::DhcpOption::ClientId(&client_id),
-                v6::DhcpOption::ElapsedTime(elapsed_time),
-                v6::DhcpOption::Oro(&oro),
-            ])
-            .chain(iaaddr_options.iter().map(|(iaid, iaaddr_opt)| {
-                v6::DhcpOption::Iana(v6::IanaSerializer::new(
-                    *iaid,
-                    0,
-                    0,
-                    iaaddr_opt.as_ref().map_or(&[], AsRef::as_ref),
-                ))
-            }))
-            .chain(iaprefix_options.iter().map(|(iaid, iaprefix_opt)| {
-                v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
-                    *iaid,
-                    0,
-                    0,
-                    iaprefix_opt.as_ref().map_or(&[], AsRef::as_ref),
-                ))
-            }))
-            .collect::<Vec<_>>();
+        let buf = StatefulMessageBuilder {
+            transaction_id,
+            message_type,
+            client_id: &client_id,
+            server_id: maybe_server_id,
+            elapsed_time_in_centisecs: elapsed_time,
+            options_to_request,
+            ia_nas: non_temporary_addresses.iter().map(|(iaid, ia)| (*iaid, ia.value())),
+            ia_pds: delegated_prefixes.iter().map(|(iaid, ia)| (*iaid, ia.value())),
+        }
+        .build();
 
-        let builder = v6::MessageBuilder::new(message_type, transaction_id, &options);
-        let mut buf = vec![0; builder.bytes_len()];
-        builder.serialize(&mut buf);
         let retrans_timeout = Self::retransmission_timeout(prev_retrans_timeout, rng);
 
         Transition {
