@@ -87,7 +87,6 @@ config("fidl-deprecated-c-bindings") {
     "//src/devices/block/bin/disk-inspect",
     "//src/devices/block/bin/gpt",
     "//src/devices/block/bin/iochk",
-    "//src/devices/block/bin/iotime",
     "//src/devices/block/bin/lsblk",
     "//src/devices/block/drivers/core:core-unittest-bin",
     "//src/devices/block/drivers/core:shared",

@@ -5,7 +5,7 @@
 executable("iotime") {
   sources = [ "iotime.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_cpp_wire",
     "//sdk/lib/fdio",
     "//src/lib/storage/block_client/cpp",
     "//src/lib/storage/ramdevice_client/cpp",
@@ -14,8 +14,4 @@ executable("iotime") {
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
