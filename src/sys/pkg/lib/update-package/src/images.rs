@@ -327,10 +327,7 @@ impl ImagePackagesManifest {
         let zbi = self.image_metadata(slot, SlotImage::Zbi);
         let vbmeta = self.image_metadata(slot, SlotImage::Vbmeta);
 
-        match zbi {
-            Some(zbi) => Some(BootSlot { zbi, vbmeta }),
-            None => None,
-        }
+        zbi.map(|zbi| BootSlot { zbi, vbmeta })
     }
 
     /// Returns metadata for the fuchsia boot slot, if present.
@@ -572,9 +569,8 @@ impl<'de> Deserialize<'de> for ImagePackagesManifest {
 pub fn parse_image_packages_json(
     contents: &[u8],
 ) -> Result<ImagePackagesManifest, ImagePackagesError> {
-    let manifest = match serde_json::from_slice(contents).map_err(ImagePackagesError::Parse)? {
-        VersionedImagePackagesManifest::Version1(manifest) => manifest,
-    };
+    let VersionedImagePackagesManifest::Version1(manifest) =
+        serde_json::from_slice(contents).map_err(ImagePackagesError::Parse)?;
 
     Ok(manifest)
 }
@@ -583,7 +579,7 @@ pub(crate) async fn image_packages(
     proxy: &fio::DirectoryProxy,
 ) -> Result<ImagePackagesManifest, ImagePackagesError> {
     let file =
-        fuchsia_fs::directory::open_file(&proxy, "images.json", fio::OpenFlags::RIGHT_READABLE)
+        fuchsia_fs::directory::open_file(proxy, "images.json", fio::OpenFlags::RIGHT_READABLE)
             .await
             .map_err(|e| match e {
                 fuchsia_fs::node::OpenError::OpenError(Status::NOT_FOUND) => {
@@ -592,7 +588,7 @@ pub(crate) async fn image_packages(
                 e => ImagePackagesError::Open(e),
             })?;
 
-    let contents = fuchsia_fs::file::read(&file).await.map_err(|e| ImagePackagesError::Read(e))?;
+    let contents = fuchsia_fs::file::read(&file).await.map_err(ImagePackagesError::Read)?;
 
     parse_image_packages_json(&contents)
 }

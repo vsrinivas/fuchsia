@@ -104,7 +104,7 @@ pub enum SerializePackageError {
 
 /// Returns structured `packages.json` data based on file contents string.
 pub fn parse_packages_json(contents: &[u8]) -> Result<Vec<AbsolutePackageUrl>, ParsePackageError> {
-    match serde_json::from_slice(&contents).map_err(ParsePackageError::JsonError)? {
+    match serde_json::from_slice(contents).map_err(ParsePackageError::JsonError)? {
         Packages { ref version, content } if version == "1" => Ok(content),
         Packages { version, .. } => Err(ParsePackageError::VersionNotSupported(version)),
     }
@@ -123,12 +123,11 @@ pub(crate) async fn packages(
     proxy: &fio::DirectoryProxy,
 ) -> Result<Vec<AbsolutePackageUrl>, ParsePackageError> {
     let file =
-        fuchsia_fs::directory::open_file(&proxy, "packages.json", fio::OpenFlags::RIGHT_READABLE)
+        fuchsia_fs::directory::open_file(proxy, "packages.json", fio::OpenFlags::RIGHT_READABLE)
             .await
             .map_err(ParsePackageError::FailedToOpen)?;
 
-    let contents =
-        fuchsia_fs::file::read(&file).await.map_err(|e| ParsePackageError::ReadError(e))?;
+    let contents = fuchsia_fs::file::read(&file).await.map_err(ParsePackageError::ReadError)?;
     parse_packages_json(&contents)
 }
 

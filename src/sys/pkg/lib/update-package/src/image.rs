@@ -185,7 +185,7 @@ pub(crate) async fn open(
     proxy: &fio::DirectoryProxy,
     image: &Image,
 ) -> Result<Buffer, OpenImageError> {
-    open_from_path(proxy, &image.name()).await
+    open_from_path(proxy, image.name()).await
 }
 
 #[cfg(target_os = "fuchsia")]
