@@ -68,6 +68,12 @@ template("go_test") {
       }
 
       deps = [ ":${_go_build_target_name}" ]
+
+      # TODO(fxbug.dev/58755): `library` will always be defined once this bug is
+      # complete.
+      if (defined(invoker.library)) {
+        deps += [ invoker.library ]
+      }
       if (defined(invoker.deps)) {
         deps += invoker.deps
       }
