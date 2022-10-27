@@ -840,7 +840,13 @@ void TerminaContainerEnclosedGuest::InstallInRealm(component_testing::Realm& rea
 
   using component_testing::ConfigValue;
   realm.InitMutableConfigFromPackage(kGuestManagerName);
+#ifdef HAS_FXFS_FILESYSTEM
+  FX_LOGS(INFO) << "Filesystem is Fxfs; will open disk as a block file";
+  realm.SetConfigValue(kGuestManagerName, "stateful_partition_type", "block-file");
+#else
+  FX_LOGS(INFO) << "Filesystem is not Fxfs; will open disk as a normal file (not a block-file)";
   realm.SetConfigValue(kGuestManagerName, "stateful_partition_type", "file");
+#endif
   realm.SetConfigValue(kGuestManagerName, "stateful_partition_size",
                        ConfigValue::Uint64(2ull * 1024 * 1024 * 1024));
 

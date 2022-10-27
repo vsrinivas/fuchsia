@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//src/storage/fshost/generated_fshost_config.gni")
 
 group("tests") {
   testonly = true
@@ -150,6 +151,11 @@ source_set("lib") {
     "enclosed_guest.h",
     "guest_test.h",
   ]
+
+  defines = []
+  if (data_filesystem_format == "fxfs") {
+    defines += [ "HAS_FXFS_FILESYSTEM" ]
+  }
 
   deps = [
     ":backtrace_watchdog",
