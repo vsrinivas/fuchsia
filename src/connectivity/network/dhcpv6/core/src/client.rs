@@ -4751,20 +4751,20 @@ pub(crate) mod testutil {
     /// A helper identity association test type specifying T1/T2, for testing
     /// T1/T2 variations across IAs.
     #[derive(Copy, Clone)]
-    pub(crate) struct TestIaNa {
-        pub(crate) address: Ipv6Addr,
+    pub(crate) struct TestIa<A> {
+        pub(crate) value: A,
         pub(crate) preferred_lifetime: v6::TimeValue,
         pub(crate) valid_lifetime: v6::TimeValue,
         pub(crate) t1: v6::TimeValue,
         pub(crate) t2: v6::TimeValue,
     }
 
-    impl TestIaNa {
-        /// Creates a `TestIaNa` with default valid values for
+    impl<A> TestIa<A> {
+        /// Creates a `TestIa` with default valid values for
         /// lifetimes.
-        pub(crate) fn new_default(address: Ipv6Addr) -> TestIaNa {
-            TestIaNa {
-                address,
+        pub(crate) fn new_default(value: A) -> TestIa<A> {
+            TestIa {
+                value,
                 preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
                     PREFERRED_LIFETIME,
                 )),
@@ -4775,36 +4775,126 @@ pub(crate) mod testutil {
                 t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(T2)),
             }
         }
-    }
 
-    /// A helper identity association test type specifying T1/T2, for testing
-    /// T1/T2 variations across IAs.
-    #[derive(Copy, Clone)]
-    pub(crate) struct TestIaPd {
-        pub(crate) prefix: Subnet<Ipv6Addr>,
-        pub(crate) preferred_lifetime: v6::TimeValue,
-        pub(crate) valid_lifetime: v6::TimeValue,
-        pub(crate) t1: v6::TimeValue,
-        pub(crate) t2: v6::TimeValue,
-    }
-
-    impl TestIaPd {
-        /// Creates a `TestIaPd` with default valid values for
-        /// lifetimes.
-        pub(crate) fn new_default(prefix: Subnet<Ipv6Addr>) -> TestIaPd {
-            TestIaPd {
-                prefix,
+        /// Creates a `TestIa` with default valid values for
+        /// renewed lifetimes.
+        pub(crate) fn new_renewed_default(value: A) -> TestIa<A> {
+            TestIa {
+                value,
                 preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                    PREFERRED_LIFETIME,
+                    RENEWED_PREFERRED_LIFETIME,
                 )),
                 valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                    VALID_LIFETIME,
+                    RENEWED_VALID_LIFETIME,
                 )),
-                t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(T1)),
-                t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(T2)),
+                t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(RENEWED_T1)),
+                t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(RENEWED_T2)),
             }
         }
     }
+
+    pub(crate) struct TestMessageBuilder<'a, IaNaIter, IaPdIter> {
+        pub(crate) transaction_id: [u8; 3],
+        pub(crate) message_type: v6::MessageType,
+        pub(crate) client_id: &'a [u8],
+        pub(crate) server_id: &'a [u8],
+        pub(crate) preference: Option<u8>,
+        pub(crate) dns_servers: Option<&'a [Ipv6Addr]>,
+        pub(crate) ia_nas: IaNaIter,
+        pub(crate) ia_pds: IaPdIter,
+    }
+
+    impl<
+            'a,
+            IaNaIter: Iterator<Item = (v6::IAID, TestIa<Ipv6Addr>)>,
+            IaPdIter: Iterator<Item = (v6::IAID, TestIa<Subnet<Ipv6Addr>>)>,
+        > TestMessageBuilder<'a, IaNaIter, IaPdIter>
+    {
+        pub(crate) fn build(self) -> Vec<u8> {
+            let TestMessageBuilder {
+                transaction_id,
+                message_type,
+                client_id,
+                server_id,
+                preference,
+                dns_servers,
+                ia_nas,
+                ia_pds,
+            } = self;
+
+            struct Inner<'a> {
+                opt: [v6::DhcpOption<'a>; 1],
+                t1: v6::TimeValue,
+                t2: v6::TimeValue,
+            }
+
+            let iaaddr_options = ia_nas
+                .map(|(iaid, TestIa { value, preferred_lifetime, valid_lifetime, t1, t2 })| {
+                    (
+                        iaid,
+                        Inner {
+                            opt: [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+                                value,
+                                get_value(preferred_lifetime),
+                                get_value(valid_lifetime),
+                                &[],
+                            ))],
+                            t1,
+                            t2,
+                        },
+                    )
+                })
+                .collect::<HashMap<_, _>>();
+            let iaprefix_options = ia_pds
+                .map(|(iaid, TestIa { value, preferred_lifetime, valid_lifetime, t1, t2 })| {
+                    (
+                        iaid,
+                        Inner {
+                            opt: [v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(
+                                get_value(preferred_lifetime),
+                                get_value(valid_lifetime),
+                                value,
+                                &[],
+                            ))],
+                            t1,
+                            t2,
+                        },
+                    )
+                })
+                .collect::<HashMap<_, _>>();
+
+            let options =
+                [v6::DhcpOption::ServerId(&server_id), v6::DhcpOption::ClientId(client_id)]
+                    .into_iter()
+                    .chain(preference.into_iter().map(v6::DhcpOption::Preference))
+                    .chain(dns_servers.into_iter().map(v6::DhcpOption::DnsServers))
+                    .chain(iaaddr_options.iter().map(|(iaid, Inner { opt, t1, t2 })| {
+                        v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                            *iaid,
+                            get_value(*t1),
+                            get_value(*t2),
+                            opt.as_ref(),
+                        ))
+                    }))
+                    .chain(iaprefix_options.iter().map(|(iaid, Inner { opt, t1, t2 })| {
+                        v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
+                            *iaid,
+                            get_value(*t1),
+                            get_value(*t2),
+                            opt.as_ref(),
+                        ))
+                    }))
+                    .collect::<Vec<_>>();
+
+            let builder = v6::MessageBuilder::new(message_type, transaction_id, &options);
+            let mut buf = vec![0; builder.bytes_len()];
+            builder.serialize(&mut buf);
+            buf
+        }
+    }
+
+    pub(crate) type TestIaNa = TestIa<Ipv6Addr>;
+    pub(crate) type TestIaPd = TestIa<Subnet<Ipv6Addr>>;
 
     /// Creates a stateful client, exchanges messages to bring it in Requesting
     /// state, and sends a Request message. Returns the client in Requesting
@@ -4831,17 +4921,13 @@ pub(crate) mod testutil {
         let configured_non_temporary_addresses = to_configured_addresses(
             non_temporary_addresses_to_assign.len(),
             non_temporary_addresses_to_assign.iter().map(
-                |TestIaNa { address, preferred_lifetime: _, valid_lifetime: _, t1: _, t2: _ }| {
-                    *address
-                },
+                |TestIaNa { value, preferred_lifetime: _, valid_lifetime: _, t1: _, t2: _ }| *value,
             ),
         );
         let configured_delegated_prefixes = to_configured_prefixes(
             delegated_prefixes_to_assign.len(),
             delegated_prefixes_to_assign.iter().map(
-                |TestIaPd { prefix, preferred_lifetime: _, valid_lifetime: _, t1: _, t2: _ }| {
-                    *prefix
-                },
+                |TestIaPd { value, preferred_lifetime: _, valid_lifetime: _, t1: _, t2: _ }| *value,
             ),
         );
         let options_to_request = if expected_dns_servers.is_empty() {
@@ -4859,65 +4945,17 @@ pub(crate) mod testutil {
             now,
         );
 
-        let mut options = vec![
-            v6::DhcpOption::ClientId(&CLIENT_ID),
-            v6::DhcpOption::ServerId(&server_id),
-            v6::DhcpOption::Preference(ADVERTISE_MAX_PREFERENCE),
-        ];
-        if !expected_dns_servers.is_empty() {
-            options.push(v6::DhcpOption::DnsServers(&expected_dns_servers));
+        let buf = TestMessageBuilder {
+            transaction_id,
+            message_type: v6::MessageType::Advertise,
+            client_id: &CLIENT_ID,
+            server_id: &server_id,
+            preference: Some(ADVERTISE_MAX_PREFERENCE),
+            dns_servers: (!expected_dns_servers.is_empty()).then(|| expected_dns_servers),
+            ia_nas: (0..).map(v6::IAID::new).zip(non_temporary_addresses_to_assign),
+            ia_pds: (0..).map(v6::IAID::new).zip(delegated_prefixes_to_assign),
         }
-        let non_temporary_addresses_to_assign: HashMap<v6::IAID, TestIaNa> =
-            (0..).map(v6::IAID::new).zip(non_temporary_addresses_to_assign).collect();
-        let delegated_prefixes_to_assign: HashMap<v6::IAID, TestIaPd> =
-            (0..).map(v6::IAID::new).zip(delegated_prefixes_to_assign).collect();
-        let iaaddr_opts = non_temporary_addresses_to_assign
-            .iter()
-            .map(|(iaid, ia)| {
-                (
-                    *iaid,
-                    [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-                        ia.address,
-                        testutil::get_value(ia.preferred_lifetime),
-                        testutil::get_value(ia.valid_lifetime),
-                        &[],
-                    ))],
-                )
-            })
-            .collect::<HashMap<_, _>>();
-        options.extend(non_temporary_addresses_to_assign.iter().map(|(iaid, ia)| {
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(
-                *iaid,
-                testutil::get_value(ia.t1),
-                testutil::get_value(ia.t2),
-                iaaddr_opts.get(iaid).unwrap(),
-            ))
-        }));
-        let iaprefix_opts = delegated_prefixes_to_assign
-            .iter()
-            .map(|(iaid, ia)| {
-                (
-                    *iaid,
-                    [v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(
-                        testutil::get_value(ia.preferred_lifetime),
-                        testutil::get_value(ia.valid_lifetime),
-                        ia.prefix,
-                        &[],
-                    ))],
-                )
-            })
-            .collect::<HashMap<_, _>>();
-        options.extend(delegated_prefixes_to_assign.iter().map(|(iaid, ia)| {
-            v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
-                *iaid,
-                testutil::get_value(ia.t1),
-                testutil::get_value(ia.t2),
-                iaprefix_opts.get(iaid).unwrap(),
-            ))
-        }));
-        let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
-        let mut buf = vec![0; builder.bytes_len()];
-        builder.serialize(&mut buf);
+        .build();
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         // The client should select the server that sent the best advertise and
@@ -4995,62 +5033,24 @@ pub(crate) mod testutil {
             now,
         );
 
-        let mut options =
-            vec![v6::DhcpOption::ClientId(&CLIENT_ID), v6::DhcpOption::ServerId(&SERVER_ID[0])];
-        if !expected_dns_servers.is_empty() {
-            options.push(v6::DhcpOption::DnsServers(&expected_dns_servers));
+        let non_temporary_addresses_to_assign = (0..)
+            .map(v6::IAID::new)
+            .zip(non_temporary_addresses_to_assign)
+            .collect::<HashMap<_, _>>();
+        let delegated_prefixes_to_assign =
+            (0..).map(v6::IAID::new).zip(delegated_prefixes_to_assign).collect::<HashMap<_, _>>();
+
+        let buf = TestMessageBuilder {
+            transaction_id,
+            message_type: v6::MessageType::Reply,
+            client_id: &CLIENT_ID,
+            server_id: &SERVER_ID[0],
+            preference: None,
+            dns_servers: (!expected_dns_servers.is_empty()).then(|| expected_dns_servers),
+            ia_nas: non_temporary_addresses_to_assign.iter().map(|(k, v)| (*k, *v)),
+            ia_pds: delegated_prefixes_to_assign.iter().map(|(k, v)| (*k, *v)),
         }
-        let non_temporary_addresses_to_assign: HashMap<v6::IAID, TestIaNa> =
-            (0..).map(v6::IAID::new).zip(non_temporary_addresses_to_assign).collect();
-        let iaaddr_opts = non_temporary_addresses_to_assign
-            .iter()
-            .map(|(iaid, ia)| {
-                (
-                    *iaid,
-                    [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-                        ia.address,
-                        testutil::get_value(ia.preferred_lifetime),
-                        testutil::get_value(ia.valid_lifetime),
-                        &[],
-                    ))],
-                )
-            })
-            .collect::<HashMap<_, _>>();
-        let delegated_prefixes_to_assign: HashMap<v6::IAID, TestIaPd> =
-            (0..).map(v6::IAID::new).zip(delegated_prefixes_to_assign).collect();
-        let iaprefix_opts = delegated_prefixes_to_assign
-            .iter()
-            .map(|(iaid, ia)| {
-                (
-                    *iaid,
-                    [v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(
-                        testutil::get_value(ia.preferred_lifetime),
-                        testutil::get_value(ia.valid_lifetime),
-                        ia.prefix,
-                        &[],
-                    ))],
-                )
-            })
-            .collect::<HashMap<_, _>>();
-        options.extend(non_temporary_addresses_to_assign.iter().map(|(iaid, ia)| {
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(
-                *iaid,
-                testutil::get_value(ia.t1),
-                testutil::get_value(ia.t2),
-                iaaddr_opts.get(iaid).unwrap(),
-            ))
-        }));
-        options.extend(delegated_prefixes_to_assign.iter().map(|(iaid, ia)| {
-            v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
-                *iaid,
-                testutil::get_value(ia.t1),
-                testutil::get_value(ia.t2),
-                iaprefix_opts.get(iaid).unwrap(),
-            ))
-        }));
-        let builder = v6::MessageBuilder::new(v6::MessageType::Reply, transaction_id, &options);
-        let mut buf = vec![0; builder.bytes_len()];
-        builder.serialize(&mut buf);
+        .build();
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let actions = client.handle_message_receive(msg, now);
@@ -5058,26 +5058,24 @@ pub(crate) mod testutil {
             &client;
         let expected_non_temporary_addresses = non_temporary_addresses_to_assign
             .iter()
-            .map(
-                |(iaid, TestIaNa { address, preferred_lifetime, valid_lifetime, t1: _, t2: _ })| {
-                    (
-                        *iaid,
-                        AddressEntry::Assigned(IaNa {
-                            address: *address,
-                            preferred_lifetime: *preferred_lifetime,
-                            valid_lifetime: *valid_lifetime,
-                        }),
-                    )
-                },
-            )
+            .map(|(iaid, TestIaNa { value, preferred_lifetime, valid_lifetime, t1: _, t2: _ })| {
+                (
+                    *iaid,
+                    AddressEntry::Assigned(IaNa {
+                        address: *value,
+                        preferred_lifetime: *preferred_lifetime,
+                        valid_lifetime: *valid_lifetime,
+                    }),
+                )
+            })
             .collect::<HashMap<_, _>>();
         let expected_delegated_prefixes = delegated_prefixes_to_assign
             .iter()
-            .map(|(iaid, TestIaPd { prefix, preferred_lifetime, valid_lifetime, t1: _, t2: _ })| {
+            .map(|(iaid, TestIaPd { value, preferred_lifetime, valid_lifetime, t1: _, t2: _ })| {
                 (
                     *iaid,
                     PrefixEntry::Assigned(IaPd {
-                        prefix: *prefix,
+                        prefix: *value,
                         preferred_lifetime: *preferred_lifetime,
                         valid_lifetime: *valid_lifetime,
                     }),
@@ -5342,16 +5340,16 @@ pub(crate) mod testutil {
         let expected_addresses_to_renew: HashMap<v6::IAID, Option<Ipv6Addr>> = (0..)
             .map(v6::IAID::new)
             .zip(non_temporary_addresses_to_assign.iter().map(
-                |TestIaNa { address, preferred_lifetime: _, valid_lifetime: _, t1: _, t2: _ }| {
-                    Some(*address)
+                |TestIaNa { value, preferred_lifetime: _, valid_lifetime: _, t1: _, t2: _ }| {
+                    Some(*value)
                 },
             ))
             .collect();
         let expected_prefixes_to_renew: HashMap<v6::IAID, Option<Subnet<Ipv6Addr>>> = (0..)
             .map(v6::IAID::new)
             .zip(delegated_prefixes_to_assign.iter().map(
-                |TestIaPd { prefix, preferred_lifetime: _, valid_lifetime: _, t1: _, t2: _ }| {
-                    Some(*prefix)
+                |TestIaPd { value, preferred_lifetime: _, valid_lifetime: _, t1: _, t2: _ }| {
+                    Some(*value)
                 },
             ))
             .collect();
@@ -5437,16 +5435,16 @@ pub(crate) mod testutil {
         let expected_addresses_to_renew: HashMap<v6::IAID, Option<Ipv6Addr>> = (0..)
             .map(v6::IAID::new)
             .zip(non_temporary_addresses_to_assign.iter().map(
-                |TestIaNa { address, preferred_lifetime: _, valid_lifetime: _, t1: _, t2: _ }| {
-                    Some(*address)
+                |TestIaNa { value, preferred_lifetime: _, valid_lifetime: _, t1: _, t2: _ }| {
+                    Some(*value)
                 },
             ))
             .collect();
         let expected_prefixes_to_renew: HashMap<v6::IAID, Option<Subnet<Ipv6Addr>>> = (0..)
             .map(v6::IAID::new)
             .zip(delegated_prefixes_to_assign.iter().map(
-                |TestIaPd { prefix, preferred_lifetime: _, valid_lifetime: _, t1: _, t2: _ }| {
-                    Some(*prefix)
+                |TestIaPd { value, preferred_lifetime: _, valid_lifetime: _, t1: _, t2: _ }| {
+                    Some(*value)
                 },
             ))
             .collect();
@@ -5473,7 +5471,7 @@ mod tests {
     use rand::rngs::mock::StepRng;
     use test_case::test_case;
     use testconsts::*;
-    use testutil::{IaTypeExt as _, TestIaNa, TestIaPd};
+    use testutil::{IaTypeExt as _, TestIa, TestIaNa, TestIaPd, TestMessageBuilder};
 
     #[test]
     fn send_information_request_and_receive_reply() {
@@ -6352,7 +6350,7 @@ mod tests {
             valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(VALID_LIFETIME)),
         };
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            ia.address,
+            ia.value(),
             PREFERRED_LIFETIME.get(),
             VALID_LIFETIME.get(),
             &[],
@@ -7110,63 +7108,39 @@ mod tests {
         );
 
         // Server0 advertises only IA_NA but all matching our hints.
-        let iana_options = CONFIGURED_NON_TEMPORARY_ADDRESSES
-            .into_iter()
-            .map(|addr| {
-                [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-                    addr,
-                    PREFERRED_LIFETIME.get(),
-                    VALID_LIFETIME.get(),
-                    &[],
-                ))]
-            })
-            .collect::<Vec<_>>();
-        let options =
-            [v6::DhcpOption::ClientId(&CLIENT_ID), v6::DhcpOption::ServerId(&SERVER_ID[0])]
-                .into_iter()
-                .chain(iana_options.iter().enumerate().map(|(iaid, iana_options)| {
-                    v6::DhcpOption::Iana(v6::IanaSerializer::new(
-                        v6::IAID::new(iaid.try_into().unwrap()),
-                        T1.get(),
-                        T2.get(),
-                        iana_options,
-                    ))
-                }))
-                .collect::<Vec<_>>();
-        let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
-        let mut buf = vec![0; builder.bytes_len()];
-        builder.serialize(&mut buf);
+        let buf = TestMessageBuilder {
+            transaction_id,
+            message_type: v6::MessageType::Advertise,
+            client_id: &CLIENT_ID,
+            server_id: &SERVER_ID[0],
+            preference: None,
+            dns_servers: None,
+            ia_nas: (0..)
+                .map(v6::IAID::new)
+                .zip(CONFIGURED_NON_TEMPORARY_ADDRESSES)
+                .map(|(iaid, value)| (iaid, TestIa::new_default(value))),
+            ia_pds: std::iter::empty(),
+        }
+        .build();
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         assert_matches!(client.handle_message_receive(msg, time)[..], []);
 
         // Server1 advertises only IA_PD but all matching our hints.
-        let iaprefix_options = CONFIGURED_DELEGATED_PREFIXES
-            .into_iter()
-            .map(|prefix| {
-                [v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(
-                    PREFERRED_LIFETIME.get(),
-                    VALID_LIFETIME.get(),
-                    prefix,
-                    &[],
-                ))]
-            })
-            .collect::<Vec<_>>();
-        let options =
-            [v6::DhcpOption::ClientId(&CLIENT_ID), v6::DhcpOption::ServerId(&SERVER_ID[1])]
-                .into_iter()
-                .chain(iaprefix_options.iter().enumerate().map(|(iaid, iaprefix_options)| {
-                    v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
-                        v6::IAID::new(iaid.try_into().unwrap()),
-                        T1.get(),
-                        T2.get(),
-                        iaprefix_options,
-                    ))
-                }))
-                .collect::<Vec<_>>();
-        let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
-        let mut buf = vec![0; builder.bytes_len()];
-        builder.serialize(&mut buf);
+        let buf = TestMessageBuilder {
+            transaction_id,
+            message_type: v6::MessageType::Advertise,
+            client_id: &CLIENT_ID,
+            server_id: &SERVER_ID[1],
+            preference: None,
+            dns_servers: None,
+            ia_nas: std::iter::empty(),
+            ia_pds: (0..)
+                .map(v6::IAID::new)
+                .zip(CONFIGURED_DELEGATED_PREFIXES)
+                .map(|(iaid, value)| (iaid, TestIa::new_default(value))),
+        }
+        .build();
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         assert_matches!(client.handle_message_receive(msg, time)[..], []);
@@ -7177,37 +7151,43 @@ mod tests {
         // This should be the best advertisement the client receives since it
         // allows the client to get the most diverse set of IAs which the client
         // prefers over a large quantity of a single IA type.
-        let iaaddr_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            REPLY_NON_TEMPORARY_ADDRESSES[0],
-            PREFERRED_LIFETIME.get(),
-            VALID_LIFETIME.get(),
-            &[],
-        ))];
-        let iaprefix_options = [v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(
-            PREFERRED_LIFETIME.get(),
-            VALID_LIFETIME.get(),
-            REPLY_DELEGATED_PREFIXES[0],
-            &[],
-        ))];
-        let options = [
-            v6::DhcpOption::ClientId(&CLIENT_ID),
-            v6::DhcpOption::ServerId(&SERVER_ID[2]),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(
+        let buf = TestMessageBuilder {
+            transaction_id,
+            message_type: v6::MessageType::Advertise,
+            client_id: &CLIENT_ID,
+            server_id: &SERVER_ID[2],
+            preference: None,
+            dns_servers: None,
+            ia_nas: std::iter::once((
                 v6::IAID::new(0),
-                T1.get(),
-                T2.get(),
-                &iaaddr_options,
+                TestIa {
+                    value: REPLY_NON_TEMPORARY_ADDRESSES[0],
+                    preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                        PREFERRED_LIFETIME,
+                    )),
+                    valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                        VALID_LIFETIME,
+                    )),
+                    t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(T1)),
+                    t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(T2)),
+                },
             )),
-            v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
+            ia_pds: std::iter::once((
                 v6::IAID::new(0),
-                T1.get(),
-                T2.get(),
-                &iaprefix_options,
+                TestIa {
+                    value: REPLY_DELEGATED_PREFIXES[0],
+                    preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                        PREFERRED_LIFETIME,
+                    )),
+                    valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                        VALID_LIFETIME,
+                    )),
+                    t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(T1)),
+                    t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(T2)),
+                },
             )),
-        ];
-        let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
-        let mut buf = vec![0; builder.bytes_len()];
-        builder.serialize(&mut buf);
+        }
+        .build();
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         assert_matches!(client.handle_message_receive(msg, time)[..], []);
@@ -7287,28 +7267,25 @@ mod tests {
             time,
         );
 
-        let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
-            60,
-            60,
-            &[],
-        ))];
-        let options = [
-            v6::DhcpOption::ClientId(&CLIENT_ID),
-            v6::DhcpOption::ServerId(&SERVER_ID[0]),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(
-                v6::IAID::new(0),
-                T1.get(),
-                T2.get(),
-                &iana_options,
-            )),
-        ];
-        let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
-        let mut buf = vec![0; builder.bytes_len()];
-        builder.serialize(&mut buf);
-        let mut buf = &buf[..]; // Implements BufferView.
-        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-        assert_matches!(client.handle_message_receive(msg, time)[..], []);
+        for i in 0..2 {
+            let buf = TestMessageBuilder {
+                transaction_id,
+                message_type: v6::MessageType::Advertise,
+                client_id: &CLIENT_ID,
+                server_id: &SERVER_ID[i],
+                preference: None,
+                dns_servers: None,
+                ia_nas: std::iter::once((
+                    v6::IAID::new(0),
+                    TestIa::new_default(CONFIGURED_NON_TEMPORARY_ADDRESSES[i]),
+                )),
+                ia_pds: std::iter::empty(),
+            }
+            .build();
+            let mut buf = &buf[..]; // Implements BufferView.
+            let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+            assert_matches!(client.handle_message_receive(msg, time)[..], []);
+        }
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
         let ServerDiscovery {
@@ -7318,45 +7295,7 @@ mod tests {
             first_solicit_time: _,
             retrans_timeout: _,
             solicit_max_rt: _,
-            collected_advertise: _,
-            collected_sol_max_rt: _,
-        } = assert_matches!(
-            state,
-            Some(ClientState::ServerDiscovery(server_discovery)) => server_discovery
-        );
-
-        let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            CONFIGURED_NON_TEMPORARY_ADDRESSES[1],
-            60,
-            60,
-            &[],
-        ))];
-        let options = [
-            v6::DhcpOption::ClientId(&CLIENT_ID),
-            v6::DhcpOption::ServerId(&SERVER_ID[1]),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(
-                v6::IAID::new(0),
-                T1.get(),
-                T2.get(),
-                &iana_options,
-            )),
-        ];
-        let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
-        let mut buf = vec![0; builder.bytes_len()];
-        builder.serialize(&mut buf);
-        let mut buf = &buf[..]; // Implements BufferView.
-        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-        assert_matches!(client.handle_message_receive(msg, time)[..], []);
-        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
-            &client;
-        let ServerDiscovery {
             collected_advertise: want_collected_advertise,
-            client_id: _,
-            configured_non_temporary_addresses: _,
-            configured_delegated_prefixes: _,
-            first_solicit_time: _,
-            retrans_timeout: _,
-            solicit_max_rt: _,
             collected_sol_max_rt: _,
         } = assert_matches!(
             state,
@@ -8031,16 +7970,16 @@ mod tests {
         let expected_non_temporary_addresses: HashMap<v6::IAID, Option<Ipv6Addr>> = (0..)
             .map(v6::IAID::new)
             .zip(non_temporary_addresses_to_assign.iter().map(
-                |TestIaNa { address, preferred_lifetime: _, valid_lifetime: _, t1: _, t2: _ }| {
-                    Some(*address)
+                |TestIaNa { value, preferred_lifetime: _, valid_lifetime: _, t1: _, t2: _ }| {
+                    Some(*value)
                 },
             ))
             .collect();
         let expected_delegated_prefixes: HashMap<v6::IAID, Option<Subnet<Ipv6Addr>>> = (0..)
             .map(v6::IAID::new)
             .zip(delegated_prefixes_to_assign.iter().map(
-                |TestIaPd { prefix, preferred_lifetime: _, valid_lifetime: _, t1: _, t2: _ }| {
-                    Some(*prefix)
+                |TestIaPd { value, preferred_lifetime: _, valid_lifetime: _, t1: _, t2: _ }| {
+                    Some(*value)
                 },
             ))
             .collect();
@@ -8083,63 +8022,23 @@ mod tests {
             time,
         );
         let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
-        let iaaddr_opts = (0..)
-            .map(v6::IAID::new)
-            .zip(CONFIGURED_NON_TEMPORARY_ADDRESSES)
-            .map(|(iaid, addr)| {
-                (
-                    iaid,
-                    v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-                        addr,
-                        RENEWED_PREFERRED_LIFETIME.get(),
-                        RENEWED_VALID_LIFETIME.get(),
-                        &[],
-                    )),
-                )
-            })
-            .collect::<HashMap<_, _>>();
-        let iaprefix_opts = (0..)
-            .map(v6::IAID::new)
-            .zip(CONFIGURED_DELEGATED_PREFIXES)
-            .map(|(iaid, prefix)| {
-                (
-                    iaid,
-                    v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(
-                        RENEWED_PREFERRED_LIFETIME.get(),
-                        RENEWED_VALID_LIFETIME.get(),
-                        prefix,
-                        &[],
-                    )),
-                )
-            })
-            .collect::<HashMap<_, _>>();
-        let options =
-            [v6::DhcpOption::ClientId(&CLIENT_ID), v6::DhcpOption::ServerId(reply_server_id)]
-                .into_iter()
-                .chain((0..).map(v6::IAID::new).take(CONFIGURED_NON_TEMPORARY_ADDRESSES.len()).map(
-                    |iaid| {
-                        v6::DhcpOption::Iana(v6::IanaSerializer::new(
-                            iaid,
-                            RENEWED_T1.get(),
-                            RENEWED_T2.get(),
-                            std::slice::from_ref(iaaddr_opts.get(&iaid).unwrap()),
-                        ))
-                    },
-                ))
-                .chain((0..).map(v6::IAID::new).take(CONFIGURED_DELEGATED_PREFIXES.len()).map(
-                    |iaid| {
-                        v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
-                            iaid,
-                            RENEWED_T1.get(),
-                            RENEWED_T2.get(),
-                            std::slice::from_ref(iaprefix_opts.get(&iaid).unwrap()),
-                        ))
-                    },
-                ))
-                .collect::<Vec<_>>();
-        let builder = v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &options);
-        let mut buf = vec![0; builder.bytes_len()];
-        builder.serialize(&mut buf);
+        let buf = TestMessageBuilder {
+            transaction_id: *transaction_id,
+            message_type: v6::MessageType::Reply,
+            client_id: &CLIENT_ID,
+            server_id: reply_server_id,
+            preference: None,
+            dns_servers: None,
+            ia_nas: (0..)
+                .map(v6::IAID::new)
+                .zip(CONFIGURED_NON_TEMPORARY_ADDRESSES)
+                .map(|(iaid, value)| (iaid, TestIa::new_renewed_default(value))),
+            ia_pds: (0..)
+                .map(v6::IAID::new)
+                .zip(CONFIGURED_DELEGATED_PREFIXES)
+                .map(|(iaid, value)| (iaid, TestIa::new_renewed_default(value))),
+        }
+        .build();
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
 
@@ -8406,61 +8305,31 @@ mod tests {
         );
         let ClientStateMachine { transaction_id, options_to_request: _, state: _, rng: _ } =
             &client;
-
         // The server includes only the IA with ID equal to `present_iaid` in the
         // reply.
-        let iaaddr_opts = present_ia_na_iaids
-            .iter()
-            .map(|iaid| {
+        let buf = TestMessageBuilder {
+            transaction_id: *transaction_id,
+            message_type: v6::MessageType::Reply,
+            client_id: &CLIENT_ID,
+            server_id: &SERVER_ID[0],
+            preference: None,
+            dns_servers: None,
+            ia_nas: present_ia_na_iaids.iter().map(|iaid| {
                 (
                     *iaid,
-                    [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+                    TestIa::new_renewed_default(
                         CONFIGURED_NON_TEMPORARY_ADDRESSES[iaid.get() as usize],
-                        RENEWED_PREFERRED_LIFETIME.get(),
-                        RENEWED_VALID_LIFETIME.get(),
-                        &[],
-                    ))],
+                    ),
                 )
-            })
-            .collect::<HashMap<_, _>>();
-        let iaprefix_opts = present_ia_pd_iaids
-            .iter()
-            .map(|iaid| {
+            }),
+            ia_pds: present_ia_pd_iaids.iter().map(|iaid| {
                 (
                     *iaid,
-                    [v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(
-                        RENEWED_PREFERRED_LIFETIME.get(),
-                        RENEWED_VALID_LIFETIME.get(),
-                        CONFIGURED_DELEGATED_PREFIXES[iaid.get() as usize],
-                        &[],
-                    ))],
+                    TestIa::new_renewed_default(CONFIGURED_DELEGATED_PREFIXES[iaid.get() as usize]),
                 )
-            })
-            .collect::<HashMap<_, _>>();
-        let options =
-            [v6::DhcpOption::ClientId(&CLIENT_ID), v6::DhcpOption::ServerId(&SERVER_ID[0])]
-                .into_iter()
-                .chain(present_ia_na_iaids.iter().map(|iaid| {
-                    v6::DhcpOption::Iana(v6::IanaSerializer::new(
-                        *iaid,
-                        RENEWED_T1.get(),
-                        RENEWED_T2.get(),
-                        iaaddr_opts.get(iaid).unwrap().as_ref(),
-                    ))
-                }))
-                .chain(present_ia_pd_iaids.iter().map(|iaid| {
-                    v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
-                        *iaid,
-                        RENEWED_T1.get(),
-                        RENEWED_T2.get(),
-                        iaprefix_opts.get(iaid).unwrap().as_ref(),
-                    ))
-                }))
-                .collect::<Vec<_>>();
-        let builder =
-            v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, options.as_slice());
-        let mut buf = vec![0; builder.bytes_len()];
-        builder.serialize(&mut buf);
+            }),
+        }
+        .build();
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let actions = client.handle_message_receive(msg, time);
@@ -8473,7 +8342,7 @@ mod tests {
             .map(|(iaid, &addr)| {
                 (
                     iaid,
-                    if iaaddr_opts.contains_key(&iaid) {
+                    if present_ia_na_iaids.contains(&iaid) {
                         AddressEntry::new_assigned(
                             addr,
                             RENEWED_PREFERRED_LIFETIME,
@@ -8491,7 +8360,7 @@ mod tests {
             .map(|(iaid, &prefix)| {
                 (
                     iaid,
-                    if iaprefix_opts.contains_key(&iaid) {
+                    if present_ia_pd_iaids.contains(&iaid) {
                         PrefixEntry::new_assigned(
                             prefix,
                             RENEWED_PREFERRED_LIFETIME,
@@ -8705,39 +8574,23 @@ mod tests {
             &client;
         // The server includes IAs with different values from what was
         // previously assigned.
-        let iaaddr_opt = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            RENEW_NON_TEMPORARY_ADDRESSES[0],
-            RENEWED_PREFERRED_LIFETIME.get(),
-            RENEWED_VALID_LIFETIME.get(),
-            &[],
-        ))];
-        let iaprefix_opt = [v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(
-            RENEWED_PREFERRED_LIFETIME.get(),
-            RENEWED_VALID_LIFETIME.get(),
-            RENEW_DELEGATED_PREFIXES[0],
-            &[],
-        ))];
-
-        let options = [
-            v6::DhcpOption::ClientId(&CLIENT_ID),
-            v6::DhcpOption::ServerId(&SERVER_ID[0]),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(
+        let buf = TestMessageBuilder {
+            transaction_id: *transaction_id,
+            message_type: v6::MessageType::Reply,
+            client_id: &CLIENT_ID,
+            server_id: &SERVER_ID[0],
+            preference: None,
+            dns_servers: None,
+            ia_nas: std::iter::once((
                 v6::IAID::new(0),
-                RENEWED_T1.get(),
-                RENEWED_T2.get(),
-                &iaaddr_opt,
+                TestIa::new_renewed_default(RENEW_NON_TEMPORARY_ADDRESSES[0]),
             )),
-            v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
+            ia_pds: std::iter::once((
                 v6::IAID::new(0),
-                RENEWED_T1.get(),
-                RENEWED_T2.get(),
-                &iaprefix_opt,
+                TestIa::new_renewed_default(RENEW_DELEGATED_PREFIXES[0]),
             )),
-        ];
-
-        let builder = v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &options);
-        let mut buf = vec![0; builder.bytes_len()];
-        builder.serialize(&mut buf);
+        }
+        .build();
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let actions = client.handle_message_receive(msg, time);
