@@ -2016,8 +2016,8 @@ zx_status_t VmCowPages::PrepareForWriteLocked(uint64_t offset, uint64_t len,
   if (start_offset < supply_zero_offset_) {
     const uint64_t end = ktl::min(supply_zero_offset_, end_offset);
     zx_status_t status = page_list_.ForEveryPageAndGapInRange(
-        [&accumulate_dirty_page, &accumulate_pages_to_dirty](const VmPageOrMarker* p,
-                                                             uint64_t off) {
+        [&accumulate_dirty_page, &accumulate_pages_to_dirty, this](const VmPageOrMarker* p,
+                                                                   uint64_t off) {
           if (p->IsPage()) {
             vm_page_t* page = p->Page();
             DEBUG_ASSERT(is_page_dirty_tracked(page));
@@ -2026,6 +2026,12 @@ zx_status_t VmCowPages::PrepareForWriteLocked(uint64_t offset, uint64_t len,
             // Page is already dirty. Try to add it to the dirty run.
             if (is_page_dirty(page)) {
               return accumulate_dirty_page(off);
+            }
+            // If the page is clean, mark it accessed to grant it some protection from eviction
+            // until the pager has a chance to respond to the DIRTY request.
+            if (is_page_clean(page)) {
+              AssertHeld(lock_);
+              UpdateOnAccessLocked(page, VMM_PF_FLAG_SW_FAULT);
             }
           }
           DEBUG_ASSERT(!p->IsReference());
