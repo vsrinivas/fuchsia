@@ -33,10 +33,7 @@ go_library("docgen") {
 }
 
 go_test("test") {
+  library = ":docgen"
   output_name = "docgen_test"
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/cppdocgen/docgen" ]
-  deps = [
-    ":docgen",
-    "../clangdoc",
-  ]
+  deps = [ "../clangdoc" ]
 }

@@ -41,9 +41,8 @@ if (is_host) {
   }
 
   go_test("fstar_integration_test") {
+    library = ":fstar_integration_lib"
     output_name = "fstar_integration_test"
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/sdk-tools/fstar_integration" ]
-    deps = [ ":fstar_integration_lib" ]
     non_go_deps = [ ":copy_host_tools" ]
     environments = []
     if (is_host && target_cpu == "x64") {

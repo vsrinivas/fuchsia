@@ -36,11 +36,7 @@ go_library("netdevice") {
 }
 
 go_test("link_netdevice_test") {
-  gopackages = [
-    "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/netdevice",
-  ]
-
-  deps = [ ":netdevice" ]
+  library = ":netdevice"
 }
 
 fuchsia_unittest_component("netstack-link-netdevice-test-component") {

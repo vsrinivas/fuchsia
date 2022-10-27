@@ -12,10 +12,8 @@ import("tracing/go_tracing_include_dirs.gni")
 import("udp_serde/udp_serde_include_dirs.gni")
 
 go_binary("bin") {
-  gopackage = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/stub"
+  library = "stub"
   output_name = string_replace(target_name, "bin", "netstack")
-
-  deps = [ "stub" ]
 }
 
 fuchsia_component("component") {
@@ -32,11 +30,10 @@ fuchsia_component("component-with-fast-udp") {
 }
 
 go_binary("bin_with_deadlock_detection") {
-  gopackage = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/stub"
+  library = "stub"
   output_name = string_replace(target_name, "bin", "netstack")
 
   tags = [ "deadlock_detection" ]
-  deps = [ "stub" ]
   include_dirs = udp_serde_include_dirs
 }
 
@@ -61,12 +58,10 @@ fuchsia_component("component-conformance") {
 }
 
 go_binary("bin_with_tracing") {
-  gopackage = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/stub"
+  library = "stub"
   output_name = string_replace(target_name, "bin", "netstack")
 
   tags = [ "tracing" ]
-  deps = [ "stub" ]
-
   include_dirs = go_tracing_include_dirs + udp_serde_include_dirs
 }
 
@@ -121,9 +116,7 @@ go_library("pprof") {
 }
 
 go_test("pprof_test") {
-  gopackages =
-      [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/pprof" ]
-  deps = [ ":pprof" ]
+  library = ":pprof"
 }
 
 go_library("lib") {
@@ -208,12 +201,9 @@ go_library("lib") {
 }
 
 go_test("netstack_test") {
+  library = ":lib"
   include_dirs = udp_serde_include_dirs
-  gopackages = [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack" ]
-  deps = [
-    ":lib",
-    "//third_party/golibs:go.uber.org/goleak",
-  ]
+  deps = [ "//third_party/golibs:go.uber.org/goleak" ]
 }
 
 fuchsia_unittest_package("netstack-gotests") {

@@ -17,8 +17,7 @@ go_library("concurrency_test") {
 }
 
 go_test("concurrency_test_driver_golang") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/src/sys/test_runners/gotests/test_data/concurrency_test" ]
-  deps = [ ":concurrency_test" ]
+  library = ":concurrency_test"
 }
 
 fuchsia_component("concurrency_test_driver_component") {

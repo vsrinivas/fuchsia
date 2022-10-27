@@ -13,7 +13,6 @@ go_library("flagmisc") {
 }
 
 go_test("tests") {
+  library = ":flagmisc"
   output_name = "flagmisc_tests"
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/lib/flagmisc" ]
-  deps = [ ":flagmisc" ]
 }

@@ -27,13 +27,11 @@ go_library("main") {
 }
 
 go_binary("fssh") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/sdk-tools/fssh/cmd"
-  deps = [ ":main" ]
+  library = ":main"
 }
 
 go_test("fssh-test") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/sdk-tools/fssh/cmd" ]
-  deps = [ ":main" ]
+  library = ":main"
 }
 install_host_tools("fssh-host") {
   deps = [
@@ -57,8 +55,7 @@ go_library("synckeys") {
 }
 
 go_test("synckeys-tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/sdk-tools/fssh/synckeys" ]
-  deps = [ ":synckeys" ]
+  library = ":synckeys"
 }
 
 go_library("tunnel") {
@@ -72,8 +69,7 @@ go_library("tunnel") {
 }
 
 go_test("tunnel-tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/sdk-tools/fssh/tunnel" ]
-  deps = [ ":tunnel" ]
+  library = ":tunnel"
 }
 
 sdk_host_tool("fssh_sdk") {

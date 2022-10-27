@@ -17,6 +17,5 @@ go_library("bloaty") {
 }
 
 go_test("bloaty_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/debug/bloaty" ]
-  deps = [ ":bloaty" ]
+  library = ":bloaty"
 }

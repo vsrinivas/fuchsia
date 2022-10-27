@@ -72,8 +72,7 @@ gn_sdk("gn.modular.tar.gz") {
 if (is_linux || is_mac) {
   # Wrapper for running the Python unit tests
   go_test("host_gn_sdk_test") {
-    gopackages = [ "gnsdktest" ]
-    deps = [ "test:host_gnsdk_test_lib" ]
+    library = "test:host_gnsdk_test_lib"
     args = [ "-testscript=" + rebase_path("test_generate.py") ]
   }
 }

@@ -41,11 +41,8 @@ go_library("fidlgen_cpp") {
 
 if (is_host) {
   fidlgentest_go_test("fidlgen_cpp_ir_test") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen_cpp" ]
-    deps = [
-      ":fidlgen_cpp",
-      "//third_party/golibs:github.com/google/go-cmp",
-    ]
+    library = ":fidlgen_cpp"
+    deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
   }
 }
 

@@ -13,8 +13,7 @@ go_library("expect") {
 }
 
 go_test("expect_test") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/src/connectivity/network/testing/conformance/expect" ]
-  deps = [ ":expect" ]
+  library = ":expect"
 }
 
 group("tests") {

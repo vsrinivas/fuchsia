@@ -8,8 +8,7 @@ import("//build/go/go_library.gni")
 assert(is_host)
 
 go_binary("cppdocgen") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/cppdocgen/cmd"
-  deps = [ ":main" ]
+  library = ":main"
 }
 
 go_library("main") {

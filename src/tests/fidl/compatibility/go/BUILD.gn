@@ -18,11 +18,9 @@ go_library("lib") {
   sources = [ "main.go" ]
 }
 go_binary("bin") {
-  gopackage = "compatibility_test"
+  library = ":lib"
   output_name = "go-impl"
   output_dir = target_out_dir
-
-  deps = [ ":lib" ]
 }
 
 fuchsia_component("go-impl") {

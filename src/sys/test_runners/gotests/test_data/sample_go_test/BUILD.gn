@@ -19,6 +19,5 @@ go_library("sample_go_test_lib") {
 }
 
 go_test("sample_go_test") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/src/sys/test_runners/gotests/test_data/sample_go_test" ]
-  deps = [ ":sample_go_test_lib" ]
+  library = ":sample_go_test_lib"
 }

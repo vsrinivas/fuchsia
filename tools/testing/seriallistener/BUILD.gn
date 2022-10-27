@@ -17,6 +17,5 @@ go_library("main") {
 }
 
 go_binary("seriallistener") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/testing/seriallistener/cmd"
-  deps = [ ":main" ]
+  library = ":main"
 }

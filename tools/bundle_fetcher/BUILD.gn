@@ -7,8 +7,7 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_binary("bundle_fetcher") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/bundle_fetcher/cmd"
-  deps = [ ":main" ]
+  library = ":main"
 }
 
 install_host_tools("host") {
@@ -39,11 +38,8 @@ go_library("main") {
 }
 
 go_test("download_main_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/bundle_fetcher/cmd" ]
-  deps = [
-    ":main",
-    "//third_party/golibs:github.com/google/go-cmp",
-  ]
+  library = ":main"
+  deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
 }
 
 group("tests") {

@@ -55,8 +55,7 @@ if (is_linux) {
   }
 
   go_test("kernel_cprng_tests") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/src/tests/kernel_cprng" ]
-    deps = [ ":lib" ]
+    library = ":lib"
     non_go_deps = [ ":main_zbi" ]
   }
 }

@@ -15,13 +15,9 @@ go_library("lib") {
 }
 
 go_binary("tarmaker") {
-  gopackage = "go.fuchsia.dev/fuchsia/build/tools/tarmaker"
-
-  deps = [ ":lib" ]
+  library = ":lib"
 }
 
 go_test("tarmaker_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/build/tools/tarmaker" ]
-
-  deps = [ ":lib" ]
+  library = ":lib"
 }

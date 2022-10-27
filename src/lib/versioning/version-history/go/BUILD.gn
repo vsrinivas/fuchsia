@@ -40,9 +40,7 @@ if (is_host) {
   }
 
   go_test("version-history-test") {
-    gopackages =
-        [ "go.fuchsia.dev/fuchsia/src/lib/versioning/version-history/go" ]
-    deps = [ ":version-history" ]
+    library = ":version-history"
     non_go_deps = [ ":version-history-test-data" ]
   }
 }

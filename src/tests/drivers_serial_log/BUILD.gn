@@ -26,8 +26,7 @@ if (is_linux) {
   }
 
   go_test("drivers_serial_log_test") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/src/tests/drivers_serial_log" ]
-    deps = [ ":lib" ]
+    library = ":lib"
     non_go_deps = [ ":bringup_zbi" ]
   }
 }

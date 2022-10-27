@@ -22,9 +22,7 @@ if (is_host) {
   }
 
   go_test("clippy_tests") {
-    gopackages =
-        [ "go.fuchsia.dev/fuchsia/tools/staticanalysis/analyzers/clippy" ]
-    deps = [ ":clippy" ]
+    library = ":clippy"
   }
 
   go_library("codelinks") {
@@ -41,9 +39,7 @@ if (is_host) {
   }
 
   go_test("codelinks_tests") {
-    gopackages =
-        [ "go.fuchsia.dev/fuchsia/tools/staticanalysis/analyzers/codelinks" ]
-    deps = [ ":codelinks" ]
+    library = ":codelinks"
   }
 
   go_library("rfcmeta") {
@@ -61,9 +57,7 @@ if (is_host) {
   }
 
   go_test("rfcmeta_tests") {
-    gopackages =
-        [ "go.fuchsia.dev/fuchsia/tools/staticanalysis/analyzers/rfcmeta" ]
-    deps = [ ":rfcmeta" ]
+    library = ":rfcmeta"
   }
 }
 

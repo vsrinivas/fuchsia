@@ -78,8 +78,7 @@ if (is_host) {
   }
 
   go_test("fint_lib_tests") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/integration/fint" ]
-    deps = [ ":fint_lib" ]
+    library = ":fint_lib"
   }
 
   go_library("main") {
@@ -106,13 +105,11 @@ if (is_host) {
   }
 
   go_test("main_tests") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/integration/fint/cmd/fint" ]
-    deps = [ ":main" ]
+    library = ":main"
   }
 
   go_binary("fint") {
-    gopackage = "go.fuchsia.dev/fuchsia/tools/integration/fint/cmd/fint"
-    deps = [ ":main" ]
+    library = ":main"
   }
 }
 

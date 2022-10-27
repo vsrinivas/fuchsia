@@ -18,8 +18,7 @@ go_library("host_perfcompare_test_lib") {
 
 # Wrapper for running the Python unit tests in perfcompare_test.py.
 go_test("host_perfcompare_test") {
-  gopackages = [ "perfcompare" ]
-  deps = [ ":host_perfcompare_test_lib" ]
+  library = ":host_perfcompare_test_lib"
 }
 
 group("perfcompare") {

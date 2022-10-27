@@ -23,6 +23,5 @@ go_library("logs_integration_go_tests_lib") {
 }
 
 go_test("logs_integration_go_tests") {
-  gopackages = [ "logs_integration_tests" ]
-  deps = [ ":logs_integration_go_tests_lib" ]
+  library = ":logs_integration_go_tests_lib"
 }

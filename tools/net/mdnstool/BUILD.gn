@@ -12,6 +12,5 @@ go_library("main") {
 }
 
 go_binary("mdnstool") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/net/mdnstool/cmd"
-  deps = [ ":main" ]
+  library = ":main"
 }

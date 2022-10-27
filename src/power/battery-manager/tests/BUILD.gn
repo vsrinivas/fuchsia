@@ -20,8 +20,7 @@ go_library("battery_manager_lib") {
 }
 
 go_test("battery_manager_go_test") {
-  gopackages = [ "battery_manager" ]
-  deps = [ ":battery_manager_lib" ]
+  library = ":battery_manager_lib"
 }
 
 fuchsia_component("battery_manager_test_driver") {

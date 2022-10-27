@@ -12,7 +12,6 @@ if (is_host) {
   }
 
   go_binary("clang-format-wrapper") {
-    gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/clang-format-wrapper"
-    deps = [ ":gopkg" ]
+    library = ":gopkg"
   }
 }  # is_host

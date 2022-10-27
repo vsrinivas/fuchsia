@@ -16,6 +16,5 @@ go_library("retry") {
 }
 
 go_test("retry_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/lib/retry" ]
-  deps = [ ":retry" ]
+  library = ":retry"
 }

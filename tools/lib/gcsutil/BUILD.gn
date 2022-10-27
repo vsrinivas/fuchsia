@@ -17,6 +17,5 @@ go_library("gcsutil") {
 }
 
 go_test("gcsutil_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/lib/gcsutil" ]
-  deps = [ ":gcsutil" ]
+  library = ":gcsutil"
 }

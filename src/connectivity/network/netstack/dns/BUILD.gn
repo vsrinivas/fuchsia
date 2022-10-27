@@ -25,10 +25,7 @@ go_library("dns") {
 }
 
 go_test("dns_test") {
-  gopackages =
-      [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns" ]
-
-  deps = [ ":dns" ]
+  library = ":dns"
 }
 
 fuchsia_unittest_package("netstack-dns-gotests") {

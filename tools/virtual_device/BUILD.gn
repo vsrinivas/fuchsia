@@ -24,9 +24,8 @@ go_library("virtual_device") {
 }
 
 go_test("virtual_device_test") {
+  library = ":virtual_device"
   output_name = "virtual_device_test"
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/virtual_device" ]
-  deps = [ ":virtual_device" ]
 }
 
 go_library("fvd_lib") {
@@ -47,8 +46,7 @@ group("tests") {
 }
 
 go_binary("fvd") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/virtual_device/cmd/fvd"
-  deps = [ ":fvd_lib" ]
+  library = ":fvd_lib"
 }
 
 # Generates $root_build_dir/default.fvd.

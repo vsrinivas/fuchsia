@@ -50,8 +50,7 @@ if (is_linux) {
   }
 
   go_test("memory_budget_tests") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/src/tests/memory_budget" ]
-    deps = [ ":lib" ]
+    library = ":lib"
     non_go_deps = [
       ":fvm.blk",
       ":host_fvm",

@@ -19,10 +19,7 @@ go_library("time") {
 }
 
 go_test("time_test") {
-  gopackages =
-      [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/time" ]
-
-  deps = [ ":time" ]
+  library = ":time"
 }
 
 fuchsia_unittest_package("netstack-time-gotests") {

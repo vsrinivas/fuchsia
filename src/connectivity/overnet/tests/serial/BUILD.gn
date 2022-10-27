@@ -31,9 +31,7 @@ if (is_linux) {
   }
 
   go_test("overnet_serial_tests") {
-    gopackages =
-        [ "go.fuchsia.dev/fuchsia/src/connectivity/overnet/tests/serial" ]
-    deps = [ ":lib" ]
+    library = ":lib"
     non_go_deps = [
       ":ascendd",
       "//build/images/overnet:test_data($host_toolchain)",

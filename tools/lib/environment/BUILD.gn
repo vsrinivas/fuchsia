@@ -13,9 +13,6 @@ go_library("environment") {
 }
 
 go_test("environment_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/lib/environment" ]
-  deps = [
-    ":environment",
-    "//third_party/golibs:github.com/google/go-cmp",
-  ]
+  library = ":environment"
+  deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
 }

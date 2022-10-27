@@ -16,6 +16,5 @@ go_library("main") {
 }
 
 go_binary("sourcerer") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/debug/sourcerer/cmd"
-  deps = [ ":main" ]
+  library = ":main"
 }

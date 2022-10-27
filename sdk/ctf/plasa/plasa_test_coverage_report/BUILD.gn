@@ -23,22 +23,18 @@ if (is_host) {
   }
 
   go_binary("plasa_test_coverage_report") {
-    gopackage =
-        "go.fuchsia.dev/fuchsia/sdk/ctf/plasa/plasa_test_coverage_report"
-    deps = [ ":gopkg" ]
+    library = ":gopkg"
   }
 
   _testdata_path = "${target_gen_dir}/testdata"
   go_test("plasa_test_coverage_report_test") {
-    gopackages =
-        [ "go.fuchsia.dev/fuchsia/sdk/ctf/plasa/plasa_test_coverage_report" ]
+    library = ":gopkg"
     args = [
       "--test_data_dir",
       rebase_path(_testdata_path, root_build_dir),
       "--fragment-prefix",
       rebase_path(_testdata_path, root_build_dir),
     ]
-    deps = [ ":gopkg" ]
     non_go_deps = [ ":testdata" ]
   }
 

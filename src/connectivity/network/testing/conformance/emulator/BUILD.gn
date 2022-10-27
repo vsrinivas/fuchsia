@@ -21,11 +21,8 @@ if (is_linux) {
   }
 
   go_test("conformance_emulator_test") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/src/connectivity/network/testing/conformance/emulator" ]
-    deps = [
-      ":emulator",
-      "//src/connectivity/network/testing/conformance/ffx",
-    ]
+    library = ":emulator"
+    deps = [ "//src/connectivity/network/testing/conformance/ffx" ]
     non_go_deps = [
       ":ffx_bin",
       "//build/images/network-conformance:network-conformance-base-test-data",

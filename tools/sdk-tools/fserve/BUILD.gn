@@ -20,8 +20,7 @@ go_library("main") {
 }
 
 go_binary("fserve") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/sdk-tools/fserve/cmd"
-  deps = [ ":main" ]
+  library = ":main"
 }
 
 if (is_host) {
@@ -31,8 +30,7 @@ if (is_host) {
   }
 
   go_test("fserve-test") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/sdk-tools/fserve/cmd" ]
-    deps = [ ":main" ]
+    library = ":main"
     args = [ "--testroot=" + rebase_path(target_out_dir, root_out_dir) ]
     non_go_deps = [ ":fserve-test-data" ]
   }

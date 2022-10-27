@@ -29,9 +29,8 @@ if (is_host) {
   }
 
   go_test("e2e_tests_pave") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/src/storage/lib/paver/e2e_tests" ]
+    library = ":lib"
     environments = [ disabled_env ]
-    deps = [ ":lib" ]
   }
 }
 

@@ -15,6 +15,5 @@ go_library("main") {
 }
 
 go_binary("bloatalyzer") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/debug/bloatalyzer/cmd"
-  deps = [ ":main" ]
+  library = ":main"
 }

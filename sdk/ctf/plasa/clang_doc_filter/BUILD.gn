@@ -22,20 +22,18 @@ if (is_host) {
   }
 
   go_binary("clang_doc_filter") {
-    gopackage = "go.fuchsia.dev/fuchsia/sdk/ctf/plasa/clang_doc_filter"
-    deps = [ ":gopkg" ]
+    library = ":gopkg"
   }
 
   _testdata_path = "${target_gen_dir}/testdata"
 
   go_test("clang_doc_filter_test") {
+    library = ":gopkg"
     output_name = "clang_doc_filter_test"
-    gopackages = [ "go.fuchsia.dev/fuchsia/sdk/ctf/plasa/clang_doc_filter" ]
     args = [
       "--test_data_dir",
       rebase_path(_testdata_path, root_build_dir),
     ]
-    deps = [ ":gopkg" ]
     non_go_deps = [ ":testdatadir" ]
   }
 

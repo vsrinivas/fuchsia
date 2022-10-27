@@ -8,9 +8,8 @@ import("//build/go/go_library.gni")
 import("//build/go/toolchain.gni")
 
 go_binary("bin") {
+  library = ":lib"
   output_name = "fidl_echo_go_server"
-  gopackage = "echo_server_go"
-  deps = [ ":lib" ]
 }
 
 go_library("lib") {

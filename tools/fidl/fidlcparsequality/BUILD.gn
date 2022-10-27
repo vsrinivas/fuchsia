@@ -11,9 +11,7 @@ go_library("lib") {
 }
 
 go_binary("fidlcparsequality") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlcparsequality"
-
-  deps = [ ":lib" ]
+  library = ":lib"
 }
 
 install_host_tools("host") {

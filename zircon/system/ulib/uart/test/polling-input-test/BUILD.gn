@@ -66,10 +66,7 @@ if (is_host && is_linux) {
   }
 
   go_test("uart-input-host-test") {
-    gopackages = [
-      "go.fuchsia.dev/fuchsia/zircon/system/ulib/uart/test/polling-input-test",
-    ]
-    deps = [ ":lib" ]
+    library = ":lib"
     non_go_deps = [ ":uart-host-test-zbi" ]
   }
 }

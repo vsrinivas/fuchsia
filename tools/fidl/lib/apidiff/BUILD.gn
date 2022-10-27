@@ -9,8 +9,7 @@ import("//tools/fidl/lib/fidlgentest/fidlgentest_go_test.gni")
 
 if (is_host) {
   fidlgentest_go_test("apidiff_test") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/lib/apidiff" ]
-    deps = [ ":gopkg" ]
+    library = ":gopkg"
   }
 
   go_library("gopkg") {

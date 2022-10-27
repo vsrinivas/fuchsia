@@ -8,8 +8,7 @@ import("//build/go/go_test.gni")
 import("//build/testing/host_test_data.gni")
 
 go_binary("check-licenses") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/check-licenses/cmd"
-  deps = [ "cmd:main" ]
+  library = "cmd:main"
 }
 
 install_host_tools("host") {

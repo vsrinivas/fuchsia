@@ -15,8 +15,7 @@ go_library("far") {
 }
 
 go_test("go_far_test") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/src/sys/pkg/lib/far/go" ]
-  deps = [ ":far" ]
+  library = ":far"
 }
 
 fuchsia_component("test-component") {

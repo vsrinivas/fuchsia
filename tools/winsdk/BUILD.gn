@@ -10,6 +10,5 @@ go_library("main") {
 }
 
 go_binary("winsdk") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/winsdk"
-  deps = [ ":main" ]
+  library = ":main"
 }

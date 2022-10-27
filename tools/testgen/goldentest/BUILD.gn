@@ -99,9 +99,8 @@ if (is_host) {
   # fx build
   # fx testgen -l ./out/default/obj/examples/components/routing/echo_server/cml/echo_server_component_component_manifest_compile/echo_server.cm -o tools/testgen/goldentest/rust_nomock
   go_test("goldentest_rust_nomock") {
+    library = ":goldentest_lib"
     output_name = "goldentest_rust_nomock"
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/testgen/goldentest" ]
-    deps = [ ":goldentest_lib" ]
     non_go_deps = [
       ":copy_echo_server_component",
       ":copy_testgen",
@@ -124,9 +123,8 @@ if (is_host) {
   # fx build
   # fx testgen -l ./out/default/obj/examples/components/routing/echo_client/cml/echo_client_component_component_manifest_compile/echo_client.cm -o tools/testgen/goldentest/rust_mock -m
   go_test("goldentest_rust_mock") {
+    library = ":goldentest_lib"
     output_name = "goldentest_rust_mock"
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/testgen/goldentest" ]
-    deps = [ ":goldentest_lib" ]
     non_go_deps = [
       ":copy_echo_client_component",
       ":copy_testgen",
@@ -146,9 +144,8 @@ if (is_host) {
   }
 
   go_test("goldentest_cpp_nomock") {
+    library = ":goldentest_lib"
     output_name = "goldentest_cpp_nomock"
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/testgen/goldentest" ]
-    deps = [ ":goldentest_lib" ]
     non_go_deps = [
       ":copy_echo_server_component",
       ":copy_testgen",
@@ -167,9 +164,8 @@ if (is_host) {
   }
 
   go_test("goldentest_cpp_mock") {
+    library = ":goldentest_lib"
     output_name = "goldentest_cpp_mock"
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/testgen/goldentest" ]
-    deps = [ ":goldentest_lib" ]
     non_go_deps = [
       ":copy_echo_server_component",
       ":copy_testgen",

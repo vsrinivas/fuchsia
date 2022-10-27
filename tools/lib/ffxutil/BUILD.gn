@@ -29,10 +29,7 @@ go_library("constants") {
 }
 
 go_test("tests") {
+  library = ":ffxutil"
   output_name = "ffxutil_tests"
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/lib/ffxutil" ]
-  deps = [
-    ":ffxutil",
-    "//third_party/golibs:github.com/google/go-cmp",
-  ]
+  deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
 }

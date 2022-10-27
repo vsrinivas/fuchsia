@@ -35,6 +35,5 @@ group("tests") {
 }
 
 go_test("repo_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/src/sys/pkg/lib/repo" ]
-  deps = [ ":repo" ]
+  library = ":repo"
 }

@@ -15,6 +15,5 @@ go_library("tftp") {
 }
 
 go_test("tftp_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/net/tftp" ]
-  deps = [ ":tftp" ]
+  library = ":tftp"
 }

@@ -21,9 +21,7 @@ if (is_linux) {
   }
 
   go_test("dm_reboot_bringup_test") {
-    gopackages =
-        [ "go.fuchsia.dev/fuchsia/src/tests/reboot/dm_reboot_bringup_test" ]
-    deps = [ ":lib" ]
+    library = ":lib"
     non_go_deps = [ ":bringup_zbi" ]
   }
 }

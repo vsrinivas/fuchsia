@@ -16,13 +16,11 @@ go_library("main") {
 }
 
 go_binary("fpublish") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/sdk-tools/fpublish/cmd"
-  deps = [ ":main" ]
+  library = ":main"
 }
 
 go_test("fpublish-test") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/sdk-tools/fpublish/cmd" ]
-  deps = [ ":main" ]
+  library = ":main"
 }
 
 install_host_tools("fpublish-host") {

@@ -27,8 +27,7 @@ if (is_linux) {
   }
 
   go_test("kernel_panic_tests") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/src/tests/kernel_panic" ]
-    deps = [ ":lib" ]
+    library = ":lib"
     non_go_deps = [ "//build/images/fuchsia:fuchsia_zbi_for_host_tests" ]
   }
 }

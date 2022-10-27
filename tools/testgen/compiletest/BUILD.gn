@@ -39,9 +39,8 @@ if (is_host) {
   }
 
   go_test("compiletest_rust_nomock") {
+    library = ":compiletest_lib"
     output_name = "compiletest_rust_nomock"
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/testgen/compiletest" ]
-    deps = [ ":compiletest_lib" ]
     non_go_deps = [ ":copy_rust_nomock_test" ]
     args = [
       "--cm",
@@ -50,9 +49,8 @@ if (is_host) {
   }
 
   go_test("compiletest_rust_mock") {
+    library = ":compiletest_lib"
     output_name = "compiletest_rust_mock"
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/testgen/compiletest" ]
-    deps = [ ":compiletest_lib" ]
     non_go_deps = [ ":copy_rust_mock_test" ]
     args = [
       "--cm",

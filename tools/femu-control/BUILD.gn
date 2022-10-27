@@ -25,16 +25,12 @@ go_library("femu-control_lib") {
 }
 
 go_binary("femu-control") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/femu-control"
-
-  deps = [ ":femu-control_lib" ]
+  library = ":femu-control_lib"
 }
 
 if (is_linux || is_mac) {
   go_test("femu-control_tests") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/femu-control" ]
-
-    deps = [ ":femu-control_lib" ]
+    library = ":femu-control_lib"
   }
 }
 

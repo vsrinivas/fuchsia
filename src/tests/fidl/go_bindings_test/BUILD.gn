@@ -24,8 +24,7 @@ go_library("gopkg") {
 }
 
 go_test("fidl-go-bindings-test") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/src/tests/fidl/go_bindings_test" ]
-  deps = [ ":gopkg" ]
+  library = ":gopkg"
 }
 
 fidl("fidl.go.types") {

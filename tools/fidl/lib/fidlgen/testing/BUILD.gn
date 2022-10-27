@@ -6,10 +6,9 @@ import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 
 go_binary("roundtripper") {
+  library = ":main"
   testonly = true
   visibility = [ "..:*" ]
-  gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen/testing"
-  deps = [ ":main" ]
 }
 
 go_library("main") {

@@ -23,14 +23,11 @@ go_library("main") {
 }
 
 go_binary("generate_breakpad") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/debug/generate_breakpad/cmd"
-
-  deps = [ ":main" ]
+  library = ":main"
 }
 
 go_test("generate_breakpad_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/debug/generate_breakpad/cmd" ]
-  deps = [ ":main" ]
+  library = ":main"
 }
 
 group("tests") {

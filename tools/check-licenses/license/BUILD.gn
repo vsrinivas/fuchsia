@@ -27,7 +27,6 @@ group("tests") {
 
 if (is_host) {
   go_test("check-licenses_license_tests") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/check-licenses/license" ]
-    deps = [ ":license" ]
+    library = ":license"
   }
 }

@@ -23,15 +23,13 @@ if (is_host) {
   }
 
   go_binary("ninjatrace") {
-    gopackage = "go.fuchsia.dev/fuchsia/tools/build/ninjago/ninjatrace/cmd"
-    deps = [ ":main" ]
+    library = ":main"
   }
 
   go_test("ninjatrace_tests") {
+    library = ":main"
     output_name = "ninjatrace_tests"
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/build/ninjago/ninjatrace/cmd" ]
     deps = [
-      ":main",
       "//third_party/golibs:github.com/google/go-cmp",
       "//tools/build/ninjago/ninjalog",
     ]

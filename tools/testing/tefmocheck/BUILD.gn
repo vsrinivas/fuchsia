@@ -60,20 +60,18 @@ go_binary("tefmocheck") {
 }
 
 go_test("main_tests") {
+  library = ":main"
   output_name = "tefmocheck_tests"
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/testing/tefmocheck/cmd" ]
   deps = [
-    ":main",
     "//third_party/golibs:github.com/google/go-cmp",
     "//tools/testing/runtests",
   ]
 }
 
 go_test("lib_tests") {
+  library = ":lib"
   output_name = "tefmocheck_lib_tests"
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/testing/tefmocheck" ]
   deps = [
-    ":lib",
     "//third_party/golibs:github.com/google/go-cmp",
     "//tools/testing/runtests",
   ]

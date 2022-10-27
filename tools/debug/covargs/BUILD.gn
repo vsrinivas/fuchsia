@@ -54,19 +54,16 @@ go_library("main") {
 }
 
 go_binary("covargs") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/debug/covargs/cmd"
-  deps = [ ":main" ]
+  library = ":main"
   cgo = false
 }
 
 go_test("covargs_lib_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/debug/covargs" ]
-  deps = [ ":covargs_lib" ]
+  library = ":covargs_lib"
 }
 
 go_test("covargs_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/debug/covargs/cmd" ]
-  deps = [ ":main" ]
+  library = ":main"
 }
 
 group("tests") {

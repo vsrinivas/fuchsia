@@ -36,8 +36,7 @@ group("tests") {
 
 if (is_host) {
   go_binary("zither") {
-    gopackage = "go.fuchsia.dev/fuchsia/zircon/tools/zither/cmd"
-    deps = [ ":main" ]
+    library = ":main"
   }
 
   go_library("main") {
@@ -72,10 +71,9 @@ if (is_host) {
   }
 
   fidlgentest_go_test("unittests") {
+    library = ":common"
     output_name = "zither-unittests"
-    gopackages = [ "go.fuchsia.dev/fuchsia/zircon/tools/zither" ]
     deps = [
-      ":common",
       "//third_party/golibs:github.com/google/go-cmp",
       "//tools/fidl/lib/fidlgen",
       "//tools/fidl/lib/fidlgentest",
@@ -269,11 +267,9 @@ template("zither_golden_test") {
       }
 
       go_binary(compilation_check_target) {
+        library = ":$main_library_target"
         visibility = [ ":*" ]
         testonly = true
-
-        gopackage = main_pkg_name
-        deps = [ ":$main_library_target" ]
       }
     }
 

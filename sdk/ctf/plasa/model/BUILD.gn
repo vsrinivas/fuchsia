@@ -29,13 +29,12 @@ if (is_host) {
   _testdata_path = "${target_gen_dir}/testdata"
 
   go_test("model_test") {
+    library = ":gopkg"
     output_name = "model_test"
-    gopackages = [ "go.fuchsia.dev/fuchsia/sdk/ctf/plasa/model" ]
     args = [
       "--test_data_dir",
       rebase_path(_testdata_path, root_build_dir),
     ]
-    deps = [ ":gopkg" ]
     non_go_deps = [ ":testdatafiles" ]
   }
 

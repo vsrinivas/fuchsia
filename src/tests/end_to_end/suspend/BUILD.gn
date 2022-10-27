@@ -41,9 +41,8 @@ if (is_host) {
   }
 
   go_test("e2e_suspend_test") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/src/tests/end_to_end/suspend" ]
+    library = ":lib"
     environments = [ disabled_env ]
-    deps = [ ":lib" ]
   }
 }
 

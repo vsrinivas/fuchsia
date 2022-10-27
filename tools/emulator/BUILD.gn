@@ -129,7 +129,6 @@ if (is_linux) {
   }
 
   go_test("emulator_tests") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/emulator" ]
-    deps = [ ":emulator" ]
+    library = ":emulator"
   }
 }

@@ -25,8 +25,7 @@ if (is_linux) {
   }
 
   go_test("dlog_tests") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/src/tests/dlog" ]
-    deps = [ ":lib" ]
+    library = ":lib"
     non_go_deps = [ "//build/images/fuchsia:fuchsia_zbi_for_host_tests" ]
   }
 }

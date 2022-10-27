@@ -18,8 +18,7 @@ if (is_host) {
   }
 
   go_binary("fidl_api_diff") {
-    gopackage = "main"
-    deps = [ ":gopkg" ]
+    library = ":gopkg"
   }
 }  # is_host
 

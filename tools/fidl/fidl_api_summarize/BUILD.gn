@@ -17,8 +17,7 @@ if (is_host) {
   }
 
   go_binary("fidl_api_summarize") {
-    gopackage = "main"
-    deps = [ ":gopkg" ]
+    library = ":gopkg"
   }
 }  # is_host
 

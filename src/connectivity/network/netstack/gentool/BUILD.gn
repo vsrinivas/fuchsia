@@ -10,6 +10,5 @@ go_library("lib") {
 }
 
 go_binary("gentool") {
-  gopackage = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/gentool"
-  deps = [ ":lib" ]
+  library = ":lib"
 }

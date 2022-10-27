@@ -19,8 +19,7 @@ go_library("syslog") {
 }
 
 go_test("syslog_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/lib/syslog" ]
-  deps = [ ":syslog" ]
+  library = ":syslog"
 }
 
 go_library("constants") {

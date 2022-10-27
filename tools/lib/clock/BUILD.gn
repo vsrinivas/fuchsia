@@ -14,6 +14,5 @@ go_library("clock") {
 }
 
 go_test("clock_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/lib/clock" ]
-  deps = [ ":clock" ]
+  library = ":clock"
 }

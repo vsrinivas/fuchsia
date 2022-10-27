@@ -25,10 +25,7 @@ go_library("fidlconv") {
 }
 
 go_test("fidlconv_test") {
-  gopackages =
-      [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv" ]
-
-  deps = [ ":fidlconv" ]
+  library = ":fidlconv"
 }
 
 fuchsia_unittest_package("netstack-fidlconv-gotests") {

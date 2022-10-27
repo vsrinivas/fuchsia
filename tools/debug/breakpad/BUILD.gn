@@ -22,6 +22,5 @@ go_library("generator") {
 }
 
 go_test("breakpad_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/debug/breakpad" ]
-  deps = [ ":breakpad" ]
+  library = ":breakpad"
 }

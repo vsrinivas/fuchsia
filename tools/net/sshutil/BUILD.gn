@@ -33,6 +33,5 @@ go_library("constants") {
 }
 
 go_test("sshutil_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/net/sshutil" ]
-  deps = [ ":sshutil" ]
+  library = ":sshutil"
 }

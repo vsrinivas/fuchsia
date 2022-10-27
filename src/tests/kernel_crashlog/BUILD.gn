@@ -27,9 +27,8 @@ if (is_linux) {
   }
 
   go_test("kernel_crashlog_tests") {
-    gopackages = [ "fuchsia.googlesource.com/tests/kernel_crashlog" ]
+    library = ":lib"
     deps = [
-      ":lib",
       "//tools/virtual_device",
       "//tools/virtual_device:proto",
     ]

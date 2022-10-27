@@ -49,7 +49,6 @@ if (is_host) {
   }
 
   go_test("cpuperf_raw_printer_test") {
-    gopackages = [ "cpuperf/printer/tests" ]
-    deps = [ ":raw_printer_test_lib" ]
+    library = ":raw_printer_test_lib"
   }
 }

@@ -26,12 +26,11 @@ group("tests") {
 
 if (is_host) {
   go_test("check-licenses_directory_tests") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/check-licenses/directory" ]
+    library = ":directory"
     args = [
       "--test_data_dir",
       rebase_path("$target_gen_dir/testdata", root_build_dir),
     ]
-    deps = [ ":directory" ]
     non_go_deps = [ "testdata" ]
   }
 }

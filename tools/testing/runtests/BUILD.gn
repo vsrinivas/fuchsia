@@ -26,7 +26,6 @@ go_library("runtests") {
 }
 
 go_test("tests") {
+  library = ":runtests"
   output_name = "runtests_tests"
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/testing/runtests" ]
-  deps = [ ":runtests" ]
 }

@@ -13,11 +13,8 @@ go_library("parseoutput") {
 }
 
 go_test("parseoutput_test") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/src/connectivity/network/testing/conformance/parseoutput" ]
-  deps = [
-    ":parseoutput",
-    "//third_party/golibs:github.com/google/go-cmp",
-  ]
+  library = ":parseoutput"
+  deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
 }
 
 group("tests") {

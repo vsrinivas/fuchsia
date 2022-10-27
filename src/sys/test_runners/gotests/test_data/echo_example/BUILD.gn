@@ -16,8 +16,7 @@ go_library("echo_go_test_lib") {
 }
 
 go_test("echo_go_client") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/src/sys/test_runners/gotests/test_data/echo_example" ]
-  deps = [ ":echo_go_test_lib" ]
+  library = ":echo_go_test_lib"
 }
 
 fuchsia_component("echo_go_client_component") {

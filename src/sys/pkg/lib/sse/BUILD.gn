@@ -17,8 +17,7 @@ go_library("sse") {
 }
 
 go_test("sse_test") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/src/sys/pkg/lib/sse" ]
-  deps = [ ":sse" ]
+  library = ":sse"
 }
 
 group("tests") {

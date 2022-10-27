@@ -50,17 +50,13 @@ go_library("main") {
 }
 
 go_binary("testsharder") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/integration/testsharder/cmd"
-  deps = [ ":main" ]
+  library = ":main"
 }
 
 if (is_host) {
   go_test("testsharder_lib_tests") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/integration/testsharder" ]
-    deps = [
-      ":testsharder_lib",
-      "//third_party/golibs:github.com/google/go-cmp",
-    ]
+    library = ":testsharder_lib"
+    deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
   }
 
   # TODO(olivernewman): Consider running the test executable locally to generate
@@ -95,13 +91,11 @@ if (is_host) {
   }
 
   go_test("testsharder_tests") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/integration/testsharder/cmd" ]
+    library = ":main"
     deps = [
-      ":main",
       "//third_party/golibs:github.com/google/go-cmp",
       "//tools/lib/jsonutil",
     ]
-
     non_go_deps = [ ":copy_golden_files" ]
 
     args = [

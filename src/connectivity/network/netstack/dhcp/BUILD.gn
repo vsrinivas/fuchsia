@@ -30,10 +30,7 @@ go_library("dhcp") {
 }
 
 go_test("dhcp_test") {
-  gopackages =
-      [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dhcp" ]
-
-  deps = [ ":dhcp" ]
+  library = ":dhcp"
 }
 
 fuchsia_unittest_package("netstack-dhcp-gotests") {

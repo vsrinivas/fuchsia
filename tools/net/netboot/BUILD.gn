@@ -21,6 +21,5 @@ go_library("netboot") {
 }
 
 go_test("netboot_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/net/netboot" ]
-  deps = [ ":netboot" ]
+  library = ":netboot"
 }

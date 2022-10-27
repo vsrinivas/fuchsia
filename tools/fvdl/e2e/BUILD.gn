@@ -92,9 +92,8 @@ if (is_linux) {
   }
 
   go_test("fvdl_intree_test_slirp") {
+    library = ":lib"
     output_name = "fvdl_intree_test_slirp"
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fvdl/e2e" ]
-    deps = [ ":lib" ]
     non_go_deps = [
       ":copy_host_tools",
       ":copy_images",
@@ -117,9 +116,8 @@ if (is_linux) {
   }
 
   go_test("fvdl_intree_test_tuntap") {
+    library = ":lib"
     output_name = "fvdl_intree_test_tuntap"
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fvdl/e2e" ]
-    deps = [ ":lib" ]
     non_go_deps = [
       ":copy_host_tools",
       ":copy_images",
@@ -142,9 +140,8 @@ if (is_linux) {
   }
 
   go_test("fvdl_sdk_test") {
+    library = ":lib"
     output_name = "fvdl_sdk_test"
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fvdl/e2e" ]
-    deps = [ ":lib" ]
     non_go_deps = [
       ":copy_host_tools",
       ":copy_images",

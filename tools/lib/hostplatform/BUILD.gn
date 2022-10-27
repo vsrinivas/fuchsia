@@ -13,7 +13,6 @@ go_library("hostplatform") {
 }
 
 go_test("tests") {
+  library = ":hostplatform"
   output_name = "hostplatform_tests"
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/lib/hostplatform" ]
-  deps = [ ":hostplatform" ]
 }

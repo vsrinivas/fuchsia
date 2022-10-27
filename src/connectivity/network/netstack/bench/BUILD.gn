@@ -15,9 +15,7 @@ go_library("bench") {
 }
 
 go_test("bench_test") {
-  gopackages =
-      [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/bench" ]
-  deps = [ ":bench" ]
+  library = ":bench"
 }
 
 fuchsia_unittest_package("netstack-bench-gotests") {

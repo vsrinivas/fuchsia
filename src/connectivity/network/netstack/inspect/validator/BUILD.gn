@@ -20,10 +20,8 @@ go_library("validator") {
 }
 
 go_binary("puppet_bin") {
-  gopackage = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/inspect/validator"
-
+  library = ":validator"
   deps = [
-    ":validator",
     "//src/diagnostics/validator/inspect/fidl:validate_go($go_toolchain)",
     "//src/lib/component",
   ]

@@ -89,18 +89,15 @@ go_library("main") {
 }
 
 go_binary("botanist") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/botanist/cmd"
-  deps = [ ":main" ]
+  library = ":main"
 }
 
 go_test("botanist_lib_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/botanist" ]
-  deps = [ ":botanist_lib" ]
+  library = ":botanist_lib"
 }
 
 go_test("botanist_targets_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/botanist/targets" ]
-  deps = [ ":targets" ]
+  library = ":targets"
 }
 
 go_library("constants") {

@@ -32,10 +32,8 @@ template("test_case_binary") {
   }
 
   go_binary(target_name) {
+    library = ":$library_name"
     output_name = "prints_to_${test_case}_go"
-    gopackage = "go.fuchsia.dev/fuchsia/src/sys/component_manager/src/elf_runner/tests/stdout/go/src/${test_case}"
-
-    deps = [ ":$library_name" ]
   }
 }
 

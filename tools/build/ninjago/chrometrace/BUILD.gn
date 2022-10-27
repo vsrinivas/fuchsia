@@ -14,10 +14,7 @@ if (is_host) {
   }
 
   go_test("chrometrace_test") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/build/ninjago/chrometrace" ]
-    deps = [
-      ":chrometrace",
-      "//third_party/golibs:github.com/google/go-cmp",
-    ]
+    library = ":chrometrace"
+    deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
   }
 }

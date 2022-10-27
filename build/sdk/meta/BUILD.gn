@@ -66,9 +66,8 @@ go_library("go_meta") {
 }
 
 go_test("go_meta_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/build/sdk/meta" ]
+  library = ":go_meta"
   deps = [
-    ":go_meta",
     "//third_party/golibs:github.com/google/go-cmp",
     "//third_party/golibs:go.uber.org/multierr",
   ]

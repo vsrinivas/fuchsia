@@ -31,9 +31,7 @@ if (is_linux) {
     }
 
     go_test("recovery_simulator_${split_name}") {
-      gopackages =
-          [ "go.fuchsia.dev/fuchsia/src/recovery/simulator/$split_name" ]
-      deps = [ ":$split_name" ]
+      library = ":$split_name"
       non_go_deps = [ "//build/images/recovery:test_data($host_toolchain)" ]
     }
   }

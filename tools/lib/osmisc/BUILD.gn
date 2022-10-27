@@ -15,7 +15,6 @@ go_library("osmisc") {
 }
 
 go_test("tests") {
+  library = ":osmisc"
   output_name = "osmisc_tests"
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/lib/osmisc" ]
-  deps = [ ":osmisc" ]
 }

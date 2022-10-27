@@ -9,8 +9,7 @@ import("//build/go/toolchain.gni")
 import("//build/testing/environments.gni")
 
 go_test("fidl-example-go-test") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/examples/fidl/go/fidl_packages" ]
-  deps = [ ":fidl-example-go" ]
+  library = ":fidl-example-go"
 }
 
 go_library("fidl-example-go") {

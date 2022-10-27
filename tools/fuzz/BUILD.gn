@@ -60,8 +60,7 @@ if (is_linux) {
   }
 
   go_binary("undercoat") {
-    gopackage = "main"
-    deps = [ ":main" ]
+    library = ":main"
   }
 
   install_host_tools("undercoat_tool") {
@@ -70,8 +69,7 @@ if (is_linux) {
   }
 
   go_test("undercoat_tests") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fuzz" ]
-    deps = [ ":lib" ]
+    library = ":lib"
   }
 }
 

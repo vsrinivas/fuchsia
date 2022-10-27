@@ -26,7 +26,7 @@ group("tests") {
 
 if (is_host) {
   go_test("check-licenses_util_tests") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/check-licenses/util" ]
+    library = ":util"
     args = [
       "--gn_path",
       rebase_path("//prebuilt/third_party/gn/${host_os}-${host_cpu}/gn",
@@ -34,6 +34,5 @@ if (is_host) {
       "--build_dir",
       rebase_path(root_out_dir, root_build_dir),
     ]
-    deps = [ ":util" ]
   }
 }

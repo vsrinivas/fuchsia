@@ -40,13 +40,8 @@ go_library("fifo") {
 }
 
 go_test("link_fifo_test") {
-  gopackages =
-      [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo" ]
-
-  deps = [
-    ":entries_gen_test/entries",
-    ":fifo",
-  ]
+  library = ":fifo"
+  deps = [ ":entries_gen_test/entries" ]
 }
 
 fuchsia_unittest_package("netstack-link-fifo-gotests") {

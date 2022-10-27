@@ -25,9 +25,7 @@ if (is_linux) {
   }
 
   go_test("console_qemu_test") {
-    gopackages =
-        [ "go.fuchsia.dev/fuchsia/src/bringup/bin/console-launcher/qemu-tests" ]
-    deps = [ ":lib" ]
+    library = ":lib"
     non_go_deps = [ ":bringup_zbi" ]
   }
 }

@@ -19,11 +19,8 @@ go_library("sdkcommon") {
 }
 
 go_test("sdkcommon-test") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/sdk-tools/sdkcommon" ]
-  deps = [
-    ":sdkcommon",
-    "//third_party/golibs:github.com/google/go-cmp",
-  ]
+  library = ":sdkcommon"
+  deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
 }
 
 group("host-tool-deps") {

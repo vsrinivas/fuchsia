@@ -18,6 +18,5 @@ go_library("subprocess") {
 }
 
 go_test("subprocess_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/lib/subprocess" ]
-  deps = [ ":subprocess" ]
+  library = ":subprocess"
 }

@@ -32,11 +32,8 @@ go_library("component") {
 }
 
 go_test("component_test") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/src/lib/component" ]
-  deps = [
-    ":bindingstest_go($go_toolchain)",
-    ":component",
-  ]
+  library = ":component"
+  deps = [ ":bindingstest_go($go_toolchain)" ]
 }
 
 fuchsia_unittest_package("lib-component-go-unittests") {

@@ -14,6 +14,5 @@ go_library("color") {
 }
 
 go_test("color_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/lib/color" ]
-  deps = [ ":color" ]
+  library = ":color"
 }

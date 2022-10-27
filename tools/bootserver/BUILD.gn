@@ -63,13 +63,11 @@ go_binary("bootserver") {
 }
 
 go_test("bootserver_lib_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/bootserver" ]
-  deps = [ ":bootserver_lib" ]
+  library = ":bootserver_lib"
 }
 
 go_test("bootserver_cmd_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/bootserver/cmd" ]
-  deps = [ ":main" ]
+  library = ":main"
 }
 
 group("tests") {

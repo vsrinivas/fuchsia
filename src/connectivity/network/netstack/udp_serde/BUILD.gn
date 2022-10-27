@@ -87,10 +87,7 @@ go_library("golib") {
 }
 
 go_test("udp_serde_test") {
-  gopackages =
-      [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/udp_serde" ]
-
-  deps = [ ":golib" ]
+  library = ":golib"
 }
 
 fuchsia_unittest_package("udp_serde-gotests") {

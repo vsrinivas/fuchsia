@@ -16,8 +16,7 @@ if (is_host) {
   }
 
   go_test("staticanalysis_tests") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/staticanalysis" ]
-    deps = [ ":staticanalysis" ]
+    library = ":staticanalysis"
   }
 }
 

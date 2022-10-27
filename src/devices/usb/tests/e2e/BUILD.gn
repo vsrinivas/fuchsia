@@ -29,9 +29,8 @@ if (is_linux) {
   }
 
   go_test("femu_usb_test") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/src/devices/usb/tests/e2e" ]
+    library = ":lib"
     deps = [
-      ":lib",
       "//tools/virtual_device",
       "//tools/virtual_device:proto",
     ]

@@ -18,7 +18,6 @@ go_library("iomisc") {
 }
 
 go_test("tests") {
+  library = ":iomisc"
   output_name = "iomisc_tests"
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/lib/iomisc" ]
-  deps = [ ":iomisc" ]
 }

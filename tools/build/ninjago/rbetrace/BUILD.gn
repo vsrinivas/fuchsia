@@ -15,10 +15,7 @@ if (is_host) {
   }
 
   go_test("rbetrace_test") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/build/ninjago/rbetrace" ]
-    deps = [
-      ":rbetrace",
-      "//third_party/golibs:github.com/google/go-cmp",
-    ]
+    library = ":rbetrace"
+    deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
   }
 }

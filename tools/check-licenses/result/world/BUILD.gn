@@ -32,7 +32,6 @@ group("tests") {
 
 if (is_host) {
   go_test("check-licenses_world_tests") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/check-licenses/result/world" ]
-    deps = [ ":world" ]
+    library = ":world"
   }
 }

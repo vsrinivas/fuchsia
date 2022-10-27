@@ -15,6 +15,5 @@ go_library("cache") {
 }
 
 go_test("cache_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/lib/cache" ]
-  deps = [ ":cache" ]
+  library = ":cache"
 }

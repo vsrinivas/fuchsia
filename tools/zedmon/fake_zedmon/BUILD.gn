@@ -11,9 +11,8 @@ go_library("lib") {
 }
 
 go_binary("bin") {
+  library = ":lib"
   output_name = "fake_zedmon"
-  gopackage = "fake_zedmon"
-  deps = [ ":lib" ]
 }
 
 group("fake_zedmon") {

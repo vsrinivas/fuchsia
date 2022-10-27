@@ -31,9 +31,8 @@ go_library("lib") {
 }
 
 go_binary("bin") {
+  library = ":lib"
   output_name = "traceutil"
-  gopackage = "traceutil"
-  deps = [ ":lib" ]
 }
 
 install_host_tools("traceutil") {
@@ -54,7 +53,7 @@ if (is_host) {
   _fake_zedmon_path = "$target_gen_dir/zedmon_test/runtime_deps/fake_zedmon"
 
   go_test("zedmon_test") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/src/performance/traceutil/zedmon" ]
+    library = ":zedmon"
     args = [
       "-fake_zedmon_relpath",
       rebase_path(_fake_zedmon_path, root_out_dir),

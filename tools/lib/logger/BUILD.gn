@@ -15,6 +15,5 @@ go_library("logger") {
 }
 
 go_test("logger_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/lib/logger" ]
-  deps = [ ":logger" ]
+  library = ":logger"
 }

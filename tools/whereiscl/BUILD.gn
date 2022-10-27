@@ -30,8 +30,7 @@ go_library("netutil") {
 }
 
 go_binary("whereiscl") {
-  gopackage = "main"
-  deps = [ ":main" ]
+  library = ":main"
 }
 
 install_host_tools("host") {
@@ -45,9 +44,8 @@ go_library("testhelper") {
 }
 
 go_test("whereiscl_test") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/whereiscl" ]
+  library = ":lib"
   deps = [
-    ":lib",
     ":testhelper",
     "//third_party/golibs:github.com/google/go-cmp",
   ]

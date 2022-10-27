@@ -27,14 +27,11 @@ if (is_host) {
   }
 
   go_test("staticlints_tests") {
-    gopackages =
-        [ "go.fuchsia.dev/fuchsia/tools/staticanalysis/cmd/staticlints" ]
-    deps = [ ":staticlints_lib" ]
+    library = ":staticlints_lib"
   }
 
   go_binary("staticlints") {
-    gopackage = "go.fuchsia.dev/fuchsia/tools/staticanalysis/cmd/staticlints"
-    deps = [ ":staticlints_lib" ]
+    library = ":staticlints_lib"
   }
 }
 

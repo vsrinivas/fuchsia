@@ -62,6 +62,5 @@ go_library("build") {
 }
 
 go_test("build_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/build" ]
-  deps = [ ":build" ]
+  library = ":build"
 }

@@ -16,8 +16,7 @@ if (is_host) {
   }
 
   go_test("inject_test") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/src/lib/inject" ]
-    deps = [ ":inject" ]
+    library = ":inject"
   }
 }
 

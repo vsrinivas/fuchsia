@@ -20,11 +20,8 @@ go_library("go") {
 }
 
 go_test("syslog_test") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/src/lib/syslog/go" ]
-  deps = [
-    ":go",
-    "//src/lib/component($go_toolchain)",
-  ]
+  library = ":go"
+  deps = [ "//src/lib/component($go_toolchain)" ]
 }
 
 fuchsia_unittest_package("syslog-gotests") {

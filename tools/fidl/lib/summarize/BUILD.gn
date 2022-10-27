@@ -9,11 +9,8 @@ import("//tools/fidl/lib/fidlgentest/fidlgentest_go_test.gni")
 
 if (is_host) {
   fidlgentest_go_test("summarize_test") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/lib/summarize" ]
-    deps = [
-      ":gopkg",
-      "//third_party/golibs:github.com/google/go-cmp",
-    ]
+    library = ":gopkg"
+    deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
   }
 
   go_library("gopkg") {

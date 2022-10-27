@@ -16,16 +16,12 @@ if (is_host) {
   }
 
   go_binary("gidl-format") {
-    gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/gidl-format"
-    deps = [ ":gopkg" ]
+    library = ":gopkg"
   }
 
   go_test("gidl_format_tests") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/gidl-format" ]
-    deps = [
-      ":gopkg",
-      "//third_party/golibs:github.com/google/go-cmp",
-    ]
+    library = ":gopkg"
+    deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
   }
 }  # is_host
 

@@ -15,12 +15,8 @@ go_library("qemu") {
 }
 
 go_test("qemu_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/qemu" ]
-
-  deps = [
-    ":qemu",
-    "//third_party/golibs:github.com/google/go-cmp",
-  ]
+  library = ":qemu"
+  deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
 }
 
 group("tests") {

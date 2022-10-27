@@ -33,10 +33,7 @@ go_library("eth") {
 }
 
 go_test("link_eth_test") {
-  gopackages =
-      [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth" ]
-
-  deps = [ ":eth" ]
+  library = ":eth"
 }
 
 fuchsia_unittest_package("netstack-link-eth-gotests") {

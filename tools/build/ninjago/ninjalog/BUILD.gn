@@ -25,15 +25,12 @@ if (is_host) {
   _testdata_path = "$target_gen_dir/testdata/ninja_log.gz"
 
   go_test("ninjalog_tests") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/build/ninjago/ninjalog" ]
+    library = ":ninjalog"
     args = [
       "--test_ninjalog",
       rebase_path(_testdata_path, root_build_dir),
     ]
-    deps = [
-      ":ninjalog",
-      "//third_party/golibs:github.com/google/go-cmp",
-    ]
+    deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
     non_go_deps = [ ":testdata" ]
   }
 

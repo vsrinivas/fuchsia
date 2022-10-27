@@ -20,11 +20,8 @@ go_library("vmobuffer") {
 }
 
 go_test("vmobuffer_test") {
-  gopackages = [ _vmobuffer_go_pkg ]
-  deps = [
-    ":vmobuffer",
-    "//third_party/golibs:github.com/google/go-cmp",
-  ]
+  library = ":vmobuffer"
+  deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
 }
 
 fuchsia_unittest_package("vmobuffer-gotests") {

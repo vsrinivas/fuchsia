@@ -24,10 +24,7 @@ go_library("util") {
 }
 
 go_test("util_test") {
-  gopackages =
-      [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util" ]
-
-  deps = [ ":util" ]
+  library = ":util"
 }
 
 fuchsia_unittest_package("netstack-util-gotests") {

@@ -13,9 +13,6 @@ go_library("jsonutil") {
 }
 
 go_test("tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/lib/jsonutil" ]
-  deps = [
-    ":jsonutil",
-    "//third_party/golibs:github.com/google/go-cmp",
-  ]
+  library = ":jsonutil"
+  deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
 }
