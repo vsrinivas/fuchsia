@@ -171,10 +171,8 @@ template("clang_toolchain") {
       }
       _rustc_wrapper = rebase_path(rustc_remote_wrapper, root_build_dir) +
                        _rewrapper_flags + " -- "
-    }
-
-    # TODO(http://fxbug.dev/111790): fix concurrency
-    if (_rust_concurrent_jobs == "") {
+      _rust_concurrent_jobs = concurrent_jobs.remote
+    } else {
       _rust_concurrent_jobs = concurrent_jobs.local
     }
 
