@@ -153,9 +153,17 @@ A filter is composed of one or more sub-filters of the following form:
 
 Where:
 
-* `value`: A double-quoted string, boolean (`true` or `false`), or an integer.
 * `category`: For valid categories, see [Categories](#categories).
 * `operator`: For valid categories, see [Operators](#operators).
+* `value`: depends on the category. For:
+  - severities: a severity name. For valid severities, see [Categories](#categories).
+  - rest of the categories, depending on the type:
+    - a string without spaces (or with escaped spaces `\ `)
+    - a double-quoted string: which can contain any character but must escape `"` and `\` with a
+     `\`.
+    - a regular expression, see [Regular expressions](#regexes)
+    - a number
+    - a boolean (true, false)
 
 Additionally, sub-filters may be joined with OR (inside parentheses). For
 example:
@@ -173,7 +181,7 @@ see [Logical operators][#logical-operators].
 For example `message:"Hello world"` queries for log message that contain
 `Hello world`.
 
-Finally, the logging viewer also supports passing raw strings as filters. This
+Finally, the logging viewer also supports passing raw strings and regexes as filters. This
 causes the viewer to filter on any field containing the given value. For example:
 
 * Writing `foo` will show logs where any field contains the word `foo`.
@@ -236,6 +244,18 @@ The filtering supports the following operators:
   to chain multiple queries.
 * `and` or `&`: This lets you use an `and` logical operator in your
   query or to chain multiple queries.
+
+#### Regular expressions {#regexes}
+
+A regular expression can be passed to operators `:` and `=`. When used with a `:`, the regular
+expression will be searched for within the category it's being applied to. When used with `=`, the
+entire field must match the regular expression.
+
+A regular expression must be written within `/`. For example: `moniker:/core.+net.+/`.
+
+A regular expression can also be used without targeting a category, by just writing `/regex-here/`,
+just like filtering with raw strings. When used this way, logs that contain a field where a match
+for the regular expression was found will be displayed.
 
 #### Examples {#filter-examples}
 
