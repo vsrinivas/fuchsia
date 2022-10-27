@@ -111,6 +111,7 @@ pub struct RepoKeysBuilder {
 
 impl RepoKeysBuilder {
     /// Construct a new [RepoKeysBuilder].
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         RepoKeysBuilder {
             keys: RepoKeys {
@@ -177,7 +178,7 @@ impl RepoKeysBuilder {
 
 /// Try to open the key file. Return an empty vector if the file doesn't exist.
 fn parse_keys_if_exists(path: &Path) -> Result<Vec<Box<dyn PrivateKey>>, ParseError> {
-    match File::open(&path) {
+    match File::open(path) {
         Ok(f) => parse_keys(f),
         Err(err) => {
             if err.kind() == io::ErrorKind::NotFound {

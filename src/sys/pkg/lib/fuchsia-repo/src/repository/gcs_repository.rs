@@ -223,7 +223,7 @@ where
         resource_path: &str,
         range: Range,
     ) -> BoxFuture<'a, Result<Resource, Error>> {
-        self.get(&self.metadata_repo_url, &resource_path, range)
+        self.get(&self.metadata_repo_url, resource_path, range)
     }
 
     fn fetch_blob_range<'a>(
@@ -231,7 +231,7 @@ where
         resource_path: &str,
         range: Range,
     ) -> BoxFuture<'a, Result<Resource, Error>> {
-        self.get(&self.blob_repo_url, &resource_path, range)
+        self.get(&self.blob_repo_url, resource_path, range)
     }
 
     fn blob_len<'a>(&'a self, path: &str) -> BoxFuture<'a, Result<u64, anyhow::Error>> {

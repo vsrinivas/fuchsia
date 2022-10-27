@@ -37,8 +37,8 @@ impl AsyncSpooledTempFile {
             Kind::Buffer(buffer) => {
                 if buffer.len().saturating_add(buf.len()) < self.buf_size {
                     let mut file = async_fs::File::from(tempfile::tempfile()?);
-                    file.write_all(&buffer).await?;
-                    file.write_all(&buf).await?;
+                    file.write_all(buffer).await?;
+                    file.write_all(buf).await?;
                     self.kind = Kind::File(file);
                 } else {
                     buffer.extend(buf);

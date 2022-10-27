@@ -321,11 +321,7 @@ fn parse_integer(s: &[u8]) -> Result<u64, Error> {
 }
 
 fn split_once(s: &[u8], needle: u8) -> Option<(&[u8], &[u8])> {
-    if let Some(pos) = s.iter().position(|ch| *ch == needle) {
-        Some((&s[..pos], &s[pos + 1..]))
-    } else {
-        None
-    }
+    s.iter().position(|ch| *ch == needle).map(|pos| (&s[..pos], &s[pos + 1..]))
 }
 
 #[cfg(test)]

@@ -63,7 +63,7 @@ where
         // Download all the packages.
         let mut futures = FuturesUnordered::new();
         for desc in trusted_targets.targets().values() {
-            let merkle = merkle_from_description(&desc)?;
+            let merkle = merkle_from_description(desc)?;
             futures.push(fetcher.fetch_package(merkle));
         }
 
@@ -104,7 +104,7 @@ where
     let metadata_dir = metadata_dir.as_ref();
 
     // Cache the TUF metadata from the upstream repository into a temporary directory.
-    let local_repo = FileSystemRepository::builder(&metadata_dir).targets_prefix("targets").build();
+    let local_repo = FileSystemRepository::builder(metadata_dir).targets_prefix("targets").build();
 
     let mut batch_repo = local_repo.batch_update();
 
@@ -148,7 +148,7 @@ where
     let meta_far_hash = merkle_from_description(&desc)?;
 
     let fetcher = PackageFetcher::new(repo, output_blobs_dir, concurrency).await?;
-    fetcher.fetch_package(meta_far_hash.clone()).await?;
+    fetcher.fetch_package(meta_far_hash).await?;
 
     Ok(meta_far_hash)
 }
@@ -177,7 +177,7 @@ where
         version: MetadataVersion,
     ) -> BoxFuture<'a, Result<Box<dyn AsyncRead + Send + Unpin + 'a>, Error>> {
         let meta_path = meta_path.clone();
-        let metadata_fut = self.upstream.fetch_metadata(&meta_path, version.clone());
+        let metadata_fut = self.upstream.fetch_metadata(&meta_path, version);
 
         let cache = Arc::clone(&self.cache);
 
@@ -291,7 +291,7 @@ where
             .buffer_unordered(self.concurrency);
 
         // Wait until all the package blobs have finished downloading.
-        while let Some(_) = tasks.try_next().await? {}
+        while (tasks.try_next().await?).is_some() {}
 
         Ok(())
     }
@@ -310,7 +310,7 @@ where
             }
 
             let (result_tx, result_rx) = oneshot::channel();
-            verified_blobs.insert(blob.clone(), result_rx.shared());
+            verified_blobs.insert(*blob, result_rx.shared());
 
             result_tx
         };

@@ -174,7 +174,7 @@ where
             Some(trusted_targets) => Ok(trusted_targets
                 .targets()
                 .get(&TargetPath::new(path).map_err(|e| anyhow::anyhow!(e))?)
-                .map(|t| t.clone())),
+                .cloned()),
             None => Ok(None),
         }
     }
@@ -226,7 +226,7 @@ where
         let components = package_entries
             .unwrap()
             .into_iter()
-            .filter(|e| is_component_manifest(&e.path.as_ref().unwrap()))
+            .filter(|e| is_component_manifest(e.path.as_ref().unwrap()))
             .collect();
 
         Ok(Some(components))
@@ -265,11 +265,10 @@ where
             // Concurrently fetch the package blob sizes.
             // FIXME(http://fxbug.dev/97192): Use work queue so we can globally control the
             // concurrency here, rather than limiting fetches per call.
-            let mut tasks =
-                stream::iter(contents.contents().into_iter().map(|(_, hash)| async move {
-                    self.tuf_client.remote_repo().blob_len(&hash.to_string()).await
-                }))
-                .buffer_unordered(LIST_PACKAGE_CONCURRENCY);
+            let mut tasks = stream::iter(contents.contents().iter().map(|(_, hash)| async move {
+                self.tuf_client.remote_repo().blob_len(&hash.to_string()).await
+            }))
+            .buffer_unordered(LIST_PACKAGE_CONCURRENCY);
 
             let mut size = meta_far_size;
             while let Some(blob_len) = tasks.try_next().await? {
@@ -299,7 +298,7 @@ where
 
         if include_fields.intersects(ListFields::COMPONENTS) {
             for package in packages.iter_mut() {
-                match self.get_components_for_package(&trusted_targets, &package).await {
+                match self.get_components_for_package(trusted_targets, package).await {
                     Ok(components) => package.entries = components,
                     Err(e) => {
                         tracing::error!(
@@ -517,7 +516,7 @@ where
 }
 
 fn is_component_manifest(s: &str) -> bool {
-    return s.ends_with(".cm") || s.ends_with(".cmx");
+    s.ends_with(".cm") || s.ends_with(".cmx")
 }
 
 pub(crate) async fn get_tuf_client<R>(

@@ -393,9 +393,9 @@ async fn handle_request(
         }
         _ => {
             let res = if let Some(resource_path) = resource_path.strip_prefix("blobs/") {
-                repo.read().await.fetch_blob_range(resource_path, range.clone()).await
+                repo.read().await.fetch_blob_range(resource_path, range).await
             } else {
-                repo.read().await.fetch_metadata_range(resource_path, range.clone()).await
+                repo.read().await.fetch_metadata_range(resource_path, range).await
             };
 
             match res {
@@ -627,7 +627,6 @@ impl tokio::io::AsyncRead for ConnectionStream {
         }
         .map_ok(|sz| {
             buf.advance(sz);
-            ()
         })
     }
 }

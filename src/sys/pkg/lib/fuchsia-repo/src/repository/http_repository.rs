@@ -64,11 +64,9 @@ where
             blob_repo_url.set_path(&format!("{}/", blob_repo_url.path()));
         }
 
-        let tuf_repo = TufHttpRepositoryBuilder::<_, Pouf1>::new(
-            metadata_repo_url.clone().into(),
-            client.clone(),
-        )
-        .build();
+        let tuf_repo =
+            TufHttpRepositoryBuilder::<_, Pouf1>::new(metadata_repo_url.clone(), client.clone())
+                .build();
 
         Self { client, tuf_repo, metadata_repo_url, blob_repo_url }
     }

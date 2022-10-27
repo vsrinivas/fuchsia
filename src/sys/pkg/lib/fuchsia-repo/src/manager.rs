@@ -32,7 +32,7 @@ impl RepositoryManager {
 
     /// Get a [Repository].
     pub fn get(&self, repo_name: &str) -> Option<ArcRepoClient> {
-        self.repositories.read().unwrap().get(repo_name).map(|repo| Arc::clone(repo))
+        self.repositories.read().unwrap().get(repo_name).map(Arc::clone)
     }
 
     /// Remove a [Repository] from the [RepositoryManager].
@@ -46,9 +46,7 @@ impl RepositoryManager {
     }
 
     /// Iterate through all [Repositories].
-    pub fn repositories<'a>(
-        &'a self,
-    ) -> impl std::iter::Iterator<Item = (String, ArcRepoClient)> + 'a {
+    pub fn repositories(&self) -> impl std::iter::Iterator<Item = (String, ArcRepoClient)> + '_ {
         let mut repositories = self
             .repositories
             .read()
@@ -58,7 +56,7 @@ impl RepositoryManager {
             .collect::<Vec<_>>();
 
         // Sort the repositories so it's in a stable order.
-        repositories.sort_unstable_by(|(lhs, _), (rhs, _)| lhs.cmp(&rhs));
+        repositories.sort_unstable_by(|(lhs, _), (rhs, _)| lhs.cmp(rhs));
 
         repositories.into_iter()
     }

@@ -188,8 +188,8 @@ pub async fn make_pm_repo_dir(repo_dir: &Path) {
 }
 
 pub async fn make_repo_dir(metadata_dir: &Path, blobs_dir: &Path) {
-    create_dir_all(&metadata_dir).unwrap();
-    create_dir_all(&blobs_dir).unwrap();
+    create_dir_all(metadata_dir).unwrap();
+    create_dir_all(blobs_dir).unwrap();
 
     // Construct some packages for the repository.
     let build_tmp = tempfile::tempdir().unwrap();
