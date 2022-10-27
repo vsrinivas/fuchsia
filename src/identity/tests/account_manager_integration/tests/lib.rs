@@ -7,5 +7,7 @@
 
 #![cfg(test)]
 #![deny(missing_docs)]
+#![warn(clippy::all)]
+#![allow(clippy::expect_fun_call)]
 
 mod account;

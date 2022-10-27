@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![warn(clippy::all)]
+#![allow(clippy::expect_fun_call)]
+
 mod mock_cr50_agent;
 mod pinweaver;
 mod scrypt;
@@ -37,9 +40,9 @@ const ACCOUNT_LABEL: &str = "account";
 const ACCOUNT_CLOSE_TIMEOUT: zx::Duration = zx::Duration::from_seconds(5);
 
 const GLOBAL_ACCOUNT_ID: u64 = 1;
-const EMPTY_PASSWORD: &'static str = "";
-const REAL_PASSWORD: &'static str = "a real passphrase!";
-const BAD_PASSWORD: &'static str = "not the real passphrase :(";
+const EMPTY_PASSWORD: &str = "";
+const REAL_PASSWORD: &str = "a real passphrase!";
+const BAD_PASSWORD: &str = "not the real passphrase :(";
 
 #[link(name = "fs-management")]
 extern "C" {
@@ -137,7 +140,7 @@ impl TestEnv {
             .unwrap();
 
         // Set up mock Cr50Agent.
-        let mocks = maybe_mock_cr50.unwrap_or(VecDeque::new());
+        let mocks = maybe_mock_cr50.unwrap_or_default();
         let cr50 = builder
             .add_local_child(
                 "mock_cr50",

@@ -28,9 +28,9 @@ const ALWAYS_SUCCEED_AUTH_MECHANISM_ID: &str = "#meta/dev_authenticator_always_s
 const ALWAYS_FAIL_AUTHENTICATION_AUTH_MECHANISM_ID: &str =
     "#meta/dev_authenticator_always_fail_authentication.cm";
 
-const ACCOUNT_MANAGER_URL: &'static str = "#meta/account_manager.cm";
+const ACCOUNT_MANAGER_URL: &str = "#meta/account_manager.cm";
 
-const ACCOUNT_MANAGER_COMPONENT_NAME: &'static str = "account_manager";
+const ACCOUNT_MANAGER_COMPONENT_NAME: &str = "account_manager";
 
 /// Maximum time between a lock request and when the account is locked
 const LOCK_REQUEST_DURATION: zx::Duration = zx::Duration::from_seconds(5);
@@ -550,26 +550,26 @@ async fn test_account_metadata_failures() -> Result<(), Error> {
     // Fail if there is no metadata
     assert_eq!(
         account_manager
-        .provision_new_account(AccountManagerProvisionNewAccountRequest {
-            lifetime: Some(Lifetime::Persistent),
-            auth_mechanism_id: None,
-            metadata: None,
-            ..AccountManagerProvisionNewAccountRequest::EMPTY
-        })
-        .await?,
+            .provision_new_account(AccountManagerProvisionNewAccountRequest {
+                lifetime: Some(Lifetime::Persistent),
+                auth_mechanism_id: None,
+                metadata: None,
+                ..AccountManagerProvisionNewAccountRequest::EMPTY
+            })
+            .await?,
         Err(ApiError::InvalidRequest)
     );
 
     // Fail if metadata is invalid
     assert_eq!(
         account_manager
-        .provision_new_account(AccountManagerProvisionNewAccountRequest {
-            lifetime: Some(Lifetime::Persistent),
-            auth_mechanism_id: None,
-            metadata: Some(AccountMetadata::EMPTY),
-            ..AccountManagerProvisionNewAccountRequest::EMPTY
-        })
-        .await?,
+            .provision_new_account(AccountManagerProvisionNewAccountRequest {
+                lifetime: Some(Lifetime::Persistent),
+                auth_mechanism_id: None,
+                metadata: Some(AccountMetadata::EMPTY),
+                ..AccountManagerProvisionNewAccountRequest::EMPTY
+            })
+            .await?,
         Err(ApiError::InvalidRequest)
     );
 

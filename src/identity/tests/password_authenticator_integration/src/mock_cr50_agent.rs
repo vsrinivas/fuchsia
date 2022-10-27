@@ -137,7 +137,7 @@ impl MockCr50AgentBuilder {
 
     /// Consumes the builder and returns the VecDeque of responses for use with `mock()`.
     pub(crate) fn build(self) -> VecDeque<MockResponse> {
-        self.responses.clone()
+        self.responses
     }
 }
 

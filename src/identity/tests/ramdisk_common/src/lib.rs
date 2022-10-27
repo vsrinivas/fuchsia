@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![warn(clippy::all)]
+#![allow(clippy::expect_fun_call)]
+
 use {
     fidl::{
         endpoints::{Proxy, ServerEnd},
@@ -23,7 +26,7 @@ use {
     storage_isolated_driver_manager::bind_fvm,
 };
 
-const RAMCTL_PATH: &'static str = "sys/platform/00:00:2d/ramctl";
+const RAMCTL_PATH: &str = "sys/platform/00:00:2d/ramctl";
 const BLOCK_SIZE: u64 = 4096;
 const BLOCK_COUNT: u64 = 1024; // 4MB RAM ought to be good enough
 
