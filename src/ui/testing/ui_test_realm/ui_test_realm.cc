@@ -70,7 +70,7 @@ constexpr auto kRootPresenterName = "root_presenter";
 constexpr auto kSceneManagerName = "scene_manager";
 constexpr auto kInputPipelineName = "input_pipeline";
 constexpr auto kTextManagerName = "text_manager";
-constexpr auto kVirtualKeyboardManagerName = "virtual-keyboard-manager";
+constexpr auto kVirtualKeyboardManagerName = "virtual_keyboard_manager";
 constexpr auto kSceneProviderName = "scene-provider";
 
 // Contents of config file used to allow scenic to use gfx.

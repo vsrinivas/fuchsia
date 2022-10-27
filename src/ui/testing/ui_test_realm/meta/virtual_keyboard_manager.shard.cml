@@ -1,0 +1,12 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "//src/ui/meta/virtual_keyboard_manager_base_routes.shard.cml" ],
+    children: [
+        {
+            name: "virtual_keyboard_manager",
+            url: "#meta/virtual_keyboard_manager.cm",
+        },
+    ],
+}

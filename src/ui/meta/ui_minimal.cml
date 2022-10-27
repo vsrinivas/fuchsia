@@ -7,14 +7,8 @@
         "//src/ui/meta/scene_manager_routes.shard.cml",
         "//src/ui/meta/scenic_routes.shard.cml",
         "//src/ui/meta/text_manager_routes.shard.cml",
+        "//src/ui/meta/virtual_keyboard_manager_routes.shard.cml",
         "syslog/client.shard.cml",
-    ],
-    children: [
-        {
-            // Centralized management of virtual keyboard features.
-            name: "virtual_keyboard_manager",
-            url: "fuchsia-pkg://fuchsia.com/virtual_keyboard_manager#meta/virtual_keyboard_manager.cm",
-        },
     ],
     offer: [
         {
@@ -22,39 +16,12 @@
             from: "parent",
             to: [ "#scene_manager" ],
         },
-        {
-            protocol: [
-                "fuchsia.logger.LogSink",
-                "fuchsia.tracing.provider.Registry",
-            ],
-            from: "parent",
-            to: [ "#virtual_keyboard_manager" ],
-        },
 
         // TODO(fxbug.dev/110642): Remove once gfx is deprecated.
         {
             protocol: [ "fuchsia.ui.accessibility.view.Registry" ],
             from: "#scene_manager",
             to: [ "#a11y_manager" ],
-        },
-        {
-            protocol: [ "fuchsia.ui.focus.FocusChainListenerRegistry" ],
-            from: "#scenic",
-            to: [ "#virtual_keyboard_manager" ],
-        },
-        {
-            protocol: [ "fuchsia.ui.keyboard.focus.Controller" ],
-            from: "#text_manager",
-            to: [ "#virtual_keyboard_manager" ],
-        },
-    ],
-    expose: [
-        {
-            protocol: [
-                "fuchsia.input.virtualkeyboard.ControllerCreator",
-                "fuchsia.input.virtualkeyboard.Manager",
-            ],
-            from: "#virtual_keyboard_manager",
         },
     ],
 }

@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "//src/ui/testing/ui_test_realm/meta/text_manager.shard.cml" ],
+    include: [
+        "//src/ui/testing/ui_test_realm/meta/text_manager.shard.cml",
+        "//src/ui/testing/ui_test_realm/meta/virtual_keyboard_manager.shard.cml",
+    ],
     children: [
         {
             // TODO(fxbug.dev/107054): Remove use of input-synthesis.
@@ -16,10 +19,6 @@
         {
             name: "input-helper",
             url: "#meta/input-helper.cm",
-        },
-        {
-            name: "virtual-keyboard-manager",
-            url: "#meta/virtual_keyboard_manager.cm",
         },
     ],
     offer: [
@@ -45,30 +44,8 @@
             from: "#scene_manager",
             to: [ "#input-helper" ],
         },
-        {
-            protocol: "fuchsia.tracing.provider.Registry",
-            from: "parent",
-            to: [ "#virtual-keyboard-manager" ],
-        },
-        {
-            protocol: [ "fuchsia.ui.focus.FocusChainListenerRegistry" ],
-            from: "#scenic",
-            to: [ "#virtual-keyboard-manager" ],
-        },
-        {
-            protocol: [ "fuchsia.ui.keyboard.focus.Controller" ],
-            from: "#text_manager",
-            to: [ "#virtual-keyboard-manager" ],
-        },
     ],
     expose: [
-        {
-            protocol: [
-                "fuchsia.input.virtualkeyboard.ControllerCreator",
-                "fuchsia.input.virtualkeyboard.Manager",
-            ],
-            from: "#virtual-keyboard-manager",
-        },
         {
             // TODO(fxbug.dev/107054): Remove these.
             protocol: [

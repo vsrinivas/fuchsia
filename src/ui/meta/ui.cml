@@ -7,6 +7,7 @@
         "//src/ui/meta/scene_manager_routes.shard.cml",
         "//src/ui/meta/scenic_routes.shard.cml",
         "//src/ui/meta/text_manager_routes.shard.cml",
+        "//src/ui/meta/virtual_keyboard_manager_routes.shard.cml",
         "syslog/client.shard.cml",
     ],
     children: [
@@ -16,11 +17,6 @@
             name: "shortcut_manager",
             url: "fuchsia-pkg://fuchsia.com/shortcut#meta/shortcut_manager.cm",
         },
-        {
-            // Centralized management of virtual keyboard features.
-            name: "virtual_keyboard_manager",
-            url: "fuchsia-pkg://fuchsia.com/virtual_keyboard_manager#meta/virtual_keyboard_manager.cm",
-        },
     ],
     offer: [
         {
@@ -29,10 +25,7 @@
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
-            to: [
-                "#shortcut_manager",
-                "#virtual_keyboard_manager",
-            ],
+            to: [ "#shortcut_manager" ],
         },
         {
             protocol: [ "fuchsia.media.sounds.Player" ],
@@ -56,16 +49,6 @@
             from: "#scenic",
             to: [ "#shortcut_manager" ],
         },
-        {
-            protocol: [ "fuchsia.ui.focus.FocusChainListenerRegistry" ],
-            from: "#scenic",
-            to: [ "#virtual_keyboard_manager" ],
-        },
-        {
-            protocol: [ "fuchsia.ui.keyboard.focus.Controller" ],
-            from: "#text_manager",
-            to: [ "#virtual_keyboard_manager" ],
-        },
     ],
     expose: [
         {
@@ -75,13 +58,6 @@
                 "fuchsia.ui.shortcut2.Registry",
             ],
             from: "#shortcut_manager",
-        },
-        {
-            protocol: [
-                "fuchsia.input.virtualkeyboard.ControllerCreator",
-                "fuchsia.input.virtualkeyboard.Manager",
-            ],
-            from: "#virtual_keyboard_manager",
         },
     ],
 }
