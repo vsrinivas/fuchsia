@@ -131,7 +131,7 @@ function fetch_or_build_tool {
   local local_os
   local_os=$(uname)
 
-  if [[ "${remote_os}" -ne "${local_os}" ]]; then
+  if [[ "${remote_os}" != "${local_os}" ]]; then
     if [[ -f "$(get_host_tools_dir)/${tool_name}" ]]; then
       fx-info "Using locally built ${tool_name}"
       echo "$(get_host_tools_dir)/${tool_name}"
