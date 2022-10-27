@@ -6,6 +6,7 @@
 //! among other things, sets the fvm_ramdisk flag to prevent binding of the on-disk filesystems.)
 
 use {
+    super::{new_builder, DATA_FILESYSTEM_FORMAT},
     device_watcher::recursive_wait_and_open_node,
     either::Either,
     fidl::endpoints::Proxy as _,
@@ -16,7 +17,7 @@ use {
     fidl_fuchsia_io as fio,
     fs_management::{filesystem::Filesystem, Fxfs, Minfs},
     fshost::AdminProxy,
-    fshost_test_fixture::{create_hermetic_crypt_service, TestFixtureBuilder},
+    fshost_test_fixture::create_hermetic_crypt_service,
     fuchsia_component::client::connect_to_protocol_at_path,
     fuchsia_zircon::{self as zx, HandleBased as _},
     key_bag::{KeyBagManager, WrappingKey, AES128_KEY_SIZE},
@@ -25,13 +26,7 @@ use {
     storage_isolated_driver_manager::{fvm::bind_fvm_driver, zxcrypt::unseal_insecure_zxcrypt},
 };
 
-const FSHOST_COMPONENT_NAME: &'static str = std::env!("FSHOST_COMPONENT_NAME");
-const DATA_FILESYSTEM_FORMAT: &'static str = std::env!("DATA_FILESYSTEM_FORMAT");
 const PAYLOAD: &[u8] = b"top secret stuff";
-
-fn new_builder() -> TestFixtureBuilder {
-    TestFixtureBuilder::new(FSHOST_COMPONENT_NAME, DATA_FILESYSTEM_FORMAT)
-}
 
 fn generate_insecure_key(name: &[u8]) -> WrappingKey {
     let mut bytes = [0u8; AES128_KEY_SIZE];
@@ -145,8 +140,10 @@ async fn verify_file_contents(ramdisk: RamdiskClient, expected_volume_size: u64,
 
 #[fuchsia::test]
 async fn write_data_file_unformatted() {
-    let builder = new_builder().with_ramdisk();
+    let mut builder = new_builder().with_ramdisk();
+    builder.fshost().set_fvm_ramdisk().set_ramdisk_prefix("/nada/zip/zilch");
     let fixture = builder.build().await;
+
     let admin =
         fixture.realm.root.connect_to_protocol_at_exposed_dir::<fshost::AdminMarker>().unwrap();
     call_write_data_file(&admin).await;
@@ -161,8 +158,10 @@ async fn write_data_file_unformatted() {
 
 #[fuchsia::test]
 async fn write_data_file_unformatted_small_disk() {
-    let builder = new_builder().with_sized_ramdisk(25165824);
+    let mut builder = new_builder().with_sized_ramdisk(25165824);
+    builder.fshost().set_fvm_ramdisk().set_ramdisk_prefix("/nada/zip/zilch");
     let fixture = builder.build().await;
+
     let admin =
         fixture.realm.root.connect_to_protocol_at_exposed_dir::<fshost::AdminMarker>().unwrap();
     call_write_data_file(&admin).await;
@@ -176,8 +175,10 @@ async fn write_data_file_unformatted_small_disk() {
 
 #[fuchsia::test]
 async fn write_data_file_formatted() {
-    let builder = new_builder().format_data().with_ramdisk();
+    let mut builder = new_builder().format_data().with_ramdisk();
+    builder.fshost().set_fvm_ramdisk().set_ramdisk_prefix("/nada/zip/zilch");
     let fixture = builder.build().await;
+
     let admin =
         fixture.realm.root.connect_to_protocol_at_exposed_dir::<fshost::AdminMarker>().unwrap();
     call_write_data_file(&admin).await;

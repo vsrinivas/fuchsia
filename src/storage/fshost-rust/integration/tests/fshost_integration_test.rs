@@ -16,8 +16,14 @@ use {
     futures::FutureExt,
 };
 
+mod write_data_file;
+
 const FSHOST_COMPONENT_NAME: &'static str = std::env!("FSHOST_COMPONENT_NAME");
 const DATA_FILESYSTEM_FORMAT: &'static str = std::env!("DATA_FILESYSTEM_FORMAT");
+
+fn new_builder() -> TestFixtureBuilder {
+    TestFixtureBuilder::new(FSHOST_COMPONENT_NAME, DATA_FILESYSTEM_FORMAT)
+}
 
 const VFS_TYPE_BLOBFS: u32 = 0x9e694d21;
 // const VFS_TYPE_FATFS: u32 = 0xce694d21;
@@ -36,10 +42,6 @@ fn data_fs_type() -> u32 {
         "minfs" => VFS_TYPE_MINFS,
         _ => panic!("invalid data filesystem format"),
     }
-}
-
-fn new_builder() -> TestFixtureBuilder {
-    TestFixtureBuilder::new(FSHOST_COMPONENT_NAME, DATA_FILESYSTEM_FORMAT)
 }
 
 #[fuchsia::test]

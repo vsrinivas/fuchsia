@@ -46,11 +46,6 @@ rustc_library("fshost_test_fixture") {
 
 # Generates an fshost integration test component.
 #
-#   deps(optional)
-#
-#   source_root(required)
-#     [string] The path to the binary which defines the test cases to run.
-#
 #   fshost_target (required)
 #     [string] The build target of the component to test against. The name of this target is also
 #     used to determine the component manifest path in the resulting package, so make sure the
@@ -58,6 +53,11 @@ rustc_library("fshost_test_fixture") {
 #
 #   data_filesystem_format (required)
 #     [string] The format of the data partition fshost exports. One of "fxfs", "minfs", or "f2fs".
+#
+# Additionally, the following are forwarded to the rustc_test template.
+#   deps (optional)
+#   source_root (required)
+#   sources (required)
 #
 template("fshost_integration_test") {
   assert(defined(invoker.fshost_target),
@@ -71,18 +71,21 @@ template("fshost_integration_test") {
   rustc_test(_test_bin) {
     edition = "2021"
     source_root = invoker.source_root
+    sources = invoker.sources
     rustenv = [
       "FSHOST_COMPONENT_NAME=${_fshost_component_name}",
       "DATA_FILESYSTEM_FORMAT=${invoker.data_filesystem_format}",
     ]
-    sources = [ invoker.source_root ]
     deps = [
       ":fshost_test_fixture",
       "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_rust",
+      "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_rust",
       "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
       "//sdk/lib/device-watcher/rust",
       "//src/lib/fidl/rust/fidl",
       "//src/lib/fuchsia",
+      "//src/lib/fuchsia-fs",
+      "//src/lib/storage/fs_management/rust:fs_management",
       "//src/lib/zircon/rust:fuchsia-zircon",
     ]
     if (defined(invoker.deps)) {
@@ -168,12 +171,21 @@ fshost_component_and_config("test-fshost-rust-minfs-recovery") {
 fshost_integration_test("fshost-cpp-integration-test-fxfs") {
   fshost_target = "//src/storage/fshost/testing:test-fshost-fxfs"
   source_root = "tests/fshost_integration_test.rs"
+  sources = [
+    "tests/fshost_integration_test.rs",
+    "tests/write_data_file.rs",
+  ]
   data_filesystem_format = "fxfs"
   deps = [
-    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_rust",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/storage/key-bag",
+    "//src/lib/storage/ramdevice_client/rust",
+    "//src/storage/fxfs:fuchsia.fxfs_rust",
+    "//src/storage/testing/rust:storage-isolated-driver-manager",
+    "//third_party/rust_crates:either",
     "//third_party/rust_crates:futures",
   ]
 }
@@ -181,65 +193,76 @@ fshost_integration_test("fshost-cpp-integration-test-fxfs") {
 fshost_integration_test("fshost-cpp-integration-test-minfs") {
   fshost_target = "//src/storage/fshost/testing:test-fshost"
   source_root = "tests/fshost_integration_test.rs"
+  sources = [
+    "tests/fshost_integration_test.rs",
+    "tests/write_data_file.rs",
+  ]
   data_filesystem_format = "minfs"
   deps = [
-    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_rust",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/storage/key-bag",
+    "//src/lib/storage/ramdevice_client/rust",
+    "//src/storage/fxfs:fuchsia.fxfs_rust",
+    "//src/storage/testing/rust:storage-isolated-driver-manager",
+    "//third_party/rust_crates:either",
     "//third_party/rust_crates:futures",
   ]
 }
 
-fshost_integration_test("fshost-cpp-integration-test-fxfs-recovery") {
-  fshost_target = "//src/storage/fshost/testing:test-fshost-fxfs-recovery"
-  source_root = "tests/fshost_recovery_integration_test.rs"
-  deps = [
-    "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
-    "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_rust",
-    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_rust",
-    "//src/lib/fuchsia-component",
-    "//src/lib/fuchsia-fs",
-    "//src/lib/storage/fs_management/rust:fs_management",
-    "//src/lib/storage/key-bag",
-    "//src/lib/storage/ramdevice_client/rust",
-    "//src/storage/fxfs:fuchsia.fxfs_rust",
-    "//src/storage/testing/rust:storage-isolated-driver-manager",
-    "//third_party/rust_crates:either",
-  ]
-  data_filesystem_format = "fxfs"
-}
-
-fshost_integration_test("fshost-cpp-integration-test-minfs-recovery") {
-  fshost_target = "//src/storage/fshost/testing:test-fshost-recovery"
-  source_root = "tests/fshost_recovery_integration_test.rs"
-  deps = [
-    "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
-    "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_rust",
-    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_rust",
-    "//src/lib/fuchsia-component",
-    "//src/lib/fuchsia-fs",
-    "//src/lib/storage/fs_management/rust:fs_management",
-    "//src/lib/storage/key-bag",
-    "//src/lib/storage/ramdevice_client/rust",
-    "//src/storage/fxfs:fuchsia.fxfs_rust",
-    "//src/storage/testing/rust:storage-isolated-driver-manager",
-    "//third_party/rust_crates:either",
+fshost_integration_test("fshost-rust-integration-test-minfs") {
+  fshost_target = ":test-fshost-rust-minfs"
+  source_root = "tests/fshost_integration_test.rs"
+  sources = [
+    "tests/fshost_integration_test.rs",
+    "tests/write_data_file.rs",
   ]
   data_filesystem_format = "minfs"
+  deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_rust",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/storage/key-bag",
+    "//src/lib/storage/ramdevice_client/rust",
+    "//src/storage/fxfs:fuchsia.fxfs_rust",
+    "//src/storage/testing/rust:storage-isolated-driver-manager",
+    "//third_party/rust_crates:either",
+    "//third_party/rust_crates:futures",
+  ]
 }
 
+fshost_integration_test("fshost-rust-integration-test-fxfs") {
+  fshost_target = ":test-fshost-rust-fxfs"
+  source_root = "tests/fshost_integration_test.rs"
+  sources = [
+    "tests/fshost_integration_test.rs",
+    "tests/write_data_file.rs",
+  ]
+  data_filesystem_format = "fxfs"
+  deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_rust",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/storage/key-bag",
+    "//src/lib/storage/ramdevice_client/rust",
+    "//src/storage/fxfs:fuchsia.fxfs_rust",
+    "//src/storage/testing/rust:storage-isolated-driver-manager",
+    "//third_party/rust_crates:either",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
+# TODO(fxbug.dev/87511): Port this test to fshost-rust.
 fshost_integration_test(
     "fshost-cpp-wipe-storage-integration-test-fxfs-recovery") {
   fshost_target = "//src/storage/fshost/testing:test-fshost-fxfs-recovery"
   source_root = "tests/fshost_recovery_wipe_storage_integration_test.rs"
-  deps = [
-    "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_rust",
-    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_rust",
-    "//src/lib/fuchsia-fs",
-    "//src/lib/storage/block_client/rust:remote-block-device",
-    "//src/lib/storage/fs_management/rust:fs_management",
-  ]
+  sources = [ "tests/fshost_recovery_wipe_storage_integration_test.rs" ]
+  deps = [ "//src/lib/storage/block_client/rust:remote-block-device" ]
   data_filesystem_format = "fxfs"
 }
 
@@ -248,75 +271,8 @@ fshost_integration_test(
     "fshost-cpp-wipe-storage-integration-test-minfs-recovery") {
   fshost_target = "//src/storage/fshost/testing:test-fshost-recovery"
   source_root = "tests/fshost_recovery_wipe_storage_integration_test.rs"
-  deps = [
-    "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_rust",
-    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_rust",
-    "//src/lib/fuchsia-fs",
-    "//src/lib/storage/block_client/rust:remote-block-device",
-    "//src/lib/storage/fs_management/rust:fs_management",
-  ]
-  data_filesystem_format = "minfs"
-}
-
-fshost_integration_test("fshost-rust-integration-test-minfs") {
-  fshost_target = ":test-fshost-rust-minfs"
-  source_root = "tests/fshost_integration_test.rs"
-  data_filesystem_format = "minfs"
-  deps = [
-    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_rust",
-    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_rust",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//third_party/rust_crates:futures",
-  ]
-}
-
-fshost_integration_test("fshost-rust-integration-test-fxfs") {
-  fshost_target = ":test-fshost-rust-fxfs"
-  source_root = "tests/fshost_integration_test.rs"
-  data_filesystem_format = "fxfs"
-  deps = [
-    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_rust",
-    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_rust",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//third_party/rust_crates:futures",
-  ]
-}
-
-fshost_integration_test("fshost-rust-integration-test-fxfs-recovery") {
-  fshost_target = ":test-fshost-rust-fxfs-recovery"
-  source_root = "tests/fshost_recovery_integration_test.rs"
-  deps = [
-    "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
-    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_rust",
-    "//src/lib/fuchsia-component",
-    "//src/lib/fuchsia-fs",
-    "//src/lib/storage/fs_management/rust:fs_management",
-    "//src/lib/storage/key-bag",
-    "//src/lib/storage/ramdevice_client/rust",
-    "//src/storage/fxfs:fuchsia.fxfs_rust",
-    "//src/storage/testing/rust:storage-isolated-driver-manager",
-    "//third_party/rust_crates:either",
-  ]
-  data_filesystem_format = "fxfs"
-}
-
-fshost_integration_test("fshost-rust-integration-test-minfs-recovery") {
-  fshost_target = ":test-fshost-rust-minfs-recovery"
-  source_root = "tests/fshost_recovery_integration_test.rs"
-  deps = [
-    "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
-    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_rust",
-    "//src/lib/fuchsia-component",
-    "//src/lib/fuchsia-fs",
-    "//src/lib/storage/fs_management/rust:fs_management",
-    "//src/lib/storage/key-bag",
-    "//src/lib/storage/ramdevice_client/rust",
-    "//src/storage/fxfs:fuchsia.fxfs_rust",
-    "//src/storage/testing/rust:storage-isolated-driver-manager",
-    "//third_party/rust_crates:either",
-  ]
+  sources = [ "tests/fshost_recovery_wipe_storage_integration_test.rs" ]
+  deps = [ "//src/lib/storage/block_client/rust:remote-block-device" ]
   data_filesystem_format = "minfs"
 }
 
@@ -331,12 +287,8 @@ fuchsia_test_package("fshost_integration_tests") {
   test_components = [
     ":fshost-cpp-integration-test-fxfs",
     ":fshost-cpp-integration-test-minfs",
-    ":fshost-cpp-integration-test-fxfs-recovery",
-    ":fshost-cpp-integration-test-minfs-recovery",
     ":fshost-rust-integration-test-fxfs",
     ":fshost-rust-integration-test-minfs",
-    ":fshost-rust-integration-test-fxfs-recovery",
-    ":fshost-rust-integration-test-minfs-recovery",
     ":fshost-cpp-wipe-storage-integration-test-fxfs-recovery",
     ":fshost-cpp-wipe-storage-integration-test-minfs-recovery",
   ]
