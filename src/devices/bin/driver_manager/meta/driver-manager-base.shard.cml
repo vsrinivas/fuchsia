@@ -55,21 +55,30 @@
             protocol: [
                 "fuchsia.boot.Arguments",
                 "fuchsia.boot.Items",
-                "fuchsia.boot.RootResource",
-                "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.driver.development.DriverIndex",
                 "fuchsia.driver.index.DriverIndex",
-                "fuchsia.kernel.MexecResource",
                 "fuchsia.kernel.RootJob",
-
-                // This is only used when the kernel commandline flag devmgr.enable-ephemeral
-                // is set, which enables loading drivers ephemerally. This is intended for
-                // eng builds only.
-                "fuchsia.pkg.PackageResolver",
                 "fuchsia.power.manager.DriverManagerRegistration",
                 "fuchsia.process.Launcher",
                 "fuchsia.scheduler.ProfileProvider",
             ],
+        },
+        {
+            protocol: [
+                "fuchsia.boot.RootResource",
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.kernel.MexecResource",
+            ],
+
+            // These protocols may not be available in test environments.
+            availability: "optional",
+        },
+        {
+            // This is only used when the kernel commandline flag devmgr.enable-ephemeral
+            // is set, which enables loading drivers ephemerally. This is intended for
+            // eng builds only.
+            protocol: [ "fuchsia.pkg.PackageResolver" ],
+            availability: "optional",
         },
         {
             protocol: [ "fuchsia.tracing.provider.Registry" ],
