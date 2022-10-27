@@ -56,6 +56,18 @@ go_wrap_sdk(
 go_rules_dependencies()
 go_register_toolchains()
 
+load("@rules_fuchsia//cipd:defs.bzl", "cipd_tool_repository")
+
+# Create a stubbed out cipd_tool repository. Doing this is necessary because the
+# Fuchsia SDK repository rule still loads the cipd_tool repo to allow users to
+# download the sdk on demand so there needs to be a repository registered but we
+# want to prevent bazel from downloading the cipd binary.
+cipd_tool_repository(
+    name = "cipd_tool",
+    bin = "__empty__",
+    validate_cipd_bin = False,
+)
+
 # Create @rules_fuchsia and @rules_fuchsia_experimental
 local_repository(
     name = "rules_fuchsia",
