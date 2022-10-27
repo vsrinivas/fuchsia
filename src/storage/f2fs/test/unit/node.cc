@@ -309,7 +309,7 @@ TEST_F(NodeManagerTest, NodePage) {
 
   // Check second indirect node (level 2)
   node_nid += 2;
-  const pgoff_t indirect_blks = kAddrsPerBlock * kNidsPerBlock;
+  const pgoff_t indirect_blks = static_cast<const pgoff_t>(kAddrsPerBlock) * kNidsPerBlock;
 
   {
     LockedPage dnode_page;
@@ -376,7 +376,7 @@ TEST_F(NodeManagerTest, NodePageExceptionCase) {
   // Check inode (level 0)
   const pgoff_t direct_index = 1;
   const pgoff_t direct_blks = kAddrsPerBlock;
-  const pgoff_t indirect_blks = kAddrsPerBlock * kNidsPerBlock;
+  const pgoff_t indirect_blks = static_cast<const pgoff_t>(kAddrsPerBlock) * kNidsPerBlock;
   const pgoff_t indirect_index_lv1 = direct_index + kAddrsPerInode;
   const pgoff_t indirect_index_lv2 = indirect_index_lv1 + direct_blks * 2;
   const pgoff_t indirect_index_lv3 = indirect_index_lv2 + indirect_blks * 2;
@@ -478,7 +478,7 @@ TEST_F(NodeManagerTest, TruncateDoubleIndirect) {
 
   // Alloc a double indirect node (level 3)
   const pgoff_t direct_blks = kAddrsPerBlock;
-  const pgoff_t indirect_blks = kAddrsPerBlock * kNidsPerBlock;
+  const pgoff_t indirect_blks = static_cast<const pgoff_t>(kAddrsPerBlock) * kNidsPerBlock;
   const pgoff_t direct_index = kAddrsPerInode + 1;
   const pgoff_t indirect_index = direct_index + direct_blks * 2;
   const pgoff_t double_indirect_index = indirect_index + indirect_blks * 2;
@@ -617,7 +617,7 @@ TEST_F(NodeManagerTest, TruncateExceptionCase) {
 
   const pgoff_t direct_index = 1;
   const pgoff_t direct_blks = kAddrsPerBlock;
-  const pgoff_t indirect_blks = kAddrsPerBlock * kNidsPerBlock;
+  const pgoff_t indirect_blks = static_cast<const pgoff_t>(kAddrsPerBlock) * kNidsPerBlock;
   const pgoff_t indirect_index_lv1 = direct_index + kAddrsPerInode;
   const pgoff_t indirect_index_lv1_2nd = indirect_index_lv1 + direct_blks;
   const pgoff_t indirect_index_lv2 = indirect_index_lv1 + direct_blks * 2;
@@ -828,7 +828,7 @@ TEST_F(NodeManagerTest, GetDataBlockAddressesSinglePage) {
   }
 
   // Check second indirect node (level 2)
-  const pgoff_t indirect_blks = kAddrsPerBlock * kNidsPerBlock;
+  const pgoff_t indirect_blks = static_cast<const pgoff_t>(kAddrsPerBlock) * kNidsPerBlock;
   file_offset = (indirect_index_lv2 + indirect_blks) * kBlockSize;
   {
     vnode->TruncateBlocks(file_offset);
@@ -965,7 +965,7 @@ TEST_F(NodeManagerTest, GetDataBlockAddressesMultiPage) {
   }
 
   // Check second indirect node (level 2)
-  const pgoff_t indirect_blks = kAddrsPerBlock * kNidsPerBlock;
+  const pgoff_t indirect_blks = static_cast<const pgoff_t>(kAddrsPerBlock) * kNidsPerBlock;
   file_offset = (indirect_index_lv2 + indirect_blks) * kBlockSize;
   {
     vnode->TruncateBlocks(file_offset);
@@ -1151,7 +1151,7 @@ TEST_F(NodeManagerTest, GetDataBlockAddressesCrossMultiPage) {
   }
 
   // Check second indirect node (level 3)
-  const pgoff_t indirect_blks = kAddrsPerBlock * kNidsPerBlock;
+  const pgoff_t indirect_blks = static_cast<const pgoff_t>(kAddrsPerBlock) * kNidsPerBlock;
   file_offset = (indirect_index_lv2 + indirect_blks + direct_blks - 1) * kBlockSize;
   {
     vnode->TruncateBlocks(file_offset);

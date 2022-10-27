@@ -80,7 +80,7 @@ TEST(MultiThreads, Write) {
     std::thread thread1 = std::thread([&]() {
       for (int i = 0; i < kNTry; ++i) {
         size_t out_actual;
-        ASSERT_EQ(vn1->Write(buf, sizeof(buf), i * 8192, &out_actual), ZX_OK);
+        ASSERT_EQ(vn1->Write(buf, sizeof(buf), static_cast<size_t>(i * 8192), &out_actual), ZX_OK);
         ASSERT_EQ(out_actual, sizeof(buf));
       }
     });
@@ -88,7 +88,7 @@ TEST(MultiThreads, Write) {
     std::thread thread2 = std::thread([&]() {
       for (int i = 0; i < kNTry; ++i) {
         size_t out_actual;
-        ASSERT_EQ(vn2->Write(buf, sizeof(buf), i * 8192, &out_actual), ZX_OK);
+        ASSERT_EQ(vn2->Write(buf, sizeof(buf), static_cast<size_t>(i * 8192), &out_actual), ZX_OK);
         ASSERT_EQ(out_actual, sizeof(buf));
       }
     });

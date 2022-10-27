@@ -359,7 +359,8 @@ zx::result<int32_t> NodeManager::GetNodePath(VnodeF2fs &vnode, pgoff_t block, in
   const pgoff_t direct_index = vnode.GetAddrsPerInode();
   const pgoff_t direct_blks = kAddrsPerBlock;
   const pgoff_t dptrs_per_blk = kNidsPerBlock;
-  const pgoff_t indirect_blks = kAddrsPerBlock * kNidsPerBlock;
+  const pgoff_t indirect_blks =
+      safemath::CheckMul(safemath::checked_cast<pgoff_t>(kAddrsPerBlock), kNidsPerBlock).ValueOrDie();
   const pgoff_t dindirect_blks = indirect_blks * kNidsPerBlock;
   int32_t n = 0;
   int32_t level = 0;

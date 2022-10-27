@@ -101,7 +101,8 @@ TEST_F(DirEntryCacheTest, SubDirectory) {
 
 TEST_F(DirEntryCacheTest, LRUEviction) {
   const uint32_t max_element =
-      kDirEntryCacheSlabSize * kDirEntryCacheSlabCount / sizeof(DirEntryCacheElement);
+      static_cast<uint32_t>(kDirEntryCacheSlabSize * kDirEntryCacheSlabCount) /
+      sizeof(DirEntryCacheElement);
 
   std::unordered_set<std::string> child_set = {};
 

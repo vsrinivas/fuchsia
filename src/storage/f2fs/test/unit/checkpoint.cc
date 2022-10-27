@@ -11,6 +11,7 @@
 
 #include <gtest/gtest.h>
 
+#include "safemath/safe_conversions.h"
 #include "src/lib/storage/block_client/cpp/fake_block_device.h"
 #include "src/storage/f2fs/f2fs.h"
 #include "unit_lib.h"
@@ -381,8 +382,9 @@ void CheckpointTestRemoveOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint
     std::iota(exp_inos.begin(), exp_inos.end(), start_ino);
 
     // Remove exp orphan inodes
-    for (int i = orphan_inos / 10 - 1; i >= 0; --i) {
-      exp_inos.erase(exp_inos.begin() + (i * 10));
+    for (int i = safemath::checked_cast<int>(orphan_inos) / 10 - 1; i >= 0; --i) {
+      uint32_t offset = i * 10;
+      exp_inos.erase(exp_inos.begin() + offset);
     }
 
     pgoff_t start_blk = cp_page->GetIndex() + 1;

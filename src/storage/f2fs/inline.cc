@@ -173,8 +173,9 @@ zx_status_t Dir::ConvertInlineDir() {
   // copy data from inline dentry block to new dentry block
   memcpy(dentry_blk->dentry_bitmap, InlineDentryBitmap(ipage), InlineDentryBitmapSize());
   memcpy(dentry_blk->dentry, InlineDentryArray(ipage, *this), sizeof(DirEntry) * MaxInlineDentry());
-  memcpy(dentry_blk->filename, InlineDentryFilenameArray(ipage, *this),
-         MaxInlineDentry() * kNameLen);
+  memcpy(
+      dentry_blk->filename, InlineDentryFilenameArray(ipage, *this),
+      safemath::CheckMul(safemath::checked_cast<size_t>(MaxInlineDentry()), kNameLen).ValueOrDie());
 
   page->SetDirty();
   // clear inline dir and flag after data writeback

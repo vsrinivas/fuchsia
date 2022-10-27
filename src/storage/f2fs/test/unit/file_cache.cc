@@ -310,12 +310,13 @@ TEST_F(FileCacheTest, GetPages) {
   root_dir_->Create("test", S_IFREG, &test_file);
   fbl::RefPtr<f2fs::File> vn = fbl::RefPtr<f2fs::File>::Downcast(std::move(test_file));
   constexpr uint32_t kTestNum = 10;
+  constexpr uint32_t kTestEndNum = kTestNum * 2;
   char buf[kPageSize * kTestNum];
 
-  FileTester::AppendToFile(vn.get(), buf, kPageSize * kTestNum);
+  FileTester::AppendToFile(vn.get(), buf, static_cast<size_t>(kPageSize) * kTestNum);
 
   std::vector<LockedPage> locked_pages;
-  std::vector<pgoff_t> pg_offsets(kTestNum * 2);
+  std::vector<pgoff_t> pg_offsets(kTestEndNum);
   std::iota(pg_offsets.begin(), pg_offsets.end(), 0);
   {
     auto pages_or = vn->GrabCachePages(pg_offsets);
@@ -323,7 +324,7 @@ TEST_F(FileCacheTest, GetPages) {
     for (size_t i = 0; i < kTestNum; ++i) {
       ASSERT_EQ(pages_or.value()[i]->IsDirty(), true);
     }
-    for (size_t i = kTestNum; i < kTestNum * 2; ++i) {
+    for (size_t i = kTestNum; i < kTestEndNum; ++i) {
       ASSERT_EQ(pages_or.value()[i]->IsDirty(), false);
     }
     locked_pages = std::move(pages_or.value());
@@ -337,7 +338,7 @@ TEST_F(FileCacheTest, GetPages) {
       for (size_t i = 0; i < kTestNum; ++i) {
         ASSERT_EQ(pages_or.value()[i]->IsDirty(), true);
       }
-      for (size_t i = kTestNum; i < kTestNum * 2; ++i) {
+      for (size_t i = kTestNum; i < kTestEndNum; ++i) {
         ASSERT_EQ(pages_or.value()[i]->IsDirty(), false);
       }
     }
@@ -438,7 +439,7 @@ TEST_F(FileCacheTest, Truncate) {
   }
 
   // Truncate the size of |vn| to the half.
-  pgoff_t start = nblocks / 2 * kPageSize;
+  pgoff_t start = static_cast<pgoff_t>(nblocks) / 2 * kPageSize;
   vn->TruncateBlocks(start);
 
   // Check if each page has correct flags.

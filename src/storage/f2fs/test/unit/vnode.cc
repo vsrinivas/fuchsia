@@ -254,7 +254,7 @@ TEST_F(VnodeTest, TruncateExceptionCase) {
 
   const pgoff_t direct_index = 1;
   const pgoff_t direct_blks = kAddrsPerBlock;
-  const pgoff_t indirect_blks = kAddrsPerBlock * kNidsPerBlock;
+  const pgoff_t indirect_blks = static_cast<const pgoff_t>(kAddrsPerBlock) * kNidsPerBlock;
   const pgoff_t indirect_index_lv1 = direct_index + kAddrsPerInode;
   const pgoff_t indirect_index_lv2 = indirect_index_lv1 + direct_blks * 2;
   const pgoff_t indirect_index_lv3 = indirect_index_lv2 + indirect_blks * 2;

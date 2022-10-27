@@ -63,9 +63,11 @@ uint64_t Dir::DirBlockIndex(uint32_t level, uint8_t dir_level, uint32_t idx) {
   uint64_t bidx = 0;
 
   for (uint32_t i = 0; i < level; ++i) {
-    bidx += DirBuckets(i, dir_level) * BucketBlocks(i);
+    bidx += safemath::checked_cast<uint64_t>(
+        safemath::CheckMul(DirBuckets(i, dir_level), BucketBlocks(i)).ValueOrDie());
   }
-  bidx += idx * BucketBlocks(level);
+  bidx += safemath::checked_cast<uint64_t>(
+      safemath::CheckMul(idx, BucketBlocks(level)).ValueOrDie());
   return bidx;
 }
 

@@ -541,9 +541,8 @@ void SegmentManager::AddSumEntry(CursegType type, Summary *sum, uint16_t offset)
 // Calculate the number of current summary pages for writing
 int SegmentManager::NpagesForSummaryFlush() {
   SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
-  int total_size_bytes = 0;
-  int valid_sum_count = 0;
-  int sum_space;
+  uint32_t total_size_bytes = 0;
+  uint32_t valid_sum_count = 0;
 
   for (int i = static_cast<int>(CursegType::kCursegHotData);
        i <= static_cast<int>(CursegType::kCursegColdData); ++i) {
@@ -555,8 +554,10 @@ int SegmentManager::NpagesForSummaryFlush() {
   }
 
   total_size_bytes =
-      valid_sum_count * (kSummarySize + 1) + sizeof(NatJournal) + 2 + sizeof(SitJournal) + 2;
-  sum_space = kPageSize - kSumFooterSize;
+      (safemath::CheckMul<uint32_t>(valid_sum_count, kSummarySize + 1) +
+       safemath::checked_cast<uint32_t>(sizeof(NatJournal) + 2U + sizeof(SitJournal) + 2U))
+          .ValueOrDie();
+  uint32_t sum_space = kPageSize - kSumFooterSize;
   if (total_size_bytes < sum_space) {
     return 1;
   } else if (total_size_bytes < 2 * sum_space) {

@@ -28,8 +28,11 @@ uint32_t MaxInlineData(const Inode &inode) {
 }
 
 uint32_t MaxInlineDentry(const Inode &inode) {
-  return MaxInlineData(inode) * kBitsPerByte /
-         ((kSizeOfDirEntry + kDentrySlotLen) * kBitsPerByte + 1);
+  return (MaxInlineData(inode) * kBitsPerByte /
+          (safemath::CheckAdd(safemath::checked_cast<uint32_t>(kSizeOfDirEntry), kDentrySlotLen) *
+               kBitsPerByte +
+           1))
+      .ValueOrDie();
 }
 
 const uint8_t *InlineDataPtr(const Inode &inode) {
