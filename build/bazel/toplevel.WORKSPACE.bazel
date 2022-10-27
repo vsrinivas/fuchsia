@@ -56,6 +56,17 @@ go_wrap_sdk(
 go_rules_dependencies()
 go_register_toolchains()
 
+# Create @rules_fuchsia and @rules_fuchsia_experimental
+local_repository(
+    name = "rules_fuchsia",
+    path = "third_party/sdk-integration/bazel_rules_fuchsia",
+)
+
+local_repository(
+    name = "rules_fuchsia_experimental",
+    path = "third_party/sdk-integration/bazel_rules_fuchsia_experimental",
+)
+
 load("@rules_fuchsia//cipd:defs.bzl", "cipd_tool_repository")
 
 # Create a stubbed out cipd_tool repository. Doing this is necessary because the
@@ -66,17 +77,6 @@ cipd_tool_repository(
     name = "cipd_tool",
     bin = "__empty__",
     validate_cipd_bin = False,
-)
-
-# Create @rules_fuchsia and @rules_fuchsia_experimental
-local_repository(
-    name = "rules_fuchsia",
-    path = "third_party/sdk-integration/bazel_rules_fuchsia",
-)
-
-local_repository(
-    name = "rules_fuchsia_experimental",
-    path = "third_party/sdk-integration/bazel_rules_fuchsia_experimental",
 )
 
 # buildifier: disable=load-on-top
