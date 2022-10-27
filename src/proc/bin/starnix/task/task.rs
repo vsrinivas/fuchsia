@@ -458,7 +458,7 @@ impl Task {
             let mut child_state = child.write();
             let state = self.read();
             child_state.signals.alt_stack = state.signals.alt_stack;
-            child_state.signals.mask = state.signals.mask;
+            child_state.signals.set_mask(state.signals.mask());
             self.mm.snapshot_to(&child.mm)?;
             copy_process_debug_addr(&self.thread_group.process, &child.thread_group.process)?;
         }
@@ -635,10 +635,10 @@ impl CurrentTask {
     where
         F: FnOnce(&CurrentTask) -> Result<T, Errno>,
     {
-        let old_mask = self.write().signals.set_signal_mask(signal_mask);
+        let old_mask = self.write().signals.set_mask(signal_mask);
         let wait_result = wait_function(self);
         dequeue_signal(self);
-        self.write().signals.set_signal_mask(old_mask);
+        self.write().signals.set_mask(old_mask);
         wait_result
     }
 

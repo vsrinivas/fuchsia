@@ -1420,11 +1420,11 @@ pub fn sys_pselect6(
     }
 
     let mask = if sigmask_addr.is_null() {
-        current_task.read().signals.mask
+        current_task.read().signals.mask()
     } else {
         let sigmask = current_task.mm.read_object(sigmask_addr)?;
         if sigmask.ss.is_null() {
-            current_task.read().signals.mask
+            current_task.read().signals.mask()
         } else {
             if sigmask.ss_len < std::mem::size_of::<sigset_t>() {
                 return error!(EINVAL);
@@ -1611,7 +1611,7 @@ fn poll(
         );
     }
 
-    let mask = mask.unwrap_or_else(|| current_task.read().signals.mask);
+    let mask = mask.unwrap_or_else(|| current_task.read().signals.mask());
     match current_task.wait_with_temporary_mask(mask, |current_task| {
         waiter.wait_until(current_task, zx::Time::after(timeout))
     }) {

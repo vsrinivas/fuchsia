@@ -83,7 +83,7 @@ pub fn sys_rt_sigprocmask(
 
     let mut state = current_task.write();
     let signal_state = &mut state.signals;
-    let signal_mask = signal_state.mask;
+    let signal_mask = signal_state.mask();
     // If old_set is not null, store the previous value in old_set.
     if !user_old_set.is_null() {
         current_task.mm.write_object(user_old_set, &signal_mask)?;
@@ -101,7 +101,7 @@ pub fn sys_rt_sigprocmask(
         // Arguments have already been verified, this should never match.
         _ => return error!(EINVAL),
     };
-    signal_state.set_signal_mask(signal_mask);
+    signal_state.set_mask(signal_mask);
 
     Ok(())
 }
@@ -726,7 +726,7 @@ mod tests {
         let addr = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
         let original_mask = SIGTRAP.mask();
         {
-            current_task.write().signals.mask = original_mask;
+            current_task.write().signals.set_mask(original_mask);
         }
 
         let set = UserRef::<sigset_t>::default();
@@ -754,7 +754,7 @@ mod tests {
         let (_kernel, current_task) = create_kernel_and_task();
         let original_mask = SIGTRAP.mask();
         {
-            current_task.write().signals.mask = original_mask;
+            current_task.write().signals.set_mask(original_mask);
         }
 
         let set = UserRef::<sigset_t>::default();
@@ -765,7 +765,7 @@ mod tests {
             sys_rt_sigprocmask(&current_task, how, set, old_set, std::mem::size_of::<sigset_t>()),
             Ok(())
         );
-        assert_eq!(current_task.read().signals.mask, original_mask);
+        assert_eq!(current_task.read().signals.mask(), original_mask);
     }
 
     /// Calling rt_sigprocmask with SIG_SETMASK should set the mask to the provided set.
@@ -780,7 +780,7 @@ mod tests {
 
         let original_mask = SIGTRAP.mask();
         {
-            current_task.write().signals.mask = original_mask;
+            current_task.write().signals.set_mask(original_mask);
         }
 
         let new_mask: sigset_t = SIGIO.mask();
@@ -797,7 +797,7 @@ mod tests {
 
         let old_mask = current_task.mm.read_object(old_set).expect("failed to read mask");
         assert_eq!(old_mask, original_mask);
-        assert_eq!(current_task.read().signals.mask, new_mask);
+        assert_eq!(current_task.read().signals.mask(), new_mask);
     }
 
     /// Calling st_sigprocmask with a how of SIG_BLOCK should add to the existing set.
@@ -812,7 +812,7 @@ mod tests {
 
         let original_mask = SIGTRAP.mask();
         {
-            current_task.write().signals.mask = original_mask;
+            current_task.write().signals.set_mask(original_mask);
         }
 
         let new_mask: sigset_t = SIGIO.mask();
@@ -829,7 +829,7 @@ mod tests {
 
         let old_mask = current_task.mm.read_object(old_set).expect("failed to read mask");
         assert_eq!(old_mask, original_mask);
-        assert_eq!(current_task.read().signals.mask, new_mask | original_mask);
+        assert_eq!(current_task.read().signals.mask(), new_mask | original_mask);
     }
 
     /// Calling st_sigprocmask with a how of SIG_UNBLOCK should remove from the existing set.
@@ -844,7 +844,7 @@ mod tests {
 
         let original_mask = SIGTRAP.mask() | SIGIO.mask();
         {
-            current_task.write().signals.mask = original_mask;
+            current_task.write().signals.set_mask(original_mask);
         }
 
         let new_mask: sigset_t = SIGTRAP.mask();
@@ -861,7 +861,7 @@ mod tests {
 
         let old_mask = current_task.mm.read_object(old_set).expect("failed to read mask");
         assert_eq!(old_mask, original_mask);
-        assert_eq!(current_task.read().signals.mask, SIGIO.mask());
+        assert_eq!(current_task.read().signals.mask(), SIGIO.mask());
     }
 
     /// It's ok to call sigprocmask to unblock a signal that is not set.
@@ -876,7 +876,7 @@ mod tests {
 
         let original_mask = SIGIO.mask();
         {
-            current_task.write().signals.mask = original_mask;
+            current_task.write().signals.set_mask(original_mask);
         }
 
         let new_mask: sigset_t = SIGTRAP.mask();
@@ -893,7 +893,7 @@ mod tests {
 
         let old_mask = current_task.mm.read_object(old_set).expect("failed to read mask");
         assert_eq!(old_mask, original_mask);
-        assert_eq!(current_task.read().signals.mask, original_mask);
+        assert_eq!(current_task.read().signals.mask(), original_mask);
     }
 
     /// It's not possible to block SIGKILL or SIGSTOP.
@@ -908,7 +908,7 @@ mod tests {
 
         let original_mask = SIGIO.mask();
         {
-            current_task.write().signals.mask = original_mask;
+            current_task.write().signals.set_mask(original_mask);
         }
 
         let new_mask: sigset_t = UNBLOCKABLE_SIGNALS;
@@ -925,7 +925,7 @@ mod tests {
 
         let old_mask = current_task.mm.read_object(old_set).expect("failed to read mask");
         assert_eq!(old_mask, original_mask);
-        assert_eq!(current_task.read().signals.mask, original_mask);
+        assert_eq!(current_task.read().signals.mask(), original_mask);
     }
 
     #[::fuchsia::test]

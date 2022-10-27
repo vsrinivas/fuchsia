@@ -507,7 +507,7 @@ impl ThreadGroup {
             // If the calling process is a member of a background group and not ignoring SIGTTOU, a
             // SIGTTOU signal is sent to all members of this background process group.
             send_ttou = process_group.leader != cs.foregound_process_group_leader
-                && !SIGTTOU.is_in_set(current_task.read().signals.mask)
+                && !SIGTTOU.is_in_set(current_task.read().signals.mask())
                 && self.signal_actions.get(SIGTTOU).sa_handler != SIG_IGN;
 
             *controlling_session = controlling_session

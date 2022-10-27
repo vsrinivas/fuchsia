@@ -55,32 +55,36 @@ impl SignalActions {
 /// Per-task signal handling state.
 #[derive(Default)]
 pub struct SignalState {
+    // See https://man7.org/linux/man-pages/man2/sigaltstack.2.html
+    pub alt_stack: Option<sigaltstack_t>,
+
+    /// Wait queue for signalfd and sigtimedwait. Signaled whenever a signal is added to the queue.
+    pub signal_wait: WaitQueue,
+
+    /// The waiter that the task is currently sleeping on, if any.
+    pub waiter: WaiterRef,
+
+    /// The signal mask of the task.
+    // See https://man7.org/linux/man-pages/man2/rt_sigprocmask.2.html
+    mask: sigset_t,
+
     /// The queue of signals for a given task.
     ///
     /// There may be more than one instance of a real-time signal in the queue, but for standard
     /// signals there is only ever one instance of any given signal.
     queue: VecDeque<SignalInfo>,
-
-    /// Wait queue for signalfd and sigtimedwait. Signaled whenever a signal is added to the queue.
-    pub signal_wait: WaitQueue,
-
-    // See https://man7.org/linux/man-pages/man2/sigaltstack.2.html
-    pub alt_stack: Option<sigaltstack_t>,
-
-    /// The signal mask of the task.
-    // See https://man7.org/linux/man-pages/man2/rt_sigprocmask.2.html
-    pub mask: sigset_t,
-
-    /// The waiter that the task is currently sleeping on, if any.
-    pub waiter: WaiterRef,
 }
 
 impl SignalState {
     /// Sets the signal mask of the state, and returns the old signal mask.
-    pub fn set_signal_mask(&mut self, signal_mask: u64) -> u64 {
+    pub fn set_mask(&mut self, signal_mask: u64) -> u64 {
         let old_mask = self.mask;
         self.mask = signal_mask & !UNBLOCKABLE_SIGNALS;
         old_mask
+    }
+
+    pub fn mask(&self) -> u64 {
+        self.mask
     }
 
     pub fn enqueue(&mut self, siginfo: SignalInfo) {

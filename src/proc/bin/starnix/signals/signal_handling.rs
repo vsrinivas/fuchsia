@@ -113,7 +113,7 @@ fn dispatch_signal_handler(
                 rsp: current_task.registers.rsp,
                 rip: current_task.registers.rip,
                 eflags: current_task.registers.rflags,
-                oldmask: signal_state.mask,
+                oldmask: signal_state.mask(),
                 ..Default::default()
             },
             uc_stack: signal_state
@@ -125,7 +125,7 @@ fn dispatch_signal_handler(
                     ..Default::default()
                 })
                 .unwrap_or_default(),
-            uc_sigmask: signal_state.mask,
+            uc_sigmask: signal_state.mask(),
             ..Default::default()
         },
         action.sa_restorer.ptr() as u64,
@@ -156,7 +156,7 @@ fn dispatch_signal_handler(
         .write_memory(UserAddress::from(stack_pointer), signal_stack_frame.as_bytes())
         .unwrap();
 
-    signal_state.set_signal_mask(action.sa_mask);
+    signal_state.set_mask(action.sa_mask);
 
     current_task.registers.rsp = stack_pointer;
     current_task.registers.rdi = siginfo.signal.number() as u64;
@@ -204,14 +204,14 @@ pub fn restore_from_signal_handler(current_task: &mut CurrentTask) -> Result<(),
         gs_base: current_task.registers.gs_base,
     }
     .into();
-    current_task.write().signals.mask = signal_stack_frame.context.uc_sigmask;
+    current_task.write().signals.set_mask(signal_stack_frame.context.uc_sigmask);
     Ok(())
 }
 
 pub fn send_signal(task: &Task, siginfo: SignalInfo) {
     let mut task_state = task.write();
 
-    let action_is_masked = siginfo.signal.is_in_set(task_state.signals.mask);
+    let action_is_masked = siginfo.signal.is_in_set(task_state.signals.mask());
     let sigaction = task.thread_group.signal_actions.get(siginfo.signal);
     let action = action_for_signal(&siginfo, sigaction);
 
@@ -326,7 +326,7 @@ pub fn dequeue_signal(current_task: &mut CurrentTask) {
     let task = current_task.task_arc_clone();
     let mut task_state = task.write();
 
-    let mask = task_state.signals.mask;
+    let mask = task_state.signals.mask();
     let siginfo =
         task_state.signals.take_next_where(|sig| !sig.signal.is_in_set(mask) || sig.force);
     prepare_to_restart_syscall(
