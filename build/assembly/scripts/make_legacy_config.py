@@ -52,6 +52,12 @@ def copy_to_assembly_input_bundle(
     aib_creator.boot_args = legacy.boot_args
 
     aib_creator.base_drivers = set(base_driver_packages_list)
+
+    # Strip any base_driver and base pkgs from the cache set
+    aib_creator.cache = aib_creator.cache.difference(
+        aib_creator.base).difference(aib_creator.base_drivers)
+    aib_creator.base = aib_creator.base.difference(aib_creator.base_drivers)
+
     if len(aib_creator.base_drivers) != len(base_driver_packages_list):
         raise ValueError(
             f"Duplicate package specified "

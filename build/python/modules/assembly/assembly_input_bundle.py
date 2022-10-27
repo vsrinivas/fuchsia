@@ -39,6 +39,10 @@ BlobList = List[Tuple[Merkle, FilePath]]
 ConfigDataEntries = Dict[PackageName, Set[FileEntry]]
 
 
+class DuplicatePackageException(Exception):
+    ...
+
+
 @dataclass
 @serialize_json
 class DriverDetails:
@@ -230,6 +234,7 @@ class AIBCreator:
        The AIBCreator has fields that match the AIB itself, but isn't an AIB
        because the paths it contains are not valid for an AIB.
     """
+    package_url_template = "{repository}/{package_name}"
 
     def __init__(self, outdir: FilePath):
         # The directory to create the AIB in.  The manifest will be placed in
@@ -265,6 +270,9 @@ class AIBCreator:
         # Additional base drivers directly specified without requiring
         # us to parse GN generated files
         self.provided_base_driver_details: List[dict] = list()
+
+        # A set containing all the unique packageUrls seen by the AIBCreator instance
+        self.package_urls: Set[str] = set()
 
     def build(self) -> Tuple[AssemblyInputBundle, FilePath, DepSet]:
         """
@@ -302,9 +310,6 @@ class AIBCreator:
         (base_pkgs, base_blobs, base_deps) = self._copy_packages("base")
         deps.update(base_deps)
         result.base.update(base_pkgs)
-
-        # Strip any base pkgs from the cache set
-        self.cache = self.cache.difference(self.base)
 
         # Copy the manifests for the cache package set into the assembly bundle
         (cache_pkgs, cache_blobs, cache_deps) = self._copy_packages("cache")
@@ -475,6 +480,18 @@ class AIBCreator:
         single, deduplicated step.)
         """
 
+        def validate_unique_packages(package_url, package_path):
+            invalid = False
+            if package_url in self.package_urls:
+                invalid = True
+                message = f"There is a duplicate declaration of {package_url} in {set_name}"
+            if os.path.exists(package_path):
+                invalid = True
+                message = f"The package path {package_path} already exists, and can't be replaced."
+            if invalid:
+                raise DuplicatePackageException(message)
+            self.package_urls.add(package_url)
+
         package_manifests = getattr(self, set_name)
 
         # Resultant paths to package manifests
@@ -510,6 +527,15 @@ class AIBCreator:
                 # Track in deps, since it was opened.
                 deps.add(package_manifest_path)
 
+            # Path to which we will write the new manifest within the input bundle.
+            rebased_destination = os.path.join(packages_dir, package_name)
+
+            # Bail if we are trying to add a duplicate package
+            validate_unique_packages(
+                AIBCreator.package_url_template.format(
+                    repository=manifest.repository,
+                    package_name=manifest.package.name), rebased_destination)
+
             # But skip config-data, if we find it.
             if "config-data" == package_name:
                 continue
@@ -544,8 +570,6 @@ class AIBCreator:
                         source_path=blob_destination))
             new_manifest.set_blob_sources_relative(True)
 
-            # Write the new manifest to its destination within the input bundle.
-            rebased_destination = os.path.join(packages_dir, package_name)
             package_manifest_destination = os.path.join(
                 self.outdir, rebased_destination)
             with open(package_manifest_destination, 'w') as new_manifest_file:

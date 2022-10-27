@@ -5,14 +5,16 @@
 
 from collections import namedtuple
 from contextlib import contextmanager
+from functools import partial
 import hashlib
 import json
 import os
 import tempfile
 import unittest
+from unittest import mock
 
 from assembly import FileEntry, ImageAssemblyConfig, PackageManifest, BlobEntry, PackageMetaData
-from assembly.assembly_input_bundle import DriverDetails
+from assembly.assembly_input_bundle import DriverDetails, DuplicatePackageException
 from fast_copy_mock import mock_fast_copy_in
 import make_legacy_config
 import assembly
@@ -27,7 +29,7 @@ def make_merkle(blob_name: str) -> str:
     return m.hexdigest()
 
 
-def make_package_manifest(package_name, blobs, source_dir):
+def _make_package_contents(package_name, blobs, source_dir) -> PackageManifest:
     manifest = PackageManifest(
         PackageMetaData(package_name), [], repository="fuchsia.com")
 
@@ -37,6 +39,11 @@ def make_package_manifest(package_name, blobs, source_dir):
             blob_name, make_merkle(package_name + blob_name), None,
             os.path.join(source_dir, package_name, blob_name))
         manifest.blobs.append(entry)
+    return manifest
+
+
+def make_package_manifest(package_name, blobs, source_dir):
+    manifest = _make_package_contents(package_name, blobs, source_dir)
 
     # Write the manifest out to the temp dir
     manifest_path = os.path.join(source_dir, f"{package_name}.json")
@@ -44,6 +51,14 @@ def make_package_manifest(package_name, blobs, source_dir):
         serialization.json_dump(manifest, manifest_file, indent=2)
 
     return manifest_path
+
+
+def make_image_assembly_path(package_name):
+    return "source/" + package_name + ".json"
+
+
+def make_package_path(package_name):
+    return "packages/base/" + package_name
 
 
 TestSetupArgs = namedtuple(
@@ -381,7 +396,7 @@ class MakeLegacyConfig(unittest.TestCase):
                             destination='outdir/bootfs/another/file'),
                     ]))
 
-    def test_make_legacy_config_prevents_duplicates(self):
+    def test_package_found_in_base_and_cache(self):
         """
         Asserts that the copy_to_assembly_input_bundle function has the side effect of
         assigning packages found in both base and cache in the image assembly config to
@@ -391,16 +406,19 @@ class MakeLegacyConfig(unittest.TestCase):
             # Patch in a mock for the fast_copy() fn
             mock_fast_copy_in(assembly.assembly_input_bundle)
             _, image_assembly, _, _ = setup_args
-            manifest_path = make_package_manifest("cache_a", [], SOURCE_DIR)
+            duplicate_package = "cache_a"
+            manifest_path = make_package_manifest(
+                duplicate_package, [], SOURCE_DIR)
             image_assembly.base.add(manifest_path)
 
             # Validates that package with name cache_a is in both the base and cache package sets
             # in the image_assembly_config
-            duplicate_package = "cache_a"
             self.assertIn(
-                "source/" + duplicate_package + ".json", image_assembly.base)
+                make_image_assembly_path(duplicate_package),
+                image_assembly.base)
             self.assertIn(
-                "source/" + duplicate_package + ".json", image_assembly.cache)
+                make_image_assembly_path(duplicate_package),
+                image_assembly.cache)
 
             # Copies legacy config into AIB
             aib, _, _ = make_legacy_config.copy_to_assembly_input_bundle(
@@ -408,8 +426,88 @@ class MakeLegacyConfig(unittest.TestCase):
 
             # Asserts that the duplicate package is present in the base package set after
             # being copied to the AIB
-            self.assertIn("packages/base/" + duplicate_package, aib.base)
+            self.assertIn(make_package_path(duplicate_package), aib.base)
 
             # Asserts that the duplicate package is not present in the cache package set, since
             # it's been added to base
-            self.assertNotIn("packages/base/" + duplicate_package, aib.cache)
+            self.assertNotIn(make_package_path(duplicate_package), aib.cache)
+
+    def test_driver_package_removed_from_base(self):
+        """
+        Asserts that the copy_to_assembly_input_bundle function has the side effect of
+        removing packages from base if they are listed as driver packages, and adds them to the
+        base_drivers package set in the AIB.
+        """
+        with setup_temp_dir() as setup_args:
+            # Patch in a mock for the fast_copy() fn
+            mock_fast_copy_in(assembly.assembly_input_bundle)
+            _, image_assembly, _, _ = setup_args
+            duplicate_package = "base_driver_package"
+            manifest_path = make_package_manifest(
+                duplicate_package, [], SOURCE_DIR)
+            image_assembly.base.add(manifest_path)
+
+            self.assertIn(
+                make_image_assembly_path(duplicate_package),
+                image_assembly.base)
+
+            # Replace the AIBCreator._get_base_driver_details function within the
+            # context manager with a mock.
+            with mock.patch.object(
+                    make_legacy_config.AIBCreator,
+                    "_get_base_driver_details") as patched_method:
+                # This fixed return value should add the contents of the set in the first index
+                # of the tuple to the aib.base_drivers, and remove it from the aib.base package set
+                # when we copy the contents of the image assembly to the AIB
+                patched_method.return_value = (
+                    {make_package_path(duplicate_package)}, list())
+                aib, _, _ = make_legacy_config.copy_to_assembly_input_bundle(
+                    image_assembly, [], OUTDIR, [manifest_path], [], [])
+
+            self.assertNotIn(make_package_path(duplicate_package), aib.base)
+            self.assertIn(
+                make_package_path(duplicate_package), aib.base_drivers)
+
+    def test_different_manifest_same_pkg_name(self):
+        """
+        Asserts that when a package is found in a package set that has a different package
+        manifest path, but the same package name, assembly will raise a DuplicatePackageException.
+        """
+        with setup_temp_dir() as setup_args:
+            # Patch in a mock for the fast_copy() fn
+            mock_fast_copy_in(assembly.assembly_input_bundle)
+            _, image_assembly, _, _ = setup_args
+            duplicate_package = "package_a"
+            manifest_path = make_package_manifest(
+                duplicate_package, [], SOURCE_DIR)
+            different_path = "different_path/"
+            manifest2 = _make_package_contents(
+                duplicate_package, [], SOURCE_DIR)
+
+            os.mkdir(os.path.join(SOURCE_DIR, different_path))
+            # Write the manifest out to the temp dir
+            manifest2_path = os.path.join(
+                SOURCE_DIR, different_path, f"{duplicate_package}.json")
+            with open(manifest2_path, 'w+') as manifest_file:
+                serialization.json_dump(manifest2, manifest_file, indent=2)
+
+            # Add manifest path to both base and cache
+            image_assembly.base.add(manifest_path)
+            image_assembly.base.add(manifest2_path)
+
+            # Validates that package with name package_a is in the base package set of the 
+            # image_assembly with a different path prefix
+            self.assertIn(
+                make_image_assembly_path(duplicate_package),
+                image_assembly.base)
+            self.assertIn(
+                make_image_assembly_path(
+                    os.path.join(different_path, duplicate_package)),
+                image_assembly.base)
+
+            # Copies legacy config into AIB
+            self.assertRaises(
+                DuplicatePackageException,
+                partial(
+                    make_legacy_config.copy_to_assembly_input_bundle,
+                    image_assembly, [], OUTDIR, [], [], []))
