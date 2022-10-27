@@ -118,8 +118,7 @@ void GuestManager::Launch(GuestConfig user_config,
   if (merged_cfg.has_default_net() && merged_cfg.default_net()) {
     merged_cfg.mutable_net_devices()->push_back({
         .mac_address = kGuestMacAddress,
-        // TODO(https://fxbug.dev/67566): Enable once bridging is fixed.
-        .enable_bridge = false,
+        .enable_bridge = true,
     });
   }
 
