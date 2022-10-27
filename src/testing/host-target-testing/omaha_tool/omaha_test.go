@@ -55,20 +55,6 @@ func getTestOmahaRequest(t *testing.T) []byte {
 	return r
 }
 
-func TestSetPkgUrl(t *testing.T) {
-	ctx := context.Background()
-	args := argsForTest()
-
-	if err := args.SetUpdatePkgURL(ctx, "bad"); err == nil {
-		t.Fatalf("SetUpdatePkgURL should fail when given string 'bad'.")
-	}
-
-	err := args.SetUpdatePkgURL(ctx, "fuchsia-pkg://fuchsia.com/update/0?hash=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
-	if err != nil {
-		t.Fatalf("SetUpdatePkgURL should not fail with the given input. %s", err)
-	}
-}
-
 func TestSingleRequest(t *testing.T) {
 	ctx := context.Background()
 	var stdout bytes.Buffer
@@ -153,7 +139,7 @@ func TestSingleRequest(t *testing.T) {
 	}
 }
 
-func QueryWithTestOmahaRequest(t *testing.T, o *OmahaTool, stdout bytes.Buffer, stderr bytes.Buffer, expectedRunValue string) {
+func QueryWithTestOmahaRequest(t *testing.T, o *OmahaTool, stdout bytes.Buffer, stderr bytes.Buffer, expectedCodeBaseValue string, expectedRunValue string) {
 	req := getTestOmahaRequest(t)
 	resp, err := http.Post(o.URL(), "application/json", bytes.NewBuffer(req))
 	if err != nil {
@@ -164,6 +150,11 @@ func QueryWithTestOmahaRequest(t *testing.T, o *OmahaTool, stdout bytes.Buffer, 
 	var data response
 	if err = dec.Decode(&data); err != nil {
 		t.Fatalf("Could not decode")
+	}
+
+	codebase := data.Response.App[0].UpdateCheck.Urls.Url[0].Codebase
+	if codebase != expectedCodeBaseValue {
+		t.Fatalf("URL codebase should have '%s', is %s", expectedCodeBaseValue, codebase)
 	}
 
 	action := data.Response.App[0].UpdateCheck.Manifest.Actions.Action[0]
@@ -183,17 +174,21 @@ func TestSetPkgUrlOnServer(t *testing.T) {
 	}
 	defer o.Shutdown(ctx)
 
+	if err := o.SetPkgURL(ctx, "bad"); err == nil {
+		t.Fatalf("SetPkgURL should fail when given string 'bad'.")
+	}
+
 	if err := o.SetPkgURL(ctx, "fuchsia-pkg://fuchsia.com/update/0?hash=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"); err != nil {
 		t.Fatalf("SetPkgURL should not fail with the given input. %s", err)
 	}
 
-	QueryWithTestOmahaRequest(t, o, stdout, stderr, "update/0?hash=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
+	QueryWithTestOmahaRequest(t, o, stdout, stderr, "fuchsia-pkg://fuchsia.com/", "update/0?hash=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
 
 	if err := o.SetPkgURL(ctx, "fuchsia-pkg://other-domain.com/foo/1?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead"); err != nil {
 		t.Fatalf("Setting Pkg URL on a running server shouldn't fail. err: %s\nstdout: %s\n stderr: %s\n", err, stdout.String(), stderr.String())
 	}
 
-	QueryWithTestOmahaRequest(t, o, stdout, stderr, "foo/1?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead")
+	QueryWithTestOmahaRequest(t, o, stdout, stderr, "fuchsia-pkg://other-domain.com/", "foo/1?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead")
 }
 
 func TestSingleRequestBeforeMerkleSet(t *testing.T) {
@@ -202,9 +197,6 @@ func TestSingleRequestBeforeMerkleSet(t *testing.T) {
 	var stderr bytes.Buffer
 
 	args := argsForTest()
-	if args.Merkle != "" {
-		t.Fatalf("This test is supposed to invoke NewOmahaServer on args with merkle empty, but it is not: %s", args.Merkle)
-	}
 
 	o, err := NewOmahaServer(ctx, args, &stdout, &stderr)
 	if err != nil {

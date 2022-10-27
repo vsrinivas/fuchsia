@@ -31,8 +31,6 @@ type OmahaToolArgs struct {
 	AppId          string
 	LocalHostname  string
 	RequireCup     bool
-	Merkle         string
-	PackagePath    string
 }
 
 type responseAndMetadata struct {
@@ -45,26 +43,6 @@ type responseAndMetadata struct {
 	CohortAssertion string `json:"cohort_assertion,omitempty"`
 	Codebase        string `json:"codebase,omitempty"`
 	PackagePath     string `json:"package_path,omitempty"`
-}
-
-// Service this update package URL as the current update package.
-func (a *OmahaToolArgs) SetUpdatePkgURL(ctx context.Context, updatePkgURL string) error {
-	// Expected input format: fuchsia-pkg://fuchsia.com/update?hash=abcdef
-	u, err := url.Parse(updatePkgURL)
-	if err != nil {
-		return fmt.Errorf("invalid update package URL %q: %w", updatePkgURL, err)
-	}
-	if u.Scheme != "fuchsia-pkg" {
-		return fmt.Errorf("scheme must be fuchsia-pkg, not %q", u.Scheme)
-	}
-	if u.Host == "" {
-		return fmt.Errorf("update package URL's host must not be empty")
-	}
-	// The merkle field is the URL query param 'hash'.
-	q := u.Query()
-	a.Merkle = q.Get("hash")
-	a.PackagePath = strings.TrimPrefix(u.Path, "/")
-	return nil
 }
 
 type OmahaTool struct {
@@ -222,19 +200,25 @@ func (o *OmahaTool) URL() string {
 }
 
 func (o *OmahaTool) SetPkgURL(ctx context.Context, updatePkgURL string) error {
-	newArgs := o.Args
-	if err := newArgs.SetUpdatePkgURL(ctx, updatePkgURL); err != nil {
-		return err
+	// Expected input format: fuchsia-pkg://fuchsia.com/update?hash=abcdef
+	u, err := url.Parse(updatePkgURL)
+	if err != nil {
+		return fmt.Errorf("invalid update package URL %q: %w", updatePkgURL, err)
 	}
-	o.Args = newArgs
+	if u.Scheme != "fuchsia-pkg" {
+		return fmt.Errorf("scheme must be fuchsia-pkg, not %q", u.Scheme)
+	}
+	if u.Host == "" {
+		return fmt.Errorf("update package URL's host must not be empty")
+	}
 
 	responsesByAppID := map[string]responseAndMetadata{
 		o.Args.AppId: {
 			Response:       "Update",
-			Merkle:         o.Args.Merkle,
+			Merkle:         u.Query().Get("hash"),
 			CheckAssertion: "UpdatesEnabled",
-			Codebase:       "fuchsia-pkg://fuchsia.com/",
-			PackagePath:    o.Args.PackagePath,
+			Codebase:       "fuchsia-pkg://" + u.Host + "/",
+			PackagePath:    strings.TrimPrefix(u.Path, "/"),
 		},
 	}
 	req, err := json.Marshal(responsesByAppID)
