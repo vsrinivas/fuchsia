@@ -1,0 +1,71 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library examples.keyvaluestore.additerator;
+
+/// An item in the store. The key must match the regex `^[A-z][A-z0-9_\.\/]{2,62}[A-z0-9]$`. That
+/// is, it must start with a letter, end with a letter or number, contain only letters, numbers,
+/// periods, and slashes, and be between 4 and 64 characters long.
+type Item = struct {
+    key string:128;
+    value vector<byte>:64000;
+};
+
+/// An enumeration of things that may go wrong when trying to write a value to our store.
+type WriteError = flexible enum {
+    UNKNOWN = 0;
+    INVALID_KEY = 1;
+    INVALID_VALUE = 2;
+    ALREADY_EXISTS = 3;
+};
+
+/// A key-value store which supports insertion and iteration.
+@discoverable
+protocol Store {
+    /// Writes an item to the store.
+    WriteItem(struct {
+        attempt Item;
+    }) -> (struct {}) error WriteError;
+
+    // [START diff_1]
+
+    /// Iterates over the items in the store, using lexicographic ordering over
+    /// the keys.
+    ///
+    /// The [`iterator`] is [pipelined][pipelining] to the server, such that the
+    /// client can immediately send requests over the new connection.
+    ///
+    /// [pipelining]: https://fuchsia.dev/fuchsia-src/development/api/fidl?hl=en#request-pipelining
+    Iterate(resource struct {
+        /// If present, requests to start the iteration at this item.
+        starting_at string:<128, optional>;
+
+        /// The [`Iterator`] server endpoint.
+        iterator server_end:Iterator;
+    }) -> (struct {}) error IteratorConnectionError;
+
+    // [END diff_1]
+};
+
+// [START diff_2]
+
+type IteratorConnectionError = flexible enum {
+    /// The starting key was not found.
+    UNKNOWN_START_AT = 1;
+};
+
+protocol Iterator {
+    /// Gets the next batch of keys.
+    ///
+    /// The client pulls keys rather than having the server proactively push
+    /// them, to implement [flow control][flow-control] over the messages.
+    ///
+    /// [flow-control]: https://fuchsia.dev/fuchsia-src/development/api/fidl?hl=en#prefer_pull_to_push
+    Get() -> (struct {
+        /// A list of keys. If the iterator has reached the end of iteration,
+        /// the list will be empty.
+        entries vector<string:128>:10;
+    });
+};
+
+// [END diff_2]

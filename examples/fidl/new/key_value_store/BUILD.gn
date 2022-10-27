@@ -6,6 +6,7 @@ group("tests") {
   testonly = true
   deps = [
     # DO_NOT_REMOVE_COMMENT (Why? See: /tools/fidl/scripts/canonical_example/README.md)
+    "add_iterator:tests",
     "add_read_item:tests",
     "baseline:tests",
 
