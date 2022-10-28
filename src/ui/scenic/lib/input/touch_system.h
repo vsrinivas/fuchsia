@@ -5,6 +5,7 @@
 #ifndef SRC_UI_SCENIC_LIB_INPUT_TOUCH_SYSTEM_H_
 #define SRC_UI_SCENIC_LIB_INPUT_TOUCH_SYSTEM_H_
 
+#include <fidl/fuchsia.ui.pointer/cpp/fidl.h>
 #include <fuchsia/ui/pointer/augment/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 
@@ -41,6 +42,9 @@ class TouchSystem : public fuchsia::ui::pointer::augment::LocalHit {
   void RegisterTouchSource(
       fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource> touch_source_request,
       zx_koid_t client_view_ref_koid);
+
+  void RegisterTouchSource(fidl::ServerEnd<fuchsia_ui_pointer::TouchSource> touch_source_server_end,
+                           zx_koid_t client_view_ref_koid);
 
   // |fuchsia::ui::pointer::augment::LocalHit|
   void Upgrade(fidl::InterfaceHandle<fuchsia::ui::pointer::TouchSource> original,

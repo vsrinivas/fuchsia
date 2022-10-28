@@ -184,6 +184,8 @@ source_set("touch") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.ui.pointer:fuchsia.ui.pointer_cpp",
+    "//sdk/fidl/fuchsia.ui.pointer:fuchsia.ui.pointer_cpp_hlcpp_conversion",
     "//sdk/fidl/fuchsia.ui.pointer:fuchsia.ui.pointer_hlcpp",
     "//sdk/fidl/fuchsia.ui.pointer.augment:fuchsia.ui.pointer.augment_hlcpp",
   ]

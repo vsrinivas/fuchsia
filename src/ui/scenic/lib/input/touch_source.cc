@@ -4,25 +4,24 @@
 
 #include "src/ui/scenic/lib/input/touch_source.h"
 
+#include <lib/async/default.h>
+
 namespace scenic_impl::input {
 
 TouchSource::TouchSource(zx_koid_t view_ref_koid,
-                         fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource> touch_source,
+                         fidl::ServerEnd<fuchsia_ui_pointer::TouchSource> touch_source,
                          fit::function<void(StreamId, const std::vector<GestureResponse>&)> respond,
                          fit::function<void()> error_handler, GestureContenderInspector& inspector)
     : TouchSourceBase(
           utils::ExtractKoid(touch_source.channel()), view_ref_koid, std::move(respond),
           [this](zx_status_t epitaph) { CloseChannel(epitaph); },
           /*augment*/ [](auto&...) {}, inspector),
-      binding_(this, std::move(touch_source)),
-      error_handler_(std::move(error_handler)) {
-  binding_.set_error_handler([this](zx_status_t epitaph) { error_handler_(); });
-}
+      binding_(async_get_default_dispatcher(), std::move(touch_source), this,
+               [error_handler = std::move(error_handler)](fidl::UnbindInfo) {
+                 // NOTE: Triggers destruction of this object.
+                 error_handler();
+               }) {}
 
-void TouchSource::CloseChannel(zx_status_t epitaph) {
-  binding_.Close(epitaph);
-  // NOTE: Triggers destruction of this object.
-  error_handler_();
-}
+void TouchSource::CloseChannel(zx_status_t epitaph) { binding_.Close(epitaph); }
 
 }  // namespace scenic_impl::input

@@ -83,7 +83,7 @@ class TouchSourceTest : public gtest::TestLoopFixture {
     client_ptr_.set_error_handler([this](auto) { channel_closed_ = true; });
 
     touch_source_.emplace(
-        kViewRefKoid, client_ptr_.NewRequest(),
+        kViewRefKoid, fidl::HLCPPToNatural(client_ptr_.NewRequest()),
         /*respond*/
         [this](StreamId stream_id, const std::vector<GestureResponse>& responses) {
           std::copy(responses.begin(), responses.end(),

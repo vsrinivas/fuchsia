@@ -4,6 +4,8 @@
 
 #include "src/ui/scenic/lib/input/touch_system.h"
 
+#include <fidl/fuchsia.ui.pointer/cpp/fidl.h>
+#include <fidl/fuchsia.ui.pointer/cpp/hlcpp_conversion.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
@@ -268,6 +270,12 @@ ContenderId TouchSystem::AddGfxLegacyContender(StreamId stream_id, zx_koid_t vie
 void TouchSystem::RegisterTouchSource(
     fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource> touch_source_request,
     zx_koid_t client_view_ref_koid) {
+  RegisterTouchSource(fidl::HLCPPToNatural(std::move(touch_source_request)), client_view_ref_koid);
+}
+
+void TouchSystem::RegisterTouchSource(
+    fidl::ServerEnd<fuchsia_ui_pointer::TouchSource> touch_source_server_end,
+    zx_koid_t client_view_ref_koid) {
   FX_DCHECK(client_view_ref_koid != ZX_KOID_INVALID);
   const ContenderId contender_id = next_contender_id_++;
 
@@ -276,7 +284,7 @@ void TouchSystem::RegisterTouchSource(
   {
     const auto [_, success] = contenders_.emplace(
         contender_id, std::make_unique<TouchSource>(
-                          client_view_ref_koid, std::move(touch_source_request),
+                          client_view_ref_koid, std::move(touch_source_server_end),
                           /*respond*/
                           [this, contender_id](StreamId stream_id,
                                                const std::vector<GestureResponse>& responses) {
