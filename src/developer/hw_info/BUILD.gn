@@ -1,0 +1,42 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+import("//src/sys/core/build/core_shard.gni")
+
+rustc_binary("hw_shell_bin") {
+  name = "hw-info"
+
+  # Generates the "bin_test" build target
+  with_unit_tests = true
+  edition = "2021"
+
+  deps = [
+    "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo_rust",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl_rust",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:futures",
+  ]
+
+  sources = [ "shell.rs" ]
+  source_root = "shell.rs"
+}
+
+fuchsia_shell_package("hw-info-shell") {
+  manifest = "meta/hw_info_shell.cml"
+  deps = [ ":hw_shell_bin" ]
+}
+
+fuchsia_unittest_package("hw_shell_tests") {
+  deps = [ ":hw_shell_bin_test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":hw_shell_tests" ]
+}

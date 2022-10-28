@@ -25,14 +25,15 @@ impl std::str::FromStr for Info {
             "latest_commit_date" => Ok(Info::LatestCommitDate),
             "product_config" => Ok(Info::ProductConfig),
             "version" => Ok(Info::Version),
-            _ => Err(format!("Invalid key: {:?}", value)),
+            _ => Err(format!("Invalid key: {:?}.", value)),
         }
     }
 }
 
-/// Build information key value.
+/// Build Information command.
 #[derive(Debug, PartialEq, FromArgs)]
 struct BuildInfoCmd {
+    /// valid keys: <board_config> <latest_commit_date> <product_config> <version>
     #[argh(positional)]
     info: Info,
 }

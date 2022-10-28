@@ -26,11 +26,13 @@ group("tests") {
     "ffx:tests",
     "forensics:tests",
     "fuchsia-criterion:tests",
+    "hw_info:tests",
     "memory:tests",
     "remote-control:tests",
     "shell:tests",
     "ssh-key-manager:tests",
     "sshd-host:tests",
+    "sys_info:tests",
   ]
 }
 

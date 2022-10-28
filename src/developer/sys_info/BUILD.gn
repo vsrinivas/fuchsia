@@ -1,0 +1,42 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+import("//src/sys/core/build/core_shard.gni")
+
+rustc_binary("sys_shell_bin") {
+  name = "sys-info"
+
+  # Generates the "bin_test" build target
+  with_unit_tests = true
+  edition = "2021"
+
+  deps = [
+    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_rust",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:futures",
+  ]
+
+  sources = [ "shell.rs" ]
+  source_root = "shell.rs"
+}
+
+fuchsia_shell_package("sys-info-shell") {
+  manifest = "meta/sys_info_shell.cml"
+  deps = [ ":sys_shell_bin" ]
+}
+
+fuchsia_unittest_package("sys_shell_tests") {
+  deps = [ ":sys_shell_bin_test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":sys_shell_tests" ]
+}
