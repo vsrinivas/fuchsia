@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_STORAGE_BLOCK_CLIENT_CPP_BLOCK_DEVICE_H_
 #define SRC_LIB_STORAGE_BLOCK_CLIENT_CPP_BLOCK_DEVICE_H_
 
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
@@ -33,6 +34,7 @@ class BlockDevice : public storage::VmoidRegistry {
 
   // fuchsia.device.block interface:
   virtual zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const = 0;
+  virtual zx_status_t BlockGetInfo(fuchsia_hardware_block::wire::BlockInfo* out_info) const = 0;
 
   // storage::VmoidRegistry implementation:
   //

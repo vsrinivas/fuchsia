@@ -26,6 +26,10 @@ class PassThroughReadOnlyBlockDevice : public BlockDevice {
     return device_.BlockGetInfo(out_info);
   }
 
+  zx_status_t BlockGetInfo(fuchsia_hardware_block::wire::BlockInfo* out_info) const override {
+    return device_.BlockGetInfo(out_info);
+  }
+
   zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) override {
     return device_.BlockAttachVmo(vmo, out);
   }

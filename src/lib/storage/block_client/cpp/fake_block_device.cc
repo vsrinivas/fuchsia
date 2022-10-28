@@ -222,6 +222,15 @@ zx_status_t FakeBlockDevice::BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_
   return ZX_OK;
 }
 
+zx_status_t FakeBlockDevice::BlockGetInfo(fuchsia_hardware_block::wire::BlockInfo* out_info) const {
+  fbl::AutoLock lock(&lock_);
+  out_info->block_count = block_count_;
+  out_info->block_size = block_size_;
+  out_info->flags = block_info_flags_;
+  out_info->max_transfer_size = max_transfer_size_;
+  return ZX_OK;
+}
+
 void FakeBlockDevice::Wipe() {
   fbl::AutoLock lock(&lock_);
   ZX_ASSERT(block_device_.op_range(ZX_VMO_OP_ZERO, 0, block_count_ * block_size_, nullptr, 0) ==

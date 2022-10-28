@@ -26,6 +26,10 @@ namespace block_client {
 class RemoteBlockDevice final : public BlockDevice {
  public:
   static zx_status_t Create(zx::channel device, std::unique_ptr<RemoteBlockDevice>* out);
+  static zx_status_t Create(fidl::ClientEnd<fuchsia_hardware_block::Block> device,
+                            std::unique_ptr<RemoteBlockDevice>* out) {
+    return Create(device.TakeChannel(), out);
+  }
   static zx::result<std::unique_ptr<RemoteBlockDevice>> Create(int fd);
   RemoteBlockDevice& operator=(RemoteBlockDevice&&) = delete;
   RemoteBlockDevice(RemoteBlockDevice&&) = delete;
@@ -36,6 +40,7 @@ class RemoteBlockDevice final : public BlockDevice {
   zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) final;
   zx::result<std::string> GetDevicePath() const final;
   zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const final;
+  zx_status_t BlockGetInfo(fuchsia_hardware_block::wire::BlockInfo* out_info) const final;
   zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out_vmoid) final;
   zx_status_t VolumeGetInfo(fuchsia_hardware_block_volume_VolumeManagerInfo* out_manager_info,
                             fuchsia_hardware_block_volume_VolumeInfo* out_volume_info) const final;

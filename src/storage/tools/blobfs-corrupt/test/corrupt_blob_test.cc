@@ -37,6 +37,9 @@ class ProxyBlockDevice : public BlockDevice {
   zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const override {
     return inner_->BlockGetInfo(out_info);
   }
+  zx_status_t BlockGetInfo(fuchsia_hardware_block::wire::BlockInfo* out_info) const override {
+    return inner_->BlockGetInfo(out_info);
+  }
   zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out_vmoid) override {
     return inner_->BlockAttachVmo(vmo, out_vmoid);
   }

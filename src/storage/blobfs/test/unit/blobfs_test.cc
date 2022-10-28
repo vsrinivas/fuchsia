@@ -52,6 +52,7 @@ class MockBlockDevice : public FakeBlockDevice {
 
   zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) final;
   zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* info) const final;
+  zx_status_t BlockGetInfo(fuchsia_hardware_block::wire::BlockInfo* info) const final;
 
  private:
   bool saw_trim_ = false;
@@ -68,6 +69,14 @@ zx_status_t MockBlockDevice::FifoTransaction(block_fifo_request_t* requests, siz
 }
 
 zx_status_t MockBlockDevice::BlockGetInfo(fuchsia_hardware_block_BlockInfo* info) const {
+  zx_status_t status = FakeBlockDevice::BlockGetInfo(info);
+  if (status == ZX_OK) {
+    info->flags |= fuchsia_hardware_block_FLAG_TRIM_SUPPORT;
+  }
+  return status;
+}
+
+zx_status_t MockBlockDevice::BlockGetInfo(fuchsia_hardware_block::wire::BlockInfo* info) const {
   zx_status_t status = FakeBlockDevice::BlockGetInfo(info);
   if (status == ZX_OK) {
     info->flags |= fuchsia_hardware_block_FLAG_TRIM_SUPPORT;

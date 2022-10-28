@@ -63,6 +63,22 @@ zx_status_t RemoteBlockDevice::BlockGetInfo(fuchsia_hardware_block_BlockInfo* ou
   return status;
 }
 
+zx_status_t RemoteBlockDevice::BlockGetInfo(
+    fuchsia_hardware_block::wire::BlockInfo* out_info) const {
+  const fidl::WireResult result =
+      fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block::Block>(device_.borrow()))
+          ->GetInfo();
+  if (!result.ok()) {
+    return result.status();
+  }
+  const fidl::WireResponse response = result.value();
+  if (zx_status_t status = response.status; status != ZX_OK) {
+    return status;
+  }
+  *out_info = *response.info;
+  return ZX_OK;
+}
+
 zx_status_t RemoteBlockDevice::BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out_vmoid) {
   zx::vmo xfer_vmo;
   zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo);
