@@ -299,9 +299,13 @@ bool ieee80211_has_protected(const struct ieee80211_frame_header* fh);
 
 bool ieee80211_is_data(const struct ieee80211_frame_header* fh);
 
+bool ieee80211_is_data_present(const struct ieee80211_frame_header* fh);
+
 bool ieee80211_is_data_qos(const struct ieee80211_frame_header* fh);
 
 uint8_t ieee80211_get_tid(const struct ieee80211_frame_header* fh);
+
+bool ieee80211_is_back_req(const struct ieee80211_frame_header* fh);
 
 #if defined(__cplusplus)
 }  // extern "C"

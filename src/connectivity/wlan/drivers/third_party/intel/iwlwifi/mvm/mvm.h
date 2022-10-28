@@ -705,7 +705,7 @@ struct iwl_mvm_tdls_peer_counter {
 
 /**
  * struct iwl_mvm_reorder_buffer - per ra/tid/queue reorder buffer
- * @head_sn: reorder window head sn
+ * @head_sn: reorder window head sn. The first SN in the window.
  * @num_stored: number of mpdus stored in the buffer
  * @buf_size: the reorder buffer size as set by the last addba request
  * @queue: queue of this reorder buffer
@@ -734,12 +734,16 @@ struct iwl_mvm_reorder_buffer {
 
 /**
  * struct _iwl_mvm_reorder_buf_entry - reorder buffer entry per-queue/per-seqno
- * @frames: list of skbs stored
+ * @rx_packet: The single rx_packet in the buffer.
+ * @rx_status: Metadata about rx_packet when it was received.
  * @reorder_time: time the packet was stored in the reorder buffer
+ * @has_packet: True if the entry has a packet stored, false otherwise.
  */
 struct _iwl_mvm_reorder_buf_entry {
-  struct sk_buff_head frames;
-  unsigned long reorder_time;
+	wlan_rx_packet_t rx_packet;
+	struct ieee80211_rx_status rx_status;
+	unsigned long reorder_time;
+	bool has_packet;
 };
 
 /* make this indirection to get the aligned thing */
@@ -1715,6 +1719,16 @@ void iwl_mvm_rx_fw_error(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb);
 void iwl_mvm_rx_card_state_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb);
 void iwl_mvm_rx_mfuart_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb);
 void iwl_mvm_rx_shared_mem_cfg_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb);
+
+/*
+ * Returns true if the MPDU was buffered\dropped, false if it should be passed
+ * to upper layer.
+ * This is exposed in this header for unit tests, but isn't used outside rxmq.c.
+ */
+bool iwl_mvm_reorder(struct iwl_mvm* mvm, struct ieee80211_sta* sta,
+		     const wlan_rx_packet_t* rx_packet,
+		     struct ieee80211_rx_status* rx_status,
+		     int queue, struct iwl_rx_mpdu_desc* desc);
 
 /* MVM PHY */
 zx_status_t iwl_mvm_phy_ctxt_add(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt,

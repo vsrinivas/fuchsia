@@ -62,6 +62,7 @@ enum ieee80211_frame_subtype {
     IEEE80211_FRAME_SUBTYPE_QOS_NULL   = 0xc0,
 
     /* CONTROL */
+    IEEE80211_FRAME_SUBTYPE_BACK_REQ   = 0x80,
     IEEE80211_FRAME_SUBTYPE_CTS        = 0xc0,
     IEEE80211_FRAME_SUBTYPE_ACK        = 0xd0,
 };
@@ -361,5 +362,26 @@ static inline const char* ieee80211_cipher_str(const uint8_t* oui, uint8_t ciphe
 //   ZX_USEC(ieee80211_tu_to_usec(tu));
 //
 static inline int ieee80211_tu_to_usec(int tu) { return tu * 1024; }
+
+#define IEEE80211_SN_MASK (0xFFF)
+#define IEEE80211_SN_HALF_RANGE (0x800)
+
+// Returns true if sn1 < sn2, conforming to rules specified by
+// section 10.24.1 of IEEE Std 802.11-2016:
+// sn2 is considered greater than sn1 if it's within 0x800 ahead of sn1,
+// modulo 2^12.
+static inline bool ieee80211_sn_less(uint16_t sn1, uint16_t sn2) {
+    return (sn2 > sn1 && (sn1 + IEEE80211_SN_HALF_RANGE > sn2)) ||
+           (sn1 > sn2 && (sn2 + IEEE80211_SN_HALF_RANGE < sn1));
+}
+
+// Adds two sequence numbers together, conforming to rules specified by
+// section 10.24.1 of IEEE Std 802.11-2016.
+static inline uint16_t ieee80211_sn_add(uint16_t sn1, uint16_t sn2) {
+    return (sn1 + sn2) & IEEE80211_SN_MASK;
+}
+
+// Increments the given sequence number by 1.
+static inline uint16_t ieee80211_sn_inc(uint16_t sn) { return ieee80211_sn_add(sn, 1); }
 
 #endif  // SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_IEEE80211_H_

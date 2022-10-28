@@ -47,6 +47,11 @@ bool ieee80211_is_data(const struct ieee80211_frame_header* fh) {
   return ieee80211_get_frame_type(fh) == IEEE80211_FRAME_TYPE_DATA;
 }
 
+bool ieee80211_is_data_present(const struct ieee80211_frame_header* fh) {
+  return ieee80211_is_data(fh) &&
+         ((static_cast<uint8_t>(ieee80211_get_frame_subtype(fh)) & 0x40) == 0);
+}
+
 bool ieee80211_is_data_qos(const struct ieee80211_frame_header* fh) {
   return ieee80211_is_qos_data(fh);
 }
@@ -54,4 +59,9 @@ bool ieee80211_is_data_qos(const struct ieee80211_frame_header* fh) {
 uint8_t ieee80211_get_tid(const struct ieee80211_frame_header* fh) {
   const uint8_t* qos_ctl = reinterpret_cast<const uint8_t*>(fh) + ieee80211_get_qos_ctrl_offset(fh);
   return qos_ctl[0] & 0xF;
+}
+
+bool ieee80211_is_back_req(const struct ieee80211_frame_header* fh) {
+  return (ieee80211_get_frame_type(fh) == IEEE80211_FRAME_TYPE_CTRL) &&
+         (ieee80211_get_frame_subtype(fh) == IEEE80211_FRAME_SUBTYPE_BACK_REQ);
 }

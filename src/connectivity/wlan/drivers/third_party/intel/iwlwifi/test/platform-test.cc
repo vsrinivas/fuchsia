@@ -7,6 +7,7 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/debug.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
 
 namespace {
@@ -170,6 +171,30 @@ TEST_F(PlatformTest, find_next_bit) {
   EXPECT_EQ(32, find_next_bit(test, 32, 16));  // Not found
   EXPECT_EQ(12, find_next_bit(test, 32, 0));
   EXPECT_EQ(12, find_next_bit(test, 64, 0));
+}
+
+TEST_F(PlatformTest, ieee80211_sn_less) {
+  EXPECT_FALSE(ieee80211_sn_less(0x0000, 0x0000));
+  EXPECT_FALSE(ieee80211_sn_less(0x0040, 0x0040));
+  EXPECT_TRUE(ieee80211_sn_less(0x0000, 0x0001));
+  EXPECT_FALSE(ieee80211_sn_less(0x0001, 0x0000));
+
+  EXPECT_TRUE(ieee80211_sn_less(0x0000, 0x07ff));
+  EXPECT_FALSE(ieee80211_sn_less(0x07ff, 0x0000));
+
+  EXPECT_FALSE(ieee80211_sn_less(0x0000, 0x0800));
+  EXPECT_FALSE(ieee80211_sn_less(0x0800, 0x0000));
+  EXPECT_TRUE(ieee80211_sn_less(0x0801, 0x0000));
+
+  EXPECT_TRUE(ieee80211_sn_less(0x0003, 0x0800));
+
+  EXPECT_TRUE(ieee80211_sn_less(0x0f00, 0x0000));
+
+  EXPECT_FALSE(ieee80211_sn_less(0x0fff, 0x07ff));
+  EXPECT_FALSE(ieee80211_sn_less(0x07ff, 0x0fff));
+
+  EXPECT_TRUE(ieee80211_sn_less(0x0fff, 0x07fe));
+  EXPECT_TRUE(ieee80211_sn_less(0x0800, 0x0fff));
 }
 
 }  // namespace

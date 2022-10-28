@@ -7,8 +7,12 @@
 
 #include <iterator>
 #include <memory>
+#include <numeric>
+#include <random>
 
 #include <zxtest/zxtest.h>
+
+#include "wlan/common/ieee80211.h"
 
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
@@ -29,7 +33,6 @@ namespace testing {
 namespace {
 
 // Helper function to create a PHY context for the interface.
-//
 static void setup_phy_ctxt(struct iwl_mvm_vif* mvmvif) __TA_NO_THREAD_SAFETY_ANALYSIS {
   // Create a PHY context and assign it to mvmvif.
   wlan_channel_t chandef = {
@@ -90,19 +93,21 @@ class MvmTest : public SingleApTest {
   }
 
  protected:
+  using RecvFn = void (*)(void*, const wlan_rx_packet_t*);
+
   // This function is kind of dirty. It hijacks the wlan_softmac_ifc_protocol_t.recv() so that we
   // can save the rx_info passed to MLME.  See TearDown() for cleanup logic related to this
   // function.
-  void MockRecv(TestCtx* ctx) {
-    // TODO(fxbug.dev/43218): replace rxq->napi with interface instance so that we can map to
-    // mvmvif.
-    mvmvif_->ifc.ctx = ctx;  // 'ctx' was used as 'wlan_softmac_ifc_protocol_t*', but we override it
-                             // with 'TestCtx*'.
-    mvmvif_->ifc.recv = [](void* ctx, const wlan_rx_packet_t* packet) {
-      TestCtx* test_ctx = reinterpret_cast<TestCtx*>(ctx);
-      test_ctx->rx_info = packet->info;
-      test_ctx->frame_len = packet->mac_frame_size;
-    };
+  template <typename Context>
+  void MockRecv(Context* ctx, RecvFn recv) {
+    mvmvif_->ifc.ctx = ctx;
+    mvmvif_->ifc.recv = recv;
+  }
+
+  static void MockRecvCallback (void* ctx, const wlan_rx_packet_t* packet) {
+    TestCtx* test_ctx = reinterpret_cast<TestCtx*>(ctx);
+    test_ctx->rx_info = packet->info;
+    test_ctx->frame_len = packet->mac_frame_size;
   }
 
   struct iwl_mvm* mvm_;
@@ -214,7 +219,7 @@ TEST_F(MvmTest, rxMpdu) {
   EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_CMD_FROM_FW), 0);
 
   TestCtx test_ctx = {};
-  MockRecv(&test_ctx);
+  MockRecv(&test_ctx, MockRecvCallback);
   iwl_mvm_rx_rx_mpdu(mvm_, nullptr /* napi */, &mpdu_rxcb);
 
   EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_CMD_FROM_FW), 1);
@@ -268,7 +273,7 @@ TEST_F(MvmTest, rxMqMpdu) {
   EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_CMD_FROM_FW), 0);
 
   TestCtx test_ctx = {};
-  MockRecv(&test_ctx);
+  MockRecv(&test_ctx, MockRecvCallback);
   iwl_mvm_rx_mpdu_mq(mvm_, nullptr /* napi */, &mpdu_rxcb, 0);
 
   EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_CMD_FROM_FW), 1);
@@ -324,7 +329,7 @@ TEST_F(MvmTest, rxMqMpdu_with_header_padding) {
   TestRxcb mpdu_rxcb(sim_trans_.iwl_trans()->dev, &mpdu, sizeof(mpdu));
 
   TestCtx test_ctx = {};
-  MockRecv(&test_ctx);
+  MockRecv(&test_ctx, MockRecvCallback);
   iwl_mvm_rx_mpdu_mq(mvm_, nullptr /* napi */, &mpdu_rxcb, 0);
 
   // Expect FRAME_BODY_PADDING_4 is set in rx_flags
@@ -415,6 +420,471 @@ TEST_F(MvmTest, scanLmacPassiveCmdFilling) {
   EXPECT_EQ(0x12, preq[1]);
   EXPECT_EQ(0x78, preq[2]);
   EXPECT_EQ(0x56, preq[3]);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                          Aggregate Reordering tests
+//
+
+using MacAddress = std::array<uint8_t, ETH_ALEN>;
+constexpr MacAddress kDefaultMacAddr{0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
+
+void CopyMacAddress(uint8_t* dst, const MacAddress& src) {
+  std::memcpy(dst, src.data(), src.size());
+}
+
+// Wrapper packet for managing a wlan_rx_packet_t whose frame buffer points to an
+// ieee80211_frame_header with the corresponding iwl_rx_mpdu_desc.
+struct WlanRxPacket {
+  WlanRxPacket() {
+    // fill payload with random data so that packets are (probably) uniquely identified
+    std::random_device rd;
+    std::mt19937 g(rd());
+    std::generate(bytes_.begin(), bytes_.end(), g);
+
+    // setup header
+    SetFrameTypeAndSubtype(IEEE80211_FRAME_TYPE_DATA, IEEE80211_FRAME_SUBTYPE_QOS);
+    CopyMacAddress(hdr_->addr1, kDefaultMacAddr);
+    CopyMacAddress(hdr_->addr2, kDefaultMacAddr);
+    CopyMacAddress(hdr_->addr3, kDefaultMacAddr);
+
+    SetBlockAckId(0);
+    SetSn(0);
+    SetNssn(0);
+    SetTid(0);
+  }
+
+  bool Equals(const wlan_rx_packet_t& other) {
+    auto* packet = Packet();
+    return packet->mac_frame_size == other.mac_frame_size &&
+           memcmp(packet->mac_frame_buffer, other.mac_frame_buffer, packet->mac_frame_size) == 0;
+  }
+
+  wlan_rx_packet_t* Packet() { return &packet_; }
+
+  struct iwl_rx_mpdu_desc* Desc() { return &desc_; }
+
+  struct ieee80211_frame_header* Header() { return hdr_; }
+
+  void SetFrameTypeAndSubtype(enum ieee80211_frame_type frame_type,
+                              enum ieee80211_frame_subtype subtype) {
+    hdr_->frame_ctrl &= ~(IEEE80211_FRAME_TYPE_MASK | IEEE80211_FRAME_SUBTYPE_MASK);
+    hdr_->frame_ctrl |= frame_type;
+    hdr_->frame_ctrl |= subtype;
+  }
+
+  void SetTid(uint8_t tid) {
+    // based on code from ieee80211.cc
+    uint8_t* qos_ctl = reinterpret_cast<uint8_t*>(hdr_) + ieee80211_get_qos_ctrl_offset(hdr_);
+    qos_ctl[0] &= ~0xF;
+    qos_ctl[0] |= (tid & 0xF);
+  }
+
+  void SetBlockAckId(uint8_t baid) {
+    desc_.reorder_data &= ~(IWL_RX_MPDU_REORDER_BAID_MASK);
+    desc_.reorder_data |= (baid << IWL_RX_MPDU_REORDER_BAID_SHIFT) & IWL_RX_MPDU_REORDER_BAID_MASK;
+  }
+
+  void SetSn(uint8_t sn) {
+    desc_.reorder_data &= ~(IWL_RX_MPDU_REORDER_SN_MASK);
+    desc_.reorder_data |= (sn << IWL_RX_MPDU_REORDER_SN_SHIFT) & IWL_RX_MPDU_REORDER_SN_MASK;
+  }
+
+  void SetNssn(uint8_t nssn) {
+    desc_.reorder_data &= ~(IWL_RX_MPDU_REORDER_NSSN_MASK);
+    desc_.reorder_data |= (nssn & IWL_RX_MPDU_REORDER_NSSN_MASK);
+  }
+
+  struct iwl_rx_mpdu_desc desc_ {};
+
+  std::array<uint8_t, 256> bytes_{};
+
+  struct ieee80211_frame_header* hdr_{
+      reinterpret_cast<struct ieee80211_frame_header*>(bytes_.data())};
+
+  wlan_rx_packet_t packet_{
+      .mac_frame_buffer = bytes_.data(),
+      .mac_frame_size = bytes_.size(),
+  };
+};
+
+// The test fixture manages baid_data/mvm/sta, but each test itself
+// must manage WlanRxPackets themselves.
+struct ReorderTest : public MvmTest, public MockTrans {
+  static constexpr uint16_t kEntriesPerQueue = 64;
+
+  ReorderTest() {
+    BIND_TEST(mvm_->trans);
+
+    // setup station
+    mvm_sta_.sta_id = 0;
+    mvm_sta_.mvmvif = mvmvif_;
+
+    CopyMacAddress(mvm_sta_.addr, kDefaultMacAddr);
+    SetupBaidData();
+
+    mvm_->fw_id_to_mac_id[0] = &mvm_sta_;
+    mvm_->baid_map[0] = baid_data_;
+  }
+
+  ~ReorderTest() {
+    // reorder buffer entries are usually freed by the call to iwl_mvm_release_frames
+    // but not all tests call iwl_mvm_release_frames
+    for (uint8_t i = 0; i < kEntriesPerQueue; i++) {
+      auto& entry = GetReorderBufEntry(i);
+      if (entry.e.has_packet && entry.e.rx_packet.mac_frame_buffer) {
+        free((void*)entry.e.rx_packet.mac_frame_buffer);
+      }
+    }
+    free(baid_data_);
+  }
+
+  void SetupBaidData() {
+    uint16_t reorder_buf_size = kEntriesPerQueue * sizeof(baid_data_->entries[0]);
+
+    baid_data_ = reinterpret_cast<struct iwl_mvm_baid_data*>(
+        calloc(1, sizeof(*baid_data_) + (mvm_->trans->num_rx_queues * reorder_buf_size)));
+
+    baid_data_->sta_id = 0;
+    baid_data_->entries_per_queue = kEntriesPerQueue;
+    baid_data_->mvm = mvm_;
+    baid_data_->baid = 0;
+    baid_data_->tid = 0;
+
+    for (auto i = 0; i < mvm_->trans->num_rx_queues; i++) {
+      auto* reorder_buf = &baid_data_->reorder_buf[i];
+      reorder_buf->num_stored = 0;
+      reorder_buf->head_sn = 0;
+      reorder_buf->buf_size = kEntriesPerQueue;
+      reorder_buf->mvm = mvm_;
+      reorder_buf->queue = i;
+      reorder_buf->valid = false;
+    }
+  }
+
+  bool Reorder(WlanRxPacket& packet, int queue = 0) {
+    return iwl_mvm_reorder(mvm_, &sta_, packet.Packet(), &rx_status_, queue, packet.Desc());
+  }
+
+  struct iwl_mvm_reorder_buffer& GetReorderBuf(int queue = 0) {
+    return baid_data_->reorder_buf[queue];
+  }
+
+  struct iwl_mvm_reorder_buf_entry& GetReorderBufEntry(uint8_t sn, int queue = 0) {
+    auto* entries = &baid_data_->entries[queue * baid_data_->entries_per_queue];
+    auto index = sn % GetReorderBuf(queue).buf_size;
+
+    return entries[index];
+  }
+
+  wlan_rx_packet_t& GetBufferedPacket(uint8_t sn, int queue = 0) {
+    return GetReorderBufEntry(sn, queue).e.rx_packet;
+  }
+
+  bool BufferIndexHasPacket(uint8_t sn, int queue = 0) {
+    return GetReorderBufEntry(sn, queue).e.has_packet;
+  }
+
+  bool BufferIsEmpty(int queue = 0) {
+    if (GetReorderBuf(queue).num_stored > 0) {
+      return false;
+    }
+
+    for (uint8_t i = 0; i < kEntriesPerQueue; i++) {
+      auto& entry = GetReorderBufEntry(i);
+      if (entry.e.has_packet || entry.e.rx_packet.mac_frame_buffer != NULL) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  struct TestCtx {
+    // Holds copies of received packetes
+    std::vector<wlan_rx_packet_t> received{};
+
+    ~TestCtx() {
+      for (auto packet : received) {
+        if (packet.mac_frame_buffer) {
+          free((void*)packet.mac_frame_buffer);
+        }
+      }
+    }
+  };
+
+  static void MockRecvCallback(void* ptr, const wlan_rx_packet_t* pkt) {
+    TestCtx* ctx = reinterpret_cast<TestCtx*>(ptr);
+
+    wlan_rx_packet_t copy;
+    copy.mac_frame_size = pkt->mac_frame_size;
+
+    auto* buffer = malloc(pkt->mac_frame_size);
+    memcpy(buffer, pkt->mac_frame_buffer, pkt->mac_frame_size);
+    copy.mac_frame_buffer = reinterpret_cast<const uint8_t*>(buffer);
+    copy.info = pkt->info;
+
+    ctx->received.push_back(copy);
+  }
+
+  struct iwl_mvm_sta mvm_sta_ {};
+
+  struct ieee80211_sta sta_ {
+    .drv_priv = &mvm_sta_,
+  };
+
+  TestCtx ctx_{};
+  struct ieee80211_rx_status rx_status_ {};
+
+  // Initialized separately in the constructor because we also have to allocate room for
+  // baid_data_->entries manually
+  struct iwl_mvm_baid_data* baid_data_{nullptr};
+};
+
+TEST_F(ReorderTest, NotBufferedIfInvalidBlockAckId) {
+  WlanRxPacket packet;
+  packet.SetBlockAckId(IWL_RX_REORDER_DATA_INVALID_BAID);
+  ASSERT_FALSE(Reorder(packet));
+}
+
+TEST_F(ReorderTest, NotBufferedIfInvalidStation) {
+  WlanRxPacket packet;
+  ASSERT_FALSE(iwl_mvm_reorder(mvm_, nullptr, packet.Packet(), &rx_status_, 0, packet.Desc()));
+}
+
+TEST_F(ReorderTest, NotBufferedIfStationsDontMatch) {
+  WlanRxPacket packet;
+  mvm_sta_.sta_id = baid_data_->sta_id + 1;
+  ASSERT_FALSE(Reorder(packet));
+}
+
+TEST_F(ReorderTest, NotBufferedIfTidsDontMatch) {
+  WlanRxPacket packet;
+  packet.SetTid(baid_data_->tid + 1);
+  ASSERT_FALSE(Reorder(packet));
+}
+
+TEST_F(ReorderTest, NotBufferedIfInvalidBaidData) {
+  WlanRxPacket packet;
+  mvm_->baid_map[0] = nullptr;
+  ASSERT_FALSE(Reorder(packet));
+}
+
+TEST_F(ReorderTest, BufferPacketsWithDifferentSequenceNumbers) {
+  std::vector<WlanRxPacket> packets{GetReorderBuf().buf_size};
+
+  ASSERT_FALSE(GetReorderBuf().valid);
+  uint8_t sn = 1;
+  for (WlanRxPacket& packet : packets) {
+    packet.SetSn(sn);
+    ASSERT_FALSE(BufferIndexHasPacket(sn));
+    ASSERT_TRUE(Reorder(packet));
+    ASSERT_TRUE(GetReorderBuf().valid);
+    ASSERT_TRUE(BufferIndexHasPacket(sn));
+    ASSERT_TRUE(packet.Equals(GetBufferedPacket(sn)));
+    ++sn;
+  }
+
+  ASSERT_EQ(GetReorderBuf().buf_size, GetReorderBuf().num_stored);
+}
+
+TEST_F(ReorderTest, DropPacketIfSameSequenceNumber) {
+  WlanRxPacket packet0;
+  packet0.SetSn(1);
+  ASSERT_FALSE(BufferIndexHasPacket(1));
+  ASSERT_TRUE(Reorder(packet0));
+  ASSERT_TRUE(BufferIndexHasPacket(1));
+  ASSERT_TRUE(packet0.Equals(GetBufferedPacket(1)));
+
+  WlanRxPacket packet1;
+  packet1.SetSn(1);
+
+  // Returns true if packet is dropped
+  ASSERT_TRUE(Reorder(packet1));
+  ASSERT_TRUE(BufferIndexHasPacket(1));
+
+  // Check that stored packet is packet0 to show packet1 was dropped
+  ASSERT_FALSE(packet1.Equals(GetBufferedPacket(1)));
+  ASSERT_TRUE(packet0.Equals(GetBufferedPacket(1)));
+  ASSERT_EQ(1, GetReorderBuf().num_stored);
+}
+
+TEST_F(ReorderTest, DropPacketIfSequenceNumberBehindBufferHead) {
+  WlanRxPacket packet;
+
+  GetReorderBuf().head_sn = 1;
+
+  ASSERT_TRUE(Reorder(packet));
+  ASSERT_TRUE(BufferIsEmpty());
+
+  packet.SetSn(10);
+  GetReorderBuf().head_sn = 23;
+  ASSERT_TRUE(Reorder(packet));
+  ASSERT_TRUE(BufferIsEmpty());
+}
+
+TEST_F(ReorderTest, FramesReleasedOnBlockAckRequestUpToNssn) {
+  constexpr uint8_t kNumPackets = 30;
+  std::vector<WlanRxPacket> packets{kNumPackets};
+
+  // Pass packets to reorder buffer
+  uint8_t sn = static_cast<uint8_t>(GetReorderBuf().head_sn + 1);
+  for (WlanRxPacket& packet : packets) {
+    packet.SetSn(sn++);
+    ASSERT_TRUE(Reorder(packet));
+  }
+  ASSERT_EQ(kNumPackets, GetReorderBuf().num_stored);
+
+  MockRecv(&ctx_, MockRecvCallback);
+
+  ASSERT_TRUE(ctx_.received.empty());
+
+  // Send Block Ack requests to trigger frames to be released
+  WlanRxPacket bar;
+  bar.SetFrameTypeAndSubtype(IEEE80211_FRAME_TYPE_CTRL, IEEE80211_FRAME_SUBTYPE_BACK_REQ);
+  bar.SetSn(sn);
+  bar.SetNssn(kNumPackets - 10 + 1);
+  ASSERT_TRUE(Reorder(bar));
+  ASSERT_EQ(10, GetReorderBuf().num_stored);
+
+  bar.SetSn(sn + 1);
+  bar.SetNssn(kNumPackets + 1);
+  ASSERT_TRUE(Reorder(bar));
+  ASSERT_TRUE(BufferIsEmpty());
+
+  ASSERT_EQ(ctx_.received.size(), packets.size());
+
+  // Check that they're released in the expected order
+  for (auto i = 0U; i < packets.size(); i++) {
+    ASSERT_TRUE(packets[i].Equals(ctx_.received[i]));
+  }
+}
+
+TEST_F(ReorderTest, OutOfOrderFramesAreReleasedInOrder) {
+  constexpr uint8_t kNumPackets = 30;
+  std::vector<WlanRxPacket> packets{kNumPackets};
+
+  // Receive packets in random order
+  std::vector<uint8_t> receive_order{};
+  receive_order.resize(packets.size());
+
+  std::iota(receive_order.begin(), receive_order.end(), 0);
+  std::random_device rd;
+  std::mt19937 g(rd());
+  std::shuffle(receive_order.begin(), receive_order.end(), g);
+
+  for (const uint8_t i : receive_order) {
+    // Sn needs to be index + 1, because iwl_mvm_reorder() drops packets if it's empty
+    // and sn == head_sn. So adding 1 avoids that case.
+    packets[i].SetSn(i + 1);
+    ASSERT_FALSE(BufferIndexHasPacket(i + 1));
+    ASSERT_TRUE(Reorder(packets[i]));
+    ASSERT_TRUE(BufferIndexHasPacket(i + 1));
+  }
+
+  ASSERT_EQ(packets.size(), GetReorderBuf().num_stored);
+
+  ASSERT_TRUE(ctx_.received.empty());
+
+  MockRecv(&ctx_, MockRecvCallback);
+
+  // Release frames by sending BAR
+  WlanRxPacket bar;
+  bar.SetFrameTypeAndSubtype(IEEE80211_FRAME_TYPE_CTRL, IEEE80211_FRAME_SUBTYPE_BACK_REQ);
+  bar.SetSn(kNumPackets + 1);
+  bar.SetNssn(kNumPackets + 1);
+  ASSERT_TRUE(Reorder(bar));
+  ASSERT_TRUE(BufferIsEmpty());
+
+  ASSERT_EQ(ctx_.received.size(), packets.size());
+
+  // Check that the received order matches the order in packets,
+  // which is in ascending SN.
+  for (auto i = 0U; i < packets.size(); i++) {
+    ASSERT_TRUE(packets[i].Equals(ctx_.received[i]));
+  }
+}
+
+TEST_F(ReorderTest, FramesReleasedOnDataPacketsUpToNssn) {
+  constexpr uint8_t kNumPackets = 30;
+  std::vector<WlanRxPacket> packets{kNumPackets};
+
+  // Pass packets to reorder buffer
+  // Starts with 1 so that they don't get passed up immediately.
+  uint8_t sn = 1;
+  for (WlanRxPacket& packet : packets) {
+    packet.SetSn(sn++);
+    ASSERT_TRUE(Reorder(packet));
+  }
+  ASSERT_EQ(packets.size(), GetReorderBuf().num_stored);
+
+  MockRecv(&ctx_, MockRecvCallback);
+
+  ASSERT_TRUE(ctx_.received.empty());
+
+  // Send Block Ack requests to trigger frames to be released
+  WlanRxPacket data1, data2;
+  data1.SetSn(sn);
+  data1.SetNssn(kNumPackets - 10 + 1);
+  ASSERT_TRUE(Reorder(data1));
+
+  // 10 remaining in buffer + 1 for the new data packet
+  ASSERT_EQ(11, GetReorderBuf().num_stored);
+
+  data2.SetSn(sn + 1);
+  data2.SetNssn(kNumPackets + 1);
+  ASSERT_TRUE(Reorder(data2));
+
+  // Buffer should contain the previous data packet and this one
+  ASSERT_EQ(2, GetReorderBuf().num_stored);
+
+  ASSERT_TRUE(data1.Equals(GetBufferedPacket(sn)));
+  ASSERT_TRUE(data2.Equals(GetBufferedPacket(sn + 1)));
+
+  ASSERT_EQ(ctx_.received.size(), packets.size());
+
+  // Check that they're released in the expected order
+  for (auto i = 0U; i < packets.size(); i++) {
+    ASSERT_TRUE(packets[i].Equals(ctx_.received[i]));
+  }
+}
+
+TEST_F(ReorderTest, FrameNotBufferedIfBufferEmptyAndSnMatchesHeadSn) {
+  constexpr uint8_t kNumPackets = 30;
+  std::vector<WlanRxPacket> packets{kNumPackets};
+
+  uint8_t sn = static_cast<uint8_t>(GetReorderBuf().head_sn);
+  for (WlanRxPacket& packet : packets) {
+    packet.SetSn(sn++);
+
+    // Expected that Reorder will return false so that caller immediately passes it
+    // to MLME
+    ASSERT_FALSE(Reorder(packet));
+  }
+
+  ASSERT_TRUE(BufferIsEmpty());
+}
+
+TEST_F(ReorderTest, FrameNotBufferedIfBufferEmptyAndSnBehindNssn) {
+  WlanRxPacket packet;
+
+  packet.SetSn(0);
+  packet.SetNssn(1);
+
+  ASSERT_FALSE(Reorder(packet));
+  ASSERT_EQ(1, GetReorderBuf().head_sn);
+  ASSERT_TRUE(BufferIsEmpty());
+}
+
+TEST_F(ReorderTest, FrameNotBufferedIfReorderDataFlagSet) {
+  WlanRxPacket packet;
+  packet.SetSn(1);
+
+  packet.Desc()->reorder_data |= IWL_RX_MPDU_REORDER_BA_OLD_SN;
+
+  ASSERT_FALSE(Reorder(packet));
+  ASSERT_TRUE(BufferIsEmpty());
+  ASSERT_FALSE(GetReorderBuf().valid);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
