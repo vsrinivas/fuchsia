@@ -254,12 +254,6 @@
             source_availability: "unknown",
         },
         {
-            protocol: "fuchsia.intl.TimeZones",
-            from: "#time-zone-info-service",
-            to: "#session-manager",
-            source_availability: "unknown",
-        },
-        {
             directory: [
                 "tzdata",
                 "tzdata-icu-44-le",

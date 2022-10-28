@@ -8,4 +8,11 @@
             from: "#intl",
         },
     ],
+    offer: [
+        {
+            protocol: "fuchsia.intl.TimeZones",
+            from: "#intl",
+            to: "#session-manager",
+        },
+    ],
 }

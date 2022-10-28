@@ -20,5 +20,10 @@
             from: "parent",
             to: "#time-zone-info-service",
         },
+        {
+            protocol: "fuchsia.intl.TimeZones",
+            from: "#time-zone-info-service",
+            to: "#session-manager",
+        },
     ],
 }
