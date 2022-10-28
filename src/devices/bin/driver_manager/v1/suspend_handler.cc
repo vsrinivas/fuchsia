@@ -206,8 +206,11 @@ void SuspendHandler::UnregisterSystemStorageForShutdown(SuspendCallback callback
     return device.DriverLivesInSystemStorage();
   };
 
+  uint32_t sflags = coordinator_->suspend_resume_manager()->GetSuspendFlagsFromSystemPowerState(
+      coordinator_->shutdown_system_state());
+
   unregister_system_storage_task_ = SuspendMatchingTask::Create(
-      coordinator_->sys_device(), DEVICE_SUSPEND_FLAG_REBOOT, std::move(match),
+      coordinator_->sys_device(), sflags, std::move(match),
       [this, callback = std::move(callback)](zx_status_t status) mutable {
         unregister_system_storage_task_ = nullptr;
         callback(status);

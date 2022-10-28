@@ -585,6 +585,8 @@ TEST_F(MultipleDeviceTestCase, UnregisterSystemStorageForShutdown_DevicesRemoveC
                                     &package_device_index));
   fbl::RefPtr<Device> package_device = device(package_device_index)->device;
 
+  coordinator().set_shutdown_system_state(SystemPowerState::kReboot);
+
   coordinator_loop()->RunUntilIdle();
 
   bool finished = false;
