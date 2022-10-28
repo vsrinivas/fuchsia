@@ -1,0 +1,88 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library examples.keyvaluestore.usegenericvalues;
+
+/// An item in the store. The key must match the regex `^[A-z][A-z0-9_\.\/]{2,62}[A-z0-9]$`. That
+/// is, it must start with a letter, end with a letter or number, contain only letters, numbers,
+/// periods, and slashes, and be between 4 and 64 characters long.
+type Item = struct {
+    key string:128;
+    // [START diff_1]
+    value Value;
+};
+
+// Because the `Value` must be used both in the request and the response, we give it its own named
+// type. The type is a `union` of all possible data types that we take as values, and is marked
+// `flexible` to allow for the easy addition of new data types in the future.
+type Value = flexible union {
+    // Keep the original `bytes` as one of the options in the new union.
+    1: bytes vector<byte>:64000;
+
+    // A `string` is very similar to `vector<byte>` on the wire, with the extra constraint that
+    // it enforces that it enforces that the byte vector in question is valid UTF-8.
+    2: string string:64000;
+
+    // All of FIDL's primitive types.
+    3: bool bool;
+    4: uint8 uint8;
+    5: int8 int8;
+    6: uint16 uint16;
+    7: int16 int16;
+    8: uint32 uint32;
+    9: int32 int32;
+   10: float32 float32;
+   11: uint64 uint64;
+   12: int64 int64;
+   13: float64 float64;
+
+    // FIDL does not natively support 128-bit integer types, so we have to define our own
+    // representations.
+   14: uint128 array<uint64, 2>;
+};
+
+// Because we now supoprt a richer range of types as values in our store, it is helpful to use a
+// `flexible`, and therefore evolvable, `bits` type to store write options.
+type WriteOptions = flexible bits : uint8 {
+    // This flag allows us to overwrite existing data when there is a collision, rather than failing
+    // with an `WriteError.ALREADY_EXISTS`.
+    OVERWRITE = 0b1;
+    // This flag allows us to concatenate to existing data when there is a collision, rather than
+    // failing with an `WriteError.ALREADY_EXISTS`. "Concatenation" means addition for the numeric
+    // variants and appending to the `bytes`/`string` variants. If no existing data can be found, we
+    // "concatenate" to default values of zero and an empty vector, respectively. Attempting to
+    // concatenate to an existing variant of a different type will return a
+    // `WriteError.INVALID_VALUE` error.
+    CONCAT = 0b10;
+};
+// [END diff_1]
+
+/// An enumeration of things that may go wrong when trying to write a value to our store.
+type WriteError = flexible enum {
+    UNKNOWN = 0;
+    INVALID_KEY = 1;
+    INVALID_VALUE = 2;
+    ALREADY_EXISTS = 3;
+};
+
+/// A very basic key-value store.
+@discoverable
+protocol Store {
+    // [START diff_2]
+    /// Writes an item to the store.
+    ///
+    /// Since the value stored in the key-value store can now be different from the input (if the
+    /// `WriteOptions.CONCAT` flag is set), we need to return the resulting `Value` to the
+    /// requester.
+    ///
+    /// We use an (anonymous) `table` and a (named) `flexible union` as the request and response
+    /// payload, respectively, to allow for easier future evolution. Both of these types are
+    /// `flexible`, meaning that adding or removing members is binary-compatible. This makes them
+    /// much easier to evolve that the `struct` types that were previously used, which cannot be
+    /// changed after release without breaking ABI.
+    WriteItem(table {
+        1: attempt Item;
+        2: options WriteOptions;
+    }) -> (Value) error WriteError;
+    // [END diff_2]
+};

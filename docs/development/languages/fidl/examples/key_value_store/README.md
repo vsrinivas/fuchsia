@@ -21,12 +21,16 @@ modified or improved.
 
 <<_add_read_item_tutorial.md>>
 
-### Adding support for iterating the store {#add_iterator}
+### Using generic values {#use_generic_values}
 
-<<_add_iterator_tutorial.md>>
+<<_use_generic_values_tutorial.md>>
 
 ### Supporting nested key-value stores {#support_trees}
 
 <<_support_trees_tutorial.md>>
+
+### Adding support for iterating the store {#add_iterator}
+
+<<_add_iterator_tutorial.md>>
 
 <!-- /DO_NOT_REMOVE_COMMENT (Why? See: /tools/fidl/scripts/canonical_example/README.md) -->
