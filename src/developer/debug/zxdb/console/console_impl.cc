@@ -313,19 +313,31 @@ void ConsoleImpl::EnableInput() {
   if (InputEnabled())
     return;
 
-  stdio_watch_ =
-      debug::MessageLoop::Current()->WatchFD(debug::MessageLoop::WatchMode::kRead, STDIN_FILENO,
-                                             [this](int fd, bool readable, bool, bool error) {
-                                               if (error)  // EOF
-                                                 Quit();
+  // Callback for input passed to WatchFD().
+  auto watch_fn = [this](int fd, bool readable, bool, bool error) {
+    if (error)  // EOF
+      Quit();
 
-                                               if (!readable)
-                                                 return;
+    if (!readable)
+      return;
 
-                                               char ch;
-                                               while (read(STDIN_FILENO, &ch, 1) > 0)
-                                                 line_input_.OnInput(ch);
-                                             });
+    // Dispatch one character at a time. The message loop will continue to notify us if the
+    // input continues to be readable, so we'll get future messages for buffered input.
+    //
+    // The reason we want this is to avoid starving other work in the case that input is
+    // buffered. If the user queued several "next" commands and we didn't return to the message
+    // loop, for example, we wouldn't even get a chance to process any replies from the target
+    // before issuing the following command.
+    //
+    // Note if we ever start dispatching more than one byte here, we should check InputEnabled()
+    // in case the processing of the previous command has disabled input and no data is
+    // expected.
+    char ch;
+    if (read(STDIN_FILENO, &ch, 1) > 0)
+      line_input_.OnInput(ch);
+  };
+  stdio_watch_ = debug::MessageLoop::Current()->WatchFD(debug::MessageLoop::WatchMode::kRead,
+                                                        STDIN_FILENO, std::move(watch_fn));
   line_input_.Show();
 }
 
