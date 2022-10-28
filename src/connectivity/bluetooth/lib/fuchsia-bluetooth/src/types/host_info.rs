@@ -5,7 +5,7 @@
 use {
     crate::{
         inspect::{DebugExt, InspectData, Inspectable, IsInspectable, ToProperty},
-        types::{Address, HostId},
+        types::{addresses_to_custom_string, Address, HostId},
     },
     anyhow::{format_err, Error},
     fidl_fuchsia_bluetooth_sys as fsys,
@@ -97,8 +97,7 @@ impl fmt::Display for HostInfo {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(fmt, "HostInfo:")?;
         writeln!(fmt, "\tidentifier:\t{}", self.id.to_string())?;
-        writeln!(fmt, "\taddress:\t{}", self.address)?;
-        writeln!(fmt, "\taddresses:\t{:?}", self.addresses)?;
+        writeln!(fmt, "\taddresses:\t{}", addresses_to_custom_string(&self.addresses, "\n\t\t\t"))?;
         writeln!(fmt, "\tactive:\t{}", self.active)?;
         writeln!(fmt, "\ttechnology:\t{:?}", self.technology)?;
         writeln!(

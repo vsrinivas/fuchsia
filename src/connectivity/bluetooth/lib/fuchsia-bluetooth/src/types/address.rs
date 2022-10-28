@@ -35,6 +35,11 @@ fn addr_to_string(bytes: &AddressBytes) -> String {
     )
 }
 
+/// Combines a list of addresses with the provided `separator`.
+pub fn addresses_to_custom_string(addresses: &Vec<Address>, separator: &str) -> String {
+    addresses.iter().map(|addr| format!("{}", addr)).collect::<Vec<String>>().join(separator)
+}
+
 impl Address {
     fn to_fidl(&self) -> fidl::Address {
         match self {

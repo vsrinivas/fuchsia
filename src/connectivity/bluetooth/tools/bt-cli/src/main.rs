@@ -12,7 +12,7 @@ use {
     },
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::io_capabilities::{InputCapability, OutputCapability},
-    fuchsia_bluetooth::types::{HostId, HostInfo, Peer, PeerId},
+    fuchsia_bluetooth::types::{addresses_to_custom_string, HostId, HostInfo, Peer, PeerId},
     fuchsia_component::client::connect_to_protocol,
     futures::{channel::mpsc, select, FutureExt, Sink, SinkExt, Stream, StreamExt, TryFutureExt},
     pairing_delegate,
@@ -59,7 +59,7 @@ async fn get_hosts(state: &Mutex<State>) -> Result<String, Error> {
     table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
     let _ = table.set_titles(row![
         "HostId",
-        "Address",
+        "Addresses",
         "Active",
         "Technology",
         "Name",
@@ -69,7 +69,7 @@ async fn get_hosts(state: &Mutex<State>) -> Result<String, Error> {
     for host in hosts {
         let _ = table.add_row(row![
             host.id.to_string(),
-            format!("{}", host.address),
+            addresses_to_custom_string(&host.addresses, "\n"),
             host.active.to_string(),
             format!("{:?}", host.technology),
             host.local_name.clone().unwrap_or("(unknown)".to_string()),
@@ -706,8 +706,8 @@ async fn watch_hosts(host_svc: HostWatcherProxy, state: Arc<Mutex<State>>) -> Re
             let host = HostInfo::try_from(fidl_host)?;
             if !first_result {
                 println!(
-                    "Adapter updated: [address: {}, active: {}, discoverable: {}, discovering: {}]",
-                    host.address, host.active, host.discoverable, host.discovering
+                    "Adapter updated: [addresses: {}, active: {}, discoverable: {}, discovering: {}]",
+                    addresses_to_custom_string(&host.addresses, " "), host.active, host.discoverable, host.discovering
                 );
             }
             hosts.push(host);
@@ -863,7 +863,7 @@ mod tests {
     #[fuchsia::test]
     async fn test_get_hosts() {
         // Fields for table view of hosts
-        let fields = Regex::new(r"HostId[ \t]*\|[ \t]*Address[ \t]*\|[ \t]*Active[ \t]*\|[ \t]*Technology[ \t]*\|[ \t]*Name[ \t]*\|[ \t]*Discoverable[ \t]*\|[ \t]*Discovering").unwrap();
+        let fields = Regex::new(r"HostId[ \t]*\|[ \t]*Addresses[ \t]*\|[ \t]*Active[ \t]*\|[ \t]*Technology[ \t]*\|[ \t]*Name[ \t]*\|[ \t]*Discoverable[ \t]*\|[ \t]*Discovering").unwrap();
 
         // No hosts
         let mut output = get_hosts(&Mutex::new(State::new())).await.unwrap();
