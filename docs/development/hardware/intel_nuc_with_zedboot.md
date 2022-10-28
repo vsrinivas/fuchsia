@@ -398,9 +398,9 @@ contains the IPv4 address you configured in the Intel ME settings,
 In these instructions, `AMT_PASSWORD` is the Intel ME password and `VNC_PASSWORD`
 is the VNC password.
 
-Note: Password must be _exactly_ 8 characters long, contain both lowercase and
-uppercase characters, at least one digit and at least one non alphanumeric
-character.
+Note: The password used for `VNC_PASSWORD` must be _exactly_ 8 characters long,
+must contain both lowercase and uppercase characters, at least one digit and
+at least one non alphanumeric character.
 
 #### Intel AMT serial-over-LAN {:#amt-serial-over-lan}
 
