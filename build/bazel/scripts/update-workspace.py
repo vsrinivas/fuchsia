@@ -73,7 +73,7 @@ def force_symlink(target_path, dst_path):
     except OSError as e:
         if e.errno == errno.EEXIST:
             os.remove(dst_path)
-            os.symlink(ltarget_path, dst_path)
+            os.symlink(target_path, dst_path)
         else:
             raise
 
@@ -303,6 +303,8 @@ def main():
 
     topdir = os.path.abspath(args.topdir)
 
+    logs_dir = os.path.join(topdir, 'logs')
+
     host_tag = get_host_tag()
 
     ninja_binary = os.path.join(
@@ -334,13 +336,15 @@ def main():
   Ninja binary:           {}
   Bazel source:           {}
   Topdir:                 {}
+  Logs directory:         {}
   Bazel workspace:        {}
   Bazel output_base:      {}
   Bazel output user root: {}
   Bazel launcher:         {}
 '''.format(
             fuchsia_dir, gn_output_dir, ninja_binary, bazel_bin, topdir,
-            workspace_dir, output_base_dir, output_user_root, bazel_launcher))
+            logs_dir, workspace_dir, output_base_dir, output_user_root,
+            bazel_launcher))
 
     if ninja_regen_check(gn_output_dir, ninja_binary):
         log('Re-generating Ninja build plan!')
@@ -414,6 +418,11 @@ build --platforms=//build/bazel/platforms:linux_x64
 common --experimental_enable_bzlmod
 '''
 
+    bazelrc_content += '''
+# Save workspace rule events to a log file for later analysis.
+build --experimental_workspace_rules_log_file={log_file}
+'''.format(log_file=os.path.join(logs_dir, 'workspace-events.log'))
+
     generated.add_file('workspace/.bazelrc', bazelrc_content)
 
     # Create a symlink to the GN-generated file that will contain the list
@@ -432,14 +441,43 @@ readonly _SCRIPT_DIR="$(cd "$(dirname "${{BASH_SOURCE[0]}}")" >/dev/null 2>&1 &&
 readonly _WORKSPACE_DIR="${{_SCRIPT_DIR}}/{workspace}"
 readonly _OUTPUT_BASE="${{_SCRIPT_DIR}}/{output_base}"
 readonly _OUTPUT_USER_ROOT="${{_SCRIPT_DIR}}/{output_user_root}"
+readonly _LOG_DIR="{logs_dir}"
 
 # Exported explicitly to be used by repository rules to reference the
 # Ninja output directory and binary.
 export BAZEL_FUCHSIA_NINJA_OUTPUT_DIR="{ninja_output_dir}"
 export BAZEL_FUCHSIA_NINJA_PREBUILT="{ninja_prebuilt}"
 
+# Implement log rotation
+# $1: log file name (e.g. "path/to/workspace-events.log")
+logrotate3 () {{
+  local i
+  local prev_log="$1.3"
+  local cur_log
+  for i in "2" "1"; do
+    rm -f "${{prev_log}}"
+    cur_log="$1.$i"
+    if [[ -f "${{cur_log}}" ]]; then
+      mv "${{cur_log}}" "${{prev_log}}"
+    fi
+    prev_log="${{cur_log}}"
+  done
+  cur_log="$1"
+  if [[ -f "${{cur_log}}" ]]; then
+    mv "${{cur_log}}" "${{prev_log}}"
+  fi
+}}
+
+mkdir -p "${{_LOG_DIR}}"
+logrotate3 "${{_LOG_DIR}}/workspace-events.log"
+
 # Setting $USER so `bazel` won't fail in environments with fake UIDs. Even if
 # the USER is not actually used. See https://fxbug.dev/112206#c9.
+#
+# Explanation for flags:
+#  --nohome_rc: Ignore $HOME/.bazelrc to enforce hermiticity / reproducibility.
+#  --output_base: Ensure the output base is in the Ninja output directory, not under $HOME.
+#  --output_user_root: Ensure the output user root is in the Ninja output directory, not under $HOME.
 cd "${{_WORKSPACE_DIR}}" && USER=unused-bazel-build-user {bazel_bin_path} \
       --nohome_rc \
       --output_base="${{_OUTPUT_BASE}}" \
@@ -449,6 +487,7 @@ cd "${{_WORKSPACE_DIR}}" && USER=unused-bazel-build-user {bazel_bin_path} \
         ninja_output_dir=os.path.abspath(gn_output_dir),
         ninja_prebuilt=os.path.abspath(ninja_binary),
         bazel_bin_path=os.path.abspath(bazel_bin),
+        logs_dir=os.path.abspath(logs_dir),
         workspace=os.path.relpath(workspace_dir, topdir),
         output_base=os.path.relpath(output_base_dir, topdir),
         output_user_root=os.path.relpath(output_user_root, topdir))
