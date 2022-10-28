@@ -155,6 +155,9 @@ zx::status<> ComponentRunner::Configure(std::unique_ptr<BlockDevice> device,
     return status.take_error();
   }
 
+  // All of our pager threads get the deadline profile for scheduling.
+  SetDeadlineProfile(GetPagerThreads());
+
   auto blobfs_or = Blobfs::Create(loop_.dispatcher(), std::move(device), this, options,
                                   std::move(vmex_resource_));
   if (blobfs_or.is_error()) {
