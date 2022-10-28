@@ -4,6 +4,7 @@
 
 #include "utils.h"
 
+#include <bootbyte.h>
 #include <lib/zbi/zbi.h>
 #include <stdio.h>
 
@@ -11,6 +12,25 @@
 #include <efi/types.h>
 
 namespace gigaboot {
+
+namespace {
+
+std::optional<RebootMode> ParseByteToRebootMode(uint8_t b) {
+  switch (b) {
+    case 0x1:
+      return RebootMode::kNormal;
+    case 0x2:
+      return RebootMode::kRecovery;
+    case 0x4:
+      return RebootMode::kBootloader;
+    case 0xFF:
+      return RebootMode::kBootloaderDefault;
+    default:
+      return std::nullopt;
+  }
+}
+
+}  // namespace
 
 const char* EfiStatusToString(efi_status status) {
   switch (status) {
@@ -151,6 +171,21 @@ fit::result<efi_status, bool> IsSecureBootOn() {
   }
 
   return fit::ok(value);
+}
+
+bool SetRebootMode(RebootMode mode) {
+  return gEfiSystemTable != nullptr &&
+         set_bootbyte(gEfiSystemTable->RuntimeServices, RebootModeToByte(mode)) == EFI_SUCCESS;
+}
+
+std::optional<RebootMode> GetRebootMode() {
+  uint8_t bootbyte;
+  efi_status status = get_bootbyte(gEfiSystemTable->RuntimeServices, &bootbyte);
+  if (status != EFI_SUCCESS) {
+    return std::nullopt;
+  }
+
+  return ParseByteToRebootMode(bootbyte);
 }
 
 }  // namespace gigaboot

@@ -19,7 +19,6 @@ source_set("src") {
     "abr.c",
     "acpi.c",
     "avb.c",
-    "bootbyte.c",
     "bootimg.c",
     "cmdline.c",
     "device_id.c",
@@ -43,6 +42,7 @@ source_set("src") {
   include_dirs = [ "." ]
   deps = [
     "../lib",
+    "//src/firmware/gigaboot/lib:bootbyte",
     "//src/firmware/lib/abr",
     "//src/firmware/lib/zbi",
     "//src/firmware/lib/zircon_boot",
@@ -78,7 +78,6 @@ if (!is_mac) {
       "acpi_test.cc",
       "avb.c",
       "avb_test.cc",
-      "bootbyte.c",
       "cmdline.c",
       "diskio.c",
       "diskio_test.cc",
@@ -104,6 +103,7 @@ if (!is_mac) {
     deps = [
       "../host",
       "//src/bringup/lib/netboot",
+      "//src/firmware/gigaboot/lib:bootbyte",
       "//src/firmware/lib/abr",
       "//src/firmware/lib/zbi",
       "//src/lib/fxl/test:gtest_main",

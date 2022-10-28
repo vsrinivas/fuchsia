@@ -9,18 +9,6 @@
 
 namespace gigaboot {
 
-enum class RebootMode {
-  kBootloader,
-  kNormal,
-  kRecovery,
-};
-
-// Set reboot mode. Returns true if succeeds, false otherwise.
-bool SetRebootMode(RebootMode mode);
-
-// Get reboot mode.
-RebootMode GetRebootMode();
-
 // Adds verified boot backends.
 
 const cpp20::span<const uint8_t> GetPermanentAttributes();

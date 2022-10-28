@@ -17,6 +17,7 @@
 #include <fbl/vector.h>
 
 #include "backends.h"
+#include "utils.h"
 
 namespace gigaboot {
 

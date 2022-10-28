@@ -7,6 +7,8 @@
 
 #include <lib/stdcompat/span.h>
 
+#include <optional>
+
 #include <efi/protocol/block-io.h>
 #include <efi/protocol/device-path.h>
 #include <efi/protocol/disk-io.h>
@@ -93,6 +95,22 @@ efi_status PrintTpm2Capability();
 // Check whether secure boot is turned on by querying the `SecureBoot` global variable.
 // Returns error if fail to query `SecureBoot`.
 fit::result<efi_status, bool> IsSecureBootOn();
+
+enum class RebootMode : uint8_t {
+  kNormal = 0x1,
+  kRecovery = 0x2,
+  kBootloader = 0x4,
+  kBootloaderDefault = 0xFF,
+};
+
+constexpr uint8_t RebootModeToByte(RebootMode m) { return static_cast<uint8_t>(m); }
+
+// Set reboot mode. Returns true if succeeds, false otherwise.
+bool SetRebootMode(RebootMode mode);
+
+// Get reboot mode.
+// Returns std::nullopt on failure
+std::optional<RebootMode> GetRebootMode();
 
 }  // namespace gigaboot
 

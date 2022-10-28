@@ -23,26 +23,6 @@ using namespace std::literals;
 
 namespace gigaboot {
 
-RebootMode test_reboot_mode;
-bool set_reboot_mode_res = true;
-bool SetRebootMode(RebootMode mode) {
-  test_reboot_mode = mode;
-  return set_reboot_mode_res;
-}
-
-class FakeRebootMode {
- public:
-  FakeRebootMode(RebootMode test_mode, bool reboot_mode_res = true) {
-    test_reboot_mode = test_mode;
-    set_reboot_mode_res = reboot_mode_res;
-  }
-
-  ~FakeRebootMode() {
-    test_reboot_mode = RebootMode::kNormal;
-    set_reboot_mode_res = true;
-  }
-};
-
 namespace {
 
 class TestTcpTransport : public TcpTransportInterface {
@@ -679,9 +659,48 @@ EFIAPI efi_status ResetSystemSucceed(efi_reset_type, efi_status, size_t, void*) 
   return EFI_SUCCESS;
 }
 
+class EfiBootbyteOwner {
+ public:
+  EfiBootbyteOwner() = default;
+  EfiBootbyteOwner(efi_status status, RebootMode mode) {
+    EFI_RETVAL = status;
+    DATA = static_cast<uint8_t>(mode);
+  }
+
+  static EFIAPI efi_status GetVariable(char16_t* var_name, efi_guid* vendor_guid,
+                                       uint32_t* attributes, size_t* data_size, void* data) {
+    *data_size = sizeof(DATA);
+    *reinterpret_cast<uint8_t*>(data) = DATA;
+
+    return EFI_RETVAL;
+  }
+
+  static EFIAPI efi_status SetVariable(char16_t* var_name, efi_guid* vendor_guid,
+                                       uint32_t attributes, size_t data_size, const void* data) {
+    DATA = *reinterpret_cast<uint8_t const*>(data);
+
+    return EFI_RETVAL;
+  }
+
+  ~EfiBootbyteOwner() {
+    DATA = 0;
+    EFI_RETVAL = EFI_SUCCESS;
+  }
+
+ private:
+  static uint8_t DATA;
+  static efi_status EFI_RETVAL;
+};
+
+uint8_t EfiBootbyteOwner::DATA = 0;
+efi_status EfiBootbyteOwner::EFI_RETVAL = 0;
+
 TEST_F(FastbootFlashTest, RebootNormal) {
   auto cleanup = SetupEfiGlobalState(stub_service(), image_device());
+  EfiBootbyteOwner efi_var;
   efi_runtime_services runtime_services{
+      .GetVariable = efi_var.GetVariable,
+      .SetVariable = efi_var.SetVariable,
       .ResetSystem = ResetSystemSucceed,
   };
   gEfiSystemTable->RuntimeServices = &runtime_services;
@@ -690,7 +709,7 @@ TEST_F(FastbootFlashTest, RebootNormal) {
   fastboot::TestTransport transport;
 
   // Set to a different initial boot mode.
-  FakeRebootMode bootmode(RebootMode::kBootloader);
+  ASSERT_TRUE(SetRebootMode(RebootMode::kBootloader));
 
   transport.AddInPacket(std::string("reboot"));
   zx::result ret = fastboot.ProcessPacket(&transport);
@@ -698,12 +717,17 @@ TEST_F(FastbootFlashTest, RebootNormal) {
   std::vector<std::string> expected_packets = {"OKAY"};
   ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
 
-  ASSERT_EQ(test_reboot_mode, RebootMode::kNormal);
+  std::optional<RebootMode> mode_option = GetRebootMode();
+  ASSERT_TRUE(mode_option);
+  ASSERT_EQ(*mode_option, RebootMode::kNormal);
 }
 
 TEST_F(FastbootFlashTest, RebootBootloader) {
   auto cleanup = SetupEfiGlobalState(stub_service(), image_device());
+  EfiBootbyteOwner efi_var;
   efi_runtime_services runtime_services{
+      .GetVariable = efi_var.GetVariable,
+      .SetVariable = efi_var.SetVariable,
       .ResetSystem = ResetSystemSucceed,
   };
   gEfiSystemTable->RuntimeServices = &runtime_services;
@@ -712,7 +736,7 @@ TEST_F(FastbootFlashTest, RebootBootloader) {
   fastboot::TestTransport transport;
 
   // Set to a different initial boot mode.
-  FakeRebootMode bootmode(RebootMode::kNormal);
+  ASSERT_TRUE(SetRebootMode(RebootMode::kNormal));
 
   transport.AddInPacket(std::string("reboot-bootloader"));
   zx::result ret = fastboot.ProcessPacket(&transport);
@@ -720,12 +744,17 @@ TEST_F(FastbootFlashTest, RebootBootloader) {
   std::vector<std::string> expected_packets = {"OKAY"};
   ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
 
-  ASSERT_EQ(test_reboot_mode, RebootMode::kBootloader);
+  std::optional<RebootMode> mode_option = GetRebootMode();
+  ASSERT_TRUE(mode_option);
+  ASSERT_EQ(*mode_option, RebootMode::kBootloader);
 }
 
 TEST_F(FastbootFlashTest, RebootRecovery) {
   auto cleanup = SetupEfiGlobalState(stub_service(), image_device());
+  EfiBootbyteOwner efi_var;
   efi_runtime_services runtime_services{
+      .GetVariable = efi_var.GetVariable,
+      .SetVariable = efi_var.SetVariable,
       .ResetSystem = ResetSystemSucceed,
   };
   gEfiSystemTable->RuntimeServices = &runtime_services;
@@ -734,7 +763,7 @@ TEST_F(FastbootFlashTest, RebootRecovery) {
   fastboot::TestTransport transport;
 
   // Set to a different initial boot mode.
-  FakeRebootMode bootmode(RebootMode::kNormal);
+  ASSERT_TRUE(SetRebootMode(RebootMode::kNormal));
 
   transport.AddInPacket(std::string("reboot-recovery"));
   zx::result ret = fastboot.ProcessPacket(&transport);
@@ -742,21 +771,24 @@ TEST_F(FastbootFlashTest, RebootRecovery) {
   std::vector<std::string> expected_packets = {"OKAY"};
   ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
 
-  ASSERT_EQ(test_reboot_mode, RebootMode::kRecovery);
+  std::optional<RebootMode> mode_option = GetRebootMode();
+  ASSERT_TRUE(mode_option);
+  ASSERT_EQ(*mode_option, RebootMode::kRecovery);
 }
 
 TEST_F(FastbootFlashTest, RebootSetRebootModeFail) {
   auto cleanup = SetupEfiGlobalState(stub_service(), image_device());
+
+  EfiBootbyteOwner efi_var(EFI_DEVICE_ERROR, RebootMode::kNormal);
   efi_runtime_services runtime_services{
+      .GetVariable = efi_var.GetVariable,
+      .SetVariable = efi_var.SetVariable,
       .ResetSystem = ResetSystemSucceed,
   };
   gEfiSystemTable->RuntimeServices = &runtime_services;
 
   Fastboot fastboot(download_buffer, mock_zb_ops().GetZirconBootOps());
   fastboot::TestTransport transport;
-
-  // Set returned value to false
-  FakeRebootMode bootmode(RebootMode::kNormal, false);
 
   transport.AddInPacket(std::string("reboot"));
   zx::result ret = fastboot.ProcessPacket(&transport);
@@ -773,7 +805,10 @@ EFIAPI efi_status ResetSystemFailed(efi_reset_type, efi_status, size_t, void*) {
 
 TEST_F(FastbootFlashTest, RebootResetSystemFail) {
   auto cleanup = SetupEfiGlobalState(stub_service(), image_device());
+  EfiBootbyteOwner efi_var;
   efi_runtime_services runtime_services{
+      .GetVariable = efi_var.GetVariable,
+      .SetVariable = efi_var.SetVariable,
       .ResetSystem = ResetSystemFailed,
   };
   gEfiSystemTable->RuntimeServices = &runtime_services;

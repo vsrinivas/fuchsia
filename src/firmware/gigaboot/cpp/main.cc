@@ -57,7 +57,8 @@ int main(int argc, char** argv) {
            gigaboot::EfiStatusToString(res));
   }
 
-  gigaboot::RebootMode reboot_mode = gigaboot::GetRebootMode();
+  gigaboot::RebootMode reboot_mode =
+      gigaboot::GetRebootMode().value_or(gigaboot::RebootMode::kNormal);
   bool enter_fastboot = reboot_mode == gigaboot::RebootMode::kBootloader;
   if (!enter_fastboot) {
     printf("Auto boot in 2 seconds. Press f to enter fastboot.\n");

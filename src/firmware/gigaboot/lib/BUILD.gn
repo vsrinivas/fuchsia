@@ -41,6 +41,14 @@ source_set("shared") {
   cflags = [ "-fshort-wchar" ]
 }
 
+source_set("bootbyte") {
+  sources = [ "bootbyte.c" ]
+
+  public_deps = [ "//zircon/kernel/lib/efi" ]
+
+  public_configs = [ ":shared_config" ]
+}
+
 config("shared_config") {
   include_dirs = [ "../include/shared" ]
 }

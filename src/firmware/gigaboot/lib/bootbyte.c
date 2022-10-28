@@ -5,7 +5,6 @@
 #include "bootbyte.h"
 
 #include <stdint.h>
-#include <stdio.h>
 #include <zircon/boot/image.h>
 #include <zircon/compiler.h>
 

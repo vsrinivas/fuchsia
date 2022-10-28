@@ -8,6 +8,7 @@
 
 #include "fastboot.h"
 
+#include <bootbyte.h>
 #include <inttypes.h>
 #include <lib/abr/data.h>
 #include <log.h>

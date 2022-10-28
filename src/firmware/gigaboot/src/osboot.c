@@ -4,6 +4,7 @@
 
 #include "osboot.h"
 
+#include <bootbyte.h>
 #include <cmdline.h>
 #include <device_id.h>
 #include <fastboot.h>
@@ -29,7 +30,6 @@
 
 #include "abr.h"
 #include "avb.h"
-#include "bootbyte.h"
 #include "diskio.h"
 #include "mdns.h"
 #include "netboot.h"

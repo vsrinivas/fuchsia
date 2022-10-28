@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_FIRMWARE_GIGABOOT_SRC_BOOTBYTE_H_
-#define SRC_FIRMWARE_GIGABOOT_SRC_BOOTBYTE_H_
+#ifndef SRC_FIRMWARE_GIGABOOT_INCLUDE_SHARED_BOOTBYTE_H_
+#define SRC_FIRMWARE_GIGABOOT_INCLUDE_SHARED_BOOTBYTE_H_
 
 #include <stdint.h>
 #include <zircon/boot/image.h>
@@ -30,4 +30,4 @@ efi_status set_bootbyte(efi_runtime_services* runtime, uint8_t bootbyte);
 
 __END_CDECLS
 
-#endif  // SRC_FIRMWARE_GIGABOOT_SRC_BOOTBYTE_H_
+#endif  // SRC_FIRMWARE_GIGABOOT_INCLUDE_SHARED_BOOTBYTE_H_
