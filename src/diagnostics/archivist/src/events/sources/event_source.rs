@@ -28,16 +28,21 @@ pub struct EventSource {
 impl EventSource {
     pub async fn new(legacy_proxy: fsys::EventSourceProxy) -> Result<Self, Error> {
         // Connect to /events/event_stream which contains our newer FIDL protocol
-        let event_streams = Some(vec![
+        let event_streams = vec![
             connect_to_protocol_at_path::<fsys::EventStream2Marker>(
                 "/events/log_sink_requested_event_stream",
             )?,
             connect_to_protocol_at_path::<fsys::EventStream2Marker>(
                 "/events/diagnostics_ready_event_stream",
             )?,
-        ]);
+        ];
+        for event_stream in &event_streams {
+            // Swallow result for now. We have a fallback to use the legacy system below.
+            // Once we remove the legacy fallback, we should handle the potential error.
+            let _ = event_stream.wait_for_ready().await;
+        }
         Ok(Self {
-            event_streams,
+            event_streams: Some(event_streams),
             dispatcher: Dispatcher::default(),
             legacy_proxy: Some(legacy_proxy),
         })
