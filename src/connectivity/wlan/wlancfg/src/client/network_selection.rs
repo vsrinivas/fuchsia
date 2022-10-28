@@ -27,7 +27,11 @@ use {
     fuchsia_zircon as zx,
     futures::lock::Mutex,
     log::{debug, error, info, trace, warn},
-    std::{collections::HashMap, convert::TryInto as _, sync::Arc},
+    std::{
+        collections::{HashMap, HashSet},
+        convert::TryInto as _,
+        sync::Arc,
+    },
     wlan_common::{self, hasher::WlanHasher},
     wlan_inspect::wrappers::InspectWlanChan,
     wlan_metrics_registry::{
@@ -80,6 +84,8 @@ struct InternalSavedNetworkData {
     past_connections: PastConnectionsByBssid,
 }
 
+// TODO(fxbug.dev/113029): Consider merging InternalBSS into ScannedCandidate. This (or making
+// InternalBss public) will need to occur in order to make some NetworkSelector methods public.
 #[derive(Debug, Clone, PartialEq)]
 struct InternalBss {
     saved_network_info: InternalSavedNetworkData,
@@ -257,104 +263,196 @@ impl NetworkSelector {
         }
     }
 
-    /// Select the best available network, based on the current saved networks and the most
-    /// recent scan results provided to this module.
-    /// Only networks that are both saved and visible in the most recent scan results are eligible
-    /// for consideration. Among those, the "best" network based on compatibility and quality (e.g.
-    /// RSSI, recent failures) is selected.
-    pub(crate) async fn find_best_connection_candidate(&self) -> Option<types::ScannedCandidate> {
-        // Log a metric for scan age
-        let last_scan_result_time = *self.last_scan_result_time.lock().await;
-        let scan_age = zx::Time::get_monotonic() - last_scan_result_time;
-        if last_scan_result_time != zx::Time::ZERO {
-            info!("Scan results are {}s old, triggering a scan", scan_age.into_seconds());
-            self.telemetry_sender.send(TelemetryEvent::LogMetricEvents {
-                events: vec![MetricEvent {
-                    metric_id: LAST_SCAN_AGE_WHEN_SCAN_REQUESTED_MIGRATED_METRIC_ID,
-                    event_codes: vec![],
-                    payload: MetricEventPayload::IntegerValue(scan_age.into_micros()),
-                }],
-                ctx: "NetworkSelector::perform_scan",
-            });
-        }
+    /// Scans and compiles list of BSSs that appear in the scan and belong to currently saved
+    /// networks. If a network is provided, a directed active scan will be used to find available
+    /// BSSs. Otherwise, either an undirected scan or cached scan results will be used.
+    async fn find_available_bss_list(
+        &self,
+        network: Option<types::NetworkIdentifier>,
+    ) -> Vec<InternalBss> {
+        let scan_results = match network {
+            Some(ref network) => {
+                self.scan_requester.perform_directed_active_scan(network.ssid.clone(), None).await
+            }
+            None => {
+                let last_scan_result_time = *self.last_scan_result_time.lock().await;
+                let scan_age = zx::Time::get_monotonic() - last_scan_result_time;
+                if last_scan_result_time != zx::Time::ZERO {
+                    info!("Scan results are {}s old, triggering a scan", scan_age.into_seconds());
+                    self.telemetry_sender.send(TelemetryEvent::LogMetricEvents {
+                        events: vec![MetricEvent {
+                            metric_id: LAST_SCAN_AGE_WHEN_SCAN_REQUESTED_MIGRATED_METRIC_ID,
+                            event_codes: vec![],
+                            payload: MetricEventPayload::IntegerValue(scan_age.into_micros()),
+                        }],
+                        ctx: "NetworkSelector::perform_scan",
+                    });
+                }
+                self.scan_requester.perform_scan(NetworkSelectionScan).await
+            }
+        };
 
-        let scan_results = self.scan_requester.perform_scan(NetworkSelectionScan).await;
-
-        let (candidate_networks, num_candidates) = match scan_results {
+        let candidates = match scan_results {
             Err(e) => {
-                warn!("Failed to get scan results for network selection, {:?}", e);
-                (vec![], Err(()))
+                warn!("Failed to get available BSSs, {:?}", e);
+                vec![]
             }
             Ok(scan_results) => {
-                let candidate_networks = merge_saved_networks_and_scan_data(
+                let candidates = merge_saved_networks_and_scan_data(
                     &self.saved_network_manager,
                     scan_results,
                     &self.hasher,
                 )
                 .await;
+                if network.is_none() {
+                    *self.last_scan_result_time.lock().await = zx::Time::get_monotonic();
+                    record_metrics_on_scan(candidates.clone(), &self.telemetry_sender);
+                }
+                candidates
+            }
+        };
+        candidates
+    }
 
-                *self.last_scan_result_time.lock().await = zx::Time::get_monotonic();
-                record_metrics_on_scan(candidate_networks.clone(), &self.telemetry_sender);
-                let candidate_count = candidate_networks.len();
-                (candidate_networks, Ok(candidate_count))
+    /// Network selection. Filters list of available networks to only those that are acceptable for
+    /// immediate connection.
+    fn select_networks(
+        &self,
+        available_networks: HashSet<types::NetworkIdentifier>,
+    ) -> HashSet<types::NetworkIdentifier> {
+        // TODO(fxbug.dev/113030): Add network selection logic.
+        // Currently, the connection selection is determined solely based on the BSS. All available
+        // networks are allowed.
+        available_networks
+    }
+
+    /// BSS selection. Selects the best from a list of InternalBss that are available for
+    /// connection. Converts to ScannedCandidate.
+    async fn select_bss(&self, allowed_bss_list: Vec<InternalBss>) -> Option<InternalBss> {
+        if allowed_bss_list.is_empty() {
+            info!("No BSSs available to select from.");
+        } else {
+            info!("Selecting from {} BSSs found for allowed networks", allowed_bss_list.len());
+        }
+
+        let mut inspect_node = self.inspect_node_for_network_selections.lock().await;
+
+        let selected = allowed_bss_list
+            .iter()
+            .inspect(|&bss| {
+                info!("{}", bss.to_string_without_pii());
+            })
+            .filter(|&bss| {
+                // Filter out incompatible BSSs
+                if !bss.scanned_bss.is_compatible() {
+                    trace!("BSS is incompatible, filtering: {:?}", bss);
+                    return false;
+                };
+                true
+            })
+            .max_by_key(|&bss| bss.score());
+
+        // Log the candidates into Inspect
+        inspect_log!(
+            inspect_node.get_mut(),
+            candidates: InspectList(&allowed_bss_list),
+            selected?: selected
+        );
+
+        if let Some(bss) = selected {
+            info!("Selected BSS:");
+            info!("{}", bss.to_string_without_pii());
+            Some(bss.clone())
+        } else {
+            None
+        }
+    }
+
+    /// Full connection selection. Scans to find available candidates, uses network selection (or
+    /// optional provided network) to filter out networks, and then bss selection to select the best
+    /// of the remaining candidates. If the candidate was discovered via a passive scan, augment the
+    /// bss info with an active scan
+    pub(crate) async fn find_and_select_scanned_candidate(
+        &self,
+        network: Option<types::NetworkIdentifier>,
+    ) -> Option<types::ScannedCandidate> {
+        // Scan for BSSs belonging to saved networks.
+        let available_bss_list = self.find_available_bss_list(network.clone()).await;
+
+        let allowed_bss_list = match network {
+            Some(_) => available_bss_list.clone(),
+            None => {
+                // Network selection.
+                let available_networks: HashSet<types::NetworkIdentifier> = available_bss_list
+                    .iter()
+                    .map(|bss| bss.saved_network_info.network_id.clone())
+                    .collect();
+                let selected_networks = self.select_networks(available_networks);
+
+                // Filter down to only BSSs in the selected networks.
+                available_bss_list
+                    .iter()
+                    .cloned()
+                    .filter(|bss| selected_networks.contains(&bss.saved_network_info.network_id))
+                    .collect()
             }
         };
 
-        let mut inspect_node = self.inspect_node_for_network_selections.lock().await;
-        let result = match select_best_connection_candidate(candidate_networks, &mut inspect_node) {
-            Some((selected, channel, bssid)) => Some(
-                augment_bss_with_active_scan(selected, channel, bssid, self.scan_requester.clone())
-                    .await,
-            ),
+        // BSS Selection.
+        let selection = match self.select_bss(allowed_bss_list).await {
+            Some(mut bss) => {
+                if network.is_some() {
+                    // Strip scan observation type, because the candidate was discovered via a
+                    // directed active scan, so we cannot know if it is discoverable via a passive
+                    // scan.
+                    bss.scanned_bss.observation = types::ScanObservation::Unknown;
+                }
+                let mutual_security_protocols = match bss.scanned_bss.compatibility.as_ref() {
+                    Some(compatibility) => compatibility.mutual_security_protocols().clone(),
+                    None => {
+                        error!("The selected BSS lacks compatibility information");
+                        return None;
+                    }
+                };
+                // Convert to ScannedCandidate
+                let selected_candidate = types::ScannedCandidate {
+                    network: bss.saved_network_info.network_id.clone(),
+                    credential: bss.saved_network_info.credential.clone(),
+                    bss_description: bss.scanned_bss.bss_description.clone(),
+                    observation: bss.scanned_bss.observation,
+                    has_multiple_bss_candidates: bss.multiple_bss_candidates,
+                    mutual_security_protocols,
+                };
+                // If it was observed passively, augment with active scan.
+                match bss.scanned_bss.observation {
+                    types::ScanObservation::Passive => Some(
+                        augment_bss_with_active_scan(
+                            selected_candidate,
+                            bss.scanned_bss.channel,
+                            bss.scanned_bss.bssid,
+                            self.scan_requester.clone(),
+                        )
+                        .await,
+                    ),
+                    _ => Some(selected_candidate),
+                }
+            }
             None => None,
         };
 
+        // Send metrics
         self.telemetry_sender.send(TelemetryEvent::NetworkSelectionDecision {
-            network_selection_type: telemetry::NetworkSelectionType::Undirected,
-            num_candidates,
-            selected_any: result.is_some(),
+            network_selection_type: match network {
+                Some(_) => telemetry::NetworkSelectionType::Directed,
+                None => telemetry::NetworkSelectionType::Undirected,
+            },
+            num_candidates: (!available_bss_list.is_empty())
+                .then_some(available_bss_list.len())
+                .ok_or(()),
+            selected_any: selection.is_some(),
         });
-        result
-    }
 
-    /// Find a suitable BSS for the given network.
-    pub(crate) async fn find_connection_candidate_for_network(
-        &self,
-        network: types::NetworkIdentifier,
-    ) -> Option<types::ScannedCandidate> {
-        let scan_results =
-            self.scan_requester.perform_directed_active_scan(network.ssid.clone(), None).await;
-
-        let (result, num_candidates) = match scan_results {
-            Err(_) => (None, Err(())),
-            Ok(scan_results) => {
-                let networks = merge_saved_networks_and_scan_data(
-                    &self.saved_network_manager,
-                    scan_results,
-                    &self.hasher,
-                )
-                .await;
-                let num_candidates = Ok(networks.len());
-                let mut inspect_node = self.inspect_node_for_network_selections.lock().await;
-                let result = select_best_connection_candidate(networks, &mut inspect_node).map(
-                    |(mut scanned_candidate, _, _)| {
-                        // Strip out the information about passive vs active scan, because we can't know
-                        // if this network would have been observed in a passive scan (since we never
-                        // performed a passive scan).
-                        scanned_candidate.observation = types::ScanObservation::Unknown;
-                        scanned_candidate
-                    },
-                );
-                (result, num_candidates)
-            }
-        };
-
-        self.telemetry_sender.send(TelemetryEvent::NetworkSelectionDecision {
-            network_selection_type: telemetry::NetworkSelectionType::Directed,
-            num_candidates,
-            selected_any: result.is_some(),
-        });
-        result
+        selection
     }
 }
 
@@ -396,63 +494,6 @@ async fn merge_saved_networks_and_scan_data(
         }
     }
     merged_networks
-}
-
-fn select_best_connection_candidate(
-    bss_list: Vec<InternalBss>,
-    inspect_node: &mut AutoPersist<InspectBoundedListNode>,
-) -> Option<(types::ScannedCandidate, types::WlanChan, types::Bssid)> {
-    if bss_list.is_empty() {
-        info!("No saved networks to connect to");
-    } else {
-        info!("Selecting from {} BSSs found for saved networks", bss_list.len());
-    }
-
-    let selected = bss_list
-        .iter()
-        .inspect(|&bss| {
-            info!("{}", bss.to_string_without_pii());
-        })
-        .filter(|&bss| {
-            // Filter out incompatible BSSs
-            if !bss.scanned_bss.is_compatible() {
-                trace!("BSS is incompatible, filtering: {:?}", bss);
-                return false;
-            };
-            true
-        })
-        .max_by_key(|&bss| bss.score());
-
-    // Log the candidates into Inspect
-    inspect_log!(inspect_node.get_mut(), candidates: InspectList(&bss_list), selected?: selected);
-
-    if let Some(bss) = selected {
-        info!("Selected BSS:");
-        info!("{}", bss.to_string_without_pii());
-
-        let mutual_security_protocols = match bss.scanned_bss.compatibility.as_ref() {
-            Some(compatibility) => compatibility.mutual_security_protocols().clone(),
-            None => {
-                error!("The selected BSS lacks compatibility information");
-                return None;
-            }
-        };
-
-        Some((
-            types::ScannedCandidate {
-                network: bss.saved_network_info.network_id.clone(),
-                credential: bss.saved_network_info.credential.clone(),
-                bss_description: bss.scanned_bss.bss_description.clone(),
-                observation: bss.scanned_bss.observation,
-                has_multiple_bss_candidates: bss.multiple_bss_candidates,
-                mutual_security_protocols,
-            },
-            bss.scanned_bss.channel,
-            bss.scanned_bss.bssid,
-        ))
-    } else {
-        None
-    }
 }
 
 /// If a BSS was discovered via a passive scan, we need to perform an active scan on it to discover
@@ -1055,15 +1096,10 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn select_best_connection_candidate_sorts_by_score() {
-        let _executor = fasync::TestExecutor::new();
-        // generate Inspect nodes
-        let inspector = inspect::Inspector::new();
-        let mut inspect_node = AutoPersist::new(
-            InspectBoundedListNode::new(inspector.root().create_child("test"), 10),
-            "sample-persistence-tag",
-            create_inspect_persistence_channel().0,
-        );
+    fn select_bss_sorts_by_score() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let test_values = exec.run_singlethreaded(test_setup());
+
         // build networks list
         let test_id_1 = types::NetworkIdentifier {
             ssid: types::Ssid::try_from("foo").unwrap(),
@@ -1143,19 +1179,8 @@ mod tests {
 
         // there's a network on 5G, it should get a boost and be selected
         assert_eq!(
-            select_best_connection_candidate(networks.clone(), &mut inspect_node),
-            Some((
-                types::ScannedCandidate {
-                    network: test_id_1.clone(),
-                    credential: credential_1.clone(),
-                    bss_description: bss_1.bss_description.clone(),
-                    observation: bss_1.observation,
-                    has_multiple_bss_candidates: true,
-                    mutual_security_protocols: [security_protocol_1].into_iter().collect(),
-                },
-                bss_1.channel,
-                bss_1.bssid
-            ))
+            exec.run_singlethreaded(test_values.network_selector.select_bss(networks.clone())),
+            Some(networks[0].clone())
         );
 
         // make the 5GHz network into a 2.4GHz network
@@ -1167,32 +1192,16 @@ mod tests {
 
         // all networks are 2.4GHz, strongest RSSI network returned
         assert_eq!(
-            select_best_connection_candidate(networks.clone(), &mut inspect_node),
-            Some((
-                types::ScannedCandidate {
-                    network: test_id_2.clone(),
-                    credential: credential_2.clone(),
-                    bss_description: networks[2].scanned_bss.bss_description.clone(),
-                    observation: networks[2].scanned_bss.observation,
-                    has_multiple_bss_candidates: false,
-                    mutual_security_protocols: [security_protocol_3].into_iter().collect(),
-                },
-                networks[2].scanned_bss.channel,
-                networks[2].scanned_bss.bssid
-            ))
+            exec.run_singlethreaded(test_values.network_selector.select_bss(networks.clone())),
+            Some(networks[2].clone())
         );
     }
 
     #[fuchsia::test]
-    fn select_best_connection_candidate_sorts_by_failure_count() {
-        let _executor = fasync::TestExecutor::new();
-        // generate Inspect nodes
-        let inspector = inspect::Inspector::new();
-        let mut inspect_node = AutoPersist::new(
-            InspectBoundedListNode::new(inspector.root().create_child("test"), 10),
-            "sample-persistence-tag",
-            create_inspect_persistence_channel().0,
-        );
+    fn select_bss_sorts_by_failure_count() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let test_values = exec.run_singlethreaded(test_setup());
+
         // build networks list
         let test_id_1 = types::NetworkIdentifier {
             ssid: types::Ssid::try_from("foo").unwrap(),
@@ -1253,19 +1262,8 @@ mod tests {
 
         // stronger network returned
         assert_eq!(
-            select_best_connection_candidate(networks.clone(), &mut inspect_node),
-            Some((
-                types::ScannedCandidate {
-                    network: test_id_1.clone(),
-                    credential: credential_1.clone(),
-                    bss_description: bss_1.bss_description.clone(),
-                    observation: networks[0].scanned_bss.observation,
-                    has_multiple_bss_candidates: false,
-                    mutual_security_protocols: mutual_security_protocols_1.into_iter().collect(),
-                },
-                bss_1.channel,
-                bss_1.bssid
-            ))
+            exec.run_singlethreaded(test_values.network_selector.select_bss(networks.clone())),
+            Some(networks[0].clone()),
         );
 
         // mark the stronger network as having some failures
@@ -1277,19 +1275,8 @@ mod tests {
 
         // weaker network (with no failures) returned
         assert_eq!(
-            select_best_connection_candidate(networks.clone(), &mut inspect_node),
-            Some((
-                types::ScannedCandidate {
-                    network: test_id_2.clone(),
-                    credential: credential_2.clone(),
-                    bss_description: bss_2.bss_description.clone(),
-                    observation: networks[1].scanned_bss.observation,
-                    has_multiple_bss_candidates: false,
-                    mutual_security_protocols: mutual_security_protocols_2.into_iter().collect(),
-                },
-                bss_2.channel,
-                bss_2.bssid
-            ))
+            exec.run_singlethreaded(test_values.network_selector.select_bss(networks.clone())),
+            Some(networks[1].clone())
         );
 
         // give them both the same number of failures
@@ -1298,32 +1285,16 @@ mod tests {
 
         // stronger network returned
         assert_eq!(
-            select_best_connection_candidate(networks.clone(), &mut inspect_node),
-            Some((
-                types::ScannedCandidate {
-                    network: test_id_1.clone(),
-                    credential: credential_1.clone(),
-                    bss_description: bss_1.bss_description.clone(),
-                    observation: networks[0].scanned_bss.observation,
-                    has_multiple_bss_candidates: false,
-                    mutual_security_protocols: mutual_security_protocols_1.into_iter().collect(),
-                },
-                bss_1.channel,
-                bss_1.bssid
-            ))
+            exec.run_singlethreaded(test_values.network_selector.select_bss(networks.clone())),
+            Some(networks[0].clone())
         );
     }
 
     #[fuchsia::test]
-    fn select_best_connection_candidate_incompatible() {
-        let _executor = fasync::TestExecutor::new();
-        // generate Inspect nodes
-        let inspector = inspect::Inspector::new();
-        let mut inspect_node = AutoPersist::new(
-            InspectBoundedListNode::new(inspector.root().create_child("test"), 10),
-            "sample-persistence-tag",
-            create_inspect_persistence_channel().0,
-        );
+    fn select_bss_incompatible() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let test_values = exec.run_singlethreaded(test_setup());
+
         // build networks list
         let test_id_1 = types::NetworkIdentifier {
             ssid: types::Ssid::try_from("foo").unwrap(),
@@ -1340,7 +1311,7 @@ mod tests {
 
         // NOTE: The corresponding BSS has random compatibility. These mutual security protocols
         //       are only used to verify the results and not to configure the BSS.
-        let mutual_security_protocols_1 = [SecurityDescriptor::WPA3_PERSONAL];
+
         let bss_1 = types::Bss {
             rssi: -14,
             channel: generate_channel(1),
@@ -1404,19 +1375,8 @@ mod tests {
 
         // stronger network returned
         assert_eq!(
-            select_best_connection_candidate(networks.clone(), &mut inspect_node),
-            Some((
-                types::ScannedCandidate {
-                    network: test_id_2.clone(),
-                    credential: credential_2.clone(),
-                    bss_description: bss_3.bss_description.clone(),
-                    observation: networks[2].scanned_bss.observation,
-                    has_multiple_bss_candidates: false,
-                    mutual_security_protocols: mutual_security_protocols_3.into_iter().collect()
-                },
-                bss_3.channel,
-                bss_3.bssid
-            ))
+            exec.run_singlethreaded(test_values.network_selector.select_bss(networks.clone())),
+            Some(networks[2].clone())
         );
 
         // mark the stronger network as incompatible
@@ -1428,32 +1388,16 @@ mod tests {
 
         // other network returned
         assert_eq!(
-            select_best_connection_candidate(networks.clone(), &mut inspect_node),
-            Some((
-                types::ScannedCandidate {
-                    network: test_id_1.clone(),
-                    credential: credential_1.clone(),
-                    bss_description: networks[0].scanned_bss.bss_description.clone(),
-                    observation: networks[0].scanned_bss.observation,
-                    has_multiple_bss_candidates: true,
-                    mutual_security_protocols: mutual_security_protocols_1.into_iter().collect(),
-                },
-                networks[0].scanned_bss.channel,
-                networks[0].scanned_bss.bssid
-            ))
+            exec.run_singlethreaded(test_values.network_selector.select_bss(networks.clone())),
+            Some(networks[0].clone()),
         );
     }
 
     #[fuchsia::test]
-    fn select_best_connection_candidate_logs_to_inspect() {
-        let _executor = fasync::TestExecutor::new();
-        // generate Inspect nodes
-        let inspector = inspect::Inspector::new();
-        let mut inspect_node = AutoPersist::new(
-            InspectBoundedListNode::new(inspector.root().create_child("test"), 10),
-            "sample-persistence-tag",
-            create_inspect_persistence_channel().0,
-        );
+    fn select_bss_logs_to_inspect() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let test_values = exec.run_singlethreaded(test_setup());
+
         // build networks list
         let test_id_1 = types::NetworkIdentifier {
             ssid: types::Ssid::try_from("foo").unwrap(),
@@ -1532,53 +1476,64 @@ mod tests {
 
         // stronger network returned
         assert_eq!(
-            select_best_connection_candidate(networks.clone(), &mut inspect_node),
-            Some((
-                types::ScannedCandidate {
-                    network: test_id_2.clone(),
-                    credential: credential_2.clone(),
-                    bss_description: bss_3.bss_description.clone(),
-                    observation: networks[2].scanned_bss.observation,
-                    has_multiple_bss_candidates: false,
-                    mutual_security_protocols: mutual_security_protocols_3.into_iter().collect(),
-                },
-                bss_3.channel,
-                bss_3.bssid
-            ))
+            exec.run_singlethreaded(test_values.network_selector.select_bss(networks.clone())),
+            Some(networks[2].clone())
         );
 
         let fidl_channel = fidl_common::WlanChannel::from(networks[2].scanned_bss.channel);
-        assert_data_tree!(inspector, root: {
-            test: {
-                "0": {
-                    "@time": inspect::testing::AnyProperty,
-                    "candidates": {
-                        "0": contains {
-                            score: inspect::testing::AnyProperty,
+        assert_data_tree!(test_values.inspector, root: {
+            net_select_test: {
+                "network_selection": {
+                    "0": {
+                        "@time": inspect::testing::AnyProperty,
+                        "candidates": {
+                            "0": contains {
+                                score: inspect::testing::AnyProperty,
+                            },
+                            "1": contains {
+                                score: inspect::testing::AnyProperty,
+                            },
+                            "2": contains {
+                                score: inspect::testing::AnyProperty,
+                            },
                         },
-                        "1": contains {
-                            score: inspect::testing::AnyProperty,
+                        "selected": {
+                            ssid_hash: networks[2].hasher.hash_ssid(&networks[2].saved_network_info.network_id.ssid),
+                            bssid_hash: networks[2].hasher.hash_mac_addr(&networks[2].scanned_bss.bssid.0),
+                            rssi: i64::from(networks[2].scanned_bss.rssi),
+                            score: i64::from(networks[2].score()),
+                            security_type_saved: networks[2].saved_security_type_to_string(),
+                            security_type_scanned: format!("{}", wlan_common::bss::Protection::from(networks[2].security_type_detailed)),
+                            channel: {
+                                cbw: inspect::testing::AnyProperty,
+                                primary: u64::from(fidl_channel.primary),
+                                secondary80: u64::from(fidl_channel.secondary80),
+                            },
+                            compatible: networks[2].scanned_bss.compatibility.is_some(),
+                            recent_failure_count: networks[2].recent_failure_count(),
+                            saved_network_has_ever_connected: networks[2].saved_network_info.has_ever_connected,
                         },
-                        "2": contains {
-                            score: inspect::testing::AnyProperty,
-                        },
-                    },
-                    "selected": {
-                        ssid_hash: networks[2].hasher.hash_ssid(&networks[2].saved_network_info.network_id.ssid),
-                        bssid_hash: networks[2].hasher.hash_mac_addr(&networks[2].scanned_bss.bssid.0),
-                        rssi: i64::from(networks[2].scanned_bss.rssi),
-                        score: i64::from(networks[2].score()),
-                        security_type_saved: networks[2].saved_security_type_to_string(),
-                        security_type_scanned: format!("{}", wlan_common::bss::Protection::from(networks[2].security_type_detailed)),
-                        channel: {
-                            cbw: inspect::testing::AnyProperty,
-                            primary: u64::from(fidl_channel.primary),
-                            secondary80: u64::from(fidl_channel.secondary80),
-                        },
-                        compatible: networks[2].scanned_bss.compatibility.is_some(),
-                        recent_failure_count: networks[2].recent_failure_count(),
-                        saved_network_has_ever_connected: networks[2].saved_network_info.has_ever_connected,
-                    },
+                    }
+                }
+            },
+        });
+    }
+
+    #[fuchsia::test]
+    fn select_bss_empty_list_logs_to_inspect() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let test_values = exec.run_singlethreaded(test_setup());
+
+        assert_eq!(exec.run_singlethreaded(test_values.network_selector.select_bss(vec![])), None);
+
+        // Verify that an empty list of candidates is still logged to inspect.
+        assert_data_tree!(test_values.inspector, root: {
+            net_select_test: {
+                "network_selection": {
+                    "0": {
+                        "@time": inspect::testing::AnyProperty,
+                        "candidates": {},
+                    }
                 }
             },
         });
@@ -1690,7 +1645,7 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn find_best_connection_candidate_scan_error() {
+    fn find_and_select_scanned_candidate_scan_error() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = exec.run_singlethreaded(test_setup());
         let network_selector = test_values.network_selector;
@@ -1702,7 +1657,7 @@ mod tests {
         );
 
         // Kick off network selection
-        let network_selection_fut = network_selector.find_best_connection_candidate();
+        let network_selection_fut = network_selector.find_and_select_scanned_candidate(None);
         pin_mut!(network_selection_fut);
         // Check that nothing is returned
         assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Ready(None));
@@ -1736,7 +1691,7 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn find_best_connection_candidate_end_to_end() {
+    fn find_and_select_scanned_candidate_end_to_end() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = exec.run_singlethreaded(test_setup());
         let network_selector = test_values.network_selector;
@@ -1852,7 +1807,7 @@ mod tests {
         ])));
 
         // Check that we pick a network
-        let network_selection_fut = network_selector.find_best_connection_candidate();
+        let network_selection_fut = network_selector.find_and_select_scanned_candidate(None);
         pin_mut!(network_selection_fut);
         let results = exec.run_singlethreaded(&mut network_selection_fut);
         assert_eq!(
@@ -1940,7 +1895,7 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn find_connection_candidate_for_network_end_to_end() {
+    fn find_and_select_scanned_candidate_with_network_end_to_end() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = exec.run_singlethreaded(test_setup());
         let network_selector = test_values.network_selector;
@@ -1985,7 +1940,7 @@ mod tests {
 
         // Run network selection
         let network_selection_fut =
-            network_selector.find_connection_candidate_for_network(test_id_1.clone());
+            network_selector.find_and_select_scanned_candidate(Some(test_id_1.clone()));
         pin_mut!(network_selection_fut);
         let results = exec.run_singlethreaded(&mut network_selection_fut);
         assert_eq!(
@@ -2021,7 +1976,7 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn find_connection_candidate_for_network_end_to_end_with_failure() {
+    fn find_and_select_scanned_candidate_with_network_end_to_end_with_failure() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = exec.run_singlethreaded(test_setup());
         let network_selector = test_values.network_selector;
@@ -2040,7 +1995,7 @@ mod tests {
 
         // Kick off network selection
         let network_selection_fut =
-            network_selector.find_connection_candidate_for_network(test_id_1.clone());
+            network_selector.find_and_select_scanned_candidate(Some(test_id_1.clone()));
         pin_mut!(network_selection_fut);
         // Check that nothing is returned
         let results = exec.run_singlethreaded(&mut network_selection_fut);
