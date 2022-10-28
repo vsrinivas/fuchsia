@@ -18,11 +18,11 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/theupdateframework/go-tuf v0.0.0-20211108161206-fc0190d925a5
 	github.com/ulikunitz/xz v0.5.10
-	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb
 	github.com/xeipuuv/gojsonschema v1.2.0
 	go.uber.org/goleak v1.2.0
 	go.uber.org/multierr v1.8.0
 	golang.org/x/crypto v0.0.0-20220829220503-c86fa9a7ed90
+	golang.org/x/exp v0.0.0-20221023144134-a1e5550cf13e
 	golang.org/x/net v0.0.0-20220907135653-1e95f45603a7
 	golang.org/x/sync v0.0.0-20220907140024-f12130a52804
 	golang.org/x/sys v0.0.0-20220908164124-27713097b956
@@ -49,6 +49,7 @@ require (
 	github.com/petermattis/goid v0.0.0-20220824145935-af5520614cb6 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613 // indirect
+	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	go.opencensus.io v0.23.0 // indirect
 	go.uber.org/atomic v1.10.0 // indirect

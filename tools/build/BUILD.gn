@@ -55,6 +55,7 @@ go_library("build") {
   ]
   deps = [
     "//third_party/golibs:github.com/google/go-cmp",
+    "//third_party/golibs:golang.org/x/exp",
     "//tools/lib/hostplatform",
     "//tools/lib/jsonutil",
     "//tools/lib/osmisc",

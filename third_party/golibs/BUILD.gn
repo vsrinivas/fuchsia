@@ -906,6 +906,19 @@ go_library("golang.org/x/crypto") {
   ]
 }
 
+go_library("golang.org/x/exp") {
+  name = "golang.org/x/exp/..."
+  source_dir = "vendor/golang.org/x/exp"
+  sources = [
+    "constraints/constraints.go",
+    "maps/maps.go",
+    "slices/slices.go",
+    "slices/sort.go",
+    "slices/zsortfunc.go",
+    "slices/zsortordered.go",
+  ]
+}
+
 go_library("golang.org/x/net") {
   name = "golang.org/x/net/..."
   source_dir = "vendor/golang.org/x/net"
