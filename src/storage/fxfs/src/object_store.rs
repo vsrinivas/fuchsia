@@ -32,7 +32,9 @@ use {
         debug_assert_not_too_long,
         errors::FxfsError,
         ff1::Ff1,
-        filesystem::{ApplyContext, ApplyMode, Filesystem, FxFilesystem, JournalingObject},
+        filesystem::{
+            ApplyContext, ApplyMode, Filesystem, FxFilesystem, JournalingObject, MAX_FILE_SIZE,
+        },
         log::*,
         lsm_tree::{
             types::{Item, ItemRef, LayerIterator},
@@ -809,6 +811,7 @@ impl ObjectStore {
             .await?
             .ok_or(FxfsError::NotFound)?;
         if let ObjectValue::Attribute { size } = item.value {
+            ensure!(size <= MAX_FILE_SIZE, FxfsError::Inconsistent);
             Ok(StoreObjectHandle::new(
                 owner.clone(),
                 object_id,
