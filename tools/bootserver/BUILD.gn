@@ -55,11 +55,10 @@ go_library("main") {
 }
 
 go_binary("bootserver") {
-  # TODO(fxbug.dev/38517): Stop renaming once zircon bootserver goes away.
+  library = ":main"
 
+  # TODO(fxbug.dev/38517): Stop renaming once zircon bootserver goes away.
   output_name = "bootserver_new"
-  gopackage = "go.fuchsia.dev/fuchsia/tools/bootserver/cmd"
-  deps = [ ":main" ]
 }
 
 go_test("bootserver_lib_tests") {

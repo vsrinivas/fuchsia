@@ -121,8 +121,7 @@ template("host_script_test") {
   } else {
     # Wrapper for running test. This runs the test_script in the test_root directory.
     go_test(target_name) {
-      gopackages = [ "gnsdktest" ]
-      deps = [ "//scripts/sdk/gn/test:host_gnsdk_test_lib" ]
+      library = "//scripts/sdk/gn/test:host_gnsdk_test_lib"
       args = [ "-testscript=${test_script}" ]
       if (defined(test_root)) {
         args += [ "--testroot=${test_root}" ]

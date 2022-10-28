@@ -4,34 +4,20 @@
 
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
-import("//build/go/go_test.gni")
 import("//build/testing/host_test_data.gni")
 
-go_library("gopkg") {
-  name = "go.fuchsia.dev/fuchsia/tools/fidl/measure-tape/src/..."
-  deps = [ "//tools/fidl/lib/fidlgen" ]
-  sources = [
-    "hlcpp/hlcpp.go",
-    "main.go",
-    "measurer/code_generator.go",
-    "measurer/expressions.go",
-    "measurer/measurer.go",
-    "measurer/ops.go",
-    "measurer/pruning.go",
-    "measurer/pruning_test.go",
-    "rust/rust.go",
-    "utils/utils.go",
+go_library("main") {
+  deps = [
+    "hlcpp",
+    "measurer",
+    "rust",
+    "//tools/fidl/lib/fidlgen",
   ]
+  sources = [ "main.go" ]
 }
 
 go_binary("measure-tape") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/measure-tape/src"
-  deps = [ ":gopkg" ]
-}
-
-go_test("measure-tape_test") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/measure-tape/src/measurer" ]
-  deps = [ ":gopkg" ]
+  library = ":main"
 }
 
 install_host_tools("host") {

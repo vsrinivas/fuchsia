@@ -2,75 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/components/fuchsia_unittest_package.gni")
-import("//build/go/go_library.gni")
-import("//build/go/go_test.gni")
-import("//build/go/toolchain.gni")
-import("go_tracing_include_dirs.gni")
-
-go_library("tracing") {
-  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/tracing/..."
-  sources = [
-    "provider/notracing.go",
-    "provider/provider_service.go",
-    "provider/session.go",
-    "provider/session_test.go",
-    "trace/byteorder_amd64.go",
-    "trace/byteorder_arm64.go",
-    "trace/context.go",
-    "trace/context_api.go",
-    "trace/context_api_test.go",
-    "trace/context_test.go",
-    "trace/engine.go",
-    "trace/engine_test.go",
-    "trace/event.go",
-    "trace/notracing.go",
-  ]
-  deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io_go($go_toolchain)",
-    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_go($go_toolchain)",
-    "//src/connectivity/network/netstack/sync",
-    "//src/lib/syslog/go",
-  ]
-}
-
-go_test("provider_test") {
-  gopackages = [
-    "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/tracing/provider",
-  ]
-  tags = [ "tracing" ]
-  deps = [
-    ":tracing",
-    "//src/lib/component",
-    "//third_party/golibs:github.com/google/go-cmp",
-  ]
-  include_dirs = go_tracing_include_dirs
-}
-
-fuchsia_unittest_package("provider-test") {
-  deps = [ ":provider_test" ]
-}
-
-go_test("trace_test") {
-  gopackages = [
-    "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/tracing/trace",
-  ]
-  tags = [ "tracing" ]
-  deps = [
-    ":tracing",
-    "//third_party/golibs:github.com/google/go-cmp",
-  ]
-  include_dirs = go_tracing_include_dirs
-}
-
-fuchsia_unittest_package("trace-test") {
-  deps = [ ":trace_test" ]
-}
-
 group("tests") {
   testonly = true
   deps = [
-    ":provider-test",
-    ":trace-test",
+    "provider:tests",
+    "trace:tests",
   ]
 }

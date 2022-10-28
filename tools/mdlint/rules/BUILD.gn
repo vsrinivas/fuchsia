@@ -1,0 +1,41 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+
+go_library("rules") {
+  sources = [
+    "bad_headers.go",
+    "bad_headers_test.go",
+    "bad_lists.go",
+    "bad_lists_test.go",
+    "casing_of_anchors.go",
+    "casing_of_anchors_test.go",
+    "mdhelpers.go",
+    "mdhelpers_test.go",
+    "newline_before_code_span.go",
+    "newline_before_code_span_test.go",
+    "no_extra_space_at_start_of_doc.go",
+    "no_extra_space_at_start_of_doc_test.go",
+    "no_extra_space_on_right.go",
+    "no_extra_space_on_right_test.go",
+    "respect_col_length.go",
+    "respect_col_length_test.go",
+    "respectful_code.go",
+    "respectful_code_test.go",
+    "respectful_code_words.json",
+    "simple_utf8_chars.go",
+    "simple_utf8_chars_test.go",
+    "testutils_test.go",
+    "verify_internal_links.go",
+    "verify_internal_links_test.go",
+  ]
+  deps = [ "../core" ]
+}
+
+go_test("mdlint_rules_tests") {
+  library = ":rules"
+  deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
+}

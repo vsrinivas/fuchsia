@@ -59,19 +59,17 @@ template("go_fuzzer") {
 
   # 3a. Build the wrapper package as a C archive with Go's libfuzzer instrumentation.
   go_build(wrapper_name) {
-    gopackages = [ wrapper_name ]
+    library = library_name
     carchive = true
     tags = [ "libfuzzer" ]
     gcflags = [ "all=-d=libfuzzer" ]
-    deps = [ ":$library_name" ]
   }
 
   # 3b. Alternately, create a fuzzer unit test to ensure fuzzer code is built even when not fuzzing.
   test_wrapper_name = "${fuzzer_name}_test_wrapper"
   go_build(test_wrapper_name) {
-    gopackages = [ wrapper_name ]
+    library = library_name
     carchive = true
-    deps = [ ":$library_name" ]
   }
 
   # 4. Link the resulting C archive as though it was a normal C++ fuzzer.

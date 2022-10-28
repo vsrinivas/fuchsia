@@ -270,8 +270,7 @@ if (is_host) {
 }
 
 go_test("clang_coverage_tests_on_target") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/src/tests/coverage" ]
-  deps = [ ":lib" ]
+  library = ":lib"
   non_go_deps = [
     ":clang_coverage_test_deps($host_toolchain)",
     ":clang_coverage_test_deps_on_target($host_toolchain)",
@@ -330,8 +329,7 @@ if (is_host) {
 }
 
 go_test("rust_coverage_tests_on_target") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/src/tests/coverage" ]
-  deps = [ ":lib" ]
+  library = ":lib"
   non_go_deps = [
     ":rust_coverage_test_deps($host_toolchain)",
     ":rust_coverage_test_deps_on_target($host_toolchain)",

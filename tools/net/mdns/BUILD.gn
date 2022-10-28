@@ -17,12 +17,10 @@ go_library("mdns") {
 }
 
 go_test("mdns_tests") {
-  # TODO(awdavies): The default name conflicts w/ the connectivity service.
+  library = ":mdns"
 
+  # TODO(awdavies): The default name conflicts w/ the connectivity service.
   output_name = "mdns_tools_test"
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/net/mdns" ]
-  deps = [
-    ":mdns",
-    "//third_party/golibs:github.com/google/go-cmp",
-  ]
+
+  deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
 }

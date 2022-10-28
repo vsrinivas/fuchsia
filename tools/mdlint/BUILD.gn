@@ -4,67 +4,18 @@
 
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
-import("//build/go/go_test.gni")
 import("//build/testing/host_test_data.gni")
 
-go_library("gopkg") {
-  name = "go.fuchsia.dev/fuchsia/tools/mdlint/..."
-  sources = [
-    "core/recognizer.go",
-    "core/recognizer_test.go",
-    "core/registry.go",
-    "core/reporter.go",
-    "core/reporter_test.go",
-    "core/rules.go",
-    "core/tokenizer.go",
-    "core/tokenizer_test.go",
-    "main.go",
-    "rules/bad_headers.go",
-    "rules/bad_headers_test.go",
-    "rules/bad_lists.go",
-    "rules/bad_lists_test.go",
-    "rules/casing_of_anchors.go",
-    "rules/casing_of_anchors_test.go",
-    "rules/mdhelpers.go",
-    "rules/mdhelpers_test.go",
-    "rules/newline_before_code_span.go",
-    "rules/newline_before_code_span_test.go",
-    "rules/no_extra_space_at_start_of_doc.go",
-    "rules/no_extra_space_at_start_of_doc_test.go",
-    "rules/no_extra_space_on_right.go",
-    "rules/no_extra_space_on_right_test.go",
-    "rules/respect_col_length.go",
-    "rules/respect_col_length_test.go",
-    "rules/respectful_code.go",
-    "rules/respectful_code_test.go",
-    "rules/respectful_code_words.json",
-    "rules/simple_utf8_chars.go",
-    "rules/simple_utf8_chars_test.go",
-    "rules/testutils_test.go",
-    "rules/verify_internal_links.go",
-    "rules/verify_internal_links_test.go",
+go_library("main") {
+  sources = [ "main.go" ]
+  deps = [
+    "core",
+    "rules",
   ]
 }
 
 go_binary("mdlint") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/mdlint"
-  deps = [ ":gopkg" ]
-}
-
-go_test("mdlint_core_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/mdlint/core" ]
-  deps = [
-    ":gopkg",
-    "//third_party/golibs:github.com/google/go-cmp",
-  ]
-}
-
-go_test("mdlint_rules_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/mdlint/rules" ]
-  deps = [
-    ":gopkg",
-    "//third_party/golibs:github.com/google/go-cmp",
-  ]
+  library = ":main"
 }
 
 install_host_tools("host") {
@@ -75,7 +26,7 @@ install_host_tools("host") {
 group("tests") {
   testonly = true
   deps = [
-    ":mdlint_core_tests($host_toolchain)",
-    ":mdlint_rules_tests($host_toolchain)",
+    "core:mdlint_core_tests($host_toolchain)",
+    "rules:mdlint_rules_tests($host_toolchain)",
   ]
 }

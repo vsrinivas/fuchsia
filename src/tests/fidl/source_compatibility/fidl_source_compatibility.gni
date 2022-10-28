@@ -34,10 +34,8 @@ template("_llcpp_compat") {
 
 # Go Source Compatibility Test
 template("_go_compat") {
-  gopackage = target_name
-
   go_library("${target_name}_lib") {
-    name = gopackage
+    name = target_name
     source_dir = get_path_info(invoker.source, "dir")
     sources = [ get_path_info(invoker.source, "file") ]
     deps = [
@@ -47,9 +45,8 @@ template("_go_compat") {
   }
 
   go_binary(target_name) {
+    library = ":${target_name}_lib"
     output_dir = target_out_dir
-    gopackage = gopackage
-    deps = [ ":${target_name}_lib" ]
   }
 }
 

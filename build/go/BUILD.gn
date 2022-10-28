@@ -25,14 +25,10 @@ if (is_host) {
 group("allow_gopackages") {
   # WARNING: Do add new items to this list. You are encouraged to prune the list.
   visibility = [
-    "//scripts/sdk/gn/bash_tests:*",
-    "//src/connectivity/network/netstack/tracing:*",
     "//src/sys/pkg/bin/pm:*",
     "//src/sys/pkg/tests/system-tests:*",
     "//src/testing/host-target-testing:*",
     "//src/tests/benchmarks/fidl/benchmark_suite/gen:*",
-    "//src/tests/coverage:*",
-    "//src/tests/fidl/fidl_go_conformance:*",
     "//src/tests/fidl/source_compatibility/*",
     "//third_party/cobalt/src/bin/config_change_validator/src:*",
     "//third_party/cobalt/src/bin/config_parser/src:*",
@@ -41,9 +37,7 @@ group("allow_gopackages") {
     "//third_party/go/makefuchsia:*",
     "//third_party/go/makeroot:*",
     "//third_party/golibs/*",
-    "//tools/bootserver:*",
     "//tools/bootserver_old/tests:*",
-    "//tools/devshell:*",
     "//tools/fidl/fidlgen_cpp:*",
     "//tools/fidl/fidlgen_dart:*",
     "//tools/fidl/fidlgen_go:*",
@@ -52,12 +46,6 @@ group("allow_gopackages") {
     "//tools/fidl/fidlgen_rust:*",
     "//tools/fidl/fidlgen_syzkaller:*",
     "//tools/fidl/gidl:*",
-    "//tools/fidl/measure-tape/src:*",
-    "//tools/mdlint:*",
-    "//tools/net/mdns:*",
-    "//tools/testing/resultdb:*",
-    "//tools/testing/tefmocheck:*",
-    "//vendor/*",
   ]
 }
 

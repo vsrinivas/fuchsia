@@ -1,0 +1,22 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+
+go_library("measurer") {
+  deps = [ "//tools/fidl/lib/fidlgen" ]
+  sources = [
+    "code_generator.go",
+    "expressions.go",
+    "measurer.go",
+    "ops.go",
+    "pruning.go",
+    "pruning_test.go",
+  ]
+}
+
+go_test("measure-tape_test") {
+  library = ":measurer"
+}
