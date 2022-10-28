@@ -25,13 +25,16 @@ namespace {
 
 using fuchsia::ui::composition::Orientation;
 
+constexpr int kImageWidth = 1000;
+constexpr int kImageHeight = 1000;
+
 // Helper function to generate an ImageRect from a glm::mat3 for tests that are strictly testing the
 // conversion math.
 ImageRect GetImageRectForMatrix(const glm::mat3& matrix) {
   // Compute the global rectangle vector and return the first entry.
-  allocation::ImageMetadata image = {.width = 1, .height = 1};
-  const auto rectangles = ComputeGlobalRectangles({matrix}, {ImageSampleRegion{0, 0, 1, 1}},
-                                                  {kUnclippedRegion}, {image});
+  allocation::ImageMetadata image = {.width = kImageWidth, .height = kImageHeight};
+  const auto rectangles = ComputeGlobalRectangles(
+      {matrix}, {ImageSampleRegion{0, 0, kImageWidth, kImageHeight}}, {kUnclippedRegion}, {image});
   EXPECT_EQ(rectangles.size(), 1ul);
   return rectangles[0];
 }
@@ -40,9 +43,9 @@ ImageRect GetImageRectForMatrix(const glm::mat3& matrix) {
 // conversion math.
 ImageRect GetImageRectForMatrixAndClip(const glm::mat3& matrix, const TransformClipRegion& clip) {
   // Compute the global rectangle vector and return the first entry.
-  allocation::ImageMetadata image = {.width = 1, .height = 1};
-  const auto rectangles =
-      ComputeGlobalRectangles({matrix}, {ImageSampleRegion{0, 0, 1, 1}}, {clip}, {image});
+  allocation::ImageMetadata image = {.width = kImageWidth, .height = kImageHeight};
+  const auto rectangles = ComputeGlobalRectangles(
+      {matrix}, {ImageSampleRegion{0, 0, kImageWidth, kImageHeight}}, {clip}, {image});
   EXPECT_EQ(rectangles.size(), 1ul);
   return rectangles[0];
 }
@@ -190,7 +193,9 @@ TEST(ImageRectTest, ParentCompletelyBiggerThanChildClipTest) {
   TransformClipRegion clip = {0, 0, 120, 60};
 
   const ImageRect expected_rectangle(
-      glm::vec2(0, 0), extent, {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)},
+      glm::vec2(0, 0), extent,
+      {glm::ivec2(0, 0), glm::ivec2(kImageWidth, 0), glm::ivec2(kImageHeight, kImageHeight),
+       glm::ivec2(0, kImageHeight)},
       Orientation::CCW_0_DEGREES);
 
   const auto rectangle = GetImageRectForMatrixAndClip(matrix, clip);
@@ -205,10 +210,10 @@ TEST(ImageRectTest, ChildCompletelyBiggerThanParentClipTest) {
 
   TransformClipRegion clip = {20, 30, 35, 40};
 
-  const ImageRect expected_rectangle(glm::vec2(clip.x, clip.y), glm::vec2(clip.width, clip.height),
-                                     {glm::vec2(.2, .3333), glm::vec2(.55, 0.333333),
-                                      glm::vec2(.55, 0.777777), glm::vec2(.2, 0.777777)},
-                                     Orientation::CCW_0_DEGREES);
+  const ImageRect expected_rectangle(
+      glm::vec2(clip.x, clip.y), glm::vec2(clip.width, clip.height),
+      {glm::vec2(200, 333), glm::vec2(550, 333), glm::vec2(550, 778), glm::vec2(200, 778)},
+      Orientation::CCW_0_DEGREES);
 
   const auto rectangle = GetImageRectForMatrixAndClip(matrix, clip);
   EXPECT_EQ(rectangle, expected_rectangle);
@@ -233,7 +238,7 @@ TEST(ImageRectTest, ChildCompletelyBiggerThanParentClipRotatedBy90Test) {
   // linearly interpolated horizontally.
   const ImageRect expected_rectangle(
       glm::vec2(clip.x, clip.y), glm::vec2(clip.width, clip.height),
-      {glm::vec2(.3, .22222), glm::vec2(.7, .22222), glm::vec2(.7, .61111), glm::vec2(.3, .61111)},
+      {glm::vec2(300, 222), glm::vec2(700, 222), glm::vec2(700, 611), glm::vec2(300, 611)},
       Orientation::CCW_90_DEGREES);
 
   const auto rectangle = GetImageRectForMatrixAndClip(matrix, clip);
@@ -256,10 +261,10 @@ TEST(ImageRectTest, ChildCompletelyBiggerThanParentClipRotatedBy180Test) {
 
   // After clipping, the UV coordinates are reversed. I.e. if the coordinate was initially 0.2, then
   // it would instead be equal to 0.8.
-  const ImageRect expected_rectangle(glm::vec2(clip.x, clip.y), glm::vec2(clip.width, clip.height),
-                                     {glm::vec2(.45, .22222), glm::vec2(.8, 0.22222),
-                                      glm::vec2(.8, 0.66667), glm::vec2(.45, 0.66667)},
-                                     Orientation::CCW_180_DEGREES);
+  const ImageRect expected_rectangle(
+      glm::vec2(clip.x, clip.y), glm::vec2(clip.width, clip.height),
+      {glm::vec2(450, 222), glm::vec2(800, 222), glm::vec2(800, 667), glm::vec2(450, 667)},
+      Orientation::CCW_180_DEGREES);
 
   const auto rectangle = GetImageRectForMatrixAndClip(matrix, clip);
   EXPECT_EQ(rectangle, expected_rectangle);
@@ -284,7 +289,7 @@ TEST(ImageRectTest, ChildCompletelyBiggerThanParentClipRotatedBy270Test) {
   // interpolated vertically and the v coordinate is now linearly interpolated horizontally.
   const ImageRect expected_rectangle(
       glm::vec2(clip.x, clip.y), glm::vec2(clip.width, clip.height),
-      {glm::vec2(.3, .38889), glm::vec2(.7, .38889), glm::vec2(.7, .7778), glm::vec2(.3, .77778)},
+      {glm::vec2(300, 389), glm::vec2(700, 389), glm::vec2(700, 778), glm::vec2(300, 778)},
       Orientation::CCW_270_DEGREES);
 
   const auto rectangle = GetImageRectForMatrixAndClip(matrix, clip);
@@ -321,7 +326,7 @@ TEST(ImageRectTest, RectangleAndClipPartialOverlap) {
 
   const ImageRect expected_rectangle(
       glm::vec2(20, 30), glm::vec2(70, 40),
-      {glm::vec2(0, 0), glm::vec2(0.7, 0), glm::vec2(0.7, 0.8), glm::vec2(0, 0.8)},
+      {glm::vec2(0, 0), glm::vec2(700, 0), glm::vec2(700, 800), glm::vec2(0, 800)},
       Orientation::CCW_0_DEGREES);
 
   const auto rectangle = GetImageRectForMatrixAndClip(matrix, clip);
@@ -339,7 +344,8 @@ TEST(ImageRectTest, ScaleAndRotate90DegreesTest) {
 
   const ImageRect expected_rectangle(
       glm::vec2(0.f, -100.f), glm::vec2(50.f, 100.f),
-      {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)},
+      {glm::ivec2(0, 0), glm::ivec2(kImageWidth, 0), glm::ivec2(kImageWidth, kImageHeight),
+       glm::ivec2(0, kImageHeight)},
       Orientation::CCW_90_DEGREES);
 
   const auto rectangle = GetImageRectForMatrix(matrix);
@@ -354,7 +360,8 @@ TEST(ImageRectTest, ScaleAndRotate180DegreesTest) {
 
   const ImageRect expected_rectangle(
       glm::vec2(-100.f, -50.f), glm::vec2(100.f, 50.f),
-      {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)},
+      {glm::ivec2(0, 0), glm::ivec2(kImageWidth, 0), glm::ivec2(kImageWidth, kImageHeight),
+       glm::ivec2(0, kImageHeight)},
       Orientation::CCW_180_DEGREES);
 
   const auto rectangle = GetImageRectForMatrix(matrix);
@@ -369,7 +376,8 @@ TEST(ImageRectTest, ScaleAndRotate270DegreesTest) {
 
   const ImageRect expected_rectangle(
       glm::vec2(-50.f, 0.f), glm::vec2(50.f, 100.f),
-      {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)},
+      {glm::ivec2(0, 0), glm::ivec2(kImageWidth, 0), glm::ivec2(kImageWidth, kImageHeight),
+       glm::ivec2(0, kImageHeight)},
       Orientation::CCW_270_DEGREES);
 
   const auto rectangle = GetImageRectForMatrix(matrix);
@@ -385,7 +393,9 @@ TEST(ImageRectTest, FloatingPointTranslateAndScaleTest) {
   matrix = glm::scale(matrix, extent);
 
   const ImageRect expected_rectangle(
-      offset, extent, {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)},
+      offset, extent,
+      {glm::ivec2(0, 0), glm::ivec2(kImageWidth, 0), glm::ivec2(kImageWidth, kImageHeight),
+       glm::ivec2(0, kImageHeight)},
       Orientation::CCW_0_DEGREES);
 
   const auto rectangle = GetImageRectForMatrix(matrix);
@@ -403,7 +413,8 @@ TEST(ImageRectTest, OrderOfOperationsTest) {
 
     const ImageRect expected_rectangle_1(
         glm::vec2(10.f, 5.f), glm::vec2(2.f, 2.f),
-        {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)},
+        {glm::ivec2(0, 0), glm::ivec2(kImageWidth, 0), glm::ivec2(kImageWidth, kImageHeight),
+         glm::ivec2(0, kImageHeight)},
         Orientation::CCW_0_DEGREES);
 
     const auto rectangle_1 = GetImageRectForMatrix(test_1);
@@ -416,7 +427,8 @@ TEST(ImageRectTest, OrderOfOperationsTest) {
 
     const ImageRect expected_rectangle_2(
         glm::vec2(20.f, 10.f), glm::vec2(2.f, 2.f),
-        {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)},
+        {glm::ivec2(0, 0), glm::ivec2(kImageWidth, 0), glm::ivec2(kImageWidth, kImageHeight),
+         glm::ivec2(0, kImageHeight)},
         Orientation::CCW_0_DEGREES);
 
     const auto rectangle_2 = GetImageRectForMatrix(test_2);
@@ -433,7 +445,8 @@ TEST(ImageRectTest, OrderOfOperationsTest) {
 
     const ImageRect expected_rectangle_1(
         glm::vec2(10.f, 4.f), glm::vec2(1.f, 1.f),
-        {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)},
+        {glm::ivec2(0, 0), glm::ivec2(kImageWidth, 0), glm::ivec2(kImageWidth, kImageHeight),
+         glm::ivec2(0, kImageHeight)},
         Orientation::CCW_90_DEGREES);
 
     const auto rectangle_1 = GetImageRectForMatrix(test_1);
@@ -448,7 +461,8 @@ TEST(ImageRectTest, OrderOfOperationsTest) {
 
     const ImageRect expected_rectangle_2(
         glm::vec2(5.f, -11.f), glm::vec2(1.f, 1.f),
-        {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)},
+        {glm::ivec2(0, 0), glm::ivec2(kImageWidth, 0), glm::ivec2(kImageWidth, kImageHeight),
+         glm::ivec2(0, kImageHeight)},
         Orientation::CCW_90_DEGREES);
 
     const auto rectangle_2 = GetImageRectForMatrix(test_2);
@@ -464,7 +478,8 @@ TEST(ImageRectTest, OrderOfOperationsTest) {
 
     const ImageRect expected_rectangle_1(
         glm::vec2(0.f, -7.f), glm::vec2(9.f, 7.f),
-        {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)},
+        {glm::ivec2(0, 0), glm::ivec2(kImageWidth, 0), glm::ivec2(kImageWidth, kImageHeight),
+         glm::ivec2(0, kImageHeight)},
         Orientation::CCW_90_DEGREES);
 
     const auto rectangle_1 = GetImageRectForMatrix(test_1);
@@ -478,7 +493,8 @@ TEST(ImageRectTest, OrderOfOperationsTest) {
 
     const ImageRect expected_rectangle_2(
         glm::vec2(0.f, -9.f), glm::vec2(7.f, 9.f),
-        {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)},
+        {glm::ivec2(0, 0), glm::ivec2(kImageWidth, 0), glm::ivec2(kImageWidth, kImageHeight),
+         glm::ivec2(0, kImageHeight)},
         Orientation::CCW_90_DEGREES);
 
     const auto rectangle_2 = GetImageRectForMatrix(test_2);

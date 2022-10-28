@@ -188,11 +188,11 @@ ImageRect CreateImageRect(const glm::mat3& matrix, const TransformClipRegion& cl
   }
 
   // The rectangle was clipped, so we also have to clip the UV coordinates.
-  auto lerp = [](float a, float b, float t) -> float { return a + t * (b - a); };
-  float x_lerp = (clipped_origin.x - origin.x) / extent.x;
-  float y_lerp = (clipped_origin.y - origin.y) / extent.y;
-  float w_lerp = (clipped_origin.x + clipped_extent.x - origin.x) / extent.x;
-  float h_lerp = (clipped_origin.y + clipped_extent.y - origin.y) / extent.y;
+  auto rlerp = [](float a, float b, float t) -> int { return std::round(a + t * (b - a)); };
+  float x_lerp = glm::clamp((clipped_origin.x - origin.x) / extent.x, 0.f, 1.f);
+  float y_lerp = glm::clamp((clipped_origin.y - origin.y) / extent.y, 0.f, 1.f);
+  float w_lerp = glm::clamp((clipped_origin.x + clipped_extent.x - origin.x) / extent.x, 0.f, 1.f);
+  float h_lerp = glm::clamp((clipped_origin.y + clipped_extent.y - origin.y) / extent.y, 0.f, 1.f);
 
   // The clipped region, the new origin and the new extent already account for orientation. However,
   // this is not the case for the texel UVs. If the rectangle was rotated by 90 or 270, then the
@@ -214,20 +214,20 @@ ImageRect CreateImageRect(const glm::mat3& matrix, const TransformClipRegion& cl
   const uint32_t idx_3 = (vert_index + 3) % 4;
 
   // Top Left (of texture).
-  uvs[idx][rotated_u] = lerp(texel_uvs[idx][rotated_u], texel_uvs[idx_1][rotated_u], x_lerp);
-  uvs[idx][rotated_v] = lerp(texel_uvs[idx][rotated_v], texel_uvs[idx_3][rotated_v], y_lerp);
+  uvs[idx][rotated_u] = rlerp(texel_uvs[idx][rotated_u], texel_uvs[idx_1][rotated_u], x_lerp);
+  uvs[idx][rotated_v] = rlerp(texel_uvs[idx][rotated_v], texel_uvs[idx_3][rotated_v], y_lerp);
 
   // Top Right (of texture).
-  uvs[idx_1][rotated_u] = lerp(texel_uvs[idx][rotated_u], texel_uvs[idx_1][rotated_u], w_lerp);
-  uvs[idx_1][rotated_v] = lerp(texel_uvs[idx_1][rotated_v], texel_uvs[idx_2][rotated_v], y_lerp);
+  uvs[idx_1][rotated_u] = rlerp(texel_uvs[idx][rotated_u], texel_uvs[idx_1][rotated_u], w_lerp);
+  uvs[idx_1][rotated_v] = rlerp(texel_uvs[idx_1][rotated_v], texel_uvs[idx_2][rotated_v], y_lerp);
 
   // Bottom Right (of texture).
-  uvs[idx_2][rotated_u] = lerp(texel_uvs[idx_3][rotated_u], texel_uvs[idx_2][rotated_u], w_lerp);
-  uvs[idx_2][rotated_v] = lerp(texel_uvs[idx_1][rotated_v], texel_uvs[idx_2][rotated_v], h_lerp);
+  uvs[idx_2][rotated_u] = rlerp(texel_uvs[idx_3][rotated_u], texel_uvs[idx_2][rotated_u], w_lerp);
+  uvs[idx_2][rotated_v] = rlerp(texel_uvs[idx_1][rotated_v], texel_uvs[idx_2][rotated_v], h_lerp);
 
   // Bottom Left (of texture).
-  uvs[idx_3][rotated_u] = lerp(texel_uvs[idx_3][rotated_u], texel_uvs[idx_2][rotated_u], x_lerp);
-  uvs[idx_3][rotated_v] = lerp(texel_uvs[idx][rotated_v], texel_uvs[idx_3][rotated_v], h_lerp);
+  uvs[idx_3][rotated_u] = rlerp(texel_uvs[idx_3][rotated_u], texel_uvs[idx_2][rotated_u], x_lerp);
+  uvs[idx_3][rotated_v] = rlerp(texel_uvs[idx][rotated_v], texel_uvs[idx_3][rotated_v], h_lerp);
 
   // This construction will CHECK if the extent is negative.
   return ImageRect(clipped_origin, clipped_extent, std::move(uvs), orientation);
