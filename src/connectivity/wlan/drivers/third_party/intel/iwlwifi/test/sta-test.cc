@@ -25,7 +25,7 @@ class StaTest : public SingleApTest, public MockTrans {
     mvm_ = iwl_trans_get_mvm(sim_trans_.iwl_trans());
     BIND_TEST(mvm_->trans);
   }
-  ~StaTest() {}
+  ~StaTest() { mock_send_cmd_.VerifyAndClear(); }
 
   // Expected fields.
   mock_function::MockFunction<zx_status_t,  // return value
