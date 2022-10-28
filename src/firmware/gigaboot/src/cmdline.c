@@ -162,7 +162,7 @@ void cmdline_append_load_options(void) {
     return;
   }
 
-  if (options_len >= 0) {
+  if (options_len > 0) {
     // To ensure we allocate enough space for arbitrary UTF-8 representations of
     // strings we receive as UTF-16, we need to allocate a *larger* buffer than
     // the UTF-16 string, since in the worst case each codepoint could require 3
