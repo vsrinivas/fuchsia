@@ -85,7 +85,6 @@ int run_test_ui_stack(int argc, const char** argv) {
   AddPublicService<fuchsia::ui::input3::KeyEventInjector>(context.get(),
                                                           realm_exposed_services.get());
   AddPublicService<fuchsia::ui::shortcut::Manager>(context.get(), realm_exposed_services.get());
-  AddPublicService<fuchsia::ui::shortcut::Registry>(context.get(), realm_exposed_services.get());
   AddPublicService<fuchsia::ui::shortcut2::Registry>(context.get(), realm_exposed_services.get());
   AddPublicService<fuchsia::ui::pointerinjector::Registry>(context.get(),
                                                            realm_exposed_services.get());

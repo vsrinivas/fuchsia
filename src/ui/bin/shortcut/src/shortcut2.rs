@@ -7,8 +7,10 @@
 use anyhow::{self, Context, Result};
 use fidl_fuchsia_ui_focus::FocusChain;
 use fidl_fuchsia_ui_input3::{KeyEvent, KeyEventType, KeyMeaning};
+use fidl_fuchsia_ui_shortcut as ui_shortcut;
 use fidl_fuchsia_ui_shortcut2 as fs2;
 use fuchsia_async::{self as fasync, Task};
+use fuchsia_scenic as scenic;
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::{
     channel::mpsc::{self, Receiver, Sender},
@@ -244,6 +246,33 @@ impl Shortcut2Impl {
         }
     }
 
+    /// Handles requests to `fuchsia.ui.shortcut.Manager` interface.
+    pub async fn manager_server(
+        &self,
+        mut stream: ui_shortcut::ManagerRequestStream,
+    ) -> Result<()> {
+        while let Some(req) = stream.try_next().await.context("error running manager server")? {
+            match req {
+                ui_shortcut::ManagerRequest::HandleKey3Event { event, responder } => {
+                    let was_handled = match self.handle_key_event(event).await? {
+                        fs2::Handled::Handled => true,
+                        fs2::Handled::NotHandled | fs2::HandledUnknown!() => false,
+                    };
+                    responder
+                        .send(was_handled)
+                        .context("Error sending response for HandleKey3Event")?;
+                }
+                ui_shortcut::ManagerRequest::HandleFocusChange {
+                    focus_chain, responder, ..
+                } => {
+                    self.handle_focus_change(&focus_chain).await;
+                    responder.send()?;
+                }
+            }
+        }
+        Ok(())
+    }
+
     /// Processes a [KeyEvent].
     ///
     /// Processing a key event includes triggering notifications for matching
@@ -412,17 +441,31 @@ impl Shortcut2Impl {
 
     /// Updates the current view of the focus chain for the shortcut handler.
     pub async fn handle_focus_change(&self, focus_chain: &FocusChain) {
-        let view_refs = focus_chain
-            .focus_chain
-            .as_ref()
-            .map(|f| crate::registry::clone_focus_chain(f))
-            .unwrap_or(vec![]);
-        let view_ids =
-            crate::registry::koids_of(&view_refs).into_iter().map(|k| ViewId(k)).collect();
+        let view_refs = focus_chain.focus_chain.as_ref().map(clone_focus_chain).unwrap_or(vec![]);
+        let view_ids = koids_of(&view_refs).into_iter().map(|k| ViewId(k)).collect();
         debug!(focus_chain = ?view_ids, "shortcut2/handle_focus_change");
 
         self.inner.lock().await.focus_chain_view_ids = view_ids;
     }
+}
+
+/// Turns `focus_chain` into a sequence of corresponding `zx::Koid`s.  Mainly useful
+/// for debugging.
+fn koids_of(focus_chain: &Vec<fidl_fuchsia_ui_views::ViewRef>) -> Vec<zx::Koid> {
+    focus_chain
+        .iter()
+        .map(|v| v.reference.as_handle_ref().get_koid().expect("failed to get koid"))
+        .collect()
+}
+
+/// Clones the supplied focus chain, since [ViewRef]s are not directly cloneable.
+fn clone_focus_chain(
+    focus_chain: &Vec<fidl_fuchsia_ui_views::ViewRef>,
+) -> Vec<fidl_fuchsia_ui_views::ViewRef> {
+    focus_chain
+        .iter()
+        .map(|v| scenic::duplicate_view_ref(v).expect("failed to clone a ViewRef"))
+        .collect()
 }
 
 /// Code point for 'A'.

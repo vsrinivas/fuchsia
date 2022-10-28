@@ -54,7 +54,6 @@
         {
             protocol: [
                 "fuchsia.ui.shortcut.Manager",
-                "fuchsia.ui.shortcut.Registry",
                 "fuchsia.ui.shortcut2.Registry",
             ],
             from: "#shortcut_manager",

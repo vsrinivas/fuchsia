@@ -12,7 +12,6 @@ group("tests") {
 
   deps = [
     ":shortcut",
-    ":shortcut_integration_test_pkg",
     ":shortcut_test_pkg",
   ]
 }
@@ -23,7 +22,6 @@ rustc_binary("bin") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.input:fuchsia.input_rust",
     "//sdk/fidl/fuchsia.ui.focus:fuchsia.ui.focus_rust",
     "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3_rust",
     "//sdk/fidl/fuchsia.ui.shortcut:fuchsia.ui.shortcut_rust",
@@ -42,9 +40,6 @@ rustc_binary("bin") {
 
   sources = [
     "src/main.rs",
-    "src/registry.rs",
-    "src/router.rs",
-    "src/service.rs",
     "src/shortcut2.rs",
   ]
 
@@ -73,55 +68,4 @@ fuchsia_component("shortcut_manager") {
 # The shortcut manager package.
 fuchsia_package("shortcut") {
   deps = [ ":shortcut_manager" ]
-}
-
-# The integration test for the shortcut manager.
-rustc_test("shortcut_integration_test_bin") {
-  output_name = "shortcut_integration_test"
-  edition = "2021"
-
-  deps = [
-    ":bin",
-    "//sdk/fidl/fuchsia.input:fuchsia.input_rust",
-    "//sdk/fidl/fuchsia.ui.focus:fuchsia.ui.focus_rust",
-    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3_rust",
-    "//sdk/fidl/fuchsia.ui.shortcut:fuchsia.ui.shortcut_rust",
-    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_rust",
-    "//src/lib/diagnostics/log/rust",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/ui/fuchsia-scenic",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:tracing",
-  ]
-  source_root = "tests/tests.rs"
-
-  sources = [
-    "tests/test_helpers.rs",
-    "tests/tests.rs",
-  ]
-}
-
-# The component and package for the integration test above.
-fuchsia_component("shortcut_integration_test") {
-  testonly = true
-  deps = [
-    ":shortcut_integration_test_bin",
-    ":shortcut_manager",
-  ]
-  manifest = "meta/shortcut_integration_test.cml"
-}
-
-fuchsia_test_package("shortcut_integration_test_pkg") {
-  test_components = [ ":shortcut_integration_test" ]
-  deps = [ ":shortcut_manager" ]
-
-  test_specs = {
-    # Test cases manipulate the global focus chain, which will confuse the
-    # shortcut manager if ran in parallel.
-    parallel = 1
-  }
 }
