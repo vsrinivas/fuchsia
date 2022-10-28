@@ -28,14 +28,15 @@ struct LoopbackIntegrationTest {
 async fn setup_piconet_with_two_a2dp_components() -> LoopbackIntegrationTest {
     let mut test_harness = PiconetHarness::new().await;
 
-    let use_capabilities = vec![
+    let mut use_capabilities = vec![
         Capability::protocol::<CodecFactoryMarker>().into(),
         Capability::protocol::<MetricEventLoggerFactoryMarker>().into(),
         Capability::protocol::<AllocatorMarker>().into(),
-        Capability::protocol::<RegistryMarker>().into(),
         Capability::protocol::<SessionAudioConsumerFactoryMarker>().into(),
         Capability::protocol::<AudioDeviceEnumeratorMarker>().into(),
+        Capability::protocol::<RegistryMarker>().into(),
     ];
+    // Tracing must be enabled for source for some e2e tests
     let a2dp_source = test_harness
         .add_profile_with_capabilities(
             A2DP_SOURCE_MONIKER.to_string(),
@@ -47,6 +48,8 @@ async fn setup_piconet_with_two_a2dp_components() -> LoopbackIntegrationTest {
         .await
         .expect("can add a2dp source profile");
 
+    // Remove the Tracing profile, to confirm component works without
+    let _ = use_capabilities.pop();
     let a2dp_sink = test_harness
         .add_profile_with_capabilities(
             A2DP_SINK_MONIKER.to_string(),
