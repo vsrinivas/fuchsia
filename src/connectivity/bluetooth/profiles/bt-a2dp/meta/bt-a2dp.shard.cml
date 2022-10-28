@@ -41,23 +41,27 @@
                 "fuchsia.bluetooth.bredr.Profile",
                 "fuchsia.mediacodec.CodecFactory",
                 "fuchsia.metrics.MetricEventLoggerFactory",
+                "fuchsia.tracing.provider.Registry",
             ],
         },
+
+        // Used if source is enabled
         {
             protocol: [
-                // Used if sink is enabled
-                "fuchsia.bluetooth.avrcp.PeerManager",
-
-                // Used if source is enabled
                 "fuchsia.media.AudioDeviceEnumerator",
+                "fuchsia.sysmem.Allocator",
+            ],
+            availability: "optional",
+        },
+
+        // Used if sink is enabled
+        {
+            protocol: [
+                "fuchsia.bluetooth.avrcp.PeerManager",
                 "fuchsia.media.SessionAudioConsumerFactory",
                 "fuchsia.media.sessions2.Publisher",
                 "fuchsia.power.battery.BatteryManager",
                 "fuchsia.settings.Audio",
-                "fuchsia.sysmem.Allocator",
-
-                // Tracing is not provided on all builds.
-                "fuchsia.tracing.provider.Registry",
             ],
             availability: "optional",
         },
