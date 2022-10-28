@@ -40,7 +40,7 @@ protocol Store {
     /// Writes an item to the store.
     WriteItem(struct {
         attempt Item;
-    }) -> (struct {}) error WriteError;
+    }) -> () error WriteError;
 
     // [START diff_3]
     /// Reads an item from the store.

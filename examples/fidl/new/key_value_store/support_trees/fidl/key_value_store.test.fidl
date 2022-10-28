@@ -1,0 +1,47 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library examples.keyvaluestore.supporttrees;
+
+/// An item in the store. The key must match the regex `^[A-z][A-z0-9_\.\/]{2,62}[A-z0-9]$`. That
+/// is, it must start with a letter, end with a letter or number, contain only letters, numbers,
+/// periods, and slashes, and be between 4 and 64 characters long.
+type Item = struct {
+    key string:128;
+    // [START diff_1]
+    value strict union {
+        // Keep the original `bytes` as one of the options in the new union. All leaf nodes in the
+        // tree must be `bytes`, or absent unions (representing empty). Empty byte arrays are
+        // disallowed.
+        1: bytes vector<byte>:64000;
+
+        // Allows a store within a store, thereby turning our flat key-value store into a tree
+        // thereof. Note the use of `@generated_name` to prevent a type-name collision with the
+        // `Store` protocol below, and the use of `box<T>` to ensure that there is a break in the
+        // chain of recursion, thereby allowing `Item` to include itself in its own definition.
+        //
+        // This is a table so that added fields, like for example a `hash`, can be easily added in
+        // the future.
+        2: store @generated_name("nested_store") table {
+            1: items vector<box<Item>>;
+        };
+    } :optional;
+    // [END diff_1]
+};
+
+/// An enumeration of things that may go wrong when trying to write a value to our store.
+type WriteError = flexible enum {
+    UNKNOWN = 0;
+    INVALID_KEY = 1;
+    INVALID_VALUE = 2;
+    ALREADY_EXISTS = 3;
+};
+
+/// A very basic key-value store.
+@discoverable
+protocol Store {
+    /// Writes an item to the store.
+    WriteItem(struct {
+        attempt Item;
+    }) -> () error WriteError;
+};

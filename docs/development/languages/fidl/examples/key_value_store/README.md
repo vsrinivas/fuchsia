@@ -25,4 +25,8 @@ modified or improved.
 
 <<_add_iterator_tutorial.md>>
 
+### Supporting nested key-value stores {#support_trees}
+
+<<_support_trees_tutorial.md>>
+
 <!-- /DO_NOT_REMOVE_COMMENT (Why? See: /tools/fidl/scripts/canonical_example/README.md) -->

@@ -9,6 +9,7 @@ group("tests") {
     "add_iterator:tests",
     "add_read_item:tests",
     "baseline:tests",
+    "support_trees:tests",
 
     # /DO_NOT_REMOVE_COMMENT (Why? See: /tools/fidl/scripts/canonical_example/README.md)
   ]

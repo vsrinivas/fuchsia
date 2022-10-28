@@ -25,5 +25,5 @@ protocol Store {
     /// Writes an item to the store.
     WriteItem(struct {
         attempt Item;
-    }) -> (struct {}) error WriteError;
+    }) -> () error WriteError;
 };
