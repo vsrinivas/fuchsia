@@ -4,6 +4,7 @@
 
 #ifndef SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_EXTERNAL_MEMORY_ALLOCATOR_H_
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_EXTERNAL_MEMORY_ALLOCATOR_H_
+
 #include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <lib/zx/event.h>
 
@@ -14,14 +15,14 @@ class ExternalMemoryAllocator : public MemoryAllocator {
  public:
   ExternalMemoryAllocator(MemoryAllocator::Owner* owner,
                           fidl::WireSharedClient<fuchsia_sysmem2::Heap> heap,
-                          fuchsia_sysmem2::wire::HeapProperties properties);
+                          fuchsia_sysmem2::HeapProperties properties);
 
   ~ExternalMemoryAllocator() override;
 
   zx_status_t Allocate(uint64_t size, std::optional<std::string> name,
                        zx::vmo* parent_vmo) override;
   zx_status_t SetupChildVmo(const zx::vmo& parent_vmo, const zx::vmo& child_vmo,
-                            fuchsia_sysmem2::wire::SingleBufferSettings buffer_settings) override;
+                            fuchsia_sysmem2::SingleBufferSettings buffer_settings) override;
   void Delete(zx::vmo parent_vmo) override;
   bool is_empty() override { return allocations_.empty(); }
 

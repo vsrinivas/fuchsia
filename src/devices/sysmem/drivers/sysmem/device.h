@@ -5,9 +5,9 @@
 #ifndef SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_DEVICE_H_
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_DEVICE_H_
 
-#include <fidl/fuchsia.hardware.sysmem/cpp/wire.h>
-#include <fidl/fuchsia.sysmem/cpp/wire.h>
-#include <fidl/fuchsia.sysmem2/cpp/wire.h>
+#include <fidl/fuchsia.hardware.sysmem/cpp/fidl.h>
+#include <fidl/fuchsia.sysmem/cpp/fidl.h>
+#include <fidl/fuchsia.sysmem2/cpp/fidl.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/sysmem/c/banjo.h>
@@ -35,7 +35,6 @@
 
 #include "memory_allocator.h"
 #include "sysmem_metrics.h"
-#include "table_set.h"
 
 namespace sys {
 class ServiceDirectory;
@@ -93,10 +92,9 @@ class Device final : public DdkDeviceType,
   [[nodiscard]] zx_status_t CreatePhysicalVmo(uint64_t base, uint64_t size,
                                               zx::vmo* vmo_out) override;
   void CheckForUnbind() override;
-  TableSet& table_set() override;
   SysmemMetrics& metrics() override;
   protected_ranges::ProtectedRangesCoreControl& protected_ranges_core_control(
-      fuchsia_sysmem2::wire::HeapType heap_type) override;
+      fuchsia_sysmem2::HeapType heap_type) override;
 
   inspect::Node* heap_node() override { return &heaps_; }
 
@@ -127,14 +125,14 @@ class Device final : public DdkDeviceType,
   // Get allocator for |settings|. Returns NULL if allocator is not
   // registered for settings.
   [[nodiscard]] MemoryAllocator* GetAllocator(
-      const fuchsia_sysmem2::wire::BufferMemorySettings& settings);
+      const fuchsia_sysmem2::BufferMemorySettings& settings);
 
   // Get heap properties of a specific memory heap allocator.
   //
   // Clients should guarantee that the heap is valid and already registered
   // to sysmem driver.
-  [[nodiscard]] const fuchsia_sysmem2::wire::HeapProperties& GetHeapProperties(
-      fuchsia_sysmem2::wire::HeapType heap) const;
+  [[nodiscard]] const fuchsia_sysmem2::HeapProperties& GetHeapProperties(
+      fuchsia_sysmem2::HeapType heap) const;
 
   [[nodiscard]] const sysmem_protocol_t* proto() const { return &in_proc_sysmem_protocol_; }
   [[nodiscard]] const zx_device_t* device() const { return zxdev_; }
@@ -190,8 +188,6 @@ class Device final : public DdkDeviceType,
   // initialization, it checks that operations are on the loop thread.
   mutable std::optional<fit::thread_checker> loop_checker_;
 
-  TableSet table_set_;
-
   // Currently located at bootstrap/driver_manager:root/sysmem.
   inspect::Node sysmem_root_;
   inspect::Node heaps_;
@@ -216,20 +212,19 @@ class Device final : public DdkDeviceType,
   std::deque<zx_koid_t> unfound_token_koids_ __TA_GUARDED(*loop_checker_);
 
   // This map contains all registered memory allocators.
-  std::map<fuchsia_sysmem2::wire::HeapType, std::shared_ptr<MemoryAllocator>> allocators_
+  std::map<fuchsia_sysmem2::HeapType, std::shared_ptr<MemoryAllocator>> allocators_
       __TA_GUARDED(*loop_checker_);
 
   // Some memory allocators need to be registered with properties before
   // we can use them to allocate memory. We keep this map to store all the
   // unregistered allocators.
-  std::map<MemoryAllocator*,
-           std::pair<fuchsia_sysmem2::wire::HeapType, std::unique_ptr<MemoryAllocator>>>
+  std::map<MemoryAllocator*, std::pair<fuchsia_sysmem2::HeapType, std::unique_ptr<MemoryAllocator>>>
       unregistered_allocators_ __TA_GUARDED(*loop_checker_);
 
   // This map contains only the secure allocators, if any.  The pointers are owned by allocators_.
   //
   // TODO(dustingreen): Consider unordered_map for this and some of above.
-  std::map<fuchsia_sysmem2::wire::HeapType, MemoryAllocator*> secure_allocators_
+  std::map<fuchsia_sysmem2::HeapType, MemoryAllocator*> secure_allocators_
       __TA_GUARDED(*loop_checker_);
 
   struct SecureMemControl : public protected_ranges::ProtectedRangesCoreControl {
@@ -255,7 +250,7 @@ class Device final : public DdkDeviceType,
     void ZeroProtectedSubRange(bool is_covering_range_explicit,
                                const protected_ranges::Range& range) override;
 
-    fuchsia_sysmem2::wire::HeapType heap_type;
+    fuchsia_sysmem2::HeapType heap_type;
     Device* parent{};
     bool is_dynamic{};
     uint64_t range_granularity{};
@@ -263,7 +258,7 @@ class Device final : public DdkDeviceType,
     bool has_mod_protected_range{};
   };
   // This map has the secure_mem_ properties for each HeapType in secure_allocators_.
-  std::map<fuchsia_sysmem2::wire::HeapType, SecureMemControl> secure_mem_controls_
+  std::map<fuchsia_sysmem2::HeapType, SecureMemControl> secure_mem_controls_
       __TA_GUARDED(*loop_checker_);
 
   // This flag is used to determine if the closing of the current secure mem

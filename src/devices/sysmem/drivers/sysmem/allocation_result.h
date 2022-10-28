@@ -5,13 +5,13 @@
 #ifndef SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_ALLOCATION_RESULT_H_
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_ALLOCATION_RESULT_H_
 
-#include <fidl/fuchsia.sysmem2/cpp/wire.h>
+#include <fidl/fuchsia.sysmem2/cpp/fidl.h>
 #include <zircon/types.h>
 
 namespace sysmem_driver {
 
 struct AllocationResult {
-  const fuchsia_sysmem2::wire::BufferCollectionInfo* buffer_collection_info = nullptr;
+  const fuchsia_sysmem2::BufferCollectionInfo* buffer_collection_info = nullptr;
   const zx_status_t status = ZX_OK;
 };
 

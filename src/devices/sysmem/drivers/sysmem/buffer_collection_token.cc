@@ -31,7 +31,7 @@ BufferCollectionToken::~BufferCollectionToken() {
 }
 
 void BufferCollectionToken::CloseServerBinding(zx_status_t epitaph) {
-  if (server_binding_) {
+  if (server_binding_.has_value()) {
     server_binding_->Close(epitaph);
   }
   server_binding_ = {};
@@ -64,7 +64,6 @@ void BufferCollectionToken::DuplicateSync(DuplicateSyncRequestView request,
                                           DuplicateSyncCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "BufferCollectionToken::DuplicateSync", "this", this,
                  "logical_buffer_collection", &logical_buffer_collection());
-  table_set().MitigateChurn();
   if (is_done_) {
     // Probably a Close() followed by DuplicateSync(), which is illegal and
     // causes the whole LogicalBufferCollection to fail.
@@ -85,7 +84,7 @@ void BufferCollectionToken::DuplicateSync(DuplicateSyncRequestView request,
     NodeProperties* new_node_properties = node_properties().NewChild(&logical_buffer_collection());
     if (rights_attenuation_mask != ZX_RIGHT_SAME_RIGHTS) {
       new_node_properties->rights_attenuation_mask() &=
-          static_cast<uint32_t>(rights_attenuation_mask);
+          safe_cast<uint32_t>(rights_attenuation_mask);
     }
     logical_buffer_collection().CreateBufferCollectionToken(shared_logical_buffer_collection(),
                                                             new_node_properties,
@@ -102,7 +101,6 @@ void BufferCollectionToken::Duplicate(DuplicateRequestView request,
                                       DuplicateCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "BufferCollectionToken::Duplicate", "this", this,
                  "logical_buffer_collection", &logical_buffer_collection());
-  table_set().MitigateChurn();
   if (is_done_) {
     // Probably a Close() followed by Duplicate(), which is illegal and
     // causes the whole LogicalBufferCollection to fail.
@@ -211,7 +209,6 @@ void BufferCollectionToken::CreateBufferCollectionTokenGroup(
     CreateBufferCollectionTokenGroupCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "BufferCollectionTokenGroup::CreateBufferCollectionTokenGroup", "this",
                  this, "logical_buffer_collection", &logical_buffer_collection());
-  table_set().MitigateChurn();
   if (is_done_) {
     // Probably a Close() followed by Duplicate(), which is illegal and
     // causes the whole LogicalBufferCollection to fail.
@@ -264,7 +261,7 @@ void BufferCollectionToken::FailAsync(Location location, zx_status_t status, con
   va_end(args);
 
   // Idempotent, so only close once.
-  if (!server_binding_)
+  if (!server_binding_.has_value())
     return;
 
   async_failure_result_ = status;

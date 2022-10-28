@@ -376,12 +376,9 @@ class AfbcFormats : public ImageFormatSet {
   const char* Name() const override { return "AfbcFormats"; }
 
   static constexpr uint64_t kAfbcModifierMask =
-      fuchsia_sysmem2::kFormatModifierArmTeBit |
-      fuchsia_sysmem2::kFormatModifierArmSplitBlockBit |
-      fuchsia_sysmem2::kFormatModifierArmSparseBit |
-      fuchsia_sysmem2::kFormatModifierArmYuvBit |
-      fuchsia_sysmem2::kFormatModifierArmBchBit |
-      fuchsia_sysmem2::kFormatModifierArmTiledHeaderBit;
+      fuchsia_sysmem2::kFormatModifierArmTeBit | fuchsia_sysmem2::kFormatModifierArmSplitBlockBit |
+      fuchsia_sysmem2::kFormatModifierArmSparseBit | fuchsia_sysmem2::kFormatModifierArmYuvBit |
+      fuchsia_sysmem2::kFormatModifierArmBchBit | fuchsia_sysmem2::kFormatModifierArmTiledHeaderBit;
   bool IsSupported(const PixelFormat& pixel_format) const override {
     if (!pixel_format.format_modifier_value().has_value())
       return false;

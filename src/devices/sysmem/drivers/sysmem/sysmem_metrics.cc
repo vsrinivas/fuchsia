@@ -4,7 +4,10 @@
 
 #include "sysmem_metrics.h"
 
+#include <limits>
+
 #include "src/devices/sysmem/metrics/metrics.cb.h"
+#include "utils.h"
 
 SysmemMetrics::SysmemMetrics()
     : metrics_buffer_(cobalt::MetricsBuffer::Create(sysmem_metrics::kProjectId)),
@@ -27,11 +30,12 @@ void SysmemMetrics::LogUnusedPageCheckCounts(uint32_t succeeded_count, uint32_t 
   }
 
   zx::time now = zx::clock::get_monotonic();
-  if ((now >= unused_page_check_last_flush_time_ + kUnusedPageCheckFlushSuccessPeriod) &&
-      unused_page_check_pending_success_count_) {
+  if (((now >= unused_page_check_last_flush_time_ + kUnusedPageCheckFlushSuccessPeriod) &&
+       unused_page_check_pending_success_count_) ||
+      unused_page_check_pending_success_count_ >= std::numeric_limits<uint32_t>::max() / 2) {
     unused_page_check_.LogEventCount(
         {sysmem_metrics::UnusedPageCheckMetricDimensionEvent_PatternCheckOk},
-        unused_page_check_pending_success_count_);
+        safe_cast<uint32_t>(unused_page_check_pending_success_count_));
     unused_page_check_pending_success_count_ = 0;
     unused_page_check_last_flush_time_ = now;
   }

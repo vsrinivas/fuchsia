@@ -4,7 +4,9 @@
 
 #include "device.h"
 
+#include <fidl/fuchsia.sysmem/cpp/fidl.h>
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
+#include <fidl/fuchsia.sysmem2/cpp/fidl.h>
 #include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <fuchsia/sysmem/c/banjo.h>
 #include <inttypes.h>
@@ -69,35 +71,33 @@ T AlignUp(T value, T divisor) {
 }
 
 // Helper function to build owned HeapProperties table with coherency domain support.
-fuchsia_sysmem2::wire::HeapProperties BuildHeapPropertiesWithCoherencyDomainSupport(
-    fidl::AnyArena& allocator, bool cpu_supported, bool ram_supported, bool inaccessible_supported,
-    bool need_clear, bool need_flush) {
-  using fuchsia_sysmem2::wire::CoherencyDomainSupport;
-  using fuchsia_sysmem2::wire::HeapProperties;
+fuchsia_sysmem2::HeapProperties BuildHeapPropertiesWithCoherencyDomainSupport(
+    bool cpu_supported, bool ram_supported, bool inaccessible_supported, bool need_clear,
+    bool need_flush) {
+  using fuchsia_sysmem2::CoherencyDomainSupport;
+  using fuchsia_sysmem2::HeapProperties;
 
-  CoherencyDomainSupport coherency_domain_support(allocator);
-  coherency_domain_support.set_cpu_supported(cpu_supported)
-      .set_ram_supported(ram_supported)
-      .set_inaccessible_supported(inaccessible_supported);
+  CoherencyDomainSupport coherency_domain_support;
+  coherency_domain_support.cpu_supported().emplace(cpu_supported);
+  coherency_domain_support.ram_supported().emplace(ram_supported);
+  coherency_domain_support.inaccessible_supported().emplace(inaccessible_supported);
 
-  HeapProperties heap_properties(allocator);
-  heap_properties.set_coherency_domain_support(allocator, std::move(coherency_domain_support))
-      .set_need_clear(need_clear)
-      .set_need_flush(need_flush);
+  HeapProperties heap_properties;
+  heap_properties.coherency_domain_support().emplace(std::move(coherency_domain_support));
+  heap_properties.need_clear().emplace(need_clear);
+  heap_properties.need_flush().emplace(need_flush);
   return heap_properties;
 }
 
 class SystemRamMemoryAllocator : public MemoryAllocator {
  public:
   SystemRamMemoryAllocator(Owner* parent_device)
-      : MemoryAllocator(parent_device->table_set(),
-                        BuildHeapPropertiesWithCoherencyDomainSupport(
-                            parent_device->table_set().allocator(), true /*cpu*/, true /*ram*/,
-                            true /*inaccessible*/,
-                            // Zircon guarantees created VMO are filled with 0; sysmem doesn't
-                            // need to clear it once again.  There's little point in flushing a
-                            // demand-backed VMO that's only virtually filled with 0.
-                            /*need_clear=*/false, /*need_flush=*/false)) {
+      : MemoryAllocator(BuildHeapPropertiesWithCoherencyDomainSupport(
+            true /*cpu*/, true /*ram*/, true /*inaccessible*/,
+            // Zircon guarantees created VMO are filled with 0; sysmem doesn't
+            // need to clear it once again.  There's little point in flushing a
+            // demand-backed VMO that's only virtually filled with 0.
+            /*need_clear=*/false, /*need_flush=*/false)) {
     node_ = parent_device->heap_node()->CreateChild("SysmemRamMemoryAllocator");
     node_.CreateUint("id", id(), &properties_);
   }
@@ -114,7 +114,7 @@ class SystemRamMemoryAllocator : public MemoryAllocator {
   }
 
   zx_status_t SetupChildVmo(const zx::vmo& parent_vmo, const zx::vmo& child_vmo,
-                            fuchsia_sysmem2::wire::SingleBufferSettings buffer_settings) override {
+                            fuchsia_sysmem2::SingleBufferSettings buffer_settings) override {
     // nothing to do here
     return ZX_OK;
   }
@@ -135,18 +135,17 @@ class SystemRamMemoryAllocator : public MemoryAllocator {
 class ContiguousSystemRamMemoryAllocator : public MemoryAllocator {
  public:
   explicit ContiguousSystemRamMemoryAllocator(Owner* parent_device)
-      : MemoryAllocator(parent_device->table_set(),
-                        BuildHeapPropertiesWithCoherencyDomainSupport(
-                            parent_device->table_set().allocator(), true /*cpu*/, true /*ram*/,
-                            true /*inaccessible*/,
-                            // Zircon guarantees contagious VMO created are filled with 0;
-                            // sysmem doesn't need to clear it once again.  Unlike non-contiguous
-                            // VMOs which haven't backed pages yet, contiguous VMOs have backed
-                            // pages, and it's effective to flush the zeroes to RAM.  Some current
-                            // sysmem clients rely on contiguous allocations having their initial
-                            // zero-fill already flushed to RAM (at least for the RAM coherency
-                            // domain, this should probably remain true).
-                            /*need_clear=*/false, /*need_flush=*/true)),
+      : MemoryAllocator(BuildHeapPropertiesWithCoherencyDomainSupport(
+            /*cpu_supported=*/true, /*ram_supported=*/true,
+            /*inaccessible_supported=*/true,
+            // Zircon guarantees contagious VMO created are filled with 0;
+            // sysmem doesn't need to clear it once again.  Unlike non-contiguous
+            // VMOs which haven't backed pages yet, contiguous VMOs have backed
+            // pages, and it's effective to flush the zeroes to RAM.  Some current
+            // sysmem clients rely on contiguous allocations having their initial
+            // zero-fill already flushed to RAM (at least for the RAM coherency
+            // domain, this should probably remain true).
+            /*need_clear=*/false, /*need_flush=*/true)),
         parent_device_(parent_device) {
     node_ = parent_device_->heap_node()->CreateChild("ContiguousSystemRamMemoryAllocator");
     node_.CreateUint("id", id(), &properties_);
@@ -187,7 +186,7 @@ class ContiguousSystemRamMemoryAllocator : public MemoryAllocator {
   }
   virtual zx_status_t SetupChildVmo(
       const zx::vmo& parent_vmo, const zx::vmo& child_vmo,
-      fuchsia_sysmem2::wire::SingleBufferSettings buffer_settings) override {
+      fuchsia_sysmem2::SingleBufferSettings buffer_settings) override {
     // nothing to do here
     return ZX_OK;
   }
@@ -386,7 +385,7 @@ void Device::CheckForUnbind() {
   }
   for (auto& [type, allocator] : allocators_) {
     if (!allocator->is_empty()) {
-      zxlogf(INFO, "Not unbinding because allocator %lx is not empty", static_cast<uint64_t>(type));
+      zxlogf(INFO, "Not unbinding because allocator %lx is not empty", safe_cast<uint64_t>(type));
 
       return;
     }
@@ -396,12 +395,10 @@ void Device::CheckForUnbind() {
   loop_.Quit();
 }
 
-TableSet& Device::table_set() { return table_set_; }
-
 SysmemMetrics& Device::metrics() { return metrics_; }
 
 protected_ranges::ProtectedRangesCoreControl& Device::protected_ranges_core_control(
-    fuchsia_sysmem2::wire::HeapType heap_type) {
+    fuchsia_sysmem2::HeapType heap_type) {
   std::lock_guard checker(*loop_checker_);
   ZX_DEBUG_ASSERT(secure_mem_controls_.find(heap_type) != secure_mem_controls_.end());
   return secure_mem_controls_[heap_type];
@@ -418,16 +415,18 @@ bool Device::SecureMemControl::HasModProtectedRange() { return has_mod_protected
 void Device::SecureMemControl::AddProtectedRange(const protected_ranges::Range& range) {
   std::lock_guard checker(*parent->loop_checker_);
   ZX_DEBUG_ASSERT(parent->secure_mem_);
-  fidl::Arena allocator;
-  fuchsia_sysmem::wire::SecureHeapAndRange secure_heap_and_range(allocator);
-  secure_heap_and_range.set_heap(allocator, sysmem::V1CopyFromV2HeapType(heap_type));
-  fuchsia_sysmem::wire::SecureHeapRange secure_heap_range(allocator);
-  secure_heap_range.set_physical_address(allocator, range.begin());
-  secure_heap_range.set_size_bytes(allocator, range.length());
-  secure_heap_and_range.set_range(allocator, std::move(secure_heap_range));
+  fuchsia_sysmem::SecureHeapAndRange secure_heap_and_range;
+  secure_heap_and_range.heap().emplace(
+      safe_cast<fuchsia_sysmem::HeapType>(sysmem::fidl_underlying_cast(heap_type)));
+  fuchsia_sysmem::SecureHeapRange secure_heap_range;
+  secure_heap_range.physical_address().emplace(range.begin());
+  secure_heap_range.size_bytes().emplace(range.length());
+  secure_heap_and_range.range().emplace(std::move(secure_heap_range));
+  fidl::Arena arena;
+  auto wire_secure_heap_and_range = fidl::ToWire(arena, std::move(secure_heap_and_range));
   auto result =
       fidl::WireCall<fuchsia_sysmem::SecureMem>(zx::unowned_channel(parent->secure_mem_->channel()))
-          ->AddSecureHeapPhysicalRange(std::move(secure_heap_and_range));
+          ->AddSecureHeapPhysicalRange(std::move(wire_secure_heap_and_range));
   // If we lose the ability to control protected memory ranges ... reboot.
   ZX_ASSERT(result.ok());
   if (result->is_error()) {
@@ -439,16 +438,18 @@ void Device::SecureMemControl::AddProtectedRange(const protected_ranges::Range& 
 void Device::SecureMemControl::DelProtectedRange(const protected_ranges::Range& range) {
   std::lock_guard checker(*parent->loop_checker_);
   ZX_DEBUG_ASSERT(parent->secure_mem_);
-  fidl::Arena allocator;
-  fuchsia_sysmem::wire::SecureHeapAndRange secure_heap_and_range(allocator);
-  secure_heap_and_range.set_heap(allocator, sysmem::V1CopyFromV2HeapType(heap_type));
-  fuchsia_sysmem::wire::SecureHeapRange secure_heap_range(allocator);
-  secure_heap_range.set_physical_address(allocator, range.begin());
-  secure_heap_range.set_size_bytes(allocator, range.length());
-  secure_heap_and_range.set_range(allocator, std::move(secure_heap_range));
+  fuchsia_sysmem::SecureHeapAndRange secure_heap_and_range;
+  secure_heap_and_range.heap().emplace(
+      safe_cast<fuchsia_sysmem::HeapType>(sysmem::fidl_underlying_cast(heap_type)));
+  fuchsia_sysmem::SecureHeapRange secure_heap_range;
+  secure_heap_range.physical_address().emplace(range.begin());
+  secure_heap_range.size_bytes().emplace(range.length());
+  secure_heap_and_range.range().emplace(std::move(secure_heap_range));
+  fidl::Arena arena;
+  auto wire_secure_heap_and_range = fidl::ToWire(arena, std::move(secure_heap_and_range));
   auto result =
       fidl::WireCall<fuchsia_sysmem::SecureMem>(zx::unowned_channel(parent->secure_mem_->channel()))
-          ->DeleteSecureHeapPhysicalRange(std::move(secure_heap_and_range));
+          ->DeleteSecureHeapPhysicalRange(std::move(wire_secure_heap_and_range));
   // If we lose the ability to control protected memory ranges ... reboot.
   ZX_ASSERT(result.ok());
   if (result->is_error()) {
@@ -469,20 +470,22 @@ void Device::SecureMemControl::ModProtectedRange(const protected_ranges::Range& 
 
   std::lock_guard checker(*parent->loop_checker_);
   ZX_DEBUG_ASSERT(parent->secure_mem_);
-  fidl::Arena allocator;
-  fuchsia_sysmem::wire::SecureHeapAndRangeModification modification(allocator);
-  modification.set_heap(allocator, sysmem::V1CopyFromV2HeapType(heap_type));
-  fuchsia_sysmem::wire::SecureHeapRange range_old(allocator);
-  range_old.set_physical_address(allocator, old_range.begin());
-  range_old.set_size_bytes(allocator, old_range.length());
-  fuchsia_sysmem::wire::SecureHeapRange range_new(allocator);
-  range_new.set_physical_address(allocator, new_range.begin());
-  range_new.set_size_bytes(allocator, new_range.length());
-  modification.set_old_range(allocator, std::move(range_old));
-  modification.set_new_range(allocator, std::move(range_new));
+  fuchsia_sysmem::SecureHeapAndRangeModification modification;
+  modification.heap().emplace(
+      safe_cast<fuchsia_sysmem::HeapType>(sysmem::fidl_underlying_cast(heap_type)));
+  fuchsia_sysmem::SecureHeapRange range_old;
+  range_old.physical_address().emplace(old_range.begin());
+  range_old.size_bytes().emplace(old_range.length());
+  fuchsia_sysmem::SecureHeapRange range_new;
+  range_new.physical_address().emplace(new_range.begin());
+  range_new.size_bytes().emplace(new_range.length());
+  modification.old_range().emplace(std::move(range_old));
+  modification.new_range().emplace(std::move(range_new));
+  fidl::Arena arena;
+  auto wire_modification = fidl::ToWire(arena, std::move(modification));
   auto result =
       fidl::WireCall<fuchsia_sysmem::SecureMem>(zx::unowned_channel(parent->secure_mem_->channel()))
-          ->ModifySecureHeapPhysicalRange(std::move(modification));
+          ->ModifySecureHeapPhysicalRange(std::move(wire_modification));
   // If we lose the ability to control protected memory ranges ... reboot.
   ZX_ASSERT(result.ok());
   if (result->is_error()) {
@@ -495,16 +498,18 @@ void Device::SecureMemControl::ZeroProtectedSubRange(bool is_covering_range_expl
                                                      const protected_ranges::Range& range) {
   std::lock_guard checker(*parent->loop_checker_);
   ZX_DEBUG_ASSERT(parent->secure_mem_);
-  fidl::Arena allocator;
-  fuchsia_sysmem::wire::SecureHeapAndRange secure_heap_and_range(allocator);
-  secure_heap_and_range.set_heap(allocator, sysmem::V1CopyFromV2HeapType(heap_type));
-  fuchsia_sysmem::wire::SecureHeapRange secure_heap_range(allocator);
-  secure_heap_range.set_physical_address(allocator, range.begin());
-  secure_heap_range.set_size_bytes(allocator, range.length());
-  secure_heap_and_range.set_range(allocator, std::move(secure_heap_range));
+  fuchsia_sysmem::SecureHeapAndRange secure_heap_and_range;
+  secure_heap_and_range.heap().emplace(
+      safe_cast<fuchsia_sysmem::HeapType>(sysmem::fidl_underlying_cast(heap_type)));
+  fuchsia_sysmem::SecureHeapRange secure_heap_range;
+  secure_heap_range.physical_address().emplace(range.begin());
+  secure_heap_range.size_bytes().emplace(range.length());
+  secure_heap_and_range.range().emplace(std::move(secure_heap_range));
+  fidl::Arena arena;
+  auto wire_secure_heap_and_range = fidl::ToWire(arena, std::move(secure_heap_and_range));
   auto result =
       fidl::WireCall<fuchsia_sysmem::SecureMem>(zx::unowned_channel(parent->secure_mem_->channel()))
-          ->ZeroSubRange(is_covering_range_explicit, std::move(secure_heap_and_range));
+          ->ZeroSubRange(is_covering_range_explicit, std::move(wire_secure_heap_and_range));
   // If we lose the ability to control protected memory ranges ... reboot.
   ZX_ASSERT(result.ok());
   if (result->is_error()) {
@@ -579,9 +584,9 @@ zx_status_t Device::Bind() {
   assert(kMinProtectedAlignment % zx_system_get_page_size() == 0);
   protected_memory_size = AlignUp(protected_memory_size, kMinProtectedAlignment);
   contiguous_memory_size =
-      AlignUp(contiguous_memory_size, static_cast<int64_t>(zx_system_get_page_size()));
+      AlignUp(contiguous_memory_size, safe_cast<int64_t>(zx_system_get_page_size()));
 
-  allocators_[fuchsia_sysmem2::wire::HeapType::kSystemRam] =
+  allocators_[fuchsia_sysmem2::HeapType::kSystemRam] =
       std::make_unique<SystemRamMemoryAllocator>(this);
 
   status = pdev_.GetBti(0, &bti_);
@@ -648,8 +653,8 @@ zx_status_t Device::Bind() {
     }
     // For !is_cpu_accessible_, we don't call amlogic_allocator->SetupUnusedPages() until the start
     // of set_ready().
-    secure_allocators_[fuchsia_sysmem2::wire::HeapType::kAmlogicSecure] = amlogic_allocator.get();
-    allocators_[fuchsia_sysmem2::wire::HeapType::kAmlogicSecure] = std::move(amlogic_allocator);
+    secure_allocators_[fuchsia_sysmem2::HeapType::kAmlogicSecure] = amlogic_allocator.get();
+    allocators_[fuchsia_sysmem2::HeapType::kAmlogicSecure] = std::move(amlogic_allocator);
   }
 
   sync_completion_t completion;
@@ -697,7 +702,6 @@ zx_status_t Device::SysmemConnect(zx::channel allocator_request) {
   // The Allocator is channel-owned / self-owned.
   return async::PostTask(loop_.dispatcher(),
                          [this, allocator_request = std::move(allocator_request)]() mutable {
-                           table_set_.MitigateChurn();
                            // The Allocator is channel-owned / self-owned.
                            Allocator::CreateChannelOwned(std::move(allocator_request), this);
                          });
@@ -709,20 +713,20 @@ zx_status_t Device::SysmemRegisterHeap(uint64_t heap_param, zx::channel heap_con
     DRIVER_ERROR("Invalid external heap");
     return ZX_ERR_INVALID_ARGS;
   }
-  auto heap = static_cast<fuchsia_sysmem2::wire::HeapType>(heap_param);
+  auto heap = safe_cast<fuchsia_sysmem2::HeapType>(heap_param);
 
   class EventHandler : public fidl::WireAsyncEventHandler<fuchsia_sysmem2::Heap> {
    public:
     void OnRegister(fidl::WireEvent<fuchsia_sysmem2::Heap::OnRegister>* event) override {
+      auto properties = fidl::ToNatural(event->properties);
       std::lock_guard checker(*device_->loop_checker_);
       // A heap should not be registered twice.
       ZX_DEBUG_ASSERT(heap_client_.is_valid());
       // This replaces any previously registered allocator for heap. This
       // behavior is preferred as it avoids a potential race-condition during
       // heap restart.
-      auto allocator = std::make_shared<ExternalMemoryAllocator>(
-          device_, std::move(heap_client_),
-          sysmem::V2CloneHeapProperties(device_->table_set_.allocator(), event->properties));
+      auto allocator = std::make_shared<ExternalMemoryAllocator>(device_, std::move(heap_client_),
+                                                                 std::move(properties));
       weak_associated_allocator_ = allocator;
       device_->allocators_[heap_] = std::move(allocator);
     }
@@ -745,26 +749,24 @@ zx_status_t Device::SysmemRegisterHeap(uint64_t heap_param, zx::channel heap_con
     }
 
     static void Bind(Device* device, fidl::ClientEnd<fuchsia_sysmem2::Heap> heap_client_end,
-                     fuchsia_sysmem2::wire::HeapType heap) {
+                     fuchsia_sysmem2::HeapType heap) {
       auto event_handler = std::unique_ptr<EventHandler>(new EventHandler(device, heap));
       event_handler->heap_client_.Bind(std::move(heap_client_end), device->dispatcher(),
                                        std::move(event_handler));
     }
 
    private:
-    EventHandler(Device* device, fuchsia_sysmem2::wire::HeapType heap)
-        : device_(device), heap_(heap) {}
+    EventHandler(Device* device, fuchsia_sysmem2::HeapType heap) : device_(device), heap_(heap) {}
 
     Device* const device_;
     fidl::WireSharedClient<fuchsia_sysmem2::Heap> heap_client_;
-    const fuchsia_sysmem2::wire::HeapType heap_;
+    const fuchsia_sysmem2::HeapType heap_;
     std::weak_ptr<ExternalMemoryAllocator> weak_associated_allocator_;
   };
 
   return async::PostTask(loop_.dispatcher(),
                          [this, heap, heap_connection = std::move(heap_connection)]() mutable {
                            std::lock_guard checker(*loop_checker_);
-                           table_set_.MitigateChurn();
                            EventHandler::Bind(this, std::move(heap_connection), heap);
                          });
 }
@@ -778,7 +780,6 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
       loop_.dispatcher(), [this, secure_mem_connection = std::move(secure_mem_connection),
                            close_is_abort = current_close_is_abort_]() mutable {
         std::lock_guard checker(*loop_checker_);
-        table_set_.MitigateChurn();
         // This code must run asynchronously for two reasons:
         // 1) It does synchronous IPCs to the secure mem device, so SysmemRegisterSecureMem must
         // have return so the call from the secure mem device is unblocked.
@@ -833,16 +834,18 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
             LOG(WARNING, "get_status != ZX_OK - get_status: %d", get_status);
             return;
           }
-          fidl::Arena fidl_allocator;
-          fuchsia_sysmem::wire::SecureHeapAndRange whole_heap(fidl_allocator);
-          whole_heap.set_heap(fidl_allocator, sysmem::V1CopyFromV2HeapType(heap_type));
-          fuchsia_sysmem::wire::SecureHeapRange range(fidl_allocator);
-          range.set_physical_address(fidl_allocator, phys_base);
-          range.set_size_bytes(fidl_allocator, size_bytes);
-          whole_heap.set_range(fidl_allocator, std::move(range));
+          fuchsia_sysmem::SecureHeapAndRange whole_heap;
+          whole_heap.heap().emplace(
+              safe_cast<fuchsia_sysmem::HeapType>(sysmem::fidl_underlying_cast(heap_type)));
+          fuchsia_sysmem::SecureHeapRange range;
+          range.physical_address().emplace(phys_base);
+          range.size_bytes().emplace(size_bytes);
+          whole_heap.range().emplace(std::move(range));
+          fidl::Arena arena;
+          auto wire_whole_heap = fidl::ToWire(arena, std::move(whole_heap));
           auto get_properties_result =
               fidl::WireCall<fuchsia_sysmem::SecureMem>(zx::unowned_channel(secure_mem_->channel()))
-                  ->GetPhysicalSecureHeapProperties(std::move(whole_heap));
+                  ->GetPhysicalSecureHeapProperties(std::move(wire_whole_heap));
           if (!get_properties_result.ok()) {
             ZX_ASSERT(!*close_is_abort);
             return;
@@ -855,21 +858,22 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
             return;
           }
           ZX_ASSERT(get_properties_result->is_ok());
-          const fuchsia_sysmem::wire::SecureHeapProperties& properties =
-              get_properties_result->value()->properties;
-          ZX_ASSERT(properties.has_heap());
-          ZX_ASSERT(properties.heap() == sysmem::V1CopyFromV2HeapType(heap_type));
-          ZX_ASSERT(properties.has_dynamic_protection_ranges());
-          ZX_ASSERT(properties.has_protected_range_granularity());
-          ZX_ASSERT(properties.has_max_protected_range_count());
-          ZX_ASSERT(properties.has_is_mod_protected_range_available());
+          const fuchsia_sysmem::SecureHeapProperties& properties =
+              fidl::ToNatural(std::move(get_properties_result->value()->properties));
+          ZX_ASSERT(properties.heap().has_value());
+          ZX_ASSERT(properties.heap().value() ==
+                    safe_cast<fuchsia_sysmem::HeapType>(sysmem::fidl_underlying_cast(heap_type)));
+          ZX_ASSERT(properties.dynamic_protection_ranges().has_value());
+          ZX_ASSERT(properties.protected_range_granularity().has_value());
+          ZX_ASSERT(properties.max_protected_range_count().has_value());
+          ZX_ASSERT(properties.is_mod_protected_range_available().has_value());
           SecureMemControl control;
           control.heap_type = heap_type;
           control.parent = this;
-          control.is_dynamic = properties.dynamic_protection_ranges();
-          control.max_range_count = properties.max_protected_range_count();
-          control.range_granularity = properties.protected_range_granularity();
-          control.has_mod_protected_range = properties.is_mod_protected_range_available();
+          control.is_dynamic = properties.dynamic_protection_ranges().value();
+          control.max_range_count = properties.max_protected_range_count().value();
+          control.range_granularity = properties.protected_range_granularity().value();
+          control.has_mod_protected_range = properties.is_mod_protected_range_available().value();
           secure_mem_controls_.emplace(std::make_pair<>(heap_type, std::move(control)));
         }
 
@@ -891,38 +895,39 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
           return;
         }
         ZX_ASSERT(get_result->is_ok());
-        const fuchsia_sysmem::wire::SecureHeapsAndRanges& tee_configured_heaps =
-            get_result->value()->heaps;
-        ZX_ASSERT(tee_configured_heaps.has_heaps());
-        ZX_ASSERT(tee_configured_heaps.heaps().count() != 0);
-        for (uint32_t heap_index = 0; heap_index < tee_configured_heaps.heaps().count();
+        const fuchsia_sysmem::SecureHeapsAndRanges& tee_configured_heaps =
+            fidl::ToNatural(std::move(get_result->value()->heaps));
+        ZX_ASSERT(tee_configured_heaps.heaps().has_value());
+        ZX_ASSERT(tee_configured_heaps.heaps()->size() != 0);
+        for (uint32_t heap_index = 0; heap_index < tee_configured_heaps.heaps()->size();
              ++heap_index) {
-          const fuchsia_sysmem::wire::SecureHeapAndRanges& heap =
-              tee_configured_heaps.heaps()[heap_index];
-          ZX_ASSERT(heap.has_heap());
-          ZX_ASSERT(heap.has_ranges());
+          const fuchsia_sysmem::SecureHeapAndRanges& heap =
+              tee_configured_heaps.heaps()->at(heap_index);
+          ZX_ASSERT(heap.heap().has_value());
+          ZX_ASSERT(heap.ranges().has_value());
           // A tee-configured heap with multiple ranges can be specified by the protocol but is not
           // currently supported by sysmem.
-          ZX_ASSERT(heap.ranges().count() == 1);
+          ZX_ASSERT(heap.ranges()->size() == 1);
           // For now we assume that all TEE-configured heaps are protected full-time, and that they
           // start fully protected.
           constexpr bool kIsAlwaysCpuAccessible = false;
           constexpr bool kIsEverCpuAccessible = false;
           constexpr bool kIsReady = false;
           constexpr bool kCanBeTornDown = true;
-          const fuchsia_sysmem::wire::SecureHeapRange& heap_range = heap.ranges()[0];
+          const fuchsia_sysmem::SecureHeapRange& heap_range = heap.ranges()->at(0);
           auto secure_allocator = std::make_unique<ContiguousPooledMemoryAllocator>(
-              this, "tee_secure", &heaps_, static_cast<uint64_t>(heap.heap()),
-              heap_range.size_bytes(), kIsAlwaysCpuAccessible, kIsEverCpuAccessible, kIsReady,
+              this, "tee_secure", &heaps_, safe_cast<uint64_t>(heap.heap().value()),
+              *heap_range.size_bytes(), kIsAlwaysCpuAccessible, kIsEverCpuAccessible, kIsReady,
               kCanBeTornDown, loop_.dispatcher());
-          status = secure_allocator->InitPhysical(heap_range.physical_address());
+          status = secure_allocator->InitPhysical(heap_range.physical_address().value());
           // A failing status is fatal for now.
           ZX_ASSERT(status == ZX_OK);
           LOG(DEBUG,
               "created secure allocator: heap_type: %08lx base: %016" PRIx64 " size: %016" PRIx64,
-              static_cast<uint64_t>(heap.heap()), heap_range.physical_address(),
-              heap_range.size_bytes());
-          auto heap_type = sysmem::V2CopyFromV1HeapType(heap.heap());
+              safe_cast<uint64_t>(heap.heap().value()), heap_range.physical_address().value(),
+              heap_range.size_bytes().value());
+          auto heap_type =
+              safe_cast<fuchsia_sysmem2::HeapType>(sysmem::fidl_underlying_cast(*heap.heap()));
 
           // The only usage of SecureMemControl for a TEE-configured heap is to do ZeroSubRange(),
           // so field values of this SecureMemControl are somewhat degenerate (eg. VDEC).
@@ -965,7 +970,6 @@ zx_status_t Device::SysmemUnregisterSecureMem() {
   return async::PostTask(loop_.dispatcher(), [this]() {
     std::lock_guard checker(*loop_checker_);
     LOG(DEBUG, "begin UnregisterSecureMem()");
-    table_set_.MitigateChurn();
     secure_mem_.reset();
     LOG(DEBUG, "end UnregisterSecureMem()");
   });
@@ -1046,22 +1050,22 @@ BufferCollectionToken* Device::FindTokenByServerChannelKoid(zx_koid_t token_serv
   return iter->second;
 }
 
-MemoryAllocator* Device::GetAllocator(const fuchsia_sysmem2::wire::BufferMemorySettings& settings) {
+MemoryAllocator* Device::GetAllocator(const fuchsia_sysmem2::BufferMemorySettings& settings) {
   std::lock_guard checker(*loop_checker_);
-  if (settings.heap() == fuchsia_sysmem2::wire::HeapType::kSystemRam &&
-      settings.is_physically_contiguous()) {
+  if (*settings.heap() == fuchsia_sysmem2::HeapType::kSystemRam &&
+      *settings.is_physically_contiguous()) {
     return contiguous_system_ram_allocator_.get();
   }
 
-  auto iter = allocators_.find(settings.heap());
+  auto iter = allocators_.find(*settings.heap());
   if (iter == allocators_.end()) {
     return nullptr;
   }
   return iter->second.get();
 }
 
-const fuchsia_sysmem2::wire::HeapProperties& Device::GetHeapProperties(
-    fuchsia_sysmem2::wire::HeapType heap) const {
+const fuchsia_sysmem2::HeapProperties& Device::GetHeapProperties(
+    fuchsia_sysmem2::HeapType heap) const {
   std::lock_guard checker(*loop_checker_);
   ZX_DEBUG_ASSERT(allocators_.find(heap) != allocators_.end());
   return allocators_.at(heap)->heap_properties();

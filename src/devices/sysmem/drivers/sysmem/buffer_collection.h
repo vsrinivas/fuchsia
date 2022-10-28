@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_BUFFER_COLLECTION_H_
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_BUFFER_COLLECTION_H_
 
-#include <fidl/fuchsia.sysmem/cpp/wire.h>
-#include <fidl/fuchsia.sysmem2/cpp/wire.h>
+#include <fidl/fuchsia.sysmem/cpp/natural_types.h>
+#include <fidl/fuchsia.sysmem2/cpp/natural_types.h>
 #include <lib/fidl/internal.h>
 
 #include <list>
@@ -72,10 +72,10 @@ class BufferCollection : public Node, public fidl::WireServer<fuchsia_sysmem::Bu
   bool has_constraints();
 
   // has_constraints() must be true to call this.
-  const fuchsia_sysmem2::wire::BufferCollectionConstraints& constraints();
+  const fuchsia_sysmem2::BufferCollectionConstraints& constraints();
 
   // has_constraints() must be true to call this, and will stay true after calling this.
-  fuchsia_sysmem2::wire::BufferCollectionConstraints CloneConstraints();
+  fuchsia_sysmem2::BufferCollectionConstraints CloneConstraints();
 
   fbl::RefPtr<LogicalBufferCollection> logical_buffer_collection_shared();
 
@@ -124,18 +124,17 @@ class BufferCollection : public Node, public fidl::WireServer<fuchsia_sysmem::Bu
   void FailSync(Location location, Completer& completer, zx_status_t status, const char* format,
                 ...) __PRINTFLIKE(5, 6);
 
-  fpromise::result<fuchsia_sysmem2::wire::BufferCollectionInfo> CloneResultForSendingV2(
-      const fuchsia_sysmem2::wire::BufferCollectionInfo& buffer_collection_info);
+  fpromise::result<fuchsia_sysmem2::BufferCollectionInfo> CloneResultForSendingV2(
+      const fuchsia_sysmem2::BufferCollectionInfo& buffer_collection_info);
 
-  fpromise::result<fuchsia_sysmem::wire::BufferCollectionInfo2> CloneResultForSendingV1(
-      const fuchsia_sysmem2::wire::BufferCollectionInfo& buffer_collection_info);
-  fpromise::result<fuchsia_sysmem::wire::BufferCollectionInfo2> CloneAuxBuffersResultForSendingV1(
-      const fuchsia_sysmem2::wire::BufferCollectionInfo& buffer_collection_info);
+  fpromise::result<fuchsia_sysmem::BufferCollectionInfo2> CloneResultForSendingV1(
+      const fuchsia_sysmem2::BufferCollectionInfo& buffer_collection_info);
+  fpromise::result<fuchsia_sysmem::BufferCollectionInfo2> CloneAuxBuffersResultForSendingV1(
+      const fuchsia_sysmem2::BufferCollectionInfo& buffer_collection_info);
 
   // Temporarily holds fuchsia.sysmem.BufferCollectionConstraintsAuxBuffers until SetConstraints()
   // arrives.
-  std::optional<TableHolder<fuchsia_sysmem::wire::BufferCollectionConstraintsAuxBuffers>>
-      constraints_aux_buffers_;
+  std::optional<fuchsia_sysmem::BufferCollectionConstraintsAuxBuffers> constraints_aux_buffers_;
 
   // FIDL protocol enforcement.
   bool is_set_constraints_seen_ = false;

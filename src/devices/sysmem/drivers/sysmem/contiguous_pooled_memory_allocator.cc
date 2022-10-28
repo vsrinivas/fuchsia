@@ -24,6 +24,7 @@
 #include "protected_ranges.h"
 #include "region-alloc/region-alloc.h"
 #include "src/devices/sysmem/metrics/metrics.cb.h"
+#include "utils.h"
 
 namespace sysmem_driver {
 
@@ -32,18 +33,17 @@ namespace {
 
 constexpr uint64_t kMiB = 1024ull * 1024;
 
-fuchsia_sysmem2::wire::HeapProperties BuildHeapProperties(fidl::AnyArena& allocator,
-                                                          bool is_cpu_accessible) {
-  using fuchsia_sysmem2::wire::CoherencyDomainSupport;
-  using fuchsia_sysmem2::wire::HeapProperties;
+fuchsia_sysmem2::HeapProperties BuildHeapProperties(bool is_cpu_accessible) {
+  using fuchsia_sysmem2::CoherencyDomainSupport;
+  using fuchsia_sysmem2::HeapProperties;
 
-  auto coherency_domain_support = CoherencyDomainSupport(allocator);
-  coherency_domain_support.set_cpu_supported(is_cpu_accessible);
-  coherency_domain_support.set_ram_supported(is_cpu_accessible);
-  coherency_domain_support.set_inaccessible_supported(true);
+  CoherencyDomainSupport coherency_domain_support;
+  coherency_domain_support.cpu_supported() = is_cpu_accessible;
+  coherency_domain_support.ram_supported() = is_cpu_accessible;
+  coherency_domain_support.inaccessible_supported() = true;
 
-  auto heap_properties = HeapProperties(allocator);
-  heap_properties.set_coherency_domain_support(allocator, std::move(coherency_domain_support));
+  HeapProperties heap_properties;
+  heap_properties.coherency_domain_support() = std::move(coherency_domain_support);
   // New buffers do need to be zeroed (regardless of is_ever_cpu_accessible_ and
   // is_always_cpu_accessible_), and we want to do the zeroing in ContiguousPooledMemoryAllocator,
   // either via Zircon's zeroing of reclaimed pages, our own zeroing of just-checked pattern pages,
@@ -52,7 +52,7 @@ fuchsia_sysmem2::wire::HeapProperties BuildHeapProperties(fidl::AnyArena& alloca
   // even if some of the pages may have also been cleared by Zircon page reclaim, since any
   // "scramble" HW setting feature would potentially make zeroes look like non-zero to a device
   // reading the buffer.
-  heap_properties.set_need_clear(true);
+  heap_properties.need_clear() = true;
 
   // is_cpu_accessible true: We don't do (all the) flushing in this class, so caller will help with
   // that.
@@ -60,7 +60,7 @@ fuchsia_sysmem2::wire::HeapProperties BuildHeapProperties(fidl::AnyArena& alloca
   // is_cpu_accessible false: The only zeroing that matters re. cache flushing is the last one which
   // is done via the TEE and the TEE flushes after that zeroing.  We shouldn't flush from the REE
   // since it will/could cause HW errors.
-  heap_properties.set_need_flush(is_cpu_accessible);
+  heap_properties.need_flush() = is_cpu_accessible;
 
   return heap_properties;
 }
@@ -90,9 +90,7 @@ ContiguousPooledMemoryAllocator::ContiguousPooledMemoryAllocator(
     Owner* parent_device, const char* allocation_name, inspect::Node* parent_node, uint64_t pool_id,
     uint64_t size, bool is_always_cpu_accessible, bool is_ever_cpu_accessible, bool is_ready,
     bool can_be_torn_down, async_dispatcher_t* dispatcher)
-    : MemoryAllocator(
-          parent_device->table_set(),
-          BuildHeapProperties(parent_device->table_set().allocator(), is_always_cpu_accessible)),
+    : MemoryAllocator(BuildHeapProperties(is_always_cpu_accessible)),
       parent_device_(parent_device),
       dispatcher_(dispatcher),
       allocation_name_(allocation_name),
@@ -179,7 +177,7 @@ void ContiguousPooledMemoryAllocator::InitGuardRegion(size_t guard_region_size,
   ZX_DEBUG_ASSERT(min_guard_data_size % zx_system_get_page_size() == 0);
   guard_region_data_.resize(min_guard_data_size);
   for (size_t i = 0; i < min_guard_data_size; i++) {
-    guard_region_data_[i] = ((i + 1) % 256);
+    guard_region_data_[i] = debug_safe_cast<uint8_t>(((i + 1) % 256));
   }
   if (!guard_region_size) {
     return;
@@ -209,7 +207,7 @@ void ContiguousPooledMemoryAllocator::InitGuardRegion(size_t guard_region_size,
 
 void ContiguousPooledMemoryAllocator::SetupUnusedPages() {
   ZX_DEBUG_ASSERT(is_ever_cpu_accessible_);
-  ZX_DEBUG_ASSERT((is_always_cpu_accessible_ && is_ready_ && !protected_ranges_) ||
+  ZX_DEBUG_ASSERT((is_always_cpu_accessible_ && is_ready_ && !protected_ranges_.has_value()) ||
                   protected_ranges_->ranges().size() == 0);
   ZX_DEBUG_ASSERT(!is_setup_unused_pages_called_);
   is_setup_unused_pages_called_ = true;
@@ -259,7 +257,7 @@ zx_status_t ContiguousPooledMemoryAllocator::Init(uint32_t alignment_log2) {
   zx::vmo local_contiguous_vmo;
   const long system_page_alignment = __builtin_ctzl(zx_system_get_page_size());
   if (alignment_log2 < system_page_alignment) {
-    alignment_log2 = system_page_alignment;
+    alignment_log2 = safe_cast<uint32_t>(system_page_alignment);
   }
   zx_status_t status = zx::vmo::create_contiguous(parent_device_->bti(), size_, alignment_log2,
                                                   &local_contiguous_vmo);
@@ -467,11 +465,12 @@ zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size,
   // protected mode devices that read the just-protected range, due to any potential HW "scramble".
   CheckUnusedRange(region->base, region->size, /*and_also_zero=*/is_always_cpu_accessible_);
 
-  ZX_DEBUG_ASSERT(!!protected_ranges_ == (!is_always_cpu_accessible_ && is_ever_cpu_accessible_));
+  ZX_DEBUG_ASSERT(protected_ranges_.has_value() ==
+                  (!is_always_cpu_accessible_ && is_ever_cpu_accessible_));
   if (!is_always_cpu_accessible_) {
     const auto new_range = protected_ranges::Range::BeginLength(region->base, region->size);
-    if (protected_ranges_) {
-      ZX_DEBUG_ASSERT(protected_ranges_);
+    if (protected_ranges_.has_value()) {
+      ZX_DEBUG_ASSERT(protected_ranges_.has_value());
       protected_ranges_->AddRange(new_range);
       EnsureSteppingTowardOptimalProtectedRanges();
     } else {
@@ -526,7 +525,7 @@ zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size,
     return status;
   }
 
-  if (!name) {
+  if (!name.has_value()) {
     name = "Unknown";
   }
 
@@ -554,7 +553,7 @@ zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size,
 
 zx_status_t ContiguousPooledMemoryAllocator::SetupChildVmo(
     const zx::vmo& parent_vmo, const zx::vmo& child_vmo,
-    fuchsia_sysmem2::wire::SingleBufferSettings buffer_settings) {
+    fuchsia_sysmem2::SingleBufferSettings buffer_settings) {
   // nothing to do here
   return ZX_OK;
 }
@@ -566,8 +565,9 @@ void ContiguousPooledMemoryAllocator::Delete(zx::vmo parent_vmo) {
   auto& region_data = it->second;
   CheckGuardRegionData(region_data);
   StashDeletedRegion(region_data);
-  ZX_DEBUG_ASSERT(!!protected_ranges_ == (!is_always_cpu_accessible_ && is_ever_cpu_accessible_));
-  if (protected_ranges_) {
+  ZX_DEBUG_ASSERT(protected_ranges_.has_value() ==
+                  (!is_always_cpu_accessible_ && is_ever_cpu_accessible_));
+  if (protected_ranges_.has_value()) {
     const auto& region = *region_data.ptr;
     const auto old_range = protected_ranges::Range::BeginLength(region.base, region.size);
     protected_ranges_->DeleteRange(old_range);
@@ -594,7 +594,8 @@ void ContiguousPooledMemoryAllocator::set_ready() {
   if (!is_always_cpu_accessible_) {
     protected_ranges_control_.emplace(this);
     if (is_ever_cpu_accessible_) {
-      protected_ranges_.emplace(&*protected_ranges_control_, parent_device_->protected_ranges_disable_dynamic());
+      protected_ranges_.emplace(&*protected_ranges_control_,
+                                parent_device_->protected_ranges_disable_dynamic());
       SetupUnusedPages();
     }
   }
@@ -625,8 +626,8 @@ void ContiguousPooledMemoryAllocator::CheckGuardRegion(const char* region_name, 
     std::string bad_str;
     std::string good_str;
     constexpr uint32_t kRegionSizeToOutput = 16;
-    for (uint32_t i = error_start; i < error_start + kRegionSizeToOutput && i < guard_region_size_;
-         i++) {
+    for (uint32_t i = safe_cast<uint32_t>(error_start);
+         i < error_start + kRegionSizeToOutput && i < guard_region_size_; i++) {
       bad_str += fbl::StringPrintf(" 0x%x", guard_region_copy_[i]).c_str();
       good_str += fbl::StringPrintf(" 0x%x", guard_region_data_[i]).c_str();
     }
@@ -844,7 +845,7 @@ void ContiguousPooledMemoryAllocator::CheckAnyUnusedPages(uint64_t start_offset,
     return true;
   };
 
-  if (!protected_ranges_) {
+  if (!protected_ranges_.has_value()) {
     // Without protected_ranges_, the unused ranges (in this context, that are check-able) are just
     // the raw unused ranges from region_allocator_.
     region_allocator_.WalkAvailableRegions([&process_unused_region](const ralloc_region_t* region) {
@@ -901,8 +902,8 @@ ContiguousPooledMemoryAllocator::FindMostRecentDeletedRegion(uint64_t offset) {
   DeletedRegion* deleted_region = nullptr;
   int32_t index = deleted_regions_next_ - 1;
   int32_t count = 0;
-  ralloc_region_t offset_page{.base = static_cast<uint64_t>(offset),
-                              .size = static_cast<uint64_t>(page_size)};
+  ralloc_region_t offset_page{.base = safe_cast<uint64_t>(offset),
+                              .size = safe_cast<uint64_t>(page_size)};
   while (count < deleted_regions_count_) {
     if (index < 0) {
       index = kNumDeletedRegions - 1;
@@ -947,23 +948,23 @@ void ContiguousPooledMemoryAllocator::ReportPatternCheckFailedRange(
     LOG(ERROR, "...");
     skipped_since_last = false;
   };
-  for (int64_t offset = static_cast<int64_t>(failed_range.base) - page_size;
-       offset < static_cast<int64_t>(failed_range.base + failed_range.size) + page_size;
+  for (int64_t offset = safe_cast<int64_t>(failed_range.base) - page_size;
+       offset < safe_cast<int64_t>(failed_range.base + failed_range.size) + page_size;
        offset += page_size) {
     ZX_ASSERT(offset >= -page_size);
     if (offset == -page_size) {
       LOG(ERROR, "offset -page_size (out of bounds)");
       continue;
     }
-    ZX_ASSERT(offset <= static_cast<int64_t>(size_));
-    if (offset == static_cast<int64_t>(size_)) {
+    ZX_ASSERT(offset <= safe_cast<int64_t>(size_));
+    if (offset == safe_cast<int64_t>(size_)) {
       LOG(ERROR, "offset == size_ (out of bounds)");
       continue;
     }
     DeletedRegion* deleted_region = FindMostRecentDeletedRegion(offset);
     // This can sometimes be comparing nullptr and nullptr, or nullptr and not nullptr, and that's
     // fine/expected.
-    if (prev_deleted_region && deleted_region == prev_deleted_region.value()) {
+    if (prev_deleted_region.has_value() && deleted_region == prev_deleted_region.value()) {
       skipped_since_last = true;
       continue;
     }
@@ -1072,7 +1073,7 @@ void ContiguousPooledMemoryAllocator::CheckUnusedRange(uint64_t offset, uint64_t
        &failed_count](const ralloc_region_t& range) {
         std::optional<ralloc_region_t> zero_range;
         auto handle_zero_range = [this, &zero_range, and_also_zero] {
-          if (!and_also_zero || !zero_range) {
+          if (!and_also_zero || !zero_range.has_value()) {
             return;
           }
           // We don't have to cache flush here because the logical_buffer_collection.cc caller does
@@ -1084,16 +1085,16 @@ void ContiguousPooledMemoryAllocator::CheckUnusedRange(uint64_t offset, uint64_t
 
         std::optional<ralloc_region_t> failed_range;
         auto handle_failed_range = [this, &failed_range, and_also_zero] {
-          if (!failed_range) {
+          if (!failed_range.has_value()) {
             return;
           }
           ReportPatternCheckFailedRange(failed_range.value(), "unused");
           IncrementGuardRegionFailureInspectData();
-          failed_range.reset();
           // So we don't keep finding the same corruption over and over.
           if (!and_also_zero) {
             FillUnusedRangeWithGuard(failed_range->base, failed_range->size);
           }
+          failed_range.reset();
         };
         auto ensure_handle_failed_range =
             fit::defer([&handle_failed_range] { handle_failed_range(); });
@@ -1104,7 +1105,7 @@ void ContiguousPooledMemoryAllocator::CheckUnusedRange(uint64_t offset, uint64_t
           todo_size = std::min(unused_guard_data_size_, end - iter);
           ZX_DEBUG_ASSERT(todo_size % page_size == 0);
           if (unlikely(memcmp(guard_region_data_.data(), &mapping_[iter], todo_size))) {
-            if (!failed_range) {
+            if (!failed_range.has_value()) {
               failed_range.emplace(ralloc_region_t{.base = iter, .size = 0});
             }
             failed_range->size += todo_size;
@@ -1121,11 +1122,11 @@ void ContiguousPooledMemoryAllocator::CheckUnusedRange(uint64_t offset, uint64_t
           // range then zeroing a big range, but this should also be quite a bit faster by staying
           // in cache until we're done reading and writing the data.
           if (and_also_zero) {
-            if (!zero_range) {
+            if (!zero_range.has_value()) {
               zero_range.emplace(ralloc_region_t{.base = iter, .size = 0});
             }
             zero_range->size += todo_size;
-            if (!failed_range) {
+            if (!failed_range.has_value()) {
               // Zero immediately if we don't need to keep the data around for failed_range reasons.
               handle_zero_range();
             }
@@ -1249,7 +1250,7 @@ template <typename F1, typename F2, typename F3>
 void ContiguousPooledMemoryAllocator::ForUnusedGuardPatternRanges(const ralloc_region_t& region,
                                                                   F1 pattern_func, F2 loan_func,
                                                                   F3 zero_func) {
-  if (!protected_ranges_) {
+  if (!protected_ranges_.has_value()) {
     ForUnusedGuardPatternRangesInternal(region, pattern_func, loan_func, zero_func);
   } else {
     const protected_ranges::Range unused_range =
@@ -1374,7 +1375,7 @@ zx_status_t ContiguousPooledMemoryAllocator::CommitRegion(const ralloc_region_t&
 
 // loanable pages / un-used pages
 double ContiguousPooledMemoryAllocator::GetLoanableEfficiency() {
-  if (protected_ranges_) {
+  if (protected_ranges_.has_value()) {
     return protected_ranges_->GetEfficiency();
   } else {
     if (is_ever_cpu_accessible_) {
@@ -1387,12 +1388,12 @@ double ContiguousPooledMemoryAllocator::GetLoanableEfficiency() {
 
 // loanable pages / total pages
 double ContiguousPooledMemoryAllocator::GetLoanableRatio() {
-  if (protected_ranges_) {
+  if (protected_ranges_.has_value()) {
     return protected_ranges_->GetLoanableRatio();
   } else {
     if (is_ever_cpu_accessible_) {
       uint64_t loanable_bytes = size_ - allocated_bytes_;
-      return static_cast<double>(loanable_bytes) / static_cast<double>(size_);
+      return safe_cast<double>(loanable_bytes) / safe_cast<double>(size_);
     } else {
       return 0.0;
     }
@@ -1400,7 +1401,7 @@ double ContiguousPooledMemoryAllocator::GetLoanableRatio() {
 }
 
 uint64_t ContiguousPooledMemoryAllocator::GetLoanableBytes() {
-  if (protected_ranges_) {
+  if (protected_ranges_.has_value()) {
     return protected_ranges_->GetLoanableBytes();
   } else {
     if (is_ever_cpu_accessible_) {

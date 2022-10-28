@@ -50,7 +50,6 @@ void BufferCollectionTokenGroup::SetVerboseLogging(SetVerboseLoggingCompleter::S
 
 void BufferCollectionTokenGroup::CreateChild(CreateChildRequestView request,
                                              CreateChildCompleter::Sync& completer) {
-  table_set().MitigateChurn();
   if (is_done_) {
     FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE, "CreateChild() after Close()");
     return;
@@ -69,8 +68,7 @@ void BufferCollectionTokenGroup::CreateChild(CreateChildRequestView request,
   }
   NodeProperties* new_node_properties = node_properties().NewChild(&logical_buffer_collection());
   if (rights_attenuation_mask != ZX_RIGHT_SAME_RIGHTS) {
-    new_node_properties->rights_attenuation_mask() &=
-        static_cast<uint32_t>(rights_attenuation_mask);
+    new_node_properties->rights_attenuation_mask() &= rights_attenuation_mask;
   }
   logical_buffer_collection().CreateBufferCollectionToken(
       shared_logical_buffer_collection(), new_node_properties, std::move(request->token_request()));
@@ -78,7 +76,6 @@ void BufferCollectionTokenGroup::CreateChild(CreateChildRequestView request,
 
 void BufferCollectionTokenGroup::CreateChildrenSync(CreateChildrenSyncRequestView request,
                                                     CreateChildrenSyncCompleter::Sync& completer) {
-  table_set().MitigateChurn();
   if (is_done_) {
     FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE, "CreateChildrenSync() after Close()");
     return;
@@ -99,8 +96,7 @@ void BufferCollectionTokenGroup::CreateChildrenSync(CreateChildrenSyncRequestVie
 
     NodeProperties* new_node_properties = node_properties().NewChild(&logical_buffer_collection());
     if (rights_attenuation_mask != ZX_RIGHT_SAME_RIGHTS) {
-      new_node_properties->rights_attenuation_mask() &=
-          static_cast<uint32_t>(rights_attenuation_mask);
+      new_node_properties->rights_attenuation_mask() &= rights_attenuation_mask;
     }
     logical_buffer_collection().CreateBufferCollectionToken(shared_logical_buffer_collection(),
                                                             new_node_properties,
@@ -113,7 +109,6 @@ void BufferCollectionTokenGroup::CreateChildrenSync(CreateChildrenSyncRequestVie
 }
 
 void BufferCollectionTokenGroup::AllChildrenPresent(AllChildrenPresentCompleter::Sync& completer) {
-  table_set().MitigateChurn();
   if (is_done_) {
     FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE, "AllChildrenPresent() after Close()");
     return;
@@ -199,7 +194,7 @@ bool BufferCollectionTokenGroup::is_currently_connected() const {
 }
 
 void BufferCollectionTokenGroup::CloseServerBinding(zx_status_t epitaph) {
-  if (server_binding_) {
+  if (server_binding_.has_value()) {
     server_binding_->Close(epitaph);
   }
   server_binding_ = {};

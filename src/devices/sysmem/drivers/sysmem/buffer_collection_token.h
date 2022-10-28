@@ -68,7 +68,6 @@ class BufferCollectionToken : public Node,
   void TokenCloseImplV1(CompleterSync& completer) {
     // BufferCollectionToken has one additional error case we want to check, so check before calling
     // Node::CloseImpl().
-    table_set().MitigateChurn();
     if (buffer_collection_request_) {
       FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
                "BufferCollectionToken::Close() when buffer_collection_request_");

@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_MEMORY_ALLOCATOR_H_
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_MEMORY_ALLOCATOR_H_
 
-#include <fidl/fuchsia.sysmem/cpp/wire.h>
-#include <fidl/fuchsia.sysmem2/cpp/wire.h>
+#include <fidl/fuchsia.sysmem/cpp/fidl.h>
+#include <fidl/fuchsia.sysmem2/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/bti.h>
@@ -15,8 +15,6 @@
 #include <map>
 
 #include "protected_ranges.h"
-#include "table_holder.h"
-#include "table_set.h"
 
 class SysmemMetrics;
 
@@ -33,17 +31,16 @@ class MemoryAllocator {
     virtual zx_status_t CreatePhysicalVmo(uint64_t base, uint64_t size, zx::vmo* vmo_out) = 0;
     // Should be called after every delete that makes the allocator empty.
     virtual void CheckForUnbind() {}
-    virtual TableSet& table_set() = 0;
     virtual SysmemMetrics& metrics() = 0;
     virtual protected_ranges::ProtectedRangesCoreControl& protected_ranges_core_control(
-        fuchsia_sysmem2::wire::HeapType heap_type) {
+        fuchsia_sysmem2::HeapType heap_type) {
       // Avoid requiring unrelated tests to implement.
       ZX_PANIC("protected_ranges_core_control() not implemented by subclass");
     }
     virtual bool protected_ranges_disable_dynamic() const { return false; }
   };
 
-  explicit MemoryAllocator(TableSet& table_set, fuchsia_sysmem2::wire::HeapProperties properties);
+  explicit MemoryAllocator(fuchsia_sysmem2::HeapProperties properties);
 
   virtual ~MemoryAllocator();
 
@@ -63,9 +60,8 @@ class MemoryAllocator {
   // boot, and can be used to identify whether an arbitrary VMO handle refers to
   // the same VMO as child_vmo.  Any such tracking by koid should be cleaned up
   // during Delete().
-  virtual zx_status_t SetupChildVmo(
-      const zx::vmo& parent_vmo, const zx::vmo& child_vmo,
-      fuchsia_sysmem2::wire::SingleBufferSettings buffer_settings) = 0;
+  virtual zx_status_t SetupChildVmo(const zx::vmo& parent_vmo, const zx::vmo& child_vmo,
+                                    fuchsia_sysmem2::SingleBufferSettings buffer_settings) = 0;
 
   // This also should clean up any tracking of child_vmo by child_vmo's koid.
   // The child_vmo object itself, and all handles to it, are completely gone by
@@ -80,7 +76,7 @@ class MemoryAllocator {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  const fuchsia_sysmem2::wire::HeapProperties& heap_properties() const { return *heap_properties_; }
+  const fuchsia_sysmem2::HeapProperties& heap_properties() const { return heap_properties_; }
 
   // These avoid the possibility of trying to use a sysmem-configured secure
   // heap before the TEE has told the HW to make the physical range
@@ -107,7 +103,7 @@ class MemoryAllocator {
  private:
   // This is a unique ID for the allocator on this system.
   uint64_t id_{};
-  TableHolder<fuchsia_sysmem2::wire::HeapProperties> heap_properties_;
+  fuchsia_sysmem2::HeapProperties heap_properties_;
 };
 
 }  // namespace sysmem_driver

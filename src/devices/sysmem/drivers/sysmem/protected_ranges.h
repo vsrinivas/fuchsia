@@ -588,7 +588,7 @@ class ProtectedRanges {
     }
     // Handle all the interior gaps.
     for (auto iter = iter_begin; iter != iter_end; prev_end = iter->end(), ++iter) {
-      if (!prev_end) {
+      if (!prev_end.has_value()) {
         continue;
       }
       const auto gap = Range::BeginEnd(*prev_end, iter->begin());
@@ -596,7 +596,7 @@ class ProtectedRanges {
         callback(Range::Intersect(gap, range));
       }
     }
-    ZX_DEBUG_ASSERT(prev_end);
+    ZX_DEBUG_ASSERT(prev_end.has_value());
     // Check for overlapping exterior gap at the end.
     if (iter_end == ranges_.end()) {
       const auto last_gap = Range::BeginEnd(ranges_.rbegin()->end(), entire_range.end());

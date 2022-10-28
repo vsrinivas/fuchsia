@@ -4,24 +4,26 @@
 
 #include "device.h"
 
+#include <fidl/fuchsia.sysmem/cpp/natural_types.h>
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <lib/async-loop/default.h>
+#include <lib/async-loop/loop.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fidl/cpp/wire/arena.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/bti.h>
 #include <stdlib.h>
 #include <zircon/errors.h>
 
 #include <ddktl/device.h>
+#include <ddktl/unbind-txn.h>
 #include <zxtest/zxtest.h>
 
 #include "../buffer_collection.h"
 #include "../device.h"
 #include "../driver.h"
 #include "../logical_buffer_collection.h"
-#include "ddktl/unbind-txn.h"
-#include "lib/async-loop/loop.h"
 #include "src/devices/bus/testing/fake-pdev/fake-pdev.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
@@ -374,15 +376,16 @@ TEST_F(FakeDdkSysmem, MaxSize) {
 
   auto collection_client = AllocateNonSharedCollection();
 
-  fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
-  constraints.min_buffer_count = 1;
-  constraints.has_buffer_memory_constraints = true;
-  constraints.buffer_memory_constraints.min_size_bytes = zx_system_get_page_size() * 2;
-  constraints.buffer_memory_constraints.cpu_domain_supported = true;
-  constraints.usage.cpu = fuchsia_sysmem_cpuUsageRead;
+  fuchsia_sysmem::BufferCollectionConstraints constraints;
+  constraints.min_buffer_count() = 1;
+  constraints.has_buffer_memory_constraints() = true;
+  constraints.buffer_memory_constraints().min_size_bytes() = zx_system_get_page_size() * 2;
+  constraints.buffer_memory_constraints().cpu_domain_supported() = true;
+  constraints.usage().cpu() = fuchsia_sysmem::kCpuUsageRead;
 
   fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection(std::move(collection_client));
-  EXPECT_OK(collection->SetConstraints(true, std::move(constraints)));
+  fidl::Arena arena;
+  EXPECT_OK(collection->SetConstraints(true, fidl::ToWire(arena, std::move(constraints))));
 
   // Sysmem should fail the collection and return an error.
   fidl::WireResult result = collection->WaitForBuffersAllocated();
@@ -393,15 +396,16 @@ TEST_F(FakeDdkSysmem, MaxSize) {
 TEST_F(FakeDdkSysmem, TeardownLeak) {
   auto collection_client = AllocateNonSharedCollection();
 
-  fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
-  constraints.min_buffer_count = 1;
-  constraints.has_buffer_memory_constraints = true;
-  constraints.buffer_memory_constraints.min_size_bytes = zx_system_get_page_size();
-  constraints.buffer_memory_constraints.cpu_domain_supported = true;
-  constraints.usage.cpu = fuchsia_sysmem_cpuUsageRead;
+  fuchsia_sysmem::BufferCollectionConstraints constraints;
+  constraints.min_buffer_count() = 1;
+  constraints.has_buffer_memory_constraints() = true;
+  constraints.buffer_memory_constraints().min_size_bytes() = zx_system_get_page_size();
+  constraints.buffer_memory_constraints().cpu_domain_supported() = true;
+  constraints.usage().cpu() = fuchsia_sysmem::kCpuUsageRead;
 
   fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection(std::move(collection_client));
-  EXPECT_OK(collection->SetConstraints(true, constraints));
+  fidl::Arena arena;
+  EXPECT_OK(collection->SetConstraints(true, fidl::ToWire(arena, std::move(constraints))));
 
   fidl::WireResult result = collection->WaitForBuffersAllocated();
 
@@ -419,15 +423,16 @@ TEST_F(FakeDdkSysmem, TeardownLeak) {
 TEST_F(FakeDdkSysmem, AuxBufferLeak) {
   auto collection_client = AllocateNonSharedCollection();
 
-  fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
-  constraints.min_buffer_count = 1;
-  constraints.has_buffer_memory_constraints = true;
-  constraints.buffer_memory_constraints.min_size_bytes = zx_system_get_page_size();
-  constraints.buffer_memory_constraints.cpu_domain_supported = true;
-  constraints.usage.cpu = fuchsia_sysmem_cpuUsageRead;
+  fuchsia_sysmem::BufferCollectionConstraints constraints;
+  constraints.min_buffer_count() = 1;
+  constraints.has_buffer_memory_constraints() = true;
+  constraints.buffer_memory_constraints().min_size_bytes() = zx_system_get_page_size();
+  constraints.buffer_memory_constraints().cpu_domain_supported() = true;
+  constraints.usage().cpu() = fuchsia_sysmem::kCpuUsageRead;
 
   fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection(std::move(collection_client));
-  EXPECT_OK(collection->SetConstraints(true, std::move(constraints)));
+  fidl::Arena arena;
+  EXPECT_OK(collection->SetConstraints(true, fidl::ToWire(arena, std::move(constraints))));
 
   fidl::WireResult result = collection->WaitForBuffersAllocated();
 

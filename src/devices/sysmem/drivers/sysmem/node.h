@@ -139,15 +139,6 @@ class Node : public fbl::RefCounted<Node> {
   void SyncImplV1(SyncCompleterSync& completer) {
     TRACE_DURATION("gfx", "Node::SyncImpl", "this", this, "logical_buffer_collection",
                    &logical_buffer_collection());
-    // This isn't real churn.  As a temporary measure, we need to count churn despite there not
-    // being any, since more real churn is coming soon, and we need to test the mitigation of that
-    // churn.
-    //
-    // TODO(fxbug.dev/33670): Remove this fake churn count once we're creating real churn from tests
-    // using new messages.  Also consider making TableSet::CountChurn() private.
-    table_set().CountChurn();
-
-    table_set().MitigateChurn();
     if (is_done_) {
       // Probably a Close() followed by Sync(), which is illegal and
       // causes the whole LogicalBufferCollection to fail.
@@ -160,7 +151,6 @@ class Node : public fbl::RefCounted<Node> {
 
   template <class CloseCompleterSync>
   void CloseImplV1(CloseCompleterSync& completer) {
-    table_set().MitigateChurn();
     if (is_done_) {
       FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE, "Close() after Close()");
       return;
@@ -174,7 +164,6 @@ class Node : public fbl::RefCounted<Node> {
 
   template <class SetNameRequestView, class SetNameCompleterSync>
   void SetNameImplV1(SetNameRequestView request, SetNameCompleterSync& completer) {
-    table_set().MitigateChurn();
     if (is_done_) {
       FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE, "SetName() after Close()");
       return;
@@ -186,7 +175,6 @@ class Node : public fbl::RefCounted<Node> {
   template <class SetDebugClientInfoRequestView, class SetDebugClientInfoCompleterSync>
   void SetDebugClientInfoImplV1(SetDebugClientInfoRequestView request,
                                 SetDebugClientInfoCompleterSync& completer) {
-    table_set().MitigateChurn();
     if (is_done_) {
       FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE, "SetDebugClientInfo() after Close()");
       return;
@@ -199,7 +187,6 @@ class Node : public fbl::RefCounted<Node> {
             class SetDebugTimeoutLogDeadlineCompleterSync>
   void SetDebugTimeoutLogDeadlineImplV1(SetDebugTimeoutLogDeadlineRequestView request,
                                         SetDebugTimeoutLogDeadlineCompleterSync& completer) {
-    table_set().MitigateChurn();
     if (is_done_) {
       FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
                "SetDebugTimeoutLogDeadline() after Close()");
@@ -210,7 +197,6 @@ class Node : public fbl::RefCounted<Node> {
 
   template <class SetVerboseLoggingCompleterSync>
   void SetVerboseLoggingImplV1(SetVerboseLoggingCompleterSync& completer) {
-    table_set().MitigateChurn();
     if (is_done_) {
       FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE, "SetVerboseLogging() after Close()");
       return;
@@ -220,7 +206,6 @@ class Node : public fbl::RefCounted<Node> {
 
   template <class GetNodeRefCompleterSync>
   void GetNodeRefImplV1(GetNodeRefCompleterSync& completer) {
-    table_set().MitigateChurn();
     if (is_done_) {
       FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE, "GetNodeRef() after Close()");
       return;
@@ -240,7 +225,6 @@ class Node : public fbl::RefCounted<Node> {
   template <class IsAlternateForRequestView, class IsAlternateForCompleterSync>
   void IsAlternateForImplV1(IsAlternateForRequestView request,
                             IsAlternateForCompleterSync& completer) {
-    table_set().MitigateChurn();
     if (is_done_) {
       FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE, "IsAlternateFor() after Close()");
       return;
@@ -255,7 +239,7 @@ class Node : public fbl::RefCounted<Node> {
     }
     auto maybe_other_node_properties =
         logical_buffer_collection_->FindNodePropertiesByNodeRefKoid(node_ref_koid);
-    if (!maybe_other_node_properties) {
+    if (!maybe_other_node_properties.has_value()) {
       completer.Reply(fit::error(ZX_ERR_NOT_FOUND));
       return;
     }
@@ -288,8 +272,6 @@ class Node : public fbl::RefCounted<Node> {
 
   virtual void CloseServerBinding(zx_status_t epitaph) = 0;
 
-  TableSet& table_set() { return table_set_; }
-
   // Becomes true on the first Close() (or BindSharedCollection(), in the case of
   // BufferCollectionToken).  This being true means a channel close is not fatal to the node's
   // sub-tree.  However, if the client sends a redundant Close(), that is fatal to the node's
@@ -317,9 +299,6 @@ class Node : public fbl::RefCounted<Node> {
   // This is in Node instead of NodeProperties because when BufferCollectionToken or
   // BufferCollection becomes an OrphanedNode, we no longer reference LogicalBufferCollection.
   fbl::RefPtr<LogicalBufferCollection> logical_buffer_collection_;
-
-  // Cached from LogicalBufferCollection.
-  TableSet& table_set_;
 
   // The Node is co-owned by the NodeProperties, so the Node has a raw pointer back to
   // NodeProperties.

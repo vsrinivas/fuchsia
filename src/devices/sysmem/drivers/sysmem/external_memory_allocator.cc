@@ -4,6 +4,8 @@
 
 #include "external_memory_allocator.h"
 
+#include <fidl/fuchsia.sysmem2/cpp/fidl.h>
+
 #include <fbl/string_printf.h>
 
 #include "macros.h"
@@ -11,8 +13,8 @@
 namespace sysmem_driver {
 ExternalMemoryAllocator::ExternalMemoryAllocator(MemoryAllocator::Owner* owner,
                                                  fidl::WireSharedClient<fuchsia_sysmem2::Heap> heap,
-                                                 fuchsia_sysmem2::wire::HeapProperties properties)
-    : MemoryAllocator(owner->table_set(), properties), owner_(owner), heap_(std::move(heap)) {
+                                                 fuchsia_sysmem2::HeapProperties properties)
+    : MemoryAllocator(properties), owner_(owner), heap_(std::move(heap)) {
   node_ = owner->heap_node()->CreateChild(
       fbl::StringPrintf("ExternalMemoryAllocator-%ld", id()).c_str());
   node_.CreateUint("id", id(), &properties_);
@@ -38,7 +40,7 @@ zx_status_t ExternalMemoryAllocator::Allocate(uint64_t size, std::optional<std::
 
 zx_status_t ExternalMemoryAllocator::SetupChildVmo(
     const zx::vmo& parent_vmo, const zx::vmo& child_vmo,
-    fuchsia_sysmem2::wire::SingleBufferSettings buffer_settings) {
+    fuchsia_sysmem2::SingleBufferSettings buffer_settings) {
   zx::vmo child_vmo_copy;
   zx_status_t status = child_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &child_vmo_copy);
   if (status != ZX_OK) {
@@ -48,7 +50,9 @@ zx_status_t ExternalMemoryAllocator::SetupChildVmo(
     return status;
   }
 
-  auto result = heap_.sync()->CreateResource(std::move(child_vmo_copy), std::move(buffer_settings));
+  fidl::Arena arena;
+  auto result = heap_.sync()->CreateResource(std::move(child_vmo_copy),
+                                             fidl::ToWire(arena, std::move(buffer_settings)));
   if (!result.ok() || result.value().s != ZX_OK) {
     DRIVER_ERROR("HeapCreateResource() failed - status: %d status2: %d", result.status(),
                  result.value().s);

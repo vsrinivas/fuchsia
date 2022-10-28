@@ -70,7 +70,7 @@ void Allocator::AllocateNonSharedCollection(AllocateNonSharedCollectionRequestVi
   LogicalBufferCollection::Create(std::move(token_server), parent_device_);
   LogicalBufferCollection::BindSharedCollection(
       parent_device_, std::move(token_client), request->collection_request.TakeChannel(),
-      client_debug_info_ ? &*client_debug_info_ : nullptr);
+      client_debug_info_.has_value() ? &*client_debug_info_ : nullptr);
 
   // Now the client can SetConstraints() on the BufferCollection, etc.  The
   // client didn't have to hassle with the BufferCollectionToken, which is the
@@ -110,7 +110,7 @@ void Allocator::BindSharedCollection(BindSharedCollectionRequestView request,
   LogicalBufferCollection::BindSharedCollection(
       parent_device_, request->token.TakeChannel(),
       request->buffer_collection_request.TakeChannel(),
-      client_debug_info_ ? &*client_debug_info_ : nullptr);
+      client_debug_info_.has_value() ? &*client_debug_info_ : nullptr);
 }
 
 void Allocator::ValidateBufferCollectionToken(

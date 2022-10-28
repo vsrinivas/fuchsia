@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_LOGICAL_BUFFER_COLLECTION_H_
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_LOGICAL_BUFFER_COLLECTION_H_
 
-#include <fidl/fuchsia.sysmem/cpp/wire.h>
+#include <fidl/fuchsia.sysmem2/cpp/fidl.h>
 #include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <inttypes.h>
 #include <lib/async/cpp/task.h>
@@ -27,7 +27,7 @@
 #include "device.h"
 #include "logging.h"
 #include "node_properties.h"
-#include "table_set.h"
+#include "utils.h"
 
 namespace sysmem_driver {
 
@@ -118,8 +118,6 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   // For tests.
   std::vector<const BufferCollection*> collection_views() const;
 
-  TableSet& table_set() { return table_set_; }
-
   // Track/untrack the node by the koid of the client end of its FIDL channel.
   //
   // While tracked, a node can be found with FindNodeByClientChannelKoid().
@@ -138,7 +136,7 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   std::optional<NodeProperties*> FindNodePropertiesByNodeRefKoid(zx_koid_t node_ref_keep_koid);
 
   std::optional<std::string> name() const {
-    return name_ ? std::make_optional(name_->name) : std::optional<std::string>();
+    return name_.has_value() ? std::make_optional(name_->name) : std::optional<std::string>();
   }
 
   inspect::Node& inspect_node() { return inspect_node_; }
@@ -154,17 +152,16 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
    public:
     Constraints(const Constraints&) = delete;
     Constraints(Constraints&&) = default;
-    Constraints(TableSet& table_set,
-                fuchsia_sysmem2::wire::BufferCollectionConstraints&& constraints,
+    Constraints(fuchsia_sysmem2::BufferCollectionConstraints constraints,
                 const NodeProperties& node_properties)
-        : buffer_collection_constraints_(table_set, std::move(constraints)),
+        : buffer_collection_constraints_(std::move(constraints)),
           node_properties_(node_properties) {}
 
-    const fuchsia_sysmem2::wire::BufferCollectionConstraints& constraints() const {
-      return *buffer_collection_constraints_;
+    const fuchsia_sysmem2::BufferCollectionConstraints& constraints() const {
+      return buffer_collection_constraints_;
     }
-    fuchsia_sysmem2::wire::BufferCollectionConstraints& mutate_constraints() {
-      return buffer_collection_constraints_.mutate();
+    fuchsia_sysmem2::BufferCollectionConstraints& mutate_constraints() {
+      return buffer_collection_constraints_;
     }
 
     const ClientDebugInfo& client_debug_info() const {
@@ -173,7 +170,7 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
     const NodeProperties& node_properties() const { return node_properties_; }
 
    private:
-    TableHolder<fuchsia_sysmem2::wire::BufferCollectionConstraints> buffer_collection_constraints_;
+    fuchsia_sysmem2::BufferCollectionConstraints buffer_collection_constraints_;
     const NodeProperties& node_properties_;
   };
 
@@ -235,7 +232,7 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   // likely to want to keep "this" alive longer than MaybeAllocate() could anyway.
   void MaybeAllocate();
 
-  fpromise::result<fuchsia_sysmem2::wire::BufferCollectionInfo, zx_status_t> TryAllocate(
+  fpromise::result<fuchsia_sysmem2::BufferCollectionInfo, zx_status_t> TryAllocate(
       std::vector<NodeProperties*> nodes);
 
   zx_status_t TryLateLogicalAllocation(std::vector<NodeProperties*> nodes);
@@ -245,7 +242,7 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   void SetFailedAllocationResult(zx_status_t status);
 
   void SetAllocationResult(std::vector<NodeProperties*> visible_pruned_sub_tree,
-                           fuchsia_sysmem2::wire::BufferCollectionInfo&& info,
+                           fuchsia_sysmem2::BufferCollectionInfo info,
                            std::vector<NodeProperties*> whole_pruned_sub_tree);
 
   void SendAllocationResult(std::vector<NodeProperties*> nodes);
@@ -258,75 +255,73 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   void BindSharedCollectionInternal(BufferCollectionToken* token,
                                     zx::channel buffer_collection_request);
 
-  fpromise::result<fuchsia_sysmem2::wire::BufferCollectionConstraints, void> CombineConstraints(
+  fpromise::result<fuchsia_sysmem2::BufferCollectionConstraints, void> CombineConstraints(
       ConstraintsList* constraints_list);
 
   bool CheckSanitizeBufferCollectionConstraints(
-      CheckSanitizeStage stage, fuchsia_sysmem2::wire::BufferCollectionConstraints& constraints);
+      CheckSanitizeStage stage, fuchsia_sysmem2::BufferCollectionConstraints& constraints);
 
   bool CheckSanitizeBufferUsage(CheckSanitizeStage stage,
-                                fuchsia_sysmem2::wire::BufferUsage& buffer_usage);
+                                fuchsia_sysmem2::BufferUsage& buffer_usage);
 
-  bool CheckSanitizeBufferMemoryConstraints(
-      CheckSanitizeStage stage, const fuchsia_sysmem2::wire::BufferUsage& buffer_usage,
-      fuchsia_sysmem2::wire::BufferMemoryConstraints& constraints);
+  bool CheckSanitizeBufferMemoryConstraints(CheckSanitizeStage stage,
+                                            const fuchsia_sysmem2::BufferUsage& buffer_usage,
+                                            fuchsia_sysmem2::BufferMemoryConstraints& constraints);
 
-  bool CheckSanitizeImageFormatConstraints(
-      CheckSanitizeStage stage, fuchsia_sysmem2::wire::ImageFormatConstraints& constraints);
+  bool CheckSanitizeImageFormatConstraints(CheckSanitizeStage stage,
+                                           fuchsia_sysmem2::ImageFormatConstraints& constraints);
 
-  bool AccumulateConstraintBufferCollection(fuchsia_sysmem2::wire::BufferCollectionConstraints* acc,
-                                            fuchsia_sysmem2::wire::BufferCollectionConstraints c);
+  bool AccumulateConstraintBufferCollection(fuchsia_sysmem2::BufferCollectionConstraints* acc,
+                                            fuchsia_sysmem2::BufferCollectionConstraints c);
 
-  bool AccumulateConstraintsBufferUsage(fuchsia_sysmem2::wire::BufferUsage* acc,
-                                        fuchsia_sysmem2::wire::BufferUsage c);
+  bool AccumulateConstraintsBufferUsage(fuchsia_sysmem2::BufferUsage* acc,
+                                        fuchsia_sysmem2::BufferUsage c);
 
-  bool AccumulateConstraintHeapPermitted(fidl::VectorView<fuchsia_sysmem2::wire::HeapType>* acc,
-                                         fidl::VectorView<fuchsia_sysmem2::wire::HeapType> c);
+  bool AccumulateConstraintHeapPermitted(std::vector<fuchsia_sysmem2::HeapType>* acc,
+                                         std::vector<fuchsia_sysmem2::HeapType> c);
 
-  bool AccumulateConstraintBufferMemory(fuchsia_sysmem2::wire::BufferMemoryConstraints* acc,
-                                        fuchsia_sysmem2::wire::BufferMemoryConstraints c);
+  bool AccumulateConstraintBufferMemory(fuchsia_sysmem2::BufferMemoryConstraints* acc,
+                                        fuchsia_sysmem2::BufferMemoryConstraints c);
 
-  bool AccumulateConstraintImageFormats(
-      fidl::VectorView<fuchsia_sysmem2::wire::ImageFormatConstraints>* acc,
-      fidl::VectorView<fuchsia_sysmem2::wire::ImageFormatConstraints> c);
+  bool AccumulateConstraintImageFormats(std::vector<fuchsia_sysmem2::ImageFormatConstraints>* acc,
+                                        std::vector<fuchsia_sysmem2::ImageFormatConstraints> c);
 
-  bool AccumulateConstraintImageFormat(fuchsia_sysmem2::wire::ImageFormatConstraints* acc,
-                                       fuchsia_sysmem2::wire::ImageFormatConstraints c);
+  bool AccumulateConstraintImageFormat(fuchsia_sysmem2::ImageFormatConstraints* acc,
+                                       fuchsia_sysmem2::ImageFormatConstraints c);
 
-  bool AccumulateConstraintColorSpaces(fidl::VectorView<fuchsia_sysmem2::wire::ColorSpace>* acc,
-                                       fidl::VectorView<fuchsia_sysmem2::wire::ColorSpace> c);
+  bool AccumulateConstraintColorSpaces(std::vector<fuchsia_sysmem2::ColorSpace>* acc,
+                                       std::vector<fuchsia_sysmem2::ColorSpace> c);
 
   size_t InitialCapacityOrZero(CheckSanitizeStage stage, size_t initial_capacity);
 
-  bool IsColorSpaceEqual(const fuchsia_sysmem2::wire::ColorSpace& a,
-                         const fuchsia_sysmem2::wire::ColorSpace& b);
+  bool IsColorSpaceEqual(const fuchsia_sysmem2::ColorSpace& a,
+                         const fuchsia_sysmem2::ColorSpace& b);
 
-  fpromise::result<fuchsia_sysmem2::wire::BufferCollectionInfo, zx_status_t>
+  fpromise::result<fuchsia_sysmem2::BufferCollectionInfo, zx_status_t>
   GenerateUnpopulatedBufferCollectionInfo(
-      const fuchsia_sysmem2::wire::BufferCollectionConstraints& constraints);
+      const fuchsia_sysmem2::BufferCollectionConstraints& constraints);
 
-  fpromise::result<fuchsia_sysmem2::wire::BufferCollectionInfo, zx_status_t> Allocate(
-      const fuchsia_sysmem2::wire::BufferCollectionConstraints& constraints,
-      fuchsia_sysmem2::wire::BufferCollectionInfo* buffer_collection_info);
+  fpromise::result<fuchsia_sysmem2::BufferCollectionInfo, zx_status_t> Allocate(
+      const fuchsia_sysmem2::BufferCollectionConstraints& constraints,
+      fuchsia_sysmem2::BufferCollectionInfo* buffer_collection_info);
 
   fpromise::result<zx::vmo> AllocateVmo(MemoryAllocator* allocator,
-                                        const fuchsia_sysmem2::wire::SingleBufferSettings& settings,
+                                        const fuchsia_sysmem2::SingleBufferSettings& settings,
                                         uint32_t index);
 
-  int32_t CompareImageFormatConstraintsTieBreaker(
-      const fuchsia_sysmem2::wire::ImageFormatConstraints& a,
-      const fuchsia_sysmem2::wire::ImageFormatConstraints& b);
+  int32_t CompareImageFormatConstraintsTieBreaker(const fuchsia_sysmem2::ImageFormatConstraints& a,
+                                                  const fuchsia_sysmem2::ImageFormatConstraints& b);
 
   int32_t CompareImageFormatConstraintsByIndex(
-      const fuchsia_sysmem2::wire::BufferCollectionConstraints& constraints, uint32_t index_a,
+      const fuchsia_sysmem2::BufferCollectionConstraints& constraints, uint32_t index_a,
       uint32_t index_b);
 
   void CreationTimedOut(async_dispatcher_t* dispatcher, async::TaskBase* task, zx_status_t status);
 
   AllocationResult allocation_result();
 
-  void LogBufferCollectionInfoDiffs(const fuchsia_sysmem2::wire::BufferCollectionInfo& o,
-                                    const fuchsia_sysmem2::wire::BufferCollectionInfo& n);
+  void LogBufferCollectionInfoDiffs(const fuchsia_sysmem2::BufferCollectionInfo& o,
+                                    const fuchsia_sysmem2::BufferCollectionInfo& n);
 
   // To be called only by CombineConstraints().
   bool IsMinBufferSizeSpecifiedByAnyParticipant(const ConstraintsList& constraints_list);
@@ -374,20 +369,22 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
 #endif
   // If LLCPP had generic field objects, we wouldn't need this macro.  We #undef the macro name
   // after we're done using it so it doesn't escape this header.
-#define PRINT_DIFF(child_field_name)                                                              \
-  do {                                                                                            \
-    const std::string& parent_field_name = field_name;                                            \
-    if (o.has_##child_field_name() != n.has_##child_field_name()) {                               \
-      LogError(FROM_HERE,                                                                         \
-               "o%s.has_" #child_field_name "(): %d n%s.has_" #child_field_name "(): %d",         \
-               parent_field_name.c_str(), o.has_##child_field_name(), parent_field_name.c_str(),  \
-               n.has_##child_field_name());                                                       \
-    } else if (o.has_##child_field_name()) {                                                      \
-      std::string field_name =                                                                    \
-          fbl::StringPrintf("%s.%s()", parent_field_name.c_str(), #child_field_name).c_str();     \
-      DiffPrinter<std::remove_const_t<std::remove_reference_t<decltype(o.child_field_name())>>>:: \
-          PrintDiff(*this, field_name, o.child_field_name(), n.child_field_name());               \
-    }                                                                                             \
+#define PRINT_DIFF(child_field_name)                                                               \
+  do {                                                                                             \
+    const std::string& parent_field_name = field_name;                                             \
+    if (o.child_field_name().has_value() != n.child_field_name().has_value()) {                    \
+      LogError(FROM_HERE,                                                                          \
+               "o%s." #child_field_name                                                            \
+               "().has_value(): %d "                                                               \
+               "n%s." #child_field_name "().has_value(): %d",                                      \
+               parent_field_name.c_str(), o.child_field_name().has_value(),                        \
+               parent_field_name.c_str(), n.child_field_name().has_value());                       \
+    } else if (o.child_field_name().has_value()) {                                                 \
+      std::string field_name =                                                                     \
+          fbl::StringPrintf("%s.%s()", parent_field_name.c_str(), #child_field_name).c_str();      \
+      DiffPrinter<std::remove_const_t<std::remove_reference_t<decltype(*o.child_field_name())>>>:: \
+          PrintDiff(*this, field_name, *o.child_field_name(), *n.child_field_name());              \
+    }                                                                                              \
   } while (false)
 
   template <typename FieldType, typename Enable = void>
@@ -396,20 +393,19 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
                           const std::string& field_name, const FieldType& o, const FieldType& n);
   };
   template <typename ElementType>
-  struct DiffPrinter<fidl::VectorView<ElementType>,
-                     std::enable_if_t<fidl::IsVectorView<fidl::VectorView<ElementType>>::value>> {
+  struct DiffPrinter<std::vector<ElementType>, void> {
     static void PrintDiff(const LogicalBufferCollection& buffer_collection,
-                          const std::string& field_name, const fidl::VectorView<ElementType>& o,
-                          const fidl::VectorView<ElementType>& n) {
-      if (o.count() != n.count()) {
-        buffer_collection.LogError(FROM_HERE, "o%s.count(): %" PRIu64 " n%s.count(): %" PRIu64,
-                                   field_name.c_str(), o.count(), field_name.c_str(), n.count());
+                          const std::string& field_name, const std::vector<ElementType>& o,
+                          const std::vector<ElementType>& n) {
+      if (o.size() != n.size()) {
+        buffer_collection.LogError(FROM_HERE, "o%s.size(): %" PRIu64 " n%s.size(): %" PRIu64,
+                                   field_name.c_str(), o.size(), field_name.c_str(), n.size());
       }
-      for (uint32_t i = 0; i < std::max(o.count(), n.count()); ++i) {
+      for (uint32_t i = 0; i < std::max(o.size(), n.size()); ++i) {
         std::string new_field_name = fbl::StringPrintf("%s[%u]", field_name.c_str(), i).c_str();
         const ElementType& blank = ElementType();
-        const ElementType& o_element = i < o.count() ? o[i] : blank;
-        const ElementType& n_element = i < n.count() ? n[i] : blank;
+        const ElementType& o_element = i < o.size() ? o[i] : blank;
+        const ElementType& n_element = i < n.size() ? n[i] : blank;
         DiffPrinter<ElementType>::PrintDiff(buffer_collection, new_field_name, o_element,
                                             n_element);
       }
@@ -447,8 +443,8 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
     static void PrintDiff(const LogicalBufferCollection& buffer_collection,
                           const std::string& field_name, const EnumType& o, const EnumType& n) {
       using UnderlyingType = sysmem::FidlUnderlyingTypeOrType_t<EnumType>;
-      const UnderlyingType o_underlying = static_cast<UnderlyingType>(o);
-      const UnderlyingType n_underlying = static_cast<UnderlyingType>(n);
+      const UnderlyingType o_underlying = safe_cast<UnderlyingType>(o);
+      const UnderlyingType n_underlying = safe_cast<UnderlyingType>(n);
       DiffPrinter<UnderlyingType>::PrintDiff(buffer_collection, field_name, o_underlying,
                                              n_underlying);
     }
@@ -480,9 +476,9 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   void LogTableDiffs(const std::string& field_name, const Table& o, const Table& n) const;
 
   template <>
-  void LogTableDiffs<fuchsia_sysmem2::wire::BufferMemorySettings>(
-      const std::string& field_name, const fuchsia_sysmem2::wire::BufferMemorySettings& o,
-      const fuchsia_sysmem2::wire::BufferMemorySettings& n) const {
+  void LogTableDiffs<fuchsia_sysmem2::BufferMemorySettings>(
+      const std::string& field_name, const fuchsia_sysmem2::BufferMemorySettings& o,
+      const fuchsia_sysmem2::BufferMemorySettings& n) const {
     PRINT_DIFF(size_bytes);
     PRINT_DIFF(is_physically_contiguous);
     PRINT_DIFF(is_secure);
@@ -491,24 +487,24 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   }
 
   template <>
-  void LogTableDiffs<fuchsia_sysmem2::wire::PixelFormat>(
-      const std::string& field_name, const fuchsia_sysmem2::wire::PixelFormat& o,
-      const fuchsia_sysmem2::wire::PixelFormat& n) const {
+  void LogTableDiffs<fuchsia_sysmem2::PixelFormat>(const std::string& field_name,
+                                                   const fuchsia_sysmem2::PixelFormat& o,
+                                                   const fuchsia_sysmem2::PixelFormat& n) const {
     PRINT_DIFF(type);
     PRINT_DIFF(format_modifier_value);
   }
 
   template <>
-  void LogTableDiffs<fuchsia_sysmem2::wire::ColorSpace>(
-      const std::string& field_name, const fuchsia_sysmem2::wire::ColorSpace& o,
-      const fuchsia_sysmem2::wire::ColorSpace& n) const {
+  void LogTableDiffs<fuchsia_sysmem2::ColorSpace>(const std::string& field_name,
+                                                  const fuchsia_sysmem2::ColorSpace& o,
+                                                  const fuchsia_sysmem2::ColorSpace& n) const {
     PRINT_DIFF(type);
   }
 
   template <>
-  void LogTableDiffs<fuchsia_sysmem2::wire::ImageFormatConstraints>(
-      const std::string& field_name, const fuchsia_sysmem2::wire::ImageFormatConstraints& o,
-      const fuchsia_sysmem2::wire::ImageFormatConstraints& n) const {
+  void LogTableDiffs<fuchsia_sysmem2::ImageFormatConstraints>(
+      const std::string& field_name, const fuchsia_sysmem2::ImageFormatConstraints& o,
+      const fuchsia_sysmem2::ImageFormatConstraints& n) const {
     PRINT_DIFF(pixel_format);
     PRINT_DIFF(color_spaces);
     PRINT_DIFF(min_coded_width);
@@ -533,39 +529,39 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   }
 
   template <>
-  void LogTableDiffs<fuchsia_sysmem2::wire::SingleBufferSettings>(
-      const std::string& field_name, const fuchsia_sysmem2::wire::SingleBufferSettings& o,
-      const fuchsia_sysmem2::wire::SingleBufferSettings& n) const {
+  void LogTableDiffs<fuchsia_sysmem2::SingleBufferSettings>(
+      const std::string& field_name, const fuchsia_sysmem2::SingleBufferSettings& o,
+      const fuchsia_sysmem2::SingleBufferSettings& n) const {
     PRINT_DIFF(buffer_settings);
     PRINT_DIFF(image_format_constraints);
   }
 
   template <>
-  void LogTableDiffs<fuchsia_sysmem2::wire::VmoBuffer>(
-      const std::string& field_name, const fuchsia_sysmem2::wire::VmoBuffer& o,
-      const fuchsia_sysmem2::wire::VmoBuffer& n) const {
+  void LogTableDiffs<fuchsia_sysmem2::VmoBuffer>(const std::string& field_name,
+                                                 const fuchsia_sysmem2::VmoBuffer& o,
+                                                 const fuchsia_sysmem2::VmoBuffer& n) const {
     PRINT_DIFF(vmo);
     PRINT_DIFF(vmo_usable_start);
     PRINT_DIFF(aux_vmo);
   }
 
   template <>
-  void LogTableDiffs<fuchsia_sysmem2::wire::BufferCollectionInfo>(
-      const std::string& field_name, const fuchsia_sysmem2::wire::BufferCollectionInfo& o,
-      const fuchsia_sysmem2::wire::BufferCollectionInfo& n) const {
+  void LogTableDiffs<fuchsia_sysmem2::BufferCollectionInfo>(
+      const std::string& field_name, const fuchsia_sysmem2::BufferCollectionInfo& o,
+      const fuchsia_sysmem2::BufferCollectionInfo& n) const {
     PRINT_DIFF(settings);
     PRINT_DIFF(buffers);
   }
 #undef PRINT_DIFF
 
-  void LogDiffsBufferCollectionInfo(const fuchsia_sysmem2::wire::BufferCollectionInfo& o,
-                                    const fuchsia_sysmem2::wire::BufferCollectionInfo& n) const {
+  void LogDiffsBufferCollectionInfo(const fuchsia_sysmem2::BufferCollectionInfo& o,
+                                    const fuchsia_sysmem2::BufferCollectionInfo& n) const {
     LOG(WARNING, "LogDiffsBufferCollectionInfo()");
-    LogTableDiffs<fuchsia_sysmem2::wire::BufferCollectionInfo>("", o, n);
+    LogTableDiffs<fuchsia_sysmem2::BufferCollectionInfo>("", o, n);
   }
 
   void LogConstraints(Location location, NodeProperties* node_properties,
-                      const fuchsia_sysmem2::wire::BufferCollectionConstraints& constraints) const;
+                      const fuchsia_sysmem2::BufferCollectionConstraints& constraints) const;
   void LogPrunedSubTree(NodeProperties* subtree);
   void LogNodeConstraints(std::vector<NodeProperties*> nodes);
 
@@ -574,11 +570,6 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
       NodeProperties& subtree, fit::function<bool(const NodeProperties&)> visit_keep) const;
 
   Device* parent_device_ = nullptr;
-
-  // We occasionally swap out the allocator for a fresh one, to avoid the possibility of churn
-  // leading to excessive un-used memory allocation in the allocator.  This is accomplished via
-  // TableHolder and TableSet.
-  TableSet table_set_;
 
   // This owns the current tree of BufferCollectionToken, BufferCollection, OrphanedNode.  The
   // Location in the tree is determined by creation path.  Child Node(s) are children because they
@@ -602,12 +593,11 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   // failed.  Both allocation_result_status_ and allocation_result_info_ are
   // not meaningful until has_allocation_result_ is true.
   bool has_allocation_result_ = false;
-  std::optional<TableHolder<fuchsia_sysmem2::wire::BufferCollectionInfo>>
-      buffer_collection_info_before_population_;
+  std::optional<fuchsia_sysmem2::BufferCollectionInfo> buffer_collection_info_before_population_;
   std::optional<fidl::unstable::OwnedEncodedMessage<fuchsia_sysmem2::wire::BufferCollectionInfo>>
       linearized_buffer_collection_info_before_population_;
   zx_status_t allocation_result_status_ = ZX_OK;
-  std::optional<TableHolder<fuchsia_sysmem2::wire::BufferCollectionInfo>> allocation_result_info_;
+  std::optional<fuchsia_sysmem2::BufferCollectionInfo> allocation_result_info_;
 
   MemoryAllocator* memory_allocator_ = nullptr;
   std::optional<CollectionName> name_;

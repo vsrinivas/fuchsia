@@ -4,6 +4,7 @@
 
 #include "contiguous_pooled_memory_allocator.h"
 
+#include <lib/async-loop/loop.h>
 #include <lib/async-testing/test_loop.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/fake-bti/bti.h>
@@ -15,8 +16,6 @@
 #include <vector>
 
 #include <zxtest/zxtest.h>
-
-#include "lib/async-loop/loop.h"
 
 namespace sysmem_driver {
 namespace {
@@ -34,11 +33,9 @@ class FakeOwner : public MemoryAllocator::Owner {
     return zx::vmo::create(size, 0u, vmo_out);
   }
   inspect::Node* heap_node() override { return heap_node_; }
-  TableSet& table_set() override { return table_set_; }
   SysmemMetrics& metrics() override { return metrics_; }
 
  private:
-  TableSet table_set_;
   inspect::Node* heap_node_;
   zx::bti bti_;
   SysmemMetrics metrics_;

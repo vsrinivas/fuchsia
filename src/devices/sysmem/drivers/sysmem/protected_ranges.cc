@@ -15,6 +15,7 @@
 #include "lib/zx/time.h"
 #include "macros.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "utils.h"
 
 #define DLOG_ENABLED 0
 #define BACKTRACE_DLOG 0
@@ -146,19 +147,22 @@ const Range* FindRangeToShorten(const Ranges& old_ranges, const Ranges& new_rang
         continue;
       }
       const Range& new_range = *look;
-      if (!min_overlapping_range_begin || new_range.begin() < *min_overlapping_range_begin) {
+      if (!min_overlapping_range_begin.has_value() ||
+          new_range.begin() < *min_overlapping_range_begin) {
         min_overlapping_range_begin = {new_range.begin()};
       }
-      if (!max_overlapping_range_end || new_range.end() > *max_overlapping_range_end) {
+      if (!max_overlapping_range_end.has_value() || new_range.end() > *max_overlapping_range_end) {
         max_overlapping_range_end = {new_range.end()};
       }
     }
-    ZX_DEBUG_ASSERT(!!min_overlapping_range_begin == !!max_overlapping_range_end);
-    if (min_overlapping_range_begin && *min_overlapping_range_begin > old_range.begin()) {
+    ZX_DEBUG_ASSERT(!!min_overlapping_range_begin.has_value() ==
+                    !!max_overlapping_range_end.has_value());
+    if (min_overlapping_range_begin.has_value() &&
+        *min_overlapping_range_begin > old_range.begin()) {
       *shorter_range = Range::BeginEnd(*min_overlapping_range_begin, old_range.end());
       return &old_range;
     }
-    if (max_overlapping_range_end && *max_overlapping_range_end < old_range.end()) {
+    if (max_overlapping_range_end.has_value() && *max_overlapping_range_end < old_range.end()) {
       *shorter_range = Range::BeginEnd(old_range.begin(), *max_overlapping_range_end);
       return &old_range;
     }
@@ -178,22 +182,22 @@ const Range* FindBestSplit(const Ranges& old_ranges, const Ranges& new_ranges,
     const Range old_interior = Range::BeginEnd(old_range.begin() + 1, old_range.end() - 1);
     std::optional<uint64_t> prev_end;
     for (auto look = look_start; look != look_end; prev_end = {look->end()}, ++look) {
-      if (!prev_end) {
+      if (!prev_end.has_value()) {
         continue;
       }
       Range new_gap = Range::BeginEnd(*prev_end, look->begin());
-      if (best_gap && new_gap.length() <= best_gap->length()) {
+      if (best_gap.has_value() && new_gap.length() <= best_gap->length()) {
         continue;
       }
       if (IsCoveredBy(new_gap, old_interior)) {
-        ZX_DEBUG_ASSERT(!best_gap || new_gap.length() > best_gap->length());
+        ZX_DEBUG_ASSERT(!best_gap.has_value() || new_gap.length() > best_gap->length());
         best_gap.emplace(std::move(new_gap));
         best_gap_old_range = &old_range;
       }
     }
   }
-  ZX_DEBUG_ASSERT(!!best_gap == !!best_gap_old_range);
-  if (!best_gap) {
+  ZX_DEBUG_ASSERT(!!best_gap.has_value() == !!best_gap_old_range);
+  if (!best_gap.has_value()) {
     return nullptr;
   }
   *new_gap_to_stop_using = std::move(*best_gap);
@@ -215,23 +219,23 @@ const Range* FindBestMerge(const Ranges& old_ranges, const Ranges& new_ranges,
       continue;
     }
     const Range old_gap = Range::BeginEnd(prev_range->end(), old_range.begin());
-    if (best_gap_size && old_gap.length() >= *best_gap_size) {
+    if (best_gap_size.has_value() && old_gap.length() >= *best_gap_size) {
       continue;
     }
     auto [look_start, look_end] =
         ProtectedRanges::IteratorsCoveringPotentialOverlapsOfRangeWithRanges(old_gap, new_ranges);
     for (auto look = look_start; look != look_end; ++look) {
       if (IsCoveredBy(old_gap, *look)) {
-        ZX_DEBUG_ASSERT(!best_gap_size || old_gap.length() < *best_gap_size);
+        ZX_DEBUG_ASSERT(!best_gap_size.has_value() || old_gap.length() < *best_gap_size);
         best_gap_size = {old_gap.length()};
         best_gap_left_range = prev_range;
         best_gap_right_range = &old_range;
       }
     }
   }
-  ZX_DEBUG_ASSERT(!!best_gap_size == !!best_gap_left_range);
-  ZX_DEBUG_ASSERT(!!best_gap_size == !!best_gap_right_range);
-  if (!best_gap_size) {
+  ZX_DEBUG_ASSERT(best_gap_size.has_value() == !!best_gap_left_range);
+  ZX_DEBUG_ASSERT(best_gap_size.has_value() == !!best_gap_right_range);
+  if (!best_gap_size.has_value()) {
     return nullptr;
   }
   *second_range_to_merge = best_gap_right_range;
@@ -1052,13 +1056,13 @@ void ProtectedRanges::UpdateInteriorUnusedRanges(const Range& diff_range) {
   if (!interior_unused_ranges_.empty()) {
     uint64_t carve_begin;
     uint64_t carve_end;
-    if (maybe_carve_begin) {
+    if (maybe_carve_begin.has_value()) {
       carve_begin = *maybe_carve_begin;
     } else {
       carve_begin = interior_unused_ranges_.begin()->begin();
     }
     DebugDumpOffset(carve_begin, "carve_begin");
-    if (maybe_carve_end) {
+    if (maybe_carve_end.has_value()) {
       carve_end = *maybe_carve_end;
     } else {
       carve_end = interior_unused_ranges_.rbegin()->end();
@@ -1085,7 +1089,7 @@ void ProtectedRanges::UpdateInteriorUnusedRanges(const Range& diff_range) {
   // interior_unused_ranges_.
   std::optional<uint64_t> prev_end;
   for (auto iter = rebuild_begin; iter != rebuild_end; prev_end = {iter->end()}, ++iter) {
-    if (!prev_end) {
+    if (!prev_end.has_value()) {
       continue;
     }
     auto gap_range = Range::BeginEnd(*prev_end, iter->begin());
@@ -1144,7 +1148,7 @@ void ProtectedRanges::BuildGoalRanges() {
   std::optional<uint64_t> prev_end;
   for (auto iter = largest_interior_unused_ranges_.begin();
        iter != largest_interior_unused_ranges_.end(); prev_end = iter->end(), ++iter) {
-    if (!prev_end) {
+    if (!prev_end.has_value()) {
       continue;
     }
     // The gap_range in interior unused ranges is covering some used blocks, and possibly also some
@@ -1394,7 +1398,7 @@ double ProtectedRanges::GetEfficiency() {
   // un-used bytes
   uint64_t un_used_bytes = ranges_control_->GetSize() - requested_bytes_;
 
-  return static_cast<double>(un_covered_bytes) / static_cast<double>(un_used_bytes);
+  return safe_cast<double>(un_covered_bytes) / safe_cast<double>(un_used_bytes);
 }
 
 // un-covered pages / total pages
@@ -1405,7 +1409,7 @@ double ProtectedRanges::GetLoanableRatio() {
   // total bytes
   uint64_t total_bytes = ranges_control_->GetSize();
 
-  return static_cast<double>(un_covered_bytes) / static_cast<double>(total_bytes);
+  return safe_cast<double>(un_covered_bytes) / safe_cast<double>(total_bytes);
 }
 
 uint64_t ProtectedRanges::GetLoanableBytes() { return ranges_control_->GetSize() - ranges_bytes_; }

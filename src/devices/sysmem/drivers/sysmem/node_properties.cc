@@ -15,6 +15,7 @@
 #include "koid_util.h"
 #include "logical_buffer_collection.h"
 #include "node.h"
+#include "utils.h"
 
 namespace sysmem_driver {
 
@@ -62,15 +63,14 @@ NodeProperties* NodeProperties::NewChild(LogicalBufferCollection* logical_buffer
 // static
 std::unique_ptr<NodeProperties> NodeProperties::NewTemporary(
     LogicalBufferCollection* logical_buffer_collection,
-    fuchsia_sysmem2::wire::BufferCollectionConstraints buffer_collection_constraints,
+    fuchsia_sysmem2::BufferCollectionConstraints buffer_collection_constraints,
     std::string debug_name) {
   auto result = std::unique_ptr<NodeProperties>(new NodeProperties(logical_buffer_collection));
   ZX_DEBUG_ASSERT(!result->parent_);
   // Since temporary, won't ever have a node_.
   ZX_DEBUG_ASSERT(!result->node_);
   ZX_DEBUG_ASSERT(result->children_.empty());
-  result->SetBufferCollectionConstraints(TableHolder(logical_buffer_collection->table_set(),
-                                                     std::move(buffer_collection_constraints)));
+  result->SetBufferCollectionConstraints(std::move(buffer_collection_constraints));
   result->client_debug_info().name = debug_name;
   return result;
 }
@@ -174,7 +174,7 @@ Node* NodeProperties::node() const {
   return node_.get();
 }
 
-uint32_t NodeProperties::child_count() const { return children_.size(); }
+uint32_t NodeProperties::child_count() const { return safe_cast<uint32_t>(children_.size()); }
 
 NodeProperties& NodeProperties::child(uint32_t which) const { return *children_[which]; }
 
@@ -197,19 +197,19 @@ void NodeProperties::SetBuffersLogicallyAllocated() {
   buffers_logically_allocated_ = true;
 }
 
-bool NodeProperties::has_constraints() const { return !!buffer_collection_constraints_; }
+bool NodeProperties::has_constraints() const { return buffer_collection_constraints_.has_value(); }
 
-const fuchsia_sysmem2::wire::BufferCollectionConstraints*
-NodeProperties::buffer_collection_constraints() const {
-  if (!buffer_collection_constraints_) {
+const fuchsia_sysmem2::BufferCollectionConstraints* NodeProperties::buffer_collection_constraints()
+    const {
+  if (!buffer_collection_constraints_.has_value()) {
     return nullptr;
   }
-  return &(**buffer_collection_constraints_);
+  return &*buffer_collection_constraints_;
 }
 
 void NodeProperties::SetBufferCollectionConstraints(
-    TableHolder<fuchsia_sysmem2::wire::BufferCollectionConstraints> buffer_collection_constraints) {
-  ZX_DEBUG_ASSERT(!buffer_collection_constraints_);
+    fuchsia_sysmem2::BufferCollectionConstraints buffer_collection_constraints) {
+  ZX_DEBUG_ASSERT(!buffer_collection_constraints_.has_value());
   buffer_collection_constraints_.emplace(std::move(buffer_collection_constraints));
 }
 
@@ -241,7 +241,7 @@ bool NodeProperties::visible() const {
       return true;
     }
     auto* parent = iter->parent();
-    if (!parent->which_child()) {
+    if (!parent->which_child().has_value()) {
       // If which_child() isn't set, then that means "all", which can't be hiding "this".
       continue;
     }

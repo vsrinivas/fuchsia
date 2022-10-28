@@ -15,7 +15,6 @@ namespace sysmem_driver {
 Node::Node(fbl::RefPtr<LogicalBufferCollection> logical_buffer_collection,
            NodeProperties* node_properties, zx::unowned_channel server_end)
     : logical_buffer_collection_(std::move(logical_buffer_collection)),
-      table_set_(logical_buffer_collection_->table_set()),
       node_properties_(node_properties),
       server_end_(std::move(server_end)) {
   if (*server_end_) {
@@ -59,7 +58,7 @@ void Node::Bind(zx::channel server_end) {
                [this, this_ref = fbl::RefPtr<Node>(this)](fidl::UnbindInfo info) {
                  if (error_handler_) {
                    zx_status_t status = info.status();
-                   if (async_failure_result_ && info.reason() == fidl::Reason::kClose) {
+                   if (async_failure_result_.has_value() && info.reason() == fidl::Reason::kClose) {
                      // On kClose the error is always ZX_OK, so report the real error to
                      // LogicalBufferCollection if the close was caused by FailAsync or FailSync.
                      status = *async_failure_result_;

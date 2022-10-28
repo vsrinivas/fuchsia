@@ -5,9 +5,10 @@
 #ifndef SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_NODE_PROPERTIES_H_
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_NODE_PROPERTIES_H_
 
+#include <fidl/fuchsia.sysmem2/cpp/fidl.h>
 #include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <lib/fit/function.h>
-#include <lib/zx/eventpair.h>
+#include <lib/zx/event.h>
 #include <stdint.h>
 
 #include <memory>
@@ -16,7 +17,6 @@
 #include <fbl/ref_ptr.h>
 
 #include "logging.h"
-#include "table_holder.h"
 
 namespace sysmem_driver {
 
@@ -114,7 +114,7 @@ class NodeProperties : public std::enable_shared_from_this<NodeProperties> {
   // consistency.
   static std::unique_ptr<NodeProperties> NewTemporary(
       LogicalBufferCollection* logical_buffer_collection,
-      fuchsia_sysmem2::wire::BufferCollectionConstraints buffer_collection_constraints,
+      fuchsia_sysmem2::BufferCollectionConstraints buffer_collection_constraints,
       std::string debug_name);
 
   // Remove this NodeProperties from the tree by unlinking this NodeProperties from its parent,
@@ -158,10 +158,9 @@ class NodeProperties : public std::enable_shared_from_this<NodeProperties> {
   // BufferCollection may have constraints.
   // OrphanedConstraints may have constraints.
   bool has_constraints() const;
-  const fuchsia_sysmem2::wire::BufferCollectionConstraints* buffer_collection_constraints() const;
+  const fuchsia_sysmem2::BufferCollectionConstraints* buffer_collection_constraints() const;
   void SetBufferCollectionConstraints(
-      TableHolder<fuchsia_sysmem2::wire::BufferCollectionConstraints>
-          buffer_collection_constraints);
+      fuchsia_sysmem2::BufferCollectionConstraints buffer_collection_constraints);
 
   void SetNode(fbl::RefPtr<Node> node);
 
@@ -255,8 +254,7 @@ class NodeProperties : public std::enable_shared_from_this<NodeProperties> {
   //     SetConstraints()
   //
   // Either way, the constraints here are in v2 form.
-  std::optional<TableHolder<fuchsia_sysmem2::wire::BufferCollectionConstraints>>
-      buffer_collection_constraints_;
+  std::optional<fuchsia_sysmem2::BufferCollectionConstraints> buffer_collection_constraints_;
 
   // These counts are for the current NodeProperties + any current children (direct and indirect) of
   // the current NodeProperties.  For LogicalBufferCollection::root_, these counts are for the whole
