@@ -4,7 +4,7 @@
 
 use {
     component_events::{
-        events::{Destroyed, Event, EventSource, EventSubscription, Started, Stopped},
+        events::{Destroyed, Event, EventStream, Started},
         matcher::{EventMatcher, ExitStatusMatcher},
         sequence::{EventSequence, Ordering},
     },
@@ -17,22 +17,10 @@ use {
 /// timeout explicitly set.
 #[fuchsia::test]
 async fn test_stop_timeouts() {
-    let event_source = EventSource::new().unwrap();
-
-    let event_stream_start =
-        event_source.subscribe(vec![EventSubscription::new(vec![Started::NAME])]).await.unwrap();
-    let event_stream_1 = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME, Destroyed::NAME])])
-        .await
-        .unwrap();
-    let event_stream_2 = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME, Destroyed::NAME])])
-        .await
-        .unwrap();
-    let event_stream_3 = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME, Destroyed::NAME])])
-        .await
-        .unwrap();
+    let event_stream_start = EventStream::open_at_path("/events/started").await.unwrap();
+    let event_stream_1 = EventStream::open_at_path("/events/stopped_destroyed").await.unwrap();
+    let event_stream_2 = EventStream::open_at_path("/events/stopped_destroyed").await.unwrap();
+    let event_stream_3 = EventStream::open_at_path("/events/stopped_destroyed").await.unwrap();
     let collection_name = String::from("test-collection");
     // What is going on here? A scoped dynamic instance is created and then
     // dropped. When a the instance is dropped it stops the instance.
