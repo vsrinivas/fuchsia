@@ -79,10 +79,8 @@ void AddNonPassingTests(TestMap& tests) {
   ExpectFailure(tests, "All/SocketInetLoopbackTest.TCPInfoState/*");
   ExpectFailure(tests, "All/SocketInetLoopbackTest.TCPListenCloseConnectingRead/*");
   ExpectFailure(tests, "All/SocketInetLoopbackTest.TCPListenCloseDuringConnect/*");
-  ExpectFailure(tests, "All/SocketInetLoopbackTest.TCPListenShutdown/*");
   ExpectFailure(tests, "All/SocketInetLoopbackTest.TCPListenShutdownConnectingRead/*");
   ExpectFailure(tests, "All/SocketInetLoopbackTest.TCPListenShutdownDuringConnect/*");
-  ExpectFailure(tests, "All/SocketInetLoopbackTest.TCPListenShutdownListen/*");
   ExpectFailure(tests, "All/SocketInetLoopbackTest.TCPNonBlockingConnectClose/*");
   ExpectFailure(tests, "All/SocketInetReusePortTest.TcpPortReuseMultiThread/*");
 
@@ -98,6 +96,132 @@ void AddNonPassingTests(TestMap& tests) {
   ExpectFailure(tests,
                 "AllFamilies/"
                 "SocketMultiProtocolInetLoopbackTest.V6OnlyV6AnyReservesV6/*");
+
+  // TODO(https://fxbug.dev/21198): Netstack3 doesn't have dual-stack sockets.
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdownListen/"
+                "ListenV4Any_ConnectV4MappedAny");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdownListen/"
+                "ListenV4Any_ConnectV4MappedLoopback");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdownListen/"
+                "ListenV4Loopback_ConnectV4MappedLoopback");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdownListen/"
+                "ListenV4MappedAny_ConnectV4Any");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdownListen/"
+                "ListenV4MappedAny_ConnectV4Loopback");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdownListen/"
+                "ListenV4MappedAny_ConnectV4MappedAny");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdownListen/"
+                "ListenV4MappedAny_ConnectV4MappedLoopback");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdownListen/"
+                "ListenV4MappedLoopback_ConnectV4Any");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdownListen/"
+                "ListenV4MappedLoopback_ConnectV4Loopback");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdownListen/"
+                "ListenV4MappedLoopback_ConnectV4MappedLoopback");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdownListen/"
+                "ListenV6Any_ConnectV4Any");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdownListen/"
+                "ListenV6Any_ConnectV4MappedAny");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdownListen/"
+                "ListenV6Any_ConnectV4MappedLoopback");
+  SkipTest(tests,
+           "All/SocketInetLoopbackTest.TCPListenShutdownListen/"
+           "ListenV6Any_ConnectV4Loopback");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdown/"
+                "ListenV6Any_ConnectV4MappedAny");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdown/"
+                "ListenV4Loopback_ConnectV4MappedLoopback");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdown/"
+                "ListenV4MappedAny_ConnectV4Any");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdown/"
+                "ListenV6Any_ConnectV4MappedLoopback");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdown/"
+                "ListenV4MappedAny_ConnectV4Loopback");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdown/"
+                "ListenV4MappedAny_ConnectV4MappedAny");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdown/"
+                "ListenV4MappedAny_ConnectV4MappedLoopback");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdown/"
+                "ListenV4MappedLoopback_ConnectV4Any");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdown/"
+                "ListenV4Any_ConnectV4MappedAny");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdown/"
+                "ListenV4MappedLoopback_ConnectV4Loopback");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdown/"
+                "ListenV4Any_ConnectV4MappedLoopback");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdown/"
+                "ListenV4MappedLoopback_ConnectV4MappedLoopback");
+  SkipTest(tests,
+           "All/SocketInetLoopbackTest.TCPListenShutdown/"
+           "ListenV6Any_ConnectV4Loopback");
+
+  // TODO(https://fxbug.dev/113477): Netstack3 does not yet follow the Linux/BSD
+  // convention that connecting to the unspecified address is equivalent to
+  // connecting to loopback.
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdownListen/"
+                "ListenV4Loopback_ConnectV4Any");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdownListen/"
+                "ListenV4Any_ConnectV4Any");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdownListen/"
+                "ListenV6Loopback_ConnectV6Any");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdownListen/"
+                "ListenV6Any_ConnectV6Any");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdownListen/"
+                "ListenV6Any_ConnectV6Any");
+  ExpectFailure(tests, "All/SocketInetLoopbackTest.TCPListenShutdown/ListenV6Any_ConnectV6Any");
+  ExpectFailure(tests, "All/SocketInetLoopbackTest.TCPListenShutdown/ListenV4Any_ConnectV4Any");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdown/"
+                "ListenV6Loopback_ConnectV6Any");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdown/"
+                "ListenV4Loopback_ConnectV4Any");
+  ExpectFailure(tests, "All/SocketInetLoopbackTest.TCPListenShutdown/ListenV6Any_ConnectV4Any");
+
+  // TODO(https://fxbug.dev/113481): Netstack3 does not interpret listener
+  // backlog exactly as Linux does.
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdown/"
+                "ListenV6Any_ConnectV6Loopback");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdown/"
+                "ListenV4Any_ConnectV4Loopback");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdown/"
+                "ListenV6Loopback_ConnectV6Loopback");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdown/"
+                "ListenV4Loopback_ConnectV4Loopback");
 }  // NOLINT(readability/fn_size)
 
 }  // namespace netstack_syscall_test

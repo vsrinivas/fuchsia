@@ -14,8 +14,6 @@ void AddNonPassingTests(TestMap& tests) {
   // Skip tests that will otherwise hang forever.
   // TODO(https://fxbug.dev/111877): un-skip some of these when the data path is ready.
   SkipTest(tests, "BlockingTCPSockets/*.*/*");
-  SkipTest(tests, "AllTCPSockets/*.*/*");
-  SkipTest(tests, "AllUnixDomainSockets/*.*/*");
 }  // NOLINT(readability/fn_size)
 
 }  // namespace netstack_syscall_test
