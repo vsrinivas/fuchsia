@@ -16,4 +16,16 @@
         // bound in the middle of shutdown.
         // lifecycle: { stop_event: "notify" },
     },
+    use: [
+        {
+            protocol: [
+                "fuchsia.boot.RootResource",
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.kernel.MexecResource",
+            ],
+
+            // These protocols may not be available in test environments.
+            availability: "optional",
+        },
+    ],
 }
