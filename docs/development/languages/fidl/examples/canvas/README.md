@@ -1,4 +1,4 @@
-# FIDL example: canvas
+# FIDL example: Canvas
 
 In this example, we start by creating a 2D line-drawing canvas, then proceed to
 augment its functionality with various data flow patterns commonly used in FIDL,

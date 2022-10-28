@@ -1,4 +1,4 @@
-# FIDL example: key-value store
+# FIDL example: Key-value store
 
 In this example, we start by creating a simple write-only key-value store, then
 proceed to augment its functionality with various capabilities, such as reading

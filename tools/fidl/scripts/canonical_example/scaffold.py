@@ -480,16 +480,22 @@ def document(name, concepts):
 
     # Create the files for each concept.
     dns_counts = {}
-    for concept in concepts:
+    for concept in sorted(concepts, reverse=True):
         subs['concept_snake_case'] = concept
         subs['concept_sentence_case'] = to_sentence_case(concept)
 
         # Add an entry to the root docs README.md file's example section for this concept, and update
         # the dns count so the user is aware that they need to make further edits in this file.
         with open(DOCS_ROOT_README_FILE, "wt") as f:
+            prefix = "<<../widgets/_"
             lines, start, end = readme_concepts_lines
-            lines.insert(end, """<<../concepts/_%s.md>>\n\n""" % concept)
-            lines.insert(end, """### %s\n\n""" % subs['concept_sentence_case'])
+            line_num = start
+            while line_num < end:
+                line = lines[line_num]
+                if line.startswith(prefix) and concept < line[len(prefix):]:
+                    break
+                line_num = line_num + 1
+            lines.insert(line_num, """%s%s.md>>\n\n""" % (prefix, concept))
             out_contents = "".join(lines)
             f.write(out_contents)
 

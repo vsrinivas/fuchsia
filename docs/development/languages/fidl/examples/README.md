@@ -32,21 +32,13 @@ section.
 
 <!-- DO_NOT_REMOVE_COMMENT:concepts (Why? See: /tools/fidl/scripts/canonical_example/README.md) -->
 
-### Alias
+<<../widgets/_acknowledgement_pattern.md>>
 
-<<../concepts/_alias.md>>
+<<../widgets/_alias.md>>
 
-### Enum
+<<../widgets/_enum.md>>
 
-<<../concepts/_enum.md>>
-
-### Named method payload
-
-<<../concepts/_named_payload.md>>
-
-### Acknowledgement pattern
-
-<<../concepts/_acknowledgement_pattern.md>>
+<<../widgets/_named_payload.md>>
 
 <!-- /DO_NOT_REMOVE_COMMENT:concepts (Why? See: /tools/fidl/scripts/canonical_example/README.md) -->
 
