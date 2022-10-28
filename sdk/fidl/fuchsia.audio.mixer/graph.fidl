@@ -524,7 +524,77 @@ protocol Graph {
         2: release_fence zx.handle:EVENTPAIR;
     }) error zx.status;
 
-    // TODO(fxbug.dev/87651): Start/Stop methods to control Producer and Consumer nodes
+    /// Starts a consumer or a producer at a specified time.
+    Start(table {
+        /// ID of the consumer or producer node.
+        ///
+        /// Required.
+        1: node_id NodeId;
+
+        /// When to apply the start command.
+        ///
+        /// Required.
+        2: when RealTime;
+
+        /// Stream time of the start frame.
+        ///
+        /// Required.
+        3: stream_time StreamTime;
+    }) -> (table {
+        /// The system time when the producer or consumer was actually started.
+        ///
+        /// Required.
+        1: system_time zx.time;
+
+        /// The reference time when the producer or consumer was actually started.
+        ///
+        /// Required.
+        2: reference_time zx.time;
+
+        /// The stream time at which the producer or consumer was actually started.
+        ///
+        /// Required.
+        3: stream_time zx.duration;
+
+        /// The packet timestamp that corresponds to `stream_time`.
+        ///
+        /// Required.
+        4: packet_timestamp int64;
+    }) error StartError;
+
+    /// Stops a consumer or a producer at a specified time.
+    Stop(table {
+        /// ID of the consumer or producer node.
+        ///
+        /// Required.
+        1: node_id NodeId;
+
+        /// When to apply the stop command.
+        ///
+        /// Required.
+        2: when RealOrStreamTime;
+    }) -> (table {
+        /// The system time when the producer or consumer was actually stopped.
+        ///
+        /// Required.
+        1: system_time zx.time;
+
+        /// The reference time when the producer or consumer was actually stopped.
+        ///
+        /// Required.
+        2: reference_time zx.time;
+
+        /// The stream time at which the producer or consumer was actually stopped.
+        ///
+        /// Required.
+        3: stream_time zx.duration;
+
+        /// The packet timestamp that corresponds to `stream_time`.
+        ///
+        /// Required.
+        4: packet_timestamp int64;
+    }) error StopError;
+
     // TODO(fxbug.dev/87651): Watch method to observe delay (aka lead time) of a node
 };
 
@@ -638,4 +708,41 @@ type DeleteGainControlError = flexible enum {
     /// There are still edges using this GainControl. These edges must be deleted
     /// before the GainControl can be deleted.
     STILL_IN_USE = 2;
+};
+
+/// Type of errors return by [`Start`].
+type StartError = flexible enum {
+    /// A required field was not provided.
+    MISSING_REQUIRED_FIELD = 1;
+
+    /// A parameter had an invalid value.
+    INVALID_PARAMETER = 2;
+
+    /// A flexible field had an unsupported option. This can happen when a
+    /// client built with API version X+1 talks to a server built with API
+    /// version X.
+    UNSUPPORTED_OPTION = 3;
+
+    /// Request is canceled.
+    CANCELED = 4;
+};
+
+/// Type of errors return by [`Stop`].
+type StopError = flexible enum {
+    /// A required field was not provided.
+    MISSING_REQUIRED_FIELD = 1;
+
+    /// A parameter had an invalid value.
+    INVALID_PARAMETER = 2;
+
+    /// A flexible field had an unsupported option. This can happen when a
+    /// client built with API version X+1 talks to a server built with API
+    /// version X.
+    UNSUPPORTED_OPTION = 3;
+
+    /// Request is canceled.
+    CANCELED = 4;
+
+    /// The stream is already stopped.
+    ALREADY_STOPPED = 5;
 };

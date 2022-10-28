@@ -941,6 +941,18 @@ void GraphServer::CreateGraphControlledReferenceClock(
           .Build());
 }
 
+void GraphServer::Start(StartRequestView request, StartCompleter::Sync& completer) {
+  TRACE_DURATION("audio", "Graph:::Start");
+  ScopedThreadChecker checker(thread().checker());
+  FX_LOGS(FATAL) << "not implemented";
+}
+
+void GraphServer::Stop(StopRequestView request, StopCompleter::Sync& completer) {
+  TRACE_DURATION("audio", "Graph:::Stop");
+  ScopedThreadChecker checker(thread().checker());
+  FX_LOGS(FATAL) << "not implemented";
+}
+
 void GraphServer::OnShutdown(fidl::UnbindInfo info) {
   // Clearing this list will cancel all pending waiters.
   pending_one_shot_waiters_.clear();

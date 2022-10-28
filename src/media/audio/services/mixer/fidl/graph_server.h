@@ -70,6 +70,8 @@ class GraphServer
                          DeleteGainControlCompleter::Sync& completer) override;
   void CreateGraphControlledReferenceClock(
       CreateGraphControlledReferenceClockCompleter::Sync& completer) override;
+  void Start(StartRequestView request, StartCompleter::Sync& completer) override;
+  void Stop(StopRequestView request, StopCompleter::Sync& completer) override;
 
   // Name of this graph.
   // For debugging only: may be empty or not unique.
