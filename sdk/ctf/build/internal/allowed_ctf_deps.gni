@@ -21,10 +21,8 @@ ALLOWED_CTS_DEPS = [
   "//zircon/system/public:public",
   "//src/session/bin/element_manager:element_manager_comp",
   "//src/session/bin/element_manager:sc_values",
-]
 
-# Individual Rust dependencies that correspond to an SDK element.
-ALLOWED_RUST_DEPS = [
+  # Individual Rust dependencies that correspond to an SDK element.
   "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
   "//src/lib/fidl/rust/fidl:fidl",
   "//src/lib/fuchsia-async:fuchsia-async",
@@ -45,11 +43,12 @@ ALLOWED_RUST_DEPS = [
   "//src/sys/component_manager/testing/echo_server:echo_server",
   "//src/sys/component_manager/tests/fidl:components",
 
+  # Needed by //sdk/ctf/tests/examples/host_tool:tests.
   "//src/developer/ffx:ffx_bin",
-]
 
-ALLOWED_EXPERIMENTAL_FIDL =
-    [ "//sdk/ctf/tests/examples/experimental_fidl:fuchsia.cts.experimental" ]
+  # Needed by //sdk/ctf/tests/examples/experimental_fidl:tests.
+  "//sdk/ctf/tests/examples/experimental_fidl:fuchsia.cts.experimental",
+]
 
 # All targets in these directories and their subdirectories are approved for use in CTF.
 ALLOWED_CTS_DIRS = [

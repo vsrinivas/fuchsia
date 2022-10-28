@@ -12,8 +12,7 @@ import("//sdk/ctf/build/verify_deps_in_sdk.gni")
 template("ctf_element") {
   verify_deps_in_sdk(target_name) {
     forward_variables_from(invoker, "*")
-    allowed_deps =
-        ALLOWED_CTS_DEPS + ALLOWED_RUST_DEPS + ALLOWED_EXPERIMENTAL_FIDL
+    allowed_deps = ALLOWED_CTS_DEPS
     allowed_dirs = ALLOWED_CTS_DIRS
   }
 }
