@@ -1,0 +1,39 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.gpio.init;
+
+using fuchsia.hardware.gpio;
+
+/// Must match ZX_DEVICE_NAME_MAX.
+const MAX_GPIO_FRAGMENT_NAME uint32 = 31;
+
+/// GPIO calls to make as part of an init step. Calls are made in the order that they appear in the
+/// table; multiple steps can be used for a single GPIO if a different order is needed.
+type GpioInitOptions = table {
+    /// If set, the GPIO init driver will call `SetAltFunction` with the given alt function value
+    /// (specific to the GPIO implementation driver).
+    1: alt_function uint64;
+    /// If set, the GPIO init driver will call `ConfigIn` with the given flags.
+    2: input_flags fuchsia.hardware.gpio.GpioFlags;
+    /// If set, the GPIO init driver will call `ConfigOut` with the given output value.
+    3: output_value uint8;
+    /// If set, the GPIO init driver will call `SetDriveStrength` with the given value in microamps.
+    4: drive_strength_ua uint64;
+};
+
+/// A single init step to be performed by the GPIO init driver.
+type GpioInitStep = struct {
+    /// The string name corresponding to a GPIO device fragment obtained by the init driver.
+    fragment_name string:MAX_GPIO_FRAGMENT_NAME;
+    /// Zero or more GPIO protocol calls to make on this fragment.
+    options GpioInitOptions;
+};
+
+/// Passed to the GPIO init driver in metadata as DEVICE_METADATA_GPIO_INIT_STEPS. Steps are
+/// processed sequentially in the order that they appear in the vector. Processing occurs once
+/// during the GPIO init driver's bind hook.
+type GpioInitMetadata = struct {
+    steps vector<GpioInitStep>:MAX;
+};
