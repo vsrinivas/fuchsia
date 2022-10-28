@@ -752,12 +752,18 @@ impl FlatlandSceneManager {
             .push(request_present_with_pingback(&self.scene_flatland_presentation_sender)?);
 
         let _child_status = child_view_watcher.get_status().await?;
-        let mut child_view_ref = child_view_watcher.get_view_ref().await?;
+        let child_view_ref = child_view_watcher.get_view_ref().await?;
         let child_view_ref_copy = scenic::duplicate_view_ref(&child_view_ref)?;
 
-        let request_focus_result =
-            self.root_flatland.focuser.request_focus(&mut child_view_ref).await;
-        match request_focus_result {
+        let auto_focus_result = self
+            .root_flatland
+            .focuser
+            .set_auto_focus(ui_views::FocuserSetAutoFocusRequest {
+                view_ref: Some(child_view_ref),
+                ..ui_views::FocuserSetAutoFocusRequest::EMPTY
+            })
+            .await;
+        match auto_focus_result {
             Err(e) => warn!("Request focus failed with err: {}", e),
             Ok(Err(value)) => warn!("Request focus failed with err: {:?}", value),
             Ok(_) => {}
