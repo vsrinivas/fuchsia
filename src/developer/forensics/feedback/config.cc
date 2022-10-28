@@ -24,12 +24,16 @@ const char kSchema[] = R"({
     "enable_data_redaction": {
       "type": "boolean"
     },
+    "enable_hourly_snapshots": {
+      "type": "boolean"
+    },
     "enable_limit_inspect_data": {
       "type": "boolean"
     }
   },
   "required": [
     "enable_data_redaction",
+    "enable_hourly_snapshots",
     "enable_limit_inspect_data"
   ],
   "additionalProperties": false
@@ -67,6 +71,7 @@ std::optional<BuildTypeConfig> ReadConfig(const std::string& filepath) {
 
   return BuildTypeConfig{
       .enable_data_redaction = config["enable_data_redaction"].GetBool(),
+      .enable_hourly_snapshots = config["enable_hourly_snapshots"].GetBool(),
       .enable_limit_inspect_data = config["enable_limit_inspect_data"].GetBool(),
   };
 }

@@ -28,6 +28,7 @@
 #include "src/developer/forensics/crash_reports/snapshot_collector.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/annotations/types.h"
+#include "src/developer/forensics/feedback/config.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/developer/forensics/utils/utc_clock_ready_watcher.h"
 #include "src/developer/forensics/utils/utc_time_provider.h"
@@ -41,7 +42,8 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
  public:
   CrashReporter(async_dispatcher_t* dispatcher,
                 const std::shared_ptr<sys::ServiceDirectory>& services, timekeeper::Clock* clock,
-                const std::shared_ptr<InfoContext>& info_context, Config config,
+                const std::shared_ptr<InfoContext>& info_context,
+                feedback::BuildTypeConfig build_type_config, Config config,
                 CrashRegister* crash_register, LogTags* tags, CrashServer* crash_server,
                 ReportStore* report_store, feedback_data::DataProviderInternal* data_provider,
                 zx::duration snapshot_collector_window_duration,

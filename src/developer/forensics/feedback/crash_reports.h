@@ -19,6 +19,7 @@
 #include "src/developer/forensics/crash_reports/log_tags.h"
 #include "src/developer/forensics/crash_reports/report_store.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
+#include "src/developer/forensics/feedback/config.h"
 #include "src/developer/forensics/feedback_data/data_provider.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/developer/forensics/utils/storage_size.h"
@@ -28,6 +29,7 @@ namespace forensics::feedback {
 class CrashReports {
  public:
   struct Options {
+    BuildTypeConfig build_type_config;
     crash_reports::Config config;
     StorageSize snapshot_store_max_archives_size;
     zx::duration snapshot_collector_window_duration;

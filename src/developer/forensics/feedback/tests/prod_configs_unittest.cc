@@ -25,6 +25,7 @@ TEST_F(ProdConfigTest, Default) {
   ASSERT_TRUE(config.has_value());
 
   EXPECT_FALSE(config->enable_data_redaction);
+  EXPECT_FALSE(config->enable_hourly_snapshots);
   EXPECT_FALSE(config->enable_limit_inspect_data);
 }
 
@@ -33,6 +34,7 @@ TEST_F(ProdConfigTest, User) {
   ASSERT_TRUE(config.has_value());
 
   EXPECT_TRUE(config->enable_data_redaction);
+  EXPECT_FALSE(config->enable_hourly_snapshots);
   EXPECT_TRUE(config->enable_limit_inspect_data);
 }
 
@@ -41,6 +43,7 @@ TEST_F(ProdConfigTest, Userdebug) {
   ASSERT_TRUE(config.has_value());
 
   EXPECT_FALSE(config->enable_data_redaction);
+  EXPECT_TRUE(config->enable_hourly_snapshots);
   EXPECT_FALSE(config->enable_limit_inspect_data);
 }
 
