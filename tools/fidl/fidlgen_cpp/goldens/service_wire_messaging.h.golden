@@ -278,10 +278,25 @@ class ::fidl::WireServer<::test_service::FirstProtocol> : public ::fidl::interna
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_service::FirstProtocol;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_service::FirstProtocol>)>;
+
   using MethodOnFirstCompleter = ::fidl::internal::WireCompleter<::test_service::FirstProtocol::MethodOnFirst>;
 
   virtual void MethodOnFirst(
       MethodOnFirstCompleter::Sync& completer) = 0;
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl = this, dispatcher = dispatcher](::fidl::ServerEnd<::test_service::FirstProtocol> request) {
+      (void)::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
  private:
   void dispatch_message(
@@ -539,10 +554,25 @@ class ::fidl::WireServer<::test_service::SecondProtocol> : public ::fidl::intern
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_service::SecondProtocol;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_service::SecondProtocol>)>;
+
   using MethodOnSecondCompleter = ::fidl::internal::WireCompleter<::test_service::SecondProtocol::MethodOnSecond>;
 
   virtual void MethodOnSecond(
       MethodOnSecondCompleter::Sync& completer) = 0;
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl = this, dispatcher = dispatcher](::fidl::ServerEnd<::test_service::SecondProtocol> request) {
+      (void)::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
  private:
   void dispatch_message(
@@ -592,6 +622,22 @@ class EmptyService final {
    private:
 #endif  // __Fuchsia__
   };
+#ifdef __Fuchsia__
+  // Facilitates member protocol registration for servers.
+  class InstanceHandler final : public fidl::ServiceInstanceHandler<::fidl::internal::ChannelTransport> {
+   public:
+    struct Members {
+    };
+
+    InstanceHandler() = default;
+
+    // Construct an instance handler for a FIDL service. It is expected that every member
+    // contained in |members| is initialized with a handler.
+    InstanceHandler(Members members) {
+    }
+  };
+
+#endif  // __Fuchsia__
 };
 
 class SingleMemberService final {
@@ -688,7 +734,7 @@ class SingleMemberService final {
     // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
     ::zx::result<> add_single_member(
         ServiceInstanceHandler::MemberHandler<::test_service::FirstProtocol> handler) {
-      return service_handler_->AddMember<::test_service::FirstProtocol>("single_member", std::move(handler));
+      return service_handler_->AddMember<::test_service::FirstProtocol>(std::move(handler), "single_member");
     }
 
    private:
@@ -696,6 +742,25 @@ class SingleMemberService final {
 
 #endif  // __Fuchsia__
   };
+#ifdef __Fuchsia__
+  // Facilitates member protocol registration for servers.
+  class InstanceHandler final : public fidl::ServiceInstanceHandler<::fidl::internal::ChannelTransport> {
+   public:
+    struct Members {
+      MemberHandler<::test_service::FirstProtocol> single_member;
+    };
+
+    InstanceHandler() = default;
+
+    // Construct an instance handler for a FIDL service. It is expected that every member
+    // contained in |members| is initialized with a handler.
+    InstanceHandler(Members members) {
+      // TODO(https://fxbug.dev/102973): Handle member registration failure.
+      (void)this->AddMember<::test_service::FirstProtocol>(std::move(members.single_member), "single_member");
+    }
+  };
+
+#endif  // __Fuchsia__
 };
 
 class MultiHeterogeneousMemberService final {
@@ -843,7 +908,7 @@ class MultiHeterogeneousMemberService final {
     // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
     ::zx::result<> add_first_member(
         ServiceInstanceHandler::MemberHandler<::test_service::FirstProtocol> handler) {
-      return service_handler_->AddMember<::test_service::FirstProtocol>("first_member", std::move(handler));
+      return service_handler_->AddMember<::test_service::FirstProtocol>(std::move(handler), "first_member");
     }
 
     // Adds member "second_member" to the service instance. |handler| will be invoked on connection
@@ -854,7 +919,7 @@ class MultiHeterogeneousMemberService final {
     // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
     ::zx::result<> add_second_member(
         ServiceInstanceHandler::MemberHandler<::test_service::SecondProtocol> handler) {
-      return service_handler_->AddMember<::test_service::SecondProtocol>("second_member", std::move(handler));
+      return service_handler_->AddMember<::test_service::SecondProtocol>(std::move(handler), "second_member");
     }
 
    private:
@@ -862,6 +927,28 @@ class MultiHeterogeneousMemberService final {
 
 #endif  // __Fuchsia__
   };
+#ifdef __Fuchsia__
+  // Facilitates member protocol registration for servers.
+  class InstanceHandler final : public fidl::ServiceInstanceHandler<::fidl::internal::ChannelTransport> {
+   public:
+    struct Members {
+      MemberHandler<::test_service::FirstProtocol> first_member;
+      MemberHandler<::test_service::SecondProtocol> second_member;
+    };
+
+    InstanceHandler() = default;
+
+    // Construct an instance handler for a FIDL service. It is expected that every member
+    // contained in |members| is initialized with a handler.
+    InstanceHandler(Members members) {
+      // TODO(https://fxbug.dev/102973): Handle member registration failure.
+      (void)this->AddMember<::test_service::FirstProtocol>(std::move(members.first_member), "first_member");
+      // TODO(https://fxbug.dev/102973): Handle member registration failure.
+      (void)this->AddMember<::test_service::SecondProtocol>(std::move(members.second_member), "second_member");
+    }
+  };
+
+#endif  // __Fuchsia__
 };
 
 class MultiHomogeneousMemberService final {
@@ -1009,7 +1096,7 @@ class MultiHomogeneousMemberService final {
     // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
     ::zx::result<> add_first_member(
         ServiceInstanceHandler::MemberHandler<::test_service::FirstProtocol> handler) {
-      return service_handler_->AddMember<::test_service::FirstProtocol>("first_member", std::move(handler));
+      return service_handler_->AddMember<::test_service::FirstProtocol>(std::move(handler), "first_member");
     }
 
     // Adds member "second_member" to the service instance. |handler| will be invoked on connection
@@ -1020,7 +1107,7 @@ class MultiHomogeneousMemberService final {
     // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
     ::zx::result<> add_second_member(
         ServiceInstanceHandler::MemberHandler<::test_service::FirstProtocol> handler) {
-      return service_handler_->AddMember<::test_service::FirstProtocol>("second_member", std::move(handler));
+      return service_handler_->AddMember<::test_service::FirstProtocol>(std::move(handler), "second_member");
     }
 
    private:
@@ -1028,6 +1115,28 @@ class MultiHomogeneousMemberService final {
 
 #endif  // __Fuchsia__
   };
+#ifdef __Fuchsia__
+  // Facilitates member protocol registration for servers.
+  class InstanceHandler final : public fidl::ServiceInstanceHandler<::fidl::internal::ChannelTransport> {
+   public:
+    struct Members {
+      MemberHandler<::test_service::FirstProtocol> first_member;
+      MemberHandler<::test_service::FirstProtocol> second_member;
+    };
+
+    InstanceHandler() = default;
+
+    // Construct an instance handler for a FIDL service. It is expected that every member
+    // contained in |members| is initialized with a handler.
+    InstanceHandler(Members members) {
+      // TODO(https://fxbug.dev/102973): Handle member registration failure.
+      (void)this->AddMember<::test_service::FirstProtocol>(std::move(members.first_member), "first_member");
+      // TODO(https://fxbug.dev/102973): Handle member registration failure.
+      (void)this->AddMember<::test_service::FirstProtocol>(std::move(members.second_member), "second_member");
+    }
+  };
+
+#endif  // __Fuchsia__
 };
 
 }  // namespace test_service

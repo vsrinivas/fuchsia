@@ -1953,6 +1953,8 @@ class ::fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse> : publ
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_protocols::WithAndWithoutRequestResponse;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_protocols::WithAndWithoutRequestResponse>)>;
+
 
     using NoRequestNoResponseCompleter = ::fidl::internal::WireCompleter<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>;
 
@@ -1996,6 +1998,19 @@ class ::fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse> : publ
       ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseRequest* request,
     WithRequestWithResponseCompleter::Sync& completer)= 0;
 
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl=this, dispatcher=dispatcher](::fidl::ServerEnd<::test_protocols::WithAndWithoutRequestResponse> request) {
+        (void) ::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
   private:
   void dispatch_message(
@@ -3534,6 +3549,8 @@ class ::fidl::WireServer<::test_protocols::WithErrorSyntax> : public ::fidl::int
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_protocols::WithErrorSyntax;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_protocols::WithErrorSyntax>)>;
+
 
     using ResponseAsStructCompleter = ::fidl::internal::WireCompleter<::test_protocols::WithErrorSyntax::ResponseAsStruct>;
 
@@ -3559,6 +3576,19 @@ class ::fidl::WireServer<::test_protocols::WithErrorSyntax> : public ::fidl::int
   virtual void HandleInResult(
     HandleInResultCompleter::Sync& completer)= 0;
 
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl=this, dispatcher=dispatcher](::fidl::ServerEnd<::test_protocols::WithErrorSyntax> request) {
+        (void) ::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
   private:
   void dispatch_message(
@@ -5020,6 +5050,8 @@ class ::fidl::WireServer<::test_protocols::ChannelProtocol> : public ::fidl::int
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_protocols::ChannelProtocol;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_protocols::ChannelProtocol>)>;
+
 
     using MethodACompleter = ::fidl::internal::WireCompleter<::test_protocols::ChannelProtocol::MethodA>;
       using MethodARequestView = ::test_protocols::wire::ChannelProtocolMethodARequest*;
@@ -5053,6 +5085,19 @@ class ::fidl::WireServer<::test_protocols::ChannelProtocol> : public ::fidl::int
       ::test_protocols::wire::ChannelProtocolMutateSocketRequest* request,
     MutateSocketCompleter::Sync& completer)= 0;
 
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl=this, dispatcher=dispatcher](::fidl::ServerEnd<::test_protocols::ChannelProtocol> request) {
+        (void) ::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
   private:
   void dispatch_message(
@@ -5845,6 +5890,8 @@ class ::fidl::WireServer<::test_protocols::Transitional> : public ::fidl::intern
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_protocols::Transitional;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_protocols::Transitional>)>;
+
 
     using RequestCompleter = ::fidl::internal::WireCompleter<::test_protocols::Transitional::Request>;
       using RequestRequestView = ::test_protocols::wire::TransitionalRequestRequest*;
@@ -5862,6 +5909,19 @@ class ::fidl::WireServer<::test_protocols::Transitional> : public ::fidl::intern
       ::test_protocols::wire::TransitionalOneWayRequest* request,
     OneWayCompleter::Sync& completer){ completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl=this, dispatcher=dispatcher](::fidl::ServerEnd<::test_protocols::Transitional> request) {
+        (void) ::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
   private:
   void dispatch_message(
@@ -6164,6 +6224,8 @@ class ::fidl::WireServer<::test_protocols::DiscoverableProtocol> : public ::fidl
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_protocols::DiscoverableProtocol;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>)>;
+
 
     using MethodCompleter = ::fidl::internal::WireCompleter<::test_protocols::DiscoverableProtocol::Method>;
 
@@ -6171,6 +6233,19 @@ class ::fidl::WireServer<::test_protocols::DiscoverableProtocol> : public ::fidl
   virtual void Method(
     MethodCompleter::Sync& completer)= 0;
 
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl=this, dispatcher=dispatcher](::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> request) {
+        (void) ::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
   private:
   void dispatch_message(
@@ -6326,7 +6401,22 @@ class ::fidl::WireServer<::test_protocols::AnotherDiscoverableProtocol> : public
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_protocols::AnotherDiscoverableProtocol;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_protocols::AnotherDiscoverableProtocol>)>;
 
+
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl=this, dispatcher=dispatcher](::fidl::ServerEnd<::test_protocols::AnotherDiscoverableProtocol> request) {
+        (void) ::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
   private:
   void dispatch_message(
@@ -7178,6 +7268,8 @@ class ::fidl::WireServer<::test_protocols::HandleRightsProtocol> : public ::fidl
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_protocols::HandleRightsProtocol;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_protocols::HandleRightsProtocol>)>;
+
 
     using NoResponseMethodCompleter = ::fidl::internal::WireCompleter<::test_protocols::HandleRightsProtocol::NoResponseMethod>;
       using NoResponseMethodRequestView = ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest*;
@@ -7195,6 +7287,19 @@ class ::fidl::WireServer<::test_protocols::HandleRightsProtocol> : public ::fidl
       ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest* request,
     ResponseMethodCompleter::Sync& completer)= 0;
 
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl=this, dispatcher=dispatcher](::fidl::ServerEnd<::test_protocols::HandleRightsProtocol> request) {
+        (void) ::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
   private:
   void dispatch_message(
@@ -8483,6 +8588,8 @@ class ::fidl::WireServer<::test_protocols::WithProtocolEnds> : public ::fidl::in
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_protocols::WithProtocolEnds;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_protocols::WithProtocolEnds>)>;
+
 
     using ClientEndsCompleter = ::fidl::internal::WireCompleter<::test_protocols::WithProtocolEnds::ClientEnds>;
       using ClientEndsRequestView = ::test_protocols::wire::WithProtocolEndsClientEndsRequest*;
@@ -8508,6 +8615,19 @@ class ::fidl::WireServer<::test_protocols::WithProtocolEnds> : public ::fidl::in
       ::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest* request,
     StructContainingEndsCompleter::Sync& completer)= 0;
 
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl=this, dispatcher=dispatcher](::fidl::ServerEnd<::test_protocols::WithProtocolEnds> request) {
+        (void) ::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
   private:
   void dispatch_message(
@@ -8838,6 +8958,8 @@ class ::fidl::WireServer<::test_protocols::ManyParameters> : public ::fidl::inte
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_protocols::ManyParameters;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_protocols::ManyParameters>)>;
+
 
     using FifteenCompleter = ::fidl::internal::WireCompleter<::test_protocols::ManyParameters::Fifteen>;
       using FifteenRequestView = ::test_protocols::wire::ManyParametersFifteenRequest*;
@@ -8847,6 +8969,19 @@ class ::fidl::WireServer<::test_protocols::ManyParameters> : public ::fidl::inte
       ::test_protocols::wire::ManyParametersFifteenRequest* request,
     FifteenCompleter::Sync& completer)= 0;
 
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl=this, dispatcher=dispatcher](::fidl::ServerEnd<::test_protocols::ManyParameters> request) {
+        (void) ::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
   private:
   void dispatch_message(
@@ -9349,6 +9484,8 @@ class ::fidl::WireServer<::test_protocols::MethodWithUnion> : public ::fidl::int
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_protocols::MethodWithUnion;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_protocols::MethodWithUnion>)>;
+
 
     using UnionMethodCompleter = ::fidl::internal::WireCompleter<::test_protocols::MethodWithUnion::UnionMethod>;
       using UnionMethodRequestView = ::test_protocols::wire::MethodWithUnionUnionMethodRequest*;
@@ -9358,6 +9495,19 @@ class ::fidl::WireServer<::test_protocols::MethodWithUnion> : public ::fidl::int
       ::test_protocols::wire::MethodWithUnionUnionMethodRequest* request,
     UnionMethodCompleter::Sync& completer)= 0;
 
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl=this, dispatcher=dispatcher](::fidl::ServerEnd<::test_protocols::MethodWithUnion> request) {
+        (void) ::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
   private:
   void dispatch_message(

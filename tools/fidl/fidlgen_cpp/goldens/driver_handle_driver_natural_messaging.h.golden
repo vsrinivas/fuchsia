@@ -55,6 +55,21 @@ class ::fdf::Server<::test_driverhandle::DriverProtocol> : public ::fidl::intern
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_driverhandle::DriverProtocol;
 
+  using Handler = fit::function<void(::fdf::ServerEnd<::test_driverhandle::DriverProtocol>)>;
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(fdf_dispatcher_t* dispatcher) {
+    return [impl = this, dispatcher = dispatcher](::fdf::ServerEnd<::test_driverhandle::DriverProtocol> request) {
+      (void)::fdf::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
+
  private:
   void dispatch_message(
       ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
@@ -138,11 +153,26 @@ class ::fdf::Server<::test_driverhandle::HandlesInProtocol> : public ::fidl::int
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_driverhandle::HandlesInProtocol;
 
+  using Handler = fit::function<void(::fdf::ServerEnd<::test_driverhandle::HandlesInProtocol>)>;
+
   using SendHandlesRequest = ::fidl::Request<::test_driverhandle::HandlesInProtocol::SendHandles>;
   using SendHandlesCompleter = ::fidl::internal::NaturalCompleter<::test_driverhandle::HandlesInProtocol::SendHandles>;
 
   virtual void SendHandles(SendHandlesRequest& request,
                            SendHandlesCompleter::Sync& completer) = 0;
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(fdf_dispatcher_t* dispatcher) {
+    return [impl = this, dispatcher = dispatcher](::fdf::ServerEnd<::test_driverhandle::HandlesInProtocol> request) {
+      (void)::fdf::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
  private:
   void dispatch_message(

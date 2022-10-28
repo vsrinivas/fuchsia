@@ -28,6 +28,8 @@ class {{ .WireServer }} : public ::fidl::internal::IncomingMessageDispatcher
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = {{ . }};
 
+  using Handler = fit::function<void({{ .ServerEnd }})>;
+
 {{ "" }}
   {{- range .Methods }}
     {{- if .HasRequest }}
@@ -53,6 +55,19 @@ class {{ .WireServer }} : public ::fidl::internal::IncomingMessageDispatcher
 {{ "" }}
     {{- end }}
   {{- end }}
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler({{ .Dispatcher }}* dispatcher) {
+    return [impl=this, dispatcher=dispatcher]({{ .ServerEnd }} request) {
+        (void) {{ .BindServer }}(dispatcher, std::move(request), impl);
+    };
+  }
 
   private:
   {{- /* Note that this implementation is snake_case to avoid name conflicts. */}}
@@ -89,6 +104,8 @@ class {{ .NaturalServer }} : public ::fidl::internal::IncomingMessageDispatcher
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = {{ .Wire }};
 
+  using Handler = fit::function<void({{ .ServerEnd }})>;
+
 {{ "" }}
   {{- range .ClientMethods }}
     {{- if .HasRequestPayload }}
@@ -110,6 +127,19 @@ class {{ .NaturalServer }} : public ::fidl::internal::IncomingMessageDispatcher
     {{- end }}
 {{ "" }}
   {{- end }}
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler({{ .Dispatcher }}* dispatcher) {
+    return [impl=this, dispatcher=dispatcher]({{ .ServerEnd }} request) {
+        (void) {{ .BindServer }}(dispatcher, std::move(request), impl);
+    };
+  }
 
   private:
   {{- /* Note that this implementation is snake_case to avoid name conflicts. */}}

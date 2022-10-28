@@ -260,6 +260,8 @@ class ::fidl::Server<::test_errorsyntax::ExampleUseOfErrorSyntax> : public ::fid
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_errorsyntax::ExampleUseOfErrorSyntax;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_errorsyntax::ExampleUseOfErrorSyntax>)>;
+
   using ComposedCallWhichMayFailRequest = ::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>;
   using ComposedCallWhichMayFailCompleter = ::fidl::internal::NaturalCompleter<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>;
 
@@ -271,6 +273,19 @@ class ::fidl::Server<::test_errorsyntax::ExampleUseOfErrorSyntax> : public ::fid
 
   virtual void CallWhichMayFail(CallWhichMayFailRequest& request,
                                 CallWhichMayFailCompleter::Sync& completer) = 0;
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl = this, dispatcher = dispatcher](::fidl::ServerEnd<::test_errorsyntax::ExampleUseOfErrorSyntax> request) {
+      (void)::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
  private:
   void dispatch_message(

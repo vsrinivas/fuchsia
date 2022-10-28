@@ -147,6 +147,21 @@ class ::fidl::WireServer<::test_versions::OtherProtocol> : public ::fidl::intern
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_versions::OtherProtocol;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_versions::OtherProtocol>)>;
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl = this, dispatcher = dispatcher](::fidl::ServerEnd<::test_versions::OtherProtocol> request) {
+      (void)::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
+
  private:
   void dispatch_message(
       ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
@@ -403,10 +418,25 @@ class ::fidl::WireServer<::test_versions::Protocol> : public ::fidl::internal::I
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_versions::Protocol;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_versions::Protocol>)>;
+
   using FooCompleter = ::fidl::internal::WireCompleter<::test_versions::Protocol::Foo>;
 
   virtual void Foo(
       FooCompleter::Sync& completer) = 0;
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl = this, dispatcher = dispatcher](::fidl::ServerEnd<::test_versions::Protocol> request) {
+      (void)::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
  private:
   void dispatch_message(
@@ -514,7 +544,7 @@ class Service final {
     // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
     ::zx::result<> add_p(
         ServiceInstanceHandler::MemberHandler<::test_versions::Protocol> handler) {
-      return service_handler_->AddMember<::test_versions::Protocol>("p", std::move(handler));
+      return service_handler_->AddMember<::test_versions::Protocol>(std::move(handler), "p");
     }
 
    private:
@@ -522,6 +552,25 @@ class Service final {
 
 #endif  // __Fuchsia__
   };
+#ifdef __Fuchsia__
+  // Facilitates member protocol registration for servers.
+  class InstanceHandler final : public fidl::ServiceInstanceHandler<::fidl::internal::ChannelTransport> {
+   public:
+    struct Members {
+      MemberHandler<::test_versions::Protocol> p;
+    };
+
+    InstanceHandler() = default;
+
+    // Construct an instance handler for a FIDL service. It is expected that every member
+    // contained in |members| is initialized with a handler.
+    InstanceHandler(Members members) {
+      // TODO(https://fxbug.dev/102973): Handle member registration failure.
+      (void)this->AddMember<::test_versions::Protocol>(std::move(members.p), "p");
+    }
+  };
+
+#endif  // __Fuchsia__
 };
 
 }  // namespace test_versions

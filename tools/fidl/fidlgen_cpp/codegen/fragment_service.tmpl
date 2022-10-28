@@ -122,7 +122,7 @@ class {{ .Name }} final {
     // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
     ::zx::result<> add_{{ .Name }}(
         ServiceInstanceHandler::MemberHandler<{{ .ProtocolType }}> handler) {
-      return service_handler_->AddMember<{{ .ProtocolType }}>("{{ .Name }}", std::move(handler));
+      return service_handler_->AddMember<{{ .ProtocolType }}>(std::move(handler), "{{ .Name }}");
     }
     {{- end }}
 
@@ -132,5 +132,29 @@ class {{ .Name }} final {
     {{- end }}
   {{ EndifFuchsia }}
   };
+
+  {{- IfdefFuchsia -}}
+  // Facilitates member protocol registration for servers.
+  class InstanceHandler final : public fidl::ServiceInstanceHandler<{{ .Transport.Type }}> {
+   public:
+    struct Members {
+      {{- range .Members }}
+        MemberHandler<{{ .ProtocolType }}> {{ .Name }};
+      {{- end }}
+    };
+
+    InstanceHandler() = default;
+
+    // Construct an instance handler for a FIDL service. It is expected that every member
+    // contained in |members| is initialized with a handler.
+    InstanceHandler(Members members) {
+      {{- range .Members }}
+        // TODO(https://fxbug.dev/102973): Handle member registration failure.
+        (void) this->AddMember<{{ .ProtocolType }}>(std::move(members.{{ .Name }}), "{{ .Name }}");
+      {{- end }}
+    }
+
+  };
+  {{ EndifFuchsia }}
 };
 {{- end }}

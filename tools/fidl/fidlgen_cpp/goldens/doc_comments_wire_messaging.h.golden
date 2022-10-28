@@ -371,6 +371,8 @@ class ::fidl::WireServer<::test_doccomments::Interface> : public ::fidl::interna
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_doccomments::Interface;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_doccomments::Interface>)>;
+
   using MethodCompleter = ::fidl::internal::WireCompleter<::test_doccomments::Interface::Method>;
 
   /// method comment #1
@@ -378,6 +380,19 @@ class ::fidl::WireServer<::test_doccomments::Interface> : public ::fidl::interna
   /// method comment #3
   virtual void Method(
       MethodCompleter::Sync& completer) = 0;
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl = this, dispatcher = dispatcher](::fidl::ServerEnd<::test_doccomments::Interface> request) {
+      (void)::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
  private:
   void dispatch_message(
@@ -488,7 +503,7 @@ class Service final {
     // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
     ::zx::result<> add_interface(
         ServiceInstanceHandler::MemberHandler<::test_doccomments::Interface> handler) {
-      return service_handler_->AddMember<::test_doccomments::Interface>("interface", std::move(handler));
+      return service_handler_->AddMember<::test_doccomments::Interface>(std::move(handler), "interface");
     }
 
    private:
@@ -496,6 +511,25 @@ class Service final {
 
 #endif  // __Fuchsia__
   };
+#ifdef __Fuchsia__
+  // Facilitates member protocol registration for servers.
+  class InstanceHandler final : public fidl::ServiceInstanceHandler<::fidl::internal::ChannelTransport> {
+   public:
+    struct Members {
+      MemberHandler<::test_doccomments::Interface> interface;
+    };
+
+    InstanceHandler() = default;
+
+    // Construct an instance handler for a FIDL service. It is expected that every member
+    // contained in |members| is initialized with a handler.
+    InstanceHandler(Members members) {
+      // TODO(https://fxbug.dev/102973): Handle member registration failure.
+      (void)this->AddMember<::test_doccomments::Interface>(std::move(members.interface), "interface");
+    }
+  };
+
+#endif  // __Fuchsia__
 };
 
 }  // namespace test_doccomments

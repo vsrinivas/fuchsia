@@ -29,17 +29,6 @@ class ServiceInstanceHandler {
  public:
   using TransportType = typename Transport::OwnedType;
 
-  ServiceInstanceHandler() = default;
-  ~ServiceInstanceHandler() = default;
-
-  // Disallow copying.
-  ServiceInstanceHandler(const ServiceInstanceHandler&) = delete;
-  ServiceInstanceHandler& operator=(const ServiceInstanceHandler&) = delete;
-
-  // Enable moving.
-  ServiceInstanceHandler(ServiceInstanceHandler&&) = default;
-  ServiceInstanceHandler& operator=(ServiceInstanceHandler&&) = default;
-
   // User-defined action for handling a connection attempt to a
   // member FIDL protocol defined by |Protocol|.
   // For example, if |Protocol| is spoken over Zircon channels, the handler takes a
@@ -51,6 +40,17 @@ class ServiceInstanceHandler {
   // member FIDL protocol.
   using AnyMemberHandler = fit::function<void(TransportType)>;
 
+  ServiceInstanceHandler() = default;
+  ~ServiceInstanceHandler() = default;
+
+  // Disallow copying.
+  ServiceInstanceHandler(const ServiceInstanceHandler&) = delete;
+  ServiceInstanceHandler& operator=(const ServiceInstanceHandler&) = delete;
+
+  // Enable moving.
+  ServiceInstanceHandler(ServiceInstanceHandler&&) noexcept = default;
+  ServiceInstanceHandler& operator=(ServiceInstanceHandler&&) noexcept = default;
+
   // Add a |member| to the instance, which will be handled by |handler|.
   //
   // This method specifies the exact protocol |Protocol|, hence should be
@@ -60,7 +60,7 @@ class ServiceInstanceHandler {
   //
   // ZX_ERR_ALREADY_EXISTS: The member already exists.
   template <typename Protocol>
-  zx::result<> AddMember(std::string_view member, MemberHandler<Protocol> handler) {
+  zx::result<> AddMember(MemberHandler<Protocol> handler, std::string_view member) {
     std::string owned_member = std::string(member);
     if (handlers_.count(owned_member) != 0) {
       return zx::make_result(ZX_ERR_ALREADY_EXISTS);

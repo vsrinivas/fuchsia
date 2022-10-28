@@ -161,11 +161,26 @@ class ::fidl::Server<::test_inheritance::Super> : public ::fidl::internal::Incom
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_inheritance::Super;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_inheritance::Super>)>;
+
   using FooRequest = ::fidl::Request<::test_inheritance::Super::Foo>;
   using FooCompleter = ::fidl::internal::NaturalCompleter<::test_inheritance::Super::Foo>;
 
   virtual void Foo(FooRequest& request,
                    FooCompleter::Sync& completer) = 0;
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl = this, dispatcher = dispatcher](::fidl::ServerEnd<::test_inheritance::Super> request) {
+      (void)::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
  private:
   void dispatch_message(
@@ -326,11 +341,26 @@ class ::fidl::Server<::test_inheritance::Sub> : public ::fidl::internal::Incomin
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_inheritance::Sub;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_inheritance::Sub>)>;
+
   using FooRequest = ::fidl::Request<::test_inheritance::Sub::Foo>;
   using FooCompleter = ::fidl::internal::NaturalCompleter<::test_inheritance::Sub::Foo>;
 
   virtual void Foo(FooRequest& request,
                    FooCompleter::Sync& completer) = 0;
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl = this, dispatcher = dispatcher](::fidl::ServerEnd<::test_inheritance::Sub> request) {
+      (void)::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
  private:
   void dispatch_message(

@@ -106,6 +106,21 @@ class ::fidl::Server<::test_protocolrequest::Child> : public ::fidl::internal::I
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_protocolrequest::Child;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_protocolrequest::Child>)>;
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl = this, dispatcher = dispatcher](::fidl::ServerEnd<::test_protocolrequest::Child> request) {
+      (void)::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
+
  private:
   void dispatch_message(
       ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
@@ -352,6 +367,8 @@ class ::fidl::Server<::test_protocolrequest::Parent> : public ::fidl::internal::
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_protocolrequest::Parent;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_protocolrequest::Parent>)>;
+
   using GetChildCompleter = ::fidl::internal::NaturalCompleter<::test_protocolrequest::Parent::GetChild>;
 
   virtual void GetChild(
@@ -373,6 +390,19 @@ class ::fidl::Server<::test_protocolrequest::Parent> : public ::fidl::internal::
 
   virtual void TakeChildRequest(TakeChildRequestRequest& request,
                                 TakeChildRequestCompleter::Sync& completer) = 0;
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl = this, dispatcher = dispatcher](::fidl::ServerEnd<::test_protocolrequest::Parent> request) {
+      (void)::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
  private:
   void dispatch_message(

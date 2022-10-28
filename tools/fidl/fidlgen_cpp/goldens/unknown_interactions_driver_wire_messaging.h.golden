@@ -5108,6 +5108,8 @@ class ::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverPro
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
 
+  using Handler = fit::function<void(::fdf::ServerEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol>)>;
+
 
     using StrictOneWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>;
 
@@ -5235,6 +5237,19 @@ class ::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverPro
        fdf::Arena& arena,
     FlexibleTwoWayTableErrCompleter::Sync& completer)= 0;
 
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(fdf_dispatcher_t* dispatcher) {
+    return [impl=this, dispatcher=dispatcher](::fdf::ServerEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> request) {
+        (void) ::fdf::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
   private:
   void dispatch_message(
@@ -7918,6 +7933,8 @@ class ::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDrive
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol;
 
+  using Handler = fit::function<void(::fdf::ServerEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>)>;
+
 
     using StrictOneWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>;
 
@@ -7989,6 +8006,19 @@ class ::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDrive
        fdf::Arena& arena,
     StrictTwoWayTableErrCompleter::Sync& completer)= 0;
 
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(fdf_dispatcher_t* dispatcher) {
+    return [impl=this, dispatcher=dispatcher](::fdf::ServerEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> request) {
+        (void) ::fdf::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
   private:
   void dispatch_message(
@@ -10546,6 +10576,8 @@ class ::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsClosedDri
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
 
+  using Handler = fit::function<void(::fdf::ServerEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>)>;
+
 
     using StrictOneWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>;
 
@@ -10610,6 +10642,19 @@ class ::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsClosedDri
        fdf::Arena& arena,
     StrictTwoWayTableErrCompleter::Sync& completer)= 0;
 
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(fdf_dispatcher_t* dispatcher) {
+    return [impl=this, dispatcher=dispatcher](::fdf::ServerEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> request) {
+        (void) ::fdf::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
   private:
   void dispatch_message(

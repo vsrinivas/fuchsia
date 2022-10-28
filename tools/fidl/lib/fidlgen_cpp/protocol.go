@@ -445,9 +445,22 @@ func (p Protocol) ServerEnd() string {
 	return p.endpointTypeName("Server")
 }
 
+// BindServer returns the proper |BindServer| function for this namespace
+func (p Protocol) BindServer() string {
+	return fmt.Sprintf("::%s::BindServer", p.Transport.Namespace)
+}
+
 // UnownedServerEnd returns the type for unowned server ends of this protocol in the new C++ bindings.
 func (p Protocol) UnownedServerEnd() string {
 	return p.endpointTypeName("UnownedServer")
+}
+
+func (p Protocol) Dispatcher() string {
+	if p.Transport.Name == "Driver" {
+		return "fdf_dispatcher_t"
+	}
+
+	return "async_dispatcher_t"
 }
 
 func newProtocol(inner protocolInner) Protocol {

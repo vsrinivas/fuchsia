@@ -187,7 +187,22 @@ class ::fidl::WireServer<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> : public
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_bindingsdenylist::OnlyLibfuzzerAndDeps;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>)>;
 
+
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl=this, dispatcher=dispatcher](::fidl::ServerEnd<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> request) {
+        (void) ::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
   private:
   void dispatch_message(
@@ -342,7 +357,22 @@ class ::fidl::WireServer<::test_bindingsdenylist::OnlyCppAndDeps> : public ::fid
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_bindingsdenylist::OnlyCppAndDeps;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_bindingsdenylist::OnlyCppAndDeps>)>;
 
+
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl=this, dispatcher=dispatcher](::fidl::ServerEnd<::test_bindingsdenylist::OnlyCppAndDeps> request) {
+        (void) ::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
   private:
   void dispatch_message(
@@ -2277,6 +2307,8 @@ class ::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding> : public ::fi
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_bindingsdenylist::DenyEachBinding;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_bindingsdenylist::DenyEachBinding>)>;
+
 
     using OnlyDenyDartCompleter = ::fidl::internal::WireCompleter<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>;
       using OnlyDenyDartRequestView = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest*;
@@ -2318,6 +2350,19 @@ class ::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding> : public ::fi
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest* request,
     OnlyDenySyzkallerCompleter::Sync& completer)= 0;
 
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl=this, dispatcher=dispatcher](::fidl::ServerEnd<::test_bindingsdenylist::DenyEachBinding> request) {
+        (void) ::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
   private:
   void dispatch_message(
@@ -2472,7 +2517,22 @@ class ::fidl::WireServer<::test_bindingsdenylist::Allowed> : public ::fidl::inte
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_bindingsdenylist::Allowed;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_bindingsdenylist::Allowed>)>;
 
+
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl=this, dispatcher=dispatcher](::fidl::ServerEnd<::test_bindingsdenylist::Allowed> request) {
+        (void) ::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
   private:
   void dispatch_message(
@@ -2922,6 +2982,8 @@ class ::fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext> : publ
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_bindingsdenylist::ImportsSameNameContext;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_bindingsdenylist::ImportsSameNameContext>)>;
+
 
     using UnattributedCompleter = ::fidl::internal::WireCompleter<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>;
 
@@ -2935,6 +2997,19 @@ class ::fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext> : publ
   virtual void AlwaysAppearsInImportingLibrary(
     AlwaysAppearsInImportingLibraryCompleter::Sync& completer)= 0;
 
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl=this, dispatcher=dispatcher](::fidl::ServerEnd<::test_bindingsdenylist::ImportsSameNameContext> request) {
+        (void) ::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
   private:
   void dispatch_message(

@@ -2322,6 +2322,8 @@ class ::fidl::Server<::test_unknowninteractions::UnknownInteractionsProtocol> : 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_unknowninteractions::UnknownInteractionsProtocol>)>;
+
 
   using StrictOneWayCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>;
 
@@ -2449,6 +2451,19 @@ class ::fidl::Server<::test_unknowninteractions::UnknownInteractionsProtocol> : 
       FlexibleTwoWayTableErrCompleter::Sync& completer
   )= 0;
 
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl=this, dispatcher=dispatcher](::fidl::ServerEnd<::test_unknowninteractions::UnknownInteractionsProtocol> request) {
+        (void) ::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
   private:
   void dispatch_message(
@@ -4155,6 +4170,8 @@ class ::fidl::Server<::test_unknowninteractions::UnknownInteractionsAjarProtocol
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol>)>;
+
 
   using StrictOneWayCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>;
 
@@ -4226,6 +4243,19 @@ class ::fidl::Server<::test_unknowninteractions::UnknownInteractionsAjarProtocol
       StrictTwoWayTableErrCompleter::Sync& completer
   )= 0;
 
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl=this, dispatcher=dispatcher](::fidl::ServerEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> request) {
+        (void) ::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
   private:
   void dispatch_message(
@@ -5453,6 +5483,8 @@ class ::fidl::Server<::test_unknowninteractions::UnknownInteractionsClosedProtoc
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol>)>;
+
 
   using StrictOneWayCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>;
 
@@ -5517,6 +5549,19 @@ class ::fidl::Server<::test_unknowninteractions::UnknownInteractionsClosedProtoc
       StrictTwoWayTableErrCompleter::Sync& completer
   )= 0;
 
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl=this, dispatcher=dispatcher](::fidl::ServerEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> request) {
+        (void) ::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
   private:
   void dispatch_message(

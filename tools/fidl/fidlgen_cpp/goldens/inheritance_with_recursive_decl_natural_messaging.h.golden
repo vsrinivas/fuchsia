@@ -123,11 +123,26 @@ class ::fidl::Server<::test_inheritancewithrecursivedecl::Parent> : public ::fid
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_inheritancewithrecursivedecl::Parent;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>)>;
+
   using FirstRequest = ::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First>;
   using FirstCompleter = ::fidl::internal::NaturalCompleter<::test_inheritancewithrecursivedecl::Parent::First>;
 
   virtual void First(FirstRequest& request,
                      FirstCompleter::Sync& completer) = 0;
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl = this, dispatcher = dispatcher](::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent> request) {
+      (void)::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
  private:
   void dispatch_message(
@@ -275,6 +290,8 @@ class ::fidl::Server<::test_inheritancewithrecursivedecl::Child> : public ::fidl
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_inheritancewithrecursivedecl::Child;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Child>)>;
+
   using FirstRequest = ::fidl::Request<::test_inheritancewithrecursivedecl::Child::First>;
   using FirstCompleter = ::fidl::internal::NaturalCompleter<::test_inheritancewithrecursivedecl::Child::First>;
 
@@ -286,6 +303,19 @@ class ::fidl::Server<::test_inheritancewithrecursivedecl::Child> : public ::fidl
 
   virtual void Second(SecondRequest& request,
                       SecondCompleter::Sync& completer) = 0;
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl = this, dispatcher = dispatcher](::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Child> request) {
+      (void)::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
  private:
   void dispatch_message(

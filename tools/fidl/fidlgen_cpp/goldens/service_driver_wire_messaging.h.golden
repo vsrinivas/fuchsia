@@ -57,6 +57,22 @@ class EmptyService final {
    private:
 #endif  // __Fuchsia__
   };
+#ifdef __Fuchsia__
+  // Facilitates member protocol registration for servers.
+  class InstanceHandler final : public fidl::ServiceInstanceHandler<::fidl::internal::ChannelTransport> {
+   public:
+    struct Members {
+    };
+
+    InstanceHandler() = default;
+
+    // Construct an instance handler for a FIDL service. It is expected that every member
+    // contained in |members| is initialized with a handler.
+    InstanceHandler(Members members) {
+    }
+  };
+
+#endif  // __Fuchsia__
 };
 
 }  // namespace test_service

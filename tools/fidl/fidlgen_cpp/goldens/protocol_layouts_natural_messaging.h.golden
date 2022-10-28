@@ -1261,6 +1261,8 @@ class ::fidl::Server<::test_protocollayouts::MainProtocol> : public ::fidl::inte
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_protocollayouts::MainProtocol;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_protocollayouts::MainProtocol>)>;
+
   using OneWayAnonComposedRequest = ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnonComposed>;
   using OneWayAnonComposedCompleter = ::fidl::internal::NaturalCompleter<::test_protocollayouts::MainProtocol::OneWayAnonComposed>;
 
@@ -1350,6 +1352,19 @@ class ::fidl::Server<::test_protocollayouts::MainProtocol> : public ::fidl::inte
 
   virtual void TwoWayAnonWithError(TwoWayAnonWithErrorRequest& request,
                                    TwoWayAnonWithErrorCompleter::Sync& completer) = 0;
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl = this, dispatcher = dispatcher](::fidl::ServerEnd<::test_protocollayouts::MainProtocol> request) {
+      (void)::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
  private:
   void dispatch_message(

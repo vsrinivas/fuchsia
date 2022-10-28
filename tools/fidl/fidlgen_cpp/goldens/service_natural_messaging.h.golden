@@ -115,10 +115,25 @@ class ::fidl::Server<::test_service::FirstProtocol> : public ::fidl::internal::I
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_service::FirstProtocol;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_service::FirstProtocol>)>;
+
   using MethodOnFirstCompleter = ::fidl::internal::NaturalCompleter<::test_service::FirstProtocol::MethodOnFirst>;
 
   virtual void MethodOnFirst(
       MethodOnFirstCompleter::Sync& completer) = 0;
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl = this, dispatcher = dispatcher](::fidl::ServerEnd<::test_service::FirstProtocol> request) {
+      (void)::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
  private:
   void dispatch_message(
@@ -243,10 +258,25 @@ class ::fidl::Server<::test_service::SecondProtocol> : public ::fidl::internal::
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_service::SecondProtocol;
 
+  using Handler = fit::function<void(::fidl::ServerEnd<::test_service::SecondProtocol>)>;
+
   using MethodOnSecondCompleter = ::fidl::internal::NaturalCompleter<::test_service::SecondProtocol::MethodOnSecond>;
 
   virtual void MethodOnSecond(
       MethodOnSecondCompleter::Sync& completer) = 0;
+
+  // |bind_handler| returns a handler that binds incoming connections to this
+  // server implementation.
+  //
+  // The returned handler borrows the server instance.
+  // The server must outlive the provided |dispatcher|. Only after
+  // the dispatcher is shutdown will it be safe to destroy the servers.
+  // The server should not be moved.
+  Handler bind_handler(async_dispatcher_t* dispatcher) {
+    return [impl = this, dispatcher = dispatcher](::fidl::ServerEnd<::test_service::SecondProtocol> request) {
+      (void)::fidl::BindServer(dispatcher, std::move(request), impl);
+    };
+  }
 
  private:
   void dispatch_message(
