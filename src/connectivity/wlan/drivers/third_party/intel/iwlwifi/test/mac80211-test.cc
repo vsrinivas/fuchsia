@@ -310,7 +310,7 @@ class McastFilterTestWithoutIface : public Mac80211Test, public MockTrans {
 class McastFilterTest : public McastFilterTestWithoutIface {
  public:
   McastFilterTest() : helper_(ClientInterfaceHelper(&sim_trans_)) {}
-  ~McastFilterTest() {}
+  ~McastFilterTest() { mock_send_cmd_.VerifyAndClear(); }
 
  protected:
   ClientInterfaceHelper helper_;

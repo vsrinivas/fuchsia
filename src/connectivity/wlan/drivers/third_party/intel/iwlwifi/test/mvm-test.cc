@@ -1001,6 +1001,7 @@ class TxqTest : public MvmTest, public MockTrans {
     for (size_t i = 0; i < std::size(sta_.txq); ++i) {
       free(sta_.txq[i]);
     }
+    mock_tx_.VerifyAndClear();
   }
 
   // Expected fields.
