@@ -28,9 +28,7 @@ async fn main() {
     let Args { wait } = argh::from_env();
     info!("Realm started");
 
-    let event_source = EventSource::new().unwrap();
-    let event_stream = event_source.take_static_event_stream("DestroyedEventStream").await.unwrap();
-
+    let event_stream = EventStream::open().await.unwrap();
     // Create 3 scoped instances
     let mut instances = create_instances().await.expect("failed to create instances");
     info!("Created instances");

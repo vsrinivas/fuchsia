@@ -20,7 +20,7 @@ async fn scoped_instances(root_component: &'static str) {
         .add_route(
             Route::new()
                 .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
-                .capability(Capability::protocol_by_name("fuchsia.sys2.EventSource"))
+                .capability(Capability::event_stream("destroyed_v2").with_scope(&root))
                 .from(Ref::parent())
                 .to(&root),
         )

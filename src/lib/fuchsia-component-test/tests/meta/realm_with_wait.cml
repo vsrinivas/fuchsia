@@ -21,18 +21,8 @@
     ],
     use: [
         {
-            event: [ "destroyed" ],
-            from: "framework",
-        },
-        {
-            protocol: "fuchsia.sys2.EventSource",
+            event_stream: [ "destroyed_v2" ],
             from: "parent",
-        },
-        {
-            event_stream_deprecated: "DestroyedEventStream",
-            subscriptions: [
-                { event: "destroyed" },
-            ],
         },
     ],
 }
