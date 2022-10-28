@@ -384,19 +384,20 @@ func ninjaDryRun(ctx context.Context, r ninjaRunner, targets []string) (string, 
 // have already been built). It returns true if the build would be a no-op,
 // false otherwise.
 //
-// It also returns a map of logs produced by the no-op check, which can be
+// It also returns the first line of ninja's output, which often contains a
+// useful message, and a map of logs produced by the no-op check, which can be
 // presented to the user for help with debugging in case the check fails.
 func checkNinjaNoop(
 	ctx context.Context,
 	r ninjaRunner,
 	targets []string,
 	isMac bool,
-) (bool, map[string]string, error) {
+) (bool, string, map[string]string, error) {
 	stdout, stderr, ninjaErr := ninjaDryRun(ctx, r, targets)
 	// Temporarily tolerate a failure if it's on Mac. We won't emit the error if
 	// it seemed to be caused by a known broken Mac path.
 	if ninjaErr != nil && !isMac {
-		return false, nil, ninjaErr
+		return false, "", nil, ninjaErr
 	}
 
 	// Different versions of Ninja choose to emit "explain" logs to stderr
@@ -409,7 +410,7 @@ func checkNinjaNoop(
 			// TODO(https://fxbug.dev/61784): Dirty builds should be an error even on Mac.
 			for _, path := range brokenMacPaths {
 				if strings.Contains(allStdio, path) {
-					return true, nil, nil
+					return true, "", nil, nil
 				}
 			}
 		}
@@ -420,10 +421,12 @@ func checkNinjaNoop(
 		// Return the original ninja error, which may be non-nil if we're
 		// running on a Mac and the dry run failed but the stdio didn't contain
 		// one of the broken Mac paths.
-		return false, logs, ninjaErr
+		noopMsg := strings.Split(stderr, "\n")[0]
+		noopMsg = strings.TrimPrefix(noopMsg, "ninja explain: ")
+		return false, noopMsg, logs, ninjaErr
 	}
 
-	return true, nil, nil
+	return true, "", nil, nil
 }
 
 // touchFiles updates the modified time on all the specified files to the

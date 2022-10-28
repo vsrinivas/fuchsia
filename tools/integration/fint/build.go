@@ -250,7 +250,7 @@ func buildImpl(
 	}
 
 	if !contextSpec.SkipNinjaNoopCheck {
-		noop, logs, err := checkNinjaNoop(ctx, r, targets, hostplatform.IsMac(platform))
+		noop, msg, logs, err := checkNinjaNoop(ctx, r, targets, hostplatform.IsMac(platform))
 		if err != nil {
 			return artifacts, err
 		}
@@ -282,7 +282,7 @@ func buildImpl(
 				}
 			}
 
-			artifacts.FailureSummary = ninjaNoopFailureMessage(platform)
+			artifacts.FailureSummary = ninjaNoopFailureMessage(platform, msg)
 			return artifacts, fmt.Errorf("ninja build did not converge to no-op")
 		}
 	}
@@ -347,7 +347,7 @@ func collectFileAccessTraces(buildDir string) ([]string, error) {
 	return traces, nil
 }
 
-func ninjaNoopFailureMessage(platform string) string {
+func ninjaNoopFailureMessage(platform, ninjaMsg string) string {
 	summaryLines := []string{
 		"Ninja build did not converge to no-op.",
 		"See: https://fuchsia.dev/fuchsia-src/development/build/ninja_no_op",
@@ -357,6 +357,14 @@ func ninjaNoopFailureMessage(platform string) string {
 			summaryLines,
 			"If this failure is specific to Mac, confirm that it's not related to fxbug.dev/61784.",
 		)
+	}
+	if ninjaMsg != "" {
+		summaryLines = append(
+			summaryLines,
+			"",
+			"First line of ninja explain output:",
+			"",
+			ninjaMsg)
 	}
 	return strings.Join(summaryLines, "\n")
 }

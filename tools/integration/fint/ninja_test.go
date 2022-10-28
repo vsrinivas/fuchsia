@@ -490,12 +490,13 @@ func TestCheckNinjaNoop(t *testing.T) {
 			r := ninjaRunner{
 				runner: &fakeSubprocessRunner{
 					mockStdout: []byte(tc.stdout),
+					mockStderr: []byte("ninja explain: output foo older than most recent input bar"),
 					fail:       tc.fail,
 				},
 				ninjaPath: "ninja",
 				buildDir:  t.TempDir(),
 			}
-			noop, logFiles, err := checkNinjaNoop(context.Background(), r, []string{"foo"}, tc.isMac)
+			noop, msg, logFiles, err := checkNinjaNoop(context.Background(), r, []string{"foo"}, tc.isMac)
 			if err != nil {
 				if !tc.expectErr {
 					t.Fatal(err)
@@ -511,8 +512,17 @@ func TestCheckNinjaNoop(t *testing.T) {
 				if len(logFiles) > 0 {
 					t.Errorf("Expected no log files in case of no-op, but got: %+v", logFiles)
 				}
-			} else if len(logFiles) != 2 {
-				t.Errorf("Expected 2 log files in case of non-no-op, but got: %+v", logFiles)
+				if msg != "" {
+					t.Errorf("Got unexpected message: %q", msg)
+				}
+			} else {
+				if len(logFiles) != 2 {
+					t.Errorf("Expected 2 log files in case of non-no-op, but got: %+v", logFiles)
+				}
+				expectedMsg := "output foo older than most recent input bar"
+				if msg != expectedMsg {
+					t.Errorf("Got wrong message; wanted %q, got %q", msg, expectedMsg)
+				}
 			}
 		})
 	}

@@ -228,7 +228,7 @@ func TestBuild(t *testing.T) {
 			runnerFunc: nil,
 			expectErr:  true,
 			expectedArtifacts: &fintpb.BuildArtifacts{
-				FailureSummary: ninjaNoopFailureMessage(platform),
+				FailureSummary: ninjaNoopFailureMessage(platform, ""),
 				DebugFiles: []*fintpb.DebugFile{
 					{
 						Path:       filepath.Join(buildDir, ninjaDepsPath),
