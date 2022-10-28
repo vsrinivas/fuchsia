@@ -721,4 +721,19 @@ type Foo = struct {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameNotFound);
 }
 
+TEST(TypesTests, BadExperimentalZxCTypesWithoutFlag) {
+  for (std::string type : {"usize", "uintptr", "uchar", "experimental_pointer<uint32>"}) {
+    TestLibrary library("library example; alias T = " + type + ";");
+    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExperimentalZxCTypesDisallowed);
+  }
+}
+
+TEST(TypesTests, GoodExperimentalZxCTypesWithFlag) {
+  for (std::string type : {"usize", "uintptr", "uchar", "experimental_pointer<uint32>"}) {
+    TestLibrary library("library example; alias T = " + type + ";");
+    library.EnableFlag(fidl::ExperimentalFlags::Flag::kZxCTypes);
+    ASSERT_COMPILED(library);
+  }
+}
+
 }  // namespace fidl::flat

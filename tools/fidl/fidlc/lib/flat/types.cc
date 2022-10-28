@@ -549,7 +549,7 @@ bool ZxExperimentalPointerType::ApplyConstraints(TypeResolver* resolver,
                           0, num_constraints);
   }
   if (!resolver->experimental_flags().IsFlagEnabled(ExperimentalFlags::Flag::kZxCTypes)) {
-    return resolver->Fail(ErrExperimentalZxCTypesDisallowed, constraints.span.value(),
+    return resolver->Fail(ErrExperimentalZxCTypesDisallowed, layout.span(),
                           layout.resolved().name());
   }
   *out_type = std::make_unique<ZxExperimentalPointerType>(name, pointee_type);
