@@ -8,6 +8,7 @@
 
 #include "fuchsia/ui/activity/cpp/fidl.h"
 #include "lib/async/cpp/task.h"
+#include "src/public/activity_listener_interface.h"
 
 namespace cobalt {
 
@@ -35,8 +36,13 @@ void ActivityListenerImpl::Start(const std::function<void(cobalt::ActivityState)
     FX_LOGS(ERROR) << "Callback value already set. Replacing the current value.";
   }
   callback_ = callback;
-  StartListening();
-  Update();
+  // TODO(fxbug.dev/113288): this is only temporary until Cobalt Core does not do any activity
+  // listening.
+  SetState(fuchsia::ui::activity::State::IDLE);
+  callback_.value()(ActivityState::IDLE);
+  // TODO(fxbug.dev/107587): remove the FIDL dependency instead of simply commenting it out.
+  // StartListening();
+  // Update();
 }
 
 void ActivityListenerImpl::StartListening() {
