@@ -399,8 +399,8 @@ mod tests {
 
             let repo = GcsRepository::new(
                 MockGcsClient { repo: remote_repo, content_length_header },
-                Url::parse(&tuf_url).unwrap(),
-                Url::parse(&blob_url).unwrap(),
+                Url::parse(tuf_url).unwrap(),
+                Url::parse(blob_url).unwrap(),
             )
             .unwrap();
 

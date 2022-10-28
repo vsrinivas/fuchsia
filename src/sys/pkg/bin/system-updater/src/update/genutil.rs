@@ -125,7 +125,7 @@ where
 #[cfg(test)]
 mod tests {
     use {super::*, futures::channel::oneshot};
-
+    #[allow(clippy::bool_assert_comparison)]
     #[fuchsia_async::run_singlethreaded(test)]
     async fn when_done_handles_empty_generator() {
         let (send, recv) = oneshot::channel();

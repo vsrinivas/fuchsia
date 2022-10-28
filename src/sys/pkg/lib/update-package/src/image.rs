@@ -317,7 +317,7 @@ mod tests {
             imagetype: ImageType,
             subtype: Option<String>,
         ) -> Image {
-            let subtype = subtype.as_ref().map(String::as_str);
+            let subtype = subtype.as_deref();
             let image = Image::new(imagetype, subtype);
 
             match constructor {

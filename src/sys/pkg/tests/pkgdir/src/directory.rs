@@ -602,9 +602,9 @@ fn generate_lax_directory_paths(base: &str) -> Vec<String> {
     // "path segment rules are checked"
     paths.extend([format!("./{}", base), format!("{}/.", base)]);
     if base.contains('/') {
-        paths.push(base.replace("/", "//"));
-        paths.push(base.replace("/", "/to-be-removed/../"));
-        paths.push(base.replace("/", "/./"));
+        paths.push(base.replace('/', "//"));
+        paths.push(base.replace('/', "/to-be-removed/../"));
+        paths.push(base.replace('/', "/./"));
     }
     paths
 }
@@ -645,12 +645,12 @@ async fn verify_directory_opened(node: fio::NodeProxy, flag: fio::OpenFlags) -> 
     }
 
     if flag.intersects(fio::OpenFlags::DESCRIBE) {
-        let event = node.take_event_stream().next().await.ok_or(anyhow!("no events!"))?;
+        let event = node.take_event_stream().next().await.ok_or_else(|| anyhow!("no events!"))?;
         let event = event.context("event error")?;
         match event {
             fio::NodeEvent::OnOpen_ { s, info } => {
                 let () = zx::Status::ok(s).context("OnOpen failed")?;
-                let info = info.ok_or(anyhow!("missing info"))?;
+                let info = info.ok_or_else(|| anyhow!("missing info"))?;
                 let expected = if flag.intersects(fio::OpenFlags::NODE_REFERENCE) {
                     fio::NodeInfoDeprecated::Service(fio::Service)
                 } else {
@@ -678,12 +678,13 @@ async fn verify_content_file_opened(
             return Err(anyhow!("wrong protocol returned: {:?}", std::str::from_utf8(&protocol)));
         }
         if flag.intersects(fio::OpenFlags::DESCRIBE) {
-            let event = node.take_event_stream().next().await.ok_or(anyhow!("no events!"))?;
+            let event =
+                node.take_event_stream().next().await.ok_or_else(|| anyhow!("no events!"))?;
             let event = event.context("event error")?;
             match event {
                 fio::NodeEvent::OnOpen_ { s, info } => {
                     let () = zx::Status::ok(s).context("OnOpen failed")?;
-                    let info = info.ok_or(anyhow!("missing info"))?;
+                    let info = info.ok_or_else(|| anyhow!("missing info"))?;
                     if *info != fio::NodeInfoDeprecated::Service(fio::Service) {
                         return Err(anyhow!("wrong protocol returned: {:?}", info));
                     }
@@ -701,23 +702,24 @@ async fn verify_content_file_opened(
         {
             let fio::FileInfo { observer, .. } =
                 file.describe().await.context("failed to call describe")?;
-            let observer = observer.ok_or(anyhow!("expected observer to be set"))?;
+            let observer = observer.ok_or_else(|| anyhow!("expected observer to be set"))?;
             let _: zx::Signals = observer
                 .wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST)
                 .context("FILE_SIGNAL_READABLE not set")?;
         }
 
         if flag.intersects(fio::OpenFlags::NODE_REFERENCE) {
-            let event = file.take_event_stream().next().await.ok_or(anyhow!("no events!"))?;
+            let event =
+                file.take_event_stream().next().await.ok_or_else(|| anyhow!("no events!"))?;
             let event = event.context("event error")?;
             match event {
                 fio::FileEvent::OnOpen_ { s, info } => {
                     let () = zx::Status::ok(s).context("OnOpen failed")?;
-                    let info = info.ok_or(anyhow!("missing info"))?;
+                    let info = info.ok_or_else(|| anyhow!("missing info"))?;
                     if let fio::NodeInfoDeprecated::File(fio::FileObject { event, stream: _ }) =
                         *info
                     {
-                        let event = event.ok_or(anyhow!("expected event to be set"))?;
+                        let event = event.ok_or_else(|| anyhow!("expected event to be set"))?;
                         let _: zx::Signals = event
                             .wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST)
                             .context("FILE_SIGNAL_READABLE not set")?;
@@ -749,12 +751,12 @@ async fn verify_meta_as_file_opened(
     }
 
     if flag.intersects(fio::OpenFlags::DESCRIBE) {
-        let event = node.take_event_stream().next().await.ok_or(anyhow!("no events!"))?;
+        let event = node.take_event_stream().next().await.ok_or_else(|| anyhow!("no events!"))?;
         let event = event.context("event error")?;
         match event {
             fio::NodeEvent::OnOpen_ { s, info } => {
                 let () = zx::Status::ok(s).context("OnOpen failed")?;
-                let info = info.ok_or(anyhow!("missing info"))?;
+                let info = info.ok_or_else(|| anyhow!("missing info"))?;
                 match *info {
                     fio::NodeInfoDeprecated::File(fio::FileObject { .. }) => {}
                     info => return Err(anyhow!("wrong protocol returned: {:?}", info)),
@@ -886,10 +888,10 @@ async fn assert_clone_sends_on_open_event(package_root: &fio::DirectoryProxy, pa
             Some(Ok(fio::NodeEvent::OnOpen_ { s, info: Some(boxed) })) => {
                 assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
                 assert_eq!(*boxed, fio::NodeInfoDeprecated::Directory(fio::DirectoryObject {}));
-                return Ok(());
+                Ok(())
             }
             Some(Ok(other)) => return Err(anyhow!("wrong node event returned: {:?}", other)),
-            Some(Err(e)) => return Err(e).context("failed to call onopen"),
+            Some(Err(e)) => Err(e).context("failed to call onopen"),
             None => return Err(anyhow!("no events!")),
         }
     }

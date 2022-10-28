@@ -106,8 +106,8 @@ mod tests {
         let tree = MerkleTree::from_levels(vec![leafs.clone(), vec![root]]);
 
         assert_eq!(tree.root(), root);
-        for i in 0..HASHES_PER_BLOCK {
-            assert_eq!(tree.leaf_hash(i), leafs[i]);
+        for (i, leaf) in leafs.iter().enumerate().take(HASHES_PER_BLOCK) {
+            assert_eq!(&tree.leaf_hash(i), leaf);
         }
     }
 

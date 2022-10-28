@@ -3698,11 +3698,8 @@ mod tests {
             async move {
                 futures::pin_mut!(s);
                 while let Some(event) = s.next().await {
-                    match event {
-                        StateMachineEvent::StateChange(state) => {
-                            states.borrow_mut().push(state);
-                        }
-                        _ => {}
+                    if let StateMachineEvent::StateChange(state) = event {
+                        states.borrow_mut().push(state);
                     }
                 }
             }
@@ -3716,15 +3713,12 @@ mod tests {
             async move {
                 futures::pin_mut!(s);
                 while let Some(event) = s.next().await {
-                    match event {
-                        StateMachineEvent::StateChange(state) => {
-                            states.borrow_mut().push(state);
-                            match state {
-                                State::Idle | State::WaitingForReboot => return,
-                                _ => {}
-                            }
+                    if let StateMachineEvent::StateChange(state) = event {
+                        states.borrow_mut().push(state);
+                        match state {
+                            State::Idle | State::WaitingForReboot => return,
+                            _ => {}
                         }
-                        _ => {}
                     }
                 }
             }

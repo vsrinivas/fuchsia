@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #![warn(clippy::all)]
+#![allow(clippy::let_unit_value)]
 #![cfg(test)]
 use {
     anyhow::anyhow,
@@ -194,12 +195,12 @@ impl TestEnvBuilder {
     }
 
     fn omaha_client_override_config_bool(mut self, key: String, value: bool) -> Self {
-        self.omaha_client_config_bool_overrides.push((key.into(), value));
+        self.omaha_client_config_bool_overrides.push((key, value));
         self
     }
 
     fn omaha_client_override_config_uint16(mut self, key: String, value: u16) -> Self {
-        self.omaha_client_config_uint16_overrides.push((key.into(), value));
+        self.omaha_client_config_uint16_overrides.push((key, value));
         self
     }
 
@@ -730,6 +731,7 @@ pub mod fuchsia_update_config_optout {
     pub struct Mock(Mutex<OptOutPreference>);
 
     impl Mock {
+        #[allow(clippy::new_without_default)]
         pub fn new() -> Self {
             Self(Mutex::new(OptOutPreference::AllowAllUpdates))
         }
@@ -1544,7 +1546,7 @@ async fn test_omaha_client_installation_deferred() {
                 MockPaverServiceBuilder::new()
                     .insert_hook(throttle_hook)
                     .insert_hook(mphooks::config_status(move |_| {
-                        Ok(config_status_response.lock().as_ref().unwrap().clone())
+                        Ok(*config_status_response.lock().as_ref().unwrap())
                     }))
                     .build(),
             )

@@ -334,7 +334,7 @@ mod tests {
                     zbi_hash,
                     format!(
                         "fuchsia-pkg://fuchsia.com/update-images-fuchsia/0?hash={}#zbi",
-                        Hash::from([9; 32]).to_string()
+                        Hash::from([9; 32])
                     )
                     .parse()
                     .unwrap(),
@@ -344,7 +344,7 @@ mod tests {
                     vbmeta_hash,
                     format!(
                         "fuchsia-pkg://fuchsia.com/update-images-fuchsia/0?hash={}#vbmeta",
-                        Hash::from([9; 32]).to_string()
+                        Hash::from([9; 32])
                     )
                     .parse()
                     .unwrap(),
@@ -388,7 +388,7 @@ mod tests {
                     zbi_hash,
                     format!(
                         "fuchsia-pkg://fuchsia.com/update-images-fuchsia/0?hash={}#zbi",
-                        Hash::from([9; 32]).to_string()
+                        Hash::from([9; 32])
                     )
                     .parse()
                     .unwrap(),
@@ -433,7 +433,7 @@ mod tests {
                     hash,
                     format!(
                         "fuchsia-pkg://fuchsia.com/update-images-recovery/0?hash={}#zbi",
-                        Hash::from([9; 32]).to_string()
+                        Hash::from([9; 32])
                     )
                     .parse()
                     .unwrap(),
@@ -479,7 +479,7 @@ mod tests {
                     zbi_hash,
                     format!(
                         "fuchsia-pkg://fuchsia.com/update-images-fuchsia/0?hash={}#zbi",
-                        Hash::from([9; 32]).to_string()
+                        Hash::from([9; 32])
                     )
                     .parse()
                     .unwrap(),
@@ -489,7 +489,7 @@ mod tests {
                     vbmeta_hash,
                     format!(
                         "fuchsia-pkg://fuchsia.com/update-images-fuchsia/0?hash={}#vbmeta",
-                        Hash::from([9; 32]).to_string()
+                        Hash::from([9; 32])
                     )
                     .parse()
                     .unwrap(),

@@ -318,7 +318,7 @@ mod tests {
 
     const REPO_URL: &str = "fuchsia-pkg://fuchsia.com";
     const CONFIG_JSON: &str = r#"{"version": "1", "content": []}"#;
-    const CMD_NAME: &'static [&'static str] = &["pkgctl"];
+    const CMD_NAME: &[&str] = &["pkgctl"];
 
     #[test]
     fn resolve() {

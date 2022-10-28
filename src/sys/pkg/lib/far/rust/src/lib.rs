@@ -390,7 +390,7 @@ pub(crate) mod tests {
     #[test]
     fn test_serialize_deserialize_index() {
         let mut target = Cursor::new(Vec::new());
-        let index = Index { magic: MAGIC_INDEX_VALUE, length: (2 * INDEX_ENTRY_LEN as u64).into() };
+        let index = Index { magic: MAGIC_INDEX_VALUE, length: (2 * INDEX_ENTRY_LEN).into() };
         let () = target.write_all(index.as_bytes()).unwrap();
         assert_eq!(target.get_ref().len() as u64, INDEX_LEN);
         assert_eq!(target.seek(SeekFrom::Start(0)).unwrap(), 0);

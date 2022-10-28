@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #![warn(clippy::all)]
+#![allow(clippy::let_unit_value)]
 
 use {
     anyhow::{anyhow, Error},
@@ -434,6 +435,7 @@ pub mod hooks {
     }
 }
 
+#[allow(clippy::type_complexity)]
 pub struct MockPaverServiceBuilder {
     hooks: Vec<Box<dyn Hook + Send + Sync>>,
     event_hook: Option<Box<dyn Fn(&PaverEvent) + Send + Sync>>,
@@ -443,6 +445,7 @@ pub struct MockPaverServiceBuilder {
 }
 
 impl MockPaverServiceBuilder {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
             hooks: vec![],
@@ -507,7 +510,7 @@ pub struct MockPaverService {
 
 impl MockPaverService {
     pub fn take_events(&self) -> Vec<PaverEvent> {
-        std::mem::replace(&mut *self.events.lock(), vec![])
+        std::mem::take(&mut *self.events.lock())
     }
 
     /// Spawns a new task to serve the data sink protocol.

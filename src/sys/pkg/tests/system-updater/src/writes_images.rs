@@ -30,8 +30,8 @@ async fn fails_on_paver_connect_error_v1() {
     // to query the current configuration.
     let interactions = env.take_interactions();
     assert!(
-        interactions == &[]
-            || interactions == &[Gc, PackageResolve(UPDATE_PKG_URL.to_string()), Gc, BlobfsSync,],
+        interactions.is_empty()
+            || interactions == [Gc, PackageResolve(UPDATE_PKG_URL.to_string()), Gc, BlobfsSync,],
         "expected early failure or failure while querying current configuration. Got {:#?}",
         interactions
     );
@@ -56,8 +56,8 @@ async fn fails_on_paver_connect_error() {
     // to query the current configuration.
     let interactions = env.take_interactions();
     assert!(
-        interactions == &[]
-            || interactions == &[Gc, PackageResolve(UPDATE_PKG_URL.to_string()), Gc, BlobfsSync,],
+        interactions.is_empty()
+            || interactions == [Gc, PackageResolve(UPDATE_PKG_URL.to_string()), Gc, BlobfsSync,],
         "expected early failure or failure while querying current configuration. Got {:#?}",
         interactions
     );
@@ -1177,7 +1177,7 @@ async fn assert_stage_resolve_failure_reason(
         attempt.next().await.unwrap().unwrap(),
         State::Stage(
             UpdateInfoAndProgress::builder()
-                .info(info.clone())
+                .info(info)
                 .progress(Progress::builder().fraction_completed(0.0).bytes_downloaded(0).build())
                 .build()
         )

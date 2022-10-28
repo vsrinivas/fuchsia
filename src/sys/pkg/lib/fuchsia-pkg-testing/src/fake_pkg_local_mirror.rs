@@ -64,7 +64,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn handle_request_stream() {
         let package = PackageBuilder::new("test").build().await.unwrap();
-        let meta_far_merkle = package.meta_far_merkle_root().clone();
+        let meta_far_merkle = *package.meta_far_merkle_root();
         let repo = RepositoryBuilder::new().add_package(package).build().await.unwrap();
         let url = "fuchsia-pkg://example.org".parse().unwrap();
         let mirror = FakePkgLocalMirror::from_repository_and_url(&repo, &url).await;

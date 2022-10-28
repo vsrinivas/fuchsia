@@ -186,7 +186,7 @@ mod tests {
         let pkg2_merkle_file = dir.join("pkg2-merkle");
 
         // Write out all the files.
-        MetaPackage::from_name(pkg2_name.clone())
+        MetaPackage::from_name(pkg2_name)
             .serialize(File::create(&pkg2_meta_package_file).unwrap())
             .unwrap();
 
@@ -274,7 +274,7 @@ mod tests {
         MetaPackage::from_name(pkg_name.clone())
             .serialize(File::create(&pkg_meta_package_file).unwrap())
             .unwrap();
-        let pkg_url = RelativePackageUrl::from(pkg_name.clone());
+        let pkg_url = RelativePackageUrl::from(pkg_name);
 
         assert_eq!(manifest.to_subpackages().unwrap(), vec![(pkg_url, pkg_hash)]);
     }
@@ -285,7 +285,7 @@ mod tests {
         let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
         let pkg_name = PackageName::try_from("pkg".to_string()).unwrap();
-        let pkg_url = RelativePackageUrl::from(pkg_name.clone());
+        let pkg_url = RelativePackageUrl::from(pkg_name);
         let pkg_hash = fuchsia_merkle::from_slice(b"pkg").root();
         let pkg_merkle_file = dir.join("merkle");
 

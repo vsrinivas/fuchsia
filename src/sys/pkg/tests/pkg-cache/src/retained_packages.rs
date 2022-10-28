@@ -54,7 +54,7 @@ async fn cached_packages_are_retained() {
         packages.iter().map(|pkg| BlobId::from(*pkg.meta_far_merkle_root())).collect::<Vec<_>>();
 
     // Mark packages as retained.
-    replace_retained_packages(&env.proxies.retained_packages, &blob_ids.as_slice()).await;
+    replace_retained_packages(&env.proxies.retained_packages, blob_ids.as_slice()).await;
 
     assert_matches!(env.proxies.space_manager.gc().await, Ok(Ok(())));
 
@@ -99,7 +99,7 @@ async fn packages_are_retained_gc_mid_process() {
     write_meta_far(&needed_blobs, meta_far).await;
 
     // Add the packages as retained.
-    replace_retained_packages(&env.proxies.retained_packages, &vec![blob_id.into()]).await;
+    replace_retained_packages(&env.proxies.retained_packages, &[blob_id]).await;
 
     // Clear the retained index and GC.
     assert_matches!(env.proxies.retained_packages.clear().await, Ok(()));
@@ -132,7 +132,7 @@ async fn cached_and_released_packages_are_removed() {
         packages.iter().map(|pkg| BlobId::from(*pkg.meta_far_merkle_root())).collect::<Vec<_>>();
 
     // Mark packages as retained.
-    replace_retained_packages(&env.proxies.retained_packages, &blob_ids.as_slice()).await;
+    replace_retained_packages(&env.proxies.retained_packages, blob_ids.as_slice()).await;
 
     // Cache the packages.
     let () = get_and_verify_packages(&env.proxies.package_cache, &packages).await;

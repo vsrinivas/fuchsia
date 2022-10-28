@@ -72,12 +72,7 @@ impl ForcedFDR {
             fidl::endpoints::create_proxy_and_stream::<FactoryResetMarker>().unwrap();
 
         (
-            ForcedFDR {
-                data_dir: data_dir,
-                config_data_dir: config_data_dir,
-                info_proxy: info_proxy,
-                factory_reset_proxy: fdr_proxy,
-            },
+            ForcedFDR { data_dir, config_data_dir, info_proxy, factory_reset_proxy: fdr_proxy },
             info_stream,
             fdr_stream,
         )

@@ -177,8 +177,8 @@ mod tests {
         assert!(Version::from([1, 2, 3, 4]) < Version::from([2, 0, 3]));
         assert!(Version::from([1, 2, 3]) < Version::from([1, 2, 3, 4]));
         assert!(Version::from([1, 0]) == Version::from([1, 0, 0]));
-        assert!(!(Version::from([1, 0]) > Version::from([1, 0, 0])));
-        assert!(!(Version::from([1, 0]) < Version::from([1, 0, 0])));
+        assert!(Version::from([1, 0]) <= Version::from([1, 0, 0]));
+        assert!(Version::from([1, 0]) >= Version::from([1, 0, 0]));
         assert!(Version::from([1]) == Version::from([1, 0, 0, 0]));
         assert!(Version::from([0]) == Version::from([0, 0, 0, 0]));
         assert!(Version::from([0, 1, 0]) > Version::from([0, 0, 1, 0]));

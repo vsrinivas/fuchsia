@@ -279,34 +279,32 @@ async fn verify_describe_file(
         } else {
             Err(anyhow!("wrong protocol returned: {:?}", std::str::from_utf8(&protocol)))
         }
-    } else {
-        if protocol == fio::FILE_PROTOCOL_NAME.as_bytes() {
-            let fio::FileInfo { observer, .. } = fio::FileProxy::new(node.into_channel().unwrap())
-                .describe()
-                .await
-                .context("failed to call describe")?;
-            match observer {
-                Some(observer) => {
-                    if content {
-                        let _: zx::Signals = observer
-                            .wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST)
-                            .context("FILE_SIGNAL_READABLE not set")?;
-                        Ok(())
-                    } else {
-                        Err(anyhow!("observer unexpectedly set"))
-                    }
-                }
-                None => {
-                    if content {
-                        Err(anyhow!("expected observer to be set"))
-                    } else {
-                        Ok(())
-                    }
+    } else if protocol == fio::FILE_PROTOCOL_NAME.as_bytes() {
+        let fio::FileInfo { observer, .. } = fio::FileProxy::new(node.into_channel().unwrap())
+            .describe()
+            .await
+            .context("failed to call describe")?;
+        match observer {
+            Some(observer) => {
+                if content {
+                    let _: zx::Signals = observer
+                        .wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST)
+                        .context("FILE_SIGNAL_READABLE not set")?;
+                    Ok(())
+                } else {
+                    Err(anyhow!("observer unexpectedly set"))
                 }
             }
-        } else {
-            Err(anyhow!("wrong protocol returned: {:?}", std::str::from_utf8(&protocol)))
+            None => {
+                if content {
+                    Err(anyhow!("expected observer to be set"))
+                } else {
+                    Ok(())
+                }
+            }
         }
+    } else {
+        Err(anyhow!("wrong protocol returned: {:?}", std::str::from_utf8(&protocol)))
     }
 }
 

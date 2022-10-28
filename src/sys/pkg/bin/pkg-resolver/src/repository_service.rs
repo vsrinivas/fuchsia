@@ -166,7 +166,7 @@ mod tests {
         let mut results: Vec<RepositoryConfig> = Vec::new();
         loop {
             let chunk = list_iterator.next().await.unwrap();
-            if chunk.len() == 0 {
+            if chunk.is_empty() {
                 break;
             }
             assert!(chunk.len() <= LIST_CHUNK_SIZE);

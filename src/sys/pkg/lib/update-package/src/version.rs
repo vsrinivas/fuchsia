@@ -136,6 +136,7 @@ pub(crate) async fn read_version(
 }
 
 #[cfg(test)]
+#[allow(clippy::bool_assert_comparison)]
 mod tests {
     use {
         super::*, crate::TestUpdatePackage, assert_matches::assert_matches, fuchsia_async as fasync,

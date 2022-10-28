@@ -542,7 +542,7 @@ mod tests {
         let (sender, mut receiver) = mpsc::channel(1);
         handle.add_client(MpscNotifier { sender }).await.unwrap();
         handle.queue_event("event".into()).await.unwrap();
-        assert_matches!(receiver.next().await.as_ref().map(|s| s.as_str()), Some("event"));
+        assert_matches!(receiver.next().await.as_deref(), Some("event"));
         drop(handle);
         assert_matches!(receiver.next().await, None);
     }

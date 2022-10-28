@@ -19,7 +19,7 @@ fn main_inner(args: &Args) -> Result<(), anyhow::Error> {
     let input_configs: Vec<InputConfig> = args
         .eager_package_config_files
         .iter()
-        .map(|f| File::open(f).expect(&format!("opening file {:?}", f)))
+        .map(|f| File::open(f).unwrap_or_else(|_| panic!("opening file {:?}", f)))
         .map(|e| serde_json::from_reader(BufReader::new(e)).unwrap())
         .collect();
 
@@ -69,7 +69,7 @@ mod tests {
             out_omaha_client_config: location_of(&omaha_out),
             out_pkg_resolver_config: location_of(&pkgresolver_out),
             key_config_file: location_of(&keyconfig_file),
-            eager_package_config_files: input_files.iter().map(|file| location_of(&file)).collect(),
+            eager_package_config_files: input_files.iter().map(|file| location_of(file)).collect(),
         })
         .unwrap();
 

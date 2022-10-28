@@ -810,7 +810,7 @@ mod tests {
             for (devhost, bodies) in &test_cases {
                 for body in &bodies[..] {
                     let url = format!("{}/{}/{}", server_url, devhost, body);
-                    assert_matches!(get_bytes(&url).await, Ok(bytes) if bytes == &body[..]);
+                    assert_matches!(get_bytes(&url).await, Ok(bytes) if bytes == body[..]);
                 }
             }
         })

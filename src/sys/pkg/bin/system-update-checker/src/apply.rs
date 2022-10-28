@@ -264,9 +264,11 @@ mod test_apply_system_update_impl {
             self.update_url = Some(update_url);
             self.options = Some(options);
             self.reboot_controller_server_end = Some(reboot_controller_server_end);
-            let state = self.state.clone().unwrap_or(State::Complete(UpdateInfoAndProgress::done(
-                UpdateInfo::builder().download_size(0).build(),
-            )));
+            let state = self.state.clone().unwrap_or_else(|| {
+                State::Complete(UpdateInfoAndProgress::done(
+                    UpdateInfo::builder().download_size(0).build(),
+                ))
+            });
             future::ok(futures::stream::once(future::ok(state))).boxed()
         }
     }
@@ -436,8 +438,7 @@ mod test_apply_system_update_impl {
         assert_matches!(
             results
                 .remove(1)
-                .err()
-                .expect("system update should fail")
+                .expect_err("system update should fail")
                 .1
                 .downcast::<Error>()
                 .unwrap(),

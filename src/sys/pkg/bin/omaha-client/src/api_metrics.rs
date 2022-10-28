@@ -11,6 +11,7 @@ use std::future::Future;
 use tracing::info;
 
 #[derive(Debug)]
+#[allow(clippy::enum_variant_names)]
 pub enum ApiEvent {
     UpdateChannelControlSetTarget,
     UpdateManagerConnection,

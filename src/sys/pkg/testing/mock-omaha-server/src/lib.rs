@@ -172,7 +172,7 @@ impl OmahaServer {
             async move {
                 Ok::<_, Infallible>(service_fn(move |req| {
                     let arc_server = Arc::clone(&arc_server);
-                    async move { handle_request(req, &*arc_server).await }
+                    async move { handle_request(req, &arc_server).await }
                 }))
             }
         });
@@ -221,12 +221,12 @@ fn make_etag(
         }
     }?;
 
-    let request_hash = Sha256::digest(&request_body);
-    let response_hash = Sha256::digest(&response_data);
+    let request_hash = Sha256::digest(request_body);
+    let response_hash = Sha256::digest(response_data);
 
     let mut hasher = Sha256::new();
-    hasher.update(&request_hash);
-    hasher.update(&response_hash);
+    hasher.update(request_hash);
+    hasher.update(response_hash);
     hasher.update(&*cup2key_val);
     let transaction_hash = hasher.finalize();
 

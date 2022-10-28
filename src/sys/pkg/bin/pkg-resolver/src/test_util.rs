@@ -8,7 +8,6 @@ use {
     fidl_fuchsia_metrics::{MetricEvent, MetricEventPayload},
     futures::channel::mpsc,
     serde::Serialize,
-    serde_json,
     std::{
         fs::File,
         io::{self, Write as _},

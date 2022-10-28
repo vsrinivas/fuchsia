@@ -39,9 +39,9 @@ async fn assert_base_packages_match(
     static_packages: &[&Package],
     system_image_hash: Hash,
 ) {
-    let expected_entries = static_packages.into_iter().map(|pkg| {
+    let expected_entries = static_packages.iter().map(|pkg| {
         let url = format!("fuchsia-pkg://fuchsia.com/{}", pkg.name());
-        let merkle = pkg.meta_far_merkle_root().clone();
+        let merkle = *pkg.meta_far_merkle_root();
         (url, merkle)
     });
 

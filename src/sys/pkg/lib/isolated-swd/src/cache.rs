@@ -142,7 +142,11 @@ pub(crate) mod for_tests {
                             vfs::path::Path::dot(),
                             handles.outgoing_dir.into_channel().into(),
                         );
-                        async move { Ok(scope.wait().await) }.boxed()
+                        async move {
+                            scope.wait().await;
+                            Ok(())
+                        }
+                        .boxed()
                     },
                     ChildOptions::new(),
                 )

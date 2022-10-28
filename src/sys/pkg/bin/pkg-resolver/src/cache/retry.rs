@@ -161,7 +161,7 @@ mod tests {
 
     impl<E> Backoff<E> for ConstDelay {
         fn next_backoff(&mut self, _err: &E) -> Option<Duration> {
-            Some(self.0.clone())
+            Some(self.0)
         }
     }
 

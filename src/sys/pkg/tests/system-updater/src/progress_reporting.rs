@@ -52,7 +52,7 @@ async fn progress_reporting_fetch_multiple_packages_v1() {
         attempt.next().await.unwrap().unwrap(),
         State::Fetch(
             UpdateInfoAndProgress::builder()
-                .info(info.clone())
+                .info(info)
                 .progress(Progress::builder().fraction_completed(0.25).bytes_downloaded(0).build())
                 .build()
         )
@@ -63,7 +63,7 @@ async fn progress_reporting_fetch_multiple_packages_v1() {
         attempt.next().await.unwrap().unwrap(),
         State::Fetch(
             UpdateInfoAndProgress::builder()
-                .info(info.clone())
+                .info(info)
                 .progress(Progress::builder().fraction_completed(0.5).bytes_downloaded(0).build())
                 .build()
         )
@@ -74,7 +74,7 @@ async fn progress_reporting_fetch_multiple_packages_v1() {
         attempt.next().await.unwrap().unwrap(),
         State::Fetch(
             UpdateInfoAndProgress::builder()
-                .info(info.clone())
+                .info(info)
                 .progress(Progress::builder().fraction_completed(0.75).bytes_downloaded(0).build())
                 .build()
         )
@@ -85,7 +85,7 @@ async fn progress_reporting_fetch_multiple_packages_v1() {
         attempt.next().await.unwrap().unwrap(),
         State::Fetch(
             UpdateInfoAndProgress::builder()
-                .info(info.clone())
+                .info(info)
                 .progress(Progress::builder().fraction_completed(1.0).bytes_downloaded(0).build())
                 .build()
         )
@@ -136,7 +136,7 @@ async fn progress_reporting_fetch_multiple_packages() {
         attempt.next().await.unwrap().unwrap(),
         State::Fetch(
             UpdateInfoAndProgress::builder()
-                .info(info.clone())
+                .info(info)
                 .progress(Progress::builder().fraction_completed(0.25).bytes_downloaded(0).build())
                 .build()
         )
@@ -147,7 +147,7 @@ async fn progress_reporting_fetch_multiple_packages() {
         attempt.next().await.unwrap().unwrap(),
         State::Fetch(
             UpdateInfoAndProgress::builder()
-                .info(info.clone())
+                .info(info)
                 .progress(Progress::builder().fraction_completed(0.5).bytes_downloaded(0).build())
                 .build()
         )
@@ -158,7 +158,7 @@ async fn progress_reporting_fetch_multiple_packages() {
         attempt.next().await.unwrap().unwrap(),
         State::Fetch(
             UpdateInfoAndProgress::builder()
-                .info(info.clone())
+                .info(info)
                 .progress(Progress::builder().fraction_completed(0.75).bytes_downloaded(0).build())
                 .build()
         )
@@ -169,7 +169,7 @@ async fn progress_reporting_fetch_multiple_packages() {
         attempt.next().await.unwrap().unwrap(),
         State::Fetch(
             UpdateInfoAndProgress::builder()
-                .info(info.clone())
+                .info(info)
                 .progress(Progress::builder().fraction_completed(1.0).bytes_downloaded(0).build())
                 .build()
         )
@@ -535,7 +535,7 @@ async fn fail_additional_start_requests_when_not_compatible() {
 }
 
 pub fn assert_success_monitor_states(states: Vec<State>, ordering: &[StateId]) {
-    let res = util::verify_monitor_states(&states, &ordering, false);
+    let res = util::verify_monitor_states(&states, ordering, false);
     if let Err(e) = res {
         panic!("Error received when verifying monitor states: {:#}\nWant ordering: {:#?}\nGot states:{:#?}", e, ordering, states);
     }
@@ -601,15 +601,14 @@ mod util {
 
         let mut prev_fraction_completed = 0.0;
         let mut state_index = 0;
-        for ordering_index in 0..ordering.len() {
+        for item in ordering {
             // Check if it's out of order.
-            if states[state_index].id() != ordering[ordering_index] {
+            if states[state_index].id() != *item {
                 return Err(VerifyMonitorStatesError::OutOfOrder);
             }
 
             // Check progress.
-            while state_index < states.len() && states[state_index].id() == ordering[ordering_index]
-            {
+            while state_index < states.len() && states[state_index].id() == *item {
                 if let Some(progress) = states[state_index].progress() {
                     // Verify we aren't decreasing.
                     if progress.fraction_completed() < prev_fraction_completed {
@@ -683,11 +682,11 @@ mod util {
     fn fail_progress_decreased() {
         let info = UpdateInfo::builder().download_size(0).build();
         let d0 = UpdateInfoAndProgress::builder()
-            .info(info.clone())
+            .info(info)
             .progress(Progress::builder().fraction_completed(0.0).bytes_downloaded(0).build())
             .build();
         let d1 = UpdateInfoAndProgress::builder()
-            .info(info.clone())
+            .info(info)
             .progress(Progress::builder().fraction_completed(0.4).bytes_downloaded(0).build())
             .build();
         let d2 = UpdateInfoAndProgress::builder()
@@ -707,7 +706,7 @@ mod util {
     fn fail_fraction_completed_should_end_with_1_on_success() {
         let info = UpdateInfo::builder().download_size(0).build();
         let d0 = UpdateInfoAndProgress::builder()
-            .info(info.clone())
+            .info(info)
             .progress(Progress::builder().fraction_completed(0.0).bytes_downloaded(0).build())
             .build();
         let d1 = UpdateInfoAndProgress::builder()
@@ -729,11 +728,11 @@ mod util {
     fn success() {
         let info = UpdateInfo::builder().download_size(0).build();
         let d0 = UpdateInfoAndProgress::builder()
-            .info(info.clone())
+            .info(info)
             .progress(Progress::builder().fraction_completed(0.0).bytes_downloaded(0).build())
             .build();
         let d1 = UpdateInfoAndProgress::builder()
-            .info(info.clone())
+            .info(info)
             .progress(Progress::builder().fraction_completed(0.5).bytes_downloaded(0).build())
             .build();
         let d2 = UpdateInfoAndProgress::builder()
@@ -743,9 +742,9 @@ mod util {
         let states = vec![
             State::Prepare,
             State::Fetch(d0),
-            State::Fetch(d1.clone()),
+            State::Fetch(d1),
             State::Stage(d1),
-            State::Stage(d2.clone()),
+            State::Stage(d2),
             State::Reboot(d2),
         ];
         let ordering = vec![StateId::Prepare, StateId::Fetch, StateId::Stage, StateId::Reboot];

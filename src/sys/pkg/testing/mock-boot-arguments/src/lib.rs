@@ -10,8 +10,8 @@ use {
     std::{collections::HashMap, sync::Arc},
 };
 
-static PKGFS_BOOT_ARG_KEY: &'static str = "zircon.system.pkgfs.cmd";
-static PKGFS_BOOT_ARG_VALUE_PREFIX: &'static str = "bin/pkgsvr+";
+static PKGFS_BOOT_ARG_KEY: &str = "zircon.system.pkgfs.cmd";
+static PKGFS_BOOT_ARG_VALUE_PREFIX: &str = "bin/pkgsvr+";
 
 /// Serves fuchsia.boot/Arguments.GetString from a supplied arguments map.
 /// Panics on unexpected keys or fidl methods.

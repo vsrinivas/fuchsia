@@ -111,13 +111,13 @@ pub fn generate_omaha_client_config(
 
     let json = OmahaConfigsJson {
         eager_package_configs: key_configs
-            .into_iter()
+            .iter()
             .map(|(service_url, key_config)| OmahaConfigs {
                 server: OmahaServer {
                     service_url: service_url.clone(),
                     public_keys: key_config.clone(),
                 },
-                packages: packages_by_service_url.remove(service_url).unwrap_or(vec![]),
+                packages: packages_by_service_url.remove(service_url).unwrap_or_default(),
             })
             .collect(),
     };
@@ -128,7 +128,7 @@ pub fn generate_omaha_client_config(
 }
 
 pub fn generate_pkg_resolver_config(
-    configs: &Vec<InputConfig>,
+    configs: &[InputConfig],
     key_config: &PublicKeysByServiceUrl,
 ) -> ResolverConfigs {
     let packages: Vec<_> = configs
@@ -138,10 +138,9 @@ pub fn generate_pkg_resolver_config(
             executable: i.executable.unwrap_or(false),
             public_keys: key_config
                 .get(&i.service_url)
-                .expect(&format!(
-                    "could not find service_url {:?} in key_config map",
-                    i.service_url
-                ))
+                .unwrap_or_else(|| {
+                    panic!("could not find service_url {:?} in key_config map", i.service_url)
+                })
                 .clone(),
             minimum_required_version: i.minimum_required_version,
             cache_fallback: i.cache_fallback.unwrap_or(true),
@@ -289,7 +288,7 @@ mod tests {
         }"#;
         assert_eq!(
             omaha_client_config,
-            serde_json::from_str::<OmahaConfigsJson>(&expected).unwrap()
+            serde_json::from_str::<OmahaConfigsJson>(expected).unwrap()
         );
     }
 
@@ -414,7 +413,7 @@ mod tests {
         }"#;
         assert_eq!(
             omaha_client_config,
-            serde_json::from_str::<OmahaConfigsJson>(&expected).unwrap()
+            serde_json::from_str::<OmahaConfigsJson>(expected).unwrap()
         );
     }
 
@@ -473,7 +472,7 @@ mod tests {
         }"#;
         test_support::compare_ignoring_whitespace(
             &serde_json::to_string_pretty(&pkg_resolver_config).unwrap(),
-            &expected,
+            expected,
         );
     }
 

@@ -16,6 +16,8 @@ impl MockMetricsReporter {
     pub fn new_failing() -> Self {
         MockMetricsReporter { should_fail: true, metrics: vec![] }
     }
+
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         MockMetricsReporter { should_fail: false, metrics: vec![] }
     }

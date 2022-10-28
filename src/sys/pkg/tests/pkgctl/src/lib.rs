@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #![warn(clippy::all)]
+#![allow(clippy::let_unit_value)]
 #![cfg(test)]
 use {
     anyhow::Error,
@@ -352,6 +353,7 @@ enum CapturedPackageResolverRequest {
     GetHash { package_url: String },
 }
 
+#[allow(clippy::type_complexity)]
 struct MockPackageResolverService {
     captured_args: Mutex<Vec<CapturedPackageResolverRequest>>,
     get_hash_response: Mutex<Option<Result<fidl_fuchsia_pkg::BlobId, Status>>>,

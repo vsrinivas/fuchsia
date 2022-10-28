@@ -6,7 +6,6 @@
 #![cfg(test)]
 use {
     assert_matches::assert_matches,
-    fidl_fuchsia_io,
     fidl_fuchsia_paver::Configuration,
     fidl_fuchsia_update as fidl_update,
     fidl_fuchsia_update_ext::{
@@ -221,7 +220,7 @@ impl MockUpdateManagerService {
                         let states = receiver.next().await.unwrap();
                         fasync::Task::spawn(Self::send_states(proxy, states)).detach();
                     }
-                    responder.send(&mut *self.check_now_response.lock()).unwrap();
+                    responder.send(&mut self.check_now_response.lock()).unwrap();
                 }
 
                 fidl_update::ManagerRequest::PerformPendingReboot { responder: _ } => {

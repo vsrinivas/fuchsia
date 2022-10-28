@@ -93,7 +93,7 @@ mod tests {
                 .iter()
                 .map(|(url, hash)| PackageIndexEntry {
                     package_url: fpkg::PackageUrl { url: url.to_string() },
-                    meta_far_blob_id: BlobId::from(hash.clone()).into(),
+                    meta_far_blob_id: (*hash).into(),
                 })
                 .collect::<Vec<PackageIndexEntry>>();
 

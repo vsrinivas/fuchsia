@@ -593,22 +593,18 @@ async fn assert_fetch_failure_reason_v1(
         attempt.next().await.unwrap().unwrap(),
         State::Stage(
             UpdateInfoAndProgress::builder()
-                .info(info.clone())
+                .info(info)
                 .progress(Progress::builder().fraction_completed(0.0).bytes_downloaded(0).build())
                 .build()
         )
     );
     assert_eq!(
         attempt.next().await.unwrap().unwrap(),
-        State::Stage(
-            UpdateInfoAndProgress::builder().info(info).progress(progress.clone()).build()
-        )
+        State::Stage(UpdateInfoAndProgress::builder().info(info).progress(progress).build())
     );
     assert_eq!(
         attempt.next().await.unwrap().unwrap(),
-        State::Fetch(
-            UpdateInfoAndProgress::builder().info(info).progress(progress.clone()).build()
-        )
+        State::Fetch(UpdateInfoAndProgress::builder().info(info).progress(progress).build())
     );
     assert_eq!(
         attempt.next().await.unwrap().unwrap(),
@@ -688,22 +684,18 @@ async fn assert_fetch_failure_reason(
         attempt.next().await.unwrap().unwrap(),
         State::Stage(
             UpdateInfoAndProgress::builder()
-                .info(info.clone())
+                .info(info)
                 .progress(Progress::builder().fraction_completed(0.0).bytes_downloaded(0).build())
                 .build()
         )
     );
     assert_eq!(
         attempt.next().await.unwrap().unwrap(),
-        State::Stage(
-            UpdateInfoAndProgress::builder().info(info).progress(progress.clone()).build()
-        )
+        State::Stage(UpdateInfoAndProgress::builder().info(info).progress(progress).build())
     );
     assert_eq!(
         attempt.next().await.unwrap().unwrap(),
-        State::Fetch(
-            UpdateInfoAndProgress::builder().info(info).progress(progress.clone()).build()
-        )
+        State::Fetch(UpdateInfoAndProgress::builder().info(info).progress(progress).build())
     );
     assert_eq!(
         attempt.next().await.unwrap().unwrap(),

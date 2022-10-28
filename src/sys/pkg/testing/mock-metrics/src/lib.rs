@@ -46,6 +46,7 @@ pub struct MockMetricEventLoggerFactory {
 }
 
 impl MockMetricEventLoggerFactory {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self::with_id(cobalt_sw_delivery_registry::PROJECT_ID)
     }

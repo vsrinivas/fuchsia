@@ -156,7 +156,7 @@ mod tests {
         let tempdir = TempDir::new().expect("create tempdir");
         let path = tempdir.path().join(file_name);
         fs::write(&path, r#"{"version":"1","content":{"legacy_amber_source_name":"example"}}"#)
-            .expect(&format!("write {:?}", path));
+            .unwrap_or_else(|_| panic!("write {:?}", path));
         tempdir
     }
 

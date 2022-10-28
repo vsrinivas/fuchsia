@@ -981,7 +981,7 @@ mod tests {
             prop_assert_eq!(
                 UpdateInfoAndProgress::builder()
                     .info(info_progress.info)
-                    .progress(info_progress.progress.clone())
+                    .progress(info_progress.progress)
                     .build(),
                 info_progress
             );
@@ -989,13 +989,13 @@ mod tests {
 
         #[test]
         fn update_info_roundtrips_through_fidl(info: UpdateInfo) {
-            let as_fidl: fidl::UpdateInfo = info.clone().into();
+            let as_fidl: fidl::UpdateInfo = info.into();
             prop_assert_eq!(as_fidl.try_into(), Ok(info));
         }
 
         #[test]
         fn progress_roundtrips_through_fidl(progress: Progress) {
-            let as_fidl: fidl::InstallationProgress = progress.clone().into();
+            let as_fidl: fidl::InstallationProgress = progress.into();
             prop_assert_eq!(as_fidl.try_into(), Ok(progress));
         }
 
@@ -1010,7 +1010,7 @@ mod tests {
                 .build();
 
             prop_assert_eq!(
-                UpdateInfoAndProgress::new(info_progress.info.clone(), info_progress.progress.clone()),
+                UpdateInfoAndProgress::new(info_progress.info, info_progress.progress),
                 Ok(info_progress)
             );
         }
@@ -1062,7 +1062,7 @@ mod tests {
 
         #[test]
         fn progress_rejects_invalid_fraction_completed(progress: Progress, fraction_completed: f32) {
-            let fraction_valid = fraction_completed >= 0.0 && fraction_completed <= 1.0;
+            let fraction_valid = (0.0..=1.0).contains(&fraction_completed);
             prop_assume!(!fraction_valid);
             // Note, the above doesn't look simplified, but not all the usual math rules apply to
             // types that are PartialOrd and not Ord:
@@ -1119,7 +1119,7 @@ mod tests {
             different_fetch_reason: FetchFailureReason,
             different_stage_reason: StageFailureReason,
         ) {
-            let state_with_different_data = match state.clone() {
+            let state_with_different_data = match state {
                  State::Prepare => State::Prepare,
                  State::Stage(_) => State::Stage(different_data),
                     State::Fetch(_) => State::Fetch(different_data),
@@ -1156,7 +1156,7 @@ mod tests {
             .with_stage_reason(StageFailureReason::Internal),
         );
         let inspector = Inspector::new();
-        state.write_to_inspect(&inspector.root());
+        state.write_to_inspect(inspector.root());
         assert_data_tree! {
             inspector,
             root: {
@@ -1183,7 +1183,7 @@ mod tests {
             .with_fetch_reason(FetchFailureReason::Internal),
         );
         let inspector = Inspector::new();
-        state.write_to_inspect(&inspector.root());
+        state.write_to_inspect(inspector.root());
         assert_data_tree! {
             inspector,
             root: {
@@ -1204,7 +1204,7 @@ mod tests {
     fn populates_inspect_fail_prepare() {
         let state = State::FailPrepare(PrepareFailureReason::OutOfSpace);
         let inspector = Inspector::new();
-        state.write_to_inspect(&inspector.root());
+        state.write_to_inspect(inspector.root());
         assert_data_tree! {
             inspector,
             root: {
@@ -1221,7 +1221,7 @@ mod tests {
             progress: Progress { bytes_downloaded: 2048, fraction_completed: 0.5 },
         });
         let inspector = Inspector::new();
-        state.write_to_inspect(&inspector.root());
+        state.write_to_inspect(inspector.root());
         assert_data_tree! {
             inspector,
             root: {

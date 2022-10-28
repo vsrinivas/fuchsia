@@ -151,6 +151,7 @@ impl Notify for RealAttemptNotifier {
     }
 }
 
+#[allow(clippy::bool_assert_comparison)]
 #[cfg(test)]
 mod tests {
     use super::*;

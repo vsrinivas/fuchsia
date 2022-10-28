@@ -155,6 +155,7 @@ mod tests {
     use std::cmp::min;
     use test_case::test_case;
 
+    #[allow(clippy::unused_unit)]
     #[test_case(vec![], "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b" ; "test_empty")]
     #[test_case(vec![0xFF; 8192], "68d131bc271f9c192d4f6dcd8fe61bef90004856da19d0f2f514a7f4098b0737"; "test_oneblock")]
     #[test_case(vec![0xFF; 65536], "f75f59a944d2433bc6830ec243bfefa457704d2aed12f30539cd4f18bf1d62cf"; "test_small")]
@@ -189,9 +190,9 @@ mod tests {
         let expected =
             "f75f59a944d2433bc6830ec243bfefa457704d2aed12f30539cd4f18bf1d62cf".parse().unwrap();
 
-        for chunk_size in vec![1, 100, 1024, 8193] {
+        for chunk_size in &[1, 100, 1024, 8193] {
             let mut tree = MerkleTreeBuilder::new();
-            for block in data.as_slice().chunks(chunk_size) {
+            for block in data.as_slice().chunks(*chunk_size) {
                 tree.write(block);
             }
             let root = tree.finish().root();

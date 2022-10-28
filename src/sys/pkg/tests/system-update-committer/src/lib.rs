@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #![warn(clippy::all)]
+#![allow(clippy::let_unit_value)]
 
 use {
     anyhow::anyhow,
@@ -76,7 +77,7 @@ impl TestEnvBuilder {
 
         // Set up paver service.
         let paver_service_builder =
-            self.paver_service_builder.unwrap_or_else(|| MockPaverServiceBuilder::new());
+            self.paver_service_builder.unwrap_or_else(MockPaverServiceBuilder::new);
         let paver_service = Arc::new(paver_service_builder.build());
         {
             let paver_service = Arc::clone(&paver_service);

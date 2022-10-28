@@ -47,7 +47,7 @@ pub fn get_meta_far(
     meta_subpackages.serialize(&mut meta_subpackages_bytes).unwrap();
 
     let mut path_content_map: BTreeMap<&str, (u64, Box<dyn io::Read>)> = BTreeMap::new();
-    for (path, content) in vec![
+    for (path, content) in &[
         ("meta/contents", &meta_contents_bytes),
         ("meta/package", &meta_package_bytes),
         (MetaSubpackages::PATH, &meta_subpackages_bytes),

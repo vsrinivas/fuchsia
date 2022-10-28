@@ -1294,7 +1294,7 @@ mod tests {
         let VersionedImagePackagesManifest::Version1(manifest) = builder.build();
 
         assert_eq!(manifest.fuchsia(), None);
-        assert_eq!(manifest.recovery(), Some(slot.clone()));
+        assert_eq!(manifest.recovery(), Some(slot));
         assert_eq!(manifest.firmware(), btreemap! {});
 
         let mut builder = ImagePackagesManifest::builder();

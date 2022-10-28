@@ -142,7 +142,7 @@ mod tests {
         #[test]
         /// Verifies that a fidl_fuchsia_update_installer::Options without an Initiator raises an error.
         fn fidl_options_sans_initiator_error(options: Options) {
-            let mut as_fidl: fidl_fuchsia_update_installer::Options = options.clone().into();
+            let mut as_fidl: fidl_fuchsia_update_installer::Options = options.into();
             as_fidl.initiator = None;
             prop_assert_eq!(Options::try_from(as_fidl), Err(OptionsParseError::MissingInitiator));
         }

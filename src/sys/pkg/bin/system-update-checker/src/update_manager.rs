@@ -907,7 +907,7 @@ pub(crate) mod tests {
             Self { states: Arc::new(Mutex::new(vec![])) }
         }
         pub fn take_states(&self) -> Vec<State> {
-            std::mem::replace(&mut self.states.lock(), vec![])
+            std::mem::take(&mut self.states.lock())
         }
     }
     impl Notify for StateChangeCollector {
@@ -1455,7 +1455,7 @@ pub(crate) mod tests {
 
         // Unblock the update attempt and verify that it eventually enters the idle state.
         sender.send(()).unwrap();
-        while let Some(_) = manager.get_state().await {}
+        while (manager.get_state().await).is_some() {}
     }
 
     #[fasync::run_singlethreaded(test)]

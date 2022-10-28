@@ -365,6 +365,7 @@ impl Client {
 }
 
 #[cfg(test)]
+#[allow(clippy::bool_assert_comparison)]
 mod tests {
     use {
         super::*, assert_matches::assert_matches, blobfs_ramdisk::BlobfsRamdisk,

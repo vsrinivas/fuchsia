@@ -4,6 +4,7 @@
 
 #![deny(missing_docs)]
 #![warn(clippy::all)]
+#![allow(clippy::let_unit_value)]
 
 //! Test utilities for starting a blobfs server.
 
@@ -241,7 +242,7 @@ impl BlobfsRamdisk {
 
         let mut file = self.root_dir().unwrap().write_file(merkle.to_string(), 0o777)?;
         file.set_len(bytes.len().try_into().unwrap())?;
-        file.write_all(&bytes)?;
+        file.write_all(bytes)?;
         Ok(())
     }
 }
@@ -477,10 +478,10 @@ mod tests {
             .with_blob(blob.clone())
             .start()
             .unwrap();
-        assert_eq!(blobfs.list_blobs().unwrap(), btreeset![blob.merkle.clone()]);
+        assert_eq!(blobfs.list_blobs().unwrap(), btreeset![blob.merkle]);
 
         let blobfs = blobfs.into_builder().await.unwrap().with_blob(blob.clone()).start().unwrap();
-        assert_eq!(blobfs.list_blobs().unwrap(), btreeset![blob.merkle.clone()]);
+        assert_eq!(blobfs.list_blobs().unwrap(), btreeset![blob.merkle]);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -526,6 +527,7 @@ mod tests {
     }
 
     /// Writes a blob to blobfs, returning the computed merkle root of the blob.
+    #[allow(clippy::zero_prefixed_literal)]
     fn write_blob(dir: &openat::Dir, payload: &[u8]) -> String {
         let merkle = fuchsia_merkle::MerkleTree::from_reader(payload).unwrap().root().to_string();
 

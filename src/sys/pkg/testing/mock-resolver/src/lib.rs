@@ -75,10 +75,10 @@ fn should_redirect_request_to_merkle_file(path: &str, flags: fio::OpenFlags, mod
 
 /// Handles a stream of requests for a package directory,
 /// redirecting file-mode Open requests for /meta to an internal file.
-pub fn handle_package_directory_stream(
+pub async fn handle_package_directory_stream(
     mut stream: fio::DirectoryRequestStream,
     backing_dir_proxy: fio::DirectoryProxy,
-) -> impl Future<Output = ()> {
+) {
     async move {
         let (package_contents_node_proxy, package_contents_dir_server_end) =
             fidl::endpoints::create_proxy::<fio::NodeMarker>().unwrap();
@@ -138,7 +138,7 @@ pub fn handle_package_directory_stream(
                 other => panic!("unhandled request type: {:?}", other),
             }
         }
-    }
+    }.await;
 }
 
 #[derive(Debug)]
@@ -158,6 +158,7 @@ pub struct MockResolverService {
 }
 
 impl MockResolverService {
+    #[allow(clippy::type_complexity)]
     pub fn new(resolve_hook: Option<Box<dyn Fn(&str) + Send + Sync>>) -> Self {
         let packages_dir = TempDir::new().expect("create packages tempdir");
         Self {

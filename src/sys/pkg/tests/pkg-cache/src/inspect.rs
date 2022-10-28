@@ -468,7 +468,7 @@ async fn package_cache_get() {
         written: u64,
     ) {
         assert_data_tree!(
-            &hierarchy,
+            hierarchy,
             root: contains {
                 "fuchsia.pkg.PackageCache": {
                     "get": {
@@ -668,7 +668,7 @@ async fn package_cache_concurrent_gets() {
         .iter()
         .map(|i| {
             let node =
-                hierarchy.get_child_by_path(&vec!["fuchsia.pkg.PackageCache", "get", i]).unwrap();
+                hierarchy.get_child_by_path(&["fuchsia.pkg.PackageCache", "get", i]).unwrap();
             let length =
                 node.get_property("meta-far-length").and_then(|property| property.uint()).unwrap();
             let hash =
@@ -725,7 +725,7 @@ async fn retained_index_updated_and_persisted() {
     let blob_ids =
         packages.iter().map(|pkg| BlobId::from(*pkg.meta_far_merkle_root())).collect::<Vec<_>>();
 
-    replace_retained_packages(&env.proxies.retained_packages, &blob_ids.as_slice()).await;
+    replace_retained_packages(&env.proxies.retained_packages, blob_ids.as_slice()).await;
 
     let mut meta_blob_info = BlobInfo { blob_id: blob_ids[0].into(), length: 0 };
 
@@ -879,7 +879,7 @@ async fn index_updated_mid_package_write() {
     let (meta_far, contents) = package.contents();
     write_meta_far(&needed_blobs, meta_far).await;
 
-    replace_retained_packages(&env.proxies.retained_packages, &vec![blob_id.into()]).await;
+    replace_retained_packages(&env.proxies.retained_packages, &[blob_id]).await;
 
     // Writing meta far triggers index update, however that's done concurrently
     // with the test, and there's no clear signal available through FIDL API.

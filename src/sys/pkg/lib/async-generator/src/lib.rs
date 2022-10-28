@@ -4,6 +4,7 @@
 
 #![deny(missing_docs)]
 #![warn(clippy::all)]
+#![allow(clippy::let_unit_value)]
 
 //! Asynchronous generator-like functionality in stable Rust.
 
@@ -394,7 +395,7 @@ mod tests {
                 co.yield_(a).await;
 
                 let n = b;
-                b = a + b;
+                b += a;
                 a = n;
             }
         })

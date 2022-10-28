@@ -77,7 +77,7 @@ pub(super) async fn reboot(proxy: &PowerStateControlProxy) {
 #[cfg(test)]
 mod tests {
     use {super::*, futures::task::Poll};
-
+    #[allow(clippy::bool_assert_comparison)]
     #[test]
     fn wait_to_reboot_times_out() {
         let mut executor = fuchsia_async::TestExecutor::new_with_fake_time().unwrap();

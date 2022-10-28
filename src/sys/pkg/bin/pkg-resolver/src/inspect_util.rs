@@ -115,7 +115,7 @@ mod test_inspectable_repository_config {
                 .unwrap()
                 .build();
         let config = Arc::new(
-            RepositoryConfigBuilder::new(fuchsia_url.clone())
+            RepositoryConfigBuilder::new(fuchsia_url)
                 .add_root_key(RepositoryKey::Ed25519(vec![0]))
                 .add_mirror(mirror_config.clone())
                 .build(),
@@ -147,7 +147,7 @@ mod test_inspectable_repository_config {
         let inspector = inspect::Inspector::new();
         let fuchsia_url = fuchsia_url::RepositoryUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
         let config = Arc::new(
-            RepositoryConfigBuilder::new(fuchsia_url.clone())
+            RepositoryConfigBuilder::new(fuchsia_url)
                 .add_root_key(RepositoryKey::Ed25519(vec![0]))
                 .build(),
         );

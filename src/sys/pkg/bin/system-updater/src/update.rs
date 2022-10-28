@@ -1483,7 +1483,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn calculate_hash_test_empty_buffer() {
         let buffer = write_mem_buffer(vec![]);
-        let image_size = 4 as usize;
+        let image_size = 4_usize;
         let calc_hash = calculate_hash(&buffer, image_size);
 
         assert_matches!(calc_hash, Err(PrepareError::VmoRead(Status::OUT_OF_RANGE)));
@@ -1492,7 +1492,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn calculate_hash_test_same_size() {
         let buffer = write_mem_buffer(vec![0; 4]);
-        let image_size = 4 as usize;
+        let image_size = 4_usize;
         let image_hash =
             Hash::from_str("df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119")
                 .unwrap();
@@ -1507,14 +1507,14 @@ mod tests {
 
         let mut hasher = Sha256::new();
         let mut chunk = [0; 4096];
-        let chunk_len = 2 as usize;
+        let chunk_len = 2_usize;
         let chunk = &mut chunk[..chunk_len];
 
         buffer.vmo.read(chunk, 0).unwrap();
         hasher.update(chunk);
         let image_hash = Hash::from(*AsRef::<[u8; 32]>::as_ref(&hasher.finalize()));
 
-        let image_size = 2 as usize;
+        let image_size = 2_usize;
         let calc_hash = calculate_hash(&buffer, image_size).unwrap();
 
         assert_eq!(calc_hash, image_hash);
@@ -1523,7 +1523,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn calculate_hash_test_buffer_larger_than_vmo() {
         let buffer = write_mem_buffer(vec![0; 4097]);
-        let image_size = 2 as usize;
+        let image_size = 2_usize;
         let calc_hash = calculate_hash(&buffer, image_size).unwrap();
         let image_hash =
             Hash::from_str("96a296d224f285c67bee93c30f8a309157f0daa35dc5b87e410b78630a09cfc7")

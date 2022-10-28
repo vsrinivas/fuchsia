@@ -217,7 +217,7 @@ mod tests {
 
         install_update_with_http(
             resolver.cache.blobfs.root_dir_handle().expect("getting blobfs root handle"),
-            ClientEnd::from(client),
+            client,
             Arc::clone(&resolver.cache.cache),
             Arc::clone(&resolver.resolver),
             "test".to_owned(),
@@ -281,11 +281,11 @@ mod tests {
             .paver(|p| p.insert_hook(mphooks::return_error(hook)))
             .repo_url(TEST_REPO_URL)
             .add_package(test_package)
-            .add_image("zbi.signed", &data)
-            .add_image("fuchsia.vbmeta", &data)
-            .add_image("recovery", &data)
+            .add_image("zbi.signed", data)
+            .add_image("fuchsia.vbmeta", data)
+            .add_image("recovery", data)
             .add_image("epoch.json", make_current_epoch_json().as_bytes())
-            .add_image("recovery.vbmeta", &data);
+            .add_image("recovery.vbmeta", data);
         let updater = updater.build().await;
         Ok(updater)
     }

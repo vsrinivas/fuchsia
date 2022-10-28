@@ -124,7 +124,7 @@ mod tests {
             let deserialized_object: UpdateModeFile =
                 serde_json::from_value(starting_json_value.clone())
                     .expect("json to deserialize");
-            assert_eq!(deserialized_object, UpdateModeFile::Version1 { update_mode: s.clone() });
+            assert_eq!(deserialized_object, UpdateModeFile::Version1 { update_mode: s });
 
             // Serialize back into serde_json::Value object & show we get same json we started with.
             // Note: even though serialize generally means "convert to string", in this case we're

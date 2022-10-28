@@ -162,9 +162,7 @@ mod tests {
             let (lhs, rhs) = this.bytes.split_at(n);
             this.bytes = rhs;
 
-            for i in 0..n {
-                buf[i] = lhs[i];
-            }
+            buf[..n].copy_from_slice(&lhs[..n]);
 
             Poll::Ready(Ok(n))
         }

@@ -320,17 +320,21 @@ pub mod test_check_for_system_update_impl {
         fn read_to_string(&self, path: &str) -> io::Result<String> {
             self.contents
                 .get(path)
-                .ok_or(io::Error::new(
-                    io::ErrorKind::NotFound,
-                    format!("not present in fake file system: {}", path),
-                ))
+                .ok_or_else(|| {
+                    io::Error::new(
+                        io::ErrorKind::NotFound,
+                        format!("not present in fake file system: {}", path),
+                    )
+                })
                 .map(|s| s.to_string())
         }
         fn remove_file(&mut self, path: &str) -> io::Result<()> {
-            self.contents.remove(path).and(Some(())).ok_or(io::Error::new(
-                io::ErrorKind::NotFound,
-                format!("fake file system cannot remove non-existent file: {}", path),
-            ))
+            self.contents.remove(path).and(Some(())).ok_or_else(|| {
+                io::Error::new(
+                    io::ErrorKind::NotFound,
+                    format!("fake file system cannot remove non-existent file: {}", path),
+                )
+            })
         }
     }
 
@@ -393,7 +397,7 @@ pub mod test_check_for_system_update_impl {
 
             for (name, image) in self.images.into_iter() {
                 fs::write(self.temp_dir.path().join(name.clone()), image)
-                    .expect(&format!("write {}", name));
+                    .unwrap_or_else(|_| panic!("write {}", name));
             }
             PackageResolverProxyTempDir {
                 temp_dir: self.temp_dir,

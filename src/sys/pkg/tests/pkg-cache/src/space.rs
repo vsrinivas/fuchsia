@@ -532,7 +532,7 @@ async fn subpackage_blobs_protected_from_gc(gc_protection: GcProtection) {
     let () = write_blob(&subpackage_meta_far.contents, subpackage_meta_blob).await.unwrap();
 
     // Subpackage meta.far should now be in blobfs.
-    assert!(env.blobfs.list_blobs().unwrap().contains(&subpackage.meta_far_merkle_root()));
+    assert!(env.blobfs.list_blobs().unwrap().contains(subpackage.meta_far_merkle_root()));
 
     // GC should not delete the subpackage meta.far
     let () = env.proxies.space_manager.gc().await.unwrap().unwrap();

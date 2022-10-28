@@ -174,10 +174,10 @@ mod tests {
             "RV64.fuchsia.com",
         ];
         for host in valid_hosts {
-            assert!(validate_host(&host).is_ok());
+            assert!(validate_host(host).is_ok());
         }
         for host in invalid_hosts {
-            assert!(validate_host(&host).is_err());
+            assert!(validate_host(host).is_err());
         }
     }
 

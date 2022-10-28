@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #![warn(clippy::all)]
+#![allow(clippy::let_unit_value)]
+#![allow(clippy::bool_assert_comparison)]
 #![cfg(test)]
 
 use {
@@ -391,7 +393,7 @@ where
         // Paver service, so we can verify that we submit the expected requests and so that
         // we can verify if the paver service returns errors, that we handle them correctly.
         let paver_service = Arc::new(
-            self.paver_service_builder.unwrap_or_else(|| MockPaverServiceBuilder::new()).build(),
+            self.paver_service_builder.unwrap_or_else(MockPaverServiceBuilder::new).build(),
         );
         {
             let paver_service = Arc::clone(&paver_service);
@@ -424,7 +426,9 @@ where
 
         // fuchsia.boot/Arguments service to supply the hash of the system_image package.
         let mut arguments_service = MockBootArgumentsService::new(HashMap::new());
-        system_image.map(|hash| arguments_service.insert_pkgfs_boot_arg(hash));
+        if let Some(hash) = system_image {
+            arguments_service.insert_pkgfs_boot_arg(hash);
+        }
         let arguments_service = Arc::new(arguments_service);
         {
             let arguments_service = Arc::clone(&arguments_service);
@@ -478,7 +482,11 @@ where
                         vfs::path::Path::dot(),
                         handles.outgoing_dir.into_channel().into(),
                     );
-                    async move { Ok(scope.wait().await) }.boxed()
+                    async move {
+                        scope.wait().await;
+                        Ok(())
+                    }
+                    .boxed()
                 },
                 ChildOptions::new(),
             )

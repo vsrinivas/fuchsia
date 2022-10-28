@@ -89,7 +89,7 @@ impl ThrottleHook {
 impl Hook for ThrottleHook {
     fn file(&self, report: CrashReport) -> BoxFuture<'static, Result<(), Status>> {
         let sender = Arc::clone(&self.sender);
-        let file_response = self.file_response.clone();
+        let file_response = self.file_response;
 
         async move {
             sender.lock().await.send(report).await.unwrap();

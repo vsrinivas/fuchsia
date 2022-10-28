@@ -320,7 +320,7 @@ mod tests {
         for entry in WalkDir::new(dir) {
             let entry = entry.unwrap();
             if entry.metadata().unwrap().is_file() {
-                let path = entry.path().strip_prefix(&dir).unwrap().to_str().unwrap().to_string();
+                let path = entry.path().strip_prefix(dir).unwrap().to_str().unwrap().to_string();
                 let contents = std::fs::read(entry.path()).unwrap();
 
                 entries.insert(path, contents);
@@ -773,7 +773,7 @@ mod tests {
 
         let metadata_repo_path = dir.join("metadata");
         let blob_repo_path = dir.join("blobs");
-        let repo = FileSystemRepository::new(metadata_repo_path, blob_repo_path.clone());
+        let repo = FileSystemRepository::new(metadata_repo_path, blob_repo_path);
         let repo_keys = test_utils::make_repo_keys();
 
         let pkg1_dir = dir.join("package1");

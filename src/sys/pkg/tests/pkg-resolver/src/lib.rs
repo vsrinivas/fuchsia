@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #![warn(clippy::all)]
+#![allow(clippy::let_unit_value)]
 
 use {
     assert_matches::assert_matches,
@@ -336,6 +337,7 @@ pub struct TestEnvBuilder<BlobfsAndSystemImageFut, MountsFn> {
 }
 
 impl TestEnvBuilder<future::BoxFuture<'static, (BlobfsRamdisk, Option<Hash>)>, fn() -> Mounts> {
+    #![allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
             blobfs_and_system_image: async {
@@ -463,7 +465,9 @@ where
         let mut args = HashMap::new();
         args.insert("tuf_repo_config".to_string(), self.tuf_repo_config_boot_arg);
         let mut boot_arguments_service = MockBootArgumentsService::new(args);
-        system_image.map(|hash| boot_arguments_service.insert_pkgfs_boot_arg(hash));
+        if let Some(hash) = system_image {
+            boot_arguments_service.insert_pkgfs_boot_arg(hash)
+        }
         let boot_arguments_service = Arc::new(boot_arguments_service);
         local_child_svc_dir
             .add_entry(
@@ -557,7 +561,11 @@ where
                         vfs::path::Path::dot(),
                         handles.outgoing_dir.into_channel().into(),
                     );
-                    async move { Ok(scope.wait().await) }.boxed()
+                    async move {
+                        scope.wait().await;
+                        Ok(())
+                    }
+                    .boxed()
                 },
                 ChildOptions::new(),
             )
@@ -910,7 +918,7 @@ impl<B: Blobfs> TestEnv<B> {
         url: impl Into<String>,
     ) -> impl Future<Output = Result<pkg::BlobId, Status>> {
         let fut = self.proxies.resolver.get_hash(&mut fpkg::PackageUrl { url: url.into() });
-        async move { fut.await.unwrap().map(|blob_id| blob_id.into()).map_err(|i| Status::from_raw(i)) }
+        async move { fut.await.unwrap().map(|blob_id| blob_id.into()).map_err(Status::from_raw) }
     }
 
     pub async fn open_cached_package(

@@ -220,7 +220,7 @@ async fn images_manifest_update_package_firmware_no_match() {
 
     let env = TestEnv::builder()
         .paver_service(|builder| {
-            builder.insert_hook(mphooks::read_firmware(|_, _| return Ok(b"not a match".to_vec())))
+            builder.insert_hook(mphooks::read_firmware(|_, _| Ok(b"not a match".to_vec())))
         })
         .build()
         .await;
@@ -309,9 +309,7 @@ async fn images_manifest_update_package_firmware_match_desired_config() {
 
     let env = TestEnv::builder()
         .paver_service(|builder| {
-            builder.insert_hook(mphooks::read_firmware(|_, _| {
-                return Ok(b"matching".to_vec());
-            }))
+            builder.insert_hook(mphooks::read_firmware(|_, _| Ok(b"matching".to_vec())))
         })
         .build()
         .await;
@@ -777,7 +775,7 @@ async fn fails_on_firmware_write_error_v1() {
         attempt.next().await.unwrap().unwrap(),
         State::Stage(
             UpdateInfoAndProgress::builder()
-                .info(info.clone())
+                .info(info)
                 .progress(Progress::builder().fraction_completed(0.0).bytes_downloaded(0).build())
                 .build()
         )
@@ -867,7 +865,7 @@ async fn fails_on_firmware_write_error() {
         attempt.next().await.unwrap().unwrap(),
         State::Stage(
             UpdateInfoAndProgress::builder()
-                .info(info.clone())
+                .info(info)
                 .progress(Progress::builder().fraction_completed(0.0).bytes_downloaded(0).build())
                 .build()
         )

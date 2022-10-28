@@ -5,6 +5,7 @@
 #![deny(missing_docs)]
 #![warn(clippy::all)]
 #![allow(clippy::type_complexity)]
+#![allow(clippy::let_unit_value)]
 
 //! Concurrent work queue helpers
 
@@ -245,7 +246,7 @@ where
             Poll::Ready(Some((key, res))) => {
                 let mut tasks = this.tasks.lock();
                 let infos: &mut TaskVariants<_, _> =
-                    &mut tasks.get_mut(&key).expect("key to exist in map if not resolved");
+                    tasks.get_mut(&key).expect("key to exist in map if not resolved");
 
                 if let Some(next_context) = infos.done(res) {
                     // start the next operation immediately
@@ -526,7 +527,7 @@ mod tests {
         }
 
         fn peek(&self) -> Option<K> {
-            self.tasks.lock().keys().next().map(|key| key.clone())
+            self.tasks.lock().keys().next().cloned()
         }
 
         fn keys(&self) -> Vec<K> {
@@ -550,7 +551,7 @@ mod tests {
 
     impl<K> TestQueueResults<K> {
         fn take(&self) -> Vec<K> {
-            std::mem::replace(&mut *self.done.lock(), vec![])
+            std::mem::take(&mut *self.done.lock())
         }
 
         fn is_terminated(&self) -> bool {

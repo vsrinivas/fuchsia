@@ -297,7 +297,7 @@ pub(crate) mod for_tests {
         }
     }
 
-    pub fn generate_packages_json(packages: &Vec<Package>, repo_url: &str) -> String {
+    pub fn generate_packages_json(packages: &[Package], repo_url: &str) -> String {
         let package_urls: Vec<String> = packages
             .iter()
             .map(|p| format!("{}/{}/0?hash={}", repo_url, p.name(), p.meta_far_merkle_root()))
@@ -354,7 +354,7 @@ pub(crate) mod for_tests {
 
             let mut updater = Updater::launch_with_components(
                 resolver.cache.blobfs.root_dir_handle().expect("getting blobfs root handle"),
-                ClientEnd::from(client),
+                client,
                 Arc::clone(&resolver.resolver),
                 Arc::clone(&resolver.cache.cache),
                 "test",
@@ -434,11 +434,11 @@ pub mod tests {
                 p.boot_manager_close_with_epitaph(zx::Status::NOT_SUPPORTED)
             })
             .add_package(test_package)
-            .add_image("zbi.signed", &data)
-            .add_image("fuchsia.vbmeta", &data)
-            .add_image("recovery", &data)
+            .add_image("zbi.signed", data)
+            .add_image("fuchsia.vbmeta", data)
+            .add_image("recovery", data)
             .add_image("epoch.json", make_current_epoch_json().as_bytes())
-            .add_image("recovery.vbmeta", &data);
+            .add_image("recovery.vbmeta", data);
         let result = updater.build_and_run().await;
 
         assert_eq!(

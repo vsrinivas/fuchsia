@@ -109,7 +109,7 @@ pub(crate) mod for_tests {
                 match req {
                     ArgumentsRequest::GetString { key, responder } => {
                         if key == "tuf_repo_config" {
-                            responder.send(channel.as_ref().map(|c| c.as_str())).unwrap();
+                            responder.send(channel.as_deref()).unwrap();
                         } else {
                             eprintln!("Unexpected arguments GetString: {}, closing channel.", key);
                         }

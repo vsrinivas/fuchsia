@@ -377,7 +377,7 @@ mod tests {
     fn test_from_dir_all_keys() {
         let tmp = tempfile::tempdir().unwrap();
         let dir = Utf8Path::from_path(tmp.path()).unwrap();
-        test_utils::make_empty_pm_repo_dir(&dir);
+        test_utils::make_empty_pm_repo_dir(dir);
 
         let keys = RepoKeys::from_dir(&dir.join("keys").into_std_path_buf()).unwrap();
 
@@ -427,7 +427,7 @@ mod tests {
     fn test_from_dir_some_keys() {
         let tmp = tempfile::tempdir().unwrap();
         let dir = Utf8Path::from_path(tmp.path()).unwrap();
-        test_utils::make_empty_pm_repo_dir(&dir);
+        test_utils::make_empty_pm_repo_dir(dir);
 
         let keys_dir = dir.join("keys");
         std::fs::remove_file(&keys_dir.join("root.json")).unwrap();

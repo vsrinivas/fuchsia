@@ -1690,7 +1690,7 @@ mod tests {
             assert_matches!(
                 retry_or_last_error(repeat(Duration::from_millis(50)).take(20), || async {
                     let UiActivityState { state } = *ui_activity.lock().await;
-                    (state == State::Idle).then(|| ()).ok_or(state)
+                    (state == State::Idle).then_some(()).ok_or(state)
                 })
                 .await,
                 Ok(())
@@ -1703,7 +1703,7 @@ mod tests {
             assert_matches!(
                 retry_or_last_error(repeat(Duration::from_millis(50)).take(20), || async {
                     let UiActivityState { state } = *ui_activity.lock().await;
-                    (state == State::Active).then(|| ()).ok_or(state)
+                    (state == State::Active).then_some(()).ok_or(state)
                 })
                 .await,
                 Ok(())

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #![warn(clippy::all)]
+#![allow(clippy::let_unit_value)]
 #![cfg(test)]
 
 use {
@@ -482,7 +483,7 @@ impl TestEnv {
     }
 
     fn take_interactions(&self) -> Vec<SystemUpdaterInteraction> {
-        std::mem::replace(&mut *self.interactions.lock(), vec![])
+        std::mem::take(&mut *self.interactions.lock())
     }
 
     /// Set the name of the board that system-updater is running on.
@@ -519,7 +520,7 @@ impl TestEnv {
     }
 
     async fn start_update(&self) -> Result<UpdateAttempt, UpdateAttemptError> {
-        self.start_update_with_options(&UPDATE_PKG_URL, default_options()).await
+        self.start_update_with_options(UPDATE_PKG_URL, default_options()).await
     }
 
     async fn start_update_with_options(

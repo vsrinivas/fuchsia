@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #![warn(clippy::all)]
+#![allow(clippy::let_unit_value)]
 
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_update::{CommitStatusProviderRequest, CommitStatusProviderRequestStream};

@@ -52,11 +52,7 @@ mod tests {
     use {super::*, assert_matches::assert_matches, fuchsia_pkg::PackagePathSegmentError};
 
     fn into_hashset(names: &[&str]) -> HashSet<PackageName> {
-        names
-            .into_iter()
-            .map(|s| PackageName::from_str(*s))
-            .collect::<Result<HashSet<_>, _>>()
-            .unwrap()
+        names.iter().map(|s| PackageName::from_str(s)).collect::<Result<HashSet<_>, _>>().unwrap()
     }
 
     fn allowlist_allows(allowlist: &NonStaticAllowList, name: &str) -> bool {

@@ -299,6 +299,7 @@ pub enum Error {
     Json(#[from] serde_json::Error),
 }
 
+#[allow(clippy::bool_assert_comparison)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -329,8 +330,8 @@ mod tests {
                 match req {
                     ArgumentsRequest::GetStrings { keys, responder } => {
                         assert_eq!(keys, vec!["ota_channel", "omaha_app_id"]);
-                        let response = [channel.clone(), realm.clone()];
-                        responder.send(&mut response.iter().map(|v| *v)).expect("send ok");
+                        let response = [channel, realm];
+                        responder.send(&mut response.iter().copied()).expect("send ok");
                     }
                     _ => unreachable!(),
                 }
@@ -707,7 +708,7 @@ mod tests {
     }
 
     impl ArgumentsServiceConnector {
-        fn new<'a>(ota_channel: Option<String>) -> Self {
+        fn new(ota_channel: Option<String>) -> Self {
             Self { ota_channel: Arc::new(Mutex::new(ota_channel)) }
         }
         fn set(&self, target: Option<String>) {

@@ -46,8 +46,8 @@ mod tests {
 
     #[test]
     fn to_alternate() {
-        assert_eq!((&Configuration::A).to_alternate(), &Configuration::B);
-        assert_eq!((&Configuration::B).to_alternate(), &Configuration::A);
+        assert_eq!(Configuration::A.to_alternate(), &Configuration::B);
+        assert_eq!(Configuration::B.to_alternate(), &Configuration::A);
     }
 
     #[test]

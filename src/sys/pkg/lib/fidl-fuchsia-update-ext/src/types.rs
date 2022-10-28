@@ -441,7 +441,7 @@ mod tests {
         #[test]
         fn test_initiator_roundtrips(initiator: Initiator) {
             prop_assert_eq!(
-                Initiator::from(fidl::Initiator::from(initiator.clone())),
+                Initiator::from(fidl::Initiator::from(initiator)),
                 initiator
             );
         }

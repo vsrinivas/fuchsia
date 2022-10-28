@@ -74,10 +74,9 @@ async fn fails_commit_recovery_v1() {
     let env = TestEnv::builder()
         .paver_service(|builder| {
             builder.insert_hook(mphooks::return_error(|event| match event {
-                PaverEvent::SetConfigurationUnbootable { configuration } => match configuration {
-                    paver::Configuration::A => Status::INTERNAL,
-                    _ => Status::OK,
-                },
+                PaverEvent::SetConfigurationUnbootable {
+                    configuration: paver::Configuration::A,
+                } => Status::INTERNAL,
                 _ => Status::OK,
             }))
         })
@@ -214,10 +213,9 @@ async fn fails_commit_recovery() {
     let env = TestEnv::builder()
         .paver_service(|builder| {
             builder.insert_hook(mphooks::return_error(|event| match event {
-                PaverEvent::SetConfigurationUnbootable { configuration } => match configuration {
-                    paver::Configuration::A => Status::INTERNAL,
-                    _ => Status::OK,
-                },
+                PaverEvent::SetConfigurationUnbootable {
+                    configuration: paver::Configuration::A,
+                } => Status::INTERNAL,
                 _ => Status::OK,
             }))
         })

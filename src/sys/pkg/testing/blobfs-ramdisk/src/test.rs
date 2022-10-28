@@ -33,7 +33,7 @@ async fn blobfs() -> Result<(), Error> {
     );
 
     let mut f = d.write_file(BLOB_MERKLE, 0).expect("open file 1");
-    f.set_len(6 as u64).expect("truncate");
+    f.set_len(6_u64).expect("truncate");
 
     f.write_all(b"Hello").unwrap_or_else(|e| eprintln!("write 1 error: {}", e));
     drop(f);
@@ -71,7 +71,7 @@ async fn open_blob(
     let (file, server_end) = fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
     let server_end = ServerEnd::new(server_end.into_channel());
 
-    flags = flags | fio::OpenFlags::DESCRIBE;
+    flags |= fio::OpenFlags::DESCRIBE;
     blobfs.open(flags, 0, merkle, server_end).expect("open blob");
 
     let mut events = file.take_event_stream();
@@ -125,12 +125,12 @@ async fn create_blob(
     contents: &[u8],
 ) -> Result<(), Error> {
     let (blob, _) =
-        open_blob(&blobfs, merkle, fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE).await?;
+        open_blob(blobfs, merkle, fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE).await?;
     let () = blob.resize(contents.len() as u64).await?.map_err(Status::from_raw)?;
     write_blob(&blob, contents).await?;
     blob.close().await?.map_err(Status::from_raw)?;
 
-    let (blob, _) = open_blob(&blobfs, merkle, fio::OpenFlags::RIGHT_READABLE).await?;
+    let (blob, _) = open_blob(blobfs, merkle, fio::OpenFlags::RIGHT_READABLE).await?;
     verify_blob(&blob, contents).await?;
     Ok(())
 }
@@ -145,7 +145,7 @@ async fn create_blob(
 async fn wait_for_blob_to_be_creatable(blobfs: &fio::DirectoryProxy, merkle: &str) {
     for _ in 0..50 {
         let res =
-            open_blob(&blobfs, merkle, fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE)
+            open_blob(blobfs, merkle, fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE)
                 .await;
         match res {
             Err(zx::Status::ACCESS_DENIED) => {
@@ -352,7 +352,7 @@ async fn open_for_create_wait_for_signal() -> Result<(), Error> {
         event.wait_handle(zx::Signals::all(), zx::Time::after(zx::Duration::from_seconds(0))),
         Err(zx::Status::TIMED_OUT)
     );
-    write_blob(&blob0, &BLOB_CONTENTS[..]).await?;
+    write_blob(&blob0, BLOB_CONTENTS).await?;
 
     assert_eq!(
         event.wait_handle(zx::Signals::all(), zx::Time::after(zx::Duration::from_seconds(0)))?,
@@ -377,7 +377,7 @@ async fn open_resize_wait_for_signal() -> Result<(), Error> {
         event.wait_handle(zx::Signals::all(), zx::Time::after(zx::Duration::from_seconds(0))),
         Err(zx::Status::TIMED_OUT)
     );
-    write_blob(&blob0, &BLOB_CONTENTS[..]).await?;
+    write_blob(&blob0, BLOB_CONTENTS).await?;
 
     assert_eq!(
         event.wait_handle(zx::Signals::all(), zx::Time::after(zx::Duration::from_seconds(0)))?,

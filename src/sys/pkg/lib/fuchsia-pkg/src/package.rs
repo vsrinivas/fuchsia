@@ -149,7 +149,7 @@ mod test_package {
         };
         let blobs = btreemap! {
             "bin/my_prog".to_string() => blob_entry.clone(),
-            "bin/my_prog2".to_string() => blob_entry.clone(),
+            "bin/my_prog2".to_string() => blob_entry,
         };
         let package = Package {
             meta_contents: meta_contents.clone(),
@@ -224,7 +224,7 @@ mod test_package {
         };
         let blobs = btreemap! {
             "bin/my_prog".to_string() => blob_entry.clone(),
-            "bin/my_prog2".to_string() => blob_entry.clone(),
+            "bin/my_prog2".to_string() => blob_entry,
         };
         let package =
             Package::from_meta_far(File::open(&meta_far_path).unwrap(), blobs.clone()).unwrap();
@@ -251,9 +251,9 @@ mod test_package {
         };
         let blobs = btreemap! {
             "bin/my_prog".to_string() => blob_entry.clone(),
-            "bin/my_prog2".to_string() => blob_entry.clone(),
+            "bin/my_prog2".to_string() => blob_entry,
         };
-        let package = Package::from_meta_far(file, blobs.clone());
+        let package = Package::from_meta_far(file, blobs);
         assert!(package.is_err());
     }
 }

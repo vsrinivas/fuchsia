@@ -561,7 +561,7 @@ mod tests {
         let server_fut = async move {
             match stream.next().await.unwrap().unwrap() {
                 InstallerRequest::MonitorUpdate { attempt_id, .. } => {
-                    assert_eq!(attempt_id.as_ref().map(String::as_str), Some("id"));
+                    assert_eq!(attempt_id.as_deref(), Some("id"));
                 }
                 request => panic!("Unexpected request: {:?}", request),
             }

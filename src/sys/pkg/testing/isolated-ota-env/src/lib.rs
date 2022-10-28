@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #![warn(clippy::all)]
+#![allow(clippy::let_unit_value)]
 
 use {
     anyhow::{Context, Error},
@@ -67,6 +68,7 @@ pub struct TestEnvBuilder {
 }
 
 impl TestEnvBuilder {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         TestEnvBuilder {
             blobfs: None,
@@ -168,7 +170,7 @@ impl TestEnvBuilder {
                 served_repo.make_repo_config(TEST_REPO_URL.parse().expect("make repo config"))
             ]);
 
-            let update_merkle = update.meta_far_merkle_root().clone();
+            let update_merkle = *update.meta_far_merkle_root();
             // Add the update package to the list of packages, so that TestResult::check_packages
             // will expect to see the update package's blobs in blobfs.
             let mut packages = vec![update];
@@ -360,7 +362,11 @@ impl TestEnv {
                         vfs::path::Path::dot(),
                         handles.outgoing_dir.into_channel().into(),
                     );
-                    async move { Ok(scope.wait().await) }.boxed()
+                    async move {
+                        scope.wait().await;
+                        Ok(())
+                    }
+                    .boxed()
                 },
                 ChildOptions::new(),
             )
@@ -425,7 +431,11 @@ impl TestEnv {
                         vfs::path::Path::dot(),
                         handles.outgoing_dir.into_channel().into(),
                     );
-                    async move { Ok(scope.wait().await) }.boxed()
+                    async move {
+                        scope.wait().await;
+                        Ok(())
+                    }
+                    .boxed()
                 },
                 ChildOptions::new(),
             )
@@ -517,7 +527,7 @@ impl TestEnv {
 
         let result = download_and_apply_update_with_pre_configured_components(
             blobfs_proxy,
-            ClientEnd::from(client),
+            client,
             &channel_clone,
             &self.board,
             &self.version,
@@ -540,7 +550,7 @@ impl TestEnv {
             match req {
                 ArgumentsRequest::GetString { key, responder } => {
                     if key == "tuf_repo_config" {
-                        responder.send(channel.as_ref().map(|c| c.as_str())).unwrap();
+                        responder.send(channel.as_deref()).unwrap();
                     } else {
                         eprintln!("Unexpected arguments GetString: {}, closing channel.", key);
                     }

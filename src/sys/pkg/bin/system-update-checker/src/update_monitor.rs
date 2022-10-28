@@ -192,7 +192,9 @@ mod test {
         let (fut, attempt_fut, mut mms) = UpdateMonitor::<N, A>::new();
         fasync::Task::spawn(fut).detach();
         fasync::Task::spawn(attempt_fut).detach();
-        version_available.map(|s| mms.set_version_available(s));
+        if let Some(s) = version_available {
+            mms.set_version_available(s);
+        }
         if let Some(update_state) = update_state {
             mms.advance_update_state(update_state).await;
         }

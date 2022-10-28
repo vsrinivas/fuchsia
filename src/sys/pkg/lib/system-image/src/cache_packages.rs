@@ -175,7 +175,7 @@ mod tests {
         assert_eq!(
             Some(hash),
             packages.hash_for_package(
-                &AbsolutePackageUrl::parse(&format!("fuchsia-pkg://fuchsia.com/name")).unwrap()
+                &AbsolutePackageUrl::parse("fuchsia-pkg://fuchsia.com/name").unwrap()
             )
         );
     }

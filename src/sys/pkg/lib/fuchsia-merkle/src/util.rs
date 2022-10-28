@@ -134,8 +134,8 @@ mod tests {
             "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b".parse().unwrap();
         let zero_hash =
             "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap();
-        let hash_of_single_hash = hash_hashes(&vec![data_hash], 1, 0);
-        let hash_of_single_hash_and_zero_hash = hash_hashes(&vec![data_hash, zero_hash], 1, 0);
+        let hash_of_single_hash = hash_hashes(&[data_hash], 1, 0);
+        let hash_of_single_hash_and_zero_hash = hash_hashes(&[data_hash, zero_hash], 1, 0);
         assert_eq!(hash_of_single_hash, hash_of_single_hash_and_zero_hash);
     }
 }

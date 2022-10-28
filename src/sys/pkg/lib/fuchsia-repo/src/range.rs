@@ -411,10 +411,11 @@ mod tests {
 
     #[test]
     fn test_content_range_from_http_content_range_parses_correctly() {
-        for (header, expected) in [(
-            "bytes 1-5/10",
-            ContentRange::Inclusive { first_byte_pos: 1, last_byte_pos: 5, complete_len: 10 },
-        )] {
+        {
+            let (header, expected) = (
+                "bytes 1-5/10",
+                ContentRange::Inclusive { first_byte_pos: 1, last_byte_pos: 5, complete_len: 10 },
+            );
             let header = HeaderValue::from_static(header);
             let actual = ContentRange::from_http_content_range_header(&header).unwrap();
             assert_eq!(actual, expected);

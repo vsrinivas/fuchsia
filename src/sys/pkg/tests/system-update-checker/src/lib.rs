@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #![warn(clippy::all)]
+#![allow(clippy::let_unit_value)]
 #![cfg(test)]
 use {
     anyhow::anyhow,
@@ -743,7 +744,7 @@ async fn test_installation_deferred() {
                 MockPaverServiceBuilder::new()
                     .insert_hook(throttle_hook)
                     .insert_hook(mphooks::config_status(move |_| {
-                        Ok(config_status_response.lock().as_ref().unwrap().clone())
+                        Ok(*config_status_response.lock().as_ref().unwrap())
                     }))
                     .build(),
             )

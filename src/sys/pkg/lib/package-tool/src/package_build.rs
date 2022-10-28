@@ -642,7 +642,7 @@ mod test {
 
         // Build the package.
         cmd_package_build(PackageBuildCommand {
-            creation_manifest_path: creation_manifest_path,
+            creation_manifest_path,
             out: out.clone(),
             api_level: Some(8),
             abi_revision: None,
@@ -699,8 +699,8 @@ mod test {
                 blobs_manifest_path.clone(),
                 meta_far_path.clone(),
                 meta_far_depfile_path.clone(),
-                meta_far_merkle_path.clone(),
-                package_manifest_path.clone(),
+                meta_far_merkle_path,
+                package_manifest_path,
             ],
         );
 
