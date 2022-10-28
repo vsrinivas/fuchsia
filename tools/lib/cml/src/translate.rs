@@ -1128,7 +1128,7 @@ fn extract_use_availability(in_obj: &Use) -> Result<fdecl::Availability, Error> 
         Some(Availability::Required) | None => Ok(fdecl::Availability::Required),
         Some(Availability::Optional) => Ok(fdecl::Availability::Optional),
         Some(Availability::Transitional) => Ok(fdecl::Availability::Transitional),
-        _ => Err(Error::internal(
+        Some(Availability::SameAsTarget) => Err(Error::internal(
             "availability \"same_as_target\" not supported for use declarations",
         )),
     }
