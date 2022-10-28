@@ -35,7 +35,10 @@
 namespace mock_device {
 
 class MockDevice;
-using MockDeviceType = ddk::FullDevice<MockDevice>;
+using MockDeviceType =
+    ddk::Device<MockDevice, ddk::GetProtocolable, ddk::Initializable, ddk::Openable, ddk::Closable,
+                ddk::Unbindable, ddk::Readable, ddk::Writable, ddk::GetSizable, ddk::Suspendable,
+                ddk::Resumable, ddk::Rxrpcable>;
 
 class MockDevice : public MockDeviceType {
  public:

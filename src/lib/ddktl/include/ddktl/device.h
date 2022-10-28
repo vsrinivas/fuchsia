@@ -101,10 +101,6 @@
 // +--------------------------+----------------------------------------------------+
 //
 //
-// Note: the ddk::FullDevice type alias may also be used if your device class
-// will implement every mixin.
-//
-//
 // :: Example ::
 //
 // // Define our device type using a type alias.
@@ -793,12 +789,6 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
       device_add_args_t* args,
       typename std::enable_if<!internal::is_base_protocol<T>::value, T>::type* dummy = 0) {}
 };
-
-// Convenience type for implementations that would like to override all
-// zx_protocol_device_t methods.
-template <class D>
-using FullDevice = Device<D, GetProtocolable, Initializable, Openable, Closable, Unbindable,
-                          Readable, Writable, GetSizable, Suspendable, Resumable, Rxrpcable>;
 
 }  // namespace ddk
 

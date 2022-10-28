@@ -104,8 +104,14 @@ static void do_test() {
   auto dev = std::make_unique<T>();
 }
 
-struct TestDispatch : public ddk::FullDevice<TestDispatch> {
-  TestDispatch() : ddk::FullDevice<TestDispatch>(nullptr) {}
+struct TestDispatch;
+using TestDispatchType =
+    ddk::Device<TestDispatch, ddk::GetProtocolable, ddk::Initializable, ddk::Openable,
+                ddk::Closable, ddk::Unbindable, ddk::Readable, ddk::Writable, ddk::GetSizable,
+                ddk::Suspendable, ddk::Resumable, ddk::Rxrpcable>;
+
+struct TestDispatch : public TestDispatchType {
+  TestDispatch() : TestDispatchType(nullptr) {}
 
   // Give access to the device ops for testing
   const zx_protocol_device_t* GetDeviceOps() { return &ddk_device_proto_; }
