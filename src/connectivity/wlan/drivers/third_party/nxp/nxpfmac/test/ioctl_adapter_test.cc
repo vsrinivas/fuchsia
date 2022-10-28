@@ -67,11 +67,10 @@ TEST_F(IoctlAdapterTest, IssueIoctlAsync) {
 
   sync_completion_t complete_called;
   // We can't capture join_request because it's variable sized, capture its pointer instead.
-  auto on_complete = [join_request_addr = &join_request, &complete_called](
-                         mlan_ioctl_req *req, IoctlStatus status) -> zx_status_t {
+  auto on_complete = [join_request_addr = &join_request, &complete_called](mlan_ioctl_req *req,
+                                                                           IoctlStatus status) {
     EXPECT_EQ(static_cast<void *>(req), static_cast<void *>(join_request_addr));
     sync_completion_signal(&complete_called);
-    return ZX_OK;
   };
 
   ASSERT_EQ(IoctlStatus::Pending,
@@ -224,6 +223,72 @@ TEST_F(IoctlAdapterTest, IssueIoctlCompleteBeforeTimeoutScheduled) {
   ASSERT_EQ(1u, on_complete_calls.load());
   // on_ioctl should only have been called once, the timeout should not have made any calls.
   ASSERT_EQ(1u, on_ioctl_calls.load());
+}
+
+TEST_F(IoctlAdapterTest, IssueIoctlCompleteDuringCancelation) {
+  // Test for the edge case where both timeout and completion are scheduled on the dispatcher.
+
+  IoctlRequest<mlan_ds_rate> blocking_request(MLAN_IOCTL_RATE, MLAN_ACT_SET, 0, mlan_ds_rate{});
+  IoctlRequest<mlan_ds_rate> request(MLAN_IOCTL_BSS, MLAN_ACT_SET, 0, mlan_ds_rate{});
+
+  auto on_ioctl = [&](t_void *, pmlan_ioctl_req req) -> mlan_status {
+    if (req->action == MLAN_ACT_CANCEL) {
+      // This is the cancelation because of the timeout, emulate mlan's behavior.
+      req->status_code = MLAN_ERROR_CMD_CANCEL;
+      ioctl_adapter_->OnIoctlComplete(req, IoctlStatus::Failure);
+      return MLAN_STATUS_SUCCESS;
+    }
+    if (&blocking_request.IoctlReq() == req) {
+      // This is the request that's intended to block until both the ioctl completion and timeout
+      // for our main request have been scheduled. Make it succeed immediately, the completion
+      // callback will do the waiting.
+      return MLAN_STATUS_SUCCESS;
+    }
+    if (&request.IoctlReq() == req) {
+      // This is the request that should be blocked and timed out. Don't schedule it's completion
+      // until after the timeout has been properly scheduled.
+      ioctl_adapter_->OnIoctlComplete(req, IoctlStatus::Success);
+      return MLAN_STATUS_PENDING;
+    }
+
+    return MLAN_STATUS_SUCCESS;
+  };
+
+  mock_mlan_.SetOnMlanIoctl(std::move(on_ioctl));
+
+  // Issue a request that will complete immediately and call the completion callback on the
+  // ioctl_adapter's working thread. The callback will block until we're ready to proceed.
+  sync_completion_t unblock_request;
+  ASSERT_EQ(
+      IoctlStatus::Pending,
+      ioctl_adapter_->IssueIoctl(&blocking_request, [&](pmlan_ioctl_req req, IoctlStatus status) {
+        sync_completion_wait(&unblock_request, ZX_TIME_INFINITE);
+      }));
+
+  sync_completion_t request_completed;
+  std::atomic<int> completion_calls = 0;
+  // Now issue an IOCTL that will first complete and then timeout afterwards. Because the blocking
+  // request's callback has not yet completed, both of these tasks should be scheduled. Because this
+  // relies on timing this test may not always trigger an error but it should most of the time.
+  ASSERT_EQ(IoctlStatus::Pending,
+            ioctl_adapter_->IssueIoctl(&request, [&](pmlan_ioctl_req req, IoctlStatus status) {
+              ++completion_calls;
+              sync_completion_signal(&request_completed);
+            }));
+
+  ASSERT_TRUE(ioctl_adapter_->CancelIoctl(&request));
+
+  // At this point the completion and cancelation of the request should have been queued up. Let the
+  // blocking request complete now and then both the completion and cancelation should go through.
+
+  sync_completion_signal(&unblock_request);
+
+  ASSERT_OK(sync_completion_wait(&request_completed, ZX_TIME_INFINITE));
+
+  // Destroy the ioctl adapter here to ensure that whatever scheduled callback loses doesn't call
+  // into a destroyed request. Destroying the ioctl adapter will stop the ioctl worker thread and
+  // wait for all work to complete.
+  ioctl_adapter_.reset();
 }
 
 TEST_F(IoctlAdapterTest, IssueIoctlSyncTimeout) {

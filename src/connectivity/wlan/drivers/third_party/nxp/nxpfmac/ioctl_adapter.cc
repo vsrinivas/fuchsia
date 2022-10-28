@@ -85,7 +85,9 @@ void IoctlAdapter::OnIoctlComplete(mlan_ioctl_req* request, IoctlStatus status) 
     // reuses the same request object and assigns a new callback to it.
     std::shared_ptr<IoctlRequestCallback> callback;
     std::swap(callback, ioctl_request->callback_);
-    (*callback)(&ioctl_request->IoctlReq(), callback_status);
+    if (callback) {
+      (*callback)(&ioctl_request->IoctlReq(), callback_status);
+    }
     // Now let the callback pointer expire, destroying it and any captures it might hold.
   });
 }
