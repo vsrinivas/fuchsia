@@ -367,7 +367,8 @@ void DropDevNamespace() {
   }
 }
 
-zx::result<> WipeStatefulPartition(size_t bytes_to_zero, uint8_t value) {
+zx::result<> WipeStatefulPartition(size_t bytes_to_zero, uint8_t value,
+                                   VolumeAction volume_action) {
   auto dir = opendir(kBlockPath);
   if (dir == nullptr) {
     FX_LOGS(ERROR) << "Failed to open directory '" << kBlockPath << "'";
@@ -399,6 +400,25 @@ zx::result<> WipeStatefulPartition(size_t bytes_to_zero, uint8_t value) {
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to write bytes";
       return zx::error(ZX_ERR_IO);
+    }
+  }
+
+  // Now deallocate the partition. This will allow us to recreate the FVM partition the next time
+  // we start the VM.
+  //
+  // Note we still need to zero bytes because FVM can reallocate the same slices the next time we
+  // create the volume.
+  if (volume_action == VolumeAction::REMOVE) {
+    auto volume_sync = volume.BindSync();
+    zx_status_t fidl_status;
+    zx_status_t status = volume_sync->Destroy(&fidl_status);
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Transport Error Destroying FVM partition";
+      return zx::error(status);
+    }
+    if (fidl_status != ZX_OK) {
+      FX_PLOGS(ERROR, fidl_status) << "FIDL Error Destroying FVM partition";
+      return zx::error(fidl_status);
     }
   }
   return zx::ok();

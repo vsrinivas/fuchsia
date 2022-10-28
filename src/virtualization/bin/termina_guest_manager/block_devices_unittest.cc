@@ -215,8 +215,8 @@ TEST_F(BlockDevicesTest, WipeStatefulPartition) {
   EXPECT_TRUE(guest_partition);
 
   // Fill the entire partition with one bit-pattern and then wipe the first half back to 0.
-  ASSERT_TRUE(WipeStatefulPartition(10 * kFvmSliceSize, 0xab).is_ok());
-  ASSERT_TRUE(WipeStatefulPartition(5 * kFvmSliceSize).is_ok());
+  ASSERT_TRUE(WipeStatefulPartition(10 * kFvmSliceSize, 0xab, VolumeAction::KEEP).is_ok());
+  ASSERT_TRUE(WipeStatefulPartition(5 * kFvmSliceSize, 0x0, VolumeAction::KEEP).is_ok());
 
   // Check the slices. These should be all 0.
   for (size_t i = 0; i < 5; ++i) {
@@ -226,4 +226,9 @@ TEST_F(BlockDevicesTest, WipeStatefulPartition) {
   for (size_t i = 5; i < 10; ++i) {
     CheckSlice(*guest_partition, i, 0xab);
   }
+
+  // Now wipe and remove the volume.
+  ASSERT_TRUE(WipeStatefulPartition(5 * kFvmSliceSize, 0x0, VolumeAction::REMOVE).is_ok());
+  guest_partition = FindPartitionWithGuid(kGuestPartitionGuid);
+  EXPECT_FALSE(guest_partition);
 }
