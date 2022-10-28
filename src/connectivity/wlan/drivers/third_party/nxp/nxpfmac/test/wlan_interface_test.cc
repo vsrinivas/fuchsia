@@ -679,6 +679,14 @@ TEST_F(WlanInterfaceTest, WlanFullmacImplStartReq) {
       } else if (bss->sub_command == MLAN_OID_BSS_START ||
                  bss->sub_command == MLAN_OID_UAP_BSS_RESET) {
         ioctl_adapter_->OnIoctlComplete(req, wlan::nxpfmac::IoctlStatus::Success);
+        if (bss->sub_command == MLAN_OID_BSS_START) {
+          uint8_t event_buf[sizeof(mlan_event)];
+          auto event = reinterpret_cast<pmlan_event>(event_buf);
+          event->event_id = MLAN_EVENT_ID_UAP_FW_BSS_START;
+          event->bss_index = 0;
+          event->event_len = 0;
+          event_handler_.OnEvent(event);
+        }
         return MLAN_STATUS_PENDING;
       }
     }
@@ -756,6 +764,14 @@ TEST_F(WlanInterfaceTest, SoftApStaConnectDisconnect) {
       } else if (bss->sub_command == MLAN_OID_BSS_START ||
                  bss->sub_command == MLAN_OID_UAP_BSS_RESET) {
         ioctl_adapter_->OnIoctlComplete(req, wlan::nxpfmac::IoctlStatus::Success);
+        if (bss->sub_command == MLAN_OID_BSS_START) {
+          uint8_t event_buf[sizeof(mlan_event)];
+          auto event = reinterpret_cast<pmlan_event>(event_buf);
+          event->event_id = MLAN_EVENT_ID_UAP_FW_BSS_START;
+          event->bss_index = kBssIndex;
+          event->event_len = 0;
+          event_handler_.OnEvent(event);
+        }
         return MLAN_STATUS_PENDING;
       }
     }
@@ -839,7 +855,7 @@ TEST_F(WlanInterfaceTest, SoftApStaConnectDisconnect) {
   // Followed by the STA disconnect event.
   event->event_id = MLAN_EVENT_ID_UAP_FW_STA_DISCONNECT;
   memcpy(event->event_buf + 2, kTestSoftApClient, sizeof(kTestSoftApClient));
-  event->event_len = sizeof(kTestSoftApClient);
+  event->event_len = sizeof(kTestSoftApClient) + 2;
   event->bss_index = kBssIndex;
   event_handler_.OnEvent(event);
 
@@ -859,4 +875,141 @@ TEST_F(WlanInterfaceTest, SoftApStaConnectDisconnect) {
   ifc->WlanFullmacImplStopReq(&stop_req);
   ASSERT_OK(sync_completion_wait(&on_stop_conf_called, ZX_TIME_INFINITE));
 }
+
+// Check to see SoftAP auth and assoc indications are received when a STA connects to it.
+// Also verify a connected STA can be deauth'd by the SoftAP explicitly.
+TEST_F(WlanInterfaceTest, SoftApStaLocalDisconnect) {
+  // Test that STA connect, disconnect indications are received correctly.
+
+  constexpr uint8_t kTestSoftApClient[] = {0x0, 0x1, 0x2, 0x3, 0x4, 0x5};
+  wlan::nxpfmac::MockFullmacIfc mock_fullmac_ifc;
+  constexpr uint8_t kSoftApSsid[] = {"Test_SoftAP"};
+  constexpr uint8_t kTestChannel = 6;
+  constexpr uint8_t kBssIndex = 1;
+
+  mlan_mocks_.SetOnMlanIoctl([&](t_void*, pmlan_ioctl_req req) -> mlan_status {
+    if (req->req_id == MLAN_IOCTL_BSS) {
+      auto bss = reinterpret_cast<const mlan_ds_bss*>(req->pbuf);
+      if (bss->sub_command == MLAN_OID_UAP_BSS_CONFIG) {
+        if (req->action == MLAN_ACT_SET) {
+          // BSS config set. Ensure SSID, channel and Band are correctly set.
+          EXPECT_EQ(bss->param.bss_config.ssid.ssid_len, sizeof(kSoftApSsid));
+          EXPECT_BYTES_EQ(bss->param.bss_config.ssid.ssid, kSoftApSsid,
+                          bss->param.bss_config.ssid.ssid_len);
+          EXPECT_EQ(bss->param.bss_config.channel, kTestChannel);
+          EXPECT_EQ(bss->param.bss_config.bandcfg.chanBand, BAND_2GHZ);
+          EXPECT_EQ(bss->param.bss_config.bandcfg.chanWidth, CHAN_BW_20MHZ);
+        }
+        ioctl_adapter_->OnIoctlComplete(req, wlan::nxpfmac::IoctlStatus::Success);
+        return MLAN_STATUS_PENDING;
+      } else if (bss->sub_command == MLAN_OID_BSS_START ||
+                 bss->sub_command == MLAN_OID_UAP_BSS_RESET) {
+        ioctl_adapter_->OnIoctlComplete(req, wlan::nxpfmac::IoctlStatus::Success);
+        if (bss->sub_command == MLAN_OID_BSS_START) {
+          uint8_t event_buf[sizeof(mlan_event)];
+          auto event = reinterpret_cast<pmlan_event>(event_buf);
+          event->event_id = MLAN_EVENT_ID_UAP_FW_BSS_START;
+          event->bss_index = kBssIndex;
+          event->event_len = 0;
+          event_handler_.OnEvent(event);
+        }
+        return MLAN_STATUS_PENDING;
+      }
+    }
+    // Return success for everything else.
+    return MLAN_STATUS_SUCCESS;
+  });
+
+  zx::channel in_mlme_channel;
+  zx::channel unused;
+  ASSERT_OK(zx::channel::create(0, &in_mlme_channel, &unused));
+
+  ASSERT_OK(CreateDeviceInterface(parent_.get(), kFullmacSoftApDeviceName, kBssIndex,
+                                  WLAN_MAC_ROLE_AP, &context_, kSoftApMacAddress,
+                                  std::move(in_mlme_channel)));
+  WlanInterface* ifc = GetInterface();
+
+  zx::channel out_mlme_channel;
+  ifc->WlanFullmacImplStart(mock_fullmac_ifc.proto(), &out_mlme_channel);
+
+  sync_completion_t on_start_conf_called;
+  mock_fullmac_ifc.on_start_conf.ExpectCallWithMatcher([&](const wlan_fullmac_start_confirm* resp) {
+    EXPECT_EQ(resp->result_code, WLAN_START_RESULT_SUCCESS);
+    sync_completion_signal(&on_start_conf_called);
+  });
+
+  // Start the SoftAP
+  wlan_fullmac_start_req start_req = {
+      .bss_type = BSS_TYPE_INFRASTRUCTURE,
+      .channel = kTestChannel,
+  };
+  memcpy(start_req.ssid.data, kSoftApSsid, sizeof(kSoftApSsid));
+  start_req.ssid.len = sizeof(kSoftApSsid);
+
+  ifc->WlanFullmacImplStartReq(&start_req);
+  ASSERT_OK(sync_completion_wait(&on_start_conf_called, ZX_TIME_INFINITE));
+
+  // Setup the auth_ind and assoc_ind callbacks.
+  sync_completion_t on_auth_ind;
+  mock_fullmac_ifc.on_auth_ind_conf.ExpectCallWithMatcher([&](const wlan_fullmac_auth_ind_t* ind) {
+    EXPECT_BYTES_EQ(ind->peer_sta_address, kTestSoftApClient, ETH_ALEN);
+    EXPECT_EQ(ind->auth_type, WLAN_AUTH_TYPE_OPEN_SYSTEM);
+    sync_completion_signal(&on_auth_ind);
+  });
+
+  sync_completion_t on_assoc_ind;
+  mock_fullmac_ifc.on_assoc_ind_conf.ExpectCallWithMatcher(
+      [&](const wlan_fullmac_assoc_ind_t* ind) {
+        EXPECT_BYTES_EQ(ind->peer_sta_address, kTestSoftApClient, ETH_ALEN);
+        EXPECT_EQ(ind->listen_interval, 0);
+        sync_completion_signal(&on_assoc_ind);
+      });
+
+  // Send a STA connect event
+  uint8_t event_buf[sizeof(mlan_event) + ETH_ALEN + 2];
+  auto event = reinterpret_cast<pmlan_event>(event_buf);
+  event->event_id = MLAN_EVENT_ID_UAP_FW_STA_CONNECT;
+  memcpy(event->event_buf, kTestSoftApClient, sizeof(kTestSoftApClient));
+  event->event_len = sizeof(kTestSoftApClient);
+  event->bss_index = kBssIndex;
+  event_handler_.OnEvent(event);
+
+  // Wait for auth and assoc indications.
+  ASSERT_OK(sync_completion_wait(&on_auth_ind, ZX_TIME_INFINITE));
+  ASSERT_OK(sync_completion_wait(&on_assoc_ind, ZX_TIME_INFINITE));
+
+  sync_completion_t on_deauth_conf;
+  mock_fullmac_ifc.on_deauth_conf.ExpectCallWithMatcher(
+      [&](const wlan_fullmac_deauth_confirm_t* conf) {
+        EXPECT_BYTES_EQ(conf->peer_sta_address, kTestSoftApClient, ETH_ALEN);
+        sync_completion_signal(&on_deauth_conf);
+      });
+
+  // Send a deauth request to disconnect the STA
+  wlan_fullmac_deauth_req deauth_req = {
+      .reason_code = 0,
+  };
+  memcpy(deauth_req.peer_sta_address, kTestSoftApClient, ETH_ALEN);
+
+  env_.ScheduleNotification([&]() { ifc->WlanFullmacImplDeauthReq(&deauth_req); }, zx::msec(10));
+  // We currently do not have a way to send the deauth event at the appropriate time. So let the
+  // deauth request timeout waiting for the event and send a deauth conf.
+
+  env_.Run(zx::sec(2));
+
+  ASSERT_OK(sync_completion_wait(&on_deauth_conf, ZX_TIME_INFINITE));
+
+  // And now ensure SoftAP Stop works ok.
+  sync_completion_t on_stop_conf_called;
+  mock_fullmac_ifc.on_stop_conf.ExpectCallWithMatcher([&](const wlan_fullmac_stop_confirm* resp) {
+    EXPECT_EQ(resp->result_code, WLAN_STOP_RESULT_SUCCESS);
+    sync_completion_signal(&on_stop_conf_called);
+  });
+  wlan_fullmac_stop_req stop_req = {};
+  memcpy(stop_req.ssid.data, kSoftApSsid, sizeof(kSoftApSsid));
+  stop_req.ssid.len = sizeof(kSoftApSsid);
+  ifc->WlanFullmacImplStopReq(&stop_req);
+  ASSERT_OK(sync_completion_wait(&on_stop_conf_called, ZX_TIME_INFINITE));
+}
+
 }  // namespace

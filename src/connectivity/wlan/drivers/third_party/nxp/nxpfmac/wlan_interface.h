@@ -103,7 +103,8 @@ class WlanInterface : public WlanInterfaceDeviceType,
 
   // SoftApIfc implementation.
   void OnStaConnectEvent(uint8_t* sta_mac_addr, uint8_t* ies, uint32_t ie_length) override;
-  void OnStaDisconnectEvent(uint8_t* sta_mac_addr, uint16_t reason_code) override;
+  void OnStaDisconnectEvent(uint8_t* sta_mac_addr, uint16_t reason_code,
+                            bool locally_initiated) override;
 
   // NetworkPort::Callbacks implementation
   uint32_t PortGetMtu() override;

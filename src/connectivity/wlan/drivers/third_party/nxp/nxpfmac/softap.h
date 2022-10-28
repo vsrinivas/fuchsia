@@ -15,11 +15,15 @@
 
 #include <fidl/fuchsia.wlan.ieee80211/cpp/common_types.h>
 #include <fuchsia/hardware/wlan/fullmac/cpp/banjo.h>
+#include <lib/sync/completion.h>
 #include <netinet/if_ether.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
 #include <mutex>
+#include <unordered_set>
+
+#include <wlan/common/macaddr.h>
 
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/event_handler.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ioctl_request.h"
@@ -36,7 +40,8 @@ class SoftApIfc {
   virtual ~SoftApIfc() = default;
 
   virtual void OnStaConnectEvent(uint8_t* sta_mac_addr, uint8_t* ies, uint32_t ie_len) = 0;
-  virtual void OnStaDisconnectEvent(uint8_t* sta_mac_addr, uint16_t reason_code) = 0;
+  virtual void OnStaDisconnectEvent(uint8_t* sta_mac_addr, uint16_t reason_code,
+                                    bool locally_initiated = false) = 0;
 };
 
 class SoftAp {
@@ -45,12 +50,14 @@ class SoftAp {
 
   SoftAp(SoftApIfc* ifc, DeviceContext* context, uint32_t bss_index);
   ~SoftAp();
-  // Attempt to start the SoftAP on the given bss and channel. Returns ZX_ERR_ALREADY_EXISTS if a
-  // SoftAP has already been started. Returns ZX_OK if the start request is successful.
+  // Attempt to start the SoftAP on the given bss and channel. Returns appropriate
+  // WLAN_START_RESULT_XX.
   wlan_start_result_t Start(const wlan_fullmac_start_req* req) __TA_EXCLUDES(mutex_);
 
-  // Returns ZX_ERR_ if not started or ZX_OK if the request is successful.
+  // Returns appropriate WLAN_STOP_RESULT_XX.
   wlan_stop_result_t Stop(const wlan_fullmac_stop_req* req) __TA_EXCLUDES(mutex_);
+  zx_status_t DeauthSta(const uint8_t sta_mac_addr[ETH_ALEN], uint16_t reason_code)
+      __TA_EXCLUDES(mutex_);
 
  private:
   SoftApIfc* ifc_ = nullptr;
@@ -60,9 +67,13 @@ class SoftAp {
   const uint32_t bss_index_;
   cssid_t ssid_ = {};
   bool started_ __TA_GUARDED(mutex_) = false;
+  std::unordered_set<wlan::common::MacAddr, wlan::common::MacAddrHasher> deauth_sta_set_;
   std::mutex mutex_;
+  sync_completion_t deauth_sync_;
+  sync_completion_t softap_start_sync_;
   EventRegistration client_connect_event_;
   EventRegistration client_disconnect_event_;
+  EventRegistration softap_start_;
 };
 
 }  // namespace wlan::nxpfmac

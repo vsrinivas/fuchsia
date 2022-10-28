@@ -388,8 +388,21 @@ void WlanInterface::WlanFullmacImplAuthResp(const wlan_fullmac_auth_resp_t* resp
 }
 
 void WlanInterface::WlanFullmacImplDeauthReq(const wlan_fullmac_deauth_req_t* req) {
-  NXPF_ERR("%s", __func__);
   std::lock_guard lock(mutex_);
+
+  if (role_ == WLAN_MAC_ROLE_AP) {
+    // Deauth the specified client associated to the SoftAP.
+    zx_status_t status = soft_ap_.DeauthSta(req->peer_sta_address, req->reason_code);
+    if (status != ZX_OK) {
+      // Deauth request failed, respond to SME anyway since there is no way to indicate status.
+      wlan_fullmac_deauth_confirm_t resp{};
+      memcpy(resp.peer_sta_address, req->peer_sta_address, ETH_ALEN);
+      std::lock_guard lock(fullmac_ifc_mutex_);
+      fullmac_ifc_.DeauthConf(&resp);
+    }
+    // If the request is successful, the notification should occur via the event handler.
+    return;
+  }
 
   auto on_disconnect = [this](IoctlStatus status) __TA_EXCLUDES(mutex_) {
     if (status != IoctlStatus::Success) {
@@ -611,20 +624,29 @@ void WlanInterface::OnStaConnectEvent(uint8_t* sta_mac_addr, uint8_t* ies, uint3
 }
 
 // Handle STA disconnect event for SoftAP.
-void WlanInterface::OnStaDisconnectEvent(uint8_t* sta_mac_addr, uint16_t reason_code) {
+void WlanInterface::OnStaDisconnectEvent(uint8_t* sta_mac_addr, uint16_t reason_code,
+                                         bool locally_initiated) {
   // This is the only event from FW for STA disconnect. Indicate both deauth and disassoc to SME.
   std::lock_guard lock(fullmac_ifc_mutex_);
-  wlan_fullmac_deauth_indication_t deauth_ind_params = {};
-  // Disconnect event contains the STA's mac address at offset 2.
-  memcpy(deauth_ind_params.peer_sta_address, sta_mac_addr, ETH_ALEN);
-  deauth_ind_params.reason_code = reason_code;
+  if (!locally_initiated) {
+    NXPF_INFO("Disconnect Event, not locally initiated, send deauth and disassoc ind");
+    wlan_fullmac_deauth_indication_t deauth_ind_params = {};
+    // Disconnect event contains the STA's mac address at offset 2.
+    memcpy(deauth_ind_params.peer_sta_address, sta_mac_addr, ETH_ALEN);
+    deauth_ind_params.reason_code = reason_code;
 
-  // Indicate disassoc.
-  fullmac_ifc_.DeauthInd(&deauth_ind_params);
-  wlan_fullmac_disassoc_indication_t disassoc_ind_params = {};
-  memcpy(disassoc_ind_params.peer_sta_address, sta_mac_addr, ETH_ALEN);
-  disassoc_ind_params.reason_code = reason_code;
-  fullmac_ifc_.DisassocInd(&disassoc_ind_params);
+    // Indicate disassoc.
+    fullmac_ifc_.DeauthInd(&deauth_ind_params);
+    wlan_fullmac_disassoc_indication_t disassoc_ind_params = {};
+    memcpy(disassoc_ind_params.peer_sta_address, sta_mac_addr, ETH_ALEN);
+    disassoc_ind_params.reason_code = reason_code;
+    fullmac_ifc_.DisassocInd(&disassoc_ind_params);
+  } else {
+    NXPF_INFO("Disconnect Event, locally initiated, send deauth conf");
+    wlan_fullmac_deauth_confirm_t conf{};
+    memcpy(conf.peer_sta_address, sta_mac_addr, ETH_ALEN);
+    fullmac_ifc_.DeauthConf(&conf);
+  }
 }
 uint32_t WlanInterface::PortGetMtu() { return 1500u; }
 
