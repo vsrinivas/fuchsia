@@ -342,7 +342,33 @@ def main():
         os.path.relpath(args.output_path, gopath_src),
         package,
     ]
-    subprocess.run(cmd, env=env, cwd=gopath_src).check_returncode()
+    proc = subprocess.run(
+        cmd,
+        env=env,
+        cwd=gopath_src,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    # We want to both capture stdout/stderr and print it but there isn't an easy
+    # way to do that automatically, so we must separately print the captured
+    # output.
+    print(proc.stdout, end='')
+
+    proc.check_returncode()
+
+    # If the package contains no *_test.go files `go test -c` will exit with a
+    # retcode of zero, but not produce the expected output file. Instead it will
+    # print a warning like "no test files".
+    #
+    # Not producing the expected output file leads to confusing no-op failures
+    # and breakages in targets that depend on this one, so we should turn it
+    # into an immediate failure. We can't check if the file exists to determine
+    # whether the build succeeded because the file might have been created by a
+    # previous build, so instead we assume that Go will only print anything if
+    # it didn't produce the output file, or otherwise failed in some fatal way.
+    if proc.stdout.strip():
+        raise Exception('go build printed unexpected output')
 
     if args.stripped_output_path:
         if args.current_os == 'mac':
