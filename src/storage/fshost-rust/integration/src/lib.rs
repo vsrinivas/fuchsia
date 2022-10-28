@@ -5,15 +5,12 @@
 use {
     device_watcher::recursive_wait_and_open_node,
     fidl::endpoints::{create_proxy, Proxy},
-    fidl_fuchsia_boot as fboot,
-    fidl_fuchsia_fxfs::{CryptManagementMarker, CryptMarker, KeyPurpose},
-    fidl_fuchsia_io as fio, fidl_fuchsia_logger as flogger, fidl_fuchsia_process as fprocess,
+    fidl_fuchsia_boot as fboot, fidl_fuchsia_io as fio, fidl_fuchsia_logger as flogger,
+    fidl_fuchsia_process as fprocess,
     fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
     fuchsia_zircon as zx,
     futures::FutureExt,
-    key_bag::Aes256Key,
     ramdevice_client::{RamdiskClient, VmoRamdiskClientBuilder},
-    std::ops::Deref,
 };
 
 pub mod disk_builder;
@@ -22,62 +19,10 @@ mod mocks;
 
 pub const FVM_SLICE_SIZE: u64 = 32 * 1024;
 
-pub async fn create_hermetic_crypt_service(
-    data_key: Aes256Key,
-    metadata_key: Aes256Key,
-) -> RealmInstance {
-    let builder = RealmBuilder::new().await.unwrap();
-    let url = "#meta/fxfs-crypt.cm";
-    let crypt = builder.add_child("fxfs-crypt", url, ChildOptions::new().eager()).await.unwrap();
-    builder
-        .add_route(
-            Route::new()
-                .capability(Capability::protocol::<CryptMarker>())
-                .capability(Capability::protocol::<CryptManagementMarker>())
-                .from(&crypt)
-                .to(Ref::parent()),
-        )
-        .await
-        .unwrap();
-    builder
-        .add_route(
-            Route::new()
-                .capability(Capability::protocol::<flogger::LogSinkMarker>())
-                .from(Ref::parent())
-                .to(&crypt),
-        )
-        .await
-        .unwrap();
-    let realm = builder.build().await.expect("realm build failed");
-    let crypt_management =
-        realm.root.connect_to_protocol_at_exposed_dir::<CryptManagementMarker>().unwrap();
-    crypt_management
-        .add_wrapping_key(0, data_key.deref())
-        .await
-        .unwrap()
-        .expect("add_wrapping_key failed");
-    crypt_management
-        .add_wrapping_key(1, metadata_key.deref())
-        .await
-        .unwrap()
-        .expect("add_wrapping_key failed");
-    crypt_management
-        .set_active_key(KeyPurpose::Data, 0)
-        .await
-        .unwrap()
-        .expect("set_active_key failed");
-    crypt_management
-        .set_active_key(KeyPurpose::Metadata, 1)
-        .await
-        .unwrap()
-        .expect("set_active_key failed");
-    realm
-}
-
 pub struct TestFixtureBuilder {
     netboot: bool,
 
-    disk: Option<disk_builder::DiskBuilder>,
+    disk: Option<disk_builder::Disk>,
     fshost: fshost_builder::FshostBuilder,
 }
 
@@ -95,8 +40,13 @@ impl TestFixtureBuilder {
     }
 
     pub fn with_disk(&mut self) -> &mut disk_builder::DiskBuilder {
-        self.disk = Some(disk_builder::DiskBuilder::new());
-        self.disk.as_mut().unwrap()
+        self.disk = Some(disk_builder::Disk::Builder(disk_builder::DiskBuilder::new()));
+        self.disk.as_mut().unwrap().builder()
+    }
+
+    pub fn with_disk_from_vmo(mut self, vmo: zx::Vmo) -> Self {
+        self.disk = Some(disk_builder::Disk::Prebuilt(vmo));
+        self
     }
 
     pub fn netboot(mut self) -> Self {
@@ -125,7 +75,7 @@ impl TestFixtureBuilder {
             .unwrap();
 
         if let Some(disk) = self.disk {
-            let vmo = disk.build().await;
+            let vmo = disk.get_vmo().await;
             let vmo_clone =
                 vmo.create_child(zx::VmoChildOptions::SLICE, 0, vmo.get_size().unwrap()).unwrap();
 

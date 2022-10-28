@@ -3,16 +3,16 @@
 // found in the LICENSE file.
 
 use {
-    super::create_hermetic_crypt_service,
     device_watcher::recursive_wait_and_open_node,
     fidl::endpoints::{create_proxy, Proxy},
-    fidl_fuchsia_fxfs::CryptMarker,
-    fidl_fuchsia_io as fio,
+    fidl_fuchsia_fxfs::{CryptManagementMarker, CryptMarker, KeyPurpose},
+    fidl_fuchsia_io as fio, fidl_fuchsia_logger as flogger,
     fs_management::{Blobfs, Fxfs, BLOBFS_TYPE_GUID, DATA_TYPE_GUID},
+    fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
     fuchsia_zircon::{self as zx, HandleBased},
     key_bag::Aes256Key,
     ramdevice_client::VmoRamdiskClientBuilder,
-    std::{io::Write, path::Path},
+    std::{io::Write, ops::Deref, path::Path},
     storage_isolated_driver_manager::{
         fvm::{create_fvm_volume, set_up_fvm},
         zxcrypt,
@@ -67,6 +67,79 @@ const LEGACY_METADATA_KEY: Aes256Key = Aes256Key::create([
     0xef, 0xee, 0xed, 0xec, 0xeb, 0xea, 0xe9, 0xe8, 0xe7, 0xe6, 0xe5, 0xe4, 0xe3, 0xe2, 0xe1, 0xe0,
 ]);
 
+async fn create_hermetic_crypt_service(
+    data_key: Aes256Key,
+    metadata_key: Aes256Key,
+) -> RealmInstance {
+    let builder = RealmBuilder::new().await.unwrap();
+    let url = "#meta/fxfs-crypt.cm";
+    let crypt = builder.add_child("fxfs-crypt", url, ChildOptions::new().eager()).await.unwrap();
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol::<CryptMarker>())
+                .capability(Capability::protocol::<CryptManagementMarker>())
+                .from(&crypt)
+                .to(Ref::parent()),
+        )
+        .await
+        .unwrap();
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol::<flogger::LogSinkMarker>())
+                .from(Ref::parent())
+                .to(&crypt),
+        )
+        .await
+        .unwrap();
+    let realm = builder.build().await.expect("realm build failed");
+    let crypt_management =
+        realm.root.connect_to_protocol_at_exposed_dir::<CryptManagementMarker>().unwrap();
+    crypt_management
+        .add_wrapping_key(0, data_key.deref())
+        .await
+        .unwrap()
+        .expect("add_wrapping_key failed");
+    crypt_management
+        .add_wrapping_key(1, metadata_key.deref())
+        .await
+        .unwrap()
+        .expect("add_wrapping_key failed");
+    crypt_management
+        .set_active_key(KeyPurpose::Data, 0)
+        .await
+        .unwrap()
+        .expect("set_active_key failed");
+    crypt_management
+        .set_active_key(KeyPurpose::Metadata, 1)
+        .await
+        .unwrap()
+        .expect("set_active_key failed");
+    realm
+}
+
+pub enum Disk {
+    Prebuilt(zx::Vmo),
+    Builder(DiskBuilder),
+}
+
+impl Disk {
+    pub async fn get_vmo(self) -> zx::Vmo {
+        match self {
+            Disk::Prebuilt(vmo) => vmo,
+            Disk::Builder(builder) => builder.build().await,
+        }
+    }
+
+    pub fn builder(&mut self) -> &mut DiskBuilder {
+        match self {
+            Disk::Prebuilt(_) => panic!("attempted to get builder for prebuilt disk"),
+            Disk::Builder(builder) => builder,
+        }
+    }
+}
+
 pub struct DiskBuilder {
     size: u64,
     format: Option<&'static str>,
@@ -104,7 +177,7 @@ impl DiskBuilder {
         self
     }
 
-    pub(crate) async fn build(&self) -> zx::Vmo {
+    pub(crate) async fn build(self) -> zx::Vmo {
         let (dev, server) = create_proxy::<fio::DirectoryMarker>().unwrap();
         fdio::open(
             "/dev",
