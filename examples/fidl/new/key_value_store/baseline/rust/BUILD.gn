@@ -7,7 +7,7 @@ import("//build/components.gni")
 # The two definitions below are Fuchsia components, which will be wrapped into a package for
 # delivery to running devices.
 fuchsia_component("client") {
-  component_name = "key_value_store_baseline_client"
+  component_name = "keyvaluestore_baseline_client"
   manifest = "//examples/fidl/new/key_value_store/baseline/meta/client.cml"
   deps = [
     "client:bin",
@@ -15,7 +15,7 @@ fuchsia_component("client") {
   ]
 }
 fuchsia_component("server") {
-  component_name = "key_value_store_baseline_server"
+  component_name = "keyvaluestore_baseline_server"
   manifest = "//examples/fidl/new/key_value_store/baseline/meta/server.cml"
   deps = [ "server:bin" ]
 }

@@ -7,12 +7,12 @@ import("//build/components.gni")
 # The two definitions below are Fuchsia components, which will be wrapped into a package for
 # delivery to running devices.
 fuchsia_component("client") {
-  component_name = "canvas_add_line_metered_client"
+  component_name = "canvas_addlinemetered_client"
   manifest = "//examples/fidl/new/canvas/add_line_metered/meta/client.cml"
   deps = [ "client:bin" ]
 }
 fuchsia_component("server") {
-  component_name = "canvas_add_line_metered_server"
+  component_name = "canvas_addlinemetered_server"
   manifest = "//examples/fidl/new/canvas/add_line_metered/meta/server.cml"
   deps = [ "server:bin" ]
 }

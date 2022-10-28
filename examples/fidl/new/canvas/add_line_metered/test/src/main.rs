@@ -15,8 +15,8 @@ use {
 #[fasync::run_singlethreaded(test)]
 async fn test_draw_success() -> Result<(), Error> {
     let test_name = "test_draw_success";
-    let client = Client::new(test_name, "#meta/canvas_add_line_metered_client.cm");
-    let server = Server::new(test_name, "#meta/canvas_add_line_metered_server.cm");
+    let client = Client::new(test_name, "#meta/canvas_addlinemetered_client.cm");
+    let server = Server::new(test_name, "#meta/canvas_addlinemetered_server.cm");
 
     run_test(
         InstanceMarker::PROTOCOL_NAME,

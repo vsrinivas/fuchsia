@@ -15,8 +15,8 @@ use {
 #[fasync::run_singlethreaded(test)]
 async fn test_read_item_success() -> Result<(), Error> {
     let test_name = "test_read_item_success";
-    let client = Client::new(test_name, "#meta/key_value_store_add_read_item_client.cm");
-    let server = Server::new(test_name, "#meta/key_value_store_add_read_item_server.cm");
+    let client = Client::new(test_name, "#meta/keyvaluestore_addreaditem_client.cm");
+    let server = Server::new(test_name, "#meta/keyvaluestore_addreaditem_server.cm");
     let key = "verse_1";
 
     run_test(
@@ -40,8 +40,8 @@ async fn test_read_item_success() -> Result<(), Error> {
 #[fasync::run_singlethreaded(test)]
 async fn test_read_item_error() -> Result<(), Error> {
     let test_name = "test_read_item_error";
-    let client = Client::new(test_name, "#meta/key_value_store_add_read_item_client.cm");
-    let server = Server::new(test_name, "#meta/key_value_store_add_read_item_server.cm");
+    let client = Client::new(test_name, "#meta/keyvaluestore_addreaditem_client.cm");
+    let server = Server::new(test_name, "#meta/keyvaluestore_addreaditem_server.cm");
     let key = "verse_1000";
 
     run_test(
