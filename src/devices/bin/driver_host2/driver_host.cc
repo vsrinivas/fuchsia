@@ -116,14 +116,12 @@ zx::result<> DriverHost::StartDriver(fbl::RefPtr<Driver> driver,
     drivers_.erase(*driver);
   });
 
-  // Save a ptr to the dispatcher so we can shut it down if starting the driver fails.
-  fdf::UnownedDispatcher unowned_dispatcher = dispatcher.borrow();
   auto start = driver->Start(std::move(start_args), std::move(dispatcher));
   if (start.is_error()) {
     FX_SLOG(ERROR, "Failed to start driver", KV("url", driver->url().data()),
             KV("status_str", start.status_string()));
     // If we fail to start the driver, we need to initiate shutting down the dispatcher.
-    unowned_dispatcher->ShutdownAsync();
+    driver->ShutdownDispatcher();
     // The dispatcher will be destroyed in the shutdown callback, when the last driver reference
     // is released.
     return start.take_error();

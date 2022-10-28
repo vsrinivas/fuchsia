@@ -34,16 +34,13 @@ void internal::DriverHostControllerConnection::Start(StartRequestView request,
     // Task to start the driver. Post this to the driver dispatcher thread.
     auto start_task = [this, request = std::move(request), completer = std::move(completer),
                        loaded = std::move(*loaded)]() mutable {
-      // Save a ptr to the dispatcher so we can shut it down if starting the driver fails.
-      fdf::UnownedDispatcher unowned_dispatcher = loaded.dispatcher.borrow();
-
       // Start the driver.
       auto start = loaded.driver->Start(std::move(loaded.start_args), std::move(loaded.dispatcher));
       if (start.is_error()) {
         LOGF(ERROR, "Failed to start driver '%s': %s", loaded.driver->url().data(),
              start.status_string());
         // If we fail to start the driver, we need to initiate shutting down the dispatcher.
-        unowned_dispatcher->ShutdownAsync();
+        loaded.driver->ShutdownDispatcher();
         return;
       }
       LOGF(INFO, "Started '%s'", loaded.driver->url().data());

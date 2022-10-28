@@ -44,9 +44,7 @@ class Unowned final {
     return *this;
   }
 
-  T& operator*() { return value_; }
   const T& operator*() const { return value_; }
-  T* operator->() { return &value_; }
   const T* operator->() const { return &value_; }
 
  private:

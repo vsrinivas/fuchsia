@@ -9,6 +9,7 @@
 #include <lib/driver2/record.h>
 #include <lib/fdf/cpp/dispatcher.h>
 
+#include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
@@ -33,6 +34,11 @@ class Driver : public fidl::Server<fuchsia_driver_host::Driver>,
   // Starts the driver.
   zx::result<> Start(fuchsia_driver_framework::DriverStartArgs start_args,
                      fdf::Dispatcher dispatcher);
+
+  void ShutdownDispatcher() __TA_EXCLUDES(lock_) {
+    fbl::AutoLock al(&lock_);
+    initial_dispatcher_.ShutdownAsync();
+  }
 
  private:
   std::string url_;
