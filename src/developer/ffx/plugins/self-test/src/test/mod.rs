@@ -8,7 +8,6 @@ use {
     fuchsia_async::TimeoutExt,
     serde_json::Value,
     std::process::Stdio,
-    std::time::Instant,
     std::{future::Future, pin::Pin},
     std::{io::Write, process::Command, time::Duration},
     termion::is_tty,
@@ -39,15 +38,9 @@ pub async fn get_target_nodename() -> Result<String> {
     let isolate = new_isolate("initial-target-discovery").await?;
 
     // ensure a daemon is spun up first, so we have a moment to discover targets.
-    let start = Instant::now();
-    loop {
-        let out = isolate.ffx(&["ffx", "target", "list"]).await?;
-        if out.stdout.len() > 10 {
-            break;
-        }
-        if start.elapsed() > Duration::from_secs(5) {
-            bail!("No targets found after 5s")
-        }
+    let out = isolate.ffx(&["target", "wait", "-t", "5"]).await?;
+    if !out.status.success() {
+        bail!("No targets found after 5s")
     }
 
     let out = isolate.ffx(&["target", "list", "-f", "j"]).await.context("getting target list")?;
