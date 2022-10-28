@@ -6,8 +6,6 @@ import("//third_party/flatbuffers/flatbuffer.gni")
 import("build_args.gni")
 
 declare_args() {
-  scenic_ignore_vsync = false
-
   # Draws the current frame number in the top-left corner.
   scenic_display_frame_number = false
 }
@@ -17,10 +15,7 @@ config("include_garnet") {
 }
 
 config("swapchain") {
-  defines = [
-    "SCENIC_IGNORE_VSYNC=$scenic_ignore_vsync",
-    "SCENIC_DISPLAY_FRAME_NUMBER=$scenic_display_frame_number",
-  ]
+  defines = [ "SCENIC_DISPLAY_FRAME_NUMBER=$scenic_display_frame_number" ]
 }
 
 source_set("common_gfx_config_source_set") {
