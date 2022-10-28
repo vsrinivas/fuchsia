@@ -15,7 +15,7 @@ The changes applied to the FIDL and CML definitions are as follows:
     <!-- FIDL -->
     <section>
       <h3>FIDL</h3>
-      <pre class="prettyprint">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/add_read_item/fidl/key_value_store.test.fidl" highlight="6,7,8,9,10,11,12,13,14,15,16,17,18,27,28,29,30,31,32,41,42,43,44" %}</pre>
+      <pre class="prettyprint">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/add_read_item/fidl/key_value_store.test.fidl" highlight="diff_1,diff_2,diff_3" %}</pre>
     </section>
     <!-- CML -->
     <section style="padding: 0px;">
@@ -23,7 +23,7 @@ The changes applied to the FIDL and CML definitions are as follows:
       <devsite-selector style="margin: 0px; padding: 0px;">
         <section>
           <h3 id="key_value_store-add_read_item-cml-client">Client</h3>
-          <pre class="prettyprint">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/add_read_item/meta/client.cml" highlight="26,27,28,29,30,31,32,33" %}</pre>
+          <pre class="prettyprint">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/add_read_item/meta/client.cml" highlight="diff_1" %}</pre>
         </section>
         <section>
           <h3 id="key_value_store-add_read_item-cml-server">Server</h3>
@@ -48,11 +48,11 @@ Client and server implementations for all languages change as well:
       <devsite-selector style="margin: 0px; padding: 0px;">
         <section>
           <h3 id="key_value_store-add_read_item-rust-client">Client</h3>
-          <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/add_read_item/rust/client/src/main.rs" highlight="add_read_item" %}</pre>
+          <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/add_read_item/rust/client/src/main.rs" highlight="diff_1" %}</pre>
         </section>
         <section>
           <h3 id="key_value_store-add_read_item-rust-server">Server</h3>
-          <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/add_read_item/rust/server/src/main.rs" highlight="add_read_item" %}</pre>
+          <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/add_read_item/rust/server/src/main.rs" highlight="diff_1,diff_2" %}</pre>
         </section>
       </devsite-selector>
     </section>

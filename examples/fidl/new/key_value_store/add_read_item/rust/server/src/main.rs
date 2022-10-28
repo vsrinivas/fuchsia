@@ -4,9 +4,11 @@
 
 use {
     anyhow::{Context as _, Error},
+    // [START diff_1]
     fidl_examples_keyvaluestore_addreaditem::{
         Item, ReadError, StoreRequest, StoreRequestStream, WriteError,
     },
+    // [END diff_1]
     fuchsia_component::server::ServiceFs,
     futures::prelude::*,
     lazy_static::lazy_static,
@@ -75,7 +77,7 @@ async fn run_server(stream: StoreRequestStream) -> Result<(), Error> {
                         .context("error sending reply")?;
                     println!("WriteItem response sent");
                 }
-                // [START add_read_item]
+                // [START diff_2]
                 StoreRequest::ReadItem { key, responder } => {
                     println!("ReadItem request received");
 
@@ -94,7 +96,7 @@ async fn run_server(stream: StoreRequestStream) -> Result<(), Error> {
                         .context("error sending reply")?;
                     println!("ReadItem response sent");
                 } //
-                  // [END add_read_item]
+                  // [END diff_2]
             }
             Ok(())
         })

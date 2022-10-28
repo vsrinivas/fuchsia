@@ -20,7 +20,7 @@
             },
         },
 
-        // [START add_read_item]
+        // [START diff_1]
         read_items: {
             type: "vector",
             max_count: 16,
@@ -30,6 +30,6 @@
             },
         },
 
-        // [END add_read_item]
+        // [END diff_1]
     },
 }
