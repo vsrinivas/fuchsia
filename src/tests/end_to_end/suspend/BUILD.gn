@@ -26,7 +26,10 @@ if (is_host) {
     ]
     non_go_deps = [ ":test_tools" ]
     deps = [
-      "//src/testing/host-target-testing",
+      "//src/testing/host-target-testing/cli",
+      "//src/testing/host-target-testing/device",
+      "//src/testing/host-target-testing/errutil",
+      "//src/testing/host-target-testing/util",
       "//tools/botanist:constants",
       "//tools/lib/color",
       "//tools/lib/logger",

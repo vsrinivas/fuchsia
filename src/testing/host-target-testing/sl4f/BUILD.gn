@@ -1,0 +1,20 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+
+if (is_host) {
+  go_library("sl4f") {
+    testonly = true
+    deps = [
+      "//tools/lib/logger",
+      "//tools/net/sshutil",
+    ]
+    sources = [
+      "client.go",
+      "file.go",
+      "paver.go",
+    ]
+  }
+}

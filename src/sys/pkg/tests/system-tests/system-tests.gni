@@ -4,6 +4,14 @@
 
 import("//build/testing/host_test.gni")
 
+if (is_host) {
+  # Add this to go_test()'s environments to disable a test in infra
+  disabled_env = {
+    tags = [ "system-tests-disabled" ]  # Tells infra not to run this by default
+    dimensions = host_env.dimensions
+  }
+}
+
 # The service account that allows the test to download build artifacts.
 _environment_service_account =
     "artifact-readers@fuchsia-infra.iam.gserviceaccount.com"
@@ -110,7 +118,8 @@ template("system_test_upgrade_suite") {
   assert(defined(invoker.environments),
          "environments must be defined for $target_name")
 
-  _tests = [ "//src/sys/pkg/tests/system-tests:system_tests_upgrade" ]
+  _tests =
+      [ "//src/sys/pkg/tests/system-tests/upgrade_test:system_tests_upgrade" ]
 
   _deps = []
 
@@ -309,7 +318,8 @@ template("system_test_reboot_suite") {
   assert(defined(invoker.environments),
          "environments must be defined for $target_name")
 
-  _tests = [ "//src/sys/pkg/tests/system-tests:system_tests_reboot" ]
+  _tests =
+      [ "//src/sys/pkg/tests/system-tests/reboot_test:system_tests_reboot" ]
 
   _deps = []
 

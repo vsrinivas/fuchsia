@@ -2,11 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/go/go_library.gni")
-import("//build/go/go_test.gni")
 import("//build/host.gni")
 import("//build/images/vbmeta.gni")
-import("//build/testing/environments.gni")
 import("//build/testing/host_test_data.gni")
 import("//src/sys/pkg/tests/system-tests/system-tests.gni")
 
@@ -21,6 +18,7 @@ if (is_host) {
     public_deps = [ "//src/developer/ffx:host($host_toolchain)" ]
   }
 
+  non_go_deps = [ ":test_tools" ]
   if (use_vbmeta) {
     host_test_data("test_avb_atx_metadata") {
       sources = [ avb_atx_metadata ]
@@ -31,64 +29,16 @@ if (is_host) {
       sources = [ avb_key ]
       outputs = [ "$root_out_dir/test_data/system-tests/atx_psk.pem" ]
     }
+
+    non_go_deps += [
+      ":test_avb_atx_metadata",
+      ":test_avb_key",
+    ]
   }
 
-  go_library("system_tests_lib") {
+  group("non_go_deps") {
     testonly = true
-    name = "go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/..."
-    deps = [
-      "//src/testing/host-target-testing",
-      "//tools/botanist:constants",
-      "//tools/lib/color",
-      "//tools/lib/logger",
-    ]
-    non_go_deps = [ ":test_tools" ]
-    if (use_vbmeta) {
-      non_go_deps += [
-        ":test_avb_atx_metadata",
-        ":test_avb_key",
-      ]
-    }
-    sources = [
-      "check/check.go",
-      "flash/flash.go",
-      "pave/pave.go",
-      "reboot_test/config.go",
-      "reboot_test/reboot_test.go",
-      "script/script.go",
-      "tracking_test/config.go",
-      "tracking_test/tracking_test.go",
-      "upgrade_test/config.go",
-      "upgrade_test/upgrade_test.go",
-    ]
-  }
-
-  # Add this to go_test()'s environments to disable a test in infra
-  disabled_env = {
-    tags = [ "system-tests-disabled" ]  # Tells infra not to run this by default
-    dimensions = host_env.dimensions
-  }
-
-  go_test("system_tests_reboot") {
-    gopackages =
-        [ "go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/reboot_test" ]
-    environments = [ disabled_env ]
-    deps = [ ":system_tests_lib" ]
-  }
-
-  go_test("system_tests_tracking") {
-    gopackages = [
-      "go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/tracking_test",
-    ]
-    environments = [ disabled_env ]
-    deps = [ ":system_tests_lib" ]
-  }
-
-  go_test("system_tests_upgrade") {
-    gopackages =
-        [ "go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/upgrade_test" ]
-    environments = [ disabled_env ]
-    deps = [ ":system_tests_lib" ]
+    deps = non_go_deps
   }
 
   # This target adds tool_paths.json entries for the system test binaries; by
@@ -98,8 +48,14 @@ if (is_host) {
   group("system_tests_tools") {
     testonly = true
     tools = [
-      "system_tests_reboot",
-      "system_tests_upgrade",
+      {
+        dir = "reboot_test"
+        label = "system_tests_reboot"
+      },
+      {
+        dir = "upgrade_test"
+        label = "system_tests_upgrade"
+      },
     ]
 
     metadata = {
@@ -108,10 +64,11 @@ if (is_host) {
         tool_paths += [
           {
             cpu = host_cpu
-            label = get_label_info(":$tool", "label_with_toolchain")
-            name = tool
+            label = get_label_info("${tool.dir}:${tool.label}",
+                                   "label_with_toolchain")
+            name = tool.label
             os = host_os
-            path = rebase_path("$host_out_dir/$tool", root_build_dir)
+            path = rebase_path("${host_out_dir}/${tool.label}", root_build_dir)
           },
         ]
       }
@@ -122,9 +79,9 @@ if (is_host) {
 group("system_tests") {
   testonly = true
   deps = [
-    ":system_tests_reboot($host_toolchain)",
-    ":system_tests_tracking($host_toolchain)",
-    ":system_tests_upgrade($host_toolchain)",
+    "reboot_test:system_tests_reboot($host_toolchain)",
+    "tracking_test:system_tests_tracking($host_toolchain)",
+    "upgrade_test:system_tests_upgrade($host_toolchain)",
   ]
 }
 

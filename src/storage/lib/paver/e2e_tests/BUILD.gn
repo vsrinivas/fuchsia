@@ -21,7 +21,11 @@ if (is_host) {
     ]
     non_go_deps = [ "//src/sys/pkg/tests/system-tests:test_tools" ]
     deps = [
-      "//src/testing/host-target-testing",
+      "//src/testing/host-target-testing/cli",
+      "//src/testing/host-target-testing/device",
+      "//src/testing/host-target-testing/errutil",
+      "//src/testing/host-target-testing/paver",
+      "//src/testing/host-target-testing/util",
       "//tools/botanist:constants",
       "//tools/lib/color",
       "//tools/lib/logger",

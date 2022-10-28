@@ -6,85 +6,6 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/testing/host_test_data.gni")
 
-if (is_host) {
-  mock_omaha_server_target =
-      "//src/sys/pkg/testing/mock-omaha-server:bin($host_toolchain)"
-  zbi_tool_target = "//zircon/tools/zbi($host_toolchain)"
-
-  host_test_data("test_tools") {
-    sources = [
-      "//src/testing/host-target-testing/omaha_tool/testing_keys/test_private_key.pem",
-      "//third_party/android/platform/external/avb/avbtool.py",
-      get_label_info(mock_omaha_server_target, "root_out_dir") +
-          "/mock-omaha-server",
-      get_label_info(zbi_tool_target, "root_out_dir") + "/zbi",
-    ]
-    outputs = [ "$root_out_dir/test_data/system-tests/{{source_file_part}}" ]
-    deps = [
-      mock_omaha_server_target,
-      zbi_tool_target,
-    ]
-  }
-}
-
-go_library("host-target-testing") {
-  testonly = true
-  name = "go.fuchsia.dev/fuchsia/src/testing/host-target-testing/..."
-  deps = [
-    "//src/lib/versioning/version-history/go:version-history",
-    "//src/sys/pkg/bin/pm:pm_lib",
-    "//src/sys/pkg/lib/far/go:far",
-    "//src/sys/pkg/lib/repo",
-    "//third_party/golibs:github.com/theupdateframework/go-tuf",
-    "//third_party/golibs:golang.org/x/crypto",
-    "//tools/build",
-    "//tools/lib/retry",
-    "//tools/net/sshutil",
-  ]
-  non_go_deps = [ ":test_tools($host_toolchain)" ]
-  sources = [
-    "artifacts/archive.go",
-    "artifacts/archive_test.go",
-    "artifacts/build.go",
-    "artifacts/builder.go",
-    "avb/avb.go",
-    "avb/avb_test.go",
-    "cli/archive.go",
-    "cli/build.go",
-    "cli/device.go",
-    "cli/installer.go",
-    "device/device.go",
-    "device/finder.go",
-    "device/monotonic.go",
-    "device/node_names.go",
-    "device/node_names_test.go",
-    "device/resolver.go",
-    "device/serial.go",
-    "errutil/errutil.go",
-    "flasher/flasher.go",
-    "flasher/flasher_test.go",
-    "omaha_tool/omaha.go",
-    "omaha_tool/omaha_structs.go",
-    "omaha_tool/omaha_test.go",
-    "packages/package.go",
-    "packages/package_builder.go",
-    "packages/package_builder_test.go",
-    "packages/package_test.go",
-    "packages/repo.go",
-    "packages/server.go",
-    "paver/paver.go",
-    "paver/paver_test.go",
-    "sl4f/client.go",
-    "sl4f/file.go",
-    "sl4f/paver.go",
-    "updater/updater.go",
-    "util/util.go",
-    "util/util_test.go",
-    "zbi/zbi.go",
-    "zbi/zbi_test.go",
-  ]
-}
-
 test_packages = [
   "artifacts",
   "avb",
@@ -96,19 +17,13 @@ test_packages = [
   "util",
   "zbi",
 ]
-foreach(testpkg, test_packages) {
-  go_test("host-target-testing-${testpkg}-test") {
-    gopackages =
-        [ "go.fuchsia.dev/fuchsia/src/testing/host-target-testing/${testpkg}" ]
-    deps = [ ":host-target-testing" ]
-  }
-}
 
 group("tests") {
   testonly = true
 
   public_deps = []
   foreach(testpkg, test_packages) {
-    public_deps += [ ":host-target-testing-${testpkg}-test($host_toolchain)" ]
+    public_deps +=
+        [ "${testpkg}:host-target-testing-${testpkg}-test($host_toolchain)" ]
   }
 }

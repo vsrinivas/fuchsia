@@ -1,0 +1,45 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+
+if (is_host) {
+  mock_omaha_server_target =
+      "//src/sys/pkg/testing/mock-omaha-server:bin($host_toolchain)"
+  zbi_tool_target = "//zircon/tools/zbi($host_toolchain)"
+
+  host_test_data("test_tools") {
+    sources = [
+      "//src/testing/host-target-testing/omaha_tool/testing_keys/test_private_key.pem",
+      "//third_party/android/platform/external/avb/avbtool.py",
+      get_label_info(mock_omaha_server_target, "root_out_dir") +
+          "/mock-omaha-server",
+      get_label_info(zbi_tool_target, "root_out_dir") + "/zbi",
+    ]
+    outputs = [ "$root_out_dir/test_data/system-tests/{{source_file_part}}" ]
+    deps = [
+      mock_omaha_server_target,
+      zbi_tool_target,
+    ]
+  }
+
+  go_library("omaha_tool") {
+    testonly = true
+    deps = [
+      "//tools/lib/color",
+      "//tools/lib/logger",
+    ]
+    non_go_deps = [ ":test_tools" ]
+    sources = [
+      "omaha.go",
+      "omaha_structs.go",
+      "omaha_test.go",
+    ]
+  }
+
+  go_test("host-target-testing-omaha_tool-test") {
+    library = ":omaha_tool"
+  }
+}
