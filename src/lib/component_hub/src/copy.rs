@@ -14,8 +14,6 @@ use {
     std::path::PathBuf,
 };
 
-const CHANNEL_SIZE_LIMIT: u64 = 64 * 1024;
-
 /// Transfer a file between a component's namespace to/from the host machine.
 ///
 /// # Arguments
@@ -119,14 +117,6 @@ pub async fn copy_file_from_namespace(
         HostOrRemotePath::Host(destination),
     )
     .await?;
-    let file_size = namespace.get_file_size(&file_path).await?;
-    // TODO(http://fxbug.dev/111473): Add large file support
-    if file_size > CHANNEL_SIZE_LIMIT {
-        return Err(anyhow!(
-            "File: \"{}\" is greater than 64KB which is currently not supported.",
-            { file_path.display() }
-        ));
-    }
 
     let data = namespace.read_file_bytes(file_path).await?;
     write(destination_path, data).map_err(|e| anyhow!("Could not write file to host: {:?}", e))?;
@@ -150,6 +140,7 @@ mod tests {
         test_case::test_case,
     };
 
+    const CHANNEL_SIZE_LIMIT: u64 = 64 * 1024;
     const LARGE_FILE_ARRAY: [u8; CHANNEL_SIZE_LIMIT as usize] = [b'a'; CHANNEL_SIZE_LIMIT as usize];
     const OVER_LIMIT_FILE_ARRAY: [u8; (CHANNEL_SIZE_LIMIT + 1) as usize] =
         [b'a'; (CHANNEL_SIZE_LIMIT + 1) as usize];
@@ -159,6 +150,7 @@ mod tests {
     const SAMPLE_FILE_NAME_2: &str = "bar.txt";
     const SAMPLE_FILE_CONTENTS: &str = "Lorem Ipsum";
     const SAMPLE_FILE_CONTENTS_2: &str = "New Data";
+    const BLANK_FILE_CONTENTS: &str = "";
     const READ_WRITE: bool = false;
     const READ_ONLY: bool = true;
 
@@ -231,13 +223,14 @@ mod tests {
 
     #[test_case("/core/appmgr::/data/foo.txt", "/foo.txt", vec![], vec![(SAMPLE_FILE_NAME, SAMPLE_FILE_CONTENTS)], "/foo.txt", SAMPLE_FILE_CONTENTS; "device_to_host")]
     #[test_case("/core/appmgr::/data/foo.txt", "/foo.txt", vec![(SAMPLE_FILE_NAME, SAMPLE_FILE_CONTENTS)], vec![(SAMPLE_FILE_NAME, SAMPLE_FILE_CONTENTS_2)], "/foo.txt", SAMPLE_FILE_CONTENTS_2; "device_to_host_overwrite_file")]
+    #[test_case("/core/appmgr::/data/foo.txt", "/foo.txt", vec![], vec![(SAMPLE_FILE_NAME, BLANK_FILE_CONTENTS)], "/foo.txt", BLANK_FILE_CONTENTS; "device_to_host_blank_file")]
     #[test_case("/core/appmgr::/data/foo.txt", "/bar.txt", vec![],  vec![(SAMPLE_FILE_NAME, SAMPLE_FILE_CONTENTS)], "/bar.txt", SAMPLE_FILE_CONTENTS; "device_to_host_different_name")]
     #[test_case("/core/appmgr::/data/foo.txt", "", vec![],  vec![(SAMPLE_FILE_NAME, SAMPLE_FILE_CONTENTS)], "/foo.txt", SAMPLE_FILE_CONTENTS; "device_to_host_infer_path")]
     #[test_case("/core/appmgr::/data/foo.txt", "/", vec![],  vec![(SAMPLE_FILE_NAME, SAMPLE_FILE_CONTENTS)], "/foo.txt", SAMPLE_FILE_CONTENTS; "device_to_host_infer_slash_path")]
     #[test_case("/core/appmgr::/data/foo.txt", "/foo.txt", vec![],  vec![(SAMPLE_FILE_NAME, SAMPLE_FILE_CONTENTS),(SAMPLE_FILE_NAME_2, SAMPLE_FILE_CONTENTS)],
     "/foo.txt", SAMPLE_FILE_CONTENTS; "device_to_host_populated_directory")]
     #[test_case("/core/appmgr::/data/foo.txt", "/foo.txt", vec![],  vec![(SAMPLE_FILE_NAME, std::str::from_utf8(&LARGE_FILE_ARRAY).unwrap())], "/foo.txt", std::str::from_utf8(&LARGE_FILE_ARRAY).unwrap(); "device_to_host_large_file")]
-    #[test_case("/core/appmgr::/data/foo.txt", "/foo.txt", vec![],  vec![(SAMPLE_FILE_NAME, std::str::from_utf8(&OVER_LIMIT_FILE_ARRAY).unwrap())], "/tmp/foo.txt", std::str::from_utf8(&LARGE_FILE_ARRAY).unwrap(); "inconclusive device_to_host_over_file_limit")]
+    #[test_case("/core/appmgr::/data/foo.txt", "/foo.txt", vec![],  vec![(SAMPLE_FILE_NAME, std::str::from_utf8(&OVER_LIMIT_FILE_ARRAY).unwrap())], "/foo.txt", std::str::from_utf8(&OVER_LIMIT_FILE_ARRAY).unwrap(); "device_to_host_over_file_limit")]
     #[fuchsia::test]
     async fn copy_device_to_host(
         source_path: &'static str,
@@ -266,7 +259,6 @@ mod tests {
     #[test_case("/core/appmgr::/data/foo.txt", "/core/appmgr::/data/foo.txt",  vec![(SAMPLE_FILE_NAME, SAMPLE_FILE_CONTENTS)]; "device_to_device_not_supported")]
     #[test_case("/core/appmgr::/data/bar.txt", "/foo.txt", vec![(SAMPLE_FILE_NAME, SAMPLE_FILE_CONTENTS)]; "bad_file")]
     #[test_case("/core/appmgr::/data/foo.txt", "/bar/foo.txt", vec![(SAMPLE_FILE_NAME, SAMPLE_FILE_CONTENTS)]; "bad_directory")]
-    #[test_case("/core/appmgr::/data/foo.txt", "/foo.txt", vec![(SAMPLE_FILE_NAME, std::str::from_utf8(&OVER_LIMIT_FILE_ARRAY).unwrap())]; "device_to_host_over_file_limit")]
     #[fuchsia::test]
     async fn copy_device_to_host_fails(
         source_path: &'static str,
@@ -301,12 +293,13 @@ mod tests {
     }
 
     #[test_case("/foo.txt", "/core/appmgr::/data/foo.txt", vec![],  "/data/foo.txt", SAMPLE_FILE_CONTENTS; "host_to_device")]
-    #[test_case("/foo.txt", "/core/appmgr::/data/bar.txt", vec![(SAMPLE_FILE_NAME, SAMPLE_FILE_CONTENTS_2)], "/data/bar.txt", SAMPLE_FILE_CONTENTS; "host_to_device_different_name")]
-    #[test_case("/foo.txt", "/core/appmgr::/data/foo.txt", vec![],  "/data/foo.txt", SAMPLE_FILE_CONTENTS; "host_to_device_overwrite_file")]
+    #[test_case("/foo.txt", "/core/appmgr::/data/bar.txt", vec![],  "/data/bar.txt", SAMPLE_FILE_CONTENTS; "host_to_device_different_name")]
+    #[test_case("/foo.txt", "/core/appmgr::/data/foo.txt", vec![(SAMPLE_FILE_NAME, SAMPLE_FILE_CONTENTS_2)],  "/data/foo.txt", SAMPLE_FILE_CONTENTS; "host_to_device_overwrite_file")]
+    #[test_case("/foo.txt", "/core/appmgr::/data/foo.txt", vec![],  "/data/foo.txt", BLANK_FILE_CONTENTS; "host_to_device_blank_file")]
     #[test_case("/foo.txt", "/core/appmgr::/data", vec![], "/data/foo.txt", SAMPLE_FILE_CONTENTS; "host_to_device_inferred_path")]
     #[test_case("/foo.txt", "/core/appmgr::/data/", vec![], "/data/foo.txt", SAMPLE_FILE_CONTENTS; "host_to_device_inferred_slash_path")]
     #[test_case("/foo.txt", "/core/appmgr::/data/", vec![], "/data/foo.txt", std::str::from_utf8(&LARGE_FILE_ARRAY).unwrap(); "host_to_device_large_file")]
-    #[test_case("/foo.txt", "/core/appmgr::/data/", vec![], "/data/foo.txt", std::str::from_utf8(&OVER_LIMIT_FILE_ARRAY).unwrap(); "inconclusive host_to_device_over_limit_file")]
+    #[test_case("/foo.txt", "/core/appmgr::/data/", vec![], "/data/foo.txt", std::str::from_utf8(&OVER_LIMIT_FILE_ARRAY).unwrap(); "host_to_device_over_limit_file")]
     #[fuchsia::test]
     async fn copy_host_to_device(
         source_path: &'static str,
@@ -334,7 +327,6 @@ mod tests {
     #[test_case("/foo.txt", "wrong_moniker/core/appmgr::/data/foo.txt", SAMPLE_FILE_CONTENTS; "bad_moniker")]
     #[test_case("/foo.txt", "/core/appmgr::/bar/foo.txt", SAMPLE_FILE_CONTENTS; "bad_directory")]
     #[test_case("/foo.txt", "/core/appmgr/data/foo.txt", SAMPLE_FILE_CONTENTS; "host_to_host_not_supported")]
-    #[test_case("/foo.txt", "/core/appmgr::/foo.txt", std::str::from_utf8(&OVER_LIMIT_FILE_ARRAY).unwrap(); "device_to_host_over_file_limit")]
     #[fuchsia::test]
     async fn copy_host_to_device_fails(
         source_path: &'static str,

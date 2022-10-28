@@ -8,12 +8,11 @@ use {
     fidl_fuchsia_developer_remotecontrol as rc,
 };
 
-#[ffx_plugin("copy")]
+#[ffx_plugin]
 pub async fn component_copy(
     rcs_proxy: rc::RemoteControlProxy,
     cmd: CopyComponentCommand,
 ) -> Result<()> {
-    println!("Warning! This is an experimental command.");
     let query_proxy = connect_to_realm_query(&rcs_proxy).await?;
     let CopyComponentCommand { source_path, destination_path } = cmd;
     copy(&query_proxy, source_path, destination_path).await?;
