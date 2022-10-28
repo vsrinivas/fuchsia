@@ -38,6 +38,8 @@ section.
 
 <<../widgets/_anonymous_type.md>>
 
+<<../widgets/_bits.md>>
+
 <<../widgets/_enum.md>>
 
 <<../widgets/_generated_name.md>>
@@ -47,6 +49,12 @@ section.
 <<../widgets/_optionality.md>>
 
 <<../widgets/_recursive_type.md>>
+
+<<../widgets/_scalar_type.md>>
+
+<<../widgets/_table_payload.md>>
+
+<<../widgets/_union_payload.md>>
 
 <!-- /DO_NOT_REMOVE_COMMENT:concepts (Why? See: /tools/fidl/scripts/canonical_example/README.md) -->
 
