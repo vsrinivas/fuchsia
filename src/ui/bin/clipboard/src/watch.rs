@@ -6,7 +6,7 @@
 //!
 //! Unit tests are in [`crate::watch_tests`].
 
-#![allow(unused_imports, dead_code)] // TODO(fxbug.dev/110935)
+#![allow(dead_code)] // TODO(fxbug.dev/110935)
 
 use {
     crate::{errors::ClipboardError, metadata::ClipboardMetadata},
@@ -195,8 +195,10 @@ impl WatchServer {
             debug!("[WatchServer::new] Server task started");
             // TODO: Switch to let chain when `let_chains` feature is stabilized.
             while let Some(server) = weak_server.upgrade() {
-                while let Some(message) = rx.next().await {
+                if let Some(message) = rx.next().await {
                     server.process_message(message);
+                } else {
+                    break;
                 }
             }
             debug!("[WatchServer::new] Server task ended");
@@ -336,14 +338,84 @@ impl WatchServer {
         })
     }
 
-    #[allow(unused_variables)]
     fn internal_notify(
         self: &Rc<Self>,
         inner: RefMut<'_, Inner>,
         force_notify_view_ref_koid: Option<zx::Koid>,
     ) {
-        // TODO(fxbug.dev/110935)
-        todo!()
+        let focused_view_ref_koid = inner.focused_view_ref_koid;
+        let recipient_view_ref_koid = force_notify_view_ref_koid.or(focused_view_ref_koid);
+
+        let is_forced = force_notify_view_ref_koid.is_some();
+        let is_focused = focused_view_ref_koid == recipient_view_ref_koid;
+
+        let (mut view_ref_koid_to_state, clipboard_metadata) = RefMut::map_split(inner, |inner| {
+            (&mut inner.view_ref_koid_to_state, &mut inner.clipboard_metadata)
+        });
+
+        let view_ref_state = recipient_view_ref_koid.and_then(|recipient_view_ref_koid| {
+            view_ref_koid_to_state.get_mut(&recipient_view_ref_koid)
+        });
+
+        match view_ref_state {
+            Some(view_ref_state) if view_ref_state.is_watching() => {
+                if is_forced || view_ref_state.is_dirty() {
+                    let mut response: Result<fclip::ClipboardMetadata, fclip::ClipboardError> =
+                        if is_focused {
+                            Ok((&*clipboard_metadata).into())
+                        } else {
+                            Err(ClipboardError::Unauthorized.into())
+                        };
+                    debug!(
+                        recipient = ?recipient_view_ref_koid.unwrap(),
+                        ?response,
+                        "[internal_notify] Sending"
+                    );
+                    let responder = view_ref_state.watching.take_responder().unwrap();
+                    if let Err(fidl_err) = responder.send(&mut response) {
+                        Self::log_fidl_send_error(fidl_err, recipient_view_ref_koid.unwrap());
+                    } else {
+                        // If the client was successfully sent actual metadata, clear the "dirty"
+                        // flag.
+                        if is_focused {
+                            view_ref_state.dirty = false;
+                        }
+                    }
+                } else {
+                    // not forced, not dirty
+                    debug!(
+                        ?recipient_view_ref_koid,
+                        ?view_ref_state,
+                        "[internal_notify] Not notifying because client is up to date"
+                    )
+                }
+            }
+            Some(view_ref_state) => {
+                if is_forced {
+                    error!(
+                        ?force_notify_view_ref_koid,
+                        ?view_ref_state,
+                        "[internal_notify] Attempted to force notify but client hadn't called Watch"
+                    );
+                } else {
+                    debug!(
+                        ?recipient_view_ref_koid,
+                        ?view_ref_state,
+                        "[internal_notify] Client hadn't called Watch"
+                    )
+                }
+            }
+            None => {
+                if is_forced {
+                    error!(
+                        ?force_notify_view_ref_koid,
+                        "[internal_notify] Attempted to notify unknown client"
+                    )
+                } else {
+                    debug!(?recipient_view_ref_koid, "[internal_notify] No one to notify")
+                }
+            }
+        }
     }
 
     /// Enqueues an update of the clipboard metadata, i.e. the state being watched.
