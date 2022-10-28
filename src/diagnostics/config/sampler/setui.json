@@ -2880,6 +2880,474 @@
             "metric_id": 9,
             "metric_type": "Occurrence",
             "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/service_flags.json/result_counts:UsingDefaults"
+        },
+        {
+            "event_codes": [
+                1,
+                1
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Accessibility/Get:count"
+        },
+        {
+            "event_codes": [
+                1,
+                2
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Accessibility/Listen:count"
+        },
+        {
+            "event_codes": [
+                1,
+                3
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Accessibility/Set:count"
+        },
+        {
+            "event_codes": [
+                1,
+                4
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Accessibility/Restore:count"
+        },
+        {
+            "event_codes": [
+                2,
+                1
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Audio/Get:count"
+        },
+        {
+            "event_codes": [
+                2,
+                2
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Audio/Listen:count"
+        },
+        {
+            "event_codes": [
+                2,
+                3
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Audio/Set:count"
+        },
+        {
+            "event_codes": [
+                2,
+                4
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Audio/Restore:count"
+        },
+        {
+            "event_codes": [
+                4,
+                1
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Display/Get:count"
+        },
+        {
+            "event_codes": [
+                4,
+                2
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Display/Listen:count"
+        },
+        {
+            "event_codes": [
+                4,
+                3
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Display/Set:count"
+        },
+        {
+            "event_codes": [
+                4,
+                4
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Display/Restore:count"
+        },
+        {
+            "event_codes": [
+                5,
+                1
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/DoNotDisturb/Get:count"
+        },
+        {
+            "event_codes": [
+                5,
+                2
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/DoNotDisturb/Listen:count"
+        },
+        {
+            "event_codes": [
+                5,
+                3
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/DoNotDisturb/Set:count"
+        },
+        {
+            "event_codes": [
+                5,
+                4
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/DoNotDisturb/Restore:count"
+        },
+        {
+            "event_codes": [
+                6,
+                1
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/FactoryReset/Get:count"
+        },
+        {
+            "event_codes": [
+                6,
+                2
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/FactoryReset/Listen:count"
+        },
+        {
+            "event_codes": [
+                6,
+                3
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/FactoryReset/Set:count"
+        },
+        {
+            "event_codes": [
+                6,
+                4
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/FactoryReset/Restore:count"
+        },
+        {
+            "event_codes": [
+                7,
+                1
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Input/Get:count"
+        },
+        {
+            "event_codes": [
+                7,
+                2
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Input/Listen:count"
+        },
+        {
+            "event_codes": [
+                7,
+                3
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Input/Set:count"
+        },
+        {
+            "event_codes": [
+                7,
+                4
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Input/Restore:count"
+        },
+        {
+            "event_codes": [
+                8,
+                1
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Intl/Get:count"
+        },
+        {
+            "event_codes": [
+                8,
+                2
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Intl/Listen:count"
+        },
+        {
+            "event_codes": [
+                8,
+                3
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Intl/Set:count"
+        },
+        {
+            "event_codes": [
+                8,
+                4
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Intl/Restore:count"
+        },
+        {
+            "event_codes": [
+                9,
+                1
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Light/Get:count"
+        },
+        {
+            "event_codes": [
+                9,
+                2
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Light/Listen:count"
+        },
+        {
+            "event_codes": [
+                9,
+                3
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Light/Set:count"
+        },
+        {
+            "event_codes": [
+                9,
+                4
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Light/Restore:count"
+        },
+        {
+            "event_codes": [
+                10,
+                1
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/NightMode/Get:count"
+        },
+        {
+            "event_codes": [
+                10,
+                2
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/NightMode/Listen:count"
+        },
+        {
+            "event_codes": [
+                10,
+                3
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/NightMode/Set:count"
+        },
+        {
+            "event_codes": [
+                10,
+                4
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/NightMode/Restore:count"
+        },
+        {
+            "event_codes": [
+                11,
+                1
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Privacy/Get:count"
+        },
+        {
+            "event_codes": [
+                11,
+                2
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Privacy/Listen:count"
+        },
+        {
+            "event_codes": [
+                11,
+                3
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Privacy/Set:count"
+        },
+        {
+            "event_codes": [
+                11,
+                4
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Privacy/Restore:count"
+        },
+        {
+            "event_codes": [
+                12,
+                1
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Setup/Get:count"
+        },
+        {
+            "event_codes": [
+                12,
+                2
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Setup/Listen:count"
+        },
+        {
+            "event_codes": [
+                12,
+                3
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Setup/Set:count"
+        },
+        {
+            "event_codes": [
+                12,
+                4
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Setup/Restore:count"
+        },
+        {
+            "event_codes": [
+                13,
+                1
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Keyboard/Get:count"
+        },
+        {
+            "event_codes": [
+                13,
+                2
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Keyboard/Listen:count"
+        },
+        {
+            "event_codes": [
+                13,
+                3
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Keyboard/Set:count"
+        },
+        {
+            "event_codes": [
+                13,
+                4
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/Keyboard/Restore:count"
+        },
+        {
+            "event_codes": [
+                14,
+                1
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/LightSensor/Get:count"
+        },
+        {
+            "event_codes": [
+                14,
+                2
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/LightSensor/Listen:count"
+        },
+        {
+            "event_codes": [
+                14,
+                3
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/LightSensor/Set:count"
+        },
+        {
+            "event_codes": [
+                14,
+                4
+            ],
+            "metric_id": 10,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/api_usage_counts/LightSensor/Restore:count"
         }
     ],
     "poll_rate_sec": 3600,
