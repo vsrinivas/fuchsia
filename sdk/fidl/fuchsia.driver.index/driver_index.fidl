@@ -84,6 +84,9 @@ type MatchedDeviceGroupInfo = table {
     /// A list of all the node names for this device group.
     /// These are ordered according to index.
     5: node_names vector<string:MAX>:MAX;
+
+    /// The primary node index.
+    6: primary_index uint32;
 };
 
 /// Information for a device group node that's matched by the driver index.

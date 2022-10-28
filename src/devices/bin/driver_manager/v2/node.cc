@@ -74,10 +74,6 @@ bool IsDefaultOffer(std::string_view target_name) {
   return std::string_view("default").compare(target_name) == 0;
 }
 
-Node* PrimaryParent(const std::vector<Node*>& parents) {
-  return parents.empty() ? nullptr : parents[0];
-}
-
 template <typename T>
 void UnbindAndReset(std::optional<fidl::ServerBindingRef<T>>& ref) {
   if (ref) {
@@ -260,14 +256,16 @@ void BindResultTracker::Complete(size_t current) {
 }
 
 Node::Node(std::string_view name, std::vector<Node*> parents, NodeManager* node_manager,
-           async_dispatcher_t* dispatcher)
+           async_dispatcher_t* dispatcher, uint32_t primary_index)
     : devfs_name_(name),
       name_(name),
       parents_(std::move(parents)),
+      primary_index_(primary_index),
       node_manager_(node_manager),
       dispatcher_(dispatcher) {
+  ZX_ASSERT(primary_index_ == 0 || primary_index_ < parents_.size());
   TransformToValidName(name_);
-  if (auto primary_parent = PrimaryParent(parents_)) {
+  if (auto primary_parent = GetPrimaryParent()) {
     // By default, we set `driver_host_` to match the primary parent's
     // `driver_host_`. If the node is then subsequently bound to a driver in a
     // different driver host, this value will be updated to match.
@@ -289,8 +287,15 @@ Node::Node(std::string_view name, std::vector<Node*> parents, NodeManager* node_
 zx::result<std::shared_ptr<Node>> Node::CreateCompositeNode(
     std::string_view node_name, std::vector<Node*> parents, std::vector<std::string> parents_names,
     std::vector<fuchsia_driver_framework::wire::NodeProperty> properties,
-    NodeManager* driver_binder, async_dispatcher_t* dispatcher) {
-  auto composite = std::make_shared<Node>(node_name, std::move(parents), driver_binder, dispatcher);
+    NodeManager* driver_binder, async_dispatcher_t* dispatcher, uint32_t primary_index) {
+  ZX_ASSERT(!parents.empty());
+  if (primary_index >= parents.size()) {
+    LOGF(ERROR, "Primary node index is out of bounds");
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+
+  auto composite = std::make_shared<Node>(node_name, std::move(parents), driver_binder, dispatcher,
+                                          primary_index);
   composite->parents_names_ = std::move(parents_names);
 
   for (auto& prop : properties) {
@@ -299,7 +304,7 @@ zx::result<std::shared_ptr<Node>> Node::CreateCompositeNode(
     composite->properties_.push_back(new_prop);
   }
 
-  auto primary = PrimaryParent(composite->parents_);
+  auto primary = composite->GetPrimaryParent();
   // We know that our device has a parent because we're creating it.
   ZX_ASSERT(primary);
 
@@ -363,7 +368,7 @@ void Node::set_collection(Collection collection) { collection_ = collection; }
 
 std::string Node::TopoName() const {
   std::deque<std::string_view> names;
-  for (auto node = this; node != nullptr; node = PrimaryParent(node->parents_)) {
+  for (auto node = this; node != nullptr; node = node->GetPrimaryParent()) {
     names.push_front(node->name());
   }
   return fxl::JoinStrings(names, ".");
@@ -388,6 +393,10 @@ void Node::OnBind() const {
       LOGF(ERROR, "Failed to send OnBind event: %s", result.FormatDescription().data());
     }
   }
+}
+
+Node* Node::GetPrimaryParent() const {
+  return parents_.empty() ? nullptr : parents_[primary_index_];
 }
 
 void Node::AddToParents() {
@@ -502,7 +511,7 @@ fit::result<fuchsia_driver_framework::wire::NodeError, std::shared_ptr<Node>> No
       // been bound to the node, and the driver is running within the collection.
       auto source_node = this;
       while (source_node && source_node->collection_ == Collection::kNone) {
-        source_node = PrimaryParent(source_node->parents_);
+        source_node = source_node->GetPrimaryParent();
       }
       VisitOffer<bool>(offer, [&arena = child->arena_, source_node](auto& decl) mutable {
         // Assign the source of the offer.

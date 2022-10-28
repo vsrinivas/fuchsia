@@ -210,7 +210,7 @@ zx_status_t BindDriverManager::BindDriverToFragment(const MatchedCompositeDriver
   auto name = std::string(driver.driver_info.name());
   if (driver_index_composite_devices_.count(name) == 0) {
     driver_index_composite_devices_[name] =
-        CompositeDevice::CreateFromDriverIndex(driver, fbl::Array<std::unique_ptr<Metadata>>());
+        CompositeDevice::CreateFromDriverIndex(driver, 0, fbl::Array<std::unique_ptr<Metadata>>());
   }
 
   // Bind the matched fragment to the device.

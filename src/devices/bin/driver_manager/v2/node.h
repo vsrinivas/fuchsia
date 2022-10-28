@@ -73,7 +73,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
              public std::enable_shared_from_this<Node> {
  public:
   Node(std::string_view name, std::vector<Node*> parents, NodeManager* node_manager,
-       async_dispatcher_t* dispatcher);
+       async_dispatcher_t* dispatcher, uint32_t primary_index = 0);
   Node(std::string_view name, std::vector<Node*> parents, NodeManager* node_manager,
        async_dispatcher_t* dispatcher, DriverHost* driver_host);
 
@@ -83,7 +83,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
       std::string_view node_name, std::vector<Node*> parents,
       std::vector<std::string> parents_names,
       std::vector<fuchsia_driver_framework::wire::NodeProperty> properties,
-      NodeManager* driver_binder, async_dispatcher_t* dispatcher);
+      NodeManager* driver_binder, async_dispatcher_t* dispatcher, uint32_t primary_index = 0);
 
   fuchsia_driver_framework::wire::NodeAddArgs CreateAddArgs(fidl::AnyArena& arena);
 
@@ -109,6 +109,9 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
       fidl::ServerEnd<fuchsia_component_runner::ComponentController> controller);
 
   bool IsComposite() const;
+
+  // Exposed for testing.
+  Node* GetPrimaryParent() const;
 
   const std::string& name() const;
   const DriverHost* driver_host() const { return *driver_host_; }
@@ -150,6 +153,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   // If this is a composite device, this stores the list of each parent's names.
   std::vector<std::string> parents_names_;
   std::vector<Node*> parents_;
+  uint32_t primary_index_ = 0;
   std::list<std::shared_ptr<Node>> children_;
   fit::nullable<NodeManager*> node_manager_;
   async_dispatcher_t* const dispatcher_;

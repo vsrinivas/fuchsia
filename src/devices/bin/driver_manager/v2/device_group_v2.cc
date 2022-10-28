@@ -19,7 +19,8 @@ zx::result<std::optional<DeviceOrNode>> DeviceGroupV2::BindNodeImpl(
     fuchsia_driver_index::wire::MatchedDeviceGroupInfo info, const DeviceOrNode& device_or_node) {
   auto node_ptr = std::get_if<std::weak_ptr<dfv2::Node>>(&device_or_node);
   ZX_ASSERT(node_ptr);
-  ZX_ASSERT(info.has_node_index() && info.has_node_index() && info.has_node_names());
+  ZX_ASSERT(info.has_node_index() && info.has_node_index() && info.has_node_names() &&
+            info.has_primary_index());
   ZX_ASSERT(info.has_composite() && info.composite().has_composite_name());
 
   if (!parent_set_collector_) {
@@ -46,8 +47,9 @@ zx::result<std::optional<DeviceOrNode>> DeviceGroupV2::BindNodeImpl(
   }
 
   // Create a composite node for the device group with our complete parent set.
-  auto composite = Node::CreateCompositeNode(composite_name, std::move(*completed_parents),
-                                             node_names, {}, node_manager_, dispatcher_);
+  auto composite =
+      Node::CreateCompositeNode(composite_name, std::move(*completed_parents), node_names, {},
+                                node_manager_, dispatcher_, info.primary_index());
   if (composite.is_error()) {
     // If we are returning an error we should clear out what we have.
     parent_set_collector_->RemoveNode(info.node_index());

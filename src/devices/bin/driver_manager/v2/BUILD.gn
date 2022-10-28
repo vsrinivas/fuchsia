@@ -102,6 +102,22 @@ fuchsia_unittest_component("composite-assembler-test") {
   deps = [ ":composite_assembler_test" ]
 }
 
+executable("device_group_v2_test") {
+  testonly = true
+  sources = [ "device_group_v2_test.cc" ]
+
+  deps = [
+    ":driver_runner",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//zircon/system/ulib/zircon-internal",
+  ]
+}
+
+fuchsia_unittest_component("device-group-v2-test") {
+  deps = [ ":device_group_v2_test" ]
+}
+
 fuchsia_test_package("driver-runner-tests") {
   test_specs = {
     log_settings = {
@@ -110,6 +126,7 @@ fuchsia_test_package("driver-runner-tests") {
   }
 
   test_components = [
+    ":device-group-v2-test",
     ":driver-runner-test",
     ":composite-assembler-test",
   ]

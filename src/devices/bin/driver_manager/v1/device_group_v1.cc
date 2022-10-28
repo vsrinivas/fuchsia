@@ -73,7 +73,8 @@ void DeviceGroupV1::SetCompositeDevice(fuchsia_driver_index::wire::MatchedDevice
   ZX_ASSERT(!composite_device_);
   ZX_ASSERT(info.has_composite() && info.composite().has_driver_info() &&
             info.composite().driver_info().has_url() && info.composite().has_composite_name());
-  ZX_ASSERT(info.has_node_index() && info.has_num_nodes() && info.has_node_names());
+  ZX_ASSERT(info.has_node_index() && info.has_num_nodes() && info.has_node_names() &&
+            info.has_primary_index());
 
   auto node_names = std::vector<std::string>(info.node_names().count());
   for (size_t i = 0; i < info.node_names().count(); i++) {
@@ -95,7 +96,7 @@ void DeviceGroupV1::SetCompositeDevice(fuchsia_driver_index::wire::MatchedDevice
 
   composite_device_ = CompositeDevice::CreateFromDriverIndex(
       MatchedCompositeDriverInfo{.composite = composite_info, .driver_info = matched_driver_info},
-      std::move(metadata_));
+      info.primary_index(), std::move(metadata_));
   metadata_ = fbl::Array<std::unique_ptr<Metadata>>();
 }
 

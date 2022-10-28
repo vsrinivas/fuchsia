@@ -312,6 +312,7 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
                          {.url = "fuchsia-boot:///#meta/composite-driver.cm", .colocate = true})}),
                 .num_nodes = 2,
                 .node_names = {{"node-0", "node-1"}},
+                .primary_index = 1,
             })});
       } else if (args.name().get() == "dev-group-1") {
         return zx::ok(FakeDriverIndex::MatchResult{
@@ -326,6 +327,7 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
                          {.url = "fuchsia-boot:///#meta/composite-driver.cm", .colocate = true})}),
                 .num_nodes = 2,
                 .node_names = {{"node-0", "node-1"}},
+                .primary_index = 1,
             })});
       } else {
         return zx::error(ZX_ERR_NOT_FOUND);
@@ -1734,6 +1736,7 @@ TEST_F(DriverRunnerTest, CreateAndBindDeviceGroup) {
            .driver_info = fuchsia_driver_index::MatchedDriverInfo(
                {.url = "fuchsia-boot:///#meta/composite-driver.cm", .colocate = true})}),
       .node_names = {{"node-0", "node-1"}},
+      .primary_index = 1,
   });
   driver_index.AddDeviceGroupMatch(topological_path, match);
 

@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::match_common::{
-        collect_node_names_from_composite_rules, get_composite_rules_from_composite_driver,
-        node_to_device_property,
-    },
+    crate::match_common::{get_composite_rules_from_composite_driver, node_to_device_property},
     crate::resolved_driver::ResolvedDriver,
     bind::compiler::Symbol,
     bind::interpreter::match_bind::{match_bind, DeviceProperties, MatchBindData, PropertyKey},
@@ -26,6 +23,7 @@ type DeviceGroupNodeBindRules = BTreeMap<PropertyKey, BindRuleCondition>;
 struct MatchedComposite {
     pub info: fdi::MatchedCompositeInfo,
     pub names: Vec<String>,
+    pub primary_index: u32,
 }
 
 struct DeviceGroupInfo {
@@ -105,6 +103,7 @@ impl DeviceGroupManager {
                         matched: Some(MatchedComposite {
                             info: matched_composite.info.clone(),
                             names: matched_composite.names.clone(),
+                            primary_index: matched_composite.primary_index,
                         }),
                     },
                 );
@@ -160,10 +159,7 @@ impl DeviceGroupManager {
             let matched_composite_result =
                 match_composite_bind_properties(&resolved_driver, &dev_group.nodes);
             if let Ok(Some(matched_composite)) = matched_composite_result {
-                dev_group.matched = Some(MatchedComposite {
-                    info: matched_composite.info,
-                    names: matched_composite.names,
-                });
+                dev_group.matched = Some(matched_composite);
             }
         }
     }
@@ -179,6 +175,7 @@ impl DeviceGroupManager {
                 if let Some(matched) = &device_group.matched {
                     info.composite = Some(matched.info.clone());
                     info.node_names = Some(matched.names.clone());
+                    info.primary_index = Some(matched.primary_index);
                 }
 
                 return Some(info);
@@ -282,12 +279,20 @@ fn match_composite_bind_properties<'a>(
         return Ok(None);
     }
 
-    // First check the primary nodes match.
-    let primary_matches = node_matches_composite_driver(
-        &nodes[0],
-        &composite.primary_node.instructions,
-        &composite.symbol_table,
-    );
+    // First find a matching primary node.
+    let mut primary_index = 0;
+    let mut primary_matches = false;
+    for i in 0..nodes.len() {
+        primary_matches = node_matches_composite_driver(
+            &nodes[i],
+            &composite.primary_node.instructions,
+            &composite.symbol_table,
+        );
+        if primary_matches {
+            primary_index = i as u32;
+            break;
+        }
+    }
 
     if !primary_matches {
         return Ok(None);
@@ -319,10 +324,14 @@ fn match_composite_bind_properties<'a>(
     let mut unmatched_optional_indices =
         (0..composite.optional_nodes.len()).collect::<HashSet<_>>();
 
-    let primary_name: String = composite.symbol_table[&composite.primary_node.name_id].clone();
-    let mut names = vec![primary_name];
+    let mut names = vec![];
 
-    for i in 1..nodes.len() {
+    for i in 0..nodes.len() {
+        if i == primary_index as usize {
+            names.push(composite.symbol_table[&composite.primary_node.name_id].clone());
+            continue;
+        }
+
         let mut matched = None;
         let mut matched_name: Option<String> = None;
         let mut from_optional = false;
@@ -380,14 +389,13 @@ fn match_composite_bind_properties<'a>(
 
     let info = fdi::MatchedCompositeInfo {
         node_index: None,
-        num_nodes: Some((composite.additional_nodes.len() + 1) as u32),
+        num_nodes: None,
         composite_name: Some(composite.symbol_table[&composite.device_name_id].clone()),
-        node_names: Some(collect_node_names_from_composite_rules(composite)),
+        node_names: None,
         driver_info: Some(composite_driver.create_matched_driver_info()),
         ..fdi::MatchedCompositeInfo::EMPTY
     };
-
-    return Ok(Some(MatchedComposite { info, names }));
+    return Ok(Some(MatchedComposite { info, names, primary_index }));
 }
 
 fn node_matches_composite_driver(
@@ -1582,13 +1590,9 @@ mod tests {
             Ok((
                 fdi::MatchedCompositeInfo {
                     node_index: None,
-                    num_nodes: Some(3),
+                    num_nodes: None,
                     composite_name: Some(device_name.to_string()),
-                    node_names: Some(vec![
-                        primary_name.to_string(),
-                        additional_a_name.to_string(),
-                        additional_b_name.to_string()
-                    ]),
+                    node_names: None,
                     driver_info: Some(composite_driver.clone().create_matched_driver_info()),
                     ..fdi::MatchedCompositeInfo::EMPTY
                 },
@@ -1620,6 +1624,7 @@ mod tests {
             topological_path: Some("test/path".to_string()),
             node_index: Some(2),
             num_nodes: Some(3),
+            primary_index: Some(0),
             node_names: Some(vec![
                 primary_name.to_string(),
                 additional_b_name.to_string(),
@@ -1627,13 +1632,177 @@ mod tests {
             ]),
             composite: Some(fdi::MatchedCompositeInfo {
                 node_index: None,
-                num_nodes: Some(3),
+                num_nodes: None,
                 composite_name: Some(device_name.to_string()),
-                node_names: Some(vec![
-                    primary_name.to_string(),
-                    additional_a_name.to_string(),
+                node_names: None,
+                driver_info: Some(composite_driver.clone().create_matched_driver_info()),
+                ..fdi::MatchedCompositeInfo::EMPTY
+            }),
+            ..fdi::MatchedDeviceGroupInfo::EMPTY
+        };
+        assert_eq!(
+            Some(fdi::MatchedDriver::DeviceGroupNode(fdi::MatchedDeviceGroupNodeInfo {
+                device_groups: Some(vec![expected_device_group]),
+                ..fdi::MatchedDeviceGroupNodeInfo::EMPTY
+            })),
+            device_group_manager.match_device_group_nodes(&device_properties_1)
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_composite_with_rearranged_primary_node() {
+        let primary_bind_rules = vec![fdf::BindRule {
+            key: fdf::NodePropertyKey::IntValue(1),
+            condition: fdf::Condition::Accept,
+            values: vec![fdf::NodePropertyValue::IntValue(200)],
+        }];
+
+        let additional_bind_rules_1 = vec![fdf::BindRule {
+            key: fdf::NodePropertyKey::IntValue(1),
+            condition: fdf::Condition::Accept,
+            values: vec![fdf::NodePropertyValue::IntValue(10)],
+        }];
+
+        let additional_bind_rules_2 = vec![fdf::BindRule {
+            key: fdf::NodePropertyKey::IntValue(10),
+            condition: fdf::Condition::Accept,
+            values: vec![fdf::NodePropertyValue::BoolValue(true)],
+        }];
+
+        let primary_key_1 = "whimbrel";
+        let primary_val_1 = "sanderling";
+
+        let additional_a_key_1 = 100;
+        let additional_a_val_1 = 50;
+
+        let additional_b_key_1 = "curlew";
+        let additional_b_val_1 = 500;
+
+        let device_name = "mimid";
+        let primary_name = "primary_node";
+        let additional_a_name = "additional_1";
+        let additional_b_name = "additional_2";
+
+        let primary_device_group_node = fdf::DeviceGroupNode {
+            bind_rules: primary_bind_rules,
+            bind_properties: vec![fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::StringValue(primary_key_1.to_string())),
+                value: Some(fdf::NodePropertyValue::StringValue(primary_val_1.to_string())),
+                ..fdf::NodeProperty::EMPTY
+            }],
+        };
+
+        let primary_node_inst = vec![SymbolicInstructionInfo {
+            location: None,
+            instruction: SymbolicInstruction::AbortIfNotEqual {
+                lhs: Symbol::Key(primary_key_1.to_string(), ValueType::Str),
+                rhs: Symbol::StringValue(primary_val_1.to_string()),
+            },
+        }];
+
+        let additional_device_group_node_a = fdf::DeviceGroupNode {
+            bind_rules: additional_bind_rules_1,
+            bind_properties: vec![fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::IntValue(additional_a_key_1)),
+                value: Some(fdf::NodePropertyValue::IntValue(additional_a_val_1)),
+                ..fdf::NodeProperty::EMPTY
+            }],
+        };
+
+        let additional_node_a_inst = vec![
+            SymbolicInstructionInfo {
+                location: None,
+                instruction: SymbolicInstruction::AbortIfNotEqual {
+                    lhs: Symbol::DeprecatedKey(additional_a_key_1),
+                    rhs: Symbol::NumberValue(additional_a_val_1.clone().into()),
+                },
+            },
+            SymbolicInstructionInfo {
+                location: None,
+                instruction: SymbolicInstruction::AbortIfEqual {
+                    lhs: Symbol::Key("NA".to_string(), ValueType::Number),
+                    rhs: Symbol::NumberValue(500),
+                },
+            },
+        ];
+
+        let additional_device_group_node_b = fdf::DeviceGroupNode {
+            bind_rules: additional_bind_rules_2,
+            bind_properties: vec![fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::StringValue(additional_b_key_1.to_string())),
+                value: Some(fdf::NodePropertyValue::IntValue(additional_b_val_1)),
+                ..fdf::NodeProperty::EMPTY
+            }],
+        };
+
+        let additional_node_b_inst = vec![SymbolicInstructionInfo {
+            location: None,
+            instruction: SymbolicInstruction::AbortIfNotEqual {
+                lhs: Symbol::Key(additional_b_key_1.to_string(), ValueType::Number),
+                rhs: Symbol::NumberValue(additional_b_val_1.clone().into()),
+            },
+        }];
+
+        let composite_driver = create_driver_with_rules(
+            device_name,
+            (primary_name, primary_node_inst),
+            vec![
+                (additional_a_name, additional_node_a_inst),
+                (additional_b_name, additional_node_b_inst),
+            ],
+            vec![],
+        );
+
+        let mut device_group_manager = DeviceGroupManager::new();
+        assert_eq!(
+            Ok((
+                fdi::MatchedCompositeInfo {
+                    node_index: None,
+                    num_nodes: None,
+                    composite_name: Some(device_name.to_string()),
+                    node_names: None,
+                    driver_info: Some(composite_driver.clone().create_matched_driver_info()),
+                    ..fdi::MatchedCompositeInfo::EMPTY
+                },
+                vec![
                     additional_b_name.to_string(),
-                ]),
+                    additional_a_name.to_string(),
+                    primary_name.to_string(),
+                ]
+            )),
+            device_group_manager.add_device_group(
+                fdf::DeviceGroup {
+                    topological_path: Some("test/path".to_string()),
+                    nodes: Some(vec![
+                        additional_device_group_node_b,
+                        additional_device_group_node_a,
+                        primary_device_group_node,
+                    ]),
+                    ..fdf::DeviceGroup::EMPTY
+                },
+                vec![&composite_driver]
+            )
+        );
+
+        // Match additional node A, the last node in the device group at index 2.
+        let mut device_properties_1: DeviceProperties = HashMap::new();
+        device_properties_1.insert(PropertyKey::NumberKey(1), Symbol::NumberValue(10));
+
+        let expected_device_group = fdi::MatchedDeviceGroupInfo {
+            topological_path: Some("test/path".to_string()),
+            node_index: Some(1),
+            num_nodes: Some(3),
+            primary_index: Some(2),
+            node_names: Some(vec![
+                additional_b_name.to_string(),
+                additional_a_name.to_string(),
+                primary_name.to_string(),
+            ]),
+            composite: Some(fdi::MatchedCompositeInfo {
+                node_index: None,
+                num_nodes: None,
+                composite_name: Some(device_name.to_string()),
+                node_names: None,
                 driver_info: Some(composite_driver.clone().create_matched_driver_info()),
                 ..fdi::MatchedCompositeInfo::EMPTY
             }),
@@ -1778,13 +1947,9 @@ mod tests {
             Ok((
                 fdi::MatchedCompositeInfo {
                     node_index: None,
-                    num_nodes: Some(3),
+                    num_nodes: None,
                     composite_name: Some(device_name.to_string()),
-                    node_names: Some(vec![
-                        primary_name.to_string(),
-                        additional_a_name.to_string(),
-                        additional_b_name.to_string()
-                    ]),
+                    node_names: None,
                     driver_info: Some(composite_driver.clone().create_matched_driver_info()),
                     ..fdi::MatchedCompositeInfo::EMPTY
                 },
@@ -1816,6 +1981,7 @@ mod tests {
             topological_path: Some("test/path".to_string()),
             node_index: Some(2),
             num_nodes: Some(3),
+            primary_index: Some(0),
             node_names: Some(vec![
                 primary_name.to_string(),
                 additional_b_name.to_string(),
@@ -1823,13 +1989,9 @@ mod tests {
             ]),
             composite: Some(fdi::MatchedCompositeInfo {
                 node_index: None,
-                num_nodes: Some(3),
+                num_nodes: None,
                 composite_name: Some(device_name.to_string()),
-                node_names: Some(vec![
-                    primary_name.to_string(),
-                    additional_a_name.to_string(),
-                    additional_b_name.to_string(),
-                ]),
+                node_names: None,
                 driver_info: Some(composite_driver.clone().create_matched_driver_info()),
                 ..fdi::MatchedCompositeInfo::EMPTY
             }),
@@ -1989,13 +2151,9 @@ mod tests {
             Ok((
                 fdi::MatchedCompositeInfo {
                     node_index: None,
-                    num_nodes: Some(3),
+                    num_nodes: None,
                     composite_name: Some(device_name.to_string()),
-                    node_names: Some(vec![
-                        primary_name.to_string(),
-                        additional_a_name.to_string(),
-                        additional_b_name.to_string()
-                    ]),
+                    node_names: None,
                     driver_info: Some(composite_driver.clone().create_matched_driver_info()),
                     ..fdi::MatchedCompositeInfo::EMPTY
                 },
@@ -2029,6 +2187,7 @@ mod tests {
             topological_path: Some("test/path".to_string()),
             node_index: Some(3),
             num_nodes: Some(4),
+            primary_index: Some(0),
             node_names: Some(vec![
                 primary_name.to_string(),
                 additional_b_name.to_string(),
@@ -2037,13 +2196,9 @@ mod tests {
             ]),
             composite: Some(fdi::MatchedCompositeInfo {
                 node_index: None,
-                num_nodes: Some(3),
+                num_nodes: None,
                 composite_name: Some(device_name.to_string()),
-                node_names: Some(vec![
-                    primary_name.to_string(),
-                    additional_a_name.to_string(),
-                    additional_b_name.to_string(),
-                ]),
+                node_names: None,
                 driver_info: Some(composite_driver.clone().create_matched_driver_info()),
                 ..fdi::MatchedCompositeInfo::EMPTY
             }),
@@ -2065,6 +2220,7 @@ mod tests {
             topological_path: Some("test/path".to_string()),
             node_index: Some(2),
             num_nodes: Some(4),
+            primary_index: Some(0),
             node_names: Some(vec![
                 primary_name.to_string(),
                 additional_b_name.to_string(),
@@ -2073,13 +2229,9 @@ mod tests {
             ]),
             composite: Some(fdi::MatchedCompositeInfo {
                 node_index: None,
-                num_nodes: Some(3),
+                num_nodes: None,
                 composite_name: Some(device_name.to_string()),
-                node_names: Some(vec![
-                    primary_name.to_string(),
-                    additional_a_name.to_string(),
-                    additional_b_name.to_string(),
-                ]),
+                node_names: None,
                 driver_info: Some(composite_driver.clone().create_matched_driver_info()),
                 ..fdi::MatchedCompositeInfo::EMPTY
             }),
