@@ -22,7 +22,7 @@ const FSHOST_COMPONENT_NAME: &'static str = std::env!("FSHOST_COMPONENT_NAME");
 const DATA_FILESYSTEM_FORMAT: &'static str = std::env!("DATA_FILESYSTEM_FORMAT");
 
 fn new_builder() -> TestFixtureBuilder {
-    TestFixtureBuilder::new(FSHOST_COMPONENT_NAME, DATA_FILESYSTEM_FORMAT)
+    TestFixtureBuilder::new(FSHOST_COMPONENT_NAME)
 }
 
 const VFS_TYPE_BLOBFS: u32 = 0x9e694d21;
@@ -46,7 +46,8 @@ fn data_fs_type() -> u32 {
 
 #[fuchsia::test]
 async fn blobfs_and_data_mounted() {
-    let builder = new_builder().with_ramdisk().format_data();
+    let mut builder = new_builder();
+    builder.with_disk().format_data(DATA_FILESYSTEM_FORMAT);
     let fixture = builder.build().await;
 
     fixture.check_fs_type("blob", VFS_TYPE_BLOBFS).await;
@@ -64,7 +65,8 @@ async fn blobfs_and_data_mounted() {
 
 #[fuchsia::test]
 async fn data_formatted() {
-    let builder = new_builder().with_ramdisk();
+    let mut builder = new_builder();
+    builder.with_disk();
     let fixture = builder.build().await;
 
     fixture.check_fs_type("data", data_fs_type()).await;
@@ -74,7 +76,8 @@ async fn data_formatted() {
 
 #[fuchsia::test]
 async fn data_mounted_legacy_crypto_format() {
-    let builder = new_builder().with_ramdisk().format_data().with_legacy_crypto_format();
+    let mut builder = new_builder();
+    builder.with_disk().format_data(DATA_FILESYSTEM_FORMAT).legacy_crypto_format();
     let fixture = builder.build().await;
 
     fixture.check_fs_type("data", data_fs_type()).await;
@@ -90,8 +93,9 @@ async fn data_mounted_legacy_crypto_format() {
 
 #[fuchsia::test]
 async fn data_mounted_no_zxcrypt() {
-    let mut builder = new_builder().with_ramdisk().format_data().without_zxcrypt();
+    let mut builder = new_builder();
     builder.fshost().set_no_zxcrypt();
+    builder.with_disk().format_data(DATA_FILESYSTEM_FORMAT).without_zxcrypt();
     let fixture = builder.build().await;
 
     fixture.check_fs_type("data", data_fs_type()).await;
@@ -107,8 +111,9 @@ async fn data_mounted_no_zxcrypt() {
 
 #[fuchsia::test]
 async fn data_formatted_no_zxcrypt() {
-    let mut builder = new_builder().with_ramdisk().without_zxcrypt();
+    let mut builder = new_builder();
     builder.fshost().set_no_zxcrypt();
+    builder.with_disk();
     let fixture = builder.build().await;
 
     fixture.check_fs_type("data", data_fs_type()).await;
@@ -140,8 +145,9 @@ async fn wipe_storage_not_supported() {
 
 #[fuchsia::test]
 async fn ramdisk_blob_and_data_mounted() {
-    let mut builder = new_builder().with_ramdisk().format_data().without_zxcrypt();
+    let mut builder = new_builder();
     builder.fshost().set_fvm_ramdisk();
+    builder.with_disk().format_data(DATA_FILESYSTEM_FORMAT).without_zxcrypt();
     let fixture = builder.build().await;
 
     fixture.check_fs_type("blob", VFS_TYPE_BLOBFS).await;
@@ -158,9 +164,10 @@ async fn ramdisk_blob_and_data_mounted() {
 
 #[fuchsia::test]
 async fn ramdisk_data_ignores_non_ramdisk() {
-    let mut builder = new_builder().with_ramdisk().without_zxcrypt();
+    let mut builder = new_builder();
     // Fake out the ramdisk checking by providing a nonsense ramdisk prefix.
     builder.fshost().set_fvm_ramdisk().set_ramdisk_prefix("/not/the/prefix");
+    builder.with_disk().format_data(DATA_FILESYSTEM_FORMAT).without_zxcrypt();
     let fixture = builder.build().await;
 
     let dev = fixture.dir("dev-topological/class/block");
@@ -209,8 +216,9 @@ async fn get_instance_guid_from_path(dir_proxy: &fio::DirectoryProxy, path: &str
 
 #[fuchsia::test]
 async fn partition_max_size_set() {
-    let mut builder = new_builder().with_ramdisk();
+    let mut builder = new_builder();
     builder.fshost().set_data_max_bytes(DATA_MAX_BYTES).set_blobfs_max_bytes(BLOBFS_MAX_BYTES);
+    builder.with_disk();
     let fixture = builder.build().await;
 
     fixture.check_fs_type("blob", VFS_TYPE_BLOBFS).await;
@@ -260,7 +268,8 @@ async fn tmp_is_available() {
 #[fuchsia::test]
 async fn netboot_set() {
     // Set the netboot flag
-    let builder = new_builder().with_ramdisk().netboot();
+    let mut builder = new_builder().netboot();
+    builder.with_disk();
     let fixture = builder.build().await;
 
     let dev = fixture.dir("dev-topological/class/block");

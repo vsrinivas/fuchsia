@@ -140,8 +140,9 @@ async fn verify_file_contents(ramdisk: RamdiskClient, expected_volume_size: u64,
 
 #[fuchsia::test]
 async fn write_data_file_unformatted() {
-    let mut builder = new_builder().with_ramdisk();
+    let mut builder = new_builder();
     builder.fshost().set_fvm_ramdisk().set_ramdisk_prefix("/nada/zip/zilch");
+    builder.with_disk();
     let fixture = builder.build().await;
 
     let admin =
@@ -158,8 +159,9 @@ async fn write_data_file_unformatted() {
 
 #[fuchsia::test]
 async fn write_data_file_unformatted_small_disk() {
-    let mut builder = new_builder().with_sized_ramdisk(25165824);
+    let mut builder = new_builder();
     builder.fshost().set_fvm_ramdisk().set_ramdisk_prefix("/nada/zip/zilch");
+    builder.with_disk().size(25165824);
     let fixture = builder.build().await;
 
     let admin =
@@ -175,8 +177,9 @@ async fn write_data_file_unformatted_small_disk() {
 
 #[fuchsia::test]
 async fn write_data_file_formatted() {
-    let mut builder = new_builder().format_data().with_ramdisk();
+    let mut builder = new_builder();
     builder.fshost().set_fvm_ramdisk().set_ramdisk_prefix("/nada/zip/zilch");
+    builder.with_disk().format_data(DATA_FILESYSTEM_FORMAT);
     let fixture = builder.build().await;
 
     let admin =

@@ -14,6 +14,7 @@ rustc_library("fshost_test_fixture") {
   edition = "2021"
   testonly = true
   sources = [
+    "src/disk_builder.rs",
     "src/fshost_builder.rs",
     "src/lib.rs",
     "src/mocks.rs",
