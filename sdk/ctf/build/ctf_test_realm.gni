@@ -4,7 +4,9 @@
 
 import("//build/components.gni")
 
-# Defines a test realm that provides capabilities for one or more CTF tests.
+# Defines a test realm component that provides capabilities for one or more CTF tests.
+#
+# The test realm can be accessed at runtime using the URL: '$target_name#meta/default.cm'
 #
 # Parameters
 #
@@ -14,14 +16,14 @@ import("//build/components.gni")
 #
 #   deps
 template("ctf_test_realm") {
+  assert(defined(invoker.manifest), "A component manifest is required")
+
   fuchsia_package_with_default_component(target_name) {
     forward_variables_from(invoker,
-                           "*",
                            [
+                             "deps",
                              "manifest",
-                             "testonly",
                            ])
-    manifest = "meta/$target_name.cml"
     testonly = true
   }
 }
