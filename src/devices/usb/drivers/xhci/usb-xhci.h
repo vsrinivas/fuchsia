@@ -25,6 +25,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <thread>
 
@@ -302,7 +303,7 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   void WaitForIsochronousReady(UsbRequestState* state);
 
   // Starts a normal transfer
-  void StartNormalTransaction(UsbRequestState* state);
+  void StartNormalTransaction(UsbRequestState* state, uint8_t interrupter);
 
   // Continues a normal transfer
   void ContinueNormalTransaction(UsbRequestState* state);

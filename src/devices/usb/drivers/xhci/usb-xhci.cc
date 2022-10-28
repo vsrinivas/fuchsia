@@ -26,6 +26,7 @@
 #include <zircon/types.h>
 
 #include <algorithm>
+#include <cstdint>
 #include <memory>
 #include <string>
 
@@ -698,7 +699,7 @@ void UsbXhci::WaitForIsochronousReady(UsbRequestState* state) {
   }
 }
 
-void UsbXhci::StartNormalTransaction(UsbRequestState* state) {
+void UsbXhci::StartNormalTransaction(UsbRequestState* state, uint8_t interrupter_target) {
   size_t packet_count = 0;
 
   // Normal transfer
@@ -747,7 +748,7 @@ void UsbXhci::StartNormalTransaction(UsbRequestState* state) {
   state->first_cycle = state->info.first()[0].status;
   state->first_trb = state->info.first().data();
   state->last_trb = state->info.trbs.data() + (packet_count - 1);
-  state->interrupter = static_cast<uint8_t>(InterrupterMapping());
+  state->interrupter = static_cast<uint8_t>(interrupter_target);
 }
 
 void UsbXhci::ContinueNormalTransaction(UsbRequestState* state) {
@@ -921,7 +922,7 @@ void UsbXhci::UsbHciNormalRequestQueue(Request request) {
   auto rollback_transaction = [&]() __TA_NO_THREAD_SAFETY_ANALYSIS {
     state.GetTransferRing(index).Restore(pending_transfer.transaction);
   };
-  StartNormalTransaction(&pending_transfer);
+  StartNormalTransaction(&pending_transfer, static_cast<uint8_t>(state.GetInterrupterTarget()));
   if (pending_transfer.complete) {
     rollback_transaction();
     transaction_lock.release();
@@ -1939,8 +1940,8 @@ zx_status_t UsbXhci::HciFinalize() {
   }
   uint64_t* scratchpad_buffer_array = static_cast<uint64_t*>(scratchpad_buffer_array_->virt());
   for (size_t i = 0; i < buffers - 1; i++) {
-    status = buffer_factory_->CreateContiguous(
-        bti_, page_size, align_log2, &scratchpad_buffers_[i]);
+    status =
+        buffer_factory_->CreateContiguous(bti_, page_size, align_log2, &scratchpad_buffers_[i]);
     if (status != ZX_OK) {
       zxlogf(ERROR, "buffer_factory_->CreateContiguous(buffer[%zu]): %s", i,
              zx_status_get_string(status));
@@ -1979,8 +1980,8 @@ zx_status_t UsbXhci::HciFinalize() {
       return ZX_ERR_INTERNAL;
     }
   }
-  status = command_ring_.Init(page_size, &bti_, &interrupter(0).ring(), is_32bit_,
-                              &mmio_.value(), this);
+  status =
+      command_ring_.Init(page_size, &bti_, &interrupter(0).ring(), is_32bit_, &mmio_.value(), this);
   if (status != ZX_OK) {
     zxlogf(ERROR, "command_ring_.Init(): %s", zx_status_get_string(status));
     return ZX_ERR_INTERNAL;
