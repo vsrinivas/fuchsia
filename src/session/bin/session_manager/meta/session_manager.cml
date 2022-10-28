@@ -79,6 +79,7 @@
                 "fuchsia.net.http.Loader",
                 "fuchsia.net.interfaces.State",
                 "fuchsia.net.mdns.Publisher",
+                "fuchsia.net.mdns.ServiceSubscriber2",
                 "fuchsia.net.mdns.Subscriber",
                 "fuchsia.net.routes.State",
                 "fuchsia.netstack.Netstack",
