@@ -47,6 +47,9 @@ class Renderer : public allocation::BufferCollectionImporter {
   // The vector of release fences will be signaled once rendering has completed. Clients can use
   // these fences to coordinate with other work that needs to wait until rendering is completed
   // to be executed.
+  //
+  // If any of the |images| use protected memory but the |render_target| is not using protected
+  // memory, the renderer replaces protected content with black solid color.
   virtual void Render(const allocation::ImageMetadata& render_target,
                       const std::vector<ImageRect>& rectangles,
                       const std::vector<allocation::ImageMetadata>& images,

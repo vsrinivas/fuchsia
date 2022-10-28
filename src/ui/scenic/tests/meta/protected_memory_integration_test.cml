@@ -8,7 +8,10 @@
     },
     use: [
         {
-            protocol: [ "fuchsia.sysmem.Allocator" ],
+            protocol: [
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.ui.composition.Screenshot",
+            ],
         },
     ],
 }

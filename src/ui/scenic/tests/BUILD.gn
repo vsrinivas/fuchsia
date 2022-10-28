@@ -318,6 +318,7 @@ executable("protected_memory_integration_test_bin") {
     "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
     "//src/ui/scenic/lib/allocation:allocation",
     "//src/ui/scenic/lib/utils:utils",
+    "//src/ui/testing/util:screenshot_helper",
     "//zircon/system/ulib/fbl",
   ]
 }

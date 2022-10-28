@@ -40,6 +40,9 @@ const std::vector<vk::Format> kPreferredImageFormats = {
 
 const vk::Filter kDefaultFilter = vk::Filter::eNearest;
 
+// Black color to replace protected content when we aren't in protected mode, i.e. Screenshots.
+const glm::vec4 kProtectedReplacementColorInRGBA = glm::vec4(0, 0, 0, 1);
+
 // Returns the corresponding Vulkan image format to use given the provided
 // Zircon image format.
 // TODO(fxbug.dev/71410): Remove all references to zx_pixel_format_t.
@@ -618,26 +621,18 @@ void VkRenderer::Render(const ImageMetadata& render_target,
   pending_render_targets_.clear();
   lock.unlock();
 
-  // If we have any |images| protected, we should switch to a protected escher::Frame and
-  // |render_target| should also be protected.
-  bool has_protected_images = false;
-  for (const auto& image : images) {
-    FX_DCHECK(local_texture_map.find(image.identifier) != local_texture_map.end());
-    if (local_texture_map.at(image.identifier)->image()->use_protected_memory()) {
-      has_protected_images = true;
-      break;
-    }
-  }
+  // If the |render_target| is protected, we should switch to a protected escher::Frame. Otherwise,
+  // we should ensure that there is no protected content in |images|.
   FX_DCHECK(local_render_target_map.find(render_target.identifier) !=
             local_render_target_map.end());
-  FX_CHECK(has_protected_images ==
-           local_render_target_map.at(render_target.identifier)->use_protected_memory());
+  const bool render_in_protected_mode =
+      local_render_target_map.at(render_target.identifier)->use_protected_memory();
 
   // Escher's frame class acts as a command buffer manager that we use to create a
   // command buffer and submit it to the device queue once we are done.
   auto frame = escher_->NewFrame(
       "flatland::VkRenderer", ++frame_number_, /*enable_gpu_logging=*/false,
-      /*requested_type=*/escher::CommandBuffer::Type::kGraphics, has_protected_images);
+      /*requested_type=*/escher::CommandBuffer::Type::kGraphics, render_in_protected_mode);
   auto command_buffer = frame->cmds();
 
   // Transition pending images to their correct layout
@@ -661,8 +656,19 @@ void VkRenderer::Render(const ImageMetadata& render_target,
   std::vector<const escher::TexturePtr> textures;
   std::vector<escher::RectangleCompositor::ColorData> color_data;
   for (const auto& image : images) {
+    auto texture_ptr = local_texture_map.at(image.identifier);
+
+    // When we are not in protected mode, replace any protected content with black solid color.
+    if (!render_in_protected_mode && texture_ptr->image()->use_protected_memory()) {
+      textures.emplace_back(local_texture_map.at(allocation::kInvalidImageId));
+      color_data.emplace_back(escher::RectangleCompositor::ColorData(
+          kProtectedReplacementColorInRGBA,
+          image.blend_mode == fuchsia::ui::composition::BlendMode::SRC));
+      continue;
+    }
+
     // Pass the texture into the above vector to keep it alive outside of this loop.
-    textures.emplace_back(local_texture_map.at(image.identifier));
+    textures.emplace_back(texture_ptr);
 
     glm::vec4 multiply(image.multiply_color[0], image.multiply_color[1], image.multiply_color[2],
                        image.multiply_color[3]);

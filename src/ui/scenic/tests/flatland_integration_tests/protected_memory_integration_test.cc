@@ -17,6 +17,7 @@
 #include "src/ui/scenic/lib/allocation/buffer_collection_import_export_tokens.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 #include "src/ui/scenic/tests/utils/scenic_realm_builder.h"
+#include "src/ui/testing/util/screenshot_helper.h"
 
 namespace integration_tests {
 
@@ -25,6 +26,7 @@ using fuchsia::ui::composition::ContentId;
 using fuchsia::ui::composition::FlatlandPtr;
 using fuchsia::ui::composition::ParentViewportWatcher;
 using fuchsia::ui::composition::TransformId;
+using ui_testing::Screenshot;
 
 class ProtectedMemoryIntegrationTest : public gtest::RealLoopFixture {
  public:
@@ -73,6 +75,61 @@ class ProtectedMemoryIntegrationTest : public gtest::RealLoopFixture {
     RunLoopUntil([&presented] { return presented; });
     flatland.events().OnFramePresented = nullptr;
   }
+
+  void SetConstraintsAndAllocateBuffer(fuchsia::sysmem::BufferCollectionTokenSyncPtr token,
+                                       bool use_protected_memory) {
+    fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
+    auto status =
+        sysmem_allocator_->BindSharedCollection(std::move(token), buffer_collection.NewRequest());
+    ASSERT_EQ(status, ZX_OK);
+    fuchsia::sysmem::BufferCollectionConstraints constraints;
+    if (use_protected_memory) {
+      constraints.has_buffer_memory_constraints = true;
+      constraints.buffer_memory_constraints.secure_required = true;
+      constraints.buffer_memory_constraints.inaccessible_domain_supported = true;
+      constraints.buffer_memory_constraints.cpu_domain_supported = false;
+      constraints.buffer_memory_constraints.ram_domain_supported = false;
+    }
+    constraints.usage.none = fuchsia::sysmem::noneUsage;
+    constraints.min_buffer_count = 1;
+    constraints.image_format_constraints_count = 1;
+    auto& image_constraints = constraints.image_format_constraints[0];
+    image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::BGRA32;
+    image_constraints.color_spaces_count = 1;
+    image_constraints.color_space[0] =
+        fuchsia::sysmem::ColorSpace{.type = fuchsia::sysmem::ColorSpaceType::SRGB};
+    image_constraints.required_min_coded_width = display_width_;
+    image_constraints.required_min_coded_height = display_height_;
+    image_constraints.required_max_coded_width = display_width_;
+    image_constraints.required_max_coded_height = display_height_;
+    status = buffer_collection->SetConstraints(true, constraints);
+    ASSERT_EQ(status, ZX_OK);
+    zx_status_t allocation_status = ZX_OK;
+    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info{};
+    status =
+        buffer_collection->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
+    ASSERT_EQ(ZX_OK, status);
+    ASSERT_EQ(ZX_OK, allocation_status);
+    EXPECT_EQ(constraints.min_buffer_count, buffer_collection_info.buffer_count);
+    ASSERT_EQ(ZX_OK, buffer_collection->Close());
+  }
+
+  Screenshot TakeScreenshot() {
+    fuchsia::ui::composition::ScreenshotSyncPtr screenshotter =
+        realm_.ConnectSync<fuchsia::ui::composition::Screenshot>();
+
+    fuchsia::ui::composition::ScreenshotTakeRequest request;
+    request.set_format(fuchsia::ui::composition::ScreenshotFormat::BGRA_RAW);
+
+    fuchsia::ui::composition::ScreenshotTakeResponse response;
+    auto status = screenshotter->Take(std::move(request), &response);
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "Failed to take screenshot: " << zx_status_get_string(status);
+    }
+    return Screenshot(response.vmo(), display_width_, display_height_,
+                      /*display_rotation=*/0);
+  }
+
   const TransformId kRootTransform{.value = 1};
   uint32_t display_width_ = 0;
   uint32_t display_height_ = 0;
@@ -100,37 +157,7 @@ TEST_F(ProtectedMemoryIntegrationTest, RendersProtectedImage) {
   ASSERT_FALSE(result.is_err());
 
   // Use the local token to allocate a protected buffer.
-  fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
-  auto status = sysmem_allocator_->BindSharedCollection(std::move(local_token),
-                                                        buffer_collection.NewRequest());
-  ASSERT_EQ(status, ZX_OK);
-  fuchsia::sysmem::BufferCollectionConstraints constraints;
-  constraints.has_buffer_memory_constraints = true;
-  constraints.buffer_memory_constraints.secure_required = true;
-  constraints.buffer_memory_constraints.inaccessible_domain_supported = true;
-  constraints.buffer_memory_constraints.cpu_domain_supported = false;
-  constraints.buffer_memory_constraints.ram_domain_supported = false;
-  constraints.usage.none = fuchsia::sysmem::noneUsage;
-  constraints.min_buffer_count = 1;
-  constraints.image_format_constraints_count = 1;
-  auto& image_constraints = constraints.image_format_constraints[0];
-  image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::BGRA32;
-  image_constraints.color_spaces_count = 1;
-  image_constraints.color_space[0] =
-      fuchsia::sysmem::ColorSpace{.type = fuchsia::sysmem::ColorSpaceType::SRGB};
-  image_constraints.required_min_coded_width = display_width_;
-  image_constraints.required_min_coded_height = display_height_;
-  image_constraints.required_max_coded_width = display_width_;
-  image_constraints.required_max_coded_height = display_height_;
-  status = buffer_collection->SetConstraints(true, constraints);
-  ASSERT_EQ(status, ZX_OK);
-  zx_status_t allocation_status = ZX_OK;
-  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info{};
-  status = buffer_collection->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
-  ASSERT_EQ(ZX_OK, status);
-  ASSERT_EQ(ZX_OK, allocation_status);
-  EXPECT_EQ(constraints.min_buffer_count, buffer_collection_info.buffer_count);
-  ASSERT_EQ(ZX_OK, buffer_collection->Close());
+  SetConstraintsAndAllocateBuffer(std::move(local_token), /*use_protected_memory=*/true);
 
   // Create the image in the Flatland instance.
   fuchsia::ui::composition::ImageProperties image_properties = {};
@@ -146,8 +173,43 @@ TEST_F(ProtectedMemoryIntegrationTest, RendersProtectedImage) {
   root_flatland_->SetContent(kRootTransform, kImageContentId);
   BlockingPresent(root_flatland_);
 
-  // Only verify that render happened without any errors. We cannot access the pixels of the
-  // protected image.
+  // Verify that render happened without any errors.
+}
+
+TEST_F(ProtectedMemoryIntegrationTest, ScreenshotReplacesProtectedImage) {
+  auto [local_token, scenic_token] = utils::CreateSysmemTokens(sysmem_allocator_.get());
+
+  // Send one token to Flatland Allocator.
+  allocation::BufferCollectionImportExportTokens bc_tokens =
+      allocation::BufferCollectionImportExportTokens::New();
+  fuchsia::ui::composition::RegisterBufferCollectionArgs rbc_args = {};
+  rbc_args.set_export_token(std::move(bc_tokens.export_token));
+  rbc_args.set_buffer_collection_token(std::move(scenic_token));
+  fuchsia::ui::composition::Allocator_RegisterBufferCollection_Result result;
+  flatland_allocator_->RegisterBufferCollection(std::move(rbc_args), &result);
+  ASSERT_FALSE(result.is_err());
+
+  // Use the local token to allocate a protected buffer.
+  SetConstraintsAndAllocateBuffer(std::move(local_token), /*use_protected_memory=*/true);
+
+  // Create the image in the Flatland instance.
+  fuchsia::ui::composition::ImageProperties image_properties = {};
+  image_properties.set_size({display_width_, display_height_});
+  const ContentId kImageContentId{.value = 1};
+  root_flatland_->CreateImage(kImageContentId, std::move(bc_tokens.import_token),
+                              /*buffer_collection_index=*/0, std::move(image_properties));
+  BlockingPresent(root_flatland_);
+
+  // Present the created Image.
+  root_flatland_->CreateTransform(kRootTransform);
+  root_flatland_->SetRootTransform(kRootTransform);
+  root_flatland_->SetContent(kRootTransform, kImageContentId);
+  BlockingPresent(root_flatland_);
+
+  // Verify that screenshot works and replaced the content with black.
+  auto screenshot = TakeScreenshot();
+  EXPECT_EQ(screenshot.Histogram()[ui_testing::Screenshot::kBlack],
+            screenshot.width() * screenshot.height());
 }
 
 }  // namespace integration_tests
