@@ -1905,9 +1905,11 @@ pub enum TrimResult {
 #[cfg(test)]
 mod tests {
     use {
-        super::OBJECT_ID_HI_MASK,
+        super::{StoreInfo, MAX_STORE_INFO_SERIALIZED_SIZE, OBJECT_ID_HI_MASK},
         crate::{
-            crypt::{insecure::InsecureCrypt, Crypt},
+            crypt::{
+                insecure::InsecureCrypt, Crypt, WrappedKey, WrappedKeyBytes, WRAPPED_KEY_SIZE,
+            },
             errors::FxfsError,
             filesystem::{
                 Filesystem, FxFilesystem, JournalingObject, OpenFxFilesystem, SyncOptions,
@@ -1922,6 +1924,7 @@ mod tests {
                 volume::root_volume,
                 HandleOptions, ObjectStore,
             },
+            serialized_types::VersionedLatest,
         },
         assert_matches::assert_matches,
         fuchsia_async as fasync,
@@ -2499,5 +2502,38 @@ mod tests {
             fs.close().await.expect("Close failed");
             device = fs.take_device().await;
         }
+    }
+
+    #[test]
+    fn test_store_info_max_serialized_size() {
+        let info = StoreInfo {
+            guid: [0xff; 16],
+            last_object_id: 0x1234567812345678,
+            // Worst case, each layer should be 3/4 the size of the layer below it (because of the
+            // compaction policy we're using).  If the smallest layer is 8,192 bytes, then 120
+            // layers would take up a size that exceeds a 64 bit unsigned integer, so if this fits,
+            // any size should fit.
+            layers: vec![0x1234567812345678; 120],
+            root_directory_object_id: 0x1234567812345678,
+            graveyard_directory_object_id: 0x1234567812345678,
+            object_count: 0x1234567812345678,
+            mutations_key: Some(WrappedKey {
+                wrapping_key_id: 0x1234567812345678,
+                key: WrappedKeyBytes([0xff; WRAPPED_KEY_SIZE]),
+            }),
+            mutations_cipher_offset: 0x1234567812345678,
+            encrypted_mutations_object_id: 0x1234567812345678,
+            object_id_key: Some(WrappedKey {
+                wrapping_key_id: 0x1234567812345678,
+                key: WrappedKeyBytes([0xff; WRAPPED_KEY_SIZE]),
+            }),
+        };
+        let mut serialized_info = Vec::new();
+        info.serialize_with_version(&mut serialized_info).unwrap();
+        assert!(
+            serialized_info.len() <= MAX_STORE_INFO_SERIALIZED_SIZE,
+            "{}",
+            serialized_info.len()
+        );
     }
 }
