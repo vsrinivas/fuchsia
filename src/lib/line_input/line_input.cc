@@ -35,7 +35,10 @@ LineInputEditor::LineInputEditor(AcceptCallback accept_cb, const std::string& pr
   persistent_history_.emplace_front();
 }
 
-LineInputEditor::~LineInputEditor() { EnsureTerminalMode(kOriginalMode); }
+LineInputEditor::~LineInputEditor() {
+  // Note: the terminal is put back in ~LineInputStdout since we can't call the overridden
+  // EnsureTerminalMode() on our already-destructed derived class.
+}
 
 void LineInputEditor::SetAutocompleteCallback(AutocompleteCallback cb) {
   autocomplete_callback_ = std::move(cb);
@@ -674,7 +677,7 @@ LineInputStdout::LineInputStdout(AcceptCallback accept_cb, const std::string& pr
     : LineInputEditor(std::move(accept_cb), prompt) {
   SetMaxCols(GetTerminalMaxCols(STDIN_FILENO));
 }
-LineInputStdout::~LineInputStdout() {}
+LineInputStdout::~LineInputStdout() { EnsureTerminalMode(kOriginalMode); }
 
 void LineInputStdout::Write(const std::string& data) {
   write(STDOUT_FILENO, data.data(), data.size());
