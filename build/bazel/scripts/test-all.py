@@ -300,13 +300,6 @@ def main():
 
         return True
 
-    log('bazel query check (before Ninja build)')
-    # NOTE: This requires the previous step to generate the Bazel workspace.
-    # However, no Ninja outputs have been generated so far.
-    if not check_test_query('pre_ninja_queries', os.path.join(
-            args.fuchsia_dir, 'build/bazel/tests/bazel_query_before_ninja')):
-        return 1
-
     # NOTE: this requires Ninja outputs to be properly generated.
     # See note in build/bazel/tests/bazel_inputs_resource_directory/BUILD.bazel
     log("Generating @legacy_ninja_build_outputs repository")
@@ -317,6 +310,17 @@ def main():
     if not check_test_query('bazel_input_resource_directory', os.path.join(
             args.fuchsia_dir,
             'build/bazel/tests/bazel_input_resource_directory')):
+        return 1
+
+    log("Checking @com_google_googletest repository creation")
+    out = get_bazel_command_output(
+        ['query', '@com_google_googletest//:BUILD.bazel'])
+    expected = '@com_google_googletest//:BUILD.bazel\n'
+    if out != expected:
+        print(
+            'ERROR: @com_google_googletest repository creation failed! got [%s] expected [%s]'
+            % (out, expected),
+            file=sys.stderr)
         return 1
 
     log('Checking `fx bazel run //build/bazel/tests/hello_world`.')
@@ -334,7 +338,8 @@ def main():
     run_fx_command(['build', 'build/bazel/tests/build_action'])
 
     log('//build/bazel:generate_fuchsia_sdk_repository check')
-    output_base_dir = os.path.join(build_dir, 'gen', 'build', 'bazel', 'output_base')
+    output_base_dir = os.path.join(
+        build_dir, 'gen', 'build', 'bazel', 'output_base')
     shutil.rmtree(output_base_dir)
     fuchsia_sdk_symlink = os.path.join(
         build_dir, 'gen', 'build', 'bazel', 'fuchsia_sdk')

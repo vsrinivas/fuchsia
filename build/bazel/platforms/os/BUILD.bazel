@@ -24,38 +24,40 @@ package(
     default_visibility = ["//visibility:public"],
 )
 
-constraint_value(
-  name = "fuchsia",
-  constraint_setting = "@platforms//os:os"
+# TODO(digit): Redirect to @platforms//os:fuchsia once this is available
+# from our prebuilt Bazel built-in @platforms// repository.
+alias(
+    name = "fuchsia",
+    actual = "@rules_fuchsia//fuchsia/constraints/os:fuchsia",
 )
 
 alias(
-  name = "linux",
-  actual = "@platforms//os:linux"
+    name = "linux",
+    actual = "@platforms//os:linux",
 )
 
 alias(
-  name = "mac",
-  actual = "@platforms//os:osx"
+    name = "mac",
+    actual = "@platforms//os:osx",
 )
 
 config_setting(
-  name = "is_fuchsia",
-  constraint_values = [
-    ":fuchsia",
-  ]
+    name = "is_fuchsia",
+    constraint_values = [
+        ":fuchsia",
+    ],
 )
 
 config_setting(
-  name = "is_linux",
-  constraint_values = [
-    ":linux",
-  ]
+    name = "is_linux",
+    constraint_values = [
+        ":linux",
+    ],
 )
 
 config_setting(
-  name = "is_mac",
-  constraint_values = [
-    ":osx",
-  ]
+    name = "is_mac",
+    constraint_values = [
+        ":osx",
+    ],
 )

@@ -7,6 +7,8 @@ A set of repository rules used by the Bazel workspace for the Fuchsia
 platform build.
 """
 
+load("//:build/bazel/repository_utils.bzl", "workspace_root_path")
+
 def _ninja_target_from_gn_label(gn_label):
     """Convert a GN label into an equivalent Ninja target name"""
 
@@ -113,4 +115,32 @@ bazel_inputs_repository = repository_rule(
           "exposing Ninja build outputs as Bazel inputs. Its content is described by " +
           "a Ninja-generated input manifest, a JSON array of objects describing each " +
           "filegroup().",
+)
+
+def _googletest_repository_impl(repo_ctx):
+    """Create a @com_google_googletest repository that supports Fuchsia."""
+    workspace_dir = str(workspace_root_path(repo_ctx))
+
+    # This uses a git bundle to ensure that we can always work from a
+    # Jiri-managed clone of //third_party/googletest/src/. This is more reliable
+    # than the previous approach that relied on patching.
+    repo_ctx.execute(
+        [
+            workspace_dir + "/build/bazel/scripts/git-clone-then-apply-bundle.py",
+            "--dst-dir",
+            ".",
+            "--git-url",
+            workspace_dir + "/third_party/googletest/src",
+            "--git-bundle",
+            workspace_dir + "/build/bazel/patches/googletest/fuchsia-support.bundle",
+            "--git-bundle-head",
+            "fuchsia-support",
+        ],
+        quiet = False,  # False for debugging.
+    )
+
+googletest_repository = repository_rule(
+    implementation = _googletest_repository_impl,
+    doc = "A repository rule used to create a googletest repository that " +
+          "properly supports Fuchsia through local patching.",
 )

@@ -35,7 +35,7 @@ def _generate_prebuilt_toolchain_impl(repo_ctx):
     # This allows us to add Bazel-specific files in this location.
     repo_ctx.execute(
         [
-            workspace_dir + "/build/bazel/scripts/hardlink-directory.py",
+            workspace_dir + "/build/bazel/scripts/symlink-directory.py",
             repo_ctx.attr.clang_install_dir,
             ".",
         ],

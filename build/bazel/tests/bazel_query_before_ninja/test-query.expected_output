@@ -1,3 +1,0 @@
-//:build/bazel/README.md
-//build/bazel/tests/bazel_query_before_ninja:BUILD.bazel
-//build/bazel/tests/bazel_query_before_ninja:bazel_readme

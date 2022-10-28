@@ -79,6 +79,25 @@ cipd_tool_repository(
     validate_cipd_bin = False,
 )
 
+# googletest is a dependency from @rules_fuchsia amd requires a local
+# patch for now for Fuchsia support, which is handled by a repository rule.
+#
+# local_repository(
+#    name = "com_google_googletest",
+#    path = "third_party/googletest/src",
+# )
+# buildifier: disable=load-on-top
+load("//:build/bazel/repository_rules.bzl", "bazel_inputs_repository", "googletest_repository")
+
+googletest_repository(
+    name = "com_google_googletest",
+)
+
+bazel_inputs_repository(
+    name = "legacy_ninja_build_outputs",
+    inputs_manifest = "//:bazel_inputs_manifest.json",
+)
+
 # buildifier: disable=load-on-top
 load(
     "@rules_fuchsia//fuchsia:deps.bzl",
@@ -113,12 +132,12 @@ fuchsia_clang_repository(
 )
 
 # buildifier: disable=load-on-top
-load("//:build/bazel/repository_rules.bzl", "bazel_inputs_repository")
-
-bazel_inputs_repository(
-    name = "legacy_ninja_build_outputs",
-    inputs_manifest = "//:bazel_inputs_manifest.json",
+load(
+    "@fuchsia_clang//:defs.bzl",
+    "register_clang_toolchains",
 )
+
+register_clang_toolchains()
 
 # buildifier: disable=load-on-top
 load(

@@ -116,7 +116,7 @@ local_path_override(
 )
 
 fuchsia_sdk_repositories = use_extension(
-    "//:build/bazel/mmodule_extensions.bzl",
+    "//:build/bazel/module_extensions.bzl",
     "fuchsia_sdk_repositories",
 )
 
