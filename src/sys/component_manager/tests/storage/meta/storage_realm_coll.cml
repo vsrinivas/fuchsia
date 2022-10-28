@@ -38,18 +38,11 @@
             from: "parent",
         },
         {
-            event: [
-                "destroyed",
-                "stopped",
+            event_stream: [
+                "destroyed_v2",
+                "stopped_v2",
             ],
-            from: "framework",
-        },
-        {
-            event_stream_deprecated: "TestEventStream",
-            subscriptions: [
-                { event: "stopped" },
-                { event: "destroyed" },
-            ],
+            from: "parent",
         },
         {
             directory: "hub",

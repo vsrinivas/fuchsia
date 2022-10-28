@@ -19,22 +19,11 @@
             from: "framework",
         },
         {
-            protocol: "fuchsia.sys2.EventSource",
+            event_stream: [
+                "destroyed_v2",
+                "stopped_v2",
+            ],
             from: "parent",
-        },
-        {
-            event: [
-                "destroyed",
-                "stopped",
-            ],
-            from: "framework",
-        },
-        {
-            event_stream_deprecated: "TestEventStream",
-            subscriptions: [
-                { event: "stopped" },
-                { event: "destroyed" },
-            ],
         },
         {
             directory: "hub",

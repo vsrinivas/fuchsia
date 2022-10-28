@@ -46,8 +46,7 @@ async fn main() {
     )
     .expect("failed to connect to fuchsia.component.Binder");
 
-    let source = EventSource::new().unwrap();
-    let mut event_stream = source.take_static_event_stream("TestEventStream").await.unwrap();
+    let mut event_stream = EventStream::open().await.unwrap();
 
     // Expect the dynamic child to stop.
     EventMatcher::ok()
