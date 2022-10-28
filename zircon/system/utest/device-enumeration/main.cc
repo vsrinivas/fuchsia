@@ -260,45 +260,45 @@ TEST_F(DeviceEnumerationTest, Av400Test) {
       "sys/platform/05:07:2c/clocks",
       "sys/platform/05:00:2/aml-i2c",
       "sys/platform/00:00:29",  // registers device
-      "aml_emmc/aml-sd-emmc/sdmmc/sdmmc-mmc",
-      "aml_sdio/aml-sd-emmc/sdmmc/sdmmc-sdio",
-      "spi-1/aml-spi-1/spi/spi-1-0",
-      "pwm-init",
-      "dwmac/dwmac/eth_phy/phy_null_device",
-      "dwmac/dwmac/Designware-MAC/ethernet",
-      "ethernet_mac/aml-ethernet",
+      "sys/platform/05:07:8/aml_emmc/aml-sd-emmc/sdmmc/sdmmc-mmc",
+      "sys/platform/05:00:6/aml_sdio/aml-sd-emmc/sdmmc/sdmmc-sdio",
+      "sys/platform/05:00:19/spi-1/aml-spi-1/spi/spi-1-0",
+      "sys/platform/05:07:1d/aml-pwm-device/pwm-6/pwm-init",
+      "sys/platform/05:07:9/ethernet_mac/aml-ethernet/dwmac/dwmac/eth_phy/phy_null_device",
+      "sys/platform/05:07:9/ethernet_mac/aml-ethernet/dwmac/dwmac/Designware-MAC/ethernet",
+      "sys/platform/05:07:9/ethernet_mac/aml-ethernet",
       "sys/platform/05:07:2e/aml-rtc",
-      "av400-i2s-audio-out",
-      "av400-i2s-audio-in",
+      "sys/platform/05:07:12:1/av400-i2s-audio-out",
+      "sys/platform/05:07:12:2/av400-i2s-audio-in",
       "sys/platform/05:07:13/av400-audio-pdm-in",
       "sys/platform/05:07:b/aml-mailbox",
-      "dsp/aml-dsp",
+      "sys/platform/05:07:31/dsp/aml-dsp",
 
       // CPU Device
       "sys/platform/05:07:1e",
       "class/cpu-ctrl/000",
-      "aml-cpu/a5-arm-a55",
+      "sys/platform/05:07:26/aml-power-impl-composite/power-impl/composite-pd-armcore/power-0/aml-cpu/a5-arm-a55",
 
       // USB
-      "aml-usb-crg-phy-v2",
+      "sys/platform/05:00:2f/aml-usb-crg-phy-v2",
       // Force to usb peripheral
-      "udc/udc/usb-peripheral/function-000/cdc-eth-function",
+      "sys/platform/05:00:2f/aml-usb-crg-phy-v2/aml-usb-crg-phy-v2/udc/udc/udc/usb-peripheral/function-000/cdc-eth-function",
 
       // Power Device.
-      "aml-power-impl-composite/power-impl",
-      "composite-pd-armcore",
-      "composite-pd-armcore/power-0",
+      "sys/platform/05:07:26/aml-power-impl-composite/power-impl",
+      "sys/platform/05:07:26/aml-power-impl-composite/power-impl/composite-pd-armcore",
+      "sys/platform/05:07:26/aml-power-impl-composite/power-impl/composite-pd-armcore/power-0",
 
       // Thermal
       "sys/platform/05:07:a/thermal",
       "class/thermal/000",
       "sys/platform/00:00:1b/sysmem",
-      "tee/optee",
+      "sys/platform/00:00:e/tee/optee",
 
       // RAM (DDR) control.
       "sys/platform/05:07:24/ram",
 
-      "av400-buttons/hid-buttons",
+      "sys/platform/05:07:1/aml-axg-gpio/gpio-35/av400-buttons/hid-buttons",
       "sys/platform/05:07:1c/aml-nna",
   };
 
