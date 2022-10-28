@@ -98,7 +98,7 @@ void MockConsole::ProcessInputLine(const std::string& line, fxl::RefPtr<CommandC
 
 fxl::RefPtr<ConsoleSuspendToken> MockConsole::SuspendInput() {
   // Mock consoles don't suspend input.
-  return fxl::RefPtr<ConsoleSuspendToken>(new ConsoleSuspendToken);
+  return fxl::AdoptRef(new ConsoleSuspendToken);
 }
 
 void MockConsole::EnableInput() {}

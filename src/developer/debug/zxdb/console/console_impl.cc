@@ -306,7 +306,7 @@ fxl::RefPtr<ConsoleSuspendToken> ConsoleImpl::SuspendInput() {
     // the synchronous mode, while also buffering the user typing while hidden.
     stdio_watch_.StopWatching();
   }
-  return fxl::RefPtr<ConsoleSuspendToken>(new ConsoleSuspendToken);
+  return fxl::AdoptRef(new ConsoleSuspendToken);
 }
 
 void ConsoleImpl::EnableInput() {
