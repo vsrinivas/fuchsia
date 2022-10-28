@@ -7,6 +7,7 @@ use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_io as fio;
 use fidl_fuchsia_process as fprocess;
 use fidl_fuchsia_starnix_developer as fstardev;
+#[cfg(feature = "syscall_stats")]
 use fuchsia_inspect::NumericProperty;
 use fuchsia_runtime::{HandleInfo, HandleType};
 use fuchsia_zircon::{self as zx, sys::ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET};
@@ -61,6 +62,7 @@ pub fn execute_syscall(
     current_task: &mut CurrentTask,
     syscall_decl: &'static SyscallDecl,
 ) -> Option<ErrorContext> {
+    #[cfg(feature = "syscall_stats")]
     SyscallDecl::stats_property(syscall_decl.number).add(1);
 
     let syscall = Syscall {

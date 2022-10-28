@@ -469,6 +469,7 @@ macro_rules! syscall_match {
     }
 }
 
+#[cfg(feature = "syscall_stats")]
 macro_rules! syscall_match_stats {
     {$number:ident; $($name:ident,)*} => {
         paste! {
@@ -488,6 +489,7 @@ impl SyscallDecl {
         for_each_syscall! { syscall_match, number }
     }
 
+    #[cfg(feature = "syscall_stats")]
     pub fn stats_property(number: u64) -> &'static inspect::UintProperty {
         for_each_syscall! { syscall_match_stats, number }
     }
