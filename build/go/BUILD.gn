@@ -20,6 +20,47 @@ if (is_host) {
   }
 }
 
+# Used to restrict the set of `go_build` targets that can set `gopackages`.
+# TODO(fxbug.dev/58755): Stop supporting `gopackages` in favor of `library`.
+group("allow_gopackages") {
+  # WARNING: Do add new items to this list. You are encouraged to prune the list.
+  visibility = [
+    "//scripts/sdk/gn/bash_tests:*",
+    "//src/connectivity/network/netstack/tracing:*",
+    "//src/sys/pkg/bin/pm:*",
+    "//src/sys/pkg/tests/system-tests:*",
+    "//src/testing/host-target-testing:*",
+    "//src/tests/benchmarks/fidl/benchmark_suite/gen:*",
+    "//src/tests/coverage:*",
+    "//src/tests/fidl/fidl_go_conformance:*",
+    "//src/tests/fidl/source_compatibility/*",
+    "//third_party/cobalt/src/bin/config_change_validator/src:*",
+    "//third_party/cobalt/src/bin/config_parser/src:*",
+    "//third_party/cobalt/src/bin/error_calculator/src:*",
+    "//third_party/go:*",
+    "//third_party/go/makefuchsia:*",
+    "//third_party/go/makeroot:*",
+    "//third_party/golibs/*",
+    "//tools/bootserver:*",
+    "//tools/bootserver_old/tests:*",
+    "//tools/devshell:*",
+    "//tools/fidl/fidlgen_cpp:*",
+    "//tools/fidl/fidlgen_dart:*",
+    "//tools/fidl/fidlgen_go:*",
+    "//tools/fidl/fidlgen_hlcpp:*",
+    "//tools/fidl/fidlgen_libfuzzer:*",
+    "//tools/fidl/fidlgen_rust:*",
+    "//tools/fidl/fidlgen_syzkaller:*",
+    "//tools/fidl/gidl:*",
+    "//tools/fidl/measure-tape/src:*",
+    "//tools/mdlint:*",
+    "//tools/net/mdns:*",
+    "//tools/testing/resultdb:*",
+    "//tools/testing/tefmocheck:*",
+    "//vendor/*",
+  ]
+}
+
 group("tests") {
   testonly = true
   deps = [ ":verify_golden_go_proto_file_test($host_toolchain)" ]

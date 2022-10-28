@@ -445,6 +445,7 @@ template("go_build") {
     if (defined(invoker.gopackages) == defined(invoker.library)) {
       assert(false, "Exactly one of gopackages or library must be set")
     } else if (defined(invoker.gopackages)) {
+      deps += [ "//build/go:allow_gopackages" ]
       gopackages = invoker.gopackages
 
       # Multi-package support was never implemented and is no longer planned as
