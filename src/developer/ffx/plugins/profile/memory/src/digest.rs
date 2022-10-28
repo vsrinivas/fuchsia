@@ -352,28 +352,27 @@ pub mod processed {
             }
             processes
         };
-        // Mapping from each VMO koid to the set of every
-        // processes that refer this VMO, either directly, or
-        // indirectly via related VMOs.
-        let vmo_to_processes: HashMap<u64, HashSet<u64>> = {
-            let mut vmo_to_processes: HashMap<u64, HashSet<u64>> = HashMap::new();
+        // Mapping from each VMO koid to the set of every processes that refer
+        // this VMO, either directly, or indirectly via related VMOs.
+        // Also maps process to VMOs either directly, or indirectly.
+        let (vmo_to_charged_processes, process_to_charged_vmos) = {
+            let mut vmo_to_charged_processes: HashMap<u64, HashSet<u64>> = HashMap::new();
+            let mut process_to_charged_vmos: HashMap<u64, HashSet<u64>> = HashMap::new();
             for process in processes.iter() {
                 for mut vmo_koid in process.vmos.iter() {
-                    // In case of related VMOs, follow parents
-                    // until reaching the root VMO.
+                    // In case of related VMOs, follow parents until reaching
+                    // the root VMO.
                     while *vmo_koid != 0 {
-                        vmo_to_processes.entry(*vmo_koid).or_default().insert(process.koid);
-
+                        vmo_to_charged_processes.entry(*vmo_koid).or_default().insert(process.koid);
+                        process_to_charged_vmos.entry(process.koid).or_default().insert(*vmo_koid);
                         if let Some(processed::Vmo { parent_koid, .. }) = koid_to_vmo.get(&vmo_koid)
                         {
                             vmo_koid = parent_koid;
                         } else {
-                            // If we reach this branch, it means
-                            // that the report mentions a process
-                            // that holds a handle to a VMO, and
-                            // that either this VMO or one of its
-                            // ascendants is absent from the VMO
-                            // list. This might be a bug.
+                            // If we reach this branch, it means that the report
+                            // mentions a process that holds a handle to a VMO,
+                            // and that either this VMO or one of its ascendants
+                            // is absent from the VMO list. This might be a bug.
                             eprintln!(
                                 "Process {:?} refers (directly or indirectly) to unknown VMO {}",
                                 process, vmo_koid
@@ -386,34 +385,38 @@ pub mod processed {
                     }
                 }
             }
-            vmo_to_processes
+            (vmo_to_charged_processes, process_to_charged_vmos)
         };
+
         // Compute per-process, aggregated sizes.
         for mut process in processes.iter_mut() {
-            for vmo_koid in process.vmos.iter() {
-                if let Some(processed::Vmo { name, committed_bytes, .. }) =
-                    koid_to_vmo.get(&vmo_koid)
-                {
-                    let share_count = match vmo_to_processes.get(&vmo_koid) {
-                        Some(v) => v.len() as u64,
-                        None => unreachable!(),
-                    };
-                    let name = rename(name).to_string();
-                    let mut name_sizes = process
-                        .name_to_memory
-                        .entry(name)
-                        .or_insert(RetainedMemory { private: 0, scaled: 0, total: 0 });
-                    name_sizes.total += committed_bytes;
-                    process.memory.total += committed_bytes;
-                    name_sizes.scaled += committed_bytes / share_count;
-                    process.memory.scaled += committed_bytes / share_count;
-                    if share_count == 1 {
-                        name_sizes.private += committed_bytes;
-                        process.memory.private += committed_bytes;
+            if let Some(vmo_koids) = process_to_charged_vmos.get(&process.koid) {
+                for vmo_koid in vmo_koids.iter() {
+                    if let Some(processed::Vmo { name, committed_bytes, .. }) =
+                        koid_to_vmo.get(&vmo_koid)
+                    {
+                        let share_count = match vmo_to_charged_processes.get(&vmo_koid) {
+                            Some(v) => v.len() as u64,
+                            None => unreachable!(),
+                        };
+                        let name = rename(name).to_string();
+                        let mut name_sizes = process
+                            .name_to_memory
+                            .entry(name)
+                            .or_insert(RetainedMemory { private: 0, scaled: 0, total: 0 });
+                        name_sizes.total += committed_bytes;
+                        process.memory.total += committed_bytes;
+                        name_sizes.scaled += committed_bytes / share_count;
+                        process.memory.scaled += committed_bytes / share_count;
+                        if share_count == 1 {
+                            name_sizes.private += committed_bytes;
+                            process.memory.private += committed_bytes;
+                        }
                     }
                 }
             }
         }
+
         processes.sort_unstable_by(|a, b| b.memory.private.cmp(&a.memory.private));
         let total_committed_vmo = {
             let mut total = 0;
@@ -484,8 +487,8 @@ mod tests {
                     koid: 1,
                     name: 0,
                     parent_koid: 0,
-                    committed_bytes: 500,
-                    allocated_bytes: 500,
+                    committed_bytes: 300,
+                    allocated_bytes: 300,
                 }),
                 raw::Vmo::Data(raw::VmoData {
                     koid: 2,
@@ -509,12 +512,12 @@ mod tests {
                 processed::Process {
                     koid: 2,
                     name: "process2".to_string(),
-                    memory: processed::RetainedMemory { private: 0, scaled: 166, total: 500 },
+                    memory: processed::RetainedMemory { private: 0, scaled: 100, total: 300 },
                     name_to_memory: {
                         let mut result = HashMap::new();
                         result.insert(
                             "vmo1".to_string(),
-                            processed::RetainedMemory { private: 0, scaled: 166, total: 500 },
+                            processed::RetainedMemory { private: 0, scaled: 100, total: 300 },
                         );
                         result
                     },
@@ -530,12 +533,12 @@ mod tests {
                 processed::Process {
                     koid: 3,
                     name: "process3".to_string(),
-                    memory: processed::RetainedMemory { private: 0, scaled: 216, total: 600 },
+                    memory: processed::RetainedMemory { private: 0, scaled: 150, total: 400 },
                     name_to_memory: {
                         let mut result = HashMap::new();
                         result.insert(
                             "vmo1".to_string(),
-                            processed::RetainedMemory { private: 0, scaled: 166, total: 500 },
+                            processed::RetainedMemory { private: 0, scaled: 100, total: 300 },
                         );
                         result.insert(
                             "vmo2".to_string(),
@@ -556,12 +559,16 @@ mod tests {
                 processed::Process {
                     koid: 5,
                     name: "process5".to_string(),
-                    memory: processed::RetainedMemory { private: 0, scaled: 50, total: 100 },
+                    memory: processed::RetainedMemory { private: 0, scaled: 150, total: 400 },
                     name_to_memory: {
                         let mut result = HashMap::new();
                         result.insert(
                             "vmo2".to_string(),
                             processed::RetainedMemory { private: 0, scaled: 50, total: 100 },
+                        );
+                        result.insert(
+                            "vmo1".to_string(),
+                            processed::RetainedMemory { private: 0, scaled: 100, total: 300 },
                         );
                         result
                     },
@@ -687,12 +694,16 @@ mod tests {
                 processed::Process {
                     koid: 3,
                     name: "app.cmx".to_string(),
-                    memory: processed::RetainedMemory { private: 0, scaled: 0, total: 0 },
+                    memory: processed::RetainedMemory { private: 0, scaled: 250, total: 500 },
                     name_to_memory: {
                         let mut result = HashMap::new();
                         result.insert(
                             "app.cmx".to_string(),
                             processed::RetainedMemory { private: 0, scaled: 0, total: 0 },
+                        );
+                        result.insert(
+                            "blob-xxx".to_string(),
+                            processed::RetainedMemory { private: 0, scaled: 250, total: 500 },
                         );
                         result
                     },
