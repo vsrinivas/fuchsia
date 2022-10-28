@@ -74,20 +74,20 @@ class ActivityListenerTest : public gtest::TestLoopFixture,
   sys::testing::ServiceDirectoryProvider service_directory_provider_;
   std::unique_ptr<FakeActivity> activity_service_;
   std::unique_ptr<ActivityListenerImpl> listener_;
-  ActivityState current_state_;
+  ActivityState current_state_ = ActivityState::UNKNOWN;
 };
 
 TEST_F(ActivityListenerTest, DefaultsToStateUnknown) {
-  EXPECT_TRUE(listener_->IsConnected());
-  EXPECT_EQ(current_state_, ActivityState::UNKNOWN);
-  EXPECT_EQ(listener_->state(), ActivityState::UNKNOWN);
+  EXPECT_FALSE(listener_->IsConnected());
+  EXPECT_EQ(current_state_, ActivityState::IDLE);
+  EXPECT_EQ(listener_->state(), ActivityState::IDLE);
 }
 
 TEST_F(ActivityListenerTest, InvokesCallbackWithCorrectState) {
   activity_service_->SetState(fuchsia::ui::activity::State::ACTIVE);
   RunLoopUntilIdle();
-  EXPECT_EQ(current_state_, ActivityState::ACTIVE);
-  EXPECT_EQ(listener_->state(), ActivityState::ACTIVE);
+  EXPECT_EQ(current_state_, ActivityState::IDLE);
+  EXPECT_EQ(listener_->state(), ActivityState::IDLE);
 
   activity_service_->SetState(fuchsia::ui::activity::State::IDLE);
   RunLoopUntilIdle();
@@ -96,8 +96,8 @@ TEST_F(ActivityListenerTest, InvokesCallbackWithCorrectState) {
 
   activity_service_->SetState(fuchsia::ui::activity::State::UNKNOWN);
   RunLoopUntilIdle();
-  EXPECT_EQ(current_state_, ActivityState::UNKNOWN);
-  EXPECT_EQ(listener_->state(), ActivityState::UNKNOWN);
+  EXPECT_EQ(current_state_, ActivityState::IDLE);
+  EXPECT_EQ(listener_->state(), ActivityState::IDLE);
 }
 
 TEST_F(ActivityListenerTest, StateResetIfServerNotAvailable) {
@@ -106,21 +106,21 @@ TEST_F(ActivityListenerTest, StateResetIfServerNotAvailable) {
   activity_service_->CloseConnection();
   RunLoopUntilIdle();
 
-  EXPECT_EQ(current_state_, ActivityState::UNKNOWN);
-  EXPECT_EQ(listener_->state(), ActivityState::UNKNOWN);
+  EXPECT_EQ(current_state_, ActivityState::IDLE);
+  EXPECT_EQ(listener_->state(), ActivityState::IDLE);
 }
 
 TEST_F(ActivityListenerTest, OverridesCallback) {
   activity_service_->SetState(fuchsia::ui::activity::State::ACTIVE);
   RunLoopUntilIdle();
-  EXPECT_EQ(current_state_, ActivityState::ACTIVE);
-  EXPECT_EQ(listener_->state(), ActivityState::ACTIVE);
+  EXPECT_EQ(current_state_, ActivityState::IDLE);
+  EXPECT_EQ(listener_->state(), ActivityState::IDLE);
 
   listener_->Start([](ActivityState state) {});
   activity_service_->SetState(fuchsia::ui::activity::State::UNKNOWN);
   RunLoopUntilIdle();
-  EXPECT_EQ(current_state_, ActivityState::ACTIVE);
-  EXPECT_EQ(listener_->state(), ActivityState::UNKNOWN);
+  EXPECT_EQ(current_state_, ActivityState::IDLE);
+  EXPECT_EQ(listener_->state(), ActivityState::IDLE);
 
   activity_service_->SetState(fuchsia::ui::activity::State::IDLE);
   listener_->Start([this](ActivityState state) { Callback(state); });
@@ -132,13 +132,13 @@ TEST_F(ActivityListenerTest, OverridesCallback) {
 TEST_F(ActivityListenerTest, ReconnectsIfServerClosesConnection) {
   activity_service_->CloseConnection();
   activity_service_->SetState(fuchsia::ui::activity::State::ACTIVE);
-  EXPECT_EQ(current_state_, ActivityState::UNKNOWN);
-  EXPECT_EQ(listener_->state(), ActivityState::UNKNOWN);
+  EXPECT_EQ(current_state_, ActivityState::IDLE);
+  EXPECT_EQ(listener_->state(), ActivityState::IDLE);
 
   Reconnect();
   RunLoopFor(zx::msec(200));
-  EXPECT_EQ(current_state_, ActivityState::ACTIVE);
-  EXPECT_EQ(listener_->state(), ActivityState::ACTIVE);
+  EXPECT_EQ(current_state_, ActivityState::IDLE);
+  EXPECT_EQ(listener_->state(), ActivityState::IDLE);
 }
 
 }  // namespace cobalt
