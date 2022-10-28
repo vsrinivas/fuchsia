@@ -6,7 +6,6 @@ use bitfield::bitfield;
 use fidl_fuchsia_bluetooth_bredr as bredr;
 use fidl_fuchsia_bluetooth_deviceid as di;
 use fuchsia_bluetooth::types::Uuid;
-use fuchsia_bluetooth::util::CollectExt;
 use std::convert::TryFrom;
 
 use crate::error::Error;
@@ -220,7 +219,7 @@ impl DeviceIdentificationService {
         if records.is_empty() {
             return Err(Error::EmptyRequest);
         }
-        let parsed = records.iter().map(DIRecord::try_from).collect_results()?;
+        let parsed = records.iter().map(DIRecord::try_from).collect::<Result<Vec<_>, _>>()?;
         let _ = Self::validate_primary(&parsed)?;
 
         Ok(Self { records: parsed })

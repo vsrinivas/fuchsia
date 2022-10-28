@@ -10,7 +10,7 @@ use fidl_fuchsia_bluetooth::ErrorCode;
 use fidl_fuchsia_bluetooth_bredr as bredr;
 use fuchsia_async as fasync;
 use fuchsia_bluetooth::profile::{psm_from_protocol, ChannelParameters, Psm, ServiceDefinition};
-use fuchsia_bluetooth::{types::PeerId, util::CollectExt};
+use fuchsia_bluetooth::types::PeerId;
 use fuchsia_inspect_derive::Inspect;
 use futures::{
     self, channel::mpsc, future::BoxFuture, select, sink::SinkExt, stream::StreamExt, Future,
@@ -248,7 +248,7 @@ impl ProfileRegistrar {
             .services
             .iter()
             .map(bredr::ServiceDefinition::try_from)
-            .collect_results()
+            .collect::<Result<Vec<_>, _>>()
             .unwrap();
         profile_upstream
             .advertise(
@@ -400,8 +400,11 @@ impl ProfileRegistrar {
     ) -> Option<AdvertiseResult> {
         match request {
             bredr::ProfileRequest::Advertise { services, parameters, receiver, responder } => {
-                let services_local =
-                    services.iter().map(ServiceDefinition::try_from).collect_results().ok()?;
+                let services_local = services
+                    .iter()
+                    .map(ServiceDefinition::try_from)
+                    .collect::<Result<Vec<_>, _>>()
+                    .ok()?;
                 trace!("Received advertise request: {:?}", services_local);
                 if service_definitions_request_rfcomm(&services_local) {
                     let receiver = receiver.into_proxy().ok()?;

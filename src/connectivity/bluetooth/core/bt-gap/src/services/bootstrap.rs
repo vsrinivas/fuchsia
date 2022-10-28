@@ -5,10 +5,7 @@
 use {
     anyhow::{format_err, Error},
     fidl_fuchsia_bluetooth_sys::{self as sys, BootstrapRequest, BootstrapRequestStream},
-    fuchsia_bluetooth::{
-        types::{BondingData, Identity, PeerId},
-        util::CollectExt,
-    },
+    fuchsia_bluetooth::types::{BondingData, Identity, PeerId},
     futures::prelude::*,
     std::{convert::TryFrom, iter, mem},
 };
@@ -39,12 +36,13 @@ impl BootstrapSession {
                     .commit_bootstrap(identities)
                     .await
                     .map_err(|_| sys::BootstrapError::WriteFailure);
-                responder.send(&mut result).map_err(|e| e.into())
+                responder.send(&mut result).map_err(Into::into)
             }
             BootstrapRequest::AddIdentities { identities, control_handle: _ } => {
                 // Accumulate identities locally; Only push to HostDispatcher once `commit()` is
                 // received
-                let identities = identities.into_iter().map(validate).collect_results()?;
+                let identities =
+                    identities.into_iter().map(validate).collect::<Result<Vec<_>, _>>()?;
                 for ident in identities {
                     self.identities.push(ident);
                 }
@@ -76,7 +74,10 @@ fn validate(src: sys::Identity) -> Result<Identity, Error> {
     let bonds = src.bonds.unwrap_or(vec![]);
     // We'll fail if any BondingData is missing required fields - I think this is better than
     // silently dropping individual bonding datas
-    let bonds =
-        bonds.into_iter().zip(generate_random_ids).map(BondingData::try_from).collect_results()?;
+    let bonds = bonds
+        .into_iter()
+        .zip(generate_random_ids)
+        .map(BondingData::try_from)
+        .collect::<Result<Vec<_>, _>>()?;
     Ok(Identity { host: host.into(), bonds })
 }

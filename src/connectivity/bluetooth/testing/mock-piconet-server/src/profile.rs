@@ -6,7 +6,7 @@ use {
     anyhow::format_err,
     bt_rfcomm::profile::{is_rfcomm_protocol, server_channel_from_protocol},
     fidl_fuchsia_bluetooth_bredr as bredr,
-    fuchsia_bluetooth::{profile::*, util::CollectExt},
+    fuchsia_bluetooth::profile::*,
     std::{
         collections::HashSet,
         convert::{TryFrom, TryInto},
@@ -34,7 +34,7 @@ fn parse_service_definition(
             .service_class_uuids
             .iter()
             .map(|uuid| bredr::ServiceClassProfileIdentifier::try_from(uuid.clone()))
-            .collect_results()?;
+            .collect::<Result<Vec<_>, _>>()?;
         HashSet::from_iter(uuids_vec)
     };
     if svc_ids.is_empty() {

@@ -10,7 +10,7 @@ use fidl_fuchsia_bluetooth_bredr as bredr;
 use fidl_fuchsia_component_test as ftest;
 use fidl_fuchsia_logger::LogSinkMarker;
 use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
-use fuchsia_bluetooth::{types as bt_types, util::CollectExt};
+use fuchsia_bluetooth::types as bt_types;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_component_test::{
     Capability, ChildOptions, LocalComponentHandles, RealmBuilder, RealmInstance, Ref, Route,
@@ -100,8 +100,10 @@ impl PiconetMemberSpec {
         expose_capabilities: Vec<ftest::Capability>,
     ) -> Result<(Self, bredr::PeerObserverRequestStream), Error> {
         let id = bt_types::PeerId::random();
-        let capability_names =
-            expose_capabilities.iter().map(protocol_name_from_capability).collect_results()?;
+        let capability_names = expose_capabilities
+            .iter()
+            .map(protocol_name_from_capability)
+            .collect::<Result<Vec<_>, _>>()?;
         let expose_decls = capability_names
             .iter()
             .map(|capability_name| expose_decl(&name, id, capability_name))
