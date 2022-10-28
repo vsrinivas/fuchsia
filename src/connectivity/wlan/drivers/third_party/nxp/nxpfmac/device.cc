@@ -47,6 +47,12 @@ Device::Device(zx_device_t *parent) : DeviceType(parent) {
           data_plane_->DeferRxWork();
         }
       });
+  defer_handling_event_ =
+      event_handler_.RegisterForEvent(MLAN_EVENT_ID_DRV_DEFER_HANDLING, [this](pmlan_event event) {
+        if (bus_) {
+          bus_->TriggerMainProcess();
+        }
+      });
 }
 
 void Device::DdkInit(ddk::InitTxn txn) {

@@ -123,6 +123,7 @@ class Device : public DeviceType,
   sync_completion_t fidl_dispatcher_completion_;
 
   EventRegistration defer_rx_work_event_;
+  EventRegistration defer_handling_event_;
 };
 
 }  // namespace wlan::nxpfmac

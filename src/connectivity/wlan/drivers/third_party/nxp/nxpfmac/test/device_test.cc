@@ -46,6 +46,9 @@ struct TestDevice : public Device {
   ~TestDevice() {}
   async_dispatcher_t* GetDispatcher() override { return nullptr; }
 
+  wlan::nxpfmac::DeviceContext* GetContext() { return &context_; }
+  wlan::nxpfmac::MockBus* GetBus() { return &bus_; }
+
  private:
   TestDevice(zx_device_t* parent, sync_completion_t& on_destructor)
       : Device(parent), on_destruct_(on_destructor) {}
@@ -300,4 +303,40 @@ TEST_F(DeviceTest, ClearCountry) {
   ASSERT_TRUE(get_result->value()->country.is_alpha2());
   EXPECT_BYTES_EQ("WW", get_result->value()->country.alpha2().data(), 2);
 }
+
+TEST_F(DeviceTest, DeferredRxWork) {
+  // Test that the deferred processing event triggers a call to the bus to perform processing.
+
+  wlan::nxpfmac::EventHandler* event_handler = device_->GetContext()->event_handler_;
+
+  sync_completion_t mlan_rx_process_called;
+  mlan_mocks_.SetOnMlanRxProcess([&](t_void*, t_u8*) -> mlan_status {
+    sync_completion_signal(&mlan_rx_process_called);
+    return MLAN_STATUS_SUCCESS;
+  });
+
+  mlan_event event{.event_id = MLAN_EVENT_ID_DRV_DEFER_RX_WORK};
+  event_handler->OnEvent(&event);
+
+  ASSERT_OK(sync_completion_wait(&mlan_rx_process_called, ZX_TIME_INFINITE));
+}
+
+TEST_F(DeviceTest, DeferredProcessing) {
+  // Test that the deferred processing event triggers a call to the bus to perform processing.
+
+  wlan::nxpfmac::EventHandler* event_handler = device_->GetContext()->event_handler_;
+  wlan::nxpfmac::MockBus* mock_bus = device_->GetBus();
+
+  sync_completion_t trigger_main_process_called;
+  mock_bus->SetTriggerMainProcess([&]() -> zx_status_t {
+    sync_completion_signal(&trigger_main_process_called);
+    return ZX_OK;
+  });
+
+  mlan_event event{.event_id = MLAN_EVENT_ID_DRV_DEFER_HANDLING};
+  event_handler->OnEvent(&event);
+
+  sync_completion_wait(&trigger_main_process_called, ZX_TIME_INFINITE);
+}
+
 }  // namespace
