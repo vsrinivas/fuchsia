@@ -2,11 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::sync::atomic::{AtomicU16, Ordering};
+
 use anyhow::Error;
 use fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route};
+use lazy_static::lazy_static;
+use regex::Regex;
 
 const SINGLE_COUNTER_URL: &str = "#meta/single_counter_test_component.cm";
 const PERSISTENCE_URL: &str = "#meta/persistence.cm";
+lazy_static! {
+    pub static ref REALM_NAME_PATTERN: Regex = Regex::new(r"persistence-test-\d{5}").unwrap();
+}
 
 pub async fn create() -> Result<RealmInstance, Error> {
     let builder = RealmBuilder::new().await?;
@@ -110,6 +117,18 @@ pub async fn create() -> Result<RealmInstance, Error> {
                 .to(Ref::parent()),
         )
         .await?;
-    let instance = builder.build().await?;
+
+    static COUNTER: AtomicU16 = AtomicU16::new(0);
+
+    // We want deterministic realm names of a fixed length. Add a fixed-size
+    // variable component so that realm names are unique across test cases.
+    let realm_name = format!("persistence-test-{:05}", COUNTER.fetch_add(1, Ordering::Relaxed));
+    assert!(
+        REALM_NAME_PATTERN.is_match(&realm_name),
+        "{} does not match {:?}",
+        realm_name,
+        *REALM_NAME_PATTERN
+    );
+    let instance = builder.build_with_name(realm_name).await?;
     Ok(instance)
 }

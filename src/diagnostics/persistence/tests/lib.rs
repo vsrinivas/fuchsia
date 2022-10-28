@@ -13,6 +13,7 @@ use fuchsia_zircon::{Duration, Time};
 use serde_json::{self, Value};
 use std::fs::File;
 use std::io::Read;
+use std::mem::take;
 use std::{thread, time};
 use tracing::*;
 
@@ -247,16 +248,18 @@ fn clean_and_test_timestamps(map: &mut serde_json::Map<String, Value>) {
             }
         }
     }
-    let matcher = regex::Regex::new("realm_builder\\\\:auto-[a-f0-9]*?/").unwrap();
-    let keys = map
-        .keys()
-        .filter_map(|key| if matcher.is_match(key) { Some(key.to_owned()) } else { None })
-        .collect::<Vec<_>>();
-    for key in keys {
-        let value = map.remove(&key).unwrap();
-        let new_key = matcher.replace(&key, "realm_builder/").to_string();
-        map.insert(new_key, value);
-    }
+
+    *map = take(map)
+        .into_iter()
+        .map(|(key, value)| {
+            (
+                test_topology::REALM_NAME_PATTERN
+                    .replace(&key, "realm-name")
+                    .replace(r"realm_builder\:realm-name", "realm_builder"),
+                value,
+            )
+        })
+        .collect();
 }
 
 /// The number of bytes reported in the "too big" case may vary. It should be a 2-digit
@@ -501,11 +504,8 @@ fn expected_diagnostics_persistence_inspect(published: Published) -> String {
             }
             "#
         .replace("%SIZE_ERROR%", &expected_size_error()),
-        Published::Int(_) => {
-            let number_text = match published {
-                Published::Int(number) => format!("\"optional\": {},", number),
-                _ => "".to_string(),
-            };
+        Published::Int(number) => {
+            let number_text = format!("\"optional\": {},", number);
             r#"
                 "test-service": {
                     "test-component-metric": {
