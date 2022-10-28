@@ -23,6 +23,12 @@ declare_args() {
 
   # Whether to use Fxfs for the stateful image
   termina_fxfs_stateful_image = false
+
+  # Default stateful image size (40GiB).
+  #
+  # If you change this value you will need to rebuild the guest partition using
+  # 'guest wipe termina' for the new size to take effect.
+  termina_stateful_partition_size_bytes = 42949672960
 }
 
 fuchsia_component_manifest("manifest") {
@@ -39,8 +45,7 @@ fuchsia_structured_config_values("default_config") {
       stateful_partition_type = "fvm"
     }
 
-    # 40 GiB.
-    stateful_partition_size = 42949672960
+    stateful_partition_size = termina_stateful_partition_size_bytes
     additional_read_only_mounts = []
     start_container_runtime = true
 
