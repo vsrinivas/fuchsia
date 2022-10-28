@@ -167,7 +167,7 @@ To record a trace of `du`, do the following:
    ./tracing/bin/trace2html trace.json
    ```
 
-![drawing](images/trace-example-overview.png)
+![Screenshot of trace interface](images/trace-example-overview.png)
 
 A trace file has a lot of information including a time scale near the top of
 the trace. In this example, the whole trace lasted about 2.5 seconds.
@@ -204,7 +204,7 @@ between the CPU usage and the filesystem:
 You can zoom in on specific areas of this region to determine the correlation
 between the CPU usage and the filesystem.
 
-![drawing](images/trace-example-zoom1.png)
+![Screenshot of zooming in on cpu and filesystem information](images/trace-example-zoom1.png)
 
 In this example, you can see just two `du` executions (the first is marked
 with a green circle). The first `blobfs` CPU burst actually consists of
@@ -218,7 +218,7 @@ Instead, it shows that the bursts are due to loading the `du` program.
 
 You are now ready to dive further into what is causing the `blobs` bursts.
 
-![drawing](images/trace-example-blobfs1.png)
+![Image of blobs trace timings](images/trace-example-blobfs1.png)
 
 In this example, notice the time scale that spans a time period from 2,023,500
 microseconds to just past 2,024,500 which indicated a time scale of about
@@ -233,7 +233,7 @@ of the report for more detailed information about a specific object.
 
 If you click on `FileReadAt`, you can see the following information:
 
-![drawing](images/trace-example-filereadat.png)
+![Image of FileReadAt information](images/trace-example-filereadat.png)
 
 This information tells you the following:
 
@@ -245,7 +245,7 @@ see [//src/lib/storage/vfs/cpp/connection.cc](/src/lib/storage/vfs/cpp/connectio
 
 If you click on `Blob::Read`, you can see the following information:
 
-![drawing](images/trace-example-blobread.png)
+![Image of Blob::Read information](images/trace-example-blobread.png)
 
 Note: For information on how tracing is performed for `Blob::Read`,
 see [//src/storage/blobfs/blob.cc](/src/storage/blobfs/blob.cc).

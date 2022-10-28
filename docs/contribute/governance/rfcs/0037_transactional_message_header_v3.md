@@ -98,7 +98,7 @@ bindings.
 
 As a [wire format diagram][wire-format] we have:
 
-![drawing](resources/0037_transactional_message_header_v3/transaction-header.png)
+![Diagram of wire format message header][transaction-header-png]
 
 ### When should a new magic number be assigned {#new-magic-number}
 
@@ -115,4 +115,5 @@ transaction header, increases the minimal amount of bytes read from 16 bytes to
 bytes has minimal impact.
 
 <!-- xrefs -->
+[transaction-header-png]: resources/0037_transactional_message_header_v3/transaction-header.png
 [wire-format]: /docs/reference/fidl/language/wire-format

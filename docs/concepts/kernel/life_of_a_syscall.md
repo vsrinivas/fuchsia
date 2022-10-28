@@ -8,7 +8,7 @@ In order to reduce boilerplate code, syscall-specific logic is generated with th
 tool. Before diving into how each of the above stages works, it is best to understand
 how this code is generated.
 
-![drawing](images/overview.png)
+![Diagram of User Mode and Kernel Mode blocks and how specific code blocks are created.](images/overview.png)
 
 ## Code generation with kazoo
 
@@ -127,7 +127,7 @@ and the base address is provided to the first thread in a specific register.
 The vDSO is dynamically linked to the user's program in the entrypoint provided
 by [libc](/docs/development/languages/c-cpp/libc.md)
 
-![drawing](images/vdso_loading.png)
+![Sequence diagram of process loading and the vDSO](images/vdso_loading.png)
 
 ## Syscall handler
 
