@@ -1,0 +1,69 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/drivers.gni")
+import("//build/test.gni")
+
+driver_bind_rules("gpio-init-bind") {
+  rules = "gpio-init.bind"
+  header_output = "gpio-init-bind.h"
+  bind_output = "gpio-init.bindbc"
+  tests = "gpio-init-bind-tests.json"
+  deps = [ "//src/devices/bind/fuchsia.platform" ]
+}
+
+fuchsia_driver("gpio-init-driver") {
+  output_name = "gpio-init"
+  sources = [ "gpio-init.cc" ]
+  deps = [
+    ":gpio-init-bind",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.gpio.init:fuchsia.hardware.gpio.init_cpp_wire",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddk:ddk-metadata-headers",
+    "//src/lib/ddktl",
+  ]
+}
+
+fuchsia_driver_component("gpio-init") {
+  info = "gpio-init-info.json"
+  deps = [ ":gpio-init-driver" ]
+  colocate = false
+}
+
+test("gpio-init-test-bin") {
+  output_name = "gpio-init-test"
+  sources = [
+    "gpio-init-test.cc",
+    "gpio-init.cc",
+  ]
+  deps = [
+    ":gpio-init-bind",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp_mock",
+    "//sdk/fidl/fuchsia.hardware.gpio.init:fuchsia.hardware.gpio.init_cpp_wire",
+    "//src/devices/lib/driver",
+    "//src/devices/testing/mock-ddk",
+    "//src/lib/ddk",
+    "//src/lib/ddk:ddk-metadata-headers",
+    "//src/lib/ddktl",
+    "//zircon/system/ulib/mock-function",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("gpio-init-test") {
+  deps = [ ":gpio-init-test-bin" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":gpio-init-bind_test",
+    ":gpio-init-test",
+  ]
+}
