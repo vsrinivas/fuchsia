@@ -564,7 +564,6 @@ void F2fs::WriteCheckpoint(bool blocked, bool is_umount) {
     ZX_ASSERT(superblock_info_->GetPageCount(CountType::kWriteback) == 0);
     ZX_ASSERT(superblock_info_->GetPageCount(CountType::kDirtyMeta) == 0);
     ZX_ASSERT(superblock_info_->GetPageCount(CountType::kDirtyNodes) == 0);
-    ZX_ASSERT(superblock_info_->GetPageCount(CountType::kMmapedData) == 0);
   }
   UnblockOperations();
 }
