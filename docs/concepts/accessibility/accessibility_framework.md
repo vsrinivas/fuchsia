@@ -123,7 +123,7 @@ Accessibility tests live in
 [src/ui/a11y/lib/testing/](/src/ui/a11y/lib/testing/).
 
 [chromium]: https://chromium.googlesource.com/chromium/src/+/lkgr/docs/accessibility/overview.md
-[semantics]: https://fuchsia.dev/reference/fidl/fuchsia.accessibility.semantics?hl=en
+[semantics]: https://fuchsia.dev/reference/fidl/fuchsia.accessibility.semantics
 [screenreader]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=78636
 [magnifier]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=78645
 [colorcorrection]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=78644
