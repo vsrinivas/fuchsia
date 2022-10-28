@@ -5,13 +5,12 @@
 #ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_COMMON_GLOBAL_WORK_QUEUE_H_
 #define SRC_MEDIA_AUDIO_SERVICES_MIXER_COMMON_GLOBAL_WORK_QUEUE_H_
 
+#include <lib/fit/function.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
 #include <deque>
-#include <functional>
 #include <mutex>
 #include <unordered_map>
-#include <vector>
 
 #include "src/media/audio/lib/clock/timer.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
@@ -36,7 +35,7 @@ class GlobalTaskQueue {
   // Pushes a task onto the end of the queue.
   // The task must execute on thread `id`, unless `id = kAnyThreadId`,
   // in which case the task may execute on any thread.
-  void Push(ThreadId id, std::function<void()>&& fn);
+  void Push(ThreadId id, fit::closure fn);
 
   // Runs all tasks that can be processed by the given thread.
   // If `id != kAnyThreadId`, then this must be called from the correct thread.
@@ -52,9 +51,9 @@ class GlobalTaskQueue {
 
  private:
   struct Task {
-    Task(ThreadId _id, std::function<void()>&& _fn) : id(_id), fn(std::move(_fn)) {}
+    Task(ThreadId _id, fit::closure _fn) : id(_id), fn(std::move(_fn)) {}
     ThreadId id;
-    std::function<void()> fn;
+    fit::closure fn;
     bool running TA_GUARDED(&GlobalTaskQueue::mutex_) = false;
   };
 

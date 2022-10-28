@@ -8,7 +8,7 @@
 
 namespace media_audio {
 
-void GlobalTaskQueue::Push(ThreadId id, std::function<void()>&& fn) {
+void GlobalTaskQueue::Push(ThreadId id, fit::closure fn) {
   std::shared_ptr<Timer> next_timer;
   {
     std::lock_guard<std::mutex> guard(mutex_);
