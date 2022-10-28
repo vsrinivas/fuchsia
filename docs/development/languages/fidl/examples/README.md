@@ -36,9 +36,17 @@ section.
 
 <<../widgets/_alias.md>>
 
+<<../widgets/_anonymous_type.md>>
+
 <<../widgets/_enum.md>>
 
+<<../widgets/_generated_name.md>>
+
 <<../widgets/_named_payload.md>>
+
+<<../widgets/_optionality.md>>
+
+<<../widgets/_recursive_type.md>>
 
 <!-- /DO_NOT_REMOVE_COMMENT:concepts (Why? See: /tools/fidl/scripts/canonical_example/README.md) -->
 
