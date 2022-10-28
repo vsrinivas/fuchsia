@@ -59,6 +59,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_RAM_NAND               0x2E  // RAM disk for nand devices
 #define PDEV_DID_VIRTUAL_AUDIO          0x2F  // Virtual audio for test
 #define PDEV_DID_BT_HCI_EMULATOR        0x30  // Bluetooth HCI emulator for test
+#define PDEV_DID_GPIO_INIT              0x31  // GPIO init device
 
 // QEMU emulator
 #define PDEV_VID_QEMU               0x01

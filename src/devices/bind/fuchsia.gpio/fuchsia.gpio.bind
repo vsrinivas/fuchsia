@@ -8,3 +8,7 @@ extend uint fuchsia.BIND_PROTOCOL {
   DEVICE = 20,
   IMPL = 21,
 };
+
+extend uint fuchsia.BIND_INIT_STEP {
+  GPIO = 0x4F495047,
+};

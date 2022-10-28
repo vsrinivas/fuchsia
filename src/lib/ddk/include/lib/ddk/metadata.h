@@ -82,6 +82,9 @@ static_assert(DEVICE_METADATA_BOARD_PRIVATE == ZBI_TYPE_DRV_BOARD_PRIVATE, "");
 // type: array of gpio_pin_t
 #define DEVICE_METADATA_GPIO_PINS 0x4F495047  // GPIO
 
+// type: FIDL fuchsia.hardware.gpio.init/GpioInitMetadata
+#define DEVICE_METADATA_GPIO_INIT_STEPS 0x49495047  // GPII
+
 // type: array of power_domain_t
 #define DEVICE_METADATA_POWER_DOMAINS 0x52574F50  // POWR
 
