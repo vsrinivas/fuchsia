@@ -11,6 +11,7 @@ use {
     digest::processed,
     ffx_writer::Writer,
     humansize::{file_size_opts::BINARY, FileSize},
+    std::cmp::Reverse,
     std::io::Write,
 };
 
@@ -78,6 +79,16 @@ fn print_complete_digest(w: &mut Writer, digest: processed::Digest) -> Result<()
     writeln!(w, "    mmu:   {}", digest.kernel.mmu.file_size(BINARY).unwrap())?;
     writeln!(w, "    ipc:   {}", digest.kernel.ipc.file_size(BINARY).unwrap())?;
     writeln!(w)?;
+
+    let sorted_buckets = {
+        let mut sorted_buckets = digest.buckets;
+        sorted_buckets.sort_by_key(|bucket| Reverse(bucket.size));
+        sorted_buckets
+    };
+
+    for bucket in sorted_buckets {
+        writeln!(w, "Bucket {}: {}", bucket.name, bucket.size.file_size(BINARY).unwrap())?;
+    }
     print_processes_digest(w, digest.processes)?;
     writeln!(w)?;
     Ok(())

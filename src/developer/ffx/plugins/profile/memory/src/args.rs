@@ -26,6 +26,9 @@ pub struct MemoryCommand {
     )]
     pub interval: Option<f64>,
 
+    #[argh(switch, description = "prints a bucketized digest of the memory usage.")]
+    pub buckets: bool,
+
     #[argh(
         switch,
         description = "outputs csv that for every process shows the device uptime in nano seconds, the process koid, the process name, and the private, scale, and total memory usage. This option is not supported with other output options like --machine."

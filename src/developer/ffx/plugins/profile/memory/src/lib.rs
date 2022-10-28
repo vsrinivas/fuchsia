@@ -4,6 +4,7 @@
 
 //! Library that obtains and prints memory digests of a running fuchsia device.
 
+mod bucket;
 mod digest;
 mod plugin_output;
 mod write_csv_output;
@@ -54,8 +55,9 @@ pub async fn print_output(
         writeln!(writer, "{}", String::from_utf8(raw_data)?)?;
         Ok(())
     } else {
-        let digest = get_digest(monitor_proxy).await?;
-        let processed_digest = processed::Digest::from(digest);
+        let memory_monitor_output = get_output(monitor_proxy).await?;
+        let processed_digest =
+            processed::digest_from_memory_monitor_output(memory_monitor_output, cmd.buckets);
         let output = match cmd.process_koids.len() {
             0 => ProfileMemoryOutput::CompleteDigest(processed_digest),
             _ => filter_digest_by_process_koids(processed_digest, &cmd.process_koids),
@@ -78,7 +80,7 @@ async fn get_raw_data(monitor_proxy: &MonitorProxy) -> Result<Vec<u8>> {
     let (rx, tx) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;
 
     // Send one end of the socket to the remote device.
-    monitor_proxy.write_json_capture(tx)?;
+    monitor_proxy.write_json_capture_and_buckets(tx)?;
 
     // Read all the bytes sent from the other end of the socket.
     let mut rx_async = fidl::AsyncSocket::from_socket(rx)?;
@@ -88,8 +90,8 @@ async fn get_raw_data(monitor_proxy: &MonitorProxy) -> Result<Vec<u8>> {
     Ok(buffer)
 }
 
-/// Returns a `Digest` obtained via the `MonitorProxyInterface`. Performs basic schema validation.
-async fn get_digest(monitor_proxy: &MonitorProxy) -> anyhow::Result<raw::Digest> {
+/// Returns the `MemoryMonitorOutput` obtained via the `MonitorProxyInterface`. Performs basic schema validation.
+async fn get_output(monitor_proxy: &MonitorProxy) -> anyhow::Result<raw::MemoryMonitorOutput> {
     let buffer = get_raw_data(monitor_proxy).await?;
     Ok(serde_json::from_slice(&buffer)?)
 }
@@ -100,7 +102,7 @@ mod tests {
     use futures::AsyncWriteExt;
 
     lazy_static::lazy_static! {
-    static ref EXPECTED_DIGEST: raw::Digest = raw::Digest{
+    static ref EXPECTED_CAPTURE: raw::Capture = raw::Capture{
         time: 0,
         kernel: raw::Kernel{
         total: 0,
@@ -127,18 +129,23 @@ mod tests {
         vmos: vec![],
     };
 
-    static ref DATA_WRITTEN_BY_MEMORY_MONITOR: Vec<u8> = serde_json::to_vec(&*EXPECTED_DIGEST).unwrap();
+    static ref EXPECTED_OUTPUT: raw::MemoryMonitorOutput = raw::MemoryMonitorOutput{
+        capture: EXPECTED_CAPTURE.clone(),
+        buckets_definitions: vec![]
+    };
+
+    static ref DATA_WRITTEN_BY_MEMORY_MONITOR: Vec<u8> = serde_json::to_vec(&*EXPECTED_OUTPUT).unwrap();
 
     }
 
     use fidl_fuchsia_memory::MonitorRequest;
 
-    /// Returns a fake monitor service that writes `EXPECTED_DIGEST` serialized to JSON to the socket
-    /// when `WriteJsonCapture` is called.
+    /// Returns a fake monitor service that writes `EXPECTED_OUTPUT` serialized to JSON to the socket
+    /// when `WriteJsonCaptureAndBuckets` is called.
     fn setup_fake_monitor_svc() -> MonitorProxy {
         setup_fake_monitor_proxy(|request| match request {
             MonitorRequest::Watch { watcher: _, .. } => {}
-            MonitorRequest::WriteJsonCapture { socket, .. } => {
+            MonitorRequest::WriteJsonCaptureAndBuckets { socket, .. } => {
                 let mut s = fidl::AsyncSocket::from_socket(socket).unwrap();
                 fuchsia_async::Task::local(async move {
                     s.write_all(&DATA_WRITTEN_BY_MEMORY_MONITOR).await.unwrap();
@@ -157,11 +164,11 @@ mod tests {
         assert_eq!(raw_data, *DATA_WRITTEN_BY_MEMORY_MONITOR);
     }
 
-    /// Tests that `get_digest` properly reads and parses data from the memory monitor service.
+    /// Tests that `get_output` properly reads and parses data from the memory monitor service.
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn get_digest_test() {
+    async fn get_output_test() {
         let monitor_proxy = setup_fake_monitor_svc();
-        let digest = get_digest(&monitor_proxy).await.expect("failed to get digest");
-        assert_eq!(digest, *EXPECTED_DIGEST);
+        let output = get_output(&monitor_proxy).await.expect("failed to get output");
+        assert_eq!(output, *EXPECTED_OUTPUT);
     }
 }

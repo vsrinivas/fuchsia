@@ -29,6 +29,7 @@ ffx_plugin("ffx_profile_memory") {
   args_sources = [ "src/args.rs" ]
 
   sources = [
+    "src/bucket.rs",
     "src/digest.rs",
     "src/lib.rs",
     "src/plugin_output.rs",

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Digest related functionality.
+//! Capture and Digest related functionality.
 
 /// Types and utilities related to the raw data produced by
 /// `MemoryMonitor`.
@@ -31,7 +31,7 @@ pub mod raw {
     ///   report for completion and to facilitate deserialization, but
     ///   it is likely that only a small subset of its fields will
     ///   ever get used in this crate.
-    #[derive(Serialize, Deserialize, PartialEq, Debug, Default)]
+    #[derive(Serialize, Deserialize, PartialEq, Debug, Default, Clone)]
     pub struct Kernel {
         /// Total physical memory available to the system, in bytes.
         pub total: u64,
@@ -81,7 +81,7 @@ pub mod raw {
 
     /// Placeholder to validate the JSON schema. None of those fields
     /// are ever used, but they are documented here as a reference.
-    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
     pub struct ProcessHeaders {
         pub koid: String,
         pub name: String,
@@ -98,7 +98,7 @@ pub mod raw {
         }
     }
 
-    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
     pub struct ProcessData {
         /// Kernel Object ID. See related Fuchsia Kernel concept.
         pub koid: u64,
@@ -106,7 +106,7 @@ pub mod raw {
         pub vmos: Vec<u64>,
     }
 
-    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
     #[serde(untagged)]
     pub enum Process {
         /// Headers describing the meaning of the data.
@@ -117,7 +117,7 @@ pub mod raw {
 
     /// Placeholder to validate the JSON schema. None of those fields
     /// are ever used, but they are documented here as a reference.
-    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
     pub struct VmoHeaders {
         pub koid: String,
         pub name: String,
@@ -138,7 +138,7 @@ pub mod raw {
         }
     }
 
-    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
     pub struct VmoData {
         /// Kernel Object ID. See related Fuchsia Kernel concept.
         pub koid: u64,
@@ -148,7 +148,7 @@ pub mod raw {
         pub allocated_bytes: u64,
     }
 
-    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
     #[serde(untagged)]
     pub enum Vmo {
         /// Headers describing the meaning of the data.
@@ -157,25 +157,54 @@ pub mod raw {
         Data(VmoData),
     }
 
-    /// Digests exported by `MemoryMonitor`.
-    /// This corresponds to the schema of the data that is transferred
-    /// by `MemoryMonitor::WriteJsonCapture`'s API.
-    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    /// Capture exported by `MemoryMonitor`.
+    /// This part of the schema that contains information on the
+    /// processes and VMOs.
+    #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
     #[serde(rename_all = "PascalCase")]
-    pub struct Digest {
+    pub struct Capture {
         /// A monotonic time (in ns).
         pub time: u64,
         pub kernel: Kernel,
         pub processes: Vec<Process>,
-        /// Names of the VMOs mentioned in the `Digest`.
+        /// Names of the VMOs mentioned in the `Capture`.
         pub vmo_names: Vec<String>,
         pub vmos: Vec<Vmo>,
+    }
+
+    /// Defines a memory bucket.
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    pub struct BucketDefinition {
+        /// The Cobalt event code associated with this bucket.
+        pub event_code: u64,
+        /// The human-readable name of the bucket.
+        pub name: String,
+        /// String saying which process to match. Will be interpreted as a regex.
+        /// If the string is empty, will be interpreted as ".*".
+        pub process: String,
+        /// Regex saying which VMOs to match. Will be interpreted as a regex.
+        /// If the string is empty, will be interpreted as ".*".
+        pub vmo: String,
+    }
+
+    /// Digests exported by `MemoryMonitor`.
+    /// This corresponds to the schema of the data that is transferred
+    /// by `MemoryMonitor::WriteJsonCaptureAndBuckets`'s API.
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    pub struct MemoryMonitorOutput {
+        #[serde(rename(serialize = "Buckets", deserialize = "Buckets"))]
+        pub buckets_definitions: Vec<BucketDefinition>,
+        #[serde(rename(serialize = "Capture", deserialize = "Capture"))]
+        pub capture: Capture,
     }
 }
 
 /// Types and utilities to produce and manipulate processed summaries
 /// suitable for user-facing consumption.
 pub mod processed {
+    use crate::bucket::compute_buckets;
+    use crate::bucket::Bucket;
+    use crate::digest::processed;
     use crate::digest::raw;
     use serde::Serialize;
 
@@ -214,6 +243,15 @@ pub mod processed {
         pub vmos: HashSet<u64>,
     }
 
+    /// Holds all the data relevant to a Vmo.
+    pub struct Vmo {
+        pub koid: u64,
+        pub name: String,
+        pub parent_koid: u64,
+        pub committed_bytes: u64,
+        pub allocated_bytes: u64,
+    }
+
     pub type Kernel = raw::Kernel;
 
     /// Aggregated, processed digest of memory use in a system.
@@ -227,6 +265,8 @@ pub mod processed {
         pub kernel: Kernel,
         /// Process data.
         pub processes: Vec<Process>,
+        /// Buckets
+        pub buckets: Vec<Bucket>,
     }
 
     /// Perform ad-hoc VMO name canonicalization. Computes equivalence
@@ -251,122 +291,151 @@ pub mod processed {
 
     /// Conversion trait from a raw digest to a human-friendly
     /// processed digest. Data is aggregated, normalized, sorted.
-    impl From<raw::Digest> for Digest {
-        fn from(raw: raw::Digest) -> Self {
-            // Index processes by koid.
-            let koid_to_process = {
-                let mut koid_to_process = HashMap::new();
-                for process in raw.processes {
-                    if let raw::Process::Data(raw::ProcessData { koid, .. }) = process {
-                        koid_to_process.insert(koid, process);
-                    }
+    pub fn digest_from_memory_monitor_output(
+        memory_monitor_output: raw::MemoryMonitorOutput,
+        bucketize: bool,
+    ) -> Digest {
+        let capture = memory_monitor_output.capture;
+        // Index processes by koid.
+        let koid_to_process = {
+            let mut koid_to_process = HashMap::new();
+            for process in capture.processes {
+                if let raw::Process::Data(raw::ProcessData { koid, .. }) = process {
+                    koid_to_process.insert(koid, process);
                 }
-                koid_to_process
-            };
-            // Index VMOs by koid.
-            let koid_to_vmo = {
-                let mut koid_to_vmo = HashMap::new();
-                for vmo in raw.vmos {
-                    if let raw::Vmo::Data(raw::VmoData { koid, .. }) = vmo {
-                        koid_to_vmo.insert(koid, vmo);
-                    }
-                }
-                koid_to_vmo
-            };
-            let mut processes: Vec<Process> = {
-                let mut processes = vec![];
-                for (koid, process) in koid_to_process {
-                    if let raw::Process::Data(raw::ProcessData { name, vmos, .. }) = process {
-                        let p = Process {
+            }
+            koid_to_process
+        };
+        // Index VMOs by koid.
+        let koid_to_vmo = {
+            let mut koid_to_vmo = HashMap::new();
+            for vmo in capture.vmos {
+                if let raw::Vmo::Data(raw::VmoData {
+                    koid,
+                    parent_koid,
+                    name,
+                    committed_bytes,
+                    allocated_bytes,
+                }) = vmo
+                {
+                    let vmo_name_index = name as usize;
+                    let vmo_name_string = capture.vmo_names[vmo_name_index].clone();
+                    koid_to_vmo.insert(
+                        koid,
+                        processed::Vmo {
                             koid,
-                            name: name.to_string(),
-                            memory: RetainedMemory { private: 0, scaled: 0, total: 0 },
-                            name_to_memory: HashMap::new(),
-                            vmos: HashSet::from_iter(vmos),
-                        };
-                        if !p.vmos.is_empty() {
-                            processes.push(p);
-                        }
+                            parent_koid,
+                            name: vmo_name_string,
+                            committed_bytes,
+                            allocated_bytes,
+                        },
+                    );
+                }
+            }
+            koid_to_vmo
+        };
+        let mut processes: Vec<Process> = {
+            let mut processes = vec![];
+            for (koid, process) in koid_to_process {
+                if let raw::Process::Data(raw::ProcessData { name, vmos, .. }) = process {
+                    let p = Process {
+                        koid,
+                        name: name.to_string(),
+                        memory: RetainedMemory { private: 0, scaled: 0, total: 0 },
+                        name_to_memory: HashMap::new(),
+                        vmos: HashSet::from_iter(vmos),
+                    };
+                    if !p.vmos.is_empty() {
+                        processes.push(p);
                     }
                 }
-                processes
-            };
-            // Mapping from each VMO koid to the set of every
-            // processes that refer this VMO, either directly, or
-            // indirectly via related VMOs.
-            let vmo_to_processes: HashMap<u64, HashSet<u64>> = {
-                let mut vmo_to_processes: HashMap<u64, HashSet<u64>> = HashMap::new();
-                for process in processes.iter() {
-                    for mut vmo_koid in process.vmos.iter() {
-                        // In case of related VMOs, follow parents
-                        // until reaching the root VMO.
-                        while *vmo_koid != 0 {
-                            vmo_to_processes.entry(*vmo_koid).or_default().insert(process.koid);
-                            if let Some(raw::Vmo::Data(raw::VmoData { parent_koid, .. })) =
-                                koid_to_vmo.get(&vmo_koid)
-                            {
-                                vmo_koid = parent_koid;
-                            } else {
-                                // If we reach this branch, it means
-                                // that the report mentions a process
-                                // that holds a handle to a VMO, and
-                                // that either this VMO or one of its
-                                // ascendants is absent from the VMO
-                                // list. This might be a bug.
-                                eprintln!("Process {:?} refers (directly or indirectly) to unknown VMO {}", process, vmo_koid);
-                                eprintln!(
-                                    "Please consider reporting this issue to the plugin's authors."
-                                );
-                                break;
-                            }
-                        }
-                    }
-                }
-                vmo_to_processes
-            };
-            // Compute per-process, aggregated sizes.
-            for mut process in processes.iter_mut() {
-                for vmo_koid in process.vmos.iter() {
-                    if let Some(raw::Vmo::Data(raw::VmoData { name, committed_bytes, .. })) =
-                        koid_to_vmo.get(&vmo_koid)
-                    {
-                        let share_count = match vmo_to_processes.get(&vmo_koid) {
-                            Some(v) => v.len() as u64,
-                            None => unreachable!(),
-                        };
-                        let name = rename(&raw.vmo_names[*name as usize]).to_string();
-                        let mut name_sizes = process
-                            .name_to_memory
-                            .entry(name)
-                            .or_insert(RetainedMemory { private: 0, scaled: 0, total: 0 });
-                        name_sizes.total += committed_bytes;
-                        process.memory.total += committed_bytes;
-                        name_sizes.scaled += committed_bytes / share_count;
-                        process.memory.scaled += committed_bytes / share_count;
-                        if share_count == 1 {
-                            name_sizes.private += committed_bytes;
-                            process.memory.private += committed_bytes;
+            }
+            processes
+        };
+        // Mapping from each VMO koid to the set of every
+        // processes that refer this VMO, either directly, or
+        // indirectly via related VMOs.
+        let vmo_to_processes: HashMap<u64, HashSet<u64>> = {
+            let mut vmo_to_processes: HashMap<u64, HashSet<u64>> = HashMap::new();
+            for process in processes.iter() {
+                for mut vmo_koid in process.vmos.iter() {
+                    // In case of related VMOs, follow parents
+                    // until reaching the root VMO.
+                    while *vmo_koid != 0 {
+                        vmo_to_processes.entry(*vmo_koid).or_default().insert(process.koid);
+
+                        if let Some(processed::Vmo { parent_koid, .. }) = koid_to_vmo.get(&vmo_koid)
+                        {
+                            vmo_koid = parent_koid;
+                        } else {
+                            // If we reach this branch, it means
+                            // that the report mentions a process
+                            // that holds a handle to a VMO, and
+                            // that either this VMO or one of its
+                            // ascendants is absent from the VMO
+                            // list. This might be a bug.
+                            eprintln!(
+                                "Process {:?} refers (directly or indirectly) to unknown VMO {}",
+                                process, vmo_koid
+                            );
+                            eprintln!(
+                                "Please consider reporting this issue to the plugin's authors."
+                            );
+                            break;
                         }
                     }
                 }
             }
-            processes.sort_unstable_by(|a, b| b.memory.private.cmp(&a.memory.private));
-            let total_committed_vmo = {
-                let mut total = 0;
-                for (_, vmo) in koid_to_vmo {
-                    if let raw::Vmo::Data(raw::VmoData { committed_bytes, .. }) = vmo {
-                        total += committed_bytes;
+            vmo_to_processes
+        };
+        // Compute per-process, aggregated sizes.
+        for mut process in processes.iter_mut() {
+            for vmo_koid in process.vmos.iter() {
+                if let Some(processed::Vmo { name, committed_bytes, .. }) =
+                    koid_to_vmo.get(&vmo_koid)
+                {
+                    let share_count = match vmo_to_processes.get(&vmo_koid) {
+                        Some(v) => v.len() as u64,
+                        None => unreachable!(),
+                    };
+                    let name = rename(name).to_string();
+                    let mut name_sizes = process
+                        .name_to_memory
+                        .entry(name)
+                        .or_insert(RetainedMemory { private: 0, scaled: 0, total: 0 });
+                    name_sizes.total += committed_bytes;
+                    process.memory.total += committed_bytes;
+                    name_sizes.scaled += committed_bytes / share_count;
+                    process.memory.scaled += committed_bytes / share_count;
+                    if share_count == 1 {
+                        name_sizes.private += committed_bytes;
+                        process.memory.private += committed_bytes;
                     }
                 }
-                total
-            };
-            let kernel_vmo = raw.kernel.vmo.saturating_sub(total_committed_vmo);
-            Digest {
-                time: raw.time,
-                total_committed_bytes_in_vmos: total_committed_vmo,
-                kernel: raw::Kernel { vmo: kernel_vmo, ..raw.kernel },
-                processes,
             }
+        }
+        processes.sort_unstable_by(|a, b| b.memory.private.cmp(&a.memory.private));
+        let total_committed_vmo = {
+            let mut total = 0;
+            for (_, vmo) in &koid_to_vmo {
+                total += vmo.committed_bytes;
+            }
+            total
+        };
+        let kernel_vmo = capture.kernel.vmo.saturating_sub(total_committed_vmo);
+
+        let buckets = if bucketize {
+            compute_buckets(&memory_monitor_output.buckets_definitions, &processes, &koid_to_vmo)
+        } else {
+            vec![]
+        };
+
+        Digest {
+            time: capture.time,
+            total_committed_bytes_in_vmos: total_committed_vmo,
+            kernel: raw::Kernel { vmo: kernel_vmo, ..capture.kernel },
+            processes,
+            buckets,
         }
     }
 }
@@ -378,7 +447,7 @@ mod tests {
 
     #[test]
     fn raw_to_processed_test() {
-        let raw = raw::Digest {
+        let raw = raw::Capture {
             time: 1234567,
             kernel: raw::Kernel::default(),
             processes: vec![
@@ -525,7 +594,10 @@ mod tests {
                 },
             ),
         ]);
-        let processed = processed::Digest::from(raw);
+        let processed = processed::digest_from_memory_monitor_output(
+            raw::MemoryMonitorOutput { capture: raw, buckets_definitions: Vec::new() },
+            false,
+        );
         // Check that the process list is sorted
         {
             let mut pairs = processed.processes.windows(2);
@@ -553,7 +625,7 @@ mod tests {
     // that it owns a VMO that has a parent with committed memory.
     #[test]
     fn code_pages_received_from_blobfs_test() {
-        let raw = raw::Digest {
+        let capture = raw::Capture {
             time: 1234567,
             kernel: raw::Kernel::default(),
             processes: vec![
@@ -632,7 +704,11 @@ mod tests {
                 },
             ),
         ]);
-        let processed = processed::Digest::from(raw);
+        let processed = processed::digest_from_memory_monitor_output(
+            raw::MemoryMonitorOutput { capture, buckets_definitions: vec![] },
+            false,
+        );
+        // processed::Digest::from(raw);
         // Check that the process list is sorted
         {
             let mut pairs = processed.processes.windows(2);
