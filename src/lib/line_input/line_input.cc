@@ -715,15 +715,18 @@ void LineInputStdout::EnsureTerminalMode(TerminalMode mode) {
     raw_in_termios_->c_oflag = OPOST | ONLCR;
   }
 
+  // Use TCSADRAIN to ensure that all output currently in the buffer has been written in the
+  // expected manner. Don't use TCSAFLUSH because that will flush the input buffer which will
+  // discard any user input that hasn't been read yet.
   switch (mode) {
     case kOriginalMode:
-      tcsetattr(STDOUT_FILENO, TCSAFLUSH, original_termios_.get());
+      tcsetattr(STDOUT_FILENO, TCSADRAIN, original_termios_.get());
       break;
     case kRawInOutMode:
-      tcsetattr(STDOUT_FILENO, TCSAFLUSH, raw_inout_termios_.get());
+      tcsetattr(STDOUT_FILENO, TCSADRAIN, raw_inout_termios_.get());
       break;
     case kRawInMode:
-      tcsetattr(STDOUT_FILENO, TCSAFLUSH, raw_in_termios_.get());
+      tcsetattr(STDOUT_FILENO, TCSADRAIN, raw_in_termios_.get());
       break;
   }
 #endif
