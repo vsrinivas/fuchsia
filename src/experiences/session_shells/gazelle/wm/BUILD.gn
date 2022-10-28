@@ -23,6 +23,8 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.math:fuchsia.math_rust",
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_rust",
     "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_rust",
+    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3_rust",
+    "//sdk/fidl/fuchsia.ui.shortcut2:fuchsia.ui.shortcut2_rust",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",

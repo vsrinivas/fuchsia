@@ -20,7 +20,10 @@
     ],
     use: [
         {
-            protocol: [ "fuchsia.ui.composition.Flatland" ],
+            protocol: [
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.shortcut2.Registry",
+            ],
         },
     ],
     expose: [

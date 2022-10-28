@@ -9,6 +9,8 @@ use fidl::endpoints::{self, Proxy};
 use fidl_fuchsia_element as felement;
 use fidl_fuchsia_math as fmath;
 use fidl_fuchsia_ui_composition as ui_comp;
+use fidl_fuchsia_ui_input3 as ui_input3;
+use fidl_fuchsia_ui_shortcut2 as ui_shortcut2;
 use fidl_fuchsia_ui_views as ui_views;
 use fuchsia_scenic::flatland;
 use futures::{
@@ -24,6 +26,9 @@ const BORDER_WIDTH: i32 = 10;
 const BG_COLOR: ui_comp::ColorRgba =
     ui_comp::ColorRgba { red: 0.41, green: 0.24, blue: 0.21, alpha: 1.0 };
 
+/// Shortcut ID registered for "cycle through windows" a.k.a. Alt-Tab.
+const CYCLE_WINDOWS_SHORTCUT_ID: u32 = 1;
+
 /// `View` implements the view in the Model-View-Controller sense - it allows
 /// manipulation of the graphics on-screen without worrying about all the
 /// low-level details.
@@ -36,6 +41,8 @@ const BG_COLOR: ui_comp::ColorRgba =
 /// indicating things that will happen eventually.
 pub struct View {
     flatland: flatland::FlatlandProxy,
+
+    view_ref: ui_views::ViewRef,
     id_generator: flatland::IdGenerator,
     desktop_content_id: flatland::ContentId,
     frame_transform_id: flatland::TransformId,
@@ -71,10 +78,16 @@ impl View {
         let (view_focuser, view_focuser_request) =
             endpoints::create_proxy::<ui_views::FocuserMarker>()
                 .context("creating view_focuser")?;
+
+        let mut view_ref_pair =
+            ui_views::ViewIdentityOnCreation::from(fuchsia_scenic::ViewRefPair::new()?);
+
+        let view_ref = fuchsia_scenic::duplicate_view_ref(&view_ref_pair.view_ref)?;
+
         flatland
             .create_view2(
                 &mut view_creation_token,
-                &mut ui_views::ViewIdentityOnCreation::from(fuchsia_scenic::ViewRefPair::new()?),
+                &mut view_ref_pair,
                 flatland::ViewBoundProtocols {
                     view_focuser: Some(view_focuser_request),
                     ..flatland::ViewBoundProtocols::EMPTY
@@ -117,6 +130,7 @@ impl View {
 
         Ok(View {
             flatland,
+            view_ref,
             id_generator,
             desktop_content_id,
             frame_transform_id,
@@ -131,6 +145,12 @@ impl View {
     /// The set of currently open windows.
     pub fn window_ids(&self) -> Vec<WindowId> {
         self.window_order.iter().copied().collect()
+    }
+
+    /// Returns a duplicated ViewRef for the Window Manager as a whole.
+    pub fn get_view_ref(&self) -> anyhow::Result<ui_views::ViewRef> {
+        fuchsia_scenic::duplicate_view_ref(&self.view_ref)
+            .context("duplicating Window Manager ViewRef")
     }
 
     /// Hanging get for updates to the parent viewport's logical size.
@@ -164,11 +184,12 @@ impl View {
         &mut self,
         mut viewport_creation_token: ui_views::ViewportCreationToken,
     ) -> anyhow::Result<CreateWindowResponse> {
-        let viewport_size =
-            self.viewport_size.expect("called create_window before setting initial viewport_size");
-
         let content_id = self.id_generator.next_content_id();
         let window_id = WindowId(content_id.value);
+
+        tracing::info!("create_window {:?}", window_id);
+        let viewport_size =
+            self.viewport_size.expect("called create_window before setting initial viewport_size");
 
         let (child_view_watcher, child_view_watcher_server) =
             endpoints::create_proxy::<flatland::ChildViewWatcherMarker>()
@@ -223,6 +244,7 @@ impl View {
         window_id: WindowId,
         child_view: ui_views::ViewRef,
     ) -> anyhow::Result<()> {
+        tracing::info!("register_window {:?}", window_id);
         let window = match self.windows.get_mut(&window_id) {
             Some(window) => window,
             None => bail!("Tried to register window {:?}, but there's no such window", window_id),
@@ -242,6 +264,7 @@ impl View {
 
     /// Dismiss the window with the given `window_id`.
     pub fn dismiss_window(&mut self, window_id: WindowId) -> anyhow::Result<DismissWindowResponse> {
+        tracing::info!("dismiss_window {:?}", window_id);
         if self.windows.remove(&window_id).is_none() {
             bail!("Tried to dismiss window {:?}, but there's no such window", window_id)
         };
@@ -272,6 +295,7 @@ impl View {
     /// Panics unless an initial `viewport_size` has already been specified via
     /// `set_viewport_size`.
     pub fn update(&self) -> anyhow::Result<UpdateResponse> {
+        tracing::info!("update");
         let viewport_size =
             self.viewport_size.expect("called update before setting initial viewport_size");
 
@@ -364,6 +388,18 @@ impl View {
         }
     }
 
+    /// Moves the active (back) window to the front of the window ordering.
+    /// Repeated calls to this will cycle through the windows, making each the
+    /// active window, in turn.
+    ///
+    /// If there are fewer that 2 windows open, this does nothing.
+    pub fn cycle_windows(&mut self) {
+        tracing::info!("cycle_windows");
+        if let Some(active) = self.window_order.pop_back() {
+            self.window_order.push_front(active);
+        }
+    }
+
     /// Calculates the size of the desktop background, based on the given
     /// viewport_size.
     fn desktop_size(viewport_size: &fmath::SizeU) -> fmath::SizeU {
@@ -437,17 +473,42 @@ pub struct UpdateResponse {
 /// tasks.
 ///
 /// Users of `Manager` must call `select_background_task` regularly to drive
-/// internal background tasks and observe any errors going on in the background.
+/// internal background tasks. They should also periodically call
+/// `take_background_results()` and poll the resulting stream in order to
+/// observe any errors going on in the background.
 pub struct Manager {
     view: View,
+
+    /// Tasks that may need to modify the manager once they are complete. This
+    /// is for things like keyboard events. We don't necessarily know that these
+    /// are going to complete at any point.
     background_tasks: stream::FuturesUnordered<
         future::LocalBoxFuture<'static, Box<dyn FnOnce(&mut Manager) -> anyhow::Result<()>>>,
     >,
+
+    /// Asynchronous results of calls that we have made. The manager doesn't
+    /// take any action as result of these futures, and strictly speaking they
+    /// don't even need to get polled. However, they're provided to the caller
+    /// for logging or panicking when errors are encountered.
+    background_results:
+        stream::FuturesUnordered<future::LocalBoxFuture<'static, anyhow::Result<()>>>,
+}
+
+/// Configuration options for `Manager`.
+#[derive(Debug, Clone)]
+pub struct ManagerOptions {
+    /// Chord of keys that, when pressed, will cause the windows to be cycled
+    /// through.
+    pub cycle_windows_shortcut: Vec<ui_input3::KeyMeaning>,
 }
 
 impl Manager {
     /// Create a new `Manager` that manipulates the given `View`.
-    pub async fn new(mut view: View) -> anyhow::Result<Self> {
+    pub async fn new(
+        mut view: View,
+        shortcuts: ui_shortcut2::RegistryProxy,
+        options: ManagerOptions,
+    ) -> anyhow::Result<Self> {
         let viewport_size = view.query_viewport_size().await.context("getting viewport size")?;
 
         view.set_viewport_size(viewport_size);
@@ -455,7 +516,32 @@ impl Manager {
         let update_response = view.update()?;
         update_response.on_completed.await?;
 
-        Ok(Self { view, background_tasks: stream::FuturesUnordered::new() })
+        let (listener_client, listener_requests) =
+            endpoints::create_request_stream::<ui_shortcut2::ListenerMarker>()
+                .context("creating shortcut listener")?;
+
+        shortcuts
+            .set_view(&mut view.get_view_ref()?, listener_client)
+            .context("associating ViewRef with shortcut registry")?;
+
+        shortcuts
+            .register_shortcut(&mut ui_shortcut2::Shortcut {
+                id: CYCLE_WINDOWS_SHORTCUT_ID,
+                key_meanings: options.cycle_windows_shortcut,
+                options: ui_shortcut2::Options::EMPTY,
+            })
+            .await?
+            .map_err(|e| anyhow!("shortcut error while registering: {:?}", e))?;
+
+        let mut res = Self {
+            view,
+            background_tasks: stream::FuturesUnordered::new(),
+            background_results: stream::FuturesUnordered::new(),
+        };
+
+        res.background_stream(listener_requests, Self::handle_shortcut_event);
+
+        Ok(res)
     }
 
     /// Handle a `GraphicalPresenter::PresentView` request.
@@ -560,6 +646,44 @@ impl Manager {
         return SelectBackgroundTask { manager: self };
     }
 
+    /// Take a Stream of Results of calls that the Manager has made to backends
+    /// since the last time `take_background_results` was called.
+    pub fn take_background_results(
+        &mut self,
+    ) -> impl stream::FusedStream<Item = anyhow::Result<()>> {
+        std::mem::take(&mut self.background_results)
+    }
+
+    /// Handles an event received from the Shortcuts service.
+    fn handle_shortcut_event(
+        &mut self,
+        event: fidl::Result<ui_shortcut2::ListenerRequest>,
+    ) -> anyhow::Result<()> {
+        tracing::info!("handle_shortcut_event");
+        match event.context("handling shortcut event")? {
+            ui_shortcut2::ListenerRequest::OnShortcut {
+                id: CYCLE_WINDOWS_SHORTCUT_ID,
+                responder,
+            } => {
+                responder
+                    .send(ui_shortcut2::Handled::Handled)
+                    .context("replying to shortcut event")?;
+                self.view.cycle_windows();
+
+                let update_response = self.view.update()?;
+                self.background_result(update_response.on_completed);
+
+                Ok(())
+            }
+            ui_shortcut2::ListenerRequest::OnShortcut { id, responder } => {
+                tracing::error!("Unknown shortcut ID: {}", id);
+                responder
+                    .send(ui_shortcut2::Handled::NotHandled)
+                    .context("replying to shortcut event")
+            }
+        }
+    }
+
     /// Enqueues a background task from a Future and a closure. Note that `fut`
     /// has a static lifetime, and therefore cannot depend on `self`. The
     /// closure takes a `&mut Manager` and the output of `fut`.
@@ -579,6 +703,28 @@ impl Manager {
         );
     }
 
+    /// Observes a Stream in the background, calling `work` for each Item
+    /// emitted by the stream.
+    ///
+    /// This is the same as `background_task`, but for Streams.
+    fn background_stream<Stream, Work>(&mut self, stream: Stream, mut work: Work)
+    where
+        Stream: futures::Stream + Unpin + 'static,
+        Work: FnMut(&mut Manager, Stream::Item) -> anyhow::Result<()> + 'static,
+    {
+        self.background_task(
+            stream.into_future(),
+            move |this, (maybe_item, rest)| match maybe_item {
+                None => Ok(()),
+                Some(item) => {
+                    let result = work(this, item);
+                    this.background_stream(rest, work);
+                    result
+                }
+            },
+        );
+    }
+
     /// Version of `background_task` that passes through any errors returned by
     /// `fut`. This is to `background_task` what `and_then` is to `map`.
     fn and_then_background_task<Ok, Fut, Work>(&mut self, fut: Fut, work: Work)
@@ -592,14 +738,14 @@ impl Manager {
         })
     }
 
-    /// Version of `background_task` that does no work.
-    /// `select_background_task()` simply polls `fut` and then returns the
-    /// result once it's done.
+    /// Sends a future that reports the result of an async operation to the
+    /// `background_results` stream. Clients can observe it by calling
+    /// `take_background_results`.
     fn background_result<Fut>(&mut self, fut: Fut)
     where
         Fut: futures::Future<Output = anyhow::Result<()>> + 'static,
     {
-        self.background_task(fut, |_, result| result)
+        self.background_results.push(fut.boxed_local())
     }
 }
 
@@ -645,6 +791,8 @@ mod tests {
     use fidl_fuchsia_element as felement;
     use fidl_fuchsia_ui_app as ui_app;
     use fidl_fuchsia_ui_composition as ui_comp;
+    use fidl_fuchsia_ui_input3 as ui_input3;
+    use fidl_fuchsia_ui_shortcut2 as ui_shortcut2;
     use fidl_fuchsia_ui_test_scene as ui_test_scene;
     use fidl_fuchsia_ui_views as ui_views;
     use fuchsia_async as fasync;
@@ -690,8 +838,10 @@ mod tests {
         builder
             .add_route(
                 Route::new()
-                    .capability(Capability::protocol_by_name("fuchsia.ui.test.scene.Controller"))
                     .capability(Capability::protocol_by_name("fuchsia.ui.composition.Flatland"))
+                    .capability(Capability::protocol_by_name("fuchsia.ui.shortcut2.Registry"))
+                    .capability(Capability::protocol_by_name("fuchsia.ui.test.input.Registry"))
+                    .capability(Capability::protocol_by_name("fuchsia.ui.test.scene.Controller"))
                     .from(&test_ui_stack)
                     .to(Ref::parent()),
             )
@@ -709,6 +859,7 @@ mod tests {
 
         let server_task = fasync::Task::local(test_server(
             realm.root.connect_to_protocol_at_exposed_dir::<flatland::FlatlandMarker>()?,
+            realm.root.connect_to_protocol_at_exposed_dir::<ui_shortcut2::RegistryMarker>()?,
             realm.root.connect_to_protocol_at_exposed_dir::<ui_test_scene::ControllerMarker>()?,
             graphical_presenter_request_stream,
         ));
@@ -716,9 +867,9 @@ mod tests {
         Ok((server_task, graphical_presenter_proxy))
     }
 
-    // A test server that loops on every frame.
     async fn test_server(
         flatland: flatland::FlatlandProxy,
+        shortcut_registry: ui_shortcut2::RegistryProxy,
         scene_controller: ui_test_scene::ControllerProxy,
         mut graphical_presenter_request_stream: felement::GraphicalPresenterRequestStream,
     ) -> anyhow::Result<()> {
@@ -749,7 +900,20 @@ mod tests {
             .0
             .unwrap();
 
-        let mut server = Manager::new(View::new(flatland.clone(), view_creation_token)?).await?;
+        let mut background_results = stream::SelectAll::new();
+
+        let mut server = Manager::new(
+            View::new(flatland.clone(), view_creation_token)?,
+            shortcut_registry,
+            ManagerOptions {
+                // Make the shortcut be "Tab", because "Alt-Tab" can't currently
+                // be typed in our virtual test keyboard.
+                cycle_windows_shortcut: vec![ui_input3::KeyMeaning::NonPrintableKey(
+                    ui_input3::NonPrintableKey::Tab,
+                )],
+            },
+        )
+        .await?;
         let mut flatland_events = flatland.take_event_stream();
 
         flatland.present(flatland::PresentArgs::EMPTY)?;
@@ -782,22 +946,21 @@ mod tests {
                 }
                 bg = server.select_background_task() => {
                     bg?;
-                }
-            }
-        }
-
-        tracing::info!("finishing background tasks...");
-        loop {
-            flatland.present(flatland::PresentArgs::EMPTY)?;
-            await_next_on_frame_begin(&mut flatland_events).await;
-
-            select! {
-                bg = server.select_background_task() => {
+                },
+                bg = background_results.select_next_some() => {
                     bg?;
                 }
-                complete => return Ok(())
             }
+
+            background_results.push(server.take_background_results());
         }
+        background_results.push(server.take_background_results());
+
+        tracing::info!("finishing background tasks...");
+        flatland.present(flatland::PresentArgs::EMPTY)?;
+        await_next_on_frame_begin(&mut flatland_events).await;
+        background_results.for_each(|result| future::ready(result.unwrap())).await;
+        Ok(())
     }
 
     struct TestWindow {
@@ -863,11 +1026,42 @@ mod tests {
         }
 
         async fn until_status_is(&self, status: ui_comp::ParentViewportStatus) {
-            while self.parent_viewport_watcher.get_status().await.unwrap() != status {}
+            until_true_or_timeout(
+                || async { self.parent_viewport_watcher.get_status().await.unwrap() == status },
+                fasync::Duration::from_seconds(10),
+            )
+            .await
+
+            // while self.parent_viewport_watcher.get_status().await.unwrap() != status {}
         }
 
         async fn until_focused_is(&self, focused: bool) {
-            while self.view_ref_focused.watch().await.unwrap().focused.unwrap() != focused {}
+            until_true_or_timeout(
+                || async {
+                    self.view_ref_focused.watch().await.unwrap().focused.unwrap() == focused
+                },
+                fasync::Duration::from_seconds(10),
+            )
+            .await
+        }
+    }
+
+    /// Helper function that continuously polls `pred` until it returns true or
+    /// the timeout elapses.
+    async fn until_true_or_timeout<Pred, Fut>(mut pred: Pred, timeout: fasync::Duration)
+    where
+        Pred: FnMut() -> Fut,
+        Fut: future::Future<Output = bool>,
+    {
+        let mut timer = fasync::Timer::new(fasync::Time::after(timeout)).fuse();
+
+        loop {
+            select! {
+                result = pred().fuse() => if result {
+                    return
+                },
+                _ = timer => panic!("deadline exceeded")
+            }
         }
     }
 
@@ -1086,4 +1280,83 @@ mod tests {
         realm.destroy().await?;
         Ok(())
     }
+
+    // TODO(fxbug.dev/113350): Deflake this.
+    // #[fuchsia::test]
+    // async fn cycle_windows() -> Result<(), Error> {
+    //     let realm = build_realm().await?;
+    //     let (server_task, graphical_presenter_proxy) = start_server_task(&realm)?;
+
+    //     let (keyboard, keyboard_server) =
+    //         endpoints::create_proxy::<ui_test_input::KeyboardMarker>()?;
+    //     let input_registry =
+    //         realm.root.connect_to_protocol_at_exposed_dir::<ui_test_input::RegistryMarker>()?;
+
+    //     input_registry
+    //         .register_keyboard(ui_test_input::RegistryRegisterKeyboardRequest {
+    //             device: Some(keyboard_server),
+    //             ..ui_test_input::RegistryRegisterKeyboardRequest::EMPTY
+    //         })
+    //         .await?;
+
+    //     // Create three windows.
+    //     let window1 = TestWindow::create(
+    //         realm.root.connect_to_protocol_at_exposed_dir::<flatland::FlatlandMarker>()?,
+    //         &graphical_presenter_proxy,
+    //     )
+    //     .await?;
+    //     let window2 = TestWindow::create(
+    //         realm.root.connect_to_protocol_at_exposed_dir::<flatland::FlatlandMarker>()?,
+    //         &graphical_presenter_proxy,
+    //     )
+    //     .await?;
+    //     let window3 = TestWindow::create(
+    //         realm.root.connect_to_protocol_at_exposed_dir::<flatland::FlatlandMarker>()?,
+    //         &graphical_presenter_proxy,
+    //     )
+    //     .await?;
+
+    //     window3.until_status_is(ui_comp::ParentViewportStatus::ConnectedToDisplay).await;
+    //     window3.until_focused_is(true).await;
+
+    //     let send_text = |t: String| async {
+    //         keyboard
+    //             .simulate_us_ascii_text_entry(
+    //                 ui_test_input::KeyboardSimulateUsAsciiTextEntryRequest {
+    //                     text: Some(t),
+    //                     ..ui_test_input::KeyboardSimulateUsAsciiTextEntryRequest::EMPTY
+    //                 },
+    //             )
+    //             .await
+    //             .expect("Failed to inject text using fuchsia.ui.test.input.Keyboard");
+    //     };
+
+    //     send_text("\t".to_string()).await;
+
+    //     window2.until_status_is(ui_comp::ParentViewportStatus::ConnectedToDisplay).await;
+    //     window2.until_focused_is(true).await;
+    //     window3.until_status_is(ui_comp::ParentViewportStatus::DisconnectedFromDisplay).await;
+    //     window3.until_focused_is(false).await;
+
+    //     send_text("\t".to_string()).await;
+
+    //     window1.until_status_is(ui_comp::ParentViewportStatus::ConnectedToDisplay).await;
+    //     window1.until_focused_is(true).await;
+    //     window2.until_status_is(ui_comp::ParentViewportStatus::DisconnectedFromDisplay).await;
+    //     window2.until_focused_is(false).await;
+
+    //     send_text("\t".to_string()).await;
+
+    //     window3.until_status_is(ui_comp::ParentViewportStatus::ConnectedToDisplay).await;
+    //     window3.until_focused_is(true).await;
+    //     window1.until_status_is(ui_comp::ParentViewportStatus::DisconnectedFromDisplay).await;
+    //     window1.until_focused_is(false).await;
+
+    //     // Delete the `GraphicalPresenterProxy`, which tells the server to shut
+    //     // down.
+    //     std::mem::drop(graphical_presenter_proxy);
+    //     server_task.await?;
+    //     realm.destroy().await?;
+    //     Ok(())
+    // }
 }

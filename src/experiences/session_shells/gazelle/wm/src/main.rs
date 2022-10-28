@@ -6,6 +6,7 @@ use anyhow::Context;
 use fidl_fuchsia_element as felement;
 use fidl_fuchsia_ui_app as ui_app;
 use fidl_fuchsia_ui_composition as ui_comp;
+use fidl_fuchsia_ui_input3 as ui_input3;
 use fidl_fuchsia_ui_views as ui_views;
 use fuchsia_component::{client, server};
 use fuchsia_scenic::flatland;
@@ -101,7 +102,6 @@ async fn get_create_view2_request(
 #[fuchsia::main(logging = true)]
 async fn main() -> anyhow::Result<()> {
     tracing::info!("{}", WELCOME_LOG);
-    let flatland = client::connect_to_protocol::<flatland::FlatlandMarker>()?;
 
     let mut fs = server::ServiceFs::new();
     fs.dir("svc").add_fidl_service(IncomingService::GraphicalPresenter);
@@ -115,13 +115,28 @@ async fn main() -> anyhow::Result<()> {
     let (view_creation_token, _control_handle) =
         get_create_view2_request(&mut view_provider_request_stream).await;
 
+    let flatland = client::connect_to_protocol::<flatland::FlatlandMarker>()?;
     let mut flatland_events = flatland.take_event_stream();
     let mut incoming_connections = stream::iter(queued_connections.into_iter()).chain(fs).fuse();
 
     let mut graphical_presenter_requests = stream::SelectAll::new();
 
-    let mut manager =
-        wm::Manager::new(wm::View::new(flatland.clone(), view_creation_token)?).await?;
+    let mut background_results: stream::SelectAll<
+        stream::LocalBoxStream<'static, anyhow::Result<()>>,
+    > = stream::SelectAll::new();
+
+    let mut manager = wm::Manager::new(
+        wm::View::new(flatland.clone(), view_creation_token)?,
+        client::connect_to_protocol::<fidl_fuchsia_ui_shortcut2::RegistryMarker>()?,
+        wm::ManagerOptions {
+            cycle_windows_shortcut: vec![
+                ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Alt),
+                ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Tab),
+            ],
+        },
+    )
+    .await?;
+
     flatland.present(flatland::PresentArgs::EMPTY)?;
 
     let mut presentation_budget = 0;
@@ -177,6 +192,12 @@ async fn main() -> anyhow::Result<()> {
                 let () = background_result.expect("while doing background work");
                 presentation_requested = true;
              }
+             background_result = background_results.select_next_some() => {
+                let () = background_result.expect("while doing background work");
+                presentation_requested = true;
+             }
         }
+
+        background_results.push(manager.take_background_results().boxed_local())
     }
 }
