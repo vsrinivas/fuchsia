@@ -195,6 +195,7 @@ TEST_F(ClientConnectionTest, Connect) {
 
   TestClientConnectionIfc test_ifc;
   sync_completion_t signal_ioctl_received;
+  std::atomic<bool> ies_cleared;
   auto on_ioctl = [&](t_void *, pmlan_ioctl_req req) -> mlan_status {
     if (req->action == MLAN_ACT_SET && req->req_id == MLAN_IOCTL_BSS) {
       auto bss = reinterpret_cast<const mlan_ds_bss *>(req->pbuf);
@@ -229,6 +230,14 @@ TEST_F(ClientConnectionTest, Connect) {
         sync_completion_signal(&signal_ioctl_received);
         return MLAN_STATUS_PENDING;
       }
+    } else if (req->action == MLAN_ACT_SET && req->req_id == MLAN_IOCTL_MISC_CFG) {
+      auto misc_cfg = reinterpret_cast<mlan_ds_misc_cfg *>(req->pbuf);
+      if (misc_cfg->sub_command == MLAN_OID_MISC_GEN_IE) {
+        if (misc_cfg->param.gen_ie.type == MLAN_IE_TYPE_GEN_IE && misc_cfg->param.gen_ie.len == 0) {
+          // This is an ioctl to clear out any existing IEs.
+          ies_cleared = true;
+        }
+      }
     }
     return HandleOtherIoctls(req);
   };
@@ -261,6 +270,8 @@ TEST_F(ClientConnectionTest, Connect) {
   // Ensure the Signal quality indication was called.
   EXPECT_EQ(test_ifc.ind_rssi, kTestRssi);
   EXPECT_EQ(test_ifc.ind_snr, kTestSnr);
+  // Expect that each connect call will clear out any existing IEs first.
+  EXPECT_TRUE(ies_cleared.load());
 
   ASSERT_OK(connection.Disconnect(kStaAddr, 0, [&](wlan::nxpfmac::IoctlStatus status) {
     EXPECT_EQ(wlan::nxpfmac::IoctlStatus::Success, status);

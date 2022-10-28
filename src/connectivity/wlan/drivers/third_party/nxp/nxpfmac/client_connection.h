@@ -72,6 +72,7 @@ class ClientConnection {
   zx_status_t GetRsnCipherSuites(const uint8_t* ies, size_t ies_count,
                                  uint8_t* out_pairwise_cipher_suite,
                                  uint8_t* out_group_cipher_suite);
+  zx_status_t ClearIes();
   zx_status_t ConfigureIes(const uint8_t* ies, size_t ies_count);
   zx_status_t SetAuthMode(wlan_auth_type_t auth_type);
   zx_status_t SetEncryptMode(uint8_t cipher_suite);

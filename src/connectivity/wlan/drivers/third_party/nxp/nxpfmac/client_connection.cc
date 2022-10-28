@@ -120,9 +120,17 @@ zx_status_t ClientConnection::Connect(const wlan_fullmac_connect_req_t* req,
     }
   }
 
+  // We need to clear the IEs first to reset the internal MLAN state. This is especially true in
+  // case there are no security IEs, otherwise the previous security settings might be applied to
+  // the new connection.
+  status = ClearIes();
+  if (status != ZX_OK) {
+    NXPF_ERR("Failed to clear IEs: %s", zx_status_get_string(status));
+    return status;
+  }
   status = ConfigureIes(req->security_ie_list, req->security_ie_count);
   if (status != ZX_OK) {
-    NXPF_ERR("Failed to configure security IES: %s", zx_status_get_string(status));
+    NXPF_ERR("Failed to configure security IEs: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -344,6 +352,20 @@ zx_status_t ClientConnection::GetRsnCipherSuites(const uint8_t* ies, size_t ies_
   }
   *out_pairwise_cipher_suite = rsn->pairwise_cipher.list[0].type;
   *out_group_cipher_suite = rsn->group_cipher.type;
+  return ZX_OK;
+}
+
+zx_status_t ClientConnection::ClearIes() {
+  IoctlRequest<mlan_ds_misc_cfg> request(
+      MLAN_IOCTL_MISC_CFG, MLAN_ACT_SET, bss_index_,
+      mlan_ds_misc_cfg{.sub_command = MLAN_OID_MISC_GEN_IE,
+                       .param{.gen_ie{.type = MLAN_IE_TYPE_GEN_IE}}});
+
+  IoctlStatus io_status = context_->ioctl_adapter_->IssueIoctlSync(&request);
+  if (io_status != IoctlStatus::Success) {
+    NXPF_ERR("Failed to clear IEs: %d", io_status);
+    return ZX_ERR_IO;
+  }
   return ZX_OK;
 }
 
