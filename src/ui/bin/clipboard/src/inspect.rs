@@ -20,6 +20,9 @@ use {
 #[derive(Debug, Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub(crate) enum EventType {
     Read,
+    /// Watch events are recorded once per `Watch` call (rather than attempting to group the calls
+    /// into complete hanging-get sessions).
+    Watch,
     Write,
     Clear,
     ReadAccessDenied,
@@ -35,6 +38,7 @@ impl std::fmt::Display for EventType {
         use EventType::*;
         let s = match self {
             Read => "read",
+            Watch => "watch",
             Write => "write",
             Clear => "clear",
             ReadAccessDenied => "read_access_denied",

@@ -297,8 +297,8 @@ async fn test_basic_copy_paste_across_different_view_refs() -> Result<(), Error>
         // exposes its FIDL services, and properly connects to the services it needs. (Semantic
         // correctness is verified by unit tests.)
         //
-        // Given that scope, receiving _some_ response to the `set_item()` and `get_item()` FIDL
-        // calls is sufficient.
+        // Given that scope, receiving _some_ response to the `set_item()`, `get_item()`, and
+        // 'watch()` FIDL calls is sufficient.
 
         let _ = writer_a
             .set_item(make_clipboard_item("text/json".to_string(), "{}".to_string()))
@@ -307,6 +307,7 @@ async fn test_basic_copy_paste_across_different_view_refs() -> Result<(), Error>
         handles.set_focus_chain(vec![&view_ref_b]).await?;
 
         let _ = reader_b.get_item(fclip::ReaderGetItemRequest::EMPTY).await?;
+        let _ = reader_b.watch(fclip::ReaderWatchRequest::EMPTY).await?;
 
         Ok(())
     }

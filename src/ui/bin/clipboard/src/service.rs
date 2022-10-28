@@ -5,7 +5,8 @@
 use {
     crate::{
         errors::ClipboardError, inspect, inspect::ServiceInspectData, items::ClipboardItem,
-        shared::ViewRefPrinter, tasks::LocalTaskTracker,
+        metadata::ClipboardMetadata, shared::ViewRefPrinter, tasks::LocalTaskTracker,
+        watch::WatchServer,
     },
     anyhow::{Context, Error},
     async_utils::hanging_get::client::HangingGetStream,
@@ -15,7 +16,6 @@ use {
     fuchsia_async::{self as fasync, Task},
     fuchsia_inspect as finspect, fuchsia_zircon as zx,
     futures::{future::Shared, select_biased, FutureExt, StreamExt, TryFutureExt, TryStreamExt},
-    once_cell::unsync::OnceCell,
     std::{
         cell::RefCell,
         collections::HashMap,
@@ -95,13 +95,14 @@ pub(crate) struct Service<T: ServiceDependencies> {
     contents: RefCell<ClipboardContents>,
     /// Keeps track of the registration state for each `ViewRef`'s koid.
     view_ref_koid_to_view_ref_state: RefCell<HashMap<zx::Koid, ViewRefState>>,
+    /// Implements `Reader.Watch`.
+    watch_server: Rc<WatchServer>,
 
     inspect_data: ServiceInspectData,
 
-    /// Retains the pending `Task` in which the clipboard service listens for focus chain updates.
-    focus_watcher_task: OnceCell<Task<()>>,
-
-    /// Retains pending `Task`s associated with the service. This includes
+    /// Retains pending `Task`s associated with the service. This includes the
+    /// * focus watcher task
+    /// * WatchServer task
     /// * reader registry and writer registry tasks for each client
     /// * reader and writer tasks for each view
     tracked_tasks: LocalTaskTracker,
@@ -116,17 +117,20 @@ impl<T: ServiceDependencies> Service<T> {
         inspect_root: &finspect::Node,
     ) -> Rc<Self> {
         let now = clock.now();
+        let (watch_server, watch_server_task) =
+            WatchServer::new(ClipboardMetadata::with_last_modified(now));
         let inspect_data = ServiceInspectData::new(inspect_root, now);
         let svc = Rc::new(Self {
             clock,
             focused_view_ref_koid: RefCell::new(None),
             contents: RefCell::new(ClipboardContents::new(now)),
             view_ref_koid_to_view_ref_state: RefCell::new(HashMap::new()),
+            watch_server,
             inspect_data,
-            focus_watcher_task: OnceCell::new(),
             tracked_tasks: LocalTaskTracker::new(),
         });
         svc.spawn_focus_watcher(focus_provider_proxy);
+        svc.tracked_tasks.track(watch_server_task);
         svc
     }
 
@@ -139,15 +143,12 @@ impl<T: ServiceDependencies> Service<T> {
         self.focused_view_ref_koid.try_borrow().map(|r| *r).unwrap_or(None)
     }
 
-    /// Spawns a singleton task that handles focus change events.
-    ///
-    /// Will panic if this method is called more than once.
+    /// Spawns a singleton task that handles focus change events. Do not call more than once.
     fn spawn_focus_watcher(self: &Rc<Self>, focus_provider_proxy: focus::FocusChainProviderProxy) {
-        let task = Task::local(
+        self.tracked_tasks.track(Task::local(
             Self::focus_watcher_task(Rc::downgrade(self), focus_provider_proxy)
                 .unwrap_or_else(|e: Error| error!("Error in focus_watcher_task: {e:?}")),
-        );
-        self.focus_watcher_task.set(task).expect("Set focus_watcher_task more than once");
+        ));
     }
 
     async fn focus_watcher_task(
@@ -169,6 +170,9 @@ impl<T: ServiceDependencies> Service<T> {
                     let old_view_ref_koid =
                         this.focused_view_ref_koid.replace(focused_view_ref_koid);
                     if old_view_ref_koid != focused_view_ref_koid {
+                        // Errors logged inside `update_focus`.
+                        let _ = this.watch_server.update_focus(focused_view_ref_koid);
+
                         this.inspect_data
                             .record_event(inspect::EventType::FocusUpdated, this.clock.now());
                         debug!(
@@ -227,26 +231,29 @@ impl<T: ServiceDependencies> Service<T> {
     ) -> Result<(), Error> {
         use fclip::FocusedWriterRegistryRequest::*;
 
-        while let (Some(this), Some(req)) = (
-            weak_this.upgrade(),
-            stream
+        // TODO(fxbug.dev/113422): Switch to let chain when `let_chains` feature is stabilized.
+        while let Some(this) = weak_this.upgrade() {
+            if let Some(req) = stream
                 .try_next()
                 .await
-                .with_context(|| format!("reading from FocusedWriterRegistryRequestStream"))?,
-        ) {
-            match req {
-                RequestWriter { payload, responder } => {
-                    match this.register_focused_writer_client(payload) {
-                        Ok(_) => {
-                            responder.send(&mut Ok(()))?;
-                        }
-                        Err(e) => {
-                            let server_error: fclip::ClipboardError = e.into();
-                            let mut result = Err(server_error);
-                            responder.send(&mut result)?;
-                        }
-                    };
+                .with_context(|| format!("reading from FocusedWriterRegistryRequestStream"))?
+            {
+                match req {
+                    RequestWriter { payload, responder } => {
+                        match this.register_focused_writer_client(payload) {
+                            Ok(_) => {
+                                responder.send(&mut Ok(()))?;
+                            }
+                            Err(e) => {
+                                let server_error: fclip::ClipboardError = e.into();
+                                let mut result = Err(server_error);
+                                responder.send(&mut result)?;
+                            }
+                        };
+                    }
                 }
+            } else {
+                break;
             }
         }
         Ok(())
@@ -355,6 +362,7 @@ impl<T: ServiceDependencies> Service<T> {
         contents.clipboard_item.replace(item);
         contents.last_modified = now;
         self.inspect_data.record_event(inspect::EventType::Write, now);
+        self.notify_watchers(now);
         Ok(())
     }
 
@@ -366,10 +374,17 @@ impl<T: ServiceDependencies> Service<T> {
         let mut contents = self.contents.borrow_mut();
         let _ = contents.clipboard_item.take();
         contents.last_modified = now;
-
         self.inspect_data.clear_items(now);
         self.inspect_data.record_event(inspect::EventType::Clear, now);
+        self.notify_watchers(now);
         Ok(())
+    }
+
+    fn notify_watchers(self: &Rc<Self>, last_modified: zx::Time) {
+        // Errors logged inside called method.
+        let _ = self
+            .watch_server
+            .update_clipboard_metadata(ClipboardMetadata::with_last_modified(last_modified));
     }
 
     /// Spawns a task that handles a single client's requests to register for read access.
@@ -397,26 +412,29 @@ impl<T: ServiceDependencies> Service<T> {
     ) -> Result<(), Error> {
         use fclip::FocusedReaderRegistryRequest::*;
 
-        while let (Some(this), Some(req)) = (
-            weak_this.upgrade(),
-            stream
+        // TODO(fxbug.dev/113422): Switch to let chain when `let_chains` feature is stabilized.
+        while let Some(this) = weak_this.upgrade() {
+            if let Some(req) = stream
                 .try_next()
                 .await
-                .with_context(|| format!("reading from FocusedReaderRegistryRequestStream"))?,
-        ) {
-            match req {
-                RequestReader { payload, responder } => {
-                    match this.register_focused_reader_client(payload) {
-                        Ok(_) => {
-                            responder.send(&mut Ok(()))?;
-                        }
-                        Err(e) => {
-                            let server_error: fclip::ClipboardError = e.into();
-                            let mut result = Err(server_error);
-                            responder.send(&mut result)?;
+                .with_context(|| format!("reading from FocusedReaderRegistryRequestStream"))?
+            {
+                match req {
+                    RequestReader { payload, responder } => {
+                        match this.register_focused_reader_client(payload) {
+                            Ok(_) => {
+                                responder.send(&mut Ok(()))?;
+                            }
+                            Err(e) => {
+                                let server_error: fclip::ClipboardError = e.into();
+                                let mut result = Err(server_error);
+                                responder.send(&mut result)?;
+                            }
                         }
                     }
                 }
+            } else {
+                break;
             }
         }
         Ok(())
@@ -479,9 +497,11 @@ impl<T: ServiceDependencies> Service<T> {
                                     debug!("GetItem response: {:?}", &result);
                                     responder.send(&mut result)?;
                                 },
-                                fclip::ReaderRequest::Watch { .. } => {
-                                    // TODO(fxbug.dev/110935): Implement Watch()
-                                    unimplemented!()
+                                fclip::ReaderRequest::Watch { payload: _, responder } => {
+                                    // Errors logged and handled inside called method.
+                                    let _ = this.watch_server.watch(view_ref_koid, responder);
+                                    this.inspect_data.record_event(
+                                        inspect::EventType::Watch, this.clock.now());
                                 },
                             }
                             // Keep looping
@@ -653,6 +673,8 @@ impl<T: ServiceDependencies> Service<T> {
                         );
                     }
                 }
+                // Errors logged inside called method.
+                let _ = this.watch_server.forget_view_ref(view_ref_koid);
             } else {
                 debug!("Service was already shut down when ViewRef {view_ref_koid:?} was closed");
             }
@@ -704,6 +726,26 @@ impl std::fmt::Display for RegisterFor {
 }
 
 /// Generic clock trait.
+///
+/// All clones of a given original `Clock` instance must represent the same underlying source of
+/// time values. In other words:
+///
+/// ```ignore
+/// let clock_a = MySettableClock::new();
+/// let clock_b = clock_a.clone();
+/// let clock_c = MySettableClock::new();
+///
+/// clock_a.set(zx::Time::from_nanos(17);
+/// clock_c.set(zx::Time::from_nanos(29));
+/// assert_eq!(clock_a.now(), zx::Time::from_nanos(17));
+/// assert_eq!(clock_b.now(), zx::Time::from_nanos(17));
+/// assert_eq!(clock_c.now(), zx::Time::from_nanos(29));
+///
+/// clock_b.set(zx::Time::from_nanos(34));
+/// assert_eq!(clock_a.now(), zx::Time::from_nanos(34));
+/// assert_eq!(clock_b.now(), zx::Time::from_nanos(34));
+/// assert_eq!(clock_c.now(), zx::Time::from_nanos(29));
+/// ```
 pub(crate) trait Clock: Clone + std::fmt::Debug {
     fn now(&self) -> zx::Time;
 }

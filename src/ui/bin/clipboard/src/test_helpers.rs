@@ -13,7 +13,9 @@ use {
     fidl_fuchsia_ui_clipboard::{self as fclip},
     fidl_fuchsia_ui_clipboard_ext::FidlClipboardError,
     fidl_fuchsia_ui_views::ViewRef,
+    fuchsia_async as fasync,
     fuchsia_scenic::{self as scenic},
+    std::{future::Future, task::Poll},
 };
 
 #[async_trait(?Send)]
@@ -123,5 +125,35 @@ impl<T: Unpin> NestedClipboardErrorResult<T>
     async fn flatten_err(self) -> Result<T, Error> {
         let response = self.await.context("Error in FIDL call")?.map_into_clipboard_error()?;
         Ok(response)
+    }
+}
+
+/// Extensions for [`std::task::Poll`].
+trait PollExt<T> {
+    fn into_option(self) -> Option<T>;
+    fn unwrap(self) -> T;
+}
+
+impl<T> PollExt<T> for Poll<T> {
+    fn into_option(self) -> Option<T> {
+        match self {
+            Poll::Ready(x) => Some(x),
+            Poll::Pending => None,
+        }
+    }
+
+    fn unwrap(self) -> T {
+        self.into_option().unwrap()
+    }
+}
+
+/// Extensions for [`fuchsia_async::TestExecutor`].
+pub trait TestExecutorExt {
+    fn pin_and_run_until_stalled<F: Future>(&mut self, main_future: F) -> Option<F::Output>;
+}
+
+impl TestExecutorExt for fasync::TestExecutor {
+    fn pin_and_run_until_stalled<F: Future>(&mut self, main_future: F) -> Option<F::Output> {
+        self.run_until_stalled(&mut Box::pin(main_future)).into_option()
     }
 }

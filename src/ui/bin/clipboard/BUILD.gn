@@ -46,7 +46,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:derivative",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:once_cell",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tracing",
   ]
@@ -83,6 +82,7 @@ rustc_library("test_helpers") {
     "//sdk/fidl/fuchsia.ui.clipboard:fuchsia.ui.clipboard_rust",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_rust",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
     "//src/lib/ui/fidl_fuchsia_ui_clipboard_ext:lib",
     "//src/lib/ui/fuchsia-scenic:fuchsia-scenic",
     "//third_party/rust_crates:anyhow",

@@ -48,7 +48,7 @@ impl TestHandles {
             fidl::endpoints::create_proxy_and_stream::<fclip::ReaderMarker>()?;
         let server_weak = self.server.weak();
         fasync::Task::local(async move {
-            // TODO: Switch to let chain when `let_chains` feature is stabilized.
+            // TODO(fxbug.dev/113422): Switch to let chain when `let_chains` feature is stabilized.
             while let Some(server) = server_weak.upgrade() {
                 if let Some(Ok(req)) = reader_request_stream.next().await {
                     match req {

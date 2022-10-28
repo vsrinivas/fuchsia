@@ -8,11 +8,13 @@
 
 use {
     crate::{
+        metadata::ClipboardMetadata,
         service::{Clock, Service, ServiceDependencies},
         test_helpers::*,
     },
     anyhow::{Context, Error},
     assert_matches::assert_matches,
+    async_utils::hanging_get::client::HangingGetStream,
     fclip::{
         FocusedReaderRegistryMarker, FocusedReaderRegistryProxy, FocusedWriterRegistryMarker,
         FocusedWriterRegistryProxy,
@@ -27,14 +29,17 @@ use {
     fuchsia_inspect::{assert_data_tree, Inspector},
     fuchsia_scenic::{self as scenic, ViewRefPair},
     fuchsia_zircon::{self as zx, DurationNum},
+    futures::StreamExt,
     std::{
         cell::{Cell, RefCell},
         rc::Rc,
+        task::Poll,
     },
 };
 
 #[derive(Debug)]
 enum TestServiceDependencies {/* not instantiable */}
+
 impl ServiceDependencies for TestServiceDependencies {
     type Clock = FakeClock;
 }
@@ -126,7 +131,7 @@ impl TestHandles {
         Ok(proxy)
     }
 
-    async fn set_focus_chain(&self, chain: Vec<&ViewRef>) -> Result<(), Error> {
+    fn internal_set_focus_chain(&self, chain: Vec<&ViewRef>) -> Result<zx::Koid, Error> {
         let expected_koid = chain
             .last()
             .map(|view_ref| view_ref.get_koid())
@@ -142,7 +147,11 @@ impl TestHandles {
         let focus_chain =
             focus::FocusChain { focus_chain: Some(chain), ..focus::FocusChain::EMPTY };
         self.focus_chain_publisher.set_state_and_notify_if_changed(&focus_chain)?;
+        Ok(expected_koid)
+    }
 
+    async fn set_focus_chain(&self, chain: Vec<&ViewRef>) -> Result<(), Error> {
+        let expected_koid = self.internal_set_focus_chain(chain)?;
         // Wait for focus update to reach service.
         loop {
             if Some(expected_koid) == self.service.read_focused_view_ref_koid() {
@@ -150,8 +159,23 @@ impl TestHandles {
             }
             fasync::Timer::new(5_i64.millis().after_now()).await;
         }
-
         Ok(())
+    }
+
+    fn set_focus_chain_with_test_exec(
+        &self,
+        chain: Vec<&ViewRef>,
+        test_exec: &mut fasync::TestExecutor,
+    ) -> Result<(), Error> {
+        let expected_koid = self.internal_set_focus_chain(chain)?;
+        self.run_focus_chain_provider_until_stalled(test_exec);
+        assert_eq!(self.service.read_focused_view_ref_koid(), Some(expected_koid));
+        Ok(())
+    }
+
+    fn run_focus_chain_provider_until_stalled(&self, test_exec: &mut fasync::TestExecutor) {
+        let _ = test_exec
+            .run_until_stalled(&mut self.focus_chain_provider_task.borrow_mut().as_mut().unwrap());
     }
 
     async fn kill_focus_chain_provider(&self) {
@@ -485,6 +509,144 @@ async fn test_copy_and_paste_default_mime_type() -> Result<(), Error> {
         make_clipboard_item("text/plain;charset=utf-8".to_string(), "abc".to_string());
     assert_eq!(pasted_item, expected_item);
 
+    Ok(())
+}
+
+#[fuchsia::test]
+fn test_writer_and_watcher() -> Result<(), Error> {
+    let mut exec = fasync::TestExecutor::new()?;
+
+    let handles = TestHandles::new()?;
+
+    let ViewRefPair { control_ref: _control_ref_a, view_ref: view_ref_a } = ViewRefPair::new()?;
+    let ViewRefPair { control_ref: _control_ref_b, view_ref: view_ref_b } = ViewRefPair::new()?;
+
+    handles.set_time_ns(5);
+    handles.set_focus_chain_with_test_exec(vec![&view_ref_a], &mut exec)?;
+    let writer_registry = handles.get_writer_registry()?;
+    let reader_registry = handles.get_reader_registry()?;
+
+    let (writer_a, reader_b): (fclip::WriterProxy, fclip::ReaderProxy) = exec
+        .pin_and_run_until_stalled(async {
+            let writer_a = writer_registry.get_writer(&view_ref_a).await.unwrap();
+            let reader_b = reader_registry.get_reader(&view_ref_b).await.unwrap();
+            (writer_a, reader_b)
+        })
+        .unwrap();
+
+    {
+        let mut initial_watch_fut = reader_b.watch(fclip::ReaderWatchRequest::EMPTY);
+        assert_matches!(
+            exec.run_until_stalled(&mut initial_watch_fut),
+            Poll::Ready(Ok(Err(fclip::ClipboardError::Unauthorized)))
+        );
+    }
+
+    handles.set_time_ns(10);
+
+    let mut watch_fut = reader_b.watch(fclip::ReaderWatchRequest::EMPTY);
+    assert_matches!(exec.run_until_stalled(&mut watch_fut), Poll::Pending);
+
+    {
+        let mut set_fut = writer_a.set_item(fclip::ClipboardItem {
+            mime_type_hint: Some("text/json".to_string()),
+            payload: Some(fclip::ClipboardItemData::Text("{}".to_string())),
+            ..fclip::ClipboardItem::EMPTY
+        });
+        assert_matches!(exec.run_until_stalled(&mut set_fut), Poll::Ready(Ok(Ok(_))));
+    }
+
+    handles.set_time_ns(15);
+
+    handles.set_focus_chain_with_test_exec(vec![&view_ref_b], &mut exec)?;
+
+    assert_matches!(
+        exec.run_until_stalled(&mut watch_fut),
+        Poll::Ready(Ok(Ok(metadata))) if metadata ==
+            ClipboardMetadata::with_last_modified_ns(10).into()
+    );
+
+    assert_data_tree!(handles.inspector, root: contains {
+        clipboard: contains {
+            events: contains {
+                focus_updated: {
+                    event_count: 2u64,
+                    last_seen_ns: 15i64,
+                },
+                write: {
+                    event_count: 1u64,
+                    last_seen_ns: 10i64,
+                },
+                watch: {
+                    event_count: 2u64,
+                    last_seen_ns: 10i64,
+                }
+            },
+            last_modified_ns: 10i64,
+        }
+    });
+
+    Ok(())
+}
+
+/// Similar to above, but demonstrates compatibility with
+/// `async_utils::hanging_get::HangingGetStream`.
+#[fuchsia::test]
+fn test_writer_and_watcher_hanging_get_stream() -> Result<(), Error> {
+    let mut exec = fasync::TestExecutor::new()?;
+
+    let handles = TestHandles::new()?;
+
+    let ViewRefPair { control_ref: _control_ref_a, view_ref: view_ref_a } = ViewRefPair::new()?;
+    let ViewRefPair { control_ref: _control_ref_b, view_ref: view_ref_b } = ViewRefPair::new()?;
+
+    handles.set_time_ns(5);
+    handles.set_focus_chain_with_test_exec(vec![&view_ref_a], &mut exec)?;
+    let writer_registry = handles.get_writer_registry()?;
+    let reader_registry = handles.get_reader_registry()?;
+
+    let (writer_a, reader_b): (fclip::WriterProxy, fclip::ReaderProxy) = exec
+        .pin_and_run_until_stalled(async {
+            let writer_a = writer_registry.get_writer(&view_ref_a).await.unwrap();
+            let reader_b = reader_registry.get_reader(&view_ref_b).await.unwrap();
+            (writer_a, reader_b)
+        })
+        .unwrap();
+
+    let mut watch_stream = HangingGetStream::new(reader_b.clone(), |reader| {
+        reader.watch(fclip::ReaderWatchRequest::EMPTY)
+    });
+
+    let mut stream_fut = watch_stream.next();
+    assert_matches!(
+        exec.run_until_stalled(&mut stream_fut),
+        Poll::Ready(Some(Ok(Err(fclip::ClipboardError::Unauthorized))))
+    );
+
+    handles.set_time_ns(10);
+
+    let mut stream_fut = watch_stream.next();
+    assert_matches!(exec.run_until_stalled(&mut stream_fut), Poll::Pending);
+
+    {
+        let mut set_fut = writer_a.set_item(fclip::ClipboardItem {
+            mime_type_hint: Some("text/json".to_string()),
+            payload: Some(fclip::ClipboardItemData::Text("{}".to_string())),
+            ..fclip::ClipboardItem::EMPTY
+        });
+        assert_matches!(exec.run_until_stalled(&mut set_fut), Poll::Ready(Ok(Ok(_))));
+    }
+
+    assert_matches!(exec.run_until_stalled(&mut stream_fut), Poll::Pending);
+
+    handles.set_time_ns(15);
+    handles.set_focus_chain_with_test_exec(vec![&view_ref_b], &mut exec)?;
+
+    assert_matches!(
+        exec.run_until_stalled(&mut stream_fut),
+        Poll::Ready(Some(Ok(Ok(metadata)))) if metadata ==
+            ClipboardMetadata::with_last_modified_ns(10).into()
+    );
     Ok(())
 }
 

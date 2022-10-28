@@ -6,8 +6,6 @@
 //!
 //! Unit tests are in [`crate::watch_tests`].
 
-#![allow(dead_code)] // TODO(fxbug.dev/110935)
-
 use {
     crate::{errors::ClipboardError, metadata::ClipboardMetadata},
     derivative::Derivative,
@@ -193,7 +191,7 @@ impl WatchServer {
         let weak_server = server.weak();
         let server_task = Task::local(async move {
             debug!("[WatchServer::new] Server task started");
-            // TODO: Switch to let chain when `let_chains` feature is stabilized.
+            // TODO(fxbug.dev/113422): Switch to let chain when `let_chains` feature is stabilized.
             while let Some(server) = weak_server.upgrade() {
                 if let Some(message) = rx.next().await {
                     server.process_message(message);
