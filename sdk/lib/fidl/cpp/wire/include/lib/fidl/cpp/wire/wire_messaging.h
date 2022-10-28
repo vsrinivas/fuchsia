@@ -95,10 +95,6 @@ fidl::DispatchResult WireTryDispatch(fidl::WireServer<FidlProtocol>* impl,
 }
 #endif  // __Fuchsia__
 
-// Temporary transitional macro for the removal of empty request views from server implementations.
-// TODO(ianloic): remove as part of https://fxbug.dev/108342 cleanup
-#define FIDL_NO_EMPTY_SERVER_REQUEST_VIEWS
-
 namespace internal {
 
 // Verifies that |body| has zero bytes and no handles.
