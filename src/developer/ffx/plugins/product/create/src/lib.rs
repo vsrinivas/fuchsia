@@ -33,7 +33,7 @@ pub async fn pb_create(cmd: CreateCommand) -> Result<()> {
         load_assembly_manifest(&cmd.system_a, &cmd.out_dir.join("system_a"))?;
     let (system_b, packages_b) =
         load_assembly_manifest(&cmd.system_b, &cmd.out_dir.join("system_b"))?;
-    let (system_r, packages_r) =
+    let (system_r, _packages_r) =
         load_assembly_manifest(&cmd.system_r, &cmd.out_dir.join("system_r"))?;
 
     let repositories = if let Some(tuf_keys) = &cmd.tuf_keys {
@@ -44,9 +44,8 @@ pub async fn pb_create(cmd: CreateCommand) -> Result<()> {
         let repo_keys = RepoKeys::from_dir(&tuf_keys).context("Gathering repo keys")?;
 
         RepoBuilder::create(&repo, &repo_keys)
-            .add_packages(packages_a.into_iter())
-            .add_packages(packages_b.into_iter())
-            .add_packages(packages_r.into_iter())
+            .add_packages(packages_a.into_iter())?
+            .add_packages(packages_b.into_iter())?
             .commit()
             .await
             .context("Building the repo")?;

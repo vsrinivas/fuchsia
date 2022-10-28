@@ -146,7 +146,7 @@ pub async fn cmd_repo_publish(cmd: RepoPublishCommand) -> Result<()> {
 
     // Publish all the packages.
     for package in packages {
-        repo_builder = repo_builder.add_package(package);
+        repo_builder = repo_builder.add_package(package)?;
     }
 
     repo_builder.commit().await?;

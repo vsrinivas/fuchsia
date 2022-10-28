@@ -8,8 +8,8 @@ use {
     async_fs::File,
     camino::Utf8Path,
     chrono::{DateTime, Duration, Utc},
-    fuchsia_pkg::PackageManifest,
-    std::collections::HashMap,
+    fuchsia_pkg::{PackageManifest, PackagePath},
+    std::collections::{hash_map, HashMap},
     tuf::{
         crypto::HashAlgorithm, metadata::TargetPath, pouf::Pouf1,
         repo_builder::RepoBuilder as TufRepoBuilder, Database,
@@ -39,7 +39,7 @@ pub struct RepoBuilder<'a, R: RepoStorageProvider> {
     refresh_metadata: bool,
     refresh_non_root_metadata: bool,
     inherit_from_trusted_targets: bool,
-    packages: Vec<PackageManifest>,
+    packages: HashMap<PackagePath, PackageManifest>,
 }
 
 impl<'a, R> RepoBuilder<'a, &'a R>
@@ -85,7 +85,7 @@ where
             refresh_metadata: false,
             refresh_non_root_metadata: false,
             inherit_from_trusted_targets: true,
-            packages: vec![],
+            packages: HashMap::new(),
         }
     }
 
@@ -126,14 +126,30 @@ where
         self
     }
 
-    pub fn add_package(mut self, package: PackageManifest) -> Self {
-        self.packages.push(package);
-        self
+    pub fn add_package(mut self, package: PackageManifest) -> Result<Self> {
+        match self.packages.entry(package.package_path()) {
+            hash_map::Entry::Vacant(entry) => {
+                entry.insert(package);
+            }
+            hash_map::Entry::Occupied(entry) => {
+                if entry.get().hash() != package.hash() {
+                    return Err(anyhow!(
+                        "conflicting entry for package {}: {} != {}",
+                        entry.key(),
+                        entry.get().hash(),
+                        package.hash(),
+                    ));
+                }
+            }
+        }
+        Ok(self)
     }
 
-    pub fn add_packages(mut self, packages: impl Iterator<Item = PackageManifest>) -> Self {
-        self.packages.extend(packages);
-        self
+    pub fn add_packages(mut self, packages: impl Iterator<Item = PackageManifest>) -> Result<Self> {
+        for package in packages {
+            self = self.add_package(package)?;
+        }
+        Ok(self)
     }
 
     pub async fn commit(self) -> Result<()> {
@@ -201,9 +217,9 @@ where
 
         // Gather up all package blobs, and separate out the the meta.far blobs.
         let mut staged_blobs = HashMap::new();
-        let mut meta_far_blobs = HashMap::new();
+        let mut package_meta_fars = HashMap::new();
 
-        for package in &self.packages {
+        for (package_path, package) in self.packages {
             let mut meta_far_blob = None;
             for blob in package.blobs() {
                 if blob.path == "meta/" {
@@ -216,8 +232,7 @@ where
             let meta_far_blob = meta_far_blob
                 .ok_or_else(|| anyhow!("package does not contain entry for meta.far"))?;
 
-            meta_far_blobs
-                .insert(meta_far_blob.merkle, (package.package_path().to_string(), meta_far_blob));
+            package_meta_fars.insert(package_path, meta_far_blob);
         }
 
         // Make sure all the blobs exist.
@@ -228,8 +243,8 @@ where
         }
 
         // Stage the metadata blobs.
-        for (package_path, meta_far_blob) in meta_far_blobs.values() {
-            let target_path = TargetPath::new(package_path)?;
+        for (package_path, meta_far_blob) in package_meta_fars {
+            let target_path = TargetPath::new(package_path.to_string())?;
             let mut custom = HashMap::new();
 
             custom.insert("merkle".into(), serde_json::to_value(meta_far_blob.merkle)?);
@@ -290,6 +305,7 @@ mod tests {
         },
         assert_matches::assert_matches,
         camino::Utf8Path,
+        fuchsia_pkg::PackageBuilder,
         pretty_assertions::{assert_eq, assert_ne},
         std::collections::{BTreeMap, HashMap},
         tuf::{
@@ -344,7 +360,12 @@ mod tests {
             test_utils::make_package_manifest("package1", pkg1_dir.as_std_path());
         let pkg1_meta_far_contents = std::fs::read(&pkg1_meta_far_path).unwrap();
 
-        RepoBuilder::create(&repo, &repo_keys).add_package(pkg1_manifest).commit().await.unwrap();
+        RepoBuilder::create(&repo, &repo_keys)
+            .add_package(pkg1_manifest)
+            .unwrap()
+            .commit()
+            .await
+            .unwrap();
 
         // Make sure we wrote all the blobs from package1.
         assert_eq!(
@@ -373,6 +394,7 @@ mod tests {
 
         RepoBuilder::from_client(&repo_client, &repo_keys)
             .add_package(pkg2_manifest)
+            .unwrap()
             .commit()
             .await
             .unwrap();
@@ -646,6 +668,7 @@ mod tests {
         let repo_keys = test_utils::make_repo_keys();
         RepoBuilder::from_database(repo_client.remote_repo(), &repo_keys, repo_client.database())
             .add_package(pkg3_manifest)
+            .unwrap()
             .commit()
             .await
             .unwrap();
@@ -664,6 +687,7 @@ mod tests {
         RepoBuilder::from_database(repo_client.remote_repo(), &repo_keys, repo_client.database())
             .inherit_from_trusted_targets(false)
             .add_package(pkg4_manifest)
+            .unwrap()
             .commit()
             .await
             .unwrap();
@@ -740,5 +764,32 @@ mod tests {
             trusted_root.timestamp_keys().collect::<Vec<_>>(),
             repo_trusted_keys.timestamp_keys().iter().map(|k| k.public()).collect::<Vec<_>>(),
         );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_conflicting_package_manifests_errors_out() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = Utf8Path::from_path(tmp.path()).unwrap();
+
+        let metadata_repo_path = dir.join("metadata");
+        let blob_repo_path = dir.join("blobs");
+        let repo = FileSystemRepository::new(metadata_repo_path, blob_repo_path.clone());
+        let repo_keys = test_utils::make_repo_keys();
+
+        let pkg1_dir = dir.join("package1");
+        let (_, pkg1_manifest) =
+            test_utils::make_package_manifest("package1", pkg1_dir.as_std_path());
+
+        // Whoops, we created a package with the same package name but with different contents.
+        let pkg2_dir = dir.join("package2");
+        let pkg2_meta_far_path = pkg2_dir.join("meta.far");
+        let pkg2_manifest =
+            PackageBuilder::new("package1").build(&pkg2_dir, &pkg2_meta_far_path).unwrap();
+
+        assert!(RepoBuilder::create(&repo, &repo_keys)
+            .add_package(pkg1_manifest)
+            .unwrap()
+            .add_package(pkg2_manifest)
+            .is_err());
     }
 }
