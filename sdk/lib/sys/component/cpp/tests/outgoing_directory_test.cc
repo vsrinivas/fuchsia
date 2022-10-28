@@ -112,21 +112,6 @@ class OutgoingDirectoryTest : public gtest::RealLoopFixture {
   fidl::ClientEnd<fuchsia_io::Directory> TakeRootClientEnd() { return std::move(client_end_); }
 
  protected:
-  void InstallServiceHandler(fuchsia_examples::EchoService::Handler& service_handler,
-                             EchoImpl* impl, bool reversed) {
-    auto handler = [dispatcher = dispatcher(),
-                    impl = impl](fidl::ServerEnd<fuchsia_examples::Echo> request) -> void {
-      // This is invoked during handler unbound. We're not testing for that
-      // here so we just provide a no-op callback.
-      auto _on_unbound = [](EchoImpl* impl, fidl::UnbindInfo info,
-                            fidl::ServerEnd<fuchsia_examples::Echo> server_end) {};
-      fidl::BindServer(dispatcher, std::move(request), impl, std::move(_on_unbound));
-    };
-    auto result = reversed ? service_handler.add_reversed_echo(std::move(handler))
-                           : service_handler.add_regular_echo(std::move(handler));
-    ZX_ASSERT(result.is_ok());
-  }
-
   fidl::WireClient<fuchsia_examples::Echo> ConnectToServiceMember(
       fuchsia_examples::EchoService::ServiceClient& service, bool reversed) {
     auto connect_result =
@@ -138,15 +123,17 @@ class OutgoingDirectoryTest : public gtest::RealLoopFixture {
 
   // Service handler that is pre-populated. This is only used for tests that
   // want to test failure paths.
-  component::ServiceInstanceHandler CreateNonEmptyServiceHandler() {
-    // Setup service handler.
-    component::ServiceInstanceHandler service_handler;
-    fuchsia_examples::EchoService::Handler echo_service_handler(&service_handler);
-
-    // First, install the regular Echo server in this service handler.
-    EchoImpl regular_impl(/*reversed=*/false);
-    InstallServiceHandler(echo_service_handler, &regular_impl, /*reversed=*/false);
-    return service_handler;
+  static fuchsia_examples::EchoService::InstanceHandler CreateNonEmptyServiceHandler() {
+    return fuchsia_examples::EchoService::InstanceHandler({
+        .regular_echo =
+            [](fidl::ServerEnd<fuchsia_examples::Echo>) {
+              // no op
+            },
+        .reversed_echo =
+            [](fidl::ServerEnd<fuchsia_examples::Echo>) {
+              // no op
+            },
+    });
   }
 
  private:
@@ -241,21 +228,14 @@ TEST_F(OutgoingDirectoryTest, AddProtocolNaturalServer) {
 // this case, the directory will host the `fuchsia.examples.EchoService` which
 // contains two `fuchsia.examples.Echo` member. One regular, and one reversed.
 TEST_F(OutgoingDirectoryTest, AddServiceServesAllMembers) {
-  // Setup service handler.
-  component::ServiceInstanceHandler service_handler;
-  fuchsia_examples::EchoService::Handler echo_service_handler(&service_handler);
-
-  // First, install the regular Echo server in this service handler.
   EchoImpl regular_impl(/*reversed=*/false);
-  InstallServiceHandler(echo_service_handler, &regular_impl, /*reversed=*/false);
-
-  // Then, install the reverse Echo server. This instance will reverse the string
-  // received in calls to EchoString.
   EchoImpl reversed_impl(/*reversed=*/true);
-  InstallServiceHandler(echo_service_handler, &reversed_impl, /*reversed=*/true);
-
   ZX_ASSERT(GetOutgoingDirectory()
-                ->AddService<fuchsia_examples::EchoService>(std::move(service_handler))
+                ->AddService<fuchsia_examples::EchoService>(
+                    std::move(fuchsia_examples::EchoService::InstanceHandler({
+                        .regular_echo = regular_impl.bind_handler(dispatcher()),
+                        .reversed_echo = reversed_impl.bind_handler(dispatcher()),
+                    })))
                 .is_ok());
 
   // Setup test client.
