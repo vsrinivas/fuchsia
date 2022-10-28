@@ -267,7 +267,6 @@ if [[ -n "${VERBOSE}" ]]; then
 fi
 
 PY_TOOL="${FUCHSIA_DIR}/prebuilt/third_party/vpython/vpython3"
-PY_TOOL+=" -vpython-interpreter ${PREBUILT_PYTHON3_DIR}/bin/python3.8"
 declare -r PY_TOOL
 readonly BAZEL_FORMAT_CMD="${PREBUILT_BUILDIFIER} -lint=warn"
 readonly CLANG_CMD="${PREBUILT_CLANG_DIR}/bin/clang-format -style=file -fallback-style=Google -sort-includes -i"
