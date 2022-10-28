@@ -17,6 +17,7 @@ pub const DEFAULT_DATA_ATTRIBUTE_ID: u64 = 0;
 /// ExtentKey is a child of ObjectKey for Object attributes that have attached extents
 /// (at time of writing this was only the used for file contents).
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub struct ExtentKey {
     pub range: Range<u64>,
 }
@@ -104,6 +105,7 @@ impl PartialOrd for ExtentKey {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub enum Checksums {
     None,
     /// A vector of checksums, one per block.
@@ -122,6 +124,7 @@ impl Checksums {
 /// ExtentValue is the payload for an extent in the object store, which describes where the extent
 /// is physically located.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub enum ExtentValue {
     /// Indicates a deleted extent; that is, the logical range described by the extent key is
     /// considered to be deleted.

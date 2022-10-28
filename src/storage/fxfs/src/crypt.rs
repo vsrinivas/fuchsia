@@ -108,7 +108,16 @@ impl<'de> Deserialize<'de> for WrappedKeyBytes {
     }
 }
 
+// There doesn't seem to be much point wasting entropy on fuzzing key bytes.
+#[cfg(fuzz)]
+impl<'a> arbitrary::Arbitrary<'a> for WrappedKeyBytes {
+    fn arbitrary(_: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
+        Ok(WrappedKeyBytes([0; WRAPPED_KEY_SIZE]))
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub struct WrappedKey {
     /// The identifier of the wrapping key.  The identifier has meaning to whatever is doing the
     /// unwrapping.
@@ -124,6 +133,7 @@ pub struct WrappedKey {
 /// To support key rolling and clones, a file can have more than one key.  Each key has an ID that
 /// unique to the file.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub struct WrappedKeys(pub Vec<(u64, WrappedKey)>);
 
 impl std::ops::Deref for WrappedKeys {

@@ -17,6 +17,7 @@ use {
 
 /// ObjectDescriptor is the set of possible records in the object store.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub enum ObjectDescriptor {
     /// A file (in the generic sense; i.e. an object with some attributes).
     File,
@@ -27,6 +28,7 @@ pub enum ObjectDescriptor {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]
+#[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub enum ObjectKeyData {
     /// A generic, untyped object.  This must come first and sort before all other keys for a given
     /// object because it's also used as a tombstone and it needs to merge with all following keys.
@@ -43,6 +45,7 @@ pub enum ObjectKeyData {
 }
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub enum AttributeKey {
     Size,
     Extent(ExtentKey),
@@ -50,6 +53,7 @@ pub enum AttributeKey {
 
 /// ObjectKey is a key in the object store.
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize, Versioned)]
+#[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub struct ObjectKey {
     /// The ID of the object referred to.
     pub object_id: u64,
@@ -198,6 +202,7 @@ impl RangeKey for ObjectKey {
 
 /// UNIX epoch based timestamp in the UTC timezone.
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
+#[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub struct Timestamp {
     pub secs: u64,
     pub nanos: u32,
@@ -240,6 +245,7 @@ impl From<Timestamp> for std::time::Duration {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub enum ObjectKind {
     File {
         /// The number of references to this file.
@@ -255,6 +261,7 @@ pub enum ObjectKind {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub enum EncryptionKeys {
     AES256XTS(WrappedKeys),
 }
@@ -263,6 +270,7 @@ pub enum EncryptionKeys {
 /// ObjectValue::Attribute sense, which refers to an arbitrary data payload associated with an
 /// object.  This naming collision is unfortunate.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub struct ObjectAttributes {
     /// The timestamp at which the object was created (i.e. crtime).
     pub creation_time: Timestamp,
@@ -274,6 +282,7 @@ pub struct ObjectAttributes {
 /// Note that the tree stores deltas on objects, so these values describe deltas. Unless specified
 /// otherwise, a value indicates an insert/replace mutation.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Versioned)]
+#[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub enum ObjectValue {
     /// Some keys have no value (this often indicates a tombstone of some sort).  Records with this
     /// value are always filtered when a major compaction is performed, so the meaning must be the

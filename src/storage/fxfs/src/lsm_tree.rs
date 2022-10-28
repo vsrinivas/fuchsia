@@ -563,18 +563,13 @@ mod tests {
 #[cfg(fuzz)]
 mod fuzz {
     use {
-        super::LSMTree,
         crate::{
-            lsm_tree::{
-                merge::{MergeLayerIterator, MergeResult},
-                types::{Item, NextKey, OrdLowerBound, OrdUpperBound},
-            },
+            lsm_tree::types::{Item, NextKey, OrdLowerBound, OrdUpperBound},
             serialized_types::{
                 versioned_type, Version, Versioned, VersionedLatest, LATEST_VERSION,
             },
         },
-        arbitrary::{Arbitrary, Unstructured},
-        futures::executor::block_on,
+        arbitrary::Arbitrary,
         fuzz::fuzz,
     };
 
@@ -602,19 +597,6 @@ mod fuzz {
         }
     }
 
-    fn emit_left_merge_fn(
-        _left: &MergeLayerIterator<'_, TestKey, u64>,
-        _right: &MergeLayerIterator<'_, TestKey, u64>,
-    ) -> MergeResult<TestKey, u64> {
-        MergeResult::EmitLeft
-    }
-
-    impl Arbitrary<'_> for crate::lsm_tree::types::Item<TestKey, u64> {
-        fn arbitrary(u: &mut Unstructured<'_>) -> arbitrary::Result<Self> {
-            Ok(Item::new(TestKey(u.arbitrary()?), u.arbitrary()?))
-        }
-    }
-
     #[derive(Arbitrary)]
     enum FuzzAction {
         Insert(Item<TestKey, u64>),
@@ -626,6 +608,19 @@ mod fuzz {
 
     #[fuzz]
     fn fuzz_lsm_tree_actions(actions: Vec<FuzzAction>) {
+        use {
+            super::LSMTree,
+            crate::lsm_tree::merge::{MergeLayerIterator, MergeResult},
+            futures::executor::block_on,
+        };
+
+        fn emit_left_merge_fn(
+            _left: &MergeLayerIterator<'_, TestKey, u64>,
+            _right: &MergeLayerIterator<'_, TestKey, u64>,
+        ) -> MergeResult<TestKey, u64> {
+            MergeResult::EmitLeft
+        }
+
         let tree = LSMTree::new(emit_left_merge_fn);
         for action in actions {
             match action {

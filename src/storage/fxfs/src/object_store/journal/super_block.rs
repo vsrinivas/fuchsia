@@ -557,7 +557,7 @@ mod tests {
         let fs = FakeFilesystem::new(device);
         let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 2));
         fs.object_manager().set_allocator(allocator.clone());
-        fs.object_manager().init_metadata_reservation();
+        fs.object_manager().init_metadata_reservation().expect("init_metadata_reservation failed");
         let root_parent_store = ObjectStore::new_empty(None, 3, fs.clone());
         fs.object_manager().set_root_parent_store(root_parent_store.clone());
         let root_store;

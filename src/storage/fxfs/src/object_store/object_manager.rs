@@ -22,7 +22,7 @@ use {
         },
         serialized_types::{Version, LATEST_VERSION},
     },
-    anyhow::{anyhow, bail, Context, Error},
+    anyhow::{anyhow, bail, ensure, Context, Error},
     once_cell::sync::OnceCell,
     std::{
         collections::{hash_map::Entry, HashMap},
@@ -276,7 +276,12 @@ impl ObjectManager {
                 .context(format!("Store {} failed to load after replay", store_id))?;
         }
 
-        self.init_metadata_reservation();
+        ensure!(
+            !self.inner.read().unwrap().stores.iter().any(|(_, store)| store.is_unknown()),
+            FxfsError::Inconsistent
+        );
+
+        self.init_metadata_reservation()?;
 
         Ok(())
     }
@@ -410,8 +415,9 @@ impl ObjectManager {
         for (object_id, mutation) in mutations {
             if let Mutation::UpdateBorrowed(borrowed) = mutation {
                 if let Some(txn_size) = txn_size {
-                    self.inner.write().unwrap().borrowed_metadata_space =
-                        borrowed + reserved_space_from_journal_usage(txn_size);
+                    self.inner.write().unwrap().borrowed_metadata_space = borrowed
+                        .checked_add(reserved_space_from_journal_usage(txn_size))
+                        .ok_or(FxfsError::Inconsistent)?;
                 }
                 continue;
             }
@@ -603,8 +609,10 @@ impl ObjectManager {
         }
     }
 
-    pub fn init_metadata_reservation(&self) {
+    pub fn init_metadata_reservation(&self) -> Result<(), Error> {
         let inner = self.inner.read().unwrap();
+        let required = inner.required_reservation();
+        ensure!(required >= inner.borrowed_metadata_space, FxfsError::Inconsistent);
         self.metadata_reservation
             .set(
                 inner
@@ -613,14 +621,17 @@ impl ObjectManager {
                     .cloned()
                     .unwrap()
                     .reserve(None, inner.required_reservation() - inner.borrowed_metadata_space)
-                    .expect(&format!(
-                        "Failed to reserve {} - {} = {} bytes",
-                        inner.required_reservation(),
-                        inner.borrowed_metadata_space,
-                        inner.required_reservation() - inner.borrowed_metadata_space
-                    )),
+                    .with_context(|| {
+                        format!(
+                            "Failed to reserve {} - {} = {} bytes",
+                            inner.required_reservation(),
+                            inner.borrowed_metadata_space,
+                            inner.required_reservation() - inner.borrowed_metadata_space
+                        )
+                    })?,
             )
             .unwrap();
+        Ok(())
     }
 
     pub fn metadata_reservation(&self) -> &Reservation {

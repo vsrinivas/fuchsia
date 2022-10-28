@@ -306,6 +306,7 @@ pub type Hold<'a> = ReservationImpl<&'a Reservation, Reservation>;
 // reference counts should never exceed 1, but that might change with snapshots and clones.
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, Versioned)]
+#[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub struct AllocatorKey {
     pub device_range: Range<u64>,
 }
@@ -363,6 +364,7 @@ impl RangeKey for AllocatorKey {
 /// Allocations are "owned" by a single ObjectStore and are reference counted
 /// (for future snapshot/clone support).
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, Versioned)]
+#[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub enum AllocatorValue {
     // Tombstone variant indicating an extent is no longer allocated.
     None,
@@ -1809,7 +1811,7 @@ mod tests {
         let store = ObjectStore::new_empty(None, 2, fs.clone());
         store.set_graveyard_directory_object_id(store.maybe_get_next_object_id());
         fs.object_manager().set_root_store(store.clone());
-        fs.object_manager().init_metadata_reservation();
+        fs.object_manager().init_metadata_reservation().expect("init_metadata_reservation failed");
         let mut transaction = fs
             .clone()
             .new_transaction(&[], Options::default())

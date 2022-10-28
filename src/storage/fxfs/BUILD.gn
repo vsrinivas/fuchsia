@@ -348,27 +348,36 @@ group("tests") {
 ## Fuzzers
 #################
 
-rustc_fuzzer("fuzz_lsm_tree_actions") {
-  edition = "2021"
-  deps = fxfs_deps + [
-           "//src/lib/fuzzing/rust:fuzz",
-           "//third_party/rust_crates:arbitrary",
-           "//third_party/rust_crates:futures",
-         ]
-  sources = fxfs_sources
-  rustfunction = "fuzz_lsm_tree_actions"
-  if (is_fuchsia) {
-    features = [ "tracing" ]
+fuzzers = [
+  "fuzz_lsm_tree_actions",
+  "fuzz_journal",
+  "fuzz_journal_bytes",
+]
+
+foreach(fuzzer, fuzzers) {
+  rustc_fuzzer(fuzzer) {
+    edition = "2021"
+    deps = fxfs_deps + [
+             "//src/lib/fuzzing/rust:fuzz",
+             "//third_party/rust_crates:arbitrary",
+             "//third_party/rust_crates:futures",
+           ]
+    sources = fxfs_sources
+    if (is_fuchsia) {
+      features = [ "tracing" ]
+    }
+    options = [
+      "rss_limit_mb=3072",
+      "timeout=60",
+    ]
   }
-  options = [
-    "rss_limit_mb=3072",
-    "timeout=60",
-  ]
 }
 
 fuzzer_package("fxfs-fuzzers") {
-  rust_fuzzers = [ ":fuzz_lsm_tree_actions" ]
-  fuzz_host = true
+  rust_fuzzers = []
+  foreach(fuzzer, fuzzers) {
+    rust_fuzzers += [ ":$fuzzer" ]
+  }
 }
 
 group("fuzzers") {

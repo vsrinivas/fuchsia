@@ -84,6 +84,7 @@ impl<'a, K, V> Copy for ItemRef<'a, K, V> {}
 
 /// Item is a struct that combines a key and a value.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub struct Item<K, V> {
     pub key: K,
     pub value: V,

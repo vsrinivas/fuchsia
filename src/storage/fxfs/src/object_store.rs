@@ -1509,7 +1509,14 @@ impl ObjectStore {
     }
 
     pub fn is_locked(&self) -> bool {
-        matches!(*self.lock_state.lock().unwrap(), LockState::Locked(_) | LockState::Locking(_))
+        matches!(
+            *self.lock_state.lock().unwrap(),
+            LockState::Locked(_) | LockState::Locking(_) | LockState::Unknown
+        )
+    }
+
+    pub fn is_unknown(&self) -> bool {
+        matches!(*self.lock_state.lock().unwrap(), LockState::Unknown)
     }
 
     // Locks a store.  This assumes no other concurrent access to the store.  Whilst this can return

@@ -131,6 +131,7 @@ pub trait TransactionHandler: AsRef<LockManager> + Send + Sync {
 /// (and we require custom comparison functions below).  For example, we need to be able to find
 /// object size changes.
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize, Versioned)]
+#[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub enum Mutation {
     ObjectStore(ObjectStoreMutation),
     EncryptedObjectStore(Box<[u8]>),
@@ -178,6 +179,7 @@ impl Mutation {
 // get_object_mutation below).
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub struct ObjectStoreMutation {
     pub item: ObjectItem,
     pub op: Operation,
@@ -185,6 +187,7 @@ pub struct ObjectStoreMutation {
 
 // The different LSM tree operations that can be performed as part of a mutation.
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub enum Operation {
     Insert,
     ReplaceOrInsert,
@@ -226,6 +229,7 @@ impl PartialOrd for AllocatorItem {
 /// Same as std::ops::Range but with Ord and PartialOrd support, sorted first by start of the range,
 /// then by the end.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub struct DeviceRange(pub Range<u64>);
 
 impl Deref for DeviceRange {
@@ -267,6 +271,7 @@ impl PartialOrd for DeviceRange {
 }
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub enum AllocatorMutation {
     Allocate {
         device_range: DeviceRange,
@@ -289,6 +294,7 @@ pub enum AllocatorMutation {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub struct UpdateMutationsKey(pub WrappedKey);
 
 impl Ord for UpdateMutationsKey {

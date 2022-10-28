@@ -470,6 +470,10 @@ impl FxFilesystem {
         };
         Ok((metadata_reservation, options.allocator_reservation, hold))
     }
+
+    pub fn journal(&self) -> &Journal {
+        &self.journal
+    }
 }
 
 impl Drop for FxFilesystem {

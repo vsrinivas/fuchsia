@@ -116,6 +116,7 @@ pub struct JournalCheckpoint {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Versioned)]
+#[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub enum JournalRecord {
     // Indicates no more records in this block.
     EndBlock,
@@ -786,7 +787,7 @@ impl Journal {
         let allocator =
             Arc::new(SimpleAllocator::new(filesystem.clone(), INIT_ALLOCATOR_OBJECT_ID));
         self.objects.set_allocator(allocator.clone());
-        self.objects.init_metadata_reservation();
+        self.objects.init_metadata_reservation()?;
 
         let journal_handle;
         let super_block_a_handle;
@@ -1517,5 +1518,58 @@ mod tests {
             }
         }
         fs.close().await.expect("close failed");
+    }
+}
+
+#[cfg(fuzz)]
+mod fuzz {
+    use fuzz::fuzz;
+
+    #[fuzz]
+    fn fuzz_journal_bytes(input: Vec<u8>) {
+        use {
+            crate::filesystem::FxFilesystem,
+            fuchsia_async as fasync,
+            std::io::Write,
+            storage_device::{fake_device::FakeDevice, DeviceHolder},
+        };
+
+        fasync::SendExecutor::new(4).unwrap().run(async move {
+            let device = DeviceHolder::new(FakeDevice::new(32768, 512));
+            let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+            fs.journal().inner.lock().unwrap().writer.write_all(&input).expect("write failed");
+            fs.close().await.expect("close failed");
+            let device = fs.take_device().await;
+            device.reopen(false);
+            if let Ok(fs) = FxFilesystem::open(device).await {
+                fs.close().await.expect("close failed");
+            }
+        });
+    }
+
+    #[fuzz]
+    fn fuzz_journal(input: Vec<super::JournalRecord>) {
+        use {
+            crate::filesystem::FxFilesystem,
+            fuchsia_async as fasync,
+            storage_device::{fake_device::FakeDevice, DeviceHolder},
+        };
+
+        fasync::SendExecutor::new(4).unwrap().run(async move {
+            let device = DeviceHolder::new(FakeDevice::new(32768, 512));
+            let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+            {
+                let mut inner = fs.journal().inner.lock().unwrap();
+                for record in &input {
+                    inner.writer.write_record(record);
+                }
+            }
+            fs.close().await.expect("close failed");
+            let device = fs.take_device().await;
+            device.reopen(false);
+            if let Ok(fs) = FxFilesystem::open(device).await {
+                fs.close().await.expect("close failed");
+            }
+        });
     }
 }
