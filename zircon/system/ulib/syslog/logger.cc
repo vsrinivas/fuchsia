@@ -10,7 +10,7 @@
 
 #ifndef SYSLOG_STATIC
 #include <fidl/fuchsia.logger/cpp/wire.h>
-#include <lib/sys/component/cpp/service_client.h>
+#include <lib/component/cpp/incoming/service_client.h>
 #endif
 
 SYSLOG_EXPORT

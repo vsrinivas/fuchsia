@@ -111,7 +111,7 @@ zx_library("syslog") {
   deps = [
     ":helpers",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_cpp_wire",
-    "//sdk/lib/sys/component/cpp",
+    "//sdk/lib/component/cpp/incoming",
     "//sdk/lib/syslog:client_includes",
     "//sdk/lib/syslog/cpp:cpp-macros",
     "//sdk/lib/syslog/structured_backend",
@@ -120,7 +120,6 @@ zx_library("syslog") {
   ]
   runtime_deps = [
     "//sdk/lib/fdio:fdio_sdk",
-    "//sdk/lib/svc:svc_sdk",
     "//zircon/system/ulib/trace-engine:trace-engine_sdk",
   ]
 
