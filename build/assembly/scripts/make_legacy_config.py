@@ -12,10 +12,14 @@ import argparse
 from collections import defaultdict
 import json
 import sys
+import logging
 from typing import Dict, List, Set, Tuple
 
 from assembly import AssemblyInputBundle, AIBCreator, FileEntry, FilePath, ImageAssemblyConfig
+from assembly.assembly_input_bundle import DuplicatePackageException, PackageManifestParsingException
 from depfile import DepFile
+
+logger = logging.getLogger()
 
 # Some type annotations for clarity
 PackageManifestList = List[FilePath]
@@ -154,4 +158,14 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        main()
+    except DuplicatePackageException as exc:
+        logger.exception(
+            "The Legacy Assembly Input Bundle could not be constructed due to \
+        a duplicate package declaration in the build")
+    except PackageManifestParsingException as exc:
+        logger.exception(
+            "A problem occurred attempting to load a PackageManifest")
+    finally:
+        sys.exit()

@@ -9,10 +9,11 @@ import os
 import subprocess
 import sys
 from typing import Dict, List, Set, Tuple
-
+import logging
 from depfile import DepFile
 from assembly import AssemblyInputBundle, AIBCreator, DriverDetails, FilePath, PackageManifest
 from serialization.serialization import json_load
+logger = logging.getLogger()
 
 
 def create_bundle(args: argparse.Namespace) -> None:
@@ -99,8 +100,8 @@ def add_shell_commands_from_file(
 def _read_json_file(pkg_list_file):
     try:
         return json.load(pkg_list_file)
-    except Exception as ex:
-        ex.args = (*ex.args, f"While parsing {pkg_list_file.name}")
+    except:
+        logger.exception(f"While parsing {pkg_list_file.name}")
         raise
 
 

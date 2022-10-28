@@ -40,6 +40,13 @@ ConfigDataEntries = Dict[PackageName, Set[FileEntry]]
 
 
 class DuplicatePackageException(Exception):
+    """To be raised when an attempt is made to add multiple packages with the same name to the same
+    invocation of the AIBCreator"""
+    ...
+
+
+class PackageManifestParsingException(Exception):
+    """To be raised when an attempt to parse a json file into a PackageManifest object fails"""
     ...
 
 
@@ -436,12 +443,10 @@ class AIBCreator:
             with open(driver_details.package, 'r') as file:
                 try:
                     manifest = json_load(PackageManifest, file)
-                except Exception as ex:
-                    ex.args = (
-                        *ex.args,
+                except Exception as exc:
+                    raise PackageManifestParsingException(
                         f"loading PackageManifest from {driver_details.package}"
-                    )
-                    raise
+                    ) from exc
 
                 package_name = manifest.package.name
                 if component_files.get(package_name):
@@ -456,11 +461,10 @@ class AIBCreator:
                       'r') as file:
                 try:
                     manifest = json_load(PackageManifest, file)
-                except Exception as ex:
-                    ex.args = (
-                        *ex.args,
-                        f"loading PackageManifest from {package_manifest_path}")
-                    raise
+                except Exception as exc:
+                    raise PackageManifestParsingException(
+                        f"loading PackageManifest from {package_manifest_path}"
+                    ) from exc
 
                 package_name = manifest.package.name
                 base_driver_details.append(
@@ -518,11 +522,11 @@ class AIBCreator:
             with open(package_manifest_path, 'r') as file:
                 try:
                     manifest = json_load(PackageManifest, file)
-                except Exception as ex:
-                    ex.args = (
-                        *ex.args,
-                        f"loading PackageManifest from {package_manifest_path}")
-                    raise
+                except Exception as exc:
+                    raise PackageManifestParsingException(
+                        f"loading PackageManifest from {package_manifest_path}"
+                    ) from exc
+
                 package_name = manifest.package.name
                 # Track in deps, since it was opened.
                 deps.add(package_manifest_path)

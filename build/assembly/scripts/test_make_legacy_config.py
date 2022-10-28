@@ -495,7 +495,7 @@ class MakeLegacyConfig(unittest.TestCase):
             image_assembly.base.add(manifest_path)
             image_assembly.base.add(manifest2_path)
 
-            # Validates that package with name package_a is in the base package set of the 
+            # Validates that package with name package_a is in the base package set of the
             # image_assembly with a different path prefix
             self.assertIn(
                 make_image_assembly_path(duplicate_package),
