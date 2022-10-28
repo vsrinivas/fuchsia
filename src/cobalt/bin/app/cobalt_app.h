@@ -22,6 +22,7 @@
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/sys/cpp/component_context.h"
 #include "src/cobalt/bin/app/activity_listener_impl.h"
+#include "src/cobalt/bin/app/aggregate_and_upload_impl.h"
 #include "src/cobalt/bin/app/cobalt_controller_impl.h"
 #include "src/cobalt/bin/app/configuration_data.h"
 #include "src/cobalt/bin/app/diagnostics_impl.h"
@@ -140,6 +141,9 @@ class CobaltApp {
 
   std::unique_ptr<fuchsia::cobalt::SystemDataUpdater> system_data_updater_impl_;
   fidl::BindingSet<fuchsia::cobalt::SystemDataUpdater> system_data_updater_bindings_;
+
+  std::unique_ptr<AggregateAndUploadImpl> aggregate_and_upload_impl_;
+  fidl::BindingSet<fuchsia::cobalt::AggregateAndUpload> aggregate_and_upload_bindings_;
 
   std::unique_ptr<cobalt::ProcessLifecycle> process_lifecycle_impl_;
 

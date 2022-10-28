@@ -12,6 +12,7 @@
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/sys/cpp/component_context.h"
 #include "src/cobalt/bin/app/activity_listener_impl.h"
+#include "src/cobalt/bin/app/aggregate_and_upload_impl.h"
 #include "src/cobalt/bin/app/diagnostics_impl.h"
 #include "src/cobalt/bin/app/metric_event_logger_factory_impl.h"
 #include "src/cobalt/bin/app/utils.h"
@@ -231,6 +232,11 @@ CobaltApp::CobaltApp(
   // Create Controller protocol implementation and start serving it.
   controller_impl_ = std::make_unique<CobaltControllerImpl>(dispatcher, cobalt_service_.get());
   context_->outgoing()->AddPublicService(controller_bindings_.GetHandler(controller_impl_.get()));
+
+  // Create AggregateAndUpload protocol implementation and start serving it.
+  aggregate_and_upload_impl_ = std::make_unique<AggregateAndUploadImpl>();
+  context_->outgoing()->AddPublicService(
+      aggregate_and_upload_bindings_.GetHandler(aggregate_and_upload_impl_.get()));
 }
 
 ClientSecret CobaltApp::getClientSecret() {

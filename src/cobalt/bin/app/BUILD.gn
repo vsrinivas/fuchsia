@@ -44,6 +44,8 @@ source_set("lib") {
   sources = [
     "activity_listener_impl.cc",
     "activity_listener_impl.h",
+    "aggregate_and_upload_impl.cc",
+    "aggregate_and_upload_impl.h",
     "cobalt_app.cc",
     "cobalt_app.h",
     "cobalt_controller_impl.cc",
