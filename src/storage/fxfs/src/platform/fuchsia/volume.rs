@@ -328,12 +328,7 @@ impl HandleOwner for FxVolume {
     type Buffer = VmoDataBuffer;
 
     fn create_data_buffer(&self, object_id: u64, initial_size: u64) -> Self::Buffer {
-        // TODO(fxbug.dev/102659) Enable trap dirty.
-        self.pager
-            .create_vmo(object_id, initial_size, /*enable_trap_dirty=*/ false)
-            .unwrap()
-            .try_into()
-            .unwrap()
+        self.pager.create_vmo(object_id, initial_size).unwrap().try_into().unwrap()
     }
 }
 
@@ -441,7 +436,7 @@ mod tests {
                 memory_pressure::{MemoryPressureLevel, MemoryPressureMonitor},
                 testing::{
                     close_dir_checked, close_file_checked, open_dir, open_dir_checked, open_file,
-                    open_file_checked, TestFixture,
+                    open_file_checked, write_at, TestFixture,
                 },
                 volume::{FlushTaskConfig, FxVolumeAndRoot},
             },
@@ -451,7 +446,6 @@ mod tests {
         fuchsia_zircon::Status,
         std::{sync::Arc, time::Duration},
         storage_device::{fake_device::FakeDevice, DeviceHolder},
-        vfs::file::FileIo,
     };
 
     #[fasync::run(10, test)]
@@ -729,7 +723,7 @@ mod tests {
                 .expect("Not a file");
 
             // Write some data to the file, which will only go to the cache for now.
-            file.write_at(0, &[123u8]).await.expect("write_at failed");
+            write_at(&file, 0, &[123u8]).expect("write_at failed");
 
             let data_has_persisted = || async {
                 // We have to reopen the object each time since this is a distinct handle from the
@@ -806,7 +800,7 @@ mod tests {
                 .expect("Not a file");
 
             // Write some data to the file, which will only go to the cache for now.
-            file.write_at(0, &[123u8]).await.expect("write_at failed");
+            write_at(&file, 0, &[123u8]).expect("write_at failed");
 
             let data_has_persisted = || async {
                 // We have to reopen the object each time since this is a distinct handle from the
@@ -901,7 +895,7 @@ mod tests {
                 .expect("Not a file");
 
             // Write some data to the file, which will only go to the cache for now.
-            file.write_at(0, &[123u8]).await.expect("write_at failed");
+            write_at(&file, 0, &[123u8]).expect("write_at failed");
 
             let data_has_persisted = || async {
                 // We have to reopen the object each time since this is a distinct handle from the

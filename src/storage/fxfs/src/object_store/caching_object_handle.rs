@@ -18,7 +18,7 @@ use {
             AssocObj, HandleOwner, Mutation, ObjectKey, ObjectStore, ObjectValue,
             StoreObjectHandle, TrimMode, TrimResult,
         },
-        round::round_up,
+        round::{how_many, round_up},
     },
     anyhow::{anyhow, Context, Error},
     async_trait::async_trait,
@@ -317,9 +317,7 @@ impl<S: HandleOwner> Drop for CachingObjectHandle<S> {
 impl<S: HandleOwner> StorageReservation for CachingObjectHandle<S> {
     fn reservation_needed(&self, mut amount: u64) -> u64 {
         amount = round_up(amount, self.block_size()).unwrap();
-        amount
-            + round_up(amount, FLUSH_BATCH_SIZE).unwrap() / FLUSH_BATCH_SIZE
-                * TRANSACTION_METADATA_MAX_AMOUNT
+        amount + how_many(amount, FLUSH_BATCH_SIZE) * TRANSACTION_METADATA_MAX_AMOUNT
     }
     fn reserve(&self, mut amount: u64) -> Result<allocator::Reservation, Error> {
         amount = round_up(amount, self.block_size()).unwrap();

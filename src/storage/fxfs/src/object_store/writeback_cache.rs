@@ -6,6 +6,7 @@ use {
     crate::{
         data_buffer::DataBuffer,
         errors::FxfsError,
+        filesystem::MAX_FILE_SIZE,
         object_handle::ReadObjectHandle,
         object_store::allocator::{self},
         round::{round_down, round_up},
@@ -320,7 +321,7 @@ impl<B: DataBuffer> WritebackCache<B> {
         block_size: u64,
         reserver: &dyn StorageReservation,
     ) -> Result<(), Error> {
-        ensure!(size <= i64::MAX as u64, FxfsError::TooBig);
+        ensure!(size <= MAX_FILE_SIZE, FxfsError::TooBig);
         {
             let mut inner = self.inner.lock().unwrap();
             let old_size = self.content_size();
@@ -382,11 +383,8 @@ impl<B: DataBuffer> WritebackCache<B> {
         let size = self.data.size();
         let offset = offset.unwrap_or(size);
 
-        // Whilst Fxfs could support up to u64::MAX, off_t is i64 so allowing files larger than that
-        // become difficult to deal with via the POSIX APIs, so, for now, we limit sizes to
-        // i64::MAX.
-        ensure!(offset < i64::MAX as u64, FxfsError::TooBig);
-        let max_len = i64::MAX as u64 - offset;
+        ensure!(offset < MAX_FILE_SIZE, FxfsError::TooBig);
+        let max_len = MAX_FILE_SIZE - offset;
         if buf.len() as u64 > max_len {
             buf = &buf[..max_len as usize];
         }
@@ -608,7 +606,7 @@ mod tests {
                 allocator::{Allocator, AllocatorInfo, Reservation, ReservationOwner},
                 transaction::Transaction,
             },
-            round::round_up,
+            round::{how_many, round_up},
             testing::fake_object::{FakeObject, FakeObjectHandle},
         },
         anyhow::{anyhow, Error},
@@ -668,9 +666,7 @@ mod tests {
         fn reservation_needed(&self, mut amount: u64) -> u64 {
             amount = round_up(amount, self.granularity).unwrap();
             if self.sync_overhead > 0 && self.flush_limit > 0 {
-                amount
-                    + round_up(amount, self.flush_limit).unwrap() / self.flush_limit
-                        * self.sync_overhead
+                amount + how_many(amount, self.flush_limit) * self.sync_overhead
             } else {
                 amount
             }

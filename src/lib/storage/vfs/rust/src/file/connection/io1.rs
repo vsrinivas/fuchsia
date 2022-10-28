@@ -79,10 +79,10 @@ pub async fn create_connection_async<U: 'static + File + FileIo + DirectoryEntry
 /// issuing read, write, and seek calls. Any read, write, and seek calls that continue to come in
 /// over FIDL will be forwarded to `stream` instead of being sent to `file`.
 ///
-/// If `flags` contains `fio::OpenFlags::NODE_REFERENCE` then `create_connection_async` should be
-/// used instead. Reading, writing, or seeking on a node reference should return ZX_ERR_BAD_HANDLE.
-/// If a client attempts those operations on a zx::stream then ZX_ERR_ACCESS_DENIED will be
-/// returned.
+/// If `flags` contains `fio::OpenFlags::NODE_REFERENCE` then
+/// `create_node_reference_connection_async` should be used instead. Reading, writing, or seeking on
+/// a node reference should return ZX_ERR_BAD_HANDLE. If a client attempts those operations on a
+/// zx::stream then ZX_ERR_ACCESS_DENIED will be returned.
 pub async fn create_stream_connection_async<U: 'static + File + DirectoryEntry>(
     scope: ExecutionScope,
     file: Arc<U>,
@@ -101,6 +101,29 @@ pub async fn create_stream_connection_async<U: 'static + File + DirectoryEntry>(
     let file = StreamIoFile { file, stream };
     create_connection_async_impl(
         scope, file, flags, server_end, readable, writable, executable, shutdown,
+    )
+    .await
+}
+
+/// Initializes a node reference file connection running in the context of the specified execution
+/// `scope`. `flags` must contain `fio::OpenFlags::NODE_REFERENCE`.
+pub async fn create_node_reference_connection_async<U: 'static + File + DirectoryEntry>(
+    scope: ExecutionScope,
+    file: Arc<U>,
+    flags: fio::OpenFlags,
+    server_end: ServerEnd<fio::NodeMarker>,
+    shutdown: oneshot::Receiver<()>,
+) {
+    assert!(flags.intersects(fio::OpenFlags::NODE_REFERENCE));
+    create_connection_async_impl(
+        scope,
+        NodeReferenceIoFile { file },
+        flags,
+        server_end,
+        false,
+        false,
+        false,
+        shutdown,
     )
     .await
 }
@@ -442,6 +465,57 @@ impl<T: 'static + File + DirectoryEntry> AsFile for StreamIoFile<T> {
 }
 
 impl<T: 'static + File + DirectoryEntry> CloneFile for StreamIoFile<T> {
+    fn clone_file(&self) -> Arc<dyn DirectoryEntry> {
+        self.file.clone()
+    }
+}
+
+/// Wrapper around a file that forwards `File` requests to `file` and doesn't expect any `FileIo`
+/// requests.
+struct NodeReferenceIoFile<T: 'static + File + DirectoryEntry> {
+    /// File that requests will be forwarded to.
+    file: Arc<T>,
+}
+
+#[async_trait]
+impl<T: 'static + File + DirectoryEntry> IoOpHandler for NodeReferenceIoFile<T> {
+    async fn read(&mut self, _count: u64) -> Result<Vec<u8>, zx::Status> {
+        unreachable!();
+    }
+
+    async fn read_at(&self, _offset: u64, _count: u64) -> Result<Vec<u8>, zx::Status> {
+        unreachable!();
+    }
+
+    async fn write(&mut self, _data: &[u8]) -> Result<u64, zx::Status> {
+        unreachable!();
+    }
+
+    async fn write_at(&self, _offset: u64, _data: &[u8]) -> Result<u64, zx::Status> {
+        unreachable!();
+    }
+
+    async fn seek(&mut self, _offset: i64, _origin: fio::SeekOrigin) -> Result<u64, zx::Status> {
+        unreachable!();
+    }
+
+    fn update_flags(&mut self, _flags: fio::OpenFlags) -> zx::Status {
+        zx::Status::OK
+    }
+
+    fn duplicate_stream(&self) -> Result<Option<zx::Stream>, zx::Status> {
+        Ok(None)
+    }
+}
+
+impl<T: 'static + File + DirectoryEntry> AsFile for NodeReferenceIoFile<T> {
+    type FileType = T;
+    fn as_file(&self) -> &Self::FileType {
+        self.file.as_ref()
+    }
+}
+
+impl<T: 'static + File + DirectoryEntry> CloneFile for NodeReferenceIoFile<T> {
     fn clone_file(&self) -> Arc<dyn DirectoryEntry> {
         self.file.clone()
     }

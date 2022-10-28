@@ -197,7 +197,7 @@ impl RangeKey for ObjectKey {
 }
 
 /// UNIX epoch based timestamp in the UTC timezone.
-#[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct Timestamp {
     pub secs: u64,
     pub nanos: u32,

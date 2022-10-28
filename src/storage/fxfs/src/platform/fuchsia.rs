@@ -10,6 +10,7 @@ pub mod file;
 pub mod log;
 mod memory_pressure;
 pub mod node;
+mod paged_object_handle;
 pub mod pager;
 mod remote_crypt;
 pub mod vmo_data_buffer;

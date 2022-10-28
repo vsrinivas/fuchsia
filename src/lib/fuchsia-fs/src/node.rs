@@ -118,7 +118,7 @@ impl Kind {
 
     fn expect_file(info: fio::NodeInfoDeprecated) -> Result<(), Kind> {
         match info {
-            fio::NodeInfoDeprecated::File(fio::FileObject { event: _, stream: None }) => Ok(()),
+            fio::NodeInfoDeprecated::File(fio::FileObject { .. }) => Ok(()),
             other => Err(Kind::kind_of(&other)),
         }
     }
@@ -141,7 +141,7 @@ impl Kind {
 
     fn expect_file2(representation: &fio::Representation) -> Result<(), Kind> {
         match representation {
-            fio::Representation::File(fio::FileInfo { stream: None, .. }) => Ok(()),
+            fio::Representation::File(fio::FileInfo { .. }) => Ok(()),
             other => Err(Kind::kind_of2(other)),
         }
     }

@@ -8,12 +8,13 @@ use {
         filesystem::{FxFilesystem, OpenFxFilesystem},
         fsck::{errors::FsckIssue, fsck_volume_with_options, fsck_with_options, FsckOptions},
         object_store::volume::root_volume,
-        platform::fuchsia::volume::FxVolumeAndRoot,
+        platform::fuchsia::{file::FxFile, pager::PagerBackedVmo, volume::FxVolumeAndRoot},
     },
+    anyhow::Context,
     anyhow::Error,
     fidl::endpoints::{create_proxy, ServerEnd},
     fidl_fuchsia_io as fio,
-    fuchsia_zircon::Status,
+    fuchsia_zircon::{self as zx, Status},
     std::sync::Arc,
     storage_device::{fake_device::FakeDevice, DeviceHolder},
     vfs::{directory::entry::DirectoryEntry, path::Path},
@@ -227,4 +228,13 @@ pub async fn open_dir_checked(
     path: &str,
 ) -> fio::DirectoryProxy {
     open_dir(dir, flags, mode, path).await.expect("open_dir failed")
+}
+
+/// Utility function to write to an `FxFile`.
+pub fn write_at(file: &FxFile, offset: u64, content: &[u8]) -> Result<usize, Error> {
+    let stream = zx::Stream::create(zx::StreamOptions::MODE_WRITE, file.vmo(), 0)
+        .context("stream create failed")?;
+    stream
+        .writev_at(zx::StreamWriteOptions::empty(), offset, &[content])
+        .context("stream write failed")
 }

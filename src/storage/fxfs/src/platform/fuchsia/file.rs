@@ -7,12 +7,13 @@ use {
         async_enter,
         filesystem::SyncOptions,
         log::*,
-        object_handle::{GetProperties, ObjectHandle, ReadObjectHandle, WriteObjectHandle},
-        object_store::{CachingObjectHandle, StoreObjectHandle, Timestamp},
+        object_handle::{ObjectHandle, ReadObjectHandle, WriteObjectHandle},
+        object_store::{StoreObjectHandle, Timestamp},
         platform::fuchsia::{
             directory::FxDirectory,
             errors::map_to_status,
             node::{FxNode, OpenedNode},
+            paged_object_handle::PagedObjectHandle,
             pager::PagerBackedVmo,
             volume::{info_to_filesystem_info, FxVolume},
         },
@@ -36,7 +37,13 @@ use {
         common::{rights_to_posix_mode_bits, send_on_open_with_error},
         directory::entry::{DirectoryEntry, EntryInfo},
         execution_scope::ExecutionScope,
-        file::{connection::io1::create_connection_async, File, FileIo},
+        file::{
+            connection::io1::{
+                create_node_reference_connection_async, create_stream_connection_async,
+                create_stream_options_from_open_flags,
+            },
+            File,
+        },
         path::Path,
     },
 };
@@ -121,7 +128,7 @@ const PURGED: usize = 1 << (usize::BITS - 1);
 
 /// FxFile represents an open connection to a file.
 pub struct FxFile {
-    handle: CachingObjectHandle<FxVolume>,
+    handle: PagedObjectHandle,
     open_count: AtomicUsize,
     has_written: AtomicBool,
 }
@@ -129,7 +136,7 @@ pub struct FxFile {
 impl FxFile {
     pub fn new(handle: StoreObjectHandle<FxVolume>) -> Arc<Self> {
         let file = Arc::new(Self {
-            handle: CachingObjectHandle::new(handle),
+            handle: PagedObjectHandle::new(handle),
             open_count: AtomicUsize::new(0),
             has_written: AtomicBool::new(false),
         });
@@ -149,19 +156,34 @@ impl FxFile {
         server_end: ServerEnd<fio::NodeMarker>,
         shutdown: oneshot::Receiver<()>,
     ) {
-        create_connection_async(
-            // Note readable/writable/executable do not override what's set in flags, they merely
-            // tell the FileConnection which set of rights the file can be opened as.
-            scope.clone(),
-            this.take(),
-            flags,
-            server_end,
-            /*readable=*/ true,
-            /*writable=*/ true,
-            /*executable=*/ false,
-            shutdown,
-        )
-        .await;
+        if flags.intersects(fio::OpenFlags::NODE_REFERENCE) {
+            create_node_reference_connection_async(scope, this.take(), flags, server_end, shutdown)
+                .await;
+        } else {
+            let options = create_stream_options_from_open_flags(flags)
+                .unwrap_or_else(|| panic!("Invalid flags for stream connection: {:?}", flags));
+            let stream = match zx::Stream::create(options, this.vmo(), 0) {
+                Ok(stream) => stream,
+                Err(status) => {
+                    send_on_open_with_error(flags, server_end, status);
+                    return;
+                }
+            };
+            create_stream_connection_async(
+                // Note readable/writable/executable do not override what's set in flags, they
+                // merely tell the FileConnection which set of rights the file can be opened as.
+                scope.clone(),
+                this.take(),
+                flags,
+                server_end,
+                /*readable=*/ true,
+                /*writable=*/ true,
+                /*executable=*/ false,
+                stream,
+                shutdown,
+            )
+            .await;
+        }
     }
 
     /// Marks the file as being purged.  Returns true if there are no open references.
@@ -320,7 +342,7 @@ impl File for FxFile {
             return Err(Status::NOT_SUPPORTED);
         }
 
-        let vmo = self.handle.data_buffer().vmo();
+        let vmo = self.handle.vmo();
         let size = vmo.get_size()?;
 
         let mut child_options = zx::VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE;
@@ -401,38 +423,13 @@ impl File for FxFile {
 }
 
 #[async_trait]
-impl FileIo for FxFile {
-    async fn read_at(&self, offset: u64, buffer: &mut [u8]) -> Result<u64, Status> {
-        let bytes_read = self.handle.read_cached(offset, buffer).await.map_err(map_to_status)?;
-        Ok(bytes_read as u64)
-    }
-
-    async fn write_at(&self, offset: u64, content: &[u8]) -> Result<u64, Status> {
-        let _ = self
-            .handle
-            .write_or_append_cached(Some(offset), content)
-            .await
-            .map_err(map_to_status)?;
-        self.has_written.store(true, Ordering::Relaxed);
-        Ok(content.len() as u64)
-    }
-
-    async fn append(&self, content: &[u8]) -> Result<(u64, u64), Status> {
-        let size =
-            self.handle.write_or_append_cached(None, content).await.map_err(map_to_status)?;
-        self.has_written.store(true, Ordering::Relaxed);
-        Ok((content.len() as u64, size))
-    }
-}
-
-#[async_trait]
 impl PagerBackedVmo for FxFile {
     fn pager_key(&self) -> u64 {
         self.object_id()
     }
 
     fn vmo(&self) -> &zx::Vmo {
-        self.handle.data_buffer().vmo()
+        self.handle.vmo()
     }
 
     async fn page_in(self: &Arc<Self>, mut range: Range<u64>) {
@@ -483,11 +480,7 @@ impl PagerBackedVmo for FxFile {
                     error = e.as_value(),
                     "Failed to page-in range"
                 );
-                self.handle.owner().pager().report_failure(
-                    self.vmo(),
-                    range.clone(),
-                    zx::Status::IO,
-                );
+                self.handle.pager().report_failure(self.vmo(), range.clone(), zx::Status::IO);
                 return;
             }
         };
@@ -498,7 +491,7 @@ impl PagerBackedVmo for FxFile {
             buf = remainder;
             let range_chunk = range.start..range.start + source.len() as u64;
             match transfer_buffer.vmo().write(source, transfer_buffer.offset()) {
-                Ok(_) => self.handle.owner().pager().supply_pages(
+                Ok(_) => self.handle.pager().supply_pages(
                     self.vmo(),
                     range_chunk,
                     transfer_buffer.vmo(),
@@ -511,19 +504,17 @@ impl PagerBackedVmo for FxFile {
                             range = ?range_chunk,
                             error = e.as_value(),
                             "Failed to transfer range");
-                    self.handle.owner().pager().report_failure(
-                        self.vmo(),
-                        range_chunk,
-                        zx::Status::IO,
-                    );
+                    self.handle.pager().report_failure(self.vmo(), range_chunk, zx::Status::IO);
                 }
             }
             range.start += source.len() as u64;
         }
     }
 
-    async fn mark_dirty(self: &Arc<Self>, _range: Range<u64>) {
-        todo!("fxbug.dev/102659: Implement pager writeback")
+    async fn mark_dirty(self: &Arc<Self>, range: Range<u64>) {
+        async_enter!("mark_dirty");
+        self.has_written.store(true, Ordering::Relaxed);
+        self.handle.mark_dirty(range).await;
     }
 
     fn on_zero_children(&self) {

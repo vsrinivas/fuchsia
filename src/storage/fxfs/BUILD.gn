@@ -125,6 +125,7 @@ if (is_fuchsia) {
     "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup_rust",
     "//third_party/rust_crates:bitflags",
     "//third_party/rust_crates:event-listener",
+    "//third_party/rust_crates:scopeguard",
   ]
   if (is_debug) {
     fxfs_deps += [ "//zircon/system/ulib/backtrace-request/rust" ]
@@ -150,6 +151,7 @@ if (is_fuchsia) {
     "src/platform/fuchsia/log.rs",
     "src/platform/fuchsia/memory_pressure.rs",
     "src/platform/fuchsia/node.rs",
+    "src/platform/fuchsia/paged_object_handle.rs",
     "src/platform/fuchsia/pager.rs",
     "src/platform/fuchsia/remote_crypt.rs",
     "src/platform/fuchsia/testing.rs",
@@ -242,8 +244,13 @@ fidl("fuchsia.fxfs") {
 fs_test_config("fxfs") {
   is_component = true
   is_multi_volume = true
-  max_file_size = 9223372036854775807
+
+  # See MAX_FILE_SIZE in filesystem.rs.
+  max_file_size = 9223372036854771712
   supports_fsck_after_every_transaction = true
+
+  # TODO(fxbug.dev/112024) Add support for block sizes greater than the page size.
+  max_block_size = 4096
   supports_hard_links = true
   supports_inspect = true
   supports_resize = true

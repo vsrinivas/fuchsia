@@ -4,7 +4,9 @@
 
 use {
     crate::{
-        filesystem::{mkfs, Filesystem, FxFilesystem, OpenFxFilesystem, OpenOptions},
+        filesystem::{
+            mkfs, Filesystem, FxFilesystem, OpenFxFilesystem, OpenOptions, MIN_BLOCK_SIZE,
+        },
         fsck,
         log::*,
         metrics::{DETAIL_NODE, OBJECT_STORES_NODE},
@@ -34,7 +36,7 @@ use {
     futures::lock::Mutex,
     futures::TryStreamExt,
     inspect_runtime::service::{TreeServerSendPreference, TreeServerSettings},
-    remote_block_device::RemoteBlockClient,
+    remote_block_device::{BlockClient as _, RemoteBlockClient},
     std::ops::Deref,
     std::sync::{Arc, Weak},
     storage_device::{block_device::BlockDevice, DeviceHolder},
@@ -275,6 +277,10 @@ impl Component {
         // connections.  Fix the bug in fs_test which requires this.
         state.stop(&self.outgoing_dir).await;
         let client = new_block_client(device.into_channel()).await?;
+
+        // TODO(fxbug.dev/112024) Add support for block sizes greater than the page size.
+        assert!(client.block_size() <= zx::system_get_page_size());
+        assert!((zx::system_get_page_size() as u64) == MIN_BLOCK_SIZE);
 
         let fs = FxFilesystem::open_with_options(
             DeviceHolder::new(BlockDevice::new(Box::new(client), options.read_only).await?),

@@ -352,16 +352,9 @@ impl<T: PagerBackedVmo> Pager<T> {
 
     /// Creates a new VMO to be used with the pager. Page requests will not be serviced until
     /// [`Pager::register_file()`] is called.
-    pub fn create_vmo(
-        &self,
-        pager_key: u64,
-        initial_size: u64,
-        enable_trap_dirty: bool,
-    ) -> Result<zx::Vmo, Error> {
-        let trap_dirty =
-            if enable_trap_dirty { zx::VmoOptions::TRAP_DIRTY } else { zx::VmoOptions::empty() };
+    pub fn create_vmo(&self, pager_key: u64, initial_size: u64) -> Result<zx::Vmo, Error> {
         Ok(self.pager.create_vmo(
-            zx::VmoOptions::RESIZABLE | trap_dirty,
+            zx::VmoOptions::RESIZABLE | zx::VmoOptions::TRAP_DIRTY,
             self.port_thread.port(),
             pager_key,
             initial_size,
@@ -624,7 +617,7 @@ mod tests {
 
     impl MockFile {
         fn new(pager: Arc<Pager<Self>>, pager_key: u64) -> Self {
-            let vmo = pager.create_vmo(pager_key, 4096, true).unwrap();
+            let vmo = pager.create_vmo(pager_key, zx::system_get_page_size().into()).unwrap();
             Self { pager, vmo, pager_key }
         }
     }
@@ -719,7 +712,7 @@ mod tests {
         let expected_ehandle = pager_executor.executor_handle().clone();
         let pager = Arc::new(Pager::<ExecutorValidatingFile>::new(pager_executor).unwrap());
         let file = Arc::new(ExecutorValidatingFile {
-            vmo: pager.create_vmo(PAGER_KEY, 4096, /*enable_trap_dirty=*/ true).unwrap(),
+            vmo: pager.create_vmo(PAGER_KEY, zx::system_get_page_size().into()).unwrap(),
             pager_key: PAGER_KEY,
             pager: pager.clone(),
             expected_ehandle,
@@ -743,7 +736,7 @@ mod tests {
 
     impl OnZeroChildrenFile {
         fn new(pager: &Pager<Self>, pager_key: u64, sender: mpsc::UnboundedSender<()>) -> Self {
-            let vmo = pager.create_vmo(pager_key, 4096, /*enable_trap_dirty=*/ false).unwrap();
+            let vmo = pager.create_vmo(pager_key, zx::system_get_page_size().into()).unwrap();
             Self { vmo, pager_key, sender: Mutex::new(sender) }
         }
     }
@@ -863,7 +856,7 @@ mod tests {
         let pager_executor = Arc::new(PagerExecutor::start().await.unwrap());
         let pager = Arc::new(Pager::<StatusCodeFile>::new(pager_executor).unwrap());
         let file = Arc::new(StatusCodeFile {
-            vmo: pager.create_vmo(PAGER_KEY, 4096, /*enable_trap_dirty=*/ false).unwrap(),
+            vmo: pager.create_vmo(PAGER_KEY, zx::system_get_page_size().into()).unwrap(),
             pager_key: PAGER_KEY,
             pager: pager.clone(),
             status_code: Mutex::new(zx::Status::INTERNAL),

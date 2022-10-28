@@ -35,6 +35,7 @@ use {
         FutureExt,
     },
     once_cell::sync::OnceCell,
+    static_assertions::const_assert,
     std::sync::{
         atomic::{self, AtomicBool},
         Arc, Mutex, Weak,
@@ -43,6 +44,13 @@ use {
 };
 
 pub const MIN_BLOCK_SIZE: u64 = 4096;
+
+// Whilst Fxfs could support up to u64::MAX, off_t is i64 so allowing files larger than that becomes
+// difficult to deal with via the POSIX APIs. Additionally, PagedObjectHandle only sees data get
+// modified in page chunks so to prevent writes at i64::MAX the entire page containing i64::MAX
+// needs to be excluded.
+pub const MAX_FILE_SIZE: u64 = i64::MAX as u64 - 4095;
+const_assert!(9223372036854771712 == MAX_FILE_SIZE);
 
 /// Holds information on an Fxfs Filesystem
 pub struct Info {
