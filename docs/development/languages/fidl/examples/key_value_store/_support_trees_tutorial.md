@@ -98,11 +98,11 @@ Client and server implementations can then be written in any supported language:
       <devsite-selector style="margin: 0px; padding: 0px;">
         <section>
           <h3 id="key_value_store-support_trees-rust-client">Client</h3>
-          <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/support_trees/rust/TODO.md" region_tag="todo" %}</pre>
+          <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/support_trees/rust/client/src/main.rs" highlight="diff_1,diff_2,diff_3" %}</pre>
         </section>
         <section>
           <h3 id="key_value_store-support_trees-rust-server">Server</h3>
-          <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/support_trees/rust/TODO.md" region_tag="todo" %}</pre>
+          <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/support_trees/rust/server/src/main.rs" highlight="diff_1,diff_2,diff_3,diff_4,diff_5" %}</pre>
         </section>
       </devsite-selector>
     </section>

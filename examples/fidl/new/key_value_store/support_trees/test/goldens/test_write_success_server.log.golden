@@ -1,0 +1,16 @@
+Started
+Listening for incoming connections
+WriteItem request received
+Wrote key: verse_1, value: "Once upon a midnight dreary, while I pondered, weak and weary,\nOver many a quaint and curious volume of forgotten lore—\nWhile I nodded, nearly napping, suddenly there came a tapping,\nAs of some one gently rapping, rapping at my chamber door.\n“’Tis some visitor,” I muttered, “tapping at my chamber door—\nOnly this and nothing more.”\n"
+WriteItem response sent
+WriteItem request received
+Wrote key: verse_2, value: "Ah, distinctly I remember it was in the bleak December;\nAnd each separate dying ember wrought its ghost upon the floor.\nEagerly I wished the morrow;—vainly I had sought to borrow\nFrom my books surcease of sorrow—sorrow for the lost Lenore—\nFor the rare and radiant maiden whom the angels name Lenore—\nNameless here for evermore.\n"
+WriteItem response sent
+WriteItem request received
+Wrote key: rest_of_poem/verse_3, value: "And the silken, sad, uncertain rustling of each purple curtain\nThrilled me—filled me with fantastic terrors never felt before;\nSo that now, to still the beating of my heart, I stood repeating\n\"’Tis some visitor entreating entrance at my chamber door—\nSome late visitor entreating entrance at my chamber door;—\nThis it is and nothing more.”\n"
+Wrote key: rest_of_poem/verse_4, value: "Presently my soul grew stronger; hesitating then no longer,\n“Sir,” said I, “or Madam, truly your forgiveness I implore;\nBut the fact is I was napping, and so gently you came rapping,\nAnd so faintly you came tapping, tapping at my chamber door,\nThat I scarce was sure I heard you”—here I opened wide the door;—\nDarkness there and nothing more.\n"
+Created branch at key: rest_of_poem
+WriteItem response sent
+WriteItem request received
+Wrote value: NONE at key: null_verse
+WriteItem response sent
