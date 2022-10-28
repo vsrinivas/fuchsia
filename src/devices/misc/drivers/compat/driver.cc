@@ -164,6 +164,12 @@ zx::result<> Driver::Start() {
   }
   devfs_exporter_ = std::move(*exporter);
 
+  // Serve the diagnostics directory.
+  serve_status = ServeDiagnosticsDir();
+  if (serve_status != ZX_OK) {
+    return zx::error(serve_status);
+  }
+
   auto compat_connect =
       Driver::ConnectToParentDevices()
           .and_then(fit::bind_member<&Driver::GetDeviceInfo>(this))
@@ -724,6 +730,27 @@ zx::result<std::unique_ptr<driver::DriverBase>> DriverFactory::CreateDriver(
     return result.take_error();
   }
   return zx::ok(std::move(driver));
+}
+
+zx_status_t Driver::ServeDiagnosticsDir() {
+  diagnostics_vfs_ = std::make_unique<fs::SynchronousVfs>(dispatcher());
+
+  zx::result endpoints = fidl::CreateEndpoints<fio::Directory>();
+  if (endpoints.is_error()) {
+    return endpoints.status_value();
+  }
+  auto& [client, server] = endpoints.value();
+  zx_status_t status = diagnostics_vfs_->ServeDirectory(diagnostics_dir_, std::move(server));
+  if (status != ZX_OK) {
+    FDF_LOG(ERROR, "Failed to serve diagnostics dir: %s", zx_status_get_string(status));
+    return status;
+  }
+  zx::result result = outgoing().AddDirectory(std::move(client), "diagnostics");
+  if (result.is_error()) {
+    FDF_LOG(ERROR, "Failed to add diagnostics directory: %s", result.status_string());
+    return result.status_value();
+  }
+  return ZX_OK;
 }
 
 }  // namespace compat

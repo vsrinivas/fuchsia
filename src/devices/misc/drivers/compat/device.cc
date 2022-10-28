@@ -286,6 +286,13 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
     service_offers = ServiceOffersV1(outgoing_name, std::move(*client_end), {});
   }
 
+  if (zx_args->inspect_vmo != ZX_HANDLE_INVALID) {
+    zx_status_t status = device->ServeInspectVmo(zx::vmo(zx_args->inspect_vmo));
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
   device->device_server_ = DeviceServer(outgoing_name, zx_args->proto_id, device->topological_path_,
                                         std::move(service_offers));
 
@@ -983,6 +990,26 @@ zx::result<fidl::ClientEnd<fuchsia_io::Directory>> Device::ServeRuntimeConnector
     return serve.take_error();
   }
   return zx::ok(std::move(endpoints->client));
+}
+
+zx_status_t Device::ServeInspectVmo(zx::vmo inspect_vmo) {
+  uint64_t size;
+  zx_status_t status = inspect_vmo.get_size(&size);
+  if (status != ZX_OK) {
+    FDF_LOG(ERROR, "Failed to vmo size: %s", zx_status_get_string(status));
+    return status;
+  }
+  inspect_vmo_file_.emplace(fbl::MakeRefCounted<fs::VmoFile>(std::move(inspect_vmo), size));
+
+  auto inspect_filename = OutgoingName().append(".inspect");
+  ZX_ASSERT(driver() != nullptr);
+  status =
+      driver()->diagnostics_dir().AddEntry(inspect_filename.c_str(), inspect_vmo_file_.value());
+  if (status != ZX_OK) {
+    FDF_LOG(ERROR, "Failed to add inspect vmo: %s", zx_status_get_string(status));
+    return status;
+  }
+  return ZX_OK;
 }
 
 void Device::Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) {

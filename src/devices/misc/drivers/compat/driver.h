@@ -13,6 +13,7 @@
 #include <lib/driver_compat/compat.h>
 #include <lib/fdf/cpp/dispatcher.h>
 #include <lib/fpromise/scope.h>
+#include <lib/inspect/component/cpp/component.h>
 
 #include <unordered_set>
 
@@ -70,6 +71,8 @@ class Driver : public driver::DriverBase {
 
   uint32_t GetNextDeviceId() { return next_device_id_++; }
 
+  fs::PseudoDir& diagnostics_dir() { return *diagnostics_dir_; }
+
  private:
   bool IsComposite();
 
@@ -100,6 +103,9 @@ class Driver : public driver::DriverBase {
   fpromise::promise<void, zx_status_t> ConnectToParentDevices();
   fpromise::promise<void, zx_status_t> GetDeviceInfo();
 
+  // Serves the diagnostics directory that is used to host inspect files.
+  zx_status_t ServeDiagnosticsDir();
+
   async::Executor executor_;
   std::string driver_path_;
 
@@ -112,6 +118,9 @@ class Driver : public driver::DriverBase {
 
   std::unique_ptr<driver::Logger> inner_logger_;
   Device device_;
+
+  std::unique_ptr<fs::SynchronousVfs> diagnostics_vfs_;
+  fbl::RefPtr<fs::PseudoDir> diagnostics_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
 
   // The next unique device id for devices. Starts at 1 because `device_` has id zero.
   uint32_t next_device_id_ = 1;

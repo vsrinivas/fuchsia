@@ -268,6 +268,7 @@
 //src/devices/tests/v2/dynamic_offers:leaf_driver
 //src/devices/tests/v2/dynamic_offers:root_driver
 //src/devices/tests/v2/init-child-first:driver
+//src/devices/tests/v2/inspect:root-driver
 //src/devices/tests/v2/interop:leaf_driver
 //src/devices/tests/v2/interop:root_driver
 //src/devices/tests/v2/interop:v1_driver

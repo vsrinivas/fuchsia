@@ -1,0 +1,10 @@
+{
+    "short_description": "Root driver for inspect test",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "DriverFramework",
+        "Test"
+    ]
+}

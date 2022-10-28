@@ -48,6 +48,7 @@ source_set("lib") {
     "//sdk/lib/driver2:cpp-promise",
     "//sdk/lib/driver2:devfs_exporter",
     "//sdk/lib/driver2:runtime-deprecated",
+    "//sdk/lib/inspect/component/cpp:inspect_component_cpp",
     "//sdk/lib/stdcompat",
     "//sdk/lib/sys/component/cpp",
     "//src/devices/bin/driver_host:simple_binding",

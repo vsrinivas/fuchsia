@@ -18,6 +18,7 @@
 #include <lib/fdf/cpp/channel.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/scope.h>
+#include <lib/inspect/component/cpp/component.h>
 #include <lib/sync/cpp/completion.h>
 
 #include <list>
@@ -28,6 +29,7 @@
 
 #include "src/devices/misc/drivers/compat/devfs_vnode.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/vmo_file.h"
 
 namespace compat {
 
@@ -112,6 +114,9 @@ class Device : public std::enable_shared_from_this<Device>,
   // Serves the |fuchsia_driver_framework::RuntimeConnector| protocol,
   // used for supporting v1 of driver runtime protocol discovery.
   zx::result<fidl::ClientEnd<fuchsia_io::Directory>> ServeRuntimeConnectorProtocol();
+
+  // Serves the |inspect_vmo| from the driver's diagnostics directory.
+  zx_status_t ServeInspectVmo(zx::vmo inspect_vmo);
 
   // |fuchsia_driver_framework::RuntimeConnector| implementation.
   void ListProtocols(ListProtocolsRequestView request,
@@ -213,6 +218,9 @@ class Device : public std::enable_shared_from_this<Device>,
   std::list<std::shared_ptr<Device>> children_;
 
   async::Executor executor_;
+
+  // File representing the device's inspect vmo, if any.
+  std::optional<fbl::RefPtr<fs::VmoFile>> inspect_vmo_file_;
 
   // NOTE: Must be the last member.
   fpromise::scope scope_;
