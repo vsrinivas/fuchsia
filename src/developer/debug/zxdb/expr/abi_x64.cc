@@ -11,6 +11,7 @@
 #include "src/developer/debug/zxdb/expr/builtin_types.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
+#include "src/developer/debug/zxdb/symbols/data_member.h"
 #include "src/developer/debug/zxdb/symbols/visit_scopes.h"
 
 namespace zxdb {

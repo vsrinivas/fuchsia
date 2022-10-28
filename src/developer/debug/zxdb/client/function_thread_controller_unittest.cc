@@ -14,6 +14,7 @@
 #include "src/developer/debug/zxdb/client/step_thread_controller.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/symbols/elf_symbol.h"
+#include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/line_details.h"
 
 namespace zxdb {

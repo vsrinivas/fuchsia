@@ -26,8 +26,17 @@ class MockEvalContext : public EvalContext {
   void set_vector_register_format(VectorRegisterFormat fmt) { vector_register_format_ = fmt; }
   void set_should_promote_to_derived(bool p) { should_promote_to_derived_ = p; }
 
+  // Adds a result to the mocked data returned by FindName.
+  void AddName(const ParsedIdentifier& ident, FoundName found);
+
   // Adds the given mocked variable with the given name and value. If using the "Value" variant, the
   // checked thing is the actual pointer value, not the name.
+  //
+  // This also registers a result via AddName. The FoundName will be a Variable type.
+  //
+  // IMPORTANT: This Variable registered for the mocked FindName() will have the name set but
+  // nothing else. This means it won't be quite a perfect mock, but is sufficient for knowing that
+  // a variable with that name exists (for the parser).
   void AddVariable(const std::string& name, ExprValue v);
   void AddVariable(const Value* key, ExprValue v);
 
@@ -37,12 +46,14 @@ class MockEvalContext : public EvalContext {
   // EvalContext implementation.
   ExprLanguage GetLanguage() const override { return language_; }
   const std::shared_ptr<Abi>& GetAbi() const override { return abi_; }
+  using EvalContext::FindName;
+  void FindName(const FindNameOptions& options, const ParsedIdentifier& looking_for,
+                std::vector<FoundName>* results) const override;
   FindNameContext GetFindNameContext() const override;
   void GetNamedValue(const ParsedIdentifier& ident, EvalCallback cb) const override;
   void GetVariableValue(fxl::RefPtr<Value> variable, EvalCallback cb) const override;
   const ProcessSymbols* GetProcessSymbols() const override;
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override;
-  NameLookupCallback GetSymbolNameLookupCallback() override;
   Location GetLocationForAddress(uint64_t address) const override;
   const PrettyTypeManager& GetPrettyTypeManager() const override { return pretty_type_manager_; }
   VectorRegisterFormat GetVectorRegisterFormat() const override { return vector_register_format_; }
@@ -58,6 +69,10 @@ class MockEvalContext : public EvalContext {
  private:
   std::shared_ptr<Abi> abi_;
   fxl::RefPtr<MockSymbolDataProvider> data_provider_;
+
+  // Mocked results for FindName.
+  std::map<ParsedIdentifier, FoundName> names_;
+
   std::map<std::string, ExprValue> values_by_name_;
   std::map<const Value*, ExprValue> values_by_symbol_;
   std::map<uint64_t, Location> locations_;

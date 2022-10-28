@@ -11,6 +11,7 @@
 #include "src/developer/debug/zxdb/console/string_util.h"
 #include "src/developer/debug/zxdb/expr/format.h"
 #include "src/developer/debug/zxdb/expr/format_node.h"
+#include "src/developer/debug/zxdb/symbols/variable.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 
 namespace zxdb {

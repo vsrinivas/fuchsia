@@ -11,6 +11,8 @@
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/print_command_utils.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
+#include "src/developer/debug/zxdb/symbols/function.h"
+#include "src/developer/debug/zxdb/symbols/variable.h"
 
 namespace zxdb {
 

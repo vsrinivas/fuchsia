@@ -9,7 +9,7 @@
 #include "src/developer/debug/zxdb/expr/eval_callback.h"
 #include "src/developer/debug/zxdb/expr/expr_language.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
-#include "src/developer/debug/zxdb/expr/name_lookup.h"
+#include "src/developer/debug/zxdb/expr/find_name.h"
 #include "src/developer/debug/zxdb/expr/parsed_identifier.h"
 #include "src/developer/debug/zxdb/expr/resolve_type.h"
 #include "src/developer/debug/zxdb/expr/vector_register_format.h"
@@ -44,7 +44,21 @@ class EvalContext : public fxl::RefCountedThreadSafe<EvalContext> {
   // The ABI defines the calling conventions on the current platform.
   virtual const std::shared_ptr<Abi>& GetAbi() const = 0;
 
-  // Returns a context for looking up names.
+  // Looks up the given name in the current context.
+  //
+  // These use the global FindName backend with our context from GetFindNameContext() below. The
+  // main difference is that this call additionally allows tests to inject names without setting up
+  // the very complex symbol system indexing.
+  //
+  // The version that returns a FoundName is the same as the one that takes an output vector but
+  // limits the result to 1 max.
+  FoundName FindName(const FindNameOptions& options, const ParsedIdentifier& identifier) const;
+  virtual void FindName(const FindNameOptions& options, const ParsedIdentifier& looking_for,
+                        std::vector<FoundName>* results) const = 0;
+
+  // Returns a context for looking up names via FindName. Prefer not to use this and instead
+  // call EvalContext.FindName (which uses this context implicitly) because it additionally allows
+  // mocking.
   virtual FindNameContext GetFindNameContext() const = 0;
 
   // Issues the callback with the value of the given named value in the context of the current
@@ -93,12 +107,6 @@ class EvalContext : public fxl::RefCountedThreadSafe<EvalContext> {
   virtual const ProcessSymbols* GetProcessSymbols() const = 0;
 
   virtual fxl::RefPtr<SymbolDataProvider> GetDataProvider() = 0;
-
-  // Returns a callback the parser can use to lookup names.
-  //
-  // It is assumed this callback is used for parsing and discarded rather than stored since it may
-  // have references back the eval context.
-  virtual NameLookupCallback GetSymbolNameLookupCallback() = 0;
 
   // Returns a symbolized (if possible) location for the given address.
   virtual Location GetLocationForAddress(uint64_t address) const = 0;

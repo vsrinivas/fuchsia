@@ -55,8 +55,7 @@ void EvalExpressionAsBytecode(const std::string& input, const fxl::RefPtr<EvalCo
   if (!tokenizer.Tokenize())
     return cb(tokenizer.err());
 
-  ExprParser parser(tokenizer.TakeTokens(), tokenizer.language(),
-                    context->GetSymbolNameLookupCallback());
+  ExprParser parser(tokenizer.TakeTokens(), tokenizer.language(), context);
   auto node = parser.ParseExpression();
   if (parser.err().has_error()) {
     // Add context information since we have the original input string (the
@@ -87,8 +86,7 @@ void EvalExpressionAsNode(const std::string& input, const fxl::RefPtr<EvalContex
   if (!tokenizer.Tokenize())
     return cb(tokenizer.err());
 
-  ExprParser parser(tokenizer.TakeTokens(), tokenizer.language(),
-                    context->GetSymbolNameLookupCallback());
+  ExprParser parser(tokenizer.TakeTokens(), tokenizer.language(), context);
   auto node = parser.ParseExpression();
   if (parser.err().has_error()) {
     // Add context information since we have the original input string (the

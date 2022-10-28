@@ -41,6 +41,15 @@ class ParsedIdentifierComponent {
            template_contents_ == other.template_contents_;
   }
   bool operator!=(const ParsedIdentifierComponent& other) const { return !operator==(other); }
+  bool operator<(const ParsedIdentifierComponent& other) const {
+    if (special_ != other.special_)
+      return static_cast<int>(special_) < static_cast<int>(other.special_);
+    if (has_template_ != other.has_template_)
+      return has_template_ < other.has_template_;
+    if (name_ != other.name_)
+      return name_ < other.name_;
+    return template_contents_ < other.template_contents_;
+  }
 
   bool has_template() const { return has_template_; }
 

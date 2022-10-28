@@ -19,6 +19,7 @@ static_library("expr") {
     "cast.cc",
     "cast.h",
     "eval_callback.h",
+    "eval_context.cc",
     "eval_context.h",
     "eval_context_impl.cc",
     "eval_context_impl.h",

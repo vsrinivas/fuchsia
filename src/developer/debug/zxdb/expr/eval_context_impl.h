@@ -46,12 +46,14 @@ class EvalContextImpl : public EvalContext {
   // some things up to the debugger settings system.
   ExprLanguage GetLanguage() const override;
   const std::shared_ptr<Abi>& GetAbi() const override { return abi_; }
+  using EvalContext::FindName;
+  void FindName(const FindNameOptions& options, const ParsedIdentifier& looking_for,
+                std::vector<FoundName>* results) const override;
   FindNameContext GetFindNameContext() const override;
   void GetNamedValue(const ParsedIdentifier& name, EvalCallback cb) const override;
   void GetVariableValue(fxl::RefPtr<Value> variable, EvalCallback cb) const override;
   const ProcessSymbols* GetProcessSymbols() const override;
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override;
-  NameLookupCallback GetSymbolNameLookupCallback() override;
   Location GetLocationForAddress(uint64_t address) const override;
   const PrettyTypeManager& GetPrettyTypeManager() const override { return pretty_type_manager_; }
   VectorRegisterFormat GetVectorRegisterFormat() const override {

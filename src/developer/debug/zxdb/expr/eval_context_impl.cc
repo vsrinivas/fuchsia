@@ -142,18 +142,22 @@ EvalContextImpl::~EvalContextImpl() = default;
 
 ExprLanguage EvalContextImpl::GetLanguage() const { return language_; }
 
+void EvalContextImpl::FindName(const FindNameOptions& options, const ParsedIdentifier& looking_for,
+                               std::vector<FoundName>* results) const {
+  ::zxdb::FindName(GetFindNameContext(), options, looking_for, results);
+}
+
 FindNameContext EvalContextImpl::GetFindNameContext() const {
   // The symbol context for the current location is passed to the FindNameContext to prioritize
   // the current module's values when searching for variables. If relative, this will be ignored.
   SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
   if (block_ && process_symbols_)
     symbol_context = block_->GetSymbolContext(process_symbols_.get());
-  return FindNameContext(process_symbols_.get(), symbol_context, block_.get());
+  return FindNameContext(process_symbols_.get(), symbol_context, block_.get(), language_);
 }
 
 void EvalContextImpl::GetNamedValue(const ParsedIdentifier& identifier, EvalCallback cb) const {
-  if (FoundName found =
-          FindName(GetFindNameContext(), FindNameOptions(FindNameOptions::kAllKinds), identifier)) {
+  if (FoundName found = FindName(FindNameOptions(FindNameOptions::kAllKinds), identifier)) {
     switch (found.kind()) {
       case FoundName::kVariable:
       case FoundName::kMemberVariable:
@@ -261,22 +265,6 @@ const ProcessSymbols* EvalContextImpl::GetProcessSymbols() const {
 
 fxl::RefPtr<SymbolDataProvider> EvalContextImpl::GetDataProvider() { return data_provider_; }
 
-NameLookupCallback EvalContextImpl::GetSymbolNameLookupCallback() {
-  // The contract for this function is that the callback must not be stored
-  // so the callback can reference |this|.
-  return [this](const ParsedIdentifier& ident, const FindNameOptions& opts) -> FoundName {
-    // Look up the symbols in the symbol table if possible.
-    FoundName result = FindName(GetFindNameContext(), opts, ident);
-
-    // Fall back on builtin types.
-    if (result.kind() == FoundName::kNone && opts.find_types) {
-      if (auto type = GetBuiltinType(language_, ident.GetFullName()))
-        return FoundName(std::move(type));
-    }
-    return result;
-  };
-}
-
 Location EvalContextImpl::GetLocationForAddress(uint64_t address) const {
   if (!process_symbols_)
     return Location(Location::State::kAddress, address);  // Can't symbolize.
@@ -301,7 +289,12 @@ Err EvalContextImpl::ResolveExternValue(const fxl::RefPtr<Value>& input_value,
   FindNameContext context = GetFindNameContext();
   context.block = nullptr;
 
-  FoundName found = FindName(context, options, ToParsedIdentifier(input_value->GetIdentifier()));
+  // This call into the toplevel FindName() bypasses any mocking on the eval context because we need
+  // to supply our own context. We could have the virtual EvalContext::FindName take a context to
+  // avoid this, but extern values won't currently be generated for these mock values so we won't
+  // get here in the first place.
+  FoundName found =
+      ::zxdb::FindName(context, options, ToParsedIdentifier(input_value->GetIdentifier()));
   if (!found || !found.variable())
     return Err("Extern variable '%s' not found.", input_value->GetFullName().c_str());
 
@@ -351,7 +344,7 @@ void EvalContextImpl::DoResolve(FoundName found, EvalCallback cb) const {
 }
 
 FoundName EvalContextImpl::DoTargetSymbolsNameLookup(const ParsedIdentifier& ident) {
-  return FindName(GetFindNameContext(), FindNameOptions(FindNameOptions::kAllKinds), ident);
+  return FindName(FindNameOptions(FindNameOptions::kAllKinds), ident);
 }
 
 }  // namespace zxdb

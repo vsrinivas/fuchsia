@@ -9,6 +9,7 @@
 #include "src/developer/debug/zxdb/expr/builtin_types.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/find_name.h"
+#include "src/developer/debug/zxdb/expr/found_name.h"
 #include "src/developer/debug/zxdb/expr/resolve_type.h"
 #include "src/developer/debug/zxdb/symbols/identifier.h"
 
@@ -20,16 +21,47 @@ MockEvalContext::MockEvalContext()
 
 MockEvalContext::~MockEvalContext() = default;
 
+void MockEvalContext::AddName(const ParsedIdentifier& ident, FoundName found) {
+  names_[ident] = std::move(found);
+}
+
 void MockEvalContext::AddVariable(const std::string& name, ExprValue v) {
   values_by_name_[name] = v;
+
+  fxl::RefPtr<Variable> var =
+      fxl::MakeRefCounted<Variable>(DwarfTag::kVariable, name, v.type_ref(), VariableLocation());
+  // The FoundName constructor takes a reference to the Variable object.
+  AddName(ParsedIdentifier(ParsedIdentifierComponent(name)), FoundName(var.get()));
 }
-void MockEvalContext::AddVariable(const Value* key, ExprValue v) { values_by_symbol_[key] = v; }
+
+void MockEvalContext::AddVariable(const Value* key, ExprValue v) {
+  values_by_symbol_[key] = v;
+
+  fxl::RefPtr<Variable> var = fxl::MakeRefCounted<Variable>(
+      DwarfTag::kVariable, key->GetAssignedName(), v.type_ref(), VariableLocation());
+  // The FoundName constructor takes a reference to the Variable object.
+  AddName(ToParsedIdentifier(key->GetIdentifier()), FoundName(var.get()));
+}
 
 void MockEvalContext::AddLocation(uint64_t address, Location location) {
   locations_[address] = std::move(location);
 }
 
-FindNameContext MockEvalContext::GetFindNameContext() const { return FindNameContext(); }
+void MockEvalContext::FindName(const FindNameOptions& options, const ParsedIdentifier& looking_for,
+                               std::vector<FoundName>* results) const {
+  // Check the mocks first.
+  auto found = names_.find(looking_for);
+  if (found != names_.end()) {
+    results->push_back(found->second);
+    // Assume if a mock was provided, we don't need to do a full search for anything else.
+    return;
+  }
+
+  // Fall back on normal name lookup.
+  ::zxdb::FindName(GetFindNameContext(), options, looking_for, results);
+}
+
+FindNameContext MockEvalContext::GetFindNameContext() const { return FindNameContext(language_); }
 
 void MockEvalContext::GetNamedValue(const ParsedIdentifier& ident, EvalCallback cb) const {
   // Can ignore the symbol output for this test, it's not needed by the expression evaluation
@@ -53,17 +85,6 @@ void MockEvalContext::GetVariableValue(fxl::RefPtr<Value> variable, EvalCallback
 const ProcessSymbols* MockEvalContext::GetProcessSymbols() const { return nullptr; }
 
 fxl::RefPtr<SymbolDataProvider> MockEvalContext::GetDataProvider() { return data_provider_; }
-
-NameLookupCallback MockEvalContext::GetSymbolNameLookupCallback() {
-  // This mock version just integrates with builtin types.
-  return [lang = language_](const ParsedIdentifier& ident, const FindNameOptions& opts) {
-    if (opts.find_types) {
-      if (auto type = GetBuiltinType(lang, ident.GetFullName()))
-        return FoundName(std::move(type));
-    }
-    return FoundName();
-  };
-}
 
 Location MockEvalContext::GetLocationForAddress(uint64_t address) const {
   auto found = locations_.find(address);

@@ -10,59 +10,47 @@
 
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/expr/expr_tokenizer.h"
+#include "src/developer/debug/zxdb/expr/found_name.h"
+#include "src/developer/debug/zxdb/expr/mock_eval_context.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 
 namespace zxdb {
 
-namespace {
-
-// This name looker-upper declares anything beginning with "Namespace" is a namespace, anything
-// beginning with "Template" is a template, and anything beginning with "Type" is a type.
-FoundName TestLookupName(const ParsedIdentifier& ident, const FindNameOptions& opts) {
-  const ParsedIdentifierComponent& comp = ident.components().back();
-  const std::string& name = comp.name();
-
-  if (opts.find_namespaces && StringStartsWith(name, "Namespace"))
-    return FoundName(FoundName::kNamespace, ident.GetFullName());
-  if (opts.find_types && StringStartsWith(name, "Type")) {
-    // Make up a random class to go with the type.
-    auto type = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
-    type->set_assigned_name("Type");
-
-    // NOTE: This doesn't qualify the type with namespaces or classes present in the identifier so
-    // qualified names ("Namespace::Type") won't convert to strings properly. This could be added if
-    // necessary.
-    return FoundName(std::move(type));
-  }
-  if (opts.find_templates && StringStartsWith(name, "Template")) {
-    if (comp.has_template()) {
-      // Assume templates with arguments are types.
-      auto collection = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
-      // This name won't always be correct if the input has a namespace or other qualifier, but is
-      // good enough for this test.
-      collection->set_assigned_name(ident.GetFullName());
-      return FoundName(std::move(collection));
-    }
-    return FoundName(FoundName::kTemplate, ident.GetFullName());
-  }
-  return FoundName();
-}
-
-}  // namespace
-
 class ExprParserTest : public testing::Test {
  public:
-  ExprParserTest() = default;
+  // Adds the built-in types.
+  ExprParserTest() {
+    // "Namespace" is a namespace.
+    ParsedIdentifier namespace_ident(ParsedIdentifierComponent("Namespace"));
+    eval_context().AddName(namespace_ident, FoundName(FoundName::kNamespace, namespace_ident));
+
+    // "Type" is a class type.
+    ParsedIdentifier type_ident(ParsedIdentifierComponent("Type"));
+    auto type = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
+    type->set_assigned_name("Type");
+    eval_context().AddName(type_ident, FoundName(std::move(type)));
+
+    // Bare "Template" is a template (in FindName terms, a template is the name of a template with
+    // no template parameters, the fully specified thing is just a normal type -- see below).
+    ParsedIdentifier templ_ident(ParsedIdentifierComponent("Template"));
+    eval_context().AddName(templ_ident, FoundName(FoundName::kTemplate, templ_ident));
+
+    // Add a "Template<int>" specialization which is just a class type.
+    ParsedIdentifier templ_int_ident(ParsedIdentifierComponent("Template", {"int"}));
+    auto templ_int_type = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
+    templ_int_type->set_assigned_name("Template<int>");
+    eval_context().AddName(templ_int_ident, FoundName(std::move(templ_int_type)));
+  }
+
+  MockEvalContext& eval_context() { return *eval_context_; }
 
   // Valid after Parse() is called.
   ExprParser& parser() { return *parser_; }
 
-  fxl::RefPtr<ExprNode> Parse(const char* input, NameLookupCallback name_lookup) {
-    return Parse(input, ExprLanguage::kC, std::move(name_lookup));
-  }
-
+  // Include_context controls whether the EvalContext is passed into the parser to provide type
+  // information. This is omitted for some cases where identifiers are parsed.
   fxl::RefPtr<ExprNode> Parse(const char* input, ExprLanguage lang = ExprLanguage::kC,
-                              NameLookupCallback name_lookup = NameLookupCallback()) {
+                              bool include_context = true) {
     parser_.reset();
 
     tokenizer_ = std::make_unique<ExprTokenizer>(input, lang);
@@ -72,19 +60,17 @@ class ExprParserTest : public testing::Test {
     }
 
     parser_ = std::make_unique<ExprParser>(tokenizer_->TakeTokens(), tokenizer_->language(),
-                                           std::move(name_lookup));
+                                           include_context ? eval_context_ : nullptr);
     return parser_->ParseExpression();
   }
 
   // Does the parse and returns the string dump of the structure.
-  std::string GetParseString(const char* input,
-                             NameLookupCallback name_lookup = NameLookupCallback()) {
-    return GetParseString(input, ExprLanguage::kC, std::move(name_lookup));
+  std::string GetParseString(const char* input, bool include_context = true) {
+    return GetParseString(input, ExprLanguage::kC, include_context);
   }
 
-  std::string GetParseString(const char* input, ExprLanguage lang,
-                             NameLookupCallback name_lookup = NameLookupCallback()) {
-    auto root = Parse(input, lang, std::move(name_lookup));
+  std::string GetParseString(const char* input, ExprLanguage lang, bool include_context = true) {
+    auto root = Parse(input, lang, include_context);
     if (!root) {
       // Expect calls to this to parse successfully.
       if (parser_.get())
@@ -100,6 +86,7 @@ class ExprParserTest : public testing::Test {
  private:
   std::unique_ptr<ExprTokenizer> tokenizer_;
   std::unique_ptr<ExprParser> parser_;
+  fxl::RefPtr<MockEvalContext> eval_context_ = fxl::MakeRefCounted<MockEvalContext>();
 };
 
 TEST_F(ExprParserTest, Empty) {
@@ -474,9 +461,9 @@ TEST_F(ExprParserTest, AndOr) {
 }
 
 TEST_F(ExprParserTest, Identifiers) {
-  EXPECT_EQ("IDENTIFIER(\"foo\")\n", GetParseString("foo"));
-  EXPECT_EQ("IDENTIFIER(::\"foo\")\n", GetParseString("::foo"));
-  EXPECT_EQ("IDENTIFIER(::\"foo\"; ::\"~bar\")\n", GetParseString("::foo :: ~bar"));
+  EXPECT_EQ("IDENTIFIER(\"foo\")\n", GetParseString("foo", false));
+  EXPECT_EQ("IDENTIFIER(::\"foo\")\n", GetParseString("::foo", false));
+  EXPECT_EQ("IDENTIFIER(::\"foo\"; ::\"~bar\")\n", GetParseString("::foo :: ~bar", false));
 
   auto result = Parse("::");
   ASSERT_FALSE(result);
@@ -505,8 +492,12 @@ TEST_F(ExprParserTest, Identifiers) {
 TEST_F(ExprParserTest, SpecialIdentifiers) {
   // Most special identifier parsing is tested in the dedicated special identifier parser tests.
   // This checks that the integration is correct.
-  EXPECT_EQ("IDENTIFIER(\"ns\"; ::\"$anon\"; ::\"Foo\")\n", GetParseString("ns::$anon::Foo"));
-  EXPECT_EQ("IDENTIFIER(\"$main\")\n", GetParseString("$main"));
+  //
+  // These take no context (pass "false" to GetParseString()) to put the parser into identifier
+  // mode.
+  EXPECT_EQ("IDENTIFIER(\"ns\"; ::\"$anon\"; ::\"Foo\")\n",
+            GetParseString("ns::$anon::Foo", false));
+  EXPECT_EQ("IDENTIFIER(\"$main\")\n", GetParseString("$main", false));
   EXPECT_EQ(
       "BINARY_OP(+)\n"
       " BINARY_OP(+)\n"
@@ -518,22 +509,24 @@ TEST_F(ExprParserTest, SpecialIdentifiers) {
   // For escaping, the identifier won't contain the escaping characters, these are for parsing and
   // output only.
   EXPECT_EQ("IDENTIFIER(\"{{impl}}\"; ::\"some(crazyness)$here)\")\n",
-            GetParseString("$({{impl}})::$(some(crazyness)$here\\))"));
+            GetParseString("$({{impl}})::$(some(crazyness)$here\\))", false));
 }
 
 TEST_F(ExprParserTest, CppOperators) {
-  EXPECT_EQ("IDENTIFIER(\"Class\"; ::\"operator>>\")\n", GetParseString("Class::operator>>"));
-  EXPECT_EQ("IDENTIFIER(\"Class\"; ::\"operator()\")\n", GetParseString("Class :: operator ()"));
+  EXPECT_EQ("IDENTIFIER(\"Class\"; ::\"operator>>\")\n",
+            GetParseString("Class::operator>>", false));
+  EXPECT_EQ("IDENTIFIER(\"Class\"; ::\"operator()\")\n",
+            GetParseString("Class :: operator ()", false));
   EXPECT_EQ(
       "BINARY_OP(>)\n"
       " IDENTIFIER(\"Class\"; ::\"operator>>\")\n"
       " IDENTIFIER(\"operator<<\")\n",
-      GetParseString("Class::operator>>>operator<<"));
+      GetParseString("Class::operator>>>operator<<", false));
 
   // Type conversion operator. To parse this correctly both the class name and the destination
   // type name must be known as types to the parser.
   EXPECT_EQ("IDENTIFIER(\"Type\"; ::\"operator const Type*\")\n",
-            GetParseString("Type::operator   const  Type *", &TestLookupName));
+            GetParseString("Type::operator   const  Type *"));
 
   // We allow invalid operator names and just treat them as a literal "operator" identifier to allow
   // C variables using that name.
@@ -563,7 +556,7 @@ TEST_F(ExprParserTest, Shift) {
       "    LITERAL(2)\n"
       "   LITERAL(2)\n"
       " LITERAL(2)\n",
-      GetParseString("2<<2<static_cast<Template<int>>(2)>>2>2", &TestLookupName));
+      GetParseString("2<<2<static_cast<Template<int>>(2)>>2>2"));
 
   EXPECT_EQ(
       "BINARY_OP(>>=)\n"
@@ -571,7 +564,7 @@ TEST_F(ExprParserTest, Shift) {
       "  IDENTIFIER(\"i\")\n"
       "  LITERAL(5)\n"
       " LITERAL(6)\n",
-      GetParseString("i <<= 5 >>= 6", &TestLookupName));
+      GetParseString("i <<= 5 >>= 6"));
 
   // Some invalid shift combinations.
   auto result = Parse("a << = 2");
@@ -598,7 +591,7 @@ TEST_F(ExprParserTest, FunctionCall) {
   EXPECT_EQ(
       "FUNCTIONCALL\n"
       " IDENTIFIER(\"ns\"; ::\"Foo\",<\"int\">; ::\"GetCurrent\")\n",
-      GetParseString("ns::Foo<int>::GetCurrent()"));
+      GetParseString("ns::Foo<int>::GetCurrent()", false));
 
   // One arg.
   EXPECT_EQ(
@@ -666,47 +659,50 @@ TEST_F(ExprParserTest, FunctionCall) {
   EXPECT_EQ("Unexpected '('.", parser().err().msg());
 }
 
+// These pass no context (false) to GetParseString() so it goes into the mode where it prefers
+// identifiers and doesn't try to look up anything in the symbol system.
 TEST_F(ExprParserTest, Templates) {
   EXPECT_EQ(R"(IDENTIFIER("foo",<>))"
             "\n",
-            GetParseString("foo<>"));
+            GetParseString("foo<>", false));
   EXPECT_EQ(R"(IDENTIFIER("foo",<"Foo">))"
             "\n",
-            GetParseString("foo<Foo>"));
+            GetParseString("foo<Foo>", false));
   EXPECT_EQ(R"(IDENTIFIER("foo",<"Foo", "5">))"
             "\n",
-            GetParseString("foo< Foo,5 >"));
+            GetParseString("foo< Foo,5 >", false));
   EXPECT_EQ(
       R"(IDENTIFIER("std"; ::"map",<"Key", "Value", "std::less<Key>", "std::allocator<std::pair<Key const, Value>>">; ::"insert"))"
       "\n",
       GetParseString("std::map<Key, Value, std::less<Key>, "
-                     "std::allocator<std::pair<Key const, Value>>>::insert"));
+                     "std::allocator<std::pair<Key const, Value>>>::insert",
+                     false));
 
   // Unmatched "<" error. This is generated by the parser because it's expecting the match for the
   // outer level.
-  auto result = Parse("std::map<Key, Value");
+  auto result = Parse("std::map<Key, Value", ExprLanguage::kC, false);
   ASSERT_FALSE(result);
   EXPECT_EQ("Expected '>' to match. Hit the end of input instead.", parser().err().msg());
 
   // This unmatched token is generated by the template type skipper which is why the error message
   // is slightly different (both are OK).
-  result = Parse("std::map<key[, value");
+  result = Parse("std::map<key[, value", ExprLanguage::kC, false);
   ASSERT_FALSE(result);
   EXPECT_EQ("Unmatched '['.", parser().err().msg());
 
   // Duplicate template spec. This will actually be parsed as "less than" and "greater than" and it
   // will look like "greater than" is missing the right-hand-side.
-  result = Parse("Foo<Bar><Baz>");
+  result = Parse("Foo<Bar><Baz>", ExprLanguage::kC, false);
   ASSERT_FALSE(result);
   EXPECT_EQ("Expected expression after '>'.", parser().err().msg());
 
   // Empty value.
-  result = Parse("Foo<1,,2>");
+  result = Parse("Foo<1,,2>", ExprLanguage::kC, false);
   ASSERT_FALSE(result);
   EXPECT_EQ("Expected template parameter.", parser().err().msg());
 
   // Trailing comma.
-  result = Parse("Foo<Bar,>");
+  result = Parse("Foo<Bar,>", ExprLanguage::kC, false);
   ASSERT_FALSE(result);
   EXPECT_EQ("Expected template parameter.", parser().err().msg());
 }
@@ -747,11 +743,25 @@ TEST_F(ExprParserTest, ArraySize) {
 }
 
 TEST_F(ExprParserTest, Comparison) {
+  // Passing no context (the "false" parameter) puts the parser into a mode where it prefers to
+  // parse identifiers.
   EXPECT_EQ(
       "BINARY_OP(!=)\n"
       " IDENTIFIER(\"a\",<\"int\">; ::\"foo\")\n"
       " LITERAL(0)\n",
-      GetParseString("a<int>::foo != 0"));
+      GetParseString("a<int>::foo != 0", false));
+
+  // Doing the same thing with symbol context will try to look up "a" as a name which will fail
+  // so we won't think it's a template and get a completely different parsing.
+  EXPECT_EQ(
+      "BINARY_OP(!=)\n"
+      " BINARY_OP(>)\n"
+      "  BINARY_OP(<)\n"
+      "   IDENTIFIER(\"a\")\n"
+      "   TYPE(int)\n"
+      "  IDENTIFIER(::\"foo\")\n"
+      " LITERAL(0)\n",
+      GetParseString("a<int>::foo != 0", true));
 
   EXPECT_EQ(
       "BINARY_OP(&&)\n"
@@ -780,33 +790,32 @@ TEST_F(ExprParserTest, Comparison) {
       GetParseString("a <=> 4"));
 }
 
-// Tests parsing identifier names that require lookups from the symbol system. See TestLookupName
-// above for the mocked symbol rules.
+// Tests parsing identifier names that require lookups from the symbol system.
 TEST_F(ExprParserTest, NamesWithSymbolLookup) {
   // Bare namespace is an error.
-  auto result = Parse("Namespace", &TestLookupName);
+  auto result = Parse("Namespace");
   ASSERT_FALSE(result);
   EXPECT_EQ("Expected expression after namespace name.", parser().err().msg());
 
   // Bare template is an error.
-  result = Parse("Template", &TestLookupName);
+  result = Parse("Template");
   ASSERT_FALSE(result);
   EXPECT_EQ("Expected template args after template name.", parser().err().msg());
 
   // Nothing after "::"
-  result = Parse("Namespace::", &TestLookupName);
+  result = Parse("Namespace::");
   ASSERT_FALSE(result);
   EXPECT_EQ("Expected name after '::'.", parser().err().msg());
 
   // Can't put a template on a type that's not a template.
-  result = Parse("Type<int>", &TestLookupName);
+  result = Parse("Type<int>");
   ASSERT_FALSE(result);
   // This error message might change with future type support because it might look like a
   // comparison between a type and an int.
   EXPECT_EQ("Template parameters not valid on this object type.", parser().err().msg());
 
   // Can't put a template on a namespace.
-  result = Parse("Namespace<int>", &TestLookupName);
+  result = Parse("Namespace<int>");
   ASSERT_FALSE(result);
   EXPECT_EQ("Template parameters not valid on this object type.", parser().err().msg());
 
@@ -814,7 +823,7 @@ TEST_F(ExprParserTest, NamesWithSymbolLookup) {
   EXPECT_EQ(
       "FUNCTIONCALL\n"
       " IDENTIFIER(\"Namespace\"; ::\"Template\",<\"int\">; ::\"fn\")\n",
-      GetParseString("Namespace::Template<int>::fn()", &TestLookupName));
+      GetParseString("Namespace::Template<int>::fn()", false));
 }
 
 TEST_F(ExprParserTest, TrueFalse) {
@@ -828,33 +837,33 @@ TEST_F(ExprParserTest, TrueFalse) {
 }
 
 TEST_F(ExprParserTest, Types) {
-  EXPECT_EQ("TYPE(Type)\n", GetParseString("Type", &TestLookupName));
-  EXPECT_EQ("IDENTIFIER(\"NotType\")\n", GetParseString("NotType", &TestLookupName));
+  EXPECT_EQ("TYPE(Type)\n", GetParseString("Type"));
+  EXPECT_EQ("IDENTIFIER(\"NotType\")\n", GetParseString("NotType"));
 
-  EXPECT_EQ("TYPE(const Type)\n", GetParseString("const Type", &TestLookupName));
-  EXPECT_EQ("TYPE(const Type)\n", GetParseString("Type const", &TestLookupName));
+  EXPECT_EQ("TYPE(const Type)\n", GetParseString("const Type"));
+  EXPECT_EQ("TYPE(const Type)\n", GetParseString("Type const"));
 
   // It would be better it this printed as "const volatile Type" but our heuristic for moving
   // modifiers to the beginning isn't good enough.
-  EXPECT_EQ("TYPE(volatile Type const)\n", GetParseString("const volatile Type", &TestLookupName));
+  EXPECT_EQ("TYPE(volatile Type const)\n", GetParseString("const volatile Type"));
 
   // Duplicate const qualifications.
-  auto result = Parse("const Type const", &TestLookupName);
+  auto result = Parse("const Type const");
   ASSERT_FALSE(result);
   EXPECT_EQ("Duplicate 'const' type qualification.", parser().err().msg());
-  result = Parse("const const Type", &TestLookupName);
+  result = Parse("const const Type");
   ASSERT_FALSE(result);
   EXPECT_EQ("Duplicate 'const' type qualification.", parser().err().msg());
 
-  EXPECT_EQ("TYPE(Type*)\n", GetParseString("Type*", &TestLookupName));
-  EXPECT_EQ("TYPE(Type**)\n", GetParseString("Type * *", &TestLookupName));
-  EXPECT_EQ("TYPE(Type&&)\n", GetParseString("Type &&", &TestLookupName));
-  EXPECT_EQ("TYPE(Type&**)\n", GetParseString("Type&**", &TestLookupName));
+  EXPECT_EQ("TYPE(Type*)\n", GetParseString("Type*"));
+  EXPECT_EQ("TYPE(Type**)\n", GetParseString("Type * *"));
+  EXPECT_EQ("TYPE(Type&&)\n", GetParseString("Type &&"));
+  EXPECT_EQ("TYPE(Type&**)\n", GetParseString("Type&**"));
   EXPECT_EQ("TYPE(volatile Type* restrict* const)\n",
-            GetParseString("Type volatile *restrict* const", &TestLookupName));
+            GetParseString("Type volatile *restrict* const"));
 
   // "const" should force us into type mode.
-  result = Parse("const NonType", &TestLookupName);
+  result = Parse("const NonType");
   ASSERT_FALSE(result);
   EXPECT_EQ("Expected a type name but could not find a type named 'NonType'.",
             parser().err().msg());
@@ -863,11 +872,11 @@ TEST_F(ExprParserTest, Types) {
   EXPECT_EQ(
       "SIZEOF\n"
       " TYPE(Type*)\n",
-      GetParseString("sizeof(Type*)", &TestLookupName));
+      GetParseString("sizeof(Type*)"));
   EXPECT_EQ(
       "SIZEOF\n"
       " IDENTIFIER(\"foo\")\n",
-      GetParseString("sizeof(foo)", &TestLookupName));
+      GetParseString("sizeof(foo)"));
 }
 
 TEST_F(ExprParserTest, C_Cast) {
@@ -875,7 +884,7 @@ TEST_F(ExprParserTest, C_Cast) {
       "CAST(C)\n"
       " TYPE(Type)\n"
       " IDENTIFIER(\"a\")\n",
-      GetParseString("(Type)(a)", &TestLookupName));
+      GetParseString("(Type)(a)"));
 
   EXPECT_EQ(
       "BINARY_OP(&&)\n"
@@ -883,7 +892,7 @@ TEST_F(ExprParserTest, C_Cast) {
       "  TYPE(Type*)\n"
       "  IDENTIFIER(\"a\")\n"
       " IDENTIFIER(\"b\")\n",
-      GetParseString("(Type*)a && b", &TestLookupName));
+      GetParseString("(Type*)a && b"));
 
   EXPECT_EQ(
       "CAST(C)\n"
@@ -893,10 +902,10 @@ TEST_F(ExprParserTest, C_Cast) {
       "   IDENTIFIER(\"a\")\n"
       "   LITERAL(0)\n"
       "  b\n",
-      GetParseString("(Type)a[0]->b", &TestLookupName));
+      GetParseString("(Type)a[0]->b"));
 
   // Looks like a cast but it's not a type.
-  auto result = Parse("(NotType)a", &TestLookupName);
+  auto result = Parse("(NotType)a");
   EXPECT_FALSE(result);
   EXPECT_EQ("Unexpected input, did you forget an operator?", parser().err().msg());
 }
@@ -906,7 +915,7 @@ TEST_F(ExprParserTest, RustCast) {
       "CAST(Rust)\n"
       " TYPE(Type)\n"
       " IDENTIFIER(\"a\")\n",
-      GetParseString("a as Type", ExprLanguage::kRust, &TestLookupName));
+      GetParseString("a as Type", ExprLanguage::kRust));
 
   EXPECT_EQ(
       "BINARY_OP(&&)\n"
@@ -914,7 +923,7 @@ TEST_F(ExprParserTest, RustCast) {
       "  TYPE(Type*)\n"
       "  IDENTIFIER(\"a\")\n"
       " IDENTIFIER(\"b\")\n",
-      GetParseString("a as *Type && b", ExprLanguage::kRust, &TestLookupName));
+      GetParseString("a as *Type && b", ExprLanguage::kRust));
 
   EXPECT_EQ(
       "BINARY_OP(&&)\n"
@@ -922,7 +931,7 @@ TEST_F(ExprParserTest, RustCast) {
       "  TYPE(Type*******)\n"
       "  IDENTIFIER(\"a\")\n"
       " IDENTIFIER(\"b\")\n",
-      GetParseString("a as &mut &mut && mut &*&Type && b", ExprLanguage::kRust, &TestLookupName));
+      GetParseString("a as &mut &mut && mut &*&Type && b", ExprLanguage::kRust));
 
   EXPECT_EQ(
       "CAST(Rust)\n"
@@ -932,7 +941,7 @@ TEST_F(ExprParserTest, RustCast) {
       "   IDENTIFIER(\"a\")\n"
       "   LITERAL(0)\n"
       "  b\n",
-      GetParseString("a[0]->b as Type", ExprLanguage::kRust, &TestLookupName));
+      GetParseString("a[0]->b as Type", ExprLanguage::kRust));
 
   // We can't actually cast to tuple, so these wouldn't evaluate, but we want to test the type
   // parsing anyway.
@@ -940,103 +949,103 @@ TEST_F(ExprParserTest, RustCast) {
       "CAST(Rust)\n"
       " TYPE((Type, Type, Type))\n"
       " IDENTIFIER(\"a\")\n",
-      GetParseString("a as (Type, Type, Type)", ExprLanguage::kRust, &TestLookupName));
+      GetParseString("a as (Type, Type, Type)", ExprLanguage::kRust));
 
   EXPECT_EQ(
       "CAST(Rust)\n"
       " TYPE(())\n"
       " IDENTIFIER(\"a\")\n",
-      GetParseString("a as ()", ExprLanguage::kRust, &TestLookupName));
+      GetParseString("a as ()", ExprLanguage::kRust));
 
   EXPECT_EQ(
       "CAST(Rust)\n"
       " TYPE((Type,))\n"
       " IDENTIFIER(\"a\")\n",
-      GetParseString("a as (Type,)", ExprLanguage::kRust, &TestLookupName));
+      GetParseString("a as (Type,)", ExprLanguage::kRust));
 
   EXPECT_EQ(
       "CAST(Rust)\n"
       " TYPE(Type)\n"
       " IDENTIFIER(\"a\")\n",
-      GetParseString("a as (Type)", ExprLanguage::kRust, &TestLookupName));
+      GetParseString("a as (Type)", ExprLanguage::kRust));
 
   EXPECT_EQ(
       "CAST(Rust)\n"
       " TYPE(Type[23])\n"
       " IDENTIFIER(\"a\")\n",
-      GetParseString("a as [Type; 23]", ExprLanguage::kRust, &TestLookupName));
+      GetParseString("a as [Type; 23]", ExprLanguage::kRust));
 
   EXPECT_EQ(
       "CAST(Rust)\n"
       " TYPE(Type[])\n"
       " IDENTIFIER(\"a\")\n",
-      GetParseString("a as [Type]", ExprLanguage::kRust, &TestLookupName));
+      GetParseString("a as [Type]", ExprLanguage::kRust));
 
   EXPECT_EQ(
       "CAST(Rust)\n"
       " TYPE(Type[23]*)\n"
       " IDENTIFIER(\"a\")\n",
-      GetParseString("a as &[Type; 23]", ExprLanguage::kRust, &TestLookupName));
+      GetParseString("a as &[Type; 23]", ExprLanguage::kRust));
 
   // Looks like a cast but it's not a type.
-  auto result = Parse("a as NotType", ExprLanguage::kRust, &TestLookupName);
+  auto result = Parse("a as NotType", ExprLanguage::kRust);
   EXPECT_FALSE(result);
   EXPECT_EQ("Expected a type name but could not find a type named 'NotType'.",
             parser().err().msg());
 
   // Rust cast but we're not in rust
-  result = Parse("a as Type", ExprLanguage::kC, &TestLookupName);
+  result = Parse("a as Type", ExprLanguage::kC);
   EXPECT_FALSE(result);
   EXPECT_EQ("Unexpected identifier, did you forget an operator?", parser().err().msg());
 }
 
 TEST_F(ExprParserTest, BadRustArrays) {
-  auto result = Parse("a as [NotType]", ExprLanguage::kRust, &TestLookupName);
+  auto result = Parse("a as [NotType]", ExprLanguage::kRust);
   EXPECT_FALSE(result);
   EXPECT_EQ("Expected a type name but could not find a type named 'NotType'.",
             parser().err().msg());
 
-  result = Parse("a as [NotType; 23]", ExprLanguage::kRust, &TestLookupName);
+  result = Parse("a as [NotType; 23]", ExprLanguage::kRust);
   EXPECT_FALSE(result);
   EXPECT_EQ("Expected a type name but could not find a type named 'NotType'.",
             parser().err().msg());
 
-  result = Parse("a as [Type; 23", ExprLanguage::kRust, &TestLookupName);
+  result = Parse("a as [Type; 23", ExprLanguage::kRust);
   EXPECT_FALSE(result);
   EXPECT_EQ("Expected ']' before end of input.", parser().err().msg());
 
-  result = Parse("a as [Type;", ExprLanguage::kRust, &TestLookupName);
+  result = Parse("a as [Type;", ExprLanguage::kRust);
   EXPECT_FALSE(result);
   EXPECT_EQ("Expected element count before end of input.", parser().err().msg());
 
-  result = Parse("a as [Type", ExprLanguage::kRust, &TestLookupName);
+  result = Parse("a as [Type", ExprLanguage::kRust);
   EXPECT_FALSE(result);
   EXPECT_EQ("Expected ']' before end of input.", parser().err().msg());
 }
 
 TEST_F(ExprParserTest, BadRustTuples) {
-  auto result = Parse("a as (Type, NotType)", ExprLanguage::kRust, &TestLookupName);
+  auto result = Parse("a as (Type, NotType)", ExprLanguage::kRust);
   EXPECT_FALSE(result);
   EXPECT_EQ("Expected a type name but could not find a type named 'NotType'.",
             parser().err().msg());
 
   // Missing comma
-  result = Parse("a as (Type Type)", ExprLanguage::kRust, &TestLookupName);
+  result = Parse("a as (Type Type)", ExprLanguage::kRust);
   EXPECT_FALSE(result);
   EXPECT_EQ("This looks like a declaration which is not supported.", parser().err().msg());
 
   // Missing end
-  result = Parse("a as (Type, Type", ExprLanguage::kRust, &TestLookupName);
+  result = Parse("a as (Type, Type", ExprLanguage::kRust);
   EXPECT_FALSE(result);
   EXPECT_EQ("Expected ')' or ',' before end of input.", parser().err().msg());
 
   // Missing end with comma
-  result = Parse("a as (Type,", ExprLanguage::kRust, &TestLookupName);
+  result = Parse("a as (Type,", ExprLanguage::kRust);
   EXPECT_FALSE(result);
   EXPECT_EQ("Expected ')' or ',' before end of input.", parser().err().msg());
 
   // Missing end, no groupings.
-  result = Parse("a as (Type", ExprLanguage::kRust, &TestLookupName);
+  result = Parse("a as (Type", ExprLanguage::kRust);
   EXPECT_FALSE(result);
   EXPECT_EQ("Expected ')' or ',' before end of input.", parser().err().msg());
 }
@@ -1046,13 +1055,13 @@ TEST_F(ExprParserTest, CppCast) {
       "CAST(reinterpret_cast)\n"
       " TYPE(Type*)\n"
       " IDENTIFIER(\"a\")\n",
-      GetParseString("reinterpret_cast<Type*>(a)", &TestLookupName));
+      GetParseString("reinterpret_cast<Type*>(a)"));
 
   EXPECT_EQ(
       "CAST(static_cast)\n"
       " TYPE(Type*)\n"
       " IDENTIFIER(\"a\")\n",
-      GetParseString("static_cast<Type*>(a)", &TestLookupName));
+      GetParseString("static_cast<Type*>(a)"));
 
   EXPECT_EQ(
       "CAST(reinterpret_cast)\n"
@@ -1060,9 +1069,9 @@ TEST_F(ExprParserTest, CppCast) {
       " BINARY_OP(&&)\n"
       "  IDENTIFIER(\"x\")\n"
       "  IDENTIFIER(\"y\")\n",
-      GetParseString("reinterpret_cast<  const Type&& >( x && y)", &TestLookupName));
+      GetParseString("reinterpret_cast<  const Type&& >( x && y)"));
 
-  auto result = Parse("reinterpret_cast<", &TestLookupName);
+  auto result = Parse("reinterpret_cast<");
   EXPECT_FALSE(result);
   EXPECT_EQ("Expected type name before end of input.", parser().err().msg());
 }

@@ -9,10 +9,10 @@
 #include <vector>
 
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr_language.h"
 #include "src/developer/debug/zxdb/expr/expr_node.h"
 #include "src/developer/debug/zxdb/expr/expr_token.h"
-#include "src/developer/debug/zxdb/expr/name_lookup.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_tag.h"
 
 namespace zxdb {
@@ -33,11 +33,12 @@ class ExprParser {
     kEndOfInput,
   };
 
-  // The name lookup callback can be empty if the caller doesn't have any symbol context. This means
-  // that we can't disambiguate some cases like how to parse "Foo < 1 > bar". In this mode, we'll
-  // assume that "<" after a name always mean a template rather than a comparison operation.
+  // The eval context can be null if the caller doesn't have any symbol context. This means that we
+  // can't resolve any type or variable names, and can't disambiguate some cases like how to parse
+  // "Foo < 1 > bar". In this mode, we'll assume that "<" after a name always mean a template rather
+  // than a comparison operation.
   ExprParser(std::vector<ExprToken> tokens, ExprLanguage lang,
-             NameLookupCallback name_lookup = NameLookupCallback());
+             fxl::RefPtr<EvalContext> eval_context = nullptr);
 
   // Returns the root expression node on successful parsing. On error, returns an empty pointer in
   // which case the error message can be read from err() ad error_token()
@@ -238,7 +239,7 @@ class ExprParser {
   ExprLanguage language_;
 
   // Possibly null, see constructor.
-  NameLookupCallback name_lookup_callback_;
+  fxl::RefPtr<EvalContext> eval_context_;
 
   std::vector<ExprToken> tokens_;
   size_t cur_ = 0;  // Current index into tokens_.

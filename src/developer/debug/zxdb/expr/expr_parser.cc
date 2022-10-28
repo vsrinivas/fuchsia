@@ -10,7 +10,8 @@
 #include <iterator>
 
 #include "src/developer/debug/zxdb/expr/expr_tokenizer.h"
-#include "src/developer/debug/zxdb/expr/name_lookup.h"
+#include "src/developer/debug/zxdb/expr/find_name.h"
+#include "src/developer/debug/zxdb/expr/found_name.h"
 #include "src/developer/debug/zxdb/expr/number_parser.h"
 #include "src/developer/debug/zxdb/expr/operator_keyword.h"
 #include "src/developer/debug/zxdb/expr/parse_special_identifier.h"
@@ -177,8 +178,8 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
 const ExprToken ExprParser::kInvalidToken;
 
 ExprParser::ExprParser(std::vector<ExprToken> tokens, ExprLanguage lang,
-                       NameLookupCallback name_lookup)
-    : language_(lang), name_lookup_callback_(std::move(name_lookup)), tokens_(std::move(tokens)) {
+                       fxl::RefPtr<EvalContext> eval_context)
+    : language_(lang), eval_context_(std::move(eval_context)), tokens_(std::move(tokens)) {
   static_assert(std::size(ExprParser::kDispatchInfo) == static_cast<int>(ExprTokenType::kNumTypes),
                 "kDispatchInfo needs updating to match ExprTokenType");
 
@@ -481,9 +482,9 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
         back = ParsedIdentifierComponent(back.name(), std::move(list));
 
         // The thing we just made is either a type or a name, look it up.
-        if (name_lookup_callback_) {
+        if (eval_context_) {
           FoundName lookup =
-              name_lookup_callback_(result.ident, FindNameOptions(FindNameOptions::kAllKinds));
+              eval_context_->FindName(FindNameOptions(FindNameOptions::kAllKinds), result.ident);
           switch (lookup.kind()) {
             case FoundName::kType:
               mode = kType;
@@ -567,9 +568,9 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
         }
 
         // Decode what adding the name just generated.
-        if (name_lookup_callback_) {
+        if (eval_context_) {
           FoundName lookup =
-              name_lookup_callback_(result.ident, FindNameOptions(FindNameOptions::kAllKinds));
+              eval_context_->FindName(FindNameOptions(FindNameOptions::kAllKinds), result.ident);
           switch (lookup.kind()) {
             case FoundName::kNamespace:
               mode = kNamespace;

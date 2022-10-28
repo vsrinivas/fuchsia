@@ -20,6 +20,7 @@
 #include "src/developer/debug/zxdb/expr/expr.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/find_name.h"
+#include "src/developer/debug/zxdb/expr/found_name.h"
 #include "src/developer/debug/zxdb/expr/permissive_input_location.h"
 #include "src/developer/debug/zxdb/symbols/identifier.h"
 #include "src/developer/debug/zxdb/symbols/index.h"

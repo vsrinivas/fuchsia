@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/developer/debug/zxdb/common/string_util.h"
+#include "src/developer/debug/zxdb/expr/builtin_types.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/found_name.h"
 #include "src/developer/debug/zxdb/expr/index_walker.h"
@@ -440,8 +441,8 @@ VisitResult FindMemberOn(const FindNameContext& context, const FindNameOptions& 
 }  // namespace
 
 FindNameContext::FindNameContext(const ProcessSymbols* ps, const SymbolContext& symbol_context,
-                                 const CodeBlock* b)
-    : block(b) {
+                                 const CodeBlock* b, std::optional<ExprLanguage> lang)
+    : block(b), language(lang) {
   if (ps) {
     target_symbols = ps->target_symbols();
 
@@ -458,7 +459,8 @@ FindNameContext::FindNameContext(const ProcessSymbols* ps, const SymbolContext& 
   }
 }
 
-FindNameContext::FindNameContext(const TargetSymbols* ts) : target_symbols(ts) {}
+FindNameContext::FindNameContext(const TargetSymbols* ts, std::optional<ExprLanguage> lang)
+    : target_symbols(ts), language(lang) {}
 
 FoundName FindName(const FindNameContext& context, const FindNameOptions& options,
                    const ParsedIdentifier& identifier) {
@@ -494,7 +496,7 @@ void FindName(const FindNameContext& context, const FindNameOptions& options,
       return;
   }
 
-  // Fall back to searching global vars.
+  // Fall back to searching global vars and types.
   if (context.module_symbols || context.target_symbols) {
     // Get the scope for the current function. This may fail in which case we'll be left with an
     // empty current scope. This is non-fatal: it just means we won't implicitly search the current
@@ -506,6 +508,12 @@ void FindName(const FindNameContext& context, const FindNameOptions& options,
       }
     }
     FindIndexedName(context, options, current_scope, looking_for, true, results);
+  }
+
+  if (results->empty() && options.find_types && context.language) {
+    // Fall back on synthetic built-in types for the requested language.
+    if (auto type = GetBuiltinType(*context.language, looking_for.GetFullName()))
+      results->emplace_back(std::move(type));
   }
 }
 

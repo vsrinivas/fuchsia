@@ -37,9 +37,12 @@ class PrettyEvalContext : public EvalContext {
  public:
   // Construct with fxl::MakeRefCounted().
 
-  // EvalContext implementation. Everything except GetNamedValue() passes through to the impl_.
+  // EvalContext implementation. Everything except FindName()/GetNamedValue() passes through to the
+  // impl_.
   ExprLanguage GetLanguage() const override { return impl_->GetLanguage(); }
   const std::shared_ptr<Abi>& GetAbi() const override { return impl_->GetAbi(); }
+  void FindName(const FindNameOptions& options, const ParsedIdentifier& looking_for,
+                std::vector<FoundName>* results) const override;
   FindNameContext GetFindNameContext() const override { return impl_->GetFindNameContext(); }
   void GetNamedValue(const ParsedIdentifier& name, EvalCallback cb) const override;
   void GetVariableValue(fxl::RefPtr<Value> variable, EvalCallback cb) const override {
@@ -47,9 +50,6 @@ class PrettyEvalContext : public EvalContext {
   }
   const ProcessSymbols* GetProcessSymbols() const override { return impl_->GetProcessSymbols(); }
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override { return impl_->GetDataProvider(); }
-  NameLookupCallback GetSymbolNameLookupCallback() override {
-    return impl_->GetSymbolNameLookupCallback();
-  }
   Location GetLocationForAddress(uint64_t address) const override {
     return impl_->GetLocationForAddress(address);
   }
@@ -76,6 +76,26 @@ class PrettyEvalContext : public EvalContext {
   fxl::RefPtr<EvalContext> impl_;
   ExprValue value_;
 };
+
+void PrettyEvalContext::FindName(const FindNameOptions& options,
+                                 const ParsedIdentifier& looking_for,
+                                 std::vector<FoundName>* results) const {
+  // TODO Hook this up to implicitly use the scope of the object being printed. Ideally it would
+  // appear as the "this" member. Currently FindNameContext can't express this, it can only take
+  // a CodeBlock where it looks for the "this" member. Ideally it could also take an object that
+  // is automatically treated as "this".
+  //
+  // The parser will generally tolerate unknown words and treat them as identifiers which makes
+  // parsing work. These cases will all end up in GetNamedValue() below when they're evaluated and
+  // everything works.
+  //
+  // The thing that won't work is local types defined in the pretty-printed object. For C++ parsing
+  // to work correctly, it needs to know which names are types, and this will force the
+  // pretty-printer code to qualify all names, and means that types inside templates probably can't
+  // be expressed at all. However, pretty-printers can always use "auto" which is sufficient for
+  // most uses.
+  return impl_->FindName(options, looking_for, results);
+}
 
 void PrettyEvalContext::GetNamedValue(const ParsedIdentifier& name, EvalCallback cb) const {
   // First try to resolve all names on the object given.

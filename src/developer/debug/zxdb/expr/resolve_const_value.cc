@@ -6,6 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/developer/debug/zxdb/symbols/value.h"
+
 namespace zxdb {
 
 // TESTING NOTE: This code is tested by the collection and value resolution tests (the places

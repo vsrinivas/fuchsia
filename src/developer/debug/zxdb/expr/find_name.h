@@ -6,9 +6,11 @@
 #define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_FIND_NAME_H_
 
 #include <limits>
+#include <optional>
 #include <string>
 
 #include "lib/fit/function.h"
+#include "src/developer/debug/zxdb/expr/expr_language.h"
 #include "src/developer/debug/zxdb/expr/parsed_identifier.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
 #include "src/developer/debug/zxdb/symbols/visit_scopes.h"
@@ -37,13 +39,17 @@ class Variable;
 //
 // It provides a superset of the symbol lookup functionality of the symbol system's
 // ResolveInputLocation() functions. The symbol system provides only exact matching.
+//
+// ALMOST ALL CALLERS SHOULD USE EvalContext::FindName() INSTEAD. This automatically hooks up the
+// correct symbol information (which can be a bit complicated) and also allows tests to inject
+// names of things without having to mock the entire symbol system.
 
 // FindName can search for different levels of things depending on how much context it's given. This
 // class encapsulates all of these variants.
 struct FindNameContext {
   // No symbol context. This can be useful when searching for names on structures where there is no
   // environmental state needed.
-  FindNameContext() = default;
+  explicit FindNameContext(std::optional<ExprLanguage> lang = std::nullopt) : language(lang) {}
 
   // Search everything given a live context. The current module is extracted from the given symbol
   // context if possible. This can be SymbolContext::ForRelativeAddresses() to skip this.
@@ -52,10 +58,11 @@ struct FindNameContext {
   // some tests.
   FindNameContext(const ProcessSymbols* ps,
                   const SymbolContext& symbol_context = SymbolContext::ForRelativeAddresses(),
-                  const CodeBlock* cb = nullptr);
+                  const CodeBlock* cb = nullptr, std::optional<ExprLanguage> lang = std::nullopt);
 
   // Searches a target's symbols. This is used to search for symbols in a non-running program.
-  explicit FindNameContext(const TargetSymbols* ts);
+  explicit FindNameContext(const TargetSymbols* ts,
+                           std::optional<ExprLanguage> lang = std::nullopt);
 
   // Together TargetSymbols and ModuleSymbols control what is searched. They are both optional,
   // producing this behavior:
@@ -75,6 +82,11 @@ struct FindNameContext {
   // If given, local variables, local types, and |this| will be searched. Otherwise, only global
   // symbols will be searched.
   const CodeBlock* block = nullptr;
+
+  // The language to search built-in types for. If set and there are no type matches, the name
+  // will be matched against hardcoded built-in types for the corresponding language. If unset,
+  // only types declared in the symbols will be matched.
+  std::optional<ExprLanguage> language;
 };
 
 // By default this will find the first exact match of any kind.
