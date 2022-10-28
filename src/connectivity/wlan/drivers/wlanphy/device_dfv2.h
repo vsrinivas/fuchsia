@@ -23,8 +23,10 @@ namespace wlanphy {
 
 class DeviceConnector;
 
-class Device : public fidl::WireServer<fuchsia_wlan_device::Phy>,
-               public ::ddk::Device<Device, ::ddk::MessageableManual, ::ddk::Unbindable> {
+class Device
+    : public fidl::WireServer<fuchsia_wlan_device::Phy>,
+      public ::ddk::Device<Device, ::ddk::Messageable<fuchsia_wlan_device::Connector>::Mixin,
+                           ::ddk::Unbindable> {
  public:
   Device(zx_device_t* device, fdf::ClientEnd<fuchsia_wlan_wlanphyimpl::WlanphyImpl> client);
   ~Device();
@@ -35,7 +37,6 @@ class Device : public fidl::WireServer<fuchsia_wlan_device::Phy>,
                             fdf::ClientEnd<fuchsia_wlan_wlanphyimpl::WlanphyImpl> client);
 
   // Overriding DDK functions.
-  void DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn);
   void DdkRelease();
   void DdkUnbind(::ddk::UnbindTxn txn);
 
@@ -50,7 +51,10 @@ class Device : public fidl::WireServer<fuchsia_wlan_device::Phy>,
   void SetPsMode(SetPsModeRequestView request, SetPsModeCompleter::Sync& completer) override;
   void GetPsMode(GetPsModeCompleter::Sync& completer) override;
 
-  zx_status_t Connect(fidl::ServerEnd<fuchsia_wlan_device::Phy> server_end);
+  // Function implementations in protocol fuchsia_wlan_device::Connector.
+  void Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) override;
+  void Connect(fidl::ServerEnd<fuchsia_wlan_device::Phy> server_end);
+
   zx_status_t ConnectToWlanphyImpl(fdf::Channel server_channel);
 
   // Add the device to the devhost.

@@ -20,7 +20,6 @@
 #include <wlan/common/element.h>
 #include <wlan/common/phy.h>
 
-#include "ddktl/fidl.h"
 #include "debug.h"
 #include "driver.h"
 
@@ -29,19 +28,9 @@ namespace wlanphy {
 namespace wlan_common = ::fuchsia::wlan::common;
 namespace wlan_internal = ::fuchsia::wlan::internal;
 
-class DeviceConnector : public fidl::WireServer<fuchsia_wlan_device::Connector> {
- public:
-  DeviceConnector(Device* device) : device_(device) {}
-  void Connect(ConnectRequestView request, ConnectCompleter::Sync& _completer) override {
-    device_->Connect(std::move(request->request));
-  }
-
- private:
-  Device* device_;
-};
-
 Device::Device(zx_device_t* parent, fdf::ClientEnd<fuchsia_wlan_wlanphyimpl::WlanphyImpl> client)
-    : ::ddk::Device<Device, ::ddk::MessageableManual, ::ddk::Unbindable>(parent),
+    : ::ddk::Device<Device, ::ddk::Messageable<fuchsia_wlan_device::Connector>::Mixin,
+                    ::ddk::Unbindable>(parent),
       server_dispatcher_(wlanphy_async_t()) {
   ltrace_fn();
   ZX_ASSERT_MSG(parent != nullptr, "No parent device assigned for wlanphy device.");
@@ -74,11 +63,14 @@ zx_status_t Device::DeviceAdd() {
   return ZX_OK;
 }
 
-zx_status_t Device::Connect(fidl::ServerEnd<fuchsia_wlan_device::Phy> server_end) {
+void Device::Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) {
+  Connect(std::move(request->request));
+}
+
+void Device::Connect(fidl::ServerEnd<fuchsia_wlan_device::Phy> server_end) {
   ltrace_fn();
   fidl::BindServer<fidl::WireServer<fuchsia_wlan_device::Phy>>(server_dispatcher_,
                                                                std::move(server_end), this);
-  return ZX_OK;
 }
 
 zx_status_t Device::ConnectToWlanphyImpl(fdf::Channel server_channel) {
@@ -90,12 +82,6 @@ zx_status_t Device::ConnectToWlanphyImpl(fdf::Channel server_channel) {
     return status;
   }
   return status;
-}
-
-void Device::DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn) {
-  DeviceConnector connector(this);
-
-  fidl::WireDispatch<fuchsia_wlan_device::Connector>(&connector, std::move(msg), &txn);
 }
 
 // Implement DdkRelease for satisfying Ddk's requirement, but this function is not called now.
