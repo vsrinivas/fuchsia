@@ -30,6 +30,14 @@ class Inspect : public AttachmentProvider {
 
   ::fpromise::promise<AttachmentValue> Get(zx::duration timeout) override;
 
+  // Returns a promise to the inspect data and allows collection to be terminated early with
+  // |ticket|.
+  ::fpromise::promise<AttachmentValue> Get(uint64_t ticket, zx::duration timeout);
+
+  // Completes the inspect data collection promise associated with |ticket| early, if it hasn't
+  // already completed.
+  void ForceCompletion(uint64_t ticket, Error error);
+
  private:
   async_dispatcher_t* dispatcher_;
   std::shared_ptr<sys::ServiceDirectory> services_;
@@ -37,6 +45,9 @@ class Inspect : public AttachmentProvider {
   feedback_data::InspectDataBudget* data_budget_;
 
   fuchsia::diagnostics::ArchiveAccessorPtr archive_accessor_;
+
+  uint64_t internal_ticket_{std::numeric_limits<uint64_t>::max()};
+  std::map<uint64_t, ::fit::callback<void(std::optional<Error>)>> completers_;
 
   fxl::WeakPtrFactory<Inspect> ptr_factory_{this};
 };

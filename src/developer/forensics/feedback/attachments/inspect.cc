@@ -138,6 +138,13 @@ void InspectCollector::Run() {
 }  // namespace
 
 ::fpromise::promise<AttachmentValue> Inspect::Get(const zx::duration timeout) {
+  return Get(internal_ticket_--, timeout);
+}
+
+::fpromise::promise<AttachmentValue> Inspect::Get(const uint64_t ticket,
+                                                  const zx::duration timeout) {
+  FX_CHECK(completers_.count(ticket) == 0) << "Ticket used twice: " << ticket;
+
   if (!archive_accessor_.is_bound()) {
     return ::fpromise::make_ok_promise(AttachmentValue(Error::kConnectionError));
   }
@@ -158,6 +165,8 @@ void InspectCollector::Run() {
 
   auto collector = std::make_unique<InspectCollector>(complete.share());
 
+  completers_[ticket] = std::move(complete);
+
   fuchsia::diagnostics::StreamParameters params;
   params.set_data_type(fuchsia::diagnostics::DataType::INSPECT)
       .set_format(fuchsia::diagnostics::Format::JSON)
@@ -173,24 +182,30 @@ void InspectCollector::Run() {
 
   archive_accessor_->StreamDiagnostics(std::move(params), collector->NewRequest(dispatcher_));
 
+  auto self = ptr_factory_.GetWeakPtr();
+
   collector->Run();
   async::PostDelayedTask(
       dispatcher_,
-      [complete = complete.share()]() mutable {
-        if (complete != nullptr) {
-          complete(Error::kTimeout);
+      [self, ticket]() mutable {
+        if (self) {
+          self->ForceCompletion(ticket, Error::kTimeout);
         }
       },
       timeout);
 
   // Keep |collector| alive until Inspect collection has completed (for any reason).
-  return consume.then([collector = std::move(collector), complete = std::move(complete)](
+  return consume.then([self, ticket, collector = std::move(collector)](
                           const ::fpromise::result<void, Error>& result) mutable
                       -> ::fpromise::result<AttachmentValue> {
     auto& inspect = collector->Inspect();
     if (inspect.empty()) {
       FX_LOGS(WARNING) << "Inspect data was empty";
       return ::fpromise::ok(result.is_ok() ? Error::kMissingValue : result.error());
+    }
+
+    if (self) {
+      self->completers_.erase(ticket);
     }
 
     std::string joined_data = "[\n";
@@ -203,6 +218,12 @@ void InspectCollector::Run() {
 
     return ::fpromise::ok(std::move(value));
   });
+}
+
+void Inspect::ForceCompletion(const uint64_t ticket, const Error error) {
+  if (completers_.count(ticket) != 0 && completers_[ticket] != nullptr) {
+    completers_[ticket](error);
+  }
 }
 
 }  // namespace forensics::feedback

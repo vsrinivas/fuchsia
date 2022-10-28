@@ -66,7 +66,7 @@ class InspectTest : public UnitTestFixture {
 
   AttachmentValue Run(::fpromise::promise<AttachmentValue> promise,
                       const std::optional<zx::duration> run_loop_for = std::nullopt) {
-    AttachmentValue attachment(Error::kLogicError);
+    AttachmentValue attachment(Error::kNotSet);
     executor_.schedule_task(
         promise.and_then([&attachment](AttachmentValue& result) { attachment = std::move(result); })
             .or_else([]() { FX_LOGS(FATAL) << "Unexpected branch"; }));
@@ -157,6 +157,69 @@ TEST_F(InspectTest, GetTimeout) {
 foo1,
 foo2
 ])");
+}
+
+TEST_F(InspectTest, GetTerminatesDueToForceCompletion) {
+  const uint64_t kTicket = 1234;
+  SetUpInspectServer(std::make_unique<stubs::DiagnosticsArchive>(
+      std::make_unique<stubs::DiagnosticsBatchIteratorNeverRespondsAfterOneBatch>(
+          std::vector<std::string>({"foo1", "foo2"}))));
+
+  Inspect inspect(dispatcher(), services(), MonotonicBackoff::Make(), DataBudget());
+  const auto attachment = Run(inspect.Get(kTicket, zx::sec(1)));
+
+  // Giving some time to actually collect some inspect data
+  RunLoopUntilIdle();
+
+  // Forcefully terminate inspect collection
+  inspect.ForceCompletion(kTicket, Error::kDefault);
+
+  RunLoopUntilIdle();
+
+  ASSERT_TRUE(attachment.HasError());
+  EXPECT_EQ(attachment.Error(), Error::kDefault);
+
+  ASSERT_TRUE(attachment.HasValue());
+  EXPECT_EQ(attachment.Value(), R"([
+foo1,
+foo2
+])");
+}
+
+TEST_F(InspectTest, ForceCompletionCalledAfterTermination) {
+  const uint64_t kTicket = 1234;
+  SetUpInspectServer(std::make_unique<stubs::DiagnosticsArchive>(
+      std::make_unique<stubs::DiagnosticsBatchIteratorNeverRespondsAfterOneBatch>(
+          std::vector<std::string>({"foo1", "foo2"}))));
+
+  Inspect inspect(dispatcher(), services(), MonotonicBackoff::Make(), DataBudget());
+  const auto attachment = Run(inspect.Get(kTicket, zx::sec(1)));
+
+  RunLoopFor(zx::sec(1));
+
+  inspect.ForceCompletion(kTicket, Error::kDefault);
+
+  ASSERT_TRUE(attachment.HasError());
+  EXPECT_EQ(attachment.Error(), Error::kTimeout);
+
+  ASSERT_TRUE(attachment.HasValue());
+  EXPECT_EQ(attachment.Value(), R"([
+foo1,
+foo2
+])");
+}
+
+TEST_F(InspectTest, GetCalledWithSameTicket) {
+  const uint64_t kTicket = 1234;
+  Inspect inspect(dispatcher(), services(), MonotonicBackoff::Make(), DataBudget());
+
+  // Expect a crash because a ticket cannot be reused.
+  ASSERT_DEATH(
+      {
+        const auto attachment1 = inspect.Get(kTicket, zx::sec(1));
+        const auto attachment2 = inspect.Get(kTicket, zx::sec(1));
+      },
+      "Ticket used twice: ");
 }
 
 TEST_F(InspectTest, GetConnectionError) {
