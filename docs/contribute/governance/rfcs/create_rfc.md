@@ -347,7 +347,7 @@ After you receive a final status from the Eng Council, do the following:
      reviewers were abarth@google.com, cpu@google.com, and vaas@google.com,
      `['abarth@google.com', 'cpu@google.com', 'vaas@google.com']`.
    * `Reviewed`: Use the date (year-month-day) on which your RFC was approved
-     or rejected. For example, November 11th 2020 would be `'2020-11-11'`.
+     or rejected. For example, March 15th 2020 would be `'2020-03-15'`.
 
    The metadata for an accepted RFC proposal looks like the following:
 
@@ -363,7 +363,7 @@ After you receive a final status from the Eng Council, do the following:
      status: 'Accepted'
      reviewers: ['cpu@google.com', 'kulakowski@google.com', 'abarth@google.com', 'pascallouis@google.com']
      submitted: '2020-09-25'
-     reviewed: '2020-10-06'
+     reviewed: '2020-10-31'
    ```
 
 1. Upload a patch to your change with the updates to the RFC files.
