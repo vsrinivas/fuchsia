@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -21,18 +21,19 @@ import os
 import string
 import subprocess
 import sys
-import urllib2
+import urllib.request
 
 
 def get_git_file_data(url, revision, file_path):
     """Download a single file from a git source repository."""
     if url.startswith('https://github.com/'):
         # Use github-specific URL API:
-        data = urllib2.urlopen('%s/raw/%s/%s' % (url, revision, file_path))
+        data = urllib.request.urlopen(
+            '%s/raw/%s/%s' % (url, revision, file_path))
         return data.read()
     if url.find('.googlesource.com') >= 0:
         url = '%s/+/%s/%s?format=TEXT' % (url, revision, file_path)
-        data_file = urllib2.urlopen(url)
+        data_file = urllib.request.urlopen(url)
         data = data_file.read()
         data = base64.b64decode(data)
         return data
@@ -46,7 +47,7 @@ def get_git_remote_ref(git_url, ref_name):
     command = ['git', 'ls-remote', '--refs', git_url, ref_name]
     output = subprocess.check_output(command)
     for line in output.splitlines():
-        commit, _, ref = line.partition('\t')
+        commit, _, ref = line.partition(b'\t')
         if ref == ref_name:
             return commit
     return None
@@ -90,7 +91,8 @@ def parse_deps_file(deps_data):
     Note:
         See _EXAMPLE_DEPS_FILE below to see what the file should look like.
     """
-    assert isinstance(deps_data, basestring)
+    deps_data = deps_data.decode("utf-8")
+    assert isinstance(deps_data, str)
     var_func = lambda name: safe
     safe_globals = {
         '__builtins__': {
@@ -102,7 +104,7 @@ def parse_deps_file(deps_data):
         'Var': lambda name: safe_globals['vars'][name]
     }
 
-    exec deps_data in safe_globals
+    exec(deps_data, safe_globals)
     deps = safe_globals.get('deps')
     assert isinstance(deps, dict)
     return deps
@@ -110,6 +112,7 @@ def parse_deps_file(deps_data):
 
 def parse_git_submodules(gitmodules_data):
     """Parse a .gitmodules file to extract a { name -> url } map from it."""
+    gitmodules_data = gitmodules_data.decode("utf-8")
     result = {}
     # NOTE: configparser.ConfigParser() doesn't seem to like the file
     #       (i.e. read_string() always returns None), so do the parsing
@@ -138,7 +141,7 @@ def parse_git_submodules(gitmodules_data):
                 branches[submodule_name] = value
 
     result = {}
-    for submodule, url in urls.iteritems():
+    for submodule, url in urls.items():
         branch = branches.get(submodule)
         if not branch:
             branch = get_git_remote_ref(url, 'heads/master')
