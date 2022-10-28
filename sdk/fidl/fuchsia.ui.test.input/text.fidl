@@ -41,8 +41,6 @@ protocol KeyboardInputListener {
     /// to complete their setup to be able to continue with testing should call
     /// this method, so that the listener can wait until they are ready to
     /// proceed with testing.
-    // TODO(fxbug.dev/111291): Remove @transitional annotation.
-    @transitional
     @available(added=9, removed=10)
     ReportReady() -> ();
 
