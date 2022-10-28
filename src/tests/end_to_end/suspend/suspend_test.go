@@ -38,14 +38,24 @@ const ecSerialPathSuffix = "/serial/EC"
 
 // These are EC serial commands.
 // `powerinfo` returns the device power state
-const powerQueryString = "powerinfo"
+const powerQueryCmd = "powerinfo"
+
+// `lidclose` simulates the device lid closing.
+const lidCloseCmd = "lidclose"
+
+// `lidopen` simulates the device lid opening.
+const lidOpenCmd = "lidopen"
 
 // `powerbtn` simulates a power button press.
-const wakeSignalString = "powerbtn"
+const powerbtnCmd = "powerbtn"
+
+// Whether to use lid open for resume. If false the power button will be used instead.
+const lidUsedForSuspend = true
 
 // These are the logs we expect to read from EC serial in the test.
-const suspendString = "power state 2 = S3"
-const resumeString = "power state 7 = S3->S0"
+const suspendTrace = "power state 2 = S3"
+const resumeTrace = "power state 7 = S3->S0"
+const lidCloseTrace = "lid close"
 
 func TestMain(m *testing.M) {
 	log.SetPrefix("suspend-test: ")
@@ -130,8 +140,8 @@ func doTestSuspend(
 	// Use filepath discovery to get the serial path.
 	if ecSerialPath == "" {
 		ecSerialPath = getSerialPath()
-		// EC serial is required to resume the device after suspending so if we can't get it,
-		// we return an error rather than attempting the test.
+		// EC serial is required to resume the device after suspending so if we can't get
+		// it, we return an error rather than attempting the test.
 		if ecSerialPath == "" {
 			return fmt.Errorf("Could not get EC serial path, not attempting suspend")
 		}
@@ -140,7 +150,7 @@ func doTestSuspend(
 
 	// Try connecting to EC serial. If this fails, abort the test as we will not be able to wake
 	// the device from suspend.
-	ecAvailable := executeAndCheckLog(ctx, "", "", ecSerialPath)
+	ecAvailable := executeAndCheckLog(ctx, "", "", ecSerialPath, false)
 	if !ecAvailable {
 		return fmt.Errorf("Could not connect to EC serial, not attempting suspend")
 	}
@@ -155,19 +165,28 @@ func doTestSuspend(
 	time.Sleep(10 * time.Second)
 
 	// Check the device power state. We expect it to be S3.
-	deviceSuspended := executeAndCheckLog(ctx, powerQueryString, suspendString, ecSerialPath)
+	deviceSuspended := executeAndCheckLog(ctx, powerQueryCmd, suspendTrace, ecSerialPath, true)
 
 	if !deviceSuspended {
 		return fmt.Errorf("Device is not in the S3 Suspend to RAM power state.")
 	}
 	logger.Infof(ctx, "Device is in the S3 Suspend to RAM power state 😴💤")
 
-	// Simulate a power button press to wake the device and check that the device attempts to
-	// resume.
-	deviceResumed := executeAndCheckLog(ctx, wakeSignalString, resumeString, ecSerialPath)
+	var wakeSignalString string
+	// If we are going to use opening the lid to wake from suspend, we should first close the
+	// lid.
+	if lidUsedForSuspend && executeAndCheckLog(ctx, lidCloseCmd, lidCloseTrace, ecSerialPath, false) {
+		wakeSignalString = lidOpenCmd
+	} else {
+		wakeSignalString = powerbtnCmd
+	}
+
+	// Send a signal to wake the device and check that the device attempts to resume.
+	deviceResumed := executeAndCheckLog(ctx, wakeSignalString, resumeTrace, ecSerialPath, true)
 	logger.Infof(ctx, "Sent wake up signal ⏰")
 
-	if !deviceResumed {
+	// If the powerstate is anything other than S3, then the device attempted to resume.
+	if !deviceResumed && executeAndCheckLog(ctx, powerQueryCmd, suspendTrace, ecSerialPath, true) {
 		return fmt.Errorf("Device did not attempt to resume.")
 	}
 	logger.Infof(ctx, "Device attempted resume")
@@ -191,7 +210,7 @@ func getSerialPath() string {
 	return ""
 }
 
-func executeAndCheckLog(ctx context.Context, cmd string, checkLog string, serialPath string) bool {
+func executeAndCheckLog(ctx context.Context, cmd string, checkLog string, serialPath string, verbose bool) bool {
 	// Open a ReadWriteCloser to the EC serial line
 	localSerialSocket, err := serial.Open(serialPath)
 	if err != nil {
@@ -223,6 +242,9 @@ func executeAndCheckLog(ctx context.Context, cmd string, checkLog string, serial
 	scanner := bufio.NewScanner(localSerialSocket)
 	for scanner.Scan() {
 		logLine := scanner.Text()
+		if verbose {
+			logger.Infof(ctx, "%s", logLine)
+		}
 		if strings.Contains(logLine, checkLog) {
 			logFound = true
 			break
