@@ -93,14 +93,15 @@ fn main() -> Result<(), Error> {
 
 async fn do_policy_client_cmd(cmd: opts::PolicyClientCmd) -> Result<(), Error> {
     match cmd {
-        opts::PolicyClientCmd::Connect(network_id) => {
+        opts::PolicyClientCmd::Connect(connect_args) => {
             let (client_controller, updates_server_end) = get_client_controller().await?;
-            let network_id = wlan_policy::NetworkIdentifier::from(network_id);
-            handle_connect(client_controller, updates_server_end, network_id).await?;
+            let security = connect_args.security_type.map(|s| s.into());
+            handle_connect(client_controller, updates_server_end, connect_args.ssid, security)
+                .await?;
         }
         opts::PolicyClientCmd::GetSavedNetworks => {
             let (client_controller, _) = get_client_controller().await?;
-            let saved_networks = handle_get_saved_networks(client_controller).await?;
+            let saved_networks = handle_get_saved_networks(&client_controller).await?;
             print_saved_networks(saved_networks)?;
         }
         opts::PolicyClientCmd::Listen => {
@@ -132,7 +133,7 @@ async fn do_policy_client_cmd(cmd: opts::PolicyClientCmd) -> Result<(), Error> {
         }
         opts::PolicyClientCmd::DumpConfig => {
             let (client_controller, _) = get_client_controller().await?;
-            let saved_networks = handle_get_saved_networks(client_controller).await?;
+            let saved_networks = handle_get_saved_networks(&client_controller).await?;
             print_serialized_saved_networks(saved_networks)?;
         }
         opts::PolicyClientCmd::RestoreConfig { serialized_config } => {

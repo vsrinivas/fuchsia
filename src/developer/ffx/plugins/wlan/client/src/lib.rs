@@ -23,19 +23,25 @@ pub async fn handle_client_command(
         arg_types::ClientSubCommand::BatchConfig(batch_cmd) => match batch_cmd.subcommand {
             arg_types::BatchConfigSubCommand::Dump(arg_types::Dump {}) => {
                 let saved_networks =
-                    donut_lib::handle_get_saved_networks(client_controller).await?;
+                    donut_lib::handle_get_saved_networks(&client_controller).await?;
                 donut_lib::print_serialized_saved_networks(saved_networks)
             }
             arg_types::BatchConfigSubCommand::Restore(arg_types::Restore { serialized_config }) => {
                 donut_lib::restore_serialized_config(client_controller, serialized_config).await
             }
         },
-        arg_types::ClientSubCommand::Connect(id) => {
-            let id = wlan_policy::NetworkIdentifier::from(id);
-            donut_lib::handle_connect(client_controller, listener_stream, id).await
+        arg_types::ClientSubCommand::Connect(connect_args) => {
+            let security = connect_args.security_type.map(|s| s.into());
+            donut_lib::handle_connect(
+                client_controller,
+                listener_stream,
+                connect_args.ssid,
+                security,
+            )
+            .await
         }
         arg_types::ClientSubCommand::List(arg_types::ListSavedNetworks {}) => {
-            let saved_networks = donut_lib::handle_get_saved_networks(client_controller).await?;
+            let saved_networks = donut_lib::handle_get_saved_networks(&client_controller).await?;
             donut_lib::print_saved_networks(saved_networks)
         }
         arg_types::ClientSubCommand::Listen(arg_types::Listen {}) => {

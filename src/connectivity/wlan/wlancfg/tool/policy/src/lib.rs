@@ -176,8 +176,29 @@ async fn run_proxy_command<'a, T>(fut: BoxFuture<'a, Result<T, fidl::Error>>) ->
 pub async fn handle_connect(
     client_controller: wlan_policy::ClientControllerProxy,
     mut server_stream: wlan_policy::ClientStateUpdatesRequestStream,
-    mut network_id: wlan_policy::NetworkIdentifier,
+    ssid: String,
+    security_type: Option<wlan_policy::SecurityType>,
 ) -> Result<(), Error> {
+    // Use the exact security type if provided, or try to find the intended NetworkIdentifier
+    let mut network_id = if let Some(type_) = security_type {
+        wlan_policy::NetworkIdentifier { ssid: ssid.into_bytes(), type_ }
+    } else {
+        let mut saved_networks = handle_get_saved_networks(&client_controller)
+            .await
+            .map_err(|e| format_err!("failed to look up matching saved networks: {:?}", e))?;
+        saved_networks.retain(|config| config.id.as_ref().unwrap().ssid == ssid.as_bytes());
+        // If there is one matching saved network, use it to connect
+        if saved_networks.len() == 1 {
+            saved_networks.pop().unwrap().id.unwrap()
+        } else if saved_networks.is_empty() {
+            return Err(format_err!("Failed to find a saved network with the provided name. Please check that the name is correct or make sure the network with the provided name is saved."));
+        // If there are more than one matching network, do not assume which one to use and
+        // ask the caller to specify.
+        } else {
+            return Err(format_err!("Multiple saved networks were found matching the provided name, please specify the security type of the network to connect to."));
+        }
+    };
+
     let result = run_proxy_command(Box::pin(client_controller.connect(&mut network_id))).await?;
     handle_request_status(result)?;
 
@@ -219,7 +240,10 @@ pub async fn handle_connect(
                         return Err(format_err!("Disconnect with reason {:?}", net_state.status));
                     }
                     wlan_policy::ConnectionState::Connecting => continue,
-                    wlan_policy::ConnectionState::Connected => return Ok(()),
+                    wlan_policy::ConnectionState::Connected => {
+                        println!("Successfully connected");
+                        return Ok(());
+                    }
                 }
             }
         }
@@ -230,7 +254,7 @@ pub async fn handle_connect(
 /// Issues a call to the client policy layer to get saved networks and prints all saved network
 /// configurations.
 pub async fn handle_get_saved_networks(
-    client_controller: wlan_policy::ClientControllerProxy,
+    client_controller: &wlan_policy::ClientControllerProxy,
 ) -> Result<Vec<wlan_policy::NetworkConfig>, Error> {
     let (client_proxy, server_end) =
         create_proxy::<wlan_policy::NetworkConfigIteratorMarker>().unwrap();
@@ -769,6 +793,19 @@ mod tests {
         }
     }
 
+    /// Creates a NetworkConfig for use in tests.
+    fn create_network_config_with_security(
+        ssid: &str,
+        security: wlan_policy::SecurityType,
+    ) -> fidl_fuchsia_wlan_policy::NetworkConfig {
+        let id = wlan_policy::NetworkIdentifier { ssid: ssid.as_bytes().to_vec(), type_: security };
+        wlan_policy::NetworkConfig {
+            id: Some(id),
+            credential: None,
+            ..wlan_policy::NetworkConfig::EMPTY
+        }
+    }
+
     /// Create a scan result to be sent as a response to a scan request.
     fn create_scan_result(ssid: &str) -> wlan_policy::ScanResult {
         wlan_policy::ScanResult {
@@ -828,7 +865,7 @@ mod tests {
     /// networks.
     fn get_saved_networks_iterator(
         exec: &mut TestExecutor,
-        mut server: wlan_policy::ClientControllerRequestStream,
+        server: &mut wlan_policy::ClientControllerRequestStream,
     ) -> wlan_policy::NetworkConfigIteratorRequestStream {
         let poll = exec.run_until_stalled(&mut server.next());
         let request = match poll {
@@ -1032,8 +1069,10 @@ mod tests {
         let mut test_values = client_test_setup();
 
         // Start the connect routine.
-        let config = create_network_id(TEST_SSID);
-        let fut = handle_connect(test_values.client_proxy, test_values.update_stream, config);
+        let ssid = TEST_SSID.to_string();
+        let security = Some(wlan_policy::SecurityType::Wpa2);
+        let fut =
+            handle_connect(test_values.client_proxy, test_values.update_stream, ssid, security);
         pin_mut!(fut);
 
         // The function should now stall out waiting on the connect call to go out
@@ -1064,6 +1103,123 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(())));
     }
 
+    /// Tests the case where the security type is not specified, but it is automatically chosen
+    /// because a matching network is already saved. The connection succeeds.
+    #[fuchsia::test]
+    fn test_connect_unspecified_security_pass() {
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
+        let mut test_values = client_test_setup();
+
+        // Start the connect routine without giving a security type.
+        let ssid = TEST_SSID.to_string();
+        let fut = handle_connect(test_values.client_proxy, test_values.update_stream, ssid, None);
+        pin_mut!(fut);
+
+        // The function should now stall out waiting on the get saved networks call to go out.
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // Send back a network matching the SSID requested.
+        let mut iterator = get_saved_networks_iterator(&mut exec, &mut test_values.client_stream);
+        send_saved_networks(&mut exec, &mut iterator, vec![create_network_config(TEST_SSID)]);
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // Send back an empty set of configs to indicate that the process is complete
+        send_saved_networks(&mut exec, &mut iterator, vec![]);
+
+        // The function should now stall out waiting on the connect call to go out
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // Send back a positive acknowledgement
+        send_client_request_status(
+            &mut exec,
+            &mut test_values.client_stream,
+            fidl_wlan_common::RequestStatus::Acknowledged,
+        );
+
+        // The client should now wait for events from the listener.  Send a Connecting update.
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+        let _ = test_values.update_proxy.on_client_state_update(create_client_state_summary(
+            TEST_SSID,
+            wlan_policy::ConnectionState::Connecting,
+        ));
+
+        // The client should stall and then wait for a Connected message.  Send that over.
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+        let _ = test_values.update_proxy.on_client_state_update(create_client_state_summary(
+            TEST_SSID,
+            wlan_policy::ConnectionState::Connected,
+        ));
+
+        // The connect process should complete after receiving the Connected status response
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(())));
+    }
+
+    /// Tests the case where a user doesn't provide a security type and nothing matching is saved.
+    /// In this case there should be no connect request and an error should be returned.
+    #[fuchsia::test]
+    fn test_connect_no_security_given_nothing_saved_fails() {
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
+        let mut test_values = client_test_setup();
+
+        // Start the connect routine.
+        let ssid = TEST_SSID.to_string();
+        let fut = handle_connect(test_values.client_proxy, test_values.update_stream, ssid, None);
+        pin_mut!(fut);
+
+        // Progress future forward until it waits on a get saved networks call.
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // Respond to the get saved networks request with no matches
+        let mut iterator = get_saved_networks_iterator(&mut exec, &mut test_values.client_stream);
+        send_saved_networks(&mut exec, &mut iterator, vec![]);
+
+        // The connect routine should return an error.
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Err(_)));
+
+        // No connect request should have been sent through FIDL.
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.client_stream.next()),
+            Poll::Ready(None)
+        );
+    }
+
+    /// Tests the case where a user doesn't provide a security type and multiple matching networks
+    /// are saved. In this case there should be no connect request and an error should be returned.
+    #[fuchsia::test]
+    fn test_connect_no_security_given_multiple_saved_fails() {
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
+        let mut test_values = client_test_setup();
+
+        // Start the connect routine.
+        let ssid = TEST_SSID.to_string();
+        let fut = handle_connect(test_values.client_proxy, test_values.update_stream, ssid, None);
+        pin_mut!(fut);
+
+        // Progress future forward until it waits on a get saved networks call.
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // Send back 2 networks matching the SSID requested.
+        let mut iterator = get_saved_networks_iterator(&mut exec, &mut test_values.client_stream);
+        let wpa_config =
+            create_network_config_with_security(TEST_SSID, wlan_policy::SecurityType::Wpa);
+        let networks = vec![create_network_config(TEST_SSID), wpa_config];
+
+        send_saved_networks(&mut exec, &mut iterator, networks);
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // Send back an empty set of configs to indicate that the process is complete
+        send_saved_networks(&mut exec, &mut iterator, vec![]);
+
+        // The connect routine should return an error since there are multiple matches.
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Err(_)));
+
+        // No connect request should have been sent through FIDL.
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.client_stream.next()),
+            Poll::Ready(None)
+        );
+    }
+
     /// Tests the case where a client fails to connect.
     #[fuchsia::test]
     fn test_connect_fail() {
@@ -1071,8 +1227,10 @@ mod tests {
         let mut test_values = client_test_setup();
 
         // Start the connect routine.
-        let config = create_network_id(TEST_SSID);
-        let fut = handle_connect(test_values.client_proxy, test_values.update_stream, config);
+        let ssid = TEST_SSID.to_string();
+        let security = Some(wlan_policy::SecurityType::Wpa2);
+        let fut =
+            handle_connect(test_values.client_proxy, test_values.update_stream, ssid, security);
         pin_mut!(fut);
 
         // The function should now stall out waiting on the connect call to go out
@@ -1156,16 +1314,16 @@ mod tests {
     #[fuchsia::test]
     fn test_get_saved_networks() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
-        let test_values = client_test_setup();
+        let mut test_values = client_test_setup();
 
-        let fut = handle_get_saved_networks(test_values.client_proxy);
+        let fut = handle_get_saved_networks(&test_values.client_proxy);
         pin_mut!(fut);
 
         // The future should stall out waiting on the get saved networks request
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
         // Send back a saved networks response
-        let mut iterator = get_saved_networks_iterator(&mut exec, test_values.client_stream);
+        let mut iterator = get_saved_networks_iterator(&mut exec, &mut test_values.client_stream);
         send_saved_networks(&mut exec, &mut iterator, vec![create_network_config(TEST_SSID)]);
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 

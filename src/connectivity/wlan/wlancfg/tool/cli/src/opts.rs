@@ -118,28 +118,6 @@ impl From<PolicyNetworkConfig> for wlan_policy::NetworkConfig {
     }
 }
 
-impl From<PolicyNetworkId> for wlan_policy::NetworkIdentifier {
-    fn from(arg: PolicyNetworkId) -> Self {
-        wlan_policy::NetworkIdentifier {
-            ssid: arg.ssid.as_bytes().to_vec(),
-            type_: wlan_policy::SecurityType::from(arg.security_type),
-        }
-    }
-}
-
-#[derive(StructOpt, Clone, Debug)]
-pub struct PolicyNetworkId {
-    #[structopt(long, required = true)]
-    pub ssid: String,
-    #[structopt(
-        long = "security-type",
-        default_value = "none",
-        raw(possible_values = "&SecurityTypeArg::variants()"),
-        raw(case_insensitive = "true")
-    )]
-    pub security_type: SecurityTypeArg,
-}
-
 #[derive(StructOpt, Clone, Debug)]
 pub struct PolicyNetworkConfig {
     #[structopt(long, required = true)]
@@ -163,9 +141,21 @@ pub struct PolicyNetworkConfig {
 }
 
 #[derive(StructOpt, Clone, Debug)]
+pub struct ConnectArgs {
+    #[structopt(long, required = true)]
+    pub ssid: String,
+    #[structopt(
+        long = "security-type",
+        raw(possible_values = "&SecurityTypeArg::variants()"),
+        raw(case_insensitive = "true")
+    )]
+    pub security_type: Option<SecurityTypeArg>,
+}
+
+#[derive(StructOpt, Clone, Debug)]
 pub enum PolicyClientCmd {
     #[structopt(name = "connect")]
-    Connect(PolicyNetworkId),
+    Connect(ConnectArgs),
     #[structopt(name = "list-saved-networks")]
     GetSavedNetworks,
     #[structopt(name = "listen")]

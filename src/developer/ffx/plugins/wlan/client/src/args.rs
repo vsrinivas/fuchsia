@@ -256,16 +256,6 @@ impl From<SaveNetwork> for wlan_policy::NetworkConfig {
 pub struct Connect {
     #[argh(option, default = "String::from(\"\")", description = "WLAN network name")]
     pub ssid: String,
-    #[argh(
-        option,
-        default = "SecurityType::None",
-        description = "one of None, WEP, WPA, WPA2, WPA3"
-    )]
-    pub security_type: SecurityType,
-}
-
-impl From<Connect> for wlan_policy::NetworkIdentifier {
-    fn from(arg: Connect) -> Self {
-        ffx_wlan_common::args::id_from_args(arg.ssid, arg.security_type)
-    }
+    #[argh(option, description = "one of None, WEP, WPA, WPA2, WPA3")]
+    pub security_type: Option<SecurityType>,
 }
