@@ -42,12 +42,12 @@ InjectorInspector::InjectorInspector(inspect::Node node)
                                                        std::move(insp));
                                                  })),
       viewport_event_latency_(node_.CreateExponentialUintHistogram(
-          "viewport_event_latency", kLatencyHistogramFloor.to_nsecs(),
-          kLatencyHistogramInitialStep.to_nsecs(), kLatencyHistogramStepMultiplier,
+          "viewport_event_latency_usecs", kLatencyHistogramFloor.to_usecs(),
+          kLatencyHistogramInitialStep.to_usecs(), kLatencyHistogramStepMultiplier,
           kLatencyHistogramBuckets)),
       pointer_event_latency_(node_.CreateExponentialUintHistogram(
-          "pointer_event_latency", kLatencyHistogramFloor.to_nsecs(),
-          kLatencyHistogramInitialStep.to_nsecs(), kLatencyHistogramStepMultiplier,
+          "pointer_event_latency_usecs", kLatencyHistogramFloor.to_usecs(),
+          kLatencyHistogramInitialStep.to_usecs(), kLatencyHistogramStepMultiplier,
           kLatencyHistogramBuckets)) {}
 
 void InjectorInspector::OnPointerInjectorEvent(const fuchsia::ui::pointerinjector::Event& event) {
@@ -57,10 +57,10 @@ void InjectorInspector::OnPointerInjectorEvent(const fuchsia::ui::pointerinjecto
   const zx::time now = async::Now(async_get_default_dispatcher());
   const zx::duration latency = now - zx::time(event.timestamp());
   if (event.data().is_viewport()) {
-    viewport_event_latency_.Insert(latency.to_nsecs());
+    viewport_event_latency_.Insert(latency.to_usecs());
   } else if (event.data().is_pointer_sample()) {
     UpdateHistory(now);
-    pointer_event_latency_.Insert(latency.to_nsecs());
+    pointer_event_latency_.Insert(latency.to_usecs());
   } else {
     FX_LOGS(ERROR) << "pointerinjector::Event dropped from inspect metrics. Unexpected data type.";
   }

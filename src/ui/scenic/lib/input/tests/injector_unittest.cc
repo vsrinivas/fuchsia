@@ -1014,7 +1014,7 @@ TEST_F(InjectorInspectionTest, HistogramsTrackInjections) {
   {
     uint64_t count = 0;
     for (const inspect::UintArrayValue::HistogramBucket& bucket :
-         GetHistogramBuckets("viewport_event_latency")) {
+         GetHistogramBuckets("viewport_event_latency_usecs")) {
       count += bucket.count;
     }
 
@@ -1024,7 +1024,7 @@ TEST_F(InjectorInspectionTest, HistogramsTrackInjections) {
   {
     uint64_t count = 0;
     for (const inspect::UintArrayValue::HistogramBucket& bucket :
-         GetHistogramBuckets("pointer_event_latency")) {
+         GetHistogramBuckets("pointer_event_latency_usecs")) {
       count += bucket.count;
     }
 
