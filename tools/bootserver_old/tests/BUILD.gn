@@ -41,7 +41,6 @@ group("tests") {
 if (is_linux) {
   go_library("lib") {
     testonly = true
-    name = "go.fuchsia.dev/fuchsia/tools/bootserver_old/tests/..."
     deps = [
       "//tools/emulator/emulatortest",
       "//tools/net/netutil",
@@ -51,15 +50,27 @@ if (is_linux) {
       ":bootserver_user_tools",
       "//build/images/fuchsia:fuchsia_zbi_for_host_tests",
     ]
-    sources = [
-      "common.go",
-      "test_advert_frequency/test_advert_frequency_test.go",
-      "test_init_partition_tables/test_init_partition_tables_test.go",
-      "test_pave_no_bind/test_pave_no_bind_test.go",
-      "test_pave_no_bind_failure/test_pave_no_bind_failure_test.go",
-      "test_write_firmware_no_type/test_write_firmware_no_type_test.go",
-      "test_write_firmware_with_type/test_write_firmware_with_type_test.go",
-    ]
+    sources = [ "common.go" ]
+  }
+
+  foreach(test_dir, test_dirs) {
+    _test = "bootserver_${test_dir}"
+    _library = "${_test}_lib"
+
+    go_library(_library) {
+      source_dir = test_dir
+      testonly = true
+      deps = [ ":lib" ]
+      sources = [ "${test_dir}_test.go" ]
+    }
+
+    go_test(_test) {
+      library = ":${_library}"
+      args = [
+        "--test_data_dir",
+        rebase_path("$root_out_dir/test_data", root_build_dir),
+      ]
+    }
   }
 
   host_out_dir = get_label_info("//bogus($host_toolchain)", "root_out_dir")
@@ -91,17 +102,5 @@ if (is_linux) {
       ":copy_fake_firmware",
       ":copy_netls",
     ]
-  }
-
-  foreach(test_dir, test_dirs) {
-    go_test("bootserver_${test_dir}") {
-      gopackages =
-          [ "go.fuchsia.dev/fuchsia/tools/bootserver_old/tests/${test_dir}" ]
-      args = [
-        "--test_data_dir",
-        rebase_path("$root_out_dir/test_data", root_build_dir),
-      ]
-      deps = [ ":lib" ]
-    }
   }
 }
