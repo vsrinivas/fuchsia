@@ -15,9 +15,12 @@
 
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/testing/ui_test_manager/ui_test_manager.h"
+#include "src/ui/testing/util/flatland_test_view.h"
 #include "src/ui/testing/util/gfx_test_view.h"
 
 namespace integration_tests {
+
+namespace {
 
 using component_testing::ChildRef;
 using component_testing::LocalComponent;
@@ -29,34 +32,73 @@ using component_testing::Route;
 
 constexpr auto kViewProvider = "view-provider";
 
+std::vector<ui_testing::UITestRealm::Config> UIConfigurationsToTest() {
+  std::vector<ui_testing::UITestRealm::Config> configs;
+
+  // GFX x root presenter
+  {
+    ui_testing::UITestRealm::Config config;
+    config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER;
+    config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
+    configs.push_back(std::move(config));
+  }
+
+  // GFX x scene manager
+  {
+    ui_testing::UITestRealm::Config config;
+    config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER;
+    config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
+    configs.push_back(std::move(config));
+  }
+
+  // Flatland x scene manager
+  {
+    ui_testing::UITestRealm::Config config;
+    config.use_flatland = true;
+    config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER;
+    config.ui_to_client_services = {fuchsia::ui::composition::Flatland::Name_,
+                                    fuchsia::ui::composition::Allocator::Name_};
+    configs.push_back(std::move(config));
+  }
+  return configs;
+}
+
+}  // namespace
+
 // This test verifies that the scene owner correctly connects the scene graph to
 // the display so that pixels render, and enforces the expected presentation
 // semantics.
-class PresentationTest
-    : public gtest::RealLoopFixture,
-      public ::testing::WithParamInterface<ui_testing::UITestRealm::SceneOwnerType> {
+class PresentationTest : public gtest::RealLoopFixture,
+                         public ::testing::WithParamInterface<ui_testing::UITestRealm::Config> {
  protected:
   // |testing::Test|
   void SetUp() override {
-    ui_testing::UITestRealm::Config config;
-    config.scene_owner = GetParam();
-    config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
-    ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(std::move(config));
+    ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(GetParam());
+    auto ui_stack_config = GetParam();
 
     // Build realm.
     FX_LOGS(INFO) << "Building realm";
     realm_ = std::make_unique<Realm>(ui_test_manager_->AddSubrealm());
 
     // Add a test view provider.
-    test_view_ = std::make_unique<ui_testing::GfxTestView>(
-        dispatcher(), /* content = */ ui_testing::TestView::ContentType::COORDINATE_GRID);
+    if (ui_stack_config.use_flatland) {
+      test_view_ = std::make_unique<ui_testing::FlatlandTestView>(
+          dispatcher(), /* content = */ ui_testing::TestView::ContentType::COORDINATE_GRID);
+    } else {
+      test_view_ = std::make_unique<ui_testing::GfxTestView>(
+          dispatcher(), /* content = */ ui_testing::TestView::ContentType::COORDINATE_GRID);
+    }
+
     realm_->AddLocalChild(kViewProvider, test_view_.get());
     realm_->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
                            .source = ChildRef{kViewProvider},
                            .targets = {ParentRef()}});
-    realm_->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-                           .source = ParentRef(),
-                           .targets = {ChildRef{kViewProvider}}});
+
+    for (const auto& protocol : ui_stack_config.ui_to_client_services) {
+      realm_->AddRoute(Route{.capabilities = {Protocol{protocol}},
+                             .source = ParentRef(),
+                             .targets = {ChildRef{kViewProvider}}});
+    }
 
     ui_test_manager_->BuildRealm();
     realm_exposed_services_ = ui_test_manager_->CloneExposedServicesDirectory();
@@ -76,8 +118,7 @@ class PresentationTest
 };
 
 INSTANTIATE_TEST_SUITE_P(PresentationTestWithParams, PresentationTest,
-                         ::testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
-                                           ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER));
+                         ::testing::ValuesIn(UIConfigurationsToTest()));
 
 TEST_P(PresentationTest, RenderCoordinateGridPattern) {
   auto data = TakeScreenshot();
