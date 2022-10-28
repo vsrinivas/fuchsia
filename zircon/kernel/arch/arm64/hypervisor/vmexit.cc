@@ -171,29 +171,20 @@ zx_status_t handle_system_instruction(uint32_t iss, uint64_t& hcr, GuestState* g
 
       uint32_t sctlr_el1 = reg & UINT32_MAX;
 
-      // If the MMU is being enabled and caches are on, invalidate the caches.
-      //
-      // At this point the guest may reasonably assume that the caches are
-      // clear, but accesses by the host (either directly or even by just
-      // a speculative CPU load) may have led to them containing data. If this
-      // has happened, a guest's write to raw memory may be hidden by a stale
-      // cache entry.
-      //
-      // Invalidating the caches removes all stale data from cache. It's not
-      // a problem if a cache line is brought back into the cache after we
-      // invalidate: it will correctly contain the guest's data.
+      // When the MMU and caches are off the HCR_EL2.DC control is used to force caching on. This
+      // ensures that there are not conflicts due to the guest performing uncached accesses to
+      // memory that has other cached mappings. The DC bit also has the effect of forcing execution
+      // to act as if SCTLR.M=0, hence once the guest is wanting to use the MMU we must disable the
+      // DC bit. As enabling the MMU and caches are typically done at the same time this is fine
+      // since the guest will seamlessly transition to its caching setup.
       bool mmu_enabled = (sctlr_el1 & SCTLR_ELX_M) != 0;
       bool dcaches_enabled = (sctlr_el1 & SCTLR_ELX_C) != 0;
       if (mmu_enabled && dcaches_enabled) {
-        // Clean/invalidate the pages. We don't strictly need the clean, but it
-        // doesn't hurt.
-        clean_invalidate_cache(gpa->arch_aspace().arch_table_phys(), MMU_GUEST_TOP_SHIFT);
-
-        // Stop trapping MMU register accesses to improve performance.
+        // Also stop trapping MMU register accesses to improve performance.
         //
         // We'll start monitoring again if the guest does a set/way cache
         // operation.
-        hcr &= ~HCR_EL2_TVM;
+        hcr &= ~(HCR_EL2_TVM | HCR_EL2_DC);
       }
 
       LTRACEF("guest sctlr_el1: %#x\n", sctlr_el1);
@@ -271,15 +262,12 @@ zx_status_t handle_system_instruction(uint32_t iss, uint64_t& hcr, GuestState* g
       //
       // We (the host) can't guarantee that the we won't inadvertently cause
       // the cache lines to load again (e.g., through speculative CPU
-      // accesses). Instead, we start monitoring for when the guest turns on
-      // the MMU again, and clean/invalidate caches then. This ensures that
-      // any writes done by the guest while caches are disabled won't be
-      // hidden by stale cache lines.
+      // accesses). Instead, we force caching on using the DC control.
       uint32_t sctlr_el1 = guest_state->system_state.sctlr_el1;
       bool mmu_enabled = (sctlr_el1 & SCTLR_ELX_M) != 0;
       bool dcaches_enabled = (sctlr_el1 & SCTLR_ELX_C) != 0;
       if (!mmu_enabled || !dcaches_enabled) {
-        hcr |= HCR_EL2_TVM;
+        hcr |= HCR_EL2_TVM | HCR_EL2_DC;
       }
 
       next_pc(guest_state);
