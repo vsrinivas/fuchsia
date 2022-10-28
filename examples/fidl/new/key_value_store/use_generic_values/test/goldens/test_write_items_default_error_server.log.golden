@@ -1,0 +1,32 @@
+Started
+Listening for incoming connections
+WriteItem request received
+Wrote key: bytes, value: Bytes([102, 111, 111])
+WriteItem response sent
+WriteItem request received
+Write error: ALREADY_EXISTS for key: bytes
+WriteItem response sent
+WriteItem request received
+Wrote key: string, value: String("baz")
+WriteItem response sent
+WriteItem request received
+Write error: ALREADY_EXISTS for key: string
+WriteItem response sent
+WriteItem request received
+Wrote key: uint64, value: Uint64(1)
+WriteItem response sent
+WriteItem request received
+Write error: ALREADY_EXISTS for key: uint64
+WriteItem response sent
+WriteItem request received
+Wrote key: int64, value: Int64(-2)
+WriteItem response sent
+WriteItem request received
+Write error: ALREADY_EXISTS for key: int64
+WriteItem response sent
+WriteItem request received
+Wrote key: uint128, value: Uint128([0, 3])
+WriteItem response sent
+WriteItem request received
+Write error: ALREADY_EXISTS for key: uint128
+WriteItem response sent

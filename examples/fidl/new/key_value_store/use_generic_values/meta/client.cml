@@ -10,5 +10,52 @@
     use: [
         { protocol: "examples.keyvaluestore.usegenericvalues.Store" },
     ],
-    config: {},
+    config: {
+        // [START diff_1]
+        // A vector of values for every easily representible type in our key-value store. For
+        // brevity's sake, the 8, 16, and 32 bit integer types and booleans are omitted.
+        //
+        // TODO(fxbug.dev/96264): It would absolve individual language implementations of a great
+        //   deal of string parsing if we were able to use all FIDL constructs directly here. In
+        //   particular, floats and nested types are very difficult to represent, and have been
+        //   excluded from this example for the time being.
+        set_concat_option: { type: "bool" },
+        set_overwrite_option: { type: "bool" },
+        write_bytes: {
+            type: "vector",
+            max_count: 16,
+            element: {
+                type: "string",
+                max_size: 64,
+            },
+        },
+        write_strings: {
+            type: "vector",
+            max_count: 16,
+            element: {
+                type: "string",
+                max_size: 64,
+            },
+        },
+        write_uint64s: {
+            type: "vector",
+            max_count: 16,
+            element: { type: "uint64" },
+        },
+        write_int64s: {
+            type: "vector",
+            max_count: 16,
+            element: { type: "int64" },
+        },
+
+        // Note: due to the limitation of structured config not allowing vectors nested in vectors,
+        // we only set the lower half of the uint128 for simplicity's sake.
+        write_uint128s: {
+            type: "vector",
+            max_count: 16,
+            element: { type: "uint64" },
+        },
+
+        // [END diff_1]
+    },
 }

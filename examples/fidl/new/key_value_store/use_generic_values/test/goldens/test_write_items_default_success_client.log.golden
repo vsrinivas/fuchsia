@@ -1,0 +1,12 @@
+Started
+Outgoing connection enabled
+WriteItem request sent: key: bytes, value: Bytes([102, 111, 111])
+WriteItem response received: Bytes([102, 111, 111])
+WriteItem request sent: key: string, value: String("baz")
+WriteItem response received: String("baz")
+WriteItem request sent: key: uint64, value: Uint64(1)
+WriteItem response received: Uint64(1)
+WriteItem request sent: key: int64, value: Int64(-2)
+WriteItem response received: Int64(-2)
+WriteItem request sent: key: uint128, value: Uint128([0, 3])
+WriteItem response received: Uint128([0, 3])

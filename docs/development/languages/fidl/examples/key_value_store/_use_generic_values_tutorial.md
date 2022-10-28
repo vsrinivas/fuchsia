@@ -41,7 +41,7 @@ are much easier to extend in the future in a binary compatible way.
       <devsite-selector style="margin: 0px; padding: 0px;">
         <section>
           <h3 id="key_value_store-use_generic_values-cml-client">Client</h3>
-          <pre class="prettyprint">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/use_generic_values/meta/client.cml" %}</pre>
+          <pre class="prettyprint">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/use_generic_values/meta/client.cml" highlight="diff_1" %}</pre>
         </section>
         <section>
           <h3 id="key_value_store-use_generic_values-server">Server</h3>
@@ -66,11 +66,11 @@ Client and server implementations can then be written in any supported language:
       <devsite-selector style="margin: 0px; padding: 0px;">
         <section>
           <h3 id="key_value_store-use_generic_values-rust-client">Client</h3>
-          <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/use_generic_values/rust/TODO.md" region_tag="todo" %}</pre>
+          <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/use_generic_values/rust/client/src/main.rs" highlight="diff_1,diff_2,diff_3" %}</pre>
         </section>
         <section>
           <h3 id="key_value_store-use_generic_values-rust-server">Server</h3>
-          <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/use_generic_values/rust/TODO.md" region_tag="todo" %}</pre>
+          <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/use_generic_values/rust/server/src/main.rs" highlight="diff_1,diff_2,diff_3,diff_4" %}</pre>
         </section>
       </devsite-selector>
     </section>
