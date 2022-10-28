@@ -37,14 +37,16 @@ group("tests") {
 }
 
 group("userdebug_configs") {
-  deps = [ ":crash_reports_userdebug_config" ]
+  deps = [
+    ":crash_reports_userdebug_config",
+    ":feedback_userdebug_config",
+  ]
 }
 
 group("user_configs") {
   deps = [
     ":crash_reports_user_config",
-    ":feedback_data_limit_inspect_data",
-    ":feedback_redact_data",
+    ":feedback_user_config",
   ]
 }
 
@@ -78,6 +80,7 @@ fuchsia_component("feedback") {
   deps = [
     ":crash_reports_default_config",
     ":feedback_data_config",
+    ":feedback_default_build_type_config",
     ":feedback_exe",
     ":system_log_recorder_exe",
   ]
@@ -165,20 +168,26 @@ resource("feedback_data_config") {
   outputs = [ "data/feedback_data/config.json" ]
 }
 
-config_data("feedback_data_limit_inspect_data") {
-  for_pkg = "forensics"
+resource("feedback_default_build_type_config") {
+  sources = [ "feedback/configs/build_type/default.json" ]
 
-  sources = [ "feedback_data/configs/limit_inspect_data" ]
-
-  outputs = [ "feedback_data/limit_inspect_data" ]
+  outputs = [ "data/build_type/default_config.json" ]
 }
 
-config_data("feedback_redact_data") {
+config_data("feedback_user_config") {
   for_pkg = "forensics"
 
-  sources = [ "feedback/configs/redact_data" ]
+  sources = [ "feedback/configs/build_type/user.json" ]
 
-  outputs = [ "feedback/redact_data" ]
+  outputs = [ "build_type/override_config.json" ]
+}
+
+config_data("feedback_userdebug_config") {
+  for_pkg = "forensics"
+
+  sources = [ "feedback/configs/build_type/userdebug.json" ]
+
+  outputs = [ "build_type/override_config.json" ]
 }
 
 config_data("feedback_remote_device_id_provider") {

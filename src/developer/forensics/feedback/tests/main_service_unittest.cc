@@ -38,6 +38,7 @@ class MainServiceTest : public UnitTestFixture {
         main_service_(dispatcher(), services(), &clock_, &InspectRoot(), &cobalt_,
                       /*startup_annotations=*/{},
                       MainService::Options{
+                          BuildTypeConfig{},
                           "",
                           LastReboot::Options{
                               .is_first_instance = kIsFirstInstance,

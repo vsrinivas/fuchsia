@@ -46,6 +46,12 @@ int main() {
     return EXIT_FAILURE;
   }
 
+  std::optional<BuildTypeConfig> build_type_config = GetBuildTypeConfig();
+  if (!build_type_config) {
+    FX_LOGS(FATAL) << "Failed to get config for build type";
+    return EXIT_FAILURE;
+  }
+
   // TODO(fxbug.dev/100847): stop deleting migration file once all devices are running F8+.
   files::DeletePath("/data/migration_log.json", /*recursive=*/false);
 
@@ -65,7 +71,6 @@ int main() {
   auto reboot_log = RebootLog::ParseRebootLog(
       "/boot/log/last-panic.txt", kPreviousGracefulRebootReasonFile, TestAndSetNotAFdr());
 
-  const bool limit_inspect_data = files::IsFile(kLimitInspectDataPath);
   const bool spawn_system_log_recorder = !files::IsFile(kDoNotLaunchSystemLogRecorder);
 
   std::optional<std::string> local_device_id_path = kDeviceIdPath;
@@ -84,7 +89,7 @@ int main() {
       component.Dispatcher(), component.Services(), component.Clock(), component.InspectRoot(),
       cobalt.get(), startup_annotations,
       MainService::Options{
-          local_device_id_path,
+          *build_type_config, local_device_id_path,
           LastReboot::Options{
               .is_first_instance = component.IsFirstInstance(),
               .reboot_log = reboot_log,
@@ -99,7 +104,7 @@ int main() {
           FeedbackData::Options{
               .config = *feedback_data_config,
               .is_first_instance = component.IsFirstInstance(),
-              .limit_inspect_data = limit_inspect_data,
+              .limit_inspect_data = build_type_config->enable_limit_inspect_data,
               .spawn_system_log_recorder = spawn_system_log_recorder,
               .delete_previous_boot_logs_time = delete_previous_boot_logs_time,
           }});

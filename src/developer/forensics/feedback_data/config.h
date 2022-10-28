@@ -7,9 +7,8 @@
 
 #include <zircon/types.h>
 
+#include <set>
 #include <string>
-
-#include "src/developer/forensics/feedback/attachments/types.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -20,7 +19,7 @@ struct Config {
   std::set<std::string> annotation_allowlist;
 
   // Set of attachment keys to return data for in fuchsia.feedback.DataProvider/GetSnapshot.
-  feedback::AttachmentKeys attachment_allowlist;
+  std::set<std::string> attachment_allowlist;
 };
 
 // Parses the JSON config at |filepath| as |config|.

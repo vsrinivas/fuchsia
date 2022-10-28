@@ -4,6 +4,9 @@
 
 #include "src/developer/forensics/feedback/config.h"
 
+#include <optional>
+#include <string>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -15,30 +18,155 @@ namespace {
 constexpr auto kUploadDisabled = crash_reports::Config::UploadPolicy::kDisabled;
 constexpr auto kUploadEnabled = crash_reports::Config::UploadPolicy::kEnabled;
 
-TEST(ConfigTest, GetCrashReportsConfig) {
-  files::ScopedTempDir temp_dir;
+class ConfigTest : public testing::Test {
+ protected:
+  // Writes |config| to a file and returns the path of the config.
+  std::string WriteConfig(const std::string& config) {
+    std::string path;
+    FX_CHECK(temp_dir_.NewTempFileWithData(config, &path));
+    return path;
+  }
 
-  std::string default_config_path;
-  ASSERT_TRUE(temp_dir.NewTempFileWithData(R"({
+  std::optional<BuildTypeConfig> ParseConfig(const std::string& config) {
+    return GetBuildTypeConfig(WriteConfig(config));
+  }
+
+ private:
+  files::ScopedTempDir temp_dir_;
+};
+
+TEST_F(ConfigTest, MissingEnableDataRedaction) {
+  const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "enable_limit_inspect_data": false
+})");
+
+  EXPECT_FALSE(config.has_value());
+}
+
+TEST_F(ConfigTest, MissingEnableLimitInspectData) {
+  const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "enable_data_redaction": false
+})");
+
+  EXPECT_FALSE(config.has_value());
+}
+
+TEST_F(ConfigTest, SpuriousField) {
+  const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "enable_data_redaction": false,
+  "enable_limit_inspect_data": false,
+  "spurious": ""
+})");
+
+  EXPECT_FALSE(config.has_value());
+}
+
+TEST_F(ConfigTest, EnableDataRedactionTrue) {
+  const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "enable_data_redaction": true,
+  "enable_limit_inspect_data": false
+})");
+
+  ASSERT_TRUE(config.has_value());
+  EXPECT_TRUE(config->enable_data_redaction);
+}
+
+TEST_F(ConfigTest, EnableDataRedactionFalse) {
+  const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "enable_data_redaction": false,
+  "enable_limit_inspect_data": false
+})");
+
+  ASSERT_TRUE(config.has_value());
+  EXPECT_FALSE(config->enable_data_redaction);
+}
+
+TEST_F(ConfigTest, EnableDataRedactionNotBoolean) {
+  const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "enable_data_redaction": "",
+  "enable_limit_inspect_data": false
+})");
+
+  EXPECT_FALSE(config.has_value());
+}
+
+TEST_F(ConfigTest, EnableLimitInspectDataTrue) {
+  const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "enable_data_redaction": false,
+  "enable_limit_inspect_data": true
+})");
+
+  ASSERT_TRUE(config.has_value());
+  EXPECT_TRUE(config->enable_limit_inspect_data);
+}
+
+TEST_F(ConfigTest, EnableLimitInspectDataFalse) {
+  const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "enable_data_redaction": false,
+  "enable_limit_inspect_data": false
+})");
+
+  ASSERT_TRUE(config.has_value());
+  EXPECT_FALSE(config->enable_limit_inspect_data);
+}
+
+TEST_F(ConfigTest, EnableLimitInspectDataNotBoolean) {
+  const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "enable_data_redaction": false,
+  "enable_limit_inspect_data": ""
+})");
+
+  EXPECT_FALSE(config.has_value());
+}
+
+TEST_F(ConfigTest, UseOverrideConfig) {
+  const std::string override_path = WriteConfig(R"({
+  "enable_data_redaction": true,
+  "enable_limit_inspect_data": true
+})");
+
+  const std::optional<BuildTypeConfig> config = GetBuildTypeConfig(override_path, "/bad/path");
+
+  ASSERT_TRUE(config.has_value());
+  EXPECT_TRUE(config->enable_data_redaction);
+  EXPECT_TRUE(config->enable_limit_inspect_data);
+}
+
+TEST_F(ConfigTest, UseDefaultConfig) {
+  const std::string default_path = WriteConfig(R"({
+  "enable_data_redaction": true,
+  "enable_limit_inspect_data": true
+})");
+
+  const std::optional<BuildTypeConfig> config = GetBuildTypeConfig("/bad/path", default_path);
+
+  ASSERT_TRUE(config.has_value());
+  EXPECT_TRUE(config->enable_data_redaction);
+  EXPECT_TRUE(config->enable_limit_inspect_data);
+}
+
+TEST_F(ConfigTest, MissingOverrideAndDefaultConfigs) {
+  const std::optional<BuildTypeConfig> config = GetBuildTypeConfig("/bad/path", "/bad/path");
+
+  EXPECT_FALSE(config.has_value());
+}
+
+TEST_F(ConfigTest, GetCrashReportsConfig) {
+  const std::string default_config_path = WriteConfig(R"({
     "daily_per_product_quota": -1,
     "crash_report_upload_policy": "disabled",
     "hourly_snapshot": false
-})",
-                                           &default_config_path));
+})");
 
-  std::string override_config_path;
-  ASSERT_TRUE(temp_dir.NewTempFileWithData(R"({
+  const std::string override_config_path = WriteConfig(R"({
     "daily_per_product_quota": 100,
     "crash_report_upload_policy": "enabled",
     "hourly_snapshot": true
-})",
-                                           &override_config_path));
+})");
 
-  std::string invalid_config_path;
-  ASSERT_TRUE(temp_dir.NewTempFileWithData(R"({
+  const std::string invalid_config_path = WriteConfig(R"({
     "invalid": {}
-})",
-                                           &invalid_config_path));
+})");
 
   // The override config should be read regardless of the default config being valid.
   auto config = GetCrashReportsConfig("/bad/path", override_config_path);
@@ -71,11 +199,8 @@ TEST(ConfigTest, GetCrashReportsConfig) {
   EXPECT_FALSE(GetCrashReportsConfig(invalid_config_path, invalid_config_path));
 }
 
-TEST(ConfigTest, GetFeedbackDataConfig) {
-  files::ScopedTempDir temp_dir;
-
-  std::string config_path;
-  ASSERT_TRUE(temp_dir.NewTempFileWithData(R"({
+TEST_F(ConfigTest, GetFeedbackDataConfig) {
+  const std::string config_path = WriteConfig(R"({
     "annotation_allowlist": [
       "annotation_one",
       "annotation_two"
@@ -83,8 +208,7 @@ TEST(ConfigTest, GetFeedbackDataConfig) {
     "attachment_allowlist": [
       "attachment_one"
     ]
-})",
-                                           &config_path));
+})");
 
   EXPECT_FALSE(GetFeedbackDataConfig("/bad/path"));
 
