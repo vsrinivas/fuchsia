@@ -134,7 +134,7 @@ fx host-tool my_host_fuzzer -help=1
 
 This is the easiest and most recommended way to run a fuzzer after initial development. To run your
 fuzzer on [ClusterFuzz][clusterfuzz]{:.external}, you simply need to ensure it is a [GN][fuchsia-gn]
-dependency of `//bundles/buildbot:core`. Practically, this means including it in your code's "tests"
+dependency of `//bundles/buildbot/core`. Practically, this means including it in your code's "tests"
 GN target.
 
 For example:
@@ -153,13 +153,13 @@ If you are unsure if your fuzzer is included in the dependency graph, you can ch
 For example:
 
 <pre class="devsite-terminal">
-fx gn path out/default //bundles/buildbot:core <var>path-to-fuzzer</var>
+fx gn path out/default //bundles/buildbot/core <var>path-to-fuzzer</var>
 </pre>
 
 For `//examples/fuzzers`, this yields:
 
 <pre>
-//bundles/buildbot:core --[public]-->
+//bundles/buildbot/core --[public]-->
 //examples:examples --[private]-->
 //examples/fuzzers:fuzzers
 

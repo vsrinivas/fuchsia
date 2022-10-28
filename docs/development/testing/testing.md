@@ -6,12 +6,12 @@ To build Zircon and run unit tests, run one of the following commands:
 
 ```sh
 # Build and run x64.
-fx set bringup.x64 --with-base //bundles/buildbot:bringup
+fx set bringup.x64 --with-base //bundles/buildbot/bringup
 fx build
 fx qemu
 
 # Build and run arm64.
-fx set bringup.arm64 --with-base //bundles/buildbot:bringup
+fx set bringup.arm64 --with-base //bundles/buildbot/bringup
 fx build
 fx qemu
 ```

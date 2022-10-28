@@ -83,7 +83,7 @@ These groups are aggregated in "tests" groups of BUILD.gn files in parent
 directories. The root "tests" group (for some portion of the codebase, e.g.
 src/lib/fidl/BUILD.gn) should be included in bundles/fidl/BUILD.gn. This enables
 `fx set ... --with //bundles/fidl:tests` to include all FIDL tests in the build.
-(The tests are also run in CQ because `//bundles/buildbot:core` includes
+(The tests are also run in CQ because `//bundles/buildbot/core` includes
 `//bundles/fidl:tests`.)
 
 ## Binary names

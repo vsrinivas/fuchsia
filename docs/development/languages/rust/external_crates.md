@@ -275,7 +275,7 @@ override file.
 The tool discovers which build targets depend on a given crate, which means it
 needs the metadata from the completion of a maximal "kitchen sink" build:
 
-1. Include `//bundles/buildbot:core` and `//bundles:kitchen_sink` in your build
+1. Include `//bundles/buildbot/core` and `//bundles/kitchen_sink` in your build
 2. Run `fx build`
 3. Run `fx update-3p-owners --rust-only --num-threads <NUM_THREADS>`. It's
    usually a good idea to limit the number of threads to 50% of available CPUs
