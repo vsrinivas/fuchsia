@@ -178,13 +178,9 @@ async fn inner_main() -> Result<(), Error> {
                 expected a decimal, got {contents}"
             ))?)
         }
-        Err(e) => {
-            warn!(
-                "Wasn't able to read config/data/display_pixel_density, \
-                    guessing based on display size: {}",
-                e
-            );
-            Some(9.0) // Unknown display: match Root Presenter's 9.0f default pixel density
+        Err(_) => {
+            warn!("/config/data/display_pixel_density not there.");
+            None
         }
     };
     let viewing_distance = match std::fs::read_to_string("/config/data/display_usage") {
@@ -196,12 +192,8 @@ async fn inner_main() -> Result<(), Error> {
             "far" => ViewingDistance::Far,
             unknown => anyhow::bail!("Invalid /config/data/display_usage value: {unknown}"),
         }),
-        Err(e) => {
-            warn!(
-                "Wasn't able to read config/data/display_usage, \
-                guessing based on display size: {}",
-                e
-            );
+        Err(_) => {
+            warn!("/config/data/display_usage not there.");
             None
         }
     };
