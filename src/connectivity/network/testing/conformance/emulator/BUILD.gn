@@ -12,9 +12,10 @@ if (is_linux) {
       "emulator_test.go",
     ]
     deps = [
+      "//src/connectivity/network/testing/conformance/util",
       "//third_party/golibs:go.uber.org/multierr",
-      "//third_party/golibs:golang.org/x/crypto",
       "//tools/emulator",
+      "//tools/virtual_device:proto",
     ]
     non_go_deps = [ ":zbi_bin" ]
     testonly = true

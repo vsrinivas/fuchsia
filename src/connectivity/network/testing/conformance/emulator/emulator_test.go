@@ -6,6 +6,7 @@ package emulator
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"io/fs"
@@ -16,7 +17,6 @@ import (
 
 	ffxlib "go.fuchsia.dev/fuchsia/src/connectivity/network/testing/conformance/ffx"
 	fvdpb "go.fuchsia.dev/fuchsia/tools/virtual_device/proto"
-	"golang.org/x/net/context"
 )
 
 const RSA_KEY_NUM_BITS int = 2048
