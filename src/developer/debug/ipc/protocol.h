@@ -36,9 +36,10 @@ constexpr uint32_t kCurrentProtocolVersion = 53;
 
 #if !defined(FUCHSIA_API_LEVEL)
 #error FUCHSIA_API_LEVEL must be defined
-#elif FUCHSIA_API_LEVEL == 9
+#elif FUCHSIA_API_LEVEL == 10
 constexpr uint32_t kMinimumProtocolVersion = 52;
 #else
+#define FUCHSIA_API_LEVEL_NOT_SUPPORTED  // This will issue a warning.
 constexpr uint32_t kMinimumProtocolVersion = kCurrentProtocolVersion;
 #endif
 

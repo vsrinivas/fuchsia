@@ -6,6 +6,11 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#ifdef FUCHSIA_API_LEVEL_NOT_SUPPORTED
+#pragma message \
+    "Please update the support for the current FUCHSIA_API_LEVEL as in platform_version.json."
+#endif
+
 namespace debug_ipc {
 
 const char* MsgHeader::TypeToString(MsgHeader::Type type) {
