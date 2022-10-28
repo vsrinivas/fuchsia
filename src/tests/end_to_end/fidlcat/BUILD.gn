@@ -2,28 +2,34 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dart/test.gni")
 import("//build/fidl/fidl.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/host.gni")
-import("//build/python/python_host_test.gni")
 import("//build/testing/environments.gni")
 import("//build/testing/host_test_data.gni")
 
-if (is_host) {
-  python_host_test("fidlcat_e2e_tests") {
-    main_source = "fidlcat_e2e_tests.py"
-    extra_args = [ "-v" ]
+_shared_out_dir =
+    get_label_info(":anything(${target_toolchain})", "root_out_dir")
 
-    deps = [ ":runtime_deps" ]
+dart_test("fidlcat_test") {
+  sources = [ "fidlcat_test.dart" ]
 
-    # Runs on "main" builders (try and ci) in QEMU environments, but only on x64, as we don't
-    # support running host test on arm64 host.
-    # TODO(fxbug.dev/100888): fix the timeout issue with asan on.
-    # TODO: enable the test on other arm64 targets.
-    environments = []
-    if (target_cpu == "x64" && !is_asan) {
-      environments = [ emu_env ]
-    }
+  deps = [
+    "//sdk/testing/sl4f/client",
+    "//third_party/dart-pkg/pub/test",
+  ]
+
+  non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
+
+  args = [ "--data-dir=" + rebase_path(_shared_out_dir, root_build_dir) ]
+
+  # Runs on "main" builders (try and ci) in QEMU environments, but only on x64,
+  # as we don't currently support Dart on arm64 hosts.
+  # TODO(fxbug.dev/100888): fix the timeout issue with asan on.
+  environments = []
+  if (is_host && target_cpu == "x64" && !is_asan) {
+    environments = [ emu_env ]
   }
 }
 
@@ -63,8 +69,8 @@ template("generate_symbols") {
 
 generate_symbols("echo_client_sym") {
   library_label = "//src/testing/fidl/echo_realm_placeholder/echo_client:bin($target_toolchain)"
-  library_path = "$root_build_dir/echo_client_placeholder"
-  output = "$target_gen_dir/echo_realm_placeholder/echo_client.debug"
+  library_path = "$_shared_out_dir/echo_client_placeholder"
+  output = "${target_gen_dir}/echo_realm_placeholder/echo_client.debug"
 }
 
 # Examples FIDL library required by save/replay .proto tests recorded against
@@ -77,21 +83,20 @@ fidl("echo") {
 }
 
 if (is_host) {
-  host_test_data("test_data") {
+  host_test_data("runtime_deps") {
     sources = [
       # We have to list all required FIDL IR explicitly here or they will not be
       # present when we execute the test.
       # This must be kept in sync with the list of FIDL IR in the test itself.
-      "$root_build_dir/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io.fidl.json",
-      "$root_build_dir/fidling/gen/sdk/fidl/fuchsia.mem/fuchsia.mem.fidl.json",
-      "$root_build_dir/fidling/gen/sdk/fidl/fuchsia.sys/fuchsia.sys.fidl.json",
-      "$root_build_dir/fidling/gen/src/testing/fidl/placeholders.fidl.json",
-      "$root_build_dir/fidling/gen/src/tests/end_to_end/fidlcat/echo.fidl.json",
-
-      # Debug symbol
-      "$target_gen_dir/echo_realm_placeholder/echo_client.debug",
-
-      # Previous saved test data.
+      "$_shared_out_dir/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io.fidl.json",
+      "$_shared_out_dir/fidling/gen/sdk/fidl/fuchsia.mem/fuchsia.mem.fidl.json",
+      "$_shared_out_dir/fidling/gen/sdk/fidl/fuchsia.sys/fuchsia.sys.fidl.json",
+      "$_shared_out_dir/fidling/gen/src/testing/fidl/placeholders.fidl.json",
+      "$_shared_out_dir/fidling/gen/src/tests/end_to_end/fidlcat/echo.fidl.json",
+      "$root_out_dir/ffx",
+      "$root_out_dir/fidlcat",
+      "$root_out_dir/gen/tools/fidlcat/fidlcat_sdk.meta.json",
+      "${target_gen_dir}/echo_realm_placeholder/echo_client.debug",
       "//src/tests/end_to_end/fidlcat/echo.pb",
       "//src/tests/end_to_end/fidlcat/echo_client.pb",
       "//src/tests/end_to_end/fidlcat/echo_client_sync.pb",
@@ -101,8 +106,7 @@ if (is_host) {
       "//src/tests/end_to_end/fidlcat/snapshot.pb",
     ]
 
-    outputs =
-        [ "$root_out_dir/test_data/fidlcat_e2e_tests/{{source_file_part}}" ]
+    outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
 
     deps = [
       ":echo($fidl_toolchain)",
@@ -110,22 +114,11 @@ if (is_host) {
       "//sdk/fidl/fuchsia.io($fidl_toolchain)",
       "//sdk/fidl/fuchsia.mem($fidl_toolchain)",
       "//sdk/fidl/fuchsia.sys($fidl_toolchain)",
-      "//src/testing/fidl:placeholders($fidl_toolchain)",
-    ]
-  }
-
-  host_test_data("runtime_deps") {
-    sources = [
-      "$root_out_dir/ffx",
-      "$root_out_dir/fidlcat",
-    ]
-
-    deps = [
-      ":test_data",
       "//src/developer/debug/debug_agent($target_toolchain)",
       "//src/developer/ffx:ffx_bin",
-      "//src/testing/fidl/echo_realm_placeholder($target_toolchain)",
+      "//src/testing/fidl:placeholders($fidl_toolchain)",
       "//tools/fidlcat",
+      "//tools/fidlcat:fidlcat_sdk_meta_generated_file",
     ]
   }
 }
@@ -133,5 +126,8 @@ if (is_host) {
 group("tests") {
   testonly = true
 
-  deps = [ ":fidlcat_e2e_tests($host_toolchain)" ]
+  deps = [
+    ":fidlcat_test($host_toolchain)",
+    "//src/testing/fidl/echo_realm_placeholder",
+  ]
 }
