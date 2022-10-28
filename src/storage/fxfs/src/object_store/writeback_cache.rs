@@ -320,11 +320,14 @@ impl<B: DataBuffer> WritebackCache<B> {
         size: u64,
         block_size: u64,
         reserver: &dyn StorageReservation,
+        source: &dyn ReadObjectHandle,
     ) -> Result<(), Error> {
         ensure!(size <= MAX_FILE_SIZE, FxfsError::TooBig);
+        let old_size;
+        let mut reservation_and_range = None;
         {
             let mut inner = self.inner.lock().unwrap();
-            let old_size = self.content_size();
+            old_size = self.content_size();
             let aligned_size = round_up(size, block_size).unwrap();
             if size < old_size {
                 let removed = inner.intervals.remove_interval(&(aligned_size..u64::MAX)).unwrap();
@@ -340,7 +343,28 @@ impl<B: DataBuffer> WritebackCache<B> {
                 if needed < before {
                     let _ = reserver.wrap_reservation(before - needed);
                 }
+            } else if old_size % block_size != 0 {
+                // If the tail isn't already dirty, we must bring that block in and mark it as dirty
+                // to ensure that it gets properly zeroed.
+                let aligned_range =
+                    round_down(old_size, block_size)..round_up(old_size, block_size).unwrap();
+                if inner.intervals.get_intervals(&aligned_range).unwrap().is_empty() {
+                    reservation_and_range = Some((
+                        reserver.reserve(
+                            reserver.reservation_needed(inner.dirty_bytes + block_size)
+                                - reserver.reservation_needed(inner.dirty_bytes),
+                        )?,
+                        aligned_range,
+                    ));
+                }
             }
+        }
+
+        // VmoDataBuffer will page in the tail page, but DataBuffer won't do that, and since we want
+        // to mark it dirty we must make sure we read it in here.
+        if reservation_and_range.is_some() {
+            let mut buf = [0];
+            self.data.read(old_size - 1, &mut buf, source).await?;
         }
 
         // Resize the buffer after making changes to |inner| to avoid a race when truncating (where
@@ -350,6 +374,13 @@ impl<B: DataBuffer> WritebackCache<B> {
         // If that turns out to be problematic, we'll have to atomically update both the buffer and
         // the interval tree at once.
         self.data.resize(size).await;
+
+        if let Some((reservation, range)) = reservation_and_range {
+            let mut inner = self.inner.lock().unwrap();
+            inner.intervals.add_interval(&CachedRange { range, state: CacheState::Dirty }).unwrap();
+            inner.dirty_bytes += block_size;
+            reservation.forget();
+        }
 
         Ok(())
     }
@@ -917,7 +948,7 @@ mod tests {
             .write_or_append(None, &buffer[..1], 512, &reserver, None, &source)
             .await
             .expect("write failed");
-        cache.resize(1000, 512, &reserver).await.expect("resize failed");
+        cache.resize(1000, 512, &reserver, &source).await.expect("resize failed");
         assert_eq!(cache.content_size(), 1000);
 
         // The entire length of the file should be clean and contain the write, plus some zeroes.
@@ -962,7 +993,7 @@ mod tests {
             .write_or_append(None, &buffer[..], 512, &reserver, None, &source)
             .await
             .expect("write failed");
-        cache.resize(1000, 512, &reserver).await.expect("resize failed");
+        cache.resize(1000, 512, &reserver, &source).await.expect("resize failed");
         assert_eq!(cache.content_size(), 1000);
 
         // The resize should have truncated the pending writes.
@@ -1231,7 +1262,7 @@ mod tests {
             },
             async {
                 recv1.await.unwrap();
-                cache.resize(511, 512, &reserver).await.expect("resize failed");
+                cache.resize(511, 512, &reserver, &source).await.expect("resize failed");
                 send2.send(()).unwrap();
             },
         );

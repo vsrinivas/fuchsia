@@ -299,10 +299,24 @@ impl<S: HandleOwner> CachingObjectHandle<S> {
                     metadata.modification_time.map(|t| t.into()),
                 )
                 .await?;
-            transaction.commit_with_callback(|_| self.cache.complete_flush(flushable)).await?;
             if needs_trim {
-                self.handle.store().trim(self.object_id()).await?;
+                transaction.commit_and_continue().await?;
+                let store = self.store();
+                while matches!(
+                    store
+                        .trim_some(
+                            &mut transaction,
+                            self.handle.object_id,
+                            self.handle.attribute_id,
+                            TrimMode::FromOffset(metadata.content_size.unwrap())
+                        )
+                        .await?,
+                    TrimResult::Incomplete
+                ) {
+                    transaction.commit_and_continue().await?;
+                }
             }
+            transaction.commit_with_callback(|_| self.cache.complete_flush(flushable)).await?;
         }
         Ok(())
     }
@@ -398,7 +412,7 @@ impl<S: HandleOwner> WriteObjectHandle for CachingObjectHandle<S> {
             // If we're trying to grow after we previously shrunk, we need to shrink now.
             self.flush_metadata().await?;
         }
-        self.cache.resize(size, self.block_size() as u64, self).await?;
+        self.cache.resize(size, self.block_size() as u64, self, &self.handle).await?;
         // Try and resize immediately, but since we successfully resized the cache, don't propagate
         // errors here.
         if let Err(e) = self.flush_metadata().await {

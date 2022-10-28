@@ -4,6 +4,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <lib/fit/defer.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/mman.h>
@@ -367,6 +368,31 @@ TEST_P(MmapTest, BadPermissions) {
   ASSERT_EQ(close(fd.release()), 0);
 
   ASSERT_EQ(unlink(myfile.c_str()), 0);
+}
+
+TEST_P(MmapTest, TailZeroTest) {
+  const std::string myfile = GetPath("myfile");
+  fbl::unique_fd fd(open(myfile.c_str(), O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR));
+  ASSERT_TRUE(fd);
+  EXPECT_EQ(write(fd.get(), "hello", 5), 5);
+
+  // Close the file so that it gets flushed.
+  ASSERT_EQ(close(fd.release()), 0);
+
+  // Truncate and close again.
+  fd.reset(open(myfile.c_str(), O_RDWR));
+  EXPECT_EQ(ftruncate(fd.get(), 3), 0);
+  ASSERT_EQ(close(fd.release()), 0);
+
+  // When we read back the file, it should be zeroed.
+  fd.reset(open(myfile.c_str(), O_RDONLY));
+  void* addr = mmap(nullptr, PAGE_SIZE, PROT_READ, MAP_SHARED, fd.get(), 0);
+  auto clean_up = fit::defer([addr] { munmap(addr, PAGE_SIZE); });
+
+  std::vector<uint8_t> expected(PAGE_SIZE);
+  memcpy(expected.data(), "hel", 3);
+
+  EXPECT_EQ(memcmp(addr, expected.data(), expected.size()), 0);
 }
 
 TEST_P(MmapSharedWriteTest, BadPermissions) {

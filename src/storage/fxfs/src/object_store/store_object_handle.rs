@@ -680,8 +680,6 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         transaction: &mut Transaction<'a>,
         size: u64,
     ) -> Result<NeedsTrim, Error> {
-        let block_size = self.block_size();
-        let aligned_size = round_up(size, block_size).ok_or(FxfsError::TooBig)?;
         let store = self.store();
         let needs_trim = matches!(
             store
@@ -715,24 +713,6 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                 }
             }
         }
-        let to_zero = aligned_size - size;
-        if to_zero > 0 {
-            assert!(to_zero < block_size);
-            // We intentionally use the COW write path even if we're in overwrite mode. There's
-            // no need to support overwrite mode here, and it would be difficult since we'd need
-            // to transactionalize zeroing the tail of the last block with the other metadata
-            // changes, which we don't currently have a way to do.
-            //
-            // TODO(fxbug.dev/88676): This is allocating a small buffer that we'll just end up
-            // copying.  Is there a better way?
-            //
-            // TODO(fxbug.dev/88676): This might cause an allocation when there needs be none;
-            // ideally this would know if the tail block is allocated and if it isn't, it should
-            // leave it be.
-            let mut buf = store.device.allocate_buffer(to_zero as usize);
-            buf.as_mut_slice().fill(0);
-            self.txn_write(transaction, size, buf.as_ref()).await?;
-        }
         transaction.add_with_object(
             store.store_object_id,
             Mutation::replace_or_insert_object(
@@ -742,6 +722,79 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
             AssocObj::Borrowed(self),
         );
         Ok(NeedsTrim(needs_trim))
+    }
+
+    async fn grow<'a>(
+        &'a self,
+        transaction: &mut Transaction<'a>,
+        old_size: u64,
+        size: u64,
+    ) -> Result<(), Error> {
+        // Before growing the file, we must make sure that a previous trim has completed.
+        let store = self.store();
+        while matches!(
+            store
+                .trim_some(
+                    transaction,
+                    self.object_id,
+                    self.attribute_id,
+                    TrimMode::FromOffset(old_size)
+                )
+                .await?,
+            TrimResult::Incomplete
+        ) {
+            transaction.commit_and_continue().await?;
+        }
+        // We might need to zero out the tail of the old last block.
+        let block_size = self.block_size();
+        if old_size % block_size != 0 {
+            let layer_set = store.tree.layer_set();
+            let mut merger = layer_set.merger();
+            let aligned_old_size = round_down(old_size, block_size);
+            let iter = merger
+                .seek(Bound::Included(&ObjectKey::extent(
+                    self.object_id,
+                    self.attribute_id,
+                    aligned_old_size..aligned_old_size + 1,
+                )))
+                .await?;
+            if let Some(ItemRef {
+                key:
+                    ObjectKey {
+                        object_id,
+                        data:
+                            ObjectKeyData::Attribute(attribute_id, AttributeKey::Extent(extent_key)),
+                    },
+                value: ObjectValue::Extent(ExtentValue::Some { device_offset, key_id, .. }),
+                ..
+            }) = iter.get()
+            {
+                if *object_id == self.object_id && *attribute_id == self.attribute_id {
+                    let device_offset = device_offset
+                        .checked_add(aligned_old_size - extent_key.range.start)
+                        .ok_or(FxfsError::Inconsistent)?;
+                    let mut buf = self.allocate_buffer(block_size as usize);
+                    self.read_and_decrypt(device_offset, aligned_old_size, buf.as_mut(), *key_id)
+                        .await?;
+                    buf.as_mut_slice()[(old_size % block_size) as usize..].fill(0);
+                    self.multi_write(
+                        transaction,
+                        &[aligned_old_size..aligned_old_size + block_size],
+                        buf.as_mut(),
+                    )
+                    .await?;
+                }
+            }
+        }
+        transaction.add_with_object(
+            store.store_object_id,
+            Mutation::replace_or_insert_object(
+                ObjectKey::attribute(self.object_id, self.attribute_id, AttributeKey::Size),
+                ObjectValue::attribute(size),
+            ),
+            AssocObj::Borrowed(self),
+        );
+        Ok(())
     }
 
     // Must be multiple of block size.
@@ -1146,44 +1199,35 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> WriteObjectHandle for StoreO
             return Ok(());
         }
         if size < old_size {
-            let needs_trim = self.shrink(&mut transaction, size).await?.0;
-            transaction.commit().await?;
-            if needs_trim {
-                // To the user, it will appear we've truncated so we don't want to propagate errors
-                // here.  Not all the free space will get returned, but the filesystem will remain
-                // consistent and there should be no other observable difference with the success
-                // case.  If the user tries to grow the file later, it will attempt to trim the file
-                // again and it will return an error if that fails.
-                if let Err(error) = self.store().trim(self.object_id).await {
+            if self.shrink(&mut transaction, size).await?.0 {
+                // The file needs to be trimmed.
+                transaction.commit_and_continue().await?;
+                let store = self.store();
+                while matches!(
+                    store
+                        .trim_some(
+                            &mut transaction,
+                            self.object_id,
+                            self.attribute_id,
+                            TrimMode::FromOffset(size)
+                        )
+                        .await?,
+                    TrimResult::Incomplete
+                ) {
+                    if let Err(error) = transaction.commit_and_continue().await {
+                        warn!(?error, "Failed to trim after truncate");
+                        return Ok(());
+                    }
+                }
+                if let Err(error) = transaction.commit().await {
                     warn!(?error, "Failed to trim after truncate");
                 }
+                return Ok(());
             }
         } else {
-            // Before growing the file, we must make sure that a previous trim has completed.
-            let store = self.store();
-            while matches!(
-                store
-                    .trim_some(
-                        &mut transaction,
-                        self.object_id,
-                        self.attribute_id,
-                        TrimMode::FromOffset(old_size)
-                    )
-                    .await?,
-                TrimResult::Incomplete
-            ) {
-                transaction.commit_and_continue().await?;
-            }
-            transaction.add_with_object(
-                store.store_object_id,
-                Mutation::replace_or_insert_object(
-                    ObjectKey::attribute(self.object_id, self.attribute_id, AttributeKey::Size),
-                    ObjectValue::attribute(size),
-                ),
-                AssocObj::Borrowed(self),
-            );
-            transaction.commit().await?;
+            self.grow(&mut transaction, old_size, size).await?;
         }
+        transaction.commit().await?;
         Ok(())
     }
 
@@ -1732,6 +1776,24 @@ mod tests {
             allocated_after
         );
         fs.close().await.expect("Close failed");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_truncate_zeroes_tail_block() {
+        let (fs, object) = test_filesystem_and_object().await;
+
+        WriteObjectHandle::truncate(&object, TEST_DATA_OFFSET + 3).await.expect("truncate failed");
+        WriteObjectHandle::truncate(&object, TEST_DATA_OFFSET + TEST_DATA.len() as u64)
+            .await
+            .expect("truncate failed");
+
+        let mut buf = object.allocate_buffer(fs.block_size() as usize);
+        let offset = (TEST_DATA_OFFSET % fs.block_size()) as usize;
+        object.read(TEST_DATA_OFFSET - offset as u64, buf.as_mut()).await.expect("read failed");
+
+        let mut expected = TEST_DATA.to_vec();
+        expected[3..].fill(0);
+        assert_eq!(&buf.as_slice()[offset..offset + expected.len()], &expected);
     }
 
     #[fasync::run_singlethreaded(test)]
