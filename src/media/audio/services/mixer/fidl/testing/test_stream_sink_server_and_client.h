@@ -11,13 +11,13 @@
 #include <gtest/gtest.h>
 
 #include "src/media/audio/services/common/logging.h"
-#include "src/media/audio/services/common/testing/test_server_and_client.h"
+#include "src/media/audio/services/common/testing/test_server_and_sync_client.h"
 #include "src/media/audio/services/mixer/fidl/stream_sink_server.h"
 
 namespace media_audio {
 
-// A wrapper around a TestServerAndClient<StreamSinkServer>> which adds some extra functionality for
-// StreamSinkServers.
+// A wrapper around a TestServerAndWireSyncClient<StreamSinkServer>> which adds
+// some extra functionality for StreamSinkServers.
 class TestStreamSinkServerAndClient {
  public:
   TestStreamSinkServerAndClient(std::shared_ptr<FidlThread> thread, uint32_t payload_buffer_id,
@@ -25,7 +25,7 @@ class TestStreamSinkServerAndClient {
                                 TimelineRate media_ticks_per_ns)
       : thread_(thread) {
     payload_buffer_ = MemoryMappedBuffer::CreateOrDie(payload_buffer_size, true);
-    wrapper_ = std::make_unique<TestServerAndClient<StreamSinkServer>>(
+    wrapper_ = std::make_unique<TestServerAndWireSyncClient<StreamSinkServer>>(
         thread, StreamSinkServer::Args{
                     .format = format,
                     .media_ticks_per_ns = media_ticks_per_ns,
@@ -93,7 +93,7 @@ class TestStreamSinkServerAndClient {
   fidl::Arena<> arena_;
   std::shared_ptr<MemoryMappedBuffer> payload_buffer_;
   std::shared_ptr<FidlThread> thread_;
-  std::unique_ptr<TestServerAndClient<StreamSinkServer>> wrapper_;
+  std::unique_ptr<TestServerAndWireSyncClient<StreamSinkServer>> wrapper_;
 
   int64_t fidl_calls_completed_{0};
 };

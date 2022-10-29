@@ -11,7 +11,7 @@
 
 #include "src/media/audio/lib/clock/testing/clock_test.h"
 #include "src/media/audio/services/common/logging.h"
-#include "src/media/audio/services/common/testing/test_server_and_client.h"
+#include "src/media/audio/services/common/testing/test_server_and_sync_client.h"
 #include "src/media/audio/services/mixer/fidl/synthetic_clock_server.h"
 
 namespace media_audio {
@@ -21,7 +21,7 @@ class GraphCreatorServerTest : public ::testing::Test {
  public:
   void SetUp() {
     thread_ = FidlThread::CreateFromNewThread("test_fidl_thread");
-    creator_wrapper_ = std::make_unique<TestServerAndClient<GraphCreatorServer>>(thread_);
+    creator_wrapper_ = std::make_unique<TestServerAndWireSyncClient<GraphCreatorServer>>(thread_);
   }
 
   void TearDown() {
@@ -39,7 +39,7 @@ class GraphCreatorServerTest : public ::testing::Test {
 
  private:
   std::shared_ptr<FidlThread> thread_;
-  std::unique_ptr<TestServerAndClient<GraphCreatorServer>> creator_wrapper_;
+  std::unique_ptr<TestServerAndWireSyncClient<GraphCreatorServer>> creator_wrapper_;
 };
 
 TEST_F(GraphCreatorServerTest, CreateGraphMissingServerEnd) {
@@ -54,7 +54,7 @@ TEST_F(GraphCreatorServerTest, CreateGraphMissingServerEnd) {
 }
 
 TEST_F(GraphCreatorServerTest, CreateGraphWithRealClocks) {
-  auto [graph_client, graph_server] = CreateClientOrDie<fuchsia_audio_mixer::Graph>();
+  auto [graph_client, graph_server] = CreateWireSyncClientOrDie<fuchsia_audio_mixer::Graph>();
 
   {
     auto result = creator_client()->Create(
@@ -80,8 +80,9 @@ TEST_F(GraphCreatorServerTest, CreateGraphWithRealClocks) {
 }
 
 TEST_F(GraphCreatorServerTest, CreateGraphWithSyntheticClocks) {
-  auto [graph_client, graph_server] = CreateClientOrDie<fuchsia_audio_mixer::Graph>();
-  auto [realm_client, realm_server] = CreateClientOrDie<fuchsia_audio_mixer::SyntheticClockRealm>();
+  auto [graph_client, graph_server] = CreateWireSyncClientOrDie<fuchsia_audio_mixer::Graph>();
+  auto [realm_client, realm_server] =
+      CreateWireSyncClientOrDie<fuchsia_audio_mixer::SyntheticClockRealm>();
 
   {
     auto result = creator_client()->Create(
@@ -121,7 +122,8 @@ TEST_F(GraphCreatorServerTest, CreateGraphWithSyntheticClocks) {
     ASSERT_FALSE(result->is_error()) << result->error_value();
   }
 
-  auto [observe_client, observe_server] = CreateClientOrDie<fuchsia_audio_mixer::SyntheticClock>();
+  auto [observe_client, observe_server] =
+      CreateWireSyncClientOrDie<fuchsia_audio_mixer::SyntheticClock>();
 
   {
     auto result = realm_client->ObserveClock(

@@ -29,7 +29,7 @@
 #include "fidl/fuchsia.mem/cpp/wire_types.h"
 #include "src/media/audio/lib/clock/testing/clock_test.h"
 #include "src/media/audio/services/common/logging.h"
-#include "src/media/audio/services/common/testing/test_server_and_client.h"
+#include "src/media/audio/services/common/testing/test_server_and_sync_client.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/fidl/clock_registry.h"
 #include "src/media/audio/services/mixer/fidl/real_clock_factory.h"
@@ -100,7 +100,8 @@ zx::vmo MakeInvalidVmo(size_t size = 1024) {
 
 fidl::WireTableBuilder<fuchsia_audio_mixer::wire::StreamSinkProducer> MakeDefaultStreamSinkProducer(
     fidl::AnyArena& arena) {
-  auto [stream_sink_client, stream_sink_server] = CreateClientOrDie<fuchsia_media2::StreamSink>();
+  auto [stream_sink_client, stream_sink_server] =
+      CreateWireSyncClientOrDie<fuchsia_media2::StreamSink>();
   auto builder = fuchsia_audio_mixer::wire::StreamSinkProducer::Builder(arena);
   builder.server_end(std::move(stream_sink_server));
   builder.format(kFormat.ToWireFidl(arena));
@@ -113,7 +114,8 @@ fidl::WireTableBuilder<fuchsia_audio_mixer::wire::StreamSinkProducer> MakeDefaul
 
 fidl::WireTableBuilder<fuchsia_audio_mixer::wire::StreamSinkConsumer> MakeDefaultStreamSinkConsumer(
     fidl::AnyArena& arena) {
-  auto [stream_sink_client, stream_sink_server] = CreateClientOrDie<fuchsia_media2::StreamSink>();
+  auto [stream_sink_client, stream_sink_server] =
+      CreateWireSyncClientOrDie<fuchsia_media2::StreamSink>();
   auto builder = fuchsia_audio_mixer::wire::StreamSinkConsumer::Builder(arena);
   builder.client_end(stream_sink_client.TakeClientEnd());
   builder.format(kFormat.ToWireFidl(arena));
@@ -196,7 +198,7 @@ MakeDefaultProcessorConfig(fidl::AnyArena& arena) {
 
 fidl::WireTableBuilder<fuchsia_audio_mixer::wire::GraphCreateGainControlRequest>
 MakeDefaultCreateGainControlRequest(fidl::AnyArena& arena) {
-  auto [client, server] = CreateClientOrDie<fuchsia_audio::GainControl>();
+  auto [client, server] = CreateWireSyncClientOrDie<fuchsia_audio::GainControl>();
   return fuchsia_audio_mixer::wire::GraphCreateGainControlRequest::Builder(arena)
       .name(fidl::StringView::FromExternal("gaincontrol"))
       .control(std::move(server))
@@ -226,7 +228,7 @@ class GraphServerTest : public ::testing::Test {
 
  private:
   std::shared_ptr<FidlThread> thread_ = FidlThread::CreateFromNewThread("test_fidl_thread");
-  TestServerAndClient<GraphServer> wrapper_{
+  TestServerAndWireSyncClient<GraphServer> wrapper_{
       thread_, GraphServer::Args{
                    .clock_factory = std::make_shared<RealClockFactory>(),
                    .clock_registry = std::make_shared<ClockRegistry>(),
@@ -238,7 +240,8 @@ class GraphServerTest : public ::testing::Test {
 //
 
 TEST_F(GraphServerTest, CreateProducerFailsMissingDirection) {
-  auto [stream_sink_client, stream_sink_server] = CreateClientOrDie<fuchsia_media2::StreamSink>();
+  auto [stream_sink_client, stream_sink_server] =
+      CreateWireSyncClientOrDie<fuchsia_media2::StreamSink>();
 
   auto result = client()->CreateProducer(
       fuchsia_audio_mixer::wire::GraphCreateProducerRequest::Builder(arena_)

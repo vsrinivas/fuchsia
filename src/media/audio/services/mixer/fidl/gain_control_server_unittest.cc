@@ -19,7 +19,7 @@
 #include "fidl/fuchsia.audio/cpp/common_types.h"
 #include "fidl/fuchsia.audio/cpp/natural_types.h"
 #include "src/media/audio/lib/processing/gain.h"
-#include "src/media/audio/services/common/testing/test_server_and_client.h"
+#include "src/media/audio/services/common/testing/test_server_and_sync_client.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/common/global_task_queue.h"
 #include "src/media/audio/services/mixer/fidl/graph_detached_thread.h"
@@ -52,7 +52,7 @@ class GainControlServerTest : public ::testing::Test {
   void SetUp() {
     global_task_queue_ = std::make_shared<GlobalTaskQueue>();
     thread_ = FidlThread::CreateFromNewThread("test_fidl_thread");
-    wrapper_ = std::make_unique<TestServerAndClient<GainControlServer>>(
+    wrapper_ = std::make_unique<TestServerAndWireSyncClient<GainControlServer>>(
         thread_, GainControlServer::Args{
                      .id = GainControlId{1},
                      .reference_clock = DefaultClock(),
@@ -86,7 +86,7 @@ class GainControlServerTest : public ::testing::Test {
  private:
   std::shared_ptr<GlobalTaskQueue> global_task_queue_;
   std::shared_ptr<FidlThread> thread_;
-  std::unique_ptr<TestServerAndClient<GainControlServer>> wrapper_;
+  std::unique_ptr<TestServerAndWireSyncClient<GainControlServer>> wrapper_;
 };
 
 TEST_F(GainControlServerTest, SetGainFails) {

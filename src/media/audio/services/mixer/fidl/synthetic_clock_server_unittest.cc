@@ -10,7 +10,7 @@
 #include <gtest/gtest.h>
 
 #include "src/media/audio/services/common/logging.h"
-#include "src/media/audio/services/common/testing/test_server_and_client.h"
+#include "src/media/audio/services/common/testing/test_server_and_sync_client.h"
 
 namespace media_audio {
 namespace {
@@ -28,7 +28,8 @@ class SyntheticClockServerTest : public ::testing::Test {
  public:
   void SetUp() {
     thread_ = FidlThread::CreateFromNewThread("test_fidl_thread");
-    realm_wrapper_ = std::make_unique<TestServerAndClient<SyntheticClockRealmServer>>(thread_);
+    realm_wrapper_ =
+        std::make_unique<TestServerAndWireSyncClient<SyntheticClockRealmServer>>(thread_);
   }
 
   void TearDown() {
@@ -53,7 +54,7 @@ class SyntheticClockServerTest : public ::testing::Test {
 
  private:
   std::shared_ptr<FidlThread> thread_;
-  std::unique_ptr<TestServerAndClient<SyntheticClockRealmServer>> realm_wrapper_;
+  std::unique_ptr<TestServerAndWireSyncClient<SyntheticClockRealmServer>> realm_wrapper_;
 };
 
 TEST_F(SyntheticClockServerTest, CreateClockZxClockIsNotReadable) {
@@ -77,7 +78,8 @@ TEST_F(SyntheticClockServerTest, CreateClockZxClockIsNotReadable) {
 }
 
 TEST_F(SyntheticClockServerTest, CreateClockWithControl) {
-  auto [clock_client, clock_server] = CreateClientOrDie<fuchsia_audio_mixer::SyntheticClock>();
+  auto [clock_client, clock_server] =
+      CreateWireSyncClientOrDie<fuchsia_audio_mixer::SyntheticClock>();
   zx::clock zx_clock;
 
   {
@@ -139,7 +141,8 @@ TEST_F(SyntheticClockServerTest, CreateClockWithControl) {
   EXPECT_EQ(realm_t1, realm_t0 + zx::msec(100));
 
   // A second observer should see the same time.
-  auto [observe_client, observe_server] = CreateClientOrDie<fuchsia_audio_mixer::SyntheticClock>();
+  auto [observe_client, observe_server] =
+      CreateWireSyncClientOrDie<fuchsia_audio_mixer::SyntheticClock>();
 
   {
     auto result = realm_client()->ObserveClock(
@@ -177,7 +180,8 @@ TEST_F(SyntheticClockServerTest, CreateClockWithoutControl) {
   }
 
   // Get an observer.
-  auto [observe_client, observe_server] = CreateClientOrDie<fuchsia_audio_mixer::SyntheticClock>();
+  auto [observe_client, observe_server] =
+      CreateWireSyncClientOrDie<fuchsia_audio_mixer::SyntheticClock>();
 
   {
     auto result = realm_client()->ObserveClock(
@@ -227,7 +231,8 @@ TEST_F(SyntheticClockServerTest, CreateClockWithoutControl) {
 }
 
 TEST_F(SyntheticClockServerTest, SetRateFailsOnUnadjustableClock) {
-  auto [clock_client, clock_server] = CreateClientOrDie<fuchsia_audio_mixer::SyntheticClock>();
+  auto [clock_client, clock_server] =
+      CreateWireSyncClientOrDie<fuchsia_audio_mixer::SyntheticClock>();
 
   {
     auto result = realm_client()->CreateClock(
@@ -256,7 +261,8 @@ TEST_F(SyntheticClockServerTest, SetRateFailsOnUnadjustableClock) {
 }
 
 TEST_F(SyntheticClockServerTest, SetRateFailsOnAdjustableClock) {
-  auto [clock_client, clock_server] = CreateClientOrDie<fuchsia_audio_mixer::SyntheticClock>();
+  auto [clock_client, clock_server] =
+      CreateWireSyncClientOrDie<fuchsia_audio_mixer::SyntheticClock>();
 
   {
     auto result = realm_client()->CreateClock(
@@ -378,7 +384,7 @@ TEST_F(SyntheticClockServerTest, ObserveClockFails) {
   // Fail because `handle` is missing.
   {
     auto [observe_client, observe_server] =
-        CreateClientOrDie<fuchsia_audio_mixer::SyntheticClock>();
+        CreateWireSyncClientOrDie<fuchsia_audio_mixer::SyntheticClock>();
 
     auto result = realm_client()->ObserveClock(
         fuchsia_audio_mixer::wire::SyntheticClockRealmObserveClockRequest::Builder(arena_)
@@ -405,7 +411,7 @@ TEST_F(SyntheticClockServerTest, ObserveClockFails) {
   // Fail because `handle` is unknown.
   {
     auto [observe_client, observe_server] =
-        CreateClientOrDie<fuchsia_audio_mixer::SyntheticClock>();
+        CreateWireSyncClientOrDie<fuchsia_audio_mixer::SyntheticClock>();
 
     auto result = realm_client()->ObserveClock(
         fuchsia_audio_mixer::wire::SyntheticClockRealmObserveClockRequest::Builder(arena_)

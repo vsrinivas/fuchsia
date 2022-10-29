@@ -8,11 +8,16 @@ source_set("testing") {
   testonly = true
   visibility = [ "../../*" ]
 
-  sources = [ "test_server_and_client.h" ]
+  sources = [
+    "test_server_and_async_client.h",
+    "test_server_and_sync_client.h",
+  ]
 
   public_deps = [
     "//sdk/lib/fidl/cpp/wire",
     "//sdk/lib/syslog/cpp:cpp",
+    "//src/lib/fidl/cpp",
     "//src/media/audio/services/common",
+    "//zircon/system/ulib/async-testing",
   ]
 }

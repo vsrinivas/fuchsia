@@ -12,7 +12,7 @@
 #include "src/media/audio/lib/clock/unreadable_clock.h"
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/services/common/logging.h"
-#include "src/media/audio/services/common/testing/test_server_and_client.h"
+#include "src/media/audio/services/common/testing/test_server_and_sync_client.h"
 #include "src/media/audio/services/mixer/fidl/gain_control_server.h"
 #include "src/media/audio/services/mixer/fidl/ptr_decls.h"
 #include "src/media/audio/services/mixer/mix/simple_packet_queue_producer_stage.h"
@@ -124,7 +124,7 @@ FakeGraph::FakeGraph(Args args)
   // Populate `gain_controls_`.
   auto fidl_thread = FidlThread::CreateFromNewThread("FidlThread");
   for (const auto& gain_id : args.gain_controls) {
-    auto [client, server] = CreateClientOrDie<fuchsia_audio::GainControl>();
+    auto [client, server] = CreateWireSyncClientOrDie<fuchsia_audio::GainControl>();
     gain_controls_.emplace(gain_id,
                            GainControlServer::Create(fidl_thread, std::move(server),
                                                      {
