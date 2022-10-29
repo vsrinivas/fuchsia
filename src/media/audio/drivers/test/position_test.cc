@@ -221,11 +221,6 @@ void RegisterPositionTestsForDevice(const DeviceEntry& device_entry,
       REGISTER_POSITION_TEST(PositionNotifySlow, device_entry);
       REGISTER_POSITION_TEST(NoPositionNotifyAfterStop, device_entry);
       REGISTER_POSITION_TEST(PositionNotifyNone, device_entry);
-    } else {
-      REGISTER_DISABLED_POSITION_TEST(PositionNotifyFast, device_entry);
-      REGISTER_DISABLED_POSITION_TEST(PositionNotifySlow, device_entry);
-      REGISTER_DISABLED_POSITION_TEST(NoPositionNotifyAfterStop, device_entry);
-      REGISTER_DISABLED_POSITION_TEST(PositionNotifyNone, device_entry);
     }
   }
 }

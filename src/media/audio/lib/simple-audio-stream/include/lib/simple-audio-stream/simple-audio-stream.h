@@ -450,6 +450,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   bool rb_started_ __TA_GUARDED(domain_token()) = false;
   bool rb_vmo_fetched_ __TA_GUARDED(domain_token()) = false;
   bool delay_info_updated_ __TA_GUARDED(domain_token()) = false;
+  std::optional<WatchDelayInfoCompleter::Async> delay_completer_;
 
   // |shutting_down_| is a boolean indicating whether |loop_| is about to be shut down.
   bool shutting_down_ __TA_GUARDED(channel_lock_) = false;

@@ -11,10 +11,26 @@
 
 #include <algorithm>
 #include <cstring>
+#include <optional>
 
 #include "gtest/gtest.h"
 
 namespace media::audio::drivers::test {
+
+void AdminTest::TearDown() {
+  ring_buffer_.Unbind();
+
+  // When disconnecting a RingBuffer, there's no signal to wait on before proceeding (potentially
+  // immediately executing other tests); insert a 100-ms wait. This wait is even more important for
+  // error cases that cause the RingBuffer to disconnect: without it, subsequent test cases that use
+  // the RingBuffer may receive unexpected errors (e.g. ZX_ERR_PEER_CLOSED or ZX_ERR_INVALID_ARGS).
+  //
+  // We need this wait when testing a "real hardware" driver (i.e. on realtime-capable systems). For
+  // this reason a hardcoded time constant, albeit a test antipattern, is (grudgingly) acceptable.
+  zx::nanosleep(zx::deadline_after(zx::msec(100)));
+
+  TestBase::TearDown();
+}
 
 // For the channelization and sample_format that we've set, determine the size of each frame.
 // This method assumes that SetFormat has already been sent to the driver.
@@ -64,27 +80,36 @@ void AdminTest::RequestMaxFormat() {
 
 // Ring-buffer channel requests
 //
-// Request the FIFO depth in bytes, at the current format (relies on the ring buffer channel).
+// Request the RingBufferProperties, at the current format (relies on the ring buffer channel).
+// Validate the four fields that might be returned (only one is currently required).
 void AdminTest::RequestRingBufferProperties() {
   ring_buffer_->GetProperties(AddCallback(
-      "RingBuffer::GetProperties", [this](fuchsia::hardware::audio::RingBufferProperties prop) {
-        ring_buffer_props_ = std::move(prop);
+      "RingBuffer::GetProperties", [this](fuchsia::hardware::audio::RingBufferProperties props) {
+        ring_buffer_props_ = std::move(props);
       }));
   ExpectCallbacks();
   if (HasFailure()) {
     return;
   }
+  ASSERT_TRUE(ring_buffer_props_.has_value()) << "No RingBufferProperties table received";
 
-  if (ring_buffer_props_.has_external_delay()) {
-    EXPECT_GE(ring_buffer_props_.external_delay(), 0);
+  if (ring_buffer_props_->has_external_delay()) {
+    // As a zx::duration, a negative value is theoretically possible, but this is disallowed.
+    EXPECT_GE(ring_buffer_props_->external_delay(), 0);
   }
 
-  EXPECT_TRUE(ring_buffer_props_.has_fifo_depth());
+  // `fifo_depth` in the RingBufferProperties table is deprecated as of SDK version 9.
+  // `external_delay` was always optional, and is deprecated as of SDK version 9.
+  // If present, these fields must match the `DelayInfo.internal_delay` and
+  // `DelayInfo.external_delay` values returned from WatchDelayInfo.
+  ExpectRingBufferPropsMatchesDelayInfo();
 
-  EXPECT_TRUE(ring_buffer_props_.has_needs_cache_flush_or_invalidate());
+  // This field is required.
+  EXPECT_TRUE(ring_buffer_props_->has_needs_cache_flush_or_invalidate());
 
-  if (ring_buffer_props_.has_turn_on_delay()) {
-    EXPECT_GE(ring_buffer_props_.turn_on_delay(), 0);
+  if (ring_buffer_props_->has_turn_on_delay()) {
+    // As a zx::duration, a negative value is theoretically possible, but this is disallowed.
+    EXPECT_GE(ring_buffer_props_->turn_on_delay(), 0);
   }
 }
 
@@ -202,6 +227,71 @@ void AdminTest::PositionNotificationCallback(
       << "Position notification received: notifications_per_ring() cannot be zero";
 }
 
+void AdminTest::WatchDelayAndExpectUpdate() {
+  ring_buffer_->WatchDelayInfo(
+      AddCallback("WatchDelayInfo", [this](fuchsia::hardware::audio::DelayInfo delay_info) {
+        delay_info_ = std::move(delay_info);
+      }));
+  ExpectCallbacks();
+
+  ASSERT_TRUE(delay_info_.has_value()) << "No DelayInfo table received";
+
+  if (delay_info_->has_internal_delay()) {
+    EXPECT_GE(delay_info_->internal_delay(), 0ll) << "Internal delay cannot be negative";
+  }
+
+  if (delay_info_->has_external_delay()) {
+    EXPECT_GE(delay_info_->external_delay(), 0ll) << "External delay cannot be negative";
+  }
+
+  if (!delay_info_->has_internal_delay() && !delay_info_->has_external_delay()) {
+    GTEST_SKIP()
+        << "*** Audio " << ((device_type() == DeviceType::Input) ? "input" : "output")
+        << " did not return internal_delay or external_delay. Skipping this test case. ***";
+    __UNREACHABLE;
+  }
+
+  ExpectRingBufferPropsMatchesDelayInfo();
+}
+
+void AdminTest::WatchDelayAndExpectNoUpdate() {
+  ring_buffer_->WatchDelayInfo([](fuchsia::hardware::audio::DelayInfo delay_info) {
+    FAIL() << "Unexpected delay update received";
+  });
+}
+
+void AdminTest::ExpectRingBufferPropsMatchesDelayInfo() {
+  if (!ring_buffer_props_.has_value()) {
+    // We haven't received a GetProperties response yet.
+    return;
+  }
+  if (!delay_info_.has_value()) {
+    // We haven't received a WatchDelayInfo response yet.
+    return;
+  }
+
+  if (ring_buffer_props_->has_external_delay()) {
+    ASSERT_TRUE(delay_info_->has_external_delay())
+        << "GetProperties returned external_delay, so WatchDelayInfo external_delay is required";
+    EXPECT_EQ(ring_buffer_props_->external_delay(), delay_info_->external_delay())
+        << "WatchDelayInfo `external_delay` must match GetProperties `external_delay`";
+  }
+
+  if (ring_buffer_props_->has_fifo_depth()) {
+    ASSERT_TRUE(delay_info_->has_internal_delay())
+        << "GetProperties returned fifo_depth, so WatchDelayInfo internal_delay is required";
+
+    // nsec = bytes * nsec/sec * sec/frame * frames/byte
+    int64_t fifo_delay_nsec =
+        ring_buffer_props_->fifo_depth() * ZX_SEC(1) / frame_size_ / pcm_format().frame_rate;
+
+    // This calculation could differ by one, depending on how the driver floors/rounds/ceilings.
+    EXPECT_NEAR(static_cast<double>(delay_info_->internal_delay()),
+                static_cast<double>(fifo_delay_nsec), 1)
+        << "WatchDelayInfo `internal_delay` must match GetProperties `fifo_depth`";
+  }
+}
+
 #define DEFINE_ADMIN_TEST_CLASS(CLASS_NAME, CODE)                               \
   class CLASS_NAME : public AdminTest {                                         \
    public:                                                                      \
@@ -303,6 +393,42 @@ DEFINE_ADMIN_TEST_CLASS(StopWhileStoppedIsPermitted, {
   WaitForError();
 });
 
+// Verify that valid WatchDelayInfo responses are received, but not updates.
+DEFINE_ADMIN_TEST_CLASS(GetDelayInfoMatchesFifoDepth, {
+  ASSERT_NO_FAILURE_OR_SKIP(RequestFormats());
+  ASSERT_NO_FAILURE_OR_SKIP(RequestMaxFormat());
+  ASSERT_NO_FAILURE_OR_SKIP(RequestRingBufferProperties());
+
+  WatchDelayAndExpectUpdate();
+  WaitForError();
+});
+
+// Verify that valid WatchDelayInfo responses are received, even after Start().
+DEFINE_ADMIN_TEST_CLASS(GetDelayInfoAfterStart, {
+  ASSERT_NO_FAILURE_OR_SKIP(RequestFormats());
+  ASSERT_NO_FAILURE_OR_SKIP(RequestMaxFormat());
+  ASSERT_NO_FAILURE_OR_SKIP(RequestBuffer(100));
+  ASSERT_NO_FAILURE_OR_SKIP(RequestStart());
+
+  WatchDelayAndExpectUpdate();
+  WaitForError();
+});
+
+// Verify valid responses: WatchDelayInfo does NOT respond a second time.
+DEFINE_ADMIN_TEST_CLASS(GetDelayInfoSecondTimeNoResponse, {
+  ASSERT_NO_FAILURE_OR_SKIP(RequestFormats());
+  ASSERT_NO_FAILURE_OR_SKIP(RequestMaxFormat());
+
+  WatchDelayAndExpectUpdate();
+  WatchDelayAndExpectNoUpdate();
+
+  ASSERT_NO_FAILURE_OR_SKIP(RequestBuffer(8000));
+  ASSERT_NO_FAILURE_OR_SKIP(RequestStart());
+  ASSERT_NO_FAILURE_OR_SKIP(RequestStop());
+
+  WaitForError();
+});
+
 // Register separate test case instances for each enumerated device
 //
 // See googletest/docs/advanced.md for details
@@ -324,15 +450,17 @@ void RegisterAdminTestsForDevice(const DeviceEntry& device_entry,
   if (device_entry.dir_fd == DeviceEntry::kA2dp || !expect_audio_core_connected) {
     REGISTER_ADMIN_TEST(GetRingBufferProperties, device_entry);
     REGISTER_ADMIN_TEST(GetBuffer, device_entry);
+    REGISTER_ADMIN_TEST(GetDelayInfoMatchesFifoDepth, device_entry);
 
     REGISTER_ADMIN_TEST(SetActiveChannels, device_entry);
+    REGISTER_ADMIN_TEST(GetDelayInfoSecondTimeNoResponse, device_entry);
 
     REGISTER_ADMIN_TEST(Start, device_entry);
-    REGISTER_ADMIN_TEST(Stop, device_entry);
-
     REGISTER_ADMIN_TEST(StartBeforeGetVmoShouldDisconnect, device_entry);
     REGISTER_ADMIN_TEST(StartWhileStartedShouldDisconnect, device_entry);
+    REGISTER_ADMIN_TEST(GetDelayInfoAfterStart, device_entry);
 
+    REGISTER_ADMIN_TEST(Stop, device_entry);
     REGISTER_ADMIN_TEST(StopBeforeGetVmoShouldDisconnect, device_entry);
     REGISTER_ADMIN_TEST(StopWhileStoppedIsPermitted, device_entry);
   }

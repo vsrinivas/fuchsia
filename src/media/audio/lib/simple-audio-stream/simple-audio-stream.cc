@@ -273,6 +273,15 @@ void SimpleAudioStream::DeactivateRingBufferChannel(const Channel* channel) {
     }
     rb_vmo_fetched_ = false;
     delay_info_updated_ = false;
+    // Any pending LLCPP completer must be either replied to or closed before we destroy it.
+    if (delay_completer_.has_value()) {
+      // This is expected/normal: clients will always have an outstanding hanging-get, and it is not
+      // automatically completed/canceled by any RingBuffer call (Stop(), for example).
+      zxlogf(INFO, "Delay completer is still open when deactivating ring buffer channel");
+      delay_completer_->Reply({});  // Don't close the channel with an error.
+    }
+    delay_completer_.reset();
+
     expected_notifications_per_ring_.store(0);
     {
       fbl::AutoLock position_lock(&position_lock_);
@@ -495,6 +504,8 @@ void SimpleAudioStream::WatchDelayInfo(WatchDelayInfoCompleter::Sync& completer)
     delay_info.internal_delay(internal_delay_nsec_);
     delay_info.external_delay(external_delay_nsec_);
     completer.Reply(delay_info.Build());
+  } else {
+    delay_completer_ = completer.ToAsync();
   }
 }
 

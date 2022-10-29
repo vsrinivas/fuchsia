@@ -5,10 +5,13 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_TEST_ADMIN_TEST_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_TEST_ADMIN_TEST_H_
 
+#include <fuchsia/hardware/audio/cpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/time.h>
 #include <zircon/device/audio.h>
 #include <zircon/errors.h>
+
+#include <optional>
 
 #include "src/media/audio/drivers/test/test_base.h"
 
@@ -19,6 +22,8 @@ class AdminTest : public TestBase {
   explicit AdminTest(const DeviceEntry& dev_entry) : TestBase(dev_entry) {}
 
  protected:
+  void TearDown() override;
+
   void RequestMinFormat();
   void RequestMaxFormat();
 
@@ -42,6 +47,10 @@ class AdminTest : public TestBase {
   void AllowPositionNotifications() { fail_on_position_notification_ = false; }
   void PositionNotificationCallback(fuchsia::hardware::audio::RingBufferPositionInfo position_info);
 
+  void WatchDelayAndExpectUpdate();
+  void WatchDelayAndExpectNoUpdate();
+  void ExpectRingBufferPropsMatchesDelayInfo();
+
   fidl::InterfacePtr<fuchsia::hardware::audio::RingBuffer>& ring_buffer() { return ring_buffer_; }
   uint32_t ring_buffer_frames() const { return ring_buffer_frames_; }
   fuchsia::hardware::audio::PcmFormat pcm_format() const { return pcm_format_; }
@@ -52,7 +61,8 @@ class AdminTest : public TestBase {
 
  private:
   fidl::InterfacePtr<fuchsia::hardware::audio::RingBuffer> ring_buffer_;
-  fuchsia::hardware::audio::RingBufferProperties ring_buffer_props_;
+  std::optional<fuchsia::hardware::audio::RingBufferProperties> ring_buffer_props_;
+  std::optional<fuchsia::hardware::audio::DelayInfo> delay_info_;
 
   uint32_t min_ring_buffer_frames_ = 0;
   uint32_t notifications_per_ring_ = 0;
@@ -63,7 +73,7 @@ class AdminTest : public TestBase {
   fuchsia::hardware::audio::PcmFormat pcm_format_;
   uint16_t frame_size_ = 0;
 
-  // Position notifications are hanging-gets. On receipt, should we register the next one? Or fail?
+  // Position notifications are hanging-gets. On receipt, should we register the next one or fail?
   bool fail_on_position_notification_ = false;
 };
 
