@@ -72,7 +72,7 @@ TEST_F(FinishThreadControllerTest, FinishInline) {
 
   // Should not have resumed.
   EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());
-  EXPECT_EQ(debug_ipc::ThreadRecord::State::kBlocked, thread()->GetState());
+  EXPECT_EQ(std::make_optional(debug_ipc::ThreadRecord::State::kBlocked), thread()->GetState());
 
   // None of the above stepping should have triggered a non-inline function return.
   EXPECT_FALSE(function_completion_called);

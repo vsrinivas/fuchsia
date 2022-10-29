@@ -8,6 +8,7 @@
 
 #include "src/developer/debug/zxdb/client/mock_frame.h"
 #include "src/developer/debug/zxdb/client/mock_process.h"
+#include "src/developer/debug/zxdb/client/mock_target.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/stack.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
@@ -27,7 +28,9 @@ class AnalyzeMemoryTest : public TestWithLoop {};
 TEST_F(AnalyzeMemoryTest, Basic) {
   Session session;
   ProcessSymbolsTestSetup setup;
-  MockProcess process(&session);
+
+  MockTarget target(&session);
+  MockProcess process(&target);
   process.set_symbols(&setup.process());
 
   constexpr uint64_t kBegin = 0x1000;

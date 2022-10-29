@@ -44,10 +44,15 @@ class Thread : public ClientObject {
   virtual uint64_t GetKoid() const = 0;
   virtual const std::string& GetName() const = 0;
 
-  // The state of the thread isn't necessarily up-to-date. There are no system messages for a thread
-  // transitioning to suspended, for example. To make sure this is up-to-date, call
-  // Process::SyncThreads() or Thread::SyncFrames().
-  virtual debug_ipc::ThreadRecord::State GetState() const = 0;
+  // Returns the current state of the thread.
+  //
+  // The state of the thread isn't necessarily up-to-date. In cases where we know the state isn't
+  // up-to-date (we've asked it to do change but haven't heard back), GetState() will return a
+  // nullopt. But the thread state could have changed out from under us or there could be a race
+  // with the target, so a present state isn't guaranteed correct.
+  //
+  // To force an update, call Process::SyncThreads() or Thread::SyncFrames().
+  virtual std::optional<debug_ipc::ThreadRecord::State> GetState() const = 0;
   virtual debug_ipc::ThreadRecord::BlockedReason GetBlockedReason() const = 0;
 
   // The "blocked on exception" state has a special query function since that's the only blocked

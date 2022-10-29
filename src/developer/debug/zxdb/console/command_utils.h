@@ -72,7 +72,7 @@ size_t CheckHexPrefix(const std::string& s);
 [[nodiscard]] Err ReadUint64Arg(const Command& cmd, size_t arg_index, const char* param_desc,
                                 uint64_t* out);
 
-std::string ThreadStateToString(debug_ipc::ThreadRecord::State state,
+std::string ThreadStateToString(std::optional<debug_ipc::ThreadRecord::State> state,
                                 debug_ipc::ThreadRecord::BlockedReason blocked_reason);
 
 std::string ExecutionScopeToString(const ConsoleContext* context, const ExecutionScope& scope);

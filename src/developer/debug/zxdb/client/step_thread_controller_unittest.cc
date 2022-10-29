@@ -74,7 +74,7 @@ TEST_F(StepThreadControllerTest, SofwareException) {
 
   // It should have stayed stopped despite being in range.
   EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Stopped
-  EXPECT_EQ(debug_ipc::ThreadRecord::State::kBlocked, thread()->GetState());
+  EXPECT_EQ(std::make_optional(debug_ipc::ThreadRecord::State::kBlocked), thread()->GetState());
 }
 
 // Some entries in the line table may have their line number set to zero. These indicate code
@@ -156,7 +156,7 @@ TEST_F(StepThreadControllerTest, Line0) {
                            debug_ipc::ExceptionType::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)), true);
   EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Stopped
-  EXPECT_EQ(debug_ipc::ThreadRecord::State::kBlocked, thread()->GetState());
+  EXPECT_EQ(std::make_optional(debug_ipc::ThreadRecord::State::kBlocked), thread()->GetState());
 }
 
 void StepThreadControllerTest::SetUnsymbolizedSetting(bool stop_on_no_symbols) {

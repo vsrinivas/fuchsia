@@ -8,6 +8,7 @@
 
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "src/developer/debug/zxdb/client/mock_process.h"
+#include "src/developer/debug/zxdb/client/mock_target.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/symbols/mock_module_symbols.h"
@@ -27,7 +28,9 @@ class ProcessSymbolDataProviderTest : public TestWithLoop {
 TEST_F(ProcessSymbolDataProviderTest, GetTLSSegment) {
   const uint64_t kLoadAddress = 0xf00db4b3;
   Session session;
-  MockProcess process(&session);
+  MockTarget target(&session);
+  MockProcess process(&target);
+
   fxl::RefPtr<ProcessSymbolDataProvider> provider =
       fxl::MakeRefCounted<ProcessSymbolDataProvider>(process.GetWeakPtr());
   SymbolContext symbol_context(kLoadAddress);

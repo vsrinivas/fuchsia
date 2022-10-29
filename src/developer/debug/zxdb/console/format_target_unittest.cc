@@ -25,7 +25,7 @@ TEST(FormatTarget, FormatTarget) {
   // There's a default target.
   EXPECT_EQ("Process 2 state=\"Not running\"\n", FormatTarget(&context, &target).AsString());
 
-  MockProcess process(&session);
+  MockProcess process(&target);
   target.SetRunningProcess(&process);
 
   EXPECT_EQ("Process 2 state=Running koid=0 name=\"Mock process\" component=component.cm\n",
@@ -45,7 +45,7 @@ TEST(FormatTarget, DISABLED_FormatTargetList) {
   MockTarget target(&session);
   // TODO(104366): This is a segmentation fault because CreateNewTarget expects a TargetImpl.
   session.system().CreateNewTarget(&target);
-  MockProcess process(&session);
+  MockProcess process(&target);
   target.SetRunningProcess(&process);
 
   EXPECT_EQ(

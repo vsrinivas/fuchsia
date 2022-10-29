@@ -319,12 +319,18 @@ Err DebugAdapterContext::CheckStoppedThread(Thread* thread) {
     return Err("Invalid thread.");
   }
 
-  if (thread->GetState() != debug_ipc::ThreadRecord::State::kBlocked &&
-      thread->GetState() != debug_ipc::ThreadRecord::State::kCoreDump &&
-      thread->GetState() != debug_ipc::ThreadRecord::State::kSuspended) {
+  std::optional<debug_ipc::ThreadRecord::State> state_or = thread->GetState();
+  if (!state_or) {
+    return Err("Thread should be suspended but thread %llu is in an unknown state.",
+               static_cast<unsigned long long>(thread->GetKoid()));
+  }
+
+  if (*state_or != debug_ipc::ThreadRecord::State::kBlocked &&
+      *state_or != debug_ipc::ThreadRecord::State::kCoreDump &&
+      *state_or != debug_ipc::ThreadRecord::State::kSuspended) {
     return Err("Thread should be suspended but thread %llu is %s.",
                static_cast<unsigned long long>(thread->GetKoid()),
-               debug_ipc::ThreadRecord::StateToString(thread->GetState()));
+               debug_ipc::ThreadRecord::StateToString(*state_or));
   }
   return Err();
 }

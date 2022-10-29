@@ -259,7 +259,8 @@ TEST_F(InputLocationParserTest, ParseLocalInputLocation) {
 
   // Process/thread setup.
   Session session;
-  MockProcess process(&session);
+  MockTarget target(&session);
+  MockProcess process(&target);
   process.set_symbols(&symbols_.process());
   MockThread thread(&process);
 
@@ -324,7 +325,7 @@ TEST_F(InputLocationParserTest, CompleteInputLocation) {
   Session session;
   MockTarget target(&session);
   target.set_symbols(&symbols_.target());
-  MockProcess process(&session);
+  MockProcess process(&target);
   process.set_symbols(&symbols_.process());
 
   Location loc;

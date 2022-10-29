@@ -52,13 +52,16 @@ Thread::~Thread() = default;
 fxl::WeakPtr<Thread> Thread::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
 bool Thread::IsBlockedOnException() const {
-  return GetState() == debug_ipc::ThreadRecord::State::kBlocked &&
+  std::optional<debug_ipc::ThreadRecord::State> state_or = GetState();
+  return state_or && *state_or == debug_ipc::ThreadRecord::State::kBlocked &&
          GetBlockedReason() == debug_ipc::ThreadRecord::BlockedReason::kException;
 }
 
 bool Thread::CurrentStopSupportsFrames() const {
-  return IsBlockedOnException() || GetState() == debug_ipc::ThreadRecord::State::kCoreDump ||
-         GetState() == debug_ipc::ThreadRecord::State::kSuspended;
+  std::optional<debug_ipc::ThreadRecord::State> state_or = GetState();
+  return IsBlockedOnException() ||
+         (state_or && (*state_or == debug_ipc::ThreadRecord::State::kCoreDump ||
+                       *state_or == debug_ipc::ThreadRecord::State::kSuspended));
 }
 
 fxl::RefPtr<SettingSchema> Thread::GetSchema() {

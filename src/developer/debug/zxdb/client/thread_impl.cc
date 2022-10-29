@@ -54,7 +54,7 @@ uint64_t ThreadImpl::GetKoid() const { return koid_; }
 
 const std::string& ThreadImpl::GetName() const { return name_; }
 
-debug_ipc::ThreadRecord::State ThreadImpl::GetState() const { return state_; }
+std::optional<debug_ipc::ThreadRecord::State> ThreadImpl::GetState() const { return state_; }
 debug_ipc::ThreadRecord::BlockedReason ThreadImpl::GetBlockedReason() const {
   return blocked_reason_;
 }
@@ -63,10 +63,11 @@ void ThreadImpl::Pause(fit::callback<void()> on_paused) {
   // The frames may have been requested when the thread was running which will have marked them
   // "empty but complete." When a pause happens the frames will become available so we want
   // subsequent requests to request them.
-  ClearFrames();
+  ClearState();
 
   debug_ipc::PauseRequest request;
   request.ids.push_back({.process = process_->GetKoid(), .thread = koid_});
+
   session()->remote_api()->Pause(
       request, [weak_thread = weak_factory_.GetWeakPtr(), on_paused = std::move(on_paused)](
                    const Err& err, debug_ipc::PauseReply reply) mutable {
@@ -134,7 +135,7 @@ void ThreadImpl::Continue(bool forward_exception) {
     }
   }
 
-  ClearFrames();
+  ClearState();
   session()->remote_api()->Resume(request, [](const Err& err, debug_ipc::ResumeReply) {});
 }
 
@@ -412,7 +413,10 @@ Location ThreadImpl::GetSymbolizedLocationForStackFrame(const debug_ipc::StackFr
   return vect[0];
 }
 
-void ThreadImpl::ClearFrames() {
+void ThreadImpl::ClearState() {
+  state_ = std::nullopt;
+  blocked_reason_ = debug_ipc::ThreadRecord::BlockedReason::kNotBlocked;
+
   if (stack_.ClearFrames()) {
     for (auto& observer : session()->thread_observers())
       observer.OnThreadFramesInvalidated(this);

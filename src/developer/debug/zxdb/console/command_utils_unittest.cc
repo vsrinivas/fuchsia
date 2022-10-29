@@ -14,11 +14,13 @@
 #include "src/developer/debug/zxdb/client/mock_breakpoint_location.h"
 #include "src/developer/debug/zxdb/client/mock_frame.h"
 #include "src/developer/debug/zxdb/client/mock_process.h"
+#include "src/developer/debug/zxdb/client/mock_target.h"
 #include "src/developer/debug/zxdb/client/mock_thread.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/console_context.h"
+#include "src/developer/debug/zxdb/console/mock_console.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
@@ -247,9 +249,10 @@ TEST(CommandUtils, FormatConsoleString) {
 
 TEST(CommandUtils, AssertStoppedThreadWithFrameCommand) {
   Session session;
-  ConsoleContext context(&session);
+  MockConsole console(&session);
 
-  MockProcess process(&session);
+  MockTarget target(&session);
+  MockProcess process(&target);
   MockThread thread(&process);
   thread.SetState(debug_ipc::ThreadRecord::State::kBlocked,
                   debug_ipc::ThreadRecord::BlockedReason::kException);
@@ -258,19 +261,33 @@ TEST(CommandUtils, AssertStoppedThreadWithFrameCommand) {
       &session, &thread, Location(Location::State::kAddress, 0x1000), 0x2000));
   thread.GetStack().SetFramesForTest(std::move(frames), false);
 
+  // Tell the context about our process and thread so it can supply correct indices in errors.
+  console.context().DidCreateTarget(&target);
+  console.context().DidCreateProcess(&process, 0);
+  console.context().DidCreateThread(&thread);
+
   Command cmd;
   cmd.set_verb(Verb::kSteps);
 
   // Test with no thread.
-  Err err = AssertStoppedThreadWithFrameCommand(&context, cmd, "steps", true);
+  Err err = AssertStoppedThreadWithFrameCommand(&console.context(), cmd, "steps", true);
   ASSERT_TRUE(err.has_error());
   EXPECT_EQ("\"steps\" requires a thread but there is no current thread.", err.msg());
 
   // Supply a valid thread, this should succeed.
   cmd.set_thread(&thread);
   cmd.set_frame(thread.GetStack()[0]);
-  err = AssertStoppedThreadWithFrameCommand(&context, cmd, "steps", true);
+  err = AssertStoppedThreadWithFrameCommand(&console.context(), cmd, "steps", true);
   EXPECT_FALSE(err.has_error());
+
+  // Supply a thread in an unknown state.
+  thread.SetState(std::nullopt, debug_ipc::ThreadRecord::BlockedReason::kNotBlocked);
+  err = AssertStoppedThreadWithFrameCommand(&console.context(), cmd, "steps", true);
+  EXPECT_EQ(
+      "\"steps\" requires a suspended thread but thread 1 is Unknown.\n"
+      "To view and sync thread state with the remote system, type \"thread\".\n"
+      "Or type \"pause\" to pause a running thread.",
+      err.msg());
 }
 
 }  // namespace zxdb

@@ -29,7 +29,7 @@ class ThreadImpl final : public Thread, public Stack::Delegate {
   Process* GetProcess() const override;
   uint64_t GetKoid() const override;
   const std::string& GetName() const override;
-  debug_ipc::ThreadRecord::State GetState() const override;
+  std::optional<debug_ipc::ThreadRecord::State> GetState() const override;
   debug_ipc::ThreadRecord::BlockedReason GetBlockedReason() const override;
   void Pause(fit::callback<void()> on_paused) override;
   void Continue(bool forward_exception) override;
@@ -65,8 +65,9 @@ class ThreadImpl final : public Thread, public Stack::Delegate {
                                            Location location) override;
   Location GetSymbolizedLocationForStackFrame(const debug_ipc::StackFrame& input) override;
 
-  // Invalidates the cached frames.
-  void ClearFrames();
+  // Invalidates the thread state and cached frames. Used when we know that some operation has
+  // invalidated our state but we aren't sure what the new state is yet.
+  void ClearState();
 
   // Runs the next post-stop task and queues up a continuation of this function when it has
   // completed. This will have the effect of sequentially running all of the post-stop tasks and
@@ -79,8 +80,9 @@ class ThreadImpl final : public Thread, public Stack::Delegate {
   Stack stack_;
 
   std::string name_;
-  debug_ipc::ThreadRecord::State state_;
-  debug_ipc::ThreadRecord::BlockedReason blocked_reason_;
+  std::optional<debug_ipc::ThreadRecord::State> state_;
+  debug_ipc::ThreadRecord::BlockedReason blocked_reason_ =
+      debug_ipc::ThreadRecord::BlockedReason::kNotBlocked;
 
   // Ordered list of ThreadControllers that apply to this thread. This is a stack where back() is
   // the topmost controller that applies first.

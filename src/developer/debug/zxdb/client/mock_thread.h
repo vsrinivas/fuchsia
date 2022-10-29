@@ -24,7 +24,7 @@ class MockThread : public Thread, public Stack::Delegate {
   Process* GetProcess() const override { return process_; }
   uint64_t GetKoid() const override { return 1234; }
   const std::string& GetName() const override { return thread_name_; }
-  debug_ipc::ThreadRecord::State GetState() const override { return state_; }
+  std::optional<debug_ipc::ThreadRecord::State> GetState() const override { return state_; }
   debug_ipc::ThreadRecord::BlockedReason GetBlockedReason() const override {
     return blocked_reason_;
   }
@@ -44,7 +44,7 @@ class MockThread : public Thread, public Stack::Delegate {
   const Stack& GetStack() const override { return stack_; }
   Stack& GetStack() override { return stack_; }
 
-  void SetState(debug_ipc::ThreadRecord::State state,
+  void SetState(std::optional<debug_ipc::ThreadRecord::State> state,
                 debug_ipc::ThreadRecord::BlockedReason blocked_reason =
                     debug_ipc::ThreadRecord::BlockedReason::kNotBlocked) {
     if (state == debug_ipc::ThreadRecord::State::kBlocked) {
@@ -72,7 +72,7 @@ class MockThread : public Thread, public Stack::Delegate {
   std::string thread_name_ = "test thread";
   Process* process_;
 
-  debug_ipc::ThreadRecord::State state_ = debug_ipc::ThreadRecord::State::kSuspended;
+  std::optional<debug_ipc::ThreadRecord::State> state_ = debug_ipc::ThreadRecord::State::kSuspended;
   debug_ipc::ThreadRecord::BlockedReason blocked_reason_ =
       debug_ipc::ThreadRecord::BlockedReason::kNotBlocked;
 

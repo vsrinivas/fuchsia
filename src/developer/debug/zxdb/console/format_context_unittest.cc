@@ -9,6 +9,7 @@
 #include "src/developer/debug/zxdb/client/arch_info.h"
 #include "src/developer/debug/zxdb/client/memory_dump.h"
 #include "src/developer/debug/zxdb/client/mock_process.h"
+#include "src/developer/debug/zxdb/client/mock_target.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/symbols/mock_module_symbols.h"
@@ -176,7 +177,8 @@ TEST(FormatContext, FormatAsmContext) {
   SymbolContext symbol_context(ProcessSymbolsTestSetup::kDefaultLoadAddress);
 
   Session session;
-  MockProcess process(&session);
+  MockTarget target(&session);
+  MockProcess process(&target);
   process.set_symbols(&symbols.process());
 
   // Setup address-to-source mapping. These must match the addresses in the assembly. Line 4

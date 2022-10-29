@@ -132,7 +132,7 @@ void FunctionThreadControllerTest::DoUnsymbolizedPltCallTest(bool stop_on_no_sym
   if (stop_on_no_symbols) {
     // For this variant of the test, the unsymbolized thunk should have stopped stepping.
     EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Stopped
-    EXPECT_EQ(debug_ipc::ThreadRecord::State::kBlocked, thread()->GetState());
+    EXPECT_EQ(std::make_optional(debug_ipc::ThreadRecord::State::kBlocked), thread()->GetState());
     return;
   }
 
@@ -158,7 +158,7 @@ void FunctionThreadControllerTest::DoUnsymbolizedPltCallTest(bool stop_on_no_sym
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::ExceptionType::kSingleStep, std::move(stack), true);
   EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Stopped
-  EXPECT_EQ(debug_ipc::ThreadRecord::State::kBlocked, thread()->GetState());
+  EXPECT_EQ(std::make_optional(debug_ipc::ThreadRecord::State::kBlocked), thread()->GetState());
 }
 
 TEST_F(FunctionThreadControllerTest, UnsymbolizedPltCallStepOver) {

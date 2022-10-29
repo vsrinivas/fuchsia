@@ -44,6 +44,16 @@ void AppendFrameNumber(size_t begin_range, size_t end_range, size_t active_frame
   }
 }
 
+bool ThreadIsSuspendedOrBlockedOnException(Thread* thread) {
+  std::optional<debug_ipc::ThreadRecord::State> state_or = thread->GetState();
+  if (!state_or)
+    return false;  // Unknown state.
+
+  return *state_or == debug_ipc::ThreadRecord::State::kSuspended ||
+         (*state_or == debug_ipc::ThreadRecord::State::kBlocked &&
+          thread->GetBlockedReason() == debug_ipc::ThreadRecord::BlockedReason::kException);
+}
+
 fxl::RefPtr<AsyncOutputBuffer> ListCompletedFrames(Thread* thread, const FormatStackOptions& opts) {
   size_t active_frame_id =
       static_cast<size_t>(Console::get()->context().GetActiveFrameIdForThread(thread));
@@ -53,9 +63,7 @@ fxl::RefPtr<AsyncOutputBuffer> ListCompletedFrames(Thread* thread, const FormatS
   // This doesn't use table output since the format of the stack frames is usually so unpredictable.
   const Stack& stack = thread->GetStack();
   if (stack.empty()) {
-    if (thread->GetState() != debug_ipc::ThreadRecord::State::kSuspended &&
-        !(thread->GetState() == debug_ipc::ThreadRecord::State::kBlocked &&
-          thread->GetBlockedReason() == debug_ipc::ThreadRecord::BlockedReason::kException)) {
+    if (!ThreadIsSuspendedOrBlockedOnException(thread)) {
       // Make a nicer error message for the common case of requesting stack frames when the thread
       // is in the wrong state.
       out->Append(

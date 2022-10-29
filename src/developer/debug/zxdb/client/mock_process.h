@@ -10,6 +10,7 @@
 
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/zxdb/client/process.h"
+#include "src/developer/debug/zxdb/client/target.h"
 
 namespace zxdb {
 
@@ -17,7 +18,8 @@ namespace zxdb {
 // override this to implement the subset of functionality they need.
 class MockProcess : public Process {
  public:
-  explicit MockProcess(Session* session) : Process(session, Process::StartType::kLaunch) {}
+  explicit MockProcess(Target* target)
+      : Process(target->session(), Process::StartType::kLaunch), target_(target) {}
   ~MockProcess() override = default;
 
   // Sets the value returned by GetSymbols(). Does not take ownership.
@@ -27,7 +29,7 @@ class MockProcess : public Process {
   void set_tls_helpers(TLSHelpers h) { tls_helpers_ = h; }
 
   // Process implementation:
-  Target* GetTarget() const override { return nullptr; }
+  Target* GetTarget() const override { return target_; }
   uint64_t GetKoid() const override { return 0; }
   const std::string& GetName() const override { return kMockProcessName; }
   const std::optional<debug_ipc::ComponentInfo>& GetComponentInfo() const override {
@@ -56,6 +58,8 @@ class MockProcess : public Process {
       fit::callback<void(ErrOr<std::vector<debug_ipc::InfoHandle>> handles)> callback) override;
 
  private:
+  Target* target_ = nullptr;
+
   inline static std::string kMockProcessName = "Mock process";
   inline static std::optional<debug_ipc::ComponentInfo> kComponentInfo =
       debug_ipc::ComponentInfo{.moniker = "/moniker", .url = "schema://url#meta/component.cm"};

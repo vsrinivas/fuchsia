@@ -223,11 +223,14 @@ Err ReadUint64Arg(const Command& cmd, size_t arg_index, const char* param_desc, 
   return Err();
 }
 
-std::string ThreadStateToString(debug_ipc::ThreadRecord::State state,
+std::string ThreadStateToString(std::optional<debug_ipc::ThreadRecord::State> state,
                                 debug_ipc::ThreadRecord::BlockedReason blocked_reason) {
+  if (!state)
+    return "Unknown";
+
   // Blocked can have many cases, so we handle it separately.
-  if (state != debug_ipc::ThreadRecord::State::kBlocked)
-    return debug_ipc::ThreadRecord::StateToString(state);
+  if (*state != debug_ipc::ThreadRecord::State::kBlocked)
+    return debug_ipc::ThreadRecord::StateToString(*state);
 
   FX_DCHECK(blocked_reason != debug_ipc::ThreadRecord::BlockedReason::kNotBlocked)
       << "A blocked thread has to have a valid reason.";
