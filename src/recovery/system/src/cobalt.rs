@@ -184,7 +184,7 @@ mod tests {
         let (logger_proxy, mut logger_server) =
             create_proxy_and_stream::<MetricEventLoggerMarker>()
                 .expect("Failed to create Logger FIDL.");
-        let status = metrics::RecoveryMetricDimensionResult::Success;
+        let status = metrics::OtaDownloadStatusMetricDimensionResult::Success;
 
         fasync::Task::spawn(async move {
             let _ = log_ota_status(&logger_proxy, status).await;
@@ -200,7 +200,10 @@ mod tests {
             } = log_request
             {
                 assert_eq!(metric_id, metrics::OTA_DOWNLOAD_STATUS_METRIC_ID);
-                assert_eq!(event_codes, &[metrics::RecoveryMetricDimensionResult::Success as u32]);
+                assert_eq!(
+                    event_codes,
+                    &[metrics::OtaDownloadStatusMetricDimensionResult::Success as u32]
+                );
                 assert_eq!(count, 1);
             } else {
                 panic!("LogOccurance failed");
