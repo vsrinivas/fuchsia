@@ -9,6 +9,8 @@
 #include <limits>
 #include <random>
 
+#include "src/lib/files/file.h"
+
 namespace forensics::feedback {
 
 int DefaultCacheIdFn() {
@@ -20,15 +22,15 @@ int DefaultCacheIdFn() {
   return dist(rng);
 }
 
-// Returns an IdentityRedactor if |enable_data_redaction| is false in |config|, otherwise returns a
+// Returns an IdentityRedactor if the file at |enable_flag_file| doesn't exist, otherwise return a
 // Redactor.
 std::unique_ptr<RedactorBase> RedactorFromConfig(inspect::Node* root_node,
-                                                 const BuildTypeConfig& config,
+                                                 const std::string& enable_flag_file,
                                                  ::fit::function<int()> seed_cache_id) {
   std::unique_ptr<RedactorBase> redactor;
   auto redaction_enabled = root_node == nullptr ? inspect::BoolProperty()
                                                 : root_node->CreateBool("redaction_enabled", false);
-  if (config.enable_data_redaction) {
+  if (files::IsFile(enable_flag_file)) {
     redaction_enabled.Set(true);
     auto num_redaction_ids = root_node == nullptr ? inspect::UintProperty()
                                                   : root_node->CreateUint("num_redaction_ids", 0u);

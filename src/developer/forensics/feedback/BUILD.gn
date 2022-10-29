@@ -31,7 +31,6 @@ source_set("config") {
   deps = [
     "//sdk/lib/syslog/cpp",
     "//src/lib/files",
-    "//third_party/rapidjson",
   ]
 }
 
@@ -160,8 +159,9 @@ source_set("redactor_factory") {
   ]
 
   public_deps = [
-    ":config",
     ":constants",
     "//src/developer/forensics/utils/redact",
   ]
+
+  deps = [ "//src/lib/files" ]
 }

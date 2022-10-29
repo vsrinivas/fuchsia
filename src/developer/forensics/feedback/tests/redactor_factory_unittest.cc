@@ -13,8 +13,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/forensics/feedback/config.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
+#include "src/lib/files/scoped_temp_dir.h"
 
 namespace forensics::feedback {
 namespace {
@@ -33,28 +33,27 @@ constexpr std::string_view kRedacted = "<REDACTED-IPV4: 11>";
 
 using RedactorFromConfigTest = UnitTestFixture;
 
-TEST_F(RedactorFromConfigTest, EnableRedactDataFalse) {
-  const BuildTypeConfig config{
-      .enable_data_redaction = false,
-  };
-  std::unique_ptr<RedactorBase> redactor = RedactorFromConfig(nullptr, config);
+TEST_F(RedactorFromConfigTest, FileMissing) {
+  std::unique_ptr<RedactorBase> redactor = RedactorFromConfig(nullptr, "missing");
 
   std::string text(kUnredacted);
   EXPECT_EQ(redactor->Redact(text), text);
   EXPECT_THAT(InspectTree(), NodeMatches(AllOf(PropertyList(IsEmpty()))));
 
-  redactor = RedactorFromConfig(&InspectRoot(), config);
+  redactor = RedactorFromConfig(&InspectRoot(), "missing");
   EXPECT_THAT(InspectTree(), NodeMatches(AllOf(PropertyList(ElementsAreArray({
                                  BoolIs("redaction_enabled", false),
                              })))));
 }
 
 TEST_F(RedactorFromConfigTest, FilePresent) {
-  const BuildTypeConfig config{
-      .enable_data_redaction = true,
-  };
+  files::ScopedTempDir temp_dir;
+
+  std::string path;
+  ASSERT_TRUE(temp_dir.NewTempFile(&path));
+
   std::unique_ptr<RedactorBase> redactor;
-  redactor = RedactorFromConfig(&InspectRoot(), config, [] { return 10; });
+  redactor = RedactorFromConfig(&InspectRoot(), path, [] { return 10; });
 
   std::string text(kUnredacted);
   EXPECT_EQ(redactor->Redact(text), kRedacted);
@@ -63,7 +62,7 @@ TEST_F(RedactorFromConfigTest, FilePresent) {
                                  UintIs("num_redaction_ids", 1u),
                              })))));
 
-  redactor = RedactorFromConfig(nullptr, config, [] { return 10; });
+  redactor = RedactorFromConfig(nullptr, path, [] { return 10; });
   text = kUnredacted;
   EXPECT_EQ(redactor->Redact(text), kRedacted);
 }

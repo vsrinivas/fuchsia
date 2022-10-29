@@ -15,7 +15,10 @@ source_set("config") {
     "config.h",
   ]
 
-  public_deps = [ "//zircon/system/ulib/zx" ]
+  public_deps = [
+    "//src/developer/forensics/feedback/attachments",
+    "//zircon/system/ulib/zx",
+  ]
 
   deps = [
     "//sdk/lib/syslog/cpp",

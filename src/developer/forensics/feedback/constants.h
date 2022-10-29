@@ -15,9 +15,7 @@ namespace forensics::feedback {
 constexpr zx::duration kDirectoryMigratorResponeTimeout = zx::min(1);
 
 constexpr char kUseRemoteDeviceIdProviderPath[] = "/config/data/feedback/remote_device_id_provider";
-
-const char kDefaultBuildTypeConfigPath[] = "/pkg/data/build_type/default_config.json";
-const char kOverrideBuildTypeConfigPath[] = "/config/data/build_type/override_config.json";
+constexpr char kEnableRedactDataPath[] = "/config/data/feedback/redact_data";
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Reboot reporting
@@ -81,6 +79,7 @@ constexpr char kCurrentBootIdPath[] = "/data/boot_id.txt";
 constexpr char kPreviousBuildVersionPath[] = "/tmp/build_version.txt";
 constexpr char kCurrentBuildVersionPath[] = "/data/build_version.txt";
 constexpr char kDataRegisterPath[] = "/tmp/data_register.json";
+constexpr char kLimitInspectDataPath[] = "/config/data/feedback_data/limit_inspect_data";
 
 // Use this file to determine whether or not a previous instance of the component was instructed to
 // terminated system log recording.

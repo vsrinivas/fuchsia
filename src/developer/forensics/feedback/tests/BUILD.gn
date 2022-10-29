@@ -336,22 +336,6 @@ executable("namespace_init_unittest_exe") {
   ]
 }
 
-executable("prod_configs_unittest_exe") {
-  testonly = true
-
-  # "prod_configs_unittest_exe" exists in //src/developer/forensics/crash_reports/BUILD.gn
-  output_dir = target_out_dir
-
-  sources = [ "prod_configs_unittest.cc" ]
-
-  deps = [
-    "//src/developer/forensics/feedback:config",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/lib/files",
-    "//third_party/googletest:gtest",
-  ]
-}
-
 executable("product_info_provider_unittest_exe") {
   testonly = true
 
@@ -503,19 +487,6 @@ executable("ui_state_provider_unittest_exe") {
 }
 
 ###############################################################################
-# RESOURCES
-###############################################################################
-resource("prod_configs") {
-  sources = [
-    "//src/developer/forensics/feedback/configs/build_type/default.json",
-    "//src/developer/forensics/feedback/configs/build_type/user.json",
-    "//src/developer/forensics/feedback/configs/build_type/userdebug.json",
-  ]
-
-  outputs = [ "data/configs/{{source_file_part}}" ]
-}
-
-###############################################################################
 # COMPONENTS
 ###############################################################################
 fuchsia_unittest_component("annotation_manager_unittest") {
@@ -622,19 +593,15 @@ fuchsia_unittest_component("namespace_init_unittest") {
   ]
 }
 
-fuchsia_unittest_component("prod_configs_unittest") {
-  deps = [
-    ":prod_configs",
-    ":prod_configs_unittest_exe",
-  ]
-}
-
 fuchsia_unittest_component("product_info_provider_unittest") {
   deps = [ ":product_info_provider_unittest_exe" ]
 }
 
 fuchsia_unittest_component("redactor_factory_unittest") {
-  deps = [ ":redactor_factory_unittest_exe" ]
+  deps = [
+    ":redactor_factory_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
 fuchsia_unittest_component("startup_annotations_unittest") {
@@ -690,7 +657,6 @@ fuchsia_test_package("feedback-tests") {
     ":inspect_unittest",
     ":main_service_unittest",
     ":namespace_init_unittest",
-    ":prod_configs_unittest",
     ":product_info_provider_unittest",
     ":redactor_factory_unittest",
     ":startup_annotations_unittest",

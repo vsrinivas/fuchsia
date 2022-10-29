@@ -18,7 +18,6 @@ source_set("main") {
     "encoding:production",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/feedback:config",
     "//src/developer/forensics/feedback:redactor_factory",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/utils/redact",

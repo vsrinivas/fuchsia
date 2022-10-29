@@ -20,7 +20,6 @@
 #include <vector>
 
 #include "src/developer/forensics/feedback/annotation_providers.h"
-#include "src/developer/forensics/feedback/config.h"
 #include "src/developer/forensics/feedback/crash_reports.h"
 #include "src/developer/forensics/feedback/feedback_data.h"
 #include "src/developer/forensics/feedback/last_reboot.h"
@@ -38,7 +37,6 @@ namespace forensics::feedback {
 class MainService {
  public:
   struct Options {
-    BuildTypeConfig build_type_config;
     std::optional<std::string> local_device_id_path;
     LastReboot::Options last_reboot_options;
     CrashReports::Options crash_reports_options;
