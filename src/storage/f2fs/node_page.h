@@ -5,6 +5,10 @@
 #ifndef SRC_STORAGE_F2FS_NODE_PAGE_H_
 #define SRC_STORAGE_F2FS_NODE_PAGE_H_
 
+#include <fbl/recycler.h>
+
+#include "src/storage/f2fs/file_cache.h"
+
 namespace f2fs {
 
 class NodePage : public Page, public fbl::Recyclable<NodePage> {

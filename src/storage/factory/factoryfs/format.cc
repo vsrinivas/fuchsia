@@ -9,7 +9,6 @@
 #include <storage/buffer/owned_vmoid.h>
 
 #include "src/lib/storage/block_client/cpp/block_device.h"
-#include "src/lib/storage/block_client/cpp/client.h"
 #include "src/storage/factory/factoryfs/factoryfs.h"
 #include "src/storage/factory/factoryfs/mkfs.h"
 #include "src/storage/factory/factoryfs/superblock.h"
@@ -40,7 +39,7 @@ zx_status_t WriteFilesystemToDisk(block_client::BlockDevice* device, const Super
     return status;
   }
 
-  fuchsia_hardware_block_BlockInfo block_info;
+  fuchsia_hardware_block::wire::BlockInfo block_info;
   status = device->BlockGetInfo(&block_info);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "cannot acquire block info: " << status;
@@ -61,7 +60,7 @@ zx_status_t WriteFilesystemToDisk(block_client::BlockDevice* device, const Super
 
 zx_status_t FormatFilesystem(block_client::BlockDevice* device) {
   zx_status_t status;
-  fuchsia_hardware_block_BlockInfo block_info = {};
+  fuchsia_hardware_block::wire::BlockInfo block_info = {};
   status = device->BlockGetInfo(&block_info);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "cannot acquire block info: " << status;

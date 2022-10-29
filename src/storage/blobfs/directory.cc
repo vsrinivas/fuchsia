@@ -4,7 +4,7 @@
 
 #include "src/storage/blobfs/directory.h"
 
-#include <fuchsia/device/c/fidl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <lib/sync/completion.h>
 #include <stdlib.h>
 #include <string.h>
@@ -64,13 +64,12 @@ zx_status_t Directory::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out
       return ZX_OK;
     }
 
-    zx_status_t status;
     Digest digest;
-    if ((status = digest.Parse(name.data(), name.length())) != ZX_OK) {
+    if (zx_status_t status = digest.Parse(name.data(), name.length()); status != ZX_OK) {
       return status;
     }
     fbl::RefPtr<CacheNode> cache_node;
-    if ((status = blobfs_->GetCache().Lookup(digest, &cache_node)) != ZX_OK) {
+    if (zx_status_t status = blobfs_->GetCache().Lookup(digest, &cache_node); status != ZX_OK) {
       return status;
     }
     auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(cache_node));
@@ -113,16 +112,16 @@ zx_status_t Directory::Create(std::string_view name, uint32_t mode, fbl::RefPtr<
 
   return blobfs_->node_operations().create.Track([&] {
     Digest digest;
-    zx_status_t status;
-    if ((status = digest.Parse(name.data(), name.length())) != ZX_OK) {
+    if (zx_status_t status = digest.Parse(name.data(), name.length()); status != ZX_OK) {
       return status;
     }
 
-    fbl::RefPtr<Blob> vn = fbl::AdoptRef(new Blob(blobfs_, std::move(digest), data_format));
-    if ((status = blobfs_->GetCache().Add(vn)) != ZX_OK) {
+    fbl::RefPtr<Blob> vn = fbl::AdoptRef(new Blob(blobfs_, digest, data_format));
+    if (zx_status_t status = blobfs_->GetCache().Add(vn); status != ZX_OK) {
       return status;
     }
-    if ((status = vn->OpenValidating(fs::VnodeConnectionOptions(), nullptr)) != ZX_OK) {
+    if (zx_status_t status = vn->OpenValidating(fs::VnodeConnectionOptions(), nullptr);
+        status != ZX_OK) {
       return status;
     }
     *out = std::move(vn);
@@ -139,19 +138,17 @@ zx_status_t Directory::Unlink(std::string_view name, bool must_be_dir) {
   assert(memchr(name.data(), '/', name.length()) == nullptr);
 
   return blobfs_->node_operations().unlink.Track([&] {
-    zx_status_t status;
     Digest digest;
-    if ((status = digest.Parse(name.data(), name.length())) != ZX_OK) {
+    if (zx_status_t status = digest.Parse(name.data(), name.length()); status != ZX_OK) {
       return status;
     }
     fbl::RefPtr<CacheNode> cache_node;
-    if ((status = blobfs_->GetCache().Lookup(digest, &cache_node)) != ZX_OK) {
+    if (zx_status_t status = blobfs_->GetCache().Lookup(digest, &cache_node); status != ZX_OK) {
       return status;
     }
     auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(cache_node));
     blobfs_->GetMetrics()->UpdateLookup(vnode->FileSize());
-    status = vnode->QueueUnlink();
-    return status;
+    return vnode->QueueUnlink();
   });
 }
 

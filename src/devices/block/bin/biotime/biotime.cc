@@ -4,9 +4,9 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/block/c/fidl.h>
-#include <lib/fit/defer.h>
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/fit/defer.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/xorshiftrand.h>
 #include <stdio.h>
@@ -71,9 +71,9 @@ typedef struct {
   zx_handle_t vmo;
   zx_handle_t fifo;
   reqid_t reqid;
-  fuchsia_hardware_block_VmoId vmoid;
+  fuchsia_hardware_block::wire::VmoId vmoid;
   size_t bufsz;
-  fuchsia_hardware_block_BlockInfo info;
+  fuchsia_hardware_block::wire::BlockInfo info;
 } blkdev_t;
 
 static void blkdev_close(blkdev_t* blk) {
@@ -94,36 +94,63 @@ static zx_status_t blkdev_open(int fd, const char* dev, size_t bufsz, blkdev_t* 
   auto cleanup = fit::defer([blk]() { blkdev_close(blk); });
 
   fdio_cpp::UnownedFdioCaller caller(fd);
-  zx_status_t status;
-  zx_status_t io_status =
-      fuchsia_hardware_block_BlockGetInfo(caller.borrow_channel(), &status, &blk->info);
-  if (io_status != ZX_OK || status != ZX_OK) {
-    fprintf(stderr, "error: cannot get block device info for '%s'\n", dev);
-    return ZX_ERR_INTERNAL;
+  fidl::UnownedClientEnd channel = caller.borrow_as<fuchsia_hardware_block::Block>();
+
+  {
+    const fidl::WireResult result = fidl::WireCall(channel)->GetInfo();
+    if (!result.ok()) {
+      fprintf(stderr, "error: cannot get block device info for '%s': %s\n", dev,
+              result.FormatDescription().c_str());
+      return result.status();
+    }
+    const fidl::WireResponse response = result.value();
+    if (zx_status_t status = response.status; status != ZX_OK) {
+      fprintf(stderr, "error: cannot get block device info for '%s':%s\n", dev,
+              zx_status_get_string(status));
+      return status;
+    }
+    blk->info = *response.info;
   }
 
-  io_status = fuchsia_hardware_block_BlockGetFifo(caller.borrow_channel(), &status, &blk->fifo);
-  if (io_status != ZX_OK || status != ZX_OK) {
-    fprintf(stderr, "error: cannot get fifo for '%s'\n", dev);
-    return ZX_ERR_INTERNAL;
+  {
+    fidl::WireResult result = fidl::WireCall(channel)->GetFifo();
+    if (!result.ok()) {
+      fprintf(stderr, "error: cannot get fifo for '%s':%s\n", dev,
+              result.FormatDescription().c_str());
+      return result.status();
+    }
+    auto& response = result.value();
+    if (zx_status_t status = response.status; status != ZX_OK) {
+      fprintf(stderr, "error: cannot get fifo for '%s':%s\n", dev, zx_status_get_string(status));
+      return status;
+    }
+    blk->fifo = response.fifo.release();
   }
-  if ((status = zx_vmo_create(bufsz, 0, &blk->vmo)) != ZX_OK) {
-    fprintf(stderr, "error: out of memory %d\n", status);
+
+  if (zx_status_t status = zx_vmo_create(bufsz, 0, &blk->vmo); status != ZX_OK) {
+    fprintf(stderr, "error: out of memory: %s\n", zx_status_get_string(status));
     return status;
   }
 
   zx_handle_t dup;
-  if ((status = zx_handle_duplicate(blk->vmo, ZX_RIGHT_SAME_RIGHTS, &dup)) != ZX_OK) {
-    fprintf(stderr, "error: cannot duplicate handle %d\n", status);
+  if (zx_status_t status = zx_handle_duplicate(blk->vmo, ZX_RIGHT_SAME_RIGHTS, &dup);
+      status != ZX_OK) {
+    fprintf(stderr, "error: cannot duplicate handle: %s\n", zx_status_get_string(status));
     return status;
   }
 
-  io_status =
-      fuchsia_hardware_block_BlockAttachVmo(caller.borrow_channel(), dup, &status, &blk->vmoid);
-  if (io_status != ZX_OK || status != ZX_OK) {
-    fprintf(stderr, "error: cannot attach vmo for '%s'\n", dev);
-    return ZX_ERR_INTERNAL;
+  const fidl::WireResult result = fidl::WireCall(channel)->AttachVmo(zx::vmo(dup));
+  if (!result.ok()) {
+    fprintf(stderr, "error: cannot attach vmo for '%s':%s\n", dev,
+            result.FormatDescription().c_str());
+    return result.status();
   }
+  const fidl::WireResponse response = result.value();
+  if (zx_status_t status = response.status; status != ZX_OK) {
+    fprintf(stderr, "error: cannot attach vmo for '%s':%s\n", dev, zx_status_get_string(status));
+    return status;
+  }
+  blk->vmoid = *response.vmoid;
 
   cleanup.cancel();
   return ZX_OK;

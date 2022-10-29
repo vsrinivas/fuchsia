@@ -134,28 +134,30 @@ bool GptDevicePartitioner::FindGptDevices(const fbl::unique_fd& devfs_root, GptD
     }
     fdio_cpp::FdioCaller caller(std::move(fd));
 
-    auto result = fidl::WireCall<block::Block>(caller.channel())->GetInfo();
-    if (!result.ok()) {
+    {
+      auto result = fidl::WireCall(caller.borrow_as<block::Block>())->GetInfo();
+      if (!result.ok()) {
+        continue;
+      }
+      const auto& response = result.value();
+      if (response.status != ZX_OK) {
+        continue;
+      }
+      if (response.info->flags & BLOCK_FLAG_REMOVABLE) {
+        continue;
+      }
+    }
+    auto result = fidl::WireCall(caller.borrow_as<device::Controller>())->GetTopologicalPath();
+    if (result.status() != ZX_OK) {
       continue;
     }
     const auto& response = result.value();
-    if (response.status != ZX_OK) {
-      continue;
-    }
-    if (response.info->flags & BLOCK_FLAG_REMOVABLE) {
-      continue;
-    }
-    auto result2 = fidl::WireCall<device::Controller>(caller.channel())->GetTopologicalPath();
-    if (result2.status() != ZX_OK) {
-      continue;
-    }
-    const auto& response2 = result2.value();
-    if (response2.is_error()) {
+    if (response.is_error()) {
       continue;
     }
 
-    std::string path_str(response2.value()->path.data(),
-                         static_cast<size_t>(response2.value()->path.size()));
+    std::string path_str(response.value()->path.data(),
+                         static_cast<size_t>(response.value()->path.size()));
 
     // The GPT which will be a non-removable block device that isn't a partition or fvm created
     // partition itself.
@@ -212,7 +214,8 @@ zx::result<std::unique_ptr<GptDevicePartitioner>> GptDevicePartitioner::Initiali
       ERROR("Failed to sync empty GPT\n");
       return zx::error(ZX_ERR_BAD_STATE);
     }
-    if (auto status = RebindGptDriver(svc_root, caller.channel()); status.is_error()) {
+    if (auto status = RebindGptDriver(svc_root, caller.borrow_as<fuchsia_device::Controller>());
+        status.is_error()) {
       ERROR("Failed to re-read GPT\n");
       return status.take_error();
     }
@@ -395,7 +398,8 @@ zx::result<Uuid> GptDevicePartitioner::CreateGptPartition(const char* name, cons
     ERROR("Failed to clear first block of new partition\n");
     return status.take_error();
   }
-  if (auto status = RebindGptDriver(svc_root_, Channel()); status.is_error()) {
+  if (auto status = RebindGptDriver(svc_root_, caller_.borrow_as<fuchsia_device::Controller>());
+      status.is_error()) {
     ERROR("Failed to rebind GPT\n");
     return status.take_error();
   }
@@ -495,7 +499,7 @@ zx::result<> GptDevicePartitioner::WipePartitions(FilterCallback filter) const {
     gpt_->Sync();
     LOG("Immediate reboot strongly recommended\n");
   }
-  static_cast<void>(RebindGptDriver(svc_root_, Channel()));
+  static_cast<void>(RebindGptDriver(svc_root_, caller_.borrow_as<fuchsia_device::Controller>()));
   return zx::ok();
 }
 

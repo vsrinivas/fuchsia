@@ -5,6 +5,16 @@
 #ifndef SRC_STORAGE_F2FS_NODE_H_
 #define SRC_STORAGE_F2FS_NODE_H_
 
+#include <fbl/intrusive_double_list.h>
+#include <fbl/intrusive_wavl_tree.h>
+
+#include "src/storage/f2fs/f2fs_internal.h"
+#include "src/storage/f2fs/f2fs_layout.h"
+#include "src/storage/f2fs/file_cache.h"
+#include "src/storage/f2fs/node_page.h"
+
+class F2fs;
+
 namespace f2fs {
 
 // start node id of a node block dedicated to the given node id
@@ -63,11 +73,11 @@ class NatEntry : public fbl::WAVLTreeContainable<std::unique_ptr<NatEntry>>,
   void ClearCheckpointed() { checkpointed_ = false; }
   uint32_t GetNid() const { return ni_.nid; }
   void SetNid(const nid_t value) { ni_.nid = value; }
-  block_t GetBlockAddress() { return ni_.blk_addr; }
+  block_t GetBlockAddress() const { return ni_.blk_addr; }
   void SetBlockAddress(const block_t value) { ni_.blk_addr = value; }
-  uint32_t GetIno() { return ni_.ino; }
+  uint32_t GetIno() const { return ni_.ino; }
   void SetIno(const nid_t value) { ni_.ino = value; }
-  uint8_t GetVersion() { return ni_.version; }
+  uint8_t GetVersion() const { return ni_.version; }
   void SetVersion(const uint8_t value) { ni_.version = value; }
   ino_t GetKey() const { return ni_.nid; }
 
@@ -100,7 +110,7 @@ class NodeManager {
   NodeManager(NodeManager &&) = delete;
   NodeManager &operator=(NodeManager &&) = delete;
 
-  NodeManager(F2fs *fs);
+  explicit NodeManager(F2fs *fs);
 
   zx_status_t NextFreeNid(nid_t *nid);
   void NodeInfoFromRawNat(NodeInfoDeprecated &ni, RawNatEntry &raw_ne);
@@ -161,14 +171,14 @@ class NodeManager {
   zx_status_t RecoverInodePage(NodePage &page);
 
   // Check whether the given nid is within node id range.
-  void CheckNidRange(const nid_t &nid) { ZX_ASSERT(nid < max_nid_); }
+  void CheckNidRange(const nid_t &nid) const { ZX_ASSERT(nid < max_nid_); }
 
   // members for fsck and unit tests
-  NodeManager(SuperblockInfo *sb);
+  explicit NodeManager(SuperblockInfo *sb);
   void SetMaxNid(const nid_t value) { max_nid_ = value; }
   nid_t GetMaxNid() const { return max_nid_; }
   void SetNatAddress(const block_t value) { nat_blkaddr_ = value; }
-  block_t GetNatAddress() { return nat_blkaddr_; }
+  block_t GetNatAddress() const { return nat_blkaddr_; }
   void SetFirstScanNid(const nid_t value) { init_scan_nid_ = value; }
   nid_t GetFirstScanNid() const { return init_scan_nid_; }
   void SetNextScanNid(const nid_t value) { next_scan_nid_ = value; }

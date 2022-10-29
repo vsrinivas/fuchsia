@@ -33,7 +33,7 @@ class MinfsInspectorTest : public testing::Test {
  public:
   MinfsInspectorTest() : vfs_loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
 
-  std::unique_ptr<MinfsInspector> CreateMinfsInspector(
+  static std::unique_ptr<MinfsInspector> CreateMinfsInspector(
       std::unique_ptr<block_client::BlockDevice> device) {
     std::unique_ptr<disk_inspector::InspectorTransactionHandler> inspector_handler;
     EXPECT_EQ(disk_inspector::InspectorTransactionHandler::Create(
@@ -75,7 +75,7 @@ class MinfsInspectorTest : public testing::Test {
   // Initialize a MinfsInspector from an zero-ed out block device. This simulates
   // corruption to various metadata. Allows copying |count| bytes of |data| to
   // the start of the fake block device.
-  std::unique_ptr<MinfsInspector> BadSetupMinfsInspector(void* data, uint64_t count) {
+  static std::unique_ptr<MinfsInspector> BadSetupMinfsInspector(void* data, uint64_t count) {
     auto temp = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
     if (count > 0) {
       zx::vmo buffer;

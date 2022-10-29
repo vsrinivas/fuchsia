@@ -18,14 +18,15 @@
 #include <fbl/ref_ptr.h>
 #include <storage/buffer/block_buffer.h>
 
-#include "src/storage/f2fs/f2fs.h"
+#include "src/storage/f2fs/bcache.h"
+#include "src/storage/f2fs/f2fs_layout.h"
 
 namespace f2fs {
 
 #ifdef __Fuchsia__
 zx::result<std::unique_ptr<Bcache>> CreateBcache(std::unique_ptr<block_client::BlockDevice> device,
                                                  bool* out_readonly) {
-  fuchsia_hardware_block_BlockInfo info;
+  fuchsia_hardware_block::wire::BlockInfo info;
   if (zx_status_t status = device->BlockGetInfo(&info); status != ZX_OK) {
     FX_LOGS(ERROR) << "Coult not access device info: " << status;
     return zx::error(status);
@@ -46,13 +47,14 @@ zx::result<std::unique_ptr<Bcache>> CreateBcache(std::unique_ptr<block_client::B
   }
 
   if (out_readonly) {
-    *out_readonly = static_cast<bool>(info.flags & fuchsia_hardware_block_FLAG_READONLY);
+    *out_readonly = static_cast<bool>(info.flags & fuchsia_hardware_block::wire::kFlagReadonly);
   }
 
   return Bcache::Create(std::move(device), block_count, kBlockSize);
 }
 
-zx::result<std::unique_ptr<Bcache>> CreateBcache(zx::channel device_channel, bool* out_readonly) {
+zx::result<std::unique_ptr<Bcache>> CreateBcache(
+    fidl::ClientEnd<fuchsia_hardware_block::Block> device_channel, bool* out_readonly) {
   std::unique_ptr<block_client::RemoteBlockDevice> device;
   zx_status_t status = block_client::RemoteBlockDevice::Create(std::move(device_channel), &device);
   if (status != ZX_OK) {
@@ -218,7 +220,7 @@ zx_status_t Bcache::RunRequests(const std::vector<storage::BufferedOperation>& o
 
 zx_status_t Bcache::Trim(block_t start, block_t num) {
 #ifdef __Fuchsia__
-  if (!(info_.flags & fuchsia_hardware_block_FLAG_TRIM_SUPPORT)) {
+  if (!(info_.flags & fuchsia_hardware_block::wire::kFlagTrimSupport)) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 

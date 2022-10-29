@@ -31,7 +31,6 @@
 #include "src/lib/storage/vfs/cpp/journal/initializer.h"
 #include "src/lib/storage/vfs/cpp/trace.h"
 #include "src/storage/minfs/allocator/allocator_reservation.h"
-#include "src/storage/minfs/file.h"
 #include "src/storage/minfs/fsck.h"
 #include "src/storage/minfs/minfs_private.h"
 #include "src/storage/minfs/writeback.h"
@@ -90,8 +89,8 @@ void FreeSlices(const Superblock* info, block_client::BlockDevice* device) {
 // Checks all slices against the block device. May shrink the partition.
 zx::result<> CheckSlices(const Superblock& info, size_t blocks_per_slice,
                          block_client::BlockDevice* device, bool repair_slices) {
-  fuchsia_hardware_block_volume_VolumeManagerInfo manager_info;
-  fuchsia_hardware_block_volume_VolumeInfo volume_info;
+  fuchsia_hardware_block_volume::wire::VolumeManagerInfo manager_info;
+  fuchsia_hardware_block_volume::wire::VolumeInfo volume_info;
   zx_status_t status = device->VolumeGetInfo(&manager_info, &volume_info);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "unable to query FVM :" << status;
@@ -117,8 +116,8 @@ zx::result<> CheckSlices(const Superblock& info, size_t blocks_per_slice,
   request.vslice_start[2] = kFVMBlockInodeStart / blocks_per_slice;
   request.vslice_start[3] = kFVMBlockDataStart / blocks_per_slice;
 
-  fuchsia_hardware_block_volume_VsliceRange
-      ranges[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
+  fuchsia_hardware_block_volume::wire::VsliceRange
+      ranges[fuchsia_hardware_block_volume::wire::kMaxSliceRequests];
   size_t ranges_count;
 
   status = device->VolumeQuerySlices(request.vslice_start, request.count, ranges, &ranges_count);
@@ -165,8 +164,8 @@ zx::result<> CheckSlices(const Superblock& info, size_t blocks_per_slice,
 // will do nothing.
 zx::result<> CreateFvmData(const MountOptions& options, Superblock* info,
                            block_client::BlockDevice* device) {
-  fuchsia_hardware_block_volume_VolumeManagerInfo manager_info;
-  fuchsia_hardware_block_volume_VolumeInfo volume_info;
+  fuchsia_hardware_block_volume::wire::VolumeManagerInfo manager_info;
+  fuchsia_hardware_block_volume::wire::VolumeInfo volume_info;
   if (device->VolumeGetInfo(&manager_info, &volume_info) != ZX_OK) {
     return zx::ok();
   }
@@ -497,7 +496,7 @@ zx::result<> CheckSuperblock(const Superblock& info, uint32_t max_blocks) {
 
 #ifndef __Fuchsia__
 BlockOffsets::BlockOffsets(const Bcache& bc, const SuperblockManager& sb) {
-  if (bc.extent_lengths_.size() > 0) {
+  if (!bc.extent_lengths_.empty()) {
     ZX_ASSERT(bc.extent_lengths_.size() == kExtentCount);
     ibm_block_count_ = static_cast<blk_t>(bc.extent_lengths_[1] / sb.Info().BlockSize());
     abm_block_count_ = static_cast<blk_t>(bc.extent_lengths_[2] / sb.Info().BlockSize());
@@ -1187,7 +1186,7 @@ zx::result<std::unique_ptr<Minfs>> Minfs::Create(FuchsiaDispatcher dispatcher,
 #endif
 
 #ifndef __Fuchsia__
-  if (bc->extent_lengths_.size() != 0 && bc->extent_lengths_.size() != kExtentCount) {
+  if (!bc->extent_lengths_.empty() && bc->extent_lengths_.size() != kExtentCount) {
     FX_LOGS(ERROR) << "invalid number of extents";
     return zx::error(ZX_ERR_INVALID_ARGS);
   }

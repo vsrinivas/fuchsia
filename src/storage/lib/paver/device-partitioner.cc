@@ -157,11 +157,11 @@ DevicePartitionerFactory::registered_factory_list() {
 
 std::unique_ptr<DevicePartitioner> DevicePartitionerFactory::Create(
     fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root, Arch arch,
-    std::shared_ptr<Context> context, zx::channel block_device) {
+    std::shared_ptr<Context> context, fidl::ClientEnd<fuchsia_hardware_block::Block> block_device) {
   fbl::unique_fd block_dev;
   if (block_device) {
     int fd;
-    zx_status_t status = fdio_fd_create(block_device.release(), &fd);
+    zx_status_t status = fdio_fd_create(block_device.TakeChannel().release(), &fd);
     if (status != ZX_OK) {
       ERROR(
           "Unable to create fd from block_device channel. Does it implement fuchsia.io.Node?: %s\n",

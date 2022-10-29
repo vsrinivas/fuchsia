@@ -5,8 +5,8 @@
 #include "src/security/zxcrypt/volume.h"
 
 #include <fcntl.h>
-#include <fuchsia/hardware/block/c/fidl.h>
-#include <fuchsia/hardware/block/volume/c/fidl.h>
+#include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <inttypes.h>
 #include <lib/fdio/cpp/caller.h>
 #include <stddef.h>
@@ -36,19 +36,21 @@ namespace {
 void VolumeCreate(const fbl::unique_fd& fd, const fbl::unique_fd& devfs_root,
                   const crypto::Secret& key, bool fvm, zx_status_t expected) {
   char err[128];
-  fdio_cpp::UnownedFdioCaller caller(fd.get());
-  fuchsia_hardware_block_BlockInfo block_info;
-  zx_status_t status;
-  ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(caller.borrow_channel(), &status, &block_info),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  fdio_cpp::UnownedFdioCaller caller(fd);
+  const fidl::WireResult result =
+      fidl::WireCall(caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+  ASSERT_OK(result.status());
+  const fidl::WireResponse response = result.value();
+  ASSERT_OK(response.status);
+  const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
 
   if (fvm) {
-    fuchsia_hardware_block_volume_VolumeManagerInfo manager_info;
-    fuchsia_hardware_block_volume_VolumeInfo volume_info;
-    ASSERT_OK(fuchsia_hardware_block_volume_VolumeGetVolumeInfo(caller.borrow_channel(), &status,
-                                                                &manager_info, &volume_info));
-    ASSERT_OK(status);
+    const fidl::WireResult result =
+        fidl::WireCall(caller.borrow_as<fuchsia_hardware_block_volume::Volume>())->GetVolumeInfo();
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+    const fuchsia_hardware_block_volume::wire::VolumeManagerInfo& manager_info = *response.manager;
 
     snprintf(err, sizeof(err),
              "details: block size=%" PRIu32 ", block count=%" PRIu64
@@ -430,9 +432,8 @@ class TestVolume : public zxcrypt::Volume {
     return ZX_OK;
   }
 
-  virtual zx_status_t DoBlockFvmVsliceQuery(uint64_t vslice_start,
-                                            SliceRegion ranges[MAX_SLICE_REGIONS],
-                                            uint64_t* slice_count) override = 0;
+  zx_status_t DoBlockFvmVsliceQuery(uint64_t vslice_start, SliceRegion ranges[MAX_SLICE_REGIONS],
+                                    uint64_t* slice_count) override = 0;
 
   zx_status_t DoBlockFvmExtend(uint64_t start_slice, uint64_t slice_count) override {
     extend_calls_++;
@@ -464,16 +465,17 @@ TEST(VolumeTest, TestFvmUsageNewImage) {
           ranges[1].count = kFakeVolumeSize - 2;
           *slice_count = 2;
           return ZX_OK;
-        } else {
-          ranges[0].allocated = true;
-          ranges[0].count = 1;
-          ranges[1].allocated = false;
-          ranges[1].count = kFakeVolumeSize - 1;
-          *slice_count = 2;
-          return ZX_OK;
         }
+        ranges[0].allocated = true;
+        ranges[0].count = 1;
+        ranges[1].allocated = false;
+        ranges[1].count = kFakeVolumeSize - 1;
+        *slice_count = 2;
         return ZX_OK;
-      } else if (vslice_start == 1) {
+
+        return ZX_OK;
+      }
+      if (vslice_start == 1) {
         if (extend_calls_ > 0) {
           ranges[0].allocated = true;
           ranges[0].count = 1;
@@ -481,12 +483,11 @@ TEST(VolumeTest, TestFvmUsageNewImage) {
           ranges[1].count = kFakeVolumeSize - 2;
           *slice_count = 2;
           return ZX_OK;
-        } else {
-          ranges[0].allocated = false;
-          ranges[0].count = kFakeVolumeSize - 1;
-          *slice_count = 1;
-          return ZX_OK;
         }
+        ranges[0].allocated = false;
+        ranges[0].count = kFakeVolumeSize - 1;
+        *slice_count = 1;
+        return ZX_OK;
       }
 
       // Should be unreachable.

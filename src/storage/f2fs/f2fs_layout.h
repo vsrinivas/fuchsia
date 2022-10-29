@@ -5,6 +5,10 @@
 #ifndef SRC_STORAGE_F2FS_F2FS_LAYOUT_H_
 #define SRC_STORAGE_F2FS_F2FS_LAYOUT_H_
 
+#include <safemath/checked_math.h>
+
+#include "src/storage/f2fs/f2fs_types.h"
+
 namespace f2fs {
 
 constexpr uint64_t kSuperOffset = 1024;     // byte-size offset

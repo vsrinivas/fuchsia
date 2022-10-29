@@ -3,11 +3,13 @@
 // found in the LICENSE file.
 
 #include <getopt.h>
+#include <lib/fdio/vfs.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/storage/block_client/cpp/remote_block_device.h"
-#include "src/storage/f2fs/f2fs.h"
+#include "src/storage/f2fs/fsck.h"
+#include "src/storage/f2fs/mkfs.h"
+#include "src/storage/f2fs/mount.h"
 
 namespace {
 
@@ -125,7 +127,9 @@ int main(int argc, char** argv) {
         // If we aren't being launched as a component, we are getting the block device as a startup
         // handle. Get it and create the bcache.
         zx::channel device_channel = zx::channel(zx_take_startup_handle(FS_HANDLE_BLOCK_DEVICE_ID));
-        auto bc_or = f2fs::CreateBcache(std::move(device_channel), &readonly_device);
+        auto bc_or = f2fs::CreateBcache(
+            fidl::ClientEnd<fuchsia_hardware_block::Block>(std::move(device_channel)),
+            &readonly_device);
         if (bc_or.is_error()) {
           return EXIT_FAILURE;
         }

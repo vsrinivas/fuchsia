@@ -44,10 +44,6 @@ static_library("transaction") {
       "//zircon/system/ulib/zx",
     ]
   }
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 group("tests") {
@@ -66,10 +62,6 @@ test("fs-transaction-test") {
     "buffered_operations_builder_test.cc",
     "device_transaction_handler_test.cc",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_unittest_package("fs-transaction-tests") {

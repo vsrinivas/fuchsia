@@ -188,6 +188,7 @@ class UnownedFdioCaller {
     release();
     io_ = fd >= 0 ? fdio_unsafe_fd_to_io(fd) : nullptr;
   }
+  void reset(const fbl::unique_fd& fd) { reset(fd.get()); }
 
   explicit operator bool() const { return io_ != nullptr; }
 

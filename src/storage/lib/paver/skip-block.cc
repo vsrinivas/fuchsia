@@ -98,25 +98,14 @@ zx::result<> SkipBlockDevicePartitioner::WipeFvm() const {
   }
   parent += kDevRootLen;
 
-  zx::channel local, remote;
-  {
-    auto status = zx::make_result(zx::channel::create(0, &local, &remote));
-    if (status.is_error()) {
-      ERROR("Warning: Failed to create channel pair: %s\n", status.status_string());
-      return status.take_error();
-    }
-  }
-  fdio_cpp::UnownedFdioCaller caller(devfs_root_.get());
-  {
-    auto status =
-        zx::make_result(fdio_service_connect_at(caller.borrow_channel(), parent, remote.release()));
-    if (status.is_error()) {
-      ERROR("Warning: Unable to open block parent device: %s\n", status.status_string());
-      return status.take_error();
-    }
+  fdio_cpp::UnownedFdioCaller caller(devfs_root_);
+  zx::result channel = component::ConnectAt<block::Ftl>(caller.directory(), parent);
+  if (channel.is_error()) {
+    ERROR("Warning: Unable to open block parent device: %s\n", channel.status_string());
+    return channel.take_error();
   }
 
-  fidl::WireSyncClient<block::Ftl> client(std::move(local));
+  fidl::WireSyncClient<block::Ftl> client(std::move(channel.value()));
   auto result2 = client->Format();
 
   return zx::make_result(result2.ok() ? result2.value().status : result2.status());

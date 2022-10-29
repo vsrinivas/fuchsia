@@ -46,7 +46,6 @@ class GptDevicePartitioner {
   const fuchsia_hardware_block::wire::BlockInfo& GetBlockInfo() const { return block_info_; }
 
   GptDevice* GetGpt() const { return gpt_.get(); }
-  zx::unowned_channel Channel() const { return caller_.channel(); }
 
   struct FindFirstFitResult {
     size_t start;

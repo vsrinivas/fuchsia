@@ -16,9 +16,6 @@
 #include <storage/buffer/owned_vmoid.h>
 
 #include "src/lib/storage/block_client/cpp/reader.h"
-#include "src/lib/storage/block_client/cpp/remote_block_device.h"
-#include "src/lib/storage/vfs/cpp/managed_vfs.h"
-#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/trace.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 #include "src/storage/factory/factoryfs/directory.h"
@@ -109,7 +106,7 @@ zx::result<std::unique_ptr<Factoryfs>> Factoryfs::Create(async_dispatcher_t* dis
     return zx::error(status);
   }
 
-  fuchsia_hardware_block_BlockInfo block_info;
+  fuchsia_hardware_block::wire::BlockInfo block_info;
   if (zx_status_t status = device->BlockGetInfo(&block_info); status != ZX_OK) {
     FX_LOGS(ERROR) << "cannot acquire block info: " << zx_status_get_string(status);
     return zx::error(status);
@@ -134,7 +131,7 @@ zx::result<std::unique_ptr<Factoryfs>> Factoryfs::Create(async_dispatcher_t* dis
   }
 
   auto fs = std::unique_ptr<Factoryfs>(new Factoryfs(std::move(device), &superblock, vfs));
-  fs->block_info_ = std::move(block_info);
+  fs->block_info_ = block_info;
 
   return zx::ok(std::move(fs));
 }
@@ -146,9 +143,8 @@ zx_status_t Factoryfs::InitDirectoryVmo() {
     return ZX_OK;
   }
 
-  zx_status_t status;
   const size_t vmo_size = fbl::round_up(GetDirectorySize(), kFactoryfsBlockSize);
-  if ((status = zx::vmo::create(vmo_size, 0, &directory_vmo_)) != ZX_OK) {
+  if (zx_status_t status = zx::vmo::create(vmo_size, 0, &directory_vmo_); status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to initialize directory vmo; error: " << zx_status_get_string(status);
     return status;
   }
@@ -156,8 +152,9 @@ zx_status_t Factoryfs::InitDirectoryVmo() {
   zx_object_set_property(directory_vmo_.get(), ZX_PROP_NAME, "factoryfs-directory",
                          strlen("factoryfs-directory"));
   storage::OwnedVmoid vmoid;
-  if ((status = Device().BlockAttachVmo(directory_vmo_,
-                                        &vmoid.GetReference(block_device_.get()))) != ZX_OK) {
+  if (zx_status_t status =
+          Device().BlockAttachVmo(directory_vmo_, &vmoid.GetReference(block_device_.get()));
+      status != ZX_OK) {
     directory_vmo_.reset();
     return status;
   }
@@ -182,7 +179,6 @@ zx_status_t Factoryfs::InitDirectoryVmo() {
 // |parse_data| is guarenteed to be 4 byte aligned.
 zx_status_t Factoryfs::ParseEntries(Callback callback, void* parse_data) {
   size_t avail = GetDirectorySize();
-  zx_status_t status;
 
   // To enforce 4 byte alignment for all the directory entries,
   // we need to enforce the starting address of parse_data is
@@ -206,13 +202,13 @@ zx_status_t Factoryfs::ParseEntries(Callback callback, void* parse_data) {
       DumpDirectoryEntry(entry);
       return ZX_ERR_IO;
     }
-    if ((status = IsValidDirectoryEntry(*entry, Info())) != ZX_OK) {
+    if (zx_status_t status = IsValidDirectoryEntry(*entry, Info()); status != ZX_OK) {
       FX_LOGS(ERROR) << "invalid directory entry!";
       DumpDirectoryEntry(entry);
       return status;
     }
-    if ((status = callback(entry)) == ZX_OK) {
-      return status;
+    if (callback(entry) == ZX_OK) {
+      return ZX_OK;
     }
     buffer += size;
     avail -= size;
@@ -235,12 +231,12 @@ zx::result<std::unique_ptr<DirectoryEntryManager>> Factoryfs::LookupInternal(
   uint32_t len = dirent_blocks * kFactoryfsBlockSize;
 
   zx_status_t status = ZX_OK;
-  if ((status = InitDirectoryVmo()) != ZX_OK) {
+  if (zx_status_t status = InitDirectoryVmo(); status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to initialize VMO error: " << zx_status_get_string(status);
     return zx::error(status);
   }
 
-  if ((status = directory_vmo_.read(block.data(), 0, len)) != ZX_OK) {
+  if (zx_status_t status = directory_vmo_.read(block.data(), 0, len); status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to read VMO error: " << zx_status_get_string(status);
     return zx::error(status);
   }
@@ -285,9 +281,8 @@ zx::result<fbl::RefPtr<fs::Vnode>> Factoryfs::Lookup(const std::string_view path
   // a file node.
   if (path.size() < dir_entry->GetName().size()) {
     return zx::ok(fbl::MakeRefCounted<Directory>(*this, path));
-  } else {
-    return zx::ok(fbl::MakeRefCounted<File>(*this, std::move(dir_entry)));
   }
+  return zx::ok(fbl::MakeRefCounted<File>(*this, std::move(dir_entry)));
 }
 
 void Factoryfs::DidOpen(std::string_view path, fs::Vnode& vnode) {

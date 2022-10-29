@@ -2,8 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/lib/storage/block_client/cpp/remote_block_device.h"
-#include "src/storage/f2fs/f2fs.h"
+#include "src/storage/f2fs/service/startup.h"
+
+#include <lib/fidl-async/cpp/bind.h>
+#include <lib/syslog/cpp/macros.h>
+
+#include "src/storage/f2fs/bcache.h"
+#include "src/storage/f2fs/fsck.h"
+#include "src/storage/f2fs/mkfs.h"
 
 namespace f2fs {
 
@@ -14,7 +20,7 @@ StartupService::StartupService(async_dispatcher_t* dispatcher, ConfigureCallback
       configure_(std::move(cb)) {}
 
 void StartupService::Start(StartRequestView request, StartCompleter::Sync& completer) {
-  auto bc_or = f2fs::CreateBcache(request->device.TakeChannel());
+  auto bc_or = f2fs::CreateBcache(std::move(request->device));
   if (bc_or.is_error()) {
     completer.ReplyError(bc_or.status_value());
     return;
@@ -30,7 +36,7 @@ void StartupService::Start(StartRequestView request, StartCompleter::Sync& compl
 
 void StartupService::Format(FormatRequestView request, FormatCompleter::Sync& completer) {
   bool readonly_device = false;
-  auto bc_or = f2fs::CreateBcache(request->device.TakeChannel(), &readonly_device);
+  auto bc_or = f2fs::CreateBcache(std::move(request->device), &readonly_device);
   if (bc_or.is_error()) {
     completer.ReplyError(bc_or.status_value());
     return;
@@ -53,7 +59,7 @@ void StartupService::Format(FormatRequestView request, FormatCompleter::Sync& co
 
 void StartupService::Check(CheckRequestView request, CheckCompleter::Sync& completer) {
   bool readonly_device = false;
-  auto bc_or = f2fs::CreateBcache(request->device.TakeChannel(), &readonly_device);
+  auto bc_or = f2fs::CreateBcache(std::move(request->device), &readonly_device);
   if (bc_or.is_error()) {
     completer.ReplyError(bc_or.status_value());
     return;

@@ -5,8 +5,15 @@
 #ifndef SRC_STORAGE_F2FS_FILE_CACHE_H_
 #define SRC_STORAGE_F2FS_FILE_CACHE_H_
 
+#include <condition_variable>
+#include <utility>
+
+#include <fbl/intrusive_wavl_tree.h>
 #include <safemath/checked_math.h>
 #include <storage/buffer/block_buffer.h>
+
+#include "src/storage/f2fs/f2fs_types.h"
+#include "src/storage/f2fs/vmo_manager.h"
 
 namespace f2fs {
 
@@ -119,11 +126,8 @@ class Page : public PageRefCounted<Page>,
     }
   }
   bool TryLock() {
-    if (!flags_[static_cast<uint8_t>(PageFlag::kPageLocked)].test_and_set(
-            std::memory_order_acquire)) {
-      return false;
-    }
-    return true;
+    return flags_[static_cast<uint8_t>(PageFlag::kPageLocked)].test_and_set(
+        std::memory_order_acquire);
   }
   void Unlock() {
     if (IsLocked()) {
@@ -156,13 +160,13 @@ class Page : public PageRefCounted<Page>,
   // its block address in a dnode or nat entry first.
   void Invalidate();
 
-  void ZeroUserSegment(uint64_t start, uint64_t end) {
+  void ZeroUserSegment(uint64_t start, uint64_t end) const {
     if (start < end && end <= BlockSize()) {
       std::memset(GetAddress<uint8_t>() + start, 0, end - start);
     }
   }
 
-  uint32_t BlockSize() const { return kPageSize; }
+  static uint32_t BlockSize() { return kPageSize; }
 
   // Check that |this| Page exists in FileCache.
   bool InTreeContainer() const { return fbl::WAVLTreeContainable<Page *>::InContainer(); }
@@ -232,19 +236,19 @@ class LockedPage final {
   LockedPage(const LockedPage &) = delete;
   LockedPage &operator=(const LockedPage &) = delete;
 
-  LockedPage(LockedPage &&p) {
+  LockedPage(LockedPage &&p) noexcept {
     page_ = std::move(p.page_);
     p.page_ = nullptr;
   }
-  LockedPage &operator=(LockedPage &&p) {
+  LockedPage &operator=(LockedPage &&p) noexcept {
     reset();
     page_ = std::move(p.page_);
     p.page_ = nullptr;
     return *this;
   }
 
-  LockedPage(fbl::RefPtr<Page> page, bool try_lock = true) {
-    page_ = page;
+  explicit LockedPage(fbl::RefPtr<Page> page, bool try_lock = true) {
+    page_ = std::move(page);
     if (try_lock) {
       page_->Lock();
     }
@@ -282,7 +286,7 @@ class LockedPage final {
   Page *get() { return page_.get(); }
   Page &operator*() { return *page_; }
   Page *operator->() { return page_.get(); }
-  explicit operator bool() const { return bool(page_); }
+  explicit operator bool() const { return page_ != nullptr; }
 
   // Comparison against nullptr operators (of the form, myptr == nullptr).
   bool operator==(decltype(nullptr)) const { return (page_ == nullptr); }
@@ -308,19 +312,19 @@ class FileCache {
 
   // It returns a locked Page corresponding to |index| from |page_tree_|.
   // If there is no Page, it creates and returns a locked Page.
-  zx_status_t GetPage(const pgoff_t index, LockedPage *out) __TA_EXCLUDES(tree_lock_);
+  zx_status_t GetPage(pgoff_t index, LockedPage *out) __TA_EXCLUDES(tree_lock_);
   // It returns locked Pages corresponding to [start - end) from |page_tree_|.
-  zx::result<std::vector<LockedPage>> GetPages(const pgoff_t start, const pgoff_t end)
+  zx::result<std::vector<LockedPage>> GetPages(pgoff_t start, pgoff_t end)
       __TA_EXCLUDES(tree_lock_);
   // It returns locked pages corresponding to |page_offsets| from |page_tree_|.
   // If kInvalidPageOffset is included in |page_offsets|, the corresponding Page will be a null
   // page.
   zx::result<std::vector<LockedPage>> GetPages(const std::vector<pgoff_t> &page_offsets)
       __TA_EXCLUDES(tree_lock_);
-  LockedPage GetNewPage(const pgoff_t index) __TA_REQUIRES(tree_lock_);
+  LockedPage GetNewPage(pgoff_t index) __TA_REQUIRES(tree_lock_);
   // It returns an unlocked Page corresponding to |index| from |page_tree|.
   // If it fails to find the Page in |page_tree_|, it returns ZX_ERR_NOT_FOUND.
-  zx_status_t FindPage(const pgoff_t index, fbl::RefPtr<Page> *out) __TA_EXCLUDES(tree_lock_);
+  zx_status_t FindPage(pgoff_t index, fbl::RefPtr<Page> *out) __TA_EXCLUDES(tree_lock_);
   // It tries to write out dirty Pages that meets |operation| in |page_tree_|.
   pgoff_t Writeback(WritebackOperation &operation) __TA_EXCLUDES(tree_lock_);
   // It invalidates Pages within the range of |start| to |end| in |page_tree_|.
@@ -350,7 +354,7 @@ class FileCache {
   // It returns a set of locked dirty Pages that meet |operation|.
   std::vector<LockedPage> GetLockedDirtyPagesUnsafe(const WritebackOperation &operation)
       __TA_REQUIRES(tree_lock_);
-  zx::result<LockedPage> GetPageUnsafe(const pgoff_t index) __TA_REQUIRES(tree_lock_);
+  zx::result<LockedPage> GetPageUnsafe(pgoff_t index) __TA_REQUIRES(tree_lock_);
   zx_status_t AddPageUnsafe(const fbl::RefPtr<Page> &page) __TA_REQUIRES(tree_lock_);
   zx_status_t EvictUnsafe(Page *page) __TA_REQUIRES(tree_lock_);
   // It returns all Pages from |page_tree_| within the range of |start| to |end|.

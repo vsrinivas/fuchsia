@@ -18,9 +18,7 @@
 #include "src/lib/storage/block_client/cpp/fake_block_device.h"
 #include "src/lib/storage/block_client/cpp/reader.h"
 #include "src/storage/blobfs/blob.h"
-#include "src/storage/blobfs/directory.h"
 #include "src/storage/blobfs/format.h"
-#include "src/storage/blobfs/fsck.h"
 #include "src/storage/blobfs/mkfs.h"
 #include "src/storage/blobfs/test/blob_utils.h"
 #include "src/storage/blobfs/test/blobfs_test_setup.h"
@@ -51,7 +49,6 @@ class MockBlockDevice : public FakeBlockDevice {
   bool saw_trim() const { return saw_trim_; }
 
   zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) final;
-  zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* info) const final;
   zx_status_t BlockGetInfo(fuchsia_hardware_block::wire::BlockInfo* info) const final;
 
  private:
@@ -66,14 +63,6 @@ zx_status_t MockBlockDevice::FifoTransaction(block_fifo_request_t* requests, siz
     }
   }
   return FakeBlockDevice::FifoTransaction(requests, count);
-}
-
-zx_status_t MockBlockDevice::BlockGetInfo(fuchsia_hardware_block_BlockInfo* info) const {
-  zx_status_t status = FakeBlockDevice::BlockGetInfo(info);
-  if (status == ZX_OK) {
-    info->flags |= fuchsia_hardware_block_FLAG_TRIM_SUPPORT;
-  }
-  return status;
 }
 
 zx_status_t MockBlockDevice::BlockGetInfo(fuchsia_hardware_block::wire::BlockInfo* info) const {

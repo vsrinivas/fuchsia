@@ -10,7 +10,7 @@ using block_client::BlockDevice;
 
 zx_status_t FsBlockClient::Create(std::unique_ptr<BlockDevice> device,
                                   std::unique_ptr<FsBlockClient>* out) {
-  fuchsia_hardware_block_BlockInfo block_info;
+  fuchsia_hardware_block::wire::BlockInfo block_info;
   zx_status_t status = device->BlockGetInfo(&block_info);
   if (status != ZX_OK) {
     return status;
@@ -69,7 +69,7 @@ zx_status_t FsBlockClient::WriteBlock(uint64_t block, const void* data) {
 }
 
 FsBlockClient::FsBlockClient(std::unique_ptr<BlockDevice> device,
-                             fuchsia_hardware_block_BlockInfo block_info, zx::vmo vmo,
+                             fuchsia_hardware_block::wire::BlockInfo block_info, zx::vmo vmo,
                              storage::Vmoid vmoid)
     : device_(std::move(device)),
       block_info_(block_info),

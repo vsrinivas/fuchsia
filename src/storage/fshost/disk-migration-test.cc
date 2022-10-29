@@ -63,12 +63,10 @@ void BuildDiskImage(zx::vmo vmo) {
   // Format the new fvm partition with minfs.
   {
     FX_LOGS(INFO) << "Formatting \"" << zxcrypt.value() << "\" as minfs.";
-    fbl::unique_fd minfs_fd(open(zxcrypt->c_str(), O_RDONLY));
-    ASSERT_TRUE(minfs_fd);
-    zx::channel minfs_channel;
-    ASSERT_EQ(fdio_fd_transfer(minfs_fd.release(), minfs_channel.reset_and_get_address()), ZX_OK);
+    zx::result channel = component::Connect<fuchsia_hardware_block::Block>(zxcrypt.value());
+    ASSERT_TRUE(channel.is_ok()) << channel.status_string();
     std::unique_ptr<block_client::RemoteBlockDevice> minfs_device;
-    ASSERT_EQ(block_client::RemoteBlockDevice::Create(std::move(minfs_channel), &minfs_device),
+    ASSERT_EQ(block_client::RemoteBlockDevice::Create(std::move(channel.value()), &minfs_device),
               ZX_OK);
     auto bc = minfs::Bcache::Create(std::move(minfs_device), block_count);
     ASSERT_EQ(bc.status_value(), ZX_OK);

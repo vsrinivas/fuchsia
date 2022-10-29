@@ -4,7 +4,7 @@
 
 #include "src/lib/storage/vfs/cpp/inspect/inspect_data.h"
 
-#include <fuchsia/hardware/block/c/fidl.h>
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
 
 namespace fs_inspect {
 
@@ -54,8 +54,8 @@ zx::result<FvmData::SizeInfo> FvmData::GetSizeInfoFromDevice(
   FvmData::SizeInfo size_info{};
   // This information is for the entire FVM volume. So the "slices allocated" counts across all
   // partitions inside of FVM.
-  fuchsia_hardware_block_volume_VolumeManagerInfo volume_manager;
-  fuchsia_hardware_block_volume_VolumeInfo volume_info;
+  fuchsia_hardware_block_volume::wire::VolumeManagerInfo volume_manager;
+  fuchsia_hardware_block_volume::wire::VolumeInfo volume_info;
   zx_status_t status = device.VolumeGetInfo(&volume_manager, &volume_info);
   if (status != ZX_OK) {
     return zx::error(status);

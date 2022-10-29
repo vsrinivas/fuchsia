@@ -199,8 +199,8 @@ int main(int argc, char** argv) {
         zx::channel device_channel = zx::channel(zx_take_startup_handle(FS_HANDLE_BLOCK_DEVICE_ID));
 
         std::unique_ptr<block_client::RemoteBlockDevice> device;
-        zx_status_t status =
-            block_client::RemoteBlockDevice::Create(std::move(device_channel), &device);
+        zx_status_t status = block_client::RemoteBlockDevice::Create(
+            fidl::ClientEnd<fuchsia_hardware_block::Block>(std::move(device_channel)), &device);
         if (status != ZX_OK) {
           FX_LOGS(ERROR) << "Could not access block device";
           return EXIT_FAILURE;

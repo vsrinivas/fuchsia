@@ -18,10 +18,8 @@
 #include "src/storage/blobfs/format.h"
 
 #ifdef __Fuchsia__
-#include <fuchsia/hardware/block/c/fidl.h>
-#include <fuchsia/hardware/block/volume/c/fidl.h>
-
-#include "src/storage/fvm/client.h"
+#include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #endif
 
 #include "src/storage/blobfs/common.h"
@@ -160,7 +158,8 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max, bool quiet) {
       if (!quiet)
         FX_LOGS(ERROR) << "Not enough slices for block bitmap" << *info;
       return ZX_ERR_INVALID_ARGS;
-    } else if (abm_blocks_allocated + BlockMapStartBlock(*info) >= NodeMapStartBlock(*info)) {
+    }
+    if (abm_blocks_allocated + BlockMapStartBlock(*info) >= NodeMapStartBlock(*info)) {
       if (!quiet)
         FX_LOGS(ERROR) << "Block bitmap collides into node map" << *info;
       return ZX_ERR_INVALID_ARGS;
@@ -172,7 +171,8 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max, bool quiet) {
       if (!quiet)
         FX_LOGS(ERROR) << "Not enough slices for node map" << *info;
       return ZX_ERR_INVALID_ARGS;
-    } else if (ino_blocks_allocated + NodeMapStartBlock(*info) >= DataStartBlock(*info)) {
+    }
+    if (ino_blocks_allocated + NodeMapStartBlock(*info) >= DataStartBlock(*info)) {
       if (!quiet)
         FX_LOGS(ERROR) << "Node bitmap collides into data blocks" << *info;
       return ZX_ERR_INVALID_ARGS;
@@ -184,12 +184,13 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max, bool quiet) {
       if (!quiet)
         FX_LOGS(ERROR) << "Partition too small; no space left for data blocks" << *info;
       return ZX_ERR_INVALID_ARGS;
-    } else if (dat_blocks_needed > dat_blocks_allocated) {
+    }
+    if (dat_blocks_needed > dat_blocks_allocated) {
       if (!quiet)
         FX_LOGS(ERROR) << "Not enough slices for data blocks" << *info;
       return ZX_ERR_INVALID_ARGS;
-    } else if (dat_blocks_allocated + DataStartBlock(*info) >
-               std::numeric_limits<uint32_t>::max()) {
+    }
+    if (dat_blocks_allocated + DataStartBlock(*info) > std::numeric_limits<uint32_t>::max()) {
       if (!quiet)
         FX_LOGS(ERROR) << "Data blocks overflow uint32" << *info;
       return ZX_ERR_INVALID_ARGS;

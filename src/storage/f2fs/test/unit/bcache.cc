@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/storage/f2fs/bcache.h"
+
 #include <gtest/gtest.h>
 
 #include "src/lib/storage/block_client/cpp/fake_block_device.h"
-#include "src/storage/f2fs/f2fs.h"
+#include "src/storage/f2fs/f2fs_layout.h"
 
 namespace f2fs {
 namespace {
@@ -24,7 +26,7 @@ TEST(BCacheTest, Trim) {
     auto bc_or = CreateBcache(std::move(device), &readonly_device);
     ASSERT_TRUE(bc_or.is_ok());
 
-    fuchsia_hardware_block_BlockInfo info;
+    fuchsia_hardware_block::wire::BlockInfo info;
     bc_or->GetDevice()->BlockGetInfo(&info);
     block_t end_blk = static_cast<block_t>(bc_or->Maxblk() / (kBlockSize / info.block_size));
     ASSERT_EQ(bc_or->Trim(0, end_blk), ZX_ERR_NOT_SUPPORTED);
@@ -37,7 +39,7 @@ TEST(BCacheTest, Trim) {
     auto bc_or = CreateBcache(std::move(device), &readonly_device);
     ASSERT_TRUE(bc_or.is_ok());
 
-    fuchsia_hardware_block_BlockInfo info;
+    fuchsia_hardware_block::wire::BlockInfo info;
     bc_or->GetDevice()->BlockGetInfo(&info);
     block_t end_blk = static_cast<block_t>(bc_or->Maxblk() / (kBlockSize / info.block_size));
     ASSERT_EQ(bc_or->Trim(0, end_blk), ZX_OK);

@@ -147,7 +147,8 @@ zx::result<fidl::ClientEnd<partition::Partition>> OpenBlockPartition(
 
   auto cb = [&](const zx::channel& chan) {
     if (type_guid) {
-      auto result = fidl::WireCall<partition::Partition>(zx::unowned(chan))->GetTypeGuid();
+      auto result = fidl::WireCall(fidl::UnownedClientEnd<partition::Partition>(chan.borrow()))
+                        ->GetTypeGuid();
       if (!result.ok()) {
         return true;
       }
@@ -157,7 +158,8 @@ zx::result<fidl::ClientEnd<partition::Partition>> OpenBlockPartition(
       }
     }
     if (unique_guid) {
-      auto result = fidl::WireCall<partition::Partition>(zx::unowned(chan))->GetInstanceGuid();
+      auto result = fidl::WireCall(fidl::UnownedClientEnd<partition::Partition>(chan.borrow()))
+                        ->GetInstanceGuid();
       if (!result.ok()) {
         return true;
       }
@@ -177,16 +179,14 @@ constexpr char kSkipBlockDevPath[] = "class/skip-block/";
 zx::result<fidl::ClientEnd<skipblock::SkipBlock>> OpenSkipBlockPartition(
     const fbl::unique_fd& devfs_root, const Uuid& type_guid, zx_duration_t timeout) {
   auto cb = [&](const zx::channel& chan) {
-    auto result = fidl::WireCall<skipblock::SkipBlock>(zx::unowned(chan))->GetPartitionInfo();
+    auto result = fidl::WireCall(fidl::UnownedClientEnd<skipblock::SkipBlock>(chan.borrow()))
+                      ->GetPartitionInfo();
     if (!result.ok()) {
       return true;
     }
     const auto& response = result.value();
-    if (response.status != ZX_OK ||
-        type_guid != Uuid(response.partition_info.partition_guid.data())) {
-      return true;
-    }
-    return false;
+    return response.status != ZX_OK ||
+           type_guid != Uuid(response.partition_info.partition_guid.data());
   };
 
   return OpenPartition(devfs_root, kSkipBlockDevPath, cb, timeout);
@@ -245,54 +245,44 @@ zx::result<> WipeBlockPartition(const fbl::unique_fd& devfs_root, std::optional<
 }
 
 zx::result<> IsBoard(const fbl::unique_fd& devfs_root, std::string_view board_name) {
-  zx::channel local, remote;
-  auto status = zx::make_result(zx::channel::create(0, &local, &remote));
-  if (status.is_error()) {
-    return status.take_error();
-  }
-
   fdio_cpp::UnownedFdioCaller caller(devfs_root.get());
-  status = zx::make_result(
-      fdio_service_connect_at(caller.borrow_channel(), "sys/platform", remote.release()));
+  zx::result status =
+      component::ConnectAt<fuchsia_sysinfo::SysInfo>(caller.directory(), "sys/platform");
   if (status.is_error()) {
     return status.take_error();
   }
-
-  auto result = fidl::WireCall<fuchsia_sysinfo::SysInfo>(zx::unowned(local))->GetBoardName();
-  status = zx::make_result(result.ok() ? result.value().status : result.status());
-  if (status.is_error()) {
-    return status.take_error();
+  fidl::WireResult result = fidl::WireCall(status.value())->GetBoardName();
+  if (!result.ok()) {
+    return zx::error(result.status());
   }
-  if (strncmp(result.value().name.data(), board_name.data(), result.value().name.size()) == 0) {
+  fidl::WireResponse response = result.value();
+  if (zx_status_t status = response.status; status != ZX_OK) {
+    return zx::error(status);
+  }
+  if (response.name.get() == board_name) {
     return zx::ok();
   }
-
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
 zx::result<> IsBootloader(const fbl::unique_fd& devfs_root, std::string_view vendor) {
-  zx::channel local, remote;
-  zx::result<> status = zx::make_result(zx::channel::create(0, &local, &remote));
-  if (status.is_error()) {
-    return status.take_error();
-  }
-
   fdio_cpp::UnownedFdioCaller caller(devfs_root.get());
-  status = zx::make_result(
-      fdio_service_connect_at(caller.borrow_channel(), "sys/platform", remote.release()));
+  zx::result status =
+      component::ConnectAt<fuchsia_sysinfo::SysInfo>(caller.directory(), "sys/platform");
   if (status.is_error()) {
     return status.take_error();
   }
-
-  auto result = fidl::WireCall<fuchsia_sysinfo::SysInfo>(zx::unowned(local))->GetBootloaderVendor();
-  status = zx::make_result(result.ok() ? result.value().status : result.status());
-  if (status.is_error()) {
-    return status.take_error();
+  fidl::WireResult result = fidl::WireCall(status.value())->GetBootloaderVendor();
+  if (!result.ok()) {
+    return zx::error(result.status());
   }
-  if (strncmp(result.value().vendor.data(), vendor.data(), result.value().vendor.size()) == 0) {
+  fidl::WireResponse response = result.value();
+  if (zx_status_t status = response.status; status != ZX_OK) {
+    return zx::error(status);
+  }
+  if (response.vendor.get() == vendor) {
     return zx::ok();
   }
-
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 }  // namespace paver

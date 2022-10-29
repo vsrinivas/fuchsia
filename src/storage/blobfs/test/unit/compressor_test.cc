@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/storage/blobfs/compression/compressor.h"
-
 #include <stdlib.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
@@ -13,15 +11,12 @@
 
 #include <gtest/gtest.h>
 
-#include "src/lib/digest/digest.h"
-#include "src/lib/digest/merkle-tree.h"
-#include "src/lib/storage/block_client/cpp/fake_block_device.h"
 #include "src/storage/blobfs/blobfs.h"
 #include "src/storage/blobfs/common.h"
 #include "src/storage/blobfs/compression/blob_compressor.h"
 #include "src/storage/blobfs/compression/decompressor.h"
+#include "src/storage/blobfs/directory.h"
 #include "src/storage/blobfs/format.h"
-#include "src/storage/blobfs/mkfs.h"
 #include "src/storage/blobfs/test/blob_utils.h"
 #include "src/storage/blobfs/test/blobfs_test_setup.h"
 
@@ -65,9 +60,8 @@ void CompressionHelper(CompressionAlgorithm algorithm, const char* input, size_t
 
   size_t offset = 0;
   while (offset != size) {
-    const void* data = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(input) + offset);
     const size_t incremental_size = std::min(step, size - offset);
-    ASSERT_EQ(compressor->Update(data, incremental_size), ZX_OK);
+    ASSERT_EQ(compressor->Update(input + offset, incremental_size), ZX_OK);
     offset += incremental_size;
   }
   ASSERT_EQ(compressor->End(), ZX_OK);

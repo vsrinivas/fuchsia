@@ -5,6 +5,12 @@
 #ifndef SRC_STORAGE_F2FS_SEGMENT_H_
 #define SRC_STORAGE_F2FS_SEGMENT_H_
 
+#include "src/storage/f2fs/f2fs_internal.h"
+#include "src/storage/f2fs/f2fs_layout.h"
+#include "src/storage/f2fs/f2fs_lib.h"
+#include "src/storage/f2fs/f2fs_types.h"
+#include "src/storage/f2fs/file_cache.h"
+
 namespace f2fs {
 
 // constant macro
@@ -164,8 +170,8 @@ class SegmentManager {
   SegmentManager(SegmentManager &&) = delete;
   SegmentManager &operator=(SegmentManager &&) = delete;
   SegmentManager() = delete;
-  SegmentManager(F2fs *fs);
-  SegmentManager(SuperblockInfo *info) { superblock_info_ = info; }
+  explicit SegmentManager(F2fs *fs);
+  explicit SegmentManager(SuperblockInfo *info) { superblock_info_ = info; }
 
   zx_status_t BuildSegmentManager();
   void DestroySegmentManager();
@@ -333,11 +339,11 @@ class SegmentManager {
   // L: Logical segment number in volume, R: Relative segment number in main area
   uint32_t GetL2RSegNo(uint32_t segno) { return (segno - free_info_->start_segno); }
   uint32_t GetR2LSegNo(uint32_t segno) { return (segno + free_info_->start_segno); }
-  bool IsDataSeg(CursegType t) {
+  static bool IsDataSeg(CursegType t) {
     return ((t == CursegType::kCursegHotData) || (t == CursegType::kCursegColdData) ||
             (t == CursegType::kCursegWarmData));
   }
-  bool IsNodeSeg(CursegType t) {
+  static bool IsNodeSeg(CursegType t) {
     return ((t == CursegType::kCursegHotNode) || (t == CursegType::kCursegColdNode) ||
             (t == CursegType::kCursegWarmNode));
   }
@@ -348,7 +354,7 @@ class SegmentManager {
     CursegInfo *curseg = CURSEG_I(type);
     return (StartBlock(curseg->segno) + curseg->next_blkoff);
   }
-  block_t GetSegOffFromSeg0(block_t blk_addr) { return blk_addr - GetSegment0StartBlock(); }
+  block_t GetSegOffFromSeg0(block_t blk_addr) const { return blk_addr - GetSegment0StartBlock(); }
   uint32_t GetSegNoFromSeg0(block_t blk_addr) {
     return GetSegOffFromSeg0(blk_addr) >> superblock_info_->GetLogBlocksPerSeg();
   }
@@ -361,22 +367,22 @@ class SegmentManager {
   uint32_t GetZoneNoFromSegNo(uint32_t segno) {
     return segno / superblock_info_->GetSegsPerSec() / superblock_info_->GetSecsPerZone();
   }
-  block_t GetSumBlock(uint32_t segno) { return ssa_blkaddr_ + segno; }
+  block_t GetSumBlock(uint32_t segno) const { return ssa_blkaddr_ + segno; }
   uint32_t SitEntryOffset(uint32_t segno) { return segno % sit_info_->sents_per_block; }
-  block_t SitBlockOffset(uint32_t segno) { return segno / kSitEntryPerBlock; }
-  block_t StartSegNo(uint32_t segno) { return SitBlockOffset(segno) * kSitEntryPerBlock; }
-  uint32_t BitmapSize(uint32_t nr) {
+  static block_t SitBlockOffset(uint32_t segno) { return segno / kSitEntryPerBlock; }
+  static block_t StartSegNo(uint32_t segno) { return SitBlockOffset(segno) * kSitEntryPerBlock; }
+  static uint32_t BitmapSize(uint32_t nr) {
     return static_cast<uint32_t>(BitsToLongs(nr) * sizeof(uint64_t));
   }
 
-  block_t TotalSegs() { return main_segments_; }
+  block_t TotalSegs() const { return main_segments_; }
 
   // GetVictimByDefault() is called for two purposes:
   // 1) One is to select a victim segment for garbage collection, and
   // 2) the other is to find a dirty segment used for SSR.
   // For GC, it tries to find a victim segment that might require less cost
   // to secure free segments among all types of dirty segments.
-  // The gc cost can be calucalted in two ways according to GcType.
+  // The gc cost can be calculated in two ways according to GcType.
   // In case of GcType::kFgGc, it is typically triggered in the middle of user IO path,
   // and thus it selects a victim with a less valid block count (i.e., GcMode::kGcGreedy)
   // as it hopes the migration completes more quickly.

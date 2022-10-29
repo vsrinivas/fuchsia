@@ -42,14 +42,15 @@ class InspectorTransactionHandler : public fs::DeviceTransactionHandler,
 
  private:
   explicit InspectorTransactionHandler(std::unique_ptr<block_client::BlockDevice> device,
-                                       fuchsia_hardware_block_BlockInfo info, uint32_t block_size)
+                                       fuchsia_hardware_block::wire::BlockInfo info,
+                                       uint32_t block_size)
       : device_(std::move(device)), info_(info), block_size_(block_size) {}
 
   uint32_t FsBlockSize() const { return block_size_; }
   uint32_t DeviceBlockSize() const { return info_.block_size; }
 
   std::unique_ptr<block_client::BlockDevice> device_;
-  fuchsia_hardware_block_BlockInfo info_ = {};
+  fuchsia_hardware_block::wire::BlockInfo info_ = {};
   uint32_t block_size_;
 };
 

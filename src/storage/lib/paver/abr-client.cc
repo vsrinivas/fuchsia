@@ -29,7 +29,6 @@
 #include <fbl/algorithm.h>
 
 #include "src/lib/uuid/uuid.h"
-#include "src/storage/lib/paver/device-partitioner.h"
 #include "src/storage/lib/paver/partition-client.h"
 #include "src/storage/lib/paver/pave-logging.h"
 
@@ -44,9 +43,11 @@ zx::result<Configuration> CurrentSlotToConfiguration(std::string_view slot) {
   slot.remove_prefix(std::min(slot.find_first_not_of("_-"), slot.size()));
   if (slot.compare("a") == 0) {
     return zx::ok(Configuration::kA);
-  } else if (slot.compare("b") == 0) {
+  }
+  if (slot.compare("b") == 0) {
     return zx::ok(Configuration::kB);
-  } else if (slot.compare("r") == 0) {
+  }
+  if (slot.compare("r") == 0) {
     return zx::ok(Configuration::kRecovery);
   }
   ERROR("Invalid value `%.*s` found in zvb.current_slot!\n", static_cast<int>(slot.size()),
@@ -73,34 +74,35 @@ bool FindPartitionLabelByGuid(const fbl::unique_fd& devfs_root, const uint8_t* g
 
   struct dirent* de;
   while ((de = readdir(d)) != nullptr) {
-    fbl::unique_fd fd(openat(dirfd(d), de->d_name, O_RDWR));
-    if (!fd) {
+    fdio_cpp::UnownedFdioCaller caller(dirfd(d));
+    zx::result channel = component::ConnectAt<partition::Partition>(caller.directory(), de->d_name);
+    if (channel.is_error()) {
       continue;
     }
-    fdio_cpp::FdioCaller caller(std::move(fd));
+    {
+      auto result = fidl::WireCall(channel.value())->GetInstanceGuid();
+      if (!result.ok()) {
+        continue;
+      }
+      const auto& response = result.value();
+      if (response.status != ZX_OK) {
+        continue;
+      }
+      if (memcmp(response.guid->value.data_, guid, GPT_GUID_LEN) != 0) {
+        continue;
+      }
+    }
 
-    auto result = fidl::WireCall<partition::Partition>(caller.channel())->GetInstanceGuid();
+    auto result = fidl::WireCall(channel.value())->GetName();
     if (!result.ok()) {
       continue;
     }
+
     const auto& response = result.value();
     if (response.status != ZX_OK) {
       continue;
     }
-    if (memcmp(response.guid->value.data_, guid, GPT_GUID_LEN) != 0) {
-      continue;
-    }
-
-    auto result2 = fidl::WireCall<partition::Partition>(caller.channel())->GetName();
-    if (!result2.ok()) {
-      continue;
-    }
-
-    const auto& response2 = result2.value();
-    if (response2.status != ZX_OK) {
-      continue;
-    }
-    std::string_view name(response2.name.data(), response2.name.size());
+    std::string_view name(response.name.data(), response.name.size());
     out.append(name);
     return true;
   }

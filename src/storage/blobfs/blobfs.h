@@ -14,8 +14,8 @@
 
 #include <fidl/fuchsia.blobfs/cpp/wire.h>
 #include <fidl/fuchsia.fs/cpp/wire.h>
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/trace/event.h>
 #include <lib/zx/resource.h>
@@ -33,15 +33,12 @@
 #include <fbl/ref_ptr.h>
 #include <storage/operation/unbuffered_operations_builder.h>
 
-#include "src/lib/digest/digest.h"
 #include "src/lib/storage/block_client/cpp/block_device.h"
-#include "src/lib/storage/block_client/cpp/client.h"
 #include "src/lib/storage/vfs/cpp/journal/journal.h"
 #include "src/lib/storage/vfs/cpp/paged_vfs.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 #include "src/storage/blobfs/allocator/allocator.h"
 #include "src/storage/blobfs/allocator/extent_reserver.h"
-#include "src/storage/blobfs/allocator/node_reserver.h"
 #include "src/storage/blobfs/blob_cache.h"
 #include "src/storage/blobfs/blob_loader.h"
 #include "src/storage/blobfs/blobfs_inspect_tree.h"
@@ -49,12 +46,9 @@
 #include "src/storage/blobfs/common.h"
 #include "src/storage/blobfs/compression/external_decompressor.h"
 #include "src/storage/blobfs/compression_settings.h"
-#include "src/storage/blobfs/directory.h"
 #include "src/storage/blobfs/format.h"
-#include "src/storage/blobfs/iterator/allocated_extent_iterator.h"
 #include "src/storage/blobfs/iterator/block_iterator.h"
 #include "src/storage/blobfs/iterator/block_iterator_provider.h"
-#include "src/storage/blobfs/iterator/extent_iterator.h"
 #include "src/storage/blobfs/mount.h"
 #include "src/storage/blobfs/page_loader.h"
 #include "src/storage/blobfs/transaction.h"
@@ -63,7 +57,6 @@
 namespace blobfs {
 
 using block_client::BlockDevice;
-using fuchsia_io::wire::FilesystemInfo;
 
 constexpr char kOutgoingDataRoot[] = "root";
 
@@ -84,7 +77,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
 
   static std::unique_ptr<BlockDevice> Destroy(std::unique_ptr<Blobfs> blobfs);
 
-  virtual ~Blobfs();
+  ~Blobfs() override;
 
   // The Vfs object associated with this Blobfs instance, if any. The Vfs will exist only when
   // running on the target and will be null otherwise.
@@ -316,7 +309,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   async_dispatcher_t* dispatcher_ = nullptr;
 
   std::unique_ptr<BlockDevice> block_device_;
-  fuchsia_hardware_block_BlockInfo block_info_ = {};
+  fuchsia_hardware_block::wire::BlockInfo block_info_ = {};
   Writability writability_;
   const CompressionSettings write_compression_settings_;
   zx::resource vmex_resource_;  // Possibly null resource. See getter for more.

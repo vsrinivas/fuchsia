@@ -61,15 +61,12 @@ TEST(FvmSparseImageReaderTest, PartitionsInImagePassFsck) {
   ASSERT_TRUE(ram_disk_or.is_ok()) << ram_disk_or.status_string();
 
   // Open the ram disk
-  fbl::unique_fd fd(open(ram_disk_or.value().path().c_str(), O_RDWR));
-  ASSERT_TRUE(fd);
-
-  zx::channel device;
-  zx_status_t status = fdio_get_service_handle(fd.release(), device.reset_and_get_address());
-  ASSERT_EQ(status, ZX_OK);
+  zx::result channel =
+      component::Connect<fuchsia_hardware_block::Block>(ram_disk_or.value().path());
+  ASSERT_TRUE(channel.is_ok()) << channel.status_string();
 
   std::unique_ptr<block_client::RemoteBlockDevice> client;
-  status = block_client::RemoteBlockDevice::Create(std::move(device), &client);
+  zx_status_t status = block_client::RemoteBlockDevice::Create(std::move(channel.value()), &client);
   ASSERT_EQ(status, ZX_OK);
 
   constexpr uint64_t kInitialVmoSize = 1048576;
@@ -122,7 +119,6 @@ TEST(FvmSparseImageReaderTest, PartitionsInImagePassFsck) {
                              << ", dev_offset=" << request.dev_offset;
   }
 
-  fd.reset();
   client.reset();
 
   // Now try and attach FVM.

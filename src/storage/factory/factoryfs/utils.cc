@@ -24,7 +24,7 @@ storage::OwnedVmoid AttachVmo(BlockDevice* device, zx::vmo* vmo) {
 // Returns block_size in |out_block_size|.
 void VerifySizeBlockAligned(BlockDevice* device, size_t size, uint64_t offset,
                             uint32_t* out_block_size) {
-  fuchsia_hardware_block_BlockInfo info = {};
+  fuchsia_hardware_block::wire::BlockInfo info = {};
   ASSERT_OK(device->BlockGetInfo(&info));
   ASSERT_EQ(size % info.block_size, 0);
   ASSERT_EQ(offset % info.block_size, 0);

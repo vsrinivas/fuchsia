@@ -31,15 +31,10 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_fd.h>
 
-#include "src/lib/storage/fs_management/cpp/fvm.h"
-#include "src/lib/storage/fs_management/cpp/mount.h"
-#include "src/security/zxcrypt/client.h"
-#include "src/storage/fshost/constants.h"
 #include "src/storage/lib/paver/fvm.h"
 #include "src/storage/lib/paver/pave-logging.h"
 #include "src/storage/lib/paver/stream-reader.h"
 #include "src/storage/lib/paver/validation.h"
-#include "src/storage/lib/paver/vmo-reader.h"
 #include "sysconfig-fidl.h"
 
 namespace paver {
@@ -411,15 +406,12 @@ zx::result<> PartitionPave(const DevicePartitioner& partitioner, zx::vmo payload
   return zx::ok();
 }
 
-zx::channel OpenServiceRoot() {
-  zx::channel request, service_root;
-  if (zx::channel::create(0, &request, &service_root) != ZX_OK) {
-    return zx::channel();
+fidl::ClientEnd<fuchsia_io::Directory> OpenServiceRoot() {
+  zx::result client = component::Connect<fuchsia_io::Directory>("/svc");
+  if (client.is_error()) {
+    return {};
   }
-  if (fdio_service_connect("/svc", request.release()) != ZX_OK) {
-    return zx::channel();
-  }
-  return service_root;
+  return std::move(client.value());
 }
 
 Configuration SlotIndexToConfiguration(AbrSlotIndex slot_index) {
@@ -452,9 +444,8 @@ std::optional<Configuration> GetActiveConfiguration(const abr::Client& abr_clien
   auto slot_index = abr_client.GetBootSlot(false, nullptr);
   if (slot_index == kAbrSlotIndexR) {
     return std::nullopt;
-  } else {
-    return SlotIndexToConfiguration(slot_index);
   }
+  return SlotIndexToConfiguration(slot_index);
 }
 
 // Helper to wrap a std::variant with a WriteFirmwareResult union.
@@ -482,15 +473,16 @@ void Paver::FindDataSink(FindDataSinkRequestView request, FindDataSinkCompleter:
   }
 
   DataSink::Bind(dispatcher_, devfs_root_.duplicate(), std::move(svc_root_),
-                 request->data_sink.TakeChannel(), context_);
+                 std::move(request->data_sink), context_);
 }
 
 void Paver::UseBlockDevice(UseBlockDeviceRequestView request,
                            UseBlockDeviceCompleter::Sync& _completer) {
-  UseBlockDevice(request->block_device.TakeChannel(), request->data_sink.TakeChannel());
+  UseBlockDevice(std::move(request->block_device), std::move(request->data_sink));
 }
 
-void Paver::UseBlockDevice(zx::channel block_device, zx::channel dynamic_data_sink) {
+void Paver::UseBlockDevice(fidl::ClientEnd<fuchsia_hardware_block::Block> block_device,
+                           fidl::ServerEnd<fuchsia_paver::DynamicDataSink> dynamic_data_sink) {
   // Use global devfs if one wasn't injected via set_devfs_root.
   if (!devfs_root_) {
     devfs_root_ = fbl::unique_fd(open("/dev", O_RDONLY));
@@ -514,7 +506,7 @@ void Paver::FindBootManager(FindBootManagerRequestView request,
   }
 
   BootManager::Bind(dispatcher_, devfs_root_.duplicate(), std::move(svc_root_), context_,
-                    request->boot_manager.TakeChannel());
+                    std::move(request->boot_manager));
 }
 
 void DataSink::ReadAsset(ReadAssetRequestView request, ReadAssetCompleter::Sync& completer) {
@@ -652,7 +644,8 @@ zx::result<fuchsia_mem::wire::Buffer> DataSinkImpl::ReadFirmware(Configuration c
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx::result<> DataSinkImpl::WriteVolumes(zx::channel payload_stream) {
+zx::result<> DataSinkImpl::WriteVolumes(
+    fidl::ClientEnd<fuchsia_paver::PayloadStream> payload_stream) {
   auto status = StreamReader::Create(std::move(payload_stream));
   if (status.is_error()) {
     ERROR("Unable to create stream.\n");
@@ -673,7 +666,8 @@ zx::result<> DataSinkImpl::WriteBootloader(fuchsia_mem::wire::Buffer payload) {
   return PartitionPave(*partitioner_, std::move(payload.vmo), payload.size, spec);
 }
 
-zx::result<zx::channel> DataSinkImpl::WipeVolume() {
+zx::result<fidl::ClientEnd<fuchsia_hardware_block_volume::VolumeManager>>
+DataSinkImpl::WipeVolume() {
   auto status = GetFvmPartition(*partitioner_);
   if (status.is_error()) {
     return status.take_error();
@@ -710,13 +704,14 @@ zx::result<zx::channel> DataSinkImpl::WipeVolume() {
 }
 
 void DataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
-                    fidl::ClientEnd<fuchsia_io::Directory> svc_root, zx::channel server,
+                    fidl::ClientEnd<fuchsia_io::Directory> svc_root,
+                    fidl::ServerEnd<fuchsia_paver::DataSink> server,
                     std::shared_ptr<Context> context) {
-  auto partitioner = DevicePartitionerFactory::Create(devfs_root.duplicate(), std::move(svc_root),
+  auto partitioner = DevicePartitionerFactory::Create(devfs_root.duplicate(), svc_root,
                                                       GetCurrentArch(), std::move(context));
   if (!partitioner) {
     ERROR("Unable to initialize a partitioner.\n");
-    fidl_epitaph_write(server.get(), ZX_ERR_BAD_STATE);
+    fidl_epitaph_write(server.channel().get(), ZX_ERR_BAD_STATE);
     return;
   }
   auto data_sink = std::make_unique<DataSink>(std::move(devfs_root), std::move(partitioner));
@@ -725,14 +720,15 @@ void DataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
 
 void DynamicDataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
                            fidl::ClientEnd<fuchsia_io::Directory> svc_root,
-                           zx::channel block_device, zx::channel server,
+                           fidl::ClientEnd<fuchsia_hardware_block::Block> block_device,
+                           fidl::ServerEnd<fuchsia_paver::DynamicDataSink> server,
                            std::shared_ptr<Context> context) {
-  auto partitioner = DevicePartitionerFactory::Create(devfs_root.duplicate(), std::move(svc_root),
-                                                      GetCurrentArch(), std::move(context),
-                                                      std::move(block_device));
+  auto partitioner =
+      DevicePartitionerFactory::Create(devfs_root.duplicate(), svc_root, GetCurrentArch(),
+                                       std::move(context), std::move(block_device));
   if (!partitioner) {
     ERROR("Unable to initialize a partitioner.\n");
-    fidl_epitaph_write(server.get(), ZX_ERR_BAD_STATE);
+    fidl_epitaph_write(server.channel().get(), ZX_ERR_BAD_STATE);
     return;
   }
   auto data_sink = std::make_unique<DynamicDataSink>(std::move(devfs_root), std::move(partitioner));
@@ -785,11 +781,12 @@ void DynamicDataSink::WipeVolume(WipeVolumeCompleter::Sync& completer) {
 
 void BootManager::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
                        fidl::ClientEnd<fuchsia_io::Directory> svc_root,
-                       std::shared_ptr<Context> context, zx::channel server) {
+                       std::shared_ptr<Context> context,
+                       fidl::ServerEnd<fuchsia_paver::BootManager> server) {
   auto status = abr::ClientFactory::Create(devfs_root.duplicate(), svc_root, std::move(context));
   if (status.is_error()) {
     ERROR("Failed to get ABR client: %s\n", status.status_string());
-    fidl_epitaph_write(server.get(), status.error_value());
+    fidl_epitaph_write(server.channel().get(), status.error_value());
     return;
   }
   auto& abr_client = status.value();
@@ -908,10 +905,10 @@ void BootManager::SetConfigurationHealthy(SetConfigurationHealthyRequestView req
 
 void Paver::FindSysconfig(FindSysconfigRequestView request,
                           FindSysconfigCompleter::Sync& completer) {
-  FindSysconfig(request->sysconfig.TakeChannel());
+  FindSysconfig(std::move(request->sysconfig));
 }
 
-void Paver::FindSysconfig(zx::channel sysconfig) {
+void Paver::FindSysconfig(fidl::ServerEnd<fuchsia_paver::Sysconfig> sysconfig) {
   // Use global devfs if one wasn't injected via set_devfs_root.
   if (!devfs_root_) {
     devfs_root_ = fbl::unique_fd(open("/dev", O_RDONLY));

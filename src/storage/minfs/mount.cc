@@ -12,19 +12,15 @@
 
 #include <safemath/safe_math.h>
 
-#include "src/lib/storage/vfs/cpp/managed_vfs.h"
-#include "src/lib/storage/vfs/cpp/paged_vfs.h"
-#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
-#include "src/lib/storage/vfs/cpp/trace.h"
+#include "fidl/fuchsia.hardware.block/cpp/wire_types.h"
 #include "src/storage/minfs/component_runner.h"
 #include "src/storage/minfs/minfs_private.h"
 #include "src/storage/minfs/runner.h"
-#include "src/storage/minfs/service/admin.h"
 
 namespace minfs {
 
 zx::result<CreateBcacheResult> CreateBcache(std::unique_ptr<block_client::BlockDevice> device) {
-  fuchsia_hardware_block_BlockInfo info;
+  fuchsia_hardware_block::wire::BlockInfo info;
   zx_status_t status = device->BlockGetInfo(&info);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Could not access device info: " << status;
@@ -56,7 +52,7 @@ zx::result<CreateBcacheResult> CreateBcache(std::unique_ptr<block_client::BlockD
 
   CreateBcacheResult result{
       .bcache = std::move(bcache_or.value()),
-      .is_read_only = static_cast<bool>(info.flags & fuchsia_hardware_block_FLAG_READONLY),
+      .is_read_only = static_cast<bool>(info.flags & fuchsia_hardware_block::wire::kFlagReadonly),
   };
   return zx::ok(std::move(result));
 }

@@ -6,6 +6,7 @@
 #define SRC_STORAGE_LIB_PAVER_PAVER_H_
 
 #include <fidl/fuchsia.paver/cpp/wire.h>
+#include <lib/async/dispatcher.h>
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
 
@@ -17,7 +18,6 @@
 
 #include "abr-client.h"
 #include "device-partitioner.h"
-#include "lib/async/dispatcher.h"
 #include "paver-context.h"
 
 namespace paver {
@@ -30,7 +30,8 @@ class Paver : public fidl::WireServer<fuchsia_paver::Paver> {
   void UseBlockDevice(UseBlockDeviceRequestView request,
                       UseBlockDeviceCompleter::Sync& completer) override;
 
-  void UseBlockDevice(zx::channel block_device, zx::channel dynamic_data_sink);
+  void UseBlockDevice(fidl::ClientEnd<fuchsia_hardware_block::Block> block_device,
+                      fidl::ServerEnd<fuchsia_paver::DynamicDataSink> dynamic_data_sink);
 
   void FindBootManager(FindBootManagerRequestView request,
                        FindBootManagerCompleter::Sync& completer) override;
@@ -38,7 +39,7 @@ class Paver : public fidl::WireServer<fuchsia_paver::Paver> {
   void FindSysconfig(FindSysconfigRequestView request,
                      FindSysconfigCompleter::Sync& completer) override;
 
-  void FindSysconfig(zx::channel sysconfig);
+  void FindSysconfig(fidl::ServerEnd<fuchsia_paver::Sysconfig> sysconfig);
 
   void set_dispatcher(async_dispatcher_t* dispatcher) { dispatcher_ = dispatcher; }
   void set_devfs_root(fbl::unique_fd devfs_root) { devfs_root_ = std::move(devfs_root); }
@@ -87,11 +88,11 @@ class DataSinkImpl {
   zx::result<fuchsia_mem::wire::Buffer> ReadFirmware(
       fuchsia_paver::wire::Configuration configuration, fidl::StringView type);
 
-  zx::result<> WriteVolumes(zx::channel payload_stream);
+  zx::result<> WriteVolumes(fidl::ClientEnd<fuchsia_paver::PayloadStream> payload_stream);
 
   zx::result<> WriteBootloader(fuchsia_mem::wire::Buffer payload);
 
-  zx::result<zx::channel> WipeVolume();
+  zx::result<fidl::ClientEnd<fuchsia_hardware_block_volume::VolumeManager>> WipeVolume();
 
   DevicePartitioner* partitioner() { return partitioner_.get(); }
 
@@ -113,7 +114,8 @@ class DataSink : public fidl::WireServer<fuchsia_paver::DataSink> {
 
   // Automatically finds block device to use.
   static void Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
-                   fidl::ClientEnd<fuchsia_io::Directory> svc_root, zx::channel server,
+                   fidl::ClientEnd<fuchsia_io::Directory> svc_root,
+                   fidl::ServerEnd<fuchsia_paver::DataSink> server,
                    std::shared_ptr<Context> context);
 
   void ReadAsset(ReadAssetRequestView request, ReadAssetCompleter::Sync& completer) override;
@@ -142,7 +144,7 @@ class DataSink : public fidl::WireServer<fuchsia_paver::DataSink> {
 
   void WriteVolumes(WriteVolumesRequestView request,
                     WriteVolumesCompleter::Sync& completer) override {
-    completer.Reply(sink_.WriteVolumes(request->payload.TakeChannel()).status_value());
+    completer.Reply(sink_.WriteVolumes(std::move(request->payload)).status_value());
   }
 
   void WriteBootloader(WriteBootloaderRequestView request,
@@ -166,8 +168,10 @@ class DynamicDataSink : public fidl::WireServer<fuchsia_paver::DynamicDataSink> 
       : sink_(std::move(devfs_root), std::move(partitioner)) {}
 
   static void Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
-                   fidl::ClientEnd<fuchsia_io::Directory> svc_root, zx::channel block_device,
-                   zx::channel server, std::shared_ptr<Context> context);
+                   fidl::ClientEnd<fuchsia_io::Directory> svc_root,
+                   fidl::ClientEnd<fuchsia_hardware_block::Block> block_device,
+                   fidl::ServerEnd<fuchsia_paver::DynamicDataSink> server,
+                   std::shared_ptr<Context> context);
 
   void InitializePartitionTables(InitializePartitionTablesCompleter::Sync& completer) override;
 
@@ -199,7 +203,7 @@ class DynamicDataSink : public fidl::WireServer<fuchsia_paver::DynamicDataSink> 
 
   void WriteVolumes(WriteVolumesRequestView request,
                     WriteVolumesCompleter::Sync& completer) override {
-    completer.Reply(sink_.WriteVolumes(request->payload.TakeChannel()).status_value());
+    completer.Reply(sink_.WriteVolumes(std::move(request->payload)).status_value());
   }
 
   void WriteBootloader(WriteBootloaderRequestView request,
@@ -227,7 +231,8 @@ class BootManager : public fidl::WireServer<fuchsia_paver::BootManager> {
 
   static void Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
                    fidl::ClientEnd<fuchsia_io::Directory> svc_root,
-                   std::shared_ptr<Context> context, zx::channel server);
+                   std::shared_ptr<Context> context,
+                   fidl::ServerEnd<fuchsia_paver::BootManager> server);
 
   void QueryCurrentConfiguration(QueryCurrentConfigurationCompleter::Sync& completer) override;
 

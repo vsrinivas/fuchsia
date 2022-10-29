@@ -5,6 +5,11 @@
 #ifndef SRC_STORAGE_F2FS_MKFS_H_
 #define SRC_STORAGE_F2FS_MKFS_H_
 
+#include <utility>
+
+#include "src/storage/f2fs/bcache.h"
+#include "src/storage/f2fs/f2fs_layout.h"
+
 namespace f2fs {
 
 constexpr uint32_t kChecksumOffset = 4092;
@@ -24,8 +29,8 @@ struct MkfsOptions {
 
 class MkfsWorker {
  public:
-  explicit MkfsWorker(std::unique_ptr<Bcache> bc, const MkfsOptions& options)
-      : bc_(std::move(bc)), mkfs_options_(options) {}
+  explicit MkfsWorker(std::unique_ptr<Bcache> bc, MkfsOptions options)
+      : bc_(std::move(bc)), mkfs_options_(std::move(options)) {}
 
   // Not copyable or moveable
   MkfsWorker(const MkfsWorker&) = delete;
@@ -77,7 +82,7 @@ zx_status_t ParseOptions(int argc, char** argv, MkfsOptions& options);
 
 zx::result<std::unique_ptr<Bcache>> Mkfs(const MkfsOptions& options, std::unique_ptr<Bcache> bc);
 
-void AsciiToUnicode(const std::string_view in_string, std::u16string& out_string);
+void AsciiToUnicode(std::string_view in_string, std::u16string& out_string);
 
 }  // namespace f2fs
 

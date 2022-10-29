@@ -7,6 +7,12 @@
 
 #include <map>
 
+#include "src/storage/f2fs/bcache.h"
+#include "src/storage/f2fs/f2fs_layout.h"
+#include "src/storage/f2fs/f2fs_types.h"
+#include "src/storage/f2fs/node.h"
+#include "src/storage/f2fs/segment.h"
+
 namespace f2fs {
 
 struct FsckOptions {
@@ -234,7 +240,7 @@ class FsckWorker {
     return superblock_info_.StartCpAddr() +
            LeToCpu(superblock_info_.GetCheckpoint().cp_pack_total_block_count) - (base + 1) + type;
   }
-  void NodeInfoFromRawNat(NodeInfoDeprecated &ni, RawNatEntry &raw_nat) {
+  static void NodeInfoFromRawNat(NodeInfoDeprecated &ni, RawNatEntry &raw_nat) {
     ni.ino = LeToCpu(raw_nat.ino);
     ni.blk_addr = LeToCpu(raw_nat.block_addr);
     ni.version = raw_nat.version;

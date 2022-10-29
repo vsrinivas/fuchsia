@@ -4,10 +4,10 @@
 
 // Tests minfs backup superblock behavior.
 
-#include "src/storage/minfs/superblock.h"
-
 #include <lib/cksum.h>
 #include <unistd.h>
+
+#include <memory>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -16,7 +16,6 @@
 #include "src/lib/storage/block_client/cpp/reader.h"
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/fsck.h"
-#include "src/storage/minfs/minfs_private.h"
 
 namespace minfs {
 namespace {
@@ -32,7 +31,7 @@ constexpr size_t integrity_block = 8;
 // Mock TransactionHandler class to be used in superblock tests.
 class MockTransactionHandler : public fs::DeviceTransactionHandler {
  public:
-  MockTransactionHandler(block_client::BlockDevice* device) { device_ = device; }
+  explicit MockTransactionHandler(block_client::BlockDevice* device) { device_ = device; }
 
   MockTransactionHandler(const MockTransactionHandler&) = delete;
   MockTransactionHandler(MockTransactionHandler&&) = delete;
@@ -50,7 +49,7 @@ class MockTransactionHandler : public fs::DeviceTransactionHandler {
 
 void CreateAndRegisterVmo(block_client::BlockDevice* device, size_t blocks, zx::vmo* vmo,
                           storage::OwnedVmoid* vmoid) {
-  fuchsia_hardware_block_BlockInfo info = {};
+  fuchsia_hardware_block::wire::BlockInfo info = {};
   ASSERT_EQ(device->BlockGetInfo(&info), ZX_OK);
   ASSERT_EQ(zx::vmo::create(blocks * info.block_size, 0, vmo), ZX_OK);
   ASSERT_EQ(device->BlockAttachVmo(*vmo, &vmoid->GetReference(device)), ZX_OK);
@@ -99,8 +98,7 @@ TEST(SuperblockTest, TestBitmapReconstruction) {
   FillSuperblockFields(&info);
 
   FakeBlockDevice device = FakeBlockDevice(100, kMinfsBlockSize);
-  auto transaction_handler =
-      std::unique_ptr<MockTransactionHandler>(new MockTransactionHandler(&device));
+  auto transaction_handler = std::make_unique<MockTransactionHandler>(&device);
 
   uint8_t block[minfs::kMinfsBlockSize];
   memset(block, 0, sizeof(block));
@@ -173,8 +171,7 @@ TEST(SuperblockTest, TestCorruptSuperblockWithoutCorrection) {
   FillSuperblockFields(&info);
 
   FakeBlockDevice device = FakeBlockDevice(100, kMinfsBlockSize);
-  auto transaction_handler =
-      std::unique_ptr<MockTransactionHandler>(new MockTransactionHandler(&device));
+  auto transaction_handler = std::make_unique<MockTransactionHandler>(&device);
 
   Superblock backup;
   memcpy(&backup, &info, sizeof(backup));
@@ -220,8 +217,7 @@ TEST(SuperblockTest, TestCorruptSuperblockWithCorrection) {
   FillSuperblockFields(&info);
 
   FakeBlockDevice device = FakeBlockDevice(100, kMinfsBlockSize);
-  auto transaction_handler =
-      std::unique_ptr<MockTransactionHandler>(new MockTransactionHandler(&device));
+  auto transaction_handler = std::make_unique<MockTransactionHandler>(&device);
 
   Superblock backup;
   memcpy(&backup, &info, sizeof(backup));
@@ -259,8 +255,7 @@ TEST(SuperblockTest, TestCorruptSuperblockWithCorrection) {
 // Tests if Repair of corrupted superblock reconstructs the bitmaps correctly.
 TEST(SuperblockTest, TestRepairSuperblockWithBitmapReconstruction) {
   FakeBlockDevice device = FakeBlockDevice(100, kMinfsBlockSize);
-  auto transaction_handler =
-      std::unique_ptr<MockTransactionHandler>(new MockTransactionHandler(&device));
+  auto transaction_handler = std::make_unique<MockTransactionHandler>(&device);
 
   Superblock backup;
   FillSuperblockFields(&backup);

@@ -26,6 +26,7 @@ class fifo {
 
   void reset(zx_handle_t value = ZX_HANDLE_INVALID) { fifo_.reset(value); }
 
+  zx::fifo& get() { return fifo_; }
   const zx::fifo& get() const { return fifo_; }
 
   zx_handle_t get_handle() const { return fifo_.get(); }

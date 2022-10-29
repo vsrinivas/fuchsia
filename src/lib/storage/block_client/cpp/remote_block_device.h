@@ -5,10 +5,9 @@
 #ifndef SRC_LIB_STORAGE_BLOCK_CLIENT_CPP_REMOTE_BLOCK_DEVICE_H_
 #define SRC_LIB_STORAGE_BLOCK_CLIENT_CPP_REMOTE_BLOCK_DEVICE_H_
 
+#include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
-#include <fuchsia/device/c/fidl.h>
-#include <fuchsia/hardware/block/c/fidl.h>
-#include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
@@ -17,6 +16,7 @@
 #include <mutex>
 
 #include "src/lib/storage/block_client/cpp/block_device.h"
+#include "src/lib/storage/block_client/cpp/client.h"
 
 namespace block_client {
 
@@ -25,35 +25,32 @@ namespace block_client {
 // This class is not movable or copyable.
 class RemoteBlockDevice final : public BlockDevice {
  public:
-  static zx_status_t Create(zx::channel device, std::unique_ptr<RemoteBlockDevice>* out);
   static zx_status_t Create(fidl::ClientEnd<fuchsia_hardware_block::Block> device,
-                            std::unique_ptr<RemoteBlockDevice>* out) {
-    return Create(device.TakeChannel(), out);
-  }
+                            std::unique_ptr<RemoteBlockDevice>* out);
   static zx::result<std::unique_ptr<RemoteBlockDevice>> Create(int fd);
   RemoteBlockDevice& operator=(RemoteBlockDevice&&) = delete;
   RemoteBlockDevice(RemoteBlockDevice&&) = delete;
   RemoteBlockDevice& operator=(const RemoteBlockDevice&) = delete;
   RemoteBlockDevice(const RemoteBlockDevice&) = delete;
-  ~RemoteBlockDevice();
+  ~RemoteBlockDevice() override;
 
   zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) final;
   zx::result<std::string> GetDevicePath() const final;
-  zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const final;
   zx_status_t BlockGetInfo(fuchsia_hardware_block::wire::BlockInfo* out_info) const final;
   zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out_vmoid) final;
-  zx_status_t VolumeGetInfo(fuchsia_hardware_block_volume_VolumeManagerInfo* out_manager_info,
-                            fuchsia_hardware_block_volume_VolumeInfo* out_volume_info) const final;
+  zx_status_t VolumeGetInfo(
+      fuchsia_hardware_block_volume::wire::VolumeManagerInfo* out_manager_info,
+      fuchsia_hardware_block_volume::wire::VolumeInfo* out_volume_info) const final;
   zx_status_t VolumeQuerySlices(const uint64_t* slices, size_t slices_count,
-                                fuchsia_hardware_block_volume_VsliceRange* out_ranges,
+                                fuchsia_hardware_block_volume::wire::VsliceRange* out_ranges,
                                 size_t* out_ranges_count) const final;
   zx_status_t VolumeExtend(uint64_t offset, uint64_t length) final;
   zx_status_t VolumeShrink(uint64_t offset, uint64_t length) final;
 
  private:
-  RemoteBlockDevice(zx::channel device, zx::fifo fifo);
+  RemoteBlockDevice(fidl::ClientEnd<fuchsia_hardware_block::Block> device, zx::fifo fifo);
 
-  zx::channel device_;
+  const fidl::ClientEnd<fuchsia_hardware_block::Block> device_;
   block_client::Client fifo_client_;
 };
 

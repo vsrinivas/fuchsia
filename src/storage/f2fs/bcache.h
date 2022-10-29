@@ -15,8 +15,8 @@
 #include <storage/buffer/vmoid_registry.h>
 
 #include "src/lib/storage/block_client/cpp/block_device.h"
-#include "src/lib/storage/block_client/cpp/client.h"
 #include "src/lib/storage/vfs/cpp/transaction/device_transaction_handler.h"
+#include "src/storage/f2fs/f2fs_types.h"
 #else
 #include <storage/buffer/array_buffer.h>
 
@@ -32,7 +32,8 @@ namespace f2fs {
 
 #ifdef __Fuchsia__
 class Bcache;
-zx::result<std::unique_ptr<Bcache>> CreateBcache(zx::channel device, bool* out_readonly = nullptr);
+zx::result<std::unique_ptr<Bcache>> CreateBcache(
+    fidl::ClientEnd<fuchsia_hardware_block::Block> device, bool* out_readonly = nullptr);
 zx::result<std::unique_ptr<Bcache>> CreateBcache(std::unique_ptr<block_client::BlockDevice> device,
                                                  bool* out_readonly = nullptr);
 class Bcache : public fs::DeviceTransactionHandler, public storage::VmoidRegistry {
@@ -119,7 +120,7 @@ class Bcache : public fs::TransactionHandler {
          block_t block_size);
 
   const block_t block_size_;
-  fuchsia_hardware_block_BlockInfo info_ = {};
+  fuchsia_hardware_block::wire::BlockInfo info_ = {};
   std::unique_ptr<block_client::BlockDevice> device_;  // The device, if owned.
   // |buffer_| and |buffer_mutex_| are used in the "Readblk/Writeblk" methods.
   storage::VmoBuffer buffer_ __TA_GUARDED(buffer_mutex_);

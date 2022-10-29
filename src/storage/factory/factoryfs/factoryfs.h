@@ -11,12 +11,10 @@
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 
+#include <fbl/ref_ptr.h>
 #include <storage/buffer/vmoid_registry.h>
 
-#include "src/lib/storage/block_client/cpp/remote_block_device.h"
-#include "src/lib/storage/vfs/cpp/managed_vfs.h"
-#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
-#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 #include "src/storage/factory/factoryfs/directory_entry.h"
 #include "src/storage/factory/factoryfs/format.h"
 #include "src/storage/factory/factoryfs/mount.h"
@@ -53,7 +51,7 @@ class Factoryfs {
   // async_dispatcher_t& dispatcher() { return dispatcher_; }
 
   BlockDevice& Device() const { return *block_device_; }
-  const fuchsia_hardware_block_BlockInfo& GetDeviceBlockInfo() const { return block_info_; }
+  const fuchsia_hardware_block::wire::BlockInfo& GetDeviceBlockInfo() const { return block_info_; }
 
   // Returns a vnode for a given path.
   zx::result<fbl::RefPtr<fs::Vnode>> Lookup(std::string_view path);
@@ -69,7 +67,7 @@ class Factoryfs {
   // iteration stops.
   using Callback = fit::function<zx_status_t(const DirectoryEntry* entry)>;
 
-  Factoryfs(std::unique_ptr<BlockDevice> device, const Superblock* info, fs::FuchsiaVfs* vfs);
+  Factoryfs(std::unique_ptr<BlockDevice> device, const Superblock* superblock, fs::FuchsiaVfs* vfs);
 
   uint64_t GetDirectorySize() const {
     return superblock_.directory_ent_blocks * kFactoryfsBlockSize;
@@ -92,7 +90,7 @@ class Factoryfs {
   // async_dispatcher_t* dispatcher_ = nullptr;
   std::unique_ptr<BlockDevice> block_device_;
   Superblock superblock_;
-  fuchsia_hardware_block_BlockInfo block_info_ = {};
+  fuchsia_hardware_block::wire::BlockInfo block_info_ = {};
 
   fs::FuchsiaVfs* vfs_ = nullptr;
 

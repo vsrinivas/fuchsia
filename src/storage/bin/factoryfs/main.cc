@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <getopt.h>
 #include <lib/fdio/directory.h>
+#include <lib/fdio/vfs.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/resource.h>
@@ -24,7 +25,6 @@
 #include <fbl/vector.h>
 
 #include "src/lib/storage/block_client/cpp/remote_block_device.h"
-#include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/storage/factory/factoryfs/fsck.h"
 #include "src/storage/factory/factoryfs/mkfs.h"
 #include "src/storage/factory/factoryfs/mount.h"
@@ -48,8 +48,7 @@ zx_status_t Fsck(std::unique_ptr<BlockDevice> device, factoryfs::MountOptions* o
   return factoryfs::Fsck(std::move(device), options);
 }
 
-typedef zx_status_t (*CommandFunction)(std::unique_ptr<BlockDevice> device,
-                                       factoryfs::MountOptions* options);
+using CommandFunction = zx_status_t (*)(std::unique_ptr<BlockDevice>, factoryfs::MountOptions*);
 
 const struct {
   const char* name;
@@ -82,7 +81,7 @@ zx_status_t usage() {
 
 zx_status_t ProcessArgs(int argc, char** argv, CommandFunction* func,
                         factoryfs::MountOptions* options) {
-  while (1) {
+  while (true) {
     static struct option opts[] = {
         {"verbose", no_argument, nullptr, 'v'},
         {"help", no_argument, nullptr, 'h'},
@@ -150,7 +149,8 @@ int main(int argc, char** argv) {
   }
 
   std::unique_ptr<RemoteBlockDevice> device;
-  status = RemoteBlockDevice::Create(std::move(block_connection), &device);
+  status = RemoteBlockDevice::Create(
+      fidl::ClientEnd<fuchsia_hardware_block::Block>(std::move(block_connection)), &device);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Could not initialize block device";
     return EXIT_FAILURE;

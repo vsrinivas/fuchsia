@@ -27,7 +27,8 @@ zx_status_t Connect(void* ctx, async_dispatcher_t* dispatcher, const char* servi
   if (!strcmp(service_name, fidl::DiscoverableProtocolName<fuchsia_paver::Paver>)) {
     auto* paver = reinterpret_cast<paver::Paver*>(ctx);
     paver->set_dispatcher(dispatcher);
-    return fidl::BindSingleInFlightOnly(dispatcher, zx::channel(request), paver);
+    return fidl::BindSingleInFlightOnly(
+        dispatcher, fidl::ServerEnd<fuchsia_paver::Paver>(zx::channel(request)), paver);
   }
 
   zx_handle_close(request);

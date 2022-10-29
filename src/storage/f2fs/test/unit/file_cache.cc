@@ -7,7 +7,6 @@
 #include <gtest/gtest.h>
 #include <safemath/checked_math.h>
 
-#include "src/lib/storage/block_client/cpp/fake_block_device.h"
 #include "src/storage/f2fs/f2fs.h"
 #include "unit_lib.h"
 
@@ -32,7 +31,7 @@ TEST_F(FileCacheTest, WaitOnLock) {
 
     std::thread thread([&]() { unlocked_page->Unlock(); });
     // Wait for |thread| to unlock |page|.
-    page = unlocked_page;
+    page = LockedPage(unlocked_page);
     thread.join();
   }
 
@@ -146,7 +145,7 @@ TEST_F(FileCacheTest, WritebackOperation) {
                            .end = 2,
                            .to_write = 2,
                            .bSync = false,
-                           .if_page = [&key](fbl::RefPtr<Page> page) {
+                           .if_page = [&key](const fbl::RefPtr<Page> &page) {
                              if (page->GetKey() <= key) {
                                return ZX_OK;
                              }

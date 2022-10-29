@@ -144,7 +144,8 @@ zx::result<std::unique_ptr<PartitionClient>> NelsonPartitioner::FindPartition(
     case Partition::kBootloaderA: {
       if (spec.content_type == "bl2") {
         return GetEmmcBootPartitionClient();
-      } else if (spec.content_type == "tpl") {
+      }
+      if (spec.content_type == "tpl") {
         part_info = "tpl_a";
       } else {
         return zx::error(ZX_ERR_INVALID_ARGS);
@@ -201,13 +202,12 @@ zx::result<std::unique_ptr<PartitionClient>> NelsonPartitioner::FindPartition(
       return partition.take_error();
     }
     return zx::ok(new BlockPartitionClient(std::move(partition.value())));
-  } else {
-    auto status = gpt_->FindPartition(std::move(filter_by_name));
-    if (status.is_error()) {
-      return status.take_error();
-    }
-    return zx::ok(std::move(status->partition));
   }
+  auto status = gpt_->FindPartition(std::move(filter_by_name));
+  if (status.is_error()) {
+    return status.take_error();
+  }
+  return zx::ok(std::move(status->partition));
 }
 
 zx::result<> NelsonPartitioner::WipeFvm() const { return gpt_->WipeFvm(); }
@@ -248,8 +248,7 @@ zx::result<std::unique_ptr<abr::Client>> NelsonAbrClientFactory::New(
     fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
     std::shared_ptr<paver::Context> context) {
   fbl::unique_fd none;
-  auto partitioner =
-      NelsonPartitioner::Initialize(std::move(devfs_root), std::move(svc_root), none);
+  auto partitioner = NelsonPartitioner::Initialize(std::move(devfs_root), svc_root, none);
 
   if (partitioner.is_error()) {
     return partitioner.take_error();
@@ -301,7 +300,7 @@ zx::result<> NelsonBootloaderPartitionClient::Flush() {
 fidl::ClientEnd<fuchsia_hardware_block::Block> NelsonBootloaderPartitionClient::GetChannel() {
   ERROR("GetChannel() is not supported for NelsonBootloaderPartitionClient\n");
   ZX_ASSERT(false);
-  return zx::channel();
+  return {};
 }
 
 fbl::unique_fd NelsonBootloaderPartitionClient::block_fd() {

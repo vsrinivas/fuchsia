@@ -5,6 +5,11 @@
 #ifndef SRC_STORAGE_F2FS_MOUNT_H_
 #define SRC_STORAGE_F2FS_MOUNT_H_
 
+#include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.process.lifecycle/cpp/wire.h>
+
+#include "src/storage/f2fs/bcache.h"
+
 namespace f2fs {
 
 constexpr uint32_t kOptMaxNum = 13;
@@ -45,9 +50,9 @@ class MountOptions {
   MountOptions();
   MountOptions(const MountOptions &) = default;
 
-  zx_status_t GetValue(const uint32_t opt_id, uint32_t *out) const;
+  zx_status_t GetValue(uint32_t opt_id, uint32_t *out) const;
   uint32_t GetOptionID(std::string_view opt) const;
-  zx_status_t SetValue(std::string_view opt, const uint32_t value);
+  zx_status_t SetValue(std::string_view opt, uint32_t value);
   std::string_view GetNameView(const uint32_t opt_id) {
     ZX_ASSERT(opt_id < kOptMaxNum);
     return opt_[opt_id].name;

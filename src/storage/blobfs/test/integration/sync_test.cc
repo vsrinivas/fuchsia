@@ -8,12 +8,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/lib/storage/block_client/cpp/block_device.h"
 #include "src/lib/storage/block_client/cpp/fake_block_device.h"
-#include "src/storage/blobfs/blobfs.h"
-#include "src/storage/blobfs/mkfs.h"
-#include "src/storage/blobfs/mount.h"
-#include "src/storage/blobfs/runner.h"
 #include "src/storage/blobfs/test/blob_utils.h"
 #include "src/storage/blobfs/test/integration/blobfs_fixtures.h"
 #include "src/storage/blobfs/test/integration/fdio_test.h"
@@ -24,7 +19,7 @@ namespace {
 using SyncFdioTest = FdioTest;
 
 uint64_t GetSucceededFlushCalls(block_client::FakeBlockDevice* device) {
-  fuchsia_hardware_block_BlockStats stats;
+  fuchsia_hardware_block::wire::BlockStats stats;
   device->GetStats(true, &stats);
   return stats.flush.success.total_calls;
 }
@@ -57,7 +52,7 @@ TEST_F(SyncFdioTest, Sync) {
   // between writing to the journal and writing to the final metadata location, and then another one
   // prior to writing a new info-block, so we should see 3 flush calls plus a flush that's triggered
   // when we format, so 4 in total.
-  fuchsia_hardware_block_BlockStats stats;
+  fuchsia_hardware_block::wire::BlockStats stats;
   block_device()->GetStats(true, &stats);
   EXPECT_LE(1u, stats.write.success.total_calls);
   EXPECT_EQ(4u, stats.flush.success.total_calls);

@@ -15,26 +15,24 @@ using block_client::BlockDevice;
 
 class MockDeviceBase : public BlockDevice {
  public:
-  virtual ~MockDeviceBase() = default;
+  ~MockDeviceBase() override = default;
   zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) final {
     return ZX_ERR_NOT_SUPPORTED;
   }
   zx::result<std::string> GetDevicePath() const final { return zx::error(ZX_ERR_NOT_SUPPORTED); }
-  zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const final {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
   zx_status_t BlockGetInfo(fuchsia_hardware_block::wire::BlockInfo* out_info) const final {
     return ZX_ERR_NOT_SUPPORTED;
   }
   zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out_vmoid) final {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  zx_status_t VolumeGetInfo(fuchsia_hardware_block_volume_VolumeManagerInfo* out_manager,
-                            fuchsia_hardware_block_volume_VolumeInfo* out_volume) const final {
+  zx_status_t VolumeGetInfo(
+      fuchsia_hardware_block_volume::wire::VolumeManagerInfo* out_manager,
+      fuchsia_hardware_block_volume::wire::VolumeInfo* out_volume) const final {
     return ZX_ERR_NOT_SUPPORTED;
   }
   zx_status_t VolumeQuerySlices(const uint64_t* slices, size_t slices_count,
-                                fuchsia_hardware_block_volume_VsliceRange* out_ranges,
+                                fuchsia_hardware_block_volume::wire::VsliceRange* out_ranges,
                                 size_t* out_ranges_count) const override {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -52,7 +50,7 @@ TEST(FvmClientTest, ResetSlicesNotSupported) {
 class MockBadDevice : public MockDeviceBase {
  public:
   zx_status_t VolumeQuerySlices(const uint64_t* slices, size_t slices_count,
-                                fuchsia_hardware_block_volume_VsliceRange* out_ranges,
+                                fuchsia_hardware_block_volume::wire::VsliceRange* out_ranges,
                                 size_t* out_ranges_count) const override {
     *out_ranges_count = 0;
     return ZX_OK;
@@ -69,7 +67,7 @@ TEST(FvmClientTest, ResetSlicesBadDevice) {
 class MockOneSliceRangeDevice : public MockDeviceBase {
  public:
   zx_status_t VolumeQuerySlices(const uint64_t* slices, size_t slices_count,
-                                fuchsia_hardware_block_volume_VsliceRange* out_ranges,
+                                fuchsia_hardware_block_volume::wire::VsliceRange* out_ranges,
                                 size_t* out_ranges_count) const override {
     EXPECT_EQ(1, slices_count);
     if (slices[0] == 1) {
@@ -77,9 +75,8 @@ class MockOneSliceRangeDevice : public MockDeviceBase {
       out_ranges[0].allocated = true;
       *out_ranges_count = 1;
       return ZX_OK;
-    } else {
-      return ZX_ERR_OUT_OF_RANGE;
     }
+    return ZX_ERR_OUT_OF_RANGE;
   }
 
   zx_status_t VolumeShrink(uint64_t offset, uint64_t length) override {
@@ -105,7 +102,7 @@ TEST(FvmClientTest, ResetSlicesOneSliceRange) {
 class MockManySliceRangesDevice : public MockDeviceBase {
  public:
   zx_status_t VolumeQuerySlices(const uint64_t* slices, size_t slices_count,
-                                fuchsia_hardware_block_volume_VsliceRange* out_ranges,
+                                fuchsia_hardware_block_volume::wire::VsliceRange* out_ranges,
                                 size_t* out_ranges_count) const override {
     EXPECT_EQ(1, slices_count);
     switch (slices[0]) {

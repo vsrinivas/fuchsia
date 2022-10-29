@@ -5,6 +5,7 @@
 #include "src/storage/testing/ram_disk.h"
 
 #include <lib/fdio/directory.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/job.h>
 #include <lib/zx/time.h>
@@ -57,18 +58,8 @@ zx::result<RamDisk> RamDisk::CreateWithVmo(zx::vmo vmo, uint64_t block_size) {
   return zx::ok(RamDisk(client));
 }
 
-zx::result<zx::channel> RamDisk::channel() const {
-  zx::channel device, device_server;
-  zx_status_t status = zx::channel::create(0, &device, &device_server);
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-  status = fdio_service_connect(path().c_str(), device_server.release());
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-
-  return zx::ok(std::move(device));
+zx::result<fidl::ClientEnd<fuchsia_hardware_block::Block>> RamDisk::channel() const {
+  return component::Connect<fuchsia_hardware_block::Block>(path());
 }
 
 }  // namespace storage

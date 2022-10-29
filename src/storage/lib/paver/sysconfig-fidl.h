@@ -18,7 +18,8 @@ class Sysconfig : public fidl::WireServer<fuchsia_paver::Sysconfig> {
 
   static void Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
                    fidl::ClientEnd<fuchsia_io::Directory> svc_root,
-                   std::shared_ptr<Context> context, zx::channel server);
+                   std::shared_ptr<Context> context,
+                   fidl::ServerEnd<fuchsia_paver::Sysconfig> server);
 
   void Read(ReadCompleter::Sync& completer) override;
 

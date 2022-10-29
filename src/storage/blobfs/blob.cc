@@ -6,8 +6,8 @@
 
 #include <assert.h>
 #include <ctype.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <fuchsia/device/c/fidl.h>
 #include <lib/fit/defer.h>
 #include <lib/sync/completion.h>
 #include <lib/syslog/cpp/macros.h>
@@ -34,18 +34,15 @@
 
 #include "src/lib/digest/digest.h"
 #include "src/lib/digest/merkle-tree.h"
-#include "src/lib/digest/node-digest.h"
 #include "src/lib/storage/vfs/cpp/journal/data_streamer.h"
 #include "src/storage/blobfs/blob_data_producer.h"
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/blobfs/blob_verifier.h"
 #include "src/storage/blobfs/blobfs.h"
 #include "src/storage/blobfs/common.h"
-#include "src/storage/blobfs/compression/chunked.h"
 #include "src/storage/blobfs/compression/streaming_chunked_decompressor.h"
 #include "src/storage/blobfs/compression_settings.h"
 #include "src/storage/blobfs/format.h"
-#include "src/storage/blobfs/iterator/allocated_extent_iterator.h"
 #include "src/storage/blobfs/iterator/block_iterator.h"
 #include "src/storage/blobfs/iterator/extent_iterator.h"
 #include "src/storage/blobfs/iterator/node_populator.h"
@@ -723,7 +720,8 @@ zx_status_t Blob::GetReadableEvent(zx::event* out) {
     status = zx::event::create(0, &readable_event_);
     if (status != ZX_OK) {
       return status;
-    } else if (state() == BlobState::kReadable) {
+    }
+    if (state() == BlobState::kReadable) {
       readable_event_.signal(0u, ZX_USER_SIGNAL_0);
     }
   }
@@ -747,15 +745,15 @@ zx_status_t Blob::CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo) {
     return ZX_ERR_BAD_STATE;
   }
 
-  auto status = LoadVmosFromDisk();
-  if (status != ZX_OK) {
+  if (zx_status_t status = LoadVmosFromDisk(); status != ZX_OK) {
     return status;
   }
 
   zx::vmo clone;
-  status = paged_vmo().create_child(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE, 0, blob_size_, &clone);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create child VMO: " << zx_status_get_string(status);
+  if (zx_status_t status =
+          paged_vmo().create_child(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE, 0, blob_size_, &clone);
+      status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to create child VMO";
     return status;
   }
   DidClonePagedVmo();
@@ -770,13 +768,13 @@ zx_status_t Blob::CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo) {
       FX_LOGS(ERROR) << "No VMEX resource available, executable blobs unsupported";
       return ZX_ERR_NOT_SUPPORTED;
     }
-    if ((status = clone.replace_as_executable(vmex, &clone)) != ZX_OK) {
+    if (zx_status_t status = clone.replace_as_executable(vmex, &clone); status != ZX_OK) {
       return status;
     }
   }
 
   // Narrow rights to those requested.
-  if ((status = clone.replace(rights, &clone)) != ZX_OK) {
+  if (zx_status_t status = clone.replace(rights, &clone); status != ZX_OK) {
     return status;
   }
   *out_vmo = std::move(clone);
@@ -1104,7 +1102,8 @@ zx_status_t Blob::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo) {
 
   if (flags & fuchsia_io::wire::VmoFlags::kWrite) {
     return ZX_ERR_NOT_SUPPORTED;
-  } else if (flags & fuchsia_io::wire::VmoFlags::kSharedBuffer) {
+  }
+  if (flags & fuchsia_io::wire::VmoFlags::kSharedBuffer) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 

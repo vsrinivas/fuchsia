@@ -7,8 +7,6 @@
 #ifndef SRC_STORAGE_BLOBFS_DIRECTORY_H_
 #define SRC_STORAGE_BLOBFS_DIRECTORY_H_
 
-#include <fidl/fuchsia.io/cpp/wire.h>
-
 #include <string_view>
 
 #include <fbl/algorithm.h>

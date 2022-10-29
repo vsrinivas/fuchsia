@@ -28,15 +28,12 @@ constexpr uint32_t kNumBlocks = 400 * kBlocksPerBlobfsBlock;
 // of a block device and the tests can check the block device after corrupting a blob.
 class ProxyBlockDevice : public BlockDevice {
  public:
-  ProxyBlockDevice(BlockDevice* inner) : inner_(inner) {}
+  explicit ProxyBlockDevice(BlockDevice* inner) : inner_(inner) {}
 
   zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) override {
     return inner_->FifoTransaction(requests, count);
   }
   zx::result<std::string> GetDevicePath() const override { return inner_->GetDevicePath(); }
-  zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const override {
-    return inner_->BlockGetInfo(out_info);
-  }
   zx_status_t BlockGetInfo(fuchsia_hardware_block::wire::BlockInfo* out_info) const override {
     return inner_->BlockGetInfo(out_info);
   }
@@ -44,12 +41,13 @@ class ProxyBlockDevice : public BlockDevice {
     return inner_->BlockAttachVmo(vmo, out_vmoid);
   }
 
-  zx_status_t VolumeGetInfo(fuchsia_hardware_block_volume_VolumeManagerInfo* out_manager,
-                            fuchsia_hardware_block_volume_VolumeInfo* out_volume) const override {
+  zx_status_t VolumeGetInfo(
+      fuchsia_hardware_block_volume::wire::VolumeManagerInfo* out_manager,
+      fuchsia_hardware_block_volume::wire::VolumeInfo* out_volume) const override {
     return inner_->VolumeGetInfo(out_manager, out_volume);
   }
   zx_status_t VolumeQuerySlices(const uint64_t* slices, size_t slices_count,
-                                fuchsia_hardware_block_volume_VsliceRange* out_ranges,
+                                fuchsia_hardware_block_volume::wire::VsliceRange* out_ranges,
                                 size_t* out_ranges_count) const override {
     return inner_->VolumeQuerySlices(slices, slices_count, out_ranges, out_ranges_count);
   }
@@ -109,7 +107,7 @@ std::unique_ptr<MockBlockDevice> CreateAndFormatDevice() {
 
 class ZeroDiskTest : public zxtest::Test {
  public:
-  void SetUp() { device_ = std::make_unique<MockBlockDevice>(kNumBlocks, kBlockSize); }
+  void SetUp() override { device_ = std::make_unique<MockBlockDevice>(kNumBlocks, kBlockSize); }
 
  protected:
   std::unique_ptr<MockBlockDevice> device_;
@@ -117,7 +115,7 @@ class ZeroDiskTest : public zxtest::Test {
 
 class BlobfsDiskTest : public ZeroDiskTest {
  public:
-  void SetUp() {
+  void SetUp() override {
     device_ = CreateAndFormatDevice();
     ASSERT_TRUE(device_);
 

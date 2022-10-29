@@ -15,10 +15,6 @@
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 
-#ifdef __Fuchsia__
-#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
-#endif  // __Fuchsia__
-
 namespace f2fs {
 
 F2fs::F2fs(FuchsiaDispatcher dispatcher, std::unique_ptr<f2fs::Bcache> bc,

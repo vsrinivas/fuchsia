@@ -4,7 +4,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/block/c/fidl.h>
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -99,46 +99,70 @@ static zx_duration_t iotime_block(int is_read, int fd, size_t total, size_t bufs
 }
 
 static zx_duration_t iotime_fifo(char* dev, int is_read, int fd, size_t total, size_t bufsz) {
-  zx_status_t status;
   zx::vmo vmo;
-  if ((status = zx::vmo::create(bufsz, 0, &vmo)) != ZX_OK) {
-    fprintf(stderr, "error: out of memory %d\n", status);
+  if (zx_status_t status = zx::vmo::create(bufsz, 0, &vmo); status != ZX_OK) {
+    fprintf(stderr, "error: out of memory: %s\n", zx_status_get_string(status));
     return ZX_TIME_INFINITE;
   }
 
   fdio_cpp::UnownedFdioCaller disk_connection(fd);
-  zx::unowned_channel channel(disk_connection.borrow_channel());
-  fuchsia_hardware_block_BlockInfo info;
+  fidl::UnownedClientEnd channel = disk_connection.borrow_as<fuchsia_hardware_block::Block>();
 
-  zx_status_t io_status = fuchsia_hardware_block_BlockGetInfo(channel->get(), &status, &info);
-  if (io_status != ZX_OK || status != ZX_OK) {
-    fprintf(stderr, "error: cannot get info for '%s'\n", dev);
-    return ZX_TIME_INFINITE;
+  fuchsia_hardware_block::wire::BlockInfo info;
+  {
+    const fidl::WireResult result = fidl::WireCall(channel)->GetInfo();
+    if (!result.ok()) {
+      fprintf(stderr, "error: cannot get info for '%s':%s\n", dev,
+              result.FormatDescription().c_str());
+      return ZX_TIME_INFINITE;
+    }
+    const fidl::WireResponse response = result.value();
+    if (zx_status_t status = response.status; status != ZX_OK) {
+      fprintf(stderr, "error: cannot get info for '%s':%s\n", dev, zx_status_get_string(status));
+      return ZX_TIME_INFINITE;
+    }
+    info = *response.info;
   }
 
   zx::fifo fifo;
-  io_status =
-      fuchsia_hardware_block_BlockGetFifo(channel->get(), &status, fifo.reset_and_get_address());
-  if (io_status != ZX_OK || status != ZX_OK) {
-    fprintf(stderr, "error: cannot get fifo for '%s'\n", dev);
-    return ZX_TIME_INFINITE;
+  {
+    fidl::WireResult result = fidl::WireCall(channel)->GetFifo();
+    if (!result.ok()) {
+      fprintf(stderr, "error: cannot get fifo for '%s':%s\n", dev,
+              result.FormatDescription().c_str());
+      return ZX_TIME_INFINITE;
+    }
+    auto& response = result.value();
+    if (zx_status_t status = response.status; status != ZX_OK) {
+      fprintf(stderr, "error: cannot get fifo for '%s':%s\n", dev, zx_status_get_string(status));
+      return ZX_TIME_INFINITE;
+    }
+    fifo = std::move(response.fifo);
+  }
+
+  fuchsia_hardware_block::wire::VmoId vmoid;
+  {
+    zx::vmo dup;
+    if (zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup); status != ZX_OK) {
+      fprintf(stderr, "error: cannot duplicate handle: %s\n", zx_status_get_string(status));
+      return ZX_TIME_INFINITE;
+    }
+
+    const fidl::WireResult result = fidl::WireCall(channel)->AttachVmo(std::move(dup));
+    if (!result.ok()) {
+      fprintf(stderr, "error: cannot attach vmo for '%s':%s\n", dev,
+              result.FormatDescription().c_str());
+      return ZX_TIME_INFINITE;
+    }
+    const fidl::WireResponse response = result.value();
+    if (zx_status_t status = response.status; status != ZX_OK) {
+      fprintf(stderr, "error: cannot attach vmo for '%s':%s\n", dev, zx_status_get_string(status));
+      return ZX_TIME_INFINITE;
+    }
+    vmoid = *response.vmoid;
   }
 
   groupid_t group = 0;
-
-  zx::vmo dup;
-  if ((status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup)) != ZX_OK) {
-    fprintf(stderr, "error: cannot duplicate handle %d\n", status);
-    return ZX_TIME_INFINITE;
-  }
-
-  fuchsia_hardware_block_VmoId vmoid;
-  io_status = fuchsia_hardware_block_BlockAttachVmo(channel->get(), dup.release(), &status, &vmoid);
-  if (io_status != ZX_OK || status != ZX_OK) {
-    fprintf(stderr, "error: cannot attach vmo for '%s'\n", dev);
-    return ZX_TIME_INFINITE;
-  }
-
   block_client::Client client(std::move(fifo));
 
   zx_time_t t0 = zx_clock_get_monotonic();
@@ -154,8 +178,8 @@ static zx_duration_t iotime_fifo(char* dev, int is_read, int fd, size_t total, s
         .vmo_offset = 0,
         .dev_offset = (total - n) / info.block_size,
     };
-    if ((status = client.Transaction(&request, 1)) != ZX_OK) {
-      fprintf(stderr, "error: block_fifo_txn error %d\n", status);
+    if (zx_status_t status = client.Transaction(&request, 1); status != ZX_OK) {
+      fprintf(stderr, "error: block_fifo_txn error %s\n", zx_status_get_string(status));
       return ZX_TIME_INFINITE;
     }
     n -= xfer;

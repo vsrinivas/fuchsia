@@ -234,14 +234,14 @@ void CheckPartitionsInRamdisk(const FvmDescriptor& fvm_descriptor) {
 
     if (partition.volume().name == "my-empty-partition") {
       // Check that allocated slices are equal to the slice count for max bytes.
+      fdio_cpp::FdioCaller caller(std::move(partition_fd_or.value()));
+      zx::result channel = caller.take_as<fuchsia_hardware_block::Block>();
+      ASSERT_TRUE(channel.is_ok()) << channel.status_string();
       std::unique_ptr<block_client::RemoteBlockDevice> block_device;
-      zx::channel channel;
-      ASSERT_EQ(
-          fdio_get_service_handle(partition_fd_or->release(), channel.reset_and_get_address()),
-          ZX_OK);
-      ASSERT_EQ(block_client::RemoteBlockDevice::Create(std::move(channel), &block_device), ZX_OK);
+      ASSERT_EQ(block_client::RemoteBlockDevice::Create(std::move(channel.value()), &block_device),
+                ZX_OK);
       std::array<uint64_t, 2> slice_start = {0, 2};
-      using VsliceRange = fuchsia_hardware_block_volume_VsliceRange;
+      using VsliceRange = fuchsia_hardware_block_volume::wire::VsliceRange;
       std::array<VsliceRange, fuchsia_hardware_block_volume::wire::kMaxSliceRequests>
 
           ranges = {};
@@ -261,14 +261,14 @@ void CheckPartitionsInRamdisk(const FvmDescriptor& fvm_descriptor) {
 
     if (partition.volume().name == "internal") {
       // Check that allocated slices are equal to the slice count for max bytes.
+      fdio_cpp::FdioCaller caller(std::move(partition_fd_or.value()));
+      zx::result channel = caller.take_as<fuchsia_hardware_block::Block>();
+      ASSERT_TRUE(channel.is_ok()) << channel.status_string();
       std::unique_ptr<block_client::RemoteBlockDevice> block_device;
-      zx::channel channel;
-      ASSERT_EQ(
-          fdio_get_service_handle(partition_fd_or->release(), channel.reset_and_get_address()),
-          ZX_OK);
-      ASSERT_EQ(block_client::RemoteBlockDevice::Create(std::move(channel), &block_device), ZX_OK);
+      ASSERT_EQ(block_client::RemoteBlockDevice::Create(std::move(channel.value()), &block_device),
+                ZX_OK);
       std::array<uint64_t, 2> slice_start = {0, 4};
-      using VsliceRange = fuchsia_hardware_block_volume_VsliceRange;
+      using VsliceRange = fuchsia_hardware_block_volume::wire::VsliceRange;
       std::array<VsliceRange, fuchsia_hardware_block_volume::wire::kMaxSliceRequests>
 
           ranges = {};

@@ -4,7 +4,7 @@
 
 #include "src/lib/storage/block_client/cpp/fake_block_device.h"
 
-#include <fuchsia/hardware/block/c/fidl.h>
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 
@@ -22,10 +22,10 @@ FakeBlockDevice::FakeBlockDevice(const FakeBlockDevice::Config& config)
       block_size_(config.block_size),
       max_transfer_size_(config.max_transfer_size) {
   ZX_ASSERT(zx::vmo::create(block_count_ * block_size_, ZX_VMO_RESIZABLE, &block_device_) == ZX_OK);
-  ZX_ASSERT(max_transfer_size_ == fuchsia_hardware_block_MAX_TRANSFER_UNBOUNDED ||
+  ZX_ASSERT(max_transfer_size_ == fuchsia_hardware_block::wire::kMaxTransferUnbounded ||
             max_transfer_size_ % block_size_ == 0);
   if (config.supports_trim) {
-    block_info_flags_ |= fuchsia_hardware_block_FLAG_TRIM_SUPPORT;
+    block_info_flags_ |= fuchsia_hardware_block::wire::kFlagTrimSupport;
   }
 }
 
@@ -82,7 +82,7 @@ bool FakeBlockDevice::IsRegistered(vmoid_t vmoid) const {
   return vmos_.find(vmoid) != vmos_.end();
 }
 
-void FakeBlockDevice::GetStats(bool clear, fuchsia_hardware_block_BlockStats* out_stats) {
+void FakeBlockDevice::GetStats(bool clear, fuchsia_hardware_block::wire::BlockStats* out_stats) {
   ZX_ASSERT(out_stats != nullptr);
   fbl::AutoLock lock(&lock_);
   stats_.CopyToFidl(out_stats);
@@ -189,7 +189,7 @@ zx_status_t FakeBlockDevice::FifoTransaction(block_fifo_request_t* requests, siz
       }
       case BLOCKIO_TRIM:
         UpdateStats(false, start_tick, requests[i]);
-        if (!(block_info_flags_ & fuchsia_hardware_block_FLAG_TRIM_SUPPORT)) {
+        if (!(block_info_flags_ & fuchsia_hardware_block::wire::kFlagTrimSupport)) {
           return ZX_ERR_NOT_SUPPORTED;
         }
         if (requests[i].vmoid != BLOCK_VMOID_INVALID) {
@@ -210,15 +210,6 @@ zx_status_t FakeBlockDevice::FifoTransaction(block_fifo_request_t* requests, siz
         return ZX_ERR_NOT_SUPPORTED;
     }
   }
-  return ZX_OK;
-}
-
-zx_status_t FakeBlockDevice::BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const {
-  fbl::AutoLock lock(&lock_);
-  out_info->block_count = block_count_;
-  out_info->block_size = block_size_;
-  out_info->flags = block_info_flags_;
-  out_info->max_transfer_size = max_transfer_size_;
   return ZX_OK;
 }
 
@@ -281,7 +272,7 @@ zx_status_t FakeFVMBlockDevice::FifoTransaction(block_fifo_request_t* requests, 
   // requests will be excuted by the FakeBlockDevice::FifoTransaction() call at the bottom which
   // handles the pause requests.
 
-  fuchsia_hardware_block_BlockInfo info = {};
+  fuchsia_hardware_block::wire::BlockInfo info = {};
   ZX_ASSERT(BlockGetInfo(&info) == ZX_OK);
   ZX_ASSERT_MSG(manager_info_.slice_size >= info.block_size,
                 "Slice size must be larger than block size");
@@ -324,8 +315,8 @@ zx_status_t FakeFVMBlockDevice::FifoTransaction(block_fifo_request_t* requests, 
 }
 
 zx_status_t FakeFVMBlockDevice::VolumeGetInfo(
-    fuchsia_hardware_block_volume_VolumeManagerInfo* out_manager_info,
-    fuchsia_hardware_block_volume_VolumeInfo* out_volume_info) const {
+    fuchsia_hardware_block_volume::wire::VolumeManagerInfo* out_manager_info,
+    fuchsia_hardware_block_volume::wire::VolumeInfo* out_volume_info) const {
   fbl::AutoLock lock(&fvm_lock_);
   *out_manager_info = manager_info_;
   *out_volume_info = volume_info_;
@@ -334,7 +325,7 @@ zx_status_t FakeFVMBlockDevice::VolumeGetInfo(
 
 zx_status_t FakeFVMBlockDevice::VolumeQuerySlices(
     const uint64_t* slices, size_t slices_count,
-    fuchsia_hardware_block_volume_VsliceRange* out_ranges, size_t* out_ranges_count) const {
+    fuchsia_hardware_block_volume::wire::VsliceRange* out_ranges, size_t* out_ranges_count) const {
   *out_ranges_count = 0;
   fbl::AutoLock lock(&fvm_lock_);
   for (size_t i = 0; i < slices_count; i++) {
@@ -449,7 +440,7 @@ zx_status_t FakeFVMBlockDevice::VolumeShrink(uint64_t offset, uint64_t length) {
         range::Range<uint64_t> new_extent(new_start, new_end);
         erased_blocks += iter->second.Length() - new_extent.Length();
         iter = extents_.erase(iter);
-        extents_.emplace(new_start, std::move(new_extent));
+        extents_.emplace(new_start, new_extent);
       } else {
         // Case 3: The overlap splits the extent in two.
         range::Range<uint64_t> before(iter->second.Start(), range.Start());

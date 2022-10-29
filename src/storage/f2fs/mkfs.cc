@@ -2,14 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/storage/f2fs/mkfs.h"
+
 #include <getopt.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <iostream>
 
 #include <safemath/checked_math.h>
 
 #include "src/lib/uuid/uuid.h"
-#include "src/storage/f2fs/f2fs.h"
+#include "src/storage/f2fs/segment.h"
 
 namespace f2fs {
 
@@ -68,7 +71,7 @@ void MkfsWorker::InitGlobalParameters() {
 
 zx_status_t MkfsWorker::GetDeviceInfo() {
 #ifdef __Fuchsia__
-  fuchsia_hardware_block_BlockInfo info;
+  fuchsia_hardware_block::wire::BlockInfo info;
 
   bc_->GetDevice()->BlockGetInfo(&info);
 

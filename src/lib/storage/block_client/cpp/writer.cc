@@ -23,7 +23,7 @@ zx_status_t Writer::Write(uint64_t offset, const size_t count, void* buf) {
       return status;
     }
 
-    fuchsia_hardware_block_BlockInfo info;
+    fuchsia_hardware_block::wire::BlockInfo info;
     if (zx_status_t status = device_.BlockGetInfo(&info); status != ZX_OK)
       return status;
 

@@ -5,6 +5,7 @@
 #ifndef SRC_STORAGE_TESTING_RAM_DISK_H_
 #define SRC_STORAGE_TESTING_RAM_DISK_H_
 
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 #include <zircon/hw/gpt.h>
@@ -36,8 +37,8 @@ class RamDisk {
   static zx::result<RamDisk> CreateWithVmo(zx::vmo vmo, uint64_t block_size = 0);
 
   RamDisk() = default;
-  RamDisk(RamDisk&& other) : client_(other.client_) { other.client_ = nullptr; }
-  RamDisk& operator=(RamDisk&& other) {
+  RamDisk(RamDisk&& other) noexcept : client_(other.client_) { other.client_ = nullptr; }
+  RamDisk& operator=(RamDisk&& other) noexcept {
     if (client_)
       ramdisk_destroy(client_);
     client_ = other.client_;
@@ -56,7 +57,7 @@ class RamDisk {
   std::string path() const { return ramdisk_get_path(client_); }
 
   // Returns a channel to the device.
-  zx::result<zx::channel> channel() const;
+  zx::result<fidl::ClientEnd<fuchsia_hardware_block::Block>> channel() const;
 
   zx::result<> SleepAfter(uint64_t block_count) {
     return zx::make_result(ramdisk_sleep_after(client_, block_count));
@@ -65,7 +66,7 @@ class RamDisk {
   zx::result<> Wake() { return zx::make_result(ramdisk_wake(client_)); }
 
  private:
-  RamDisk(ramdisk_client_t* client) : client_(client) {}
+  explicit RamDisk(ramdisk_client_t* client) : client_(client) {}
 
   ramdisk_client_t* client_ = nullptr;
 };

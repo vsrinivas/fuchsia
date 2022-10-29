@@ -29,7 +29,6 @@
 #include <storage/buffer/vmoid_registry.h>
 
 #include "src/lib/storage/block_client/cpp/block_device.h"
-#include "src/lib/storage/block_client/cpp/client.h"
 #include "src/lib/storage/vfs/cpp/transaction/device_transaction_handler.h"
 #else
 #include <fbl/vector.h>
@@ -52,7 +51,7 @@ class Bcache : public fs::DeviceTransactionHandler, public storage::VmoidRegistr
   Bcache(Bcache&&) = delete;
   Bcache& operator=(Bcache&&) = delete;
 
-  ~Bcache() = default;
+  ~Bcache() override = default;
 
   // Destroys a "bcache" object, but take back ownership of the underlying block device.
   static std::unique_ptr<block_client::BlockDevice> Destroy(std::unique_ptr<Bcache> bcache);
@@ -121,7 +120,7 @@ class Bcache : public fs::DeviceTransactionHandler, public storage::VmoidRegistr
   zx::result<> VerifyDeviceInfo();
 
   uint32_t max_blocks_;
-  fuchsia_hardware_block_BlockInfo info_ = {};
+  fuchsia_hardware_block::wire::BlockInfo info_ = {};
   std::unique_ptr<block_client::BlockDevice> owned_device_;  // The device, if owned.
   block_client::BlockDevice* device_;  // Pointer to the device, irrespective of ownership.
   // This buffer is used as internal scratch space for the "Readblk/Writeblk" methods.

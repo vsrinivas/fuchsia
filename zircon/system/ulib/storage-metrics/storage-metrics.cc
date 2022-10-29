@@ -121,59 +121,54 @@ void CallStat::CopyToFidl(fuchsia_storage_metrics_CallStat* out) const {
 }
 
 zx_ticks_t CallStat::minimum_latency(std::optional<bool> success) const {
-  if (success) {
-    if (*success == true) {
+  if (success.has_value()) {
+    if (success.value()) {
       return success_stat_.minimum_latency;
-    } else {
-      return failure_stat_.minimum_latency;
     }
+    return failure_stat_.minimum_latency;
   }
   return std::min(success_stat_.minimum_latency, failure_stat_.minimum_latency);
 }
 zx_ticks_t CallStat::maximum_latency(std::optional<bool> success) const {
-  if (success) {
-    if (*success == true) {
+  if (success.has_value()) {
+    if (success.value()) {
       return success_stat_.maximum_latency;
-    } else {
-      return failure_stat_.maximum_latency;
     }
+    return failure_stat_.maximum_latency;
   }
   return std::max(success_stat_.maximum_latency, failure_stat_.maximum_latency);
 }
 zx_ticks_t CallStat::total_time_spent(std::optional<bool> success) const {
-  if (success) {
-    if (*success == true) {
+  if (success.has_value()) {
+    if (success.value()) {
       return success_stat_.total_time_spent;
-    } else {
-      return failure_stat_.total_time_spent;
     }
+    return failure_stat_.total_time_spent;
   }
   return success_stat_.total_time_spent + failure_stat_.total_time_spent;
 }
 uint64_t CallStat::total_calls(std::optional<bool> success) const {
-  if (success) {
-    if (*success == true) {
+  if (success.has_value()) {
+    if (success.value()) {
       return success_stat_.total_calls;
-    } else {
-      return failure_stat_.total_calls;
     }
+    return failure_stat_.total_calls;
   }
   return success_stat_.total_calls + failure_stat_.total_calls;
 }
 uint64_t CallStat::bytes_transferred(std::optional<bool> success) const {
-  if (success) {
-    if (*success == true) {
+  if (success.has_value()) {
+    if (success.value()) {
       return success_stat_.bytes_transferred;
-    } else {
-      return failure_stat_.bytes_transferred;
     }
+    return failure_stat_.bytes_transferred;
   }
   return success_stat_.bytes_transferred + failure_stat_.bytes_transferred;
 }
 
 void CallStat::Dump(FILE* stream, const char* stat_name, std::optional<bool> success) const {
   const char* stat_success = "aggregate";
-  if (success) {
+  if (success.has_value()) {
     if (*success) {
       stat_success = "success";
     } else {
@@ -258,17 +253,17 @@ void BlockDeviceMetrics::Dump(FILE* stream, std::optional<bool> success) const {
 }
 
 void BlockDeviceMetrics::UpdateStats(bool success, const zx::ticks start_tick,
-                                     const uint32_t command, const uint64_t bytes_transfered) {
+                                     const uint32_t command, const uint64_t bytes_transferred) {
   zx::ticks duration = zx::ticks::now() - start_tick;
 
   if (block_operation(command) == BLOCK_OP_WRITE) {
-    UpdateWriteStat(success, duration.get(), bytes_transfered);
+    UpdateWriteStat(success, duration.get(), bytes_transferred);
   } else if (block_operation(command) == BLOCK_OP_READ) {
-    UpdateReadStat(success, duration.get(), bytes_transfered);
+    UpdateReadStat(success, duration.get(), bytes_transferred);
   } else if (block_operation(command) == BLOCK_OP_FLUSH) {
-    UpdateFlushStat(success, duration.get(), bytes_transfered);
+    UpdateFlushStat(success, duration.get(), bytes_transferred);
   } else if (block_operation(command) == BLOCK_OP_TRIM) {
-    UpdateTrimStat(success, duration.get(), bytes_transfered);
+    UpdateTrimStat(success, duration.get(), bytes_transferred);
   }
 }
 

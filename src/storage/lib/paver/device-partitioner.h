@@ -146,7 +146,8 @@ class DevicePartitionerFactory {
   // against. It's only meaningful for EFI and CROS devices which may have multiple storage devices.
   static std::unique_ptr<DevicePartitioner> Create(
       fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root, Arch arch,
-      std::shared_ptr<Context> context, zx::channel block_device = zx::channel());
+      std::shared_ptr<Context> context,
+      fidl::ClientEnd<fuchsia_hardware_block::Block> block_device = {});
 
   static void Register(std::unique_ptr<DevicePartitionerFactory> factory);
 
@@ -194,7 +195,7 @@ class FixedDevicePartitioner : public DevicePartitioner {
   zx::result<> Flush() const override { return zx::ok(); }
 
  private:
-  FixedDevicePartitioner(fbl::unique_fd devfs_root) : devfs_root_(std::move(devfs_root)) {}
+  explicit FixedDevicePartitioner(fbl::unique_fd devfs_root) : devfs_root_(std::move(devfs_root)) {}
 
   fbl::unique_fd devfs_root_;
 };

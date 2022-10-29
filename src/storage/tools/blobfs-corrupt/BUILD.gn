@@ -8,16 +8,13 @@ executable("blobfs-corrupt") {
   sources = [ "main.cc" ]
   deps = [
     ":common",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/digest",
     "//src/lib/storage/block_client/cpp",
     "//src/storage/blobfs",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 executable("blobfs-corrupt-test") {
@@ -33,10 +30,6 @@ executable("blobfs-corrupt-test") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zxtest",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 source_set("common") {
@@ -51,10 +44,6 @@ source_set("common") {
     "//src/storage/blobfs",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_unittest_package("blobfs-corrupt-tests") {

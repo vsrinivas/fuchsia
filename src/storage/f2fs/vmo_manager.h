@@ -5,6 +5,11 @@
 #ifndef SRC_STORAGE_F2FS_VMO_MANAGER_H_
 #define SRC_STORAGE_F2FS_VMO_MANAGER_H_
 
+#include <fbl/intrusive_wavl_tree.h>
+
+#include "src/storage/f2fs/f2fs_layout.h"
+#include "src/storage/f2fs/f2fs_types.h"
+
 namespace f2fs {
 
 // It manages the lifecycle of |vmo_| that Pages use in each vnode.
@@ -15,7 +20,7 @@ class VmoNode : public fbl::WAVLTreeContainable<std::unique_ptr<VmoNode>> {
   VmoNode &operator=(const VmoNode &) = delete;
   VmoNode(const VmoNode &&) = delete;
   VmoNode &operator=(const VmoNode &&) = delete;
-  constexpr VmoNode(pgoff_t index) : index_(index) {}
+  constexpr explicit VmoNode(pgoff_t index) : index_(index) {}
   ~VmoNode();
 
   // It ensures that |vmo_| keeps VMO_OP_LOCK as long as any Pages refer to it
@@ -62,8 +67,8 @@ class VmoManager {
   VmoManager &operator=(const VmoManager &&) = delete;
   ~VmoManager() { Reset(true); }
 
-  zx::result<bool> CreateAndLockVmo(const pgoff_t index) __TA_EXCLUDES(tree_lock_);
-  zx_status_t UnlockVmo(const pgoff_t index, const bool evict) __TA_EXCLUDES(tree_lock_);
+  zx::result<bool> CreateAndLockVmo(pgoff_t index) __TA_EXCLUDES(tree_lock_);
+  zx_status_t UnlockVmo(pgoff_t index, bool evict) __TA_EXCLUDES(tree_lock_);
   zx::result<zx_vaddr_t> GetAddress(pgoff_t index) __TA_EXCLUDES(tree_lock_);
   void Reset(bool shutdown = false) __TA_EXCLUDES(tree_lock_);
 
@@ -77,8 +82,8 @@ class VmoManager {
 
   using VmoTreeTraits = fbl::DefaultKeyedObjectTraits<pgoff_t, VmoNode>;
   using VmoTree = fbl::WAVLTree<pgoff_t, std::unique_ptr<VmoNode>, VmoTreeTraits>;
-  zx::result<VmoNode *> FindVmoNodeUnsafe(const pgoff_t index) __TA_REQUIRES_SHARED(tree_lock_);
-  zx::result<VmoNode *> GetVmoNodeUnsafe(const pgoff_t index) __TA_REQUIRES(tree_lock_);
+  zx::result<VmoNode *> FindVmoNodeUnsafe(pgoff_t index) __TA_REQUIRES_SHARED(tree_lock_);
+  zx::result<VmoNode *> GetVmoNodeUnsafe(pgoff_t index) __TA_REQUIRES(tree_lock_);
 
   fs::SharedMutex tree_lock_;
   VmoTree vmo_tree_ __TA_GUARDED(tree_lock_);

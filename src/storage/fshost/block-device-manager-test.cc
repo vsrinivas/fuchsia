@@ -21,8 +21,6 @@
 #include "src/storage/blobfs/mkfs.h"
 #include "src/storage/fshost/config.h"
 #include "src/storage/fshost/constants.h"
-#include "src/storage/fshost/filesystem-mounter.h"
-#include "src/storage/fshost/fs-manager.h"
 #include "src/storage/fshost/testing/fshost_integration_test.h"
 #include "src/storage/fshost/testing/mock-block-device.h"
 #include "src/storage/testing/fvm.h"
@@ -37,7 +35,6 @@ using ::fshost::testing::MockBlobfsDevice;
 using ::fshost::testing::MockBlockDevice;
 using ::fshost::testing::MockMinfsDevice;
 using ::fshost::testing::MockZxcryptDevice;
-using ::testing::ContainerEq;
 
 // For tests that want the full integration test suite.
 using BlockDeviceManagerIntegration = testing::FshostIntegrationTest;
@@ -281,16 +278,12 @@ TEST_F(BlockDeviceManagerIntegration, StartBlobfsComponent) {
     ASSERT_EQ(fvm_partition_or.status_value(), ZX_OK);
 
     // Format the new fvm partition with blobfs.
-    fbl::unique_fd fvm_fd(open(fvm_partition_or->c_str(), O_RDONLY));
-    ASSERT_TRUE(fvm_fd);
-    zx::channel blobfs_device_chan;
-    ASSERT_EQ(fdio_fd_transfer(fvm_fd.release(), blobfs_device_chan.reset_and_get_address()),
-              ZX_OK);
+    zx::result device = component::Connect<fuchsia_hardware_block::Block>(fvm_partition_or.value());
+    ASSERT_TRUE(device.is_ok()) << device.status_string();
 
     std::unique_ptr<block_client::RemoteBlockDevice> blobfs_device;
-    ASSERT_EQ(
-        block_client::RemoteBlockDevice::Create(std::move(blobfs_device_chan), &blobfs_device),
-        ZX_OK);
+    ASSERT_EQ(block_client::RemoteBlockDevice::Create(std::move(device.value()), &blobfs_device),
+              ZX_OK);
     ASSERT_EQ(blobfs::FormatFilesystem(blobfs_device.get(), blobfs::FilesystemOptions{}), ZX_OK);
 
     // Check the newly formatted blobfs for good measure.

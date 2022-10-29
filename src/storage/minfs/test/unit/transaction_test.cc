@@ -73,17 +73,17 @@ class FakeBlockDevice : public block_client::BlockDevice {
 
   zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) final { return ZX_OK; }
   zx::result<std::string> GetDevicePath() const final { return zx::ok(std::string()); }
-  zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const final { return ZX_OK; }
   zx_status_t BlockGetInfo(fuchsia_hardware_block::wire::BlockInfo* out_info) const final {
     return ZX_OK;
   }
   zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out_vmoid) final { return ZX_OK; }
-  zx_status_t VolumeGetInfo(fuchsia_hardware_block_volume_VolumeManagerInfo* out_manager,
-                            fuchsia_hardware_block_volume_VolumeInfo* out_volume) const final {
+  zx_status_t VolumeGetInfo(
+      fuchsia_hardware_block_volume::wire::VolumeManagerInfo* out_manager,
+      fuchsia_hardware_block_volume::wire::VolumeInfo* out_volume) const final {
     return ZX_OK;
   }
   zx_status_t VolumeQuerySlices(const uint64_t* slices, size_t slices_count,
-                                fuchsia_hardware_block_volume_VsliceRange* out_ranges,
+                                fuchsia_hardware_block_volume::wire::VsliceRange* out_ranges,
                                 size_t* out_ranges_count) const final {
     return ZX_OK;
   }

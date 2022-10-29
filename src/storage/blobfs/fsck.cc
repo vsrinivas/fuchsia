@@ -4,7 +4,6 @@
 
 #include "src/storage/blobfs/fsck.h"
 
-#include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
@@ -13,7 +12,6 @@
 #include "src/lib/storage/vfs/cpp/paged_vfs.h"
 #include "src/storage/blobfs/blobfs.h"
 #include "src/storage/blobfs/blobfs_checker.h"
-#include "src/storage/blobfs/iterator/extent_iterator.h"
 #include "zircon/errors.h"
 
 namespace blobfs {

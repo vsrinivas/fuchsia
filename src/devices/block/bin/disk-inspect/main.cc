@@ -6,6 +6,7 @@
 #include <fidl/fuchsia.hardware.block.partition/cpp/wire.h>
 #include <lib/cmdline/args_parser.h>
 #include <lib/fdio/fdio.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <stdio.h>
 #include <zircon/status.h>
 
@@ -103,35 +104,33 @@ fpromise::result<uint32_t, std::string> GetBlockSize(const std::string& name) {
 }
 
 std::unique_ptr<disk_inspector::CommandHandler> GetHandler(const char* path, const char* fs_name) {
-  fbl::unique_fd fd(open(path, O_RDONLY));
-
-  zx::channel channel;
-  zx_status_t status = fdio_get_service_handle(fd.release(), channel.reset_and_get_address());
-  if (status != ZX_OK) {
-    std::cerr << "Cannot acquire handle with error: " << status << "\n";
+  zx::result channel = component::Connect<fuchsia_hardware_block::Block>(path);
+  if (channel.is_error()) {
+    std::cerr << "Cannot acquire handle with error: " << channel.status_string() << std::endl;
+    ;
     return nullptr;
   }
 
   std::string name(fs_name);
   auto size_result = GetBlockSize(name);
-
   if (size_result.is_error()) {
     std::cerr << size_result.take_error();
     return nullptr;
   }
 
   std::unique_ptr<block_client::RemoteBlockDevice> device;
-  status = block_client::RemoteBlockDevice::Create(std::move(channel), &device);
-  if (status != ZX_OK) {
-    std::cerr << "Cannot create remote device: " << status << "\n";
+  if (zx_status_t status =
+          block_client::RemoteBlockDevice::Create(std::move(channel.value()), &device);
+      status != ZX_OK) {
+    std::cerr << "Cannot create remote device: " << zx_status_get_string(status) << std::endl;
     return nullptr;
   }
 
   uint32_t block_size = size_result.take_value();
   std::unique_ptr<disk_inspector::InspectorTransactionHandler> inspector_handler;
-  status = disk_inspector::InspectorTransactionHandler::Create(std::move(device), block_size,
-                                                               &inspector_handler);
-  if (status != ZX_OK) {
+  if (zx_status_t status = disk_inspector::InspectorTransactionHandler::Create(
+          std::move(device), block_size, &inspector_handler);
+      status != ZX_OK) {
     std::cerr << "Cannot create TransactionHandler.\n";
     return nullptr;
   }

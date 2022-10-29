@@ -118,7 +118,8 @@ zx_status_t Client::DoRead(block_fifo_response_t* response, size_t* count) {
             fifo_.wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, zx::time::infinite(), &signals);
         status != ZX_OK) {
       return status;
-    } else if (signals & ZX_FIFO_PEER_CLOSED) {
+    }
+    if (signals & ZX_FIFO_PEER_CLOSED) {
       return ZX_ERR_PEER_CLOSED;
     }
     // Try reading again...
@@ -135,7 +136,8 @@ zx_status_t Client::DoWrite(block_fifo_request_t* request, size_t count) {
                                                    zx::time::infinite(), &signals);
           wait_status != ZX_OK) {
         return wait_status;
-      } else if (signals & ZX_FIFO_PEER_CLOSED) {
+      }
+      if (signals & ZX_FIFO_PEER_CLOSED) {
         return ZX_ERR_PEER_CLOSED;
       }
       // Try writing again...

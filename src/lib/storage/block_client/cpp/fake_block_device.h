@@ -37,7 +37,7 @@ class FakeBlockDevice : public BlockDevice {
     uint64_t block_count = 0;
     uint32_t block_size = 0;
     bool supports_trim = false;
-    uint32_t max_transfer_size = fuchsia_hardware_block_MAX_TRANSFER_UNBOUNDED;
+    uint32_t max_transfer_size = fuchsia_hardware_block::wire::kMaxTransferUnbounded;
   };
   explicit FakeBlockDevice(const Config&);
   FakeBlockDevice(uint64_t block_count, uint32_t block_size)
@@ -47,7 +47,7 @@ class FakeBlockDevice : public BlockDevice {
   FakeBlockDevice(FakeBlockDevice&& other) = delete;
   FakeBlockDevice& operator=(FakeBlockDevice&& other) = delete;
 
-  virtual ~FakeBlockDevice() = default;
+  ~FakeBlockDevice() override = default;
 
   // Sets a callback which will be invoked for each FIFO request that is received by the block
   // device. (If the FIFO request targets a VMO, |vmo| will be set as well.)
@@ -80,7 +80,7 @@ class FakeBlockDevice : public BlockDevice {
   void SetBlockSize(uint32_t block_size);
   bool IsRegistered(vmoid_t vmoid) const;
 
-  void GetStats(bool clear, fuchsia_hardware_block_BlockStats* out_stats);
+  void GetStats(bool clear, fuchsia_hardware_block::wire::BlockStats* out_stats);
 
   // Wipes the device to a zeroed state.
   void Wipe();
@@ -90,13 +90,13 @@ class FakeBlockDevice : public BlockDevice {
   zx::result<std::string> GetDevicePath() const override { return zx::error(ZX_ERR_NOT_SUPPORTED); }
 
   zx_status_t VolumeGetInfo(
-      fuchsia_hardware_block_volume_VolumeManagerInfo* out_manager_info,
-      fuchsia_hardware_block_volume_VolumeInfo* out_volume_info) const override {
+      fuchsia_hardware_block_volume::wire::VolumeManagerInfo* out_manager_info,
+      fuchsia_hardware_block_volume::wire::VolumeInfo* out_volume_info) const override {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   zx_status_t VolumeQuerySlices(const uint64_t* slices, size_t slices_count,
-                                fuchsia_hardware_block_volume_VsliceRange* out_ranges,
+                                fuchsia_hardware_block_volume::wire::VsliceRange* out_ranges,
                                 size_t* out_ranges_count) const override {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -110,7 +110,6 @@ class FakeBlockDevice : public BlockDevice {
   }
 
   zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) override;
-  zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const override;
   zx_status_t BlockGetInfo(fuchsia_hardware_block::wire::BlockInfo* out_info) const override;
   zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out_vmoid) final;
 
@@ -158,10 +157,11 @@ class FakeFVMBlockDevice : public FakeBlockDevice {
                      uint64_t slice_capacity);
 
   zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) final;
-  zx_status_t VolumeGetInfo(fuchsia_hardware_block_volume_VolumeManagerInfo* out_manager_info,
-                            fuchsia_hardware_block_volume_VolumeInfo* out_volume_info) const final;
+  zx_status_t VolumeGetInfo(
+      fuchsia_hardware_block_volume::wire::VolumeManagerInfo* out_manager_info,
+      fuchsia_hardware_block_volume::wire::VolumeInfo* out_volume_info) const final;
   zx_status_t VolumeQuerySlices(const uint64_t* slices, size_t slices_count,
-                                fuchsia_hardware_block_volume_VsliceRange* out_ranges,
+                                fuchsia_hardware_block_volume::wire::VsliceRange* out_ranges,
                                 size_t* out_ranges_count) const final;
   zx_status_t VolumeExtend(uint64_t offset, uint64_t length) final;
   zx_status_t VolumeShrink(uint64_t offset, uint64_t length) final;
@@ -169,8 +169,8 @@ class FakeFVMBlockDevice : public FakeBlockDevice {
  private:
   mutable fbl::Mutex fvm_lock_ = {};
 
-  fuchsia_hardware_block_volume_VolumeManagerInfo manager_info_ __TA_GUARDED(fvm_lock_) = {};
-  fuchsia_hardware_block_volume_VolumeInfo volume_info_ __TA_GUARDED(fvm_lock_) = {};
+  fuchsia_hardware_block_volume::wire::VolumeManagerInfo manager_info_ __TA_GUARDED(fvm_lock_) = {};
+  fuchsia_hardware_block_volume::wire::VolumeInfo volume_info_ __TA_GUARDED(fvm_lock_) = {};
 
   // Start Slice -> Range.
   std::map<uint64_t, range::Range<uint64_t>> extents_ __TA_GUARDED(fvm_lock_);

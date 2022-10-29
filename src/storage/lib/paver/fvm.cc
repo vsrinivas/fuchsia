@@ -13,6 +13,7 @@
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/time.h>
@@ -62,7 +63,7 @@ constexpr size_t kZxcryptExtraSlices = 1;
 // Upon success, |buf| will contain the null-terminated topological path.
 zx_status_t GetTopoPathFromFd(const fbl::unique_fd& fd, char* buf, size_t buf_len) {
   fdio_cpp::UnownedFdioCaller caller(fd.get());
-  auto resp = fidl::WireCall<fuchsia_device::Controller>(caller.channel())->GetTopologicalPath();
+  auto resp = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())->GetTopologicalPath();
   if (!resp.ok()) {
     return resp.status();
   }
@@ -117,7 +118,7 @@ zx_status_t RegisterFastBlockIo(const fbl::unique_fd& fd, const zx::vmo& vmo, vm
                                 std::unique_ptr<block_client::Client>* out_client) {
   fdio_cpp::UnownedFdioCaller caller(fd.get());
 
-  auto result = fidl::WireCall<block::Block>(caller.channel())->GetFifo();
+  auto result = fidl::WireCall(caller.borrow_as<block::Block>())->GetFifo();
   if (!result.ok()) {
     return result.status();
   }
@@ -132,7 +133,7 @@ zx_status_t RegisterFastBlockIo(const fbl::unique_fd& fd, const zx::vmo& vmo, vm
     return ZX_ERR_IO;
   }
 
-  auto result2 = fidl::WireCall<block::Block>(caller.channel())->AttachVmo(std::move(dup));
+  auto result2 = fidl::WireCall(caller.borrow_as<block::Block>())->AttachVmo(std::move(dup));
   if (result2.status() != ZX_OK) {
     return result2.status();
   }
@@ -261,7 +262,7 @@ fbl::unique_fd TryBindToFvmDriver(const fbl::unique_fd& devfs_root,
 
   fdio_cpp::UnownedFdioCaller caller(partition_fd.get());
   constexpr char kFvmDriverLib[] = "fvm.so";
-  auto resp = fidl::WireCall<fuchsia_device::Controller>(caller.channel())
+  auto resp = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
                   ->Rebind(fidl::StringView(kFvmDriverLib));
   status = resp.status();
   if (status == ZX_OK) {
@@ -303,9 +304,7 @@ fbl::unique_fd FvmPartitionFormat(const fbl::unique_fd& devfs_root, fbl::unique_
       if (fvm_fd) {
         LOG("Found already formatted FVM.\n");
         fdio_cpp::UnownedFdioCaller volume_manager(fvm_fd.get());
-        auto result = fidl::WireCall<volume::VolumeManager>(
-                          fdio_cpp::UnownedFdioCaller(fvm_fd.get()).channel())
-                          ->GetInfo();
+        auto result = fidl::WireCall(volume_manager.borrow_as<volume::VolumeManager>())->GetInfo();
         if (result.status() == ZX_OK) {
           auto get_maximum_slice_count = [](const fvm::SparseImage& header) {
             return fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, header.maximum_disk_size,
@@ -552,7 +551,7 @@ zx_status_t AllocatePartitions(const fbl::unique_fd& devfs_root, const fbl::uniq
 
       fdio_cpp::UnownedFdioCaller partition_connection(part_info.new_part.get());
       auto result =
-          fidl::WireCall<volume::Volume>(partition_connection.channel())->Extend(offset, length);
+          fidl::WireCall(partition_connection.borrow_as<volume::Volume>())->Extend(offset, length);
       auto status = result.ok() ? result.value().status : result.status();
       if (status != ZX_OK) {
         ERROR("Failed to extend partition: %s\n", zx_status_get_string(status));
@@ -626,7 +625,7 @@ zx_status_t WipeAllFvmPartitionsWithGuid(const fbl::unique_fd& fvm_fd, const uin
     // destroy it before we pave anew.
 
     fdio_cpp::UnownedFdioCaller partition_connection(old_part.get());
-    auto result = fidl::WireCall<volume::Volume>(partition_connection.channel())->Destroy();
+    auto result = fidl::WireCall(partition_connection.borrow_as<volume::Volume>())->Destroy();
     zx_status_t status = result.ok() ? result.value().status : result.status();
     if (status != ZX_OK) {
       ERROR("Couldn't destroy partition: %s\n", zx_status_get_string(status));
@@ -750,7 +749,7 @@ zx::result<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
     }
 
     fdio_cpp::UnownedFdioCaller partition_connection(parts[p].new_part.get());
-    auto result = fidl::WireCall<block::Block>(partition_connection.channel())->GetInfo();
+    auto result = fidl::WireCall(partition_connection.borrow_as<block::Block>())->GetInfo();
     if (!result.ok()) {
       ERROR("Couldn't get partition block info: %s\n", zx_status_get_string(result.status()));
       return zx::error(result.status());
@@ -788,7 +787,7 @@ zx::result<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
     // Upgrade the old partition (currently active) to the new partition (currently
     // inactive) so the new partition persists.
     auto result =
-        fidl::WireCall<partition::Partition>(partition_connection.channel())->GetInstanceGuid();
+        fidl::WireCall(partition_connection.borrow_as<partition::Partition>())->GetInstanceGuid();
     if (!result.ok() || result.value().status != ZX_OK) {
       ERROR("Failed to get unique GUID of new partition\n");
       return zx::error(ZX_ERR_BAD_STATE);
@@ -796,7 +795,7 @@ zx::result<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
     auto* guid = result.value().guid.get();
 
     auto result2 =
-        fidl::WireCall<volume::VolumeManager>(volume_manager.channel())->Activate(*guid, *guid);
+        fidl::WireCall(volume_manager.borrow_as<volume::VolumeManager>())->Activate(*guid, *guid);
     if (result2.status() != ZX_OK || result2.value().status != ZX_OK) {
       ERROR("Failed to upgrade partition\n");
       return zx::error(ZX_ERR_IO);
@@ -821,19 +820,14 @@ zx_status_t FvmUnbind(const fbl::unique_fd& devfs_root, const char* device) {
   name_buffer.Append(device + kDevPathLen);
   name_buffer.Append("/fvm");
 
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    return status;
-  }
   fdio_cpp::UnownedFdioCaller caller(devfs_root.get());
-  status = fdio_service_connect_at(caller.borrow_channel(), name_buffer.data(), remote.release());
-  if (status != ZX_OK) {
-    ERROR("Unable to connect to FVM service: %s on device %s\n", zx_status_get_string(status),
-          name_buffer.data());
-    return status;
+  zx::result channel = component::ConnectAt<device::Controller>(caller.directory(), name_buffer);
+  if (channel.is_error()) {
+    ERROR("Unable to connect to FVM service: %s on device %s\n", channel.status_string(),
+          name_buffer.c_str());
+    return channel.status_value();
   }
-  auto resp = fidl::WireCall<device::Controller>(local.borrow())->ScheduleUnbind();
+  auto resp = fidl::WireCall(channel.value())->ScheduleUnbind();
   if (resp.status() != ZX_OK) {
     ERROR("Failed to schedule FVM unbind: %s on device %s\n", zx_status_get_string(resp.status()),
           name_buffer.data());

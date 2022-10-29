@@ -5,7 +5,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <fidl/fuchsia.blobfs/cpp/markers.h>
+#include <fidl/fuchsia.blobfs/cpp/wire.h>
 #include <fidl/fuchsia.fs/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/blobfs/cpp/fidl.h>
@@ -47,7 +47,6 @@
 #include <safemath/safe_conversions.h>
 
 #include "src/lib/digest/digest.h"
-#include "src/lib/digest/node-digest.h"
 #include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/lib/storage/fs_management/cpp/launch.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
@@ -56,14 +55,11 @@
 #include "src/storage/blobfs/test/integration/blobfs_fixtures.h"
 #include "src/storage/blobfs/test/integration/fdio_test.h"
 #include "src/storage/fvm/format.h"
-#include "src/storage/lib/utils/topological_path.h"
 
 namespace blobfs {
 namespace {
 
-namespace fio = fuchsia_io;
 using BlobfsIntegrationTest = ParameterizedBlobfsTest;
-using ::testing::UnitTest;
 
 // Class emulating a corruption handler service.
 class CorruptBlobHandlerImpl final : public fuchsia::blobfs::CorruptBlobHandler {
@@ -454,9 +450,7 @@ void QueryInfo(fs_test::TestFilesystem& fs, size_t expected_nodes, size_t expect
   ASSERT_TRUE(root_fd = fbl::unique_fd(open(fs.mount_path().c_str(), O_RDONLY | O_DIRECTORY)))
       << strerror(errno);
   fdio_cpp::UnownedFdioCaller root_connection(root_fd);
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io::Directory>(
-                                   zx::unowned_channel(root_connection.borrow_channel())))
-                    ->QueryFilesystem();
+  auto result = fidl::WireCall(root_connection.directory())->QueryFilesystem();
   ASSERT_TRUE(result.ok()) << result.FormatDescription();
   ASSERT_EQ(result.value().s, ZX_OK) << zx_status_get_string(result.value().s);
   const auto& info = *result.value().info;
@@ -1035,23 +1029,13 @@ TEST_P(BlobfsIntegrationTest, ReadOnly) {
 
 void OpenBlockDevice(const std::string& path,
                      std::unique_ptr<block_client::RemoteBlockDevice>* block_device) {
-  fbl::unique_fd fd(open(path.c_str(), O_RDWR));
-  ASSERT_TRUE(fd) << "Unable to open block device";
-
-  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
-  ASSERT_EQ(endpoints.status_value(), ZX_OK);
-  auto [channel, server] = *std::move(endpoints);
-
-  fdio_cpp::FdioCaller caller(std::move(fd));
-  ASSERT_EQ(fidl::WireCall(
-                fidl::UnownedClientEnd<fio::Node>(zx::unowned_channel(caller.borrow_channel())))
-                ->Clone(fio::wire::OpenFlags::kCloneSameRights, std::move(server))
-                .status(),
+  zx::result channel = component::Connect<fuchsia_hardware_block::Block>(path);
+  ASSERT_TRUE(channel.is_ok()) << channel.status_string();
+  ASSERT_EQ(block_client::RemoteBlockDevice::Create(std::move(channel.value()), block_device),
             ZX_OK);
-  ASSERT_EQ(block_client::RemoteBlockDevice::Create(channel.TakeChannel(), block_device), ZX_OK);
 }
 
-using SliceRange = fuchsia_hardware_block_volume_VsliceRange;
+using SliceRange = fuchsia_hardware_block_volume::wire::VsliceRange;
 
 uint64_t BlobfsBlockToFvmSlice(fs_test::TestFilesystem& fs, uint64_t block) {
   const size_t blocks_per_slice = fs.options().fvm_slice_size / kBlobfsBlockSize;
@@ -1092,7 +1076,7 @@ void GetSliceRange(const BlobfsWithFvmTest& test, const std::vector<uint64_t>& s
   ASSERT_NO_FATAL_FAILURE(OpenBlockDevice(test.fs().DevicePath().value(), &block_device));
 
   size_t ranges_count;
-  SliceRange range_array[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
+  SliceRange range_array[fuchsia_hardware_block_volume::wire::kMaxSliceRequests];
   ASSERT_EQ(
       block_device->VolumeQuerySlices(slices.data(), slices.size(), range_array, &ranges_count),
       ZX_OK);

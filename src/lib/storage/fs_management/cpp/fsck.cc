@@ -24,7 +24,9 @@
 #include <fbl/vector.h>
 
 #include "src/lib/storage/fs_management/cpp/component.h"
-#include "src/lib/storage/fs_management/cpp/mount.h"
+#include "src/lib/storage/fs_management/cpp/format.h"
+#include "src/lib/storage/fs_management/cpp/launch.h"
+#include "src/lib/storage/fs_management/cpp/options.h"
 #include "src/lib/storage/fs_management/cpp/path.h"
 
 namespace fs_management {
@@ -46,7 +48,7 @@ zx_status_t FsckNativeFs(const char* device_path, const FsckOptions& options, La
   }
 
   std::vector<std::pair<uint32_t, zx::handle>> handles;
-  handles.push_back({FS_HANDLE_BLOCK_DEVICE_ID, std::move(block_device)});
+  handles.emplace_back(FS_HANDLE_BLOCK_DEVICE_ID, std::move(block_device));
   return cb(options.as_argv(binary), std::move(handles));
 }
 

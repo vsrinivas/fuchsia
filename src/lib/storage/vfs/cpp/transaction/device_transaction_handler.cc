@@ -69,7 +69,7 @@ zx_status_t DeviceTransactionHandler::RunRequests(
     }
   }
 
-  zx_status_t status = GetDevice()->FifoTransaction(&block_requests[0], operations.size());
+  zx_status_t status = GetDevice()->FifoTransaction(block_requests.data(), operations.size());
 
   TRACE_DURATION("storage", "DeviceTransactionHandler::RunRequests::Finish");
   for (const auto& id : trace_flow_ids) {

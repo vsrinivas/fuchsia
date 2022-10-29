@@ -5,6 +5,12 @@
 #ifndef SRC_STORAGE_F2FS_SERVICE_STARTUP_H_
 #define SRC_STORAGE_F2FS_SERVICE_STARTUP_H_
 
+#include <fidl/fuchsia.fs.startup/cpp/wire.h>
+
+#include "src/lib/storage/vfs/cpp/service.h"
+#include "src/storage/f2fs/bcache.h"
+#include "src/storage/f2fs/mount.h"
+
 namespace f2fs {
 
 using ConfigureCallback = fit::callback<zx::result<>(std::unique_ptr<Bcache>, const MountOptions&)>;

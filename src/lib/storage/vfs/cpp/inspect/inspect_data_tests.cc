@@ -11,8 +11,8 @@
 #include "src/lib/storage/block_client/cpp/fake_block_device.h"
 #include "src/lib/storage/vfs/cpp/inspect/inspect_data.h"
 
-using VolumeManagerInfo = fuchsia_hardware_block_volume_VolumeManagerInfo;
-using VolumeInfo = fuchsia_hardware_block_volume_VolumeInfo;
+using VolumeManagerInfo = fuchsia_hardware_block_volume::wire::VolumeManagerInfo;
+using VolumeInfo = fuchsia_hardware_block_volume::wire::VolumeInfo;
 
 namespace fs_inspect {
 
@@ -22,8 +22,9 @@ class FakeBlockDevice final : public block_client::FakeBlockDevice {
   FakeBlockDevice() : block_client::FakeBlockDevice({}) {}
   ~FakeBlockDevice() override = default;
 
-  zx_status_t VolumeGetInfo(fuchsia_hardware_block_volume_VolumeManagerInfo* out_manager_info,
-                            fuchsia_hardware_block_volume_VolumeInfo* out_volume_info) const final {
+  zx_status_t VolumeGetInfo(
+      fuchsia_hardware_block_volume::wire::VolumeManagerInfo* out_manager_info,
+      fuchsia_hardware_block_volume::wire::VolumeInfo* out_volume_info) const final {
     *out_manager_info = volume_manager_info_;
     *out_volume_info = volume_info_;
     return ZX_OK;

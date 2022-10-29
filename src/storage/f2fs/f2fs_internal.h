@@ -5,6 +5,8 @@
 #ifndef SRC_STORAGE_F2FS_F2FS_INTERNAL_H_
 #define SRC_STORAGE_F2FS_F2FS_INTERNAL_H_
 
+#include "src/storage/f2fs/node_page.h"
+
 namespace f2fs {
 
 class VnodeF2fs;
@@ -115,20 +117,20 @@ class FlagAcquireGuard {
   FlagAcquireGuard() = delete;
   FlagAcquireGuard(const FlagAcquireGuard &) = delete;
   FlagAcquireGuard &operator=(const FlagAcquireGuard &) = delete;
-  FlagAcquireGuard(FlagAcquireGuard &&flag) {
+  FlagAcquireGuard(FlagAcquireGuard &&flag) noexcept {
     flag_ = flag.flag_;
     acquired_ = flag.acquired_;
     wake_waiters_ = flag.wake_waiters_;
     flag.acquired_ = false;
   }
-  FlagAcquireGuard &operator=(FlagAcquireGuard &&flag) {
+  FlagAcquireGuard &operator=(FlagAcquireGuard &&flag) noexcept {
     flag_ = flag.flag_;
     acquired_ = flag.acquired_;
     wake_waiters_ = flag.wake_waiters_;
     flag.acquired_ = false;
     return *this;
   }
-  FlagAcquireGuard(std::atomic_flag *flag, bool wake_waiters = false)
+  explicit FlagAcquireGuard(std::atomic_flag *flag, bool wake_waiters = false)
       : flag_(flag), wake_waiters_(wake_waiters) {
     // Release-acquire ordering between the writeback (loader) and others such as checkpoint and gc.
     acquired_ = !flag_->test_and_set(std::memory_order_acquire);
@@ -145,7 +147,7 @@ class FlagAcquireGuard {
     }
   }
   bool IsSet() { return flag_->test(std::memory_order_acquire); }
-  bool IsAcquired() { return acquired_; }
+  bool IsAcquired() const { return acquired_; }
 
  private:
   std::atomic_flag *flag_ = nullptr;
@@ -176,10 +178,7 @@ class VnodeSet {
 
   bool FindVnode(nid_t ino) __TA_EXCLUDES(vnode_mutex_) {
     fs::SharedLock lock(vnode_mutex_);
-    if (vnodes.find(ino) == vnodes.end()) {
-      return false;
-    }
-    return true;
+    return vnodes.find(ino) != vnodes.end();
   }
 
   void ForAllVnodes(fit::function<void(nid_t)> callback) __TA_EXCLUDES(vnode_mutex_) {
@@ -378,7 +377,7 @@ class SuperblockInfo {
 
   void ClearOpt(uint64_t option) { mount_opt_ &= ~option; }
   void SetOpt(uint64_t option) { mount_opt_ |= option; }
-  bool TestOpt(uint64_t option) { return ((mount_opt_ & option) != 0); }
+  bool TestOpt(uint64_t option) const { return ((mount_opt_ & option) != 0); }
 
   void IncSegmentCount(int type) { ++segment_count_[type]; }
   uint64_t GetSegmentCount(int type) const { return segment_count_[type]; }
@@ -416,12 +415,12 @@ class SuperblockInfo {
   void IncreaseDirtyDir() { ++n_dirty_dirs; }
   void DecreaseDirtyDir() { --n_dirty_dirs; }
 
-  uint32_t BitmapSize(MetaBitmap flag) {
+  uint32_t BitmapSize(MetaBitmap flag) const {
     if (flag == MetaBitmap::kNatBitmap) {
       return LeToCpu(checkpoint_block_.checkpoint_.nat_ver_bitmap_bytesize);
-    } else {  // MetaBitmap::kSitBitmap
-      return LeToCpu(checkpoint_block_.checkpoint_.sit_ver_bitmap_bytesize);
     }
+    // MetaBitmap::kSitBitmap
+    return LeToCpu(checkpoint_block_.checkpoint_.sit_ver_bitmap_bytesize);
   }
 
   void *BitmapPtr(MetaBitmap flag) {
@@ -452,7 +451,7 @@ class SuperblockInfo {
     return start_addr;
   }
 
-  block_t StartSumAddr() { return LeToCpu(checkpoint_block_.checkpoint_.cp_pack_start_sum); }
+  block_t StartSumAddr() const { return LeToCpu(checkpoint_block_.checkpoint_.cp_pack_start_sum); }
 
  private:
   std::shared_ptr<Superblock> raw_superblock_;  // raw super block pointer

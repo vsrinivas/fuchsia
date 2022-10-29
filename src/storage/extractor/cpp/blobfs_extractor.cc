@@ -110,20 +110,10 @@ blobfs::MountOptions ReadOnlyOptions() {
 }
 
 zx::result<std::unique_ptr<blobfs::Blobfs>> FsWalker::CreateBlobfs(async_dispatcher_t* dispatcher) {
-  zx::channel root_client;
-  if (zx_status_t status = fdio_fd_clone(input_fd_.get(), root_client.reset_and_get_address());
-      status != ZX_OK) {
-    std::cerr << "Error transferring input fd to channel" << std::endl;
-    std::cerr << "Status: " << status << std::endl;
-    return zx::error(status);
-  }
-
-  std::unique_ptr<block_client::RemoteBlockDevice> device;
-  if (zx_status_t status =
-          block_client::RemoteBlockDevice::Create(std::move(root_client), &device) != ZX_OK) {
-    std::cerr << "Error creating Remote Block Device";
-    std::cerr << "Status: " << status << std::endl;
-    return zx::error(status);
+  zx::result device = block_client::RemoteBlockDevice::Create(input_fd_.get());
+  if (device.is_error()) {
+    std::cerr << "Error creating Remote Block Device: " << device.status_string() << std::endl;
+    return device.take_error();
   }
 
   vfs_ = std::make_unique<fs::PagedVfs>(dispatcher);
@@ -131,7 +121,7 @@ zx::result<std::unique_ptr<blobfs::Blobfs>> FsWalker::CreateBlobfs(async_dispatc
     return zx::error(status.error_value());
 
   auto blobfs_or =
-      blobfs::Blobfs::Create(dispatcher, std::move(device), vfs_.get(), ReadOnlyOptions());
+      blobfs::Blobfs::Create(dispatcher, std::move(device.value()), vfs_.get(), ReadOnlyOptions());
   if (blobfs_or.is_error()) {
     std::cerr << "Cannot create filesystem for checking: " << blobfs_or.status_string();
     return zx::error(blobfs_or.status_value());

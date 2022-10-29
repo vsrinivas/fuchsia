@@ -4,6 +4,7 @@
 
 #include <fidl/fuchsia.kernel/cpp/wire.h>
 #include <getopt.h>
+#include <lib/fdio/vfs.h>
 #include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
@@ -15,7 +16,6 @@
 #include <utility>
 
 #include "src/lib/storage/block_client/cpp/remote_block_device.h"
-#include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/storage/bin/blobfs/blobfs_component_config.h"
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/blobfs/cache_policy.h"
@@ -26,7 +26,6 @@
 
 namespace {
 
-using block_client::BlockDevice;
 using block_client::RemoteBlockDevice;
 
 // Parsed command line options for the different commands.
@@ -60,7 +59,8 @@ zx_status_t Mount(const Options& options) {
   }
 
   std::unique_ptr<RemoteBlockDevice> device;
-  zx_status_t status = RemoteBlockDevice::Create(std::move(block_connection), &device);
+  zx_status_t status = RemoteBlockDevice::Create(
+      fidl::ClientEnd<fuchsia_hardware_block::Block>(std::move(block_connection)), &device);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Could not initialize block device";
     return ZX_ERR_INTERNAL;
@@ -88,7 +88,8 @@ zx_status_t Mkfs(const Options& options) {
   }
 
   std::unique_ptr<RemoteBlockDevice> device;
-  zx_status_t status = RemoteBlockDevice::Create(std::move(block_connection), &device);
+  zx_status_t status = RemoteBlockDevice::Create(
+      fidl::ClientEnd<fuchsia_hardware_block::Block>(std::move(block_connection)), &device);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Could not initialize block device";
     return ZX_ERR_INTERNAL;
@@ -105,7 +106,8 @@ zx_status_t Fsck(const Options& options) {
   }
 
   std::unique_ptr<RemoteBlockDevice> device;
-  zx_status_t status = RemoteBlockDevice::Create(std::move(block_connection), &device);
+  zx_status_t status = RemoteBlockDevice::Create(
+      fidl::ClientEnd<fuchsia_hardware_block::Block>(std::move(block_connection)), &device);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Could not initialize block device";
     return ZX_ERR_INTERNAL;
@@ -151,7 +153,7 @@ zx_status_t StartComponent(const Options& _options) {
   return ZX_OK;
 }
 
-typedef zx_status_t (*CommandFunction)(const Options& options);
+using CommandFunction = zx_status_t (*)(const Options&);
 
 const struct {
   const char* name;
@@ -167,7 +169,8 @@ const struct {
 std::optional<blobfs::CompressionAlgorithm> ParseAlgorithm(const char* str) {
   if (!strcmp(str, "UNCOMPRESSED")) {
     return blobfs::CompressionAlgorithm::kUncompressed;
-  } else if (!strcmp(str, "ZSTD_CHUNKED")) {
+  }
+  if (!strcmp(str, "ZSTD_CHUNKED")) {
     return blobfs::CompressionAlgorithm::kChunked;
   }
   return std::nullopt;
@@ -176,7 +179,8 @@ std::optional<blobfs::CompressionAlgorithm> ParseAlgorithm(const char* str) {
 std::optional<blobfs::CachePolicy> ParseEvictionPolicy(const char* str) {
   if (!strcmp(str, "NEVER_EVICT")) {
     return blobfs::CachePolicy::NeverEvict;
-  } else if (!strcmp(str, "EVICT_IMMEDIATELY")) {
+  }
+  if (!strcmp(str, "EVICT_IMMEDIATELY")) {
     return blobfs::CachePolicy::EvictImmediately;
   }
   return std::nullopt;
@@ -187,7 +191,8 @@ std::optional<int> ParseInt(const char* str) {
   long ret = strtol(str, &pend, 10);
   if (*pend != '\0') {
     return std::nullopt;
-  } else if (ret < std::numeric_limits<int>::min() || ret > std::numeric_limits<int>::max()) {
+  }
+  if (ret < std::numeric_limits<int>::min() || ret > std::numeric_limits<int>::max()) {
     return std::nullopt;
   }
   return static_cast<int>(ret);
@@ -247,7 +252,7 @@ zx::result<Options> ProcessArgs(int argc, char** argv, CommandFunction* func) {
   // This option has no short flag, use int value beyond a char.
   constexpr int kDeprecatedPaddedFormat = 256;
 
-  while (1) {
+  while (true) {
     static struct option opts[] = {
         {"verbose", no_argument, nullptr, 'v'},
         {"readonly", no_argument, nullptr, 'r'},

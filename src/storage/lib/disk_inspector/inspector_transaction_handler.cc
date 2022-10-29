@@ -13,14 +13,12 @@
 #include <safemath/checked_math.h>
 #include <storage/buffer/vmo_buffer.h>
 
-#include "src/lib/storage/block_client/cpp/remote_block_device.h"
-
 namespace disk_inspector {
 
 zx_status_t InspectorTransactionHandler::Create(std::unique_ptr<block_client::BlockDevice> device,
                                                 uint32_t block_size,
                                                 std::unique_ptr<InspectorTransactionHandler>* out) {
-  fuchsia_hardware_block_BlockInfo info;
+  fuchsia_hardware_block::wire::BlockInfo info;
   zx_status_t status = device->BlockGetInfo(&info);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Cannot get block device information: " << status;

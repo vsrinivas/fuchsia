@@ -6,7 +6,9 @@
 #define STORAGE_METRICS_STORAGE_METRICS_H_
 
 #include <fidl/fuchsia.storage.metrics/cpp/wire.h>
+#if defined(FIDL_ALLOW_DEPRECATED_C_BINDINGS)
 #include <fuchsia/storage/metrics/c/fidl.h>
+#endif
 #include <stdio.h>
 
 #include <atomic>
@@ -41,14 +43,18 @@ class CallStat {
   // Copies fields of fidl structure into corresponding fields of CallStat
   void CopyFromFidl(const CallStatFidl* istat);
 
+#if defined(FIDL_ALLOW_DEPRECATED_C_BINDINGS)
   // Copies fields of fidl structure into corresponding fields of CallStat
   void CopyFromFidl(const fuchsia_storage_metrics_CallStat* istat);
+#endif
 
   // Copies to fields of fidl structure the corresponding fields of CallStat
   void CopyToFidl(CallStatFidl* out) const;
 
+#if defined(FIDL_ALLOW_DEPRECATED_C_BINDINGS)
   // Copies to fields of fidl structure the corresponding fields of CallStat
   void CopyToFidl(fuchsia_storage_metrics_CallStat* out) const;
+#endif
 
   // Prints the fields of CallStat to file |stream|. If |success| is nullopt,
   // prints aggregate of successful and failed calls. If |success| is true,
@@ -88,14 +94,18 @@ class CallStat {
     // Copies fields of fidl structure into corresponding fields of CallStat
     void CopyFromRawFidl(const CallStatRawFidl* istat);
 
+#if defined(FIDL_ALLOW_DEPRECATED_C_BINDINGS)
     // Copies fields of fidl structure into corresponding fields of CallStat
     void CopyFromRawFidl(const fuchsia_storage_metrics_CallStatRaw* istat);
+#endif
 
     // Copies to fields of fidl structure the corresponding fields of CallStat
     void CopyToRawFidl(CallStatRawFidl* out) const;
 
+#if defined(FIDL_ALLOW_DEPRECATED_C_BINDINGS)
     // Copies to fields of fidl structure the corresponding fields of CallStat
     void CopyToRawFidl(fuchsia_storage_metrics_CallStatRaw* out) const;
+#endif
 
     void UpdateRawCallStat(zx_ticks_t delta_time, uint64_t bytes_transferred);
 

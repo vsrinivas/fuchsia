@@ -299,9 +299,8 @@ pgoff_t F2fs::SyncDirtyDataPages(WritebackOperation &operation) {
           total_nwritten = safemath::CheckAdd<pgoff_t>(total_nwritten, nwritten).ValueOrDie();
           if (nwritten >= operation.to_write) {
             return ZX_ERR_STOP;
-          } else {
-            operation.to_write -= nwritten;
           }
+          operation.to_write -= nwritten;
         }
         return ZX_OK;
       },

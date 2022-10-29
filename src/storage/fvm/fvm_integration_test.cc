@@ -68,7 +68,7 @@
 
 namespace {
 
-using VolumeManagerInfo = fuchsia_hardware_block_volume_VolumeManagerInfo;
+using VolumeManagerInfo = fuchsia_hardware_block_volume::wire::VolumeManagerInfo;
 using BlockGuid = std::array<uint8_t, BLOCK_GUID_LEN>;
 using BlockName = std::array<char, BLOCK_NAME_LEN>;
 
@@ -235,11 +235,12 @@ enum class ValidationResult {
 void ValidateFVM(fbl::unique_fd fd, ValidationResult result = ValidationResult::Valid) {
   ASSERT_TRUE(fd);
   fdio_cpp::UnownedFdioCaller disk_caller(fd.get());
-  fuchsia_hardware_block_BlockInfo block_info;
-  zx_status_t status;
-  ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(disk_caller.borrow_channel(), &status, &block_info),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  const fidl::WireResult wire_result =
+      fidl::WireCall(disk_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+  ASSERT_OK(wire_result.status());
+  const fidl::WireResponse wire_response = wire_result.value();
+  ASSERT_OK(wire_response.status);
+  const fuchsia_hardware_block::wire::BlockInfo& block_info = *wire_response.info;
   fvm::Checker checker(std::move(fd), block_info.block_size, true);
   switch (result) {
     case ValidationResult::Valid:
@@ -450,12 +451,12 @@ void CheckRead(int fd, size_t off, size_t len, const uint8_t* in) {
 
 void CheckWriteReadBlock(int fd, size_t block, size_t count) {
   fdio_cpp::UnownedFdioCaller disk_connection(fd);
-  zx_status_t status;
-  fuchsia_hardware_block_BlockInfo block_info;
-  ASSERT_EQ(
-      fuchsia_hardware_block_BlockGetInfo(disk_connection.borrow_channel(), &status, &block_info),
-      ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  const fidl::WireResult result =
+      fidl::WireCall(disk_connection.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+  ASSERT_OK(result.status());
+  const fidl::WireResponse response = result.value();
+  ASSERT_OK(response.status);
+  const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
   size_t len = block_info.block_size * count;
   size_t off = block_info.block_size * block;
   std::unique_ptr<uint8_t[]> in(new uint8_t[len]);
@@ -477,12 +478,12 @@ void CheckWriteReadBytesFifo(fidl::UnownedClientEnd<fuchsia_hardware_block::Bloc
 
 void CheckNoAccessBlock(int fd, size_t block, size_t count) {
   fdio_cpp::UnownedFdioCaller disk_connection(fd);
-  zx_status_t status;
-  fuchsia_hardware_block_BlockInfo block_info;
-  ASSERT_EQ(
-      fuchsia_hardware_block_BlockGetInfo(disk_connection.borrow_channel(), &status, &block_info),
-      ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  const fidl::WireResult result =
+      fidl::WireCall(disk_connection.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+  ASSERT_OK(result.status());
+  const fidl::WireResponse response = result.value();
+  ASSERT_OK(response.status);
+  const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
   std::unique_ptr<uint8_t[]> buf(new uint8_t[block_info.block_size * count]);
   size_t len = block_info.block_size * count;
   size_t off = block_info.block_size * block;
@@ -507,10 +508,8 @@ void Upgrade(const fdio_cpp::FdioCaller& caller, const BlockGuid& old_guid,
   fuchsia_hardware_block_partition::wire::Guid new_guid_fidl;
   memcpy(&new_guid_fidl.value, new_guid.data(), new_guid.size());
 
-  auto response =
-      fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager>(
-                         caller.borrow_channel()))
-          ->Activate(old_guid_fidl, new_guid_fidl);
+  auto response = fidl::WireCall(caller.borrow_as<fuchsia_hardware_block_volume::VolumeManager>())
+                      ->Activate(old_guid_fidl, new_guid_fidl);
   ASSERT_EQ(ZX_OK, response.status());
   ASSERT_EQ(result, response.value().status);
 }
@@ -591,17 +590,15 @@ TEST_F(FvmTest, TestAllocateOne) {
   fbl::unique_fd vp_fd = *std::move(vp_fd_or);
 
   // Check that the name matches what we provided
-  char name[fvm::kMaxVPartitionNameLength + 1];
-  fdio_cpp::UnownedFdioCaller partition_connection(vp_fd.get());
+  fdio_cpp::UnownedFdioCaller partition_connection(vp_fd);
 
-  zx_status_t status;
-  size_t actual;
-  ASSERT_EQ(fuchsia_hardware_block_partition_PartitionGetName(partition_connection.borrow_channel(),
-                                                              &status, name, sizeof(name), &actual),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
-  name[actual] = '\0';
-  ASSERT_STREQ(name, kTestPartDataName.data());
+  const fidl::WireResult result =
+      fidl::WireCall(partition_connection.borrow_as<fuchsia_hardware_block_partition::Partition>())
+          ->GetName();
+  ASSERT_OK(result.status());
+  const fidl::WireResponse response = result.value();
+  ASSERT_OK(response.status);
+  ASSERT_STREQ(response.name.get(), kTestPartDataName.data());
 
   // Check that we can read from / write to it.
   CheckWriteReadBlock(vp_fd.get(), 0, 1);
@@ -721,68 +718,113 @@ TEST_F(FvmTest, TestVPartitionExtend) {
 
   // Confirm that the disk reports the correct number of slices
   fdio_cpp::FdioCaller partition_caller(std::move(vp_fd));
-  zx::unowned_channel partition_channel(partition_caller.borrow_channel());
-  fuchsia_hardware_block_BlockInfo block_info;
-  zx_status_t status;
-  ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
+
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+    const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
+    ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
+  }
 
   // Try re-allocating an already allocated vslice
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), 0, 1, &status),
-            ZX_OK);
-  ASSERT_NE(status, ZX_OK, "Expected request failure");
-  ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Extend(0, 1);
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_STATUS(response.status, ZX_ERR_OUT_OF_RANGE);
+  }
+
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+    const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
+    ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
+  }
 
   // Try again with a portion of the request which is unallocated
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), 0, 2, &status),
-            ZX_OK);
-  ASSERT_NE(status, ZX_OK, "Expected request failure");
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Extend(0, 2);
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_STATUS(response.status, ZX_ERR_OUT_OF_RANGE);
+  }
 
   // Allocate OBSCENELY too many slices
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), slice_count,
-                                                       std::numeric_limits<size_t>::max(), &status),
-            ZX_OK);
-  ASSERT_NE(status, ZX_OK, "Expected request failure");
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Extend(slice_count, std::numeric_limits<uint64_t>::max());
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_STATUS(response.status, ZX_ERR_OUT_OF_RANGE);
+  }
 
   // Allocate slices at a too-large offset
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(
-                partition_channel->get(), std::numeric_limits<size_t>::max(), 1, &status),
-            ZX_OK);
-  ASSERT_NE(status, ZX_OK, "Expected request failure");
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Extend(std::numeric_limits<uint64_t>::max(), 1);
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_STATUS(response.status, ZX_ERR_OUT_OF_RANGE);
+  }
 
   // Attempt to allocate slightly too many slices
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), slice_count,
-                                                       slices_left + 1, &status),
-            ZX_OK);
-  ASSERT_NE(status, ZX_OK, "Expected request failure");
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Extend(slice_count, slices_left + 1);
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_STATUS(response.status, ZX_ERR_NO_SPACE);
+  }
 
   // The number of free slices should be unchanged.
   FVMCheckAllocatedCount(fd, slices_total - slices_left, slices_total);
 
   // Allocate exactly the remaining number of slices
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), slice_count,
-                                                       slices_left, &status),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Extend(slice_count, slices_left);
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+  }
 
   slice_count += slices_left;
   slices_left = 0;
   FVMCheckAllocatedCount(fd, slices_total - slices_left, slices_total);
-  ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
+
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+    const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
+    ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
+  }
 
   // We can't allocate any more to this VPartition
-  ASSERT_EQ(
-      fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), slice_count, 1, &status),
-      ZX_OK);
-  ASSERT_NE(status, ZX_OK, "Expected request failure");
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Extend(slice_count, 1);
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_STATUS(response.status, ZX_ERR_NO_SPACE);
+  }
 
   // We can't allocate a new VPartition
   auto vp2_fd_or = AllocatePartition({
@@ -819,35 +861,52 @@ TEST_F(FvmTest, TestVPartitionExtendSparse) {
   ASSERT_EQ(bno / (kSliceSize / kBlockSize), (fvm::kMaxVSlices - 1), "bno overflowed");
   ASSERT_EQ((bno * kBlockSize) / kBlockSize, bno, "block access will overflow");
 
-  fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
-  zx::unowned_channel partition_channel(partition_caller.borrow_channel());
-  zx_status_t status;
+  fdio_cpp::UnownedFdioCaller partition_caller(vp_fd);
 
   // Try allocating at a location that's slightly too large
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), fvm::kMaxVSlices,
-                                                       1, &status),
-            ZX_OK);
-  ASSERT_NE(status, ZX_OK, "Expected request failure");
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Extend(fvm::kMaxVSlices, 1);
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_STATUS(response.status, ZX_ERR_OUT_OF_RANGE);
+  }
 
   // Try allocating at the largest offset
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(),
-                                                       fvm::kMaxVSlices - 1, 1, &status),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Extend(fvm::kMaxVSlices - 1, 1);
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+  }
+
   CheckWriteReadBlock(vp_fd.get(), bno, 1);
 
   // Try freeing beyond largest offset
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(partition_channel->get(), fvm::kMaxVSlices,
-                                                       1, &status),
-            ZX_OK);
-  ASSERT_NE(status, ZX_OK, "Expected request failure");
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Shrink(fvm::kMaxVSlices, 1);
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_STATUS(response.status, ZX_ERR_OUT_OF_RANGE);
+  }
+
   CheckWriteReadBlock(vp_fd.get(), bno, 1);
 
   // Try freeing at the largest offset
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(partition_channel->get(),
-                                                       fvm::kMaxVSlices - 1, 1, &status),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Shrink(fvm::kMaxVSlices - 1, 1);
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+  }
+
   CheckNoAccessBlock(vp_fd.get(), bno, 1);
 
   ASSERT_EQ(close(vp_fd.release()), 0);
@@ -885,93 +944,155 @@ TEST_F(FvmTest, TestVPartitionShrink) {
   fbl::unique_fd vp_fd = *std::move(vp_fd_or);
   slices_left--;
 
-  fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
-  zx::unowned_channel partition_channel(partition_caller.borrow_channel());
-  zx_status_t status;
+  fdio_cpp::UnownedFdioCaller partition_caller(vp_fd);
 
   // Confirm that the disk reports the correct number of slices
-  fuchsia_hardware_block_BlockInfo block_info;
-  ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
-  CheckWriteReadBlock(vp_fd.get(), (slice_size / block_info.block_size) - 1, 1);
-  CheckNoAccessBlock(vp_fd.get(), (slice_size / block_info.block_size) - 1, 2);
-  FVMCheckAllocatedCount(fd, slices_total - slices_left, slices_total);
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+    const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
+    ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
+    CheckWriteReadBlock(vp_fd.get(), (slice_size / block_info.block_size) - 1, 1);
+    CheckNoAccessBlock(vp_fd.get(), (slice_size / block_info.block_size) - 1, 2);
+    FVMCheckAllocatedCount(fd, slices_total - slices_left, slices_total);
+  }
 
   // Try shrinking the 0th vslice
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(partition_channel->get(), 0, 1, &status),
-            ZX_OK);
-  ASSERT_NE(status, ZX_OK, "Expected request failure");
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Shrink(0, 1);
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_STATUS(response.status, ZX_ERR_OUT_OF_RANGE);
+  }
 
   // Try no-op requests (length = 0).
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), 1, 0, &status),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(partition_channel->get(), 1, 0, &status),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Extend(1, 0);
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+  }
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Shrink(1, 0);
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+  }
+
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+    const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
+    ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
+  }
 
   // Try again with a portion of the request which is unallocated
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(partition_channel->get(), 1, 2, &status),
-            ZX_OK);
-  ASSERT_NE(status, ZX_OK);
-  ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
-  FVMCheckAllocatedCount(fd, slices_total - slices_left, slices_total);
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Shrink(1, 2);
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_STATUS(response.status, ZX_ERR_INVALID_ARGS);
+  }
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+    const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
+    ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
+    FVMCheckAllocatedCount(fd, slices_total - slices_left, slices_total);
+  }
 
   // Allocate exactly the remaining number of slices
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), slice_count,
-                                                       slices_left, &status),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Extend(slice_count, slices_left);
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+  }
   slice_count += slices_left;
   slices_left = 0;
 
-  ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
-  CheckWriteReadBlock(vp_fd.get(), (slice_size / block_info.block_size) - 1, 1);
-  CheckWriteReadBlock(vp_fd.get(), (slice_size / block_info.block_size) - 1, 2);
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+    const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
+    ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
+    CheckWriteReadBlock(vp_fd.get(), (slice_size / block_info.block_size) - 1, 1);
+    CheckWriteReadBlock(vp_fd.get(), (slice_size / block_info.block_size) - 1, 2);
+  }
   FVMCheckAllocatedCount(fd, slices_total - slices_left, slices_total);
 
   // We can't allocate any more to this VPartition
-  ASSERT_EQ(
-      fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), slice_count, 1, &status),
-      ZX_OK);
-  ASSERT_NE(status, ZX_OK);
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Extend(slice_count, 1);
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_STATUS(response.status, ZX_ERR_NO_SPACE);
+  }
 
   // Try to shrink off the end (okay, since SOME of the slices are allocated)
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(partition_channel->get(), 1, slice_count + 3,
-                                                       &status),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Shrink(1, slice_count + 3);
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+  }
   FVMCheckAllocatedCount(fd, 1, slices_total);
 
   // The same request to shrink should now fail (NONE of the slices are
   // allocated)
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(partition_channel->get(), 1, slice_count - 1,
-                                                       &status),
-            ZX_OK);
-  ASSERT_NE(status, ZX_OK);
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Shrink(1, slice_count - 1);
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_STATUS(response.status, ZX_ERR_INVALID_ARGS);
+  }
   FVMCheckAllocatedCount(fd, 1, slices_total);
 
   // ... unless we re-allocate and try again.
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), 1, slice_count - 1,
-                                                       &status),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(partition_channel->get(), 1, slice_count - 1,
-                                                       &status),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Extend(1, slice_count - 1);
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+  }
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Shrink(1, slice_count - 1);
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+  }
 
   FVMCheckSliceSize(fvm_device(), kSliceSize);
   ValidateFVM(ramdisk_device());
@@ -1002,15 +1123,15 @@ TEST_F(FvmTest, TestVPartitionSplit) {
   ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
   fbl::unique_fd vp_fd = *std::move(vp_fd_or);
 
-  fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
-  zx::unowned_channel partition_channel(partition_caller.borrow_channel());
+  fdio_cpp::UnownedFdioCaller partition_caller(vp_fd);
 
   // Confirm that the disk reports the correct number of slices
-  fuchsia_hardware_block_BlockInfo block_info;
-  zx_status_t status;
-  ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  const fidl::WireResult result =
+      fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+  ASSERT_OK(result.status());
+  const fidl::WireResponse response = result.value();
+  ASSERT_OK(response.status);
+  const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
   ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
 
   extend_request_t reset_erequest;
@@ -1049,82 +1170,84 @@ TEST_F(FvmTest, TestVPartitionSplit) {
     return true;
   };
 
-  auto doExtend = [](const zx::unowned_channel& partition_channel, extend_request_t request) {
-    zx_status_t status;
-    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), request.offset,
-                                                         request.length, &status),
-              ZX_OK);
-    ASSERT_EQ(status, ZX_OK);
+  auto doExtend = [&partition_caller](extend_request_t request) {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Extend(request.offset, request.length);
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
   };
 
-  auto doShrink = [](const zx::unowned_channel& partition_channel, extend_request_t request) {
-    zx_status_t status;
-    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(partition_channel->get(), request.offset,
-                                                         request.length, &status),
-              ZX_OK);
-    ASSERT_EQ(status, ZX_OK);
+  auto doShrink = [&partition_caller](extend_request_t request) {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Shrink(request.offset, request.length);
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
   };
 
   // We should be able to split the extent.
   verifyExtents(true, true, true);
-  doShrink(partition_channel, mid_erequest);
+  doShrink(mid_erequest);
   verifyExtents(true, false, true);
-  doShrink(partition_channel, start_erequest);
+  doShrink(start_erequest);
   verifyExtents(false, false, true);
-  doShrink(partition_channel, end_erequest);
+  doShrink(end_erequest);
   verifyExtents(false, false, false);
 
-  doExtend(partition_channel, reset_erequest);
+  doExtend(reset_erequest);
 
-  doShrink(partition_channel, start_erequest);
+  doShrink(start_erequest);
   verifyExtents(false, true, true);
-  doShrink(partition_channel, mid_erequest);
+  doShrink(mid_erequest);
   verifyExtents(false, false, true);
-  doShrink(partition_channel, end_erequest);
+  doShrink(end_erequest);
   verifyExtents(false, false, false);
 
-  doExtend(partition_channel, reset_erequest);
+  doExtend(reset_erequest);
 
-  doShrink(partition_channel, end_erequest);
+  doShrink(end_erequest);
   verifyExtents(true, true, false);
-  doShrink(partition_channel, mid_erequest);
+  doShrink(mid_erequest);
   verifyExtents(true, false, false);
-  doShrink(partition_channel, start_erequest);
+  doShrink(start_erequest);
   verifyExtents(false, false, false);
 
-  doExtend(partition_channel, reset_erequest);
+  doExtend(reset_erequest);
 
-  doShrink(partition_channel, end_erequest);
+  doShrink(end_erequest);
   verifyExtents(true, true, false);
-  doShrink(partition_channel, start_erequest);
+  doShrink(start_erequest);
   verifyExtents(false, true, false);
-  doShrink(partition_channel, mid_erequest);
+  doShrink(mid_erequest);
   verifyExtents(false, false, false);
 
   // We should also be able to combine extents
-  doExtend(partition_channel, mid_erequest);
+  doExtend(mid_erequest);
   verifyExtents(false, true, false);
-  doExtend(partition_channel, start_erequest);
+  doExtend(start_erequest);
   verifyExtents(true, true, false);
-  doExtend(partition_channel, end_erequest);
+  doExtend(end_erequest);
   verifyExtents(true, true, true);
 
-  doShrink(partition_channel, reset_erequest);
+  doShrink(reset_erequest);
 
-  doExtend(partition_channel, end_erequest);
+  doExtend(end_erequest);
   verifyExtents(false, false, true);
-  doExtend(partition_channel, mid_erequest);
+  doExtend(mid_erequest);
   verifyExtents(false, true, true);
-  doExtend(partition_channel, start_erequest);
+  doExtend(start_erequest);
   verifyExtents(true, true, true);
 
-  doShrink(partition_channel, reset_erequest);
+  doShrink(reset_erequest);
 
-  doExtend(partition_channel, end_erequest);
+  doExtend(end_erequest);
   verifyExtents(false, false, true);
-  doExtend(partition_channel, start_erequest);
+  doExtend(start_erequest);
   verifyExtents(true, false, true);
-  doExtend(partition_channel, mid_erequest);
+  doExtend(mid_erequest);
   verifyExtents(true, true, true);
 
   ASSERT_EQ(close(vp_fd.release()), 0);
@@ -1150,8 +1273,7 @@ TEST_F(FvmTest, TestVPartitionDestroy) {
   });
   ASSERT_EQ(data_fd_or.status_value(), ZX_OK);
   fbl::unique_fd data_fd = *std::move(data_fd_or);
-  fdio_cpp::UnownedFdioCaller data_caller(data_fd.get());
-  zx::unowned_channel data_channel(data_caller.borrow_channel());
+  fdio_cpp::UnownedFdioCaller data_caller(data_fd);
 
   auto blob_fd_or = AllocatePartition({
       .type = kTestPartBlobGuid,
@@ -1160,8 +1282,7 @@ TEST_F(FvmTest, TestVPartitionDestroy) {
   });
   ASSERT_EQ(blob_fd_or.status_value(), ZX_OK);
   fbl::unique_fd blob_fd = *std::move(blob_fd_or);
-  fdio_cpp::UnownedFdioCaller blob_caller(blob_fd.get());
-  zx::unowned_channel blob_channel(blob_caller.borrow_channel());
+  fdio_cpp::UnownedFdioCaller blob_caller(blob_fd);
 
   auto sys_fd_or = AllocatePartition({
       .type = kTestPartSystemGuid,
@@ -1171,7 +1292,6 @@ TEST_F(FvmTest, TestVPartitionDestroy) {
   ASSERT_EQ(sys_fd_or.status_value(), ZX_OK);
   fbl::unique_fd sys_fd = *std::move(sys_fd_or);
   fdio_cpp::UnownedFdioCaller sys_caller(sys_fd.get());
-  zx::unowned_channel sys_channel(sys_caller.borrow_channel());
 
   // We can access all three...
   CheckWriteReadBlock(data_fd.get(), 0, 1);
@@ -1179,21 +1299,35 @@ TEST_F(FvmTest, TestVPartitionDestroy) {
   CheckWriteReadBlock(sys_fd.get(), 0, 1);
 
   // But not after we destroy the blob partition.
-  zx_status_t status;
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeDestroy(blob_channel->get(), &status), ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(blob_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())->Destroy();
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+  }
   CheckWriteReadBlock(data_fd.get(), 0, 1);
   CheckWriteReadBlock(sys_fd.get(), 0, 1);
   CheckDeadConnection(blob_fd.get());
 
   // Destroy the other two VPartitions.
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeDestroy(data_channel->get(), &status), ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(data_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())->Destroy();
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+  }
   CheckWriteReadBlock(sys_fd.get(), 0, 1);
   CheckDeadConnection(data_fd.get());
 
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeDestroy(sys_channel->get(), &status), ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(sys_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())->Destroy();
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+  }
   CheckDeadConnection(sys_fd.get());
 
   ASSERT_EQ(close(fd.release()), 0);
@@ -1219,16 +1353,18 @@ TEST_F(FvmTest, TestVPartitionQuery) {
   ASSERT_EQ(part_fd_or.status_value(), ZX_OK);
   fbl::unique_fd part_fd = *std::move(part_fd_or);
   fdio_cpp::FdioCaller partition_caller(std::move(part_fd));
-  zx::unowned_channel partition_channel(partition_caller.borrow_channel());
 
   // Create non-contiguous extent.
-  zx_status_t status;
   uint64_t offset = 20;
   uint64_t length = 10;
-  ASSERT_EQ(
-      fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), offset, length, &status),
-      ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Extend(offset, length);
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+  }
 
   auto volume_info_or = fs_management::FvmQuery(fd.get());
   ASSERT_EQ(volume_info_or.status_value(), ZX_OK);
@@ -1243,62 +1379,74 @@ TEST_F(FvmTest, TestVPartitionQuery) {
   start_slices[5] = 15;
 
   // Check response from partition query
-  fuchsia_hardware_block_volume_VsliceRange
-      ranges[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
-  size_t actual_ranges_count;
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(partition_channel->get(), start_slices,
-                                                            std::size(start_slices), &status,
-                                                            ranges, &actual_ranges_count),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(actual_ranges_count, std::size(start_slices));
-  ASSERT_TRUE(ranges[0].allocated);
-  ASSERT_EQ(ranges[0].count, 10);
-  ASSERT_FALSE(ranges[1].allocated);
-  ASSERT_EQ(ranges[1].count, 10);
-  ASSERT_TRUE(ranges[2].allocated);
-  ASSERT_EQ(ranges[2].count, 10);
-  ASSERT_FALSE(ranges[3].allocated);
-  ASSERT_EQ(ranges[3].count, volume_info_or->max_virtual_slice - 50);
-  ASSERT_TRUE(ranges[4].allocated);
-  ASSERT_EQ(ranges[4].count, 5);
-  ASSERT_FALSE(ranges[5].allocated);
-  ASSERT_EQ(ranges[5].count, 5);
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->QuerySlices(fidl::VectorView<uint64_t>::FromExternal(start_slices));
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+    fidl::Array ranges = response.response;
+
+    ASSERT_EQ(response.response_count, std::size(start_slices));
+    ASSERT_TRUE(ranges[0].allocated);
+    ASSERT_EQ(ranges[0].count, 10);
+    ASSERT_FALSE(ranges[1].allocated);
+    ASSERT_EQ(ranges[1].count, 10);
+    ASSERT_TRUE(ranges[2].allocated);
+    ASSERT_EQ(ranges[2].count, 10);
+    ASSERT_FALSE(ranges[3].allocated);
+    ASSERT_EQ(ranges[3].count, volume_info_or->max_virtual_slice - 50);
+    ASSERT_TRUE(ranges[4].allocated);
+    ASSERT_EQ(ranges[4].count, 5);
+    ASSERT_FALSE(ranges[5].allocated);
+    ASSERT_EQ(ranges[5].count, 5);
+  }
 
   // Merge the extents!
   offset = 10;
   length = 10;
-  ASSERT_EQ(
-      fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), offset, length, &status),
-      ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Extend(offset, length);
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+  }
 
   // Check partition query response again after extend
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(partition_channel->get(), start_slices,
-                                                            std::size(start_slices), &status,
-                                                            ranges, &actual_ranges_count),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(actual_ranges_count, std::size(start_slices));
-  ASSERT_TRUE(ranges[0].allocated);
-  ASSERT_EQ(ranges[0].count, 30);
-  ASSERT_TRUE(ranges[1].allocated);
-  ASSERT_EQ(ranges[1].count, 20);
-  ASSERT_TRUE(ranges[2].allocated);
-  ASSERT_EQ(ranges[2].count, 10);
-  ASSERT_FALSE(ranges[3].allocated);
-  ASSERT_EQ(ranges[3].count, volume_info_or->max_virtual_slice - 50);
-  ASSERT_TRUE(ranges[4].allocated);
-  ASSERT_EQ(ranges[4].count, 5);
-  ASSERT_TRUE(ranges[5].allocated);
-  ASSERT_EQ(ranges[5].count, 15);
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->QuerySlices(fidl::VectorView<uint64_t>::FromExternal(start_slices));
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+    fidl::Array ranges = response.response;
+
+    ASSERT_EQ(response.response_count, std::size(start_slices));
+    ASSERT_TRUE(ranges[0].allocated);
+    ASSERT_EQ(ranges[0].count, 30);
+    ASSERT_TRUE(ranges[1].allocated);
+    ASSERT_EQ(ranges[1].count, 20);
+    ASSERT_TRUE(ranges[2].allocated);
+    ASSERT_EQ(ranges[2].count, 10);
+    ASSERT_FALSE(ranges[3].allocated);
+    ASSERT_EQ(ranges[3].count, volume_info_or->max_virtual_slice - 50);
+    ASSERT_TRUE(ranges[4].allocated);
+    ASSERT_EQ(ranges[4].count, 5);
+    ASSERT_TRUE(ranges[5].allocated);
+    ASSERT_EQ(ranges[5].count, 15);
+  }
 
   start_slices[0] = volume_info_or->max_virtual_slice + 1;
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(partition_channel->get(), start_slices,
-                                                            std::size(start_slices), &status,
-                                                            ranges, &actual_ranges_count),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_ERR_OUT_OF_RANGE);
+  const fidl::WireResult result =
+      fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+          ->QuerySlices(fidl::VectorView<uint64_t>::FromExternal(start_slices));
+  ASSERT_OK(result.status());
+  const fidl::WireResponse response = result.value();
+  ASSERT_STATUS(response.status, ZX_ERR_OUT_OF_RANGE);
 
   ASSERT_EQ(close(fd.release()), 0);
   FVMCheckSliceSize(fvm_device(), kSliceSize);
@@ -1326,13 +1474,14 @@ TEST_F(FvmTest, TestSliceAccessContiguous) {
   ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
   fbl::unique_fd vp_fd = *std::move(vp_fd_or);
 
-  fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
-  zx::unowned_channel partition_channel(partition_caller.borrow_channel());
-  fuchsia_hardware_block_BlockInfo block_info;
-  zx_status_t status;
-  ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  fdio_cpp::UnownedFdioCaller partition_caller(vp_fd);
+
+  const fidl::WireResult result =
+      fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+  ASSERT_OK(result.status());
+  const fidl::WireResponse response = result.value();
+  ASSERT_OK(response.status);
+  const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
 
   // This is the last 'accessible' block.
   size_t last_block = (slice_size / block_info.block_size) - 1;
@@ -1348,9 +1497,14 @@ TEST_F(FvmTest, TestSliceAccessContiguous) {
     CheckNoAccessBlock(vp_fd.get(), slice_size / block_info.block_size, 1);
 
     // Attempt to access the next contiguous slice
-    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), 1, 1, &status),
-              ZX_OK);
-    ASSERT_EQ(status, ZX_OK);
+    {
+      const fidl::WireResult result =
+          fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+              ->Extend(1, 1);
+      ASSERT_OK(result.status());
+      const fidl::WireResponse response = result.value();
+      ASSERT_OK(response.status);
+    }
 
     // Now we can access the next slice...
     vc->CheckWrite(vb, block_info.block_size, block_info.block_size * (last_block + 1),
@@ -1395,13 +1549,14 @@ TEST_F(FvmTest, TestSliceAccessMany) {
   ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
   fbl::unique_fd vp_fd = *std::move(vp_fd_or);
 
-  fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
-  zx::unowned_channel partition_channel(partition_caller.borrow_channel());
-  fuchsia_hardware_block_BlockInfo block_info;
-  zx_status_t status;
-  ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  fdio_cpp::UnownedFdioCaller partition_caller(vp_fd);
+
+  const fidl::WireResult result =
+      fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+  ASSERT_OK(result.status());
+  const fidl::WireResponse response = result.value();
+  ASSERT_OK(response.status);
+  const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
   ASSERT_EQ(block_info.block_size, kBlockSize);
 
   {
@@ -1419,10 +1574,14 @@ TEST_F(FvmTest, TestSliceAccessMany) {
     // Attempt to access the next contiguous slices
     uint64_t offset = 1;
     uint64_t length = 2;
-    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), offset, length,
-                                                         &status),
-              ZX_OK);
-    ASSERT_EQ(status, ZX_OK);
+    {
+      const fidl::WireResult result =
+          fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+              ->Extend(offset, length);
+      ASSERT_OK(result.status());
+      const fidl::WireResponse response = result.value();
+      ASSERT_OK(response.status);
+    }
 
     // Now we can access the next slices...
     vc->CheckWrite(vb, kSliceSize, kSliceSize, 2 * kSliceSize);
@@ -1489,13 +1648,13 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousPhysical) {
     vpart.fd = *std::move(fd_or);
   }
 
-  fdio_cpp::UnownedFdioCaller partition_caller(vparts[0].fd.get());
-  zx::unowned_channel partition_channel(partition_caller.borrow_channel());
-  fuchsia_hardware_block_BlockInfo block_info;
-  zx_status_t status;
-  ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  fdio_cpp::UnownedFdioCaller partition_caller(vparts[0].fd);
+  const fidl::WireResult result =
+      fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+  ASSERT_OK(result.status());
+  const fidl::WireResponse response = result.value();
+  ASSERT_OK(response.status);
+  const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
 
   size_t usable_slices_per_vpart = UsableSlicesCount(kDiskSize, kSliceSize) / kNumVParts;
   size_t i = 0;
@@ -1519,10 +1678,14 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousPhysical) {
     zx::unowned_channel partition_channel(partition_caller.borrow_channel());
     uint64_t offset = vparts[i].slices_used;
     uint64_t length = 1;
-    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), offset, length,
-                                                         &status),
-              ZX_OK);
-    ASSERT_EQ(status, ZX_OK);
+    {
+      const fidl::WireResult result =
+          fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+              ->Extend(offset, length);
+      ASSERT_OK(result.status());
+      const fidl::WireResponse response = result.value();
+      ASSERT_OK(response.status);
+    }
 
     // Now we can access the next slice...
     vc->CheckWrite(vb, block_info.block_size, block_info.block_size * (last_block + 1),
@@ -1633,13 +1796,13 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousVirtual) {
     vpart.fd = *std::move(fd_or);
   }
 
-  fdio_cpp::UnownedFdioCaller partition_caller(vparts[0].fd.get());
-  zx::unowned_channel partition_channel(partition_caller.borrow_channel());
-  fuchsia_hardware_block_BlockInfo block_info;
-  zx_status_t status;
-  ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  fdio_cpp::UnownedFdioCaller partition_caller(vparts[0].fd);
+  const fidl::WireResult result =
+      fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+  ASSERT_OK(result.status());
+  const fidl::WireResponse response = result.value();
+  ASSERT_OK(response.status);
+  const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
 
   size_t usable_slices_per_vpart = UsableSlicesCount(kDiskSize, kSliceSize) / kNumVParts;
   size_t i = 0;
@@ -1658,10 +1821,14 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousVirtual) {
     zx::unowned_channel partition_channel(partition_caller.borrow_channel());
     uint64_t offset = vparts[i].last_slice + 2;
     uint64_t length = 1;
-    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), offset, length,
-                                                         &status),
-              ZX_OK);
-    ASSERT_EQ(status, ZX_OK);
+    {
+      const fidl::WireResult result =
+          fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+              ->Extend(offset, length);
+      ASSERT_OK(result.status());
+      const fidl::WireResponse response = result.value();
+      ASSERT_OK(response.status);
+    }
 
     // We still don't have access to the next slice...
     CheckNoAccessBlock(vfd, last_block, 2);
@@ -1710,23 +1877,28 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   fbl::unique_fd vp_fd = *std::move(vp_fd_or);
   slices_left--;
 
-  fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
-  zx::unowned_channel partition_channel(partition_caller.borrow_channel());
+  fdio_cpp::UnownedFdioCaller partition_caller(vp_fd);
 
   // Check that the name matches what we provided
-  char name[fvm::kMaxVPartitionNameLength + 1];
-  zx_status_t status;
-  size_t actual;
-  ASSERT_EQ(fuchsia_hardware_block_partition_PartitionGetName(partition_channel->get(), &status,
-                                                              name, sizeof(name), &actual),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
-  name[actual] = '\0';
-  ASSERT_STREQ(name, kTestPartDataName.data());
-  fuchsia_hardware_block_BlockInfo block_info;
-  ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_partition::Partition>())
+            ->GetName();
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+    ASSERT_STREQ(response.name.get(), kTestPartDataName.data());
+  }
+
+  fuchsia_hardware_block::wire::BlockInfo block_info;
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+    block_info = *response.info;
+  }
   std::unique_ptr<uint8_t[]> buf(new uint8_t[block_info.block_size * static_cast<size_t>(2)]);
 
   // Check that we can read from / write to it
@@ -1755,14 +1927,17 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   CheckNoAccessBlock(vp_fd.get(), (kSliceSize / block_info.block_size) - 1, 2);
   CheckNoAccessBlock(vp_fd.get(), kSliceSize / block_info.block_size, 1);
 
-  partition_caller.reset(vp_fd.get());
-  partition_channel = zx::unowned_channel(partition_caller.borrow_channel());
+  partition_caller.reset(vp_fd);
   uint64_t offset = 1;
   uint64_t length = 1;
-  ASSERT_EQ(
-      fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), offset, length, &status),
-      ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Extend(offset, length);
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+  }
   slices_left--;
 
   ASSERT_EQ(close(vp_fd.release()), 0);
@@ -1778,8 +1953,7 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   ASSERT_OK(vp_fd_or.status_value());
   vp_fd = *std::move(vp_fd_or);
 
-  partition_caller.reset(vp_fd.get());
-  partition_channel = zx::unowned_channel(partition_caller.borrow_channel());
+  partition_caller.reset(vp_fd);
 
   // Now we can access the next slice...
   CheckWrite(vp_fd.get(), block_info.block_size * (last_block + 1), block_info.block_size,
@@ -1794,20 +1968,34 @@ TEST_F(FvmTest, TestPersistenceSimple) {
 
   // Try allocating the rest of the slices, rebinding, and ensuring
   // that the size stays updated.
-  ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+    block_info = *response.info;
+  }
   ASSERT_EQ(block_info.block_count * block_info.block_size, kSliceSize * 2);
 
   offset = 2;
   length = slices_left;
-  ASSERT_EQ(
-      fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), offset, length, &status),
-      ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Extend(offset, length);
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+  }
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+    block_info = *response.info;
+  }
   ASSERT_EQ(block_info.block_count * block_info.block_size, kSliceSize * kSliceCount);
 
   ASSERT_EQ(close(vp_fd.release()), 0);
@@ -1819,12 +2007,16 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   vp_fd_or = WaitForPartition(kPartition1Matcher);
   ASSERT_OK(vp_fd_or.status_value());
   vp_fd = *std::move(vp_fd_or);
-  partition_caller.reset(vp_fd.get());
-  partition_channel = zx::unowned_channel(partition_caller.borrow_channel());
+  partition_caller.reset(vp_fd);
 
-  ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+    block_info = *response.info;
+  }
   ASSERT_EQ(block_info.block_count * block_info.block_size, kSliceSize * kSliceCount);
 
   ASSERT_EQ(close(vp_fd.release()), 0);
@@ -1849,50 +2041,57 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
       fs_management::OpenPartitionWithDevfs(devfs_root.get(), kPartition1Matcher, 0, nullptr);
   ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
   fbl::unique_fd vp_fd(*std::move(vp_fd_or));
-  fuchsia_hardware_block_volume_VsliceRange
-      ranges[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
-  fuchsia_hardware_block_volume_VsliceRange
-      initial_ranges[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
-  zx_status_t status;
-  size_t actual_ranges_count;
+
+  fuchsia_hardware_block_volume::wire::VsliceRange
+      initial_ranges[fuchsia_hardware_block_volume::wire::kMaxSliceRequests];
 
   // Check initial slice allocation.
   //
   // Avoid keeping the "FdioCaller" in-scope across mount, as the caller prevents
   // the file descriptor from being transferred.
   {
-    fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
-    zx::unowned_channel partition_channel(partition_caller.borrow_channel());
-    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(
-                  partition_channel->get(), query_request.vslice_start, query_request.count,
-                  &status, ranges, &actual_ranges_count),
-              ZX_OK);
-    ASSERT_EQ(status, ZX_OK);
-    ASSERT_EQ(query_request.count, actual_ranges_count);
+    fdio_cpp::UnownedFdioCaller partition_caller(vp_fd);
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->QuerySlices(fidl::VectorView<uint64_t>::FromExternal(
+                const_cast<size_t*>(query_request.vslice_start), query_request.count));
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+    ASSERT_EQ(query_request.count, response.response_count);
 
-    for (unsigned i = 0; i < actual_ranges_count; i++) {
-      ASSERT_TRUE(ranges[i].allocated);
-      ASSERT_GT(ranges[i].count, 0);
-      initial_ranges[i] = ranges[i];
+    for (unsigned i = 0; i < response.response_count; i++) {
+      ASSERT_TRUE(response.response[i].allocated);
+      ASSERT_GT(response.response[i].count, 0);
+      initial_ranges[i] = response.response[i];
     }
 
     // Manually shrink slices so FVM will differ from the partition.
-    uint64_t offset = query_request.vslice_start[0] + ranges[0].count - 1;
+    uint64_t offset = query_request.vslice_start[0] + response.response[0].count - 1;
     uint64_t length = 1;
-    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(partition_channel->get(), offset, length,
-                                                         &status),
-              ZX_OK);
-    ASSERT_EQ(status, ZX_OK);
+    {
+      const fidl::WireResult result =
+          fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+              ->Shrink(offset, length);
+      ASSERT_OK(result.status());
+      const fidl::WireResponse response = result.value();
+      ASSERT_OK(response.status);
+    }
 
     // Check slice allocation after manual grow/shrink
-    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(
-                  partition_channel->get(), query_request.vslice_start, query_request.count,
-                  &status, ranges, &actual_ranges_count),
-              ZX_OK);
-    ASSERT_EQ(status, ZX_OK);
-    ASSERT_EQ(query_request.count, actual_ranges_count);
-    ASSERT_FALSE(ranges[0].allocated);
-    ASSERT_EQ(ranges[0].count, query_request.vslice_start[1] - query_request.vslice_start[0]);
+    {
+      const fidl::WireResult result =
+          fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+              ->QuerySlices(fidl::VectorView<uint64_t>::FromExternal(
+                  const_cast<size_t*>(query_request.vslice_start), query_request.count));
+      ASSERT_OK(result.status());
+      const fidl::WireResponse response = result.value();
+      ASSERT_OK(response.status);
+      ASSERT_EQ(query_request.count, response.response_count);
+      ASSERT_FALSE(response.response[0].allocated);
+      ASSERT_EQ(response.response[0].count,
+                query_request.vslice_start[1] - query_request.vslice_start[0]);
+    }
   }
 
   // Try to mount the VPart. Since this mount call is supposed to fail, we wait for the spawned
@@ -1909,50 +2108,64 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
     ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
     vp_fd = *std::move(vp_fd_or);
 
-    fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
-    zx::unowned_channel partition_channel(partition_caller.borrow_channel());
+    fdio_cpp::UnownedFdioCaller partition_caller(vp_fd);
 
     // Grow back the slice we shrunk earlier.
     uint64_t offset = query_request.vslice_start[0];
     uint64_t length = 1;
-    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), offset, length,
-                                                         &status),
-              ZX_OK);
-    ASSERT_EQ(status, ZX_OK);
+    {
+      const fidl::WireResult result =
+          fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+              ->Extend(offset, length);
+      ASSERT_OK(result.status());
+      const fidl::WireResponse response = result.value();
+      ASSERT_OK(response.status);
+    }
 
     // Verify grow was successful.
-    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(
-                  partition_channel->get(), query_request.vslice_start, query_request.count,
-                  &status, ranges, &actual_ranges_count),
-              ZX_OK);
-    ASSERT_EQ(status, ZX_OK);
-    ASSERT_EQ(query_request.count, actual_ranges_count);
-    ASSERT_TRUE(ranges[0].allocated);
-    ASSERT_EQ(ranges[0].count, 1);
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->QuerySlices(fidl::VectorView<uint64_t>::FromExternal(
+                const_cast<size_t*>(query_request.vslice_start), query_request.count));
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+    ASSERT_EQ(query_request.count, response.response_count);
+    ASSERT_TRUE(response.response[0].allocated);
+    ASSERT_EQ(response.response[0].count, 1);
 
     // Now extend all extents by some number of additional slices.
-    fuchsia_hardware_block_volume_VsliceRange
-        ranges_before_extend[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
+    fuchsia_hardware_block_volume::wire::VsliceRange
+        ranges_before_extend[fuchsia_hardware_block_volume::wire::kMaxSliceRequests];
     for (unsigned i = 0; i < query_request.count; i++) {
-      ranges_before_extend[i] = ranges[i];
-      uint64_t offset = query_request.vslice_start[i] + ranges[i].count;
+      ranges_before_extend[i] = response.response[i];
+      uint64_t offset = query_request.vslice_start[i] + response.response[i].count;
       uint64_t length = query_request.count - i;
-      ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), offset, length,
-                                                           &status),
-                ZX_OK);
-      ASSERT_EQ(status, ZX_OK);
+      {
+        const fidl::WireResult result =
+            fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+                ->Extend(offset, length);
+        ASSERT_OK(result.status());
+        const fidl::WireResponse response = result.value();
+        ASSERT_OK(response.status);
+      }
     }
 
     // Verify that the extensions were successful.
-    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(
-                  partition_channel->get(), query_request.vslice_start, query_request.count,
-                  &status, ranges, &actual_ranges_count),
-              ZX_OK);
-    ASSERT_EQ(status, ZX_OK);
-    ASSERT_EQ(query_request.count, actual_ranges_count);
-    for (unsigned i = 0; i < query_request.count; i++) {
-      ASSERT_TRUE(ranges[i].allocated);
-      ASSERT_EQ(ranges[i].count, ranges_before_extend[i].count + query_request.count - i);
+    {
+      const fidl::WireResult result =
+          fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+              ->QuerySlices(fidl::VectorView<uint64_t>::FromExternal(
+                  const_cast<size_t*>(query_request.vslice_start), query_request.count));
+      ASSERT_OK(result.status());
+      const fidl::WireResponse response = result.value();
+      ASSERT_OK(response.status);
+      ASSERT_EQ(query_request.count, response.response_count);
+      for (unsigned i = 0; i < query_request.count; i++) {
+        ASSERT_TRUE(response.response[i].allocated);
+        ASSERT_EQ(response.response[i].count,
+                  ranges_before_extend[i].count + query_request.count - i);
+      }
     }
   }
 
@@ -1966,20 +2179,22 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
       fs_management::OpenPartitionWithDevfs(devfs_root.get(), kPartition1Matcher, 0, nullptr);
   ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
   vp_fd = *std::move(vp_fd_or);
-  fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
+  fdio_cpp::UnownedFdioCaller partition_caller(vp_fd);
   zx::unowned_channel partition_channel(partition_caller.borrow_channel());
 
   // Verify that slices were fixed on mount.
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(
-                partition_channel->get(), query_request.vslice_start, query_request.count, &status,
-                ranges, &actual_ranges_count),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(query_request.count, actual_ranges_count);
+  const fidl::WireResult result =
+      fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+          ->QuerySlices(fidl::VectorView<uint64_t>::FromExternal(
+              const_cast<size_t*>(query_request.vslice_start), query_request.count));
+  ASSERT_OK(result.status());
+  const fidl::WireResponse response = result.value();
+  ASSERT_OK(response.status);
+  ASSERT_EQ(query_request.count, response.response_count);
 
   for (unsigned i = 0; i < query_request.count; i++) {
-    ASSERT_TRUE(ranges[i].allocated);
-    ASSERT_EQ(ranges[i].count, initial_ranges[i].count);
+    ASSERT_TRUE(response.response[i].allocated);
+    ASSERT_EQ(response.response[i].count, initial_ranges[i].count);
   }
 }
 
@@ -2051,7 +2266,7 @@ TEST_F(FvmTest, TestVPartitionUpgrade) {
         .type = kTestPartDataGuid,
         .guid = kTestUniqueGuid1,
         .name = kTestPartDataName,
-        .flags = fuchsia_hardware_block_volume_ALLOCATE_PARTITION_FLAG_INACTIVE,
+        .flags = fuchsia_hardware_block_volume::wire::kAllocatePartitionFlagInactive,
     });
     ASSERT_EQ(vp_fd_or.status_value(), ZX_OK, "Couldn't open Volume");
   }
@@ -2082,7 +2297,7 @@ TEST_F(FvmTest, TestVPartitionUpgrade) {
         .type = kTestPartDataGuid,
         .guid = kTestUniqueGuid1,
         .name = kTestPartDataName,
-        .flags = fuchsia_hardware_block_volume_ALLOCATE_PARTITION_FLAG_INACTIVE,
+        .flags = fuchsia_hardware_block_volume::wire::kAllocatePartitionFlagInactive,
     });
     ASSERT_OK(vp_fd_or.status_value(), "Couldn't open new volume");
   }
@@ -2123,7 +2338,7 @@ TEST_F(FvmTest, TestVPartitionUpgrade) {
         .type = kTestPartDataGuid,
         .guid = kTestUniqueGuid2,
         .name = kTestPartBlobName,
-        .flags = fuchsia_hardware_block_volume_ALLOCATE_PARTITION_FLAG_INACTIVE,
+        .flags = fuchsia_hardware_block_volume::wire::kAllocatePartitionFlagInactive,
     });
     ASSERT_EQ(vp_fd_or.status_value(), ZX_OK, "Couldn't open volume");
   }
@@ -2142,18 +2357,21 @@ TEST_F(FvmTest, TestVPartitionUpgrade) {
   ASSERT_OK(WaitForPartition(kPartition2Matcher).status_value());
 
   // Destroy and reallocate the first partition as inactive.
-  fdio_cpp::FdioCaller partition_caller(*std::move(vp_fd_or));
-  zx_status_t status;
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeDestroy(partition_caller.borrow_channel(), &status),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
-  partition_caller.reset();
+  {
+    fdio_cpp::FdioCaller partition_caller(*std::move(vp_fd_or));
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Destroy();
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+  }
   {
     auto vp_fd_or = AllocatePartition({
         .type = kTestPartDataGuid,
         .guid = kTestUniqueGuid1,
         .name = kTestPartDataName,
-        .flags = fuchsia_hardware_block_volume_ALLOCATE_PARTITION_FLAG_INACTIVE,
+        .flags = fuchsia_hardware_block_volume::wire::kAllocatePartitionFlagInactive,
     });
     ASSERT_EQ(vp_fd_or.status_value(), ZX_OK, "Couldn't open volume");
   }
@@ -2216,9 +2434,7 @@ TEST_F(FvmTest, TestMounting) {
   fbl::unique_fd rootfd(open(kMountPath, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(rootfd);
   fdio_cpp::FdioCaller caller(std::move(rootfd));
-  auto result =
-      fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io::Directory>(caller.borrow_channel()))
-          ->QueryFilesystem();
+  auto result = fidl::WireCall(caller.directory())->QueryFilesystem();
   ASSERT_TRUE(result.ok());
   const char* kFsName = "minfs";
   const char* name = reinterpret_cast<const char*>(result.value().info->name.data());
@@ -2315,9 +2531,7 @@ TEST_F(FvmTest, TestMkfs) {
   fbl::unique_fd rootfd(open(kMountPath, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(rootfd);
   fdio_cpp::FdioCaller caller(std::move(rootfd));
-  auto result =
-      fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io::Directory>(caller.borrow_channel()))
-          ->QueryFilesystem();
+  auto result = fidl::WireCall(caller.directory())->QueryFilesystem();
   ASSERT_TRUE(result.ok());
   const char* kFsName = "minfs";
   const char* name = reinterpret_cast<const char*>(result.value().info->name.data());
@@ -2357,19 +2571,23 @@ TEST_F(FvmTest, TestCorruptionOk) {
   fbl::unique_fd vp_fd(*std::move(vp_fd_or));
 
   // Extend the vpart (writes to primary)
-  fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
-  zx::unowned_channel partition_channel(partition_caller.borrow_channel());
-  zx_status_t status;
+  fdio_cpp::UnownedFdioCaller partition_caller(vp_fd);
   uint64_t offset = 1;
   uint64_t length = 1;
-  ASSERT_EQ(
-      fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), offset, length, &status),
-      ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
-  fuchsia_hardware_block_BlockInfo block_info;
-  ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Extend(offset, length);
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+  }
+  const fidl::WireResult result =
+      fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+  ASSERT_OK(result.status());
+  const fidl::WireResponse response = result.value();
+  ASSERT_OK(response.status);
+  const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
   ASSERT_EQ(block_info.block_count * block_info.block_size, kSliceSize * 2);
 
   // Initial slice access
@@ -2434,21 +2652,26 @@ TEST_F(FvmTest, TestCorruptionRegression) {
   ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
   fbl::unique_fd vp_fd(*std::move(vp_fd_or));
 
-  fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
+  fdio_cpp::UnownedFdioCaller partition_caller(vp_fd);
   zx::unowned_channel partition_channel(partition_caller.borrow_channel());
-  zx_status_t status;
 
   // Extend the vpart (writes to primary)
   uint64_t offset = 1;
   uint64_t length = 1;
-  ASSERT_EQ(
-      fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), offset, length, &status),
-      ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
-  fuchsia_hardware_block_BlockInfo block_info;
-  ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Extend(offset, length);
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+  }
+  const fidl::WireResult result =
+      fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+  ASSERT_OK(result.status());
+  const fidl::WireResponse response = result.value();
+  ASSERT_OK(response.status);
+  const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
   ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * 2);
 
   // Initial slice access
@@ -2502,19 +2725,24 @@ TEST_F(FvmTest, TestCorruptionUnrecoverable) {
 
   fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
   zx::unowned_channel partition_channel(partition_caller.borrow_channel());
-  zx_status_t status;
 
   // Extend the vpart (writes to primary)
   uint64_t offset = 1;
   uint64_t length = 1;
-  ASSERT_EQ(
-      fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), offset, length, &status),
-      ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
-  fuchsia_hardware_block_BlockInfo block_info;
-  ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+            ->Extend(offset, length);
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+  }
+  const fidl::WireResult result =
+      fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+  ASSERT_OK(result.status());
+  const fidl::WireResponse response = result.value();
+  ASSERT_OK(response.status);
+  const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
   ASSERT_EQ(block_info.block_count * block_info.block_size, kSliceSize * 2);
 
   // Initial slice access

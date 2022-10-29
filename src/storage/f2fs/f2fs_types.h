@@ -9,6 +9,9 @@
 #include <zircon/listnode.h>
 #include <zircon/types.h>
 
+#include "src/lib/storage/vfs/cpp/paged_vfs.h"
+#include "src/lib/storage/vfs/cpp/vnode.h"
+
 namespace f2fs {
 
 class Page;

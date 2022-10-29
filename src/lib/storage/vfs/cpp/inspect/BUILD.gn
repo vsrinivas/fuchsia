@@ -34,10 +34,6 @@ static_library("inspect") {
 
     deps += [ "//sdk/lib/fit" ]
   }
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("inspect_unittests") {
@@ -55,10 +51,6 @@ test("inspect_unittests") {
     "//src/lib/storage/block_client/cpp:fake_device",
     "//third_party/googletest:gtest",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_unittest_package("vfs-inspect-tests") {

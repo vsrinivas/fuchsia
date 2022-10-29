@@ -21,6 +21,8 @@
 #include <fbl/mutex.h>
 
 #include "storage/operation/unbuffered_operations_builder.h"
+#else
+#include "src/lib/storage/vfs/cpp/transaction/buffered_operations_builder.h"
 #endif
 
 #include <fbl/algorithm.h>
@@ -28,13 +30,8 @@
 #include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
 
-#include "src/lib/storage/vfs/cpp/queue.h"
-#include "src/lib/storage/vfs/cpp/transaction/buffered_operations_builder.h"
-#include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/storage/minfs/allocator/allocator_reservation.h"
-#include "src/storage/minfs/bcache.h"
 #include "src/storage/minfs/cached_block_transaction.h"
-#include "src/storage/minfs/format.h"
 #include "src/storage/minfs/pending_work.h"
 
 namespace minfs {

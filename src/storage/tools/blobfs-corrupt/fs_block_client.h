@@ -40,12 +40,13 @@ class FsBlockClient {
 
  private:
   FsBlockClient(std::unique_ptr<block_client::BlockDevice> device,
-                fuchsia_hardware_block_BlockInfo block_info, zx::vmo vmo, storage::Vmoid vmoid);
+                fuchsia_hardware_block::wire::BlockInfo block_info, zx::vmo vmo,
+                storage::Vmoid vmoid);
   uint64_t device_blocks_per_blobfs_block() const;
   uint64_t fs_block_to_device_block(uint64_t block) const;
 
   std::unique_ptr<block_client::BlockDevice> device_;
-  fuchsia_hardware_block_BlockInfo block_info_;
+  fuchsia_hardware_block::wire::BlockInfo block_info_;
   zx::vmo vmo_;
   storage::Vmoid vmoid_;
 };

@@ -43,23 +43,24 @@ TEST_P(DeviceTest, TestWriteThenRead) {
   const std::string kFilename = GetPath("block_device");
   const off_t kFileSize = 10 * 1024 * 1024;  // 10 megabytes
   CreateFxFile(kFilename, kFileSize);
-  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_block::Block>();
   ASSERT_EQ(endpoints.status_value(), ZX_OK);
-  auto [client, server] = *std::move(endpoints);
+  auto& [client, server] = endpoints.value();
 
   // Re-open file as block device i.e. using MODE_TYPE_BLOCK_DEVICE
   fdio_cpp::FdioCaller caller(fs().GetRootFd());
   ASSERT_EQ(fidl::WireCall(caller.directory())
                 ->Open(fuchsia_io::wire::OpenFlags::kRightReadable |
                            fuchsia_io::wire::OpenFlags::kRightWritable,
-                       fuchsia_io::wire::kModeTypeBlockDevice, "block_device", std::move(server))
+                       fuchsia_io::wire::kModeTypeBlockDevice, "block_device",
+                       fidl::ServerEnd<fuchsia_io::Node>(server.TakeChannel()))
                 .status(),
             ZX_OK);
 
   std::unique_ptr<block_client::RemoteBlockDevice> device;
-  ASSERT_EQ(block_client::RemoteBlockDevice::Create(client.TakeChannel(), &device), ZX_OK);
+  ASSERT_EQ(block_client::RemoteBlockDevice::Create(std::move(client), &device), ZX_OK);
 
-  fuchsia_hardware_block_BlockInfo info = {};
+  fuchsia_hardware_block::wire::BlockInfo info = {};
   ASSERT_EQ(device->BlockGetInfo(&info), ZX_OK);
   ASSERT_EQ(info.block_count, static_cast<unsigned long>(kFileSize) / info.block_size);
 
@@ -106,25 +107,26 @@ TEST_P(DeviceTest, TestWriteThenRead) {
 TEST_P(DeviceTest, TestGroupWritesThenReads) {
   const std::string kFilename = GetPath("block_device");
   CreateFxFile(kFilename);
-  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_block::Block>();
   ASSERT_EQ(endpoints.status_value(), ZX_OK);
-  auto [client, server] = *std::move(endpoints);
+  auto& [client, server] = endpoints.value();
 
   fdio_cpp::FdioCaller caller(fs().GetRootFd());
   ASSERT_EQ(fidl::WireCall(caller.directory())
                 ->Open(fuchsia_io::wire::OpenFlags::kRightReadable |
                            fuchsia_io::wire::OpenFlags::kRightWritable,
-                       fuchsia_io::wire::kModeTypeBlockDevice, "block_device", std::move(server))
+                       fuchsia_io::wire::kModeTypeBlockDevice, "block_device",
+                       fidl::ServerEnd<fuchsia_io::Node>(server.TakeChannel()))
                 .status(),
             ZX_OK);
 
   std::unique_ptr<block_client::RemoteBlockDevice> device;
-  ASSERT_EQ(block_client::RemoteBlockDevice::Create(client.TakeChannel(), &device), ZX_OK);
+  ASSERT_EQ(block_client::RemoteBlockDevice::Create(std::move(client), &device), ZX_OK);
 
   const size_t kVmoBlocks = 6;
   zx::vmo vmo;
   storage::OwnedVmoid vmoid;
-  fuchsia_hardware_block_BlockInfo info = {};
+  fuchsia_hardware_block::wire::BlockInfo info = {};
   ASSERT_EQ(device->BlockGetInfo(&info), ZX_OK);
   ASSERT_EQ(zx::vmo::create(kVmoBlocks * info.block_size, 0, &vmo), ZX_OK);
   ASSERT_NO_FATAL_FAILURE(device->BlockAttachVmo(vmo, &vmoid.GetReference(device.get())));
@@ -189,25 +191,26 @@ TEST_P(DeviceTest, TestGroupWritesThenReads) {
 TEST_P(DeviceTest, TestWriteThenFlushThenRead) {
   const std::string kFilename = GetPath("block_device");
   CreateFxFile(kFilename);
-  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_block::Block>();
   ASSERT_EQ(endpoints.status_value(), ZX_OK);
-  auto [client, server] = *std::move(endpoints);
+  auto& [client, server] = endpoints.value();
 
   fdio_cpp::FdioCaller caller(fs().GetRootFd());
   ASSERT_EQ(fidl::WireCall(caller.directory())
                 ->Open(fuchsia_io::wire::OpenFlags::kRightReadable |
                            fuchsia_io::wire::OpenFlags::kRightWritable,
-                       fuchsia_io::wire::kModeTypeBlockDevice, "block_device", std::move(server))
+                       fuchsia_io::wire::kModeTypeBlockDevice, "block_device",
+                       fidl::ServerEnd<fuchsia_io::Node>(server.TakeChannel()))
                 .status(),
             ZX_OK);
 
   std::unique_ptr<block_client::RemoteBlockDevice> device;
-  ASSERT_EQ(block_client::RemoteBlockDevice::Create(client.TakeChannel(), &device), ZX_OK);
+  ASSERT_EQ(block_client::RemoteBlockDevice::Create(std::move(client), &device), ZX_OK);
 
   const size_t kVmoBlocks = 2;
   zx::vmo vmo;
   storage::OwnedVmoid vmoid;
-  fuchsia_hardware_block_BlockInfo info = {};
+  fuchsia_hardware_block::wire::BlockInfo info = {};
   ASSERT_EQ(device->BlockGetInfo(&info), ZX_OK);
   ASSERT_EQ(zx::vmo::create(kVmoBlocks * info.block_size, 0, &vmo), ZX_OK);
   ASSERT_NO_FATAL_FAILURE(device->BlockAttachVmo(vmo, &vmoid.GetReference(device.get())));
@@ -248,25 +251,26 @@ TEST_P(DeviceTest, TestWriteThenFlushThenRead) {
 TEST_P(DeviceTest, TestInvalidGroupRequests) {
   const std::string kFilename = GetPath("block_device");
   CreateFxFile(kFilename);
-  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_block::Block>();
   ASSERT_EQ(endpoints.status_value(), ZX_OK);
-  auto [client, server] = *std::move(endpoints);
+  auto& [client, server] = endpoints.value();
 
   fdio_cpp::FdioCaller caller(fs().GetRootFd());
   ASSERT_EQ(fidl::WireCall(caller.directory())
                 ->Open(fuchsia_io::wire::OpenFlags::kRightReadable |
                            fuchsia_io::wire::OpenFlags::kRightWritable,
-                       fuchsia_io::wire::kModeTypeBlockDevice, "block_device", std::move(server))
+                       fuchsia_io::wire::kModeTypeBlockDevice, "block_device",
+                       fidl::ServerEnd<fuchsia_io::Node>(server.TakeChannel()))
                 .status(),
             ZX_OK);
 
   std::unique_ptr<block_client::RemoteBlockDevice> device;
-  ASSERT_EQ(block_client::RemoteBlockDevice::Create(client.TakeChannel(), &device), ZX_OK);
+  ASSERT_EQ(block_client::RemoteBlockDevice::Create(std::move(client), &device), ZX_OK);
 
   const size_t kVmoBlocks = 5;
   zx::vmo vmo;
   storage::OwnedVmoid vmoid;
-  fuchsia_hardware_block_BlockInfo info = {};
+  fuchsia_hardware_block::wire::BlockInfo info = {};
   ASSERT_EQ(device->BlockGetInfo(&info), ZX_OK);
   ASSERT_EQ(zx::vmo::create(kVmoBlocks * info.block_size, 0, &vmo), ZX_OK);
   ASSERT_NO_FATAL_FAILURE(device->BlockAttachVmo(vmo, &vmoid.GetReference(device.get())));
