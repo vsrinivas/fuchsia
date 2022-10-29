@@ -103,6 +103,13 @@
         },
     ],
     facets: {
-        "fuchsia.test": { type: "chromium" },
+        "fuchsia.test": {
+            type: "chromium",
+            "deprecated-allowed-packages": [
+                "intl_property_manager",
+                "test-ui-stack",
+                "web_engine",
+            ],
+        },
     },
 }
