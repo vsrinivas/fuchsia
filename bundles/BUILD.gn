@@ -5,24 +5,6 @@
 import("//build/drivers/check_included_drivers.gni")
 import("//build/drivers/create_all_drivers_doc.gni")
 
-# DEPRECATED! DO NOT ADD TO THIS GROUP
-group("tools") {
-  testonly = true
-  public_deps = [ "//bundles/tools" ]
-  deps = [ "//build/validate:non_production_tag" ]
-}
-
-# DEPRECATED! DO NOT ADD TO THIS GROUP
-group("build_infra") {
-  public_deps = [ "//bundles/infra/build" ]
-}
-
-# DEPRECATED! DO NOT ADD TO THIS GROUP
-group("test_infra") {
-  testonly = true
-  public_deps = [ "//bundles/infra/test" ]
-}
-
 group("tests") {
   testonly = true
   public_deps = [
@@ -50,12 +32,6 @@ group("stress-tests") {
     "//src/ui/tests/scenic-stress-tests:tests",
     "//src/zircon/tests/stress-tests:tests",
   ]
-}
-
-# DEPRECATED! DO NOT ADD TO THIS GROUP
-group("kitchen_sink") {
-  testonly = true
-  public_deps = [ "//bundles/kitchen_sink" ]
 }
 
 # While we don't necessarily want to run all tests on devices with limited
