@@ -419,7 +419,7 @@ group("core") {
 group("host-tests") {
   testonly = true
 
-  deps = [ "//bundles/buildbot:host-tests_no_e2e" ]
+  deps = [ "//bundles/buildbot/host:no_e2e" ]
 
   if (is_linux) {
     # Add-assign should contain deps of :host-tests if `is_linux` is true.

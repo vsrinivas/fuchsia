@@ -5,17 +5,6 @@
 import("//build/dart/config.gni")
 import("//build/flutter/config.gni")
 
-# This has a group corresponding to each product name.  It gives the
-# additional base packages that should be included in the build done by
-# a bot to run tests and build-time checks to cover that product's code.
-
-# WARNING: Known to infrastructure
-# DEPRECATED! DO NOT ADD TO THIS GROUP
-group("bringup") {
-  testonly = true
-  deps = [ "//bundles/buildbot/bringup" ]
-}
-
 # TODO(fxbug.dev/105827): Remove group when all bringup tests pass with DFv2 is
 # enabled and all builder bots with DFv2 do not include this group into their
 # base package set.
@@ -24,28 +13,6 @@ group("bringup_dfv2") {
   deps = [ "//bundles/buildbot/dfv2:bringup" ]
 }
 
-# WARNING: Known to infrastructure
-# DEPRECATED! DO NOT ADD TO THIS GROUP
-group("core_no_e2e") {
-  testonly = true
-  deps = [ "//bundles/buildbot/core:no_e2e" ]
-}
-
-# WARNING: Known to infrastructure
-# DEPRECATED! DO NOT ADD TO THIS GROUP
-group("core") {
-  testonly = true
-  deps = [ "//bundles/buildbot/core" ]
-}
-
-# WARNING: Known to infrastructure.
-# DEPRECATED! DO NOT ADD TO THIS GROUP
-group("terminal") {
-  testonly = true
-}
-
-# WARNING: Known to infrastructure.
-# DEPRECATED! DO NOT ADD TO THIS GROUP
 # TODO(https://fxbug.dev/94919) split this into target/host groups and move to //products
 group("workstation") {
   testonly = true
@@ -62,18 +29,4 @@ group("workstation_eng_paused_tests") {
 group("host_suspend_tests_e2e") {
   testonly = true
   deps = [ "//src/tests/end_to_end/suspend:test($host_toolchain)" ]
-}
-
-# WARNING: Known to infrastructure.
-# DEPRECATED! DO NOT ADD TO THIS GROUP
-group("host-tests_no_e2e") {
-  testonly = true
-  deps = [ "//bundles/buildbot/host:no_e2e" ]
-}
-
-# WARNING: Known to infrastructure.
-# DEPRECATED! DO NOT ADD TO THIS GROUP
-group("host-tests") {
-  testonly = true
-  deps = [ "//bundles/buildbot/host" ]
 }
