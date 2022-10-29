@@ -344,7 +344,6 @@ if (is_fuchsia) {
     ]
     partitions = files.partitions_config
     system_a = files.images_json
-    system_b = files.images_json
     system_r = files.recovery_images_json
 
     # Create lists of the files that are referenced by the assembly manifests.
@@ -385,7 +384,6 @@ if (is_fuchsia) {
     # List the contents of each input so that the outputs can be calculated.
     partitions_contents = _partitions_contents
     system_a_contents = _assembly_contents
-    system_b_contents = system_a_contents
     system_r_contents = _recovery_contents
   }
 
