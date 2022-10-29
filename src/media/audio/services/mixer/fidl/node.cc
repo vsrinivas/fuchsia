@@ -171,6 +171,10 @@ fpromise::result<void, CreateEdgeError> Node::CreateEdge(const GraphContext& ctx
   auto stages_to_move = MoveNodeToThread(*source, /*new_thread=*/dest->thread(),
                                          /*expected_thread=*/ctx.detached_thread);
 
+  // Update delays. Do this after moving threads so the closures get attached to correct threads.
+  std::map<ThreadId, std::vector<fit::closure>> closures;
+  RecomputeDelays(*source, *dest, closures);
+
   // Update the PipelineStages asynchronously.
   // Fist apply updates that must happen on dest's thread, which includes connecting source -> dest.
   ctx.global_task_queue.Push(
@@ -186,7 +190,8 @@ fpromise::result<void, CreateEdgeError> Node::CreateEdge(const GraphContext& ctx
        is_source_mixer = !is_dest_mixer && (source->type() == Node::Type::kMixer),  //
        newly_added_gains =
            AddGains(ctx.gain_controls, add_source_options.gain_ids, source, dest),  //
-       add_source_options = std::move(add_source_options)]() mutable {
+       add_source_options = std::move(add_source_options),                          //
+       closures_for_thread = std::move(closures[dest->thread()->id()])]() mutable {
         // Before we acquire a checker, verify the dest_stage has the expected thread.
         FX_CHECK(dest_stage->thread() == new_thread)
             << dest_stage->thread()->name() << " != " << new_thread->name();
@@ -213,7 +218,25 @@ fpromise::result<void, CreateEdgeError> Node::CreateEdge(const GraphContext& ctx
           }
         }
         dest_stage->AddSource(source_stage, std::move(add_source_options));
+
+        for (auto& fn : closures_for_thread) {
+          FX_CHECK(fn);
+          fn();
+        }
       });
+
+  // Queue closures that must be run on other threads.
+  for (auto& [thread_id, closures_for_thread] : closures) {
+    if (thread_id == dest->thread()->id()) {
+      continue;
+    }
+    ctx.global_task_queue.Push(thread_id, [closures_for_thread = std::move(closures_for_thread)]() {
+      for (auto& fn : closures_for_thread) {
+        FX_CHECK(fn);
+        fn();
+      }
+    });
+  }
 
   return fpromise::ok();
 }
@@ -279,6 +302,10 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
     dest_parent->RemoveChildSource(dest);
   }
 
+  // Update delays. Do this before moving threads so the closures get attached to correct threads.
+  std::map<ThreadId, std::vector<fit::closure>> closures;
+  RecomputeDelays(*source, *dest, closures);
+
   // Since the source was previously connected to dest, it must be owned by the same thread as dest.
   // Since the source is now disconnected, it moves to the detached thread.
   auto stages_to_move = MoveNodeToThread(*source, /*new_thread=*/ctx.detached_thread,
@@ -293,7 +320,8 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
        new_thread = ctx.detached_thread->pipeline_thread(),   //
        old_thread = dest->thread()->pipeline_thread(),        //
        is_dest_mixer = (dest->type() == Node::Type::kMixer),  //
-       newly_removed_gains = RemoveGains(ctx.gain_controls, source, dest)]() {
+       newly_removed_gains = RemoveGains(ctx.gain_controls, source, dest),
+       closures_for_thread = std::move(closures[dest->thread()->id()])]() {
         // Before we acquire a checker, verify the dest_stage has the expected thread.
         FX_CHECK(dest_stage->thread() == old_thread)
             << dest_stage->thread()->name() << " != " << new_thread->name();
@@ -317,7 +345,25 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
               << stage->thread()->name() << " != " << old_thread->name();
           stage->set_thread(new_thread);
         }
+
+        for (auto& fn : closures_for_thread) {
+          FX_CHECK(fn);
+          fn();
+        }
       });
+
+  // Queue closures that must be run on other threads.
+  for (auto& [thread_id, closures_for_thread] : closures) {
+    if (thread_id == dest->thread()->id()) {
+      continue;
+    }
+    ctx.global_task_queue.Push(thread_id, [closures_for_thread = std::move(closures_for_thread)]() {
+      for (auto& fn : closures_for_thread) {
+        FX_CHECK(fn);
+        fn();
+      }
+    });
+  }
 
   return fpromise::ok();
 }

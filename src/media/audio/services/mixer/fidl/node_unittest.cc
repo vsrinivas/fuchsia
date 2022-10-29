@@ -13,6 +13,7 @@ namespace media_audio {
 namespace {
 
 using ::testing::ElementsAre;
+using ::testing::UnorderedElementsAre;
 
 //
 // CreateEdge
@@ -1037,8 +1038,338 @@ TEST(NodeCreateDeleteEdgeTest, ThreadMoves) {
   EXPECT_EQ(graph.node(13)->pipeline_stage()->thread(), new_thread->pipeline_thread());
 }
 
+TEST(NodeCreateDeleteEdgeTest, RecomputeDelays) {
+  // The graph is:
+  //
+  // ```
+  //        1     producer (renderer)
+  //    +---|---+
+  //    |   2   |
+  //    |       | meta 10 (splitter; 3=output, 4=loopback)
+  //    | 3   4 |
+  //    +-|---|-+
+  //      |    \
+  //      5     \   6  producer (input device)
+  // consumer    \ /
+  // (device)     7
+  //              |
+  //              8    consumer (capturer)
+  // ```
+  //
+  // None of these edges exist at the beginning. They are created 1-by-1.
+  FakeGraph graph({
+      .meta_nodes = {{10, {.source_children = {2}, .dest_children = {3, 4}}}},
+      .unconnected_ordinary_nodes = {1, 5, 6, 7, 8},
+      .types =
+          {
+              {Node::Type::kProducer, {1, 6}},
+              {Node::Type::kConsumer, {2, 5, 8}},
+          },
+      .pipeline_directions =
+          {
+              {PipelineDirection::kOutput, {1, 2, 3, 4, 5, 10}},
+              {PipelineDirection::kInput, {6, 7, 8}},
+          },
+      .threads =
+          {
+              {ThreadId(1), {2, 5}},
+              {ThreadId(2), {8}},
+          },
+  });
+
+  // Set external values.
+  graph.node(5)->set_max_downstream_output_pipeline_delay(zx::nsec(5000));
+  graph.node(6)->set_max_upstream_input_pipeline_delay(zx::nsec(6000));
+
+  // Set internal values.
+  graph.node(2)->SetOnPresentationDelayForSourceEdge([&graph](const Node* source) {
+    if (source == graph.node(1).get()) {
+      return zx::nsec(12);
+    } else {
+      ADD_FAILURE() << "unexpected source " << source->name();
+      return zx::nsec(0);
+    }
+  });
+  graph.node(5)->SetOnPresentationDelayForSourceEdge([&graph](const Node* source) {
+    if (source == graph.node(3).get()) {
+      return zx::nsec(35);
+    } else {
+      ADD_FAILURE() << "unexpected source " << source->name();
+      return zx::nsec(0);
+    }
+  });
+  graph.node(7)->SetOnPresentationDelayForSourceEdge([&graph](const Node* source) {
+    if (source == graph.node(4).get()) {
+      return zx::nsec(0);
+    } else if (source == graph.node(6).get()) {
+      return zx::nsec(67);
+    } else {
+      ADD_FAILURE() << "unexpected source " << source->name();
+      return zx::nsec(0);
+    }
+  });
+  graph.node(8)->SetOnPresentationDelayForSourceEdge([&graph](const Node* source) {
+    if (source == graph.node(7).get()) {
+      return zx::nsec(78);
+    } else {
+      ADD_FAILURE() << "unexpected source " << source->name();
+      return zx::nsec(0);
+    }
+  });
+
+  // Setup callbacks.
+  struct Updated {
+    std::unordered_set<int> downstream_output;
+    std::unordered_set<int> downstream_input;
+    std::unordered_set<int> upstream_input;
+  };
+  Updated updated;
+  for (int k = 1; k <= 8; k++) {
+    auto node = graph.node(k);
+    node->SetOnSetMaxDownstreamOutputPipelineDelay([&updated, k, node]() {
+      return std::make_pair(node->thread()->id(),
+                            [&updated, k]() { updated.downstream_output.insert(k); });
+    });
+    node->SetOnSetMaxDownstreamInputPipelineDelay([&updated, k, node]() {
+      return std::make_pair(node->thread()->id(),
+                            [&updated, k]() { updated.downstream_input.insert(k); });
+    });
+    node->SetOnSetMaxUpstreamInputPipelineDelay([&updated, k, node]() {
+      return std::make_pair(node->thread()->id(),
+                            [&updated, k]() { updated.upstream_input.insert(k); });
+    });
+  }
+
+  auto q = graph.global_task_queue();
+
+  // These test cases are run forward then backwards.
+  //
+  // When run forwards, we create edge `source -> dest`, then validate the two closures, then move
+  // to the next test case.
+  //
+  // When run backwards, we delete edge `source -> dest`, then calidate `changes_on_edge`, then
+  // validate `stage_after_edge` in the prior test case.
+  struct TestCase {
+    NodePtr source;
+    NodePtr dest;
+    std::function<void()> state_after_edge;
+    std::function<void()> changes_on_edge;
+  };
+  std::vector<TestCase> test_cases = {
+      {
+          // This is the expected initial state.
+          .source = nullptr,
+          .dest = nullptr,
+          .state_after_edge =
+              [&graph]() {
+                for (int k = 1; k <= 4; k++) {
+                  auto node = graph.node(k);
+                  SCOPED_TRACE(node->name());
+                  EXPECT_EQ(node->max_downstream_output_pipeline_delay(), zx::nsec(0));
+                  EXPECT_EQ(node->max_downstream_input_pipeline_delay(), zx::nsec(0));
+                }
+                for (int k = 7; k <= 8; k++) {
+                  auto node = graph.node(k);
+                  SCOPED_TRACE(node->name());
+                  EXPECT_EQ(node->max_upstream_input_pipeline_delay(), zx::nsec(0));
+                }
+                EXPECT_EQ(graph.node(5)->max_downstream_output_pipeline_delay(), zx::nsec(5000));
+                EXPECT_EQ(graph.node(5)->max_downstream_input_pipeline_delay(), zx::nsec(0));
+                EXPECT_EQ(graph.node(6)->max_upstream_input_pipeline_delay(), zx::nsec(6000));
+              },
+          .changes_on_edge = []() {},
+      },
+      {
+          .source = graph.node(1),
+          .dest = graph.node(2),
+          .state_after_edge =
+              [&graph]() {
+                EXPECT_EQ(graph.node(1)->max_downstream_output_pipeline_delay(), zx::nsec(12));
+                EXPECT_EQ(graph.node(2)->max_downstream_output_pipeline_delay(), zx::nsec(0));
+                EXPECT_EQ(graph.node(3)->max_downstream_output_pipeline_delay(), zx::nsec(0));
+                EXPECT_EQ(graph.node(5)->max_downstream_output_pipeline_delay(), zx::nsec(5000));
+              },
+          .changes_on_edge =
+              [q, &updated]() {
+                q->RunForThread(1);
+                EXPECT_THAT(updated.downstream_output, UnorderedElementsAre(1));
+                EXPECT_THAT(updated.downstream_input, UnorderedElementsAre());
+                EXPECT_THAT(updated.upstream_input, UnorderedElementsAre());
+
+                updated.downstream_output.clear();
+                updated.downstream_input.clear();
+                updated.upstream_input.clear();
+
+                q->RunForThread(2);
+                EXPECT_THAT(updated.downstream_output, UnorderedElementsAre());
+                EXPECT_THAT(updated.downstream_input, UnorderedElementsAre());
+                EXPECT_THAT(updated.upstream_input, UnorderedElementsAre());
+              },
+      },
+      {
+          .source = graph.node(3),
+          .dest = graph.node(5),
+          .state_after_edge =
+              [&graph]() {
+                EXPECT_EQ(graph.node(1)->max_downstream_output_pipeline_delay(),
+                          zx::nsec(12 + 35 + 5000));
+                EXPECT_EQ(graph.node(2)->max_downstream_output_pipeline_delay(),
+                          zx::nsec(35 + 5000));
+                EXPECT_EQ(graph.node(3)->max_downstream_output_pipeline_delay(),
+                          zx::nsec(35 + 5000));
+                EXPECT_EQ(graph.node(5)->max_downstream_output_pipeline_delay(), zx::nsec(5000));
+              },
+          .changes_on_edge =
+              [q, &updated]() {
+                q->RunForThread(1);
+                EXPECT_THAT(updated.downstream_output, UnorderedElementsAre(1, 2, 3));
+                EXPECT_THAT(updated.downstream_input, UnorderedElementsAre());
+                EXPECT_THAT(updated.upstream_input, UnorderedElementsAre());
+
+                updated.downstream_output.clear();
+                updated.downstream_input.clear();
+                updated.upstream_input.clear();
+
+                q->RunForThread(2);
+                EXPECT_THAT(updated.downstream_output, UnorderedElementsAre());
+                EXPECT_THAT(updated.downstream_input, UnorderedElementsAre());
+                EXPECT_THAT(updated.upstream_input, UnorderedElementsAre());
+              },
+      },
+      {
+          .source = graph.node(6),
+          .dest = graph.node(7),
+          .state_after_edge =
+              [&graph]() {
+                EXPECT_EQ(graph.node(4)->max_downstream_input_pipeline_delay(), zx::nsec(0));
+                EXPECT_EQ(graph.node(6)->max_downstream_input_pipeline_delay(), zx::nsec(67));
+                EXPECT_EQ(graph.node(7)->max_downstream_input_pipeline_delay(), zx::nsec(0));
+                EXPECT_EQ(graph.node(8)->max_downstream_input_pipeline_delay(), zx::nsec(0));
+
+                EXPECT_EQ(graph.node(6)->max_upstream_input_pipeline_delay(), zx::nsec(6000));
+                EXPECT_EQ(graph.node(7)->max_upstream_input_pipeline_delay(), zx::nsec(6000 + 67));
+                EXPECT_EQ(graph.node(8)->max_upstream_input_pipeline_delay(), zx::nsec(0));
+              },
+          .changes_on_edge =
+              [q, &updated]() {
+                // Since 6 and 7 aren't connected to a consumer before this edges is created,
+                // they're detached, hence these run on the first available thread.
+                q->RunForThread(1);
+                EXPECT_THAT(updated.downstream_output, UnorderedElementsAre());
+                EXPECT_THAT(updated.downstream_input, UnorderedElementsAre(6));
+                EXPECT_THAT(updated.upstream_input, UnorderedElementsAre(7));
+
+                updated.downstream_output.clear();
+                updated.downstream_input.clear();
+                updated.upstream_input.clear();
+
+                q->RunForThread(2);
+                EXPECT_THAT(updated.downstream_output, UnorderedElementsAre());
+                EXPECT_THAT(updated.downstream_input, UnorderedElementsAre());
+                EXPECT_THAT(updated.upstream_input, UnorderedElementsAre());
+              },
+      },
+      {
+          .source = graph.node(7),
+          .dest = graph.node(8),
+          .state_after_edge =
+              [&graph]() {
+                EXPECT_EQ(graph.node(4)->max_downstream_input_pipeline_delay(), zx::nsec(0));
+                EXPECT_EQ(graph.node(6)->max_downstream_input_pipeline_delay(), zx::nsec(67 + 78));
+                EXPECT_EQ(graph.node(7)->max_downstream_input_pipeline_delay(), zx::nsec(78));
+                EXPECT_EQ(graph.node(8)->max_downstream_input_pipeline_delay(), zx::nsec(0));
+
+                EXPECT_EQ(graph.node(6)->max_upstream_input_pipeline_delay(), zx::nsec(6000));
+                EXPECT_EQ(graph.node(7)->max_upstream_input_pipeline_delay(), zx::nsec(6000 + 67));
+                EXPECT_EQ(graph.node(8)->max_upstream_input_pipeline_delay(),
+                          zx::nsec(6000 + 67 + 78));
+              },
+          .changes_on_edge =
+              [q, &updated]() {
+                // Tasks are pushed on node 8's thread first.
+                q->RunForThread(2);
+                EXPECT_THAT(updated.downstream_output, UnorderedElementsAre());
+                EXPECT_THAT(updated.downstream_input, UnorderedElementsAre(6, 7));
+                EXPECT_THAT(updated.upstream_input, UnorderedElementsAre(8));
+
+                updated.downstream_output.clear();
+                updated.downstream_input.clear();
+                updated.upstream_input.clear();
+
+                q->RunForThread(1);
+                EXPECT_THAT(updated.downstream_output, UnorderedElementsAre());
+                EXPECT_THAT(updated.downstream_input, UnorderedElementsAre());
+                EXPECT_THAT(updated.upstream_input, UnorderedElementsAre());
+              },
+      },
+      {
+          .source = graph.node(4),
+          .dest = graph.node(7),
+          .state_after_edge =
+              [&graph]() {
+                EXPECT_EQ(graph.node(1)->max_downstream_input_pipeline_delay(), zx::nsec(78));
+                EXPECT_EQ(graph.node(2)->max_downstream_input_pipeline_delay(), zx::nsec(78));
+                EXPECT_EQ(graph.node(4)->max_downstream_input_pipeline_delay(), zx::nsec(78));
+                EXPECT_EQ(graph.node(6)->max_downstream_input_pipeline_delay(), zx::nsec(67 + 78));
+                EXPECT_EQ(graph.node(7)->max_downstream_input_pipeline_delay(), zx::nsec(78));
+                EXPECT_EQ(graph.node(8)->max_downstream_input_pipeline_delay(), zx::nsec(0));
+
+                EXPECT_EQ(graph.node(6)->max_upstream_input_pipeline_delay(), zx::nsec(6000));
+                EXPECT_EQ(graph.node(7)->max_upstream_input_pipeline_delay(), zx::nsec(6000 + 67));
+                EXPECT_EQ(graph.node(8)->max_upstream_input_pipeline_delay(),
+                          zx::nsec(6000 + 67 + 78));
+              },
+          .changes_on_edge =
+              [q, &updated]() {
+                // Tasks are pushed on node 7's thread first.
+                q->RunForThread(2);
+                EXPECT_THAT(updated.downstream_output, UnorderedElementsAre());
+                EXPECT_THAT(updated.downstream_input, UnorderedElementsAre(4));
+                EXPECT_THAT(updated.upstream_input, UnorderedElementsAre());
+
+                updated.downstream_output.clear();
+                updated.downstream_input.clear();
+                updated.upstream_input.clear();
+
+                q->RunForThread(1);
+                EXPECT_THAT(updated.downstream_output, UnorderedElementsAre());
+                EXPECT_THAT(updated.downstream_input, UnorderedElementsAre(1, 2));
+                EXPECT_THAT(updated.upstream_input, UnorderedElementsAre());
+
+                updated.downstream_output.clear();
+                updated.downstream_input.clear();
+                updated.upstream_input.clear();
+              },
+      },
+  };
+
+  // Run forwards.
+  for (auto& tc : test_cases) {
+    if (!tc.source) {
+      SCOPED_TRACE("InitialState");
+      tc.state_after_edge();
+      continue;
+    }
+    SCOPED_TRACE("Create " + std::string(tc.source->name()) + "->" + std::string(tc.dest->name()));
+    ASSERT_TRUE(Node::CreateEdge(graph.ctx(), tc.source, tc.dest, /*options=*/{}).is_ok());
+    tc.state_after_edge();
+    tc.changes_on_edge();
+  }
+
+  // Run backwards.
+  for (size_t k = test_cases.size() - 1; k > 0; k--) {
+    auto& tc = test_cases[k];
+    SCOPED_TRACE("Delete " + std::string(tc.source->name()) + "->" + std::string(tc.dest->name()));
+    ASSERT_TRUE(Node::DeleteEdge(graph.ctx(), tc.source, tc.dest).is_ok());
+    tc.changes_on_edge();
+
+    auto& prior = test_cases[k - 1];
+    prior.state_after_edge();
+  }
+}
+
 //
-// DestroyAllEdges
+// Destroy
 //
 // We create the following pairs of edges:
 // - (ordinary -> ordinary)
