@@ -13,18 +13,6 @@ group("bringup_dfv2") {
   deps = [ "//bundles/buildbot/dfv2:bringup" ]
 }
 
-# TODO(https://fxbug.dev/94919) split this into target/host groups and move to //products
-group("workstation") {
-  testonly = true
-  deps = [ "//bundles/buildbot/workstation" ]
-}
-
-# This group contains tests to run on workstation_eng_paused product.
-group("workstation_eng_paused_tests") {
-  testonly = true
-  deps = [ "//bundles/buildbot/workstation:eng_paused" ]
-}
-
 # This group contains tests that can only run with the enable_suspend flag set.
 group("host_suspend_tests_e2e") {
   testonly = true
