@@ -5,7 +5,7 @@
 use {
     component_events::{
         descriptor::EventDescriptor,
-        events::{self, Event},
+        events::{self, Event, EventStream},
         matcher::EventMatcher,
     },
     diagnostics_reader::{assert_data_tree, ArchiveReader, Logs},
@@ -34,10 +34,7 @@ async fn check_events(
 #[fasync::run_singlethreaded(test)]
 async fn driver_runner_test() -> Result<(), anyhow::Error> {
     // Set up our expected events.
-    let event_source = events::EventSource::new()?;
-    let mut started_stream = event_source
-        .subscribe(vec![events::EventSubscription::new(vec![events::Started::NAME])])
-        .await?;
+    let mut started_stream = EventStream::open().await?;
 
     let builder = RealmBuilder::new().await?;
     // TODO(fxbug.dev/85884): This should be a relative URL but then driver_host2.cm doesn't resolve correctly.

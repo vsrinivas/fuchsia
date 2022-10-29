@@ -13,12 +13,8 @@
     },
     use: [
         {
-            protocol: [ "fuchsia.sys2.EventSource" ],
+            event_stream: "started_v2",
             from: "parent",
-        },
-        {
-            event: "started",
-            from: "framework",
         },
         { protocol: "fuchsia.diagnostics.ArchiveAccessor" },
     ],
