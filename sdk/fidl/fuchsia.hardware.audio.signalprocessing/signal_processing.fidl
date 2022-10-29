@@ -217,7 +217,7 @@ protocol SignalProcessing {
 /// [[Signal Processing Interface]](https://fuchsia.dev/fuchsia-src/concepts/drivers/driver_architectures/audio_drivers/audio_signal_processing).
 protocol Reader {
     /// Returns a vector of supported processing elements.
-    /// Must return one or more processing elements, or ZX_ERR_NOT_SUPORTED.
+    /// Must return one or more processing elements, or ZX_ERR_NOT_SUPPORTED.
     GetElements() -> (struct {
         processing_elements vector<Element>:MAX_COUNT_PROCESSING_ELEMENTS;
     }) error zx.status;
@@ -234,7 +234,7 @@ protocol Reader {
     });
 
     /// Returns a vector of supported topologies.
-    /// Must return one or more topologies, or ZX_ERR_NOT_SUPORTED.
+    /// Must return one or more topologies, or ZX_ERR_NOT_SUPPORTED.
     /// If more than one topology is returned, then the client may choose any of the topologies from
     /// the list with `SetTopology`.
     /// If only one topology is returned, then the topology definition is informational only since
