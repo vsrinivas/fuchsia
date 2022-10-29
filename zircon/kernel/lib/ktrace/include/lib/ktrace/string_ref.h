@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_LIB_KTRACE_INCLUDE_LIB_KTRACE_STRING_REF_H_
 #define ZIRCON_KERNEL_LIB_KTRACE_INCLUDE_LIB_KTRACE_STRING_REF_H_
 
+#include <lib/special-sections/special-sections.h>
 #include <zircon/types.h>
 
 #include <ktl/atomic.h>
@@ -38,6 +39,15 @@ struct StringRef {
   // Returns the head of the global string ref linked list.
   static StringRef* head() { return head_.load(ktl::memory_order_acquire); }
 
+  // Pre-registers all StringRef instances on supported compilers.
+  //
+  // Clang correctly implements section attributes on static template members in ELF targets,
+  // resulting in every StringRef instance from instantiations of the _stringref literal operator
+  // being placed in the "string_refs_table" section. However, GCC ignores section attributes on
+  // COMDAT symbols as of this writing, resulting in an empty section when compiled with GCC.
+  // TODO(fxbug.dev/27083): Cleanup this comment when GCC supports section attributes on COMDAT.
+  static void PreRegister();
+
  private:
   // TODO(fxbug.dev/33293): Replace runtime lock-free linked list with comdat linker
   // sections once the toolchain supports it.
@@ -67,7 +77,7 @@ struct StringRef {
 template <typename T, T... chars>
 inline StringRef* operator""_stringref() {
   static const char storage[] = {chars..., '\0'};
-  static StringRef string_ref{storage};
+  static StringRef string_ref SPECIAL_SECTION("__trace_string_refs_table", StringRef){storage};
   return &string_ref;
 }
 

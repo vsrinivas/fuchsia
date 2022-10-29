@@ -25,6 +25,7 @@ zx_library("ktrace") {
   public_deps = [
     ":suppress-warning",
     "//src/performance/lib/fxt:headers",
+    "//zircon/kernel/lib/special-sections",
   ]
 }
 

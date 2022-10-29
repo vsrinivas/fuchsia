@@ -82,6 +82,7 @@ if (current_toolchain == default_toolchain) {
         # <lib/ktrace.h> has #include <lib/ktrace/string_ref.h>.
         "//zircon/kernel/lib/ktrace:headers.config",
         "//zircon/kernel/lib/ktrace:suppress-warning.config",
+        "//zircon/kernel/lib/special-sections:headers.config",
         "//src/performance/lib/fxt:headers.config",
 
         # <kernel/thread.h> has #include <fbl/macros.h>

@@ -239,6 +239,17 @@ SECTIONS
     }
 
     /*
+     * Collects instances of StringRef for registration during trace
+     * subsystem initialization, where ids are allocated and instances
+     * are added to the global list.
+     */
+    __trace_string_refs_table : ALIGN(8) {
+        PROVIDE_HIDDEN(__start__trace_string_refs_table = .);
+        *(__trace_string_refs_table)
+        PROVIDE_HIDDEN(__stop__trace_string_refs_table = .);
+    }
+
+    /*
      * When these instrumentation sections are emitted, they are
      * writable data that gets updated at runtime.
      */

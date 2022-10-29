@@ -51,5 +51,21 @@ int StringRef::Register(StringRef* string_ref) {
   return new_id;
 }
 
+void StringRef::PreRegister() {
+  // Clang correctly implements section attributes on static template members in ELF targets,
+  // resulting in every StringRef instance from instantiations of the _stringref literal operator
+  // being placed in the "string_refs_table" section. However, GCC ignores section attributes on
+  // COMDAT symbols as of this writing, resulting in an empty section when compiled with GCC.
+  // TODO(fxbug.dev/27083): Cleanup this comment when GCC supports section attributes on COMDAT.
+  extern StringRef __start__trace_string_refs_table[];
+  extern StringRef __stop__trace_string_refs_table[];
+
+  StringRef* start = __start__trace_string_refs_table;
+  StringRef* stop = __stop__trace_string_refs_table;
+  for (StringRef* ref = start; ref < stop; ref++) {
+    StringRef::Register(ref);
+  }
+}
+
 ktl::atomic<int> StringRef::id_counter_{StringRef::kInvalidId + 1};
 ktl::atomic<StringRef*> StringRef::head_{nullptr};

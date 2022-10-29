@@ -95,8 +95,11 @@ void KTraceState::Init(uint32_t target_bufsize, uint32_t initial_groups) {
   // Allocations are rounded up to the nearest page size.
   target_bufsize_ = fbl::round_up(target_bufsize, static_cast<uint32_t>(PAGE_SIZE));
 
+  StringRef::PreRegister();
+
   if (initial_groups != 0) {
     if (AllocBuffer() == ZX_OK) {
+      ReportStaticNames();
       ReportThreadProcessNames();
       is_started_ = true;
     }
@@ -130,6 +133,7 @@ zx_status_t KTraceState::Start(uint32_t groups, StartMode mode) {
   // If we are not yet started, we need to report the current thread and process
   // names.
   if (!is_started_) {
+    ReportStaticNames();
     ReportThreadProcessNames();
   }
 
@@ -218,8 +222,6 @@ zx_status_t KTraceState::RewindLocked() {
     rec[1].b = static_cast<uint32_t>(n >> 32);
   }
 
-  // Stash our static metadata
-  ReportStaticNames();
   return ZX_OK;
 }
 
@@ -526,8 +528,7 @@ zx_status_t KTraceState::AllocBuffer() {
   }
   DiagsPrintf(INFO, "ktrace: buffer at %p (%u bytes)\n", ptr, target_bufsize_);
 
-  // Rewind will take care of writing the metadata records in addition to the
-  // static name records as it resets the state.
+  // Rewind will take care of writing the metadata records as it resets the state.
   [[maybe_unused]] zx_status_t rewind_res = RewindLocked();
   DEBUG_ASSERT(rewind_res == ZX_OK);
 

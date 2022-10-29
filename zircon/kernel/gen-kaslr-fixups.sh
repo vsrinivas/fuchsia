@@ -160,7 +160,7 @@ $3 ~ /^R_AARCH64_ADR_/ || $3 ~ /^R_AARCH64_.*ABS_L/ {
         bad = "";
     } else if (r_offset % 8 != 0) {
         bad = "misaligned r_offset";
-    } else if (secname !~ /^\.(ro)?data|^\.kcounter.desc|\.init_array|\.fini_array|__llvm_prf_data|asan_globals/) {
+    } else if (secname !~ /^\.(ro)?data|^\.kcounter.desc|\.init_array|\.fini_array|__llvm_prf_data|asan_globals|__trace_string_refs_table/) {
         bad = "fixup in unexpected section"
     } else {
         bad = "";
