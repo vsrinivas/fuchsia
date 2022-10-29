@@ -20,16 +20,24 @@ TEST(ConfigTest, GetCrashReportsConfig) {
 
   std::string default_config_path;
   ASSERT_TRUE(temp_dir.NewTempFileWithData(R"({
-    "daily_per_product_quota": -1,
-    "crash_report_upload_policy": "disabled",
+    "crash_reporter": {
+        "daily_per_product_quota": -1
+    },
+    "crash_server": {
+        "upload_policy": "disabled"
+    },
     "hourly_snapshot": false
 })",
                                            &default_config_path));
 
   std::string override_config_path;
   ASSERT_TRUE(temp_dir.NewTempFileWithData(R"({
-    "daily_per_product_quota": 100,
-    "crash_report_upload_policy": "enabled",
+    "crash_reporter": {
+        "daily_per_product_quota": 100
+    },
+    "crash_server" : {
+        "upload_policy": "enabled"
+    },
     "hourly_snapshot": true
 })",
                                            &override_config_path));
