@@ -18,8 +18,6 @@ namespace crash_reports {
 // Crash reporter static configuration.
 //
 // It is intended to represent an immutable configuration, typically loaded from a file.
-//
-// TODO(fxbug.dev/111700): Move these value to feedback::BuildTypeConfig.
 struct Config {
   // Policy defining whether to upload pending and future crash reports to a remote crash server.
   enum class UploadPolicy {
@@ -37,6 +35,7 @@ struct Config {
 
   UploadPolicy crash_report_upload_policy;
   std::optional<uint64_t> daily_per_product_quota;
+  bool hourly_snapshot;
 };
 
 // Parses the JSON config at |filepath|. Returns std::nullopt if an error occurs.

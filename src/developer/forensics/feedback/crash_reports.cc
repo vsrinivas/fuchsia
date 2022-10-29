@@ -30,9 +30,9 @@ CrashReports::CrashReports(async_dispatcher_t* dispatcher,
                                                      crash_reports::kReportStoreMaxCacheSize},
                     kGarbageCollectedSnapshotsPath, options.snapshot_store_max_archives_size),
       crash_register_(info_context_, kCrashRegisterPath),
-      crash_reporter_(dispatcher, services, clock, info_context_, options.build_type_config,
-                      options.config, &crash_register_, &tags_, &crash_server_, &report_store_,
-                      data_provider, options.snapshot_collector_window_duration),
+      crash_reporter_(dispatcher, services, clock, info_context_, options.config, &crash_register_,
+                      &tags_, &crash_server_, &report_store_, data_provider,
+                      options.snapshot_collector_window_duration),
       info_(info_context_) {
   info_.ExposeConfig(options.config);
 }

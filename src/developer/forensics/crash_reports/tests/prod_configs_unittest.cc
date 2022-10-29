@@ -30,6 +30,7 @@ TEST_F(ProdConfigTest, Default) {
 
   EXPECT_EQ(config->crash_report_upload_policy, kDisabled);
   EXPECT_EQ(config->daily_per_product_quota, std::nullopt);
+  EXPECT_EQ(config->hourly_snapshot, false);
 }
 
 TEST_F(ProdConfigTest, UploadToProdServer) {
@@ -38,6 +39,7 @@ TEST_F(ProdConfigTest, UploadToProdServer) {
 
   EXPECT_EQ(config->crash_report_upload_policy, kEnabled);
   EXPECT_EQ(config->daily_per_product_quota, std::nullopt);
+  EXPECT_EQ(config->hourly_snapshot, false);
 }
 
 TEST_F(ProdConfigTest, User) {
@@ -46,6 +48,7 @@ TEST_F(ProdConfigTest, User) {
 
   EXPECT_EQ(config->crash_report_upload_policy, kReadFromPrivacySettings);
   EXPECT_EQ(config->daily_per_product_quota, 100);
+  EXPECT_EQ(config->hourly_snapshot, false);
 }
 
 TEST_F(ProdConfigTest, Userdebug) {
@@ -54,6 +57,7 @@ TEST_F(ProdConfigTest, Userdebug) {
 
   EXPECT_EQ(config->crash_report_upload_policy, kReadFromPrivacySettings);
   EXPECT_EQ(config->daily_per_product_quota, std::nullopt);
+  EXPECT_EQ(config->hourly_snapshot, true);
 }
 
 }  // namespace

@@ -37,16 +37,6 @@ class ConfigTest : public testing::Test {
 
 TEST_F(ConfigTest, MissingEnableDataRedaction) {
   const std::optional<BuildTypeConfig> config = ParseConfig(R"({
-  "enable_hourly_snapshots": false,
-  "enable_limit_inspect_data": false
-})");
-
-  EXPECT_FALSE(config.has_value());
-}
-
-TEST_F(ConfigTest, MissingEnableHourlySnapshots) {
-  const std::optional<BuildTypeConfig> config = ParseConfig(R"({
-  "enable_data_redaction": false,
   "enable_limit_inspect_data": false
 })");
 
@@ -55,8 +45,7 @@ TEST_F(ConfigTest, MissingEnableHourlySnapshots) {
 
 TEST_F(ConfigTest, MissingEnableLimitInspectData) {
   const std::optional<BuildTypeConfig> config = ParseConfig(R"({
-  "enable_data_redaction": false,
-  "enable_hourly_snapshots": false
+  "enable_data_redaction": false
 })");
 
   EXPECT_FALSE(config.has_value());
@@ -65,7 +54,6 @@ TEST_F(ConfigTest, MissingEnableLimitInspectData) {
 TEST_F(ConfigTest, SpuriousField) {
   const std::optional<BuildTypeConfig> config = ParseConfig(R"({
   "enable_data_redaction": false,
-  "enable_hourly_snapshots": false,
   "enable_limit_inspect_data": false,
   "spurious": ""
 })");
@@ -76,7 +64,6 @@ TEST_F(ConfigTest, SpuriousField) {
 TEST_F(ConfigTest, EnableDataRedactionTrue) {
   const std::optional<BuildTypeConfig> config = ParseConfig(R"({
   "enable_data_redaction": true,
-  "enable_hourly_snapshots": false,
   "enable_limit_inspect_data": false
 })");
 
@@ -87,7 +74,6 @@ TEST_F(ConfigTest, EnableDataRedactionTrue) {
 TEST_F(ConfigTest, EnableDataRedactionFalse) {
   const std::optional<BuildTypeConfig> config = ParseConfig(R"({
   "enable_data_redaction": false,
-  "enable_hourly_snapshots": false,
   "enable_limit_inspect_data": false
 })");
 
@@ -98,39 +84,6 @@ TEST_F(ConfigTest, EnableDataRedactionFalse) {
 TEST_F(ConfigTest, EnableDataRedactionNotBoolean) {
   const std::optional<BuildTypeConfig> config = ParseConfig(R"({
   "enable_data_redaction": "",
-  "enable_hourly_snapshots": false,
-  "enable_limit_inspect_data": false
-})");
-
-  EXPECT_FALSE(config.has_value());
-}
-
-TEST_F(ConfigTest, EnableHourlySnapshotsTrue) {
-  const std::optional<BuildTypeConfig> config = ParseConfig(R"({
-  "enable_data_redaction": false,
-  "enable_hourly_snapshots": true,
-  "enable_limit_inspect_data": false
-})");
-
-  ASSERT_TRUE(config.has_value());
-  EXPECT_TRUE(config->enable_hourly_snapshots);
-}
-
-TEST_F(ConfigTest, EnableHourlySnapshotsFalse) {
-  const std::optional<BuildTypeConfig> config = ParseConfig(R"({
-  "enable_data_redaction": false,
-  "enable_hourly_snapshots": false,
-  "enable_limit_inspect_data": false
-})");
-
-  ASSERT_TRUE(config.has_value());
-  EXPECT_FALSE(config->enable_hourly_snapshots);
-}
-
-TEST_F(ConfigTest, EnableHourlySnapshotsNotBoolean) {
-  const std::optional<BuildTypeConfig> config = ParseConfig(R"({
-  "enable_data_redaction": false,
-  "enable_hourly_snapshots": "",
   "enable_limit_inspect_data": false
 })");
 
@@ -140,7 +93,6 @@ TEST_F(ConfigTest, EnableHourlySnapshotsNotBoolean) {
 TEST_F(ConfigTest, EnableLimitInspectDataTrue) {
   const std::optional<BuildTypeConfig> config = ParseConfig(R"({
   "enable_data_redaction": false,
-  "enable_hourly_snapshots": false,
   "enable_limit_inspect_data": true
 })");
 
@@ -151,7 +103,6 @@ TEST_F(ConfigTest, EnableLimitInspectDataTrue) {
 TEST_F(ConfigTest, EnableLimitInspectDataFalse) {
   const std::optional<BuildTypeConfig> config = ParseConfig(R"({
   "enable_data_redaction": false,
-  "enable_hourly_snapshots": false,
   "enable_limit_inspect_data": false
 })");
 
@@ -162,7 +113,6 @@ TEST_F(ConfigTest, EnableLimitInspectDataFalse) {
 TEST_F(ConfigTest, EnableLimitInspectDataNotBoolean) {
   const std::optional<BuildTypeConfig> config = ParseConfig(R"({
   "enable_data_redaction": false,
-  "enable_hourly_snapshots": false,
   "enable_limit_inspect_data": ""
 })");
 
@@ -172,7 +122,6 @@ TEST_F(ConfigTest, EnableLimitInspectDataNotBoolean) {
 TEST_F(ConfigTest, UseOverrideConfig) {
   const std::string override_path = WriteConfig(R"({
   "enable_data_redaction": true,
-  "enable_hourly_snapshots": true,
   "enable_limit_inspect_data": true
 })");
 
@@ -180,14 +129,12 @@ TEST_F(ConfigTest, UseOverrideConfig) {
 
   ASSERT_TRUE(config.has_value());
   EXPECT_TRUE(config->enable_data_redaction);
-  EXPECT_TRUE(config->enable_hourly_snapshots);
   EXPECT_TRUE(config->enable_limit_inspect_data);
 }
 
 TEST_F(ConfigTest, UseDefaultConfig) {
   const std::string default_path = WriteConfig(R"({
   "enable_data_redaction": true,
-  "enable_hourly_snapshots": true,
   "enable_limit_inspect_data": true
 })");
 
@@ -195,7 +142,6 @@ TEST_F(ConfigTest, UseDefaultConfig) {
 
   ASSERT_TRUE(config.has_value());
   EXPECT_TRUE(config->enable_data_redaction);
-  EXPECT_TRUE(config->enable_hourly_snapshots);
   EXPECT_TRUE(config->enable_limit_inspect_data);
 }
 
@@ -208,12 +154,14 @@ TEST_F(ConfigTest, MissingOverrideAndDefaultConfigs) {
 TEST_F(ConfigTest, GetCrashReportsConfig) {
   const std::string default_config_path = WriteConfig(R"({
     "daily_per_product_quota": -1,
-    "crash_report_upload_policy": "disabled"
+    "crash_report_upload_policy": "disabled",
+    "hourly_snapshot": false
 })");
 
   const std::string override_config_path = WriteConfig(R"({
     "daily_per_product_quota": 100,
-    "crash_report_upload_policy": "enabled"
+    "crash_report_upload_policy": "enabled",
+    "hourly_snapshot": true
 })");
 
   const std::string invalid_config_path = WriteConfig(R"({
@@ -225,22 +173,26 @@ TEST_F(ConfigTest, GetCrashReportsConfig) {
   ASSERT_TRUE(config);
   EXPECT_EQ(config->crash_report_upload_policy, kUploadEnabled);
   EXPECT_EQ(config->daily_per_product_quota, 100u);
+  EXPECT_EQ(config->hourly_snapshot, true);
 
   config = GetCrashReportsConfig(invalid_config_path, override_config_path);
   ASSERT_TRUE(config);
   EXPECT_EQ(config->crash_report_upload_policy, kUploadEnabled);
   EXPECT_EQ(config->daily_per_product_quota, 100u);
+  EXPECT_EQ(config->hourly_snapshot, true);
 
   // The default config should be read if there's an issue using the override config.
   config = GetCrashReportsConfig(default_config_path, "/bad/path");
   ASSERT_TRUE(config);
   EXPECT_EQ(config->crash_report_upload_policy, kUploadDisabled);
   EXPECT_EQ(config->daily_per_product_quota, std::nullopt);
+  EXPECT_EQ(config->hourly_snapshot, false);
 
   config = GetCrashReportsConfig(default_config_path, invalid_config_path);
   ASSERT_TRUE(config);
   EXPECT_EQ(config->crash_report_upload_policy, kUploadDisabled);
   EXPECT_EQ(config->daily_per_product_quota, std::nullopt);
+  EXPECT_EQ(config->hourly_snapshot, false);
 
   // No config should be returned if neither config can be read.
   EXPECT_FALSE(GetCrashReportsConfig("/bad/path", "/bad/path"));

@@ -16,7 +16,6 @@ namespace forensics::feedback {
 
 struct BuildTypeConfig {
   bool enable_data_redaction;
-  bool enable_hourly_snapshots;
   bool enable_limit_inspect_data;
 };
 

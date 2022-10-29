@@ -97,7 +97,6 @@ int main() {
               .oom_crash_reporting_delay = kOOMCrashReportingDelay,
           },
           CrashReports::Options{
-              .build_type_config = *build_type_config,
               .config = *crash_reports_config,
               .snapshot_store_max_archives_size = kSnapshotArchivesMaxSize,
               .snapshot_collector_window_duration = kSnapshotSharedRequestWindow,

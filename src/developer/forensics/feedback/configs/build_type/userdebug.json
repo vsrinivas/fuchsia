@@ -1,5 +1,4 @@
 {
     "enable_data_redaction": false,
-    "enable_hourly_snapshots": true,
     "enable_limit_inspect_data": false
 }

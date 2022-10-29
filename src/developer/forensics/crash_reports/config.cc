@@ -22,6 +22,7 @@ namespace crash_reports {
 namespace {
 
 constexpr char kCrashReportUploadPolicyKey[] = "crash_report_upload_policy";
+constexpr char kHourlySnapshotKey[] = "hourly_snapshot";
 
 const char kSchema[] = R"({
   "type": "object",
@@ -36,11 +37,15 @@ const char kSchema[] = R"({
     },
     "daily_per_product_quota": {
       "type": "number"
+    },
+    "hourly_snapshot": {
+      "type": "boolean"
     }
   },
   "required": [
     "crash_report_upload_policy",
-    "daily_per_product_quota"
+    "daily_per_product_quota",
+    "hourly_snapshot"
   ],
   "additionalProperties": false
 })";
@@ -107,6 +112,8 @@ std::optional<Config> ParseConfig(const std::string& filepath) {
   } else {
     config.daily_per_product_quota = std::nullopt;
   }
+
+  config.hourly_snapshot = doc[kHourlySnapshotKey].GetBool();
 
   // If crash reports won't be uploaded, there shouldn't be a quota in the config.
   if (config.crash_report_upload_policy == Config::UploadPolicy::kDisabled) {

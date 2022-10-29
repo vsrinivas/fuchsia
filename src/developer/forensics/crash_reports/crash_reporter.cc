@@ -30,7 +30,6 @@
 #include "src/developer/forensics/crash_reports/product.h"
 #include "src/developer/forensics/crash_reports/report.h"
 #include "src/developer/forensics/crash_reports/report_util.h"
-#include "src/developer/forensics/feedback/config.h"
 #include "src/developer/forensics/feedback/constants.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 
@@ -79,10 +78,9 @@ std::unique_ptr<ReportingPolicyWatcher> MakeReportingPolicyWatcher(
 
 CrashReporter::CrashReporter(
     async_dispatcher_t* dispatcher, const std::shared_ptr<sys::ServiceDirectory>& services,
-    timekeeper::Clock* clock, const std::shared_ptr<InfoContext>& info_context,
-    feedback::BuildTypeConfig build_type_config, Config config, CrashRegister* crash_register,
-    LogTags* tags, CrashServer* crash_server, ReportStore* report_store,
-    feedback_data::DataProviderInternal* data_provider,
+    timekeeper::Clock* clock, const std::shared_ptr<InfoContext>& info_context, Config config,
+    CrashRegister* crash_register, LogTags* tags, CrashServer* crash_server,
+    ReportStore* report_store, feedback_data::DataProviderInternal* data_provider,
     zx::duration snapshot_collector_window_duration, const zx::duration product_quota_reset_offset)
     : dispatcher_(dispatcher),
       executor_(dispatcher),
@@ -114,7 +112,7 @@ CrashReporter::CrashReporter(
 
   info_.ExposeReportingPolicy(reporting_policy_watcher_.get());
 
-  if (build_type_config.enable_hourly_snapshots) {
+  if (config.hourly_snapshot) {
     // We schedule the first hourly snapshot in 5 minutes and then it will auto-schedule itself
     // every hour after that.
     ScheduleHourlySnapshot(zx::min(5));
