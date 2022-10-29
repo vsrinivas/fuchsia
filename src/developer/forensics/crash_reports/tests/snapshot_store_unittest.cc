@@ -112,15 +112,15 @@ TEST_F(SnapshotStoreTest, Check_ArchivesMaxSizeIsEnforced) {
   AddDefaultSnapshot();
 
   EXPECT_FALSE(snapshot_store_->SizeLimitsExceeded());
-  EXPECT_TRUE(snapshot_store_->SnapshotExists(kTestUuid));
+  EXPECT_EQ(snapshot_store_->SnapshotLocation(kTestUuid), ItemLocation::kMemory);
   ASSERT_TRUE(AsManaged(snapshot_store_->GetSnapshot(kTestUuid)).LockArchive());
 
   const SnapshotUuid kTestUuid2 = kTestUuid + "2";
   AddDefaultSnapshot(kTestUuid2);
 
   EXPECT_FALSE(snapshot_store_->SizeLimitsExceeded());
-  EXPECT_FALSE(snapshot_store_->SnapshotExists(kTestUuid));
-  EXPECT_TRUE(snapshot_store_->SnapshotExists(kTestUuid2));
+  EXPECT_FALSE(snapshot_store_->SnapshotLocation(kTestUuid).has_value());
+  EXPECT_EQ(snapshot_store_->SnapshotLocation(kTestUuid2), ItemLocation::kMemory);
 
   ASSERT_TRUE(AsManaged(snapshot_store_->GetSnapshot(kTestUuid2)).LockArchive());
 
@@ -246,12 +246,12 @@ TEST_F(SnapshotStoreTest, Check_RemovesFromInsertionOrder) {
   AddDefaultSnapshot(kTestUuid2);
 
   ASSERT_FALSE(snapshot_store_->SizeLimitsExceeded());
-  ASSERT_TRUE(snapshot_store_->SnapshotExists(kTestUuid));
-  ASSERT_TRUE(snapshot_store_->SnapshotExists(kTestUuid2));
+  ASSERT_EQ(snapshot_store_->SnapshotLocation(kTestUuid), ItemLocation::kMemory);
+  ASSERT_EQ(snapshot_store_->SnapshotLocation(kTestUuid2), ItemLocation::kMemory);
 
   // Delete snapshots in different order than they were added.
   snapshot_store_->DeleteSnapshot(kTestUuid2);
-  ASSERT_FALSE(snapshot_store_->SnapshotExists(kTestUuid2));
+  ASSERT_FALSE(snapshot_store_->SnapshotLocation(kTestUuid2).has_value());
 
   // Trigger garbage collection twice by going over size limit. If |kTestUuid2| wasn't removed from
   // insertion_order_ (a FIFO queue), this would cause a CHECK-FAIL crash.
@@ -265,10 +265,10 @@ TEST_F(SnapshotStoreTest, Check_RemovesFromInsertionOrder) {
   AddDefaultSnapshot(kTestUuid5);
 
   EXPECT_FALSE(snapshot_store_->SizeLimitsExceeded());
-  EXPECT_FALSE(snapshot_store_->SnapshotExists(kTestUuid));
-  EXPECT_FALSE(snapshot_store_->SnapshotExists(kTestUuid3));
-  EXPECT_TRUE(snapshot_store_->SnapshotExists(kTestUuid4));
-  EXPECT_TRUE(snapshot_store_->SnapshotExists(kTestUuid5));
+  EXPECT_FALSE(snapshot_store_->SnapshotLocation(kTestUuid).has_value());
+  EXPECT_FALSE(snapshot_store_->SnapshotLocation(kTestUuid3).has_value());
+  EXPECT_EQ(snapshot_store_->SnapshotLocation(kTestUuid4), ItemLocation::kMemory);
+  EXPECT_EQ(snapshot_store_->SnapshotLocation(kTestUuid5), ItemLocation::kMemory);
 }
 
 }  // namespace

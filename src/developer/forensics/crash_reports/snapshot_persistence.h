@@ -8,6 +8,7 @@
 #include <memory>
 #include <string>
 
+#include "src/developer/forensics/crash_reports/item_location.h"
 #include "src/developer/forensics/crash_reports/snapshot.h"
 #include "src/developer/forensics/crash_reports/snapshot_persistence_metadata.h"
 
@@ -32,6 +33,9 @@ class SnapshotPersistence {
 
   // Returns true if a snapshot for |uuid| exists on disk.
   bool Contains(const SnapshotUuid& uuid) const;
+
+  // Returns location for where |uuid| is currently stored in persistence, if anywhere.
+  std::optional<ItemLocation> SnapshotLocation(const SnapshotUuid& uuid);
 
   // Gets an archive from disk. Check-fails that the archive for |uuid| exists on disk. Call
   // Contains to verify existence on disk first.

@@ -130,7 +130,7 @@ void SnapshotStore::AddSnapshot(const SnapshotUuid& uuid, fuchsia::feedback::Att
   insertion_order_.push_back(uuid);
 
   while (!insertion_order_.empty() && SizeLimitsExceeded()) {
-    FX_CHECK(SnapshotExists(insertion_order_.front()))
+    FX_CHECK(SnapshotLocation(insertion_order_.front()) == ItemLocation::kMemory)
         << "Snapshot for uuid " << insertion_order_.front() << " doesn't exist";
 
     EnforceSizeLimits(insertion_order_.front());
@@ -153,6 +153,15 @@ void SnapshotStore::EnforceSizeLimits(const SnapshotUuid& uuid) {
 bool SnapshotStore::SnapshotExists(const SnapshotUuid& uuid) {
   auto* data = FindSnapshotData(uuid);
   return data != nullptr;
+}
+
+std::optional<ItemLocation> SnapshotStore::SnapshotLocation(const SnapshotUuid& uuid) {
+  auto* data = FindSnapshotData(uuid);
+  if (data != nullptr) {
+    return ItemLocation::kMemory;
+  }
+
+  return std::nullopt;
 }
 
 size_t SnapshotStore::Size() const { return data_.size(); }

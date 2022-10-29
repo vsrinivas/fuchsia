@@ -7,6 +7,7 @@
 
 #include <deque>
 
+#include "src/developer/forensics/crash_reports/item_location.h"
 #include "src/developer/forensics/crash_reports/snapshot.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/utils/storage_size.h"
@@ -32,6 +33,10 @@ class SnapshotStore {
 
   // Returns true if data for |uuid| is currently stored in the SnapshotStore.
   bool SnapshotExists(const SnapshotUuid& uuid);
+
+  // Returns the location where the snapshot for |uuid| is currently stored in the SnapshotStore, if
+  // anywhere.
+  std::optional<ItemLocation> SnapshotLocation(const SnapshotUuid& uuid);
 
   // Returns the number of snapshots stored in SnapshotStore.
   //

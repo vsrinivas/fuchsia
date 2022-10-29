@@ -4,6 +4,7 @@
 
 #include "src/developer/forensics/crash_reports/snapshot_persistence.h"
 
+#include <optional>
 #include <utility>
 
 #include "src/developer/forensics/crash_reports/snapshot_persistence_metadata.h"
@@ -96,6 +97,18 @@ bool SnapshotPersistence::AddToRoot(const SnapshotUuid& uuid,
 
 bool SnapshotPersistence::Contains(const SnapshotUuid& uuid) const {
   return tmp_metadata_.Contains(uuid) || cache_metadata_.Contains(uuid);
+}
+
+std::optional<ItemLocation> SnapshotPersistence::SnapshotLocation(const SnapshotUuid& uuid) {
+  if (tmp_metadata_.Contains(uuid)) {
+    return ItemLocation::kTmp;
+  }
+
+  if (cache_metadata_.Contains(uuid)) {
+    return ItemLocation::kCache;
+  }
+
+  return std::nullopt;
 }
 
 std::shared_ptr<const ManagedSnapshot::Archive> SnapshotPersistence::Get(const SnapshotUuid& uuid) {
