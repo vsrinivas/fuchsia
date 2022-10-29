@@ -4,7 +4,7 @@
 
 use {
     component_events::{
-        events::{Destroyed, Event, EventSource, EventSubscription, Started, Stopped},
+        events::{Destroyed, Event, EventStream, Started},
         matcher::{EventMatcher, ExitStatusMatcher},
         sequence::{EventSequence, Ordering},
     },
@@ -14,23 +14,12 @@ use {
 /// still expect them to be stopped when the system kills them.
 #[fuchsia::test]
 async fn test_stop_timeouts() {
-    let event_source = EventSource::new().unwrap();
+    let started_event_stream = EventStream::open_at_path("/events/started").await.unwrap();
 
-    let started_event_stream =
-        event_source.subscribe(vec![EventSubscription::new(vec![Started::NAME])]).await.unwrap();
-
-    let event_stream_root = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME, Destroyed::NAME])])
-        .await
-        .unwrap();
-    let event_stream_custom = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME, Destroyed::NAME])])
-        .await
-        .unwrap();
-    let event_stream_inherited = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME, Destroyed::NAME])])
-        .await
-        .unwrap();
+    let event_stream_root = EventStream::open_at_path("/events/stopped_destroyed").await.unwrap();
+    let event_stream_custom = EventStream::open_at_path("/events/stopped_destroyed").await.unwrap();
+    let event_stream_inherited =
+        EventStream::open_at_path("/events/stopped_destroyed").await.unwrap();
 
     let collection_name = String::from("test-collection");
 

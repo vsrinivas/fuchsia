@@ -22,15 +22,17 @@
     ],
     use: [
         {
-            event: [
-                "destroyed",
-                "started",
-                "stopped",
+            event_stream: [
+                "destroyed_v2",
+                "stopped_v2",
             ],
-            from: "framework",
+            from: "parent",
+            path: "/events/stopped_destroyed",
         },
         {
-            protocol: [ "fuchsia.sys2.EventSource" ],
+            event_stream: [ "started_v2" ],
+            from: "parent",
+            path: "/events/started",
         },
     ],
     offer: [
