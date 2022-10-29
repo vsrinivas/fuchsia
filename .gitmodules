@@ -319,7 +319,7 @@
 [submodule "third_party/icu/stable"]
 	path = third_party/icu/stable
 	url = https://chromium.googlesource.com/chromium/deps/icu
-	name = chromium/deps/icu@stablei
+	name = chromium/deps/icu@stable
 	ignore = all
 	active = false
 [submodule "third_party/imgtec-pvr-rgx-km"]
