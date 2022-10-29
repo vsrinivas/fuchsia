@@ -446,19 +446,22 @@ Control EventRing::AdvanceErdp() {
       action = WRAP_AROUND;
       buffers_it_->new_segment = false;
     } else if (unlikely(next_buffer->new_segment)) {
-      // New segment
-      // Check for valid Completion Code
+      // New segment. Check for valid Completion Code to see if HW is using the new segment yet.
       if (static_cast<CommandCompletionEvent*>(next_buffer->buf->virt())->CompletionCode() ==
           CommandCompletionEvent::Invalid) {
-        // Invalid completion code. New segment not in use yet.
+        // Invalid completion code. New segment not in use yet, so we need to check if HW has
+        // wrapped around to the first segment in the ring. We need to do this because adding a new
+        // segment can race with the position of HW's enqueue pointer, it might have already started
+        // writing to the first segment before seeing that there is a new segment available.
         if (Control::FromTRB(reinterpret_cast<TRB*>(buffers_.front().buf->virt())).Cycle() ==
             ccs_) {
-          // Empty ring, according to spec, we should re-evaluate next time. Set the reevaluate_ bit
-          // to true and return an invalid TRB to stop advancement of pointer.
+          // HW hasn't started using the first segment, or the new segment, yet so we can't tell
+          // which direction the enqueue pointer will move next. Set reevaluate_ and return an
+          // invalid TRB to wait for the next interrupt and try again.
           reevaluate_ = true;
           return Control::Get().FromValue(0).set_Cycle(!ccs_);
         }
-        // Non-empty ring. Wrap around to beginning.
+        // HW has wrapped around to use the first segment.
         action = WRAP_AROUND;
       } else {
         // Valid completion code. New segment already in use.
@@ -500,14 +503,24 @@ Control EventRing::AdvanceErdp() {
   }
 
   if (unlikely(buffers_it_->new_segment)) {
-    // New buffer. CCS is invalid. Increment only if completion code is not invalid.
-    return Control::FromTRB(erdp_virt_)
-        .set_Cycle((static_cast<CommandCompletionEvent*>(erdp_virt_)->CompletionCode() !=
-                    CommandCompletionEvent::Invalid)
-                       ? ccs_
-                       : !ccs_);
+    // On the first pass through a new segment the cycle bit is invalid and software should use the
+    // completion code to check if the event TRB is valid. Section 4.9.4.1.
+    if (static_cast<CommandCompletionEvent*>(erdp_virt_)->CompletionCode() ==
+        CommandCompletionEvent::Invalid) {
+      return Control::Get().FromValue(0).set_Cycle(!ccs_);
+    }
+
+    // Barrier to ensure that the read of erdp_virt_ is ordered after the above validity check.
+    hw_rmb();
+    auto control = Control::FromTRB(erdp_virt_);
+    return control.set_Cycle(ccs_);
   }
-  return Control::FromTRB(erdp_virt_);
+
+  auto control = Control::FromTRB(erdp_virt_);
+  // Barrier to ensure that all subsequent reads from erdp_virt_ are after this read, since we use
+  // this read to check the cycle bit.
+  hw_rmb();
+  return control;
 }
 
 zx_status_t EventRing::HandleIRQ() {
