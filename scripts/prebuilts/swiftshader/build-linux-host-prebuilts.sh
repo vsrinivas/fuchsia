@@ -467,15 +467,16 @@ clone_or_update () {
   if [[ ! -d "${DIR}" ]]; then
     "${GIT_CMD[@]}" clone ${URL} "${DIR}"
     if [[ "${REVISION}" ]]; then
-      "${GIT_CMD[@]}" -C "${DIR}" checkout --quiet "${REVISION}"
+      "${GIT_CMD[@]}" -C "${DIR}" fetch origin --quiet "${REVISION}"
+      "${GIT_CMD[@]}" -C "${DIR}" checkout --quiet FETCH_HEAD
     fi
 #     if [[ -f "${DIR}/.gitmodules" ]]; then
 #       "${GIT_CMD[@]}" -C "${DIR}" submodule update --init
 #     fi
   else
     if [[ "${REVISION}" ]]; then
-      "${GIT_CMD[@]}" -C "${DIR}" fetch
-      "${GIT_CMD[@]}" -C "${DIR}" checkout --quiet "${REVISION}"
+      "${GIT_CMD[@]}" -C "${DIR}" fetch origin "${REVISION}"
+      "${GIT_CMD[@]}" -C "${DIR}" checkout --quiet FETCH_HEAD
     else
       "${GIT_CMD[@]}" -C "${DIR}" pull
     fi
