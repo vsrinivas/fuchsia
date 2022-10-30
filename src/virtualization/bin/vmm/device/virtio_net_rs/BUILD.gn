@@ -67,10 +67,22 @@ rustc_binary("virtio_net_bin") {
     "//third_party/rust_crates:tracing",
     "//third_party/rust_crates:zerocopy",
   ]
+
+  test_deps = [
+    "//src/lib/async-utils",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:rand",
+  ]
 }
 
 fuchsia_unittest_package("virtio_net_unittests") {
   deps = [ ":virtio_net_bin_test" ]
+
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 fuchsia_package("virtio_net_rs") {

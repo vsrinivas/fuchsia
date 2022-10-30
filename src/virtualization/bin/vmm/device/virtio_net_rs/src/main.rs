@@ -31,7 +31,7 @@ async fn run_virtio_net(mut virtio_net_fidl: VirtioNetRequestStream) -> Result<(
     // Initialize configures the netstack using the C++ dispatch loop, which is in another thread.
     // Calling Ready lets the C++ thread synchronize configuration completion with this main Rust
     // thread.
-    let mut net_device = device::NetDevice::new()?;
+    let mut net_device = device::NetDevice::<guest_ethernet::GuestEthernet>::new()?;
     net_device.initialize(mac_address, enable_bridge).await?;
 
     // TODO(fxbug.dev/95485): Return a status if device creation fails.

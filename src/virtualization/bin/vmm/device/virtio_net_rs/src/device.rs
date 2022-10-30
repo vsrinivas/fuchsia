@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{guest_ethernet, wire},
+    crate::{
+        guest_ethernet::{GuestEthernetInterface, GuestEthernetNewResult, RxPacket},
+        wire,
+    },
     anyhow::{anyhow, Error},
     fidl_fuchsia_hardware_ethernet::MacAddress,
     fuchsia_zircon as zx,
@@ -18,9 +21,9 @@ use {
     zerocopy::AsBytes,
 };
 
-pub struct NetDevice {
+pub struct NetDevice<T: GuestEthernetInterface> {
     // Safe wrapper around the C++ FFI for interacting with the netstack.
-    ethernet: Pin<Box<guest_ethernet::GuestEthernet>>,
+    ethernet: Pin<Box<T>>,
 
     // Contains any status value sent by the C++ guest ethernet device.
     status_rx: RefCell<UnboundedReceiver<zx::Status>>,
@@ -31,20 +34,15 @@ pub struct NetDevice {
 
     // Contains RX packets from the netstack to be sent to the guest. Memory pointed to by the
     // RX packet is guaranteed to be valid until `complete` is called with the matching buffer ID.
-    receive_packet_rx: RefCell<UnboundedReceiver<guest_ethernet::RxPacket>>,
+    receive_packet_rx: RefCell<UnboundedReceiver<RxPacket>>,
 }
 
-impl NetDevice {
+impl<T: GuestEthernetInterface> NetDevice<T> {
     // Create a NetDevice. This creates the C++ GuestEthernet object, initializes the C++ dispatch
     // loop on a new thread, etc.
     pub fn new() -> Result<Self, Error> {
-        let guest_ethernet::GuestEthernetNewResult {
-            guest_ethernet,
-            status_rx,
-            notify_rx,
-            receive_packet_rx,
-        } = guest_ethernet::GuestEthernet::new()
-            .map_err(|status| anyhow!("failed to create GuestEthernet: {}", status))?;
+        let GuestEthernetNewResult { guest_ethernet, status_rx, notify_rx, receive_packet_rx } =
+            T::new().map_err(|status| anyhow!("failed to create GuestEthernet: {}", status))?;
 
         Ok(Self {
             ethernet: guest_ethernet,
@@ -103,7 +101,7 @@ impl NetDevice {
             // Section 5.1.6.2 Packet Transmission
             //
             // The header and packet are added as one output descriptor to the transmitq.
-            return Err(anyhow!("Packet incorrectly fragmented over multiple descriptors"));
+            return Err(anyhow!("TX Packet incorrectly fragmented over multiple descriptors"));
         }
 
         while let Err(err) = self.process_tx_packet(&range) {
@@ -202,7 +200,7 @@ impl NetDevice {
             .await
             .expect("unexpected end of RX packet stream");
 
-        let result = NetDevice::handle_packet(&packet, bytes, chain);
+        let result = NetDevice::<T>::handle_packet(&packet, bytes, chain);
         if result.is_err() {
             self.ethernet.complete(packet, zx::Status::INTERNAL);
         } else {
@@ -212,8 +210,9 @@ impl NetDevice {
         result
     }
 
+    // Helper function to write an RxPacket to a chain.
     fn handle_packet<'a, 'b, N: DriverNotify, M: DriverMem>(
-        packet: &guest_ethernet::RxPacket,
+        packet: &RxPacket,
         available_bytes: usize,
         mut chain: WritableChain<'a, 'b, N, M>,
     ) -> Result<(), Error> {
@@ -296,8 +295,454 @@ impl NetDevice {
 
 #[cfg(test)]
 mod tests {
+    use {
+        super::*,
+        async_utils::PollExt,
+        fuchsia_async as fasync,
+        futures::channel::mpsc::{self, UnboundedSender},
+        rand::{distributions::Standard, Rng},
+        std::{cell::RefCell, collections::VecDeque},
+        virtio_device::fake_queue::{ChainBuilder, IdentityDriverMem, TestQueue},
+        zerocopy::FromBytes,
+    };
+
+    struct TestGuestEthernet {
+        status_tx: UnboundedSender<zx::Status>,
+        notify_tx: UnboundedSender<()>,
+        receive_packet_tx: UnboundedSender<RxPacket>,
+
+        sends: RefCell<Vec<(*const u8, u16)>>,
+        send_status: RefCell<VecDeque<zx::Status>>,
+
+        completes: RefCell<Vec<(u32, zx::Status)>>,
+    }
+
+    impl GuestEthernetInterface for TestGuestEthernet {
+        fn new() -> Result<GuestEthernetNewResult<TestGuestEthernet>, zx::Status> {
+            let (status_tx, status_rx) = mpsc::unbounded::<zx::Status>();
+            let (notify_tx, notify_rx) = mpsc::unbounded::<()>();
+            let (receive_packet_tx, receive_packet_rx) = mpsc::unbounded::<RxPacket>();
+            let guest_ethernet = Box::pin(Self {
+                status_tx,
+                notify_tx,
+                receive_packet_tx,
+                sends: RefCell::new(vec![]),
+                send_status: RefCell::new(VecDeque::new()),
+                completes: RefCell::new(vec![]),
+            });
+
+            Ok(GuestEthernetNewResult { guest_ethernet, status_rx, notify_rx, receive_packet_rx })
+        }
+
+        fn initialize(
+            &self,
+            _mac_address: MacAddress,
+            _enable_bridge: bool,
+        ) -> Result<(), zx::Status> {
+            Ok(())
+        }
+
+        fn send(&self, data: *const u8, len: u16) -> Result<(), zx::Status> {
+            let status = self.send_status.borrow_mut().pop_front().unwrap();
+            if status == zx::Status::OK {
+                self.sends.borrow_mut().push((data, len));
+            }
+
+            status.into()
+        }
+
+        fn complete(&self, packet: RxPacket, status: zx::Status) {
+            self.completes.borrow_mut().push((packet.buffer_id, status));
+        }
+    }
+
     #[fuchsia::test]
-    async fn create_and_destroy_device() {
-        // TODO(fxbug.dev/95485): Do something about this.
+    async fn transmit_device_status() {
+        let mut device = NetDevice::<TestGuestEthernet>::new().unwrap();
+
+        device.ethernet.status_tx.unbounded_send(zx::Status::OK).unwrap();
+        assert!(device.ready().await.is_ok());
+
+        device.ethernet.status_tx.unbounded_send(zx::Status::INTERNAL).unwrap();
+        assert!(device.ready().await.is_err());
+
+        device.ethernet.status_tx.unbounded_send(zx::Status::INTERNAL).unwrap();
+        assert!(device.get_error_from_guest_ethernet().await.is_err());
+    }
+
+    #[fuchsia::test]
+    #[should_panic(expected = "GuestEthernet shouldn't send ZX_OK once its ready")]
+
+    async fn bad_device_status() {
+        let device = NetDevice::<TestGuestEthernet>::new().unwrap();
+
+        // The C++ device should never send ZX_OK after its ready (which is when this channel
+        // will be polled with get_error_from_guest_ethernet).
+        device.ethernet.status_tx.unbounded_send(zx::Status::OK).unwrap();
+        device.get_error_from_guest_ethernet().await.unwrap();
+    }
+
+    #[fuchsia::test]
+    async fn rx_chain_too_small() {
+        let device = NetDevice::<TestGuestEthernet>::new().unwrap();
+        let actual_size = wire::REQUIRED_RX_BUFFER_SIZE / 2;
+
+        let mem = IdentityDriverMem::new();
+        let mut queue_state = TestQueue::new(32, &mem);
+
+        queue_state
+            .fake_queue
+            .publish(
+                ChainBuilder::new()
+                    .writable((wire::REQUIRED_RX_BUFFER_SIZE / 2) as u32, &mem)
+                    .build(),
+            )
+            .expect("failed to publish writable chain");
+
+        let result = device
+            .handle_writable_chain(
+                WritableChain::new(
+                    queue_state.queue.next_chain().expect("failed to get next chain"),
+                    &mem,
+                )
+                .expect("failed to get writable chain"),
+            )
+            .await;
+
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            format!(
+                "Writable chain ({} bytes) is smaller than minimum size ({} bytes)",
+                actual_size,
+                wire::REQUIRED_RX_BUFFER_SIZE
+            )
+        );
+    }
+
+    #[fuchsia::test]
+    async fn rx_chain_fragmented_multiple_descriptors() {
+        let device = NetDevice::<TestGuestEthernet>::new().unwrap();
+
+        let mem = IdentityDriverMem::new();
+        let mut queue_state = TestQueue::new(32, &mem);
+
+        queue_state
+            .fake_queue
+            .publish(
+                ChainBuilder::new()
+                    .writable((wire::REQUIRED_RX_BUFFER_SIZE / 2) as u32, &mem)
+                    .writable((wire::REQUIRED_RX_BUFFER_SIZE / 2) as u32, &mem)
+                    .build(),
+            )
+            .expect("failed to publish writable chain");
+
+        let result = device
+            .handle_writable_chain(
+                WritableChain::new(
+                    queue_state.queue.next_chain().expect("failed to get next chain"),
+                    &mem,
+                )
+                .expect("failed to get writable chain"),
+            )
+            .await;
+
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "RX buffer incorrectly fragmented over multiple descriptors"
+        );
+    }
+
+    #[fuchsia::test]
+    async fn tx_chain_too_small() {
+        let device = NetDevice::<TestGuestEthernet>::new().unwrap();
+
+        let random_bytes: Vec<u8> = rand::thread_rng()
+            .sample_iter(Standard)
+            .take(std::mem::size_of::<wire::VirtioNetHeader>() - 1)
+            .collect();
+
+        let mem = IdentityDriverMem::new();
+        let mut queue_state = TestQueue::new(32, &mem);
+
+        // Chunk the array into three descriptors.
+        queue_state
+            .fake_queue
+            .publish(ChainBuilder::new().readable(&random_bytes, &mem).build())
+            .expect("failed to publish readable chain");
+
+        let result = device
+            .handle_readable_chain(ReadableChain::new(
+                queue_state.queue.next_chain().expect("failed to get next chain"),
+                &mem,
+            ))
+            .await;
+
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().to_string(), "Chain does not contain a VirtioNetHeader");
+    }
+
+    #[fuchsia::test]
+    async fn tx_chain_fragmented_multiple_descriptors() {
+        let device = NetDevice::<TestGuestEthernet>::new().unwrap();
+
+        let random_bytes: Vec<u8> = rand::thread_rng()
+            .sample_iter(Standard)
+            .take(std::mem::size_of::<wire::VirtioNetHeader>() * 2)
+            .collect();
+
+        let mem = IdentityDriverMem::new();
+        let mut queue_state = TestQueue::new(32, &mem);
+
+        // Fragment the packet into two descriptors.
+        queue_state
+            .fake_queue
+            .publish(
+                ChainBuilder::new()
+                    .readable(&random_bytes[..random_bytes.len() / 2], &mem)
+                    .readable(&random_bytes[random_bytes.len() / 2..], &mem)
+                    .build(),
+            )
+            .expect("failed to publish readable chain");
+
+        let result = device
+            .handle_readable_chain(ReadableChain::new(
+                queue_state.queue.next_chain().expect("failed to get next chain"),
+                &mem,
+            ))
+            .await;
+
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "TX Packet incorrectly fragmented over multiple descriptors"
+        );
+    }
+
+    #[fuchsia::test]
+    async fn tx_packet_send_to_netstack() {
+        let device = NetDevice::<TestGuestEthernet>::new().unwrap();
+        let data_length = 50;
+
+        // Actual virtio-net header doesn't matter for TX, so it can be "included" in these
+        // random bytes.
+        let random_bytes: Vec<u8> = rand::thread_rng()
+            .sample_iter(Standard)
+            .take(std::mem::size_of::<wire::VirtioNetHeader>() + data_length)
+            .collect();
+
+        let mem = IdentityDriverMem::new();
+        let mut queue_state = TestQueue::new(32, &mem);
+
+        queue_state
+            .fake_queue
+            .publish(ChainBuilder::new().readable(&random_bytes, &mem).build())
+            .expect("failed to publish readable chain");
+
+        device.ethernet.send_status.borrow_mut().push_back(zx::Status::OK);
+
+        device
+            .handle_readable_chain(ReadableChain::new(
+                queue_state.queue.next_chain().expect("failed to get next chain"),
+                &mem,
+            ))
+            .await
+            .expect("failed to process TX chain");
+
+        assert_eq!(device.ethernet.sends.borrow().len(), 1);
+        let (data_ptr, actual_len) = device.ethernet.sends.borrow()[0];
+        assert_eq!(data_length, actual_len as usize);
+        let slice = unsafe { std::slice::from_raw_parts(data_ptr, actual_len as usize) };
+        assert_eq!(slice, &random_bytes[std::mem::size_of::<wire::VirtioNetHeader>()..]);
+    }
+
+    #[test]
+    fn too_many_tx_packets_resumable() {
+        let mut executor = fasync::TestExecutor::new().unwrap();
+        let device = NetDevice::<TestGuestEthernet>::new().unwrap();
+        let header_length = std::mem::size_of::<wire::VirtioNetHeader>();
+        let data_length = 50;
+        let packet_length = header_length + data_length;
+
+        let packet1: Vec<u8> =
+            rand::thread_rng().sample_iter(Standard).take(packet_length).collect();
+
+        let packet2: Vec<u8> =
+            rand::thread_rng().sample_iter(Standard).take(packet_length).collect();
+
+        let packet3: Vec<u8> =
+            rand::thread_rng().sample_iter(Standard).take(packet_length).collect();
+
+        // First packet is accepted by the netstack.
+        device.ethernet.send_status.borrow_mut().push_back(zx::Status::OK);
+
+        // Second packet is asked to wait once, and is then accepted by the netstack.
+        device.ethernet.send_status.borrow_mut().push_back(zx::Status::SHOULD_WAIT);
+        device.ethernet.send_status.borrow_mut().push_back(zx::Status::OK);
+
+        // Third packet is accepted by the netstack.
+        device.ethernet.send_status.borrow_mut().push_back(zx::Status::OK);
+
+        let mem = IdentityDriverMem::new();
+        let mut queue_state = TestQueue::new(32, &mem);
+
+        queue_state
+            .fake_queue
+            .publish(ChainBuilder::new().readable(&packet1, &mem).build())
+            .expect("failed to publish readable chain");
+
+        queue_state
+            .fake_queue
+            .publish(ChainBuilder::new().readable(&packet2, &mem).build())
+            .expect("failed to publish readable chain");
+
+        queue_state
+            .fake_queue
+            .publish(ChainBuilder::new().readable(&packet3, &mem).build())
+            .expect("failed to publish readable chain");
+
+        let fut = device.handle_readable_chain(ReadableChain::new(
+            queue_state.queue.next_chain().expect("failed to get next chain"),
+            &mem,
+        ));
+        futures::pin_mut!(fut);
+        executor.run_until_stalled(&mut fut).expect("future should have completed").unwrap();
+
+        let fut = device.handle_readable_chain(ReadableChain::new(
+            queue_state.queue.next_chain().expect("failed to get next chain"),
+            &mem,
+        ));
+        futures::pin_mut!(fut);
+
+        // "Netstack" returned SHOULD_WAIT, so this chain can't be completed.
+        assert!(executor.run_until_stalled(&mut fut).is_pending());
+
+        // Normally invoked by the netstack, this should resume processing the current TX chain.
+        device.ethernet.notify_tx.unbounded_send(()).unwrap();
+        executor.run_until_stalled(&mut fut).expect("future should have completed").unwrap();
+
+        let fut = device.handle_readable_chain(ReadableChain::new(
+            queue_state.queue.next_chain().expect("failed to get next chain"),
+            &mem,
+        ));
+        futures::pin_mut!(fut);
+        executor.run_until_stalled(&mut fut).expect("future should have completed").unwrap();
+
+        assert_eq!(device.ethernet.sends.borrow().len(), 3);
+
+        let (data_ptr, actual_len) = device.ethernet.sends.borrow()[0];
+        assert_eq!(data_length, actual_len as usize);
+        let slice = unsafe { std::slice::from_raw_parts(data_ptr, actual_len as usize) };
+        assert_eq!(slice, &packet1[header_length..]);
+
+        let (data_ptr, actual_len) = device.ethernet.sends.borrow()[1];
+        assert_eq!(data_length, actual_len as usize);
+        let slice = unsafe { std::slice::from_raw_parts(data_ptr, actual_len as usize) };
+        assert_eq!(slice, &packet2[header_length..]);
+
+        let (data_ptr, actual_len) = device.ethernet.sends.borrow()[2];
+        assert_eq!(data_length, actual_len as usize);
+        let slice = unsafe { std::slice::from_raw_parts(data_ptr, actual_len as usize) };
+        assert_eq!(slice, &packet3[header_length..]);
+    }
+
+    #[fuchsia::test]
+    async fn rx_packet_too_large_to_send_to_guest() {
+        let device = NetDevice::<TestGuestEthernet>::new().unwrap();
+
+        // Smaller than an RX buffer, but not small enough to fit the virtio-net header.
+        let data_length =
+            wire::REQUIRED_RX_BUFFER_SIZE - std::mem::size_of::<wire::VirtioNetHeader>() / 2;
+        let buffer_id = 54321;
+
+        let packet_data: Vec<u8> =
+            rand::thread_rng().sample_iter(Standard).take(data_length).collect();
+        let rx_packet =
+            RxPacket { data: packet_data.as_ptr(), len: packet_data.len(), buffer_id: buffer_id };
+
+        device.ethernet.receive_packet_tx.unbounded_send(rx_packet).unwrap();
+
+        let mem = IdentityDriverMem::new();
+        let mut queue_state = TestQueue::new(32, &mem);
+
+        queue_state
+            .fake_queue
+            .publish(
+                ChainBuilder::new().writable((wire::REQUIRED_RX_BUFFER_SIZE) as u32, &mem).build(),
+            )
+            .expect("failed to publish writable chain");
+
+        let result = device
+            .handle_writable_chain(
+                WritableChain::new(
+                    queue_state.queue.next_chain().expect("failed to get next chain"),
+                    &mem,
+                )
+                .expect("failed to get writable chain"),
+            )
+            .await;
+
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().to_string(), "Packet is too large for provided RX buffers");
+
+        // Packet must still be completed even if not sent.
+        assert_eq!(device.ethernet.completes.borrow().len(), 1);
+        let (id, status) = device.ethernet.completes.borrow()[0];
+        assert_eq!(id, buffer_id);
+        assert_eq!(status, zx::Status::INTERNAL);
+    }
+
+    #[fuchsia::test]
+    async fn rx_packet_send_to_guest() {
+        let device = NetDevice::<TestGuestEthernet>::new().unwrap();
+        let data_length = 50;
+        let header_length = std::mem::size_of::<wire::VirtioNetHeader>();
+        let buffer_id = 12345;
+
+        // The packet received from the netstack does not include the virtio-net header.
+        let packet_data: Vec<u8> =
+            rand::thread_rng().sample_iter(Standard).take(data_length).collect();
+        let rx_packet =
+            RxPacket { data: packet_data.as_ptr(), len: packet_data.len(), buffer_id: buffer_id };
+
+        device.ethernet.receive_packet_tx.unbounded_send(rx_packet).unwrap();
+
+        let mem = IdentityDriverMem::new();
+        let mut queue_state = TestQueue::new(32, &mem);
+
+        queue_state
+            .fake_queue
+            .publish(
+                ChainBuilder::new().writable((wire::REQUIRED_RX_BUFFER_SIZE) as u32, &mem).build(),
+            )
+            .expect("failed to publish writable chain");
+
+        device
+            .handle_writable_chain(
+                WritableChain::new(
+                    queue_state.queue.next_chain().expect("failed to get next chain"),
+                    &mem,
+                )
+                .expect("failed to get writable chain"),
+            )
+            .await
+            .expect("failed to handle RX packet");
+
+        let used_chain = queue_state.fake_queue.next_used().expect("no next used chain");
+        let (data_ptr, len) = used_chain.data_iter().next().unwrap();
+
+        assert_eq!(len, used_chain.written());
+        assert_eq!(len as usize, data_length + header_length);
+
+        let slice = unsafe { std::slice::from_raw_parts(data_ptr as *const u8, len as usize) };
+        let header = wire::VirtioNetHeader::read_from(&slice[..header_length]).unwrap();
+        assert_eq!(header.num_buffers.get(), 1);
+        assert_eq!(&slice[header_length..], &packet_data);
+
+        assert_eq!(device.ethernet.completes.borrow().len(), 1);
+        let (id, status) = device.ethernet.completes.borrow()[0];
+        assert_eq!(id, buffer_id);
+        assert_eq!(status, zx::Status::OK);
     }
 }

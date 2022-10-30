@@ -19,7 +19,27 @@ pub struct RxPacket {
     pub len: usize,
 
     // Complete must only be called once for this ID.
+    #[cfg(not(test))]
     buffer_id: u32,
+    #[cfg(test)]
+    pub buffer_id: u32,
+}
+
+// A trait is used to allow mocking out the FFI wrapper when unit testing.
+pub trait GuestEthernetInterface {
+    fn new() -> Result<GuestEthernetNewResult<Self>, zx::Status>
+    where
+        Self: Sized;
+    fn initialize(&self, mac_address: MacAddress, enable_bridge: bool) -> Result<(), zx::Status>;
+    fn send(&self, data: *const u8, len: u16) -> Result<(), zx::Status>;
+    fn complete(&self, packet: RxPacket, status: zx::Status);
+}
+
+pub struct GuestEthernetNewResult<T: GuestEthernetInterface> {
+    pub guest_ethernet: Pin<Box<T>>,
+    pub status_rx: UnboundedReceiver<zx::Status>,
+    pub notify_rx: UnboundedReceiver<()>,
+    pub receive_packet_rx: UnboundedReceiver<RxPacket>,
 }
 
 pub struct GuestEthernet {
@@ -39,15 +59,8 @@ pub struct GuestEthernet {
     _pin: PhantomPinned,
 }
 
-pub struct GuestEthernetNewResult {
-    pub guest_ethernet: Pin<Box<GuestEthernet>>,
-    pub status_rx: UnboundedReceiver<zx::Status>,
-    pub notify_rx: UnboundedReceiver<()>,
-    pub receive_packet_rx: UnboundedReceiver<RxPacket>,
-}
-
-impl GuestEthernet {
-    pub fn new() -> Result<GuestEthernetNewResult, zx::Status> {
+impl GuestEthernetInterface for GuestEthernet {
+    fn new() -> Result<GuestEthernetNewResult<GuestEthernet>, zx::Status> {
         let mut raw_ptr: *mut interface::guest_ethernet_t = std::ptr::null_mut();
         zx::Status::ok(unsafe { interface::guest_ethernet_create(&mut raw_ptr) })?;
 
@@ -65,11 +78,7 @@ impl GuestEthernet {
         Ok(GuestEthernetNewResult { guest_ethernet, status_rx, notify_rx, receive_packet_rx })
     }
 
-    pub fn initialize(
-        &self,
-        mac_address: MacAddress,
-        enable_bridge: bool,
-    ) -> Result<(), zx::Status> {
+    fn initialize(&self, mac_address: MacAddress, enable_bridge: bool) -> Result<(), zx::Status> {
         tracing::info!("Registering a virtio-net device with the netstack");
         zx::Status::ok(unsafe {
             interface::guest_ethernet_initialize(
@@ -82,16 +91,18 @@ impl GuestEthernet {
         })
     }
 
-    pub fn send(&self, data: *const u8, len: u16) -> Result<(), zx::Status> {
+    fn send(&self, data: *const u8, len: u16) -> Result<(), zx::Status> {
         zx::Status::ok(unsafe { interface::guest_ethernet_send(self.raw_ptr, data, len) })
     }
 
-    pub fn complete(&self, packet: RxPacket, status: zx::Status) {
+    fn complete(&self, packet: RxPacket, status: zx::Status) {
         unsafe {
             interface::guest_ethernet_complete(self.raw_ptr, packet.buffer_id, status.into_raw())
         }
     }
+}
 
+impl GuestEthernet {
     // Callback from C++.
     pub fn set_guest_ethernet_status(guest_ethernet: *const libc::c_void, status: zx::zx_status_t) {
         let status = zx::Status::from_raw(status);
