@@ -802,43 +802,6 @@ void EvalBinaryOperator(const fxl::RefPtr<EvalContext>& context, const ExprValue
   cb(std::move(result));
 }
 
-void EvalBinaryOperator(const fxl::RefPtr<EvalContext>& context, const fxl::RefPtr<ExprNode>& left,
-                        const ExprToken& op, const fxl::RefPtr<ExprNode>& right, EvalCallback cb) {
-  left->Eval(context, [context, op, right, cb = std::move(cb)](ErrOrValue left_value) mutable {
-    if (left_value.has_error())
-      return cb(left_value);
-
-    if (op.type() == ExprTokenType::kLogicalOr || op.type() == ExprTokenType::kDoubleAnd) {
-      // Short-circuit for || and &&.
-      ErrOrValue left_as_bool = CastNumericExprValue(context, left_value.value(), MakeBoolType());
-      if (left_as_bool.has_error())
-        return cb(left_as_bool.err());
-
-      if (left_as_bool.value().GetAs<uint8_t>()) {
-        if (op.type() == ExprTokenType::kLogicalOr)
-          return cb(left_as_bool);  // Computation complete, skip evaluating the right side.
-
-        // Fall through to evaluating the right side given the left already casted to a bool.
-        left_value = left_as_bool.value();
-      } else {
-        if (op.type() == ExprTokenType::kDoubleAnd)
-          return cb(left_as_bool);  // Computation complete, skip evaluating the right side.
-
-        // Fall through to evaluating the right side given the left already casted to a bool.
-        left_value = left_as_bool.value();
-      }
-    }
-
-    right->Eval(context, [context, left_value = left_value.take_value(), op,
-                          cb = std::move(cb)](ErrOrValue right_value) mutable {
-      if (right_value.has_error())
-        cb(right_value);
-      else
-        EvalBinaryOperator(std::move(context), left_value, op, right_value.value(), std::move(cb));
-    });
-  });
-}
-
 // UBSan complains about the overflow of -INT32_MAX but our tests cover that.
 [[clang::no_sanitize("signed-integer-overflow")]] void EvalUnaryOperator(
     const fxl::RefPtr<EvalContext>& context, const ExprToken& op_token, const ExprValue& value,

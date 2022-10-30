@@ -14,6 +14,7 @@
 #include "src/developer/debug/zxdb/expr/expr_node.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
+#include "src/developer/debug/zxdb/expr/vm_exec.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/code_block.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
@@ -381,11 +382,13 @@ TEST_F(EvalContextImplTest, NodeIntegation) {
 
   auto context = MakeEvalContext();
 
-  // Look up an identifier that's not present.
+  VmStream stream;
   auto present = fxl::MakeRefCounted<IdentifierExprNode>(kPresentVarName);
-  bool called = false;
+  present->EmitBytecode(stream);
+
   ExprValue out_value;
-  present->Eval(context, [&called, &out_value](ErrOrValue value) {
+  bool called = false;
+  VmExec(context, std::move(stream), [&called, &out_value](ErrOrValue value) {
     called = true;
     EXPECT_FALSE(value.has_error());
     out_value = value.take_value();

@@ -49,8 +49,8 @@ class MultiEvalTracking {
 
 }  // namespace
 
-void EvalExpressionAsBytecode(const std::string& input, const fxl::RefPtr<EvalContext>& context,
-                              bool follow_references, EvalCallback cb) {
+void EvalExpression(const std::string& input, const fxl::RefPtr<EvalContext>& context,
+                    bool follow_references, EvalCallback cb) {
   ExprTokenizer tokenizer(input, context->GetLanguage());
   if (!tokenizer.Tokenize())
     return cb(tokenizer.err());
@@ -78,42 +78,6 @@ void EvalExpressionAsBytecode(const std::string& input, const fxl::RefPtr<EvalCo
     stream.push_back(VmOp::MakeExpandRef());
 
   VmExec(context, std::move(stream), std::move(cb));
-}
-
-void EvalExpressionAsNode(const std::string& input, const fxl::RefPtr<EvalContext>& context,
-                          bool follow_references, EvalCallback cb) {
-  ExprTokenizer tokenizer(input, context->GetLanguage());
-  if (!tokenizer.Tokenize())
-    return cb(tokenizer.err());
-
-  ExprParser parser(tokenizer.TakeTokens(), tokenizer.language(), context);
-  auto node = parser.ParseExpression();
-  if (parser.err().has_error()) {
-    // Add context information since we have the original input string (the
-    // parser doesn't have this).
-    ExprToken error_token = parser.error_token();
-    if (error_token.type() != ExprTokenType::kInvalid) {
-      Err context_err(parser.err().type(),
-                      parser.err().msg() + "\n" +
-                          ExprTokenizer::GetErrorContext(input, error_token.byte_offset()));
-      cb(context_err);
-    } else {
-      cb(parser.err());
-    }
-    return;
-  }
-
-  if (follow_references)
-    node->Eval(context, std::move(cb));
-  else
-    node->EvalFollowReferences(context, std::move(cb));
-}
-
-void EvalExpression(const std::string& input, const fxl::RefPtr<EvalContext>& context,
-                    bool follow_references, EvalCallback cb) {
-  // Use the bytecode path as the default.
-  // TODO(remove the node path).
-  return EvalExpressionAsBytecode(input, context, follow_references, std::move(cb));
 }
 
 void EvalExpressions(const std::vector<std::string>& inputs,

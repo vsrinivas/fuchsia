@@ -58,39 +58,6 @@ class ExprNode : public fxl::RefCountedThreadSafe<ExprNode> {
   virtual const TypeExprNode* AsType() const { return nullptr; }
   virtual const UnaryOpExprNode* AsUnaryOp() const { return nullptr; }
 
-  // Evaluates the expression and calls the callback with the result. The callback may be called
-  // reentrantly (meaning from within the callstack of Eval itself).
-  //
-  // Some eval operations are asynchronous because they require reading data from the remote system.
-  // Many are not. Since we expect relatively few evals (from user typing) and that they are quite
-  // simple (most are one value or a simple dereference), we opt for simplicity and make all evals
-  // require a callback.
-  //
-  // For larger expressions this can be quite heavyweight because not only will the expression be
-  // recursively executed, but returning the result will double the depth of the recursion (not to
-  // mention a heavyweight lambda bind for each).
-  //
-  // One thing that might cause expression eval speed to be an issue is when they are automatically
-  // executed as in a conditional breakpoint. If we start using expressions in conditional
-  // breakpoints and find that performance is unacceptable, this should be optimized to support
-  // evals that do not require callbacks unless necessary.
-  //
-  // The caller is responsible for ensuring the tree of nodes is in scope for the duration of this
-  // call until the callback is executed. This would normally be done by having the tree be owned by
-  // the callback itself. If this is causing memory lifetime problems, we should switch nodes to be
-  // reference counted.
-  //
-  // See also EvalFollowReferences below.
-  virtual void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const = 0;
-
-  // Like "Eval" but expands all references to the values they point to. When evaluating a
-  // subexpression this is the variant you want because without it the ExprValue in the callback
-  // will be the reference, which just contains the address of the value you want.
-  //
-  // The time you wouldn't want this is when calling externally where the caller wants to know the
-  // actual type the expression evaluated to.
-  void EvalFollowReferences(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const;
-
   // Appends the bytecode necessary to execute this node.  The bytecode machine is a stack-based
   // machine.
   //
@@ -123,7 +90,6 @@ class ExprNode : public fxl::RefCountedThreadSafe<ExprNode> {
 class AddressOfExprNode : public ExprNode {
  public:
   const AddressOfExprNode* AsAddressOf() const override { return this; }
-  void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
   void EmitBytecode(VmStream& stream) const override;
   void Print(std::ostream& out, int indent) const override;
 
@@ -142,7 +108,6 @@ class AddressOfExprNode : public ExprNode {
 class ArrayAccessExprNode : public ExprNode {
  public:
   const ArrayAccessExprNode* AsArrayAccess() const override { return this; }
-  void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
   void EmitBytecode(VmStream& stream) const override;
   void Print(std::ostream& out, int indent) const override;
 
@@ -168,7 +133,6 @@ class ArrayAccessExprNode : public ExprNode {
 class BinaryOpExprNode : public ExprNode {
  public:
   const BinaryOpExprNode* AsBinaryOp() const override { return this; }
-  void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
   void EmitBytecode(VmStream& stream) const override;
   void Print(std::ostream& out, int indent) const override;
 
@@ -189,7 +153,6 @@ class BinaryOpExprNode : public ExprNode {
 class BlockExprNode : public ExprNode {
  public:
   const BlockExprNode* AsBlock() const override { return this; }
-  void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
   void EmitBytecode(VmStream& stream) const override;
   void Print(std::ostream& out, int indent) const override;
 
@@ -204,11 +167,6 @@ class BlockExprNode : public ExprNode {
       : statements_(std::move(statements)) {}
   ~BlockExprNode() override = default;
 
-  // Evaluates the given block starging from the statement at the given index. This is used to
-  // recursively evaluate the block statements.
-  static void EvalBlockFrom(fxl::RefPtr<BlockExprNode> node, size_t index,
-                            const fxl::RefPtr<EvalContext>& context, EvalCallback cb);
-
   std::vector<fxl::RefPtr<ExprNode>> statements_;
 };
 
@@ -216,7 +174,6 @@ class BlockExprNode : public ExprNode {
 class CastExprNode : public ExprNode {
  public:
   const CastExprNode* AsCast() const override { return this; }
-  void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
   void EmitBytecode(VmStream& stream) const override;
   void Print(std::ostream& out, int indent) const override;
 
@@ -246,7 +203,6 @@ class ConditionExprNode : public ExprNode {
   };
 
   const ConditionExprNode* AsCondition() const override { return this; }
-  void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
   void EmitBytecode(VmStream& stream) const override;
   void Print(std::ostream& out, int indent) const override;
 
@@ -261,9 +217,6 @@ class ConditionExprNode : public ExprNode {
       : conds_(std::move(conds)), else_(std::move(else_case)) {}
   ~ConditionExprNode() override = default;
 
-  static void EvalFromCond(fxl::RefPtr<ConditionExprNode> node, size_t index,
-                           const fxl::RefPtr<EvalContext>& context, EvalCallback cb);
-
   std::vector<Pair> conds_;
   fxl::RefPtr<ExprNode> else_;  // Possibly null.
 };
@@ -272,7 +225,6 @@ class ConditionExprNode : public ExprNode {
 class DereferenceExprNode : public ExprNode {
  public:
   const DereferenceExprNode* AsDereference() const override { return this; }
-  void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
   void EmitBytecode(VmStream& stream) const override;
   void Print(std::ostream& out, int indent) const override;
 
@@ -291,7 +243,6 @@ class DereferenceExprNode : public ExprNode {
 class FunctionCallExprNode : public ExprNode {
  public:
   const FunctionCallExprNode* AsFunctionCall() const override { return this; }
-  void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
   void EmitBytecode(VmStream& stream) const override;
   void Print(std::ostream& out, int indent) const override;
 
@@ -334,7 +285,6 @@ class FunctionCallExprNode : public ExprNode {
 class IdentifierExprNode : public ExprNode {
  public:
   const IdentifierExprNode* AsIdentifier() const override { return this; }
-  void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
   void EmitBytecode(VmStream& stream) const override;
   void Print(std::ostream& out, int indent) const override;
 
@@ -365,7 +315,6 @@ class IdentifierExprNode : public ExprNode {
 class LiteralExprNode : public ExprNode {
  public:
   const LiteralExprNode* AsLiteral() const override { return this; }
-  void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
   void EmitBytecode(VmStream& stream) const override;
   void Print(std::ostream& out, int indent) const override;
 
@@ -389,7 +338,6 @@ class LiteralExprNode : public ExprNode {
 class MemberAccessExprNode : public ExprNode {
  public:
   const MemberAccessExprNode* AsMemberAccess() const override { return this; }
-  void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
   void EmitBytecode(VmStream& stream) const override;
   void Print(std::ostream& out, int indent) const override;
 
@@ -420,7 +368,6 @@ class MemberAccessExprNode : public ExprNode {
 class SizeofExprNode : public ExprNode {
  public:
   const SizeofExprNode* AsSizeof() const override { return this; }
-  void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
   void EmitBytecode(VmStream& stream) const override;
   void Print(std::ostream& out, int indent) const override;
 
@@ -441,7 +388,6 @@ class SizeofExprNode : public ExprNode {
 class TypeExprNode : public ExprNode {
  public:
   const TypeExprNode* AsType() const override { return this; }
-  void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
   void EmitBytecode(VmStream& stream) const override;
   void Print(std::ostream& out, int indent) const override;
 
@@ -463,7 +409,6 @@ class TypeExprNode : public ExprNode {
 class UnaryOpExprNode : public ExprNode {
  public:
   const UnaryOpExprNode* AsUnaryOp() const override { return this; }
-  void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
   void EmitBytecode(VmStream& stream) const override;
   void Print(std::ostream& out, int indent) const override;
 

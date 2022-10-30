@@ -612,39 +612,6 @@ TEST_F(EvalOperators, Logical) {
   EXPECT_EQ(0, out.value().GetAs<uint8_t>());
 }
 
-// Tests that && and || don't evaluate the right-hand side if not necessary.
-TEST_F(EvalOperators, LogicalShortCircuit) {
-  // 1 || <error>
-  auto or_node = fxl::MakeRefCounted<BinaryOpExprNode>(
-      fxl::MakeRefCounted<MockExprNode>(true, ExprValue(1)),
-      ExprToken(ExprTokenType::kLogicalOr, "||", 0),
-      fxl::MakeRefCounted<MockExprNode>(true, Err("Should not eval.")));
-
-  // Should evalutate to true and not error.
-  bool called = false;
-  or_node->Eval(eval_context(), [&called](ErrOrValue v) {
-    called = true;
-    EXPECT_FALSE(v.has_error());
-    EXPECT_EQ(1, v.value().GetAs<uint8_t>());
-  });
-  EXPECT_TRUE(called);  // Should eval synchronously.
-
-  // 0 && <error>
-  auto and_node = fxl::MakeRefCounted<BinaryOpExprNode>(
-      fxl::MakeRefCounted<MockExprNode>(true, ExprValue(0)),
-      ExprToken(ExprTokenType::kDoubleAnd, "&&", 0),
-      fxl::MakeRefCounted<MockExprNode>(true, Err("Should not eval.")));
-
-  // Should evalutate to true and not error.
-  called = false;
-  and_node->Eval(eval_context(), [&called](ErrOrValue v) {
-    called = true;
-    EXPECT_FALSE(v.has_error());
-    EXPECT_EQ(0, v.value().GetAs<uint8_t>());
-  });
-  EXPECT_TRUE(called);  // Should eval synchronously.
-}
-
 // These aren't supported but we check that the right error is given.
 TEST_F(EvalOperators, InPlace) {
   const char kUnimplementedMsg[] =

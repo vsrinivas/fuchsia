@@ -17,10 +17,10 @@ namespace {
 
 class ExprTest : public TestWithLoop {
  public:
-  ErrOrValue EvalAsBytecode(const std::string& code, const fxl::RefPtr<EvalContext>& context) {
+  ErrOrValue Eval(const std::string& code, const fxl::RefPtr<EvalContext>& context) {
     ErrOrValue result(Err("Uncalled"));
     bool called = false;
-    EvalExpressionAsBytecode(code, context, true, [&](ErrOrValue in_result) {
+    EvalExpression(code, context, true, [&](ErrOrValue in_result) {
       result = in_result;
       called = true;
       debug::MessageLoop::Current()->QuitNow();
@@ -82,21 +82,21 @@ TEST_F(ExprTest, CConditions) {
   auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
 
   // If true condition executed.
-  auto result = EvalAsBytecode("if (5 > 0) { 6; } else { 7; }", eval_context);
+  auto result = Eval("if (5 > 0) { 6; } else { 7; }", eval_context);
   EXPECT_TRUE(result.ok());
   int64_t result_value = 0;
   ASSERT_TRUE(result.value().PromoteTo64(&result_value).ok());
   EXPECT_EQ(6, result_value);
 
   // Else condition executed.
-  result = EvalAsBytecode("if (5 < 0) { 6; } else { 7; }", eval_context);
+  result = Eval("if (5 < 0) { 6; } else { 7; }", eval_context);
   EXPECT_TRUE(result.ok());
   result_value = 0;
   ASSERT_TRUE(result.value().PromoteTo64(&result_value).ok());
   EXPECT_EQ(7, result_value);
 
   // Cascading if/else, execute the middle condition.
-  result = EvalAsBytecode("if (5 < 0) { 6; } else if (0 < 5) { 99; } else { 7; }", eval_context);
+  result = Eval("if (5 < 0) { 6; } else if (0 < 5) { 99; } else { 7; }", eval_context);
   EXPECT_TRUE(result.ok());
   result_value = 0;
   ASSERT_TRUE(result.value().PromoteTo64(&result_value).ok());
@@ -108,21 +108,21 @@ TEST_F(ExprTest, RustConditions) {
   eval_context->set_language(ExprLanguage::kRust);
 
   // If true condition executed.
-  auto result = EvalAsBytecode("if 5 > 0 { 6 } else { 7 }", eval_context);
+  auto result = Eval("if 5 > 0 { 6 } else { 7 }", eval_context);
   EXPECT_TRUE(result.ok());
   int64_t result_value = 0;
   ASSERT_TRUE(result.value().PromoteTo64(&result_value).ok());
   EXPECT_EQ(6, result_value);
 
   // Else condition executed.
-  result = EvalAsBytecode("if 5 < 0 { 6 } else { 7 }", eval_context);
+  result = Eval("if 5 < 0 { 6 } else { 7 }", eval_context);
   EXPECT_TRUE(result.ok());
   result_value = 0;
   ASSERT_TRUE(result.value().PromoteTo64(&result_value).ok());
   EXPECT_EQ(7, result_value);
 
   // Cascading if/else, execute the middle condition.
-  result = EvalAsBytecode("if 5 < 0 { 6 } else if 0 < 5 { 99 } else { 7 }", eval_context);
+  result = Eval("if 5 < 0 { 6 } else if 0 < 5 { 99 } else { 7 }", eval_context);
   EXPECT_TRUE(result.ok());
   result_value = 0;
   ASSERT_TRUE(result.value().PromoteTo64(&result_value).ok());
@@ -140,24 +140,24 @@ TEST_F(ExprTest, LogicalOrShortCircuit) {
   ExprValue true_value(true);
   ExprValue false_value(false);
 
-  auto result = EvalAsBytecode("1 || nonexistant", eval_context);
+  auto result = Eval("1 || nonexistant", eval_context);
   EXPECT_TRUE(result.ok());
   EXPECT_EQ(true_value, result.value());
 
-  result = EvalAsBytecode("0 || nonexistant", eval_context);
+  result = Eval("0 || nonexistant", eval_context);
   EXPECT_TRUE(result.has_error());
   EXPECT_EQ("MockEvalContext::GetVariableValue 'nonexistant' not found.", result.err().msg());
 
-  result = EvalAsBytecode("0 || 1", eval_context);
+  result = Eval("0 || 1", eval_context);
   EXPECT_TRUE(result.ok());
   EXPECT_EQ(true_value, result.value());
 
-  result = EvalAsBytecode("0 || 0", eval_context);
+  result = Eval("0 || 0", eval_context);
   EXPECT_TRUE(result.ok());
   EXPECT_EQ(false_value, result.value());
 
   // Check that condition in a real "if" statement.
-  result = EvalAsBytecode("if (1 || nonexistant) { 5; } else { 6; }", eval_context);
+  result = Eval("if (1 || nonexistant) { 5; } else { 6; }", eval_context);
   EXPECT_TRUE(result.ok());
   int64_t result_value = 0;
   ASSERT_TRUE(result.value().PromoteTo64(&result_value).ok());
@@ -171,24 +171,24 @@ TEST_F(ExprTest, LogicalAndShortCircuit) {
   ExprValue true_value(true);
   ExprValue false_value(false);
 
-  auto result = EvalAsBytecode("0 && nonexistant", eval_context);
+  auto result = Eval("0 && nonexistant", eval_context);
   EXPECT_TRUE(result.ok());
   EXPECT_EQ(false_value, result.value());
 
-  result = EvalAsBytecode("1 && nonexistant", eval_context);
+  result = Eval("1 && nonexistant", eval_context);
   EXPECT_TRUE(result.has_error());
   EXPECT_EQ("MockEvalContext::GetVariableValue 'nonexistant' not found.", result.err().msg());
 
-  result = EvalAsBytecode("1 && 99", eval_context);
+  result = Eval("1 && 99", eval_context);
   EXPECT_TRUE(result.ok());
   EXPECT_EQ(true_value, result.value());
 
-  result = EvalAsBytecode("1 && 0", eval_context);
+  result = Eval("1 && 0", eval_context);
   EXPECT_TRUE(result.ok());
   EXPECT_EQ(false_value, result.value());
 
   // Check that condition in a real "if" statement.
-  result = EvalAsBytecode("if (0 && nonexistant) { 5; } else { 6; }", eval_context);
+  result = Eval("if (0 && nonexistant) { 5; } else { 6; }", eval_context);
   EXPECT_TRUE(result.ok());
   int64_t result_value = 0;
   ASSERT_TRUE(result.value().PromoteTo64(&result_value).ok());

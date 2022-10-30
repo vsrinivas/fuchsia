@@ -14,15 +14,6 @@ MockExprNode::MockExprNode(bool is_synchronous, ErrOrValue value)
 
 MockExprNode::~MockExprNode() = default;
 
-void MockExprNode::Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const {
-  if (is_synchronous_) {
-    cb(value_);
-  } else {
-    debug::MessageLoop::Current()->PostTask(
-        FROM_HERE, [value = value_, cb = std::move(cb)]() mutable { cb(value); });
-  }
-}
-
 void MockExprNode::EmitBytecode(VmStream& stream) const {
   if (is_synchronous_) {
     stream.push_back(

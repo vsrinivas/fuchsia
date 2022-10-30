@@ -112,31 +112,10 @@ TEST_F(ExprNodeTest, EvalIdentifier) {
 
   // This identifier should be found synchronously and returned.
   auto good_identifier = fxl::MakeRefCounted<IdentifierExprNode>("foo");
-  bool called = false;
-  ExprValue out_value;
-  good_identifier->Eval(context, [&called, &out_value](ErrOrValue value) {
-    called = true;
-    EXPECT_FALSE(value.has_error());
-    out_value = value.take_value();
-  });
-
-  // This should succeed synchronously.
-  EXPECT_TRUE(called);
-  EXPECT_EQ(foo_expected, out_value);
-
   EXPECT_EQ(ErrOrValue(foo_expected), EvalAsBytecode(good_identifier, context));
 
   // This identifier should be not found.
   auto bad_identifier = fxl::MakeRefCounted<IdentifierExprNode>("bar");
-  called = false;
-  bad_identifier->Eval(context, [&called](ErrOrValue value) {
-    called = true;
-    EXPECT_TRUE(value.has_error());
-  });
-
-  // It should fail synchronously.
-  EXPECT_TRUE(called);
-
   EXPECT_TRUE(EvalAsBytecode(bad_identifier, context).has_error());
 }
 
@@ -147,17 +126,8 @@ TEST_F(ExprNodeTest, LiteralChar) {
   // C character.
   auto c_context = fxl::MakeRefCounted<MockEvalContext>();
   c_context->set_language(ExprLanguage::kC);
-  bool called = false;
-  char_node->Eval(c_context, [&called](ErrOrValue value) {
-    called = true;
-    EXPECT_FALSE(value.has_error());
 
-    // Should be one byte = 'a'.
-    EXPECT_EQ(1u, value.value().data().size());
-    EXPECT_EQ('a', value.value().GetAs<int8_t>());
-  });
-
-  // Bytecode: should be one byte = 'a'.
+  // Should be one byte = 'a'.
   ErrOrValue result = EvalAsBytecode(char_node, c_context);
   EXPECT_FALSE(result.has_error());
   EXPECT_EQ(1u, result.value().data().size());
@@ -166,17 +136,8 @@ TEST_F(ExprNodeTest, LiteralChar) {
   // Rust character.
   auto rust_context = fxl::MakeRefCounted<MockEvalContext>();
   rust_context->set_language(ExprLanguage::kRust);
-  called = false;
-  char_node->Eval(rust_context, [&called](ErrOrValue value) {
-    called = true;
-    EXPECT_FALSE(value.has_error());
 
-    // Should be four bytes.
-    EXPECT_EQ(4u, value.value().data().size());
-    EXPECT_EQ(static_cast<uint32_t>('a'), value.value().GetAs<uint32_t>());
-  });
-
-  // Bytecode: should be four bytes.
+  // Should be four bytes.
   auto rust_char_node = fxl::MakeRefCounted<LiteralExprNode>(ExprLanguage::kRust, char_token);
   result = EvalAsBytecode(rust_char_node, rust_context);
   EXPECT_TRUE(result.ok());
@@ -209,23 +170,6 @@ TEST_F(ExprNodeTest, DereferenceReferencePointer) {
   // Execute the dereference.
   auto deref_node =
       fxl::MakeRefCounted<DereferenceExprNode>(fxl::MakeRefCounted<MockExprNode>(true, ptr_value));
-  bool called = false;
-  ExprValue out_value;
-  deref_node->Eval(context, [&called, &out_value](ErrOrValue value) {
-    called = true;
-    EXPECT_TRUE(value.ok());
-    out_value = value.take_value();
-  });
-  loop().RunUntilNoTasks();
-  EXPECT_TRUE(called);
-
-  // The type should be the const base type.
-  EXPECT_EQ(const_base_type.get(), out_value.type());
-
-  ASSERT_EQ(4u, out_value.data().size());
-  EXPECT_EQ(kValue, out_value.GetAs<uint32_t>());
-
-  // Same check in bytecode exec.
   ErrOrValue result = EvalAsBytecode(deref_node, context);
   ASSERT_TRUE(result.ok());
   EXPECT_EQ(const_base_type.get(), result.value().type());
@@ -233,40 +177,17 @@ TEST_F(ExprNodeTest, DereferenceReferencePointer) {
   EXPECT_EQ(kValue, result.value().GetAs<uint32_t>());
 
   // Now go backwards and get the address of the value.
-  auto addr_node =
-      fxl::MakeRefCounted<AddressOfExprNode>(fxl::MakeRefCounted<MockExprNode>(true, out_value));
-
-  called = false;
-  out_value = ExprValue();
-  addr_node->Eval(context, [&called, &out_value](ErrOrValue value) {
-    called = true;
-    EXPECT_TRUE(value.ok());
-    out_value = value.take_value();
-  });
-
-  // Taking the address should always complete synchronously.
-  EXPECT_TRUE(called);
-
-  // The value should be the address.
-  ASSERT_EQ(8u, out_value.data().size());
-  EXPECT_EQ(kAddress, out_value.GetAs<uint64_t>());
-
-  // The type should be a pointer modifier on the old type. The pointer modifier will be a
-  // dynamically created one so won't match the original we made above, but the underlying "const
-  // int" should still match.
-  const ModifiedType* out_mod_type = out_value.type()->As<ModifiedType>();
-  ASSERT_TRUE(out_mod_type);
-  EXPECT_EQ(DwarfTag::kPointerType, out_mod_type->tag());
-  EXPECT_EQ(const_base_type.get(), out_mod_type->modified().Get()->As<ModifiedType>());
-  EXPECT_EQ("const uint32_t*", out_mod_type->GetFullName());
-
-  // Same check in bytecode.
+  auto addr_node = fxl::MakeRefCounted<AddressOfExprNode>(
+      fxl::MakeRefCounted<MockExprNode>(true, result.value()));
   result = EvalAsBytecode(addr_node, context);
   ASSERT_TRUE(result.ok());
   ASSERT_EQ(8u, result.value().data().size());
   EXPECT_EQ(kAddress, result.value().GetAs<uint64_t>());
 
-  out_mod_type = result.value().type()->As<ModifiedType>();
+  // The type should be a pointer modifier on the old type. The pointer modifier will be a
+  // dynamically created one so won't match the original we made above, but the underlying "const
+  // int" should still match.
+  const ModifiedType* out_mod_type = result.value().type()->As<ModifiedType>();
   ASSERT_TRUE(out_mod_type);
   EXPECT_EQ(DwarfTag::kPointerType, out_mod_type->tag());
   EXPECT_EQ(const_base_type.get(), out_mod_type->modified().Get()->As<ModifiedType>());
@@ -286,32 +207,12 @@ TEST_F(ExprNodeTest, DereferenceErrors) {
   ExprValue bad_ptr_value(ptr_type, {0, 0, 0, 0, 0, 0, 0, 0});
   auto bad_deref_node = fxl::MakeRefCounted<DereferenceExprNode>(
       fxl::MakeRefCounted<MockExprNode>(true, bad_ptr_value));
-  bool called = false;
-  bad_deref_node->Eval(context, [&called](ErrOrValue value) {
-    called = true;
-    EXPECT_TRUE(value.has_error());
-    EXPECT_EQ("Invalid pointer 0x0", value.err().msg());
-  });
-  loop().RunUntilNoTasks();
-  EXPECT_TRUE(called);
-
-  // Bytecode check.
   auto result = EvalAsBytecode(bad_deref_node, context);
   EXPECT_TRUE(result.has_error());
   EXPECT_EQ("Invalid pointer 0x0", result.err().msg());
 
   // Try to take the address of the invalid expression above. The error should be forwarded.
   auto addr_bad_deref_node = fxl::MakeRefCounted<AddressOfExprNode>(std::move(bad_deref_node));
-  called = false;
-  addr_bad_deref_node->Eval(context, [&called](ErrOrValue value) {
-    called = true;
-    EXPECT_TRUE(value.has_error());
-    EXPECT_EQ("Invalid pointer 0x0", value.err().msg());
-  });
-  loop().RunUntilNoTasks();
-  EXPECT_TRUE(called);
-
-  // Bytecode check.
   result = EvalAsBytecode(addr_bad_deref_node, context);
   ASSERT_TRUE(result.has_error());
   EXPECT_EQ("Invalid pointer 0x0", result.err().msg());
@@ -319,16 +220,6 @@ TEST_F(ExprNodeTest, DereferenceErrors) {
   // Dereference an undefined value.
   auto undef_node = fxl::MakeRefCounted<MockExprNode>(true, Err("Undefined"));
   auto undef_deref_node = fxl::MakeRefCounted<DereferenceExprNode>(std::move(undef_node));
-  called = false;
-  undef_deref_node->Eval(context, [&called](ErrOrValue value) {
-    called = true;
-    EXPECT_TRUE(value.has_error());
-    EXPECT_EQ("Undefined", value.err().msg());
-  });
-  loop().RunUntilNoTasks();
-  EXPECT_TRUE(called);
-
-  // Bytecode check.
   result = EvalAsBytecode(undef_deref_node, context);
   ASSERT_TRUE(result.has_error());
   EXPECT_EQ("Undefined", result.err().msg());
@@ -364,38 +255,11 @@ TEST_F(ExprNodeTest, ArrayAccess) {
   constexpr uint32_t kExpectedValue = 0x11223344;
   context->data_provider()->AddMemory(kExpectedAddr, {0x44, 0x33, 0x22, 0x11});
 
-  // Bytecode check
   auto result = EvalAsBytecode(access, context);
   ASSERT_TRUE(result.ok());
   EXPECT_EQ(uint32_type.get(), result.value().type());
   EXPECT_EQ(kExpectedValue, result.value().GetAs<uint32_t>());
   EXPECT_EQ(kExpectedAddr, result.value().source().address());
-
-  // Execute.
-  bool called = false;
-  ExprValue out_value;
-  access->Eval(context, [&called, &out_value](ErrOrValue value) {
-    called = true;
-    EXPECT_FALSE(value.has_error()) << value.err().msg();
-    out_value = value.take_value();
-  });
-
-  // The two parts of the expression were set as async above, so it should not have been called yet.
-  EXPECT_FALSE(called);
-
-  // Clear out references to the stuff being executed. It should not crash, the relevant data should
-  // remain alive.
-  context.reset();
-  access.reset();
-
-  // Should succeed asynchronously.
-  loop().RunUntilNoTasks();
-  EXPECT_TRUE(called);
-
-  // Should have found our data at the right place.
-  EXPECT_EQ(uint32_type.get(), out_value.type());
-  EXPECT_EQ(kExpectedValue, out_value.GetAs<uint32_t>());
-  EXPECT_EQ(kExpectedAddr, out_value.source().address());
 }
 
 // This is more of an integration smoke test for "." and "->". The details are tested in
@@ -415,19 +279,6 @@ TEST_F(ExprNodeTest, MemberAccess) {
       struct_node, ExprToken(ExprTokenType::kDot, ".", 0), ParsedIdentifier("a"));
 
   // Do the call.
-  bool called = false;
-  ExprValue out_value;
-  access_node->Eval(context, [&called, &out_value](ErrOrValue value) {
-    called = true;
-    EXPECT_FALSE(value.has_error());
-    out_value = value.take_value();
-  });
-
-  // Should have run synchronously.
-  EXPECT_TRUE(called);
-  EXPECT_EQ(0x12345678, out_value.GetAs<int32_t>());
-
-  // Bytecode version.
   auto result = EvalAsBytecode(access_node, context);
   ASSERT_TRUE(result.ok());
   EXPECT_EQ(0x12345678, result.value().GetAs<int32_t>());
@@ -448,22 +299,6 @@ TEST_F(ExprNodeTest, MemberAccess) {
       struct_ptr_node, ExprToken(ExprTokenType::kArrow, "->", 0), ParsedIdentifier("b"));
 
   // Do the call.
-  called = false;
-  out_value = ExprValue();
-  access_ptr_node->Eval(context, [&called, &out_value](ErrOrValue value) {
-    called = true;
-    EXPECT_TRUE(value.ok());
-    out_value = value.take_value();
-  });
-
-  // Should have run asynchronously.
-  EXPECT_FALSE(called);
-  loop().RunUntilNoTasks();
-  EXPECT_TRUE(called);
-  EXPECT_EQ(sizeof(int32_t), out_value.data().size());
-  EXPECT_EQ(0x55667788, out_value.GetAs<int32_t>());
-
-  // Bytecode version.
   result = EvalAsBytecode(access_ptr_node, context);
   ASSERT_TRUE(result.ok());
   EXPECT_EQ(sizeof(int32_t), result.value().data().size());
@@ -500,23 +335,6 @@ TEST_F(ExprNodeTest, RustMemberAccess) {
       struct_ptr_node, ExprToken(ExprTokenType::kDot, ".", 0), ParsedIdentifier("b"));
 
   // Do the call.
-  auto called = false;
-  auto out_value = ExprValue();
-  access_ptr_node->Eval(context, [&called, &out_value](ErrOrValue value) {
-    called = true;
-    EXPECT_TRUE(value.ok());
-    out_value = value.take_value();
-  });
-
-  // Should have run asynchronously.
-  EXPECT_FALSE(called);
-  loop().RunUntilNoTasks();
-  EXPECT_TRUE(called);
-
-  EXPECT_EQ(sizeof(int32_t), out_value.data().size());
-  EXPECT_EQ(0x55667788, out_value.GetAs<int32_t>());
-
-  // Bytecode version.
   auto result = EvalAsBytecode(access_ptr_node, context);
   ASSERT_TRUE(result.ok());
   EXPECT_EQ(0x55667788, result.value().GetAs<int32_t>());
@@ -548,16 +366,6 @@ TEST_F(ExprNodeTest, PrettyDereference) {
 
   // Dereferencing MyType should yield the pretty type result |struct_type| above.
   auto deref_node = fxl::MakeRefCounted<DereferenceExprNode>(my_node);
-  bool called = false;
-  deref_node->Eval(context, [&called, struct_value](ErrOrValue value) {
-    called = true;
-    EXPECT_TRUE(value.ok()) << value.err().msg();
-    // Should have returned the constant struct.
-    EXPECT_EQ(struct_value, value.value());
-  });
-  EXPECT_TRUE(called);
-
-  // Bytecode version.
   auto result = EvalAsBytecode(deref_node, context);
   ASSERT_TRUE(result.ok());
   EXPECT_EQ(struct_value, result.value());
@@ -566,16 +374,6 @@ TEST_F(ExprNodeTest, PrettyDereference) {
   // resolve the member "a" on it, giving kAValue as the result.
   auto member_node = fxl::MakeRefCounted<MemberAccessExprNode>(
       my_node, ExprToken(ExprTokenType::kArrow, "->", 0), ParsedIdentifier("a"));
-  called = false;
-  member_node->Eval(context, [&called, struct_value, kAValue](ErrOrValue value) {
-    called = true;
-    EXPECT_TRUE(value.ok()) << value.err().msg();
-    // Should have returned the constant struct.
-    EXPECT_EQ(kAValue, value.value().GetAs<int32_t>());
-  });
-  EXPECT_TRUE(called);
-
-  // Bytecode version.
   result = EvalAsBytecode(member_node, context);
   ASSERT_TRUE(result.ok());
   EXPECT_EQ(kAValue, result.value().GetAs<int32_t>());
@@ -596,19 +394,6 @@ TEST_F(ExprNodeTest, Cast) {
       CastType::kStatic, std::move(derived_ref_type_node), std::move(base2_ref_node));
 
   // Do the call.
-  bool called = false;
-  ExprValue out_value;
-  cast_ref_ref_node->Eval(context, [&called, &out_value](ErrOrValue value) {
-    called = true;
-    ASSERT_FALSE(value.has_error());
-    out_value = value.take_value();
-  });
-
-  // Should have run synchronously.
-  EXPECT_TRUE(called);
-  EXPECT_EQ(d.derived_ref_value, out_value);
-
-  // Bytecode version.
   auto result = EvalAsBytecode(cast_ref_ref_node, context);
   ASSERT_TRUE(result.ok());
   EXPECT_EQ(d.derived_ref_value, result.value());
@@ -624,23 +409,6 @@ TEST_F(ExprNodeTest, Cast) {
   // Provide the memory for the derived type for when we dereference the ref.
   context->data_provider()->AddMemory(d.kDerivedAddr, d.derived_value.data().bytes());
 
-  called = false;
-  out_value = ExprValue();
-  cast_node->Eval(context, [&called, &out_value](ErrOrValue value) {
-    called = true;
-    EXPECT_FALSE(value.has_error()) << value.err().msg();
-    out_value = value.take_value();
-  });
-
-  // Dereferencing will be an asynchronous memory request so it will not have completed yet.
-  EXPECT_FALSE(called);
-  loop().RunUntilNoTasks();
-  EXPECT_TRUE(called);
-
-  // Should have converted to the Base2 value.
-  EXPECT_EQ(d.base2_value, out_value);
-
-  // Bytecode version.
   result = EvalAsBytecode(cast_node, context);
   ASSERT_TRUE(result.ok());
   EXPECT_EQ(d.base2_value, result.value());
@@ -669,16 +437,7 @@ TEST_F(ExprNodeTest, PrettyTypeMember) {
       content, ExprToken(ExprTokenType::kDot, ".", 0),
       ParsedIdentifier(MockGetterPrettyType::kMemberName));
 
-  // Evaluate, everything is synchronously available.
-  bool called = false;
-  dot_access->Eval(context, [&called](ErrOrValue value) {
-    called = true;
-    EXPECT_FALSE(value.has_error()) << value.err().msg();
-    EXPECT_EQ(MockGetterPrettyType::kMemberValue, value.value().GetAs<int32_t>());
-  });
-  EXPECT_TRUE(called);
-
-  // Bytecode version.
+  // Evaluate.
   auto result = EvalAsBytecode(dot_access, context);
   ASSERT_TRUE(result.ok());
   EXPECT_EQ(MockGetterPrettyType::kMemberValue, result.value().GetAs<int32_t>());
@@ -696,18 +455,7 @@ TEST_F(ExprNodeTest, PrettyTypeMember) {
       pointer, ExprToken(ExprTokenType::kArrow, "->", 0),
       ParsedIdentifier(MockGetterPrettyType::kMemberName));
 
-  // Evaluate, requires a loop because fetching the pointer data is async.
-  called = false;
-  arrow_access->Eval(context, [&called](ErrOrValue value) {
-    called = true;
-    EXPECT_FALSE(value.has_error()) << value.err().msg();
-    EXPECT_EQ(MockGetterPrettyType::kMemberValue, value.value().GetAs<int>());
-  });
-  EXPECT_FALSE(called);
-  loop().RunUntilNoTasks();
-  EXPECT_TRUE(called);
-
-  // Bytecode version.
+  // Evaluate.
   result = EvalAsBytecode(arrow_access, context);
   ASSERT_TRUE(result.ok());
   EXPECT_EQ(MockGetterPrettyType::kMemberValue, result.value().GetAs<int>());
@@ -717,15 +465,6 @@ TEST_F(ExprNodeTest, PrettyTypeMember) {
       content, ExprToken(ExprTokenType::kArrow, "->", 0),
       ParsedIdentifier(MockGetterPrettyType::kMemberName));
 
-  called = false;
-  invalid_arrow_access->Eval(context, [&called](ErrOrValue value) {
-    called = true;
-    EXPECT_TRUE(value.has_error());
-    EXPECT_EQ("Attempting to dereference 'MyType' which is not a pointer.", value.err().msg());
-  });
-  EXPECT_TRUE(called);  // This error is synchronous.
-
-  // Bytecode version.
   result = EvalAsBytecode(invalid_arrow_access, context);
   ASSERT_TRUE(result.has_error());
   EXPECT_EQ("Attempting to dereference 'MyType' which is not a pointer.", result.err().msg());
@@ -747,15 +486,6 @@ TEST_F(ExprNodeTest, PrettyTypeMember) {
   auto pretty_arrow_access = fxl::MakeRefCounted<MemberAccessExprNode>(
       needs_deref_node, ExprToken(ExprTokenType::kArrow, "->", 0),
       ParsedIdentifier(MockGetterPrettyType::kMemberName));
-
-  // This is synchronous since no pointers are actually dereferenced.
-  called = false;
-  pretty_arrow_access->Eval(context, [&called](ErrOrValue value) {
-    called = true;
-    EXPECT_FALSE(value.has_error()) << value.err().msg();
-    EXPECT_EQ(MockGetterPrettyType::kMemberValue, value.value().GetAs<int>());
-  });
-  EXPECT_TRUE(called);
 
   // Bytecode version.
   result = EvalAsBytecode(pretty_arrow_access, context);
@@ -787,16 +517,7 @@ TEST_F(ExprNodeTest, PrettyTypeGetter) {
       ParsedIdentifier(MockGetterPrettyType::kGetterName));
   auto dot_call = fxl::MakeRefCounted<FunctionCallExprNode>(dot_access);
 
-  // Evaluate, everything is synchronously available.
-  bool called = false;
-  dot_call->Eval(context, [&called](ErrOrValue value) {
-    called = true;
-    EXPECT_FALSE(value.has_error()) << value.err().msg();
-    EXPECT_EQ(MockGetterPrettyType::kGetterValue, value.value().GetAs<int32_t>());
-  });
-  EXPECT_TRUE(called);
-
-  // Bytecode version.
+  // Evaluate.
   auto result = EvalAsBytecode(dot_call, context);
   ASSERT_TRUE(result.ok()) << result.err().msg();
   EXPECT_EQ(MockGetterPrettyType::kGetterValue, result.value().GetAs<int32_t>());
@@ -815,18 +536,7 @@ TEST_F(ExprNodeTest, PrettyTypeGetter) {
       ParsedIdentifier(MockGetterPrettyType::kGetterName));
   auto arrow_call = fxl::MakeRefCounted<FunctionCallExprNode>(arrow_access);
 
-  // Evaluate, requires a loop because fetching the pointer data is async.
-  called = false;
-  arrow_call->Eval(context, [&called](ErrOrValue value) {
-    called = true;
-    EXPECT_FALSE(value.has_error()) << value.err().msg();
-    EXPECT_EQ(MockGetterPrettyType::kGetterValue, value.value().GetAs<int>());
-  });
-  EXPECT_FALSE(called);
-  loop().RunUntilNoTasks();
-  EXPECT_TRUE(called);
-
-  // Bytecode version.
+  // Evaluate.
   result = EvalAsBytecode(arrow_call, context);
   ASSERT_TRUE(result.ok());
   EXPECT_EQ(MockGetterPrettyType::kGetterValue, result.value().GetAs<int>());
@@ -837,15 +547,6 @@ TEST_F(ExprNodeTest, PrettyTypeGetter) {
       ParsedIdentifier(MockGetterPrettyType::kGetterName));
   auto invalid_arrow_call = fxl::MakeRefCounted<FunctionCallExprNode>(invalid_arrow_access);
 
-  called = false;
-  invalid_arrow_call->Eval(context, [&called](ErrOrValue value) {
-    called = true;
-    EXPECT_TRUE(value.has_error());
-    EXPECT_EQ("Attempting to dereference 'MyType' which is not a pointer.", value.err().msg());
-  });
-  EXPECT_TRUE(called);  // This error is synchronous.
-
-  // Bytecode version.
   result = EvalAsBytecode(invalid_arrow_call, context);
   ASSERT_TRUE(result.has_error());
   EXPECT_EQ("Attempting to dereference 'MyType' which is not a pointer.", result.err().msg());
@@ -869,16 +570,6 @@ TEST_F(ExprNodeTest, PrettyTypeGetter) {
       ParsedIdentifier(MockGetterPrettyType::kGetterName));
   auto pretty_arrow_call = fxl::MakeRefCounted<FunctionCallExprNode>(pretty_arrow_access);
 
-  // This is synchronous since no pointers are actually dereferenced.
-  called = false;
-  pretty_arrow_call->Eval(context, [&called](ErrOrValue value) {
-    called = true;
-    EXPECT_FALSE(value.has_error()) << value.err().msg();
-    EXPECT_EQ(MockGetterPrettyType::kGetterValue, value.value().GetAs<int>());
-  });
-  EXPECT_TRUE(called);
-
-  // Bytecode version.
   result = EvalAsBytecode(pretty_arrow_call, context);
   ASSERT_TRUE(result.ok());
   EXPECT_EQ(MockGetterPrettyType::kGetterValue, result.value().GetAs<int>());
@@ -896,20 +587,6 @@ TEST_F(ExprNodeTest, Sizeof) {
   auto char_ref_type_node = fxl::MakeRefCounted<TypeExprNode>(char_ref_type);
   auto sizeof_char_ref_type = fxl::MakeRefCounted<SizeofExprNode>(char_ref_type_node);
 
-  bool called = false;
-  sizeof_char_ref_type->Eval(context, [&called](ErrOrValue v) {
-    EXPECT_FALSE(v.has_error());
-
-    // Should have retrieved the size of the char, not the reference itself.
-    uint64_t sizeof_value = 0;
-    EXPECT_FALSE(v.value().PromoteTo64(&sizeof_value).has_error());
-    EXPECT_EQ(1u, sizeof_value);
-
-    called = true;
-  });
-  EXPECT_TRUE(called);  // Make sure callback executed.
-
-  // Bytecode version.
   auto result = EvalAsBytecode(sizeof_char_ref_type, context);
   ASSERT_TRUE(result.ok());
   uint64_t sizeof_value = 0;
@@ -920,22 +597,6 @@ TEST_F(ExprNodeTest, Sizeof) {
   auto char_value_node = fxl::MakeRefCounted<MockExprNode>(false, ExprValue(true));
   auto sizeof_char = fxl::MakeRefCounted<SizeofExprNode>(char_value_node);
 
-  called = false;
-  sizeof_char->Eval(context, [&called](ErrOrValue v) {
-    EXPECT_FALSE(v.has_error());
-
-    // Should have retrieved the size of the char.
-    uint64_t sizeof_value = 0;
-    EXPECT_FALSE(v.value().PromoteTo64(&sizeof_value).has_error());
-    EXPECT_EQ(1u, sizeof_value);
-
-    called = true;
-  });
-
-  loop().RunUntilNoTasks();
-  EXPECT_TRUE(called);  // Make sure callback executed.
-
-  // Bytecode version.
   result = EvalAsBytecode(sizeof_char, context);
   ASSERT_TRUE(result.ok());
   sizeof_value = 0;
