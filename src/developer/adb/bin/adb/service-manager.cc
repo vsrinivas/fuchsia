@@ -14,9 +14,9 @@ namespace adb {
 namespace {
 
 std::unordered_map<std::string_view, std::string_view> services{
-    {kShellService, "fuchsia-boot:///#meta/adb-shell.cm"},
-    {kFfxService, "fuchsia-boot:///#meta/adb-ffx.cm"},
-    {kFileSyncService, "fuchsia-boot:///#meta/adb-file-sync.cm"},
+    {kShellService, "fuchsia-pkg://fuchsia.com/adb#meta/adb-shell.cm"},
+    {kFfxService, "fuchsia-pkg://fuchsia.com/adb#meta/adb-ffx.cm"},
+    {kFileSyncService, "fuchsia-pkg://fuchsia.com/adb#meta/adb-file-sync.cm"},
 };
 
 }  // namespace

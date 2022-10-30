@@ -3,10 +3,7 @@
 # found in the LICENSE file.
 
 group("adb") {
-  deps = [
-    "bin",
-    "drivers/usb-adb-function",
-  ]
+  deps = [ "bin" ]
 }
 
 group("core_shards") {

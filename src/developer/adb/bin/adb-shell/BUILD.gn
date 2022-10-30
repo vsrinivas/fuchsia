@@ -1,0 +1,76 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+import("//src/sys/core/build/core_shard.gni")
+
+group("common") {
+  public_deps = [
+    ":adb-shell-config",
+    "//sdk/fidl/fuchsia.dash:fuchsia.dash_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.adb:fuchsia.hardware.adb_cpp_wire",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
+    "//sdk/lib/sys/component/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/fbl",
+  ]
+}
+
+executable("adb-shell") {
+  sources = [
+    "adb-shell.cc",
+    "main.cc",
+  ]
+  deps = [ ":common" ]
+}
+
+core_shard("adb-shell-shard") {
+  shard_file = "meta/adb-shell.core_shard.cml"
+}
+
+fuchsia_component_manifest("manifest") {
+  component_name = "adb-shell"
+  manifest = "meta/adb-shell.cml"
+}
+
+fuchsia_structured_config_cpp_elf_lib("adb-shell-config") {
+  cm_label = ":manifest"
+}
+
+fuchsia_structured_config_values("adb-shell-config-default-values") {
+  cm_label = ":manifest"
+  values = {
+    dash_moniker = "./bootstrap/console-launcher"
+  }
+}
+
+fuchsia_component("adb-shell-component") {
+  cm_label = ":manifest"
+  deps = [ ":adb-shell" ]
+}
+
+test("adb-shell-test-bin") {
+  sources = [
+    "adb-shell-test.cc",
+    "adb-shell.cc",
+  ]
+  deps = [
+    ":common",
+    "//sdk/fidl/fuchsia.hardware.adb:fuchsia.hardware.adb_cpp_wire_testing",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("adb-shell-test") {
+  deps = [ ":adb-shell-test-bin" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":adb-shell-test" ]
+}

@@ -5,14 +5,28 @@
 import("//build/components.gni")
 
 group("bin") {
-  deps = [ "adb:adb-component" ]
+  deps = [ ":adb" ]
 }
 
 group("core_shards") {
-  deps = [ "adb:adb-shard" ]
+  deps = [
+    "adb:adb-shard",
+    "adb-shell:adb-shell-shard",
+  ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ "adb:tests" ]
+  deps = [
+    "adb:tests",
+    "adb-shell:tests",
+  ]
+}
+
+fuchsia_package("adb") {
+  deps = [
+    "adb:adb-component",
+    "adb-shell:adb-shell-component",
+    "adb-shell:adb-shell-config-default-values",
+  ]
 }

@@ -5,7 +5,7 @@
     children: [
         {
             name: "adb",
-            url: "fuchsia-boot:///#meta/adb.cm",
+            url: "fuchsia-pkg://fuchsia.com/adb#meta/adb.cm",
 
             // Start up Adb eagerly. The usb-adb driver expects to have this component up to
             // start receiving and servicing packets. Minimizes device discovery latency.
