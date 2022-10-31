@@ -132,7 +132,7 @@ void DeclarationOrderTreeVisitor::OnProtocolDeclaration(
     if (methods_it != element->methods.end()) {
       m[(*methods_it)->start_.previous_end().data().data()] = method_t;
     }
-    if (m.size() == 0)
+    if (m.empty())
       return;
 
     // And the earliest declaration is...

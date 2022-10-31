@@ -10,7 +10,6 @@
 #include "tools/fidl/fidlc/include/fidl/flat/types.h"
 #include "tools/fidl/fidlc/include/fidl/flat_ast.h"
 #include "tools/fidl/fidlc/include/fidl/names.h"
-#include "tools/fidl/fidlc/include/fidl/types.h"
 
 namespace fidl {
 
@@ -80,7 +79,7 @@ void IndexJSONGenerator::Generate(SourceSpan value) {
     if (!value.source_file().IsVirtual()) {
       GenerateObjectMember("file", value.source_file().filename());
       GenerateObjectMember("data", value.data());
-      auto start_offset = value.data().data() - value.source_file().data().data();
+      uint64_t start_offset = value.data().data() - value.source_file().data().data();
       GenerateObjectMember("start_offset", start_offset);
       GenerateObjectMember("end_offset", start_offset + value.data().size());
     }

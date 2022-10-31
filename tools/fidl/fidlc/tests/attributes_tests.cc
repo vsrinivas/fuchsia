@@ -7,10 +7,6 @@
 #include "tools/fidl/fidlc/include/fidl/diagnostics.h"
 #include "tools/fidl/fidlc/include/fidl/flat/attribute_schema.h"
 #include "tools/fidl/fidlc/include/fidl/flat_ast.h"
-#include "tools/fidl/fidlc/include/fidl/lexer.h"
-#include "tools/fidl/fidlc/include/fidl/parser.h"
-#include "tools/fidl/fidlc/include/fidl/reporter.h"
-#include "tools/fidl/fidlc/include/fidl/source_file.h"
 #include "tools/fidl/fidlc/tests/error_test.h"
 #include "tools/fidl/fidlc/tests/test_library.h"
 
@@ -650,10 +646,9 @@ protocol MyProtocol {
 };
 )FIDL");
   EXPECT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 3);
-  for (size_t i = 0; i < errors.size(); i++) {
-    ASSERT_ERR(errors[i], fidl::ErrDeprecatedAttribute);
+  ASSERT_EQ(library.errors().size(), 3);
+  for (auto& error : library.errors()) {
+    ASSERT_ERR(error, fidl::ErrDeprecatedAttribute);
   }
 }
 

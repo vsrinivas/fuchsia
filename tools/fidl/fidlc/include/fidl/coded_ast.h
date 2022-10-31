@@ -66,13 +66,14 @@ struct StructPadding {
     ZX_ASSERT_MSG(length != 0, "padding shouldn't be created for zero-length offsets");
     if (length <= 2) {
       return StructPadding(offset_v2 & ~1, BuildMask<uint16_t>(offset_v2 & 1, length));
-    } else if (length <= 4) {
-      return StructPadding(offset_v2 & ~3, BuildMask<uint32_t>(offset_v2 & 3, length));
-    } else if (length < 8) {
-      return StructPadding(offset_v2 & ~7, BuildMask<uint64_t>(offset_v2 & 7, length));
-    } else {
-      ZX_PANIC("length should be < 8, got %u", length);
     }
+    if (length <= 4) {
+      return StructPadding(offset_v2 & ~3, BuildMask<uint32_t>(offset_v2 & 3, length));
+    }
+    if (length < 8) {
+      return StructPadding(offset_v2 & ~7, BuildMask<uint64_t>(offset_v2 & 7, length));
+    }
+    ZX_PANIC("length should be < 8, got %u", length);
   }
 
   const uint32_t offset_v2;
@@ -100,7 +101,7 @@ struct TableField {
 };
 
 struct XUnionField {
-  XUnionField(const Type* type) : type(type) {}
+  explicit XUnionField(const Type* type) : type(type) {}
 
   const Type* type;
 };

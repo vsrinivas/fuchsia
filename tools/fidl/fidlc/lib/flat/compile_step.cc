@@ -58,10 +58,9 @@ class Scope {
     auto iter = scope_.find(t);
     if (iter != scope_.end()) {
       return ScopeInsertResult::FailureAt(iter->second);
-    } else {
-      scope_.emplace(t, span);
-      return ScopeInsertResult::Ok();
     }
+    scope_.emplace(t, span);
+    return ScopeInsertResult::Ok();
   }
 
   typename std::map<T, SourceSpan>::const_iterator begin() const { return scope_.begin(); }
@@ -102,7 +101,7 @@ struct MethodScope {
 class DeriveResourceness {
  public:
   explicit DeriveResourceness(std::optional<types::Resourceness>* target)
-      : target_(target), derive_(!target->has_value()), result_(types::Resourceness::kValue) {}
+      : target_(target), derive_(!target->has_value()) {}
 
   ~DeriveResourceness() {
     if (derive_) {
@@ -120,7 +119,7 @@ class DeriveResourceness {
  private:
   std::optional<types::Resourceness>* const target_;
   const bool derive_;
-  types::Resourceness result_;
+  types::Resourceness result_ = types::Resourceness::kValue;
 };
 
 // A helper class to track when a Decl is compiling and compiled.
@@ -1042,7 +1041,7 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
     // TODO(fxbug.dev/77623): Remove.
     auto library_name = library()->name;
     if (library_name.size() == 2 && library_name[0] == "fuchsia" && library_name[1] == "io" &&
-        selector.find("/") == selector.npos) {
+        selector.find('/') == std::string::npos) {
       Fail(ErrFuchsiaIoExplicitOrdinals, method.name);
       continue;
     }
@@ -1183,7 +1182,7 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
     const auto& protocol = *event.owning_protocol;
     const Library& library = *protocol.name.library();
     // TODO(fxbug.dev/98319): Migrate test libraries.
-    ZX_ASSERT(library.name.size() > 0);
+    ZX_ASSERT(!library.name.empty());
     if (library.name[0] == "test" || library.name[0] == "fidl") {
       return;
     }

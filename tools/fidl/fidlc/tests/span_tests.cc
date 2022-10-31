@@ -90,7 +90,7 @@ constexpr std::string_view kMarkerRight = "»";
 
 class SourceSpanVisitor : public fidl::raw::TreeVisitor {
  public:
-  SourceSpanVisitor(ElementType test_case_type) : test_case_type_(test_case_type) {}
+  explicit SourceSpanVisitor(ElementType test_case_type) : test_case_type_(test_case_type) {}
 
   const std::multiset<std::string>& spans() { return spans_; }
 

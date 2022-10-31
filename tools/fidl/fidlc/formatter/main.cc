@@ -15,7 +15,6 @@
 
 #include "tools/fidl/fidlc/include/fidl/formatter.h"
 #include "tools/fidl/fidlc/include/fidl/lexer.h"
-#include "tools/fidl/fidlc/include/fidl/parser.h"
 #include "tools/fidl/fidlc/include/fidl/source_manager.h"
 #include "tools/fidl/fidlc/include/fidl/utils.h"
 

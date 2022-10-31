@@ -9,6 +9,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "tools/fidl/fidlc/include/fidl/diagnostic_types.h"
@@ -31,7 +32,7 @@ class DiagnosticsJson : public utils::JsonWriter<DiagnosticsJson> {
   using utils::JsonWriter<DiagnosticsJson>::GenerateArray;
 
   explicit DiagnosticsJson(std::vector<Diagnostic*> diagnostics)
-      : JsonWriter(json_file_), diagnostics_(diagnostics) {}
+      : JsonWriter(json_file_), diagnostics_(std::move(diagnostics)) {}
 
   ~DiagnosticsJson() = default;
 

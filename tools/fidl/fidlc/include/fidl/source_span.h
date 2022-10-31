@@ -10,7 +10,7 @@
 #include <cstdint>
 #include <string_view>
 
-#include "tools/fidl/fidlc/include/fidl/source_manager.h"
+#include "tools/fidl/fidlc/include/fidl/source_file.h"
 
 namespace fidl {
 

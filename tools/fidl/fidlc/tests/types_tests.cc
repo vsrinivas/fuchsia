@@ -4,11 +4,8 @@
 
 #include <zxtest/zxtest.h>
 
-#include "tools/fidl/fidlc/include/fidl/flat/compile_step.h"
-#include "tools/fidl/fidlc/include/fidl/flat/type_resolver.h"
 #include "tools/fidl/fidlc/include/fidl/flat_ast.h"
 #include "tools/fidl/fidlc/include/fidl/types.h"
-#include "tools/fidl/fidlc/include/fidl/virtual_source_file.h"
 #include "tools/fidl/fidlc/tests/error_test.h"
 #include "tools/fidl/fidlc/tests/test_library.h"
 

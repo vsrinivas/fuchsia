@@ -1799,12 +1799,6 @@ std::ostringstream CGenerator::ProduceHeader() {
         }
         break;
       }
-      case flat::Decl::Kind::kResource:
-        // Do nothing.
-        break;
-      case flat::Decl::Kind::kService:
-        // Do nothing.
-        break;
       case flat::Decl::Kind::kStruct: {
         auto iter = named_structs.find(decl);
         if (iter != named_structs.end()) {
@@ -1812,13 +1806,13 @@ std::ostringstream CGenerator::ProduceHeader() {
         }
         break;
       }
-      case flat::Decl::Kind::kTable:
-        // Do nothing.
-        break;
       case flat::Decl::Kind::kAlias:
         // TODO(fxbug.dev/7807): Do more than nothing.
         break;
+      case flat::Decl::Kind::kTable:
       case flat::Decl::Kind::kUnion:
+      case flat::Decl::Kind::kResource:
+      case flat::Decl::Kind::kService:
         // Do nothing.
         break;
     }  // switch
@@ -1890,12 +1884,6 @@ std::ostringstream CGenerator::ProduceHeader() {
         }
         break;
       }
-      case flat::Decl::Kind::kResource:
-        // Do nothing.
-        break;
-      case flat::Decl::Kind::kService:
-        // Do nothing.
-        break;
       case flat::Decl::Kind::kStruct: {
         auto iter = named_structs.find(decl);
         if (iter != named_structs.end()) {
@@ -1903,13 +1891,13 @@ std::ostringstream CGenerator::ProduceHeader() {
         }
         break;
       }
-      case flat::Decl::Kind::kTable:
-        // Do nothing.
-        break;
       case flat::Decl::Kind::kAlias:
         // TODO(fxbug.dev/7807): Do more than nothing.
         break;
+      case flat::Decl::Kind::kTable:
       case flat::Decl::Kind::kUnion:
+      case flat::Decl::Kind::kResource:
+      case flat::Decl::Kind::kService:
         // Do nothing.
         break;
     }  // switch

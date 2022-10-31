@@ -11,7 +11,6 @@
 #include <string_view>
 
 #include "tools/fidl/fidlc/include/fidl/reporter.h"
-#include "tools/fidl/fidlc/include/fidl/source_manager.h"
 #include "tools/fidl/fidlc/include/fidl/token.h"
 
 namespace fidl {

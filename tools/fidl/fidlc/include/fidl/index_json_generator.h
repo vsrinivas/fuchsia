@@ -13,7 +13,6 @@
 #include <string_view>
 #include <vector>
 
-#include "tools/fidl/fidlc/include/fidl/experimental_flags.h"
 #include "tools/fidl/fidlc/include/fidl/flat/compiler.h"
 #include "tools/fidl/fidlc/include/fidl/flat_ast.h"
 #include "tools/fidl/fidlc/include/fidl/json_writer.h"
@@ -48,15 +47,13 @@ class IndexJSONGenerator : public utils::JsonWriter<IndexJSONGenerator> {
 
   void Generate(SourceSpan value);
   void Generate(ReferencedIdentifier value);
-  void Generate(long value) { EmitNumeric(value); }
-  void Generate(unsigned long value) { EmitNumeric(value); }
   void Generate(const flat::Compilation::Dependency& dependency);
   void Generate(std::pair<flat::Library*, SourceSpan> reference);
   void Generate(const flat::Const& value);
   void Generate(const flat::Constant& value);
   void Generate(const flat::Enum& value);
   void Generate(const flat::Enum::Member& value);
-  void Generate(const flat::Name& value);
+  void Generate(const flat::Name& name);
   void Generate(const flat::Struct& value);
   void Generate(const flat::Struct::Member& value);
   void Generate(const flat::TypeConstructor* value);

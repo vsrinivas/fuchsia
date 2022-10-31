@@ -321,9 +321,7 @@ class Name final {
 
   Name(const Library* library, SourcedNameContext name_context,
        std::optional<std::string> member_name)
-      : library_(library),
-        name_context_(std::move(name_context)),
-        member_name_(std::move(member_name)) {}
+      : library_(library), name_context_(name_context), member_name_(std::move(member_name)) {}
 
   Name(const Library* library, AnonymousNameContext name_context,
        std::optional<std::string> member_name)

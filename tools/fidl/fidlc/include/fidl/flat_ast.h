@@ -27,7 +27,6 @@
 #include "tools/fidl/fidlc/include/fidl/flat/traits.h"
 #include "tools/fidl/fidlc/include/fidl/flat/types.h"
 #include "tools/fidl/fidlc/include/fidl/flat/values.h"
-#include "tools/fidl/fidlc/include/fidl/ordinals.h"
 #include "tools/fidl/fidlc/include/fidl/type_shape.h"
 #include "tools/fidl/fidlc/include/fidl/types.h"
 #include "tools/fidl/fidlc/include/fidl/versioning_types.h"
@@ -573,7 +572,7 @@ struct Table;
 // TODO(fxbug.dev/37535): Move this to a nested class inside Table::Member.
 struct TableMemberUsed : public Object, public HasClone<TableMemberUsed> {
   TableMemberUsed(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name)
-      : type_ctor(std::move(type_ctor)), name(std::move(name)) {}
+      : type_ctor(std::move(type_ctor)), name(name) {}
   std::unique_ptr<TypeConstructor> type_ctor;
   SourceSpan name;
 

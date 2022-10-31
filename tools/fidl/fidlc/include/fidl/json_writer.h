@@ -27,7 +27,8 @@ namespace fidl::utils {
 template <typename DerivedT>
 class JsonWriter {
  public:
-  JsonWriter(std::ostream& os, int indent_level = 0) : os_(os), indent_level_(indent_level) {}
+  explicit JsonWriter(std::ostream& os, int indent_level = 0)
+      : os_(os), indent_level_(indent_level) {}
 
   ~JsonWriter() = default;
 
@@ -88,7 +89,7 @@ class JsonWriter {
 
   void Generate(std::string value) { EmitString(value); }
 
-  void Generate(uint32_t value) { EmitNumeric(value); }
+  void Generate(uint32_t value) { EmitNumeric<uint64_t>(value); }
   void Generate(int64_t value) { EmitNumeric(value); }
   void Generate(uint64_t value) { EmitNumeric(value); }
 
@@ -159,21 +160,23 @@ class JsonWriter {
   }
 
   void EmitBoolean(bool value, ConstantStyle style = kAsConstant) {
-    if (style == kAsString)
+    if (style == kAsString) {
       os_ << "\"";
-    if (value)
+    }
+    if (value) {
       os_ << "true";
-    else
+    } else {
       os_ << "false";
-    if (style == kAsString)
+    }
+    if (style == kAsString) {
       os_ << "\"";
+    }
   }
 
   void EmitString(std::string_view value) {
     os_ << "\"";
 
-    for (size_t i = 0; i < value.size(); ++i) {
-      const char c = value[i];
+    for (char c : value) {
       switch (c) {
         case '"':
           os_ << "\\\"";
@@ -231,15 +234,14 @@ class JsonWriter {
     }
   }
 
-  template <typename ValueType>
-  void EmitNumeric(ValueType value, ConstantStyle style = kAsConstant) {
-    static_assert(std::is_arithmetic<ValueType>::value && !std::is_same<ValueType, bool>::value,
-                  "EmitNumeric can only be used with a numeric ValueType");
-    static_assert(std::is_arithmetic<ValueType>::value && !std::is_same<ValueType, uint8_t>::value,
-                  "EmitNumeric does not work for uint8_t, upcast to uint64_t");
-    static_assert(std::is_arithmetic<ValueType>::value && !std::is_same<ValueType, int8_t>::value,
-                  "EmitNumeric does not work for int8_t, upcast to int64_t");
-
+  template <typename T>
+  void EmitNumeric(T value, ConstantStyle style = kAsConstant) {
+    // Enforce widening integers to 64 bits rather than instantiating for 8, 16,
+    // and 32 bits. In particular, uint8_t and int8_t are problematic because
+    // operator<< will print them as characters (e.g. 'A' for 65).
+    static_assert(std::is_same_v<T, uint64_t> || std::is_same_v<T, int64_t> ||
+                      std::is_same_v<T, float> || std::is_same_v<T, double>,
+                  "EmitNumeric can only be used with uint64_t, int64_t, float, or double");
     switch (style) {
       case ConstantStyle::kAsConstant:
         os_ << value;

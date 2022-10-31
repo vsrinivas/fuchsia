@@ -6,6 +6,7 @@
 
 #include <zircon/assert.h>
 
+#include "tools/fidl/fidlc/include/fidl/diagnostics.h"
 #include "tools/fidl/fidlc/include/fidl/flat/attribute_schema.h"
 #include "tools/fidl/fidlc/include/fidl/flat/availability_step.h"
 #include "tools/fidl/fidlc/include/fidl/flat/compile_step.h"

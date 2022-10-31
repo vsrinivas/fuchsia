@@ -5,10 +5,11 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_SPAN_SEQUENCE_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_SPAN_SEQUENCE_H_
 
+#include <memory>
+#include <optional>
+#include <string_view>
 #include <utility>
-
-#include "tools/fidl/fidlc/include/fidl/raw_ast.h"
-#include "tools/fidl/fidlc/include/fidl/token.h"
+#include <vector>
 
 namespace fidl::fmt {
 

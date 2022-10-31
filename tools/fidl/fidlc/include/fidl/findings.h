@@ -9,6 +9,7 @@
 #include <optional>
 #include <sstream>
 #include <string>
+#include <utility>
 
 #include "tools/fidl/fidlc/include/fidl/source_span.h"
 
@@ -19,10 +20,10 @@ namespace fidl {
 // values for referenced parts of the source.
 struct Suggestion {
  public:
-  explicit Suggestion(std::string description) : description_(description) {}
+  explicit Suggestion(std::string description) : description_(std::move(description)) {}
 
   Suggestion(std::string description, std::string replacement)
-      : description_(description), replacement_(replacement) {}
+      : description_(std::move(description)), replacement_(std::move(replacement)) {}
 
   // Enable move construction and assignment
   Suggestion(Suggestion&& rhs) = default;
@@ -46,7 +47,7 @@ class Finding {
   // Construct a Finding with an analyzer-specific subcategory string (for
   // example, fidl-lint's check-id), SourceSpan, and message
   Finding(SourceSpan span, std::string subcategory, std::string message)
-      : span_(span), subcategory_(subcategory), message_(message) {}
+      : span_(span), subcategory_(std::move(subcategory)), message_(std::move(message)) {}
 
   // move constructor
   Finding(Finding&& rhs) = default;

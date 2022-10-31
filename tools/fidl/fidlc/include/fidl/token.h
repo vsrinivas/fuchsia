@@ -43,7 +43,9 @@ class Token {
 
     constexpr Kind kind() const { return kind_; }
     constexpr Subkind subkind() const { return subkind_; }
-    constexpr uint16_t combined() const { return uint16_t(kind_) | uint16_t(subkind_ << 8); }
+    constexpr uint16_t combined() const {
+      return static_cast<uint16_t>(kind_) | static_cast<uint16_t>(subkind_ << 8);
+    }
 
    private:
     Kind kind_;

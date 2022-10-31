@@ -9,7 +9,6 @@
 #include <limits>
 #include <type_traits>
 
-#include "tools/fidl/fidlc/include/fidl/flat/name.h"
 #include "tools/fidl/fidlc/include/fidl/flat/reference.h"
 #include "tools/fidl/fidlc/include/fidl/flat/traits.h"
 #include "tools/fidl/fidlc/include/fidl/raw_ast.h"
@@ -24,7 +23,7 @@ struct Type;
 // _declaration_, see Const. For the _use_, see Constant.) ConstantValue has
 // derived classes for all the different kinds of constants.
 struct ConstantValue : public HasClone<ConstantValue> {
-  virtual ~ConstantValue() {}
+  virtual ~ConstantValue() = default;
 
   enum struct Kind {
     kInt8,
@@ -58,9 +57,9 @@ struct NumericConstantValue final : ConstantValue {
   static_assert(std::is_arithmetic<ValueType>::value && !std::is_same<ValueType, bool>::value,
                 "NumericConstantValue can only be used with a numeric ValueType");
 
-  NumericConstantValue(ValueType value) : ConstantValue(GetKind()), value(value) {}
+  explicit NumericConstantValue(ValueType value) : ConstantValue(GetKind()), value(value) {}
 
-  operator ValueType() const { return value; }
+  explicit operator ValueType() const { return value; }
 
   friend bool operator==(const NumericConstantValue<ValueType>& l,
                          const NumericConstantValue<ValueType>& r) {
@@ -152,9 +151,10 @@ using HandleSubtype = NumericConstantValue<uint32_t>;
 using HandleRights = NumericConstantValue<types::RightsWrappedType>;
 
 struct BoolConstantValue final : ConstantValue {
-  BoolConstantValue(bool value) : ConstantValue(ConstantValue::Kind::kBool), value(value) {}
+  explicit BoolConstantValue(bool value)
+      : ConstantValue(ConstantValue::Kind::kBool), value(value) {}
 
-  operator bool() const { return value; }
+  explicit operator bool() const { return value; }
 
   friend bool operator==(const BoolConstantValue& l, const BoolConstantValue& r) {
     return l.value == r.value;
@@ -219,7 +219,7 @@ struct StringConstantValue final : ConstantValue {
 // reference to another constant (IdentifierConstant), a literal value
 // (LiteralConstant). Every Constant resolves to a concrete ConstantValue.
 struct Constant : HasClone<Constant> {
-  virtual ~Constant() {}
+  virtual ~Constant() = default;
 
   enum struct Kind { kIdentifier, kLiteral, kBinaryOperator };
 

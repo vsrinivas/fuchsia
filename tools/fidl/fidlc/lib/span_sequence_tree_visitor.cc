@@ -593,7 +593,7 @@ void SpanSequenceTreeVisitor::OnConstDeclaration(
 
 void SpanSequenceTreeVisitor::OnFile(const std::unique_ptr<raw::File>& element) {
   const auto visiting = Visiting(this, VisitorKind::kFile);
-  building_.push(std::vector<std::unique_ptr<SpanSequence>>());
+  building_.emplace();
 
   DeclarationOrderTreeVisitor::OnFile(element);
 

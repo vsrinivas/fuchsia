@@ -124,7 +124,7 @@ bool is_konstant_case(std::string_view astr) {
   return is_upper_camel_case(str);
 }
 
-static void add_word(std::string word, std::vector<std::string>& words,
+static void add_word(const std::string& word, std::vector<std::string>& words,
                      const std::set<std::string>& stop_words) {
   if (stop_words.find(word) == stop_words.end()) {
     words.push_back(word);
@@ -133,7 +133,8 @@ static void add_word(std::string word, std::vector<std::string>& words,
 
 std::vector<std::string> id_to_words(std::string_view astr) { return id_to_words(astr, {}); }
 
-std::vector<std::string> id_to_words(std::string_view astr, std::set<std::string> stop_words) {
+std::vector<std::string> id_to_words(std::string_view astr,
+                                     const std::set<std::string>& stop_words) {
   std::string str = strip_konstant_k(astr);
   std::vector<std::string> words;
   std::string word;

@@ -6,7 +6,6 @@
 
 #include <zircon/assert.h>
 
-#include "tools/fidl/fidlc/include/fidl/diagnostic_types.h"
 #include "tools/fidl/fidlc/include/fidl/flat/name.h"
 #include "tools/fidl/fidlc/include/fidl/flat/types.h"
 #include "tools/fidl/fidlc/include/fidl/flat_ast.h"
@@ -20,9 +19,9 @@ void JSONGenerator::Generate(SourceSpan value) { EmitString(value.data()); }
 void JSONGenerator::Generate(NameSpan value) {
   GenerateObject([&]() {
     GenerateObjectMember("filename", value.filename, Position::kFirst);
-    GenerateObjectMember("line", (uint32_t)value.position.line);
-    GenerateObjectMember("column", (uint32_t)value.position.column);
-    GenerateObjectMember("length", (uint32_t)value.length);
+    GenerateObjectMember("line", static_cast<uint32_t>(value.position.line));
+    GenerateObjectMember("column", static_cast<uint32_t>(value.position.column));
+    GenerateObjectMember("length", static_cast<uint32_t>(value.length));
   });
 }
 
@@ -31,54 +30,54 @@ void JSONGenerator::Generate(const flat::ConstantValue& value) {
     case flat::ConstantValue::Kind::kUint8:
     case flat::ConstantValue::Kind::kZxUchar: {
       auto& numeric_constant = reinterpret_cast<const flat::NumericConstantValue<uint8_t>&>(value);
-      EmitNumeric(static_cast<uint64_t>(numeric_constant), kAsString);
+      EmitNumeric<uint64_t>(static_cast<uint8_t>(numeric_constant), kAsString);
       break;
     }
     case flat::ConstantValue::Kind::kUint16: {
       auto& numeric_constant = reinterpret_cast<const flat::NumericConstantValue<uint16_t>&>(value);
-      EmitNumeric(static_cast<uint16_t>(numeric_constant), kAsString);
+      EmitNumeric<uint64_t>(static_cast<uint16_t>(numeric_constant), kAsString);
       break;
     }
     case flat::ConstantValue::Kind::kUint32: {
       auto& numeric_constant = reinterpret_cast<const flat::NumericConstantValue<uint32_t>&>(value);
-      EmitNumeric(static_cast<uint32_t>(numeric_constant), kAsString);
+      EmitNumeric<uint64_t>(static_cast<uint32_t>(numeric_constant), kAsString);
       break;
     }
     case flat::ConstantValue::Kind::kUint64:
     case flat::ConstantValue::Kind::kZxUsize:
     case flat::ConstantValue::Kind::kZxUintptr: {
       auto& numeric_constant = reinterpret_cast<const flat::NumericConstantValue<uint64_t>&>(value);
-      EmitNumeric(static_cast<uint64_t>(numeric_constant), kAsString);
+      EmitNumeric<uint64_t>(static_cast<uint64_t>(numeric_constant), kAsString);
       break;
     }
     case flat::ConstantValue::Kind::kInt8: {
       auto& numeric_constant = reinterpret_cast<const flat::NumericConstantValue<int8_t>&>(value);
-      EmitNumeric(static_cast<int64_t>(numeric_constant), kAsString);
+      EmitNumeric<int64_t>(static_cast<int8_t>(numeric_constant), kAsString);
       break;
     }
     case flat::ConstantValue::Kind::kInt16: {
       auto& numeric_constant = reinterpret_cast<const flat::NumericConstantValue<int16_t>&>(value);
-      EmitNumeric(static_cast<int16_t>(numeric_constant), kAsString);
+      EmitNumeric<int64_t>(static_cast<int16_t>(numeric_constant), kAsString);
       break;
     }
     case flat::ConstantValue::Kind::kInt32: {
       auto& numeric_constant = reinterpret_cast<const flat::NumericConstantValue<int32_t>&>(value);
-      EmitNumeric(static_cast<int32_t>(numeric_constant), kAsString);
+      EmitNumeric<int64_t>(static_cast<int32_t>(numeric_constant), kAsString);
       break;
     }
     case flat::ConstantValue::Kind::kInt64: {
       auto& numeric_constant = reinterpret_cast<const flat::NumericConstantValue<int64_t>&>(value);
-      EmitNumeric(static_cast<int64_t>(numeric_constant), kAsString);
+      EmitNumeric<int64_t>(static_cast<int64_t>(numeric_constant), kAsString);
       break;
     }
     case flat::ConstantValue::Kind::kFloat32: {
       auto& numeric_constant = reinterpret_cast<const flat::NumericConstantValue<float>&>(value);
-      EmitNumeric(static_cast<float>(numeric_constant), kAsString);
+      EmitNumeric<float>(static_cast<float>(numeric_constant), kAsString);
       break;
     }
     case flat::ConstantValue::Kind::kFloat64: {
       auto& numeric_constant = reinterpret_cast<const flat::NumericConstantValue<double>&>(value);
-      EmitNumeric(static_cast<double>(numeric_constant), kAsString);
+      EmitNumeric<double>(static_cast<double>(numeric_constant), kAsString);
       break;
     }
     case flat::ConstantValue::Kind::kBool: {
@@ -1012,6 +1011,7 @@ std::ostringstream JSONGenerator::Produce() {
     GenerateObjectMember("new_type_declarations", compilation_->declarations.new_types);
 
     std::vector<std::string> declaration_order;
+    declaration_order.reserve(compilation_->declaration_order.size());
     for (const auto decl : compilation_->declaration_order) {
       declaration_order.push_back(NameFlatName(decl->name));
     }

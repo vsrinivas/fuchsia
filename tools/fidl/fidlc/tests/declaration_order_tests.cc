@@ -13,10 +13,7 @@
 #include <zxtest/zxtest.h>
 
 #include "tools/fidl/fidlc/include/fidl/flat_ast.h"
-#include "tools/fidl/fidlc/include/fidl/lexer.h"
 #include "tools/fidl/fidlc/include/fidl/names.h"
-#include "tools/fidl/fidlc/include/fidl/parser.h"
-#include "tools/fidl/fidlc/include/fidl/source_file.h"
 #include "tools/fidl/fidlc/tests/error_test.h"
 #include "tools/fidl/fidlc/tests/test_library.h"
 
@@ -35,7 +32,7 @@ namespace {
 // test dependency ordering, this utility manufactures random names for the types tested.
 class Namer {
  public:
-  Namer() : vars_() {}
+  Namer() = default;
 
   std::string mangle(std::string input) {
     std::size_t start_pos = 0;

@@ -54,10 +54,8 @@ class TreeVisitor;
 
 class SourceElement {
  public:
-  explicit SourceElement(SourceElement const& element)
-      : start_(element.start_), end_(element.end_) {}
-
   explicit SourceElement(Token start, Token end) : start_(start), end_(end) {}
+  virtual ~SourceElement() = default;
 
   bool has_span() const {
     return start_.span().valid() && end_.span().valid() &&
@@ -86,8 +84,6 @@ class SourceElement {
     start_ = element.start_;
     end_ = element.end_;
   }
-
-  virtual ~SourceElement() {}
 
   Token start_;
   Token end_;
@@ -133,8 +129,6 @@ class Literal : public SourceElement {
 
   explicit Literal(SourceElement const& element, Kind kind) : SourceElement(element), kind(kind) {}
 
-  virtual ~Literal() {}
-
   const Kind kind;
 };
 
@@ -168,7 +162,7 @@ class StringLiteral final : public Literal {
 
 class NumericLiteral final : public Literal {
  public:
-  NumericLiteral(SourceElement const& element) : Literal(element, Kind::kNumeric) {}
+  explicit NumericLiteral(SourceElement const& element) : Literal(element, Kind::kNumeric) {}
 
   void Accept(TreeVisitor* visitor) const;
 };
@@ -198,8 +192,6 @@ class Constant : public SourceElement {
 
   explicit Constant(Token token, Kind kind) : SourceElement(token, token), kind(kind) {}
   explicit Constant(const SourceElement& element, Kind kind) : SourceElement(element), kind(kind) {}
-
-  virtual ~Constant() {}
 
   const Kind kind;
 };
@@ -269,10 +261,7 @@ class Attribute final : public SourceElement {
   // Constructor for cases where the name of the attribute is explicitly defined in the text.
   Attribute(SourceElement const& element, std::unique_ptr<Identifier> maybe_name,
             std::vector<std::unique_ptr<AttributeArg>> args)
-      : SourceElement(element),
-        provenance(kDefault),
-        maybe_name(std::move(maybe_name)),
-        args(std::move(args)) {}
+      : SourceElement(element), maybe_name(std::move(maybe_name)), args(std::move(args)) {}
 
   // Factory for "///"-style doc comments, which have no attribute name.
   static Attribute CreateDocComment(SourceElement const& element,
@@ -284,7 +273,7 @@ class Attribute final : public SourceElement {
 
   void Accept(TreeVisitor* visitor) const;
 
-  Provenance provenance;
+  Provenance provenance = Provenance::kDefault;
   std::unique_ptr<Identifier> maybe_name;
   std::vector<std::unique_ptr<AttributeArg>> args;
 };

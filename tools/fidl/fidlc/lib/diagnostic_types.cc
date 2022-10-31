@@ -6,7 +6,6 @@
 
 #include <zircon/assert.h>
 
-#include "tools/fidl/fidlc/include/fidl/flat/typespace.h"
 #include "tools/fidl/fidlc/include/fidl/flat_ast.h"
 #include "tools/fidl/fidlc/include/fidl/names.h"
 #include "tools/fidl/fidlc/include/fidl/raw_ast.h"
@@ -238,7 +237,7 @@ std::string Display(std::vector<const flat::Decl*>& d) {
 
 std::string Display(const flat::Type* t) { return NameFlatType(t); }
 
-std::string Display(const flat::Name& n) { return std::string(n.full_name()); }
+std::string Display(const flat::Name& n) { return n.full_name(); }
 
 std::string Display(const Platform& p) { return p.name(); }
 

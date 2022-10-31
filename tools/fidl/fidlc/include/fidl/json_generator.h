@@ -82,10 +82,10 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
   void Generate(const raw::Ordinal64& value);
 
   void Generate(const TypeShape& type_shape);
-  void Generate(const FieldShape& type_shape);
+  void Generate(const FieldShape& field_shape);
 
   void GenerateDeclName(const flat::Name& name);
-  void Generate(const flat::Name& value);
+  void Generate(const flat::Name& name);
   void Generate(const flat::Type* value);
   void Generate(const flat::Constant& value);
   void Generate(const flat::ConstantValue& value);
@@ -96,8 +96,8 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
   void Generate(const flat::Enum::Member& value);
   void Generate(const flat::NewType& value);
   void Generate(const flat::Protocol& value);
-  void Generate(const flat::Protocol::ComposedProtocol& composed_protocol);
-  void Generate(const flat::Protocol::MethodWithInfo& value);
+  void Generate(const flat::Protocol::ComposedProtocol& value);
+  void Generate(const flat::Protocol::MethodWithInfo& method_with_info);
   void Generate(const flat::LiteralConstant& value);
   void Generate(const flat::Resource& value);
   void Generate(const flat::Resource::Property& value);

@@ -6,6 +6,7 @@
 
 #include <zircon/assert.h>
 
+#include "tools/fidl/fidlc/include/fidl/diagnostics.h"
 #include "tools/fidl/fidlc/include/fidl/flat/compile_step.h"
 #include "tools/fidl/fidlc/include/fidl/flat/transport.h"
 #include "tools/fidl/fidlc/include/fidl/flat/typespace.h"
@@ -594,7 +595,7 @@ static bool MaxBytesConstraint(Reporter* reporter, const Attribute* attribute,
   auto& arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
 
   uint32_t bound;
-  if (!ParseBound(reporter, attribute, std::string(arg_value.MakeContents()), &bound))
+  if (!ParseBound(reporter, attribute, arg_value.MakeContents(), &bound))
     return false;
   uint32_t max_bytes = std::numeric_limits<uint32_t>::max();
   switch (element->kind) {
@@ -663,7 +664,7 @@ static bool MaxHandlesConstraint(Reporter* reporter, const Attribute* attribute,
   auto& arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
 
   uint32_t bound;
-  if (!ParseBound(reporter, attribute, std::string(arg_value.MakeContents()), &bound))
+  if (!ParseBound(reporter, attribute, arg_value.MakeContents(), &bound))
     return false;
   uint32_t max_handles = std::numeric_limits<uint32_t>::max();
   switch (element->kind) {

@@ -11,16 +11,16 @@ namespace fidl::utils {
 
 namespace {
 
-void compare_id_to_words(std::string id, std::string expected_lowercase_words) {
+void compare_id_to_words(std::string_view id, std::string_view expected_lowercase_words) {
   std::ostringstream actual;
-  for (auto word : id_to_words(id)) {
+  for (const auto& word : id_to_words(id)) {
     if (actual.tellp() > 0) {
       actual << " ";
     }
     actual << word;
   }
-  ASSERT_STRING_EQ(expected_lowercase_words, actual.str(), "%s",
-                   std::string("Failed for " + id).c_str());
+  ASSERT_STRING_EQ(expected_lowercase_words, actual.str(), "Failed for %s",
+                   std::string(id).c_str());
 }
 
 TEST(UtilsTests, IdToWords) {

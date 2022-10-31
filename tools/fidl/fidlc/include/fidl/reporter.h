@@ -14,9 +14,8 @@
 #include <utility>
 #include <vector>
 
-#include "tools/fidl/fidlc/include/fidl/diagnostics.h"
+#include "tools/fidl/fidlc/include/fidl/diagnostic_types.h"
 #include "tools/fidl/fidlc/include/fidl/source_span.h"
-#include "tools/fidl/fidlc/include/fidl/token.h"
 #include "tools/fidl/fidlc/include/fidl/utils.h"
 
 namespace fidl {

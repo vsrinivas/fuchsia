@@ -8,7 +8,6 @@
 
 #include "tools/fidl/fidlc/include/fidl/coded_ast.h"
 #include "tools/fidl/fidlc/include/fidl/coded_types_generator.h"
-#include "tools/fidl/fidlc/include/fidl/tables_generator.h"
 #include "tools/fidl/fidlc/tests/error_test.h"
 #include "tools/fidl/fidlc/tests/test_library.h"
 

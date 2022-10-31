@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <fstream>
+#include <string_view>
+#include <utility>
 
 #include "tools/fidl/fidlc/include/fidl/diagnostics_json.h"
-#include "tools/fidl/fidlc/include/fidl/experimental_flags.h"
-#include "tools/fidl/fidlc/tests/error_test.h"
 #include "tools/fidl/fidlc/tests/test_library.h"
 #include "tools/fidl/fidlc/tests/unittest_helpers.h"
 
@@ -16,8 +16,8 @@ namespace {
 
 #define ASSERT_JSON(DIAGS, JSON) ASSERT_NO_FAILURES(ExpectJson(DIAGS, JSON))
 
-void ExpectJson(std::vector<Diagnostic*> diagnostics, std::string expected_json) {
-  std::string actual_json = DiagnosticsJson(diagnostics).Produce().str();
+void ExpectJson(std::vector<Diagnostic*> diagnostics, std::string_view expected_json) {
+  std::string actual_json = DiagnosticsJson(std::move(diagnostics)).Produce().str();
 
   if (expected_json != actual_json) {
     std::ofstream output_actual("json_diagnostics_tests_actual.txt");

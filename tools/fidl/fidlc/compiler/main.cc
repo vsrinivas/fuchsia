@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <ios>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -132,13 +133,13 @@ void MakeParentDirectory(const std::string& filename) {
 
   for (;;) {
     slash = filename.find('/', slash);
-    if (slash == filename.npos) {
+    if (slash == std::string::npos) {
       return;
     }
 
     std::string path = filename.substr(0, slash);
     ++slash;
-    if (path.size() == 0u) {
+    if (path.empty()) {
       // Skip creating "/".
       continue;
     }
@@ -165,7 +166,7 @@ std::fstream Open(std::string filename, std::ios::openmode mode) {
 
 class Arguments {
  public:
-  virtual ~Arguments() {}
+  virtual ~Arguments() = default;
 
   virtual std::string Claim() = 0;
   virtual bool Remaining() const = 0;
@@ -173,7 +174,7 @@ class Arguments {
 
 class ResponseFileArguments : public Arguments {
  public:
-  ResponseFileArguments(std::string_view filename)
+  explicit ResponseFileArguments(std::string_view filename)
       : file_(Open(std::string(filename), std::ios::in)) {
     ConsumeWhitespace();
   }
@@ -217,7 +218,7 @@ class ArgvArguments : public Arguments {
       : count_(count), arguments_(const_cast<const char**>(arguments)) {}
 
   std::string Claim() override {
-    if (response_file_.get()) {
+    if (response_file_) {
       if (response_file_->Remaining()) {
         return response_file_->Claim();
       }
@@ -229,7 +230,7 @@ class ArgvArguments : public Arguments {
     std::string argument = arguments_[0];
     --count_;
     ++arguments_;
-    if (argument.size() == 0 || argument[0] != '@') {
+    if (argument.empty() || argument[0] != '@') {
       return argument;
     }
 
@@ -274,13 +275,13 @@ bool Parse(const fidl::SourceFile& source_file, fidl::Reporter* reporter,
   return true;
 }
 
-void Write(const std::ostringstream& output_stream, const std::string file_path) {
+void Write(const std::ostringstream& output_stream, const std::string& file_path) {
   std::string contents = output_stream.str();
   struct stat st;
   if (!stat(file_path.c_str(), &st)) {
     // File exists.
-    size_t current_size = st.st_size;
-    if (current_size == contents.size()) {
+    std::streamsize current_size = st.st_size;
+    if (current_size == static_cast<std::streamsize>(contents.size())) {
       // Lengths match.
       std::string current_contents(current_size, '\0');
       std::fstream current_file = Open(file_path, std::ios::in);
@@ -303,8 +304,8 @@ void Write(const std::ostringstream& output_stream, const std::string file_path)
 
 // TODO(pascallouis): remove forward declaration, this was only introduced to
 // reduce diff size while breaking things up.
-int compile(fidl::Reporter* reporter, std::string library_name, std::string dep_file_path,
-            const std::vector<std::string>& source_list,
+int compile(fidl::Reporter* reporter, const std::string& library_name,
+            const std::string& dep_file_path, const std::vector<std::string>& source_list,
             const std::vector<std::pair<Behavior, std::string>>& outputs,
             const std::vector<fidl::SourceManager>& source_managers,
             const fidl::VersionSelection* version_selection,
@@ -342,7 +343,7 @@ int main(int argc, char* argv[]) {
     } else if (behavior_argument == "--werror") {
       warnings_as_errors = true;
     } else if (behavior_argument.rfind("--format") == 0) {
-      const auto equals = behavior_argument.rfind("=");
+      const auto equals = behavior_argument.rfind('=');
       if (equals == std::string::npos) {
         FailWithUsage("Unknown value for flag `format`\n");
       }
@@ -353,20 +354,20 @@ int main(int argc, char* argv[]) {
       format = format_value;
     } else if (behavior_argument == "--deprecated-fuchsia-only-c-header") {
       std::string path = args->Claim();
-      outputs.emplace_back(std::make_pair(Behavior::kCHeader, path));
+      outputs.emplace_back(Behavior::kCHeader, path);
     } else if (behavior_argument == "--deprecated-fuchsia-only-c-client") {
       std::string path = args->Claim();
-      outputs.emplace_back(std::make_pair(Behavior::kCClient, path));
+      outputs.emplace_back(Behavior::kCClient, path);
     } else if (behavior_argument == "--deprecated-fuchsia-only-c-server") {
       std::string path = args->Claim();
-      outputs.emplace_back(std::make_pair(Behavior::kCServer, path));
+      outputs.emplace_back(Behavior::kCServer, path);
     } else if (behavior_argument == "--tables") {
       std::string path = args->Claim();
-      outputs.emplace_back(std::make_pair(Behavior::kTables, path));
+      outputs.emplace_back(Behavior::kTables, path);
     } else if (behavior_argument == "--json") {
       std::string path = args->Claim();
       json_path = path;
-      outputs.emplace_back(std::make_pair(Behavior::kJSON, path));
+      outputs.emplace_back(Behavior::kJSON, path);
     } else if (behavior_argument == "--available") {
       std::string selection = args->Claim();
       const auto colon_idx = selection.find(':');
@@ -404,7 +405,7 @@ int main(int argc, char* argv[]) {
   // Prepare source files.
   std::vector<fidl::SourceManager> source_managers;
   std::vector<std::string> source_list;
-  source_managers.push_back(fidl::SourceManager());
+  source_managers.emplace_back();
   while (args->Remaining()) {
     std::string arg = args->Claim();
     if (arg == "--files") {
@@ -420,7 +421,7 @@ int main(int argc, char* argv[]) {
   // Ready. Set. Go.
   if (experimental_flags.IsFlagEnabled(fidl::ExperimentalFlags::Flag::kOutputIndexJson)) {
     auto path = std::filesystem::path(json_path).replace_extension("index.json");
-    outputs.emplace_back(std::make_pair(Behavior::kIndex, path));
+    outputs.emplace_back(Behavior::kIndex, path);
   }
   fidl::Reporter reporter;
   reporter.set_warnings_as_errors(warnings_as_errors);
@@ -435,8 +436,8 @@ int main(int argc, char* argv[]) {
   return status;
 }
 
-int compile(fidl::Reporter* reporter, std::string library_name, std::string dep_file_path,
-            const std::vector<std::string>& source_list,
+int compile(fidl::Reporter* reporter, const std::string& library_name,
+            const std::string& dep_file_path, const std::vector<std::string>& source_list,
             const std::vector<std::pair<Behavior, std::string>>& outputs,
             const std::vector<fidl::SourceManager>& source_managers,
             const fidl::VersionSelection* version_selection,
@@ -500,7 +501,7 @@ int compile(fidl::Reporter* reporter, std::string library_name, std::string dep_
   // output1 : inputA inputB inputC
   // output2 : inputA inputB inputC
   // ...
-  if (dep_file_path.size() != 0) {
+  if (!dep_file_path.empty()) {
     std::ostringstream dep_file_contents;
     for (auto& output : outputs) {
       auto& file_path = output.second;

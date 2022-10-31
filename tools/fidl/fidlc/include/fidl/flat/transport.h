@@ -6,10 +6,9 @@
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_TRANSPORT_H_
 
 #include <optional>
+#include <set>
 #include <string>
 #include <vector>
-
-#include "tools/fidl/fidlc/include/fidl/flat_ast.h"
 
 namespace fidl::flat {
 

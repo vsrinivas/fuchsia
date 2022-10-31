@@ -9,7 +9,6 @@
 #include <sstream>
 
 #include "tools/fidl/fidlc/include/fidl/diagnostics_json.h"
-#include "tools/fidl/fidlc/include/fidl/token.h"
 
 namespace fidl {
 

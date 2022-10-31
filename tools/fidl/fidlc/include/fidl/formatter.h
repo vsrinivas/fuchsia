@@ -10,8 +10,6 @@
 #include "tools/fidl/fidlc/include/fidl/experimental_flags.h"
 #include "tools/fidl/fidlc/include/fidl/raw_ast.h"
 #include "tools/fidl/fidlc/include/fidl/reporter.h"
-#include "tools/fidl/fidlc/include/fidl/span_sequence.h"
-#include "tools/fidl/fidlc/include/fidl/span_sequence_tree_visitor.h"
 
 namespace fidl::fmt {
 

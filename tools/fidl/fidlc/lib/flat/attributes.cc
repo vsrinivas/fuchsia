@@ -6,8 +6,6 @@
 
 #include <zircon/assert.h>
 
-#include "tools/fidl/fidlc/include/fidl/flat/typespace.h"
-#include "tools/fidl/fidlc/include/fidl/flat_ast.h"
 #include "tools/fidl/fidlc/include/fidl/utils.h"
 
 namespace fidl::flat {

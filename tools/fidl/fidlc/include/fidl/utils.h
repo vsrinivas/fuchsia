@@ -129,13 +129,11 @@ inline bool LineFromOffsetIsRegularComment(std::string_view view, size_t offset)
     // slashes are not converted to doc comment attributes.
     if (view.size() == 2) {
       return true;
-    } else {
-      return (i + 2 == view.size()) || (view[i + 2] != '/') ||
-             ((i + 3 < view.size()) && (view[i + 3] == '/'));
     }
-  } else {
-    return false;
+    return (i + 2 == view.size()) || (view[i + 2] != '/') ||
+           ((i + 3 < view.size()) && (view[i + 3] == '/'));
   }
+  return false;
 }
 
 inline bool FirstLineIsRegularComment(std::string_view view) {
@@ -203,7 +201,7 @@ bool has_adjacent_underscores(std::string_view str);
 std::vector<std::string> id_to_words(std::string_view str);
 
 // Split the identifier into words, excluding words in the |stop_words| set.
-std::vector<std::string> id_to_words(std::string_view str, const std::set<std::string> stop_words);
+std::vector<std::string> id_to_words(std::string_view str, const std::set<std::string>& stop_words);
 
 bool is_konstant_case(std::string_view str);
 bool is_lower_no_separator_case(std::string_view str);

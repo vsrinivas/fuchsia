@@ -8,6 +8,7 @@
 
 #include <algorithm>
 
+#include "tools/fidl/fidlc/include/fidl/diagnostics.h"
 #include "tools/fidl/fidlc/include/fidl/names.h"
 
 namespace fidl::flat {

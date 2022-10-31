@@ -10,6 +10,7 @@
 #include <memory>
 #include <optional>
 
+#include "tools/fidl/fidlc/include/fidl/diagnostics.h"
 #include "tools/fidl/fidlc/include/fidl/experimental_flags.h"
 #include "tools/fidl/fidlc/include/fidl/lexer.h"
 #include "tools/fidl/fidlc/include/fidl/raw_ast.h"
@@ -87,11 +88,11 @@ class Parser {
     explicit ASTScope(Parser* parser) : parser_(parser) {
       suppress_ = parser_->suppress_gap_checks_;
       parser_->suppress_gap_checks_ = false;
-      parser_->active_ast_scopes_.push_back(raw::SourceElement(Token(), Token()));
+      parser_->active_ast_scopes_.emplace_back(Token(), Token());
     }
     // The suppress mechanism
     ASTScope(Parser* parser, bool suppress) : parser_(parser), suppress_(suppress) {
-      parser_->active_ast_scopes_.push_back(raw::SourceElement(Token(), Token()));
+      parser_->active_ast_scopes_.emplace_back(Token(), Token());
       suppress_ = parser_->suppress_gap_checks_;
       parser_->suppress_gap_checks_ = suppress;
     }
@@ -117,7 +118,7 @@ class Parser {
 
   void UpdateMarks(Token& token) {
     // There should always be at least one of these - the outermost.
-    ZX_ASSERT_MSG(active_ast_scopes_.size() > 0, "unbalanced parse tree");
+    ZX_ASSERT_MSG(!active_ast_scopes_.empty(), "unbalanced parse tree");
 
     if (!suppress_gap_checks_) {
       // If the end of the last node was the start of a gap, record that.

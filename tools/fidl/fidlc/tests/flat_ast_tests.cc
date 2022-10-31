@@ -15,13 +15,11 @@
 
 namespace {
 
-using fidl::SourceSpan;
 using fidl::Token;
 using fidl::flat::HandleRights;
 using fidl::flat::HandleType;
 using fidl::flat::LiteralConstant;
 using fidl::flat::Name;
-using fidl::flat::NumericConstantValue;
 using fidl::raw::Literal;
 using fidl::raw::SourceElement;
 using fidl::types::HandleSubtype;

@@ -88,9 +88,8 @@ class CodedTypesGenerator {
       if (!a_less_b && !b_less_a) {
         // types are equivalent
         return lhs.first < rhs.first;
-      } else {
-        return a_less_b;
       }
+      return a_less_b;
     }
   };
 

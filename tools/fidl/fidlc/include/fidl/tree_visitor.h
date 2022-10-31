@@ -59,7 +59,7 @@ class TreeVisitor {
     TYPE* ptr = static_cast<TYPE*>(unconst_element.get()); \
     std::unique_ptr<TYPE> uptr(ptr);                       \
     On##TYPE(uptr);                                        \
-    uptr.release();                                        \
+    static_cast<void>(uptr.release());                     \
   } while (0)
 
   virtual void OnConstant(std::unique_ptr<Constant> const& element) {
@@ -244,8 +244,8 @@ class TreeVisitor {
 // have a special visitor for code that needs to visit in declaration order.
 class DeclarationOrderTreeVisitor : public TreeVisitor {
  public:
-  virtual void OnFile(std::unique_ptr<File> const& element) override;
-  virtual void OnProtocolDeclaration(std::unique_ptr<ProtocolDeclaration> const& element) override;
+  void OnFile(std::unique_ptr<File> const& element) override;
+  void OnProtocolDeclaration(std::unique_ptr<ProtocolDeclaration> const& element) override;
 };
 
 }  // namespace fidl::raw

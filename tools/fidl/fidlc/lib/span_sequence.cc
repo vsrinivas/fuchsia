@@ -6,7 +6,7 @@
 
 #include <zircon/assert.h>
 
-#include "tools/fidl/fidlc/include/fidl/raw_ast.h"
+#include <string>
 
 namespace fidl::fmt {
 
@@ -508,7 +508,7 @@ void StandaloneCommentSpanSequence::AddLine(const std::string_view line,
                                             size_t leading_blank_lines) {
   ZX_ASSERT_MSG(!IsClosed(), "cannot AddLine to closed StandaloneCommentSpanSequence");
   while (leading_blank_lines > 0) {
-    lines_.emplace_back(std::string_view());
+    lines_.emplace_back();
     leading_blank_lines--;
   }
   lines_.push_back(line);

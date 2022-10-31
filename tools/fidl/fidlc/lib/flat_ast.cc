@@ -6,9 +6,9 @@
 
 #include <zircon/assert.h>
 
+#include "tools/fidl/fidlc/include/fidl/diagnostics.h"
 #include "tools/fidl/fidlc/include/fidl/flat/visitor.h"
 #include "tools/fidl/fidlc/include/fidl/reporter.h"
-#include "tools/fidl/fidlc/include/fidl/virtual_source_file.h"
 
 namespace fidl::flat {
 

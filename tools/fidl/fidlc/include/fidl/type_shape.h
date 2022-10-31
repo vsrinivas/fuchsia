@@ -83,9 +83,9 @@ struct TypeShape {
 // remove the getter/setter methods since they're purely for backward-compatibility with existing
 // code.
 struct FieldShape {
-  explicit FieldShape(const flat::StructMember&, const WireFormat wire_format);
-  explicit FieldShape(const flat::TableMemberUsed&, const WireFormat wire_format);
-  explicit FieldShape(const flat::UnionMemberUsed&, const WireFormat wire_format);
+  explicit FieldShape(const flat::StructMember&, WireFormat wire_format);
+  explicit FieldShape(const flat::TableMemberUsed&, WireFormat wire_format);
+  explicit FieldShape(const flat::UnionMemberUsed&, WireFormat wire_format);
 
   uint32_t offset = 0;
   uint32_t padding = 0;

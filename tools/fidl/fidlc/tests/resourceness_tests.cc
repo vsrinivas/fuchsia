@@ -6,8 +6,6 @@
 
 #include "tools/fidl/fidlc/include/fidl/diagnostics.h"
 #include "tools/fidl/fidlc/include/fidl/flat_ast.h"
-#include "tools/fidl/fidlc/include/fidl/lexer.h"
-#include "tools/fidl/fidlc/include/fidl/parser.h"
 #include "tools/fidl/fidlc/include/fidl/source_file.h"
 #include "tools/fidl/fidlc/tests/error_test.h"
 #include "tools/fidl/fidlc/tests/test_library.h"
@@ -287,16 +285,16 @@ type ResourceUnion = resource union { 1: b bool; };
 }
 
 TEST(ResourcenessTests, BadResourcesInNestedContainers) {
-  for (const std::string& definition : {
-           "type Foo = struct { bad_member vector<vector<zx.handle>>; };",
-           "type Foo = struct { bad_member vector<vector<zx.handle:optional>>; };",
-           "type Foo = struct { bad_member vector<vector<client_end:Protocol>>; };",
-           "type Foo = struct { bad_member vector<vector<ResourceStruct>>; };",
-           "type Foo = struct { bad_member vector<vector<ResourceTable>>; };",
-           "type Foo = struct { bad_member vector<vector<ResourceUnion>>; };",
-           "type Foo = struct { bad_member "
-           "vector<array<vector<ResourceStruct>:optional,2>>:optional; };",
-       }) {
+  for (
+      const std::string& definition : {
+          "type Foo = struct { bad_member vector<vector<zx.handle>>; };",
+          "type Foo = struct { bad_member vector<vector<zx.handle:optional>>; };",
+          "type Foo = struct { bad_member vector<vector<client_end:Protocol>>; };",
+          "type Foo = struct { bad_member vector<vector<ResourceStruct>>; };",
+          "type Foo = struct { bad_member vector<vector<ResourceTable>>; };",
+          "type Foo = struct { bad_member vector<vector<ResourceUnion>>; };",
+          "type Foo = struct { bad_member vector<array<vector<ResourceStruct>:optional,2>>:optional; };",
+      }) {
     std::string fidl_library = R"FIDL(
 library example;
 using zx;

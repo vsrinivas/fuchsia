@@ -27,7 +27,7 @@ std::string_view VirtualSourceFile::LineContaining(std::string_view view,
       ZX_ASSERT(column < std::numeric_limits<int>::max());
       *position_out = {i + 1, static_cast<int>(column)};
     }
-    return std::string_view(line);
+    return line;
   }
   return std::string_view();
 }

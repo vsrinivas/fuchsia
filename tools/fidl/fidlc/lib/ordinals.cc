@@ -8,10 +8,11 @@
 
 #include <optional>
 
-#include "tools/fidl/fidlc/include/fidl/flat_ast.h"
-
 #define BORINGSSL_NO_CXX
 #include <openssl/sha.h>
+
+#include "tools/fidl/fidlc/include/fidl/flat/attributes.h"
+#include "tools/fidl/fidlc/include/fidl/raw_ast.h"
 
 namespace fidl::ordinals {
 
@@ -57,7 +58,7 @@ raw::Ordinal64 GetGeneratedOrdinal64(const std::vector<std::string_view>& librar
                                      const std::string_view& protocol_name,
                                      const std::string_view& selector_name,
                                      const raw::SourceElement& source_element) {
-  if (selector_name.find("/") != std::string_view::npos)
+  if (selector_name.find('/') != std::string_view::npos)
     return raw::Ordinal64(source_element, CalcOrdinal(selector_name));
 
   // TODO(pascallouis): Move this closer (code wise) to NameFlatName, ideally

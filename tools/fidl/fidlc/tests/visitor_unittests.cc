@@ -4,12 +4,8 @@
 
 #include <zxtest/zxtest.h>
 
-#include "tools/fidl/fidlc/include/fidl/flat_ast.h"
-#include "tools/fidl/fidlc/include/fidl/lexer.h"
-#include "tools/fidl/fidlc/include/fidl/parser.h"
 #include "tools/fidl/fidlc/include/fidl/source_file.h"
 #include "tools/fidl/fidlc/include/fidl/tree_visitor.h"
-#include "tools/fidl/fidlc/tests/examples.h"
 #include "tools/fidl/fidlc/tests/test_library.h"
 
 namespace {
@@ -17,13 +13,11 @@ namespace {
 // A TreeVisitor that reads in a file and spits back out the same file
 class NoopTreeVisitor : public fidl::raw::DeclarationOrderTreeVisitor {
  public:
-  NoopTreeVisitor() : last_location_(nullptr) {}
-
-  virtual void OnSourceElementStart(const fidl::raw::SourceElement& element) override {
+  void OnSourceElementStart(const fidl::raw::SourceElement& element) override {
     OnSourceElementShared(element.start_);
   }
 
-  virtual void OnSourceElementEnd(const fidl::raw::SourceElement& element) override {
+  void OnSourceElementEnd(const fidl::raw::SourceElement& element) override {
     OnSourceElementShared(element.end_);
   }
   void OnSourceElementShared(const fidl::Token& current_token) {
@@ -34,7 +28,8 @@ class NoopTreeVisitor : public fidl::raw::DeclarationOrderTreeVisitor {
     // token for the first identifier, so we need to make sure we don't
     // print that token twice.
     if (ws_location > last_location_) {
-      int size = (int)(current_token.data().data() - current_token.previous_end().data().data());
+      auto size = static_cast<int>(current_token.data().data() -
+                                   current_token.previous_end().data().data());
       std::string gap(ws_location, size);
       std::string content(current_token.data().data(), current_token.data().size());
       output_ += gap + content;
@@ -45,7 +40,7 @@ class NoopTreeVisitor : public fidl::raw::DeclarationOrderTreeVisitor {
 
  private:
   std::string output_;
-  const char* last_location_;
+  const char* last_location_ = nullptr;
 };
 
 // Provides more useful context for string diff than EXPECT_STREQ, which shows

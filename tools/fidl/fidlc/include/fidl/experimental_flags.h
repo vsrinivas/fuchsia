@@ -34,7 +34,7 @@ class ExperimentalFlags {
   ExperimentalFlags() = default;
   explicit ExperimentalFlags(Flag flag) : flags_(static_cast<FlagSet>(flag)) {}
 
-  bool EnableFlagByName(const std::string_view flag);
+  bool EnableFlagByName(std::string_view flag);
   void EnableFlag(Flag flag);
 
   bool IsFlagEnabled(Flag flag) const;

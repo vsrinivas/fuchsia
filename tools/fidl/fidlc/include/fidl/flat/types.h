@@ -27,8 +27,6 @@ struct TypeConstraints;
 struct TypeDecl;
 
 struct Type : public Object {
-  virtual ~Type() = default;
-
   enum struct Kind {
     kArray,
     kBox,

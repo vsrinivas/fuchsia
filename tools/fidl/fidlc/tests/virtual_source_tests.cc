@@ -5,7 +5,7 @@
 #include <zxtest/zxtest.h>
 
 #include "tools/fidl/fidlc/include/fidl/source_span.h"
-#include "tools/fidl/fidlc/tests/test_library.h"
+#include "tools/fidl/fidlc/include/fidl/virtual_source_file.h"
 
 namespace {
 

@@ -5,10 +5,9 @@
 #include <zircon/assert.h>
 
 #include <fstream>
+#include <string_view>
 
 #include "tools/fidl/fidlc/include/fidl/findings_json.h"
-#include "tools/fidl/fidlc/include/fidl/template_string.h"
-#include "tools/fidl/fidlc/include/fidl/utils.h"
 #include "tools/fidl/fidlc/tests/test_library.h"
 #include "tools/fidl/fidlc/tests/unittest_helpers.h"
 
@@ -20,7 +19,7 @@ namespace {
   ASSERT_NO_FAILURES(TEST.ExpectJson(JSON)); \
   TEST.Reset()
 
-void FindingsEmitThisJson(Findings& findings, std::string expected_json) {
+void FindingsEmitThisJson(Findings& findings, std::string_view expected_json) {
   std::string actual_json = fidl::FindingsJson(findings).Produce().str();
 
   if (expected_json != actual_json) {
@@ -40,12 +39,12 @@ void FindingsEmitThisJson(Findings& findings, std::string expected_json) {
 
 class JsonFindingsTest {
  public:
-  JsonFindingsTest(std::string filename, std::string source) : default_filename_(filename) {
-    AddSourceFile(filename, source);
+  JsonFindingsTest(const std::string& filename, std::string source) : default_filename_(filename) {
+    AddSourceFile(filename, std::move(source));
   }
 
   void AddSourceFile(std::string filename, std::string source) {
-    sources_.emplace(filename, SourceFile(filename, source));
+    sources_.emplace(std::move(filename), SourceFile(filename, std::move(source)));
   }
 
   struct AddFindingArgs {
@@ -89,7 +88,9 @@ class JsonFindingsTest {
     return &findings_.emplace_back(span, args.check_id, args.message);
   }
 
-  void ExpectJson(std::string expected_json) { FindingsEmitThisJson(findings_, expected_json); }
+  void ExpectJson(std::string_view expected_json) {
+    FindingsEmitThisJson(findings_, expected_json);
+  }
 
   void Reset() { findings_.clear(); }
 

@@ -6,7 +6,7 @@
 
 namespace fidl {
 
-bool ExperimentalFlags::EnableFlagByName(const std::string_view flag) {
+bool ExperimentalFlags::EnableFlagByName(std::string_view flag) {
   auto it = FLAG_STRINGS.find(flag);
   if (it == FLAG_STRINGS.end()) {
     return false;

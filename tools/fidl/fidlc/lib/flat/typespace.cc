@@ -4,6 +4,7 @@
 
 #include "tools/fidl/fidlc/include/fidl/flat/typespace.h"
 
+#include "tools/fidl/fidlc/include/fidl/diagnostics.h"
 #include "tools/fidl/fidlc/include/fidl/flat/type_resolver.h"
 #include "tools/fidl/fidlc/include/fidl/flat_ast.h"
 

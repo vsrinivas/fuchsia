@@ -11,7 +11,7 @@ namespace {
 
 #define ASSERT_WARNINGS(quantity, lib, content)                  \
   do {                                                           \
-    const auto& warnings = lib.lints();                          \
+    const auto& warnings = (lib).lints();                        \
     if (strlen(content) != 0) {                                  \
       bool contains_content = false;                             \
       for (size_t i = 0; i < warnings.size(); i++) {             \
@@ -22,7 +22,7 @@ namespace {
       }                                                          \
       ASSERT_TRUE(contains_content, content " not found");       \
     }                                                            \
-    if (warnings.size() != quantity) {                           \
+    if (warnings.size() != (quantity)) {                         \
       std::string error = "Found warning: ";                     \
       for (size_t i = 0; i < warnings.size(); i++) {             \
         error.append(warnings[i]);                               \

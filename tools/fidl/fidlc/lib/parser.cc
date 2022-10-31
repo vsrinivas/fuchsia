@@ -642,10 +642,7 @@ std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolEvent(
     if (!Ok())
       return false;
     *params_out = ParseParameterList();
-    if (!Ok())
-      return false;
-
-    return true;
+    return Ok();
   };
 
   std::unique_ptr<raw::ParameterList> request;
@@ -673,9 +670,7 @@ std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolMethod(
     std::unique_ptr<raw::Identifier> method_name, ASTScope& scope) {
   auto parse_params = [this](std::unique_ptr<raw::ParameterList>* params_out) {
     *params_out = ParseParameterList();
-    if (!Ok())
-      return false;
-    return true;
+    return Ok();
   };
 
   std::unique_ptr<raw::ParameterList> request;
@@ -1056,7 +1051,8 @@ std::unique_ptr<raw::ServiceDeclaration> Parser::ParseServiceDeclaration(
       const auto result = RecoverToEndOfMember();
       if (result == RecoverResult::Failure) {
         return Fail();
-      } else if (result == RecoverResult::EndOfScope) {
+      }
+      if (result == RecoverResult::EndOfScope) {
         continue;
       }
     }

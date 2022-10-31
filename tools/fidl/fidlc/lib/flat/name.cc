@@ -115,7 +115,7 @@ std::string_view Name::decl_name() const {
           // unique
           return std::string_view(name_context.flattened_name);
         } else if constexpr (std::is_same_v<T, IntrinsicNameContext>) {
-          return std::string_view(name_context.name);
+          return name_context.name;
         } else {
           abort();
         }

@@ -39,7 +39,7 @@ std::string Display(const std::set<std::string>& s);
 std::string Display(const std::set<std::string_view>& s);
 std::string Display(const SourceSpan& s);
 std::string Display(const Token::KindAndSubkind& t);
-std::string Display(const types::Openness o);
+std::string Display(types::Openness o);
 std::string Display(const raw::AttributeList* a);
 std::string Display(const std::vector<std::string_view>& library_name);
 std::string Display(const flat::Attribute* a);
