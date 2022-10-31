@@ -75,14 +75,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/eae72f00e0bb4f682567e3025c3d062bb783c76f/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/8eee9ff2f8a5b8824b4ee0349d2ec3db5cb3518a/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/eae72f00e0bb4f682567e3025c3d062bb783c76f/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/8eee9ff2f8a5b8824b4ee0349d2ec3db5cb3518a/src/intel/vulkan/BUILD.gn#30)
 
 ### api_compatibility_testing
 Whether to run API compatibility tests.
@@ -1129,19 +1129,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/1381fefdc3d10cbeb028a8aff9ae8654e1daced3/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/ddd8eaef12dce220d2f17f944ccb3d1a106bf626/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"socket"`
 
-From [//third_party/crashpad/util/net/tls.gni:19](https://fuchsia.googlesource.com/third_party/crashpad/+/1381fefdc3d10cbeb028a8aff9ae8654e1daced3/util/net/tls.gni#19)
+From [//third_party/crashpad/util/net/tls.gni:19](https://fuchsia.googlesource.com/third_party/crashpad/+/ddd8eaef12dce220d2f17f944ccb3d1a106bf626/util/net/tls.gni#19)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/1381fefdc3d10cbeb028a8aff9ae8654e1daced3/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/ddd8eaef12dce220d2f17f944ccb3d1a106bf626/util/net/tls.gni#30)
 
 ### cts_version
 Name of the CTS version.
@@ -1206,7 +1206,7 @@ From //build/images/custom_signing.gni:21
 
 **Current value (from the default):** `""`
 
-From [//third_party/Vulkan-Loader/BUILD.gn:22](https://fuchsia.googlesource.com/third_party/Vulkan-Loader/+/896801324e92faf06e4f2020ec13b34671dc45d9/BUILD.gn#22)
+From [//third_party/Vulkan-Loader/BUILD.gn:22](https://fuchsia.googlesource.com/third_party/Vulkan-Loader/+/fe7554798b429f674e8c6a569239c184250e43ed/BUILD.gn#22)
 
 ### cxx_rbe_enable
 Set to true to enable distributed compilation of C++ using RBE.
@@ -3294,7 +3294,7 @@ From //build/go/go_build.gni:22
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/dartlang/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/.gocache"`
 
 From //build/go/go_build.gni:18
 
@@ -6956,7 +6956,7 @@ From //build/security.gni:228
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"dartlang/thinlto-cache"`
+**Current value (from the default):** `"thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
