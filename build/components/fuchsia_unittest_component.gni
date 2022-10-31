@@ -68,6 +68,18 @@ import("fuchsia_test_component_manifest.gni")
 #     If `manifest` is specified then this is ignored.
 #     Type: boolean
 #
+#   required_offers (optional, v2 only)
+#     A list of protocols that must be offered to every child and collection declared
+#     in the CML file.
+#     Type: list of strings
+#     Default: []
+#
+#   required_uses (optional, v2 only)
+#     A list of protocols that must be used by every child and collection declared
+#     in the CML file.
+#     Type: list of strings
+#     Default: []
+#
 #   restricted_features (optional)
 #     The set of restricted CML features to allow. Only applicable to v2 components.
 #     The set of features is allowlisted here: //tools/cmc/build/restricted_features/BUILD.gn
@@ -112,6 +124,8 @@ template("fuchsia_unittest_component") {
                                "deps",
                                "manifest",
                                "manifest_deps",
+                               "required_offers",
+                               "required_uses",
                                "restricted_features",
                                "visibility",
                              ])

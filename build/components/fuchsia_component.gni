@@ -21,6 +21,14 @@ import("//tools/cmc/build/cmx.gni")
 #     Type: string
 #     Default: target_name
 #
+#   required_offers (optional)
+#     Check that all children and collections are offered each protocol listed.
+#     Type: list of strings
+#
+#   required_uses (optional)
+#     Check that all children and collections use each protocol listed.
+#     Type: list of strings
+#
 #   restricted_features (optional)
 #     The set of restricted CML features to allow. Only applicable to v2 components.
 #     The set of features is allowlisted here: //tools/cmc/build/restricted_features/BUILD.gn
@@ -71,6 +79,8 @@ template("fuchsia_component_manifest") {
                              [
                                "deps",
                                "manifest",
+                               "required_offers",
+                               "required_uses",
                                "restricted_features",
                                "testonly",
                                "visibility",

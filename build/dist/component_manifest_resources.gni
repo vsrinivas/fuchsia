@@ -12,6 +12,18 @@ import("resource.gni")
 #   sources
 #     Required: List of paths to .cml meta files
 #
+#   required_offers (optional)
+#     A list of protocols that must be offered to every child and collection declared
+#     in the CML file.
+#     Type: list of strings
+#     Default: []
+#
+#   required_uses (optional)
+#     A list of protocols that must be used by every child and collection declared
+#     in the CML file.
+#     Type: list of strings
+#     Default: []
+#
 #   restricted_features (optional)
 #     The set of restricted CML features to allow. Only applicable to v2 components.
 #     The set of features is allowlisted here: //tools/cmc/build/restricted_features/BUILD.gn
@@ -40,6 +52,8 @@ template("component_manifest_resources") {
                              [
                                "deps",
                                "public_deps",
+                               "required_offers",
+                               "required_uses",
                                "restricted_features",
                                "data_deps",
                                "testonly",

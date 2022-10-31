@@ -16,6 +16,12 @@ import("//tools/cmc/build/expect_includes.gni")
 #     [path] Name for the output.
 #     If not specified, the target name is used.
 #
+#   required_offers (optional)
+#     [list of strings] The set of protocols that should be offered to every child.
+#
+#   required_uses (optional)
+#     [list of strings] The set of protocols that each child must use.
+#
 #   restricted_features (optional)
 #     [list of strings] The set of restricted CML features to allow.
 #     The set of features is allowlisted here: //tools/cmc/build/restricted/BUILD.gn
@@ -69,6 +75,8 @@ template("cm") {
                              "deps",
                              "metadata",
                              "output_name",
+                             "required_offers",
+                             "required_uses",
                              "restricted_features",
                              "testonly",
                              "visibility",
@@ -111,6 +119,30 @@ template("cm") {
 
     # Opt-in to the requested restricted_features.
     args += [ "--features" ] + restricted_features
+
+    # Add required offer lint flags
+    if (!defined(required_offers)) {
+      # TODO(fxbug.dev/93346): After soft-migration: required_offers = [ "fuchsia.logger.LogSink" ]
+      required_offers = []
+    }
+
+    foreach(offer, required_offers) {
+      args += [
+        "--experimental-must-offer-protocol",
+        offer,
+      ]
+    }
+
+    if (!defined(required_uses)) {
+      required_uses = []
+    }
+
+    foreach(use_decl, required_uses) {
+      args += [
+        "--experimental-must-use-protocol",
+        use_decl,
+      ]
+    }
 
     if (!defined(deps)) {
       deps = []
