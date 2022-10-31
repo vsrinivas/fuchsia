@@ -73,13 +73,13 @@ class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_index::Driv
 
   void AddDeviceGroup(AddDeviceGroupRequestView request,
                       AddDeviceGroupCompleter::Sync& completer) override {
-    auto topological_path = std::string(request->topological_path().get());
-    if (device_group_match_.find(topological_path) == device_group_match_.end()) {
+    auto name = std::string(request->name().get());
+    if (device_group_match_.find(name) == device_group_match_.end()) {
       completer.ReplyError(ZX_ERR_NOT_FOUND);
       return;
     }
 
-    auto matched_result = device_group_match_[topological_path];
+    auto matched_result = device_group_match_[name];
     auto composite = matched_result.composite();
     auto names = matched_result.node_names();
     if (!composite.has_value() || !names.has_value()) {
@@ -91,9 +91,9 @@ class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_index::Driv
                            fidl::ToWire(arena, names.value()));
   }
 
-  void AddDeviceGroupMatch(std::string_view topological_path,
+  void AddDeviceGroupMatch(std::string_view name,
                            fuchsia_driver_index::MatchedDeviceGroupInfo result) {
-    device_group_match_[std::string(topological_path)] = result;
+    device_group_match_[std::string(name)] = result;
   }
 
  private:

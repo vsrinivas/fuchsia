@@ -16,7 +16,7 @@ class Node;
 using DeviceOrNode = std::variant<std::weak_ptr<DeviceV1Wrapper>, std::weak_ptr<dfv2::Node>>;
 
 struct DeviceGroupCreateInfo {
-  std::string topological_path;
+  std::string name;
   size_t size;
 };
 
@@ -50,7 +50,7 @@ class DeviceGroup {
       const DeviceOrNode& device_or_node) = 0;
 
  private:
-  std::string topological_path_;
+  std::string name_;
   std::vector<bool> device_group_nodes_;
 };
 

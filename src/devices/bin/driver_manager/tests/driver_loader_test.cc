@@ -380,8 +380,8 @@ TEST_F(DriverLoaderTest, TestReturnOnlyDeviceGroups) {
   // Add first device group.
   auto device_group_1 = fdi::wire::MatchedDeviceGroupInfo(allocator);
   device_group_1.set_node_index(1);
-  device_group_1.set_topological_path(
-      fidl::ObjectView<fidl::StringView>(allocator, allocator, "test/path/device_group_1"));
+  device_group_1.set_name(
+      fidl::ObjectView<fidl::StringView>(allocator, allocator, "device_group_1"));
 
   fidl::VectorView<fdi::wire::MatchedDeviceGroupInfo> device_groups_1(allocator, 1);
   device_groups_1[0] = device_group_1;
@@ -395,8 +395,8 @@ TEST_F(DriverLoaderTest, TestReturnOnlyDeviceGroups) {
   // Add second device group.
   auto device_group_2 = fdi::wire::MatchedDeviceGroupInfo(allocator);
   device_group_2.set_node_index(0);
-  device_group_2.set_topological_path(
-      fidl::ObjectView<fidl::StringView>(allocator, allocator, "test/path/device_group_2"));
+  device_group_2.set_name(
+      fidl::ObjectView<fidl::StringView>(allocator, allocator, "device_group_2"));
 
   fidl::VectorView<fdi::wire::MatchedDeviceGroupInfo> device_groups_2(allocator, 1);
   device_groups_2[0] = device_group_2;
@@ -419,14 +419,14 @@ TEST_F(DriverLoaderTest, TestReturnOnlyDeviceGroups) {
 
   auto device_group_result_1 = std::get<fdi::MatchedDeviceGroupNodeInfo>(drivers[0]);
   ASSERT_EQ(1, device_group_result_1.device_groups().value().size());
-  ASSERT_STREQ("test/path/device_group_1",
-               device_group_result_1.device_groups().value().at(0).topological_path().value());
+  ASSERT_STREQ("device_group_1",
+               device_group_result_1.device_groups().value().at(0).name().value());
   ASSERT_EQ(1, device_group_result_1.device_groups().value().at(0).node_index());
 
   auto device_group_result_2 = std::get<fdi::MatchedDeviceGroupNodeInfo>(drivers[1]);
   ASSERT_EQ(1, device_group_result_2.device_groups().value().size());
-  ASSERT_STREQ("test/path/device_group_2",
-               device_group_result_2.device_groups().value().at(0).topological_path().value());
+  ASSERT_STREQ("device_group_2",
+               device_group_result_2.device_groups().value().at(0).name().value());
   ASSERT_EQ(0, device_group_result_2.device_groups().value().at(0).node_index());
 }
 
@@ -435,8 +435,7 @@ TEST_F(DriverLoaderTest, TestReturnDriversAndDeviceGroups) {
 
   auto device_group = fdi::wire::MatchedDeviceGroupInfo(allocator);
   device_group.set_node_index(1);
-  device_group.set_topological_path(
-      fidl::ObjectView<fidl::StringView>(allocator, allocator, "test/path/device_group"));
+  device_group.set_name(fidl::ObjectView<fidl::StringView>(allocator, allocator, "device_group"));
 
   fidl::VectorView<fdi::wire::MatchedDeviceGroupInfo> device_groups(allocator, 1);
   device_groups[0] = device_group;
@@ -470,8 +469,7 @@ TEST_F(DriverLoaderTest, TestReturnDriversAndDeviceGroups) {
   // Check device group.
   auto device_group_result = std::get<fdi::MatchedDeviceGroupNodeInfo>(drivers[1]);
   ASSERT_EQ(1, device_group_result.device_groups().value().size());
-  ASSERT_STREQ("test/path/device_group",
-               device_group_result.device_groups().value().at(0).topological_path().value());
+  ASSERT_STREQ("device_group", device_group_result.device_groups().value().at(0).name().value());
   ASSERT_EQ(1, device_group_result.device_groups().value().at(0).node_index().value());
 }
 
@@ -525,13 +523,13 @@ TEST_F(DriverLoaderTest, TestReturnDeviceGroupMultipleNodes) {
 
   auto device_group_1 = fdi::wire::MatchedDeviceGroupInfo(allocator);
   device_group_1.set_node_index(1);
-  device_group_1.set_topological_path(
-      fidl::ObjectView<fidl::StringView>(allocator, allocator, "test/path/device_group_1"));
+  device_group_1.set_name(
+      fidl::ObjectView<fidl::StringView>(allocator, allocator, "device_group_1"));
 
   auto device_group_2 = fdi::wire::MatchedDeviceGroupInfo(allocator);
   device_group_2.set_node_index(3);
-  device_group_2.set_topological_path(
-      fidl::ObjectView<fidl::StringView>(allocator, allocator, "test/path/device_group_2"));
+  device_group_2.set_name(
+      fidl::ObjectView<fidl::StringView>(allocator, allocator, "device_group_2"));
 
   fidl::VectorView<fdi::wire::MatchedDeviceGroupInfo> device_groups(allocator, 2);
   device_groups[0] = device_group_1;
@@ -555,11 +553,9 @@ TEST_F(DriverLoaderTest, TestReturnDeviceGroupMultipleNodes) {
 
   auto device_group_result = std::get<fdi::MatchedDeviceGroupNodeInfo>(drivers[0]);
   ASSERT_EQ(2, device_group_result.device_groups().value().size());
-  ASSERT_STREQ("test/path/device_group_1",
-               device_group_result.device_groups().value().at(0).topological_path().value());
+  ASSERT_STREQ("device_group_1", device_group_result.device_groups().value().at(0).name().value());
   ASSERT_EQ(1, device_group_result.device_groups().value().at(0).node_index().value());
-  ASSERT_STREQ("test/path/device_group_2",
-               device_group_result.device_groups().value().at(1).topological_path().value());
+  ASSERT_STREQ("device_group_2", device_group_result.device_groups().value().at(1).name().value());
   ASSERT_EQ(3, device_group_result.device_groups().value().at(1).node_index().value());
 }
 

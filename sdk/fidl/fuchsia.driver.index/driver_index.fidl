@@ -69,8 +69,8 @@ type MatchedCompositeInfo = table {
 
 /// Information for a device group that contains a matched node.
 type MatchedDeviceGroupInfo = table {
-    /// Topological path of the node's device group.
-    1: topological_path string:MAX;
+    /// The name of the node's device group.
+    1: name string:MAX;
 
     /// The node's index in its device group.
     2: node_index uint32;
@@ -131,8 +131,8 @@ protocol DriverIndex {
     }) error zx.status;
 
     /// Adds a device group to the driver index. The driver index stores the
-    /// device group and maps it by the topological path. The stored device
-    /// groups are included in the driver matching process.
+    /// device group and maps it by the name. The stored device groups are
+    /// included in the driver matching process.
     // TODO(fxbug.dev/111076): Return just the status.
     AddDeviceGroup(fuchsia.driver.framework.DeviceGroup) -> (struct {
         composite_driver MatchedCompositeInfo;

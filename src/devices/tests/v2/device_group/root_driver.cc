@@ -58,7 +58,7 @@ fdf::DeviceGroup DeviceGroupOne() {
       }},
   };
 
-  return {{.topological_path = "test/path1", .nodes = nodes}};
+  return {{.name = "test_group_1", .nodes = nodes}};
 }
 
 // Group 2 is created after creating the right node, but before creating the left node.
@@ -94,7 +94,7 @@ fdf::DeviceGroup DeviceGroupTwo() {
       }},
   };
 
-  return {{.topological_path = "test/path2", .nodes = nodes}};
+  return {{.name = "test_group_2", .nodes = nodes}};
 }
 
 // Group 3 is created after creating both the left and right nodes.
@@ -130,7 +130,7 @@ fdf::DeviceGroup DeviceGroupThree() {
       }},
   };
 
-  return {{.topological_path = "test/path3", .nodes = nodes}};
+  return {{.name = "test_group_3", .nodes = nodes}};
 }
 
 // Group 4 is created before creating the left, optional, and right nodes.
@@ -180,7 +180,7 @@ fdf::DeviceGroup DeviceGroupFour() {
       }},
   };
 
-  return {{.topological_path = "test/path4", .nodes = nodes}};
+  return {{.name = "test_group_4", .nodes = nodes}};
 }
 
 class NumberServer : public fidl::WireServer<ft::Device> {
@@ -426,7 +426,7 @@ class RootDriver : public driver::DriverBase {
   }
 
   void AddDeviceGroup(fdf::DeviceGroup dev_group, fit::closure callback) {
-    auto dev_group_name = dev_group.topological_path();
+    auto dev_group_name = dev_group.name();
     device_group_manager_->CreateDeviceGroup(std::move(dev_group))
         .Then([this, dev_group_name, callback = std::move(callback)](
                   fidl::Result<fdf::DeviceGroupManager::CreateDeviceGroup>& create_result) {

@@ -923,7 +923,7 @@ zx_status_t Device::AddDeviceGroup(const char* name, const device_group_desc_t* 
   }
 
   auto device_group = fdf::wire::DeviceGroup::Builder(allocator)
-                          .topological_path(fidl::StringView(allocator, name))
+                          .name(fidl::StringView(allocator, name))
                           .nodes(std::move(nodes))
                           .Build();
 

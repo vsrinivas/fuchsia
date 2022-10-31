@@ -838,12 +838,9 @@ zx_status_t Coordinator::AddDeviceGroup(
     return ZX_ERR_INVALID_ARGS;
   }
 
-  std::string topological_path = "/";
-  topological_path.append(name);
-
   auto device_group_result = device_group::DeviceGroupV1::Create(
       DeviceGroupCreateInfo{
-          .topological_path = topological_path,
+          .name = std::string(name.data()),
           .size = group_desc.nodes.count(),
       },
       group_desc, &driver_loader_);
@@ -854,7 +851,7 @@ zx_status_t Coordinator::AddDeviceGroup(
 
   fidl::Arena allocator;
   auto fidl_device_group = fdf::wire::DeviceGroup::Builder(allocator)
-                               .topological_path(fidl::StringView(allocator, topological_path))
+                               .name(fidl::StringView(allocator, name))
                                .nodes(std::move(group_desc.nodes))
                                .Build();
 

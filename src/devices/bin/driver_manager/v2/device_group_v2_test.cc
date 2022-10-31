@@ -22,7 +22,7 @@ TEST_F(DeviceGroupV2Test, DeviceGroupBind) {
 
   auto device_group = dfv2::DeviceGroupV2(
       DeviceGroupCreateInfo{
-          .topological_path = "group",
+          .name = "group",
           .size = 2,
       },
       dispatcher(), &node_manager);
@@ -36,7 +36,7 @@ TEST_F(DeviceGroupV2Test, DeviceGroupBind) {
   auto node_1 =
       std::shared_ptr<dfv2::Node>(new dfv2::Node("group_node_1", {}, &node_manager, dispatcher()));
   auto matched_node_1 = fuchsia_driver_index::MatchedDeviceGroupInfo({
-      .topological_path = "group",
+      .name = "group",
       .node_index = 0,
       .composite = matched_composite,
       .num_nodes = 2,
@@ -51,7 +51,7 @@ TEST_F(DeviceGroupV2Test, DeviceGroupBind) {
   auto node_2 =
       std::shared_ptr<dfv2::Node>(new dfv2::Node("group_node_2", {}, &node_manager, dispatcher()));
   auto matched_node_2 = fuchsia_driver_index::MatchedDeviceGroupInfo({
-      .topological_path = "group",
+      .name = "group",
       .node_index = 1,
       .composite = matched_composite,
       .num_nodes = 2,

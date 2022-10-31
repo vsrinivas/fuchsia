@@ -16,23 +16,21 @@ DeviceGroupManager::DeviceGroupManager(CompositeManagerBridge *bridge) : bridge_
 fit::result<fdf::DeviceGroupError> DeviceGroupManager::AddDeviceGroup(
     fdf::wire::DeviceGroup fidl_group, std::unique_ptr<DeviceGroup> device_group) {
   ZX_ASSERT(device_group);
-  ZX_ASSERT(fidl_group.has_topological_path() && fidl_group.has_nodes() &&
-            !fidl_group.nodes().empty());
+  ZX_ASSERT(fidl_group.has_name() && fidl_group.has_nodes() && !fidl_group.nodes().empty());
 
-  auto topological_path = std::string(fidl_group.topological_path().get());
-  if (device_groups_.find(topological_path) != device_groups_.end()) {
-    LOGF(ERROR, "Duplicate device group %.*s", static_cast<int>(topological_path.size()),
-         topological_path.data());
+  auto name = std::string(fidl_group.name().get());
+  if (device_groups_.find(name) != device_groups_.end()) {
+    LOGF(ERROR, "Duplicate device group %.*s", static_cast<int>(name.size()), name.data());
     return fit::error(fdf::DeviceGroupError::kAlreadyExists);
   }
 
   auto node_count = fidl_group.nodes().count();
   AddToIndexCallback callback =
-      [this, group = std::move(device_group), topological_path, node_count](
+      [this, group = std::move(device_group), name, node_count](
           zx::result<fuchsia_driver_index::DriverIndexAddDeviceGroupResponse> result) mutable {
         if (!result.is_ok()) {
           if (result.status_value() == ZX_ERR_NOT_FOUND) {
-            device_groups_[topological_path] = std::move(group);
+            device_groups_[name] = std::move(group);
             return;
           }
 
@@ -46,7 +44,7 @@ fit::result<fdf::DeviceGroupError> DeviceGroupManager::AddDeviceGroup(
           return;
         }
 
-        device_groups_[topological_path] = std::move(group);
+        device_groups_[name] = std::move(group);
 
         // Now that there is a new device group, we can tell the bridge to attempt binds again.
         bridge_->BindNodesForDeviceGroups();
@@ -65,14 +63,14 @@ zx::result<std::optional<CompositeNodeAndDriver>> DeviceGroupManager::BindDevice
 
   // Go through each device group until we find an available one with an unbound node.
   for (auto device_group_info : match_info.device_groups()) {
-    if (!device_group_info.has_topological_path() || !device_group_info.has_node_index() ||
+    if (!device_group_info.has_name() || !device_group_info.has_node_index() ||
         !device_group_info.has_num_nodes() || !device_group_info.has_node_names() ||
         !device_group_info.has_composite()) {
       LOGF(WARNING, "MatchedDeviceGroupInfo missing field(s)");
       continue;
     }
 
-    auto &topological_path = device_group_info.topological_path();
+    auto &name = device_group_info.name();
     auto &node_index = device_group_info.node_index();
     auto &num_nodes = device_group_info.num_nodes();
     auto &driver = device_group_info.composite();
@@ -93,18 +91,18 @@ zx::result<std::optional<CompositeNodeAndDriver>> DeviceGroupManager::BindDevice
       node_names_vec.emplace_back(node_name.get());
     }
 
-    auto topological_path_val = std::string(topological_path.get());
-    if (device_groups_.find(topological_path_val) == device_groups_.end()) {
-      LOGF(ERROR, "Missing device group %s", topological_path_val.c_str());
+    auto name_val = std::string(name.get());
+    if (device_groups_.find(name_val) == device_groups_.end()) {
+      LOGF(ERROR, "Missing device group %s", name_val.c_str());
       continue;
     }
 
-    if (!device_groups_[topological_path_val]) {
-      LOGF(ERROR, "Stored device group in %s is null", topological_path_val.c_str());
+    if (!device_groups_[name_val]) {
+      LOGF(ERROR, "Stored device group in %s is null", name_val.c_str());
       continue;
     }
 
-    auto &device_group = device_groups_[topological_path_val];
+    auto &device_group = device_groups_[name_val];
     auto result = device_group->BindNode(device_group_info, device_or_node);
     if (result.is_ok()) {
       auto composite_node = result.value();

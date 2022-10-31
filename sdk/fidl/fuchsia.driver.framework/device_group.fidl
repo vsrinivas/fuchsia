@@ -36,8 +36,8 @@ type DeviceGroupNode = struct {
 
 /// Struct that represents a device group.
 type DeviceGroup = table {
-    /// The device group's topological path.
-    1: topological_path string:MAX;
+    /// The device group's name.
+    1: name string:MAX;
 
     /// The nodes in the device group. Must not be empty. The first node is
     /// the primary node.
@@ -50,8 +50,8 @@ type DeviceGroupError = strict enum {
     MISSING_ARGS = 1;
     /// The given device group's `nodes` is empty.
     EMPTY_NODES = 2;
-    /// The `topological_path` in the given device group is a duplicate
-    /// of an already created device group.
+    /// The `name` in the given device group is a duplicate of an already
+    /// created device group.
     ALREADY_EXISTS = 3;
 };
 

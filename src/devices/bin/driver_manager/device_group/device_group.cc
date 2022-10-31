@@ -6,8 +6,7 @@
 
 #include "src/devices/lib/log/log.h"
 
-DeviceGroup::DeviceGroup(DeviceGroupCreateInfo create_info)
-    : topological_path_(create_info.topological_path) {
+DeviceGroup::DeviceGroup(DeviceGroupCreateInfo create_info) : name_(create_info.name) {
   device_group_nodes_ = std::vector<bool>(create_info.size, false);
 }
 

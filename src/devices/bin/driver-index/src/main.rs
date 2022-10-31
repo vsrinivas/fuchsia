@@ -2447,7 +2447,7 @@ mod tests {
                 Err(Status::NOT_FOUND.into_raw()),
                 proxy
                     .add_device_group(fdf::DeviceGroup {
-                        topological_path: Some("test/path".to_string()),
+                        name: Some("test_group".to_string()),
                         nodes: Some(vec![fdf::DeviceGroupNode {
                             bind_rules: bind_rules,
                             bind_properties: bind_properties,
@@ -2479,7 +2479,7 @@ mod tests {
             assert_eq!(
                 fdi::MatchedDriver::DeviceGroupNode(fdi::MatchedDeviceGroupNodeInfo {
                     device_groups: Some(vec![fdi::MatchedDeviceGroupInfo {
-                        topological_path: Some("test/path".to_string()),
+                        name: Some("test_group".to_string()),
                         node_index: Some(0),
                         num_nodes: Some(1),
                         ..fdi::MatchedDeviceGroupInfo::EMPTY
@@ -2578,7 +2578,7 @@ mod tests {
                 Err(Status::NOT_FOUND.into_raw()),
                 proxy
                     .add_device_group(fdf::DeviceGroup {
-                        topological_path: Some("test/path".to_string()),
+                        name: Some("test_group".to_string()),
                         nodes: Some(vec![fdf::DeviceGroupNode {
                             bind_rules: bind_rules,
                             bind_properties: bind_properties,
@@ -2613,7 +2613,7 @@ mod tests {
                 vec![
                     fdi::MatchedDriver::DeviceGroupNode(fdi::MatchedDeviceGroupNodeInfo {
                         device_groups: Some(vec![fdi::MatchedDeviceGroupInfo {
-                            topological_path: Some("test/path".to_string()),
+                            name: Some("test_group".to_string()),
                             node_index: Some(0),
                             num_nodes: Some(1),
                             ..fdi::MatchedDeviceGroupInfo::EMPTY
@@ -2788,7 +2788,7 @@ mod tests {
 
             let result = proxy
                 .add_device_group(fdf::DeviceGroup {
-                    topological_path: Some("test/match".to_string()),
+                    name: Some("group_match".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
                             bind_rules: node_1_bind_rules.clone(),
@@ -2816,7 +2816,7 @@ mod tests {
                 Err(Status::NOT_FOUND.into_raw()),
                 proxy
                     .add_device_group(fdf::DeviceGroup {
-                        topological_path: Some("test/non_match_1".to_string()),
+                        name: Some("group_non_match_1".to_string()),
                         nodes: Some(vec![
                             fdf::DeviceGroupNode {
                                 bind_rules: node_1_bind_rules.clone(),
@@ -2843,7 +2843,7 @@ mod tests {
                 Err(Status::NOT_FOUND.into_raw()),
                 proxy
                     .add_device_group(fdf::DeviceGroup {
-                        topological_path: Some("test/non_match_2".to_string()),
+                        name: Some("group_non_match_2".to_string()),
                         nodes: Some(vec![
                             fdf::DeviceGroupNode {
                                 bind_rules: node_1_bind_rules.clone(),
@@ -2994,7 +2994,7 @@ mod tests {
 
             let result = proxy
                 .add_device_group(fdf::DeviceGroup {
-                    topological_path: Some("test/match".to_string()),
+                    name: Some("group_match".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
                             bind_rules: node_1_bind_rules.clone(),
@@ -3022,7 +3022,7 @@ mod tests {
                 Err(Status::NOT_FOUND.into_raw()),
                 proxy
                     .add_device_group(fdf::DeviceGroup {
-                        topological_path: Some("test/non_match_1".to_string()),
+                        name: Some("group_non_match_1".to_string()),
                         nodes: Some(vec![
                             fdf::DeviceGroupNode {
                                 bind_rules: node_1_bind_rules.clone(),
@@ -3049,7 +3049,7 @@ mod tests {
                 Err(Status::NOT_FOUND.into_raw()),
                 proxy
                     .add_device_group(fdf::DeviceGroup {
-                        topological_path: Some("test/non_match_2".to_string()),
+                        name: Some("group_non_match_2".to_string()),
                         nodes: Some(vec![
                             fdf::DeviceGroupNode {
                                 bind_rules: node_1_bind_rules.clone(),
@@ -3212,7 +3212,7 @@ mod tests {
 
             let result = proxy
                 .add_device_group(fdf::DeviceGroup {
-                    topological_path: Some("test/match".to_string()),
+                    name: Some("group_match".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
                             bind_rules: node_1_bind_rules.clone(),
@@ -3350,7 +3350,7 @@ mod tests {
                 Err(Status::NOT_FOUND.into_raw()),
                 proxy
                     .add_device_group(fdf::DeviceGroup {
-                        topological_path: Some("test/path".to_string()),
+                        name: Some("test_group".to_string()),
                         nodes: Some(vec![
                             fdf::DeviceGroupNode {
                                 bind_rules: node_1_bind_rules.clone(),
@@ -3552,7 +3552,7 @@ mod tests {
                 Err(Status::NOT_FOUND.into_raw()),
                 proxy
                     .add_device_group(fdf::DeviceGroup {
-                        topological_path: Some("test/path".to_string()),
+                        name: Some("test_group".to_string()),
                         nodes: Some(vec![
                             fdf::DeviceGroupNode {
                                 bind_rules: node_1_bind_rules.clone(),
@@ -3766,7 +3766,7 @@ mod tests {
                 Err(Status::NOT_FOUND.into_raw()),
                 proxy
                     .add_device_group(fdf::DeviceGroup {
-                        topological_path: Some("test/path".to_string()),
+                        name: Some("test_group".to_string()),
                         nodes: Some(vec![
                             fdf::DeviceGroupNode {
                                 bind_rules: node_1_bind_rules.clone(),
@@ -3901,7 +3901,7 @@ mod tests {
                 Err(Status::NOT_FOUND.into_raw()),
                 proxy
                     .add_device_group(fdf::DeviceGroup {
-                        topological_path: Some("test/path".to_string()),
+                        name: Some("test_group".to_string()),
                         nodes: Some(vec![fdf::DeviceGroupNode {
                             bind_rules: bind_rules,
                             bind_properties: vec![fdf::NodeProperty {
@@ -3934,7 +3934,7 @@ mod tests {
 
             let result = proxy
                 .add_device_group(fdf::DeviceGroup {
-                    topological_path: Some("test/path".to_string()),
+                    name: Some("test_group".to_string()),
                     nodes: Some(vec![fdf::DeviceGroupNode {
                         bind_rules: duplicate_bind_rules,
                         bind_properties: node_transform,
@@ -4012,7 +4012,7 @@ mod tests {
 
             let result = proxy
                 .add_device_group(fdf::DeviceGroup {
-                    topological_path: Some("test/path".to_string()),
+                    name: Some("test_group".to_string()),
                     nodes: Some(vec![fdf::DeviceGroupNode {
                         bind_rules: bind_rules,
                         bind_properties: node_transform,

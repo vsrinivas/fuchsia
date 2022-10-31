@@ -73,8 +73,7 @@ bool VerifyMatchedDeviceGroupNodeInfo(fdi::wire::MatchedDeviceGroupNodeInfo info
   }
 
   for (auto& device_group : info.device_groups()) {
-    if (!device_group.has_topological_path() || device_group.topological_path().empty() ||
-        !device_group.has_node_index()) {
+    if (!device_group.has_name() || device_group.name().empty() || !device_group.has_node_index()) {
       return false;
     }
   }

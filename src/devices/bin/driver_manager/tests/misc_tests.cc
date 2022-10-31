@@ -496,11 +496,11 @@ TEST(MiscTestCase, AddDeviceGroup) {
            .driver_info = fdi::MatchedDriverInfo({.url = "#driver/mock-device.so"})}),
       .node_names = {{"shoveler"}},
   });
-  fake_driver_index.AddDeviceGroupMatch("/group", match);
+  fake_driver_index.AddDeviceGroupMatch("group", match);
 
   ASSERT_OK(coordinator.AddDeviceGroup(device, "group", group_desc));
   loop.RunUntilIdle();
-  ZX_ASSERT(coordinator.device_group_manager()->device_groups().count("/group") != 0);
+  ZX_ASSERT(coordinator.device_group_manager()->device_groups().count("group") != 0);
 
   controller_endpoints->server.reset();
   coordinator_endpoints->client.reset();

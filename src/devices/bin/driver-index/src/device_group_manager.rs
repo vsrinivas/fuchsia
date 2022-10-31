@@ -9,8 +9,11 @@ use {
     bind::interpreter::match_bind::{match_bind, DeviceProperties, MatchBindData, PropertyKey},
     fidl_fuchsia_driver_framework as fdf, fidl_fuchsia_driver_index as fdi,
     fuchsia_zircon::{zx_status_t, Status},
+    regex::Regex,
     std::collections::{BTreeMap, HashMap, HashSet},
 };
+
+const NAME_REGEX: &'static str = r"^[a-zA-Z0-9\-_]*$";
 
 #[derive(Debug, Eq, Hash, PartialEq)]
 pub struct BindRuleCondition {
@@ -40,8 +43,8 @@ pub struct DeviceGroupManager {
     // device groups that share a node with the same bind rules. Used for matching nodes.
     pub device_group_nodes: HashMap<DeviceGroupNodeBindRules, Vec<fdi::MatchedDeviceGroupInfo>>,
 
-    // Maps device groups to their topological path. This list ensures that we don't add
-    // multiple groups with the same path.
+    // Maps device groups to the name. This list ensures that we don't add multiple groups with
+    // the same name.
     device_group_list: HashMap<String, DeviceGroupInfo>,
 }
 
@@ -55,10 +58,22 @@ impl DeviceGroupManager {
         group: fdf::DeviceGroup,
         composite_drivers: Vec<&ResolvedDriver>,
     ) -> fdi::DriverIndexAddDeviceGroupResult {
-        let topological_path = group.topological_path.ok_or(Status::INVALID_ARGS.into_raw())?;
+        // Get and validate the name.
+        let name = group.name.ok_or(Status::INVALID_ARGS.into_raw())?;
+        if let Ok(name_regex) = Regex::new(NAME_REGEX) {
+            if !name_regex.is_match(&name) {
+                log::error!(
+                    "Invalid device group name. Name can only contain [A-Za-z0-9-_] characters"
+                );
+                return Err(Status::INVALID_ARGS.into_raw());
+            }
+        } else {
+            log::warn!("Regex failure. Unable to validate device group name");
+        }
+
         let nodes = group.nodes.ok_or(Status::INVALID_ARGS.into_raw())?;
 
-        if self.device_group_list.contains_key(&topological_path) {
+        if self.device_group_list.contains_key(&name) {
             return Err(Status::ALREADY_EXISTS.into_raw());
         }
 
@@ -75,7 +90,7 @@ impl DeviceGroupManager {
         for (node_idx, node) in nodes.iter().enumerate() {
             let properties = convert_fidl_to_bind_rules(&node.bind_rules)?;
             let device_group_info = fdi::MatchedDeviceGroupInfo {
-                topological_path: Some(topological_path.clone()),
+                name: Some(name.clone()),
                 node_index: Some(node_idx as u32),
                 num_nodes: Some(nodes.len() as u32),
                 ..fdi::MatchedDeviceGroupInfo::EMPTY
@@ -97,7 +112,7 @@ impl DeviceGroupManager {
             if let Some(matched_composite) = matched_composite {
                 // Found a match so we can set this in our map.
                 self.device_group_list.insert(
-                    topological_path.clone(),
+                    name.clone(),
                     DeviceGroupInfo {
                         nodes,
                         matched: Some(MatchedComposite {
@@ -111,7 +126,7 @@ impl DeviceGroupManager {
             }
         }
 
-        self.device_group_list.insert(topological_path, DeviceGroupInfo { nodes, matched: None });
+        self.device_group_list.insert(name, DeviceGroupInfo { nodes, matched: None });
         Err(Status::NOT_FOUND.into_raw())
     }
 
@@ -168,8 +183,8 @@ impl DeviceGroupManager {
         &self,
         mut info: fdi::MatchedDeviceGroupInfo,
     ) -> Option<fdi::MatchedDeviceGroupInfo> {
-        if let Some(topological_path) = &info.topological_path {
-            let list_value = self.device_group_list.get(topological_path);
+        if let Some(name) = &info.name {
+            let list_value = self.device_group_list.get(name);
             if let Some(device_group) = list_value {
                 // TODO(fxb/107371): Only return device groups that have a matched composite.
                 if let Some(matched) = &device_group.matched {
@@ -524,7 +539,7 @@ mod tests {
             Err(Status::NOT_FOUND.into_raw()),
             device_group_manager.add_device_group(
                 fdf::DeviceGroup {
-                    topological_path: Some("test/path".to_string()),
+                    name: Some("test_group".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
                             bind_rules: bind_rules_1,
@@ -555,7 +570,7 @@ mod tests {
         );
 
         let expected_device_group = fdi::MatchedDeviceGroupInfo {
-            topological_path: Some("test/path".to_string()),
+            name: Some("test_group".to_string()),
             node_index: Some(0),
             num_nodes: Some(2),
             ..fdi::MatchedDeviceGroupInfo::EMPTY
@@ -582,7 +597,7 @@ mod tests {
         );
 
         let expected_device_group_2 = fdi::MatchedDeviceGroupInfo {
-            topological_path: Some("test/path".to_string()),
+            name: Some("test_group".to_string()),
             node_index: Some(1),
             num_nodes: Some(2),
             ..fdi::MatchedDeviceGroupInfo::EMPTY
@@ -622,7 +637,7 @@ mod tests {
             Err(Status::NOT_FOUND.into_raw()),
             device_group_manager.add_device_group(
                 fdf::DeviceGroup {
-                    topological_path: Some("test/path".to_string()),
+                    name: Some("test_group".to_string()),
                     nodes: Some(vec![fdf::DeviceGroupNode {
                         bind_rules: bind_rules,
                         bind_properties: bind_properties,
@@ -638,7 +653,7 @@ mod tests {
         device_properties.insert(PropertyKey::NumberKey(1), Symbol::NumberValue(200));
 
         let expected_device_group = fdi::MatchedDeviceGroupInfo {
-            topological_path: Some("test/path".to_string()),
+            name: Some("test_group".to_string()),
             node_index: Some(0),
             num_nodes: Some(1),
             ..fdi::MatchedDeviceGroupInfo::EMPTY
@@ -737,7 +752,7 @@ mod tests {
             Err(Status::NOT_FOUND.into_raw()),
             device_group_manager.add_device_group(
                 fdf::DeviceGroup {
-                    topological_path: Some("test/path".to_string()),
+                    name: Some("test_group".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
                             bind_rules: bind_rules_1,
@@ -758,7 +773,7 @@ mod tests {
             Err(Status::NOT_FOUND.into_raw()),
             device_group_manager.add_device_group(
                 fdf::DeviceGroup {
-                    topological_path: Some("test/path2".to_string()),
+                    name: Some("test_group2".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
                             bind_rules: bind_rules_2_rearranged,
@@ -795,14 +810,14 @@ mod tests {
             assert_eq!(2, matched_device_groups.len());
 
             assert!(matched_device_groups.contains(&fdi::MatchedDeviceGroupInfo {
-                topological_path: Some("test/path".to_string()),
+                name: Some("test_group".to_string()),
                 node_index: Some(1),
                 num_nodes: Some(2),
                 ..fdi::MatchedDeviceGroupInfo::EMPTY
             }));
 
             assert!(matched_device_groups.contains(&fdi::MatchedDeviceGroupInfo {
-                topological_path: Some("test/path2".to_string()),
+                name: Some("test_group2".to_string()),
                 node_index: Some(0),
                 num_nodes: Some(2),
                 ..fdi::MatchedDeviceGroupInfo::EMPTY
@@ -904,7 +919,7 @@ mod tests {
             Err(Status::NOT_FOUND.into_raw()),
             device_group_manager.add_device_group(
                 fdf::DeviceGroup {
-                    topological_path: Some("test/path".to_string()),
+                    name: Some("test_group".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
                             bind_rules: bind_rules_1,
@@ -925,7 +940,7 @@ mod tests {
             Err(Status::NOT_FOUND.into_raw()),
             device_group_manager.add_device_group(
                 fdf::DeviceGroup {
-                    topological_path: Some("test/path2".to_string()),
+                    name: Some("test_group2".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
                             bind_rules: bind_rules_3,
@@ -946,7 +961,7 @@ mod tests {
             Err(Status::NOT_FOUND.into_raw()),
             device_group_manager.add_device_group(
                 fdf::DeviceGroup {
-                    topological_path: Some("test/path3".to_string()),
+                    name: Some("test_group3".to_string()),
                     nodes: Some(vec![fdf::DeviceGroupNode {
                         bind_rules: bind_rules_4,
                         bind_properties: bind_properties_4,
@@ -972,21 +987,21 @@ mod tests {
             assert_eq!(3, matched_device_groups.len());
 
             assert!(matched_device_groups.contains(&fdi::MatchedDeviceGroupInfo {
-                topological_path: Some("test/path".to_string()),
+                name: Some("test_group".to_string()),
                 node_index: Some(0),
                 num_nodes: Some(2),
                 ..fdi::MatchedDeviceGroupInfo::EMPTY
             }));
 
             assert!(matched_device_groups.contains(&fdi::MatchedDeviceGroupInfo {
-                topological_path: Some("test/path2".to_string()),
+                name: Some("test_group2".to_string()),
                 node_index: Some(1),
                 num_nodes: Some(2),
                 ..fdi::MatchedDeviceGroupInfo::EMPTY
             }));
 
             assert!(matched_device_groups.contains(&fdi::MatchedDeviceGroupInfo {
-                topological_path: Some("test/path3".to_string()),
+                name: Some("test_group3".to_string()),
                 node_index: Some(0),
                 num_nodes: Some(1),
                 ..fdi::MatchedDeviceGroupInfo::EMPTY
@@ -1048,7 +1063,7 @@ mod tests {
             Err(Status::NOT_FOUND.into_raw()),
             device_group_manager.add_device_group(
                 fdf::DeviceGroup {
-                    topological_path: Some("test/path".to_string()),
+                    name: Some("test_group".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
                             bind_rules: bind_rules_1,
@@ -1135,7 +1150,7 @@ mod tests {
             Err(Status::NOT_FOUND.into_raw()),
             device_group_manager.add_device_group(
                 fdf::DeviceGroup {
-                    topological_path: Some("test/path".to_string()),
+                    name: Some("test_group".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
                             bind_rules: bind_rules_1,
@@ -1161,7 +1176,7 @@ mod tests {
         );
 
         let expected_device_group_1 = fdi::MatchedDeviceGroupInfo {
-            topological_path: Some("test/path".to_string()),
+            name: Some("test_group".to_string()),
             node_index: Some(0),
             num_nodes: Some(2),
             ..fdi::MatchedDeviceGroupInfo::EMPTY
@@ -1181,7 +1196,7 @@ mod tests {
             .insert(PropertyKey::StringKey("dunlin".to_string()), Symbol::BoolValue(true));
 
         let expected_device_group_2 = fdi::MatchedDeviceGroupInfo {
-            topological_path: Some("test/path".to_string()),
+            name: Some("test_group".to_string()),
             node_index: Some(1),
             num_nodes: Some(2),
             ..fdi::MatchedDeviceGroupInfo::EMPTY
@@ -1249,7 +1264,7 @@ mod tests {
             Err(Status::NOT_FOUND.into_raw()),
             device_group_manager.add_device_group(
                 fdf::DeviceGroup {
-                    topological_path: Some("test/path".to_string()),
+                    name: Some("test_group".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
                             bind_rules: bind_rules_1,
@@ -1305,7 +1320,7 @@ mod tests {
             Err(Status::INVALID_ARGS.into_raw()),
             device_group_manager.add_device_group(
                 fdf::DeviceGroup {
-                    topological_path: Some("test/path".to_string()),
+                    name: Some("test_group".to_string()),
                     nodes: Some(vec![fdf::DeviceGroupNode {
                         bind_rules: bind_rules,
                         bind_properties: bind_properties,
@@ -1346,7 +1361,7 @@ mod tests {
             Err(Status::INVALID_ARGS.into_raw()),
             device_group_manager.add_device_group(
                 fdf::DeviceGroup {
-                    topological_path: Some("test/path".to_string()),
+                    name: Some("test_group".to_string()),
                     nodes: Some(vec![fdf::DeviceGroupNode {
                         bind_rules: bind_rules,
                         bind_properties: bind_properties,
@@ -1393,7 +1408,7 @@ mod tests {
             Err(Status::INVALID_ARGS.into_raw()),
             device_group_manager.add_device_group(
                 fdf::DeviceGroup {
-                    topological_path: Some("test/path".to_string()),
+                    name: Some("test_group".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
                             bind_rules: bind_rules,
@@ -1446,7 +1461,7 @@ mod tests {
             Err(Status::INVALID_ARGS.into_raw()),
             device_group_manager.add_device_group(
                 fdf::DeviceGroup {
-                    topological_path: None,
+                    name: None,
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
                             bind_rules: bind_rules,
@@ -1469,7 +1484,7 @@ mod tests {
             Err(Status::INVALID_ARGS.into_raw()),
             device_group_manager.add_device_group(
                 fdf::DeviceGroup {
-                    topological_path: Some("test/path".to_string()),
+                    name: Some("test_group".to_string()),
                     nodes: None,
                     ..fdf::DeviceGroup::EMPTY
                 },
@@ -1604,7 +1619,7 @@ mod tests {
             )),
             device_group_manager.add_device_group(
                 fdf::DeviceGroup {
-                    topological_path: Some("test/path".to_string()),
+                    name: Some("test_group".to_string()),
                     nodes: Some(vec![
                         primary_device_group_node,
                         additional_device_group_node_b,
@@ -1621,7 +1636,7 @@ mod tests {
         device_properties_1.insert(PropertyKey::NumberKey(1), Symbol::NumberValue(10));
 
         let expected_device_group = fdi::MatchedDeviceGroupInfo {
-            topological_path: Some("test/path".to_string()),
+            name: Some("test_group".to_string()),
             node_index: Some(2),
             num_nodes: Some(3),
             primary_index: Some(0),
@@ -1772,7 +1787,7 @@ mod tests {
             )),
             device_group_manager.add_device_group(
                 fdf::DeviceGroup {
-                    topological_path: Some("test/path".to_string()),
+                    name: Some("test_group".to_string()),
                     nodes: Some(vec![
                         additional_device_group_node_b,
                         additional_device_group_node_a,
@@ -1789,7 +1804,7 @@ mod tests {
         device_properties_1.insert(PropertyKey::NumberKey(1), Symbol::NumberValue(10));
 
         let expected_device_group = fdi::MatchedDeviceGroupInfo {
-            topological_path: Some("test/path".to_string()),
+            name: Some("test_group".to_string()),
             node_index: Some(1),
             num_nodes: Some(3),
             primary_index: Some(2),
@@ -1961,7 +1976,7 @@ mod tests {
             )),
             device_group_manager.add_device_group(
                 fdf::DeviceGroup {
-                    topological_path: Some("test/path".to_string()),
+                    name: Some("test_group".to_string()),
                     nodes: Some(vec![
                         primary_device_group_node,
                         additional_device_group_node_b,
@@ -1978,7 +1993,7 @@ mod tests {
         device_properties_1.insert(PropertyKey::NumberKey(1), Symbol::NumberValue(10));
 
         let expected_device_group = fdi::MatchedDeviceGroupInfo {
-            topological_path: Some("test/path".to_string()),
+            name: Some("test_group".to_string()),
             node_index: Some(2),
             num_nodes: Some(3),
             primary_index: Some(0),
@@ -2166,7 +2181,7 @@ mod tests {
             )),
             device_group_manager.add_device_group(
                 fdf::DeviceGroup {
-                    topological_path: Some("test/path".to_string()),
+                    name: Some("test_group".to_string()),
                     nodes: Some(vec![
                         primary_device_group_node,
                         additional_device_group_node_b,
@@ -2184,7 +2199,7 @@ mod tests {
         device_properties_1.insert(PropertyKey::NumberKey(1), Symbol::NumberValue(10));
 
         let expected_device_group = fdi::MatchedDeviceGroupInfo {
-            topological_path: Some("test/path".to_string()),
+            name: Some("test_group".to_string()),
             node_index: Some(3),
             num_nodes: Some(4),
             primary_index: Some(0),
@@ -2217,7 +2232,7 @@ mod tests {
         device_properties_1.insert(PropertyKey::NumberKey(1000), Symbol::NumberValue(1000));
 
         let expected_device_group = fdi::MatchedDeviceGroupInfo {
-            topological_path: Some("test/path".to_string()),
+            name: Some("test_group".to_string()),
             node_index: Some(2),
             num_nodes: Some(4),
             primary_index: Some(0),
@@ -2356,7 +2371,7 @@ mod tests {
             Err(Status::NOT_FOUND.into_raw()),
             device_group_manager.add_device_group(
                 fdf::DeviceGroup {
-                    topological_path: Some("test/path".to_string()),
+                    name: Some("test_group".to_string()),
                     nodes: Some(vec![
                         primary_device_group_node,
                         additional_device_group_node_a,
@@ -2365,6 +2380,87 @@ mod tests {
                     ..fdf::DeviceGroup::EMPTY
                 },
                 vec![&composite_driver]
+            )
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_valid_name() {
+        let mut device_group_manager = DeviceGroupManager::new();
+
+        let node = fdf::DeviceGroupNode {
+            bind_rules: vec![fdf::BindRule {
+                key: fdf::NodePropertyKey::StringValue("wrybill".to_string()),
+                condition: fdf::Condition::Accept,
+                values: vec![fdf::NodePropertyValue::IntValue(200)],
+            }],
+            bind_properties: vec![fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::StringValue("dotteral".to_string())),
+                value: Some(fdf::NodePropertyValue::StringValue("wrybill".to_string())),
+                ..fdf::NodeProperty::EMPTY
+            }],
+        };
+        assert_eq!(
+            Err(Status::NOT_FOUND.into_raw()),
+            device_group_manager.add_device_group(
+                fdf::DeviceGroup {
+                    name: Some("test-group".to_string()),
+                    nodes: Some(vec![node.clone(),]),
+                    ..fdf::DeviceGroup::EMPTY
+                },
+                vec![]
+            )
+        );
+
+        assert_eq!(
+            Err(Status::NOT_FOUND.into_raw()),
+            device_group_manager.add_device_group(
+                fdf::DeviceGroup {
+                    name: Some("TEST_group".to_string()),
+                    nodes: Some(vec![node]),
+                    ..fdf::DeviceGroup::EMPTY
+                },
+                vec![]
+            )
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_invalid_name() {
+        let mut device_group_manager = DeviceGroupManager::new();
+        let node = fdf::DeviceGroupNode {
+            bind_rules: vec![fdf::BindRule {
+                key: fdf::NodePropertyKey::StringValue("wrybill".to_string()),
+                condition: fdf::Condition::Accept,
+                values: vec![fdf::NodePropertyValue::IntValue(200)],
+            }],
+            bind_properties: vec![fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::StringValue("dotteral".to_string())),
+                value: Some(fdf::NodePropertyValue::IntValue(100)),
+                ..fdf::NodeProperty::EMPTY
+            }],
+        };
+        assert_eq!(
+            Err(Status::INVALID_ARGS.into_raw()),
+            device_group_manager.add_device_group(
+                fdf::DeviceGroup {
+                    name: Some("test/group".to_string()),
+                    nodes: Some(vec![node.clone(),]),
+                    ..fdf::DeviceGroup::EMPTY
+                },
+                vec![]
+            )
+        );
+
+        assert_eq!(
+            Err(Status::INVALID_ARGS.into_raw()),
+            device_group_manager.add_device_group(
+                fdf::DeviceGroup {
+                    name: Some("test:group".to_string()),
+                    nodes: Some(vec![node]),
+                    ..fdf::DeviceGroup::EMPTY
+                },
+                vec![]
             )
         );
     }

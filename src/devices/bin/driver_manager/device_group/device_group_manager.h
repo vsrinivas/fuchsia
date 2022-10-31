@@ -65,7 +65,7 @@ class DeviceGroupManager {
   const DeviceGroupMap& device_groups() const { return device_groups_; }
 
  private:
-  // Contains all device groups. This maps the topological path to a DeviceGroup object.
+  // Contains all device groups. This maps the name to a DeviceGroup object.
   DeviceGroupMap device_groups_;
 
   // The owner of DeviceGroupManager. CompositeManagerBridge must outlive DeviceGroupManager.

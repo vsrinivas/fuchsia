@@ -177,7 +177,7 @@ void DriverRunner::BindNodesForDeviceGroups() { TryBindAllOrphansUntracked(); }
 
 void DriverRunner::CreateDeviceGroup(CreateDeviceGroupRequestView request,
                                      CreateDeviceGroupCompleter::Sync& completer) {
-  if (!request->has_topological_path() || !request->has_nodes()) {
+  if (!request->has_name() || !request->has_nodes()) {
     completer.Reply(fit::error(fdf::DeviceGroupError::kMissingArgs));
     return;
   }
@@ -189,7 +189,7 @@ void DriverRunner::CreateDeviceGroup(CreateDeviceGroupRequestView request,
 
   auto device_group = std::make_unique<DeviceGroupV2>(
       DeviceGroupCreateInfo{
-          .topological_path = std::string(request->topological_path().get()),
+          .name = std::string(request->name().get()),
           .size = request->nodes().count(),
       },
       dispatcher_, this);
