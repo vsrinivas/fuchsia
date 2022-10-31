@@ -32,6 +32,7 @@ async fn assemble_realm(
     sound_player_mock: SoundPlayerMock,
     pointer_injector_mock: PointerInjectorMock,
     factory_reset_mock: FactoryResetMock,
+    test_name: &str,
 ) -> RealmInstance {
     let b = RealmBuilder::new().await.expect("Failed to create RealmBuilder");
 
@@ -88,7 +89,7 @@ async fn assemble_realm(
     .await;
 
     // Create the test realm.
-    b.build().await.expect("Failed to create realm")
+    b.build_with_name(test_name).await.expect("Failed to create realm")
 }
 
 async fn perform_factory_reset(realm: &RealmInstance) {
@@ -113,10 +114,10 @@ const FACTORY_RESET_NAME: &'static str = "mock_factory_reset";
 const INPUT_PIPELINE_URL: &'static str = "#meta/input-pipeline.cm";
 const SCENE_MANAGER_URL: &'static str = "#meta/scene_manager.cm";
 
-#[test_case(INPUT_PIPELINE_URL; "Input Pipeline variant")]
-#[test_case(SCENE_MANAGER_URL; "Scene Manager variant")]
+#[test_case(INPUT_PIPELINE_URL, "sound_played_ip"; "Input Pipeline variant")]
+#[test_case(SCENE_MANAGER_URL, "sound_played_sm"; "Scene Manager variant")]
 #[fuchsia::test]
-async fn sound_is_played_during_factory_reset(input_owner_url: &str) {
+async fn sound_is_played_during_factory_reset(input_owner_url: &str, test_name: &str) {
     let (sound_request_relay_write_end, mut sound_request_relay_read_end) =
         futures::channel::mpsc::unbounded();
     let (reset_request_relay_write_end, mut reset_request_relay_read_end) =
@@ -134,6 +135,7 @@ async fn sound_is_played_during_factory_reset(input_owner_url: &str) {
         sound_player_mock,
         pointer_injector_mock,
         factory_reset_mock,
+        test_name,
     )
     .await;
 
@@ -157,10 +159,10 @@ async fn sound_is_played_during_factory_reset(input_owner_url: &str) {
     realm.destroy().await.unwrap();
 }
 
-#[test_case(INPUT_PIPELINE_URL; "Input Pipeline variant")]
-#[test_case(SCENE_MANAGER_URL; "Scene Manager variant")]
+#[test_case(INPUT_PIPELINE_URL, "sound_not_loaded_ip"; "Input Pipeline variant")]
+#[test_case(SCENE_MANAGER_URL, "sound_not_loaded_sm"; "Scene Manager variant")]
 #[fuchsia::test]
-async fn failure_to_load_sound_doesnt_block_factory_reset(input_owner_url: &str) {
+async fn failure_to_load_sound_doesnt_block_factory_reset(input_owner_url: &str, test_name: &str) {
     let (reset_request_relay_write_end, mut reset_request_relay_read_end) =
         futures::channel::mpsc::unbounded();
     let sound_player_mock =
@@ -173,6 +175,7 @@ async fn failure_to_load_sound_doesnt_block_factory_reset(input_owner_url: &str)
         sound_player_mock,
         pointer_injector_mock,
         factory_reset_mock,
+        test_name,
     )
     .await;
 
@@ -186,10 +189,10 @@ async fn failure_to_load_sound_doesnt_block_factory_reset(input_owner_url: &str)
     realm.destroy().await.unwrap();
 }
 
-#[test_case(INPUT_PIPELINE_URL; "Input Pipeline variant")]
-#[test_case(SCENE_MANAGER_URL; "Scene Manager variant")]
+#[test_case(INPUT_PIPELINE_URL, "sound_not_played_ip"; "Input Pipeline variant")]
+#[test_case(SCENE_MANAGER_URL, "sound_not_played_sm"; "Scene Manager variant")]
 #[fuchsia::test]
-async fn failure_to_play_sound_doesnt_block_factory_reset(input_owner_url: &str) {
+async fn failure_to_play_sound_doesnt_block_factory_reset(input_owner_url: &str, test_name: &str) {
     let (reset_request_relay_write_end, mut reset_request_relay_read_end) =
         futures::channel::mpsc::unbounded();
     let sound_player_mock =
@@ -202,6 +205,7 @@ async fn failure_to_play_sound_doesnt_block_factory_reset(input_owner_url: &str)
         sound_player_mock,
         pointer_injector_mock,
         factory_reset_mock,
+        test_name,
     )
     .await;
 
