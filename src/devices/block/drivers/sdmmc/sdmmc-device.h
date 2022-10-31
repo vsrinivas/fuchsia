@@ -38,12 +38,12 @@ class SdmmcDevice {
 
   // SD/MMC shared ops
   zx_status_t SdmmcGoIdle();
-  zx_status_t SdmmcSendStatus(uint32_t* response);
+  zx_status_t SdmmcSendStatus(uint32_t* status);
   zx_status_t SdmmcStopTransmission(uint32_t* status = nullptr);
   zx_status_t SdmmcWaitForState(uint32_t state);
   // Retries a block read/write request. STOP_TRANSMISSION is issued after every attempt that
   // results in an error, but not after the request succeeds.
-  zx_status_t SdmmcIoRequestWithRetries(sdmmc_req_t* request, uint32_t* retries);
+  zx_status_t SdmmcIoRequestWithRetries(const sdmmc_req_new_t& request, uint32_t* retries);
 
   // SD ops
   zx_status_t SdSendOpCond(uint32_t flags, uint32_t* ocr);
@@ -82,6 +82,10 @@ class SdmmcDevice {
   // Retry each request retries_ times (with wait_time delay in between) by default. Requests are
   // always tried at least once.
   zx_status_t Request(sdmmc_req_t* req, uint32_t retries = 0, zx::duration wait_time = {}) const;
+  zx_status_t Request(const sdmmc_req_new_t& req, uint32_t response[4], uint32_t retries = 0,
+                      zx::duration wait_time = {}) const;
+  zx_status_t RequestWithBlockRead(const sdmmc_req_new_t& req, uint32_t response[4],
+                                   cpp20::span<uint8_t> read_data) const;
   zx_status_t SdSendAppCmd();
 
   inline uint32_t RcaArg() const { return rca_ << 16; }

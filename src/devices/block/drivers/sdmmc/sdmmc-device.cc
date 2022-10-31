@@ -52,26 +52,67 @@ zx_status_t SdmmcDevice::Request(sdmmc_req_t* req, uint32_t retries, zx::duratio
   return st;
 }
 
+zx_status_t SdmmcDevice::Request(const sdmmc_req_new_t& req, uint32_t response[4], uint32_t retries,
+                                 zx::duration wait_time) const {
+  if (retries == 0) {
+    retries = retries_;
+  }
+
+  zx_status_t st;
+  while (((st = host_.RequestNew(&req, response)) != ZX_OK) && retries > 0) {
+    retries--;
+    if (wait_time.get() > 0) {
+      zx::nanosleep(zx::deadline_after(wait_time));
+    }
+  }
+  return st;
+}
+
+zx_status_t SdmmcDevice::RequestWithBlockRead(const sdmmc_req_new_t& req, uint32_t response[4],
+                                              cpp20::span<uint8_t> read_data) const {
+  zx::vmo vmo;
+  zx_status_t st = zx::vmo::create(read_data.size(), 0, &vmo);
+  if (st != ZX_OK) {
+    return st;
+  }
+
+  const sdmmc_buffer_region_t vmo_region = {
+      .buffer = {.vmo = vmo.get()},
+      .type = SDMMC_BUFFER_TYPE_VMO_HANDLE,
+      .offset = 0,
+      .size = read_data.size(),
+  };
+
+  sdmmc_req_new_t request = req;
+  request.buffers_list = &vmo_region;
+  request.buffers_count = 1;
+  if ((st = Request(request, response)) != ZX_OK) {
+    return st;
+  }
+
+  return vmo.read(read_data.data(), 0, read_data.size());
+}
+
 // SD/MMC shared ops
 
 zx_status_t SdmmcDevice::SdmmcGoIdle() {
-  sdmmc_req_t req = {};
+  sdmmc_req_new_t req = {};
   req.cmd_idx = SDMMC_GO_IDLE_STATE;
   req.arg = 0;
   req.cmd_flags = SDMMC_GO_IDLE_STATE_FLAGS;
-  req.use_dma = UseDma();
-  return Request(&req);
+  uint32_t unused_response[4];
+  return Request(req, unused_response);
 }
 
-zx_status_t SdmmcDevice::SdmmcSendStatus(uint32_t* response) {
-  sdmmc_req_t req = {};
+zx_status_t SdmmcDevice::SdmmcSendStatus(uint32_t* status) {
+  sdmmc_req_new_t req = {};
   req.cmd_idx = SDMMC_SEND_STATUS;
   req.arg = RcaArg();
   req.cmd_flags = SDMMC_SEND_STATUS_FLAGS;
-  req.use_dma = UseDma();
-  zx_status_t st = Request(&req);
+  uint32_t response[4];
+  zx_status_t st = Request(req, response);
   if (st == ZX_OK) {
-    *response = req.response[0];
+    *status = response[0];
   }
   return st;
 }
@@ -79,15 +120,15 @@ zx_status_t SdmmcDevice::SdmmcSendStatus(uint32_t* response) {
 zx_status_t SdmmcDevice::SdmmcStopTransmission(uint32_t* status) {
   zx_status_t st;
   for (uint32_t i = 0; i < kRetryAttempts; i++) {
-    sdmmc_req_t req = {};
+    sdmmc_req_new_t req = {};
     req.cmd_idx = SDMMC_STOP_TRANSMISSION;
     req.arg = 0;
     req.cmd_flags = SDMMC_STOP_TRANSMISSION_FLAGS;
-    req.use_dma = UseDma();
     req.suppress_error_messages = i < (kRetryAttempts - 1);
-    if ((st = Request(&req)) == ZX_OK) {
+    uint32_t response[4];
+    if ((st = Request(req, response)) == ZX_OK) {
       if (status) {
-        *status = req.response[0];
+        *status = response[0];
       }
       break;
     }
@@ -97,28 +138,29 @@ zx_status_t SdmmcDevice::SdmmcStopTransmission(uint32_t* status) {
 
 zx_status_t SdmmcDevice::SdmmcWaitForState(uint32_t state) {
   for (uint32_t i = 0; i < kRetryAttempts; i++) {
-    sdmmc_req_t req = {};
+    sdmmc_req_new_t req = {};
     req.cmd_idx = SDMMC_SEND_STATUS;
     req.arg = RcaArg();
     req.cmd_flags = SDMMC_SEND_STATUS_FLAGS;
-    req.use_dma = UseDma();
     req.suppress_error_messages = i < (kRetryAttempts - 1);
-    zx_status_t st = Request(&req);
-    if (st == ZX_OK && MMC_STATUS_CURRENT_STATE(req.response[0]) == state) {
+    uint32_t response[4];
+    zx_status_t st = Request(req, response);
+    if (st == ZX_OK && MMC_STATUS_CURRENT_STATE(response[0]) == state) {
       return ZX_OK;
     }
   }
   return ZX_ERR_TIMED_OUT;
 }
 
-zx_status_t SdmmcDevice::SdmmcIoRequestWithRetries(sdmmc_req_t* request, uint32_t* retries) {
+zx_status_t SdmmcDevice::SdmmcIoRequestWithRetries(const sdmmc_req_new_t& request,
+                                                   uint32_t* retries) {
   zx_status_t st;
   for (uint32_t i = 0; i < kRetryAttempts; i++) {
-    sdmmc_req_t req = *request;
+    sdmmc_req_new_t req = request;
     req.suppress_error_messages = i < (kRetryAttempts - 1);
 
-    if ((st = Request(&req)) == ZX_OK) {
-      memcpy(request->response, req.response, sizeof(req.response));
+    uint32_t unused_response[4];
+    if ((st = Request(req, unused_response)) == ZX_OK) {
       break;
     }
 
@@ -136,19 +178,18 @@ zx_status_t SdmmcDevice::SdmmcIoRequestWithRetries(sdmmc_req_t* request, uint32_
     SdmmcWaitForState(MMC_STATUS_CURRENT_STATE_TRAN);
   }
 
-  request->status = st;
   return st;
 }
 
 // SD ops
 
 zx_status_t SdmmcDevice::SdSendAppCmd() {
-  sdmmc_req_t req = {};
+  sdmmc_req_new_t req = {};
   req.cmd_idx = SDMMC_APP_CMD;
   req.arg = RcaArg();
   req.cmd_flags = SDMMC_APP_CMD_FLAGS;
-  req.use_dma = UseDma();
-  return Request(&req);
+  uint32_t unused_response[4];
+  return Request(req, unused_response);
 }
 
 zx_status_t SdmmcDevice::SdSendOpCond(uint32_t flags, uint32_t* ocr) {
@@ -157,36 +198,36 @@ zx_status_t SdmmcDevice::SdSendOpCond(uint32_t flags, uint32_t* ocr) {
     return st;
   }
 
-  sdmmc_req_t req = {};
+  sdmmc_req_new_t req = {};
   req.cmd_idx = SD_APP_SEND_OP_COND;
   req.arg = flags;
   req.cmd_flags = SD_APP_SEND_OP_COND_FLAGS;
-  req.use_dma = UseDma();
-  if ((st = Request(&req)) != ZX_OK) {
+  uint32_t response[4];
+  if ((st = Request(req, response)) != ZX_OK) {
     return st;
   }
 
-  *ocr = req.response[0];
+  *ocr = response[0];
   return ZX_OK;
 }
 
 zx_status_t SdmmcDevice::SdSendIfCond() {
   // TODO what is this parameter?
   uint32_t arg = 0x1aa;
-  sdmmc_req_t req = {};
+  sdmmc_req_new_t req = {};
   req.cmd_idx = SD_SEND_IF_COND;
   req.arg = arg;
   req.cmd_flags = SD_SEND_IF_COND_FLAGS;
-  req.use_dma = UseDma();
   req.suppress_error_messages = true;
-  zx_status_t st = Request(&req);
+  uint32_t response[4];
+  zx_status_t st = Request(req, response);
   if (st != ZX_OK) {
     zxlogf(DEBUG, "SD_SEND_IF_COND failed, retcode = %d", st);
     return st;
   }
-  if ((req.response[0] & 0xfff) != arg) {
+  if ((response[0] & 0xfff) != arg) {
     // The card should have replied with the pattern that we sent.
-    zxlogf(DEBUG, "SDMMC_SEND_IF_COND got bad reply = %" PRIu32 "", req.response[0]);
+    zxlogf(DEBUG, "SDMMC_SEND_IF_COND got bad reply = %" PRIu32 "", response[0]);
     return ZX_ERR_BAD_STATE;
   } else {
     return ZX_OK;
@@ -194,34 +235,34 @@ zx_status_t SdmmcDevice::SdSendIfCond() {
 }
 
 zx_status_t SdmmcDevice::SdSendRelativeAddr(uint16_t* card_status) {
-  sdmmc_req_t req = {};
+  sdmmc_req_new_t req = {};
   req.cmd_idx = SD_SEND_RELATIVE_ADDR;
   req.arg = 0;
   req.cmd_flags = SD_SEND_RELATIVE_ADDR_FLAGS;
-  req.use_dma = UseDma();
 
-  zx_status_t st = Request(&req);
+  uint32_t response[4];
+  zx_status_t st = Request(req, response);
   if (st != ZX_OK) {
     zxlogf(DEBUG, "SD_SEND_RELATIVE_ADDR failed, retcode = %d", st);
     return st;
   }
 
-  rca_ = static_cast<uint16_t>(req.response[0] >> 16);
+  rca_ = static_cast<uint16_t>(response[0] >> 16);
 
   if (card_status != nullptr) {
-    *card_status = req.response[0] & 0xffff;
+    *card_status = response[0] & 0xffff;
   }
 
   return st;
 }
 
 zx_status_t SdmmcDevice::SdSelectCard() {
-  sdmmc_req_t req = {};
+  sdmmc_req_new_t req = {};
   req.cmd_idx = SD_SELECT_CARD;
   req.arg = RcaArg();
   req.cmd_flags = SD_SELECT_CARD_FLAGS;
-  req.use_dma = UseDma();
-  return Request(&req);
+  uint32_t unused_response[4];
+  return Request(req, unused_response);
 }
 
 zx_status_t SdmmcDevice::SdSendScr(std::array<uint8_t, 8>& scr) {
@@ -230,17 +271,13 @@ zx_status_t SdmmcDevice::SdSendScr(std::array<uint8_t, 8>& scr) {
     return st;
   }
 
-  sdmmc_req_t req = {};
+  sdmmc_req_new_t req = {};
   req.cmd_idx = SD_APP_SEND_SCR;
   req.arg = 0;
   req.cmd_flags = SD_APP_SEND_SCR_FLAGS;
-  req.blockcount = 1;
   req.blocksize = 8;
-  req.use_dma = false;
-  req.virt_buffer = scr.data();
-  req.virt_size = 8;
-  req.buf_offset = 0;
-  return Request(&req);
+  uint32_t unused_response[4];
+  return RequestWithBlockRead(req, unused_response, {scr.data(), scr.size()});
 }
 
 zx_status_t SdmmcDevice::SdSetBusWidth(sdmmc_bus_width_t width) {
@@ -253,27 +290,27 @@ zx_status_t SdmmcDevice::SdSetBusWidth(sdmmc_bus_width_t width) {
     return st;
   }
 
-  sdmmc_req_t req = {};
+  sdmmc_req_new_t req = {};
   req.cmd_idx = SD_APP_SET_BUS_WIDTH;
   req.arg = (width == SDMMC_BUS_WIDTH_FOUR ? 2 : 0);
   req.cmd_flags = SD_APP_SET_BUS_WIDTH_FLAGS;
-  req.use_dma = UseDma();
-  return Request(&req);
+  uint32_t unused_response[4];
+  return Request(req, unused_response);
 }
 
 zx_status_t SdmmcDevice::SdSwitchUhsVoltage(uint32_t ocr) {
   zx_status_t st = ZX_OK;
-  sdmmc_req_t req = {};
+  sdmmc_req_new_t req = {};
   req.cmd_idx = SD_VOLTAGE_SWITCH;
   req.arg = 0;
   req.cmd_flags = SD_VOLTAGE_SWITCH_FLAGS;
-  req.use_dma = UseDma();
 
   if (signal_voltage_ == SDMMC_VOLTAGE_V180) {
     return ZX_OK;
   }
 
-  if ((st = Request(&req)) != ZX_OK) {
+  uint32_t unused_response[4];
+  if ((st = Request(req, unused_response)) != ZX_OK) {
     zxlogf(DEBUG, "SD_VOLTAGE_SWITCH failed, retcode = %d", st);
     return st;
   }
@@ -307,20 +344,20 @@ zx_status_t SdmmcDevice::SdSwitchUhsVoltage(uint32_t ocr) {
 
 zx_status_t SdmmcDevice::SdioSendOpCond(uint32_t ocr, uint32_t* rocr) {
   zx_status_t st = ZX_OK;
-  sdmmc_req_t req = {};
+  sdmmc_req_new_t req = {};
   req.cmd_idx = SDIO_SEND_OP_COND;
   req.arg = ocr;
   req.cmd_flags = SDIO_SEND_OP_COND_FLAGS;
-  req.use_dma = UseDma();
   req.suppress_error_messages = true;
   for (size_t i = 0; i < 100; i++) {
-    if ((st = Request(&req, 3, zx::msec(10))) != ZX_OK) {
+    uint32_t response[4];
+    if ((st = Request(req, response, 3, zx::msec(10))) != ZX_OK) {
       // fail on request error
       break;
     }
     // No need to wait for busy clear if probing
-    if ((ocr == 0) || (req.response[0] & MMC_OCR_BUSY)) {
-      *rocr = req.response[0];
+    if ((ocr == 0) || (response[0] & MMC_OCR_BUSY)) {
+      *rocr = response[0];
       break;
     }
     zx::nanosleep(zx::deadline_after(zx::msec(10)));
@@ -341,7 +378,7 @@ zx_status_t SdmmcDevice::SdioIoRwDirect(bool write, uint32_t fn_idx, uint32_t re
   UpdateBits(&cmd_arg, SDIO_IO_RW_DIRECT_REG_ADDR_MASK, SDIO_IO_RW_DIRECT_REG_ADDR_LOC, reg_addr);
   UpdateBits(&cmd_arg, SDIO_IO_RW_DIRECT_WRITE_BYTE_MASK, SDIO_IO_RW_DIRECT_WRITE_BYTE_LOC,
              write_byte);
-  sdmmc_req_t req = {};
+  sdmmc_req_new_t req = {};
   req.cmd_idx = SDIO_IO_RW_DIRECT;
   req.arg = cmd_arg;
   if (reg_addr == SDIO_CIA_CCCR_ASx_ABORT_SEL_CR_ADDR) {
@@ -350,17 +387,16 @@ zx_status_t SdmmcDevice::SdioIoRwDirect(bool write, uint32_t fn_idx, uint32_t re
   } else {
     req.cmd_flags = SDIO_IO_RW_DIRECT_FLAGS;
   }
-  req.use_dma = UseDma();
-  zx_status_t st = Request(&req);
+  uint32_t response[4];
+  zx_status_t st = Request(req, response);
   if (st != ZX_OK) {
     // Let the platform driver handle logging of this error.
     zxlogf(DEBUG, "SDIO_IO_RW_DIRECT failed, retcode = %d", st);
     return st;
   }
   if (read_byte) {
-    *read_byte =
-        static_cast<uint8_t>(GetBits(req.response[0], SDIO_IO_RW_DIRECT_RESP_READ_BYTE_MASK,
-                                     SDIO_IO_RW_DIRECT_RESP_READ_BYTE_LOC));
+    *read_byte = static_cast<uint8_t>(GetBits(response[0], SDIO_IO_RW_DIRECT_RESP_READ_BYTE_MASK,
+                                              SDIO_IO_RW_DIRECT_RESP_READ_BYTE_LOC));
   }
   return ZX_OK;
 }
@@ -475,20 +511,20 @@ zx_status_t SdmmcDevice::SdioIoRwExtended(uint32_t caps, bool write, uint8_t fn_
 zx_status_t SdmmcDevice::MmcSendOpCond(uint32_t ocr, uint32_t* rocr) {
   // Request sector addressing if not probing
   uint32_t arg = (ocr == 0) ? ocr : ((1 << 30) | ocr);
-  sdmmc_req_t req = {};
+  sdmmc_req_new_t req = {};
   req.cmd_idx = MMC_SEND_OP_COND;
   req.arg = arg;
   req.cmd_flags = MMC_SEND_OP_COND_FLAGS;
-  req.use_dma = UseDma();
   zx_status_t st;
   for (int i = 100; i; i--) {
-    if ((st = Request(&req)) != ZX_OK) {
+    uint32_t response[4];
+    if ((st = Request(req, response)) != ZX_OK) {
       // fail on request error
       break;
     }
     // No need to wait for busy clear if probing
-    if ((arg == 0) || (req.response[0] & MMC_OCR_BUSY)) {
-      *rocr = req.response[0];
+    if ((arg == 0) || (response[0] & MMC_OCR_BUSY)) {
+      *rocr = response[0];
       break;
     }
     zx::nanosleep(zx::deadline_after(zx::msec(10)));
@@ -497,87 +533,89 @@ zx_status_t SdmmcDevice::MmcSendOpCond(uint32_t ocr, uint32_t* rocr) {
 }
 
 zx_status_t SdmmcDevice::MmcAllSendCid(std::array<uint8_t, SDMMC_CID_SIZE>& cid) {
-  sdmmc_req_t req = {};
+  sdmmc_req_new_t req = {};
   req.cmd_idx = SDMMC_ALL_SEND_CID;
   req.arg = 0;
   req.cmd_flags = SDMMC_ALL_SEND_CID_FLAGS;
-  req.use_dma = UseDma();
-  zx_status_t st = Request(&req);
+  uint32_t response[4];
+  zx_status_t st = Request(req, response);
   auto* const cid_u32 = reinterpret_cast<uint32_t*>(cid.data());
   if (st == ZX_OK) {
-    cid_u32[0] = req.response[0];
-    cid_u32[1] = req.response[1];
-    cid_u32[2] = req.response[2];
-    cid_u32[3] = req.response[3];
+    cid_u32[0] = response[0];
+    cid_u32[1] = response[1];
+    cid_u32[2] = response[2];
+    cid_u32[3] = response[3];
   }
   return st;
 }
 
 zx_status_t SdmmcDevice::MmcSetRelativeAddr(uint16_t rca) {
   rca_ = rca;
-  sdmmc_req_t req = {};
+  sdmmc_req_new_t req = {};
   req.cmd_idx = MMC_SET_RELATIVE_ADDR;
   req.arg = RcaArg();
   req.cmd_flags = MMC_SET_RELATIVE_ADDR_FLAGS;
-  req.use_dma = UseDma();
-  return Request(&req);
+  uint32_t unused_response[4];
+  return Request(req, unused_response);
 }
 
 zx_status_t SdmmcDevice::MmcSendCsd(std::array<uint8_t, SDMMC_CSD_SIZE>& csd) {
-  sdmmc_req_t req = {};
+  sdmmc_req_new_t req = {};
   req.cmd_idx = SDMMC_SEND_CSD;
   req.arg = RcaArg();
   req.cmd_flags = SDMMC_SEND_CSD_FLAGS;
-  req.use_dma = UseDma();
-  zx_status_t st = Request(&req);
+  uint32_t response[4];
+  zx_status_t st = Request(req, response);
   auto* const csd_u32 = reinterpret_cast<uint32_t*>(csd.data());
   if (st == ZX_OK) {
-    csd_u32[0] = req.response[0];
-    csd_u32[1] = req.response[1];
-    csd_u32[2] = req.response[2];
-    csd_u32[3] = req.response[3];
+    csd_u32[0] = response[0];
+    csd_u32[1] = response[1];
+    csd_u32[2] = response[2];
+    csd_u32[3] = response[3];
   }
   return st;
 }
 
 zx_status_t SdmmcDevice::MmcSendExtCsd(std::array<uint8_t, MMC_EXT_CSD_SIZE>& ext_csd) {
   // EXT_CSD is send in a data stage
-  sdmmc_req_t req = {};
+  sdmmc_req_new_t req = {};
   req.cmd_idx = MMC_SEND_EXT_CSD;
   req.arg = 0;
-  req.blockcount = 1;
   req.blocksize = 512;
-  req.use_dma = false;
-  req.virt_buffer = ext_csd.data();
-  req.virt_size = 512;
   req.cmd_flags = MMC_SEND_EXT_CSD_FLAGS;
-  zx_status_t st = Request(&req);
-  if (st == ZX_OK && zxlog_level_enabled(TRACE)) {
+  uint32_t unused_response[4];
+  zx_status_t st = RequestWithBlockRead(req, unused_response, {ext_csd.data(), ext_csd.size()});
+  if (st != ZX_OK) {
+    return st;
+  }
+
+  if (zxlog_level_enabled(TRACE)) {
     zxlogf(TRACE, "EXT_CSD:");
     hexdump8_ex(ext_csd.data(), ext_csd.size(), 0);
   }
-  return st;
+
+  return ZX_OK;
 }
 
 zx_status_t SdmmcDevice::MmcSelectCard() {
-  sdmmc_req_t req = {};
+  sdmmc_req_new_t req = {};
   req.cmd_idx = MMC_SELECT_CARD;
   req.arg = RcaArg();
   req.cmd_flags = MMC_SELECT_CARD_FLAGS;
-  req.use_dma = UseDma();
-  return Request(&req);
+  uint32_t unused_response[4];
+  return Request(req, unused_response);
 }
 
 zx_status_t SdmmcDevice::MmcSwitch(uint8_t index, uint8_t value) {
   // Send the MMC_SWITCH command
   uint32_t arg = (3 << 24) |  // write byte
                  (index << 16) | (value << 8);
-  sdmmc_req_t req = {};
+  sdmmc_req_new_t req = {};
   req.cmd_idx = MMC_SWITCH;
   req.arg = arg;
   req.cmd_flags = MMC_SWITCH_FLAGS;
-  req.use_dma = UseDma();
-  return Request(&req);
+  uint32_t unused_response[4];
+  return Request(req, unused_response);
 }
 
 }  // namespace sdmmc

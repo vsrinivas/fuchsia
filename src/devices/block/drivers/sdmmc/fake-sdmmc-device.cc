@@ -190,6 +190,7 @@ zx_status_t FakeSdmmcDevice::SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_
   SdmmcVmoStore& owned_vmos = *registered_vmos_[req->client_id];
 
   fzl::VmoMapper linear_vmo;
+  uint16_t blockcount = 0;
   if (req->cmd_flags & SDMMC_RESP_DATA_PRESENT) {
     size_t total_size = 0;
     for (const sdmmc_buffer_region_t& buffer : buffers) {
@@ -211,13 +212,15 @@ zx_status_t FakeSdmmcDevice::SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_
         return status;
       }
     }
+
+    blockcount = static_cast<uint16_t>(linear_vmo.size() / req->blocksize);
   }
 
   sdmmc_req_t linear_req = {
       .cmd_idx = req->cmd_idx,
       .cmd_flags = req->cmd_flags,
       .arg = req->arg,
-      .blockcount = static_cast<uint16_t>(linear_vmo.size() / req->blocksize),
+      .blockcount = blockcount,
       .blocksize = static_cast<uint16_t>(req->blocksize),
       .use_dma = false,
       .dma_vmo = ZX_HANDLE_INVALID,
