@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"runtime"
 	stdtime "time"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
@@ -47,6 +48,23 @@ type Server struct {
 
 	mu     sync.Mutex
 	leases map[tcpip.LinkAddress]serverLease
+
+	testServerOptions testServerOptions
+}
+
+type testServerOptions struct {
+	// If set, the server will not set optDHCPServer in messages that do not
+	// require it, specifically DHCPACK and DHCPNAK.
+	// See: https://www.rfc-editor.org/rfc/rfc2132#section-9.7
+	omitServerIdentifierWhenNotRequired bool
+	// If set, when responding to DHCPDISCOVER with a DHCPOFFER, the server will
+	// send a DHCPOFFER (incorrectly) omitting the Server Identifier before
+	// sending a valid DHCPOFFER.
+	sendOfferWithoutServerIdentifierFirst bool
+	// If set, when responding to DHCPDISCOVER with a DHCPOFFER, the server will
+	// send a DHCPOFFER with a body of invalid length before sending a valid
+	// DHCPOFFER.
+	sendOfferWithInvalidOptionsFirst bool
 }
 
 // conn is a blocking read/write network endpoint.
@@ -112,7 +130,7 @@ func (c *epConn) Write(b []byte, addr *tcpip.FullAddress) error {
 	return nil
 }
 
-func newEPConnServer(ctx context.Context, stack *stack.Stack, addrs []tcpip.Address, cfg Config) (*Server, error) {
+func newEPConnServer(ctx context.Context, stack *stack.Stack, addrs []tcpip.Address, cfg Config, testServerOptions testServerOptions) (*Server, error) {
 	wq := new(waiter.Queue)
 	ep, err := stack.NewEndpoint(udp.ProtocolNumber, ipv4.ProtocolNumber, wq)
 	if err != nil {
@@ -125,12 +143,12 @@ func newEPConnServer(ctx context.Context, stack *stack.Stack, addrs []tcpip.Addr
 	}
 	ep.SocketOptions().SetBroadcast(true)
 	c := newEPConn(ctx, wq, ep)
-	return NewServer(ctx, c, addrs, cfg)
+	return NewServer(ctx, c, addrs, cfg, testServerOptions)
 }
 
 // NewServer creates a new DHCP server and begins serving.
 // The server continues serving until ctx is done.
-func NewServer(ctx context.Context, c conn, addrs []tcpip.Address, cfg Config) (*Server, error) {
+func NewServer(ctx context.Context, c conn, addrs []tcpip.Address, cfg Config, testServerOptions testServerOptions) (*Server, error) {
 	if cfg.ServerAddress == "" {
 		return nil, fmt.Errorf("dhcp: server requires explicit server address")
 	}
@@ -146,6 +164,8 @@ func NewServer(ctx context.Context, c conn, addrs []tcpip.Address, cfg Config) (
 
 		handlers: make([]chan hdr, 8),
 		leases:   make(map[tcpip.LinkAddress]serverLease),
+
+		testServerOptions: testServerOptions,
 	}
 
 	for i := 0; i < len(s.handlers); i++ {
@@ -303,14 +323,36 @@ func (s *Server) handleDiscover(hreq hdr, opts options) {
 		{optDHCPServer, []byte(s.cfg.ServerAddress)},
 	}
 	opts = append(opts, s.cfgopts...)
-	h := make(hdr, headerBaseSize+opts.len()+1)
-	h.init()
-	h.setOp(opReply)
-	copy(h.xidbytes(), hreq.xidbytes())
-	copy(h.yiaddr(), lease.addr)
-	copy(h.chaddr(), hreq.chaddr())
-	h.setOptions(opts)
-	s.conn.Write(h, &s.broadcast)
+
+	sendOffer := func(opts options) {
+		h := make(hdr, headerBaseSize+opts.len()+1)
+		h.init()
+		h.setOp(opReply)
+		copy(h.xidbytes(), hreq.xidbytes())
+		copy(h.yiaddr(), lease.addr)
+		copy(h.chaddr(), hreq.chaddr())
+		h.setOptions(opts)
+		s.conn.Write(h, &s.broadcast)
+	}
+
+	if s.testServerOptions.sendOfferWithoutServerIdentifierFirst {
+		sendOffer(filterOptions(func(opt option) bool {
+			return opt.code != optDHCPServer
+		}, opts))
+		runtime.Gosched()
+	}
+
+	if s.testServerOptions.sendOfferWithInvalidOptionsFirst {
+		opts := append([]option(nil), []option(opts)...)
+		opts = append(opts, option{
+			optRouter,
+			// optRouter is required to have a body with length divisible by 4.
+			[]byte{1, 2, 3},
+		})
+		sendOffer(opts)
+		runtime.Gosched()
+	}
+	sendOffer(opts)
 }
 
 func (s *Server) nack(hreq hdr) {
@@ -319,6 +361,12 @@ func (s *Server) nack(hreq hdr) {
 		{optDHCPMsgType, []byte{byte(dhcpNAK)}},
 		{optDHCPServer, []byte(s.cfg.ServerAddress)},
 	})
+	if s.testServerOptions.omitServerIdentifierWhenNotRequired {
+		// We have to filter all of opts here rather than simply not including
+		// optDHCPServer in the literal above because optDHCPServer could also be
+		// present in s.cfgopts.
+		opts = filterOptions(func(opt option) bool { return opt.code != optDHCPServer }, opts)
+	}
 	h := make(hdr, headerBaseSize+opts.len()+1)
 	h.init()
 	h.setOp(opReply)
@@ -372,6 +420,14 @@ func (s *Server) handleRequest(hreq hdr, opts options) {
 		{optDHCPServer, []byte(s.cfg.ServerAddress)},
 	}
 	opts = append(opts, s.cfgopts...)
+
+	if s.testServerOptions.omitServerIdentifierWhenNotRequired {
+		// We have to filter all of opts here rather than simply not including
+		// optDHCPServer in the literal above because optDHCPServer could also be
+		// present in s.cfgopts.
+		opts = filterOptions(func(opt option) bool { return opt.code != optDHCPServer }, opts)
+	}
+
 	h := make(hdr, headerBaseSize+opts.len()+1)
 	h.init()
 	h.setOp(opReply)
@@ -389,6 +445,16 @@ func (s *Server) handleRequest(hreq hdr, opts options) {
 		}
 	}
 	s.conn.Write(h, &addr)
+}
+
+func filterOptions(pred func(option) bool, opts []option) []option {
+	var newOpts []option
+	for _, opt := range opts {
+		if pred(opt) {
+			newOpts = append(newOpts, opt)
+		}
+	}
+	return newOpts
 }
 
 type leaseState int
