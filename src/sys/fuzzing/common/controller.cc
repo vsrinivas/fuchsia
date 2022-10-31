@@ -87,8 +87,7 @@ void ControllerImpl::AddToCorpus(CorpusType corpus_type, FidlInput fidl_input,
                     return AsyncSocketRead(executor_, std::move(fidl_input));
                   })
                   .and_then([this, corpus_type](Input& received) -> ZxResult<> {
-                    runner_->AddToCorpus(corpus_type, std::move(received));
-                    return fpromise::ok();
+                    return AsZxResult(runner_->AddToCorpus(corpus_type, std::move(received)));
                   })
                   .then([callback = std::move(callback)](const ZxResult<>& result) {
                     callback(result.is_ok() ? ZX_OK : result.error());
