@@ -1895,6 +1895,7 @@ TEST_P(VulkanFormatTest, FastClear) {
 
     vk::ImageFormatConstraintsInfoFUCHSIA format_constraints =
         GetDefaultRgbImageFormatConstraintsInfo();
+    format_constraints.requiredFormatFeatures |= vk::FormatFeatureFlagBits::eColorAttachment;
     format_constraints.imageCreateInfo = image_create_info;
 
     UniqueBufferCollection collection = CreateVkBufferCollectionForImage(
