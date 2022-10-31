@@ -340,6 +340,49 @@ TEST(FsckTest, UnreachableSitEntryInJournal) {
   ASSERT_EQ(Fsck(std::move(bc), FsckOptions{.repair = false}), ZX_OK);
 }
 
+TEST(FsckTest, OrphanNodes) {
+  std::unique_ptr<Bcache> bc;
+  FileTester::MkfsOnFakeDev(&bc);
+
+  // Preconditioning
+  {
+    std::unique_ptr<F2fs> fs;
+    async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+    MountOptions options;
+    ASSERT_EQ(options.SetValue(options.GetNameView(kOptInlineData), 0), ZX_OK);
+    FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+
+    fbl::RefPtr<VnodeF2fs> root;
+    FileTester::CreateRoot(fs.get(), &root);
+    fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
+
+    fbl::RefPtr<fs::Vnode> vn;
+    ASSERT_EQ(root_dir->Create("test", S_IFREG, &vn), ZX_OK);
+    auto file = fbl::RefPtr<File>::Downcast(std::move(vn));
+
+    char buf[kPageSize] = {
+        0,
+    };
+    FileTester::AppendToFile(file.get(), buf, kPageSize);
+    WritebackOperation op = {.bSync = true};
+    fs->SyncDirtyDataPages(op);
+    fs->WriteCheckpoint(false, false);
+
+    FileTester::DeleteChild(root_dir.get(), "test", false);
+    fs->WriteCheckpoint(false, false);
+
+    ASSERT_EQ(file->Close(), ZX_OK);
+    file = nullptr;
+    ASSERT_EQ(root_dir->Close(), ZX_OK);
+    root_dir = nullptr;
+    FileTester::SuddenPowerOff(std::move(fs), &bc);
+  }
+
+  FsckWorker fsck(std::move(bc), FsckOptions{.repair = false});
+  ASSERT_EQ(fsck.DoMount(), ZX_OK);
+  ASSERT_EQ(fsck.DoFsck(), ZX_OK);
+}
+
 TEST(FsckTest, WrongInodeHardlinkCount) {
   std::unique_ptr<Bcache> bc;
   nid_t ino;

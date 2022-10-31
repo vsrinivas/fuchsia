@@ -250,7 +250,7 @@ zx::result<bool> FsckWorker::UpdateContext(const Node &node_block, NodeInfoDepre
 
     if (ntype == NodeType::kTypeInode) {
       uint32_t i_links = LeToCpu(node_block.i.i_links);
-      if (ftype != FileType::kFtDir) {
+      if (ftype != FileType::kFtDir && ftype != FileType::kFtOrphan) {
         // First time visiting this inode.
         AddIntoInodeLinkMap(nid, i_links);
         if (i_links > 1) {

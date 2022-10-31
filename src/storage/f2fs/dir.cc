@@ -511,6 +511,7 @@ void Dir::DeleteEntry(DirEntry *dentry, fbl::RefPtr<Page> &page, VnodeF2fs *vnod
         WriteInode(false);
       }
 
+      vnode->MarkInodeDirty();
       vnode->SetCTime(cur_time);
       vnode->DropNlink();
       if (vnode->IsDir()) {

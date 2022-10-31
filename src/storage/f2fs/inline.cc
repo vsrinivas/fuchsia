@@ -284,6 +284,7 @@ void Dir::DeleteInlineEntry(DirEntry *dentry, fbl::RefPtr<Page> &page, VnodeF2fs
     clock_gettime(CLOCK_REALTIME, &cur_time);
     SetCTime(cur_time);
     SetMTime(cur_time);
+    vnode->MarkInodeDirty();
     vnode->SetCTime(cur_time);
     vnode->DropNlink();
     if (vnode->IsDir()) {
