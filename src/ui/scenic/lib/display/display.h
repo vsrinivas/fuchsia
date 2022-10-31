@@ -58,10 +58,6 @@ class Display {
 
   glm::vec2 device_pixel_ratio() const { return device_pixel_ratio_.load(); }
 
-  // TODO(fxb/99312): Remove real_device_pixel_ratio() when we complete the scale
-  // work in tree and all clients.
-  glm::vec2 real_device_pixel_ratio() const { return device_pixel_ratio_.load(); }
-
   // TODO(fxbug.dev/71410): Remove all references to zx_pixel_format_t.
   const std::vector<zx_pixel_format_t>& pixel_formats() const { return pixel_formats_; }
 
