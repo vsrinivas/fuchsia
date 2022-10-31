@@ -246,12 +246,11 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
 
     // Connect to netstack, and create the ethernet interface
     zx_status_t status = CreateGuestInterface();
-    if (status != ZX_OK) {
-      bindings_.CloseAll(status);
-      return;
+    if (status == ZX_OK) {
+      callback(fpromise::ok());
+    } else {
+      callback(fpromise::error(status));
     }
-
-    callback();
   }
 
   // Create a GuestEthernet interface and connect it to Netstack.

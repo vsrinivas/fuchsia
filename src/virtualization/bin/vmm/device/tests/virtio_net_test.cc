@@ -24,6 +24,7 @@
 
 namespace {
 
+using fuchsia::virtualization::hardware::VirtioNet_Start_Result;
 using fuchsia_hardware_network::wire::PortId;
 using network::client::NetworkDeviceClient;
 
@@ -184,7 +185,11 @@ class VirtioNetTest : public TestWithDevice,
     // Start the device, waiting for it to complete before attempting to use it.
     {
       bool done = false;
-      net_->Start(std::move(start_info), mac_address, /*enable_bridge=*/true, [&] { done = true; });
+      net_->Start(std::move(start_info), mac_address, /*enable_bridge=*/true,
+                  [&](VirtioNet_Start_Result result) {
+                    done = true;
+                    ASSERT_TRUE(result.is_response());
+                  });
       RunLoopUntil([&] { return done; });
     }
 

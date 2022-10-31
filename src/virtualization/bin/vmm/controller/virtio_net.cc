@@ -37,22 +37,27 @@ zx_status_t VirtioNet::Start(const zx::guest& guest,
   if (status != ZX_OK) {
     return status;
   }
+
+  {
+    std::lock_guard<std::mutex> lock(device_config_.mutex);
+    config_.status = VIRTIO_NET_S_LINK_UP;
+    config_.max_virtqueue_pairs = 1;
+    memcpy(config_.mac, mac_address.octets.data(), sizeof(config_.mac));
+  }
+
   fuchsia::virtualization::hardware::StartInfo start_info;
   status = PrepStart(guest, dispatcher, &start_info);
   if (status != ZX_OK) {
     return status;
   }
-  status = net_->Start(std::move(start_info), mac_address, enable_bridge);
+
+  ::fuchsia::virtualization::hardware::VirtioNet_Start_Result result;
+  status = net_->Start(std::move(start_info), mac_address, enable_bridge, &result);
   if (status != ZX_OK) {
     return status;
   }
 
-  std::lock_guard<std::mutex> lock(device_config_.mutex);
-  config_.status = VIRTIO_NET_S_LINK_UP;
-  config_.max_virtqueue_pairs = 1;
-  memcpy(config_.mac, mac_address.octets.data(), sizeof(config_.mac));
-
-  return ZX_OK;
+  return result.is_err() ? result.err() : ZX_OK;
 }
 
 zx_status_t VirtioNet::ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,

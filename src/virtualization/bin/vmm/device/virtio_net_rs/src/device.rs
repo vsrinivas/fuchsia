@@ -40,9 +40,9 @@ pub struct NetDevice<T: GuestEthernetInterface> {
 impl<T: GuestEthernetInterface> NetDevice<T> {
     // Create a NetDevice. This creates the C++ GuestEthernet object, initializes the C++ dispatch
     // loop on a new thread, etc.
-    pub fn new() -> Result<Self, Error> {
+    pub fn new() -> Result<Self, zx::Status> {
         let GuestEthernetNewResult { guest_ethernet, status_rx, notify_rx, receive_packet_rx } =
-            T::new().map_err(|status| anyhow!("failed to create GuestEthernet: {}", status))?;
+            T::new()?;
 
         Ok(Self {
             ethernet: guest_ethernet,
@@ -262,24 +262,14 @@ impl<T: GuestEthernetInterface> NetDevice<T> {
         &mut self,
         mac_address: MacAddress,
         enable_bridge: bool,
-    ) -> Result<(), Error> {
-        self.ethernet.initialize(mac_address, enable_bridge).map_err(|status| {
-            anyhow!("failed to setup asynchronous GuestEthernet initialization: {}", status)
-        })?;
-
+    ) -> Result<(), zx::Status> {
         // The C++ GuestEthernet object will push an ZX_OK status after a successful initialization.
+        self.ethernet.initialize(mac_address, enable_bridge)?;
         self.ready().await
     }
 
-    async fn ready(&mut self) -> Result<(), Error> {
-        let status =
-            self.status_rx.get_mut().next().await.expect("unexpected end of status stream");
-
-        if status == zx::Status::OK {
-            Ok(())
-        } else {
-            Err(anyhow!("failed to initialize GuestEthernet: {}", status))
-        }
+    async fn ready(&mut self) -> Result<(), zx::Status> {
+        self.status_rx.get_mut().next().await.expect("unexpected end of status stream").into()
     }
 
     // Surfaces any unrecoverable errors encountered by the C++ GuestEthernet object. After the
