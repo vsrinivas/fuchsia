@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be found
 // in the LICENSE file.
 
+#include <fuchsia/media/audio/cpp/fidl.h>
 #include <zircon/device/audio.h>
 
 #include <algorithm>
 #include <cmath>
 
-#include "fuchsia/media/audio/cpp/fidl.h"
 #include "src/media/audio/audio_core/driver_output.h"
 #include "src/media/audio/audio_core/test/api/fidelity_results.h"
 #include "src/media/audio/audio_core/testing/integration/hermetic_fidelity_test.h"

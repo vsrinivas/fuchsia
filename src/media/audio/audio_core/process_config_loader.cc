@@ -4,6 +4,7 @@
 
 #include "src/media/audio/audio_core/process_config_loader.h"
 
+#include <fuchsia/media/audio/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
@@ -15,7 +16,6 @@
 #include <rapidjson/error/en.h>
 #include <rapidjson/schema.h>
 
-#include "fuchsia/media/audio/cpp/fidl.h"
 #include "rapidjson/prettywriter.h"
 #include "src/lib/files/file.h"
 #include "src/media/audio/audio_core/mix_profile_config.h"

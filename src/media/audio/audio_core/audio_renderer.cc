@@ -5,12 +5,12 @@
 #include "src/media/audio/audio_core/audio_renderer.h"
 
 #include <fuchsia/media/audio/cpp/fidl.h>
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <string>
 
-#include "fuchsia/media/cpp/fidl.h"
 #include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/logging_flags.h"
 #include "src/media/audio/audio_core/reporter.h"
