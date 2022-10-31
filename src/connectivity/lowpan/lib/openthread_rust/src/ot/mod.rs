@@ -1,4 +1,4 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -120,6 +120,9 @@ pub use otbox::*;
 
 mod dataset;
 pub use dataset::*;
+
+mod backbone_router;
+pub use backbone_router::*;
 
 mod border_router;
 pub use border_router::*;

@@ -1,4 +1,4 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -15,6 +15,8 @@ pub(crate) struct InstanceBacking {
     pub cli_output_fn: Cell<Option<std::boxed::Box<dyn FnMut(&CStr)>>>,
     pub ip6_receive_fn: Cell<Option<std::boxed::Box<dyn FnMut(OtMessageBox<'_>)>>>,
     pub ip6_address_fn: Cell<Option<std::boxed::Box<dyn FnMut(Ip6AddressInfo<'_>, bool)>>>,
+    pub multicast_listener_callback:
+        Cell<Option<std::boxed::Box<dyn FnMut(BackboneRouterMulticastListenerEvent, &Ip6Address)>>>,
     pub active_scan_fn: Cell<Option<std::boxed::Box<dyn FnMut(Option<&ActiveScanResult>)>>>,
     pub energy_scan_fn: Cell<Option<std::boxed::Box<dyn FnMut(Option<&EnergyScanResult>)>>>,
     pub joiner_fn: Cell<Option<std::boxed::Box<dyn FnOnce(Result)>>>,
@@ -38,6 +40,7 @@ impl InstanceBacking {
             joiner_fn: Cell::new(None),
             srp_server_service_update_fn: Cell::new(None),
             dnssd_query_sub_unsub_fn: Cell::new(None),
+            multicast_listener_callback: Cell::new(None),
         }
     }
 }

@@ -1,7 +1,9 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod backbone_router_multicast_listener_event;
+mod backbone_router_multicast_listener_info;
 mod border_router_config;
 mod castable;
 mod channel_mask;
@@ -30,6 +32,8 @@ mod tlv;
 
 use crate::prelude_internal::*;
 
+pub use backbone_router_multicast_listener_event::*;
+pub use backbone_router_multicast_listener_info::*;
 pub use border_router_config::*;
 pub use castable::*;
 pub use channel_mask::*;

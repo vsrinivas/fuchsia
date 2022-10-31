@@ -1,4 +1,4 @@
-# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -30,6 +30,7 @@ rustc_library("openthread") {
 
   sources = [
     "src/lib.rs",
+    "src/ot/backbone_router.rs",
     "src/ot/border_agent.rs",
     "src/ot/border_router.rs",
     "src/ot/cli.rs",
@@ -55,6 +56,8 @@ rustc_library("openthread") {
     "src/ot/tasklets.rs",
     "src/ot/thread.rs",
     "src/ot/trel.rs",
+    "src/ot/types/backbone_router_multicast_listener_event.rs",
+    "src/ot/types/backbone_router_multicast_listener_info.rs",
     "src/ot/types/border_router_config.rs",
     "src/ot/types/castable.rs",
     "src/ot/types/channel_mask.rs",

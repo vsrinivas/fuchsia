@@ -1,4 +1,4 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -34,6 +34,7 @@ pub mod prelude {
 
     pub use crate::{ot, otsys};
     pub use crate::{OtBox, OtInstanceBox, OtMessageBox};
+    pub use ot::BackboneRouter as _;
     pub use ot::BorderRouter as _;
     pub use ot::Boxable as _;
     pub use ot::Dnssd as _;
@@ -72,8 +73,8 @@ pub(crate) mod prelude_internal {
     pub(crate) use ot::ascii_dump;
     pub use ot::Result;
     pub use ot::{
-        types::*, BorderRouter, Boxable, Error, Instance, InstanceInterface, Ip6, Link, Message,
-        MessageBuffer, Platform, SrpServer, Tasklets, Thread,
+        types::*, BackboneRouter, BorderRouter, Boxable, Error, Instance, InstanceInterface, Ip6,
+        Link, Message, MessageBuffer, Platform, SrpServer, Tasklets, Thread,
     };
     pub use static_assertions as sa;
     pub use std::ffi::{CStr, CString};
