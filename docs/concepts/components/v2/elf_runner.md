@@ -39,7 +39,7 @@ The arguments set will be passed in the same order as declared in the manifest.
     program: {
         runner: "elf",
         binary: "bin/foo",
-        args: ["--verbose", "--debug"]
+        {{ '<strong>' }}args: ["--verbose", "--debug"]{{ '</strong>' }}
     }
 }
 ```
@@ -72,8 +72,8 @@ explicit flags:
     program: {
         runner: "elf",
         binary: "bin/foo",
-        forward_stdout_to: "none",
-        forward_stderr_to: "none",
+        {{ '<strong>' }}forward_stdout_to: "none",{{ '</strong>' }}
+        {{ '<strong>' }}forward_stderr_to: "none",{{ '</strong>' }}
     }
 ```
 
@@ -92,7 +92,7 @@ manifest. Currently `stop` is the only method in the Lifecycle protocol.
     program: {
         runner: "elf",
         binary: "bin/foo",
-        lifecycle: { stop_event: "notify" },
+        {{ '<strong>' }}lifecycle: { stop_event: "notify" },{{ '</strong>' }}
     }
 }
 ```
@@ -125,6 +125,7 @@ cause component manager (and all components) to be terminated if the process
 exits with a non-zero code. This will force the system to trigger a hard reboot.
 
 #### Ambient VMO Exec
+
 The `ambient_mark_vmo_exec` field may be used to allow the component's first
 process to use [`zx_vmo_replace_as_executable`][vmo-replace] with a
 `ZX_HANDLE_INVALID` as the second argument rather than a valid
@@ -132,14 +133,35 @@ process to use [`zx_vmo_replace_as_executable`][vmo-replace] with a
 
 #### Create Raw Processes
 
-The `create_raw_processes` field may be used to allow a component to create
-processes by using [`zx_process_create`][process-create].
+The `job_policy_create_raw_processes` field may be used to allow a component to
+create processes by using [`zx_process_create`][process-create].
+
+```json5
+{
+    program: {
+        runner: "elf",
+        binary: "bin/foo",
+        {{ '<strong>' }}job_policy_create_raw_processes: "true"{{ '</strong>' }}
+    }
+}
+```
 
 #### Is Shared Process
 
 The `is_shared_process` field may be used to pass the `ZX_PROCESS_SHARED` flag
 when calling [`zx_process_create`][process-create]. This flag can only be used
-if the component also has `create_raw_processes` set to `true`.
+if the component also has `job_policy_create_raw_processes` set to `true`.
+
+```json5
+{
+    program: {
+        runner: "elf",
+        binary: "bin/foo",
+        job_policy_create_raw_processes: "true",
+        {{ '<strong>' }}is_shared_process: "true"{{ '</strong>' }}
+    }
+}
+```
 
 ## Further Reading
 
@@ -159,10 +181,10 @@ and `red`.
     program: {
         runner: "elf",
         binary: "bin/echo",
-        environ: [
-            "FAVORITE_ANIMAL=cat",
-            "FAVORITE_COLOR=red",
-        ]
+        {{ '<strong>' }}environ: [{{ '</strong>' }}
+            {{ '<strong>' }}"FAVORITE_ANIMAL=cat",{{ '</strong>' }}
+            {{ '<strong>' }}"FAVORITE_COLOR=red",{{ '</strong>' }}
+        {{ '<strong>' }}]{{ '</strong>' }}
     }
 }
 ```
