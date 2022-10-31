@@ -20,7 +20,8 @@ namespace sdmmc {
 class SdmmcBlockDevice;
 
 class PartitionDevice;
-using PartitionDeviceType = ddk::Device<PartitionDevice, ddk::GetSizable, ddk::GetProtocolable>;
+using PartitionDeviceType =
+    ddk::Device<PartitionDevice, ddk_deprecated::GetSizable, ddk::GetProtocolable>;
 
 class PartitionDevice : public PartitionDeviceType,
                         public ddk::BlockImplProtocol<PartitionDevice, ddk::base_protocol>,

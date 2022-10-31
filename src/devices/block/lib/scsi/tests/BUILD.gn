@@ -33,6 +33,10 @@ test("scsilib-disk-test-bin") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zxtest",
   ]
+
+  # TODO(fxbug.dev/33820): This target uses the deprecated GetSizable.
+  # Please migrate away from this feature.
+  configs += [ "//src/lib/ddktl:deprecated-getsizable" ]
 }
 
 fuchsia_unittest_package("scsilib-disk-test") {

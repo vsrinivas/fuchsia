@@ -157,6 +157,10 @@ fuchsia_driver("block-verity-driver") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
   ]
+
+  # TODO(fxbug.dev/33820): This target uses the deprecated GetSizable.
+  # Please migrate away from this feature.
+  configs += [ "//src/lib/ddktl:deprecated-getsizable" ]
 }
 
 fuchsia_driver_component("block-verity") {

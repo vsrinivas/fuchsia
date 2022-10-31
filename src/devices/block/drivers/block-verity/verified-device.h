@@ -25,7 +25,7 @@ namespace block_verity {
 // See ddk::Device in ddktl/device.h
 class VerifiedDevice;
 using VerifiedDeviceType =
-    ddk::Device<VerifiedDevice, ddk::GetProtocolable, ddk::GetSizable, ddk::Unbindable>;
+    ddk::Device<VerifiedDevice, ddk::GetProtocolable, ddk_deprecated::GetSizable, ddk::Unbindable>;
 
 // A DDK device that speaks the ddk block protocol, providing a block device
 // that exposes the data section of the device for reads.  It verifies each read

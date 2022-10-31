@@ -30,6 +30,10 @@ fuchsia_driver("usb-mass-storage-driver") {
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
   ]
+
+  # TODO(fxbug.dev/33820): This target uses the deprecated GetSizable.
+  # Please migrate away from this feature.
+  configs += [ "//src/lib/ddktl:deprecated-getsizable" ]
 }
 
 fuchsia_driver_component("usb-mass-storage") {
@@ -59,6 +63,10 @@ source_set("block") {
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
+
+  # TODO(fxbug.dev/33820): This target uses the deprecated GetSizable.
+  # Please migrate away from this feature.
+  configs += [ "//src/lib/ddktl:deprecated-getsizable" ]
 }
 
 test("ums-block") {
@@ -72,6 +80,10 @@ test("ums-block") {
     "//src/devices/testing/fake_ddk",
     "//zircon/system/ulib/zxtest",
   ]
+
+  # TODO(fxbug.dev/33820): This target uses the deprecated GetSizable.
+  # Please migrate away from this feature.
+  configs += [ "//src/lib/ddktl:deprecated-getsizable" ]
 }
 
 fuchsia_unittest_package("ums-block-test") {
@@ -94,6 +106,10 @@ test("ums") {
     "//src/devices/usb/lib/usb",
     "//zircon/system/ulib/zxtest",
   ]
+
+  # TODO(fxbug.dev/33820): This target uses the deprecated GetSizable.
+  # Please migrate away from this feature.
+  configs += [ "//src/lib/ddktl:deprecated-getsizable" ]
 }
 
 fuchsia_unittest_package("ums-test") {

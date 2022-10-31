@@ -44,6 +44,10 @@ fuchsia_driver("ram-nand-driver") {
   # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
   # rather than builders.
   configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
+
+  # TODO(fxbug.dev/33820): This target uses the deprecated GetSizable.
+  # Please migrate away from this feature.
+  configs += [ "//src/lib/ddktl:deprecated-getsizable" ]
 }
 
 fuchsia_driver_component("ram-nand") {
@@ -72,6 +76,10 @@ source_set("common") {
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+
+  # TODO(fxbug.dev/33820): This target uses the deprecated GetSizable.
+  # Please migrate away from this feature.
+  configs += [ "//src/lib/ddktl:deprecated-getsizable" ]
 }
 
 test("test") {
@@ -111,6 +119,10 @@ test("test") {
   # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
   # rather than builders.
   configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
+
+  # TODO(fxbug.dev/33820): This target uses the deprecated GetSizable.
+  # Please migrate away from this feature.
+  configs += [ "//src/lib/ddktl:deprecated-getsizable" ]
 }
 
 fuchsia_unittest_package("ram-nand-test") {

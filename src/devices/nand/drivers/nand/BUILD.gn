@@ -37,6 +37,10 @@ source_set("common") {
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
   ]
+
+  # TODO(fxbug.dev/33820): This target uses the deprecated GetSizable.
+  # Please migrate away from this feature.
+  configs += [ "//src/lib/ddktl:deprecated-getsizable" ]
 }
 
 fuchsia_driver("nand-driver") {
@@ -45,6 +49,10 @@ fuchsia_driver("nand-driver") {
     ":common",
     "//src/devices/lib/driver",
   ]
+
+  # TODO(fxbug.dev/33820): This target uses the deprecated GetSizable.
+  # Please migrate away from this feature.
+  configs += [ "//src/lib/ddktl:deprecated-getsizable" ]
 }
 
 fuchsia_driver_component("nand") {

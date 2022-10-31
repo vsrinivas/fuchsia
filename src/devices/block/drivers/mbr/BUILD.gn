@@ -49,6 +49,10 @@ fuchsia_driver("mbr-driver") {
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
+
+  # TODO(fxbug.dev/33820): This target uses the deprecated GetSizable.
+  # Please migrate away from this feature.
+  configs += [ "//src/lib/ddktl:deprecated-getsizable" ]
 }
 
 fuchsia_driver_component("mbr") {
@@ -81,6 +85,10 @@ test("mbr-test-bin") {
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
+
+  # TODO(fxbug.dev/33820): This target uses the deprecated GetSizable.
+  # Please migrate away from this feature.
+  configs += [ "//src/lib/ddktl:deprecated-getsizable" ]
 }
 
 fuchsia_unittest_package("mbr-test") {

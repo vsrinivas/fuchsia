@@ -13,6 +13,10 @@ fuchsia_driver("skip-block-driver") {
     ":common",
     "//src/devices/lib/driver",
   ]
+
+  # TODO(fxbug.dev/33820): This target uses the deprecated GetSizable.
+  # Please migrate away from this feature.
+  configs += [ "//src/lib/ddktl:deprecated-getsizable" ]
 }
 
 fuchsia_driver_component("skip-block") {
@@ -53,6 +57,10 @@ source_set("common") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zircon-internal",
   ]
+
+  # TODO(fxbug.dev/33820): This target uses the deprecated GetSizable.
+  # Please migrate away from this feature.
+  configs += [ "//src/lib/ddktl:deprecated-getsizable" ]
 }
 
 test("skip-block-test-bin") {
@@ -72,6 +80,10 @@ test("skip-block-test-bin") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/zxtest",
   ]
+
+  # TODO(fxbug.dev/33820): This target uses the deprecated GetSizable.
+  # Please migrate away from this feature.
+  configs += [ "//src/lib/ddktl:deprecated-getsizable" ]
 }
 
 fuchsia_unittest_package("skip-block-test") {

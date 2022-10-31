@@ -32,6 +32,10 @@ fuchsia_driver("virtio_block-driver") {
     "//src/devices/lib/driver",
     "//src/lib/ddktl",
   ]
+
+  # TODO(fxbug.dev/33820): This target uses the deprecated GetSizable.
+  # Please migrate away from this feature.
+  configs += [ "//src/lib/ddktl:deprecated-getsizable" ]
 }
 
 fuchsia_driver_component("virtio_block") {
@@ -53,6 +57,10 @@ source_set("block_lib") {
     "//src/lib/ddktl",
     "//src/lib/listnode",
   ]
+
+  # TODO(fxbug.dev/33820): This target uses the deprecated GetSizable.
+  # Please migrate away from this feature.
+  configs += [ "//src/lib/ddktl:deprecated-getsizable" ]
 }
 
 source_set("scsi_lib") {
@@ -64,6 +72,10 @@ source_set("scsi_lib") {
     "//src/devices/bus/lib/virtio",
     "//src/lib/ddktl",
   ]
+
+  # TODO(fxbug.dev/33820): This target uses the deprecated GetSizable.
+  # Please migrate away from this feature.
+  configs += [ "//src/lib/ddktl:deprecated-getsizable" ]
 }
 
 driver_bind_rules("virtio_scsi_bind") {
@@ -87,6 +99,10 @@ fuchsia_driver("virtio_scsi-driver") {
     "//src/devices/lib/driver",
     "//src/lib/ddktl",
   ]
+
+  # TODO(fxbug.dev/33820): This target uses the deprecated GetSizable.
+  # Please migrate away from this feature.
+  configs += [ "//src/lib/ddktl:deprecated-getsizable" ]
 }
 
 fuchsia_driver_component("virtio_scsi") {
@@ -115,6 +131,10 @@ test("virtio-block-test-bin") {
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/zxtest",
   ]
+
+  # TODO(fxbug.dev/33820): This target uses the deprecated GetSizable.
+  # Please migrate away from this feature.
+  configs += [ "//src/lib/ddktl:deprecated-getsizable" ]
 }
 
 test("virtio-scsi-test-bin") {
@@ -136,6 +156,10 @@ test("virtio-scsi-test-bin") {
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/zxtest",
   ]
+
+  # TODO(fxbug.dev/33820): This target uses the deprecated GetSizable.
+  # Please migrate away from this feature.
+  configs += [ "//src/lib/ddktl:deprecated-getsizable" ]
 }
 
 group("tests") {

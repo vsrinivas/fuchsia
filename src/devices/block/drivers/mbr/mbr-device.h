@@ -26,7 +26,7 @@
 namespace mbr {
 
 class MbrDevice;
-using DeviceType = ddk::Device<MbrDevice, ddk::GetProtocolable, ddk::GetSizable>;
+using DeviceType = ddk::Device<MbrDevice, ddk::GetProtocolable, ddk_deprecated::GetSizable>;
 
 class MbrDevice final : public DeviceType,
                         public ddk::BlockImplProtocol<MbrDevice, ddk::base_protocol>,

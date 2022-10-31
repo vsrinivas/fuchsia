@@ -49,7 +49,7 @@ struct FtlOp {
 };
 
 class BlockDevice;
-using DeviceType = ddk::Device<BlockDevice, ddk::GetSizable, ddk::Unbindable,
+using DeviceType = ddk::Device<BlockDevice, ddk_deprecated::GetSizable, ddk::Unbindable,
                                ddk::Messageable<fuchsia_hardware_block::Ftl>::Mixin,
                                ddk::Suspendable, ddk::Resumable, ddk::GetProtocolable>;
 

@@ -46,6 +46,10 @@ fuchsia_driver("gpt-driver") {
     "//zircon/system/ulib/sync",
     "//zircon/third_party/ulib/cksum",
   ]
+
+  # TODO(fxbug.dev/33820): This target uses the deprecated GetSizable.
+  # Please migrate away from this feature.
+  configs += [ "//src/lib/ddktl:deprecated-getsizable" ]
 }
 
 fuchsia_driver_component("gpt") {
@@ -77,6 +81,10 @@ test("gpt-device-test-bin") {
     "//zircon/system/ulib/zxtest",
     "//zircon/third_party/ulib/cksum",
   ]
+
+  # TODO(fxbug.dev/33820): This target uses the deprecated GetSizable.
+  # Please migrate away from this feature.
+  configs += [ "//src/lib/ddktl:deprecated-getsizable" ]
 }
 
 fuchsia_unittest_package("gpt-device-test") {

@@ -35,7 +35,8 @@ struct block_txn_t {
 
 class Ring;
 class BlockDevice;
-using DeviceType = ddk::Device<BlockDevice, ddk::GetProtocolable, ddk::GetSizable, ddk::Unbindable>;
+using DeviceType =
+    ddk::Device<BlockDevice, ddk::GetProtocolable, ddk_deprecated::GetSizable, ddk::Unbindable>;
 class BlockDevice : public Device,
                     // Mixins for protocol device:
                     public DeviceType,

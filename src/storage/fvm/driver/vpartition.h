@@ -27,7 +27,8 @@ namespace fvm {
 class VPartitionManager;
 class VPartition;
 
-using PartitionDeviceType = ddk::Device<VPartition, ddk::GetProtocolable, ddk::GetSizable>;
+using PartitionDeviceType =
+    ddk::Device<VPartition, ddk::GetProtocolable, ddk_deprecated::GetSizable>;
 
 class VPartition : public PartitionDeviceType,
                    public ddk::BlockImplProtocol<VPartition, ddk::base_protocol>,

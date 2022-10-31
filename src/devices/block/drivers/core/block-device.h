@@ -54,7 +54,7 @@ struct StatsCookie {
 class BlockDevice;
 using BlockDeviceType =
     ddk::Device<BlockDevice, ddk::GetProtocolable, ddk::MessageableManual, ddk_deprecated::Readable,
-                ddk_deprecated::Writable, ddk::GetSizable>;
+                ddk_deprecated::Writable, ddk_deprecated::GetSizable>;
 
 class BlockDevice : public BlockDeviceType,
                     public ddk::BlockProtocol<BlockDevice, ddk::base_protocol> {

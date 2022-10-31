@@ -38,7 +38,7 @@ class MockDevice;
 using MockDeviceType =
     ddk::Device<MockDevice, ddk::GetProtocolable, ddk::Initializable, ddk::Openable, ddk::Closable,
                 ddk::Unbindable, ddk_deprecated::Readable, ddk_deprecated::Writable,
-                ddk::GetSizable, ddk::Suspendable, ddk::Resumable, ddk::Rxrpcable>;
+                ddk_deprecated::GetSizable, ddk::Suspendable, ddk::Resumable, ddk::Rxrpcable>;
 
 class MockDevice : public MockDeviceType {
  public:

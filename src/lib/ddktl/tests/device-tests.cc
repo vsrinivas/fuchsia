@@ -69,7 +69,7 @@ BEGIN_SUCCESS_DEPRECATED_CASE(Writable)
 zx_status_t DdkWrite(const void* buf, size_t count, zx_off_t off, size_t* actual) { return ZX_OK; }
 END_SUCCESS_CASE
 
-BEGIN_SUCCESS_CASE(GetSizable)
+BEGIN_SUCCESS_DEPRECATED_CASE(GetSizable)
 zx_off_t DdkGetSize() { return 0; }
 END_SUCCESS_CASE
 
@@ -114,7 +114,7 @@ struct TestDispatch;
 using TestDispatchType =
     ddk::Device<TestDispatch, ddk::GetProtocolable, ddk::Initializable, ddk::Openable,
                 ddk::Closable, ddk::Unbindable, ddk_deprecated::Readable, ddk_deprecated::Writable,
-                ddk::GetSizable, ddk::Suspendable, ddk::Resumable, ddk::Rxrpcable>;
+                ddk_deprecated::GetSizable, ddk::Suspendable, ddk::Resumable, ddk::Rxrpcable>;
 
 struct TestDispatch : public TestDispatchType {
   TestDispatch() : TestDispatchType(nullptr) {}

@@ -44,7 +44,7 @@ struct BlockDeviceParameters {
 static_assert(std::has_unique_object_representations_v<BlockDeviceParameters>);
 
 class UmsBlockDevice;
-using DeviceType = ddk::Device<UmsBlockDevice, ddk::GetSizable>;
+using DeviceType = ddk::Device<UmsBlockDevice, ddk_deprecated::GetSizable>;
 class UmsBlockDevice : public DeviceType,
                        public ddk::BlockImplProtocol<UmsBlockDevice, ddk::base_protocol>,
                        public fbl::RefCounted<UmsBlockDevice> {

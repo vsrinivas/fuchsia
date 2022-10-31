@@ -28,7 +28,7 @@ namespace nand {
 using Transaction = nand::BorrowedOperation<>;
 
 class NandDevice;
-using DeviceType = ddk::Device<NandDevice, ddk::GetSizable, ddk::Suspendable>;
+using DeviceType = ddk::Device<NandDevice, ddk_deprecated::GetSizable, ddk::Suspendable>;
 
 class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::base_protocol> {
  public:

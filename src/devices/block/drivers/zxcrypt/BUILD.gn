@@ -66,6 +66,10 @@ fuchsia_driver("zxcrypt-driver") {
     "//src/security/zxcrypt:zxcrypt-client",
     "//src/security/zxcrypt:zxcrypt-fdio",
   ]
+
+  # TODO(fxbug.dev/33820): This target uses the deprecated GetSizable.
+  # Please migrate away from this feature.
+  configs += [ "//src/lib/ddktl:deprecated-getsizable" ]
 }
 
 fuchsia_driver_component("zxcrypt") {

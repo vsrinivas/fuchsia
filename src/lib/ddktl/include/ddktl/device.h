@@ -215,18 +215,6 @@ class Unbindable : public base_mixin {
 };
 
 template <typename D>
-class GetSizable : public base_mixin {
- protected:
-  static constexpr void InitOp(zx_protocol_device_t* proto) {
-    internal::CheckGetSizable<D>();
-    proto->get_size = GetSize;
-  }
-
- private:
-  static zx_off_t GetSize(void* ctx) { return static_cast<D*>(ctx)->DdkGetSize(); }
-};
-
-template <typename D>
 class ServiceConnectable : public base_mixin {
  protected:
   static constexpr void InitOp(zx_protocol_device_t* proto) {
@@ -752,19 +740,19 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
 // remove existing uses.
 //
 // Deprecated Mixins:
-// +--------------------------+----------------------------------------------------+
-// | Mixin class              | Required function implementation                   |
-// +--------------------------+----------------------------------------------------+
-// | ddk_deprecated::Readable | zx_status_t DdkRead(void* buf, size_t count,       |
-// |                          |                     zx_off_t off, size_t* actual)  |
-// |                          |                                                    |
-// | ddk_deprecated::Writable | zx_status_t DdkWrite(const void* buf,              |
-// |                          |                      size_t count, zx_off_t off,   |
-// |                          |                      size_t* actual)               |
-// |                          |                                                    |
-// | ddk::GetSizable          | zx_off_t DdkGetSize()                              |
-// |                          |                                                    |
-// +--------------------------+----------------------------------------------------+
+// +----------------------------+----------------------------------------------------+
+// | Mixin class                | Required function implementation                   |
+// +----------------------------+----------------------------------------------------+
+// | ddk_deprecated::Readable   | zx_status_t DdkRead(void* buf, size_t count,       |
+// |                            |                     zx_off_t off, size_t* actual)  |
+// |                            |                                                    |
+// | ddk_deprecated::Writable   | zx_status_t DdkWrite(const void* buf,              |
+// |                            |                      size_t count, zx_off_t off,   |
+// |                            |                      size_t* actual)               |
+// |                            |                                                    |
+// | ddk_deprecated::GetSizable | zx_off_t DdkGetSize()                              |
+// |                            |                                                    |
+// +----------------------------+----------------------------------------------------+
 //
 namespace ddk_deprecated {
 #if defined(DDKTL_ALLOW_READ_WRITE)
@@ -797,6 +785,21 @@ class Writable : public ddk::base_mixin {
 };
 
 #endif
+
+#if defined(DDKTL_ALLOW_GETSIZABLE)
+template <typename D>
+class GetSizable : public ddk::base_mixin {
+ protected:
+  static constexpr void InitOp(zx_protocol_device_t* proto) {
+    ddk::internal::CheckGetSizable<D>();
+    proto->get_size = GetSize;
+  }
+
+ private:
+  static zx_off_t GetSize(void* ctx) { return static_cast<D*>(ctx)->DdkGetSize(); }
+};
+#endif
+
 }  // namespace ddk_deprecated
 
 #endif  // SRC_LIB_DDKTL_INCLUDE_DDKTL_DEVICE_H_

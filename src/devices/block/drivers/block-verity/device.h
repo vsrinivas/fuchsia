@@ -17,7 +17,8 @@ namespace block_verity {
 
 // See ddk::Device in ddktl/device.h
 class Device;
-using DeviceType = ddk::Device<Device, ddk::GetProtocolable, ddk::GetSizable, ddk::Unbindable>;
+using DeviceType =
+    ddk::Device<Device, ddk::GetProtocolable, ddk_deprecated::GetSizable, ddk::Unbindable>;
 
 class Device : public DeviceType, public ddk::BlockImplProtocol<Device, ddk::base_protocol> {
  public:

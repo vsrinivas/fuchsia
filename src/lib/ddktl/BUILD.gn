@@ -73,3 +73,33 @@ config("deprecated-read-write") {
     "//src/lib/ddktl/tests:ddktl-test",
   ]
 }
+
+config("deprecated-getsizable") {
+  cflags = [ "-DDDKTL_ALLOW_GETSIZABLE" ]
+
+  # Please do not add to this list.
+  # TODO(fxbug.dev/33820): Remove all usages and delete this functionality.
+  visibility = [
+    "//src/devices/block/drivers/block-verity:block-verity-driver",
+    "//src/devices/block/drivers/core:*",
+    "//src/devices/block/drivers/ftl:*",
+    "//src/devices/block/drivers/ftl/tests:*",
+    "//src/devices/block/drivers/gpt:*",
+    "//src/devices/block/drivers/mbr:*",
+    "//src/devices/block/drivers/ramdisk:ramdisk-driver",
+    "//src/devices/block/drivers/sdmmc:*",
+    "//src/devices/block/drivers/usb-mass-storage:*",
+    "//src/devices/block/drivers/virtio:*",
+    "//src/devices/block/drivers/zxcrypt:zxcrypt-driver",
+    "//src/devices/block/lib/scsi",
+    "//src/devices/block/lib/scsi/tests:*",
+    "//src/devices/nand/drivers/nand:*",
+    "//src/devices/nand/drivers/nand/tests:*",
+    "//src/devices/nand/drivers/nandpart:nandpart-driver",
+    "//src/devices/nand/drivers/ram-nand:*",
+    "//src/devices/nand/drivers/skip-block:*",
+    "//src/devices/tests/mock-device:mock-device-driver",
+    "//src/lib/ddktl/tests:ddktl-test",
+    "//src/storage/fvm/driver:*",
+  ]
+}

@@ -36,7 +36,7 @@ Deprecated Mixin class                 | Function             | Purpose
 ---------------------------------------|----------------------|------------------------------
 `ddk_deprecated::Readable`             | **DdkRead()**        | client's **read()**
 `ddk_deprecated::Writable`             | **DdkWrite()**       | client's **write()**
-`ddk::GetSizable`                      | **DdkGetSize()**     | returns size of device
+`ddk_deprecated::GetSizable`           | **DdkGetSize()**     | returns size of device
 
 When defining the class for your device, you specify which functions it will
 support by including the appropriate mixins.
@@ -137,7 +137,7 @@ we have a typical device declaration ([`device.h`](/src/devices/block/drivers/zx
 [01] class Device;
 [02] using DeviceType = ddk::Device<Device,
 [03]                                ddk::GetProtocolable,
-[04]                                ddk::GetSizable,
+[04]                                ddk_deprecated::GetSizable,
 [05]                                ddk::Unbindable>;
 ...
 [06] class Device final : public DeviceType,
