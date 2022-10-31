@@ -268,22 +268,6 @@ int main(int argc, const char** argv) {
   LifecycleHandler lifecycle_handler{basemgr_impl.get(), &loop};
 
   basemgr_impl->Start();
-
-  // NOTE: component_controller.events.OnDirectoryReady() is triggered when a
-  // component's out directory has mounted. basemgr_launcher uses this signal
-  // to determine when basemgr has completed initialization so it can detach
-  // and stop itself. When basemgr_launcher is used, it's responsible for
-  // providing basemgr a configuration file. To ensure we don't shutdown
-  // basemgr_launcher too early, we need additions to out/ to complete after
-  // configurations have been parsed.
-  component_context->outgoing()->debug_dir()->AddEntry(
-      modular_config::kBasemgrConfigName,
-      std::make_unique<vfs::Service>([basemgr_impl = basemgr_impl.get()](
-                                         zx::channel request, async_dispatcher_t* /* unused */) {
-        basemgr_impl->Connect(
-            fidl::InterfaceRequest<fuchsia::modular::internal::BasemgrDebug>(std::move(request)));
-      }));
-
   loop.Run();
 
   // The loop will run until graceful shutdown is complete so returning SUCCESS here indicates that.

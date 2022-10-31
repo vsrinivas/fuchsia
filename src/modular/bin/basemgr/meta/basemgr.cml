@@ -19,10 +19,6 @@
                 "fuchsia.process.lifecycle.Lifecycle",
             ],
         },
-        {
-            protocol: "fuchsia.modular.internal.BasemgrDebug",
-            path: "/debug/basemgr",
-        },
     ],
     use: [
         {
@@ -52,10 +48,7 @@
     ],
     expose: [
         {
-            protocol: [
-                "fuchsia.modular.internal.BasemgrDebug",
-                "fuchsia.modular.session.Launcher",
-            ],
+            protocol: [ "fuchsia.modular.session.Launcher" ],
             from: "self",
         },
         {

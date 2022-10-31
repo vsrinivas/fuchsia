@@ -9,7 +9,6 @@ fidl("fuchsia.modular.internal") {
   excluded_checks = [ "string-bounds-not-specified" ]
 
   sources = [
-    "basemgr_debug.fidl",
     "sessionmgr.fidl",
     "story_data.fidl",
   ]

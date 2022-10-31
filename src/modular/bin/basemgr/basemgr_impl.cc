@@ -109,11 +109,6 @@ BasemgrImpl::BasemgrImpl(modular::ModularConfigAccessor config_accessor,
 
 BasemgrImpl::~BasemgrImpl() = default;
 
-void BasemgrImpl::Connect(
-    fidl::InterfaceRequest<fuchsia::modular::internal::BasemgrDebug> request) {
-  basemgr_debug_bindings_.AddBinding(this, std::move(request));
-}
-
 void BasemgrImpl::Start() {
   CreateSessionProvider(&config_accessor_);
 
@@ -146,11 +141,7 @@ void BasemgrImpl::Shutdown() {
     return bridge.consumer.promise();
   };
 
-  auto shutdown = teardown_session_provider().and_then([this]() {
-    basemgr_debug_bindings_.CloseAll(ZX_OK);
-    on_shutdown_();
-  });
-
+  auto shutdown = teardown_session_provider().and_then([this] { on_shutdown_(); });
   executor_.schedule_task(std::move(shutdown));
 }
 
@@ -298,7 +289,7 @@ BasemgrImpl::StartSessionResult BasemgrImpl::StartSession() {
   return fpromise::ok();
 }
 
-void BasemgrImpl::RestartSession(RestartSessionCallback on_restart_complete) {
+void BasemgrImpl::RestartSession(fit::closure on_restart_complete) {
   if (state_ == State::SHUTTING_DOWN || state_ == State::RESTARTING || !session_provider_.get()) {
     on_restart_complete();
     return;
@@ -346,16 +337,6 @@ void BasemgrImpl::RestartSession(RestartSessionCallback on_restart_complete) {
     }
     on_restart_complete();
   });
-}
-
-void BasemgrImpl::StartSessionWithRandomId() {
-  // If there is a session already running, exit.
-  if (session_provider_.get()) {
-    return;
-  }
-  FX_CHECK(!session_provider_.get());
-
-  Start();
 }
 
 void BasemgrImpl::LaunchSessionmgr(fuchsia::modular::session::ModularConfig config) {

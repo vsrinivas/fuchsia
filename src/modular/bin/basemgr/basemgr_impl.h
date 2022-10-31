@@ -43,8 +43,7 @@ class LauncherImpl;
 // 1) Initializes and owns the system's root view and presentation.
 // 2) Manages the lifecycle of sessions, represented as |sessionmgr| processes.
 class BasemgrImpl : public fuchsia::modular::Lifecycle,
-                    public fuchsia::process::lifecycle::Lifecycle,
-                    fuchsia::modular::internal::BasemgrDebug {
+                    public fuchsia::process::lifecycle::Lifecycle {
  public:
   using SceneOwnerPtr =
       std::variant<fuchsia::ui::policy::PresenterPtr, fuchsia::session::scene::ManagerPtr>;
@@ -85,8 +84,6 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
 
   ~BasemgrImpl() override;
 
-  void Connect(fidl::InterfaceRequest<fuchsia::modular::internal::BasemgrDebug> request);
-
   // Starts a session using the configuration read from |config_accessor_|.
   void Start();
 
@@ -110,7 +107,9 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   using StartSessionResult = fpromise::result<void, zx_status_t>;
 
   // Shuts down the session and session launcher component, if any are running.
-  void Shutdown() override;
+  void Shutdown();
+
+  void RestartSession(fit::closure on_restart_complete);
 
   // Starts a new session.
   //
@@ -119,12 +118,6 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   // Returns |ZX_ERR_BAD_STATE| if basemgr is shutting down, |session_provider_| does not exist,
   // or a session is already running.
   StartSessionResult StartSession();
-
-  // |BasemgrDebug|
-  void RestartSession(RestartSessionCallback on_restart_complete) override;
-
-  // |BasemgrDebug|
-  void StartSessionWithRandomId() override;
 
   // Creates a |session_provider_| that uses the given config.
   //
@@ -166,7 +159,6 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
 
   LauncherBindingSet session_launcher_bindings_;
   fidl::BindingSet<fuchsia::modular::Lifecycle> lifecycle_bindings_;
-  fidl::BindingSet<fuchsia::modular::internal::BasemgrDebug> basemgr_debug_bindings_;
   fidl::BindingSet<fuchsia::process::lifecycle::Lifecycle> process_lifecycle_bindings_;
 
   AsyncHolder<SessionProvider> session_provider_;
