@@ -25,5 +25,4 @@ more information about fidlcat.
 ### How to run this test manually
 
 1. Add `//src/tests/end_to_end/fidlcat:tests` to your `universe_package_labels` and `fx build`.
-2. Run `fx test fidlcat_test`.
-3. Consider uncomment some additional outputs to help debug.
+2. Run `fx test --e2e fidlcat_e2e_tests`.
