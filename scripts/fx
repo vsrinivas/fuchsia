@@ -119,12 +119,10 @@ configure and build
   clean                     Clean the build artifacts
 
 use the emulator
-  emu                       Emulate a device and interact with it
-                            You can hit return after the emulator starts up
-                            to enter the shell. Or use \`fx shell\` commands.
-  emu --headless            Run without a graphic terminal
+  ffx emu start             Emulate a device and interact with it
+  ffx emu start --headless  Run without a graphic terminal
   shell dm shutdown         Shut down Fuchsia on the emulator
-  emu -h                    Show emu help
+  ffx emu --help            Show emu help
 
 test
   test <component>          Run a test
@@ -151,10 +149,10 @@ other
 example basic workflow using an emulator
   $ fx set core.qemu-x64 --with //examples/hello_world
   $ fx build
-  $ fx emu --headless -N                # headless with networking
-  $ fx serve                            # [Start in a new window]
-  $ fx test hello-world-cpp-unittests   # [Start in a new window] Run test
-  $ fx shell dm shutdown                # Shut down the emulator
+  $ fx ffx emu start --headless --net tap  # headless with tun/tap-based networking
+  $ fx serve                               # [Start in a new window]
+  $ fx test hello-world-cpp-unittests      # [Start in a new window] Run test
+  $ fx ffx emu stop                        # Shut down the emulator
 
 online documentation
   Fuchsia development:    https://fuchsia.dev/fuchsia-src/development

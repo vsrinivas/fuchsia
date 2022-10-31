@@ -67,7 +67,6 @@ test_scripts = [
   "tests/fx-internal/verify_default_keys_test",
   "tests/subcommands/fx_cp_test",
   "tests/subcommands/fx_emu_remote_test",
-  "tests/subcommands/fx_emu_test",
   "tests/subcommands/fx_flash_fuchsia_test",
   "tests/subcommands/fx_helpdoc_test",
   "tests/subcommands/fx_host_tool_test",
@@ -89,7 +88,6 @@ test_scripts = [
 
   # tests that currently can't be included in automation.
   # use 'fx self-test' to run them manually:
-  # "tests/subcommands/fx_emu_test",   # disabled because stty call fails
   # "tests/subcommands/fx_serve_update_test",  # disabled because it depends on pm
   # "tests/subcommands/fx_test_test",  # disabled because it depends on dart prebuilt
 ]
@@ -154,7 +152,6 @@ host_script_test_data("fx_bash_tests") {
         "//tools/devshell/contrib/lint",
         "//tools/devshell/contrib/setup-go",
         "//tools/devshell/cp",
-        "//tools/devshell/emu",
         "//tools/devshell/emu-remote",
         "//tools/devshell/flash",
         "//tools/devshell/flash-remote",
