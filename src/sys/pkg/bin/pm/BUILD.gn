@@ -4,90 +4,10 @@
 
 import("//build/components.gni")
 import("//build/go/go_binary.gni")
-import("//build/go/go_library.gni")
-import("//build/go/go_test.gni")
 import("//build/host.gni")
-
-go_library("pm_lib") {
-  name = "go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/..."
-
-  deps = [
-    "//src/lib/versioning/version-history/go:version-history",
-    "//src/sys/pkg/lib/far/go:far",
-    "//src/sys/pkg/lib/merkle",
-    "//src/sys/pkg/lib/repo",
-    "//src/sys/pkg/lib/sse",
-    "//third_party/golibs:github.com/dustin/go-humanize",
-    "//third_party/golibs:github.com/fsnotify/fsnotify",
-    "//third_party/golibs:github.com/theupdateframework/go-tuf",
-    "//third_party/golibs:golang.org/x/crypto",
-    "//third_party/golibs:golang.org/x/sys",
-  ]
-
-  sources = [
-    "build/archive.go",
-    "build/blobs.go",
-    "build/config.go",
-    "build/config_test.go",
-    "build/contents.go",
-    "build/contents_test.go",
-    "build/delta.go",
-    "build/delta_test.go",
-    "build/doc.go",
-    "build/manifest.go",
-    "build/manifest_test.go",
-    "build/package.go",
-    "build/package_test.go",
-    "build/snapshot.go",
-    "build/snapshot_test.go",
-    "build/testutil.go",
-    "cmd/pm/archive/archive.go",
-    "cmd/pm/build/build.go",
-    "cmd/pm/delta/delta.go",
-    "cmd/pm/expand/expand.go",
-    "cmd/pm/genkey/genkey.go",
-    "cmd/pm/genkey/genkey_test.go",
-    "cmd/pm/init/init.go",
-    "cmd/pm/newrepo/newrepo.go",
-    "cmd/pm/pm.go",
-    "cmd/pm/publish/publish.go",
-    "cmd/pm/publish/publish_test.go",
-    "cmd/pm/seal/seal.go",
-    "cmd/pm/serve/incremental.go",
-    "cmd/pm/serve/listener_default.go",
-    "cmd/pm/serve/listener_unix.go",
-    "cmd/pm/serve/monitor.go",
-    "cmd/pm/serve/monitor_test.go",
-    "cmd/pm/serve/serve.go",
-    "cmd/pm/serve/serve_test.go",
-    "cmd/pm/snapshot/snapshot.go",
-    "cmd/pm/update/update.go",
-    "cmd/pm/verify/verify.go",
-    "fswatch/fswatch.go",
-    "fswatch/fswatch_fuchsia.go",
-    "ignores/ignores.go",
-    "ignores/ignores_test.go",
-    "pkg/package.go",
-    "pkg/package_test.go",
-    "pmhttp/auto.go",
-    "pmhttp/config.go",
-    "pmhttp/config_test.go",
-    "pmhttp/configv2.go",
-    "pmhttp/configv2_test.go",
-    "pmhttp/index.go",
-    "pmhttp/pmhttp.go",
-    "pmhttp/pmhttp_test.go",
-    "repo/config.go",
-    "repo/repo.go",
-    "repo/repo_test.go",
-  ]
-}
 
 test_packages = [
   "build",
-  "cmd/pm/genkey",
-  "cmd/pm/publish",
-  "cmd/pm/serve",
   "pkg",
   "pmhttp",
   "repo",
@@ -97,20 +17,12 @@ test_labels = []
 foreach(pkg, test_packages) {
   pkg_ = string_replace(pkg, "/", "_")
   name = "pm_${pkg_}_test"
-  go_test(name) {
-    gopackages = [ "go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/${pkg}" ]
-    deps = [
-      ":pm_lib",
-      "//third_party/golibs:github.com/google/go-cmp",
-    ]
-  }
-
-  test_labels += [ ":$name" ]
+  test_labels += [ "$pkg:$name" ]
 }
 
 group("host_tests") {
   testonly = true
-  public_deps = []
+  public_deps = [ "cmd/pm:host_tests" ]
   foreach(label, test_labels) {
     public_deps += [ label + "($host_toolchain)" ]
   }
@@ -118,9 +30,8 @@ group("host_tests") {
 
 go_binary("pm_bin") {
   output_name = "pm"
-  gopackage = "go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/cmd/pm"
+  library = "cmd/pm:main"
   sdk_category = "partner"
-  deps = [ ":pm_lib" ]
 }
 
 fuchsia_shell_package("pm") {

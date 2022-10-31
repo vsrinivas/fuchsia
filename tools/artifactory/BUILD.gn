@@ -65,7 +65,7 @@ go_library("lib") {
     "upload.go",
   ]
   deps = [
-    "//src/sys/pkg/bin/pm:pm_lib",
+    "//src/sys/pkg/bin/pm/build",
     "//tools/build",
     "//tools/lib/logger",
     "//tools/lib/osmisc",

@@ -11,7 +11,9 @@ if (is_host) {
     deps = [
       "../util",
       "//src/lib/versioning/version-history/go:version-history",
-      "//src/sys/pkg/bin/pm:pm_lib",
+      "//src/sys/pkg/bin/pm/build",
+      "//src/sys/pkg/bin/pm/pkg",
+      "//src/sys/pkg/bin/pm/repo",
       "//src/sys/pkg/lib/far/go:far",
       "//src/sys/pkg/lib/repo",
       "//third_party/golibs:github.com/theupdateframework/go-tuf",

@@ -15,7 +15,7 @@ go_library("botanist_lib") {
   ]
   deps = [
     ":constants",
-    "//src/sys/pkg/bin/pm:pm_lib",
+    "//src/sys/pkg/bin/pm/pmhttp",
     "//third_party/golibs:cloud.google.com/go/storage",
     "//tools/build",
     "//tools/lib/gcsutil",

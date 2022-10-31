@@ -1,0 +1,137 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/host.gni")
+
+subcommands = [
+  {
+    name = "archive"
+  },
+  {
+    name = "build"
+    deps = [
+      ":seal",
+      ":update",
+    ]
+  },
+  {
+    name = "delta"
+    deps = [ "//third_party/golibs:github.com/dustin/go-humanize" ]
+  },
+  {
+    name = "expand"
+    deps = [
+      "//src/sys/pkg/bin/pm/pkg",
+      "//src/sys/pkg/lib/far/go:far",
+      "//src/sys/pkg/lib/merkle",
+    ]
+  },
+  {
+    name = "genkey"
+    deps = [
+      "//src/sys/pkg/bin/pm/pkg",
+      "//src/sys/pkg/lib/far/go:far",
+      "//src/sys/pkg/lib/merkle",
+    ]
+    with_test = true
+  },
+  {
+    name = "init"
+  },
+  {
+    name = "newrepo"
+    deps = [ "//src/sys/pkg/bin/pm/repo" ]
+  },
+  {
+    name = "publish"
+    deps = [
+      "//src/sys/pkg/bin/pm/pkg",
+      "//src/sys/pkg/bin/pm/repo",
+      "//src/sys/pkg/lib/far/go:far",
+    ]
+    with_test = true
+  },
+  {
+    name = "seal"
+  },
+  {
+    name = "serve"
+    deps = [
+      "//src/sys/pkg/bin/pm/fswatch",
+      "//src/sys/pkg/bin/pm/pmhttp",
+      "//src/sys/pkg/bin/pm/repo",
+      "//src/sys/pkg/lib/sse",
+      "//third_party/golibs:golang.org/x/sys",
+    ]
+    sources = [
+      "incremental.go",
+      "listener_default.go",
+      "listener_unix.go",
+      "monitor.go",
+      "monitor_test.go",
+    ]
+    with_test = true
+  },
+  {
+    name = "snapshot"
+  },
+  {
+    name = "update"
+  },
+  {
+    name = "verify"
+  },
+]
+
+test_labels = []
+
+foreach(subcommand, subcommands) {
+  _sources = []
+
+  # Every subcommand `foo` should contain a `foo.go` file.
+  _sources += [ "${subcommand.name}.go" ]
+  if (defined(subcommand.sources)) {
+    _sources += subcommand.sources
+  }
+
+  if (defined(subcommand.with_test) && subcommand.with_test) {
+    test_name = "pm_cmd_pm_${subcommand.name}_test"
+    go_test(test_name) {
+      library = ":${subcommand.name}"
+    }
+
+    # Every subcommand `foo` with tests enabled should contain a `foo_test.go`
+    # file.
+    _sources += [ "${subcommand.name}_test.go" ]
+    test_labels += [ ":${test_name}" ]
+  }
+
+  go_library(subcommand.name) {
+    source_dir = subcommand.name
+    sources = _sources
+
+    # Everything depends on the `build` library.
+    deps = [ "//src/sys/pkg/bin/pm/build" ]
+    if (defined(subcommand.deps)) {
+      deps += subcommand.deps
+    }
+  }
+}
+
+go_library("main") {
+  deps = [ "//src/sys/pkg/bin/pm/build" ]
+  foreach(subcommand, subcommands) {
+    deps += [ ":${subcommand.name}" ]
+  }
+  sources = [ "pm.go" ]
+}
+
+group("host_tests") {
+  testonly = true
+  public_deps = test_labels
+}

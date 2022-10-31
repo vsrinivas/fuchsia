@@ -28,7 +28,7 @@ go_library("testsharder_lib") {
   ]
 
   deps = [
-    "//src/sys/pkg/bin/pm:pm_lib",
+    "//src/sys/pkg/bin/pm/build",
     "//tools/build",
     "//tools/lib/color",
     "//tools/lib/ffxutil",

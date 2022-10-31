@@ -1,0 +1,40 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+
+go_library("build") {
+  deps = [
+    "../ignores",
+    "../pkg",
+    "//src/lib/versioning/version-history/go:version-history",
+    "//src/sys/pkg/lib/far/go:far",
+    "//src/sys/pkg/lib/merkle",
+  ]
+
+  sources = [
+    "archive.go",
+    "blobs.go",
+    "config.go",
+    "config_test.go",
+    "contents.go",
+    "contents_test.go",
+    "delta.go",
+    "delta_test.go",
+    "doc.go",
+    "manifest.go",
+    "manifest_test.go",
+    "package.go",
+    "package_test.go",
+    "snapshot.go",
+    "snapshot_test.go",
+    "testutil.go",
+  ]
+}
+
+go_test("pm_build_test") {
+  library = ":build"
+  deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
+}
