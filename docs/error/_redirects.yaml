@@ -144,8 +144,20 @@ redirects:
   to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0076
 - from: /fuchsia-src/error/fi-0077
   to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0077
+- from: /fuchsia-src/error/fi-0078
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0078
+- from: /fuchsia-src/error/fi-0079
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0079
 - from: /fuchsia-src/error/fi-0084
   to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0084
+- from: /fuchsia-src/error/fi-0085
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0085
+- from: /fuchsia-src/error/fi-0087
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0087
+- from: /fuchsia-src/error/fi-0089
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0089
+- from: /fuchsia-src/error/fi-0090
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0090
 - from: /fuchsia-src/error/fi-0092
   to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0092
 - from: /fuchsia-src/error/fi-0093

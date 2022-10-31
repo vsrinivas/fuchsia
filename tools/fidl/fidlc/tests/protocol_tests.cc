@@ -581,7 +581,40 @@ protocol Wrong {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidProtocolMember);
 }
 
-TEST(ProtocolTests, BadComposedProtocolsHaveClashingNames) {
+TEST(ProtocolTests, BadDuplicateMethodNames) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0078-a.test.fidl");
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrDuplicateMethodName,
+                                      fidl::ErrDuplicateMethodOrdinal);
+}
+
+TEST(ProtocolTests, BadDuplicateMethodNamesFromImmediateComposition) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0078-b.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodName);
+}
+
+TEST(ProtocolTests, BadDuplicateMethodNamesFromMultipleComposition) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol A {
+    Method();
+};
+
+protocol B {
+    Method();
+};
+
+protocol C {
+    compose A;
+    compose B;
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodName);
+}
+
+TEST(ProtocolTests, BadDuplicateMethodNamesFromNestedComposition) {
   TestLibrary library(R"FIDL(
 library example;
 

@@ -61,18 +61,8 @@ service SomeService {
 }
 
 TEST(ServiceTests, BadCannotHaveConflictingMembers) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol SomeProtocol1 {};
-protocol SomeProtocol2 {};
-
-service SomeService {
-    this_will_conflict client_end:SomeProtocol1;
-    this_will_conflict client_end:SomeProtocol2;
-};
-
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0085.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateServiceMemberName);
 }
 

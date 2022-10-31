@@ -313,18 +313,12 @@ type Example = struct {};
 }
 
 TEST(CanonicalNamesTests, BadStructMembers) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type Example = struct {
-  fooBar bool;
-  FooBar bool;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0090.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateStructMemberNameCanonical);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "myStructMember");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MyStructMember");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "my_struct_member");
 }
 
 TEST(CanonicalNamesTests, BadTableMembers) {
@@ -370,18 +364,12 @@ TEST(CanonicalNamesTests, BadBitsMembers) {
 }
 
 TEST(CanonicalNamesTests, BadProtocolMethods) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol Example {
-  fooBar() -> ();
-  FooBar() -> ();
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0079.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodNameCanonical);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "myMethod");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MyMethod");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "my_method");
 }
 
 TEST(CanonicalNamesTests, BadMethodParameters) {
@@ -413,19 +401,12 @@ protocol Example {
 }
 
 TEST(CanonicalNamesTests, BadServiceMembers) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol P {};
-service Example {
-  fooBar client_end:P;
-  FooBar client_end:P;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0087.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateServiceMemberNameCanonical);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "myServiceMember");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MyServiceMember");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "my_service_member");
 }
 
 TEST(CanonicalNamesTests, BadResourceProperties) {

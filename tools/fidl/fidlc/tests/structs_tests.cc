@@ -204,14 +204,8 @@ type MyStruct = struct {
 }
 
 TEST(StructsTests, BadDuplicateMemberName) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type Duplicates = struct {
-    s string;
-    s uint8;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0089.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateStructMemberName);
 }
 

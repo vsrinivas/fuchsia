@@ -175,9 +175,9 @@ constexpr RetiredDef<76, std::string_view> ErrResponsesWithErrorsMustNotBeEmpty(
     "must define success type of method '{}'");
 constexpr ErrorDef<77, std::string_view> ErrEmptyPayloadStructs(
     "method '{}' cannot have an empty struct as a payload, prefer omitting the payload altogether");
-constexpr UndocumentedErrorDef<78, std::string_view, SourceSpan> ErrDuplicateMethodName(
+constexpr ErrorDef<78, std::string_view, SourceSpan> ErrDuplicateMethodName(
     "multiple protocol methods named '{}'; previous was at {}");
-constexpr UndocumentedErrorDef<79, std::string_view, std::string_view, SourceSpan, std::string_view>
+constexpr ErrorDef<79, std::string_view, std::string_view, SourceSpan, std::string_view>
     ErrDuplicateMethodNameCanonical(
         "protocol method '{}' conflicts with method '{}' from {}; both are "
         "represented by the canonical form '{}'");
@@ -192,18 +192,18 @@ constexpr UndocumentedErrorDef<83> ErrFuchsiaIoExplicitOrdinals(
     "fuchsia.io must have explicit ordinals (https://fxbug.dev/77623)");
 constexpr ErrorDef<84> ErrPayloadStructHasDefaultMembers(
     "default values are not allowed on members of request/response structs");
-constexpr UndocumentedErrorDef<85, std::string_view, SourceSpan> ErrDuplicateServiceMemberName(
+constexpr ErrorDef<85, std::string_view, SourceSpan> ErrDuplicateServiceMemberName(
     "multiple service members named '{}'; previous was at {}");
 constexpr UndocumentedErrorDef<86> ErrStrictUnionMustHaveNonReservedMember(
     "strict unions must have at least one non-reserved member");
-constexpr UndocumentedErrorDef<87, std::string_view, std::string_view, SourceSpan, std::string_view>
+constexpr ErrorDef<87, std::string_view, std::string_view, SourceSpan, std::string_view>
     ErrDuplicateServiceMemberNameCanonical(
         "service member '{}' conflicts with member '{}' from {}; both are "
         "represented by the canonical form '{}'");
 constexpr UndocumentedErrorDef<88> ErrOptionalServiceMember("service members cannot be optional");
-constexpr UndocumentedErrorDef<89, std::string_view, SourceSpan> ErrDuplicateStructMemberName(
+constexpr ErrorDef<89, std::string_view, SourceSpan> ErrDuplicateStructMemberName(
     "multiple struct fields named '{}'; previous was at {}");
-constexpr UndocumentedErrorDef<90, std::string_view, std::string_view, SourceSpan, std::string_view>
+constexpr ErrorDef<90, std::string_view, std::string_view, SourceSpan, std::string_view>
     ErrDuplicateStructMemberNameCanonical(
         "struct field '{}' conflicts with field '{}' from {}; both are represented "
         "by the canonical form '{}'");
