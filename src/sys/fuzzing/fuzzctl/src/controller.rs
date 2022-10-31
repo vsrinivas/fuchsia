@@ -4,6 +4,7 @@
 
 use {
     crate::artifact::Artifact,
+    crate::constants::*,
     crate::corpus,
     crate::diagnostics::Forwarder,
     crate::duration::deadline_after,
@@ -17,6 +18,7 @@ use {
     futures::future::{pending, Either},
     futures::{pin_mut, select, try_join, Future, FutureExt},
     std::cell::RefCell,
+    std::cmp::max,
     std::path::Path,
 };
 
@@ -88,7 +90,7 @@ impl<O: OutputSink> Controller<O> {
                     *timeout_mut = None;
                 }
                 n => {
-                    *timeout_mut = Some(n * 2);
+                    *timeout_mut = Some(max(n * 2, 60 * NANOS_PER_SECOND));
                 }
             }
         }

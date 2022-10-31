@@ -43,7 +43,7 @@ impl<O: OutputSink> FuzzCtl<O> {
 
     /// Parses command line arguments and executes commands based on them.
     pub async fn run(&self, args: &Vec<String>) -> Result<()> {
-        let libfuzzer_re = Regex::new(r"-([^=\s]+)=(.*)").expect("failed to compile regex");
+        let libfuzzer_re = Regex::new(r"-([^=\-\s][^=\s]*)=(.*)").expect("failed to compile regex");
         let mut libfuzzer_args = Vec::new();
         for arg in args {
             match libfuzzer_re.captures(&arg) {
@@ -107,8 +107,10 @@ impl<O: OutputSink> FuzzCtl<O> {
         let proxy = self.manager.connect(&cmd.url).await?;
         let mut controller = Controller::new(proxy, &self.writer);
 
-        let socket = self.manager.get_output(&cmd.url, fuzz::TestOutput::Stderr).await?;
-        controller.set_output(socket, fuzz::TestOutput::Stderr, &Some(fuzzer_dir.clone()))?;
+        for output in cmd.forward.iter() {
+            let socket = self.manager.get_output(&cmd.url, *output).await?;
+            controller.set_output(socket, *output, &Some(fuzzer_dir.clone()))?;
+        }
 
         let options = cmd.get_options();
         controller.configure(options).await.context("failed to configure fuzzer")?;

@@ -52,6 +52,11 @@ pub struct ResetSubcommand {
 #[derive(Clone, Debug, FromArgs, PartialEq)]
 #[argh(subcommand, name = "run_libfuzzer")]
 pub struct RunLibFuzzerSubcommand {
+    /// comma-separated list of streams to forward, made up of the following:
+    ///  "stdout", "stderr", "syslog", and/or "all"
+    #[argh(option, from_str_fn(parse_forward), default = "vec![fuzz::TestOutput::Stderr]")]
+    pub forward: Vec<fuzz::TestOutput>,
+
     /// directory used to store fuzzer artifacts
     #[argh(option)]
     pub artifact_prefix: Option<String>,
@@ -135,6 +140,24 @@ pub struct RunLibFuzzerSubcommand {
     /// files to test or directories to fuzz from, but not both, prefixed with 'tmp/'
     #[argh(positional)]
     pub data: Vec<String>,
+}
+
+fn parse_forward(value: &str) -> Result<Vec<fuzz::TestOutput>, String> {
+    let mut outputs = Vec::new();
+    for token in value.split(',') {
+        match token {
+            "all" => {
+                outputs.push(fuzz::TestOutput::Stdout);
+                outputs.push(fuzz::TestOutput::Stderr);
+                outputs.push(fuzz::TestOutput::Syslog);
+            }
+            "stdout" => outputs.push(fuzz::TestOutput::Stdout),
+            "stderr" => outputs.push(fuzz::TestOutput::Stderr),
+            "syslog" => outputs.push(fuzz::TestOutput::Syslog),
+            unknown => return Err(format!("cannot forward: unknown output: {}", unknown)),
+        };
+    }
+    Ok(outputs)
 }
 
 fn parse_switch(value: &str) -> Result<bool, String> {
