@@ -263,6 +263,16 @@ TEST(ErrcatTests, Good0050) {
   ASSERT_COMPILED(library);
 }
 
+TEST(ErrcatTests, Good0051) {
+  SharedAmongstLibraries shared;
+  TestLibrary dependency(&shared);
+  dependency.AddFile("good/fi-0051-a.test.fidl");
+  ASSERT_COMPILED(dependency);
+  TestLibrary library(&shared);
+  library.AddFile("good/fi-0051-b.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
 TEST(ErrcatTests, Good0058) {
   TestLibrary library;
   library.AddFile("good/fi-0058.test.fidl");

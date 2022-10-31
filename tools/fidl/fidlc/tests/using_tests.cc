@@ -287,11 +287,9 @@ TEST(UsingTests, BadUnusedUsing) {
 }
 
 TEST(UsingTests, BadUnknownDependentLibrary) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library;
+  library.AddFile("bad/fi-0051.test.fidl");
 
-const QUX foo.bar.baz = 0;
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownDependentLibrary);
 }
 

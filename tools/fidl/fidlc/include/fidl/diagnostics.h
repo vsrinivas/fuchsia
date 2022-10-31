@@ -106,7 +106,7 @@ constexpr ErrorDef<48> ErrOptionalTableMember("Table members cannot be optional"
 constexpr ErrorDef<49> ErrOptionalUnionMember("Union members cannot be optional");
 constexpr ErrorDef<50> ErrDeprecatedStructDefaults(
     "Struct defaults are deprecated and should not be used (see RFC-0160)");
-constexpr UndocumentedErrorDef<51, std::vector<std::string_view>, std::vector<std::string_view>>
+constexpr ErrorDef<51, std::vector<std::string_view>, std::vector<std::string_view>>
     ErrUnknownDependentLibrary(
         "Unknown dependent library {} or reference to member of "
         "library {}. Did you require it with `using`?");
