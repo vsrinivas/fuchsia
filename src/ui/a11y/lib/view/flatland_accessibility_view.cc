@@ -298,6 +298,11 @@ void FlatlandAccessibilityView::WatchForResizes() {
   parent_watcher_->GetLayout([this](LayoutInfo layout_info) {
     layout_info_ = std::move(layout_info);
 
+    if (highlight_is_present_) {
+      FX_LOGS(ERROR) << "A11y view has been resized while a highlight is present. "
+                        "The highlight will likely not be drawn in the correct location.";
+    }
+
     const auto logical_size = layout_info_->logical_size();
     FX_LOGS(INFO) << "A11y view received layout info; view has width = " << logical_size.width
                   << ", height = " << logical_size.height;
@@ -371,6 +376,7 @@ void FlatlandAccessibilityView::DrawHighlight(fuchsia::math::Point top_left,
                                               fuchsia::math::Point bottom_right,
                                               fit::function<void()> callback) {
   FX_DCHECK(is_initialized_);
+  highlight_is_present_ = true;
 
   int32_t left = top_left.x;
   int32_t top = top_left.y;
@@ -430,6 +436,7 @@ void FlatlandAccessibilityView::DrawHighlight(fuchsia::math::Point top_left,
 
 void FlatlandAccessibilityView::ClearHighlight(fit::function<void()> callback) {
   FX_DCHECK(is_initialized_);
+  highlight_is_present_ = false;
 
   flatland_highlight_.flatland()->RemoveChild(TransformId{.value = kHighlightViewRootTransformId},
                                               TransformId{.value = kHighlightTransformId});

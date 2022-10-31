@@ -87,6 +87,9 @@ class FlatlandAccessibilityView : public AccessibilityViewInterface,
   // True if the a11y view and highlight views have been attached to the scene.
   bool is_initialized_ = false;
 
+  // True if DrawHighlight() has been called more recently than ClearHighlight().
+  bool highlight_is_present_ = false;
+
   // Holds the proxy viewport creation token between the time that `CreateView`
   // is called, and the first layout info is received from scenic.
   //
