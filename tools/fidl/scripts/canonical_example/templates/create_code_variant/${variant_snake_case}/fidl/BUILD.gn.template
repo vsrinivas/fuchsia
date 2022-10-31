@@ -7,10 +7,10 @@ import("//build/fidl/fidl.gni")
 # Builds the FIDL library into a set of language specific bindings. Bindings for a given language
 # may be imported by depending on this target, followed by a language-specific underscore:
 #
-#   ":examples.${series_snake_case}.${variant_flat_case}_rust"
-#   ":examples.${series_snake_case}.${variant_flat_case}_cpp_wire"
+#   ":examples.${series_flat_case}.${variant_flat_case}_rust"
+#   ":examples.${series_flat_case}.${variant_flat_case}_cpp_wire"
 #   ...and so on
 #
-fidl("examples.${series_snake_case}.${variant_flat_case}") {
+fidl("examples.${series_flat_case}.${variant_flat_case}") {
   sources = [ "${series_snake_case}.test.fidl" ]
 }

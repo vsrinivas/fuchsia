@@ -5,7 +5,7 @@ Note: The source code for this example is located at
 This directory includes tests exercising the implementation in all supported
 languages, which may be run locally by executing the following from
 the command line: `fx set core.x64 --with=//examples/fidl/new:tests && fx test
-${series_snake_case}_${variant_snake_case}`.
+${series_flat_case}_${variant_flat_case}`.
 
 First, we need to define our interface definitions and test harness. The FIDL,
 CML, and realm interface definitions set up a scaffold that arbitrary
@@ -16,7 +16,7 @@ implementations can use:
     <!-- FIDL -->
     <section>
       <h3 id="${series_snake_case}-${variant_snake_case}-fidl">FIDL</h3>
-      <pre class="prettyprint">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/${series_snake_case}/${variant_snake_case}/fidl/${series_snake_case}.test.fidl" %}</pre>
+      <pre class="prettyprint">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/${series_snake_case}/${variant_snake_case}/fidl/${series_snake_case}.test.fidl" highlight="TODO(${dns})" %}</pre>
     </section>
     <!-- CML -->
     <section style="padding: 0px;">

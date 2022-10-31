@@ -16,8 +16,8 @@ use {
 #[fasync::run_singlethreaded(test)]
 async fn test_default() -> Result<(), Error> {
     let test_name = "test_default";
-    let client = Client::new(test_name, "#meta/${series_snake_case}_${variant_snake_case}_client.cm");
-    let server = Server::new(test_name, "#meta/${series_snake_case}_${variant_snake_case}_server.cm");
+    let client = Client::new(test_name, "#meta/${series_flat_case}_${variant_flat_case}_client.cm");
+    let server = Server::new(test_name, "#meta/${series_flat_case}_${variant_flat_case}_server.cm");
 
 
     run_test(

@@ -47,6 +47,14 @@ BINDINGS = {
     "rust": "src/main.rs",
 }
 
+# Comment guard patterns for various file types.
+COMMENT_GUARDS = {
+    ".cc": ("// ", ""),
+    ".gn": ("# ", ""),
+    ".md": ("<!-- ", " -->"),
+    ".rs": ("// ", ""),
+}
+
 
 # Custom exceptions.
 class AlreadyExistsError(Exception):
@@ -526,7 +534,80 @@ def document(name, concepts):
     report_success(dns_counts)
 
 
-def maybe_implement_test(series, variant, subs):
+def copy_baseline_implementation(series, variant, subdir, subs):
+    """
+    """
+    dns_counts = {}
+    series_code_root_path = EXAMPLE_CODE_BASE_DIR / series
+    baseline_impl_root_path = series_code_root_path / "baseline" / subdir
+    variant_impl_root_path = series_code_root_path / variant / subdir
+
+    # Loop through the baseline files. For each file, perform a number of replacements to swap the
+    # word "baseline" with the variant name we are looking at.
+    for path, subdirs, files in os.walk(baseline_impl_root_path):
+        for file_name in files:
+            # Process the filename to be in the variant's, rather than baseline's, directory.
+            src_path = Path(os.path.join(path, file_name))
+            out_path = Path(
+                str(src_path).replace(
+                    str(baseline_impl_root_path), str(variant_impl_root_path),
+                    1))
+            ext = src_path.suffix
+            (comment_start, comment_end) = COMMENT_GUARDS[ext]
+
+            with open(src_path, "r") as f:
+                contents = f.read()
+
+                # We need to do very different replacement operations depending on whether or not
+                # this is a gn file.
+                if ext == ".gn":
+                    # No DNS at the end of the file, and do one replacement each for strings where
+                    # series and variant are split by "/" and "_".
+                    dns = ""
+                    contents = contents.replace(
+                        "%s/%s" % (subs['series_snake_case'], "baseline"),
+                        "%s/%s" %
+                        (subs['series_snake_case'], subs['variant_snake_case']))
+                    contents = contents.replace(
+                        "%s_%s" % (subs['series_flat_case'], "baseline"),
+                        "%s_%s" %
+                        (subs['series_flat_case'], subs['variant_flat_case']))
+                    contents = contents.replace(
+                        ".baseline", "." + subs['variant_flat_case'])
+                else:
+                    dns = textwrap.dedent(
+                        """
+
+                        %sTODO(%s): Edit this file to reflect the changes needed for this variant.%s
+
+                        """ % (comment_start, DNS, comment_end))
+
+                    # Special case: HLCPP uses flat_case in the path to fidl.h.
+                    contents = contents.replace(
+                        "%s/%s/cpp/fidl.h" %
+                        (subs['series_snake_case'], "baseline"),
+                        "%s/%s/cpp/fidl.h" %
+                        (subs['series_snake_case'], subs['variant_flat_case']))
+
+                    contents = contents.replace(
+                        "%s/%s" % (subs['series_snake_case'], "baseline"),
+                        "%s/%s" %
+                        (subs['series_snake_case'], subs['variant_snake_case']))
+                    contents = contents.replace(
+                        "baseline", subs['variant_flat_case'])
+
+                # Do the actual file writes, and update the dns count so the user is aware that they
+                # need to make further edits in this file.
+                os.makedirs(os.path.dirname(out_path), exist_ok=True)
+                dns_counts[str(
+                    out_path)] = get_dns_count(contents) + (1 if dns else 0)
+                with open(out_path, "wt") as f:
+                    f.write(contents + dns)
+
+    return dns_counts
+
+
+def maybe_implement_test(series, variant, subs, fresh):
     """Implement the test implementation, and add a TODO to client.cml, if they do not yet exist.
     """
     dns_counts = {}
@@ -589,7 +670,7 @@ def maybe_implement_test(series, variant, subs):
     return dns_counts
 
 
-def implement(name, binding, protocol, series):
+def implement(name, binding, protocol, series, fresh):
     """Implement the canonical example in a single binding language.
     """
     variant = BASELINE
@@ -597,6 +678,7 @@ def implement(name, binding, protocol, series):
         variant = name
     else:
         series = name
+        fresh = True
 
     tutorial_md_file_path = EXAMPLE_DOCS_BASE_DIR / series / (
         "_%s_tutorial.md" % variant)
@@ -622,7 +704,7 @@ def implement(name, binding, protocol, series):
     validate_todo_md_still_exists(series, variant, binding)
 
     # If it doesn't exist yet, generate the test implementation as well.
-    dns_counts = maybe_implement_test(series, variant, subs)
+    dns_counts = maybe_implement_test(series, variant, subs, fresh)
 
     # Load this file now, since it was just updated.
     variant_gn_dnrc_lines = validate_entry_does_not_already_exist(
@@ -640,18 +722,31 @@ def implement(name, binding, protocol, series):
     with open(tutorial_md_file_path, "r") as f:
         replaced_client_todo = f.read().replace(
             """%s/TODO.md" region_tag="todo" """ % binding,
-            """%s/client/%s" """ % (binding, BINDINGS[binding]), 1)
+            """%s/client/%s" highlight="TODO(%s)" """ %
+            (binding, BINDINGS[binding], DNS), 1)
         replaced_both_todos = replaced_client_todo.replace(
             """%s/TODO.md" region_tag="todo" """ % binding,
-            """%s/server/%s" """ % (binding, BINDINGS[binding]), 1)
+            """%s/server/%s" highlight="TODO(%s)" """ %
+            (binding, BINDINGS[binding], DNS), 1)
+        dns_counts[tutorial_md_file_path] = 2
         with open(tutorial_md_file_path, "wt") as f:
             f.write(replaced_both_todos)
 
-    # Remove the TODO.md file, then generate the templates in its place.
+    # Remove the TODO.md file.
     os.remove(todo_md_file_path)
-    binding_templates_dir = TEMPLATES_DIR / ("implement_%s" % binding)
-    for path, count in apply_subs(binding, subs, binding_templates_dir,
-                                  variant_code_root_path).items():
+
+    # If the user request a "fresh" instance, generate the templates. Otherwise, copy them over from
+    # the baseline case.
+    generated = {}
+    if fresh:
+        binding_templates_dir = TEMPLATES_DIR / ("implement_%s" % binding)
+        generated = apply_subs(
+            binding, subs, binding_templates_dir, variant_code_root_path)
+    else:
+        generated = copy_baseline_implementation(series, variant, binding, subs)
+
+    # Update the DNS counts to reflect the newly added impl files and report to the user.
+    for path, count in generated.items():
         dns_counts[path] = count
 
     report_success(dns_counts)
@@ -722,7 +817,8 @@ def main(args):
     if args.command_used == "document":
         return document(args.name, args.concepts[0])
     if args.command_used == "implement":
-        return implement(args.name, args.binding, args.protocol, args.series)
+        return implement(
+            args.name, args.binding, args.protocol, args.series, args.fresh)
     raise argparse.ArgumentTypeError("Unknown command '%s'" % args.command_used)
 
 
@@ -746,12 +842,15 @@ if __name__ == '__main__':
             """The bug associated with this canonical example entry.""",
         'concepts':
             """The concepts associated with this variant - each will receive its own widget.""",
+        'fresh':
+            """When creating a new variant implementation, enable this flag to create a blank
+            scaffold, rather than copying the baseline implementation.""",
         'from':
             """The name of the canonical example series that this example is an extension of. If
-            this argument is omitted, the --new flag must be specified instead to indicate that we
-            are creating the baseline case of a brand new canonical example series of the specified
-            name.""",
-        'new':
+            this argument is omitted, the --baseline flag must be specified instead to indicate that
+            we are creating the baseline case of a brand new canonical example series of the
+            specified name.""",
+        'baseline':
             """If this is a new canonical example series, this flag needs to be included to indicate
             this fact.""",
         'name':
@@ -761,7 +860,7 @@ if __name__ == '__main__':
             server in this example.""",
     }
     args = argparse.ArgumentParser(
-        description="Create or modify FIDL canonical example.s")
+        description="Create or modify FIDL canonical example.")
     commands = args.add_subparsers(
         dest="command_used",
         help="Commands (specify command followed by --help for details)",
@@ -776,13 +875,14 @@ if __name__ == '__main__':
         "--protocol", type=pascal_case, required=True, help=helps['protocol'])
     create_cmd.add_argument(
         "--bug", type=unsigned_int, required=True, help=helps['bug'])
-    create_cmd_new_or_extend = create_cmd.add_mutually_exclusive_group(
+
+    create_cmd_baseline_or_extend = create_cmd.add_mutually_exclusive_group(
         required=True)
-    create_cmd_new_or_extend.add_argument(
+    create_cmd_baseline_or_extend.add_argument(
         "--from", dest="series", type=snake_case, help=helps['from'])
-    create_cmd_new_or_extend.add_argument(
-        "--new", action='store_true', help=helps['new'])
-    create_cmd_new_or_extend.set_defaults(new=True)
+    create_cmd_baseline_or_extend.add_argument(
+        "--baseline", action='store_true', help=helps['baseline'])
+    create_cmd_baseline_or_extend.set_defaults(baseline=True)
 
     # Specify the document command.
     document_cmd = commands.add_parser("document", help=details["document"])
@@ -803,13 +903,17 @@ if __name__ == '__main__':
         help=helps['binding'])
     implement_cmd.add_argument(
         "--protocol", type=pascal_case, required=True, help=helps['protocol'])
-    implement_cmd_new_or_extend = implement_cmd.add_mutually_exclusive_group(
+    implement_cmd.add_argument(
+        "--fresh", action='store_true', help=helps['fresh'])
+    implement_cmd.set_defaults(fresh=False)
+
+    implement_cmd_baseline_or_extend = implement_cmd.add_mutually_exclusive_group(
         required=True)
-    implement_cmd_new_or_extend.add_argument(
+    implement_cmd_baseline_or_extend.add_argument(
         "--from", dest="series", type=snake_case, help=helps['from'])
-    implement_cmd_new_or_extend.add_argument(
-        "--new", action='store_true', help=helps['new'])
-    implement_cmd_new_or_extend.set_defaults(new=True)
+    implement_cmd_baseline_or_extend.add_argument(
+        "--baseline", action='store_true', help=helps['baseline'])
+    implement_cmd_baseline_or_extend.set_defaults(baseline=True)
 
     # Parse arguments.
     main(args.parse_args())

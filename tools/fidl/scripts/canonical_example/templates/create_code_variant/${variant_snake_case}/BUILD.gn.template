@@ -7,7 +7,7 @@ import("//build/rust/rustc_binary.gni")
 
 # Generate the manifest for the client component.
 fuchsia_component_manifest("client_manifest") {
-  component_name = "${series_snake_case}_${variant_snake_case}_client"
+  component_name = "${series_flat_case}_${variant_flat_case}_client"
   manifest = "//examples/fidl/new/${series_snake_case}/${variant_snake_case}/meta/client.cml"
 }
 
