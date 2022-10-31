@@ -15,14 +15,17 @@ using block_client::FakeBlockDevice;
 
 F2fsFakeDevTestFixture::F2fsFakeDevTestFixture(const TestOptions &options)
     : block_count_(options.block_count),
-      block_size_(options.block_size)
+      block_size_(options.block_size),
+      run_fsck_(options.run_fsck)
 
 {
   mkfs_options_ = options.mkfs_options;
   for (auto opt : options.mount_options) {
     mount_options_.SetValue(mount_options_.GetNameView(opt.first), opt.second);
   }
+}
 
+void F2fsFakeDevTestFixture::SetUp() {
   fbl::RefPtr<VnodeF2fs> root;
   FileTester::MkfsOnFakeDevWithOptions(&bc_, mkfs_options_, block_count_);
   FileTester::MountWithOptions(loop_.dispatcher(), mount_options_, &bc_, &fs_);
@@ -30,10 +33,15 @@ F2fsFakeDevTestFixture::F2fsFakeDevTestFixture(const TestOptions &options)
   root_dir_ = fbl::RefPtr<Dir>::Downcast(std::move(root));
 }
 
-F2fsFakeDevTestFixture::~F2fsFakeDevTestFixture() {
-  root_dir_->Close();
+void F2fsFakeDevTestFixture::TearDown() {
+  ASSERT_EQ(root_dir_->Close(), ZX_OK);
   root_dir_ = nullptr;
   FileTester::Unmount(std::move(fs_), &bc_);
+
+  if (run_fsck_) {
+    FsckWorker fsck(std::move(bc_), FsckOptions{.repair = false});
+    ASSERT_EQ(fsck.Run(), ZX_OK);
+  }
 }
 
 void FileTester::MkfsOnFakeDev(std::unique_ptr<Bcache> *bc, uint64_t block_count,

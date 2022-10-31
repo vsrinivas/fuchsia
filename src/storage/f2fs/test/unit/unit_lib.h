@@ -18,18 +18,25 @@ struct TestOptions {
   uint64_t block_size = kDefaultSectorSize;
   MkfsOptions mkfs_options{};
   std::vector<std::pair<uint32_t, uint32_t>> mount_options;
+  bool run_fsck = true;
 };
 
 class F2fsFakeDevTestFixture : public testing::Test {
  public:
   F2fsFakeDevTestFixture(const TestOptions &options = TestOptions());
-  ~F2fsFakeDevTestFixture();
+  ~F2fsFakeDevTestFixture() = default;
+
+  void SetUp() override;
+  void TearDown() override;
+
+  void DisableFsck() { run_fsck_ = false; }
 
  protected:
   uint64_t block_count_;
   uint64_t block_size_;
   MkfsOptions mkfs_options_{};
   MountOptions mount_options_{};
+  bool run_fsck_;
   std::unique_ptr<f2fs::Bcache> bc_;
   std::unique_ptr<F2fs> fs_;
   fbl::RefPtr<Dir> root_dir_;

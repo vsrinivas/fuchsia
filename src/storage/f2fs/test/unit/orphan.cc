@@ -131,6 +131,10 @@ TEST_F(OrphanTest, VnodeSet) {
   superblock_info.ForAllVnodesInVnodeSet(InoType::kOrphanIno,
                                          [&tmp_inos](nid_t ino) { tmp_inos.push_back(ino); });
   ASSERT_TRUE(std::equal(inos.begin(), inos.end(), tmp_inos.begin()));
+
+  for (auto ino : inos) {
+    superblock_info.RemoveVnodeFromVnodeSet(InoType::kOrphanIno, ino);
+  }
 }
 
 }  // namespace

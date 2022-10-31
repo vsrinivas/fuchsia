@@ -197,6 +197,8 @@ TEST_F(VnodeTest, WriteInode) {
 }
 
 TEST_F(VnodeTest, VgetExceptionCase) {
+  DisableFsck();
+
   fbl::RefPtr<VnodeF2fs> test_vnode;
   NodeManager &node_manager = fs_->GetNodeManager();
   nid_t nid;

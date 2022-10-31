@@ -118,11 +118,6 @@ void SegmentManager::GetSitBitmap(void *dst_addr) {
   memcpy(dst_addr, sit_info_->sit_bitmap.get(), sit_info_->bitmap_size);
 }
 
-block_t SegmentManager::GetWrittenBlockCount() {
-  fs::SharedLock lock(sit_info_->sentry_lock);
-  return sit_info_->written_valid_blocks;
-}
-
 block_t SegmentManager::FreeSegments() {
   fs::SharedLock segmap_lock(free_info_->segmap_lock);
   block_t free_segs = free_info_->free_segments;

@@ -210,7 +210,6 @@ class SuperblockInfo {
 
   Superblock &GetRawSuperblock() { return *raw_superblock_; }
   void SetRawSuperblock(std::shared_ptr<Superblock> &raw_sb) { raw_superblock_ = raw_sb; }
-  void SetRawSuperblock(Superblock *raw_sb_ptr) { raw_superblock_.reset(raw_sb_ptr); }
 
   bool IsDirty() const { return is_dirty_; }
   void SetDirty() { is_dirty_ = true; }
@@ -372,8 +371,6 @@ class SuperblockInfo {
   uint32_t GetNextGeneration() const { return s_next_generation_; }
 
   void IncNextGeneration() { ++s_next_generation_; }
-
-  atomic_t &GetNrPages(int type) { return nr_pages_[type]; }
 
   void ClearOpt(uint64_t option) { mount_opt_ &= ~option; }
   void SetOpt(uint64_t option) { mount_opt_ |= option; }

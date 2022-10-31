@@ -69,7 +69,6 @@ class StorageBuffer {
       __TA_EXCLUDES(mutex_);
   // It returns PageOperations that convey BufferedOperations and |pages_| for write I/Os.
   PageOperations TakeWriteOperations() __TA_EXCLUDES(mutex_);
-  bool IsEmpty() __TA_EXCLUDES(mutex_);
 
  private:
   void Init() __TA_EXCLUDES(mutex_);

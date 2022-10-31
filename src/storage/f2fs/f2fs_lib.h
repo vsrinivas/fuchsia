@@ -153,13 +153,6 @@ inline uint32_t CountBits(const void *addr, uint32_t offset, uint32_t len) {
   return sum;
 }
 
-inline void list_add(list_node_t *list, list_node_t *item) {
-  list->next->prev = item;
-  item->next = list->next;
-  item->prev = list;
-  list->next = item;
-}
-
 inline bool IsDotOrDotDot(std::string_view name) { return (name == "." || name == ".."); }
 
 template <typename T>

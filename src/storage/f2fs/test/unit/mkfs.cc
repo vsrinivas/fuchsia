@@ -27,7 +27,7 @@ enum class ArgType {
   OP,
 };
 
-void AddArg(std::vector<const char *> &argv, ArgType t, const char *val) {
+void AddArg(std::vector<std::string> &argv, ArgType t, const std::string &val) {
   switch (t) {
     case ArgType::Label:
       argv.push_back("-l");
@@ -51,7 +51,7 @@ void AddArg(std::vector<const char *> &argv, ArgType t, const char *val) {
   argv.push_back(val);
 }
 
-[[maybe_unused]] void PrintArg(std::vector<const char *> &argv) {
+void PrintArg(const std::vector<std::string> &argv) {
   std::string str_args;
 
   for (auto &i : argv) {
@@ -61,13 +61,20 @@ void AddArg(std::vector<const char *> &argv, ArgType t, const char *val) {
   FX_LOGS(INFO) << "mkfs arg: " << str_args;
 }
 
-void DoMkfs(std::unique_ptr<Bcache> bcache, std::vector<const char *> &argv, bool expect_success,
-            std::unique_ptr<Bcache> *out) {
+void DoMkfs(std::unique_ptr<Bcache> bcache, const std::vector<std::string> &argv,
+            bool expect_success, std::unique_ptr<Bcache> *out) {
   MkfsOptions mkfs_options;
 
   zx_status_t status;
   zx::result<std::unique_ptr<Bcache>> make_return;
-  if (status = ParseOptions(static_cast<int>(argv.size()), const_cast<char **>(argv.data()),
+
+  std::vector<const char *> argv_list;
+  argv_list.reserve(argv.size());
+  for (const auto &s : argv) {
+    argv_list.push_back(s.c_str());
+  }
+
+  if (status = ParseOptions(static_cast<int>(argv.size()), const_cast<char **>(argv_list.data()),
                             mkfs_options);
       status == ZX_OK) {
     make_return = Mkfs(mkfs_options, std::move(bcache));
@@ -101,8 +108,7 @@ void ReadCheckpoint(Bcache *bc, Superblock &sb, Checkpoint *ckp) {
   memcpy(ckp, buf, sizeof(Checkpoint));
 }
 
-void VerifyLabel(Superblock &sb, const char *label) {
-  std::string vol_label(label);
+void VerifyLabel(Superblock &sb, const std::string &vol_label) {
   std::u16string volume_name;
   AsciiToUnicode(vol_label, volume_name);
 
@@ -120,7 +126,7 @@ void VerifySecsPerZone(Superblock &sb, uint32_t secs_per_zone) {
   ASSERT_EQ(sb.secs_per_zone, secs_per_zone);
 }
 
-void VerifyExtensionList(Superblock &sb, const char *extensions) {
+void VerifyExtensionList(Superblock &sb, const std::string &extensions) {
   ASSERT_LE(sb.extension_count, static_cast<uint32_t>(kMaxExtension));
   uint32_t extension_iter = 0;
   for (const char *ext_item : kMediaExtList) {
@@ -202,7 +208,7 @@ TEST(FormatFilesystemTest, MkfsOptionsLabel) {
   const char *default_label = "F2FS";
 
   // Check default label is written when there is no arg for label
-  std::vector<const char *> argv = {"mkfs"};
+  std::vector<std::string> argv = {"mkfs"};
   std::unique_ptr<Bcache> bc;
   DoMkfs(std::move(*bc_or), argv, true, &bc);
 
@@ -233,7 +239,7 @@ TEST(FormatFilesystemTest, MkfsOptionsSegsPerSec) {
   ASSERT_TRUE(bc_or.is_ok());
 
   // Check default value
-  std::vector<const char *> argv = {"mkfs"};
+  std::vector<std::string> argv = {"mkfs"};
   std::unique_ptr<Bcache> bc;
   DoMkfs(std::move(*bc_or), argv, true, &bc);
   auto sb_or = ReadSuperblock(*bc);
@@ -245,8 +251,8 @@ TEST(FormatFilesystemTest, MkfsOptionsSegsPerSec) {
     FX_LOGS(INFO) << "segs_per_sec = " << segs_per_sec;
     argv.clear();
     argv.push_back("mkfs");
-    std::string tmp(std::to_string(segs_per_sec).c_str());
-    AddArg(argv, ArgType::SegsPerSec, tmp.data());
+    std::string tmp(std::to_string(segs_per_sec));
+    AddArg(argv, ArgType::SegsPerSec, tmp);
     DoMkfs(std::move(bc), argv, true, &bc);
     auto sb_or = ReadSuperblock(*bc);
     VerifySegsPerSec(*sb_or.value(), segs_per_sec);
@@ -256,7 +262,7 @@ TEST(FormatFilesystemTest, MkfsOptionsSegsPerSec) {
   argv.clear();
   argv.push_back("mkfs");
   std::string tmp("0");
-  AddArg(argv, ArgType::SegsPerSec, tmp.data());
+  AddArg(argv, ArgType::SegsPerSec, tmp);
   DoMkfs(std::move(bc), argv, false, &bc);
 }
 
@@ -268,7 +274,7 @@ TEST(FormatFilesystemTest, MkfsOptionsSecsPerZone) {
   ASSERT_TRUE(bc_or.is_ok());
 
   // Check default value
-  std::vector<const char *> argv = {"mkfs"};
+  std::vector<std::string> argv = {"mkfs"};
   DoMkfs(std::move(*bc_or), argv, true, &bc);
   auto sb_or = ReadSuperblock(*bc);
   VerifySecsPerZone(*sb_or.value(), default_option.secs_per_zone);
@@ -279,8 +285,8 @@ TEST(FormatFilesystemTest, MkfsOptionsSecsPerZone) {
     FX_LOGS(INFO) << "secs_per_zone = " << secs_per_zone;
     argv.clear();
     argv.push_back("mkfs");
-    std::string tmp(std::to_string(secs_per_zone).c_str());
-    AddArg(argv, ArgType::SecsPerZone, tmp.data());
+    std::string tmp(std::to_string(secs_per_zone));
+    AddArg(argv, ArgType::SecsPerZone, tmp);
     DoMkfs(std::move(bc), argv, true, &bc);
     auto sb_or = ReadSuperblock(*bc);
     VerifySecsPerZone(*sb_or.value(), secs_per_zone);
@@ -303,38 +309,35 @@ TEST(FormatFilesystemTest, MkfsOptionsExtensions) {
   ASSERT_TRUE(bc_or.is_ok());
 
   // Check default
-  std::vector<const char *> argv = {"mkfs"};
+  std::vector<std::string> argv = {"mkfs"};
   DoMkfs(std::move(*bc_or), argv, true, &bc);
   auto sb_or = ReadSuperblock(*bc);
   VerifyExtensionList(*sb_or.value(), "");
 
   // Try with max extension counts
-  std::string extensions("");
+  std::string extensions;
   for (uint32_t i = sizeof(kMediaExtList) / sizeof(const char *); i < kMaxExtension; ++i) {
     if (i > sizeof(kMediaExtList) / sizeof(const char *))
       extensions.append(",");
     extensions.append(std::to_string(i));
   }
-  char ext_arg_buf[512];
-  strcpy(ext_arg_buf, extensions.c_str());
 
   argv.clear();
   argv.push_back("mkfs");
-  AddArg(argv, ArgType::Extension, ext_arg_buf);
+  AddArg(argv, ArgType::Extension, extensions);
   DoMkfs(std::move(bc), argv, true, &bc);
   sb_or = ReadSuperblock(*bc);
-  VerifyExtensionList(*sb_or.value(), extensions.c_str());
+  VerifyExtensionList(*sb_or.value(), extensions);
 
   // If exeeding max extension counts, only extensions within max count are valid
   extensions.append(",foo");
-  strcpy(ext_arg_buf, extensions.c_str());
 
   argv.clear();
   argv.push_back("mkfs");
-  AddArg(argv, ArgType::Extension, ext_arg_buf);
+  AddArg(argv, ArgType::Extension, extensions);
   DoMkfs(std::move(bc), argv, true, &bc);
   sb_or = ReadSuperblock(*bc);
-  VerifyExtensionList(*sb_or.value(), extensions.c_str());
+  VerifyExtensionList(*sb_or.value(), extensions);
 }
 
 TEST(FormatFilesystemTest, MkfsOptionsHeapBasedAlloc) {
@@ -345,7 +348,7 @@ TEST(FormatFilesystemTest, MkfsOptionsHeapBasedAlloc) {
   ASSERT_TRUE(bc_or.is_ok());
 
   // Check default
-  std::vector<const char *> argv = {"mkfs"};
+  std::vector<std::string> argv = {"mkfs"};
   DoMkfs(std::move(*bc_or), argv, true, &bc);
   auto sb_or = ReadSuperblock(*bc);
   Checkpoint ckp = {};
@@ -356,7 +359,7 @@ TEST(FormatFilesystemTest, MkfsOptionsHeapBasedAlloc) {
   argv.clear();
   argv.push_back("mkfs");
   std::string tmp("0");
-  AddArg(argv, ArgType::Heap, tmp.data());
+  AddArg(argv, ArgType::Heap, tmp);
   DoMkfs(std::move(bc), argv, true, &bc);
   sb_or = ReadSuperblock(*bc);
   ReadCheckpoint(bc.get(), *sb_or.value(), &ckp);
@@ -366,7 +369,7 @@ TEST(FormatFilesystemTest, MkfsOptionsHeapBasedAlloc) {
   argv.clear();
   argv.push_back("mkfs");
   tmp = "1";
-  AddArg(argv, ArgType::Heap, tmp.data());
+  AddArg(argv, ArgType::Heap, tmp);
   DoMkfs(std::move(bc), argv, true, &bc);
   sb_or = ReadSuperblock(*bc);
   ReadCheckpoint(bc.get(), *sb_or.value(), &ckp);
@@ -380,7 +383,7 @@ TEST(FormatFilesystemTest, MkfsOptionsOverprovision) {
   ASSERT_TRUE(bc_or.is_ok());
 
   // Check default
-  std::vector<const char *> argv = {"mkfs"};
+  std::vector<std::string> argv = {"mkfs"};
   std::unique_ptr<Bcache> bc;
   DoMkfs(std::move(*bc_or), argv, true, &bc);
   auto sb_or = ReadSuperblock(*bc);
@@ -393,8 +396,8 @@ TEST(FormatFilesystemTest, MkfsOptionsOverprovision) {
     FX_LOGS(INFO) << "overprovision_ratio = " << overprovision_ratio;
     argv.clear();
     argv.push_back("mkfs");
-    std::string tmp(std::to_string(overprovision_ratio).c_str());
-    AddArg(argv, ArgType::OP, tmp.data());
+    std::string tmp(std::to_string(overprovision_ratio));
+    AddArg(argv, ArgType::OP, tmp);
     DoMkfs(std::move(bc), argv, true, &bc);
     ReadCheckpoint(bc.get(), *sb_or.value(), &ckp);
     VerifyOP(*sb_or.value(), ckp, overprovision_ratio);
@@ -404,16 +407,16 @@ TEST(FormatFilesystemTest, MkfsOptionsOverprovision) {
   argv.clear();
   argv.push_back("mkfs");
   std::string tmp("0");
-  AddArg(argv, ArgType::OP, tmp.data());
+  AddArg(argv, ArgType::OP, tmp);
   DoMkfs(std::move(bc), argv, false, &bc);
 }
-#if 0  //[TODO] fix errors with core.arm64-release
-      // https://ci.chromium.org/ui/p/fuchsia/builders/try/core.arm64-release/b8837818659754240433/overview
+
 TEST(FormatFilesystemTest, MkfsOptionsMixed) {
   auto device = std::make_unique<FakeBlockDevice>(kMkfsBlockCount, kMkfsBlockSize);
-  std::unique_ptr<Bcache> bc;
   bool readonly_device = false;
-  ASSERT_EQ(CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
+  auto bc_or = CreateBcache(std::move(device), &readonly_device);
+  ASSERT_TRUE(bc_or.is_ok());
+  std::unique_ptr<Bcache> bc = std::move(*bc_or);
 
   const char *label_list[] = {"aa", "bbbbb"};
   const uint32_t segs_per_sec_list[] = {2, 4};
@@ -428,12 +431,12 @@ TEST(FormatFilesystemTest, MkfsOptionsMixed) {
         for (const char *extensions : ext_list) {
           for (const uint32_t heap_based : heap_based_list) {
             for (const uint32_t overprovision : overprovision_list) {
-              std::vector<const char *> argv = {"mkfs"};
+              std::vector<std::string> argv = {"mkfs"};
               char ext_arg_buf[512];
 
               AddArg(argv, ArgType::Label, label);
-              AddArg(argv, ArgType::SegsPerSec, std::to_string(segs_per_sec).c_str());
-              AddArg(argv, ArgType::SecsPerZone, std::to_string(secs_per_zone).c_str());
+              AddArg(argv, ArgType::SegsPerSec, std::to_string(segs_per_sec));
+              AddArg(argv, ArgType::SecsPerZone, std::to_string(secs_per_zone));
 
               // Mkfs will tokenize extension list using strtok().
               // Since strtok() needs to modify original string, use non-const buffer to deliver
@@ -441,24 +444,24 @@ TEST(FormatFilesystemTest, MkfsOptionsMixed) {
               strcpy(ext_arg_buf, extensions);
               AddArg(argv, ArgType::Extension, ext_arg_buf);
 
-              AddArg(argv, ArgType::Heap, std::to_string(heap_based).c_str());
-              AddArg(argv, ArgType::OP, std::to_string(overprovision).c_str());
+              AddArg(argv, ArgType::Heap, std::to_string(heap_based));
+              AddArg(argv, ArgType::OP, std::to_string(overprovision));
 
               PrintArg(argv);
-              DoMkfs(bc.get(), argv, true);
+              DoMkfs(std::move(bc), argv, true, &bc);
 
-              Superblock sb = {};
-              ReadSuperblock(bc.get(), &sb);
+              std::unique_ptr<Superblock> sb;
+              ReadSuperblock(*bc, &sb);
 
               Checkpoint ckp = {};
-              ReadCheckpoint(bc.get(), sb, &ckp);
+              ReadCheckpoint(bc.get(), *sb, &ckp);
 
-              VerifyLabel(sb, label);
-              VerifySegsPerSec(sb, segs_per_sec);
-              VerifySecsPerZone(sb, secs_per_zone);
-              VerifyExtensionList(sb, extensions);
-              VerifyHeapBasedAllocation(sb, ckp, (heap_based != 0));
-              VerifyOP(sb, ckp, overprovision);
+              VerifyLabel(*sb, label);
+              VerifySegsPerSec(*sb, segs_per_sec);
+              VerifySecsPerZone(*sb, secs_per_zone);
+              VerifyExtensionList(*sb, extensions);
+              VerifyHeapBasedAllocation(*sb, ckp, (heap_based != 0));
+              VerifyOP(*sb, ckp, overprovision);
             }
           }
         }
@@ -466,7 +469,6 @@ TEST(FormatFilesystemTest, MkfsOptionsMixed) {
     }
   }
 }
-#endif
 
 TEST(FormatFilesystemTest, BlockSize) {
   uint32_t block_size_array[] = {256, 512, 1024, 2048, 4096, 8192};
@@ -566,7 +568,7 @@ TEST(FormatFilesystemTest, MkfsPrintOptions) {
   ASSERT_TRUE(bc_or.is_ok());
 
   // Check default value
-  std::vector<const char *> argv = {"mkfs"};
+  std::vector<std::string> argv = {"mkfs"};
   std::unique_ptr<Bcache> bc;
   DoMkfs(std::move(*bc_or), argv, true, &bc);
 
@@ -626,9 +628,9 @@ TEST(FormatFilesystemTest, PrepareSuperblockExceptionCase) {
 
 TEST(FormatFilesystemTest, LabelAsciiToUnicodeConversion) {
   // Convert empty string
-  std::string label("");
+  std::string label;
   std::u16string out;
-  std::u16string target(u"");
+  std::u16string target;
 
   AsciiToUnicode(label, out);
   ASSERT_EQ(out, target);

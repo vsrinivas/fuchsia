@@ -20,7 +20,10 @@ namespace {
 
 constexpr uint32_t kMaxNodeCnt = 10;
 
-using NodeManagerTest = F2fsFakeDevTestFixture;
+class NodeManagerTest : public F2fsFakeDevTestFixture {
+ public:
+  NodeManagerTest() : F2fsFakeDevTestFixture(TestOptions{.run_fsck = false}) {}
+};
 
 void FaultInjectToDnodeAndTruncate(NodeManager &node_manager, fbl::RefPtr<VnodeF2fs> &vnode,
                                    pgoff_t page_index, block_t fault_address,

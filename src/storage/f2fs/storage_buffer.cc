@@ -159,11 +159,6 @@ void StorageBuffer::ReleaseWriteBuffers(const PageOperations &operation,
   }
 }
 
-bool StorageBuffer::IsEmpty() {
-  fs::SharedLock lock(mutex_);
-  return free_list_.is_empty();
-}
-
 PageOperations StorageBuffer::TakeWriteOperations() {
   std::lock_guard lock(mutex_);
   return PageOperations(builder_.TakeOperations(), std::move(pages_), std::move(inflight_list_),

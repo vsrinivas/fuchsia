@@ -237,7 +237,6 @@ class SegmentManager {
   void ChangeCurseg(CursegType type, bool reuse);
   void AllocateSegmentByDefault(CursegType type, bool force);
   void AllocateNewSegments();
-  block_t GetWrittenBlockCount();
 #if 0  // porting needed
   void VerifyBlockAddr(block_t blk_addr) = 0;
 #endif
@@ -289,7 +288,6 @@ class SegmentManager {
 
   block_t GetSegment0StartBlock() const { return seg0_blkaddr_; }
   block_t GetMainAreaStartBlock() const { return main_blkaddr_; }
-  block_t GetSSAreaStartBlock() const { return ssa_blkaddr_; }
   block_t GetSegmentsCount() const { return segment_count_; }
   block_t GetMainSegmentsCount() const { return main_segments_; }
   block_t GetReservedSegmentsCount() const { return reserved_segments_; }
