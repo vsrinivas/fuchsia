@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.devicegroup.test/cpp/wire.h>
+#include <lib/driver/compat/cpp/compat.h>
 #include <lib/driver2/device_group.h>
 #include <lib/driver2/driver2_cpp.h>
 #include <lib/driver2/service_client.h>
-#include <lib/driver_compat/compat.h>
 
 #include <bind/fuchsia/devicegroupbind/test/cpp/bind.h>
 

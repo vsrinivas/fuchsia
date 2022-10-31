@@ -4,7 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/driver_compat/connect.h>
+#include <lib/driver/compat/cpp/connect.h>
 #include <lib/fdio/directory.h>
 
 #include <memory>

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/driver/compat/cpp/service_offers.h>
 #include <lib/driver2/node_add_args.h>
-#include <lib/driver_compat/service_offers.h>
 #include <lib/sys/component/cpp/service_client.h>
 
 namespace compat {

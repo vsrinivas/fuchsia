@@ -8,9 +8,9 @@
 #include <fidl/fuchsia.boot/cpp/wire.h>
 #include <fidl/fuchsia.scheduler/cpp/markers.h>
 #include <lib/async/cpp/executor.h>
+#include <lib/driver/compat/cpp/compat.h>
 #include <lib/driver2/devfs_exporter.h>
 #include <lib/driver2/driver2_cpp.h>
-#include <lib/driver_compat/compat.h>
 #include <lib/fdf/cpp/dispatcher.h>
 #include <lib/fpromise/scope.h>
 #include <lib/inspect/component/cpp/component.h>

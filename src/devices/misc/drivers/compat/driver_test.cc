@@ -14,7 +14,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-testing/test_loop.h>
-#include <lib/driver_compat/symbols.h>
+#include <lib/driver/compat/cpp/symbols.h>
 #include <lib/fdf/testing.h>
 #include <lib/fdio/directory.h>
 #include <lib/fit/defer.h>

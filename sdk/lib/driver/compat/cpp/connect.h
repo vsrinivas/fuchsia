@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_DRIVER_COMPAT_CONNECT_H_
-#define LIB_DRIVER_COMPAT_CONNECT_H_
+#ifndef LIB_DRIVER_COMPAT_CPP_CONNECT_H_
+#define LIB_DRIVER_COMPAT_CPP_CONNECT_H_
 
 #include <fidl/fuchsia.driver.compat/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
@@ -30,4 +30,4 @@ void ConnectToParentDevices(async_dispatcher_t* dispatcher, const driver::Namesp
 
 }  // namespace compat
 
-#endif  // LIB_DRIVER_COMPAT_CONNECT_H_
+#endif  // LIB_DRIVER_COMPAT_CPP_CONNECT_H_

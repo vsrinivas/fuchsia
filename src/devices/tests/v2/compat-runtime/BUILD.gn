@@ -39,9 +39,9 @@ fuchsia_driver("root-driver") {
   deps = [
     ":fuchsia.compat.runtime.test_cpp_driver",
     ":root-bind",
+    "//sdk/lib/driver/compat/cpp",
+    "//sdk/lib/driver/compat/cpp:symbols",
     "//sdk/lib/driver2:cpp",
-    "//sdk/lib/driver_compat",
-    "//sdk/lib/driver_compat:symbols",
     "//src/devices/bind/fuchsia.test:fuchsia.test_cpp",
     "//src/devices/lib/driver:driver_runtime",
     "//src/lib/ddk",

@@ -43,7 +43,7 @@ source_set("dfv2") {
   ]
   deps = [ "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_hlcpp" ]
   public_deps = [
+    "//sdk/lib/driver/compat/cpp",
     "//sdk/lib/driver2:cpp",
-    "//sdk/lib/driver_compat",
   ]
 }

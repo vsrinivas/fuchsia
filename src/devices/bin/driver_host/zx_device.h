@@ -12,6 +12,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/driver/compat/cpp/symbols.h>
 #include <lib/fit/function.h>
 #include <lib/fpromise/result.h>
 #include <lib/sync/cpp/completion.h>
@@ -37,7 +38,6 @@
 
 #include "driver.h"
 #include "inspect.h"
-#include "sdk/lib/driver_compat/symbols.h"
 #include "src/devices/bin/driver_host/devfs_vnode.h"
 
 class CompositeDevice;

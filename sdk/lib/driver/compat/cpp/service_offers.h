@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_DRIVER_COMPAT_SERVICE_OFFERS_H_
-#define LIB_DRIVER_COMPAT_SERVICE_OFFERS_H_
+#ifndef LIB_DRIVER_COMPAT_CPP_SERVICE_OFFERS_H_
+#define LIB_DRIVER_COMPAT_CPP_SERVICE_OFFERS_H_
 
 #include <fidl/fuchsia.component.decl/cpp/fidl.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
@@ -45,4 +45,4 @@ class ServiceOffersV1 {
 
 }  // namespace compat
 
-#endif  // LIB_DRIVER_COMPAT_SERVICE_OFFERS_H_
+#endif  // LIB_DRIVER_COMPAT_CPP_SERVICE_OFFERS_H_

@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <lib/ddk/device.h>
+#include <lib/driver/compat/cpp/compat.h>
+#include <lib/driver/compat/cpp/symbols.h>
 #include <lib/driver2/driver2_cpp.h>
-#include <lib/driver_compat/compat.h>
-#include <lib/driver_compat/symbols.h>
 
 #include <bind/fuchsia/test/cpp/bind.h>
 

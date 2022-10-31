@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.composite.test/cpp/wire.h>
+#include <lib/driver/compat/cpp/compat.h>
 #include <lib/driver2/driver2_cpp.h>
 #include <lib/driver2/service_client.h>
-#include <lib/driver_compat/compat.h>
 
 #include <bind/fuchsia/test/cpp/bind.h>
 

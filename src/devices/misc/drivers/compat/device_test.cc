@@ -9,7 +9,7 @@
 #include <fidl/fuchsia.driver.framework/cpp/wire_test_base.h>
 #include <fidl/test.placeholders/cpp/wire.h>
 #include <lib/ddk/metadata.h>
-#include <lib/driver_compat/symbols.h>
+#include <lib/driver/compat/cpp/symbols.h>
 #include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/fidl/cpp/wire/transaction.h>
 

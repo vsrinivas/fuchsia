@@ -35,8 +35,8 @@ fuchsia_driver("root_driver") {
     ":fuchsia.devicegroupbind.test_cpp",
     ":root_bind",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_cpp_wire",
+    "//sdk/lib/driver/compat/cpp",
     "//sdk/lib/driver2:cpp",
-    "//sdk/lib/driver_compat",
     "//src/devices/lib/driver:driver_runtime",
   ]
 }

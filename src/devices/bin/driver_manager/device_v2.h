@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_DEVICE_V2_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_DEVICE_V2_H_
 
-#include "sdk/lib/driver_compat/device_server.h"
+#include "sdk/lib/driver/compat/cpp/device_server.h"
 #include "src/devices/bin/driver_manager/v2/node.h"
 
 namespace dfv2 {

@@ -12,10 +12,10 @@
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <fidl/fuchsia.lifecycle.test/cpp/wire.h>
 #include <fuchsia/lifecycle/test/cpp/banjo.h>
+#include <lib/driver/compat/cpp/context.h>
+#include <lib/driver/compat/cpp/device_server.h>
+#include <lib/driver/compat/cpp/symbols.h>
 #include <lib/driver2/driver2_cpp.h>
-#include <lib/driver_compat/context.h>
-#include <lib/driver_compat/device_server.h>
-#include <lib/driver_compat/symbols.h>
 
 namespace fdf {
 using namespace fuchsia_driver_framework;

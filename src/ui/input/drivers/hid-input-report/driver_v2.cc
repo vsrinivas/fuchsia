@@ -5,11 +5,11 @@
 #include <fidl/fuchsia.driver.compat/cpp/fidl.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <lib/ddk/debug.h>
+#include <lib/driver/compat/cpp/compat.h>
+#include <lib/driver/compat/cpp/context.h>
+#include <lib/driver/compat/cpp/symbols.h>
 #include <lib/driver2/devfs_exporter.h>
 #include <lib/driver2/driver2_cpp.h>
-#include <lib/driver_compat/compat.h>
-#include <lib/driver_compat/context.h>
-#include <lib/driver_compat/symbols.h>
 #include <lib/inspect/component/cpp/component.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
 #include <zircon/errors.h>

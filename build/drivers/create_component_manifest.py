@@ -34,8 +34,9 @@ def main():
         help='If this exists then the driver should be colocated with its parent'
     )
     parser.add_argument(
-      '--device_categories_file',
-      help='A path to a JSON file of device categories to enlist and run the tests for certification'
+        '--device_categories_file',
+        help=
+        'A path to a JSON file of device categories to enlist and run the tests for certification'
     )
     parser.add_argument(
         '--fallback',
@@ -108,7 +109,7 @@ def main():
         manifest["include"] = [
             'inspect/client.shard.cml',
             'syslog/client.shard.cml',
-            '//sdk/lib/driver_compat/compat.shard.cml',
+            '//sdk/lib/driver/compat/compat.shard.cml',
         ]
     else:
         manifest["program"]["binary"] = program

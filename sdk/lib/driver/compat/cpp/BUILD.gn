@@ -6,7 +6,7 @@ import("//build/components.gni")
 import("//build/cpp/sdk_source_set.gni")
 import("//build/test.gni")
 
-sdk_source_set("driver_compat") {
+sdk_source_set("cpp") {
   category = "experimental"
   sdk_name = "driver_compat"
   include_base = "//sdk"
@@ -38,7 +38,7 @@ test("test") {
   output_name = "compat-lib-test"
   sources = [ "test.cc" ]
   deps = [
-    ":driver_compat",
+    ":cpp",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/driver_compat/connect.h>
+#include <lib/driver/compat/cpp/connect.h>
 
 namespace compat {
 

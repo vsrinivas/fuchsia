@@ -41,9 +41,9 @@ fuchsia_driver("lifecycle_driver") {
     "bind:fuchsia.lifecycle_cpp",
     "//sdk/fidl/fuchsia.device.fs:fuchsia.device.fs_cpp",
     "//sdk/fidl/fuchsia.driver.compat:fuchsia.driver.compat_cpp",
+    "//sdk/lib/driver/compat/cpp",
+    "//sdk/lib/driver/compat/cpp:symbols",
     "//sdk/lib/driver2:cpp",
-    "//sdk/lib/driver_compat",
-    "//sdk/lib/driver_compat:symbols",
     "//sdk/lib/sys/component/cpp",
     "//src/devices/lib/driver:driver_runtime",
   ]

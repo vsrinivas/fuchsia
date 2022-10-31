@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_DRIVER_COMPAT_SYMBOLS_H_
-#define LIB_DRIVER_COMPAT_SYMBOLS_H_
+#ifndef LIB_DRIVER_COMPAT_CPP_SYMBOLS_H_
+#define LIB_DRIVER_COMPAT_CPP_SYMBOLS_H_
 
 #include <stdint.h>
 
@@ -35,4 +35,4 @@ constexpr char kDeviceSymbol[] = "fuchsia.compat.device/Device";
 
 }  // namespace compat
 
-#endif  // LIB_DRIVER_COMPAT_SYMBOLS_H_
+#endif  // LIB_DRIVER_COMPAT_CPP_SYMBOLS_H_
