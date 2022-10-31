@@ -11,9 +11,7 @@
 #include <soc/aml-a5/a5-hiu.h>
 #include <soc/aml-a5/a5-hw.h>
 
-namespace amlogic_clock {
-
-namespace a5_pll {
+namespace amlogic_clock::a5 {
 
 constexpr uint32_t kA5HifiPllSize = 8 * sizeof(uint32_t);
 constexpr uint32_t kA5MpllSize = 2 * sizeof(uint32_t);
@@ -63,8 +61,7 @@ static constexpr meson_clk_pll_data_t a5_mpll_rates = {
     .init_count = std::size(a5_mpll_default),
 };
 
-std::unique_ptr<AmlMesonPllDevice> CreatePllDeviceA5(fdf::MmioBuffer* mmio,
-                                                     const uint32_t pll_num) {
+std::unique_ptr<AmlMesonPllDevice> CreatePllDevice(fdf::MmioBuffer* mmio, const uint32_t pll_num) {
   switch (pll_num) {
     case SYS_PLL:
       return AmlA5SysPllDevice::Create(
@@ -144,6 +141,4 @@ std::unique_ptr<AmlMesonPllDevice> AmlA5MpllDevice::Create(
   return dev;
 }
 
-}  // namespace a5_pll
-
-}  // namespace amlogic_clock
+}  // namespace amlogic_clock::a5

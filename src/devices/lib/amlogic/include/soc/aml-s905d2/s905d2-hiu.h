@@ -11,6 +11,8 @@
 #include <unistd.h>
 #include <zircon/assert.h>
 
+#include <soc/aml-meson/aml-pll.h>
+
 typedef enum {
   GP0_PLL = 0,
   PCIE_PLL,
@@ -19,14 +21,6 @@ typedef enum {
   SYS1_PLL,
   HIU_PLL_COUNT,
 } hhi_plls_t;
-
-typedef struct {
-  uint64_t rate;
-  uint32_t n;
-  uint32_t m;
-  uint32_t frac;
-  uint32_t od;
-} hhi_pll_rate_t;
 
 typedef struct aml_hiu_dev {
   mmio_buffer_t mmio;

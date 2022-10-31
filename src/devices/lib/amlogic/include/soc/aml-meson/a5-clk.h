@@ -9,7 +9,6 @@
 
 #include <soc/aml-a5/a5-hiu.h>
 #include <soc/aml-meson/aml-clk-common.h>
-#include <soc/aml-s905d2/s905d2-hiu.h>
 
 namespace a5_clk {
 
@@ -87,12 +86,13 @@ constexpr uint32_t CLK_NNA_CORE_SEL = AmlClkId(26, clk_type::kMesonMuxRo);
 constexpr uint32_t CLK_TIMESTAMP_SEL = AmlClkId(27, clk_type::kMesonMuxRo);
 constexpr uint32_t CLK_A5_MUX_COUNT = 28;
 
+using a5_pll_type = amlogic_clock::a5::meson_plls_t;
 // kMesonPllClocks
-constexpr uint32_t CLK_HIFI_PLL = AmlClkId(amlogic_clock::a5_pll::HIFI_PLL, clk_type::kMesonPll);
-constexpr uint32_t CLK_MPLL0 = AmlClkId(amlogic_clock::a5_pll::MPLL0, clk_type::kMesonPll);
-constexpr uint32_t CLK_MPLL1 = AmlClkId(amlogic_clock::a5_pll::MPLL1, clk_type::kMesonPll);
-constexpr uint32_t CLK_MPLL2 = AmlClkId(amlogic_clock::a5_pll::MPLL2, clk_type::kMesonPll);
-constexpr uint32_t CLK_MPLL3 = AmlClkId(amlogic_clock::a5_pll::MPLL3, clk_type::kMesonPll);
+constexpr uint32_t CLK_HIFI_PLL = AmlClkId(a5_pll_type::HIFI_PLL, clk_type::kMesonPll);
+constexpr uint32_t CLK_MPLL0 = AmlClkId(a5_pll_type::MPLL0, clk_type::kMesonPll);
+constexpr uint32_t CLK_MPLL1 = AmlClkId(a5_pll_type::MPLL1, clk_type::kMesonPll);
+constexpr uint32_t CLK_MPLL2 = AmlClkId(a5_pll_type::MPLL2, clk_type::kMesonPll);
+constexpr uint32_t CLK_MPLL3 = AmlClkId(a5_pll_type::MPLL3, clk_type::kMesonPll);
 
 // Cpu Clocks
 constexpr uint32_t CLK_SYS_CPU_CLK = AmlClkId(0, clk_type::kMesonCpuClk);

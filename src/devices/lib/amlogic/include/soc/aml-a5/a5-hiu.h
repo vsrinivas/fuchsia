@@ -13,37 +13,9 @@
 #include <zircon/types.h>
 
 #include <fbl/macros.h>
-#include <soc/aml-s905d2/s905d2-hiu.h>
+#include <soc/aml-meson/aml-meson-pll.h>
 
-namespace amlogic_clock {
-
-class AmlMesonPllDevice {
- public:
-  DISALLOW_COPY_ASSIGN_AND_MOVE(AmlMesonPllDevice);
-
-  // Return correct clock rate table for selected clock.
-  virtual const hhi_pll_rate_t* GetRateTable() const = 0;
-
-  // Return the count of the rate table for the clock.
-  virtual size_t GetRateTableSize() = 0;
-
-  // Enable the selected clock.
-  virtual zx_status_t Enable() = 0;
-
-  // Disable the selected clock.
-  virtual void Disable() = 0;
-
-  // Set the rate of the selected clock.
-  virtual zx_status_t SetRate(const uint64_t hz) = 0;
-
- protected:
-  friend class std::default_delete<AmlMesonPllDevice>;
-  AmlMesonPllDevice() {}
-
-  virtual ~AmlMesonPllDevice() = default;
-};
-
-namespace a5_pll {
+namespace amlogic_clock::a5 {
 
 typedef enum {
   SYS_PLL = 0,
@@ -53,18 +25,7 @@ typedef enum {
   MPLL2,
   MPLL3,
   PLL_COUNT,
-} a5_plls_t;
-
-struct reg_sequence {
-  uint32_t reg_offset;
-  uint32_t def;
-  uint32_t delay_us;
-};
-
-typedef struct {
-  const struct reg_sequence* init_regs;
-  uint32_t init_count;
-} meson_clk_pll_data_t;
+} meson_plls_t;
 
 class AmlA5SysPllDevice : public AmlMesonPllDevice {
  public:
@@ -180,16 +141,7 @@ class AmlA5MpllDevice : public AmlMesonPllDevice {
 };
 
 // Create the PLL device according to the specified ID.
-std::unique_ptr<AmlMesonPllDevice> CreatePllDeviceA5(fdf::MmioBuffer* mmio, const uint32_t pll_num);
+std::unique_ptr<AmlMesonPllDevice> CreatePllDevice(fdf::MmioBuffer* mmio, const uint32_t pll_num);
 
-// Load the default register parameter.
-void LoadInitConfig(const fdf::MmioView view, const meson_clk_pll_data_t config);
-
-// Find frequency in the rate table and return pointer to the entry.
-zx_status_t FetchRateTable(uint64_t hz, const cpp20::span<const hhi_pll_rate_t> rates_table,
-                           const hhi_pll_rate_t** pll_rate);
-
-}  // namespace a5_pll
-
-}  // namespace amlogic_clock
+}  // namespace amlogic_clock::a5
 #endif  // SRC_DEVICES_LIB_AMLOGIC_INCLUDE_SOC_AML_A5_A5_HIU_H_

@@ -8,7 +8,6 @@
 #include <stdint.h>
 
 #include <soc/aml-meson/aml-clk-common.h>
-#include <soc/aml-s905d2/s905d2-hiu.h>
 
 namespace a1_clk {
 

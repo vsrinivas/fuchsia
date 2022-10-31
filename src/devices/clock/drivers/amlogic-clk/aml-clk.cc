@@ -70,14 +70,14 @@ class MesonPllClock : public MesonRateClock {
  public:
   explicit MesonPllClock(const hhi_plls_t pll_num, aml_hiu_dev_t* hiudev)
       : pll_num_(pll_num), hiudev_(hiudev) {}
-  explicit MesonPllClock(std::unique_ptr<AmlMesonPllDevice> a5_hiudev)
+  explicit MesonPllClock(std::unique_ptr<AmlMesonPllDevice> meson_hiudev)
       : pll_num_(HIU_PLL_COUNT),  // A5 doesn't use it.
-        a5_hiudev_(std::move(a5_hiudev)) {}
+        meson_hiudev_(std::move(meson_hiudev)) {}
   explicit MesonPllClock(MesonPllClock&& other)
       : pll_num_(other.pll_num_),  // A5 doesn't use it.
         pll_(other.pll_),
         hiudev_(other.hiudev_),
-        a5_hiudev_(std::move(other.a5_hiudev_)) {}
+        meson_hiudev_(std::move(other.meson_hiudev_)) {}
   ~MesonPllClock() = default;
 
   void Init();
@@ -93,16 +93,16 @@ class MesonPllClock : public MesonRateClock {
   const hhi_plls_t pll_num_;
   aml_pll_dev_t pll_;
   aml_hiu_dev_t* hiudev_;
-  std::unique_ptr<AmlMesonPllDevice> a5_hiudev_;
+  std::unique_ptr<AmlMesonPllDevice> meson_hiudev_;
 };
 
 void MesonPllClock::Init() {
   const hhi_pll_rate_t* rate_table = nullptr;
   size_t rate_table_size = 0;
 
-  if (a5_hiudev_) {
-    rate_table = a5_hiudev_->GetRateTable();
-    rate_table_size = a5_hiudev_->GetRateTableSize();
+  if (meson_hiudev_) {
+    rate_table = meson_hiudev_->GetRateTable();
+    rate_table_size = meson_hiudev_->GetRateTableSize();
   } else {
     s905d2_pll_init_etc(hiudev_, &pll_, pll_num_);
 
@@ -117,8 +117,8 @@ void MesonPllClock::Init() {
 }
 
 zx_status_t MesonPllClock::SetRate(const uint32_t hz) {
-  if (a5_hiudev_) {
-    return a5_hiudev_->SetRate(hz);
+  if (meson_hiudev_) {
+    return meson_hiudev_->SetRate(hz);
   }
 
   return s905d2_pll_set_rate(&pll_, hz);
@@ -132,9 +132,9 @@ zx_status_t MesonPllClock::QuerySupportedRate(const uint64_t max_rate, uint64_t*
   size_t rate_table_size = 0;
   const hhi_pll_rate_t* best_rate = nullptr;
 
-  if (a5_hiudev_) {
-    rate_table = a5_hiudev_->GetRateTable();
-    rate_table_size = a5_hiudev_->GetRateTableSize();
+  if (meson_hiudev_) {
+    rate_table = meson_hiudev_->GetRateTable();
+    rate_table_size = meson_hiudev_->GetRateTableSize();
   } else {
     rate_table = s905d2_pll_get_rate_table(pll_num_);
     rate_table_size = s905d2_get_rate_table_count(pll_num_);
@@ -162,14 +162,14 @@ zx_status_t MesonPllClock::GetRate(uint64_t* result) { return ZX_ERR_NOT_SUPPORT
 
 zx_status_t MesonPllClock::Toggle(const bool enable) {
   if (enable) {
-    if (a5_hiudev_) {
-      return a5_hiudev_->Enable();
+    if (meson_hiudev_) {
+      return meson_hiudev_->Enable();
     } else {
       return s905d2_pll_ena(&pll_);
     }
   } else {
-    if (a5_hiudev_) {
-      a5_hiudev_->Disable();
+    if (meson_hiudev_) {
+      meson_hiudev_->Disable();
     } else {
       s905d2_pll_disable(&pll_);
     }
@@ -668,7 +668,7 @@ AmlClock::AmlClock(zx_device_t* device, fdf::MmioBuffer hiu_mmio, fdf::MmioBuffe
       muxes_ = a5_muxes;
       mux_count_ = std::size(a5_muxes);
 
-      pll_count_ = a5_pll::PLL_COUNT;
+      pll_count_ = a5::PLL_COUNT;
       InitHiuA5();
 
       constexpr size_t cpu_clk_count = std::size(a5_cpu_clks);
@@ -1213,7 +1213,7 @@ void AmlClock::InitHiu() {
 void AmlClock::InitHiuA5() {
   pllclk_.reserve(pll_count_);
   for (unsigned int pllnum = 0; pllnum < pll_count_; pllnum++) {
-    auto plldev = a5_pll::CreatePllDeviceA5(&dosbus_mmio_, pllnum);
+    auto plldev = a5::CreatePllDevice(&dosbus_mmio_, pllnum);
     pllclk_.emplace_back(std::move(plldev));
     pllclk_[pllnum].Init();
   }

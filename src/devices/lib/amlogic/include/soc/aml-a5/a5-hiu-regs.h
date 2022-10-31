@@ -8,9 +8,7 @@
 #include <hwreg/bitfields.h>
 #include <soc/aml-a5/a5-hw.h>
 
-namespace amlogic_clock {
-
-namespace a5_pll {
+namespace amlogic_clock::a5 {
 
 class HifiPllCtrl : public hwreg::RegisterBase<HifiPllCtrl, uint32_t> {
  public:
@@ -41,8 +39,6 @@ class MpllCtrl : public hwreg::RegisterBase<MpllCtrl, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<MpllCtrl>(0x0); }
 };
 
-}  // namespace a5_pll
-
-}  // namespace amlogic_clock
+}  // namespace amlogic_clock::a5
 
 #endif  // SRC_DEVICES_LIB_AMLOGIC_INCLUDE_SOC_AML_A5_A5_HIU_REGS_H_
