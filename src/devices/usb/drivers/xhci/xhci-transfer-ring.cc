@@ -192,17 +192,16 @@ zx_status_t TransferRing::AddTRB(const TRB& trb, std::unique_ptr<TRBContext> con
   return ZX_OK;
 }
 
-zx_status_t TransferRing::HandleShortPacket(TRB* short_trb, size_t* transferred, TRB** first_trb,
-                                            size_t short_length) {
+zx_status_t TransferRing::HandleShortPacket(TRB* short_trb, size_t short_length, TRB** last_trb) {
   fbl::AutoLock l(&mutex_);
   if (pending_trbs_.is_empty()) {
     return ZX_ERR_IO;
   }
   auto target_ctx = pending_trbs_.begin();
-  if (target_ctx->transfer_len_including_short_trb || target_ctx->short_length) {
+  if (target_ctx->short_transfer_len.has_value()) {
     // Controller gave us a duplicate event. Discard it but report an error.
     // This is non-fatal and may happen frequently on certain controllers.
-    return ZX_ERR_IO;
+    return ZX_OK;
   }
   auto end_ctx = target_ctx;
   end_ctx++;
@@ -211,12 +210,12 @@ zx_status_t TransferRing::HandleShortPacket(TRB* short_trb, size_t* transferred,
     end = end_ctx->first_trb;
   }
   TRB* current = target_ctx->first_trb;
+  size_t transferred = 0;
   while (current != end) {
-    *transferred += static_cast<Normal*>(current)->LENGTH();
+    transferred += static_cast<Normal*>(current)->LENGTH();
     if (current == short_trb) {
-      *first_trb = target_ctx->trb;
-      target_ctx->short_length = short_length;
-      target_ctx->transfer_len_including_short_trb = *transferred;
+      *last_trb = target_ctx->trb;
+      target_ctx->short_transfer_len = transferred - short_length;
       return ZX_OK;
     }
     size_t page = reinterpret_cast<size_t>(current) / zx_system_get_page_size();

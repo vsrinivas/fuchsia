@@ -108,16 +108,13 @@ class EventRing {
   void RunUntilIdle();
 
  private:
-  // List of pending enumeration tasks
-  fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> enumeration_queue_;
-  // Whether or not we're currently enumerating a device
-  bool enumerating_ = false;
-  synchronous_executor::synchronous_executor executor_;
-  void HandlePortStatusChangeEventInterrupt(uint8_t port_id, bool preempt = false);
+  void SchedulePortStatusChange(uint8_t port_id, bool preempt = false);
   TRBPromise HandlePortStatusChangeEvent(uint8_t port_id);
   TRBPromise WaitForPortStatusChange(uint8_t port_id);
+
   TRBPromise LinkUp(uint8_t port_id);
   void CallPortStatusChanged(fbl::RefPtr<PortStatusChangeState> state);
+
   // Advance ERDP according to Section 4.9.4.1. Evaluates the validity of the current TRB and the
   // direction of the next TRB. Possible directions:
   //   - If not at the end of the segment, next TRB is consecutive in address.
@@ -138,6 +135,12 @@ class EventRing {
   //                usually expect), but the current TRB already evaluated.
   // Returns the next TRB pointed to by ERDP.
   Control AdvanceErdp();
+
+  // Interrupt handlers.
+  void HandlePortStatusChangeInterrupt();
+  zx_status_t HandleCommandCompletionInterrupt();
+  void HandleTransferInterrupt();
+
   // USB 3.0 device attach
   void Usb3DeviceAttach(uint16_t port_id);
   // USB 2.0 device attach
@@ -158,6 +161,12 @@ class EventRing {
   fbl::DoublyLinkedList<std::unique_ptr<SegmentBuf>> buffers_ __TA_GUARDED(segment_mutex_);
   fbl::DoublyLinkedList<std::unique_ptr<SegmentBuf>>::iterator buffers_it_
       __TA_GUARDED(segment_mutex_);
+
+  // List of pending enumeration tasks
+  fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> enumeration_queue_;
+  // Whether or not we're currently enumerating a device
+  bool enumerating_ = false;
+  synchronous_executor::synchronous_executor executor_;
 
   // Virtual address of the event ring dequeue pointer
   TRB* erdp_virt_ = nullptr;

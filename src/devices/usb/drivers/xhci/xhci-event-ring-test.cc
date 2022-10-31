@@ -30,7 +30,6 @@ constexpr size_t kErstMax = 42;
 constexpr size_t kShortTransferLength0 = 97;
 constexpr size_t kShortTransferLength1 = 102;
 constexpr size_t kFinalTransferLength = 87;
-constexpr size_t kTransferLengthInclusive = 8162;
 constexpr size_t kShortTransferLength = 800;
 constexpr size_t kFakeTrb = 0x3924ff0913;
 constexpr size_t kFakeTrbVirt = 0x8411487132;
@@ -184,14 +183,12 @@ class EventRingHarness : public zxtest::Test {
     regs_[2062].Write(reg.reg_value());
     return ZX_OK;
   }
-  void SetShortPacketHandler(
-      fit::function<void(usb_xhci::TRB*, size_t*, usb_xhci::TRB**, size_t)> handler) {
+  void SetShortPacketHandler(fit::function<void(usb_xhci::TRB*, size_t, usb_xhci::TRB**)> handler) {
     short_packet_handler_ = std::move(handler);
   }
 
-  void HandleShortPacket(TRB* short_trb, size_t* transferred, TRB** first_trb,
-                         size_t short_length) {
-    (*short_packet_handler_)(short_trb, transferred, first_trb, short_length);
+  void HandleShortPacket(TRB* short_trb, size_t short_length, TRB** first_trb) {
+    (*short_packet_handler_)(short_trb, short_length, first_trb);
   }
 
   zx_status_t CompleteTRB(TRB* trb, std::unique_ptr<TRBContext>* context) {
@@ -223,8 +220,7 @@ class EventRingHarness : public zxtest::Test {
 
  private:
   std::optional<Request> pending_req_;
-  std::optional<fit::function<void(usb_xhci::TRB*, size_t*, usb_xhci::TRB**, size_t)>>
-      short_packet_handler_;
+  std::optional<fit::function<void(usb_xhci::TRB*, size_t, usb_xhci::TRB**)>> short_packet_handler_;
   using AllocatorTraits = fbl::InstancedSlabAllocatorTraits<std::unique_ptr<TRBContext>, 4096U>;
   using AllocatorType = fbl::SlabAllocator<AllocatorTraits>;
   AllocatorType trb_context_allocator_;
@@ -342,10 +338,9 @@ zx_status_t TransferRing::Init(size_t page_size, const zx::bti& bti, EventRing* 
 
 void UsbXhci::Shutdown(zx_status_t status) {}
 
-zx_status_t TransferRing::HandleShortPacket(TRB* short_trb, size_t* transferred, TRB** first_trb,
-                                            size_t short_length) {
+zx_status_t TransferRing::HandleShortPacket(TRB* short_trb, size_t short_length, TRB** first_trb) {
   static_cast<EventRingHarness*>(hci_->GetTestHarness())
-      ->HandleShortPacket(short_trb, transferred, first_trb, short_length);
+      ->HandleShortPacket(short_trb, short_length, first_trb);
   return ZX_OK;
 }
 
@@ -403,13 +398,12 @@ TEST_F(EventRingHarness, ShortTransferTest) {
   size_t index = 0;
   TRB* trb_list[2];
   size_t shorts[2];
-  SetShortPacketHandler(
-      [&](TRB* short_trb, size_t* transferred, usb_xhci::TRB** first_trb, size_t short_length) {
-        *first_trb = nullptr;
-        trb_list[index] = short_trb;
-        shorts[index] = short_length;
-        index++;
-      });
+  SetShortPacketHandler([&](TRB* short_trb, size_t short_length, usb_xhci::TRB** first_trb) {
+    *first_trb = nullptr;
+    trb_list[index] = short_trb;
+    shorts[index] = short_length;
+    index++;
+  });
   auto ctx = AllocateContext();
   size_t transfer_len;
   zx_status_t transfer_status;
@@ -419,14 +413,13 @@ TEST_F(EventRingHarness, ShortTransferTest) {
     transfer_status = request.request()->response.status;
     transfer_len = request.request()->response.actual;
   });
-  ctx->transfer_len_including_short_trb = kTransferLengthInclusive;
-  ctx->short_length = kShortTransferLength;
+  ctx->short_transfer_len = kShortTransferLength;
   ctx->request = Borrow(std::move(*request));
   AddContext(std::move(ctx));
   SetCompletion(reinterpret_cast<TRB*>(kFakeTrbVirt));
   Interrupt();
   ASSERT_OK(transfer_status);
-  ASSERT_EQ(transfer_len, kTransferLengthInclusive - kShortTransferLength);
+  ASSERT_EQ(transfer_len, kShortTransferLength);
   ASSERT_EQ(shorts[0], kShortTransferLength0);
   ASSERT_EQ(shorts[1], kShortTransferLength1);
   ASSERT_EQ(trb_list[0], reinterpret_cast<TRB*>(kFakeTrbVirt));

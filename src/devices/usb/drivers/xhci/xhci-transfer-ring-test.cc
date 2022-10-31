@@ -184,7 +184,7 @@ TRBPromise EnumerateDevice(UsbXhci* hci, uint8_t port, std::optional<HubInfo> hu
 
 TEST_F(TransferRingHarness, EmptyShortTransferTest) {
   auto ring = this->ring();
-  ASSERT_EQ(ring->HandleShortPacket(nullptr, nullptr, nullptr, 0), ZX_ERR_IO);
+  ASSERT_EQ(ring->HandleShortPacket(nullptr, 0, nullptr), ZX_ERR_IO);
 }
 
 TEST_F(TransferRingHarness, CorruptedTransferRingShortTransferTest) {
@@ -194,34 +194,40 @@ TEST_F(TransferRingHarness, CorruptedTransferRingShortTransferTest) {
     auto context = ring->AllocateContext();
     ASSERT_OK(ring->AddTRB(trb, std::move(context)));
   }
-  ASSERT_EQ(ring->HandleShortPacket(nullptr, nullptr, nullptr, 0), ZX_ERR_IO);
+  ASSERT_EQ(ring->HandleShortPacket(nullptr, 0, nullptr), ZX_ERR_IO);
   ring->TakePendingTRBs();
 }
 
 TEST_F(TransferRingHarness, MultiPageShortTransferTest) {
+  constexpr size_t kNumTrbs = 510;
+  constexpr size_t kTrbLength = 20;
+  constexpr size_t kShortLength = 4;
+
   auto ring = this->ring();
-  TRB* last;
   TRB* first = nullptr;
-  {
-    auto context = ring->AllocateContext();
-    for (size_t i = 0; i < 510; i++) {
-      TRB* ptr;
-      ASSERT_OK(ring->AllocateTRB(&ptr, nullptr));
-      if (first == nullptr) {
-        first = ptr;
-      }
-      Control::FromTRB(ptr).set_Type(Control::Normal).ToTrb(ptr);
-      static_cast<Normal*>(ptr)->set_LENGTH(static_cast<uint32_t>(i) * 20);
-      last = ptr;
+  TRB* last;
+  for (size_t i = 0; i < kNumTrbs; i++) {
+    TRB* ptr;
+    ASSERT_OK(ring->AllocateTRB(&ptr, nullptr));
+    if (first == nullptr) {
+      first = ptr;
     }
-    ASSERT_OK(ring->AssignContext(last, std::move(context), first));
-    last--;
+    Control::FromTRB(ptr).set_Type(Control::Normal).ToTrb(ptr);
+    static_cast<Normal*>(ptr)->set_LENGTH(kTrbLength);
+    last = ptr;
   }
-  size_t transferred = 0;
-  TRB* first_trb;
-  ASSERT_OK(ring->HandleShortPacket(last, &transferred, &first_trb, 0));
-  ASSERT_EQ(transferred, 2585720);
-  ring->TakePendingTRBs();
+
+  ASSERT_OK(ring->AssignContext(last, ring->AllocateContext(), first));
+
+  TRB* last_trb;
+  ASSERT_OK(ring->HandleShortPacket(last - 1, kShortLength, &last_trb));
+  EXPECT_EQ(last_trb, last);
+
+  std::unique_ptr<TRBContext> context;
+  ASSERT_OK(ring->CompleteTRB(last, &context));
+  EXPECT_EQ(context->short_transfer_len.value(), ((kNumTrbs - 1) * kTrbLength) - kShortLength);
+  EXPECT_EQ(context->first_trb, first);
+  EXPECT_EQ(context->trb, last);
 }
 
 TEST_F(TransferRingHarness, SetStall) {

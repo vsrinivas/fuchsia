@@ -40,16 +40,20 @@ class TransferRing {
   TransferRing() : trb_context_allocator_(-1, true) {}
   bool IsIsochronous() { return isochronous_; }
   void SetIsochronous() { isochronous_ = true; }
-  size_t GetShortCount() { return short_count_; }
-  void ResetShortCount() { short_count_ = 0; }
-  void IncrementShortCount(size_t size) { short_count_ += size; }
   zx_status_t AddTRB(const TRB& trb, std::unique_ptr<TRBContext> context);
+
+  // Assign a TRBContext to trb, and record that first_trb is the first TRB in the TD. trb should be
+  // the last TRB in the TD.
   zx_status_t AssignContext(TRB* trb, std::unique_ptr<TRBContext> context, TRB* first_trb);
-  // Handles a short packet. This will walk the TRB list up to and including short_trb
-  // and return the number of bytes transferred. Returns ZX_ERR_IO if the transfer was
-  // mis-aligned.
-  zx_status_t HandleShortPacket(TRB* short_trb, size_t* transferred, TRB** first_trb,
-                                size_t short_length);
+
+  // Handles a short packet. This will walk the TRBs corresponding to the next pending TD. If it
+  // finds short_trb it will set short_transfer_len to the total transfer length which is equal to
+  // the length up each TRB up to and include short_trb minus short_length. Note that short_length
+  // is the residual number of bytes not transferred, as provided by a transfer event length field.
+  // last_trb is set to the TRB which corresponds to the TRBContext which was modified (i.e. the
+  // last TRB in the TD). Returns ZX_ERR_IO if the TRB is misaligned, or if short_trb isn't found.
+  zx_status_t HandleShortPacket(TRB* short_trb, size_t short_length, TRB** last_trb);
+
   // Allocates a TRB but does not configure it.
   // It is the caller's responsibility to fully configure the returned TRB.
   // The caller may optionally rollback a transaction by calling Restore
@@ -157,7 +161,6 @@ class TransferRing {
   // command TRB is placed on the command ring and the command ring doorbell is rang.
   bool stalled_ __TA_GUARDED(mutex_);
   // Not guarded by a mutex since this is synchronized by the event ring.
-  size_t short_count_ = 0;
   bool isochronous_ = false;
   const UsbXhci* hci_;
 };

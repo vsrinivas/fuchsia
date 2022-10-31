@@ -36,10 +36,16 @@ struct TRBContext : fbl::DoublyLinkedListable<std::unique_ptr<TRBContext>>,
   std::optional<Request> request;
   std::optional<fpromise::completer<TRB*, zx_status_t>> completer;
   uint64_t token;
+
+  // The last TRB in the TD, i.e. the TRB with IOC (interrupt on completion) set to true. This is
+  // the TRB that will pointed to by a transfer event on completion.
   TRB* trb = nullptr;
+
+  // The first TRB in the TD.
   TRB* first_trb = nullptr;
-  size_t short_length = 0;
-  size_t transfer_len_including_short_trb = 0;
+
+  // When the TD includes a short TRB, this will be set to the actual length of data transferred.
+  std::optional<size_t> short_transfer_len;
 };
 
 }  // namespace usb_xhci

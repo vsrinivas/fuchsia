@@ -302,7 +302,7 @@ TRBPromise EventRing::HandlePortStatusChangeEvent(uint8_t port_id) {
     return WaitForPortStatusChange(port_id)
         .and_then([=](TRB*& trb) {
           // Retry enumeration
-          HandlePortStatusChangeEventInterrupt(port_id, true);
+          SchedulePortStatusChange(port_id, true);
           return fpromise::ok(trb);
         })
         .box();
@@ -358,7 +358,7 @@ void EventRing::CallPortStatusChanged(fbl::RefPtr<PortStatusChangeState> state) 
   }
 }
 
-void EventRing::HandlePortStatusChangeEventInterrupt(uint8_t port_id, bool preempt) {
+void EventRing::SchedulePortStatusChange(uint8_t port_id, bool preempt) {
   auto ctx = hci_->GetCommandRing()->AllocateContext();
   ctx->port_number = port_id;
   fpromise::bridge<TRB*, zx_status_t> bridge;
@@ -537,187 +537,47 @@ zx_status_t EventRing::HandleIRQ() {
     }
   });
 
-  // avoid_yield is used to indicate that we are in "realtime mode"
-  // When in this mode, we should avoid yielding our timeslice to the scheduler
-  // if at all possible, because yielding could result in us getting behind on our
-  // deadlines. Currently; we only ever need this on systems
-  // that don't support cache coherency where we may have to go through the loop
-  // several times due to stale values in the cache (after invalidating of course).
-  // On systems with a coherent cache this isn't necessary.
-  // Additionally; if we had a guarantee from the scheduler that we
-  // would be woken up in <125 microseconds (length of USB frame),
-  // we could safely yield after flushing our caches and wouldn't need this loop.
+  // avoid_yield is used to indicate that we are in "realtime mode". When in this mode, we should
+  // avoid yielding our timeslice to the scheduler if at all possible, because yielding could result
+  // in us getting behind on our deadlines. Currently; we only ever need this on systems that don't
+  // support cache coherency where we may have to go through the loop several times due to stale
+  // values in the cache (after invalidating of course). On systems with a coherent cache this isn't
+  // necessary. Additionally; if we had a guarantee from the scheduler that we would be woken up in
+  // <125 microseconds (length of USB frame), we could safely yield after flushing our caches and
+  // wouldn't need this loop.
   do {
     avoid_yield = false;
+
     for (Control control = reevaluate_ ? AdvanceErdp() : Control::FromTRB(erdp_virt_);
          control.Cycle() == ccs_; control = AdvanceErdp()) {
       ++processed_trbs;
       switch (control.Type()) {
-        case Control::PortStatusChangeEvent: {
-          // Section 4.3 -- USB device intialization
-          // Section 6.4.2.3 (Port Status change TRB)
-          auto change_event = static_cast<PortStatusChangeEvent*>(erdp_virt_);
-          uint8_t port_id = static_cast<uint8_t>(change_event->PortID());
-          auto event = std::move(hci_->GetPortState()[port_id - 1].wait_for_port_status_change_);
-          // Resume interrupted wait
-          if (event) {
-            event->completer->complete_ok(nullptr);
-          } else {
-            HandlePortStatusChangeEventInterrupt(port_id);
-          }
-        } break;
+        case Control::PortStatusChangeEvent:
+          HandlePortStatusChangeInterrupt();
+          break;
         case Control::CommandCompletionEvent: {
-          auto completion_event = static_cast<CommandCompletionEvent*>(erdp_virt_);
-          if (completion_event->CompletionCode() != CommandCompletionEvent::Success) {
-          }
-          TRB* trb = command_ring_->PhysToVirt(erdp_virt_->ptr);
-          // Advance dequeue pointer
-          std::unique_ptr<TRBContext> context;
-          zx_status_t status = command_ring_->CompleteTRB(trb, &context);
+          zx_status_t status = HandleCommandCompletionInterrupt();
           if (status != ZX_OK) {
-            hci_->Shutdown(ZX_ERR_BAD_STATE);
-            return ZX_ERR_BAD_STATE;
-          }
-          if (status != ZX_OK) {
-            hci_->Shutdown(status);
             return status;
           }
-          if (completion_event->CompletionCode() == CommandCompletionEvent::SlotNotEnabledError) {
-            break;
-          }
-          // Invoke the callback to pre-process the command first.
-          // The command MAY mutate the state of the completion event.
-          // It is important that it be called prior to further processing of the event.
-          if (context->completer.has_value()) {
-            context->completer.value().complete_ok(completion_event);
-          }
         } break;
-        case Control::TransferEvent: {
-          auto completion = static_cast<TransferEvent*>(erdp_virt_);
-          auto state = &hci_->GetDeviceState()[completion->SlotID() - 1];
-          fbl::AutoLock l(&state->transaction_lock());
-          if (!state->IsValid()) {
-            break;
-          }
-          std::unique_ptr<TRBContext> context;
-          TransferRing* ring;
-          uint8_t endpoint_id = static_cast<uint8_t>(completion->EndpointID() - 1);
-          if (unlikely(endpoint_id == 0)) {
-            ring = &state->GetTransferRing();
-          } else {
-            ring = &state->GetTransferRing(endpoint_id - 1);
-          }
-          if (completion->CompletionCode() == CommandCompletionEvent::RingOverrun) {
-            break;
-          }
-          if (completion->CompletionCode() == CommandCompletionEvent::RingUnderrun) {
-            break;
-          }
-          TRB* trb;
-          if (unlikely(!erdp_virt_->ptr || (completion->CompletionCode() ==
-                                            CommandCompletionEvent::EndpointNotEnabledError))) {
-            trb = nullptr;
-          } else {
-            trb = ring->PhysToVirt(erdp_virt_->ptr);
-          }
-          if (completion->CompletionCode() == CommandCompletionEvent::MissedServiceError) {
-            ring->CompleteTRB(nullptr, &context);
-            context->request->Complete(ZX_ERR_IO_MISSED_DEADLINE, 0);
-
-            // set resynchronize_ to wait for next successful transfer.
-            resynchronize_ = true;
-            break;
-          }
-
-          zx_status_t status = ZX_ERR_IO;
-          size_t short_transfer_len = 0;
-          TRB* first_trb = trb;
-          fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> resynchronize_completions;
-          auto cleanup = fit::defer([&resynchronize_completions]() {
-            for (auto& completion : resynchronize_completions) {
-              completion.request->Complete(ZX_ERR_IO_MISSED_DEADLINE, 0);
-            }
-          });
-          if (trb) {
-            if (completion->CompletionCode() == CommandCompletionEvent::ShortPacket) {
-              ring->HandleShortPacket(trb, &short_transfer_len, &first_trb,
-                                      completion->TransferLength());
-              if (trb != first_trb) {
-                // We'll get a second event for this TRB -- but we need to log the fact that this
-                // was a short transfer.
-                break;
-              }
-            }
-            if (resynchronize_) {
-              resynchronize_ = false;
-              // Resynchronize (4.11.2.5.2). Just find the next successful TRB.
-              resynchronize_completions = ring->TakePendingTRBsUntil(trb);
-            }
-            status = ring->CompleteTRB(first_trb, &context);
-          }
-          if (completion->CompletionCode() == CommandCompletionEvent::StallError) {
-            ring->set_stall(true);
-            auto completions = ring->TakePendingTRBs();
-            l.release();
-            if (context) {
-              if (completions.is_empty()) {
-                auto result = StallWorkaroundForDefectiveHubs(std::move(context));
-                if (std::holds_alternative<bool>(result)) {
-                  break;
-                }
-                context = std::move(std::get<std::unique_ptr<TRBContext>>(result));
-              }
-              context->request->Complete(ZX_ERR_IO_REFUSED, 0);
-            }
-            for (auto cb = completions.begin(); cb != completions.end(); cb++) {
-              cb->request->Complete(ZX_ERR_IO_REFUSED, 0);
-            }
-
-            break;
-          }
-          if (status != ZX_OK) {
-            auto completions = ring->TakePendingTRBs();
-            l.release();
-            if (context) {
-              context->request->Complete(ZX_ERR_IO, 0);
-            }
-            for (auto cb = completions.begin(); cb != completions.end(); cb++) {
-              cb->request->Complete(ZX_ERR_IO, 0);
-            }
-            ring->ResetShortCount();
-            // NOTE: No need to shutdown the whole slot.
-            // It may only be an endpoint-specific failure.
-            break;
-          }
-          l.release();
-
-          if ((completion->CompletionCode() != CommandCompletionEvent::Success) &&
-              (completion->CompletionCode() != CommandCompletionEvent::ShortPacket)) {
-            // asix-88179 will stall the endpoint if we're sending data too fast.
-            // The driver expects us to give it a ZX_ERR_IO_INVALID response when
-            // this happens.
-            context->request->Complete(ZX_ERR_IO_INVALID, 0);
-            break;
-          }
-          if (context->short_length || context->transfer_len_including_short_trb) {
-            context->request->Complete(
-                ZX_OK, context->transfer_len_including_short_trb - context->short_length);
-          } else {
-            context->request->Complete(ZX_OK, context->request->request()->header.length);
-          }
-          ring->ResetShortCount();
-        } break;
+        case Control::TransferEvent:
+          HandleTransferInterrupt();
+          break;
         case Control::MFIndexWrapEvent: {
           hci_->MfIndexWrapped();
         } break;
-        case Control::HostControllerEvent: {
-          // NOTE: We can't really do anything here.
-          // This typically indicates some kind of error condition.
-          // If something strange is happening, it might be a good idea
-          // to add a printf here and log the completion code.
-        } break;
+        case Control::HostControllerEvent:
+          // NOTE: We can't really do anything here. This typically indicates some kind of error
+          // condition.
+          zxlogf(WARNING, "Host controller event");
+          break;
+        default:
+          zxlogf(ERROR, "Unexpected transfer event: %u", control.Type());
+          break;
       }
     }
+
     if (last_phys != erdp_phys_) {
       executor_.run_until_idle();
       {
@@ -727,6 +587,7 @@ zx_status_t EventRing::HandleIRQ() {
       }
       last_phys = erdp_phys_;
     }
+
     if (!hci_->HasCoherentState()) {
       // Check for stale value in cache
       InvalidatePageCache(erdp_virt_, ZX_CACHE_FLUSH_INVALIDATE | ZX_CACHE_FLUSH_DATA);
@@ -736,6 +597,174 @@ zx_status_t EventRing::HandleIRQ() {
     }
   } while (avoid_yield);
   return ZX_OK;
+}
+
+void EventRing::HandlePortStatusChangeInterrupt() {
+  // Section 4.3 -- USB device intialization
+  // Section 6.4.2.3 (Port Status change TRB)
+  auto change_event = static_cast<PortStatusChangeEvent*>(erdp_virt_);
+  uint8_t port_id = static_cast<uint8_t>(change_event->PortID());
+  auto event = std::move(hci_->GetPortState()[port_id - 1].wait_for_port_status_change_);
+  // Resume interrupted wait
+  if (event) {
+    event->completer->complete_ok(nullptr);
+  } else {
+    SchedulePortStatusChange(port_id);
+  }
+}
+
+zx_status_t EventRing::HandleCommandCompletionInterrupt() {
+  auto completion_event = static_cast<CommandCompletionEvent*>(erdp_virt_);
+  if (completion_event->CompletionCode() != CommandCompletionEvent::Success) {
+    zxlogf(WARNING, "Received command completion event with completion code: %u",
+           completion_event->CompletionCode());
+    return ZX_OK;
+  }
+
+  TRB* trb = command_ring_->PhysToVirt(erdp_virt_->ptr);
+  // Advance dequeue pointer
+  std::unique_ptr<TRBContext> context;
+  zx_status_t status = command_ring_->CompleteTRB(trb, &context);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "command_ring_->CompleteTRB(): %s", zx_status_get_string(status));
+    hci_->Shutdown(ZX_ERR_BAD_STATE);
+    return ZX_ERR_BAD_STATE;
+  }
+
+  if (completion_event->CompletionCode() == CommandCompletionEvent::SlotNotEnabledError) {
+    return ZX_OK;
+  }
+
+  // Invoke the callback to pre-process the command first.
+  // The command MAY mutate the state of the completion event.
+  // It is important that it be called prior to further processing of the event.
+  if (context->completer.has_value()) {
+    context->completer.value().complete_ok(completion_event);
+  }
+  return ZX_OK;
+}
+
+void EventRing::HandleTransferInterrupt() {
+  auto transfer_event = static_cast<TransferEvent*>(erdp_virt_);
+
+  auto device_state = &hci_->GetDeviceState()[transfer_event->SlotID() - 1];
+  fbl::AutoLock l(&device_state->transaction_lock());
+  if (!device_state->IsValid()) {
+    zxlogf(WARNING, "Device state invalid");
+    return;
+  }
+
+  TransferRing* ring;
+  uint8_t endpoint_id = static_cast<uint8_t>(transfer_event->EndpointID() - 1);
+  if (unlikely(endpoint_id == 0)) {
+    ring = &device_state->GetTransferRing();
+  } else {
+    ring = &device_state->GetTransferRing(endpoint_id - 1);
+  }
+
+  if (transfer_event->CompletionCode() == CommandCompletionEvent::RingOverrun) {
+    zxlogf(DEBUG, "Ring overrun");
+    return;
+  }
+  if (transfer_event->CompletionCode() == CommandCompletionEvent::RingUnderrun) {
+    zxlogf(DEBUG, "Ring underrun");
+    return;
+  }
+
+  TRB* trb;
+  if (unlikely(!erdp_virt_->ptr || (transfer_event->CompletionCode() ==
+                                    CommandCompletionEvent::EndpointNotEnabledError))) {
+    trb = nullptr;
+  } else {
+    trb = ring->PhysToVirt(erdp_virt_->ptr);
+  }
+
+  if (transfer_event->CompletionCode() == CommandCompletionEvent::MissedServiceError) {
+    std::unique_ptr<TRBContext> context;
+    ring->CompleteTRB(nullptr, &context);
+    context->request->Complete(ZX_ERR_IO_MISSED_DEADLINE, 0);
+
+    // set resynchronize_ to wait for next successful transfer.
+    resynchronize_ = true;
+    return;
+  }
+
+  zx_status_t status = ZX_ERR_IO;
+  fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> resynchronize_completions;
+  auto cleanup = fit::defer([&resynchronize_completions]() {
+    for (auto& completion : resynchronize_completions) {
+      completion.request->Complete(ZX_ERR_IO_MISSED_DEADLINE, 0);
+    }
+  });
+
+  std::unique_ptr<TRBContext> context;
+  if (trb) {
+    if (transfer_event->CompletionCode() == CommandCompletionEvent::ShortPacket) {
+      TRB* last_trb = trb;
+      ring->HandleShortPacket(trb, transfer_event->TransferLength(), &last_trb);
+      if (trb != last_trb) {
+        // We'll get a second event for this TRB, we have recorded TransferLength in the appropriate
+        // TRBContext.
+        return;
+      }
+    }
+    if (resynchronize_) {
+      resynchronize_ = false;
+      // Resynchronize (4.11.2.5.2). Just find the next successful TRB.
+      resynchronize_completions = ring->TakePendingTRBsUntil(trb);
+    }
+    status = ring->CompleteTRB(trb, &context);
+  }
+
+  if (transfer_event->CompletionCode() == CommandCompletionEvent::StallError) {
+    ring->set_stall(true);
+    auto completions = ring->TakePendingTRBs();
+    l.release();
+    if (context) {
+      if (completions.is_empty()) {
+        auto result = StallWorkaroundForDefectiveHubs(std::move(context));
+        if (std::holds_alternative<bool>(result)) {
+          return;
+        }
+        context = std::move(std::get<std::unique_ptr<TRBContext>>(result));
+      }
+      context->request->Complete(ZX_ERR_IO_REFUSED, 0);
+    }
+    for (auto cb = completions.begin(); cb != completions.end(); cb++) {
+      cb->request->Complete(ZX_ERR_IO_REFUSED, 0);
+    }
+    return;
+  }
+
+  if (status != ZX_OK) {
+    auto completions = ring->TakePendingTRBs();
+    l.release();
+    if (context) {
+      context->request->Complete(ZX_ERR_IO, 0);
+    }
+    for (auto cb = completions.begin(); cb != completions.end(); cb++) {
+      cb->request->Complete(ZX_ERR_IO, 0);
+    }
+    // NOTE: No need to shutdown the whole slot.
+    // It may only be an endpoint-specific failure.
+    return;
+  }
+  l.release();
+
+  if ((transfer_event->CompletionCode() != CommandCompletionEvent::Success) &&
+      (transfer_event->CompletionCode() != CommandCompletionEvent::ShortPacket)) {
+    // asix-88179 will stall the endpoint if we're sending data too fast.
+    // The driver expects us to give it a ZX_ERR_IO_INVALID response when
+    // this happens.
+    context->request->Complete(ZX_ERR_IO_INVALID, 0);
+    return;
+  }
+
+  if (context->short_transfer_len.has_value()) {
+    context->request->Complete(ZX_OK, context->short_transfer_len.value());
+  } else {
+    context->request->Complete(ZX_OK, context->request->request()->header.length);
+  }
 }
 
 TRBPromise EventRing::LinkUp(uint8_t port_id) {
