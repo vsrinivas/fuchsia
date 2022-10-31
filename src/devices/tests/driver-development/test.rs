@@ -432,10 +432,8 @@ async fn test_get_device_info_with_incomplete_filter_dfv1() -> Result<()> {
     const DEVICE_FILTER: [&str; 1] = ["sys/test/sample"];
 
     let (_instance, driver_dev) = set_up_test_driver_realm(false).await?;
-    let iterator = send_get_device_info_request(&driver_dev, &DEVICE_FILTER)?;
-    let res = iterator.get_next().await.expect_err("A device should not be returned");
-
-    assert_not_found_error(res);
+    let device_infos = get_device_info(&driver_dev, &DEVICE_FILTER).await?;
+    assert_eq!(device_infos.len(), 0);
     Ok(())
 }
 
@@ -444,10 +442,8 @@ async fn test_get_device_info_not_found_filter_dfv1() -> Result<()> {
     const DEVICE_FILTER: [&str; 1] = ["foo"];
 
     let (_instance, driver_dev) = set_up_test_driver_realm(false).await?;
-    let iterator = send_get_device_info_request(&driver_dev, &DEVICE_FILTER)?;
-    let res = iterator.get_next().await.expect_err("A device should not be returned");
-
-    assert_not_found_error(res);
+    let device_infos = get_device_info(&driver_dev, &DEVICE_FILTER).await?;
+    assert_eq!(device_infos.len(), 0);
     Ok(())
 }
 

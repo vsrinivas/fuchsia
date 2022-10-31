@@ -901,6 +901,10 @@ void Coordinator::GetDeviceInfo(GetDeviceInfoRequestView request,
     for (const auto& device_path : request->device_filter) {
       zx::result dn = root_node.walk(device_path.get());
       if (dn.is_error()) {
+        if (dn.status_value() == ZX_ERR_NOT_FOUND) {
+          // If no device matches the filter, continue rather than exiting with an error.
+          continue;
+        }
         request->iterator.Close(dn.status_value());
         return;
       }

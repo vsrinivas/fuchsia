@@ -20,6 +20,11 @@ class DeviceInfoIterator : public fidl::WireServer<fuchsia_driver_development::D
       : arena_(std::move(arena)), list_(std::move(list)) {}
 
   void GetNext(GetNextCompleter::Sync& completer) override {
+    if (offset_ >= list_.size()) {
+      completer.Reply(fidl::VectorView<fuchsia_driver_development::wire::DeviceInfo>{});
+      return;
+    }
+
     constexpr size_t kMaxEntries = 100;
     auto result = cpp20::span(&list_[offset_], std::min(kMaxEntries, list_.size() - offset_));
     offset_ += result.size();

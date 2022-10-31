@@ -134,12 +134,13 @@ TEST_F(BindCompilerV2Test, ValidDriver) {
   }
 }
 
-// Check that calling GetDeviceInfo with an invalid device path returns ZX_ERR_NOT_FOUND.
+// Check that calling GetDeviceInfo with a non-existent device path returns an empty vector.
 TEST_F(BindCompilerV2Test, InvalidDevice) {
   fuchsia::driver::development::DeviceInfoIteratorSyncPtr iterator;
   ASSERT_EQ(driver_dev_->GetDeviceInfo({"abc"}, iterator.NewRequest()), ZX_OK);
   std::vector<fuchsia::driver::development::DeviceInfo> devices;
-  ASSERT_NE(iterator->GetNext(&devices), ZX_OK);
+  ASSERT_EQ(iterator->GetNext(&devices), ZX_OK);
+  ASSERT_EQ(devices.size(), 0u);
 }
 
 // Get the properties of the test driver's child device and check that they are as expected.

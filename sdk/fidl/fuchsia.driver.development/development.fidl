@@ -189,10 +189,10 @@ protocol DriverDevelopment {
     }) error zx.status;
 
     /// Returns the list of devices that are running on the system.
+    ///
     /// If a |device_filter| is provided, the returned list will be filtered to
-    /// only include devices specified in the filter.
-    /// ZX_ERR_NOT_FOUND indicates that there is no device matching the given path for at least one
-    /// device in |device_filter|.
+    /// only include devices specified in the filter. The list will be empty if
+    /// no devices match the filter.
     ///
     /// |iterator| is closed with following epitaphs on error:
     /// ZX_ERR_BAD_PATH indicates that the given path is not valid.

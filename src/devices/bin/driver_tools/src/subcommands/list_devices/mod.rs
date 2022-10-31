@@ -189,14 +189,18 @@ pub async fn list_devices(
     .map(|device_info| Device::from(device_info))
     .collect();
 
-    if cmd.verbose {
-        for device in devices {
-            device.print_verbose()?;
+    if devices.len() > 0 {
+        if cmd.verbose {
+            for device in devices {
+                device.print_verbose()?;
+            }
+        } else {
+            for device in devices {
+                device.print()?;
+            }
         }
     } else {
-        for device in devices {
-            device.print()?;
-        }
+        println!("No devices found.");
     }
     Ok(())
 }
