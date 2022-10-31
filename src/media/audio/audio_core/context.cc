@@ -71,6 +71,9 @@ class ContextImpl : public Context {
     zx_status_t res = device_manager_.Init();
     FX_DCHECK(res == ZX_OK);
 
+    // We call Reporter::InitializeSingleton before Context::Create. Reporter is now safe to use.
+    Reporter::Singleton().SetNumThermalStates(process_config_.thermal_config().states().size());
+
     auto throttle = ThrottleOutput::Create(process_config_.device_config(), threading_model_.get(),
                                            &device_manager_, &link_matrix_, clock_factory_);
     throttle_output_ = throttle.get();
