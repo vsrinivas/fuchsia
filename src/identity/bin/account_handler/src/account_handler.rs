@@ -41,8 +41,8 @@ lazy_static! {
     /// (see src/identity/bin/dev_authenticator) and needs to stay in sync.
     static ref MAGIC_PREKEY: [u8; 32] = [77; 32];
 
-    static ref DEV_AUTHENTICATION_MECHANISM_PATHS: HashMap<&'static str, &'static str> = HashMap::from(
-        [
+    static ref DEV_AUTHENTICATION_MECHANISM_PATHS: HashMap<&'static str, &'static str> =
+        HashMap::from([
             (
                 "#meta/dev_authenticator_always_succeed.cm",
                 "/svc/fuchsia.identity.authentication.AlwaysSucceedStorageUnlockMechanism"
@@ -111,13 +111,11 @@ where
 {
     /// Constructs a new AccountHandler and puts it in the Uninitialized state.
     pub fn new(
-        account_id: AccountId,
         lifetime: AccountLifetime,
         inspector: &Inspector,
         storage_manager: SM,
     ) -> AccountHandler<SM> {
-        let inspect =
-            Arc::new(inspect::AccountHandler::new(inspector.root(), &account_id, "uninitialized"));
+        let inspect = Arc::new(inspect::AccountHandler::new(inspector.root(), "uninitialized"));
         Self {
             state: Arc::new(Mutex::new(Lifecycle::Uninitialized)),
             lifetime,
@@ -214,6 +212,7 @@ where
                 ApiError::InvalidRequest
             })?
             .into();
+        self.inspect.set_account_id(account_id);
 
         let mut state_lock = self.state.lock().await;
         match &*state_lock {
@@ -296,6 +295,7 @@ where
         match &*state_lock {
             Lifecycle::Uninitialized => {
                 let pre_auth_state = PreAuthState::try_from(pre_auth_state_bytes)?;
+                self.inspect.set_account_id(*pre_auth_state.account_id());
 
                 *state_lock = Lifecycle::Locked { pre_auth_state };
 
@@ -740,7 +740,6 @@ mod tests {
         inspector: Arc<Inspector>,
     ) -> (AccountHandlerControlProxy, impl Future<Output = ()>) {
         let test_object = AccountHandler::new(
-            TEST_ACCOUNT_ID.clone(),
             lifetime,
             &inspector,
             /*storage_manager=*/
@@ -1018,7 +1017,6 @@ mod tests {
                     async move {
                         assert_data_tree!(inspector, root: {
                             account_handler: {
-                                account_id: TEST_ACCOUNT_ID_UINT,
                                 lifecycle: "uninitialized",
                             }
                         });

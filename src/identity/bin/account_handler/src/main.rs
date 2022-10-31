@@ -27,7 +27,6 @@ mod test_util;
 
 use {
     crate::{account_handler::AccountHandler, common::AccountLifetime},
-    account_common::AccountId,
     anyhow::{Context as _, Error},
     fidl::endpoints::RequestStream,
     fidl_fuchsia_io as fio,
@@ -78,15 +77,9 @@ fn main() -> Result<(), Error> {
         AccountLifetime::Persistent { account_dir: DATA_DIR.into() }
     };
 
-    // TODO(fxbug.dev/104516): We'll clean up account id when we deprecate stash.
-    // Account ID was used to differentiate the different
-    // stash stores in CFv2. But since we have sandboxed storage available in v2,
-    // we don't need unique names for each. Hence the hardcoded value for now.
-    let account_id = AccountId::new(111222);
-
     let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
 
-    diagnostics_log::init!(&["identity", &format!("id<{}>", &account_id.to_canonical_string())]);
+    diagnostics_log::init!(&["identity", "account_manager"]);
     info!("Starting account handler");
 
     let inspector = Inspector::new();
@@ -94,7 +87,6 @@ fn main() -> Result<(), Error> {
     inspect_runtime::serve(&inspector, &mut fs)?;
 
     let account_handler = Arc::new(AccountHandler::new(
-        account_id,
         lifetime,
         &inspector,
         /*storage_manager_factory=*/

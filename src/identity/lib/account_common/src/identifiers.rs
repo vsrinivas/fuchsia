@@ -20,8 +20,8 @@ use std::hash::{Hash, Hasher};
 /// Implements `$name` as a new wrapper type.
 ///
 /// This wrapper type implements many standard copy and comparison traits and provides conversion
-/// in both directions to a type with the same name in `$fidl_crate`. This type must by a struct
-/// contain a single field of type `$type` named 'id'.
+/// in both directions to a type with the same name in `$fidl_crate`. This type must be a struct
+/// containing a single field of type `$type` named 'id'.
 ///
 /// `$type` must implement the following traits: `Debug`, `Clone`, `Hash`, `Eq`, and `Ord`.
 ///
@@ -44,6 +44,8 @@ macro_rules! wrapper_type {
                 $name { inner: id }
             }
         }
+
+        impl Copy for $name {}
 
         impl Clone for $name {
             fn clone(&self) -> $name {

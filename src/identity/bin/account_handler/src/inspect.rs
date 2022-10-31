@@ -16,19 +16,21 @@ use {
 pub struct AccountHandler {
     /// The underlying inspect node.
     node: Node,
-    /// The account id
-    pub account_id: UintProperty,
     /// Represents the state of the account handler, such as "initialized"
     pub lifecycle: StringProperty,
 }
 
 impl AccountHandler {
     /// Creates a new AccountHandler as a child of the supplied node.
-    pub fn new<'a>(parent: &'a Node, account_id: &'a AccountId, lifecycle: &'a str) -> Self {
+    pub fn new<'a>(parent: &'a Node, lifecycle: &'a str) -> Self {
         let node = parent.create_child("account_handler");
-        let account_id = node.create_uint("account_id", account_id.clone().into());
         let lifecycle = node.create_string("lifecycle", lifecycle);
-        Self { node, account_id, lifecycle }
+        Self { node, lifecycle }
+    }
+
+    /// Records the account ID for this AccountHandler.
+    pub fn set_account_id(&self, account_id: AccountId) {
+        self.node.record_uint("account_id", account_id.into());
     }
 
     /// Get the underlying node, can be used to create children.

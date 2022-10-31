@@ -18,17 +18,17 @@ const PRE_AUTH_STATE_VERSION: u32 = 1;
 /// The pre-authentication state for an account.
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct State {
-    /// Pre-Auth State Version
+    /// The version of the preauth state.
     ///
-    /// We may modify the struct or its methods based on the version.
-    /// We only support a single version at the moment and don't enforce any
-    /// checks.
+    /// Defining a version now lets us change fields over time (for example by deserializing into
+    /// different structs based on the version) but currently we only support a single version
+    /// and don't enforce any checks on that version.
     version: u32,
 
-    /// The Account ID
+    /// The Account ID.
     account_id: AccountId,
 
-    /// The enrollment state for this account
+    /// The enrollment state for this account.
     pub enrollment_state: EnrollmentState,
 }
 
@@ -54,8 +54,14 @@ impl<'a> TryInto<Vec<u8>> for &'a State {
 }
 
 impl State {
+    /// Constructs a new preauth state.
     pub fn new(account_id: AccountId, enrollment_state: EnrollmentState) -> Self {
         Self { version: PRE_AUTH_STATE_VERSION, account_id, enrollment_state }
+    }
+
+    /// Returns the account that this preauth state applies to.
+    pub fn account_id(&self) -> &AccountId {
+        &self.account_id
     }
 }
 
