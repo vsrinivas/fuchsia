@@ -51,6 +51,11 @@ void BindReply(const fbl::RefPtr<zx_device_t>& dev,
 
 }  // namespace
 
+void DeviceControllerConnection::ConnectToDeviceProtocol(
+    ConnectToDeviceProtocolRequestView request, ConnectToDeviceProtocolCompleter::Sync& completer) {
+  dev()->vnode->ConnectToDeviceFidl(std::move(request->server));
+}
+
 void DeviceControllerConnection::ConnectToController(
     ConnectToControllerRequestView request, ConnectToControllerCompleter::Sync& completer) {
   fidl::BindServer(driver_host_context_->loop().dispatcher(), std::move(request->controller),

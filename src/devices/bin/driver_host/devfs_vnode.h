@@ -19,7 +19,8 @@ struct zx_device;
 
 class DevfsVnode : public fs::Vnode, public fidl::WireServer<fuchsia_device::Controller> {
  public:
-  explicit DevfsVnode(fbl::RefPtr<zx_device> dev) : dev_(std::move(dev)) {}
+  DevfsVnode(fbl::RefPtr<zx_device> dev, async_dispatcher_t* dispatcher)
+      : dev_(std::move(dev)), dispatcher_(dispatcher) {}
 
   // fs::Vnode methods
   zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) override;
@@ -31,6 +32,7 @@ class DevfsVnode : public fs::Vnode, public fidl::WireServer<fuchsia_device::Con
                                      fs::VnodeRepresentation* info) override;
   void HandleFsSpecificMessage(fidl::IncomingHeaderAndMessage& msg,
                                fidl::Transaction* txn) override;
+  void ConnectToDeviceFidl(zx::channel server);
 
   // fidl::WireServer<fuchsia_device::Controller> methods
   void ConnectToDeviceFidl(ConnectToDeviceFidlRequestView request,
@@ -54,6 +56,7 @@ class DevfsVnode : public fs::Vnode, public fidl::WireServer<fuchsia_device::Con
   zx_status_t CloseNode() override;
 
   fbl::RefPtr<zx_device> dev_;
+  async_dispatcher_t* dispatcher_;
 };
 
 // Utilities for converting our fidl::Transactions to something usable by the driver C ABI

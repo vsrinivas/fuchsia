@@ -73,6 +73,20 @@ TEST_F(DeviceControllerFidl, ControllerTest) {
     ASSERT_EQ(ZX_OK, result.status());
     ASSERT_EQ(sent_string, result.value().response.get());
   }
+
+  // Check the Echo API through the device protocol connector.
+  {
+    zx::result channel = component::ConnectAt<fuchsia_hardware_sample::Echo>(
+        caller.directory(), "sys/test/sample_driver/device_protocol");
+    ASSERT_EQ(ZX_OK, channel.status_value());
+
+    auto echo = fidl::WireSyncClient(std::move(channel.value()));
+
+    std::string_view sent_string = "hello";
+    auto result = echo->EchoString(fidl::StringView::FromExternal(sent_string));
+    ASSERT_EQ(ZX_OK, result.status());
+    ASSERT_EQ(sent_string, result.value().response.get());
+  }
 }
 
 TEST_F(DeviceControllerFidl, ControllerTestDfv2) {
@@ -122,6 +136,20 @@ TEST_F(DeviceControllerFidl, ControllerTestDfv2) {
     ASSERT_EQ(client->ConnectToDeviceFidl(endpoints->server.TakeChannel()).status(), ZX_OK);
 
     auto echo = fidl::WireSyncClient(std::move(endpoints->client));
+
+    std::string_view sent_string = "hello";
+    auto result = echo->EchoString(fidl::StringView::FromExternal(sent_string));
+    ASSERT_EQ(ZX_OK, result.status());
+    ASSERT_EQ(sent_string, result.value().response.get());
+  }
+
+  // Check the Echo API through the device protocol connector.
+  {
+    zx::result channel = component::ConnectAt<fuchsia_hardware_sample::Echo>(
+        caller.directory(), "sys/test/sample_driver/device_protocol");
+    ASSERT_EQ(ZX_OK, channel.status_value());
+
+    auto echo = fidl::WireSyncClient(std::move(channel.value()));
 
     std::string_view sent_string = "hello";
     auto result = echo->EchoString(fidl::StringView::FromExternal(sent_string));

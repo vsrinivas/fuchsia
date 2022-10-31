@@ -112,9 +112,13 @@ zx_status_t DevfsVnode::GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::R
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+void DevfsVnode::ConnectToDeviceFidl(zx::channel server) {
+  FidlDispatcher::CreateAndBind(dev_, dispatcher_, std::move(server));
+}
+
 void DevfsVnode::ConnectToDeviceFidl(ConnectToDeviceFidlRequestView request,
                                      ConnectToDeviceFidlCompleter::Sync& completer) {
-  FidlDispatcher::CreateAndBind(dev_, async_get_default_dispatcher(), std::move(request->server));
+  ConnectToDeviceFidl(std::move(request->server));
 }
 
 void DevfsVnode::HandleFsSpecificMessage(fidl::IncomingHeaderAndMessage& msg,

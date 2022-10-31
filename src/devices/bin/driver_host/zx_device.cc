@@ -38,7 +38,7 @@ zx_device::~zx_device() = default;
 zx_status_t zx_device::Create(DriverHostContext* ctx, std::string name, fbl::RefPtr<Driver> driver,
                               fbl::RefPtr<zx_device>* out_dev) {
   *out_dev = fbl::AdoptRef(new zx_device(ctx, name, driver));
-  (*out_dev)->vnode = fbl::MakeRefCounted<DevfsVnode>(*out_dev);
+  (*out_dev)->vnode = fbl::MakeRefCounted<DevfsVnode>(*out_dev, ctx->loop().dispatcher());
   return ZX_OK;
 }
 

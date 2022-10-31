@@ -238,29 +238,53 @@ Devnode::Devnode(Devfs& devfs, PseudoDir& parent, Target target, fbl::String nam
         ZX_ASSERT(inserted);
         return it->first;
       }()) {
-  fbl::RefPtr<fs::Service> device_controller = std::visit(
-      overloaded{[](const NoRemote&) { return fbl::RefPtr<fs::Service>(); },
+  auto [device_controller, device_protocol] = std::visit(
+      overloaded{[](const NoRemote&) {
+                   return std::make_tuple(fbl::RefPtr<fs::Service>(), fbl::RefPtr<fs::Service>());
+                 },
                  [](const Service& service) {
-                   return fbl::MakeRefCounted<fs::Service>([&service](zx::channel channel) {
-                     return fidl::WireCall(service.remote)
-                         ->Open(fio::OpenFlags::kRightReadable | fio::OpenFlags::kRightWritable, 0,
-                                fidl::StringView::FromExternal(service.path),
-                                fidl::ServerEnd<fuchsia_io::Node>(std::move(channel)))
-                         .status();
-                   });
+                   auto device_controller =
+                       fbl::MakeRefCounted<fs::Service>([&service](zx::channel channel) {
+                         return fidl::WireCall(service.remote)
+                             ->Open(fio::OpenFlags::kRightReadable | fio::OpenFlags::kRightWritable,
+                                    0, fidl::StringView::FromExternal(service.path),
+                                    fidl::ServerEnd<fuchsia_io::Node>(std::move(channel)))
+                             .status();
+                       });
+                   auto device_protocol =
+                       fbl::MakeRefCounted<fs::Service>([&service](zx::channel channel) {
+                         return fidl::WireCall(service.remote)
+                             ->Open(fio::OpenFlags::kRightReadable | fio::OpenFlags::kRightWritable,
+                                    0, fidl::StringView::FromExternal(service.path),
+                                    fidl::ServerEnd<fuchsia_io::Node>(std::move(channel)))
+                             .status();
+                       });
+                   return std::make_tuple(std::move(device_controller), std::move(device_protocol));
                  },
                  [](const Device& device) {
-                   return fbl::MakeRefCounted<fs::Service>([&device](zx::channel channel) {
-                     return device.device_controller()
-                         ->ConnectToController(
-                             fidl::ServerEnd<fuchsia_device::Controller>(std::move(channel)))
-                         .status();
-                   });
+                   auto device_controller =
+                       fbl::MakeRefCounted<fs::Service>([&device](zx::channel channel) {
+                         return device.device_controller()
+                             ->ConnectToController(
+                                 fidl::ServerEnd<fuchsia_device::Controller>(std::move(channel)))
+                             .status();
+                       });
+                   auto device_protocol =
+                       fbl::MakeRefCounted<fs::Service>([&device](zx::channel channel) {
+                         return device.device_controller()
+                             ->ConnectToDeviceProtocol(std::move(channel))
+                             .status();
+                       });
+                   return std::make_tuple(std::move(device_controller), std::move(device_protocol));
                  }},
       this->target());
   if (device_controller) {
     children().AddEntry(fuchsia_device_fs::wire::kDeviceControllerName,
                         std::move(device_controller));
+  }
+
+  if (device_protocol) {
+    children().AddEntry(fuchsia_device_fs::wire::kDeviceProtocolName, std::move(device_protocol));
   }
 }
 
