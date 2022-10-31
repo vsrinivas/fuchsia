@@ -285,11 +285,10 @@ device state. Examples:
   inferred from the absence of a key in a later InputReport.
 
 The product's use of the input pipeline may in theory be configured by the
-Fuchsia product [session][session], which is built on the [Fuchsia Session
-Framework][session-framework]. However, the input pipeline does not run inside
-the session realm. The input pipeline is a more privileged component than the
-session and makes use of a number of capabilities that we do not currently wish
-to expose to session components.
+Fuchsia product [session component][glossary.session-component]. However, the
+input pipeline does not run inside the session realm. The input pipeline is a
+more privileged component than the session and makes use of a number of
+capabilities that we do not currently wish to expose to session components.
 
 Input pipeline implementation(s) are provided to product owners as part of the
 Fuchsia platform. As of the publication fo this RFC, these implementations are
@@ -744,14 +743,13 @@ future but was deemed too heavyweight for the current use-cases.
 [inputmethod]: https://en.wikipedia.org/wiki/Input_method
 [i18n]: /docs/development/internationalization/README.md
 [root-presenter]: /src/ui/bin/root_presenter/presentation.cc
-[input-pipeline]: /docs/concepts/session/input.md#input-pipeline
+[input-pipeline]: /src/ui/bin/input-pipeline/
 [drivers]: /docs/development/drivers/concepts/driver_architectures/input_drivers/input.md
 [input-report]: https://fuchsia.dev/reference/fidl/fuchsia.input.report
 [glossary.InputEvent]: /docs/glossary/README.md#inputevent
 [glossary.InputHandler]: /docs/glossary/README.md#inputhandler
-[session-framework]: /docs/concepts/session/introduction.md
+[glossary.session-component]: /docs/glossary#session-component
 [output-report]: https://fuchsia.dev/reference/fidl/fuchsia.input.report#fuchsia.input.report/InputDevice.SendOutputReport
 [input-roadmap]: /docs/contribute/roadmap/2020/overview.md#implementing_accessibility_and_input_improvements
 [config-roadmap]: /docs/contribute/roadmap/2021/structured_configuration.md
 [event-pair]: /docs/reference/kernel_objects/eventpair.md
-[session]: /docs/contribute/governance/rfcs/0092_sessions.md

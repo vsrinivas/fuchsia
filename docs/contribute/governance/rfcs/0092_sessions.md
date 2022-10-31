@@ -173,8 +173,7 @@ and recreate the session.
 
 ## Documentation
 
-Conceptual documentation and developer guides can be found
-[here][documentation].
+Per [RFC-194][rfc_0194], conceptual documentation has been removed.
 
 Each individual binary and library in `//src/session` also contains a README
 explaining its purpose.
@@ -198,6 +197,6 @@ number of offered protocols.
 
 [examples]: /src/session/examples
 [experiences]: /src/experiences/session_shells/ermine/session
-[documentation]: /docs/concepts/session/introduction.md
 [session_manager]: /src/session/bin/session_manager
 [rfc_0089]: /docs/contribute/governance/rfcs/0089_core_realm_variations.md
+[rfc_0194]: /docs/contribute/governance/rfcs/0194_addendum_sessions.md

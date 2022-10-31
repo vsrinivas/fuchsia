@@ -2,8 +2,8 @@
 
 Note: This is a low-level input API and it should only be used by trusted system
 programs.  Most applications should use the real input stack (either
-[`RootPresenter`](/docs/concepts/ui/scenic/index.md) or
-[`SessionFramework`](/docs/concepts/session/input.md))
+[`RootPresenter`](/docs/concepts/ui/scenic/index.md) or that provided by
+the [input pipeline](/src/ui/bin/input-pipeline/README.md))
 to get things like IME, localization, and proper input focus.
 
 `fuchsia.input.report` is the lowest level of structured input in the Fuchsia

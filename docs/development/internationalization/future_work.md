@@ -13,7 +13,7 @@ For information about the future work related to localization, see
 
 -   Instead of having a single `fuchsia.intl.PropertyProvider` implemented by
     the `intl` component, demonstrate best practices for embedding custom
-    `PropertyProvider`s in [Session](/docs/concepts/session/introduction.md)
+    `PropertyProvider`s in [session component](/docs/glossary#session-component)
     implementations, ideally with multi-user use cases.
 
 -   Wire up Dart's `Platform.localeName` (blocked by Dart SDK

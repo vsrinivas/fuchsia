@@ -100,7 +100,7 @@ For the purpose of this doc:
     manager. This component is responsible for launching application components
     with the appropriate capabilities in response to user actions. As of the
     writing of this RFC Fuchsia only supports a single session at a time.
-*   *[Element][element]:* A session framework concept for a component with
+*   *Element:* A session framework concept for a component with
     graphics. This RFC deprecates the element role.
 *   *Application Component:* A component that implements a graphical user
     experience and runs within a system shell.
@@ -139,7 +139,7 @@ The Fuchsia SDK defines two API surfaces for window management policy:
     facilitates compatibility across different products built on top of Fuchsia.
 
 The implementation details for client applications currently vary widely. Some
-applications implement the [element role][element] while others interact
+applications implement the element role while others interact
 directly with the component framework and scenic, or implement the element
 manager API within the app. This RFC mandates simplifying this by moving to a
 single API for all application components.
@@ -351,10 +351,9 @@ platform UI stack.
 ## Documentation
 
 This RFC and subsequent RFCs dealing with API specifics will require significant
-updates to the
-[Session Framework documentation on fuchsia.dev](/docs/concepts/session/introduction.md)
-to reflect updated expectations about the split between product and platform and
-the elimination of Element Manager.
+updates to the Session Framework documentation on fuchsia.dev to reflect updated
+expectations about the split between product and platform and the elimination of
+Element Manager.
 
 ## Drawbacks, alternatives, and unknowns
 
@@ -376,9 +375,8 @@ the elimination of Element Manager.
 [wayland]: https://wayland.freedesktop.org
 [view_system]: /docs/contribute/governance/rfcs/0147_view_system.md
 [scenic]: /docs//concepts/ui/scenic/index.md
-[element]: /docs/concepts/session/element.md
 [view_tree]: /docs/concepts/ui/scenic/views.md
 [ui_stack]: /docs/contribute/governance/rfcs/0166_ui_stack.md
-[graphical_presenter]: /docs/concepts/session/graphical_presenter.md
+[graphical_presenter]: /sdk/fidl/fuchsia.element/graphical_presenter.fidl
 [input_arch]: /docs/contribute/governance/rfcs/0096_user_input_arch.md
 [element_manager]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/session/bin/element_manager/meta/element_manager.cml

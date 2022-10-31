@@ -2,9 +2,7 @@
 
 Reviewed on: 2021-10-01
 
-`session_manager` is the component that runs and manages sessions. For more
-information on what sessions are and what roles they play in products built on
-Fuchsia, see [Session Framework](/docs/concepts/session/introduction.md)
+`session_manager` is the component that runs and manages [session components](glossary.session-component).
 
 ## Building
 
@@ -75,3 +73,5 @@ details in other files within `src/`.
 
 Unit tests are co-located with the code, while integration tests are in
 [`//src/session/tests`](/src/session/tests).
+
+[glossary.session-component]: /docs/glossary.md#session-component

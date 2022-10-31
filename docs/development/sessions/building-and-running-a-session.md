@@ -1,9 +1,7 @@
 # Building and running a session {#building-and-running-a-session}
 
 A session is the first product-specific component started on boot. The session
-component is responsible for building a product's user experience. For more
-information on sessions, see
-[session framework](/docs/concepts/session/introduction.md).
+component is responsible for building a product's user experience.
 
 ## Booting into a session {#booting-into-a-session}
 

@@ -56,7 +56,7 @@ The shortcut handler itself reacts to two kinds of notifications:
 
 [1]: /sdk/fidl/fuchsia.ui.shortcut2/shortcut2.fidl
 [2]: /sdk/fidl/fuchsia.ui.shortcut2/manager.fidl
-[3]: /docs/concepts/session/input/README.md
+[3]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/ui/lib/input_pipeline/
 [6]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.ui.shortcut/registry.fidl;l=20;drc=964a1196ff25317b96172952c941ba95f9520bef
 [7]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.ui.views/view_ref.fidl;l=29;drc=8beb042b3e5e1ebda0a8de1413c0090704e8fd13
 [8]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.ui.shortcut/registry.fidl;l=95;drc=964a1196ff25317b96172952c941ba95f9520bef
@@ -65,7 +65,3 @@ The shortcut handler itself reacts to two kinds of notifications:
 [11]: https://fuchsia.googlesource.com/experiences/+/1d46b60eb0b58b7a434074c8ba70ff34f53c1947/session_shells/ermine/session/lib/main.dart#83
 [12]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.ui.shortcut/registry.fidl;l=28;drc=964a1196ff25317b96172952c941ba95f9520bef
 [13]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.ui.shortcut/registry.fidl;l=34;drc=964a1196ff25317b96172952c941ba95f9520bef
-[14]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.ui.shortcut/registry.fidl;l=75;drc=964a1196ff25317b96172952c941ba95f9520bef
-[15]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.ui.shortcut/registry.fidl;l=63;drc=964a1196ff25317b96172952c941ba95f9520bef
-[16]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.ui.shortcut/registry.fidl;l=60;drc=964a1196ff25317b96172952c941ba95f9520bef
-[17]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.ui.shortcut/registry.fidl;l=80;drc=964a1196ff25317b96172952c941ba95f9520bef

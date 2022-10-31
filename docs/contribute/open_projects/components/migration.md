@@ -60,9 +60,8 @@ A high-level diagram of the system's component topology is shown below:
 
 *   Modern components are shown in blue boxes.
 *   Legacy components are shown in red boxes.
-*   The dashed arrow between the [session][glossary.session] and
-    Modular represents bidirectional communication between both
-    systems.
+*   The dashed arrow between the [session component][glossary.session-component]
+    and Modular represents bidirectional communication between both systems.
 
 In addition, all [unit tests with generated manifests][unit-tests-generated] are
 modern components.
@@ -77,10 +76,10 @@ a new component, you are strongly advised to make it a modern component unless
 there is some reason it must be legacy. All legacy components in-tree must
 appear in the GN allowlist at [//build/components/cmx][gn-cmx-allowlist].
 
-Build configurations that use the [Session Framework][session-framework] also
-include a [session][glossary.session] component which runs under
-`session_manager`. All capabilities hosted by legacy components that are
-required by the session are routed from `appmgr` to `session_manager` by `core`.
+For build configurations that include a [session
+component][glossary.session-component], all capabilities hosted by legacy
+components that are required by the
+session are routed from `appmgr` to `session_manager` by `core`.
 
 ### Terminology
 
@@ -198,9 +197,7 @@ Reach out for questions or for status updates:
 [label-cf-v2-migration]: https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=label%3Acf-v2-migration
 [lib-fuchsia-component]: /src/lib/fuchsia-component/README.md
 [migrating-sys-components]: /docs/development/components/v2/migration/README.md
-[session-framework]: /docs/concepts/session/introduction.md
 [sdk-components]: /sdk/lib/sys/cpp
 [sdk-test-with-environment]: /sdk/lib/sys/cpp/testing/test_with_environment.h
-[sfw]: /docs/concepts/session/introduction.md
-[glossary.session]: /docs/glossary/README.md#session
+[glossary.session-component]: /docs/glossary/README.md#session-component
 [unit-tests-generated]: /docs/development/components/build.md#unit-tests

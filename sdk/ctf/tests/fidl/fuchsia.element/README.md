@@ -4,12 +4,11 @@ This is a compatibility test for `fuchsia.element` FIDL APIs.
 
 ## Motivation
 
-The [Session Framework][doc-sfw-intro] provides tools and APIs to create product
-experiences on Fuchsia that combine software from the platform (e.g.
-`session_manager`), product (the [session][glossary-session]), and third-parties
-([elements][glossary-element]).  Interoperability between components is
-a challenge because they may implement the framework’s contracts differently or
-rely on undocumented behaviors.
+Fuchsia provides tools and APIs to create product experiences that combine
+software from the platform (e.g. `session_manager`), product (the [session
+component][glossary.session-component]), and user-visible components.
+Interoperability between components is a challenge because they may implement
+the framework’s contracts differently or rely on undocumented behaviors.
 
 The Fuchsia [Compatibility Test Suite][doc-cts-rfc] (CTS) is a collection of
 tests that ensure a Fuchsia product build is backwards-compatible with software
@@ -21,9 +20,9 @@ between:
 1. **Platform and session**: ensuring platform changes do not break existing
    sessions, including changes to platform-provided session components (e.g.
    input pipeline, `element_manager`)
-2. **Session and elements**: ensuring sessions are compatible with common types
-   of elements — for example, that a Flutter app is launched and presented
-   similarly on different products.
+2. **Session and user-visible components**: ensuring sessions are compatible
+   with common types of user-visible components — for example, that a Flutter
+   app is launched and presented similarly on different products.
 
 ## Component Topology
 
@@ -74,10 +73,7 @@ $ fx test fuchsia-element-tests -o
 
 [doc-cts-rfc]: /docs/contribute/governance/rfcs/0015_cts.md
 [doc-event-capabilities]: /docs/concepts/components/v2/capabilities/event.md
-[doc-sfw-intro]: /docs/concepts/session/introduction.md
-[glossary-element]: /docs/glossary.md#element
-[glossary-session]: /docs/glossary.md#session
-[glossary-session-manager]: /docs/glossary.md#session-manager
+[glossary.session-component]: /docs/glossary#session-component
 [source-element-management]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/session/lib/element_management
 [source-element-manager-fidl]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.element/element_manager.fidl
 [source-element-manager]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/session/bin/element_manager

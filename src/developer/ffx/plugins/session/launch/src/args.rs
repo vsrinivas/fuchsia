@@ -10,13 +10,13 @@ use {argh::FromArgs, ffx_core::ffx_command};
     subcommand,
     name = "launch",
     description = "Launch a session",
-    example = "To use the tiling session manager:
+    example = "To use the tiling session component:
 
        $ fx set workstation_eng.x64 --with //src/session/examples/tiles-session
 
        $ ffx session launch fuchsia-pkg://fuchsia.com/tiles-session#meta/tiles-session.cm
 
-This will launch the tiling session manager if a session is not already active. For a detailed explanation of sessions, see https://fuchsia.dev/fuchsia-src/concepts/session/introduction
+This will launch the tiling session component. See https://fuchsia.dev/glossary#session-component
 "
 )]
 pub struct SessionLaunchCommand {

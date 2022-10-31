@@ -251,9 +251,7 @@ but may provide some interesting places to begin exploring:
   </tr>
   <tr>
     <td><code>src/session</code></td>
-    <td>
-      <a href="/docs/concepts/session/introduction.md">Session framework</a>.
-    </td>
+    <td>Infrastructure and tools for managing session components.</td>
   </tr>
   <tr>
     <td><code>src/storage</code></td>

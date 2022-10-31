@@ -72,7 +72,7 @@ platform out of providing key consistencies in behavior across all products.
 
 Lastly, the legacy "Session Framework" concept has caused some developer
 confusion. The concepts, some of which were not explicitly included in RFC-0092
-but were in the [Session Framework concept docs](/docs/concepts/session/introduction.md), originally included:
+but were in the Session Framework concept docs, originally included:
 
   * Providing client libraries and reusable components for use inside
     a session to solve a myriad of problems, including:

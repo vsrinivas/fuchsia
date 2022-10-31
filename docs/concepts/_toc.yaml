@@ -43,9 +43,6 @@ toc:
 - title: "Security"
   section:
   - include: /docs/concepts/security/_toc.yaml
-- title: "Sessions"
-  section:
-  - include: /docs/concepts/session/_toc.yaml
 - title: "Source code"
   section:
   - include: /docs/concepts/source_code/_toc.yaml

@@ -9,6 +9,6 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[argh(
     subcommand,
     name = "restart",
-    description = "Restart the current session. See https://fuchsia.dev/fuchsia-src/concepts/session/introduction for details."
+    description = "Restart the current session component. See https://fuchsia.dev/fuchsia-src/glossary#session-component for details."
 )]
 pub struct SessionRestartCommand {}

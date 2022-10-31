@@ -341,8 +341,3 @@ platform integration tests. Some examples:
 Developing new models are also how we test new topologies and interaction
 patterns to make sure the APIs are sensible and usable, and serve as as a
 foundation for converting an entire product.
-
-*   For example, converting a product to
-    [Session Framework](/docs/concepts/session/introduction) has many moving
-    parts, and validating specific graphics scenarios builds confidence in APIs,
-    implementations, and migration strategy.

@@ -467,61 +467,6 @@
   related_guides: [""]
   area: ["FIDL"]
 
-- term: "Element"
-  short_description: "A component added to a session dynamically through the FIDL
-  <code>ElementManager</code> protocol."
-  full_description: "A <a href=\"/docs/glossary#component\">component</a> added to a
-  <a href=\"/docs/glossary#session\">session</a> dynamically through the
-  <a href=\"/docs/glossary#fidl\">fidl</a> protocol
-  <a href=\"/docs/glossary#element-manager\"><code>ElementManager</code></a>. In addition
-  to the properties common to all components, elements are also annotated by element proposers.
-  Those annotations are shared with other components within the session. It is the session's
-  responsibility to manage the lifecycle of elements."
-  see_also: ["<a href=\"/docs/concepts/session/element.md\">Elements</a>",
-             "<a href=\"/docs/glossary#session-framework\">Session framework</a>"]
-  related_guides: [""]
-  area: ["Session", "Component Framework"]
-
-- term: "Element annotation"
-  short_description: "A collection of named attributes associated with an
-  <a href=\"/docs/glossary#element\">element</a>."
-  full_description: "A <a href=\"/docs/glossary#fidl\">fidl</a> struct. A collection of
-  named attributes associated with an <a href=\"/docs/glossary#element\">element</a>.
-  Annotations are specified at element creation time by
-  <a href=\"/docs/glossary#element-proposer\">element proposers</a> and remain mutable for
-  the lifetime of the element."
-  see_also: ["<a href=\"/docs/concepts/session/element.md\">Elements</a>",
-             "<a href=\"/docs/glossary#session-framework\">Session framework</a>"]
-  related_guides: [""]
-  area: ["Session", "Component Framework", "FIDL"]
-
-- term: "Element manager"
-  short_description: " A protocol used to grant <a href=\"/docs/glossary#session\">session</a>
-  sub-components the capability to ask for
-  <a href=\"/docs/concepts/session/element.md\">elements</a> to be added to the product
-  experience at runtime."
-  full_description: "A <a href=\"/docs/glossary#fidl\">fidl</a> protocol.
-  A protocol used to grant <a href=\"/docs/glossary#session\">session</a> sub-components
-  the capability to ask for <a href=\"/docs/concepts/session/element.md\">elements</a>
-  to be added to the product experience at runtime."
-  see_also: ["<a href=\"https://fuchsia.dev/reference/fidl/fuchsia.element#Manager\">fuchsia.session.ElementManager</a>",
-             "<a href=\"/docs/glossary#session-framework\">Session framework</a>",
-             "<a href=\"/docs/concepts/session/element.md\">Elements</a>"]
-  related_guides: [""]
-  area: ["Session", "Component Framework", "FIDL"]
-
-- term: "Element proposer"
-  short_description: "A way to refer to any <a href=\"/docs/glossary#component\">component</a>
-  that invokes the ProposeElement() method on
-  <a href=\"/docs/glossary#element-manager\"><code>Element manager</code></a>
-  to launch a specific <a href=\"/docs/glossary#element\">element</a> in a
-  <a href=\"/docs/glossary#session\">session</a>."
-  full_description: ""
-  see_also: ["<a href=\"/docs/glossary#session-framework\">Session framework</a>",
-             "<a href=\"/docs/concepts/session/element.md\">Elements</a>"]
-  related_guides: [""]
-  area: ["Session", "Component Framework"]
-
 - term: "Environment"
   short_description: "A container for a set of components."
   full_description: "A container for a set of components, which provides a way to manage their
@@ -791,9 +736,7 @@
   <a href=\"/docs/glossary#component\">component</a> written in Flutter, or when a session
   component that manages the lifecycle of elements delegates the presentation of element views to a
   child component that implements <code>GraphicalPresenter</code>."
-  see_also: ["<a href=\"https://fuchsia.dev/reference/fidl/fuchsia.element#GraphicalPresenter\"><code>fuchsia.element.GraphicalPresenter</code></a>",
-             "<a href=\"/docs/glossary#session-framework\">Session framework</a>",
-             "<a href=\"/docs/concepts/session/graphical_presenter.md\">Graphical Presenter component role</a>"]
+  see_also: ["<a href=\"https://fuchsia.dev/reference/fidl/fuchsia.element#GraphicalPresenter\"><code>fuchsia.element.GraphicalPresenter</code></a>"]
   related_guides: [""]
   area: ["General", "UI", "FIDL", "Component Framework", "Session", "Flutter"]
 
@@ -848,18 +791,8 @@
                    '<a href="/docs/get-started/build_fuchsia.md">Build Fuchsia</a>']
   area: ["Developer"]
 
-- term: "Input pipeline client library"
-  short_description: "A client library available to <a href=\"/docs/glossary#session\">session</a>
-  authors to simplify the consumption and routing of input events from physical hardware."
-  full_description: ""
-  see_also: ["<a href=\"/docs/concepts/session/input.md\">Input client library</a>",
-             "<a href=\"/docs/glossary#session-framework\">Session framework</a>"]
-  related_guides: [""]
-  area: ["Session", "Devices"]
-
 - term: "InputDeviceBinding"
-  short_description: "A Rust trait in the
-  <a href=\"/docs/glossary#input-pipeline-client-library\">input pipeline client library</a>."
+  short_description: "A Rust trait in the input pipeline client library."
   full_description: "<p>Represents a connection to a physical input device (e.g. mouse, keyboard) in
   an input pipeline. An <code>InputDeviceBinding</code> does the following:</p>
   <ul>
@@ -870,7 +803,7 @@
   </ul>
   <p>The input pipeline creates and owns <code>InputDeviceBinding</code>`s as new input peripherals
   are connected to a device.</p>"
-  see_also: ["<a href=\"/docs/glossary#session-framework\">Session framework</a>"]
+  see_also: []
   related_guides: [""]
   area: ["Session", "Devices"]
 
@@ -884,7 +817,6 @@
   keyboard, and a <code>InputDeviceDescriptor::Touch</code> contains the maximum number of touch
   contacts and the range of <code>x-</code> and <code>y-</code> values each contact can take on."
   see_also: ["<a href=\"/src/ui/lib/input/src/input_device.rs\"><code>enum InputDeviceDescriptor</code></a>",
-             "<a href=\"/docs/glossary#session-framework\">Session framework</a>",
              "<a href=\"https://fuchsia.dev/reference/fidl/fuchsia.input.report#DeviceDescriptor\"><code>fuchsia.input.report.DeviceDescriptor</code></a>"]
   related_guides: [""]
   area: ["Session", "Devices"]
@@ -897,7 +829,7 @@
   <a href=\"/docs/glossary#inputreport\"><code>InputReport</code>`s they are parsed from.
   For example, <code>InputDeviceEvent::Keyboard</code> contains all the pressed keys, as well as
   the key's phase (pressed, released, etc.)."
-  see_also: ["<a href=\"/docs/glossary#session-framework\">Session framework</a>"]
+  see_also: []
   related_guides: [""]
   area: ["Session", "Devices"]
 
@@ -907,7 +839,7 @@
   The input pipeline generates <code>InputEvent</code>`s from hardware signals."
   full_description: "A Rust struct in the
   <a href=\"/docs/glossary#input-pipeline-client-library\">input pipeline client library</a>."
-  see_also: ["<a href=\"/docs/glossary#session-framework\">Session framework</a>"]
+  see_also: []
   related_guides: [""]
   area: ["Session", "Devices"]
 
@@ -923,7 +855,7 @@
     for the next <a href=\"/docs/glossary#inputhandler\"><code>InputHandler</code></a> to process.</li>
   </ul>"
   full_description: "A Rust trait in the <a href=\"/docs/glossary#input-pipeline-client-library\">input pipeline client library</a>."
-  see_also: ["<a href=\"/docs/glossary#session-framework\">Session framework</a>"]
+  see_also: []
   related_guides: [""]
   area: ["Session", "Devices"]
 
@@ -931,8 +863,7 @@
   short_description: "A stateless representation of an event from a physical input device."
   full_description: "A <a href=\"/docs/glossary#fidl\">FIDL</a> struct. Zircon
   generates <code>InputReport</code>`s from HID Reports."
-  see_also: ["<a href=\"https://fuchsia.dev/reference/fidl/fuchsia.ui.input#InputReport\"><code>fuchsia.ui.InputReport</code></a>",
-             "<a href=\"/docs/glossary#session-framework\">Session framework</a>"]
+  see_also: ["<a href=\"https://fuchsia.dev/reference/fidl/fuchsia.ui.input#InputReport\"><code>fuchsia.ui.InputReport</code></a>"]
   related_guides: [""]
   area: ["Session", "Devices"]
 
@@ -1273,45 +1204,41 @@ href=\"docs/contribute/governance/rfcs/0100_product_metadata\">RFC-0100</a>."
   related_guides: ["<a href=\"/docs/concepts/components/v2/capabilities/service.md\">Service capabilities</a>"]
   area: ["Component Framework"]
 
-- term: "Session"
-  short_description: "A session is a component that encapsulates a product’s user
-  experience."
-  full_description: "A session is the first product-specific component started on boot after the
-  <a href=\"/docs/glossary#session-manager\">session manager</a>. Sessions typically utilize
-  aspects of the <a href=\"/docs/glossary#session-framework\">session framework</a> during
-  their development, in automated testing, and at runtime. At runtime, there is only one session
-  component, but it can be composed of many sub-components. For example, the session for a graphical
-  product instantiates Scenic (graphics) as a child component."
-  see_also: ["<a href=\"/docs/glossary#component\">Component</a>",
-             "<a href=\"/docs/glossary#session-framework\">Session framework</a>"]
+- term: "Session component"
+  short_description: "A session component is a component that encapsulates a product's user
+  experience and runs as a child of the platform `session_manager` component."
+  full_description: "A \"session component\" is a component. Each Fuchsia
+  product encapsulates its user experience within a session component (and its
+  descendent components). The term \"user experience\" is used broadly: it
+  encompasses traditional graphical experiences with touch/mouse/keyboard
+  interaction, as well as simpler experiences with a single RGB LED and several
+  hardware buttons, or those with only network I/O.
+
+  Simple products may specify a session component with no children, while complex
+  products have many children of the session component. For example, the
+  workstation session instantiates components to display the system user
+  interface, a command line shell, and a web browser as descendents of its session
+  component."
+  see_also: ["<a href=\"/docs/glossary#component\">Component</a>"]
   related_guides: [""]
   area: ["Session", "Component Framework"]
-
-- term: "Session framework"
-  short_description: "A framework for building products on Fuchsia."
-  full_description: "The framework provides software libraries, FIDL protocols, developer tools,
-  and standards that are composed to create a particular product’s user experience."
-  see_also: ["<a href=\"/docs/concepts/session/introduction.md\">Session framework</a>"]
-  related_guides: [""]
-  area: ["Session"]
 
 - term: "Session launcher"
   short_description: "A <a href=\"/docs/glossary#fidl\">FIDL</a> protocol, exposed by the
   <a href=\"/docs/glossary#session-manager\">session manager</a>, used to start or
-  restart <a href=\"/docs/glossary#session\">sessions</a>."
+  restart <a href=\"/docs/glossary#session-component\">sessions</a>."
   full_description: "It is available
   to developer tools such as <code>session_control</code> to control session components at runtime."
-  see_also: ["<a href=\"https://fuchsia.dev/reference/fidl/fuchsia.session#Launche\"><code>fuchsia.session.Launcher</code></a>",
-             "<a href=\"/docs/glossary#session-framework\">Session framework</a>"]
+  see_also: ["<a href=\"https://fuchsia.dev/reference/fidl/fuchsia.session#Launcher\"><code>fuchsia.session.Launcher</code></a>"]
   related_guides: [""]
   area: ["FIDL", "Session"]
 
 - term: "Session manager"
-  short_description: "The platform component, that starts late in the Fuchsia boot sequence, that
-  manages the lifecycle of the <a href=\"/docs/glossary#session\">session</a>."
+  short_description: "The platform component that
+  manages the lifecycle of the <a href=\"/docs/glossary#session-component\">session component</a>."
   full_description: "The session
   manager defines the set of system capabilities provided to sessions at runtime."
-  see_also: ["<a href=\"/docs/glossary#session-framework\">Session framework</a>"]
+  see_also: []
   related_guides: [""]
   area: ["Session"]
 

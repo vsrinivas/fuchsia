@@ -3,8 +3,6 @@
 Reviewed on: 2022-03-22
 
 `input_pipeline` is a library for creating an input pipeline.
-* For information on the role of an input pipeline in a Fuchsia system,
-  see [Input client library](/docs/concepts/session/input.md).
 * For information on how to integrate this library with a larger Rust
   program, see [integration docs](docs/integration.md).
 
