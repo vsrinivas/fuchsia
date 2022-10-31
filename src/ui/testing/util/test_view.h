@@ -19,10 +19,10 @@ namespace ui_testing {
 class TestView : public fuchsia::ui::app::ViewProvider, public component_testing::LocalComponent {
  public:
   enum class ContentType {
-    // Draws an invisible rect in the view to give it "renderable" content.
+    // Draws a green rect in the view.
     DEFAULT = 0,
 
-    // Draws the following coordinate test pattern in a view:
+    // Draws the following coordinate test pattern in the view:
     //
     // ___________________________________
     // |                |                |

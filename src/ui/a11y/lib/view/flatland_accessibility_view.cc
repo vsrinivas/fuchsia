@@ -32,24 +32,24 @@ using fuchsia::ui::composition::ViewportProperties;
 //
 // The final scene topology is:
 // a11y view:
-//    root transform (11)
-//    -->magnifier transform (12)
-//       -->highlight view holder transform (13) {content: highlight viewport}
+//    a11y view root transform (id=11)
+//    -->magnifier transform (id=12)
+//       -->highlight view holder transform (id=13) {content: highlight viewport id=14}
 //
 // highlight view:
-//    highlight root transform (21)
-//    -->proxy transform (22) {content: proxy viewport}
-//    -->highlight transform [not always attached to the graph!]
+//    highlight view root transform (id=21)
+//    -->proxy viewport transform (id=22) {content: proxy viewport id=23}
+//    -->highlight transform (id=24) [not always attached to the graph!]
 //       -->rectangle 1
 //       -->rectangle 2
 //       -->rectangle 3
 //       -->rectangle 4
 
-constexpr uint64_t kA11yRootTransformId = 11;
+constexpr uint64_t kA11yViewRootTransformId = 11;
 constexpr uint64_t kMagnifierTransformId = 12;
 constexpr uint64_t kHighlightViewportTransformId = 13;
 constexpr uint64_t kHighlightViewportContentId = 14;
-constexpr uint64_t kHighlightRootTransformId = 21;
+constexpr uint64_t kHighlightViewRootTransformId = 21;
 constexpr uint64_t kProxyViewportTransformId = 22;
 constexpr uint64_t kProxyViewportContentId = 23;
 
@@ -79,13 +79,13 @@ fuchsia::ui::views::ViewRef InitialA11yViewSetup(
   flatland_a11y->CreateView2(std::move(a11y_view_token), std::move(view_identity),
                              std::move(view_bound_protocols), parent_watcher.NewRequest());
 
-  flatland_a11y->CreateTransform(TransformId({.value = kA11yRootTransformId}));
-  flatland_a11y->SetRootTransform(TransformId({.value = kA11yRootTransformId}));
+  flatland_a11y->CreateTransform(TransformId({.value = kA11yViewRootTransformId}));
+  flatland_a11y->SetRootTransform(TransformId({.value = kA11yViewRootTransformId}));
 
   // Create magnifier transform, and attach as a child of the root transform.
   // Attach highlight viewport transform as a child of magnifier transform.
   flatland_a11y->CreateTransform(TransformId{.value = kMagnifierTransformId});
-  flatland_a11y->AddChild(TransformId{.value = kA11yRootTransformId},
+  flatland_a11y->AddChild(TransformId{.value = kA11yViewRootTransformId},
                           TransformId{.value = kMagnifierTransformId});
 
   return view_ref;
@@ -98,7 +98,7 @@ void FinishA11yViewSetup(fuchsia::ui::composition::Flatland* flatland_a11y,
 
   // Change the default hit region to SEMANTICALLY_INVISIBLE.
   flatland_a11y->SetHitRegions(
-      TransformId({.value = kA11yRootTransformId}),
+      TransformId({.value = kA11yViewRootTransformId}),
       {fuchsia::ui::composition::HitRegion{
           SizeUToRectFAtOrigin(logical_size),
           fuchsia::ui::composition::HitTestInteraction::SEMANTICALLY_INVISIBLE}});
@@ -137,11 +137,11 @@ void HighlightViewSetup(
                                   highlight_view_watcher.NewRequest());
 
   // Set up the root transform.
-  flatland_highlight->CreateTransform(TransformId({.value = kHighlightRootTransformId}));
-  flatland_highlight->SetRootTransform(TransformId({.value = kHighlightRootTransformId}));
+  flatland_highlight->CreateTransform(TransformId({.value = kHighlightViewRootTransformId}));
+  flatland_highlight->SetRootTransform(TransformId({.value = kHighlightViewRootTransformId}));
 
   // Clear the default hit region.
-  flatland_highlight->SetHitRegions(TransformId({.value = kHighlightRootTransformId}), {});
+  flatland_highlight->SetHitRegions(TransformId({.value = kHighlightViewRootTransformId}), {});
 
   // Create the proxy viewport.
   fuchsia::ui::composition::ViewportProperties viewport_properties;
@@ -158,7 +158,7 @@ void HighlightViewSetup(
   flatland_highlight->CreateTransform(TransformId{.value = kProxyViewportTransformId});
   flatland_highlight->SetContent(TransformId{.value = kProxyViewportTransformId},
                                  ContentId{.value = kProxyViewportContentId});
-  flatland_highlight->AddChild(TransformId{.value = kHighlightRootTransformId},
+  flatland_highlight->AddChild(TransformId{.value = kHighlightViewRootTransformId},
                                TransformId{.value = kProxyViewportTransformId});
 }
 
@@ -288,7 +288,7 @@ void FlatlandAccessibilityView::ResizeLayout(fuchsia::math::SizeU logical_size) 
   flatland_a11y_.flatland()->SetViewportProperties(ContentId{.value = kHighlightViewportContentId},
                                                    fidl::Clone(viewport_properties));
   flatland_a11y_.flatland()->SetHitRegions(
-      TransformId({.value = kA11yRootTransformId}),
+      TransformId({.value = kA11yViewRootTransformId}),
       {fuchsia::ui::composition::HitRegion{
           SizeUToRectFAtOrigin(logical_size),
           fuchsia::ui::composition::HitTestInteraction::SEMANTICALLY_INVISIBLE}});
