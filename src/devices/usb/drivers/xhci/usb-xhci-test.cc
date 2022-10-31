@@ -248,7 +248,7 @@ class Ddk : public fake_ddk::Bind, public ddk::UsbBusInterfaceProtocol<Ddk> {
  public:
   Ddk() {}
   bool added() { return add_called_; }
-  const device_add_args_t& args() { return add_args_; }
+  const device_add_args_t& args() { return add_args_.value(); }
 
   void reset() { sync_completion_reset(&completion_); }
 
@@ -280,12 +280,13 @@ class Ddk : public fake_ddk::Bind, public ddk::UsbBusInterfaceProtocol<Ddk> {
  private:
   zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
                         zx_device_t** out) override {
+    // Set add_args_ before calling DeviceAdd so it's ready before we call DdkInit and subsequently
+    // get a call to DeviceInitReply.
+    add_args_ = *args;
     zx_status_t status = fake_ddk::Bind::DeviceAdd(drv, parent, args, out);
     if (status != ZX_OK) {
       return status;
     }
-    sync_completion_signal(&completion_);
-    add_args_ = *args;
     return ZX_OK;
   }
 
@@ -294,13 +295,15 @@ class Ddk : public fake_ddk::Bind, public ddk::UsbBusInterfaceProtocol<Ddk> {
     usb_bus_interface_protocol_t proto;
     proto.ctx = this;
     proto.ops = &usb_bus_interface_protocol_ops_;
-    static_cast<UsbXhci*>(add_args_.ctx)->UsbHciSetBusInterface(&proto);
+    ASSERT_OK(status);
+    ASSERT_TRUE(add_args_.has_value());
+    static_cast<UsbXhci*>(add_args_->ctx)->UsbHciSetBusInterface(&proto);
 
     fake_ddk::Bind::DeviceInitReply(device, status, args);
   }
   std::map<uint32_t, FakeUsbDevice> devices_;
   sync_completion_t completion_;
-  device_add_args_t add_args_;
+  std::optional<device_add_args_t> add_args_;
 };
 
 using TestRequest = usb::CallbackRequest<sizeof(max_align_t)>;
