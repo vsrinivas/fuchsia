@@ -281,14 +281,14 @@ TEST(GestureArenaTest, ReleasedCanWin) {
 TEST(GestureArenaTest, RoutePointerEvents) {
   std::optional<uint32_t> actual_device_id;
   std::optional<uint32_t> actual_pointer_id;
-  std::optional<fuchsia::ui::input::accessibility::EventHandling> actual_handled;
-  a11y::GestureArenaV2 arena([&actual_device_id, &actual_pointer_id, &actual_handled](
-                                 uint32_t device_id, uint32_t pointer_id,
-                                 fuchsia::ui::input::accessibility::EventHandling handled) {
-    actual_device_id = device_id;
-    actual_pointer_id = pointer_id;
-    actual_handled = handled;
-  });
+  std::optional<a11y::ContestStatus> actual_status;
+  a11y::GestureArenaV2 arena(
+      [&actual_device_id, &actual_pointer_id, &actual_status](
+          uint32_t device_id, uint32_t pointer_id, a11y::ContestStatus status) {
+        actual_device_id = device_id;
+        actual_pointer_id = pointer_id;
+        actual_status = status;
+      });
   std::array<MockGestureRecognizer, 2> recognizers;
   arena.Add(&recognizers[0]);
   arena.Add(&recognizers[1]);
@@ -300,9 +300,9 @@ TEST(GestureArenaTest, RoutePointerEvents) {
   EXPECT_EQ(recognizers[0].num_events(), 1u);
   EXPECT_EQ(recognizers[1].num_events(), 1u);
 
-  EXPECT_FALSE(actual_handled) << "Arena should not prematurely notify that events were consumed.";
+  EXPECT_FALSE(actual_status) << "Arena should not prematurely notify that events were consumed.";
   recognizers[0].participation_token()->Accept();
-  EXPECT_EQ(actual_handled, fuchsia::ui::input::accessibility::EventHandling::CONSUMED);
+  EXPECT_EQ(actual_status, a11y::ContestStatus::kWinnerAssigned);
   EXPECT_EQ(actual_device_id, kDefaultDeviceID);
   EXPECT_EQ(actual_pointer_id, 1);
 
@@ -323,14 +323,14 @@ TEST(GestureArenaTest, RoutePointerEvents) {
 TEST(GestureArenaTest, EmptyArenaRejectsPointerEvents) {
   std::optional<uint32_t> actual_device_id;
   std::optional<uint32_t> actual_pointer_id;
-  std::optional<fuchsia::ui::input::accessibility::EventHandling> actual_handled;
-  a11y::GestureArenaV2 arena([&actual_device_id, &actual_pointer_id, &actual_handled](
-                                 uint32_t device_id, uint32_t pointer_id,
-                                 fuchsia::ui::input::accessibility::EventHandling handled) {
-    actual_device_id = device_id;
-    actual_pointer_id = pointer_id;
-    actual_handled = handled;
-  });
+  std::optional<a11y::ContestStatus> actual_status;
+  a11y::GestureArenaV2 arena(
+      [&actual_device_id, &actual_pointer_id, &actual_status](
+          uint32_t device_id, uint32_t pointer_id, a11y::ContestStatus status) {
+        actual_device_id = device_id;
+        actual_pointer_id = pointer_id;
+        actual_status = status;
+      });
   MockGestureRecognizer recognizer;
   arena.Add(&recognizer);
 
@@ -338,7 +338,7 @@ TEST(GestureArenaTest, EmptyArenaRejectsPointerEvents) {
   recognizer.participation_token()->Reject();
 
   // The input system should see the callback now, as all recognizers have rejected.
-  EXPECT_EQ(actual_handled, fuchsia::ui::input::accessibility::EventHandling::REJECTED);
+  EXPECT_EQ(actual_status, a11y::ContestStatus::kAllLosers);
   EXPECT_EQ(actual_device_id, kDefaultDeviceID);
   EXPECT_EQ(actual_pointer_id, 1);
 }
@@ -386,21 +386,21 @@ TEST(GestureArenaTest, HoldResolvedArena) {
 TEST(GestureArenaTest, ConsumeAfterInteraction) {
   std::optional<uint32_t> actual_device_id;
   std::optional<uint32_t> actual_pointer_id;
-  std::optional<fuchsia::ui::input::accessibility::EventHandling> actual_handled;
-  a11y::GestureArenaV2 arena([&actual_device_id, &actual_pointer_id, &actual_handled](
-                                 uint32_t device_id, uint32_t pointer_id,
-                                 fuchsia::ui::input::accessibility::EventHandling handled) {
-    actual_device_id = device_id;
-    actual_pointer_id = pointer_id;
-    actual_handled = handled;
-  });
+  std::optional<a11y::ContestStatus> actual_status;
+  a11y::GestureArenaV2 arena(
+      [&actual_device_id, &actual_pointer_id, &actual_status](
+          uint32_t device_id, uint32_t pointer_id, a11y::ContestStatus status) {
+        actual_device_id = device_id;
+        actual_pointer_id = pointer_id;
+        actual_status = status;
+      });
   MockGestureRecognizer recognizer;
   arena.Add(&recognizer);
 
   SendPointerEvents(&arena, tapEvents(1, {}, 0));
   recognizer.participation_token()->Accept();
 
-  EXPECT_EQ(actual_handled, fuchsia::ui::input::accessibility::EventHandling::CONSUMED);
+  EXPECT_EQ(actual_status, a11y::ContestStatus::kWinnerAssigned);
   EXPECT_EQ(actual_device_id, kDefaultDeviceID);
   EXPECT_EQ(actual_pointer_id, 1);
 }
@@ -409,14 +409,14 @@ TEST(GestureArenaTest, ConsumeAfterInteraction) {
 TEST(GestureArenaTest, ConsumeSubsequentInteractions) {
   std::optional<uint32_t> actual_device_id;
   std::optional<uint32_t> actual_pointer_id;
-  std::optional<fuchsia::ui::input::accessibility::EventHandling> actual_handled;
-  a11y::GestureArenaV2 arena([&actual_device_id, &actual_pointer_id, &actual_handled](
-                                 uint32_t device_id, uint32_t pointer_id,
-                                 fuchsia::ui::input::accessibility::EventHandling handled) {
-    actual_device_id = device_id;
-    actual_pointer_id = pointer_id;
-    actual_handled = handled;
-  });
+  std::optional<a11y::ContestStatus> actual_status;
+  a11y::GestureArenaV2 arena(
+      [&actual_device_id, &actual_pointer_id, &actual_status](
+          uint32_t device_id, uint32_t pointer_id, a11y::ContestStatus status) {
+        actual_device_id = device_id;
+        actual_pointer_id = pointer_id;
+        actual_status = status;
+      });
   MockGestureRecognizer recognizer;
   arena.Add(&recognizer);
 
@@ -425,11 +425,11 @@ TEST(GestureArenaTest, ConsumeSubsequentInteractions) {
 
   actual_device_id.reset();
   actual_pointer_id.reset();
-  actual_handled.reset();
+  actual_status.reset();
 
   SendPointerEvents(&arena, tapEvents(1, {}, 1));
 
-  EXPECT_EQ(actual_handled, fuchsia::ui::input::accessibility::EventHandling::CONSUMED);
+  EXPECT_EQ(actual_status, a11y::ContestStatus::kWinnerAssigned);
   EXPECT_EQ(actual_device_id, kDefaultDeviceID);
   EXPECT_EQ(actual_pointer_id, 1);
 }

@@ -8,6 +8,7 @@
 
 #include <utility>
 
+#include "fuchsia/ui/input/accessibility/cpp/fidl.h"
 #include "src/ui/a11y/lib/gesture_manager/arena_v2/recognizer_v2.h"
 
 namespace a11y {
@@ -18,30 +19,30 @@ InteractionTracker::InteractionTracker(OnInteractionHandledCallback on_interacti
 }
 
 void InteractionTracker::Reset() {
-  handled_.reset();
+  status_ = ContestStatus::kUnresolved;
   interaction_callbacks_.clear();
   open_interactions_.clear();
 }
 
 void InteractionTracker::RejectPointerEvents() {
-  InvokePointerEventCallbacks(fuchsia::ui::input::accessibility::EventHandling::REJECTED);
+  InvokePointerEventCallbacks(ContestStatus::kAllLosers);
   // It is also necessary to clear the open interactions, because as they were rejected,
   // Scenic will not send us the remaining events from those interactions.
   open_interactions_.clear();
 }
 
 void InteractionTracker::ConsumePointerEvents() {
-  InvokePointerEventCallbacks(fuchsia::ui::input::accessibility::EventHandling::CONSUMED);
+  InvokePointerEventCallbacks(ContestStatus::kWinnerAssigned);
 }
 
-void InteractionTracker::InvokePointerEventCallbacks(
-    fuchsia::ui::input::accessibility::EventHandling handled) {
-  handled_ = handled;
+void InteractionTracker::InvokePointerEventCallbacks(ContestStatus status) {
+  FX_CHECK(status != ContestStatus::kUnresolved);
+  status_ = status;
 
   for (const auto& kv : interaction_callbacks_) {
     const auto [device_id, pointer_id] = kv.first;
     for (uint32_t times = 1; times <= kv.second; ++times) {
-      on_interaction_handled_callback_(device_id, pointer_id, handled);
+      on_interaction_handled_callback_(device_id, pointer_id, status);
     }
   }
   interaction_callbacks_.clear();
@@ -63,10 +64,10 @@ void InteractionTracker::OnEvent(
   // consume or reject all interactions in a gesture.
   switch (sample.phase()) {
     case fuchsia::ui::pointer::EventPhase::ADD: {
-      if (handled_) {
-        on_interaction_handled_callback_(interaction.device_id, interaction.pointer_id, *handled_);
-      } else {
+      if (status_ == ContestStatus::kUnresolved) {
         interaction_callbacks_[interaction_id]++;
+      } else {
+        on_interaction_handled_callback_(interaction.device_id, interaction.pointer_id, status_);
       }
       open_interactions_.insert(interaction_id);
       break;
@@ -153,7 +154,9 @@ void GestureArenaV2::Add(GestureRecognizerV2* recognizer) {
 // Possible |Remove| implementation:
 // fxr/c/fuchsia/+/341227/11/src/ui/a11y/lib/gesture_manager/arena/gesture_arena.cc#151
 
-void GestureArenaV2::OnEvent(const fuchsia::ui::pointer::augment::TouchEventWithLocalHit& event) {
+ContestStatus GestureArenaV2::OnEvent(
+    const fuchsia::ui::pointer::augment::TouchEventWithLocalHit& event) {
+  FX_CHECK(event.touch_event.has_pointer_sample());
   FX_CHECK(!recognizers_.empty()) << "The a11y Gesture arena is listening for pointer events "
                                      "but has no added gesture recognizer.";
   if (IsIdle()) {
@@ -163,6 +166,8 @@ void GestureArenaV2::OnEvent(const fuchsia::ui::pointer::augment::TouchEventWith
 
   interactions_.OnEvent(event);
   DispatchEvent(event);
+
+  return interactions_.Status();
 }
 
 void GestureArenaV2::TryToResolve() {
@@ -184,11 +189,6 @@ void GestureArenaV2::TryToResolve() {
       HandleEvents(false);
     }
   }
-}
-
-GestureArenaV2::State GestureArenaV2::GetState() {
-  FX_DCHECK(false) << "not yet implemented";
-  return State::kInProgress;
 }
 
 void GestureArenaV2::DispatchEvent(

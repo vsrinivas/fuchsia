@@ -17,6 +17,13 @@
 
 namespace a11y {
 
+// Return value for |GestureArenaV2::OnEvent|, indicating the status of the current contest.
+enum class ContestStatus {
+  kUnresolved,
+  kWinnerAssigned,
+  kAllLosers,
+};
+
 // |InteractionTracker| tracks the life cycle of interactions arriving from Scenic.
 //
 // Every interaction is eventually either consumed or rejected, at which point
@@ -26,8 +33,7 @@ class InteractionTracker {
   // Callback signature used to indicate to Scenic how an interaction sent to the
   // a11y gesture arena was handled.
   using OnInteractionHandledCallback =
-      fit::function<void(uint32_t device_id, uint32_t pointer_id,
-                         fuchsia::ui::input::accessibility::EventHandling handled)>;
+      fit::function<void(uint32_t device_id, uint32_t pointer_id, ContestStatus status)>;
 
   explicit InteractionTracker(OnInteractionHandledCallback on_interaction_handled_callback);
   ~InteractionTracker() = default;
@@ -52,6 +58,12 @@ class InteractionTracker {
   // An interaction is considered closed when there is an event with phase == REMOVE.
   bool is_active() const { return !open_interactions_.empty(); }
 
+  // What is the current status of the interaction tracker?
+  //
+  // The tracker can be in "accept mode", "reject mode", or currently "undecided", represented
+  // by the three variants of |ContestStatus|.
+  ContestStatus Status() { return status_; }
+
  private:
   // Used to identify an interaction. A pair is used rather
   // than a structure for a comparable key for std::set.
@@ -59,7 +71,7 @@ class InteractionTracker {
 
   // Handle all open interactions, and enter a state where all future interactions
   // will be handled in the same way.
-  void InvokePointerEventCallbacks(fuchsia::ui::input::accessibility::EventHandling handled);
+  void InvokePointerEventCallbacks(ContestStatus status);
 
   // Callback used to notify how each interaction was handled.
   //
@@ -85,9 +97,9 @@ class InteractionTracker {
 
   // Whether the tracker is in "accept mode", "reject mode", or currently "undecided".
   //
-  // Gets set when a user calls `ConsumePointerEvents` or `RejectPointerEvents`, and
-  // gets reset when a user calls `Reset`.
-  std::optional<fuchsia::ui::input::accessibility::EventHandling> handled_;
+  // Gets set when a user calls `ConsumePointerEvents`, or `RejectPointerEvents`, or
+  // `Reset`.
+  ContestStatus status_;
 };
 
 class GestureRecognizerV2;
@@ -145,15 +157,6 @@ class GestureRecognizerV2;
 //   they decide to accept.
 class GestureArenaV2 {
  public:
-  enum class State {
-    kIdle,
-    kInProgress,
-    kWinnerAssigned,
-    kAllDefeated,
-    kContestEndedWinnerAssigned,
-    kContestEndedAllDefeated,
-  };
-
   // This arena takes |on_interaction_handled_callback|, which is called whenever an
   // interaction is handled (e.g., is consumed or rejected).
   explicit GestureArenaV2(
@@ -169,7 +172,7 @@ class GestureArenaV2 {
   // recognizers.
   //
   // Virtual for testing; overridden by a mock.
-  virtual void OnEvent(const fuchsia::ui::pointer::augment::TouchEventWithLocalHit& event);
+  virtual ContestStatus OnEvent(const fuchsia::ui::pointer::augment::TouchEventWithLocalHit& event);
 
   // Tries to resolve the arena if it is not resolved already.
   //
@@ -179,13 +182,6 @@ class GestureArenaV2 {
   // A resolved arena stays resolved (and the current contest continues) until the winner
   // releases its |ParticipationToken|, which resets the arena for a new contest.
   void TryToResolve();
-
-  // Get the state of the gesture arena.
-  //
-  // TODO(fxbug.dev/109939): gesture arena provides its state.
-  //
-  // Virtual for testing; overridden by a mock.
-  virtual State GetState();
 
  private:
   class ParticipationToken;
