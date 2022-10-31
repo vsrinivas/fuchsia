@@ -428,6 +428,7 @@ pub async fn from_sdk<W: Write>(
     fastboot_proxy: FastbootProxy,
     cmd: ManifestParams,
 ) -> Result<()> {
+    tracing::debug!("fastboot manifest from_sdk");
     match cmd.product_bundle.as_ref() {
         Some(b) => {
             let product_bundle =
@@ -451,6 +452,7 @@ pub async fn from_in_tree<W: Write>(
     fastboot_proxy: FastbootProxy,
     cmd: ManifestParams,
 ) -> Result<()> {
+    tracing::debug!("fastboot manifest from_in_tree");
     FlashManifest {
         resolver: Resolver::new(path.clone())?,
         version: FlashManifestVersion::from_in_tree(path.clone())?,
@@ -465,6 +467,7 @@ pub async fn from_path<W: Write>(
     fastboot_proxy: FastbootProxy,
     cmd: ManifestParams,
 ) -> Result<()> {
+    tracing::debug!("fastboot manifest from_path");
     match path.extension() {
         Some(ext) => {
             if ext == "zip" {

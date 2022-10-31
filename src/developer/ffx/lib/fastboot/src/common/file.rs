@@ -64,9 +64,9 @@ pub struct Resolver {
 impl Resolver {
     pub fn new(path: PathBuf) -> Result<Self> {
         Ok(Self {
-            manifest_path: path
-                .canonicalize()
-                .context("Getting absolute path of flashing manifest")?,
+            manifest_path: path.canonicalize().with_context(|| {
+                format!("Getting absolute path of flashing manifest at {:?}", path)
+            })?,
         })
     }
 }

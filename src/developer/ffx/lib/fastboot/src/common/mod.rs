@@ -332,7 +332,12 @@ pub async fn flash_partition<W: Write, F: FileResolver + Sync>(
     tracing::trace!("File size: {}", file_size);
 
     if u64::from(max_download_size) < file_size {
-        writeln!(writer, "File size ({}) is bigger than device Max Download Size ({})... Flashing image in Sparse mode", file_size, max_download_size)?;
+        writeln!(
+            writer,
+            "File size ({}) is bigger than device Max Download Size ({})... \
+            Flashing image in Sparse mode",
+            file_size, max_download_size
+        )?;
         return flash_partition_sparse(
             writer,
             name,
