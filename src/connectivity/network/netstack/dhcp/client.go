@@ -114,6 +114,7 @@ type Stats struct {
 	RecvOfferOptsDecodeErrors   tcpip.StatCounter
 	RecvOfferTimeout            tcpip.StatCounter
 	RecvOfferAcquisitionTimeout tcpip.StatCounter
+	RecvOfferNoServerAddress    tcpip.StatCounter
 	RecvAckErrors               tcpip.StatCounter
 	RecvNakErrors               tcpip.StatCounter
 	RecvAckOptsDecodeErrors     tcpip.StatCounter
@@ -711,7 +712,14 @@ func acquire(ctx context.Context, c *Client, nicName string, info *Info) (Config
 				var cfg Config
 				if err := cfg.decode(result.options); err != nil {
 					c.stats.RecvOfferOptsDecodeErrors.Increment()
-					return Config{}, fmt.Errorf("%s decode: %w", result.typ, err)
+					_ = syslog.WarnTf(tag, "error decoding %s options: %s; discarding", result.typ, err)
+					continue
+				}
+
+				if cfg.ServerAddress.Unspecified() {
+					c.stats.RecvOfferNoServerAddress.Increment()
+					_ = syslog.WarnTf(tag, "%s: got %s from %s with no ServerAddress; discarding", nicName, dhcpOFFER, result.source)
+					continue
 				}
 
 				if len(cfg.SubnetMask) == 0 {
@@ -833,6 +841,17 @@ retransmitRequest:
 					return Config{}, fmt.Errorf("%s with unexpected address=%s expected=%s", result.typ, addr, requestedAddr)
 				}
 				c.stats.RecvAcks.Increment()
+
+				// According to RFC2132, the Server Identifier option may be omitted from DHCPACK messages
+				// (https://www.rfc-editor.org/rfc/rfc2132#section-9.7). This is inconsistent with RFC2131
+				// (https://www.rfc-editor.org/rfc/rfc2131#section-4.3.1), which states that DHCPACK
+				// messages MUST include the Server Identifier option. Due to this inconsistency, we behave
+				// permissively by using the Server Identifier we must have received in a past DHCPOFFER as
+				// a fallback.
+				if cfg.ServerAddress.Unspecified() {
+					_ = syslog.InfoTf(tag, "%s omits Server Identifier; continuing to use %s instead", result.typ, info.Config.ServerAddress)
+					cfg.ServerAddress = info.Config.ServerAddress
+				}
 
 				// Now that we've successfully acquired the address, update the client state.
 				info.Acquired = requestedAddr

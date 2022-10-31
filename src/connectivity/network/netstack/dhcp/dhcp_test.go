@@ -281,7 +281,7 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 		}()
 	}
 
-	if _, err := newEPConnServer(ctx, serverStack, defaultClientAddrs, defaultServerCfg); err != nil {
+	if _, err := newEPConnServer(ctx, serverStack, defaultClientAddrs, defaultServerCfg, testServerOptions{}); err != nil {
 		t.Fatalf("newEPConnServer failed: %s", err)
 	}
 }
@@ -291,7 +291,9 @@ func (c *Client) verifyClientStats(t *testing.T, want uint64) {
 	if got := c.stats.SendDiscovers.Value(); got != want {
 		t.Errorf("DHCPStats.SendDiscovers=%d want=%d", got, want)
 	}
-	if got := c.stats.RecvOffers.Value(); got != want {
+	if got := (c.stats.RecvOffers.Value() -
+		c.stats.RecvOfferNoServerAddress.Value() -
+		c.stats.RecvOfferOptsDecodeErrors.Value()); got != want {
 		t.Errorf("DHCPStats.RecvOffers=%d want=%d", got, want)
 	}
 	if got := c.stats.SendRequests.Value(); got != want {
@@ -309,7 +311,7 @@ type randSourceStub struct {
 
 func (s *randSourceStub) Int63() int64 { return s.src }
 
-func setupTestEnv(ctx context.Context, t *testing.T, serverCfg Config) (clientStack, serverStack *stack.Stack, client, server *endpoint, _ *Client) {
+func setupTestEnv(ctx context.Context, t *testing.T, serverCfg Config, testServerOptions testServerOptions) (clientStack, serverStack *stack.Stack, client, server *endpoint, _ *Client) {
 	var serverLinkEP, clientLinkEP endpoint
 	serverLinkEP.remote = append(serverLinkEP.remote, &clientLinkEP)
 	clientLinkEP.remote = append(clientLinkEP.remote, &serverLinkEP)
@@ -320,14 +322,32 @@ func setupTestEnv(ctx context.Context, t *testing.T, serverCfg Config) (clientSt
 	clientStack = createTestStack()
 	addEndpointToStack(t, nil, testNICID, clientStack, &clientLinkEP)
 
-	if _, err := newEPConnServer(ctx, serverStack, defaultClientAddrs, serverCfg); err != nil {
+	if _, err := newEPConnServer(ctx, serverStack, defaultClientAddrs, serverCfg, testServerOptions); err != nil {
 		t.Fatalf("newEPConnServer failed: %s", err)
 	}
 	c := newZeroJitterClient(clientStack, testNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultRetransTime, nil)
 	return clientStack, serverStack, &clientLinkEP, &serverLinkEP, c
 }
 
+type testDHCPCase struct {
+	name              string
+	testServerOptions testServerOptions
+}
+
 func TestDHCP(t *testing.T) {
+	for _, tc := range []testDHCPCase{
+		{"omitting Server Identifier in DHCPACK and DHCPNAK", testServerOptions{omitServerIdentifierWhenNotRequired: true}},
+		{"including Server Identifier in DHCPACK and DHCPNAK", testServerOptions{omitServerIdentifierWhenNotRequired: false}},
+		{"needing to drop a DHCPOFFER missing Server Identifier", testServerOptions{sendOfferWithoutServerIdentifierFirst: true}},
+		{"needing to drop a DHCPOFFER with invalid options", testServerOptions{sendOfferWithInvalidOptionsFirst: true}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			testDHCP(t, tc)
+		})
+	}
+}
+
+func testDHCP(t *testing.T, tc testDHCPCase) {
 	var serverLinkEP, clientLinkEP endpoint
 	serverLinkEP.remote = append(serverLinkEP.remote, &clientLinkEP)
 	clientLinkEP.remote = append(clientLinkEP.remote, &serverLinkEP)
@@ -340,7 +360,7 @@ func TestDHCP(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	if _, err := newEPConnServer(ctx, serverStack, defaultClientAddrs, defaultServerCfg); err != nil {
+	if _, err := newEPConnServer(ctx, serverStack, defaultClientAddrs, defaultServerCfg, tc.testServerOptions); err != nil {
 		t.Fatalf("newEPConnServer failed: %s", err)
 	}
 
@@ -360,6 +380,9 @@ func TestDHCP(t *testing.T) {
 			if got, want := cfg.SubnetMask, defaultServerCfg.SubnetMask; got != want {
 				t.Errorf("cfg.SubnetMask=%s, want=%s", got, want)
 			}
+			if got, want := cfg.ServerAddress, defaultServerCfg.ServerAddress; got != want {
+				t.Errorf("cfg.ServerAddress=%s, want=%s", got, want)
+			}
 			c0.verifyClientStats(t, 1)
 		}
 		{
@@ -372,6 +395,9 @@ func TestDHCP(t *testing.T) {
 			}
 			if got, want := cfg.SubnetMask, defaultServerCfg.SubnetMask; got != want {
 				t.Errorf("cfg.SubnetMask=%s, want=%s", got, want)
+			}
+			if got, want := cfg.ServerAddress, defaultServerCfg.ServerAddress; got != want {
+				t.Errorf("cfg.ServerAddress=%s, want=%s", got, want)
 			}
 			c0.verifyClientStats(t, 2)
 		}
@@ -389,6 +415,9 @@ func TestDHCP(t *testing.T) {
 		}
 		if got, want := cfg.SubnetMask, defaultServerCfg.SubnetMask; got != want {
 			t.Errorf("cfg.SubnetMask=%s, want=%s", got, want)
+		}
+		if got, want := cfg.ServerAddress, defaultServerCfg.ServerAddress; got != want {
+			t.Errorf("cfg.ServerAddress=%s, want=%s", got, want)
 		}
 		c1.verifyClientStats(t, 1)
 	}
@@ -412,6 +441,9 @@ func TestDHCP(t *testing.T) {
 		}
 		if got, want := cfg.SubnetMask, defaultServerCfg.SubnetMask; got != want {
 			t.Errorf("cfg.SubnetMask=%s, want=%s", got, want)
+		}
+		if got, want := cfg.ServerAddress, defaultServerCfg.ServerAddress; got != want {
+			t.Errorf("cfg.ServerAddress=%s, want=%s", got, want)
 		}
 
 		if diff := cmp.Diff(cfg, defaultServerCfg, cmp.AllowUnexported(time.Time{})); diff != "" {
@@ -469,7 +501,7 @@ func TestDelayRetransmission(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			_, _, _, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
+			_, _, _, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg, testServerOptions{})
 			serverEP.onWritePacket = func(pkt *stack.PacketBuffer) (*stack.PacketBuffer, bool) {
 				func() {
 					switch mustMsgType(t, hdr(pkt.Data().AsRange().ToSlice())) {
@@ -582,6 +614,7 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 		wantAcks                      uint64
 		wantDiscovers                 uint64
 		wantReqs                      uint64
+		testServerOptions             testServerOptions
 	}{
 		{
 			name: "initial acquisition",
@@ -602,6 +635,28 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 			wantAcks:                      1,
 			wantDiscovers:                 2,
 			wantReqs:                      2,
+			testServerOptions:             testServerOptions{},
+		},
+		{
+			name: "initial acquisition, omit server identifier in ACK and NAK",
+			// Nak the first address acquisition and let the client retry.
+			nakNthReq: 1,
+			durations: []time.Duration{
+				// Start first acquisition.
+				0,
+				// Fail acquisition due to NAK and backoff.
+				0,
+				// Successful acquisition.
+				0,
+			},
+			// Fires while waiting to retransmit after receiving NAK.
+			initialStateTransitionTimeout: true,
+			wantInitAcq:                   2,
+			wantNaks:                      1,
+			wantAcks:                      1,
+			wantDiscovers:                 2,
+			wantReqs:                      2,
+			testServerOptions:             testServerOptions{omitServerIdentifierWhenNotRequired: true},
 		},
 		{
 			name: "renew",
@@ -629,6 +684,7 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 			wantAcks:                      2,
 			wantDiscovers:                 2,
 			wantReqs:                      3,
+			testServerOptions:             testServerOptions{},
 		},
 		{
 			name: "rebind",
@@ -656,6 +712,7 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 			wantAcks:                      2,
 			wantDiscovers:                 2,
 			wantReqs:                      3,
+			testServerOptions:             testServerOptions{},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -666,7 +723,7 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 				wg.Wait()
 			}()
 
-			clientStack, _, clientEP, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
+			clientStack, _, clientEP, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg, tc.testServerOptions)
 			clientTransitionsDone := make(chan struct{})
 			c.now = stubTimeNow(ctx, time.Now(), tc.durations, clientTransitionsDone)
 			// Do not allow the context to time out. A context time out in this test
@@ -893,7 +950,7 @@ func TestRetransmissionExponentialBackoff(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			_, _, clientEP, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
+			_, _, clientEP, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg, testServerOptions{})
 			info := c.Info()
 			info.Retransmission = retransTimeout
 			c.info.Store(info)
@@ -1036,7 +1093,7 @@ func TestRenewRebindBackoff(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			clientStack, _, _, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
+			clientStack, _, _, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg, testServerOptions{})
 
 			now := time.Now()
 			info := c.Info()
@@ -1157,7 +1214,7 @@ func TestRetransmissionTimeoutWithUnexpectedPackets(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	_, _, clientEP, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
+	_, _, clientEP, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg, testServerOptions{})
 
 	timeoutCh := make(chan time.Time)
 	c.retransTimeout = func(time.Duration) <-chan time.Time {
@@ -1260,7 +1317,7 @@ func TestClientDropsIrrelevantFrames(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		_, _, clientEP, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
+		_, _, clientEP, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg, testServerOptions{})
 
 		timeoutCh := make(chan time.Time)
 		c.retransTimeout = func(time.Duration) <-chan time.Time {
@@ -2014,7 +2071,7 @@ func TestTwoServers(t *testing.T) {
 		Router:        []tcpip.Address{"\xc0\xa8\x03\xF0"},
 		DNS:           []tcpip.Address{"\x08\x08\x08\x08"},
 		LeaseLength:   Seconds(30 * 60),
-	}); err != nil {
+	}, testServerOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := newEPConnServer(ctx, serverStack, []tcpip.Address{"\xc0\xa8\x04\x02"}, Config{
@@ -2023,7 +2080,7 @@ func TestTwoServers(t *testing.T) {
 		Router:        []tcpip.Address{"\xc0\xa8\x03\xF0"},
 		DNS:           []tcpip.Address{"\x08\x08\x08\x08"},
 		LeaseLength:   Seconds(30 * 60),
-	}); err != nil {
+	}, testServerOptions{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2038,7 +2095,7 @@ func TestClientRestartIPHeader(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	clientStack, _, clientEP, _, c := setupTestEnv(ctx, t, defaultServerCfg)
+	clientStack, _, clientEP, _, c := setupTestEnv(ctx, t, defaultServerCfg, testServerOptions{})
 
 	type Packet struct {
 		Addresses struct {
@@ -2173,7 +2230,7 @@ func TestDecline(t *testing.T) {
 	}
 	defer cancelCtx()
 
-	clientStack, serverStack, clientEP, _, c := setupTestEnv(ctx, t, defaultServerCfg)
+	clientStack, serverStack, clientEP, _, c := setupTestEnv(ctx, t, defaultServerCfg, testServerOptions{})
 	arpEP, err := clientStack.GetNetworkEndpoint(testNICID, arp.ProtocolNumber)
 	if err != nil {
 		t.Fatalf("clientStack.GetNetworkEndpoint(%d, %d): %s", testNICID, arp.ProtocolNumber, err)
@@ -2303,7 +2360,7 @@ func TestClientRestartLeaseTime(t *testing.T) {
 		wg.Wait()
 	}()
 
-	clientStack, _, clientEP, _, c := setupTestEnv(ctx, t, defaultServerCfg)
+	clientStack, _, clientEP, _, c := setupTestEnv(ctx, t, defaultServerCfg, testServerOptions{})
 	// Always return the same arbitrary time.
 	c.now = func() time.Time { return time.Monotonic((1234 * time.Second.Nanoseconds()) + 5678) }
 
@@ -2421,7 +2478,7 @@ func TestClientUpdateInfo(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	_, _, _, _, c := setupTestEnv(ctx, t, defaultServerCfg)
+	_, _, _, _, c := setupTestEnv(ctx, t, defaultServerCfg, testServerOptions{})
 
 	acquired := tcpip.AddressWithPrefix{Address: defaultClientAddrs[0], PrefixLen: 24}
 	offeredAt := time.Monotonic(100)
