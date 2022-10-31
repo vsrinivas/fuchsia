@@ -27,6 +27,7 @@ class RectangleCompositor {
       FX_CHECK(glm::all(glm::lessThanEqual(in_color, vec4(1.f))));
     }
 
+    // RGBA
     const vec4 color = vec4(1.f);
     const bool is_opaque = false;
   };

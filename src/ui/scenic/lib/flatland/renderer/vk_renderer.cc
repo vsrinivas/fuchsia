@@ -662,8 +662,7 @@ void VkRenderer::Render(const ImageMetadata& render_target,
     if (!render_in_protected_mode && texture_ptr->image()->use_protected_memory()) {
       textures.emplace_back(local_texture_map.at(allocation::kInvalidImageId));
       color_data.emplace_back(escher::RectangleCompositor::ColorData(
-          kProtectedReplacementColorInRGBA,
-          image.blend_mode == fuchsia::ui::composition::BlendMode::SRC));
+          kProtectedReplacementColorInRGBA, /*is_opaque=*/true));
       continue;
     }
 
