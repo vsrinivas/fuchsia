@@ -1,0 +1,50 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This shard is shared across all production and test UI realms that
+// contain shortcut manager.
+//
+// It contains any capabilities that:
+//
+// (1) Shortcut manager exposes from every production or test UI in which
+//     it's present.
+// (2) Shortcut manager always consumes from the same source in every
+//     production or test UI realm in which it's present.
+//
+// This shard should **NOT** include:
+//
+// (1) Routes that have different sources in different ui realms.
+// (2) Shortcut manager's child definition, as we may use a different url in
+//     test vs. production ui realms.
+// (3) Capabilities that other components consume from shortcut manager.
+{
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [ "#shortcut_manager" ],
+        },
+        {
+            protocol: [
+                "fuchsia.ui.focus.FocusChainListenerRegistry",
+                "fuchsia.ui.pointerinjector.Registry",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "#scenic",
+            to: [ "#shortcut_manager" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.ui.shortcut.Manager",
+                "fuchsia.ui.shortcut2.Registry",
+            ],
+            from: "#shortcut_manager",
+        },
+    ],
+}

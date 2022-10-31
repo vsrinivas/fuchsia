@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 {
     include: [
+        "//src/ui/testing/ui_test_realm/meta/shortcut_manager.shard.cml",
         "//src/ui/testing/ui_test_realm/meta/text_manager.shard.cml",
         "//src/ui/testing/ui_test_realm/meta/virtual_keyboard_manager.shard.cml",
     ],
@@ -11,10 +12,6 @@
             // TODO(fxbug.dev/107054): Remove use of input-synthesis.
             name: "input-synthesis",
             url: "#meta/input-synthesis-component.cm",
-        },
-        {
-            name: "shortcut_manager",
-            url: "#meta/shortcut_manager.cm",
         },
         {
             name: "input-helper",
@@ -28,7 +25,6 @@
             to: [
                 "#input-helper",
                 "#input-synthesis",
-                "#shortcut_manager",
             ],
         },
         {
@@ -57,10 +53,6 @@
         {
             protocol: [ "fuchsia.ui.test.input.Registry" ],
             from: "#input-helper",
-        },
-        {
-            protocol: [ "fuchsia.ui.shortcut2.Registry" ],
-            from: "#shortcut_manager",
         },
     ],
 }

@@ -6,27 +6,12 @@
         "//src/ui/meta/a11y_routes.shard.cml",
         "//src/ui/meta/scene_manager_routes.shard.cml",
         "//src/ui/meta/scenic_routes.shard.cml",
+        "//src/ui/meta/shortcut_manager_routes.shard.cml",
         "//src/ui/meta/text_manager_routes.shard.cml",
         "//src/ui/meta/virtual_keyboard_manager_routes.shard.cml",
         "syslog/client.shard.cml",
     ],
-    children: [
-        {
-            // Centralized management of keyboard shortcuts.
-            // TODO(fxbug.dev/104239): Configure presence via build flag.
-            name: "shortcut_manager",
-            url: "fuchsia-pkg://fuchsia.com/shortcut#meta/shortcut_manager.cm",
-        },
-    ],
     offer: [
-        {
-            protocol: [
-                "fuchsia.logger.LogSink",
-                "fuchsia.tracing.provider.Registry",
-            ],
-            from: "parent",
-            to: [ "#shortcut_manager" ],
-        },
         {
             protocol: [ "fuchsia.media.sounds.Player" ],
             from: "void",
@@ -39,24 +24,6 @@
             protocol: [ "fuchsia.ui.accessibility.view.Registry" ],
             from: "#scene_manager",
             to: [ "#a11y_manager" ],
-        },
-        {
-            protocol: [
-                "fuchsia.ui.focus.FocusChainListenerRegistry",
-                "fuchsia.ui.pointerinjector.Registry",
-                "fuchsia.ui.scenic.Scenic",
-            ],
-            from: "#scenic",
-            to: [ "#shortcut_manager" ],
-        },
-    ],
-    expose: [
-        {
-            protocol: [
-                "fuchsia.ui.shortcut.Manager",
-                "fuchsia.ui.shortcut2.Registry",
-            ],
-            from: "#shortcut_manager",
         },
     ],
 }
