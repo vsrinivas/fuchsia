@@ -122,6 +122,12 @@ type DeviceInfo = table {
 
     /// (DFv2): Component offers to the node.
    12: offer_list vector<fuchsia.component.decl.Offer>:MAX;
+
+    /// (DFv1): Banjo protocol ID
+   13: protocol_id uint32;
+
+    /// (DFv1): Banjo protocol name
+   14: protocol_name string:MAX;
 };
 
 /// Information about a driver binding to a node.

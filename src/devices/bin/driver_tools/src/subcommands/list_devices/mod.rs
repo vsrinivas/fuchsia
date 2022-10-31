@@ -41,6 +41,14 @@ impl DevicePrinter for DFv1Device {
             "Flags",
             self.0.flags.as_ref().unwrap_or(&fdd::DeviceFlags::empty())
         );
+        if let Some(protocol_id) = self.0.protocol_id {
+            println!(
+                "{0: <9}: {1} ({2})",
+                "Proto",
+                self.0.protocol_name.as_deref().unwrap_or("none"),
+                protocol_id
+            );
+        }
         if let Some(ref property_list) = self.0.property_list {
             let count = property_list.props.len();
             println!("{} Properties", count);

@@ -4,10 +4,23 @@
 
 #include "src/devices/bin/driver_manager/v1/driver_development.h"
 
+#include <lib/ddk/driver.h>
+
 #include "src/devices/bin/driver_manager/composite_device.h"
 
 namespace fdd = fuchsia_driver_development;
 namespace fdm = fuchsia_device_manager;
+
+const char* get_protocol_name(uint32_t protocol_id) {
+  switch (protocol_id) {
+#define DDK_PROTOCOL_DEF(tag, val, name, flags) \
+  case val:                                     \
+    return "ZX_PROTOCOL_" #tag;
+#include <lib/ddk/protodefs.h>
+    default:
+      return "unknown";
+  }
+}
 
 zx::result<std::vector<fdd::wire::DeviceInfo>> GetDeviceInfo(
     fidl::AnyArena& allocator, const std::vector<fbl::RefPtr<const Device>>& devices) {
@@ -115,6 +128,13 @@ zx::result<std::vector<fdd::wire::DeviceInfo>> GetDeviceInfo(
                                              });
 
     device_info.set_flags(fdd::wire::DeviceFlags::TruncatingUnknown(device->flags));
+
+    if (device->protocol_id() != 0 && device->protocol_id() != ZX_PROTOCOL_MISC) {
+      device_info.set_protocol_id(device->protocol_id());
+      const char* protocol_name = get_protocol_name(device->protocol_id());
+      device_info.set_protocol_name(
+          allocator, fidl::StringView(allocator, {protocol_name, strlen(protocol_name)}));
+    }
 
     device_info_vec.push_back(std::move(device_info));
   }
