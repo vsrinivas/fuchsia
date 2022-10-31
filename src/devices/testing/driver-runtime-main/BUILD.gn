@@ -9,8 +9,8 @@ source_set("zxtest") {
   testonly = true
   sources = [ "zxtest.cc" ]
   deps = [
-    "//sdk/lib/driver_runtime:driver_runtime_cpp",
-    "//sdk/lib/driver_runtime:driver_runtime_env_cpp",
+    "//sdk/lib/driver/runtime:driver_runtime_cpp",
+    "//sdk/lib/driver/runtime:driver_runtime_env_cpp",
     "//src/devices/lib/driver:driver_runtime",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/sync:sync-cpp",
@@ -28,7 +28,7 @@ test("zxtest-test") {
   sources = [ "zxtest_test.cc" ]
   deps = [
     ":zxtest",
-    "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//sdk/lib/driver/runtime:driver_runtime_cpp",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/sync:sync-cpp",
     "//zircon/system/ulib/zxtest",

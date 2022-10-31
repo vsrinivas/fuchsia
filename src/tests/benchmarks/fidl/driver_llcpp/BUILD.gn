@@ -19,7 +19,7 @@ foreach(suite, benchmark_suites) {
     fidl = suite.fidl_target
     deps = [
       "//sdk/ctf/tests/pkg/fidl/cpp:handle_util",
-      "//sdk/lib/driver_runtime:testing",
+      "//sdk/lib/driver/runtime:testing",
       "//sdk/lib/fidl",
       "//sdk/lib/fidl_driver",
       "//src/devices/bin/driver_runtime:driver_runtime_impl",
@@ -39,7 +39,7 @@ executable("bin") {
   testonly = true
   sources = [ "main.cc" ]
   deps = [
-           "//sdk/lib/driver_runtime:testing",
+           "//sdk/lib/driver/runtime:testing",
            "//sdk/lib/fidl_driver",
            "//src/devices/bin/driver_runtime:driver_runtime_impl",
            "//src/zircon/lib/zircon",

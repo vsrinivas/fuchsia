@@ -29,7 +29,7 @@ fuchsia_driver("aml-dsp-driver") {
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.dsp:fuchsia.hardware.dsp_cpp",
     "//sdk/fidl/fuchsia.hardware.mailbox:fuchsia.hardware.mailbox_cpp",
-    "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//sdk/lib/driver/runtime:driver_runtime_cpp",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/driver",

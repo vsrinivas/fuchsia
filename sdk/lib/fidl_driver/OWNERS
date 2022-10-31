@@ -1,4 +1,4 @@
 include /src/fidl/OWNERS
-include /sdk/lib/driver_runtime/OWNERS
+include /sdk/lib/driver/runtime/OWNERS
 
 # COMPONENT: FIDL

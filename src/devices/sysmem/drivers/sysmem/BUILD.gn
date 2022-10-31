@@ -105,7 +105,7 @@ fuchsia_driver("sysmem-driver") {
   deps = [
     ":sysmem_bind",
     ":sysmem_common_srcs",
-    "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//sdk/lib/driver/runtime:driver_runtime_cpp",
     "//sdk/lib/syslog/cpp:backend",
     "//src/devices/lib/driver",
     "//src/devices/lib/driver:driver_runtime",

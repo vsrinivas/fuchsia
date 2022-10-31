@@ -15,8 +15,8 @@ sdk_source_set("fidl_driver_transport") {
   sources = [ "transport.cc" ]
   public_configs = [ ":include" ]
   public_deps = [
-    "//sdk/lib/driver_runtime",
-    "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//sdk/lib/driver/runtime:driver_runtime",
+    "//sdk/lib/driver/runtime:driver_runtime_cpp",
     "//sdk/lib/fidl/cpp/wire",
   ]
 }
@@ -36,8 +36,8 @@ source_set("fidl_driver") {
   public_configs = [ ":include" ]
   public_deps = [
     ":fidl_driver_transport",
-    "//sdk/lib/driver_runtime",
-    "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//sdk/lib/driver/runtime:driver_runtime",
+    "//sdk/lib/driver/runtime:driver_runtime_cpp",
     "//sdk/lib/fidl/cpp/wire",
   ]
 }
@@ -55,8 +55,8 @@ source_set("fidl_driver_natural") {
   public_configs = [ ":include" ]
   public_deps = [
     ":fidl_driver_transport",
-    "//sdk/lib/driver_runtime",
-    "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//sdk/lib/driver/runtime:driver_runtime",
+    "//sdk/lib/driver/runtime:driver_runtime_cpp",
     "//src/lib/fidl/cpp",
   ]
 }

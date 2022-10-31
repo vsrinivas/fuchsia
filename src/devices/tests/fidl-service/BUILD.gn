@@ -53,7 +53,7 @@ fuchsia_driver("parent-driver") {
     ":echo_cpp_wire",
     ":parent-driver-bind",
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
-    "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//sdk/lib/driver/runtime:driver_runtime_cpp",
     "//sdk/lib/sys/component/cpp",
     "//src/devices/lib/driver",
     "//src/devices/lib/driver:driver_runtime",

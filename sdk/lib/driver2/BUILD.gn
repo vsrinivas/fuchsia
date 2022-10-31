@@ -18,7 +18,7 @@ sdk_source_set("record") {
 
   sources = [ "record.h" ]
 
-  public_deps = [ "//sdk/lib/driver_runtime:driver_runtime" ]
+  public_deps = [ "//sdk/lib/driver/runtime:driver_runtime" ]
 }
 
 sdk_source_set("devfs_exporter") {
@@ -69,7 +69,7 @@ sdk_source_set("cpp") {
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_cpp",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_cpp",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_cpp",
-    "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//sdk/lib/driver/runtime:driver_runtime_cpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl",
     "//sdk/lib/fidl_driver:fidl_driver_transport",
@@ -112,7 +112,7 @@ sdk_source_set("runtime-deprecated") {
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_cpp",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_cpp",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_cpp",
-    "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//sdk/lib/driver/runtime:driver_runtime_cpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl",
     "//sdk/lib/fidl_driver:fidl_driver_transport",
@@ -139,7 +139,7 @@ executable("cpp_test") {
     "//sdk/fidl/fuchsia.device.fs:fuchsia.device.fs_hlcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
-    "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//sdk/lib/driver/runtime:driver_runtime_cpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/component/cpp",
     "//src/devices/lib/driver:driver_runtime",

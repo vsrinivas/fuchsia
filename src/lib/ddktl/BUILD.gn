@@ -54,7 +54,7 @@ source_set("ddktl") {
   }
 
   deps = [
-    "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//sdk/lib/driver/runtime:driver_runtime_cpp",
     "//src/lib/ddk",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",

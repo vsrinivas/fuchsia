@@ -26,7 +26,7 @@
 #include <gtest/gtest.h>
 #include <mock-boot-arguments/server.h>
 
-#include "sdk/lib/driver_runtime/testing/loop_fixture/test_loop_fixture.h"
+#include "sdk/lib/driver/runtime/testing/loop_fixture/test_loop_fixture.h"
 #include "src/devices/misc/drivers/compat/v1_test.h"
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"

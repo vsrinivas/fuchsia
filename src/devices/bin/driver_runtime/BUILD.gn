@@ -32,13 +32,13 @@ source_set("driver_runtime_impl") {
   ]
   public_configs = [ ":include" ]
   public_deps = [
-    "//sdk/lib/driver_runtime",
+    "//sdk/lib/driver/runtime:driver_runtime",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
   deps = [
-    "//sdk/lib/driver_runtime:driver_runtime_env",
-    "//sdk/lib/driver_runtime:testing",
+    "//sdk/lib/driver/runtime:driver_runtime_env",
+    "//sdk/lib/driver/runtime:testing",
     "//sdk/lib/fidl/cpp/wire",
     "//src/devices/lib/log",
     "//src/lib/ddk",
@@ -76,10 +76,10 @@ test("driver_runtime_test") {
   ]
   deps = [
     ":driver_runtime_impl",
-    "//sdk/lib/driver_runtime",
-    "//sdk/lib/driver_runtime:driver_runtime_cpp",
-    "//sdk/lib/driver_runtime:driver_runtime_env_cpp",
-    "//sdk/lib/driver_runtime:testing",
+    "//sdk/lib/driver/runtime:driver_runtime",
+    "//sdk/lib/driver/runtime:driver_runtime_cpp",
+    "//sdk/lib/driver/runtime:driver_runtime_env_cpp",
+    "//sdk/lib/driver/runtime:testing",
     "//sdk/lib/fidl/cpp/wire",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/sync",
@@ -93,8 +93,8 @@ test("driver_runtime_death_test") {
   sources = [ "channel_death_test.cc" ]
   deps = [
     ":driver_runtime_impl",
-    "//sdk/lib/driver_runtime",
-    "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//sdk/lib/driver/runtime:driver_runtime",
+    "//sdk/lib/driver/runtime:driver_runtime_cpp",
     "//sdk/lib/fidl/cpp/wire",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/sync:sync-cpp",

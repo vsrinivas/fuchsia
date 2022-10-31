@@ -63,7 +63,7 @@ sdk_source_set("driver_runtime_env") {
   sdk_name = "driver_runtime_env"
   sources = [ "include/lib/fdf/env.h" ]
   visibility = [
-    "//sdk/lib/driver_runtime/*",
+    "//sdk/lib/driver/runtime/*",
     "//src/devices/bin/driver_host/*",
     "//src/devices/bin/driver_host2/*",
     "//src/devices/bin/driver_runtime/*",
@@ -94,7 +94,7 @@ sdk_source_set("driver_runtime_env_cpp") {
 source_set("testing") {
   sources = [ "include/lib/fdf/testing.h" ]
   visibility = [
-    "//sdk/lib/driver_runtime/*",
+    "//sdk/lib/driver/runtime/*",
     "//sdk/lib/fidl_driver/tests/transport/*",
     "//src/devices/bin/driver_host/*",
     "//src/devices/bin/driver_host2/*",

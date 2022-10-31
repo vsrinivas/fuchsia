@@ -76,7 +76,7 @@ source_set("common") {
     ":simple_binding",
     "//sdk/fidl/fuchsia.device.fs:fuchsia.device.fs_cpp_wire",
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
-    "//sdk/lib/driver_runtime:driver_runtime_env_cpp",
+    "//sdk/lib/driver/runtime:driver_runtime_env_cpp",
     "//src/devices/lib/driver:driver_runtime",
   ]
 
@@ -85,10 +85,10 @@ source_set("common") {
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_cpp_wire",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_cpp_wire",
     "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_cpp_wire",
+    "//sdk/lib/driver/runtime:driver_runtime_cpp",
+    "//sdk/lib/driver/runtime:driver_runtime_env",
+    "//sdk/lib/driver/runtime:driver_runtime_env_cpp",
     "//sdk/lib/driver2:cpp",
-    "//sdk/lib/driver_runtime:driver_runtime_cpp",
-    "//sdk/lib/driver_runtime:driver_runtime_env",
-    "//sdk/lib/driver_runtime:driver_runtime_env_cpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fit-promise",
     "//src/devices/bin/driver_host2:driver",

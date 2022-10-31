@@ -97,7 +97,7 @@ fuchsia_driver("platform-bus-x86-driver") {
     "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_cpp_wire",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_c",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
-    "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//sdk/lib/driver/runtime:driver_runtime_cpp",
     "//src/devices/board/lib/acpi",
     "//src/devices/board/lib/smbios",
     "//src/devices/lib/driver",

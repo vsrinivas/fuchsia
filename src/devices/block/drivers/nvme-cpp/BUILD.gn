@@ -30,7 +30,7 @@ driver_bind_rules("bind") {
 common_deps = [
   ":bind",
   "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
-  "//sdk/lib/driver_runtime:driver_runtime_cpp",
+  "//sdk/lib/driver/runtime:driver_runtime_cpp",
   "//sdk/lib/fit-promise",
   "//src/devices/lib/driver",
   "//src/devices/lib/driver:driver_runtime",

@@ -24,7 +24,7 @@ source_set("driver") {
   ]
 
   deps = [
-    "//sdk/lib/driver_runtime:driver_runtime_env_cpp",
+    "//sdk/lib/driver/runtime:driver_runtime_env_cpp",
     "//sdk/lib/fit",
     "//src/devices/lib/log",
     "//zircon/system/ulib/zircon-internal",
@@ -32,8 +32,8 @@ source_set("driver") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.driver.host:fuchsia.driver.host_cpp",
+    "//sdk/lib/driver/runtime:driver_runtime_cpp",
     "//sdk/lib/driver2:cpp",
-    "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/fbl",
   ]
@@ -49,9 +49,9 @@ source_set("lib") {
     ":driver",
     "//sdk/fidl/fuchsia.driver.host:fuchsia.driver.host_cpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp",
+    "//sdk/lib/driver/runtime:driver_runtime_cpp",
+    "//sdk/lib/driver/runtime:driver_runtime_env_cpp",
     "//sdk/lib/driver2:cpp",
-    "//sdk/lib/driver_runtime:driver_runtime_cpp",
-    "//sdk/lib/driver_runtime:driver_runtime_env_cpp",
     "//sdk/lib/sys/component/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/devices/lib/driver:driver_runtime",
@@ -115,7 +115,7 @@ executable("unittests") {
     ":fuchsia.driverhost.test_cpp_wire",
     ":lib",
     "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
-    "//sdk/lib/driver_runtime:testing",
+    "//sdk/lib/driver/runtime:testing",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/component/cpp",
     "//src/devices/lib/driver:driver_runtime",
@@ -151,7 +151,7 @@ executable("bin") {
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.inspect:fuchsia.inspect_cpp_wire",
-    "//sdk/lib/driver_runtime:driver_runtime_env",
+    "//sdk/lib/driver/runtime:driver_runtime_env",
     "//sdk/lib/inspect/service/cpp",
     "//sdk/lib/sys/component/cpp",
     "//sdk/lib/syslog/cpp",

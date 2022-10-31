@@ -124,7 +124,7 @@ if (platform_enable_user_pci) {
       "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
       "//sdk/fidl/fuchsia.hardware.pci:fuchsia.hardware.pci_cpp_wire",
-      "//sdk/lib/driver_runtime:driver_runtime_cpp",
+      "//sdk/lib/driver/runtime:driver_runtime_cpp",
       "//sdk/lib/fidl",
       "//sdk/lib/sys/component/cpp",
       "//src/devices/bind/fuchsia.acpi:fuchsia.acpi_cpp",

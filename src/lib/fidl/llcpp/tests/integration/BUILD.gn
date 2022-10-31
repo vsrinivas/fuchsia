@@ -97,8 +97,8 @@ test("fidl_llcpp_zircon_channel_client_over_driver_dispatcher_tests_bin") {
   output_name = "fidl_llcpp_zircon_channel_client_over_driver_dispatcher_tests"
   sources = [ "zircon_channel_client_over_driver_dispatcher_test.cc" ]
   deps = [
-    "//sdk/lib/driver_runtime:driver_runtime_cpp",
-    "//sdk/lib/driver_runtime:testing",
+    "//sdk/lib/driver/runtime:driver_runtime_cpp",
+    "//sdk/lib/driver/runtime:testing",
     "//sdk/testing/fidl/protocols_tests:test.empty.protocol_cpp_wire",
     "//src/devices/bin/driver_runtime:driver_runtime_impl",
     "//src/lib/fxl/test:gtest_main",

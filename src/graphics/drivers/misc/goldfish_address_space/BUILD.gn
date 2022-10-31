@@ -17,7 +17,7 @@ driver_bind_rules("goldfish_address_space-bind") {
 common_deps = [
   ":goldfish_address_space-bind",
   "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_cpp_wire",
-  "//sdk/lib/driver_runtime:driver_runtime_cpp",
+  "//sdk/lib/driver/runtime:driver_runtime_cpp",
   "//sdk/lib/fidl",
   "//src/devices/lib/driver",
   "//src/devices/lib/driver:driver_runtime",

@@ -20,8 +20,8 @@ fuchsia_driver("driver") {
   deps = [
     ":bind",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_cpp",
+    "//sdk/lib/driver/runtime:driver_runtime_cpp",
     "//sdk/lib/driver2:cpp",
-    "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//src/devices/lib/driver",
     "//src/devices/lib/driver:driver_runtime",
     "//src/devices/tests/v2/compat-runtime-v1:fuchsia.compat.runtime_cpp_driver",

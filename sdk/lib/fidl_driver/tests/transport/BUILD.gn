@@ -28,7 +28,7 @@ source_set("fidl_driver_transport_testing_lib") {
   ]
   sources = [ "assert_peer_closed_helper.cc" ]
   deps = [
-    "//sdk/lib/driver_runtime:testing",
+    "//sdk/lib/driver/runtime:testing",
     "//sdk/lib/fidl_driver",
     "//sdk/lib/fit",
     "//zircon/system/ulib/sync:sync-cpp",
@@ -62,7 +62,7 @@ foreach(test_name, test_names) {
     deps = [
       ":fidl_driver_transport_testing_lib",
       ":test.transport_cpp_driver",
-      "//sdk/lib/driver_runtime:testing",
+      "//sdk/lib/driver/runtime:testing",
       "//sdk/lib/fidl_driver",
       "//sdk/lib/fidl_driver:fidl_driver_natural",
       "//sdk/testing/fidl/protocols_tests:test.unknown.interactions_cpp_driver",
@@ -88,7 +88,7 @@ test("fidl_driver_api_test_bin") {
   deps = [
     ":fidl_driver_transport_testing_lib",
     ":test.transport_cpp_driver",
-    "//sdk/lib/driver_runtime:testing",
+    "//sdk/lib/driver/runtime:testing",
     "//sdk/lib/fidl_driver",
     "//sdk/lib/fidl_driver:fidl_driver_natural",
     "//sdk/testing/fidl/protocols_tests:test.unknown.interactions_cpp_driver",

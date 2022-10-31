@@ -40,5 +40,5 @@ C++ bindings over the driver transport is under iteration. For now the tests may
 serve as [examples][async-example] of using the bindings.
 
 <!-- xrefs -->
-[fdf]: /sdk/lib/driver_runtime/
+[fdf]: /sdk/lib/driver/runtime/
 [async-example]: /sdk/lib/fidl_driver/tests/transport/wire_async_two_way_test.cc

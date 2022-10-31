@@ -51,7 +51,7 @@ fuchsia_driver("wlan_driver-driver") {
   deps = [
     ":wlan_bind",
     ":wlan_convert",
-    "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//sdk/lib/driver/runtime:driver_runtime_cpp",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//src/devices/lib/dev-operation",
     "//src/devices/lib/driver",

@@ -8,8 +8,8 @@ source_set("gtest") {
   sources = [ "test_loop_fixture.h" ]
 
   public_deps = [
-    "//sdk/lib/driver_runtime:driver_runtime_cpp",
-    "//sdk/lib/driver_runtime:testing",
+    "//sdk/lib/driver/runtime:driver_runtime_cpp",
+    "//sdk/lib/driver/runtime:testing",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/sync:sync-cpp",

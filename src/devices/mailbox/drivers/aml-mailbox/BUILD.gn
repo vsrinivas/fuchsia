@@ -27,7 +27,7 @@ fuchsia_driver("aml-mailbox-driver") {
   deps = [
     ":aml_mailbox_bind",
     "//sdk/fidl/fuchsia.hardware.mailbox:fuchsia.hardware.mailbox_cpp",
-    "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//sdk/lib/driver/runtime:driver_runtime_cpp",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/driver",
