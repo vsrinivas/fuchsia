@@ -123,7 +123,7 @@
 
     // Use clippy for checkOnSave, if checkOnSave is enabled.
     "rust-analyzer.checkOnSave.overrideCommand": [
-      "fx",
+      "./scripts/fx",
       "clippy",
       "--raw",
       "--all"
