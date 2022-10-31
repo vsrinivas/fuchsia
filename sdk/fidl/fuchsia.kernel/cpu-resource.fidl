@@ -9,7 +9,7 @@ using zx;
 /// `ZX_RSRC_SYSTEM_CPU_BASE`.
 @discoverable
 protocol CpuResource {
-    /// Get an info resource handle.
+    /// Get a CPU resource handle.
     Get() -> (resource struct {
         resource zx.handle:RESOURCE;
     });
