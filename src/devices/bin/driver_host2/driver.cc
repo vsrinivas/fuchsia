@@ -47,27 +47,10 @@ class FileEventHandler : public fidl::AsyncEventHandler<fio::File> {
   std::string url_;
 };
 
-// TODO(fxbug.dev/99679): This logic needs to be kept in sync with |driver::NsValue|.
-// Once we have the ability to produce a const view from FIDL natural types, we can
-// directly use |driver::NsValue| and delete this function.
-zx::result<fidl::UnownedClientEnd<fuchsia_io::Directory>> NsValue(
-    const std::vector<fuchsia_component_runner::ComponentNamespaceEntry>& entries,
-    std::string_view path) {
-  for (auto& entry : entries) {
-    if (!entry.path() || !entry.directory()) {
-      continue;
-    }
-    if (path == *entry.path()) {
-      return zx::ok(fidl::UnownedClientEnd<fuchsia_io::Directory>(*entry.directory()));
-    }
-  }
-  return zx::error(ZX_ERR_NOT_FOUND);
-}
-
 zx::result<fidl::ClientEnd<fio::File>> OpenDriverFile(
     const fdf::DriverStartArgs& start_args, const fuchsia_data::wire::Dictionary& program) {
   const auto& ns = start_args.ns();
-  auto pkg = ns ? NsValue(*ns, "/pkg") : zx::error(ZX_ERR_INVALID_ARGS);
+  auto pkg = ns ? driver::NsValue(*ns, "/pkg") : zx::error(ZX_ERR_INVALID_ARGS);
   if (pkg.is_error()) {
     LOGF(ERROR, "Failed to start driver, missing '/pkg' directory: %s", pkg.status_string());
     return pkg.take_error();

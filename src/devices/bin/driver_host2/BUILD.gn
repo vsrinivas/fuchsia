@@ -80,7 +80,6 @@ fuchsia_driver("test_driver_driver") {
     ":bind",
     ":fuchsia.driverhost.test_cpp_wire",
     "//sdk/lib/driver2:cpp",
-    "//sdk/lib/sys/component/cpp",
     "//src/devices/lib/driver:driver_runtime",
   ]
 }

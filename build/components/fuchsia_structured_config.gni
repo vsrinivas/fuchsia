@@ -573,7 +573,7 @@ template("fuchsia_structured_config_cpp_elf_lib") {
 #   deps = [ ... ]
 # }
 #
-# fuchsia_structured_config_cpp_driver_lib("my_component_config_lib") {
+# fuchsia_structured_config_cpp_driver_lib("my_driver_config_lib") {
 #   cm_label = ":my_component_manifest"
 # }
 # ```
@@ -585,7 +585,7 @@ template("fuchsia_structured_config_cpp_elf_lib") {
 # fuchsia_driver("my_driver") {
 #   ...
 #   deps = [
-#     ":my_component_config_lib",
+#     ":my_driver_config_lib",
 #     ...
 #   ]
 # }
@@ -594,14 +594,10 @@ template("fuchsia_structured_config_cpp_elf_lib") {
 # And in my_driver source, it can be used like this
 #
 # ```
-# #import <my_component_config_lib/config.h>
+# #import <my_driver_config_lib/config.h>
 #
-# static zx::result<std::unique_ptr<MyDriver>> Start(fdf::wire::DriverStartArgs& start_args,
-#                                                        async_dispatcher_t* dispatcher,
-#                                                        fidl::WireSharedClient<fdf::Node> node,
-#                                                        driver::Namespace ns,
-#                                                        std::unique_ptr<driver::Logger> logger) {
-#   auto config = Config::from_args(start_args);
+# zx::result<> Start() {
+#   auto config = take_config<my_driver_config_lib::Config>();
 #   FDF_LOG(INFO, config.enable_foo);
 #   ...
 # }

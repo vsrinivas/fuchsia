@@ -59,7 +59,6 @@ sdk_source_set("cpp") {
     "node_add_args.h",
     "outgoing_directory.cc",
     "outgoing_directory.h",
-    "record_cpp.h",
     "service_client.h",
     "start_args.h",
     "structured_logger.h",

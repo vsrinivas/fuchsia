@@ -51,13 +51,6 @@ zx::result<T> SymbolValue(
 }
 
 template <typename T>
-T GetSymbol(const fuchsia_driver_framework::wire::DriverStartArgs& args, std::string_view name,
-            T default_value = nullptr) {
-  auto value = driver::SymbolValue<T>(args, name);
-  return value.is_ok() ? *value : default_value;
-}
-
-template <typename T>
 T GetSymbol(const std::optional<std::vector<fuchsia_driver_framework::NodeSymbol>>& symbols,
             std::string_view name, T default_value = nullptr) {
   auto value = driver::SymbolValue<T>(symbols, name);
@@ -160,10 +153,10 @@ inline zx::result<fidl::UnownedClientEnd<fuchsia_io::Directory>> NsValue(
     std::string_view path) {
   for (auto& entry : entries) {
     auto entry_path = entry.path();
-    ZX_ASSERT(entry_path.has_value());
+    ZX_ASSERT_MSG(entry_path.has_value(), "The entry's path cannot be empty.");
     if (path == entry_path.value()) {
       auto& entry_directory = entry.directory();
-      ZX_ASSERT(entry_directory.has_value());
+      ZX_ASSERT_MSG(entry_directory.has_value(), "The entry's directory cannot be empty.");
       return zx::ok<fidl::UnownedClientEnd<fuchsia_io::Directory>>(entry_directory.value());
     }
   }
