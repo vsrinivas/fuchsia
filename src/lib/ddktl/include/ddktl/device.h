@@ -38,7 +38,7 @@
 //
 // ddk::Device<D, ...> is a mixin class that simplifies writing DDK drivers in
 // C++. The DDK's zx_device_t defines a set of function pointer callbacks that
-// can be implemented to define standard behavior (e.g., open/close/read/write),
+// can be implemented to define standard behavior (e.g., message),
 // as well as to implement device lifecycle events (e.g., unbind/release). The
 // mixin classes are used to set up the function pointer table to call methods
 // from the user's class automatically.
@@ -85,28 +85,13 @@
 // | ddk::Rxrpcable             | zx_status_t DdkRxrpc(zx_handle_t channel)          |
 // +----------------------------+----------------------------------------------------+
 //
-// Deprecated Mixins:
-// +--------------------------+----------------------------------------------------+
-// | Mixin class              | Required function implementation                   |
-// +--------------------------+----------------------------------------------------+
-// | ddk::Readable            | zx_status_t DdkRead(void* buf, size_t count,       |
-// |                          |                     zx_off_t off, size_t* actual)  |
-// |                          |                                                    |
-// | ddk::Writable            | zx_status_t DdkWrite(const void* buf,              |
-// |                          |                      size_t count, zx_off_t off,   |
-// |                          |                      size_t* actual)               |
-// |                          |                                                    |
-// | ddk::GetSizable          | zx_off_t DdkGetSize()                              |
-// |                          |                                                    |
-// +--------------------------+----------------------------------------------------+
-//
 //
 // :: Example ::
 //
 // // Define our device type using a type alias.
 // class MyDevice;
 // using DeviceType = ddk::Device<MyDevice, ddk::Openable, ddk::Closable,
-//                                          ddk::Readable, ddk::Unbindable, ddk::Suspendable>;
+//                                          ddk::Unbindable, ddk::Suspendable>;
 //
 // class MyDevice : public DeviceType {
 //   public:
@@ -122,7 +107,6 @@
 //     // Methods required by the ddk mixins
 //     zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
 //     zx_status_t DdkClose(uint32_t flags);
-//     zx_status_t DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual);
 //     void DdkUnbind(ddk::UnbindTxn txn);
 //     void DdkSuspend(ddk::SuspendTxn txn);
 //     void DdkRelease();
@@ -227,34 +211,6 @@ class Unbindable : public base_mixin {
     auto dev = static_cast<D*>(ctx);
     UnbindTxn txn(dev->zxdev());
     dev->DdkUnbind(std::move(txn));
-  }
-};
-
-template <typename D>
-class Readable : public base_mixin {
- protected:
-  static constexpr void InitOp(zx_protocol_device_t* proto) {
-    internal::CheckReadable<D>();
-    proto->read = Read;
-  }
-
- private:
-  static zx_status_t Read(void* ctx, void* buf, size_t count, zx_off_t off, size_t* actual) {
-    return static_cast<D*>(ctx)->DdkRead(buf, count, off, actual);
-  }
-};
-
-template <typename D>
-class Writable : public base_mixin {
- protected:
-  static constexpr void InitOp(zx_protocol_device_t* proto) {
-    internal::CheckWritable<D>();
-    proto->write = Write;
-  }
-
- private:
-  static zx_status_t Write(void* ctx, const void* buf, size_t count, zx_off_t off, size_t* actual) {
-    return static_cast<D*>(ctx)->DdkWrite(buf, count, off, actual);
   }
 };
 
@@ -791,5 +747,56 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
 };
 
 }  // namespace ddk
+
+// Each of these Mixins are deprecated. Please do not add new usages, and please
+// remove existing uses.
+//
+// Deprecated Mixins:
+// +--------------------------+----------------------------------------------------+
+// | Mixin class              | Required function implementation                   |
+// +--------------------------+----------------------------------------------------+
+// | ddk_deprecated::Readable | zx_status_t DdkRead(void* buf, size_t count,       |
+// |                          |                     zx_off_t off, size_t* actual)  |
+// |                          |                                                    |
+// | ddk_deprecated::Writable | zx_status_t DdkWrite(const void* buf,              |
+// |                          |                      size_t count, zx_off_t off,   |
+// |                          |                      size_t* actual)               |
+// |                          |                                                    |
+// | ddk::GetSizable          | zx_off_t DdkGetSize()                              |
+// |                          |                                                    |
+// +--------------------------+----------------------------------------------------+
+//
+namespace ddk_deprecated {
+#if defined(DDKTL_ALLOW_READ_WRITE)
+template <typename D>
+class Readable : public ddk::base_mixin {
+ protected:
+  static constexpr void InitOp(zx_protocol_device_t* proto) {
+    ddk::internal::CheckReadable<D>();
+    proto->read = Read;
+  }
+
+ private:
+  static zx_status_t Read(void* ctx, void* buf, size_t count, zx_off_t off, size_t* actual) {
+    return static_cast<D*>(ctx)->DdkRead(buf, count, off, actual);
+  }
+};
+
+template <typename D>
+class Writable : public ddk::base_mixin {
+ protected:
+  static constexpr void InitOp(zx_protocol_device_t* proto) {
+    ddk::internal::CheckWritable<D>();
+    proto->write = Write;
+  }
+
+ private:
+  static zx_status_t Write(void* ctx, const void* buf, size_t count, zx_off_t off, size_t* actual) {
+    return static_cast<D*>(ctx)->DdkWrite(buf, count, off, actual);
+  }
+};
+
+#endif
+}  // namespace ddk_deprecated
 
 #endif  // SRC_LIB_DDKTL_INCLUDE_DDKTL_DEVICE_H_

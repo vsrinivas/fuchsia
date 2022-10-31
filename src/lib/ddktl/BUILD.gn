@@ -60,3 +60,16 @@ source_set("ddktl") {
     "//zircon/system/ulib/zx",
   ]
 }
+
+config("deprecated-read-write") {
+  cflags = [ "-DDDKTL_ALLOW_READ_WRITE" ]
+
+  # Please do not add to this list.
+  # TODO(fxbug.dev/33820): Remove all usages and delete this functionality.
+  visibility = [
+    "//src/devices/block/drivers/core:core-unittest-bin",
+    "//src/devices/block/drivers/core:shared",
+    "//src/devices/tests/mock-device:mock-device-driver",
+    "//src/lib/ddktl/tests:ddktl-test",
+  ]
+}

@@ -29,6 +29,8 @@ test("ddktl-test") {
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
+
+  configs += [ "//src/lib/ddktl:deprecated-read-write" ]
 }
 
 fuchsia_unittest_package("ddktl-unittest-package") {

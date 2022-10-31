@@ -27,6 +27,12 @@ class TestNone : public ddk::Device<TestNone> {
     Test##name() : ddk::Device<Test##name, ddk::name>(nullptr) {} \
     void DdkRelease() {}
 
+#define BEGIN_SUCCESS_DEPRECATED_CASE(name)                                  \
+  class Test##name : public ddk::Device<Test##name, ddk_deprecated::name> {  \
+   public:                                                                   \
+    Test##name() : ddk::Device<Test##name, ddk_deprecated::name>(nullptr) {} \
+    void DdkRelease() {}
+
 #define END_SUCCESS_CASE \
   }                      \
   ;
@@ -55,11 +61,11 @@ BEGIN_SUCCESS_CASE(Unbindable)
 void DdkUnbind(ddk::UnbindTxn txn) {}
 END_SUCCESS_CASE
 
-BEGIN_SUCCESS_CASE(Readable)
+BEGIN_SUCCESS_DEPRECATED_CASE(Readable)
 zx_status_t DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual) { return ZX_OK; }
 END_SUCCESS_CASE
 
-BEGIN_SUCCESS_CASE(Writable)
+BEGIN_SUCCESS_DEPRECATED_CASE(Writable)
 zx_status_t DdkWrite(const void* buf, size_t count, zx_off_t off, size_t* actual) { return ZX_OK; }
 END_SUCCESS_CASE
 
@@ -107,8 +113,8 @@ static void do_test() {
 struct TestDispatch;
 using TestDispatchType =
     ddk::Device<TestDispatch, ddk::GetProtocolable, ddk::Initializable, ddk::Openable,
-                ddk::Closable, ddk::Unbindable, ddk::Readable, ddk::Writable, ddk::GetSizable,
-                ddk::Suspendable, ddk::Resumable, ddk::Rxrpcable>;
+                ddk::Closable, ddk::Unbindable, ddk_deprecated::Readable, ddk_deprecated::Writable,
+                ddk::GetSizable, ddk::Suspendable, ddk::Resumable, ddk::Rxrpcable>;
 
 struct TestDispatch : public TestDispatchType {
   TestDispatch() : TestDispatchType(nullptr) {}

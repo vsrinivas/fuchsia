@@ -32,11 +32,11 @@ Mixin class            | Function             | Purpose
 
 For completeness, the following mixins are also provided, but have been deprecated:
 
-Deprecated Mixin class      | Function             | Purpose
-----------------------------|----------------------|------------------------------
-`ddk::Readable`             | **DdkRead()**        | client's **read()**
-`ddk::Writable`             | **DdkWrite()**       | client's **write()**
-`ddk::GetSizable`           | **DdkGetSize()**     | returns size of device
+Deprecated Mixin class                 | Function             | Purpose
+---------------------------------------|----------------------|------------------------------
+`ddk_deprecated::Readable`             | **DdkRead()**        | client's **read()**
+`ddk_deprecated::Writable`             | **DdkWrite()**       | client's **write()**
+`ddk::GetSizable`                      | **DdkGetSize()**     | returns size of device
 
 When defining the class for your device, you specify which functions it will
 support by including the appropriate mixins.
@@ -47,7 +47,7 @@ For example (line numbers added for documentation purposes only):
 [02]                                ddk::Initializable,   // safely initialize after **DdkAdd()**
 [03]                                ddk::Openable,        // we support open()
 [04]                                ddk::Closable,        // close()
-[05]                                ddk::Readable,        // read()
+[05]                                ddk_deprecated::Readable,        // read()
 [06]                                ddk::Unbindable>;     // and the device can be unbound
 ```
 

@@ -57,6 +57,11 @@ test("core-unittest-bin") {
     "//zircon/system/ulib/zxtest",
   ]
 
+  # TODO(fxbug.dev/33822): Move the block driver off of deprecated APIs.
+  # TODO(fxbug.dev/33820): This target uses the deprecated Readable/Writeable.
+  # Please migrate away from these features.
+  configs += [ "//src/lib/ddktl:deprecated-read-write" ]
+
   # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
   # Consider switching to the C++ bindings. See linked bug for details.
   configs += [ "//build/c:fidl-deprecated-c-bindings" ]
@@ -98,6 +103,7 @@ source_set("shared") {
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
   ]
+
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_banjo_cpp",
@@ -110,6 +116,11 @@ source_set("shared") {
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/storage-metrics",
   ]
+
+  # TODO(fxbug.dev/33822): Move the block driver off of deprecated APIs.
+  # TODO(fxbug.dev/33820): This target uses the deprecated Readable/Writeable.
+  # Please migrate away from these features.
+  configs += [ "//src/lib/ddktl:deprecated-read-write" ]
 
   # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
   # Consider switching to the C++ bindings. See linked bug for details.
