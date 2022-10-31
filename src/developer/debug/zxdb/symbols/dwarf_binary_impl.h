@@ -39,6 +39,7 @@ class DwarfBinaryImpl final : public DwarfBinary {
 
   // These are invalid until Load() has completed successfully.
   llvm::DWARFContext* context() { return context_.get(); }
+  llvm::DWARFUnitVector& compile_units() { return compile_units_; }
   llvm::object::ObjectFile* object_file() {
     return static_cast<llvm::object::ObjectFile*>(binary_.get());
   }
@@ -71,8 +72,7 @@ class DwarfBinaryImpl final : public DwarfBinary {
   std::unique_ptr<llvm::object::Binary> binary_;
   std::unique_ptr<llvm::DWARFContext> context_;  // binary_ must outlive this.
 
-  class DebugAranges;
-  std::unique_ptr<DebugAranges> debug_aranges_;  // Replaces context_->Aranges.
+  llvm::DWARFUnitVector compile_units_;
 
   std::time_t modification_time_ = 0;  // Set when the file is loaded.
 
