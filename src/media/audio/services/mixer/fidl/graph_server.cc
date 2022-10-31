@@ -4,6 +4,7 @@
 
 #include "src/media/audio/services/mixer/fidl/graph_server.h"
 
+#include <lib/fidl/cpp/wire/arena.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <lib/zx/eventpair.h>
@@ -31,6 +32,7 @@
 #include "src/media/audio/services/mixer/fidl/stream_sink_server.h"
 #include "src/media/audio/services/mixer/mix/ring_buffer.h"
 #include "src/media/audio/services/mixer/mix/ring_buffer_consumer_writer.h"
+#include "src/media/audio/services/mixer/mix/start_stop_control.h"
 #include "src/media/audio/services/mixer/mix/stream_sink_consumer_writer.h"
 
 namespace media_audio {
@@ -252,6 +254,46 @@ ParseCreateEdgeOptions(
     }
   }
   return fpromise::ok(std::move(options));
+}
+
+zx::result<StartStopControl::RealTime> ParseRealTime(
+    const fuchsia_audio_mixer::wire::RealTime& real_time) {
+  if (real_time.is_reference_time()) {
+    return zx::ok(StartStopControl::RealTime{
+        .clock = StartStopControl::WhichClock::kReference,
+        .time = zx::time(real_time.reference_time()),
+    });
+  }
+  if (real_time.is_system_time()) {
+    return zx::ok(StartStopControl::RealTime{
+        .clock = StartStopControl::WhichClock::kSystemMonotonic,
+        .time = zx::time(real_time.system_time()),
+    });
+  }
+  return zx::error(ZX_ERR_NOT_SUPPORTED);
+}
+
+zx::result<StartStopControl::MediaPosition> ParseStreamTime(
+    const fuchsia_audio_mixer::wire::StreamTime& stream_time) {
+  if (stream_time.is_stream_time()) {
+    return zx::ok(StartStopControl::MediaPosition{zx::duration(stream_time.stream_time())});
+  }
+  if (stream_time.is_packet_timestamp()) {
+    return zx::ok(StartStopControl::MediaPosition{
+        StartStopControl::MediaTicks{stream_time.packet_timestamp()}});
+  }
+  return zx::error(ZX_ERR_NOT_SUPPORTED);
+}
+
+zx::result<std::variant<StartStopControl::RealTime, StartStopControl::MediaPosition>>
+ParseRealOrStreamTime(const fuchsia_audio_mixer::wire::RealOrStreamTime& real_or_stream_time) {
+  if (real_or_stream_time.is_real_time()) {
+    return ParseRealTime(real_or_stream_time.real_time());
+  }
+  if (real_or_stream_time.is_stream_time()) {
+    return ParseStreamTime(real_or_stream_time.stream_time());
+  }
+  return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
 }  // namespace
@@ -944,13 +986,142 @@ void GraphServer::CreateGraphControlledReferenceClock(
 void GraphServer::Start(StartRequestView request, StartCompleter::Sync& completer) {
   TRACE_DURATION("audio", "Graph:::Start");
   ScopedThreadChecker checker(thread().checker());
-  FX_LOGS(FATAL) << "not implemented";
+
+  if (!request->has_node_id() || !request->has_when() || !request->has_stream_time()) {
+    FX_LOGS(WARNING) << "Start: missing field";
+    completer.ReplyError(fuchsia_audio_mixer::StartError::kMissingRequiredField);
+    return;
+  }
+
+  const auto node_it = nodes_.find(request->node_id());
+  if (node_it == nodes_.end()) {
+    FX_LOGS(WARNING) << "Start: invalid node_id";
+    completer.ReplyError(fuchsia_audio_mixer::StartError::kInvalidParameter);
+    return;
+  }
+
+  auto& node = node_it->second;
+  if (node->type() != Node::Type::kConsumer && node->type() != Node::Type::kProducer) {
+    FX_LOGS(WARNING) << "Start: invalid node type";
+    completer.ReplyError(fuchsia_audio_mixer::StartError::kInvalidParameter);
+    return;
+  }
+
+  const auto start_time = ParseRealTime(request->when());
+  if (!start_time.is_ok()) {
+    FX_LOGS(WARNING) << "Start: unsupported option for 'when' field";
+    completer.ReplyError(fuchsia_audio_mixer::StartError::kUnsupportedOption);
+    return;
+  }
+
+  const auto start_position = ParseStreamTime(request->stream_time());
+  if (!start_position.is_ok()) {
+    FX_LOGS(WARNING) << "Start: unsupported option for 'stream_time' field";
+    completer.ReplyError(fuchsia_audio_mixer::StartError::kUnsupportedOption);
+    return;
+  }
+
+  auto callback =
+      [fidl_thread = thread_ptr(), completer = completer.ToAsync()](
+          fpromise::result<StartStopControl::When, StartStopControl::StartError> result) mutable {
+        fidl_thread->PostTask(
+            [result = std::move(result), completer = std::move(completer)]() mutable {
+              if (!result.is_ok()) {
+                FX_LOGS(WARNING) << "Start: canceled";
+                completer.ReplyError(fuchsia_audio_mixer::StartError::kCanceled);
+                return;
+              }
+              auto& value = result.value();
+              fidl::Arena arena;
+              completer.ReplySuccess(fuchsia_audio_mixer::wire::GraphStartResponse::Builder(arena)
+                                         .system_time(value.mono_time.get())
+                                         .reference_time(value.reference_time.get())
+                                         .stream_time(value.media_time.get())
+                                         .packet_timestamp(value.media_ticks)
+                                         .Build());
+            });
+      };
+  auto cmd = StartStopControl::StartCommand{
+      .start_time = start_time.value(),
+      .start_position = start_position.value(),
+      .callback = std::move(callback),
+  };
+
+  // TODO(fxbug.dev/87651): Define and implement a virtual `Start` method in `Node` instead.
+  if (node->type() == Node::Type::kConsumer) {
+    static_cast<ConsumerNode*>(node.get())->Start(std::move(cmd));
+  } else {
+    static_cast<ProducerNode*>(node.get())->Start(std::move(cmd));
+  }
 }
 
 void GraphServer::Stop(StopRequestView request, StopCompleter::Sync& completer) {
   TRACE_DURATION("audio", "Graph:::Stop");
   ScopedThreadChecker checker(thread().checker());
-  FX_LOGS(FATAL) << "not implemented";
+
+  if (!request->has_node_id() || !request->has_when()) {
+    FX_LOGS(WARNING) << "Stop: missing field";
+    completer.ReplyError(fuchsia_audio_mixer::StopError::kMissingRequiredField);
+    return;
+  }
+
+  const auto node_it = nodes_.find(request->node_id());
+  if (node_it == nodes_.end()) {
+    FX_LOGS(WARNING) << "Stop: invalid node_id";
+    completer.ReplyError(fuchsia_audio_mixer::StopError::kInvalidParameter);
+    return;
+  }
+
+  auto& node = node_it->second;
+  if (node->type() != Node::Type::kConsumer && node->type() != Node::Type::kProducer) {
+    FX_LOGS(WARNING) << "Stop: invalid node type";
+    completer.ReplyError(fuchsia_audio_mixer::StopError::kInvalidParameter);
+    return;
+  }
+
+  const auto when = ParseRealOrStreamTime(request->when());
+  if (!when.is_ok()) {
+    FX_LOGS(WARNING) << "Stop: unsupported option for 'when' field";
+    completer.ReplyError(fuchsia_audio_mixer::StopError::kUnsupportedOption);
+    return;
+  }
+
+  auto callback =
+      [fidl_thread = thread_ptr(), completer = completer.ToAsync()](
+          fpromise::result<StartStopControl::When, StartStopControl::StopError> result) mutable {
+        fidl_thread->PostTask(
+            [result = std::move(result), completer = std::move(completer)]() mutable {
+              if (!result.is_ok()) {
+                if (result.error() == StartStopControl::StopError::kCanceled) {
+                  FX_LOGS(WARNING) << "Stop: canceled";
+                  completer.ReplyError(fuchsia_audio_mixer::StopError::kCanceled);
+                } else {
+                  FX_LOGS(WARNING) << "Stop: already stopped";
+                  completer.ReplyError(fuchsia_audio_mixer::StopError::kAlreadyStopped);
+                }
+                return;
+              }
+              auto& value = result.value();
+              fidl::Arena arena;
+              completer.ReplySuccess(fuchsia_audio_mixer::wire::GraphStopResponse::Builder(arena)
+                                         .system_time(value.mono_time.get())
+                                         .reference_time(value.reference_time.get())
+                                         .stream_time(value.media_time.get())
+                                         .packet_timestamp(value.media_ticks)
+                                         .Build());
+            });
+      };
+  auto cmd = StartStopControl::StopCommand{
+      .when = when.value(),
+      .callback = std::move(callback),
+  };
+
+  // TODO(fxbug.dev/87651): Define and implement a virtual `Stop` method in `Node` instead.
+  if (node->type() == Node::Type::kConsumer) {
+    static_cast<ConsumerNode*>(node.get())->Stop(std::move(cmd));
+  } else {
+    static_cast<ProducerNode*>(node.get())->Stop(std::move(cmd));
+  }
 }
 
 void GraphServer::OnShutdown(fidl::UnbindInfo info) {

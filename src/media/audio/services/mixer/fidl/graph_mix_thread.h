@@ -34,6 +34,7 @@ class GraphMixThread : public GraphThread {
   // These methods are forwarded asynchronously to the underlying PipelineMixThread.
   void AddConsumer(ConsumerStagePtr consumer_stage);
   void RemoveConsumer(ConsumerStagePtr consumer_stage);
+  void NotifyConsumerStarting(ConsumerStagePtr consumer_stage);
   void Shutdown();
 
  private:

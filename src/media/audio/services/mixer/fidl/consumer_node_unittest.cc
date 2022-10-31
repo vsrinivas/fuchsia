@@ -174,6 +174,8 @@ TEST_F(ConsumerNodeTest, CreateEdgeSuccess) {
       .start_position = Fixed(0),
   });
 
+  q.RunForThread(h.mix_thread->id());
+
   // Feed data into the source, including data for the second mix job -- later, we'll verify we
   // successfully disconnected from this source by checking that the second mix job doesn't read
   // this data.

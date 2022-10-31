@@ -45,6 +45,17 @@ void GraphMixThread::RemoveConsumer(ConsumerStagePtr consumer_stage) {
   });
 }
 
+void GraphMixThread::NotifyConsumerStarting(ConsumerStagePtr consumer_stage) {
+  FX_CHECK(consumers_.count(consumer_stage) == 1)
+      << "cannot find Consumer to notify: " << consumer_stage->name();
+
+  // Forward to the PipelineMixThread.
+  PushTask([pipeline_thread = thread_, consumer_stage]() {
+    ScopedThreadChecker checker(pipeline_thread->checker());
+    pipeline_thread->NotifyConsumerStarting(consumer_stage);
+  });
+}
+
 void GraphMixThread::Shutdown() {
   // Forward to the PipelineMixThread.
   PushTask([pipeline_thread = thread_]() {

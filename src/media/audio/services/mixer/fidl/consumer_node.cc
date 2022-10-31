@@ -62,12 +62,16 @@ ConsumerNode::ConsumerNode(std::string_view name, std::shared_ptr<Clock> referen
 void ConsumerNode::Start(ConsumerStage::StartCommand cmd) const {
   if (auto old = pending_start_stop_command_->swap(std::move(cmd)); old) {
     StartStopControl::CancelCommand(*old);
+  } else {
+    mix_thread_->NotifyConsumerStarting(consumer_stage_);
   }
 }
 
 void ConsumerNode::Stop(ConsumerStage::StopCommand cmd) const {
   if (auto old = pending_start_stop_command_->swap(std::move(cmd)); old) {
     StartStopControl::CancelCommand(*old);
+  } else {
+    mix_thread_->NotifyConsumerStarting(consumer_stage_);
   }
 }
 

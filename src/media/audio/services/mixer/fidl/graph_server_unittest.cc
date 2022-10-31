@@ -41,6 +41,11 @@ namespace {
 using ::fuchsia_audio_mixer::wire::CreateGainControlError;
 using ::fuchsia_audio_mixer::wire::CreateNodeError;
 using ::fuchsia_audio_mixer::wire::DeleteGainControlError;
+using ::fuchsia_audio_mixer::wire::RealOrStreamTime;
+using ::fuchsia_audio_mixer::wire::RealTime;
+using ::fuchsia_audio_mixer::wire::StartError;
+using ::fuchsia_audio_mixer::wire::StopError;
+using ::fuchsia_audio_mixer::wire::StreamTime;
 
 const Format kFormat = Format::CreateOrDie({
     .sample_type = ::fuchsia_audio::SampleType::kFloat32,
@@ -1744,6 +1749,279 @@ TEST_F(GraphServerTest, DeleteGainControlSuccess) {
         fuchsia_audio_mixer::wire::GraphDeleteGainControlRequest::Builder(arena_).id(id).Build());
     ASSERT_TRUE(result.ok()) << result;
     ASSERT_FALSE(result->is_error());
+  }
+}
+
+//
+// Start
+//
+
+TEST_F(GraphServerTest, StartFails) {
+  NodeId producer_id;
+  NodeId consumer_id;
+  ASSERT_NO_FATAL_FAILURE(CreateProducerAndConsumer(&producer_id, &consumer_id));
+
+  NodeId invalid_type_node_id;
+  {
+    const auto result = client()->CreateMixer(MakeDefaultCreateMixerRequest(arena_).Build());
+    ASSERT_TRUE(result.ok());
+    ASSERT_FALSE(result->is_error());
+    ASSERT_TRUE(result->value()->has_id());
+    invalid_type_node_id = result->value()->id();
+  }
+
+  struct TestCase {
+    std::string name;
+    std::function<void(fidl::WireTableBuilder<fuchsia_audio_mixer::wire::GraphStartRequest>&)> edit;
+    StartError expected_error;
+  };
+
+  const std::vector<TestCase> cases = {
+      {
+          .name = "MissingNodeId",
+          .edit = [](auto request) { request.clear_node_id(); },
+          .expected_error = StartError::kMissingRequiredField,
+      },
+      {
+          .name = "MissingWhen",
+          .edit = [](auto request) { request.clear_when(); },
+          .expected_error = StartError::kMissingRequiredField,
+      },
+      {
+          .name = "MissingStreamTime",
+          .edit = [](auto request) { request.clear_stream_time(); },
+          .expected_error = StartError::kMissingRequiredField,
+      },
+      {
+          .name = "InvalidNodeId",
+          .edit = [](auto request) { request.node_id(99); },
+          .expected_error = StartError::kInvalidParameter,
+      },
+      {
+          .name = "InvalidNodeType",
+          .edit = [invalid_type_node_id](auto request) { request.node_id(invalid_type_node_id); },
+          .expected_error = StartError::kInvalidParameter,
+      },
+  };
+
+  for (auto& tc : cases) {
+    SCOPED_TRACE("TestCase: " + tc.name);
+    auto request = fuchsia_audio_mixer::wire::GraphStartRequest::Builder(arena_)
+                       .node_id(consumer_id)
+                       .when(RealTime::WithSystemTime(arena_, 0))
+                       .stream_time(StreamTime::WithPacketTimestamp(arena_, 0));
+    tc.edit(request);
+
+    const auto result = client()->Start(request.Build());
+    if (!result.ok()) {
+      ADD_FAILURE() << "failed to send method call: " << result;
+      continue;
+    }
+    if (!result->is_error()) {
+      ADD_FAILURE() << "Start did not fail";
+      continue;
+    }
+    EXPECT_EQ(result->error_value(), tc.expected_error);
+  }
+}
+
+// TODO(fxbug.dev/109467): Needs clocks to be registered in `PipelineMixThread::clocks_`.
+TEST_F(GraphServerTest, DISABLED_StartSuccess) {
+  NodeId producer_id;
+  NodeId consumer_id;
+  ASSERT_NO_FATAL_FAILURE(CreateProducerAndConsumer(&producer_id, &consumer_id));
+
+  {
+    // Create producer -> consumer edge.
+    const auto result =
+        client()->CreateEdge(fuchsia_audio_mixer::wire::GraphCreateEdgeRequest::Builder(arena_)
+                                 .source_id(producer_id)
+                                 .dest_id(consumer_id)
+                                 .Build());
+  }
+
+  {
+    // Start producer.
+    const auto result =
+        client()->Start(fuchsia_audio_mixer::wire::GraphStartRequest::Builder(arena_)
+                            .node_id(producer_id)
+                            .when(RealTime::WithReferenceTime(arena_, 1))
+                            .stream_time(StreamTime::WithStreamTime(arena_, 2))
+                            .Build());
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+    ASSERT_TRUE(result->value()->has_system_time());
+    ASSERT_TRUE(result->value()->has_reference_time());
+    ASSERT_TRUE(result->value()->has_stream_time());
+    ASSERT_TRUE(result->value()->has_packet_timestamp());
+  }
+
+  {
+    // Start consumer.
+    const auto result =
+        client()->Start(fuchsia_audio_mixer::wire::GraphStartRequest::Builder(arena_)
+                            .node_id(consumer_id)
+                            .when(RealTime::WithSystemTime(arena_, 3))
+                            .stream_time(StreamTime::WithStreamTime(arena_, 4))
+                            .Build());
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+    ASSERT_TRUE(result->value()->has_system_time());
+    ASSERT_TRUE(result->value()->has_reference_time());
+    ASSERT_TRUE(result->value()->has_stream_time());
+    ASSERT_TRUE(result->value()->has_packet_timestamp());
+  }
+}
+
+//
+// Stop
+//
+
+TEST_F(GraphServerTest, StopFails) {
+  NodeId producer_id;
+  NodeId consumer_id;
+  ASSERT_NO_FATAL_FAILURE(CreateProducerAndConsumer(&producer_id, &consumer_id));
+
+  NodeId invalid_type_node_id;
+  {
+    const auto result = client()->CreateMixer(MakeDefaultCreateMixerRequest(arena_).Build());
+    ASSERT_TRUE(result.ok());
+    ASSERT_FALSE(result->is_error());
+    ASSERT_TRUE(result->value()->has_id());
+    invalid_type_node_id = result->value()->id();
+  }
+
+  struct TestCase {
+    std::string name;
+    std::function<void(fidl::WireTableBuilder<fuchsia_audio_mixer::wire::GraphStopRequest>&)> edit;
+    StopError expected_error;
+  };
+
+  const std::vector<TestCase> cases = {
+      {
+          .name = "MissingNodeId",
+          .edit = [](auto request) { request.clear_node_id(); },
+          .expected_error = StopError::kMissingRequiredField,
+      },
+      {
+          .name = "MissingWhen",
+          .edit = [](auto request) { request.clear_when(); },
+          .expected_error = StopError::kMissingRequiredField,
+      },
+      {
+          .name = "InvalidNodeId",
+          .edit = [](auto request) { request.node_id(99); },
+          .expected_error = StopError::kInvalidParameter,
+      },
+      {
+          .name = "InvalidNodeType",
+          .edit = [invalid_type_node_id](auto request) { request.node_id(invalid_type_node_id); },
+          .expected_error = StopError::kInvalidParameter,
+      },
+      // TODO(fxbug.dev/109467): Needs clocks to be registered in `PipelineMixThread::clocks_`.
+      // {
+      //     .name = "AlreadyStopped",
+      //     // Send a valid `Stop` request without a prior `Start` call.
+      //     .expected_error = StopError::kAlreadyStopped,
+      // },
+  };
+
+  for (auto& tc : cases) {
+    SCOPED_TRACE("TestCase: " + tc.name);
+    auto request =
+        fuchsia_audio_mixer::wire::GraphStopRequest::Builder(arena_)
+            .node_id(consumer_id)
+            .when(RealOrStreamTime::WithRealTime(arena_, RealTime::WithSystemTime(arena_, 0)));
+    tc.edit(request);
+
+    const auto result = client()->Stop(request.Build());
+    if (!result.ok()) {
+      ADD_FAILURE() << "failed to send method call: " << result;
+      continue;
+    }
+    if (!result->is_error()) {
+      ADD_FAILURE() << "Stop did not fail";
+      continue;
+    }
+    EXPECT_EQ(result->error_value(), tc.expected_error);
+  }
+}
+
+// TODO(fxbug.dev/109467): Needs clocks to be registered in `PipelineMixThread::clocks_`.
+TEST_F(GraphServerTest, DISABLED_StopSuccess) {
+  NodeId producer_id;
+  NodeId consumer_id;
+  ASSERT_NO_FATAL_FAILURE(CreateProducerAndConsumer(&producer_id, &consumer_id));
+
+  {
+    // Create producer -> consumer edge.
+    const auto result =
+        client()->CreateEdge(fuchsia_audio_mixer::wire::GraphCreateEdgeRequest::Builder(arena_)
+                                 .source_id(producer_id)
+                                 .dest_id(consumer_id)
+                                 .Build());
+  }
+
+  {
+    // Start consumer.
+    const auto result =
+        client()->Start(fuchsia_audio_mixer::wire::GraphStartRequest::Builder(arena_)
+                            .node_id(consumer_id)
+                            .when(RealTime::WithSystemTime(arena_, 4))
+                            .stream_time(StreamTime::WithStreamTime(arena_, 5))
+                            .Build());
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+    ASSERT_TRUE(result->value()->has_system_time());
+    ASSERT_TRUE(result->value()->has_reference_time());
+    ASSERT_TRUE(result->value()->has_stream_time());
+    ASSERT_TRUE(result->value()->has_packet_timestamp());
+  }
+
+  {
+    // Stop consumer.
+    const auto result = client()->Stop(
+        fuchsia_audio_mixer::wire::GraphStopRequest::Builder(arena_)
+            .node_id(consumer_id)
+            .when(RealOrStreamTime::WithRealTime(arena_, RealTime::WithSystemTime(arena_, 6)))
+            .Build());
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+    ASSERT_TRUE(result->value()->has_system_time());
+    ASSERT_TRUE(result->value()->has_reference_time());
+    ASSERT_TRUE(result->value()->has_stream_time());
+    ASSERT_TRUE(result->value()->has_packet_timestamp());
+  }
+
+  {
+    // Start producer.
+    const auto result =
+        client()->Start(fuchsia_audio_mixer::wire::GraphStartRequest::Builder(arena_)
+                            .node_id(producer_id)
+                            .when(RealTime::WithSystemTime(arena_, 1))
+                            .stream_time(StreamTime::WithStreamTime(arena_, 2))
+                            .Build());
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+    ASSERT_TRUE(result->value()->has_system_time());
+    ASSERT_TRUE(result->value()->has_reference_time());
+    ASSERT_TRUE(result->value()->has_stream_time());
+    ASSERT_TRUE(result->value()->has_packet_timestamp());
+  }
+
+  {
+    // Stop producer.
+    const auto result = client()->Stop(
+        fuchsia_audio_mixer::wire::GraphStopRequest::Builder(arena_)
+            .node_id(producer_id)
+            .when(RealOrStreamTime::WithRealTime(arena_, RealTime::WithSystemTime(arena_, 3)))
+            .Build());
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+    ASSERT_TRUE(result->value()->has_system_time());
+    ASSERT_TRUE(result->value()->has_reference_time());
+    ASSERT_TRUE(result->value()->has_stream_time());
+    ASSERT_TRUE(result->value()->has_packet_timestamp());
   }
 }
 

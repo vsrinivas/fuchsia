@@ -238,6 +238,9 @@ TEST(SplitterNodeTest, CopySourceToDests) {
       .start_position = Fixed(0),
   });
 
+  q->RunForThread(thread1->id());
+  q->RunForThread(thread2->id());
+
   // TODO(fxbug.dev/87651): CreateEdge should update this automatically
   {
     ASSERT_EQ(splitter->child_sources().size(), 1u);

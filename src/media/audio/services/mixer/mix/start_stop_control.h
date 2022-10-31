@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_START_STOP_CONTROL_H_
 #define SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_START_STOP_CONTROL_H_
 
+#include <lib/fit/function.h>
 #include <lib/fpromise/result.h>
 #include <lib/zx/time.h>
 
@@ -83,7 +84,7 @@ class StartStopControl {
     // the command fails. The call back parameter describes when the command was applied (on
     // success) or the error message (on failure). The callback is optional -- it can be nullptr.
     // TODO(fxbug.dev/87651): use fit::inline_callback or a different mechanism
-    std::function<void(fpromise::result<When, StartError>)> callback;
+    fit::callback<void(fpromise::result<When, StartError>)> callback;
   };
 
   // Stops the control: at `when`, stop producing or consuming frames.
@@ -95,7 +96,7 @@ class StartStopControl {
     // command fails. The call back parameter describes when the command was applied (on success) or
     // the error message (on failure). The callback is optional -- it can be nullptr.
     // TODO(fxbug.dev/87651): use fit::inline_callback or a different mechanism
-    std::function<void(fpromise::result<When, StopError>)> callback;
+    fit::callback<void(fpromise::result<When, StopError>)> callback;
   };
 
   using Command = std::variant<StartCommand, StopCommand>;
