@@ -534,14 +534,15 @@ bool ConsumeStep::ConsumeParameterList(const SourceSpan method_name,
 void ConsumeStep::ConsumeResourceDeclaration(
     std::unique_ptr<raw::ResourceDeclaration> resource_declaration) {
   auto name = Name::CreateSourced(library(), resource_declaration->identifier->span());
+  auto context = NamingContext::Create(name);
   std::vector<Resource::Property> properties;
   for (auto& property : resource_declaration->properties) {
     std::unique_ptr<AttributeList> attributes;
     ConsumeAttributeList(std::move(property->attributes), &attributes);
 
     std::unique_ptr<TypeConstructor> type_ctor;
-    if (!ConsumeTypeConstructor(std::move(property->type_ctor), NamingContext::Create(name),
-                                &type_ctor))
+    if (!ConsumeTypeConstructor(std::move(property->type_ctor),
+                                context->EnterMember(property->identifier->span()), &type_ctor))
       return;
     properties.emplace_back(std::move(type_ctor), property->identifier->span(),
                             std::move(attributes));
@@ -552,8 +553,8 @@ void ConsumeStep::ConsumeResourceDeclaration(
 
   std::unique_ptr<TypeConstructor> type_ctor;
   if (resource_declaration->maybe_type_ctor != nullptr) {
-    if (!ConsumeTypeConstructor(std::move(resource_declaration->maybe_type_ctor),
-                                NamingContext::Create(name), &type_ctor))
+    if (!ConsumeTypeConstructor(std::move(resource_declaration->maybe_type_ctor), context,
+                                &type_ctor))
       return;
   } else {
     type_ctor = IdentifierTypeForDecl(default_underlying_type_);

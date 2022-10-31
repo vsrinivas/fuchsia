@@ -71,6 +71,11 @@ void AvailabilityStep::PopulateLexicalParents() {
       }
     }
   }
+  for (auto& decl : library()->declarations.resources) {
+    for (auto& property : decl->properties) {
+      link_anonymous(&property, property.type_ctor.get());
+    }
+  }
 }
 
 void AvailabilityStep::CompileAvailability(Element* element) {

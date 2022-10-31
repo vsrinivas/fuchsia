@@ -313,6 +313,11 @@ const Type* Typespace::Creator::CreateStringType() {
 const Type* Typespace::Creator::CreateHandleType(Resource* resource) {
   if (!EnsureNumberOfLayoutParams(0))
     return nullptr;
+  if (auto cycle = resolver_->GetDeclCycle(resource); cycle) {
+    Fail(ErrIncludeCycle, resource->name.span().value(), cycle.value());
+    return nullptr;
+  }
+  resolver_->CompileDecl(resource);
 
   HandleType type(layout_.resolved().name(), resource);
   std::unique_ptr<Type> constrained_type;

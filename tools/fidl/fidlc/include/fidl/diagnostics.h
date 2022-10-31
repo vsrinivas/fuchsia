@@ -407,18 +407,17 @@ constexpr UndocumentedErrorDef<171, flat::Name> ErrCannotBeBoxed(
     "type {} cannot be boxed, try using optional instead");
 constexpr UndocumentedErrorDef<172, flat::Name> ErrResourceMustBeUint32Derived(
     "resource {} must be uint32");
-// TODO(fxbug.dev/75112): add these errors back by adding support in ResolveAs for
-// storing errors
 constexpr UndocumentedErrorDef<173, flat::Name> ErrResourceMissingSubtypeProperty(
     "resource {} expected to have the subtype property, but it was missing");
-constexpr UndocumentedErrorDef<174, flat::Name> ErrResourceMissingRightsProperty(
+constexpr RetiredDef<174, flat::Name> ErrResourceMissingRightsProperty(
     "resource {} expected to have the rights property, but it was missing");
 constexpr UndocumentedErrorDef<175, flat::Name> ErrResourceSubtypePropertyMustReferToEnum(
     "the subtype property must be an enum, but wasn't in resource {}");
-constexpr UndocumentedErrorDef<176> ErrHandleSubtypeMustReferToResourceSubtype(
+constexpr RetiredDef<176> ErrHandleSubtypeMustReferToResourceSubtype(
     "the subtype must be a constant referring to the resource's subtype enum");
 constexpr UndocumentedErrorDef<177, flat::Name> ErrResourceRightsPropertyMustReferToBits(
-    "the rights property must be a bits, but wasn't in resource {}");
+    "the rights property must be a uint32 or a uint32-based bits, "
+    "but wasn't defined as such in resource {}");
 constexpr ErrorDef<178, std::vector<std::string_view>, std::vector<std::string_view>,
                    std::vector<std::string_view>>
     ErrUnusedImport("Library {} imports {} but does not use it. Either use {}, or remove import.");

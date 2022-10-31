@@ -859,6 +859,8 @@ resource_definition Resource : uint32 {
         first uint32;
         @available(added=3, removed=4)
         second uint32;
+        // This property is required for compilation, but is not otherwise under test.
+        subtype flexible enum : uint32 {};
     };
 };
 )FIDL";
@@ -905,6 +907,8 @@ service Service {
 resource_definition Resource : uint32 {
     properties {
         first uint32;
+        // This property is required for compilation, but is not otherwise under test.
+        subtype flexible enum : uint32 {};
     };
 };
 )FIDL";
@@ -957,6 +961,8 @@ resource_definition Resource : uint32 {
     properties {
         first uint32;
         second uint32;
+        // This property is required for compilation, but is not otherwise under test.
+        subtype flexible enum : uint32 {};
     };
 };
 )FIDL";
@@ -999,6 +1005,8 @@ service Service {
 resource_definition Resource : uint32 {
     properties {
         first uint32;
+        // This property is required for compilation, but is not otherwise under test.
+        subtype flexible enum : uint32 {};
     };
 };
 )FIDL";
@@ -1162,6 +1170,8 @@ service Service {
 resource_definition Resource : uint32 {
     properties {
         first IntegerType;
+        // This property is required for compilation, but is not otherwise under test.
+        subtype flexible enum : uint32 {};
     };
 };
 

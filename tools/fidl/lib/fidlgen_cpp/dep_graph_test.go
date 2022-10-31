@@ -224,6 +224,9 @@ func TestResourceDeps(t *testing.T) {
 			properties {
 				prop1 B;
 				prop2 C;
+				// This property is required for compilation, but is not otherwise under
+				// test.
+				subtype flexible enum : uint32 {};
 			};
 		};
 
@@ -237,6 +240,7 @@ func TestResourceDeps(t *testing.T) {
 
 	g := NewDeclDepGraph(ir)
 	expectNames(t, g.SortedDecls(), []string{
+		"example/Subtype",
 		"example/B",
 		"example/C",
 		"example/A",

@@ -916,6 +916,35 @@ void CompileStep::CompileResource(Resource* resource_declaration) {
     }
     CompileTypeConstructor(property.type_ctor.get());
   }
+
+  // All properties have been compiled at this point, so we can reason about their types.
+  auto subtype_property = resource_declaration->LookupProperty("subtype");
+  if (subtype_property != nullptr) {
+    const Type* subtype_type = subtype_property->type_ctor->type;
+
+    // If the |subtype_type is a |nullptr|, we are in a cycle, which means that the |subtype|
+    // property could not possibly be an enum declaration.
+    if (subtype_type == nullptr || subtype_type->kind != Type::Kind::kIdentifier ||
+        static_cast<const IdentifierType*>(subtype_type)->type_decl->kind != Decl::Kind::kEnum) {
+      Fail(ErrResourceSubtypePropertyMustReferToEnum, subtype_property->name,
+           resource_declaration->name);
+    }
+  } else {
+    Fail(ErrResourceMissingSubtypeProperty, resource_declaration->name.span().value(),
+         resource_declaration->name);
+  }
+
+  auto rights_property = resource_declaration->LookupProperty("rights");
+  if (rights_property != nullptr) {
+    const Type* rights_type = rights_property->type_ctor->type;
+    const Type* rights_underlying_type = UnderlyingType(rights_type);
+    if (!(rights_underlying_type->kind == Type::Kind::kPrimitive &&
+          static_cast<const PrimitiveType*>(rights_underlying_type)->subtype ==
+              types::PrimitiveSubtype::kUint32)) {
+      Fail(ErrResourceRightsPropertyMustReferToBits, rights_property->name,
+           resource_declaration->name);
+    }
+  }
 }
 
 void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
@@ -1399,20 +1428,11 @@ bool CompileStep::ResolveHandleRightsConstant(Resource* resource, Constant* cons
   if (!rights_property) {
     return false;
   }
-  CompileTypeConstructor(rights_property->type_ctor.get());
-  const Type* rights_type = rights_property->type_ctor->type;
-  if (!rights_type) {
+  ZX_ASSERT_MSG(rights_property->type_ctor->type, "resource must already be compiled");
+  if (!ResolveConstant(constant, rights_property->type_ctor->type)) {
     return false;
   }
-  const Type* underlying = UnderlyingType(rights_type);
-  if (!(underlying->kind == Type::Kind::kPrimitive &&
-        static_cast<const PrimitiveType*>(underlying)->subtype ==
-            types::PrimitiveSubtype::kUint32)) {
-    return false;
-  }
-  if (!ResolveConstant(constant, rights_type)) {
-    return false;
-  }
+
   if (out_rights) {
     *out_rights = static_cast<const HandleRights*>(&constant->Value());
   }
@@ -1425,20 +1445,11 @@ bool CompileStep::ResolveHandleSubtypeIdentifier(Resource* resource, Constant* c
   if (!subtype_property) {
     return false;
   }
-  CompileTypeConstructor(subtype_property->type_ctor.get());
-  const Type* subtype_type = subtype_property->type_ctor->type;
-  if (!subtype_type) {
+  ZX_ASSERT_MSG(subtype_property->type_ctor->type, "resource must already be compiled");
+  if (!ResolveConstant(constant, subtype_property->type_ctor->type)) {
     return false;
   }
-  const Type* underlying = UnderlyingType(subtype_type);
-  if (!(underlying->kind == Type::Kind::kPrimitive &&
-        static_cast<const PrimitiveType*>(underlying)->subtype ==
-            types::PrimitiveSubtype::kUint32)) {
-    return false;
-  }
-  if (!ResolveConstant(constant, subtype_type)) {
-    return false;
-  }
+
   if (out_obj_type) {
     *out_obj_type = static_cast<const HandleSubtype*>(&constant->Value())->value;
   }

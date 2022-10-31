@@ -829,7 +829,7 @@ service Service {
 resource_definition Resource : uint32 {
     properties {
         @available(added=1)
-        property uint32;
+        subtype flexible enum : uint32 {};
     };
 };
 )FIDL");

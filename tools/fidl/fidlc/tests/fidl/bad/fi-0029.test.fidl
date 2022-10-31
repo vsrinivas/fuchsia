@@ -4,6 +4,5 @@
 library test.bad.resourcedefinitionnoproperties;
 
 resource_definition SomeResource : uint32 {
-  properties {
-  };
+  properties {};
 };

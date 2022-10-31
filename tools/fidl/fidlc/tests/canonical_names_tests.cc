@@ -187,6 +187,8 @@ TEST(CanonicalNamesTests, GoodResourceProperties) {
 
 resource_definition Example {
     properties {
+        // This property is required for compilation, but is not otherwise under test.
+        subtype flexible enum : uint32 {};
         foobar uint32;
         foo_bar uint32;
         f_o_o_b_a_r uint32;
@@ -432,6 +434,8 @@ library example;
 
 resource_definition Example {
     properties {
+        // This property is required for compilation, but is not otherwise under test.
+        subtype flexible enum : uint32 {};
         fooBar uint32;
         FooBar uint32;
     };

@@ -194,7 +194,6 @@ type MyStruct = struct {
   EXPECT_SUBSTR(library.errors()[1]->msg.c_str(), "cannot find 'vmo'");
 }
 
-// TODO(fxbug.dev/64629): Consider how we could validate resource_declaration without any use.
 TEST(HandleTests, GoodResourceDefinitionOnlySubtypeNoRightsTest) {
   TestLibrary library(R"FIDL(library example;
 
@@ -230,74 +229,7 @@ type MyStruct = resource struct {
       fidl::flat::kHandleSameRights);
 }
 
-// TODO(fxbug.dev/64629): Consider how we could validate resource_declaration without any use.
-TEST(HandleTests, BadResourceDefinitionMissingRightsPropertyTest) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type obj_type = enum : uint32 {
-    NONE = 0;
-    VMO = 3;
-};
-
-resource_definition handle : uint32 {
-    properties {
-        subtype obj_type;
-    };
-};
-
-type MyStruct = resource struct {
-    h handle:<VMO, 1>;
-};
-)FIDL");
-
-  // TODO(fxbug.dev/75112): should include ErrResourceMissingRightsProperty
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedConstraint);
-}
-
-// TODO(fxbug.dev/64629): Consider how we could validate resource_declaration without any use.
-TEST(HandleTests, BadResourceDefinitionMissingSubtypePropertyTest) {
-  TestLibrary library(R"FIDL(
-library example;
-
-resource_definition handle : uint32 {
-    properties {
-        rights uint32;
-    };
-};
-
-type MyStruct = resource struct {
-    h handle:VMO;
-};
-)FIDL");
-
-  // TODO(fxbug.dev/75112): should include ErrResourceMissingSubtypeProperty
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameNotFound);
-}
-
-// TODO(fxbug.dev/64629): Consider how we could validate resource_declaration without any use.
-TEST(HandleTests, BadResourceSubtypeNotEnum) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type obj_type = struct {};
-
-resource_definition handle : uint32 {
-    properties {
-        subtype obj_type;
-    };
-};
-
-type MyStruct = resource struct {
-    h handle:<VMO, 1>;
-};
-)FIDL");
-
-  // TODO(fxbug.dev/75112): should include ErrResourceSubtypePropertyMustReferToEnum
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameNotFound);
-}
-
-TEST(HandleTests, BadNonIdentifierSubtype) {
+TEST(HandleTests, BadInvalidSubtypeAtUseSite) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -317,13 +249,11 @@ type MyStruct = resource struct {
 };
 )FIDL");
 
-  // TODO(fxbug.dev/75112): should include ErrHandleSubtypeMustReferToResourceSubtype
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrTypeCannotBeConvertedToType,
                                       fidl::ErrUnexpectedConstraint);
 }
 
-// TODO(fxbug.dev/64629): Consider how we could validate resource_declaration without any use.
-TEST(HandleTests, BadResourceDefinitionNonBitsRights) {
+TEST(HandleTests, BadInvalidRightsAtUseSite) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -335,17 +265,17 @@ type obj_type = enum : uint32 {
 resource_definition handle : uint32 {
     properties {
         subtype obj_type;
-        rights string;
+        rights uint32;
     };
 };
 
 type MyStruct = resource struct {
-    h handle:<VMO, "hello">;
+    h handle:<VMO, "my_improperly_typed_rights", optional>;
 };
 )FIDL");
 
-  // TODO(fxbug.dev/75112): should include ErrResourceRightsPropertyMustReferToBits
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedConstraint);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrTypeCannotBeConvertedToType,
+                                      fidl::ErrUnexpectedConstraint);
 }
 
 TEST(HandleTests, BadBareHandleNoConstraints) {

@@ -14,27 +14,76 @@
 
 namespace {
 
-TEST(ResourceTests, GoodValid) {
-  TestLibrary library;
-  library.AddFile("good/fi-0029.test.fidl");
+TEST(ResourceTests, GoodValidWithoutRights) {
+  TestLibrary library(R"FIDL(library example;
+
+type MyEnum = strict enum : uint32 {
+    NONE = 0;
+};
+
+resource_definition SomeResource : uint32 {
+    properties {
+        subtype MyEnum;
+    };
+};
+)FIDL");
   ASSERT_COMPILED(library);
 
   auto resource = library.LookupResource("SomeResource");
   ASSERT_NOT_NULL(resource);
-
   ASSERT_EQ(resource->properties.size(), 1u);
-  EXPECT_EQ(resource->properties[0].name.data(), "subtype");
-  EXPECT_EQ(resource->properties[0].type_ctor->layout.resolved().element(),
-            library.LookupEnum("MyEnum"));
 
   ASSERT_NOT_NULL(resource->subtype_ctor);
   auto underlying = resource->subtype_ctor->type;
   ASSERT_EQ(underlying->kind, fidl::flat::Type::Kind::kPrimitive);
   auto underlying_primitive = static_cast<const fidl::flat::PrimitiveType*>(underlying);
   EXPECT_EQ(underlying_primitive->subtype, fidl::types::PrimitiveSubtype::kUint32);
+
+  auto& subtype = resource->properties[0];
+  EXPECT_EQ(subtype.name.data(), "subtype");
+  EXPECT_EQ(resource->properties[0].type_ctor->layout.resolved().element(),
+            library.LookupEnum("MyEnum"));
 }
 
-TEST(ResourceTests, GoodAliasedBaseType) {
+TEST(ResourceTests, GoodValidWithRights) {
+  TestLibrary library(R"FIDL(library example;
+
+type MyEnum = strict enum : uint32 {
+    NONE = 0;
+};
+
+resource_definition SomeResource : uint32 {
+    properties {
+        subtype MyEnum;
+        rights uint32;
+    };
+};
+)FIDL");
+  ASSERT_COMPILED(library);
+
+  auto resource = library.LookupResource("SomeResource");
+  ASSERT_NOT_NULL(resource);
+  ASSERT_EQ(resource->properties.size(), 2u);
+
+  ASSERT_NOT_NULL(resource->subtype_ctor);
+  auto underlying = resource->subtype_ctor->type;
+  ASSERT_EQ(underlying->kind, fidl::flat::Type::Kind::kPrimitive);
+  auto underlying_primitive = static_cast<const fidl::flat::PrimitiveType*>(underlying);
+  EXPECT_EQ(underlying_primitive->subtype, fidl::types::PrimitiveSubtype::kUint32);
+
+  auto& subtype = resource->properties[0];
+  EXPECT_EQ(subtype.name.data(), "subtype");
+  EXPECT_EQ(resource->properties[0].type_ctor->layout.resolved().element(),
+            library.LookupEnum("MyEnum"));
+
+  auto& rights = resource->properties[1];
+  EXPECT_EQ(rights.name.data(), "rights");
+  EXPECT_EQ(rights.type_ctor->type->kind, fidl::flat::Type::Kind::kPrimitive);
+  EXPECT_EQ(static_cast<const fidl::flat::PrimitiveType*>(rights.type_ctor->type)->subtype,
+            fidl::types::PrimitiveSubtype::kUint32);
+}
+
+TEST(ResourceTests, GoodAliasedBaseTypeWithoutRights) {
   TestLibrary library(R"FIDL(library example;
 
 type MyEnum = strict enum : uint32 {
@@ -53,17 +102,58 @@ resource_definition SomeResource : via {
 
   auto resource = library.LookupResource("SomeResource");
   ASSERT_NOT_NULL(resource);
-
   ASSERT_EQ(resource->properties.size(), 1u);
-  EXPECT_EQ(resource->properties[0].name.data(), "subtype");
-  EXPECT_EQ(resource->properties[0].type_ctor->layout.resolved().element(),
-            library.LookupEnum("MyEnum"));
 
   ASSERT_NOT_NULL(resource->subtype_ctor);
   auto underlying = resource->subtype_ctor->type;
   ASSERT_EQ(underlying->kind, fidl::flat::Type::Kind::kPrimitive);
   auto underlying_primitive = static_cast<const fidl::flat::PrimitiveType*>(underlying);
   EXPECT_EQ(underlying_primitive->subtype, fidl::types::PrimitiveSubtype::kUint32);
+
+  auto& subtype = resource->properties[0];
+  EXPECT_EQ(subtype.name.data(), "subtype");
+  EXPECT_EQ(resource->properties[0].type_ctor->layout.resolved().element(),
+            library.LookupEnum("MyEnum"));
+}
+
+TEST(ResourceTests, GoodAliasedBaseTypeWithRights) {
+  TestLibrary library(R"FIDL(library example;
+
+type MyEnum = strict enum : uint32 {
+    NONE = 0;
+};
+
+alias via = uint32;
+
+resource_definition SomeResource : via {
+    properties {
+        subtype MyEnum;
+        rights via;
+    };
+};
+)FIDL");
+  ASSERT_COMPILED(library);
+
+  auto resource = library.LookupResource("SomeResource");
+  ASSERT_NOT_NULL(resource);
+  ASSERT_EQ(resource->properties.size(), 2u);
+
+  ASSERT_NOT_NULL(resource->subtype_ctor);
+  auto underlying = resource->subtype_ctor->type;
+  ASSERT_EQ(underlying->kind, fidl::flat::Type::Kind::kPrimitive);
+  auto underlying_primitive = static_cast<const fidl::flat::PrimitiveType*>(underlying);
+  EXPECT_EQ(underlying_primitive->subtype, fidl::types::PrimitiveSubtype::kUint32);
+
+  auto& subtype = resource->properties[0];
+  EXPECT_EQ(subtype.name.data(), "subtype");
+  EXPECT_EQ(resource->properties[0].type_ctor->layout.resolved().element(),
+            library.LookupEnum("MyEnum"));
+
+  auto& rights = resource->properties[1];
+  EXPECT_EQ(rights.name.data(), "rights");
+  EXPECT_EQ(rights.type_ctor->type->kind, fidl::flat::Type::Kind::kPrimitive);
+  EXPECT_EQ(static_cast<const fidl::flat::PrimitiveType*>(rights.type_ctor->type)->subtype,
+            fidl::types::PrimitiveSubtype::kUint32);
 }
 
 TEST(ResourceTests, BadEmpty) {
@@ -93,6 +183,8 @@ type MyEnum = enum {
 
 resource_definition SomeResource : uint32 {
   properties {
+    // This property is required for compilation, but is not otherwise under test.
+    subtype flexible enum : uint32 {};
     stuff MyEnum;
     stuff MyEnum;
   };
@@ -116,6 +208,80 @@ resource_definition SomeResource : uint8 {
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrResourceMustBeUint32Derived);
+}
+
+TEST(ResourceTests, BadMissingSubtypePropertyTest) {
+  TestLibrary library(R"FIDL(
+library example;
+
+resource_definition handle : uint32 {
+    properties {
+        rights uint32;
+    };
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrResourceMissingSubtypeProperty);
+}
+
+TEST(ResourceTests, BadSubtypeNotEnum) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type obj_type = struct {};
+
+resource_definition handle : uint32 {
+    properties {
+        subtype obj_type;
+    };
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrResourceSubtypePropertyMustReferToEnum);
+}
+
+TEST(ResourceTests, BadSubtypeNotIdentifier) {
+  TestLibrary library(R"FIDL(
+library example;
+
+resource_definition handle : uint32 {
+    properties {
+        subtype uint32;
+    };
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrResourceSubtypePropertyMustReferToEnum);
+}
+
+TEST(ResourceTests, BadNonBitsRights) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type obj_type = enum : uint32 {
+    NONE = 0;
+    VMO = 3;
+};
+
+resource_definition handle : uint32 {
+    properties {
+        subtype obj_type;
+        rights string;
+    };
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrResourceRightsPropertyMustReferToBits);
+}
+
+TEST(ResourceTests, BadIncludeCycle) {
+  TestLibrary library(R"FIDL(
+library example;
+
+resource_definition handle : uint32 {
+    properties {
+        subtype handle;
+    };
+};
+)FIDL");
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrIncludeCycle,
+                                      fidl::ErrResourceSubtypePropertyMustReferToEnum);
 }
 
 }  // namespace
