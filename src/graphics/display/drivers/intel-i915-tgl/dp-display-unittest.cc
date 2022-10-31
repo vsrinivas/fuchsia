@@ -179,8 +179,13 @@ class DpDisplayTest : public ::testing::Test {
     // DisplayDevice::LoadACtiveMode() (for a pre-initialized display, e.g. bootloader-configured
     // eDP). For testing we only initialize until the Query() stage. The states of a DpDisplay
     // should become easier to reason about if remove the partially-initialized states.
-    auto display = std::make_unique<DpDisplay>(
-        &controller_, id, ddi, &fake_dpcd_, &pch_engine_.value(), i915_tgl::DdiReference(), &node_);
+    if (ddi_phys_[ddi] == nullptr) {
+      ddi_phys_[ddi] = std::make_unique<TestDdiPhysicalLayer>(ddi);
+      ddi_phys_[ddi]->Enable();
+    }
+    auto display =
+        std::make_unique<DpDisplay>(&controller_, id, ddi, &fake_dpcd_, &pch_engine_.value(),
+                                    i915_tgl::DdiReference(ddi_phys_[ddi].get()), &node_);
     if (!display->Query()) {
       return nullptr;
     }
@@ -201,6 +206,8 @@ class DpDisplayTest : public ::testing::Test {
 
   inspect::Node node_;
   testing::FakeDpcdChannel fake_dpcd_;
+
+  std::unordered_map<tgl_registers::Ddi, std::unique_ptr<DdiPhysicalLayer>> ddi_phys_;
 
   std::optional<PchEngine> pch_engine_;
 };

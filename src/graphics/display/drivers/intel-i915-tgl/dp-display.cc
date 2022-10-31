@@ -1500,9 +1500,10 @@ bool DpDisplay::InitDdi() {
   }
 
   // 6. Program DP mode
-  if (is_tgl(controller()->device_id()) &&
-      ddi_reference()->GetPhysicalLayerInfo().connection_type ==
-          DdiPhysicalLayer::ConnectionType::kTypeCDisplayPortAltMode &&
+  // This step only applies to Type-C DDIs in non-Thunderbolt mode.
+  const auto phy_info = ddi_reference()->GetPhysicalLayerInfo();
+  if (is_tgl(controller()->device_id()) && phy_info.ddi_type == DdiPhysicalLayer::DdiType::kTypeC &&
+      phy_info.connection_type != DdiPhysicalLayer::ConnectionType::kTypeCThunderbolt &&
       !ProgramDpModeTigerLake()) {
     zxlogf(ERROR, "DDI %d: Cannot program DP mode", ddi());
     return false;
