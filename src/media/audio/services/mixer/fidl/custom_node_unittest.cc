@@ -103,6 +103,7 @@ TEST_F(CustomNodeTest, CreateDeleteEdge) {
 
   const auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
+      .pipeline_direction = PipelineDirection::kOutput,
       .config = MakeProcessorConfigBuilder(/*block_size_frames=*/6, /*latency_frames=*/10).Build(),
       .detached_thread = ctx.detached_thread,
   });
@@ -224,6 +225,7 @@ TEST_F(CustomNodeTest, CreateEdgeCannotAcceptSourceFormat) {
 
   const auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
+      .pipeline_direction = PipelineDirection::kOutput,
       .config = MakeProcessorConfigBuilder(/*block_size_frames=*/1, /*latency_frames=*/5).Build(),
       .detached_thread = ctx.detached_thread,
   });
@@ -275,6 +277,7 @@ TEST_F(CustomNodeTest, CreateEdgeDisallowed) {
 
   const auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
+      .pipeline_direction = PipelineDirection::kOutput,
       .config = MakeProcessorConfigBuilder().Build(),
       .detached_thread = ctx.detached_thread,
   });
@@ -314,7 +317,7 @@ TEST_F(CustomNodeTest, CreateEdgeDisallowed) {
 
 TEST_F(CustomNodeTest, CreateFailsMissingConfig) {
   auto custom_node = CustomNode::Create({
-      .reference_clock = DefaultClock(),
+      .reference_clock = DefaultClock(), .pipeline_direction = PipelineDirection::kOutput,
       // no .config
   });
   EXPECT_EQ(custom_node, nullptr);
@@ -323,6 +326,7 @@ TEST_F(CustomNodeTest, CreateFailsMissingConfig) {
 TEST_F(CustomNodeTest, CreateFailsMissingProcessor) {
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
+      .pipeline_direction = PipelineDirection::kOutput,
       .config = MakeProcessorConfigBuilder().processor({}).Build(),
   });
   EXPECT_EQ(custom_node, nullptr);
@@ -331,6 +335,7 @@ TEST_F(CustomNodeTest, CreateFailsMissingProcessor) {
 TEST_F(CustomNodeTest, CreateFailsMissingInputs) {
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
+      .pipeline_direction = PipelineDirection::kOutput,
       .config = MakeProcessorConfigBuilder().inputs({}).Build(),
   });
 }
@@ -338,6 +343,7 @@ TEST_F(CustomNodeTest, CreateFailsMissingInputs) {
 TEST_F(CustomNodeTest, CreateFailsMissingOutputs) {
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
+      .pipeline_direction = PipelineDirection::kOutput,
       .config = MakeProcessorConfigBuilder().outputs({}).Build(),
   });
 }
@@ -345,6 +351,7 @@ TEST_F(CustomNodeTest, CreateFailsMissingOutputs) {
 TEST_F(CustomNodeTest, CreateFailsTooManyInputs) {
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
+      .pipeline_direction = PipelineDirection::kOutput,
       .config = MakeProcessorConfigBuilder()
                     .inputs(MakeInputs(MakeInputConfigBuilder().Build(), /*count=*/2))
                     .Build(),
@@ -354,6 +361,7 @@ TEST_F(CustomNodeTest, CreateFailsTooManyInputs) {
 TEST_F(CustomNodeTest, CreateFailsTooManyOutputs) {
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
+      .pipeline_direction = PipelineDirection::kOutput,
       .config = MakeProcessorConfigBuilder()
                     .outputs(MakeOutputs(MakeOutputConfigBuilder().Build(), /*count=*/2))
                     .Build(),
@@ -363,6 +371,7 @@ TEST_F(CustomNodeTest, CreateFailsTooManyOutputs) {
 TEST_F(CustomNodeTest, CreateFailsMissingInputFormat) {
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
+      .pipeline_direction = PipelineDirection::kOutput,
       .config = MakeProcessorConfigBuilder()
                     .inputs(MakeInputs(MakeInputConfigBuilder().buffer(MakeBuffer()).Build()))
                     .Build(),
@@ -372,6 +381,7 @@ TEST_F(CustomNodeTest, CreateFailsMissingInputFormat) {
 TEST_F(CustomNodeTest, CreateFailsMissingOutputFormat) {
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
+      .pipeline_direction = PipelineDirection::kOutput,
       .config = MakeProcessorConfigBuilder()
                     .outputs(MakeOutputs(MakeOutputConfigBuilder().buffer(MakeBuffer()).Build()))
                     .Build(),
@@ -381,6 +391,7 @@ TEST_F(CustomNodeTest, CreateFailsMissingOutputFormat) {
 TEST_F(CustomNodeTest, CreateFailsMismatchingFrameRate) {
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
+      .pipeline_direction = PipelineDirection::kOutput,
       .config = MakeProcessorConfigBuilder()
                     .inputs(MakeInputs(
                         MakeInputConfigBuilder()
@@ -394,6 +405,7 @@ TEST_F(CustomNodeTest, CreateFailsMismatchingFrameRate) {
 TEST_F(CustomNodeTest, CreateFailsMissingInputBuffer) {
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
+      .pipeline_direction = PipelineDirection::kOutput,
       .config =
           MakeProcessorConfigBuilder()
               .inputs(MakeInputs(MakeInputConfigBuilder().format(kFormat.ToLegacyFidl()).Build()))
@@ -404,6 +416,7 @@ TEST_F(CustomNodeTest, CreateFailsMissingInputBuffer) {
 TEST_F(CustomNodeTest, CreateFailsMissingOutputBuffer) {
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
+      .pipeline_direction = PipelineDirection::kOutput,
       .config = MakeProcessorConfigBuilder()
                     .outputs(MakeOutputs(
                         MakeOutputConfigBuilder().format(kFormat.ToLegacyFidl()).Build()))
@@ -414,6 +427,7 @@ TEST_F(CustomNodeTest, CreateFailsMissingOutputBuffer) {
 TEST_F(CustomNodeTest, CreateFailsEmptyInputBuffer) {
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
+      .pipeline_direction = PipelineDirection::kOutput,
       .config = MakeProcessorConfigBuilder()
                     .inputs(MakeInputs(MakeInputConfigBuilder()
                                            .buffer(MakeBuffer(/*size=*/0))
@@ -426,6 +440,7 @@ TEST_F(CustomNodeTest, CreateFailsEmptyInputBuffer) {
 TEST_F(CustomNodeTest, CreateFailsEmptyOutputBuffer) {
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
+      .pipeline_direction = PipelineDirection::kOutput,
       .config = MakeProcessorConfigBuilder()
                     .outputs(MakeOutputs(MakeOutputConfigBuilder()
                                              .buffer(MakeBuffer(/*size=*/0))
@@ -438,6 +453,7 @@ TEST_F(CustomNodeTest, CreateFailsEmptyOutputBuffer) {
 TEST_F(CustomNodeTest, CreateFailsInvalidInputBuffer) {
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
+      .pipeline_direction = PipelineDirection::kOutput,
       .config = MakeProcessorConfigBuilder()
                     .inputs(MakeInputs(MakeInputConfigBuilder()
                                            .buffer(Range{.size = 100})
@@ -452,6 +468,7 @@ TEST_F(CustomNodeTest, CreateFailsInvalidInputBufferNotMappable) {
   ASSERT_EQ(ZX_OK, buffer.vmo.replace(ZX_RIGHT_WRITE, &buffer.vmo));
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
+      .pipeline_direction = PipelineDirection::kOutput,
       .config = MakeProcessorConfigBuilder()
                     .inputs(MakeInputs(MakeInputConfigBuilder()
                                            .buffer(std::move(buffer))
@@ -466,6 +483,7 @@ TEST_F(CustomNodeTest, CreateFailsInvalidInputBufferNotWritable) {
   ASSERT_EQ(ZX_OK, buffer.vmo.replace(ZX_RIGHT_MAP, &buffer.vmo));
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
+      .pipeline_direction = PipelineDirection::kOutput,
       .config = MakeProcessorConfigBuilder()
                     .inputs(MakeInputs(MakeInputConfigBuilder()
                                            .buffer(std::move(buffer))
@@ -482,6 +500,7 @@ TEST_F(CustomNodeTest, CreateFailsInvalidInputBufferSizeTooSmall) {
   buffer.size = vmo_size + 1;
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
+      .pipeline_direction = PipelineDirection::kOutput,
       .config = MakeProcessorConfigBuilder()
                     .inputs(MakeInputs(MakeInputConfigBuilder()
                                            .buffer(std::move(buffer))
@@ -498,6 +517,7 @@ TEST_F(CustomNodeTest, CreateFailsInvalidInputBufferOffsetTooLarge) {
   buffer.offset = vmo_size - buffer.size + 1;
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
+      .pipeline_direction = PipelineDirection::kOutput,
       .config = MakeProcessorConfigBuilder()
                     .inputs(MakeInputs(MakeInputConfigBuilder()
                                            .buffer(std::move(buffer))
@@ -510,6 +530,7 @@ TEST_F(CustomNodeTest, CreateFailsInvalidInputBufferOffsetTooLarge) {
 TEST_F(CustomNodeTest, CreateFailsInvalidOutputBuffer) {
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
+      .pipeline_direction = PipelineDirection::kOutput,
       .config = MakeProcessorConfigBuilder()
                     .outputs(MakeOutputs(MakeOutputConfigBuilder()
                                              .buffer(Range{.size = 100})
@@ -524,6 +545,7 @@ TEST_F(CustomNodeTest, CreateFailsInvalidOutputBufferNotMappable) {
   ASSERT_EQ(ZX_OK, buffer.vmo.replace(ZX_RIGHT_WRITE, &buffer.vmo));
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
+      .pipeline_direction = PipelineDirection::kOutput,
       .config = MakeProcessorConfigBuilder()
                     .outputs(MakeOutputs(MakeOutputConfigBuilder()
                                              .buffer(std::move(buffer))
@@ -538,6 +560,7 @@ TEST_F(CustomNodeTest, CreateFailsInvalidOutputBufferNotReadable) {
   ASSERT_EQ(ZX_OK, buffer.vmo.replace(ZX_RIGHT_MAP, &buffer.vmo));
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
+      .pipeline_direction = PipelineDirection::kOutput,
       .config = MakeProcessorConfigBuilder()
                     .outputs(MakeOutputs(MakeOutputConfigBuilder()
                                              .buffer(std::move(buffer))
@@ -554,6 +577,7 @@ TEST_F(CustomNodeTest, CreateFailsInvalidOutputBufferSizeTooSmall) {
   buffer.size = vmo_size + 1;
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
+      .pipeline_direction = PipelineDirection::kOutput,
       .config = MakeProcessorConfigBuilder()
                     .outputs(MakeOutputs(MakeOutputConfigBuilder()
                                              .buffer(std::move(buffer))
@@ -570,6 +594,7 @@ TEST_F(CustomNodeTest, CreateFailsInvalidOutputBufferOffsetTooLarge) {
   buffer.offset = vmo_size - buffer.size + 1;
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
+      .pipeline_direction = PipelineDirection::kOutput,
       .config = MakeProcessorConfigBuilder()
                     .outputs(MakeOutputs(MakeOutputConfigBuilder()
                                              .buffer(std::move(buffer))
@@ -585,6 +610,7 @@ TEST_F(CustomNodeTest, CreateFailsOutputBufferPartiallyOverlapsInputBuffer) {
   ASSERT_EQ(input_buffer.vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &output_vmo), ZX_OK);
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
+      .pipeline_direction = PipelineDirection::kOutput,
       .config = MakeProcessorConfigBuilder()
                     .inputs(MakeInputs(MakeInputConfigBuilder()
                                            .buffer(std::move(input_buffer))
@@ -602,6 +628,7 @@ TEST_F(CustomNodeTest, CreateFailsOutputBufferPartiallyOverlapsInputBuffer) {
 TEST_F(CustomNodeTest, CreateFailsBlockSizeTooBig) {
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
+      .pipeline_direction = PipelineDirection::kOutput,
       .config = MakeProcessorConfigBuilder().block_size_frames(kDefaultBufferSize + 1).Build(),
   });
 }
@@ -609,6 +636,7 @@ TEST_F(CustomNodeTest, CreateFailsBlockSizeTooBig) {
 TEST_F(CustomNodeTest, CreateFailsMaxFramesPerCallTooBig) {
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
+      .pipeline_direction = PipelineDirection::kOutput,
       .config = MakeProcessorConfigBuilder().max_frames_per_call(kDefaultBufferSize + 1).Build(),
   });
 }

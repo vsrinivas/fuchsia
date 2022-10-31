@@ -46,7 +46,7 @@ TEST(ProducerNodeTest, CreateEdgeCannotAcceptSource) {
 
   auto stream_sink = MakeStreamSink();
   auto producer = ProducerNode::Create({
-      .pipeline_direction = PipelineDirection::kInput,
+      .pipeline_direction = PipelineDirection::kOutput,
       .format = kFormat,
       .reference_clock = DefaultClock(),
       .media_ticks_per_ns = kFormat.frames_per_ns(),
@@ -78,7 +78,7 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithStreamSink) {
 
   auto stream_sink = MakeStreamSink();
   auto producer = ProducerNode::Create({
-      .pipeline_direction = PipelineDirection::kInput,
+      .pipeline_direction = PipelineDirection::kOutput,
       .format = kFormat,
       .reference_clock = clock,
       .media_ticks_per_ns = kFormat.frames_per_ns(),
@@ -88,7 +88,7 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithStreamSink) {
 
   ASSERT_NE(producer, nullptr);
   EXPECT_EQ(producer->type(), Node::Type::kProducer);
-  EXPECT_EQ(producer->pipeline_direction(), PipelineDirection::kInput);
+  EXPECT_EQ(producer->pipeline_direction(), PipelineDirection::kOutput);
   EXPECT_EQ(producer->reference_clock(), clock);
   EXPECT_EQ(producer->thread(), detached_thread);
   EXPECT_EQ(producer->pipeline_stage()->thread(), detached_thread->pipeline_thread());
@@ -174,7 +174,7 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithRingBuffer) {
 
   auto ring_buffer = std::make_shared<RingBuffer>(kFormat, UnreadableClock(clock), buffer);
   auto producer = ProducerNode::Create({
-      .pipeline_direction = PipelineDirection::kInput,
+      .pipeline_direction = PipelineDirection::kOutput,
       .format = kFormat,
       .reference_clock = clock,
       .media_ticks_per_ns = kFormat.frames_per_ns(),
@@ -190,7 +190,7 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithRingBuffer) {
   }
 
   EXPECT_EQ(producer->dest(), dest);
-  EXPECT_EQ(producer->pipeline_direction(), PipelineDirection::kInput);
+  EXPECT_EQ(producer->pipeline_direction(), PipelineDirection::kOutput);
   EXPECT_EQ(producer->thread(), detached_thread);
   EXPECT_EQ(producer->pipeline_stage()->thread(), detached_thread->pipeline_thread());
   EXPECT_EQ(producer->pipeline_stage()->format(), kFormat);
@@ -248,7 +248,7 @@ TEST(ProducerNodeTest, StopCancelsStart) {
 
   auto stream_sink = MakeStreamSink();
   auto producer = ProducerNode::Create({
-      .pipeline_direction = PipelineDirection::kInput,
+      .pipeline_direction = PipelineDirection::kOutput,
       .format = kFormat,
       .reference_clock =
           RealClock::CreateFromMonotonic("ReferenceClock", Clock::kExternalDomain, true),
@@ -287,7 +287,7 @@ TEST(ProducerNodeTest, StartCancelsStop) {
 
   auto stream_sink = MakeStreamSink();
   auto producer = ProducerNode::Create({
-      .pipeline_direction = PipelineDirection::kInput,
+      .pipeline_direction = PipelineDirection::kOutput,
       .format = kFormat,
       .reference_clock = clock,
       .media_ticks_per_ns = kFormat.frames_per_ns(),

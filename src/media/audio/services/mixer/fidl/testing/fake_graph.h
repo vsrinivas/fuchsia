@@ -58,25 +58,11 @@ class FakeGraphThread : public GraphThread {
 // Not safe for concurrent use.
 class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
  public:
-  // Registers a handler for `set_max_downstream_output_pipeline_delay`.
+  // Registers a handler for `SetMaxDelays`.
   // If a handler is not registered, a default handler is used.
-  void SetOnSetMaxDownstreamOutputPipelineDelay(
-      std::function<std::optional<std::pair<ThreadId, fit::closure>>(void)> handler) {
-    on_set_max_downstream_output_pipeline_delay_ = std::move(handler);
-  }
-
-  // Registers a handler for `set_max_downstream_input_pipeline_delay`.
-  // If a handler is not registered, a default handler is used.
-  void SetOnSetMaxDownstreamInputPipelineDelay(
-      std::function<std::optional<std::pair<ThreadId, fit::closure>>(void)> handler) {
-    on_set_max_downstream_input_pipeline_delay_ = std::move(handler);
-  }
-
-  // Registers a handler for `set_max_upstream_input_pipeline_delay`.
-  // If a handler is not registered, a default handler is used.
-  void SetOnSetMaxUpstreamInputPipelineDelay(
-      std::function<std::optional<std::pair<ThreadId, fit::closure>>(void)> handler) {
-    on_set_max_upstream_input_pipeline_delay_ = std::move(handler);
+  void SetOnSetMaxDelays(
+      std::function<std::optional<std::pair<ThreadId, fit::closure>>(Delays)> handler) {
+    on_set_max_delays_ = std::move(handler);
   }
 
   // Registers a handler for `PresentationDelayForSourceEdge`.
@@ -136,12 +122,7 @@ class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
   }
 
   // Implements `Node`.
-  std::optional<std::pair<ThreadId, fit::closure>> set_max_downstream_output_pipeline_delay(
-      zx::duration delay) final;
-  std::optional<std::pair<ThreadId, fit::closure>> set_max_downstream_input_pipeline_delay(
-      zx::duration delay) final;
-  std::optional<std::pair<ThreadId, fit::closure>> set_max_upstream_input_pipeline_delay(
-      zx::duration delay) final;
+  std::optional<std::pair<ThreadId, fit::closure>> SetMaxDelays(Delays delays) final;
   zx::duration PresentationDelayForSourceEdge(const Node* source) const final;
 
  protected:
@@ -163,13 +144,7 @@ class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
 
   FakeGraph& graph_;
 
-  std::function<std::optional<std::pair<ThreadId, fit::closure>>(void)>
-      on_set_max_downstream_output_pipeline_delay_;
-  std::function<std::optional<std::pair<ThreadId, fit::closure>>(void)>
-      on_set_max_downstream_input_pipeline_delay_;
-  std::function<std::optional<std::pair<ThreadId, fit::closure>>(void)>
-      on_set_max_upstream_input_pipeline_delay_;
-
+  std::function<std::optional<std::pair<ThreadId, fit::closure>>(Delays)> on_set_max_delays_;
   std::function<zx::duration(const Node*)> on_presentation_delay_for_edge_;
   std::function<NodePtr()> on_create_new_child_source_;
   std::function<NodePtr()> on_create_new_child_dest_;
@@ -261,7 +236,7 @@ class FakeGraph {
     std::unordered_map<PipelineDirection, std::unordered_set<NodeId>> pipeline_directions;
 
     // The default direction if not specified above.
-    PipelineDirection default_pipeline_direction;
+    PipelineDirection default_pipeline_direction = PipelineDirection::kOutput;
 
     // Assignment of nodes to threads. If a node is not assigned a thread, it's assigned to
     // `FakeGraph::DetachedThread()`. All nodes must be ordinary nodes (i.e. not a key of

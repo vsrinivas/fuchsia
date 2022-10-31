@@ -73,6 +73,9 @@ Node::Node(Type type, std::string_view name, std::shared_ptr<Clock> reference_cl
     FX_CHECK(pipeline_stage_);  // each ordinary node own a PipelineStage
     FX_CHECK(pipeline_stage_->reference_clock() == reference_clock_);
   }
+  // Ensure this is specified.
+  FX_CHECK(pipeline_direction_ == PipelineDirection::kOutput ||
+           pipeline_direction_ == PipelineDirection::kInput);
 }
 
 fpromise::result<void, CreateEdgeError> Node::CreateEdge(const GraphContext& ctx, NodePtr source,
@@ -172,8 +175,7 @@ fpromise::result<void, CreateEdgeError> Node::CreateEdge(const GraphContext& ctx
                                          /*expected_thread=*/ctx.detached_thread);
 
   // Update delays. Do this after moving threads so the closures get attached to correct threads.
-  std::map<ThreadId, std::vector<fit::closure>> closures;
-  RecomputeDelays(*source, *dest, closures);
+  auto closures = RecomputeDelays(*source, *dest);
 
   // Update the PipelineStages asynchronously.
   // Fist apply updates that must happen on dest's thread, which includes connecting source -> dest.
@@ -303,8 +305,7 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
   }
 
   // Update delays. Do this before moving threads so the closures get attached to correct threads.
-  std::map<ThreadId, std::vector<fit::closure>> closures;
-  RecomputeDelays(*source, *dest, closures);
+  auto closures = RecomputeDelays(*source, *dest);
 
   // Since the source was previously connected to dest, it must be owned by the same thread as dest.
   // Since the source is now disconnected, it moves to the detached thread.
@@ -495,26 +496,23 @@ zx::duration Node::max_upstream_input_pipeline_delay() const {
   return max_upstream_input_pipeline_delay_;
 }
 
-std::optional<std::pair<ThreadId, fit::closure>> Node::set_max_downstream_output_pipeline_delay(
-    zx::duration delay) {
+std::optional<std::pair<ThreadId, fit::closure>> Node::SetMaxDelays(Delays delays) {
   FX_CHECK(type_ != Type::kMeta);
-  FX_CHECK(pipeline_direction_ == PipelineDirection::kOutput);
-  max_downstream_output_pipeline_delay_ = delay;
-  return std::nullopt;
-}
 
-std::optional<std::pair<ThreadId, fit::closure>> Node::set_max_downstream_input_pipeline_delay(
-    zx::duration delay) {
-  FX_CHECK(type_ != Type::kMeta);
-  max_downstream_input_pipeline_delay_ = delay;
-  return std::nullopt;
-}
+  if (delays.downstream_output_pipeline_delay) {
+    FX_CHECK(pipeline_direction_ == PipelineDirection::kOutput);
+    max_downstream_output_pipeline_delay_ = *delays.downstream_output_pipeline_delay;
+  }
 
-std::optional<std::pair<ThreadId, fit::closure>> Node::set_max_upstream_input_pipeline_delay(
-    zx::duration delay) {
-  FX_CHECK(type_ != Type::kMeta);
-  FX_CHECK(pipeline_direction_ == PipelineDirection::kInput);
-  max_upstream_input_pipeline_delay_ = delay;
+  if (delays.downstream_input_pipeline_delay) {
+    max_downstream_input_pipeline_delay_ = *delays.downstream_input_pipeline_delay;
+  }
+
+  if (delays.upstream_input_pipeline_delay) {
+    FX_CHECK(pipeline_direction_ == PipelineDirection::kInput);
+    max_upstream_input_pipeline_delay_ = *delays.upstream_input_pipeline_delay;
+  }
+
   return std::nullopt;
 }
 

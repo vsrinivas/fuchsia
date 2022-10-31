@@ -110,11 +110,9 @@ void ForEachUpstreamEdge(const Node& node, Fn fn) {
 
 }  // namespace
 
-void RecomputeMaxDownstreamOutputPipelineDelay(
-    Node& node, std::map<ThreadId, std::vector<fit::closure>>& closures) {
+void RecomputeMaxDownstreamDelays(Node& node,
+                                  std::map<ThreadId, std::vector<fit::closure>>& closures) {
   FX_CHECK(node.type() != Node::Type::kMeta);
-  FX_CHECK(node.pipeline_direction() == PipelineDirection::kOutput);
-
   std::vector<Node*> stack = {&node};
 
   while (!stack.empty()) {
@@ -125,64 +123,51 @@ void RecomputeMaxDownstreamOutputPipelineDelay(
     if (node->type() == Node::Type::kConsumer && !node->parent()) {
       continue;
     }
+
+    Node::Delays new_delays;
 
     // Recompute node->max_downstream_output_pipeline_delay().
-    auto max_delay = zx::nsec(0);
-    ForEachDownstreamEdge(*node, [&max_delay, node](const Node& dest) {
-      // Skip loopback edges.
-      if (dest.pipeline_direction() != PipelineDirection::kOutput) {
-        return;
+    if (node->pipeline_direction() == PipelineDirection::kOutput) {
+      auto max_delay = zx::nsec(0);
+      ForEachDownstreamEdge(*node, [&max_delay, node](const Node& dest) {
+        // Skip loopback edges.
+        if (dest.pipeline_direction() != PipelineDirection::kOutput) {
+          return;
+        }
+        auto edge_delay =
+            dest.PresentationDelayForSourceEdge((node->dest().get() == &dest) ? node : nullptr);
+        max_delay = std::max(max_delay, edge_delay + dest.max_downstream_output_pipeline_delay());
+      });
+
+      if (node->max_downstream_output_pipeline_delay() != max_delay) {
+        new_delays.downstream_output_pipeline_delay = max_delay;
       }
-      auto edge_delay =
-          dest.PresentationDelayForSourceEdge((node->dest().get() == &dest) ? node : nullptr);
-      max_delay = std::max(max_delay, edge_delay + dest.max_downstream_output_pipeline_delay());
-    });
-
-    if (node->max_downstream_output_pipeline_delay() == max_delay) {
-      continue;
-    }
-
-    // It changed: update `node` and recurse upwards.
-    if (auto pair = node->set_max_downstream_output_pipeline_delay(max_delay); pair) {
-      closures.try_emplace(pair->first, std::vector<fit::closure>{})
-          .first->second.push_back(std::move(pair->second));
-    }
-
-    ForEachUpstreamEdge(*node, [&stack](Node& source) { stack.push_back(&source); });
-  }
-}
-
-void RecomputeMaxDownstreamInputPipelineDelay(
-    Node& node, std::map<ThreadId, std::vector<fit::closure>>& closures) {
-  FX_CHECK(node.type() != Node::Type::kMeta);
-
-  std::vector<Node*> stack = {&node};
-
-  while (!stack.empty()) {
-    auto node = stack.back();
-    stack.pop_back();
-
-    // At, bottom-of-graph consumers downstream delay is determined by an external client.
-    if (node->type() == Node::Type::kConsumer && !node->parent()) {
-      continue;
     }
 
     // Recompute node->max_downstream_input_pipeline_delay().
-    auto max_delay = zx::nsec(0);
-    ForEachDownstreamEdge(*node, [&max_delay, node](const Node& dest) {
-      auto edge_delay =
-          (dest.pipeline_direction() == PipelineDirection::kInput)
-              ? dest.PresentationDelayForSourceEdge((node->dest().get() == &dest) ? node : nullptr)
-              : zx::nsec(0);
-      max_delay = std::max(max_delay, edge_delay + dest.max_downstream_input_pipeline_delay());
-    });
+    {
+      auto max_delay = zx::nsec(0);
+      ForEachDownstreamEdge(*node, [&max_delay, node](const Node& dest) {
+        auto edge_delay = (dest.pipeline_direction() == PipelineDirection::kInput)
+                              ? dest.PresentationDelayForSourceEdge(
+                                    (node->dest().get() == &dest) ? node : nullptr)
+                              : zx::nsec(0);
+        max_delay = std::max(max_delay, edge_delay + dest.max_downstream_input_pipeline_delay());
+      });
 
-    if (node->max_downstream_input_pipeline_delay() == max_delay) {
+      if (node->max_downstream_input_pipeline_delay() != max_delay) {
+        new_delays.downstream_input_pipeline_delay = max_delay;
+      }
+    }
+
+    // Did either delay change?
+    if (!new_delays.downstream_output_pipeline_delay &&
+        !new_delays.downstream_input_pipeline_delay) {
       continue;
     }
 
     // It changed: update `node` and recurse upwards.
-    if (auto pair = node->set_max_downstream_input_pipeline_delay(max_delay); pair) {
+    if (auto pair = node->SetMaxDelays(new_delays); pair) {
       closures.try_emplace(pair->first, std::vector<fit::closure>{})
           .first->second.push_back(std::move(pair->second));
     }
@@ -191,10 +176,14 @@ void RecomputeMaxDownstreamInputPipelineDelay(
   }
 }
 
-void RecomputeMaxUpstreamInputPipelineDelay(
-    Node& node, std::map<ThreadId, std::vector<fit::closure>>& closures) {
+void RecomputeMaxUpstreamDelays(Node& node,
+                                std::map<ThreadId, std::vector<fit::closure>>& closures) {
   FX_CHECK(node.type() != Node::Type::kMeta);
-  FX_CHECK(node.pipeline_direction() == PipelineDirection::kInput);
+
+  // Output pipelines (currently) have no upstream delays defined.
+  if (node.pipeline_direction() == PipelineDirection::kOutput) {
+    return;
+  }
 
   std::vector<Node*> stack = {&node};
 
@@ -223,7 +212,7 @@ void RecomputeMaxUpstreamInputPipelineDelay(
     }
 
     // It changed: update `node` and recurse downwards.
-    if (auto pair = node->set_max_upstream_input_pipeline_delay(max_delay); pair) {
+    if (auto pair = node->SetMaxDelays({.upstream_input_pipeline_delay = max_delay}); pair) {
       closures.try_emplace(pair->first, std::vector<fit::closure>{})
           .first->second.push_back(std::move(pair->second));
     }
@@ -232,15 +221,11 @@ void RecomputeMaxUpstreamInputPipelineDelay(
   }
 }
 
-void RecomputeDelays(Node& source, Node& dest,
-                     std::map<ThreadId, std::vector<fit::closure>>& closures) {
-  if (source.pipeline_direction() == PipelineDirection::kOutput) {
-    RecomputeMaxDownstreamOutputPipelineDelay(source, closures);
-  }
-  RecomputeMaxDownstreamInputPipelineDelay(source, closures);
-  if (dest.pipeline_direction() == PipelineDirection::kInput) {
-    RecomputeMaxUpstreamInputPipelineDelay(dest, closures);
-  }
+std::map<ThreadId, std::vector<fit::closure>> RecomputeDelays(Node& source, Node& dest) {
+  std::map<ThreadId, std::vector<fit::closure>> closures;
+  RecomputeMaxDownstreamDelays(source, closures);
+  RecomputeMaxUpstreamDelays(dest, closures);
+  return closures;
 }
 
 bool ExistsPath(const Node& source, const Node& dest) {

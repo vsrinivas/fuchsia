@@ -30,18 +30,14 @@ namespace media_audio {
 // caller can process the ThreadIds in a deterministic order (which is helpful in tests).
 //
 // REQUIRED: the property to compute is defined at `node`
-void RecomputeMaxDownstreamOutputPipelineDelay(
-    Node& node, std::map<ThreadId, std::vector<fit::closure>>& closures);
+void RecomputeMaxDownstreamDelays(Node& node,
+                                  std::map<ThreadId, std::vector<fit::closure>>& closures);
 
-void RecomputeMaxDownstreamInputPipelineDelay(
-    Node& node, std::map<ThreadId, std::vector<fit::closure>>& closures);
-
-void RecomputeMaxUpstreamInputPipelineDelay(
-    Node& node, std::map<ThreadId, std::vector<fit::closure>>& closures);
+void RecomputeMaxUpstreamDelays(Node& node,
+                                std::map<ThreadId, std::vector<fit::closure>>& closures);
 
 // Call the above functions assuming that the edge `source -> dest` was just created or deleted.
-void RecomputeDelays(Node& source, Node& dest,
-                     std::map<ThreadId, std::vector<fit::closure>>& closures);
+std::map<ThreadId, std::vector<fit::closure>> RecomputeDelays(Node& source, Node& dest);
 
 // Reports whether there exists a path from `source` to `dest`. The nodes may be ordinary nodes
 // and/or meta nodes. For any given meta node M, there are implicit paths from M's child source

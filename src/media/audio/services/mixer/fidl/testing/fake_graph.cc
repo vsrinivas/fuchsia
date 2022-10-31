@@ -45,29 +45,10 @@ FakeNode::FakeNode(FakeGraph& graph, NodeId id, Type type, PipelineDirection pip
            std::move(parent)),
       graph_(graph) {}
 
-std::optional<std::pair<ThreadId, fit::closure>> FakeNode::set_max_downstream_output_pipeline_delay(
-    zx::duration delay) {
-  Node::set_max_downstream_output_pipeline_delay(delay);
-  if (on_set_max_downstream_output_pipeline_delay_) {
-    return on_set_max_downstream_output_pipeline_delay_();
-  }
-  return std::nullopt;
-}
-
-std::optional<std::pair<ThreadId, fit::closure>> FakeNode::set_max_downstream_input_pipeline_delay(
-    zx::duration delay) {
-  Node::set_max_downstream_input_pipeline_delay(delay);
-  if (on_set_max_downstream_input_pipeline_delay_) {
-    return on_set_max_downstream_input_pipeline_delay_();
-  }
-  return std::nullopt;
-}
-
-std::optional<std::pair<ThreadId, fit::closure>> FakeNode::set_max_upstream_input_pipeline_delay(
-    zx::duration delay) {
-  Node::set_max_upstream_input_pipeline_delay(delay);
-  if (on_set_max_upstream_input_pipeline_delay_) {
-    return on_set_max_upstream_input_pipeline_delay_();
+std::optional<std::pair<ThreadId, fit::closure>> FakeNode::SetMaxDelays(Delays delays) {
+  Node::SetMaxDelays(delays);
+  if (on_set_max_delays_) {
+    return on_set_max_delays_(delays);
   }
   return std::nullopt;
 }
@@ -214,9 +195,7 @@ FakeGraph::FakeGraph(Args args)
 FakeGraph::~FakeGraph() {
   for (auto [id, node] : nodes_) {
     // Clear closures that might have additional references.
-    node->on_set_max_downstream_output_pipeline_delay_ = nullptr;
-    node->on_set_max_downstream_input_pipeline_delay_ = nullptr;
-    node->on_set_max_upstream_input_pipeline_delay_ = nullptr;
+    node->on_set_max_delays_ = nullptr;
     node->on_presentation_delay_for_edge_ = nullptr;
     node->on_create_new_child_source_ = nullptr;
     node->on_create_new_child_dest_ = nullptr;

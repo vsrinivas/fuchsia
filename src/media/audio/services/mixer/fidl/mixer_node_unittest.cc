@@ -28,6 +28,7 @@ TEST(MixerNodeTest, Create) {
   auto detached_thread = graph.ctx().detached_thread;
 
   const auto mixer_node = MixerNode::Create({
+      .pipeline_direction = PipelineDirection::kOutput,
       .format = kDestFormat,
       .reference_clock = DefaultClock(),
       .dest_buffer_frame_count = 10,
@@ -68,6 +69,7 @@ TEST(MixerNodeTest, CreateDeleteEdge) {
   auto q = graph.global_task_queue();
 
   const auto mixer_node = MixerNode::Create({
+      .pipeline_direction = PipelineDirection::kOutput,
       .format = kDestFormat,
       .reference_clock = DefaultClock(),
       .dest_buffer_frame_count = 10,
@@ -170,6 +172,7 @@ TEST(MixerNodeTest, CreateEdgeCannotAcceptSourceFormat) {
   auto q = graph.global_task_queue();
 
   const auto mixer_node = MixerNode::Create({
+      .pipeline_direction = PipelineDirection::kOutput,
       .format = kDestFormat,
       .reference_clock = DefaultClock(),
       .dest_buffer_frame_count = 10,

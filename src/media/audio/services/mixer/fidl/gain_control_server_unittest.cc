@@ -67,6 +67,7 @@ class GainControlServerTest : public ::testing::Test {
 
   NodePtr MakeDefaultMixer() {
     return MixerNode::Create(MixerNode::Args{
+        .pipeline_direction = PipelineDirection::kOutput,
         .format = Format::CreateOrDie({
             .sample_type = fuchsia_audio::SampleType::kFloat32,
             .channels = 1,

@@ -1078,8 +1078,8 @@ TEST(NodeCreateDeleteEdgeTest, RecomputeDelays) {
   });
 
   // Set external values.
-  graph.node(5)->set_max_downstream_output_pipeline_delay(zx::nsec(5000));
-  graph.node(6)->set_max_upstream_input_pipeline_delay(zx::nsec(6000));
+  graph.node(5)->SetMaxDelays({.downstream_output_pipeline_delay = zx::nsec(5000)});
+  graph.node(6)->SetMaxDelays({.upstream_input_pipeline_delay = zx::nsec(6000)});
 
   // Set internal values.
   graph.node(2)->SetOnPresentationDelayForSourceEdge([&graph](const Node* source) {
@@ -1126,17 +1126,18 @@ TEST(NodeCreateDeleteEdgeTest, RecomputeDelays) {
   Updated updated;
   for (int k = 1; k <= 8; k++) {
     auto node = graph.node(k);
-    node->SetOnSetMaxDownstreamOutputPipelineDelay([&updated, k, node]() {
-      return std::make_pair(node->thread()->id(),
-                            [&updated, k]() { updated.downstream_output.insert(k); });
-    });
-    node->SetOnSetMaxDownstreamInputPipelineDelay([&updated, k, node]() {
-      return std::make_pair(node->thread()->id(),
-                            [&updated, k]() { updated.downstream_input.insert(k); });
-    });
-    node->SetOnSetMaxUpstreamInputPipelineDelay([&updated, k, node]() {
-      return std::make_pair(node->thread()->id(),
-                            [&updated, k]() { updated.upstream_input.insert(k); });
+    node->SetOnSetMaxDelays([&updated, k, node](auto delays) {
+      return std::make_pair(node->thread()->id(), [&updated, delays, k]() {
+        if (delays.downstream_output_pipeline_delay) {
+          updated.downstream_output.insert(k);
+        }
+        if (delays.downstream_input_pipeline_delay) {
+          updated.downstream_input.insert(k);
+        }
+        if (delays.upstream_input_pipeline_delay) {
+          updated.upstream_input.insert(k);
+        }
+      });
     });
   }
 

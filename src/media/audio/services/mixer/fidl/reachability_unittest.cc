@@ -72,17 +72,21 @@ TEST(ReachabilityTest, RecomputeMaxDownstreamOutputPipelineDelay) {
   });
 
   // Set external values.
-  graph.node(12)->set_max_downstream_output_pipeline_delay(zx::nsec(2));
-  graph.node(13)->set_max_downstream_output_pipeline_delay(zx::nsec(3));
-  graph.node(12)->set_max_downstream_input_pipeline_delay(zx::nsec(999));  // unused
-  graph.node(13)->set_max_downstream_input_pipeline_delay(zx::nsec(999));  // unused
+  graph.node(12)->SetMaxDelays({
+      .downstream_output_pipeline_delay = zx::nsec(2),
+      .downstream_input_pipeline_delay = zx::nsec(999),  // unused
+  });
+  graph.node(13)->SetMaxDelays({
+      .downstream_output_pipeline_delay = zx::nsec(3),
+      .downstream_input_pipeline_delay = zx::nsec(999),  // unused
+  });
 
   // Setup callbacks.
   std::unordered_set<int> updated;
   for (int k = 1; k <= 13; k++) {
     auto node = graph.node(k);
-    auto tid = node->thread()->id();
-    node->SetOnSetMaxDownstreamOutputPipelineDelay([&updated, k, tid]() {
+    node->SetOnSetMaxDelays([&updated, k, tid = node->thread()->id()](auto delays) {
+      EXPECT_TRUE(delays.downstream_output_pipeline_delay);
       return std::make_pair(tid, [&updated, k]() { updated.insert(k); });
     });
   }
@@ -93,7 +97,7 @@ TEST(ReachabilityTest, RecomputeMaxDownstreamOutputPipelineDelay) {
     SCOPED_TRACE("recompute 10");
 
     std::map<ThreadId, std::vector<fit::closure>> closures;
-    RecomputeMaxDownstreamOutputPipelineDelay(*graph.node(10), closures);
+    RecomputeMaxDownstreamDelays(*graph.node(10), closures);
 
     for (int k = 1; k <= 10; k++) {
       auto node = graph.node(k);
@@ -125,7 +129,7 @@ TEST(ReachabilityTest, RecomputeMaxDownstreamOutputPipelineDelay) {
     SCOPED_TRACE("recompute 11");
 
     std::map<ThreadId, std::vector<fit::closure>> closures;
-    RecomputeMaxDownstreamOutputPipelineDelay(*graph.node(11), closures);
+    RecomputeMaxDownstreamDelays(*graph.node(11), closures);
 
     for (int k = 1; k <= 11; k++) {
       auto node = graph.node(k);
@@ -160,7 +164,7 @@ TEST(ReachabilityTest, RecomputeMaxDownstreamOutputPipelineDelay) {
     SCOPED_TRACE("recompute 9");
 
     std::map<ThreadId, std::vector<fit::closure>> closures;
-    RecomputeMaxDownstreamOutputPipelineDelay(*graph.node(9), closures);
+    RecomputeMaxDownstreamDelays(*graph.node(9), closures);
     EXPECT_TRUE(closures.empty());
 
     for (int k = 1; k <= 11; k++) {
@@ -225,7 +229,7 @@ TEST(ReachabilityTest, RecomputeMaxDownstreamOutputPipelineDelay) {
     SCOPED_TRACE("recompute 8");
 
     std::map<ThreadId, std::vector<fit::closure>> closures;
-    RecomputeMaxDownstreamOutputPipelineDelay(*graph.node(8), closures);
+    RecomputeMaxDownstreamDelays(*graph.node(8), closures);
     EXPECT_TRUE(closures.empty());
 
     for (int k = 1; k <= 8; k++) {
@@ -240,8 +244,8 @@ TEST(ReachabilityTest, RecomputeMaxDownstreamOutputPipelineDelay) {
     SCOPED_TRACE("recompute 6+7");
 
     std::map<ThreadId, std::vector<fit::closure>> closures;
-    RecomputeMaxDownstreamOutputPipelineDelay(*graph.node(6), closures);
-    RecomputeMaxDownstreamOutputPipelineDelay(*graph.node(7), closures);
+    RecomputeMaxDownstreamDelays(*graph.node(6), closures);
+    RecomputeMaxDownstreamDelays(*graph.node(7), closures);
 
     EXPECT_EQ(graph.node(1)->max_downstream_output_pipeline_delay(), zx::nsec(410 + 700 + 873));
     EXPECT_EQ(graph.node(2)->max_downstream_output_pipeline_delay(),
@@ -332,21 +336,25 @@ TEST(ReachabilityTest, RecomputeMaxDownstreamLoopbackPipelineDelay) {
   });
 
   // Set external values.
-  graph.node(8)->set_max_downstream_output_pipeline_delay(zx::nsec(8));
-  graph.node(14)->set_max_downstream_input_pipeline_delay(zx::nsec(14));
+  graph.node(8)->SetMaxDelays({.downstream_output_pipeline_delay = zx::nsec(8)});
+  graph.node(14)->SetMaxDelays({.downstream_input_pipeline_delay = zx::nsec(14)});
 
   // Setup callbacks.
   std::unordered_set<int> updated_output;
   std::unordered_set<int> updated_input;
   for (int k = 1; k <= 14; k++) {
     auto node = graph.node(k);
-    auto tid = node->thread()->id();
-    node->SetOnSetMaxDownstreamOutputPipelineDelay([&updated_output, k, tid]() {
-      return std::make_pair(tid, [&updated_output, k]() { updated_output.insert(k); });
-    });
-    node->SetOnSetMaxDownstreamInputPipelineDelay([&updated_input, k, tid]() {
-      return std::make_pair(tid, [&updated_input, k]() { updated_input.insert(k); });
-    });
+    node->SetOnSetMaxDelays(
+        [&updated_output, &updated_input, k, tid = node->thread()->id()](auto delays) {
+          return std::make_pair(tid, [&updated_output, &updated_input, k, delays]() {
+            if (delays.downstream_output_pipeline_delay) {
+              updated_output.insert(k);
+            }
+            if (delays.downstream_input_pipeline_delay) {
+              updated_input.insert(k);
+            }
+          });
+        });
   }
 
   // Initially, input pipeline delay is defined at node 8 only. Recomputing at node 13 should flood
@@ -355,7 +363,7 @@ TEST(ReachabilityTest, RecomputeMaxDownstreamLoopbackPipelineDelay) {
     SCOPED_TRACE("recompute 13 downstream_input_delay");
 
     std::map<ThreadId, std::vector<fit::closure>> closures;
-    RecomputeMaxDownstreamInputPipelineDelay(*graph.node(13), closures);
+    RecomputeMaxDownstreamDelays(*graph.node(13), closures);
 
     for (int k = 1; k <= 14; k++) {
       auto node = graph.node(k);
@@ -391,7 +399,7 @@ TEST(ReachabilityTest, RecomputeMaxDownstreamLoopbackPipelineDelay) {
     SCOPED_TRACE("recompute 7 downstream_output_delay");
 
     std::map<ThreadId, std::vector<fit::closure>> closures;
-    RecomputeMaxDownstreamOutputPipelineDelay(*graph.node(7), closures);
+    RecomputeMaxDownstreamDelays(*graph.node(7), closures);
 
     for (int k = 1; k <= 8; k++) {
       auto node = graph.node(k);
@@ -424,7 +432,7 @@ TEST(ReachabilityTest, RecomputeMaxDownstreamLoopbackPipelineDelay) {
     SCOPED_TRACE("recompute 6 downstream_output_delay");
 
     std::map<ThreadId, std::vector<fit::closure>> closures;
-    RecomputeMaxDownstreamOutputPipelineDelay(*graph.node(6), closures);
+    RecomputeMaxDownstreamDelays(*graph.node(6), closures);
     EXPECT_EQ(graph.node(6)->max_downstream_output_pipeline_delay(), zx::nsec(0));
     EXPECT_TRUE(closures.empty());
   }
@@ -460,7 +468,7 @@ TEST(ReachabilityTest, RecomputeMaxDownstreamLoopbackPipelineDelay) {
     SCOPED_TRACE("recompute 6 downstream_output_delay (again)");
 
     std::map<ThreadId, std::vector<fit::closure>> closures;
-    RecomputeMaxDownstreamOutputPipelineDelay(*graph.node(7), closures);
+    RecomputeMaxDownstreamDelays(*graph.node(7), closures);
     EXPECT_EQ(graph.node(6)->max_downstream_output_pipeline_delay(), zx::nsec(0));
     EXPECT_TRUE(closures.empty());
   }
@@ -479,7 +487,7 @@ TEST(ReachabilityTest, RecomputeMaxDownstreamLoopbackPipelineDelay) {
     SCOPED_TRACE("recompute 12 downstream_input_delay");
 
     std::map<ThreadId, std::vector<fit::closure>> closures;
-    RecomputeMaxDownstreamInputPipelineDelay(*graph.node(12), closures);
+    RecomputeMaxDownstreamDelays(*graph.node(12), closures);
 
     for (int k = 1; k <= 14; k++) {
       auto node = graph.node(k);
@@ -586,15 +594,15 @@ TEST(ReachabilityTest, RecomputeMaxUpstreamInputPipelineDelay) {
   });
 
   // Set external values.
-  graph.node(6)->set_max_upstream_input_pipeline_delay(zx::nsec(6));
-  graph.node(7)->set_max_upstream_input_pipeline_delay(zx::nsec(7));
+  graph.node(6)->SetMaxDelays({.upstream_input_pipeline_delay = zx::nsec(6)});
+  graph.node(7)->SetMaxDelays({.upstream_input_pipeline_delay = zx::nsec(7)});
 
   // Setup callbacks.
   std::unordered_set<int> updated;
   for (int k = 6; k <= 18; k++) {
     auto node = graph.node(k);
-    auto tid = node->thread()->id();
-    node->SetOnSetMaxUpstreamInputPipelineDelay([&updated, k, tid]() {
+    node->SetOnSetMaxDelays([&updated, k, tid = node->thread()->id()](auto delays) {
+      EXPECT_TRUE(delays.upstream_input_pipeline_delay);
       return std::make_pair(tid, [&updated, k]() { updated.insert(k); });
     });
   }
@@ -604,7 +612,7 @@ TEST(ReachabilityTest, RecomputeMaxUpstreamInputPipelineDelay) {
     SCOPED_TRACE("recompute 10");
 
     std::map<ThreadId, std::vector<fit::closure>> closures;
-    RecomputeMaxUpstreamInputPipelineDelay(*graph.node(10), closures);
+    RecomputeMaxUpstreamDelays(*graph.node(10), closures);
 
     for (int k = 6; k <= 18; k++) {
       auto node = graph.node(k);
@@ -642,7 +650,7 @@ TEST(ReachabilityTest, RecomputeMaxUpstreamInputPipelineDelay) {
     SCOPED_TRACE("recompute 8");
 
     std::map<ThreadId, std::vector<fit::closure>> closures;
-    RecomputeMaxUpstreamInputPipelineDelay(*graph.node(8), closures);
+    RecomputeMaxUpstreamDelays(*graph.node(8), closures);
 
     for (int k = 6; k <= 18; k++) {
       auto node = graph.node(k);
@@ -717,7 +725,7 @@ TEST(ReachabilityTest, RecomputeMaxUpstreamInputPipelineDelay) {
     SCOPED_TRACE("recompute 13");
 
     std::map<ThreadId, std::vector<fit::closure>> closures;
-    RecomputeMaxUpstreamInputPipelineDelay(*graph.node(13), closures);
+    RecomputeMaxUpstreamDelays(*graph.node(13), closures);
 
     for (int k = 6; k <= 18; k++) {
       auto node = graph.node(k);
@@ -756,7 +764,7 @@ TEST(ReachabilityTest, RecomputeMaxUpstreamInputPipelineDelay) {
     SCOPED_TRACE("recompute 10 (again)");
 
     std::map<ThreadId, std::vector<fit::closure>> closures;
-    RecomputeMaxUpstreamInputPipelineDelay(*graph.node(10), closures);
+    RecomputeMaxUpstreamDelays(*graph.node(10), closures);
 
     for (int k = 6; k <= 18; k++) {
       auto node = graph.node(k);
@@ -801,7 +809,7 @@ TEST(ReachabilityTest, RecomputeMaxUpstreamInputPipelineDelay) {
     SCOPED_TRACE("recompute 9");
 
     std::map<ThreadId, std::vector<fit::closure>> closures;
-    RecomputeMaxUpstreamInputPipelineDelay(*graph.node(9), closures);
+    RecomputeMaxUpstreamDelays(*graph.node(9), closures);
 
     for (int k = 6; k <= 18; k++) {
       auto node = graph.node(k);

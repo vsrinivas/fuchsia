@@ -265,13 +265,18 @@ class Node {
   // return value: an optional pair `(T, F)` contains a function (F) that must execute on the
   // corresponding thread (T).
   //
-  // REQUIRED: same as the corresponding getter
-  virtual std::optional<std::pair<ThreadId, fit::closure>> set_max_downstream_output_pipeline_delay(
-      zx::duration delay);
-  virtual std::optional<std::pair<ThreadId, fit::closure>> set_max_downstream_input_pipeline_delay(
-      zx::duration delay);
-  virtual std::optional<std::pair<ThreadId, fit::closure>> set_max_upstream_input_pipeline_delay(
-      zx::duration delay);
+  // This is a single method, rather than three methods, to reduce expensive state changes. For
+  // example, SplitterNode's internal buffer size is `downstream_output_pipeline_delay +
+  // downstream_input_pipeline_delay`. If we update those fields separately, we might see two
+  // updates and allocate two new buffers when one new buffer would be sufficient.
+  //
+  // REQUIRED: a field can be non-nullopt only if it's legal to call the corresponding getter.
+  struct Delays {
+    std::optional<zx::duration> downstream_output_pipeline_delay;
+    std::optional<zx::duration> downstream_input_pipeline_delay;
+    std::optional<zx::duration> upstream_input_pipeline_delay;
+  };
+  virtual std::optional<std::pair<ThreadId, fit::closure>> SetMaxDelays(Delays delays);
 
   // Returns total presentation delay of a source edge.
   //
