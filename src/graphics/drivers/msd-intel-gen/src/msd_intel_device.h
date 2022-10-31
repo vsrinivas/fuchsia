@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "device_request.h"
+#include "forcewake.h"
 #include "gtt.h"
 #include "interrupt_manager.h"
 #include "magma_util/macros.h"
@@ -29,6 +30,7 @@
 struct magma_intel_gen_topology;
 
 class MsdIntelDevice : public msd_device_t,
+                       public MsdIntelRegisterIo::Owner,
                        public EngineCommandStreamer::Owner,
                        public Gtt::Owner,
                        public InterruptManager::Owner,
@@ -107,6 +109,12 @@ class MsdIntelDevice : public msd_device_t,
 #define CHECK_THREAD_NOT_CURRENT(x) \
   if (x)                            \
   DASSERT(!magma::ThreadIdCheck::IsCurrent(*x))
+
+  // MsdIntelRegisterIo::Owner
+  bool IsForceWakeDomainActive(ForceWakeDomain domain) override {
+    DASSERT(forcewake_);
+    return forcewake_->is_active_cached(domain);
+  }
 
   // EngineCommandStreamer::Owner
   MsdIntelRegisterIo* register_io() override {
@@ -227,6 +235,7 @@ class MsdIntelDevice : public msd_device_t,
   std::atomic_uint64_t last_interrupt_timestamp_{};
 
   std::unique_ptr<MsdIntelPciDevice> platform_device_;
+  std::unique_ptr<ForceWake> forcewake_;
   std::unique_ptr<MsdIntelRegisterIo> register_io_;
   std::shared_ptr<Gtt> gtt_;
   std::unique_ptr<RenderEngineCommandStreamer> render_engine_cs_;

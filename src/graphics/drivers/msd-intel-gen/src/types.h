@@ -33,6 +33,8 @@ enum EngineCommandStreamerId {
   VIDEO_COMMAND_STREAMER,
 };
 
+enum class ForceWakeDomain { RENDER, GEN9_MEDIA, GEN12_VDBOX0 };
+
 constexpr EngineCommandStreamerId kCommandStreamers[2] = {RENDER_COMMAND_STREAMER,
                                                           VIDEO_COMMAND_STREAMER};
 

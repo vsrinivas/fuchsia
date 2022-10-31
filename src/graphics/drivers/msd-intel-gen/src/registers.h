@@ -336,46 +336,39 @@ class PowerGateEnable : public hwreg::RegisterBase<PowerGateEnable, uint32_t> {
 };
 
 // from intel-gfx-prm-osrc-bdw-vol02c-commandreference-registers_4.pdf p.493
-class ForceWake {
+class ForceWakeRequest {
  public:
-  enum Domain { RENDER, GEN9_MEDIA, GEN12_VDBOX0 };
-
   static constexpr uint32_t kRenderOffset = 0xA278;
-  static constexpr uint32_t kRenderStatusOffset = 0xD84;
-
   static constexpr uint32_t kGen9MediaOffset = 0xA270;
-  static constexpr uint32_t kGen9MediaStatusOffset = 0xD88;
-
   static constexpr uint32_t kGen12Vdbox0Offset = 0xA540;
-  static constexpr uint32_t kGen12Vdbox0StatusOffset = 0xD50;
 
-  static void reset(MsdIntelRegisterIo* reg_io, Domain domain) { write(reg_io, domain, 0xFFFF, 0); }
-
-  static void write(MsdIntelRegisterIo* reg_io, Domain domain, uint16_t mask, uint16_t val) {
-    uint32_t val32 = mask;
-    val32 = (val32 << 16) | val;
-    switch (domain) {
-      case RENDER:
-        reg_io->Write32(val32, kRenderOffset);
-        break;
-      case GEN9_MEDIA:
-        reg_io->Write32(val32, kGen9MediaOffset);
-        break;
-      case GEN12_VDBOX0:
-        reg_io->Write32(val32, kGen12Vdbox0Offset);
-        break;
-    }
+  static void reset(MsdIntelRegisterIo* reg_io, uint32_t offset) {
+    write(reg_io, offset, 0xFFFF, 0);
   }
 
-  static uint16_t read_status(MsdIntelRegisterIo* reg_io, Domain domain) {
-    switch (domain) {
-      case RENDER:
-        return static_cast<uint16_t>(reg_io->Read32(kRenderStatusOffset));
-      case GEN9_MEDIA:
-        return static_cast<uint16_t>(reg_io->Read32(kGen9MediaStatusOffset));
-      case GEN12_VDBOX0:
-        return static_cast<uint16_t>(reg_io->Read32(kGen12Vdbox0StatusOffset));
-    }
+  static void write(MsdIntelRegisterIo* reg_io, uint32_t offset, uint16_t mask, uint16_t val) {
+    uint32_t val32 = mask;
+    val32 = (val32 << 16) | val;
+    reg_io->Write32(val32, offset);
+  }
+};
+
+class ForceWakeStatus : public hwreg::RegisterBase<ForceWakeStatus, uint32_t> {
+ public:
+  DEF_FIELD(15, 0, status);
+
+  static constexpr uint32_t kRenderStatusOffset = 0xD84;
+  static constexpr uint32_t kGen9MediaStatusOffset = 0xD88;
+  static constexpr uint32_t kGen12Vdbox0StatusOffset = 0xD50;
+
+  static ForceWakeStatus GetRender(MsdIntelRegisterIo* register_io) {
+    return hwreg::RegisterAddr<ForceWakeStatus>(kRenderStatusOffset).ReadFrom(register_io);
+  }
+  static ForceWakeStatus GetGen9Media(MsdIntelRegisterIo* register_io) {
+    return hwreg::RegisterAddr<ForceWakeStatus>(kGen9MediaStatusOffset).ReadFrom(register_io);
+  }
+  static ForceWakeStatus GetGen12Vdbox0(MsdIntelRegisterIo* register_io) {
+    return hwreg::RegisterAddr<ForceWakeStatus>(kGen12Vdbox0StatusOffset).ReadFrom(register_io);
   }
 };
 

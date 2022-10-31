@@ -5,7 +5,7 @@
 #ifndef FORCEWAKE_H
 #define FORCEWAKE_H
 
-#include <thread>
+#include <optional>
 
 #include "magma_util/macros.h"
 #include "msd_intel_register_io.h"
@@ -13,41 +13,48 @@
 
 class ForceWake {
  public:
-  static void reset(MsdIntelRegisterIo* reg_io, registers::ForceWake::Domain domain) {
-    registers::ForceWake::reset(reg_io, domain);
+  ForceWake(MsdIntelRegisterIo* register_io, uint32_t device_id);
+
+  registers::ForceWakeStatus* get_status_register(ForceWakeDomain domain) {
+    switch (domain) {
+      case ForceWakeDomain::RENDER:
+        return status_render_ ? &(*status_render_) : nullptr;
+      case ForceWakeDomain::GEN9_MEDIA:
+        return status_gen9_media_ ? &(*status_gen9_media_) : nullptr;
+      case ForceWakeDomain::GEN12_VDBOX0:
+        return status_gen12_vdbox0_ ? &(*status_gen12_vdbox0_) : nullptr;
+    }
   }
 
-  static void request(MsdIntelRegisterIo* reg_io, registers::ForceWake::Domain domain) {
-    if (registers::ForceWake::read_status(reg_io, domain) & (1 << kThreadShift))
-      return;
-    DLOG("forcewake request");
-    registers::ForceWake::write(reg_io, domain, 1 << kThreadShift, 1 << kThreadShift);
-    wait(reg_io, domain, true);
+  bool is_active_cached(ForceWakeDomain domain) {
+    return (get_status_register(domain)->status() & (1 << kThreadShift)) != 0;
   }
 
-  static void release(MsdIntelRegisterIo* reg_io, registers::ForceWake::Domain domain) {
-    if ((registers::ForceWake::read_status(reg_io, domain) & (1 << kThreadShift)) == 0)
-      return;
-    DLOG("forcewake release");
-    registers::ForceWake::write(reg_io, domain, 1 << kThreadShift, 0);
-    wait(reg_io, domain, false);
+  static uint32_t get_request_offset(ForceWakeDomain domain) {
+    switch (domain) {
+      case ForceWakeDomain::RENDER:
+        return registers::ForceWakeRequest::kRenderOffset;
+      case ForceWakeDomain::GEN9_MEDIA:
+        return registers::ForceWakeRequest::kGen9MediaOffset;
+      case ForceWakeDomain::GEN12_VDBOX0:
+        return registers::ForceWakeRequest::kGen12Vdbox0Offset;
+    }
   }
+
+  bool IsActive(MsdIntelRegisterIo* reg_io, ForceWakeDomain domain);
+  bool Reset(MsdIntelRegisterIo* reg_io, ForceWakeDomain domain);
+  bool Request(MsdIntelRegisterIo* reg_io, ForceWakeDomain domain);
+  bool Release(MsdIntelRegisterIo* reg_io, ForceWakeDomain domain);
 
   static constexpr uint32_t kThreadShift = 0;
   static constexpr uint32_t kRetryMaxMs = 3;
 
  private:
-  static void wait(MsdIntelRegisterIo* reg_io, registers::ForceWake::Domain domain, bool set) {
-    uint32_t status;
-    for (unsigned int ms = 0; ms < kRetryMaxMs; ms++) {
-      status = registers::ForceWake::read_status(reg_io, domain);
-      if (((status >> kThreadShift) & 1) == (set ? 1 : 0))
-        return;
-      std::this_thread::sleep_for(std::chrono::milliseconds(1));
-      DLOG("forcewake wait retrying");
-    }
-    DLOG("timed out waiting for forcewake, status 0x%x", status);
-  }
+  bool Wait(MsdIntelRegisterIo* register_io, ForceWakeDomain domain, bool set);
+
+  std::optional<registers::ForceWakeStatus> status_render_;
+  std::optional<registers::ForceWakeStatus> status_gen9_media_;
+  std::optional<registers::ForceWakeStatus> status_gen12_vdbox0_;
 };
 
 #endif  // FORCEWAKE_H

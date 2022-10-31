@@ -202,7 +202,9 @@ bool MsdIntelDevice::BaseInit(void* device_handle) {
   if (!mmio)
     return DRETF(false, "failed to map pci bar 0");
 
-  register_io_ = std::make_unique<MsdIntelRegisterIo>(std::move(mmio));
+  register_io_ = std::make_unique<MsdIntelRegisterIo>(this, std::move(mmio), device_id_);
+
+  forcewake_ = std::make_unique<ForceWake>(register_io_.get(), device_id_);
 
   HardwarePreinit();
 
@@ -256,15 +258,15 @@ bool MsdIntelDevice::HardwarePreinit() {
   // TODO(fxbug.dev/79999): request and release forcewake as needed. For now we always hold
   // forcewake for the engines we support, however on some hardware (eg gen12) this prevents
   // the GPU from reaching max frequency.
-  ForceWake::reset(register_io(), registers::ForceWake::RENDER);
-  ForceWake::request(register_io(), registers::ForceWake::RENDER);
+  forcewake_->Reset(register_io(), ForceWakeDomain::RENDER);
+  forcewake_->Request(register_io(), ForceWakeDomain::RENDER);
 
   if (DeviceId::is_gen12(device_id_)) {
-    ForceWake::reset(register_io(), registers::ForceWake::GEN12_VDBOX0);
-    ForceWake::request(register_io(), registers::ForceWake::GEN12_VDBOX0);
+    forcewake_->Reset(register_io(), ForceWakeDomain::GEN12_VDBOX0);
+    forcewake_->Request(register_io(), ForceWakeDomain::GEN12_VDBOX0);
   } else if (DeviceId::is_gen9(device_id_)) {
-    ForceWake::reset(register_io(), registers::ForceWake::GEN9_MEDIA);
-    ForceWake::request(register_io(), registers::ForceWake::GEN9_MEDIA);
+    forcewake_->Reset(register_io(), ForceWakeDomain::GEN9_MEDIA);
+    forcewake_->Request(register_io(), ForceWakeDomain::GEN9_MEDIA);
   }
 
   if (DeviceId::is_gen12(device_id_)) {

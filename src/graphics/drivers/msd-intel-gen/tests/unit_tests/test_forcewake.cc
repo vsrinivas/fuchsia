@@ -11,29 +11,39 @@
 #include "platform_mmio.h"
 #include "registers.h"
 
-class TestForceWake : public testing::TestWithParam<registers::ForceWake::Domain> {
+namespace {
+struct TestParam {
+  ForceWakeDomain domain;
+  uint32_t device_id;
+};
+}  // namespace
+
+class TestForceWake : public testing::TestWithParam<TestParam> {
  public:
-  TestForceWake() : domain_(GetParam()) {
+  void SetUp() override {
+    domain_ = GetParam().domain;
     switch (domain_) {
-      case registers::ForceWake::RENDER:
-        offset_ = registers::ForceWake::kRenderOffset;
-        status_offset_ = registers::ForceWake::kRenderStatusOffset;
+      case ForceWakeDomain::RENDER:
+        offset_ = registers::ForceWakeRequest::kRenderOffset;
+        status_offset_ = registers::ForceWakeStatus::kRenderStatusOffset;
         break;
-      case registers::ForceWake::GEN9_MEDIA:
-        offset_ = registers::ForceWake::kGen9MediaOffset;
-        status_offset_ = registers::ForceWake::kGen9MediaStatusOffset;
+      case ForceWakeDomain::GEN9_MEDIA:
+        offset_ = registers::ForceWakeRequest::kGen9MediaOffset;
+        status_offset_ = registers::ForceWakeStatus::kGen9MediaStatusOffset;
         break;
-      case registers::ForceWake::GEN12_VDBOX0:
-        offset_ = registers::ForceWake::kGen12Vdbox0Offset;
-        status_offset_ = registers::ForceWake::kGen12Vdbox0StatusOffset;
+      case ForceWakeDomain::GEN12_VDBOX0:
+        offset_ = registers::ForceWakeRequest::kGen12Vdbox0Offset;
+        status_offset_ = registers::ForceWakeStatus::kGen12Vdbox0StatusOffset;
         break;
     }
 
     register_io_ = std::make_unique<MsdIntelRegisterIo>(MockMmio::Create(2 * 1024 * 1024));
+    forcewake_ = std::make_unique<ForceWake>(register_io_.get(), GetParam().device_id);
   }
 
   std::unique_ptr<MsdIntelRegisterIo> register_io_;
-  registers::ForceWake::Domain domain_;
+  ForceWakeDomain domain_;
+  std::unique_ptr<ForceWake> forcewake_;
   uint32_t offset_;
   uint32_t status_offset_;
 };
@@ -41,7 +51,7 @@ class TestForceWake : public testing::TestWithParam<registers::ForceWake::Domain
 TEST_P(TestForceWake, Reset) {
   register_io_->mmio()->Write32(0, offset_);
 
-  ForceWake::reset(register_io_.get(), domain_);
+  ASSERT_TRUE(forcewake_->Reset(register_io_.get(), domain_));
 
   EXPECT_EQ(0xFFFF0000, register_io_->mmio()->Read32(offset_));
 }
@@ -51,7 +61,8 @@ TEST_P(TestForceWake, Request) {
 
   // Verify timeout waiting for status
   auto start = std::chrono::high_resolution_clock::now();
-  ForceWake::request(register_io_.get(), domain_);
+  ASSERT_FALSE(forcewake_->Request(register_io_.get(), domain_));
+
   auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> elapsed = end - start;
 
@@ -64,7 +75,8 @@ TEST_P(TestForceWake, Release) {
 
   // Verify timeout waiting for status
   auto start = std::chrono::high_resolution_clock::now();
-  ForceWake::release(register_io_.get(), domain_);
+  ASSERT_FALSE(forcewake_->Release(register_io_.get(), domain_));
+
   auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> elapsed = end - start;
 
@@ -72,19 +84,24 @@ TEST_P(TestForceWake, Release) {
   EXPECT_GE(elapsed.count(), ForceWake::kRetryMaxMs);
 }
 
-INSTANTIATE_TEST_SUITE_P(TestForceWake, TestForceWake,
-                         testing::Values(registers::ForceWake::RENDER,
-                                         registers::ForceWake::GEN9_MEDIA,
-                                         registers::ForceWake::GEN12_VDBOX0),
-                         [](testing::TestParamInfo<registers::ForceWake::Domain> info) {
-                           switch (info.param) {
-                             case registers::ForceWake::RENDER:
-                               return "RENDER";
-                             case registers::ForceWake::GEN9_MEDIA:
-                               return "GEN9_MEDIA";
-                             case registers::ForceWake::GEN12_VDBOX0:
-                               return "GEN12_VDBOX0";
-                             default:
-                               return "Unknown";
-                           }
-                         });
+static constexpr uint32_t kGen9DeviceId = 0x5916;
+static constexpr uint32_t kGen12DeviceId = 0x9A49;
+
+INSTANTIATE_TEST_SUITE_P(
+    TestForceWake, TestForceWake,
+    testing::Values(TestParam{.domain = ForceWakeDomain::RENDER, .device_id = kGen12DeviceId},
+                    TestParam{.domain = ForceWakeDomain::GEN9_MEDIA, .device_id = kGen9DeviceId},
+                    TestParam{.domain = ForceWakeDomain::GEN12_VDBOX0,
+                              .device_id = kGen12DeviceId}),
+    [](testing::TestParamInfo<TestParam> info) {
+      switch (info.param.domain) {
+        case ForceWakeDomain::RENDER:
+          return "RENDER";
+        case ForceWakeDomain::GEN9_MEDIA:
+          return "GEN9_MEDIA";
+        case ForceWakeDomain::GEN12_VDBOX0:
+          return "GEN12_VDBOX0";
+        default:
+          return "Unknown";
+      }
+    });

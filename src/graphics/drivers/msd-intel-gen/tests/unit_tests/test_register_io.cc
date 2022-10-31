@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <map>
+
 #include <gtest/gtest.h>
 
 #include "hwreg/bitfields.h"
 #include "mock/mock_mmio.h"
 #include "msd_intel_register_io.h"
+#include "registers.h"
 
 class TestMsdIntelRegisterIo : public testing::Test {
  public:
@@ -111,3 +114,96 @@ TEST_F(TestMsdIntelRegisterIo, RegisterRead64) {
     EXPECT_EQ(kExpected, reg_b.reg_value());
   }
 }
+
+namespace {
+struct TestParam {
+  ForceWakeDomain domain;
+  uint32_t mmio_base;
+};
+}  // namespace
+
+class TestMsdIntelRegisterIoForceWake : public testing::TestWithParam<TestParam>,
+                                        public MsdIntelRegisterIo::Owner {
+ public:
+  bool IsForceWakeDomainActive(ForceWakeDomain domain) override {
+    domain_check_counts_[domain]++;
+    return true;
+  }
+
+  static constexpr uint32_t kGen12DeviceId = 0x9A49;
+  static constexpr uint32_t kGen12MmioSize = 0x200000;  // big enough
+
+  std::map<ForceWakeDomain, uint32_t> domain_check_counts_;
+};
+
+TEST_P(TestMsdIntelRegisterIoForceWake, ForceWakeDomainCheck) {
+  auto param = GetParam();
+
+  auto register_io =
+      std::make_unique<MsdIntelRegisterIo>(this, MockMmio::Create(kGen12MmioSize), kGen12DeviceId);
+
+  EXPECT_EQ(0u, domain_check_counts_[param.domain]);
+
+  uint32_t expected_count = 0;
+
+  // Not in gen12 forcewake ranges
+  register_io->Read32(0x1000);
+  EXPECT_EQ(expected_count, domain_check_counts_[param.domain]);
+  register_io->Read32(0x10000);
+  EXPECT_EQ(expected_count, domain_check_counts_[param.domain]);
+  register_io->Read32(0x1CD000);
+  EXPECT_EQ(expected_count, domain_check_counts_[param.domain]);
+
+  // Domain specific lowest
+  switch (param.domain) {
+    case ForceWakeDomain::RENDER:
+      register_io->Read32(0x2000);
+      break;
+    case ForceWakeDomain::GEN12_VDBOX0:
+      register_io->Read32(0x20000);
+      break;
+    default:
+      ASSERT_TRUE(false);
+  }
+  EXPECT_EQ(++expected_count, domain_check_counts_[param.domain]);
+
+  // Domain specific highest
+  switch (param.domain) {
+    case ForceWakeDomain::RENDER:
+      register_io->Read32(0x1BFFC);
+      break;
+    case ForceWakeDomain::GEN12_VDBOX0:
+      register_io->Read32(0x1CCFFC);
+      break;
+    default:
+      ASSERT_TRUE(false);
+  }
+  EXPECT_EQ(++expected_count, domain_check_counts_[param.domain]);
+
+  // Common register read
+  register_io->Read32(param.mmio_base + registers::Timestamp::kOffset);
+  EXPECT_EQ(++expected_count, domain_check_counts_[param.domain]);
+
+  // Common register write
+  register_io->Write32(0, param.mmio_base + registers::Timestamp::kOffset);
+  EXPECT_EQ(++expected_count, domain_check_counts_[param.domain]);
+
+  // 64-bit register read (ExecListStatusGen12)
+  register_io->Read64(param.mmio_base + 0x234);
+  EXPECT_EQ(++expected_count, domain_check_counts_[param.domain]);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    TestMsdIntelRegisterIoForceWake, TestMsdIntelRegisterIoForceWake,
+    testing::Values(TestParam{.domain = ForceWakeDomain::RENDER, .mmio_base = 0x2000},
+                    TestParam{.domain = ForceWakeDomain::GEN12_VDBOX0, .mmio_base = 0x1C0000}),
+    [](testing::TestParamInfo<TestParam> info) {
+      switch (info.param.domain) {
+        case ForceWakeDomain::RENDER:
+          return "RENDER";
+        case ForceWakeDomain::GEN12_VDBOX0:
+          return "GEN12_VDBOX0";
+        default:
+          return "Unknown";
+      }
+    });
