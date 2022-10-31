@@ -43,9 +43,6 @@ type FfxInstanceOptions struct {
 	// The path to the ffx binary. Empty string means that the default ffx
 	// binary in the host out directory will be used.
 	FfxBinPath string
-	// The path to the ssh private key that should be used to access the target.
-	// If unset, defaults to the key for the fuchsia checkout (//.ssh/pkey).
-	HostPathSshKey string
 }
 
 // GetFfxPath returns the absolute path to the ffx binary.
@@ -72,13 +69,9 @@ func NewFfxInstance(
 		ffx = path
 	}
 
-	sshKey := options.HostPathSshKey
-	if sshKey == "" {
-		defaultSshKey, err := util.DutSshKeyPath()
-		if err != nil {
-			return nil, fmt.Errorf("DutSshKeyPath() = %w", err)
-		}
-		sshKey = defaultSshKey
+	sshKey, err := util.DutSshKeyPath()
+	if err != nil {
+		return nil, fmt.Errorf("util.DutSshKeyPath() = %w", err)
 	}
 
 	fmt.Printf("os.Environ() = %s\n", os.Environ())

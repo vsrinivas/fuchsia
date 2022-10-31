@@ -19,16 +19,12 @@ if (is_host) {
   host_test_data("dut_ssh_key") {
     sources = [ "//.ssh/pkey" ]
 
-    # TODO(https://fxbug.dev/112513): rm in_tree path component once
-    # soft-transition has occurred.
-    outputs = [ "${root_out_dir}/ssh_keys/in_tree/dut_ssh_key" ]
+    outputs = [ "${root_out_dir}/ssh_keys/dut_ssh_key" ]
   }
 
   host_test_data("dut_authorized_keys") {
     sources = [ "//.ssh/authorized_keys" ]
 
-    # TODO(https://fxbug.dev/112513): rm in_tree path component once
-    # soft-transition has occurred.
-    outputs = [ "${root_out_dir}/ssh_keys/in_tree/dut_authorized_keys" ]
+    outputs = [ "${root_out_dir}/ssh_keys/dut_authorized_keys" ]
   }
 }

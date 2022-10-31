@@ -29,10 +29,6 @@ type QemuInstanceArgs struct {
 	Initrd string
 	// The root_out_dir for the host toolchain, e.g. /.../out/default/host_x64
 	HostX64Path string
-	// The filepath of the authorized_keys file that should be provisioned with the QEMU
-	// instance. If unset, defaults to the fuchsia checkout's authorized_keys file
-	// (//.ssh/authorized_keys).
-	HostPathAuthorizedKeys string
 	// The network devices that should be added to the QEMU instance, i.e. any tap interfaces
 	// that it should be using.
 	NetworkDevices []*fvdpb.Netdev
@@ -81,14 +77,9 @@ func NewQemuInstance(
 		SourceRootRelativeDir,
 	)
 
-	authorizedKeysPath := args.HostPathAuthorizedKeys
-
-	if authorizedKeysPath == "" {
-		defaultAuthorizedKeysPath, err := util.DutAuthorizedKeysPath()
-		if err != nil {
-			return nil, fmt.Errorf("couldn't generate dut authorized keys path: %w", err)
-		}
-		authorizedKeysPath = defaultAuthorizedKeysPath
+	authorizedKeysPath, err := util.DutAuthorizedKeysPath()
+	if err != nil {
+		return nil, fmt.Errorf("util.DutAuthorizedKeysPath() = %w", err)
 	}
 
 	i, err := distro.CreateContextWithAuthorizedKeys(

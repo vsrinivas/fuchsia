@@ -34,9 +34,7 @@ func DutSshKeyPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	// TODO(https://fxbug.dev/112513): rm in_tree path component once
-	// soft-transition has occurred.
-	keyFilepath := filepath.Join(hostOutDir, "ssh_keys", "in_tree", "dut_ssh_key")
+	keyFilepath := filepath.Join(hostOutDir, "ssh_keys", "dut_ssh_key")
 	fileExists, err := osmisc.FileExists(keyFilepath)
 	if err != nil {
 		return "", fmt.Errorf("osmisc.FileExists(%q) = %w", keyFilepath, err)
@@ -52,9 +50,7 @@ func DutAuthorizedKeysPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	// TODO(https://fxbug.dev/112513): rm in_tree path component once
-	// soft-transition has occurred.
-	authorizedKeysFilepath := filepath.Join(hostOutDir, "ssh_keys", "in_tree", "dut_authorized_keys")
+	authorizedKeysFilepath := filepath.Join(hostOutDir, "ssh_keys", "dut_authorized_keys")
 	fileExists, err := osmisc.FileExists(authorizedKeysFilepath)
 	if err != nil {
 		return "", fmt.Errorf("osmisc.FileExists(%q) = %w", authorizedKeysFilepath, err)
