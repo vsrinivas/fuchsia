@@ -312,7 +312,7 @@ GraphServer::GraphServer(Args args)
 
 void GraphServer::CreateProducer(CreateProducerRequestView request,
                                  CreateProducerCompleter::Sync& completer) {
-  TRACE_DURATION("audio", "Graph:::CreateProducer");
+  TRACE_DURATION("audio", "Graph::CreateProducer");
   ScopedThreadChecker checker(thread().checker());
 
   if (!request->has_direction() || !request->has_data_source()) {
@@ -392,7 +392,7 @@ void GraphServer::CreateProducer(CreateProducerRequestView request,
 
 void GraphServer::CreateConsumer(CreateConsumerRequestView request,
                                  CreateConsumerCompleter::Sync& completer) {
-  TRACE_DURATION("audio", "Graph:::CreateConsumer");
+  TRACE_DURATION("audio", "Graph::CreateConsumer");
   ScopedThreadChecker checker(thread().checker());
 
   if (!request->has_direction() || !request->has_data_source() || !request->has_thread()) {
@@ -443,8 +443,7 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
     const auto client = std::make_shared<StreamSinkClient>(StreamSinkClient::Args{
         .format = *format,
         .frames_per_packet = frames_per_packet,
-        .client =
-            fidl::WireSharedClient(std::move(stream_sink.client_end()), thread().dispatcher()),
+        .client_end = std::move(stream_sink.client_end()),
         .payload_buffers = {{0, std::move(result.value().payload_buffer)}},
         .recycled_packet_queue = packet_queue,
         .thread = thread_ptr(),
@@ -511,7 +510,7 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
 
 void GraphServer::CreateMixer(CreateMixerRequestView request,
                               CreateMixerCompleter::Sync& completer) {
-  TRACE_DURATION("audio", "Graph:::CreateMixer");
+  TRACE_DURATION("audio", "Graph::CreateMixer");
   ScopedThreadChecker checker(thread().checker());
 
   if (!request->has_direction() || !request->has_dest_format() ||
@@ -575,7 +574,7 @@ void GraphServer::CreateMixer(CreateMixerRequestView request,
 
 void GraphServer::CreateSplitter(CreateSplitterRequestView request,
                                  CreateSplitterCompleter::Sync& completer) {
-  TRACE_DURATION("audio", "Graph:::CreateSplitter");
+  TRACE_DURATION("audio", "Graph::CreateSplitter");
   ScopedThreadChecker checker(thread().checker());
 
   if (!request->has_direction() || !request->has_format() || !request->has_thread() ||
@@ -627,7 +626,7 @@ void GraphServer::CreateSplitter(CreateSplitterRequestView request,
 
 void GraphServer::CreateCustom(CreateCustomRequestView request,
                                CreateCustomCompleter::Sync& completer) {
-  TRACE_DURATION("audio", "Graph:::CreateCustom");
+  TRACE_DURATION("audio", "Graph::CreateCustom");
   ScopedThreadChecker checker(thread().checker());
 
   if (!request->has_reference_clock() || !request->has_direction() || !request->has_config()) {
@@ -687,7 +686,7 @@ void GraphServer::CreateCustom(CreateCustomRequestView request,
 }
 
 void GraphServer::DeleteNode(DeleteNodeRequestView request, DeleteNodeCompleter::Sync& completer) {
-  TRACE_DURATION("audio", "Graph:::DeleteNode");
+  TRACE_DURATION("audio", "Graph::DeleteNode");
   ScopedThreadChecker checker(thread().checker());
 
   if (!request->has_id()) {
@@ -712,7 +711,7 @@ void GraphServer::DeleteNode(DeleteNodeRequestView request, DeleteNodeCompleter:
 }
 
 void GraphServer::CreateEdge(CreateEdgeRequestView request, CreateEdgeCompleter::Sync& completer) {
-  TRACE_DURATION("audio", "Graph:::CreateEdge");
+  TRACE_DURATION("audio", "Graph::CreateEdge");
   ScopedThreadChecker checker(thread().checker());
 
   if (!request->has_source_id()) {
@@ -761,7 +760,7 @@ void GraphServer::CreateEdge(CreateEdgeRequestView request, CreateEdgeCompleter:
 }
 
 void GraphServer::DeleteEdge(DeleteEdgeRequestView request, DeleteEdgeCompleter::Sync& completer) {
-  TRACE_DURATION("audio", "Graph:::DeleteEdge");
+  TRACE_DURATION("audio", "Graph::DeleteEdge");
   ScopedThreadChecker checker(thread().checker());
 
   if (!request->has_source_id()) {
@@ -804,7 +803,7 @@ void GraphServer::DeleteEdge(DeleteEdgeRequestView request, DeleteEdgeCompleter:
 
 void GraphServer::CreateThread(CreateThreadRequestView request,
                                CreateThreadCompleter::Sync& completer) {
-  TRACE_DURATION("audio", "Graph:::CreateThread");
+  TRACE_DURATION("audio", "Graph::CreateThread");
   ScopedThreadChecker checker(thread().checker());
 
   if (!request->has_period() || !request->has_cpu_per_period()) {
@@ -841,7 +840,7 @@ void GraphServer::CreateThread(CreateThreadRequestView request,
 
 void GraphServer::DeleteThread(DeleteThreadRequestView request,
                                DeleteThreadCompleter::Sync& completer) {
-  TRACE_DURATION("audio", "Graph:::DeleteThread");
+  TRACE_DURATION("audio", "Graph::DeleteThread");
   ScopedThreadChecker checker(thread().checker());
 
   if (!request->has_id()) {
@@ -876,7 +875,7 @@ void GraphServer::DeleteThread(DeleteThreadRequestView request,
 
 void GraphServer::CreateGainControl(CreateGainControlRequestView request,
                                     CreateGainControlCompleter::Sync& completer) {
-  TRACE_DURATION("audio", "Graph:::CreateGainControl");
+  TRACE_DURATION("audio", "Graph::CreateGainControl");
 
   if (!request->has_control() || !request->has_reference_clock()) {
     FX_LOGS(WARNING) << "CreateGainControl: missing field";
@@ -912,7 +911,7 @@ void GraphServer::CreateGainControl(CreateGainControlRequestView request,
 
 void GraphServer::DeleteGainControl(DeleteGainControlRequestView request,
                                     DeleteGainControlCompleter::Sync& completer) {
-  TRACE_DURATION("audio", "Graph:::DeleteGainControl");
+  TRACE_DURATION("audio", "Graph::DeleteGainControl");
 
   if (!request->has_id()) {
     FX_LOGS(WARNING) << "DeleteGainControl: missing `id` field";
@@ -940,7 +939,7 @@ void GraphServer::DeleteGainControl(DeleteGainControlRequestView request,
 
 void GraphServer::CreateGraphControlledReferenceClock(
     CreateGraphControlledReferenceClockCompleter::Sync& completer) {
-  TRACE_DURATION("audio", "Graph:::CreateGraphControlledReferenceClock");
+  TRACE_DURATION("audio", "Graph::CreateGraphControlledReferenceClock");
   ScopedThreadChecker checker(thread().checker());
 
   auto name = std::string("GraphControlledClock") + std::to_string(num_graph_controlled_clocks_);
@@ -1122,6 +1121,16 @@ void GraphServer::Stop(StopRequestView request, StopCompleter::Sync& completer) 
   } else {
     static_cast<ProducerNode*>(node.get())->Stop(std::move(cmd));
   }
+}
+
+void GraphServer::BindProducerLeadTimeWatcher(
+    BindProducerLeadTimeWatcherRequestView request,
+    BindProducerLeadTimeWatcherCompleter::Sync& completer) {
+  TRACE_DURATION("audio", "Graph::BindProducerLeadTimeWatcher");
+  ScopedThreadChecker checker(thread().checker());
+
+  // TODO(fxbug.dev/87651): implement
+  FX_LOGS(FATAL) << "not implemented";
 }
 
 void GraphServer::OnShutdown(fidl::UnbindInfo info) {

@@ -1,0 +1,18 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.audio;
+
+using zx;
+
+/// Watches for a delay to change.
+protocol DelayWatcher {
+    /// The first call returns immediately with the current delay, if known.
+    /// Subsequent calls block until the delay changes. There can be at most one
+    /// outstanding call, otherwise the channel may be closed.
+    WatchDelay(table {}) -> (table {
+        /// Optional. If not specified, the delay is unknown.
+        1: delay zx.duration;
+    });
+};

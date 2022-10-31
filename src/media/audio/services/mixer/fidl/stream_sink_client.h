@@ -33,7 +33,7 @@ class StreamSinkClient : public std::enable_shared_from_this<StreamSinkClient> {
     int64_t frames_per_packet;
 
     // FIDL handle.
-    fidl::WireSharedClient<fuchsia_media2::StreamSink> client;
+    fidl::ClientEnd<fuchsia_media2::StreamSink> client_end;
 
     // Payload buffers available to this StreamSink, indexed by buffer ID.
     // Each buffer must be large enough to fit at least one packet.

@@ -22,6 +22,10 @@ source_set("fidl") {
     "consumer_node.h",
     "custom_node.cc",
     "custom_node.h",
+    "delay_watcher_client.cc",
+    "delay_watcher_client.h",
+    "delay_watcher_server.cc",
+    "delay_watcher_server.h",
     "gain_control_server.cc",
     "gain_control_server.h",
     "graph_creator_server.cc",
@@ -80,6 +84,8 @@ executable("fidl_unittests") {
     "clock_registry_unittest.cc",
     "consumer_node_unittest.cc",
     "custom_node_unittest.cc",
+    "delay_watcher_client_unittest.cc",
+    "delay_watcher_server_unittest.cc",
     "gain_control_server_unittest.cc",
     "graph_creator_server_unittest.cc",
     "graph_server_unittest.cc",
@@ -109,6 +115,7 @@ executable("fidl_unittests") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/async-loop/testing:async-loop-testing",
+    "//zircon/system/ulib/async-testing",
     "//zircon/system/ulib/sync:sync-cpp",
   ]
 }

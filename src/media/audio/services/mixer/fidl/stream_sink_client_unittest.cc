@@ -51,7 +51,7 @@ TestHarness MakeTestHarness(
   h.client = std::make_shared<StreamSinkClient>(StreamSinkClient::Args{
       .format = kFormat,
       .frames_per_packet = kFramesPerPacket,
-      .client = fidl::WireSharedClient(std::move(h.endpoints.client), h.thread->dispatcher()),
+      .client_end = std::move(h.endpoints.client),
       .payload_buffers = std::move(h.payload_buffers),
       .recycled_packet_queue = h.recycled_packet_queue,
       .thread = h.thread,

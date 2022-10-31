@@ -12,7 +12,7 @@ StreamSinkClient::StreamSinkClient(Args args)
     : payload_buffers_(std::move(args.payload_buffers)),
       recycled_packet_queue_(std::move(args.recycled_packet_queue)),
       thread_(std::move(args.thread)),
-      client_(std::move(args.client)) {
+      client_(fidl::WireSharedClient(std::move(args.client_end), thread_->dispatcher())) {
   // TODO(fxbug.dev/87651): need to fail gracefully when these parameters come from a client
   FX_CHECK(args.frames_per_packet > 0);
 

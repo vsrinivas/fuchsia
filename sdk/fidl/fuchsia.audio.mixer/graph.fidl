@@ -177,6 +177,13 @@ protocol Graph {
         ///
         /// Required.
         3: data_source ProducerDataSource;
+
+        /// If the `direction` is INPUT, this must be specified. This reports
+        /// the maximum delay between when a frame is captured at an input
+        /// microphone and when that frame is available at this producer.
+        ///
+        /// If `direction` is OUTPUT, this must be empty.
+        4: external_delay_watcher ExternalDelayWatcher;
     }) -> (table {
         /// ID of the newly-created node. Guaranteed to be unique.
         1: id NodeId;
@@ -217,6 +224,13 @@ protocol Graph {
         ///
         /// Required.
         4: thread ThreadId;
+
+        /// If `direction` is OUTPUT, this must be specified. This reports the
+        /// delay between when a frame is written by this consumer and when that
+        /// frame is rendered at its final destination (such as a speaker).
+        ///
+        /// If `direction` is INPUT, this must be empty.
+        5: external_delay_watcher ExternalDelayWatcher;
     }) -> (table {
         /// ID of the newly-created node. Guaranteed to be unique.
         1: id NodeId;
@@ -595,7 +609,19 @@ protocol Graph {
         4: packet_timestamp int64;
     }) error StopError;
 
-    // TODO(fxbug.dev/87651): Watch method to observe delay (aka lead time) of a node
+    /// Reports a producer's lead time. In output pipelines, a producer's lead
+    /// time defines how early an audio frame must be received in order for that
+    /// frame to be presented on time. If a client wishes to present an audio
+    /// frame at time T, that frame must be delivered to this producer by time
+    /// `T - LeadTime`.
+    BindProducerLeadTimeWatcher(resource table {
+        /// ID of a node that was created with CreateProducer. The producer must
+        /// have `direction == OUTPUT`.
+        1: id NodeId;
+
+        /// Channel to serve updates.
+        2: server_end server_end:fuchsia.audio.DelayWatcher;
+    }) -> () error BindProducerLeadTimeWatcherError;
 };
 
 /// Type of errors return by [`CreateGraph`].
@@ -745,4 +771,10 @@ type StopError = flexible enum {
 
     /// The stream is already stopped.
     ALREADY_STOPPED = 5;
+};
+
+/// Type of errors return by [`BindProducerLeadTimeWatcher`].
+type BindProducerLeadTimeWatcherError = flexible enum {
+    /// The given `id` does not refer to a producer in an OUTPUT pipeline.
+    INVALID_ID = 1;
 };

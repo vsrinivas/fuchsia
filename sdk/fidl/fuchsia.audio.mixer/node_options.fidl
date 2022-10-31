@@ -106,6 +106,22 @@ type ReferenceClock = resource table {
     3: domain fuchsia.hardware.audio.clock_domain;
 };
 
+/// Used to watch for changes in delay from an external source.
+///
+/// If the delay is fixed (it never changes), then `initial_delay` contains the
+/// fixed delay and `client_end` should not be specified.
+///
+/// If the delay is variable, then `initial_delay` contains the initial delay
+/// value (if known) and `client_end` should be queried to watch for updates.
+type ExternalDelayWatcher = resource table {
+    /// The initial delay value. Optional if `client_end` is specified,
+    /// otherwise required.
+    1: initial_delay zx.duration;
+
+    /// A channel to query for delay updates. Optional.
+    2: client_end client_end:fuchsia.audio.DelayWatcher;
+};
+
 /// Return value for CreateCustom.
 type CustomNodeProperties = resource table {
     /// IDs for each source node. See comments at [`Graph.CreateCustom`].

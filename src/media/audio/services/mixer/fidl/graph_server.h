@@ -49,29 +49,28 @@ class GraphServer
 
   // Implementation of fidl::WireServer<fuchsia_audio_mixer::Graph>.
   void CreateProducer(CreateProducerRequestView request,
-                      CreateProducerCompleter::Sync& completer) override;
+                      CreateProducerCompleter::Sync& completer) final;
   void CreateConsumer(CreateConsumerRequestView request,
-                      CreateConsumerCompleter::Sync& completer) override;
-  void CreateMixer(CreateMixerRequestView request, CreateMixerCompleter::Sync& completer) override;
+                      CreateConsumerCompleter::Sync& completer) final;
+  void CreateMixer(CreateMixerRequestView request, CreateMixerCompleter::Sync& completer) final;
   void CreateSplitter(CreateSplitterRequestView request,
-                      CreateSplitterCompleter::Sync& completer) override;
-  void CreateCustom(CreateCustomRequestView request,
-                    CreateCustomCompleter::Sync& completer) override;
-  void DeleteNode(DeleteNodeRequestView request, DeleteNodeCompleter::Sync& completer) override;
-  void CreateEdge(CreateEdgeRequestView request, CreateEdgeCompleter::Sync& completer) override;
-  void DeleteEdge(DeleteEdgeRequestView request, DeleteEdgeCompleter::Sync& completer) override;
-  void CreateThread(CreateThreadRequestView request,
-                    CreateThreadCompleter::Sync& completer) override;
-  void DeleteThread(DeleteThreadRequestView request,
-                    DeleteThreadCompleter::Sync& completer) override;
+                      CreateSplitterCompleter::Sync& completer) final;
+  void CreateCustom(CreateCustomRequestView request, CreateCustomCompleter::Sync& completer) final;
+  void DeleteNode(DeleteNodeRequestView request, DeleteNodeCompleter::Sync& completer) final;
+  void CreateEdge(CreateEdgeRequestView request, CreateEdgeCompleter::Sync& completer) final;
+  void DeleteEdge(DeleteEdgeRequestView request, DeleteEdgeCompleter::Sync& completer) final;
+  void CreateThread(CreateThreadRequestView request, CreateThreadCompleter::Sync& completer) final;
+  void DeleteThread(DeleteThreadRequestView request, DeleteThreadCompleter::Sync& completer) final;
   void CreateGainControl(CreateGainControlRequestView request,
-                         CreateGainControlCompleter::Sync& completer) override;
+                         CreateGainControlCompleter::Sync& completer) final;
   void DeleteGainControl(DeleteGainControlRequestView request,
-                         DeleteGainControlCompleter::Sync& completer) override;
+                         DeleteGainControlCompleter::Sync& completer) final;
   void CreateGraphControlledReferenceClock(
-      CreateGraphControlledReferenceClockCompleter::Sync& completer) override;
-  void Start(StartRequestView request, StartCompleter::Sync& completer) override;
-  void Stop(StopRequestView request, StopCompleter::Sync& completer) override;
+      CreateGraphControlledReferenceClockCompleter::Sync& completer) final;
+  void Start(StartRequestView request, StartCompleter::Sync& completer) final;
+  void Stop(StopRequestView request, StopCompleter::Sync& completer) final;
+  void BindProducerLeadTimeWatcher(BindProducerLeadTimeWatcherRequestView request,
+                                   BindProducerLeadTimeWatcherCompleter::Sync& completer) final;
 
   // Name of this graph.
   // For debugging only: may be empty or not unique.
