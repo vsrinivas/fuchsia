@@ -1426,16 +1426,16 @@ bool DpDisplay::InitDdi() {
     }
   }
 
-  dpcd::LaneAlignStatusUpdate status;
-  if (!DpcdRead(dpcd::DPCD_LANE_ALIGN_STATUS_UPDATED, status.reg_value_ptr(), 1)) {
-    zxlogf(WARNING, "Failed to read align status on hotplug");
-    return false;
-  }
-
-  // If the link is already trained, assume output is working
-  if (status.interlane_align_done()) {
-    return true;
-  }
+  // Note that we always initialize the port and train the links regardless of
+  // the display status.
+  //
+  // It is tempting to avoid port initialization and link training if the
+  // DPCD_INTERLANE_ALIGN_DONE bit of DPCD_LANE_ALIGN_STATUS_UPDATED register
+  // is set to 1.
+  //
+  // One could hope to skip this step when using a connection that has already
+  // been configured by the boot firmware. However, since we reset DDIs, it is
+  // not safe to skip training.
 
   // 3.b. Program DFLEXDPMLE.DPMLETC* to maximum number of lanes allowed as determined by
   // FIA and panel lane count.
