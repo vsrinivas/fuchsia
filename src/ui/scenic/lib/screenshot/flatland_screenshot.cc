@@ -18,6 +18,12 @@ using fuchsia::ui::composition::ScreenCaptureConfig;
 using fuchsia::ui::composition::ScreenCaptureError;
 using screen_capture::ScreenCapture;
 
+namespace {
+
+constexpr uint32_t kBufferIndex = 0;
+
+}  // namespace
+
 namespace screenshot {
 
 FlatlandScreenshot::FlatlandScreenshot(
@@ -157,16 +163,19 @@ void FlatlandScreenshot::Take(fuchsia::ui::composition::ScreenshotTakeRequest fo
 
   // Wait for the frame to render in an async fashion.
   render_wait_ = std::make_shared<async::WaitOnce>(render_event_.get(), ZX_EVENT_SIGNALED);
-  status = render_wait_->Begin(async_get_default_dispatcher(),
-                               [weak_ptr = weak_factory_.GetWeakPtr()](
-                                   async_dispatcher_t*, async::WaitOnce*, zx_status_t status,
-                                   const zx_packet_signal_t*) mutable {
-                                 FX_DCHECK(status == ZX_OK || status == ZX_ERR_CANCELED);
-                                 if (!weak_ptr) {
-                                   return;
-                                 }
-                                 weak_ptr->HandleFrameRender();
-                               });
+  status = render_wait_->Begin(
+      async_get_default_dispatcher(), [weak_ptr = weak_factory_.GetWeakPtr()](
+                                          async_dispatcher_t*, async::WaitOnce*, zx_status_t status,
+                                          const zx_packet_signal_t*) mutable {
+        FX_DCHECK(status == ZX_OK || status == ZX_ERR_CANCELED);
+        if (!weak_ptr) {
+          return;
+        }
+        weak_ptr->HandleFrameRender();
+
+        // Release the buffer to allow for subsequent screenshots.
+        weak_ptr->screen_capturer_->ReleaseFrame(kBufferIndex, [](auto result) {});
+      });
   FX_DCHECK(status == ZX_OK);
 }
 
@@ -176,7 +185,7 @@ void FlatlandScreenshot::HandleFrameRender() {
   fuchsia::ui::composition::ScreenshotTakeResponse response;
 
   zx::vmo response_vmo;
-  zx_status_t status = buffer_collection_info_.buffers[0].vmo.duplicate(
+  zx_status_t status = buffer_collection_info_.buffers[kBufferIndex].vmo.duplicate(
       ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER | ZX_RIGHT_GET_PROPERTY, &response_vmo);
   FX_DCHECK(status == ZX_OK);
 
