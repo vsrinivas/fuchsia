@@ -10,6 +10,7 @@
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace-provider/provider.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/service.h>
 #include <zircon/status.h>
@@ -34,6 +35,7 @@ int main(int argc, char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+  trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
   auto outgoing = component::OutgoingDirectory::Create(loop.dispatcher());
 

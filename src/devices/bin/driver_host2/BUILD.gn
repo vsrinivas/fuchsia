@@ -159,6 +159,7 @@ executable("bin") {
     "//sdk/lib/vfs/cpp",
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/trace-provider",
   ]
 }
 

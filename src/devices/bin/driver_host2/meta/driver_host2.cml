@@ -22,6 +22,10 @@
         {
             protocol: [ "fuchsia.boot.WriteOnlyLog" ],
         },
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
+            availability: "optional",
+        },
     ],
     expose: [
         {
