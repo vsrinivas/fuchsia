@@ -4,5 +4,5 @@
 
 declare_args() {
   # If true, uses the new Rust virtio-net device instead of the legacy C++ device.
-  rust_virtio_net = false
+  rust_virtio_net = true
 }

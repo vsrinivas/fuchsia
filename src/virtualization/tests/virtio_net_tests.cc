@@ -38,6 +38,7 @@ static constexpr fuchsia::hardware::ethernet::MacAddress kSecondNicMacAddress = 
 };
 static constexpr fuchsia::virtualization::NetSpec kSecondNicNetSpec = {
     .mac_address = kSecondNicMacAddress,
+    .enable_bridge = true,
 };
 static constexpr char kDefaultMacString[] = "02:1a:11:00:01:00";
 static constexpr char kSecondNicMacString[] = "02:1a:11:00:01:01";

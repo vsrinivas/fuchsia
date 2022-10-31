@@ -35,6 +35,7 @@
                 "virtio_block",
                 "virtio_console",
                 "virtio_net",
+                "virtio_net_rs",
                 "virtio_rng",
                 "virtio_sound",
                 "virtio_vsock",
