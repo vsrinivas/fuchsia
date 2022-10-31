@@ -1248,7 +1248,7 @@ mod tests {
             buffer::FakeBufferProvider,
             client::{lost_bss::LostBssCounter, test_utils::drain_timeouts},
             device::{FakeDevice, LinkStatus},
-            test_utils::{fake_control_handle, fake_wlan_channel, MockWlanRxInfo},
+            test_utils::{fake_control_handle, MockWlanRxInfo},
             MlmeImpl,
         },
         fidl::endpoints::create_proxy_and_stream,
@@ -1279,6 +1279,11 @@ mod tests {
         0x00, 0x0f, 0xac, 0x02, //  akm suite list
         0xa8, 0x04, //  rsn capabilities
     ];
+    const MAIN_CHANNEL: banjo_common::WlanChannel = banjo_common::WlanChannel {
+        primary: 11,
+        cbw: banjo_common::ChannelBandwidth::CBW20,
+        secondary80: 0,
+    };
     const SCAN_CHANNEL_PRIMARY: u8 = 6;
     // Note: not necessarily valid beacon frame.
     #[rustfmt::skip]
@@ -1325,7 +1330,7 @@ mod tests {
                 FakeBufferProvider::new(),
                 self.timer.take().unwrap(),
             );
-            mlme.set_main_channel(fake_wlan_channel().into()).expect("unable to set main channel");
+            mlme.set_main_channel(MAIN_CHANNEL).expect("unable to set main channel");
             mlme
         }
     }
@@ -1579,7 +1584,11 @@ mod tests {
                 valid_fields: 0,
                 phy: banjo_common::WlanPhyType::DSSS,
                 data_rate: 0,
-                channel: me.channel_state.get_main_channel().unwrap(),
+                channel: banjo_common::WlanChannel {
+                    primary: 11,
+                    cbw: banjo_common::ChannelBandwidth::CBW20,
+                    secondary80: 0,
+                },
                 mcs: 0,
                 rssi_dbm: 0,
                 snr_dbh: 0,
@@ -1898,11 +1907,6 @@ mod tests {
         ][..]);
     }
 
-    fn mock_rx_info<'a>(client: &BoundClient<'a>) -> banjo_wlan_softmac::WlanRxInfo {
-        let channel = client.channel_state.get_main_channel().unwrap();
-        MockWlanRxInfo::with_channel(channel).into()
-    }
-
     #[test]
     fn respond_to_keep_alive_request() {
         #[rustfmt::skip]
@@ -1922,7 +1926,7 @@ mod tests {
         let mut client = me.get_bound_client().expect("client should be present");
         client.move_to_associated_state();
 
-        client.on_mac_frame(&data_frame[..], mock_rx_info(&client));
+        client.on_mac_frame(&data_frame[..], MockWlanRxInfo::default().into());
 
         assert_eq!(m.fake_device.wlan_queue.len(), 1);
         #[rustfmt::skip]
@@ -1951,7 +1955,7 @@ mod tests {
         let mut client = me.get_bound_client().expect("client should be present");
         client.move_to_associated_state();
 
-        client.on_mac_frame(&data_frame[..], mock_rx_info(&client));
+        client.on_mac_frame(&data_frame[..], MockWlanRxInfo::default().into());
 
         assert_eq!(m.fake_device.eth_queue.len(), 1);
         #[rustfmt::skip]
@@ -1977,7 +1981,7 @@ mod tests {
         let mut client = me.get_bound_client().expect("client should be present");
         client.move_to_associated_state();
 
-        client.on_mac_frame(&data_frame[..], mock_rx_info(&client));
+        client.on_mac_frame(&data_frame[..], MockWlanRxInfo::default().into());
 
         let queue = &m.fake_device.eth_queue;
         assert_eq!(queue.len(), 2);
@@ -2013,7 +2017,7 @@ mod tests {
         let mut client = me.get_bound_client().expect("client should be present");
         client.move_to_associated_state();
 
-        client.on_mac_frame(&data_frame[..], mock_rx_info(&client));
+        client.on_mac_frame(&data_frame[..], MockWlanRxInfo::default().into());
 
         let queue = &m.fake_device.eth_queue;
         assert_eq!(queue.len(), 1);
@@ -2042,7 +2046,7 @@ mod tests {
         client.move_to_associated_state();
         client.close_controlled_port(&exec);
 
-        client.on_mac_frame(&data_frame[..], mock_rx_info(&client));
+        client.on_mac_frame(&data_frame[..], MockWlanRxInfo::default().into());
 
         // Verify frame was not sent to netstack.
         assert_eq!(m.fake_device.eth_queue.len(), 0);
@@ -2063,7 +2067,7 @@ mod tests {
         client.move_to_associated_state();
         client.close_controlled_port(&exec);
 
-        client.on_mac_frame(&eapol_frame[..], mock_rx_info(&client));
+        client.on_mac_frame(&eapol_frame[..], MockWlanRxInfo::default().into());
 
         // Verify EAPoL frame was not sent to netstack.
         assert_eq!(m.fake_device.eth_queue.len(), 0);
@@ -2093,7 +2097,7 @@ mod tests {
         let mut client = me.get_bound_client().expect("client should be present");
         client.move_to_associated_state();
 
-        client.on_mac_frame(&eapol_frame[..], mock_rx_info(&client));
+        client.on_mac_frame(&eapol_frame[..], MockWlanRxInfo::default().into());
 
         // Verify EAPoL frame was not sent to netstack.
         assert_eq!(m.fake_device.eth_queue.len(), 0);
@@ -2614,12 +2618,11 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         let (control_handle, _) = fake_control_handle(&exec);
-        let channel = Channel::new(6, Cbw::Cbw40);
         let connect_req = fidl_mlme::ConnectRequest {
             selected_bss: fake_fidl_bss_description!(Open,
                 ssid: Ssid::try_from("ssid").unwrap().into(),
                 bssid: BSSID.0,
-                channel: channel.clone(),
+                channel: Channel::new(6, Cbw::Cbw40),
             ),
             connect_failure_timeout: 100,
             auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
@@ -2672,10 +2675,7 @@ mod tests {
             2, 0, // Txn Sequence Number
             0, 0, // Status Code
         ];
-        me.on_mac_frame_rx(
-            &auth_resp_success[..],
-            MockWlanRxInfo::with_channel(channel.into()).into(),
-        );
+        me.on_mac_frame_rx(&auth_resp_success[..], MockWlanRxInfo::default().into());
 
         // Verify association request frame was went to AP
         assert_eq!(m.fake_device.wlan_queue.len(), 1);
@@ -2731,10 +2731,7 @@ mod tests {
             0xbf, 0x0c, 0x91, 0x59, 0x82, 0x0f, // VHT capabilities info
             0xea, 0xff, 0x00, 0x00, 0xea, 0xff, 0x00, 0x00, // VHT supported MCS set
         ];
-        me.on_mac_frame_rx(
-            &assoc_resp_success[..],
-            MockWlanRxInfo::with_channel(channel.into()).into(),
-        );
+        me.on_mac_frame_rx(&assoc_resp_success[..], MockWlanRxInfo::default().into());
 
         // Verify a successful connect conf is sent
         let msg =
@@ -2770,12 +2767,11 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         let (control_handle, _) = fake_control_handle(&exec);
-        let channel = Channel::new(6, Cbw::Cbw40);
         let connect_req = fidl_mlme::ConnectRequest {
             selected_bss: fake_fidl_bss_description!(Wpa2,
                 ssid: Ssid::try_from("ssid").unwrap().into(),
                 bssid: BSSID.0,
-                channel: channel.clone(),
+                channel: Channel::new(6, Cbw::Cbw40),
             ),
             connect_failure_timeout: 100,
             auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
@@ -2834,10 +2830,7 @@ mod tests {
             2, 0, // Txn Sequence Number
             0, 0, // Status Code
         ];
-        me.on_mac_frame_rx(
-            &auth_resp_success[..],
-            MockWlanRxInfo::with_channel(channel.into()).into(),
-        );
+        me.on_mac_frame_rx(&auth_resp_success[..], MockWlanRxInfo::default().into());
 
         // Verify association request frame was went to AP
         assert_eq!(m.fake_device.wlan_queue.len(), 1);
@@ -2903,10 +2896,7 @@ mod tests {
             0xbf, 0x0c, 0x91, 0x59, 0x82, 0x0f, // VHT capabilities info
             0xea, 0xff, 0x00, 0x00, 0xea, 0xff, 0x00, 0x00, // VHT supported MCS set
         ];
-        me.on_mac_frame_rx(
-            &assoc_resp_success[..],
-            MockWlanRxInfo::with_channel(channel.into()).into(),
-        );
+        me.on_mac_frame_rx(&assoc_resp_success[..], MockWlanRxInfo::default().into());
 
         // Verify a successful connect conf is sent
         let msg =
@@ -2961,12 +2951,11 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         let (control_handle, _) = fake_control_handle(&exec);
-        let channel = Channel::new(36, Cbw::Cbw40);
         let connect_req = fidl_mlme::ConnectRequest {
             selected_bss: fake_fidl_bss_description!(Open,
                 ssid: Ssid::try_from("ssid").unwrap().into(),
                 bssid: BSSID.0,
-                channel: channel.clone(),
+                channel: Channel::new(36, Cbw::Cbw40),
             ),
             connect_failure_timeout: 100,
             auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
@@ -3004,10 +2993,7 @@ mod tests {
             2, 0, // Txn Sequence Number
             0, 0, // Status Code
         ];
-        me.on_mac_frame_rx(
-            &auth_resp_success[..],
-            MockWlanRxInfo::with_channel(channel.into()).into(),
-        );
+        me.on_mac_frame_rx(&auth_resp_success[..], MockWlanRxInfo::default().into());
 
         // Verify association request frame was went to AP
         assert_eq!(m.fake_device.wlan_queue.len(), 1);

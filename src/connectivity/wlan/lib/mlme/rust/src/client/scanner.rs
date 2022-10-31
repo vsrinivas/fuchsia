@@ -507,10 +507,8 @@ mod tests {
     use {
         super::*,
         crate::{
-            buffer::FakeBufferProvider,
-            client::TimedEvent,
-            device::FakeDevice,
-            test_utils::{fake_wlan_channel, MockWlanRxInfo},
+            buffer::FakeBufferProvider, client::TimedEvent, device::FakeDevice,
+            test_utils::MockWlanRxInfo,
         },
         fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync,
         ieee80211::Ssid,
@@ -537,11 +535,8 @@ mod tests {
         0x05, 0x04, 0x00, 0x01, 0x00, 0x02,
     ];
     lazy_static! {
-        static ref RX_INFO_FOO: banjo_wlan_softmac::WlanRxInfo = MockWlanRxInfo {
-            rssi_dbm: -30,
-            ..MockWlanRxInfo::with_channel(fake_wlan_channel().into())
-        }
-        .into();
+        static ref RX_INFO_FOO: banjo_wlan_softmac::WlanRxInfo =
+            MockWlanRxInfo { rssi_dbm: -30, ..Default::default() }.into();
         static ref BSS_DESCRIPTION_FOO: fidl_internal::BssDescription =
             fidl_internal::BssDescription {
                 bssid: BSSID_FOO.0,
@@ -572,11 +567,8 @@ mod tests {
         0x05, 0x04, 0x00, 0x01, 0x00, 0x02,
     ];
     lazy_static! {
-        static ref RX_INFO_BAR: banjo_wlan_softmac::WlanRxInfo = MockWlanRxInfo {
-            rssi_dbm: -60,
-            ..MockWlanRxInfo::with_channel(fake_wlan_channel().into())
-        }
-        .into();
+        static ref RX_INFO_BAR: banjo_wlan_softmac::WlanRxInfo =
+            MockWlanRxInfo { rssi_dbm: -60, ..Default::default() }.into();
         static ref BSS_DESCRIPTION_BAR: fidl_internal::BssDescription =
             fidl_internal::BssDescription {
                 bssid: BSSID_BAR.0,

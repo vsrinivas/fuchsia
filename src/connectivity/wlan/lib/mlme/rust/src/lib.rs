@@ -449,12 +449,8 @@ mod test_utils {
     use {
         super::*, banjo_fuchsia_hardware_wlan_associnfo as banjo_wlan_associnfo,
         banjo_fuchsia_wlan_common as banjo_common, fidl::endpoints::RequestStream,
-        wlan_common::channel,
+        std::default::Default,
     };
-
-    pub(crate) fn fake_wlan_channel() -> channel::Channel {
-        channel::Channel { primary: 1, cbw: channel::Cbw::Cbw20 }
-    }
 
     #[derive(Copy, Clone, Debug)]
     pub struct MockWlanRxInfo {
@@ -468,13 +464,17 @@ mod test_utils {
         pub snr_dbh: i16,
     }
 
-    impl MockWlanRxInfo {
-        pub(crate) fn with_channel(channel: banjo_common::WlanChannel) -> Self {
+    impl Default for MockWlanRxInfo {
+        fn default() -> Self {
             Self {
                 valid_fields: banjo_wlan_associnfo::WlanRxInfoValid::CHAN_WIDTH.0
                     | banjo_wlan_associnfo::WlanRxInfoValid::RSSI.0
                     | banjo_wlan_associnfo::WlanRxInfoValid::SNR.0,
-                channel,
+                channel: banjo_common::WlanChannel {
+                    primary: 1,
+                    cbw: banjo_common::ChannelBandwidth::CBW20,
+                    secondary80: 0,
+                },
                 rssi_dbm: -40,
                 snr_dbh: 35,
 

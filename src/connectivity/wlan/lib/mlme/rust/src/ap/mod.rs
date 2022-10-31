@@ -582,15 +582,6 @@ mod tests {
         ));
     }
 
-    fn mock_rx_info(ap: &Ap) -> banjo_wlan_softmac::WlanRxInfo {
-        let channel = banjo_common::WlanChannel {
-            primary: ap.bss.as_ref().unwrap().channel,
-            cbw: banjo_common::ChannelBandwidth::CBW20,
-            secondary80: 0,
-        };
-        MockWlanRxInfo::with_channel(channel).into()
-    }
-
     #[test]
     fn ap_handle_mac_frame() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
@@ -623,7 +614,7 @@ mod tests {
                 1, 0, // Auth Txn Seq Number
                 0, 0, // Status code
             ][..],
-            mock_rx_info(&ap),
+            MockWlanRxInfo::default().into(),
         );
 
         assert_eq!(ap.bss.as_mut().unwrap().clients.contains_key(&CLIENT_ADDR), true);
@@ -687,7 +678,7 @@ mod tests {
                 2, 2, 2, 2, 2, 2, // BSSID.
                 0x10, 0, // Sequence control.
             ][..],
-            mock_rx_info(&ap),
+            MockWlanRxInfo::default().into(),
         );
 
         ap.handle_eth_frame_tx(&make_eth_frame(
@@ -707,7 +698,7 @@ mod tests {
                 2, 2, 2, 2, 2, 2, // addr1
                 4, 4, 4, 4, 4, 4, // addr2
             ][..],
-            mock_rx_info(&ap),
+            MockWlanRxInfo::default().into(),
         );
 
         assert_eq!(fake_device.wlan_queue.len(), 1);
@@ -760,7 +751,7 @@ mod tests {
                 // Disassoc header:
                 8, 0, // reason code
             ][..],
-            mock_rx_info(&ap),
+            MockWlanRxInfo::default().into(),
         );
 
         assert_eq!(ap.bss.as_mut().unwrap().clients.contains_key(&CLIENT_ADDR), false);

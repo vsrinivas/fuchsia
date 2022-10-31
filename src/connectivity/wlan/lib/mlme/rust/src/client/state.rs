@@ -937,16 +937,8 @@ impl States {
     ) -> States {
         // While scanning, it is normal to receive mac frames from other BSSes. Off-channel frames
         // can be safely ignored since they are handled by the scanner elsewhere.
-        match sta.channel_state.get_main_channel() {
-            Some(main_channel) if main_channel == rx_info.channel => (),
-            Some(_) => return self,
-            None => {
-                error!(
-                    "Received MAC frame on channel {:?} while main channel is not set.",
-                    rx_info.channel
-                );
-                return self;
-            }
+        if sta.scanner.is_scanning() {
+            return self;
         }
 
         let body_aligned =
@@ -1108,7 +1100,17 @@ impl States {
         frame: B,
     ) -> Result<(), Error> {
         match self {
-            States::Associated(state) => state.on_eth_frame(sta, frame),
+            States::Associated(state) if !sta.scanner.is_scanning() => {
+                state.on_eth_frame(sta, frame)
+            }
+            States::Associated(_state) => Err(Error::Status(
+                format!(
+                    "Associated but current channel {:?} != main channel {:?}. Ethernet dropped",
+                    sta.ctx.device.channel(),
+                    sta.channel_state.get_main_channel()
+                ),
+                zx::Status::BAD_STATE,
+            )),
             _ => Err(Error::Status(
                 format!("Not associated. Ethernet dropped"),
                 zx::Status::BAD_STATE,
@@ -1356,9 +1358,7 @@ mod tests {
                 Context, ParsedConnectRequest, TimedEventClass,
             },
             device::{Device, FakeDevice},
-            test_utils::{
-                fake_control_handle, fake_mlme_set_keys_req, fake_wlan_channel, MockWlanRxInfo,
-            },
+            test_utils::{fake_control_handle, fake_mlme_set_keys_req, MockWlanRxInfo},
         },
         akm::AkmAlgorithm,
         banjo_fuchsia_hardware_wlan_associnfo as banjo_wlan_associnfo,
@@ -1402,19 +1402,19 @@ mod tests {
                 timer: Some(timer),
                 time_stream,
                 scanner: Scanner::new(IFACE_MAC),
-                channel_state: ChannelState::new_with_main_channel(fake_wlan_channel().into()),
+                channel_state: ChannelState::new_with_main_channel(fake_wlan_channel()),
             }
         }
 
         fn make_ctx(&mut self) -> Context {
             let device = self.fake_device.as_device();
-            device.set_channel(fake_wlan_channel().into()).expect("fake device is obedient");
+            device.set_channel(fake_wlan_channel()).expect("fake device is obedient");
             self.make_ctx_with_device(device)
         }
 
         fn make_ctx_with_bss(&mut self) -> Context {
             let device = self.fake_device.as_device();
-            device.set_channel(fake_wlan_channel().into()).expect("fake device is obedient");
+            device.set_channel(fake_wlan_channel()).expect("fake device is obedient");
             device
                 .configure_bss(banjo_internal::BssConfig {
                     bssid: [1, 2, 3, 4, 5, 6],
@@ -1433,6 +1433,14 @@ mod tests {
                 timer: self.timer.take().unwrap(),
                 seq_mgr: SequenceManager::new(),
             }
+        }
+    }
+
+    fn fake_wlan_channel() -> banjo_common::WlanChannel {
+        banjo_common::WlanChannel {
+            primary: 0,
+            cbw: banjo_common::ChannelBandwidth(0),
+            secondary80: 0,
         }
     }
 
@@ -1879,11 +1887,6 @@ mod tests {
         assert!(m.fake_device.bss_cfg.is_some());
     }
 
-    fn mock_rx_info<'a>(client: &BoundClient<'a>) -> banjo_wlan_softmac::WlanRxInfo {
-        let channel = client.channel_state.get_main_channel().unwrap();
-        MockWlanRxInfo::with_channel(channel).into()
-    }
-
     #[test]
     fn associated_block_ack_frame() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
@@ -1919,8 +1922,7 @@ mod tests {
         let state = States::from(statemachine::testing::new_state(Associated(empty_association(
             &mut client,
         ))));
-        let rx_info = mock_rx_info(&client);
-        match state.on_mac_frame(&mut client, &frame[..], rx_info) {
+        match state.on_mac_frame(&mut client, &frame[..], MockWlanRxInfo::default().into()) {
             States::Associated(state) => {
                 let (_, associated) = state.release_data();
                 // TODO(fxbug.dev/29887): Handle BlockAck frames. The following code has been
@@ -2304,8 +2306,7 @@ mod tests {
             0x10, 0, // Sequence Control
             // Omit IEs
         ];
-        let rx_info = mock_rx_info(&sta);
-        state.on_mac_frame(&mut sta, &beacon[..], rx_info);
+        state.on_mac_frame(&mut sta, &beacon[..], MockWlanRxInfo::default().into());
         assert_eq!(m.fake_device.wlan_queue.len(), 0);
     }
 
@@ -2344,8 +2345,7 @@ mod tests {
             // Trailing bytes
             11, 11, 11,
         ];
-        let rx_info = mock_rx_info(&sta);
-        state.on_mac_frame(&mut sta, &bytes[..], rx_info);
+        state.on_mac_frame(&mut sta, &bytes[..], MockWlanRxInfo::default().into());
         assert_eq!(m.fake_device.eth_queue.len(), 0);
     }
 
@@ -2406,8 +2406,8 @@ mod tests {
             2, 0, // Txn Sequence Number
             0, 0, // Status Code
         ];
-        let rx_info = mock_rx_info(&sta);
-        state = state.on_mac_frame(&mut sta, &auth_resp_success[..], rx_info);
+        state =
+            state.on_mac_frame(&mut sta, &auth_resp_success[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Associating(_), "not in associating state");
     }
 
@@ -2437,8 +2437,8 @@ mod tests {
             2, 0, // Txn Sequence Number
             42, 0, // Status Code
         ];
-        let rx_info = mock_rx_info(&sta);
-        state = state.on_mac_frame(&mut sta, &auth_resp_failure[..], rx_info);
+        state =
+            state.on_mac_frame(&mut sta, &auth_resp_failure[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Joined(_), "not in joined state");
         assert!(m.fake_device.bss_cfg.is_none());
     }
@@ -2467,8 +2467,7 @@ mod tests {
             // Deauth Header:
             5, 0, // Algorithm Number (Open)
         ];
-        let rx_info = mock_rx_info(&sta);
-        state = state.on_mac_frame(&mut sta, &deauth[..], rx_info);
+        state = state.on_mac_frame(&mut sta, &deauth[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Joined(_), "not in joined state");
         assert!(m.fake_device.bss_cfg.is_none());
     }
@@ -2498,8 +2497,8 @@ mod tests {
             2, 0, // Txn Sequence Number
             0, 0, // Status Code
         ];
-        let rx_info = mock_rx_info(&sta);
-        state = state.on_mac_frame(&mut sta, &auth_resp_success[..], rx_info);
+        state =
+            state.on_mac_frame(&mut sta, &auth_resp_success[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Authenticating(_), "not in authenticating state");
 
         // Verify that an authentication response from the joined BSS still moves the Client
@@ -2518,8 +2517,8 @@ mod tests {
             2, 0, // Txn Sequence Number
             0, 0, // Status Code
         ];
-        let rx_info = mock_rx_info(&sta);
-        state = state.on_mac_frame(&mut sta, &auth_resp_success[..], rx_info);
+        state =
+            state.on_mac_frame(&mut sta, &auth_resp_success[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Associating(_), "not in associating state");
     }
 
@@ -2580,8 +2579,8 @@ mod tests {
             2, 0, // Txn Sequence Number
             0, 0, // Status Code
         ];
-        let rx_info = mock_rx_info(&sta);
-        state = state.on_mac_frame(&mut sta, &auth_resp_wrong[..], rx_info);
+        state =
+            state.on_mac_frame(&mut sta, &auth_resp_wrong[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Joined(_), "not in joined state");
         assert!(m.fake_device.bss_cfg.is_none());
     }
@@ -2620,8 +2619,8 @@ mod tests {
             0xbf, 0x0c, 0x91, 0x59, 0x82, 0x0f, // VHT capabilities info
             0xea, 0xff, 0x00, 0x00, 0xea, 0xff, 0x00, 0x00, // VHT supported MCS set
         ];
-        let rx_info = mock_rx_info(&sta);
-        state = state.on_mac_frame(&mut sta, &assoc_resp_success[..], rx_info);
+        state =
+            state.on_mac_frame(&mut sta, &assoc_resp_success[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Associated(_), "not in associated state");
     }
 
@@ -2650,8 +2649,8 @@ mod tests {
             2, 0, // Status Code (Failed)
             0, 0, // AID
         ];
-        let rx_info = mock_rx_info(&sta);
-        state = state.on_mac_frame(&mut sta, &assoc_resp_failure[..], rx_info);
+        state =
+            state.on_mac_frame(&mut sta, &assoc_resp_failure[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Joined(_), "not in joined state");
         assert!(m.fake_device.bss_cfg.is_some());
     }
@@ -2679,8 +2678,7 @@ mod tests {
             // Deauth Header:
             4, 0, // Reason Code
         ];
-        let rx_info = mock_rx_info(&sta);
-        state = state.on_mac_frame(&mut sta, &deauth[..], rx_info);
+        state = state.on_mac_frame(&mut sta, &deauth[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Joined(_), "not in joined state");
         assert!(m.fake_device.bss_cfg.is_none());
     }
@@ -2772,8 +2770,7 @@ mod tests {
             // Deauth Header:
             4, 0, // Reason Code
         ];
-        let rx_info = mock_rx_info(&sta);
-        state = state.on_mac_frame(&mut sta, &disassoc[..], rx_info);
+        state = state.on_mac_frame(&mut sta, &disassoc[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Authenticated(_), "not in auth'd state");
         assert!(m.fake_device.bss_cfg.is_some());
 
@@ -2839,8 +2836,8 @@ mod tests {
             0xbf, 0x0c, 0x91, 0x59, 0x82, 0x0f, // VHT capabilities info
             0xea, 0xff, 0x00, 0x00, 0xea, 0xff, 0x00, 0x00, // VHT supported MCS set
         ];
-        let rx_info = mock_rx_info(&sta);
-        state = state.on_mac_frame(&mut sta, &assoc_resp_success[..], rx_info);
+        state =
+            state.on_mac_frame(&mut sta, &assoc_resp_success[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Associated(_), "not in associated state");
 
         // Verify a successful connect conf is sent
@@ -2877,8 +2874,7 @@ mod tests {
             // Deauth Header:
             4, 0, // Reason Code
         ];
-        let rx_info = mock_rx_info(&sta);
-        state = state.on_mac_frame(&mut sta, &disassoc[..], rx_info);
+        state = state.on_mac_frame(&mut sta, &disassoc[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Authenticated(_), "not in auth'd state");
         assert!(m.fake_device.bss_cfg.is_some());
 
@@ -2948,8 +2944,7 @@ mod tests {
             // Deauth Header:
             4, 0, // Reason Code
         ];
-        let rx_info = mock_rx_info(&sta);
-        state = state.on_mac_frame(&mut sta, &disassoc[..], rx_info);
+        state = state.on_mac_frame(&mut sta, &disassoc[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Authenticated(_), "not in auth'd state");
         assert!(m.fake_device.bss_cfg.is_some());
 
@@ -3048,8 +3043,7 @@ mod tests {
             // Deauth Header:
             4, 0, // Reason Code
         ];
-        let rx_info = mock_rx_info(&sta);
-        state = state.on_mac_frame(&mut sta, &deauth[..], rx_info);
+        state = state.on_mac_frame(&mut sta, &deauth[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Joined(_), "not in joined state");
         assert!(m.fake_device.bss_cfg.is_none());
     }
@@ -3066,11 +3060,9 @@ mod tests {
         }
     }
 
-    #[test_case(false, false; "unprotected bss, not scanning")]
-    #[test_case(true, false; "protected bss, not scanning")]
-    #[test_case(false, true; "unprotected bss, scanning")]
-    #[test_case(true, true; "protected bss, scanning")]
-    fn assoc_send_eth_frame_becomes_data_frame(protected: bool, scanning: bool) {
+    #[test_case(false; "unprotected bss")]
+    #[test_case(true; "protected bss")]
+    fn assoc_send_eth_frame_becomes_data_frame(protected: bool) {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
@@ -3081,22 +3073,6 @@ mod tests {
             controlled_port_open: true,
             ..empty_association(&mut sta)
         })));
-
-        if scanning {
-            let mut bound_scanner = sta.scanner.bind(sta.ctx);
-            bound_scanner
-                .on_sme_scan(fidl_mlme::ScanRequest {
-                    txn_id: 1337,
-                    scan_type: fidl_mlme::ScanTypes::Passive,
-                    channel_list: vec![1],
-                    ssid_list: vec![],
-                    probe_delay: 0,
-                    min_channel_time: 100,
-                    max_channel_time: 300,
-                })
-                .expect("Failed to start scan");
-            assert!(sta.scanner.is_scanning());
-        }
 
         let eth_frame = [
             1, 2, 3, 4, 5, 6, // dst_addr
@@ -3146,11 +3122,7 @@ mod tests {
 
         sta.ctx
             .device
-            .set_channel(banjo_common::WlanChannel {
-                primary: 42,
-                cbw: banjo_common::ChannelBandwidth::CBW20,
-                secondary80: 0,
-            })
+            .set_channel(banjo_common::WlanChannel { primary: 42, ..fake_wlan_channel() })
             .expect("fake device is obedient");
         let eth_frame = &[100; 14]; // An ethernet frame must be at least 14 bytes long.
 
@@ -3542,6 +3514,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn mlme_set_controlled_port_not_associated() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
@@ -3563,6 +3536,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn mlme_set_controlled_port_associated_not_protected() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
@@ -3577,6 +3551,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn mlme_set_controlled_port_associated() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
@@ -3591,62 +3566,6 @@ mod tests {
         assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::UP);
         let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_ctrl_port_open(false, &exec));
         assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::DOWN);
-    }
-
-    #[test_case(true; "while scanning")]
-    #[test_case(false; "while not scanning")]
-    fn associated_rx_succeeds(scanning: bool) {
-        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut m = MockObjects::new(&exec);
-        let mut ctx = m.make_ctx();
-        let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
-        let state = States::from(statemachine::testing::new_state(Associated(Association {
-            aid: 1,
-            controlled_port_open: true,
-            ..empty_association(&mut sta)
-        })));
-
-        if scanning {
-            let mut bound_scanner = sta.scanner.bind(sta.ctx);
-            bound_scanner
-                .on_sme_scan(fidl_mlme::ScanRequest {
-                    txn_id: 1337,
-                    scan_type: fidl_mlme::ScanTypes::Passive,
-                    channel_list: vec![1],
-                    ssid_list: vec![],
-                    probe_delay: 0,
-                    min_channel_time: 100,
-                    max_channel_time: 300,
-                })
-                .expect("Failed to start scan");
-            assert!(sta.scanner.is_scanning());
-        }
-
-        let fc = mac::FrameControl(0)
-            .with_frame_type(mac::FrameType::DATA)
-            .with_data_subtype(mac::DataSubtype(0))
-            .with_from_ds(true);
-        let fc = fc.0.to_le_bytes();
-
-        let data_frame = vec![
-            // Data header:
-            fc[0], fc[1], // FC
-            0, 0, // Duration
-            7, 7, 7, 7, 7, 7, // addr1
-            6, 6, 6, 6, 6, 6, // addr2
-            42, 42, 42, 42, 42, 42, // addr3
-            0x10, 0, // Sequence Control
-            // LLC Header
-            7, 7, 7, // DSAP, SSAP & control
-            8, 8, 8, // OUI
-            9, 10, // eth type
-            1, 2, 3, 4, 5, 6, 7, 8, // payload
-        ];
-
-        let rx_info = mock_rx_info(&sta);
-        state.on_mac_frame(&mut sta, &data_frame[..], rx_info);
-        assert_eq!(m.fake_device.eth_queue.len(), 1);
     }
 
     #[test]
@@ -3676,8 +3595,7 @@ mod tests {
             5, 4, 0, 0, 0, 0b00000010, // Tim IE: bit 1 in the last octet indicates AID 1
         ];
 
-        let rx_info = mock_rx_info(&sta);
-        state.on_mac_frame(&mut sta, &beacon[..], rx_info);
+        state.on_mac_frame(&mut sta, &beacon[..], MockWlanRxInfo::default().into());
 
         assert_eq!(m.fake_device.wlan_queue.len(), 1);
         assert_eq!(
@@ -3717,17 +3635,14 @@ mod tests {
             33, 0, // Capabilities
             5, 4, 0, 0, 0, 0, // Tim IE: No buffered frame for any client.
         ];
-        let rx_info = mock_rx_info(&sta);
-        state.on_mac_frame(&mut sta, &beacon[..], rx_info);
+        state.on_mac_frame(&mut sta, &beacon[..], MockWlanRxInfo::default().into());
 
         assert_eq!(m.fake_device.wlan_queue.len(), 0);
     }
 
-    fn rx_info_with_dbm<'a>(
-        client: &BoundClient<'a>,
-        rssi_dbm: i8,
-    ) -> banjo_wlan_softmac::WlanRxInfo {
-        let mut rx_info = banjo_wlan_softmac::WlanRxInfo { rssi_dbm, ..mock_rx_info(client) };
+    fn rx_info_with_dbm(rssi_dbm: i8) -> banjo_wlan_softmac::WlanRxInfo {
+        let mut rx_info: banjo_wlan_softmac::WlanRxInfo =
+            MockWlanRxInfo { rssi_dbm, ..Default::default() }.into();
         rx_info.valid_fields |= banjo_wlan_associnfo::WlanRxInfoValid::RSSI.0;
         rx_info
     }
@@ -3771,8 +3686,7 @@ mod tests {
         ];
 
         const EXPECTED_DBM: i8 = -32;
-        let rx_info = rx_info_with_dbm(&sta, EXPECTED_DBM);
-        let state = state.on_mac_frame(&mut sta, &beacon[..], rx_info);
+        let state = state.on_mac_frame(&mut sta, &beacon[..], rx_info_with_dbm(EXPECTED_DBM));
 
         let (_, timed_event) =
             m.time_stream.try_next().unwrap().expect("Should have scheduled signal report timeout");
