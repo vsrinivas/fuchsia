@@ -79,6 +79,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.net.neighbor:fuchsia.net.neighbor_rust",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack_rust",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack_rust",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//src/developer/ffx/lib/writer:lib",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
