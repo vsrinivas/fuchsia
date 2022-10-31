@@ -15,6 +15,7 @@
 #include <memory>
 #include <optional>
 
+#include "src/ui/a11y/lib/annotation/highlight_delegate.h"
 #include "src/ui/a11y/lib/magnifier/magnifier_2.h"
 #include "src/ui/a11y/lib/view/accessibility_view.h"
 #include "src/ui/a11y/lib/view/flatland_connection.h"
@@ -25,6 +26,7 @@ namespace a11y {
 // composition API.
 class FlatlandAccessibilityView : public AccessibilityViewInterface,
                                   public fuchsia::accessibility::scene::Provider,
+                                  public HighlightDelegate,
                                   public Magnifier2::Delegate {
  public:
   explicit FlatlandAccessibilityView(fuchsia::ui::composition::FlatlandPtr flatland1,
@@ -46,6 +48,13 @@ class FlatlandAccessibilityView : public AccessibilityViewInterface,
   // |fuchsia::accessibility::scene::Provider|
   void CreateView(fuchsia::ui::views::ViewCreationToken a11y_view_token,
                   fuchsia::ui::views::ViewportCreationToken proxy_viewport_token) override;
+
+  // |HighlightDelegate|
+  void DrawHighlight(fuchsia::math::Point top_left, fuchsia::math::Point bottom_right,
+                     fit::function<void()> callback) override;
+
+  // |HighlightDelegate|
+  void ClearHighlight(fit::function<void()> callback) override;
 
   // |Magnifier2::Delegate|
   void SetMagnificationTransform(float scale, float x, float y,
@@ -75,7 +84,7 @@ class FlatlandAccessibilityView : public AccessibilityViewInterface,
   // True if we've received a CreateView request.
   bool received_create_view_request_ = false;
 
-  // True if the a11y view has been attached to the scene.
+  // True if the a11y view and highlight views have been attached to the scene.
   bool is_initialized_ = false;
 
   // Holds the proxy viewport creation token between the time that `CreateView`

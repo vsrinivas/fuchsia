@@ -13,14 +13,28 @@ namespace a11y {
 // accessibility highlight.
 class HighlightDelegate {
  public:
-  // Draw a highlight around the rectangular region specified (in LTRB rect format).
-  // `top_left` and `bottom_right` should be given in the coordinate space of the
-  // 'highlight view' in which the highlight will be drawn.
-  virtual void DrawHighlight(fuchsia::math::PointF top_left,
-                             fuchsia::math::PointF bottom_right) = 0;
+  // Draw an accessibility highlight (a brightly colored border) around the
+  // rectangular region specified.
+  // The highlight rectangles will be centered on the edges of the rectangle provided, so the
+  // highlight will cover some pixels 'inside' and some pixels 'outside' the rectangle.
+  //
+  // `top_left` and `bottom_right` should be given in the coordinate space of
+  // the 'highlight view', where accessibility highlights are drawn.
+  //
+  // The callback is for synchronization in tests.
+  virtual void DrawHighlight(fuchsia::math::Point top_left, fuchsia::math::Point bottom_right,
+                             fit::function<void()> callback) = 0;
+
+  inline void DrawHighlight(fuchsia::math::Point top_left, fuchsia::math::Point bottom_right) {
+    DrawHighlight(top_left, bottom_right, {});
+  }
 
   // Clears the current highlight (if any).
-  virtual void ClearHighlight() = 0;
+  //
+  // The callback is for synchronization in tests.
+  virtual void ClearHighlight(fit::function<void()> callback) = 0;
+
+  inline void ClearHighlight() { ClearHighlight({}); }
 };
 
 }  // namespace a11y

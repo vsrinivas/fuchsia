@@ -57,11 +57,9 @@ void AnnotationView::InitializeView(fuchsia::ui::views::ViewRef client_view_ref)
   // detaching only this node from the view.
   PushCommand(&cmds, scenic::NewCreateEntityNodeCmd(kFocusHighlightContentNodeId));
 
-  // Create material (fill color) for highlights.
-  // TODO: Update color.
+  // Create material (fill color) for highlights. Chosen arbitrarily.
   PushCommand(&cmds, scenic::NewCreateMaterialCmd(kFocusHighlightMaterialId));
-  PushCommand(&cmds, scenic::NewSetColorCmd(kFocusHighlightMaterialId, 0xf5, 0x00, 0x57,
-                                            0xff));  // Pink A400
+  PushCommand(&cmds, scenic::NewSetColorCmd(kFocusHighlightMaterialId, 0xf5, 0x00, 0x57, 0xff));
 
   // Create shape nodes to hold each of the edges of the highlight.
   CreateHighlightEdgeNode(&cmds, kFocusHighlightLeftEdgeNodeId);

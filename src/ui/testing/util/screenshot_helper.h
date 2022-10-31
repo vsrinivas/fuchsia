@@ -14,7 +14,20 @@
 
 namespace ui_testing {
 
+static uint8_t linear_to_srgb(const uint8_t in) {
+  // Function to convert from linear RGB to sRGB.
+  // (https://en.wikipedia.org/wiki/SRGB#From_CIE_XYZ_to_sRGB)
+  float scaled_val = static_cast<float>(in) / 0xFF;
+  if (0.f <= scaled_val && scaled_val <= 0.0031308f) {
+    return static_cast<uint8_t>(roundf((scaled_val * 12.92f) * 255U));
+  } else {
+    return static_cast<uint8_t>(
+        roundf(((std::powf(scaled_val, 1.0f / 2.4f) * 1.055f) - 0.055f) * 255U));
+  }
+}
+
 // Represents a Pixel in BGRA format.
+// Uses the sRGB color space.
 struct Pixel {
   uint8_t blue = 0;
   uint8_t green = 0;
@@ -24,9 +37,15 @@ struct Pixel {
   Pixel(uint8_t blue, uint8_t green, uint8_t red, uint8_t alpha)
       : blue(blue), green(green), red(red), alpha(alpha) {}
 
+  static Pixel from_linear_brga(uint8_t blue, uint8_t green, uint8_t red, uint8_t alpha) {
+    return Pixel{linear_to_srgb(blue), linear_to_srgb(green), linear_to_srgb(red), alpha};
+  }
+
   bool operator==(const Pixel& rhs) const {
     return blue == rhs.blue && green == rhs.green && red == rhs.red && alpha == rhs.alpha;
   }
+
+  inline bool operator!=(const Pixel& rhs) const { return !(*this == rhs); }
 
   bool operator<(const Pixel& other) const {
     return std::tie(blue, green, red, alpha) <

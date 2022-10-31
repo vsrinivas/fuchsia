@@ -40,10 +40,19 @@ using fuchsia::ui::composition::ViewportProperties;
 //    highlight view root transform (id=21)
 //    -->proxy viewport transform (id=22) {content: proxy viewport id=23}
 //    -->highlight transform (id=24) [not always attached to the graph!]
-//       -->rectangle 1
-//       -->rectangle 2
-//       -->rectangle 3
-//       -->rectangle 4
+//       -->rectangle transform 0 (id=25) {content: filled rect id=29} [top]
+//       -->rectangle transform 1 (id=26) {content: filled rect id=30} [bottom]
+//       -->rectangle transform 2 (id=27) {content: filled rect id=31} [right]
+//       -->rectangle transform 3 (id=28) {content: filled rect id=32} [left]
+
+// Color for accessibility highlights. Chosen arbitrarily.
+const fuchsia::ui::composition::ColorRgba kHighlightColor = {
+    .red = 0xF5 / 255.f, .green = 0, .blue = 0x57 / 255.f, .alpha = 1};
+
+// Multiply by 2 to get the width (in logical pixels) of the four rectangles that
+// constitute the boundaries of the highlight.
+constexpr int32_t kHighlightHalfThickness = 3;
+constexpr int32_t kHighlightThickness = kHighlightHalfThickness * 2;
 
 constexpr uint64_t kA11yViewRootTransformId = 11;
 constexpr uint64_t kMagnifierTransformId = 12;
@@ -52,6 +61,14 @@ constexpr uint64_t kHighlightViewportContentId = 14;
 constexpr uint64_t kHighlightViewRootTransformId = 21;
 constexpr uint64_t kProxyViewportTransformId = 22;
 constexpr uint64_t kProxyViewportContentId = 23;
+constexpr uint64_t kHighlightTransformId = 24;
+
+constexpr size_t kTopRect = 0;
+constexpr size_t kBottomRect = 1;
+constexpr size_t kLeftRect = 2;
+constexpr size_t kRightRect = 3;
+constexpr uint64_t kRectangleTransformIds[] = {25, 26, 27, 28};
+constexpr uint64_t kRectangleContentIds[] = {29, 30, 31, 32};
 
 fuchsia::math::RectF SizeUToRectFAtOrigin(fuchsia::math::SizeU size) {
   return fuchsia::math::RectF{.x = 0.,
@@ -160,6 +177,21 @@ void HighlightViewSetup(
                                  ContentId{.value = kProxyViewportContentId});
   flatland_highlight->AddChild(TransformId{.value = kHighlightViewRootTransformId},
                                TransformId{.value = kProxyViewportTransformId});
+
+  // Set up the highlight transform and its children.
+  // Note that we do *not* add it to the scene, we'll only do that when a highlight is drawn.
+  flatland_highlight->CreateTransform(TransformId{.value = kHighlightTransformId});
+
+  for (int i = 0; i < 4; i++) {
+    auto transform_id = TransformId{.value = kRectangleTransformIds[i]};
+    auto content_id = ContentId{.value = kRectangleContentIds[i]};
+
+    flatland_highlight->CreateTransform(transform_id);
+    flatland_highlight->AddChild(TransformId{.value = kHighlightTransformId}, transform_id);
+
+    flatland_highlight->CreateFilledRect(content_id);
+    flatland_highlight->SetContent(transform_id, content_id);
+  }
 }
 
 bool InvokeViewPropertiesChangedCallback(
@@ -335,8 +367,81 @@ FlatlandAccessibilityView::GetHandler() {
   return view_bindings_.GetHandler(this);
 }
 
+void FlatlandAccessibilityView::DrawHighlight(fuchsia::math::Point top_left,
+                                              fuchsia::math::Point bottom_right,
+                                              fit::function<void()> callback) {
+  FX_DCHECK(is_initialized_);
+
+  int32_t left = top_left.x;
+  int32_t top = top_left.y;
+  int32_t right = bottom_right.x;
+  int32_t bottom = bottom_right.y;
+  if (left > right) {
+    std::swap(left, right);
+  }
+  if (top > bottom) {
+    std::swap(top, bottom);
+  }
+
+  // Adjust these points so that they represent the *upper left corner* of the rectangles we will
+  // draw. For example, if kHighlightEdgeHalfThickness is 3, all our rectangles' upper left corners
+  // will be shifted left & up by 3 pixels from the rect the caller provided.
+  top -= kHighlightHalfThickness;
+  bottom -= kHighlightHalfThickness;
+  left -= kHighlightHalfThickness;
+  right -= kHighlightHalfThickness;
+
+  // Length of the long sides of the rectangles we'll draw.
+  const uint32_t horizontal_extent = right - left + kHighlightThickness;
+  const uint32_t vertical_extent = bottom - top + kHighlightThickness;
+
+  const auto size_horizontal_rect =
+      fuchsia::math::SizeU{.width = horizontal_extent, .height = kHighlightThickness};
+  const auto size_vertical_rect =
+      fuchsia::math::SizeU{.width = kHighlightThickness, .height = vertical_extent};
+  flatland_highlight_.flatland()->SetSolidFill(ContentId{.value = kRectangleContentIds[kTopRect]},
+                                               kHighlightColor, size_horizontal_rect);
+  flatland_highlight_.flatland()->SetSolidFill(
+      ContentId{.value = kRectangleContentIds[kBottomRect]}, kHighlightColor, size_horizontal_rect);
+  flatland_highlight_.flatland()->SetSolidFill(ContentId{.value = kRectangleContentIds[kLeftRect]},
+                                               kHighlightColor, size_vertical_rect);
+  flatland_highlight_.flatland()->SetSolidFill(ContentId{.value = kRectangleContentIds[kRightRect]},
+                                               kHighlightColor, size_vertical_rect);
+
+  // Note that:
+  // - [0,0] is the top left of the transform's coord space
+  // - SetSolidFill rects are drawn with their top left corner at [0,0]
+  flatland_highlight_.flatland()->SetTranslation(
+      TransformId{.value = kRectangleTransformIds[kTopRect]}, fuchsia::math::Vec{left, top});
+  flatland_highlight_.flatland()->SetTranslation(
+      TransformId{.value = kRectangleTransformIds[kBottomRect]}, fuchsia::math::Vec{left, bottom});
+  flatland_highlight_.flatland()->SetTranslation(
+      TransformId{.value = kRectangleTransformIds[kLeftRect]}, fuchsia::math::Vec{left, top});
+  flatland_highlight_.flatland()->SetTranslation(
+      TransformId{.value = kRectangleTransformIds[kRightRect]}, fuchsia::math::Vec{right, top});
+
+  // Attach the highlight transform to the rest of the graph so that the rects will be rendered!
+  flatland_highlight_.flatland()->AddChild(TransformId{.value = kHighlightViewRootTransformId},
+                                           TransformId{.value = kHighlightTransformId});
+
+  flatland_highlight_.Present(fuchsia::ui::composition::PresentArgs{},
+                              [callback = std::move(callback)](auto) { callback(); });
+}
+
+void FlatlandAccessibilityView::ClearHighlight(fit::function<void()> callback) {
+  FX_DCHECK(is_initialized_);
+
+  flatland_highlight_.flatland()->RemoveChild(TransformId{.value = kHighlightViewRootTransformId},
+                                              TransformId{.value = kHighlightTransformId});
+
+  flatland_highlight_.Present(fuchsia::ui::composition::PresentArgs{},
+                              [callback = std::move(callback)](auto) { callback(); });
+}
+
 void FlatlandAccessibilityView::SetMagnificationTransform(
     float scale, float x, float y, SetMagnificationTransformCallback callback) {
+  FX_DCHECK(is_initialized_);
+
   flatland_a11y_.flatland()->SetScale(
       fuchsia::ui::composition::TransformId{.value = kMagnifierTransformId},
       fuchsia::math::VecF{.x = scale, .y = scale});
