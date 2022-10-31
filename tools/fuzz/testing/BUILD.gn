@@ -2,10 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/fuzzing/fuzzer.gni")
-import("//build/fuzzing/fuzzer_package.gni")
+import("//build/fuzz.gni")
 
-fuzzer("noisy_fuzzer") {
+fuchsia_library_fuzzer("noisy_fuzzer") {
   sources = [ "noisy-fuzzer.cc" ]
   deps = [
     "//sdk/lib/syslog/cpp",
@@ -13,6 +12,12 @@ fuzzer("noisy_fuzzer") {
   ]
 }
 
-fuzzer_package("undercoat-test-fuzzers") {
-  cpp_fuzzers = [ ":noisy_fuzzer" ]
+fuchsia_fuzzer_component("noisy-fuzzer-component") {
+  component_name = "noisy_fuzzer"
+  manifest = "meta/noisy_fuzzer.cml"
+  deps = [ ":noisy_fuzzer" ]
+}
+
+fuchsia_fuzzer_package("undercoat-test-fuzzers") {
+  cpp_fuzzer_components = [ ":noisy-fuzzer-component" ]
 }
