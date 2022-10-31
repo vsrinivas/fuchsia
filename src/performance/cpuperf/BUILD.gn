@@ -46,7 +46,6 @@ executable("bin") {
   deps = [
     ":session_result_spec",
     ":session_spec",
-    "//src/lib/debugger_utils",
     "//src/lib/fxl",
     "//src/performance/lib/perfmon",
     "//src/zircon/lib/zircon",

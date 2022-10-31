@@ -25,7 +25,6 @@ executable("cpuperf_print") {
   ]
 
   deps = [
-    "//src/lib/debugger_utils",
     "//src/lib/fxl",
     "//src/performance/cpuperf:session_result_spec",
     "//src/performance/lib/perfmon",

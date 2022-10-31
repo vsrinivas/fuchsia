@@ -20,7 +20,6 @@
 
 #include "session_result_spec.h"
 #include "session_spec.h"
-#include "src/lib/debugger_utils/util.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
