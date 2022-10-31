@@ -1813,8 +1813,6 @@ void VmCowPages::UpdateDirtyStateLocked(vm_page_t* page, uint64_t offset, DirtyS
       // If the page is not in the process of being added, we can only see a transition to Clean
       // from AwaitingClean.
       ASSERT(is_pending_add || is_page_awaiting_clean(page));
-      // A pinned page will be kept Dirty as long as it is pinned.
-      ASSERT(page->object.pin_count == 0);
 
       // If we are expecting a pending Add[New]PageLocked, we can defer updating the page queue.
       if (!is_pending_add) {
@@ -1846,6 +1844,16 @@ void VmCowPages::UpdateDirtyStateLocked(vm_page_t* page, uint64_t offset, DirtyS
       // A newly added page cannot start off as AwaitingClean.
       ASSERT(!is_pending_add);
       // A pinned page will be kept Dirty as long as it is pinned.
+      //
+      // Note that there isn't a similar constraint when setting the Clean state as it is possible
+      // to pin a page for read after it has been marked AwaitingClean. Since it is a pinned read it
+      // does not need to dirty the page. So when the writeback is done it can transition from
+      // AwaitingClean -> Clean with a non-zero pin count.
+      //
+      // It is also possible for us to observe an intermediate pin count for a write-pin that has
+      // not fully completed yet, as we will only attempt to dirty pages after pinning them. So it
+      // is possible for a thread to be waiting on a DIRTY request on a pinned page, while a racing
+      // writeback transitions the page from AwaitingClean -> Clean with a non-zero pin count.
       ASSERT(page->object.pin_count == 0);
       // We can only transition to AwaitingClean from Dirty.
       ASSERT(is_page_dirty(page));
