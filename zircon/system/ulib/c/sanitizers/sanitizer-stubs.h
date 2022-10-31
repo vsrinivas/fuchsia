@@ -65,12 +65,26 @@
   "\n"                                \
   "ret\n"
 #elif defined(__aarch64__)
+#if __has_feature(hwaddress_sanitizer)
+// With hwasan instrumentation on globals, _dynlink_runtime can be tagged so we
+// can't get the address directly since its value can be outside the range of
+// the corresponding relocation. This effectively does the same thing but
+// without an overflow check and manually adds the tag back in.
+#define SANITIZER_STUB_ASM_BODY(name)                  \
+  "adrp x16, :pg_hi21_nc:_dynlink_runtime\n"           \
+  "movk x16, #:prel_g3:_dynlink_runtime+0x100000000\n" \
+  "ldr  w16, [x16, #:lo12:_dynlink_runtime]\n"         \
+  "cbnz w16, _dynlink" name                            \
+  "\n"                                                 \
+  "ret\n"
+#else
 #define SANITIZER_STUB_ASM_BODY(name)         \
   "adrp x16, _dynlink_runtime\n"              \
   "ldr w16, [x16, #:lo12:_dynlink_runtime]\n" \
   "cbnz w16, _dynlink" name                   \
   "\n"                                        \
   "ret\n"
+#endif
 #else
 #error unsupported architecture
 #endif
