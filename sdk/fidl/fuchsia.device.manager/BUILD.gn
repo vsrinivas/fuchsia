@@ -12,6 +12,7 @@ fidl("fuchsia.device.manager") {
     "system-state-transition.fidl",
   ]
   public_deps = [
+    "//sdk/fidl/fuchsia.device",
     "//sdk/fidl/fuchsia.driver.framework",
     "//sdk/fidl/fuchsia.driver.host",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol",

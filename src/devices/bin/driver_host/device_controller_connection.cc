@@ -12,6 +12,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/string_printf.h>
 
+#include "devfs_vnode.h"
 #include "driver_host.h"
 #include "env.h"
 #include "log.h"
@@ -49,6 +50,12 @@ void BindReply(const fbl::RefPtr<zx_device_t>& dev,
 }
 
 }  // namespace
+
+void DeviceControllerConnection::ConnectToController(
+    ConnectToControllerRequestView request, ConnectToControllerCompleter::Sync& completer) {
+  fidl::BindServer(driver_host_context_->loop().dispatcher(), std::move(request->controller),
+                   dev()->vnode.get());
+}
 
 void DeviceControllerConnection::Init(InitCompleter::Sync& completer) {
   ZX_ASSERT(this->dev()->init_cb == nullptr);

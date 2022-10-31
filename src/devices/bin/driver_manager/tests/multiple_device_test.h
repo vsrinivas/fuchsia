@@ -94,6 +94,7 @@ class DeviceState : public fidl::testing::WireTestBase<fdm::DeviceController> {
   void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) override {
     ADD_FAILURE("%s is unimplemented and should not be called", name.c_str());
   }
+
   void BindDriver(BindDriverRequestView request, BindDriverCompleter::Sync& completer) override {
     bind_driver_path_ = std::string(request->driver_path.get());
     bind_completer_ = completer.ToAsync();

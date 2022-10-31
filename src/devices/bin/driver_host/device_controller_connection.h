@@ -39,6 +39,8 @@ class DeviceControllerConnection
   fidl::WireSharedClient<fuchsia_device_manager::Coordinator> coordinator_client_;
 
   // Fidl methods
+  void ConnectToController(ConnectToControllerRequestView request,
+                           ConnectToControllerCompleter::Sync& completer) override;
   void BindDriver(BindDriverRequestView request, BindDriverCompleter::Sync& _completer) override;
   void ConnectProxy(ConnectProxyRequestView request,
                     ConnectProxyCompleter::Sync& _completer) override;

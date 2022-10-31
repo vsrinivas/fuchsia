@@ -5,6 +5,7 @@
 #include "devfs.h"
 
 #include <fcntl.h>
+#include <fidl/fuchsia.device.fs/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/ddk/driver.h>
@@ -30,6 +31,7 @@
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
+#include "src/lib/storage/vfs/cpp/service.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 
 namespace {
@@ -235,7 +237,32 @@ Devnode::Devnode(Devfs& devfs, PseudoDir& parent, Target target, fbl::String nam
         auto [it, inserted] = parent.unpublished.emplace(name, *this);
         ZX_ASSERT(inserted);
         return it->first;
-      }()) {}
+      }()) {
+  fbl::RefPtr<fs::Service> device_controller = std::visit(
+      overloaded{[](const NoRemote&) { return fbl::RefPtr<fs::Service>(); },
+                 [](const Service& service) {
+                   return fbl::MakeRefCounted<fs::Service>([&service](zx::channel channel) {
+                     return fidl::WireCall(service.remote)
+                         ->Open(fio::OpenFlags::kRightReadable | fio::OpenFlags::kRightWritable, 0,
+                                fidl::StringView::FromExternal(service.path),
+                                fidl::ServerEnd<fuchsia_io::Node>(std::move(channel)))
+                         .status();
+                   });
+                 },
+                 [](const Device& device) {
+                   return fbl::MakeRefCounted<fs::Service>([&device](zx::channel channel) {
+                     return device.device_controller()
+                         ->ConnectToController(
+                             fidl::ServerEnd<fuchsia_device::Controller>(std::move(channel)))
+                         .status();
+                   });
+                 }},
+      this->target());
+  if (device_controller) {
+    children().AddEntry(fuchsia_device_fs::wire::kDeviceControllerName,
+                        std::move(device_controller));
+  }
+}
 
 std::optional<std::reference_wrapper<fs::Vnode>> Devfs::Lookup(PseudoDir& parent,
                                                                std::string_view name) {

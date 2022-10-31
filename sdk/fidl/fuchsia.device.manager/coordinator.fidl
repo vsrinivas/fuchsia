@@ -8,6 +8,7 @@ library fuchsia.device.manager;
 using fuchsia.driver.framework as fdf;
 using fuchsia.io;
 using fuchsia.driver.host;
+using fuchsia.device;
 using zx;
 
 /// This has the same structure as zx_device_prop_t.
@@ -133,6 +134,11 @@ type DeviceGroupDescriptor = struct {
 /// Protocol for controlling devices in a devhost process from the devcoordinator
 protocol DeviceController {
     compose fuchsia.io.Openable;
+
+    /// Connect to the device's fuchsia.device.Controller API.
+    ConnectToController(resource struct {
+        controller server_end:fuchsia.device.Controller;
+    });
 
     /// Bind the requested driver to this device.  `driver_path` is informational,
     /// but all calls to BindDriver/CreateDevice should use the same `driver_path`

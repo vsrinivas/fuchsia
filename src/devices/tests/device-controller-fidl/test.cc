@@ -7,9 +7,11 @@
 #include <fuchsia/driver/test/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/driver_test_realm/realm_builder/cpp/lib.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
 
@@ -49,13 +51,12 @@ TEST_F(DeviceControllerFidl, ControllerTest) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_device::Controller>();
   ASSERT_EQ(endpoints.status_value(), ZX_OK);
 
-  zx::channel dev_channel;
-  fdio_fd_clone(root_fd.get(), dev_channel.reset_and_get_address());
-  fdio_service_connect_at(dev_channel.get(), "sys/test/sample_driver",
-                          endpoints->server.TakeChannel().release());
+  fdio_cpp::UnownedFdioCaller caller(root_fd);
+  zx::result channel = component::ConnectAt<fuchsia_device::Controller>(
+      caller.directory(), "sys/test/sample_driver/device_controller");
+  ASSERT_EQ(ZX_OK, channel.status_value());
 
-  auto client = fidl::WireSyncClient(
-      fidl::ClientEnd<fuchsia_device::Controller>(std::move(endpoints->client)));
+  auto client = fidl::WireSyncClient(std::move(channel.value()));
 
   auto result = client->GetTopologicalPath();
   ASSERT_EQ(result->value()->path.get(), "/dev/sys/test/sample_driver");
@@ -105,13 +106,12 @@ TEST_F(DeviceControllerFidl, ControllerTestDfv2) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_device::Controller>();
   ASSERT_EQ(endpoints.status_value(), ZX_OK);
 
-  zx::channel dev_channel;
-  fdio_fd_clone(root_fd.get(), dev_channel.reset_and_get_address());
-  fdio_service_connect_at(dev_channel.get(), "sys/test/sample_driver",
-                          endpoints->server.TakeChannel().release());
+  fdio_cpp::UnownedFdioCaller caller(root_fd);
+  zx::result channel = component::ConnectAt<fuchsia_device::Controller>(
+      caller.directory(), "sys/test/sample_driver/device_controller");
+  ASSERT_EQ(ZX_OK, channel.status_value());
 
-  auto client = fidl::WireSyncClient(
-      fidl::ClientEnd<fuchsia_device::Controller>(std::move(endpoints->client)));
+  auto client = fidl::WireSyncClient(std::move(channel.value()));
 
   auto result = client->GetTopologicalPath();
   ASSERT_EQ(result->value()->path.get(), "/dev/sys/test/sample_driver");

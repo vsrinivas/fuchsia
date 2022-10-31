@@ -152,6 +152,10 @@ zx_status_t DevfsVnode::Write(const void* data, size_t len, size_t off, size_t* 
 }
 
 void DevfsVnode::Bind(BindRequestView request, BindCompleter::Sync& completer) {
+  if (dev_->Unbound()) {
+    completer.Close(ZX_ERR_IO_NOT_PRESENT);
+    return;
+  }
   zx_status_t status =
       device_bind(dev_, std::string(request->driver.data(), request->driver.size()).c_str());
   if (status != ZX_OK) {
@@ -168,10 +172,18 @@ void DevfsVnode::Bind(BindRequestView request, BindCompleter::Sync& completer) {
 }
 
 void DevfsVnode::GetCurrentPerformanceState(GetCurrentPerformanceStateCompleter::Sync& completer) {
+  if (dev_->Unbound()) {
+    completer.Close(ZX_ERR_IO_NOT_PRESENT);
+    return;
+  }
   completer.Reply(dev_->current_performance_state());
 }
 
 void DevfsVnode::Rebind(RebindRequestView request, RebindCompleter::Sync& completer) {
+  if (dev_->Unbound()) {
+    completer.Close(ZX_ERR_IO_NOT_PRESENT);
+    return;
+  }
   dev_->set_rebind_drv_name(std::string(request->driver.data(), request->driver.size()).c_str());
   zx_status_t status = device_rebind(dev_.get());
 
@@ -190,6 +202,10 @@ void DevfsVnode::Rebind(RebindRequestView request, RebindCompleter::Sync& comple
 }
 
 void DevfsVnode::UnbindChildren(UnbindChildrenCompleter::Sync& completer) {
+  if (dev_->Unbound()) {
+    completer.Close(ZX_ERR_IO_NOT_PRESENT);
+    return;
+  }
   zx::result<bool> scheduled_unbind = device_schedule_unbind_children(dev_);
   if (scheduled_unbind.is_error()) {
     completer.ReplyError(scheduled_unbind.status_value());
@@ -213,6 +229,10 @@ void DevfsVnode::UnbindChildren(UnbindChildrenCompleter::Sync& completer) {
 }
 
 void DevfsVnode::ScheduleUnbind(ScheduleUnbindCompleter::Sync& completer) {
+  if (dev_->Unbound()) {
+    completer.Close(ZX_ERR_IO_NOT_PRESENT);
+    return;
+  }
   zx_status_t status = device_schedule_remove(dev_, true /* unbind_self */);
   if (status != ZX_OK) {
     completer.ReplyError(status);
@@ -222,6 +242,10 @@ void DevfsVnode::ScheduleUnbind(ScheduleUnbindCompleter::Sync& completer) {
 }
 
 void DevfsVnode::GetTopologicalPath(GetTopologicalPathCompleter::Sync& completer) {
+  if (dev_->Unbound()) {
+    completer.Close(ZX_ERR_IO_NOT_PRESENT);
+    return;
+  }
   char buf[fuchsia_device::wire::kMaxDevicePathLen + 1];
   size_t actual;
   zx_status_t status = dev_->driver_host_context()->GetTopoPath(dev_, buf, sizeof(buf), &actual);
@@ -238,6 +262,10 @@ void DevfsVnode::GetTopologicalPath(GetTopologicalPathCompleter::Sync& completer
 }
 
 void DevfsVnode::GetMinDriverLogSeverity(GetMinDriverLogSeverityCompleter::Sync& completer) {
+  if (dev_->Unbound()) {
+    completer.Close(ZX_ERR_IO_NOT_PRESENT);
+    return;
+  }
   if (!dev_->driver) {
     completer.Reply(ZX_ERR_UNAVAILABLE, 0);
     return;
@@ -248,6 +276,10 @@ void DevfsVnode::GetMinDriverLogSeverity(GetMinDriverLogSeverityCompleter::Sync&
 
 void DevfsVnode::SetMinDriverLogSeverity(SetMinDriverLogSeverityRequestView request,
                                          SetMinDriverLogSeverityCompleter::Sync& completer) {
+  if (dev_->Unbound()) {
+    completer.Close(ZX_ERR_IO_NOT_PRESENT);
+    return;
+  }
   if (!dev_->driver) {
     completer.Reply(ZX_ERR_UNAVAILABLE);
     return;
@@ -258,6 +290,10 @@ void DevfsVnode::SetMinDriverLogSeverity(SetMinDriverLogSeverityRequestView requ
 
 void DevfsVnode::SetPerformanceState(SetPerformanceStateRequestView request,
                                      SetPerformanceStateCompleter::Sync& completer) {
+  if (dev_->Unbound()) {
+    completer.Close(ZX_ERR_IO_NOT_PRESENT);
+    return;
+  }
   uint32_t out_state;
   zx_status_t status = dev_->driver_host_context()->DeviceSetPerformanceState(
       dev_, request->requested_state, &out_state);
