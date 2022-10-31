@@ -80,6 +80,7 @@
             protocol: [
                 "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.buildinfo.Provider",
+                "fuchsia.fshost.Admin",
                 "fuchsia.logger.LogSink",
                 "fuchsia.net.name.Lookup",
                 "fuchsia.paver.Paver",

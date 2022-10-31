@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::{setup::DevhostConfig, storage::Storage},
+    crate::setup::DevhostConfig,
     anyhow::{bail, format_err, Context, Error},
     fidl::endpoints::ClientEnd,
     fidl::endpoints::ServerEnd,
@@ -47,14 +47,6 @@ enum BoardName {
     Override { name: String },
 }
 
-pub enum StorageType {
-    /// Use storage that has already had its blobfs partition wiped.
-    Ready(Box<dyn Storage>),
-    /// Use the given DirectoryMarker for blobfs, and the given path for minfs.
-    #[allow(dead_code)]
-    Fake { blobfs_root: ClientEnd<fio::DirectoryMarker>, minfs_path: Option<String> },
-}
-
 /// Helper for constructing OTAs.
 pub struct OtaEnvBuilder {
     board_name: BoardName,
@@ -62,9 +54,8 @@ pub struct OtaEnvBuilder {
     ota_type: OtaType,
     paver: PaverType,
     ssl_certificates: String,
-    storage_type: Option<StorageType>,
-    factory_reset: bool,
     outgoing_dir: Arc<Simple>,
+    blobfs_proxy: Option<fio::DirectoryProxy>,
 }
 
 impl OtaEnvBuilder {
@@ -80,9 +71,8 @@ impl OtaEnvBuilder {
             ota_type: OtaType::WellKnown,
             paver: PaverType::Real,
             ssl_certificates: "/config/ssl".to_owned(),
-            storage_type: None,
-            factory_reset: true,
             outgoing_dir,
+            blobfs_proxy: None,
         }
     }
 
@@ -107,8 +97,8 @@ impl OtaEnvBuilder {
     }
 
     /// Use the given StorageType as the storage target.
-    pub fn storage_type(mut self, storage_type: StorageType) -> Self {
-        self.storage_type = Some(storage_type);
+    pub fn blobfs_proxy(mut self, blobfs_proxy: fio::DirectoryProxy) -> Self {
+        self.blobfs_proxy = Some(blobfs_proxy);
         self
     }
 
@@ -123,13 +113,6 @@ impl OtaEnvBuilder {
     /// Use the given path for SSL certificates.
     pub fn ssl_certificates(mut self, path: &str) -> Self {
         self.ssl_certificates = path.to_owned();
-        self
-    }
-
-    #[cfg(test)]
-    /// Set whether the OTA process should factory reset the data partition.
-    pub fn factory_reset(mut self, reset: bool) -> Self {
-        self.factory_reset = reset;
         self
     }
 
@@ -152,12 +135,9 @@ impl OtaEnvBuilder {
     }
 
     /// Takes a devhost config, and converts into a pkg-resolver friendly format.
-    /// Returns SSH authorized keys and a |File| representing a directory with the repository
+    /// Returns a |File| representing a directory with the repository
     /// configuration in it.
-    async fn get_devhost_config(
-        &self,
-        cfg: &DevhostConfig,
-    ) -> Result<(Option<String>, File), Error> {
+    async fn get_devhost_config(&self, cfg: &DevhostConfig) -> Result<File, Error> {
         // Get the repository information from the devhost (including keys and repo URL).
         let client = fuchsia_hyper::new_client();
         let response = client
@@ -198,23 +178,17 @@ impl OtaEnvBuilder {
         let tmp_file = File::create(file).context("Creating file")?;
         serde_json::to_writer(tmp_file, &config_for_resolver).context("Writing JSON")?;
 
-        Ok((
-            Some(cfg.authorized_keys.clone()),
-            File::open(tempdir.into_path()).context("Opening tmpdir")?,
-        ))
+        Ok(File::open(tempdir.into_path()).context("Opening tmpdir")?)
     }
 
-    async fn get_wellknown_config(&self) -> Result<(Option<String>, File), Error> {
+    async fn get_wellknown_config(&self) -> Result<File, Error> {
         println!("recovery-ota: passing in config from config_data");
-        Ok((
-            None, // No authorized_keys for wellknown builds, can be added to userdebug builds in the future
-            File::open(PATH_TO_CONFIGS_DIR).context("Opening config data path")?,
-        ))
+        Ok(File::open(PATH_TO_CONFIGS_DIR).context("Opening config data path")?)
     }
 
     /// Construct an |OtaEnv| from this |OtaEnvBuilder|.
     pub async fn build(self) -> Result<OtaEnv, Error> {
-        let (authorized_keys, repo_dir) = match &self.ota_type {
+        let repo_dir = match &self.ota_type {
             OtaType::Devhost { cfg } => {
                 self.get_devhost_config(cfg).await.context("Getting devhost config")?
             }
@@ -228,14 +202,7 @@ impl OtaEnvBuilder {
 
         let board_name = self.get_board_name().await.context("Could not get board name")?;
 
-        let storage_type = self.storage_type.expect("storage_type is required");
-        let (storage, blobfs_root, minfs_root_path) = match storage_type {
-            StorageType::Ready(storage) => {
-                let blobfs_root = storage.wipe_or_get_storage().await.context("Opening blobfs")?;
-                (Some(storage), blobfs_root, None)
-            }
-            StorageType::Fake { blobfs_root, minfs_path } => (None, blobfs_root, minfs_path),
-        };
+        let blobfs_proxy = self.blobfs_proxy.ok_or(format_err!("Blobfs proxy not found"))?;
 
         let paver_connector = match self.paver {
             PaverType::Real => {
@@ -250,32 +217,24 @@ impl OtaEnvBuilder {
         };
 
         Ok(OtaEnv {
-            authorized_keys,
-            blobfs_root,
+            blobfs_proxy,
             board_name,
-            minfs_root_path,
             omaha_config: self.omaha_config,
             paver_connector,
             repo_dir,
             ssl_certificates,
-            storage,
-            factory_reset: self.factory_reset,
             outgoing_dir: self.outgoing_dir,
         })
     }
 }
 
 pub struct OtaEnv {
-    authorized_keys: Option<String>,
-    blobfs_root: ClientEnd<fio::DirectoryMarker>,
+    blobfs_proxy: fio::DirectoryProxy,
     board_name: String,
-    minfs_root_path: Option<String>,
     omaha_config: Option<OmahaConfig>,
     paver_connector: ClientEnd<fio::DirectoryMarker>,
     repo_dir: File,
     ssl_certificates: File,
-    storage: Option<Box<dyn Storage>>,
-    factory_reset: bool,
     outgoing_dir: Arc<Simple>,
 }
 
@@ -303,17 +262,14 @@ impl OtaEnv {
             },
         )?;
 
-        let blobfs_proxy = self
-            .storage
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("couldn't get storage while applying ota"))?
-            .wipe_or_get_storage()
-            .await?
-            .into_proxy()?;
-        self.outgoing_dir.add_entry("blob", vfs::remote::remote_dir(blobfs_proxy))?;
+        let (blobfs_client, remote) = fidl::endpoints::create_endpoints::<fio::DirectoryMarker>()?;
+        self.blobfs_proxy
+            .clone(fio::OpenFlags::CLONE_SAME_RIGHTS, ServerEnd::from(remote.into_channel()))?;
+
+        self.outgoing_dir.add_entry("blob", vfs::remote::remote_dir(self.blobfs_proxy))?;
 
         download_and_apply_update(
-            self.blobfs_root,
+            blobfs_client,
             self.paver_connector,
             channel,
             &self.board_name,
@@ -323,33 +279,6 @@ impl OtaEnv {
         .await
         .context("Installing OTA")?;
 
-        if let Some(keys) = self.authorized_keys {
-            match self.minfs_root_path {
-                Some(path) => {
-                    OtaEnv::install_ssh_certificates(&path, &keys)
-                        .context("Installing SSH authorized keys")?;
-                }
-                None => eprintln!("Skipping SSH key installation: minfs not available"),
-            };
-        }
-
-        if self.factory_reset {
-            match self.storage {
-                Some(storage) => {
-                    storage.wipe_data().await.context("Wiping data")?;
-                }
-                // This should only be the case for test environments.
-                None => eprintln!("Storage not available, skipping factory reset."),
-            };
-        }
-        Ok(())
-    }
-
-    /// Install SSH certificates into the target minfs.
-    fn install_ssh_certificates(minfs_root: &str, keys: &str) -> Result<(), Error> {
-        std::fs::create_dir(&format!("{}/ssh", minfs_root)).context("Creating ssh dir")?;
-        std::fs::write(&format!("{}/ssh/authorized_keys", minfs_root), keys)
-            .context("Writing authorized_keys")?;
         Ok(())
     }
 }
@@ -376,7 +305,7 @@ pub async fn run_devhost_ota(
     cfg: DevhostConfig,
     out_dir: ServerEnd<fio::NodeMarker>,
 ) -> Result<(), Error> {
-    // TODO(fxbug.dev/112997): deduplicate this spinup code with the code in
+    // TODO(fxbug.dev/112997, b/255340851): deduplicate this spinup code with the code in
     // ota_main.rs. To do that, we'll need to remove the run_devhost_ota call
     // from //src/recovery/system/src/main.rs and make run_*_ota public to only ota_main.rs.
     // Also, remove out_dir - ota_main.rs should provide an outgoing directory already spun up.
@@ -404,7 +333,7 @@ pub async fn run_devhost_ota(
 
 /// Run an OTA against a TUF or Omaha server. Returns Ok after the system has successfully been installed.
 pub async fn run_wellknown_ota(
-    storage_type: StorageType,
+    blobfs_proxy: fio::DirectoryProxy,
     outgoing_dir: Arc<Simple>,
 ) -> Result<(), Error> {
     let config: RecoveryUpdateConfig = get_config().context("Couldn't get config")?;
@@ -417,7 +346,7 @@ pub async fn run_wellknown_ota(
         UpdateType::Tuf => {
             println!("recovery-ota: Creating TUF OTA environment");
             let ota_env = OtaEnvBuilder::new(outgoing_dir)
-                .storage_type(storage_type)
+                .blobfs_proxy(blobfs_proxy)
                 .build()
                 .await
                 .context("Failed to create OTA env")?;
@@ -439,7 +368,7 @@ pub async fn run_wellknown_ota(
 
             let ota_env = OtaEnvBuilder::new(outgoing_dir)
                 .omaha_config(OmahaConfig { app_id: app_id, server_url: service_url })
-                .storage_type(storage_type)
+                .blobfs_proxy(blobfs_proxy)
                 .build()
                 .await
                 .context("Failed to create OTA env");
@@ -507,14 +436,12 @@ mod tests {
     /// we pretend is minfs.
     struct FakeStorage {
         blobfs: BlobfsRamdisk,
-        minfs: tempfile::TempDir,
     }
 
     impl FakeStorage {
         pub fn new() -> Result<Self, Error> {
-            let minfs = tempfile::tempdir().context("making tempdir")?;
             let blobfs = BlobfsRamdisk::start().context("launching blobfs")?;
-            Ok(FakeStorage { blobfs, minfs })
+            Ok(FakeStorage { blobfs })
         }
 
         /// Get all the blobs inside the blobfs.
@@ -522,14 +449,9 @@ mod tests {
             self.blobfs.list_blobs()
         }
 
-        /// Get the blobfs root directory.
-        pub fn blobfs_root(&self) -> Result<ClientEnd<fio::DirectoryMarker>, Error> {
-            self.blobfs.root_dir_handle()
-        }
-
-        /// Get the path to be used for minfs.
-        pub fn minfs_path(&self) -> String {
-            self.minfs.path().to_string_lossy().into_owned()
+        /// Get the blobfs proxy.
+        pub fn blobfs_root(&self) -> Result<fio::DirectoryProxy, Error> {
+            self.blobfs.root_dir_proxy()
         }
     }
 
@@ -604,7 +526,6 @@ mod tests {
 
     /// Represents an OTA that is yet to be run.
     struct TestOtaEnv {
-        authorized_keys: Option<String>,
         images: HashMap<String, Vec<u8>>,
         packages: Vec<Package>,
         storage: FakeStorage,
@@ -613,7 +534,6 @@ mod tests {
     impl TestOtaEnv {
         pub fn new() -> Result<Self, Error> {
             Ok(TestOtaEnv {
-                authorized_keys: None,
                 images: HashMap::new(),
                 packages: vec![],
                 storage: FakeStorage::new().context("Starting fake storage")?,
@@ -629,12 +549,6 @@ mod tests {
         /// Add an image to include in the update package for this OTA.
         pub fn add_image(mut self, name: &str, data: &str) -> Self {
             self.images.insert(name.to_owned(), data.to_owned().into_bytes());
-            self
-        }
-
-        /// Set the authorized keys to be installed by the OTA.
-        pub fn authorized_keys(mut self, keys: &str) -> Self {
-            self.authorized_keys = Some(keys.to_owned());
             self
         }
 
@@ -721,14 +635,7 @@ mod tests {
             let paver_connector = ClientEnd::from(paver_connector);
 
             // Get the devhost config
-            let cfg = DevhostConfig {
-                url: config_url,
-                authorized_keys: self
-                    .authorized_keys
-                    .as_ref()
-                    .map(|p| p.clone())
-                    .unwrap_or("".to_owned()),
-            };
+            let cfg = DevhostConfig { url: config_url };
 
             let directory_handle = take_startup_handle(HandleType::DirectoryRequest.into())
                 .expect("cannot take startup handle");
@@ -747,17 +654,15 @@ mod tests {
             );
             fasync::Task::local(async move { scope.wait().await }).detach();
 
+            let blobfs_proxy = self.storage.blobfs_root()?;
+
             // Build the environment, and do the OTA.
             let ota_env = OtaEnvBuilder::new(outgoing_dir_vfs)
                 .board_name("x64")
-                .storage_type(StorageType::Fake {
-                    blobfs_root: self.storage.blobfs_root().context("Opening blobfs root")?,
-                    minfs_path: Some(self.storage.minfs_path()),
-                })
+                .blobfs_proxy(blobfs_proxy)
                 .fake_paver(paver_connector)
                 .ssl_certificates(TEST_SSL_CERTS)
                 .devhost(cfg)
-                .factory_reset(false)
                 .build()
                 .await
                 .context("Building environment")?;
@@ -776,18 +681,6 @@ mod tests {
 
             assert_eq!(written_blobs, all_package_blobs);
         }
-
-        /// Check that the authorized keys file is what we expect it to be.
-        pub async fn check_keys(&self) {
-            let keys_path = format!("{}/ssh/authorized_keys", self.storage.minfs_path());
-            if let Some(expected) = &self.authorized_keys {
-                let result =
-                    std::fs::read_to_string(keys_path).expect("Failed to read authorized keys!");
-                assert_eq!(&result, expected);
-            } else {
-                assert_eq!(std::fs::read_to_string(keys_path).unwrap(), "");
-            }
-        }
     }
 
     #[ignore] //TODO(fxbug.dev/102239) Move to integration test
@@ -802,12 +695,10 @@ mod tests {
             .add_package(package)
             .add_image("zbi.signed", "zbi image")
             .add_image("fuchsia.vbmeta", "fuchsia vbmeta")
-            .add_image("epoch.json", &make_epoch_json(1))
-            .authorized_keys("test authorized keys file!");
+            .add_image("epoch.json", &make_epoch_json(1));
 
         env.run_ota().await?;
         env.check_blobs().await;
-        env.check_keys().await;
         Ok(())
     }
 

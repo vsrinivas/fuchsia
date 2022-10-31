@@ -34,6 +34,7 @@
         },
         {
             protocol: [
+                "fuchsia.fshost.Admin",
                 "fuchsia.paver.Paver",
                 "fuchsia.process.Launcher",
             ],

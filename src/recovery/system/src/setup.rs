@@ -20,7 +20,6 @@ pub enum SetupEvent {
 /// Devhost configuration, passed to the actual OTA process.
 pub struct DevhostConfig {
     pub url: String,
-    pub authorized_keys: String,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -29,8 +28,6 @@ struct DevhostRequestInfo {
     /// We assume that the OTA server is running on the requester's address
     /// at the given port.
     pub port: u16,
-    /// Contents of SSH authorized keys file to install to minfs.
-    pub authorized_keys: String,
 }
 
 async fn parse_ota_json(
@@ -40,11 +37,11 @@ async fn parse_ota_json(
     use bytes::Buf as _;
 
     let body = hyper::body::aggregate(request.into_body()).await.context("read request")?;
-    let DevhostRequestInfo { port, authorized_keys } =
+    let DevhostRequestInfo { port } =
         serde_json::from_reader(body.reader()).context("Failed to parse JSON")?;
 
     let url = format!("http://{}/config.json", SocketAddr::new(remote_addr, port));
-    Ok(DevhostConfig { url, authorized_keys })
+    Ok(DevhostConfig { url })
 }
 
 async fn serve<Fut, F>(
