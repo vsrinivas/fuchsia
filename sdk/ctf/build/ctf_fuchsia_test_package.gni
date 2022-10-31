@@ -46,6 +46,14 @@ template("ctf_fuchsia_test_package") {
     invoker.enable_ctf_test_realms = false
   }
 
+  # cts_version is nonempty when building for release.
+  # Rename the package when building for release so that when it's downloaded
+  # as a prebuilt and added to the build the prebuilt package name doesn't
+  # conflict with the name of the package from HEAD.
+  if (cts_version != "") {
+    invoker.package_name += "_$cts_version"
+  }
+
   not_needed(invoker, [ "enable_ctf_test_realms" ])
   not_needed(invoker, [ "plasa_element" ])
   not_needed(invoker, [ "release_in_ctf" ])
@@ -78,10 +86,6 @@ template("ctf_fuchsia_test_package") {
       if (cts_version == "" && invoker.enable_ctf_test_realms) {
         import("//sdk/ctf/build/ctf_test_realms.gni")
         subpackages = ctf_test_realms
-      }
-
-      if (cts_version != "") {
-        package_name += "_$cts_version"
       }
     }
 
