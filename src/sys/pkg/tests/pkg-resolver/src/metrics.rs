@@ -419,7 +419,7 @@ mod pkg_resolver_blob_fetch {
         status: metrics::FetchBlobMigratedMetricDimensionResult,
     }
 
-    #[test_case(vec![
+    #[test_case(&[
             // Hyper doesn't support 100-level responses other than protocol upgrade, and silently
             // turns them into a 500 and closes the connection. That results in flakiness when we can
             // request faster than the connection is removed from the pool.
@@ -428,10 +428,10 @@ mod pkg_resolver_blob_fetch {
             (200, 200, 1, ContentLengthMismatch),
             (201, 299, 2, Http2xx),
         ]; "status_ranges_101_2xx")]
-    #[test_case(vec![
+    #[test_case(&[
             (300, 399, 2, Http3xx),
         ]; "status_ranges_3xx")]
-    #[test_case(vec![
+    #[test_case(&[
             (400, 400, 2, HttpBadRequest),
             (401, 401, 2, HttpUnauthorized),
             (402, 402, 2, Http4xx),
@@ -449,7 +449,7 @@ mod pkg_resolver_blob_fetch {
             (429, 429, 4, HttpTooManyRequests),
             (430, 499, 2, Http4xx),
         ]; "status_ranges_4xx")]
-    #[test_case(vec![
+    #[test_case(&[
             (500, 500, 2, HttpInternalServerError),
             (501, 501, 2, Http5xx),
             (502, 502, 2, HttpBadGateway),
@@ -461,10 +461,10 @@ mod pkg_resolver_blob_fetch {
     // machine transitions, and occasionally leak on bugs. Unfortunately, we don't get to test
     // these because StatusCode won't let us create new ones in this range.
     #[fasync::run_singlethreaded(test)]
-    async fn tests(tests: Vec<(u16, u16, usize, metrics::FetchBlobMigratedMetricDimensionResult)>) {
+    async fn tests(tests: &[(u16, u16, usize, metrics::FetchBlobMigratedMetricDimensionResult)]) {
         let test_table: Vec<StatusTest> = tests
             .into_iter()
-            .map(|(min_code, max_code, count, status)| StatusTest {
+            .map(|&(min_code, max_code, count, status)| StatusTest {
                 min_code,
                 max_code,
                 count,
@@ -532,7 +532,7 @@ mod pkg_resolver_create_tuf_client {
         status: metrics::CreateTufClientMigratedMetricDimensionResult,
     }
 
-    #[test_case(vec![
+    #[test_case(&[
             // Hyper doesn't support 100-level responses other than protocol upgrade, and silently
             // turns them into a 500 and closes the connection. That results in flakiness when we can
             // request faster than the connection is removed from the pool.
@@ -541,10 +541,10 @@ mod pkg_resolver_create_tuf_client {
             (200, 200, UnexpectedTufErrorVariant),
             (201, 299, Http2xx),
         ]; "status_ranges_101_2xx")]
-    #[test_case(vec![
+    #[test_case(&[
             (300, 399, Http3xx),
         ]; "status_ranges_3xx")]
-    #[test_case(vec![
+    #[test_case(&[
             (400, 400, HttpBadRequest),
             (401, 401, HttpUnauthorized),
             (402, 402, Http4xx),
@@ -562,7 +562,7 @@ mod pkg_resolver_create_tuf_client {
             (429, 429, HttpTooManyRequests),
             (430, 499, Http4xx),
         ]; "status_ranges_4xx")]
-    #[test_case(vec![
+    #[test_case(&[
             (500, 500, HttpInternalServerError),
             (501, 501, Http5xx),
             (502, 502, HttpBadGateway),
@@ -574,10 +574,10 @@ mod pkg_resolver_create_tuf_client {
     // 600-999 aren't real, but are sometimes used in e.g. CDN configurations to track state
     // machine transitions, and occasionally leak on bugs. Unfortunately, we don't get to test
     // these because StatusCode won't let us create new ones in this range.
-    async fn tests(tests: Vec<(u16, u16, metrics::CreateTufClientMigratedMetricDimensionResult)>) {
+    async fn tests(tests: &[(u16, u16, metrics::CreateTufClientMigratedMetricDimensionResult)]) {
         let test_table: Vec<StatusTest> = tests
             .into_iter()
-            .map(|(min_code, max_code, status)| StatusTest { min_code, max_code, status })
+            .map(|&(min_code, max_code, status)| StatusTest { min_code, max_code, status })
             .collect();
         verify_status_ranges(&test_table).await
     }
@@ -631,7 +631,7 @@ mod pkg_resolver_update_tuf_client {
         status: metrics::UpdateTufClientMigratedMetricDimensionResult,
     }
 
-    #[test_case(vec![
+    #[test_case(&[
             // Hyper doesn't support 100-level responses other than protocol upgrade, and silently
             // turns them into a 500 and closes the connection. That results in flakiness when we can
             // request faster than the connection is removed from the pool.
@@ -640,10 +640,10 @@ mod pkg_resolver_update_tuf_client {
             (200, 200, UnexpectedTufErrorVariant),
             (201, 299, Http2xx),
         ]; "status_ranges_101_2xx")]
-    #[test_case(vec![
+    #[test_case(&[
             (300, 399, Http3xx),
         ]; "status_ranges_3xx")]
-    #[test_case(vec![
+    #[test_case(&[
             (400, 400, HttpBadRequest),
             (401, 401, HttpUnauthorized),
             (402, 402, Http4xx),
@@ -661,7 +661,7 @@ mod pkg_resolver_update_tuf_client {
             (429, 429, HttpTooManyRequests),
             (430, 499, Http4xx),
         ]; "status_ranges_4xx")]
-    #[test_case(vec![
+    #[test_case(&[
             (500, 500, HttpInternalServerError),
             (501, 501, Http5xx),
             (502, 502, HttpBadGateway),
@@ -673,10 +673,10 @@ mod pkg_resolver_update_tuf_client {
     // 600-999 aren't real, but are sometimes used in e.g. CDN configurations to track state
     // machine transitions, and occasionally leak on bugs. Unfortunately, we don't get to test
     // these because StatusCode won't let us create new ones in this range.
-    async fn tests(tests: Vec<(u16, u16, metrics::UpdateTufClientMigratedMetricDimensionResult)>) {
+    async fn tests(tests: &[(u16, u16, metrics::UpdateTufClientMigratedMetricDimensionResult)]) {
         let test_table: Vec<StatusTest> = tests
             .into_iter()
-            .map(|(min_code, max_code, status)| StatusTest { min_code, max_code, status })
+            .map(|&(min_code, max_code, status)| StatusTest { min_code, max_code, status })
             .collect();
         verify_status_ranges(&test_table).await
     }
