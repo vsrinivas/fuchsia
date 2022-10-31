@@ -25,6 +25,7 @@ if (is_host) {
 group("allow_gopackages") {
   # WARNING: Do add new items to this list. You are encouraged to prune the list.
   visibility = [
+    "//src/testing/fuzzing/syzkaller:syz-sysgen",
     "//src/tests/benchmarks/fidl/benchmark_suite/gen:*",
     "//src/tests/fidl/source_compatibility/*",
     "//third_party/cobalt/src/bin/config_change_validator/src:*",
