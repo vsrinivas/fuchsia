@@ -216,6 +216,25 @@ zx_status_t Sdhci::SgFinishRequest(const sdmmc_req_new_t& request, uint32_t out_
         WaitForReset(SoftwareReset::Get().FromValue(0).set_reset_cmd(1).set_reset_dat(1));
   }
 
+  if ((request.cmd_flags & SDMMC_RESP_DATA_PRESENT) && (request.cmd_flags & SDMMC_CMD_READ)) {
+    const cpp20::span<const sdmmc_buffer_region_t> regions{request.buffers_list,
+                                                           request.buffers_count};
+    for (const auto& region : regions) {
+      if (region.type != SDMMC_BUFFER_TYPE_VMO_HANDLE) {
+        continue;
+      }
+
+      // Invalidate the cache so that the next CPU read will pick up data that was written to main
+      // memory by the controller.
+      zx_status_t status = zx_vmo_op_range(region.buffer.vmo, ZX_VMO_OP_CACHE_CLEAN_INVALIDATE,
+                                           region.offset, region.size, nullptr, 0);
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "Failed to clean/invalidate cache: %s", zx_status_get_string(status));
+        return status;
+      }
+    }
+  }
+
   const InterruptStatus interrupt_status = pending_request_.status;
   pending_request_.Reset();
 
@@ -424,6 +443,22 @@ zx::result<size_t> Sdhci::DmaDescriptorBuilder::GetPinnedRegions(
   }
 
   pmt_count_++;
+
+  // We don't own this VMO, and therefore cannot make any assumptions about the state of the
+  // cache. The cache must be clean and invalidated for reads so that the final clean + invalidate
+  // doesn't overwrite main memory with stale data from the cache, and must be clean for writes so
+  // that main memory has the latest data.
+  if (request_.cmd_flags & SDMMC_CMD_READ) {
+    status =
+        vmo->op_range(ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, buffer.offset, buffer.size, nullptr, 0);
+  } else {
+    status = vmo->op_range(ZX_VMO_OP_CACHE_CLEAN, buffer.offset, buffer.size, nullptr, 0);
+  }
+
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Cache op on unowned VMO failed: %s", zx_status_get_string(status));
+    return zx::error(status);
+  }
 
   ZX_DEBUG_ASSERT(!out_regions.empty());  // This assumption simplifies the following logic.
 

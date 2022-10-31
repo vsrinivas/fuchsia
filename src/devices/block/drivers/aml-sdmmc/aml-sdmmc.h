@@ -195,6 +195,8 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
                                                     aml_sdmmc_desc_t* cur_desc,
                                                     fzl::PinnedVmo::Region region);
   static zx_status_t FinishReq(sdmmc_req_t* req);
+  static zx_status_t FinishReqNew(const sdmmc_req_new_t& req);
+
   void ClearStatus();
   zx_status_t WaitForInterrupt(sdmmc_req_t* req);
   zx::result<std::array<uint32_t, kResponseCount>> WaitForInterruptNew(const sdmmc_req_new_t& req);

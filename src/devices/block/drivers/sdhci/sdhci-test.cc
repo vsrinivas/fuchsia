@@ -17,6 +17,13 @@
 
 #include <zxtest/zxtest.h>
 
+// Stub out vmo_op_range to allow tests to use fake VMOs.
+__EXPORT
+zx_status_t zx_vmo_op_range(zx_handle_t handle, uint32_t op, uint64_t offset, uint64_t size,
+                            void* buffer, size_t buffer_size) {
+  return ZX_OK;
+}
+
 namespace {
 
 zx_paddr_t PageMask() { return static_cast<uintptr_t>(zx_system_get_page_size()) - 1; }

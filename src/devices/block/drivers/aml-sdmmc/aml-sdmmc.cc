@@ -834,6 +834,22 @@ zx::result<std::pair<aml_sdmmc_desc_t*, fzl::PinnedVmo>> AmlSdmmc::SetupUnownedV
     return zx::error(status);
   }
 
+  // We don't own this VMO, and therefore cannot make any assumptions about the state of the
+  // cache. The cache must be clean and invalidated for reads so that the final clean + invalidate
+  // doesn't overwrite main memory with stale data from the cache, and must be clean for writes so
+  // that main memory has the latest data.
+  if (req.cmd_flags & SDMMC_CMD_READ) {
+    status =
+        vmo->op_range(ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, buffer.offset, buffer.size, nullptr, 0);
+  } else {
+    status = vmo->op_range(ZX_VMO_OP_CACHE_CLEAN, buffer.offset, buffer.size, nullptr, 0);
+  }
+
+  if (status != ZX_OK) {
+    AML_SDMMC_ERROR("Cache op on unowned VMO failed: %s", zx_status_get_string(status));
+    return zx::error(status);
+  }
+
   aml_sdmmc_desc_t* desc = cur_desc;
   for (uint32_t i = 0; i < pinned_vmo.region_count(); i++) {
     fzl::PinnedVmo::Region region = pinned_vmo.region(i);
@@ -952,6 +968,28 @@ zx_status_t AmlSdmmc::FinishReq(sdmmc_req_t* req) {
   return st;
 }
 
+zx_status_t AmlSdmmc::FinishReqNew(const sdmmc_req_new_t& req) {
+  if ((req.cmd_flags & SDMMC_RESP_DATA_PRESENT) && (req.cmd_flags & SDMMC_CMD_READ)) {
+    const cpp20::span<const sdmmc_buffer_region_t> regions{req.buffers_list, req.buffers_count};
+    for (const auto& region : regions) {
+      if (region.type != SDMMC_BUFFER_TYPE_VMO_HANDLE) {
+        continue;
+      }
+
+      // Invalidate the cache so that the next CPU read will pick up data that was written to main
+      // memory by the controller.
+      zx_status_t status = zx_vmo_op_range(region.buffer.vmo, ZX_VMO_OP_CACHE_CLEAN_INVALIDATE,
+                                           region.offset, region.size, nullptr, 0);
+      if (status != ZX_OK) {
+        AML_SDMMC_ERROR("Failed to clean/invalidate cache: %s", zx_status_get_string(status));
+        return status;
+      }
+    }
+  }
+
+  return ZX_OK;
+}
+
 zx_status_t AmlSdmmc::SdmmcRequest(sdmmc_req_t* req) {
   {
     fbl::AutoLock lock(&mtx_);
@@ -1049,18 +1087,7 @@ zx_status_t AmlSdmmc::TuningDoTransfer(zx::unowned_vmo received_block, size_t bl
   };
 
   uint32_t unused_response[4];
-  zx_status_t status = AmlSdmmc::SdmmcRequestNew(&tuning_req, unused_response);
-
-  // We are the SDMMC client in this case, and are therefore responsible for performing cache ops
-  // for DMA.
-  zx_status_t cache_status =
-      received_block->op_range(ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, 0, blk_pattern_size, nullptr, 0);
-  if (cache_status != ZX_OK) {
-    AML_SDMMC_ERROR("Failed to invalidate tuning buffer: %s", zx_status_get_string(cache_status));
-    return cache_status;
-  }
-
-  return status;
+  return AmlSdmmc::SdmmcRequestNew(&tuning_req, unused_response);
 }
 
 bool AmlSdmmc::TuningTestSettings(cpp20::span<const uint8_t> tuning_blk, uint32_t tuning_cmd_idx,
@@ -1237,19 +1264,6 @@ zx_status_t AmlSdmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
   zx_status_t status = zx::vmo::create(tuning_blk.size(), 0, &received_block);
   if (status != ZX_OK) {
     AML_SDMMC_ERROR("Failed to create VMO: %s", zx_status_get_string(status));
-    return status;
-  }
-
-  // Commit the VMO and clean the cache up front so that the subsequent pin operation doesn't dirty
-  // the cache before DMA.
-  status = received_block.op_range(ZX_VMO_OP_COMMIT, 0, tuning_blk.size(), nullptr, 0);
-  if (status != ZX_OK) {
-    AML_SDMMC_ERROR("Failed to commit VMO: %s", zx_status_get_string(status));
-    return status;
-  }
-  status = received_block.op_range(ZX_VMO_OP_CACHE_CLEAN, 0, tuning_blk.size(), nullptr, 0);
-  if (status != ZX_OK) {
-    AML_SDMMC_ERROR("Failed to clean cache: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -1511,6 +1525,10 @@ zx_status_t AmlSdmmc::SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_t out_r
   zx::result<std::array<uint32_t, AmlSdmmc::kResponseCount>> response = WaitForInterruptNew(*req);
   if (response.is_ok()) {
     memcpy(out_response, response.value().data(), sizeof(uint32_t) * AmlSdmmc::kResponseCount);
+  }
+
+  if (zx_status_t status = FinishReqNew(*req); status != ZX_OK) {
+    return status;
   }
 
   fbl::AutoLock lock(&mtx_);
