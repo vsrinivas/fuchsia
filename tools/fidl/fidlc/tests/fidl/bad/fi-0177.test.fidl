@@ -1,0 +1,16 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library test.bad.fi0177;
+
+type MySubtype = enum : uint32 {
+    NONE = 0;
+    VMO = 3;
+};
+
+resource_definition MyResource : uint32 {
+    properties {
+        subtype MySubtype;
+        rights string;
+    };
+};

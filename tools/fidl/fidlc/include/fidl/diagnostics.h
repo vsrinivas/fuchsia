@@ -246,10 +246,9 @@ constexpr ErrorDef<106, std::string_view, std::string_view, std::string_view, So
 constexpr ErrorDef<107, std::string_view, std::string_view, std::string_view, SourceSpan>
     ErrDuplicateMemberValue(
         "value of {} member '{}' conflicts with previously declared member '{}' at {}");
-constexpr UndocumentedErrorDef<108, std::string_view, SourceSpan> ErrDuplicateResourcePropertyName(
+constexpr ErrorDef<108, std::string_view, SourceSpan> ErrDuplicateResourcePropertyName(
     "multiple resource properties named '{}'; previous was at {}");
-constexpr UndocumentedErrorDef<109, std::string_view, std::string_view, SourceSpan,
-                               std::string_view>
+constexpr ErrorDef<109, std::string_view, std::string_view, SourceSpan, std::string_view>
     ErrDuplicateResourcePropertyNameCanonical(
         "resource property '{}' conflicts with property '{}' from {}; both are "
         "represented by the canonical form '{}'");
@@ -405,17 +404,16 @@ constexpr UndocumentedErrorDef<170> ErrBoxedTypeCannotBeOptional(
     "no double optionality, boxes are already optional");
 constexpr UndocumentedErrorDef<171, flat::Name> ErrCannotBeBoxed(
     "type {} cannot be boxed, try using optional instead");
-constexpr UndocumentedErrorDef<172, flat::Name> ErrResourceMustBeUint32Derived(
-    "resource {} must be uint32");
-constexpr UndocumentedErrorDef<173, flat::Name> ErrResourceMissingSubtypeProperty(
+constexpr ErrorDef<172, flat::Name> ErrResourceMustBeUint32Derived("resource {} must be uint32");
+constexpr ErrorDef<173, flat::Name> ErrResourceMissingSubtypeProperty(
     "resource {} expected to have the subtype property, but it was missing");
 constexpr RetiredDef<174, flat::Name> ErrResourceMissingRightsProperty(
     "resource {} expected to have the rights property, but it was missing");
-constexpr UndocumentedErrorDef<175, flat::Name> ErrResourceSubtypePropertyMustReferToEnum(
+constexpr ErrorDef<175, flat::Name> ErrResourceSubtypePropertyMustReferToEnum(
     "the subtype property must be an enum, but wasn't in resource {}");
 constexpr RetiredDef<176> ErrHandleSubtypeMustReferToResourceSubtype(
     "the subtype must be a constant referring to the resource's subtype enum");
-constexpr UndocumentedErrorDef<177, flat::Name> ErrResourceRightsPropertyMustReferToBits(
+constexpr ErrorDef<177, flat::Name> ErrResourceRightsPropertyMustReferToBits(
     "the rights property must be a uint32 or a uint32-based bits, "
     "but wasn't defined as such in resource {}");
 constexpr ErrorDef<178, std::vector<std::string_view>, std::vector<std::string_view>,

@@ -429,22 +429,12 @@ service Example {
 }
 
 TEST(CanonicalNamesTests, BadResourceProperties) {
-  TestLibrary library(R"FIDL(
-library example;
-
-resource_definition Example {
-    properties {
-        // This property is required for compilation, but is not otherwise under test.
-        subtype flexible enum : uint32 {};
-        fooBar uint32;
-        FooBar uint32;
-    };
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0109.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateResourcePropertyNameCanonical);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "rights");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Rights");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "rights");
 }
 
 TEST(CanonicalNamesTests, BadUpperAcronym) {

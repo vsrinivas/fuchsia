@@ -174,67 +174,26 @@ TEST(ResourceTests, BadNoProperties) {
 }
 
 TEST(ResourceTests, BadDuplicateProperty) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type MyEnum = enum {
-  X = 0;
-};
-
-resource_definition SomeResource : uint32 {
-  properties {
-    // This property is required for compilation, but is not otherwise under test.
-    subtype flexible enum : uint32 {};
-    stuff MyEnum;
-    stuff MyEnum;
-  };
-};
-
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0108.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateResourcePropertyName);
 }
 
 TEST(ResourceTests, BadNotUint32) {
-  TestLibrary library(R"FIDL(library example;
-
-type MyEnum = strict enum : uint32 {
-    NONE = 0;
-};
-
-resource_definition SomeResource : uint8 {
-    properties {
-        subtype MyEnum;
-    };
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0172.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrResourceMustBeUint32Derived);
 }
 
 TEST(ResourceTests, BadMissingSubtypePropertyTest) {
-  TestLibrary library(R"FIDL(
-library example;
-
-resource_definition handle : uint32 {
-    properties {
-        rights uint32;
-    };
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0173.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrResourceMissingSubtypeProperty);
 }
 
 TEST(ResourceTests, BadSubtypeNotEnum) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type obj_type = struct {};
-
-resource_definition handle : uint32 {
-    properties {
-        subtype obj_type;
-    };
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0175.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrResourceSubtypePropertyMustReferToEnum);
 }
 
@@ -252,21 +211,8 @@ resource_definition handle : uint32 {
 }
 
 TEST(ResourceTests, BadNonBitsRights) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type obj_type = enum : uint32 {
-    NONE = 0;
-    VMO = 3;
-};
-
-resource_definition handle : uint32 {
-    properties {
-        subtype obj_type;
-        rights string;
-    };
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0177.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrResourceRightsPropertyMustReferToBits);
 }
 

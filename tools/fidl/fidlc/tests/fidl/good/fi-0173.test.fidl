@@ -1,0 +1,11 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library test.good.fi0173;
+
+resource_definition MyResource : uint32 {
+    properties {
+        subtype flexible enum : uint32 {};
+        rights uint32;
+    };
+};
