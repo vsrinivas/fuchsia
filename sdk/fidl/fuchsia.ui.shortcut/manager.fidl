@@ -1,6 +1,22 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+/// # Fuchsia shortcut
+///
+/// ## Rendered Docs
+///
+/// * [Shortcut FIDL](https://fuchsia.dev/reference/fidl/fuchsia.ui.shortcut)
+/// * [Rust](https://fuchsia-docs.firebaseapp.com/rust/fidl_fuchsia_ui_shortcut/index.html)
+/// * [Shortcut2 FIDL](https://fuchsia.dev/reference/fidl/fuchsia.ui.shortcut2)
+/// * [Rust](https://fuchsia-docs.firebaseapp.com/rust/fidl_fuchsia_ui_shortcut2/index.html)
+///
+/// ## Overview
+///
+/// `fuchsia.ui.shortcut` is an internal API for delivering events to the
+/// shortcut manager.  See `fuchsia.ui.shortcut2` for client-side notification
+/// interface.
+@available(added=7)
 library fuchsia.ui.shortcut;
 
 using fuchsia.ui.input3;

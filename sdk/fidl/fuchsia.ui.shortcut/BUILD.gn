@@ -7,11 +7,7 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.ui.shortcut") {
   sdk_category = "internal"
 
-  sources = [
-    "manager.fidl",
-    "overview.fidl",
-    "registry.fidl",
-  ]
+  sources = [ "manager.fidl" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.input",
