@@ -1,7 +1,7 @@
 # Input Pipeline
 
 This directory contains source for the input-pipeline component for astro and
-sherlock (`//src/ui/bin/input-pipeline:component-v2`).
+sherlock (`//src/ui/bin/input-pipeline:component`).
 
 This component is being repurposed for use on headless devices and replaced by
 the [Scene Manager component](../scene_manager/README.md) for devices that can
@@ -34,7 +34,7 @@ product_assembly_configuration("my_product") {
 }
 ```
 
-The `component-v2-for-test` target also sets a default value for testing:
+The `component-for-test` target also sets a default value for testing:
 
 ```
 fuchsia_structured_config_values("test_config") {
@@ -60,4 +60,4 @@ through human interface devices.
 
 Generally, test packages should include their own copy of a component to ensure
 hermeticity with respect to package loading semantics, and can do so by
-including `//src/ui/bin/input-pipeline:component-v2-for-test`.
+including `//src/ui/bin/input-pipeline:component-for-test`.

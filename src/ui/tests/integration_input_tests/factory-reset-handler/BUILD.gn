@@ -69,7 +69,7 @@ fuchsia_test_package("factory-reset-handler-test") {
   deps = [
     "//src/cobalt/bin/testing/mock_cobalt:component_v2",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
-    "//src/ui/bin/input-pipeline:component-v2-for-test",
+    "//src/ui/bin/input-pipeline:component-for-test",
     "//src/ui/bin/scene_manager:scene_manager_component_for_test",
     "//src/ui/testing/ui_test_realm:scenic_only",
   ]

@@ -155,7 +155,7 @@ group("ui_packages") {
     ]
   } else {
     deps += [
-      "bin/input-pipeline",
+      "bin/input-pipeline:pkg",
       "bin/root_presenter",
       "bin/text:text_manager",
     ]
@@ -175,7 +175,7 @@ group("ui_minimal_packages") {
     ]
   } else {
     deps += [
-      "bin/input-pipeline",
+      "bin/input-pipeline:pkg",
       "bin/root_presenter",
     ]
   }
@@ -185,7 +185,7 @@ group("ui_with_root_presenter_packages") {
   deps = [
     ":ui_packages_base",
     ":ui_with_root_presenter_package",
-    "bin/input-pipeline",
+    "bin/input-pipeline:pkg",
     "bin/root_presenter",
     "bin/text:text_manager",
     "//src/graphics/bundles:vulkan",
@@ -200,7 +200,7 @@ group("ui_headless_packages") {
     # supports required FIDL services like FactoryResetCountdown. Otherwise
     # remove and replace with a headless-specific list.
     ":ui_packages_base",
-    "bin/input-pipeline",
+    "bin/input-pipeline:pkg",
     "bin/root_presenter",
     "//src/graphics/bundles:vulkan",
   ]

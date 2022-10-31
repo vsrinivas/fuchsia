@@ -102,7 +102,7 @@ fuchsia_component("root_presenter_scene_with_input") {
   deps = [
     "//src/cobalt/bin/testing/mock_cobalt:component_v2",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
-    "//src/ui/bin/input-pipeline:component-v2-for-test",
+    "//src/ui/bin/input-pipeline:component-for-test",
     "//src/ui/bin/root_presenter:component_v2",
     "//src/ui/bin/text:text_manager_comp",
     "//src/ui/scenic:component_v2_with_supplied_display_provider",

@@ -5,6 +5,15 @@
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
+group("input-pipeline") {
+  testonly = true
+  deps = [
+    ":default-config-pkg",
+    ":pkg",
+    ":tests",
+  ]
+}
+
 group("tests") {
   testonly = true
   deps = [ ":input-pipeline-tests" ]
@@ -44,24 +53,25 @@ fuchsia_component_manifest("manifest") {
   manifest = "meta/input-pipeline.cml"
 }
 
-# TODO(fxbug.dev/113335): Remove -v2 suffix.
-fuchsia_component("component-v2") {
+fuchsia_component("component") {
   cm_label = ":manifest"
   deps = [ ":input-pipeline-bin" ]
 }
 
 # TODO(fxbug.dev/106573): Remove test-only target when
 # default config values are available.
-group("component-v2-for-test") {
+group("component-for-test") {
   testonly = true
   deps = [
-    ":component-v2",
+    ":component",
     ":config_for_test",
   ]
 }
 
-fuchsia_package("input-pipeline") {
-  deps = [ ":component-v2" ]
+# Standard package containing input-pipeline.cm.
+fuchsia_package("pkg") {
+  package_name = "input-pipeline"
+  deps = [ ":component" ]
 }
 
 fuchsia_unittest_package("input-pipeline-tests") {
