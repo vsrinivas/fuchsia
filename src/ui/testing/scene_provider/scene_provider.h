@@ -36,7 +36,7 @@ class FakeViewController : public fuchsia::element::ViewController {
 class SceneProvider : public fuchsia::ui::test::scene::Controller,
                       public fuchsia::element::GraphicalPresenter {
  public:
-  explicit SceneProvider(sys::ComponentContext* context) : context_(context) {}
+  explicit SceneProvider(sys::ComponentContext* context);
   ~SceneProvider() override = default;
 
   // |fuchsia::ui::test::scene::Controller|
@@ -72,6 +72,8 @@ class SceneProvider : public fuchsia::ui::test::scene::Controller,
   std::optional<FakeViewController> fake_view_controller_;
   fuchsia::element::AnnotationControllerPtr annotation_controller_;
   sys::ComponentContext* context_ = nullptr;
+  bool use_flatland_ = false;
+  bool use_scene_manager_ = false;
 };
 
 }  // namespace ui_testing

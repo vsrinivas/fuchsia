@@ -18,16 +18,20 @@ namespace ui_testing {
 
 void FakeViewController::Dismiss() { dismiss_(); }
 
+SceneProvider::SceneProvider(sys::ComponentContext* context) : context_(context) {
+  auto scene_provider_config = scene_provider_config_lib::Config::TakeFromStartupHandle();
+  use_flatland_ = scene_provider_config.use_flatland();
+  use_scene_manager_ = scene_provider_config.use_scene_manager();
+}
+
 void SceneProvider::AttachClientView(
     fuchsia::ui::test::scene::ControllerAttachClientViewRequest request,
     AttachClientViewCallback callback) {
   FX_LOGS(INFO) << "Attach client view";
 
-  auto scene_provider_config = scene_provider_config_lib::Config::TakeFromStartupHandle();
-
   fuchsia::ui::views::ViewRef client_view_ref;
 
-  if (scene_provider_config.use_scene_manager()) {
+  if (use_scene_manager_) {
     fuchsia::session::scene::ManagerSyncPtr scene_manager;
     context_->svc()->Connect(scene_manager.NewRequest());
 
@@ -85,8 +89,6 @@ void SceneProvider::PresentView(
     fake_view_controller_.emplace(std::move(view_controller), [this] { this->DismissView(); });
   }
 
-  auto scene_provider_config = scene_provider_config_lib::Config::TakeFromStartupHandle();
-
   // TODO(fxbug.dev/106094): Register client's scoped view tree watcher, if
   // requested.
 
@@ -94,7 +96,7 @@ void SceneProvider::PresentView(
   // set. On flatland, it will have the `viewport_creation_token` field set.
   // Any other combination thereof is invalid.
   if (view_spec.has_view_ref() && view_spec.has_view_holder_token()) {
-    if (scene_provider_config.use_scene_manager()) {
+    if (use_scene_manager_) {
       fuchsia::session::scene::ManagerSyncPtr scene_manager;
       context_->svc()->Connect(scene_manager.NewRequest());
 
@@ -110,8 +112,7 @@ void SceneProvider::PresentView(
                                             /* presentation */ nullptr);
     }
   } else if (view_spec.has_viewport_creation_token()) {
-    FX_CHECK(scene_provider_config.use_scene_manager())
-        << "Flatland not supported on root presenter";
+    FX_CHECK(use_scene_manager_) << "Flatland not supported on root presenter";
 
     fuchsia::session::scene::ManagerSyncPtr scene_manager;
     context_->svc()->Connect(scene_manager.NewRequest());
