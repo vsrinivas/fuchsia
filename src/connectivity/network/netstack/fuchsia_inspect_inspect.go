@@ -219,11 +219,14 @@ func (impl *statCounterInspectImpl) GetChild(childName string) inspectInner {
 }
 
 func extractIntegralStatCounterMap(value reflect.Value) (*tcpip.IntegralStatCounterMap, bool) {
+	// IntegralStatCounterMap holds a lock. If we accept a Value that holds an
+	// instance of it, then the instance will contain a reference to the same
+	// underlying map data but a separate lock. Accessing the map would result
+	// in run-time concurrency bugs like https://fxbug.dev/113437. Prevent this
+	// by only allowing Value objects that hold pointers to maps.
 	switch t := value.Interface().(type) {
 	case *tcpip.IntegralStatCounterMap:
 		return t, true
-	case tcpip.IntegralStatCounterMap:
-		return &t, true
 	default:
 		return nil, false
 	}

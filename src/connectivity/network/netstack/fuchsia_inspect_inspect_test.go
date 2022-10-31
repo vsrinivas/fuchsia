@@ -120,9 +120,7 @@ func TestStatCounterInspectImpl(t *testing.T) {
 	const invalidPortCount = 10
 	const initAcquireCount = 3
 	var s dhcp.Stats
-	s.PacketDiscardStats.InvalidPort.Init()
-	s.PacketDiscardStats.InvalidPacketType.Init()
-	s.PacketDiscardStats.InvalidTransProto.Init()
+	s.PacketDiscardStats.Init()
 	for i := 0; i < invalidPortCount; i++ {
 		s.PacketDiscardStats.InvalidPort.Increment(invalidPort)
 	}
@@ -208,6 +206,30 @@ func TestStatCounterInspectImpl(t *testing.T) {
 	if err := checkInspectRecurse(&v, expected); err != nil {
 		t.Error(err)
 	}
+}
+
+func TestStatCounterGetChildDoesNotCopy(t *testing.T) {
+	addGoleakCheck(t)
+
+	const fieldName = "InvalidPort"
+	var s dhcp.PacketDiscardStats
+	s.Init()
+
+	v := statCounterInspectImpl{
+		name:  "doesn't matter",
+		value: reflect.ValueOf(&s).Elem(),
+	}
+
+	child := v.GetChild(fieldName)
+	integralMap, ok := child.(*integralStatCounterMapInspectImpl)
+	if !ok {
+		t.Fatalf("got v.GetChild(%q) = %#v, want %T", fieldName, child, integralMap)
+	}
+
+	if want, got := s.InvalidPort, integralMap.value; want != got {
+		t.Errorf("got integralMap.value = %p, want %p", got, want)
+	}
+
 }
 
 func circularLogsChecker(logs *circularLogsInspectImpl, expectedChildren []string, expectedChildrenData []inspect.Object) []error {
@@ -596,9 +618,7 @@ func TestDHCPInfoInspectImpl(t *testing.T) {
 		},
 		stats: &dhcp.Stats{},
 	}
-	v.stats.PacketDiscardStats.InvalidPort.Init()
-	v.stats.PacketDiscardStats.InvalidTransProto.Init()
-	v.stats.PacketDiscardStats.InvalidPacketType.Init()
+	v.stats.PacketDiscardStats.Init()
 	for i := 0; i < invalidPortCount; i++ {
 		v.stats.PacketDiscardStats.InvalidPort.Increment(invalidPort)
 	}

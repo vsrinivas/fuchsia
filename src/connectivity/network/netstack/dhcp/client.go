@@ -91,9 +91,19 @@ type Client struct {
 }
 
 type PacketDiscardStats struct {
-	InvalidPort       tcpip.IntegralStatCounterMap
-	InvalidTransProto tcpip.IntegralStatCounterMap
-	InvalidPacketType tcpip.IntegralStatCounterMap
+	InvalidPort       *tcpip.IntegralStatCounterMap
+	InvalidTransProto *tcpip.IntegralStatCounterMap
+	InvalidPacketType *tcpip.IntegralStatCounterMap
+}
+
+func (p *PacketDiscardStats) Init() {
+	p.InvalidPort = &tcpip.IntegralStatCounterMap{}
+	p.InvalidTransProto = &tcpip.IntegralStatCounterMap{}
+	p.InvalidPacketType = &tcpip.IntegralStatCounterMap{}
+
+	p.InvalidPort.Init()
+	p.InvalidTransProto.Init()
+	p.InvalidPacketType.Init()
 }
 
 // Stats collects DHCP statistics per client.
@@ -186,9 +196,7 @@ func NewClient(
 		stateRecentHistory: util.MakeCircularLogs(stateRecentHistoryLength),
 		contextWithTimeout: time.ContextWithTimeout,
 	}
-	c.stats.PacketDiscardStats.InvalidPacketType.Init()
-	c.stats.PacketDiscardStats.InvalidTransProto.Init()
-	c.stats.PacketDiscardStats.InvalidPort.Init()
+	c.stats.PacketDiscardStats.Init()
 	c.storeInfo(&Info{
 		NICID:          nicid,
 		LinkAddr:       linkAddr,
