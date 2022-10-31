@@ -95,6 +95,7 @@ rustc_library("input_pipeline") {
     "src/gestures/inspect_keys.rs",
     "src/gestures/mod.rs",
     "src/gestures/motion.rs",
+    "src/gestures/one_finger_button.rs",
     "src/gestures/one_finger_drag.rs",
     "src/gestures/primary_tap.rs",
     "src/gestures/scroll.rs",

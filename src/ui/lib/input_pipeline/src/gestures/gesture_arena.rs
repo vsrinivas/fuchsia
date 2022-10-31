@@ -177,6 +177,8 @@ pub(super) enum RecognizedGesture {
     Motion,
     Scroll,
     OneFingerDrag,
+    #[allow(dead_code)]
+    OneButtonDown,
 }
 
 #[derive(Debug)]
@@ -411,6 +413,7 @@ impl RecognizedGesture {
             RecognizedGesture::Motion => "motion",
             RecognizedGesture::Scroll => "scroll",
             RecognizedGesture::OneFingerDrag => "one_finger_drag",
+            RecognizedGesture::OneButtonDown => "one_button_down",
         }
     }
 }
