@@ -914,9 +914,12 @@ bool DpDisplay::LinkTrainingSetupTigerLake() {
       target_bw = dpcd::LinkBw::k1620Mbps;
     } else if (dp_link_rate_mhz_ == 2700) {
       target_bw = dpcd::LinkBw::k2700Mbps;
-    } else {
-      ZX_ASSERT(dp_link_rate_mhz_ == 5400);
+    } else if (dp_link_rate_mhz_ == 5400) {
       target_bw = dpcd::LinkBw::k5400Mbps;
+    } else {
+      ZX_ASSERT_MSG(dp_link_rate_mhz_ == 8100, "Unrecognized DP link rate: %d Mbps/lane",
+                    dp_link_rate_mhz_);
+      target_bw = dpcd::LinkBw::k8100Mbps;
     }
 
     dpcd::LinkBw bw_setting;
@@ -1011,9 +1014,12 @@ bool DpDisplay::LinkTrainingSetupKabyLake() {
       target_bw = dpcd::LinkBw::k1620Mbps;
     } else if (dp_link_rate_mhz_ == 2700) {
       target_bw = dpcd::LinkBw::k2700Mbps;
-    } else {
-      ZX_ASSERT(dp_link_rate_mhz_ == 5400);
+    } else if (dp_link_rate_mhz_ == 5400) {
       target_bw = dpcd::LinkBw::k5400Mbps;
+    } else {
+      ZX_ASSERT_MSG(dp_link_rate_mhz_ == 8100, "Unrecognized DP link rate: %d Mbps/lane",
+                    dp_link_rate_mhz_);
+      target_bw = dpcd::LinkBw::k8100Mbps;
     }
 
     dpcd::LinkBw bw_setting;
