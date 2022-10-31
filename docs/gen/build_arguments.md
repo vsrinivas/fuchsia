@@ -6396,7 +6396,7 @@ From //build/config/rust/BUILD.gn:28
 ### rust_virtio_net
 If true, uses the new Rust virtio-net device instead of the legacy C++ device.
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
 From //src/virtualization/bin/args.gni:7
 
