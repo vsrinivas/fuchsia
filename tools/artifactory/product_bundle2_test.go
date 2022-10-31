@@ -32,7 +32,7 @@ func TestProductBundle2Uploads(t *testing.T) {
 		Version: "1",
 		Entries: []TransferManifestEntry{
 			{
-				Type:   "product_bundle",
+				Type:   "files",
 				Local:  "",
 				Remote: "product_bundle",
 				Entries: []ArtifactEntry{
@@ -85,7 +85,7 @@ func TestProductBundle2Uploads(t *testing.T) {
   "version": "1",
   "entries": [
     {
-      "type": "product_bundle",
+      "type": "files",
       "local": "",
       "remote": "namespace_pb/product_bundle",
       "entries": [

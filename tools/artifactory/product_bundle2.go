@@ -76,7 +76,7 @@ func uploadProductBundle(mods productBundlesModules, transferManifestPath string
 	var newTransferEntries []TransferManifestEntry
 	for _, entry := range transferManifest.Entries {
 		remote := ""
-		if entry.Type == "product_bundle" {
+		if entry.Type == "files" {
 			remote = productBundleRemote
 			for _, artifact := range entry.Entries {
 				uploads = append(uploads, Upload{

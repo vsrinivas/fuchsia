@@ -48,9 +48,9 @@ pub enum ArtifactType {
     /// Fuchsia package blobs.
     #[serde(rename = "blobs")]
     Blobs,
-    /// A Fuchsia product bundle.
-    #[serde(rename = "product_bundle")]
-    ProductBundle,
+    /// A collection of files.
+    #[serde(rename = "files")]
+    Files,
 }
 
 /// A single artifact inside a local or remote location.
@@ -78,7 +78,7 @@ mod tests {
                     ],
                 },
                 TransferEntry {
-                    artifact_type: ArtifactType::ProductBundle,
+                    artifact_type: ArtifactType::Files,
                     local: PathBuf::from("path/to/local/b"),
                     remote: "gs://bucket/b".into(),
                     entries: vec![
@@ -101,7 +101,7 @@ mod tests {
                     ],
                 },
                 {
-                    "type": "product_bundle",
+                    "type": "files",
                     "local": "path/to/local/b",
                     "remote": "gs://bucket/b",
                     "entries": [

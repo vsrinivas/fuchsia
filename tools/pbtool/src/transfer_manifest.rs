@@ -103,7 +103,7 @@ impl GenerateTransferManifest {
         }
 
         entries.push(TransferEntry {
-            artifact_type: ArtifactType::ProductBundle,
+            artifact_type: ArtifactType::Files,
             local: rebased_product_bundle_path.clone(),
             remote: "product_bundle".into(),
             entries: product_bundle_entries,
@@ -185,7 +185,7 @@ mod tests {
             transfer_manifest,
             TransferManifest::V1(TransferManifestV1 {
                 entries: vec![TransferEntry {
-                    artifact_type: ArtifactType::ProductBundle,
+                    artifact_type: ArtifactType::Files,
                     local: "product_bundle".into(),
                     remote: "product_bundle".into(),
                     entries: vec![
