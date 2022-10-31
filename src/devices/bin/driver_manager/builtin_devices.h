@@ -23,6 +23,8 @@ class BuiltinDevVnode : public fs::Vnode {
 
   zx_status_t Write(const void* data, size_t len, size_t off, size_t* out_actual) override;
 
+  zx_status_t Truncate(size_t len) override;
+
   zx_status_t GetAttributes(fs::VnodeAttributes* a) override;
 
   fs::VnodeProtocolSet GetProtocols() const override;
