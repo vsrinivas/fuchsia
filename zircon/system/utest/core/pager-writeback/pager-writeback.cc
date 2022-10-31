@@ -6430,4 +6430,60 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(CommitExtendedTail, ZX_VMO_RESIZABLE) {
   ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
+// Tests a race between resolving a DIRTY request for a zero range and marking the zero range clean.
+TEST(PagerWriteback, DelayedDirtyNotFound) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, ZX_VMO_TRAP_DIRTY | ZX_VMO_RESIZABLE, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  // Resize the VMO up so that there's a zero range.
+  ASSERT_TRUE(vmo->Resize(2));
+
+  // Verify that the resized range is dirty and zero.
+  zx_vmo_dirty_range_t range = {.offset = 1, .length = 1, .options = ZX_VMO_DIRTY_RANGE_IS_ZERO};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // Write to the zero range. This will generate a DIRTY request.
+  TestThread t([vmo]() -> bool {
+    uint8_t data = 0xaa;
+    return vmo->vmo().write(&data, zx_system_get_page_size(), sizeof(data)) == ZX_OK;
+  });
+  ASSERT_TRUE(t.Start());
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 1, 1, ZX_TIME_INFINITE));
+
+  // Meanwhile writeback the dirty zero range. This will reset the zero tail so that the pager is
+  // now responsible for supplying all pages.
+  ASSERT_TRUE(pager.WritebackBeginZeroPages(vmo, 1, 1));
+  ASSERT_TRUE(pager.WritebackEndPages(vmo, 1, 1));
+
+  // Verify that no pages are dirty now.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // Now try to resolve the DIRTY request we saw earlier. This will fail with ZX_ERR_NOT_FOUND as
+  // there is no committed page for the kernel to dirty.
+  ASSERT_EQ(ZX_ERR_NOT_FOUND,
+            zx_pager_op_range(pager.pager().get(), ZX_PAGER_OP_DIRTY, vmo->vmo().get(),
+                              zx_system_get_page_size(), zx_system_get_page_size(), 0));
+
+  // Failing the DIRTY request will cause the kernel to try again, this time with a READ request
+  // first as the zero page has been marked clean without being committed.
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 1, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 1, 1));
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 1, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.DirtyPages(vmo, 1, 1));
+  ASSERT_TRUE(t.Wait());
+
+  // The last page should still be dirty but non-zero now.
+  range.options = 0;
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+}
+
 }  // namespace pager_tests

@@ -4561,9 +4561,12 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len, list_nod
         },
         [](uint64_t start, uint64_t end) {
           // A gap indicates a page that has not been supplied yet. It will need to be supplied
-          // first. Although we will never generate a DIRTY request for absent pages in the first
-          // place, it is still possible for a clean page to get evicted after the DIRTY request was
-          // generated.
+          // first. Although we will never generate a DIRTY request for absent pages before
+          // supply_zero_offset_ in the first place, it is still possible for a clean page to get
+          // evicted after the DIRTY request was generated. It is also possible for the
+          // supply_zero_offset_ to get advanced itself due to a racing writeback, such that an old
+          // DIRTY request (for uncommitted pages beyond supply_zero_offset_) now starts before the
+          // advanced supply_zero_offset_.
           //
           // Spuriously resolve the DIRTY page request, and let the waiter(s) retry looking up the
           // page, which will generate a READ request first to supply the missing page.
