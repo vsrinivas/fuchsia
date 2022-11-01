@@ -626,10 +626,10 @@ int pcap_activate_fuchsia(pcap_t *handle) {
     uint64_t value = 1;
     ssize_t n = write(handlep->poll_breakloop_fd, &value, sizeof(value));
     if (n < 0) {
-      ZX_PANIC("failed to write to breaklook fd; %s\n", strerror(errno));
+      ZX_PANIC("failed to write to breaklook fd; %s", strerror(errno));
     }
     if (n != sizeof(value)) {
-      ZX_PANIC("short write to event FD; expected %zu, got %zd\n", sizeof(value), n);
+      ZX_PANIC("short write to event FD; expected %zu, got %zd", sizeof(value), n);
     }
   };
 
