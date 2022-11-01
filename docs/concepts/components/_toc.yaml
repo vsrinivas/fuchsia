@@ -31,6 +31,8 @@ toc:
     section:
     - title: "ELF runner"
       path: /docs/concepts/components/v2/elf_runner.md
+    - title: "Starnix"
+      path: /docs/concepts/components/v2/starnix.md
 - title: "Configuration"
   path: /docs/concepts/components/configuration.md
 - title: "Diagnostics"
