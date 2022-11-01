@@ -1,0 +1,242 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library zx;
+
+// TODO(fxbug.dev/113897): `status` should be defined here and this should all
+// be a single enum definition.
+
+/// Indicates an operation was successful.
+const OK status = 0;
+
+// ======= Internal failures =======
+
+/// The system encountered an otherwise unspecified error while performing the
+/// operation.
+const ERR_INTERNAL status = -1;
+
+/// The operation is not implemented, supported, or enabled.
+const ERR_NOT_SUPPORTED status = -2;
+
+/// The system was not able to allocate some resource needed for the operation.
+const ERR_NO_RESOURCES status = -3;
+
+/// The system was not able to allocate memory needed for the operation.
+const ERR_NO_MEMORY status = -4;
+
+// -5 used to be ZX_ERR_CALL_FAILED.
+
+/// The system call was interrupted, but should be retried. This should not be
+/// seen outside of the VDSO.
+const ERR_INTERNAL_INTR_RETRY status = -6;
+
+// ======= Parameter errors =======
+
+/// An argument is invalid. For example, a null pointer when a null pointer is
+/// not permitted.
+const ERR_INVALID_ARGS status = -10;
+
+/// A specified handle value does not refer to a handle.
+const ERR_BAD_HANDLE status = -11;
+
+/// The subject of the operation is the wrong type to perform the operation.
+///
+/// For example: Attempting a message_read on a thread handle.
+const ERR_WRONG_TYPE status = -12;
+
+/// The specified syscall number is invalid.
+const ERR_BAD_SYSCALL status = -13;
+
+/// An argument is outside the valid range for this operation.
+const ERR_OUT_OF_RANGE status = -14;
+
+/// The caller-provided buffer is too small for this operation.
+const ERR_BUFFER_TOO_SMALL status = -15;
+
+// ======= Precondition or state errors =======
+
+/// The operation failed because the current state of the object does not allow
+/// it, or a precondition of the operation is not satisfied.
+const ERR_BAD_STATE status = -20;
+
+/// The time limit for the operation elapsed before the operation completed.
+const ERR_TIMED_OUT status = -21;
+
+/// The operation cannot be performed currently but potentially could succeed if
+/// the caller waits for a prerequisite to be satisfied, like waiting for a
+/// handle to be readable or writable.
+///
+/// Example: Attempting to read from a channel that has no messages waiting but
+/// has an open remote will return `ZX_ERR_SHOULD_WAIT`. In contrast, attempting
+/// to read from a channel that has no messages waiting and has a closed remote
+/// end will return `ZX_ERR_PEER_CLOSED`.
+const ERR_SHOULD_WAIT status = -22;
+
+/// The in-progress operation, for example, a wait, has been canceled.
+const ERR_CANCELED status = -23;
+
+/// The operation failed because the remote end of the subject of the operation
+/// was closed.
+const ERR_PEER_CLOSED status = -24;
+
+/// The requested entity is not found.
+const ERR_NOT_FOUND status = -25;
+
+/// An object with the specified identifier already exists.
+///
+/// Example: Attempting to create a file when a file already exists with that
+/// name.
+const ERR_ALREADY_EXISTS status = -26;
+
+/// The operation failed because the named entity is already owned or controlled
+/// by another entity. The operation could succeed later if the current owner
+/// releases the entity.
+const ERR_ALREADY_BOUND status = -27;
+
+/// The subject of the operation is currently unable to perform the operation.
+///
+/// This is used when there's no direct way for the caller to observe when the
+/// subject will be able to perform the operation and should thus retry.
+const ERR_UNAVAILABLE status = -28;
+
+// ======= Permission check errors =======
+
+/// The caller did not have permission to perform the specified operation.
+const ERR_ACCESS_DENIED status = -30;
+
+/// Otherwise-unspecified error occurred during I/O.
+const ERR_IO status = -40;
+
+/// The entity the I/O operation is being performed on rejected the operation.
+///
+/// Example: an I2C device NAK'ing a transaction or a disk controller rejecting
+/// an invalid command, or a stalled USB endpoint.
+const ERR_IO_REFUSED status = -41;
+
+/// The data in the operation failed an integrity check and is possibly
+/// corrupted.
+///
+/// Example: CRC or Parity error.
+const ERR_IO_DATA_INTEGRITY status = -42;
+
+/// The data in the operation is currently unavailable and may be permanently
+/// lost.
+///
+/// Example: A disk block is irrecoverably damaged.
+const ERR_IO_DATA_LOSS status = -43;
+
+/// The device is no longer available (has been unplugged from the system,
+/// powered down, or the driver has been unloaded).
+const ERR_IO_NOT_PRESENT status = -44;
+
+/// More data was received from the device than expected.
+///
+/// Example: a USB "babble" error due to a device sending more data than the
+/// host queued to receive.
+const ERR_IO_OVERRUN status = -45;
+
+/// An operation did not complete within the required timeframe.
+///
+/// Example: A USB isochronous transfer that failed to complete due to an
+/// overrun or underrun.
+const ERR_IO_MISSED_DEADLINE status = -46;
+
+/// The data in the operation is invalid parameter or is out of range.
+///
+/// Example: A USB transfer that failed to complete with TRB Error
+const ERR_IO_INVALID status = -47;
+
+// ======== Filesystem Errors ========
+
+/// Path name is too long.
+const ERR_BAD_PATH status = -50;
+
+/// The object is not a directory or does not support directory operations.
+///
+/// Example: Attempted to open a file as a directory or attempted to do
+/// directory operations on a file.
+const ERR_NOT_DIR status = -51;
+
+/// Object is not a regular file.
+const ERR_NOT_FILE status = -52;
+
+/// This operation would cause a file to exceed a filesystem-specific size
+/// limit.
+const ERR_FILE_BIG status = -53;
+
+/// The filesystem or device space is exhausted.
+const ERR_NO_SPACE status = -54;
+
+/// The directory is not empty for an operation that requires it to be empty.
+///
+/// For example, non-recursively deleting a directory with files still in it.
+const ERR_NOT_EMPTY status = -55;
+
+// ======== Flow Control ========
+
+/// An indicate to not call again.
+///
+/// The flow control values `ZX_ERR_STOP`, `ZX_ERR_NEXT`, and `ZX_ERR_ASYNC` are
+/// not errors and will never be returned by a system call or public API. They
+/// allow callbacks to request their caller perform some other operation.
+///
+/// For example, a callback might be called on every event until it returns
+/// something other than `ZX_OK`. This status allows differentiation between
+/// "stop due to an error" and "stop because work is done."
+const ERR_STOP status = -60;
+
+/// Advance to the next item.
+///
+/// The flow control values `ZX_ERR_STOP`, `ZX_ERR_NEXT`, and `ZX_ERR_ASYNC` are
+/// not errors and will never be returned by a system call or public API. They
+/// allow callbacks to request their caller perform some other operation.
+///
+/// For example, a callback could use this value to indicate it did not consume
+/// an item passed to it, but by choice, not due to an error condition.
+const ERR_NEXT status = -61;
+
+/// Ownership of the item has moved to an asynchronous worker.
+///
+/// The flow control values `ZX_ERR_STOP`, `ZX_ERR_NEXT`, and `ZX_ERR_ASYNC` are
+/// not errors and will never be returned by a system call or public API. They
+/// allow callbacks to request their caller perform some other operation.
+///
+/// Unlike `ZX_ERR_STOP`, which implies that iteration on an object
+/// should stop, and `ZX_ERR_NEXT`, which implies that iteration
+/// should continue to the next item, `ZX_ERR_ASYNC` implies
+/// that an asynchronous worker is responsible for continuing iteration.
+///
+/// For example, a callback will be called on every event, but one event needs
+/// to handle some work asynchronously before it can continue. `ZX_ERR_ASYNC`
+/// implies the worker is responsible for resuming iteration once its work has
+/// completed.
+const ERR_ASYNC status = -62;
+
+// ======== Network-related errors ========
+
+/// The specified protocol is not supported.
+const ERR_PROTOCOL_NOT_SUPPORTED status = -70;
+
+/// The host is unreachable.
+const ERR_ADDRESS_UNREACHABLE status = -71;
+
+/// Address is being used by someone else.
+const ERR_ADDRESS_IN_USE status = -72;
+
+/// The socket is not connected.
+const ERR_NOT_CONNECTED status = -73;
+
+/// The remote peer rejected the connection.
+const ERR_CONNECTION_REFUSED status = -74;
+
+/// The connection was reset.
+const ERR_CONNECTION_RESET status = -75;
+
+/// The connection was aborted.
+const ERR_CONNECTION_ABORTED status = -76;
+
+// ======= VDSO-private errors =======
+
+/// A task was killed during an operation. This is a private error that should
+/// not be seen outside of the VDSO.
+const ERR_INTERNAL_INTR_KILLED status = -502;

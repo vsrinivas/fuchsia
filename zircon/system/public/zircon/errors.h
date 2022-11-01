@@ -1,14 +1,16 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+// DO NOT EDIT. Generated from FIDL library
+//   zx (//zircon/vdso/errors.fidl)
+// by zither, a Fuchsia platform tool.
 
 #ifndef SYSROOT_ZIRCON_ERRORS_H_
 #define SYSROOT_ZIRCON_ERRORS_H_
 
 // Indicates an operation was successful.
 #define ZX_OK (0)
-
-// ======= Internal failures =======
 
 // The system encountered an otherwise unspecified error while performing the
 // operation.
@@ -23,13 +25,9 @@
 // The system was not able to allocate memory needed for the operation.
 #define ZX_ERR_NO_MEMORY (-4)
 
-// -5 used to be ZX_ERR_CALL_FAILED.
-
 // The system call was interrupted, but should be retried. This should not be
 // seen outside of the VDSO.
 #define ZX_ERR_INTERNAL_INTR_RETRY (-6)
-
-// ======= Parameter errors =======
 
 // An argument is invalid. For example, a null pointer when a null pointer is
 // not permitted.
@@ -51,8 +49,6 @@
 
 // The caller-provided buffer is too small for this operation.
 #define ZX_ERR_BUFFER_TOO_SMALL (-15)
-
-// ======= Precondition or state errors =======
 
 // The operation failed because the current state of the object does not allow
 // it, or a precondition of the operation is not satisfied.
@@ -97,8 +93,6 @@
 // This is used when there's no direct way for the caller to observe when the
 // subject will be able to perform the operation and should thus retry.
 #define ZX_ERR_UNAVAILABLE (-28)
-
-// ======= Permission check errors =======
 
 // The caller did not have permission to perform the specified operation.
 #define ZX_ERR_ACCESS_DENIED (-30)
@@ -145,8 +139,6 @@
 // Example: A USB transfer that failed to complete with TRB Error
 #define ZX_ERR_IO_INVALID (-47)
 
-// ======== Filesystem Errors ========
-
 // Path name is too long.
 #define ZX_ERR_BAD_PATH (-50)
 
@@ -170,8 +162,6 @@
 //
 // For example, non-recursively deleting a directory with files still in it.
 #define ZX_ERR_NOT_EMPTY (-55)
-
-// ======== Flow Control ========
 
 // An indicate to not call again.
 //
@@ -211,8 +201,6 @@
 // completed.
 #define ZX_ERR_ASYNC (-62)
 
-// ======== Network-related errors ========
-
 // The specified protocol is not supported.
 #define ZX_ERR_PROTOCOL_NOT_SUPPORTED (-70)
 
@@ -233,8 +221,6 @@
 
 // The connection was aborted.
 #define ZX_ERR_CONNECTION_ABORTED (-76)
-
-// ======= VDSO-private errors =======
 
 // A task was killed during an operation. This is a private error that should
 // not be seen outside of the VDSO.

@@ -189,7 +189,7 @@
   "include/zircon/compiler.h": "283b0856f86b26d15e39345bd4da2281",
   "include/zircon/device/audio.h": "7e2afee52e24ad839a479e4cba9247a5",
   "include/zircon/dlfcn.h": "28285c191e9a046125a2065cb482d6ec",
-  "include/zircon/errors.h": "8060db6cfcb1718088f50a4916a2ef11",
+  "include/zircon/errors.h": "762503c0d992e8755e6ce9e5294fd598",
   "include/zircon/exception.h": "425c558088583172dc860b894ac6ea0a",
   "include/zircon/features.h": "77d54612c9cd3b3d4a71a00bcf7f19dc",
   "include/zircon/fidl.h": "3910f2fe1385f56a9cf6548b31106c4d",
