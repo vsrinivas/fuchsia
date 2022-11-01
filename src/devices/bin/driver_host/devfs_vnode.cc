@@ -288,7 +288,8 @@ void DevfsVnode::SetMinDriverLogSeverity(SetMinDriverLogSeverityRequestView requ
     completer.Reply(ZX_ERR_UNAVAILABLE);
     return;
   }
-  auto status = dev_->zx_driver()->set_driver_min_log_severity(request->severity);
+  auto status = dev_->zx_driver()->set_driver_min_log_severity(
+      static_cast<fx_log_severity_t>(request->severity));
   completer.Reply(status);
 }
 

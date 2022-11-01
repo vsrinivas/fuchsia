@@ -40,18 +40,18 @@ class TestDevhostDriver : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOC
   void GetPid(GetPidCompleter::Sync& _completer) override;
 };
 
-void TestDevhostDriver::GetPid(GetPidCompleter::Sync& _completer) {
-  pid_t pid;
+void TestDevhostDriver::GetPid(GetPidCompleter::Sync& completer) {
+  zx_koid_t koid;
   auto self = zx_process_self();
   zx_info_handle_basic_t info;
   zx_status_t status =
       zx_object_get_info(self, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
-    pid = ZX_KOID_INVALID;
+    koid = ZX_KOID_INVALID;
   } else {
-    pid = info.koid;
+    koid = info.koid;
   }
-  _completer.ReplySuccess(pid);
+  completer.ReplySuccess(koid);
 }
 
 zx_status_t TestDevhostDriver::Bind() {

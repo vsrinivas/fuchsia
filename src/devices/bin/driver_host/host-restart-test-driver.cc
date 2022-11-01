@@ -39,17 +39,17 @@ class TestHostRestartDriver : public DeviceType {
 };
 
 void TestHostRestartDriver::GetPid(GetPidCompleter::Sync& _completer) {
-  pid_t pid;
+  zx_koid_t koid;
   auto self = zx_process_self();
   zx_info_handle_basic_t info;
   zx_status_t status =
       zx_object_get_info(self, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
-    pid = ZX_KOID_INVALID;
+    koid = ZX_KOID_INVALID;
   } else {
-    pid = info.koid;
+    koid = info.koid;
   }
-  _completer.ReplySuccess(pid);
+  _completer.ReplySuccess(koid);
 }
 
 zx_status_t TestHostRestartBind(void* ctx, zx_device_t* device) {

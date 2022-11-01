@@ -1205,7 +1205,7 @@ zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>
   }
 
   uint32_t primary_fragment_index = UINT32_MAX;
-  for (size_t i = 0; i < comp_desc->fragments_count; i++) {
+  for (uint32_t i = 0; i < comp_desc->fragments_count; i++) {
     if (strcmp(comp_desc->primary_fragment, comp_desc->fragments[i].name) == 0) {
       primary_fragment_index = i;
       break;
