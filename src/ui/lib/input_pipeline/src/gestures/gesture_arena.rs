@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::{
-        args, click, inspect_keys, motion, one_finger_drag, primary_tap, scroll, secondary_tap,
-    },
+    super::{args, inspect_keys, motion, one_finger_button, primary_tap, scroll, secondary_tap},
     crate::{input_device, input_handler::InputHandler, mouse_binding, touch_binding, utils::Size},
     anyhow::{format_err, Context, Error},
     async_trait::async_trait,
@@ -24,9 +22,6 @@ struct GestureArenaInitialContenders {}
 impl ContenderFactory for GestureArenaInitialContenders {
     fn make_contenders(&self) -> Vec<Box<dyn Contender>> {
         vec![
-            Box::new(click::InitialContender {
-                max_finger_displacement_in_mm: args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM,
-            }),
             Box::new(motion::InitialContender {
                 min_movement_in_mm: args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM,
             }),
@@ -38,15 +33,19 @@ impl ContenderFactory for GestureArenaInitialContenders {
                 max_finger_displacement_in_mm: args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM,
                 max_time_elapsed: args::TAP_TIMEOUT,
             }),
-            Box::new(one_finger_drag::InitialContender {
-                min_movement_in_mm: args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM,
-            }),
             Box::new(scroll::InitialContender {
                 min_movement_in_mm: args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM,
                 max_movement_in_mm: args::MAX_SPURIOUS_TO_INTENTIONAL_SCROLL_THRESHOLD_MM,
                 limit_tangent_for_direction: args::MAX_SCROLL_DIRECTION_SKEW_DEGREES
                     .to_radians()
                     .tan(),
+            }),
+            Box::new(one_finger_button::InitialContender {
+                spurious_to_intentional_motion_threshold_mm:
+                    args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM,
+                spurious_to_intentional_motion_threshold_button_change_mm:
+                    args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_BUTTON_CHANGE_MM,
+                button_change_state_timeout: args::BUTTON_CHANGE_STATE_TIMEOUT,
             }),
         ]
     }

@@ -34,14 +34,14 @@ mod test {
         })
     }
 
-    // TODO(fxbug.dev/109689): should split the button down and move event.
     #[fuchsia::test(allow_stalls = false)]
     async fn drag_keep_button_down() {
         let finger_pos0_um = Position { x: 2_000.0, y: 3_000.0 };
         let finger_pos1_um = finger_pos0_um
             + Position {
                 x: 0.0,
-                y: 1_000.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
+                y: 1_000.0
+                    + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_BUTTON_CHANGE_MM * 1_000.0,
             };
         let finger_pos2_um = finger_pos1_um.clone();
         let inputs = vec![
@@ -52,13 +52,20 @@ mod test {
         let got = utils::run_gesture_arena_test(inputs).await;
 
         assert_eq!(got.len(), 3);
-        assert_eq!(got[0].as_slice(), []);
-        assert_matches!(got[1].as_slice(), [
+        assert_matches!(got[0].as_slice(), [
           utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
         ] => {
           assert_eq!(phase_a, &mouse_binding::MousePhase::Down);
           assert_eq!(pressed_button_a, &hashset! {1});
           assert_eq!(affected_button_a, &hashset! {1});
+          assert_eq!(location_a, &utils::NO_MOVEMENT_LOCATION);
+        });
+        assert_matches!(got[1].as_slice(), [
+          utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
+        ] => {
+          assert_eq!(phase_a, &mouse_binding::MousePhase::Move);
+          assert_eq!(pressed_button_a, &hashset! {1});
+          assert_eq!(affected_button_a, &hashset! {});
           assert_near!(location_a.millimeters.x, 0.0, utils::EPSILON);
           assert_gt!(location_a.millimeters.y, 0.0);
         });
@@ -79,7 +86,8 @@ mod test {
         let finger_pos1_um = finger_pos0_um
             + Position {
                 x: 0.0,
-                y: 1_000.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
+                y: 1_000.0
+                    + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_BUTTON_CHANGE_MM * 1_000.0,
             };
         let finger_pos2_um = finger_pos1_um.clone();
         let inputs = vec![
@@ -90,13 +98,20 @@ mod test {
         let got = utils::run_gesture_arena_test(inputs).await;
 
         assert_eq!(got.len(), 3);
-        assert_eq!(got[0].as_slice(), []);
-        assert_matches!(got[1].as_slice(), [
+        assert_matches!(got[0].as_slice(), [
           utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
         ] => {
           assert_eq!(phase_a, &mouse_binding::MousePhase::Down);
           assert_eq!(pressed_button_a, &hashset! {1});
           assert_eq!(affected_button_a, &hashset! {1});
+          assert_eq!(location_a, &utils::NO_MOVEMENT_LOCATION);
+        });
+        assert_matches!(got[1].as_slice(), [
+          utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
+        ] => {
+          assert_eq!(phase_a, &mouse_binding::MousePhase::Move);
+          assert_eq!(pressed_button_a, &hashset! {1});
+          assert_eq!(affected_button_a, &hashset! {});
           assert_near!(location_a.millimeters.x, 0.0, utils::EPSILON);
           assert_gt!(location_a.millimeters.y, 0.0);
         });
@@ -116,7 +131,8 @@ mod test {
         let finger_pos1_um = finger_pos0_um
             + Position {
                 x: 0.0,
-                y: 1_000.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
+                y: 1_000.0
+                    + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_BUTTON_CHANGE_MM * 1_000.0,
             };
         let inputs = vec![
             touchpad_event(vec![finger_pos0_um], hashset! {1}),
@@ -126,13 +142,20 @@ mod test {
         let got = utils::run_gesture_arena_test(inputs).await;
 
         assert_eq!(got.len(), 3);
-        assert_eq!(got[0].as_slice(), []);
-        assert_matches!(got[1].as_slice(), [
+        assert_matches!(got[0].as_slice(), [
           utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
         ] => {
           assert_eq!(phase_a, &mouse_binding::MousePhase::Down);
           assert_eq!(pressed_button_a, &hashset! {1});
           assert_eq!(affected_button_a, &hashset! {1});
+          assert_eq!(location_a, &utils::NO_MOVEMENT_LOCATION);
+        });
+        assert_matches!(got[1].as_slice(), [
+          utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
+        ] => {
+          assert_eq!(phase_a, &mouse_binding::MousePhase::Move);
+          assert_eq!(pressed_button_a, &hashset! {1});
+          assert_eq!(affected_button_a, &hashset! {});
           assert_near!(location_a.millimeters.x, 0.0, utils::EPSILON);
           assert_gt!(location_a.millimeters.y, 0.0);
         });
@@ -152,7 +175,8 @@ mod test {
         let finger_pos1_um = finger_pos0_um
             + Position {
                 x: 0.0,
-                y: 1_000.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
+                y: 1_000.0
+                    + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_BUTTON_CHANGE_MM * 1_000.0,
             };
         let finger_pos2_um = finger_pos1_um.clone();
         let inputs = vec![
@@ -164,13 +188,20 @@ mod test {
         let got = utils::run_gesture_arena_test(inputs).await;
 
         assert_eq!(got.len(), 4);
-        assert_eq!(got[0].as_slice(), []);
-        assert_matches!(got[1].as_slice(), [
+        assert_matches!(got[0].as_slice(), [
           utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
         ] => {
           assert_eq!(phase_a, &mouse_binding::MousePhase::Down);
           assert_eq!(pressed_button_a, &hashset! {1});
           assert_eq!(affected_button_a, &hashset! {1});
+          assert_eq!(location_a, &utils::NO_MOVEMENT_LOCATION);
+        });
+        assert_matches!(got[1].as_slice(), [
+          utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
+        ] => {
+          assert_eq!(phase_a, &mouse_binding::MousePhase::Move);
+          assert_eq!(pressed_button_a, &hashset! {1});
+          assert_eq!(affected_button_a, &hashset! {});
           assert_near!(location_a.millimeters.x, 0.0, utils::EPSILON);
           assert_gt!(location_a.millimeters.y, 0.0);
         });
@@ -186,8 +217,6 @@ mod test {
         assert_eq!(got[3].as_slice(), []);
     }
 
-    // TODO(fxbug.dev/109627): Because one_finger_drag does not have one finger
-    // contender, this test is does not detect drag gesture.
     #[fuchsia::test(allow_stalls = false)]
     async fn place_finger_button_down_drag_release_button_lift() {
         let finger_pos0_um = Position { x: 2_000.0, y: 3_000.0 };
@@ -195,28 +224,59 @@ mod test {
         let finger_pos2_um = finger_pos1_um
             + Position {
                 x: 0.0,
-                y: 1_000.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
+                y: 1_000.0
+                    + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_BUTTON_CHANGE_MM * 1_000.0,
             };
         let finger_pos3_um = finger_pos2_um.clone();
         let inputs = vec![
-            // Initial finger placement -> rejected by OneFingerDrag because no click.
+            // Initial finger placement -> matching OneFingerButton.
             touchpad_event(vec![finger_pos0_um], hashset! {}),
-            // Click -> rejected by Motion, etc.; start new contest.
+            // Down -> claimed by OneFingerButton because button down.
             touchpad_event(vec![finger_pos1_um], hashset! {1}),
-            // Hold -> OneFingerDrag remains
+            // Move -> claimed by OneFingerButton.
             touchpad_event(vec![finger_pos2_um], hashset! {1}),
-            // Move -> claimed by OneFingerDrag.
-            touchpad_event(vec![finger_pos3_um], hashset! {}),
+            // Hold.
+            touchpad_event(vec![finger_pos3_um], hashset! {1}),
+            // Release.
             touchpad_event(vec![], hashset! {}),
         ];
         let got = utils::run_gesture_arena_test(inputs).await;
 
         assert_eq!(got.len(), 5);
         assert_eq!(got[0].as_slice(), []);
-        assert_eq!(got[1].as_slice(), []);
-        assert_eq!(got[2].as_slice(), []);
-        assert_eq!(got[3].as_slice(), []);
-        assert_eq!(got[4].as_slice(), []);
+        assert_matches!(got[1].as_slice(), [
+          utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
+        ] => {
+          assert_eq!(phase_a, &mouse_binding::MousePhase::Down);
+          assert_eq!(pressed_button_a, &hashset! {1});
+          assert_eq!(affected_button_a, &hashset! {1});
+          assert_eq!(location_a, &utils::NO_MOVEMENT_LOCATION);
+        });
+        assert_matches!(got[2].as_slice(), [
+          utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
+        ] => {
+          assert_eq!(phase_a, &mouse_binding::MousePhase::Move);
+          assert_eq!(pressed_button_a, &hashset! {1});
+          assert_eq!(affected_button_a, &hashset! {});
+          assert_near!(location_a.millimeters.x, 0.0, utils::EPSILON);
+          assert_gt!(location_a.millimeters.y, 0.0);
+        });
+        assert_matches!(got[3].as_slice(), [
+          utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
+        ] => {
+          assert_eq!(phase_a, &mouse_binding::MousePhase::Move);
+          assert_eq!(pressed_button_a, &hashset! {1});
+          assert_eq!(affected_button_a, &hashset! {});
+          assert_eq!(location_a, &utils::NO_MOVEMENT_LOCATION);
+        });
+        assert_matches!(got[4].as_slice(), [
+          utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
+        ] => {
+          assert_eq!(phase_a, &mouse_binding::MousePhase::Up);
+          assert_eq!(pressed_button_a, &hashset! {});
+          assert_eq!(affected_button_a, &hashset! {1});
+          assert_eq!(location_a, &utils::NO_MOVEMENT_LOCATION);
+        });
     }
 
     mod chain {
@@ -236,7 +296,8 @@ mod test {
             let finger_pos1_um = finger_pos0_um
                 + Position {
                     x: 0.0,
-                    y: 1_000.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
+                    y: 1_000.0
+                        + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_BUTTON_CHANGE_MM * 1_000.0,
                 };
             let finger_pos2_um = finger_pos1_um.clone();
             let finger_pos3_um = finger_pos2_um.clone();
@@ -255,15 +316,22 @@ mod test {
             let got = utils::run_gesture_arena_test(inputs).await;
 
             assert_eq!(got.len(), 5);
-            assert_eq!(got[0].as_slice(), []);
-            assert_matches!(got[1].as_slice(), [
-                utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
+            assert_matches!(got[0].as_slice(), [
+              utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
             ] => {
-                assert_eq!(phase_a, &mouse_binding::MousePhase::Down);
-                assert_eq!(pressed_button_a, &hashset! {1});
-                assert_eq!(affected_button_a, &hashset! {1});
-                assert_near!(location_a.millimeters.x, 0.0, utils::EPSILON);
-                assert_gt!(location_a.millimeters.y, 0.0);
+              assert_eq!(phase_a, &mouse_binding::MousePhase::Down);
+              assert_eq!(pressed_button_a, &hashset! {1});
+              assert_eq!(affected_button_a, &hashset! {1});
+              assert_eq!(location_a, &utils::NO_MOVEMENT_LOCATION);
+            });
+            assert_matches!(got[1].as_slice(), [
+              utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
+            ] => {
+              assert_eq!(phase_a, &mouse_binding::MousePhase::Move);
+              assert_eq!(pressed_button_a, &hashset! {1});
+              assert_eq!(affected_button_a, &hashset! {});
+              assert_near!(location_a.millimeters.x, 0.0, utils::EPSILON);
+              assert_gt!(location_a.millimeters.y, 0.0);
             });
             assert_matches!(got[2].as_slice(), [
                 utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
@@ -289,7 +357,8 @@ mod test {
             let finger_pos1_um = finger_pos0_um
                 + Position {
                     x: 0.0,
-                    y: 1_000.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
+                    y: 1_000.0
+                        + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_BUTTON_CHANGE_MM * 1_000.0,
                 };
             let finger_pos2_um = finger_pos1_um.clone();
             let finger_pos3_um = finger_pos2_um.clone();
@@ -304,15 +373,22 @@ mod test {
             let got = utils::run_gesture_arena_test(inputs).await;
 
             assert_eq!(got.len(), 5);
-            assert_eq!(got[0].as_slice(), []);
-            assert_matches!(got[1].as_slice(), [
-                utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
+            assert_matches!(got[0].as_slice(), [
+              utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
             ] => {
-                assert_eq!(phase_a, &mouse_binding::MousePhase::Down);
-                assert_eq!(pressed_button_a, &hashset! {1});
-                assert_eq!(affected_button_a, &hashset! {1});
-                assert_near!(location_a.millimeters.x, 0.0, utils::EPSILON);
-                assert_gt!(location_a.millimeters.y, 0.0);
+              assert_eq!(phase_a, &mouse_binding::MousePhase::Down);
+              assert_eq!(pressed_button_a, &hashset! {1});
+              assert_eq!(affected_button_a, &hashset! {1});
+              assert_eq!(location_a, &utils::NO_MOVEMENT_LOCATION);
+            });
+            assert_matches!(got[1].as_slice(), [
+              utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
+            ] => {
+              assert_eq!(phase_a, &mouse_binding::MousePhase::Move);
+              assert_eq!(pressed_button_a, &hashset! {1});
+              assert_eq!(affected_button_a, &hashset! {});
+              assert_near!(location_a.millimeters.x, 0.0, utils::EPSILON);
+              assert_gt!(location_a.millimeters.y, 0.0);
             });
             assert_matches!(got[2].as_slice(), [
                 utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
@@ -322,19 +398,21 @@ mod test {
                 assert_eq!(affected_button_a, &hashset! {1});
                 assert_eq!(location_a, &utils::NO_MOVEMENT_LOCATION);
             });
-            assert_matches!(got[3].as_slice(), []);
-            assert_matches!(got[4].as_slice(), [
-                utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
-                utils::expect_mouse_event!(phase: phase_b, pressed_buttons: pressed_button_b, affected_buttons: affected_button_b, location: location_b),
+            assert_matches!(got[3].as_slice(), [
+              utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
             ] => {
-                assert_eq!(phase_a, &mouse_binding::MousePhase::Down);
-                assert_eq!(pressed_button_a, &hashset! {1});
-                assert_eq!(affected_button_a, &hashset! {1});
-                assert_eq!(location_a, &utils::NO_MOVEMENT_LOCATION);
-                assert_eq!(phase_b, &mouse_binding::MousePhase::Up);
-                assert_eq!(pressed_button_b, &hashset! {});
-                assert_eq!(affected_button_b, &hashset! {1});
-                assert_eq!(location_b, &utils::NO_MOVEMENT_LOCATION);
+              assert_eq!(phase_a, &mouse_binding::MousePhase::Down);
+              assert_eq!(pressed_button_a, &hashset! {1});
+              assert_eq!(affected_button_a, &hashset! {1});
+              assert_eq!(location_a, &utils::NO_MOVEMENT_LOCATION);
+            });
+            assert_matches!(got[4].as_slice(), [
+              utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
+            ] => {
+              assert_eq!(phase_a, &mouse_binding::MousePhase::Up);
+              assert_eq!(pressed_button_a, &hashset! {});
+              assert_eq!(affected_button_a, &hashset! {1});
+              assert_eq!(location_a, &utils::NO_MOVEMENT_LOCATION);
             });
         }
 
@@ -344,7 +422,8 @@ mod test {
             let finger1_pos1_um = finger1_pos0_um
                 + Position {
                     x: 0.0,
-                    y: 1_000.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
+                    y: 1_000.0
+                        + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_BUTTON_CHANGE_MM * 1_000.0,
                 };
             let finger1_pos2_um = finger1_pos1_um.clone();
             let finger1_pos3_um = finger1_pos2_um.clone();
@@ -359,15 +438,22 @@ mod test {
             let got = utils::run_gesture_arena_test(inputs).await;
 
             assert_eq!(got.len(), 5);
-            assert_eq!(got[0].as_slice(), []);
-            assert_matches!(got[1].as_slice(), [
-                utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
+            assert_matches!(got[0].as_slice(), [
+              utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
             ] => {
-                assert_eq!(phase_a, &mouse_binding::MousePhase::Down);
-                assert_eq!(pressed_button_a, &hashset! {1});
-                assert_eq!(affected_button_a, &hashset! {1});
-                assert_near!(location_a.millimeters.x, 0.0, utils::EPSILON);
-                assert_gt!(location_a.millimeters.y, 0.0);
+              assert_eq!(phase_a, &mouse_binding::MousePhase::Down);
+              assert_eq!(pressed_button_a, &hashset! {1});
+              assert_eq!(affected_button_a, &hashset! {1});
+              assert_eq!(location_a, &utils::NO_MOVEMENT_LOCATION);
+            });
+            assert_matches!(got[1].as_slice(), [
+              utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
+            ] => {
+              assert_eq!(phase_a, &mouse_binding::MousePhase::Move);
+              assert_eq!(pressed_button_a, &hashset! {1});
+              assert_eq!(affected_button_a, &hashset! {});
+              assert_near!(location_a.millimeters.x, 0.0, utils::EPSILON);
+              assert_gt!(location_a.millimeters.y, 0.0);
             });
             assert_matches!(got[2].as_slice(), [
                 utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
@@ -388,7 +474,8 @@ mod test {
             let finger1_pos1_um = finger1_pos0_um
                 + Position {
                     x: 0.0,
-                    y: 1_000.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
+                    y: 1_000.0
+                        + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_BUTTON_CHANGE_MM * 1_000.0,
                 };
             let finger1_pos2_um = finger1_pos1_um.clone();
             let finger1_pos3_um = finger1_pos2_um.clone();
@@ -414,15 +501,22 @@ mod test {
             let got = utils::run_gesture_arena_test(inputs).await;
 
             assert_eq!(got.len(), 5);
-            assert_eq!(got[0].as_slice(), []);
-            assert_matches!(got[1].as_slice(), [
-                utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
+            assert_matches!(got[0].as_slice(), [
+              utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
             ] => {
-                assert_eq!(phase_a, &mouse_binding::MousePhase::Down);
-                assert_eq!(pressed_button_a, &hashset! {1});
-                assert_eq!(affected_button_a, &hashset! {1});
-                assert_near!(location_a.millimeters.x, 0.0, utils::EPSILON);
-                assert_gt!(location_a.millimeters.y, 0.0);
+              assert_eq!(phase_a, &mouse_binding::MousePhase::Down);
+              assert_eq!(pressed_button_a, &hashset! {1});
+              assert_eq!(affected_button_a, &hashset! {1});
+              assert_eq!(location_a, &utils::NO_MOVEMENT_LOCATION);
+            });
+            assert_matches!(got[1].as_slice(), [
+              utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
+            ] => {
+              assert_eq!(phase_a, &mouse_binding::MousePhase::Move);
+              assert_eq!(pressed_button_a, &hashset! {1});
+              assert_eq!(affected_button_a, &hashset! {});
+              assert_near!(location_a.millimeters.x, 0.0, utils::EPSILON);
+              assert_gt!(location_a.millimeters.y, 0.0);
             });
             assert_matches!(got[2].as_slice(), [
                 utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),

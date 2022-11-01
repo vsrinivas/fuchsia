@@ -18,3 +18,7 @@ pub(super) const MAX_SCROLL_DIRECTION_SKEW_DEGREES: f32 = 40.0;
 /// standard deviation is 0.925mm. Mean + 2 stddev = 7.70mm.
 /// So we believe 7.8mm maybe a threshold of thumb to palm.
 pub(super) const MIN_PALM_SIZE_MM: f32 = 7.8;
+
+pub(super) const SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_BUTTON_CHANGE_MM: f32 =
+    3.0 * SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM;
+pub(super) const BUTTON_CHANGE_STATE_TIMEOUT: zx::Duration = zx::Duration::from_millis(100);
