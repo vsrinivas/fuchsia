@@ -101,7 +101,7 @@ constexpr uint32_t trap_kind(TrapType type) {
     case TrapType::PIO_SYNC:
       return ZX_GUEST_TRAP_IO;
     default:
-      ZX_PANIC("Unhandled TrapType %d\n", static_cast<int>(type));
+      ZX_PANIC("Unhandled TrapType %d", static_cast<int>(type));
       return 0;
   }
 }
