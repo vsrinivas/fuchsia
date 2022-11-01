@@ -5,9 +5,6 @@
 // Realm that acts as a container for general system components.
 {
     include: [
-        // Add capabilities that still loop through /core
-        "//src/sys/core/meta/loopback_capabilities.core_shard.cml",
-
         // Add capabilities used by legacy sys realm and legacy shells
         "//src/sys/core/meta/svc_for_sys.core_shard.cml",
     ],

@@ -96,15 +96,6 @@
             source_availability: "unknown",
         },
         {
-            protocol: "fuchsia.media.SessionAudioConsumerFactory",
-
-            // TODO(fxbug.dev/108731): offer from "#mediaplayer", remove "weak_for_migration"
-            from: "self",
-            to: "#test_manager",
-            dependency: "weak_for_migration",
-            source_availability: "unknown",
-        },
-        {
             storage: "data",
             from: "self",
             to: "#test_manager",

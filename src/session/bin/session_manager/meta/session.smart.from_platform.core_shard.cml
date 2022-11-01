@@ -25,7 +25,6 @@
                 "fuchsia.ultrasound.Factory",
                 "fuchsia.weave.Provisioner",
                 "google.cast.cryptokey.NamedKeyProvider",
-                "google.cast.multizone.Leader",
             ],
         },
     ],

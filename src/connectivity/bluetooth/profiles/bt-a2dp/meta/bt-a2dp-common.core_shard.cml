@@ -15,12 +15,6 @@
     ],
     offer: [
         {
-            protocol: "fuchsia.media.SessionAudioConsumerFactory",
-            from: "self",
-            to: "#bt-a2dp",
-            dependency: "weak_for_migration",
-        },
-        {
             protocol: "fuchsia.tracing.provider.Registry",
             from: "#trace_manager",
             to: "#bt-a2dp",

@@ -16,10 +16,10 @@
     offer: [
         {
             // fuchsia.media.SessionAudioConsumerFactory can come from multiple sources
-            // depending on product config. #multizone_leader is the source of this capability in
-            // smart display products, which are the configurations that use bt-a2dp-lazy.
+            // depending on product config. #mediaplayer is the source of this capability in
+            // workstation, which is the configuration that use bt-a2dp-eager.
             protocol: "fuchsia.media.SessionAudioConsumerFactory",
-            from: "#multizone_leader",
+            from: "#mediaplayer",
             to: "#bt-a2dp",
             dependency: "weak_for_migration",
         },

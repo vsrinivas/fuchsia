@@ -52,8 +52,7 @@ core_realm_shards +=
     [ "//src/virtualization/bin/guest_manager:termina_core_shard" ]
 
 # Add Bluetooth packages
-core_realm_shards +=
-    [ "//src/connectivity/bluetooth/profiles/bt-a2dp:eager_core_shard" ]
+core_realm_shards += [ "//src/connectivity/bluetooth/profiles/bt-a2dp:eager_with_mediaplayer_core_shard" ]
 
 # To use the eager shard, the used should be in base
 legacy_base_package_labels += [
