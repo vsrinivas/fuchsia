@@ -28,6 +28,7 @@ enum iwl_stats_counter_index {
   IWL_STATS_CNT_DATA_FROM_MLME,    // Data from the MLME
   IWL_STATS_CNT_DATA_TO_FW,        // Data sent to the firmware
   IWL_STATS_CNT_CMD_TO_FW,         // Host commands sent to the firmware
+  IWL_STATS_CNT_TXQ_DROP,          // Times we drop pkts because txq is full
   IWL_STATS_CNT_MAX,               // Always at the end of list.
 };
 
@@ -40,6 +41,9 @@ void iwl_stats_start_reporting(void);
 // Update the latest WiFi signal status.
 void iwl_stats_update_last_rssi(int8_t rssi_dbm);
 void iwl_stats_update_date_rate(uint32_t data_rate);
+
+// Update stats about isr_duration
+void iwl_stats_update_rx_isr_duration(zx_duration_t isr_duration);
 
 // For testing.
 size_t iwl_stats_read(enum iwl_stats_counter_index index);

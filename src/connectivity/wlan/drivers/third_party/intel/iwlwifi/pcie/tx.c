@@ -2262,13 +2262,15 @@ zx_status_t iwl_trans_pcie_tx(struct iwl_trans* trans, struct ieee80211_mac_pack
   int available_space = iwl_queue_space(trans, txq);
   if (available_space < txq->high_mark) {
     iwl_stop_queue(trans, txq);
-    IWL_WARN(trans, "stopped queue because the avaliable space (%d) is too small (< %d)\n",
-             available_space, txq->high_mark);
+    IWL_WARN_THROTTLE(trans, "stopped queue because the avaliable space (%d) is too small (< %d)\n",
+                      available_space, txq->high_mark);
 
     /* don't put the packet on the ring, if there is no room */
     if (unlikely(available_space < TX_RESERVED_SPACE)) {
       mtx_unlock(&txq->lock);
-      IWL_WARN(trans, "dropped packet due to small available space: %d\n", available_space);
+      IWL_WARN_THROTTLE(trans, "dropped packet due to small available space: %d\n",
+                        available_space);
+      iwl_stats_inc(IWL_STATS_CNT_TXQ_DROP);
       return ZX_OK;
     }
   }

@@ -995,6 +995,8 @@ static void iwl_pcie_rx_handle(struct iwl_trans* trans, int queue) {
   struct iwl_rxq* rxq = &trans_pcie->rxq[queue];
   uint32_t r, i;
 
+  zx_time_t start_time = zx_clock_get_monotonic();
+
   mtx_lock(&rxq->lock);
   /* uCode's read index (stored in shared DRAM) indicates the last Rx
    * buffer that the driver may process (last buffer filled by ucode). */
@@ -1040,7 +1042,8 @@ static void iwl_pcie_rx_handle(struct iwl_trans* trans, int queue) {
     napi_gro_flush(&rxq->napi, false);
   }
 #endif  // NEEDS_PORTING
-
+  zx_duration_t rx_isr_duration = zx_time_sub_time(zx_clock_get_monotonic(), start_time);
+  iwl_stats_update_rx_isr_duration(rx_isr_duration);
   iwl_pcie_rxq_restock(trans, rxq);
 }
 

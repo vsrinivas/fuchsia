@@ -76,6 +76,14 @@ struct device;
 #define __iwl_dbg(dev, level, limit, function, fmt, args...) \
   IWL_LOG_FILTER_TAG(ltrace, IWL_LOG_DEBUG_FILTER, IWL_LOG_DEBUG_TAG, fmt, ##args)
 
+#define __iwl_err_throttle(dev, rfkill_prefix, only_trace, fmt, args...) \
+  IWL_LOG(lthrottle_error, fmt, ##args)
+#define __iwl_warn_throttle(dev, fmt, args...) IWL_LOG(lthrottle_warn, fmt, ##args)
+#define __iwl_info_throttle(dev, fmt, args...) IWL_LOG(lthrottle_info, fmt, ##args)
+#define __iwl_crit_throttle(dev, fmt, args...) IWL_LOG(lthrottle_error, fmt, ##args)
+#define __iwl_dbg_throttle(dev, level, limit, function, fmt, args...) \
+  IWL_LOG_FILTER_TAG(lthrottle_trace, IWL_LOG_DEBUG_FILTER, IWL_LOG_DEBUG_TAG, fmt, ##args)
+
 // Publish a core dump.
 zx_status_t iwl_debug_core_dump(struct device* dev, const char* core_dump_name,
                                 const char** core_dump_ptrs, size_t* core_dump_sizes,

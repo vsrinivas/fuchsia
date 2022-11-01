@@ -19,9 +19,8 @@
 
 #define IWL_STATS_INTERVAL ZX_SEC(20)
 
-static const char* descs[] = {
-    "ints", "fw_cmd", "be", "bc", "mc", "uni", "from_mlme", "data->fw", "cmd->fw",
-};
+static const char* descs[] = {"ints", "fw_cmd",    "be",       "bc",      "mc",
+                              "uni",  "from_mlme", "data->fw", "cmd->fw", "txq_drop"};
 
 struct iwl_stats_data {
   async_dispatcher_t* dispatcher;
@@ -30,8 +29,12 @@ struct iwl_stats_data {
   int8_t last_rssi_dbm;
   uint32_t last_data_rate;
 
+  zx_duration_t max_isr_duration;
+  zx_duration_t total_isr_duration;
+
   size_t counters[IWL_STATS_CNT_MAX];
 };
+
 static struct iwl_stats_data stats_data;
 static std::mutex mutex_lock;
 
@@ -47,7 +50,7 @@ void iwl_stats_report_wk(async_dispatcher_t* dispatcher, async_task_t* task, zx_
   // TODO(fxb/101542): better debug info for bug triage.
   // clang-format off
   zxlogf(INFO,
-      "rssi:%d rate:%u [%s:%zu %s:%zu (%s:%zu,%s:%zu,%s:%zu,%s:%zu)] [%s:%zu %s:%zu %s:%zu]",
+      "rssi:%d rate:%u [%s:%zu %s:%zu (%s:%zu,%s:%zu,%s:%zu,%s:%zu)] [%s:%zu %s:%zu %s:%zu] [%s:%zu]",
       stats_data.last_rssi_dbm, stats_data.last_data_rate,
       descs[IWL_STATS_CNT_INTS_FROM_FW], stats_data.counters[IWL_STATS_CNT_INTS_FROM_FW],
       descs[IWL_STATS_CNT_CMD_FROM_FW], stats_data.counters[IWL_STATS_CNT_CMD_FROM_FW],
@@ -57,8 +60,17 @@ void iwl_stats_report_wk(async_dispatcher_t* dispatcher, async_task_t* task, zx_
       descs[IWL_STATS_CNT_BEACON_TO_MLME], stats_data.counters[IWL_STATS_CNT_BEACON_TO_MLME],
       descs[IWL_STATS_CNT_DATA_FROM_MLME], stats_data.counters[IWL_STATS_CNT_DATA_FROM_MLME],
       descs[IWL_STATS_CNT_DATA_TO_FW], stats_data.counters[IWL_STATS_CNT_DATA_TO_FW],
-      descs[IWL_STATS_CNT_CMD_TO_FW], stats_data.counters[IWL_STATS_CNT_CMD_TO_FW]);
+      descs[IWL_STATS_CNT_CMD_TO_FW], stats_data.counters[IWL_STATS_CNT_CMD_TO_FW],
+      descs[IWL_STATS_CNT_TXQ_DROP], stats_data.counters[IWL_STATS_CNT_TXQ_DROP]);
   // clang-format on
+
+  uint64_t avg_isr_duration = 0;
+  if (stats_data.counters[IWL_STATS_CNT_INTS_FROM_FW]) {
+    avg_isr_duration =
+        stats_data.total_isr_duration / stats_data.counters[IWL_STATS_CNT_INTS_FROM_FW];
+  }
+
+  zxlogf(INFO, "rx isr: avg:%zuns, max:%zuns", avg_isr_duration, stats_data.max_isr_duration);
 
   iwl_stats_schedule_next(IWL_STATS_INTERVAL);
 }
@@ -83,6 +95,12 @@ void iwl_stats_update_last_rssi(int8_t rssi_dbm) {
 void iwl_stats_update_date_rate(uint32_t data_rate) {
   const std::lock_guard<std::mutex> lock(mutex_lock);
   stats_data.last_data_rate = data_rate;
+}
+
+void iwl_stats_update_rx_isr_duration(zx_duration_t isr_duration) {
+  const std::lock_guard<std::mutex> lock(mutex_lock);
+  stats_data.max_isr_duration = std::max(stats_data.max_isr_duration, isr_duration);
+  stats_data.total_isr_duration += isr_duration;
 }
 
 size_t iwl_stats_read(enum iwl_stats_counter_index index) {

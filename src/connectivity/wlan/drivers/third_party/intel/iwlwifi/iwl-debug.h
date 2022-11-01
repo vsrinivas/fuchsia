@@ -56,6 +56,11 @@ static inline bool iwl_have_debug_level(uint32_t level) {
 #define IWL_INFO(m, f, a...) __iwl_info((m)->dev, f, ##a)
 #define IWL_CRIT(m, f, a...) __iwl_crit((m)->dev, f, ##a)
 
+#define IWL_ERR_THROTTLE(m, f, a...) __iwl_err_throttle((m)->dev, false, false, f, ##a)
+#define IWL_WARN_THROTTLE(m, f, a...) __iwl_warn_throttle((m)->dev, f, ##a)
+#define IWL_INFO_THROTTLE(m, f, a...) __iwl_info_throttle((m)->dev, f, ##a)
+#define IWL_CRIT_THROTTLE(m, f, a...) __iwl_crit_throttle((m)->dev, f, ##a)
+
 #define iwl_print_hex_error(m, p, len)                                            \
   do {                                                                            \
     print_hex_dump(KERN_ERR, "iwl data: ", DUMP_PREFIX_OFFSET, 16, 1, p, len, 1); \
