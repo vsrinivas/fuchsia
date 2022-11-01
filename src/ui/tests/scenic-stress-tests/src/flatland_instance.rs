@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 use {
+    crate::input_listener,
     fidl::endpoints::*,
     fidl_fuchsia_math as fmath, fidl_fuchsia_ui_composition as flatland,
-    fidl_fuchsia_ui_views as fviews, fuchsia_async as fasync,
+    fidl_fuchsia_ui_pointer as fpointer, fidl_fuchsia_ui_views as fviews, fuchsia_async as fasync,
     fuchsia_component_test::ScopedInstance,
     fuchsia_scenic as scenic,
     futures::StreamExt,
@@ -14,6 +15,7 @@ use {
         atomic::{AtomicU64, Ordering},
         Arc,
     },
+    tracing::debug,
 };
 
 pub const DISPLAY_WIDTH: u16 = 1024;
@@ -123,9 +125,11 @@ async fn safe_present(
             .expect("Fidl error")
         {
             flatland::FlatlandEvent::OnNextFrameBegin { .. } => {
+                debug!("OnNextFrameBegin");
                 next_frame_begun = true;
             }
             flatland::FlatlandEvent::OnFramePresented { .. } => {
+                debug!("OnFramePresented");
                 frame_presented = true;
             }
             flatland::FlatlandEvent::OnError { error } => {
@@ -170,6 +174,7 @@ pub enum FlatlandInstance {
         root_transform: flatland::TransformId,
         child_instances: Vec<(FlatlandInstance, flatland::ContentId)>,
         _present_task: fasync::Task<()>,
+        _touch_listener_task: fasync::Task<()>,
     },
 }
 
@@ -263,11 +268,18 @@ impl FlatlandInstance {
         );
         let (_, parent_viewport_watcher) =
             create_proxy::<flatland::ParentViewportWatcherMarker>().unwrap();
+
+        let (touch_source, touch_source_request) = create_proxy::<fpointer::TouchSourceMarker>()
+            .expect("failed to create TouchSource channels");
+        let protocols = flatland::ViewBoundProtocols {
+            touch_source: Some(touch_source_request),
+            ..flatland::ViewBoundProtocols::EMPTY
+        };
         flatland_instance
             .create_view2(
                 &mut view_creation_token,
                 &mut view_identity,
-                flatland::ViewBoundProtocols::EMPTY,
+                protocols,
                 parent_viewport_watcher,
             )
             .expect("Failure creating view");
@@ -286,6 +298,7 @@ impl FlatlandInstance {
             root_transform,
             child_instances: Vec::new(),
             _present_task,
+            _touch_listener_task: input_listener::autolisten_touch(touch_source),
         };
 
         (child, viewport_creation_token)

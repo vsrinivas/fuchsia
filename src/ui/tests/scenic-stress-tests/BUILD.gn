@@ -52,6 +52,7 @@ rustc_test("scenic-stressor-flatland-bin") {
   deps = [
     "//sdk/fidl/fuchsia.math:fuchsia.math_rust",
     "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_rust",
+    "//sdk/fidl/fuchsia.ui.pointer:fuchsia.ui.pointer_rust",
     "//sdk/fidl/fuchsia.ui.pointerinjector:fuchsia.ui.pointerinjector_rust",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_rust",
     "//src/lib/diagnostics/log/rust",
@@ -74,6 +75,7 @@ rustc_test("scenic-stressor-flatland-bin") {
     "src/flatland_instance.rs",
     "src/flatland_main.rs",
     "src/input_actor.rs",
+    "src/input_listener.rs",
     "src/pointer_state.rs",
   ]
 }
