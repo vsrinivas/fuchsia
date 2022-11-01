@@ -396,8 +396,8 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       "sys/platform/05:00:2/aml-i2c",
       "sys/platform/05:03:17/mali/aml-gpu",
       "sys/platform/05:00:18/aml-usb-phy-v2",
-      "class/bt-transport/000",
-      "class/bt-hci/000",
+      "sys/platform/05:00:3/bt-uart/aml-uart/bt-transport-uart",
+      "sys/platform/05:00:3/bt-uart/aml-uart/bt-transport-uart/bt-hci-broadcom",
 
       // XHCI driver will not be loaded if we are in USB peripheral mode.
       // "xhci/xhci/usb-bus",
@@ -482,8 +482,8 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "sys/platform/05:05:1/aml-axg-gpio",
       "sys/platform/05:05:1:1/aml-axg-gpio",
       "sys/platform/05:05:1/aml-axg-gpio/gpio-5/nelson-buttons/hid-buttons",
-      "class/bt-transport/000",
-      "class/bt-hci/000",
+      "sys/platform/05:00:3/bt-uart/aml-uart/bt-transport-uart",
+      "sys/platform/05:00:3/bt-uart/aml-uart/bt-transport-uart/bt-hci-broadcom",
       "sys/platform/05:00:2/aml-i2c",
       "sys/platform/05:05:17/mali/aml-gpu",
       "sys/platform/05:0a:21/nelson-usb-phy",

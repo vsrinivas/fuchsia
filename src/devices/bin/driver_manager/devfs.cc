@@ -506,8 +506,6 @@ Devfs::Devfs(std::optional<Devnode>& root, Device* device,
       // TODO(https://fxbug.dev/113719): Remove.
       "bt-hci",
 
-      "bt-transport",
-
       // TODO(https://fxbug.dev/113720): Remove.
       "camera",
 
