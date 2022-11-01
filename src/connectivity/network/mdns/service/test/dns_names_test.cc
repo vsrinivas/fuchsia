@@ -268,5 +268,14 @@ TEST(MdnsNamesTest, IsValidTextString) {
       "6789012345678901234567890123456789012345"));
 }
 
+// Tests |AltHostName|.
+TEST(MdnsNamesTest, AltHostName) {
+  EXPECT_EQ("123456789ABC", MdnsNames::AltHostName("fuchsia-1234-5678-9abc"));
+  EXPECT_EQ("ABCDEFABCDEF", MdnsNames::AltHostName("fuchsia-abcd-efab-cdef"));
+  EXPECT_EQ("000000000000", MdnsNames::AltHostName("fuchsia-0000-0000-0000"));
+  EXPECT_EQ("unexpected format", MdnsNames::AltHostName("unexpected format"));
+  EXPECT_EQ("longer unexpected format", MdnsNames::AltHostName("longer unexpected format"));
+}
+
 }  // namespace test
 }  // namespace mdns

@@ -23,7 +23,8 @@ AddressResponder::AddressResponder(MdnsAgent::Owner* owner, std::string host_ful
       media_(media),
       ip_versions_(ip_versions) {
   FX_DCHECK(!host_full_name_.empty());
-  FX_DCHECK(!addresses_.empty());
+  // TODO(fxb/113901): Restore this check when alt_services is no longer needed.
+  // FX_DCHECK(!addresses_.empty());
 }
 
 AddressResponder::~AddressResponder() {}
@@ -87,8 +88,10 @@ void AddressResponder::MaybeSendAddresses(ReplyAddress reply_address) {
 
 void AddressResponder::SendAddressResources(ReplyAddress reply_address) {
   if (addresses_.empty()) {
-    // Send addresses for the local host.
-    SendAddresses(MdnsResourceSection::kAnswer, reply_address);
+    // Send local addresses. The address value in the resource is invalid, which tells the interface
+    // transceivers to send their own addresses.
+    SendResource(std::make_shared<DnsResource>(host_full_name_, DnsType::kA),
+                 MdnsResourceSection::kAnswer, reply_address);
   } else {
     // Send addresses that were provided in the constructor.
     for (const auto& address : addresses_) {

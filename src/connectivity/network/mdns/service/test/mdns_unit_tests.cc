@@ -12,16 +12,17 @@
 namespace mdns {
 namespace test {
 
-constexpr char kHostName[] = "test_host_name";
-constexpr char kLocalHostFullName[] = "test_host_name.local.";
+constexpr char kHostName[] = "fuchsia-1234-5678-9abc";
+constexpr char kLocalHostFullName[] = "fuchsia-1234-5678-9abc.local.";
+constexpr char kAltHostFullName[] = "123456789ABC.local.";
 constexpr char kServiceName[] = "_yardapult._tcp.";
 constexpr char kServiceFullName[] = "_yardapult._tcp.local.";
 constexpr char kInstanceName[] = "my";
 constexpr char kInstanceFullName[] = "my._yardapult._tcp.local.";
 static const ReplyAddress kReplyAddress({192, 168, 78, 9, inet::IpPort::From_uint16_t(5353)},
                                         {192, 168, 1, 1}, 1, Media::kWired, IpVersions::kBoth);
-constexpr char kAlternateHostName[] = "test_alt_host_name";
-constexpr char kAlternateHostFullName[] = "test_alt_host_name.local.";
+constexpr char kProxyHostName[] = "test_proxy_host_name";
+constexpr char kProxyHostFullName[] = "test_proxy_host_name.local.";
 const std::vector<inet::IpAddress> kAddresses{inet::IpAddress(192, 168, 1, 200),
                                               inet::IpAddress(192, 168, 1, 201)};
 const inet::IpPort kPort = inet::IpPort::From_uint16_t(5353);
@@ -87,8 +88,10 @@ class MdnsUnitTests : public gtest::RealLoopFixture, public Mdns::Transceiver {
   bool ready() const { return ready_; }
 
   // Starts the |Mdns| instance under test.
-  void Start(bool perform_address_probe) {
-    under_test_.Start(nullptr, kHostName, perform_address_probe, [this]() { ready_ = true; });
+  void Start(bool perform_address_probe, std::vector<std::string> alt_services = {}) {
+    under_test_.Start(
+        nullptr, kHostName, perform_address_probe, [this]() { ready_ = true; },
+        std::move(alt_services));
     EXPECT_TRUE(start_called_);
     EXPECT_TRUE(link_change_callback_);
     EXPECT_TRUE(inbound_message_callback_);
@@ -185,13 +188,25 @@ class MdnsUnitTests : public gtest::RealLoopFixture, public Mdns::Transceiver {
   void ExpectAddresses(DnsMessage& message, MdnsResourceSection section,
                        const std::string& host_full_name,
                        const std::vector<inet::IpAddress>& addresses) {
+    bool expect_invalid = false;
     bool expect_v4 = false;
     bool expect_v6 = false;
     for (const auto& address : addresses) {
-      if (address.is_v4()) {
+      if (!address.is_valid()) {
+        expect_invalid = true;
+      } else if (address.is_v4()) {
         expect_v4 = true;
       } else {
         expect_v6 = true;
+      }
+    }
+
+    if (expect_invalid) {
+      auto resources = ExpectResources(message, section, host_full_name, DnsType::kA);
+      for (const auto& address : addresses) {
+        if (address.is_valid()) {
+          ExpectAddress(resources, address);
+        }
       }
     }
 
@@ -629,7 +644,7 @@ TEST_F(MdnsUnitTests, PublishInstanceWithHostNameAndAddresses) {
 
   Publisher publisher;
 
-  EXPECT_TRUE(under_test().PublishServiceInstance(kAlternateHostName, kAddresses, kServiceName,
+  EXPECT_TRUE(under_test().PublishServiceInstance(kProxyHostName, kAddresses, kServiceName,
                                                   kInstanceName, Media::kBoth, IpVersions::kBoth,
                                                   false, &publisher));
   RunLoopUntilIdle();
@@ -644,13 +659,13 @@ TEST_F(MdnsUnitTests, PublishInstanceWithHostNameAndAddresses) {
   EXPECT_EQ(0, resource->srv_.priority_);
   EXPECT_EQ(0, resource->srv_.weight_);
   EXPECT_EQ(kPort, resource->srv_.port_);
-  EXPECT_EQ(kAlternateHostFullName, resource->srv_.target_.dotted_string_);
+  EXPECT_EQ(kProxyHostFullName, resource->srv_.target_.dotted_string_);
 
   resource =
       ExpectResource(message, MdnsResourceSection::kAdditional, kInstanceFullName, DnsType::kTxt);
   EXPECT_TRUE(resource->txt_.strings_.empty());
 
-  ExpectAddresses(message, MdnsResourceSection::kAdditional, kAlternateHostFullName, kAddresses);
+  ExpectAddresses(message, MdnsResourceSection::kAdditional, kProxyHostFullName, kAddresses);
 
   ExpectNoOtherQuestionOrResource(message);
 
@@ -667,15 +682,15 @@ TEST_F(MdnsUnitTests, PublishHost) {
 
   HostPublisher host_publisher;
 
-  EXPECT_TRUE(under_test().PublishHost(kAlternateHostName, kAddresses, Media::kBoth,
-                                       IpVersions::kBoth, false, &host_publisher));
+  EXPECT_TRUE(under_test().PublishHost(kProxyHostName, kAddresses, Media::kBoth, IpVersions::kBoth,
+                                       false, &host_publisher));
   RunLoopUntilIdle();
   ExpectSendMessageNotCalled();
 
-  ReceiveQuery(kAlternateHostFullName, DnsType::kA, kReplyAddress);
+  ReceiveQuery(kProxyHostFullName, DnsType::kA, kReplyAddress);
   RunLoopUntilIdle();
   auto message = ExpectSendMessageCalled(ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth));
-  ExpectAddresses(message, MdnsResourceSection::kAnswer, kAlternateHostFullName, kAddresses);
+  ExpectAddresses(message, MdnsResourceSection::kAnswer, kProxyHostFullName, kAddresses);
 
   // Clean up.
   under_test().Stop();
@@ -690,26 +705,26 @@ TEST_F(MdnsUnitTests, PublishHostWiredOnly) {
 
   HostPublisher host_publisher;
 
-  EXPECT_TRUE(under_test().PublishHost(kAlternateHostName, kAddresses, Media::kWired,
-                                       IpVersions::kBoth, false, &host_publisher));
+  EXPECT_TRUE(under_test().PublishHost(kProxyHostName, kAddresses, Media::kWired, IpVersions::kBoth,
+                                       false, &host_publisher));
   RunLoopUntilIdle();
   ExpectSendMessageNotCalled();
 
   // Expect no response to wireless query.
   ReplyAddress sender_address0({192, 168, 78, 9, inet::IpPort::From_uint16_t(5353)},
                                {192, 168, 1, 1}, 1, Media::kWireless, IpVersions::kBoth);
-  ReceiveQuery(kAlternateHostFullName, DnsType::kA, sender_address0);
+  ReceiveQuery(kProxyHostFullName, DnsType::kA, sender_address0);
   RunLoopUntilIdle();
   ExpectSendMessageNotCalled();
 
   // Expect response to wired query.
   ReplyAddress sender_address1({192, 168, 78, 9, inet::IpPort::From_uint16_t(5353)},
                                {192, 168, 1, 1}, 1, Media::kWired, IpVersions::kBoth);
-  ReceiveQuery(kAlternateHostFullName, DnsType::kA, sender_address1);
+  ReceiveQuery(kProxyHostFullName, DnsType::kA, sender_address1);
   RunLoopUntilIdle();
 
   auto message = ExpectSendMessageCalled(ReplyAddress::Multicast(Media::kWired, IpVersions::kBoth));
-  ExpectAddresses(message, MdnsResourceSection::kAnswer, kAlternateHostFullName, kAddresses);
+  ExpectAddresses(message, MdnsResourceSection::kAnswer, kProxyHostFullName, kAddresses);
 
   // Clean up.
   under_test().Stop();
@@ -724,7 +739,7 @@ TEST_F(MdnsUnitTests, PublishHostWirelessOnly) {
 
   HostPublisher host_publisher;
 
-  EXPECT_TRUE(under_test().PublishHost(kAlternateHostName, kAddresses, Media::kWireless,
+  EXPECT_TRUE(under_test().PublishHost(kProxyHostName, kAddresses, Media::kWireless,
                                        IpVersions::kBoth, false, &host_publisher));
   RunLoopUntilIdle();
   ExpectSendMessageNotCalled();
@@ -732,19 +747,19 @@ TEST_F(MdnsUnitTests, PublishHostWirelessOnly) {
   // Expect no response to wired query.
   ReplyAddress sender_address0({192, 168, 78, 9, inet::IpPort::From_uint16_t(5353)},
                                {192, 168, 1, 1}, 1, Media::kWired, IpVersions::kBoth);
-  ReceiveQuery(kAlternateHostFullName, DnsType::kA, sender_address0);
+  ReceiveQuery(kProxyHostFullName, DnsType::kA, sender_address0);
   RunLoopUntilIdle();
   ExpectSendMessageNotCalled();
 
   // Expect response to wireless query.
   ReplyAddress sender_address1({192, 168, 78, 9, inet::IpPort::From_uint16_t(5353)},
                                {192, 168, 1, 1}, 1, Media::kWireless, IpVersions::kBoth);
-  ReceiveQuery(kAlternateHostFullName, DnsType::kA, sender_address1);
+  ReceiveQuery(kProxyHostFullName, DnsType::kA, sender_address1);
   RunLoopUntilIdle();
 
   auto message =
       ExpectSendMessageCalled(ReplyAddress::Multicast(Media::kWireless, IpVersions::kBoth));
-  ExpectAddresses(message, MdnsResourceSection::kAnswer, kAlternateHostFullName, kAddresses);
+  ExpectAddresses(message, MdnsResourceSection::kAnswer, kProxyHostFullName, kAddresses);
 
   // Clean up.
   under_test().Stop();
@@ -759,26 +774,26 @@ TEST_F(MdnsUnitTests, PublishHostV4Only) {
 
   HostPublisher host_publisher;
 
-  EXPECT_TRUE(under_test().PublishHost(kAlternateHostName, kAddresses, Media::kBoth,
-                                       IpVersions::kV4, false, &host_publisher));
+  EXPECT_TRUE(under_test().PublishHost(kProxyHostName, kAddresses, Media::kBoth, IpVersions::kV4,
+                                       false, &host_publisher));
   RunLoopUntilIdle();
   ExpectSendMessageNotCalled();
 
   // Expect no response to an IPv6 query.
   ReplyAddress sender_address0({0xfe80, 9, inet::IpPort::From_uint16_t(5353)}, {0xfe80, 1}, 1,
                                Media::kBoth, IpVersions::kV6);
-  ReceiveQuery(kAlternateHostFullName, DnsType::kAaaa, sender_address0);
+  ReceiveQuery(kProxyHostFullName, DnsType::kAaaa, sender_address0);
   RunLoopUntilIdle();
   ExpectSendMessageNotCalled();
 
   // Expect response to an IPv4 query.
   ReplyAddress sender_address1({192, 168, 78, 9, inet::IpPort::From_uint16_t(5353)},
                                {192, 168, 1, 1}, 1, Media::kBoth, IpVersions::kV4);
-  ReceiveQuery(kAlternateHostFullName, DnsType::kA, sender_address1);
+  ReceiveQuery(kProxyHostFullName, DnsType::kA, sender_address1);
   RunLoopUntilIdle();
 
   auto message = ExpectSendMessageCalled(ReplyAddress::Multicast(Media::kBoth, IpVersions::kV4));
-  ExpectAddresses(message, MdnsResourceSection::kAnswer, kAlternateHostFullName, kAddresses);
+  ExpectAddresses(message, MdnsResourceSection::kAnswer, kProxyHostFullName, kAddresses);
 
   // Clean up.
   under_test().Stop();
@@ -793,26 +808,65 @@ TEST_F(MdnsUnitTests, PublishHostV6Only) {
 
   HostPublisher host_publisher;
 
-  EXPECT_TRUE(under_test().PublishHost(kAlternateHostName, kAddresses, Media::kBoth,
-                                       IpVersions::kV6, false, &host_publisher));
+  EXPECT_TRUE(under_test().PublishHost(kProxyHostName, kAddresses, Media::kBoth, IpVersions::kV6,
+                                       false, &host_publisher));
   RunLoopUntilIdle();
   ExpectSendMessageNotCalled();
 
   // Expect no response to an IPv4 query.
   ReplyAddress sender_address0({192, 168, 78, 9, inet::IpPort::From_uint16_t(5353)},
                                {192, 168, 1, 1}, 1, Media::kBoth, IpVersions::kV4);
-  ReceiveQuery(kAlternateHostFullName, DnsType::kA, sender_address0);
+  ReceiveQuery(kProxyHostFullName, DnsType::kA, sender_address0);
   RunLoopUntilIdle();
   ExpectSendMessageNotCalled();
 
   // Expect response to an IPv6 query.
   ReplyAddress sender_address1({0xfe80, 9, inet::IpPort::From_uint16_t(5353)}, {0xfe80, 1}, 1,
                                Media::kBoth, IpVersions::kV6);
-  ReceiveQuery(kAlternateHostFullName, DnsType::kAaaa, sender_address1);
+  ReceiveQuery(kProxyHostFullName, DnsType::kAaaa, sender_address1);
   RunLoopUntilIdle();
 
   auto message = ExpectSendMessageCalled(ReplyAddress::Multicast(Media::kBoth, IpVersions::kV6));
-  ExpectAddresses(message, MdnsResourceSection::kAnswer, kAlternateHostFullName, kAddresses);
+  ExpectAddresses(message, MdnsResourceSection::kAnswer, kProxyHostFullName, kAddresses);
+
+  // Clean up.
+  under_test().Stop();
+  RunLoopUntilIdle();
+}
+
+// Tests that an 'alternate' publisher publishes from the alternate host name.
+TEST_F(MdnsUnitTests, PublishAlt) {
+  // Start.
+  SetHasInterfaces(true);
+  Start(false, {kServiceName});
+
+  Publisher publisher;
+
+  // Publish alt service.
+  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, Media::kBoth,
+                                                  IpVersions::kBoth, false, &publisher));
+  RunLoopUntilIdle();
+  auto message = ExpectSendMessageCalled(ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth));
+  ExpectAddresses(message, MdnsResourceSection::kAdditional, kAltHostFullName, {inet::IpAddress()});
+
+  // Clean up.
+  under_test().Stop();
+  RunLoopUntilIdle();
+}
+
+// Tests that the alternate host name has a responder when alt services are specified.
+TEST_F(MdnsUnitTests, RespondAlt) {
+  // Start.
+  SetHasInterfaces(true);
+  Start(false, {kServiceName});
+
+  RunLoopUntilIdle();
+  ExpectSendMessageNotCalled();
+
+  ReceiveQuery(kAltHostFullName, DnsType::kA, kReplyAddress);
+  RunLoopUntilIdle();
+  auto message = ExpectSendMessageCalled(ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth));
+  ExpectAddresses(message, MdnsResourceSection::kAnswer, kAltHostFullName, {inet::IpAddress()});
 
   // Clean up.
   under_test().Stop();

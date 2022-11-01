@@ -19,6 +19,10 @@ struct MdnsNames {
   // "host.local." from "host".
   static std::string HostFullName(const std::string& host_name);
 
+  // Constructs a simple host name from a local host name. For example, produces
+  // "host" from "host.local.".
+  static std::string HostNameFromFullName(const std::string& host_full_name);
+
   // Constructs a local service name from a simple service name. For example,
   // produces "_foo._tcp.local." from "_foo._tcp.".
   static std::string ServiceFullName(const std::string& service_name);
@@ -66,6 +70,12 @@ struct MdnsNames {
 
   // Determines if |text_string| is a valid text string.
   static bool IsValidTextString(const std::vector<uint8_t>& text_string);
+
+  // Returns the alternate host name for |host_name|. For example, if |host_name| is
+  // "fuchsia-1234-5678-9abc", this method returns "123456789ABC". If |host_name| isn't
+  // the expected size (22 characters), this method returns the |host_name| argument.
+  // TODO(fxb/113901): Remove this when alt_services is no longer needed.
+  static std::string AltHostName(const std::string& host_name);
 };
 
 }  // namespace mdns

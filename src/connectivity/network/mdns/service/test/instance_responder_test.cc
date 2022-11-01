@@ -21,6 +21,10 @@ constexpr char kOtherServiceName[] = "_other._tcp.";
 constexpr char kInstanceName[] = "testinstance";
 constexpr char kHostName[] = "test2host";
 constexpr char kHostFullName[] = "test2host.local.";
+constexpr char kLocalHostNameLong[] = "testhostnamethatislong";
+constexpr char kLocalHostFullNameLong[] = "testhostnamethatislong.local.";
+constexpr char kAltHostName[] = "123456789ABC";
+constexpr char kAltHostFullName[] = "123456789ABC.local.";
 const std::vector<inet::IpAddress> kAddresses{inet::IpAddress(192, 168, 1, 200),
                                               inet::IpAddress(192, 168, 1, 201)};
 const std::vector<inet::SocketAddress> kSocketAddresses{
@@ -183,7 +187,7 @@ void InstanceResponderTest::ExpectPublication(ReplyAddress reply_address,
   EXPECT_TRUE(resource->txt_.strings_.empty());
 
   if (addresses.empty()) {
-    ExpectAddressPlaceholder(message.get(), MdnsResourceSection::kAdditional);
+    ExpectResource(message.get(), MdnsResourceSection::kAdditional, host_full_name, DnsType::kA);
   } else {
     ExpectAddresses(message.get(), MdnsResourceSection::kAdditional, host_full_name, addresses);
   }
@@ -621,6 +625,16 @@ TEST_F(InstanceResponderTest, LocalServiceInstanceNotifications) {
 
   ExpectAddLocalServiceInstanceCall(
       ServiceInstance(kServiceName, kInstanceName, kLocalHostFullName, kSocketAddresses), false);
+}
+
+// Tests the the responder works with an alternate host name.
+TEST_F(InstanceResponderTest, AltHostName) {
+  InstanceResponder under_test(this, kAltHostName, {}, kServiceName, kInstanceName, Media::kBoth,
+                               IpVersions::kBoth, this);
+  SetAgent(under_test);
+
+  under_test.Start(kLocalHostFullName);
+  ExpectAnnouncements(Media::kBoth, IpVersions::kBoth, kAltHostFullName);
 }
 
 }  // namespace test

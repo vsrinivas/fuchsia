@@ -22,7 +22,8 @@ class AddressResponder : public MdnsAgent {
   AddressResponder(MdnsAgent::Owner* owner, Media media, IpVersions ip_versions);
 
   // Creates an |AddressResponder| that responds to queries for the specified host name with the
-  // specified addresses.
+  // specified addresses. If no addresses are supplied, the responder will respond to queries with
+  // local addresses.
   AddressResponder(MdnsAgent::Owner* owner, std::string host_full_name,
                    std::vector<inet::IpAddress> addresses, Media media, IpVersions ip_versions);
 
