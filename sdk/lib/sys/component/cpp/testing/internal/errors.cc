@@ -83,13 +83,13 @@ void PanicWithMessage(const char* stacktrace, const char* context, zx_status_t s
 
 void PanicWithMessage(const char* stacktrace, const char* context,
                       fuchsia::component::test::RealmBuilderError& error) {
-  ZX_PANIC("[%s] FIDL method %s failed with error: %s\n", stacktrace, context,
+  ZX_PANIC("[%s] FIDL method %s failed with error: %s", stacktrace, context,
            ConvertToString(error));
 }
 
 void PanicWithMessage(const char* stacktrace, const char* context,
                       fuchsia::component::Error& error) {
-  ZX_PANIC("[%s] FIDL method %s failed with error: %s\n", stacktrace, context,
+  ZX_PANIC("[%s] FIDL method %s failed with error: %s", stacktrace, context,
            ConvertToString(error));
 }
 
