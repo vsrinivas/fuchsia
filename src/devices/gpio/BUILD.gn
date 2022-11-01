@@ -8,7 +8,6 @@ group("drivers") {
     "drivers/aml-axg-gpio",
     "drivers/as370-gpio",
     "drivers/gpio",
-    "drivers/gpio-init",
     "drivers/gpio-test",
     "drivers/ti-tca6408a",
   ]
