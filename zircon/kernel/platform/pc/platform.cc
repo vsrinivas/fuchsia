@@ -196,8 +196,8 @@ static void platform_init_crashlog(void) {
   PlatformCrashlog::Bind(crashlog_impls::efi);
 }
 
-// Number of pages required to identity map 8GiB of memory.
-constexpr size_t kBytesToIdentityMap = 8ull * GB;
+// Number of pages required to identity map 16GiB of memory.
+constexpr size_t kBytesToIdentityMap = 16ull * GB;
 constexpr size_t kNumL2PageTables = kBytesToIdentityMap / (2ull * MB * NO_OF_PT_ENTRIES);
 constexpr size_t kNumL3PageTables = 1;
 constexpr size_t kNumL4PageTables = 1;
