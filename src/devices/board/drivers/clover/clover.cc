@@ -86,6 +86,11 @@ int Clover::Thread() {
     init_txn_->Reply(status);
     return status;
   }
+  if ((status = ThermalInit()) != ZX_OK) {
+    zxlogf(ERROR, "ThermalInit() failed: %s", zx_status_get_string(status));
+    init_txn_->Reply(status);
+    return status;
+  }
 
   init_txn_->Reply(status);
   return status;

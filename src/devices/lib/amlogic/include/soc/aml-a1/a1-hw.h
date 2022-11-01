@@ -54,6 +54,7 @@
 #define A1_GPIO_IRQ_5 86  // 32+54
 #define A1_GPIO_IRQ_6 87  // 32+55
 #define A1_GPIO_IRQ_7 88  // 32+56
+#define A1_TS_PLL_IRQ 89  // 57+32
 
 // PWM
 
@@ -67,7 +68,12 @@
 // sys_ctrl
 
 // sticky register -  not reset by watchdog
+#define A1_SYS_CTRL_SEC_STATUS_REG13 ((0x00cd << 2) + 0xfe005800)
 
 // Temperature
+#define A1_TEMP_SENSOR_PLL_BASE 0xfe004c00
+#define A1_TEMP_SENSOR_PLL_LENGTH 0x50
+#define A1_TEMP_SENSOR_PLL_TRIM A1_SYS_CTRL_SEC_STATUS_REG13
+#define A1_TEMP_SENSOR_PLL_TRIM_LENGTH 0x4
 
 #endif  // SRC_DEVICES_LIB_AMLOGIC_INCLUDE_SOC_AML_A1_A1_HW_H_

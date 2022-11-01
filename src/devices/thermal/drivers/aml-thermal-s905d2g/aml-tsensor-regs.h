@@ -14,9 +14,10 @@
 // Clock Gate Register offset
 #define AML_HHI_TS_CLK_CNTL     0x64 << 2
 #define AML_HHI_TS_CLK_CNTL_A5  0x56 << 2
+#define AML_HHI_TS_CLK_CNTL_A1  0x35 << 2
 #define AML_HHI_TS_CLK_ENABLE     0x130U /* u-boot */
 #define AML_HHI_TS_CLK_ENABLE_A5  0x12fU // Bit8   - clk_en
-                                         // Bit7:0 - clk_div, div N, if you want div8, set to 7
+#define AML_HHI_TS_CLK_ENABLE_A1  0x12fU // Bit7:0 - clk_div, div N, if you want div8, set to 7
                                          // The source clock of TS_CLK is 24Mhz, and TS_CLK needs
                                          // to be set to 0.5Mhz (div48, set to 0x2f)
 // Register offset

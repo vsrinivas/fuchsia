@@ -416,6 +416,12 @@ zx_status_t AmlTSensor::InitSensor(fuchsia_hardware_thermal::wire::ThermalDevice
       // Set the clk.
       hiu_mmio_->Write32(AML_HHI_TS_CLK_ENABLE_A5, AML_HHI_TS_CLK_CNTL_A5);
       break;
+    case PDEV_PID_AMLOGIC_A1:
+      // Get the trim info.
+      trim_info_ = trim_mmio_->Read32(0);
+      // Set the clk.
+      hiu_mmio_->Write32(AML_HHI_TS_CLK_ENABLE_A1, AML_HHI_TS_CLK_CNTL_A1);
+      break;
     default:
       ZX_ASSERT_MSG(0, "Unsupport version");
   }

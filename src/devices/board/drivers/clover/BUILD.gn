@@ -35,6 +35,7 @@ fuchsia_driver("clover-driver") {
     "clover-gpio.cc",
     "clover-sysmem.cc",
     "clover-tee.cc",
+    "clover-thermal.cc",
     "clover.cc",
   ]
   deps = [
@@ -46,6 +47,7 @@ fuchsia_driver("clover-driver") {
     "//sdk/banjo/fuchsia.sysmem:fuchsia.sysmem_banjo_c",
     "//sdk/fidl/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_cpp_driver",
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
+    "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_cpp_wire",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/devices/bus/lib/platform-bus-composites",
     "//src/devices/lib/amlogic",
