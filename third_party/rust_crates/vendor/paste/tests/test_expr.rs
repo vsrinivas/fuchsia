@@ -10,8 +10,8 @@ fn test_shared_hygiene() {
 
 #[test]
 fn test_repeat() {
-    const ROCKET_A: &'static str = "/a";
-    const ROCKET_B: &'static str = "/b";
+    const ROCKET_A: &str = "/a";
+    const ROCKET_B: &str = "/b";
 
     macro_rules! routes {
         ($($route:ident),*) => {{
@@ -26,10 +26,22 @@ fn test_repeat() {
 }
 
 #[test]
-fn test_integer() {
-    const CONST0: &'static str = "const0";
+fn test_literals() {
+    const CONST0: &str = "const0";
 
     let pasted = paste!([<CONST 0>]);
+    assert_eq!(pasted, CONST0);
+
+    let pasted = paste!([<CONST '0'>]);
+    assert_eq!(pasted, CONST0);
+
+    let pasted = paste!([<CONST "0">]);
+    assert_eq!(pasted, CONST0);
+
+    let pasted = paste!([<CONST r"0">]);
+    assert_eq!(pasted, CONST0);
+
+    let pasted = paste!([<CONST '\u{30}'>]);
     assert_eq!(pasted, CONST0);
 }
 
@@ -198,4 +210,63 @@ mod test_x86_feature_literal {
     }
 
     my_is_x86_feature_detected!("mmx");
+}
+
+#[rustversion::since(1.46)]
+mod test_local_setter {
+    // https://github.com/dtolnay/paste/issues/7
+
+    use paste::paste;
+
+    #[derive(Default)]
+    struct Test {
+        val: i32,
+    }
+
+    impl Test {
+        fn set_val(&mut self, arg: i32) {
+            self.val = arg;
+        }
+    }
+
+    macro_rules! setter {
+        ($obj:expr, $field:ident, $value:expr) => {
+            paste! { $obj.[<set_ $field>]($value); }
+        };
+
+        ($field:ident, $value:expr) => {{
+            let mut new = Test::default();
+            setter!(new, val, $value);
+            new
+        }};
+    }
+
+    #[test]
+    fn test_local_setter() {
+        let a = setter!(val, 42);
+        assert_eq!(a.val, 42);
+    }
+}
+
+// https://github.com/dtolnay/paste/issues/85
+#[test]
+fn test_top_level_none_delimiter() {
+    macro_rules! clone {
+        ($val:expr) => {
+            paste! {
+                $val.clone()
+            }
+        };
+    }
+
+    #[derive(Clone)]
+    struct A;
+
+    impl A {
+        fn consume_self(self) {
+            let _ = self;
+        }
+    }
+
+    clone!(&A).consume_self();
 }
