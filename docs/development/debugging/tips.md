@@ -62,7 +62,7 @@ through the symbolizer as follows:
 ```
 fx set bringup.x64 --variant asan  # or bringup.arm64
 fx build
-fx emu | fx symbolize
+fx ffx emu start --console | ffx debug symbolize
 ...
 > crasher
 ...
