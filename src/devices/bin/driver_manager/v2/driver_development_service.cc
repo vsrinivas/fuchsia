@@ -54,9 +54,9 @@ class DeviceInfoIterator : public fidl::WireServer<fdd::DeviceInfoIterator> {
 
 zx::result<fdd::wire::DeviceInfo> CreateDeviceInfo(fidl::AnyArena& allocator,
                                                    const dfv2::Node* node) {
-  fdd::wire::DeviceInfo device_info(allocator);
+  auto device_info = fdd::wire::DeviceInfo::Builder(allocator);
 
-  device_info.set_id(allocator, reinterpret_cast<uint64_t>(node));
+  device_info.id(reinterpret_cast<uint64_t>(node));
 
   const auto& children = node->children();
   fidl::VectorView<uint64_t> child_ids(allocator, children.size());
@@ -65,7 +65,7 @@ zx::result<fdd::wire::DeviceInfo> CreateDeviceInfo(fidl::AnyArena& allocator,
     child_ids[i++] = reinterpret_cast<uint64_t>(child.get());
   }
   if (!child_ids.empty()) {
-    device_info.set_child_ids(allocator, child_ids);
+    device_info.child_ids(child_ids);
   }
 
   const auto& parents = node->parents();
@@ -75,14 +75,13 @@ zx::result<fdd::wire::DeviceInfo> CreateDeviceInfo(fidl::AnyArena& allocator,
     parent_ids[i++] = reinterpret_cast<uint64_t>(parent);
   }
   if (!parent_ids.empty()) {
-    device_info.set_parent_ids(allocator, parent_ids);
+    device_info.parent_ids(parent_ids);
   }
 
-  device_info.set_moniker(allocator, fidl::StringView(allocator, node->TopoName()));
+  device_info.moniker(fidl::StringView(allocator, node->TopoName()));
 
   if (node->driver_component()) {
-    device_info.set_bound_driver_url(allocator,
-                                     fidl::StringView(allocator, node->driver_component()->url()));
+    device_info.bound_driver_url(fidl::StringView(allocator, node->driver_component()->url()));
   }
 
   auto properties = node->properties();
@@ -90,16 +89,16 @@ zx::result<fdd::wire::DeviceInfo> CreateDeviceInfo(fidl::AnyArena& allocator,
     fidl::VectorView<fdf::wire::NodeProperty> node_properties(allocator, properties.size());
     for (size_t i = 0; i < properties.size(); ++i) {
       const auto& src = properties[i];
-      auto& dst = node_properties[i];
-      dst = fdf::wire::NodeProperty(allocator);
+      auto dst = fdf::wire::NodeProperty::Builder(allocator);
       if (src.has_key()) {
-        dst.set_key(allocator, src.key());
+        dst.key(src.key());
       }
       if (src.has_value()) {
-        dst.set_value(allocator, src.value());
+        dst.value(src.value());
       }
+      node_properties[i] = dst.Build();
     }
-    device_info.set_node_property_list(allocator, node_properties);
+    device_info.node_property_list(node_properties);
   }
 
   // TODO(fxbug.dev/90735): Get topological path
@@ -112,7 +111,7 @@ zx::result<fdd::wire::DeviceInfo> CreateDeviceInfo(fidl::AnyArena& allocator,
            zx_status_get_string(result.status_value()));
       return zx::error(result.status_value());
     }
-    device_info.set_driver_host_koid(allocator, result.value());
+    device_info.driver_host_koid(result.value());
   }
 
   // Copy over the offers.
@@ -123,9 +122,9 @@ zx::result<fdd::wire::DeviceInfo> CreateDeviceInfo(fidl::AnyArena& allocator,
       node_offers[i] = fidl::ToWire(allocator, fidl::ToNatural(offers[i]));
     }
   }
-  device_info.set_offer_list(allocator, offers);
+  device_info.offer_list(offers);
 
-  return zx::ok(device_info);
+  return zx::ok(device_info.Build());
 }
 
 void DriverDevelopmentService::GetDeviceInfo(GetDeviceInfoRequestView request,

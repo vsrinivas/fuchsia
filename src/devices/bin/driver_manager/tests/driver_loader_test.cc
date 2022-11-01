@@ -64,25 +64,23 @@ class FakeDriverLoaderIndex final : public fidl::WireServer<fdi::DriverIndex> {
                                                        fake_drivers.size() + device_groups.size());
     size_t index = 0;
     for (auto& driver : fake_drivers) {
-      auto driver_info = fdi::wire::MatchedDriverInfo(allocator);
+      auto driver_info = fdi::wire::MatchedDriverInfo::Builder(allocator);
       if (driver.is_dfv2) {
-        driver_info.set_url(
+        driver_info.url(
             fidl::ObjectView<fidl::StringView>(allocator, allocator, driver.driver_url));
       } else {
-        driver_info.set_driver_url(
+        driver_info.driver_url(
             fidl::ObjectView<fidl::StringView>(allocator, allocator, driver.driver_url));
       }
-      driver_info.set_package_type(driver.package_type);
-      driver_info.set_is_fallback(driver.is_fallback);
+      driver_info.package_type(driver.package_type);
+      driver_info.is_fallback(driver.is_fallback);
 
-      drivers[index] = fdi::wire::MatchedDriver::WithDriver(
-          fidl::ObjectView<fdi::wire::MatchedDriverInfo>(allocator, driver_info));
+      drivers[index] = fdi::wire::MatchedDriver::WithDriver(allocator, driver_info.Build());
       index++;
     }
 
     for (auto& device_group : device_groups) {
-      drivers[index] = fdi::wire::MatchedDriver::WithDeviceGroupNode(
-          fidl::ObjectView<fdi::wire::MatchedDeviceGroupNodeInfo>(allocator, device_group));
+      drivers[index] = fdi::wire::MatchedDriver::WithDeviceGroupNode(allocator, device_group);
       index++;
     }
 
@@ -378,34 +376,30 @@ TEST_F(DriverLoaderTest, TestReturnOnlyDeviceGroups) {
   fidl::Arena allocator;
 
   // Add first device group.
-  auto device_group_1 = fdi::wire::MatchedDeviceGroupInfo(allocator);
-  device_group_1.set_node_index(1);
-  device_group_1.set_name(
-      fidl::ObjectView<fidl::StringView>(allocator, allocator, "device_group_1"));
+  auto device_group_1 = fdi::wire::MatchedDeviceGroupInfo::Builder(allocator);
+  device_group_1.node_index(1);
+  device_group_1.name(fidl::ObjectView<fidl::StringView>(allocator, allocator, "device_group_1"));
 
   fidl::VectorView<fdi::wire::MatchedDeviceGroupInfo> device_groups_1(allocator, 1);
-  device_groups_1[0] = device_group_1;
+  device_groups_1[0] = device_group_1.Build();
 
-  auto device_group_node_1 = fdi::wire::MatchedDeviceGroupNodeInfo(allocator);
-  device_group_node_1.set_device_groups(
+  auto device_group_node_1 = fdi::wire::MatchedDeviceGroupNodeInfo::Builder(allocator);
+  device_group_node_1.device_groups(
       fidl::ObjectView<fidl::VectorView<fdi::wire::MatchedDeviceGroupInfo>>(allocator,
                                                                             device_groups_1));
-  driver_index_server.device_groups.push_back(device_group_node_1);
+  driver_index_server.device_groups.push_back(device_group_node_1.Build());
 
   // Add second device group.
-  auto device_group_2 = fdi::wire::MatchedDeviceGroupInfo(allocator);
-  device_group_2.set_node_index(0);
-  device_group_2.set_name(
-      fidl::ObjectView<fidl::StringView>(allocator, allocator, "device_group_2"));
+  auto device_group_2 = fdi::wire::MatchedDeviceGroupInfo::Builder(allocator);
+  device_group_2.node_index(0);
+  device_group_2.name(fidl::ObjectView<fidl::StringView>(allocator, allocator, "device_group_2"));
 
   fidl::VectorView<fdi::wire::MatchedDeviceGroupInfo> device_groups_2(allocator, 1);
-  device_groups_2[0] = device_group_2;
+  device_groups_2[0] = device_group_2.Build();
 
-  auto device_group_node_2 = fdi::wire::MatchedDeviceGroupNodeInfo(allocator);
-  device_group_node_2.set_device_groups(
-      fidl::ObjectView<fidl::VectorView<fdi::wire::MatchedDeviceGroupInfo>>(allocator,
-                                                                            device_groups_2));
-  driver_index_server.device_groups.push_back(device_group_node_2);
+  auto device_group_node_2 = fdi::wire::MatchedDeviceGroupNodeInfo::Builder(allocator);
+  device_group_node_2.device_groups(device_groups_2);
+  driver_index_server.device_groups.push_back(device_group_node_2.Build());
 
   DriverLoader driver_loader(nullptr, std::move(driver_index), &resolver, loop.dispatcher(), false,
                              nullptr);
@@ -433,20 +427,18 @@ TEST_F(DriverLoaderTest, TestReturnOnlyDeviceGroups) {
 TEST_F(DriverLoaderTest, TestReturnDriversAndDeviceGroups) {
   fidl::Arena allocator;
 
-  auto device_group = fdi::wire::MatchedDeviceGroupInfo(allocator);
-  device_group.set_node_index(1);
-  device_group.set_name(fidl::ObjectView<fidl::StringView>(allocator, allocator, "device_group"));
+  auto device_group = fdi::wire::MatchedDeviceGroupInfo::Builder(allocator);
+  device_group.node_index(1);
+  device_group.name(fidl::ObjectView<fidl::StringView>(allocator, allocator, "device_group"));
 
   fidl::VectorView<fdi::wire::MatchedDeviceGroupInfo> device_groups(allocator, 1);
-  device_groups[0] = device_group;
+  device_groups[0] = device_group.Build();
 
-  auto device_group_node = fdi::wire::MatchedDeviceGroupNodeInfo(allocator);
-  device_group_node.set_device_groups(
-      fidl::ObjectView<fidl::VectorView<fdi::wire::MatchedDeviceGroupInfo>>(allocator,
-                                                                            device_groups));
+  auto device_group_node = fdi::wire::MatchedDeviceGroupNodeInfo::Builder(allocator);
+  device_group_node.device_groups(device_groups);
 
   auto driver_name = "fuchsia_boot:///#driver.so";
-  driver_index_server.device_groups.push_back(device_group_node);
+  driver_index_server.device_groups.push_back(device_group_node.Build());
   driver_index_server.fake_drivers.emplace_back(driver_name, fdi::wire::DriverPackageType::kBoot);
 
   auto driver = std::make_unique<Driver>();
@@ -476,17 +468,15 @@ TEST_F(DriverLoaderTest, TestReturnDriversAndDeviceGroups) {
 TEST_F(DriverLoaderTest, TestReturnDeviceGroupNoTopologicalPath) {
   fidl::Arena allocator;
 
-  auto device_group = fdi::wire::MatchedDeviceGroupInfo(allocator);
-  device_group.set_node_index(1);
+  auto device_group = fdi::wire::MatchedDeviceGroupInfo::Builder(allocator);
+  device_group.node_index(1);
 
   fidl::VectorView<fdi::wire::MatchedDeviceGroupInfo> device_groups(allocator, 1);
-  device_groups[0] = device_group;
+  device_groups[0] = device_group.Build();
 
-  auto device_group_node = fdi::wire::MatchedDeviceGroupNodeInfo(allocator);
-  device_group_node.set_device_groups(
-      fidl::ObjectView<fidl::VectorView<fdi::wire::MatchedDeviceGroupInfo>>(allocator,
-                                                                            device_groups));
-  driver_index_server.device_groups.push_back(device_group_node);
+  auto device_group_node = fdi::wire::MatchedDeviceGroupNodeInfo::Builder(allocator);
+  device_group_node.device_groups(device_groups);
+  driver_index_server.device_groups.push_back(device_group_node.Build());
 
   DriverLoader driver_loader(nullptr, std::move(driver_index), &resolver, loop.dispatcher(), false,
                              nullptr);
@@ -502,11 +492,11 @@ TEST_F(DriverLoaderTest, TestReturnDeviceGroupNoNodes) {
   fidl::Arena allocator;
 
   fidl::VectorView<fdi::wire::MatchedDeviceGroupInfo> device_groups(allocator, 0);
-  auto device_group_node = fdi::wire::MatchedDeviceGroupNodeInfo(allocator);
-  device_group_node.set_device_groups(
+  auto device_group_node = fdi::wire::MatchedDeviceGroupNodeInfo::Builder(allocator);
+  device_group_node.device_groups(
       fidl::ObjectView<fidl::VectorView<fdi::wire::MatchedDeviceGroupInfo>>(allocator,
                                                                             device_groups));
-  driver_index_server.device_groups.push_back(device_group_node);
+  driver_index_server.device_groups.push_back(device_group_node.Build());
 
   DriverLoader driver_loader(nullptr, std::move(driver_index), &resolver, loop.dispatcher(), false,
                              nullptr);
@@ -521,25 +511,21 @@ TEST_F(DriverLoaderTest, TestReturnDeviceGroupNoNodes) {
 TEST_F(DriverLoaderTest, TestReturnDeviceGroupMultipleNodes) {
   fidl::Arena allocator;
 
-  auto device_group_1 = fdi::wire::MatchedDeviceGroupInfo(allocator);
-  device_group_1.set_node_index(1);
-  device_group_1.set_name(
-      fidl::ObjectView<fidl::StringView>(allocator, allocator, "device_group_1"));
+  auto device_group_1 = fdi::wire::MatchedDeviceGroupInfo::Builder(allocator);
+  device_group_1.node_index(1);
+  device_group_1.name(fidl::ObjectView<fidl::StringView>(allocator, allocator, "device_group_1"));
 
-  auto device_group_2 = fdi::wire::MatchedDeviceGroupInfo(allocator);
-  device_group_2.set_node_index(3);
-  device_group_2.set_name(
-      fidl::ObjectView<fidl::StringView>(allocator, allocator, "device_group_2"));
+  auto device_group_2 = fdi::wire::MatchedDeviceGroupInfo::Builder(allocator);
+  device_group_2.node_index(3);
+  device_group_2.name(fidl::ObjectView<fidl::StringView>(allocator, allocator, "device_group_2"));
 
   fidl::VectorView<fdi::wire::MatchedDeviceGroupInfo> device_groups(allocator, 2);
-  device_groups[0] = device_group_1;
-  device_groups[1] = device_group_2;
+  device_groups[0] = device_group_1.Build();
+  device_groups[1] = device_group_2.Build();
 
-  auto device_group_node = fdi::wire::MatchedDeviceGroupNodeInfo(allocator);
-  device_group_node.set_device_groups(
-      fidl::ObjectView<fidl::VectorView<fdi::wire::MatchedDeviceGroupInfo>>(allocator,
-                                                                            device_groups));
-  driver_index_server.device_groups.push_back(device_group_node);
+  auto device_group_node = fdi::wire::MatchedDeviceGroupNodeInfo::Builder(allocator);
+  device_group_node.device_groups(device_groups);
+  driver_index_server.device_groups.push_back(device_group_node.Build());
 
   DriverLoader driver_loader(nullptr, std::move(driver_index), &resolver, loop.dispatcher(), false,
                              nullptr);

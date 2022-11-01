@@ -238,8 +238,6 @@ config("fidl-wire-deprecated-mutable-tables") {
     "//src/developer/forensics/crasher/cpp:crasher_exe",
     "//src/developer/shell/interpreter:shell_server_lib",
     "//src/devices/bin/driver_host2:unittests",
-    "//src/devices/bin/driver_manager:driver_manager_test",
-    "//src/devices/bin/driver_manager:lib",
     "//src/devices/bin/driver_manager/v2:driver_runner",
     "//src/devices/bin/driver_manager/v2:driver_runner_test",
     "//src/devices/board/drivers/astro:astro-driver",

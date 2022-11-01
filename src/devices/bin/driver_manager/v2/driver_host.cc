@@ -14,7 +14,7 @@ namespace fdf = fuchsia_driver_framework;
 
 namespace dfv2 {
 
-zx::result<> SetEncodedConfig(fdf::wire::DriverStartArgs& args,
+zx::result<> SetEncodedConfig(fidl::WireTableBuilder<fdf::wire::DriverStartArgs>& args,
                               frunner::wire::ComponentStartInfo& start_info) {
   if (!start_info.has_encoded_config()) {
     return zx::ok();
@@ -26,7 +26,7 @@ zx::result<> SetEncodedConfig(fdf::wire::DriverStartArgs& args,
   }
 
   if (start_info.encoded_config().is_buffer()) {
-    args.set_config(std::move(start_info.encoded_config().buffer().vmo));
+    args.config(std::move(start_info.encoded_config().buffer().vmo));
     return zx::ok();
   }
 
@@ -43,7 +43,7 @@ zx::result<> SetEncodedConfig(fdf::wire::DriverStartArgs& args,
     return zx::error(status);
   }
 
-  args.set_config(std::move(vmo));
+  args.config(std::move(vmo));
   return zx::ok();
 }
 
@@ -64,13 +64,13 @@ zx::result<fidl::ClientEnd<fdh::Driver>> DriverHostComponent::Start(
 
   auto binary = driver::ProgramValue(start_info.program(), "binary").value_or("");
   fidl::Arena arena;
-  fdf::wire::DriverStartArgs args(arena);
-  args.set_node(std::move(client_end))
-      .set_node_name(arena, fidl::StringView::FromExternal(node_name))
-      .set_url(arena, start_info.resolved_url())
-      .set_program(arena, start_info.program())
-      .set_ns(arena, start_info.ns())
-      .set_outgoing_dir(std::move(start_info.outgoing_dir()));
+  auto args = fdf::wire::DriverStartArgs::Builder(arena);
+  args.node(std::move(client_end))
+      .node_name(fidl::StringView::FromExternal(node_name))
+      .url(start_info.resolved_url())
+      .program(start_info.program())
+      .ns(start_info.ns())
+      .outgoing_dir(std::move(start_info.outgoing_dir()));
 
   auto status = SetEncodedConfig(args, start_info);
   if (status.is_error()) {
@@ -78,10 +78,10 @@ zx::result<fidl::ClientEnd<fdh::Driver>> DriverHostComponent::Start(
   }
 
   if (!symbols.empty()) {
-    args.set_symbols(arena, symbols);
+    args.symbols(symbols);
   }
 
-  auto start = driver_host_->Start(args, std::move(endpoints->server));
+  auto start = driver_host_->Start(args.Build(), std::move(endpoints->server));
   if (!start.ok()) {
     LOGF(ERROR, "Failed to start driver '%s' in driver host: %s", binary.data(),
          start.FormatDescription().data());

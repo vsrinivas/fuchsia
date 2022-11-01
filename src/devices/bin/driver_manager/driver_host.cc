@@ -153,13 +153,13 @@ zx::result<fidl::ClientEnd<fdh::Driver>> DriverHost::Start(
 
   auto binary = driver::ProgramValue(start_info.program(), "binary").value_or("");
   fidl::Arena arena;
-  fdf::wire::DriverStartArgs args(arena);
-  args.set_node(std::move(client_end))
-      .set_node_name(arena, node_name)
-      .set_url(arena, start_info.resolved_url())
-      .set_program(arena, start_info.program())
-      .set_ns(arena, start_info.ns())
-      .set_outgoing_dir(std::move(start_info.outgoing_dir()));
+  auto args = fdf::wire::DriverStartArgs::Builder(arena);
+  args.node(std::move(client_end))
+      .node_name(node_name)
+      .url(start_info.resolved_url())
+      .program(start_info.program())
+      .ns(start_info.ns())
+      .outgoing_dir(std::move(start_info.outgoing_dir()));
 
   auto status = dfv2::SetEncodedConfig(args, start_info);
   if (status.is_error()) {
@@ -167,10 +167,10 @@ zx::result<fidl::ClientEnd<fdh::Driver>> DriverHost::Start(
   }
 
   if (!symbols.empty()) {
-    args.set_symbols(arena, symbols);
+    args.symbols(symbols);
   }
 
-  auto start = controller_->Start(args, std::move(endpoints->server));
+  auto start = controller_->Start(args.Build(), std::move(endpoints->server));
   if (!start.ok()) {
     LOGF(ERROR, "Failed to start driver '%s' in driver host: %s", binary.data(),
          start.FormatDescription().data());

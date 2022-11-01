@@ -271,10 +271,10 @@ const std::vector<MatchedDriver> DriverLoader::MatchPropertiesDriverIndex(
   }
 
   fidl::Arena allocator;
-  fdf::wire::NodeAddArgs args(allocator);
-  args.set_properties(allocator, std::move(props));
+  auto args = fdf::wire::NodeAddArgs::Builder(allocator);
+  args.properties(std::move(props));
 
-  auto result = driver_index_.sync()->MatchDriversV1(std::move(args));
+  auto result = driver_index_.sync()->MatchDriversV1(args.Build());
   if (!result.ok()) {
     if (result.status() != ZX_OK) {
       LOGF(ERROR, "DriverIndex::MatchDriversV1 failed: %d", result.status());

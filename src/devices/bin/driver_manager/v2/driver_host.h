@@ -42,8 +42,9 @@ class DriverHostComponent final
   fidl::WireSharedClient<fuchsia_driver_host::DriverHost> driver_host_;
 };
 
-zx::result<> SetEncodedConfig(fuchsia_driver_framework::wire::DriverStartArgs& args,
-                              fuchsia_component_runner::wire::ComponentStartInfo& start_info);
+zx::result<> SetEncodedConfig(
+    fidl::WireTableBuilder<fuchsia_driver_framework::wire::DriverStartArgs>& args,
+    fuchsia_component_runner::wire::ComponentStartInfo& start_info);
 
 }  // namespace dfv2
 

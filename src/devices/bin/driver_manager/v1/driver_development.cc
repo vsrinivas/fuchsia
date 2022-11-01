@@ -33,16 +33,16 @@ zx::result<std::vector<fdd::wire::DeviceInfo>> GetDeviceInfo(
       return zx::error(ZX_ERR_BUFFER_TOO_SMALL);
     }
 
-    fdd::wire::DeviceInfo device_info(allocator);
+    auto device_info = fdd::wire::DeviceInfo::Builder(allocator);
 
     // id leaks internal pointers, but since this is a development only API, it shouldn't be
     // a big deal.
-    device_info.set_id(allocator, reinterpret_cast<uint64_t>(device.get()));
+    device_info.id(reinterpret_cast<uint64_t>(device.get()));
 
     // TODO(fxbug.dev/80094): Handle multiple parents case.
     fidl::VectorView<uint64_t> parent_ids(allocator, 1);
     parent_ids[0] = reinterpret_cast<uint64_t>(device->parent().get());
-    device_info.set_parent_ids(allocator, parent_ids);
+    device_info.parent_ids(parent_ids);
 
     size_t child_count = 0;
     for (const Device* child __attribute__((unused)) : device->children()) {
@@ -54,11 +54,11 @@ zx::result<std::vector<fdd::wire::DeviceInfo>> GetDeviceInfo(
       for (const Device* child : device->children()) {
         child_ids[i++] = reinterpret_cast<uint64_t>(child);
       }
-      device_info.set_child_ids(allocator, child_ids);
+      device_info.child_ids(child_ids);
     }
 
     if (device->host()) {
-      device_info.set_driver_host_koid(allocator, device->host()->koid());
+      device_info.driver_host_koid(device->host()->koid());
     }
 
     char path[fdm::wire::kDevicePathMax + 1];
@@ -67,10 +67,9 @@ zx::result<std::vector<fdd::wire::DeviceInfo>> GetDeviceInfo(
       return zx::error(status);
     }
 
-    device_info.set_topological_path(allocator, fidl::StringView(allocator, {path, strlen(path)}));
+    device_info.topological_path(fidl::StringView(allocator, {path, strlen(path)}));
 
-    device_info.set_bound_driver_libname(
-        allocator,
+    device_info.bound_driver_libname(
         fidl::StringView(allocator, {device->libname().data(), device->libname().size()}));
 
     fidl::VectorView<fdm::wire::DeviceProperty> props(allocator, device->props().size());
@@ -122,21 +121,20 @@ zx::result<std::vector<fdd::wire::DeviceInfo>> GetDeviceInfo(
       str_props[i] = fidl_str_prop;
     }
 
-    device_info.set_property_list(allocator, fdm::wire::DevicePropertyList{
-                                                 .props = props,
-                                                 .str_props = str_props,
-                                             });
+    device_info.property_list(fdm::wire::DevicePropertyList{
+        .props = props,
+        .str_props = str_props,
+    });
 
-    device_info.set_flags(fdd::wire::DeviceFlags::TruncatingUnknown(device->flags));
+    device_info.flags(fdd::wire::DeviceFlags::TruncatingUnknown(device->flags));
 
     if (device->protocol_id() != 0 && device->protocol_id() != ZX_PROTOCOL_MISC) {
-      device_info.set_protocol_id(device->protocol_id());
+      device_info.protocol_id(device->protocol_id());
       const char* protocol_name = get_protocol_name(device->protocol_id());
-      device_info.set_protocol_name(
-          allocator, fidl::StringView(allocator, {protocol_name, strlen(protocol_name)}));
+      device_info.protocol_name(allocator, std::string_view(protocol_name));
     }
 
-    device_info_vec.push_back(std::move(device_info));
+    device_info_vec.push_back(device_info.Build());
   }
   return zx::ok(std::move(device_info_vec));
 }
