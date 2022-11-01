@@ -6,15 +6,23 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <algorithm>
+#include <cstdint>
 #include <limits>
+#include <memory>
+#include <unordered_set>
 
-#include "llvm/DebugInfo/DIContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugAranges.h"
-#include "llvm/DebugInfo/DWARF/DWARFUnit.h"
-#include "llvm/Object/Binary.h"
-#include "llvm/Object/ELFObjectFile.h"
-#include "llvm/Object/ObjectFile.h"
+#include <llvm/DebugInfo/DIContext.h>
+#include <llvm/DebugInfo/DWARF/DWARFCompileUnit.h>
+#include <llvm/DebugInfo/DWARF/DWARFContext.h>
+#include <llvm/DebugInfo/DWARF/DWARFDebugArangeSet.h>
+#include <llvm/DebugInfo/DWARF/DWARFUnit.h>
+#include <llvm/Object/Binary.h>
+#include <llvm/Object/ELFObjectFile.h>
+#include <llvm/Object/ObjectFile.h>
+#include <llvm/Support/Error.h>
+
+#include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/zxdb/common/file_util.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_unit_impl.h"
 #include "src/lib/elflib/elflib.h"
@@ -59,6 +67,83 @@ std::map<std::string, elflib::Elf64_Sym> GetMergedElfSymbols(elflib::ElfLib& elf
 }
 
 }  // namespace
+
+// To work around https://github.com/llvm/llvm-project/issues/58641.
+class DwarfBinaryImpl::DebugAranges {
+ public:
+  explicit DebugAranges(llvm::DWARFContext* context) {
+    std::unordered_set<uint64_t> parsed_units;
+
+    // Extract aranges from .debug_aranges section first.
+    llvm::DWARFDataExtractor aranges(context->getDWARFObj().getArangesSection(),
+                                     context->isLittleEndian(), 0);
+    uint64_t aranges_offset = 0;
+
+    while (aranges.isValidOffset(aranges_offset)) {
+      llvm::DWARFDebugArangeSet set;
+      if (auto err = set.extract(aranges, &aranges_offset, OnWarning)) {
+        LOGS(Error) << llvm::toString(std::move(err));
+        break;
+      }
+      uint64_t offset = set.getCompileUnitDIEOffset();
+      for (const auto& desc : set.descriptors()) {
+        // getEndAddress() might overflow.
+        if (desc.Address && desc.getEndAddress() > desc.Address)
+          ranges_.push_back({desc.Address, desc.getEndAddress(), offset});
+      }
+      parsed_units.insert(offset);
+    }
+
+    // Generate aranges from compile units because .debug_aranges could be incomplete.
+    // But we can skip those units that we have parsed.
+    for (const auto& compile_unit : context->compile_units()) {
+      uint64_t offset = compile_unit->getOffset();
+      if (parsed_units.insert(offset).second) {
+        if (auto ranges = compile_unit->collectAddressRanges()) {
+          for (const auto& range : *ranges) {
+            if (range.LowPC && range.HighPC > range.LowPC)
+              ranges_.push_back({range.LowPC, range.HighPC, offset});
+          }
+        } else {
+          LOGS(Error) << llvm::toString(ranges.takeError());
+        }
+      }
+    }
+
+    std::sort(ranges_.begin(), ranges_.end(),
+              [](const Range& first, const Range& second) { return first.begin < second.begin; });
+    // Check
+    Range* prev = nullptr;
+    for (Range& range : ranges_) {
+      if (prev && prev->end > range.begin) {
+        // This could happen when the linker resolves the same symbol in different CUs to the same
+        // address in the final executable.
+        prev->end = range.begin;
+      }
+      prev = &range;
+    }
+  }
+
+  uint64_t FindAddress(uint64_t address) const {
+    auto it = std::partition_point(ranges_.begin(), ranges_.end(),
+                                   [address](const Range& range) { return range.end <= address; });
+    // it is the first range that has end > address.
+    if (it != ranges_.end() && it->begin <= address) {
+      return it->cu_offset;
+    }
+    return -1ULL;
+  }
+
+ private:
+  static void OnWarning(llvm::Error err) { LOGS(Warn) << llvm::toString(std::move(err)); }
+
+  struct Range {
+    uint64_t begin;
+    uint64_t end;
+    uint64_t cu_offset;
+  };
+  std::vector<Range> ranges_;
+};
 
 DwarfBinaryImpl::DwarfBinaryImpl(const std::string& name, const std::string& binary_name,
                                  const std::string& build_id)
@@ -113,9 +198,6 @@ Err DwarfBinaryImpl::Load() {
   binary_ = std::move(binary_pair.first);
 
   context_ = llvm::DWARFContext::create(*object_file());
-  context_->getDWARFObj().forEachInfoSections([this](const llvm::DWARFSection& s) {
-    compile_units_.addUnitsForSection(*context_, s, llvm::DW_SECT_INFO);
-  });
 
   return Err();
 }
@@ -145,8 +227,11 @@ fxl::RefPtr<DwarfUnit> DwarfBinaryImpl::GetUnitAtIndex(size_t i) {
 }
 
 fxl::RefPtr<DwarfUnit> DwarfBinaryImpl::UnitForRelativeAddress(uint64_t relative_address) {
+  if (!debug_aranges_) {
+    debug_aranges_ = std::make_unique<DebugAranges>(context_.get());
+  }
   return FromLLVMUnit(
-      compile_units_.getUnitForOffset(context_->getDebugAranges()->findAddress(relative_address)));
+      context_->getCompileUnitForOffset(debug_aranges_->FindAddress(relative_address)));
 }
 
 fxl::RefPtr<DwarfUnit> DwarfBinaryImpl::FromLLVMUnit(llvm::DWARFUnit* llvm_unit) {
