@@ -113,9 +113,5 @@
             instance_id: "4d5f882f294857b5eb02688fd1e284611a4154737bd00dbb47f53aa5e1276237",
             moniker: "/core/lowpan-ot-driver",
         },
-        {
-            instance_id: "146cb8d457bc5856dffa25ad0ee38c17585c436915128283f3bb6dbf0e9c7c63",
-            moniker: "/core/compute-benchmarks",
-        },
     ],
 }

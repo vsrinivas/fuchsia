@@ -29,7 +29,7 @@ This benchmark quantifies the overhead and latency of Magma/FIDL.
 # Build
 
 ```
-fx set core.chromebook-x64                                                                 \
+(host)$ fx set core.chromebook-x64                                                         \
    --with //src/graphics/lib/compute:vulkan-tests                                          \
    --with //src/graphics/lib/compute:compute-benchmarks                                    \
    --args='core_realm_shards += [ "//src/graphics/lib/compute:compute-benchmarks-shard" ]' \
@@ -40,13 +40,13 @@ fx set core.chromebook-x64                                                      
 # Resolve the `/core/compute-benchmarks` instance
 
 ```
-ffx component resolve /core/compute-benchmarks
+(host)$ ffx component resolve /core/compute-benchmarks
 ```
 
 # Explore the `/core/compute-benchmarks` instance
 
 ```
-ffx component explore -l namespace /core/compute-benchmarks
+(host)$ ffx component explore -l namespace /core/compute-benchmarks
 $ ls pkg/bin
 bench-vk
 radix-sort-vk-bench
@@ -56,63 +56,30 @@ spinel-vk-bench
 # Run `bench-vk`:
 
 ```
+(host)$ ffx component explore -l namespace /core/compute-benchmarks
 $ bench-vk
 ```
 
 # Run `radix-sort-vk-bench`:
 
 ```
+(host)$ ffx component explore -l namespace /core/compute-benchmarks
 $ radix-sort-vk-bench 8086:591C pkg/data/targets/radix_sort_vk_intel_gen8_u32_resource.ar direct 16384 1048576
 ```
 
-# Run `spinel-vk-bench`
+# Run `spinel-vk-bench`:
 
-If you want to execute `spinel-vk-bench` then SVG examples must be copied to the
-device before exploring the component.
+There are three steps:
 
-This script will copy a file to the `/cache` directory of the
-`core/compute-benchmarks` instance:
-
-```
-#
-# Copy one or more wildcarded files to the instance's /cache directory
-#
-spinel_vk_bench_copy_svg() {
-  ccid=146cb8d457bc5856dffa25ad0ee38c17585c436915128283f3bb6dbf0e9c7c63
-  for path in "$@"
-  do
-    for file in "$path"
-    do
-      if [ ! -e "$file" ]; then continue; fi
-      base=$(basename $file)
-      ccid_base=$ccid::$base
-      echo "copy" $file "-->" "<ccid>::$base"
-      ffx component storage --capability cache copy $file $ccid_base
-    done
-  done
-}
-```
-
-# Execute `spinel-vk-bench`:
-
-## Host:
+1. Get an example SVG file.
+1. Copy it to the `/core/compute-benchmarks` instance.
+1. Run `spinel-vk-bench` for 20 seconds while rotating around (100,100) and
+   scaled by 2.0.  The Vulkan Validation layers are disabled with `-Q`.
 
 ```
-$ wget -P /tmp https://upload.wikimedia.org/wikipedia/en/f/ff/UAB_Blazers_logo.svg
-$ spinel_vk_bench_copy_svg /tmp/UAB_Blazers_logo.svg
-$ ffx component explore -l namespace /core/compute-benchmarks
-```
-
-## Fuchsia:
-
-```
-$ spinel-vk-bench -h
+(host)$ wget -P /tmp https://upload.wikimedia.org/wikipedia/en/f/ff/UAB_Blazers_logo.svg
+(host)$ ffx component copy /tmp/UAB_Blazers_logo.svg /core/compute-benchmarks::/cache
+(host)$ ffx component explore -l namespace /core/compute-benchmarks
 $ spinel-vk-bench -f /cache/UAB_Blazers_logo.svg -Q -t 20 -r -c 100,100:2
-$ <Ctrl-C to exit>
-```
-
-# Exit the component
-
-```
-$ exit
+$ <Esc on device or Ctrl-C on host to exit>
 ```
