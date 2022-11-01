@@ -34,6 +34,7 @@
 #include <memory>
 #include <utility>
 
+#include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/vector.h>
 
@@ -2432,9 +2433,9 @@ Controller::~Controller() {
 
 // static
 zx_status_t Controller::Create(zx_device_t* parent) {
-  fbl::AllocChecker ac;
-  std::unique_ptr<i915_tgl::Controller> dev(new (&ac) i915_tgl::Controller(parent));
-  if (!ac.check()) {
+  fbl::AllocChecker alloc_checker;
+  auto dev = fbl::make_unique_checked<i915_tgl::Controller>(&alloc_checker, parent);
+  if (!alloc_checker.check()) {
     return ZX_ERR_NO_MEMORY;
   }
 

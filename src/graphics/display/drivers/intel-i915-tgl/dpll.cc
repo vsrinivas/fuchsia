@@ -317,7 +317,7 @@ bool DpllSkylake::DoDisable() {
 
 DpllManagerSkylake::DpllManagerSkylake(fdf::MmioBuffer* mmio_space) : mmio_space_(mmio_space) {
   for (const auto dpll : tgl_registers::Dplls<tgl_registers::Platform::kSkylake>()) {
-    plls_[dpll] = std::unique_ptr<DpllSkylake>(new DpllSkylake(mmio_space, dpll));
+    plls_[dpll] = std::make_unique<DpllSkylake>(mmio_space, dpll);
     ref_count_[plls_[dpll].get()] = 0;
   }
 }
