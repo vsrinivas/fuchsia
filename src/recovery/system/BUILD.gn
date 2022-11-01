@@ -351,8 +351,6 @@ fuchsia_component("component_fdr") {
     ":instructions",
     ":recovery_logo",
     ":roboto_regular",
-    "//src/storage/bin/blobfs",
-    "//src/storage/bin/minfs",
   ]
 }
 
@@ -383,8 +381,6 @@ fuchsia_test_package("system_recovery_tests") {
     ":instructions",
     ":recovery_logo",
     ":roboto_regular",
-    "//src/storage/bin/blobfs",
-    "//src/storage/bin/minfs",
     "//src/sys/pkg/bin/pm:pm_bin",
     "//src/sys/pkg/lib/fuchsia-pkg-testing/certs",
     "//src/sys/pkg/tests/pkg-resolver:empty-repo",
@@ -455,8 +451,6 @@ fuchsia_component("component_installer") {
     ":instructions",
     ":recovery_logo",
     ":roboto_regular",
-    "//src/storage/bin/blobfs",
-    "//src/storage/bin/minfs",
   ]
 }
 
@@ -488,8 +482,6 @@ fuchsia_test_package("system_recovery_installer_tests") {
     ":instructions",
     ":recovery_logo",
     ":roboto_regular",
-    "//src/storage/bin/blobfs",
-    "//src/storage/bin/minfs",
     "//src/sys/pkg/bin/pm:pm_bin",
     "//src/sys/pkg/lib/fuchsia-pkg-testing/certs",
     "//src/sys/pkg/tests/pkg-resolver:empty-repo",

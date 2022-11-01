@@ -432,8 +432,7 @@ mod tests {
         },
     };
 
-    /// Wrapper around a ramdisk blobfs and a temporary directory
-    /// we pretend is minfs.
+    /// Wrapper around a ramdisk blobfs.
     struct FakeStorage {
         blobfs: BlobfsRamdisk,
     }
