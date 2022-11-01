@@ -16,6 +16,7 @@ group("tests") {
     "httpsdate_time_source:tests",
     "lib/httpdate-hyper:tests",
     "lib/inspect-writable:tests",
+    "lib/pull-source:tests",
     "lib/push-source:tests",
     "lib/time-util:tests",
     "timekeeper:tests",
