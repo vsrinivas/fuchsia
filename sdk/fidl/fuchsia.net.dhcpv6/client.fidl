@@ -88,13 +88,8 @@ protocol ClientProvider {
 
                     /// Preferred addresses.
                     ///
-                    /// Used for requesting specific addresses from DHCPv6
-                    /// servers. The addresses are used as hints by DHCPv6
-                    /// servers, but may be ignored. If the DHCPv6 server
-                    /// does not assign the preferred addresses and responds
-                    /// with different addresses instead, the DHCPv6
-                    /// client's behaviour is to accept the assigned
-                    /// addresses.
+                    /// The addresses are used as hints by DHCPv6 servers,
+                    /// but may be ignored.
                     ///
                     /// The size of `preferred_addresses` must be less than
                     /// or equal to `address_count`, otherwise the
