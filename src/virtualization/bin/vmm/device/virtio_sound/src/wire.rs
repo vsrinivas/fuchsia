@@ -7,11 +7,10 @@
 
 use {
     iota::iota,
-    zerocopy::{AsBytes, FromBytes, LittleEndian, U32, U64},
+    zerocopy::{AsBytes, FromBytes},
 };
 
-pub type LE32 = U32<LittleEndian>;
-pub type LE64 = U64<LittleEndian>;
+pub use zerocopy::byteorder::little_endian::{U32 as LE32, U64 as LE64};
 
 // The following structures are adapted from:
 // https://www.kraxel.org/virtio/virtio-v1.1-cs01-sound-v8.html#x1-49500014

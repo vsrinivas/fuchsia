@@ -5,10 +5,9 @@
 // Allow dead code here so we can retain some definitions from the spec that are not yet used.
 #![allow(dead_code)]
 
-use zerocopy::{AsBytes, BigEndian, FromBytes, U32, U64};
+use zerocopy::{AsBytes, FromBytes};
 
-pub type BE32 = U32<BigEndian>;
-pub type BE64 = U64<BigEndian>;
+pub use zerocopy::byteorder::big_endian::{U32 as BE32, U64 as BE64};
 
 #[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C, packed)]

@@ -5,7 +5,6 @@
 //! Parsing and serialization for DHCPv6 messages.
 
 use {
-    byteorder::NetworkEndian,
     mdns::protocol::{Domain, ParseError as MdnsParseError},
     net_types::ip::{IpAddress as _, Ipv6Addr, PrefixTooLongError, Subnet},
     num_derive::FromPrimitive,
@@ -24,11 +23,11 @@ use {
     },
     thiserror::Error,
     uuid::Uuid,
-    zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned},
+    zerocopy::{
+        byteorder::network_endian::{U16, U32},
+        AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned,
+    },
 };
-
-type U16 = zerocopy::U16<NetworkEndian>;
-type U32 = zerocopy::U32<NetworkEndian>;
 
 /// A DHCPv6 packet parsing error.
 #[allow(missing_docs)]

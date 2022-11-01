@@ -12,7 +12,6 @@ mod fuchsia;
 #[cfg(target_os = "fuchsia")]
 pub use fuchsia::{new_icmp_socket, IpExt};
 
-use byteorder::NetworkEndian;
 use futures::{ready, Sink, SinkExt as _, Stream, TryStreamExt as _};
 use std::{
     marker::PhantomData,
@@ -20,7 +19,7 @@ use std::{
     task::{Context, Poll},
 };
 use thiserror::Error;
-use zerocopy::{byteorder::U16, AsBytes, FromBytes, Unaligned};
+use zerocopy::{byteorder::network_endian::U16, AsBytes, FromBytes, Unaligned};
 
 /// The number of bytes of an ICMP (v4 or v6) header.
 pub const ICMP_HEADER_LEN: usize = std::mem::size_of::<IcmpHeader>();
@@ -31,9 +30,9 @@ pub const ICMP_HEADER_LEN: usize = std::mem::size_of::<IcmpHeader>();
 struct IcmpHeader {
     r#type: u8,
     code: u8,
-    checksum: U16<NetworkEndian>,
-    id: U16<NetworkEndian>,
-    sequence: U16<NetworkEndian>,
+    checksum: U16,
+    id: U16,
+    sequence: U16,
 }
 
 impl IcmpHeader {

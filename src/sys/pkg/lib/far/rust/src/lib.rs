@@ -48,7 +48,7 @@
 #![warn(clippy::all)]
 #![allow(clippy::let_unit_value)]
 
-use zerocopy::{byteorder::LittleEndian, U16, U32, U64};
+use zerocopy::byteorder::little_endian::{U16, U32, U64};
 
 mod error;
 pub use error::Error;
@@ -81,7 +81,7 @@ pub const DIR_NAMES_CHUNK_TYPE: ChunkType = *b"DIRNAMES";
 #[repr(C)]
 struct Index {
     magic: [u8; 8],
-    length: U64<LittleEndian>,
+    length: U64,
 }
 
 const INDEX_LEN: u64 = std::mem::size_of::<Index>() as u64;
@@ -90,8 +90,8 @@ const INDEX_LEN: u64 = std::mem::size_of::<Index>() as u64;
 #[repr(C)]
 struct IndexEntry {
     chunk_type: ChunkType,
-    offset: U64<LittleEndian>,
-    length: U64<LittleEndian>,
+    offset: U64,
+    length: U64,
 }
 
 const INDEX_ENTRY_LEN: u64 = std::mem::size_of::<IndexEntry>() as u64;
@@ -99,12 +99,12 @@ const INDEX_ENTRY_LEN: u64 = std::mem::size_of::<IndexEntry>() as u64;
 #[derive(PartialEq, Eq, Debug, Clone, Copy, Default, zerocopy::AsBytes, zerocopy::FromBytes)]
 #[repr(C)]
 struct DirectoryEntry {
-    name_offset: U32<LittleEndian>,
-    name_length: U16<LittleEndian>,
-    reserved: U16<LittleEndian>,
-    data_offset: U64<LittleEndian>,
-    data_length: U64<LittleEndian>,
-    reserved2: U64<LittleEndian>,
+    name_offset: U32,
+    name_length: U16,
+    reserved: U16,
+    data_offset: U64,
+    data_length: U64,
+    reserved2: U64,
 }
 
 const DIRECTORY_ENTRY_LEN: u64 = std::mem::size_of::<DirectoryEntry>() as u64;

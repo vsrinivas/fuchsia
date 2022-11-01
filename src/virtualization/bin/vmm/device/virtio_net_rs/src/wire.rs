@@ -5,10 +5,10 @@
 use {
     anyhow::{anyhow, Error},
     num_derive::FromPrimitive,
-    zerocopy::{AsBytes, FromBytes, LittleEndian, U16},
+    zerocopy::{AsBytes, FromBytes},
 };
 
-pub type LE16 = U16<LittleEndian>;
+pub use zerocopy::byteorder::little_endian::U16 as LE16;
 
 // 5.1.2 Virtqueues
 //

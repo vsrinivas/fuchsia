@@ -11,12 +11,11 @@ use std::fmt::{Debug, Display, Formatter};
 use std::mem;
 use std::net::IpAddr;
 
-use byteorder::NetworkEndian;
 use packet::{BufferView, BufferViewMut, InnerPacketBuilder, ParsablePacket, ParseMetadata};
-use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned};
-
-type U16 = zerocopy::U16<NetworkEndian>;
-type U32 = zerocopy::U32<NetworkEndian>;
+use zerocopy::{
+    byteorder::network_endian::{U16, U32},
+    AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned,
+};
 
 const IPV4_SIZE: usize = 4;
 const IPV6_SIZE: usize = 16;

@@ -1531,7 +1531,7 @@ impl Ipv6Addr {
     #[inline]
     pub fn segments(&self) -> [u16; 8] {
         #![allow(clippy::many_single_char_names)]
-        let [a, b, c, d, e, f, g, h]: [zerocopy::U16<zerocopy::NetworkEndian>; 8] =
+        let [a, b, c, d, e, f, g, h]: [zerocopy::network_endian::U16; 8] =
             zerocopy::transmute!(self.ipv6_bytes());
         [a.into(), b.into(), c.into(), d.into(), e.into(), f.into(), g.into(), h.into()]
     }

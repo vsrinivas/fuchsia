@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use byteorder::BigEndian;
-use zerocopy::{AsBytes, FromBytes};
-
-type U32 = zerocopy::U32<BigEndian>;
-type U64 = zerocopy::U64<BigEndian>;
+use zerocopy::{
+    byteorder::network_endian::{U32, U64},
+    AsBytes, FromBytes,
+};
 
 // Supported minimum platform AVB version.
 const MIN_AVB_VERSION_MAJOR: u32 = 1;

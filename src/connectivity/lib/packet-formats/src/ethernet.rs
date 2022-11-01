@@ -10,11 +10,13 @@ use packet::{
     BufferView, BufferViewMut, PacketBuilder, PacketConstraints, ParsablePacket, ParseMetadata,
     SerializeBuffer,
 };
-use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
+use zerocopy::{
+    byteorder::network_endian::{U16, U32},
+    AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned,
+};
 
 use self::inner::*;
 use crate::error::{ParseError, ParseResult};
-use crate::{U16, U32};
 
 const ETHERNET_MIN_ILLEGAL_ETHERTYPE: u16 = 1501;
 const ETHERNET_MAX_ILLEGAL_ETHERTYPE: u16 = 1535;

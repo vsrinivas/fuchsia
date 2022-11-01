@@ -15,14 +15,16 @@ pub mod link;
 pub mod records;
 
 use {
-    byteorder::NetworkEndian,
     packet::{
         BufferView, BufferViewMut, PacketBuilder, PacketConstraints, ParsablePacket, ParseMetadata,
         SerializeBuffer,
     },
     std::convert::TryInto,
     thiserror::Error,
-    zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned, U16, U32},
+    zerocopy::{
+        byteorder::network_endian::{U16, U32},
+        AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned,
+    },
 };
 
 /// The type of error that occurred while attempting to parse a packet.
@@ -42,7 +44,7 @@ pub enum ParseError {
 #[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
 struct PppHeader {
-    protocol: U16<NetworkEndian>,
+    protocol: U16,
 }
 
 impl PppHeader {
@@ -109,7 +111,7 @@ impl PacketBuilder for PppPacketBuilder {
 struct ControlProtocolHeader {
     code: u8,
     identifier: u8,
-    length: U16<NetworkEndian>,
+    length: U16,
 }
 
 impl ControlProtocolHeader {
@@ -323,7 +325,7 @@ impl PacketBuilder for CodeRejectPacketBuilder {
 #[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
 struct ProtocolRejectHeader {
-    rejected_protocol: U16<NetworkEndian>,
+    rejected_protocol: U16,
 }
 
 impl ProtocolRejectHeader {
@@ -394,7 +396,7 @@ impl PacketBuilder for ProtocolRejectPacketBuilder {
 #[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
 struct EchoDiscardHeader {
-    magic_number: U32<NetworkEndian>,
+    magic_number: U32,
 }
 
 impl EchoDiscardHeader {

@@ -7,11 +7,10 @@
 
 use {
     lazy_static::lazy_static,
-    zerocopy::{AsBytes, FromBytes, LittleEndian, U16, U32},
+    zerocopy::{AsBytes, FromBytes},
 };
 
-pub type LE16 = U16<LittleEndian>;
-pub type LE32 = U32<LittleEndian>;
+pub use zerocopy::byteorder::little_endian::{U16 as LE16, U32 as LE32};
 
 //
 // 5.8.2 Virtqueues

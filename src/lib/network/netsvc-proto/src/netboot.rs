@@ -18,12 +18,12 @@ use std::{
     convert::{TryFrom, TryInto},
     num::NonZeroU16,
 };
-use zerocopy::{byteorder::LittleEndian, AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
+use zerocopy::{
+    byteorder::little_endian::U32, AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned,
+};
 
 // Re-export witness type.
 pub use witness::ErrorValue;
-
-type U32 = zerocopy::U32<LittleEndian>;
 
 /// The UDP port a netboot server listens on.
 pub const SERVER_PORT: NonZeroU16 = const_unwrap_option(NonZeroU16::new(33330));

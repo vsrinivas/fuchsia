@@ -42,14 +42,13 @@ use packet::{
     AsFragmentedByteSlice, BufferView, FragmentedByteSlice, FromRaw, PacketBuilder,
     PacketConstraints, ParsablePacket, ParseMetadata, SerializeBuffer,
 };
-use zerocopy::byteorder::{ByteOrder, NetworkEndian};
+use zerocopy::byteorder::{network_endian::U16, ByteOrder, NetworkEndian};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
 use crate::ip::{IpProtoExt, Ipv4Proto, Ipv6Proto};
 use crate::ipv4::{self, Ipv4PacketRaw};
 use crate::ipv6::Ipv6PacketRaw;
-use crate::U16;
 
 #[derive(Copy, Clone, Default, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]

@@ -20,10 +20,9 @@ use packet::records::{
     RecordsRawImpl,
 };
 use packet::{BufferView, BufferViewMut};
-use zerocopy::byteorder::{ByteOrder, NetworkEndian};
+use zerocopy::byteorder::{network_endian::U16, ByteOrder, NetworkEndian};
 
 use crate::ip::{IpProto, Ipv6ExtHdrType, Ipv6Proto};
-use crate::U16;
 
 /// The length of an IPv6 Fragment Extension Header.
 pub(crate) const IPV6_FRAGMENT_EXT_HDR_LEN: usize = 8;

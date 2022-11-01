@@ -7,11 +7,10 @@
 
 use {
     std::fmt,
-    zerocopy::{AsBytes, FromBytes, LittleEndian, U32, U64},
+    zerocopy::{AsBytes, FromBytes},
 };
 
-pub type LE32 = U32<LittleEndian>;
-pub type LE64 = U64<LittleEndian>;
+pub use zerocopy::byteorder::little_endian::{U32 as LE32, U64 as LE64};
 
 //
 // 5.7.2 Virtqueues

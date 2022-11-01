@@ -34,10 +34,12 @@
 
 use {
     crate::readers::{Reader, ReaderError},
-    byteorder::LittleEndian,
     std::{collections::HashMap, fmt, mem::size_of, str, sync::Arc},
     thiserror::Error,
-    zerocopy::{ByteSlice, FromBytes, LayoutVerified, Unaligned, U16, U32, U64},
+    zerocopy::{
+        byteorder::little_endian::{U16 as LEU16, U32 as LEU32, U64 as LEU64},
+        ByteSlice, FromBytes, LayoutVerified, Unaligned,
+    },
 };
 
 // Block Group 0 Padding
@@ -50,10 +52,6 @@ pub const SB_MAGIC: u16 = 0xEF53;
 pub const EH_MAGIC: u16 = 0xF30A;
 // Any smaller would not even fit the first copy of the ext4 Super Block.
 pub const MIN_EXT4_SIZE: u64 = FIRST_BG_PADDING + size_of::<SuperBlock>() as u64;
-
-type LEU16 = U16<LittleEndian>;
-type LEU32 = U32<LittleEndian>;
-type LEU64 = U64<LittleEndian>;
 
 #[derive(FromBytes, Unaligned)]
 #[repr(C)]

@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    byteorder::LittleEndian,
     num_derive::{FromPrimitive, ToPrimitive},
-    zerocopy::{byteorder::U32, AsBytes, FromBytes, Unaligned},
+    zerocopy::{byteorder::little_endian::U32, AsBytes, FromBytes, Unaligned},
 };
 
 const ZBI_MAX_SMT: usize = 4;
@@ -85,27 +84,27 @@ impl ZbiType {
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone, FromBytes, AsBytes, Unaligned)]
 pub struct zbi_header_t {
-    pub zbi_type: U32<LittleEndian>,
-    pub length: U32<LittleEndian>,
-    pub extra: U32<LittleEndian>,
-    pub flags: U32<LittleEndian>,
-    pub reserved_0: U32<LittleEndian>,
-    pub reserved_1: U32<LittleEndian>,
-    pub magic: U32<LittleEndian>,
-    pub crc32: U32<LittleEndian>,
+    pub zbi_type: U32,
+    pub length: U32,
+    pub extra: U32,
+    pub flags: U32,
+    pub reserved_0: U32,
+    pub reserved_1: U32,
+    pub magic: U32,
+    pub crc32: U32,
 }
 
 /// Define a container header that describes a container content length of `length`.
 pub fn zbi_container_header(length: u32) -> zbi_header_t {
     zbi_header_t {
-        zbi_type: U32::<LittleEndian>::new(ZbiType::Container.into_raw()),
-        length: U32::<LittleEndian>::new(length),
-        extra: U32::<LittleEndian>::new(ZBI_CONTAINER_MAGIC),
-        flags: U32::<LittleEndian>::new(ZBI_FLAGS_VERSION),
-        reserved_0: U32::<LittleEndian>::new(0),
-        reserved_1: U32::<LittleEndian>::new(0),
-        magic: U32::<LittleEndian>::new(ZBI_ITEM_MAGIC),
-        crc32: U32::<LittleEndian>::new(ZBI_ITEM_NO_CRC32),
+        zbi_type: U32::new(ZbiType::Container.into_raw()),
+        length: U32::new(length),
+        extra: U32::new(ZBI_CONTAINER_MAGIC),
+        flags: U32::new(ZBI_FLAGS_VERSION),
+        reserved_0: U32::new(0),
+        reserved_1: U32::new(0),
+        magic: U32::new(ZBI_ITEM_MAGIC),
+        crc32: U32::new(ZBI_ITEM_NO_CRC32),
     }
 }
 

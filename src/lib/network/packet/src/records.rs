@@ -1932,11 +1932,10 @@ pub mod options {
         use core::fmt::Debug;
 
         use nonzero_ext::nonzero;
+        use zerocopy::byteorder::network_endian::U16;
 
         use super::*;
         use crate::Serializer;
-
-        type U16 = zerocopy::U16<zerocopy::byteorder::NetworkEndian>;
 
         #[derive(Debug)]
         struct DummyOptionsImpl;

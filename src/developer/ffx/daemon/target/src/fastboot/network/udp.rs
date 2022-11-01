@@ -20,7 +20,7 @@ use {
     std::pin::Pin,
     std::time::Duration,
     timeout::timeout,
-    zerocopy::{ByteSlice, FromBytes, LayoutVerified, Unaligned, U16},
+    zerocopy::{byteorder::big_endian::U16, ByteSlice, FromBytes, LayoutVerified, Unaligned},
 };
 
 const HOST_PORT: u16 = 5554;
@@ -39,7 +39,7 @@ enum PacketType {
 struct Header {
     id: u8,
     flags: u8,
-    sequence: U16<BigEndian>,
+    sequence: U16,
 }
 
 struct Packet<B: ByteSlice> {

@@ -6,12 +6,10 @@
 
 use {
     bitflags::bitflags,
-    zerocopy::{AsBytes, FromBytes, LittleEndian, U16, U32, U64},
+    zerocopy::{AsBytes, FromBytes},
 };
 
-pub type LE16 = U16<LittleEndian>;
-pub type LE32 = U32<LittleEndian>;
-pub type LE64 = U64<LittleEndian>;
+pub use zerocopy::byteorder::little_endian::{U16 as LE16, U32 as LE32, U64 as LE64};
 
 //
 // 5.5.3 Feature bits

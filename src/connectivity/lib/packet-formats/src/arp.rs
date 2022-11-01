@@ -15,10 +15,11 @@ use core::mem;
 use net_types::ethernet::Mac;
 use net_types::ip::{IpAddress, Ipv4Addr};
 use packet::{BufferView, BufferViewMut, InnerPacketBuilder, ParsablePacket, ParseMetadata};
-use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
+use zerocopy::{
+    byteorder::network_endian::U16, AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned,
+};
 
 use crate::error::{ParseError, ParseResult};
-use crate::U16;
 
 #[cfg(test)]
 pub(crate) const ARP_HDR_LEN: usize = 8;

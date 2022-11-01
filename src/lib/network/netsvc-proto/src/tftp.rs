@@ -30,8 +30,8 @@ use std::{convert::TryFrom, io::Write as _, num::NonZeroU16, str::FromStr};
 use thiserror::Error;
 use witness::NonEmptyValidStr;
 use zerocopy::{
-    byteorder::NetworkEndian, AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified,
-    Unaligned, U16,
+    byteorder::network_endian::U16, AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified,
+    Unaligned,
 };
 
 /// The port netsvc uses to send TFTP traffic from.
@@ -370,7 +370,7 @@ where
 /// The body of a data message.
 #[derive(Debug)]
 pub struct DataBody<B: ByteSlice> {
-    block: LayoutVerified<B, U16<NetworkEndian>>,
+    block: LayoutVerified<B, U16>,
     payload: B,
 }
 
@@ -379,8 +379,7 @@ where
     B: ByteSlice,
 {
     fn parse<BV: BufferView<B>>(buffer: &mut BV) -> Result<Self, ParseError> {
-        let block =
-            buffer.take_obj_front::<U16<NetworkEndian>>().ok_or(ParseError::InvalidLength)?;
+        let block = buffer.take_obj_front::<U16>().ok_or(ParseError::InvalidLength)?;
         let payload = buffer.take_rest_front();
         Ok(Self { block, payload })
     }
@@ -397,7 +396,7 @@ where
 /// The body of an Ack message.
 #[derive(Debug)]
 pub struct AckBody<B: ByteSlice> {
-    block: LayoutVerified<B, U16<NetworkEndian>>,
+    block: LayoutVerified<B, U16>,
 }
 
 impl<B> AckBody<B>
@@ -405,8 +404,7 @@ where
     B: ByteSlice,
 {
     fn parse<BV: BufferView<B>>(buffer: &mut BV) -> Result<Self, ParseError> {
-        let block =
-            buffer.take_obj_front::<U16<NetworkEndian>>().ok_or(ParseError::InvalidLength)?;
+        let block = buffer.take_obj_front::<U16>().ok_or(ParseError::InvalidLength)?;
         Ok(Self { block })
     }
 
@@ -427,9 +425,8 @@ where
     B: ByteSlice,
 {
     fn parse<BV: BufferView<B>>(buffer: &mut BV) -> Result<Self, ParseError> {
-        let error = TftpError::from(
-            buffer.take_obj_front::<U16<NetworkEndian>>().ok_or(ParseError::InvalidLength)?.get(),
-        );
+        let error =
+            TftpError::from(buffer.take_obj_front::<U16>().ok_or(ParseError::InvalidLength)?.get());
         let msg =
             ValidStr::new_null_terminated_from_buffer(buffer).map_err(ParseError::BadString)?;
         Ok(Self { error, msg })
@@ -792,7 +789,7 @@ where
 #[repr(C)]
 #[derive(FromBytes, AsBytes, Unaligned)]
 struct MessageHead {
-    opcode: U16<NetworkEndian>,
+    opcode: U16,
 }
 
 impl MessageHead {
@@ -882,7 +879,7 @@ impl DataPacketBuilder {
 impl PacketBuilder for DataPacketBuilder {
     fn constraints(&self) -> PacketConstraints {
         PacketConstraints::new(
-            std::mem::size_of::<MessageHead>() + std::mem::size_of::<U16<NetworkEndian>>(),
+            std::mem::size_of::<MessageHead>() + std::mem::size_of::<U16>(),
             0,
             0,
             std::u16::MAX.into(),
@@ -893,7 +890,7 @@ impl PacketBuilder for DataPacketBuilder {
         let mut buffer = buffer.header();
         let mut bv = crate::as_buffer_view_mut(&mut buffer);
         bv.take_obj_front::<MessageHead>().unwrap().set_opcode(Opcode::Data);
-        bv.take_obj_front::<U16<NetworkEndian>>().unwrap().set(self.block);
+        bv.take_obj_front::<U16>().unwrap().set(self.block);
     }
 }
 
@@ -912,13 +909,13 @@ impl AckPacketBuilder {
 
 impl InnerPacketBuilder for AckPacketBuilder {
     fn bytes_len(&self) -> usize {
-        std::mem::size_of::<MessageHead>() + std::mem::size_of::<U16<NetworkEndian>>()
+        std::mem::size_of::<MessageHead>() + std::mem::size_of::<U16>()
     }
 
     fn serialize(&self, mut buffer: &mut [u8]) {
         let mut bv = crate::as_buffer_view_mut(&mut buffer);
         bv.take_obj_front::<MessageHead>().unwrap().set_opcode(Opcode::Ack);
-        bv.take_obj_front::<U16<NetworkEndian>>().unwrap().set(self.block);
+        bv.take_obj_front::<U16>().unwrap().set(self.block);
     }
 }
 
@@ -939,7 +936,7 @@ impl<'a> ErrorPacketBuilder<'a> {
 impl<'a> InnerPacketBuilder for ErrorPacketBuilder<'a> {
     fn bytes_len(&self) -> usize {
         std::mem::size_of::<MessageHead>()
-            + std::mem::size_of::<U16<NetworkEndian>>()
+            + std::mem::size_of::<U16>()
             + self.msg.as_bytes().len()
             + 1
     }
@@ -947,7 +944,7 @@ impl<'a> InnerPacketBuilder for ErrorPacketBuilder<'a> {
     fn serialize(&self, mut buffer: &mut [u8]) {
         let mut bv = crate::as_buffer_view_mut(&mut buffer);
         bv.take_obj_front::<MessageHead>().unwrap().set_opcode(Opcode::Error);
-        bv.take_obj_front::<U16<NetworkEndian>>().unwrap().set(self.error.into());
+        bv.take_obj_front::<U16>().unwrap().set(self.error.into());
         write_str(&mut bv, self.msg);
     }
 }

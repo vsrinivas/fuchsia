@@ -24,7 +24,10 @@ use packet::{
     NestedPacketBuilder, PacketBuilder, PacketConstraints, ParsablePacket, ParseMetadata,
     SerializeBuffer, SerializeError, Serializer, TargetBuffer,
 };
-use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned};
+use zerocopy::{
+    byteorder::network_endian::U16, AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified,
+    Unaligned,
+};
 
 use crate::error::{IpParseError, IpParseResult, ParseError};
 use crate::ip::{
@@ -33,7 +36,6 @@ use crate::ip::{
 use crate::ipv6::Ipv6PacketBuilder;
 use crate::tcp::{TcpParseArgs, TcpSegment};
 use crate::udp::{UdpPacket, UdpParseArgs};
-use crate::U16;
 
 pub(crate) use self::inner::IPV4_MIN_HDR_LEN;
 use self::options::{Ipv4Option, Ipv4OptionsImpl};
@@ -937,9 +939,7 @@ pub mod options {
         OptionBuilder, OptionLayout, OptionParseErr, OptionParseLayout, OptionsImpl,
     };
     use packet::BufferViewMut;
-    use zerocopy::byteorder::{ByteOrder, NetworkEndian};
-
-    use crate::U16;
+    use zerocopy::byteorder::{network_endian::U16, ByteOrder, NetworkEndian};
 
     const OPTION_KIND_EOL: u8 = 0;
     const OPTION_KIND_NOP: u8 = 1;

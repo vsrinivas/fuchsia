@@ -90,9 +90,6 @@ mod private {
     pub trait Sealed {}
 }
 
-type U16 = zerocopy::U16<NetworkEndian>;
-type U32 = zerocopy::U32<NetworkEndian>;
-
 fn update_transport_checksum_pseudo_header<I: Ip>(
     checksum: &mut Checksum,
     src_ip: I::Addr,

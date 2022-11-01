@@ -2,12 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use byteorder::BigEndian;
+use zerocopy::byteorder::big_endian::{U32 as BigEndianU32, U64 as BigEndianU64};
 
 use super::{HashDescriptor, HashDescriptorHeader, Salt, ALGORITHM, HASH_DESCRIPTOR_TAG};
-
-type BigEndianU32 = zerocopy::U32<BigEndian>;
-type BigEndianU64 = zerocopy::U64<BigEndian>;
 
 /// A builder for `HashDescriptor` that is able to more flexibly create a HashDescriptor. This
 /// can create HashDescriptors with omitted fields (e.g. one that has a name and size, but no

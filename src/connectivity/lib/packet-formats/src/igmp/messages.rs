@@ -12,7 +12,9 @@ use packet::records::{
     LimitedRecords, LimitedRecordsImpl, LimitedRecordsImplLayout, ParsedRecord, RecordParseResult,
 };
 use packet::{BufferView, ParsablePacket, ParseMetadata};
-use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
+use zerocopy::{
+    byteorder::network_endian::U16, AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned,
+};
 
 use super::{
     parse_v3_possible_floating_point, peek_message_type, IgmpMessage, IgmpNonEmptyBody,
@@ -20,7 +22,6 @@ use super::{
 };
 use crate::error::{ParseError, UnrecognizedProtocolCode};
 use crate::igmp::MessageType;
-use crate::U16;
 
 create_protocol_enum!(
     /// An IGMP message type.

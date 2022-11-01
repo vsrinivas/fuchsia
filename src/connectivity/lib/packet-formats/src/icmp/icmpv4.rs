@@ -9,10 +9,9 @@ use core::fmt;
 
 use net_types::ip::{Ipv4, Ipv4Addr};
 use packet::{BufferView, ParsablePacket, ParseMetadata};
-use zerocopy::{AsBytes, ByteSlice, FromBytes, Unaligned};
+use zerocopy::{byteorder::network_endian::U32, AsBytes, ByteSlice, FromBytes, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
-use crate::U32;
 
 use super::common::{IcmpDestUnreachable, IcmpEchoReply, IcmpEchoRequest, IcmpTimeExceeded};
 use super::{

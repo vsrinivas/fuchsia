@@ -4,7 +4,7 @@
 
 #![allow(dead_code)]
 
-use zerocopy::{AsBytes, FromBytes, LittleEndian, U32, U64};
+use zerocopy::{AsBytes, FromBytes};
 
 pub const VIRTIO_BLOCK_REQUEST_QUEUE: u16 = 0;
 pub const VIRTIO_BLOCK_SECTOR_SIZE: u64 = 512;
@@ -41,8 +41,7 @@ impl VirtioBlockStatus {
     }
 }
 
-pub type LE32 = U32<LittleEndian>;
-pub type LE64 = U64<LittleEndian>;
+pub use zerocopy::byteorder::little_endian::{U32 as LE32, U64 as LE64};
 
 #[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C, packed)]

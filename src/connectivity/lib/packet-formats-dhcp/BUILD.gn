@@ -14,7 +14,6 @@ rustc_library("packet-formats-dhcp") {
     "//src/connectivity/lib/net-types",
     "//src/lib/mdns/rust:mdns",
     "//src/lib/network/packet",
-    "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:num-derive",
     "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:thiserror",

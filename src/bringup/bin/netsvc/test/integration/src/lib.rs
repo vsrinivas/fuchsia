@@ -15,7 +15,7 @@ use packet::{FragmentedBuffer as _, InnerPacketBuilder as _, ParseBuffer as _, S
 use std::borrow::Cow;
 use std::convert::{TryFrom as _, TryInto as _};
 use test_case::test_case;
-use zerocopy::{FromBytes, LayoutVerified, NativeEndian, Unaligned, U32};
+use zerocopy::{byteorder::native_endian::U32, FromBytes, LayoutVerified, Unaligned};
 
 const NETSVC_URL: &str = "#meta/netsvc.cm";
 const NETSVC_NAME: &str = "netsvc";
@@ -772,7 +772,7 @@ async fn get_board_info_inner(sock: fuchsia_async::net::UdpSocket, scope_id: u32
     // Defined in zircon/system/public/zircon/boot/netboot.h.
     struct BoardInfo {
         board_name: [u8; 32],
-        board_revision: U32<NativeEndian>,
+        board_revision: U32,
         mac_address: [u8; 6],
         _padding: [u8; 2],
     }

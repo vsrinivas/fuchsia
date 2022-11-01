@@ -9,11 +9,13 @@ use core::num::NonZeroU8;
 use core::time::Duration;
 
 use net_types::ip::{Ipv6, Ipv6Addr};
-use zerocopy::{AsBytes, ByteSlice, FromBytes, Unaligned};
+use zerocopy::{
+    byteorder::network_endian::{U16, U32},
+    AsBytes, ByteSlice, FromBytes, Unaligned,
+};
 
 use crate::icmp::{IcmpIpExt, IcmpPacket, IcmpUnusedCode};
 use crate::utils::NonZeroDuration;
-use crate::{U16, U32};
 
 /// An ICMPv6 packet with an NDP message.
 #[allow(missing_docs)]
@@ -453,11 +455,11 @@ pub mod options {
         LengthEncoding, OptionBuilder, OptionLayout, OptionParseErr, OptionParseLayout, OptionsImpl,
     };
     use packet::BufferView as _;
-    use zerocopy::byteorder::{ByteOrder, NetworkEndian};
+    use zerocopy::byteorder::{network_endian::U32, ByteOrder, NetworkEndian};
     use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned};
 
     use super::NonZeroNdpLifetime;
-    use crate::{utils::NonZeroDuration, U32};
+    use crate::utils::NonZeroDuration;
 
     /// A value representing an infinite lifetime for various NDP options'
     /// lifetime fields.

@@ -2,20 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use byteorder::BigEndian;
 use mundane::hash::{Digest, Hasher, Sha256};
 use ring::{rand, rand::SecureRandom};
 use serde::Deserialize;
 use std::convert::{TryFrom, TryInto};
 use thiserror::Error;
-use zerocopy::AsBytes;
+use zerocopy::{
+    byteorder::big_endian::{U32 as BigEndianU32, U64 as BigEndianU64},
+    AsBytes,
+};
 
 pub mod builder;
 
 const ALGORITHM: &str = "sha256";
-
-type BigEndianU32 = zerocopy::U32<BigEndian>;
-type BigEndianU64 = zerocopy::U64<BigEndian>;
 
 const HASH_DESCRIPTOR_TAG: u64 = 2;
 

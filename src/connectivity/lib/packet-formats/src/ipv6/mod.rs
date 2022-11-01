@@ -24,7 +24,10 @@ use packet::{
     NestedPacketBuilder, PacketBuilder, PacketConstraints, ParsablePacket, ParseMetadata,
     SerializeBuffer, SerializeError, Serializer, TargetBuffer,
 };
-use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned};
+use zerocopy::{
+    byteorder::network_endian::U16, AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified,
+    Unaligned,
+};
 
 use crate::error::{IpParseError, IpParseErrorAction, IpParseResult, ParseError};
 use crate::icmp::Icmpv6ParameterProblemCode;
@@ -36,7 +39,6 @@ use crate::ipv4::{Ipv4PacketBuilder, HDR_PREFIX_LEN};
 use crate::ipv6::ext_hdrs::{HopByHopOption, HopByHopOptionData};
 use crate::tcp::{TcpParseArgs, TcpSegment};
 use crate::udp::{UdpPacket, UdpParseArgs};
-use crate::U16;
 
 use ext_hdrs::{
     is_valid_next_header, is_valid_next_header_upper_layer, ExtensionHeaderOptionAction,

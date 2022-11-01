@@ -21,11 +21,13 @@ use packet::{
     MaybeParsed, PacketBuilder, PacketConstraints, ParsablePacket, ParseMetadata, SerializeBuffer,
     Serializer,
 };
-use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
+use zerocopy::{
+    byteorder::network_endian::U16, AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned,
+};
 
 use crate::error::{ParseError, ParseResult};
 use crate::ip::IpProto;
-use crate::{compute_transport_checksum_parts, compute_transport_checksum_serialize, U16};
+use crate::{compute_transport_checksum_parts, compute_transport_checksum_serialize};
 
 pub(crate) const HEADER_BYTES: usize = 8;
 const CHECKSUM_OFFSET: usize = 6;

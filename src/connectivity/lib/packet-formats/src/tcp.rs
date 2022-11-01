@@ -25,11 +25,14 @@ use packet::{
     InnerPacketBuilder, MaybeParsed, PacketBuilder, PacketConstraints, ParsablePacket,
     ParseMetadata, SerializeBuffer, Serializer,
 };
-use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
+use zerocopy::{
+    byteorder::network_endian::{U16, U32},
+    AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned,
+};
 
 use crate::error::{ParseError, ParseResult};
 use crate::ip::IpProto;
-use crate::{compute_transport_checksum_parts, compute_transport_checksum_serialize, U16, U32};
+use crate::{compute_transport_checksum_parts, compute_transport_checksum_serialize};
 
 use self::data_offset_reserved_flags::DataOffsetReservedFlags;
 use self::options::{TcpOption, TcpOptionsImpl};
@@ -830,11 +833,10 @@ pub mod options {
         OptionBuilder, OptionLayout, OptionParseErr, OptionParseLayout, OptionsImpl,
     };
     use packet::BufferViewMut as _;
-    use zerocopy::byteorder::{ByteOrder, NetworkEndian};
+    use zerocopy::byteorder::{network_endian::U32, ByteOrder, NetworkEndian};
     use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned};
 
     use super::*;
-    use crate::U32;
 
     const OPTION_KIND_EOL: u8 = 0;
     const OPTION_KIND_NOP: u8 = 1;

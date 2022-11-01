@@ -19,7 +19,6 @@ rustc_library("abi") {
   with_unit_tests = true
 
   deps = [
-    "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:num-derive",
     "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:zerocopy",
