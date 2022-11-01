@@ -77,6 +77,12 @@ For more discussion on encapsulating `unsafe` invariants, see
 [Ralf Jung's "The Scope of Unsafe"][scope-of-unsafe] and
 [Niko Matsakis's "Tootsie Pop" model][tootsie-pop].
 
+## Unsafe Reviews
+
+There is a list of reviewers who can review unsafe Rust code. To request an
+unsafe review, add "Fuchsia Rust Unsafe Reviews
+<fuchsia-rust-unsafe-reviews@google.com>" as a reviewer to your CL. A reviewer
+will then be chosen and assigned to your CL.
 
 [scope-of-unsafe]: https://www.ralfj.de/blog/2016/01/09/the-scope-of-unsafe.html
 [tootsie-pop]: http://smallcultfollowing.com/babysteps/blog/2016/05/27/the-tootsie-pop-model-for-unsafe-code
