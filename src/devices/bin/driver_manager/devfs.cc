@@ -20,6 +20,8 @@
 
 #include <functional>
 #include <memory>
+#include <random>
+#include <unordered_set>
 #include <variant>
 
 #include <fbl/ref_ptr.h>
@@ -369,13 +371,14 @@ void Devfs::advertise_modified(Device& device) {
   }
 }
 
-ProtoNode::ProtoNode(fbl::String name) : name_(std::move(name)) {}
+ProtoNode::ProtoNode(fbl::String name, uint32_t initial_device_number)
+    : name_(std::move(name)), next_device_number_(initial_device_number) {}
 
 zx::result<fbl::String> ProtoNode::seq_name() {
   std::string dest;
   for (uint32_t i = 0; i < 1000; ++i) {
     dest.clear();
-    fxl::StringAppendf(&dest, "%03u", (seqcount_++) % 1000);
+    fxl::StringAppendf(&dest, "%03u", (next_device_number_++) % 1000);
     {
       fbl::RefPtr<fs::Vnode> out;
       switch (const zx_status_t status = children().Lookup(dest, &out); status) {
@@ -471,9 +474,115 @@ Devfs::Devfs(std::optional<Devnode>& root, Device* device,
   MustAddEntry(pd, kZeroDevName, fbl::MakeRefCounted<BuiltinDevVnode>(false));
 
   // Pre-populate the class directories.
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_int_distribution<> distrib(0, 1000);
+  // TODO(https://fxbug.dev/113679): shrink this list to zero.
+  //
+  // Do not add to this list.
+  //
+  // These classes have clients that rely on the numbering scheme starting at
+  // 000 and increasing sequentially. This list was generated using:
+  //
+  // rg -IoN --no-ignore -g '!out/' -g '!*.md' '\bclass/[^/]+/[0-9]{3}\b' | \
+  // sed -E 's|class/(.*)/[0-9]{3}|"\1",|g' | sort | uniq
+  const std::unordered_set<std::string_view> classes_that_assume_ordering({
+      // TODO(https://fxbug.dev/113716): Remove.
+      "adc",
+
+      // TODO(https://fxbug.dev/113717): Remove.
+      "aml-ram",
+
+      // TODO(https://fxbug.dev/113680): Remove these.
+      "audio-input",
+      "audio-output",
+
+      // TODO(https://fxbug.dev/113718): Remove.
+      // TODO(https://fxbug.dev/113842): Remove.
+      "backlight",
+
+      "block",
+
+      // TODO(https://fxbug.dev/113719): Remove.
+      "bt-hci",
+
+      "bt-transport",
+
+      // TODO(https://fxbug.dev/113720): Remove.
+      "camera",
+
+      // TODO(https://fxbug.dev/113827): Remove.
+      "chromeos-acpi",
+
+      // TODO(https://fxbug.dev/113828): Remove.
+      "cpu-ctrl",
+
+      // TODO(https://fxbug.dev/113829): Remove.
+      "display-controller",
+
+      "dsi-base",
+
+      // TODO(https://fxbug.dev/113830): Remove.
+      "goldfish-address-space",
+      "goldfish-control",
+      "goldfish-pipe",
+
+      // TODO(https://fxbug.dev/113831): Remove.
+      "gpu",
+
+      // TODO(https://fxbug.dev/113832): Remove.
+      "input",
+      "input-report",
+
+      // TODO(https://fxbug.dev/113833): Remove.
+      "isp",
+
+      // TODO(https://fxbug.dev/113834): Remove.
+      "light",
+
+      // TODO(https://fxbug.dev/113835): Remove.
+      "ot-radio",
+
+      // TODO(https://fxbug.dev/113842): Remove.
+      "power-sensor",
+
+      // TODO(https://fxbug.dev/113836): Remove.
+      "pwm",
+
+      // TODO(https://fxbug.dev/113838): Remove.
+      "radar",
+
+      // TODO(https://fxbug.dev/113839): Remove.
+      "securemem",
+
+      "sysmem",
+
+      // TODO(https://fxbug.dev/113840): Remove.
+      "tee",
+
+      // TODO(https://fxbug.dev/113713): Remove.
+      // TODO(https://fxbug.dev/113842): Remove.
+      "temperature",
+
+      // TODO(https://fxbug.dev/113841): Remove.
+      "test",
+
+      // TODO(https://fxbug.dev/113842): Remove.
+      "thermal",
+
+      // TODO(https://fxbug.dev/113844): Remove.
+      "usb-hci-test",
+
+      // TODO(https://fxbug.dev/113845): Remove.
+      "zxcrypt",
+  });
   for (const auto& info : proto_infos) {
     if (!(info.flags & PF_NOPUB)) {
-      const auto [it, inserted] = proto_info_nodes.try_emplace(info.id, info.name);
+      uint32_t seq = distrib(gen);
+      if (classes_that_assume_ordering.find(info.name) != classes_that_assume_ordering.end()) {
+        seq = 0;
+      }
+      const auto [it, inserted] = proto_info_nodes.try_emplace(info.id, info.name, seq);
       const auto& [key, value] = *it;
       ZX_ASSERT_MSG(inserted, "duplicate protocol with id %d", key);
       MustAddEntry(*class_, info.name, value.children_);

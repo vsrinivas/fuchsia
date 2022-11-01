@@ -58,7 +58,7 @@ int Usage(zx_status_t ret) {
   printf("> %s repartition <dev> [[<label> <type> <size>], ...]\n", bin_name);
   printf("  Destructively repartition the device with the given layout\n");
   printf("    e.g.\n");
-  printf("    %s repartition /dev/class/block-core/000", bin_name);
+  printf("    %s repartition /dev/class/block-core/763", bin_name);
   printf(" esp efi-system 100m sys system 5g blob fuchsia-blob 50%% data cros-data 50%%\n");
   printf("> %s add <start block> <end block> <name> [<dev>]\n", bin_name);
   printf("  Add a partition to the device (and create a GPT if one does not exist)\n");

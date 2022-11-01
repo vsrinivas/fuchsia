@@ -11,6 +11,7 @@ pub mod tests {
         device_watcher, fidl_fuchsia_io as fio, fuchsia_async as fasync,
         fuchsia_component_test::{RealmBuilder, RealmInstance},
         fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
+        futures::stream::TryStreamExt as _,
     };
 
     pub struct NullConfigurator {}
@@ -48,8 +49,14 @@ pub mod tests {
         let dir =
             fuchsia_fs::directory::open_directory(&dev, dev_dir, fio::OpenFlags::RIGHT_READABLE)
                 .await?;
-        // Wait for the first codec node 000.
-        device_watcher::recursive_wait_and_open_node(&dir, "000").await?;
+        // Wait for the first node.
+        let stream = device_watcher::watch_for_files(Clone::clone(&dir)).await?;
+        let path: Option<_> = stream
+            .try_filter(|path| futures::future::ready(path != std::path::Path::new(".")))
+            .try_next()
+            .await?;
+        let _: std::path::PathBuf =
+            path.ok_or(anyhow::anyhow!("watcher stream ended without entries"))?;
         Ok((instance, dir))
     }
 }

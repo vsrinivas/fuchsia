@@ -157,7 +157,7 @@ class PseudoDir : public fs::PseudoDir {
 // contained within it.
 class ProtoNode {
  public:
-  explicit ProtoNode(fbl::String name);
+  ProtoNode(fbl::String name, uint32_t initial_device_number);
 
   ProtoNode(const ProtoNode&) = delete;
   ProtoNode& operator=(const ProtoNode&) = delete;
@@ -177,7 +177,7 @@ class ProtoNode {
 
   const fbl::String name_;
 
-  uint32_t seqcount_ = 0;
+  uint32_t next_device_number_;
 
   fbl::RefPtr<PseudoDir> children_ = fbl::MakeRefCounted<PseudoDir>();
 };
