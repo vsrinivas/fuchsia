@@ -47,7 +47,6 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_cpp_wire",
     "//sdk/lib/driver2:cpp-promise",
     "//sdk/lib/driver2:devfs_exporter",
-    "//sdk/lib/driver2:runtime-deprecated",
     "//sdk/lib/inspect/component/cpp:inspect_component_cpp",
     "//sdk/lib/stdcompat",
     "//sdk/lib/sys/component/cpp",

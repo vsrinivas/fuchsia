@@ -89,38 +89,6 @@ source_set("cpp-promise") {
   ]
 }
 
-# TODO(fxbug.dev/109356): remove this once all users are migrated off
-# v1 of runtime protocol discovery.
-sdk_source_set("runtime-deprecated") {
-  category = "experimental"
-  sdk_name = "runtime-deprecated"
-
-  include_base = "//sdk"
-
-  sources = [
-    "runtime.h",
-    "runtime_connector_impl.cc",
-    "runtime_connector_impl.h",
-  ]
-
-  visibility = [
-    "//sdk/lib/driver2:*",
-    "//src/devices/misc/drivers/compat:lib",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_cpp",
-    "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_cpp",
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger_cpp",
-    "//sdk/lib/driver/runtime:driver_runtime_cpp",
-    "//sdk/lib/fdio",
-    "//sdk/lib/fidl",
-    "//sdk/lib/fidl_driver:fidl_driver_transport",
-    "//sdk/lib/sys/component/cpp",
-    "//sdk/lib/syslog/structured_backend",
-  ]
-}
-
 executable("cpp_test") {
   testonly = true
   sources = [
