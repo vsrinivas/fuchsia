@@ -73,7 +73,7 @@ CodecClient::CodecClient(async::Loop* loop, thrd_t loop_thread,
       //
       // TODO(dustingreen): get and print epitaph once that's possible.
       if (!in_lax_mode_) {
-        ZX_PANIC("codec_ failed - !in_lax_mode_\n");
+        ZX_PANIC("codec_ failed - !in_lax_mode_");
       } else {
         FX_PLOGS(WARNING, status) << "codec_ failed - in_lax_mode_";
         connection_lost_ = true;
@@ -458,7 +458,7 @@ std::unique_ptr<fuchsia::media::Packet> CodecClient::BlockingGetFreeInputPacket(
       if (wait_until_result == std::cv_status::timeout) {
         ZX_PANIC(
             "BlockingGetFreeInputPacket() no packet available for too long - "
-            "kBlockingGetFreeInputPacketTimeoutMs: %u\n",
+            "kBlockingGetFreeInputPacketTimeoutMs: %u",
             kBlockingGetFreeInputPacketTimeoutMs);
         // not reached
         return nullptr;

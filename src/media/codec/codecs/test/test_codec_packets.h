@@ -42,7 +42,7 @@ class CodecBufferForTest : public CodecBuffer {
                          .is_secure = is_secure},
                     VmoRangeOfSize(size)) {
     if (!Map()) {
-      ZX_PANIC("CodecBufferForTest() failed to Map()\n");
+      ZX_PANIC("CodecBufferForTest() failed to Map()");
     }
   }
 };

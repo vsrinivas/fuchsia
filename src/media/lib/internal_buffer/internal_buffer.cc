@@ -159,7 +159,7 @@ void InternalBuffer::CacheFlushPossibleInvalidate(size_t offset, size_t length, 
     status = zx_cache_flush(virt_base_ + offset, length,
                             ZX_CACHE_FLUSH_DATA | (invalidate ? ZX_CACHE_FLUSH_INVALIDATE : 0));
     if (status != ZX_OK) {
-      ZX_PANIC("InternalBuffer::CacheFlush() zx_cache_flush() failed: %d\n", status);
+      ZX_PANIC("InternalBuffer::CacheFlush() zx_cache_flush() failed: %d", status);
     }
   } else {
     status = vmo_.op_range(ZX_VMO_OP_CACHE_CLEAN, alignment_offset_ + offset, length, nullptr, 0);

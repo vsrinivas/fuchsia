@@ -165,7 +165,7 @@ void CodecBuffer::CacheFlushInternal(uint32_t flush_offset, uint32_t length,
         also_invalidate ? ZX_CACHE_FLUSH_INVALIDATE | ZX_CACHE_FLUSH_DATA : ZX_CACHE_FLUSH_DATA;
     status = zx_cache_flush(base() + flush_offset, length, flush_type);
     if (status != ZX_OK) {
-      ZX_PANIC("zx_cache_flush() failed - status: %d\n", status);
+      ZX_PANIC("zx_cache_flush() failed - status: %d", status);
     }
   } else {
     uint32_t flush_type =

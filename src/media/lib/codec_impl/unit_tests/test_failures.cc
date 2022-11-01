@@ -174,7 +174,7 @@ class TestAllocator : public fuchsia::sysmem::testing::Allocator_TestBase {
 
   void NotImplemented_(const std::string& name) override {
     // Unexpected.
-    ZX_PANIC("NotImplemented_(): %s\n", name.c_str());
+    ZX_PANIC("NotImplemented_(): %s", name.c_str());
   }
 
   TestBufferCollection& collection() { return collection_; }

@@ -223,7 +223,7 @@ void AmlogicVideo::RemoveDecoderWithCallbackLocked(VideoDecoder* decoder,
     swapped_out_instances_.erase(it);
     return;
   }
-  ZX_PANIC("attempted removal of non-existent decoder\n");
+  ZX_PANIC("attempted removal of non-existent decoder");
 }
 
 zx_status_t AmlogicVideo::AllocateStreamBuffer(StreamBuffer* buffer, uint32_t size,

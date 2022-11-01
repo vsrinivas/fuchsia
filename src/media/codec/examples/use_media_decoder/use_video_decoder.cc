@@ -445,7 +445,7 @@ uint64_t VideoDecoderRunner::QueueVp9Frames(uint64_t stream_lifetime_ordinal,
     // completely.
     ////////////////////////////////////////////////////////////////////////////////////////////////
     auto do_not_return_early_interval = fit::defer([] {
-      ZX_PANIC("don't return early until packet is set up and returned to codec_client\n");
+      ZX_PANIC("don't return early until packet is set up and returned to codec_client");
     });
     auto increment_input_pts_counter = fit::defer([&input_pts_counter] { input_pts_counter++; });
 
