@@ -36,6 +36,29 @@
 #define CPUID_FEATURE_ACPI_BIT          22
 #define CPUID_FEATURE_SEP_BIT           11
 
+#define CPUID_EXT_FEATURES_LEAF         7
+
+// EBX
+#define CPUID_EXT_FEATURE_AVX512F       16
+#define CPUID_EXT_FEATURE_AVX512DQ      17
+#define CPUID_EXT_FEATURE_AVX512IFMA    21
+#define CPUID_EXT_FEATURE_AVX512PF      26
+#define CPUID_EXT_FEATURE_AVX512ER      27
+#define CPUID_EXT_FEATURE_AVX512CD      28
+#define CPUID_EXT_FEATURE_AVX512BW      30
+#define CPUID_EXT_FEATURE_AVX512VL      31
+
+// ECX
+#define CPUID_EXT_FEATURE_AVX512VBMI    1
+#define CPUID_EXT_FEATURE_AVX512VBMI2   6
+#define CPUID_EXT_FEATURE_AVX512VNNI    11
+#define CPUID_EXT_FEATURE_AVX512BITALG  12
+#define CPUID_EXT_FEATURE_AVX512VPDQ    14
+
+// EDX
+#define CPUID_EXT_FEATURE_AVX512QVNNIW  2
+#define CPUID_EXT_FEATURE_AVX512QFMA    3
+
 // x2APIC constants
 //
 // See Intel Volume 3, Section 10.12.9: ICR Operation in x2APIC Mode
@@ -580,8 +603,6 @@ END_FUNCTION
 
 
 FUNCTION cpuid_features
-    mov $CPUID_FEATURES_LEAF, %eax
-    cpuid
 
 .macro expect_feature_set reg, bit
     bt \bit, \reg
@@ -591,6 +612,10 @@ FUNCTION cpuid_features
     bt \bit, \reg
     jc .Lcpuid_features_failure
 .endm
+
+    // Check model/features leaf
+    mov $CPUID_FEATURES_LEAF, %eax
+    cpuid
 
     expect_feature_set %ecx, $CPUID_FEATURE_X2APIC_BIT
     expect_feature_set %ecx, $CPUID_FEATURE_TSC_DEADLINE_BIT
@@ -603,6 +628,27 @@ FUNCTION cpuid_features
     expect_feature_set %edx, $CPUID_FEATURE_SEP_BIT
     expect_feature_clr %edx, $CPUID_FEATURE_TM_BIT
     expect_feature_clr %edx, $CPUID_FEATURE_ACPI_BIT
+
+    mov $CPUID_EXT_FEATURES_LEAF, %eax
+    xor %ecx, %ecx
+    cpuid
+
+    // Expect AVX512 disabled.
+    expect_feature_clr %ebx, $CPUID_EXT_FEATURE_AVX512F
+    expect_feature_clr %ebx, $CPUID_EXT_FEATURE_AVX512DQ
+    expect_feature_clr %ebx, $CPUID_EXT_FEATURE_AVX512IFMA
+    expect_feature_clr %ebx, $CPUID_EXT_FEATURE_AVX512PF
+    expect_feature_clr %ebx, $CPUID_EXT_FEATURE_AVX512ER
+    expect_feature_clr %ebx, $CPUID_EXT_FEATURE_AVX512CD
+    expect_feature_clr %ebx, $CPUID_EXT_FEATURE_AVX512BW
+    expect_feature_clr %ebx, $CPUID_EXT_FEATURE_AVX512VL
+    expect_feature_clr %ecx, $CPUID_EXT_FEATURE_AVX512VBMI
+    expect_feature_clr %ecx, $CPUID_EXT_FEATURE_AVX512VBMI2
+    expect_feature_clr %ecx, $CPUID_EXT_FEATURE_AVX512VNNI
+    expect_feature_clr %ecx, $CPUID_EXT_FEATURE_AVX512BITALG
+    expect_feature_clr %ecx, $CPUID_EXT_FEATURE_AVX512VPDQ
+    expect_feature_clr %edx, $CPUID_EXT_FEATURE_AVX512QVNNIW
+    expect_feature_clr %edx, $CPUID_EXT_FEATURE_AVX512QFMA
 
     // success
     movq $0, (EXIT_TEST_ADDR)

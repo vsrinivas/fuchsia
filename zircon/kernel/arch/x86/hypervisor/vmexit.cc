@@ -279,6 +279,22 @@ zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs& vmcs, GuestState& 
           guest_state.rdx &= ~(1u << X86_FEATURE_ARCH_CAPABILITIES.bit);
           // Disable support for the IA32_FLUSH_CMD MSR.
           guest_state.rdx &= ~(1u << X86_FEATURE_L1D_FLUSH.bit);
+
+          // TODO(fxbug.dev/108623): Enable AVX-512 if supported.
+          //
+          // Disabling this to work around invalid opcode errors trying to execute these
+          // instructions.
+          guest_state.rbx &= ~(1u << X86_FEATURE_AVX512F.bit | 1u << X86_FEATURE_AVX512DQ.bit |
+                               1u << X86_FEATURE_AVX512IFMA.bit | 1u << X86_FEATURE_AVX512PF.bit |
+                               1u << X86_FEATURE_AVX512ER.bit | 1u << X86_FEATURE_AVX512CD.bit |
+                               1u << X86_FEATURE_AVX512BW.bit | 1u << X86_FEATURE_AVX512VL.bit);
+          guest_state.rcx &=
+              ~(1u << X86_FEATURE_AVX512VBMI.bit | 1u << X86_FEATURE_AVX512VBMI2.bit |
+                1u << X86_FEATURE_AVX512VNNI.bit | 1u << X86_FEATURE_AVX512BITALG.bit |
+                1u << X86_FEATURE_AVX512VPDQ.bit);
+          guest_state.rdx &=
+              ~(1u << X86_FEATURE_AVX512QVNNIW.bit | 1u << X86_FEATURE_AVX512QFMA.bit);
+
           break;
       }
       return ZX_OK;
