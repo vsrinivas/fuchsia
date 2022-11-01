@@ -1,0 +1,23 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This build definition exists in order to define an allow-list of users of
+# the nix third-party crate.  Currently and for the foreseeable future, the
+# allow-list is limited to the fuchsia_nix in-tree crate, which selectively
+# reexports (and provides test coverage for) those nix interfaces which:
+#
+# * have a concrete fuchsia use-case
+# * have been shown to work on fuchsia
+#
+# In-tree users of the nix crate must do so indirectly through re-exported
+# interfaces in fuchsia_nix. fuchsia_nix exists so that nix interfaces can be
+# vetted as appropriate to Fuchsia OS principles, and validated as working on
+# Fuchsia. For example, we do not want nix interfaces to POSIX signals to be
+# available in-tree because signals do not exist on Fuchsia.
+
+if (is_fuchsia) {
+  nix_visibility = [ "//src/lib/fuchsia_nix:*" ]
+} else {
+  nix_visibility = [ "*" ]
+}

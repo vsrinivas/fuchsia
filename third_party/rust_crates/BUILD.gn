@@ -479,10 +479,11 @@ group("mockall") {
   public_deps = [ ":mockall-v0_9_0" ]
 }
 
-if (!(current_os == "fuchsia")) {
-  group("nix") {
-    public_deps = [ ":nix-v0_20_0" ]
-  }
+import("//src/lib/fuchsia_nix/nix_visibility.gni")
+
+group("nix") {
+  public_deps = [ ":nix-v0_20_0" ]
+  visibility = nix_visibility
 }
 
 group("nom") {

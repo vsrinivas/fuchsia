@@ -135,6 +135,7 @@ memoffset = "0.5.3"
 miniz_oxide = "0.3.6"
 # TODO(fxbug.dev/66092) limit to tests
 mockall = "0.9"
+nix = "0.20"
 nom = { version = "5.0.0", default-features = false, features = ["std", "regexp_macros"] }
 nom_locate = "2.0.0"
 nonzero_ext = "0.3.0"
@@ -285,9 +286,6 @@ indoc = "1.0.3"
 # TODO(fxbug.dev/106164) Remove this explicit mio dependency when it can be
 # pulled in automatically by tokio
 mio = { version = "0.8.2", features = ["net", "os-ext", "os-poll"] }
-# TODO(https://github.com/rust-lang/rust/issues/58590): nix is not generally
-# visible in fuchsia so we don't depend on #[cfg(unix)] things on target
-nix = "0.20"
 notify = "5.0.0-pre.10"
 parking = "2"
 petgraph = "0.6.2"
@@ -494,6 +492,9 @@ group_visibility = { import = "//src/lib/syslog/rust/log_visibility.gni", variab
 
 [gn.package.memchr."2.4.0"]
 rustflags = ["--cfg=memchr_runtime_simd", "--cfg=memchr_runtime_sse2", "--cfg=memchr_runtime_sse42", "--cfg=memchr_runtime_avx"]
+
+[gn.package.nix."0.20.0"]
+group_visibility = { import = "//src/lib/fuchsia_nix/nix_visibility.gni", variable = "nix_visibility" }
 
 [gn.package.num-bigint."0.4.3"]
 rustflags = [

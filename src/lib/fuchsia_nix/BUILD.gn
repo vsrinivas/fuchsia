@@ -7,7 +7,7 @@ import("//build/rust/rustc_library.gni")
 rustc_library("fuchsia_nix") {
   edition = "2021"
   sources = [ "src/lib.rs" ]
-  deps = [ "//third_party/rust_crates/compat/nix" ]
+  deps = [ "//third_party/rust_crates:nix" ]
 
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
