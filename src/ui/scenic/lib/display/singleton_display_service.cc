@@ -12,7 +12,7 @@ SingletonDisplayService::SingletonDisplayService(std::shared_ptr<display::Displa
 
 void SingletonDisplayService::GetMetrics(
     fuchsia::ui::display::singleton::Info::GetMetricsCallback callback) {
-  const glm::vec2 dpr = display_->device_pixel_ratio();
+  const glm::vec2 dpr = display_->real_device_pixel_ratio();
   if (dpr.x != dpr.y) {
     FX_LOGS(WARNING) << "SingletonDisplayService::GetMetrics(): x/y display pixel ratio mismatch ("
                      << dpr.x << " vs. " << dpr.y << ")";
