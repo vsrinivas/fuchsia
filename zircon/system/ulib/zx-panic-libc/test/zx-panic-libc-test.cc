@@ -74,8 +74,8 @@ void panic_this_process() {
   if (stderr == nullptr) {
     abort();
   }
-  ZX_PANIC("This message should be seen on stderr.  %d\n", 42);
-  ZX_PANIC("This message should not be seen on stderr.\n");
+  ZX_PANIC("This message should be seen on stderr.  %d", 42);
+  ZX_PANIC("This message should not be seen on stderr.");
 }
 
 TEST(ZirconUserPanicTestCase, StderrOutputAndProcessTerminates) {
