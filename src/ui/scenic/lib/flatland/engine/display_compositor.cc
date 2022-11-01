@@ -40,6 +40,8 @@ fuchsia::sysmem::PixelFormatType ConvertZirconFormatToSysmemFormat(zx_pixel_form
       return fuchsia::sysmem::PixelFormatType::R8G8B8A8;
     case ZX_PIXEL_FORMAT_NV12:
       return fuchsia::sysmem::PixelFormatType::NV12;
+    case ZX_PIXEL_FORMAT_I420:
+      return fuchsia::sysmem::PixelFormatType::I420;
   }
   FX_CHECK(false) << "Unsupported Zircon pixel format: " << format;
   return fuchsia::sysmem::PixelFormatType::INVALID;
