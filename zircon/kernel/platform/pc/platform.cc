@@ -247,8 +247,11 @@ void platform_mexec_prep(uintptr_t final_bootimage_addr, size_t final_bootimage_
     panic("failed to identity map low memory");
   }
 
-  alloc_pages_greater_than(final_bootimage_addr + final_bootimage_len + PAGE_SIZE,
-                           kTotalPageTableCount, kBytesToIdentityMap, mexec_safe_pages);
+  result = alloc_pages_greater_than(final_bootimage_addr + final_bootimage_len + PAGE_SIZE,
+                                    kTotalPageTableCount, kBytesToIdentityMap, mexec_safe_pages);
+  if (result != ZX_OK) {
+    panic("failed to alloc mexec_safe_pages");
+  }
 }
 
 void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops, uintptr_t new_bootimage_addr,
