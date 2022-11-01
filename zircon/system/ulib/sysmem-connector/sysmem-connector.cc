@@ -315,7 +315,7 @@ void SysmemConnector::OnSysmemPeerClosed(async_dispatcher_t* dispatcher, async::
   // Terminate sysmem_connector, which is a critical process, so this will do a hard reboot.
   ZX_PANIC(
       "sysmem_connector's connection to sysmem has closed; sysmem driver failed - "
-      "terminating process to trigger reboot.\n");
+      "terminating process to trigger reboot.");
 }
 
 zx_status_t sysmem_connector_init(const char* sysmem_directory_path,
