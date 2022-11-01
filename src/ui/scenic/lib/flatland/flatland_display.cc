@@ -166,8 +166,7 @@ void FlatlandDisplay::SetContent(ViewportCreationToken token,
 
 void FlatlandDisplay::SetDevicePixelRatio(fuchsia::math::VecF device_pixel_ratio) {
   if (device_pixel_ratio.x < 1.f || device_pixel_ratio.y < 1.f) {
-    FX_LOGS(ERROR) << "SetDevicePixelRatio failed, device_pixel_ratio is invalid: "
-                   << "(" << device_pixel_ratio.x << ", " << device_pixel_ratio.y << ").";
+    FX_LOGS(ERROR) << "SetDevicePixelRatio failed, device_pixel_ratio is invalid";
     ReportError();
     return;
   }
