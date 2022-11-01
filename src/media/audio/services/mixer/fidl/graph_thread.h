@@ -8,6 +8,7 @@
 #include <memory>
 #include <string>
 
+#include "src/media/audio/lib/clock/clock.h"
 #include "src/media/audio/services/common/thread_checker.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/common/global_task_queue.h"
@@ -34,6 +35,12 @@ class GraphThread {
 
   // Runs an asynchronous task on this thread.
   void PushTask(std::function<void()> fn) const { global_task_queue_->Push(id(), std::move(fn)); }
+
+  // Increments number of `clock` usages in this thread.
+  virtual void IncrementClockUsage(std::shared_ptr<Clock> clock) = 0;
+
+  // Decrements number of `clock` usages in this thread.
+  virtual void DecrementClockUsage(std::shared_ptr<Clock> clock) = 0;
 
  protected:
   explicit GraphThread(std::shared_ptr<GlobalTaskQueue> global_task_queue)

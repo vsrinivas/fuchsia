@@ -410,6 +410,9 @@ void Node::Destroy(const GraphContext& ctx, NodePtr node) {
     if (node->dest()) {
       delete_edge(node, node->dest());
     }
+    if (node->thread_) {
+      node->thread_->DecrementClockUsage(node->reference_clock_);
+    }
 
     FX_CHECK(node->sources().empty());
     FX_CHECK(node->dest() == nullptr);
@@ -422,13 +425,21 @@ void Node::Destroy(const GraphContext& ctx, NodePtr node) {
 
     // Iterate backwards through these vectors so as children are removed, our position stays valid.
     for (size_t k = child_sources.size(); k > 0; k--) {
-      for (auto& sources = child_sources[k - 1]->sources(); !sources.empty();) {
+      auto child_node = child_sources[k - 1];
+      for (auto& sources = child_node->sources(); !sources.empty();) {
         delete_edge(sources.front(), node);
+      }
+      if (child_node->thread_) {
+        child_node->thread_->DecrementClockUsage(child_node->reference_clock_);
       }
     }
     for (size_t k = child_dests.size(); k > 0; k--) {
-      if (auto child_dest = child_dests[k - 1]->dest(); child_dest) {
+      auto child_node = child_dests[k - 1];
+      if (auto child_dest = child_node->dest(); child_dest) {
         delete_edge(node, std::move(child_dest));
+      }
+      if (child_node->thread_) {
+        child_node->thread_->DecrementClockUsage(child_node->reference_clock_);
       }
     }
 
@@ -476,7 +487,15 @@ std::shared_ptr<GraphThread> Node::thread() const {
 
 void Node::set_thread(std::shared_ptr<GraphThread> t) {
   FX_CHECK(type_ != Type::kMeta);
-  thread_ = std::move(t);
+  if (t == thread_) {
+    return;
+  }
+  if (const auto old_thread = std::exchange(thread_, std::move(t)); old_thread) {
+    old_thread->DecrementClockUsage(reference_clock_);
+  }
+  if (thread_) {
+    thread_->IncrementClockUsage(reference_clock_);
+  }
 }
 
 zx::duration Node::max_downstream_output_pipeline_delay() const {

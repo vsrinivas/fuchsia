@@ -26,8 +26,10 @@ class GraphDetachedThread : public GraphThread {
   // The value returned by `id()`.
   static inline constexpr ThreadId kId = PipelineDetachedThread::kId;
 
-  // Implementation of GraphThread.
+  // Implements `GraphThread`.
   std::shared_ptr<PipelineThread> pipeline_thread() const final { return pipeline_thread_; }
+  void IncrementClockUsage(std::shared_ptr<Clock> clock) final {}
+  void DecrementClockUsage(std::shared_ptr<Clock> clock) final {}
 
  private:
   const std::shared_ptr<PipelineDetachedThread> pipeline_thread_ =

@@ -9,11 +9,13 @@
 #include <lib/zx/time.h>
 
 #include <functional>
+#include <memory>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 
+#include "src/media/audio/lib/clock/clock.h"
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
@@ -38,8 +40,22 @@ using FakeNodePtr = std::shared_ptr<FakeNode>;
 // See FakeGraph for creation methods.
 class FakeGraphThread : public GraphThread {
  public:
-  // Implementation of GraphThread.
+  // Implements `GraphThread`.
   std::shared_ptr<PipelineThread> pipeline_thread() const final { return pipeline_thread_; }
+  void IncrementClockUsage(std::shared_ptr<Clock> clock) final {
+    if (const auto [it, is_new] = clock_usages_.emplace(std::move(clock), 1); !is_new) {
+      ++it->second;
+    }
+  }
+  void DecrementClockUsage(std::shared_ptr<Clock> clock) final {
+    if (const auto it = clock_usages_.find(clock); it != clock_usages_.end() && --it->second == 0) {
+      clock_usages_.erase(it);
+    }
+  }
+
+  const std::unordered_map<std::shared_ptr<Clock>, int>& clock_usages() const {
+    return clock_usages_;
+  }
 
  private:
   // All FakeGraphThreads belong to a FakeGraph. The constructor is private to ensure that it's
@@ -50,6 +66,7 @@ class FakeGraphThread : public GraphThread {
         pipeline_thread_(std::make_shared<FakePipelineThread>(id)) {}
 
   const std::shared_ptr<PipelineThread> pipeline_thread_;
+  std::unordered_map<std::shared_ptr<Clock>, int> clock_usages_;
 };
 
 // A fake node for use in tests.
@@ -116,9 +133,14 @@ class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
   // Allow anyone to set the thread.
   using Node::set_thread;
 
-  // Our PipelineStage is always this type.
+  // Our `PipelineStage` is always this type.
   FakePipelineStagePtr fake_pipeline_stage() const {
     return std::static_pointer_cast<FakePipelineStage>(pipeline_stage());
+  }
+
+  // Our `GraphThread` is always this type.
+  std::shared_ptr<FakeGraphThread> fake_graph_thread() const {
+    return std::static_pointer_cast<FakeGraphThread>(thread());
   }
 
   // Implements `Node`.

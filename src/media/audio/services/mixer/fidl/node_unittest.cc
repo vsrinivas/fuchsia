@@ -8,11 +8,13 @@
 #include <gtest/gtest.h>
 
 #include "src/media/audio/services/mixer/fidl/testing/fake_graph.h"
+#include "src/media/audio/services/mixer/mix/testing/defaults.h"
 
 namespace media_audio {
 namespace {
 
 using ::testing::ElementsAre;
+using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
 
 //
@@ -201,6 +203,9 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinarySuccess) {
   ASSERT_EQ(source->thread(), graph.ctx().detached_thread);
   ASSERT_EQ(dest->thread(), graph.thread(kThreadId));
 
+  EXPECT_THAT(graph.thread(kThreadId)->clock_usages(),
+              UnorderedElementsAre(Pair(DefaultClock(), 1)));
+
   auto q = graph.global_task_queue();
   auto result = Node::CreateEdge(graph.ctx(), source, dest, /*options=*/{});
   ASSERT_TRUE(result.is_ok());
@@ -210,6 +215,9 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinarySuccess) {
 
   EXPECT_EQ(source->thread(), graph.thread(kThreadId));
   EXPECT_EQ(dest->thread(), graph.thread(kThreadId));
+
+  EXPECT_THAT(graph.thread(kThreadId)->clock_usages(),
+              UnorderedElementsAre(Pair(DefaultClock(), 2)));
 
   CheckPipelineStagesAfterCreate(graph, source->fake_pipeline_stage(), dest->fake_pipeline_stage());
 }
@@ -330,6 +338,8 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToMetaSuccess) {
       .threads = {{kThreadId, {}}},
   });
 
+  EXPECT_THAT(graph.thread(kThreadId)->clock_usages(), UnorderedElementsAre());
+
   auto source = graph.node(1);
   auto dest = graph.node(2);
 
@@ -353,6 +363,9 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToMetaSuccess) {
 
   EXPECT_EQ(source->thread(), graph.thread(kThreadId));
   EXPECT_EQ(dest_child->thread(), graph.thread(kThreadId));
+
+  EXPECT_THAT(graph.thread(kThreadId)->clock_usages(),
+              UnorderedElementsAre(Pair(DefaultClock(), 2)));
 
   CheckPipelineStagesAfterCreate(graph, source->fake_pipeline_stage(),
                                  dest_child->fake_pipeline_stage());
@@ -467,6 +480,9 @@ TEST_F(NodeCreateEdgeTest, MetaToOrdinarySuccess) {
       .threads = {{kThreadId, {2}}},
   });
 
+  EXPECT_THAT(graph.thread(kThreadId)->clock_usages(),
+              UnorderedElementsAre(Pair(DefaultClock(), 1)));
+
   auto source = graph.node(1);
   auto dest = graph.node(2);
 
@@ -482,6 +498,9 @@ TEST_F(NodeCreateEdgeTest, MetaToOrdinarySuccess) {
 
   EXPECT_EQ(source_child->thread(), graph.thread(kThreadId));
   EXPECT_EQ(dest->thread(), graph.thread(kThreadId));
+
+  EXPECT_THAT(graph.thread(kThreadId)->clock_usages(),
+              UnorderedElementsAre(Pair(DefaultClock(), 2)));
 
   CheckPipelineStagesAfterCreate(graph, source_child->fake_pipeline_stage(),
                                  dest->fake_pipeline_stage());
@@ -595,6 +614,8 @@ TEST_F(NodeCreateEdgeTest, MetaToMetaSuccess) {
       .threads = {{kThreadId, {}}},
   });
 
+  EXPECT_THAT(graph.thread(kThreadId)->clock_usages(), UnorderedElementsAre());
+
   auto source = graph.node(1);
   auto dest = graph.node(2);
 
@@ -622,6 +643,9 @@ TEST_F(NodeCreateEdgeTest, MetaToMetaSuccess) {
 
   EXPECT_EQ(source_child->thread(), graph.thread(kThreadId));
   EXPECT_EQ(dest_child->thread(), graph.thread(kThreadId));
+
+  EXPECT_THAT(graph.thread(kThreadId)->clock_usages(),
+              UnorderedElementsAre(Pair(DefaultClock(), 2)));
 
   CheckPipelineStagesAfterCreate(graph, source_child->fake_pipeline_stage(),
                                  dest_child->fake_pipeline_stage());
@@ -714,6 +738,9 @@ TEST_F(NodeDeleteEdgeTest, OrdinaryToOrdinarySuccess) {
   ASSERT_EQ(source->thread(), graph.thread(kThreadId));
   ASSERT_EQ(dest->thread(), graph.thread(kThreadId));
 
+  EXPECT_THAT(graph.thread(kThreadId)->clock_usages(),
+              UnorderedElementsAre(Pair(DefaultClock(), 2)));
+
   auto q = graph.global_task_queue();
   auto result = Node::DeleteEdge(graph.ctx(), source, dest);
   ASSERT_TRUE(result.is_ok());
@@ -723,6 +750,9 @@ TEST_F(NodeDeleteEdgeTest, OrdinaryToOrdinarySuccess) {
 
   EXPECT_EQ(source->thread(), graph.ctx().detached_thread);
   EXPECT_EQ(dest->thread(), graph.thread(kThreadId));
+
+  EXPECT_THAT(graph.thread(kThreadId)->clock_usages(),
+              UnorderedElementsAre(Pair(DefaultClock(), 1)));
 
   CheckPipelineStagesAfterDelete(graph, source->fake_pipeline_stage(), dest->fake_pipeline_stage());
 }
@@ -758,6 +788,9 @@ TEST_F(NodeDeleteEdgeTest, OrdinaryToMetaSuccess) {
       .threads = {{kThreadId, {1, 3}}},
   });
 
+  EXPECT_THAT(graph.thread(kThreadId)->clock_usages(),
+              UnorderedElementsAre(Pair(DefaultClock(), 2)));
+
   auto source = graph.node(1);
   auto dest = graph.node(2);
 
@@ -781,6 +814,9 @@ TEST_F(NodeDeleteEdgeTest, OrdinaryToMetaSuccess) {
   EXPECT_EQ(dest->child_sources().size(), 0u);
   EXPECT_EQ(dest->child_dests().size(), 0u);
   EXPECT_TRUE(dest_destroyed);
+
+  EXPECT_THAT(graph.thread(kThreadId)->clock_usages(),
+              UnorderedElementsAre(Pair(DefaultClock(), 1)));
 
   CheckPipelineStagesAfterDelete(graph, source_stage, dest_stage);
 }
@@ -816,6 +852,9 @@ TEST_F(NodeDeleteEdgeTest, MetaToOrdinarySuccess) {
       .threads = {{kThreadId, {2, 3}}},
   });
 
+  EXPECT_THAT(graph.thread(kThreadId)->clock_usages(),
+              UnorderedElementsAre(Pair(DefaultClock(), 2)));
+
   auto source = graph.node(1);
   auto dest = graph.node(2);
 
@@ -839,6 +878,9 @@ TEST_F(NodeDeleteEdgeTest, MetaToOrdinarySuccess) {
   EXPECT_EQ(dest->sources().size(), 0u);
   EXPECT_EQ(dest->thread(), graph.thread(kThreadId));
   EXPECT_TRUE(source_destroyed);
+
+  EXPECT_THAT(graph.thread(kThreadId)->clock_usages(),
+              UnorderedElementsAre(Pair(DefaultClock(), 1)));
 
   CheckPipelineStagesAfterDelete(graph, source_stage, dest_stage);
 }
@@ -885,6 +927,9 @@ TEST_F(NodeDeleteEdgeTest, MetaToMetaSuccess) {
       .threads = {{kThreadId, {3, 4}}},
   });
 
+  EXPECT_THAT(graph.thread(kThreadId)->clock_usages(),
+              UnorderedElementsAre(Pair(DefaultClock(), 2)));
+
   auto source = graph.node(1);
   auto dest = graph.node(2);
 
@@ -918,6 +963,9 @@ TEST_F(NodeDeleteEdgeTest, MetaToMetaSuccess) {
   EXPECT_EQ(dest->child_dests().size(), 0u);
   EXPECT_TRUE(source_destroyed);
   EXPECT_TRUE(dest_destroyed);
+
+  EXPECT_THAT(graph.thread(kThreadId)->clock_usages(),
+              UnorderedElementsAre(Pair(DefaultClock(), 1)));
 
   CheckPipelineStagesAfterDelete(graph, source_stage, dest_stage);
 }
@@ -963,6 +1011,8 @@ TEST(NodeCreateDeleteEdgeTest, ThreadMoves) {
   ASSERT_EQ(source->thread(), detached_thread);
   ASSERT_EQ(dest->thread(), new_thread);
 
+  EXPECT_THAT(new_thread->clock_usages(), UnorderedElementsAre(Pair(DefaultClock(), 1)));
+
   // Create source -> dest.
   {
     auto result = Node::CreateEdge(graph.ctx(), source, dest, /*options=*/{});
@@ -984,6 +1034,8 @@ TEST(NodeCreateDeleteEdgeTest, ThreadMoves) {
   EXPECT_EQ(graph.node(8)->thread(), detached_thread);
   // The dest doesn't change.
   EXPECT_EQ(graph.node(13)->thread(), new_thread);
+
+  EXPECT_THAT(new_thread->clock_usages(), UnorderedElementsAre(Pair(DefaultClock(), 6)));
 
   q->RunForThread(new_thread->id());
 
@@ -1020,6 +1072,8 @@ TEST(NodeCreateDeleteEdgeTest, ThreadMoves) {
   EXPECT_EQ(graph.node(7)->thread(), detached_thread);
   EXPECT_EQ(graph.node(8)->thread(), detached_thread);
   EXPECT_EQ(graph.node(13)->thread(), new_thread);
+
+  EXPECT_THAT(new_thread->clock_usages(), UnorderedElementsAre(Pair(DefaultClock(), 1)));
 
   q->RunForThread(new_thread->id());
 
@@ -1427,6 +1481,9 @@ TEST_F(NodeDestroyTest, OrdinaryToMeta) {
         .threads = {{kThreadId, {1, 3}}},
     });
 
+    EXPECT_THAT(graph.thread(kThreadId)->clock_usages(),
+                UnorderedElementsAre(Pair(DefaultClock(), 2)));
+
     auto q = graph.global_task_queue();
     auto source = graph.node(1);
     auto dest = graph.node(2);
@@ -1450,6 +1507,14 @@ TEST_F(NodeDestroyTest, OrdinaryToMeta) {
     EXPECT_TRUE(dest_destroyed);
     EXPECT_TRUE(destroyed);
 
+    if (to_destroy == dest) {
+      // `source` is moved to detached thread after `dest` edge is deleted.
+      EXPECT_THAT(graph.thread(kThreadId)->clock_usages(), UnorderedElementsAre());
+    } else {
+      EXPECT_THAT(graph.thread(kThreadId)->clock_usages(),
+                  UnorderedElementsAre(Pair(DefaultClock(), 1)));
+    }
+
     CheckPipelineStagesAfterDelete(graph, source->fake_pipeline_stage(),
                                    dest_child_source->fake_pipeline_stage());
   }
@@ -1461,6 +1526,9 @@ TEST_F(NodeDestroyTest, OrdinaryToMetaWithBuiltinChild) {
       .edges = {{1, 3}},
       .threads = {{kThreadId, {1, 3}}},
   });
+
+  EXPECT_THAT(graph.thread(kThreadId)->clock_usages(),
+              UnorderedElementsAre(Pair(DefaultClock(), 2)));
 
   auto q = graph.global_task_queue();
   auto source = graph.node(1);
@@ -1474,6 +1542,9 @@ TEST_F(NodeDestroyTest, OrdinaryToMetaWithBuiltinChild) {
   // When destroying node 1, we disconnect from child node 3, but don't delete child node 3 because
   // it's a builtin child of meta node 2.
   Node::Destroy(graph.ctx(), source);
+
+  EXPECT_THAT(graph.thread(kThreadId)->clock_usages(),
+              UnorderedElementsAre(Pair(DefaultClock(), 1)));
 
   EXPECT_EQ(source->dest(), nullptr);
   EXPECT_EQ(dest->child_sources().size(), 1u);
@@ -1490,6 +1561,9 @@ TEST_F(NodeDestroyTest, MetaToOrdinary) {
         .edges = {{3, 2}},
         .threads = {{kThreadId, {2, 3}}},
     });
+
+    EXPECT_THAT(graph.thread(kThreadId)->clock_usages(),
+                UnorderedElementsAre(Pair(DefaultClock(), 2)));
 
     auto q = graph.global_task_queue();
     auto source = graph.node(1);
@@ -1509,6 +1583,14 @@ TEST_F(NodeDestroyTest, MetaToOrdinary) {
 
     Node::Destroy(graph.ctx(), to_destroy);
 
+    if (to_destroy == dest) {
+      // `source` is moved to detached thread after `dest` edge is deleted.
+      EXPECT_THAT(graph.thread(kThreadId)->clock_usages(), UnorderedElementsAre());
+    } else {
+      EXPECT_THAT(graph.thread(kThreadId)->clock_usages(),
+                  UnorderedElementsAre(Pair(DefaultClock(), 1)));
+    }
+
     EXPECT_EQ(source->child_dests().size(), 0u);
     EXPECT_EQ(dest->sources().size(), 0u);
     EXPECT_TRUE(source_destroyed);
@@ -1526,6 +1608,9 @@ TEST_F(NodeDestroyTest, MetaToOrdinaryWithBuiltinChild) {
       .threads = {{kThreadId, {2, 3}}},
   });
 
+  EXPECT_THAT(graph.thread(kThreadId)->clock_usages(),
+              UnorderedElementsAre(Pair(DefaultClock(), 2)));
+
   auto q = graph.global_task_queue();
   auto source = graph.node(1);
   auto dest = graph.node(2);
@@ -1538,6 +1623,9 @@ TEST_F(NodeDestroyTest, MetaToOrdinaryWithBuiltinChild) {
   // When destroying node 2, we disconnect from child node 3, but don't delete child node 3 because
   // it's a builtin child of meta node 1.
   Node::Destroy(graph.ctx(), dest);
+
+  // Child node 3 is still moved to detached thread.
+  EXPECT_THAT(graph.thread(kThreadId)->clock_usages(), UnorderedElementsAre());
 
   EXPECT_EQ(source->child_dests().size(), 1u);
   EXPECT_EQ(source_child_dest->dest(), nullptr);
@@ -1558,6 +1646,9 @@ TEST_F(NodeDestroyTest, MetaToMeta) {
         .edges = {{3, 4}},
         .threads = {{kThreadId, {3, 4}}},
     });
+
+    EXPECT_THAT(graph.thread(kThreadId)->clock_usages(),
+                UnorderedElementsAre(Pair(DefaultClock(), 2)));
 
     auto q = graph.global_task_queue();
     auto source = graph.node(1);
@@ -1584,6 +1675,14 @@ TEST_F(NodeDestroyTest, MetaToMeta) {
     to_destroy->SetOnDestroySelf([&destroyed]() { destroyed = true; });
 
     Node::Destroy(graph.ctx(), to_destroy);
+
+    if (to_destroy == dest) {
+      // `source` is moved to detached thread after `dest` edge is deleted.
+      EXPECT_THAT(graph.thread(kThreadId)->clock_usages(), UnorderedElementsAre());
+    } else {
+      EXPECT_THAT(graph.thread(kThreadId)->clock_usages(),
+                  UnorderedElementsAre(Pair(DefaultClock(), 1)));
+    }
 
     EXPECT_EQ(source->child_dests().size(), 0u);
     EXPECT_EQ(dest->child_sources().size(), 0u);

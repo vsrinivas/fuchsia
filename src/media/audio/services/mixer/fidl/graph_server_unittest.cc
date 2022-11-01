@@ -1812,8 +1812,7 @@ TEST_F(GraphServerTest, StartFails) {
   }
 }
 
-// TODO(fxbug.dev/109467): Needs clocks to be registered in `PipelineMixThread::clocks_`.
-TEST_F(GraphServerTest, DISABLED_StartSuccess) {
+TEST_F(GraphServerTest, StartSuccess) {
   NodeId producer_id;
   NodeId consumer_id;
   ASSERT_NO_FATAL_FAILURE(CreateProducerAndConsumer(&producer_id, &consumer_id));
@@ -1825,22 +1824,6 @@ TEST_F(GraphServerTest, DISABLED_StartSuccess) {
                                  .source_id(producer_id)
                                  .dest_id(consumer_id)
                                  .Build());
-  }
-
-  {
-    // Start producer.
-    const auto result =
-        client()->Start(fuchsia_audio_mixer::wire::GraphStartRequest::Builder(arena_)
-                            .node_id(producer_id)
-                            .when(RealTime::WithReferenceTime(arena_, 1))
-                            .stream_time(StreamTime::WithStreamTime(arena_, 2))
-                            .Build());
-    ASSERT_TRUE(result.ok()) << result;
-    ASSERT_FALSE(result->is_error()) << result->error_value();
-    ASSERT_TRUE(result->value()->has_system_time());
-    ASSERT_TRUE(result->value()->has_reference_time());
-    ASSERT_TRUE(result->value()->has_stream_time());
-    ASSERT_TRUE(result->value()->has_packet_timestamp());
   }
 
   {
@@ -1905,12 +1888,6 @@ TEST_F(GraphServerTest, StopFails) {
           .edit = [invalid_type_node_id](auto& request) { request.node_id(invalid_type_node_id); },
           .expected_error = StopError::kInvalidParameter,
       },
-      // TODO(fxbug.dev/109467): Needs clocks to be registered in `PipelineMixThread::clocks_`.
-      // {
-      //     .name = "AlreadyStopped",
-      //     // Send a valid `Stop` request without a prior `Start` call.
-      //     .expected_error = StopError::kAlreadyStopped,
-      // },
   };
 
   for (auto& tc : cases) {
@@ -1934,8 +1911,7 @@ TEST_F(GraphServerTest, StopFails) {
   }
 }
 
-// TODO(fxbug.dev/109467): Needs clocks to be registered in `PipelineMixThread::clocks_`.
-TEST_F(GraphServerTest, DISABLED_StopSuccess) {
+TEST_F(GraphServerTest, StopSuccess) {
   NodeId producer_id;
   NodeId consumer_id;
   ASSERT_NO_FATAL_FAILURE(CreateProducerAndConsumer(&producer_id, &consumer_id));
@@ -1971,37 +1947,6 @@ TEST_F(GraphServerTest, DISABLED_StopSuccess) {
         fuchsia_audio_mixer::wire::GraphStopRequest::Builder(arena_)
             .node_id(consumer_id)
             .when(RealOrStreamTime::WithRealTime(arena_, RealTime::WithSystemTime(arena_, 6)))
-            .Build());
-    ASSERT_TRUE(result.ok()) << result;
-    ASSERT_FALSE(result->is_error()) << result->error_value();
-    ASSERT_TRUE(result->value()->has_system_time());
-    ASSERT_TRUE(result->value()->has_reference_time());
-    ASSERT_TRUE(result->value()->has_stream_time());
-    ASSERT_TRUE(result->value()->has_packet_timestamp());
-  }
-
-  {
-    // Start producer.
-    const auto result =
-        client()->Start(fuchsia_audio_mixer::wire::GraphStartRequest::Builder(arena_)
-                            .node_id(producer_id)
-                            .when(RealTime::WithSystemTime(arena_, 1))
-                            .stream_time(StreamTime::WithStreamTime(arena_, 2))
-                            .Build());
-    ASSERT_TRUE(result.ok()) << result;
-    ASSERT_FALSE(result->is_error()) << result->error_value();
-    ASSERT_TRUE(result->value()->has_system_time());
-    ASSERT_TRUE(result->value()->has_reference_time());
-    ASSERT_TRUE(result->value()->has_stream_time());
-    ASSERT_TRUE(result->value()->has_packet_timestamp());
-  }
-
-  {
-    // Stop producer.
-    const auto result = client()->Stop(
-        fuchsia_audio_mixer::wire::GraphStopRequest::Builder(arena_)
-            .node_id(producer_id)
-            .when(RealOrStreamTime::WithRealTime(arena_, RealTime::WithSystemTime(arena_, 3)))
             .Build());
     ASSERT_TRUE(result.ok()) << result;
     ASSERT_FALSE(result->is_error()) << result->error_value();

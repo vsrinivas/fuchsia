@@ -6,6 +6,9 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <memory>
+
+#include "src/media/audio/lib/clock/clock.h"
 #include "src/media/audio/services/mixer/mix/consumer_stage.h"
 
 namespace media_audio {
@@ -13,21 +16,42 @@ namespace media_audio {
 GraphMixThread::GraphMixThread(PipelineMixThread::Args args)
     : GraphThread(args.global_task_queue), thread_(PipelineMixThread::Create(std::move(args))) {}
 
-GraphMixThread::GraphMixThread(std::shared_ptr<GlobalTaskQueue> q,
-                               std::shared_ptr<PipelineMixThread> t)
-    : GraphThread(std::move(q)), thread_(std::move(t)) {}
+GraphMixThread::GraphMixThread(std::shared_ptr<GlobalTaskQueue> global_task_queue,
+                               std::shared_ptr<PipelineMixThread> pipeline_thread)
+    : GraphThread(std::move(global_task_queue)), thread_(std::move(pipeline_thread)) {}
+
+void GraphMixThread::IncrementClockUsage(std::shared_ptr<Clock> clock) {
+  const auto [it, is_new] = clock_usages_.try_emplace(std::move(clock), 1);
+  if (is_new) {
+    // Forward to the `PipelineMixThread`.
+    PushTask([pipeline_thread = thread_, clock = it->first]() mutable {
+      ScopedThreadChecker checker(pipeline_thread->checker());
+      pipeline_thread->AddClock(std::move(clock));
+    });
+  } else {
+    ++it->second;
+  }
+}
+void GraphMixThread::DecrementClockUsage(std::shared_ptr<Clock> clock) {
+  if (const auto it = clock_usages_.find(clock); it != clock_usages_.end() && --it->second == 0) {
+    // Forward to the `PipelineMixThread`.
+    PushTask([pipeline_thread = thread_, clock = std::move(clock)]() mutable {
+      ScopedThreadChecker checker(pipeline_thread->checker());
+      pipeline_thread->RemoveClock(std::move(clock));
+    });
+    clock_usages_.erase(it);
+  }
+}
 
 void GraphMixThread::AddConsumer(ConsumerStagePtr consumer_stage) {
   FX_CHECK(consumers_.count(consumer_stage) == 0)
       << "cannot add Consumer twice: " << consumer_stage->name();
 
   consumers_.insert(consumer_stage);
-
-  // Forward to the PipelineMixThread.
-  PushTask([pipeline_thread = thread_, consumer_stage]() {
+  // Forward to the `PipelineMixThread`.
+  PushTask([pipeline_thread = thread_, consumer_stage = std::move(consumer_stage)]() mutable {
     ScopedThreadChecker checker(pipeline_thread->checker());
-    pipeline_thread->AddConsumer(consumer_stage);
-    // TODO(fxbug.dev/87651): mix_thread->AddClock?
+    pipeline_thread->AddConsumer(std::move(consumer_stage));
   });
 }
 
@@ -36,12 +60,10 @@ void GraphMixThread::RemoveConsumer(ConsumerStagePtr consumer_stage) {
       << "cannot find Consumer to remove: " << consumer_stage->name();
 
   consumers_.erase(consumer_stage);
-
-  // Forward to the PipelineMixThread.
-  PushTask([pipeline_thread = thread_, consumer_stage]() {
+  // Forward to the `PipelineMixThread`.
+  PushTask([pipeline_thread = thread_, consumer_stage = std::move(consumer_stage)]() mutable {
     ScopedThreadChecker checker(pipeline_thread->checker());
-    pipeline_thread->RemoveConsumer(consumer_stage);
-    // TODO(fxbug.dev/87651): mix_thread->RemoveClock?
+    pipeline_thread->RemoveConsumer(std::move(consumer_stage));
   });
 }
 
@@ -57,7 +79,7 @@ void GraphMixThread::NotifyConsumerStarting(ConsumerStagePtr consumer_stage) {
 }
 
 void GraphMixThread::Shutdown() {
-  // Forward to the PipelineMixThread.
+  // Forward to the `PipelineMixThread`.
   PushTask([pipeline_thread = thread_]() {
     ScopedThreadChecker checker(pipeline_thread->checker());
     pipeline_thread->Shutdown();

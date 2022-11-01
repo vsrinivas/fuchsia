@@ -7,8 +7,10 @@
 
 #include <lib/zx/time.h>
 
+#include <memory>
 #include <unordered_set>
 
+#include "src/media/audio/lib/clock/clock.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/common/global_task_queue.h"
 #include "src/media/audio/services/mixer/fidl/graph_thread.h"
@@ -22,8 +24,10 @@ class GraphMixThread : public GraphThread {
  public:
   explicit GraphMixThread(PipelineMixThread::Args args);
 
-  // Implementation of GraphThread.
+  // Implements `GraphThread`.
   std::shared_ptr<PipelineThread> pipeline_thread() const final { return thread_; }
+  void IncrementClockUsage(std::shared_ptr<Clock> clock) final;
+  void DecrementClockUsage(std::shared_ptr<Clock> clock) final;
 
   // Reports the mix period.
   zx::duration mix_period() const { return thread_->mix_period(); }
@@ -46,6 +50,7 @@ class GraphMixThread : public GraphThread {
 
   const std::shared_ptr<PipelineMixThread> thread_;
 
+  std::unordered_map<std::shared_ptr<Clock>, int> clock_usages_;
   std::unordered_set<ConsumerStagePtr> consumers_;
 };
 
