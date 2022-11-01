@@ -116,7 +116,7 @@ void EnablePaging(Paddr root) {
       return EnablePagingForEl<arch::ArmTcrEl2, arch::ArmSctlrEl2, arch::ArmTtbr0El2,
                                arch::ArmMairEl2>(root);
     default:
-      ZX_PANIC("Unsupported ARM64 exception level: %u\n", static_cast<uint8_t>(current_el));
+      ZX_PANIC("Unsupported ARM64 exception level: %u", static_cast<uint8_t>(current_el));
   }
 }
 

@@ -60,7 +60,7 @@ void ArmPsciSetup(const zbi_dcfg_arm_psci_driver_t* cfg) {
       reset_args = cfg->reboot_recovery_args;
       break;
     default:
-      ZX_PANIC("impossible phys_psci_reset value %#x\n",
+      ZX_PANIC("impossible phys_psci_reset value %#x",
                static_cast<uint32_t>(gBootOptions->phys_psci_reset));
   }
 

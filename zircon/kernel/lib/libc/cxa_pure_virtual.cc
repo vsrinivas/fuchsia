@@ -8,4 +8,4 @@
 
 extern "C" void __cxa_pure_virtual();
 
-extern "C" void __cxa_pure_virtual() { ZX_PANIC("pure virtual called\n"); }
+extern "C" void __cxa_pure_virtual() { ZX_PANIC("pure virtual called"); }

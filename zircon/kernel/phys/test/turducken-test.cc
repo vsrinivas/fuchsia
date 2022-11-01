@@ -73,7 +73,7 @@ int TurduckenTest::Main(Zbi::iterator kernel_item) {
     printf("%s: It wasn't ducks all the way down after all!\n", test_name());
     return 0;
   } else {
-    ZX_PANIC("Don't like the taste of %.*s!\n", static_cast<int>(flavor->size()), flavor->data());
+    ZX_PANIC("Don't like the taste of %.*s!", static_cast<int>(flavor->size()), flavor->data());
   }
 
   const uint32_t extra_space = static_cast<uint32_t>(

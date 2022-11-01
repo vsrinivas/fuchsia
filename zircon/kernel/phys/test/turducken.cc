@@ -136,7 +136,7 @@ void TurduckenTestBase::Load(TurduckenTestBase::Zbi::iterator kernel_item,
   loaded_ = Allocation::New(ac, memalloc::Type::kZbiTestPayload, load_buffer_size.size,
                             load_buffer_size.alignment);
   if (!ac.check()) {
-    ZX_PANIC("cannot allocate %#zx bytes aligned to %#zx\n", load_buffer_size.size,
+    ZX_PANIC("cannot allocate %#zx bytes aligned to %#zx", load_buffer_size.size,
              load_buffer_size.alignment);
   }
 

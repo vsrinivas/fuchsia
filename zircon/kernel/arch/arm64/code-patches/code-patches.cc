@@ -45,11 +45,11 @@ void ArchPatchCode(code_patching::Patcher patcher, ktl::span<ktl::byte> patchee,
         performed = true;
         break;
       default:
-        ZX_PANIC("%s: code-patching: unrecognized patch case ID: %u: [%#lx, %#lx)\n", ProgramName(),
+        ZX_PANIC("%s: code-patching: unrecognized patch case ID: %u: [%#lx, %#lx)", ProgramName(),
                  patch.id, patch.range_start, patch.range_start + patch.range_size);
     }
   }
   if (!performed) {
-    ZX_PANIC("%s: code-patching: failed to patch the kernel\n", ProgramName());
+    ZX_PANIC("%s: code-patching: failed to patch the kernel", ProgramName());
   }
 }

@@ -49,7 +49,7 @@ void EntropyHandoff::AddEntropy(BootOptions& options) {
 
   for (auto c : cmdline_entropy) {
     if (isxdigit(c) == 0) {
-      ZX_PANIC("'kernel.mixin-entropy' must be a valid hex string. Found %c in %.*s.\n", c,
+      ZX_PANIC("'kernel.mixin-entropy' must be a valid hex string. Found %c in %.*s.", c,
                static_cast<int>(cmdline_entropy.length()), cmdline_entropy.data());
     }
   }
@@ -71,7 +71,7 @@ ktl::optional<crypto::EntropyPool> EntropyHandoff::Take(const BootOptions& optio
   if (options.cprng_seed_require_cmdline) {
     ZX_PANIC(
         "ZBI_TYPE_SECURE_ENTROPY zbi item or 'kernel.mixin-entropy' command line option did not "
-        "provide enough entropy.\n");
+        "provide enough entropy.");
   }
 
   return ktl::nullopt;

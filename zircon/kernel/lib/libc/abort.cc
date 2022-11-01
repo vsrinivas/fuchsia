@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <zircon/assert.h>
 
-void abort() { ZX_PANIC("abort() called!\n"); }
+void abort() { ZX_PANIC("abort() called!"); }
 
 // The compiler generates calls to this for -fstack-protector.
 extern "C" void __stack_chk_fail();

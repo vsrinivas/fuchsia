@@ -202,7 +202,7 @@ void Devicetree::WalkTree(NodeVisitor pre_order_visitor, NodeVisitor post_order_
       case FDT_END:
         return;
       default:
-        ZX_PANIC("unknown devicetree token: %#x\n", token);
+        ZX_PANIC("unknown devicetree token: %#x", token);
     }
   }
 }

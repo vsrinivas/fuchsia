@@ -58,7 +58,7 @@ struct SpSameEl {
 
 struct SpBadEl {
   void set_sp(uint64_t pc) {}
-  void Write() { ZX_PANIC("cannot return to a higher EL!\n"); }
+  void Write() { ZX_PANIC("cannot return to a higher EL!"); }
 };
 
 template <class El1, class El2, class El3>
