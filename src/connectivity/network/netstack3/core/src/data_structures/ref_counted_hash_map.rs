@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use alloc::collections::hash_map::{Entry, HashMap};
-use core::hash::Hash;
+use core::{hash::Hash, num::NonZeroUsize};
+
+use nonzero_ext::nonzero;
 
 /// The result of inserting an element into a [`RefCountedHashMap`].
 #[cfg_attr(test, derive(Debug, Eq, PartialEq))]
@@ -29,7 +31,7 @@ pub(crate) enum RemoveResult<V> {
 /// A [`HashMap`] which keeps a reference count for each entry.
 #[cfg_attr(test, derive(Debug))]
 pub(crate) struct RefCountedHashMap<K, V> {
-    inner: HashMap<K, (usize, V)>,
+    inner: HashMap<K, (NonZeroUsize, V)>,
 }
 
 impl<K, V> Default for RefCountedHashMap<K, V> {
@@ -50,13 +52,13 @@ impl<K: Eq + Hash, V> RefCountedHashMap<K, V> {
     ) -> InsertResult<O> {
         match self.inner.entry(key) {
             Entry::Occupied(mut entry) => {
-                let (refcnt, _): &mut (usize, V) = entry.get_mut();
-                *refcnt += 1;
+                let (refcnt, _): &mut (NonZeroUsize, V) = entry.get_mut();
+                *refcnt = refcnt.checked_add(1).unwrap();
                 InsertResult::AlreadyPresent
             }
             Entry::Vacant(entry) => {
                 let (value, output) = f();
-                let _: &mut (usize, V) = entry.insert((1, value));
+                let _: &mut (NonZeroUsize, V) = entry.insert((nonzero!(1usize), value));
                 InsertResult::Inserted(output)
             }
         }
@@ -70,13 +72,16 @@ impl<K: Eq + Hash, V> RefCountedHashMap<K, V> {
         match self.inner.entry(key) {
             Entry::Vacant(_) => RemoveResult::NotPresent,
             Entry::Occupied(mut entry) => {
-                let (refcnt, _): &mut (usize, V) = entry.get_mut();
-                if *refcnt == 1 {
-                    let (_, value): (usize, V) = entry.remove();
-                    RemoveResult::Removed(value)
-                } else {
-                    *refcnt -= 1;
-                    RemoveResult::StillPresent
+                let (refcnt, _): &mut (NonZeroUsize, V) = entry.get_mut();
+                match NonZeroUsize::new(refcnt.get() - 1) {
+                    None => {
+                        let (_, value): (NonZeroUsize, V) = entry.remove();
+                        RemoveResult::Removed(value)
+                    }
+                    Some(new_refcnt) => {
+                        *refcnt = new_refcnt;
+                        RemoveResult::StillPresent
+                    }
                 }
             }
         }
@@ -149,7 +154,7 @@ impl<T: Eq + Hash> RefCountedHashSet<T> {
 
     /// Iterates over values and reference counts.
     #[cfg(test)]
-    pub(crate) fn iter_counts(&self) -> impl Iterator<Item = (&'_ T, usize)> + '_ {
+    pub(crate) fn iter_counts(&self) -> impl Iterator<Item = (&'_ T, NonZeroUsize)> + '_ {
         self.inner.inner.iter().map(|(key, (count, ()))| (key, *count))
     }
 }
@@ -223,6 +228,6 @@ mod test {
     ) {
         let (actual_refcount, _value) =
             map.inner.get(key).expect(&format!("refcount should be non-zero {}", context));
-        assert_eq!(*actual_refcount, expected_refcount);
+        assert_eq!(actual_refcount.get(), expected_refcount);
     }
 }
