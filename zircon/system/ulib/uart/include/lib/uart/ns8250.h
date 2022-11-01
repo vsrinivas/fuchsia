@@ -373,7 +373,7 @@ class DriverImpl
           break;
 
         default:
-          ZX_PANIC("unhandled interrupt ID %#x\n", id);
+          ZX_PANIC("unhandled interrupt ID %#x", id);
       }
     }
   }
