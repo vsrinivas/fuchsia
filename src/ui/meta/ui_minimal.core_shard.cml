@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
+    include: [ "//src/ui/meta/ui_routes_base.shard.cml" ],
     children: [
         {
             name: "ui",
@@ -14,87 +15,14 @@
     // See also //src/sys/appmgr/meta/appmgr.core_shard.cml
     use: [
         {
-            // Expose FlatlandDisplay to the V1 realm for the benefit of
-            // flatland_benchmark.
-            // TODO(fxbug.dev/104906): Remove this when no longer needed.
-            protocol: [ "fuchsia.ui.composition.FlatlandDisplay" ],
-            from: "#ui",
-            dependency: "weak_for_migration",
-        },
-        {
-            protocol: [
-                "fuchsia.accessibility.gesture.ListenerRegistry",
-                "fuchsia.accessibility.semantics.SemanticsManager",
-                "fuchsia.accessibility.tts.EngineRegistry",
-                "fuchsia.accessibility.tts.TtsManager",
-                "fuchsia.accessibility.virtualkeyboard.Registry",
-                "fuchsia.input.virtualkeyboard.ControllerCreator",
-                "fuchsia.input.virtualkeyboard.Manager",
-                "fuchsia.recovery.policy.Device",
-                "fuchsia.recovery.ui.FactoryResetCountdown",
-                "fuchsia.session.scene.Manager",
-                "fuchsia.ui.brightness.ColorAdjustmentHandler",
-                "fuchsia.ui.composition.Allocator",
-                "fuchsia.ui.composition.Flatland",
-                "fuchsia.ui.composition.internal.ScreenCapture",
-                "fuchsia.ui.composition.ScreenCapture",
-                "fuchsia.ui.display.singleton.Info",
-                "fuchsia.ui.focus.FocusChainListenerRegistry",
-                "fuchsia.ui.input.ImeService",
-                "fuchsia.ui.input3.Keyboard",
-                "fuchsia.ui.input3.KeyEventInjector",
-                "fuchsia.ui.keyboard.focus.Controller",
-                "fuchsia.ui.pointerinjector.Registry",
-                "fuchsia.ui.policy.DeviceListenerRegistry",
-                "fuchsia.ui.policy.DisplayBacklight",
-                "fuchsia.ui.scenic.Scenic",
-                "fuchsia.ui.views.ViewRefInstalled",
-            ],
+            protocol: [ "fuchsia.session.scene.Manager" ],
             from: "#ui",
             dependency: "weak_for_migration",
         },
     ],
     offer: [
         {
-            protocol: [
-                "fuchsia.logger.LogSink",
-                "fuchsia.scheduler.ProfileProvider",
-            ],
-            from: "parent",
-            to: "#ui",
-        },
-        {
-            protocol: "fuchsia.intl.PropertyProvider",
-            from: "#intl",
-            to: "#ui",
-            source_availability: "unknown",
-        },
-        {
-            protocol: "fuchsia.tracing.provider.Registry",
-            from: "#trace_manager",
-            to: "#ui",
-            source_availability: "unknown",
-        },
-        {
-            protocol: [ "fuchsia.metrics.MetricEventLoggerFactory" ],
-            from: "#cobalt",
-            to: "#ui",
-        },
-        {
-            protocol: [ "fuchsia.recovery.FactoryReset" ],
-            from: "#factory_reset",
-            to: "#ui",
-        },
-        {
-            protocol: [ "fuchsia.feedback.LastRebootInfoProvider" ],
-            from: "#feedback",
-            to: "#ui",
-        },
-        {
-            protocol: [
-                "fuchsia.settings.Accessibility",
-                "fuchsia.settings.Keyboard",
-            ],
+            protocol: [ "fuchsia.settings.Keyboard" ],
             from: "#setui_service",
             to: "#ui",
         },
@@ -104,51 +32,7 @@
             to: "#ui",
         },
         {
-            protocol: [ "fuchsia.stash.Store" ],
-            from: "#stash",
-            to: "#ui",
-        },
-        {
-            protocol: [ "fuchsia.sysmem.Allocator" ],
-            from: "#sysmem_connector",
-            to: "#ui",
-        },
-        {
-            protocol: [ "fuchsia.vulkan.loader.Loader" ],
-            from: "#vulkan_loader",
-            to: "#ui",
-        },
-        {
-            protocol: [
-                "fuchsia.accessibility.gesture.ListenerRegistry",
-                "fuchsia.accessibility.semantics.SemanticsManager",
-                "fuchsia.accessibility.tts.EngineRegistry",
-                "fuchsia.accessibility.tts.TtsManager",
-                "fuchsia.accessibility.virtualkeyboard.Registry",
-                "fuchsia.input.virtualkeyboard.ControllerCreator",
-                "fuchsia.input.virtualkeyboard.Manager",
-                "fuchsia.recovery.policy.Device",
-                "fuchsia.recovery.ui.FactoryResetCountdown",
-                "fuchsia.session.scene.Manager",
-                "fuchsia.ui.brightness.ColorAdjustmentHandler",
-                "fuchsia.ui.composition.Allocator",
-                "fuchsia.ui.composition.Flatland",
-                "fuchsia.ui.composition.internal.ScreenCapture",
-                "fuchsia.ui.composition.ScreenCapture",
-                "fuchsia.ui.composition.Screenshot",
-                "fuchsia.ui.display.singleton.Info",
-                "fuchsia.ui.focus.FocusChainListenerRegistry",
-                "fuchsia.ui.input.ImeService",
-                "fuchsia.ui.input3.Keyboard",
-                "fuchsia.ui.input3.KeyEventInjector",
-                "fuchsia.ui.keyboard.focus.Controller",
-                "fuchsia.ui.pointer.augment.GlobalMouse",
-                "fuchsia.ui.pointerinjector.Registry",
-                "fuchsia.ui.policy.DeviceListenerRegistry",
-                "fuchsia.ui.policy.DisplayBacklight",
-                "fuchsia.ui.scenic.Scenic",
-                "fuchsia.ui.views.ViewRefInstalled",
-            ],
+            protocol: [ "fuchsia.session.scene.Manager" ],
             from: "#ui",
             to: "#session-manager",
         },
@@ -157,36 +41,6 @@
             from: "void",
             to: "#session-manager",
             availability: "optional",
-        },
-        {
-            directory: "config-data",
-            from: "parent",
-            to: "#ui",
-        },
-        {
-            directory: "dev",
-            from: "parent",
-            as: "dev-display-controller",
-            to: [ "#ui" ],
-            subdir: "class/display-controller",
-        },
-        {
-            directory: "dev",
-            from: "parent",
-            as: "dev-input-report",
-            to: [ "#ui" ],
-            subdir: "class/input-report",
-        },
-        {
-            storage: [ "tmp" ],
-            from: "self",
-            to: "#ui",
-        },
-        {
-            protocol: [ "fuchsia.media.ProfileProvider" ],
-            from: "#audio_core",
-            to: "#ui",
-            source_availability: "unknown",
         },
     ],
 }
