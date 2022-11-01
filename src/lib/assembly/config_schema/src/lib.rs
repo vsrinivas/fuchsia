@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{anyhow, Result};
+#![warn(clippy::all)]
+
+use anyhow::{anyhow, Context, Result};
 use assembly_fvm::FilesystemAttributes;
 use assembly_util as util;
 use serde::{Deserialize, Serialize};
@@ -222,15 +224,13 @@ impl ImageAssemblyConfig {
         } = PartialImageAssemblyConfig::try_from_partials(configs.into_iter())?;
 
         let PartialKernelConfig { path: kernel_path, args: cmdline_args, clock_backstop } =
-            kernel.ok_or(anyhow!("A kernel configuration must be specified"))?;
+            kernel.context("A kernel configuration must be specified")?;
 
-        let kernel_path =
-            kernel_path.ok_or(anyhow!("No product configurations specify a kernel"))?;
-        let clock_backstop = clock_backstop
-            .ok_or(anyhow!("No product configurations specify a clock backstop time"))?;
+        let kernel_path = kernel_path.context("No product configurations specify a kernel")?;
+        let clock_backstop =
+            clock_backstop.context("No product configurations specify a clock backstop time")?;
 
-        let qemu_kernel =
-            qemu_kernel.ok_or(anyhow!("A qemu kernel configuration must be specified"))?;
+        let qemu_kernel = qemu_kernel.context("A qemu kernel configuration must be specified")?;
 
         Ok(Self {
             system,
