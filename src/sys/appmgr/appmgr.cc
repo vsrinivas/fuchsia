@@ -45,7 +45,6 @@ const inspect::StringReference kInspectStats("inspect_stats");
 const inspect::StringReference kCurrentSize("current_size");
 const inspect::StringReference kMaximumSize("maximum_size");
 const inspect::StringReference kDynamicLinks("dynamic_links");
-const inspect::StringReference kStorageWatchdog("storage_watchdog");
 }  // namespace
 
 Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
@@ -61,8 +60,6 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
       publish_dir_(fbl::MakeRefCounted<fs::PseudoDir>()),
       sysmgr_url_(std::move(args.sysmgr_url)),
       sysmgr_args_(std::move(args.sysmgr_args)),
-      storage_watchdog_(StorageWatchdog(inspector_.GetRoot().CreateChild(kStorageWatchdog),
-                                        kRootDataDir, kRootCacheDir)),
       storage_metrics_(
           {
               "/data/cache",
@@ -87,7 +84,6 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
       &inspector_);
 
   // 0. Start storage watchdog for cache storage
-  storage_watchdog_.Run(dispatcher);
   if (zx_status_t status = storage_metrics_.Run().status_value(); status != ZX_OK) {
     FX_LOGS(WARNING) << "Failed to start polling storage usage: " << zx_status_get_string(status);
   }

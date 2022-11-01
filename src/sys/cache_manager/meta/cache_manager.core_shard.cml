@@ -1,0 +1,24 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "storage_cache_manager",
+            url: "fuchsia-pkg://fuchsia.com/cache_manager#meta/cache_manager.cm",
+            startup: "eager",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.sys2.StorageAdmin",
+            from: "#cache",
+            to: "#storage_cache_manager",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#storage_cache_manager",
+        },
+    ],
+}

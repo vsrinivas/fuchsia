@@ -6,6 +6,7 @@ group("sys") {
   testonly = true
   deps = [
     "activity",
+    "cache_manager",
     "pkg",
     "run_test_component",
     "time/timekeeper",
@@ -18,6 +19,7 @@ group("tests") {
     "activity:tests",
     "appmgr:tests",
     "base-resolver:tests",
+    "cache_manager:tests",
     "component_manager:tests",
     "core:tests",
     "early_boot_instrumentation:tests",

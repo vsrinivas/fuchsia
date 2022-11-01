@@ -12,8 +12,6 @@ source_set("lib") {
   sources = [
     "allow_list.cc",
     "allow_list.h",
-    "cache_control.cc",
-    "cache_control.h",
     "component_controller_impl.cc",
     "component_controller_impl.h",
     "component_event_provider_impl.cc",
@@ -61,8 +59,6 @@ source_set("lib") {
     "service_provider_dir_impl.h",
     "storage_metrics.cc",
     "storage_metrics.h",
-    "storage_watchdog.cc",
-    "storage_watchdog.h",
     "system_diagnostics_directory.cc",
     "system_diagnostics_directory.h",
     "util.cc",
@@ -210,7 +206,6 @@ executable("unittest_bin") {
     "service_provider_dir_unittest.cc",
     "storage_metrics_unittest.cc",
     "storage_unittest.cc",
-    "storage_watchdog_unittest.cc",
     "util_unittest.cc",
   ]
 

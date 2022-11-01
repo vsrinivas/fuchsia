@@ -418,16 +418,6 @@ Realm::Realm(RealmArgs args, zx::job job)
           return ZX_OK;
         }));
 
-    // Set up CacheControl service for root realm.
-    cache_control_.emplace();
-    default_namespace_->services()->AddService(
-        fuchsia::sys::test::CacheControl::Name_,
-        fbl::MakeRefCounted<fs::Service>([this](zx::channel channel) {
-          cache_control_->AddBinding(
-              fidl::InterfaceRequest<fuchsia::sys::test::CacheControl>(std::move(channel)));
-          return ZX_OK;
-        }));
-
     crash_introspector_ = std::make_unique<CrashIntrospector>();
     default_namespace_->services()->AddService(
         fuchsia::sys::internal::CrashIntrospect::Name_,
