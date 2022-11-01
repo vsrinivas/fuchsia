@@ -352,12 +352,8 @@ group("core") {
   # //src/connectivity/network/testing/conformance:tests
   # TODO(fxbug.dev/108563): Remove the following add-assign when all tests in
   # //src/connectivity/network/testing/conformance:tests pass with DFv2 enabled.
-  # TODO(fxbug.dev/110460): Add
-  # //src/connectivity/network/testing/conformance/emulator:tests to this
-  # add-assign when all tests in
-  # //src/connectivity/network/testing/conformance/emulator:tests pass with DFv2
-  # enabled.
   deps += [
+    "//src/connectivity/network/testing/conformance/emulator:tests",
     "//src/connectivity/network/testing/conformance/expect:tests",
     "//src/connectivity/network/testing/conformance/parseoutput:tests",
   ]
