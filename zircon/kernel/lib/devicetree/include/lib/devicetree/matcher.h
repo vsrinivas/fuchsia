@@ -94,6 +94,10 @@ fit::result<size_t, size_t> Match(Devicetree& tree, Matchers&&... matchers) {
   }
 }
 
+// Type |T| meets matcher API requirements.
+template <typename T>
+static constexpr bool kIsValidMatcher = internal::kIsValidMatcher<T>;
+
 }  // namespace devicetree
 
 #endif  // ZIRCON_KERNEL_LIB_DEVICETREE_INCLUDE_LIB_DEVICETREE_MATCHER_H_
