@@ -56,8 +56,8 @@ class Display {
   uint32_t width_in_mm() const { return width_in_mm_; }
   uint32_t height_in_mm() const { return height_in_mm_; }
 
-  glm::vec2 device_pixel_ratio() const { return device_pixel_ratio_.load(); }
-
+  glm::vec2 device_pixel_ratio() const { return glm::vec2(1.f, 1.f); }
+  
   // TODO(fxb/99312): Remove real_device_pixel_ratio() when we complete the scale
   // work in tree and all clients.
   glm::vec2 real_device_pixel_ratio() const { return device_pixel_ratio_.load(); }
