@@ -70,7 +70,7 @@ class VkRenderer final : public Renderer {
       const std::vector<allocation::ImageMetadata>& images) const override;
 
   // Wait for all gpu operations to complete.
-  void WaitIdle();
+  bool WaitIdle();
 
  private:
   // Wrapper struct to contain the sysmem collection handle, the vulkan

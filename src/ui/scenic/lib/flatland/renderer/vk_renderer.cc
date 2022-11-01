@@ -807,7 +807,7 @@ bool VkRenderer::RequiresRenderInProtected(
   return false;
 }
 
-void VkRenderer::WaitIdle() { escher_->vk_device().waitIdle(); }
+bool VkRenderer::WaitIdle() { return escher_->vk_device().waitIdle() == vk::Result::eSuccess; }
 
 void VkRenderer::BlitRenderTarget(escher::CommandBuffer* command_buffer,
                                   escher::ImagePtr source_image,
