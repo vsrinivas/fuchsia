@@ -124,16 +124,14 @@ Each language has a specific fuzzer GN template:
      }
      ```
 
-  1. Write a `go_fuzzer` GN target to build the package containing the fuzz target function. Make
-     sure to include the `go_library` in [`deps`][gn-deps]{:.external}.
+  1. Write a `go_fuzzer` GN target to build the package containing the fuzz target function.
 
      For example:
      ```
      import("//build/go/go_fuzzer.gni")
 
      go_fuzzer("my_fuzzer") {
-       gopackage = "my_library/pkg"
-       deps = [ ":my_library" ]
+       library = ":my_library"
      }
      ```
 

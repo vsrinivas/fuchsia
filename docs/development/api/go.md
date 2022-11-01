@@ -384,29 +384,38 @@ When propagating errors, see [error wrapping](#error-wrapping).
 
 ### GN targets
 
-When defining GN targets, name the package `go.fuchsia.dev/fuchsia/<path>`. For
-example:
+A typical `BUILD.gn` file for a Go tool will look something like this:
 
 ```gn
 go_library("gopkg") {
-  name = "go.fuchsia.dev/fuchsia/tools/foo"
-  sources = [ "main.go" ]
+  sources = [
+    "main.go",
+    "main_test.go",
+  ]
 }
+
 go_binary("foo") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/foo"
-  deps = [ ":gopkg" ]
+  library = ":gopkg"
+}
+
+go_test("foo_test") {
+  library = ":gopkg"
 }
 ```
 
 If you have nested packages (and [only in this
-case](https://fuchsia-review.googlesource.com/c/fuchsia/+/406682/)), use the
-`go.fuchsia.dev/fuchsia/<path>/...` form in go_library to enable recursive
-package dependencies:
+case](https://fuchsia-review.googlesource.com/c/fuchsia/+/406682/)), use
+`name = "go.fuchsia.dev/fuchsia/<path>/..."` form in go_library to enable
+recursive package sources:
 
 ```gn
 go_library("gopkg") {
   name = "go.fuchsia.dev/fuchsia/tools/foo/..."
-  sources = [ "main.go", "subdir/bar.go", "extra/baz.go" ]
+  sources = [
+    "main.go",
+    "subdir/bar.go",
+    "extra/baz.go",
+  ]
 }
 ```
 
