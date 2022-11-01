@@ -8,9 +8,11 @@
 
 #include <memory>
 
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/virtualization/bin/termina_guest_manager/block_devices.h"
 
 namespace termina_guest_manager {
+namespace {
 
 using ::fuchsia::virtualization::GuestConfig;
 using ::fuchsia::virtualization::GuestManagerError;
@@ -28,17 +30,38 @@ void NotifyClient(fidl::Binding<fuchsia::virtualization::LinuxManager>& binding,
   binding.events().OnGuestInfoChanged(std::string(kLinuxEnvironmentName), std::move(info));
 }
 
+std::string GuestManagerErrorToString(fuchsia::virtualization::GuestManagerError error) {
+  switch (error) {
+    case fuchsia::virtualization::GuestManagerError::BAD_CONFIG:
+      return "BAD_CONFIG";
+    case fuchsia::virtualization::GuestManagerError::ALREADY_RUNNING:
+      return "ALREADY_RUNNING";
+    case fuchsia::virtualization::GuestManagerError::NOT_RUNNING:
+      return "NOT_RUNNING";
+    case fuchsia::virtualization::GuestManagerError::START_FAILURE:
+      return "START_FAILURE";
+    case fuchsia::virtualization::GuestManagerError::NO_STORAGE:
+      return "NO_STORAGE";
+    default:
+      return fxl::StringPrintf("GuestManagerError(%u)", static_cast<int32_t>(error));
+  }
+}
+
+}  // namespace
+
 TerminaGuestManager::TerminaGuestManager(async_dispatcher_t* dispatcher,
                                          fit::function<void()> stop_manager_callback)
     : TerminaGuestManager(dispatcher, sys::ComponentContext::CreateAndServeOutgoingDirectory(),
+                          termina_config::Config::TakeFromStartupHandle(),
                           std::move(stop_manager_callback)) {}
 
 TerminaGuestManager::TerminaGuestManager(async_dispatcher_t* dispatcher,
                                          std::unique_ptr<sys::ComponentContext> context,
+                                         termina_config::Config structured_config,
                                          fit::function<void()> stop_manager_callback)
     : GuestManager(dispatcher, context.get()),
       context_(std::move(context)),
-      structured_config_(termina_config::Config::TakeFromStartupHandle()),
+      structured_config_(std::move(structured_config)),
       stop_manager_callback_(std::move(stop_manager_callback)) {
   guest_ = std::make_unique<Guest>(
       structured_config_, fit::bind_member(this, &TerminaGuestManager::OnGuestInfoChanged));
@@ -63,7 +86,7 @@ fit::result<GuestManagerError, GuestConfig> TerminaGuestManager::GetDefaultGuest
   auto block_devices_result = GetBlockDevices(structured_config_);
   if (block_devices_result.is_error()) {
     FX_LOGS(ERROR) << "Failed to option block devices: " << block_devices_result.error_value();
-    return fit::error(GuestManagerError::BAD_CONFIG);
+    return fit::error(GuestManagerError::NO_STORAGE);
   }
 
   // Drop /dev from our local namespace. We no longer need this capability so we go ahead and
@@ -88,9 +111,15 @@ fit::result<GuestManagerError, GuestConfig> TerminaGuestManager::GetDefaultGuest
 
 void TerminaGuestManager::StartGuest() {
   fuchsia::virtualization::GuestConfig cfg;
-  Launch(std::move(cfg), guest_controller_.NewRequest(), [](auto res) {
+  Launch(std::move(cfg), guest_controller_.NewRequest(), [this](auto res) {
     if (res.is_err()) {
-      FX_LOGS(INFO) << "Termina Guest failed to launch: " << static_cast<int32_t>(res.err());
+      FX_LOGS(INFO) << "Termina Guest failed to launch: " << GuestManagerErrorToString(res.err());
+      OnGuestInfoChanged(GuestInfo{
+          .cid = fuchsia::virtualization::DEFAULT_GUEST_CID,
+          .container_status = fuchsia::virtualization::ContainerStatus::FAILED,
+          .failure_reason = fxl::StringPrintf("Failed to launch VM: %s",
+                                              GuestManagerErrorToString(res.err()).c_str()),
+      });
     }
   });
 }
@@ -131,10 +160,7 @@ void TerminaGuestManager::StartAndGetLinuxGuestInfo(std::string label,
 
   if (!is_guest_started()) {
     StartGuest();
-  }
-
-  // If the container startup failed, we can request a retry.
-  if (info_ && info_->container_status == fuchsia::virtualization::ContainerStatus::FAILED) {
+  } else if (info_ && info_->container_status == fuchsia::virtualization::ContainerStatus::FAILED) {
     info_ = std::nullopt;
     guest_->RetryContainerStartup();
   }

@@ -21,6 +21,7 @@ class TerminaGuestManager : GuestManager, public fuchsia::virtualization::LinuxM
                                fit::function<void()> stop_manager_callback);
   TerminaGuestManager(async_dispatcher_t* dispatcher,
                       std::unique_ptr<sys::ComponentContext> context,
+                      termina_config::Config structured_config,
                       fit::function<void()> stop_manager_callback);
 
   TerminaGuestManager(const TerminaGuestManager&) = delete;

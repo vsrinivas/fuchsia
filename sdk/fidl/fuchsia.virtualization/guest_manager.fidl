@@ -18,6 +18,10 @@ type GuestManagerError = strict enum {
 
     /// Failed to start the guest. See VMM component logs for a more detailed reason.
     START_FAILURE = 4;
+
+    /// The guest required allocating some persistant storage but was unable to
+    /// do so.
+    NO_STORAGE = 5;
 };
 
 type GuestStatus = strict enum {

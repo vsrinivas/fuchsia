@@ -203,7 +203,10 @@ executable("termina_guest_manager_unittests") {
   visibility = [ ":*" ]
   testonly = true
 
-  sources = [ "block_devices_unittest.cc" ]
+  sources = [
+    "block_devices_unittest.cc",
+    "termina_guest_manager_unittest.cc",
+  ]
 
   deps = [
     ":lib",

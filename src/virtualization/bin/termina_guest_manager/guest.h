@@ -52,7 +52,11 @@ class Guest : public vm_tools::StartupListener::Service,
   //
   // This must only be used in response to a previous failure to start the container, which is
   // indicated by a ContainerStatus::FAILED message sent to the GuestInfoCallback.
-  void RetryContainerStartup() { CreateContainer(); }
+  void RetryContainerStartup() {
+    if (tremplin_) {
+      CreateContainer();
+    }
+  }
 
   void OnGuestLaunched(fuchsia::virtualization::GuestManager& guest_manager,
                        fuchsia::virtualization::Guest& guest);
