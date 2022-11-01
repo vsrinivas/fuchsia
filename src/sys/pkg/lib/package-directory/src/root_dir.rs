@@ -84,7 +84,7 @@ impl<S: crate::NonMetaStorage> RootDir<S> {
                 })?
                 .to_owned();
             if path.starts_with("meta/") {
-                for (i, _) in path.match_indices("/").skip(1) {
+                for (i, _) in path.match_indices('/').skip(1) {
                     if meta_files.contains_key(&path[..i]) {
                         return Err(Error::FileDirectoryCollision { path: path[..i].to_string() });
                     }
@@ -249,7 +249,7 @@ impl<S: crate::NonMetaStorage> vfs::directory::entry::DirectoryEntry for RootDir
         // The .is_empty() check above rules out "." and the following line removes the possible
         // trailing "/".
         // [1] https://fuchsia.dev/fuchsia-src/concepts/process/namespaces?hl=en#object_relative_path_expressions
-        let canonical_path = path.as_ref().strip_suffix("/").unwrap_or_else(|| path.as_ref());
+        let canonical_path = path.as_ref().strip_suffix('/').unwrap_or_else(|| path.as_ref());
 
         if canonical_path == "meta" {
             // This branch is done here instead of in MetaAsDir so that Clone'ing MetaAsDir yields

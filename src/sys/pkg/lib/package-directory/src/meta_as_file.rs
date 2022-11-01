@@ -55,10 +55,7 @@ impl<S: crate::NonMetaStorage> vfs::directory::entry::DirectoryEntry for MetaAsF
         }
 
         let () = vfs::file::connection::io1::create_connection(
-            scope.clone(),
-            self,
-            flags,
-            server_end,
+            scope, self, flags, server_end,
             // readable/writable/executable do not override the flags, they tell the
             // FileConnection if it's ever valid to open the file with that right.
             true,  /*=readable*/

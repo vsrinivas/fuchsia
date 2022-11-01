@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![warn(clippy::all)]
+#![allow(clippy::let_unit_value)]
+
 use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
@@ -150,7 +153,8 @@ pub async fn serve_path(
         }
     };
 
-    Ok(Arc::new(root_dir).open(scope, flags, mode, path, server_end))
+    Arc::new(root_dir).open(scope, flags, mode, path, server_end);
+    Ok(())
 }
 
 fn usize_to_u64_safe(u: usize) -> u64 {
@@ -179,8 +183,8 @@ fn get_dir_children<'a>(
     let mut res = vec![];
 
     for path in materialized_tree {
-        if let Some(path) = path.strip_prefix(&dir) {
-            match path.split_once("/") {
+        if let Some(path) = path.strip_prefix(dir) {
+            match path.split_once('/') {
                 None => {
                     // TODO(fxbug.dev/81370) Replace .contains/.insert with .get_or_insert_owned when non-experimental.
                     if !added_entries.contains(path) {
@@ -218,7 +222,7 @@ async fn verify_open_adjusts_flags(
     let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::NodeMarker>().unwrap();
 
     DirectoryEntry::open(
-        Arc::clone(&entry),
+        Arc::clone(entry),
         ExecutionScope::new(),
         in_flags,
         0,
@@ -379,11 +383,9 @@ mod tests {
         // sent, determined by the open() API used.
         let mut events = node.take_event_stream();
         match events.next().await? {
-            Ok(fio::NodeEvent::OnOpen_ { s: status, .. }) => {
-                return Some(zx::Status::from_raw(status));
-            }
-            Ok(fio::NodeEvent::OnRepresentation { .. }) => return Some(zx::Status::OK),
-            Err(fidl::Error::ClientChannelClosed { status, .. }) => return Some(status),
+            Ok(fio::NodeEvent::OnOpen_ { s: status, .. }) => Some(zx::Status::from_raw(status)),
+            Ok(fio::NodeEvent::OnRepresentation { .. }) => Some(zx::Status::OK),
+            Err(fidl::Error::ClientChannelClosed { status, .. }) => Some(status),
             other => panic!("unexpected stream event or error: {:?}", other),
         }
     }

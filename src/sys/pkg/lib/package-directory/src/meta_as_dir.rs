@@ -70,7 +70,7 @@ impl<S: crate::NonMetaStorage> vfs::directory::entry::DirectoryEntry for MetaAsD
         // trailing "/".
         // [1] https://fuchsia.dev/fuchsia-src/concepts/process/namespaces?hl=en#object_relative_path_expressions
         let file_path =
-            format!("meta/{}", path.as_ref().strip_suffix("/").unwrap_or_else(|| path.as_ref()));
+            format!("meta/{}", path.as_ref().strip_suffix('/').unwrap_or_else(|| path.as_ref()));
 
         if let Some(location) = self.root_dir.meta_files.get(&file_path).copied() {
             let () = Arc::new(MetaFile::new(Arc::clone(&self.root_dir), location)).open(

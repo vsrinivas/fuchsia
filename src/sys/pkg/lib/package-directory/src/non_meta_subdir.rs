@@ -70,7 +70,7 @@ impl<S: crate::NonMetaStorage> vfs::directory::entry::DirectoryEntry for NonMeta
         let file_path = format!(
             "{}{}",
             self.path,
-            path.as_ref().strip_suffix("/").unwrap_or_else(|| path.as_ref())
+            path.as_ref().strip_suffix('/').unwrap_or_else(|| path.as_ref())
         );
 
         if let Some(blob) = self.root_dir.non_meta_files.get(&file_path) {
