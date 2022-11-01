@@ -23,14 +23,12 @@ if (is_host) {
 # Used to restrict the set of `go_build` targets that can set `gopackages`.
 # TODO(fxbug.dev/58755): Stop supporting `gopackages` in favor of `library`.
 group("allow_gopackages") {
-  # WARNING: Do add new items to this list. You are encouraged to prune the list.
+  # WARNING: Do not add new items to this list. You are encouraged to prune the
+  # list.
   visibility = [
     "//src/testing/fuzzing/syzkaller:syz-sysgen",
     "//src/tests/benchmarks/fidl/benchmark_suite/gen:*",
     "//src/tests/fidl/source_compatibility/*",
-    "//third_party/cobalt/src/bin/config_change_validator/src:*",
-    "//third_party/cobalt/src/bin/config_parser/src:*",
-    "//third_party/cobalt/src/bin/error_calculator/src:*",
     "//third_party/go:*",
     "//third_party/go/makefuchsia:*",
     "//third_party/go/makeroot:*",
