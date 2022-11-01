@@ -377,7 +377,7 @@ impl<T: Resolver> EagerPackageManager<T> {
     }
 
     async fn cup_write(
-        &mut self,
+        manager: &AsyncRwLock<Self>,
         url: &fpkg::PackageUrl,
         cup: fpkg::CupData,
     ) -> Result<(), CupWriteError> {
@@ -397,7 +397,8 @@ impl<T: Resolver> EagerPackageManager<T> {
 
         let pinned_url: PinnedAbsolutePackageUrl = url.url.parse()?;
 
-        let mut packages = self.packages.clone();
+        let manager = manager.upgradable_read().await;
+        let mut packages = manager.packages.clone();
         // Make sure the url is an eager package before trying to resolve it.
         let package = packages
             .iter_mut()
@@ -411,7 +412,7 @@ impl<T: Resolver> EagerPackageManager<T> {
 
         let hash = pinned_url.hash();
         let (pkg_dir, _resolution_context) =
-            Self::resolve_pinned(&self.package_resolver, pinned_url).await?;
+            Self::resolve_pinned(&manager.package_resolver, pinned_url).await?;
         package.package_directory_and_hash = Some((pkg_dir, hash));
 
         let cup_handler = StandardCupv2Handler::new(&package.public_keys);
@@ -419,9 +420,10 @@ impl<T: Resolver> EagerPackageManager<T> {
 
         package.cup = Some(cup_data);
 
-        self.persist(&packages).await?;
+        let mut manager = async_lock::RwLockUpgradableReadGuard::upgrade(manager).await;
+        manager.persist(&packages).await?;
         // Only update self.packages if persist succeed, to prevent rollback after reboot.
-        self.packages = packages;
+        manager.packages = packages;
         Ok(())
     }
 
@@ -590,7 +592,7 @@ pub async fn run_cup_service<T: Resolver>(
             CupRequest::Write { url, cup, responder } => {
                 let mut response = match manager.as_ref() {
                     Some(manager) => {
-                        manager.write().await.cup_write(&url, cup).await.map_err(|e| {
+                        EagerPackageManager::cup_write(manager, &url, cup).await.map_err(|e| {
                             let write_error = (&e).into();
                             error!(url = %url.url, "cup_write failed: {:#}", anyhow!(e));
                             write_error
@@ -1331,10 +1333,15 @@ mod tests {
             .build()
             .await;
         let cup: CupData = make_cup_data(&get_default_cup_response());
-        manager
-            .cup_write(&fpkg::PackageUrl { url: TEST_PINNED_URL.into() }, cup.clone().into())
-            .await
-            .unwrap();
+        let manager_lock = AsyncRwLock::new(manager);
+        EagerPackageManager::cup_write(
+            &manager_lock,
+            &fpkg::PackageUrl { url: TEST_PINNED_URL.into() },
+            cup.clone().into(),
+        )
+        .await
+        .unwrap();
+        manager = manager_lock.into_inner();
         assert!(manager.packages[&url].package_directory_and_hash.is_some());
         assert_eq!(manager.packages[&url].cup, Some(cup.clone()));
 
@@ -1362,10 +1369,17 @@ mod tests {
             .build()
             .await;
         let cup: CupData = make_cup_data(&get_default_cup_response());
+        let manager_lock = AsyncRwLock::new(manager);
         assert_matches!(
-            manager.cup_write(&fpkg::PackageUrl { url: TEST_PINNED_URL.into() }, cup.into()).await,
+            EagerPackageManager::cup_write(
+                &manager_lock,
+                &fpkg::PackageUrl { url: TEST_PINNED_URL.into() },
+                cup.into(),
+            )
+            .await,
             Err(CupWriteError::Persist(_))
         );
+        manager = manager_lock.into_inner();
         assert!(manager.packages[&url].package_directory_and_hash.is_none());
         assert_eq!(manager.packages[&url].cup, None);
     }
@@ -1380,12 +1394,21 @@ mod tests {
             .build()
             .await;
         let cup: CupData = make_cup_data(&get_default_cup_response());
+        let manager_lock = AsyncRwLock::new(manager);
         assert_matches!(
-            manager
-                .cup_write(&fpkg::PackageUrl { url: format!("{url}?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead") }, cup.into())
-                .await,
+            EagerPackageManager::cup_write(
+                &manager_lock,
+                &fpkg::PackageUrl {
+                    url: format!(
+                    "{url}?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead"
+                )
+                },
+                cup.into(),
+            )
+            .await,
             Err(CupWriteError::CupResponseURLNotFound)
         );
+        manager = manager_lock.into_inner();
         assert!(manager.packages[&url].package_directory_and_hash.is_none());
         assert!(manager.packages[&url].cup.is_none());
     }
@@ -1413,15 +1436,17 @@ mod tests {
         );
         let cup: CupData = make_cup_data(&cup_response);
 
-        manager
-            .cup_write(
-                &fpkg::PackageUrl {
-                    url: format!("fuchsia-pkg://real.host.name/package?hash={TEST_HASH}"),
-                },
-                cup.clone().into(),
-            )
-            .await
-            .unwrap();
+        let manager_lock = AsyncRwLock::new(manager);
+        EagerPackageManager::cup_write(
+            &manager_lock,
+            &fpkg::PackageUrl {
+                url: format!("fuchsia-pkg://real.host.name/package?hash={TEST_HASH}"),
+            },
+            cup.clone().into(),
+        )
+        .await
+        .unwrap();
+        manager = manager_lock.into_inner();
         assert!(manager.packages[&url].package_directory_and_hash.is_some());
         assert_eq!(manager.packages[&url].cup, Some(cup));
     }
@@ -1440,10 +1465,17 @@ mod tests {
         };
         let mut manager = TestEagerPackageManagerBuilder::default().config(config).build().await;
         let cup: CupData = make_cup_data(&get_default_cup_response());
+        let manager_lock = AsyncRwLock::new(manager);
         assert_matches!(
-            manager.cup_write(&fpkg::PackageUrl { url: TEST_PINNED_URL.into() }, cup.into()).await,
+            EagerPackageManager::cup_write(
+                &manager_lock,
+                &fpkg::PackageUrl { url: TEST_PINNED_URL.into() },
+                cup.into(),
+            )
+            .await,
             Err(CupWriteError::UnknownURL(_))
         );
+        manager = manager_lock.into_inner();
         assert!(manager.packages[&url].package_directory_and_hash.is_none());
         assert!(manager.packages[&url].cup.is_none());
     }
@@ -1458,12 +1490,17 @@ mod tests {
             format!("package?hash={TEST_HASH}"),
             "0.0.0.0",
         ));
+        let manager_lock = AsyncRwLock::new(manager);
         assert_matches!(
-            manager
-                .cup_write(&fpkg::PackageUrl { url: TEST_PINNED_URL.into() }, cup.clone().into())
-                .await,
+            EagerPackageManager::cup_write(
+                &manager_lock,
+                &fpkg::PackageUrl { url: TEST_PINNED_URL.into() },
+                cup.into(),
+            )
+            .await,
             Err(CupWriteError::RequestedVersionTooLow)
         );
+        manager = manager_lock.into_inner();
         assert!(manager.packages[&url].package_directory_and_hash.is_none());
         assert_eq!(manager.packages[&url].cup, None);
     }

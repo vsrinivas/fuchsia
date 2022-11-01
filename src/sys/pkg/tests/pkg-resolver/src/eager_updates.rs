@@ -5,10 +5,13 @@
 /// This module tests eager packages.
 use {
     assert_matches::assert_matches,
-    cobalt_sw_delivery_registry as metrics,
+    cobalt_sw_delivery_registry as metrics, fidl_fuchsia_pkg as fpkg,
     fidl_fuchsia_pkg::{GetInfoError, ResolveError},
     fidl_fuchsia_pkg_ext::CupData,
-    fuchsia_pkg_testing::{PackageBuilder, RepositoryBuilder, SystemImageBuilder},
+    fuchsia_async as fasync,
+    fuchsia_pkg_testing::{
+        serve::responder, PackageBuilder, RepositoryBuilder, SystemImageBuilder,
+    },
     fuchsia_url::PinnedAbsolutePackageUrl,
     lib::{
         get_cup_response_with_name, make_pkg_with_extra_blobs, MountsBuilder, TestEnvBuilder,
@@ -146,6 +149,103 @@ async fn test_eager_resolve_package() {
 
     // Verify the served package directory contains the exact expected contents.
     pkg.verify_contents(&package).await.unwrap();
+
+    env.stop().await;
+}
+
+#[fuchsia::test]
+async fn test_eager_resolve_package_while_updating() {
+    let pkg_name = "test-package";
+    let pkg = make_pkg_with_extra_blobs(&pkg_name, 0).await;
+    let new_pkg = make_pkg_with_extra_blobs(&pkg_name, 1).await;
+    let pkg_url = PinnedAbsolutePackageUrl::parse(&format!(
+        "fuchsia-pkg://example.com/{}?hash={}",
+        pkg_name,
+        pkg.meta_far_merkle_root()
+    ))
+    .unwrap();
+
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&new_pkg)
+            .build()
+            .await
+            .unwrap(),
+    );
+    let (blocking_responder, unblocking_closure_receiver) = responder::BlockResponseBodyOnce::new();
+    let blocking_responder = responder::ForPath::new("/timestamp.json", blocking_responder);
+
+    let served_repository =
+        Arc::clone(&repo).server().response_overrider(blocking_responder).start().unwrap();
+
+    let repo_config = served_repository.make_repo_config(pkg_url.repository().clone());
+
+    let unpinned_pkg_url = pkg_url.as_unpinned().to_string();
+    let eager_config = serde_json::json!({
+        "packages": [
+            {
+                "url": unpinned_pkg_url,
+                "public_keys": make_default_json_public_keys_for_test(),
+                "minimum_required_version": "1.2.3.4",
+            }
+        ]
+    });
+
+    let system_image_package = SystemImageBuilder::new().build().await;
+
+    let cup_response = get_cup_response_with_name(&pkg_url);
+    let cup_data: CupData = make_cup_data(&cup_response);
+
+    let env = TestEnvBuilder::new()
+        .system_image_and_extra_packages(&system_image_package, &[&pkg])
+        .mounts(
+            MountsBuilder::new()
+                .static_repository(repo_config)
+                .eager_packages(vec![(pkg_url, cup_data)])
+                .custom_config_data("eager_package_config.json", eager_config.to_string())
+                .enable_dynamic_config(lib::EnableDynamicConfig {
+                    enable_dynamic_configuration: true,
+                })
+                .build(),
+        )
+        .build()
+        .await;
+
+    let new_pkg_url = PinnedAbsolutePackageUrl::parse(&format!(
+        "fuchsia-pkg://example.com/{}?hash={}",
+        pkg_name,
+        new_pkg.meta_far_merkle_root()
+    ))
+    .unwrap();
+    let new_cup_response = get_cup_response_with_name(&new_pkg_url);
+    let new_cup_data: CupData = make_cup_data(&new_cup_response);
+
+    // spawn a cup write request, which will be blocked.
+    let cup_proxy = env.proxies.cup.clone();
+    let cup_write_task = fasync::Task::spawn(async move {
+        cup_proxy
+            .write(&mut fpkg::PackageUrl { url: new_pkg_url.to_string() }, new_cup_data.into())
+            .await
+            .unwrap()
+            .unwrap()
+    });
+
+    let unblock_server =
+        unblocking_closure_receiver.await.expect("received unblocking future from hyper server");
+
+    // resolve package isn't blocked by ongoing cup write.
+    let (package, _resolved_context) =
+        env.resolve_package(&unpinned_pkg_url).await.expect("package to resolve without error");
+    // this is still the old package.
+    pkg.verify_contents(&package).await.unwrap();
+
+    unblock_server();
+    cup_write_task.await;
+
+    // resolve again it should be the new package.
+    let (package, _resolved_context) =
+        env.resolve_package(&unpinned_pkg_url).await.expect("package to resolve without error");
+    new_pkg.verify_contents(&package).await.unwrap();
 
     env.stop().await;
 }
