@@ -7,10 +7,13 @@
 
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/pointer/augment/cpp/fidl.h>
+#include <fuchsia/ui/pointer/cpp/fidl.h>
 
+#include <cstdint>
 #include <list>
 #include <map>
 #include <set>
+#include <tuple>
 
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/a11y/lib/gesture_manager/arena_v2/participation_token_interface.h"
@@ -100,6 +103,67 @@ class InteractionTracker {
   // Gets set when a user calls `ConsumePointerEvents`, or `RejectPointerEvents`, or
   // `Reset`.
   ContestStatus status_;
+};
+
+// Helper class for |GestureArenaV2|.
+//
+// Tracks the status of the current contest, as well as any "open" interactions.
+// An interaction is considered open if it has no `REMOVE` or `CANCEL` event yet;
+// otherwise we say it is closed.
+//
+// This class also tracks interactions that are "on hold". We say that an
+// interaction is on hold if the current contest was unresolved when that
+// interaction became closed. In this case, the interaction stays on hold until
+// the current contest resolves, at which point we fire a callback for that
+// interaction, and it is longer on hold.
+class InteractionTrackerV2 {
+ public:
+  // Callback fired once per interaction that was "on hold", once
+  // the current contest resolves.
+  //
+  // `status` will never be |ContestStatus::kUnresolved|.
+  using HeldInteractionCallback =
+      fit::function<void(fuchsia::ui::pointer::TouchInteractionId id, ContestStatus status)>;
+
+  explicit InteractionTrackerV2(HeldInteractionCallback callback);
+
+  // Resets the current contest status; should be called after a contest ends.
+  void Reset();
+
+  // Set the contest status to "winner assigned", and notify all interactions
+  // that were on hold.
+  void AcceptInteractions();
+
+  // Set the contest status to "all losers", and notify all interactions
+  // that were on hold.
+  void RejectInteractions();
+
+  // Handle a new touch event by keeping track of which interactions are "open"
+  // or "on hold".
+  void OnEvent(const fuchsia::ui::pointer::augment::TouchEventWithLocalHit& event);
+
+  // What is the status of the current contest?
+  ContestStatus Status();
+
+  // Are there any open interactions?
+  bool HasOpenInteractions();
+
+ private:
+  // Notify all interactions that were on hold, telling them that the
+  // current contest has resolved.
+  void NotifyHeldInteractions();
+
+  // Callback fired once per interaction that was "on hold".
+  HeldInteractionCallback callback_;
+
+  // The status of the current contest.
+  ContestStatus status_ = ContestStatus::kUnresolved;
+
+  // The set of currently open interactions.
+  std::set<std::tuple<uint32_t, uint32_t, uint32_t>> open_interactions_;
+
+  // The set of interactions that are currently on hold.
+  std::vector<fuchsia::ui::pointer::TouchInteractionId> held_interactions_;
 };
 
 class GestureRecognizerV2;

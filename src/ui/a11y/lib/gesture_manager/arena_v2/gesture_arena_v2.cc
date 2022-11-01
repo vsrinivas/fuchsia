@@ -13,6 +13,17 @@
 
 namespace a11y {
 
+namespace {
+
+// Convert a `TouchInteractionId` into a triple of `uint32_t`, so that we can
+// use it as the key in a `std::set`.
+std::tuple<uint32_t, uint32_t, uint32_t> interactionToTriple(
+    fuchsia::ui::pointer::TouchInteractionId interaction) {
+  return {interaction.device_id, interaction.pointer_id, interaction.interaction_id};
+}
+
+}  // namespace
+
 InteractionTracker::InteractionTracker(OnInteractionHandledCallback on_interaction_handled_callback)
     : on_interaction_handled_callback_(std::move(on_interaction_handled_callback)) {
   FX_DCHECK(on_interaction_handled_callback_);
@@ -79,6 +90,81 @@ void InteractionTracker::OnEvent(
     default:
       break;
   };
+}
+
+InteractionTrackerV2::InteractionTrackerV2(HeldInteractionCallback callback)
+    : callback_(std::move(callback)) {
+  FX_DCHECK(callback_);
+}
+
+void InteractionTrackerV2::Reset() {
+  FX_DCHECK(status_ != ContestStatus::kUnresolved);
+  FX_DCHECK(open_interactions_.empty());
+  FX_DCHECK(held_interactions_.empty());
+
+  status_ = ContestStatus::kUnresolved;
+  open_interactions_.clear();
+  held_interactions_.clear();
+}
+
+void InteractionTrackerV2::AcceptInteractions() {
+  FX_CHECK(status_ == ContestStatus::kUnresolved);
+  status_ = ContestStatus::kWinnerAssigned;
+  NotifyHeldInteractions();
+}
+
+void InteractionTrackerV2::RejectInteractions() {
+  FX_CHECK(status_ == ContestStatus::kUnresolved);
+  status_ = ContestStatus::kAllLosers;
+  NotifyHeldInteractions();
+
+  // We must clear the open interactions, because Scenic may stop sending us
+  // events for those interactions once we reject them. (It also may continue
+  // in some cases, since the events are sent in batches.)
+  //
+  // TODO(fxbug.dev/113881): investigate possible issues.
+  open_interactions_.clear();
+}
+
+void InteractionTrackerV2::OnEvent(
+    const fuchsia::ui::pointer::augment::TouchEventWithLocalHit& event) {
+  FX_CHECK(event.touch_event.has_pointer_sample());
+  const auto& sample = event.touch_event.pointer_sample();
+  const auto& interaction = sample.interaction();
+  const auto triple = interactionToTriple(interaction);
+
+  switch (sample.phase()) {
+    case fuchsia::ui::pointer::EventPhase::ADD:
+      FX_DCHECK(open_interactions_.count(triple) == 0);
+      open_interactions_.insert(triple);
+      break;
+    case fuchsia::ui::pointer::EventPhase::CHANGE:
+      break;
+    case fuchsia::ui::pointer::EventPhase::REMOVE:
+    case fuchsia::ui::pointer::EventPhase::CANCEL:
+      // If the contest is unresolved, put this interaction "on hold", and
+      // fire a callback for it later, when the contest does resolve.
+      if (status_ == ContestStatus::kUnresolved) {
+        held_interactions_.push_back(interaction);
+      }
+
+      open_interactions_.erase(triple);
+      break;
+  }
+}
+
+ContestStatus InteractionTrackerV2::Status() { return status_; }
+
+bool InteractionTrackerV2::HasOpenInteractions() { return !open_interactions_.empty(); }
+
+void InteractionTrackerV2::NotifyHeldInteractions() {
+  FX_DCHECK(status_ != ContestStatus::kUnresolved);
+
+  for (const auto interaction : held_interactions_) {
+    callback_(interaction, status_);
+  }
+
+  held_interactions_.clear();
 }
 
 // Represents a recognizer's participation in the current contest.
