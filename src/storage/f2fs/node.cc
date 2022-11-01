@@ -360,7 +360,8 @@ zx::result<int32_t> NodeManager::GetNodePath(VnodeF2fs &vnode, pgoff_t block, in
   const pgoff_t direct_blks = kAddrsPerBlock;
   const pgoff_t dptrs_per_blk = kNidsPerBlock;
   const pgoff_t indirect_blks =
-      safemath::CheckMul(safemath::checked_cast<pgoff_t>(kAddrsPerBlock), kNidsPerBlock).ValueOrDie();
+      safemath::CheckMul(safemath::checked_cast<pgoff_t>(kAddrsPerBlock), kNidsPerBlock)
+          .ValueOrDie();
   const pgoff_t dindirect_blks = indirect_blks * kNidsPerBlock;
   int32_t n = 0;
   int32_t level = 0;
@@ -444,14 +445,14 @@ zx::result<bool> NodeManager::IsSameDnode(VnodeF2fs &vnode, pgoff_t index, uint3
   return zx::ok(noffset[level_or.value()] == node_offset);
 }
 
-zx::result<std::vector<block_t>> NodeManager::GetDataBlockAddresses(VnodeF2fs &vnode, pgoff_t index,
-                                                                    size_t count, bool read_only) {
-  std::vector<block_t> data_block_addresses(count);
+zx::result<std::vector<block_t>> NodeManager::GetDataBlockAddresses(
+    VnodeF2fs &vnode, const std::vector<pgoff_t> &indices, bool read_only) {
+  std::vector<block_t> data_block_addresses(indices.size());
   uint32_t prev_node_offset = kInvalidNodeOffset;
   LockedPage dnode_page;
 
-  for (uint64_t i = index; i < index + count; ++i) {
-    auto is_same_or = IsSameDnode(vnode, i, prev_node_offset);
+  for (uint32_t iter = 0; iter < indices.size(); ++iter) {
+    auto is_same_or = IsSameDnode(vnode, indices[iter], prev_node_offset);
     if (is_same_or.is_error()) {
       return is_same_or.take_error();
     }
@@ -459,16 +460,17 @@ zx::result<std::vector<block_t>> NodeManager::GetDataBlockAddresses(VnodeF2fs &v
     if (!is_same_or.value()) {
       dnode_page.reset();
       if (read_only) {
-        if (zx_status_t err = FindLockedDnodePage(vnode, i, &dnode_page); err != ZX_OK) {
+        if (zx_status_t err = FindLockedDnodePage(vnode, indices[iter], &dnode_page);
+            err != ZX_OK) {
           if (err == ZX_ERR_NOT_FOUND) {
             prev_node_offset = kInvalidNodeOffset;
-            data_block_addresses[i - index] = kNullAddr;
+            data_block_addresses[iter] = kNullAddr;
             continue;
           }
           return zx::error(err);
         }
       } else {
-        if (zx_status_t err = GetLockedDnodePage(vnode, i, &dnode_page); err != ZX_OK) {
+        if (zx_status_t err = GetLockedDnodePage(vnode, indices[iter], &dnode_page); err != ZX_OK) {
           return zx::error(err);
         }
       }
@@ -477,7 +479,7 @@ zx::result<std::vector<block_t>> NodeManager::GetDataBlockAddresses(VnodeF2fs &v
     ZX_DEBUG_ASSERT(dnode_page != nullptr);
 
     uint32_t ofs_in_dnode;
-    if (auto result = GetOfsInDnode(vnode, i); result.is_error()) {
+    if (auto result = GetOfsInDnode(vnode, indices[iter]); result.is_error()) {
       return result.take_error();
     } else {
       ofs_in_dnode = result.value();
@@ -493,7 +495,7 @@ zx::result<std::vector<block_t>> NodeManager::GetDataBlockAddresses(VnodeF2fs &v
       data_blkaddr = kNewAddr;
     }
 
-    data_block_addresses[i - index] = data_blkaddr;
+    data_block_addresses[iter] = data_blkaddr;
   }
   return zx::ok(std::move(data_block_addresses));
 }

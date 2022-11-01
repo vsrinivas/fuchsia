@@ -411,6 +411,10 @@ class VnodeF2fs : public fs::Vnode,
     return file_cache_.FindPage(index, out);
   }
 
+  zx::result<std::vector<LockedPage>> FindPages(pgoff_t start, pgoff_t end) {
+    return file_cache_.FindPages(start, end);
+  }
+
   zx_status_t GrabCachePage(pgoff_t index, LockedPage *out) {
     return file_cache_.GetPage(index, out);
   }

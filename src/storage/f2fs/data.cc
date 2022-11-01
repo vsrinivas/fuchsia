@@ -199,35 +199,54 @@ zx_status_t VnodeF2fs::FindDataPage(pgoff_t index, fbl::RefPtr<Page> *out) {
 zx::result<LockedPagesAndAddrs> VnodeF2fs::FindDataBlockAddrsAndPages(const pgoff_t start,
                                                                       const pgoff_t end) {
   LockedPagesAndAddrs addrs_and_pages;
-
   ZX_DEBUG_ASSERT(end > start);
-
   size_t len = end - start;
-  if (auto result = fs()->GetNodeManager().GetDataBlockAddresses(*this, start, len, true);
-      result.is_error()) {
-    return result.take_error();
-  } else {
-    addrs_and_pages.block_addrs = std::move(result.value());
-  }
-  ZX_DEBUG_ASSERT(addrs_and_pages.block_addrs.size() == len);
+  addrs_and_pages.block_addrs.resize(len, kNullAddr);
+  addrs_and_pages.pages.resize(len);
 
-  std::vector<pgoff_t> page_offsets;
-  page_offsets.reserve(len);
-  for (auto index = start; index < end; ++index) {
-    if (addrs_and_pages.block_addrs[index - start] == kNullAddr) {
-      page_offsets.push_back(kInvalidPageOffset);
-    } else {
-      page_offsets.push_back(index);
+  // If pages are in FileCache and up-to-date, we don't need to read that pages from the underlying
+  // device.
+  auto pages_or = FindPages(start, end);
+  if (pages_or.is_error()) {
+    return pages_or.take_error();
+  }
+
+  // Insert existing pages
+  for (auto &page : pages_or.value()) {
+    auto index = page->GetKey() - start;
+    addrs_and_pages.pages[index] = std::move(page);
+  }
+
+  std::vector<pgoff_t> offsets;
+  offsets.reserve(len);
+  for (uint32_t index = 0; index < end - start; ++index) {
+    if (!addrs_and_pages.pages[index] || !addrs_and_pages.pages[index]->IsUptodate()) {
+      offsets.push_back(start + index);
     }
   }
-  ZX_DEBUG_ASSERT(page_offsets.size() == len);
 
-  if (auto pages_or = GrabCachePages(page_offsets); pages_or.is_error()) {
-    return pages_or.take_error();
-  } else {
-    addrs_and_pages.pages = std::move(pages_or.value());
+  if (offsets.empty()) {
+    return zx::ok(std::move(addrs_and_pages));
   }
-  ZX_DEBUG_ASSERT(addrs_and_pages.pages.size() == len);
+  auto addrs_or = fs()->GetNodeManager().GetDataBlockAddresses(*this, offsets, true);
+  if (addrs_or.is_error()) {
+    return addrs_or.take_error();
+  }
+  ZX_DEBUG_ASSERT(offsets.size() == addrs_or.value().size());
+
+  for (uint32_t i = 0; i < offsets.size(); ++i) {
+    auto addrs_and_pages_index = offsets[i] - start;
+    if (addrs_or.value()[i] != kNullAddr) {
+      addrs_and_pages.block_addrs[addrs_and_pages_index] = addrs_or.value()[i];
+      if (!addrs_and_pages.pages[addrs_and_pages_index]) {
+        if (auto result = GrabCachePage(offsets[i], &addrs_and_pages.pages[addrs_and_pages_index]);
+            result != ZX_OK) {
+          return zx::error(result);
+        }
+      }
+    }
+  }
+
   return zx::ok(std::move(addrs_and_pages));
 }
 
@@ -258,6 +277,17 @@ zx::result<std::vector<LockedPage>> VnodeF2fs::GetLockedDataPages(const pgoff_t 
   }
 
   if (addrs_and_pages.block_addrs.empty()) {
+    return zx::ok(std::move(addrs_and_pages.pages));
+  }
+
+  bool need_read_op = false;
+  for (uint32_t i = 0; i < addrs_and_pages.block_addrs.size(); ++i) {
+    if (addrs_and_pages.block_addrs[i] != kNullAddr && !addrs_and_pages.pages[i]->IsUptodate()) {
+      need_read_op = true;
+      break;
+    }
+  }
+  if (!need_read_op) {
     return zx::ok(std::move(addrs_and_pages.pages));
   }
 

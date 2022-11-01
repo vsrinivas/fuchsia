@@ -5,6 +5,8 @@
 #ifndef SRC_STORAGE_F2FS_NODE_H_
 #define SRC_STORAGE_F2FS_NODE_H_
 
+#include <numeric>
+
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
 
@@ -123,8 +125,15 @@ class NodeManager {
   // If indices use the same node page, read the node page once and reuse it. This
   // can reduce repeated node page access overhead.
   // If |read_only| is true, it does not assign a new block address for kNullAddr.
+  zx::result<std::vector<block_t>> GetDataBlockAddresses(VnodeF2fs &vnode,
+                                                         const std::vector<pgoff_t> &indices,
+                                                         bool read_only = false);
   zx::result<std::vector<block_t>> GetDataBlockAddresses(VnodeF2fs &vnode, pgoff_t index,
-                                                         size_t count, bool read_only = false);
+                                                         size_t count, bool read_only = false) {
+    std::vector<pgoff_t> indices(count);
+    std::iota(indices.begin(), indices.end(), index);
+    return GetDataBlockAddresses(vnode, indices, read_only);
+  }
 
   // If an unassigned node page is encountered while following the node path, a new node page is
   // assigned. Caller should acquire LockType:kFileOp.

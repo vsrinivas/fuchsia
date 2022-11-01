@@ -313,13 +313,18 @@ class FileCache {
   // It returns a locked Page corresponding to |index| from |page_tree_|.
   // If there is no Page, it creates and returns a locked Page.
   zx_status_t GetPage(pgoff_t index, LockedPage *out) __TA_EXCLUDES(tree_lock_);
-  // It returns locked Pages corresponding to [start - end) from |page_tree_|.
-  zx::result<std::vector<LockedPage>> GetPages(pgoff_t start, pgoff_t end)
-      __TA_EXCLUDES(tree_lock_);
   // It returns locked pages corresponding to |page_offsets| from |page_tree_|.
   // If kInvalidPageOffset is included in |page_offsets|, the corresponding Page will be a null
   // page.
+  // If there is no corresponding Page in |page_tree_|, it creates a new Page.
   zx::result<std::vector<LockedPage>> GetPages(const std::vector<pgoff_t> &page_offsets)
+      __TA_EXCLUDES(tree_lock_);
+  // It returns locked Pages corresponding to [start - end) from |page_tree_|.
+  zx::result<std::vector<LockedPage>> GetPages(pgoff_t start, pgoff_t end)
+      __TA_EXCLUDES(tree_lock_);
+  // It returns locked Pages corresponding to [start - end) from |page_tree_|.
+  // If there is no corresponding Page, the returned page will be a null page.
+  zx::result<std::vector<LockedPage>> FindPages(pgoff_t start, pgoff_t end)
       __TA_EXCLUDES(tree_lock_);
   LockedPage GetNewPage(pgoff_t index) __TA_REQUIRES(tree_lock_);
   // It returns an unlocked Page corresponding to |index| from |page_tree|.

@@ -268,6 +268,18 @@ zx::result<std::vector<LockedPage>> FileCache::GetPages(const pgoff_t start, con
   return zx::ok(std::move(locked_pages));
 }
 
+zx::result<std::vector<LockedPage>> FileCache::FindPages(const pgoff_t start, const pgoff_t end) {
+  std::lock_guard tree_lock(tree_lock_);
+  auto pages = GetLockedPagesUnsafe(start, end);
+  for (auto &page : pages) {
+    if (auto ret = page->GetPage(); ret != ZX_OK) {
+      return zx::error(ret);
+    }
+  }
+
+  return zx::ok(std::move(pages));
+}
+
 zx::result<std::vector<LockedPage>> FileCache::GetPages(const std::vector<pgoff_t> &page_offsets) {
   std::lock_guard tree_lock(tree_lock_);
   if (page_offsets.empty()) {
