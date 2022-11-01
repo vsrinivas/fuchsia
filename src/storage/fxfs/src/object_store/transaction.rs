@@ -338,6 +338,9 @@ pub enum LockKey {
 
     /// Used to lock flushing an object.
     Flush { object_id: u64 },
+
+    /// Used to lock any truncate operations for a file.
+    Truncate { store_object_id: u64, object_id: u64 },
 }
 
 impl LockKey {
@@ -355,6 +358,10 @@ impl LockKey {
 
     pub fn flush(object_id: u64) -> Self {
         LockKey::Flush { object_id }
+    }
+
+    pub fn truncate(store_object_id: u64, object_id: u64) -> Self {
+        LockKey::Truncate { store_object_id, object_id }
     }
 }
 

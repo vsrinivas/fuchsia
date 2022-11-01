@@ -5,6 +5,7 @@
 use {
     crate::{
         data_buffer::DataBuffer,
+        debug_assert_not_too_long,
         errors::FxfsError,
         filesystem::MAX_FILE_SIZE,
         log::*,
@@ -12,7 +13,7 @@ use {
         object_store::{
             allocator::{Allocator, Reservation, ReservationOwner, SimpleAllocator},
             transaction::{
-                AssocObj, Mutation, Options, Transaction, TRANSACTION_METADATA_MAX_AMOUNT,
+                AssocObj, LockKey, Mutation, Options, Transaction, TRANSACTION_METADATA_MAX_AMOUNT,
             },
             AttributeKey, HandleOwner, ObjectKey, ObjectStore, ObjectValue, StoreObjectHandle,
             Timestamp,
@@ -53,9 +54,6 @@ pub struct PagedObjectHandle {
     inner: Mutex<Inner>,
     buffer: VmoDataBuffer,
     handle: StoreObjectHandle<FxVolume>,
-
-    // TODO(fxbug.dev/102659): Use a LockKey and the LockManager instead.
-    truncate_lock: futures::lock::Mutex<()>,
 }
 
 struct Inner {
@@ -156,7 +154,6 @@ impl PagedObjectHandle {
                 dirty_page_count: 0,
                 spare: 0,
             }),
-            truncate_lock: futures::lock::Mutex::default(),
         }
     }
 
@@ -453,7 +450,10 @@ impl PagedObjectHandle {
         //
         // TODO(fxbug.dev/96836): Update this comment when fxfs only hands out non-resizable
         // reference child VMOs.
-        let _truncate_guard = self.truncate_lock.lock().await;
+        let store = self.handle.store();
+        let fs = store.filesystem();
+        let keys = [LockKey::truncate(store.store_object_id(), self.handle.object_id())];
+        let _truncate_guard = debug_assert_not_too_long!(fs.write_lock(&keys));
 
         // If the file had several dirty pages and then was truncated to before those dirty pages
         // then we'll still have space reserved that is no longer needed and should be released as
@@ -613,7 +613,10 @@ impl PagedObjectHandle {
 
     pub async fn truncate(&self, new_size: u64) -> Result<(), Error> {
         ensure!(new_size <= MAX_FILE_SIZE, FxfsError::InvalidArgs);
-        let _truncate_guard = self.truncate_lock.lock().await;
+        let store = self.handle.store();
+        let fs = store.filesystem();
+        let keys = [LockKey::truncate(store.store_object_id(), self.handle.object_id())];
+        let _truncate_guard = debug_assert_not_too_long!(fs.write_lock(&keys));
 
         self.buffer.resize(new_size).await;
 
