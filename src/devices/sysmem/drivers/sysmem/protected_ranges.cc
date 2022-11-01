@@ -826,7 +826,7 @@ bool ProtectedRanges::StepTowardOptimalRangesInternal(bool allow_use_range) {
     return false;
   }
 
-  ZX_PANIC("Failed to match any update cases; no progress made.\n");
+  ZX_PANIC("Failed to match any update cases; no progress made.");
   // We won't reach here, but since we haven't reached goal_ranges_, logically we'd return false if
   // we reached here, despite having made no progress.
   return false;

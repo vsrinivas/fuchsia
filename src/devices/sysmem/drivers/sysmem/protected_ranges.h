@@ -314,7 +314,7 @@ class ProtectedRangesCoreControl {
   virtual void ModProtectedRange(const Range& old_range, const Range& new_range) {
     // If this actually runs, it means the sub-class is returning true from HasModProtectedRange()
     // despite not overriding ModRange().
-    ZX_PANIC("ModRange() not implemented by sub-class (despite HasModProtectedRange() true?)\n");
+    ZX_PANIC("ModRange() not implemented by sub-class (despite HasModProtectedRange() true?)");
   }
 
   // Zero a sub-range of a current range.  The sub-range must be fully covered by exactly one

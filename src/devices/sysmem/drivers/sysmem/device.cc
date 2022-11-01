@@ -465,7 +465,7 @@ void Device::SecureMemControl::ModProtectedRange(const protected_ranges::Range& 
         "new_range.end(): %" PRIx64 " old_range.end(): %" PRIx64 " new_range.begin(): %" PRIx64
         " old_range.begin(): %" PRIx64,
         new_range.end(), old_range.end(), new_range.begin(), old_range.begin());
-    ZX_PANIC("INVALID RANGE MODIFICATION\n");
+    ZX_PANIC("INVALID RANGE MODIFICATION");
   }
 
   std::lock_guard checker(*parent->loop_checker_);

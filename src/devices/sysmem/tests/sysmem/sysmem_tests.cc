@@ -620,7 +620,7 @@ void SecureVmoReadTester::AttemptReadFromSecure(bool expect_read_success) {
     // success in the sense that we weren't able to read anything in secure memory.  Cause the thead
     // to "die" here on purpose so the test can pass.  This is not the typical case, but can happen
     // at least on sherlock.  Typically we fault during the write, flush, read of byte 0 above.
-    ZX_PANIC("didn't fault, but also didn't read non-zero, so pretend to fault\n");
+    ZX_PANIC("didn't fault, but also didn't read non-zero, so pretend to fault");
   }
 }
 
@@ -4945,7 +4945,7 @@ TEST(Sysmem, Group_MiniStress) {
           return false;
         }
       }
-      ZX_PANIC("impossible\n");
+      ZX_PANIC("impossible");
     };
 
     auto find_visible_nodes_and_mark_compatible = [&] {

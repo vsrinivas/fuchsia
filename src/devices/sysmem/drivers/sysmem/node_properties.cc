@@ -250,7 +250,7 @@ bool NodeProperties::visible() const {
       return false;
     }
   }
-  ZX_PANIC("impossible\n");
+  ZX_PANIC("impossible");
   return true;
 }
 
@@ -261,12 +261,12 @@ NodeProperties::NodeProperties(LogicalBufferCollection* logical_buffer_collectio
     // Sysmem treats this much like a code page-in that fails due to out of memory.  Both will only
     // happen if we're so low on memory that we've already committed to OOMing (or at least, that's
     // the stated intent IIUC).
-    ZX_PANIC("zx::eventpair::create() failed - status: %d\n", status);
+    ZX_PANIC("zx::eventpair::create() failed - status: %d", status);
   }
   zx_koid_t not_used;
   status = get_handle_koids(node_ref_, &node_ref_koid_, &not_used, ZX_OBJ_TYPE_EVENT);
   if (status != ZX_OK) {
-    ZX_PANIC("get_handle_koids(node_ref_) failed - status: %d\n", status);
+    ZX_PANIC("get_handle_koids(node_ref_) failed - status: %d", status);
   }
   ZX_DEBUG_ASSERT(logical_buffer_collection_);
   logical_buffer_collection_->TrackNodeProperties(this);
