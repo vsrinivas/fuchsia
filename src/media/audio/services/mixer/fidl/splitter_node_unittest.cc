@@ -181,6 +181,8 @@ TEST(SplitterNodeTest, CopySourceToDests) {
       .media_ticks_per_ns = kFormat.frames_per_ns(),
       .writer = dest1_writer,
       .thread = thread1,
+      .delay_watcher = DelayWatcherClient::Create({.initial_delay = zx::nsec(0)}),
+      .global_task_queue = q,
   });
   q->RunForThread(thread1->id());
 
@@ -192,6 +194,8 @@ TEST(SplitterNodeTest, CopySourceToDests) {
       .media_ticks_per_ns = kFormat.frames_per_ns(),
       .writer = dest2_writer,
       .thread = thread2,
+      .delay_watcher = DelayWatcherClient::Create({.initial_delay = zx::nsec(0)}),
+      .global_task_queue = q,
   });
   q->RunForThread(thread2->id());
 

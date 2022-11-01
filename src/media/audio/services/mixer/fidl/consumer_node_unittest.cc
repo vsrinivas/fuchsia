@@ -21,31 +21,26 @@ using ::testing::ElementsAre;
 
 const Format kFormat = Format::CreateOrDie({SampleType::kFloat32, 2, 10000});
 const Format kWrongFormat = Format::CreateOrDie({SampleType::kFloat32, 1, 10000});
-const auto kPipelineDirection = PipelineDirection::kOutput;
 
 // At 10kHz fps, 1ms is 10 frames.
 constexpr auto kMixJobFrames = 10;
 constexpr auto kMixJobPeriod = zx::msec(1);
 
-class ConsumerNodeTest : public ::testing::Test {
- protected:
-  struct TestHarness {
-    TestHarness() = default;
-    TestHarness(TestHarness&&) = default;
-    ~TestHarness();
+struct TestHarness {
+  TestHarness() = default;
+  TestHarness(TestHarness&&) = default;
+  ~TestHarness();
 
-    std::unique_ptr<FakeGraph> graph;
-    std::shared_ptr<SyntheticClockRealm> clock_realm;
-    std::shared_ptr<SyntheticClock> clock;
-    std::shared_ptr<GraphMixThread> mix_thread;
-    std::shared_ptr<FakeConsumerStageWriter> consumer_writer;
-    std::shared_ptr<ConsumerNode> consumer_node;
-  };
-
-  TestHarness MakeTestHarness(FakeGraph::Args graph_args);
+  std::unique_ptr<FakeGraph> graph;
+  std::shared_ptr<SyntheticClockRealm> clock_realm;
+  std::shared_ptr<SyntheticClock> clock;
+  std::shared_ptr<GraphMixThread> mix_thread;
+  std::shared_ptr<FakeConsumerStageWriter> consumer_writer;
+  std::shared_ptr<ConsumerNode> consumer_node;
 };
 
-ConsumerNodeTest::TestHarness ConsumerNodeTest::MakeTestHarness(FakeGraph::Args graph_args) {
+TestHarness MakeTestHarness(FakeGraph::Args graph_args,
+                            zx::duration consumer_downstream_delay = zx::nsec(0)) {
   TestHarness h;
   h.graph = std::make_unique<FakeGraph>(std::move(graph_args));
   h.clock_realm = SyntheticClockRealm::Create();
@@ -64,27 +59,34 @@ ConsumerNodeTest::TestHarness ConsumerNodeTest::MakeTestHarness(FakeGraph::Args 
       .mono_clock = h.clock_realm->CreateClock("mono_clock", Clock::kMonotonicDomain, false),
   });
 
+  std::shared_ptr<DelayWatcherClient> delay_watcher;
+  if (graph_args.default_pipeline_direction == PipelineDirection::kOutput) {
+    delay_watcher = DelayWatcherClient::Create({.initial_delay = consumer_downstream_delay});
+  }
+
   h.consumer_writer = std::make_shared<FakeConsumerStageWriter>();
   h.consumer_node = ConsumerNode::Create({
-      .pipeline_direction = kPipelineDirection,
+      .pipeline_direction = graph_args.default_pipeline_direction,
       .format = kFormat,
       .reference_clock = h.clock,
       .media_ticks_per_ns = kFormat.frames_per_ns(),
       .writer = h.consumer_writer,
       .thread = h.mix_thread,
+      .delay_watcher = std::move(delay_watcher),
+      .global_task_queue = h.graph->global_task_queue(),
   });
 
   return h;
 }
 
 // This removes a circular references between the consumer and thread objects.
-ConsumerNodeTest::TestHarness::~TestHarness() {
+TestHarness::~TestHarness() {
   Node::Destroy(graph->ctx(), consumer_node);
   EXPECT_EQ(mix_thread->num_consumers(), 0);
   graph->global_task_queue()->RunForThread(mix_thread->id());
 }
 
-TEST_F(ConsumerNodeTest, CreateEdgeSourceBadFormat) {
+TEST(ConsumerNodeTest, CreateEdgeSourceBadFormat) {
   auto h = MakeTestHarness({
       .unconnected_ordinary_nodes = {1},
       .formats = {{&kWrongFormat, {1}}},
@@ -98,7 +100,7 @@ TEST_F(ConsumerNodeTest, CreateEdgeSourceBadFormat) {
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
 }
 
-TEST_F(ConsumerNodeTest, CreateEdgeTooManySources) {
+TEST(ConsumerNodeTest, CreateEdgeTooManySources) {
   auto h = MakeTestHarness({
       .unconnected_ordinary_nodes = {1, 2},
       .formats = {{&kFormat, {1, 2}}},
@@ -123,7 +125,7 @@ TEST_F(ConsumerNodeTest, CreateEdgeTooManySources) {
   }
 }
 
-TEST_F(ConsumerNodeTest, CreateEdgeDestNotAllowed) {
+TEST(ConsumerNodeTest, CreateEdgeDestNotAllowed) {
   auto h = MakeTestHarness({
       .unconnected_ordinary_nodes = {1},
       .formats = {{&kFormat, {1}}},
@@ -138,24 +140,45 @@ TEST_F(ConsumerNodeTest, CreateEdgeDestNotAllowed) {
             fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
 }
 
-TEST_F(ConsumerNodeTest, CreateEdgeSuccess) {
-  auto h = MakeTestHarness({
-      .unconnected_ordinary_nodes = {1},
-      .formats = {{&kFormat, {1}}},
-  });
+struct CreateEdgeSuccessArgs {
+  PipelineDirection direction;
+  zx::duration consumer_downstream_delay;  // only if direction == output
+  zx::duration source_upstream_delay;      // only if direction == input
+  zx::time consumer_start_time;            // when the consumer starts
+  zx::time mix_job_start_time;             // when the first mix job starts
+  Fixed packet_start;                      // first non-silent frame in the source
+  // Expected delays after connecting source -> dest.
+  zx::duration expected_source_downstream_delay;  // only if direction == output
+  zx::duration expected_consumer_upstream_delay;  // only if direction == input
+  // Normally we run two mix jobs, one with a source and another after the source has been
+  // disconnected. If this is true, that second mix job is skipped.
+  bool skip_mix_job_after_disconnect = false;
+};
+
+void TestCreateEdgeSuccess(CreateEdgeSuccessArgs args) {
+  auto h = MakeTestHarness(
+      {
+          .unconnected_ordinary_nodes = {1},
+          .formats = {{&kFormat, {1}}},
+          .default_pipeline_direction = args.direction,
+      },
+      args.consumer_downstream_delay);
 
   auto& graph = *h.graph;
   auto& q = *graph.global_task_queue();
 
   // Connect source -> consumer.
   auto source = graph.node(1);
+  if (args.direction == PipelineDirection::kInput) {
+    source->SetMaxDelays({.upstream_input_pipeline_delay = args.source_upstream_delay});
+  }
   {
     auto result = Node::CreateEdge(graph.ctx(), source, h.consumer_node, /*options=*/{});
     ASSERT_TRUE(result.is_ok());
   }
 
   auto consumer_stage = static_cast<ConsumerStage*>(h.consumer_node->pipeline_stage().get());
-  EXPECT_EQ(h.consumer_node->pipeline_direction(), kPipelineDirection);
+  EXPECT_EQ(h.consumer_node->pipeline_direction(), args.direction);
   EXPECT_EQ(h.consumer_node->thread(), h.mix_thread);
   EXPECT_EQ(consumer_stage->thread(), h.mix_thread->pipeline_thread());
   EXPECT_EQ(consumer_stage->format(), kFormat);
@@ -164,12 +187,20 @@ TEST_F(ConsumerNodeTest, CreateEdgeSuccess) {
 
   q.RunForThread(h.mix_thread->id());
 
+  if (args.direction == PipelineDirection::kOutput) {
+    EXPECT_EQ(source->max_downstream_output_pipeline_delay(),
+              args.expected_source_downstream_delay);
+  } else {
+    EXPECT_EQ(h.consumer_node->max_upstream_input_pipeline_delay(),
+              args.expected_consumer_upstream_delay);
+  }
+
   // Start the consumer.
   h.consumer_node->Start({
       .start_time =
           StartStopControl::RealTime{
               .clock = StartStopControl::WhichClock::kReference,
-              .time = zx::time(0),
+              .time = args.consumer_start_time,
           },
       .start_position = Fixed(0),
   });
@@ -182,13 +213,14 @@ TEST_F(ConsumerNodeTest, CreateEdgeSuccess) {
   std::vector<float> source_payload(2 * kMixJobFrames);
   source->fake_pipeline_stage()->SetPacketForRead(PacketView({
       .format = kFormat,
-      .start = Fixed(kMixJobFrames),  // first mix job happens one period in the future
+      .start = args.packet_start,
       .length = 2 * kMixJobFrames,
       .payload = source_payload.data(),
   }));
 
   // Run a mix job, which should write the source data to the destination buffer.
   {
+    h.clock_realm->AdvanceTo(args.mix_job_start_time);
     const auto now = h.clock_realm->now();
 
     ClockSnapshots clock_snapshots;
@@ -201,7 +233,7 @@ TEST_F(ConsumerNodeTest, CreateEdgeSuccess) {
 
     ASSERT_EQ(h.consumer_writer->packets().size(), 1u);
     EXPECT_FALSE(h.consumer_writer->packets()[0].is_silence);
-    EXPECT_EQ(h.consumer_writer->packets()[0].start_frame, kMixJobFrames);  // first mix job
+    EXPECT_EQ(h.consumer_writer->packets()[0].start_frame, args.packet_start.Floor());
     EXPECT_EQ(h.consumer_writer->packets()[0].length, kMixJobFrames);
     EXPECT_EQ(h.consumer_writer->packets()[0].data, source_payload.data());
     h.consumer_writer->packets().clear();
@@ -216,8 +248,8 @@ TEST_F(ConsumerNodeTest, CreateEdgeSuccess) {
 
   q.RunForThread(h.mix_thread->id());
 
-  // Run a mix job, which should write silence now that the source is disconnected.
-  {
+  // Run a second mix job, which should write silence now that the source is disconnected.
+  if (!args.skip_mix_job_after_disconnect) {
     h.clock_realm->AdvanceBy(kMixJobPeriod);
     const auto now = h.clock_realm->now();
 
@@ -231,9 +263,70 @@ TEST_F(ConsumerNodeTest, CreateEdgeSuccess) {
 
     ASSERT_EQ(h.consumer_writer->packets().size(), 1u);
     EXPECT_TRUE(h.consumer_writer->packets()[0].is_silence);
-    EXPECT_EQ(h.consumer_writer->packets()[0].start_frame, 2 * kMixJobFrames);  // second mix job
+    EXPECT_EQ(h.consumer_writer->packets()[0].start_frame,
+              args.packet_start.Floor() + kMixJobFrames);
     EXPECT_EQ(h.consumer_writer->packets()[0].length, kMixJobFrames);
   }
+}
+
+TEST(ConsumerNodeTest, CreateEdgeSuccessOutputPipelineZeroExternalDelay) {
+  // The first frame of the source's packet must align with the start of the first mix job. In this
+  // case, the first mix job happens one period in the future.
+  TestCreateEdgeSuccess({
+      .direction = PipelineDirection::kOutput,
+      .consumer_downstream_delay = zx::msec(0),
+      .consumer_start_time = zx::time(0) + zx::msec(1),
+      .mix_job_start_time = zx::time(0) + zx::msec(1),
+      .packet_start = Fixed(kMixJobFrames),
+      // Delay introduced by this consumer.
+      .expected_source_downstream_delay = 2 * kMixJobPeriod,
+  });
+}
+
+TEST(ConsumerNodeTest, CreateEdgeSuccessOutputPipelineNonZeroExternalDelay) {
+  // As above, except there is an additional 1ms of delay, so the mix job must start 1ms earlier to
+  // produce the same output.
+  TestCreateEdgeSuccess({
+      .direction = PipelineDirection::kOutput,
+      .consumer_downstream_delay = zx::msec(1),
+      .consumer_start_time = zx::time(0) + zx::msec(1),
+      .mix_job_start_time = zx::time(0) + zx::msec(0),
+      .packet_start = Fixed(kMixJobFrames),
+      // Delay introduced when the consumer reads from its source, plus external delay.
+      .expected_source_downstream_delay = 2 * kMixJobPeriod + zx::msec(1),
+  });
+}
+
+TEST(ConsumerNodeTest, CreateEdgeSuccessInputPipelineZeroUpstreamDelay) {
+  // The first frame of the source's packet must align with the start of the first mix job. In this
+  // case, the first mix job happens one period in the past, so to read the frame presented at time
+  // 0 we must run the mix job at time 0+period.
+  TestCreateEdgeSuccess({
+      .direction = PipelineDirection::kInput,
+      .source_upstream_delay = zx::msec(0),
+      .consumer_start_time = zx::time(0),
+      .mix_job_start_time = zx::time(0) + kMixJobPeriod,
+      .packet_start = Fixed(0),
+      // Delay introduced when the consumer reads from its source.
+      .expected_consumer_upstream_delay = 2 * kMixJobPeriod,
+  });
+}
+
+TEST(ConsumerNodeTest, CreateEdgeSuccessInputPipelineNonZeroUpstreamDelay) {
+  // As above, except there is an additional 1ms of delay, so the mix job must start 1ms later to
+  // produce the same output.
+  TestCreateEdgeSuccess({
+      .direction = PipelineDirection::kInput,
+      .source_upstream_delay = zx::msec(1),
+      .consumer_start_time = zx::time(0),
+      .mix_job_start_time = zx::time(0) + kMixJobPeriod + zx::msec(1),
+      .packet_start = Fixed(0),
+      // Delay introduced when the consumer reads from its source, plus source external delay.
+      .expected_consumer_upstream_delay = 2 * kMixJobPeriod + zx::msec(1),
+      // After disconnect, the upstream delay changes, meaning the second mix job won't be
+      // continuous with the first mix job, so just skip it.
+      .skip_mix_job_after_disconnect = true,
+  });
 }
 
 }  // namespace

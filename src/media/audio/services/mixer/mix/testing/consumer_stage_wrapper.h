@@ -28,13 +28,17 @@ struct ConsumerStageWrapper {
     writer = std::make_shared<FakeConsumerStageWriter>();
     consumer = std::make_shared<ConsumerStage>(ConsumerStage::Args{
         .pipeline_direction = pipeline_direction,
-        .presentation_delay = presentation_delay,
         .format = format,
         .reference_clock = std::move(reference_clock),
         .media_ticks_per_ns = format.frames_per_ns(),
         .pending_start_stop_command = pending_start_stop_command,
         .writer = writer,
     });
+    if (pipeline_direction == PipelineDirection::kOutput) {
+      consumer->set_downstream_delay(presentation_delay);
+    } else {
+      consumer->set_upstream_delay_for_source(presentation_delay);
+    }
     consumer->AddSource(packet_queue, {});
   }
 

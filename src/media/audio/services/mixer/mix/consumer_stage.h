@@ -35,11 +35,6 @@ class ConsumerStage : public BaseConsumerStage {
     // Whether this ConsumerStage participates in an input pipeline or an output pipeline.
     PipelineDirection pipeline_direction;
 
-    // Initial presentation delay. For output pipelines, this is the downstream presentation delay.
-    // For input pipelines, this the upstream presentation delay.
-    // TODO(fxbug.dev/87651): Figure out how this is updated.
-    zx::duration presentation_delay;
-
     // Format of audio consumed by this stage.
     Format format;
 
@@ -104,6 +99,18 @@ class ConsumerStage : public BaseConsumerStage {
   // the range `[T - period, T)`.
   Status RunMixJob(MixJobContext& ctx, zx::time mix_job_start_time, zx::duration period);
 
+  // Sets the delay introduced by our downstream external output device, such as a physical speaker.
+  // This is Node::max_downstream_output_pipeline_delay().
+  //
+  // REQUIRED: must have `pipeline_direction == kOutput`
+  void set_downstream_delay(zx::duration delay);
+
+  // Sets the delay introduced by our source input pipeline, not including any delays introduced by
+  // this ConsumerStage. This is Node::max_upstream_input_pipeline_delay() in our *source* node.
+  //
+  // REQUIRED: must have `pipeline_direction == kInput`
+  void set_upstream_delay_for_source(zx::duration delay);
+
  private:
   void UpdateStatus(const MixJobContext& ctx, zx::time mix_job_current_presentation_time);
 
@@ -113,17 +120,19 @@ class ConsumerStage : public BaseConsumerStage {
     return presentation_delay_;
   }
 
-  // For input pipelines, this reports the presentation delay upstream of this consumer.
-  zx::duration upstream_delay() const {
+  // For input pipelines, this reports the presentation delay upstream of this consumer's source.
+  zx::duration upstream_delay_for_source() const {
     FX_CHECK(pipeline_direction_ == PipelineDirection::kInput);
     return presentation_delay_;
   }
 
   const PipelineDirection pipeline_direction_;
-  const zx::duration presentation_delay_;  // downstream or upstream delay
-  const std::shared_ptr<Writer> writer_;   // how to write consumed packets
+  const std::shared_ptr<Writer> writer_;  // how to write consumed packets
   const std::shared_ptr<PendingStartStopCommand> pending_start_stop_command_;
   StartStopControl start_stop_control_;
+
+  // Downstream or upstream delay, depending on `pipeline_direction_`.
+  zx::duration presentation_delay_;
 
   // The last `mix_job_start_time + period` passed to RunMixJob.
   std::optional<zx::time> last_mix_job_end_time_;

@@ -8,6 +8,7 @@
 #include <zircon/types.h>
 
 #include "src/media/audio/services/mixer/common/basic_types.h"
+#include "src/media/audio/services/mixer/fidl/delay_watcher_client.h"
 #include "src/media/audio/services/mixer/fidl/graph_mix_thread.h"
 #include "src/media/audio/services/mixer/fidl/node.h"
 #include "src/media/audio/services/mixer/mix/consumer_stage.h"
@@ -38,6 +39,12 @@ class ConsumerNode : public Node {
 
     // Which thread the consumer is assigned to.
     std::shared_ptr<GraphMixThread> thread;
+
+    // For output pipelines, the downstream delay at this consumer.
+    std::shared_ptr<DelayWatcherClient> delay_watcher;
+
+    // For queuing tasks on mixer threads.
+    std::shared_ptr<GlobalTaskQueue> global_task_queue;
   };
 
   static std::shared_ptr<ConsumerNode> Create(Args args);
@@ -49,6 +56,7 @@ class ConsumerNode : public Node {
   void Stop(ConsumerStage::StopCommand cmd) const;
 
   // Implements `Node`.
+  std::optional<std::pair<ThreadId, fit::closure>> SetMaxDelays(Delays delays) final;
   zx::duration PresentationDelayForSourceEdge(const Node* source) const final;
 
  private:
@@ -58,7 +66,8 @@ class ConsumerNode : public Node {
                PipelineDirection pipeline_direction, ConsumerStagePtr pipeline_stage,
                const Format& format,
                std::shared_ptr<PendingStartStopCommand> pending_start_stop_command,
-               std::shared_ptr<GraphMixThread> mix_thread);
+               std::shared_ptr<GraphMixThread> mix_thread,
+               std::shared_ptr<DelayWatcherClient> delay_watcher);
 
   NodePtr CreateNewChildSource() final {
     UNREACHABLE << "CreateNewChildSource should not be called on ordinary nodes";
@@ -75,6 +84,10 @@ class ConsumerNode : public Node {
   const std::shared_ptr<PendingStartStopCommand> pending_start_stop_command_;
   const std::shared_ptr<GraphMixThread> mix_thread_;
   const ConsumerStagePtr consumer_stage_;
+
+  // Logically const, but non-const so we can discard this in DestroySelf to remove a circular
+  // reference.
+  std::shared_ptr<DelayWatcherClient> delay_watcher_;
 };
 
 }  // namespace media_audio

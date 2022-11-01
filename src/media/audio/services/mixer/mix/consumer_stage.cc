@@ -23,7 +23,6 @@ ConsumerStage::ConsumerStage(Args args)
           .writer = args.writer,
       }),
       pipeline_direction_(args.pipeline_direction),
-      presentation_delay_(args.presentation_delay),
       writer_(std::move(args.writer)),
       pending_start_stop_command_(std::move(args.pending_start_stop_command)),
       start_stop_control_(args.format, args.media_ticks_per_ns, args.reference_clock) {}
@@ -45,7 +44,7 @@ ConsumerStage::Status ConsumerStage::RunMixJob(MixJobContext& ctx,
   // Input pipelines consume data that was presented in the past.
   const zx::duration consume_offset = (pipeline_direction_ == PipelineDirection::kOutput)
                                           ? period + downstream_delay()
-                                          : -period - upstream_delay();
+                                          : -period - upstream_delay_for_source();
 
   const zx::time start_consume_time = mix_job_start_time + consume_offset;
   const zx::time end_consume_time = start_consume_time + period;
@@ -86,6 +85,16 @@ ConsumerStage::Status ConsumerStage::RunMixJob(MixJobContext& ctx,
     // Advance to the next packet.
     t = end;
   }
+}
+
+void ConsumerStage::set_downstream_delay(zx::duration delay) {
+  FX_CHECK(pipeline_direction_ == PipelineDirection::kOutput);
+  presentation_delay_ = delay;
+}
+
+void ConsumerStage::set_upstream_delay_for_source(zx::duration delay) {
+  FX_CHECK(pipeline_direction_ == PipelineDirection::kInput);
+  presentation_delay_ = delay;
 }
 
 void ConsumerStage::UpdateStatus(const MixJobContext& ctx,

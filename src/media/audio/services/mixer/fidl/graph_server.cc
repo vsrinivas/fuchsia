@@ -244,6 +244,11 @@ ValidateExternalDelayWatcher(std::string_view debug_description, std::string_vie
   }
 
   auto& edw = request.external_delay_watcher();
+  if (!edw.has_client_end() && !edw.has_initial_delay()) {
+    FX_LOGS(WARNING) << debug_description << ": empty external_delay_Watcher";
+    return fpromise::error(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
+  }
+
   return fpromise::ok(ExternalDelayWatcherInfo{
       .client_end =
           edw.has_client_end() ? std::optional(std::move(edw.client_end())) : std::nullopt,
@@ -540,6 +545,27 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
     return;
   }
 
+  std::shared_ptr<DelayWatcherClient> delay_watcher;
+  if (request->direction() == PipelineDirection::kOutput) {
+    auto result = ValidateExternalDelayWatcher("CreateConsumer", name, *request);
+    if (!result.is_ok()) {
+      completer.ReplyError(result.error());
+      return;
+    }
+    delay_watcher = DelayWatcherClient::Create({
+        .name = std::string(name) + ".DelayWatcher",
+        .client_end = std::move(result.value().client_end),
+        .thread = thread_ptr(),
+        .initial_delay = result.value().initial_delay,
+    });
+  } else {
+    if (request->has_external_delay_watcher()) {
+      FX_LOGS(WARNING) << "CreateConsumer: external_delay_watcher not allowed for input pipelines";
+      completer.ReplyError(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
+      return;
+    }
+  }
+
   const auto id = NextNodeId();
   const auto consumer = ConsumerNode::Create({
       .name = name,
@@ -549,6 +575,8 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
       .media_ticks_per_ns = media_ticks_per_ns,
       .writer = std::move(writer),
       .thread = mix_thread,
+      .delay_watcher = std::move(delay_watcher),
+      .global_task_queue = global_task_queue_,
   });
   nodes_[id] = consumer;
 
