@@ -88,6 +88,8 @@ std::optional<ExceptionReason> DetectExceptionReason(
         return ExceptionReason::kPageFaultIoDataIntegrity;
       case ZX_ERR_BAD_STATE:
         return ExceptionReason::kPageFaultBadState;
+      case ZX_ERR_NO_MEMORY:
+        return ExceptionReason::kPageFaultNoMemory;
       default:
         return std::nullopt;
     }
