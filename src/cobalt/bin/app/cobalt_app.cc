@@ -166,8 +166,7 @@ lib::statusor::StatusOr<std::unique_ptr<CobaltApp>> CobaltApp::CreateCobaltApp(
           },
           upload_schedule_cfg, event_aggregator_backfill_days, test_dont_backfill_empty_reports,
           use_memory_observation_store, max_bytes_per_observation_store, storage_quotas,
-          product_name, board_name, version,
-          std::make_unique<ActivityListenerImpl>(dispatcher, context->svc()),
+          product_name, board_name, version, std::make_unique<ActivityListenerImpl>(),
           std::make_unique<DiagnosticsImpl>(inspect_node.CreateChild("core")))));
 
   cobalt_service->SetDataCollectionPolicy(configuration_data.GetDataCollectionPolicy());

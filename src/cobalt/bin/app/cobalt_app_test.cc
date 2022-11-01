@@ -66,7 +66,7 @@ class CreateCobaltConfigTest : public gtest::TestLoopFixture {
         event_aggregator_backfill_days, /*test_dont_backfill_empty_reports=*/false,
         use_memory_observation_store, max_bytes_per_observation_store,
         cobalt::kDefaultStorageQuotas, product_name, board_name, version,
-        std::make_unique<ActivityListenerImpl>(dispatcher(), context_provider_.context()->svc()),
+        std::make_unique<ActivityListenerImpl>(),
         std::make_unique<DiagnosticsImpl>(inspect::Node()));
   }
 

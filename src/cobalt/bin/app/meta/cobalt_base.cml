@@ -28,7 +28,6 @@
                 "fuchsia.net.http.Loader",
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sysinfo.SysInfo",
-                "fuchsia.ui.activity.Provider",
             ],
         },
         {

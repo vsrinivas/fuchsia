@@ -196,15 +196,9 @@
             to: "#debug_serial",
         },
         {
-            protocol: [
-                "fuchsia.ui.activity.control.Control",
-                "fuchsia.ui.activity.Provider",
-            ],
+            protocol: [ "fuchsia.ui.activity.Provider" ],
             from: "#activity",
-            to: [
-                "#cobalt",
-                "#cobalt_system_metrics",
-            ],
+            to: [ "#cobalt_system_metrics" ],
         },
         {
             directory: "dev",

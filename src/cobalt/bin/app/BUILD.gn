@@ -42,7 +42,6 @@ build_type_config_data("build_type") {
 
 source_set("lib") {
   sources = [
-    "activity_listener_impl.cc",
     "activity_listener_impl.h",
     "aggregate_and_upload_impl.cc",
     "aggregate_and_upload_impl.h",
@@ -72,7 +71,6 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_hlcpp",
     "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_hlcpp",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_hlcpp",
-    "//sdk/fidl/fuchsia.ui.activity:fuchsia.ui.activity_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
@@ -221,7 +219,6 @@ metrics_registry("testapp_metrics_registry") {
 executable("cobalt_app_unittests") {
   testonly = true
   sources = [
-    "activity_listener_impl_test.cc",
     "cobalt_app_test.cc",
     "cobalt_controller_impl_test.cc",
     "configuration_data_test.cc",
