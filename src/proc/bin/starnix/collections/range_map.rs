@@ -165,13 +165,15 @@ where
     /// The keys included in the given range are no longer associated with any
     /// values.
     ///
-    /// This method can cause one or more values in the map to be dropped if
-    /// the all of the keys associated with those values are contained within
-    /// the given range.
-    pub fn remove(&mut self, range: &Range<K>) {
+    /// This method can cause one or more values in the map to be dropped if all of the keys
+    /// associated with those values are contained within the given range.
+    ///
+    /// Returns any removed values.
+    pub fn remove(&mut self, range: &Range<K>) -> Vec<V> {
+        let mut removed_values = vec![];
         // If the given range is empty, there is nothing to do.
         if range.end <= range.start {
-            return;
+            return removed_values;
         }
 
         // Find the range (if any) that intersects the start of range.
@@ -182,7 +184,9 @@ where
             self.get(&range.start).map(|(range, v)| (range.clone(), v.clone()))
         {
             // Remove that range from the map.
-            self.remove_exact_range(old_range.clone());
+            if let Some(value) = self.remove_exact_range(old_range.clone()) {
+                removed_values.push(value);
+            }
 
             // If the removed range extends after the end of the given range,
             // re-insert the part of the old range that extends beyond the end
@@ -219,7 +223,9 @@ where
             .map(|(k, v)| (k.range.clone(), v.clone()))
         {
             // Remove that range from the map.
-            self.remove_exact_range(old_range.clone());
+            if let Some(value) = self.remove_exact_range(old_range.clone()) {
+                removed_values.push(value);
+            }
 
             // If the removed range extends after the end of the given range,
             // re-insert the part of the old range that extends beyond the end
@@ -243,8 +249,11 @@ where
             .collect();
 
         for key in &doomed {
-            self.map.remove(key);
+            if let Some(removed_value) = self.map.remove(key) {
+                removed_values.push(removed_value);
+            }
         }
+        removed_values
     }
 
     /// Iterate over the ranges in the map.
@@ -281,8 +290,8 @@ where
     ///
     /// Callers must ensure that the exact range provided as an argument is
     /// contained in the map.
-    fn remove_exact_range(&mut self, range: Range<K>) {
-        self.map.remove(&RangeStart::new(range));
+    fn remove_exact_range(&mut self, range: Range<K>) -> Option<V> {
+        self.map.remove(&RangeStart::new(range))
     }
 }
 

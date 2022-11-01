@@ -194,10 +194,21 @@ impl MemoryManagerState {
                 .map(vmar_offset, &vmo, vmo_offset, length, flags)
                 .map_err(MemoryManager::get_errno_for_map_err)?,
         );
+
+        #[cfg(any(test, debug_assertions))]
+        {
+            // Take the lock on directory entry while holding the one on the mm state to ensure any
+            // wrong ordering will trigger the tracing-mutex at the right call site.
+            if let Some(name) = &filename {
+                let _l1 = name.entry.parent();
+            }
+        }
+
         let mut mapping = Mapping::new(addr, vmo, vmo_offset, flags, options);
         mapping.filename = filename;
         let end = (addr + length).round_up(*PAGE_SIZE)?;
         self.mappings.insert(addr..end, mapping);
+
         Ok(addr)
     }
 
@@ -475,7 +486,9 @@ impl MemoryManagerState {
     // - a COW child VMO is created from C, which is mapped in the range of C that falls outside R.
     //
     // File-backed mappings don't need to have their VMOs modified.
-    fn unmap(&mut self, addr: UserAddress, length: usize) -> Result<(), Errno> {
+    //
+    // Returns any unmapped mappings.
+    fn unmap(&mut self, addr: UserAddress, length: usize) -> Result<Vec<Mapping>, Errno> {
         if !addr.is_aligned(*PAGE_SIZE) {
             return error!(EINVAL);
         }
@@ -523,7 +536,7 @@ impl MemoryManagerState {
         }?;
 
         // Remove the original range of mappings from our map.
-        self.mappings.remove(&(addr..end_addr));
+        let mappings = self.mappings.remove(&(addr..end_addr));
 
         if let Some((range, mapping)) = truncated_tail {
             // Create and map a child COW VMO mapping that represents the truncated tail.
@@ -560,7 +573,7 @@ impl MemoryManagerState {
             mapping.vmo.set_size(new_vmo_size).map_err(MemoryManager::get_errno_for_map_err)?;
         }
 
-        Ok(())
+        Ok(mappings)
     }
 
     fn protect(
@@ -1068,7 +1081,14 @@ impl MemoryManager {
 
     pub fn unmap(&self, addr: UserAddress, length: usize) -> Result<(), Errno> {
         let mut state = self.state.write();
-        state.unmap(addr, length)
+        let mappings = state.unmap(addr, length)?;
+
+        // Drop the state before the unmapped mappings, since dropping a mapping may acquire a lock
+        // in `DirEntry`'s `drop`.
+        std::mem::drop(state);
+        std::mem::drop(mappings);
+
+        Ok(())
     }
 
     pub fn protect(
@@ -1936,6 +1956,31 @@ mod tests {
 
         // Expect error if the address is invalid.
         assert_eq!(mm.read_c_string(UserCString::default(), &mut buf), error!(EFAULT));
+    }
+
+    #[::fuchsia::test]
+    fn test_unmap_returned_mappings() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let mm = &current_task.mm;
+
+        let addr = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE * 2);
+
+        let unmap_result = mm.state.write().unmap(addr, *PAGE_SIZE as usize);
+        assert!(unmap_result.is_ok());
+        assert_eq!(unmap_result.unwrap().len(), 1);
+    }
+
+    #[::fuchsia::test]
+    fn test_unmap_returns_multiple_mappings() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let mm = &current_task.mm;
+
+        let addr = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
+        let _ = map_memory(&current_task, addr + *PAGE_SIZE, *PAGE_SIZE);
+
+        let unmap_result = mm.state.write().unmap(addr, (*PAGE_SIZE * 3) as usize);
+        assert!(unmap_result.is_ok());
+        assert_eq!(unmap_result.unwrap().len(), 2);
     }
 
     /// Maps two pages, then unmaps the first page.
