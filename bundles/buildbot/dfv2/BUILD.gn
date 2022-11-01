@@ -377,8 +377,6 @@ group("core") {
   # Add-assign should contain all deps of //src/tests.
   # TODO(fxbug.dev/108563): Remove this add-assign when all tests in //src/tests
   # pass with DFv2 enabled.
-  # TODO(fxbug.dev/108565): Add //src/tests/disable_syscalls:tests when all
-  # tests in //src/tests/disable_syscalls:tests pass with DFv2 enabled.
   # TODO(fxbug.dev/108569): Add //src/tests/oom:tests when all tests in
   # //src/tests/oom:tests pass with DFv2 enabled.
   # TODO(fxbug.dev/108571): Add //src/tests/reboot:tests when all tests in
@@ -391,6 +389,7 @@ group("core") {
     "//src/tests/dfv2:tests",
     "//src/tests/diagnostics:tests",
     "//src/tests/disable_shell:tests",
+    "//src/tests/disable_syscalls:tests",
     "//src/tests/dlog:tests",
     "//src/tests/end_to_end/fidlcat:tests",
     "//src/tests/end_to_end/package_manager:tests",
