@@ -43,6 +43,7 @@
         {
             name: "bluetooth-core",
             url: "fuchsia-pkg://fuchsia.com/bt-init#meta/bt-init.cm",
+            environment: "#core-env",
         },
         {
             name: "sysmem_connector",
@@ -490,9 +491,7 @@
             to: "#remote-control",
         },
         {
-            protocol: [
-                "fuchsia.device.NameProvider",
-            ],
+            protocol: [ "fuchsia.device.NameProvider" ],
             from: "parent",
             to: "#remote-control",
         },
