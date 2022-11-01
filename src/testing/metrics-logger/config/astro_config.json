@@ -2,23 +2,23 @@
     "temperature_drivers": [
         {
             "name": "soc_pll",
-            "topological_path": "/dev/sys/platform/05:03:a/thermal"
+            "topo_path_suffix": "/thermal"
         },
         {
             "name": "therm_ambient",
-            "topological_path": "/dev/sys/platform/03:03:27/thermistor-device/therm-ambient"
+            "topo_path_suffix": "/thermistor-device/therm-ambient"
         },
         {
             "name": "therm_dsp",
-            "topological_path": "/dev/sys/platform/03:03:27/thermistor-device/therm-dsp"
+            "topo_path_suffix": "/thermistor-device/therm-dsp"
         },
         {
             "name": "therm_soc",
-            "topological_path": "/dev/sys/platform/03:03:27/thermistor-device/therm-soc"
+            "topo_path_suffix": "/thermistor-device/therm-soc"
         },
         {
             "name": "therm_wifi",
-            "topological_path": "/dev/sys/platform/03:03:27/thermistor-device/therm-wifi"
+            "topo_path_suffix": "/thermistor-device/therm-wifi"
         }
     ]
 }

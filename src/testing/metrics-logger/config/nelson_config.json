@@ -2,19 +2,19 @@
     "temperature_drivers": [
         {
             "name": "soc_pll",
-            "topological_path": "/dev/sys/platform/05:05:a/aml-thermal-pll/thermal"
+            "topo_path_suffix": "/aml-thermal-pll/thermal"
         },
         {
             "name": "therm_thread",
-            "topological_path": "/dev/sys/platform/03:0a:27/thermistor-device/therm-thread"
+            "topo_path_suffix": "/thermistor-device/therm-thread"
         },
         {
             "name": "therm_audio",
-            "topological_path": "/dev/sys/platform/03:0a:27/thermistor-device/therm-audio"
+            "topo_path_suffix": "/thermistor-device/therm-audio"
         },
         {
             "name": "top_board",
-            "topological_path": "/dev/sys/platform/05:00:2/aml-i2c/i2c/i2c-0-112/shtv3"
+            "topo_path_suffix": "/aml-i2c/i2c/i2c-0-112/shtv3"
         }
     ]
 }

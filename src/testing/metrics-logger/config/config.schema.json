@@ -20,14 +20,14 @@
                     "name": {
                         "type": "string"
                     },
-                    "topological_path": {
+                    "topo_path_suffix": {
                         "type": "string"
                     }
                 },
                 "additionalProperties": false,
                 "required": [
                     "name",
-                    "topological_path"
+                    "topo_path_suffix"
                 ]
             }
         }

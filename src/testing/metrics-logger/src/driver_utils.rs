@@ -14,8 +14,8 @@ use {
 pub struct DriverAlias {
     /// Human-readable alias.
     pub name: String,
-    /// Topological path.
-    pub topological_path: String,
+    /// Topological path suffix.
+    pub topo_path_suffix: String,
 }
 
 /// Helper struct to deserialize the optional config file loaded from CONFIG_PATH
@@ -51,6 +51,23 @@ pub async fn map_topo_paths_to_class_paths(
         }
     }
     Ok(path_map)
+}
+
+/// Find driver alias using its full topological path from the provided map from topological path
+/// suffixes to aliases.
+/// TODO (https://fxbug.dev/113837): Remove mapping from topological path to alias.
+pub fn get_driver_alias(
+    topo_suffix_to_aliases: &HashMap<String, String>,
+    topo_path: &str,
+) -> Option<String> {
+    let mut topo_suffix = topo_path;
+    while let Some((_, suffix)) = topo_suffix.split_once('/') {
+        if let Some(alias) = topo_suffix_to_aliases.get(&format!("/{}", suffix)) {
+            return Some(alias.to_string());
+        }
+        topo_suffix = suffix;
+    }
+    None
 }
 
 async fn get_driver_topological_path(path: &str) -> Result<String> {
@@ -91,5 +108,37 @@ pub struct Driver<T> {
 impl<T> Driver<T> {
     pub fn name(&self) -> &str {
         &self.alias.as_ref().unwrap_or(&self.topological_path)
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_driver_alias() {
+        let mut topo_path = "/dev/sys/platform/05:04:28/thermal";
+        let mut topo_suffix_to_alias = HashMap::from([
+            ("/thermal".to_string(), "soc_ddr".to_string()),
+            ("/aml-thermal-pll/thermal".to_string(), "soc_pll".to_string()),
+        ]);
+        assert_eq!(
+            get_driver_alias(&topo_suffix_to_alias, &topo_path),
+            Some("soc_ddr".to_string())
+        );
+
+        topo_path = "/dev/sys/platform/05:04:a/aml-thermal-pll/thermal";
+        topo_suffix_to_alias = HashMap::from([
+            ("/thermal".to_string(), "soc_ddr".to_string()),
+            ("/aml-thermal-pll/thermal".to_string(), "soc_pll".to_string()),
+        ]);
+        assert_eq!(
+            get_driver_alias(&topo_suffix_to_alias, &topo_path),
+            Some("soc_pll".to_string())
+        );
+
+        topo_path = "/dev/sys/platform/05:04:a/aml-thermal-pll/thermal";
+        topo_suffix_to_alias = HashMap::new();
+        assert_eq!(get_driver_alias(&topo_suffix_to_alias, &topo_path), None);
     }
 }

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::driver_utils::{connect_proxy, map_topo_paths_to_class_paths, Driver},
+    crate::driver_utils::{connect_proxy, get_driver_alias, map_topo_paths_to_class_paths, Driver},
     crate::MIN_INTERVAL_FOR_SYSLOG_MS,
     anyhow::{format_err, Error, Result},
     fidl_fuchsia_gpu_magma as fgpu, fidl_fuchsia_metricslogger_test as fmetrics,
@@ -33,7 +33,7 @@ pub async fn generate_gpu_drivers(
     let mut drivers = Vec::new();
     for (topological_path, class_path) in topo_to_class {
         let proxy = connect_proxy::<fgpu::DeviceMarker>(&class_path)?;
-        let alias = driver_aliases.get(&topological_path).map(|c| c.to_string());
+        let alias = get_driver_alias(&driver_aliases, &topological_path).map(|c| c.to_string());
         // Add driver if querying `MagmaQueryTotalTime` is supported.
         if is_total_time_supported(&proxy).await? {
             drivers.push(Driver { alias, topological_path, proxy });

@@ -422,7 +422,7 @@ impl MetricsLoggerServer {
             None => HashMap::new(),
             Some(c) => c.temperature_drivers.as_ref().map_or_else(
                 || HashMap::new(),
-                |d| d.into_iter().map(|m| (m.topological_path.clone(), m.name.clone())).collect(),
+                |d| d.into_iter().map(|m| (m.topo_path_suffix.clone(), m.name.clone())).collect(),
             ),
         };
 
@@ -447,7 +447,7 @@ impl MetricsLoggerServer {
             None => HashMap::new(),
             Some(c) => c.power_drivers.as_ref().map_or_else(
                 || HashMap::new(),
-                |d| d.into_iter().map(|m| (m.topological_path.clone(), m.name.clone())).collect(),
+                |d| d.into_iter().map(|m| (m.topo_path_suffix.clone(), m.name.clone())).collect(),
             ),
         };
 
@@ -469,7 +469,7 @@ impl MetricsLoggerServer {
             None => HashMap::new(),
             Some(c) => c.gpu_drivers.as_ref().map_or_else(
                 || HashMap::new(),
-                |d| d.into_iter().map(|m| (m.topological_path.clone(), m.name.clone())).collect(),
+                |d| d.into_iter().map(|m| (m.topo_path_suffix.clone(), m.name.clone())).collect(),
             ),
         };
 
@@ -876,7 +876,7 @@ mod tests {
         let json_data = json::json!({
             "power_drivers": [{
                 "name": "power_1",
-                "topological_path": "/dev/sys/platform/power_1"
+                "topo_path_suffix": "/sys/platform/power_1"
             }]
         });
         let _ = ServerBuilder::new_from_json(Some(json_data));
@@ -885,11 +885,11 @@ mod tests {
         let json_data = json::json!({
             "temperature_drivers": [{
                 "name": "temp_1",
-                "topological_path": "/dev/sys/platform/temp_1"
+                "topo_path_suffix": "/sys/platform/temp_1"
             }],
             "power_drivers": [{
                 "name": "power_1",
-                "topological_path": "/dev/sys/platform/power_1"
+                "topo_path_suffix": "/sys/platform/power_1"
             }]
         });
         let _ = ServerBuilder::new_from_json(Some(json_data));
