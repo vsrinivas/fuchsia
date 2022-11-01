@@ -10,33 +10,35 @@ import("//build/testing/golden_files.gni")
 import("//tools/fidl/fidlc/testdata/info.gni")
 
 if (is_host) {
-  go_library("gopkg") {
-    name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_libfuzzer/..."
-    deps = [
-      "//tools/fidl/lib/fidlgen",
-      "//tools/fidl/lib/fidlgen_cpp",
-    ]
+  go_library("codegen") {
+    source_dir = "codegen"
+    deps = [ "//tools/fidl/lib/fidlgen_cpp" ]
     sources = [
-      "codegen/bits.tmpl",
-      "codegen/codegen.go",
-      "codegen/decoder_encoder.tmpl",
-      "codegen/decoder_encoder_header.tmpl",
-      "codegen/decoder_encoder_source.tmpl",
-      "codegen/enum.tmpl",
-      "codegen/header.tmpl",
-      "codegen/source.tmpl",
-      "codegen/struct.tmpl",
-      "codegen/table.tmpl",
-      "codegen/union.tmpl",
-      "main.go",
+      "bits.tmpl",
+      "codegen.go",
+      "decoder_encoder.tmpl",
+      "decoder_encoder_header.tmpl",
+      "decoder_encoder_source.tmpl",
+      "enum.tmpl",
+      "header.tmpl",
+      "source.tmpl",
+      "struct.tmpl",
+      "table.tmpl",
+      "union.tmpl",
     ]
   }
 
-  go_binary("fidlgen_libfuzzer") {
-    gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_libfuzzer"
+  go_library("main") {
+    deps = [
+      ":codegen",
+      "//tools/fidl/lib/fidlgen_cpp",
+    ]
+    sources = [ "main.go" ]
+  }
 
+  go_binary("fidlgen_libfuzzer") {
+    library = ":main"
     sdk_category = "partner"
-    deps = [ ":gopkg" ]
   }
 
   golden_files("fidlgen_libfuzzer_golden_tests") {

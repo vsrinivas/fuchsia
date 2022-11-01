@@ -11,44 +11,47 @@ import("//build/testing/golden_files.gni")
 import("//tools/fidl/fidlc/testdata/info.gni")
 
 if (is_host) {
-  go_library("gopkg") {
-    name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_hlcpp/..."
+  go_library("codegen") {
+    source_dir = "codegen"
     deps = [
       "//tools/fidl/lib/fidlgen",
       "//tools/fidl/lib/fidlgen_cpp",
     ]
     sources = [
-      "codegen/codegen.go",
-      "codegen/header.tmpl",
-      "codegen/implementation.tmpl",
-      "codegen/proxies_and_stubs_protocol.tmpl",
-      "codegen/proxies_and_stubs_service.tmpl",
-      "codegen/test_base.tmpl",
-      "codegen/types_bits.tmpl",
-      "codegen/types_const.tmpl",
-      "codegen/types_enum.tmpl",
-      "codegen/types_protocol.tmpl",
-      "codegen/types_struct.tmpl",
-      "codegen/types_table.tmpl",
-      "codegen/types_union.tmpl",
-      "main.go",
+      "codegen.go",
+      "header.tmpl",
+      "implementation.tmpl",
+      "proxies_and_stubs_protocol.tmpl",
+      "proxies_and_stubs_service.tmpl",
+      "test_base.tmpl",
+      "types_bits.tmpl",
+      "types_const.tmpl",
+      "types_enum.tmpl",
+      "types_protocol.tmpl",
+      "types_struct.tmpl",
+      "types_table.tmpl",
+      "types_union.tmpl",
     ]
   }
 
-  go_binary("fidlgen_hlcpp") {
-    gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_hlcpp"
+  go_library("main") {
+    deps = [
+      ":codegen",
+      "//tools/fidl/lib/fidlgen",
+    ]
+    sources = [ "main.go" ]
+  }
 
+  go_binary("fidlgen_hlcpp") {
+    library = ":main"
     sdk_category = "partner"
-    deps = [ ":gopkg" ]
   }
 
   # TODO(fxbug.dev/45483): Remove once all SDK customers are using HLCPP backend
   # directly.
   go_binary("fidlgen") {
-    gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_hlcpp"
-
+    library = ":main"
     sdk_category = "partner"
-    deps = [ ":gopkg" ]
   }
 
   golden_files("fidlgen_hlcpp_golden_tests") {

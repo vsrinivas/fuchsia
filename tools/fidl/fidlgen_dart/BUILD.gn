@@ -11,28 +11,33 @@ import("//build/testing/golden_files.gni")
 import("//tools/fidl/fidlc/testdata/info.gni")
 
 if (is_host) {
-  go_library("fidlgen_dart_lib") {
-    name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_dart/..."
-
+  go_library("codegen") {
+    source_dir = "codegen"
     deps = [ "//tools/fidl/lib/fidlgen" ]
     sources = [
-      "codegen/bits.tmpl",
-      "codegen/const.tmpl",
-      "codegen/enum.tmpl",
-      "codegen/generator.go",
-      "codegen/interface.tmpl",
-      "codegen/ir.go",
-      "codegen/library.tmpl",
-      "codegen/struct.tmpl",
-      "codegen/table.tmpl",
-      "codegen/union.tmpl",
-      "main.go",
+      "bits.tmpl",
+      "const.tmpl",
+      "enum.tmpl",
+      "generator.go",
+      "interface.tmpl",
+      "ir.go",
+      "library.tmpl",
+      "struct.tmpl",
+      "table.tmpl",
+      "union.tmpl",
     ]
   }
 
+  go_library("main") {
+    deps = [
+      ":codegen",
+      "//tools/fidl/lib/fidlgen",
+    ]
+    sources = [ "main.go" ]
+  }
+
   go_binary("fidlgen_dart") {
-    gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_dart/"
-    deps = [ ":fidlgen_dart_lib" ]
+    library = ":main"
   }
 
   sdk_host_tool("fidlgen_dart_sdk") {

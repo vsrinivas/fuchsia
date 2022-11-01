@@ -11,25 +11,30 @@ import("//build/testing/golden_files.gni")
 import("//tools/fidl/fidlc/testdata/info.gni")
 
 if (is_host) {
-  go_library("gopkg") {
-    name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_syzkaller/..."
+  go_library("codegen") {
+    source_dir = "codegen"
     deps = [ "//tools/fidl/lib/fidlgen" ]
     sources = [
-      "codegen/codegen.go",
-      "codegen/description.tmpl",
-      "codegen/ir.go",
-      "codegen/protocol.tmpl",
-      "codegen/struct.tmpl",
-      "codegen/union.tmpl",
-      "main.go",
+      "codegen.go",
+      "description.tmpl",
+      "ir.go",
+      "protocol.tmpl",
+      "struct.tmpl",
+      "union.tmpl",
     ]
   }
 
-  go_binary("fidlgen_syzkaller") {
-    gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_syzkaller"
+  go_library("main") {
+    deps = [
+      ":codegen",
+      "//tools/fidl/lib/fidlgen",
+    ]
+    sources = [ "main.go" ]
+  }
 
+  go_binary("fidlgen_syzkaller") {
+    library = ":main"
     sdk_category = "partner"
-    deps = [ ":gopkg" ]
   }
 
   fidl_testdata_info_filtered = []

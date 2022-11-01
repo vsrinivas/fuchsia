@@ -12,40 +12,43 @@ import("//tools/fidl/fidlc/testdata/info.gni")
 import("//tools/fidl/lib/fidlgentest/fidlgentest_go_test.gni")
 
 if (is_host) {
-  go_library("gopkg") {
-    name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust/..."
+  go_library("codegen") {
+    source_dir = "codegen"
     deps = [ "//tools/fidl/lib/fidlgen" ]
     sources = [
-      "codegen/bits.tmpl",
-      "codegen/codegen.go",
-      "codegen/const.tmpl",
-      "codegen/enum.tmpl",
-      "codegen/handle_metadata_wrappers.tmpl",
-      "codegen/ir.go",
-      "codegen/ir_test.go",
-      "codegen/protocol.tmpl",
-      "codegen/result.tmpl",
-      "codegen/service.tmpl",
-      "codegen/sourcefile.tmpl",
-      "codegen/struct.tmpl",
-      "codegen/table.tmpl",
-      "codegen/union.tmpl",
-      "main.go",
+      "bits.tmpl",
+      "codegen.go",
+      "const.tmpl",
+      "enum.tmpl",
+      "handle_metadata_wrappers.tmpl",
+      "ir.go",
+      "ir_test.go",
+      "protocol.tmpl",
+      "result.tmpl",
+      "service.tmpl",
+      "sourcefile.tmpl",
+      "struct.tmpl",
+      "table.tmpl",
+      "union.tmpl",
     ]
+  }
+
+  go_library("main") {
+    deps = [
+      ":codegen",
+      "//tools/fidl/lib/fidlgen",
+    ]
+    sources = [ "main.go" ]
   }
 
   go_binary("fidlgen_rust") {
-    gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust"
+    library = ":main"
     sdk_category = "partner"
-    deps = [ ":gopkg" ]
   }
 
   fidlgentest_go_test("fidlgen_rust_lib_tests") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust/codegen" ]
-    deps = [
-      ":gopkg",
-      "//third_party/golibs:github.com/google/go-cmp",
-    ]
+    library = ":codegen"
+    deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
   }
 
   golden_files("fidlgen_rust_golden_tests") {
