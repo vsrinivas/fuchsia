@@ -131,8 +131,8 @@ fpromise::result<std::string, std::string> Guid::ToString(cpp20::span<const uint
 
   for (auto section : kGuidSections) {
     section.multiplier = sizeof(uint8_t);
-    const uint8_t* begin = std::begin(guid) + section.begin();
-    const uint8_t* end = std::begin(guid) + section.end();
+    const uint8_t* begin = guid.data() + section.begin();
+    const uint8_t* end = guid.data() + section.end();
 
     for (const uint8_t* it = begin; it != end; it = it + section.next()) {
       uint8_t high = (kHighMask & *it) >> 4;
@@ -165,8 +165,8 @@ fpromise::result<std::array<uint8_t, kGuidLength>, std::string> Guid::FromString
   for (auto section : kGuidSections) {
     // We iterate 2 characters at a time.
     section.multiplier = kGuidCharactersPerByte * sizeof(char);
-    const char* begin = std::begin(guid) + section.begin() + current_section;
-    const char* end = std::begin(guid) + section.end() + current_section;
+    const char* begin = guid.data() + section.begin() + current_section;
+    const char* end = guid.data() + section.end() + current_section;
 
     for (const char* it = begin; it != end; it = it + section.next()) {
       uint8_t high = GetValue(*it);
