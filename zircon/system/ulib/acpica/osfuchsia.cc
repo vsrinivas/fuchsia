@@ -18,7 +18,7 @@
 
 __WEAK zx_handle_t root_resource_handle;
 
-#define UNIMPLEMENTED() ZX_PANIC("%s unimplemented\n", __func__)
+#define UNIMPLEMENTED() ZX_PANIC("%s unimplemented", __func__)
 
 /**
  * @brief Initialize the OSL subsystem.
