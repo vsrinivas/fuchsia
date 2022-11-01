@@ -569,13 +569,9 @@ func (r *RunCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfac
 	}
 	defer cleanUp()
 
-	var expandedArgs []string
-	for _, arg := range args {
-		expandedArgs = append(expandedArgs, os.ExpandEnv(arg))
-	}
 	r.blobURL = os.ExpandEnv(r.blobURL)
 	r.repoURL = os.ExpandEnv(r.repoURL)
-	if err := r.execute(ctx, expandedArgs); err != nil {
+	if err := r.execute(ctx, args); err != nil {
 		logger.Errorf(ctx, "%s", err)
 		return subcommands.ExitFailure
 	}
