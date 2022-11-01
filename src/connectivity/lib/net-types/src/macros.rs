@@ -62,7 +62,7 @@ fn impl_derive_generic_over_ip(ast: &syn::DeriveInput) -> TokenStream2 {
                 with_type_param_replaced(&ast.generics, ident, param_type, generic_ip_name.clone());
 
             quote! {
-                impl <#generic_ip_name: Ip, #impl_generics>
+                impl <#impl_generics, #generic_ip_name: Ip>
                 GenericOverIp<IpType> for #name #type_generics
                 where #extra_bounds_target: #(#extra_bounds)+*, {
                     type Type = #name #generic_bounds;

@@ -3584,4 +3584,18 @@ mod macro_test {
 
         assert_ip_generic!(Generic, IpAddress);
     }
+
+    #[test]
+    fn type_with_lifetime_and_ip_parameter() {
+        #[allow(dead_code)]
+        #[derive(GenericOverIp)]
+        struct Generic<'a, I: Ip> {
+            field: &'a I::Addr,
+        }
+
+        assert_ip_generic_is::<Generic<'static, Ipv4>, Ipv4, Generic<'static, Ipv4>>();
+        assert_ip_generic_is::<Generic<'static, Ipv4>, Ipv6, Generic<'static, Ipv6>>();
+        assert_ip_generic_is::<Generic<'static, Ipv6>, Ipv4, Generic<'static, Ipv4>>();
+        assert_ip_generic_is::<Generic<'static, Ipv6>, Ipv6, Generic<'static, Ipv6>>();
+    }
 }
