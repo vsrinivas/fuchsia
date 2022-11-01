@@ -10,125 +10,37 @@ import("//build/go/go_test.gni")
 import("//build/host.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/testing/golden_files.gni")
-import("//build/testing/host_test_data.gni")
 import("//src/tests/fidl/conformance_suite/gidl-conformance-suite.gni")
 import(
     "//third_party/go/src/syscall/zx/fidl/fidl_test/conformance_test_files.gni")
 import("//tools/fidl/gidl/gidl.gni")
 
 if (is_host) {
-  go_library("gopkg") {
-    name = "go.fuchsia.dev/fuchsia/tools/fidl/gidl/..."
-    deps = [ "//tools/fidl/lib/fidlgen" ]
-    sources = [
-      "audit/main.go",
-      "c/conformance.go",
-      "c/conformance.tmpl",
-      "config/defaults.go",
-      "cpp/benchmarks.go",
-      "cpp/benchmarks.tmpl",
-      "cpp/builder.go",
-      "cpp/conformance.go",
-      "cpp/conformance.tmpl",
-      "cpp/equality_builder.go",
-      "dart/benchmarks.go",
-      "dart/benchmarks.tmpl",
-      "dart/common.go",
-      "dart/conformance.go",
-      "dart/conformance.tmpl",
-      "driver_cpp/benchmarks.go",
-      "driver_cpp/benchmarks.tmpl",
-      "driver_llcpp/benchmarks.go",
-      "driver_llcpp/benchmarks.tmpl",
-      "dynfidl/conformance.go",
-      "dynfidl/conformance.tmpl",
-      "fuzzer_corpus/conformance.go",
-      "golang/benchmarks.go",
-      "golang/benchmarks.tmpl",
-      "golang/common.go",
-      "golang/conformance.go",
-      "golang/conformance.tmpl",
-      "golang/equality_builder.go",
-      "golang/golang_test.go",
-      "hlcpp/benchmarks.go",
-      "hlcpp/benchmarks.tmpl",
-      "hlcpp/builder.go",
-      "hlcpp/conformance.go",
-      "hlcpp/conformance.tmpl",
-      "hlcpp/equality_builder.go",
-      "ir/error.go",
-      "ir/test_case.go",
-      "ir/util.go",
-      "ir/value.go",
-      "librust/common.go",
-      "llcpp/benchmarks.go",
-      "llcpp/benchmarks.tmpl",
-      "llcpp/conformance.go",
-      "llcpp/conformance.tmpl",
-      "llcpp/lib/allocator_builder.go",
-      "llcpp/lib/common.go",
-      "llcpp/lib/equality_builder.go",
-      "llcpp/lib/unowned_builder.go",
-      "main.go",
-      "mixer/mixer.go",
-      "mixer/mixer_test.go",
-      "parser/generators.go",
-      "parser/parser.go",
-      "parser/parser_test.go",
-      "reference/benchmarks.go",
-      "reference/benchmarks.tmpl",
-      "rust/benchmarks.go",
-      "rust/benchmarks.tmpl",
-      "rust/common.go",
-      "rust/conformance.go",
-      "rust/conformance.tmpl",
-      "rust/forget_handles.go",
-      "rust/measure_tape.go",
-      "rust/measure_tape.tmpl",
-      "util/pattern_match.go",
-      "walker/benchmarks.go",
-      "walker/benchmarks.tmpl",
+  go_library("main") {
+    deps = [
+      "c",
+      "config",
+      "cpp",
+      "dart",
+      "driver_cpp",
+      "driver_llcpp",
+      "dynfidl",
+      "fuzzer_corpus",
+      "golang",
+      "hlcpp",
+      "ir",
+      "llcpp",
+      "parser",
+      "reference",
+      "rust",
+      "walker",
+      "//tools/fidl/lib/fidlgen",
     ]
+    sources = [ "main.go" ]
   }
 
   go_binary("gidl") {
-    gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/gidl"
-    deps = [ ":gopkg" ]
-  }
-
-  go_binary("gidl_audit") {
-    gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/gidl/audit"
-    deps = [ ":gopkg" ]
-  }
-
-  go_test("gidl_parser_test") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/gidl/parser" ]
-    deps = [
-      ":gopkg",
-      "//third_party/golibs:github.com/google/go-cmp",
-    ]
-  }
-
-  go_test("gidl_golang_test") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/gidl/golang" ]
-
-    deps = [ ":gopkg" ]
-  }
-
-  host_test_data("gidl_mixer_test_json") {
-    deps = [ ":gidl_mixer_test_fidl($fidl_toolchain)" ]
-    sources = [ "$root_build_dir/fidling/gen/tools/fidl/gidl/gidl_mixer_test_fidl.fidl.json" ]
-    outputs = [ "$root_out_dir/test_data/gidl/mixer.test.fidl.json" ]
-  }
-
-  go_test("gidl_mixer_test") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer" ]
-    args = [
-      "--test_data_dir",
-      rebase_path("$root_out_dir/test_data/gidl", root_build_dir),
-    ]
-    deps = [ ":gopkg" ]
-    non_go_deps = [ ":gidl_mixer_test_json" ]
+    library = ":main"
   }
 
   conformance_golden_items = [
@@ -190,17 +102,10 @@ if (is_host) {
   }
 }
 
-fidl("gidl_mixer_test_fidl") {
-  name = "test.mixer"
-  testonly = true
-  sources = [ "//tools/fidl/gidl/mixer/testdata/mixer.test.fidl" ]
-  public_deps = [ "//zircon/vdso/zx" ]
-}
-
 install_host_tools("host") {
   deps = [
     ":gidl",
-    ":gidl_audit",
+    "audit:gidl_audit",
   ]
   outputs = [
     "gidl",
@@ -280,8 +185,7 @@ go_library("go_empty_gidl_tests_library") {
 }
 
 go_test("go_empty_gidl_test_bin") {
-  gopackages = [ "empty_gidl_tests" ]
-  deps = [ ":go_empty_gidl_tests_library" ]
+  library = ":go_empty_gidl_tests_library"
   non_go_deps = [ ":go_empty_gidl" ]
   use_prebuilt_go = false
 }
@@ -294,11 +198,11 @@ group("tests") {
   testonly = true
 
   deps = [
-    ":gidl_golang_test($host_toolchain)",
     ":gidl_golden_tests($host_toolchain)",
-    ":gidl_mixer_test($host_toolchain)",
-    ":gidl_parser_test($host_toolchain)",
     ":go_empty_gidl_tests",
     ":rust_empty_gidl_tests",
+    "golang:gidl_golang_test($host_toolchain)",
+    "mixer:gidl_mixer_test($host_toolchain)",
+    "parser:gidl_parser_test($host_toolchain)",
   ]
 }

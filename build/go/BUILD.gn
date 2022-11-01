@@ -33,7 +33,6 @@ group("allow_gopackages") {
     "//third_party/go/makefuchsia:*",
     "//third_party/go/makeroot:*",
     "//third_party/golibs/*",
-    "//tools/fidl/gidl:*",
   ]
 }
 
