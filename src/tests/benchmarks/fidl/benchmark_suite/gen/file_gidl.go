@@ -8,14 +8,15 @@ package main
 
 import (
 	"fmt"
-	"gen/config"
-	gidlutil "gen/gidl/util"
 	"log"
 	"os"
 	"path"
 	"strings"
 	"text/template"
 	"time"
+
+	"go.fuchsia.dev/fuchsia/src/tests/benchmarks/fidl/benchmark_suite/gen/config"
+	gidlutil "go.fuchsia.dev/fuchsia/src/tests/benchmarks/fidl/benchmark_suite/gen/gidl/util"
 )
 
 var gidlTmpl = template.Must(template.New("gidlTmpl").Parse(

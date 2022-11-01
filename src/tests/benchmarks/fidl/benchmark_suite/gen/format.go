@@ -7,8 +7,9 @@
 package main
 
 import (
-	"gen/config"
 	"strings"
+
+	"go.fuchsia.dev/fuchsia/src/tests/benchmarks/fidl/benchmark_suite/gen/config"
 )
 
 // Strip out existing indentation and use count of open braces to place new indentation.

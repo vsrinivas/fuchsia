@@ -13,8 +13,8 @@ import (
 	"path"
 
 	// Register fidl and gidl files.
-	_ "gen/fidl"
-	_ "gen/gidl"
+	_ "go.fuchsia.dev/fuchsia/src/tests/benchmarks/fidl/benchmark_suite/gen/fidl"
+	_ "go.fuchsia.dev/fuchsia/src/tests/benchmarks/fidl/benchmark_suite/gen/gidl"
 )
 
 type allFlags struct {

@@ -7,8 +7,9 @@ import("//build/go/go_library.gni")
 import("//build/host.gni")
 
 go_library("lib") {
-  name = "gen/..."
-
+  # TODO(fxbug.dev/73815): Split up recursive libraries.
+  name =
+      "go.fuchsia.dev/fuchsia/src/tests/benchmarks/fidl/benchmark_suite/gen/..."
   sources = [
     "config/config.go",
     "fidl/bool_array.go",
@@ -65,7 +66,8 @@ go_library("lib") {
 }
 
 go_binary("regen_fidl_benchmark_suite") {
-  gopackage = "gen"
+  gopackage =
+      "go.fuchsia.dev/fuchsia/src/tests/benchmarks/fidl/benchmark_suite/gen"
 
   deps = [ ":lib" ]
 }

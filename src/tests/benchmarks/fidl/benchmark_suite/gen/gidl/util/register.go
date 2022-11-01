@@ -6,7 +6,7 @@
 
 package util
 
-import "gen/config"
+import "go.fuchsia.dev/fuchsia/src/tests/benchmarks/fidl/benchmark_suite/gen/config"
 
 var gidlFiles []config.GidlFile
 

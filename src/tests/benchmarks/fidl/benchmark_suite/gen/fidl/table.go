@@ -8,9 +8,10 @@ package fidl
 
 import (
 	"fmt"
-	"gen/config"
-	"gen/fidl/util"
-	"gen/types"
+
+	"go.fuchsia.dev/fuchsia/src/tests/benchmarks/fidl/benchmark_suite/gen/config"
+	"go.fuchsia.dev/fuchsia/src/tests/benchmarks/fidl/benchmark_suite/gen/fidl/util"
+	"go.fuchsia.dev/fuchsia/src/tests/benchmarks/fidl/benchmark_suite/gen/types"
 )
 
 func init() {

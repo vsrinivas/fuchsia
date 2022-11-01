@@ -8,8 +8,9 @@ package util
 
 import (
 	"fmt"
-	"gen/config"
 	"strings"
+
+	"go.fuchsia.dev/fuchsia/src/tests/benchmarks/fidl/benchmark_suite/gen/config"
 )
 
 // Generates a string containing a sequence of the specified size.

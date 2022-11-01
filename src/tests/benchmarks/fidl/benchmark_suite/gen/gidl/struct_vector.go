@@ -8,9 +8,10 @@ package gidl
 
 import (
 	"fmt"
-	"gen/config"
-	"gen/gidl/util"
 	"strings"
+
+	"go.fuchsia.dev/fuchsia/src/tests/benchmarks/fidl/benchmark_suite/gen/config"
+	"go.fuchsia.dev/fuchsia/src/tests/benchmarks/fidl/benchmark_suite/gen/gidl/util"
 )
 
 func init() {

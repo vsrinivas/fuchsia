@@ -7,14 +7,15 @@
 package main
 
 import (
-	"gen/config"
-	fidlutil "gen/fidl/util"
 	"log"
 	"os"
 	"path"
 	"strings"
 	"text/template"
 	"time"
+
+	"go.fuchsia.dev/fuchsia/src/tests/benchmarks/fidl/benchmark_suite/gen/config"
+	fidlutil "go.fuchsia.dev/fuchsia/src/tests/benchmarks/fidl/benchmark_suite/gen/fidl/util"
 )
 
 var fidlTmpl = template.Must(template.New("fidlTmpl").Parse(

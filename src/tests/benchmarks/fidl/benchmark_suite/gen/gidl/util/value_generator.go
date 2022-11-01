@@ -8,9 +8,10 @@ package util
 
 import (
 	"fmt"
-	"gen/types"
 	"math/rand"
 	"strconv"
+
+	"go.fuchsia.dev/fuchsia/src/tests/benchmarks/fidl/benchmark_suite/gen/types"
 )
 
 func RandomValues(typ types.FidlType) ValueGenerator {

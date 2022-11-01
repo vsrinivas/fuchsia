@@ -8,8 +8,9 @@ package gidl
 
 import (
 	"fmt"
-	"gen/config"
-	"gen/gidl/util"
+
+	"go.fuchsia.dev/fuchsia/src/tests/benchmarks/fidl/benchmark_suite/gen/config"
+	"go.fuchsia.dev/fuchsia/src/tests/benchmarks/fidl/benchmark_suite/gen/gidl/util"
 )
 
 // In LLCPP and possibly other bindings, vector size limits effect the buffer

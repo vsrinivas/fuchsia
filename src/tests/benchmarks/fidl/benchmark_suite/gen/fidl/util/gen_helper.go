@@ -8,8 +8,9 @@ package util
 
 import (
 	"fmt"
-	"gen/types"
 	"strings"
+
+	"go.fuchsia.dev/fuchsia/src/tests/benchmarks/fidl/benchmark_suite/gen/types"
 )
 
 // Define fields for structs.
