@@ -12,6 +12,7 @@ _common_bootfs_deps = [
   "//src/devices/board/drivers/clover",
   "//src/devices/clock/drivers/amlogic-clk",
   "//src/devices/gpio/drivers/aml-axg-gpio",
+  "//src/devices/ram/drivers/aml-ram",
   "//src/devices/sysmem/drivers/sysmem",
   "//src/devices/tee/drivers/optee",
   "//src/devices/thermal/drivers/aml-thermal-s905d2g",

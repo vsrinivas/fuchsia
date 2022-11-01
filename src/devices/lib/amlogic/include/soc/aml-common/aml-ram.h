@@ -49,6 +49,18 @@ namespace aml_ram {
 //  ctrl1_offset = 1 << 7; (device0)
 //  ctrl2_offset |= 1 << 0;
 //
+//
+//            A1 DMC CONTROLLER
+//                   |
+//   --------------------------------------
+//   |    |    |    |        |      |     |
+//  arm dspa dspb  dev0   usb-ahb  i2c usb-host
+//  (0)  (1)  (2)  (4)      (5)    (6)   (7)
+//                  |
+//       -----------------------
+//       |      |        |     |
+//     spicc sd_emmc_a audio  dma
+//      (33)   (35)     (37)  (38)
 
 // Astro and Sherlock ports.
 constexpr uint64_t kPortIdArmAe = 0x01u << 0;
@@ -86,6 +98,17 @@ constexpr uint64_t kA5Sub1PortIdSdio = 0x01ul << 41;
 constexpr uint64_t kA5Sub1PortIdEmmc = 0x01ul << 42;
 constexpr uint64_t kA5Sub1PortIdUsb = 0x01ul << 43;
 constexpr uint64_t kA5Sub1PortIdAudio = 0x01ul << 44;
+// A1-only ports
+constexpr uint64_t kA1PortIdDspa = 0x01u << 1;
+constexpr uint64_t kA1PortIdDspb = 0x01u << 2;
+constexpr uint64_t kA1PortIdDev0 = 0x01u << 4;
+constexpr uint64_t kA1PortIdUsbAhb = 0x01u << 5;
+constexpr uint64_t kA1PortIdI2c = 0x01u << 6;
+constexpr uint64_t kA1PortIdUsbHost = 0x01u << 7;
+constexpr uint64_t kA1Sub0PortIdSpicc = 0x01ul << 33;
+constexpr uint64_t kA1Sub0PortIdEmmc = 0x01ul << 35;
+constexpr uint64_t kA1Sub0PortIdAudio = 0x01ul << 37;
+constexpr uint64_t kA1Sub0PortIdDma = 0x01ul << 38;
 
 constexpr uint64_t kDefaultChannelCpu = kPortIdArmAe;
 constexpr uint64_t kDefaultChannelGpu = kPortIdMali;

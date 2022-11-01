@@ -36,6 +36,8 @@
 //  top level ethernet control and temp sensor registers
 
 // DMC
+#define A1_DMC_BASE 0xfd020000
+#define A1_DMC_LENGTH 0x400
 
 // NNA
 
@@ -46,15 +48,16 @@
 // Reset
 
 // IRQs
-#define A1_GPIO_IRQ_0 81  // 32+49
-#define A1_GPIO_IRQ_1 82  // 32+50
-#define A1_GPIO_IRQ_2 83  // 32+51
-#define A1_GPIO_IRQ_3 84  // 32+52
-#define A1_GPIO_IRQ_4 85  // 32+53
-#define A1_GPIO_IRQ_5 86  // 32+54
-#define A1_GPIO_IRQ_6 87  // 32+55
-#define A1_GPIO_IRQ_7 88  // 32+56
-#define A1_TS_PLL_IRQ 89  // 57+32
+#define A1_GPIO_IRQ_0 81   // 32+49
+#define A1_GPIO_IRQ_1 82   // 32+50
+#define A1_GPIO_IRQ_2 83   // 32+51
+#define A1_GPIO_IRQ_3 84   // 32+52
+#define A1_GPIO_IRQ_4 85   // 32+53
+#define A1_GPIO_IRQ_5 86   // 32+54
+#define A1_GPIO_IRQ_6 87   // 32+55
+#define A1_GPIO_IRQ_7 88   // 32+56
+#define A1_TS_PLL_IRQ 89   // 57+32
+#define A1_DDR_BW_IRQ 141  // 109+32
 
 // PWM
 

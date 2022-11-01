@@ -30,6 +30,7 @@ constexpr uint64_t kPortKeyWorkPendingMsg = 0x2;
 // 16bit external bus width: kBytesPerCycle = 2 * 4 = 8
 // 32bit external bus width: kBytesPerCycle = 4 * 4 = 16
 constexpr uint64_t kBytesPerCycle = 16ul;
+constexpr uint64_t kBytesPerCycleA1 = 8ul;
 
 zx_status_t ValidateRequest(const ram_metrics::wire::BandwidthMeasurementConfig& config) {
   // Restrict timer to reasonable values.
@@ -111,8 +112,17 @@ zx_status_t AmlRam::Create(void* context, zx_device_t* parent) {
     }
   }
 
+  std::optional<fdf::MmioBuffer> clk_mmio;
+  if (info.pid == PDEV_PID_AMLOGIC_A1) {
+    if ((status = pdev.MapMmio(1, &clk_mmio)) != ZX_OK) {
+      zxlogf(ERROR, "Failed to map mmio: %s", zx_status_get_string(status));
+      return status;
+    }
+  }
+
   fbl::AllocChecker ac;
-  auto device = fbl::make_unique_checked<AmlRam>(&ac, parent, *std::move(mmio), std::move(irq),
+  auto device = fbl::make_unique_checked<AmlRam>(&ac, parent, *std::move(mmio),
+                                                 *std::move(clk_mmio), std::move(irq),
                                                  std::move(port), std::move(smc_monitor), info.pid);
   if (!ac.check()) {
     zxlogf(ERROR, "aml-ram: Failed to allocate device memory");
@@ -132,10 +142,11 @@ zx_status_t AmlRam::Create(void* context, zx_device_t* parent) {
   return ZX_OK;
 }
 
-AmlRam::AmlRam(zx_device_t* parent, fdf::MmioBuffer mmio, zx::interrupt irq, zx::port port,
-               zx::resource smc_monitor, uint32_t device_pid)
+AmlRam::AmlRam(zx_device_t* parent, fdf::MmioBuffer mmio, fdf::MmioBuffer clk_mmio,
+               zx::interrupt irq, zx::port port, zx::resource smc_monitor, uint32_t device_pid)
     : DeviceType(parent),
       mmio_(std::move(mmio)),
+      clk_mmio_(std::move(clk_mmio)),
       irq_(std::move(irq)),
       port_(std::move(port)),
       smc_monitor_(std::move(smc_monitor)),
@@ -155,6 +166,9 @@ AmlRam::AmlRam(zx_device_t* parent, fdf::MmioBuffer mmio, zx::interrupt irq, zx:
   switch (device_pid_) {
     case PDEV_PID_AMLOGIC_A5:
       dmc_offsets_ = a5_dmc_regs;
+      break;
+    case PDEV_PID_AMLOGIC_A1:
+      dmc_offsets_ = a1_dmc_regs;
       break;
     case PDEV_PID_AMLOGIC_S905D2:
     case PDEV_PID_AMLOGIC_T931:
@@ -246,7 +260,7 @@ void AmlRam::FinishReadBandwithCounters(ram_metrics::wire::BandwidthInfo* bpi,
 
   bpi->timestamp = start_time;
   bpi->frequency = ReadFrequency();
-  bpi->bytes_per_cycle = kBytesPerCycle;
+  bpi->bytes_per_cycle = (device_pid_ == PDEV_PID_AMLOGIC_A1) ? kBytesPerCycleA1 : kBytesPerCycle;
 
   uint32_t value = mmio_.Read32(dmc_offsets_.port_ctrl_offset);
   ZX_ASSERT((value & DMC_QOS_ENABLE_CTRL) == 0);
@@ -378,6 +392,9 @@ uint64_t AmlRam::ReadFrequency() const {
   switch (device_pid_) {
     case PDEV_PID_AMLOGIC_A5:
       value = DmcSmcRead(dmc_offsets_.pll_ctrl0_reg);
+      break;
+    case PDEV_PID_AMLOGIC_A1:
+      return DmcClockA1::Get(dmc_offsets_.pll_ctrl0_offset).ReadFrom(&clk_mmio_).Rate();
       break;
     case PDEV_PID_AMLOGIC_S905D2:
     case PDEV_PID_AMLOGIC_T931:

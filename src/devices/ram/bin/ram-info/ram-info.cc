@@ -70,6 +70,17 @@ constexpr ram_info::RamDeviceInfo
                         [3] = {.name = "test", .mask = aml_ram::kA5PortIdTest},
                     },
             },
+            {
+                // Clover
+                .devfs_path = "/dev/sys/platform/05:08:24/ram",
+                .default_cycles_to_measure = 384'000'000 / 20,  // 384 Mhz, 50 ms.
+                .default_channels =
+                    {
+                        [0] = {.name = "cpu", .mask = aml_ram::kDefaultChannelCpu},
+                        [1] = {.name = "dspa", .mask = aml_ram::kA1PortIdDspa},
+                        [2] = {.name = "dspb", .mask = aml_ram::kA1PortIdDspb},
+                    },
+            },
 };
 #pragma GCC diagnostic pop
 

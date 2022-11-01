@@ -92,6 +92,12 @@ int Clover::Thread() {
     return status;
   }
 
+  if ((status = DmcInit()) != ZX_OK) {
+    zxlogf(ERROR, "DmcInit() failed: %s", zx_status_get_string(status));
+    init_txn_->Reply(status);
+    return status;
+  }
+
   init_txn_->Reply(status);
   return status;
 }

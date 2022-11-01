@@ -251,6 +251,7 @@ TEST_F(DeviceEnumerationTest, CloverTest) {
       "sys/platform/00:00:e/tee/optee",
       "sys/platform/05:08:a/thermal",
       "class/thermal/000",
+      "sys/platform/05:08:24/ram",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));

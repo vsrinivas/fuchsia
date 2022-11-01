@@ -19,6 +19,7 @@
 
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
+#include <hwreg/bitfields.h>
 
 namespace ram_metrics = fuchsia_hardware_ram_metrics;
 
@@ -90,6 +91,18 @@ static constexpr dmc_reg_ctl_t a5_dmc_regs = {
     .pll_ctrl0_reg = 0xfe040000,
 };
 
+// For A1
+// Max channels = 2
+static constexpr dmc_reg_ctl_t a1_dmc_regs = {
+    .port_ctrl_offset = (0x0020 << 2),
+    .timer_offset = (0x002f << 2),
+    .ctrl1_offset = {(0x0021 << 2), (0x0023 << 2), (0x0025 << 2), (0x0027 << 2)},
+    .ctrl2_offset = {(0x0022 << 2), (0x0024 << 2), (0x0026 << 2), (0x0028 << 2)},
+    .all_bw_offset = (0x002a << 2),
+    .bw_offset = {(0x002b << 2), (0x002c << 2), (0x002d << 2), (0x002e << 2)},
+    .pll_ctrl0_reg = (0x003e << 2),
+};
+
 static constexpr zx_smc_parameters_t CreateDmcSmcCall(uint64_t arg1, uint64_t arg2, uint64_t arg3,
                                                       uint64_t arg4 = 0, uint64_t arg5 = 0,
                                                       uint64_t arg6 = 0, uint16_t client_id = 0,
@@ -108,6 +121,43 @@ static constexpr zx_smc_parameters_t CreateDmcSmcCall(uint64_t arg1, uint64_t ar
           {}};
 }
 
+class DmcClockA1 : public hwreg::RegisterBase<DmcClockA1, uint32_t> {
+ public:
+  static constexpr uint64_t kXtalClk = 24'000'000;
+  static constexpr uint64_t kFixedClkDiv2 = 768'000'000;
+  static constexpr uint64_t kFixedClkDiv3 = 512'000'000;
+  static constexpr uint64_t kFixedClkDiv5 = 307'200'000;
+
+  DEF_BIT(15, force_xtal);
+  DEF_FIELD(10, 9, source);
+  DEF_FIELD(7, 0, div);
+
+  uint64_t Rate() const {
+    if (force_xtal()) {
+      return kXtalClk;
+    }
+
+    uint64_t fclk = {};
+    switch (source()) {
+      case 0:
+        fclk = kFixedClkDiv2;
+        break;
+      case 1:
+        fclk = kFixedClkDiv2;
+        break;
+      case 2:
+        fclk = kFixedClkDiv2;
+        break;
+      default:
+        return kXtalClk;
+    }
+
+    return fclk / (div() + 1);
+  }
+
+  static auto Get(uint32_t offset) { return hwreg::RegisterAddr<DmcClockA1>(offset); }
+};
+
 class AmlRam;
 using DeviceType =
     ddk::Device<AmlRam, ddk::Suspendable, ddk::Messageable<ram_metrics::Device>::Mixin>;
@@ -118,8 +168,8 @@ class AmlRam : public DeviceType {
 
   static zx_status_t Create(void* context, zx_device_t* parent);
 
-  AmlRam(zx_device_t* parent, fdf::MmioBuffer mmio, zx::interrupt irq, zx::port port,
-         zx::resource smc_monitor, uint32_t device_pid);
+  AmlRam(zx_device_t* parent, fdf::MmioBuffer mmio, fdf::MmioBuffer clk_mmio, zx::interrupt irq,
+         zx::port port, zx::resource smc_monitor, uint32_t device_pid);
   ~AmlRam();
   void DdkRelease();
   void DdkSuspend(ddk::SuspendTxn txn);
@@ -153,6 +203,7 @@ class AmlRam : public DeviceType {
   uint64_t ReadFrequency() const;
 
   fdf::MmioBuffer mmio_;
+  fdf::MmioBuffer clk_mmio_;
   zx::interrupt irq_;
   zx::port port_;
   zx::resource smc_monitor_;
