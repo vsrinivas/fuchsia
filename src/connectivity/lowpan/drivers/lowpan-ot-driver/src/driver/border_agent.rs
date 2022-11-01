@@ -123,10 +123,7 @@ fn publish_border_agent_service(
         .publish_service_instance(
             BORDER_AGENT_SERVICE_TYPE,
             service_instance.as_str(),
-            ServiceInstancePublicationOptions {
-                ip_versions: Some(IpVersions::V6),
-                ..ServiceInstancePublicationOptions::EMPTY
-            },
+            ServiceInstancePublicationOptions::EMPTY,
             client,
         )
         .map(|x| -> Result<(), anyhow::Error> {
