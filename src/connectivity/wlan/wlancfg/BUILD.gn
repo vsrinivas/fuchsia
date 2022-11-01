@@ -109,6 +109,7 @@ rustc_library("lib") {
     "src/telemetry/windowed_stats.rs",
     "src/tests/client_e2e.rs",
     "src/tests/mod.rs",
+    "src/util/atomic_oneshot_stream.rs",
     "src/util/fuse_pending.rs",
     "src/util/future_with_metadata.rs",
     "src/util/listener/access_point.rs",
