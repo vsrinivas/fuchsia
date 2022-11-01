@@ -35,6 +35,8 @@ class LoadConstantSegmentType : public SegmentType {
 
   constexpr bool executable() const { return flags_ & Flags::kExecute; }
 
+  constexpr bool relro() const { return flags_ & Flags::kWrite; }
+
  private:
   using Flags = PhdrBase::Flags;
   uint32_t flags_ = 0;
@@ -44,6 +46,15 @@ class LoadConstantSegmentType : public SegmentType {
 template <typename SizeType>
 struct LoadSegmentTypes {
   using size_type = SizeType;
+
+  // This is used for RELRO bounds.
+  struct Region {
+    size_type size() const { return end - start; }
+
+    size_type empty() const { return start == end; }
+
+    size_type start = 0, end = 0;
+  };
 
   // Every kind of segment needs an offset and a size.
   class SegmentBase {
