@@ -632,7 +632,13 @@ pub(crate) mod test_utils {
     }
 
     impl CapturedWlanSoftmacPassiveScanArgs {
-        #[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99057)
+        /// # Safety
+        ///
+        /// This function is used exclusively in tests to simulate a driver
+        /// receiving a request. It is only guaranteed to be safe if the given
+        /// pointer is safe to dereference and will outlive the returned
+        /// CapturedWlanSoftmacPassiveScanArgs. The caller is responsible for
+        /// enforcing this.
         pub unsafe fn from_banjo(
             banjo_args_ptr: *const banjo_wlan_softmac::WlanSoftmacPassiveScanArgs,
         ) -> CapturedWlanSoftmacPassiveScanArgs {
