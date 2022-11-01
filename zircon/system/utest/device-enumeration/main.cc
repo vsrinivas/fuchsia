@@ -855,7 +855,7 @@ TEST_F(DeviceEnumerationTest, NocturneTest) {
 
 TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
   static const char* kDevicePaths[] = {
-      "class/sysmem/000",
+      "sys/platform/00:00:1b/sysmem",
 
       "sys/platform/pt/acpi",
       "sys/platform/pt/acpi/acpi-pwrbtn",

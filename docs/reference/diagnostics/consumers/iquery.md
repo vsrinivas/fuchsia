@@ -93,7 +93,7 @@ bootstrap/driver_manager
   class/misc/000.inspect
   class/pci-root/000.inspect
   class/pci/000.inspect
-  class/sysmem/000.inspect
+  class/sysmem/481.inspect
   driver_manager/driver_host/10171/root.inspect
   ...
 ```

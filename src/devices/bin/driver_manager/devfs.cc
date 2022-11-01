@@ -555,8 +555,6 @@ Devfs::Devfs(std::optional<Devnode>& root, Device* device,
       // TODO(https://fxbug.dev/113839): Remove.
       "securemem",
 
-      "sysmem",
-
       // TODO(https://fxbug.dev/113840): Remove.
       "tee",
 

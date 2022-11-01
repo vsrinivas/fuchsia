@@ -194,11 +194,12 @@ snapshots and other client applications. Here's a simple example hierarchy:
           id = 0
 ```
 Sysmem reports its view of memory through an inspect hierarchy in the
-`/dev/diagnostics/class/sysmem/000.inspect` file. Each logical-collection
-shown represents a set of identical buffers allocated by a set of clients.
-Those logical-collections contain lists of koids of live middle VMOs in that
-collection. koids are unique for the lifetime of the system and can be used
-to uniquely identify sysmem VMOs in memgraph output.
+`/dev/diagnostics/class/sysmem/XXX.inspect` file (where XXX is the pseudo-random
+3-digit identifier). Each logical-collection shown represents a set of identical
+buffers allocated by a set of clients. Those logical-collections contain lists
+of koids of live middle VMOs in that collection. koids are unique for the
+lifetime of the system and can be used to uniquely identify sysmem VMOs in
+memgraph output.
 
 All heaps also have inspect nodes. These can include the size and koids of
 all child VMOs, as well as information about how full the heap is and whether

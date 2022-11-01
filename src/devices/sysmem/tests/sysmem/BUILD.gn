@@ -19,6 +19,7 @@ test("sysmem") {
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

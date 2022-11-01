@@ -8,10 +8,12 @@
 #include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/hw/arch_ops.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
+#include <lib/fdio/watcher.h>
 #include <lib/fidl/cpp/wire/arena.h>
 #include <lib/fidl/cpp/wire/channel.h>
 #include <lib/fidl/cpp/wire/connect_service.h>
@@ -53,8 +55,7 @@
 // under /data/cache/r/sys/fuchsia.com:sysmem-test:0#meta:sysmem.cmx/ on the device.
 #define SYSMEM_FUZZ_CORPUS 0
 
-// We assume one sysmem since boot, for now.
-const char* kSysmemDevicePath = "/dev/class/sysmem/000";
+const char* kSysmemClassPath = "/dev/class/sysmem";
 
 namespace {
 
@@ -83,23 +84,6 @@ TestObserver test_observer;
 zx::result<fidl::WireSyncClient<fuchsia_sysmem::Allocator>> connect_to_sysmem_service();
 zx_status_t verify_connectivity(fidl::WireSyncClient<fuchsia_sysmem::Allocator>& allocator);
 
-bool have_waited_for_sysmem_availability = false;
-
-// Wait for the sysmem devnode to exist. If this test runs immediately after boot then the sysmem
-// driver may not have been created yet, so we need to wait.
-void WaitForSysmemAvailability() {
-  if (have_waited_for_sysmem_availability)
-    return;
-
-  have_waited_for_sysmem_availability = true;
-
-  // The sysmem connector service handle waiting for the device to become available, so once we have
-  // connectivity through that we should have connectivity directly.
-  zx::result status = connect_to_sysmem_service();
-  ASSERT_OK(status.status_value());
-  ASSERT_OK(verify_connectivity(status.value()));
-}
-
 #define IF_FAILURES_RETURN()           \
   do {                                 \
     if (CURRENT_TEST_HAS_FAILURES()) { \
@@ -115,9 +99,31 @@ void WaitForSysmemAvailability() {
   } while (0)
 
 zx::result<fidl::WireSyncClient<fuchsia_sysmem::Allocator>> connect_to_sysmem_driver() {
-  WaitForSysmemAvailability();
+  fbl::unique_fd sysmem_dir(open(kSysmemClassPath, O_RDONLY));
 
-  auto client_end = component::Connect<fuchsia_sysmem::DriverConnector>(kSysmemDevicePath);
+  zx::result<fidl::ClientEnd<fuchsia_sysmem::DriverConnector>> client_end;
+  zx_status_t status = fdio_watch_directory(
+      sysmem_dir.get(),
+      [](int dirfd, int event, const char* fn, void* cookie) {
+        if (std::string_view{fn} == ".") {
+          return ZX_OK;
+        }
+        if (event != WATCH_EVENT_ADD_FILE) {
+          return ZX_OK;
+        }
+        fdio_cpp::UnownedFdioCaller caller(dirfd);
+        *reinterpret_cast<zx::result<fidl::ClientEnd<fuchsia_sysmem::DriverConnector>>*>(cookie) =
+            component::ConnectAt<fuchsia_sysmem::DriverConnector>(caller.directory(), fn);
+        return ZX_ERR_STOP;
+      },
+      ZX_TIME_INFINITE, &client_end);
+  EXPECT_STATUS(status, ZX_ERR_STOP);
+  if (status != ZX_ERR_STOP) {
+    if (status == ZX_OK) {
+      status = ZX_ERR_BAD_STATE;
+    }
+    return zx::error(status);
+  }
   EXPECT_OK(client_end);
   if (!client_end.is_ok()) {
     return zx::error(client_end.status_value());
