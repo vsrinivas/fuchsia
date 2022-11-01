@@ -148,8 +148,7 @@ class EventRing {
   zx_status_t AddSegmentIfNone() __TA_REQUIRES(segment_mutex_);
   zx_status_t AddSegment() __TA_REQUIRES(segment_mutex_);
 
-  std::variant<bool, std::unique_ptr<TRBContext>> StallWorkaroundForDefectiveHubs(
-      std::unique_ptr<TRBContext> context);
+  bool StallWorkaroundForDefectiveHubs(std::unique_ptr<TRBContext>& context);
 
   struct SegmentBuf : fbl::DoublyLinkedListable<std::unique_ptr<SegmentBuf>> {
     SegmentBuf(std::unique_ptr<dma_buffer::ContiguousBuffer> b, bool n)
