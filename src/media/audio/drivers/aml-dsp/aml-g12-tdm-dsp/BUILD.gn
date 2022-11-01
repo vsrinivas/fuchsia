@@ -1,0 +1,58 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/drivers.gni")
+
+driver_bind_rules("aml-g12-tdm-bind") {
+  rules = "aml_tdm.bind"
+  header_output = "aml_tdm-bind.h"
+  bind_output = "aml-g12-tdm.bindbc"
+  tests = "tests-stream.json"
+  deps = [ "//src/devices/bind/fuchsia.amlogic.platform" ]
+}
+
+fuchsia_driver("aml-g12-tdm-driver") {
+  output_name = "aml-g12-tdm"
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
+  sources = [
+    "aml-tdm-config-device.cc",
+    "audio-stream.cc",
+  ]
+
+  deps = [
+    ":aml-g12-tdm-bind",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/lib/amlogic",
+    "//src/devices/lib/driver",
+    "//src/devices/lib/mmio",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//src/media/audio/drivers/lib/audio-driver-proto",
+    "//src/media/audio/drivers/lib/audio-proto-utils",
+    "//src/media/audio/lib/simple-audio-stream",
+    "//src/media/audio/lib/simple-codec",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/pretty",
+    "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/zx",
+  ]
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
+}
+
+fuchsia_driver_component("aml-g12-tdm") {
+  component_name = "aml-g12-tdm"
+  deps = [ ":aml-g12-tdm-driver" ]
+  info = "aml-g12-tdm-info.json"
+  colocate = true
+}

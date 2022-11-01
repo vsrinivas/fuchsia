@@ -1,0 +1,29 @@
+[
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "Protocol"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_COMPOSITE": "1",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "0x12",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "3",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC"
+        },
+        "expected": "match",
+        "name": "AmlG12TdmAstro"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_COMPOSITE": "1",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "0x12",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "4",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC"
+        },
+        "expected": "match",
+        "name": "AmlG12TdmSherlock"
+    }
+]

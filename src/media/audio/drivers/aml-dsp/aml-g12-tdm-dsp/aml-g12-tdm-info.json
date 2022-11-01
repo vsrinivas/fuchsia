@@ -1,0 +1,14 @@
+{
+    "short_description": "AMLogic g12 audio subsystem TDM driver using a HW DSP",
+    "manufacturer": "AMLogic",
+    "families": [
+        "g12"
+    ],
+    "models": [
+        "A5"
+    ],
+    "areas": [
+        "Media",
+        "Audio"
+    ]
+}
