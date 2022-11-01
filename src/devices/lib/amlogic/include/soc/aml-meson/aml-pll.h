@@ -24,6 +24,7 @@ struct reg_sequence {
 typedef struct {
   const struct reg_sequence* init_regs;
   uint32_t init_count;
+  bool repeatedly_toggling;
 } meson_clk_pll_data_t;
 
 #endif  // SRC_DEVICES_LIB_AMLOGIC_INCLUDE_SOC_AML_MESON_AML_PLL_H_

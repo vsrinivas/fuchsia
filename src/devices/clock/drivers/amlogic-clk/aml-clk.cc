@@ -693,6 +693,9 @@ AmlClock::AmlClock(zx_device_t* device, fdf::MmioBuffer hiu_mmio, fdf::MmioBuffe
       muxes_ = a1_muxes;
       mux_count_ = std::size(a1_muxes);
 
+      pll_count_ = a1::PLL_COUNT;
+      InitHiuA1();
+
       break;
     }
     default:
@@ -1214,6 +1217,15 @@ void AmlClock::InitHiuA5() {
   pllclk_.reserve(pll_count_);
   for (unsigned int pllnum = 0; pllnum < pll_count_; pllnum++) {
     auto plldev = a5::CreatePllDevice(&dosbus_mmio_, pllnum);
+    pllclk_.emplace_back(std::move(plldev));
+    pllclk_[pllnum].Init();
+  }
+}
+
+void AmlClock::InitHiuA1() {
+  pllclk_.reserve(pll_count_);
+  for (unsigned int pllnum = 0; pllnum < pll_count_; pllnum++) {
+    auto plldev = a1::CreatePllDevice(&dosbus_mmio_, pllnum);
     pllclk_.emplace_back(std::move(plldev));
     pllclk_[pllnum].Init();
   }

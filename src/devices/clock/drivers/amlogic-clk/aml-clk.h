@@ -23,6 +23,7 @@
 #include <fbl/array.h>
 #include <fbl/mutex.h>
 #include <hwreg/mmio.h>
+#include <soc/aml-a1/a1-hiu.h>
 #include <soc/aml-a5/a5-hiu.h>
 #include <soc/aml-s905d2/s905d2-hiu.h>
 
@@ -108,6 +109,8 @@ class AmlClock : public DeviceType, public ddk::ClockImplProtocol<AmlClock, ddk:
   void InitHiu();
 
   void InitHiuA5();
+
+  void InitHiuA1();
 
   // IO MMIO
   fdf::MmioBuffer hiu_mmio_;

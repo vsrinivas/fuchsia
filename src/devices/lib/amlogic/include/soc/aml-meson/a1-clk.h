@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 
+#include <soc/aml-a1/a1-hiu.h>
 #include <soc/aml-meson/aml-clk-common.h>
 
 namespace a1_clk {
@@ -80,7 +81,10 @@ constexpr uint32_t CLK_PSRAM_SEL = AmlClkId(22, clk_type::kMesonMux);
 constexpr uint32_t CLK_DMC_SEL = AmlClkId(23, clk_type::kMesonMux);
 constexpr uint32_t CLK_A1_MUX_COUNT = 24;
 
+using a1_pll_type = amlogic_clock::a1::meson_plls_t;
 // kMesonPllClocks
+// SYS_PLL used for cpu clocks, no need to expose.
+constexpr uint32_t CLK_HIFI_PLL = AmlClkId(a1_pll_type::HIFI_PLL, clk_type::kMesonPll);
 
 // Cpu Clocks
 

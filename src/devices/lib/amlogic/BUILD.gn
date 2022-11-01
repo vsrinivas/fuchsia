@@ -60,8 +60,12 @@ zx_library("amlogic") {
     "soc/aml-a5/a5-hiu-regs.h",
     "soc/aml-a1/a1-hw.h",
     "soc/aml-a1/a1-gpio.h",
+    "soc/aml-a1/a1-hiu.h",
+    "soc/aml-a1/a1-hiu-regs.h",
   ]
   sources = [
+    "a1-hiu.cc",
+    "a1-pll-rates.cc",
     "a113-clocks.c",
     "a5-hiu.cc",
     "a5-pll-rates.cc",
