@@ -240,6 +240,52 @@ TEST_F(DeviceTest, AddChildDevice) {
   ASSERT_TRUE(RunLoopUntilIdle());
 }
 
+TEST_F(DeviceTest, InvokeOpenAndCloseOp) {
+  auto endpoints = fidl::CreateEndpoints<fdf::Node>();
+
+  // Create a node.
+  TestNode node(dispatcher());
+  auto binding = fidl::BindServer(dispatcher(), std::move(endpoints->server), &node);
+
+  // Create a device.
+  struct Context {
+    bool closed = false;
+    bool opened = false;
+  };
+  Context context;
+
+  zx_protocol_device_t ops{
+      .open =
+          [](void* ctx, zx_device_t** dev_out, uint32_t flags) {
+            auto context = static_cast<Context*>(ctx);
+            context->opened = true;
+            return ZX_OK;
+          },
+      .close =
+          [](void* ctx, uint32_t flags) {
+            auto context = static_cast<Context*>(ctx);
+            context->closed = true;
+            return ZX_OK;
+          },
+  };
+
+  auto device = compat::kDefaultDevice;
+  device.context = &context;
+  compat::Device parent(device, &ops, nullptr, std::nullopt, logger(), dispatcher());
+  parent.Bind({std::move(endpoints->client), dispatcher()});
+
+  // Ensure open and close operations were invoked.
+  auto dev_node = fbl::MakeRefCounted<DevfsVnode>(parent.ZxDevice());
+  ASSERT_FALSE(context.opened);
+  fbl::RefPtr<fs::Vnode> out_redirect;
+  ASSERT_EQ(dev_node->OpenValidating(fs::VnodeConnectionOptions::ReadOnly(), &out_redirect), ZX_OK);
+  ASSERT_TRUE(context.opened);
+
+  ASSERT_FALSE(context.closed);
+  ASSERT_EQ(dev_node->Close(), ZX_OK);
+  ASSERT_TRUE(context.closed);
+}
+
 TEST_F(DeviceTest, RemoveChildren) {
   auto endpoints = fidl::CreateEndpoints<fdf::Node>();
 

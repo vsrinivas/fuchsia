@@ -687,6 +687,16 @@ zx::result<std::string> Driver::GetVariable(const char* name) {
   return zx::ok(std::string(result->value.data(), result->value.size()));
 }
 
+fit::deferred_callback Driver::CreateDevNodeAutoRemoveCallback(fbl::RefPtr<fs::Vnode> dev_node,
+                                                               std::string dev_node_name) {
+  auto callback = [this, dev_node_name = std::move(dev_node_name),
+                   dev_node = std::move(dev_node)]() {
+    devfs_vfs_->CloseAllConnectionsForVnode(*dev_node, {});
+    devfs_dir_->RemoveEntry(dev_node_name);
+  };
+  return fit::deferred_callback(callback);
+}
+
 zx::result<fit::deferred_callback> Driver::ExportToDevfsSync(
     fuchsia_device_fs::wire::ExportOptions options, fbl::RefPtr<fs::Vnode> dev_node,
     std::string name, std::string_view topological_path, uint32_t proto_id) {
@@ -696,16 +706,10 @@ zx::result<fit::deferred_callback> Driver::ExportToDevfsSync(
   }
   zx_status_t status = devfs_exporter_.ExportSync(name, topological_path, options, proto_id);
 
-  // If this goes out of scope, close the devfs connection.
-  auto auto_remove = [this, name = std::move(name), dev_node]() {
-    devfs_vfs_->CloseAllConnectionsForVnode(*dev_node, {});
-    devfs_dir_->RemoveEntry(name);
-  };
-
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  return zx::ok(std::move(auto_remove));
+  return zx::ok(CreateDevNodeAutoRemoveCallback(dev_node, name));
 }
 
 zx::result<std::unique_ptr<driver::DriverBase>> DriverFactory::CreateDriver(

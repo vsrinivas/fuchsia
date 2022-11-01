@@ -164,6 +164,10 @@ Device::Device(device_t device, const zx_protocol_device_t* ops, Driver* driver,
       executor_(dispatcher) {}
 
 Device::~Device() {
+  // Free the dev node early because the dev node holds a reference to the
+  // device which means the dev node's destructor may access the device.
+  dev_vnode_auto_free_.call();
+
   // We only shut down the devices that have a parent, since that means that *this* compat driver
   // owns the device. If the device does not have a parent, then ops_ belongs to another driver, and
   // it's that driver's responsibility to be shut down.
@@ -325,10 +329,14 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
 }
 
 fpromise::promise<void, zx_status_t> Device::Export() {
-  // Devices with the flag DEVICE_ADD_INSTANCE do not get an associated devfs
-  // node nor do they need to be initialized.
+  auto dev_vnode_name = OutgoingName();
+
   // TODO(fxbug.dev/113001) Remove this check when instance drivers are removed
   if (device_flags_ & DEVICE_ADD_INSTANCE) {
+    // Instance devices still have a vnode which needs to be properly closed.
+    dev_vnode_auto_free_ = driver()->CreateDevNodeAutoRemoveCallback(dev_vnode(), dev_vnode_name);
+    // Devices with the flag DEVICE_ADD_INSTANCE do not get a node in devfs nor do
+    // they need to be initialized.
     return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
   }
 
@@ -345,7 +353,7 @@ fpromise::promise<void, zx_status_t> Device::Export() {
     options |= fuchsia_device_fs::wire::ExportOptions::kInvisible;
   }
 
-  auto devfs_status = driver()->ExportToDevfsSync(options, dev_vnode(), OutgoingName(),
+  auto devfs_status = driver()->ExportToDevfsSync(options, dev_vnode(), dev_vnode_name,
                                                   topological_path_, device_server_.proto_id());
   if (devfs_status.is_error()) {
     FDF_LOG(INFO, "Device %s failed to add to devfs: %s", topological_path_.c_str(),
@@ -640,9 +648,7 @@ void Device::InsertOrUpdateProperty(fuchsia_driver_framework::wire::NodeProperty
   }
 }
 
-std::string Device::OutgoingName() {
-  return std::string(name_).append("-").append(std::to_string(device_id_));
-}
+std::string Device::OutgoingName() { return name_ + "-" + std::to_string(device_id_); }
 
 zx_status_t Device::GetProtocol(uint32_t proto_id, void* out) const {
   if (HasOp(ops_, &zx_protocol_device_t::get_protocol)) {
@@ -725,6 +731,20 @@ zx_status_t Device::WriteOp(const void* data, size_t len, size_t off, size_t* ou
     return ZX_ERR_NOT_SUPPORTED;
   }
   return ops_->write(compat_symbol_.context, data, len, off, out_actual);
+}
+
+zx_status_t Device::OpenOp(zx_device_t** dev_out, uint32_t flags) {
+  if (!HasOp(ops_, &zx_protocol_device_t::open)) {
+    return ZX_OK;
+  }
+  return ops_->open(compat_symbol_.context, dev_out, flags);
+}
+
+zx_status_t Device::CloseOp(uint32_t flags) {
+  if (!HasOp(ops_, &zx_protocol_device_t::close)) {
+    return ZX_OK;
+  }
+  return ops_->close(compat_symbol_.context, flags);
 }
 
 zx_off_t Device::GetSizeOp() {

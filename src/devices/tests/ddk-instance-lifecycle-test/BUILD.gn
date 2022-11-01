@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/drivers.gni")
+import("//build/drivers/driver_compat_test.gni")
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
 
@@ -53,9 +54,7 @@ fuchsia_driver_component("driver") {
   colocate = true
 }
 
-test("tests") {
-  output_name = "ddk-instance-lifecycle-test"
-
+driver_compat_test("ddk-instance-lifecycle-test") {
   testonly = true
   sources = [ "test.cc" ]
   deps = [
@@ -67,14 +66,29 @@ test("tests") {
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
-  visibility = [ ":*" ]
 }
 
-fuchsia_unittest_package("ddk-instance-lifecycle-test") {
+fuchsia_unittest_component("ddk-instance-lifecycle-test-dfv1") {
+  deps = [ ":ddk-instance-lifecycle-test_dfv1" ]
+}
+
+fuchsia_unittest_component("ddk-instance-lifecycle-test-dfv2") {
+  deps = [ ":ddk-instance-lifecycle-test_dfv2" ]
+}
+
+fuchsia_test_package("ddk-instance-lifecycle-test-package") {
+  test_components = [
+    ":ddk-instance-lifecycle-test-dfv1",
+    ":ddk-instance-lifecycle-test-dfv2",
+  ]
   deps = [
     ":driver",
-    ":tests",
     "//src/devices/board/drivers/integration-test",
     "//src/devices/bus/drivers/platform",
   ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":ddk-instance-lifecycle-test-package" ]
 }

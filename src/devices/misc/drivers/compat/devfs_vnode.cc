@@ -11,6 +11,7 @@
 #include <fbl/string_buffer.h>
 
 #include "device.h"
+#include "fbl/ref_ptr.h"
 #include "src/devices/bin/driver_host/simple_binding.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 
@@ -77,6 +78,25 @@ void FidlDispatcher::dispatch_message(fidl::IncomingHeaderAndMessage&& msg,
 }
 
 }  // namespace
+
+zx_status_t DevfsVnode::OpenNode(fs::Vnode::ValidatedOptions options,
+                                 fbl::RefPtr<Vnode>* out_redirect) {
+  zx_device_t* dev_out = nullptr;
+  auto status = dev_->OpenOp(&dev_out, static_cast<uint32_t>(options->ToIoV1Flags()));
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  if (dev_out != nullptr && dev_out != dev_) {
+    *out_redirect = dev_out->dev_vnode();
+  }
+  return ZX_OK;
+}
+
+zx_status_t DevfsVnode::CloseNode() {
+  return dev_->CloseOp(0);
+  ;
+}
 
 std::variant<fidl::Transaction*, std::unique_ptr<fidl::Transaction>> FromDdkInternalTransaction(
     ddk::internal::Transaction* txn) {

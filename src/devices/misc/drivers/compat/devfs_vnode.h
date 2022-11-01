@@ -53,8 +53,13 @@ class DevfsVnode : public fs::Vnode, public fidl::WireServer<fuchsia_device::Con
   zx_device* dev() { return dev_; }
 
  private:
+  // Vnode protected implementation:
+  zx_status_t OpenNode(fs::Vnode::ValidatedOptions options,
+                       fbl::RefPtr<Vnode>* out_redirect) override;
+  zx_status_t CloseNode() override;
+
   // A pointer to the device that this vnode represents. This will be
-  // set to nullptr if the device is freed
+  // set to nullptr if the device is freed.
   zx_device* dev_;
 };
 

@@ -15,7 +15,7 @@ group("tests") {
     "ddk-fallback-test-v2:tests",
     "ddk-fidl-test:tests",
     "ddk-firmware-test:tests",
-    "ddk-instance-lifecycle-test",
+    "ddk-instance-lifecycle-test:tests",
     "ddk-lifecycle:tests",
     "ddk-metadata-test",
     "ddk-power:tests",

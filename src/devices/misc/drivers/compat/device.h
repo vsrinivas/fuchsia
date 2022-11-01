@@ -100,6 +100,8 @@ class Device : public std::enable_shared_from_this<Device>,
   // TODO(fxbug.dev/33822): Remove these when R/W are removed.
   zx_status_t ReadOp(void* data, size_t len, size_t off, size_t* out_actual);
   zx_status_t WriteOp(const void* data, size_t len, size_t off, size_t* out_actual);
+  zx_status_t OpenOp(zx_device_t** dev_out, uint32_t flags);
+  zx_status_t CloseOp(uint32_t flags);
   zx_off_t GetSizeOp();
 
   fpromise::promise<void, zx_status_t> RebindToLibname(std::string_view libname);
