@@ -59,6 +59,7 @@ if (is_fuchsia) {
   }
 }
 
+# LINT.IfChange
 rustc_library("fuchsia-cprng") {
   version = "0.1.1"
   edition = "2021"
@@ -68,6 +69,8 @@ rustc_library("fuchsia-cprng") {
 
   sources = [ "fuchsia-cprng/src/lib.rs" ]
 }
+
+# LINT.ThenChange(BUILD.bazel)
 
 rustc_library("fuchsia-zircon-types") {
   version = "0.1.0"

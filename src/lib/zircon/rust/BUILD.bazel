@@ -1,0 +1,12 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+# For now, this duplicates the definition in BUILD.gn
+rust_library(
+    name = "fuchsia-cprng",
+    srcs = glob(["fuchsia-cprng/src/**/*.rs"]),
+    edition = "2021",
+)

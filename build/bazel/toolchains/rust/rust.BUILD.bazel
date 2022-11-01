@@ -1,0 +1,68 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This file is used as the top level BUILD.bazel in the @fuchsia_rust_toolchain
+# repository, which contains the contents of prebuilt/third_party/rust/linux-x64
+
+load("@rules_rust//rust:toolchain.bzl", "rust_stdlib_filegroup", "rust_toolchain")
+
+rust_stdlib_filegroup(
+    name = "rust_std",
+    srcs = glob(["lib/rustlib/**/*.rlib"]),
+    visibility = ["//visibility:private"],
+)
+
+rust_toolchain(
+    name = "rust_linux_x64_toolchain",
+    rustc = "//:bin/rustc",
+    rust_std = "//:rust_std",
+    rust_doc = "//:bin/rustdoc",
+    binary_ext = "",
+    staticlib_ext = ".a",
+    dylib_ext = ".so",
+    stdlib_linkflags = ["-lpthread", "-ldl"],
+    os = "linux",
+    exec_triple = "x86_64-unknown-linux-gnu",
+    target_triple = "x86_64-unknown-linux-gnu",
+)
+
+toolchain(
+    name = "rust_linux_x64",
+    exec_compatible_with = [
+        "@platforms//cpu:x86_64",
+    ],
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
+    toolchain = ":rust_linux_x64_toolchain",
+    toolchain_type = "@rules_rust//rust:toolchain",
+)
+
+rust_toolchain(
+    name = "rust_fuchsia_x64_toolchain",
+    rustc = "//:bin/rustc",
+    rust_std = "//:rust_std",
+    rust_doc = "//:bin/rustdoc",
+    binary_ext = "",
+    staticlib_ext = ".a",
+    dylib_ext = ".so",
+    stdlib_linkflags = [],
+    os = "fuchsia",
+    exec_triple = "x86_64-unknown-fuchsia",
+    target_triple = "x86_64-fuchsia",
+)
+
+toolchain(
+    name = "rust_fuchsia_x64",
+    exec_compatible_with = [
+        "@platforms//cpu:x86_64",
+    ],
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@rules_fuchsia//fuchsia/constraints/os:fuchsia",
+    ],
+    toolchain = ":rust_fuchsia_x64_toolchain",
+    toolchain_type = "@rules_rust//rust:toolchain",
+)

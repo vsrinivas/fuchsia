@@ -31,14 +31,20 @@ local_repository(
 )
 
 # buildifier: disable=load-on-top
-load(
-    "@rules_rust//rust:repositories.bzl",
-    "rules_rust_dependencies",
-    "rust_register_toolchains",
-)
+load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies")
 
 rules_rust_dependencies()
-rust_register_toolchains()
+
+new_local_repository(
+    name = "fuchsia_rust_toolchain",
+    path = "prebuilt/third_party/rust/linux-x64",
+    build_file = "build/bazel/toolchains/rust/rust.BUILD.bazel",
+)
+
+register_toolchains(
+    "@fuchsia_rust_toolchain//:rust_linux_x64",
+    "@fuchsia_rust_toolchain//:rust_fuchsia_x64",
+)
 
 # buildifier: disable=load-on-top
 load(
