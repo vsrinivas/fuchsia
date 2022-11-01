@@ -163,8 +163,8 @@ void FileTester::CreateChildren(F2fs *fs, std::vector<fbl::RefPtr<VnodeF2fs>> &v
   for (uint32_t i = 0; i < inode_cnt; ++i) {
     fbl::RefPtr<fs::Vnode> test_file;
 
-    name += std::to_string(i);
-    ASSERT_EQ(parent->Create(name, S_IFREG, &test_file), ZX_OK);
+    std::string file_name = name + std::to_string(i);
+    ASSERT_EQ(parent->Create(file_name, S_IFREG, &test_file), ZX_OK);
     fbl::RefPtr<VnodeF2fs> test_file_vn = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(test_file));
 
     inos.push_back(test_file_vn->Ino());

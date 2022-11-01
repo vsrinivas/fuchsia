@@ -138,7 +138,6 @@ class FsckWorker {
 
   void PrintRawSuperblockInfo();
   void PrintCheckpointInfo();
-  void PrintNodeInfo(Node &node_block);
   void PrintInodeInfo(Inode &inode);
   void PrintDentry(uint32_t depth, std::string_view name, const uint8_t *dentry_bitmap,
                    const DirEntry &dentry, uint32_t index, uint32_t last_block,
@@ -264,6 +263,15 @@ class FsckWorker {
     ZX_DEBUG_ASSERT(segment_manager_ != nullptr);
     return *segment_manager_;
   }
+
+  // For testing
+  NodeManager &GetNodeManager() const {
+    ZX_DEBUG_ASSERT(node_manager_ != nullptr);
+    return *node_manager_;
+  }
+
+  // For testing
+  SuperblockInfo &GetSuperblockInfo() { return superblock_info_; }
 
  private:
   // Saves the traverse context. It should be re-initialized every traverse.

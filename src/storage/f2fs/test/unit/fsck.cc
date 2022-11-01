@@ -383,6 +383,166 @@ TEST(FsckTest, OrphanNodes) {
   ASSERT_EQ(fsck.DoFsck(), ZX_OK);
 }
 
+TEST(FsckTest, InvalidBlockAddress) {
+  std::unique_ptr<Bcache> bc;
+  FileTester::MkfsOnFakeDev(&bc);
+
+  FsckWorker fsck(std::move(bc), FsckOptions{.repair = false});
+  ASSERT_EQ(fsck.DoMount(), ZX_OK);
+  ASSERT_EQ(fsck.IsValidBlockAddress(0U), false);
+  ASSERT_EQ(fsck.IsValidBlockAddress(std::numeric_limits<uint32_t>::max()), false);
+}
+
+TEST(FsckTest, InvalidNatEntry) {
+  std::unique_ptr<Bcache> bc;
+  FileTester::MkfsOnFakeDev(&bc);
+
+  block_t data_blkaddr;
+  // Preconditioning
+  {
+    std::unique_ptr<F2fs> fs;
+    async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+    MountOptions options;
+    ASSERT_EQ(options.SetValue(options.GetNameView(kOptInlineData), 0), ZX_OK);
+    FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+
+    fbl::RefPtr<VnodeF2fs> root;
+    FileTester::CreateRoot(fs.get(), &root);
+    fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
+
+    // Find data blkaddr.
+    {
+      auto result = root_dir->FindDataBlkAddr(0);
+      ASSERT_TRUE(result.is_ok());
+      data_blkaddr = result.value();
+    }
+
+    std::vector<fbl::RefPtr<VnodeF2fs>> vnodes;
+    std::vector<uint32_t> inos;
+    // To allocate new node segment, inode_cnt must be bigger than kDefaultBlocksPerSegment.
+    FileTester::CreateChildren(fs.get(), vnodes, inos, root_dir, "test", kDefaultBlocksPerSegment);
+
+    for (auto &child_vn : vnodes) {
+      child_vn->Close();
+      child_vn = nullptr;
+    }
+
+    ASSERT_EQ(root_dir->Close(), ZX_OK);
+    root_dir = nullptr;
+
+    FileTester::Unmount(std::move(fs), &bc);
+  }
+  const ino_t kTestIno = 4;
+  FsckWorker fsck(std::move(bc), FsckOptions{.repair = false});
+  ASSERT_EQ(fsck.DoMount(), ZX_OK);
+
+  // Read the NAT block.
+  auto block_off = kTestIno / kNatEntryPerBlock;
+  auto entry_off = kTestIno % kNatEntryPerBlock;
+  auto seg_off = block_off >> fsck.GetSuperblockInfo().GetLogBlocksPerSeg();
+  auto nat_blkaddr = (fsck.GetNodeManager().GetNatAddress() +
+                      (seg_off << fsck.GetSuperblockInfo().GetLogBlocksPerSeg() << 1) +
+                      (block_off & ((1 << fsck.GetSuperblockInfo().GetLogBlocksPerSeg()) - 1)));
+
+  if (TestValidBitmap(block_off, fsck.GetNodeManager().GetNatBitmap())) {
+    nat_blkaddr += fsck.GetSuperblockInfo().GetBlocksPerSeg();
+  }
+
+  auto fs_block = std::make_unique<FsBlock>();
+  ASSERT_EQ(fsck.ReadBlock(*fs_block, nat_blkaddr), ZX_OK);
+  NatBlock *nat_block = reinterpret_cast<NatBlock *>(fs_block->GetData().data());
+
+  // Corrupt root_ino block address.
+  ASSERT_EQ(LeToCpu(nat_block->entries[entry_off].ino), kTestIno);
+  ASSERT_NE(LeToCpu(nat_block->entries[entry_off].block_addr), data_blkaddr);
+  nat_block->entries[entry_off] = {.ino = CpuToLe(kTestIno),
+                                   .block_addr = nat_block->entries[entry_off].block_addr + 1};
+  ASSERT_EQ(fsck.WriteBlock(*fs_block.get(), nat_blkaddr), ZX_OK);
+
+  // Fsck should fail at verifying stage.
+  ASSERT_EQ(fsck.DoFsck(), ZX_ERR_INTERNAL);
+
+  // Corrupt root_ino block address.
+  nat_block->entries[entry_off] = {.ino = CpuToLe(kTestIno), .block_addr = CpuToLe(data_blkaddr)};
+  ASSERT_EQ(fsck.WriteBlock(*fs_block.get(), nat_blkaddr), ZX_OK);
+
+  // Fsck should fail at verifying stage.
+  ASSERT_EQ(fsck.DoFsck(), ZX_ERR_INTERNAL);
+
+  // Corrupt root_ino block address.
+  nat_block->entries[entry_off] = {.ino = CpuToLe(kTestIno), .block_addr = CpuToLe(kNewAddr)};
+  ASSERT_EQ(fsck.WriteBlock(*fs_block.get(), nat_blkaddr), ZX_OK);
+
+  // Fsck should fail at verifying stage.
+  ASSERT_EQ(fsck.DoFsck(), ZX_ERR_INTERNAL);
+}
+
+TEST(FsckTest, InvalidSsaEntry) {
+  std::unique_ptr<Bcache> bc;
+  FileTester::MkfsOnFakeDev(&bc);
+
+  block_t data_blkaddr;
+  ino_t target_file_ino;
+  // Preconditioning
+  {
+    std::unique_ptr<F2fs> fs;
+    async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+    MountOptions options;
+    ASSERT_EQ(options.SetValue(options.GetNameView(kOptInlineData), 0), ZX_OK);
+    FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+
+    fbl::RefPtr<VnodeF2fs> root;
+    FileTester::CreateRoot(fs.get(), &root);
+    fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
+
+    fbl::RefPtr<fs::Vnode> vn;
+    ASSERT_EQ(root_dir->Create("test", S_IFREG, &vn), ZX_OK);
+    auto file = fbl::RefPtr<File>::Downcast(std::move(vn));
+    // To allocate new data segment, kBufferSize must be bigger than f2fs segment size.
+    constexpr uint32_t kBufferSize = kBlockSize * (kDefaultBlocksPerSegment + 1);
+    std::vector<char> buf(kBufferSize);
+    FileTester::AppendToFile(file.get(), buf.data(), kBufferSize);
+    WritebackOperation op = {.bSync = true};
+    fs->SyncDirtyDataPages(op);
+
+    // Find data blkaddr.
+    {
+      target_file_ino = file->GetKey();
+      auto result = file->FindDataBlkAddr(0);
+      ASSERT_TRUE(result.is_ok());
+      data_blkaddr = result.value();
+    }
+
+    ASSERT_EQ(file->Close(), ZX_OK);
+    file = nullptr;
+    ASSERT_EQ(root_dir->Close(), ZX_OK);
+    root_dir = nullptr;
+
+    FileTester::Unmount(std::move(fs), &bc);
+  }
+
+  FsckWorker fsck(std::move(bc), FsckOptions{.repair = false});
+  ASSERT_EQ(fsck.DoMount(), ZX_OK);
+
+  // Read the SSA block.
+  auto segno = fsck.GetSegmentNumber(data_blkaddr);
+  auto blkoff_from_main = data_blkaddr - fsck.GetSegmentManager().GetMainAreaStartBlock();
+  uint32_t offset = blkoff_from_main % (1 << fsck.GetSuperblockInfo().GetLogBlocksPerSeg());
+
+  auto fs_block = std::make_unique<FsBlock>();
+  block_t ssa_blkaddr = fsck.GetSegmentManager().GetSumBlock(segno);
+  ASSERT_EQ(fsck.ReadBlock(*fs_block, ssa_blkaddr), ZX_OK);
+  SummaryBlock *ssa_block = reinterpret_cast<SummaryBlock *>(fs_block->GetData().data());
+
+  // Corrupt root_ino block address.
+  ASSERT_EQ(LeToCpu(ssa_block->entries[offset].nid), target_file_ino);
+  ++ssa_block->entries[offset].nid;
+  ASSERT_EQ(fsck.WriteBlock(*fs_block.get(), ssa_blkaddr), ZX_OK);
+
+  // Fsck should fail at verifying stage.
+  ASSERT_EQ(fsck.DoFsck(), ZX_ERR_INTERNAL);
+}
+
 TEST(FsckTest, WrongInodeHardlinkCount) {
   std::unique_ptr<Bcache> bc;
   nid_t ino;

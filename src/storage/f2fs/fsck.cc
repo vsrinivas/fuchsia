@@ -134,11 +134,10 @@ zx_status_t FsckWorker::FindAndIncreaseInodeLinkMap(nid_t nid) {
 
 bool FsckWorker::IsValidSsaNodeBlock(nid_t nid, uint32_t block_address) {
   auto [ret, summary_entry] = GetSummaryEntry(block_address);
-  ZX_ASSERT(static_cast<int>(ret) >= 0);
 
   if (ret == SegType::kSegTypeData || ret == SegType::kSegTypeCurData) {
     FX_LOGS(ERROR) << "Summary footer is not a node segment summary";
-    ZX_ASSERT(0);
+    return false;
   } else if (ret == SegType::kSegTypeNode) {
     if (LeToCpu(summary_entry.nid) != nid) {
       FX_LOGS(ERROR) << "nid                       [0x" << std::hex << nid << "]";
@@ -154,13 +153,13 @@ bool FsckWorker::IsValidSsaNodeBlock(nid_t nid, uint32_t block_address) {
                      << "]";
       FX_LOGS(ERROR) << "--> node block's nid      [0x" << std::hex << nid << "]";
       FX_LOGS(ERROR) << "Invalid node seg summary\n";
-      ZX_ASSERT(0);
+      return false;
     }
   } else if (ret == SegType::kSegTypeCurNode) {
     // current node segment has no ssa
   } else {
     FX_LOGS(ERROR) << "Invalid return value of 'GetSummaryEntry'";
-    ZX_ASSERT(0);
+    return false;
   }
   return true;
 }
@@ -184,7 +183,7 @@ bool FsckWorker::IsValidSsaDataBlock(uint32_t block_address, uint32_t parent_nid
 
     FX_LOGS(ERROR) << "Target data block address    [0x" << std::hex << block_address << "]";
     FX_LOGS(ERROR) << "Invalid data seg summary\n";
-    ZX_ASSERT(0);
+    return false;
   }
   return true;
 }
@@ -302,7 +301,8 @@ zx::result<std::pair<std::unique_ptr<FsBlock>, NodeInfoDeprecated>> FsckWorker::
   NodeInfoDeprecated node_info = *result;
 
   if (node_info.blk_addr == kNewAddr) {
-    return zx::ok(std::pair<std::unique_ptr<FsBlock>, NodeInfoDeprecated>{nullptr, node_info});
+    FX_LOGS(ERROR) << "nid is NEW_ADDR. [0x" << std::hex << nid << "]";
+    return zx::error(ZX_ERR_INTERNAL);
   }
 
   if (!IsValidBlockAddress(node_info.blk_addr) || !IsValidSsaNodeBlock(nid, node_info.blk_addr)) {
@@ -334,18 +334,6 @@ zx::result<TraverseResult> FsckWorker::CheckNodeBlock(const Inode *inode, nid_t 
   }
 
   auto [fs_block, node_info] = std::move(*result);
-  if (fs_block == nullptr) {
-    // This means that the block was already allocated, but not stored in disk.
-    ZX_ASSERT(node_info.blk_addr == kNewAddr);
-
-    ++fsck_.result.valid_block_count;
-    ++fsck_.result.valid_node_count;
-    if (ntype == NodeType::kTypeInode) {
-      ++fsck_.result.valid_inode_count;
-    }
-    return zx::ok(TraverseResult{block_count, link_count});
-  }
-
 #ifdef __Fuchsia__
   auto node_block = reinterpret_cast<Node *>(fs_block->GetData().data());
 #else   // __Fuchsia__
@@ -395,13 +383,13 @@ zx::result<TraverseResult> FsckWorker::CheckNodeBlock(const Inode *inode, nid_t 
       uint32_t i_links = LeToCpu(node_block->i.i_links);
       uint64_t i_blocks = LeToCpu(node_block->i.i_blocks);
       if (i_blocks != block_count) {
-        PrintNodeInfo(*node_block);
-        FX_LOGS(ERROR) << "i_blocks != block_count";
+        FX_LOGS(ERROR) << "Node ID [0x" << std::hex << nid << "] i_blocks != block_count";
+        PrintInodeInfo(node_block->i);
         return zx::error(ZX_ERR_INTERNAL);
       }
       if (ftype == FileType::kFtDir && i_links != link_count) {
-        PrintNodeInfo(*node_block);
-        FX_LOGS(ERROR) << "i_links != link_count";
+        FX_LOGS(ERROR) << "Node ID [0x" << std::hex << nid << "] i_links != link_count";
+        PrintInodeInfo(node_block->i);
         return zx::error(ZX_ERR_INTERNAL);
       }
     }
@@ -677,7 +665,9 @@ zx_status_t FsckWorker::CheckDataBlock(uint32_t block_address, uint32_t &child_c
     return ZX_ERR_INTERNAL;
   }
 
-  IsValidSsaDataBlock(block_address, parent_nid, index_in_node, ver);
+  if (!IsValidSsaDataBlock(block_address, parent_nid, index_in_node, ver)) {
+    return ZX_ERR_INTERNAL;
+  }
 
   if (TestValidBitmap(BlkoffFromMain(*segment_manager_, block_address), sit_area_bitmap_.get()) ==
       0x0) {
@@ -1279,22 +1269,6 @@ void FsckWorker::PrintInodeInfo(Inode &inode) {
   DisplayMember(sizeof(uint32_t), inode.i_nid[4], "i_nid[4]");  // double indirect
 
   printf("\n");
-}
-
-void FsckWorker::PrintNodeInfo(Node &node_block) {
-  nid_t ino = LeToCpu(node_block.footer.ino);
-  nid_t nid = LeToCpu(node_block.footer.nid);
-  if (ino == nid) {
-    FX_LOGS(INFO) << "Node ID [0x" << std::hex << nid << ":" << nid << "] is inode";
-    PrintInodeInfo(node_block.i);
-  } else {
-    uint32_t *dump_blk = reinterpret_cast<uint32_t *>(&node_block);
-    FX_LOGS(INFO) << "Node ID [0x" << std::hex << nid << ":" << nid
-                  << "] is direct node or indirect node";
-    for (int i = 0; i <= 10; ++i) {  // MSG (0)
-      printf("[%d]\t\t\t[0x%8x : %d]\n", i, dump_blk[i], dump_blk[i]);
-    }
-  }
 }
 
 void FsckWorker::PrintRawSuperblockInfo() {
