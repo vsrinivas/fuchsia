@@ -105,7 +105,7 @@ zx::result<DriverManifestEntries> ParseDriverManifest(rapidjson::Document manife
     return zx::error(ZX_ERR_INTERNAL);
   }
 
-  for (size_t i = 0; i < manifest.Size(); i++) {
+  for (rapidjson::SizeType i = 0; i < manifest.Size(); i++) {
     const auto& driver = manifest[i];
     if (!driver.IsObject()) {
       continue;

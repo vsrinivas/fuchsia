@@ -86,7 +86,7 @@ zx_status_t CompositeDevice::Create(std::string_view name,
     }
 
     md->type = comp_desc.metadata[i].key;
-    md->length = comp_desc.metadata[i].data.count();
+    md->length = static_cast<uint32_t>(comp_desc.metadata[i].data.count());
     memcpy(md->Data(), comp_desc.metadata[i].data.data(), md->length);
     metadata[i] = std::move(md);
   }

@@ -24,7 +24,7 @@ zx::result<std::unique_ptr<DeviceGroupV1>> DeviceGroupV1::Create(
     }
 
     md->type = group_desc.metadata[i].key;
-    md->length = group_desc.metadata[i].data.count();
+    md->length = static_cast<uint32_t>(group_desc.metadata[i].data.count());
     memcpy(md->Data(), group_desc.metadata[i].data.data(), md->length);
     metadata[i] = std::move(md);
   }

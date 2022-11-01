@@ -101,7 +101,7 @@ TEST_F(DeviceInspectTestCase, AddRemoveDevice) {
   const auto* device_count =
       hierarchy().node().get_property<inspect::UintPropertyValue>("device_count");
   ASSERT_TRUE(device_count);
-  uint32_t initial_count = device_count->value();
+  size_t initial_count = device_count->value();
 
   // Add test-device
   size_t test_index;

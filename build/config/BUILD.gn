@@ -705,7 +705,6 @@ config("Wno-conversion") {
     "//src/developer/shell/josh/console:*",
     "//src/developer/shell/josh/lib:*",
     "//src/devices/bin/driver_host:*",
-    "//src/devices/bin/driver_manager:*",
     "//src/devices/block/bin/gpt:*",
     "//src/devices/block/drivers/ftl:*",
     "//src/devices/block/drivers/ftl/tests:*",
