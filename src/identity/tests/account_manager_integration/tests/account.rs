@@ -4,6 +4,7 @@
 
 use {
     anyhow::{anyhow, format_err, Error},
+    assert_matches::assert_matches,
     fidl::endpoints::{create_endpoints, ServerEnd},
     fidl_fuchsia_hardware_block_partition::Guid,
     fidl_fuchsia_identity_account::{
@@ -11,6 +12,7 @@ use {
         AccountManagerProvisionNewAccountRequest, AccountManagerProxy, AccountMarker,
         AccountMetadata, AccountProxy, Error as ApiError, Lifetime,
     },
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_logger::LogSinkMarker,
     fidl_fuchsia_sys2 as fsys2,
     fidl_fuchsia_tracing_provider::RegistryMarker,
@@ -766,6 +768,28 @@ async fn test_account_metadata_failures() -> Result<(), Error> {
             .await?,
         Err(ApiError::InvalidRequest)
     );
+
+    Ok(())
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_get_data_directory() -> Result<(), Error> {
+    let account_manager = create_account_manager().await?;
+
+    let account_id = provision_new_account(
+        &account_manager,
+        Lifetime::Persistent,
+        Some(ALWAYS_SUCCEED_AUTH_MECHANISM_ID),
+        create_account_metadata("test1"),
+    )
+    .await?;
+
+    let (account_client_end, account_server_end) = create_endpoints()?;
+    assert_eq!(get_account(&account_manager, account_id, account_server_end).await?, Ok(()));
+    let account_proxy = account_client_end.into_proxy()?;
+
+    let (_, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
+    assert_matches!(account_proxy.get_data_directory(server).await, Ok(Ok(())));
 
     Ok(())
 }

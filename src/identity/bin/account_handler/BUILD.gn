@@ -42,6 +42,7 @@ rustc_binary("bin") {
   test_deps = [
     "//src/identity/lib/identity_testutil",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:typed-builder",
   ]

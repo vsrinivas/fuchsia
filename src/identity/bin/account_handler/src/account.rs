@@ -16,12 +16,20 @@ use {
         AccountRequest, AccountRequestStream, AuthState, AuthTargetRegisterAuthListenerRequest,
         Error as ApiError, Lifetime, PersonaMarker,
     },
+    fidl_fuchsia_io as fio,
     fuchsia_inspect::{Node, NumericProperty},
-    futures::prelude::*,
+    futures::{lock::Mutex, prelude::*},
     identity_common::{cancel_or, TaskGroup, TaskGroupCancel},
     std::{fs, sync::Arc},
+    storage_manager::StorageManager,
     tracing::{error, info, warn},
 };
+
+/// The default directory on the filesystem that we return to all clients. Returning a subdirectory
+/// rather than the root provides scope to store private account data on the encrypted filesystem
+/// that FIDL clients cannot access, and to potentially serve different directories to different
+/// clients in the future.
+const DEFAULT_DIR: &str = "default";
 
 /// The context that a particular request to an Account should be executed in, capturing
 /// information that was supplied upon creation of the channel.
@@ -34,7 +42,7 @@ pub struct AccountContext {
 ///
 /// This state is only available once the Handler has been initialized to a particular account via
 /// the AccountHandlerControl channel.
-pub struct Account {
+pub struct Account<SM> {
     /// Lifetime for this account.
     lifetime: Arc<AccountLifetime>,
 
@@ -49,19 +57,26 @@ pub struct Account {
 
     /// Helper for outputting account information via fuchsia_inspect.
     inspect: inspect::Account,
+
+    /// The StorageManager used by the owning account handler.
+    storage_manager: Arc<Mutex<SM>>,
     // TODO(jsankey): Once the system and API surface can support more than a single persona, add
     // additional state here to store these personae. This will most likely be a hashmap from
     // PersonaId to Persona struct, and changing default_persona from a struct to an ID.
 }
 
-impl Account {
+impl<SM> Account<SM>
+where
+    SM: StorageManager,
+{
     /// Manually construct an account object, shouldn't normally be called directly.
     async fn new(
         persona_id: PersonaId,
         lifetime: AccountLifetime,
         lock_request_sender: lock_request::Sender,
+        storage_manager: Arc<Mutex<SM>>,
         inspect_parent: &Node,
-    ) -> Result<Account, AccountManagerError> {
+    ) -> Result<Account<SM>, AccountManagerError> {
         let task_group = TaskGroup::new();
         let default_persona_task_group = task_group
             .create_child()
@@ -80,15 +95,17 @@ impl Account {
             task_group,
             lock_request_sender,
             inspect: account_inspect,
+            storage_manager,
         })
     }
 
     /// Creates a new system account and, if it is persistent, stores it on disk.
     pub async fn create(
         lifetime: AccountLifetime,
+        storage_manager: Arc<Mutex<SM>>,
         lock_request_sender: lock_request::Sender,
         inspect_parent: &Node,
-    ) -> Result<Account, AccountManagerError> {
+    ) -> Result<Account<SM>, AccountManagerError> {
         let persona_id = PersonaId::new(rand::random::<u64>());
         if let AccountLifetime::Persistent { ref account_dir } = lifetime {
             if StoredAccount::path(account_dir).exists() {
@@ -98,15 +115,16 @@ impl Account {
             let stored_account = StoredAccount::new(persona_id.clone());
             stored_account.save(account_dir)?;
         }
-        Self::new(persona_id, lifetime, lock_request_sender, inspect_parent).await
+        Self::new(persona_id, lifetime, lock_request_sender, storage_manager, inspect_parent).await
     }
 
     /// Loads an existing system account from disk.
     pub async fn load(
         lifetime: AccountLifetime,
+        storage_manager: Arc<Mutex<SM>>,
         lock_request_sender: lock_request::Sender,
         inspect_parent: &Node,
-    ) -> Result<Account, AccountManagerError> {
+    ) -> Result<Account<SM>, AccountManagerError> {
         let account_dir = match lifetime {
             AccountLifetime::Persistent { ref account_dir } => account_dir,
             AccountLifetime::Ephemeral => {
@@ -119,7 +137,7 @@ impl Account {
         };
         let stored_account = StoredAccount::load(account_dir)?;
         let persona_id = stored_account.get_default_persona_id().clone();
-        Self::new(persona_id, lifetime, lock_request_sender, inspect_parent).await
+        Self::new(persona_id, lifetime, lock_request_sender, storage_manager, inspect_parent).await
     }
 
     /// Removes the account from disk or returns the account and the error.
@@ -210,8 +228,9 @@ impl Account {
                 let mut response = self.lock().await;
                 responder.send(&mut response)?;
             }
-            AccountRequest::GetDataDirectory { responder, .. } => {
-                responder.send(&mut Err(ApiError::UnsupportedOperation))?;
+            AccountRequest::GetDataDirectory { data_directory, responder, .. } => {
+                let mut response = self.get_data_directory(data_directory).await;
+                responder.send(&mut response)?;
             }
         }
         Ok(())
@@ -294,12 +313,40 @@ impl Account {
             Ok(()) => Ok(()),
         }
     }
+
+    async fn get_data_directory(
+        &self,
+        data_directory: ServerEnd<fio::DirectoryMarker>,
+    ) -> Result<(), ApiError> {
+        let storage_manager = self.storage_manager.lock().await;
+
+        let root_dir = storage_manager.get_root_dir().await.map_err(|err| {
+            warn!("get_data_directory: error accessing root directory: {:?}", err);
+            ApiError::Resource
+        })?;
+
+        root_dir
+            .open(
+                fio::OpenFlags::RIGHT_READABLE
+                    | fio::OpenFlags::RIGHT_WRITABLE
+                    | fio::OpenFlags::DIRECTORY
+                    | fio::OpenFlags::CREATE,
+                fio::MODE_TYPE_DIRECTORY,
+                DEFAULT_DIR,
+                ServerEnd::new(data_directory.into_channel()),
+            )
+            .map_err(|err| {
+                error!("get_data_directory: couldn't open data dir out of storage: {:?}", err);
+                ApiError::Resource
+            })
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::test_util::*;
+    use assert_matches::assert_matches;
     use fidl::endpoints::create_endpoints;
     use fidl_fuchsia_identity_account::{
         AccountMarker, AccountProxy, AuthChangeGranularity, AuthTargetRegisterAuthListenerRequest,
@@ -307,47 +354,63 @@ mod tests {
     use fuchsia_async as fasync;
     use fuchsia_inspect::Inspector;
     use futures::channel::oneshot;
+    use identity_testutil::{make_formatted_account_partition_any_key, MockDiskManager};
+    use storage_manager::{minfs::StorageManager as MinfsStorageManager, Key};
+    use typed_builder::TypedBuilder;
 
     const TEST_AUTH_MECHANISM_ID: &str = "<AUTH MECHANISM ID>";
 
     const TEST_ENROLLMENT_ID: u64 = 1337;
 
+    const TEST_KEY: Key = Key::Key256Bit([1; 32]);
+
     /// Type to hold the common state require during construction of test objects and execution
     /// of a test, including an async executor and a temporary location in the filesystem.
+    #[derive(TypedBuilder)]
     struct Test {
+        #[builder(default = TempLocation::new())]
         location: TempLocation,
     }
 
     impl Test {
-        fn new() -> Test {
-            Test { location: TempLocation::new() }
+        fn new() -> Self {
+            Self::builder().build()
         }
 
-        async fn create_persistent_account(&self) -> Result<Account, AccountManagerError> {
+        async fn create_persistent_account(
+            &self,
+        ) -> Result<Account<MinfsStorageManager<MockDiskManager>>, AccountManagerError> {
             let inspector = Inspector::new();
             let account_dir = self.location.path.clone();
             Account::create(
                 AccountLifetime::Persistent { account_dir },
+                make_provisioned_minfs_storage_manager().await,
                 lock_request::Sender::NotSupported,
                 inspector.root(),
             )
             .await
         }
 
-        async fn create_ephemeral_account(&self) -> Result<Account, AccountManagerError> {
+        async fn create_ephemeral_account(
+            &self,
+        ) -> Result<Account<MinfsStorageManager<MockDiskManager>>, AccountManagerError> {
             let inspector = Inspector::new();
             Account::create(
                 AccountLifetime::Ephemeral,
+                make_provisioned_minfs_storage_manager().await,
                 lock_request::Sender::NotSupported,
                 inspector.root(),
             )
             .await
         }
 
-        async fn load_account(&self) -> Result<Account, AccountManagerError> {
+        async fn load_account(
+            &self,
+        ) -> Result<Account<MinfsStorageManager<MockDiskManager>>, AccountManagerError> {
             let inspector = Inspector::new();
             Account::load(
                 AccountLifetime::Persistent { account_dir: self.location.path.clone() },
+                make_provisioned_minfs_storage_manager().await,
                 lock_request::Sender::NotSupported,
                 inspector.root(),
             )
@@ -356,12 +419,17 @@ mod tests {
 
         async fn create_persistent_account_with_lock_request(
             &self,
-        ) -> Result<(Account, oneshot::Receiver<()>), AccountManagerError> {
+        ) -> Result<
+            (Account<MinfsStorageManager<MockDiskManager>>, oneshot::Receiver<()>),
+            AccountManagerError,
+        > {
             let inspector = Inspector::new();
             let account_dir = self.location.path.clone();
             let (sender, receiver) = lock_request::channel();
+
             let account = Account::create(
                 AccountLifetime::Persistent { account_dir },
+                make_provisioned_minfs_storage_manager().await,
                 sender,
                 inspector.root(),
             )
@@ -369,15 +437,17 @@ mod tests {
             Ok((account, receiver))
         }
 
-        async fn run<TestFn, Fut>(&mut self, test_object: Account, test_fn: TestFn)
+        async fn run<TestFn, Fut, SM>(&mut self, test_object: Account<SM>, test_fn: TestFn)
         where
             TestFn: FnOnce(AccountProxy) -> Fut,
             Fut: Future<Output = Result<(), Error>>,
+            SM: StorageManager + Send + Sync + 'static,
         {
             let (account_client_end, account_server_end) =
                 create_endpoints::<AccountMarker>().unwrap();
             let account_proxy = account_client_end.into_proxy().unwrap();
             let request_stream = account_server_end.into_stream().unwrap();
+
             let context = AccountContext {};
 
             let task_group = TaskGroup::new();
@@ -395,6 +465,16 @@ mod tests {
                 .expect("Unable to spawn task");
             test_fn(account_proxy).await.expect("Test function failed.")
         }
+    }
+
+    async fn make_provisioned_minfs_storage_manager(
+    ) -> Arc<Mutex<MinfsStorageManager<MockDiskManager>>> {
+        let storage_manager = MinfsStorageManager::new(
+            MockDiskManager::new().with_partition(make_formatted_account_partition_any_key()),
+        );
+        let () =
+            storage_manager.provision(&(&TEST_KEY).try_into().unwrap()).await.expect("provision");
+        Arc::new(Mutex::new(storage_manager))
     }
 
     #[fasync::run_until_stalled(test)]
@@ -451,6 +531,7 @@ mod tests {
         let inspector = Inspector::new();
         assert!(Account::load(
             AccountLifetime::Ephemeral,
+            make_provisioned_minfs_storage_manager().await,
             lock_request::Sender::NotSupported,
             inspector.root(),
         )
@@ -671,6 +752,21 @@ mod tests {
         test.run(account, |proxy| async move {
             assert_eq!(proxy.lock().await?, Ok(()));
             assert_eq!(proxy.lock().await?, Ok(()));
+            Ok(())
+        })
+        .await;
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_get_data_directory_ok() {
+        let mut test = Test::new();
+
+        let (account, _receiver) =
+            test.create_persistent_account_with_lock_request().await.unwrap();
+
+        test.run(account, |proxy| async move {
+            let (_dir, dir_server_end) = fidl::endpoints::create_proxy().unwrap();
+            assert_matches!(proxy.get_data_directory(dir_server_end).await, Ok(Ok(())));
             Ok(())
         })
         .await;

@@ -58,7 +58,10 @@ lazy_static! {
 const ENROLLMENT_ID: u64 = 0;
 
 /// The states of an AccountHandler.
-enum Lifecycle {
+enum Lifecycle<SM>
+where
+    SM: StorageManager,
+{
     /// An account has not yet been created or loaded.
     Uninitialized,
 
@@ -66,13 +69,16 @@ enum Lifecycle {
     Locked { pre_auth_state: PreAuthState },
 
     /// The account is currently loaded and is available.
-    Initialized { account: Arc<Account>, pre_auth_state: PreAuthState },
+    Initialized { account: Arc<Account<SM>>, pre_auth_state: PreAuthState },
 
     /// There is no account present, and initialization is not possible.
     Finished,
 }
 
-impl fmt::Debug for Lifecycle {
+impl<SM> fmt::Debug for Lifecycle<SM>
+where
+    SM: StorageManager,
+{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name = match *self {
             Lifecycle::Uninitialized { .. } => "Uninitialized",
@@ -93,7 +99,7 @@ where
     /// The current state of the AccountHandler state machine, optionally containing
     /// a reference to the `Account` and its pre-authentication data, depending on the
     /// state. The methods of the AccountHandler drives changes to the state.
-    state: Arc<Mutex<Lifecycle>>,
+    state: Arc<Mutex<Lifecycle<SM>>>,
 
     /// Lifetime for this account (ephemeral or persistent with a path).
     lifetime: AccountLifetime,
@@ -260,10 +266,14 @@ where
                         warn!("Error constructing lock request sender: {:?}", err);
                         err.api_error
                     })?;
-                let account =
-                    Account::create(self.lifetime.clone(), sender, self.inspect.get_node())
-                        .await
-                        .map_err(|err| err.api_error)?;
+                let account: Account<SM> = Account::create(
+                    self.lifetime.clone(),
+                    Arc::clone(&self.storage_manager),
+                    sender,
+                    self.inspect.get_node(),
+                )
+                .await
+                .map_err(|err| err.api_error)?;
 
                 let () = self.storage_manager.lock().await.provision(&MAGIC_PREKEY).await.map_err(
                     |err| {
@@ -347,9 +357,14 @@ where
                         warn!("Error constructing lock request sender: {:?}", err);
                         err.api_error
                     })?;
-                let account = Account::load(self.lifetime.clone(), sender, self.inspect.get_node())
-                    .await
-                    .map_err(|err| err.api_error)?;
+                let account: Account<SM> = Account::load(
+                    self.lifetime.clone(),
+                    Arc::clone(&self.storage_manager),
+                    sender,
+                    self.inspect.get_node(),
+                )
+                .await
+                .map_err(|err| err.api_error)?;
 
                 let () =
                     self.storage_manager.lock().await.unlock_storage(&MAGIC_PREKEY).await.map_err(
@@ -587,7 +602,7 @@ where
     ///
     /// Returns a serialized PreAuthState if it's changed.
     async fn lock_now(
-        state: Arc<Mutex<Lifecycle>>,
+        state: Arc<Mutex<Lifecycle<SM>>>,
         storage_manager: Arc<Mutex<SM>>,
         inspect: Arc<inspect::AccountHandler>,
     ) -> Result<Option<Vec<u8>>, AccountManagerError> {
