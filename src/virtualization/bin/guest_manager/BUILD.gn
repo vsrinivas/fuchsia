@@ -23,10 +23,16 @@ source_set("lib") {
   sources = [
     "guest_manager.cc",
     "guest_manager.h",
+    "memory_pressure_handler.cc",
+    "memory_pressure_handler.h",
   ]
 
+  deps = [ "//zircon/system/ulib/virtio" ]
   public_deps = [
+    "//sdk/fidl/fuchsia.memorypressure:fuchsia.memorypressure_cpp",
+    "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization_cpp",
     "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization_hlcpp",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/virtualization/lib/guest_config",
@@ -74,14 +80,20 @@ fuchsia_component("debian_guest_manager_cmp") {
 executable("guest_manager_test_bin") {
   testonly = true
 
-  sources = [ "guest_manager_test.cc" ]
+  sources = [
+    "guest_manager_test.cc",
+    "memory_pressure_handler_test.cc",
+  ]
 
   deps = [
     ":lib",
+    "//sdk/fidl/fuchsia.memorypressure:fuchsia.memorypressure_hlcpp",
+    "//sdk/fidl/fuchsia.virtualization.hardware:fuchsia.virtualization.hardware_hlcpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/testing/fidl:placeholders_hlcpp",
+    "//zircon/system/ulib/virtio",
   ]
 }
 
