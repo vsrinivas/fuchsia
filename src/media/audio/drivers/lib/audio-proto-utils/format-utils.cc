@@ -106,7 +106,7 @@ std::vector<Format> GetAllFormats(audio_sample_format_t sample_format) {
     }
     // We expect all bits to have been processed.
     if (fmt_noflags != 0) {
-      ZX_PANIC("Invalid audio_out_format_t: %X\n", sample_format);
+      ZX_PANIC("Invalid audio_out_format_t: %X", sample_format);
     }
   }
   return all;
