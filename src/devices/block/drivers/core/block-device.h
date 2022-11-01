@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_CORE_BLOCK_DEVICE_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_CORE_BLOCK_DEVICE_H_
+
 #include <assert.h>
-#include <fuchsia/hardware/block/c/fidl.h>
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <fuchsia/hardware/block/cpp/banjo.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/hardware/block/partition/cpp/banjo.h>
@@ -40,10 +43,7 @@
 #include "src/devices/block/drivers/core/block-core-bind.h"
 #include "src/devices/block/drivers/core/manager.h"
 
-#ifndef SRC_DEVICES_BLOCK_DRIVERS_CORE_BLOCK_DEVICE_H_
-#define SRC_DEVICES_BLOCK_DRIVERS_CORE_BLOCK_DEVICE_H_
-
-// To maintian stats related to time taken by a command or its success/failure, we need to
+// To maintain stats related to time taken by a command or its success/failure, we need to
 // intercept command completion with a callback routine. This might introduce memory
 // overhead.
 // TODO(auradkar): We should be able to turn on/off stats either at compile-time or load-time.
@@ -57,7 +57,8 @@ using BlockDeviceType =
                 ddk_deprecated::Writable, ddk_deprecated::GetSizable>;
 
 class BlockDevice : public BlockDeviceType,
-                    public ddk::BlockProtocol<BlockDevice, ddk::base_protocol> {
+                    public ddk::BlockProtocol<BlockDevice, ddk::base_protocol>,
+                    public fidl::WireServer<fuchsia_hardware_block::Block> {
  public:
   explicit BlockDevice(zx_device_t* parent)
       : BlockDeviceType(parent),
@@ -76,48 +77,37 @@ class BlockDevice : public BlockDeviceType,
   }
 
   void DdkRelease();
+
+  // ddk::GetProtocolable, ddk::MessageableManual
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_protocol);
   void DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn);
+
+  // ddk::Readable, ddk::Writable, ddk::GetSizable
   zx_status_t DdkRead(void* buf, size_t buf_len, zx_off_t off, size_t* actual);
   zx_status_t DdkWrite(const void* buf, size_t buf_len, zx_off_t off, size_t* actual);
   zx_off_t DdkGetSize();
 
+  // ddk::BlockProtocol
   void BlockQuery(block_info_t* block_info, size_t* op_size);
   void BlockQueue(block_op_t* op, block_impl_queue_callback completion_cb, void* cookie);
-  zx_status_t GetStats(bool clear, block_stats_t* out);
-  void UpdateStats(bool success, zx::ticks start_tick, block_op_t* op);
 
-  static const fuchsia_hardware_block_Block_ops* BlockOps() {
-    using Binder = fidl::Binder<BlockDevice>;
-    static const fuchsia_hardware_block_Block_ops kOps = {
-        .GetInfo = Binder::BindMember<&BlockDevice::FidlBlockGetInfo>,
-        .GetStats = Binder::BindMember<&BlockDevice::FidlBlockGetStats>,
-        .GetFifo = Binder::BindMember<&BlockDevice::FidlBlockGetFifo>,
-        .AttachVmo = Binder::BindMember<&BlockDevice::FidlBlockAttachVmo>,
-        .CloseFifo = Binder::BindMember<&BlockDevice::FidlBlockCloseFifo>,
-        .RebindDevice = Binder::BindMember<&BlockDevice::FidlBlockRebindDevice>,
-        .ReadBlocks = Binder::BindMember<&BlockDevice::FidlReadBlocks>,
-        .WriteBlocks = Binder::BindMember<&BlockDevice::FidlWriteBlocks>,
-    };
-    return &kOps;
-  }
+  // fuchsia.hardware.block.Block fidl
+  void GetInfo(GetInfoCompleter::Sync& completer) override;
+  void GetStats(GetStatsRequestView request, GetStatsCompleter::Sync& completer) override;
+  void GetFifo(GetFifoCompleter::Sync& completer) override;
+  void AttachVmo(AttachVmoRequestView request, AttachVmoCompleter::Sync& completer) override;
+  void CloseFifo(CloseFifoCompleter::Sync& completer) override;
+  void RebindDevice(RebindDeviceCompleter::Sync& completer) override;
+  void ReadBlocks(ReadBlocksRequestView request, ReadBlocksCompleter::Sync& completer) override;
+  void WriteBlocks(WriteBlocksRequestView request, WriteBlocksCompleter::Sync& completer) override;
 
  private:
-  zx_status_t DoIo(zx_handle_t vmo, size_t buf_len, zx_off_t off, zx_off_t vmo_off, bool write);
+  zx_status_t DoIo(zx::vmo& vmo, size_t buf_len, zx_off_t off, zx_off_t vmo_off, bool write);
 
-  zx_status_t FidlBlockGetInfo(fidl_txn_t* txn);
-  zx_status_t FidlBlockGetStats(bool clear, fidl_txn_t* txn);
-  zx_status_t FidlBlockGetFifo(fidl_txn_t* txn);
-  zx_status_t FidlBlockAttachVmo(zx_handle_t vmo, fidl_txn_t* txn);
-  zx_status_t FidlBlockCloseFifo(fidl_txn_t* txn);
-  zx_status_t FidlBlockRebindDevice(fidl_txn_t* txn);
-  zx_status_t FidlReadBlocks(zx_handle_t vmo, uint64_t length, uint64_t dev_offset,
-                             uint64_t vmo_offset, fidl_txn_t* txn);
-  zx_status_t FidlWriteBlocks(zx_handle_t vmo, uint64_t length, uint64_t dev_offset,
-                              uint64_t vmo_offset, fidl_txn_t* txn);
   zx_status_t FidlPartitionGetTypeGuid(fidl_txn_t* txn);
   zx_status_t FidlPartitionGetInstanceGuid(fidl_txn_t* txn);
   zx_status_t FidlPartitionGetName(fidl_txn_t* txn);
+
   zx_status_t FidlVolumeGetVolumeInfo(fidl_txn_t* txn);
   zx_status_t FidlVolumeQuerySlices(const uint64_t* start_slices_data, size_t start_slices_count,
                                     fidl_txn_t* txn);
@@ -125,24 +115,14 @@ class BlockDevice : public BlockDeviceType,
   zx_status_t FidlVolumeShrink(uint64_t start_slice, uint64_t slice_count, fidl_txn_t* txn);
   zx_status_t FidlVolumeDestroy(fidl_txn_t* txn);
 
-  // Converts BlockDeviceMetrics to block_stats_t
-  void ConvertToBlockStats(block_stats_t* out) __TA_REQUIRES(stat_lock_);
-
   // Completion callback that expects StatsCookie as |cookie| and calls upper
   // layer completion cookie.
   static void UpdateStatsAndCallCompletion(void* cookie, zx_status_t status, block_op_t* op);
+  void UpdateStats(bool success, zx::ticks start_tick, block_op_t* op);
 
   static const fuchsia_hardware_block_partition_Partition_ops* PartitionOps() {
     using Binder = fidl::Binder<BlockDevice>;
     static const fuchsia_hardware_block_partition_Partition_ops kOps = {
-        .GetInfo = Binder::BindMember<&BlockDevice::FidlBlockGetInfo>,
-        .GetStats = Binder::BindMember<&BlockDevice::FidlBlockGetStats>,
-        .GetFifo = Binder::BindMember<&BlockDevice::FidlBlockGetFifo>,
-        .AttachVmo = Binder::BindMember<&BlockDevice::FidlBlockAttachVmo>,
-        .CloseFifo = Binder::BindMember<&BlockDevice::FidlBlockCloseFifo>,
-        .RebindDevice = Binder::BindMember<&BlockDevice::FidlBlockRebindDevice>,
-        .ReadBlocks = Binder::BindMember<&BlockDevice::FidlReadBlocks>,
-        .WriteBlocks = Binder::BindMember<&BlockDevice::FidlWriteBlocks>,
         .GetTypeGuid = Binder::BindMember<&BlockDevice::FidlPartitionGetTypeGuid>,
         .GetInstanceGuid = Binder::BindMember<&BlockDevice::FidlPartitionGetInstanceGuid>,
         .GetName = Binder::BindMember<&BlockDevice::FidlPartitionGetName>,
@@ -153,14 +133,6 @@ class BlockDevice : public BlockDeviceType,
   static const fuchsia_hardware_block_volume_Volume_ops* VolumeOps() {
     using Binder = fidl::Binder<BlockDevice>;
     static const fuchsia_hardware_block_volume_Volume_ops kOps = {
-        .GetInfo = Binder::BindMember<&BlockDevice::FidlBlockGetInfo>,
-        .GetStats = Binder::BindMember<&BlockDevice::FidlBlockGetStats>,
-        .GetFifo = Binder::BindMember<&BlockDevice::FidlBlockGetFifo>,
-        .AttachVmo = Binder::BindMember<&BlockDevice::FidlBlockAttachVmo>,
-        .CloseFifo = Binder::BindMember<&BlockDevice::FidlBlockCloseFifo>,
-        .RebindDevice = Binder::BindMember<&BlockDevice::FidlBlockRebindDevice>,
-        .ReadBlocks = Binder::BindMember<&BlockDevice::FidlReadBlocks>,
-        .WriteBlocks = Binder::BindMember<&BlockDevice::FidlWriteBlocks>,
         .GetTypeGuid = Binder::BindMember<&BlockDevice::FidlPartitionGetTypeGuid>,
         .GetInstanceGuid = Binder::BindMember<&BlockDevice::FidlPartitionGetInstanceGuid>,
         .GetName = Binder::BindMember<&BlockDevice::FidlPartitionGetName>,

@@ -4,7 +4,6 @@
 
 #include "src/devices/block/drivers/core/block-device.h"
 
-#include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/hardware/block/partition/cpp/banjo.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
@@ -39,6 +38,11 @@ zx_status_t BlockDevice::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
 }
 
 void BlockDevice::DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn) {
+  // Try the block protocol first, then fall back to the other protocols.
+  if (fidl::WireTryDispatch(this, msg, &txn) == fidl::DispatchResult::kFound) {
+    return;
+  }
+
   fidl_incoming_msg_t message = std::move(msg).ReleaseToEncodedCMessage();
   if (parent_volume_protocol_.is_valid()) {
     txn.set_status(
@@ -47,8 +51,7 @@ void BlockDevice::DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransactio
     txn.set_status(fuchsia_hardware_block_partition_Partition_dispatch(this, txn.fidl_txn(),
                                                                        &message, PartitionOps()));
   } else {
-    txn.set_status(
-        fuchsia_hardware_block_Block_dispatch(this, txn.fidl_txn(), &message, BlockOps()));
+    txn.set_status(ZX_ERR_NOT_SUPPORTED);
   }
 }
 
@@ -71,19 +74,7 @@ void BlockDevice::UpdateStats(bool success, zx::ticks start_tick, block_op_t* op
 // be used instead.
 constexpr uint32_t kMaxMidlayerIO = 8192;
 
-zx_status_t BlockDevice::FidlReadBlocks(zx_handle_t vmo, uint64_t length, uint64_t dev_offset,
-                                        uint64_t vmo_offset, fidl_txn_t* txn) {
-  auto status = DoIo(vmo, length, dev_offset, vmo_offset, false);
-  return fuchsia_hardware_block_BlockReadBlocks_reply(txn, status);
-}
-
-zx_status_t BlockDevice::FidlWriteBlocks(zx_handle_t vmo, uint64_t length, uint64_t dev_offset,
-                                         uint64_t vmo_offset, fidl_txn_t* txn) {
-  auto status = DoIo(vmo, length, dev_offset, vmo_offset, true);
-  return fuchsia_hardware_block_BlockWriteBlocks_reply(txn, status);
-}
-
-zx_status_t BlockDevice::DoIo(zx_handle_t vmo, size_t buf_len, zx_off_t off, zx_off_t vmo_off,
+zx_status_t BlockDevice::DoIo(zx::vmo& vmo, size_t buf_len, zx_off_t off, zx_off_t vmo_off,
                               bool write) {
   fbl::AutoLock lock(&io_lock_);
   const size_t block_size = info_.block_size;
@@ -107,7 +98,7 @@ zx_status_t BlockDevice::DoIo(zx_handle_t vmo, size_t buf_len, zx_off_t off, zx_
     op->command = write ? BLOCK_OP_WRITE : BLOCK_OP_READ;
     ZX_DEBUG_ASSERT(sub_txn_length / block_size < std::numeric_limits<uint32_t>::max());
     op->rw.length = static_cast<uint32_t>(sub_txn_length / block_size);
-    op->rw.vmo = vmo;
+    op->rw.vmo = vmo.get();
     op->rw.offset_dev = (off + sub_txn_offset) / block_size;
     op->rw.offset_vmo = (vmo_off + sub_txn_offset) / block_size;
 
@@ -137,7 +128,7 @@ zx_status_t BlockDevice::DdkRead(void* buf, size_t buf_len, zx_off_t off, size_t
       ZX_OK) {
     return ZX_ERR_INTERNAL;
   }
-  zx_status_t status = DoIo(vmo.get(), buf_len, off, 0, false);
+  zx_status_t status = DoIo(vmo, buf_len, off, 0, false);
   if (vmo.read(buf, 0, buf_len) != ZX_OK) {
     return ZX_ERR_INTERNAL;
   }
@@ -154,7 +145,7 @@ zx_status_t BlockDevice::DdkWrite(const void* buf, size_t buf_len, zx_off_t off,
   if (vmo.write(buf, 0, buf_len) != ZX_OK) {
     return ZX_ERR_INTERNAL;
   }
-  zx_status_t status = DoIo(vmo.get(), buf_len, off, 0, true);
+  zx_status_t status = DoIo(vmo, buf_len, off, 0, true);
   *actual = (status == ZX_OK) ? buf_len : 0;
   return status;
 }
@@ -201,39 +192,13 @@ void BlockDevice::BlockQueue(block_op_t* op, block_impl_queue_callback completio
   }
 }
 
-void BlockDevice::ConvertToBlockStats(block_stats_t* out) {
-  fuchsia_hardware_block_BlockStats metrics;
-  stats_.CopyToFidl(&metrics);
-  out->total_ops = stats_.TotalCalls();
-  out->total_blocks = stats_.TotalBytesTransferred() / info_.block_size;
-  out->total_reads = metrics.read.success.total_calls + metrics.read.failure.total_calls;
-  out->total_blocks_read =
-      (metrics.read.success.bytes_transferred + metrics.read.failure.bytes_transferred) /
-      info_.block_size;
-  out->total_writes = metrics.write.success.total_calls + metrics.write.failure.total_calls;
-  out->total_blocks_written =
-      (metrics.write.success.bytes_transferred + metrics.write.failure.bytes_transferred) /
-      info_.block_size;
-}
+void BlockDevice::GetInfo(GetInfoCompleter::Sync& completer) {
+  static_assert(sizeof(block_info_t) == sizeof(fuchsia_hardware_block::wire::BlockInfo),
+                "Unsafe to cast between internal / FIDL types");
 
-zx_status_t BlockDevice::GetStats(bool clear, block_stats_t* out) {
-  fbl::AutoLock lock(&stat_lock_);
-
-  if (stats_.Enabled()) {
-    ConvertToBlockStats(out);
-    if (clear) {
-      stats_.Reset();
-    }
-    return ZX_OK;
-  } else {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-}
-
-zx_status_t BlockDevice::FidlBlockGetInfo(fidl_txn_t* txn) {
-  block_info_t info;
+  fuchsia_hardware_block::wire::BlockInfo info;
   size_t block_op_size = 0;
-  parent_protocol_.Query(&info, &block_op_size);
+  parent_protocol_.Query(reinterpret_cast<block_info_t*>(&info), &block_op_size);
   // Set or clear BLOCK_FLAG_BOOTPART appropriately.
   if (has_bootpart_) {
     info.flags |= BLOCK_FLAG_BOOTPART;
@@ -241,45 +206,56 @@ zx_status_t BlockDevice::FidlBlockGetInfo(fidl_txn_t* txn) {
     info.flags &= ~BLOCK_FLAG_BOOTPART;
   }
 
-  static_assert(sizeof(block_info_t) == sizeof(fuchsia_hardware_block_BlockInfo),
-                "Unsafe to cast between internal / FIDL types");
-
-  return fuchsia_hardware_block_BlockGetInfo_reply(
-      txn, ZX_OK, reinterpret_cast<const fuchsia_hardware_block_BlockInfo*>(&info));
+  completer.Reply(ZX_OK,
+                  fidl::ObjectView<fuchsia_hardware_block::wire::BlockInfo>::FromExternal(&info));
 }
 
-zx_status_t BlockDevice::FidlBlockGetStats(bool clear, fidl_txn_t* txn) {
+void BlockDevice::GetStats(GetStatsRequestView request, GetStatsCompleter::Sync& completer) {
   fbl::AutoLock lock(&stat_lock_);
   if (!enable_stats_) {
-    return fuchsia_hardware_block_BlockGetStats_reply(txn, ZX_ERR_NOT_SUPPORTED, nullptr);
+    completer.Reply(ZX_ERR_NOT_SUPPORTED, nullptr);
+    return;
   }
 
-  fuchsia_hardware_block_BlockStats stats = {};
+  fuchsia_hardware_block::wire::BlockStats stats;
   stats_.CopyToFidl(&stats);
-  if (clear) {
+  if (request->clear) {
     stats_.Reset();
   }
-  return fuchsia_hardware_block_BlockGetStats_reply(txn, ZX_OK, &stats);
+  completer.Reply(ZX_OK,
+                  fidl::ObjectView<fuchsia_hardware_block::wire::BlockStats>::FromExternal(&stats));
 }
 
-zx_status_t BlockDevice::FidlBlockGetFifo(fidl_txn_t* txn) {
+void BlockDevice::GetFifo(GetFifoCompleter::Sync& completer) {
   zx::fifo fifo;
   zx_status_t status = manager_.StartServer(zxdev(), &self_protocol_, &fifo);
-  return fuchsia_hardware_block_BlockGetFifo_reply(txn, status, fifo.release());
+  completer.Reply(status, std::move(fifo));
 }
 
-zx_status_t BlockDevice::FidlBlockAttachVmo(zx_handle_t vmo, fidl_txn_t* txn) {
-  fuchsia_hardware_block_VmoId vmoid = {fuchsia_hardware_block_VMOID_INVALID};
-  zx_status_t status = manager_.AttachVmo(zx::vmo(vmo), &vmoid.id);
-  return fuchsia_hardware_block_BlockAttachVmo_reply(txn, status, &vmoid);
+void BlockDevice::AttachVmo(AttachVmoRequestView request, AttachVmoCompleter::Sync& completer) {
+  fuchsia_hardware_block::wire::VmoId vmoid;
+  zx_status_t status = manager_.AttachVmo(std::move(request->vmo), &vmoid.id);
+  completer.Reply(status,
+                  fidl::ObjectView<fuchsia_hardware_block::wire::VmoId>::FromExternal(&vmoid));
 }
 
-zx_status_t BlockDevice::FidlBlockCloseFifo(fidl_txn_t* txn) {
-  return fuchsia_hardware_block_BlockCloseFifo_reply(txn, manager_.CloseFifoServer());
+void BlockDevice::CloseFifo(CloseFifoCompleter::Sync& completer) {
+  completer.Reply(manager_.CloseFifoServer());
 }
 
-zx_status_t BlockDevice::FidlBlockRebindDevice(fidl_txn_t* txn) {
-  return fuchsia_hardware_block_BlockRebindDevice_reply(txn, device_rebind(zxdev()));
+void BlockDevice::RebindDevice(RebindDeviceCompleter::Sync& completer) {
+  completer.Reply(device_rebind(zxdev()));
+}
+
+void BlockDevice::ReadBlocks(ReadBlocksRequestView request, ReadBlocksCompleter::Sync& completer) {
+  completer.Reply(
+      DoIo(request->vmo, request->length, request->dev_offset, request->vmo_offset, false));
+}
+
+void BlockDevice::WriteBlocks(WriteBlocksRequestView request,
+                              WriteBlocksCompleter::Sync& completer) {
+  completer.Reply(
+      DoIo(request->vmo, request->length, request->dev_offset, request->vmo_offset, true));
 }
 
 zx_status_t BlockDevice::FidlPartitionGetTypeGuid(fidl_txn_t* txn) {

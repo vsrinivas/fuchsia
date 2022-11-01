@@ -284,8 +284,7 @@ TEST(BlockTest, TestReadWriteSingle) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_block::Block>();
   ASSERT_OK(endpoints.status_value());
 
-  fidl_bind(loop.dispatcher(), endpoints->server.TakeChannel().release(),
-            (fidl_dispatch_t*)fuchsia_hardware_block_Block_dispatch, dut, BlockDevice::BlockOps());
+  fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), dut);
   auto sync_client =
       fidl::WireSyncClient<fuchsia_hardware_block::Block>(std::move(endpoints->client));
   auto info_result = sync_client->GetInfo();
