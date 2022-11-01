@@ -24,6 +24,8 @@
 #include "src/media/audio/services/mixer/common/memory_mapped_buffer.h"
 #include "src/media/audio/services/mixer/fidl/consumer_node.h"
 #include "src/media/audio/services/mixer/fidl/custom_node.h"
+#include "src/media/audio/services/mixer/fidl/delay_watcher_client.h"
+#include "src/media/audio/services/mixer/fidl/delay_watcher_server.h"
 #include "src/media/audio/services/mixer/fidl/gain_control_server.h"
 #include "src/media/audio/services/mixer/fidl/mixer_node.h"
 #include "src/media/audio/services/mixer/fidl/producer_node.h"
@@ -227,6 +229,29 @@ ValidateRingBuffer(std::string_view debug_description, std::string_view node_nam
   });
 }
 
+// Valdiates `external_delay_watcher` and translates from FIDL types to internal C++ types.
+struct ExternalDelayWatcherInfo {
+  std::optional<fidl::ClientEnd<fuchsia_audio::DelayWatcher>> client_end;
+  std::optional<zx::duration> initial_delay;
+};
+template <typename CreateNodeRequestT>
+fpromise::result<ExternalDelayWatcherInfo, fuchsia_audio_mixer::CreateNodeError>
+ValidateExternalDelayWatcher(std::string_view debug_description, std::string_view node_name,
+                             CreateNodeRequestT& request) {
+  if (!request.has_external_delay_watcher()) {
+    FX_LOGS(WARNING) << debug_description << ": missing field";
+    return fpromise::error(fuchsia_audio_mixer::CreateNodeError::kMissingRequiredField);
+  }
+
+  auto& edw = request.external_delay_watcher();
+  return fpromise::ok(ExternalDelayWatcherInfo{
+      .client_end =
+          edw.has_client_end() ? std::optional(std::move(edw.client_end())) : std::nullopt,
+      .initial_delay =
+          edw.has_initial_delay() ? std::optional(zx::nsec(edw.initial_delay())) : std::nullopt,
+  });
+}
+
 fpromise::result<Node::CreateEdgeOptions, fuchsia_audio_mixer::CreateEdgeError>
 ParseCreateEdgeOptions(
     const GraphServer::CreateEdgeRequestView& request,
@@ -374,6 +399,27 @@ void GraphServer::CreateProducer(CreateProducerRequestView request,
     return;
   }
 
+  std::shared_ptr<DelayWatcherClient> delay_watcher;
+  if (request->direction() == PipelineDirection::kInput) {
+    auto result = ValidateExternalDelayWatcher("CreateProducer", name, *request);
+    if (!result.is_ok()) {
+      completer.ReplyError(result.error());
+      return;
+    }
+    delay_watcher = DelayWatcherClient::Create({
+        .name = std::string(name) + ".DelayWatcher",
+        .client_end = std::move(result.value().client_end),
+        .thread = thread_ptr(),
+        .initial_delay = result.value().initial_delay,
+    });
+  } else {
+    if (request->has_external_delay_watcher()) {
+      FX_LOGS(WARNING) << "CreateProducer: external_delay_watcher not allowed for output pipelines";
+      completer.ReplyError(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
+      return;
+    }
+  }
+
   const auto id = NextNodeId();
   nodes_[id] = ProducerNode::Create({
       .name = name,
@@ -382,7 +428,10 @@ void GraphServer::CreateProducer(CreateProducerRequestView request,
       .reference_clock = std::move(reference_clock),
       .media_ticks_per_ns = media_ticks_per_ns,
       .data_source = std::move(*source),
+      .delay_watcher = std::move(delay_watcher),
+      .thread_for_lead_time_servers = thread_ptr(),
       .detached_thread = detached_thread_,
+      .global_task_queue = global_task_queue_,
   });
 
   fidl::Arena arena;

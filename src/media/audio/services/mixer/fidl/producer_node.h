@@ -12,6 +12,8 @@
 #include <variant>
 
 #include "src/media/audio/services/mixer/common/basic_types.h"
+#include "src/media/audio/services/mixer/fidl/delay_watcher_client.h"
+#include "src/media/audio/services/mixer/fidl/delay_watcher_server.h"
 #include "src/media/audio/services/mixer/fidl/node.h"
 #include "src/media/audio/services/mixer/fidl/ptr_decls.h"
 #include "src/media/audio/services/mixer/fidl/stream_sink_server.h"
@@ -45,8 +47,17 @@ class ProducerNode : public Node {
     // Object from which to produce data.
     DataSource data_source;
 
+    // For input pipelines, the upstream delay at this producer.
+    std::shared_ptr<DelayWatcherClient> delay_watcher;
+
+    // For output pipelines, BindLeadTimeWatcher creates DelayWatcherServers on this thread.
+    std::shared_ptr<const FidlThread> thread_for_lead_time_servers;
+
     // On creation, the node is initially assigned to this detached thread.
     GraphDetachedThreadPtr detached_thread;
+
+    // For queuing tasks on mixer threads.
+    std::shared_ptr<GlobalTaskQueue> global_task_queue;
   };
 
   static std::shared_ptr<ProducerNode> Create(Args args);
@@ -57,7 +68,12 @@ class ProducerNode : public Node {
   // Stops this producer. The command is forwarded to the underlying ProducerStage.
   void Stop(ProducerStage::StopCommand cmd) const;
 
+  // Binds a new lead time watcher.
+  // REQUIRES: `pipeline_direction() == kOutput`
+  void BindLeadTimeWatcher(fidl::ServerEnd<fuchsia_audio::DelayWatcher> server_end);
+
   // Implements `Node`.
+  std::optional<std::pair<ThreadId, fit::closure>> SetMaxDelays(Delays delays) final;
   zx::duration PresentationDelayForSourceEdge(const Node* source) const final;
 
  private:
@@ -65,7 +81,10 @@ class ProducerNode : public Node {
 
   ProducerNode(std::string_view name, std::shared_ptr<Clock> reference_clock,
                PipelineDirection pipeline_direction, PipelineStagePtr pipeline_stage,
-               std::shared_ptr<PendingStartStopCommand> pending_start_stop_command);
+               std::shared_ptr<PendingStartStopCommand> pending_start_stop_command,
+               std::shared_ptr<DelayWatcherClient> delay_watcher,
+               std::shared_ptr<DelayWatcherServerGroup> delay_reporter,
+               std::shared_ptr<GlobalTaskQueue> global_task_queue);
 
   NodePtr CreateNewChildSource() final {
     UNREACHABLE << "CreateNewChildSource should not be called on ordinary nodes";
@@ -73,11 +92,21 @@ class ProducerNode : public Node {
   NodePtr CreateNewChildDest() final {
     UNREACHABLE << "CreateNewChildDest should not be called on ordinary nodes";
   }
+  void DestroySelf() final;
   bool CanAcceptSourceFormat(const Format& format) const final;
   std::optional<size_t> MaxSources() const final;
   bool AllowsDest() const final;
+  void SetUpstreamInputDelay(std::optional<zx::duration> delay);
 
   const std::shared_ptr<PendingStartStopCommand> pending_start_stop_command_;
+  const std::shared_ptr<GlobalTaskQueue> global_task_queue_;
+  const std::shared_ptr<DelayWatcherServerGroup> delay_reporter_;
+
+  // Logically const, but non-const so we can discard this in DestroySelf to remove a circular
+  // reference.
+  std::shared_ptr<DelayWatcherClient> delay_watcher_;
+
+  zx::duration upstream_input_delay_;
 };
 
 }  // namespace media_audio

@@ -143,6 +143,24 @@ fidl::WireTableBuilder<fuchsia_audio::wire::RingBuffer> MakeDefaultRingBuffer(
   return builder;
 }
 
+fidl::WireTableBuilder<fuchsia_audio_mixer::wire::GraphCreateProducerRequest>
+MakeDefaultCreateProducerRequestWithStreamSink(fidl::AnyArena& arena) {
+  return fuchsia_audio_mixer::wire::GraphCreateProducerRequest::Builder(arena)
+      .name(fidl::StringView::FromExternal("producer"))
+      .direction(PipelineDirection::kOutput)
+      .data_source(fuchsia_audio_mixer::wire::ProducerDataSource::WithStreamSink(
+          arena, MakeDefaultStreamSinkProducer(arena).Build()));
+}
+
+fidl::WireTableBuilder<fuchsia_audio_mixer::wire::GraphCreateProducerRequest>
+MakeDefaultCreateProducerRequestWithRingBuffer(fidl::AnyArena& arena) {
+  return fuchsia_audio_mixer::wire::GraphCreateProducerRequest::Builder(arena)
+      .name(fidl::StringView::FromExternal("producer"))
+      .direction(PipelineDirection::kOutput)
+      .data_source(fuchsia_audio_mixer::wire::ProducerDataSource::WithRingBuffer(
+          arena, MakeDefaultRingBuffer(arena).Build()));
+}
+
 fidl::WireTableBuilder<fuchsia_audio_mixer::wire::GraphCreateMixerRequest>
 MakeDefaultCreateMixerRequest(fidl::AnyArena& arena) {
   return fuchsia_audio_mixer::wire::GraphCreateMixerRequest::Builder(arena)
@@ -248,13 +266,9 @@ TEST_F(GraphServerTest, CreateProducerFailsMissingDirection) {
   auto [stream_sink_client, stream_sink_server] =
       CreateWireSyncClientOrDie<fuchsia_media2::StreamSink>();
 
-  auto result = client()->CreateProducer(
-      fuchsia_audio_mixer::wire::GraphCreateProducerRequest::Builder(arena_)
-          .name(fidl::StringView::FromExternal("producer"))
-          // no direction()
-          .data_source(fuchsia_audio_mixer::wire::ProducerDataSource::WithStreamSink(
-              arena_, MakeDefaultStreamSinkProducer(arena_).Build()))
-          .Build());
+  auto request = MakeDefaultCreateProducerRequestWithStreamSink(arena_);
+  request.clear_direction();
+  auto result = client()->CreateProducer(request.Build());
 
   ASSERT_TRUE(result.ok()) << result;
   ASSERT_TRUE(result->is_error());
@@ -262,12 +276,9 @@ TEST_F(GraphServerTest, CreateProducerFailsMissingDirection) {
 }
 
 TEST_F(GraphServerTest, CreateProducerFailsMissingDataSource) {
-  auto result = client()->CreateProducer(
-      fuchsia_audio_mixer::wire::GraphCreateProducerRequest::Builder(arena_)
-          .name(fidl::StringView::FromExternal("producer"))
-          .direction(PipelineDirection::kOutput)
-          // no data_source()
-          .Build());
+  auto request = MakeDefaultCreateProducerRequestWithStreamSink(arena_);
+  request.clear_data_source();
+  auto result = client()->CreateProducer(request.Build());
 
   ASSERT_TRUE(result.ok()) << result;
   ASSERT_TRUE(result->is_error());
@@ -292,9 +303,7 @@ TEST_F(GraphServerTest, CreateProducerFailsUnknownDataSource) {
   std::memcpy(&data_source, &raw, sizeof(data_source));
 
   auto result = client()->CreateProducer(
-      fuchsia_audio_mixer::wire::GraphCreateProducerRequest::Builder(arena_)
-          .name(fidl::StringView::FromExternal("producer"))
-          .direction(PipelineDirection::kOutput)
+      MakeDefaultCreateProducerRequestWithStreamSink(arena_)
           .data_source(fidl::ObjectView<ProducerDataSource>::FromExternal(&data_source))
           .Build());
 
@@ -378,9 +387,7 @@ TEST_F(GraphServerTest, CreateProducerStreamSinkFailsBadFields) {
     tc.edit(data_source);
 
     auto result = client()->CreateProducer(
-        fuchsia_audio_mixer::wire::GraphCreateProducerRequest::Builder(arena_)
-            .name(fidl::StringView::FromExternal("producer"))
-            .direction(PipelineDirection::kOutput)
+        MakeDefaultCreateProducerRequestWithStreamSink(arena_)
             .data_source(fuchsia_audio_mixer::wire::ProducerDataSource::WithStreamSink(
                 arena_, data_source.Build()))
             .Build());
@@ -398,13 +405,8 @@ TEST_F(GraphServerTest, CreateProducerStreamSinkFailsBadFields) {
 }
 
 TEST_F(GraphServerTest, CreateProducerStreamSinkSuccess) {
-  auto result = client()->CreateProducer(
-      fuchsia_audio_mixer::wire::GraphCreateProducerRequest::Builder(arena_)
-          .name(fidl::StringView::FromExternal("producer"))
-          .direction(PipelineDirection::kOutput)
-          .data_source(fuchsia_audio_mixer::wire::ProducerDataSource::WithStreamSink(
-              arena_, MakeDefaultStreamSinkProducer(arena_).Build()))
-          .Build());
+  auto result =
+      client()->CreateProducer(MakeDefaultCreateProducerRequestWithStreamSink(arena_).Build());
 
   ASSERT_TRUE(result.ok()) << result;
   ASSERT_FALSE(result->is_error()) << result->error_value();
@@ -489,9 +491,7 @@ TEST_F(GraphServerTest, CreateProducerRingBufferFailsBadFields) {
     tc.edit(ring_buffer);
 
     auto result = client()->CreateProducer(
-        fuchsia_audio_mixer::wire::GraphCreateProducerRequest::Builder(arena_)
-            .name(fidl::StringView::FromExternal("producer"))
-            .direction(PipelineDirection::kOutput)
+        MakeDefaultCreateProducerRequestWithRingBuffer(arena_)
             .data_source(fuchsia_audio_mixer::wire::ProducerDataSource::WithRingBuffer(
                 arena_, ring_buffer.Build()))
             .Build());
@@ -509,13 +509,8 @@ TEST_F(GraphServerTest, CreateProducerRingBufferFailsBadFields) {
 }
 
 TEST_F(GraphServerTest, CreateProducerRingBufferSuccess) {
-  auto result = client()->CreateProducer(
-      fuchsia_audio_mixer::wire::GraphCreateProducerRequest::Builder(arena_)
-          .name(fidl::StringView::FromExternal("producer"))
-          .direction(PipelineDirection::kOutput)
-          .data_source(fuchsia_audio_mixer::wire::ProducerDataSource::WithRingBuffer(
-              arena_, MakeDefaultRingBuffer(arena_).Build()))
-          .Build());
+  auto result =
+      client()->CreateProducer(MakeDefaultCreateProducerRequestWithRingBuffer(arena_).Build());
 
   ASSERT_TRUE(result.ok()) << result;
   ASSERT_FALSE(result->is_error()) << result->error_value();
@@ -1028,13 +1023,8 @@ TEST_F(GraphServerTest, DeleteNodeSuccess) {
 
   // Create a producer node.
   {
-    auto result = client()->CreateProducer(
-        fuchsia_audio_mixer::wire::GraphCreateProducerRequest::Builder(arena_)
-            .name(fidl::StringView::FromExternal("producer"))
-            .direction(PipelineDirection::kOutput)
-            .data_source(fuchsia_audio_mixer::wire::ProducerDataSource::WithRingBuffer(
-                arena_, MakeDefaultRingBuffer(arena_).Build()))
-            .Build());
+    auto result =
+        client()->CreateProducer(MakeDefaultCreateProducerRequestWithRingBuffer(arena_).Build());
 
     ASSERT_TRUE(result.ok()) << result;
     ASSERT_FALSE(result->is_error()) << result->error_value();
@@ -1071,13 +1061,8 @@ void GraphServerTest::CreateProducerAndConsumer(NodeId* producer_id, NodeId* con
 
   // Producer.
   {
-    auto result = client()->CreateProducer(
-        fuchsia_audio_mixer::wire::GraphCreateProducerRequest::Builder(arena_)
-            .name(fidl::StringView::FromExternal("producer"))
-            .direction(PipelineDirection::kOutput)
-            .data_source(fuchsia_audio_mixer::wire::ProducerDataSource::WithRingBuffer(
-                arena_, MakeDefaultRingBuffer(arena_).Build()))
-            .Build());
+    auto result =
+        client()->CreateProducer(MakeDefaultCreateProducerRequestWithRingBuffer(arena_).Build());
 
     ASSERT_TRUE(result.ok()) << result;
     ASSERT_FALSE(result->is_error()) << result->error_value();
@@ -1192,13 +1177,8 @@ TEST_F(GraphServerTest, CreateEdgeInvalidGainControl) {
   // Producer.
   NodeId producer_id;
   {
-    auto result = client()->CreateProducer(
-        fuchsia_audio_mixer::wire::GraphCreateProducerRequest::Builder(arena_)
-            .name(fidl::StringView::FromExternal("producer"))
-            .direction(PipelineDirection::kOutput)
-            .data_source(fuchsia_audio_mixer::wire::ProducerDataSource::WithRingBuffer(
-                arena_, MakeDefaultRingBuffer(arena_).Build()))
-            .Build());
+    auto result =
+        client()->CreateProducer(MakeDefaultCreateProducerRequestWithRingBuffer(arena_).Build());
 
     ASSERT_TRUE(result.ok()) << result;
     ASSERT_FALSE(result->is_error()) << result->error_value();
@@ -1248,13 +1228,8 @@ TEST_F(GraphServerTest, CreateEdgeSuccessMixerDest) {
   // Producer.
   NodeId producer_id;
   {
-    auto result = client()->CreateProducer(
-        fuchsia_audio_mixer::wire::GraphCreateProducerRequest::Builder(arena_)
-            .name(fidl::StringView::FromExternal("producer"))
-            .direction(PipelineDirection::kOutput)
-            .data_source(fuchsia_audio_mixer::wire::ProducerDataSource::WithRingBuffer(
-                arena_, MakeDefaultRingBuffer(arena_).Build()))
-            .Build());
+    auto result =
+        client()->CreateProducer(MakeDefaultCreateProducerRequestWithRingBuffer(arena_).Build());
 
     ASSERT_TRUE(result.ok()) << result;
     ASSERT_FALSE(result->is_error()) << result->error_value();

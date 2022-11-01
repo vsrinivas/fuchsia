@@ -46,7 +46,10 @@ void DelayWatcherClient::SetCallback(fit::function<void(std::optional<zx::durati
   }
 }
 
-void DelayWatcherClient::Shutdown() { client_ = std::nullopt; }
+void DelayWatcherClient::Shutdown() {
+  client_ = std::nullopt;
+  callback_ = nullptr;
+}
 
 void DelayWatcherClient::Loop() {
   fidl::Arena<> arena;
