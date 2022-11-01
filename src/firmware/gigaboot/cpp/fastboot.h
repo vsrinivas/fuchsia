@@ -69,6 +69,9 @@ class Fastboot : public fastboot::FastbootBase {
   zx::result<> RebootRecovery(std::string_view cmd, fastboot::Transport *transport);
   zx::result<> SetActive(std::string_view cmd, fastboot::Transport *transport);
 
+  // OEM commands
+  zx::result<> GptInit(std::string_view cmd, fastboot::Transport *transport);
+
   cpp20::span<uint8_t> download_buffer_;
   ZirconBootOps zb_ops_;
   bool continue_ = false;

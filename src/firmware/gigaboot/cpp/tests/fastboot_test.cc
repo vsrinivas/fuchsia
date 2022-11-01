@@ -10,18 +10,42 @@
 #include <lib/fastboot/test/test-transport.h>
 #include <lib/zircon_boot/test/mock_zircon_boot_ops.h>
 
+#include <algorithm>
 #include <vector>
 
 #include <gtest/gtest.h>
 
 #include "backends.h"
+#include "gpt.h"
 #include "mock_boot_service.h"
+#include "partition.h"
 #include "utils.h"
 
 // For "ABC"sv literal string view operator
 using namespace std::literals;
 
 namespace gigaboot {
+
+class PartitionCustomizer {
+ public:
+  static cpp20::span<const PartitionMap::PartitionEntry> PARTITION_SPAN;
+
+  explicit PartitionCustomizer(cpp20::span<const PartitionMap::PartitionEntry> span) {
+    old_span_ = PARTITION_SPAN;
+    PARTITION_SPAN = span;
+  }
+
+  ~PartitionCustomizer() { PARTITION_SPAN = old_span_; }
+
+ private:
+  cpp20::span<const PartitionMap::PartitionEntry> old_span_;
+};
+
+cpp20::span<const PartitionMap::PartitionEntry> PartitionCustomizer::PARTITION_SPAN = {};
+
+const cpp20::span<const PartitionMap::PartitionEntry> GetPartitionCustomizations() {
+  return PartitionCustomizer::PARTITION_SPAN;
+}
 
 namespace {
 
@@ -823,6 +847,199 @@ TEST_F(FastbootFlashTest, RebootResetSystemFail) {
   // We should still receive an OKAY packet.
   std::vector<std::string> expected_packets = {"OKAY"};
   ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
+}
+
+TEST_F(FastbootFlashTest, GptReinitialize) {
+  PartitionMap::PartitionEntry custom_partitions[] = {
+      {GPT_DURABLE_BOOT_NAME, 0x1000, GPT_DURABLE_BOOT_TYPE_GUID},
+      {GPT_FVM_NAME, SIZE_MAX, GPT_FVM_TYPE_GUID},
+  };
+  PartitionCustomizer customizer(custom_partitions);
+
+  auto cleanup = SetupEfiGlobalState(stub_service(), image_device());
+
+  auto res = FindEfiGptDevice();
+  ASSERT_TRUE(res.is_ok());
+  EfiGptBlockDevice gpt_device = std::move(res.value());
+
+  Fastboot fastboot(download_buffer, mock_zb_ops().GetZirconBootOps());
+  fastboot::TestTransport transport;
+
+  transport.AddInPacket(std::string("oem gpt-init"));
+  zx::result ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+  ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), {"OKAY"}));
+
+  // Check the durable_boot partition
+  gpt_entry_t const* durable_boot_entry = gpt_device.FindPartition("durable_boot");
+  ASSERT_NE(durable_boot_entry, nullptr);
+
+  PartitionMap::PartitionEntry const& durable_boot_partition = custom_partitions[0];
+  size_t durable_boot_size_bytes =
+      (durable_boot_entry->last - durable_boot_entry->first + 1) * gpt_device.BlockSize();
+
+  ASSERT_EQ(durable_boot_size_bytes, durable_boot_partition.min_size_bytes);
+  ASSERT_TRUE(memcmp(durable_boot_entry->type, durable_boot_partition.type_guid,
+                     sizeof(durable_boot_partition.type_guid)) == 0);
+
+  // Check the fvm partition
+  gpt_entry_t const* fvm_entry = gpt_device.FindPartition("fvm");
+  ASSERT_NE(fvm_entry, nullptr);
+
+  PartitionMap::PartitionEntry const& fvm_partition = *(std::end(custom_partitions) - 1);
+
+  // The fvm partition takes all remaining space on disk,
+  // so its last block is the block right before the backup GPT.
+  ASSERT_EQ(fvm_entry->last, gpt_device.GptHeader().last);
+  ASSERT_TRUE(memcmp(fvm_entry->type, fvm_partition.type_guid, sizeof(fvm_partition.type_guid)) ==
+              0);
+
+  auto names = gpt_device.ListPartitionNames();
+  ASSERT_EQ(names.size(), 2UL);
+  ASSERT_EQ(names[0].data(), custom_partitions[0].name);
+  ASSERT_EQ(names[1].data(), custom_partitions[1].name);
+}
+
+TEST_F(FastbootFlashTest, GptReinitializeNoMaxSize) {
+  PartitionMap::PartitionEntry custom_partitions[] = {
+      {GPT_DURABLE_BOOT_NAME, 0x1000, GPT_DURABLE_BOOT_TYPE_GUID},
+      {GPT_DURABLE_NAME, 0x1000, GPT_DURABLE_TYPE_GUID},
+  };
+  PartitionCustomizer customizer(custom_partitions);
+
+  auto cleanup = SetupEfiGlobalState(stub_service(), image_device());
+
+  auto res = FindEfiGptDevice();
+  ASSERT_TRUE(res.is_ok());
+  EfiGptBlockDevice gpt_device = std::move(res.value());
+
+  Fastboot fastboot(download_buffer, mock_zb_ops().GetZirconBootOps());
+  fastboot::TestTransport transport;
+
+  transport.AddInPacket(std::string("oem gpt-init"));
+  zx::result ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+  ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), {"OKAY"}));
+
+  // Check the durable_boot partition
+  gpt_entry_t const* durable_boot_entry = gpt_device.FindPartition("durable_boot");
+  ASSERT_NE(durable_boot_entry, nullptr);
+
+  PartitionMap::PartitionEntry const& durable_boot_partition = custom_partitions[0];
+  size_t durable_boot_size_bytes =
+      (durable_boot_entry->last - durable_boot_entry->first + 1) * gpt_device.BlockSize();
+
+  ASSERT_EQ(durable_boot_size_bytes, durable_boot_partition.min_size_bytes);
+  ASSERT_TRUE(memcmp(durable_boot_entry->type, durable_boot_partition.type_guid,
+                     sizeof(durable_boot_partition.type_guid)) == 0);
+
+  // Check the durable partition
+  gpt_entry_t const* durable_entry = gpt_device.FindPartition("durable");
+  ASSERT_NE(durable_entry, nullptr);
+
+  PartitionMap::PartitionEntry const& durable_partition = custom_partitions[1];
+  size_t durable_size_bytes =
+      (durable_entry->last - durable_entry->first + 1) * gpt_device.BlockSize();
+
+  ASSERT_EQ(durable_size_bytes, durable_partition.min_size_bytes);
+  ASSERT_TRUE(memcmp(durable_entry->type, durable_partition.type_guid,
+                     sizeof(durable_partition.type_guid)) == 0);
+}
+
+TEST_F(FastbootFlashTest, GptReinitializeTooBigPartitionsFailure) {
+  // There are only 1024 blocks in the mock disk device,
+  // which translates to 0x80000 bytes assuming 512 byte blocks.
+  PartitionMap::PartitionEntry custom_partitions[] = {
+      {GPT_DURABLE_BOOT_NAME, 0xFFFFFF, GPT_DURABLE_BOOT_TYPE_GUID},
+  };
+  PartitionCustomizer customizer(custom_partitions);
+
+  auto cleanup = SetupEfiGlobalState(stub_service(), image_device());
+
+  auto res = FindEfiGptDevice();
+  ASSERT_TRUE(res.is_ok());
+  EfiGptBlockDevice gpt_device = std::move(res.value());
+
+  // Quick check to make sure the partition will in fact be too large.
+  ASSERT_EQ(gpt_device.BlockSize(), 512UL);
+
+  Fastboot fastboot(download_buffer, mock_zb_ops().GetZirconBootOps());
+  fastboot::TestTransport transport;
+
+  transport.AddInPacket(std::string("oem gpt-init"));
+  zx::result ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_error());
+
+  auto sent_packets = transport.GetOutPackets();
+  ASSERT_EQ(sent_packets.size(), 1ULL);
+  ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
+}
+
+TEST(FastbootTest, GptReinitializeDiskFailure) {
+  MockStubService stub_service;
+  Device image_device({"path-A", "path-B", "path-C", "image"});
+  BlockDevice block_device({"path-A", "path-B", "path-D"}, 1024);
+  auto cleanup = SetupEfiGlobalState(stub_service, image_device);
+
+  stub_service.AddDevice(&image_device);
+  stub_service.AddDevice(&block_device);
+
+  auto res = FindEfiGptDevice();
+  ASSERT_TRUE(res.is_error());
+
+  MockZirconBootOps mock_zb_ops;
+  Fastboot fastboot(download_buffer, mock_zb_ops.GetZirconBootOps());
+  fastboot::TestTransport transport;
+
+  transport.AddInPacket(std::string("oem gpt-init"));
+  zx::result ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_error());
+
+  auto sent_packets = transport.GetOutPackets();
+  ASSERT_EQ(sent_packets.size(), 1ULL);
+  ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
+}
+
+TEST_F(FastbootFlashTest, GptReinitializeTwoMaxPartFailure) {
+  PartitionMap::PartitionEntry custom_partitions[] = {
+      {GPT_DURABLE_BOOT_NAME, SIZE_MAX},
+      {GPT_DURABLE_NAME, SIZE_MAX},
+  };
+  PartitionCustomizer customizer(custom_partitions);
+
+  auto cleanup = SetupEfiGlobalState(stub_service(), image_device());
+
+  auto res = FindEfiGptDevice();
+  ASSERT_TRUE(res.is_ok());
+
+  MockZirconBootOps mock_zb_ops;
+  Fastboot fastboot(download_buffer, mock_zb_ops.GetZirconBootOps());
+  fastboot::TestTransport transport;
+
+  transport.AddInPacket(std::string("oem gpt-init"));
+  zx::result ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_error());
+}
+
+TEST_F(FastbootFlashTest, GptReinitializeMaxNotLastFailure) {
+  PartitionMap::PartitionEntry custom_partitions[] = {
+      {GPT_DURABLE_BOOT_NAME, SIZE_MAX},
+      {GPT_DURABLE_NAME, 0x1000},
+  };
+  PartitionCustomizer customizer(custom_partitions);
+
+  auto cleanup = SetupEfiGlobalState(stub_service(), image_device());
+
+  auto res = FindEfiGptDevice();
+  ASSERT_TRUE(res.is_ok());
+
+  MockZirconBootOps mock_zb_ops;
+  Fastboot fastboot(download_buffer, mock_zb_ops.GetZirconBootOps());
+  fastboot::TestTransport transport;
+
+  transport.AddInPacket(std::string("oem gpt-init"));
+  zx::result ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_error());
 }
 
 }  // namespace

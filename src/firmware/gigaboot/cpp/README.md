@@ -9,12 +9,22 @@ A gn target `src/firmware/gigaboot/cpp:esp` is added for producing a bootable
 UEFI image that can be flashed to the device. To build the target, follow steps:
 
 ```
-fx set workstation.x64 --with //src/firmware/gigaboot/cpp:esp
+fx set workstation_eng.x64 --with //src/firmware/gigaboot/cpp:eng-esp
 fx build
 ```
 
-The output path of the image is `<build_out_dir>/gigaboot_cpp.esp.blk`. The
+The output path of the image is `<build_out_dir>/eng-esp.esp.blk`. The
 following gives two ways to flash the image to a NUC device.
+
+# Unit testing
+
+To enable and run the unit test target, run:
+
+```
+fx set workstation.eng_.x64 --with //src/firmware/gigaboot/cpp/tests
+fx build
+fx test --host gigaboot_unittests
+```
 
 # Userspace fastboot with USB installer
 

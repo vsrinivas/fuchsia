@@ -7,12 +7,15 @@
 
 #include <lib/stdcompat/span.h>
 
-namespace gigaboot {
+#include "partition.h"
 
-// Adds verified boot backends.
+namespace gigaboot {
 
 const cpp20::span<const uint8_t> GetPermanentAttributes();
 const cpp20::span<const uint8_t> GetPermanentAttributesHash();
+
+// Get factory default partition information
+const cpp20::span<const PartitionMap::PartitionEntry> GetPartitionCustomizations();
 
 }  // namespace gigaboot
 

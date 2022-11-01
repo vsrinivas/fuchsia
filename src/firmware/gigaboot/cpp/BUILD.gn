@@ -16,6 +16,8 @@ source_set("lib") {
     "fastboot.h",
     "gpt.cc",
     "gpt.h",
+    "partition.cc",
+    "partition.h",
     "tss2_uefi.cc",
     "tss2_uefi.h",
     "utils.cc",
@@ -54,7 +56,10 @@ if (is_efi_toolchain) {
   # Backend implementation for the NUC platform
   source_set("backends_nuc") {
     sources = [ "backends_nuc.cc" ]
-    deps = [ "legacy_c_gigaboot" ]
+    deps = [
+      "legacy_c_gigaboot",
+      "//zircon/system/ulib/fbl:fbl",
+    ]
   }
 
   source_set("gigaboot-main") {

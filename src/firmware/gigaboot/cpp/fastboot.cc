@@ -13,8 +13,10 @@
 #include <algorithm>
 #include <string>
 
+#include <fbl/vector.h>
 #include <phys/efi/main.h>
 
+#include "gpt.h"
 #include "utils.h"
 
 namespace gigaboot {
@@ -73,6 +75,7 @@ cpp20::span<Fastboot::CommandCallbackEntry> Fastboot::GetCommandCallbackTable() 
       {"reboot-bootloader", &Fastboot::RebootBootloader},
       {"reboot-recovery", &Fastboot::RebootRecovery},
       {"set_active", &Fastboot::SetActive},
+      {"oem gpt-init", &Fastboot::GptInit},
   };
 
   return cmd_entries;
@@ -299,6 +302,22 @@ zx::result<> Fastboot::Flash(std::string_view cmd, fastboot::Transport *transpor
   return SendResponse(ResponseType::kOkay, "", transport);
 }
 
+zx::result<> Fastboot::GptInit(std::string_view cmd, fastboot::Transport *transport) {
+  auto device = FindEfiGptDevice();
+  if (!device.is_ok()) {
+    return SendResponse(ResponseType::kFail, "Failed to get block device", transport,
+                        zx::error(ZX_ERR_INTERNAL));
+  }
+
+  auto res = device.value().Reinitialize();
+  if (!res.is_ok()) {
+    return SendResponse(ResponseType::kFail, "Failed to reinitialize partiions", transport,
+                        zx::error(ZX_ERR_INTERNAL));
+  }
+
+  return SendResponse(ResponseType::kOkay, "", transport);
+}
+
 zx::result<> Fastboot::Continue(std::string_view cmd, fastboot::Transport *transport) {
   continue_ = true;
   return SendResponse(ResponseType::kOkay, "", transport);
@@ -347,6 +366,7 @@ class PacketTransport : public fastboot::Transport {
 
 void FastbootTcpSession(TcpTransportInterface &interface, Fastboot &fastboot) {
   // Whatever we receive, sends a handshake message first to improve performance.
+  printf("Fastboot connection established\n");
   if (!interface.Write("FB01", 4)) {
     printf("Failed to write handshake message\n");
     return;

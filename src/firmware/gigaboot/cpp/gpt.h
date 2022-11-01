@@ -34,7 +34,16 @@ class EfiGptBlockDevice {
   fit::result<efi_status> WritePartition(std::string_view name, const void *data, size_t offset,
                                          size_t length);
 
+  gpt_header_t const &GptHeader() const { return gpt_header_; }
+  cpp20::span<std::array<char, GPT_NAME_LEN / 2>> ListPartitionNames();
+
+  size_t BlockSize() { return block_io_protocol_->Media->BlockSize; }
+  uint64_t LastBlock() { return block_io_protocol_->Media->LastBlock; }
+
   // Find partition info.
+  //
+  // Note: this function will reload the GPT if the on-disk GPT has been reinitialized
+  // by another EfiGptBlockDevice that references the same physical device.
   const gpt_entry_t *FindPartition(std::string_view name);
 
   // Load GPT from device.
@@ -52,9 +61,23 @@ class EfiGptBlockDevice {
   // suited to a post-boot daemon.
   fit::result<efi_status> Load();
 
-  // TODO(b/238334864): Add support for initializing/updating GPT.
+  // Reinitialize device's GPT.
+  //
+  // Generates the factory default partition table, writes it to disk,
+  // and updates internal data structures.
+  // Return values from FindPartition are invalidated.
+  // Return values from ListPartitionNames are invalidated.
+  //
+  // Note: this function requires all other EfiGptBlockDevice objects
+  // that reference the same disk to reread the disk's partition information.
+  // Subsequent method calls on those objects may result in reloading
+  // the partition information from disk.
+  fit::result<efi_status> Reinitialize();
 
  private:
+  static uint64_t GENERATION_ID;
+  uint64_t generation_id_;
+
   // The parameters we need for reading/writing partitions live in both block and disk io protocols.
   EfiProtocolPtr<efi_block_io_protocol> block_io_protocol_;
   EfiProtocolPtr<efi_disk_io_protocol> disk_io_protocol_;
@@ -71,8 +94,7 @@ class EfiGptBlockDevice {
   fbl::Vector<gpt_entry_t> entries_;
   fbl::Vector<std::array<char, GPT_NAME_LEN / 2>> utf8_names_;
 
-  EfiGptBlockDevice() {}
-  size_t BlockSize() { return block_io_protocol_->Media->BlockSize; }
+  EfiGptBlockDevice() : generation_id_(GENERATION_ID - 1) {}
   efi_status Read(void *buffer, size_t offset, size_t length);
   efi_status Write(const void *data, size_t offset, size_t length);
 
