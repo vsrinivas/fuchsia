@@ -652,7 +652,8 @@ protocol MyProtocol {
   }
 }
 
-bool MustHaveThreeMembers(fidl::Reporter* reporter, const fidl::flat::Attribute* attribute,
+bool MustHaveThreeMembers(fidl::Reporter* reporter, const fidl::ExperimentalFlags flags,
+                          const fidl::flat::Attribute* attribute,
                           const fidl::flat::Element* element) {
   switch (element->kind) {
     case fidl::flat::Element::Kind::kStruct: {

@@ -282,6 +282,8 @@ This document lists all errors emitted by the [FIDL compiler][docs-fidlc],
 
 <<error-catalog/_fi-0189.md>>
 
+<<error-catalog/_fi-0190.md>>
+
 <!--
 
 // LINT.ThenChange(/tools/fidl/fidlc/tests/errcat_good_tests.cc)

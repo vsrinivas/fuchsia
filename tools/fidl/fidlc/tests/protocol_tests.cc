@@ -89,7 +89,7 @@ protocol Empty {};
   ASSERT_NOT_NULL(protocol);
 
   EXPECT_EQ(protocol->methods.size(), 0);
-  EXPECT_EQ(protocol->openness, fidl::types::Openness::kOpen);
+  EXPECT_EQ(protocol->openness, fidl::types::Openness::kClosed);
   EXPECT_EQ(protocol->all_methods.size(), 0);
 }
 
@@ -842,6 +842,39 @@ protocol MyProtocol {
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrElementMustBeSimple);
   EXPECT_SUBSTR(library.errors()[0]->msg.c_str(), "for_deprecated_c_bindings");
+}
+
+TEST(ProtocolTests, GoodClosedSimpleProtocol) {
+  TestLibrary library(R"FIDL(
+library example;
+
+@for_deprecated_c_bindings
+closed protocol MyProtocol {
+  strict MyMethod() -> ();
+};
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  ASSERT_COMPILED(library);
+}
+
+TEST(ProtocolTests, BadOpenSimpleProtocol) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0190.test.fidl");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrSimpleProtocolMustBeClosed);
+}
+
+TEST(ProtocolTests, BadAjarSimpleProtocol) {
+  TestLibrary library(R"FIDL(
+library example;
+
+@for_deprecated_c_bindings
+ajar protocol MyProtocol {
+  strict MyMethod() -> ();
+};
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrSimpleProtocolMustBeClosed);
 }
 
 TEST(ProtocolTests, BadMethodStructSizeConstraints) {

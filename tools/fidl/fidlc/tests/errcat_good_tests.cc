@@ -898,6 +898,13 @@ TEST(ErrcatTests, Good0189) {
   ASSERT_COMPILED(library);
 }
 
+TEST(ErrcatTests, Good0190) {
+  TestLibrary library;
+  library.AddFile("good/fi-0190.test.fidl");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  ASSERT_COMPILED(library);
+}
+
 // LINT.ThenChange(/docs/reference/fidl/language/errcat.md)
 
 }  // namespace

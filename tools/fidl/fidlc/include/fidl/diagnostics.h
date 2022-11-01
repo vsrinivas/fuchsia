@@ -421,7 +421,7 @@ constexpr ErrorDef<178, std::vector<std::string_view>, std::vector<std::string_v
     ErrUnusedImport("Library {} imports {} but does not use it. Either use {}, or remove import.");
 constexpr UndocumentedErrorDef<179, flat::Name> ErrNewTypeCannotHaveConstraint(
     "{} is a new-type, which cannot carry constraints");
-constexpr ErrorDef<180, flat::Name> ErrExperimentalZxCTypesDisallowed(
+constexpr UndocumentedErrorDef<180, flat::Name> ErrExperimentalZxCTypesDisallowed(
     "{} is an experimental type that must be enabled by with `--experimental zx_c_types`");
 constexpr UndocumentedErrorDef<181> ErrReferenceInLibraryAttribute(
     "attributes on the 'library' declaration do not support referencing constants");
@@ -442,6 +442,8 @@ constexpr ErrorDef<187> ErrUnicodeEscapeEmpty("Unicode escape must have at least
 constexpr ErrorDef<188> ErrUnicodeEscapeTooLong("Unicode escape must have at most 6 hex digits");
 constexpr ErrorDef<189, std::string_view> ErrUnicodeEscapeTooLarge(
     "invalid Unicode code point '{}'; maximum is 10FFFF");
+constexpr ErrorDef<190, flat::Name> ErrSimpleProtocolMustBeClosed(
+    "@for_deprecated_c_bindings annotated protocol {} must be closed");
 
 }  // namespace fidl
 

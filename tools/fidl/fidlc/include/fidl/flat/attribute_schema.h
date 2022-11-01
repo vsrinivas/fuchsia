@@ -8,6 +8,7 @@
 #include <lib/fit/function.h>
 #include <zircon/assert.h>
 
+#include "tools/fidl/fidlc/include/fidl/experimental_flags.h"
 #include "tools/fidl/fidlc/include/fidl/flat_ast.h"
 #include "tools/fidl/fidlc/include/fidl/reporter.h"
 
@@ -63,8 +64,8 @@ class AttributeSchema {
  public:
   // Note: Constraints get access to the fully compiled Element.
   // This is one reason why VerifyAttributesStep is a separate step.
-  using Constraint =
-      fit::function<bool(Reporter* reporter, const Attribute* attribute, const Element* element)>;
+  using Constraint = fit::function<bool(Reporter* reporter, ExperimentalFlags flags,
+                                        const Attribute* attribute, const Element* element)>;
 
   // Constructs a new schema that allows any placement, takes no arguments, and
   // has no constraint. Use the methods below to customize it.
@@ -96,7 +97,8 @@ class AttributeSchema {
 
   // Validates the attribute's placement and constraints. Must call
   // `ResolveArgs` first.
-  void Validate(Reporter* reporter, const Attribute* attribute, const Element* element) const;
+  void Validate(Reporter* reporter, ExperimentalFlags flags, const Attribute* attribute,
+                const Element* element) const;
 
   // Returns attribute schemas for FIDL's officially recognized attributes.
   static AttributeSchemaMap OfficialAttributes();

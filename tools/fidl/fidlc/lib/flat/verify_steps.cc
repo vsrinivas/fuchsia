@@ -330,7 +330,7 @@ void VerifyAttributesStep::RunImpl() {
 void VerifyAttributesStep::VerifyAttributes(const Element* element) {
   for (const auto& attribute : element->attributes->attributes) {
     const AttributeSchema& schema = all_libraries()->RetrieveAttributeSchema(attribute.get());
-    schema.Validate(reporter(), attribute.get(), element);
+    schema.Validate(reporter(), experimental_flags(), attribute.get(), element);
   }
 }
 

@@ -105,8 +105,8 @@ AttributeSchema& AttributeSchema::Deprecate() {
 // static
 const AttributeSchema AttributeSchema::kUserDefined(Kind::kUserDefined);
 
-void AttributeSchema::Validate(Reporter* reporter, const Attribute* attribute,
-                               const Element* element) const {
+void AttributeSchema::Validate(Reporter* reporter, const ExperimentalFlags flags,
+                               const Attribute* attribute, const Element* element) const {
   switch (kind_) {
     case Kind::kValidateOnly:
       break;
@@ -146,7 +146,7 @@ void AttributeSchema::Validate(Reporter* reporter, const Attribute* attribute,
     return;
   }
   auto check = reporter->Checkpoint();
-  auto passed = constraint_(reporter, attribute, element);
+  auto passed = constraint_(reporter, flags, attribute, element);
   if (passed) {
     ZX_ASSERT_MSG(check.NoNewErrors(), "cannot add errors and pass");
     return;
@@ -163,7 +163,7 @@ void AttributeSchema::ResolveArgs(CompileStep* step, Attribute* attribute) const
     case Kind::kCompileEarly:
       break;
     case Kind::kDeprecated:
-      // Don't attempt to resolve arguments, as we don't store arument schemas
+      // Don't attempt to resolve arguments, as we don't store argument schemas
       // for deprecated attributes. Instead, rely on AttributeSchema::Validate
       // to report the error.
       return;
@@ -463,8 +463,8 @@ static bool IsSimple(const Type* type, Reporter* reporter) {
   }
 }
 
-static bool DiscoverableConstraint(Reporter* reporter, const Attribute* attr,
-                                   const Element* element) {
+static bool DiscoverableConstraint(Reporter* reporter, const ExperimentalFlags flags,
+                                   const Attribute* attr, const Element* element) {
   auto arg = attr->GetArg(AttributeArg::kDefaultAnonymousName);
   if (!arg) {
     return true;
@@ -478,8 +478,8 @@ static bool DiscoverableConstraint(Reporter* reporter, const Attribute* attr,
   return true;
 }
 
-static bool SimpleLayoutConstraint(Reporter* reporter, const Attribute* attr,
-                                   const Element* element) {
+static bool SimpleLayoutConstraint(Reporter* reporter, const ExperimentalFlags flags,
+                                   const Attribute* attr, const Element* element) {
   ZX_ASSERT(element);
   bool ok = true;
   switch (element->kind) {
@@ -496,9 +496,15 @@ static bool SimpleLayoutConstraint(Reporter* reporter, const Attribute* attr,
     }
     case Element::Kind::kProtocol: {
       auto protocol = static_cast<const Protocol*>(element);
+      if (protocol->openness != types::Openness::kClosed) {
+        SourceSpan span = protocol->name.span().value();
+        reporter->Fail(ErrSimpleProtocolMustBeClosed, span, protocol->name);
+        ok = false;
+      }
+
       for (const auto& method_with_info : protocol->all_methods) {
         auto* method = method_with_info.method;
-        if (!SimpleLayoutConstraint(reporter, attr, method)) {
+        if (!SimpleLayoutConstraint(reporter, flags, attr, method)) {
           ok = false;
         }
       }
@@ -511,7 +517,7 @@ static bool SimpleLayoutConstraint(Reporter* reporter, const Attribute* attr,
         switch (id->type_decl->kind) {
           case Decl::Kind::kStruct: {
             auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
-            if (!SimpleLayoutConstraint(reporter, attr, as_struct)) {
+            if (!SimpleLayoutConstraint(reporter, flags, attr, as_struct)) {
               ok = false;
             }
             break;
@@ -535,7 +541,7 @@ static bool SimpleLayoutConstraint(Reporter* reporter, const Attribute* attr,
         switch (id->type_decl->kind) {
           case Decl::Kind::kStruct: {
             auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
-            if (!SimpleLayoutConstraint(reporter, attr, as_struct)) {
+            if (!SimpleLayoutConstraint(reporter, flags, attr, as_struct)) {
               ok = false;
             }
             break;
@@ -572,8 +578,8 @@ static bool SimpleLayoutConstraint(Reporter* reporter, const Attribute* attr,
   return ok;
 }
 
-static bool ParseBound(Reporter* reporter, const Attribute* attribute, std::string_view input,
-                       uint32_t* out_value) {
+static bool ParseBound(Reporter* reporter, const ExperimentalFlags flags,
+                       const Attribute* attribute, std::string_view input, uint32_t* out_value) {
   auto result = utils::ParseNumeric(input, out_value, 10);
   switch (result) {
     case utils::ParseNumericResult::kOutOfBounds:
@@ -588,14 +594,14 @@ static bool ParseBound(Reporter* reporter, const Attribute* attribute, std::stri
   }
 }
 
-static bool MaxBytesConstraint(Reporter* reporter, const Attribute* attribute,
-                               const Element* element) {
+static bool MaxBytesConstraint(Reporter* reporter, const ExperimentalFlags flags,
+                               const Attribute* attribute, const Element* element) {
   ZX_ASSERT(element);
   auto arg = attribute->GetArg(AttributeArg::kDefaultAnonymousName);
   auto& arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
 
   uint32_t bound;
-  if (!ParseBound(reporter, attribute, arg_value.MakeContents(), &bound))
+  if (!ParseBound(reporter, flags, attribute, arg_value.MakeContents(), &bound))
     return false;
   uint32_t max_bytes = std::numeric_limits<uint32_t>::max();
   switch (element->kind) {
@@ -604,7 +610,7 @@ static bool MaxBytesConstraint(Reporter* reporter, const Attribute* attribute,
       bool ok = true;
       for (const auto& method_with_info : protocol->all_methods) {
         auto* method = method_with_info.method;
-        if (!MaxBytesConstraint(reporter, attribute, method)) {
+        if (!MaxBytesConstraint(reporter, flags, attribute, method)) {
           ok = false;
         }
       }
@@ -616,14 +622,14 @@ static bool MaxBytesConstraint(Reporter* reporter, const Attribute* attribute,
       if (method->maybe_request) {
         auto id = static_cast<const flat::IdentifierType*>(method->maybe_request->type);
         auto as_type_decl = static_cast<const flat::TypeDecl*>(id->type_decl);
-        if (!MaxBytesConstraint(reporter, attribute, as_type_decl)) {
+        if (!MaxBytesConstraint(reporter, flags, attribute, as_type_decl)) {
           ok = false;
         }
       }
       if (method->maybe_response) {
         auto id = static_cast<const flat::IdentifierType*>(method->maybe_response->type);
         auto as_type_decl = static_cast<const flat::TypeDecl*>(id->type_decl);
-        if (!MaxBytesConstraint(reporter, attribute, as_type_decl)) {
+        if (!MaxBytesConstraint(reporter, flags, attribute, as_type_decl)) {
           ok = false;
         }
       }
@@ -657,14 +663,14 @@ static bool MaxBytesConstraint(Reporter* reporter, const Attribute* attribute,
   return true;
 }
 
-static bool MaxHandlesConstraint(Reporter* reporter, const Attribute* attribute,
-                                 const Element* element) {
+static bool MaxHandlesConstraint(Reporter* reporter, const ExperimentalFlags flags,
+                                 const Attribute* attribute, const Element* element) {
   ZX_ASSERT(element);
   auto arg = attribute->GetArg(AttributeArg::kDefaultAnonymousName);
   auto& arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
 
   uint32_t bound;
-  if (!ParseBound(reporter, attribute, arg_value.MakeContents(), &bound))
+  if (!ParseBound(reporter, flags, attribute, arg_value.MakeContents(), &bound))
     return false;
   uint32_t max_handles = std::numeric_limits<uint32_t>::max();
   switch (element->kind) {
@@ -673,7 +679,7 @@ static bool MaxHandlesConstraint(Reporter* reporter, const Attribute* attribute,
       bool ok = true;
       for (const auto& method_with_info : protocol->all_methods) {
         auto* method = method_with_info.method;
-        if (!MaxHandlesConstraint(reporter, attribute, method)) {
+        if (!MaxHandlesConstraint(reporter, flags, attribute, method)) {
           ok = false;
         }
       }
@@ -685,14 +691,14 @@ static bool MaxHandlesConstraint(Reporter* reporter, const Attribute* attribute,
       if (method->maybe_request) {
         auto id = static_cast<const flat::IdentifierType*>(method->maybe_request->type);
         auto as_type_decl = static_cast<const flat::TypeDecl*>(id->type_decl);
-        if (!MaxHandlesConstraint(reporter, attribute, as_type_decl)) {
+        if (!MaxHandlesConstraint(reporter, flags, attribute, as_type_decl)) {
           ok = false;
         }
       }
       if (method->maybe_response) {
         auto id = static_cast<const flat::IdentifierType*>(method->maybe_response->type);
         auto as_type_decl = static_cast<const flat::TypeDecl*>(id->type_decl);
-        if (!MaxHandlesConstraint(reporter, attribute, as_type_decl)) {
+        if (!MaxHandlesConstraint(reporter, flags, attribute, as_type_decl)) {
           ok = false;
         }
       }
@@ -723,8 +729,8 @@ static bool MaxHandlesConstraint(Reporter* reporter, const Attribute* attribute,
   return true;
 }
 
-static bool ResultShapeConstraint(Reporter* reporter, const Attribute* attribute,
-                                  const Element* element) {
+static bool ResultShapeConstraint(Reporter* reporter, const ExperimentalFlags flags,
+                                  const Attribute* attribute, const Element* element) {
   ZX_ASSERT(element);
   ZX_ASSERT(element->kind == Element::Kind::kUnion);
   auto union_decl = static_cast<const Union*>(element);
@@ -757,8 +763,8 @@ static bool ResultShapeConstraint(Reporter* reporter, const Attribute* attribute
   return true;
 }
 
-static bool TransportConstraint(Reporter* reporter, const Attribute* attribute,
-                                const Element* element) {
+static bool TransportConstraint(Reporter* reporter, const ExperimentalFlags flags,
+                                const Attribute* attribute, const Element* element) {
   ZX_ASSERT(element);
   ZX_ASSERT(element->kind == Element::Kind::kProtocol);
 

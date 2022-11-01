@@ -53,7 +53,7 @@ def insert_lines_at_line_num(path, lines, line_num, line):
         f.write("".join(lines))
 
 
-def insert_entry(path, entry_matcher, num, insert):
+def insert_entry(path, entry_matcher, num, insert, offset=2):
     # Only add an entry for this numeral if none already exists.
     already_exists = False
     with open(path, 'r') as f:
@@ -84,7 +84,8 @@ def insert_entry(path, entry_matcher, num, insert):
 
         # Handle the edge case of the entry needing to be placed at the end of the list.
         if insert_before is not None:
-            insert_lines_at_line_num(path, lines, insert_before + 2, insert)
+            insert_lines_at_line_num(
+                path, lines, insert_before + offset, insert)
 
     return int(not already_exists)
 
@@ -179,8 +180,11 @@ def main(args):
 
         # Insert this test file into the BUILD.gn file.
         progress['bad_tests_added'] += insert_entry(
-            FIDLC_BUILD_GN_FILE_PATH, REGEX_BAD_TEST_ENTRY, n,
-            '    "fidl/bad/%s.test.fidl",' % case_name)
+            FIDLC_BUILD_GN_FILE_PATH,
+            REGEX_BAD_TEST_ENTRY,
+            n,
+            '    "fidl/bad/%s.test.fidl",' % case_name,
+            offset=1)
 
         # Add any new files we need.
         progress['bad_files_created'] += create_file(
@@ -214,8 +218,11 @@ def main(args):
 
         # Insert this test file into the BUILD.gn file.
         progress['good_tests_added'] += insert_entry(
-            FIDLC_BUILD_GN_FILE_PATH, REGEX_GOOD_TEST_ENTRY, n,
-            '    "fidl/good/%s.test.fidl",' % case_name)
+            FIDLC_BUILD_GN_FILE_PATH,
+            REGEX_GOOD_TEST_ENTRY,
+            n,
+            '    "fidl/good/%s.test.fidl",' % case_name,
+            offset=1)
 
         # Add any new files we need.
         progress['good_files_created'] += create_file(
@@ -244,8 +251,11 @@ ASSERT_COMPILED(library);
 }
 """) % (flat_name, case_name)
         progress['good_test_cases_added'] += insert_entry(
-            FIDLC_ERRCAT_TESTS_FILE_PATH, REGEX_ERRCAT_TEST_FILE_ENTRY, n,
-            insert)
+            FIDLC_ERRCAT_TESTS_FILE_PATH,
+            REGEX_ERRCAT_TEST_FILE_ENTRY,
+            n,
+            insert,
+            offset=5)
 
     # Create the markdown file for the actual doc.
     progress['markdown_file_created'] = create_file(
