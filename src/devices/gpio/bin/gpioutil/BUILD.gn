@@ -12,16 +12,12 @@ executable("gpioutil") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.gpio:fuchsia.hardware.gpio_cpp_wire",
+    "//sdk/lib/component/cpp/incoming",
     "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zxc",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 test("gpioutil-test-bin") {
@@ -33,6 +29,7 @@ test("gpioutil-test-bin") {
   include_dirs = [ "." ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.gpio:fuchsia.hardware.gpio_cpp_wire",
+    "//sdk/lib/component/cpp/incoming",
     "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -44,11 +41,6 @@ test("gpioutil-test-bin") {
     "//zircon/system/ulib/zxc",
     "//zircon/system/ulib/zxtest",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 fuchsia_unittest_package("gpioutil-test") {

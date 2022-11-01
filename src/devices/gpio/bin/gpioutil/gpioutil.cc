@@ -5,6 +5,8 @@
 #include "gpioutil.h"
 
 #include <dirent.h>
+#include <fcntl.h>
+#include <lib/component/cpp/incoming/service_client.h>
 #include <lib/fdio/directory.h>
 #include <lib/fit/defer.h>
 #include <stdio.h>
@@ -90,19 +92,6 @@ int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value,
   return 0;
 }
 
-static std::optional<fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio>> GetClient(
-    const char* path) {
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    return std::nullopt;
-  }
-  status = fdio_service_connect(path, remote.release());
-  if (status != ZX_OK) {
-    return std::nullopt;
-  }
-  return fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio>(std::move(local));
-}
 
 int ListGpios(void) {
   DIR* gpio_dir = opendir(kGpioDevClassDir);
@@ -116,19 +105,21 @@ int ListGpios(void) {
   while ((dir = readdir(gpio_dir)) != NULL) {
     std::string gpio_path(kGpioDevClassDir);
     gpio_path += std::string(dir->d_name);
-    auto client = GetClient(gpio_path.c_str());
-    if (!client) {
-      fprintf(stderr, "Failed to get client from %.*s", static_cast<int>(gpio_path.length()),
-              gpio_path.data());
-      continue;
+    auto client_end = component::Connect<fuchsia_hardware_gpio::Gpio>(gpio_path);
+
+    if (client_end.is_error()) {
+      fprintf(stderr, "Failed to get client, st = %d\n", client_end.status_value());
+      return -1;
     }
-    auto result_pin = (*client)->GetPin();
+    fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio> client(std::move(*client_end));
+
+    auto result_pin = client->GetPin();
     if (!result_pin.ok()) {
       fprintf(stderr, "Could not get pin from %.*s\n", static_cast<int>(gpio_path.length()),
               gpio_path.data());
       continue;
     }
-    auto result_name = (*client)->GetName();
+    auto result_name = client->GetName();
     if (!result_name.ok()) {
       fprintf(stderr, "Could not get name from %.*s\n", static_cast<int>(gpio_path.length()),
               gpio_path.data());
@@ -143,12 +134,12 @@ int ListGpios(void) {
   return 0;
 }
 
-std::optional<fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio>> FindGpioClientByName(
+zx::result<fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio>> FindGpioClientByName(
     std::string_view name) {
   DIR* gpio_dir = opendir(kGpioDevClassDir);
   if (!gpio_dir) {
     fprintf(stderr, "Failed to open GPIO device dir %s\n", kGpioDevClassDir);
-    return std::nullopt;
+    return zx::error(ZX_ERR_NOT_FOUND);
   }
   auto cleanup = fit::defer([&gpio_dir]() { closedir(gpio_dir); });
 
@@ -156,25 +147,30 @@ std::optional<fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio>> FindGpioClientB
   while ((dir = readdir(gpio_dir)) != NULL) {
     std::string gpio_path(kGpioDevClassDir);
     gpio_path += std::string(dir->d_name);
-    auto client = GetClient(gpio_path.c_str());
-    if (!client) {
-      fprintf(stderr, "Failed to get client from %.*s", static_cast<int>(gpio_path.length()),
-              gpio_path.data());
+    auto client_end = component::Connect<fuchsia_hardware_gpio::Gpio>(gpio_path);
+
+    if (client_end.is_error()) {
+      // Non-fatal, try the next client.
+      fprintf(stderr, "Could not connect to client '%s', st = %d\n", gpio_path.c_str(),
+              client_end.status_value());
       continue;
     }
-    auto result_name = (*client)->GetName();
+
+    fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio> client(std::move(*client_end));
+    auto result_name = client->GetName();
     if (!result_name.ok()) {
       fprintf(stderr, "Could not get name from %.*s\n", static_cast<int>(gpio_path.length()),
               gpio_path.data());
       continue;
     }
+
     auto gpio_name = result_name->value()->name.get();
-    if (name.compare(gpio_name) == 0) {
-      return client;
+    if (name == gpio_name) {
+      return zx::ok(std::move(client));
     }
   }
 
-  return std::nullopt;
+  return zx::error(ZX_ERR_NOT_FOUND);
 }
 
 int ClientCall(fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio> client, GpioFunc func,

@@ -44,8 +44,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/devices/cpu/drivers/aml-cpu:aml-cpu-test-bin",
     "//src/devices/cpu/drivers/aml-cpu-legacy:aml-cpu-legacy-driver",
     "//src/devices/cpu/drivers/aml-cpu-legacy:aml-cpu-legacy-test-bin",
-    "//src/devices/gpio/bin/gpioutil",
-    "//src/devices/gpio/bin/gpioutil:gpioutil-test-bin",
     "//src/devices/gpio/drivers/gpio:gpio-test-bin",
     "//src/devices/i2c/bin:i2cutil",
     "//src/devices/i2c/drivers/i2c:i2c-test-bin",

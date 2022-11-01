@@ -33,7 +33,7 @@ int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value,
 
 int ListGpios(void);
 
-std::optional<fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio>> FindGpioClientByName(
+zx::result<fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio>> FindGpioClientByName(
     std::string_view name);
 
 int ClientCall(fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio> client, GpioFunc func,

@@ -5,6 +5,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <lib/component/cpp/incoming/service_client.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 #include <stdlib.h>
@@ -12,9 +13,13 @@
 
 #include <string>
 
-#include <fbl/unique_fd.h>
-
 #include "gpioutil.h"
+
+namespace {
+
+constexpr size_t kArgDevice = 2;
+
+}  // namespace
 
 // If you update this help text you should probably also update
 // the reference documentation at //docs/reference/hardware/tools/gpioutil.md
@@ -83,30 +88,22 @@ int main(int argc, char** argv) {
   }
 
   int ret = 0;
-  if (access(argv[2], F_OK) == 0) {
+  if (access(argv[kArgDevice], F_OK) == 0) {
     // Access by device path
-    zx::channel local, remote;
-    zx_status_t status = zx::channel::create(0, &local, &remote);
-    if (status != ZX_OK) {
-      fprintf(stderr, "Unable to create channel!\n\n");
-      usage();
+    auto client_end = component::Connect<fuchsia_hardware_gpio::Gpio>(argv[kArgDevice]);
+
+    if (client_end.is_error()) {
+      fprintf(stderr, "Failed to get client, st = %d\n", client_end.status_value());
       return -1;
     }
-
-    status = fdio_service_connect(argv[2], remote.release());
-    if (status != ZX_OK) {
-      fprintf(stderr, "Unable to connect to device!\n\n");
-      usage();
-      return -1;
-    }
-
-    ret = ClientCall(fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio>(std::move(local)), func,
-                     write_value, in_flag, out_value, ds_ua);
+    fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio> client(std::move(*client_end));
+    ret = ClientCall(std::move(client), func, write_value, in_flag, out_value, ds_ua);
   } else {
     // Access by GPIO name
-    auto client = FindGpioClientByName(argv[2]);
-    if (!client) {
-      fprintf(stderr, "Unable to connect GPIO by name %s\n\n", argv[2]);
+    auto client = FindGpioClientByName(argv[kArgDevice]);
+    if (client.is_error()) {
+      fprintf(stderr, "Unable to connect GPIO by name '%s', st = %d\n\n", argv[kArgDevice],
+              client.status_value());
       usage();
       return -1;
     }

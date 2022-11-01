@@ -20,8 +20,9 @@ class FakeGpio : public fidl::WireServer<Gpio> {
  public:
   explicit FakeGpio(uint32_t pin = 0, std::string_view name = "NO_NAME") : pin_(pin), name_(name) {}
 
-  zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
-    return fidl::BindSingleInFlightOnly(dispatcher, std::move(request), this);
+  zx_status_t Connect(async_dispatcher_t* dispatcher,
+                      fidl::ServerEnd<fuchsia_hardware_gpio::Gpio> server) {
+    return fidl::BindSingleInFlightOnly(dispatcher, std::move(server), this);
   }
 
   void GetPin(GetPinCompleter::Sync& completer) override {
@@ -110,10 +111,11 @@ class GpioUtilTest : public zxtest::Test {
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
     gpio_ = std::make_unique<FakeGpio>();
 
-    zx::channel server;
-    ASSERT_OK(zx::channel::create(0, &client_, &server));
+    auto server = fidl::CreateEndpoints(&client_);
+    ASSERT_OK(server.status_value());
+
     ASSERT_OK(loop_->StartThread("gpioutil-test-loop"));
-    ASSERT_OK(gpio_->Connect(loop_->dispatcher(), std::move(server)));
+    ASSERT_OK(gpio_->Connect(loop_->dispatcher(), std::move(server.value())));
   }
 
   void TearDown() override {
@@ -128,7 +130,7 @@ class GpioUtilTest : public zxtest::Test {
 
  protected:
   std::unique_ptr<async::Loop> loop_;
-  zx::channel client_;
+  fidl::ClientEnd<fuchsia_hardware_gpio::Gpio> client_;
   std::unique_ptr<FakeGpio> gpio_;
 };
 
