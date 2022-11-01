@@ -173,6 +173,9 @@ fuchsia::feedback::CrashReport CrashReportBuilder::Consume() {
       case ExceptionReason::kPageFaultBadState:
         crash_report.set_crash_signature("fuchsia-page_fault-bad_state");
         break;
+      case ExceptionReason::kPageFaultNoMemory:
+        crash_report.set_crash_signature("fuchsia-page_fault-no_memory");
+        break;
     }
   }
 
