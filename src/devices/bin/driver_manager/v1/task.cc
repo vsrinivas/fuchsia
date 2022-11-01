@@ -66,7 +66,7 @@ void Task::DependencyComplete(const Task* dependency, zx_status_t status) {
   // The task may have been completed as part of |DependencyFailed|,
   // in which case the list of dependencies would have already been cleared.
   if (!is_completed()) {
-    ZX_PANIC("driver_manager: %s could not find dependency %s, already removed?\n",
+    ZX_PANIC("driver_manager: %s could not find dependency %s, already removed?",
              TaskDescription().c_str(), dependency->TaskDescription().c_str());
   }
 }
