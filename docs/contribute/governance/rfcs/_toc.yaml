@@ -408,3 +408,5 @@ toc:
     path: /docs/contribute/governance/rfcs/0195_positions_and_ranges_in_text_apis.md
   - title: "RFC-0196: FIDL large messages"
     path: /docs/contribute/governance/rfcs/0196_fidl_large_messages.md
+  - title: "RFC-0197: Node Groups for composites"
+    path: /docs/contribute/governance/rfcs/0197_node_groups.md

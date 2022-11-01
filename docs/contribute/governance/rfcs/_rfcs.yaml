@@ -2562,3 +2562,17 @@
   reviewers: ['abarth@google.com', 'chcl@google.com', 'cpu@google.com', 'mseaborn@google.com', 'nickcano@google.com', 'surajmalhotra@google.com']
   submitted: '2022-06-28'
   reviewed: '2022-10-27'
+
+- name: 'RFC-0197'
+  title: 'Node Groups for composites'
+  short_description: 'Support defining composites at runtime.'
+  authors: ['spqchan@google.com']
+  file: '0197_node_groups.md'
+  area: ['Driver SDK']
+  issue: ['95821']
+  gerrit_change_id: ['726075']
+  status: 'Review'
+  reviewers: ['surajmalhotra@google.com', 'dgilhooley@google.com']
+  submitted: '2022-11-01'
+  reviewed: '2022-09-26'
+
