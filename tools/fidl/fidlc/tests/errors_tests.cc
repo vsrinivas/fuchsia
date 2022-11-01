@@ -192,6 +192,12 @@ type ForgotTheSemicolon = table {}
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
 
+TEST(ErrorsTests, BadIncorrectIdentifier) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0009.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedIdentifier);
+}
+
 TEST(ErrorsTests, BadErrorEmptyFile) {
   TestLibrary library("");
 

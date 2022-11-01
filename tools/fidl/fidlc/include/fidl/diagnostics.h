@@ -21,8 +21,8 @@ constexpr ErrorDef<6, std::string_view> ErrExpectedDeclaration("invalid declarat
 constexpr ErrorDef<7> ErrUnexpectedToken("found unexpected token");
 constexpr ErrorDef<8, Token::KindAndSubkind, Token::KindAndSubkind> ErrUnexpectedTokenOfKind(
     "unexpected token {}, was expecting {}");
-constexpr UndocumentedErrorDef<9, Token::KindAndSubkind, Token::KindAndSubkind>
-    ErrUnexpectedIdentifier("unexpected identifier {}, was expecting {}");
+constexpr ErrorDef<9, Token::KindAndSubkind, Token::KindAndSubkind> ErrUnexpectedIdentifier(
+    "unexpected identifier {}, was expecting {}");
 constexpr ErrorDef<10, std::string_view> ErrInvalidIdentifier("invalid identifier '{}'");
 constexpr ErrorDef<11, std::string_view> ErrInvalidLibraryNameComponent(
     "Invalid library name component {}");
