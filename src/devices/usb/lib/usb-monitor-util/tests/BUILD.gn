@@ -1,0 +1,25 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":usb-monitor-util-test" ]
+}
+
+test("usb-monitor-util-test-bin") {
+  output_name = "usb-monitor-util-test"
+  sources = [ "usb-monitor-util-test.cc" ]
+  deps = [
+    "//sdk/banjo/fuchsia.hardware.usb.request:fuchsia.hardware.usb.request_banjo_cpp",
+    "//src/devices/usb/lib/usb-monitor-util",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+fuchsia_unittest_component("usb-monitor-util-test") {
+  deps = [ ":usb-monitor-util-test-bin" ]
+}
