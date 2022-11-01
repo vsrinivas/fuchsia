@@ -81,26 +81,39 @@ pub async fn log_ota_duration(
         .map_err(|e| format_err!("Logging ota download duration returned an error: {:?}", e))
 }
 
-/// Reports the status of the OTA download.
+/// Reports the Recovery stages
 ///
 /// # Parameters
 /// - `logger_proxy`: The cobalt logger.
 /// - `code`:
-///      Success = 1,
-///      Failure = 2,
+///      refer to the metrics.yaml
 ///
 /// # Returns
 /// `Ok` if the status was logged successfully.
-pub async fn log_ota_status(
+pub async fn log_recovery_stage(
     logger_proxy: &MetricEventLoggerProxy,
-    status: metrics::OtaDownloadStatusMetricDimensionResult,
+    status: metrics::RecoveryEventMetricDimensionResult,
 ) -> Result<(), Error> {
     logger_proxy
-        .log_occurrence(metrics::OTA_DOWNLOAD_STATUS_METRIC_ID, 1, &[status as u32])
+        .log_occurrence(metrics::RECOVERY_EVENT_METRIC_ID, 1, &[status as u32])
         .await
-        .context("Could not log ota dowload status.")?
-        .map_err(|e| format_err!("Logging ota download status returned an error: {:?}", e))
+        .context("Could not log recovery stage event.")?
+        .map_err(|e| format_err!("Logging recovery stage event returned an error: {:?}", e))
 }
+
+// Call cobalt log functions and checks error code
+#[macro_export]
+macro_rules! log_metric {
+    ($func_name:expr,$arg:expr) => {
+        if let Ok(cobalt_logger) = cobalt::get_logger() {
+            if let Err(err) = $func_name(&cobalt_logger, $arg).await {
+                eprintln!("Failed to log metric ({}): {:?}", stringify!($func_name), err)
+            }
+        }
+    };
+}
+
+pub(crate) use log_metric;
 
 #[cfg(test)]
 mod tests {
@@ -178,16 +191,16 @@ mod tests {
         assert_eq!(format!("{}", result.unwrap_err()), "duration must not be negative");
     }
 
-    /// Tests that the right payload is sent to Cobalt when logging the ota status.
+    /// Tests that the right payload is sent to Cobalt when logging the recovery stages.
     #[fasync::run_singlethreaded(test)]
-    async fn test_log_ota_status() {
+    async fn test_log_recovery_stage() {
         let (logger_proxy, mut logger_server) =
             create_proxy_and_stream::<MetricEventLoggerMarker>()
                 .expect("Failed to create Logger FIDL.");
-        let status = metrics::OtaDownloadStatusMetricDimensionResult::Success;
+        let status = metrics::RecoveryEventMetricDimensionResult::OtaStarted;
 
         fasync::Task::spawn(async move {
-            let _ = log_ota_status(&logger_proxy, status).await;
+            let _ = log_recovery_stage(&logger_proxy, status).await;
         })
         .detach();
 
@@ -199,10 +212,10 @@ mod tests {
                 responder: _,
             } = log_request
             {
-                assert_eq!(metric_id, metrics::OTA_DOWNLOAD_STATUS_METRIC_ID);
+                assert_eq!(metric_id, metrics::RECOVERY_EVENT_METRIC_ID);
                 assert_eq!(
                     event_codes,
-                    &[metrics::OtaDownloadStatusMetricDimensionResult::Success as u32]
+                    &[metrics::RecoveryEventMetricDimensionResult::OtaStarted as u32]
                 );
                 assert_eq!(count, 1);
             } else {

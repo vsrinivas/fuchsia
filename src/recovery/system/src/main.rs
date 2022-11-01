@@ -918,17 +918,25 @@ impl RecoveryViewAssistant {
                             let view_key = self.view_key.clone();
                             let f = async move {
                                 let connected = connect_to_wifi(ssid, password).await;
-
-                                if connected.is_err() {
-                                    // Let the "Connecting" message stay there for a second so the
-                                    // user can see that something was tried.
-                                    let sleep_time = Duration::from_seconds(1);
-                                    fuchsia_async::Timer::new(sleep_time.after_now()).await;
-                                    println!(
-                                        "Failed to connect: {}",
-                                        connected.as_ref().err().unwrap()
-                                    );
+                                match connected {
+                                    Ok(()) => {
+                                        cobalt::log_metric!(
+                                            cobalt::log_recovery_stage,
+                                            metrics::RecoveryEventMetricDimensionResult::WiFiConnected
+                                        );
+                                    }
+                                    Err(_) => {
+                                        // Let the "Connecting" message stay there for a second so
+                                        // the user can see that something was tried.
+                                        let sleep_time = Duration::from_seconds(1);
+                                        fuchsia_async::Timer::new(sleep_time.after_now()).await;
+                                        println!(
+                                            "Failed to connect: {}",
+                                            connected.as_ref().err().unwrap()
+                                        );
+                                    }
                                 }
+
                                 local_app_sender.queue_message(
                                     MessageTarget::View(view_key),
                                     make_message(WiFiMessages::Connected(connected.is_ok())),
@@ -960,6 +968,11 @@ impl RecoveryViewAssistant {
 
                         let ota_manager = self.ota_manager.clone();
                         let f = async move {
+                            cobalt::log_metric!(
+                                cobalt::log_recovery_stage,
+                                metrics::RecoveryEventMetricDimensionResult::OtaStarted
+                            );
+
                             let start_time = fasync::Time::now();
 
                             // Even if stop fails, try to update anyway.
@@ -978,40 +991,21 @@ impl RecoveryViewAssistant {
                                 Ok(_) => {
                                     println!("OTA Success!");
                                     fasync::Task::local(async move {
-                                        if let Ok(cobalt_logger) = cobalt::get_logger() {
-                                            if let Err(err) = cobalt::log_ota_duration(
-                                                &cobalt_logger,
-                                                elapsed_time,
-                                            )
-                                            .await
-                                            {
-                                                eprintln!("error {:?}", err)
-                                            }
-                                            if let Err(err) = cobalt::log_ota_status(
-                                                &cobalt_logger,
-                                                metrics::OtaDownloadStatusMetricDimensionResult::Success,
-                                            )
-                                            .await
-                                            {
-                                                eprintln!("error {:?}", err)
-                                            }
-                                        }
+                                        cobalt::log_metric!(cobalt::log_ota_duration, elapsed_time);
+                                        cobalt::log_metric!(
+                                            cobalt::log_recovery_stage,
+                                            metrics::RecoveryEventMetricDimensionResult::OtaSuccess
+                                        );
                                     })
                                     .detach();
                                 }
                                 Err(ref e) => {
                                     println!("OTA Error..... {:?}", e);
                                     fasync::Task::local(async move {
-                                        if let Ok(cobalt_logger) = cobalt::get_logger() {
-                                            if let Err(err) = cobalt::log_ota_status(
-                                                &cobalt_logger,
-                                                metrics::OtaDownloadStatusMetricDimensionResult::Failure,
-                                            )
-                                            .await
-                                            {
-                                                eprintln!("error {:?}", err)
-                                            }
-                                        }
+                                        cobalt::log_metric!(
+                                            cobalt::log_recovery_stage,
+                                            metrics::RecoveryEventMetricDimensionResult::OtaFailed
+                                        );
                                     })
                                     .detach();
                                 }
