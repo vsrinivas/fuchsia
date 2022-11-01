@@ -245,7 +245,7 @@ TEEC_Result PreprocessTemporaryMemref(fidl::AnyArena& allocator, uint32_t param_
       direction = fuchsia_tee::wire::Direction::kInout;
       break;
     default:
-      ZX_PANIC("TEE Client API Unknown parameter type\n");
+      ZX_PANIC("TEE Client API Unknown parameter type");
   }
 
   zx::vmo vmo;
