@@ -617,6 +617,8 @@
                     "/core/network",
                     "/core/network/netstack",
                     "/core/lowpan-ot-driver",
+                    "/core/starnix_manager",
+                    "/core/starnix_manager/starbionic",
                 ],
             },
             {
