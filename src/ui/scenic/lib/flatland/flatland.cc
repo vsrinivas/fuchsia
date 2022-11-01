@@ -1336,6 +1336,12 @@ void Flatland::SetViewportProperties(ContentId link_id, ViewportProperties prope
   }
 
   LinkToChildData& link_data = link_kv->second;
+  if (!link_data.link.importer.valid()) {
+    // Other side of the Viewport has been invalidated and the Viewport should be released. Calling
+    // SetViewportProperties() must still be allowed since the client may not have gotten the
+    // destruction message yet.
+    return;
+  }
 
   // Callers do not have to provide a new logical size on every call to SetViewportProperties, but
   // if they do, it must have positive width and height values.
@@ -1375,7 +1381,6 @@ void Flatland::SetViewportProperties(ContentId link_id, ViewportProperties prope
                            .width = static_cast<int32_t>(properties.logical_size().width),
                            .height = static_cast<int32_t>(properties.logical_size().height)});
 
-  FX_DCHECK(link_data.link.importer.valid());
   link_data.properties = std::move(properties);
 }
 

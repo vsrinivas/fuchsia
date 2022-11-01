@@ -2914,6 +2914,34 @@ TEST_F(FlatlandTest, LayoutOnlyUpdatesChildrenInGlobalTopology) {
   }
 }
 
+TEST_F(FlatlandTest, SetViewportProperties_WithDeadViewport_ShouldNotCrash) {
+  std::shared_ptr<Flatland> parent = CreateFlatland();
+  const TransformId kTransformId = {1};
+  const ContentId kLinkId = {2};
+
+  ViewportCreationToken parent_token;
+  {
+    ViewCreationToken child_token;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
+    // Child token goes out of scope.
+  }
+
+  {
+    fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+    ViewportProperties properties;
+    properties.set_logical_size({kDefaultSize, kDefaultSize});
+    parent->CreateViewport(kLinkId, std::move(parent_token), std::move(properties),
+                           child_view_watcher.NewRequest());
+    PRESENT(parent, true);
+  }
+
+  {
+    // Now call SetViewportProperties() and make sure we don't crash.
+    parent->SetViewportProperties(kLinkId, ViewportProperties{});
+    PRESENT(parent, true);
+  }
+}
+
 TEST_F(FlatlandTest, SetViewportPropertiesDefaultBehavior) {
   std::shared_ptr<Flatland> parent = CreateFlatland();
   std::shared_ptr<Flatland> child = CreateFlatland();
