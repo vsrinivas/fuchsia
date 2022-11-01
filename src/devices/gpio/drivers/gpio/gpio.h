@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_GPIO_DRIVERS_GPIO_GPIO_H_
 #define SRC_DEVICES_GPIO_DRIVERS_GPIO_GPIO_H_
 
+#include <fidl/fuchsia.hardware.gpio.init/cpp/wire.h>
 #include <fidl/fuchsia.hardware.gpio/cpp/wire.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
@@ -140,6 +141,23 @@ class GpioDevice : public GpioDeviceType, public ddk::GpioProtocol<GpioDevice, d
   const std::string name_;
   fbl::Mutex lock_;
   bool opened_ TA_GUARDED(lock_) = false;
+};
+
+class GpioInitDevice;
+using GpioInitDeviceType = ddk::Device<GpioInitDevice>;
+
+class GpioInitDevice : public GpioInitDeviceType {
+ public:
+  static void Create(zx_device_t* parent, const ddk::GpioImplProtocolClient& gpio);
+
+  explicit GpioInitDevice(zx_device_t* parent) : GpioInitDeviceType(parent) {}
+
+  void DdkRelease() { delete this; }
+
+ private:
+  static zx_status_t ConfigureGpios(
+      const fuchsia_hardware_gpio_init::wire::GpioInitMetadata& metadata,
+      const ddk::GpioImplProtocolClient& gpio);
 };
 
 }  // namespace gpio

@@ -12,6 +12,7 @@
 #include <memory>
 
 #include <ddk/metadata/gpio.h>
+#include <ddk/metadata/init-step.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 
@@ -94,6 +95,9 @@ zx_status_t GpioDevice::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
 
+  // Process init metadata while we are still the exclusive owner of the GPIO client.
+  GpioInitDevice::Create(parent, &gpio);
+
   auto pins = ddk::GetMetadataArray<gpio_pin_t>(parent, DEVICE_METADATA_GPIO_PINS);
   if (!pins.is_ok()) {
     return pins.error_value();
@@ -132,6 +136,90 @@ zx_status_t GpioDevice::Create(void* ctx, zx_device_t* parent) {
   }
 
   return ZX_OK;
+}
+
+void GpioInitDevice::Create(zx_device_t* parent, const ddk::GpioImplProtocolClient& gpio) {
+  // Don't add the init device if anything goes wrong here, as the hardware may be in a state that
+  // child devices don't expect.
+  auto decoded = ddk::GetEncodedMetadata<fuchsia_hardware_gpio_init::wire::GpioInitMetadata>(
+      parent, DEVICE_METADATA_GPIO_INIT_STEPS);
+  if (!decoded.is_ok()) {
+    if (decoded.status_value() == ZX_ERR_NOT_FOUND) {
+      zxlogf(INFO, "No init metadata provided");
+    } else {
+      zxlogf(ERROR, "Failed to decode metadata: %s", decoded.status_string());
+    }
+    return;
+  }
+
+  auto device = std::make_unique<GpioInitDevice>(parent);
+  if (device->ConfigureGpios(*decoded->PrimaryObject(), gpio) != ZX_OK) {
+    return;
+  }
+
+  zx_device_prop_t props[] = {
+      {BIND_INIT_STEP, 0, BIND_INIT_STEP_GPIO},
+  };
+
+  zx_status_t status = device->DdkAdd(
+      ddk::DeviceAddArgs("gpio-init").set_flags(DEVICE_ADD_ALLOW_MULTI_COMPOSITE).set_props(props));
+  if (status == ZX_OK) {
+    __UNUSED auto _ = device.release();
+  } else {
+    zxlogf(ERROR, "Failed to add gpio-init: %s", zx_status_get_string(status));
+  }
+}
+
+zx_status_t GpioInitDevice::ConfigureGpios(
+    const fuchsia_hardware_gpio_init::wire::GpioInitMetadata& metadata,
+    const ddk::GpioImplProtocolClient& gpio) {
+  // Log errors but continue processing to put as many GPIOs as possible into the requested state.
+  zx_status_t return_status = ZX_OK;
+  for (const auto& step : metadata.steps) {
+    zx_status_t status;
+
+    if (step.options.has_alt_function()) {
+      if ((status = gpio.SetAltFunction(step.index, step.options.alt_function())) != ZX_OK) {
+        zxlogf(ERROR, "SetAltFunction(%lu) failed for %u: %s", step.options.drive_strength_ua(),
+               step.index, zx_status_get_string(status));
+        return_status = status;
+      }
+    }
+
+    if (step.options.has_input_flags()) {
+      status = gpio.ConfigIn(step.index, static_cast<uint32_t>(step.options.input_flags()));
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "ConfigIn(%u) failed for %u: %s",
+               static_cast<uint32_t>(step.options.input_flags()), step.index,
+               zx_status_get_string(status));
+        return_status = status;
+      }
+    }
+
+    if (step.options.has_output_value()) {
+      if ((status = gpio.ConfigOut(step.index, step.options.output_value())) != ZX_OK) {
+        zxlogf(ERROR, "ConfigOut(%u) failed for %u: %s", step.options.output_value(), step.index,
+               zx_status_get_string(status));
+        return_status = status;
+      }
+    }
+
+    if (step.options.has_drive_strength_ua()) {
+      uint64_t actual_ds;
+      status = gpio.SetDriveStrength(step.index, step.options.drive_strength_ua(), &actual_ds);
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "SetDriveStrength(%lu) failed for %u: %s", step.options.drive_strength_ua(),
+               step.index, zx_status_get_string(status));
+        return_status = status;
+      } else if (actual_ds != step.options.drive_strength_ua()) {
+        zxlogf(WARNING, "Actual drive strength (%lu) doesn't match expected (%lu) for %u",
+               actual_ds, step.options.drive_strength_ua(), step.index);
+        return_status = ZX_ERR_BAD_STATE;
+      }
+    }
+  }
+
+  return return_status;
 }
 
 static constexpr zx_driver_ops_t driver_ops = []() {
