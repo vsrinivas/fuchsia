@@ -107,20 +107,20 @@ class FsckWorker {
 
   // Even in a successful return, the returned pair can be |{*nullptr*, node_info}| if
   // |node_info.blkaddr| is |kNewAddr|.
-  zx::result<std::pair<std::unique_ptr<FsBlock>, NodeInfoDeprecated>> ReadNodeBlock(nid_t nid);
-  zx_status_t ValidateNodeBlock(const Node &node_block, NodeInfoDeprecated node_info,
+  zx::result<std::pair<std::unique_ptr<FsBlock>, NodeInfo>> ReadNodeBlock(nid_t nid);
+  zx_status_t ValidateNodeBlock(const Node &node_block, NodeInfo node_info,
                                 FileType ftype, NodeType ntype);
   // This function checks the sanity of a node block with respect to the traverse context and
   // updates the context. In a successful return, this function returns a bool value to indicate
   // whether the caller should traverse deeper.
-  zx::result<bool> UpdateContext(const Node &node_block, NodeInfoDeprecated node_info,
+  zx::result<bool> UpdateContext(const Node &node_block, NodeInfo node_info,
                                  FileType ftype, NodeType ntype);
 
   // Below traverse functions describe how to iterate over for each data structures.
   zx::result<TraverseResult> TraverseInodeBlock(const Node &node_block,
-                                                NodeInfoDeprecated node_info, FileType ftype);
+                                                NodeInfo node_info, FileType ftype);
   zx::result<TraverseResult> TraverseDnodeBlock(const Inode *inode, const Node &node_block,
-                                                NodeInfoDeprecated node_info, FileType ftype);
+                                                NodeInfo node_info, FileType ftype);
   zx::result<TraverseResult> TraverseIndirectNodeBlock(const Inode *inode, const Node &node_block,
                                                        FileType ftype);
   zx::result<TraverseResult> TraverseDoubleIndirectNodeBlock(const Inode *inode,
@@ -220,7 +220,7 @@ class FsckWorker {
   inline void CheckSegmentRange(uint32_t segno);
   SegmentEntry &GetSegmentEntry(uint32_t segno);
   uint32_t GetSegmentNumber(uint32_t block_address);
-  zx::result<NodeInfoDeprecated> GetNodeInfo(nid_t nid);
+  zx::result<NodeInfo> GetNodeInfo(nid_t nid);
   void AddIntoInodeLinkMap(nid_t nid, uint32_t link_count);
   zx_status_t FindAndIncreaseInodeLinkMap(nid_t nid);
 
@@ -239,7 +239,7 @@ class FsckWorker {
     return superblock_info_.StartCpAddr() +
            LeToCpu(superblock_info_.GetCheckpoint().cp_pack_total_block_count) - (base + 1) + type;
   }
-  static void NodeInfoFromRawNat(NodeInfoDeprecated &ni, RawNatEntry &raw_nat) {
+  static void NodeInfoFromRawNat(NodeInfo &ni, RawNatEntry &raw_nat) {
     ni.ino = LeToCpu(raw_nat.ino);
     ni.blk_addr = LeToCpu(raw_nat.block_addr);
     ni.version = raw_nat.version;

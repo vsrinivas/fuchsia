@@ -91,7 +91,7 @@ TEST(OrphanInode, RecoverOrphanInode) {
 
   // Check Orphan nids has been freed
   for (const auto &iter : inos) {
-    NodeInfoDeprecated ni;
+    NodeInfo ni;
     fs->GetNodeManager().GetNodeInfo(iter, ni);
     ASSERT_EQ(ni.blk_addr, kNullAddr);
   }

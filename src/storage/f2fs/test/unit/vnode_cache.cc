@@ -107,7 +107,7 @@ TEST_F(VnodeCacheTest, Basic) {
       ino_t ino = child_ino_set.at(i);
       fbl::RefPtr<VnodeF2fs> vn2;
       ASSERT_EQ(fs_->GetVCache().Lookup(ino, &vn2), ZX_ERR_NOT_FOUND);
-      NodeInfoDeprecated ni;
+      NodeInfo ni;
       fs_->GetNodeManager().GetNodeInfo(ino, ni);
       ASSERT_FALSE(ni.blk_addr);
     } else {
@@ -120,7 +120,7 @@ TEST_F(VnodeCacheTest, Basic) {
       ino_t ino = child_ino_set.at(i);
       fbl::RefPtr<VnodeF2fs> vn2;
       ASSERT_EQ(fs_->GetVCache().Lookup(ino, &vn2), ZX_OK);
-      NodeInfoDeprecated ni;
+      NodeInfo ni;
       fs_->GetNodeManager().GetNodeInfo(ino, ni);
       ASSERT_TRUE(ni.blk_addr);
     }

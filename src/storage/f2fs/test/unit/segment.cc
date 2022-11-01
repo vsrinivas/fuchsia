@@ -23,7 +23,7 @@ TEST_F(SegmentManagerTest, BlkChaining) {
   // write the root inode, and read the block where the previous version of the root inode is stored
   // to check if the block has a proper lba address to the next node block
   for (int i = 0; i < nwritten; ++i) {
-    NodeInfoDeprecated ni;
+    NodeInfo ni;
     {
       LockedPage read_page;
       fs_->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &read_page);
@@ -54,7 +54,7 @@ TEST_F(SegmentManagerTest, DirtyToFree) {
 
   // write the root inode repeatedly as much as 2 segments
   for (int i = 0; i < nwritten; ++i) {
-    NodeInfoDeprecated ni;
+    NodeInfo ni;
     fs_->GetNodeManager().GetNodeInfo(superblock_info.GetRootIno(), ni);
     ASSERT_NE(ni.blk_addr, kNullAddr);
     ASSERT_NE(ni.blk_addr, kNewAddr);
@@ -132,7 +132,7 @@ TEST_F(SegmentManagerTest, GetNewSegmentHeap) {
   uint32_t nwritten = kDefaultBlocksPerSegment * 3;
 
   for (uint32_t i = 0; i < nwritten; ++i) {
-    NodeInfoDeprecated ni, new_ni;
+    NodeInfo ni, new_ni;
     fs_->GetNodeManager().GetNodeInfo(superblock_info.GetRootIno(), ni);
     ASSERT_NE(ni.blk_addr, kNullAddr);
     ASSERT_NE(ni.blk_addr, kNewAddr);
@@ -317,7 +317,7 @@ TEST(SegmentManagerOptionTest, Section) {
   SuperblockInfo &superblock_info = fs->GetSuperblockInfo();
 
   for (uint32_t i = 0; i < blocks_per_section; ++i) {
-    NodeInfoDeprecated ni;
+    NodeInfo ni;
     CursegInfo *cur_segment = fs->GetSegmentManager().CURSEG_I(CursegType::kCursegHotNode);
 
     {
@@ -371,7 +371,7 @@ TEST(SegmentManagerOptionTest, GetNewSegmentHeap) {
   uint32_t nwritten = alloc_size * mkfs_options.secs_per_zone * 3;
 
   for (uint32_t i = 0; i < nwritten; ++i) {
-    NodeInfoDeprecated ni, new_ni;
+    NodeInfo ni, new_ni;
     fs->GetNodeManager().GetNodeInfo(superblock_info.GetRootIno(), ni);
     ASSERT_NE(ni.blk_addr, kNullAddr);
     ASSERT_NE(ni.blk_addr, kNewAddr);
@@ -423,7 +423,7 @@ TEST(SegmentManagerOptionTest, GetNewSegmentNoHeap) {
       kDefaultBlocksPerSegment * mkfs_options.segs_per_sec * mkfs_options.secs_per_zone * 3;
 
   for (uint32_t i = 0; i < nwritten; ++i) {
-    NodeInfoDeprecated ni, new_ni;
+    NodeInfo ni, new_ni;
     fs->GetNodeManager().GetNodeInfo(superblock_info.GetRootIno(), ni);
     ASSERT_NE(ni.blk_addr, kNullAddr);
     ASSERT_NE(ni.blk_addr, kNewAddr);

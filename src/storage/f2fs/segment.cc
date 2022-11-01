@@ -924,7 +924,7 @@ zx_status_t SegmentManager::WriteDataPage(VnodeF2fs *vnode, LockedPage &page, ni
                                           uint32_t ofs_in_node, block_t old_blkaddr,
                                           block_t *new_blkaddr) {
   Summary sum;
-  NodeInfoDeprecated ni;
+  NodeInfo ni;
 
   ZX_ASSERT(old_blkaddr != kNullAddr);
   fs_->GetNodeManager().GetNodeInfo(nid, ni);

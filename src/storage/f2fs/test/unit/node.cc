@@ -83,7 +83,7 @@ TEST_F(NodeManagerTest, NatCache) {
 
   // Lookup NAT cache
   for (auto ino : inos) {
-    NodeInfoDeprecated ni;
+    NodeInfo ni;
     ASSERT_TRUE(MapTester::IsCachedNat(node_manager, ino));
     fs_->GetNodeManager().GetNodeInfo(ino, ni);
     ASSERT_EQ(ni.nid, ino);
@@ -101,7 +101,7 @@ TEST_F(NodeManagerTest, NatCache) {
 
   // Lookup NAT cache
   for (auto ino : inos) {
-    NodeInfoDeprecated ni;
+    NodeInfo ni;
     ASSERT_TRUE(MapTester::IsCachedNat(node_manager, ino));
     fs_->GetNodeManager().GetNodeInfo(ino, ni);
     ASSERT_EQ(ni.nid, ino);
@@ -124,7 +124,7 @@ TEST_F(NodeManagerTest, NatCache) {
 
   // Lookup NAT journal
   for (auto ino : inos) {
-    NodeInfoDeprecated ni;
+    NodeInfo ni;
     ASSERT_FALSE(MapTester::IsCachedNat(node_manager, ino));
     fs_->GetNodeManager().GetNodeInfo(ino, ni);
     ASSERT_EQ(ni.nid, ino);
@@ -167,7 +167,7 @@ TEST_F(NodeManagerTest, NatCache) {
 
   // Read NAT block
   for (auto ino : inos) {
-    NodeInfoDeprecated ni;
+    NodeInfo ni;
     ASSERT_FALSE(MapTester::IsCachedNat(node_manager, ino));
     fs_->GetNodeManager().GetNodeInfo(ino, ni);
     ASSERT_EQ(ni.nid, ino);
