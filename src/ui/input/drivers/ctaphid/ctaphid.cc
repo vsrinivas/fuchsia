@@ -20,6 +20,35 @@
 #include "src/ui/input/drivers/ctaphid/ctaphid_bind.h"
 
 namespace ctaphid {
+
+void CtapHidDriver::CreatePacketHeader(uint8_t packet_sequence, uint32_t channel_id,
+                                       fuchsia_fido_report::CtapHidCommand command_id,
+                                       uint16_t payload_len, uint8_t* out, size_t out_size) {
+  for (size_t i = 0; i < out_size; i++) {
+    out[i] = 0;
+  }
+
+  // Write the Channel ID.
+  out[CHANNEL_ID_OFFSET + 0] = (channel_id >> 24) & 0xFF;
+  out[CHANNEL_ID_OFFSET + 1] = (channel_id >> 16) & 0xFF;
+  out[CHANNEL_ID_OFFSET + 2] = (channel_id >> 8) & 0xFF;
+  out[CHANNEL_ID_OFFSET + 3] = channel_id & 0xFF;
+
+  // Write the rest of the packet header. This differs between initialization and continuation
+  // packets.
+  if (packet_sequence == INIT_PACKET_SEQ) {
+    // Write the Command ID with the initialization packet bit set.
+    out[COMMAND_ID_OFFSET] = fidl::ToUnderlying(command_id) | INIT_PACKET_BIT;
+    // Write the Payload Length
+    out[PAYLOAD_LEN_HI_OFFSET] = (payload_len >> 8) & 0xFF;
+    out[PAYLOAD_LEN_LO_OFFSET] = payload_len & 0xFF;
+
+  } else {
+    // The packet sequence value, starting at 0.
+    out[PACKET_SEQ_OFFSET] = packet_sequence;
+  }
+}
+
 zx_status_t CtapHidDriver::Start() {
   uint8_t report_desc[HID_MAX_DESC_LEN];
   size_t report_desc_size;
@@ -101,40 +130,32 @@ void CtapHidDriver::SendMessage(SendMessageRequestView request,
 
   // Divide up the request's data into a series of packets, starting with an initialization packet.
   auto data_it = request->data().begin();
-  for (uint8_t packet_seq = INIT_PACKET_SEQ;
-       (packet_seq < MAX_PACKET_SEQ || packet_seq == INIT_PACKET_SEQ) &&
-       data_it != request->data().end();
-       packet_seq++) {
-    uint8_t curr_hid_report[HID_MAX_REPORT_LEN] = {0};
-    size_t n_bytes = 0;
+  if (request->data().empty()) {
+    uint8_t curr_hid_report[HID_MAX_REPORT_LEN];
+    CreatePacketHeader(INIT_PACKET_SEQ, channel_id, request->command_id(), request->payload_len(),
+                       curr_hid_report, HID_MAX_REPORT_LEN);
 
-    // Write the Channel ID.
-    curr_hid_report[CHANNEL_ID_OFFSET + 0] = (channel_id >> 24) & 0xFF;
-    curr_hid_report[CHANNEL_ID_OFFSET + 1] = (channel_id >> 16) & 0xFF;
-    curr_hid_report[CHANNEL_ID_OFFSET + 2] = (channel_id >> 8) & 0xFF;
-    curr_hid_report[CHANNEL_ID_OFFSET + 3] = channel_id & 0xFF;
-
-    // Write the rest of the packet header. This differs between initialization and continuation
-    // packets.
-    if (packet_seq == INIT_PACKET_SEQ) {
-      // Write the Command ID with the initialization packet bit set.
-      curr_hid_report[COMMAND_ID_OFFSET] =
-          fidl::ToUnderlying(request->command_id()) | INIT_PACKET_BIT;
-      // Write the Payload Length
-      curr_hid_report[PAYLOAD_LEN_HI_OFFSET] = (request->payload_len() >> 8) & 0xFF;
-      curr_hid_report[PAYLOAD_LEN_LO_OFFSET] = request->payload_len() & 0xFF;
-
-      n_bytes = INITIALIZATION_PAYLOAD_DATA_OFFSET;
-    } else {
-      // The packet sequence value, starting at 0.
-      curr_hid_report[PACKET_SEQ_OFFSET] = packet_seq;
-
-      n_bytes = CONTINUATION_PAYLOAD_DATA_OFFSET;
+    zx_status_t status = hiddev_.SetReport(HID_REPORT_TYPE_OUTPUT, output_packet_id_,
+                                           curr_hid_report, output_packet_size_);
+    if (status != ZX_OK) {
+      completer.ReplyError(status);
+      return;
     }
+  }
+
+  for (uint8_t packet_sequence = INIT_PACKET_SEQ;
+       (packet_sequence < MAX_PACKET_SEQ || packet_sequence == INIT_PACKET_SEQ) &&
+       data_it != request->data().end();
+       packet_sequence++) {
+    uint8_t curr_hid_report[HID_MAX_REPORT_LEN];
+    CreatePacketHeader(packet_sequence, channel_id, request->command_id(), request->payload_len(),
+                       curr_hid_report, HID_MAX_REPORT_LEN);
 
     // Write the payload.
-    for (; n_bytes < output_packet_size_ && data_it != request->data().end(); n_bytes++) {
-      curr_hid_report[n_bytes] = *data_it;
+    size_t byte_n = packet_sequence == INIT_PACKET_SEQ ? INITIALIZATION_PAYLOAD_DATA_OFFSET
+                                                       : CONTINUATION_PAYLOAD_DATA_OFFSET;
+    for (; byte_n < output_packet_size_ && data_it != request->data().end(); byte_n++) {
+      curr_hid_report[byte_n] = *data_it;
       data_it++;
     }
 
@@ -179,6 +200,11 @@ void CtapHidDriver::GetMessage(GetMessageRequestView request,
 }
 
 void CtapHidDriver::ReplyToWaitingGetMessage() {
+  if (!pending_response_->waiting_read) {
+    // Return if there is no waiting read to reply to.
+    return;
+  }
+
   if (!pending_response_->last_packet_received_time.has_value()) {
     // We are still waiting on a response.
     return;
@@ -274,6 +300,7 @@ void CtapHidDriver::HidReportListenerReceiveReport(const uint8_t* report, size_t
   if (pending_response_->bytes_received >= pending_response_->payload_len) {
     // We have finished receiving packets for this response.
     pending_response_->last_packet_received_time.emplace(report_time);
+    ReplyToWaitingGetMessage();
   }
 }
 

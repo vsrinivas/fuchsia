@@ -182,6 +182,28 @@ TEST_F(CtapHidDevTest, HidLifetimeTest) {
   ASSERT_FALSE(fake_hid_device_.listener_);
 }
 
+TEST_F(CtapHidDevTest, SendMessageWithEmptyPayloadTest) {
+  std::vector<uint8_t> desc(skey_desc, skey_desc + SKEY_DESC_LEN);
+  fake_hid_device_.SetReportDesc(desc);
+  ASSERT_OK(ctap_driver_device_->Bind());
+
+  SetupSyncClient();
+
+  fidl::Arena<kFidlReportBufferSize> allocator;
+  std::vector<uint8_t> data_vec{};
+  auto message_request =
+      BuildRequest(allocator, 0xFFFFFFFF, fuchsia_fido_report::CtapHidCommand::kInit, data_vec);
+
+  // Send the Command.
+  fidl::WireResult<fuchsia_fido_report::SecurityKeyDevice::SendMessage> result =
+      sync_client_->SendMessage(message_request);
+  loop_.RunUntilIdle();
+
+  ASSERT_EQ(result.status(), ZX_OK);
+  // Check the hid driver received the correct number of packets.
+  ASSERT_EQ(fake_hid_device_.n_set_reports_received, 1);
+}
+
 TEST_F(CtapHidDevTest, SendMessageSinglePacketTest) {
   std::vector<uint8_t> desc(skey_desc, skey_desc + SKEY_DESC_LEN);
   fake_hid_device_.SetReportDesc(desc);

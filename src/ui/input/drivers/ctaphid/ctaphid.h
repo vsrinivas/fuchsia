@@ -121,6 +121,10 @@ class CtapHidDriver : public CtapHidDriverDeviceType,
 
   void ReplyToWaitingGetMessage() __TA_REQUIRES(lock_);
 
+  void CreatePacketHeader(uint8_t packet_sequence, uint32_t channel_id,
+                          fuchsia_fido_report::CtapHidCommand command_id, uint16_t payload_len,
+                          uint8_t* out, size_t out_size);
+
   ddk::HidDeviceProtocolClient hiddev_;
 
   fbl::Mutex lock_;
@@ -131,7 +135,7 @@ class CtapHidDriver : public CtapHidDriverDeviceType,
   size_t output_packet_size_ = 0;
   size_t max_output_data_size_ = 0;
 
-  // Currently awaiting responses.
+  // Currently awaiting response.
   std::optional<pending_response> pending_response_ __TA_GUARDED(lock_);
 };
 
