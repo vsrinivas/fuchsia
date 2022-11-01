@@ -72,6 +72,9 @@ class TestObserver : public zxtest::LifecycleObserver {
  public:
   void OnTestStart(const zxtest::TestCase& test_case, const zxtest::TestInfo& test_info) final {
     current_test_name = std::string(test_case.name()) + "." + std::string(test_info.name());
+    if (current_test_name.size() > 64) {
+      current_test_name = current_test_name.substr(0, 64);
+    }
   }
 };
 
@@ -134,8 +137,9 @@ zx::result<fidl::WireSyncClient<fuchsia_sysmem::Allocator>> connect_to_sysmem_dr
   }
 
   fidl::WireSyncClient allocator{std::move(allocator_endpoints->client)};
-  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
-  (void)allocator->SetDebugClientInfo(fidl::StringView::FromExternal(current_test_name), 0u);
+  const fidl::WireResult result =
+      allocator->SetDebugClientInfo(fidl::StringView::FromExternal(current_test_name), 0u);
+  EXPECT_OK(result.status());
   return zx::ok(std::move(allocator));
 }
 
@@ -146,29 +150,23 @@ zx::result<fidl::WireSyncClient<fuchsia_sysmem::Allocator>> connect_to_sysmem_se
     return zx::error(client_end.status_value());
   }
   fidl::WireSyncClient allocator{std::move(client_end.value())};
-  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
-  (void)allocator->SetDebugClientInfo(fidl::StringView::FromExternal(current_test_name), 0u);
+  const fidl::WireResult result =
+      allocator->SetDebugClientInfo(fidl::StringView::FromExternal(current_test_name), 0u);
+  EXPECT_OK(result.status());
   return zx::ok(std::move(allocator));
 }
 
 zx_koid_t get_koid(zx_handle_t handle) {
   zx_info_handle_basic_t info;
-  zx_status_t status =
-      zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-  EXPECT_EQ(status, ZX_OK, "");
-  if (status != ZX_OK) {
-    printf("status: %d\n", status);
-  }
-  ZX_ASSERT(status == ZX_OK);
+  EXPECT_OK(
+      zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
   return info.koid;
 }
 
 zx_koid_t get_related_koid(zx_handle_t handle) {
   zx_info_handle_basic_t info;
-  zx_status_t status =
-      zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-  EXPECT_EQ(status, ZX_OK, "");
-  ZX_ASSERT(status == ZX_OK);
+  EXPECT_OK(
+      zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
   return info.related_koid;
 }
 
@@ -202,8 +200,7 @@ static void SetDefaultCollectionName(
   if (!suffix.empty()) {
     name = fbl::String::Concat({name, "-", suffix});
   }
-  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
-  (void)collection->SetName(kPriority, fidl::StringView::FromExternal(name.c_str()));
+  EXPECT_OK(collection->SetName(kPriority, fidl::StringView::FromExternal(name.c_str())).status());
 }
 
 zx::result<fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>>
@@ -238,7 +235,7 @@ make_single_participant_collection() {
   }
   auto [collection_client_end, collection_server_end] = std::move(*collection_endpoints);
 
-  EXPECT_NE(token_client_end.channel().get(), ZX_HANDLE_INVALID, "");
+  EXPECT_NE(token_client_end.channel().get(), ZX_HANDLE_INVALID);
   auto bind_result = allocator->BindSharedCollection(std::move(token_client_end),
                                                      std::move(collection_server_end));
   EXPECT_OK(bind_result);
@@ -254,14 +251,14 @@ make_single_participant_collection() {
 }
 
 fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken> create_initial_token() {
-  auto allocator = connect_to_sysmem_service();
-  auto token_endpoints_0 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
-  ZX_ASSERT(token_endpoints_0.is_ok());
-  auto [token_client_0, token_server_0] = std::move(*token_endpoints_0);
-  ZX_ASSERT(allocator->AllocateSharedCollection(std::move(token_server_0)).ok());
+  zx::result allocator = connect_to_sysmem_service();
+  EXPECT_OK(allocator.status_value());
+  zx::result token_endpoints_0 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
+  EXPECT_OK(token_endpoints_0.status_value());
+  auto& [token_client_0, token_server_0] = token_endpoints_0.value();
+  EXPECT_OK(allocator->AllocateSharedCollection(std::move(token_server_0)).status());
   fidl::WireSyncClient token{std::move(token_client_0)};
-  auto wire_result = token->Sync();
-  ZX_ASSERT(wire_result.ok());
+  EXPECT_OK(token->Sync().status());
   return token;
 }
 
@@ -273,26 +270,25 @@ std::vector<fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>> create_clien
   for (uint32_t i = 0; i < client_count; ++i) {
     auto cur_token = std::move(next_token);
     if (i < client_count - 1) {
-      auto token_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
-      ZX_ASSERT(token_endpoints.is_ok());
-      auto [token_client_endpoint, token_server_endpoint] = std::move(*token_endpoints);
-      ZX_ASSERT(cur_token->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_endpoint)).ok());
+      zx::result token_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
+      EXPECT_OK(token_endpoints.status_value());
+      auto& [token_client_endpoint, token_server_endpoint] = token_endpoints.value();
+      EXPECT_OK(
+          cur_token->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_endpoint)).status());
       next_token = fidl::WireSyncClient(std::move(token_client_endpoint));
     }
-    auto collection_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
-    ZX_ASSERT(collection_endpoints.is_ok());
-    auto [collection_client_endpoint, collection_server_endpoint] =
-        std::move(*collection_endpoints);
-    ZX_ASSERT(
+    zx::result collection_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
+    EXPECT_OK(collection_endpoints.status_value());
+    auto& [collection_client_endpoint, collection_server_endpoint] = collection_endpoints.value();
+    EXPECT_OK(
         allocator
             ->BindSharedCollection(cur_token.TakeClientEnd(), std::move(collection_server_endpoint))
-            .ok());
+            .status());
     fidl::WireSyncClient collection_client{std::move(collection_client_endpoint)};
     SetDefaultCollectionName(collection_client, fbl::StringPrintf("%u", i));
     if (i < client_count - 1) {
       // Ensure next_token is usable.
-      auto sync_result = collection_client->Sync();
-      ZX_ASSERT(sync_result.ok());
+      EXPECT_OK(collection_client->Sync().status());
     }
     result.emplace_back(std::move(collection_client));
   }
@@ -301,36 +297,32 @@ std::vector<fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>> create_clien
 
 fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken> create_token_under_token(
     fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken>& token_a) {
-  auto token_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
-  ZX_ASSERT(token_endpoints.is_ok());
-  auto [token_b_client, token_b_server] = std::move(*token_endpoints);
-  auto duplicate_result = token_a->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_b_server));
-  ZX_ASSERT(duplicate_result.ok());
+  zx::result token_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
+  EXPECT_OK(token_endpoints.status_value());
+  auto& [token_b_client, token_b_server] = token_endpoints.value();
+  EXPECT_OK(token_a->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_b_server)).status());
   fidl::WireSyncClient token_b{std::move(token_b_client)};
-  auto sync_result = token_b->Sync();
-  ZX_ASSERT(sync_result.ok());
+  EXPECT_OK(token_b->Sync().status());
   return token_b;
 }
 
 fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionTokenGroup> create_group_under_token(
     fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken>& token) {
-  auto group_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionTokenGroup>();
-  ZX_ASSERT(group_endpoints.is_ok());
-  auto [group_client, group_server] = std::move(*group_endpoints);
-  auto create_result = token->CreateBufferCollectionTokenGroup(std::move(group_server));
-  ZX_ASSERT(create_result.ok());
+  zx::result group_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionTokenGroup>();
+  EXPECT_OK(group_endpoints.status_value());
+  auto& [group_client, group_server] = group_endpoints.value();
+  EXPECT_OK(token->CreateBufferCollectionTokenGroup(std::move(group_server)).status());
   auto group = fidl::WireSyncClient(std::move(group_client));
-  auto sync_result = group->Sync();
-  ZX_ASSERT(sync_result.ok());
+  EXPECT_OK(group->Sync().status());
   return group;
 }
 
 fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken> create_token_under_group(
     fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionTokenGroup>& group,
     uint32_t rights_attenuation_mask = ZX_RIGHT_SAME_RIGHTS) {
-  auto token_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
-  ZX_ASSERT(token_endpoints.is_ok());
-  auto [token_client, token_server] = std::move(*token_endpoints);
+  zx::result token_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
+  EXPECT_OK(token_endpoints.status_value());
+  auto& [token_client, token_server] = token_endpoints.value();
   fidl::Arena arena;
   auto request_builder =
       fuchsia_sysmem::wire::BufferCollectionTokenGroupCreateChildRequest::Builder(arena);
@@ -338,11 +330,9 @@ fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken> create_token_under_g
   if (rights_attenuation_mask != ZX_RIGHT_SAME_RIGHTS) {
     request_builder.rights_attenuation_mask(rights_attenuation_mask);
   }
-  auto create_result = group->CreateChild(request_builder.Build());
-  ZX_ASSERT(create_result.ok());
+  EXPECT_OK(group->CreateChild(request_builder.Build()).status());
   auto token = fidl::WireSyncClient(std::move(token_client));
-  auto sync_result = token->Sync();
-  ZX_ASSERT(sync_result.ok());
+  EXPECT_OK(token->Sync().status());
   return token;
 }
 
@@ -350,8 +340,7 @@ void check_token_alive(fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToke
   constexpr uint32_t kIterations = 1;
   for (uint32_t i = 0; i < kIterations; ++i) {
     zx::nanosleep(zx::deadline_after(zx::usec(500)));
-    auto sync_result = token->Sync();
-    ZX_ASSERT(sync_result.ok());
+    EXPECT_OK(token->Sync().status());
   }
 }
 
@@ -359,26 +348,24 @@ void check_group_alive(fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToke
   constexpr uint32_t kIterations = 1;
   for (uint32_t i = 0; i < kIterations; ++i) {
     zx::nanosleep(zx::deadline_after(zx::usec(500)));
-    auto sync_result = group->Sync();
-    ZX_ASSERT(sync_result.ok());
+    EXPECT_OK(group->Sync().status());
   }
 }
 
 fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> convert_token_to_collection(
     fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken> token) {
   auto allocator = connect_to_sysmem_service();
-  auto collection_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
-  ZX_ASSERT(collection_endpoints.is_ok());
-  auto [collection_client, collection_server] = std::move(*collection_endpoints);
-  auto result =
-      allocator->BindSharedCollection(token.TakeClientEnd(), std::move(collection_server));
-  ZX_ASSERT(result.ok());
+  zx::result collection_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
+  EXPECT_OK(collection_endpoints);
+  auto& [collection_client, collection_server] = collection_endpoints.value();
+  EXPECT_OK(allocator->BindSharedCollection(token.TakeClientEnd(), std::move(collection_server))
+                .status());
   return fidl::WireSyncClient(std::move(collection_client));
 }
 
 void set_picky_constraints(fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>& collection,
                            uint32_t exact_buffer_size) {
-  ZX_ASSERT(exact_buffer_size % zx_system_get_page_size() == 0);
+  EXPECT_EQ(exact_buffer_size % zx_system_get_page_size(), 0);
   fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
   constraints.usage.cpu =
       fuchsia_sysmem::wire::kCpuUsageReadOften | fuchsia_sysmem::wire::kCpuUsageWriteOften;
@@ -398,8 +385,7 @@ void set_picky_constraints(fidl::WireSyncClient<fuchsia_sysmem::BufferCollection
       .heap_permitted = {},
   };
   constraints.image_format_constraints_count = 0;
-  auto result = collection->SetConstraints(true, std::move(constraints));
-  ZX_ASSERT(result.ok());
+  EXPECT_OK(collection->SetConstraints(true, std::move(constraints)).status());
 }
 
 void set_min_camping_constraints(fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>& collection,
@@ -427,20 +413,19 @@ void set_min_camping_constraints(fidl::WireSyncClient<fuchsia_sysmem::BufferColl
     constraints.max_buffer_count = max_buffer_count;
   }
   constraints.image_format_constraints_count = 0;
-  auto result = collection->SetConstraints(true, std::move(constraints));
-  ZX_ASSERT(result.ok());
+  EXPECT_OK(collection->SetConstraints(true, std::move(constraints)).status());
 }
 
 const std::string& GetBoardName() {
   static std::string s_board_name;
   if (s_board_name.empty()) {
-    auto client_end = component::Connect<fuchsia_sysinfo::SysInfo>();
-    ZX_ASSERT(client_end.is_ok());
+    zx::result client_end = component::Connect<fuchsia_sysinfo::SysInfo>();
+    EXPECT_OK(client_end.status_value());
 
     fidl::WireSyncClient sysinfo{std::move(client_end.value())};
     auto result = sysinfo->GetBoardName();
-    ZX_ASSERT(result.ok());
-    ZX_ASSERT(result.value().status == ZX_OK);
+    EXPECT_OK(result.status());
+    EXPECT_OK(result.value().status);
 
     s_board_name = result.value().name.get();
     printf("\nFound board %s\n", s_board_name.c_str());
@@ -475,8 +460,7 @@ bool is_board_with_amlogic_secure() {
 bool is_board_with_amlogic_secure_vdec() { return is_board_with_amlogic_secure(); }
 
 void nanosleep_duration(zx::duration duration) {
-  zx_status_t status = zx::nanosleep(zx::deadline_after(duration));
-  ZX_ASSERT(status == ZX_OK);
+  EXPECT_OK(zx::nanosleep(zx::deadline_after(duration)));
 }
 
 // Faulting on write to a mapping to the VMO can't be checked currently
@@ -528,30 +512,26 @@ void SecureVmoReadTester::Init() {
   // theoretically something else could be mapped unless we're specific with a
   // VMAR that isn't letting something else get mapped there yet.
   zx_vaddr_t child_vaddr;
-  zx_status_t status = zx::vmar::root_self()->allocate(
+  EXPECT_OK(zx::vmar::root_self()->allocate(
       ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC, 0,
-      zx_system_get_page_size(), &child_vmar_, &child_vaddr);
-  ZX_ASSERT(status == ZX_OK);
+      zx_system_get_page_size(), &child_vmar_, &child_vaddr));
 
   uint64_t vmo_size;
-  zx_status_t get_size_status = unowned_secure_vmo_->get_size(&vmo_size);
-  ZX_ASSERT(get_size_status == ZX_OK);
-  ZX_ASSERT(vmo_size % zx_system_get_page_size() == 0);
+  EXPECT_OK(unowned_secure_vmo_->get_size(&vmo_size));
+  EXPECT_EQ(vmo_size % zx_system_get_page_size(), 0);
   uint64_t vmo_offset =
       (distribution_(prng_) % (vmo_size / zx_system_get_page_size())) * zx_system_get_page_size();
 
   uintptr_t map_addr_raw;
-  status =
-      child_vmar_.map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC | ZX_VM_MAP_RANGE, 0,
-                      *unowned_secure_vmo_, vmo_offset, zx_system_get_page_size(), &map_addr_raw);
-  ZX_ASSERT(status == ZX_OK);
+  EXPECT_OK(child_vmar_.map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC | ZX_VM_MAP_RANGE,
+                            0, *unowned_secure_vmo_, vmo_offset, zx_system_get_page_size(),
+                            &map_addr_raw));
   map_addr_ = reinterpret_cast<uint8_t*>(map_addr_raw);
-  ZX_ASSERT(reinterpret_cast<uint8_t*>(child_vaddr) == map_addr_);
+  EXPECT_EQ(reinterpret_cast<uint8_t*>(child_vaddr), map_addr_);
 
   // No data should be in CPU cache for a secure VMO; no fault should happen here.
-  status = unowned_secure_vmo_->op_range(ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, vmo_offset,
-                                         zx_system_get_page_size(), nullptr, 0);
-  ZX_ASSERT(status == ZX_OK);
+  EXPECT_OK(unowned_secure_vmo_->op_range(ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, vmo_offset,
+                                          zx_system_get_page_size(), nullptr, 0));
 
   // But currently the read doesn't visibly fault while the vaddr is mapped to
   // a secure page.  Instead the read gets stuck and doesn't complete (perhaps
@@ -580,10 +560,8 @@ void SecureVmoReadTester::Init() {
     // process-visible fault instead.  We don't zx_vmar_unmap() here because the
     // syscall docs aren't completely clear on whether zx_vmar_unmap() might
     // make the vaddr page available for other uses.
-    zx_status_t status;
-    status =
-        child_vmar_.protect(0, reinterpret_cast<uintptr_t>(map_addr_), zx_system_get_page_size());
-    ZX_ASSERT(status == ZX_OK);
+    EXPECT_OK(
+        child_vmar_.protect(0, reinterpret_cast<uintptr_t>(map_addr_), zx_system_get_page_size()));
   });
 
   while (!is_let_die_started_) {
@@ -600,14 +578,14 @@ SecureVmoReadTester::~SecureVmoReadTester() {
 }
 
 bool SecureVmoReadTester::IsReadFromSecureAThing() {
-  ZX_ASSERT(is_let_die_started_);
-  ZX_ASSERT(is_read_from_secure_attempted_);
+  EXPECT_TRUE(is_let_die_started_);
+  EXPECT_TRUE(is_read_from_secure_attempted_);
   return is_read_from_secure_a_thing_;
 }
 
 void SecureVmoReadTester::AttemptReadFromSecure(bool expect_read_success) {
-  ZX_ASSERT(is_let_die_started_);
-  ZX_ASSERT(!is_read_from_secure_attempted_);
+  EXPECT_TRUE(is_let_die_started_);
+  EXPECT_TRUE(!is_read_from_secure_attempted_);
   is_read_from_secure_attempted_ = true;
   // This attempt to read from a vaddr that's mapped to a secure paddr won't succeed.  For now the
   // read gets stuck while mapped to secure memory, and then faults when we've unmapped the VMO.
@@ -617,9 +595,8 @@ void SecureVmoReadTester::AttemptReadFromSecure(bool expect_read_success) {
   // flush, read not force and fence a fault.
   for (uint32_t i = 0; i < zx_system_get_page_size(); ++i) {
     map_addr_[i] = 0xF0;
-    zx_status_t status = zx_cache_flush((const void*)&map_addr_[i], 1,
-                                        ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
-    ZX_ASSERT(status == ZX_OK);
+    EXPECT_OK(zx_cache_flush((const void*)&map_addr_[i], 1,
+                             ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
     uint8_t value = map_addr_[i];
     // Despite the flush above often causing the fault to be sync, sometimes the fault doesn't
     // happen but we read zero.  For now, only complain if we read back something other than zero.
@@ -761,7 +738,7 @@ bool AttachTokenSucceeds(
   auto [collection_client_1, collection_server_1] = std::move(*collection_endpoints_1);
   fidl::WireSyncClient collection_1{std::move(collection_client_1)};
 
-  EXPECT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
+  EXPECT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID);
   EXPECT_OK(
       allocator->BindSharedCollection(token_1.TakeClientEnd(), std::move(collection_server_1)));
   IF_FAILURES_RETURN_FALSE();
@@ -855,7 +832,7 @@ bool AttachTokenSucceeds(
   EXPECT_OK(collection_1->Sync());
   IF_FAILURES_RETURN_FALSE();
 
-  EXPECT_NE(token_client_2.channel().get(), ZX_HANDLE_INVALID, "");
+  EXPECT_NE(token_client_2.channel().get(), ZX_HANDLE_INVALID);
   EXPECT_OK(
       allocator_2->BindSharedCollection(std::move(token_client_2), std::move(collection_server_2)));
   IF_FAILURES_RETURN_FALSE();
@@ -911,8 +888,8 @@ bool AttachTokenSucceeds(
 
   auto collection_client_3_set_constraints = [&allocator_2, &token_client_3, &constraints_3,
                                               &collection_3] {
-    EXPECT_NE(allocator_2.value().client_end().channel().get(), ZX_HANDLE_INVALID, "");
-    EXPECT_NE(token_client_3.channel().get(), ZX_HANDLE_INVALID, "");
+    EXPECT_NE(allocator_2.value().client_end().channel().get(), ZX_HANDLE_INVALID);
+    EXPECT_NE(token_client_3.channel().get(), ZX_HANDLE_INVALID);
     IF_FAILURES_RETURN();
     collection_3 = {};
     ZX_DEBUG_ASSERT(!collection_3.is_valid());
@@ -988,12 +965,12 @@ bool AttachTokenSucceeds(
 
   for (uint32_t i = 0; i < std::size(buffer_collection_info_1->buffers); ++i) {
     EXPECT_EQ(buffer_collection_info_1->buffers[i].vmo.get() != ZX_HANDLE_INVALID,
-              buffer_collection_info_2->buffers[i].vmo.get() != ZX_HANDLE_INVALID, "");
+              buffer_collection_info_2->buffers[i].vmo.get() != ZX_HANDLE_INVALID);
     IF_FAILURES_RETURN_FALSE();
     if (buffer_collection_info_1->buffers[i].vmo.get() != ZX_HANDLE_INVALID) {
       // The handle values must be different.
       EXPECT_NE(buffer_collection_info_1->buffers[i].vmo.get(),
-                buffer_collection_info_2->buffers[i].vmo.get(), "");
+                buffer_collection_info_2->buffers[i].vmo.get());
       IF_FAILURES_RETURN_FALSE();
       // For now, the koid(s) are expected to be equal.  This is not a
       // fundamental check, in that sysmem could legitimately change in
@@ -1002,7 +979,7 @@ bool AttachTokenSucceeds(
       // would still be potentially valid overall.
       zx_koid_t koid_1 = get_koid(buffer_collection_info_1->buffers[i].vmo.get());
       zx_koid_t koid_2 = get_koid(buffer_collection_info_2->buffers[i].vmo.get());
-      EXPECT_EQ(koid_1, koid_2, "");
+      EXPECT_EQ(koid_1, koid_2);
       IF_FAILURES_RETURN_FALSE();
     }
   }
@@ -1013,23 +990,23 @@ bool AttachTokenSucceeds(
   // that buffer_collection_info_3 paid attention to constraints_2.
   //
 
-  EXPECT_EQ(buffer_collection_info_1->buffer_count, expected_buffer_count, "");
+  EXPECT_EQ(buffer_collection_info_1->buffer_count, expected_buffer_count);
   // The size should be sufficient for the whole NV12 frame, not just
   // min_size_bytes.  In other words, the portion of the VMO the client can
   // use is large enough to hold the min image size, despite the min buffer
   // size being smaller.
-  EXPECT_GE(buffer_collection_info_1->settings.buffer_settings.size_bytes, (512 * 512) * 3 / 2, "");
-  EXPECT_EQ(buffer_collection_info_1->settings.buffer_settings.is_physically_contiguous, false, "");
-  EXPECT_EQ(buffer_collection_info_1->settings.buffer_settings.is_secure, false, "");
+  EXPECT_GE(buffer_collection_info_1->settings.buffer_settings.size_bytes, (512 * 512) * 3 / 2);
+  EXPECT_EQ(buffer_collection_info_1->settings.buffer_settings.is_physically_contiguous, false);
+  EXPECT_EQ(buffer_collection_info_1->settings.buffer_settings.is_secure, false);
   // We specified image_format_constraints so the result must also have
   // image_format_constraints.
-  EXPECT_EQ(buffer_collection_info_1->settings.has_image_format_constraints, true, "");
+  EXPECT_EQ(buffer_collection_info_1->settings.has_image_format_constraints, true);
   IF_FAILURES_RETURN_FALSE();
 
   for (uint32_t i = 0; i < 64; ++i) {
     if (i < expected_buffer_count) {
-      EXPECT_NE(buffer_collection_info_1->buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
-      EXPECT_NE(buffer_collection_info_2->buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
+      EXPECT_NE(buffer_collection_info_1->buffers[i].vmo.get(), ZX_HANDLE_INVALID);
+      EXPECT_NE(buffer_collection_info_2->buffers[i].vmo.get(), ZX_HANDLE_INVALID);
       IF_FAILURES_RETURN_FALSE();
 
       uint64_t size_bytes_1 = 0;
@@ -1045,14 +1022,14 @@ bool AttachTokenSucceeds(
       // to vend different child VMOs to the two participants.
       EXPECT_LE(buffer_collection_info_1->buffers[i].vmo_usable_start +
                     buffer_collection_info_1->settings.buffer_settings.size_bytes,
-                size_bytes_1, "");
+                size_bytes_1);
       EXPECT_LE(buffer_collection_info_2->buffers[i].vmo_usable_start +
                     buffer_collection_info_2->settings.buffer_settings.size_bytes,
-                size_bytes_2, "");
+                size_bytes_2);
       IF_FAILURES_RETURN_FALSE();
     } else {
-      EXPECT_EQ(buffer_collection_info_1->buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
-      EXPECT_EQ(buffer_collection_info_2->buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
+      EXPECT_EQ(buffer_collection_info_1->buffers[i].vmo.get(), ZX_HANDLE_INVALID);
+      EXPECT_EQ(buffer_collection_info_2->buffers[i].vmo.get(), ZX_HANDLE_INVALID);
       IF_FAILURES_RETURN_FALSE();
     }
   }
@@ -1097,14 +1074,14 @@ bool AttachTokenSucceeds(
 
     for (uint32_t i = 0; i < std::size(buffer_collection_info_1->buffers); ++i) {
       EXPECT_EQ(buffer_collection_info_1->buffers[i].vmo.get() != ZX_HANDLE_INVALID,
-                buffer_collection_info_3.buffers[i].vmo.get() != ZX_HANDLE_INVALID, "");
+                buffer_collection_info_3.buffers[i].vmo.get() != ZX_HANDLE_INVALID);
       IF_FAILURES_RETURN_FALSE();
       if (buffer_collection_info_1->buffers[i].vmo.get() != ZX_HANDLE_INVALID) {
         // The handle values must be different.
         EXPECT_NE(buffer_collection_info_1->buffers[i].vmo.get(),
-                  buffer_collection_info_3.buffers[i].vmo.get(), "");
+                  buffer_collection_info_3.buffers[i].vmo.get());
         EXPECT_NE(buffer_collection_info_2->buffers[i].vmo.get(),
-                  buffer_collection_info_3.buffers[i].vmo.get(), "");
+                  buffer_collection_info_3.buffers[i].vmo.get());
         IF_FAILURES_RETURN_FALSE();
         // For now, the koid(s) are expected to be equal.  This is not a
         // fundamental check, in that sysmem could legitimately change in
@@ -1113,7 +1090,7 @@ bool AttachTokenSucceeds(
         // would still be potentially valid overall.
         zx_koid_t koid_1 = get_koid(buffer_collection_info_1->buffers[i].vmo.get());
         zx_koid_t koid_3 = get_koid(buffer_collection_info_3.buffers[i].vmo.get());
-        EXPECT_EQ(koid_1, koid_3, "");
+        EXPECT_EQ(koid_1, koid_3);
         IF_FAILURES_RETURN_FALSE();
       }
     }
@@ -1128,12 +1105,12 @@ bool AttachTokenSucceeds(
 
   // Check that buffer_collection_info_1 and buffer_collection_info_2 are
   // consistent.
-  EXPECT_TRUE(Equal(*buffer_collection_info_1, *buffer_collection_info_2), "");
+  EXPECT_TRUE(Equal(*buffer_collection_info_1, *buffer_collection_info_2));
   IF_FAILURES_RETURN_FALSE();
 
   // Check that buffer_collection_info_1 and buffer_collection_info_3 are
   // consistent.
-  EXPECT_TRUE(Equal(*buffer_collection_info_1, buffer_collection_info_3), "");
+  EXPECT_TRUE(Equal(*buffer_collection_info_1, buffer_collection_info_3));
   IF_FAILURES_RETURN_FALSE();
 
   return true;
@@ -1224,23 +1201,23 @@ TEST(Sysmem, TokenOneParticipantNoImageConstraints) {
   ASSERT_OK(allocation_result.value().status);
 
   auto buffer_collection_info = &allocation_result.value().buffer_collection_info;
-  ASSERT_EQ(buffer_collection_info->buffer_count, 3, "");
-  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, 64 * 1024, "");
-  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, false, "");
-  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, false, "");
+  ASSERT_EQ(buffer_collection_info->buffer_count, 3);
+  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, 64 * 1024);
+  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, false);
+  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, false);
   ASSERT_EQ(buffer_collection_info->settings.buffer_settings.coherency_domain,
-            fuchsia_sysmem::wire::CoherencyDomain::kCpu, "");
-  ASSERT_EQ(buffer_collection_info->settings.has_image_format_constraints, false, "");
+            fuchsia_sysmem::wire::CoherencyDomain::kCpu);
+  ASSERT_EQ(buffer_collection_info->settings.has_image_format_constraints, false);
 
   for (uint32_t i = 0; i < 64; ++i) {
     if (i < 3) {
-      ASSERT_NE(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
+      ASSERT_NE(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID);
       uint64_t size_bytes = 0;
       auto status = zx_vmo_get_size(buffer_collection_info->buffers[i].vmo.get(), &size_bytes);
-      ASSERT_EQ(status, ZX_OK, "");
-      ASSERT_EQ(size_bytes, 64 * 1024, "");
+      ASSERT_EQ(status, ZX_OK);
+      ASSERT_EQ(size_bytes, 64 * 1024);
     } else {
-      ASSERT_EQ(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
+      ASSERT_EQ(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID);
     }
   }
 }
@@ -1281,13 +1258,13 @@ TEST(Sysmem, TokenOneParticipantColorspaceRanking) {
   ASSERT_OK(allocation_result.value().status);
 
   auto buffer_collection_info = &allocation_result.value().buffer_collection_info;
-  ASSERT_EQ(buffer_collection_info->buffer_count, 1, "");
-  ASSERT_EQ(buffer_collection_info->settings.has_image_format_constraints, true, "");
+  ASSERT_EQ(buffer_collection_info->buffer_count, 1);
+  ASSERT_EQ(buffer_collection_info->settings.has_image_format_constraints, true);
   ASSERT_EQ(buffer_collection_info->settings.image_format_constraints.pixel_format.type,
-            fuchsia_sysmem::wire::PixelFormatType::kNv12, "");
-  ASSERT_EQ(buffer_collection_info->settings.image_format_constraints.color_spaces_count, 1, "");
+            fuchsia_sysmem::wire::PixelFormatType::kNv12);
+  ASSERT_EQ(buffer_collection_info->settings.image_format_constraints.color_spaces_count, 1);
   ASSERT_EQ(buffer_collection_info->settings.image_format_constraints.color_space[0].type,
-            fuchsia_sysmem::wire::ColorSpaceType::kRec709, "");
+            fuchsia_sysmem::wire::ColorSpaceType::kRec709);
 }
 
 TEST(Sysmem, AttachLifetimeTracking) {
@@ -1301,10 +1278,8 @@ TEST(Sysmem, AttachLifetimeTracking) {
   zx::eventpair client[kNumEventpairs];
   zx::eventpair server[kNumEventpairs];
   for (uint32_t i = 0; i < kNumEventpairs; ++i) {
-    auto status = zx::eventpair::create(/*options=*/0, &client[i], &server[i]);
-    ASSERT_OK(status, "");
-    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
-    (void)collection->AttachLifetimeTracking(std::move(server[i]), i);
+    ASSERT_OK(zx::eventpair::create(/*options=*/0, &client[i], &server[i]));
+    ASSERT_OK(collection->AttachLifetimeTracking(std::move(server[i]), i).status());
   }
 
   nanosleep_duration(zx::msec(500));
@@ -1313,10 +1288,10 @@ TEST(Sysmem, AttachLifetimeTracking) {
     zx_signals_t pending_signals;
     auto status =
         client[i].wait_one(ZX_EVENTPAIR_PEER_CLOSED, zx::time::infinite_past(), &pending_signals);
-    ASSERT_EQ(status, ZX_ERR_TIMED_OUT, "");
+    ASSERT_EQ(status, ZX_ERR_TIMED_OUT);
     // Buffers are not allocated yet, so lifetime tracking is pending, since we don't yet know how
     // many buffers there will be.
-    ASSERT_EQ(pending_signals & ZX_EVENTPAIR_PEER_CLOSED, 0, "");
+    ASSERT_EQ(pending_signals & ZX_EVENTPAIR_PEER_CLOSED, 0);
   }
 
   fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
@@ -1349,16 +1324,16 @@ TEST(Sysmem, AttachLifetimeTracking) {
     auto status = client[i].wait_one(
         ZX_EVENTPAIR_PEER_CLOSED,
         i >= kNumBuffers ? zx::time::infinite() : zx::time::infinite_past(), &pending_signals);
-    ASSERT_TRUE(status == (i >= kNumBuffers) ? ZX_OK : ZX_ERR_TIMED_OUT, "");
-    ASSERT_TRUE(!!(pending_signals & ZX_EVENTPAIR_PEER_CLOSED) == (i >= kNumBuffers), "");
+    ASSERT_TRUE(status == (i >= kNumBuffers) ? ZX_OK : ZX_ERR_TIMED_OUT);
+    ASSERT_TRUE(!!(pending_signals & ZX_EVENTPAIR_PEER_CLOSED) == (i >= kNumBuffers));
   }
 
   auto wait_for_buffers_allocated_result = collection->WaitForBuffersAllocated();
-  ASSERT_OK(wait_for_buffers_allocated_result.status(), "");
+  ASSERT_OK(wait_for_buffers_allocated_result.status());
   auto& response = wait_for_buffers_allocated_result.value();
-  ASSERT_OK(response.status, "");
+  ASSERT_OK(response.status);
   auto& info = response.buffer_collection_info;
-  ASSERT_EQ(info.buffer_count, kNumBuffers, "");
+  ASSERT_EQ(info.buffer_count, kNumBuffers);
 
   // ZX_EVENTPAIR_PEER_CLOSED should be seen for eventpair(s) >= kNumBuffers.
   for (uint32_t i = 0; i < kNumEventpairs; ++i) {
@@ -1366,8 +1341,8 @@ TEST(Sysmem, AttachLifetimeTracking) {
     auto status = client[i].wait_one(
         ZX_EVENTPAIR_PEER_CLOSED,
         i >= kNumBuffers ? zx::time::infinite() : zx::time::infinite_past(), &pending_signals);
-    ASSERT_TRUE(status == (i >= kNumBuffers) ? ZX_OK : ZX_ERR_TIMED_OUT, "");
-    ASSERT_TRUE(!!(pending_signals & ZX_EVENTPAIR_PEER_CLOSED) == (i >= kNumBuffers), "");
+    ASSERT_TRUE(status == (i >= kNumBuffers) ? ZX_OK : ZX_ERR_TIMED_OUT);
+    ASSERT_TRUE(!!(pending_signals & ZX_EVENTPAIR_PEER_CLOSED) == (i >= kNumBuffers));
   }
 
   zx::result attached_token_endpoints =
@@ -1402,9 +1377,10 @@ TEST(Sysmem, AttachLifetimeTracking) {
   // logical allocation failure, it'll close as soon as we hit logical allocation failure for the
   // attached token.  The logical allocation failure of the attached token doesn't impact collection
   // in any way.
-  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
-  (void)attached_collection->AttachLifetimeTracking(std::move(attached_lifetime_server),
-                                                    /*buffers_remaining=*/0);
+  ASSERT_OK(attached_collection
+                ->AttachLifetimeTracking(std::move(attached_lifetime_server),
+                                         /*buffers_remaining=*/0)
+                .status());
   fuchsia_sysmem::wire::BufferCollectionConstraints attached_constraints;
   attached_constraints.usage.cpu =
       fuchsia_sysmem::wire::kCpuUsageReadOften | fuchsia_sysmem::wire::kCpuUsageWriteOften;
@@ -1430,8 +1406,8 @@ TEST(Sysmem, AttachLifetimeTracking) {
   zx_signals_t attached_pending_signals;
   zx_status_t status = attached_lifetime_client.wait_one(
       ZX_EVENTPAIR_PEER_CLOSED, zx::time::infinite(), &attached_pending_signals);
-  ASSERT_OK(status, "");
-  ASSERT_TRUE(attached_pending_signals & ZX_EVENTPAIR_PEER_CLOSED, "");
+  ASSERT_OK(status);
+  ASSERT_TRUE(attached_pending_signals & ZX_EVENTPAIR_PEER_CLOSED);
 
   collection.value() = {};
 
@@ -1441,8 +1417,8 @@ TEST(Sysmem, AttachLifetimeTracking) {
     status = client[i].wait_one(ZX_EVENTPAIR_PEER_CLOSED,
                                 i >= kNumBuffers ? zx::time::infinite() : zx::time::infinite_past(),
                                 &pending_signals);
-    ASSERT_TRUE(status == (i >= kNumBuffers) ? ZX_OK : ZX_ERR_TIMED_OUT, "");
-    ASSERT_TRUE(!!(pending_signals & ZX_EVENTPAIR_PEER_CLOSED) == (i >= kNumBuffers), "");
+    ASSERT_TRUE(status == (i >= kNumBuffers) ? ZX_OK : ZX_ERR_TIMED_OUT);
+    ASSERT_TRUE(!!(pending_signals & ZX_EVENTPAIR_PEER_CLOSED) == (i >= kNumBuffers));
   }
 
   for (uint32_t j = 0; j < kNumBuffers; ++j) {
@@ -1453,7 +1429,7 @@ TEST(Sysmem, AttachLifetimeTracking) {
           ZX_EVENTPAIR_PEER_CLOSED,
           i >= kNumBuffers - (j + 1) ? zx::time::infinite() : zx::time::infinite_past(),
           &pending_signals);
-      ASSERT_TRUE(status == (i >= kNumBuffers - (j + 1)) ? ZX_OK : ZX_ERR_TIMED_OUT, "");
+      ASSERT_TRUE(status == (i >= kNumBuffers - (j + 1)) ? ZX_OK : ZX_ERR_TIMED_OUT);
       ASSERT_TRUE(!!(pending_signals & ZX_EVENTPAIR_PEER_CLOSED) == (i >= kNumBuffers - (j + 1)),
                   "");
     }
@@ -1529,32 +1505,32 @@ TEST(Sysmem, TokenOneParticipantWithImageConstraints) {
 
   auto buffer_collection_info = &allocation_result.value().buffer_collection_info;
 
-  ASSERT_EQ(buffer_collection_info->buffer_count, 3, "");
+  ASSERT_EQ(buffer_collection_info->buffer_count, 3);
   // The size should be sufficient for the whole NV12 frame, not just min_size_bytes.
-  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, 64 * 1024 * 3 / 2, "");
-  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, false, "");
-  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, false, "");
+  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, 64 * 1024 * 3 / 2);
+  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, false);
+  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, false);
   ASSERT_EQ(buffer_collection_info->settings.buffer_settings.coherency_domain,
-            fuchsia_sysmem::wire::CoherencyDomain::kCpu, "");
+            fuchsia_sysmem::wire::CoherencyDomain::kCpu);
   // We specified image_format_constraints so the result must also have
   // image_format_constraints.
-  ASSERT_EQ(buffer_collection_info->settings.has_image_format_constraints, true, "");
+  ASSERT_EQ(buffer_collection_info->settings.has_image_format_constraints, true);
 
   for (uint32_t i = 0; i < 64; ++i) {
     if (i < 3) {
-      ASSERT_NE(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
+      ASSERT_NE(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID);
       uint64_t size_bytes = 0;
       auto status = zx_vmo_get_size(buffer_collection_info->buffers[i].vmo.get(), &size_bytes);
-      ASSERT_EQ(status, ZX_OK, "");
+      ASSERT_EQ(status, ZX_OK);
       // The portion of the VMO the client can use is large enough to hold the min image size,
       // despite the min buffer size being smaller.
-      ASSERT_GE(buffer_collection_info->settings.buffer_settings.size_bytes, 64 * 1024 * 3 / 2, "");
+      ASSERT_GE(buffer_collection_info->settings.buffer_settings.size_bytes, 64 * 1024 * 3 / 2);
       // The vmo has room for the nominal size of the portion of the VMO the client can use.
       ASSERT_LE(buffer_collection_info->buffers[i].vmo_usable_start +
                     buffer_collection_info->settings.buffer_settings.size_bytes,
-                size_bytes, "");
+                size_bytes);
     } else {
-      ASSERT_EQ(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
+      ASSERT_EQ(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID);
     }
   }
 }
@@ -1587,7 +1563,7 @@ TEST(Sysmem, MinBufferCount) {
   // to any step above failing async.
   ASSERT_OK(allocation_result);
   ASSERT_OK(allocation_result.value().status);
-  ASSERT_EQ(allocation_result.value().buffer_collection_info.buffer_count, 5, "");
+  ASSERT_EQ(allocation_result.value().buffer_collection_info.buffer_count, 5);
 }
 
 TEST(Sysmem, BufferName) {
@@ -1596,10 +1572,8 @@ TEST(Sysmem, BufferName) {
   const char kSysmemName[] = "abcdefghijkl\0mnopqrstuvwxyz";
   const char kLowPrioName[] = "low_pri";
   // Override default set in make_single_participant_collection)
-  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
-  (void)collection->SetName(2000000, kSysmemName);
-  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
-  (void)collection->SetName(0, kLowPrioName);
+  ASSERT_OK(collection->SetName(2000000, kSysmemName).status());
+  ASSERT_OK(collection->SetName(0, kLowPrioName).status());
 
   fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
   constraints.usage.cpu =
@@ -1625,7 +1599,7 @@ TEST(Sysmem, BufferName) {
   ASSERT_OK(allocation_result);
   ASSERT_OK(allocation_result.value().status);
 
-  ASSERT_EQ(allocation_result.value().buffer_collection_info.buffer_count, 1, "");
+  ASSERT_EQ(allocation_result.value().buffer_collection_info.buffer_count, 1);
   zx_handle_t vmo = allocation_result.value().buffer_collection_info.buffers[0].vmo.get();
   char vmo_name[ZX_MAX_NAME_LEN];
   ASSERT_EQ(ZX_OK, zx_object_get_property(vmo, ZX_PROP_NAME, vmo_name, sizeof(vmo_name)));
@@ -1674,23 +1648,23 @@ TEST(Sysmem, NoToken) {
   ASSERT_OK(allocation_result.value().status);
 
   auto buffer_collection_info = &allocation_result.value().buffer_collection_info;
-  ASSERT_EQ(buffer_collection_info->buffer_count, 3, "");
-  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, 64 * 1024, "");
-  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, false, "");
-  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, false, "");
+  ASSERT_EQ(buffer_collection_info->buffer_count, 3);
+  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, 64 * 1024);
+  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, false);
+  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, false);
   ASSERT_EQ(buffer_collection_info->settings.buffer_settings.coherency_domain,
-            fuchsia_sysmem::wire::CoherencyDomain::kRam, "");
-  ASSERT_EQ(buffer_collection_info->settings.has_image_format_constraints, false, "");
+            fuchsia_sysmem::wire::CoherencyDomain::kRam);
+  ASSERT_EQ(buffer_collection_info->settings.has_image_format_constraints, false);
 
   for (uint32_t i = 0; i < 64; ++i) {
     if (i < 3) {
-      ASSERT_NE(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
+      ASSERT_NE(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID);
       uint64_t size_bytes = 0;
       auto status = zx_vmo_get_size(buffer_collection_info->buffers[i].vmo.get(), &size_bytes);
-      ASSERT_EQ(status, ZX_OK, "");
-      ASSERT_EQ(size_bytes, 64 * 1024, "");
+      ASSERT_EQ(status, ZX_OK);
+      ASSERT_EQ(size_bytes, 64 * 1024);
     } else {
-      ASSERT_EQ(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
+      ASSERT_EQ(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID);
     }
   }
 }
@@ -1707,12 +1681,11 @@ TEST(Sysmem, NoSync) {
   ASSERT_OK(allocator_1->AllocateSharedCollection(std::move(token_server_1)));
 
   const char* kAllocatorName = "TestAllocator";
-  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
-  (void)allocator_1->SetDebugClientInfo(fidl::StringView::FromExternal(kAllocatorName), 1u);
+  ASSERT_OK(
+      allocator_1->SetDebugClientInfo(fidl::StringView::FromExternal(kAllocatorName), 1u).status());
 
   const char* kClientName = "TestClient";
-  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
-  (void)token_1->SetDebugClientInfo(fidl::StringView::FromExternal(kClientName), 2u);
+  ASSERT_OK(token_1->SetDebugClientInfo(fidl::StringView::FromExternal(kClientName), 2u).status());
 
   // Make another token so we can bind it and set a name on the collection.
   fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection_3;
@@ -1734,8 +1707,7 @@ TEST(Sysmem, NoSync) {
     collection_3 = fidl::WireSyncClient(std::move(collection_client_3));
 
     const char* kCollectionName = "TestCollection";
-    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
-    (void)collection_3->SetName(1u, fidl::StringView::FromExternal(kCollectionName));
+    ASSERT_OK(collection_3->SetName(1u, fidl::StringView::FromExternal(kCollectionName)).status());
   }
 
   auto token_endpoints_2 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
@@ -1749,22 +1721,18 @@ TEST(Sysmem, NoSync) {
   fidl::WireSyncClient collection_1{std::move(collection_client_1)};
 
   const char* kClient2Name = "TestClient2";
-  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
-  (void)token_2->SetDebugClientInfo(fidl::StringView::FromExternal(kClient2Name), 3u);
+  ASSERT_OK(token_2->SetDebugClientInfo(fidl::StringView::FromExternal(kClient2Name), 3u).status());
 
   // Close to prevent Sync on token_client_1 from failing later due to LogicalBufferCollection
   // failure caused by the token handle closing.
-  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
-  (void)token_2->Close();
+  ASSERT_OK(token_2->Close().status());
 
   ASSERT_OK(
       allocator_1->BindSharedCollection(token_2.TakeClientEnd(), std::move(collection_server_1)));
 
   // Duplicate has not been sent (or received) so this should fail.
   auto sync_result = collection_1->Sync();
-  EXPECT_NE(sync_result.status(), ZX_OK, "");
-
-  SetDefaultCollectionName(collection_1);
+  EXPECT_STATUS(sync_result.status(), ZX_ERR_PEER_CLOSED);
 
   // The duplicate/sync should print out an error message but succeed.
   ASSERT_OK(token_1->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_2)));
@@ -1806,7 +1774,7 @@ TEST(Sysmem, MultipleParticipants) {
   auto [collection_client_1, collection_server_1] = std::move(*collection_endpoints_1);
   fidl::WireSyncClient collection_1{std::move(collection_client_1)};
 
-  ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
+  ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID);
   ASSERT_OK(
       allocator->BindSharedCollection(token_1.TakeClientEnd(), std::move(collection_server_1)));
 
@@ -1906,7 +1874,7 @@ TEST(Sysmem, MultipleParticipants) {
     ASSERT_OK(collection_1->Sync());
   }
 
-  ASSERT_NE(token_client_2.channel().get(), ZX_HANDLE_INVALID, "");
+  ASSERT_NE(token_client_2.channel().get(), ZX_HANDLE_INVALID);
   ASSERT_OK(
       allocator_2->BindSharedCollection(std::move(token_client_2), std::move(collection_server_2)));
 
@@ -1915,7 +1883,7 @@ TEST(Sysmem, MultipleParticipants) {
   auto [collection_client_3, collection_server_3] = std::move(*collection_endpoints_3);
   fidl::WireSyncClient collection_3{std::move(collection_client_3)};
 
-  ASSERT_NE(token_client_3.channel().get(), ZX_HANDLE_INVALID, "");
+  ASSERT_NE(token_client_3.channel().get(), ZX_HANDLE_INVALID);
   ASSERT_OK(
       allocator_2->BindSharedCollection(std::move(token_client_3), std::move(collection_server_3)));
 
@@ -1926,10 +1894,10 @@ TEST(Sysmem, MultipleParticipants) {
   // allocated yet.
   auto check_result_1 = collection_1->CheckBuffersAllocated();
   ASSERT_OK(check_result_1);
-  EXPECT_EQ(check_result_1->status, ZX_ERR_UNAVAILABLE, "");
+  EXPECT_EQ(check_result_1->status, ZX_ERR_UNAVAILABLE);
   auto check_result_2 = collection_2->CheckBuffersAllocated();
   ASSERT_OK(check_result_2);
-  EXPECT_EQ(check_result_2->status, ZX_ERR_UNAVAILABLE, "");
+  EXPECT_EQ(check_result_2->status, ZX_ERR_UNAVAILABLE);
 
   ASSERT_OK(collection_2->SetConstraints(true, std::move(constraints_2)));
 
@@ -1971,11 +1939,11 @@ TEST(Sysmem, MultipleParticipants) {
 
   for (uint32_t i = 0; i < std::size(buffer_collection_info_1->buffers); ++i) {
     ASSERT_EQ(buffer_collection_info_1->buffers[i].vmo.get() != ZX_HANDLE_INVALID,
-              buffer_collection_info_2->buffers[i].vmo.get() != ZX_HANDLE_INVALID, "");
+              buffer_collection_info_2->buffers[i].vmo.get() != ZX_HANDLE_INVALID);
     if (buffer_collection_info_1->buffers[i].vmo.get() != ZX_HANDLE_INVALID) {
       // The handle values must be different.
       ASSERT_NE(buffer_collection_info_1->buffers[i].vmo.get(),
-                buffer_collection_info_2->buffers[i].vmo.get(), "");
+                buffer_collection_info_2->buffers[i].vmo.get());
       // For now, the koid(s) are expected to be equal.  This is not a
       // fundamental check, in that sysmem could legitimately change in
       // future to vend separate child VMOs (of the same portion of a
@@ -1983,11 +1951,11 @@ TEST(Sysmem, MultipleParticipants) {
       // would still be potentially valid overall.
       zx_koid_t koid_1 = get_koid(buffer_collection_info_1->buffers[i].vmo.get());
       zx_koid_t koid_2 = get_koid(buffer_collection_info_2->buffers[i].vmo.get());
-      ASSERT_EQ(koid_1, koid_2, "");
+      ASSERT_EQ(koid_1, koid_2);
     }
 
     // Buffer collection 3 passed false to SetConstraints(), so we get no VMOs.
-    ASSERT_EQ(ZX_HANDLE_INVALID, buffer_collection_info_3->buffers[i].vmo.get(), "");
+    ASSERT_EQ(ZX_HANDLE_INVALID, buffer_collection_info_3->buffers[i].vmo.get());
   }
 
   //
@@ -1997,22 +1965,22 @@ TEST(Sysmem, MultipleParticipants) {
 
   // Because each specified min_buffer_count_for_camping 3, and each
   // participant camping count adds together since they camp independently.
-  ASSERT_EQ(buffer_collection_info_1->buffer_count, 6, "");
+  ASSERT_EQ(buffer_collection_info_1->buffer_count, 6);
   // The size should be sufficient for the whole NV12 frame, not just
   // min_size_bytes.  In other words, the portion of the VMO the client can
   // use is large enough to hold the min image size, despite the min buffer
   // size being smaller.
-  ASSERT_GE(buffer_collection_info_1->settings.buffer_settings.size_bytes, (512 * 512) * 3 / 2, "");
-  ASSERT_EQ(buffer_collection_info_1->settings.buffer_settings.is_physically_contiguous, false, "");
-  ASSERT_EQ(buffer_collection_info_1->settings.buffer_settings.is_secure, false, "");
+  ASSERT_GE(buffer_collection_info_1->settings.buffer_settings.size_bytes, (512 * 512) * 3 / 2);
+  ASSERT_EQ(buffer_collection_info_1->settings.buffer_settings.is_physically_contiguous, false);
+  ASSERT_EQ(buffer_collection_info_1->settings.buffer_settings.is_secure, false);
   // We specified image_format_constraints so the result must also have
   // image_format_constraints.
-  ASSERT_EQ(buffer_collection_info_1->settings.has_image_format_constraints, true, "");
+  ASSERT_EQ(buffer_collection_info_1->settings.has_image_format_constraints, true);
 
   for (uint32_t i = 0; i < 64; ++i) {
     if (i < 6) {
-      ASSERT_NE(buffer_collection_info_1->buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
-      ASSERT_NE(buffer_collection_info_2->buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
+      ASSERT_NE(buffer_collection_info_1->buffers[i].vmo.get(), ZX_HANDLE_INVALID);
+      ASSERT_NE(buffer_collection_info_2->buffers[i].vmo.get(), ZX_HANDLE_INVALID);
 
       uint64_t size_bytes_1 = 0;
       ASSERT_OK(buffer_collection_info_1->buffers[i].vmo.get_size(&size_bytes_1));
@@ -2025,17 +1993,17 @@ TEST(Sysmem, MultipleParticipants) {
       // to vend different child VMOs to the two participants.
       ASSERT_LE(buffer_collection_info_1->buffers[i].vmo_usable_start +
                     buffer_collection_info_1->settings.buffer_settings.size_bytes,
-                size_bytes_1, "");
+                size_bytes_1);
       ASSERT_LE(buffer_collection_info_2->buffers[i].vmo_usable_start +
                     buffer_collection_info_2->settings.buffer_settings.size_bytes,
-                size_bytes_2, "");
+                size_bytes_2);
 
       // Clear out vmo handles for memcmp below
       buffer_collection_info_1->buffers[i].vmo.reset();
       buffer_collection_info_2->buffers[i].vmo.reset();
     } else {
-      ASSERT_EQ(buffer_collection_info_1->buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
-      ASSERT_EQ(buffer_collection_info_2->buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
+      ASSERT_EQ(buffer_collection_info_1->buffers[i].vmo.get(), ZX_HANDLE_INVALID);
+      ASSERT_EQ(buffer_collection_info_2->buffers[i].vmo.get(), ZX_HANDLE_INVALID);
     }
   }
 
@@ -2043,13 +2011,13 @@ TEST(Sysmem, MultipleParticipants) {
                                  sizeof(fuchsia_sysmem::wire::BufferCollectionInfo2));
   // Check that buffer_collection_info_1 and buffer_collection_info_2 are
   // consistent.
-  ASSERT_EQ(memcmp_result, 0, "");
+  ASSERT_EQ(memcmp_result, 0);
 
   memcmp_result = memcmp(buffer_collection_info_1, buffer_collection_info_3,
                          sizeof(fuchsia_sysmem::wire::BufferCollectionInfo2));
   // Check that buffer_collection_info_1 and buffer_collection_info_3 are
   // consistent, except for the vmos.
-  ASSERT_EQ(memcmp_result, 0, "");
+  ASSERT_EQ(memcmp_result, 0);
 
   // Close to ensure grabbing null constraints from a closed collection
   // doesn't crash
@@ -2078,7 +2046,7 @@ TEST(Sysmem, ComplicatedFormatModifiers) {
   auto [collection_client_1, collection_server_1] = std::move(*collection_endpoints_1);
   fidl::WireSyncClient collection_1{std::move(collection_client_1)};
 
-  ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
+  ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID);
   ASSERT_OK(
       allocator->BindSharedCollection(token_1.TakeClientEnd(), std::move(collection_server_1)));
 
@@ -2143,7 +2111,7 @@ TEST(Sysmem, ComplicatedFormatModifiers) {
 
   ASSERT_OK(collection_1->Sync());
 
-  ASSERT_NE(token_client_2.channel().get(), ZX_HANDLE_INVALID, "");
+  ASSERT_NE(token_client_2.channel().get(), ZX_HANDLE_INVALID);
   ASSERT_OK(
       allocator->BindSharedCollection(std::move(token_client_2), std::move(collection_server_2)));
 
@@ -2181,7 +2149,7 @@ TEST(Sysmem, MultipleParticipantsColorspaceRanking) {
   auto [collection_client_1, collection_server_1] = std::move(*collection_endpoints_1);
   fidl::WireSyncClient collection_1{std::move(collection_client_1)};
 
-  ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
+  ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID);
   ASSERT_OK(
       allocator->BindSharedCollection(token_1.TakeClientEnd(), std::move(collection_server_1)));
 
@@ -2234,7 +2202,7 @@ TEST(Sysmem, MultipleParticipantsColorspaceRanking) {
 
   ASSERT_OK(collection_1->Sync());
 
-  ASSERT_NE(token_client_2.channel().get(), ZX_HANDLE_INVALID, "");
+  ASSERT_NE(token_client_2.channel().get(), ZX_HANDLE_INVALID);
   ASSERT_OK(
       allocator->BindSharedCollection(std::move(token_client_2), std::move(collection_server_2)));
 
@@ -2248,14 +2216,14 @@ TEST(Sysmem, MultipleParticipantsColorspaceRanking) {
         ASSERT_OK(allocation_result.value().status);
 
         auto buffer_collection_info = &allocation_result.value().buffer_collection_info;
-        ASSERT_EQ(buffer_collection_info->buffer_count, 2, "");
-        ASSERT_EQ(buffer_collection_info->settings.has_image_format_constraints, true, "");
+        ASSERT_EQ(buffer_collection_info->buffer_count, 2);
+        ASSERT_EQ(buffer_collection_info->settings.has_image_format_constraints, true);
         ASSERT_EQ(buffer_collection_info->settings.image_format_constraints.pixel_format.type,
-                  fuchsia_sysmem::wire::PixelFormatType::kNv12, "");
+                  fuchsia_sysmem::wire::PixelFormatType::kNv12);
         ASSERT_EQ(buffer_collection_info->settings.image_format_constraints.color_spaces_count, 1,
                   "");
         ASSERT_EQ(buffer_collection_info->settings.image_format_constraints.color_space[0].type,
-                  fuchsia_sysmem::wire::ColorSpaceType::kRec709, "");
+                  fuchsia_sysmem::wire::ColorSpaceType::kRec709);
       };
 
   check_allocation_results(collection_1->WaitForBuffersAllocated());
@@ -2323,8 +2291,7 @@ TEST(Sysmem, MultipleParticipants_TwoImageFormatConstraintsSamePixelFormat_Compa
     auto check_allocation_results =
         [&](const ::fidl::WireResult<::fuchsia_sysmem::BufferCollection::WaitForBuffersAllocated>&
                 allocation_result) {
-          zx_status_t status = allocation_result.value().status;
-          ZX_ASSERT_MSG(ZX_ERR_NOT_SUPPORTED == status, "status: %d", status);
+          EXPECT_STATUS(allocation_result.value().status, ZX_ERR_NOT_SUPPORTED);
           ++clean_failure_seen_count;
         };
 
@@ -2346,15 +2313,15 @@ TEST(Sysmem, MultipleParticipants_TwoImageFormatConstraintsSamePixelFormat_Compa
         zx::nanosleep(zx::deadline_after(zx::usec(uint32_distribution(prng) % 50)));
         auto set_constraints_result =
             clients[which_client]->SetConstraints(true, build_constraints(which_client % 2 == 0));
-        ZX_ASSERT(set_constraints_result.ok() || set_constraints_result.is_peer_closed());
         if (!set_constraints_result.ok()) {
+          EXPECT_STATUS(set_constraints_result.status(), ZX_ERR_PEER_CLOSED);
           return;
         }
         // randomize the continuation timing
         zx::nanosleep(zx::deadline_after(zx::usec(uint32_distribution(prng) % 50)));
         auto wait_result = clients[which_client]->WaitForBuffersAllocated();
-        ZX_ASSERT(wait_result.ok() || wait_result.is_peer_closed());
         if (!wait_result.ok()) {
+          EXPECT_STATUS(wait_result.status(), ZX_ERR_PEER_CLOSED);
           return;
         }
         check_allocation_results(wait_result);
@@ -2398,7 +2365,7 @@ TEST(Sysmem, DuplicateSync) {
   auto [collection_client_1, collection_server_1] = std::move(*collection_endpoints_1);
   fidl::WireSyncClient collection_1{std::move(collection_client_1)};
 
-  ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
+  ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID);
   ASSERT_OK(
       allocator->BindSharedCollection(token_1.TakeClientEnd(), std::move(collection_server_1)));
 
@@ -2435,7 +2402,7 @@ TEST(Sysmem, DuplicateSync) {
   ASSERT_OK(duplicate_result_2);
   ASSERT_EQ(duplicate_result_2->tokens.count(), 2);
 
-  ASSERT_NE(token_2.client_end().channel().get(), ZX_HANDLE_INVALID, "");
+  ASSERT_NE(token_2.client_end().channel().get(), ZX_HANDLE_INVALID);
   ASSERT_OK(allocator->BindSharedCollection(token_2.TakeClientEnd(),
                                             std::move(collection_endpoints_2->server)));
 
@@ -2449,11 +2416,11 @@ TEST(Sysmem, DuplicateSync) {
   ASSERT_OK(collection_endpoints_4);
   fidl::WireSyncClient collection_4{std::move(collection_endpoints_4->client)};
 
-  ASSERT_NE(duplicate_result_2->tokens[0].channel().get(), ZX_HANDLE_INVALID, "");
+  ASSERT_NE(duplicate_result_2->tokens[0].channel().get(), ZX_HANDLE_INVALID);
   ASSERT_OK(allocator->BindSharedCollection(std::move(duplicate_result_2->tokens[0]),
                                             std::move(collection_endpoints_3->server)));
 
-  ASSERT_NE(duplicate_result_2->tokens[1].channel().get(), ZX_HANDLE_INVALID, "");
+  ASSERT_NE(duplicate_result_2->tokens[1].channel().get(), ZX_HANDLE_INVALID);
   ASSERT_OK(allocator->BindSharedCollection(std::move(duplicate_result_2->tokens[1]),
                                             std::move(collection_endpoints_4->server)));
 
@@ -2511,7 +2478,7 @@ TEST(Sysmem, CloseWithOutstandingWait) {
   auto [collection_client_1, collection_server_1] = std::move(*collection_endpoints_1);
   fidl::WireSyncClient collection_1{std::move(collection_client_1)};
 
-  ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
+  ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID);
   ASSERT_OK(
       allocator_1->BindSharedCollection(token_1.TakeClientEnd(), std::move(collection_server_1)));
 
@@ -2538,7 +2505,7 @@ TEST(Sysmem, CloseWithOutstandingWait) {
 
   std::thread wait_thread([&collection_1]() {
     auto allocate_result_1 = collection_1->WaitForBuffersAllocated();
-    EXPECT_EQ(allocate_result_1.status(), ZX_ERR_PEER_CLOSED, "");
+    EXPECT_EQ(allocate_result_1.status(), ZX_ERR_PEER_CLOSED);
   });
 
   // Try to wait until the wait has been processed by the server.
@@ -2551,7 +2518,7 @@ TEST(Sysmem, CloseWithOutstandingWait) {
 
   ASSERT_OK(collection_1->Sync());
 
-  ASSERT_NE(token_client_2.channel().get(), ZX_HANDLE_INVALID, "");
+  ASSERT_NE(token_client_2.channel().get(), ZX_HANDLE_INVALID);
   ASSERT_OK(
       allocator_1->BindSharedCollection(std::move(token_client_2), std::move(collection_server_2)));
 
@@ -2589,7 +2556,7 @@ TEST(Sysmem, ConstraintsRetainedBeyondCleanClose) {
   auto [collection_client_1, collection_server_1] = std::move(*collection_endpoints_1);
   fidl::WireSyncClient collection_1{std::move(collection_client_1)};
 
-  ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
+  ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID);
   ASSERT_OK(
       allocator->BindSharedCollection(token_1.TakeClientEnd(), std::move(collection_server_1)));
 
@@ -2617,7 +2584,7 @@ TEST(Sysmem, ConstraintsRetainedBeyondCleanClose) {
   // buffers will be 4.  There are no handles in the constraints struct so a
   // struct copy instead of clone is fine here.
   fuchsia_sysmem::wire::BufferCollectionConstraints constraints_2(constraints_1);
-  ASSERT_EQ(constraints_2.min_buffer_count_for_camping, 2, "");
+  ASSERT_EQ(constraints_2.min_buffer_count_for_camping, 2);
 
   ASSERT_OK(collection_1->SetConstraints(true, constraints_1));
 
@@ -2651,7 +2618,7 @@ TEST(Sysmem, ConstraintsRetainedBeyondCleanClose) {
   // avoid adding such a call.
   nanosleep_duration(zx::msec(250));
 
-  ASSERT_NE(token_client_2.channel().get(), ZX_HANDLE_INVALID, "");
+  ASSERT_NE(token_client_2.channel().get(), ZX_HANDLE_INVALID);
   ASSERT_OK(
       allocator_2->BindSharedCollection(std::move(token_client_2), std::move(collection_server_2)));
 
@@ -2661,7 +2628,7 @@ TEST(Sysmem, ConstraintsRetainedBeyondCleanClose) {
   // yet), so the buffers haven't been allocated yet.
   auto check_result_2 = collection_2->CheckBuffersAllocated();
   ASSERT_OK(check_result_2);
-  EXPECT_EQ(check_result_2->status, ZX_ERR_UNAVAILABLE, "");
+  EXPECT_EQ(check_result_2->status, ZX_ERR_UNAVAILABLE);
 
   ASSERT_OK(collection_2->SetConstraints(true, std::move(constraints_2)));
 
@@ -2676,7 +2643,7 @@ TEST(Sysmem, ConstraintsRetainedBeyondCleanClose) {
 
   // The fact that this is 4 instead of 2 proves that client 1's constraints
   // were taken into account.
-  ASSERT_EQ(allocate_result_2->buffer_collection_info.buffer_count, 4, "");
+  ASSERT_EQ(allocate_result_2->buffer_collection_info.buffer_count, 4);
 }
 
 TEST(Sysmem, HeapConstraints) {
@@ -2704,15 +2671,15 @@ TEST(Sysmem, HeapConstraints) {
   // to any step above failing async.
   ASSERT_OK(allocate_result);
   ASSERT_OK(allocate_result.value().status);
-  ASSERT_EQ(allocate_result.value().buffer_collection_info.buffer_count, 1, "");
+  ASSERT_EQ(allocate_result.value().buffer_collection_info.buffer_count, 1);
   ASSERT_EQ(
       allocate_result.value().buffer_collection_info.settings.buffer_settings.coherency_domain,
-      fuchsia_sysmem::wire::CoherencyDomain::kInaccessible, "");
+      fuchsia_sysmem::wire::CoherencyDomain::kInaccessible);
   ASSERT_EQ(allocate_result.value().buffer_collection_info.settings.buffer_settings.heap,
-            fuchsia_sysmem::wire::HeapType::kSystemRam, "");
+            fuchsia_sysmem::wire::HeapType::kSystemRam);
   ASSERT_EQ(allocate_result.value()
                 .buffer_collection_info.settings.buffer_settings.is_physically_contiguous,
-            true, "");
+            true);
 }
 
 TEST(Sysmem, CpuUsageAndInaccessibleDomainFails) {
@@ -2739,7 +2706,7 @@ TEST(Sysmem, CpuUsageAndInaccessibleDomainFails) {
   auto allocate_result = collection->WaitForBuffersAllocated();
   // usage.cpu != 0 && inaccessible_domain_supported is expected to result in failure to
   // allocate.
-  ASSERT_NE(allocate_result.status(), ZX_OK, "");
+  ASSERT_NE(allocate_result.status(), ZX_OK);
 }
 
 TEST(Sysmem, SystemRamHeapSupportsAllDomains) {
@@ -2821,7 +2788,7 @@ TEST(Sysmem, RequiredSize) {
   size_t vmo_size;
   zx_status_t status = zx_vmo_get_size(
       allocate_result.value().buffer_collection_info.buffers[0].vmo.get(), &vmo_size);
-  ASSERT_EQ(status, ZX_OK, "");
+  ASSERT_EQ(status, ZX_OK);
 
   // Image must be at least 512x1024 NV12, due to the required max sizes
   // above.
@@ -2850,7 +2817,7 @@ TEST(Sysmem, CpuUsageAndNoBufferMemoryConstraints) {
   auto [collection_client_1, collection_server_1] = std::move(*collection_endpoints_1);
   fidl::WireSyncClient collection_1{std::move(collection_client_1)};
 
-  ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
+  ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID);
   ASSERT_OK(
       allocator_1->BindSharedCollection(token_1.TakeClientEnd(), std::move(collection_server_1)));
 
@@ -2891,7 +2858,7 @@ TEST(Sysmem, CpuUsageAndNoBufferMemoryConstraints) {
 
   ASSERT_OK(collection_1->Sync());
 
-  ASSERT_NE(token_client_2.channel().get(), ZX_HANDLE_INVALID, "");
+  ASSERT_NE(token_client_2.channel().get(), ZX_HANDLE_INVALID);
   ASSERT_OK(
       allocator_2->BindSharedCollection(std::move(token_client_2), std::move(collection_server_2)));
 
@@ -2901,7 +2868,7 @@ TEST(Sysmem, CpuUsageAndNoBufferMemoryConstraints) {
   ASSERT_OK(allocate_result_1);
   ASSERT_OK(allocate_result_1->status);
   ASSERT_EQ(allocate_result_1->buffer_collection_info.settings.buffer_settings.coherency_domain,
-            fuchsia_sysmem::wire::CoherencyDomain::kCpu, "");
+            fuchsia_sysmem::wire::CoherencyDomain::kCpu);
 }
 
 TEST(Sysmem, ContiguousSystemRamIsCached) {
@@ -2930,15 +2897,15 @@ TEST(Sysmem, ContiguousSystemRamIsCached) {
   // to any step above failing async.
   ASSERT_OK(allocate_result);
   ASSERT_OK(allocate_result.value().status);
-  ASSERT_EQ(allocate_result.value().buffer_collection_info.buffer_count, 1, "");
+  ASSERT_EQ(allocate_result.value().buffer_collection_info.buffer_count, 1);
   ASSERT_EQ(
       allocate_result.value().buffer_collection_info.settings.buffer_settings.coherency_domain,
-      fuchsia_sysmem::wire::CoherencyDomain::kCpu, "");
+      fuchsia_sysmem::wire::CoherencyDomain::kCpu);
   ASSERT_EQ(allocate_result.value().buffer_collection_info.settings.buffer_settings.heap,
-            fuchsia_sysmem::wire::HeapType::kSystemRam, "");
+            fuchsia_sysmem::wire::HeapType::kSystemRam);
   ASSERT_EQ(allocate_result.value()
                 .buffer_collection_info.settings.buffer_settings.is_physically_contiguous,
-            true, "");
+            true);
 
   // We could potentially map and try some non-aligned accesses, but on x64
   // that'd just work anyway IIRC, so just directly check if the cache policy
@@ -2952,8 +2919,8 @@ TEST(Sysmem, ContiguousSystemRamIsCached) {
   zx_info_vmo_t vmo_info{};
   zx_status_t status = allocate_result.value().buffer_collection_info.buffers[0].vmo.get_info(
       ZX_INFO_VMO, &vmo_info, sizeof(vmo_info), nullptr, nullptr);
-  ASSERT_EQ(status, ZX_OK, "");
-  ASSERT_EQ(vmo_info.cache_policy, ZX_CACHE_POLICY_CACHED, "");
+  ASSERT_EQ(status, ZX_OK);
+  ASSERT_EQ(vmo_info.cache_policy, ZX_CACHE_POLICY_CACHED);
 }
 
 TEST(Sysmem, ContiguousSystemRamIsRecycled) {
@@ -3012,15 +2979,15 @@ TEST(Sysmem, ContiguousSystemRamIsRecycled) {
     ASSERT_OK(allocate_result);
     ASSERT_OK(allocate_result.value().status);
 
-    ASSERT_EQ(allocate_result.value().buffer_collection_info.buffer_count, 1, "");
+    ASSERT_EQ(allocate_result.value().buffer_collection_info.buffer_count, 1);
     ASSERT_EQ(
         allocate_result.value().buffer_collection_info.settings.buffer_settings.coherency_domain,
-        fuchsia_sysmem::wire::CoherencyDomain::kCpu, "");
+        fuchsia_sysmem::wire::CoherencyDomain::kCpu);
     ASSERT_EQ(allocate_result.value().buffer_collection_info.settings.buffer_settings.heap,
-              fuchsia_sysmem::wire::HeapType::kSystemRam, "");
+              fuchsia_sysmem::wire::HeapType::kSystemRam);
     ASSERT_EQ(allocate_result.value()
                   .buffer_collection_info.settings.buffer_settings.is_physically_contiguous,
-              true, "");
+              true);
 
     total_bytes_allocated += kBytesToAllocatePerPass;
 
@@ -3081,8 +3048,8 @@ TEST(Sysmem, NoneUsageAndOtherUsageFromSingleParticipantFails) {
   auto collection = make_single_participant_collection();
 
   const char* kClientName = "TestClient";
-  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
-  (void)collection->SetDebugClientInfo(fidl::StringView::FromExternal(kClientName), 6u);
+  ASSERT_OK(
+      collection->SetDebugClientInfo(fidl::StringView::FromExternal(kClientName), 6u).status());
 
   fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
   // Specify both "none" and "cpu" usage from a single participant, which will
@@ -3147,7 +3114,7 @@ TEST(Sysmem, NoneUsageWithSeparateOtherUsageSucceeds) {
   auto [collection_client_1, collection_server_1] = std::move(*collection_endpoints_1);
   fidl::WireSyncClient collection_1{std::move(collection_client_1)};
 
-  ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
+  ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID);
   ASSERT_OK(
       allocator->BindSharedCollection(token_1.TakeClientEnd(), std::move(collection_server_1)));
 
@@ -3199,7 +3166,7 @@ TEST(Sysmem, NoneUsageWithSeparateOtherUsageSucceeds) {
   // which would cause sysmem to not recognize the token.
   ASSERT_OK(collection_1->Sync());
 
-  ASSERT_NE(token_client_2.channel().get(), ZX_HANDLE_INVALID, "");
+  ASSERT_NE(token_client_2.channel().get(), ZX_HANDLE_INVALID);
   ASSERT_OK(
       allocator_2->BindSharedCollection(std::move(token_client_2), std::move(collection_server_2)));
 
@@ -3277,34 +3244,34 @@ TEST(Sysmem, PixelFormatBgr24) {
   ASSERT_OK(allocate_result.value().status);
 
   auto buffer_collection_info = &allocate_result.value().buffer_collection_info;
-  ASSERT_EQ(buffer_collection_info->buffer_count, 3, "");
-  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, kStrideAlign, "");
-  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, false, "");
-  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, false, "");
+  ASSERT_EQ(buffer_collection_info->buffer_count, 3);
+  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, kStrideAlign);
+  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, false);
+  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, false);
   ASSERT_EQ(buffer_collection_info->settings.buffer_settings.coherency_domain,
-            fuchsia_sysmem::wire::CoherencyDomain::kCpu, "");
+            fuchsia_sysmem::wire::CoherencyDomain::kCpu);
   // We specified image_format_constraints so the result must also have
   // image_format_constraints.
-  ASSERT_EQ(buffer_collection_info->settings.has_image_format_constraints, true, "");
+  ASSERT_EQ(buffer_collection_info->settings.has_image_format_constraints, true);
 
   ASSERT_EQ(buffer_collection_info->settings.image_format_constraints.pixel_format.type,
-            fuchsia_sysmem::wire::PixelFormatType::kBgr24, "");
+            fuchsia_sysmem::wire::PixelFormatType::kBgr24);
 
   for (uint32_t i = 0; i < 64; ++i) {
     if (i < 3) {
-      ASSERT_NE(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
+      ASSERT_NE(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID);
       uint64_t size_bytes = 0;
       auto status = zx_vmo_get_size(buffer_collection_info->buffers[i].vmo.get(), &size_bytes);
-      ASSERT_EQ(status, ZX_OK, "");
+      ASSERT_EQ(status, ZX_OK);
       // The portion of the VMO the client can use is large enough to hold the min image size,
       // despite the min buffer size being smaller.
-      ASSERT_GE(buffer_collection_info->settings.buffer_settings.size_bytes, kStrideAlign, "");
+      ASSERT_GE(buffer_collection_info->settings.buffer_settings.size_bytes, kStrideAlign);
       // The vmo has room for the nominal size of the portion of the VMO the client can use.
       ASSERT_LE(buffer_collection_info->buffers[i].vmo_usable_start +
                     buffer_collection_info->settings.buffer_settings.size_bytes,
-                size_bytes, "");
+                size_bytes);
     } else {
-      ASSERT_EQ(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
+      ASSERT_EQ(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID);
     }
   }
 
@@ -3383,15 +3350,15 @@ TEST(Sysmem, HeapAmlogicSecure) {
     ASSERT_OK(allocate_result);
     ASSERT_OK(allocate_result.value().status);
     auto buffer_collection_info = &allocate_result.value().buffer_collection_info;
-    EXPECT_EQ(buffer_collection_info->buffer_count, kBufferCount, "");
-    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, kBufferSizeBytes, "");
-    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, true, "");
-    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, true, "");
+    EXPECT_EQ(buffer_collection_info->buffer_count, kBufferCount);
+    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, kBufferSizeBytes);
+    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, true);
+    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, true);
     EXPECT_EQ(buffer_collection_info->settings.buffer_settings.coherency_domain,
-              fuchsia_sysmem::wire::CoherencyDomain::kInaccessible, "");
+              fuchsia_sysmem::wire::CoherencyDomain::kInaccessible);
     EXPECT_EQ(buffer_collection_info->settings.buffer_settings.heap,
-              fuchsia_sysmem::wire::HeapType::kAmlogicSecure, "");
-    EXPECT_EQ(buffer_collection_info->settings.has_image_format_constraints, false, "");
+              fuchsia_sysmem::wire::HeapType::kAmlogicSecure);
+    EXPECT_EQ(buffer_collection_info->settings.has_image_format_constraints, false);
 
     fuchsia_sysmem::wire::BufferCollectionInfo2 aux_buffer_collection_info;
     if (need_aux || allow_aux) {
@@ -3400,32 +3367,32 @@ TEST(Sysmem, HeapAmlogicSecure) {
       ASSERT_OK(aux_result.value().status);
 
       EXPECT_EQ(aux_result.value().buffer_collection_info_aux_buffers.buffer_count,
-                buffer_collection_info->buffer_count, "");
+                buffer_collection_info->buffer_count);
       aux_buffer_collection_info = std::move(aux_result.value().buffer_collection_info_aux_buffers);
     }
 
     for (uint32_t i = 0; i < 64; ++i) {
       if (i < kBufferCount) {
-        EXPECT_NE(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
+        EXPECT_NE(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID);
         uint64_t size_bytes = 0;
         auto status = zx_vmo_get_size(buffer_collection_info->buffers[i].vmo.get(), &size_bytes);
-        ASSERT_EQ(status, ZX_OK, "");
-        EXPECT_EQ(size_bytes, kBufferSizeBytes, "");
+        ASSERT_EQ(status, ZX_OK);
+        EXPECT_EQ(size_bytes, kBufferSizeBytes);
         if (need_aux) {
-          EXPECT_NE(aux_buffer_collection_info.buffers[i].vmo, ZX_HANDLE_INVALID, "");
+          EXPECT_NE(aux_buffer_collection_info.buffers[i].vmo, ZX_HANDLE_INVALID);
           uint64_t aux_size_bytes = 0;
           status =
               zx_vmo_get_size(aux_buffer_collection_info.buffers[i].vmo.get(), &aux_size_bytes);
-          ASSERT_EQ(status, ZX_OK, "");
-          EXPECT_EQ(aux_size_bytes, kBufferSizeBytes, "");
+          ASSERT_EQ(status, ZX_OK);
+          EXPECT_EQ(aux_size_bytes, kBufferSizeBytes);
         } else if (allow_aux) {
           // This is how v1 indicates that aux buffers weren't allocated.
-          EXPECT_EQ(aux_buffer_collection_info.buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
+          EXPECT_EQ(aux_buffer_collection_info.buffers[i].vmo.get(), ZX_HANDLE_INVALID);
         }
       } else {
-        EXPECT_EQ(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
+        EXPECT_EQ(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID);
         if (need_aux) {
-          EXPECT_EQ(aux_buffer_collection_info.buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
+          EXPECT_EQ(aux_buffer_collection_info.buffers[i].vmo.get(), ZX_HANDLE_INVALID);
         }
       }
     }
@@ -3526,15 +3493,15 @@ TEST(Sysmem, HeapAmlogicSecureMiniStress) {
     ASSERT_OK(allocate_result);
     ASSERT_OK(allocate_result.value().status);
     auto buffer_collection_info = &allocate_result.value().buffer_collection_info;
-    EXPECT_EQ(buffer_collection_info->buffer_count, kBufferCount, "");
-    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, size, "");
-    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, true, "");
-    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, true, "");
+    EXPECT_EQ(buffer_collection_info->buffer_count, kBufferCount);
+    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, size);
+    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, true);
+    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, true);
     EXPECT_EQ(buffer_collection_info->settings.buffer_settings.coherency_domain,
-              fuchsia_sysmem::wire::CoherencyDomain::kInaccessible, "");
+              fuchsia_sysmem::wire::CoherencyDomain::kInaccessible);
     EXPECT_EQ(buffer_collection_info->settings.buffer_settings.heap,
-              fuchsia_sysmem::wire::HeapType::kAmlogicSecure, "");
-    EXPECT_EQ(buffer_collection_info->settings.has_image_format_constraints, false, "");
+              fuchsia_sysmem::wire::HeapType::kAmlogicSecure);
+    EXPECT_EQ(buffer_collection_info->settings.has_image_format_constraints, false);
     EXPECT_EQ(buffer_collection_info->buffers[0].vmo_usable_start, 0);
 
     zx::vmo buffer = std::move(buffer_collection_info->buffers[0].vmo);
@@ -3544,7 +3511,7 @@ TEST(Sysmem, HeapAmlogicSecureMiniStress) {
   };
   auto remove = [&get_random_buffer, &buffers, &total_size] {
     auto random_buffer = get_random_buffer();
-    ZX_ASSERT(random_buffer != buffers.end());
+    EXPECT_NE(random_buffer, buffers.end());
     total_size -= random_buffer->second.size;
     buffers.erase(random_buffer);
   };
@@ -3636,15 +3603,15 @@ TEST(Sysmem, HeapAmlogicSecureMiniStress) {
     ASSERT_OK(allocate_result);
     ASSERT_OK(allocate_result.value().status);
     auto buffer_collection_info = &allocate_result.value().buffer_collection_info;
-    EXPECT_EQ(buffer_collection_info->buffer_count, kBufferCount, "");
-    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, kBufferSizeBytes, "");
-    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, true, "");
-    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, true, "");
+    EXPECT_EQ(buffer_collection_info->buffer_count, kBufferCount);
+    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, kBufferSizeBytes);
+    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, true);
+    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, true);
     EXPECT_EQ(buffer_collection_info->settings.buffer_settings.coherency_domain,
-              fuchsia_sysmem::wire::CoherencyDomain::kInaccessible, "");
+              fuchsia_sysmem::wire::CoherencyDomain::kInaccessible);
     EXPECT_EQ(buffer_collection_info->settings.buffer_settings.heap,
-              fuchsia_sysmem::wire::HeapType::kAmlogicSecure, "");
-    EXPECT_EQ(buffer_collection_info->settings.has_image_format_constraints, false, "");
+              fuchsia_sysmem::wire::HeapType::kAmlogicSecure);
+    EXPECT_EQ(buffer_collection_info->settings.has_image_format_constraints, false);
 
     fuchsia_sysmem::wire::BufferCollectionInfo2 aux_buffer_collection_info;
     if (need_aux || allow_aux) {
@@ -3653,32 +3620,32 @@ TEST(Sysmem, HeapAmlogicSecureMiniStress) {
       ASSERT_OK(aux_result.value().status);
 
       EXPECT_EQ(aux_result.value().buffer_collection_info_aux_buffers.buffer_count,
-                buffer_collection_info->buffer_count, "");
+                buffer_collection_info->buffer_count);
       aux_buffer_collection_info = std::move(aux_result.value().buffer_collection_info_aux_buffers);
     }
 
     for (uint32_t i = 0; i < 64; ++i) {
       if (i < kBufferCount) {
-        EXPECT_NE(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
+        EXPECT_NE(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID);
         uint64_t size_bytes = 0;
         auto status = zx_vmo_get_size(buffer_collection_info->buffers[i].vmo.get(), &size_bytes);
-        ASSERT_EQ(status, ZX_OK, "");
-        EXPECT_EQ(size_bytes, kBufferSizeBytes, "");
+        ASSERT_EQ(status, ZX_OK);
+        EXPECT_EQ(size_bytes, kBufferSizeBytes);
         if (need_aux) {
-          EXPECT_NE(aux_buffer_collection_info.buffers[i].vmo, ZX_HANDLE_INVALID, "");
+          EXPECT_NE(aux_buffer_collection_info.buffers[i].vmo, ZX_HANDLE_INVALID);
           uint64_t aux_size_bytes = 0;
           status =
               zx_vmo_get_size(aux_buffer_collection_info.buffers[i].vmo.get(), &aux_size_bytes);
-          ASSERT_EQ(status, ZX_OK, "");
-          EXPECT_EQ(aux_size_bytes, kBufferSizeBytes, "");
+          ASSERT_EQ(status, ZX_OK);
+          EXPECT_EQ(aux_size_bytes, kBufferSizeBytes);
         } else if (allow_aux) {
           // This is how v1 indicates that aux buffers weren't allocated.
-          EXPECT_EQ(aux_buffer_collection_info.buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
+          EXPECT_EQ(aux_buffer_collection_info.buffers[i].vmo.get(), ZX_HANDLE_INVALID);
         }
       } else {
-        EXPECT_EQ(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
+        EXPECT_EQ(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID);
         if (need_aux) {
-          EXPECT_EQ(aux_buffer_collection_info.buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
+          EXPECT_EQ(aux_buffer_collection_info.buffers[i].vmo.get(), ZX_HANDLE_INVALID);
         }
       }
     }
@@ -3748,16 +3715,16 @@ TEST(Sysmem, HeapAmlogicSecureOnlySupportsInaccessible) {
       ASSERT_OK(allocate_result.value().status);
       auto buffer_collection_info = &allocate_result.value().buffer_collection_info;
 
-      EXPECT_EQ(buffer_collection_info->buffer_count, kBufferCount, "");
-      EXPECT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, kBufferSizeBytes, "");
+      EXPECT_EQ(buffer_collection_info->buffer_count, kBufferCount);
+      EXPECT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, kBufferSizeBytes);
       EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, true,
                 "");
-      EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, true, "");
+      EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, true);
       EXPECT_EQ(buffer_collection_info->settings.buffer_settings.coherency_domain,
-                fuchsia_sysmem::wire::CoherencyDomain::kInaccessible, "");
+                fuchsia_sysmem::wire::CoherencyDomain::kInaccessible);
       EXPECT_EQ(buffer_collection_info->settings.buffer_settings.heap,
-                fuchsia_sysmem::wire::HeapType::kAmlogicSecure, "");
-      EXPECT_EQ(buffer_collection_info->settings.has_image_format_constraints, false, "");
+                fuchsia_sysmem::wire::HeapType::kAmlogicSecure);
+      EXPECT_EQ(buffer_collection_info->settings.has_image_format_constraints, false);
     } else {
       ASSERT_TRUE(allocate_result.status() != ZX_OK || allocate_result.value().status != ZX_OK,
                   "Sysmem should not allocate memory from secure heap with coherency domain %u",
@@ -3802,26 +3769,26 @@ TEST(Sysmem, HeapAmlogicSecureVdec) {
     ASSERT_OK(allocate_result.value().status);
     auto buffer_collection_info = &allocate_result.value().buffer_collection_info;
 
-    EXPECT_EQ(buffer_collection_info->buffer_count, kBufferCount, "");
-    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, kBufferSizeBytes, "");
-    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, true, "");
-    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, true, "");
+    EXPECT_EQ(buffer_collection_info->buffer_count, kBufferCount);
+    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, kBufferSizeBytes);
+    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, true);
+    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, true);
     EXPECT_EQ(buffer_collection_info->settings.buffer_settings.coherency_domain,
-              fuchsia_sysmem::wire::CoherencyDomain::kInaccessible, "");
+              fuchsia_sysmem::wire::CoherencyDomain::kInaccessible);
     EXPECT_EQ(buffer_collection_info->settings.buffer_settings.heap,
-              fuchsia_sysmem::wire::HeapType::kAmlogicSecureVdec, "");
-    EXPECT_EQ(buffer_collection_info->settings.has_image_format_constraints, false, "");
+              fuchsia_sysmem::wire::HeapType::kAmlogicSecureVdec);
+    EXPECT_EQ(buffer_collection_info->settings.has_image_format_constraints, false);
 
     auto expected_size = fbl::round_up(kBufferSizeBytes, zx_system_get_page_size());
     for (uint32_t i = 0; i < 64; ++i) {
       if (i < kBufferCount) {
-        EXPECT_NE(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
+        EXPECT_NE(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID);
         uint64_t size_bytes = 0;
         auto status = zx_vmo_get_size(buffer_collection_info->buffers[i].vmo.get(), &size_bytes);
-        ASSERT_EQ(status, ZX_OK, "");
-        EXPECT_EQ(size_bytes, expected_size, "");
+        ASSERT_EQ(status, ZX_OK);
+        EXPECT_EQ(size_bytes, expected_size);
       } else {
-        EXPECT_EQ(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
+        EXPECT_EQ(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID);
       }
     }
 
@@ -3864,23 +3831,23 @@ TEST(Sysmem, CpuUsageAndInaccessibleDomainSupportedSucceeds) {
   ASSERT_OK(allocate_result.value().status);
   auto buffer_collection_info = &allocate_result.value().buffer_collection_info;
 
-  ASSERT_EQ(buffer_collection_info->buffer_count, kBufferCount, "");
-  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, kBufferSize, "");
-  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, false, "");
-  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, false, "");
+  ASSERT_EQ(buffer_collection_info->buffer_count, kBufferCount);
+  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, kBufferSize);
+  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, false);
+  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, false);
   ASSERT_EQ(buffer_collection_info->settings.buffer_settings.coherency_domain,
-            fuchsia_sysmem::wire::CoherencyDomain::kCpu, "");
-  ASSERT_EQ(buffer_collection_info->settings.has_image_format_constraints, false, "");
+            fuchsia_sysmem::wire::CoherencyDomain::kCpu);
+  ASSERT_EQ(buffer_collection_info->settings.has_image_format_constraints, false);
 
   for (uint32_t i = 0; i < 64; ++i) {
     if (i < kBufferCount) {
-      ASSERT_NE(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
+      ASSERT_NE(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID);
       uint64_t size_bytes = 0;
       auto status = zx_vmo_get_size(buffer_collection_info->buffers[i].vmo.get(), &size_bytes);
-      ASSERT_EQ(status, ZX_OK, "");
-      ASSERT_EQ(size_bytes, kBufferSize, "");
+      ASSERT_EQ(status, ZX_OK);
+      ASSERT_EQ(size_bytes, kBufferSize);
     } else {
-      ASSERT_EQ(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
+      ASSERT_EQ(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID);
     }
   }
 }
@@ -3893,9 +3860,9 @@ TEST(Sysmem, AllocatedBufferZeroInRam) {
   constexpr uint32_t kIterationCount = 200;
 
   auto zero_buffer = std::make_unique<uint8_t[]>(kBufferSize);
-  ZX_ASSERT(zero_buffer);
+  ASSERT_TRUE(zero_buffer);
   auto tmp_buffer = std::make_unique<uint8_t[]>(kBufferSize);
-  ZX_ASSERT(tmp_buffer);
+  ASSERT_TRUE(tmp_buffer);
   for (uint32_t iter = 0; iter < kIterationCount; ++iter) {
     auto collection = make_single_participant_collection();
 
@@ -3990,7 +3957,7 @@ TEST(Sysmem, DefaultAttributes) {
 
   size_t vmo_size;
   auto status = zx_vmo_get_size(buffer_collection_info->buffers[0].vmo.get(), &vmo_size);
-  ASSERT_EQ(status, ZX_OK, "");
+  ASSERT_EQ(status, ZX_OK);
 
   // Image must be at least 512x1024 NV12, due to the required max sizes
   // above.
@@ -4012,7 +3979,7 @@ TEST(Sysmem, TooManyFormats) {
   ASSERT_OK(collection_endpoints);
   auto [collection_client_end, collection_server_end] = std::move(*collection_endpoints);
 
-  EXPECT_NE(token_client_end.channel().get(), ZX_HANDLE_INVALID, "");
+  EXPECT_NE(token_client_end.channel().get(), ZX_HANDLE_INVALID);
   ASSERT_OK(allocator->BindSharedCollection(std::move(token_client_end),
                                             std::move(collection_server_end)));
 
@@ -4042,7 +4009,7 @@ TEST(Sysmem, TooManyFormats) {
   ASSERT_OK(collection->SetConstraints(true, std::move(constraints)));
 
   auto allocate_result = collection->WaitForBuffersAllocated();
-  EXPECT_NE(allocate_result.status(), ZX_OK, "");
+  EXPECT_NE(allocate_result.status(), ZX_OK);
 
   verify_connectivity(*allocator);
 }
@@ -4070,7 +4037,7 @@ TEST(Sysmem, TooManyBuffers) {
   ASSERT_OK(collection->SetConstraints(true, std::move(constraints)));
 
   auto allocation_result = collection->WaitForBuffersAllocated();
-  EXPECT_NE(allocation_result.status(), ZX_OK, "");
+  EXPECT_NE(allocation_result.status(), ZX_OK);
 
   verify_connectivity(*allocator);
 }
@@ -4454,7 +4421,7 @@ TEST(Sysmem, SetDispensable) {
     auto [collection_client_1, collection_server_1] = std::move(*collection_endpoints_1);
     fidl::WireSyncClient collection_1{std::move(collection_client_1)};
 
-    ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
+    ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID);
     ASSERT_OK(
         allocator->BindSharedCollection(token_1.TakeClientEnd(), std::move(collection_server_1)));
 
@@ -4480,7 +4447,7 @@ TEST(Sysmem, SetDispensable) {
     // buffers will be 4.  There are no handles in the constraints struct so a
     // struct copy instead of clone is fine here.
     fuchsia_sysmem::wire::BufferCollectionConstraints constraints_2(constraints_1);
-    ASSERT_EQ(constraints_2.min_buffer_count_for_camping, 2, "");
+    ASSERT_EQ(constraints_2.min_buffer_count_for_camping, 2);
 
     // Client 2 connects to sysmem separately.
     auto allocator_2 = connect_to_sysmem_driver();
@@ -4499,7 +4466,7 @@ TEST(Sysmem, SetDispensable) {
     // which would cause sysmem to not recognize the token.
     ASSERT_OK(collection_1->Sync());
 
-    ASSERT_NE(token_2.client_end().channel().get(), ZX_HANDLE_INVALID, "");
+    ASSERT_NE(token_2.client_end().channel().get(), ZX_HANDLE_INVALID);
     ASSERT_OK(
         allocator_2->BindSharedCollection(token_2.TakeClientEnd(), std::move(collection_server_2)));
 
@@ -4522,7 +4489,7 @@ TEST(Sysmem, SetDispensable) {
     if (variant == Variant::kDispensableFailureBeforeAllocation) {
       // The LogicalBufferCollection will be failed, because client 2 failed before providing
       // constraints.
-      ASSERT_EQ(allocate_result_1.status(), ZX_ERR_PEER_CLOSED, "");
+      ASSERT_EQ(allocate_result_1.status(), ZX_ERR_PEER_CLOSED);
       // next variant, if any
       continue;
     }
@@ -4530,10 +4497,10 @@ TEST(Sysmem, SetDispensable) {
 
     // The LogicalBufferCollection will not be failed, because client 2 didn't fail before
     // allocation.
-    ASSERT_EQ(allocate_result_1.status(), ZX_OK, "");
-    ASSERT_EQ(allocate_result_1->status, ZX_OK, "");
+    ASSERT_EQ(allocate_result_1.status(), ZX_OK);
+    ASSERT_EQ(allocate_result_1->status, ZX_OK);
     // This being 4 instead of 2 proves that client 2's constraints were used.
-    ASSERT_EQ(allocate_result_1->buffer_collection_info.buffer_count, 4, "");
+    ASSERT_EQ(allocate_result_1->buffer_collection_info.buffer_count, 4);
 
     // Now that we know allocation is done, client 2 will abruptly close its channel, which the
     // server treats as client 2 failure.  Since client 2 has already provided constraints, this
@@ -4837,8 +4804,7 @@ TEST(Sysmem, GroupPriority) {
       for (auto& node : all_nodes) {
         if (node->is_group()) {
           auto group = std::get<SharedGroup>(node->item);
-          auto result = (*group)->AllChildrenPresent();
-          ZX_ASSERT(result.ok());
+          EXPECT_OK((*group)->AllChildrenPresent().status());
         } else {
           auto token = std::get<SharedToken>(node->item);
           auto collection =
@@ -4863,13 +4829,12 @@ TEST(Sysmem, GroupPriority) {
         auto wait_result = (*collection)->WaitForBuffersAllocated();
         if (!wait_result.ok() || wait_result->status != ZX_OK) {
           auto* group = node->parent;
-          ZX_ASSERT(!group->is_camper);
+          ASSERT_FALSE(group->is_camper);
           // Only the picked group enumerated last among the picked groups (in DFS pre-order) gives
           // up on camping on a buffer by failing its camping child 0 and using it's non-camping
           // child 1 instead.  The picked groups with higher priority (more important) instaed keep
           // their camping child 0 and fail their non-camping child 1.
-          ZX_ASSERT((group->picked_group_dfs_preorder_ordinal < kPickCount - 1) ==
-                    (!node->is_camper));
+          ASSERT_EQ((group->picked_group_dfs_preorder_ordinal < kPickCount - 1), !node->is_camper);
         }
       }
     };
@@ -4975,7 +4940,7 @@ TEST(Sysmem, Group_MiniStress) {
         if (!parent->is_group()) {
           continue;
         }
-        ZX_ASSERT(parent->which_child.has_value());
+        EXPECT_TRUE(parent->which_child.has_value());
         if (parent->children[*parent->which_child].get() != iter) {
           return false;
         }
@@ -5008,8 +4973,7 @@ TEST(Sysmem, Group_MiniStress) {
           }
           if (node->is_group()) {
             auto group = std::get<SharedGroup>(node->item);
-            auto result = (*group)->AllChildrenPresent();
-            ZX_ASSERT(result.ok());
+            EXPECT_OK((*group)->AllChildrenPresent().status());
           } else {
             auto token = std::get<SharedToken>(node->item);
             auto collection =
@@ -5037,12 +5001,16 @@ TEST(Sysmem, Group_MiniStress) {
         auto collection = std::get<SharedCollection>(node->item);
         auto wait_result = (*collection)->WaitForBuffersAllocated();
         if (!node->is_compatible) {
-          ZX_ASSERT(!wait_result.ok() && wait_result.error().status() == ZX_ERR_PEER_CLOSED ||
-                    wait_result.ok() && wait_result->status == ZX_ERR_NOT_SUPPORTED);
+          if (wait_result.ok()) {
+            EXPECT_STATUS(wait_result.value().status, ZX_ERR_NOT_SUPPORTED);
+          } else {
+            EXPECT_STATUS(wait_result.status(), ZX_ERR_PEER_CLOSED);
+          }
           continue;
         }
-        ZX_ASSERT(wait_result.ok() && wait_result->status == ZX_OK);
-        ZX_ASSERT(wait_result->buffer_collection_info.settings.buffer_settings.size_bytes ==
+        EXPECT_OK(wait_result.status());
+        EXPECT_OK(wait_result.value().status);
+        EXPECT_EQ(wait_result->buffer_collection_info.settings.buffer_settings.size_bytes,
                   kCompatibleSize);
       }
     };
@@ -5191,7 +5159,7 @@ TEST(Sysmem, GroupCreateChildrenSync) {
     constexpr uint32_t kOddballIndex = kTokenCount / 2;
     if (!is_oddball_writable) {
       rights_attenuation_masks[kOddballIndex] = (0xFFFFFFFF & ~ZX_RIGHT_WRITE);
-      ZX_ASSERT((rights_attenuation_masks[kOddballIndex] & ZX_RIGHT_WRITE) == 0);
+      EXPECT_EQ((rights_attenuation_masks[kOddballIndex] & ZX_RIGHT_WRITE), 0);
     }
     auto result = group->CreateChildrenSync(
         fidl::VectorView<zx_rights_t>::FromExternal(rights_attenuation_masks));
@@ -5234,15 +5202,14 @@ TEST(Sysmem, GroupCreateChildrenSync) {
       ASSERT_EQ(info.settings.buffer_settings.size_bytes, kCompatibleSize);
       zx::unowned_vmo vmo(info.buffers[0].vmo);
       zx_info_handle_basic_t basic_info{};
-      zx_status_t get_info_status =
-          vmo->get_info(ZX_INFO_HANDLE_BASIC, &basic_info, sizeof(basic_info), nullptr, nullptr);
-      ZX_ASSERT(get_info_status == ZX_OK);
+      EXPECT_OK(
+          vmo->get_info(ZX_INFO_HANDLE_BASIC, &basic_info, sizeof(basic_info), nullptr, nullptr));
       uint8_t data = 42;
       zx_status_t write_status = vmo->write(&data, 0, sizeof(data));
       if (is_root(index)) {
         ASSERT_OK(write_status);
       } else {
-        ZX_ASSERT(is_oddball(index));
+        EXPECT_TRUE(is_oddball(index));
         if (is_oddball_writable) {
           ASSERT_OK(write_status);
         } else {
@@ -5320,8 +5287,8 @@ TEST(Sysmem, PixelFormatDoNotCare_Success) {
       fuchsia_sysmem::PixelFormatType::kDoNotCare;
   c2.image_format_constraints()[0].pixel_format().type() = fuchsia_sysmem::PixelFormatType::kNv12;
 
-  ZX_ASSERT(!c1.image_format_constraints()[0].pixel_format().has_format_modifier());
-  ZX_ASSERT(!c2.image_format_constraints()[0].pixel_format().has_format_modifier());
+  EXPECT_FALSE(c1.image_format_constraints()[0].pixel_format().has_format_modifier());
+  EXPECT_FALSE(c2.image_format_constraints()[0].pixel_format().has_format_modifier());
 
   fidl::Arena arena;
   auto c1w = fidl::ToWire(arena, std::move(c1));

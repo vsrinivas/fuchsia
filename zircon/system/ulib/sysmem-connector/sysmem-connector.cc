@@ -296,7 +296,7 @@ void SysmemConnector::ProcessQueue() {
                              .status());
                    }},
         std::move(queue_item));
-    printf("sysmem-connector: fuchsia.sysmem/DriverConnect.%s: %s", name,
+    printf("sysmem-connector: fuchsia.sysmem/DriverConnect.%s: %s\n", name,
            zx_status_get_string(status));
     if (status != ZX_OK) {
       driver_connector_client_.reset();
