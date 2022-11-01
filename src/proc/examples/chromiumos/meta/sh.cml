@@ -6,5 +6,6 @@
         runner: "starmium",
         binary: "/bin/sh",
         args: [ "-i" ],
+        user: "root:x:0:0",
     },
 }
