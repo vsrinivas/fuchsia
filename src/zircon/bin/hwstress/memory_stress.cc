@@ -61,8 +61,8 @@ void TestPatternAndComplement(MemoryRange* memory, PatternGenerator pattern) {
     for (size_t i = 0; i < words; i++) {
       uint64_t p = pattern();
       if (unlikely(start[i] != p)) {
-        ZX_PANIC("Found memory error: expected 0x%16lx, got 0x%16lx at offset %ld.\n", p, start[i],
-                 i);
+        ZX_PANIC("Found memory error: expected 0x%16lx, got 0x%16lx at offset %ld.", p, start[i],
+            i);
       }
       start[i] = ~p;
     }
@@ -172,7 +172,7 @@ template <typename PatternGenerator>
 void VerifyPatternOrDie(cpp20::span<uint8_t> range, PatternGenerator pattern) {
   std::optional<std::string> result = VerifyPattern(range, pattern);
   if (unlikely(result.has_value())) {
-    ZX_PANIC("Detected memory error: %s\n", result->c_str());
+    ZX_PANIC("Detected memory error: %s", result->c_str());
   }
 }
 

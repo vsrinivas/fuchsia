@@ -39,7 +39,7 @@ namespace {
               "This failure may indicate faulty hardware.\n\n"        \
               "\n");                                                  \
       fflush(stderr);                                                 \
-      ZX_PANIC("CPU calculation failed: possible hardware fault.\n"); \
+      ZX_PANIC("CPU calculation failed: possible hardware fault."); \
     }                                                                 \
   } while (false)
 

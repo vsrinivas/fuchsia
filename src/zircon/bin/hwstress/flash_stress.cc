@@ -50,8 +50,7 @@ void VerifyBlockData(zx_vaddr_t start, uint32_t block_size, uint64_t value) {
   uint64_t* data = reinterpret_cast<uint64_t*>(start);
   for (uint64_t i = 0; i < num_words; i++) {
     if (unlikely(data[i] != value)) {
-      ZX_PANIC("Found error: expected 0x%016" PRIX64 ", got 0x%016" PRIX64 " at offset %" PRIu64
-               "\n",
+      ZX_PANIC("Found error: expected 0x%016" PRIX64 ", got 0x%016" PRIX64 " at offset %" PRIu64,
                value, data[i], value * block_size + i * sizeof(value));
     }
   }
