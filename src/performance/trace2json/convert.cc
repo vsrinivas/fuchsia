@@ -13,7 +13,7 @@
 #include <iterator>
 #include <vector>
 
-#include <third_party/zlib/contrib/iostream3/zfstream.h>
+#include <contrib/iostream3/zfstream.h>
 #include <trace-reader/reader.h>
 
 #include "src/performance/trace2json/trace_parser.h"

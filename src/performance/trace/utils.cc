@@ -15,8 +15,8 @@
 #include <string>
 #include <utility>
 
+#include <contrib/iostream3/zfstream.h>
 #include <fbl/unique_fd.h>
-#include <third_party/zlib/contrib/iostream3/zfstream.h>
 
 #include "src/lib/fxl/strings/trim.h"
 
