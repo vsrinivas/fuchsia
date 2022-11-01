@@ -79,14 +79,18 @@ TEST(DelayWatcherServerTest, InitialDelayKnown) {
   }
 
   // Two updates without another call.
+  libsync::Completion done;
   thread->PostTask([wrapper]() {
     ScopedThreadChecker checker(wrapper->server().thread().checker());
     wrapper->server().set_delay(zx::nsec(2000));
   });
-  thread->PostTask([wrapper]() {
+  thread->PostTask([wrapper, &done]() {
     ScopedThreadChecker checker(wrapper->server().thread().checker());
     wrapper->server().set_delay(zx::nsec(3000));
+    done.Signal();
   });
+
+  EXPECT_EQ(done.Wait(zx::sec(5)), ZX_OK);
 
   // Second call returns immediately because there's been an update.
   {
