@@ -53,6 +53,11 @@ fuchsia_component("f2fs-component-test-component") {
 fuchsia_test_package("f2fs-component-tests") {
   test_components = [ ":f2fs-component-test-component" ]
   deps = [ ":f2fs-component" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {

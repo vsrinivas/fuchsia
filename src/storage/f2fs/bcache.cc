@@ -33,10 +33,12 @@ zx::result<std::unique_ptr<Bcache>> CreateBcache(std::unique_ptr<block_client::B
   }
 
   uint64_t device_size = info.block_size * info.block_count;
+  // f2fs requires at least 8 segments (sb + (ckpt + sit + nat) * 2 + ssr) for its metadata.
+  constexpr uint64_t min_size = kBlockSize * kDefaultBlocksPerSegment * 8;
 
-  if (device_size == 0) {
+  if (device_size <= min_size) {
     FX_LOGS(ERROR) << "block device is too small";
-    return zx::error(ZX_ERR_NO_RESOURCES);
+    return zx::error(ZX_ERR_NO_SPACE);
   }
   uint64_t block_count = device_size / kBlockSize;
 

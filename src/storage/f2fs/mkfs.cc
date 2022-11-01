@@ -84,6 +84,12 @@ zx_status_t MkfsWorker::GetDeviceInfo() {
     std::cerr << "Error: Block size " << info.block_size << " is not supported" << std::endl;
     return ZX_ERR_INVALID_ARGS;
   }
+
+  if (info.flags & fuchsia_hardware_block::wire::kFlagReadonly) {
+    std::cerr << "Error: Failed to format f2fs: read only block device" << std::endl;
+    return ZX_ERR_INVALID_ARGS;
+  }
+
 #else   // __Fuchsia__
   params_.sector_size = kDefaultSectorSize;
   params_.sectors_per_blk = kBlockSize / kDefaultSectorSize;

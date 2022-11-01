@@ -35,16 +35,9 @@ void StartupService::Start(StartRequestView request, StartCompleter::Sync& compl
 }
 
 void StartupService::Format(FormatRequestView request, FormatCompleter::Sync& completer) {
-  bool readonly_device = false;
-  auto bc_or = f2fs::CreateBcache(std::move(request->device), &readonly_device);
+  auto bc_or = f2fs::CreateBcache(std::move(request->device));
   if (bc_or.is_error()) {
     completer.ReplyError(bc_or.status_value());
-    return;
-  }
-
-  if (readonly_device) {
-    FX_LOGS(ERROR) << "failed to format f2fs: read only block device";
-    completer.ReplyError(ZX_ERR_BAD_STATE);
     return;
   }
 
@@ -52,7 +45,8 @@ void StartupService::Format(FormatRequestView request, FormatCompleter::Sync& co
   // TODO: parse option from request->options.
   if (auto status = f2fs::Mkfs(mkfs_options, std::move(*bc_or)); status.is_error()) {
     FX_LOGS(ERROR) << "failed to format f2fs: " << status.status_string();
-    completer.ReplyError(bc_or.status_value());
+    completer.ReplyError(status.status_value());
+    return;
   }
   completer.ReplySuccess();
 }

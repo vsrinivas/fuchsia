@@ -101,7 +101,7 @@ TEST(BCacheTest, Exception) {
     ASSERT_TRUE(device);
     auto bc_or = CreateBcache(std::move(device), &readonly_device);
     ASSERT_TRUE(bc_or.is_error());
-    ASSERT_EQ(bc_or.status_value(), ZX_ERR_NO_RESOURCES);
+    ASSERT_EQ(bc_or.status_value(), ZX_ERR_NO_SPACE);
   }
   // Test block_count overflow exception case
   {

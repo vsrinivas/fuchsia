@@ -143,17 +143,17 @@ TEST(SuperblockTest, Reset) {
 }
 
 TEST(RunnerTest, CreateException) {
+  uint64_t block_count = 20ull * 1024ull * 1024ull / kDefaultSectorSize;
   auto device =
       std::make_unique<block_client::FakeBlockDevice>(block_client::FakeBlockDevice::Config{
-          .block_count = 1, .block_size = kDefaultSectorSize, .supports_trim = true});
-  bool readonly_device = false;
-  auto bc_or = CreateBcache(std::move(device), &readonly_device);
+          .block_count = block_count, .block_size = kDefaultSectorSize, .supports_trim = true});
+  auto bc_or = CreateBcache(std::move(device));
   ASSERT_TRUE(bc_or.is_ok());
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   ASSERT_EQ(Runner::Create(loop.dispatcher(), std::move(*bc_or), MountOptions{}).status_value(),
-            ZX_ERR_OUT_OF_RANGE);
+            ZX_ERR_INVALID_ARGS);
 }
 
 TEST(RunnerTest, GetRootVnodeException) {

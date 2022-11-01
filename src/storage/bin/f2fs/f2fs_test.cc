@@ -27,10 +27,6 @@ const fuchsia_component_decl::wire::ChildRef kF2fsChildRef{.name = "test-f2fs",
 class F2fsComponentTest : public testing::Test {
  public:
   void SetUp() override {
-    auto ramdisk_or = storage::RamDisk::Create(kBlockSize, kBlockCount);
-    ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
-    ramdisk_ = std::move(*ramdisk_or);
-
     auto realm_client_end = component::Connect<fuchsia_component::Realm>();
     ASSERT_EQ(realm_client_end.status_value(), ZX_OK);
     realm_ = fidl::WireSyncClient(std::move(*realm_client_end));
@@ -70,6 +66,13 @@ class F2fsComponentTest : public testing::Test {
         << "destroy error: " << static_cast<uint32_t>(destroy_res->error_value());
   }
 
+  void CreateRamDisk(int block_size = kBlockSize, uint64_t block_count = kBlockCount,
+                     const storage::RamDisk::Options& options = storage::RamDisk::Options{}) {
+    auto ramdisk_or = storage::RamDisk::Create(block_size, block_count);
+    ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
+    ramdisk_ = std::move(*ramdisk_or);
+  }
+
   const fidl::WireSyncClient<fuchsia_fs_startup::Startup>& startup_client() const {
     return startup_client_;
   }
@@ -96,6 +99,7 @@ class F2fsComponentTest : public testing::Test {
 };
 
 TEST_F(F2fsComponentTest, FormatCheckStart) {
+  CreateRamDisk();
   fuchsia_fs_startup::wire::FormatOptions format_options;
   auto format_res = startup_client()->Format(block_client(), std::move(format_options));
   ASSERT_EQ(format_res.status(), ZX_OK);
@@ -128,6 +132,7 @@ TEST_F(F2fsComponentTest, RequestsBeforeStartupAreQueuedAndServicedAfter) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread("f2fs caller test thread");
 
+  CreateRamDisk();
   fuchsia_fs_startup::wire::FormatOptions format_options;
   auto format_res = startup_client()->Format(block_client(), std::move(format_options));
   ASSERT_EQ(format_res.status(), ZX_OK);
@@ -154,6 +159,55 @@ TEST_F(F2fsComponentTest, RequestsBeforeStartupAreQueuedAndServicedAfter) {
 
   auto shutdown_res = admin_client->Shutdown();
   ASSERT_EQ(shutdown_res.status(), ZX_OK);
+}
+
+TEST_F(F2fsComponentTest, SmallDiskException) {
+  CreateRamDisk(kBlockSize, 1);
+
+  fuchsia_fs_startup::wire::FormatOptions format_options;
+  auto format_res = startup_client()->Format(block_client(), std::move(format_options));
+  ASSERT_EQ(format_res.status(), ZX_OK);
+  ASSERT_TRUE(format_res->is_error());
+  ASSERT_EQ(format_res->error_value(), ZX_ERR_NO_SPACE);
+
+  fuchsia_fs_startup::wire::CheckOptions check_options;
+  auto check_res = startup_client()->Check(block_client(), std::move(check_options));
+  ASSERT_EQ(check_res.status(), ZX_OK);
+  ASSERT_TRUE(check_res->is_error());
+  ASSERT_EQ(check_res->error_value(), ZX_ERR_NO_SPACE);
+
+  fuchsia_fs_startup::wire::StartOptions start_options;
+  auto startup_res = startup_client()->Start(block_client(), std::move(start_options));
+  ASSERT_EQ(startup_res.status(), ZX_OK);
+  ASSERT_TRUE(startup_res->is_error());
+  ASSERT_EQ(startup_res->error_value(), ZX_ERR_NO_SPACE);
+}
+
+TEST_F(F2fsComponentTest, FormatFailureException) {
+  uint64_t block_count = 20ull * 1024ull * 1024ull / kBlockSize;
+  CreateRamDisk(kBlockSize, block_count);
+
+  fuchsia_fs_startup::wire::FormatOptions format_options;
+  auto format_res = startup_client()->Format(block_client(), std::move(format_options));
+  ASSERT_EQ(format_res.status(), ZX_OK);
+  ASSERT_TRUE(format_res->is_error());
+  ASSERT_EQ(format_res->error_value(), ZX_ERR_NO_SPACE);
+}
+
+TEST_F(F2fsComponentTest, NoFormatDiskException) {
+  CreateRamDisk();
+
+  fuchsia_fs_startup::wire::CheckOptions check_options;
+  auto check_res = startup_client()->Check(block_client(), std::move(check_options));
+  ASSERT_EQ(check_res.status(), ZX_OK);
+  ASSERT_TRUE(check_res->is_error());
+  ASSERT_EQ(check_res->error_value(), ZX_ERR_NOT_FOUND);
+
+  fuchsia_fs_startup::wire::StartOptions start_options;
+  auto startup_res = startup_client()->Start(block_client(), std::move(start_options));
+  ASSERT_EQ(startup_res.status(), ZX_OK);
+  ASSERT_TRUE(startup_res->is_error());
+  ASSERT_EQ(startup_res->error_value(), ZX_ERR_INVALID_ARGS);
 }
 
 }  // namespace
