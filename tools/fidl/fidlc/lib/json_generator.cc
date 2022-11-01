@@ -983,7 +983,7 @@ std::ostringstream JSONGenerator::Produce() {
       GenerateObjectMember("maybe_attributes", compilation_->library_attributes);
     }
 
-    std::vector<const std::string_view> active_experiments;
+    std::vector<std::string_view> active_experiments;
     experimental_flags_.ForEach(
         [&](const std::string_view name, ExperimentalFlags::Flag flag, bool enabled) {
           if (enabled) {
