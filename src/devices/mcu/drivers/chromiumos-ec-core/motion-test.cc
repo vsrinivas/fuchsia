@@ -165,7 +165,7 @@ class ChromiumosEcMotionTest : public ChromiumosEcTestBase {
         break;
 
       default:
-        ZX_PANIC("Unsupported command: %d\n", cmd->cmd);
+        ZX_PANIC("Unsupported command: %d", cmd->cmd);
     }
 
     completer.ReplySuccess(fuchsia_hardware_google_ec::wire::EcStatus::kSuccess, response);

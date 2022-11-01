@@ -696,7 +696,7 @@ AmlClock::AmlClock(zx_device_t* device, fdf::MmioBuffer hiu_mmio, fdf::MmioBuffe
       break;
     }
     default:
-      ZX_PANIC("aml-clk: Unsupported SOC DID %u\n", device_id);
+      ZX_PANIC("aml-clk: Unsupported SOC DID %u", device_id);
   }
 }
 

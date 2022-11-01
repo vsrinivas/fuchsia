@@ -242,7 +242,7 @@ fuchsia_tee::wire::Value Message::CreateOutputValueParameter(fidl::AnyArena& all
       direction = fuchsia_tee::wire::Direction::kInout;
       break;
     default:
-      ZX_PANIC("Invalid OP-TEE attribute specified\n");
+      ZX_PANIC("Invalid OP-TEE attribute specified");
   }
 
   const MessageParam::Value& optee_value = optee_param.payload.value;
@@ -275,7 +275,7 @@ zx_status_t Message::CreateOutputBufferParameter(fidl::AnyArena& allocator,
       direction = fuchsia_tee::wire::Direction::kInout;
       break;
     default:
-      ZX_PANIC("Invalid OP-TEE attribute specified\n");
+      ZX_PANIC("Invalid OP-TEE attribute specified");
   }
   out_buffer->set_direction(direction);
 

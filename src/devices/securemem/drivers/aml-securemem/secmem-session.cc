@@ -574,7 +574,7 @@ TEEC_Result SecmemSession::AdjustMemoryRange(uint32_t start, uint32_t length,
         // get back to a functional TEE.  We really can't be having range shortening or range
         // deletion failing; that just can't really work from the user's point of view even if we
         // could report the actual current range back to sysmem in this path.
-        ZX_PANIC("AdjustMemoryRange() failed - adjust_result: 0x%x\n", adjust_result);
+        ZX_PANIC("AdjustMemoryRange() failed - adjust_result: 0x%x", adjust_result);
       }
       return adjust_result;
     }

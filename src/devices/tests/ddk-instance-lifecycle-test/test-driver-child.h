@@ -34,11 +34,11 @@ class TestLifecycleDriverChild : public DeviceType {
 
   zx_status_t DdkOpen(zx_device_t** out, uint32_t flags);
   zx_status_t DdkClose(uint32_t flags) {
-    ZX_PANIC("DdkClose reached in device that only returns instances\n");
+    ZX_PANIC("DdkClose reached in device that only returns instances");
   }
 
   void DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn) {
-    ZX_PANIC("DdkMessage reached in device that only returns instances\n");
+    ZX_PANIC("DdkMessage reached in device that only returns instances");
   }
 
  private:
@@ -56,11 +56,11 @@ class TestLifecycleDriverChildInstance : public InstanceDeviceType {
  public:
   TestLifecycleDriverChildInstance(zx_device_t* parent, TestLifecycleDriverChild* parent_ctx)
       : InstanceDeviceType(parent), parent_ctx_(parent_ctx) {}
-  void DdkUnbind(ddk::UnbindTxn txn) { ZX_PANIC("DdkUnbind reached in instance device\n"); }
+  void DdkUnbind(ddk::UnbindTxn txn) { ZX_PANIC("DdkUnbind reached in instance device"); }
   void DdkRelease();
 
   zx_status_t DdkOpen(zx_device_t** out, uint32_t flags) {
-    ZX_PANIC("DdkOpen reached in instance device\n");
+    ZX_PANIC("DdkOpen reached in instance device");
   }
   zx_status_t DdkClose(uint32_t flags);
 

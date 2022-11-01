@@ -64,7 +64,7 @@ class MsiCapability : public Capability {
       case 32:
         return 0b101;
       default:
-        ZX_PANIC("Invalid mm_capable value = %#x\n", count);
+        ZX_PANIC("Invalid mm_capable value = %#x", count);
     }
   }
 

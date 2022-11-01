@@ -111,7 +111,7 @@ class AmlPdmDevice {
         return EE_AUDIO_TODDR_C_CTRL0;
     }
     // We should never get here, but if we do, make it hard to ignore
-    ZX_PANIC("Invalid toddr channel specified!\n");
+    ZX_PANIC("Invalid toddr channel specified!");
     return 0;
   }
 
