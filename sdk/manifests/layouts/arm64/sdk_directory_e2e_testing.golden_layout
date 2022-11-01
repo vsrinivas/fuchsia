@@ -88,6 +88,7 @@ meta/schemas/dart_library.json
 meta/schemas/data.json
 meta/schemas/documentation.json
 meta/schemas/emu_manifest.json
+meta/schemas/fhcp_tests.json
 meta/schemas/fidl_library.json
 meta/schemas/flash_manifest-835e8f26.json
 meta/schemas/hardware-f6f47515.json

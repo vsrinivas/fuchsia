@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/json/validate_json.gni")
 import("//build/python/python_host_test.gni")
 
 intermediate_metadata_path = "${target_gen_dir}/fhcp_intermediate_metadata.json"
@@ -49,6 +50,14 @@ action("fhcp-metadata-json") {
   ]
 }
 
+# Verify that the metadata complies with the specified schema.
+validate_json("fhcp-test-json-validate") {
+  testonly = true
+  data = fhcp_metadata_path
+  schema = "//build/sdk/meta/fhcp_tests.json"
+  public_deps = [ ":fhcp-metadata-json" ]
+}
+
 if (is_host) {
   python_host_test("generate-metadata-test") {
     main_source = "//src/devices/tests/fhcp/src/generate_metadata_json_test.py"
@@ -58,7 +67,10 @@ if (is_host) {
 
 group("fhcp") {
   testonly = true
-  deps = [ ":fhcp-metadata-json" ]
+  deps = [
+    ":fhcp-metadata-json",
+    ":fhcp-test-json-validate",
+  ]
 }
 
 group("device-tests") {
@@ -73,6 +85,7 @@ group("tests") {
   testonly = true
   deps = [
     ":device-tests",
+    ":fhcp-test-json-validate",
     ":generate-metadata-test($host_toolchain)",
   ]
 }

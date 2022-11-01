@@ -1,0 +1,444 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "description": "The manifest describing the properties of driver conformance tests.",
+    "id": "http://fuchsia.com/schemas/sdk/fhcp_tests.json",
+    "properties": {
+        "certification_type": {
+            "description": "The types of certifications under the FHCP program.",
+            "properties": {
+                "device_driver": {
+                    "$comment": "Properties like this are given open `{}` values to permit adding metadata in the future.",
+                    "description": "Signifies the certification of a device driver.",
+                    "type": "object"
+                },
+                "hardware_component": {
+                    "description": "Signifies the certification of a hardware component.",
+                    "type": "object"
+                },
+                "system": {
+                    "description": "Signifies the certification of a Fuchsia system.",
+                    "type": "object"
+                }
+            },
+            "required": [
+                "device_driver",
+                "hardware_component",
+                "system"
+            ],
+            "type": "object"
+        },
+        "device_category_types": {
+            "description": "The types that devices within a system can be.",
+            "properties": {
+                "audio": {
+                    "description": "An audio-related device.",
+                    "properties": {
+                        "all_in_one_codec": {
+                            "$comment": "Properties like this are given open `{}` values to permit adding metadata in the future.",
+                            "description": "An all-in-one codec device for audio.",
+                            "type": "object"
+                        },
+                        "dsp": {
+                            "description": "An audio Digital Signal Processing device.",
+                            "type": "object"
+                        },
+                        "headset": {
+                            "description": "An audio headset device.",
+                            "type": "object"
+                        },
+                        "mic": {
+                            "description": "A microphone device.",
+                            "type": "object"
+                        },
+                        "speaker": {
+                            "description": "A speaker device.",
+                            "type": "object"
+                        },
+                        "usb_audio": {
+                            "description": "An USB audio device.",
+                            "type": "object"
+                        }
+                    },
+                    "required": [
+                        "all_in_one_codec",
+                        "dsp",
+                        "headset",
+                        "mic",
+                        "speaker",
+                        "usb_audio"
+                    ],
+                    "type": "object"
+                },
+                "bluetooth": {
+                    "description": "A bluetooth device.",
+                    "type": "object"
+                },
+                "board": {
+                    "description": "A high-level device pertaining to the mainboard of the computer.",
+                    "properties": {
+                        "acpi": {
+                            "description": "An Advanced Configuration and Power Interface device.",
+                            "type": "object"
+                        },
+                        "gpio": {
+                            "description": "A General Purpose Input/Output device.",
+                            "type": "object"
+                        },
+                        "hda": {
+                            "description": "A High-Definition Audio device.",
+                            "type": "object"
+                        },
+                        "i2c": {
+                            "description": "An Inter-Integrated Circuit device.",
+                            "type": "object"
+                        },
+                        "pci": {
+                            "description": "A Peripheral Component Interconnect device.",
+                            "type": "object"
+                        },
+                        "spi": {
+                            "description": "A Serial Peripheral Interface device.",
+                            "type": "object"
+                        },
+                        "uart": {
+                            "description": "An Universal Asynchronous Receiver-Transmitter device.",
+                            "type": "object"
+                        }
+                    },
+                    "required": [
+                        "acpi",
+                        "gpio",
+                        "hda",
+                        "i2c",
+                        "pci",
+                        "spi",
+                        "uart"
+                    ],
+                    "type": "object"
+                },
+                "connectivity": {
+                    "description": "A network-related device.",
+                    "properties": {
+                        "ethernet": {
+                            "description": "An ethernet adapter.",
+                            "type": "object"
+                        },
+                        "wifi": {
+                            "description": "A WiFi adapter.",
+                            "type": "object"
+                        }
+                    },
+                    "required": [
+                        "ethernet",
+                        "wifi"
+                    ],
+                    "type": "object"
+                },
+                "display": {
+                    "description": "A display-related device.",
+                    "properties": {
+                        "dp": {
+                            "description": "A DisplayPort display.",
+                            "type": "object"
+                        },
+                        "hdmi": {
+                            "description": "A High-Definition Multimedia Interface display.",
+                            "type": "object"
+                        },
+                        "internal_display": {
+                            "description": "An internal/built-in display.",
+                            "type": "object"
+                        }
+                    },
+                    "required": [
+                        "dp",
+                        "hdmi",
+                        "internal_display"
+                    ],
+                    "type": "object"
+                },
+                "driver_framework": {
+                    "description": "A driver framework-related device.",
+                    "type": "object"
+                },
+                "graphics": {
+                    "description": "A graphics-related device.",
+                    "type": "object"
+                },
+                "imaging": {
+                    "description": "An imaging-related device.",
+                    "properties": {
+                        "camera": {
+                            "description": "A camera device.",
+                            "type": "object"
+                        }
+                    },
+                    "required": [
+                        "camera"
+                    ],
+                    "type": "object"
+                },
+                "input": {
+                    "description": "An input-related device.",
+                    "properties": {
+                        "keyboard": {
+                            "description": "A keyboard device.",
+                            "type": "object"
+                        },
+                        "mouse": {
+                            "description": "A mouse device.",
+                            "type": "object"
+                        },
+                        "touchpad": {
+                            "description": "A touchpad device.",
+                            "type": "object"
+                        },
+                        "touchscreen": {
+                            "description": "A touchscreen device.",
+                            "type": "object"
+                        }
+                    },
+                    "required": [
+                        "keyboard",
+                        "mouse",
+                        "touchpad",
+                        "touchscreen"
+                    ],
+                    "type": "object"
+                },
+                "light": {
+                    "description": "A light-emitting-related device.",
+                    "type": "object"
+                },
+                "misc": {
+                    "description": "A catch-all category for any device that hasn't been categorized.",
+                    "type": "object"
+                },
+                "sensor": {
+                    "description": "A sensor-related device.",
+                    "properties": {
+                        "accelerometer": {
+                            "description": "An accelerometer device.",
+                            "type": "object"
+                        },
+                        "activity_detection": {
+                            "description": "An activity-detection device.",
+                            "type": "object"
+                        },
+                        "temperature": {
+                            "description": "A temperature sensing device.",
+                            "type": "object"
+                        }
+                    },
+                    "required": [
+                        "accelerometer",
+                        "activity_detection",
+                        "temperature"
+                    ],
+                    "type": "object"
+                },
+                "storage": {
+                    "description": "A storage-related device.",
+                    "properties": {
+                        "nand": {
+                            "description": "A NAND flash device.",
+                            "type": "object"
+                        },
+                        "spi": {
+                            "description": "A Serial Peripheral Interface device.",
+                            "type": "object"
+                        },
+                        "ssd": {
+                            "description": "A solid-state-storage device.",
+                            "type": "object"
+                        }
+                    },
+                    "required": [
+                        "nand",
+                        "spi",
+                        "ssd"
+                    ],
+                    "type": "object"
+                },
+                "system": {
+                    "description": "A system-related device.",
+                    "properties": {
+                        "clock": {
+                            "description": "A time-keeping device.",
+                            "type": "object"
+                        },
+                        "power": {
+                            "description": "A power management device.",
+                            "type": "object"
+                        },
+                        "pwm": {
+                            "description": "A Pulse-Width Modulating device.",
+                            "type": "object"
+                        },
+                        "thermal": {
+                            "description": "A thermal device.",
+                            "type": "object"
+                        }
+                    },
+                    "required": [
+                        "clock",
+                        "power",
+                        "pwm",
+                        "thermal"
+                    ],
+                    "type": "object"
+                },
+                "test": {
+                    "description": "A test-related device.",
+                    "type": "object"
+                },
+                "usb": {
+                    "description": "A Universal Serial Bus-related device.",
+                    "type": "object"
+                }
+            },
+            "required": [
+                "audio",
+                "bluetooth",
+                "board",
+                "connectivity",
+                "display",
+                "driver_framework",
+                "graphics",
+                "imaging",
+                "input",
+                "light",
+                "misc",
+                "sensor",
+                "storage",
+                "system",
+                "test",
+                "usb"
+            ],
+            "type": "object"
+        },
+        "driver_test_types": {
+            "description": "The types that FHCP tests can be.",
+            "properties": {
+                "functional": {
+                    "$comment": "Properties like this are given open `{}` values to permit adding metadata in the future.",
+                    "description": "Tests against the functionality of a driver.",
+                    "type": "object"
+                },
+                "generic_driver_tests": {
+                    "description": "A generic driver test.",
+                    "type": "object"
+                },
+                "hardware": {
+                    "description": "Tests against a piece of hardware.",
+                    "type": "object"
+                },
+                "performance": {
+                    "description": "Tests the performance of a driver.",
+                    "type": "object"
+                },
+                "power": {
+                    "description": "Tests the power consumption characteristics.",
+                    "type": "object"
+                },
+                "security": {
+                    "description": "Tests the security of the driver.",
+                    "type": "object"
+                },
+                "spec_compliance": {
+                    "description": "Tests the driver's compliance with specifications.",
+                    "type": "object"
+                }
+            },
+            "required": [
+                "functional",
+                "generic_driver_tests",
+                "hardware",
+                "performance",
+                "power",
+                "security",
+                "spec_compliance"
+            ],
+            "type": "object"
+        },
+        "system_types": {
+            "description": "The types of systems that FHCP can test against.",
+            "properties": {
+                "smart_display": {
+                    "$comment": "Properties like this are given open `{}` values to permit adding metadata in the future.",
+                    "description": "A smart display system.",
+                    "type": "object"
+                },
+                "workstation": {
+                    "description": "A workstation system.",
+                    "type": "object"
+                }
+            },
+            "required": [
+                "smart_display",
+                "workstation"
+            ],
+            "type": "object"
+        },
+        "tests": {
+            "description": "FHCP tests.",
+            "items": {
+                "properties": {
+                    "device_categories": {
+                        "description": "Device category that the test tests against. Corresponds to the options listed in `device_category_types`.",
+                        "items": {
+                            "properties": {
+                                "category": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                },
+                                "subcategory": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "category",
+                                "subcategory"
+                            ],
+                            "type": "object"
+                        },
+                        "minItems": 1,
+                        "type": "array"
+                    },
+                    "is_automated": {
+                        "description": "Denotes whether this test can be run without interaction. True if no interaction is required.",
+                        "type": "boolean"
+                    },
+                    "test_types": {
+                        "description": "The type of this test. Corresponds to the options listed in `driver_test_types`.",
+                        "items": {
+                            "minLength": 1,
+                            "type": "string"
+                        },
+                        "minItems": 1,
+                        "type": "array"
+                    },
+                    "url": {
+                        "description": "The package URL for downloading this test.",
+                        "minLength": 1,
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "device_categories",
+                    "is_automated",
+                    "test_types",
+                    "url"
+                ],
+                "type": "object"
+            },
+            "type": "array"
+        }
+    },
+    "required": [
+        "device_category_types",
+        "driver_test_types",
+        "tests"
+    ],
+    "type": "object"
+}

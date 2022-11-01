@@ -29,6 +29,7 @@ schemas = [
             "dart_library.json",
             "data.json",
             "documentation.json",
+            "fhcp_tests.json",
             "fidl_library.json",
             "host_tool.json",
             "loadable_module.json",
