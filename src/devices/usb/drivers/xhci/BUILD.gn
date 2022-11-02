@@ -178,9 +178,6 @@ test("xhci-event-ring-unittest-bin") {
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
-
-  # TODO(fxbug.dev/54318): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test("xhci-transfer-ring-unittest-bin") {
@@ -196,9 +193,6 @@ test("xhci-transfer-ring-unittest-bin") {
     "xhci-transfer-ring.cc",
   ]
   deps = [ ":test-libs" ]
-
-  # TODO(fxbug.dev/54318): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 fuchsia_unittest_package("xhci-unittest") {
