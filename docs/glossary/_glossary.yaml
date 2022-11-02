@@ -193,7 +193,7 @@
   includes defining and delivering the data that a component can use to understand and adapt to the
   context in which it was launched."
   see_also: ["<a href=\"/docs/concepts/components/configuration.md\">Component Configuration</a>",
-  "<a href=\"/docs/development/components/configuration_mechanisms.md\">Configuration Mechanisms</a>"]
+    "<a href=\"/docs/development/components/configuration/mechanisms.md\">Configuration Mechanisms</a>"]
   related_guides: [""]
   area: ["System", "Component Framework"]
 
@@ -203,7 +203,7 @@
   full_description: "Data supplied to a component instance that it can use to understand and adapt
   to the context in which it was launched."
   see_also: ["<a href=\"/docs/concepts/components/configuration.md\">Component Configuration</a>",
-  "<a href=\"/docs/development/components/configuration_mechanisms.md\">Configuration Mechanisms</a>"]
+    "<a href=\"/docs/development/components/configuration_mechanisms.md\">Configuration Mechanisms</a>"]
   related_guides: [""]
   area: ["System", "Component Framework"]
 

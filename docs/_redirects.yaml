@@ -3,3 +3,6 @@
 # For example if you want to redirect `//docs/xyz/v1/api/qwerty.md`
 # to somewhere else you should create your redirects file
 # at `//docs/xyz/v1/api/_redirects.yaml`.
+redirects:
+ - from: empty
+   to: empty
