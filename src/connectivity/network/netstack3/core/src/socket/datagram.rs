@@ -28,7 +28,7 @@ use crate::{
     error::{LocalAddressError, RemoteAddressError, SocketError, ZonedAddressError},
     ip::{
         socket::{IpSock, IpSockCreationError, IpSocketHandler, SendOptions},
-        HopLimits, IpDeviceId, IpExt, TransportIpContext,
+        HopLimits, IpDeviceId, IpExt, MulticastMembershipHandler, TransportIpContext,
     },
     socket::{
         self,
@@ -178,18 +178,11 @@ impl<A: IpAddress, D: IpDeviceId> ConnAddr<A, D, NonZeroU16, NonZeroU16> {
     }
 }
 
-fn leave_all_joined_groups<
-    A: SocketMapAddrSpec,
-    S: DatagramSocketStateSpec,
-    C: DatagramStateNonSyncContext<A>,
-    SC: DatagramStateContext<A, C, S>,
->(
+fn leave_all_joined_groups<I: Ip, C, SC: MulticastMembershipHandler<I, C>>(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    memberships: MulticastMemberships<A::IpAddr, A::DeviceId>,
-) where
-    Bound<S>: Tagged<AddrVec<A>>,
-{
+    memberships: MulticastMemberships<I::Addr, SC::DeviceId>,
+) {
     for (addr, device) in memberships {
         sync_ctx.leave_multicast_group(ctx, &device, addr)
     }
@@ -219,36 +212,12 @@ where
 {
     /// The synchronized context passed to the callback provided to
     /// `with_sockets_mut`.
-    type IpSocketsCtx: TransportIpContext<A::IpVersion, C, DeviceId = A::DeviceId>;
+    type IpSocketsCtx: TransportIpContext<A::IpVersion, C, DeviceId = A::DeviceId>
+        + MulticastMembershipHandler<A::IpVersion, C>;
 
     /// The additional allocator passed to the callback provided to
     /// `with_sockets_mut`.
     type LocalIdAllocator: LocalIdentifierAllocator<A, C, S>;
-
-    /// Requests that the specified device join the given multicast group.
-    ///
-    /// If this method is called multiple times with the same device and
-    /// address, the device will remain joined to the multicast group until
-    /// [`UdpContext::leave_multicast_group`] has been called the same number of times.
-    fn join_multicast_group(
-        &mut self,
-        ctx: &mut C,
-        device: &A::DeviceId,
-        addr: MulticastAddr<A::IpAddr>,
-    );
-
-    /// Requests that the specified device leave the given multicast group.
-    ///
-    /// Each call to this method must correspond to an earlier call to
-    /// [`UdpContext::join_multicast_group`]. The device remains a member of the
-    /// multicast group so long as some call to `join_multicast_group` has been
-    /// made without a corresponding call to `leave_multicast_group`.
-    fn leave_multicast_group(
-        &mut self,
-        ctx: &mut C,
-        device: &A::DeviceId,
-        addr: MulticastAddr<A::IpAddr>,
-    );
 
     /// Calls the function with an immutable reference to the datagram sockets.
     fn with_sockets<O, F: FnOnce(&Self::IpSocketsCtx, &DatagramSockets<A, S>) -> O>(
@@ -351,14 +320,14 @@ pub(crate) fn remove_unbound<
 ) where
     Bound<S>: Tagged<AddrVec<A>>,
 {
-    let UnboundSocketState { device: _, sharing: _, ip_options } =
-        sync_ctx.with_sockets_mut(|_sync_ctx, state, _allocator| {
-            let DatagramSockets { unbound, bound: _ } = state;
-            unbound.remove(id.into()).expect("invalid UDP unbound ID")
-        });
-    let IpOptions { multicast_memberships, hop_limits: _ } = ip_options;
+    sync_ctx.with_sockets_mut(|sync_ctx, state, _allocator| {
+        let DatagramSockets { unbound, bound: _ } = state;
+        let UnboundSocketState { device: _, sharing: _, ip_options } =
+            unbound.remove(id.into()).expect("invalid UDP unbound ID");
 
-    leave_all_joined_groups(sync_ctx, ctx, multicast_memberships);
+        let IpOptions { multicast_memberships, hop_limits: _ } = ip_options;
+        leave_all_joined_groups(sync_ctx, ctx, multicast_memberships);
+    })
 }
 
 pub(crate) fn remove_listener<
@@ -376,17 +345,17 @@ where
     S::ListenerAddrState:
         SocketMapAddrStateSpec<Id = S::ListenerId, SharingState = S::ListenerSharingState>,
 {
-    let (ListenerState { ip_options }, addr) =
-        sync_ctx.with_sockets_mut(|_sync_ctx, state, _allocator| {
-            let DatagramSockets { bound, unbound: _ } = state;
-            let (state, _, addr): (_, S::ListenerSharingState, _) =
-                bound.listeners_mut().remove(&id).expect("Invalid UDP listener ID");
-            (state, addr)
-        });
-    let IpOptions { multicast_memberships, hop_limits: _ } = ip_options;
+    sync_ctx.with_sockets_mut(|sync_ctx, state, _allocator| {
+        let DatagramSockets { bound, unbound: _ } = state;
+        let (state, _, addr): (_, S::ListenerSharingState, _) =
+            bound.listeners_mut().remove(&id).expect("Invalid UDP listener ID");
 
-    leave_all_joined_groups(sync_ctx, ctx, multicast_memberships);
-    addr
+        let ListenerState { ip_options } = state;
+        let IpOptions { multicast_memberships, hop_limits: _ } = ip_options;
+
+        leave_all_joined_groups(sync_ctx, ctx, multicast_memberships);
+        addr
+    })
 }
 
 pub(crate) fn remove_conn<
@@ -404,17 +373,16 @@ where
     S::ConnAddrState: SocketMapAddrStateSpec<Id = S::ConnId, SharingState = S::ConnSharingState>,
     A::IpVersion: IpExt,
 {
-    let (ConnState { socket, clear_device_on_disconnect: _ }, addr) =
-        sync_ctx.with_sockets_mut(|_sync_ctx, state, _allocator| {
-            let DatagramSockets { bound, unbound: _ } = state;
-            let (state, _sharing, addr): (_, S::ConnSharingState, _) =
-                bound.conns_mut().remove(&id).expect("UDP connection not found");
-            (state, addr)
-        });
-    let IpOptions { multicast_memberships, hop_limits: _ } = socket.into_options();
+    sync_ctx.with_sockets_mut(|sync_ctx, state, _allocator| {
+        let DatagramSockets { bound, unbound: _ } = state;
+        let (state, _sharing, addr): (_, S::ConnSharingState, _) =
+            bound.conns_mut().remove(&id).expect("UDP connection not found");
+        let ConnState { socket, clear_device_on_disconnect: _ } = state;
 
-    leave_all_joined_groups(sync_ctx, ctx, multicast_memberships);
-    addr
+        let IpOptions { multicast_memberships, hop_limits: _ } = socket.into_options();
+        leave_all_joined_groups(sync_ctx, ctx, multicast_memberships);
+        addr
+    })
 }
 
 /// Returns the address and device that should be used for a socket.
@@ -1160,7 +1128,7 @@ where
 {
     let id = id.into();
 
-    let (change, interface) = sync_ctx.with_sockets_mut(|sync_ctx, state, _allocator| {
+    sync_ctx.with_sockets_mut(|sync_ctx, state, _allocator| {
         let DatagramSockets { bound, unbound } = state;
         let bound_device = match id.clone() {
             DatagramSocketId::Unbound(id) => {
@@ -1232,22 +1200,20 @@ where
         };
 
         let IpOptions { multicast_memberships, hop_limits: _ } = ip_options;
-        multicast_memberships
+        match multicast_memberships
             .apply_membership_change(multicast_group, &interface, want_membership)
-            .ok_or(SetMulticastMembershipError::NoMembershipChange)
-            .map(|change| (change, interface))
-    })?;
-
-    match change {
-        MulticastMembershipChange::Join => {
-            sync_ctx.join_multicast_group(ctx, &interface, multicast_group)
+            .ok_or(SetMulticastMembershipError::NoMembershipChange)?
+        {
+            MulticastMembershipChange::Join => {
+                sync_ctx.join_multicast_group(ctx, &interface, multicast_group)
+            }
+            MulticastMembershipChange::Leave => {
+                sync_ctx.leave_multicast_group(ctx, &interface, multicast_group)
+            }
         }
-        MulticastMembershipChange::Leave => {
-            sync_ctx.leave_multicast_group(ctx, &interface, multicast_group)
-        }
-    }
 
-    Ok(())
+        Ok(())
+    })
 }
 
 fn get_options_device<A: SocketMapAddrSpec, S: DatagramSocketSpec<A>>(
@@ -1527,24 +1493,6 @@ mod test {
     {
         type IpSocketsCtx = FakeIpSocketCtx<I, D>;
         type LocalIdAllocator = ();
-
-        fn join_multicast_group(
-            &mut self,
-            _ctx: &mut FakeNonSyncCtx,
-            _device: &<FakeAddrSpec<I, D> as SocketMapAddrSpec>::DeviceId,
-            _addr: MulticastAddr<<FakeAddrSpec<I, D> as SocketMapAddrSpec>::IpAddr>,
-        ) {
-            unimplemented!("not required for any existing tests")
-        }
-
-        fn leave_multicast_group(
-            &mut self,
-            _ctx: &mut FakeNonSyncCtx,
-            _device: &<FakeAddrSpec<I, D> as SocketMapAddrSpec>::DeviceId,
-            _addr: MulticastAddr<<FakeAddrSpec<I, D> as SocketMapAddrSpec>::IpAddr>,
-        ) {
-            unimplemented!("not required for any existing tests")
-        }
 
         fn with_sockets<
             O,

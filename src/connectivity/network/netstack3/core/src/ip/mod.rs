@@ -29,7 +29,7 @@ use derivative::Derivative;
 use log::{debug, trace};
 use net_types::{
     ip::{Ip, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr, Subnet},
-    SpecifiedAddr, UnicastAddr, Witness,
+    MulticastAddr, SpecifiedAddr, UnicastAddr, Witness,
 };
 use nonzero_ext::nonzero;
 use packet::{Buf, BufferMut, ParseMetadata, Serializer};
@@ -241,6 +241,36 @@ pub(crate) trait TransportIpContext<I: IpExt, C>:
     /// If `device` is not `None` and exists, its hop limits will be returned.
     /// Otherwise the system defaults are returned.
     fn get_default_hop_limits(&self, device: Option<&Self::DeviceId>) -> HopLimits;
+}
+
+/// Abstraction over the ability to join and leave multicast groups.
+pub(crate) trait MulticastMembershipHandler<I: Ip, C>: IpDeviceIdContext<I> {
+    /// Requests that the specified device join the given multicast group.
+    ///
+    /// If this method is called multiple times with the same device and
+    /// address, the device will remain joined to the multicast group until
+    /// [`MulticastTransportIpContext::leave_multicast_group`] has been called
+    /// the same number of times.
+    fn join_multicast_group(
+        &mut self,
+        ctx: &mut C,
+        device: &Self::DeviceId,
+        addr: MulticastAddr<I::Addr>,
+    );
+
+    /// Requests that the specified device leave the given multicast group.
+    ///
+    /// Each call to this method must correspond to an earlier call to
+    /// [`MulticastTransportIpContext::join_multicast_group`]. The device
+    /// remains a member of the multicast group so long as some call to
+    /// `join_multicast_group` has been made without a corresponding call to
+    /// `leave_multicast_group`.
+    fn leave_multicast_group(
+        &mut self,
+        ctx: &mut C,
+        device: &Self::DeviceId,
+        addr: MulticastAddr<I::Addr>,
+    );
 }
 
 /// The execution context provided by the IP layer to transport layer protocols
@@ -2504,7 +2534,11 @@ pub(crate) mod testutil {
 
     use net_types::{ip::IpAddr, MulticastAddr};
 
-    use crate::{context::testutil::FakeInstant, testutil::FakeSyncCtx};
+    use crate::{
+        context::testutil::FakeInstant,
+        ip::{device::state::IpDeviceStateIpExt, socket::testutil::FakeIpSocketCtx},
+        testutil::FakeSyncCtx,
+    };
 
     impl<I: Ip, S, Meta, D: IpDeviceId + 'static> IpDeviceIdContext<I>
         for crate::context::testutil::FakeSyncCtx<S, Meta, D>
@@ -2606,6 +2640,34 @@ pub(crate) mod testutil {
                     ) => unreachable!(),
                 }
             }
+        }
+    }
+
+    impl<
+            I: Ip + IpDeviceStateIpExt,
+            C: RngContext + InstantContext<Instant = FakeInstant>,
+            D: IpDeviceId + 'static,
+            State: AsMut<FakeIpSocketCtx<I, D>>,
+            Meta,
+        > MulticastMembershipHandler<I, C>
+        for crate::context::testutil::FakeSyncCtx<State, Meta, D>
+    {
+        fn join_multicast_group(
+            &mut self,
+            ctx: &mut C,
+            device: &Self::DeviceId,
+            addr: MulticastAddr<<I as Ip>::Addr>,
+        ) {
+            self.get_mut().as_mut().join_multicast_group(ctx, device, addr)
+        }
+
+        fn leave_multicast_group(
+            &mut self,
+            ctx: &mut C,
+            device: &Self::DeviceId,
+            addr: MulticastAddr<<I as Ip>::Addr>,
+        ) {
+            self.get_mut().as_mut().leave_multicast_group(ctx, device, addr)
         }
     }
 }

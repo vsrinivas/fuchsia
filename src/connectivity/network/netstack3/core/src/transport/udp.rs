@@ -48,7 +48,7 @@ use crate::{
             IpSockSendError, IpSocketHandler as _,
         },
         BufferIpTransportContext, BufferTransportIpContext, IpDeviceId, IpDeviceIdContext, IpExt,
-        IpTransportContext, TransportIpContext, TransportReceiveError,
+        IpTransportContext, MulticastMembershipHandler, TransportIpContext, TransportReceiveError,
     },
     socket::{
         self,
@@ -829,32 +829,8 @@ pub(crate) trait UdpStateContext<I: IpExt, C: UdpStateNonSyncContext<I>>:
 {
     /// The synchronized context passed to the callback provided to
     /// `with_sockets_mut`.
-    type IpSocketsCtx: TransportIpContext<I, C, DeviceId = Self::DeviceId>;
-
-    /// Requests that the specified device join the given multicast group.
-    ///
-    /// If this method is called multiple times with the same device and
-    /// address, the device will remain joined to the multicast group until
-    /// [`UdpContext::leave_multicast_group`] has been called the same number of times.
-    fn join_multicast_group(
-        &mut self,
-        ctx: &mut C,
-        device: &Self::DeviceId,
-        addr: MulticastAddr<I::Addr>,
-    );
-
-    /// Requests that the specified device leave the given multicast group.
-    ///
-    /// Each call to this method must correspond to an earlier call to
-    /// [`UdpContext::join_multicast_group`]. The device remains a member of the
-    /// multicast group so long as some call to `join_multicast_group` has been
-    /// made without a corresponding call to `leave_multicast_group`.
-    fn leave_multicast_group(
-        &mut self,
-        ctx: &mut C,
-        device: &Self::DeviceId,
-        addr: MulticastAddr<I::Addr>,
-    );
+    type IpSocketsCtx: TransportIpContext<I, C, DeviceId = Self::DeviceId>
+        + MulticastMembershipHandler<I, C>;
 
     /// Calls the function with an immutable reference to UDP sockets.
     fn with_sockets<O, F: FnOnce(&Self::IpSocketsCtx, &UdpSockets<I, Self::DeviceId>) -> O>(
@@ -1755,24 +1731,6 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>
     type IpSocketsCtx = SC::IpSocketsCtx;
     type LocalIdAllocator = Option<PortAlloc<UdpBoundSocketMap<I, SC::DeviceId>>>;
 
-    fn join_multicast_group(
-        &mut self,
-        ctx: &mut C,
-        device: &SC::DeviceId,
-        addr: MulticastAddr<I::Addr>,
-    ) {
-        UdpStateContext::join_multicast_group(self, ctx, device, addr)
-    }
-
-    fn leave_multicast_group(
-        &mut self,
-        ctx: &mut C,
-        device: &SC::DeviceId,
-        addr: MulticastAddr<I::Addr>,
-    ) {
-        UdpStateContext::leave_multicast_group(self, ctx, device, addr)
-    }
-
     fn with_sockets<
         O,
         F: FnOnce(
@@ -2428,7 +2386,7 @@ pub fn get_udp_listener_info<I: IpExt, C: NonSyncContext>(
 mod tests {
     use alloc::{
         borrow::ToOwned,
-        collections::{hash_map::Entry as HashMapEntry, HashMap, HashSet},
+        collections::{HashMap, HashSet},
         vec,
         vec::Vec,
     };
@@ -2499,7 +2457,6 @@ mod tests {
     #[derivative(Default(bound = ""))]
     struct FakeUdpState<I: TestIpExt, D: IpDeviceId> {
         sockets: UdpSockets<I, D>,
-        ip_options: HashMap<(D, MulticastAddr<I::Addr>), NonZeroUsize>,
     }
 
     impl<I: TestIpExt> Default for FakeUdpSyncCtx<I, FakeDeviceId> {
@@ -2582,53 +2539,12 @@ mod tests {
     {
         type IpSocketsCtx = FakeBufferSyncCtx<I, D>;
 
-        fn join_multicast_group(
-            &mut self,
-            _ctx: &mut FakeUdpNonSyncCtx<I>,
-            device: &Self::DeviceId,
-            addr: MulticastAddr<<I>::Addr>,
-        ) {
-            let Self { outer, inner: _ } = self;
-            match outer.ip_options.entry((device.clone(), addr)) {
-                HashMapEntry::Vacant(v) => {
-                    let _: &mut NonZeroUsize = v.insert(nonzero!(1usize));
-                }
-                HashMapEntry::Occupied(mut o) => {
-                    let count = o.get_mut();
-                    *count = NonZeroUsize::new(count.get() + 1).unwrap();
-                }
-            }
-        }
-
-        fn leave_multicast_group(
-            &mut self,
-            _ctx: &mut FakeUdpNonSyncCtx<I>,
-            device: &Self::DeviceId,
-            addr: MulticastAddr<<I>::Addr>,
-        ) {
-            let Self { outer, inner: _ } = self;
-            match outer.ip_options.entry((device.clone(), addr)) {
-                HashMapEntry::Vacant(_) => {
-                    panic!("not a member of group {:?} on {:?}", addr, device)
-                }
-                HashMapEntry::Occupied(mut o) => {
-                    let count = o.get_mut();
-                    match NonZeroUsize::new(count.get() - 1) {
-                        Some(c) => *count = c,
-                        None => {
-                            let _: NonZeroUsize = o.remove();
-                        }
-                    }
-                }
-            }
-        }
-
         fn with_sockets<O, F: FnOnce(&Self::IpSocketsCtx, &UdpSockets<I, Self::DeviceId>) -> O>(
             &self,
             cb: F,
         ) -> O {
             let Self { outer, inner } = self;
-            let FakeUdpState { sockets, ip_options: _ } = outer;
+            let FakeUdpState { sockets } = outer;
             cb(inner, sockets)
         }
 
@@ -2640,7 +2556,7 @@ mod tests {
             cb: F,
         ) -> O {
             let Self { outer, inner } = self;
-            let FakeUdpState { sockets, ip_options: _ } = outer;
+            let FakeUdpState { sockets } = outer;
             cb(inner, sockets)
         }
 
@@ -3147,7 +3063,7 @@ mod tests {
             conn.into()
         ));
         assert_eq!(
-            sync_ctx.outer.ip_options,
+            sync_ctx.inner.get_ref().as_ref().multicast_memberships(),
             HashMap::from([((FakeDeviceId, multicast_addr), nonzero!(1usize))])
         );
         assert_eq!(
@@ -3226,7 +3142,7 @@ mod tests {
             listener.into()
         ));
         assert_eq!(
-            sync_ctx.outer.ip_options,
+            sync_ctx.inner.get_ref().as_ref().multicast_memberships(),
             HashMap::from([((FakeDeviceId, multicast_addr), nonzero!(1usize))])
         );
         assert_eq!(
@@ -4586,7 +4502,7 @@ where {
             true,
         );
 
-        let memberships_snapshot = sync_ctx.outer.ip_options.clone();
+        let memberships_snapshot = sync_ctx.inner.get_ref().as_ref().multicast_memberships();
         if let Ok(()) = result {
             UdpSocketHandler::set_udp_multicast_membership(
                 &mut sync_ctx,
@@ -4598,7 +4514,7 @@ where {
             )
             .expect("leaving group failed");
         }
-        assert_eq!(sync_ctx.outer.ip_options, HashMap::default());
+        assert_eq!(sync_ctx.inner.get_ref().as_ref().multicast_memberships(), HashMap::default());
 
         (result, memberships_snapshot)
     }
@@ -4746,12 +4662,12 @@ where {
         .expect("join group failed");
 
         assert_eq!(
-            sync_ctx.outer.ip_options,
+            sync_ctx.inner.get_ref().as_ref().multicast_memberships(),
             HashMap::from([((MultipleDevicesId::A, group), nonzero!(1usize))])
         );
 
         UdpSocketHandler::remove_udp_unbound(&mut sync_ctx, &mut non_sync_ctx, unbound);
-        assert_eq!(sync_ctx.outer.ip_options, HashMap::default());
+        assert_eq!(sync_ctx.inner.get_ref().as_ref().multicast_memberships(), HashMap::default());
     }
 
     #[ip_test]
@@ -4793,7 +4709,7 @@ where {
         .expect("join group failed");
 
         assert_eq!(
-            sync_ctx.outer.ip_options,
+            sync_ctx.inner.get_ref().as_ref().multicast_memberships(),
             HashMap::from([
                 ((MultipleDevicesId::A, first_group), nonzero!(1usize)),
                 ((MultipleDevicesId::A, second_group), nonzero!(1usize))
@@ -4802,7 +4718,7 @@ where {
 
         let _: UdpListenerInfo<_, _> =
             UdpSocketHandler::remove_udp_listener(&mut sync_ctx, &mut non_sync_ctx, list);
-        assert_eq!(sync_ctx.outer.ip_options, HashMap::default());
+        assert_eq!(sync_ctx.inner.get_ref().as_ref().multicast_memberships(), HashMap::default());
     }
 
     #[ip_test]
@@ -4844,7 +4760,7 @@ where {
         .expect("join group failed");
 
         assert_eq!(
-            sync_ctx.outer.ip_options,
+            sync_ctx.inner.get_ref().as_ref().multicast_memberships(),
             HashMap::from([
                 ((MultipleDevicesId::A, first_group), nonzero!(1usize)),
                 ((MultipleDevicesId::A, second_group), nonzero!(1usize))
@@ -4853,7 +4769,7 @@ where {
 
         let _: UdpConnInfo<_, _> =
             UdpSocketHandler::remove_udp_conn(&mut sync_ctx, &mut non_sync_ctx, conn);
-        assert_eq!(sync_ctx.outer.ip_options, HashMap::default());
+        assert_eq!(sync_ctx.inner.get_ref().as_ref().multicast_memberships(), HashMap::default());
     }
 
     #[ip_test]

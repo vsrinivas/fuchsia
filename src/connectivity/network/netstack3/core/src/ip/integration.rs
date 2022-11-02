@@ -5,8 +5,8 @@
 //! The integrations for protocols built on top of IP.
 
 use net_types::{
-    ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
-    SpecifiedAddr,
+    ip::{Ip, IpInvariant, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
+    MulticastAddr, SpecifiedAddr,
 };
 use packet::{BufferMut, Serializer};
 
@@ -19,8 +19,9 @@ use crate::{
         send_ipv4_packet_from_device, send_ipv6_packet_from_device,
         socket::{BufferIpSocketContext, IpSocketContext, IpSocketNonSyncContext},
         IpDeviceIdContext, IpLayerIpExt, IpLayerNonSyncContext, IpPacketFragmentCache,
-        IpStateContext, SendIpPacketMeta,
+        IpStateContext, MulticastMembershipHandler, SendIpPacketMeta,
     },
+    NonSyncContext, SyncCtx,
 };
 
 impl<
@@ -93,5 +94,41 @@ impl<
         body: S,
     ) -> Result<(), S> {
         send_ipv6_packet_from_device(self, ctx, meta.into(), body)
+    }
+}
+
+impl<I: Ip, C: NonSyncContext> MulticastMembershipHandler<I, C> for &'_ SyncCtx<C> {
+    fn join_multicast_group(
+        &mut self,
+        ctx: &mut C,
+        device: &Self::DeviceId,
+        addr: MulticastAddr<I::Addr>,
+    ) {
+        I::map_ip(
+            (IpInvariant((self, ctx, device)), addr),
+            |(IpInvariant((sync_ctx, ctx, device)), addr)| {
+                crate::ip::device::join_ip_multicast::<Ipv4, _, _>(sync_ctx, ctx, device, addr)
+            },
+            |(IpInvariant((sync_ctx, ctx, device)), addr)| {
+                crate::ip::device::join_ip_multicast::<Ipv6, _, _>(sync_ctx, ctx, device, addr)
+            },
+        )
+    }
+
+    fn leave_multicast_group(
+        &mut self,
+        ctx: &mut C,
+        device: &Self::DeviceId,
+        addr: MulticastAddr<I::Addr>,
+    ) {
+        I::map_ip(
+            (IpInvariant((self, ctx, device)), addr),
+            |(IpInvariant((sync_ctx, ctx, device)), addr)| {
+                crate::ip::device::leave_ip_multicast::<Ipv4, _, _>(sync_ctx, ctx, device, addr)
+            },
+            |(IpInvariant((sync_ctx, ctx, device)), addr)| {
+                crate::ip::device::leave_ip_multicast::<Ipv6, _, _>(sync_ctx, ctx, device, addr)
+            },
+        )
     }
 }

@@ -770,25 +770,26 @@ pub(super) mod ipv6_source_address_selection {
 #[cfg(test)]
 pub(crate) mod testutil {
     use alloc::{collections::HashMap, vec::Vec};
-    use core::fmt::Debug;
+    use core::{fmt::Debug, num::NonZeroUsize};
 
     use derivative::Derivative;
     use net_types::{
         ip::{AddrSubnet, GenericOverIp, IpAddress, Subnet},
-        Witness,
+        MulticastAddr, Witness,
     };
 
     use super::*;
     use crate::{
         context::{
             testutil::{FakeCounterCtx, FakeInstant, FakeInstantCtx, FakeNonSyncCtx, FakeSyncCtx},
-            FrameContext,
+            FrameContext, RngContext,
         },
         ip::{
             device::state::{AddrConfig, AddressState, AssignedAddress as _, IpDeviceState},
             forwarding::ForwardingTable,
             testutil::FakeDeviceId,
-            HopLimits, IpDeviceId, SendIpPacketMeta, TransportIpContext, DEFAULT_HOP_LIMITS,
+            HopLimits, IpDeviceId, MulticastMembershipHandler, SendIpPacketMeta,
+            TransportIpContext, DEFAULT_HOP_LIMITS,
         },
     };
 
@@ -977,6 +978,52 @@ pub(crate) mod testutil {
         pub(crate) fn get_device_state(&self, device: &D) -> &IpDeviceState<FakeInstant, I> {
             let Self { device_state, table: _ } = self;
             device_state.get(device).unwrap_or_else(|| panic!("no device {}", device))
+        }
+
+        pub(crate) fn multicast_memberships(
+            &self,
+        ) -> HashMap<(D, MulticastAddr<I::Addr>), NonZeroUsize> {
+            let Self { device_state, table: _ } = self;
+            device_state
+                .iter()
+                .flat_map(|(device, device_state)| {
+                    device_state
+                        .multicast_groups
+                        .iter_counts()
+                        .map(|(addr, count)| ((device.clone(), *addr), count))
+                })
+                .collect()
+        }
+    }
+
+    impl<
+            I: IpDeviceStateIpExt,
+            D: IpDeviceId + 'static,
+            C: RngContext + InstantContext<Instant = FakeInstant>,
+        > MulticastMembershipHandler<I, C> for FakeIpSocketCtx<I, D>
+    {
+        fn join_multicast_group(
+            &mut self,
+            ctx: &mut C,
+            device: &Self::DeviceId,
+            addr: MulticastAddr<<I as Ip>::Addr>,
+        ) {
+            let Self { device_state, table: _ } = self;
+            let state =
+                device_state.get_mut(device).unwrap_or_else(|| panic!("no device {}", device));
+            state.multicast_groups.join_multicast_group(ctx, addr)
+        }
+
+        fn leave_multicast_group(
+            &mut self,
+            _ctx: &mut C,
+            device: &Self::DeviceId,
+            addr: MulticastAddr<<I as Ip>::Addr>,
+        ) {
+            let Self { device_state, table: _ } = self;
+            let state =
+                device_state.get_mut(device).unwrap_or_else(|| panic!("no device {}", device));
+            state.multicast_groups.leave_multicast_group(addr)
         }
     }
 

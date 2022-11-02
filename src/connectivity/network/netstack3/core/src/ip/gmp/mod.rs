@@ -38,6 +38,8 @@ pub(crate) mod igmp;
 pub(crate) mod mld;
 
 use alloc::vec::Vec;
+#[cfg(test)]
+use core::num::NonZeroUsize;
 use core::{convert::TryFrom, fmt::Debug, time::Duration};
 
 use crate::{
@@ -269,6 +271,13 @@ impl<A: IpAddress, T> MulticastGroupSet<A, T> {
 
     fn get_mut(&mut self, group: &MulticastAddr<A>) -> Option<&mut T> {
         self.inner.get_mut(group)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn iter_counts<'a>(
+        &'a self,
+    ) -> impl 'a + Iterator<Item = (&'a MulticastAddr<A>, NonZeroUsize)> {
+        self.inner.iter_with_counts().map(|(addr, _state, count)| (addr, count))
     }
 
     fn iter_mut<'a>(&'a mut self) -> impl 'a + Iterator<Item = (&'a MulticastAddr<A>, &'a mut T)> {
@@ -1195,6 +1204,72 @@ where
                 sync_ctx.send_message(ctx, device, group_addr, GmpMessageType::Leave);
             }
         })
+}
+#[cfg(test)]
+mod testutil {
+    use net_types::{
+        ip::{GenericOverIp, Ip, IpAddress, IpInvariant},
+        MulticastAddr,
+    };
+
+    use crate::{
+        context::{testutil::FakeInstant, InstantContext, RngContext},
+        data_structures::ref_counted_hash_map::{InsertResult, RemoveResult},
+        ip::{
+            device::state::IpDeviceStateIpExt,
+            gmp::{GmpStateMachine, MulticastGroupSet, ProtocolSpecific},
+        },
+    };
+
+    #[derive(GenericOverIp)]
+    struct GroupWrapper<'a, I: Ip + IpDeviceStateIpExt>(
+        &'a mut MulticastGroupSet<I::Addr, I::GmpState<FakeInstant>>,
+    );
+
+    impl<A: IpAddress> MulticastGroupSet<A, <A::Version as IpDeviceStateIpExt>::GmpState<FakeInstant>>
+    where
+        A::Version: IpDeviceStateIpExt,
+    {
+        pub(crate) fn join_multicast_group<
+            C: RngContext + InstantContext<Instant = FakeInstant>,
+        >(
+            &mut self,
+            ctx: &mut C,
+            addr: MulticastAddr<A>,
+        ) {
+            fn new_state_machine<C: RngContext + InstantContext, P: Default + ProtocolSpecific>(
+                ctx: &mut C,
+            ) -> GmpStateMachine<C::Instant, P> {
+                let now = ctx.now();
+                let (machine, _actions) = GmpStateMachine::join_group(ctx.rng_mut(), now, false);
+                machine
+            }
+
+            <A::Version as Ip>::map_ip(
+                (GroupWrapper(self), addr, IpInvariant(ctx)),
+                |(GroupWrapper(MulticastGroupSet { inner }), addr, IpInvariant(ctx))| {
+                    let _: InsertResult<_> =
+                        inner.insert_with(addr, || (new_state_machine(ctx).into(), ()));
+                },
+                |(GroupWrapper(MulticastGroupSet { inner }), addr, IpInvariant(ctx))| {
+                    let _: InsertResult<_> =
+                        inner.insert_with(addr, || (new_state_machine(ctx).into(), ()));
+                },
+            )
+        }
+
+        pub(crate) fn leave_multicast_group(&mut self, addr: MulticastAddr<A>) {
+            <A::Version as Ip>::map_ip(
+                (GroupWrapper(self), addr),
+                |(GroupWrapper(MulticastGroupSet { inner }), addr)| {
+                    let _: RemoveResult<_> = inner.remove(addr);
+                },
+                |(GroupWrapper(MulticastGroupSet { inner }), addr)| {
+                    let _: RemoveResult<_> = inner.remove(addr);
+                },
+            )
+        }
+    }
 }
 
 #[cfg(test)]
