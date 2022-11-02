@@ -4,7 +4,6 @@
 
 config("config") {
   cflags = [ "-fPIC" ]
-  ldflags = [ "-nolibc" ]
 }
 
 executable("default_init") {
@@ -18,4 +17,6 @@ executable("default_init") {
     "//build/config/fuchsia:static-pie-config",
     ":config",
   ]
+
+  configs -= [ "//build/config/linux:implicit-host-libs" ]
 }

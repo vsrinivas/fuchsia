@@ -87,11 +87,15 @@ config("clang_defaults") {
     # Use libc++ as the C++ standard library.
     "-stdlib=libc++",
 
+    "--start-no-unused-arguments",
+
     # Use libunwind as the unwinder.
     "-unwindlib=libunwind",
 
     # Use compiler-rt as the compiler runtime.
     "-rtlib=compiler-rt",
+
+    "--end-no-unused-arguments",
 
     # Use lld as the linker.
     "-fuse-ld=lld",
