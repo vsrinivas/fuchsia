@@ -97,6 +97,9 @@ template("assembly_input_bundle_package") {
       # included anywhere, it's dependencies don't end up getting gathered
       # in metadata walks.
       distribution_entries_barrier = []
+      package_barrier = []
+      assembly_package_barrier = []
+      driver_package_barrier = []
       system_image_package_barrier = []
       system_image_extra_package_manifest_barrier = []
       test_component_manifest_barrier = []
@@ -506,9 +509,11 @@ template("assembly_input_bundle") {
       # We insert these barriers to prevent the dependencies of the input bundle
       # from leaking into images "higher up" in the dependency chain.
       package_barrier = []
+      assembly_package_barrier = []
       config_package_barrier = []
       distribution_entries_barrier = []
       driver_package_component_files_barrier = []
+      system_image_package_barrier = []
     }
   }
 
