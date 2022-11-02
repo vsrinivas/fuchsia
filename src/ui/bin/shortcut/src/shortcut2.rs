@@ -23,7 +23,7 @@ use std::{
     collections::{BTreeMap, BTreeSet},
     ops::Deref,
 };
-use tracing::{debug, error, warn};
+use tracing::*;
 
 /// The shortcut identifier for reporting to the consumers.
 #[derive(Debug, Clone, PartialEq)]
@@ -287,7 +287,9 @@ impl Shortcut2Impl {
             &event.lock_state,
             &event.modifiers,
         ));
+        debug!("event: {:?}, key_meaning: {:?}", &event, &key_meaning);
         self.keys.borrow_mut().update(key_meaning, key_event_type);
+        debug!("keys: {:?}", &self.keys.borrow());
 
         // Only ever activate a shortcut on a key press. This avoids spurious
         // shortcut activation of Ctrl+A, if Ctrl+A+B is actuated, and B is then
@@ -296,6 +298,8 @@ impl Shortcut2Impl {
             let shortcut_session_ids: Vec<ShortcutSessionIdPair> = {
                 // Lock.
                 let inner = self.inner.lock().await;
+                debug!("shortcut_map: {:?}", &inner.shortcut_map);
+                debug!("focus_chain: {:?}", &inner.focus_chain_view_ids);
                 if let Some(id_map) = inner.shortcut_map.get(&self.keys.borrow()) {
                     inner
                         .focus_chain_view_ids
@@ -308,6 +312,7 @@ impl Shortcut2Impl {
                     vec![]
                 }
             };
+            debug!("found session ids: {:?}", &shortcut_session_ids);
             // Now go through the candidate sessions and try notifying them.
             // Valid ViewRefs should get notified.
             for ShortcutSessionIdPair { shortcut_id, session_id } in
