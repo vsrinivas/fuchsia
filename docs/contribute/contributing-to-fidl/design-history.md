@@ -55,6 +55,7 @@ primary theme, even if it touches on multiple themes.
 * [RFC-0054: Parameter attributes][rfc-0054]
 * [RFC-0052: Type aliasing and new types][rfc-0052]
 * [RFC-0137: Discard unknown data in FIDL][rfc-0137]
+* [RFC-0160: Remove support for FIDL struct defaults][rfc-0160]
 
 ### Syntax
 
@@ -74,6 +75,12 @@ primary theme, even if it touches on multiple themes.
 * [RFC-0025: Bit flags][rfc-0025]
 * (Rejected) [RFC-0031: Typed epitaphs][rfc-0031]
 * [RFC-0057: Default no handles][rfc-0057]
+* [RFC-0196: FIDL large messages][rfc-0196]
+
+### Domain
+
+* [RFC-0120: Standalone use of the FIDL wire format][rfc-0120]
+* [RFC-0190: FIDL support for syscalls][rfc-0190]
 
 ### Performance
 
@@ -97,7 +104,6 @@ primary theme, even if it touches on multiple themes.
 
 * [RFC-0076: FIDL API summaries][rfc-0076]
 * [RFC-0097: FIDL Toolchain][rfc-0097]
-* [RFC-0120: Standalone use of the FIDL wire format][rfc-0120]
 
 ### Documentation
 
@@ -116,7 +122,6 @@ the FIDL language. It only includes current features, not obsolete ones.
 
 | Feature                  | RFC        | Note
 | ------------------------ | -----------| ------------------------------------------
-| struct defaults          | [RFC-0022] | Default values for struct members
 | `table`                  | [RFC-0047] | Forward and backward compatible data type
 | `///`                    | [RFC-0055] | Documentation comments
 | `struct Empty {};`       | [RFC-0056] | Empty structs
@@ -156,13 +161,12 @@ _Legend:_
 | Amended                    | Accepted, still mostly accurate, but amended by a later RFC
 | Superseded                 | Accepted but no longer accurate, superseded by a later RFC
 | Rejected                   | Formally rejected
-| Rejected; Superseded       | Formally rejected, then superseded by a later RFC
 
 | RFC        | Title                          | Status
 | ---------- | ------------------------------ | --------------------------------
 | [RFC-0018] | FTP process: A modest proposal | Superseded by [RFC-0017]
 | [RFC-0019] | Type aliases with using | Superseded by [RFC-0052]
-| [RFC-0022] | Default values for struct members | Partially implemented: only in HLCPP, Dart <!-- TDOO(fxbug.dev/93470): Change to "Superseded" when struct defaults are removed. -->
+| [RFC-0022] | Default values for struct members | Superseded by [RFC-0160]
 | [RFC-0051] | Safer structs for C++ | Rejected
 | [RFC-0062] | Method impossible | Rejected
 | [RFC-0053] | Epitaphs | Implemented <!-- TODO(fxbug.dev/93457): Change to "Superseded" when we have terminal events. -->
@@ -215,11 +219,11 @@ _Legend:_
 | &ndash;    | Restrict non-numeric floating point values | Unpublished
 | &ndash;    | Constant expressions | Unpublished
 | [RFC-0057] | Default no handles | Implemented
-| [RFC-0050] | Syntax revamp | Amended by [RFC-0086], [RFC-0087], [RFC-0088]
+| [RFC-0050] | Syntax revamp | Amended by [RFC-0086], [RFC-0087]
 | &ndash;    | FIDL text format | Unpublished
 | [RFC-0059] | Reserved bits in vector, string, and array count fields | Implemented; reserved bits no longer used by LLCPP
 | [RFC-0017] | The FTP Process is dead, long live the RFC Process! | Implemented
-| &ndash;    | FIDL Large message support | [Withdrawn][large-message-cl]
+| &ndash;    | FIDL Large message support | [Withdrawn][large-message-cl]; Superseded by [RFC-0196]
 | [RFC-0076] | FIDL API summaries | Implemented
 | [RFC-0083] | FIDL versioning | [Implementation in progress](https://fxbug.dev/67858)
 | [RFC-0086] | Updates to RFC-0050: FIDL attributes syntax | Implemented
@@ -235,7 +239,12 @@ _Legend:_
 | [RFC-0137] | Discard unknown data in FIDL | [Implementation in progress](https://fxbug.dev/85383)
 | [RFC-0138] | Handling unknown interactions | [Implementation in progress](https://fxbug.dev/88366)
 | [RFC-0149] | FIDL encode validation not mandatory | Implemented
-| &ndash;    | Remove support for FIDL struct defaults | [In review](https://fuchsia-review.googlesource.com/c/fuchsia/+/623161)
+| [RFC-0160] | Remove support for FIDL struct defaults | Implemented
+| [RFC-0190] | FIDL support for syscalls | [Implementation in progress](https://fxbug.dev/110021)
+| [RFC-0196] | FIDL large messages | [Implementation in progress](https://fxbug.dev/100478)
+| &ndash;    | A JSON representation for FIDL | [In review](https://fuchsia-review.googlesource.com/c/fuchsia/+/688226)
+| &ndash;    | FIDL complex constants | [In review](https://fuchsia-review.googlesource.com/c/fuchsia/+/690449)
+| &ndash;    | FIDL language support plans | [In review](https://fuchsia-review.googlesource.com/c/fuchsia/+/705622)
 | &ndash;    | Terminal events | [In review](https://fuchsia-review.googlesource.com/c/fuchsia/+/632266/)
 
 <!-- link labels -->
@@ -298,6 +307,7 @@ _Legend:_
 [rfc-0083]: /docs/contribute/governance/rfcs/0083_fidl_versioning.md
 [rfc-0086]: /docs/contribute/governance/rfcs/0086_rfc_0050_attributes.md
 [rfc-0087]: /docs/contribute/governance/rfcs/0087_fidl_method_syntax.md
+[rfc-0088]: /docs/contribute/governance/rfcs/0088_rfc_0050_bits_enums_constraints.md
 [rfc-0097]: /docs/contribute/governance/rfcs/0097_fidl_toolchain.md
 [rfc-0113]: /docs/contribute/governance/rfcs/0113_efficient_envelopes.md
 [rfc-0114]: /docs/contribute/governance/rfcs/0114_fidl_envelope_inlining.md
@@ -308,3 +318,6 @@ _Legend:_
 [rfc-0137]: /docs/contribute/governance/rfcs/0137_discard_unknown_data_in_fidl.md
 [rfc-0138]: /docs/contribute/governance/rfcs/0138_handling_unknown_interactions.md
 [rfc-0149]: /docs/contribute/governance/rfcs/0149_fidl_encode_validation_not_mandatory.md
+[rfc-0160]: /docs/contribute/governance/rfcs/0160_fidl_remove_struct_defaults.md
+[rfc-0190]: /docs/contribute/governance/rfcs/0190_fidl_support_for_syscalls.md
+[rfc-0196]: /docs/contribute/governance/rfcs/0196_fidl_large_messages.md
