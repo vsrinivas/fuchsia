@@ -10,6 +10,8 @@
 
 #include <cstdint>
 
+#include "src/graphics/display/drivers/intel-i915-tgl/scoped-value-change.h"
+
 namespace i915_tgl {
 
 // Command sent to the PCU (power controller)'s firmware.
@@ -235,6 +237,11 @@ class PowerController {
   // reports an error. In either case, SAGV (System Agent Geyserville) cannot be
   // enabled safely.
   zx::result<MemorySubsystemInfo> GetMemorySubsystemInfoTigerLake();
+
+  static ScopedValueChange<int> OverrideTypeCColdBlockingChangeReplyTimeoutUsForTesting(
+      int timeout_us);
+  static ScopedValueChange<int> OverrideTypeCColdBlockingChangeTotalTimeoutUsForTesting(
+      int timeout_us);
 
  private:
   fdf::MmioBuffer* mmio_buffer_;

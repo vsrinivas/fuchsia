@@ -132,6 +132,8 @@ test("intel-i915-tgl-test") {
     "registers-transcoder-unittest.cc",
     "registers-typec-unittest.cc",
     "registers-unittest.cc",
+    "scoped-value-change-unittest.cc",
+    "scoped-value-change.cc",
   ]
   deps = [
     ":common_srcs",

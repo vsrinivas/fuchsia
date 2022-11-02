@@ -18,6 +18,7 @@
 
 #include "src/graphics/display/drivers/intel-i915-tgl/poll-until.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-gt-mailbox.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/scoped-value-change.h"
 
 namespace i915_tgl {
 
@@ -35,10 +36,14 @@ constexpr int kVoltageLevelRequestReplyTimeoutUs = 150;
 constexpr int kVoltageLevelRequestTotalTimeoutUs = 3'000;  // 3ms
 
 // Timeout for the PCU firmware to reply to a TCCOLD blocking change request.
-constexpr int kTypeCColdBlockingChangeReplyTimeoutUs = 200;
+// Overridden in tests via
+// PowerController::OverrideTypeCColdBlockingChangeReplyTimeoutUsForTesting().
+int g_typec_cold_blocking_change_reply_timeout_us = 200;
 
 // Timeout for the PCU firmware to execute a TCCOLD blocking change request.
-constexpr int kTypeCColdBlockingChangeTotalTimeoutUs = 600;
+// Overridden in tests via
+// PowerController::OverrideTypeCColdBlockingChangeTotalTimeoutUsForTesting().
+int g_typec_cold_blocking_change_total_timeout_us = 600;
 
 // Timeout for the PCU firmware to reply to a SAGV enablement change request.
 constexpr int kSystemAgentEnablementChangeReplyTimeoutUs = 150;
@@ -145,7 +150,7 @@ zx::result<> PowerController::SetDisplayTypeCColdBlockingTigerLake(bool blocked,
 
   const zx::time deadline =
       (retry_behavior == RetryBehavior::kRetryUntilStateChanges)
-          ? zx::deadline_after(zx::usec(kTypeCColdBlockingChangeTotalTimeoutUs))
+          ? zx::deadline_after(zx::usec(g_typec_cold_blocking_change_total_timeout_us))
           : zx::time::infinite_past();
 
   const uint64_t command_data = blocked ? 0 : 1;
@@ -153,7 +158,7 @@ zx::result<> PowerController::SetDisplayTypeCColdBlockingTigerLake(bool blocked,
     zx::result<uint64_t> mailbox_result = Transact({
         .command = 0x26,
         .data = command_data,
-        .timeout_us = kTypeCColdBlockingChangeReplyTimeoutUs,
+        .timeout_us = g_typec_cold_blocking_change_reply_timeout_us,
     });
     if (mailbox_result.is_error()) {
       return mailbox_result.take_error();
@@ -406,6 +411,18 @@ zx::result<MemorySubsystemInfo> PowerController::GetMemorySubsystemInfoTigerLake
   }
 
   return zx::ok(result);
+}
+
+// static
+ScopedValueChange<int> PowerController::OverrideTypeCColdBlockingChangeReplyTimeoutUsForTesting(
+    int timeout_us) {
+  return ScopedValueChange(g_typec_cold_blocking_change_reply_timeout_us, timeout_us);
+}
+
+// static
+ScopedValueChange<int> PowerController::OverrideTypeCColdBlockingChangeTotalTimeoutUsForTesting(
+    int timeout_us) {
+  return ScopedValueChange(g_typec_cold_blocking_change_total_timeout_us, timeout_us);
 }
 
 }  // namespace i915_tgl
