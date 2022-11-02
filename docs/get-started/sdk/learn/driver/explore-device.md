@@ -42,9 +42,6 @@ root.sys.platform.00_00_1b
 root.sys.cpu-trace.perfmon
 root.sys.platform.pt.acpi
 root.sys.platform.pt.PCI0
-root.sys.platform.00_00_2d.ramctl
-root.sys.platform.00_00_2f.virtual_audio
-root.sys.platform.00_00_1b.sysmem
 ...
 ```
 
@@ -119,19 +116,19 @@ device node is `00:06.0`:
 ```
 
 From the device list in the previous section, this means the `edu` device maps
-to the PCI device node `root.sys.platform.pt.PCI0.bus.00_06_0_`.
+to the PCI device node `root.sys.platform.pt.PCI0.bus.00_06_0_.pci-00_06.0-fidl`.
 
 Explore the properties of this device node using the following command:
 
 ```posix-terminal
-ffx driver list-devices root.sys.platform.pt.PCI0.bus.00_06_0_ --verbose
+ffx driver list-devices root.sys.platform.pt.PCI0.bus.00_06_0_.pci-00_06.0-fidl --verbose
 ```
 
 The command prints output similar to the following:
 
 ```none {:.devsite-disable-click-to-copy}
-Name     : 00_06_0_
-{{ '<strong>' }}Moniker  : root.sys.platform.pt.PCI0.bus.00_06_0_{{ '</strong>' }}
+Name     : 0-fidl
+{{ '<strong>' }}Moniker  : root.sys.platform.pt.PCI0.bus.00_06_0_.pci-00_06.0-fidl{{ '</strong>' }}
 Driver   : None
 11 Properties
 [ 1/ 11] : Key fuchsia.BIND_FIDL_PROTOCOL     Value 0x000004

@@ -28,7 +28,6 @@ structure:
                   |- BUILD.bazel
                   |- meta
                   |   |- qemu_edu.cml
-{{ '<strong>' }}                  |- driver_compat.h {{ '</strong>' }}
 {{ '<strong>' }}                  |- edu_device.cc {{ '</strong>' }}
 {{ '<strong>' }}                  |- edu_device.h {{ '</strong>' }}
                   |- qemu_edu.bind
@@ -54,28 +53,7 @@ component manifest:
 This enables the driver to open a connection to the parent device and access the
 hardware-specific protocols it offers.
 
-Create the `qemu_edu/drivers/driver_compat.h` file and add the following code to
-use the `fuchsia.driver.compat.Service` capability to open the device connection:
-
-`qemu_edu/drivers/driver_compat.h`:
-
-```cpp
-#ifndef FUCHSIA_CODELAB_QEMU_EDU_DRIVER_COMPAT_H_
-#define FUCHSIA_CODELAB_QEMU_EDU_DRIVER_COMPAT_H_
-
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/driver_compat.h" region_tag="imports" adjust_indentation="auto" exclude_regexp="fuchsia\.device\.fs" %}
-
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/driver_compat.h" region_tag="namespace_start" adjust_indentation="auto" %}
-
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/driver_compat.h" region_tag="connect_parent" adjust_indentation="auto" %}
-
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/driver_compat.h" region_tag="namespace_end" adjust_indentation="auto" %}
-
-#endif  // FUCHSIA_CODELAB_QEMU_EDU_DRIVER_COMPAT_H_
-
-```
-
-Update the driver's `Run()` method to access the `fuchsia.hardware.pci/Device`
+Update the driver's `Start()` method to access the `fuchsia.hardware.pci/Device`
 offered by the parent device during driver initialization:
 
 `qemu_edu/drivers/qemu_edu.cc`:
@@ -85,15 +63,18 @@ offered by the parent device during driver initialization:
 
 {{ '<strong>' }}{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="compat_imports" adjust_indentation="auto" %}{{ '</strong>' }}
 
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="namespace_start" adjust_indentation="auto" %}
 // ...
 
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="run_method_start" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="start_method_start" adjust_indentation="auto" %}
 
 {{ '<strong>' }}{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="connect_device" %}{{ '</strong>' }}
 
   FDF_SLOG(INFO, "edu driver loaded successfully");
 
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="run_method_end" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="start_method_end" adjust_indentation="auto" %}
+
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="namespace_end" adjust_indentation="auto" %}
 ```
 
 ## Set up interrupts and MMIO
@@ -165,11 +146,7 @@ Add the new device resources to the driver class:
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="public_main" %}
 
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="private_main" %}
-
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="fields_main" %}
-
 {{ '<strong>' }}{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="fields_hw" %}{{ '</strong>' }}
-
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="class_footer" adjust_indentation="auto" %}
 
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="namespace_end" adjust_indentation="auto" %}
@@ -181,7 +158,7 @@ initialization:
 `qemu_edu/drivers/qemu_edu.cc`:
 
 ```cpp
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="run_method_start" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="start_method_start" adjust_indentation="auto" %}
 
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="connect_device" %}
 
@@ -189,16 +166,16 @@ initialization:
 
   FDF_SLOG(INFO, "edu driver loaded successfully");
 
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="run_method_end" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="start_method_end" adjust_indentation="auto" %}
 ```
 
 Update the driver build configuration to depend on the FIDL binding libraries
-for these two protocols:
+for `fuchsia.hardware.pci`:
 
 `qemu_edu/drivers/BUILD.bazel`:
 
 ```bazel
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/BUILD.bazel" region_tag="binary" adjust_indentation="auto" exclude_regexp="edu_device\.cc|edu_device\.h|driver_compat\.h|\/\/src\/qemu_edu|sdk\/\/fidl\/fuchsia\.device" highlight="9,10" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/BUILD.bazel" region_tag="binary" adjust_indentation="auto" exclude_regexp="edu_device\.cc|edu_device\.h|edu_server\.cc|edu_server\.h|\/\/src\/qemu_edu|sdk\/\/fidl\/fuchsia\.device" highlight="9" %}
 ```
 
 ## Read device registers
@@ -261,29 +238,29 @@ to interact with the MMIO region to read and write data into the respective
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/edu_device.cc" region_tag="namespace_end" adjust_indentation="auto" %}
 ```
 
-Add the following to the driver's `Run()` method to read the major/minor version
-from the identification register from the MMIO region and print it to the log:
+Add the following to the driver's `Start()` method to read the major and minor
+version from the identification register from the MMIO region and print it to
+the log:
 
 `qemu_edu/drivers/qemu_edu.cc`:
 
 ```cpp
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="run_method_start" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="start_method_start" adjust_indentation="auto" %}
   // ...
 
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="hw_resources" %}
 
 {{ '<strong>' }}{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="device_registers" %}{{ '</strong>' }}
 
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="run_method_end" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="start_method_end" adjust_indentation="auto" %}
 ```
 
-Update the driver's build configuration to include the new includes as source
-files:
+Update the driver's build configuration to include the new source files:
 
 `qemu_edu/drivers/BUILD.bazel`:
 
 ```bazel
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/BUILD.bazel" region_tag="binary" adjust_indentation="auto" exclude_regexp="\/\/src\/qemu_edu|sdk\/\/fidl\/fuchsia\.device" highlight="6,7,8" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/BUILD.bazel" region_tag="binary" adjust_indentation="auto" exclude_regexp="edu_server\.cc|edu_server\.h|\/\/src\/qemu_edu|sdk\/\/fidl\/fuchsia\.device" highlight="4,5" %}
 ```
 
 <<_common/_restart_femu.md>>

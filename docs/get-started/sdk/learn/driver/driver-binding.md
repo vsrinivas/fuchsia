@@ -112,16 +112,10 @@ file to compile the bind rules:
 
 ## Implement driver hooks
 
-All driver components are required to supply the following two public functions:
-
-*   `Name()`: Used by the driver framework to identify the driver (for instance,
-    to identify the driver’s placement in the topology).
-*   `Start()`: This is the main function that gets executed as the start hook
-    for the driver.
-
-Once a driver is bound, the framework loads the component binary and calls the
-static `Start()` method on the driver class registered using the
-`FUCHSIA_DRIVER_RECORD_CPP_V1()` macro.
+Once a driver is bound, the framework loads the component binary and constructs
+an instance of the driver class registered using the
+`FUCHSIA_DRIVER_RECORD_CPP_V2()` macro. The driver overrides the `Start()`
+method to perform any initialization tasks.
 
 Create `qemu_edu/drivers/qemu_edu.h` and `qemu_edu/drivers/qemu_edu.cc` and add
 the following boilerplate code to create the driver class and configure the
@@ -142,9 +136,6 @@ initial `Start()` hook:
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="public_main" %}
 
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="private_main" %}
-
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="fields_main" %}
-
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="class_footer" adjust_indentation="auto" %}
 
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="namespace_end" adjust_indentation="auto" %}
@@ -160,23 +151,17 @@ initial `Start()` hook:
 
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="namespace_start" adjust_indentation="auto" %}
 
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="driver_start" adjust_indentation="auto" %}
-
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="run_method_start" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="start_method_start" adjust_indentation="auto" %}
 
   FDF_SLOG(INFO, "edu driver loaded successfully");
 
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="run_method_end" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="start_method_end" adjust_indentation="auto" %}
 
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="namespace_end" adjust_indentation="auto" %}
 
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="driver_hook" adjust_indentation="auto" %}
 
 ```
-
-This `Start()` method initializes an instance of the `QemuEduDriver` class and
-assigns it to the driver variable. The function then calls the `Run()` method of
-the driver instance to perform initialization tasks.
 
 Add the following build rule to the bottom of your `qemu_edu/drivers/BUILD.bazel`
 file to compile the driver code into a shared library binary:
@@ -187,7 +172,7 @@ file to compile the driver code into a shared library binary:
 `qemu_edu/drivers/BUILD.bazel`:
 
 ```bazel
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/BUILD.bazel" region_tag="binary" adjust_indentation="auto" exclude_regexp="edu_device\.cc|edu_device\.h|driver_compat\.h|\/\/src\/qemu_edu|sdk\/\/fidl\/fuchsia" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/BUILD.bazel" region_tag="binary" adjust_indentation="auto" exclude_regexp="edu_device\.cc|edu_device\.h|edu_server\.cc|edu_server\.h|\/\/src\/qemu_edu|sdk\/\/fidl\/fuchsia" %}
 ```
 
 ## Load the driver
@@ -232,7 +217,7 @@ INFO: Build completed successfully, 1 total action
 added repository bazel.pkg.component
 Registering fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm
 Successfully bound:
-Node 'root.sys.platform.pt.PCI0.bus.00_06_0_', Driver 'fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm'.
+Node 'root.sys.platform.pt.PCI0.bus.00_06_0_.pci-00_06.0-fidl', Driver 'fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm'.
 ```
 
 Inspect the system log and verify that you can see `FDF_SLOG()` message from the
@@ -282,12 +267,12 @@ Inspect the device node once more using `ffx driver list-devices`, and verify
 that your driver is now listed as attached to the `edu` device node:
 
 ```posix-terminal
-ffx driver list-devices root.sys.platform.pt.PCI0.bus.00_06_0_ --verbose
+ffx driver list-devices root.sys.platform.pt.PCI0.bus.00_06_0_.pci-00_06.0-fidl --verbose
 ```
 
 ```none {:.devsite-disable-click-to-copy}
-Name     : 00_06_0_
-Moniker  : root.sys.platform.pt.PCI0.bus.00_06_0_
+Name     : 0-fidl
+Moniker  : root.sys.platform.pt.PCI0.bus.00_06_0_.pci-00_06.0-fidl
 {{ '<strong>' }}Driver   : fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm{{ '</strong>' }}
 11 Properties
 [ 1/ 11] : Key fuchsia.BIND_FIDL_PROTOCOL     Value 0x000004

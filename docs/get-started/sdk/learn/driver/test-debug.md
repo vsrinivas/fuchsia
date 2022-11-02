@@ -88,9 +88,9 @@ breakpoint is set:
 ```none {:.devsite-disable-click-to-copy}
 [zxdb] break QemuEduServer::ComputeFactorial
 Created Breakpoint 1 @ QemuEduServer::ComputeFactorial
-   65 void QemuEduServer::ComputeFactorial(ComputeFactorialRequestView request,
- ◉ 66                                      ComputeFactorialCompleter::Sync& completer) {
-   67   auto edu_device = device_.lock();
+   47 void QemuEduServer::ComputeFactorial(ComputeFactorialRequestView request,
+ ◉ 48                                      ComputeFactorialCompleter::Sync& completer) {
+   49   auto edu_device = device_.lock();
 ```
 
 ## Step through the driver function
@@ -106,11 +106,11 @@ In the `zxdb` terminal, verify that the debugger has hit the breakpoint in the d
 
 ```none {:.devsite-disable-click-to-copy}
 🛑 thread 2 on bp 1 qemu_edu::QemuEduServer::ComputeFactorial(qemu_edu::QemuEduServer*, fidl::WireServer<fuchsia_examples_qemuedu::Device>::ComputeFactorialRequestView, fidl::Completer<fidl::internal::WireCompleterBase<fuchsia_examples_qemuedu::Device::ComputeFactorial> >::Sync&) • qemu_edu.cc:144
-   64 // Driver Service: Compute factorial on the edu device
-   65 void QemuEduServer::ComputeFactorial(ComputeFactorialRequestView request,
- ▶ 66                                      ComputeFactorialCompleter::Sync& completer) {
-   67   auto edu_device = device_.lock();
-   68   if (!edu_device) {
+   46 // Driver Service: Compute factorial on the edu device
+   47 void QemuEduServer::ComputeFactorial(ComputeFactorialRequestView request,
+ ▶ 48                                      ComputeFactorialCompleter::Sync& completer) {
+   49   auto edu_device = device_.lock();
+   50   if (!edu_device) {
 ```
 
 Use the `list` command at the `zxdb` prompt to show where execution is currently
@@ -123,19 +123,19 @@ paused:
 The command prints output similar to the following:
 
 ```none {:.devsite-disable-click-to-copy}
-   64 // Driver Service: Compute factorial on the edu device
-   65 void QemuEduServer::ComputeFactorial(ComputeFactorialRequestView request,
- ▶ 66                                      ComputeFactorialCompleter::Sync& completer) {
-   67   auto edu_device = device_.lock();
-   68   if (!edu_device) {
-   69     FDF_LOG(ERROR, "Unable to access device resources.");
-   70     completer.ReplyError(ZX_ERR_BAD_STATE);
-   71     return;
-   72   }
-   73
-   74   uint32_t input = request->input;
-   75
-   76   edu_device->ComputeFactorial(input);
+   46 // Driver Service: Compute factorial on the edu device
+   47 void QemuEduServer::ComputeFactorial(ComputeFactorialRequestView request,
+ ▶ 48                                      ComputeFactorialCompleter::Sync& completer) {
+   49   auto edu_device = device_.lock();
+   50   if (!edu_device) {
+   51     FDF_LOG(ERROR, "Unable to access device resources.");
+   52     completer.ReplyError(ZX_ERR_BAD_STATE);
+   53     return;
+   54   }
+   55
+   56   uint32_t input = request->input;
+   57
+   58   edu_device->ComputeFactorial(input);
 ```
 
 Step into the `ComputeFactorial` function using the `next` command:
@@ -153,7 +153,7 @@ Print the contents of the request passed into the function:
 The command prints output containing the factorial input value:
 
 ```none {:.devsite-disable-click-to-copy}
-{request_ = (*)0x747c1f2e98 ➔ {fuchsia_examples_qemuedu:… = {input = 12}}}
+(*)0x747c1f2e98 ➔ {input = 12}
 ```
 
 Exit the debugger session and disconnect:
