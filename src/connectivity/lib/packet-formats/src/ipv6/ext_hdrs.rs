@@ -8,7 +8,7 @@
 //!
 //! [RFC 8200 Section 4]: https://datatracker.ietf.org/doc/html/rfc8200#section-4
 
-use core::convert::TryFrom;
+use core::convert::{Infallible as Never, TryFrom};
 use core::marker::PhantomData;
 
 use packet::records::options::{
@@ -85,6 +85,12 @@ pub(super) enum Ipv6ExtensionHeaderParsingError {
     MalformedData,
 }
 
+impl From<Never> for Ipv6ExtensionHeaderParsingError {
+    fn from(err: Never) -> Ipv6ExtensionHeaderParsingError {
+        match err {}
+    }
+}
+
 /// Context that gets passed around when parsing IPv6 Extension Headers.
 #[derive(Debug, Clone)]
 pub(super) struct Ipv6ExtensionHeaderParsingContext {
@@ -117,10 +123,16 @@ impl Ipv6ExtensionHeaderParsingContext {
 }
 
 impl RecordsContext for Ipv6ExtensionHeaderParsingContext {
+    type Counter = ();
+
     fn clone_for_iter(&self) -> Self {
         let mut ret = self.clone();
         ret.iter = true;
         ret
+    }
+
+    fn counter_mut(&mut self) -> &mut () {
+        get_empty_tuple_mut_ref()
     }
 }
 
@@ -817,7 +829,13 @@ impl<C: Sized + Clone + Default> ExtensionHeaderOptionContext<C> {
     }
 }
 
-impl<C: Sized + Clone> RecordsContext for ExtensionHeaderOptionContext<C> {}
+impl<C: Sized + Clone> RecordsContext for ExtensionHeaderOptionContext<C> {
+    type Counter = ();
+
+    fn counter_mut(&mut self) -> &mut () {
+        get_empty_tuple_mut_ref()
+    }
+}
 
 /// Basic associated types required by `ExtensionHeaderOptionDataImpl`.
 pub(super) trait ExtensionHeaderOptionDataImplLayout {
@@ -1007,6 +1025,12 @@ pub(crate) enum ExtensionHeaderOptionParsingError {
     BufferExhausted,
 }
 
+impl From<Never> for ExtensionHeaderOptionParsingError {
+    fn from(err: Never) -> ExtensionHeaderOptionParsingError {
+        match err {}
+    }
+}
+
 /// Action to take when an unrecognized option type is encountered.
 ///
 /// `ExtensionHeaderOptionAction` is an action that MUST be taken (according
@@ -1165,6 +1189,12 @@ fn ext_hdr_opt_err_to_ext_hdr_err(
             Ipv6ExtensionHeaderParsingError::BufferExhausted
         }
     }
+}
+
+fn get_empty_tuple_mut_ref<'a>() -> &'a mut () {
+    // This is a hack since `&mut ()` is invalid.
+    let bytes: &mut [u8] = &mut [];
+    zerocopy::LayoutVerified::<_, ()>::new_unaligned(bytes).unwrap().into_mut()
 }
 
 #[cfg(test)]

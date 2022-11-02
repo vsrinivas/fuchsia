@@ -4,9 +4,11 @@
 
 //! Custom error types for the packet formats.
 
+use core::convert::Infallible as Never;
+
 use net_types::ip::IpAddress;
 use net_types::MulticastAddress;
-use packet::records::options::OptionParseErr;
+use packet::records::{options::OptionParseErr, TooFewRecordsErr};
 use thiserror::Error;
 
 use crate::icmp::IcmpIpExt;
@@ -32,6 +34,18 @@ pub enum ParseError {
     /// Packet is not formatted properly.
     #[error("Packet is not formatted properly")]
     Format,
+}
+
+impl From<Never> for ParseError {
+    fn from(err: Never) -> ParseError {
+        match err {}
+    }
+}
+
+impl From<TooFewRecordsErr> for ParseError {
+    fn from(TooFewRecordsErr: TooFewRecordsErr) -> ParseError {
+        ParseError::Format
+    }
 }
 
 impl From<OptionParseErr> for ParseError {

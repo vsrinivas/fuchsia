@@ -8,9 +8,7 @@ use core::convert::TryFrom;
 use core::ops::Deref;
 
 use net_types::ip::Ipv4Addr;
-use packet::records::{
-    LimitedRecords, LimitedRecordsImpl, LimitedRecordsImplLayout, ParsedRecord, RecordParseResult,
-};
+use packet::records::{ParsedRecord, RecordParseResult, Records, RecordsImpl, RecordsImplLayout};
 use packet::{BufferView, ParsablePacket, ParseMetadata};
 use zerocopy::{
     byteorder::network_endian::U16, AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned,
@@ -334,11 +332,11 @@ impl<B: ByteSlice> GroupRecord<B> {
 #[derive(Copy, Clone, Debug)]
 pub struct IgmpMembershipReportV3;
 
-impl<B> IgmpNonEmptyBody for LimitedRecords<B, IgmpMembershipReportV3> {}
+impl<B> IgmpNonEmptyBody for Records<B, IgmpMembershipReportV3> {}
 
 impl<B> MessageType<B> for IgmpMembershipReportV3 {
     type FixedHeader = MembershipReportV3Data;
-    type VariableBody = LimitedRecords<B, IgmpMembershipReportV3>;
+    type VariableBody = Records<B, IgmpMembershipReportV3>;
     type MaxRespTime = ();
     const TYPE: IgmpMessageType = IgmpMessageType::MembershipReportV3;
 
@@ -349,10 +347,7 @@ impl<B> MessageType<B> for IgmpMembershipReportV3 {
     where
         B: ByteSlice,
     {
-        LimitedRecords::parse_with_context(
-            bytes.into_rest(),
-            header.number_of_group_records().into(),
-        )
+        Records::parse_with_context(bytes.into_rest(), header.number_of_group_records().into())
     }
 
     fn body_bytes(body: &Self::VariableBody) -> &[u8]
@@ -363,17 +358,17 @@ impl<B> MessageType<B> for IgmpMembershipReportV3 {
     }
 }
 
-impl LimitedRecordsImplLayout for IgmpMembershipReportV3 {
+impl RecordsImplLayout for IgmpMembershipReportV3 {
+    type Context = usize;
     type Error = ParseError;
-
-    const EXACT_LIMIT_ERROR: Option<ParseError> = Some(ParseError::Format);
 }
 
-impl<'a> LimitedRecordsImpl<'a> for IgmpMembershipReportV3 {
+impl<'a> RecordsImpl<'a> for IgmpMembershipReportV3 {
     type Record = GroupRecord<&'a [u8]>;
 
-    fn parse<BV: BufferView<&'a [u8]>>(
+    fn parse_with_context<BV: BufferView<&'a [u8]>>(
         data: &mut BV,
+        _ctx: &mut usize,
     ) -> RecordParseResult<GroupRecord<&'a [u8]>, ParseError> {
         let header = data
             .take_obj_front::<GroupRecordHeader>()

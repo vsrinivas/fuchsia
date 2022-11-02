@@ -16,7 +16,7 @@ use {
         BufferView, BufferViewMut, InnerPacketBuilder, ParsablePacket, ParseMetadata,
     },
     std::{
-        convert::{TryFrom, TryInto},
+        convert::{Infallible as Never, TryFrom, TryInto},
         mem,
         slice::Iter,
         str,
@@ -49,6 +49,12 @@ pub enum ParseError {
     DomainParseError(MdnsParseError),
     #[error("failed to parse UTF8 string: {:?}", _0)]
     Utf8Error(#[from] str::Utf8Error),
+}
+
+impl From<Never> for ParseError {
+    fn from(err: Never) -> ParseError {
+        match err {}
+    }
 }
 
 /// A DHCPv6 message type as defined in [RFC 8415, Section 7.3].
