@@ -33,14 +33,18 @@ async fn main() {
     // Start the dynamic child
     start_component("./coll:simple_instance", true).await;
 
-    expect_dir_listing("/hub/children/coll:simple_instance", vec!["children", "exec", "resolved"])
-        .await;
+    expect_dir_listing(
+        "/hub/children/coll:simple_instance",
+        vec!["children", "exposed", "ns", "out", "runtime"],
+    )
+    .await;
     expect_dir_listing("/hub/children/coll:simple_instance/children", vec!["child"]).await;
 
     // Stop the dynamic child
     stop_component("./coll:simple_instance", true).await;
 
-    expect_dir_listing("/hub/children/coll:simple_instance", vec!["children", "resolved"]).await;
+    expect_dir_listing("/hub/children/coll:simple_instance", vec!["children", "exposed", "ns"])
+        .await;
 
     // Delete the dynamic child
     let mut child_ref = fdecl::ChildRef {

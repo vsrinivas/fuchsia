@@ -75,10 +75,8 @@ impl CapabilityProvider for HubCapabilityProvider {
 
 /// Hub state on an instance of a component.
 struct Instance {
-    /// Whether the `directory` has a subdirectory named `exec`
-    pub has_execution_directory: bool,
-    /// Whether the `directory` has a subdirectory named `resolved`
-    pub has_resolved_directory: bool,
+    pub is_running: bool,
+    pub is_resolved: bool,
     pub directory: Directory,
     pub children_directory: Directory,
     pub uuid: u128,
@@ -175,8 +173,8 @@ impl Hub {
         instance_map.insert(
             moniker.clone(),
             Instance {
-                has_execution_directory: false,
-                has_resolved_directory: false,
+                is_running: false,
+                is_resolved: false,
                 directory: instance.clone(),
                 children_directory: children.clone(),
                 uuid: instance_uuid.clone(),
@@ -233,61 +231,6 @@ impl Hub {
         Ok(())
     }
 
-    fn add_use_directory(
-        directory: Directory,
-        component_decl: ComponentDecl,
-        target_moniker: &AbsoluteMoniker,
-        target: WeakComponentInstance,
-        pkg_dir: Option<fio::DirectoryProxy>,
-    ) -> Result<(), ModelError> {
-        let tree = DirTree::build_from_uses(route_use_fn, target, component_decl);
-        let mut use_dir = pfs::simple();
-        tree.install(target_moniker, &mut use_dir)?;
-
-        if let Some(pkg_dir) = pkg_dir {
-            use_dir.add_node("pkg", remote_dir(pkg_dir), target_moniker)?;
-        }
-
-        directory.add_node("use", use_dir, target_moniker)?;
-
-        Ok(())
-    }
-
-    fn add_expose_directory(
-        directory: Directory,
-        component_decl: ComponentDecl,
-        target_moniker: &AbsoluteMoniker,
-        target: WeakComponentInstance,
-    ) -> Result<(), ModelError> {
-        let tree = DirTree::build_from_exposes(route_expose_fn, target, component_decl);
-        let mut expose_dir = pfs::simple();
-        tree.install(target_moniker, &mut expose_dir)?;
-        directory.add_node("expose", expose_dir, target_moniker)?;
-        Ok(())
-    }
-
-    fn add_out_directory(
-        execution_directory: Directory,
-        outgoing_dir: Option<fio::DirectoryProxy>,
-        target_moniker: &AbsoluteMoniker,
-    ) -> Result<(), ModelError> {
-        if let Some(out_dir) = outgoing_dir {
-            execution_directory.add_node("out", remote_dir(out_dir), target_moniker)?;
-        }
-        Ok(())
-    }
-
-    fn add_runtime_directory(
-        execution_directory: Directory,
-        runtime_dir: Option<fio::DirectoryProxy>,
-        moniker: &AbsoluteMoniker,
-    ) -> Result<(), ModelError> {
-        if let Some(runtime_dir) = runtime_dir {
-            execution_directory.add_node("runtime", remote_dir(runtime_dir), moniker)?;
-        }
-        Ok(())
-    }
-
     async fn on_resolved_async<'a>(
         &self,
         target_moniker: &AbsoluteMoniker,
@@ -301,27 +244,25 @@ impl Hub {
             .get_mut(target_moniker)
             .ok_or(ModelError::instance_not_found(target_moniker.clone()))?;
 
-        // If the resolved directory already exists, report error.
-        assert!(!instance.has_resolved_directory);
-        let resolved_directory = pfs::simple();
+        // The component must not be resolved already.
+        assert!(!instance.is_resolved);
 
-        Self::add_use_directory(
-            resolved_directory.clone(),
-            component_decl.clone(),
-            target_moniker,
-            target.clone(),
-            clone_dir(pkg_dir),
-        )?;
+        // Add the `namespace` directory
+        let tree = DirTree::build_from_uses(route_use_fn, target.clone(), &component_decl);
+        let mut ns_dir = pfs::simple();
+        tree.install(target_moniker, &mut ns_dir)?;
+        if let Some(pkg_dir) = clone_dir(pkg_dir) {
+            ns_dir.add_node("pkg", remote_dir(pkg_dir), target_moniker)?;
+        }
+        instance.directory.add_node("ns", ns_dir, target_moniker)?;
 
-        Self::add_expose_directory(
-            resolved_directory.clone(),
-            component_decl.clone(),
-            target_moniker,
-            target.clone(),
-        )?;
+        // Add the `exposed` directory
+        let tree = DirTree::build_from_exposes(route_expose_fn, target.clone(), &component_decl);
+        let mut expose_dir = pfs::simple();
+        tree.install(target_moniker, &mut expose_dir)?;
+        instance.directory.add_node("exposed", expose_dir, target_moniker)?;
 
-        instance.directory.add_node("resolved", resolved_directory, &target_moniker)?;
-        instance.has_resolved_directory = true;
+        instance.is_resolved = true;
 
         Ok(())
     }
@@ -329,9 +270,7 @@ impl Hub {
     async fn on_started_async<'a>(
         &'a self,
         target_moniker: &AbsoluteMoniker,
-        target: &WeakComponentInstance,
         runtime: &RuntimeInfo,
-        component_decl: &'a ComponentDecl,
     ) -> Result<(), ModelError> {
         let mut instance_map = self.instances.lock().await;
 
@@ -339,34 +278,21 @@ impl Hub {
             .get_mut(target_moniker)
             .ok_or(ModelError::instance_not_found(target_moniker.clone()))?;
 
-        // Don't create an execution directory if it already exists
-        if instance.has_execution_directory {
+        if instance.is_running {
             return Ok(());
         }
 
-        let execution_directory = pfs::simple();
+        // Add the `out` dir, if it exists
+        if let Some(out_dir) = clone_dir(runtime.outgoing_dir.as_ref()) {
+            instance.directory.add_node("out", remote_dir(out_dir), target_moniker)?;
+        }
 
-        Self::add_expose_directory(
-            execution_directory.clone(),
-            component_decl.clone(),
-            target_moniker,
-            target.clone(),
-        )?;
+        // Add the `runtime` dir, if it exists
+        if let Some(runtime_dir) = clone_dir(runtime.runtime_dir.as_ref()) {
+            instance.directory.add_node("runtime", remote_dir(runtime_dir), target_moniker)?;
+        }
 
-        Self::add_out_directory(
-            execution_directory.clone(),
-            clone_dir(runtime.outgoing_dir.as_ref()),
-            target_moniker,
-        )?;
-
-        Self::add_runtime_directory(
-            execution_directory.clone(),
-            clone_dir(runtime.runtime_dir.as_ref()),
-            &target_moniker,
-        )?;
-
-        instance.directory.add_node("exec", execution_directory, &target_moniker)?;
-        instance.has_execution_directory = true;
+        instance.is_running = true;
 
         Ok(())
     }
@@ -388,12 +314,15 @@ impl Hub {
     ) -> Result<(), ModelError> {
         let mut instance_map = self.instances.lock().await;
 
-        // The component has been unresolved. Remove the resolved directory from the hub.
+        // The component has been unresolved. Remove the corresponding directories from the hub.
         let res = instance_map.get_mut(target_moniker);
         if let Some(instance) = res {
-            if instance.has_resolved_directory {
-                instance.directory.remove_node("resolved")?;
-                instance.has_resolved_directory = false;
+            if instance.is_resolved {
+                // Remove `exposed` and `ns`.
+                // `out` and `runtime` would have already been removed on stop.
+                instance.directory.remove_node("exposed")?;
+                instance.directory.remove_node("ns")?;
+                instance.is_resolved = false;
             }
         }
         Ok(())
@@ -405,11 +334,10 @@ impl Hub {
             .get_mut(target_moniker)
             .ok_or(ModelError::instance_not_found(target_moniker.clone()))?;
 
-        instance.directory.remove_node("exec")?.ok_or_else(|| {
-            warn!(instance=%target_moniker, "exec directory was already removed");
-            ModelError::remove_entry_error("exec")
-        })?;
-        instance.has_execution_directory = false;
+        // Remove `out` and `runtime` if they exist.
+        instance.directory.remove_node("out")?;
+        instance.directory.remove_node("runtime")?;
+        instance.is_running = false;
         Ok(())
     }
 
@@ -501,8 +429,8 @@ impl Hook for Hub {
             Ok(EventPayload::Destroyed) => {
                 self.on_destroyed_async(target_moniker).await?;
             }
-            Ok(EventPayload::Started { component, runtime, component_decl, .. }) => {
-                self.on_started_async(target_moniker, component, &runtime, &component_decl).await?;
+            Ok(EventPayload::Started { runtime, .. }) => {
+                self.on_started_async(target_moniker, &runtime).await?;
             }
             Ok(EventPayload::Resolved { component, decl, package_dir, .. }) => {
                 self.on_resolved_async(target_moniker, component, &decl, package_dir.as_ref())
@@ -533,7 +461,6 @@ mod tests {
                 },
             },
         },
-        assert_matches::assert_matches,
         cm_rust::{
             self, Availability, CapabilityName, CapabilityPath, ComponentDecl, DependencyType,
             DirectoryDecl, EventSubscription, ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl,
@@ -656,6 +583,36 @@ mod tests {
     }
 
     #[fuchsia::test]
+    async fn hub_basic() {
+        let root_component_url = "test:///root".to_string();
+        let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
+            root_component_url.clone(),
+            vec![ComponentDescriptor {
+                name: "root",
+                decl: ComponentDeclBuilder::new()
+                    .use_(UseDecl::Directory(UseDirectoryDecl {
+                        dependency_type: DependencyType::Strong,
+                        source: UseSource::Framework,
+                        source_name: "hub".into(),
+                        target_path: CapabilityPath::try_from("/hub").unwrap(),
+                        rights: *routing::rights::READ_RIGHTS,
+                        subdir: Some("resolved".into()),
+                        availability: Availability::Required,
+                    }))
+                    .build(),
+                config: None,
+                host_fn: None,
+                runtime_host_fn: None,
+            }],
+        )
+        .await;
+        assert_eq!(
+            vec!["children", "exposed", "ns", "out", "runtime"],
+            list_directory(&hub_proxy).await
+        );
+    }
+
+    #[fuchsia::test]
     async fn hub_child_dir_name() {
         // the maximum length for an instance name
         let max_dir_len = usize::try_from(fidl_fuchsia_io::MAX_NAME_LENGTH).unwrap();
@@ -716,11 +673,10 @@ mod tests {
         )
         .await;
 
-        assert!(dir_contains(&hub_proxy, "exec", "out").await);
-        assert!(dir_contains(&hub_proxy, "exec/out", "foo").await);
-        assert!(dir_contains(&hub_proxy, "exec/out/test", "aaa").await);
-        assert_eq!("bar", read_file(&hub_proxy, "exec/out/foo").await);
-        assert_eq!("bbb", read_file(&hub_proxy, "exec/out/test/aaa").await);
+        assert!(dir_contains(&hub_proxy, "out", "foo").await);
+        assert!(dir_contains(&hub_proxy, "out/test", "aaa").await);
+        assert_eq!("bar", read_file(&hub_proxy, "out/foo").await);
+        assert_eq!("bbb", read_file(&hub_proxy, "out/test/aaa").await);
     }
 
     #[fuchsia::test]
@@ -738,101 +694,11 @@ mod tests {
         )
         .await;
 
-        assert_eq!("blah", read_file(&hub_proxy, "exec/runtime/bleep").await);
+        assert_eq!("blah", read_file(&hub_proxy, "runtime/bleep").await);
     }
 
     #[fuchsia::test]
-    async fn hub_resolved_directory() {
-        let root_component_url = "test:///root".to_string();
-        let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
-            root_component_url.clone(),
-            vec![ComponentDescriptor {
-                name: "root",
-                decl: ComponentDeclBuilder::new()
-                    .add_lazy_child("a")
-                    .use_(UseDecl::Directory(UseDirectoryDecl {
-                        dependency_type: DependencyType::Strong,
-                        source: UseSource::Framework,
-                        source_name: "hub".into(),
-                        target_path: CapabilityPath::try_from("/hub").unwrap(),
-                        rights: *routing::rights::READ_RIGHTS,
-                        subdir: Some("resolved".into()),
-                        availability: Availability::Required,
-                    }))
-                    .build(),
-                config: None,
-                host_fn: None,
-                runtime_host_fn: None,
-            }],
-        )
-        .await;
-
-        let resolved_dir = fuchsia_fs::open_directory(
-            &hub_proxy,
-            &Path::new("resolved"),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-        )
-        .expect("Failed to open directory");
-        assert_eq!(vec!["expose", "use"], list_directory(&resolved_dir).await);
-    }
-
-    #[fuchsia::test]
-    #[should_panic]
-    async fn hub_resolved_directory_exists() {
-        let root_component_url = "test:///root".to_string();
-        let (_model, builtin_environment, hub_proxy) = start_component_manager_with_hub(
-            root_component_url.clone(),
-            vec![ComponentDescriptor {
-                name: "root",
-                decl: ComponentDeclBuilder::new()
-                    .add_lazy_child("a")
-                    .use_(UseDecl::Directory(UseDirectoryDecl {
-                        dependency_type: DependencyType::Strong,
-                        source: UseSource::Framework,
-                        source_name: "hub".into(),
-                        target_path: CapabilityPath::try_from("/hub").unwrap(),
-                        rights: *routing::rights::READ_RIGHTS,
-                        subdir: Some("resolved".into()),
-                        availability: Availability::Required,
-                    }))
-                    .build(),
-                config: None,
-                host_fn: None,
-                runtime_host_fn: None,
-            }],
-        )
-        .await;
-
-        let resolved_dir = fuchsia_fs::open_directory(
-            &hub_proxy,
-            &Path::new("resolved"),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-        )
-        .expect("Failed to open directory");
-        assert_eq!(vec!["expose", "use"], list_directory(&resolved_dir).await);
-
-        // Call on_unresolved_async() as if the component was unresolved and reset to
-        // DiscoveredState.
-        let guard = &builtin_environment.lock().await;
-        let hub = guard.hub.as_ref().unwrap();
-        let new_url = "test:///foo".to_string();
-        let moniker = AbsoluteMoniker::parse_str("/").unwrap();
-        assert_matches!(hub.on_unresolved_async(&moniker, new_url).await, Ok(()));
-
-        // Confirm that the resolved directory was deleted.
-        let resolved_dir2 = fuchsia_fs::open_directory(
-            &hub_proxy,
-            &Path::new("resolved"),
-            fio::OpenFlags::RIGHT_READABLE,
-        )
-        .expect("Failed to open directory");
-        // The directory existed when on_discovered_async() was called, so was deleted. Listing
-        // it will induce a panic which this test expects.
-        list_directory(&resolved_dir2).await;
-    }
-
-    #[fuchsia::test]
-    async fn hub_use_directory_in_resolved() {
+    async fn hub_ns_directory() {
         let root_component_url = "test:///root".to_string();
         let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
             root_component_url.clone(),
@@ -857,24 +723,25 @@ mod tests {
         )
         .await;
 
-        let use_dir = fuchsia_fs::open_directory(
+        let ns_dir = fuchsia_fs::open_directory(
             &hub_proxy,
-            &Path::new("resolved/use"),
+            &Path::new("ns"),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
 
-        assert_eq!(vec!["hub", "pkg"], list_directory(&use_dir).await);
+        assert_eq!(vec!["hub", "pkg"], list_directory(&ns_dir).await);
 
-        assert_eq!(vec!["fake_file"], list_sub_directory(&use_dir, "pkg").await);
+        assert_eq!(vec!["fake_file"], list_sub_directory(&ns_dir, "pkg").await);
 
-        assert_eq!(vec!["children", "exec", "resolved"], list_sub_directory(&use_dir, "hub").await);
+        assert_eq!(
+            vec!["children", "exposed", "ns", "out", "runtime"],
+            list_sub_directory(&ns_dir, "hub").await
+        );
     }
 
     #[fuchsia::test]
-    // TODO(b/65870): change function name to hub_expose_directory after the expose directory
-    // is removed from exec and the original hub_expose_directory test is deleted.
-    async fn hub_expose_directory_in_resolved() {
+    async fn hub_exposed_directory() {
         let root_component_url = "test:///root".to_string();
         let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
             root_component_url.clone(),
@@ -915,7 +782,7 @@ mod tests {
 
         let expose_dir = fuchsia_fs::open_directory(
             &hub_proxy,
-            &Path::new("resolved/expose"),
+            &Path::new("exposed"),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
@@ -923,7 +790,7 @@ mod tests {
     }
 
     #[fuchsia::test]
-    async fn hub_no_event_stream_in_use_directory() {
+    async fn hub_no_event_stream_in_ns_directory() {
         let root_component_url = "test:///root".to_string();
         let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
             root_component_url.clone(),
@@ -954,63 +821,14 @@ mod tests {
         )
         .await;
 
-        let use_dir = fuchsia_fs::open_directory(
+        let ns_dir = fuchsia_fs::open_directory(
             &hub_proxy,
-            &Path::new("resolved/use"),
+            &Path::new("ns"),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
-        assert_eq!(vec!["pkg"], list_directory(&use_dir).await);
+        assert_eq!(vec!["pkg"], list_directory(&ns_dir).await);
 
-        assert_eq!(vec!["fake_file"], list_sub_directory(&&use_dir, "pkg").await);
-    }
-
-    #[fuchsia::test]
-    async fn hub_expose_directory() {
-        let root_component_url = "test:///root".to_string();
-        let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
-            root_component_url.clone(),
-            vec![ComponentDescriptor {
-                name: "root",
-                decl: ComponentDeclBuilder::new()
-                    .add_lazy_child("a")
-                    .protocol(ProtocolDecl {
-                        name: "foo".into(),
-                        source_path: Some("/svc/foo".parse().unwrap()),
-                    })
-                    .directory(DirectoryDecl {
-                        name: "baz".into(),
-                        source_path: Some("/data".parse().unwrap()),
-                        rights: *routing::rights::READ_RIGHTS,
-                    })
-                    .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
-                        source: ExposeSource::Self_,
-                        source_name: "foo".into(),
-                        target_name: "bar".into(),
-                        target: ExposeTarget::Parent,
-                    }))
-                    .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
-                        source: ExposeSource::Self_,
-                        source_name: "baz".into(),
-                        target_name: "hippo".into(),
-                        target: ExposeTarget::Parent,
-                        rights: None,
-                        subdir: None,
-                    }))
-                    .build(),
-                config: None,
-                host_fn: None,
-                runtime_host_fn: None,
-            }],
-        )
-        .await;
-
-        let expose_dir = fuchsia_fs::open_directory(
-            &hub_proxy,
-            &Path::new("exec/expose"),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-        )
-        .expect("Failed to open directory");
-        assert_eq!(vec!["bar", "hippo"], list_directory_recursive(&expose_dir).await);
+        assert_eq!(vec!["fake_file"], list_sub_directory(&ns_dir, "pkg").await);
     }
 }

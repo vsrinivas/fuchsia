@@ -48,11 +48,11 @@ pub struct AddCommand {
 }
 
 /// Path to protocols exposed by session-manager.
-const SESSION_MANAGER_EXPOSED: &str = "/hub-v2/children/core/children/session-manager/exec/expose";
+const SESSION_MANAGER_EXPOSED: &str = "/hub-v2/children/core/children/session-manager/exposed";
 
 /// Path to protocols exposed by the session.
 const SESSION_EXPOSED: &str =
-    "/hub-v2/children/core/children/session-manager/children/session:session/exec/expose";
+    "/hub-v2/children/core/children/session-manager/children/session:session/exposed";
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
