@@ -15,6 +15,7 @@
 
 #include "src/virtualization/bin/termina_guest_manager/termina_config.h"
 
+constexpr size_t kMinStatefulImageSize = 2ull * 1024 * 1024 * 1024;
 constexpr const char kGuestPartitionName[] = "guest";
 
 constexpr std::array<uint8_t, fuchsia::hardware::block::partition::GUID_LENGTH>
@@ -24,7 +25,8 @@ constexpr std::array<uint8_t, fuchsia::hardware::block::partition::GUID_LENGTH>
 };
 
 fit::result<std::string, std::vector<fuchsia::virtualization::BlockSpec>> GetBlockDevices(
-    const termina_config::Config& structured_config);
+    const termina_config::Config& structured_config,
+    size_t minimum_disk_size = kMinStatefulImageSize);
 
 void DropDevNamespace();
 

@@ -32,6 +32,7 @@ class BlockDevicesTest : public ::testing::Test {
   static constexpr int kBlockSize = 512;
   static constexpr uint64_t kBlockCount = 16 * 1024 * 1024 / kBlockSize;
   static constexpr size_t kFvmSliceSize = 32 * 1024;
+  static constexpr size_t kFvmSliceCount = kBlockCount * kBlockSize / kFvmSliceSize;
 
   void SetUp() override {
     // Create a ramdisk. We tag with with the FVM GUID so that our code can correctly locate
@@ -172,7 +173,49 @@ TEST_F(BlockDevicesTest, CreateFvmPartitionIfNonExistant) {
   InitializeFvm();
 
   // Get the block devices. This should create a guest partition that is 10 FVM slices.
-  auto result = GetBlockDevices(FvmStructuredConfig(10 * kFvmSliceSize));
+  auto result = GetBlockDevices(FvmStructuredConfig(10 * kFvmSliceSize), 0);
+
+  // Expect the partition is created.
+  ASSERT_TRUE(result.is_ok());
+  EXPECT_TRUE(FindPartitionWithGuid(GUID_FVM_VALUE));
+  auto guest_partition = FindPartitionWithGuid(kGuestPartitionGuid);
+  EXPECT_TRUE(guest_partition);
+
+  // Verify size/name
+  auto info = QueryVolumeInfo(*guest_partition);
+  EXPECT_TRUE(info.is_ok());
+  EXPECT_EQ(info.value().partition_name, kGuestPartitionName);
+  EXPECT_EQ(info.value().size, 10 * kFvmSliceSize);
+}
+
+TEST_F(BlockDevicesTest, CreateFvmPartitionLimitedDiskSpace) {
+  InitializeFvm();
+
+  // Request all slices. Note that this is not possible because FVM reserves some slices for
+  // internal usage.
+  auto result = GetBlockDevices(FvmStructuredConfig(kFvmSliceCount * kFvmSliceSize), 0);
+
+  // Expect the partition is created.
+  ASSERT_TRUE(result.is_ok());
+  EXPECT_TRUE(FindPartitionWithGuid(GUID_FVM_VALUE));
+  auto guest_partition = FindPartitionWithGuid(kGuestPartitionGuid);
+  EXPECT_TRUE(guest_partition);
+
+  auto info = QueryVolumeInfo(*guest_partition);
+  EXPECT_TRUE(info.is_ok());
+  EXPECT_EQ(info.value().partition_name, kGuestPartitionName);
+  // Expect 80% < size < 90% of FVM space. This is expected to be 90% of available sectors and we
+  // pad up to 10% of sectors that are reserved for internal FVM usage.
+  EXPECT_LE(info.value().size, (9 * kFvmSliceCount * kFvmSliceSize) / 10);
+  EXPECT_GT(info.value().size, (8 * kFvmSliceCount * kFvmSliceSize) / 10);
+}
+
+TEST_F(BlockDevicesTest, CreateFvmPartitionRoundUpToNearestSlice) {
+  InitializeFvm();
+
+  // Request a block device that is 1 byte larger than 9 FVM slices. We will expect this to be
+  // rounded up to 10 when the partition is allocated.
+  auto result = GetBlockDevices(FvmStructuredConfig(9 * kFvmSliceSize + 1), 0);
 
   // Expect the partition is created.
   ASSERT_TRUE(result.is_ok());

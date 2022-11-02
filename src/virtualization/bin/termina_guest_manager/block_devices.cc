@@ -148,7 +148,8 @@ zx::result<VolumeHandle> WaitForPartition(DIR* dir) {
 
 // Locates the FVM partition for a guest block device. If a partition does not
 // exist, allocate one.
-zx::result<VolumeHandle> FindOrAllocatePartition(std::string_view path, size_t partition_size) {
+zx::result<VolumeHandle> FindOrAllocatePartition(std::string_view path, size_t partition_size,
+                                                 size_t min_size) {
   auto dir = opendir(path.data());
   if (dir == nullptr) {
     FX_LOGS(ERROR) << "Failed to open directory '" << path << "'";
@@ -177,7 +178,33 @@ zx::result<VolumeHandle> FindOrAllocatePartition(std::string_view path, size_t p
                      << zx_status_get_string(info_status);
       return zx::error(ZX_ERR_IO);
     }
-    size_t slices = partition_size / info->slice_size;
+
+    // Round up to the next full slice.
+    size_t slices = (partition_size + info->slice_size - 1) / info->slice_size;
+
+    // Avoid allocating more than 90% of the disk space. This is a somewhat arbitrary limit prevent
+    // fully consuming  all remaining disk space for the VM.
+    size_t available_slices = info->slice_count - info->assigned_slice_count;
+    size_t usable_slices = available_slices * 9 / 10;
+    size_t usable_bytes = usable_slices * info->slice_size;
+    if (usable_bytes < min_size) {
+      FX_LOGS(ERROR) << "Only " << usable_bytes << "b usable (limited to 90%% of available space);"
+                     << " unable to allocate disk";
+      return zx::error(ZX_ERR_NO_SPACE);
+    }
+
+    if (slices > usable_slices) {
+      size_t requested_bytes = slices * info->slice_size;
+      FX_LOGS(WARNING) << "Requested disk of " << requested_bytes << "b but only " << usable_bytes
+                       << "b usable (90%% of avilable space); clamping";
+      FX_LOGS(WARNING) << "\tslice_size " << info->slice_size;
+      FX_LOGS(WARNING) << "\tslice_count " << info->slice_count;
+      FX_LOGS(WARNING) << "\tassigned_slice_count " << info->assigned_slice_count;
+      FX_LOGS(WARNING) << "\tmaxiumum_slice_count " << info->maximum_slice_count;
+      FX_LOGS(WARNING) << "\tmax_virtual_slice " << info->max_virtual_slice;
+      slices = usable_slices;
+    }
+
     zx_status_t part_status = ZX_OK;
     status = sync->AllocatePartition(slices, {.value = kGuestPartitionGuid}, {},
                                      kGuestPartitionName, 0, &part_status);
@@ -289,7 +316,7 @@ zx::result<fuchsia::io::FileHandle> GetFxfsPartition(const DiskImage& image,
 }  // namespace
 
 fit::result<std::string, std::vector<fuchsia::virtualization::BlockSpec>> GetBlockDevices(
-    const termina_config::Config& structured_config) {
+    const termina_config::Config& structured_config, size_t min_size) {
   TRACE_DURATION("termina_guest_manager", "Guest::GetBlockDevices");
 
   std::vector<fuchsia::virtualization::BlockSpec> devices;
@@ -312,7 +339,7 @@ fit::result<std::string, std::vector<fuchsia::virtualization::BlockSpec>> GetBlo
     stateful_spec.format = fuchsia::virtualization::BlockFormat::BLOCK;
   } else if (structured_config.stateful_partition_type() == "fvm") {
     // FVM
-    auto handle = FindOrAllocatePartition(kBlockPath, stateful_image_size_bytes);
+    auto handle = FindOrAllocatePartition(kBlockPath, stateful_image_size_bytes, min_size);
     if (handle.is_error()) {
       return fit::error("Failed to find or allocate a partition");
     }
