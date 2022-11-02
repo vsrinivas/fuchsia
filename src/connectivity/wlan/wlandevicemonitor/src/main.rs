@@ -54,20 +54,6 @@ async fn serve_fidl(
     Ok(())
 }
 
-// Depending on the build configuration, compile in support for either the isolated device manager
-// or the real device environment.  This eliminates the need for having test code in the production
-// build of wlandevicemonitor.
-#[cfg(feature = "isolated_dev_mgr")]
-fn serve_phys(
-    phys: Arc<device::PhyMap>,
-    inspect_tree: Arc<inspect::WlanMonitorTree>,
-) -> BoxFuture<'static, Result<std::convert::Infallible, Error>> {
-    info!("Serving IsolatedDevMgr environment");
-    let fut = device::serve_phys::<isolated_devmgr::IsolatedDeviceEnv>(phys, inspect_tree);
-    Box::pin(fut)
-}
-
-#[cfg(not(feature = "isolated_dev_mgr"))]
 fn serve_phys(
     phys: Arc<device::PhyMap>,
     inspect_tree: Arc<inspect::WlanMonitorTree>,
