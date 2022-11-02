@@ -534,6 +534,7 @@ sdk_molecule("driver_host_tools") {
 sdk_molecule("bind") {
   visibility = [ ":*" ]
   deps = [
+    "//src/devices/bind/fuchsia:fuchsia_sdk",
     "//src/devices/bind/fuchsia.acpi:fuchsia.acpi_sdk",
     "//src/devices/bind/fuchsia.i2c:fuchsia.i2c_sdk",
     "//src/devices/bind/fuchsia.pci:fuchsia.pci_sdk",
