@@ -13,6 +13,10 @@ group("tests") {
   ]
 }
 
+config("vulkan_no_nodiscard") {
+  defines = [ "VULKAN_HPP_NO_NODISCARD_WARNINGS" ]
+}
+
 source_set("gfx_tests_main") {
   testonly = true
   sources = [ "run_all_unittests.cc" ]
@@ -124,6 +128,8 @@ executable("unittests") {
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+
+  configs += [ ":vulkan_no_nodiscard" ]
 }
 
 executable("swapchain_tests") {

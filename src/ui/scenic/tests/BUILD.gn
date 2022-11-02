@@ -16,6 +16,10 @@ group("tests") {
   ]
 }
 
+config("vulkan_no_nodiscard") {
+  defines = [ "VULKAN_HPP_NO_NODISCARD_WARNINGS" ]
+}
+
 source_set("common_deps") {
   testonly = true
   sources = [
@@ -101,6 +105,8 @@ source_set("gfx_pixel_test") {
     "//src/ui/testing/views:views",
     "//third_party/googletest:gtest",
   ]
+
+  configs += [ ":vulkan_no_nodiscard" ]
 }
 
 executable("gfx_focus_integration_test_bin") {
