@@ -17,14 +17,24 @@
         },
     ],
     use: [
-        { protocol: "fuchsia.sys2.EventSource" },
         {
-            event: [
-                "destroyed",
-                "discovered",
-                "started",
-            ],
-            from: "framework",
+            event_stream: [ "discovered_v2" ],
+            from: "parent",
+            path: "/events/discovered",
+        },
+        {
+            event_stream: [ "started_v2" ],
+            from: "parent",
+            path: "/events/started",
+        },
+        {
+            event_stream: [ "started_v2" ],
+            from: "parent",
+        },
+        {
+            event_stream: [ "destroyed_v2" ],
+            from: "parent",
+            path: "/events/destroyed",
         },
         {
             protocol: "fuchsia.sys2.LifecycleController",

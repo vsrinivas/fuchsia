@@ -15,10 +15,7 @@
     ],
     offer: [
         {
-            protocol: [
-                "fuchsia.logger.LogSink",
-                "fuchsia.sys2.EventSource",
-            ],
+            protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
             to: [
                 "#archivist",
@@ -31,23 +28,21 @@
             to: "#cleanup",
         },
         {
-            event: "directory_ready",
+            event_stream: [
+                "destroyed_v2",
+                "started_v2",
+            ],
+            from: "parent",
+            to: "#cleanup",
+            scope: "#cleanup",
+        },
+        {
+            event_stream: [
+                "capability_requested_v2",
+                "directory_ready_v2",
+            ],
             from: "parent",
             to: "#archivist",
-            filter: { name: "diagnostics" },
-        },
-
-        // This event is not needed for the test to pass, but including it reduces log noise.
-        {
-            event: "stopped",
-            from: "framework",
-            to: "#archivist",
-        },
-        {
-            event: "capability_requested",
-            from: "framework",
-            to: "#archivist",
-            filter: { name: "fuchsia.logger.LogSink" },
         },
     ],
 }

@@ -25,11 +25,11 @@
             from: "parent",
         },
         {
-            event: [
-                "destroyed",
-                "started",
+            event_stream: [
+                "destroyed_v2",
+                "started_v2",
             ],
-            from: "framework",
+            from: "parent",
         },
     ],
     offer: [

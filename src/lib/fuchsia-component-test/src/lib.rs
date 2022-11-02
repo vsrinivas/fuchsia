@@ -6,10 +6,7 @@ use {
     crate::{error::Error, local_component_runner::LocalComponentRunnerBuilder},
     anyhow::{format_err, Context as _},
     cm_rust::{self, FidlIntoNative, NativeIntoFidl},
-    component_events::{
-        events::{Event as CeEvent, EventSource, EventSubscription, Started},
-        matcher::EventMatcher,
-    },
+    component_events::{events::Started, matcher::EventMatcher},
     fidl::endpoints::{
         self, create_proxy, ClientEnd, DiscoverableProtocolMarker, Proxy, ServerEnd, ServiceMarker,
     },
@@ -2095,14 +2092,11 @@ impl ScopedInstance {
     /// If the instance has been started before this method is invoked, then
     /// this method will block forever waiting for the Started event.
     /// REQUIRED: The manifest of the component executing this code must use
-    /// the `fuchsia.sys2.EventSource` protocol from the framework and the
-    /// "started" event.
+    /// the "started_v2" event_stream.
     pub async fn start_with_binder_sync(&self) -> Result<(), anyhow::Error> {
-        let event_source = EventSource::new().context("failed to create EventSource")?;
-        let mut event_stream = event_source
-            .subscribe(vec![EventSubscription::new(vec![Started::NAME])])
+        let mut event_stream = component_events::events::EventStream::open()
             .await
-            .context("failed to subscribe to EventSource")?;
+            .context("failed to create EventSource")?;
 
         let _ = self
             .connect_to_protocol_at_exposed_dir::<fcomponent::BinderMarker>()

@@ -635,6 +635,7 @@ async fn get_realm(
                 .capability(Capability::event_stream("started_v2").with_scope(&wrapper_realm))
                 .capability(Capability::event_stream("stopped_v2").with_scope(&wrapper_realm))
                 .capability(Capability::event_stream("destroyed_v2").with_scope(&wrapper_realm))
+                .capability(Capability::event_stream("discovered_v2").with_scope(&wrapper_realm))
                 .capability(
                     Capability::event_stream("capability_requested_v2").with_scope(&wrapper_realm),
                 )
@@ -749,6 +750,12 @@ async fn get_realm(
                 )
                 .capability(
                     Capability::event_stream("directory_ready_v2")
+                        .with_scope(&test_root)
+                        .with_scope(&enclosing_env)
+                        .with_scope(&resolver),
+                )
+                .capability(
+                    Capability::event_stream("discovered_v2")
                         .with_scope(&test_root)
                         .with_scope(&enclosing_env)
                         .with_scope(&resolver),

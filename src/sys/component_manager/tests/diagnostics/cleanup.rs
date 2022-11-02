@@ -39,9 +39,7 @@ async fn main() {
         }
     });
 
-    let event_source = EventSource::new().expect("conenct to event source");
-    let event_stream =
-        event_source.subscribe(vec![EventSubscription::new(vec![Destroyed::NAME])]).await.unwrap();
+    let event_stream = EventStream::open().await.expect("conenct to event source");
 
     // Destroy the parent component.
     let mut child_ref =

@@ -20,10 +20,7 @@
             to: "#reporter",
         },
         {
-            protocol: [
-                "fuchsia.logger.LogSink",
-                "fuchsia.sys2.EventSource",
-            ],
+            protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
             to: "#archivist",
         },
@@ -43,24 +40,14 @@
             to: "#reporter",
         },
         {
-            event: "directory_ready",
+            event_stream: "directory_ready_v2",
             from: "parent",
             to: "#archivist",
-            filter: { name: "diagnostics" },
-        },
-
-        // These events are not needed for the test to pass, but including them
-        // reduces log noise.
-        {
-            event: [ "stopped" ],
-            from: "framework",
-            to: "#archivist",
         },
         {
-            event: "capability_requested",
-            from: "framework",
+            event_stream: "capability_requested_v2",
+            from: "parent",
             to: "#archivist",
-            filter: { name: "fuchsia.logger.LogSink" },
         },
     ],
 }

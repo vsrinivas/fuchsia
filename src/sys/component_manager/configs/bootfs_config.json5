@@ -68,6 +68,9 @@
         {
             event_stream: "destroyed_v2",
         },
+        {
+            event_stream: "discovered_v2",
+        },
     ],
     component_id_index_path: "/boot/config/component_id_index",
     log_destination: "klog",

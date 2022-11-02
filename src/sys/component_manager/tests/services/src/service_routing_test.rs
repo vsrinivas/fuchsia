@@ -5,7 +5,7 @@
 use {
     anyhow::{format_err, Context, Error},
     component_events::{
-        events::{Destroyed, Discovered, Event, EventSource, EventSubscription, Started},
+        events::{Destroyed, Discovered, Event, EventStream, Started},
         matcher::EventMatcher,
         sequence::*,
     },
@@ -141,9 +141,7 @@ async fn create_destroy_instance_test() {
 
 /// Starts a branch child component.
 async fn start_branch() -> Result<ScopedInstance, Error> {
-    let event_source = EventSource::new()?;
-    let event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Discovered::NAME])])
+    let event_stream = EventStream::open_at_path("/events/discovered")
         .await
         .context("failed to subscribe to EventSource")?;
 
@@ -188,9 +186,7 @@ async fn start_provider(branch: &ScopedInstance, child_name: &str) -> Result<(),
         client::connect_to_protocol::<fsys2::LifecycleControllerMarker>()
             .context("failed to connect to LifecycleController")?;
 
-    let event_source = EventSource::new()?;
-    let event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Started::NAME])])
+    let event_stream = EventStream::open_at_path("/events/started")
         .await
         .context("failed to subscribe to EventSource")?;
 
@@ -229,9 +225,7 @@ async fn destroy_provider(branch: &ScopedInstance, child_name: &str) -> Result<(
         client::connect_to_protocol::<fsys2::LifecycleControllerMarker>()
             .context("failed to connect to LifecycleController")?;
 
-    let event_source = EventSource::new()?;
-    let event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Destroyed::NAME])])
+    let event_stream = EventStream::open_at_path("/events/destroyed")
         .await
         .context("failed to subscribe to EventSource")?;
 
