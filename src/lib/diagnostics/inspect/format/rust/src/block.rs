@@ -1044,19 +1044,24 @@ mod tests {
         }
     }
 
-    fn test_ok_types<T>(
-        f: fn(&mut Block<&[u8]>) -> Result<T, Error>,
+    fn test_ok_types<T: std::fmt::Debug, F: Fn(Block<&[u8]>) -> Result<T, Error>>(
+        f: F,
         ok_types: &BTreeSet<BlockType>,
     ) {
         if cfg!(debug_assertions) {
             let container = [0u8; constants::MIN_ORDER_SIZE * 3];
             for block_type in BlockType::all().iter() {
-                let mut block = create_with_type(&container[..], 0, block_type.clone());
-                let result = f(&mut block);
+                let block = create_with_type(&container[..], 0, block_type.clone());
+                let result = f(block);
                 if ok_types.contains(&block_type) {
-                    assert!(result.is_ok());
+                    assert!(
+                        result.is_ok(),
+                        "BlockType {:?} should be ok but is not: {:?}",
+                        block_type,
+                        result
+                    );
                 } else {
-                    assert!(result.is_err());
+                    assert!(result.is_err(), "BlockType {:?} should be err but is not", block_type);
                 }
             }
         }
@@ -1238,7 +1243,7 @@ mod tests {
         assert_eq!(container[24..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
 
         test_ok_types(
-            move |b| b.become_header((constants::MIN_ORDER_SIZE * 2).try_into().unwrap()),
+            |mut b| b.become_header((constants::MIN_ORDER_SIZE * 2).try_into().unwrap()),
             &BTreeSet::from_iter(vec![BlockType::Reserved]),
         );
         test_ok_types(move |b| b.header_magic(), &BTreeSet::from_iter(vec![BlockType::Header]));
@@ -1665,25 +1670,50 @@ mod tests {
     fn test_invalid_type_for_array() {
         let mut container = [0u8; 2048];
         container[24..].fill(14u8);
-        let block = get_reserved(&container);
+        let block = get_reserved_of_order(&container, 4);
 
-        assert!(block
-            .become_array_value(4, ArrayFormat::LinearHistogram, BlockType::StringReference, 0, 0)
-            .is_err());
+        test_ok_types(
+            |typed_block| {
+                block.become_free(0);
+                block.become_reserved().unwrap();
+                block.become_array_value(4, ArrayFormat::Default, typed_block.block_type(), 0, 0)
+            },
+            &BTreeSet::from_iter(vec![
+                BlockType::StringReference,
+                BlockType::IntValue,
+                BlockType::UintValue,
+                BlockType::DoubleValue,
+            ]),
+        );
 
-        for block_type in BlockType::all() {
-            if block_type.is_valid_for_array() {
-                continue;
-            }
+        test_ok_types(
+            |typed_block| {
+                block.become_free(0);
+                block.become_reserved().unwrap();
+                block.become_array_value(
+                    4,
+                    ArrayFormat::LinearHistogram,
+                    typed_block.block_type(),
+                    0,
+                    0,
+                )?;
 
-            assert!(block.become_array_value(4, ArrayFormat::Default, block_type, 0, 0).is_err());
-            assert!(block
-                .become_array_value(4, ArrayFormat::LinearHistogram, block_type, 0, 0)
-                .is_err());
-            assert!(block
-                .become_array_value(4, ArrayFormat::ExponentialHistogram, block_type, 0, 0)
-                .is_err());
-        }
+                block.become_free(0);
+                block.become_reserved().unwrap();
+                block.become_array_value(
+                    4,
+                    ArrayFormat::ExponentialHistogram,
+                    typed_block.block_type(),
+                    0,
+                    0,
+                )
+            },
+            &BTreeSet::from_iter(vec![
+                BlockType::IntValue,
+                BlockType::UintValue,
+                BlockType::DoubleValue,
+            ]),
+        );
     }
 
     // In this test, we actually don't care about generating string reference
@@ -1935,6 +1965,12 @@ mod tests {
 
     fn get_reserved(container: &[u8]) -> Block<&[u8]> {
         let block = Block::new_free(container, 0, 1, 0).unwrap();
+        assert!(block.become_reserved().is_ok());
+        block
+    }
+
+    fn get_reserved_of_order(container: &[u8], order: usize) -> Block<&[u8]> {
+        let block = Block::new_free(container, 0, order, 0).unwrap();
         assert!(block.become_reserved().is_ok());
         block
     }
