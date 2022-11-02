@@ -10,7 +10,7 @@
 #include <lib/synchronous-executor/executor.h>
 #include <lib/zx/bti.h>
 
-#include <variant>
+#include <optional>
 
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
@@ -134,7 +134,9 @@ class EventRing {
   //                to true). In this case ERDP points not to the next TRB to be evaluated (as we
   //                usually expect), but the current TRB already evaluated.
   // Returns the next TRB pointed to by ERDP.
-  Control AdvanceErdp();
+  void AdvanceErdp();
+
+  std::optional<Control> CurrentErdp();
 
   // Interrupt handlers.
   void HandlePortStatusChangeInterrupt();

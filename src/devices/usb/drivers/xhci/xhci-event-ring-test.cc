@@ -20,6 +20,7 @@
 #include <usb/usb.h>
 #include <zxtest/zxtest.h>
 
+#include "src/devices/usb/drivers/xhci/registers.h"
 #include "usb-xhci.h"
 #include "xhci-event-ring.h"
 
@@ -129,6 +130,8 @@ class EventRingHarness : public zxtest::Test {
     Control::FromTRB(&trb).set_Type(Control::PortStatusChangeEvent).ToTrb(&trb);
     auto evt = static_cast<PortStatusChangeEvent*>(&trb);
     evt->set_PortID(kPortNo);
+    auto command_completion = static_cast<CommandCompletionEvent*>(&trb);
+    command_completion->set_CompletionCode(CommandCompletionEvent::Success);
     AddTRB(trb);
   }
 

@@ -10,6 +10,8 @@
 #include <lib/fpromise/promise.h>
 #include <lib/zx/clock.h>
 
+#include <optional>
+
 #include "usb-xhci.h"
 
 namespace usb_xhci {
@@ -424,7 +426,7 @@ bool EventRing::StallWorkaroundForDefectiveHubs(std::unique_ptr<TRBContext>& con
   return false;
 }
 
-Control EventRing::AdvanceErdp() {
+void EventRing::AdvanceErdp() {
   enum {
     STOP = 0,
     INCREMENT = 1,
@@ -458,7 +460,7 @@ Control EventRing::AdvanceErdp() {
           // which direction the enqueue pointer will move next. Set reevaluate_ and return an
           // invalid TRB to wait for the next interrupt and try again.
           reevaluate_ = true;
-          return Control::Get().FromValue(0).set_Cycle(!ccs_);
+          return;
         }
         // HW has wrapped around to use the first segment.
         action = WRAP_AROUND;
@@ -500,25 +502,38 @@ Control EventRing::AdvanceErdp() {
       zxlogf(ERROR, "This should not happen.");
     } break;
   }
+}
 
-  if (unlikely(buffers_it_->new_segment)) {
-    // On the first pass through a new segment the cycle bit is invalid and software should use the
-    // completion code to check if the event TRB is valid. Section 4.9.4.1.
-    if (static_cast<CommandCompletionEvent*>(erdp_virt_)->CompletionCode() ==
-        CommandCompletionEvent::Invalid) {
-      return Control::Get().FromValue(0).set_Cycle(!ccs_);
+std::optional<Control> EventRing::CurrentErdp() {
+  if (reevaluate_) {
+    return std::nullopt;
+  }
+
+  {
+    fbl::AutoLock l(&segment_mutex_);
+    if (unlikely(buffers_it_->new_segment)) {
+      // On the first pass through a new segment the cycle bit is invalid and software should use
+      // the completion code to check if the event TRB is valid. Section 4.9.4.1.
+      if (static_cast<CommandCompletionEvent*>(erdp_virt_)->CompletionCode() ==
+          CommandCompletionEvent::Invalid) {
+        return std::nullopt;
+      }
+
+      // Barrier to ensure that the read of erdp_virt_ is ordered after the above validity check.
+      hw_rmb();
+      return Control::FromTRB(erdp_virt_);
     }
-
-    // Barrier to ensure that the read of erdp_virt_ is ordered after the above validity check.
-    hw_rmb();
-    auto control = Control::FromTRB(erdp_virt_);
-    return control.set_Cycle(ccs_);
   }
 
   auto control = Control::FromTRB(erdp_virt_);
-  // Barrier to ensure that all subsequent reads from erdp_virt_ are after this read, since we use
-  // this read to check the cycle bit.
+  if (control.Cycle() != ccs_) {
+    return std::nullopt;
+  }
+
+  // Barrier to ensure that all subsequent reads from erdp_virt_ are after the above cycle bit
+  // check.
   hw_rmb();
+
   return control;
 }
 
@@ -547,10 +562,14 @@ zx_status_t EventRing::HandleIRQ() {
   do {
     avoid_yield = false;
 
-    for (Control control = reevaluate_ ? AdvanceErdp() : Control::FromTRB(erdp_virt_);
-         control.Cycle() == ccs_; control = AdvanceErdp()) {
+    if (reevaluate_) {
+      AdvanceErdp();
+    }
+
+    std::optional<Control> control = CurrentErdp();
+    while (control.has_value()) {
       ++processed_trbs;
-      switch (control.Type()) {
+      switch (control->Type()) {
         case Control::PortStatusChangeEvent:
           HandlePortStatusChangeInterrupt();
           break;
@@ -573,9 +592,12 @@ zx_status_t EventRing::HandleIRQ() {
                  static_cast<CommandCompletionEvent*>(erdp_virt_)->CompletionCode());
           break;
         default:
-          zxlogf(ERROR, "Unexpected transfer event: %u", control.Type());
+          zxlogf(ERROR, "Unexpected transfer event: %u", control->Type());
           break;
       }
+
+      AdvanceErdp();
+      control = CurrentErdp();
     }
 
     if (last_phys != erdp_phys_) {
@@ -591,7 +613,7 @@ zx_status_t EventRing::HandleIRQ() {
     if (!hci_->HasCoherentState()) {
       // Check for stale value in cache
       InvalidatePageCache(erdp_virt_, ZX_CACHE_FLUSH_INVALIDATE | ZX_CACHE_FLUSH_DATA);
-      if (Control::FromTRB(erdp_virt_).Cycle() == ccs_) {
+      if (CurrentErdp().has_value()) {
         avoid_yield = true;
       }
     }
