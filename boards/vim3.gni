@@ -20,7 +20,7 @@ _common_bootfs_deps = [
   "//src/devices/board/drivers/vim3",
   "//src/devices/clock/drivers/amlogic-clk",
   "//src/devices/cpu/drivers/aml-cpu",
-  "//src/devices/gpio/drivers/aml-axg-gpio",
+  "//src/devices/gpio/drivers/aml-gpio",
   "//src/devices/gpio/drivers/ti-tca6408a",
   "//src/devices/i2c/drivers/aml-i2c",
   "//src/devices/mcu/drivers/vim3-mcu",
