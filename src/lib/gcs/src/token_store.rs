@@ -126,7 +126,7 @@ impl TokenStore {
 
     /// Use the refresh token to get a new access token.
     async fn refresh_access_token(&self, _https_client: &HttpsClient) -> Result<(), GcsError> {
-        tracing::trace!("refresh_access_token");
+        tracing::debug!("refresh_access_token");
         match &self.refresh_token {
             Some(refresh_token) => {
                 let new_token = new_access_token(refresh_token).await?;
@@ -147,7 +147,7 @@ impl TokenStore {
         bucket: &str,
         object: &str,
     ) -> Result<Response<Body>> {
-        tracing::trace!("download {:?}, {:?}", bucket, object);
+        tracing::debug!("download {:?}, {:?}", bucket, object);
         // If the bucket and object are from a gs:// URL, the object may have a
         // undesirable leading slash. Trim it if present.
         let object = if object.starts_with('/') { &object[1..] } else { object };
@@ -196,7 +196,7 @@ impl TokenStore {
     /// Callers are expected to handle errors and call attempt_download() again
     /// as desired (e.g. follow redirects).
     async fn send_request(&self, https_client: &HttpsClient, url: Url) -> Result<Response<Body>> {
-        tracing::trace!("https_client.request {:?}", url);
+        tracing::debug!("https_client.request {:?}", url);
         let req = Request::builder().method(Method::GET).uri(url.into_string());
         let req = self.authorize(req).await?;
         let req = req.body(Body::from(""))?;
@@ -287,7 +287,7 @@ impl TokenStore {
         prefix: &str,
         limit: Option<u32>,
     ) -> Result<Vec<String>> {
-        tracing::trace!("attempt_list of gs://{}/{}", bucket, prefix);
+        tracing::debug!("attempt_list of gs://{}/{}", bucket, prefix);
         // If the bucket and prefix are from a gs:// URL, the prefix may have a
         // undesirable leading slash. Trim it if present.
         let prefix = if prefix.starts_with('/') { &prefix[1..] } else { prefix };
@@ -313,6 +313,7 @@ impl TokenStore {
             let res = self.send_request(https_client, url).await.context("sending request")?;
             match res.status() {
                 StatusCode::FORBIDDEN | StatusCode::UNAUTHORIZED => {
+                    tracing::debug!("attempt_list status {}", res.status());
                     bail!(GcsError::NeedNewAccessToken);
                 }
                 StatusCode::OK => {

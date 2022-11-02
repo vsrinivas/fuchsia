@@ -117,7 +117,7 @@ where
 /// in storing an access token to disk for later use, though it may be used many
 /// times before needing to get a new access_token.
 pub async fn new_access_token(refresh_token: &str) -> Result<String, GcsError> {
-    tracing::trace!("new_access_token");
+    tracing::debug!("new_access_token");
     let req_body = RefreshTokenRequest {
         client_id: CLIENT_ID,
         client_secret: CLIENT_SECRET,
@@ -153,7 +153,7 @@ pub(crate) struct EncodedRedirect(pub String);
 ///
 /// Returns (auth_code, code_verifier).
 async fn get_auth_code() -> Result<(AuthCode, CodeVerifier, EncodedRedirect)> {
-    tracing::trace!("get_auth_code");
+    tracing::debug!("get_auth_code");
     let addr = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0);
     let listener = TcpListener::bind(&addr).context("TcpListener::bind")?;
 
@@ -197,18 +197,18 @@ async fn get_auth_code() -> Result<(AuthCode, CodeVerifier, EncodedRedirect)> {
 
     browser_open(&authorization_request)?;
 
-    tracing::trace!("Joining background thread");
+    tracing::debug!("Joining background thread");
     let auth_code = handle.join().expect("handling thread join")?;
     tracing::info!("HTTP server stopped.");
 
     assert!(!auth_code.is_empty(), "auth_code must not be empty");
     assert!(!code_verifier.is_empty(), "code_verifier must not be empty");
-    tracing::trace!("get_auth_code success");
+    tracing::debug!("get_auth_code success");
     Ok((AuthCode(auth_code), CodeVerifier(code_verifier), EncodedRedirect(encoded_redirect)))
 }
 
 fn handle_connection(mut stream: TcpStream, state: &str) -> Result<String> {
-    tracing::trace!("handle_connection");
+    tracing::debug!("handle_connection");
     // More than enough for the expected message.
     const BUF_LEN: usize = 8 * 1024;
     let mut data = [0; BUF_LEN];
@@ -226,7 +226,7 @@ fn handle_connection(mut stream: TcpStream, state: &str) -> Result<String> {
     let uri = url_from_buf(&data[..length])?;
     let mut incoming_state = "".to_string();
     let mut auth_code = "".to_string();
-    tracing::trace!("Scanning for code and state");
+    tracing::debug!("Scanning for code and state");
     for (key, value) in uri.query_pairs() {
         match &key {
             std::borrow::Cow::Borrowed("code") => auth_code = value.to_string(),
@@ -235,7 +235,7 @@ fn handle_connection(mut stream: TcpStream, state: &str) -> Result<String> {
         }
     }
     if incoming_state != state {
-        tracing::trace!("Incoming state mismatch");
+        tracing::debug!("Incoming state mismatch");
         let response_string = "\
                 HTTP/1.1 400 Bad Request\r\n\
                 \r\n\
@@ -253,7 +253,7 @@ fn handle_connection(mut stream: TcpStream, state: &str) -> Result<String> {
         )
     }
 
-    tracing::trace!("Sending response page");
+    tracing::debug!("Sending response page");
     let response_string = "\
             HTTP/1.1 200 OK\r\n\
             \r\n\
@@ -266,13 +266,13 @@ fn handle_connection(mut stream: TcpStream, state: &str) -> Result<String> {
     stream.write_all(&response_string.as_bytes()).context("writing response to auth")?;
     stream.flush().context("flushing response stream")?;
 
-    tracing::trace!("Got auth code");
+    tracing::debug!("Got auth code");
     Ok(auth_code)
 }
 
 /// Convert a byte array to a URL.
 fn url_from_buf(data: &[u8]) -> Result<url::Url> {
-    tracing::trace!("url_from_buf");
+    tracing::debug!("url_from_buf");
     let message = std::str::from_utf8(data).context("OAuth2 convert to utf8")?;
     let uri_start = message.find(" ").context("OAuth2 find first space")? + 1;
     let uri_end = message[uri_start..].find(" ").context("OAuth2 find second space")?;
@@ -316,7 +316,7 @@ fn browser_open(url: &str) -> Result<()> {
         .stderr(Stdio::null())
         .spawn()?;
 
-    tracing::trace!("opened browser");
+    tracing::debug!("opened browser");
     Ok(())
 }
 
@@ -329,7 +329,7 @@ pub(crate) async fn auth_code_to_refresh(
     code_verifier: &CodeVerifier,
     redirect_uri: &EncodedRedirect,
 ) -> Result<(String, Option<String>), GcsError> {
-    tracing::trace!("auth_code_to_refresh");
+    tracing::debug!("auth_code_to_refresh");
     assert!(!auth_code.0.is_empty(), "The auth code must not be empty");
 
     // Add POST parameters to exchange the auth_code for a refresh_token

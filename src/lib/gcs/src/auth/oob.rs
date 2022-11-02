@@ -29,7 +29,7 @@ scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform\
 ///
 /// This may involve user interaction such as opening a browser window..
 pub async fn new_refresh_token() -> Result<String> {
-    tracing::trace!("oob_new_refresh_token");
+    tracing::debug!("oob_new_refresh_token");
     let auth_code = AuthCode(oob_get_auth_code().context("getting auth code")?);
     let verifier = CodeVerifier("".to_string());
     let redirect = EncodedRedirect("urn:ietf:wg:oauth:2.0:oob".to_string());
@@ -43,7 +43,7 @@ pub async fn new_refresh_token() -> Result<String> {
 ///
 /// A helper wrapper around get_auth_code_with() using stdin/stdout.
 fn oob_get_auth_code() -> Result<String> {
-    tracing::trace!("oob_get_auth_code");
+    tracing::debug!("oob_get_auth_code");
     let stdout = io::stdout();
     let mut output = stdout.lock();
     let stdin = io::stdin();
@@ -62,7 +62,7 @@ where
     W: Write,
     R: Read,
 {
-    tracing::trace!("oob_get_auth_code_with");
+    tracing::debug!("oob_get_auth_code_with");
     writeln!(
         writer,
         "Please visit this site. Proceed through the web flow to allow access \

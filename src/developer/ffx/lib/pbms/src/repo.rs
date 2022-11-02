@@ -212,6 +212,7 @@ where
                 return Ok(());
             }
 
+            tracing::debug!("fetch_package_repository_from_backend failed");
             let boto_path = get_boto_path(auth_flow, ui).await?;
             let client =
                 get_gcs_client_with_auth(&boto_path).context("get_gcs_client_with_auth")?;

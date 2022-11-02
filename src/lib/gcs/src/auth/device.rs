@@ -11,6 +11,6 @@ pub async fn new_refresh_token<I>(_ui: &I) -> Result<String>
 where
     I: structured_ui::Interface + Sync,
 {
-    tracing::trace!("device_new_refresh_token");
+    tracing::debug!("device_new_refresh_token");
     unimplemented!();
 }

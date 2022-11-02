@@ -31,6 +31,7 @@ pub(crate) async fn get_boto_path<I>(auth_flow: AuthFlowChoice, ui: &I) -> Resul
 where
     I: structured_ui::Interface + Sync,
 {
+    tracing::debug!("get_boto_path");
     // TODO(fxb/89584): Change to using ffx client Id and consent screen.
     let boto: Option<PathBuf> =
         ffx_config::get("flash.gcs.token").await.context("getting flash.gcs.token config value")?;
@@ -43,6 +44,7 @@ where
         ),
     };
     if !boto_path.is_file() {
+        tracing::debug!("missing boto file at {:?}", boto_path);
         update_refresh_token(&boto_path, auth_flow, ui).await.context("Set up refresh token")?
     }
 
@@ -108,6 +110,7 @@ where
             Ok(exists) => return Ok(exists),
             Err(e) => match e.downcast_ref::<GcsError>() {
                 Some(GcsError::NeedNewRefreshToken) => {
+                    tracing::debug!("exists_in_gcs_with_auth got NeedNewRefreshToken");
                     update_refresh_token(&boto_path, auth_flow, ui)
                         .await
                         .context("Updating refresh token")?
@@ -184,6 +187,7 @@ where
             Ok(()) => break,
             Err(e) => match e.downcast_ref::<GcsError>() {
                 Some(GcsError::NeedNewRefreshToken) => {
+                    tracing::debug!("fetch_from_gcs_with_auth got NeedNewRefreshToken");
                     update_refresh_token(&boto_path, auth_flow, ui)
                         .await
                         .context("Updating refresh token")?
