@@ -96,22 +96,29 @@ pub struct SetCountryRequest {
     pub responder: oneshot::Sender<Result<(), Error>>,
 }
 
+// The following operations all require interaction with the interface state machines.  While
+// servicing these operations, IfaceManager should not accept other outside requests.
+#[derive(Debug)]
+pub enum AtomicOperation {
+    Disconnect(DisconnectRequest),
+    StopClientConnections(StopClientConnectionsRequest),
+    StopAp(StopApRequest),
+    StopAllAps(StopAllApsRequest),
+    SetCountry(SetCountryRequest),
+}
+
 #[derive(Debug)]
 pub enum IfaceManagerRequest {
-    Disconnect(DisconnectRequest),
     Connect(ConnectRequest),
     RecordIdleIface(RecordIdleIfaceRequest),
     HasIdleIface(HasIdleIfaceRequest),
     AddIface(AddIfaceRequest),
     RemoveIface(RemoveIfaceRequest),
     GetScanProxy(ScanProxyRequest),
-    StopClientConnections(StopClientConnectionsRequest),
     StartClientConnections(StartClientConnectionsRequest),
     StartAp(StartApRequest),
-    StopAp(StopApRequest),
-    StopAllAps(StopAllApsRequest),
     HasWpa3Iface(HasWpa3IfaceRequest),
-    SetCountry(SetCountryRequest),
+    AtomicOperation(AtomicOperation),
 }
 
 #[derive(Debug)]

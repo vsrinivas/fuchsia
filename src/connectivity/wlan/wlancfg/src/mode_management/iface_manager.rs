@@ -21,7 +21,7 @@ use {
             Defect,
         },
         telemetry::{TelemetryEvent, TelemetrySender},
-        util::{future_with_metadata, listener},
+        util::{atomic_oneshot_stream, future_with_metadata, listener},
     },
     anyhow::{format_err, Error},
     fidl::endpoints::create_proxy,
@@ -36,7 +36,7 @@ use {
         FutureExt, StreamExt,
     },
     log::{debug, error, info, warn},
-    std::{convert::Infallible, sync::Arc, unimplemented},
+    std::{convert::Infallible, fmt::Debug, sync::Arc, unimplemented},
 };
 
 // Maximum allowed interval between scans when attempting to reconnect client interfaces.  This
@@ -1095,8 +1095,7 @@ fn initiate_set_country(
 
         let set_country_result = if let Err(e) = stop_client_connections_fut.await {
             Err(format_err!(
-                "failed to stop client connection in preparation for setting
-            country code: {:?}",
+                "failed to stop client connection in preparation for setting country code: {:?}",
                 e
             ))
         } else if let Err(e) = stop_aps_fut.await {
@@ -1208,19 +1207,10 @@ async fn handle_iface_manager_request(
     iface_manager: &mut IfaceManagerService,
     network_selector: Arc<NetworkSelector>,
     operation_futures: &mut FuturesUnordered<BoxFuture<'static, IfaceManagerOperation>>,
+    token: atomic_oneshot_stream::Token,
     request: IfaceManagerRequest,
 ) {
     match request {
-        IfaceManagerRequest::Disconnect(DisconnectRequest { network_id, responder, reason }) => {
-            let fut = iface_manager.disconnect(network_id, reason);
-            let disconnect_fut = async move {
-                if responder.send(fut.await).is_err() {
-                    error!("could not respond to DisconnectRequest");
-                }
-                IfaceManagerOperation::ConfigureStateMachine
-            };
-            operation_futures.push(disconnect_fut.boxed());
-        }
         IfaceManagerRequest::Connect(ConnectRequest { request, responder }) => {
             if responder
                 .send(iface_manager.handle_connect_request(request, network_selector.clone()).await)
@@ -1259,19 +1249,6 @@ async fn handle_iface_manager_request(
                 error!("could not respond to ScanRequest");
             }
         }
-        IfaceManagerRequest::StopClientConnections(StopClientConnectionsRequest {
-            reason,
-            responder,
-        }) => {
-            let fut = iface_manager.stop_client_connections(reason);
-            let stop_client_connections_fut = async move {
-                if responder.send(fut.await).is_err() {
-                    error!("could not respond to StopClientConnectionsRequest");
-                }
-                IfaceManagerOperation::ConfigureStateMachine
-            };
-            operation_futures.push(stop_client_connections_fut.boxed());
-        }
         IfaceManagerRequest::StartClientConnections(StartClientConnectionsRequest {
             responder,
         }) => {
@@ -1284,43 +1261,91 @@ async fn handle_iface_manager_request(
                 error!("could not respond to StartApRequest");
             }
         }
-        IfaceManagerRequest::StopAp(StopApRequest { ssid, password, responder }) => {
-            let stop_ap_fut = iface_manager.stop_ap(ssid, password);
-            let stop_ap_fut = async move {
-                if responder.send(stop_ap_fut.await).is_err() {
-                    error!("could not respond to StopApRequest");
-                }
-                IfaceManagerOperation::ConfigureStateMachine
-            };
-            operation_futures.push(stop_ap_fut.boxed());
-        }
-        IfaceManagerRequest::StopAllAps(StopAllApsRequest { responder }) => {
-            let stop_all_aps_fut = iface_manager.stop_all_aps();
-            let stop_all_aps_fut = async move {
-                if responder.send(stop_all_aps_fut.await).is_err() {
-                    error!("could not respond to StopAllApsRequest");
-                }
-                IfaceManagerOperation::ConfigureStateMachine
-            };
-            operation_futures.push(stop_all_aps_fut.boxed());
-        }
         IfaceManagerRequest::HasWpa3Iface(HasWpa3IfaceRequest { responder }) => {
             if responder.send(iface_manager.has_wpa3_capable_client().await).is_err() {
                 error!("could not respond to HasWpa3IfaceRequest");
             }
         }
-        IfaceManagerRequest::SetCountry(req) => {
-            let regulatory_fut = initiate_set_country(iface_manager, req);
-            operation_futures.push(regulatory_fut);
+        IfaceManagerRequest::AtomicOperation(operation) => {
+            let fut = match operation {
+                AtomicOperation::Disconnect(DisconnectRequest {
+                    network_id,
+                    responder,
+                    reason,
+                }) => {
+                    let fut = iface_manager.disconnect(network_id, reason);
+                    let disconnect_fut = async move {
+                        if responder.send(fut.await).is_err() {
+                            error!("could not respond to DisconnectRequest");
+                        }
+                        IfaceManagerOperation::ConfigureStateMachine
+                    };
+                    disconnect_fut.boxed()
+                }
+                AtomicOperation::StopClientConnections(StopClientConnectionsRequest {
+                    reason,
+                    responder,
+                }) => {
+                    let fut = iface_manager.stop_client_connections(reason);
+                    let stop_client_connections_fut = async move {
+                        if responder.send(fut.await).is_err() {
+                            error!("could not respond to StopClientConnectionsRequest");
+                        }
+                        IfaceManagerOperation::ConfigureStateMachine
+                    };
+                    stop_client_connections_fut.boxed()
+                }
+                AtomicOperation::StopAp(StopApRequest { ssid, password, responder }) => {
+                    let stop_ap_fut = iface_manager.stop_ap(ssid, password);
+                    let stop_ap_fut = async move {
+                        if responder.send(stop_ap_fut.await).is_err() {
+                            error!("could not respond to StopApRequest");
+                        }
+                        IfaceManagerOperation::ConfigureStateMachine
+                    };
+                    stop_ap_fut.boxed()
+                }
+                AtomicOperation::StopAllAps(StopAllApsRequest { responder }) => {
+                    let stop_all_aps_fut = iface_manager.stop_all_aps();
+                    let stop_all_aps_fut = async move {
+                        if responder.send(stop_all_aps_fut.await).is_err() {
+                            error!("could not respond to StopAllApsRequest");
+                        }
+                        IfaceManagerOperation::ConfigureStateMachine
+                    };
+                    stop_all_aps_fut.boxed()
+                }
+                AtomicOperation::SetCountry(req) => {
+                    let regulatory_fut = initiate_set_country(iface_manager, req);
+                    let regulatory_fut = async move { regulatory_fut.await };
+                    regulatory_fut.boxed()
+                }
+            };
+
+            let fut = attempt_atomic_operation(fut, token);
+            operation_futures.push(fut);
         }
     };
+}
+
+// Bundle the operations of running the caller's future with dropping of the `AtomicOneshotStream`
+// `Token`
+fn attempt_atomic_operation<T: Debug + 'static>(
+    fut: BoxFuture<'static, T>,
+    token: atomic_oneshot_stream::Token,
+) -> BoxFuture<'static, T> {
+    Box::pin(async move {
+        let result = fut.await;
+        drop(token);
+        result
+    })
 }
 
 pub(crate) async fn serve_iface_manager_requests(
     mut iface_manager: IfaceManagerService,
     iface_manager_client: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     network_selector: Arc<NetworkSelector>,
-    mut requests: mpsc::Receiver<IfaceManagerRequest>,
+    requests: mpsc::Receiver<IfaceManagerRequest>,
     mut stats_receiver: ConnectionStatsReceiver,
     mut defect_receiver: mpsc::UnboundedReceiver<Defect>,
 ) -> Result<Infallible, Error> {
@@ -1328,6 +1353,10 @@ pub(crate) async fn serve_iface_manager_requests(
     // complete.  In such cases, futures can be added to this list to progress them once the state
     // machines have the opportunity to run.
     let mut operation_futures = FuturesUnordered::new();
+
+    // This allows routines servicing `IfaceManagerRequest`s to prevent incoming requests from
+    // being serviced to prevent potential deadlocks on the `PhyManager`.
+    let mut requests = atomic_oneshot_stream::AtomicOneshotStream::new(requests);
 
     // Create a timer to periodically check to ensure that all client interfaces are connected.
     let mut reconnect_monitor_interval: i64 = 1;
@@ -1339,6 +1368,8 @@ pub(crate) async fn serve_iface_manager_requests(
     let mut roaming_search_futures = FuturesUnordered::new();
 
     loop {
+        let mut atomic_iface_manager_requests = requests.get_atomic_oneshot_stream();
+
         select! {
             terminated_fsm = iface_manager.fsm_futures.select_next_some() => {
                 info!("state machine exited: {:?}", terminated_fsm.1);
@@ -1396,12 +1427,13 @@ pub(crate) async fn serve_iface_manager_requests(
             _connection_candidate = roaming_search_futures.select_next_some() => {
                 // TODO(fxbug.dev/84548): decide whether the best network found is better than the
                 // current network, and if so trigger a connection
-            }
-            req = requests.select_next_some() => {
+            },
+            (token, req) = atomic_iface_manager_requests.select_next_some() => {
                 handle_iface_manager_request(
                     &mut iface_manager,
                     network_selector.clone(),
                     &mut operation_futures,
+                    token,
                     req
                 ).await;
             }
@@ -4160,7 +4192,7 @@ mod tests {
             reason: client_types::DisconnectReason::NetworkUnsaved,
             responder: ack_sender,
         };
-        let req = IfaceManagerRequest::Disconnect(req);
+        let req = IfaceManagerRequest::AtomicOperation(AtomicOperation::Disconnect(req));
 
         run_service_test(
             &mut exec,
@@ -4810,7 +4842,7 @@ mod tests {
             responder: stop_sender,
             reason: client_types::DisconnectReason::FidlStopClientConnectionsRequest,
         };
-        let req = IfaceManagerRequest::StopClientConnections(req);
+        let req = IfaceManagerRequest::AtomicOperation(AtomicOperation::StopClientConnections(req));
 
         run_service_test(
             &mut exec,
@@ -4873,7 +4905,7 @@ mod tests {
             password: TEST_PASSWORD.as_bytes().to_vec(),
             responder: stop_sender,
         };
-        let req = IfaceManagerRequest::StopAp(req);
+        let req = IfaceManagerRequest::AtomicOperation(AtomicOperation::StopAp(req));
 
         run_service_test(
             &mut exec,
@@ -4900,7 +4932,7 @@ mod tests {
         // Request that an AP be started.
         let (stop_sender, stop_receiver) = oneshot::channel();
         let req = StopAllApsRequest { responder: stop_sender };
-        let req = IfaceManagerRequest::StopAllAps(req);
+        let req = IfaceManagerRequest::AtomicOperation(AtomicOperation::StopAllAps(req));
 
         run_service_test(
             &mut exec,
@@ -5680,7 +5712,7 @@ mod tests {
         // Call set_country and drive the operation to completion.
         let (set_country_sender, set_country_receiver) = oneshot::channel();
         let req = SetCountryRequest { country_code: Some([0, 0]), responder: set_country_sender };
-        let req = IfaceManagerRequest::SetCountry(req);
+        let req = IfaceManagerRequest::AtomicOperation(AtomicOperation::SetCountry(req));
 
         run_service_test(
             &mut exec,
@@ -5743,6 +5775,7 @@ mod tests {
                 phy_manager.clone(),
                 Defect::Phy(PhyFailure::IfaceCreationFailure { phy_id: 2 }),
             );
+
             // The future should complete immediately.
             assert_variant!(
                 exec.run_until_stalled(&mut defect_fut),
@@ -5816,5 +5849,206 @@ mod tests {
                 assert_eq!(phy_manager.defects, vec![Defect::Iface(IfaceFailure::ApStartFailure {iface_id: 0})])
             }
         );
+    }
+
+    // Demonstrates that the token passed to attempt_atomic_operation is held until the wrapped
+    // future completes.
+    #[fuchsia::test]
+    fn test_attempt_atomic_operation() {
+        let mut exec = fuchsia_async::TestExecutor::new().expect("failed to create an executor");
+
+        // The mpsc channel pair represents a requestor/worker pair to be managed by an
+        // AtomicOneshotReceiver.
+        let (mpsc_sender, mpsc_receiver) = mpsc::unbounded();
+        let mut mpsc_receiver = atomic_oneshot_stream::AtomicOneshotStream::new(mpsc_receiver);
+
+        // A oneshot pair is created to allow the test to synchronize around some work that the
+        // worker will do while holding the token from the AtomicOneshotReceiver.
+        let (oneshot_sender, oneshot_receiver) = oneshot::channel::<()>();
+
+        // Create a dummy future that waits on the receiver and just returns nil.  This will be the
+        // "work" that the worker does when it receives a request.
+        let fut = Box::pin(async move { oneshot_receiver.await });
+
+        // The mpsc_sender will send two requests to show that the second one is not processed
+        // until the atomic operation completes.
+        mpsc_sender.unbounded_send(()).expect("failed to send first message");
+        mpsc_sender.unbounded_send(()).expect("failed to send second message");
+
+        // Grab the request and the token from the receiving end.
+        let token = {
+            let mut oneshot_stream = mpsc_receiver.get_atomic_oneshot_stream();
+            assert_variant!(
+                exec.run_until_stalled(&mut oneshot_stream.next()),
+                Poll::Ready(Some((token, ()))) => token
+            )
+        };
+
+        // Throw the future and token into the atomic operation wrapper.  Verify that the future is
+        // waiting for the oneshot sender to send something.
+        let mut fut = attempt_atomic_operation(fut, token);
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Demonstrate that the AtomicOneshotStream is not able to produce the second request yet.
+        {
+            let mut oneshot_stream = mpsc_receiver.get_atomic_oneshot_stream();
+            assert_variant!(exec.run_until_stalled(&mut oneshot_stream.next()), Poll::Ready(None));
+        }
+
+        // Send on the oneshot sender so that the wrapped future can run to completion and the
+        // token will be dropped, allowing new requests to be received.
+        oneshot_sender.send(()).expect("failed to send oneshot message");
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(_));
+
+        let mut oneshot_stream = mpsc_receiver.get_atomic_oneshot_stream();
+        assert_variant!(exec.run_until_stalled(&mut oneshot_stream.next()), Poll::Ready(Some(_)));
+    }
+
+    fn test_atomic_operation<T: Debug>(
+        req: IfaceManagerRequest,
+        mut receiver: oneshot::Receiver<T>,
+    ) {
+        let mut exec = fuchsia_async::TestExecutor::new().expect("failed to create an executor");
+
+        // Create an IfaceManager that has both a fake client and a fake AP state machine.  Hold on
+        // to the receiving ends of the state machine command channels.  The receiving ends will
+        // never be serviced, resulting in the atomic operations stalling while holding the
+        // AtomicOneshotStream Token.
+        let test_values = test_setup(&mut exec);
+        let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
+
+        // Setup the fake client.
+        let (client_sender, client_receiver) = mpsc::channel(1);
+        iface_manager.clients[0].client_state_machine =
+            Some(Box::new(client_fsm::Client::new(client_sender)));
+
+        // Setup the fake AP.
+        let (ap_sender, ap_receiver) = mpsc::channel(1);
+        iface_manager.aps.push(ApIfaceContainer {
+            iface_id: TEST_AP_IFACE_ID,
+            config: Some(create_ap_config(&TEST_SSID, TEST_PASSWORD)),
+            ap_state_machine: Box::new(ap_fsm::AccessPoint::new(ap_sender)),
+            enabled_time: None,
+        });
+
+        // For all of the operations except SetCountry, the atomic operation can be stalled by
+        // mocking out the state machine interactions.  For SetCountry, instead make it look as if
+        // client connections are disabled and there are no APs.  This ensures that the second half
+        // of the operations which restores interfaces does not trigger.
+        match &req {
+            &IfaceManagerRequest::AtomicOperation(AtomicOperation::SetCountry(_)) => {
+                let phy_manager = Arc::new(Mutex::new(FakePhyManager {
+                    create_iface_ok: false,
+                    destroy_iface_ok: false,
+                    wpa3_iface: None,
+                    set_country_ok: false,
+                    country_code: None,
+                    client_connections_enabled: false,
+                    client_ifaces: vec![],
+                    defects: vec![],
+                }));
+                iface_manager.phy_manager = phy_manager;
+                let _ = iface_manager.aps.drain(..);
+            }
+            _ => {}
+        }
+
+        // Create other components to run the service.
+        let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
+
+        // Start the service loop
+        let (mut req_sender, req_receiver) = mpsc::channel(1);
+        let (_stats_sender, stats_receiver) = mpsc::unbounded();
+        let (_defect_sender, defect_receiver) = mpsc::unbounded();
+        let serve_fut = serve_iface_manager_requests(
+            iface_manager,
+            iface_manager_client,
+            test_values.network_selector,
+            req_receiver,
+            stats_receiver,
+            defect_receiver,
+        );
+        pin_mut!(serve_fut);
+
+        // Make the atomic call and run the service future until it stalls.
+        req_sender.try_send(req).expect("failed to make atomic request");
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(exec.run_until_stalled(&mut receiver), Poll::Pending,);
+
+        // Make a second IfaceManager call and observe that there is no response.
+        let (idle_iface_sender, mut idle_iface_receiver) = oneshot::channel();
+        let req = HasIdleIfaceRequest { responder: idle_iface_sender };
+        req_sender
+            .try_send(IfaceManagerRequest::HasIdleIface(req))
+            .expect("failed to send idle client check");
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(exec.run_until_stalled(&mut idle_iface_receiver), Poll::Pending,);
+
+        // It doesn't matter whether the state machines respond successfully, just that the
+        // operation finishes so that the atomic operation can progress.  Simply drop the receivers
+        // to demonstrate that behavior.
+        drop(client_receiver);
+        drop(ap_receiver);
+
+        // The atomic portion of the operation should now complete.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(exec.run_until_stalled(&mut receiver), Poll::Ready(_),);
+
+        // The second operation should also get a response.
+        assert_variant!(exec.run_until_stalled(&mut idle_iface_receiver), Poll::Ready(_),);
+    }
+
+    #[fuchsia::test]
+    fn test_atomic_disconnect() {
+        let (ack_sender, ack_receiver) = oneshot::channel();
+        let req = DisconnectRequest {
+            network_id: client_types::NetworkIdentifier {
+                ssid: TEST_SSID.clone(),
+                security_type: client_types::SecurityType::Wpa,
+            },
+            reason: client_types::DisconnectReason::NetworkUnsaved,
+            responder: ack_sender,
+        };
+        let req = IfaceManagerRequest::AtomicOperation(AtomicOperation::Disconnect(req));
+        test_atomic_operation(req, ack_receiver);
+    }
+
+    #[fuchsia::test]
+    fn test_atomic_stop_client_connections() {
+        let (ack_sender, ack_receiver) = oneshot::channel();
+        let req = StopClientConnectionsRequest {
+            responder: ack_sender,
+            reason: client_types::DisconnectReason::FidlStopClientConnectionsRequest,
+        };
+        let req = IfaceManagerRequest::AtomicOperation(AtomicOperation::StopClientConnections(req));
+        test_atomic_operation(req, ack_receiver);
+    }
+
+    #[fuchsia::test]
+    fn test_atomic_stop_all_aps() {
+        let (ack_sender, ack_receiver) = oneshot::channel();
+        let req = StopAllApsRequest { responder: ack_sender };
+        let req = IfaceManagerRequest::AtomicOperation(AtomicOperation::StopAllAps(req));
+        test_atomic_operation(req, ack_receiver);
+    }
+
+    #[fuchsia::test]
+    fn test_atomic_stop_ap() {
+        let (ack_sender, ack_receiver) = oneshot::channel();
+        let req = StopApRequest {
+            ssid: TEST_SSID.clone(),
+            password: TEST_PASSWORD.as_bytes().to_vec(),
+            responder: ack_sender,
+        };
+        let req = IfaceManagerRequest::AtomicOperation(AtomicOperation::StopAp(req));
+        test_atomic_operation(req, ack_receiver);
+    }
+
+    #[fuchsia::test]
+    fn test_atomic_set_country() {
+        let (ack_sender, ack_receiver) = oneshot::channel();
+        let req = SetCountryRequest { country_code: Some([0, 0]), responder: ack_sender };
+        let req = IfaceManagerRequest::AtomicOperation(AtomicOperation::SetCountry(req));
+        test_atomic_operation(req, ack_receiver);
     }
 }
