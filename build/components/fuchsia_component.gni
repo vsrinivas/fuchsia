@@ -299,7 +299,10 @@ template("fuchsia_component") {
                                  "deps",
                                  "testonly",
                                ])
-        inputs = get_target_outputs(_find_manifest_target)
+        _find_manifest_outputs = get_target_outputs(_find_manifest_target)
+        assert(_find_manifest_outputs == [ _find_manifest_outputs[0] ],
+               "$_find_manifest_target should have yielded exactly one output")
+        manifest = _find_manifest_outputs[0]
         visibility = [ ":*" ]
 
         if (!defined(deps)) {

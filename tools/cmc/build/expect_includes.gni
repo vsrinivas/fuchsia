@@ -108,17 +108,18 @@ template("collect_expected_includes") {
 #
 # Parameters
 #
-#   inputs (required)
-#     [list] Paths to JSON files containing manifest paths from GN metadata.
+#   manifest (required)
+#     [file] The path to the cml file that will be checked.
 #
 #   deps
 #   testonly
 #   visibility
 template("cmc_check_includes") {
-  assert(defined(invoker.inputs), "must provide inputs to cmc_check_includes")
+  assert(defined(invoker.manifest),
+         "must provide manifest to cmc_check_includes")
 
-  expected_includes_label = "${target_name}_expected_includes"
-  collect_expected_includes(expected_includes_label) {
+  _expected_includes_label = "${target_name}_expected_includes"
+  collect_expected_includes(_expected_includes_label) {
     forward_variables_from(invoker,
                            [
                              "deps",
@@ -130,6 +131,8 @@ template("cmc_check_includes") {
 
   cmc_label = "//tools/cmc:install"
   cmc_out_path = "${root_build_dir}/host-tools/cmc"
+
+  _expected_includes_label = ":" + _expected_includes_label
 
   python_action(target_name) {
     forward_variables_from(invoker,
@@ -144,11 +147,18 @@ template("cmc_check_includes") {
       deps = []
     }
     deps += [
-      ":" + expected_includes_label,
+      _expected_includes_label,
       cmc_label,
     ]
-    inputs += get_target_outputs(":" + expected_includes_label)
-    inputs += [ cmc_out_path ]
+    _expected_includes_outputs = get_target_outputs(_expected_includes_label)
+    assert(_expected_includes_outputs == [ _expected_includes_outputs[0] ],
+           "$_expected_includes_label should have yielded exactly one output")
+    _fromfile = _expected_includes_outputs[0]
+    inputs = [
+      invoker.manifest,
+      _fromfile,
+      cmc_out_path,
+    ]
     outputs = [ "$target_out_dir/$target_name.gn_stamp" ]
     depfile = "$target_gen_dir/$target_name.d"
 
@@ -158,9 +168,9 @@ template("cmc_check_includes") {
              "--stamp",
              rebase_path(outputs[0], root_build_dir),
              "--manifest-metadata",
-             rebase_path(inputs[0], root_build_dir),
+             rebase_path(invoker.manifest, root_build_dir),
              "--fromfile",
-             rebase_path(inputs[1], root_build_dir),
+             rebase_path(_fromfile, root_build_dir),
              "--depfile",
              rebase_path(depfile, root_build_dir),
            ] + include_paths
