@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <sstream>
+#include <utility>
 
 namespace camera {
 
@@ -14,13 +15,23 @@ constexpr auto kTag = "VmoPoolWrapper";
 
 zx_status_t VmoPoolWrapper::Init(const zx::vmo* vmos, size_t num_vmos,
                                  std::optional<std::string> name) {
-  auto status = pool_.Init(vmos, num_vmos);
-  if (status != ZX_OK) {
+  zx::unowned_vmo array[num_vmos];
+  for (size_t i = 0; i < num_vmos; ++i) {
+    array[i] = vmos[i].borrow();
+  }
+  return Init(cpp20::span(array, num_vmos), std::move(name));
+}
+
+zx_status_t VmoPoolWrapper::Init(cpp20::span<zx::unowned_vmo> vmos,
+                                 std::optional<std::string> name) {
+  if (zx_status_t status = pool_.Init(vmos); status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to initialize VmoPool";
     return status;
   }
   min_free_buffers_ = static_cast<uint32_t>(pool_.free_buffers());
-  name_ = name.value_or("");
+  if (name.has_value()) {
+    name_ = std::move(name.value());
+  }
   return ZX_OK;
 }
 

@@ -166,8 +166,7 @@ zx_status_t UsbVideoStream::CreateStream(fuchsia::sysmem::BufferCollectionInfo b
                                             .rate = frame_rate};
 
   // Try setting the format on the device.
-  auto status = usb_state_.SetFormat(video_format);
-  if (status != ZX_OK) {
+  if (zx_status_t status = usb_state_.SetFormat(video_format); status != ZX_OK) {
     zxlogf(ERROR, "setting format failed, err: %d", status);
     return status;
   }
@@ -182,13 +181,18 @@ zx_status_t UsbVideoStream::CreateStream(fuchsia::sysmem::BufferCollectionInfo b
   current_frame_ = nullptr;
   frame_number_ = 0;
   // Now to set the buffers:
-  status = buffers_.Init(buffer_collection.vmos.data(), buffer_collection.buffer_count);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to initialize VmoPool, err: %d", status);
-    return status;
+  {
+    zx::unowned_vmo vmos[std::size(buffer_collection.vmos)];
+    for (size_t i = 0; buffer_collection.buffer_count; ++i) {
+      vmos[i] = buffer_collection.vmos[i].borrow();
+    }
+    if (zx_status_t status = buffers_.Init(cpp20::span(vmos, buffer_collection.buffer_count));
+        status != ZX_OK) {
+      zxlogf(ERROR, "Failed to initialize VmoPool, err: %d", status);
+      return status;
+    }
   }
-  buffers_.MapVmos();
-  if (status != ZX_OK) {
+  if (zx_status_t status = buffers_.MapVmos(); status != ZX_OK) {
     zxlogf(ERROR, "Failed to map vmos, err: %d", status);
     return status;
   }
@@ -200,9 +204,9 @@ zx_status_t UsbVideoStream::CreateStream(fuchsia::sysmem::BufferCollectionInfo b
       fit::bind_member(this, &UsbVideoStream::PostRequestCompleteTask));
 }
 
-void UsbVideoStream::CloseStreamOnError(zx_status_t status, std::string call) {
+void UsbVideoStream::CloseStreamOnError(zx_status_t status, const char* call) {
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to %s: status %s. Closing stream channel.", call.c_str(),
+    zxlogf(ERROR, "Failed to %s: status %s. Closing stream channel.", call,
            zx_status_get_string(status));
     SetStreaming(false);
     stream_binding_.Unbind();
