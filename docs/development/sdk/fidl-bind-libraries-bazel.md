@@ -35,7 +35,7 @@ access constants for these bind library values from the parent driver.
 #### The parent driver
 
 ```bazel {:.devsite-disable-click-to-copy}
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/parent/BUILD.bazel" region_tag="parent_driver" highlight="11,12,14,15" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/parent/BUILD.bazel" region_tag="parent_driver" highlight="12,13,15,16" %}
 ```
 
 #### The child bind rules

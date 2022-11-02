@@ -162,7 +162,7 @@ The parent driver’s [`BUILD.bazel`][build-bazel-parent-driver] file below show
 `cc_binary` target has a dependency to the custom bind library `fuchsia.example.gizmo.bind_cc`:
 
 ```cpp {:.devsite-disable-click-to-copy}
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/parent/BUILD.bazel" region_tag="parent_driver" adjust_indentation="auto" highlight="9,10" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/parent/BUILD.bazel" region_tag="parent_driver" adjust_indentation="auto" highlight="10,11" %}
 ```
 
 Notice that the dependency is prefixed with `//src/bind_library/lib` (instead of `@fuchsia_sdk//`),
