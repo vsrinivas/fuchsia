@@ -146,6 +146,7 @@ impl ImageAssemblyConfigBuilder {
             blobs: _,
             base_drivers,
             shell_commands,
+            packages_to_compile: _,
         } = bundle;
 
         self.add_bundle_packages(bundle_path, &bundle)?;
@@ -791,6 +792,7 @@ mod tests {
             config_data: BTreeMap::default(),
             blobs: Vec::default(),
             shell_commands: ShellCommands::default(),
+            packages_to_compile: BTreeMap::default(),
         }
     }
 
@@ -839,6 +841,7 @@ mod tests {
             config_data: BTreeMap::default(),
             blobs: Vec::default(),
             shell_commands: ShellCommands::default(),
+            packages_to_compile: BTreeMap::default(),
         };
         let mut builder = ImageAssemblyConfigBuilder::default();
         builder.add_parsed_bundle(outdir.as_ref().join("minimum_bundle"), minimum_bundle).unwrap();

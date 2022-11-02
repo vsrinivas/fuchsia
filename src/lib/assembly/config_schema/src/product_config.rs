@@ -311,6 +311,41 @@ pub struct AssemblyInputBundle {
     /// commands within each.
     #[serde(default)]
     pub shell_commands: ShellCommands,
+
+    /// Packages to create dynamically as part of the Assembly process.
+    #[serde(default)]
+    pub packages_to_compile: BTreeMap<PackageName, PackageEntry>,
+}
+
+type ComponentManifestSource = Utf8PathBuf;
+type ComponentManifestShard = Utf8PathBuf;
+type ComponentName = String;
+
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub enum PackageEntry {
+    /// Primary definition of a compiled package. Only a single AIB should
+    /// contain the main definition for a given package.
+    MainDefinition {
+        name: PackageName,
+        /// Components to add to the package, mapping component name to
+        /// the primary cml definition of the component.
+        components: BTreeMap<ComponentName, ComponentManifestSource>,
+        /// Non-component files to add to the package
+        #[serde(default)]
+        contents: Vec<FileEntry>,
+    },
+    /// Additional contents of the package to be defined in
+    /// secondary AssemblyInputBundles. There can be many of these, and
+    /// they will be merged into the final compiled package.
+    Additional {
+        /// Name of the package to which these contents are associated.
+        /// This package should have a corresponding MainDefinition in another
+        /// AIB.
+        name: PackageName,
+        /// Additional component shards to combine with the primary manifest.
+        component_shards: BTreeMap<ComponentName, Vec<ComponentManifestShard>>,
+    },
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
