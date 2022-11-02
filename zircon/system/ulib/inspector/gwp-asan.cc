@@ -21,6 +21,14 @@ bool inspector_get_gwp_asan_info(const zx::process& process,
   // The address of __libc_gwp_asan_info.
   uint64_t libc_gwp_asan_info_addr = 0;
 
+  // If a page fault was caused because there is no memory available,
+  // it's not a gwp-asan error.
+  if (exception_report.header.type == ZX_EXCP_FATAL_PAGE_FAULT &&
+      static_cast<zx_status_t>(exception_report.context.synth_code) == ZX_ERR_NO_MEMORY) {
+    info->error_type = nullptr;
+    return true;
+  }
+
   // Find the GWP-ASan note.
   elf_search::ForEachModule(process, [&](const elf_search::ModuleInfo& info) {
     if (info.name != "libc.so") {
