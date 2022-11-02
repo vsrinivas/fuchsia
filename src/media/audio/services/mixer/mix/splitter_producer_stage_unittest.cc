@@ -118,7 +118,7 @@ TEST_F(SplitterProducerStageTest, Advance) {
 TEST_F(SplitterProducerStageTest, Read) {
   // Our frame rate is 1kHz, so a 10ms delay is 10 frames.
   ScopedThreadChecker checker(consumer().thread()->checker());
-  consumer().set_max_downstream_delay(zx::msec(10));
+  consumer().set_max_downstream_output_pipeline_delay(zx::msec(10));
 
   // Feed a packet into the source.
   std::vector<int32_t> payload(20);

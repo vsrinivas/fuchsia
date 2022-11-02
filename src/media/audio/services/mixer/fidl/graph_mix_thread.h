@@ -26,11 +26,9 @@ class GraphMixThread : public GraphThread {
 
   // Implements `GraphThread`.
   std::shared_ptr<PipelineThread> pipeline_thread() const final { return thread_; }
+  zx::duration mix_period() const final { return thread_->mix_period(); }
   void IncrementClockUsage(std::shared_ptr<Clock> clock) final;
   void DecrementClockUsage(std::shared_ptr<Clock> clock) final;
-
-  // Reports the mix period.
-  zx::duration mix_period() const { return thread_->mix_period(); }
 
   // Reports the number of consumers using this thread.
   int64_t num_consumers() const { return static_cast<int64_t>(consumers_.size()); }

@@ -82,7 +82,7 @@ TEST_F(SplitterConsumerStageTest, UpdatePresentationTimeToFracFrame) {
 TEST_F(SplitterConsumerStageTest, FillBuffer) {
   // Our frame rate is 1kHz, so an 8ms delay is 8 frames.
   ScopedThreadChecker checker(consumer().thread()->checker());
-  consumer().set_max_downstream_delay(zx::msec(8));
+  consumer().set_max_downstream_output_pipeline_delay(zx::msec(8));
 
   // On this timeline, frame 0 is presented at time 0.
   consumer().UpdatePresentationTimeToFracFrame(
@@ -98,7 +98,7 @@ TEST_F(SplitterConsumerStageTest, FillBuffer) {
   const auto t0 = zx::time(0);
   const auto t2 = zx::time(0) + zx::msec(2);
 
-  // First call, starting from t=0, should fill up to t=max_downstream_delay=8.
+  // First call, starting from t=0, should fill up to t=max_downstream_output_pipeline_delay=8.
   // Do this twice to make sure it is idempotent.
   for (auto k = 0; k < 2; k++) {
     SCOPED_TRACE("iter" + std::to_string(k));

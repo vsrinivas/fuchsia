@@ -52,8 +52,11 @@ class SplitterConsumerStage : public BaseConsumerStage {
   // Advance this splitter's source stream.
   void AdvanceSource(MixJobContext& ctx, Fixed frame) TA_REQ(thread()->checker());
 
-  // Sets the maximum delay on any path downstream of this splitter.
-  void set_max_downstream_delay(zx::duration delay) TA_REQ(thread()->checker());
+  // Sets the maximum delay on any output pipeline downstream of this splitter.
+  void set_max_downstream_output_pipeline_delay(zx::duration delay) TA_REQ(thread()->checker());
+
+  // Returns the maximum delay on any output pipeline downstream of this splitter.
+  zx::duration max_downstream_output_pipeline_delay() const TA_REQ(thread()->checker());
 
   // Equivalent to PipelineStage::presentation_time_to_frac_frame, but may be called from
   // SplitterProducerStage, which may be running on a different thread. This is initially
@@ -70,7 +73,7 @@ class SplitterConsumerStage : public BaseConsumerStage {
   [[nodiscard]] int64_t end_of_last_fill() const { return end_of_last_fill_.load(); }
 
  private:
-  std::optional<zx::duration> max_downstream_delay_ TA_GUARDED(thread()->checker());
+  std::optional<zx::duration> max_downstream_output_pipeline_delay_ TA_GUARDED(thread()->checker());
 
   std::atomic<int64_t> end_of_last_fill_{std::numeric_limits<int64_t>::min()};
   std::atomic<bool> have_presentation_time_to_frac_frame_{false};

@@ -28,6 +28,7 @@ class GraphDetachedThread : public GraphThread {
 
   // Implements `GraphThread`.
   std::shared_ptr<PipelineThread> pipeline_thread() const final { return pipeline_thread_; }
+  zx::duration mix_period() const final { return zx::nsec(0); }
   void IncrementClockUsage(std::shared_ptr<Clock> clock) final {}
   void DecrementClockUsage(std::shared_ptr<Clock> clock) final {}
 

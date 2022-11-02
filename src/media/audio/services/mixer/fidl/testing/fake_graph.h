@@ -40,8 +40,12 @@ using FakeNodePtr = std::shared_ptr<FakeNode>;
 // See FakeGraph for creation methods.
 class FakeGraphThread : public GraphThread {
  public:
+  void set_mix_period(zx::duration d) { mix_period_ = d; }
+
   // Implements `GraphThread`.
   std::shared_ptr<PipelineThread> pipeline_thread() const final { return pipeline_thread_; }
+  zx::duration mix_period() const final { return mix_period_; }
+
   void IncrementClockUsage(std::shared_ptr<Clock> clock) final {
     if (const auto [it, is_new] = clock_usages_.emplace(std::move(clock), 1); !is_new) {
       ++it->second;
@@ -66,6 +70,7 @@ class FakeGraphThread : public GraphThread {
         pipeline_thread_(std::make_shared<FakePipelineThread>(id)) {}
 
   const std::shared_ptr<PipelineThread> pipeline_thread_;
+  zx::duration mix_period_;
   std::unordered_map<std::shared_ptr<Clock>, int> clock_usages_;
 };
 

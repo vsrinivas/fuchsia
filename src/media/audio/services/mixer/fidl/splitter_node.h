@@ -57,10 +57,10 @@ class SplitterNode : public Node, public std::enable_shared_from_this<SplitterNo
     // Reference clock of this nodes's source and destination streams.
     std::shared_ptr<Clock> reference_clock;
 
-    // Which thread the consumer node is assigned to.
+    // Which thread the child consumer is assigned to.
     std::shared_ptr<GraphMixThread> consumer_thread;
 
-    // On creation, child ProducerNodes are initially assigned to this detached thread.
+    // On creation, child producers are initially assigned to this detached thread.
     GraphDetachedThreadPtr detached_thread;
   };
 
@@ -71,24 +71,34 @@ class SplitterNode : public Node, public std::enable_shared_from_this<SplitterNo
     UNREACHABLE << "PresentationDelayForSourceEdge should not be called on meta nodes";
   }
 
+  // Reports the current ring buffer size.
+  uint64_t ring_buffer_bytes() const { return consumer_->ring_buffer_bytes(); }
+
  private:
   // The type of node placed in `Splitter.child_sources()`.
   class ChildConsumerNode : public Node {
    public:
     struct Args {
       std::string_view name;
+      Format format;
       std::shared_ptr<SplitterNode> parent;
       std::shared_ptr<SplitterConsumerStage> pipeline_stage;
+      std::shared_ptr<RingBuffer> ring_buffer;
+      uint64_t ring_buffer_bytes;
     };
     explicit ChildConsumerNode(Args args);
 
     // Implements `Node`.
+    std::optional<std::pair<ThreadId, fit::closure>> SetMaxDelays(Delays delays) final;
     zx::duration PresentationDelayForSourceEdge(const Node* source) const final;
 
     // Overrides `Node::pipeline_stage` with a more specific type.
     [[nodiscard]] std::shared_ptr<SplitterConsumerStage> pipeline_stage() const {
       return std::static_pointer_cast<SplitterConsumerStage>(Node::pipeline_stage());
     }
+
+    // Reports the current ring buffer size.
+    uint64_t ring_buffer_bytes() const { return ring_buffer_bytes_; }
 
    private:
     NodePtr CreateNewChildSource() final {
@@ -102,6 +112,10 @@ class SplitterNode : public Node, public std::enable_shared_from_this<SplitterNo
     }
     std::optional<size_t> MaxSources() const final { return 1; }
     bool AllowsDest() const final { return false; }
+
+    const Format format_;
+    const std::shared_ptr<RingBuffer> ring_buffer_;
+    uint64_t ring_buffer_bytes_;
   };
 
   // The type of node placed in `Splitter.child_dests()`.
@@ -111,6 +125,7 @@ class SplitterNode : public Node, public std::enable_shared_from_this<SplitterNo
       std::string_view name;
       std::shared_ptr<SplitterNode> parent;
       std::shared_ptr<SplitterProducerStage> pipeline_stage;
+      std::shared_ptr<GraphThread> splitter_thread;
     };
     explicit ChildProducerNode(Args args);
 
@@ -132,6 +147,9 @@ class SplitterNode : public Node, public std::enable_shared_from_this<SplitterNo
     bool CanAcceptSourceFormat(const Format& format) const final { return false; }
     std::optional<size_t> MaxSources() const final { return 0; }
     bool AllowsDest() const final { return true; }
+
+    // The thread used by our parent SplitterNode.
+    const std::shared_ptr<GraphThread> splitter_thread_;
   };
 
   SplitterNode(Args args, std::shared_ptr<RingBuffer> ring_buffer);

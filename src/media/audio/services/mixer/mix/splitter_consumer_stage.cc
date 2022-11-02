@@ -32,10 +32,10 @@ void SplitterConsumerStage::UpdatePresentationTimeToFracFrame(std::optional<Time
 
 void SplitterConsumerStage::FillBuffer(MixJobContext& ctx) {
   FX_CHECK(presentation_time_to_frac_frame());
-  FX_CHECK(max_downstream_delay_);
+  FX_CHECK(max_downstream_output_pipeline_delay_);
 
   const auto start_time = ctx.start_time(reference_clock());
-  const auto end_time = start_time + *max_downstream_delay_;
+  const auto end_time = start_time + *max_downstream_output_pipeline_delay_;
 
   int64_t start_frame = FrameFromPresentationTime(start_time).Floor();
   int64_t end_frame = FrameFromPresentationTime(end_time).Floor();
@@ -59,8 +59,13 @@ void SplitterConsumerStage::AdvanceSource(MixJobContext& ctx, Fixed frame) {
   }
 }
 
-void SplitterConsumerStage::set_max_downstream_delay(zx::duration delay) {
-  max_downstream_delay_ = delay;
+void SplitterConsumerStage::set_max_downstream_output_pipeline_delay(zx::duration delay) {
+  max_downstream_output_pipeline_delay_ = delay;
+}
+
+zx::duration SplitterConsumerStage::max_downstream_output_pipeline_delay() const {
+  FX_CHECK(max_downstream_output_pipeline_delay_);
+  return *max_downstream_output_pipeline_delay_;
 }
 
 std::optional<TimelineFunction> SplitterConsumerStage::presentation_time_to_frac_frame() const {

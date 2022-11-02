@@ -172,34 +172,51 @@ TEST(SplitterNodeTest, CopySourceToDests) {
   auto clock = clock_realm->CreateClock("ref_clock", Clock::kMonotonicDomain, false);
   auto thread1 = MakeThread(clock_realm, q, 1);
   auto thread2 = MakeThread(clock_realm, q, 2);
+  auto thread3 = MakeThread(clock_realm, q, 3);
 
   auto dest1_writer = std::make_shared<FakeConsumerStageWriter>();
   auto dest1 = ConsumerNode::Create({
+      .name = "dest1",
       .pipeline_direction = PipelineDirection::kOutput,
       .format = kFormat,
       .reference_clock = clock,
       .media_ticks_per_ns = kFormat.frames_per_ns(),
       .writer = dest1_writer,
       .thread = thread1,
-      .delay_watcher = DelayWatcherClient::Create({.initial_delay = zx::nsec(0)}),
+      .delay_watcher = DelayWatcherClient::Create({.initial_delay = zx::nsec(100)}),
       .global_task_queue = q,
   });
   q->RunForThread(thread1->id());
 
   auto dest2_writer = std::make_shared<FakeConsumerStageWriter>();
   auto dest2 = ConsumerNode::Create({
+      .name = "dest2",
       .pipeline_direction = PipelineDirection::kOutput,
       .format = kFormat,
       .reference_clock = clock,
       .media_ticks_per_ns = kFormat.frames_per_ns(),
       .writer = dest2_writer,
       .thread = thread2,
-      .delay_watcher = DelayWatcherClient::Create({.initial_delay = zx::nsec(0)}),
+      .delay_watcher = DelayWatcherClient::Create({.initial_delay = zx::nsec(200)}),
       .global_task_queue = q,
   });
   q->RunForThread(thread2->id());
 
+  auto dest3_writer = std::make_shared<FakeConsumerStageWriter>();
+  auto dest3 = ConsumerNode::Create({
+      .name = "dest3",
+      .pipeline_direction = PipelineDirection::kInput,
+      .format = kFormat,
+      .reference_clock = clock,
+      .media_ticks_per_ns = kFormat.frames_per_ns(),
+      .writer = dest3_writer,
+      .thread = thread3,
+      .global_task_queue = q,
+  });
+  q->RunForThread(thread3->id());
+
   auto splitter = SplitterNode::Create({
+      .name = "splitter",
       .pipeline_direction = PipelineDirection::kOutput,
       .format = kFormat,
       .reference_clock = clock,
@@ -207,24 +224,76 @@ TEST(SplitterNodeTest, CopySourceToDests) {
       .detached_thread = graph.ctx().detached_thread,
   });
 
-  // Connect source -> splitter -> {dest1, dest2}.
+  // Connect source -> splitter -> {dest1, dest2, dest3}.
   {
     auto result = Node::CreateEdge(graph.ctx(), source, splitter, /*options=*/{});
     ASSERT_TRUE(result.is_ok());
+    q->RunForThread(thread1->id());
   }
   {
     auto result = Node::CreateEdge(graph.ctx(), splitter, dest1, /*options=*/{});
     ASSERT_TRUE(result.is_ok());
+    q->RunForThread(thread1->id());
   }
   {
     auto result = Node::CreateEdge(graph.ctx(), splitter, dest2, /*options=*/{});
     ASSERT_TRUE(result.is_ok());
+    q->RunForThread(thread2->id());
+    q->RunForThread(thread1->id());
+  }
+  {
+    auto result = Node::CreateEdge(graph.ctx(), splitter, dest3, /*options=*/{});
+    ASSERT_TRUE(result.is_ok());
+    q->RunForThread(thread3->id());
+    q->RunForThread(thread1->id());
   }
 
-  q->RunForThread(thread1->id());
-  q->RunForThread(thread2->id());
+  ASSERT_EQ(splitter->child_sources().size(), 1u);
+  ASSERT_EQ(splitter->child_dests().size(), 3u);
 
-  // Start the destinations with frame 0 presented at t=0.
+  auto consumer = splitter->child_sources()[0];
+  auto producer1 = splitter->child_dests()[0];  // same thread, not loopback
+  auto producer2 = splitter->child_dests()[1];  // cross thread, not loopback
+  auto producer3 = splitter->child_dests()[2];  // cross thread, loopback
+
+  // Check node delays.
+  EXPECT_EQ(producer1->max_downstream_output_pipeline_delay(), 2 * kMixPeriod + zx::nsec(100));
+  EXPECT_EQ(producer2->max_downstream_output_pipeline_delay(), 2 * kMixPeriod + zx::nsec(200));
+  EXPECT_EQ(producer3->max_downstream_output_pipeline_delay(), zx::nsec(0));
+  // This is producer2's downstream delay plus an extra mix period because producer2 runs on a
+  // different thread than the consumer.
+  EXPECT_EQ(consumer->max_downstream_output_pipeline_delay(), 3 * kMixPeriod + zx::nsec(200));
+
+  EXPECT_EQ(producer1->max_downstream_input_pipeline_delay(), zx::nsec(0));
+  EXPECT_EQ(producer2->max_downstream_input_pipeline_delay(), zx::nsec(0));
+  EXPECT_EQ(producer3->max_downstream_input_pipeline_delay(), 2 * kMixPeriod);
+  EXPECT_EQ(consumer->max_downstream_input_pipeline_delay(), 2 * kMixPeriod);
+
+  EXPECT_EQ(dest3->max_upstream_input_pipeline_delay(), 2 * kMixPeriod);
+
+  EXPECT_EQ(source->max_downstream_output_pipeline_delay(),
+            consumer->max_downstream_output_pipeline_delay());
+  EXPECT_EQ(source->max_downstream_input_pipeline_delay(),
+            consumer->max_downstream_input_pipeline_delay());
+
+  // Check stage delays.
+  {
+    auto consumer_stage =
+        std::static_pointer_cast<SplitterConsumerStage>(consumer->pipeline_stage());
+
+    ScopedThreadChecker checker(consumer_stage->thread()->checker());
+    EXPECT_EQ(consumer_stage->max_downstream_output_pipeline_delay(),
+              3 * kMixPeriod + zx::nsec(200));
+  }
+
+  // The ring buffer should be large enough for this many frames, rounded up to a page.
+  const auto expected_ring_buffer_bytes =
+      static_cast<uint64_t>(kFormat.bytes_per(consumer->max_downstream_output_pipeline_delay() +
+                                              consumer->max_downstream_input_pipeline_delay()));
+  EXPECT_GE(splitter->ring_buffer_bytes(), expected_ring_buffer_bytes);
+  EXPECT_EQ(splitter->ring_buffer_bytes() % zx_system_get_page_size(), 0u);
+
+  // Start the pipelines with frame 0 presented at t=0.
   dest1->Start({
       .start_time =
           StartStopControl::RealTime{
@@ -241,40 +310,43 @@ TEST(SplitterNodeTest, CopySourceToDests) {
           },
       .start_position = Fixed(0),
   });
+  dest3->Start({
+      .start_time =
+          StartStopControl::RealTime{
+              .clock = StartStopControl::WhichClock::kReference,
+              .time = zx::time(0),
+          },
+      .start_position = Fixed(0),
+  });
 
   q->RunForThread(thread1->id());
   q->RunForThread(thread2->id());
+  q->RunForThread(thread3->id());
 
-  // TODO(fxbug.dev/87651): CreateEdge should update this automatically
-  {
-    ASSERT_EQ(splitter->child_sources().size(), 1u);
-    auto splitter_consumer_stage = std::static_pointer_cast<SplitterConsumerStage>(
-        splitter->child_sources()[0]->pipeline_stage());
-    ScopedThreadChecker checker(splitter_consumer_stage->thread()->checker());
-    splitter_consumer_stage->set_max_downstream_delay(2 * kMixPeriod);
-  }
-
-  // Feed enough data into the source for one mix jobs.
+  // Give the source one packet starting at frame `kMixPeriodFrames`, which is exactly the start of
+  // the first mix job for output pipelines (dest1 and dest2).
   std::vector<int32_t> source_payload(kMixPeriodFrames);
   for (int32_t k = 0; k < kMixPeriodFrames; k++) {
     source_payload[k] = k;
   }
   source->fake_pipeline_stage()->SetPacketForRead(PacketView({
       .format = kFormat,
-      .start = Fixed(kMixPeriodFrames),  // first mix job happens one period in the future
+      .start = Fixed(kMixPeriodFrames),
       .length = kMixPeriodFrames,
       .payload = source_payload.data(),
   }));
 
   // Run a mix job on each thread. The mix job on thread1 should prime the ring buffer. Both mix
   // jobs should consume the above packet.
-  for (ThreadId tid = 1; tid <= 2; tid++) {
+  for (ThreadId tid = 1; tid <= 3; tid++) {
     SCOPED_TRACE("Mix on thread " + std::to_string(tid));
 
-    auto& dest = (tid == 1) ? dest1 : dest2;
-    auto& writer = (tid == 1) ? dest1_writer : dest2_writer;
+    auto& dest = (tid == 1) ? dest1 : (tid == 2) ? dest2 : dest3;
+    auto& writer = (tid == 1) ? dest1_writer : (tid == 2) ? dest2_writer : dest3_writer;
 
-    const auto now = zx::time(0);
+    // Input pipelines read from the past. To read frame `kMixPeriodFrames` we need to be one mix
+    // period in the future, hence for dest3 we start at the third mix period.
+    const auto now = (tid == 3) ? zx::time(0) + 2 * kMixPeriod : zx::time(0);
 
     ClockSnapshots clock_snapshots;
     clock_snapshots.AddClock(clock);
@@ -291,6 +363,7 @@ TEST(SplitterNodeTest, CopySourceToDests) {
     EXPECT_FALSE(packet.is_silence);
     EXPECT_EQ(packet.start_frame, kMixPeriodFrames);  // first mix job
     EXPECT_EQ(packet.length, kMixPeriodFrames);
+    static_assert(kMixPeriodFrames == 10);
 
     std::vector<int32_t> samples(static_cast<const int32_t*>(packet.data),
                                  static_cast<const int32_t*>(packet.data) + packet.length);
@@ -302,6 +375,8 @@ TEST(SplitterNodeTest, CopySourceToDests) {
   q->RunForThread(thread1->id());
   Node::Destroy(graph.ctx(), dest2);
   q->RunForThread(thread2->id());
+  Node::Destroy(graph.ctx(), dest3);
+  q->RunForThread(thread3->id());
   Node::Destroy(graph.ctx(), splitter);
   q->RunForThread(thread1->id());
 }
