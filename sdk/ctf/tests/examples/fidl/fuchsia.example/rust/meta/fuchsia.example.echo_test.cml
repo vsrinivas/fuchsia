@@ -1,0 +1,29 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// [START manifest]
+{
+    include: [
+        "//sdk/ctf/meta/test.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/fuchsia_example_echo_test_rust_main",
+    },
+    children: [
+        {
+            name: "test_realm",
+            url: "fuchsia.example_test_realm#meta/default.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.examples.Echo",
+            from: "#test_realm",
+        },
+    ],
+}
+
+// [END manifest]

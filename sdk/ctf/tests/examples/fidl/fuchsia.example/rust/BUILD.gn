@@ -1,0 +1,38 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# [START build]
+import("//sdk/ctf/build/ctf.gni")
+group("tests") {
+  testonly = true
+  deps = [ ":fuchsia.example.echo_rust_test" ]
+}
+
+ctf_rustc_test("test_main") {
+  edition = "2021"
+  output_name = "fuchsia_example_echo_test_rust_main"
+  source_root = "main.rs"
+  sources = [ source_root ]
+  deps = [
+    "//examples/fidl/fuchsia.examples:fuchsia.examples_rust",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+  ]
+}
+
+ctf_fuchsia_component("fuchsia.example.echo_test_component") {
+  component_name = "fuchsia.example.echo_test"
+  manifest = "meta/fuchsia.example.echo_test.cml"
+  deps = [ ":test_main" ]
+  testonly = true
+}
+
+ctf_fuchsia_test_package("fuchsia.example.echo_rust_test") {
+  enable_ctf_test_realms = true
+  package_name = "fuchsia.example.echo_rust_test"
+  test_components = [ ":fuchsia.example.echo_test_component" ]
+}
+# [END build]

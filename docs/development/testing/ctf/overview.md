@@ -15,15 +15,12 @@ Fuchsia CTF.
 ## Contributing to the CTF
 
 * [Contributing Guide][contributing]: One-stop shop with everything you need
-to know about contributing to the Fuchsia CTF.  Start here!  Below are a few
-examples of CTF tests in action.
-* Code Examples
-  * [Hello World \[c++\]][hello c++]: A barebones example CTF test written in
-C++.
-  * [Hello World \[rust\]][hello rust]: A barebones example CTF test written
-in Rust.
-  * [fuchsia.diagnostics][diag]: An example real CTF test running in
-production, protecting the fuchsia.diagnostics FIDL from compatibility issues.
+to know about contributing to the Fuchsia CTF. Start here!
+
+* Example FIDL Tests:
+  * [Rust Echo Test][rust_echo_test]
+  * [C++ Echo Test][cpp_echo_test]
+  * For more examples, see [//sdk/ctf/tests/fidl][existing_tests]
 
 ## CTF Test Coverage
 
@@ -33,6 +30,6 @@ Note: TODO: Dashboards are currently internal-only
 [rfc15]: /docs/contribute/governance/rfcs/0015_cts.md
 [faq]: /docs/development/testing/ctf/faq.md
 [contributing]: /docs/development/testing/ctf/contributing_tests.md
-[hello c++]: /sdk/ctf/tests/examples/hello_world/
-[hello rust]: /sdk/ctf/tests/examples/rust/
-[diag]: /sdk/ctf/tests/fidl/fuchsia.diagnostics/
+[cpp_echo_test]: /sdk/ctf/tests/examples/fidl/fuchsia.example/cc/
+[rust_echo_test]: /sdk/ctf/tests/examples/fidl/fuchsia.example/rust/
+[existing_tests]: /sdk/ctf/tests/fidl/

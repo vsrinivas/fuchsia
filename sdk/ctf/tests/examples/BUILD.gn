@@ -9,12 +9,21 @@ group("tests") {
 
   deps = [
     "experimental_fidl:tests",
-    "hello_world:tests",
-    "rust:tests",
+    "fidl:tests",
   ]
+
+  # Don't release examples in CTF
+  metadata = {
+    cts_barrier = []
+  }
 }
 
 group("e2e_tests") {
   deps = [ "host_tool:tests($host_toolchain)" ]
   testonly = true
+
+  # Don't release examples in CTF
+  metadata = {
+    cts_barrier = []
+  }
 }

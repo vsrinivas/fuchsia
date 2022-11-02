@@ -6,4 +6,7 @@
 #
 # Follow the instructions at //sdk/ctf/test_realm/BUILD.gn to add a new realm.
 # Please keep this list sorted alphabetically.
-ctf_test_realms = [ "//sdk/ctf/test_realm:fuchsia.driver.test_test_realm" ]
+ctf_test_realms = [
+  "//sdk/ctf/test_realm:fuchsia.driver.test_test_realm",
+  "//sdk/ctf/test_realm:fuchsia.example_test_realm",
+]
