@@ -232,10 +232,6 @@ static_library("blobfs") {
   if (blobfs_enable_offline_compression) {
     defines = [ "BLOBFS_OFFLINE_COMPRESSION_ENABLED_DEFAULT" ]
   }
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fidl("fuchsia.blobfs.internal") {

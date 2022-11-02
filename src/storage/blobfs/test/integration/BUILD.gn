@@ -45,10 +45,6 @@ static_library("blobfs_integration_fixtures") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("external_decompressor_integration") {
@@ -71,10 +67,6 @@ test("external_decompressor_integration") {
     "//zircon/system/ulib/id_allocator",
     "//zircon/system/ulib/zx",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_unittest_component("external-decompressor-integration") {
@@ -120,10 +112,6 @@ test("blobfs_integration") {
     "//zircon/system/ulib/zx",
     "//zircon/third_party/ulib/safemath",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 storage_driver_test_realm_v2_component("blobfs-integration-component") {
@@ -163,10 +151,6 @@ test("blobfs_mount") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 storage_driver_test_realm_v2_component("blobfs-mount-component") {
@@ -202,10 +186,6 @@ test("blobfs_component_runner_test") {
     "//zircon/system/ulib/id_allocator",
     "//zircon/system/ulib/zx",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_unittest_component("blobfs-component-runner-test") {
@@ -229,10 +209,6 @@ test("blobfs_sync") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 storage_driver_test_realm_v2_component("blobfs-sync-component") {
@@ -264,10 +240,6 @@ test("blobfs_superblock") {
     "//src/storage/blobfs",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 storage_driver_test_realm_v2_component("blobfs-superblock-component") {
@@ -305,10 +277,6 @@ test("blobfs_verifier_service") {
   # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
   # rather than builders.
   configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 storage_driver_test_realm_v2_component("blobfs-verifier-service-component") {
@@ -339,10 +307,6 @@ test("executable_mount") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/id_allocator",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_component("executable-mount-component") {
@@ -388,10 +352,6 @@ template("blobfs_large_integration_test") {
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }
-
-    # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-    # Consider switching to the C++ bindings. See linked bug for details.
-    configs += [ "//build/c:fidl-deprecated-c-bindings" ]
   }
 
   storage_driver_test_realm_v2_component(component_name) {

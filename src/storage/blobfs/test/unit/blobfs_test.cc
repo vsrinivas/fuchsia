@@ -68,7 +68,7 @@ zx_status_t MockBlockDevice::FifoTransaction(block_fifo_request_t* requests, siz
 zx_status_t MockBlockDevice::BlockGetInfo(fuchsia_hardware_block::wire::BlockInfo* info) const {
   zx_status_t status = FakeBlockDevice::BlockGetInfo(info);
   if (status == ZX_OK) {
-    info->flags |= fuchsia_hardware_block_FLAG_TRIM_SUPPORT;
+    info->flags |= fuchsia_hardware_block::wire::kFlagTrimSupport;
   }
   return status;
 }
