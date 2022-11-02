@@ -51,6 +51,9 @@ class CollectKernelLogTest : public gtest::RealLoopFixture {
   }
 
  protected:
+  async::Executor& GetExecutor() { return executor_; }
+
+ protected:
   std::shared_ptr<sys::ServiceDirectory> environment_services_;
   async::Executor executor_;
   std::unique_ptr<RedactorBase> redactor_;
@@ -77,6 +80,72 @@ TEST_F(CollectKernelLogTest, Succeed_BasicCase) {
 
   ASSERT_TRUE(log.HasValue());
   EXPECT_THAT(log.Value(), testing::HasSubstr(output));
+}
+
+TEST_F(CollectKernelLogTest, GetTerminatesDueToForceCompletion) {
+  const std::string output(fxl::StringPrintf(
+      "<<GetLogTest_Get_Terminates_Due_To_ForceCompletion: %zu>>", zx_clock_get_monotonic()));
+  const uint64_t kTicket = 1234;
+
+  SendToKernelLog(output);
+
+  AttachmentValue log(Error::kNotSet);
+  ::fpromise::result<AttachmentValue> attachment(::fpromise::error());
+
+  KernelLog kernel_log(dispatcher(), environment_services_, nullptr, redactor_.get());
+  GetExecutor().schedule_task(
+      kernel_log.Get(kTicket, zx::sec(1)).and_then([&attachment](AttachmentValue& result) {
+        attachment = ::fpromise::ok(std::move(result));
+      }));
+  kernel_log.ForceCompletion(kTicket, Error::kDefault);
+
+  RunLoopUntil([&attachment] { return attachment.is_ok(); });
+  log = attachment.take_value();
+
+  EXPECT_FALSE(log.HasValue());
+  ASSERT_TRUE(log.HasError());
+  EXPECT_EQ(log.Error(), Error::kDefault);
+}
+
+TEST_F(CollectKernelLogTest, ForceCompletionCalledAfterTermination) {
+  const std::string output(fxl::StringPrintf(
+      "<<GetLogTest_ForceCompletion_Called_After_Termination: %zu>>", zx_clock_get_monotonic()));
+  const uint64_t kTicket = 1234;
+
+  SendToKernelLog(output);
+
+  AttachmentValue log(Error::kNotSet);
+  ::fpromise::result<AttachmentValue> attachment(::fpromise::error());
+
+  KernelLog kernel_log(dispatcher(), environment_services_, nullptr, redactor_.get());
+  GetExecutor().schedule_task(
+      kernel_log.Get(kTicket, zx::sec(1)).and_then([&attachment](AttachmentValue& result) {
+        attachment = ::fpromise::ok(std::move(result));
+      }));
+
+  RunLoopUntil([&attachment] { return attachment.is_ok(); });
+  log = attachment.take_value();
+
+  kernel_log.ForceCompletion(kTicket, Error::kDefault);
+
+  ASSERT_FALSE(log.HasError());
+
+  ASSERT_TRUE(log.HasValue());
+  EXPECT_THAT(log.Value(), testing::HasSubstr(output));
+}
+
+TEST_F(CollectKernelLogTest, GetCalledWithSameTicket) {
+  const uint64_t kTicket = 1234;
+
+  KernelLog kernel_log(dispatcher(), environment_services_, nullptr, redactor_.get());
+
+  // Expect a crash because a ticket cannot be reused.
+  ASSERT_DEATH(
+      {
+        const auto log1 = kernel_log.Get(kTicket, zx::sec(1));
+        const auto log2 = kernel_log.Get(kTicket, zx::sec(1));
+      },
+      "Ticket used twice: ");
 }
 
 TEST_F(CollectKernelLogTest, Succeed_TwoRetrievals) {

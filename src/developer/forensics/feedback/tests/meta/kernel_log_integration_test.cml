@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 {
     include: [
+        "//src/sys/test_runners/gtest/death_test.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml",
         "inspect/client.shard.cml",
         "sys/testing/system-test.shard.cml",
@@ -16,7 +17,6 @@
             protocol: [
                 "fuchsia.boot.ReadOnlyLog",
                 "fuchsia.boot.WriteOnlyLog",
-                "fuchsia.process.Launcher",
             ],
         },
     ],

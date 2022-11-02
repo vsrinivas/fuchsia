@@ -50,6 +50,13 @@ KernelLog::KernelLog(async_dispatcher_t* dispatcher,
 }
 
 ::fpromise::promise<AttachmentValue> KernelLog::Get(const zx::duration timeout) {
+  return Get(internal_ticket_--, timeout);
+}
+
+::fpromise::promise<AttachmentValue> KernelLog::Get(const uint64_t ticket,
+                                                    const zx::duration timeout) {
+  FX_CHECK(completers_.count(ticket) == 0) << "Ticket used twice: " << ticket;
+
   if (!read_only_log_.is_bound()) {
     return ::fpromise::make_ok_promise(AttachmentValue(Error::kConnectionError));
   }
@@ -68,12 +75,14 @@ KernelLog::KernelLog(async_dispatcher_t* dispatcher,
         }
       };
 
+  completers_[ticket] = complete.share();
+
   auto self = ptr_factory_.GetWeakPtr();
   async::PostDelayedTask(
       dispatcher_,
-      [self, complete = complete.share()]() mutable {
-        if (complete != nullptr) {
-          complete(Error::kTimeout);
+      [self, ticket]() mutable {
+        if (self) {
+          self->ForceCompletion(ticket, Error::kTimeout);
         }
       },
       timeout);
@@ -85,7 +94,7 @@ KernelLog::KernelLog(async_dispatcher_t* dispatcher,
   });
 
   return consume
-      .and_then([this](zx::debuglog& debuglog) {
+      .and_then([self, ticket, this](zx::debuglog& debuglog) {
         waiting_.erase(std::remove(waiting_.begin(), waiting_.end(), nullptr), waiting_.end());
 
         std::vector<std::string> messages;
@@ -109,6 +118,10 @@ KernelLog::KernelLog(async_dispatcher_t* dispatcher,
                                 record->pid, record->tid, data.c_str()));
         }
 
+        if (self) {
+          self->completers_.erase(ticket);
+        }
+
         if (messages.empty()) {
           FX_LOGS(ERROR) << "Empty kernel log";
           return ::fpromise::ok(AttachmentValue(Error::kMissingValue));
@@ -117,6 +130,12 @@ KernelLog::KernelLog(async_dispatcher_t* dispatcher,
         return ::fpromise::ok(AttachmentValue(fxl::JoinStrings(messages)));
       })
       .or_else([](const Error& error) { return ::fpromise::ok(AttachmentValue(error)); });
+}
+
+void KernelLog::ForceCompletion(const uint64_t ticket, const Error error) {
+  if (completers_.count(ticket) != 0 && completers_[ticket] != nullptr) {
+    completers_[ticket](error);
+  }
 }
 
 }  // namespace forensics::feedback
