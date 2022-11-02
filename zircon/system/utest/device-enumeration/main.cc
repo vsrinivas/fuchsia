@@ -405,7 +405,7 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       "sys/platform/05:00:2/aml-i2c/i2c/i2c-2-44/backlight/ti-lp8556",
       "sys/platform/00:00:1e/dw-dsi/display/amlogic-display/display-controller",
       "sys/platform/00:00:1e/dw-dsi",
-      "class/dsi-base/000",
+      "sys/platform/00:00:1e/dw-dsi/dw-dsi-base",
       "sys/platform/05:00:10/aml-canvas",
       "sys/platform/00:00:e/tee/optee",
       "sys/platform/05:03:e/aml-video",
@@ -541,7 +541,7 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "sys/platform/05:00:6/aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1/wifi/brcmfmac-wlanphy/wlanphy",
       "sys/platform/00:00:1e/dw-dsi",
       "sys/platform/00:00:1e/dw-dsi/display/amlogic-display/display-controller",
-      "class/dsi-base/000",
+      "sys/platform/00:00:1e/dw-dsi/dw-dsi-base",
       "sys/platform/05:00:2/aml-i2c/i2c/i2c-2-73/ti-ina231-mlb/ti-ina231",
       "sys/platform/05:00:2/aml-i2c/i2c/i2c-2-64/ti-ina231-speakers/ti-ina231",
       "sys/platform/05:00:2/aml-i2c/i2c/i2c-0-112/shtv3",
@@ -589,7 +589,7 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "sys/platform/05:04:a/aml-thermal-pll/thermal",
       "sys/platform/00:00:1e/dw-dsi",
       "sys/platform/00:00:1e/dw-dsi/display/amlogic-display/display-controller",
-      "class/dsi-base/000",
+      "sys/platform/00:00:1e/dw-dsi/dw-dsi-base",
       "sys/platform/05:00:18/aml-usb-phy-v2",
 
       // XHCI driver will not be loaded if we are in USB peripheral mode.

@@ -64,11 +64,15 @@ constexpr uint8_t kMipiDsiRspDcsShort1 = 0x21;
 constexpr uint8_t kMipiDsiRspDcsShort2 = 0x22;
 
 // MipiDsiCmd flag bit def
-#define MIPI_DSI_CMD_FLAGS_ACK (1 << 0)
-#define MIPI_DSI_CMD_FLAGS_SET_MAX (1 << 1)
+enum {
+  MIPI_DSI_CMD_FLAGS_ACK = (1 << 0),
+  MIPI_DSI_CMD_FLAGS_SET_MAX = (1 << 1),
+};
 
-#define COMMAND_GEN (0)
-#define COMMAND_DCS (1)
+enum {
+  COMMAND_GEN = (0),
+  COMMAND_DCS = (1),
+};
 
 namespace mipi_dsi {
 
@@ -78,7 +82,7 @@ class MipiDsi {
   static zx_status_t CreateCommand(const uint8_t* tbuf, size_t tlen, uint8_t* rbuf, size_t rlen,
                                    bool is_dcs, mipi_dsi_cmd_t* cmd);
 
-  static zx::result<fuchsia_hardware_dsi::wire::MipiDsiCmd> CreateCommandFidl(
+  static std::optional<fuchsia_hardware_dsi::wire::MipiDsiCmd> CreateCommandFidl(
       uint32_t tlen, uint32_t rlen, bool is_dcs, fidl::AnyArena& allocator);
 };
 

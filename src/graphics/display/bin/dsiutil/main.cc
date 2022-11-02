@@ -23,11 +23,12 @@ namespace {
 
 void usage(const std::string& argv0) {
   printf("\n%s [flags] [subcommand] [args]\n\n", argv0.c_str());
-  printf("Subcommands: on: Turns LCD on using DCS Command 0x29\n");
-  printf("             off: Turns LCD off using DCS Command 0x28\n");
-  printf("             brightness [power]: Sets the backlight power to [0, 255]\n");
+  printf("Subcommands:\n");
+  printf("  on: Turns LCD on using DCS Command 0x29\n");
+  printf("  off: Turns LCD off using DCS Command 0x28\n");
+  printf("  brightness [power]: Sets the backlight power to [0, 255]\n");
   printf("Flags:\n");
-  printf("         path: Path to dsi-base interface, defaults to /dev/class/dsi-base/000\n\n");
+  printf("  path: Path to dsi-base interface; typically contained in /dev/class/dsi-base/\n\n");
 }
 
 zx::result<uint32_t> ParseUintArg(const std::string& arg, uint32_t min, uint32_t max) {
@@ -56,9 +57,11 @@ int main(int argc, char* argv[]) {
   if (cmd.GetOptionValue("path", &dev_path)) {
     printf("Using device %s\n", dev_path.c_str());
   } else {
-    dev_path = "/dev/class/dsi-base/000";
+    printf("No path provided\n");
+    usage(cmd.argv0());
+    return -1;
   }
-  if (args.size() == 0) {
+  if (args.empty()) {
     printf("No subcommand provided\n");
     usage(cmd.argv0());
     return -1;
@@ -121,10 +124,11 @@ int main(int argc, char* argv[]) {
     printf("Setting display brightness to %d/255\n", tbuf[3]);
   }
   fidl::Arena<2048> allocator;
-  auto res = mipi_dsi::MipiDsi::CreateCommandFidl(tlen, 0, is_dcs, allocator);
-
-  auto response =
-      client->SendCmd(std::move(res.value()), fidl::VectorView<uint8_t>::FromExternal(tbuf, tlen));
+  std::optional res = mipi_dsi::MipiDsi::CreateCommandFidl(tlen, 0, is_dcs, allocator);
+  if (!res.has_value()) {
+    return -1;
+  }
+  auto response = client->SendCmd(res.value(), fidl::VectorView<uint8_t>::FromExternal(tbuf, tlen));
 
   if (!response.ok()) {
     printf("Could not send command to DSI (%s)\n", response.FormatDescription().c_str());

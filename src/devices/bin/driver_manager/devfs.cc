@@ -518,8 +518,6 @@ Devfs::Devfs(std::optional<Devnode>& root, Device* device,
       // TODO(https://fxbug.dev/113829): Remove.
       "display-controller",
 
-      "dsi-base",
-
       // TODO(https://fxbug.dev/113830): Remove.
       "goldfish-address-space",
       "goldfish-control",

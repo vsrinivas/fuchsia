@@ -11,7 +11,7 @@
 
 namespace mipi_dsi {
 
-zx::result<fuchsia_hardware_dsi::wire::MipiDsiCmd> MipiDsi::CreateCommandFidl(
+std::optional<fuchsia_hardware_dsi::wire::MipiDsiCmd> MipiDsi::CreateCommandFidl(
     uint32_t tlen, uint32_t rlen, bool is_dcs, fidl::AnyArena& allocator) {
   // Create a command packet
   uint8_t ch_id = kMipiDsiVirtualChanId;
@@ -23,7 +23,7 @@ zx::result<fuchsia_hardware_dsi::wire::MipiDsiCmd> MipiDsi::CreateCommandFidl(
     case 0:
       if (is_dcs) {
         printf("Missing DCS Command\n");
-        return zx::error(ZX_ERR_INVALID_ARGS);
+        return {};
       }
       if (rlen > 0) {
         dsi_data_type = kMipiDsiDtGenShortRead0;
@@ -44,7 +44,7 @@ zx::result<fuchsia_hardware_dsi::wire::MipiDsiCmd> MipiDsi::CreateCommandFidl(
       if (rlen > 0) {
         if (is_dcs) {
           printf("Invalid DCS GEN READ Command!\n");
-          return zx::error(ZX_ERR_INVALID_ARGS);
+          return {};
         }
         dsi_data_type = kMipiDsiDtGenShortRead2;
         flags = MIPI_DSI_CMD_FLAGS_ACK | MIPI_DSI_CMD_FLAGS_SET_MAX;
@@ -55,7 +55,7 @@ zx::result<fuchsia_hardware_dsi::wire::MipiDsiCmd> MipiDsi::CreateCommandFidl(
     default:
       if (rlen > 0) {
         printf("Invalid DSI GEN READ Command!\n");
-        return zx::error(ZX_ERR_INVALID_ARGS);
+        return {};
       } else {
         dsi_data_type = is_dcs ? kMipiDsiDtDcsLongWrite : kMipiDsiDtGenLongWrite;
       }
@@ -68,7 +68,7 @@ zx::result<fuchsia_hardware_dsi::wire::MipiDsiCmd> MipiDsi::CreateCommandFidl(
   command.set_write_length(tlen);
   command.set_flags(flags);
   // packet command has been created.
-  return zx::ok(std::move(command));
+  return command;
 }
 
 zx_status_t MipiDsi::CreateCommand(const uint8_t* tbuf, size_t tlen, uint8_t* rbuf, size_t rlen,
