@@ -35,8 +35,8 @@ sdk://pkg/async
 sdk://pkg/async-cpp
 sdk://pkg/async-default
 sdk://pkg/driver-record
+sdk://pkg/driver_devfs_cpp
 sdk://pkg/driver2_cpp
-sdk://pkg/driver2_devfs_exporter
 sdk://pkg/driver_compat
 sdk://pkg/driver_runtime
 sdk://pkg/driver_runtime_cpp

@@ -8,7 +8,7 @@
 #include <fidl/fuchsia.component.decl/cpp/fidl.h>
 #include <fidl/fuchsia.driver.compat/cpp/wire.h>
 #include <lib/driver/compat/cpp/service_offers.h>
-#include <lib/driver2/devfs_exporter.h>
+#include <lib/driver/devfs/cpp/exporter.h>
 #include <lib/driver2/handlers.h>
 #include <lib/driver2/outgoing_directory.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>

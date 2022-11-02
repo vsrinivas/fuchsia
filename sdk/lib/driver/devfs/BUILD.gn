@@ -4,9 +4,5 @@
 
 group("tests") {
   testonly = true
-
-  deps = [
-    "compat:tests",
-    "devfs:tests",
-  ]
+  deps = [ "cpp:tests" ]
 }

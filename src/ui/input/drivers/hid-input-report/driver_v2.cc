@@ -8,7 +8,7 @@
 #include <lib/driver/compat/cpp/compat.h>
 #include <lib/driver/compat/cpp/context.h>
 #include <lib/driver/compat/cpp/symbols.h>
-#include <lib/driver2/devfs_exporter.h>
+#include <lib/driver/devfs/cpp/exporter.h>
 #include <lib/driver2/driver2_cpp.h>
 #include <lib/inspect/component/cpp/component.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>

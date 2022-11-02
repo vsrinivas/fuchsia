@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_DRIVER2_DEVFS_EXPORTER_H_
-#define LIB_DRIVER2_DEVFS_EXPORTER_H_
+#ifndef LIB_DRIVER_DEVFS_CPP_EXPORTER_H_
+#define LIB_DRIVER_DEVFS_CPP_EXPORTER_H_
 
 #include <fidl/fuchsia.device.fs/cpp/wire.h>
 #include <lib/driver2/namespace.h>
@@ -63,4 +63,4 @@ class DevfsExporter {
 
 }  // namespace driver
 
-#endif  // LIB_DRIVER2_DEVFS_EXPORTER_H_
+#endif  // LIB_DRIVER_DEVFS_CPP_EXPORTER_H_

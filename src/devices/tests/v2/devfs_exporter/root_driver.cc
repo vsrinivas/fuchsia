@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.devfs.test/cpp/wire.h>
-#include <lib/driver2/devfs_exporter.h>
+#include <lib/driver/devfs/cpp/exporter.h>
 #include <lib/driver2/driver2_cpp.h>
 
 namespace fdf {

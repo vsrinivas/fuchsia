@@ -82,7 +82,7 @@ fuchsia_driver("hid-input-report-driver-v2") {
     "//sdk/fidl/fuchsia.driver.compat:fuchsia.driver.compat_cpp",
     "//sdk/lib/driver/compat/cpp",
     "//sdk/lib/driver/compat/cpp:symbols",
-    "//sdk/lib/driver2:devfs_exporter",
+    "//sdk/lib/driver/devfs/cpp",
     "//sdk/lib/sys/component/cpp",
     "//src/devices/lib/driver:driver_runtime",
   ]

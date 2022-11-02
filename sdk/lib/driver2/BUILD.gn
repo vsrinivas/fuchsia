@@ -10,22 +10,6 @@ group("tests") {
   deps = [ ":driver2-tests" ]
 }
 
-sdk_source_set("devfs_exporter") {
-  category = "experimental"
-  sdk_name = "driver2_devfs_exporter"
-
-  include_base = "//sdk"
-
-  sources = [
-    "devfs_exporter.cc",
-    "devfs_exporter.h",
-  ]
-
-  deps = [ ":cpp" ]
-
-  public_deps = [ "//sdk/fidl/fuchsia.device.fs:fuchsia.device.fs_cpp" ]
-}
-
 sdk_source_set("cpp") {
   category = "experimental"
   sdk_name = "driver2_cpp"
@@ -78,21 +62,31 @@ source_set("cpp-promise") {
   ]
 }
 
-executable("cpp_test") {
-  testonly = true
+source_set("test_base") {
   sources = [
-    "tests/devfs_exporter_test.cc",
-    "tests/logger_test.cc",
-    "tests/namespace_test.cc",
-    "tests/node_add_args_test.cc",
-    "tests/start_args_test.cc",
     "tests/test_base.cc",
     "tests/test_base.h",
   ]
 
+  public_deps = [
+    ":cpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
+    "//sdk/lib/fit-promise",
+  ]
+}
+
+executable("cpp_test") {
+  testonly = true
+  sources = [
+    "tests/logger_test.cc",
+    "tests/namespace_test.cc",
+    "tests/node_add_args_test.cc",
+    "tests/start_args_test.cc",
+  ]
+
   deps = [
     ":cpp",
-    ":devfs_exporter",
+    ":test_base",
     "//sdk/fidl/fuchsia.device.fs:fuchsia.device.fs_hlcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
