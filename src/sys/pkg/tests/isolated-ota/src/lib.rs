@@ -7,20 +7,351 @@
 use {
     anyhow::{Context, Error},
     assert_matches::assert_matches,
-    fidl::endpoints::{ClientEnd, RequestStream, ServerEnd},
+    async_trait::async_trait,
+    blobfs_ramdisk::BlobfsRamdisk,
+    fidl::endpoints::{ClientEnd, Proxy, RequestStream, ServerEnd},
+    fidl_fuchsia_boot::{ArgumentsRequest, ArgumentsRequestStream},
     fidl_fuchsia_io as fio,
     fidl_fuchsia_paver::{Asset, Configuration},
     fidl_fuchsia_pkg_ext::{MirrorConfigBuilder, RepositoryConfigBuilder, RepositoryConfigs},
     fuchsia_async as fasync,
+    fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, Ref, Route},
     fuchsia_pkg_testing::{make_current_epoch_json, Package, PackageBuilder},
     fuchsia_zircon as zx,
-    futures::prelude::*,
+    futures::{future::FutureExt, prelude::*},
     http::uri::Uri,
-    isolated_ota::{OmahaConfig, UpdateError},
-    isolated_ota_env::{OmahaState, TestEnvBuilder},
+    isolated_ota::{
+        download_and_apply_update_with_pre_configured_components, OmahaConfig, UpdateError,
+    },
+    isolated_ota_env::{
+        OmahaState, TestEnvBuilder, TestExecutor, TestParams, GLOBAL_SSL_CERTS_PATH,
+    },
+    isolated_swd::{cache::Cache, resolver::Resolver},
     mock_omaha_server::OmahaResponse,
     mock_paver::{hooks as mphooks, PaverEvent},
+    parking_lot::Mutex,
+    std::{collections::BTreeSet, sync::Arc},
+    vfs::directory::entry::DirectoryEntry,
 };
+
+struct TestResult {
+    blobfs: Option<BlobfsRamdisk>,
+    packages: Vec<Package>,
+    pub paver_events: Vec<PaverEvent>,
+    pub result: Result<(), UpdateError>,
+}
+
+impl TestResult {
+    /// Assert that all blobs in all the packages that were part of the Update
+    /// have been installed into the blobfs, and that the blobfs contains no extra blobs.
+    pub fn check_packages(&self) {
+        let written_blobs = self
+            .blobfs
+            .as_ref()
+            .unwrap_or_else(|| panic!("Test had no blobfs"))
+            .list_blobs()
+            .expect("Listing blobfs blobs");
+        let mut all_package_blobs = BTreeSet::new();
+        for package in self.packages.iter() {
+            all_package_blobs.append(&mut package.list_blobs().expect("Listing package blobs"));
+        }
+
+        assert_eq!(written_blobs, all_package_blobs);
+    }
+}
+
+struct IsolatedOtaTestExecutor {}
+impl IsolatedOtaTestExecutor {
+    pub fn new() -> Box<Self> {
+        Box::new(Self {})
+    }
+
+    async fn serve_boot_arguments(mut stream: ArgumentsRequestStream, channel: Option<String>) {
+        while let Some(req) = stream.try_next().await.unwrap() {
+            match req {
+                ArgumentsRequest::GetString { key, responder } => {
+                    if key == "tuf_repo_config" {
+                        responder.send(channel.as_deref()).unwrap();
+                    } else {
+                        eprintln!("Unexpected arguments GetString: {}, closing channel.", key);
+                    }
+                }
+                _ => eprintln!("Unexpected arguments request, closing channel."),
+            }
+        }
+    }
+
+    async fn run_boot_arguments(
+        handles: fuchsia_component_test::LocalComponentHandles,
+        channel: Option<String>,
+    ) -> Result<(), Error> {
+        let mut fs = fuchsia_component::server::ServiceFs::new();
+        fs.dir("svc")
+            .add_fidl_service(move |stream| Self::serve_boot_arguments(stream, channel.clone()));
+        fs.serve_connection(handles.outgoing_dir)?;
+        fs.for_each_concurrent(None, |req| async { req.await }).await;
+        Ok(())
+    }
+}
+
+#[async_trait(?Send)]
+impl TestExecutor<TestResult> for IsolatedOtaTestExecutor {
+    async fn run(&self, params: TestParams) -> TestResult {
+        let realm_builder = RealmBuilder::new().await.unwrap();
+        let pkg_component =
+            realm_builder.add_child("pkg", "#meta/pkg.cm", ChildOptions::new()).await.unwrap();
+        realm_builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                    .capability(Capability::protocol_by_name(
+                        "fuchsia.metrics.MetricEventLoggerFactory",
+                    ))
+                    .capability(Capability::protocol_by_name("fuchsia.net.name.Lookup"))
+                    .capability(Capability::protocol_by_name("fuchsia.posix.socket.Provider"))
+                    .capability(Capability::protocol_by_name("fuchsia.tracing.provider.Registry"))
+                    .from(Ref::parent())
+                    .to(&pkg_component),
+            )
+            .await
+            .unwrap();
+
+        realm_builder
+            .add_route(
+                // TODO(fxbug.dev/104918): clean up when system-updater-isolated is v2.
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.pkg.PackageCache"))
+                    .capability(Capability::protocol_by_name("fuchsia.pkg.PackageResolver"))
+                    .capability(Capability::protocol_by_name("fuchsia.pkg.RetainedPackages"))
+                    .capability(Capability::protocol_by_name("fuchsia.space.Manager"))
+                    .from(&pkg_component)
+                    .to(Ref::parent()),
+            )
+            .await
+            .unwrap();
+
+        realm_builder.add_route(Route::new().from(&pkg_component).to(Ref::parent())).await.unwrap();
+
+        let pkg_resolver_directories_out_dir = vfs::pseudo_directory! {
+            "config" => vfs::pseudo_directory! {
+                "data" => vfs::pseudo_directory!{
+                        "repositories" => vfs::remote::remote_dir(fuchsia_fs::directory::open_in_namespace(params.repo_config_dir.path().to_str().unwrap(), fio::OpenFlags::RIGHT_READABLE).unwrap())
+                },
+                "ssl" => vfs::remote::remote_dir(
+                    params.ssl_certs
+                ),
+            },
+        };
+        let pkg_resolver_directories_out_dir = Mutex::new(Some(pkg_resolver_directories_out_dir));
+        let pkg_resolver_directories = realm_builder
+            .add_local_child(
+                "pkg_resolver_directories",
+                move |handles| {
+                    let pkg_resolver_directories_out_dir = pkg_resolver_directories_out_dir
+                        .lock()
+                        .take()
+                        .expect("mock component should only be launched once");
+                    let scope = vfs::execution_scope::ExecutionScope::new();
+                    let () = pkg_resolver_directories_out_dir.open(
+                        scope.clone(),
+                        fio::OpenFlags::RIGHT_READABLE
+                            | fio::OpenFlags::RIGHT_WRITABLE
+                            | fio::OpenFlags::RIGHT_EXECUTABLE,
+                        0,
+                        vfs::path::Path::dot(),
+                        handles.outgoing_dir.into_channel().into(),
+                    );
+                    async move {
+                        scope.wait().await;
+                        Ok(())
+                    }
+                    .boxed()
+                },
+                ChildOptions::new(),
+            )
+            .await
+            .unwrap();
+
+        // Directory routes
+        realm_builder
+            .add_route(
+                Route::new()
+                    .capability(
+                        Capability::directory("config-data")
+                            .path("/config/data")
+                            .rights(fio::R_STAR_DIR),
+                    )
+                    .from(&pkg_resolver_directories)
+                    .to(&pkg_component),
+            )
+            .await
+            .unwrap();
+        realm_builder
+            .add_route(
+                Route::new()
+                    .capability(
+                        Capability::directory("root-ssl-certificates")
+                            .path(GLOBAL_SSL_CERTS_PATH)
+                            .rights(fio::R_STAR_DIR),
+                    )
+                    .from(&pkg_resolver_directories)
+                    .to(&pkg_component),
+            )
+            .await
+            .unwrap();
+
+        let (blobfs_ramdisk, blobfs_handle) = match params.blobfs {
+            Some(blobfs_handle) => (None, blobfs_handle),
+            None => {
+                let blobfs_ramdisk = BlobfsRamdisk::start().expect("launching blobfs");
+                let blobfs_handle =
+                    blobfs_ramdisk.root_dir_handle().expect("getting blobfs root handle");
+                (Some(blobfs_ramdisk), blobfs_handle)
+            }
+        };
+
+        let blobfs_proxy = fio::DirectoryProxy::from_channel(
+            fasync::Channel::from_channel(blobfs_handle.into_channel()).unwrap(),
+        );
+
+        let (blobfs_client_end_clone, remote) =
+            fidl::endpoints::create_endpoints::<fio::DirectoryMarker>().unwrap();
+        blobfs_proxy
+            .clone(fio::OpenFlags::CLONE_SAME_RIGHTS, ServerEnd::from(remote.into_channel()))
+            .unwrap();
+
+        let blobfs_proxy_clone = blobfs_client_end_clone.into_proxy().unwrap();
+        let blobfs_vfs = vfs::remote::remote_dir(blobfs_proxy_clone);
+        let blobfs_reflector = realm_builder
+            .add_local_child(
+                "pkg_cache_blobfs",
+                move |handles| {
+                    let blobfs_vfs = blobfs_vfs.clone();
+                    let out_dir = vfs::pseudo_directory! {
+                        "blob" => blobfs_vfs,
+                    };
+                    let scope = vfs::execution_scope::ExecutionScope::new();
+                    let () = out_dir.open(
+                        scope.clone(),
+                        fio::OpenFlags::RIGHT_READABLE
+                            | fio::OpenFlags::RIGHT_WRITABLE
+                            | fio::OpenFlags::RIGHT_EXECUTABLE,
+                        0,
+                        vfs::path::Path::dot(),
+                        handles.outgoing_dir.into_channel().into(),
+                    );
+                    async move {
+                        scope.wait().await;
+                        Ok(())
+                    }
+                    .boxed()
+                },
+                ChildOptions::new(),
+            )
+            .await
+            .unwrap();
+
+        realm_builder
+            .add_route(
+                Route::new()
+                    .capability(
+                        Capability::directory("blob-exec")
+                            .path("/blob")
+                            .rights(fio::RW_STAR_DIR | fio::Operations::EXECUTE),
+                    )
+                    .from(&blobfs_reflector)
+                    .to(&pkg_component),
+            )
+            .await
+            .unwrap();
+
+        let channel = params.channel.clone();
+        let boot_args_mock = realm_builder
+            .add_local_child(
+                "boot_arguments",
+                move |handles| Box::pin(Self::run_boot_arguments(handles, Some(channel.clone()))),
+                ChildOptions::new(),
+            )
+            .await
+            .unwrap();
+
+        realm_builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.boot.Arguments"))
+                    .from(&boot_args_mock)
+                    .to(&pkg_component),
+            )
+            .await
+            .unwrap();
+
+        let realm_instance = realm_builder.build().await.unwrap();
+        let pkg_cache_proxy = realm_instance
+            .root
+            .connect_to_protocol_at_exposed_dir::<fidl_fuchsia_pkg::PackageCacheMarker>()
+            .expect("connect to pkg cache");
+        let space_manager_proxy = realm_instance
+            .root
+            .connect_to_protocol_at_exposed_dir::<fidl_fuchsia_space::ManagerMarker>()
+            .expect("connect to space manager");
+
+        let (cache_clone, remote) =
+            fidl::endpoints::create_endpoints::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
+        realm_instance
+            .root
+            .get_exposed_dir()
+            .clone(
+                fidl_fuchsia_io::OpenFlags::CLONE_SAME_RIGHTS,
+                ServerEnd::from(remote.into_channel()),
+            )
+            .unwrap();
+
+        let cache = Cache::new_with_proxies(
+            pkg_cache_proxy,
+            space_manager_proxy,
+            cache_clone.into_proxy().unwrap(),
+        )
+        .unwrap();
+
+        let pkg_resolver_proxy = realm_instance
+            .root
+            .connect_to_protocol_at_exposed_dir::<fidl_fuchsia_pkg::PackageResolverMarker>()
+            .expect("connect to package resolver");
+        let (resolver_svc_dir, remote) =
+            fidl::endpoints::create_endpoints::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
+        realm_instance
+            .root
+            .get_exposed_dir()
+            .clone(
+                fidl_fuchsia_io::OpenFlags::CLONE_SAME_RIGHTS,
+                ServerEnd::from(remote.into_channel()),
+            )
+            .unwrap();
+
+        let resolver =
+            Resolver::new_with_proxy(pkg_resolver_proxy, resolver_svc_dir.into_proxy().unwrap())
+                .unwrap();
+
+        let result = download_and_apply_update_with_pre_configured_components(
+            blobfs_proxy,
+            params.paver_connector,
+            &params.channel,
+            &params.board,
+            &params.version,
+            params.omaha_config,
+            Arc::new(cache),
+            Arc::new(resolver),
+        )
+        .await;
+
+        TestResult {
+            blobfs: blobfs_ramdisk,
+            packages: params.packages,
+            paver_events: params.paver.take_events(),
+            result,
+        }
+    }
+}
 
 async fn build_test_package() -> Result<Package, Error> {
     PackageBuilder::new("test-package")
@@ -43,6 +374,7 @@ pub async fn test_no_network() -> Result<(), Error> {
     .build()]);
 
     let env = TestEnvBuilder::new()
+        .test_executor(IsolatedOtaTestExecutor::new())
         .repo_config(invalid_repo)
         .build()
         .await
@@ -85,6 +417,7 @@ pub async fn test_pave_fails() -> Result<(), Error> {
     };
 
     let env = TestEnvBuilder::new()
+        .test_executor(IsolatedOtaTestExecutor::new())
         .paver(|p| p.insert_hook(mphooks::return_error(paver_hook)))
         .add_package(test_package)
         .add_image("zbi.signed", "FAIL".as_bytes())
@@ -124,6 +457,7 @@ pub async fn test_pave_fails() -> Result<(), Error> {
 #[fasync::run_singlethreaded(test)]
 pub async fn test_updater_succeeds() -> Result<(), Error> {
     let mut builder = TestEnvBuilder::new()
+        .test_executor(IsolatedOtaTestExecutor::new())
         .add_image("zbi.signed", "This is a zbi".as_bytes())
         .add_image("fuchsia.vbmeta", "This is a vbmeta".as_bytes())
         .add_image("recovery", "This is recovery".as_bytes())
@@ -348,6 +682,7 @@ pub async fn test_blobfs_broken() -> Result<(), Error> {
     let package = build_test_package().await?;
     let paver_hook = |_: &PaverEvent| zx::Status::IO;
     let env = TestEnvBuilder::new()
+        .test_executor(IsolatedOtaTestExecutor::new())
         .add_package(package)
         .add_image("zbi.signed", "ZBI".as_bytes())
         .blobfs(ClientEnd::from(client))
@@ -381,6 +716,7 @@ pub async fn test_omaha_broken() -> Result<(), Error> {
     };
     let package = build_test_package().await?;
     let env = TestEnvBuilder::new()
+        .test_executor(IsolatedOtaTestExecutor::new())
         .add_package(package)
         .add_image("zbi.signed", "ZBI".as_bytes())
         .omaha_state(OmahaState::Manual(bad_omaha_config))
@@ -397,6 +733,7 @@ pub async fn test_omaha_broken() -> Result<(), Error> {
 #[fasync::run_singlethreaded(test)]
 pub async fn test_omaha_works() -> Result<(), Error> {
     let mut builder = TestEnvBuilder::new()
+        .test_executor(IsolatedOtaTestExecutor::new())
         .add_image("zbi.signed", "This is a zbi".as_bytes())
         .add_image("fuchsia.vbmeta", "This is a vbmeta".as_bytes())
         .add_image("recovery", "This is recovery".as_bytes())

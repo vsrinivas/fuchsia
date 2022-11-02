@@ -7,43 +7,31 @@
 
 use {
     anyhow::{Context, Error},
-    blobfs_ramdisk::BlobfsRamdisk,
-    fidl::endpoints::Proxy,
-    fidl::endpoints::{ClientEnd, ServerEnd},
-    fidl_fuchsia_boot::{ArgumentsRequest, ArgumentsRequestStream},
+    async_trait::async_trait,
+    fidl::endpoints::{ClientEnd, Proxy},
     fidl_fuchsia_io as fio,
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_paver::PaverRequestStream,
     fidl_fuchsia_pkg_ext::RepositoryConfigs,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, Ref, Route},
     fuchsia_merkle::Hash,
     fuchsia_pkg_testing::{serve::ServedRepository, Package, PackageBuilder, RepositoryBuilder},
     futures::prelude::*,
-    isolated_ota::{
-        download_and_apply_update_with_pre_configured_components, OmahaConfig, UpdateError,
-    },
-    isolated_swd::cache::Cache,
-    isolated_swd::resolver::Resolver,
+    isolated_ota::OmahaConfig,
     mock_omaha_server::{
         OmahaResponse, OmahaServer, OmahaServerBuilder, ResponseAndMetadata, ResponseMap,
     },
-    mock_paver::{MockPaverService, MockPaverServiceBuilder, PaverEvent},
+    mock_paver::{MockPaverService, MockPaverServiceBuilder},
     parking_lot::Mutex,
     serde_json::json,
-    std::{
-        collections::{BTreeSet, HashMap},
-        io::Write,
-        str::FromStr,
-        sync::Arc,
-    },
-    vfs::directory::entry::DirectoryEntry,
+    std::{collections::HashMap, io::Write, str::FromStr, sync::Arc},
+    tempfile::TempDir,
 };
 
+pub const GLOBAL_SSL_CERTS_PATH: &str = "/config/ssl";
 const EMPTY_REPO_PATH: &str = "/pkg/empty-repo";
 const TEST_CERTS_PATH: &str = "/pkg/data/ssl";
-const GLOBAL_SSL_CERTS_PATH: &str = "/config/ssl";
 const TEST_REPO_URL: &str = "fuchsia-pkg://integration.test.fuchsia.com";
 
 pub enum OmahaState {
@@ -55,7 +43,26 @@ pub enum OmahaState {
     Manual(OmahaConfig),
 }
 
-pub struct TestEnvBuilder {
+pub struct TestParams {
+    pub blobfs: Option<ClientEnd<fio::DirectoryMarker>>,
+    pub board: String,
+    pub channel: String,
+    pub packages: Vec<Package>,
+    pub paver: Arc<MockPaverService>,
+    pub repo_config_dir: TempDir,
+    pub ssl_certs: DirectoryProxy,
+    pub update_merkle: Hash,
+    pub version: String,
+    pub omaha_config: Option<OmahaConfig>,
+    pub paver_connector: ClientEnd<fio::DirectoryMarker>,
+}
+
+#[async_trait(?Send)]
+pub trait TestExecutor<R> {
+    async fn run(&self, params: TestParams) -> R;
+}
+
+pub struct TestEnvBuilder<R> {
     blobfs: Option<ClientEnd<fio::DirectoryMarker>>,
     board: String,
     channel: String,
@@ -65,9 +72,10 @@ pub struct TestEnvBuilder {
     paver: MockPaverServiceBuilder,
     repo_config: Option<RepositoryConfigs>,
     version: String,
+    test_executor: Option<Box<dyn TestExecutor<R>>>,
 }
 
-impl TestEnvBuilder {
+impl<R> TestEnvBuilder<R> {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         TestEnvBuilder {
@@ -80,6 +88,7 @@ impl TestEnvBuilder {
             paver: MockPaverServiceBuilder::new(),
             repo_config: None,
             version: "0.1.2.3".to_owned(),
+            test_executor: None,
         }
     }
 
@@ -125,6 +134,11 @@ impl TestEnvBuilder {
         self
     }
 
+    pub fn test_executor(mut self, executor: Box<dyn TestExecutor<R>>) -> Self {
+        self.test_executor = Some(executor);
+        self
+    }
+
     fn generate_packages(&self) -> String {
         json!({
             "version": "1",
@@ -140,7 +154,7 @@ impl TestEnvBuilder {
     }
 
     /// Turn this |TestEnvBuilder| into a |TestEnv|
-    pub async fn build(mut self) -> Result<TestEnv, Error> {
+    pub async fn build(mut self) -> Result<TestEnv<R>, Error> {
         let mut update = PackageBuilder::new("update")
             .add_resource_at("packages.json", self.generate_packages().as_bytes());
 
@@ -224,11 +238,12 @@ impl TestEnvBuilder {
             ssl_certs,
             update_merkle: merkle,
             version: self.version,
+            test_executor: self.test_executor.expect("test executor must be set"),
         })
     }
 }
 
-pub struct TestEnv {
+pub struct TestEnv<R> {
     blobfs: Option<ClientEnd<fio::DirectoryMarker>>,
     board: String,
     channel: String,
@@ -240,9 +255,10 @@ pub struct TestEnv {
     ssl_certs: DirectoryProxy,
     update_merkle: Hash,
     version: String,
+    test_executor: Box<dyn TestExecutor<R>>,
 }
 
-impl TestEnv {
+impl<R> TestEnv<R> {
     fn start_omaha(omaha: OmahaState, merkle: Hash) -> Result<Option<OmahaConfig>, Error> {
         match omaha {
             OmahaState::Disabled => Ok(None),
@@ -270,17 +286,9 @@ impl TestEnv {
     }
 
     /// Run the update, consuming this |TestEnv| and returning a |TestResult|.
-    pub async fn run(mut self) -> TestResult {
-        let (blobfs, blobfs_handle) = if let Some(client) = self.blobfs.take() {
-            (None, client)
-        } else {
-            let blobfs = BlobfsRamdisk::start().expect("launching blobfs");
-            let client = blobfs.root_dir_handle().expect("getting blobfs root handle");
-            (Some(blobfs), client)
-        };
-
-        let omaha_config =
-            TestEnv::start_omaha(self.omaha, self.update_merkle).expect("Starting Omaha server");
+    pub async fn run(self) -> R {
+        let omaha_config = TestEnv::<R>::start_omaha(self.omaha, self.update_merkle)
+            .expect("Starting Omaha server");
 
         let mut service_fs = ServiceFs::new();
         let paver_clone = Arc::clone(&self.paver);
@@ -292,309 +300,32 @@ impl TestEnv {
             )
             .detach();
         });
-        let (client, server) =
-            fidl::endpoints::create_endpoints().expect("creating channel for servicefs");
-        service_fs.serve_connection(server).expect("Failed to serve connection");
+
+        let (client, server) = fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()
+            .expect("creating channel for servicefs");
+        service_fs
+            .serve_connection(server.into_channel().into())
+            .expect("Failed to serve connection");
         fasync::Task::spawn(service_fs.collect()).detach();
 
-        let realm_builder = RealmBuilder::new().await.unwrap();
+        // TODO(https://fxbug.dev/108786): Use Proxy::into_client_end when available.
+        let client =
+            ClientEnd::new(client.into_channel().expect("proxy into channel").into_zx_channel());
 
-        let pkg_component =
-            realm_builder.add_child("pkg", "#meta/pkg.cm", ChildOptions::new()).await.unwrap();
-        realm_builder
-            .add_route(
-                Route::new()
-                    .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
-                    .capability(Capability::protocol_by_name(
-                        "fuchsia.metrics.MetricEventLoggerFactory",
-                    ))
-                    .capability(Capability::protocol_by_name("fuchsia.net.name.Lookup"))
-                    .capability(Capability::protocol_by_name("fuchsia.posix.socket.Provider"))
-                    .capability(Capability::protocol_by_name("fuchsia.tracing.provider.Registry"))
-                    .from(Ref::parent())
-                    .to(&pkg_component),
-            )
-            .await
-            .unwrap();
-
-        realm_builder
-            .add_route(
-                // TODO(fxbug.dev/104918): clean up when system-updater-isolated is v2.
-                Route::new()
-                    .capability(Capability::protocol_by_name("fuchsia.pkg.PackageCache"))
-                    .capability(Capability::protocol_by_name("fuchsia.pkg.PackageResolver"))
-                    .capability(Capability::protocol_by_name("fuchsia.pkg.RetainedPackages"))
-                    .capability(Capability::protocol_by_name("fuchsia.space.Manager"))
-                    .from(&pkg_component)
-                    .to(Ref::parent()),
-            )
-            .await
-            .unwrap();
-
-        realm_builder.add_route(Route::new().from(&pkg_component).to(Ref::parent())).await.unwrap();
-
-        let pkg_resolver_directories_out_dir = vfs::pseudo_directory! {
-            "config" => vfs::pseudo_directory! {
-                "data" => vfs::pseudo_directory!{
-                        "repositories" => vfs::remote::remote_dir(fuchsia_fs::directory::open_in_namespace(self.repo_config_dir.path().to_str().unwrap(), fio::OpenFlags::RIGHT_READABLE).unwrap())
-                },
-                "ssl" => vfs::remote::remote_dir(
-                    self.ssl_certs
-                ),
-            },
-        };
-        let pkg_resolver_directories_out_dir = Mutex::new(Some(pkg_resolver_directories_out_dir));
-        let pkg_resolver_directories = realm_builder
-            .add_local_child(
-                "pkg_resolver_directories",
-                move |handles| {
-                    let pkg_resolver_directories_out_dir = pkg_resolver_directories_out_dir
-                        .lock()
-                        .take()
-                        .expect("mock component should only be launched once");
-                    let scope = vfs::execution_scope::ExecutionScope::new();
-                    let () = pkg_resolver_directories_out_dir.open(
-                        scope.clone(),
-                        fio::OpenFlags::RIGHT_READABLE
-                            | fio::OpenFlags::RIGHT_WRITABLE
-                            | fio::OpenFlags::RIGHT_EXECUTABLE,
-                        0,
-                        vfs::path::Path::dot(),
-                        handles.outgoing_dir.into_channel().into(),
-                    );
-                    async move {
-                        scope.wait().await;
-                        Ok(())
-                    }
-                    .boxed()
-                },
-                ChildOptions::new(),
-            )
-            .await
-            .unwrap();
-
-        // Directory routes
-        realm_builder
-            .add_route(
-                Route::new()
-                    .capability(
-                        Capability::directory("config-data")
-                            .path("/config/data")
-                            .rights(fio::R_STAR_DIR),
-                    )
-                    .from(&pkg_resolver_directories)
-                    .to(&pkg_component),
-            )
-            .await
-            .unwrap();
-        realm_builder
-            .add_route(
-                Route::new()
-                    .capability(
-                        Capability::directory("root-ssl-certificates")
-                            .path(GLOBAL_SSL_CERTS_PATH)
-                            .rights(fio::R_STAR_DIR),
-                    )
-                    .from(&pkg_resolver_directories)
-                    .to(&pkg_component),
-            )
-            .await
-            .unwrap();
-
-        let blobfs_proxy = fio::DirectoryProxy::from_channel(
-            fasync::Channel::from_channel(blobfs_handle.into_channel()).unwrap(),
-        );
-
-        let (blobfs_client_end_clone, remote) =
-            fidl::endpoints::create_endpoints::<fio::DirectoryMarker>().unwrap();
-        blobfs_proxy
-            .clone(fio::OpenFlags::CLONE_SAME_RIGHTS, ServerEnd::from(remote.into_channel()))
-            .unwrap();
-
-        let blobfs_proxy_clone = blobfs_client_end_clone.into_proxy().unwrap();
-        let blobfs_vfs = vfs::remote::remote_dir(blobfs_proxy_clone);
-        let blobfs_reflector = realm_builder
-            .add_local_child(
-                "pkg_cache_blobfs",
-                move |handles| {
-                    let blobfs_vfs = blobfs_vfs.clone();
-                    let out_dir = vfs::pseudo_directory! {
-                        "blob" => blobfs_vfs,
-                    };
-                    let scope = vfs::execution_scope::ExecutionScope::new();
-                    let () = out_dir.open(
-                        scope.clone(),
-                        fio::OpenFlags::RIGHT_READABLE
-                            | fio::OpenFlags::RIGHT_WRITABLE
-                            | fio::OpenFlags::RIGHT_EXECUTABLE,
-                        0,
-                        vfs::path::Path::dot(),
-                        handles.outgoing_dir.into_channel().into(),
-                    );
-                    async move {
-                        scope.wait().await;
-                        Ok(())
-                    }
-                    .boxed()
-                },
-                ChildOptions::new(),
-            )
-            .await
-            .unwrap();
-
-        realm_builder
-            .add_route(
-                Route::new()
-                    .capability(
-                        Capability::directory("blob-exec")
-                            .path("/blob")
-                            .rights(fio::RW_STAR_DIR | fio::Operations::EXECUTE),
-                    )
-                    .from(&blobfs_reflector)
-                    .to(&pkg_component),
-            )
-            .await
-            .unwrap();
-
-        let channel_clone = self.channel.clone();
-        let boot_args_mock = realm_builder
-            .add_local_child(
-                "boot_arguments",
-                move |handles| {
-                    Box::pin(Self::run_boot_arguments(handles, Some(self.channel.clone())))
-                },
-                ChildOptions::new(),
-            )
-            .await
-            .unwrap();
-
-        realm_builder
-            .add_route(
-                Route::new()
-                    .capability(Capability::protocol_by_name("fuchsia.boot.Arguments"))
-                    .from(&boot_args_mock)
-                    .to(&pkg_component),
-            )
-            .await
-            .unwrap();
-
-        let realm_instance = realm_builder.build().await.unwrap();
-        let pkg_cache_proxy = realm_instance
-            .root
-            .connect_to_protocol_at_exposed_dir::<fidl_fuchsia_pkg::PackageCacheMarker>()
-            .expect("connect to pkg cache");
-        let space_manager_proxy = realm_instance
-            .root
-            .connect_to_protocol_at_exposed_dir::<fidl_fuchsia_space::ManagerMarker>()
-            .expect("connect to space manager");
-
-        let (cache_clone, remote) =
-            fidl::endpoints::create_endpoints::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
-        realm_instance
-            .root
-            .get_exposed_dir()
-            .clone(
-                fidl_fuchsia_io::OpenFlags::CLONE_SAME_RIGHTS,
-                ServerEnd::from(remote.into_channel()),
-            )
-            .unwrap();
-
-        let cache = Cache::new_with_proxies(
-            pkg_cache_proxy,
-            space_manager_proxy,
-            cache_clone.into_proxy().unwrap(),
-        )
-        .unwrap();
-
-        let pkg_resolver_proxy = realm_instance
-            .root
-            .connect_to_protocol_at_exposed_dir::<fidl_fuchsia_pkg::PackageResolverMarker>()
-            .expect("connect to package resolver");
-        let (resolver_svc_dir, remote) =
-            fidl::endpoints::create_endpoints::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
-        realm_instance
-            .root
-            .get_exposed_dir()
-            .clone(
-                fidl_fuchsia_io::OpenFlags::CLONE_SAME_RIGHTS,
-                ServerEnd::from(remote.into_channel()),
-            )
-            .unwrap();
-
-        let resolver =
-            Resolver::new_with_proxy(pkg_resolver_proxy, resolver_svc_dir.into_proxy().unwrap())
-                .unwrap();
-
-        let result = download_and_apply_update_with_pre_configured_components(
-            blobfs_proxy,
-            client,
-            &channel_clone,
-            &self.board,
-            &self.version,
-            omaha_config,
-            Arc::new(cache),
-            Arc::new(resolver),
-        )
-        .await;
-
-        TestResult {
-            blobfs,
+        let params = TestParams {
+            blobfs: self.blobfs,
+            board: self.board,
+            channel: self.channel,
             packages: self.packages,
-            paver_events: self.paver.take_events(),
-            result,
-        }
-    }
+            paver: self.paver,
+            repo_config_dir: self.repo_config_dir,
+            ssl_certs: self.ssl_certs,
+            update_merkle: self.update_merkle,
+            version: self.version,
+            omaha_config,
+            paver_connector: client,
+        };
 
-    async fn serve_boot_arguments(mut stream: ArgumentsRequestStream, channel: Option<String>) {
-        while let Some(req) = stream.try_next().await.unwrap() {
-            match req {
-                ArgumentsRequest::GetString { key, responder } => {
-                    if key == "tuf_repo_config" {
-                        responder.send(channel.as_deref()).unwrap();
-                    } else {
-                        eprintln!("Unexpected arguments GetString: {}, closing channel.", key);
-                    }
-                }
-                _ => eprintln!("Unexpected arguments request, closing channel."),
-            }
-        }
-    }
-
-    async fn run_boot_arguments(
-        handles: fuchsia_component_test::LocalComponentHandles,
-        channel: Option<String>,
-    ) -> Result<(), Error> {
-        let mut fs = fuchsia_component::server::ServiceFs::new();
-        fs.dir("svc")
-            .add_fidl_service(move |stream| Self::serve_boot_arguments(stream, channel.clone()));
-        fs.serve_connection(handles.outgoing_dir)?;
-        let () = fs.for_each_concurrent(None, |req| async { req.await }).await;
-        Ok(())
-    }
-}
-
-pub struct TestResult {
-    blobfs: Option<BlobfsRamdisk>,
-    packages: Vec<Package>,
-    pub paver_events: Vec<PaverEvent>,
-    pub result: Result<(), UpdateError>,
-}
-
-impl TestResult {
-    /// Assert that all blobs in all the packages that were part of the Update
-    /// have been installed into the blobfs, and that the blobfs contains no extra blobs.
-    pub fn check_packages(&self) {
-        let written_blobs = self
-            .blobfs
-            .as_ref()
-            .unwrap_or_else(|| panic!("Test had no blobfs"))
-            .list_blobs()
-            .expect("Listing blobfs blobs");
-        let mut all_package_blobs = BTreeSet::new();
-        for package in self.packages.iter() {
-            all_package_blobs.append(&mut package.list_blobs().expect("Listing package blobs"));
-        }
-
-        assert_eq!(written_blobs, all_package_blobs);
+        self.test_executor.run(params).await
     }
 }

@@ -10,22 +10,33 @@ rustc_test("driver") {
   edition = "2021"
 
   deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_rust",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
+    "//sdk/fidl/fuchsia.space:fuchsia.space_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
+    "//src/lib/fuchsia-fs",
     "//src/lib/fuchsia-url",
+    "//src/lib/storage/vfs/rust:vfs",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/fidl-fuchsia-pkg-ext",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//src/sys/pkg/lib/isolated-ota",
+    "//src/sys/pkg/lib/isolated-swd",
+    "//src/sys/pkg/testing/blobfs-ramdisk",
     "//src/sys/pkg/testing/isolated-ota-env",
     "//src/sys/pkg/testing/mock-omaha-server",
     "//src/sys/pkg/testing/mock-paver",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:http",
+    "//third_party/rust_crates:parking_lot",
   ]
 
   sources = [ "src/lib.rs" ]
