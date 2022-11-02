@@ -410,3 +410,5 @@ toc:
     path: /docs/contribute/governance/rfcs/0196_fidl_large_messages.md
   - title: "RFC-0197: Node Groups for composites"
     path: /docs/contribute/governance/rfcs/0197_node_groups.md
+  - title: "RFC-0199: Protect child VMARs"
+    path: /docs/contribute/governance/rfcs/0199_protect_child_vmars.md

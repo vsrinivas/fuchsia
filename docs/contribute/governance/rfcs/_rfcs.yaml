@@ -2576,3 +2576,16 @@
   submitted: '2022-11-01'
   reviewed: '2022-09-26'
 
+- name: 'RFC-0199'
+  title: 'Protect child VMARs'
+  short_description: 'Allow zx_vmar_protect to apply to mappings in child VMARs.'
+  authors: ['adanis@google.com']
+  file: '0199_protect_child_vmars.md'
+  area: ['Kernel']
+  issue: ['107058']
+  gerrit_change_id: ['724364']
+  submitted: '2022-09-13'
+  status: 'Accepted'
+  reviewers: ['travisg@google.com', 'rashaeqbal@google.com', 'nickcano@google.com']
+  consulted: ['wez@google.com', 'palmer@google.com', 'mvanotti@google.com']
+  reviewed: '2022-11-03'
