@@ -1,0 +1,42 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import("//build/components.gni")
+
+fuchsia_component("web_view_system_validation_component") {
+  testonly = true
+  component_name = "web_view_system_validation"
+  manifest = "tests/meta/web_view_system_validation.cml"
+  deps = [ "//src/testing/system-validation/ui:bin" ]
+}
+
+# To run tests:
+# fx test fuchsia-pkg://fuchsia.com/simple_png_web_system_validation#meta/web_view_system_validation.cm
+fuchsia_test_package("simple_png_web_system_validation_test_pkg") {
+  package_name = "simple_png_web_system_validation"
+  test_components = [ ":web_view_system_validation_component" ]
+
+  # Do not fail test on ERROR log. When the test ends, elf_test_runner will shut down the system-validation test component
+  # and its children, which causes web_engine to log an error upon getting disconnected.
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+  deps = [
+    "//src/testing/system-validation/web/apps:simple_png_web_view_component",
+  ]
+}
+
+# To run tests:
+# fx test fuchsia-pkg://fuchsia.com/dynamic_elements_web_system_validation#meta/web_view_system_validation.cm
+fuchsia_test_package("dynamic_elements_web_system_validation_test_pkg") {
+  package_name = "dynamic_elements_web_system_validation"
+  test_components = [ ":web_view_system_validation_component" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+  deps = [ "//src/testing/system-validation/web/apps:dynamic_element_web_view_component" ]
+}

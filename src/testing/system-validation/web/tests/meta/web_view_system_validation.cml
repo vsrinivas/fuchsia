@@ -1,0 +1,113 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// Takes care of capability routing for "sample-app"
+{
+    include: [ "//src/testing/system-validation/web/tests/meta/web_system_validation_base.cml" ],
+    program: {
+        // Args for ui_app_controller
+        args: [
+            "--run-duration-sec",
+            "10",
+        ],
+    },
+    children: [
+        {
+            name: "sample-app",
+            url: "#meta/web_view.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.ui.app.ViewProvider" ],
+            from: "#sample-app",
+        },
+    ],
+    offer: [
+        // ContextFeatureFlags https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.web/context.fidl
+        {
+            protocol: "fuchsia.web.ContextProvider",
+            from: "#context_provider",
+            to: "#sample-app",
+        },
+        {
+            protocol: [
+                //  web_engine_base.shard
+                "fuchsia.buildinfo.Provider",
+                "fuchsia.fonts.Provider",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.logger.LogSink",
+                "fuchsia.memorypressure.Provider",
+                "fuchsia.sysmem.Allocator",
+            ],
+            from: "parent",
+            to: [ "#sample-app" ],
+        },
+        {
+            protocol: [
+                //  web_engine_feature_audio.shard
+                "fuchsia.media.Audio",
+                "fuchsia.media.AudioDeviceEnumerator",
+                "fuchsia.media.SessionAudioConsumerFactory",
+            ],
+            from: "parent",
+            to: [ "#sample-app" ],
+        },
+        {
+            protocol: [
+                //  web_engine_feature_vulkan.shard
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: [ "#sample-app" ],
+        },
+        {
+            protocol: [
+                //  web_engine_feature_network.shard
+                "fuchsia.net.interfaces.State",
+                "fuchsia.netstack.Netstack",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "parent",
+            to: [ "#sample-app" ],
+        },
+        {
+            protocol: [
+                //  web_engine_view.shard
+                "fuchsia.accessibility.semantics.SemanticsManager",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "parent",
+            to: [ "#sample-app" ],
+        },
+        {
+            protocol: [
+                // web_view.cm
+                "fuchsia.media.ProfileProvider",
+                "fuchsia.tracing.perfetto.ProducerConnector",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [ "#sample-app" ],
+        },
+        {
+            directory: [
+                "dev-display-controller",
+                "dev-goldfish-address-space",
+                "dev-goldfish-control",
+                "dev-goldfish-pipe",
+                "dev-goldfish-sync",
+                "dev-gpu",
+                "dev-input",
+                "dev-input-report",
+            ],
+            from: "parent",
+            to: [ "#sample-app" ],
+            rights: [ "r*" ],
+        },
+    ],
+}

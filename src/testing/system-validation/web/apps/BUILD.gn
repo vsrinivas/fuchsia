@@ -1,0 +1,79 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+# Note: Demo apps should only depend on Fuchsia SDK or third_party code.
+# (i.e from //sdk/..., or //zircon/..., or //third_party/...)
+executable("bin") {
+  output_name = "web_view_bin"
+  sources = [ "web_view.cc" ]
+  data_deps = [ ":javascripts" ]
+
+  deps = [
+    ":web_view_config_lib",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_hlcpp",
+    "//sdk/fidl/fuchsia.web:fuchsia.web_hlcpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+resource("javascripts") {
+  sources = [
+    "data/dynamic_elements.js",
+    "data/simple_png.js",
+  ]
+  outputs = [ "data/javascripts/{{source_file_part}}" ]
+}
+
+fuchsia_component_manifest("web_view_manifest") {
+  component_name = "web_view"
+  manifest = "meta/web_view.cml"
+}
+
+fuchsia_structured_config_cpp_elf_lib("web_view_config_lib") {
+  cm_label = ":web_view_manifest"
+}
+
+fuchsia_structured_config_values("simple_png_config") {
+  cm_label = ":web_view_manifest"
+  values = {
+    javascript_file = "/pkg/data/javascripts/simple_png.js"
+  }
+}
+
+fuchsia_structured_config_values("dynamic_element_config") {
+  cm_label = ":web_view_manifest"
+  values = {
+    javascript_file = "/pkg/data/javascripts/dynamic_elements.js"
+  }
+}
+
+fuchsia_component("simple_png_web_view_component") {
+  cm_label = ":web_view_manifest"
+  deps = [
+    ":bin",
+    ":simple_png_config",
+  ]
+}
+
+fuchsia_component("dynamic_element_web_view_component") {
+  cm_label = ":web_view_manifest"
+  deps = [
+    ":bin",
+    ":dynamic_element_config",
+  ]
+}
+
+fuchsia_package("simple_png_web_view") {
+  package_name = "simple_png_web_view"
+  deps = [ ":simple_png_web_view_component" ]
+}
+fuchsia_package("dynamic_element_web_view") {
+  package_name = "dynamic_element_web_view"
+  deps = [ ":dynamic_element_web_view_component" ]
+}

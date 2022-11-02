@@ -1,0 +1,58 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// Takes care of capability routing for "ui_app_controller" and "context_provider"
+{
+    include: [
+        "//src/testing/system-validation/meta/system_validation_test_facet.cml",
+        "//src/testing/system-validation/meta/use_custom_artifact.cml",
+        "sys/testing/elf_test_runner.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/ui_app_controller",
+    },
+    children: [
+        {
+            name: "context_provider",
+            url: "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.process.Launcher",
+                "fuchsia.session.scene.Manager",
+                "fuchsia.tracing.controller.Controller",
+                "fuchsia.ui.composition.Screenshot",
+            ],
+            from: "parent",
+        },
+        {
+            event_stream: [
+                "started_v2",
+                "stopped_v2",
+            ],
+            from: "parent",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.feedback.ComponentDataRegister",
+                "fuchsia.feedback.CrashReportingProductRegister",
+                "fuchsia.logger.LogSink",
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Loader",
+            ],
+            from: "parent",
+            to: "#context_provider",
+        },
+    ],
+    facets: {
+        "fuchsia.test": {
+            "deprecated-allowed-packages": [ "web_engine" ],
+        },
+    },
+}

@@ -7,5 +7,10 @@ import("//build/rust/rustc_binary.gni")
 
 group("tests") {
   testonly = true
-  deps = [ "ui:system_validation_test_pkg" ]
+  deps = [
+    "ui:system_validation_test_pkg",
+    "web:dynamic_elements_web_system_validation_test_pkg",
+    "web:simple_png_web_system_validation_test_pkg",
+    "//src/chromium:web_engine",
+  ]
 }

@@ -1,0 +1,45 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/chromium/web_engine/meta/shards/web_engine_base.shard.cml",
+        "//src/chromium/web_engine/meta/shards/web_engine_feature_audio.shard.cml",
+        "//src/chromium/web_engine/meta/shards/web_engine_feature_network.shard.cml",
+        "//src/chromium/web_engine/meta/shards/web_engine_feature_vulkan.shard.cml",
+        "//src/chromium/web_engine/meta/shards/web_engine_view.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/web_view_bin",
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.ui.app.ViewProvider" ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                // Extra capabilities used by web_engine but not specified in a shard cml.
+                "fuchsia.media.ProfileProvider",
+                "fuchsia.tracing.perfetto.ProducerConnector",
+                "fuchsia.tracing.provider.Registry",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.ui.app.ViewProvider" ],
+            from: "self",
+        },
+    ],
+    config: {
+        javascript_file: {
+            type: "string",
+            max_size: 2048,
+        },
+    },
+}

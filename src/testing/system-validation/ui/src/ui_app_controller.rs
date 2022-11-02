@@ -45,8 +45,8 @@ async fn main() {
     let view_provider = connect_to_protocol::<ui_app::ViewProviderMarker>()
         .expect("failed to connect to ViewProvider");
     let mut link_token_pair = scenic::flatland::ViewCreationTokenPair::new().unwrap();
-    // let mut event_stream = EventStream::open().await.unwrap();
     let app_monitor = AppMonitor::new(SAMPLE_APP_MONIKER.to_string());
+
     // Use view provider to initiate creation of the view which will be connected to the
     // viewport that we create below.
     view_provider
