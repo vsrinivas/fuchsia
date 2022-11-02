@@ -34,7 +34,6 @@
 #include "src/modular/lib/fidl/app_client.h"
 #include "src/modular/lib/fidl/environment.h"
 #include "src/modular/lib/modular_config/modular_config_accessor.h"
-#include "src/modular/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace modular {
 

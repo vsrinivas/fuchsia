@@ -17,7 +17,6 @@ group("lib") {
     "fidl",
     "lifecycle",
     "pseudo_dir",
-    "scoped_tmpfs",
     "testing",
   ]
 }
@@ -40,7 +39,6 @@ executable("modular_lib_unittests") {
     "//src/modular/lib/fidl:unittests",
     "//src/modular/lib/modular_config:unittests",
     "//src/modular/lib/pseudo_dir:unittests",
-    "//src/modular/lib/scoped_tmpfs:unittests",
     "//src/modular/lib/string_escape:unittests",
   ]
 }
