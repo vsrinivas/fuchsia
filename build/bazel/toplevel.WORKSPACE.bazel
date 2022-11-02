@@ -10,6 +10,15 @@ sync with toplevel.MODULE.bazel whenever possible!!
 
 workspace(name = "main")
 
+# A local copy of the platforms repository, which was already
+# OSRB-approved but doesn't have a mirror on fuchsia.googlesource.com
+# yet. TODO(digit): Move this third_party/bazel_platforms through
+# a Jiri Manifest entry once the mirror is in place.
+local_repository(
+    name = "platforms",
+    path = "build/bazel/local_repositories/platforms",
+)
+
 local_repository(
     name = "bazel_skylib",
     path = "third_party/bazel_skylib",
