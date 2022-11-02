@@ -125,19 +125,9 @@ fuchsia_component("font_provider_cm") {
   deps = [ ":font_provider" ]
 }
 
-# TODO: Remove fonts.cmx once external clients aren't using it.
-fuchsia_component("font_provider_cmx") {
-  manifest = "meta/fonts.cmx"
-  component_name = "fonts"
-  deps = [ ":font_provider" ]
-}
-
 fuchsia_package("pkg") {
   package_name = "fonts"
-  deps = [
-    ":font_provider_cm",
-    ":font_provider_cmx",
-  ]
+  deps = [ ":font_provider_cm" ]
 }
 
 build_type_config_data("build_type") {
