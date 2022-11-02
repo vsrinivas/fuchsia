@@ -16,6 +16,17 @@ pub struct ThisIsAStruct {
     pub s: *const std::os::raw::c_char,
 }
 
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct OtherTypesInlineTableResponse {
+    pub response_member: u32,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct OtherTypesInlineTableRequest {
+    pub request_member: u32,
+}
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]

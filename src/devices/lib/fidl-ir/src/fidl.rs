@@ -821,10 +821,30 @@ fn get_payload_parameters<'a>(
             }
             Ok(Some(out))
         }
-        Declaration::Table => Err(anyhow!(
-            "{:?} uses a table as a message payload, which is not yet supported (fxbug.dev/82088)",
-            payload
-        )),
+        Declaration::Table => {
+            // TODO(fxbug.dev/82088): Handle tables correctly. This is currently a hack to get
+            // parsing to work, as no backends which use this lib actually require support for
+            // tables as parameters.
+            let mut out = vec![];
+            let table_decl = ir.get_table(identifier)?;
+
+            // Flatten the table members into method parameters.
+            for member in &table_decl.members {
+                let offset_field_shape = FieldShape {
+                    offset: member.offset.unwrap_or(Count(0)) + 16,
+                    padding: Count(0),
+                };
+                out.push(MethodParameter {
+                    maybe_attributes: &member.maybe_attributes,
+                    _type: member._type.clone().unwrap(),
+                    name: &member.name.as_ref().unwrap(),
+                    location: &member.location,
+                    field_shape_v1: offset_field_shape,
+                    experimental_maybe_from_alias: None,
+                });
+            }
+            Ok(Some(out))
+        }
         Declaration::Union => {
             let mut out = vec![];
             let union_decl = ir.get_union(identifier)?;

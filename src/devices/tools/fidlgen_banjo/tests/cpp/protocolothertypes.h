@@ -21,6 +21,40 @@
 //
 // :: Proxies ::
 //
+// ddk::OtherTypesReferenceProtocolClient is a simple wrapper around
+// other_types_reference_protocol_t. It does not own the pointers passed to it.
+//
+// :: Mixins ::
+//
+// ddk::OtherTypesReferenceProtocol is a mixin class that simplifies writing DDK drivers
+// that implement the other-types-reference protocol. It doesn't set the base protocol.
+//
+// :: Examples ::
+//
+// // A driver that implements a ZX_PROTOCOL_OTHER_TYPES_REFERENCE device.
+// class OtherTypesReferenceDevice;
+// using OtherTypesReferenceDeviceType = ddk::Device<OtherTypesReferenceDevice, /* ddk mixins */>;
+//
+// class OtherTypesReferenceDevice : public OtherTypesReferenceDeviceType,
+//                      public ddk::OtherTypesReferenceProtocol<OtherTypesReferenceDevice> {
+//   public:
+//     OtherTypesReferenceDevice(zx_device_t* parent)
+//         : OtherTypesReferenceDeviceType(parent) {}
+//
+//     void OtherTypesReferenceStruct(const this_is_astruct_t* s, this_is_astruct_t** out_s);
+//
+//     void OtherTypesReferenceUnion(const this_is_aunion_t* u, this_is_aunion_t** out_u);
+//
+//     void OtherTypesReferenceString(const char* s, char* out_s, size_t s_capacity);
+//
+//     void OtherTypesReferenceStringSized(const char* s, char* out_s, size_t s_capacity);
+//
+//     void OtherTypesReferenceStringSized2(const char* s, char* out_s, size_t s_capacity);
+//
+//     ...
+// };
+// :: Proxies ::
+//
 // ddk::OtherTypesProtocolClient is a simple wrapper around
 // other_types_protocol_t. It does not own the pointers passed to it.
 //
@@ -53,39 +87,7 @@
 //
 //     void OtherTypesStringSized2(const char* s, char* out_s, size_t s_capacity);
 //
-//     ...
-// };
-// :: Proxies ::
-//
-// ddk::OtherTypesReferenceProtocolClient is a simple wrapper around
-// other_types_reference_protocol_t. It does not own the pointers passed to it.
-//
-// :: Mixins ::
-//
-// ddk::OtherTypesReferenceProtocol is a mixin class that simplifies writing DDK drivers
-// that implement the other-types-reference protocol. It doesn't set the base protocol.
-//
-// :: Examples ::
-//
-// // A driver that implements a ZX_PROTOCOL_OTHER_TYPES_REFERENCE device.
-// class OtherTypesReferenceDevice;
-// using OtherTypesReferenceDeviceType = ddk::Device<OtherTypesReferenceDevice, /* ddk mixins */>;
-//
-// class OtherTypesReferenceDevice : public OtherTypesReferenceDeviceType,
-//                      public ddk::OtherTypesReferenceProtocol<OtherTypesReferenceDevice> {
-//   public:
-//     OtherTypesReferenceDevice(zx_device_t* parent)
-//         : OtherTypesReferenceDeviceType(parent) {}
-//
-//     void OtherTypesReferenceStruct(const this_is_astruct_t* s, this_is_astruct_t** out_s);
-//
-//     void OtherTypesReferenceUnion(const this_is_aunion_t* u, this_is_aunion_t** out_u);
-//
-//     void OtherTypesReferenceString(const char* s, char* out_s, size_t s_capacity);
-//
-//     void OtherTypesReferenceStringSized(const char* s, char* out_s, size_t s_capacity);
-//
-//     void OtherTypesReferenceStringSized2(const char* s, char* out_s, size_t s_capacity);
+//     uint32_t OtherTypesInlineTable(uint32_t request_member);
 //
 //     ...
 // };
@@ -193,152 +195,6 @@
 // };
 
 namespace ddk {
-
-template <typename D, typename Base = internal::base_mixin>
-class OtherTypesProtocol : public Base {
-public:
-    OtherTypesProtocol() {
-        internal::CheckOtherTypesProtocolSubclass<D>();
-        other_types_protocol_ops_.struct = OtherTypesStruct;
-        other_types_protocol_ops_.union = OtherTypesUnion;
-        other_types_protocol_ops_.enum = OtherTypesEnum;
-        other_types_protocol_ops_.string = OtherTypesString;
-        other_types_protocol_ops_.string_sized = OtherTypesStringSized;
-        other_types_protocol_ops_.string_sized2 = OtherTypesStringSized2;
-
-        if constexpr (internal::is_base_proto<Base>::value) {
-            auto dev = static_cast<D*>(this);
-            // Can only inherit from one base_protocol implementation.
-            ZX_ASSERT(dev->ddk_proto_id_ == 0);
-            dev->ddk_proto_id_ = ZX_PROTOCOL_OTHER_TYPES;
-            dev->ddk_proto_ops_ = &other_types_protocol_ops_;
-        }
-    }
-
-protected:
-    other_types_protocol_ops_t other_types_protocol_ops_ = {};
-
-private:
-    static void OtherTypesStruct(void* ctx, const this_is_astruct_t* s, this_is_astruct_t* out_s) {
-        static_cast<D*>(ctx)->OtherTypesStruct(s, out_s);
-    }
-    static void OtherTypesUnion(void* ctx, const this_is_aunion_t* u, this_is_aunion_t* out_u) {
-        static_cast<D*>(ctx)->OtherTypesUnion(u, out_u);
-    }
-    static this_is_an_enum_t OtherTypesEnum(void* ctx, this_is_an_enum_t e) {
-        auto ret = static_cast<D*>(ctx)->OtherTypesEnum(e);
-        return ret;
-    }
-    static void OtherTypesString(void* ctx, const char* s, char* out_s, size_t s_capacity) {
-        static_cast<D*>(ctx)->OtherTypesString(s, out_s, s_capacity);
-    }
-    static void OtherTypesStringSized(void* ctx, const char* s, char* out_s, size_t s_capacity) {
-        static_cast<D*>(ctx)->OtherTypesStringSized(s, out_s, s_capacity);
-    }
-    static void OtherTypesStringSized2(void* ctx, const char* s, char* out_s, size_t s_capacity) {
-        static_cast<D*>(ctx)->OtherTypesStringSized2(s, out_s, s_capacity);
-    }
-};
-
-class OtherTypesProtocolClient {
-public:
-    OtherTypesProtocolClient()
-        : ops_(nullptr), ctx_(nullptr) {}
-    OtherTypesProtocolClient(const other_types_protocol_t* proto)
-        : ops_(proto->ops), ctx_(proto->ctx) {}
-
-    OtherTypesProtocolClient(zx_device_t* parent) {
-        other_types_protocol_t proto;
-        if (device_get_protocol(parent, ZX_PROTOCOL_OTHER_TYPES, &proto) == ZX_OK) {
-            ops_ = proto.ops;
-            ctx_ = proto.ctx;
-        } else {
-            ops_ = nullptr;
-            ctx_ = nullptr;
-        }
-    }
-
-    OtherTypesProtocolClient(zx_device_t* parent, const char* fragment_name) {
-        other_types_protocol_t proto;
-        if (device_get_fragment_protocol(parent, fragment_name, ZX_PROTOCOL_OTHER_TYPES, &proto) == ZX_OK) {
-            ops_ = proto.ops;
-            ctx_ = proto.ctx;
-        } else {
-            ops_ = nullptr;
-            ctx_ = nullptr;
-        }
-    }
-
-    // Create a OtherTypesProtocolClient from the given parent device + "fragment".
-    //
-    // If ZX_OK is returned, the created object will be initialized in |result|.
-    static zx_status_t CreateFromDevice(zx_device_t* parent,
-                                        OtherTypesProtocolClient* result) {
-        other_types_protocol_t proto;
-        zx_status_t status = device_get_protocol(
-                parent, ZX_PROTOCOL_OTHER_TYPES, &proto);
-        if (status != ZX_OK) {
-            return status;
-        }
-        *result = OtherTypesProtocolClient(&proto);
-        return ZX_OK;
-    }
-
-    // Create a OtherTypesProtocolClient from the given parent device.
-    //
-    // If ZX_OK is returned, the created object will be initialized in |result|.
-    static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
-                                        OtherTypesProtocolClient* result) {
-        other_types_protocol_t proto;
-        zx_status_t status = device_get_fragment_protocol(parent, fragment_name,
-                                 ZX_PROTOCOL_OTHER_TYPES, &proto);
-        if (status != ZX_OK) {
-            return status;
-        }
-        *result = OtherTypesProtocolClient(&proto);
-        return ZX_OK;
-    }
-
-    void GetProto(other_types_protocol_t* proto) const {
-        proto->ctx = ctx_;
-        proto->ops = ops_;
-    }
-    bool is_valid() const {
-        return ops_ != nullptr;
-    }
-    void clear() {
-        ctx_ = nullptr;
-        ops_ = nullptr;
-    }
-
-    void Struct(const this_is_astruct_t* s, this_is_astruct_t* out_s) const {
-        ops_->struct(ctx_, s, out_s);
-    }
-
-    void Union(const this_is_aunion_t* u, this_is_aunion_t* out_u) const {
-        ops_->union(ctx_, u, out_u);
-    }
-
-    this_is_an_enum_t Enum(this_is_an_enum_t e) const {
-        return ops_->enum(ctx_, e);
-    }
-
-    void String(const char* s, char* out_s, size_t s_capacity) const {
-        ops_->string(ctx_, s, out_s, s_capacity);
-    }
-
-    void StringSized(const char* s, char* out_s, size_t s_capacity) const {
-        ops_->string_sized(ctx_, s, out_s, s_capacity);
-    }
-
-    void StringSized2(const char* s, char* out_s, size_t s_capacity) const {
-        ops_->string_sized2(ctx_, s, out_s, s_capacity);
-    }
-
-private:
-    const other_types_protocol_ops_t* ops_;
-    void* ctx_;
-};
 
 template <typename D, typename Base = internal::base_mixin>
 class OtherTypesReferenceProtocol : public Base {
@@ -474,6 +330,161 @@ public:
 
 private:
     const other_types_reference_protocol_ops_t* ops_;
+    void* ctx_;
+};
+
+template <typename D, typename Base = internal::base_mixin>
+class OtherTypesProtocol : public Base {
+public:
+    OtherTypesProtocol() {
+        internal::CheckOtherTypesProtocolSubclass<D>();
+        other_types_protocol_ops_.struct = OtherTypesStruct;
+        other_types_protocol_ops_.union = OtherTypesUnion;
+        other_types_protocol_ops_.enum = OtherTypesEnum;
+        other_types_protocol_ops_.string = OtherTypesString;
+        other_types_protocol_ops_.string_sized = OtherTypesStringSized;
+        other_types_protocol_ops_.string_sized2 = OtherTypesStringSized2;
+        other_types_protocol_ops_.inline_table = OtherTypesInlineTable;
+
+        if constexpr (internal::is_base_proto<Base>::value) {
+            auto dev = static_cast<D*>(this);
+            // Can only inherit from one base_protocol implementation.
+            ZX_ASSERT(dev->ddk_proto_id_ == 0);
+            dev->ddk_proto_id_ = ZX_PROTOCOL_OTHER_TYPES;
+            dev->ddk_proto_ops_ = &other_types_protocol_ops_;
+        }
+    }
+
+protected:
+    other_types_protocol_ops_t other_types_protocol_ops_ = {};
+
+private:
+    static void OtherTypesStruct(void* ctx, const this_is_astruct_t* s, this_is_astruct_t* out_s) {
+        static_cast<D*>(ctx)->OtherTypesStruct(s, out_s);
+    }
+    static void OtherTypesUnion(void* ctx, const this_is_aunion_t* u, this_is_aunion_t* out_u) {
+        static_cast<D*>(ctx)->OtherTypesUnion(u, out_u);
+    }
+    static this_is_an_enum_t OtherTypesEnum(void* ctx, this_is_an_enum_t e) {
+        auto ret = static_cast<D*>(ctx)->OtherTypesEnum(e);
+        return ret;
+    }
+    static void OtherTypesString(void* ctx, const char* s, char* out_s, size_t s_capacity) {
+        static_cast<D*>(ctx)->OtherTypesString(s, out_s, s_capacity);
+    }
+    static void OtherTypesStringSized(void* ctx, const char* s, char* out_s, size_t s_capacity) {
+        static_cast<D*>(ctx)->OtherTypesStringSized(s, out_s, s_capacity);
+    }
+    static void OtherTypesStringSized2(void* ctx, const char* s, char* out_s, size_t s_capacity) {
+        static_cast<D*>(ctx)->OtherTypesStringSized2(s, out_s, s_capacity);
+    }
+    static uint32_t OtherTypesInlineTable(void* ctx, uint32_t request_member) {
+        auto ret = static_cast<D*>(ctx)->OtherTypesInlineTable(request_member);
+        return ret;
+    }
+};
+
+class OtherTypesProtocolClient {
+public:
+    OtherTypesProtocolClient()
+        : ops_(nullptr), ctx_(nullptr) {}
+    OtherTypesProtocolClient(const other_types_protocol_t* proto)
+        : ops_(proto->ops), ctx_(proto->ctx) {}
+
+    OtherTypesProtocolClient(zx_device_t* parent) {
+        other_types_protocol_t proto;
+        if (device_get_protocol(parent, ZX_PROTOCOL_OTHER_TYPES, &proto) == ZX_OK) {
+            ops_ = proto.ops;
+            ctx_ = proto.ctx;
+        } else {
+            ops_ = nullptr;
+            ctx_ = nullptr;
+        }
+    }
+
+    OtherTypesProtocolClient(zx_device_t* parent, const char* fragment_name) {
+        other_types_protocol_t proto;
+        if (device_get_fragment_protocol(parent, fragment_name, ZX_PROTOCOL_OTHER_TYPES, &proto) == ZX_OK) {
+            ops_ = proto.ops;
+            ctx_ = proto.ctx;
+        } else {
+            ops_ = nullptr;
+            ctx_ = nullptr;
+        }
+    }
+
+    // Create a OtherTypesProtocolClient from the given parent device + "fragment".
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent,
+                                        OtherTypesProtocolClient* result) {
+        other_types_protocol_t proto;
+        zx_status_t status = device_get_protocol(
+                parent, ZX_PROTOCOL_OTHER_TYPES, &proto);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *result = OtherTypesProtocolClient(&proto);
+        return ZX_OK;
+    }
+
+    // Create a OtherTypesProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
+                                        OtherTypesProtocolClient* result) {
+        other_types_protocol_t proto;
+        zx_status_t status = device_get_fragment_protocol(parent, fragment_name,
+                                 ZX_PROTOCOL_OTHER_TYPES, &proto);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *result = OtherTypesProtocolClient(&proto);
+        return ZX_OK;
+    }
+
+    void GetProto(other_types_protocol_t* proto) const {
+        proto->ctx = ctx_;
+        proto->ops = ops_;
+    }
+    bool is_valid() const {
+        return ops_ != nullptr;
+    }
+    void clear() {
+        ctx_ = nullptr;
+        ops_ = nullptr;
+    }
+
+    void Struct(const this_is_astruct_t* s, this_is_astruct_t* out_s) const {
+        ops_->struct(ctx_, s, out_s);
+    }
+
+    void Union(const this_is_aunion_t* u, this_is_aunion_t* out_u) const {
+        ops_->union(ctx_, u, out_u);
+    }
+
+    this_is_an_enum_t Enum(this_is_an_enum_t e) const {
+        return ops_->enum(ctx_, e);
+    }
+
+    void String(const char* s, char* out_s, size_t s_capacity) const {
+        ops_->string(ctx_, s, out_s, s_capacity);
+    }
+
+    void StringSized(const char* s, char* out_s, size_t s_capacity) const {
+        ops_->string_sized(ctx_, s, out_s, s_capacity);
+    }
+
+    void StringSized2(const char* s, char* out_s, size_t s_capacity) const {
+        ops_->string_sized2(ctx_, s, out_s, s_capacity);
+    }
+
+    uint32_t InlineTable(uint32_t request_member) const {
+        return ops_->inline_table(ctx_, request_member);
+    }
+
+private:
+    const other_types_protocol_ops_t* ops_;
     void* ctx_;
 };
 

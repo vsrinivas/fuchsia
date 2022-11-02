@@ -12,53 +12,6 @@
 namespace ddk {
 namespace internal {
 
-DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_protocol_struct, OtherTypesStruct,
-        void (C::*)(const this_is_astruct_t* s, this_is_astruct_t* out_s));
-
-DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_protocol_union, OtherTypesUnion,
-        void (C::*)(const this_is_aunion_t* u, this_is_aunion_t* out_u));
-
-DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_protocol_enum, OtherTypesEnum,
-        this_is_an_enum_t (C::*)(this_is_an_enum_t e));
-
-DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_protocol_string, OtherTypesString,
-        void (C::*)(const char* s, char* out_s, size_t s_capacity));
-
-DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_protocol_string_sized, OtherTypesStringSized,
-        void (C::*)(const char* s, char* out_s, size_t s_capacity));
-
-DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_protocol_string_sized2, OtherTypesStringSized2,
-        void (C::*)(const char* s, char* out_s, size_t s_capacity));
-
-
-template <typename D>
-constexpr void CheckOtherTypesProtocolSubclass() {
-    static_assert(internal::has_other_types_protocol_struct<D>::value,
-        "OtherTypesProtocol subclasses must implement "
-        "void OtherTypesStruct(const this_is_astruct_t* s, this_is_astruct_t* out_s);");
-
-    static_assert(internal::has_other_types_protocol_union<D>::value,
-        "OtherTypesProtocol subclasses must implement "
-        "void OtherTypesUnion(const this_is_aunion_t* u, this_is_aunion_t* out_u);");
-
-    static_assert(internal::has_other_types_protocol_enum<D>::value,
-        "OtherTypesProtocol subclasses must implement "
-        "this_is_an_enum_t OtherTypesEnum(this_is_an_enum_t e);");
-
-    static_assert(internal::has_other_types_protocol_string<D>::value,
-        "OtherTypesProtocol subclasses must implement "
-        "void OtherTypesString(const char* s, char* out_s, size_t s_capacity);");
-
-    static_assert(internal::has_other_types_protocol_string_sized<D>::value,
-        "OtherTypesProtocol subclasses must implement "
-        "void OtherTypesStringSized(const char* s, char* out_s, size_t s_capacity);");
-
-    static_assert(internal::has_other_types_protocol_string_sized2<D>::value,
-        "OtherTypesProtocol subclasses must implement "
-        "void OtherTypesStringSized2(const char* s, char* out_s, size_t s_capacity);");
-
-}
-
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_reference_protocol_struct, OtherTypesReferenceStruct,
         void (C::*)(const this_is_astruct_t* s, this_is_astruct_t** out_s));
 
@@ -96,6 +49,60 @@ constexpr void CheckOtherTypesReferenceProtocolSubclass() {
     static_assert(internal::has_other_types_reference_protocol_string_sized2<D>::value,
         "OtherTypesReferenceProtocol subclasses must implement "
         "void OtherTypesReferenceStringSized2(const char* s, char* out_s, size_t s_capacity);");
+
+}
+
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_protocol_struct, OtherTypesStruct,
+        void (C::*)(const this_is_astruct_t* s, this_is_astruct_t* out_s));
+
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_protocol_union, OtherTypesUnion,
+        void (C::*)(const this_is_aunion_t* u, this_is_aunion_t* out_u));
+
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_protocol_enum, OtherTypesEnum,
+        this_is_an_enum_t (C::*)(this_is_an_enum_t e));
+
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_protocol_string, OtherTypesString,
+        void (C::*)(const char* s, char* out_s, size_t s_capacity));
+
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_protocol_string_sized, OtherTypesStringSized,
+        void (C::*)(const char* s, char* out_s, size_t s_capacity));
+
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_protocol_string_sized2, OtherTypesStringSized2,
+        void (C::*)(const char* s, char* out_s, size_t s_capacity));
+
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_protocol_inline_table, OtherTypesInlineTable,
+        uint32_t (C::*)(uint32_t request_member));
+
+
+template <typename D>
+constexpr void CheckOtherTypesProtocolSubclass() {
+    static_assert(internal::has_other_types_protocol_struct<D>::value,
+        "OtherTypesProtocol subclasses must implement "
+        "void OtherTypesStruct(const this_is_astruct_t* s, this_is_astruct_t* out_s);");
+
+    static_assert(internal::has_other_types_protocol_union<D>::value,
+        "OtherTypesProtocol subclasses must implement "
+        "void OtherTypesUnion(const this_is_aunion_t* u, this_is_aunion_t* out_u);");
+
+    static_assert(internal::has_other_types_protocol_enum<D>::value,
+        "OtherTypesProtocol subclasses must implement "
+        "this_is_an_enum_t OtherTypesEnum(this_is_an_enum_t e);");
+
+    static_assert(internal::has_other_types_protocol_string<D>::value,
+        "OtherTypesProtocol subclasses must implement "
+        "void OtherTypesString(const char* s, char* out_s, size_t s_capacity);");
+
+    static_assert(internal::has_other_types_protocol_string_sized<D>::value,
+        "OtherTypesProtocol subclasses must implement "
+        "void OtherTypesStringSized(const char* s, char* out_s, size_t s_capacity);");
+
+    static_assert(internal::has_other_types_protocol_string_sized2<D>::value,
+        "OtherTypesProtocol subclasses must implement "
+        "void OtherTypesStringSized2(const char* s, char* out_s, size_t s_capacity);");
+
+    static_assert(internal::has_other_types_protocol_inline_table<D>::value,
+        "OtherTypesProtocol subclasses must implement "
+        "uint32_t OtherTypesInlineTable(uint32_t request_member);");
 
 }
 

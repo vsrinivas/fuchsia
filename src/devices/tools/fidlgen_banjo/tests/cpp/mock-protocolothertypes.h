@@ -17,119 +17,6 @@
 
 namespace ddk {
 
-// This class mocks a device by providing a other_types_protocol_t.
-// Users can set expectations on how the protocol ops are called and what values they return. After
-// the test, use VerifyAndClear to reset the object and verify that all expectations were satisfied.
-// See the following example test:
-//
-// ddk::MockOtherTypes other_types;
-//
-// /* Set some expectations on the device by calling other_types.Expect... methods. */
-//
-// SomeDriver dut(other_types.GetProto());
-//
-// EXPECT_OK(dut.SomeMethod());
-// ASSERT_NO_FATAL_FAILURES(other_types.VerifyAndClear());
-//
-// Note that users must provide the equality operator for struct types, for example:
-// bool operator==(const a_struct_type& lhs, const a_struct_type& rhs)
-
-class MockOtherTypes : ddk::OtherTypesProtocol<MockOtherTypes> {
-public:
-    MockOtherTypes() : proto_{&other_types_protocol_ops_, this} {}
-
-    virtual ~MockOtherTypes() {}
-
-    const other_types_protocol_t* GetProto() const { return &proto_; }
-
-    virtual MockOtherTypes& ExpectStruct(this_is_astruct_t s, this_is_astruct_t out_s) {
-        mock_struct_.ExpectCall({out_s}, s);
-        return *this;
-    }
-
-    virtual MockOtherTypes& ExpectUnion(this_is_aunion_t u, this_is_aunion_t out_u) {
-        mock_union_.ExpectCall({out_u}, u);
-        return *this;
-    }
-
-    virtual MockOtherTypes& ExpectEnum(this_is_an_enum_t out_e, this_is_an_enum_t e) {
-        mock_enum_.ExpectCall({out_e}, e);
-        return *this;
-    }
-
-    virtual MockOtherTypes& ExpectString(std::string s, std::string s) {
-        mock_string_.ExpectCall({std::move(out_s)}, std::move(s));
-        return *this;
-    }
-
-    virtual MockOtherTypes& ExpectStringSized(std::string s, std::string s) {
-        mock_string_sized_.ExpectCall({std::move(out_s)}, std::move(s));
-        return *this;
-    }
-
-    virtual MockOtherTypes& ExpectStringSized2(std::string s, std::string s) {
-        mock_string_sized2_.ExpectCall({std::move(out_s)}, std::move(s));
-        return *this;
-    }
-
-    void VerifyAndClear() {
-        mock_struct_.VerifyAndClear();
-        mock_union_.VerifyAndClear();
-        mock_enum_.VerifyAndClear();
-        mock_string_.VerifyAndClear();
-        mock_string_sized_.VerifyAndClear();
-        mock_string_sized2_.VerifyAndClear();
-    }
-
-    virtual void OtherTypesStruct(const this_is_astruct_t* s, this_is_astruct_t* out_s) {
-        std::tuple<this_is_astruct_t> ret = mock_struct_.Call(*s);
-        *out_s = std::get<0>(ret);
-    }
-
-    virtual void OtherTypesUnion(const this_is_aunion_t* u, this_is_aunion_t* out_u) {
-        std::tuple<this_is_aunion_t> ret = mock_union_.Call(*u);
-        *out_u = std::get<0>(ret);
-    }
-
-    virtual this_is_an_enum_t OtherTypesEnum(this_is_an_enum_t e) {
-        std::tuple<this_is_an_enum_t> ret = mock_enum_.Call(e);
-        return std::get<0>(ret);
-    }
-
-    virtual void OtherTypesString(const char* s, char* out_s, size_t s_capacity) {
-        std::tuple<std::string> ret = mock_string_.Call(std::string(s));
-        strncpy(out_s, std::get<0>(ret).c_str(), s_capacity));
-    }
-
-    virtual void OtherTypesStringSized(const char* s, char* out_s, size_t s_capacity) {
-        std::tuple<std::string> ret = mock_string_sized_.Call(std::string(s));
-        strncpy(out_s, std::get<0>(ret).c_str(), s_capacity));
-    }
-
-    virtual void OtherTypesStringSized2(const char* s, char* out_s, size_t s_capacity) {
-        std::tuple<std::string> ret = mock_string_sized2_.Call(std::string(s));
-        strncpy(out_s, std::get<0>(ret).c_str(), s_capacity));
-    }
-
-    mock_function::MockFunction<std::tuple<this_is_astruct_t>, this_is_astruct_t>& mock_struct() { return mock_struct_; }
-    mock_function::MockFunction<std::tuple<this_is_aunion_t>, this_is_aunion_t>& mock_union() { return mock_union_; }
-    mock_function::MockFunction<std::tuple<this_is_an_enum_t>, this_is_an_enum_t>& mock_enum() { return mock_enum_; }
-    mock_function::MockFunction<std::tuple<std::string>, std::string>& mock_string() { return mock_string_; }
-    mock_function::MockFunction<std::tuple<std::string>, std::string>& mock_string_sized() { return mock_string_sized_; }
-    mock_function::MockFunction<std::tuple<std::string>, std::string>& mock_string_sized2() { return mock_string_sized2_; }
-
-protected:
-    mock_function::MockFunction<std::tuple<this_is_astruct_t>, this_is_astruct_t> mock_struct_;
-    mock_function::MockFunction<std::tuple<this_is_aunion_t>, this_is_aunion_t> mock_union_;
-    mock_function::MockFunction<std::tuple<this_is_an_enum_t>, this_is_an_enum_t> mock_enum_;
-    mock_function::MockFunction<std::tuple<std::string>, std::string> mock_string_;
-    mock_function::MockFunction<std::tuple<std::string>, std::string> mock_string_sized_;
-    mock_function::MockFunction<std::tuple<std::string>, std::string> mock_string_sized2_;
-
-private:
-    const other_types_protocol_t proto_;
-};
-
 // This class mocks a device by providing a other_types_reference_protocol_t.
 // Users can set expectations on how the protocol ops are called and what values they return. After
 // the test, use VerifyAndClear to reset the object and verify that all expectations were satisfied.
@@ -228,6 +115,132 @@ protected:
 
 private:
     const other_types_reference_protocol_t proto_;
+};
+
+// This class mocks a device by providing a other_types_protocol_t.
+// Users can set expectations on how the protocol ops are called and what values they return. After
+// the test, use VerifyAndClear to reset the object and verify that all expectations were satisfied.
+// See the following example test:
+//
+// ddk::MockOtherTypes other_types;
+//
+// /* Set some expectations on the device by calling other_types.Expect... methods. */
+//
+// SomeDriver dut(other_types.GetProto());
+//
+// EXPECT_OK(dut.SomeMethod());
+// ASSERT_NO_FATAL_FAILURES(other_types.VerifyAndClear());
+//
+// Note that users must provide the equality operator for struct types, for example:
+// bool operator==(const a_struct_type& lhs, const a_struct_type& rhs)
+
+class MockOtherTypes : ddk::OtherTypesProtocol<MockOtherTypes> {
+public:
+    MockOtherTypes() : proto_{&other_types_protocol_ops_, this} {}
+
+    virtual ~MockOtherTypes() {}
+
+    const other_types_protocol_t* GetProto() const { return &proto_; }
+
+    virtual MockOtherTypes& ExpectStruct(this_is_astruct_t s, this_is_astruct_t out_s) {
+        mock_struct_.ExpectCall({out_s}, s);
+        return *this;
+    }
+
+    virtual MockOtherTypes& ExpectUnion(this_is_aunion_t u, this_is_aunion_t out_u) {
+        mock_union_.ExpectCall({out_u}, u);
+        return *this;
+    }
+
+    virtual MockOtherTypes& ExpectEnum(this_is_an_enum_t out_e, this_is_an_enum_t e) {
+        mock_enum_.ExpectCall({out_e}, e);
+        return *this;
+    }
+
+    virtual MockOtherTypes& ExpectString(std::string s, std::string s) {
+        mock_string_.ExpectCall({std::move(out_s)}, std::move(s));
+        return *this;
+    }
+
+    virtual MockOtherTypes& ExpectStringSized(std::string s, std::string s) {
+        mock_string_sized_.ExpectCall({std::move(out_s)}, std::move(s));
+        return *this;
+    }
+
+    virtual MockOtherTypes& ExpectStringSized2(std::string s, std::string s) {
+        mock_string_sized2_.ExpectCall({std::move(out_s)}, std::move(s));
+        return *this;
+    }
+
+    virtual MockOtherTypes& ExpectInlineTable(uint32_t out_response_member, uint32_t request_member) {
+        mock_inline_table_.ExpectCall({out_response_member}, request_member);
+        return *this;
+    }
+
+    void VerifyAndClear() {
+        mock_struct_.VerifyAndClear();
+        mock_union_.VerifyAndClear();
+        mock_enum_.VerifyAndClear();
+        mock_string_.VerifyAndClear();
+        mock_string_sized_.VerifyAndClear();
+        mock_string_sized2_.VerifyAndClear();
+        mock_inline_table_.VerifyAndClear();
+    }
+
+    virtual void OtherTypesStruct(const this_is_astruct_t* s, this_is_astruct_t* out_s) {
+        std::tuple<this_is_astruct_t> ret = mock_struct_.Call(*s);
+        *out_s = std::get<0>(ret);
+    }
+
+    virtual void OtherTypesUnion(const this_is_aunion_t* u, this_is_aunion_t* out_u) {
+        std::tuple<this_is_aunion_t> ret = mock_union_.Call(*u);
+        *out_u = std::get<0>(ret);
+    }
+
+    virtual this_is_an_enum_t OtherTypesEnum(this_is_an_enum_t e) {
+        std::tuple<this_is_an_enum_t> ret = mock_enum_.Call(e);
+        return std::get<0>(ret);
+    }
+
+    virtual void OtherTypesString(const char* s, char* out_s, size_t s_capacity) {
+        std::tuple<std::string> ret = mock_string_.Call(std::string(s));
+        strncpy(out_s, std::get<0>(ret).c_str(), s_capacity));
+    }
+
+    virtual void OtherTypesStringSized(const char* s, char* out_s, size_t s_capacity) {
+        std::tuple<std::string> ret = mock_string_sized_.Call(std::string(s));
+        strncpy(out_s, std::get<0>(ret).c_str(), s_capacity));
+    }
+
+    virtual void OtherTypesStringSized2(const char* s, char* out_s, size_t s_capacity) {
+        std::tuple<std::string> ret = mock_string_sized2_.Call(std::string(s));
+        strncpy(out_s, std::get<0>(ret).c_str(), s_capacity));
+    }
+
+    virtual uint32_t OtherTypesInlineTable(uint32_t request_member) {
+        std::tuple<uint32_t> ret = mock_inline_table_.Call(request_member);
+        return std::get<0>(ret);
+    }
+
+    mock_function::MockFunction<std::tuple<this_is_astruct_t>, this_is_astruct_t>& mock_struct() { return mock_struct_; }
+    mock_function::MockFunction<std::tuple<this_is_aunion_t>, this_is_aunion_t>& mock_union() { return mock_union_; }
+    mock_function::MockFunction<std::tuple<this_is_an_enum_t>, this_is_an_enum_t>& mock_enum() { return mock_enum_; }
+    mock_function::MockFunction<std::tuple<std::string>, std::string>& mock_string() { return mock_string_; }
+    mock_function::MockFunction<std::tuple<std::string>, std::string>& mock_string_sized() { return mock_string_sized_; }
+    mock_function::MockFunction<std::tuple<std::string>, std::string>& mock_string_sized2() { return mock_string_sized2_; }
+    mock_function::MockFunction<std::tuple<uint32_t>, uint32_t>& mock_inline_table() { return mock_inline_table_; }
+
+protected:
+    mock_function::MockFunction<std::tuple<this_is_astruct_t>, this_is_astruct_t> mock_struct_;
+    mock_function::MockFunction<std::tuple<this_is_aunion_t>, this_is_aunion_t> mock_union_;
+    mock_function::MockFunction<std::tuple<this_is_an_enum_t>, this_is_an_enum_t> mock_enum_;
+    mock_function::MockFunction<std::tuple<std::string>, std::string> mock_string_;
+    mock_function::MockFunction<std::tuple<std::string>, std::string> mock_string_sized_;
+    mock_function::MockFunction<std::tuple<std::string>, std::string> mock_string_sized2_;
+    mock_function::MockFunction<std::tuple<uint32_t>, uint32_t> mock_inline_table_;
+
+private:
+    const other_types_protocol_t proto_;
 };
 
 // This class mocks a device by providing a other_types_async_protocol_t.

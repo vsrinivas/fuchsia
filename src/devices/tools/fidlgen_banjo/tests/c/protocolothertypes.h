@@ -19,10 +19,12 @@ typedef uint32_t this_is_an_enum_t;
 #define THIS_IS_AN_ENUM_X UINT32_C(23)
 typedef union this_is_aunion this_is_aunion_t;
 typedef struct this_is_astruct this_is_astruct_t;
-typedef struct other_types_protocol other_types_protocol_t;
-typedef struct other_types_protocol_ops other_types_protocol_ops_t;
 typedef struct other_types_reference_protocol other_types_reference_protocol_t;
 typedef struct other_types_reference_protocol_ops other_types_reference_protocol_ops_t;
+typedef struct other_types_inline_table_response other_types_inline_table_response_t;
+typedef struct other_types_inline_table_request other_types_inline_table_request_t;
+typedef struct other_types_protocol other_types_protocol_t;
+typedef struct other_types_protocol_ops other_types_protocol_ops_t;
 typedef void (*other_types_async_struct_callback)(void* ctx, const this_is_astruct_t* s);
 typedef void (*other_types_async_union_callback)(void* ctx, const this_is_aunion_t* u);
 typedef void (*other_types_async_enum_callback)(void* ctx, this_is_an_enum_t e);
@@ -52,21 +54,6 @@ struct this_is_astruct {
     const char* s;
 };
 
-struct other_types_protocol_ops {
-    void (*struct)(void* ctx, const this_is_astruct_t* s, this_is_astruct_t* out_s);
-    void (*union)(void* ctx, const this_is_aunion_t* u, this_is_aunion_t* out_u);
-    this_is_an_enum_t (*enum)(void* ctx, this_is_an_enum_t e);
-    void (*string)(void* ctx, const char* s, char* out_s, size_t s_capacity);
-    void (*string_sized)(void* ctx, const char* s, char* out_s, size_t s_capacity);
-    void (*string_sized2)(void* ctx, const char* s, char* out_s, size_t s_capacity);
-};
-
-
-struct other_types_protocol {
-    const other_types_protocol_ops_t* ops;
-    void* ctx;
-};
-
 struct other_types_reference_protocol_ops {
     void (*struct)(void* ctx, const this_is_astruct_t* s, this_is_astruct_t** out_s);
     void (*union)(void* ctx, const this_is_aunion_t* u, this_is_aunion_t** out_u);
@@ -78,6 +65,30 @@ struct other_types_reference_protocol_ops {
 
 struct other_types_reference_protocol {
     const other_types_reference_protocol_ops_t* ops;
+    void* ctx;
+};
+
+struct other_types_inline_table_response {
+    uint32_t response_member;
+};
+
+struct other_types_inline_table_request {
+    uint32_t request_member;
+};
+
+struct other_types_protocol_ops {
+    void (*struct)(void* ctx, const this_is_astruct_t* s, this_is_astruct_t* out_s);
+    void (*union)(void* ctx, const this_is_aunion_t* u, this_is_aunion_t* out_u);
+    this_is_an_enum_t (*enum)(void* ctx, this_is_an_enum_t e);
+    void (*string)(void* ctx, const char* s, char* out_s, size_t s_capacity);
+    void (*string_sized)(void* ctx, const char* s, char* out_s, size_t s_capacity);
+    void (*string_sized2)(void* ctx, const char* s, char* out_s, size_t s_capacity);
+    uint32_t (*inline_table)(void* ctx, uint32_t request_member);
+};
+
+
+struct other_types_protocol {
+    const other_types_protocol_ops_t* ops;
     void* ctx;
 };
 
@@ -125,6 +136,26 @@ struct interface_protocol {
 
 
 // Helpers
+static inline void other_types_reference_struct(const other_types_reference_protocol_t* proto, const this_is_astruct_t* s, this_is_astruct_t** out_s) {
+    proto->ops->struct(proto->ctx, s, out_s);
+}
+
+static inline void other_types_reference_union(const other_types_reference_protocol_t* proto, const this_is_aunion_t* u, this_is_aunion_t** out_u) {
+    proto->ops->union(proto->ctx, u, out_u);
+}
+
+static inline void other_types_reference_string(const other_types_reference_protocol_t* proto, const char* s, char* out_s, size_t s_capacity) {
+    proto->ops->string(proto->ctx, s, out_s, s_capacity);
+}
+
+static inline void other_types_reference_string_sized(const other_types_reference_protocol_t* proto, const char* s, char* out_s, size_t s_capacity) {
+    proto->ops->string_sized(proto->ctx, s, out_s, s_capacity);
+}
+
+static inline void other_types_reference_string_sized2(const other_types_reference_protocol_t* proto, const char* s, char* out_s, size_t s_capacity) {
+    proto->ops->string_sized2(proto->ctx, s, out_s, s_capacity);
+}
+
 static inline void other_types_struct(const other_types_protocol_t* proto, const this_is_astruct_t* s, this_is_astruct_t* out_s) {
     proto->ops->struct(proto->ctx, s, out_s);
 }
@@ -149,24 +180,8 @@ static inline void other_types_string_sized2(const other_types_protocol_t* proto
     proto->ops->string_sized2(proto->ctx, s, out_s, s_capacity);
 }
 
-static inline void other_types_reference_struct(const other_types_reference_protocol_t* proto, const this_is_astruct_t* s, this_is_astruct_t** out_s) {
-    proto->ops->struct(proto->ctx, s, out_s);
-}
-
-static inline void other_types_reference_union(const other_types_reference_protocol_t* proto, const this_is_aunion_t* u, this_is_aunion_t** out_u) {
-    proto->ops->union(proto->ctx, u, out_u);
-}
-
-static inline void other_types_reference_string(const other_types_reference_protocol_t* proto, const char* s, char* out_s, size_t s_capacity) {
-    proto->ops->string(proto->ctx, s, out_s, s_capacity);
-}
-
-static inline void other_types_reference_string_sized(const other_types_reference_protocol_t* proto, const char* s, char* out_s, size_t s_capacity) {
-    proto->ops->string_sized(proto->ctx, s, out_s, s_capacity);
-}
-
-static inline void other_types_reference_string_sized2(const other_types_reference_protocol_t* proto, const char* s, char* out_s, size_t s_capacity) {
-    proto->ops->string_sized2(proto->ctx, s, out_s, s_capacity);
+static inline uint32_t other_types_inline_table(const other_types_protocol_t* proto, uint32_t request_member) {
+    return proto->ops->inline_table(proto->ctx, request_member);
 }
 
 static inline void other_types_async_struct(const other_types_async_protocol_t* proto, const this_is_astruct_t* s, other_types_async_struct_callback callback, void* cookie) {

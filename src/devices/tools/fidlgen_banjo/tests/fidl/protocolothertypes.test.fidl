@@ -50,6 +50,11 @@ protocol OtherTypes {
     }) -> (struct {
         s string:strings_size;
     });
+    InlineTable(table{
+        1: request_member uint32;
+    }) -> (table {
+        1: response_member uint32;
+    });
 };
 
 @transport("Banjo")
