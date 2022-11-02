@@ -352,6 +352,7 @@ mod tests {
         AccountMarker, AccountProxy, AuthChangeGranularity, AuthTargetRegisterAuthListenerRequest,
     };
     use fuchsia_async as fasync;
+    use fuchsia_fs::{directory, file};
     use fuchsia_inspect::Inspector;
     use futures::channel::oneshot;
     use identity_testutil::{make_formatted_account_partition_any_key, MockDiskManager};
@@ -439,7 +440,7 @@ mod tests {
 
         async fn run<TestFn, Fut, SM>(&mut self, test_object: Account<SM>, test_fn: TestFn)
         where
-            TestFn: FnOnce(AccountProxy) -> Fut,
+            TestFn: FnOnce((AccountProxy, Arc<Mutex<SM>>)) -> Fut,
             Fut: Future<Output = Result<(), Error>>,
             SM: StorageManager + Send + Sync + 'static,
         {
@@ -451,6 +452,7 @@ mod tests {
             let context = AccountContext {};
 
             let task_group = TaskGroup::new();
+            let storage_manager = Arc::clone(&test_object.storage_manager);
 
             task_group
                 .spawn(|cancel| async move {
@@ -463,7 +465,7 @@ mod tests {
                 })
                 .await
                 .expect("Unable to spawn task");
-            test_fn(account_proxy).await.expect("Test function failed.")
+            test_fn((account_proxy, storage_manager)).await.expect("Test function failed.")
         }
     }
 
@@ -490,20 +492,26 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_get_lifetime_ephemeral() {
         let mut test = Test::new();
-        test.run(test.create_ephemeral_account().await.unwrap(), |proxy| async move {
-            assert_eq!(proxy.get_lifetime().await?, Lifetime::Ephemeral);
-            Ok(())
-        })
+        test.run(
+            test.create_ephemeral_account().await.unwrap(),
+            |(proxy, _storage_manager)| async move {
+                assert_eq!(proxy.get_lifetime().await?, Lifetime::Ephemeral);
+                Ok(())
+            },
+        )
         .await;
     }
 
     #[fasync::run_until_stalled(test)]
     async fn test_get_lifetime_persistent() {
         let mut test = Test::new();
-        test.run(test.create_persistent_account().await.unwrap(), |proxy| async move {
-            assert_eq!(proxy.get_lifetime().await?, Lifetime::Persistent);
-            Ok(())
-        })
+        test.run(
+            test.create_persistent_account().await.unwrap(),
+            |(proxy, _storage_manager)| async move {
+                assert_eq!(proxy.get_lifetime().await?, Lifetime::Persistent);
+                Ok(())
+            },
+        )
         .await;
     }
 
@@ -549,34 +557,40 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_get_auth_state() {
         let mut test = Test::new();
-        test.run(test.create_persistent_account().await.unwrap(), |proxy| async move {
-            assert_eq!(proxy.get_auth_state().await?, Err(ApiError::UnsupportedOperation));
-            Ok(())
-        })
+        test.run(
+            test.create_persistent_account().await.unwrap(),
+            |(proxy, _storage_manager)| async move {
+                assert_eq!(proxy.get_auth_state().await?, Err(ApiError::UnsupportedOperation));
+                Ok(())
+            },
+        )
         .await;
     }
 
     #[fasync::run_until_stalled(test)]
     async fn test_register_auth_listener() {
         let mut test = Test::new();
-        test.run(test.create_persistent_account().await.unwrap(), |proxy| async move {
-            let (auth_listener_client_end, _) = create_endpoints().unwrap();
-            assert_eq!(
-                proxy
-                    .register_auth_listener(AuthTargetRegisterAuthListenerRequest {
-                        listener: Some(auth_listener_client_end),
-                        initial_state: Some(true),
-                        granularity: Some(AuthChangeGranularity {
-                            summary_changes: Some(true),
-                            ..AuthChangeGranularity::EMPTY
-                        }),
-                        ..AuthTargetRegisterAuthListenerRequest::EMPTY
-                    })
-                    .await?,
-                Err(ApiError::UnsupportedOperation)
-            );
-            Ok(())
-        })
+        test.run(
+            test.create_persistent_account().await.unwrap(),
+            |(proxy, _storage_manager)| async move {
+                let (auth_listener_client_end, _) = create_endpoints().unwrap();
+                assert_eq!(
+                    proxy
+                        .register_auth_listener(AuthTargetRegisterAuthListenerRequest {
+                            listener: Some(auth_listener_client_end),
+                            initial_state: Some(true),
+                            granularity: Some(AuthChangeGranularity {
+                                summary_changes: Some(true),
+                                ..AuthChangeGranularity::EMPTY
+                            }),
+                            ..AuthTargetRegisterAuthListenerRequest::EMPTY
+                        })
+                        .await?,
+                    Err(ApiError::UnsupportedOperation)
+                );
+                Ok(())
+            },
+        )
         .await;
     }
 
@@ -587,7 +601,7 @@ mod tests {
         let account = test.create_persistent_account().await.unwrap();
         let persona_id = &account.default_persona.id().clone();
 
-        test.run(account, |proxy| async move {
+        test.run(account, |(proxy, _storage_manager)| async move {
             let response = proxy.get_persona_ids().await?;
             assert_eq!(response.len(), 1);
             assert_eq!(&PersonaId::new(response[0]), persona_id);
@@ -603,7 +617,7 @@ mod tests {
         let account = test.create_persistent_account().await.unwrap();
         let persona_id = &account.default_persona.id().clone();
 
-        test.run(account, |account_proxy| {
+        test.run(account, |(account_proxy, _storage_manager)| {
             async move {
                 let (persona_client_end, persona_server_end) = create_endpoints().unwrap();
                 let response = account_proxy.get_default_persona(persona_server_end).await?;
@@ -628,7 +642,7 @@ mod tests {
     async fn test_ephemeral_account_has_ephemeral_persona() {
         let mut test = Test::new();
         let account = test.create_ephemeral_account().await.unwrap();
-        test.run(account, |account_proxy| async move {
+        test.run(account, |(account_proxy, _storage_manager)| async move {
             let (persona_client_end, persona_server_end) = create_endpoints().unwrap();
             assert!(account_proxy.get_default_persona(persona_server_end).await?.is_ok());
             let persona_proxy = persona_client_end.into_proxy().unwrap();
@@ -645,7 +659,7 @@ mod tests {
         let account = test.create_persistent_account().await.unwrap();
         let persona_id = account.default_persona.id().clone();
 
-        test.run(account, |account_proxy| {
+        test.run(account, |(account_proxy, _storage_manager)| {
             async move {
                 let (persona_client_end, persona_server_end) = create_endpoints().unwrap();
                 assert!(account_proxy
@@ -674,7 +688,7 @@ mod tests {
         // one.
         let wrong_id = PersonaId::new(13);
 
-        test.run(account, |proxy| async move {
+        test.run(account, |(proxy, _storage_manager)| async move {
             let (_, persona_server_end) = create_endpoints().unwrap();
             assert_eq!(
                 proxy.get_persona(wrong_id.into(), persona_server_end).await?,
@@ -689,21 +703,24 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_auth_mechanisms() {
         let mut test = Test::new();
-        test.run(test.create_persistent_account().await.unwrap(), |proxy| async move {
-            assert_eq!(
-                proxy.get_auth_mechanism_enrollments().await?,
-                Err(ApiError::UnsupportedOperation)
-            );
-            assert_eq!(
-                proxy.create_auth_mechanism_enrollment(TEST_AUTH_MECHANISM_ID).await?,
-                Err(ApiError::UnsupportedOperation)
-            );
-            assert_eq!(
-                proxy.remove_auth_mechanism_enrollment(TEST_ENROLLMENT_ID).await?,
-                Err(ApiError::UnsupportedOperation)
-            );
-            Ok(())
-        })
+        test.run(
+            test.create_persistent_account().await.unwrap(),
+            |(proxy, _storage_manager)| async move {
+                assert_eq!(
+                    proxy.get_auth_mechanism_enrollments().await?,
+                    Err(ApiError::UnsupportedOperation)
+                );
+                assert_eq!(
+                    proxy.create_auth_mechanism_enrollment(TEST_AUTH_MECHANISM_ID).await?,
+                    Err(ApiError::UnsupportedOperation)
+                );
+                assert_eq!(
+                    proxy.remove_auth_mechanism_enrollment(TEST_ENROLLMENT_ID).await?,
+                    Err(ApiError::UnsupportedOperation)
+                );
+                Ok(())
+            },
+        )
         .await;
     }
 
@@ -712,7 +729,7 @@ mod tests {
         let mut test = Test::new();
         let (account, mut receiver) =
             test.create_persistent_account_with_lock_request().await.unwrap();
-        test.run(account, |proxy| async move {
+        test.run(account, |(proxy, _storage_manager)| async move {
             assert_eq!(receiver.try_recv(), Ok(None));
             assert_eq!(proxy.lock().await?, Ok(()));
             assert_eq!(receiver.await, Ok(()));
@@ -725,7 +742,7 @@ mod tests {
     async fn test_lock_not_supported() {
         let mut test = Test::new();
         let account = test.create_persistent_account().await.unwrap();
-        test.run(account, |proxy| async move {
+        test.run(account, |(proxy, _storage_manager)| async move {
             assert_eq!(proxy.lock().await?, Err(ApiError::FailedPrecondition));
             Ok(())
         })
@@ -737,7 +754,7 @@ mod tests {
         let mut test = Test::new();
         let (account, receiver) = test.create_persistent_account_with_lock_request().await.unwrap();
         std::mem::drop(receiver);
-        test.run(account, |proxy| async move {
+        test.run(account, |(proxy, _storage_manager)| async move {
             assert_eq!(proxy.lock().await?, Err(ApiError::Internal));
             Ok(())
         })
@@ -749,7 +766,7 @@ mod tests {
         let mut test = Test::new();
         let (account, _receiver) =
             test.create_persistent_account_with_lock_request().await.unwrap();
-        test.run(account, |proxy| async move {
+        test.run(account, |(proxy, _storage_manager)| async move {
             assert_eq!(proxy.lock().await?, Ok(()));
             assert_eq!(proxy.lock().await?, Ok(()));
             Ok(())
@@ -757,16 +774,61 @@ mod tests {
         .await;
     }
 
+    async fn is_directory_extant<SM>(storage_manager: Arc<Mutex<SM>>, path: &str) -> bool
+    where
+        SM: StorageManager,
+    {
+        // Assert that the directory exists.
+        let root_dir = storage_manager.lock().await.get_root_dir().await.expect("get root dir");
+        directory::open_directory(&root_dir, path, fio::OpenFlags::empty()).await.is_ok()
+    }
+
     #[fasync::run_until_stalled(test)]
-    async fn test_get_data_directory_ok() {
+    async fn test_get_data_directory_ok_and_usable() {
         let mut test = Test::new();
 
         let (account, _receiver) =
             test.create_persistent_account_with_lock_request().await.unwrap();
 
-        test.run(account, |proxy| async move {
-            let (_dir, dir_server_end) = fidl::endpoints::create_proxy().unwrap();
+        test.run(account, |(proxy, storage_manager)| async move {
+            // Directory does not exist.
+            assert!(!is_directory_extant(Arc::clone(&storage_manager), DEFAULT_DIR).await);
+
+            // but then we get a directory,
+            let (dir, dir_server_end) = fidl::endpoints::create_proxy().unwrap();
             assert_matches!(proxy.get_data_directory(dir_server_end).await, Ok(Ok(())));
+
+            // So now it does.
+            assert!(is_directory_extant(Arc::clone(&storage_manager), DEFAULT_DIR).await);
+
+            // And it is usable -- we can open a file and write some contents to
+            // it.
+            assert_matches!(
+                directory::open_file(
+                    &dir,
+                    "testfile",
+                    fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE
+                ).await,
+                Ok(f) => {
+                    assert_matches!(file::write(&f, "test").await, Ok(_));
+                }
+            );
+
+            // If for whatever reason get_data_directory() is called again,
+            let (dir_again, dir_server_end) = fidl::endpoints::create_proxy().unwrap();
+            assert_matches!(proxy.get_data_directory(dir_server_end).await, Ok(Ok(())));
+
+            // We can open the same file and read the same bytes out of it,
+            // thereby proving that the directory was not unexpectedly recreated
+            // or deleted.
+            assert_matches!(
+                directory::open_file(&dir_again, "testfile", fio::OpenFlags::RIGHT_READABLE).await,
+                Ok(f) => {
+                    let bytes = assert_matches!(file::read(&f).await, Ok(b) => b);
+                    assert_eq!(bytes, b"test");
+                }
+            );
+
             Ok(())
         })
         .await;
