@@ -53,10 +53,7 @@ if (use_bringup_assembly) {
 
   group("packages") {
     testonly = true
-    public_deps = [
-      ":universe_packages",
-      labels.meta_packages,
-    ]
+    public_deps = [ ":universe_packages" ]
   }
 
   #####
