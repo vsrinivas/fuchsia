@@ -6,6 +6,10 @@
 # will eventually be deleted.
 
 group("all") {
+  # The buildbot groups are not allowed to add platform features, only tests and
+  # tools.
+  assert_no_deps = [ "//bundles/platform/*" ]
+
   testonly = true
   public_deps = [
     ":bluetooth_a2dp",

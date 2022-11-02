@@ -8,6 +8,10 @@ assert(is_fuchsia, "These can only be defined in the default toolchain")
 group("bringup") {
   testonly = true
 
+  # The buildbot groups are not allowed to add platform features, only tests and
+  # tools.
+  assert_no_deps = [ "//bundles/platform/*" ]
+
   # Add the testrunner.
   deps = [ "//src/testing/runtests" ]
 

@@ -10,6 +10,10 @@
 # All new tests and test groups should be located in their appropriate area
 # under //src and roll up to //src:tests. This group must only shrink.
 group("all") {
+  # The buildbot groups are not allowed to add platform features, only tests and
+  # tools.
+  assert_no_deps = [ "//bundles/platform/*" ]
+
   testonly = true
   public_deps = [
     ":scenic",
@@ -86,6 +90,11 @@ group("all") {
 
 group("scenic") {
   testonly = true
+
+  # The buildbot groups are not allowed to add platform features, only tests and
+  # tools.
+  assert_no_deps = [ "//bundles/platform/*" ]
+
   public_deps = [
     "//src/ui/benchmarks/image_grid_cpp",
     "//src/ui/benchmarks/transparency_benchmark",

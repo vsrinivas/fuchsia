@@ -1,0 +1,21 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# `//bundles/platform/*` contains targets that can be included by products from
+# product definitions (ie, `legacy_base_package_labels`), but _not_ from the
+# buildbot test targets in `//bundles/buildbot/*`.
+#
+# This is enforced with `assert_no_deps()`.
+#
+# This allows the following targets:
+#  - //bundles/packages/*
+#  - //bundles/tools
+#  - //bundles/kitchen_sink
+#  - //bundles:*
+#
+# to be sorted into several buckets:
+#  - platform
+#  - platform tests
+#  - product
+#  - product tests

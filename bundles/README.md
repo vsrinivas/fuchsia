@@ -96,3 +96,7 @@ Global OWNERS are not automatically owners here (through the use of `noparent`).
 - `//bundles/kitchen_sink` - Even more tools than `//bundles/tools` (which it
   includes), and miscellaneous other stuff.  This needs to be sorted through and
   subdivided.
+
+- `//bundles/platform` - new groups of targets, relocated from places such as
+  `//bundles/packages/prod:*` that are only to be added by product definitions,
+  not by buildbot groups adding tests and tools.

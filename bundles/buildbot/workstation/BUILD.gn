@@ -6,6 +6,11 @@
 # TODO(https://fxbug.dev/94919) split this into target/host groups and move to //products
 group("workstation") {
   testonly = true
+
+  # The buildbot groups are not allowed to add platform features, only tests and
+  # tools.
+  assert_no_deps = [ "//bundles/platform/*" ]
+
   deps = [
     # Only for products in which Flutter is supported.
     "//src/tests/intl/timezone:tests-for-flutter",
@@ -44,11 +49,21 @@ group("workstation") {
 # This group contains tests to run on workstation_eng_paused product.
 group("eng_paused") {
   testonly = true
+
+  # The buildbot groups are not allowed to add platform features, only tests and
+  # tools.
+  assert_no_deps = [ "//bundles/platform/*" ]
+
   deps = [ "//src/testing/system-validation:tests" ]
 }
 
 group("host_tests") {
   testonly = true
+
+  # The buildbot groups are not allowed to add platform features, only tests and
+  # tools.
+  assert_no_deps = [ "//bundles/platform/*" ]
+
   deps = [
     "//src/experiences/tests/chrome:test($host_toolchain)",
     "//src/experiences/tests/e2e:test($host_toolchain)",

@@ -8,6 +8,11 @@
 # TODO(https://fxbug.dev/93763) use an underscore to match source code layout guidelines
 group("host") {
   testonly = true
+
+  # The buildbot groups are not allowed to add platform features, only tests and
+  # tools.
+  assert_no_deps = [ "//bundles/platform/*" ]
+
   deps = [ ":no_e2e" ]
 
   if (is_linux) {
