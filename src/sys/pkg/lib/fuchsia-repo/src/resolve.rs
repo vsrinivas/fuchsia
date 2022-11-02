@@ -279,9 +279,11 @@ where
         // First, download the meta.far.
         let meta_far_path = self.fetch_blob(&meta_far_hash).await?;
 
-        let mut archive = File::open(&meta_far_path)?;
-        let mut meta_far = fuchsia_archive::Utf8Reader::new(&mut archive)?;
-        let meta_contents = meta_far.read_file("meta/contents")?;
+        let meta_contents = {
+            let mut archive = File::open(&meta_far_path)?;
+            let mut meta_far = fuchsia_archive::Utf8Reader::new(&mut archive)?;
+            meta_far.read_file("meta/contents")?
+        };
         let meta_contents = MetaContents::deserialize(meta_contents.as_slice())?.into_contents();
 
         // Download all the blobs.
@@ -367,6 +369,9 @@ where
         merkle_builder.write(&chunk);
         file.write_all(&chunk).await?;
     }
+
+    // Close the file as soon as it's not needed.
+    drop(resource);
 
     let hash = merkle_builder.finish().root();
 
