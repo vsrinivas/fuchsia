@@ -5,6 +5,7 @@
 import("//build/compiled_action.gni")
 import("//build/components.gni")
 import("//build/dist/resource.gni")
+import("//tools/cmc/build/expect_includes.gni")
 
 # Defines a fuchsia_test_package that carries a set of expectations to apply to
 # the results of tests in the package.
@@ -38,6 +39,8 @@ import("//build/dist/resource.gni")
 #   deps
 #   visibility
 template("fuchsia_test_with_expectations_package") {
+  testonly = true
+
   _base_target_name = target_name
 
   _preprocessed_target_name = "${_base_target_name}-expectations-preprocessed"
@@ -61,14 +64,104 @@ template("fuchsia_test_with_expectations_package") {
 
     visibility = [ ":*" ]
   }
+  _preprocessed_target_name = ":$_preprocessed_target_name"
 
   _expectations_target_name = "${_base_target_name}-expectations"
   resource(_expectations_target_name) {
-    sources = get_target_outputs(":${_preprocessed_target_name}")
+    sources = get_target_outputs(_preprocessed_target_name)
     outputs = [ "expectations.json5" ]
-    deps = [ ":${_preprocessed_target_name}" ]
+    deps = [ _preprocessed_target_name ]
 
     visibility = [ ":*" ]
+  }
+  _expectations_target_name = ":$_expectations_target_name"
+
+  # The standard expect_includes build-time check allows you to enforce that, if
+  # a component depends on your client library, then its manifest must include
+  # your client shard. Unfortunately for us, there is no expectation client
+  # library -- the point of this framework is that use of the GN template to
+  # define the test package is sufficient, without you having to modify the test
+  # binary, as long as you include the client shard.
+  # Therefore, we have to discover each test component's manifest ourselves, and
+  # assert that each of those manifests includes the expectation client shard.
+
+  # We start by defining a target with metadata that will be included in our
+  # cmc_check_includes invocation's `deps`. cmc_check_includes will collect this
+  # as part of determining the set of shards that must be included in the
+  # checked manifest.
+  _expected_includes_metadata_target = "${_base_target_name}-expected-includes"
+  group(_expected_includes_metadata_target) {
+    metadata = {
+      cmc_expected_includes_cml = [
+        "//src/connectivity/network/testing/expectation/meta/client.shard.cml",
+      ]
+    }
+  }
+  _expected_includes_metadata_target = ":$_expected_includes_metadata_target"
+
+  _include_check_targets = []
+  _index = 0
+
+  foreach(test_component, invoker.test_components) {
+    _prefix = "${_base_target_name}-${_index}"
+
+    # Generates a JSON file that lists all the component manifest source paths
+    # that are transitively reachable along GN `deps` edges starting from
+    # test_component.
+    _find_manifest_target = "${_prefix}_locate_manifest"
+    generated_file(_find_manifest_target) {
+      outputs = [ "$target_out_dir/$_find_manifest_target.json" ]
+      data_keys = [ "component_manifest_path" ]
+      walk_keys = [ "component_manifest_path_barrier" ]
+      rebase = root_build_dir
+      output_conversion = "json"
+      deps = [ test_component ]
+
+      visibility = [ ":*" ]
+    }
+    _find_manifest_target = ":$_find_manifest_target"
+
+    # generated_file is guaranteed to emit the discovered component manifests in
+    # a postorder traversal, so the last manifest emitted will belong to the
+    # root component of the test, which is the component we want to ensure
+    # includes the expectation_comparer client shard.
+    # (See `fx gn help generated_file` which documents the postorder guarantee.)
+    _get_last_manifest_target = "${_prefix}_last_manifest"
+    action(_get_last_manifest_target) {
+      _jq_prebuilt = "//prebuilt/third_party/jq/${host_platform}/bin/jq"
+      script =
+          "//src/connectivity/network/testing/expectation/get_last_manifest.sh"
+      sources = get_target_outputs(_find_manifest_target) + [ _jq_prebuilt ]
+      deps = [ _find_manifest_target ]
+      outputs = [ "$target_gen_dir/${_get_last_manifest_target}.txt" ]
+      args = [
+        rebase_path(_jq_prebuilt, root_build_dir),
+        rebase_path(sources[0], root_build_dir),
+        rebase_path(outputs[0], root_build_dir),
+      ]
+
+      visibility = [ ":*" ]
+    }
+    _get_last_manifest_target = ":$_get_last_manifest_target"
+
+    _include_check_target = "${_prefix}-check-includes"
+    cmc_check_includes(_include_check_target) {
+      _get_last_manifest_outputs = get_target_outputs(_get_last_manifest_target)
+      assert(
+          _get_last_manifest_outputs == [ _get_last_manifest_outputs[0] ],
+          "$_get_last_manifest_target should have yielded exactly one output")
+      manifest = _get_last_manifest_outputs[0]
+      deps = [
+        _expected_includes_metadata_target,
+        _get_last_manifest_target,
+      ]
+
+      visibility = [ ":*" ]
+    }
+    _include_check_target = ":$_include_check_target"
+
+    _include_check_targets += [ _include_check_target ]
+    _index += 1
   }
 
   fuchsia_test_package(_base_target_name) {
@@ -80,13 +173,13 @@ template("fuchsia_test_with_expectations_package") {
                              "data_deps",
                              "visibility",
                            ])
-    deps = []
+    deps =
+        _include_check_targets + [
+          "//src/connectivity/network/testing/expectation:expectation_comparer",
+          _expectations_target_name,
+        ]
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }
-    deps += [
-      ":${_expectations_target_name}",
-      "//src/connectivity/network/testing/expectation:expectation_comparer",
-    ]
   }
 }
