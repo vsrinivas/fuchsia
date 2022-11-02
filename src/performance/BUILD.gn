@@ -8,6 +8,7 @@ group("tests") {
     "cpuperf_provider:tests",
     "ktrace_provider:tests",
     "lib:tests",
+    "perfetto-bridge:tests",
     "trace/tests",
     "trace_manager/tests",
   ]

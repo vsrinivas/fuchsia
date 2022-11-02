@@ -70,6 +70,18 @@ fuchsia_component("component") {
   ]
 }
 
+# A version of trace manager that does not include the built in trace
+# providers. Mainly used in tests which need tracing and use their own routed
+# trace manager rather than the one in core.
+fuchsia_component("component_hermetic") {
+  component_name = "trace_manager"
+  manifest = "meta/trace_manager_hermetic.cml"
+  deps = [
+    ":bin",
+    ":tracing.config",
+  ]
+}
+
 fuchsia_package("trace_manager") {
   deps = [
     ":component",

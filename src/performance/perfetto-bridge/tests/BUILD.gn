@@ -1,0 +1,79 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+executable("perfetto_bridge_integration_test_bin") {
+  testonly = true
+  output_name = "perfetto_bridge_integration_test"
+
+  sources = [ "perfetto_bridge_integration_test.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.tracing.controller:fuchsia.tracing.controller_cpp",
+    "//sdk/lib/sys/component/cpp",
+    "//sdk/lib/syslog/cpp:cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/performance/lib/test_utils",
+    "//third_party/googletest:gtest",
+    "//third_party/perfetto:libperfetto_client_experimental",
+    "//zircon/system/ulib/trace-test-utils",
+  ]
+}
+
+executable("perfetto_producer_bin") {
+  # perfetto_build_with_fuchsia = true
+  testonly = true
+  output_name = "perfetto_producer"
+
+  sources = [ "perfetto_producer.cc" ]
+
+  # Perfetto (3P library) performs some pointer arithmetic that breaks UBSan
+  # (nullptr + offset). The arithmetic is legal because the addresses are used
+  # within a custom arena allocator, so UBSan's error is not correct.
+  # See https://github.com/google/perfetto/issues/271 , which recommends
+  # suppressing UBsan as the fix.
+  exclude_toolchain_tags = [ "ubsan" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.tracing.perfetto:fuchsia.tracing.perfetto_cpp",
+    "//sdk/lib/sys/component/cpp",
+    "//sdk/lib/syslog/cpp:cpp",
+    "//third_party/perfetto:libperfetto_client_experimental",
+    "//third_party/perfetto/include/perfetto/ext/ipc",
+    "//third_party/perfetto/src/base",
+    "//third_party/perfetto/src/tracing/ipc/service",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/trace",
+    "//zircon/system/ulib/trace-provider",
+  ]
+}
+
+fuchsia_component("perfetto_producer_component") {
+  testonly = true
+  component_name = "perfetto_producer"
+  manifest = "meta/perfetto_producer.cml"
+  deps = [ ":perfetto_producer_bin" ]
+}
+
+fuchsia_test_component("perfetto_bridge_integration_test_component") {
+  manifest = "meta/perfetto_bridge_integration_test.cml"
+  deps = [ ":perfetto_bridge_integration_test_bin" ]
+}
+
+fuchsia_test_package("perfetto_bridge_integration_test_package") {
+  package_name = "perfetto_bridge_integration_test"
+  test_components = [ ":perfetto_bridge_integration_test_component" ]
+  deps = [
+    ":perfetto_producer_component",
+    "//src/performance/perfetto-bridge:component",
+    "//src/performance/trace_manager:component_hermetic",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":perfetto_bridge_integration_test_package" ]
+}

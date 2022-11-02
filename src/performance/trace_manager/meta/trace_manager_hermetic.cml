@@ -1,0 +1,31 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// A version of trace manager that doesn't include the built in trace providers useful for hermetic
+// integration testing.
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/trace_manager",
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.tracing.controller.Controller",
+                "fuchsia.tracing.provider.Registry",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.tracing.controller.Controller",
+            from: "self",
+        },
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
+            from: "self",
+        },
+    ],
+}

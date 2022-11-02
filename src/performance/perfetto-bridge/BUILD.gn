@@ -74,3 +74,8 @@ fuchsia_component("component") {
 fuchsia_package("perfetto-bridge") {
   deps = [ ":component" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "tests" ]
+}
