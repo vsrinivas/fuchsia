@@ -6,70 +6,23 @@ import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/host.gni")
 
-go_library("lib") {
-  # TODO(fxbug.dev/73815): Split up recursive libraries.
-  name =
-      "go.fuchsia.dev/fuchsia/src/tests/benchmarks/fidl/benchmark_suite/gen/..."
+go_library("main") {
+  deps = [
+    "config",
+    "fidl",
+    "gidl",
+    "types",
+  ]
   sources = [
-    "config/config.go",
-    "fidl/bool_array.go",
-    "fidl/byte_array.go",
-    "fidl/byte_vector_limit.go",
-    "fidl/enum_array.go",
-    "fidl/enum_array_non_dense.go",
-    "fidl/float_array.go",
-    "fidl/handle_array_event.go",
-    "fidl/handle_plain_array.go",
-    "fidl/int32_array.go",
-    "fidl/padded_struct_tree.go",
-    "fidl/struct_array.go",
-    "fidl/struct_field.go",
-    "fidl/struct_tree.go",
-    "fidl/table.go",
-    "fidl/table_reserved.go",
-    "fidl/union.go",
-    "fidl/util/gen_helper.go",
-    "fidl/util/register.go",
     "file_fidl.go",
     "file_gidl.go",
     "format.go",
-    "gidl/bool_array.go",
-    "gidl/byte_array.go",
-    "gidl/byte_vector.go",
-    "gidl/byte_vector_limit.go",
-    "gidl/enum_array.go",
-    "gidl/enum_array_non_dense.go",
-    "gidl/float_array.go",
-    "gidl/gpu_magma.go",
-    "gidl/handle_event_array.go",
-    "gidl/handle_plain_array.go",
-    "gidl/hardware_display.go",
-    "gidl/int32_array.go",
-    "gidl/int32_vector.go",
-    "gidl/optional_struct_tree.go",
-    "gidl/padded_struct_tree.go",
-    "gidl/struct_array.go",
-    "gidl/struct_field.go",
-    "gidl/struct_tree.go",
-    "gidl/struct_vector.go",
-    "gidl/table_all_set.go",
-    "gidl/table_all_unset.go",
-    "gidl/table_reserved_last_set.go",
-    "gidl/table_single_set.go",
-    "gidl/union.go",
-    "gidl/util/gen_helper.go",
-    "gidl/util/register.go",
-    "gidl/util/value_generator.go",
     "main.go",
-    "types/types.go",
   ]
 }
 
 go_binary("regen_fidl_benchmark_suite") {
-  gopackage =
-      "go.fuchsia.dev/fuchsia/src/tests/benchmarks/fidl/benchmark_suite/gen"
-
-  deps = [ ":lib" ]
+  library = ":main"
 }
 
 install_host_tools("host") {

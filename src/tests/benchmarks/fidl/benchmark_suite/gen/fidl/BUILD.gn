@@ -1,0 +1,31 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+
+go_library("fidl") {
+  deps = [
+    "../config",
+    "../fidl/util",
+    "../types",
+  ]
+  sources = [
+    "bool_array.go",
+    "byte_array.go",
+    "byte_vector_limit.go",
+    "enum_array.go",
+    "enum_array_non_dense.go",
+    "float_array.go",
+    "handle_array_event.go",
+    "handle_plain_array.go",
+    "int32_array.go",
+    "padded_struct_tree.go",
+    "struct_array.go",
+    "struct_field.go",
+    "struct_tree.go",
+    "table.go",
+    "table_reserved.go",
+    "union.go",
+  ]
+}
