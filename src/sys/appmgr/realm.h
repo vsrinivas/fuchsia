@@ -29,6 +29,7 @@
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/loader/package_loader.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
+#include "src/sys/appmgr/cache_control.h"
 #include "src/sys/appmgr/component_container.h"
 #include "src/sys/appmgr/component_controller_impl.h"
 #include "src/sys/appmgr/component_event_provider_impl.h"
@@ -283,6 +284,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   std::string koid_;
   std::vector<std::string> realm_path_;
   std::optional<component::PackageLoader> package_loader_;
+  std::optional<component::CacheControl> cache_control_;
   fbl::RefPtr<LogConnectorImpl> log_connector_;
 
   zx::job job_;

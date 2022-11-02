@@ -21,6 +21,7 @@
 #include "src/sys/appmgr/realm.h"
 #include "src/sys/appmgr/startup_service.h"
 #include "src/sys/appmgr/storage_metrics.h"
+#include "src/sys/appmgr/storage_watchdog.h"
 #include "src/sys/appmgr/util.h"
 
 namespace component {
@@ -92,6 +93,7 @@ class Appmgr {
   std::string sysmgr_url_;
   fidl::VectorPtr<std::string> sysmgr_args_;
 
+  StorageWatchdog storage_watchdog_;
   StorageMetrics storage_metrics_;
 
   LifecycleServer lifecycle_server_;

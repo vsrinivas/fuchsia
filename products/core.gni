@@ -34,7 +34,6 @@ core_realm_shards += [
   "//src/performance/trace_manager:trace_manager_core_shard",
   "//src/proc/bin/starnix_manager:starnix_manager_core_shard",
   "//src/settings/service:setui_service_core_shard",
-  "//src/sys/cache_manager:core_shard",
   "//src/sys/pkg/bin/system-update-checker:system-update-checker-core-shard",
   "//src/sys/pkg/bin/system-updater:system-updater-core-shard",
   "//src/intl/tzdata_provider:core-shard",
@@ -83,7 +82,6 @@ legacy_base_package_labels += [
   "//src/security/policy:appmgr_policy_eng",
   "//src/sys/appmgr",
   "//src/sys/appmgr:appmgr_scheme_config",
-  "//src/sys/cache_manager",
 
   # All v1 components are allowed to use isolated-persistent-storage, even if
   # they're not listed in the component ID index.

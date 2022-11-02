@@ -1,7 +1,0 @@
-{
-    // Clear cache storage when storage utilization passes 95%.
-    cache_clearing_threshold: 95,
-
-    // Check storage utilization every 5 seconds.
-    storage_checking_frequency: 5000,
-}
