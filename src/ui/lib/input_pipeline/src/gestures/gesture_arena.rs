@@ -552,8 +552,8 @@ impl GestureArena {
     ) -> Result<Vec<input_device::InputEvent>, Error> {
         let touchpad_event = parse_touchpad_event(event_time, touchpad_event, device_descriptor)
             .context("dropping touchpad event")?;
-        let touchpad_event = filter_palm_contact(touchpad_event);
         touchpad_event.log_inspect(self.inspect_log.borrow_mut().create_entry());
+        let touchpad_event = filter_palm_contact(touchpad_event);
 
         let old_state_name = self.mutable_state.borrow().get_state_name();
         let (new_state, generated_events) = match self.mutable_state.replace(MutableState::Invalid)
@@ -3457,7 +3457,7 @@ mod tests {
         use {
             super::{
                 super::{
-                    Contender, ContenderFactory, DetailedReasonFloat, DetailedReasonInt,
+                    args, Contender, ContenderFactory, DetailedReasonFloat, DetailedReasonInt,
                     DetailedReasonUint, EndGestureEvent, ExamineEventResult, GestureArena,
                     InputHandler, MouseEvent, ProcessBufferedEventsResult, ProcessNewEventResult,
                     Reason, RecognizedGesture, TouchpadEvent,
@@ -3988,6 +3988,62 @@ mod tests {
                     "4": contains {},
                 }
             })
+        }
+
+        #[fuchsia::test]
+        fn retains_palm_contacts() {
+            let mut executor =
+                fasync::TestExecutor::new_with_fake_time().expect("failed to create executor");
+            let inspector = fuchsia_inspect::Inspector::new();
+            let arena = Rc::new(GestureArena::new_for_test(
+                Box::new(EmptyContenderFactory {}),
+                &inspector,
+                2,
+            ));
+            let mut handle_event_fut = arena.clone().handle_input_event(input_device::InputEvent {
+                device_event: input_device::InputDeviceEvent::Touchpad(
+                    touch_binding::TouchpadEvent {
+                        injector_contacts: vec![touch_binding::TouchContact {
+                            id: 1u32,
+                            position: Position { x: 2_000.0, y: 1_000.0 },
+                            contact_size: Some(Size {
+                                width: (args::MIN_PALM_SIZE_MM + 0.1) * 1_000.0,
+                                height: 4_000.0,
+                            }),
+                            pressure: None,
+                        }],
+                        pressed_buttons: hashset! {},
+                    },
+                ),
+                device_descriptor: make_touchpad_descriptor(),
+                event_time: zx::Time::ZERO,
+                trace_id: None,
+                handled: input_device::Handled::No,
+            });
+            executor.set_fake_time(fasync::Time::from_nanos(1_000_000));
+            assert_matches!(
+                executor.run_until_stalled(&mut handle_event_fut),
+                std::task::Poll::Ready(_)
+            );
+            fuchsia_inspect::assert_data_tree!(inspector, root: {
+                gestures_event_log: {
+                    "0": {
+                        touchpad_event: {
+                            driver_monotonic_nanos: 0i64,
+                            entry_latency_micros: 1_000i64,
+                            pressed_buttons: Vec::<u64>::new(),
+                            contacts: {
+                                "1": {
+                                    pos_x_mm: 2.0,
+                                    pos_y_mm: 1.0,
+                                    width_mm: (args::MIN_PALM_SIZE_MM + 0.1) as f64,
+                                    height_mm: 4.0,
+                                },
+                            },
+                        },
+                    },
+                },
+            });
         }
     }
 }
