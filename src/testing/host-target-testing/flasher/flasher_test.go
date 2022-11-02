@@ -46,7 +46,7 @@ func createAndRunFlasher(t *testing.T, options ...BuildFlasherOption) string {
 	var output bytes.Buffer
 	options = append(options, Stdout(&output))
 	flash_manifest := "dir/flash.json"
-	flasher, err := NewBuildFlasher(ffxPath, flash_manifest, options...)
+	flasher, err := NewBuildFlasher(ffxPath, flash_manifest, false, options...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,8 +69,8 @@ func TestSSHKeys(t *testing.T) {
 	sshKey := generatePublicKey(t)
 	result := strings.Trim(createAndRunFlasher(t, SSHPublicKey(sshKey)), "\n")
 	segs := strings.Fields(result)
-	result = strings.Join(segs[:len(segs)-1], " ")
-	expected_result := "ffx target flash dir/flash.json --authorized-keys"
+	result = strings.Join(segs[:len(segs)-2], " ")
+	expected_result := "ffx target flash --authorized-keys"
 	if expected_result != result {
 		t.Fatalf("target flash result mismatched: " + result)
 	}

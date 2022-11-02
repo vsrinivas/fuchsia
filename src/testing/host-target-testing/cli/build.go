@@ -14,12 +14,13 @@ import (
 )
 
 type BuildConfig struct {
-	archiveConfig   *ArchiveConfig
-	deviceConfig    *DeviceConfig
-	prefix          string
-	builderName     string
-	buildID         string
-	fuchsiaBuildDir string
+	archiveConfig    *ArchiveConfig
+	deviceConfig     *DeviceConfig
+	prefix           string
+	builderName      string
+	buildID          string
+	fuchsiaBuildDir  string
+	productBundleDir string
 }
 
 func NewBuildConfig(
@@ -46,7 +47,8 @@ func NewBuildConfigWithPrefix(
 
 	fs.StringVar(&c.builderName, fmt.Sprintf("%sbuilder-name", prefix), "", "Pave to the latest version of this builder")
 	fs.StringVar(&c.buildID, fmt.Sprintf("%sbuild-id", prefix), defaultBuildID, "Pave to this specific build id")
-	fs.StringVar(&c.fuchsiaBuildDir, fmt.Sprintf("%sfuchsia-build-dir", prefix), "", "Pave to the build in this directory")
+	fs.StringVar(&c.fuchsiaBuildDir, fmt.Sprintf("%sfuchsia-build-dir", prefix), "", "Pave to the build in this fuchsia build output directory")
+	fs.StringVar(&c.productBundleDir, fmt.Sprintf("%sproduct-bundle-dir", prefix), "", "Flash to the build in this product bundle directory")
 
 	return c
 }
@@ -57,13 +59,15 @@ func (c *BuildConfig) Validate() error {
 		c.builderName,
 		c.buildID,
 		c.fuchsiaBuildDir,
+		c.productBundleDir,
 	} {
 		if s != "" {
 			defined += 1
 		}
 	}
 	if defined > 1 {
-		return fmt.Errorf("--%sbuilder-name, --%sbuild-id, and --%sfuchsia-build-dir are mutually exclusive",
+		return fmt.Errorf("--%sbuilder-name, --%sbuild-id, --%sfuchsia-build-dir, and %sproduct-bundle-dir are mutually exclusive",
+			c.prefix,
 			c.prefix,
 			c.prefix,
 			c.prefix,
@@ -113,6 +117,8 @@ func (c *BuildConfig) GetBuild(ctx context.Context, deviceClient *device.Client,
 		build, err = c.archiveConfig.BuildArchive().GetBuildByID(ctx, buildID, dir, sshPrivateKey.PublicKey())
 	} else if c.fuchsiaBuildDir != "" {
 		build, err = artifacts.NewFuchsiaDirBuild(c.fuchsiaBuildDir, sshPrivateKey.PublicKey()), nil
+	} else if c.productBundleDir != "" {
+		build, err = artifacts.NewProductBundleDirBuild(c.productBundleDir, sshPrivateKey.PublicKey()), nil
 	}
 
 	if err != nil {

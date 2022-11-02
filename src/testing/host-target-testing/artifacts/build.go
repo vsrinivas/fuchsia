@@ -309,7 +309,7 @@ func (b *ArtifactsBuild) getFlasher(ctx context.Context) (*flasher.BuildFlasher,
 		return nil, fmt.Errorf("failed to make ffxPath executable: %w", err)
 	}
 
-	return flasher.NewBuildFlasher(ffxPath, flashManifest, flasher.SSHPublicKey(b.sshPublicKey))
+	return flasher.NewBuildFlasher(ffxPath, flashManifest, false, flasher.SSHPublicKey(b.sshPublicKey))
 }
 
 func (b *ArtifactsBuild) GetSshPublicKey() ssh.PublicKey {
@@ -405,6 +405,7 @@ func (b *FuchsiaDirBuild) GetFlasher(ctx context.Context) (flasher.Flasher, erro
 	return flasher.NewBuildFlasher(
 		filepath.Join(b.dir, "host_x64/ffx"),
 		filepath.Join(b.dir, "flash.json"),
+		false,
 		flasher.SSHPublicKey(b.sshPublicKey),
 	)
 }
@@ -433,6 +434,65 @@ func (b *FuchsiaDirBuild) GetVbmetaPath(ctx context.Context) (string, error) {
 	}
 
 	return "", fmt.Errorf("failed to file zircon-a vbmeta in %q", imagesJSON)
+}
+
+type ProductBundleDirBuild struct {
+	dir          string
+	sshPublicKey ssh.PublicKey
+}
+
+func NewProductBundleDirBuild(dir string, publicKey ssh.PublicKey) *ProductBundleDirBuild {
+	return &ProductBundleDirBuild{dir: dir, sshPublicKey: publicKey}
+}
+
+func (b *ProductBundleDirBuild) String() string {
+	return b.dir
+}
+
+func (b *ProductBundleDirBuild) GetBootserver(ctx context.Context) (string, error) {
+	// Only flashing is supported for ProductBundle
+	return "", nil
+}
+
+func (b *ProductBundleDirBuild) GetFfx(ctx context.Context) (string, error) {
+	return filepath.Join(b.dir, "ffx"), nil
+}
+
+func (b *ProductBundleDirBuild) GetFlashManifest(ctx context.Context) (string, error) {
+	return b.dir, nil
+}
+
+func (b *ProductBundleDirBuild) GetPackageRepository(ctx context.Context, blobFetchMode BlobFetchMode) (*packages.Repository, error) {
+	// TOOD(lijiaming) We don't need this for reboot test. Revisit and see if upgrade test need this.
+	return nil, nil
+}
+
+func (b *ProductBundleDirBuild) GetPaverDir(ctx context.Context) (string, error) {
+	// Only flashing is supported for ProductBundle
+	return "", nil
+}
+
+func (b *ProductBundleDirBuild) GetPaver(ctx context.Context) (paver.Paver, error) {
+	// Only flashing is supported for ProductBundle
+	return nil, nil
+}
+
+func (b *ProductBundleDirBuild) GetFlasher(ctx context.Context) (flasher.Flasher, error) {
+	return flasher.NewBuildFlasher(
+		filepath.Join(b.dir, "ffx"),
+		b.dir,
+		true,
+		flasher.SSHPublicKey(b.sshPublicKey),
+	)
+}
+
+func (b *ProductBundleDirBuild) GetSshPublicKey() ssh.PublicKey {
+	return b.sshPublicKey
+}
+
+func (b *ProductBundleDirBuild) GetVbmetaPath(ctx context.Context) (string, error) {
+	// TOOD(lijiaming) We don't need this for reboot test. Revisit when we do upgrade test.
+	return "", nil
 }
 
 type OmahaBuild struct {
@@ -587,7 +647,7 @@ func (b *OmahaBuild) GetFlasher(ctx context.Context) (flasher.Flasher, error) {
 		return nil, err
 	}
 
-	return flasher.NewBuildFlasher(ffxToolPath, updatedFlashManifest, flasher.SSHPublicKey(b.GetSshPublicKey()))
+	return flasher.NewBuildFlasher(ffxToolPath, updatedFlashManifest, false, flasher.SSHPublicKey(b.GetSshPublicKey()))
 }
 
 func (b *OmahaBuild) GetSshPublicKey() ssh.PublicKey {

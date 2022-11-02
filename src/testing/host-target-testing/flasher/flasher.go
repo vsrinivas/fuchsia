@@ -17,6 +17,7 @@ import (
 type BuildFlasher struct {
 	FfxToolPath   string
 	FlashManifest string
+	usePB         bool
 	sshPublicKey  ssh.PublicKey
 	stdout        io.Writer
 }
@@ -28,10 +29,11 @@ type Flasher interface {
 // NewBuildFlasher constructs a new flasher that uses `ffxPath` as the path
 // to the tool used to flash a device using flash.json located
 // at `flashManifest`. Also accepts a number of optional parameters.
-func NewBuildFlasher(ffxPath, flashManifest string, options ...BuildFlasherOption) (*BuildFlasher, error) {
+func NewBuildFlasher(ffxPath, flashManifest string, usePB bool, options ...BuildFlasherOption) (*BuildFlasher, error) {
 	p := &BuildFlasher{
 		FfxToolPath:   ffxPath,
 		FlashManifest: flashManifest,
+		usePB:         usePB,
 	}
 
 	for _, opt := range options {
@@ -85,11 +87,15 @@ func (p *BuildFlasher) Flash(ctx context.Context) error {
 
 		flasherArgs = append(flasherArgs, "--authorized-keys", authorizedKeys.Name())
 	}
+	if p.usePB {
+		flasherArgs = append(flasherArgs, "--product-bundle")
+	}
 	return p.runFlash(ctx, flasherArgs...)
 }
 
 func (p *BuildFlasher) runFlash(ctx context.Context, args ...string) error {
-	args = append([]string{"target", "flash", p.FlashManifest}, args...)
+	args = append([]string{"target", "flash"}, args...)
+	args = append(args, p.FlashManifest)
 
 	path, err := exec.LookPath(p.FfxToolPath)
 	if err != nil {
