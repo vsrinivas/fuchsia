@@ -34,24 +34,10 @@ async fn main() {
     .await;
 
     expect_dir_listing_with_optionals(
-        "/parent_hub/children/reporter/exec/in/svc",
-        vec!["fidl.examples.routing.echo.Echo", "fuchsia.logger.LogSink"],
-        // Coverage builds also use debugdata.Publisher
-        vec!["fuchsia.debugdata.Publisher"],
-    )
-    .await;
-
-    expect_dir_listing_with_optionals(
         "/parent_hub/children/reporter/resolved/use/svc",
         vec!["fidl.examples.routing.echo.Echo", "fuchsia.logger.LogSink"],
         // Coverage builds also use debugdata.Publisher
         vec!["fuchsia.debugdata.Publisher"],
-    )
-    .await;
-
-    expect_dir_listing(
-        "/parent_hub/children/reporter/exec/in/pkg",
-        vec!["bin", "data", "lib", "meta"],
     )
     .await;
 
@@ -68,21 +54,11 @@ async fn main() {
     )
     .await;
     expect_echo_service(
-        "/parent_hub/children/reporter/exec/in/svc/fidl.examples.routing.echo.Echo",
-    )
-    .await;
-    expect_echo_service(
         "/parent_hub/children/reporter/resolved/use/svc/fidl.examples.routing.echo.Echo",
     )
     .await;
 
-    expect_dir_listing(
-        "/hub",
-        vec!["expose", "in", "out", "resolved_url", "runtime", "start_reason"],
-    )
-    .await;
-
-    expect_file_content("/hub/start_reason", "Instance is an eager child").await;
+    expect_dir_listing("/hub", vec!["expose", "out", "runtime"]).await;
 
     // Verify that the a read-only hub cannot be opened as RW.
     //

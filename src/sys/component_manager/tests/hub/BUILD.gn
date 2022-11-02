@@ -70,24 +70,6 @@ fuchsia_component("grandchild") {
   manifest = "components/visibility/meta/grandchild.cml"
 }
 
-fuchsia_component_manifest("structured_config_reporter_manifest") {
-  testonly = true
-  component_name = "structured_config_reporter"
-  manifest = "components/structured_config/meta/reporter.cml"
-}
-
-fuchsia_component("structured_config_reporter") {
-  testonly = true
-  deps = [ "components:structured_config_reporter_bin" ]
-  cm_label = ":structured_config_reporter_manifest"
-}
-
-fuchsia_structured_config_values("structured_config_reporter_values") {
-  testonly = true
-  cm_label = ":structured_config_reporter_manifest"
-  values_source = "components/structured_config/config/reporter.json5"
-}
-
 fuchsia_unittest_package("hub_integration_test") {
   manifest = "meta/hub_integration_test.cml"
   deps = [
@@ -100,8 +82,6 @@ fuchsia_unittest_package("hub_integration_test") {
     ":hub_integration_test_bin",
     ":resolver",
     ":simple",
-    ":structured_config_reporter",
-    ":structured_config_reporter_values",
     ":visibility_reporter",
     "//src/sys/component_manager:component-manager-realm-builder-debug-cmp",
     "//src/sys/component_manager/testing/echo_server",

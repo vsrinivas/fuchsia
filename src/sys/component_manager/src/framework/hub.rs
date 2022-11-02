@@ -7,7 +7,7 @@ use {
         capability::{CapabilityProvider, CapabilitySource},
         model::{
             addable_directory::AddableDirectoryWithResult,
-            component::{StartReason, WeakComponentInstance},
+            component::WeakComponentInstance,
             dir_tree::DirTree,
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration, RuntimeInfo},
@@ -16,11 +16,9 @@ use {
     },
     ::routing::capability_source::InternalCapability,
     async_trait::async_trait,
-    cm_moniker::IncarnationId,
     cm_rust::ComponentDecl,
     cm_task_scope::TaskScope,
     cm_util::{channel, io::clone_dir},
-    config_encoder::ConfigFields,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     futures::lock::Mutex,
@@ -34,8 +32,7 @@ use {
     tracing::{info, warn},
     vfs::{
         directory::entry::DirectoryEntry, directory::immutable::simple as pfs,
-        execution_scope::ExecutionScope, file::vmo::asynchronous::read_only_static,
-        path::Path as pfsPath, remote::remote_dir,
+        execution_scope::ExecutionScope, path::Path as pfsPath, remote::remote_dir,
     },
 };
 
@@ -97,11 +94,11 @@ pub struct Hub {
 
 impl Hub {
     /// Create a new Hub given a `component_url` for the root component
-    pub fn new(component_url: String) -> Result<Self, ModelError> {
+    pub fn new() -> Result<Self, ModelError> {
         let mut instance_map = HashMap::new();
         let moniker = AbsoluteMoniker::root();
 
-        Hub::add_instance_if_necessary(&moniker, component_url, 0, &mut instance_map)?
+        Hub::add_instance_if_necessary(&moniker, &mut instance_map)?
             .expect("Did not create directory.");
 
         Ok(Hub { instances: Mutex::new(instance_map), scope: ExecutionScope::new() })
@@ -160,8 +157,6 @@ impl Hub {
 
     fn add_instance_if_necessary(
         moniker: &AbsoluteMoniker,
-        component_url: String,
-        incarnation: IncarnationId,
         instance_map: &mut HashMap<AbsoluteMoniker, Instance>,
     ) -> Result<Option<(u128, Directory)>, ModelError> {
         if instance_map.contains_key(&moniker) {
@@ -169,30 +164,6 @@ impl Hub {
         }
 
         let instance = pfs::simple();
-
-        // Add a 'moniker' file.
-        // The child moniker is stored in the `moniker` file in case it gets truncated when used as
-        // the directory name. Root has an empty moniker file because it doesn't have a child moniker.
-        let moniker_s = if let Some(instanced) = moniker.leaf() {
-            instanced.to_string()
-        } else {
-            "".to_string()
-        };
-        instance.add_node("moniker", read_only_static(moniker_s.into_bytes()), moniker)?;
-
-        // Add a 'url' file.
-        instance.add_node("url", read_only_static(component_url.clone().into_bytes()), moniker)?;
-
-        // Add an 'id' file.
-        let component_type = if incarnation > 0 { "dynamic" } else { "static" };
-        instance.add_node("id", read_only_static(incarnation.to_string().into_bytes()), moniker)?;
-
-        // Add a 'component_type' file.
-        instance.add_node(
-            "component_type",
-            read_only_static(component_type.to_string().into_bytes()),
-            moniker,
-        )?;
 
         // Add a children directory.
         let children = pfs::simple();
@@ -232,16 +203,9 @@ impl Hub {
 
     async fn add_instance_to_parent_if_necessary<'a>(
         moniker: &'a AbsoluteMoniker,
-        component_url: String,
-        incarnation: IncarnationId,
         mut instance_map: &'a mut HashMap<AbsoluteMoniker, Instance>,
     ) -> Result<(), ModelError> {
-        let (uuid, controlled) = match Hub::add_instance_if_necessary(
-            moniker,
-            component_url,
-            incarnation,
-            &mut instance_map,
-        )? {
+        let (uuid, controlled) = match Hub::add_instance_if_necessary(moniker, &mut instance_map)? {
             Some(c) => c,
             None => return Ok(()),
         };
@@ -269,29 +233,6 @@ impl Hub {
         Ok(())
     }
 
-    fn add_resolved_url_file(
-        directory: Directory,
-        resolved_url: String,
-        moniker: &AbsoluteMoniker,
-    ) -> Result<(), ModelError> {
-        directory.add_node("resolved_url", read_only_static(resolved_url.into_bytes()), moniker)?;
-        Ok(())
-    }
-
-    fn add_config(
-        directory: Directory,
-        config: &ConfigFields,
-        moniker: &AbsoluteMoniker,
-    ) -> Result<(), ModelError> {
-        let config_dir = pfs::simple();
-        for field in &config.fields {
-            let value = format!("{}", field.value);
-            config_dir.add_node(&field.key, read_only_static(value.into_bytes()), moniker)?;
-        }
-        directory.add_node("config", config_dir, moniker)?;
-        Ok(())
-    }
-
     fn add_use_directory(
         directory: Directory,
         component_decl: ComponentDecl,
@@ -309,23 +250,6 @@ impl Hub {
 
         directory.add_node("use", use_dir, target_moniker)?;
 
-        Ok(())
-    }
-
-    fn add_in_directory(
-        execution_directory: Directory,
-        component_decl: ComponentDecl,
-        package_dir: Option<fio::DirectoryProxy>,
-        target_moniker: &AbsoluteMoniker,
-        target: WeakComponentInstance,
-    ) -> Result<(), ModelError> {
-        let tree = DirTree::build_from_uses(route_use_fn, target, component_decl);
-        let mut in_dir = pfs::simple();
-        tree.install(target_moniker, &mut in_dir)?;
-        if let Some(pkg_dir) = package_dir {
-            in_dir.add_node("pkg", remote_dir(pkg_dir), target_moniker)?;
-        }
-        execution_directory.add_node("in", in_dir, target_moniker)?;
         Ok(())
     }
 
@@ -364,42 +288,11 @@ impl Hub {
         Ok(())
     }
 
-    fn add_start_reason_file(
-        execution_directory: Directory,
-        start_reason: &StartReason,
-        instanced_moniker: &AbsoluteMoniker,
-    ) -> Result<(), ModelError> {
-        let start_reason = format!("{}", start_reason);
-        execution_directory.add_node(
-            "start_reason",
-            read_only_static(start_reason.into_bytes()),
-            instanced_moniker,
-        )?;
-        Ok(())
-    }
-
-    fn add_instance_id_file(
-        directory: Directory,
-        target_moniker: &AbsoluteMoniker,
-        target: WeakComponentInstance,
-    ) -> Result<(), ModelError> {
-        if let Some(instance_id) = target.upgrade()?.instance_id() {
-            directory.add_node(
-                "instance_id",
-                read_only_static(instance_id.to_string().into_bytes()),
-                &target_moniker,
-            )?;
-        };
-        Ok(())
-    }
-
     async fn on_resolved_async<'a>(
         &self,
         target_moniker: &AbsoluteMoniker,
         target: &WeakComponentInstance,
-        resolved_url: String,
         component_decl: &'a ComponentDecl,
-        config: &Option<ConfigFields>,
         pkg_dir: Option<&fio::DirectoryProxy>,
     ) -> Result<(), ModelError> {
         let mut instance_map = self.instances.lock().await;
@@ -411,12 +304,6 @@ impl Hub {
         // If the resolved directory already exists, report error.
         assert!(!instance.has_resolved_directory);
         let resolved_directory = pfs::simple();
-
-        Self::add_resolved_url_file(
-            resolved_directory.clone(),
-            resolved_url.clone(),
-            target_moniker,
-        )?;
 
         Self::add_use_directory(
             resolved_directory.clone(),
@@ -433,12 +320,6 @@ impl Hub {
             target.clone(),
         )?;
 
-        Self::add_instance_id_file(resolved_directory.clone(), target_moniker, target.clone())?;
-
-        if let Some(config) = config {
-            Self::add_config(resolved_directory.clone(), config, target_moniker)?;
-        }
-
         instance.directory.add_node("resolved", resolved_directory, &target_moniker)?;
         instance.has_resolved_directory = true;
 
@@ -451,7 +332,6 @@ impl Hub {
         target: &WeakComponentInstance,
         runtime: &RuntimeInfo,
         component_decl: &'a ComponentDecl,
-        start_reason: &StartReason,
     ) -> Result<(), ModelError> {
         let mut instance_map = self.instances.lock().await;
 
@@ -465,20 +345,6 @@ impl Hub {
         }
 
         let execution_directory = pfs::simple();
-
-        Self::add_resolved_url_file(
-            execution_directory.clone(),
-            runtime.resolved_url.clone(),
-            target_moniker,
-        )?;
-
-        Self::add_in_directory(
-            execution_directory.clone(),
-            component_decl.clone(),
-            clone_dir(runtime.package_dir.as_ref()),
-            target_moniker,
-            target.clone(),
-        )?;
 
         Self::add_expose_directory(
             execution_directory.clone(),
@@ -499,8 +365,6 @@ impl Hub {
             &target_moniker,
         )?;
 
-        Self::add_start_reason_file(execution_directory.clone(), start_reason, &target_moniker)?;
-
         instance.directory.add_node("exec", execution_directory, &target_moniker)?;
         instance.has_execution_directory = true;
 
@@ -510,18 +374,10 @@ impl Hub {
     async fn on_discovered_async(
         &self,
         target_moniker: &AbsoluteMoniker,
-        component_url: String,
-        incarnation: IncarnationId,
     ) -> Result<(), ModelError> {
         let mut instance_map = self.instances.lock().await;
 
-        Self::add_instance_to_parent_if_necessary(
-            target_moniker,
-            component_url,
-            incarnation,
-            &mut instance_map,
-        )
-        .await?;
+        Self::add_instance_to_parent_if_necessary(target_moniker, &mut instance_map).await?;
         Ok(())
     }
 
@@ -636,13 +492,8 @@ impl Hook for Hub {
                 self.on_capability_routed_async(source.clone(), capability_provider.clone())
                     .await?;
             }
-            Ok(EventPayload::Discovered { instance_id }) => {
-                self.on_discovered_async(
-                    target_moniker,
-                    event.component_url.to_string(),
-                    *instance_id,
-                )
-                .await?;
+            Ok(EventPayload::Discovered { .. }) => {
+                self.on_discovered_async(target_moniker).await?;
             }
             Ok(EventPayload::Unresolved) => {
                 self.on_unresolved_async(target_moniker, event.component_url.to_string()).await?;
@@ -650,26 +501,12 @@ impl Hook for Hub {
             Ok(EventPayload::Destroyed) => {
                 self.on_destroyed_async(target_moniker).await?;
             }
-            Ok(EventPayload::Started { component, runtime, component_decl, start_reason }) => {
-                self.on_started_async(
-                    target_moniker,
-                    component,
-                    &runtime,
-                    &component_decl,
-                    start_reason,
-                )
-                .await?;
+            Ok(EventPayload::Started { component, runtime, component_decl, .. }) => {
+                self.on_started_async(target_moniker, component, &runtime, &component_decl).await?;
             }
-            Ok(EventPayload::Resolved { component, resolved_url, decl, config, package_dir }) => {
-                self.on_resolved_async(
-                    target_moniker,
-                    component,
-                    resolved_url.clone(),
-                    &decl,
-                    &config,
-                    package_dir.as_ref(),
-                )
-                .await?;
+            Ok(EventPayload::Resolved { component, decl, package_dir, .. }) => {
+                self.on_resolved_async(target_moniker, component, &decl, package_dir.as_ref())
+                    .await?;
             }
             Ok(EventPayload::Stopped { .. }) => {
                 self.on_stopped_async(target_moniker).await?;
@@ -690,30 +527,23 @@ mod tests {
                 component::StartReason,
                 model::Model,
                 starter::Starter,
-                testing::{
-                    test_helpers::{
-                        component_decl_with_test_runner, dir_contains, list_directory,
-                        list_directory_recursive, list_sub_directory, read_file,
-                        TestEnvironmentBuilder, TestModelResult,
-                    },
-                    test_hook::HubInjectionTestHook,
+                testing::test_helpers::{
+                    dir_contains, list_directory, list_directory_recursive, list_sub_directory,
+                    read_file, TestEnvironmentBuilder, TestModelResult,
                 },
             },
         },
         assert_matches::assert_matches,
         cm_rust::{
-            self, Availability, CapabilityName, CapabilityPath, ComponentDecl, ConfigChecksum,
-            ConfigDecl, ConfigField, ConfigNestedValueType, ConfigValueSource, ConfigValueType,
-            DependencyType, DirectoryDecl, EventSubscription, ExposeDecl, ExposeDirectoryDecl,
-            ExposeProtocolDecl, ExposeSource, ExposeTarget, ProtocolDecl, SingleValue, UseDecl,
-            UseDirectoryDecl, UseEventDecl, UseEventStreamDeprecatedDecl, UseProtocolDecl,
-            UseSource, Value, ValueSpec, ValuesData, VectorValue,
+            self, Availability, CapabilityName, CapabilityPath, ComponentDecl, DependencyType,
+            DirectoryDecl, EventSubscription, ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl,
+            ExposeSource, ExposeTarget, ProtocolDecl, UseDecl, UseDirectoryDecl, UseEventDecl,
+            UseEventStreamDeprecatedDecl, UseSource, ValuesData,
         },
         cm_rust_testing::ComponentDeclBuilder,
         fidl::endpoints::ServerEnd,
         fidl_fuchsia_io as fio,
         moniker::AbsoluteMoniker,
-        routing_test_helpers::component_id_index::make_index_file,
         std::{convert::TryFrom, path::Path},
         vfs::{
             directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
@@ -826,57 +656,6 @@ mod tests {
     }
 
     #[fuchsia::test]
-    async fn hub_basic() {
-        let root_component_url = "test:///root".to_string();
-        let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
-            root_component_url.clone(),
-            vec![
-                ComponentDescriptor {
-                    name: "root",
-                    decl: ComponentDeclBuilder::new().add_lazy_child("a").build(),
-                    config: None,
-                    host_fn: None,
-                    runtime_host_fn: None,
-                },
-                ComponentDescriptor {
-                    name: "a",
-                    decl: component_decl_with_test_runner(),
-                    config: None,
-                    host_fn: None,
-                    runtime_host_fn: None,
-                },
-            ],
-        )
-        .await;
-
-        assert_eq!(root_component_url, read_file(&hub_proxy, "url").await);
-        assert_eq!(
-            format!("{}_resolved", root_component_url),
-            read_file(&hub_proxy, "exec/resolved_url").await
-        );
-
-        assert_eq!(
-            format!("{}", StartReason::Root),
-            read_file(&hub_proxy, "exec/start_reason").await
-        );
-
-        // Verify IDs
-        assert_eq!("0", read_file(&hub_proxy, "id").await);
-        assert_eq!("0", read_file(&hub_proxy, "children/a/id").await);
-
-        // Verify Component Type
-        assert_eq!("static", read_file(&hub_proxy, "component_type").await);
-        assert_eq!("static", read_file(&hub_proxy, "children/a/component_type").await);
-
-        // Verify Moniker Files
-        // AbsoluteMoniker::root() has an empty moniker file.
-        assert_eq!("", read_file(&hub_proxy, "moniker").await);
-        assert_eq!("a", read_file(&hub_proxy, "children/a/moniker").await);
-
-        assert_eq!("test:///a", read_file(&hub_proxy, "children/a/url").await);
-    }
-
-    #[fuchsia::test]
     async fn hub_child_dir_name() {
         // the maximum length for an instance name
         let max_dir_len = usize::try_from(fidl_fuchsia_io::MAX_NAME_LENGTH).unwrap();
@@ -963,119 +742,6 @@ mod tests {
     }
 
     #[fuchsia::test]
-    async fn hub_test_hook_interception() {
-        let root_component_url = "test:///root".to_string();
-        let hub_injection_test_hook = Arc::new(HubInjectionTestHook::new());
-        let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_options(
-            root_component_url.clone(),
-            vec![ComponentDescriptor {
-                name: "root",
-                decl: ComponentDeclBuilder::new()
-                    .add_lazy_child("a")
-                    .use_(UseDecl::Directory(UseDirectoryDecl {
-                        dependency_type: DependencyType::Strong,
-                        source: UseSource::Framework,
-                        source_name: "hub".into(),
-                        target_path: CapabilityPath::try_from("/hub").unwrap(),
-                        rights: *routing::rights::READ_RIGHTS,
-                        subdir: None,
-                        availability: Availability::Required,
-                    }))
-                    .build(),
-                config: None,
-                host_fn: None,
-                runtime_host_fn: None,
-            }],
-            hub_injection_test_hook.hooks(),
-            None,
-        )
-        .await;
-
-        assert_eq!(vec!["hub", "pkg"], list_sub_directory(&hub_proxy, "exec/in").await);
-
-        assert_eq!(vec!["fake_file"], list_sub_directory(&hub_proxy, "exec/in/pkg").await);
-
-        assert_eq!(vec!["old_hub"], list_sub_directory(&hub_proxy, "exec/in/hub").await);
-
-        assert_eq!(
-            vec!["expose", "in", "out", "resolved_url", "runtime", "start_reason"],
-            list_sub_directory(&hub_proxy, "exec/in/hub/old_hub/exec").await
-        );
-    }
-
-    #[fuchsia::test]
-    async fn hub_config_dir_in_resolved() {
-        let root_component_url = "test:///root".to_string();
-        let checksum = ConfigChecksum::Sha256([
-            0x07, 0xA8, 0xE6, 0x85, 0xC8, 0x79, 0xA9, 0x79, 0xC3, 0x26, 0x17, 0xDC, 0x4E, 0x74,
-            0x65, 0x7F, 0xF1, 0xF7, 0x73, 0xE7, 0x12, 0xEE, 0x51, 0xFD, 0xF6, 0x57, 0x43, 0x07,
-            0xA7, 0xAF, 0x2E, 0x64,
-        ]);
-
-        let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
-            root_component_url.clone(),
-            vec![ComponentDescriptor {
-                name: "root",
-                decl: ComponentDeclBuilder::new()
-                    .add_config(ConfigDecl {
-                        fields: vec![
-                            ConfigField {
-                                key: "logging".to_string(),
-                                type_: ConfigValueType::Bool,
-                            },
-                            ConfigField {
-                                key: "verbosity".to_string(),
-                                type_: ConfigValueType::String { max_size: 10 },
-                            },
-                            ConfigField {
-                                key: "tags".to_string(),
-                                type_: ConfigValueType::Vector {
-                                    max_count: 10,
-                                    nested_type: ConfigNestedValueType::String { max_size: 20 },
-                                },
-                            },
-                        ],
-                        checksum: checksum.clone(),
-                        value_source: ConfigValueSource::PackagePath("meta/root.cvf".into()),
-                    })
-                    .build(),
-                config: Some((
-                    "meta/root.cvf",
-                    ValuesData {
-                        values: vec![
-                            ValueSpec { value: Value::Single(SingleValue::Bool(true)) },
-                            ValueSpec {
-                                value: Value::Single(SingleValue::String("DEBUG".to_string())),
-                            },
-                            ValueSpec {
-                                value: Value::Vector(VectorValue::StringVector(vec![
-                                    "foo".into(),
-                                    "bar".into(),
-                                ])),
-                            },
-                        ],
-                        checksum,
-                    },
-                )),
-                host_fn: None,
-                runtime_host_fn: None,
-            }],
-        )
-        .await;
-
-        let config_dir = fuchsia_fs::open_directory(
-            &hub_proxy,
-            &Path::new("resolved/config"),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-        )
-        .expect("Failed to open directory");
-        assert_eq!(vec!["logging", "tags", "verbosity"], list_directory(&config_dir).await);
-        assert_eq!("true", read_file(&config_dir, "logging").await);
-        assert_eq!("\"DEBUG\"", read_file(&config_dir, "verbosity").await);
-        assert_eq!("[\"foo\", \"bar\"]", read_file(&config_dir, "tags").await);
-    }
-
-    #[fuchsia::test]
     async fn hub_resolved_directory() {
         let root_component_url = "test:///root".to_string();
         let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
@@ -1107,12 +773,9 @@ mod tests {
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
-        assert_eq!(vec!["expose", "resolved_url", "use"], list_directory(&resolved_dir).await);
-        assert_eq!(
-            format!("{}_resolved", root_component_url),
-            read_file(&hub_proxy, "resolved/resolved_url").await
-        );
+        assert_eq!(vec!["expose", "use"], list_directory(&resolved_dir).await);
     }
+
     #[fuchsia::test]
     #[should_panic]
     async fn hub_resolved_directory_exists() {
@@ -1146,11 +809,7 @@ mod tests {
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
-        assert_eq!(vec!["expose", "resolved_url", "use"], list_directory(&resolved_dir).await);
-        assert_eq!(
-            format!("{}_resolved", root_component_url),
-            read_file(&hub_proxy, "resolved/resolved_url").await
-        );
+        assert_eq!(vec!["expose", "use"], list_directory(&resolved_dir).await);
 
         // Call on_unresolved_async() as if the component was unresolved and reset to
         // DiscoveredState.
@@ -1209,75 +868,7 @@ mod tests {
 
         assert_eq!(vec!["fake_file"], list_sub_directory(&use_dir, "pkg").await);
 
-        assert_eq!(
-            vec!["children", "component_type", "exec", "id", "moniker", "resolved", "url"],
-            list_sub_directory(&use_dir, "hub").await
-        );
-    }
-
-    #[fuchsia::test]
-    async fn hub_instance_id_in_resolved() {
-        // Create index.
-        let iid = format!("1234{}", "5".repeat(60));
-        let index_file = make_index_file(component_id_index::Index {
-            instances: vec![component_id_index::InstanceIdEntry {
-                instance_id: Some(iid.clone()),
-                appmgr_moniker: None,
-                moniker: Some(AbsoluteMoniker::parse_str("/a").unwrap()),
-            }],
-            ..component_id_index::Index::default()
-        })
-        .unwrap();
-
-        let root_component_url = "test:///root".to_string();
-        let (model, _builtin_environment, hub_proxy) = start_component_manager_with_options(
-            root_component_url.clone(),
-            vec![
-                ComponentDescriptor {
-                    name: "root",
-                    decl: ComponentDeclBuilder::new()
-                        .add_lazy_child("a")
-                        .use_(UseDecl::Directory(UseDirectoryDecl {
-                            dependency_type: DependencyType::Strong,
-                            source: UseSource::Framework,
-                            source_name: "hub".into(),
-                            target_path: CapabilityPath::try_from("/hub").unwrap(),
-                            rights: *routing::rights::READ_RIGHTS,
-                            subdir: Some("resolved".into()),
-                            availability: Availability::Required,
-                        }))
-                        .build(),
-                    config: None,
-                    host_fn: None,
-                    runtime_host_fn: None,
-                },
-                ComponentDescriptor {
-                    name: "a",
-                    decl: component_decl_with_test_runner(),
-                    config: None,
-                    host_fn: None,
-                    runtime_host_fn: None,
-                },
-            ],
-            vec![],
-            index_file.path().to_str().map(str::to_string),
-        )
-        .await;
-
-        // Starting will resolve the component and cause the instance id to be written.
-        model
-            .start_instance(&AbsoluteMoniker::parse_str("/a").unwrap(), &StartReason::Debug)
-            .await
-            .unwrap();
-        let resolved_dir = fuchsia_fs::open_directory(
-            &hub_proxy,
-            &Path::new("children/a/resolved"),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-        )
-        .expect("Failed to open directory");
-
-        // Confirm that the instance_id is read and written to file in resolved directory.
-        assert_eq!(iid, read_file(&resolved_dir, "instance_id").await);
+        assert_eq!(vec!["children", "exec", "resolved"], list_sub_directory(&use_dir, "hub").await);
     }
 
     #[fuchsia::test]
@@ -1332,62 +923,7 @@ mod tests {
     }
 
     #[fuchsia::test]
-    async fn hub_in_directory() {
-        let root_component_url = "test:///root".to_string();
-        let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
-            root_component_url.clone(),
-            vec![ComponentDescriptor {
-                name: "root",
-                decl: ComponentDeclBuilder::new()
-                    .add_lazy_child("a")
-                    .use_(UseDecl::Directory(UseDirectoryDecl {
-                        source: UseSource::Framework,
-                        source_name: "hub".into(),
-                        target_path: CapabilityPath::try_from("/hub").unwrap(),
-                        rights: *routing::rights::READ_RIGHTS,
-                        subdir: Some("exec".into()),
-                        dependency_type: DependencyType::Strong,
-                        availability: Availability::Required,
-                    }))
-                    .use_(UseDecl::Protocol(UseProtocolDecl {
-                        source: UseSource::Parent,
-                        source_name: "baz-svc".into(),
-                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                        dependency_type: DependencyType::Strong,
-                        availability: Availability::Required,
-                    }))
-                    .use_(UseDecl::Directory(UseDirectoryDecl {
-                        source: UseSource::Parent,
-                        source_name: "foo-dir".into(),
-                        target_path: CapabilityPath::try_from("/data/bar").unwrap(),
-                        rights: *routing::rights::READ_RIGHTS | *routing::rights::WRITE_RIGHTS,
-                        subdir: None,
-                        dependency_type: DependencyType::Strong,
-                        availability: Availability::Required,
-                    }))
-                    .build(),
-                config: None,
-                host_fn: None,
-                runtime_host_fn: None,
-            }],
-        )
-        .await;
-
-        assert_eq!(
-            vec!["data", "hub", "pkg", "svc"],
-            list_sub_directory(&hub_proxy, "exec/in").await
-        );
-
-        assert_eq!(vec!["fake_file"], list_sub_directory(&hub_proxy, "exec/in/pkg").await);
-
-        assert_eq!(
-            vec!["expose", "in", "out", "resolved_url", "runtime", "start_reason"],
-            list_sub_directory(&hub_proxy, "exec/in/hub").await
-        );
-    }
-
-    #[fuchsia::test]
-    async fn hub_no_event_stream_in_incoming_directory() {
+    async fn hub_no_event_stream_in_use_directory() {
         let root_component_url = "test:///root".to_string();
         let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
             root_component_url.clone(),
@@ -1418,15 +954,15 @@ mod tests {
         )
         .await;
 
-        let in_dir = fuchsia_fs::open_directory(
+        let use_dir = fuchsia_fs::open_directory(
             &hub_proxy,
-            &Path::new("exec/in"),
+            &Path::new("resolved/use"),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
-        assert_eq!(vec!["pkg"], list_directory(&in_dir).await);
+        assert_eq!(vec!["pkg"], list_directory(&use_dir).await);
 
-        assert_eq!(vec!["fake_file"], list_sub_directory(&&in_dir, "pkg").await);
+        assert_eq!(vec!["fake_file"], list_sub_directory(&&use_dir, "pkg").await);
     }
 
     #[fuchsia::test]

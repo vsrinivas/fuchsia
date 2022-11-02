@@ -61,8 +61,3 @@ async fn visibility() {
 async fn resolver() {
     start_nested_cm_and_wait_for_clean_stop("#meta/resolver.cm", "./root").await;
 }
-
-#[fasync::run_singlethreaded(test)]
-async fn structured_config() {
-    start_nested_cm_and_wait_for_clean_stop("#meta/structured_config_reporter.cm", "./root").await;
-}

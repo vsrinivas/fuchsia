@@ -27,33 +27,20 @@ async fn main() {
         .unwrap();
 
     expect_dir_listing("/hub/children", vec!["coll:simple_instance"]).await;
-    expect_dir_listing(
-        "/hub/children/coll:simple_instance",
-        vec!["children", "component_type", "id", "moniker", "url"],
-    )
-    .await;
+    expect_dir_listing("/hub/children/coll:simple_instance", vec!["children"]).await;
     expect_dir_listing("/hub/children/coll:simple_instance/children", vec![]).await;
-    expect_file_content("/hub/children/coll:simple_instance/id", "1").await;
 
     // Start the dynamic child
     start_component("./coll:simple_instance", true).await;
 
-    expect_dir_listing(
-        "/hub/children/coll:simple_instance",
-        vec!["children", "component_type", "exec", "id", "moniker", "resolved", "url"],
-    )
-    .await;
+    expect_dir_listing("/hub/children/coll:simple_instance", vec!["children", "exec", "resolved"])
+        .await;
     expect_dir_listing("/hub/children/coll:simple_instance/children", vec!["child"]).await;
-    expect_file_content("/hub/children/coll:simple_instance/children/child/id", "0").await;
 
     // Stop the dynamic child
     stop_component("./coll:simple_instance", true).await;
 
-    expect_dir_listing(
-        "/hub/children/coll:simple_instance",
-        vec!["children", "component_type", "id", "moniker", "resolved", "url"],
-    )
-    .await;
+    expect_dir_listing("/hub/children/coll:simple_instance", vec!["children", "resolved"]).await;
 
     // Delete the dynamic child
     let mut child_ref = fdecl::ChildRef {

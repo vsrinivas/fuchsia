@@ -70,7 +70,6 @@ use {
     },
     anyhow::{anyhow, format_err, Context as _, Error},
     cm_rust::{CapabilityName, EventMode, RunnerRegistration},
-    cm_types::Url,
     fidl::{
         endpoints::{create_proxy, ServerEnd},
         AsHandleRef,
@@ -346,7 +345,6 @@ impl BuiltinEnvironmentBuilder {
 
         Ok(BuiltinEnvironment::new(
             model,
-            root_component_url,
             runtime_config,
             system_resource_handle,
             builtin_runners,
@@ -429,7 +427,6 @@ pub struct BuiltinEnvironment {
 impl BuiltinEnvironment {
     async fn new(
         model: Arc<Model>,
-        root_component_url: Url,
         runtime_config: Arc<RuntimeConfig>,
         system_resource_handle: Option<Resource>,
         builtin_runners: Vec<Arc<BuiltinRunner>>,
@@ -826,7 +823,7 @@ impl BuiltinEnvironment {
         };
 
         let hub = if runtime_config.enable_introspection {
-            let hub = Arc::new(Hub::new(root_component_url.as_str().to_owned())?);
+            let hub = Arc::new(Hub::new()?);
             model.root().hooks.install(hub.hooks()).await;
             Some(hub)
         } else {

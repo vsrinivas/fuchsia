@@ -77,19 +77,6 @@ rustc_binary("resolver_bin") {
   sources = [ "resolver/main.rs" ]
 }
 
-rustc_binary("structured_config_reporter_bin") {
-  name = "structured_config_reporter"
-  edition = "2021"
-  source_root = "structured_config/reporter.rs"
-  testonly = true
-  deps = [
-    ":hub_report_lib",
-    "//src/lib/fuchsia",
-  ]
-
-  sources = [ "structured_config/reporter.rs" ]
-}
-
 rustc_library("hub_report_lib") {
   name = "hub_report"
   edition = "2021"
