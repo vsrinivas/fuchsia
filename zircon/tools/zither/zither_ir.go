@@ -59,6 +59,8 @@ var _ = []Element{
 	(*Struct)(nil),
 	(*StructMember)(nil),
 	(*Alias)(nil),
+	(*SyscallFamily)(nil),
+	(*Syscall)(nil),
 }
 
 // Decl represents a summarized FIDL declaration.
@@ -73,6 +75,7 @@ var _ = []Decl{
 	(*Bits)(nil),
 	(*Struct)(nil),
 	(*Alias)(nil),
+	(*SyscallFamily)(nil),
 }
 
 type decl struct {
@@ -105,6 +108,7 @@ var _ = []Member{
 	(*EnumMember)(nil),
 	(*BitsMember)(nil),
 	(*StructMember)(nil),
+	(*Syscall)(nil),
 }
 
 type member struct {
@@ -184,8 +188,17 @@ func (decl DeclWrapper) IsAlias() bool {
 	return ok
 }
 
+func (decl DeclWrapper) IsSyscallFamily() bool {
+	_, ok := decl.value.(*SyscallFamily)
+	return ok
+}
+
 func (decl DeclWrapper) AsAlias() Alias {
 	return *decl.value.(*Alias)
+}
+
+func (decl DeclWrapper) AsSyscallFamily() SyscallFamily {
+	return *decl.value.(*SyscallFamily)
 }
 
 // FileSummary is a summarized representation of a FIDL source file.
@@ -317,6 +330,8 @@ func Summarize(ir fidlgen.Root, sourceDir string, order DeclOrder) ([]FileSummar
 			decl, err = newStruct(*fidlDecl, processedDecls, typeKinds)
 		case *fidlgen.Alias:
 			decl, err = newAlias(*fidlDecl, processedDecls, typeKinds)
+		case *fidlgen.Protocol:
+			decl, err = newSyscallFamily(*fidlDecl)
 		}
 		if err != nil {
 			return nil, err
@@ -821,4 +836,55 @@ func (ctor fidlgenTypeCtor) GetElementCount() *int {
 		panic(fmt.Sprintf("could not interpret %s as an int", ctor.MaybeSize.Value))
 	}
 	return &count
+}
+
+// SyscallFamily represents a logical family of syscalls, usually corresponding
+// to a kernel object and the noun phrase namespacing in
+// `zx_${noun_phrase}_${verb_phrase}`.
+//
+// The interpretation here relies upon the conventions detailed in
+// //zircon/vdso/README.md.
+type SyscallFamily struct {
+	decl
+
+	// Syscalls gives the syscalls that comprise the family.
+	Syscalls []Syscall
+}
+
+// Syscall corresponds to an individual syscall.
+//
+// `Name` includes the family namespacing of the syscall (i.e., "PortWait"
+// instead of just "Wait").
+type Syscall struct {
+	member
+
+	// Internal gives whether the syscall is part of the public ABI.
+	// See the definition of @internal in //zircon/vdso/README.md.
+	Internal bool
+}
+
+func newSyscallFamily(protocol fidlgen.Protocol) (*SyscallFamily, error) {
+	if _, ok := protocol.Transports()["Syscall"]; !ok {
+		return nil, nil
+	}
+	family := &SyscallFamily{decl: newDecl(protocol)}
+	// This gives whether the family protocol name actually meaningfully
+	// signals the official namespacing of the syscalls. If the attribute is
+	// present, the name is arbitrary and the syscall member names already
+	// include the proper namespacing.
+	//
+	// See @no_protocol_prefix in //zircon/vdso/README.md
+	_, noProtocolPrefix := protocol.LookupAttribute("no_protocol_prefix")
+	for _, method := range protocol.Methods {
+		_, internal := method.LookupAttribute("internal")
+		syscall := Syscall{
+			member:   newMember(method),
+			Internal: internal,
+		}
+		if !noProtocolPrefix {
+			syscall.member.Name = family.Name.DeclarationName() + syscall.member.Name
+		}
+		family.Syscalls = append(family.Syscalls, syscall)
+	}
+	return family, nil
 }

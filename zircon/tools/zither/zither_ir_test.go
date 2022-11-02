@@ -27,6 +27,8 @@ var cmpOpt = cmp.AllowUnexported(
 	Struct{},
 	StructMember{},
 	Alias{},
+	SyscallFamily{},
+	Syscall{},
 )
 
 func TestGeneratedFileCount(t *testing.T) {
@@ -949,6 +951,94 @@ alias NestedArrayAlias = array<array<Struct, 8>, 4>;
 					ElementCount: &eight,
 				},
 				ElementCount: &four,
+			},
+		},
+	}
+
+	if diff := cmp.Diff(expected, actual, cmpOpt); diff != "" {
+		t.Error(diff)
+	}
+}
+
+func TestCanSummarizeSyscalls(t *testing.T) {
+	wd := t.TempDir()
+	ir := fidlgentest.EndToEndTest{T: t}.WithWorkingDirectory(wd).Single(`
+library example;
+
+/// This gives the foo syscalls.
+@transport("Syscall")
+protocol Foo {
+  /// This is the foo_bar syscall.
+  Bar();
+
+  @internal
+  Baz();
+};
+
+/// This
+/// gives
+/// the
+/// fizz syscalls.
+@no_protocol_prefix
+@transport("Syscall")
+protocol Arbitrary {
+  /// This
+  /// is
+  /// the
+  /// fizz_buzz syscall.
+  FizzBuzz();
+};
+`)
+	summaries, err := Summarize(ir, wd, SourceDeclOrder)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Normalize member order by name for a stable comparison.
+	var actual []SyscallFamily
+	for _, decl := range summaries[0].Decls {
+		if decl.IsSyscallFamily() {
+			fam := decl.AsSyscallFamily()
+			sort.Slice(fam.Syscalls, func(i, j int) bool {
+				return strings.Compare(fam.Syscalls[i].Name, fam.Syscalls[j].Name) < 0
+			})
+			actual = append(actual, fam)
+		}
+	}
+
+	expected := []SyscallFamily{
+		{
+			decl: decl{
+				Name:     fidlgen.MustReadName("example/Foo"),
+				Comments: []string{" This gives the foo syscalls."},
+			},
+			Syscalls: []Syscall{
+				{
+					member: member{
+						Name:     "FooBar",
+						Comments: []string{" This is the foo_bar syscall."},
+					},
+				},
+				{
+					member: member{
+						Name: "FooBaz",
+					},
+					Internal: true,
+				},
+			},
+		},
+		{
+			decl: decl{
+				Name:     fidlgen.MustReadName("example/Arbitrary"),
+				Comments: []string{" This", " gives", " the", " fizz syscalls."},
+			},
+			Syscalls: []Syscall{
+				{
+					member: member{
+						Name:     "FizzBuzz",
+						Comments: []string{" This", " is", " the", " fizz_buzz syscall."},
+					},
+				},
 			},
 		},
 	}
