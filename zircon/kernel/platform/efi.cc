@@ -90,6 +90,13 @@ zx_status_t MapUnalignedRegion(VmAspace* aspace, paddr_t base, size_t size, cons
     return status;
   }
 
+  if (arch_mmu_flags & ARCH_MMU_FLAG_UNCACHED_DEVICE) {
+    status = vmo->SetMappingCachePolicy(ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
   uint32_t vmar_flags = VMAR_FLAG_SPECIFIC_OVERWRITE;
   if (arch_mmu_flags & ARCH_MMU_FLAG_PERM_READ) {
     vmar_flags |= VMAR_FLAG_CAN_MAP_READ;
