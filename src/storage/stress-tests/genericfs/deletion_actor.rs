@@ -30,6 +30,9 @@ impl Actor for DeletionActor {
         let files = match self.home_dir.entries().await {
             Ok(files) => files,
             Err(Status::PEER_CLOSED) => return Err(ActorError::ResetEnvironment),
+            // TODO(fxbug.dev/113953): This should only be accepted after the instance actor has
+            // stopped the block device.
+            Err(Status::CANCELED) => return Err(ActorError::ResetEnvironment),
             Err(s) => panic!("Error occurred during delete: {}", s),
         };
 
