@@ -6,11 +6,11 @@
 #define LIB_DRIVER2_DRIVER_BASE_H_
 
 #include <fidl/fuchsia.driver.framework/cpp/fidl.h>
+#include <lib/driver/record/record.h>
 #include <lib/driver2/driver_context.h>
 #include <lib/driver2/logger.h>
 #include <lib/driver2/namespace.h>
 #include <lib/driver2/outgoing_directory.h>
-#include <lib/driver2/record.h>
 #include <lib/driver2/start_args.h>
 #include <lib/fdf/cpp/dispatcher.h>
 #include <lib/sys/component/cpp/structured_config.h>

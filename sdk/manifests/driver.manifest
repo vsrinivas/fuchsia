@@ -34,7 +34,7 @@ sdk://fidl/zx
 sdk://pkg/async
 sdk://pkg/async-cpp
 sdk://pkg/async-default
-sdk://pkg/driver2-record
+sdk://pkg/driver-record
 sdk://pkg/driver2_cpp
 sdk://pkg/driver2_devfs_exporter
 sdk://pkg/driver_compat

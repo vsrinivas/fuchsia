@@ -6,7 +6,7 @@
 #define SRC_DEVICES_BIN_DRIVER_HOST2_DRIVER_H_
 
 #include <fidl/fuchsia.driver.host/cpp/fidl.h>
-#include <lib/driver2/record.h>
+#include <lib/driver/record/record.h>
 #include <lib/fdf/cpp/dispatcher.h>
 
 #include <fbl/auto_lock.h>

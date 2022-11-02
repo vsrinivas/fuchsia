@@ -10,17 +10,6 @@ group("tests") {
   deps = [ ":driver2-tests" ]
 }
 
-sdk_source_set("record") {
-  category = "experimental"
-  sdk_name = "driver2-record"
-
-  include_base = "//sdk"
-
-  sources = [ "record.h" ]
-
-  public_deps = [ "//sdk/lib/driver/runtime:driver_runtime" ]
-}
-
 sdk_source_set("devfs_exporter") {
   category = "experimental"
   sdk_name = "driver2_devfs_exporter"
@@ -65,10 +54,10 @@ sdk_source_set("cpp") {
   ]
 
   public_deps = [
-    ":record",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_cpp",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_cpp",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_cpp",
+    "//sdk/lib/driver/record",
     "//sdk/lib/driver/runtime:driver_runtime_cpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl",

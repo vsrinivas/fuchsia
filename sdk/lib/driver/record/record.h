@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_DRIVER2_RECORD_H_
-#define LIB_DRIVER2_RECORD_H_
+#ifndef LIB_DRIVER_RECORD_RECORD_H_
+#define LIB_DRIVER_RECORD_RECORD_H_
 
 #include <lib/fdf/dispatcher.h>
 #include <zircon/fidl.h>
@@ -70,4 +70,4 @@ struct DriverRecord {
     .version = 2, .v1 = {start, stop}, .v2 = {prepare_stop},         \
   }
 
-#endif  // LIB_DRIVER2_RECORD_H_
+#endif  // LIB_DRIVER_RECORD_RECORD_H_

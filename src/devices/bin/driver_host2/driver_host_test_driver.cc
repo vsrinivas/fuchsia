@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.driverhost.test/cpp/wire.h>
-#include <lib/driver2/record.h>
+#include <lib/driver/record/record.h>
 #include <lib/driver2/start_args.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/epitaph.h>
