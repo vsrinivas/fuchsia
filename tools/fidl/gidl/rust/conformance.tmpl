@@ -25,9 +25,9 @@ const _V2_CONTEXT: &Context = &Context { wire_format_version: WireFormatVersion:
 fn test_{{ .Name }}_encode() {
     {{- if .HandleDefs }}
     let handle_defs = create_handles(&{{ .HandleDefs }});
-    let handle_defs = unsafe { disown_vec(handle_defs) };
+    let handle_defs = disown_vec(handle_defs);
     let handle_defs = handle_defs.as_ref();
-    let expected_handles = unsafe { disown_vec(copy_handles_at(handle_defs, &{{ .Handles }})) };
+    let expected_handles = disown_vec(unsafe { copy_handles_at(handle_defs, &{{ .Handles }}) });
     let expected_handles = expected_handles.as_ref();
     {{- end }}
     let value = &mut {{ .Value }};
@@ -56,7 +56,7 @@ fn test_{{ .Name }}_decode() {
     {{- if .HandleDefs }}
     let handle_definitions = &{{ .HandleDefs }};
     let handle_defs = create_handles(handle_definitions);
-    let handle_defs = unsafe { disown_vec(handle_defs) };
+    let handle_defs = disown_vec(handle_defs);
     let handle_defs = handle_defs.as_ref();
     let mut handles = unsafe { copy_handles_at(handle_defs, &{{ .Handles }}) };
     {{- else }}
@@ -98,7 +98,7 @@ fn test_{{ .Name }}_decode() {
 fn test_{{ .Name }}_encode_failure() {
     {{- if .HandleDefs }}
     let handle_defs = create_handles(&{{ .HandleDefs }});
-    let handle_defs = unsafe { disown_vec(handle_defs) };
+    let handle_defs = disown_vec(handle_defs);
     let handle_defs = handle_defs.as_ref();
     {{- end }}
     let value = &mut {{ .Value }};
@@ -125,7 +125,7 @@ fn test_{{ .Name }}_decode_failure() {
     let bytes = &{{ .Bytes }};
     {{- if .HandleDefs }}
     let handle_defs = create_handles(&{{ .HandleDefs }});
-    let handle_defs = unsafe { disown_vec(handle_defs) };
+    let handle_defs = disown_vec(handle_defs);
     let handle_defs = handle_defs.as_ref();
     let mut handles = unsafe { copy_handles_at(handle_defs, &{{ .Handles }}) };
     {{- else }}

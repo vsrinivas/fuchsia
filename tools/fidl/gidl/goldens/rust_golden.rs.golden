@@ -642,10 +642,10 @@ HandleDef{
 	rights: Rights::from_bits(61454).unwrap(),
 },
 ]);
-    let handle_defs = unsafe { disown_vec(handle_defs) };
+    let handle_defs = disown_vec(handle_defs);
     let handle_defs = handle_defs.as_ref();
-    let expected_handles = unsafe { disown_vec(copy_handles_at(handle_defs, &[
-0,])) };
+    let expected_handles = disown_vec(unsafe { copy_handles_at(handle_defs, &[
+0,]) });
     let expected_handles = expected_handles.as_ref();
     let value = &mut test_conformance::GoldenHandleBasicRightsStruct { v: unsafe { copy_handle(&handle_defs[0]) } };
     let bytes = &mut Vec::new();
@@ -671,10 +671,10 @@ HandleDef{
 	rights: Rights::from_bits(61454).unwrap(),
 },
 ]);
-    let handle_defs = unsafe { disown_vec(handle_defs) };
+    let handle_defs = disown_vec(handle_defs);
     let handle_defs = handle_defs.as_ref();
-    let expected_handles = unsafe { disown_vec(copy_handles_at(handle_defs, &[
-0,])) };
+    let expected_handles = disown_vec(unsafe { copy_handles_at(handle_defs, &[
+0,]) });
     let expected_handles = expected_handles.as_ref();
     let value = &mut test_conformance::GoldenHandleBasicRightsStruct { v: unsafe { copy_handle(&handle_defs[0]) } };
     let bytes = &mut Vec::new();
@@ -700,10 +700,10 @@ HandleDef{
 	rights: Rights::from_bits(2147483648).unwrap(),
 },
 ]);
-    let handle_defs = unsafe { disown_vec(handle_defs) };
+    let handle_defs = disown_vec(handle_defs);
     let handle_defs = handle_defs.as_ref();
-    let expected_handles = unsafe { disown_vec(copy_handles_at(handle_defs, &[
-0,])) };
+    let expected_handles = disown_vec(unsafe { copy_handles_at(handle_defs, &[
+0,]) });
     let expected_handles = expected_handles.as_ref();
     let value = &mut test_conformance::GoldenNullableHandleStruct { v: Some(unsafe { copy_handle(&handle_defs[0]) }) };
     let bytes = &mut Vec::new();
@@ -729,10 +729,10 @@ HandleDef{
 	rights: Rights::from_bits(2147483648).unwrap(),
 },
 ]);
-    let handle_defs = unsafe { disown_vec(handle_defs) };
+    let handle_defs = disown_vec(handle_defs);
     let handle_defs = handle_defs.as_ref();
-    let expected_handles = unsafe { disown_vec(copy_handles_at(handle_defs, &[
-0,])) };
+    let expected_handles = disown_vec(unsafe { copy_handles_at(handle_defs, &[
+0,]) });
     let expected_handles = expected_handles.as_ref();
     let value = &mut test_conformance::GoldenNullableHandleStruct { v: Some(unsafe { copy_handle(&handle_defs[0]) }) };
     let bytes = &mut Vec::new();
@@ -1803,7 +1803,7 @@ HandleDef{
 },
 ];
     let handle_defs = create_handles(handle_definitions);
-    let handle_defs = unsafe { disown_vec(handle_defs) };
+    let handle_defs = disown_vec(handle_defs);
     let handle_defs = handle_defs.as_ref();
     let mut handles = unsafe { copy_handles_at(handle_defs, &[
 0,]) };
@@ -1844,7 +1844,7 @@ HandleDef{
 },
 ];
     let handle_defs = create_handles(handle_definitions);
-    let handle_defs = unsafe { disown_vec(handle_defs) };
+    let handle_defs = disown_vec(handle_defs);
     let handle_defs = handle_defs.as_ref();
     let mut handles = unsafe { copy_handles_at(handle_defs, &[
 0,]) };

@@ -44,7 +44,7 @@ fn benchmark_{{ .Name }}_builder(b: &mut Bencher) {
         || {
             {{- if .HandleDefs }}
             let handle_defs = create_handles(&{{ .HandleDefs }});
-            unsafe { disown_vec(handle_defs) }
+            disown_vec(handle_defs)
             {{- else }}
             {{- /* Use empty vector with b.iter_batched_ref, rather than b.iter,
                 for consistency between handle and non-handle benchmarks. */}}
@@ -67,7 +67,7 @@ fn benchmark_{{ .Name }}_encode(b: &mut Bencher) {
         || {
             {{- if .HandleDefs }}
             let handle_defs = create_handles(&{{ .HandleDefs }});
-            let handle_defs = unsafe { disown_vec(handle_defs) };
+            let handle_defs = disown_vec(handle_defs);
             let handle_defs = handle_defs.as_ref();
             {{- end }}
             {{ .Value }}
@@ -96,7 +96,7 @@ fn benchmark_{{ .Name }}_decode(b: &mut Bencher) {
         || {
             {{- if .HandleDefs }}
             let handle_defs = create_handles(&{{ .HandleDefs }});
-            let handle_defs = unsafe { disown_vec(handle_defs) };
+            let handle_defs = disown_vec(handle_defs);
             let handle_defs = handle_defs.as_ref();
             {{- end }}
             let mut bytes = Vec::<u8>::new();
@@ -156,7 +156,7 @@ fn benchmark_{{ .Name }}_send_event(b: &mut Bencher) {
             b.iter_batched_ref(|| {
                 {{- if .HandleDefs }}
                 let handle_defs = create_handles(&{{ .HandleDefs }});
-                let handle_defs = unsafe { disown_vec(handle_defs) };
+                let handle_defs = disown_vec(handle_defs);
                 let handle_defs = handle_defs.as_ref();
                 {{- end }}
                 {{ .Value }}
@@ -201,7 +201,7 @@ fn benchmark_{{ .Name }}_echo_call(b: &mut Bencher) {
     b.iter_batched_ref(|| {
         {{- if .HandleDefs }}
         let handle_defs = create_handles(&{{ .HandleDefs }});
-        let handle_defs = unsafe { disown_vec(handle_defs) };
+        let handle_defs = disown_vec(handle_defs);
         let handle_defs = handle_defs.as_ref();
         {{- end }}
         {{ .Value }}

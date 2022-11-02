@@ -80,17 +80,25 @@ impl HandleFactory {
     }
 }
 
-#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99065)
 /// Unsafely copies `handle`, i.e. makes a new `Handle` object with the same raw
 /// value, and converts it to handle subtype `T`.
+///
+/// # Safety
+///
+/// The caller is responsible for manually leaking one of handles (`handle` or
+/// the returned copy) to avoid double-close errors when handles are dropped.
+/// This can be done with `std::mem::forget` or in aggregate with `disown_vec`.
 pub unsafe fn copy_handle<T: HandleBased>(handle: &Handle) -> T {
     T::from_handle(Handle::from_raw(handle.raw_handle()))
 }
 
-#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99065)
 /// Makes unsafe copies of handles at the given indices, i.e. new `Handle`
-/// objects with the same raw values. Callers should use `disown_handles` on
-/// one of the lists to prevent double-close errors when handles are dropped.
+/// objects with the same raw values.
+///
+/// # Safety
+///
+/// The caller must use `disown_handles` on one of the lists (`handles` or the
+/// returned vector) to prevent double-close errors when handles are dropped.
 pub unsafe fn copy_handles_at(handles: &[Handle], indices: &[usize]) -> Vec<Handle> {
     let mut copy = Vec::with_capacity(indices.len());
     for &i in indices {
@@ -99,18 +107,17 @@ pub unsafe fn copy_handles_at(handles: &[Handle], indices: &[usize]) -> Vec<Hand
     copy
 }
 
-#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99065)
 /// Wraps `Vec<T>` in a structure that prevents elements from being dropped. The
 /// vector itself will release its memory, but it will not invoke `T::drop`.
 ///
 /// To use the contained vector after, use this pattern:
 ///
-///     let items = unsafe { disown_vec(...) };
+///     let items = disown_vec(...);
 ///     let items = items.as_ref(); // or as_mut
 ///
 /// The seperate let-bindings are necessary for the `Disowned` value to outlive
 /// the reference obtained from it.
-pub unsafe fn disown_vec<T>(vec: Vec<T>) -> Disowned<T> {
+pub fn disown_vec<T>(vec: Vec<T>) -> Disowned<T> {
     Disowned(vec)
 }
 

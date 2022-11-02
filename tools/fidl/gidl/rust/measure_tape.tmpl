@@ -22,7 +22,7 @@ use {
 fn test_{{ .Name }}_measure_tape() {
     {{- if .HandleDefs }}
     let handle_defs = create_handles(&{{ .HandleDefs }});
-    let handle_defs = unsafe { disown_vec(handle_defs) };
+    let handle_defs = disown_vec(handle_defs);
     let handle_defs = handle_defs.as_ref();
     {{- end }}
     let value = &mut {{ .Value }};
