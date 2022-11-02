@@ -43,30 +43,34 @@ import subprocess
 import sys
 
 
-def get_host_platform():
+def get_host_platform() -> str:
+    '''Return host platform name, following Fuchsia conventions.'''
     if sys.platform == 'linux':
-        host_platform = 'linux'
+        return 'linux'
     elif sys.platform == 'darwin':
-        host_platform = 'mac'
+        return 'mac'
     else:
-        host_platform = os.uname().sysname
-    return host_platform
+        return os.uname().sysname
 
 
-def get_host_arch():
+def get_host_arch() -> str:
+    '''Return host CPU architecture, following Fuchsia conventions.'''
     host_arch = os.uname().machine
     if host_arch == 'x86_64':
-        host_arch = 'x64'
+        return 'x64'
     elif host_arch.startswith(('armv8', 'aarch64')):
-        host_arch = 'arm64'
-    return host_arch
+        return 'arm64'
+    else:
+        return host_arch
 
 
-def get_host_tag():
+def get_host_tag() -> str:
+    '''Return host tag, following Fuchsia conventions.'''
     return '%s-%s' % (get_host_platform(), get_host_arch())
 
 
-def force_symlink(target_path, dst_path):
+def force_symlink(target_path: str, dst_path: str):
+    '''Create a symlink at |dst_path| that points to |target_path|.'''
     target_path = os.path.relpath(target_path, os.path.dirname(dst_path))
     try:
         os.symlink(target_path, dst_path)
@@ -78,7 +82,7 @@ def force_symlink(target_path, dst_path):
             raise
 
 
-def make_removeable(path):
+def make_removeable(path: str):
     '''Ensure the file at |path| is removeable.'''
     info = os.stat(path, follow_symlinks=False)
     if info.st_mode & stat.S_IWUSR == 0:
@@ -448,7 +452,7 @@ readonly _LOG_DIR="{logs_dir}"
 export BAZEL_FUCHSIA_NINJA_OUTPUT_DIR="{ninja_output_dir}"
 export BAZEL_FUCHSIA_NINJA_PREBUILT="{ninja_prebuilt}"
 
-# Implement log rotation
+# Implement log rotation (up to 3 old files)
 # $1: log file name (e.g. "path/to/workspace-events.log")
 logrotate3 () {{
   local i
@@ -468,6 +472,8 @@ logrotate3 () {{
   fi
 }}
 
+# Rotate the workspace events log. Note that this file is created
+# through an option set in the .bazelrc file, not the command-line below.
 mkdir -p "${{_LOG_DIR}}"
 logrotate3 "${{_LOG_DIR}}/workspace-events.log"
 
