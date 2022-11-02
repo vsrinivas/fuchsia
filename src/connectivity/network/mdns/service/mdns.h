@@ -254,7 +254,8 @@ class Mdns : public MdnsAgent::Owner {
   // calls to |ResolveHostName|, |SubscribeToService| and
   // |PublishServiceInstance|.
   void Start(fuchsia::net::interfaces::WatcherPtr, const std::string& local_host_name,
-             bool perform_address_probe, fit::closure ready_callback);
+             bool perform_address_probe, fit::closure ready_callback,
+             std::vector<std::string> alt_services);
 
   // Stops the transceiver.
   void Stop();
@@ -522,6 +523,7 @@ class Mdns : public MdnsAgent::Owner {
   Transceiver& transceiver_;
   std::string original_local_host_name_;
   fit::closure ready_callback_;
+  std::vector<std::string> alt_services_;
   uint32_t next_local_host_name_deduplicator_ = 2;
   std::string local_host_name_;
   std::string local_host_full_name_;

@@ -24,7 +24,8 @@ InstanceResponder::InstanceResponder(MdnsAgent::Owner* owner, std::string host_n
       media_(media),
       ip_versions_(ip_versions),
       publisher_(publisher) {
-  FX_DCHECK(host_name.empty() == addresses_.empty());
+  // TODO(fxb/113901): Restore this check when alt_services is no longer needed.
+  // FX_DCHECK(host_name.empty() == addresses_.empty());
   instance_.service_name_ = service_name;
   instance_.instance_name_ = instance_name;
 }
@@ -37,10 +38,7 @@ void InstanceResponder::Start(const std::string& local_host_full_name) {
   MdnsAgent::Start(local_host_full_name);
 
   if (host_full_name_.empty()) {
-    is_from_proxy_ = false;
     host_full_name_ = local_host_full_name;
-  } else {
-    is_from_proxy_ = true;
   }
 
   instance_.target_name_ = MdnsNames::HostNameFromFullName(host_full_name_);
@@ -282,8 +280,10 @@ void InstanceResponder::SendPublication(const Mdns::Publication& publication,
   SendResource(txt_resource, MdnsResourceSection::kAdditional, reply_address);
 
   if (addresses_.empty()) {
-    // Send addresses for the local host.
-    SendAddresses(MdnsResourceSection::kAdditional, reply_address);
+    // Send local addresses. The address value in the resource is invalid, which tells the interface
+    // transceivers to send their own addresses.
+    SendResource(std::make_shared<DnsResource>(host_full_name_, DnsType::kA),
+                 MdnsResourceSection::kAdditional, reply_address);
   } else {
     // Send addresses that were provided in the constructor.
     for (const auto& address : addresses_) {
@@ -365,7 +365,7 @@ void InstanceResponder::UpdateInstanceAddresses() {
 
   instance_.addresses_.clear();
 
-  if (is_from_proxy_) {
+  if (!addresses_.empty()) {
     for (auto addr : addresses_) {
       instance_.addresses_.emplace_back(inet::SocketAddress(addr, port_, 0));
     }

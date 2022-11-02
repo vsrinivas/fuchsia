@@ -60,6 +60,14 @@ const char kSchema[] = R"({
         },
         "required": ["service","port"]
       }
+    },
+    "alt_services": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 8,
+        "maxLength": 22
+      }
     }
   }
 })";
@@ -75,6 +83,9 @@ const char kMediaKey[] = "media";
 const char kMediaValueWired[] = "wired";
 const char kMediaValueWireless[] = "wireless";
 const char kMediaValueBoth[] = "both";
+
+// TODO(fxb/113901): Remove this when alt_services is no longer needed.
+const char kAltServicesKey[] = "alt_services";
 
 }  // namespace
 
@@ -120,6 +131,22 @@ void Config::IntegrateDocument(const rapidjson::Document& document,
       if (parser_.HasError()) {
         return;
       }
+    }
+  }
+
+  if (document.HasMember(kAltServicesKey)) {
+    FX_DCHECK(document[kAltServicesKey].IsArray());
+    for (const auto& item : document[kAltServicesKey].GetArray()) {
+      FX_DCHECK(item.IsString());
+      if (!MdnsNames::IsValidServiceName(item.GetString())) {
+        parser_.ReportError((std::stringstream()
+                             << kAltServicesKey << " item value " << item.GetString()
+                             << " is not a valid service type.")
+                                .str());
+        return;
+      }
+
+      alt_services_.push_back(item.GetString());
     }
   }
 }
@@ -172,7 +199,7 @@ void Config::IntegratePublication(const rapidjson::Value& value,
       FX_DCHECK(item.IsString());
       if (!MdnsNames::IsValidTextString(item.GetString())) {
         parser_.ReportError((std::stringstream() << kTextKey << " item value " << item.GetString()
-                                                 << " is not avalid text string.")
+                                                 << " is not a valid text string.")
                                 .str());
         return;
       }
