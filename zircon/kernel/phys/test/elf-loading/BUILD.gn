@@ -19,12 +19,10 @@ zbi_executable("zbi-basic-elf-loading-test.executable") {
     "//src/lib/zbitl",
     "//zircon/kernel/lib/ktl",
     "//zircon/kernel/lib/libc",
-    "//zircon/kernel/phys:allocation",
+    "//zircon/kernel/phys:elf-image",
     "//zircon/kernel/phys:kernel-package",
     "//zircon/kernel/phys:zbi-memory",
     "//zircon/kernel/phys:zbitl-allocation",
-    "//zircon/kernel/phys/lib/memalloc",
-    "//zircon/system/ulib/fbl",
   ]
 
   # TODO(fxbug.dev/91448): see related specification on :get-int.exe.

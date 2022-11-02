@@ -93,6 +93,14 @@ struct PrintfType<const char (&)[N]> {
   static constexpr auto Arguments(const char (&str)[N]) { return std::forward_as_tuple(str); }
 };
 
+template <size_t Len>
+struct PrintfType<ConstString<Len>> {
+  static constexpr auto kFormat = ConstString("%s");
+  static constexpr auto Arguments(const ConstString<Len>& str) {
+    return std::make_tuple(str.c_str());
+  }
+};
+
 template <>
 struct PrintfType<const char*> {
   static constexpr auto kFormat = ConstString("%s");

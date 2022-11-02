@@ -93,7 +93,7 @@ ChainBoot LoadZirconZbi(KernelStorage::Bootfs kernelfs) {
 
 [[noreturn]] void BootZircon(KernelStorage kernel_storage) {
   KernelStorage::Bootfs kernelfs;
-  if (auto result = kernel_storage.GetBootfs(kDefaultKernelPackage); result.is_error()) {
+  if (auto result = kernel_storage.root().subdir(kDefaultKernelPackage); result.is_error()) {
     printf("physboot: Failed to read kernel package %.*s: ",
            static_cast<int>(kDefaultKernelPackage.size()), kDefaultKernelPackage.data());
     zbitl::PrintBootfsError(result.error_value());

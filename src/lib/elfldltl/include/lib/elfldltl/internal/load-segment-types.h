@@ -93,6 +93,9 @@ struct LoadSegmentTypes {
     size_type vaddr_ = 0;
   };
 
+  // TODO(mcgrathr): This is an optimization. GCC doesn't like the
+  // specialization being here and won't allow it to be defined later either.
+#ifdef __clang__
   // With constrained layout policy, the offset and vaddr don't both need to be
   // tracked.  They aren't always identical, but they always have a fixed
   // difference for the whole file.
@@ -107,6 +110,7 @@ struct LoadSegmentTypes {
     constexpr explicit Segment(size_type offset, size_type vaddr, size_type memsz)
         : SegmentBase(offset, memsz) {}
   };
+#endif
 
   // A writable data segment (with no attached .bss) just identifies the pages
   // from the file to load.

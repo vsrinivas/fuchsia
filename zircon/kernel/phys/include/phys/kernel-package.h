@@ -29,7 +29,7 @@ constexpr ktl::string_view kKernelZbiName = "kernel.zbi";
 class KernelStorage {
  public:
   using Zbi = zbitl::View<ktl::span<ktl::byte>>;
-  using Bootfs = zbitl::BootfsView<ktl::span<const ktl::byte>>;
+  using Bootfs = zbitl::BootfsView<ktl::span<ktl::byte>>;
 
   KernelStorage() noexcept = default;
 
@@ -49,9 +49,7 @@ class KernelStorage {
   auto data() const { return storage_.data(); }
 
   // Helper to decode data() as a BOOTFS image.
-  fit::result<Bootfs::Error, Bootfs> GetBootfs(ktl::string_view directory) const {
-    return bootfs_reader_.root().subdir(directory);
-  }
+  Bootfs root() const { return bootfs_reader_.root(); }
 
   void GetTimes(PhysBootTimes& times) {
     times.Set(PhysBootTimes::kDecompressStart, decompress_start_ts_);
@@ -59,7 +57,7 @@ class KernelStorage {
   }
 
  private:
-  using BootfsReader = zbitl::Bootfs<ktl::span<const ktl::byte>>;
+  using BootfsReader = zbitl::Bootfs<ktl::span<ktl::byte>>;
 
   Allocation storage_;
   Zbi zbi_;

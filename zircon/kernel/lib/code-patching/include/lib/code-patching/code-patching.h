@@ -56,7 +56,7 @@ static_assert(std::has_unique_object_representations_v<Directive>);
 //
 class Patcher {
  public:
-  using Bytes = ktl::span<const ktl::byte>;
+  using Bytes = ktl::span<ktl::byte>;
   using BootfsDir = zbitl::BootfsView<Bytes>;
   using Error = BootfsDir::Error;
 

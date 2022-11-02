@@ -28,7 +28,9 @@ std::string_view ToString(Type type) {
     case Type::kPoolBookkeeping:
       return "bookkeeping"sv;
     case Type::kPhysKernel:
-      return "phys kernel image"sv;
+      return "phys ZBI kernel image"sv;
+    case Type::kPhysElf:
+      return "phys ELF image"sv;
     case Type::kKernel:
       return "kernel image"sv;
     case Type::kFixedAddressKernel:

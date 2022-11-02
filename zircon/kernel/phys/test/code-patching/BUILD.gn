@@ -50,6 +50,7 @@ zbi_executable("zbi-code-patching-test.executable") {
     "//zircon/kernel/lib/ktl",
     "//zircon/kernel/lib/libc",
     "//zircon/kernel/phys:allocation",
+    "//zircon/kernel/phys:elf-image",
     "//zircon/kernel/phys:zbi-memory",
     "//zircon/kernel/phys:zbitl-allocation",
     "//zircon/kernel/phys/lib/memalloc",

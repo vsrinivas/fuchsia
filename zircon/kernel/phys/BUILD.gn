@@ -466,6 +466,21 @@ if (toolchain_environment == "kernel.phys" ||
       "//zircon/kernel/phys/lib/memalloc",
     ]
   }
+
+  source_set("elf-image") {
+    public = [ "include/phys/elf-image.h" ]
+    sources = [ "elf-image.cc" ]
+    public_configs = [ ":includes" ]
+    public_deps = [
+      "//src/lib/elfldltl",
+      "//src/lib/zbitl",
+      "//zircon/kernel/lib/code-patching",
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+      "//zircon/system/ulib/zxc",
+    ]
+    deps = [ ":allocation" ]
+  }
 }
 
 config("includes") {

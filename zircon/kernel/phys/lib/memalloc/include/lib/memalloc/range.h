@@ -45,8 +45,11 @@ enum class Type : uint64_t {
   // Reserved for internal bookkeeping.
   kPoolBookkeeping = kMinExtendedTypeValue,
 
-  // The phys kernel memory image.
+  // The phys ZBI kernel memory image.
   kPhysKernel,
+
+  // A phys ELF memory image.
+  kPhysElf,
 
   // The kernel memory image.
   kKernel,

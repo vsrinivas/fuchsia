@@ -36,7 +36,7 @@ extern "C" uint64_t multiply_by_factor(uint64_t x);
 
 namespace {
 
-using Bootfs = zbitl::Bootfs<ktl::span<const ktl::byte>>;
+using Bootfs = zbitl::Bootfs<ktl::span<ktl::byte>>;
 
 constexpr size_t kExpectedNumPatches = 2;
 

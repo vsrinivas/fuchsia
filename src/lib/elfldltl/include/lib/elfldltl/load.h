@@ -252,7 +252,7 @@ class LoadInfo {
     if (phdr.memsz > phdr.filesz) {
       return add(DataWithZeroFillSegment(offset, vaddr, memsz, filesz));
     }
-    return add(DataSegment(offset, vaddr, memsz));
+    return add(DataSegment(offset, vaddr, memsz, filesz));
   }
 
   // Get an ephemeral object to pass to elfldltl::DecodePhdrs.  The
@@ -391,7 +391,7 @@ class LoadInfo {
         segment.offset(),
         segment.vaddr(),
         relro_size,
-        Phdr::kRead | (!merge_ro ? Phdr::kWrite : 0),
+        Phdr::kRead | (merge_ro ? 0 : static_cast<uint32_t>(Phdr::kWrite)),
     };
 
     assert(relro_size <= segment.memsz());
