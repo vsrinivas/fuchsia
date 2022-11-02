@@ -401,6 +401,18 @@ template("product_assembly_configuration") {
       ":${labels.cache_package_config_data}",
       ":${labels.cache_package_set}",
     ]
+
+    # Block all metadata walks for packages, distribution entries, etc.  These
+    # inputs should not exist in metadata walks, as they are added via the paths
+    # in the assembly config itself.
+    metadata = {
+      package_barrier = []
+      assembly_package_barrier = []
+      config_package_barrier = []
+      driver_package_barrier = []
+      system_image_package_barrier = []
+      distribution_entries_barrier = []
+    }
   }
 
   # A testonly group with no visibilty restrictions, that allows the use of the
