@@ -8,9 +8,10 @@
 use {
     crate::md_element::Element,
     anyhow::Result,
+    serde_yaml::Value,
     std::{
         fmt::{Debug, Display},
-        path::PathBuf,
+        path::{Path, PathBuf},
     },
 };
 
@@ -34,7 +35,7 @@ impl Display for DocLine {
     }
 }
 
-/// Trait for DocCheck. Implementations of this traite are collected into a list
+/// Trait for DocCheck. Implementations of this trait are collected into a list
 /// and check() is called for each event during parsing the markdown.
 pub trait DocCheck {
     /// Name for this check. This name is used in error messages to identify the source
@@ -52,4 +53,26 @@ pub trait DocCheck {
     /// Some checks require visiting all pages, the post_check method is called after all
     /// markdown has been parsed.
     fn post_check(&self) -> Result<Option<Vec<DocCheckError>>>;
+}
+
+/// Trait for DocCheck to use with yaml files. Implementations of this trait are collected
+/// into a list and check() is called for each event during parsing the yaml.
+pub trait DocYamlCheck {
+    /// Name for this check. This name is used in error messages to identify the source
+    /// of the problem.
+    fn name(&self) -> &str;
+
+    /// Given the yaml, determine if this check applies to the event and return a list
+    /// of errors if any are detected.
+    /// An empty list of errors should be returned if the check does not apply to this event,
+    /// or if no errors are found.
+    fn check(&mut self, filename: &Path, yaml_value: &Value) -> Result<Option<Vec<DocCheckError>>>;
+
+    /// Some checks require visiting all pages, the post_check method is called after all
+    /// markdown has been parsed.
+    fn post_check(
+        &self,
+        markdown_files: &[PathBuf],
+        yaml_files: &[PathBuf],
+    ) -> Result<Option<Vec<DocCheckError>>>;
 }

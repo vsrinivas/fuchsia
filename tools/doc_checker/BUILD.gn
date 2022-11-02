@@ -43,6 +43,8 @@ if (is_host) {
       "src/main.rs",
       "src/md_element.rs",
       "src/parser.rs",
+      "src/yaml.rs",
+      "src/yaml/toc_checker.rs",
     ]
     deps = [
       "//third_party/rust_crates:anyhow",
@@ -51,6 +53,8 @@ if (is_host) {
       "//third_party/rust_crates:glob",
       "//third_party/rust_crates:http",
       "//third_party/rust_crates:pulldown-cmark",
+      "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:serde_yaml",
       "//third_party/rust_crates:url",
     ]
     test_deps = [

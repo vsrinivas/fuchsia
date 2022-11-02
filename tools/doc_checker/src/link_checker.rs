@@ -19,32 +19,15 @@ use {
     url::Url,
 };
 
-// path_helper includes methods to check path attributes
-// so that these methods can be mocked for unit tests.
-#[cfg(test)]
-use mockall::automock;
-
-#[cfg_attr(test, automock)]
-#[allow(dead_code)]
-mod path_helper_module {
-
-    use std::path::Path;
-    pub fn exists(path: &Path) -> bool {
-        path.exists()
-    }
-    pub fn is_dir(path: &Path) -> bool {
-        path.is_dir()
-    }
-}
-
+// path_help is a wrapper to allow mocking path checks
+// exists. and is_dir.
 cfg_if::cfg_if! {
     if #[cfg(test)] {
-         use self::mock_path_helper_module as path_helper;
+       use crate::mock_path_helper_module as path_helper;
     } else {
-         use self::path_helper_module as path_helper;
+       use crate::path_helper_module as path_helper;
     }
 }
-
 /// Files that are allowed to link to the documentation host site.
 const FILES_ALLOWED_TO_LINK_TO_PUBLISHED_DOCS: [&str; 1] = ["navbar.md"];
 
@@ -452,7 +435,8 @@ fn check_link_authority(
 
             let recommended = uri.to_string().replace(&branch_spec, "+/HEAD");
             //Possible point of discussion: Non-HEAD links are open discussion for non- //docs links.
-            if parts.contains(&"docs") {
+
+            if parts.contains(&"docs") && uri.path().ends_with(".md") {
                 return Some(DocCheckError {
                     doc_line: doc_line.clone(),
                     message: format!(
@@ -581,29 +565,13 @@ pub(crate) fn register_markdown_checks(opt: &DocCheckerArgs) -> Result<Vec<Box<d
 
 #[cfg(test)]
 mod tests {
-    use crate::DocContext;
-    use lazy_static::lazy_static;
-    use std::sync::{Mutex, MutexGuard};
-
-    use super::*;
-
-    // Since we are mocking global methods, we need to synchronize
-    // the setting of the expectations on the mock. This is done using a Mutex.
-    lazy_static! {
-        static ref MTX: Mutex<()> = Mutex::new(());
-    }
-
-    // When a test panics, it will poison the Mutex. Since we don't actually
-    // care about the state of the data we ignore that it is poisoned and grab
-    // the lock regardless.  If you just do `let _m = &MTX.lock().unwrap()`, one
-    // test panicking will cause all other tests that try and acquire a lock on
-    // that Mutex to also panic.
-    fn get_lock(m: &'static Mutex<()>) -> MutexGuard<'static, ()> {
-        match m.lock() {
-            Ok(guard) => guard,
-            Err(poisoned) => poisoned.into_inner(),
-        }
-    }
+    use {
+        super::*,
+        crate::{
+            test::{get_lock, MTX},
+            DocContext,
+        },
+    };
 
     #[test]
     fn test_make_link_to_check() -> Result<()> {
@@ -737,7 +705,8 @@ mod tests {
                     _ => false,
                 }
             } else {
-                false
+                // make a use case about URLs pass.
+                p.ends_with("OWNERS")
             }
         });
         is_dir_ctx.expect().returning(|p| {
@@ -814,6 +783,13 @@ None,
             DocContext::new(
                 PathBuf::from("/docs/README.md"),
                 "non-master branch link to src ok [old source](https://fuchsia.googlesource.com/fuchsia/+/some-branch/tools/file.cc)",
+            ),
+            None,
+        ),
+        (
+            DocContext::new(
+                PathBuf::from("/docs/README.md"),
+                "non-markdown file OK to link to docs [non-source](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/docs/OWNERS)",
             ),
             None,
         )

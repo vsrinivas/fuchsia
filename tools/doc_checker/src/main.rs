@@ -5,17 +5,43 @@
 //! doc_checker is a CLI tool to check markdown files for correctness in
 //! the Fuchsia project.
 
-use anyhow::{bail, Context, Result};
-use argh::FromArgs;
-use glob::glob;
-use std::{fs, path::PathBuf};
+use {
+    anyhow::{bail, Context, Result},
+    argh::FromArgs,
+    glob::glob,
+    serde_yaml::Value,
+    std::{
+        fs::{self, File},
+        io::BufReader,
+        path::PathBuf,
+    },
+};
 
-pub(crate) use crate::checker::{DocCheck, DocCheckError, DocLine};
+pub(crate) use crate::checker::{DocCheck, DocCheckError, DocLine, DocYamlCheck};
 pub(crate) use crate::md_element::DocContext;
 mod checker;
 mod link_checker;
 mod md_element;
 mod parser;
+mod yaml;
+
+// path_helper includes methods to check path attributes
+// so that these methods can be mocked for unit tests.
+#[cfg(test)]
+use mockall::automock;
+
+#[cfg_attr(test, automock)]
+#[allow(dead_code)]
+pub mod path_helper_module {
+
+    use std::path::Path;
+    pub fn exists(path: &Path) -> bool {
+        path.exists()
+    }
+    pub fn is_dir(path: &Path) -> bool {
+        path.is_dir()
+    }
+}
 
 /// Check the markdown documentation using a variety of checks.
 #[derive(Debug, FromArgs)]
@@ -89,7 +115,7 @@ fn do_main(opt: DocCheckerArgs) -> Result<Option<Vec<DocCheckError>>> {
 
     // Find all the .yaml files.
     let yaml_pattern = format!("{}/**/*.yaml", docs_dir.to_string_lossy());
-    let yaml_files: Vec<_> = glob(&yaml_pattern)?.collect();
+    let yaml_files: Vec<PathBuf> = glob(&yaml_pattern)?.filter_map(|p| p.ok()).collect();
 
     eprintln!(
         "Checking {} markdown files and {} yaml files",
@@ -116,10 +142,25 @@ fn do_main(opt: DocCheckerArgs) -> Result<Option<Vec<DocCheckError>>> {
         markdown_checks.push(c);
     }
 
+    let mut yaml_checks = yaml::register_yaml_checks(&opt)?;
+
     let markdown_errors: Vec<DocCheckError> =
         check_markdown(&markdown_files, &mut markdown_checks)?;
-    for e in markdown_errors {
-        errors.push(e);
+    errors.extend(markdown_errors);
+
+    let yaml_errors = check_yaml(&yaml_files, &mut yaml_checks)?;
+    errors.extend(yaml_errors);
+
+    // Post checks
+    for c in yaml_checks {
+        match c.post_check(&markdown_files, &yaml_files) {
+            Ok(Some(check_errors)) => errors.extend(check_errors),
+            Ok(None) => {}
+            Err(e) => errors.push(DocCheckError {
+                doc_line: DocLine { line_num: 0, file_name: PathBuf::from("") },
+                message: format!("Error {} running check: {} ", e, c.name()),
+            }),
+        }
     }
 
     let result = if errors.is_empty() { None } else { Some(errors) };
@@ -140,11 +181,7 @@ pub fn check_markdown<'a>(
         for element in doc_context {
             for c in &mut *checks {
                 match c.check(&element) {
-                    Ok(Some(check_errors)) => {
-                        for e in check_errors {
-                            errors.push(e);
-                        }
-                    }
+                    Ok(Some(check_errors)) => errors.extend(check_errors),
                     Ok(None) => {}
                     Err(e) => errors.push(DocCheckError {
                         doc_line: element.doc_line(),
@@ -155,4 +192,58 @@ pub fn check_markdown<'a>(
         }
     }
     Ok(errors)
+}
+
+fn check_yaml<'a>(
+    yaml_files: &[PathBuf],
+    checks: &'a mut [Box<dyn DocYamlCheck + 'static>],
+) -> Result<Vec<DocCheckError>> {
+    let mut errors: Vec<DocCheckError> = vec![];
+
+    for yaml_file in yaml_files {
+        let f = File::open(yaml_file)?;
+        let val: Value = match serde_yaml::from_reader(BufReader::new(f)) {
+            Ok(v) => v,
+            Err(e) => bail!("Error parsing {:?}: {}", yaml_file, e),
+        };
+        for c in &mut *checks {
+            match c.check(yaml_file, &val) {
+                Ok(Some(check_errors)) => errors.extend(check_errors),
+                Ok(None) => {}
+                Err(e) => errors.push(DocCheckError {
+                    doc_line: DocLine { line_num: 1, file_name: yaml_file.to_path_buf() },
+                    message: format!("Error {} running check: {} ", e, c.name()),
+                }),
+            }
+        }
+    }
+
+    Ok(errors)
+}
+
+#[cfg(test)]
+mod test {
+
+    use {
+        lazy_static::lazy_static,
+        std::sync::{Mutex, MutexGuard},
+    };
+
+    // Since we are mocking global methods, we need to synchronize
+    // the setting of the expectations on the mock. This is done using a Mutex.
+    lazy_static! {
+        pub static ref MTX: Mutex<()> = Mutex::new(());
+    }
+
+    // When a test panics, it will poison the Mutex. Since we don't actually
+    // care about the state of the data we ignore that it is poisoned and grab
+    // the lock regardless.  If you just do `let _m = &MTX.lock().unwrap()`, one
+    // test panicking will cause all other tests that try and acquire a lock on
+    // that Mutex to also panic.
+    pub fn get_lock(m: &'static Mutex<()>) -> MutexGuard<'static, ()> {
+        match m.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => poisoned.into_inner(),
+        }
+    }
 }
