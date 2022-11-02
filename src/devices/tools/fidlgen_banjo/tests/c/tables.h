@@ -14,6 +14,9 @@
 __BEGIN_CDECLS
 
 // Forward declarations
+typedef uint32_t g_t;
+#define G_ONLINE UINT32_C(0x01)
+typedef struct h h_t;
 typedef struct e e_t;
 typedef struct f f_t;
 typedef struct c c_t;
@@ -22,6 +25,10 @@ typedef struct b b_t;
 typedef struct a a_t;
 
 // Declarations
+struct h {
+    g_t flags;
+};
+
 struct e {
     uint8_t quux;
 };

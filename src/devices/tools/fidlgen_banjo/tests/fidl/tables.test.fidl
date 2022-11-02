@@ -29,3 +29,11 @@ type E = table {
 type F = struct {
     quuz E;
 };
+
+type G = strict bits  {
+    ONLINE = 0x01;
+};
+
+type H = table {
+    1: flags G;
+};

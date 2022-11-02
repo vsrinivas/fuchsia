@@ -66,6 +66,7 @@ impl std::ops::BitXorAssign for CookieKind {
     }
 }
 
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub union ChangeArgs {
@@ -79,5 +80,4 @@ impl std::fmt::Debug for ChangeArgs {
         write!(f, "<ChangeArgs>")
     }
 }
-
 

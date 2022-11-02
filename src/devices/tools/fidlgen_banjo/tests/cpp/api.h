@@ -579,7 +579,7 @@ public:
     }
 
 private:
-    api_protocol_ops_t* ops_;
+    const api_protocol_ops_t* ops_;
     void* ctx_;
 };
 

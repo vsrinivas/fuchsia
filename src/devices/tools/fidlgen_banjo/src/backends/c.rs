@@ -43,9 +43,11 @@ fn type_to_c_str(ty: &Type, ir: &FidlIr) -> Result<String, Error> {
             .get_declaration(identifier)
             .expect(&format!("Could not find declaration for {:?}", identifier))
         {
-            Declaration::Struct | Declaration::Table | Declaration::Union | Declaration::Enum => {
-                Ok(format!("{}_t", to_c_name(&identifier.get_name())))
-            }
+            Declaration::Struct
+            | Declaration::Table
+            | Declaration::Union
+            | Declaration::Enum
+            | Declaration::Bits => Ok(format!("{}_t", to_c_name(&identifier.get_name()))),
             Declaration::Protocol => {
                 let c_name = to_c_name(&identifier.get_name());
                 if not_callback(identifier, ir)? {

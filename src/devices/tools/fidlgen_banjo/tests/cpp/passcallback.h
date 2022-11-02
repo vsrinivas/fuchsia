@@ -161,7 +161,7 @@ public:
     }
 
 private:
-    action_protocol_protocol_ops_t* ops_;
+    const action_protocol_protocol_ops_t* ops_;
     void* ctx_;
 };
 
