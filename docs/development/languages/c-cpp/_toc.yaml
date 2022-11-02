@@ -33,3 +33,5 @@ toc:
 - title: "fbl:: (Fuchsia Base Library) intrusive container guide"
   section:
   - include: /docs/development/languages/c-cpp/fbl_containers_guide/_toc.yaml
+- title: "Thread safe asynchronous code"
+  path: /docs/development/languages/c-cpp/thread-safe-async.md

@@ -8,6 +8,7 @@ group("examples") {
     ":tests",
     "components",
     "cowsay",
+    "cpp",
     "diagnostics",
     "drivers",
     "fidl",
@@ -23,6 +24,7 @@ group("tests") {
   testonly = true
   data_deps = [
     "components:tests",
+    "cpp:tests",
     "diagnostics:tests",
     "drivers:tests",
     "fidl:tests",
