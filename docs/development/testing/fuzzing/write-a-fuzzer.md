@@ -31,26 +31,6 @@ For each of the examples below, assume you want to test code like the following:
   fn toy_example(input: ToyStruct) -> Result<u8, &'static str>;
   ```
 
-* {Go}
-
-  Note: Go fuzzing is experimental and may not be supported on your development host.
-
-  ```golang
-  package mypackage
-
-  func HandleBytes(s []byte) {
-    // Complicated code goes here
-  }
-
-  type MyStruct struct {
-    // Various fields
-  }
-
-  func HandleStruct(s MyStruct) {
-    // Complicated code goes here
-  }
-  ```
-
 ## Simple Fuzz Target Function {#basic}
 
 For each language, your fuzz target function will use the bytes provided to call the code you want
@@ -103,6 +83,7 @@ gracefully on invalid parameters is correct behavior.
   As with unit tests, this code can be place in the same file as the code it is testing. For
   example, the code above might be in `toy_example/src/lib.rs`.
 
+<<<<<<< HEAD
 * {Go}
 
   Note: Go fuzzing is experimental and may not be supported on your development host.
@@ -118,6 +99,8 @@ gracefully on invalid parameters is correct behavior.
   This function can be added to and exported from either an existing Go package, or a new Go package
   if no existing package is a good fit.
 
+=======
+>>>>>>> ef1f4e0d86a ([go][fuzzing] Remove go fuzzing support)
 ## Support for Fuzzing More Complex Types {#advanced}
 
 Each language has utilities to facilitate making more complicated fuzz target functions:
@@ -189,6 +172,7 @@ Each language has utilities to facilitate making more complicated fuzz target fu
      }
      ```
 
+<<<<<<< HEAD
 * {Go}
 
   Note: Go fuzzing is experimental and may not be supported on your development host.
@@ -212,10 +196,11 @@ Each language has utilities to facilitate making more complicated fuzz target fu
   }
   ```
 
+=======
+>>>>>>> ef1f4e0d86a ([go][fuzzing] Remove go fuzzing support)
 Next, you can [build](build-a-fuzzer.md) your newly created fuzzer using GN and Ninja.
 
 [arbitrary]: https://docs.rs/arbitrary/0.4.0/arbitrary
-[binary-encoding]: https://golang.org/pkg/encoding/binary/#Read
 [corpus]: https://llvm.org/docs/LibFuzzer.html#corpus
 [dictionary]: https://llvm.org/docs/LibFuzzer.html#dictionaries
 [fuzz-crate]: /src/lib/fuzzing/rust/src/lib.rs

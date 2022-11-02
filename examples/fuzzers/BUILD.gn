@@ -46,7 +46,4 @@ fuzzer_package("fuzzing-examples") {
   ]
 
   deps = [ "zx" ]
-
-  # TODO(fxbug.dev/91051): Go fuzzer tests flake.
-  # go_fuzzers = [ "go:basic_fuzzer" ]
 }

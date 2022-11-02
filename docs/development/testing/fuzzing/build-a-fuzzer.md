@@ -104,37 +104,6 @@ Each language has a specific fuzzer GN template:
       }
       ```
 
-* {Go}
-
-  Note: Go fuzzing is experimental and may not be supported on your development host.
-
-  The [`go_fuzzer`][go_fuzzer.gni] GN template generates a GN target that compiles the Go fuzz
-  target function into a C object file that it then links with the fuzzing engine.
-
-  To create build rules for a Go fuzzer:
-
-  1. Ensure the Go package in the [previous step](#write) is available as a `go_library` GN target.
-
-     For example:
-     ```
-     import("//build/go/go_library.gni")
-
-     go_library("my_library") {
-       sources = "pkg/file_with_fuzz.go"
-     }
-     ```
-
-  1. Write a `go_fuzzer` GN target to build the package containing the fuzz target function.
-
-     For example:
-     ```
-     import("//build/go/go_fuzzer.gni")
-
-     go_fuzzer("my_fuzzer") {
-       library = ":my_library"
-     }
-     ```
-
 When a [fuzzing variant][variants] is [selected](#fx-set), these templates will build a fuzzer
 binary by linking the [libFuzzer] compiler runtime with the provided `sources`, `deps` or both. This
 code must provide a [fuzz target][fuzz-target]{:.external} function.
@@ -156,6 +125,7 @@ To build host fuzzers, use the [`host_library_fuzzer`][host_library_fuzzer] GN t
 For example:
 
 ```
+<<<<<<< HEAD
 host_library_fuzzer("my_host_fuzzer") {
   sources = [ ... ]
   deps = [ ... ]
@@ -251,6 +221,11 @@ does not, and the _examplesan-fuzzer_ variant is selected, then the package defi
 fuchsia_fuzzer_package("my-fuzzers") {
   cpp_fuzz_components = [ ":my-cpp-fuzzer" ]
   rust_fuzz_components = [ ":my-rust-fuzzer" ]
+=======
+fuzzers_package("my-fuzzers") {
+  cpp_fuzzers = [ ":my-cpp-fuzzer" ]
+  rust_fuzzers = [ ":my-rust-fuzzer" ]
+>>>>>>> ef1f4e0d86a ([go][fuzzing] Remove go fuzzing support)
 }
 ```
 
@@ -330,7 +305,6 @@ Additional `ffx fuzz` commands can be used to [run a fuzzer](run-a-fuzzer.md).
 [gn-package]: /docs/development/components/build.md
 [gn-targets]: https://gn.googlesource.com/gn/+/HEAD/docs/language.md#Targets
 [gn-templates]: https://gn.googlesource.com/gn/+/HEAD/docs/language.md#Templates
-[go_fuzzer.gni]: /build/go/go_fuzzer.gni
 [known_variants]: /docs/gen/build_arguments.md#known_variants
 [options]: https://llvm.org/docs/LibFuzzer.html#options
 [rustc_fuzzer.gni]: /build/rust/rustc_fuzzer.gni
