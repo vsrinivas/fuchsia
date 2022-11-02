@@ -4,7 +4,7 @@
 
 #include "src/devices/bin/driver_manager/v2/composite_assembler.h"
 
-#include <lib/driver2/node_add_args.h>
+#include <lib/driver/component/cpp/node_add_args.h>
 
 #include "src/devices/lib/log/log.h"
 #include "src/lib/storage/vfs/cpp/service.h"

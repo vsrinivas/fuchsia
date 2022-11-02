@@ -9,7 +9,7 @@
 #include <fidl/fuchsia.driver.index/cpp/wire.h>
 #include <fidl/fuchsia.process/cpp/wire.h>
 #include <lib/async/cpp/task.h>
-#include <lib/driver2/start_args.h>
+#include <lib/driver/component/cpp/start_args.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/wire/server.h>
 #include <lib/fidl/cpp/wire/wire_messaging.h>

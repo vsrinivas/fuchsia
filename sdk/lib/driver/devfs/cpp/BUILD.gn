@@ -21,7 +21,7 @@ sdk_source_set("cpp") {
     "exporter.h",
   ]
 
-  deps = [ "//sdk/lib/driver2:cpp" ]
+  deps = [ "//sdk/lib/driver/component/cpp:cpp" ]
 
   public_deps = [ "//sdk/fidl/fuchsia.device.fs:fuchsia.device.fs_cpp" ]
 }
@@ -35,7 +35,7 @@ executable("cpp_test") {
     ":cpp",
     "//sdk/fidl/fuchsia.device.fs:fuchsia.device.fs_hlcpp",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_cpp_wire",
-    "//sdk/lib/driver2:test_base",
+    "//sdk/lib/driver/component/cpp:test_base",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/component/cpp",
     "//src/lib/fxl/test:gtest_main",

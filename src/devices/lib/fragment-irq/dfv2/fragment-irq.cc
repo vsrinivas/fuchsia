@@ -5,7 +5,7 @@
 #include "src/devices/lib/fragment-irq/dfv2/fragment-irq.h"
 
 #include <fidl/fuchsia.hardware.interrupt/cpp/fidl.h>
-#include <lib/driver2/service_client.h>
+#include <lib/driver/component/cpp/service_client.h>
 
 namespace fragment_irq {
 namespace fint = fuchsia_hardware_interrupt;

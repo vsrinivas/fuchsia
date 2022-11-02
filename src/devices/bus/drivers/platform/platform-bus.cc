@@ -15,7 +15,7 @@
 #include <lib/ddk/driver.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
-#include <lib/driver2/handlers.h>
+#include <lib/driver/component/cpp/handlers.h>
 #include <lib/fdf/dispatcher.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -898,8 +898,7 @@ zx_status_t PlatformBus::Init() {
       {BIND_PLATFORM_DEV_VID, 0, board_info_.vid()},
       {BIND_PLATFORM_DEV_PID, 0, board_info_.pid()},
   };
-  status = AddProtocolPassthrough("pt", passthrough_props, this,
-                                  &protocol_passthrough_);
+  status = AddProtocolPassthrough("pt", passthrough_props, this, &protocol_passthrough_);
   if (status != ZX_OK) {
     // We log the error but we do nothing as we've already added the device successfully.
     zxlogf(ERROR, "Error while adding pt: %s", zx_status_get_string(status));

@@ -8,7 +8,7 @@
 #include <fidl/fuchsia.driver.test.logger/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/ddk/driver.h>
-#include <lib/driver2/node_add_args.h>
+#include <lib/driver/component/cpp/node_add_args.h>
 #include <lib/fidl/coding.h>
 #include <lib/fit/defer.h>
 #include <lib/zx/clock.h>

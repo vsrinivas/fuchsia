@@ -6,8 +6,8 @@
 #include <fidl/fuchsia.driver.framework/cpp/fidl.h>
 #include <fidl/fuchsia.runtime.test/cpp/driver/fidl.h>
 #include <fidl/fuchsia.runtime.test/cpp/fidl.h>
-#include <lib/driver2/driver2_cpp.h>
-#include <lib/driver2/service_client.h>
+#include <lib/driver/component/cpp/driver_cpp.h>
+#include <lib/driver/component/cpp/service_client.h>
 #include <lib/fdf/cpp/channel.h>
 #include <lib/fdf/cpp/protocol.h>
 #include <lib/fdf/dispatcher.h>

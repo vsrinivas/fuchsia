@@ -219,8 +219,8 @@ config("fidl-wire-deprecated-mutable-tables") {
   # and replace the contents of `visibility` with the script output.
   visibility = [
     "//examples/drivers/driver_test_realm/non_hermetic/cpp:driver_test_realm_example_non_hermetic_cpp",
-    "//sdk/lib/driver2:cpp_test",
-    "//sdk/lib/driver2:driver2_llcpp_test",
+    "//sdk/lib/driver/component/cpp:cpp_test",
+    "//sdk/lib/driver/component/cpp:driver2_llcpp_test",
     "//sdk/lib/driver_test_realm:bin",
     "//sdk/lib/driver_test_realm/platform:bin",
     "//sdk/lib/driver_test_realm/simple:bin",

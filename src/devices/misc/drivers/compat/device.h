@@ -13,7 +13,7 @@
 #include <lib/ddk/driver.h>
 #include <lib/driver/compat/cpp/compat.h>
 #include <lib/driver/compat/cpp/symbols.h>
-#include <lib/driver2/logger.h>
+#include <lib/driver/component/cpp/logger.h>
 #include <lib/fdf/cpp/channel.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/scope.h>

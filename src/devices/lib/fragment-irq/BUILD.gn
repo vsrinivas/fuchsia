@@ -28,7 +28,7 @@ source_set("dfv2") {
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.interrupt:fuchsia.hardware.interrupt_cpp_wire",
-    "//sdk/lib/driver2:cpp",
+    "//sdk/lib/driver/component/cpp:cpp",
   ]
 }
 

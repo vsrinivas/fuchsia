@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_DRIVER2_LOGGER_H_
-#define LIB_DRIVER2_LOGGER_H_
+#ifndef LIB_DRIVER_COMPONENT_CPP_LOGGER_H_
+#define LIB_DRIVER_COMPONENT_CPP_LOGGER_H_
 
 #include <fidl/fuchsia.logger/cpp/wire.h>
-#include <lib/driver2/namespace.h>
+#include <lib/driver/component/cpp/namespace.h>
 #include <lib/syslog/structured_backend/cpp/fuchsia_syslog.h>
 #include <lib/zx/socket.h>
 
@@ -86,4 +86,4 @@ class Logger {
 
 }  // namespace driver
 
-#endif  // LIB_DRIVER2_LOGGER_H_
+#endif  // LIB_DRIVER_COMPONENT_CPP_LOGGER_H_

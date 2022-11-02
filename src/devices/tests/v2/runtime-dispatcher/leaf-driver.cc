@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.runtime.test/cpp/fidl.h>
-#include <lib/driver2/driver2_cpp.h>
+#include <lib/driver/component/cpp/driver_cpp.h>
 
 namespace fdf {
 using namespace fuchsia_driver_framework;

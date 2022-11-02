@@ -18,7 +18,7 @@ fuchsia_driver("driver") {
   sources = [ "demo_driver_base.cc" ]
   deps = [
     ":bind",
-    "//sdk/lib/driver2:cpp",
+    "//sdk/lib/driver/component/cpp:cpp",
     "//sdk/lib/sys/component/cpp",
     "//src/devices/lib/driver:driver_runtime",
   ]

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_DRIVER2_HANDLERS_H_
-#define LIB_DRIVER2_HANDLERS_H_
+#ifndef LIB_DRIVER_COMPONENT_CPP_HANDLERS_H_
+#define LIB_DRIVER_COMPONENT_CPP_HANDLERS_H_
 
 #include <lib/fidl/cpp/wire/service_handler.h>
 #include <lib/fidl_driver/cpp/transport.h>
@@ -21,4 +21,4 @@ using ServiceInstanceHandler = fidl::ServiceInstanceHandler<fidl::internal::Driv
 
 }  // namespace driver
 
-#endif  // LIB_DRIVER2_HANDLERS_H_
+#endif  // LIB_DRIVER_COMPONENT_CPP_HANDLERS_H_

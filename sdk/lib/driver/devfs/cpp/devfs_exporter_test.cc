@@ -7,7 +7,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/driver/devfs/cpp/exporter.h>
-#include <lib/driver2/tests/test_base.h>
+#include <lib/driver/component/cpp/tests/test_base.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
 

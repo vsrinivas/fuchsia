@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_DRIVER2_NAMESPACE_H_
-#define LIB_DRIVER2_NAMESPACE_H_
+#ifndef LIB_DRIVER_COMPONENT_CPP_NAMESPACE_H_
+#define LIB_DRIVER_COMPONENT_CPP_NAMESPACE_H_
 
 #include <fidl/fuchsia.component.runner/cpp/fidl.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
@@ -79,4 +79,4 @@ class Namespace {
 
 }  // namespace driver
 
-#endif  // LIB_DRIVER2_NAMESPACE_H_
+#endif  // LIB_DRIVER_COMPONENT_CPP_NAMESPACE_H_

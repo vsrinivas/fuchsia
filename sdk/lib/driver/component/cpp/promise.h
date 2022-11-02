@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_DRIVER2_PROMISE_H_
-#define LIB_DRIVER2_PROMISE_H_
+#ifndef LIB_DRIVER_COMPONENT_CPP_PROMISE_H_
+#define LIB_DRIVER_COMPONENT_CPP_PROMISE_H_
 
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
-#include <lib/driver2/namespace.h>
+#include <lib/driver/component/cpp/namespace.h>
 #include <lib/fpromise/promise.h>
 
 namespace driver {
@@ -62,4 +62,4 @@ fpromise::promise<void, fuchsia_driver_framework::wire::NodeError> AddChild(
 
 }  // namespace driver
 
-#endif  // LIB_DRIVER2_PROMISE_H_
+#endif  // LIB_DRIVER_COMPONENT_CPP_PROMISE_H_

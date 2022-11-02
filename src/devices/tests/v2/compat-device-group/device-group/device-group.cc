@@ -4,7 +4,7 @@
 
 #include <fidl/fuchsia.compat.devicegroup.test/cpp/wire.h>
 #include <lib/async/cpp/task.h>
-#include <lib/driver2/driver2_cpp.h>
+#include <lib/driver/component/cpp/driver_cpp.h>
 
 namespace fcdt = fuchsia_compat_devicegroup_test;
 

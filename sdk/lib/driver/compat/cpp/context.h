@@ -6,8 +6,8 @@
 #define LIB_DRIVER_COMPAT_CPP_CONTEXT_H_
 
 #include <fidl/fuchsia.driver.compat/cpp/fidl.h>
+#include <lib/driver/component/cpp/driver_context.h>
 #include <lib/driver/devfs/cpp/exporter.h>
-#include <lib/driver2/driver_context.h>
 
 namespace compat {
 

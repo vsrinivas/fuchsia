@@ -5,7 +5,7 @@
 #include <fidl/fuchsia.component.decl/cpp/fidl.h>
 #include <fidl/fuchsia.driver.framework/cpp/fidl.h>
 #include <fidl/fuchsia.offers.test/cpp/fidl.h>
-#include <lib/driver2/driver2_cpp.h>
+#include <lib/driver/component/cpp/driver_cpp.h>
 
 #include <bind/fuchsia/test/cpp/bind.h>
 

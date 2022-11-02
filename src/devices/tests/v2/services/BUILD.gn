@@ -29,7 +29,7 @@ fuchsia_driver("root_driver") {
     ":fuchsia.services.test_cpp_wire",
     ":root_bind",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_cpp_wire",
-    "//sdk/lib/driver2:cpp",
+    "//sdk/lib/driver/component/cpp:cpp",
     "//src/devices/lib/driver:driver_runtime",
   ]
 }

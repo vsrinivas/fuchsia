@@ -4,8 +4,8 @@
 
 #include <fidl/fuchsia.devicegroup.test/cpp/wire.h>
 #include <lib/async/cpp/task.h>
-#include <lib/driver2/driver2_cpp.h>
-#include <lib/driver2/service_client.h>
+#include <lib/driver/component/cpp/driver_cpp.h>
+#include <lib/driver/component/cpp/service_client.h>
 
 namespace fdf {
 using namespace fuchsia_driver_framework;

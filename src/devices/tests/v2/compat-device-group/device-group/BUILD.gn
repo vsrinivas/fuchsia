@@ -17,7 +17,7 @@ fuchsia_driver("driver") {
   sources = [ "device-group.cc" ]
   deps = [
     ":device-group-bind",
-    "//sdk/lib/driver2:cpp",
+    "//sdk/lib/driver/component/cpp:cpp",
     "//src/devices/lib/driver:driver_runtime",
     "//src/devices/tests/v2/compat-device-group:fuchsia.compat.devicegroup.test_cpp_wire",
     "//zircon/system/ulib/async:async-cpp",

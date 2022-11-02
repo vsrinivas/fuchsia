@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
-#include <lib/driver2/driver2_cpp.h>
+#include <lib/driver/component/cpp/driver_cpp.h>
 #include <lib/inspect/component/cpp/component.h>
 
 #include <optional>

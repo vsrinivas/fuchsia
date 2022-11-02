@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/driver/compat/cpp/device_server.h>
-#include <lib/driver2/node_add_args.h>
+#include <lib/driver/component/cpp/node_add_args.h>
 #include <lib/fdio/directory.h>
 
 namespace compat {

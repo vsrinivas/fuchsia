@@ -7,7 +7,7 @@
 
 #include <fidl/fuchsia.component.decl/cpp/fidl.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <lib/driver2/outgoing_directory.h>
+#include <lib/driver/component/cpp/outgoing_directory.h>
 #include <lib/fit/defer.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
 

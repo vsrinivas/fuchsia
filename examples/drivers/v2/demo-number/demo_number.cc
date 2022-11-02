@@ -6,8 +6,8 @@
 #include <fidl/fuchsia.driver.compat/cpp/fidl.h>
 #include <fidl/fuchsia.driver.framework/cpp/fidl.h>
 #include <fidl/fuchsia.hardware.demo/cpp/fidl.h>
-#include <lib/driver2/driver2_cpp.h>
-#include <lib/driver2/outgoing_directory.h>
+#include <lib/driver/component/cpp/driver_cpp.h>
+#include <lib/driver/component/cpp/outgoing_directory.h>
 #include <zircon/errors.h>
 
 namespace {

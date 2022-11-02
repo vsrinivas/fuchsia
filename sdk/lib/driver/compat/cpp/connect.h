@@ -7,7 +7,7 @@
 
 #include <fidl/fuchsia.driver.compat/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <lib/driver2/namespace.h>
+#include <lib/driver/component/cpp/namespace.h>
 #include <lib/fit/defer.h>
 
 namespace compat {

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_DRIVER2_NODE_ADD_ARGS_H_
-#define LIB_DRIVER2_NODE_ADD_ARGS_H_
+#ifndef LIB_DRIVER_COMPONENT_CPP_NODE_ADD_ARGS_H_
+#define LIB_DRIVER_COMPONENT_CPP_NODE_ADD_ARGS_H_
 
 #include <fidl/fuchsia.component.decl/cpp/fidl.h>
 #include <fidl/fuchsia.component.decl/cpp/wire.h>
@@ -122,4 +122,4 @@ inline fuchsia_driver_framework::wire::NodeProperty MakeEnumProperty(fidl::AnyAr
 
 }  // namespace driver
 
-#endif  // LIB_DRIVER2_NODE_ADD_ARGS_H_
+#endif  // LIB_DRIVER_COMPONENT_CPP_NODE_ADD_ARGS_H_

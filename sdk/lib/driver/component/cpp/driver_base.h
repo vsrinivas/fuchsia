@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_DRIVER2_DRIVER_BASE_H_
-#define LIB_DRIVER2_DRIVER_BASE_H_
+#ifndef LIB_DRIVER_COMPONENT_CPP_DRIVER_BASE_H_
+#define LIB_DRIVER_COMPONENT_CPP_DRIVER_BASE_H_
 
 #include <fidl/fuchsia.driver.framework/cpp/fidl.h>
+#include <lib/driver/component/cpp/driver_context.h>
+#include <lib/driver/component/cpp/logger.h>
+#include <lib/driver/component/cpp/namespace.h>
+#include <lib/driver/component/cpp/outgoing_directory.h>
+#include <lib/driver/component/cpp/start_args.h>
 #include <lib/driver/record/record.h>
-#include <lib/driver2/driver_context.h>
-#include <lib/driver2/logger.h>
-#include <lib/driver2/namespace.h>
-#include <lib/driver2/outgoing_directory.h>
-#include <lib/driver2/start_args.h>
 #include <lib/fdf/cpp/dispatcher.h>
 #include <lib/sys/component/cpp/structured_config.h>
 
@@ -280,4 +280,4 @@ class Record {
 
 }  // namespace driver
 
-#endif  // LIB_DRIVER2_DRIVER_BASE_H_
+#endif  // LIB_DRIVER_COMPONENT_CPP_DRIVER_BASE_H_

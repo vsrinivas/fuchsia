@@ -132,7 +132,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.power.manager:fuchsia.power.manager_cpp_wire",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_cpp_wire",
     "//sdk/lib/driver/compat/cpp",
-    "//sdk/lib/driver2:cpp",
+    "//sdk/lib/driver/component/cpp:cpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fdio:fdio-spawn-actions",
     "//sdk/lib/fidl",

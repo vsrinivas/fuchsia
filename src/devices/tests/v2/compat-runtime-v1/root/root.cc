@@ -12,7 +12,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
-#include <lib/driver2/outgoing_directory.h>
+#include <lib/driver/component/cpp/outgoing_directory.h>
 #include <lib/fdf/cpp/channel.h>
 #include <lib/inspect/cpp/inspect.h>
 

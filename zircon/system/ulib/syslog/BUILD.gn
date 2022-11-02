@@ -34,7 +34,7 @@ import("//build/zircon/zx_library.gni")
 # To regenerate:
 # fx gn refs $(fx get-build-dir) /zircon/system/ulib/syslog:syslog //zircon/system/ulib/syslog | sed 's|\(.*:\).*|"\1*",|' | sort | uniq
 syslog_visibility_allowlist = [
-  "//sdk/lib/driver2:*",
+  "//sdk/lib/driver/component/cpp:*",
   "//sdk/lib/syslog/duplicate_header_test:*",
   "//sdk/lib/ui/scenic/cpp:*",
   "//src/camera/drivers/controller:*",

@@ -6,10 +6,10 @@
 #include <fidl/fuchsia.runtime.test/cpp/driver/fidl.h>
 #include <fidl/fuchsia.runtime.test/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
-#include <lib/driver2/driver2_cpp.h>
-#include <lib/driver2/logger.h>
-#include <lib/driver2/namespace.h>
-#include <lib/driver2/service_client.h>
+#include <lib/driver/component/cpp/driver_cpp.h>
+#include <lib/driver/component/cpp/logger.h>
+#include <lib/driver/component/cpp/namespace.h>
+#include <lib/driver/component/cpp/service_client.h>
 #include <lib/fdf/cpp/arena.h>
 #include <lib/fdf/cpp/channel.h>
 #include <lib/fdf/cpp/protocol.h>

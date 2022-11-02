@@ -28,8 +28,8 @@ fuchsia_driver("root_driver") {
   deps = [
     ":fuchsia.devfs.test_cpp_wire",
     ":root_bind",
+    "//sdk/lib/driver/component/cpp:cpp",
     "//sdk/lib/driver/devfs/cpp",
-    "//sdk/lib/driver2:cpp",
     "//src/devices/lib/driver:driver_runtime",
   ]
 }

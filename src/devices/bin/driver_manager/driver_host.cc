@@ -4,7 +4,7 @@
 
 #include "driver_host.h"
 
-#include <lib/driver2/start_args.h>
+#include <lib/driver/component/cpp/start_args.h>
 #include <lib/fdio/spawn-actions.h>
 #include <lib/fdio/spawn.h>
 #include <zircon/status.h>

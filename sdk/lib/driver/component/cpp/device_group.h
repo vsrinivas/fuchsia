@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_DRIVER2_DEVICE_GROUP_H_
-#define LIB_DRIVER2_DEVICE_GROUP_H_
+#ifndef LIB_DRIVER_COMPONENT_CPP_DEVICE_GROUP_H_
+#define LIB_DRIVER_COMPONENT_CPP_DEVICE_GROUP_H_
 
 #include <fidl/fuchsia.driver.framework/cpp/fidl.h>
 
@@ -256,4 +256,4 @@ inline fuchsia_driver_framework::BindRule MakeRejectEnumBindRule(
 
 }  // namespace driver
 
-#endif  // LIB_DRIVER2_DEVICE_GROUP_H_
+#endif  // LIB_DRIVER_COMPONENT_CPP_DEVICE_GROUP_H_

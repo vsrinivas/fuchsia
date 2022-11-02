@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_DRIVER2_STRUCTURED_LOGGER_H_
-#define LIB_DRIVER2_STRUCTURED_LOGGER_H_
+#ifndef LIB_DRIVER_COMPONENT_CPP_STRUCTURED_LOGGER_H_
+#define LIB_DRIVER_COMPONENT_CPP_STRUCTURED_LOGGER_H_
 
-#include <lib/driver2/logger_internal.h>
+#include <lib/driver/component/cpp/logger_internal.h>
 
 // Used to denote a key-value pair for use in structured logging API calls.
 // This macro exists solely to improve readability of calls to FX_SLOG
@@ -20,4 +20,4 @@
 // Structured logging macro
 #define FDF_SLOG(flag, msg...) FDF_SLOG_ETC(FUCHSIA_LOG_##flag, msg)
 
-#endif  // LIB_DRIVER2_STRUCTURED_LOGGER_H_
+#endif  // LIB_DRIVER_COMPONENT_CPP_STRUCTURED_LOGGER_H_

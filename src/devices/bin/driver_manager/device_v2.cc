@@ -4,7 +4,7 @@
 
 #include "src/devices/bin/driver_manager/device_v2.h"
 
-#include <lib/driver2/node_add_args.h>
+#include <lib/driver/component/cpp/node_add_args.h>
 
 namespace dfv2 {
 

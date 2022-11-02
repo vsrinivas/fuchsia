@@ -6,7 +6,7 @@
 #define LIB_DRIVER_DEVFS_CPP_EXPORTER_H_
 
 #include <fidl/fuchsia.device.fs/cpp/wire.h>
-#include <lib/driver2/namespace.h>
+#include <lib/driver/component/cpp/namespace.h>
 #include <lib/sys/component/cpp/service_client.h>
 
 namespace driver {

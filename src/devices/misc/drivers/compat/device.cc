@@ -9,7 +9,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/binding_priv.h>
 #include <lib/driver/compat/cpp/symbols.h>
-#include <lib/driver2/node_add_args.h>
+#include <lib/driver/component/cpp/node_add_args.h>
 #include <lib/fdf/cpp/protocol.h>
 #include <lib/fit/defer.h>
 #include <lib/fpromise/bridge.h>

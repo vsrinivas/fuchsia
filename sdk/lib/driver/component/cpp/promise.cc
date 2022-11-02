@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/driver2/promise.h>
+#include <lib/driver/component/cpp/promise.h>
 #include <lib/fpromise/bridge.h>
 
 namespace fdf = fuchsia_driver_framework;

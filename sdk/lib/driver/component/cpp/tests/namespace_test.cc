@@ -4,8 +4,8 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/driver2/namespace.h>
-#include <lib/driver2/tests/test_base.h>
+#include <lib/driver/component/cpp/namespace.h>
+#include <lib/driver/component/cpp/tests/test_base.h>
 #include <lib/fidl/cpp/binding.h>
 
 #include <gtest/gtest.h>

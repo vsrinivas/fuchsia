@@ -4,7 +4,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_LIB_LOG_CPP_INCLUDE_DFV2_WLAN_DRIVERS_LOG_INSTANCE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_LIB_LOG_CPP_INCLUDE_DFV2_WLAN_DRIVERS_LOG_INSTANCE_H_
 
-#include <lib/driver2/logger.h>
+#include <lib/driver/component/cpp/logger.h>
 #include <stdint.h>
 
 namespace wlan::drivers::log {

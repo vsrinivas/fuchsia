@@ -5,7 +5,7 @@
 #include <lib/ddk/device.h>
 #include <lib/driver/compat/cpp/compat.h>
 #include <lib/driver/compat/cpp/symbols.h>
-#include <lib/driver2/driver2_cpp.h>
+#include <lib/driver/component/cpp/driver_cpp.h>
 
 #include <bind/fuchsia/test/cpp/bind.h>
 

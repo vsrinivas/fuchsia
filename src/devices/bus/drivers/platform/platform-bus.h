@@ -13,7 +13,7 @@
 #include <fuchsia/hardware/iommu/cpp/banjo.h>
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/device.h>
-#include <lib/driver2/outgoing_directory.h>
+#include <lib/driver/component/cpp/outgoing_directory.h>
 #include <lib/fdf/cpp/channel.h>
 #include <lib/fdf/cpp/dispatcher.h>
 #include <lib/sync/completion.h>

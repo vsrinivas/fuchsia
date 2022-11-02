@@ -7,21 +7,21 @@ import("//build/cpp/sdk_source_set.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":driver2-tests" ]
+  deps = [ ":driver-component-cpp-tests" ]
 }
 
 sdk_source_set("cpp") {
   category = "experimental"
-  sdk_name = "driver2_cpp"
+  sdk_name = "driver_component_cpp"
 
   include_base = "//sdk"
 
   sources = [
     "device_group.h",
-    "driver2_cpp.h",
     "driver_base.h",
     "driver_context.cc",
     "driver_context.h",
+    "driver_cpp.h",
     "handlers.h",
     "logger.cc",
     "logger.h",
@@ -110,12 +110,7 @@ executable("cpp_test") {
   configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
-fuchsia_unittest_component("driver2-cpp-test") {
+fuchsia_unittest_package("driver-component-cpp-tests") {
   manifest = "meta/cpp_test.cml"
-
   deps = [ ":cpp_test" ]
-}
-
-fuchsia_test_package("driver2-tests") {
-  test_components = [ ":driver2-cpp-test" ]
 }

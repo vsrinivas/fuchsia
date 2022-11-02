@@ -32,7 +32,7 @@ fuchsia_driver("root-driver") {
     ":fuchsia.runtime.test_cpp_wire",
     ":root-bind",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_cpp",
-    "//sdk/lib/driver2:cpp",
+    "//sdk/lib/driver/component/cpp:cpp",
     "//src/devices/bind/fuchsia.test:fuchsia.test_cpp",
     "//src/devices/lib/driver:driver_runtime",
   ]
@@ -59,7 +59,7 @@ fuchsia_driver("leaf-driver") {
   deps = [
     ":fuchsia.runtime.test_cpp",
     ":runtime-dispatcher-leaf-bind",
-    "//sdk/lib/driver2:cpp",
+    "//sdk/lib/driver/component/cpp:cpp",
     "//src/devices/lib/driver:driver_runtime",
   ]
 }

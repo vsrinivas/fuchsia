@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_DRIVER2_SERVICE_CLIENT_H_
-#define LIB_DRIVER2_SERVICE_CLIENT_H_
+#ifndef LIB_DRIVER_COMPONENT_CPP_SERVICE_CLIENT_H_
+#define LIB_DRIVER_COMPONENT_CPP_SERVICE_CLIENT_H_
 
-#include <lib/driver2/handlers.h>
-#include <lib/driver2/namespace.h>
-#include <lib/driver2/outgoing_directory.h>
+#include <lib/driver/component/cpp/handlers.h>
+#include <lib/driver/component/cpp/namespace.h>
+#include <lib/driver/component/cpp/outgoing_directory.h>
 #include <lib/fdf/cpp/protocol.h>
 
 namespace driver {
@@ -70,4 +70,4 @@ zx::result<fidl::internal::ClientEndType<typename ServiceMember::ProtocolType>> 
 
 }  // namespace driver
 
-#endif  // LIB_DRIVER2_SERVICE_CLIENT_H_
+#endif  // LIB_DRIVER_COMPONENT_CPP_SERVICE_CLIENT_H_

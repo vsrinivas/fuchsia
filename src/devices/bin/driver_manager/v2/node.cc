@@ -5,8 +5,8 @@
 #include "src/devices/bin/driver_manager/v2/node.h"
 
 #include <fidl/fuchsia.driver.framework/cpp/fidl.h>
-#include <lib/driver2/node_add_args.h>
-#include <lib/driver2/start_args.h>
+#include <lib/driver/component/cpp/node_add_args.h>
+#include <lib/driver/component/cpp/start_args.h>
 
 #include <deque>
 #include <unordered_set>

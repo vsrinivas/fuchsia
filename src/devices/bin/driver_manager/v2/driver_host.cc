@@ -4,7 +4,7 @@
 
 #include "src/devices/bin/driver_manager/v2/driver_host.h"
 
-#include <lib/driver2/start_args.h>
+#include <lib/driver/component/cpp/start_args.h>
 
 #include "src/devices/lib/log/log.h"
 

@@ -6,7 +6,7 @@
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/ddk/debug.h>
-#include <lib/driver2/start_args.h>
+#include <lib/driver/component/cpp/start_args.h>
 #include <lib/fdf/cpp/env.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/vmo.h>

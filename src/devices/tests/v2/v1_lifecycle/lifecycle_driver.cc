@@ -15,7 +15,7 @@
 #include <lib/driver/compat/cpp/context.h>
 #include <lib/driver/compat/cpp/device_server.h>
 #include <lib/driver/compat/cpp/symbols.h>
-#include <lib/driver2/driver2_cpp.h>
+#include <lib/driver/component/cpp/driver_cpp.h>
 
 namespace fdf {
 using namespace fuchsia_driver_framework;

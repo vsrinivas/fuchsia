@@ -6,7 +6,7 @@
 
 #include <fidl/fuchsia.io/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
-#include <lib/driver2/start_args.h>
+#include <lib/driver/component/cpp/start_args.h>
 #include <lib/fdf/cpp/dispatcher.h>
 #include <lib/fdf/cpp/env.h>
 #include <lib/fit/defer.h>

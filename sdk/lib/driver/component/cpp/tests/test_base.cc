@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/driver2/tests/test_base.h>
+#include <lib/driver/component/cpp/tests/test_base.h>
 
 namespace driver::testing {
 
