@@ -178,7 +178,7 @@ void BtTransportUart::HciHandleClientChannel(zx::channel* chan, zx_signals_t pen
     snoop_type = BT_HCI_SNOOP_TYPE_SCO;
     chan_name = "SCO";
   } else {
-    // This should never happen, we only know about two packet types currently.
+    // This should never happen, we only know about three packet types currently.
     ZX_ASSERT(false);
     return;
   }
