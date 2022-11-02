@@ -174,9 +174,9 @@ TEST(ServerBinding, CannotBindUnsynchronizedDispatcher) {
   async::PostTask(dispatcher->async_dispatcher(), [&] {
     ASSERT_DEATH(binding.emplace(dispatcher->get(), std::move(endpoints->server), &server,
                                  [](fidl::UnbindInfo) {}),
-                 "The selected FIDL bindings is thread unsafe. A synchronized fdf_dispatcher_t is "
-                 "required. Ensure the fdf_dispatcher_t does not have the "
-                 "|FDF_DISPATCHER_OPTION_UNSYNCHRONIZED| option.");
+                 "The selected FIDL bindings is thread unsafe\\. A synchronized fdf_dispatcher_t "
+                 "is required\\. Ensure the fdf_dispatcher_t does not have the "
+                 "\\|FDF_DISPATCHER_OPTION_UNSYNCHRONIZED\\| option\\.");
     binding.reset();
     created.Signal();
   });

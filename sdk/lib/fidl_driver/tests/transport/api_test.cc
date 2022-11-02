@@ -6,6 +6,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/sync/cpp/completion.h>
 
+#include <thread>
+
 #include <gtest/gtest.h>
 
 #include "sdk/lib/fidl_driver/tests/transport/api_test_helper.h"
@@ -84,9 +86,9 @@ TEST(WireClient, CannotDestroyInDifferentDispatcherThanBound) {
   libsync::Completion destroyed;
   async::PostTask(dispatcher2.async_dispatcher(), [&] {
     ASSERT_DEATH(client.reset(),
-                 "The selected FIDL bindings is thread unsafe. Access from multiple driver "
-                 "dispatchers detected. This is not allowed. Ensure the object is used from the "
-                 "same |fdf_dispatcher_t|.");
+                 "The selected FIDL bindings is thread unsafe\\. Access from multiple driver "
+                 "dispatchers detected\\. This is not allowed\\. Ensure the object is used from "
+                 "the same \\|fdf_dispatcher_t\\|.");
     destroyed.Signal();
   });
   ASSERT_OK(destroyed.Wait());
@@ -122,8 +124,9 @@ TEST(WireClient, CannotDestroyOnUnmanagedThread) {
   std::thread thread([&] {
     ASSERT_DEATH(
         client.reset(),
-        "The selected FIDL bindings is thread unsafe. The current thread is not managed by a "
-        "driver dispatcher. Ensure the object is always used from a dispatcher managed thread.");
+        "The selected FIDL bindings is thread unsafe\\. The current thread is not managed by a "
+        "driver dispatcher\\. Ensure the object is always used from "
+        "a dispatcher managed thread\\.");
     destroyed.Signal();
   });
   ASSERT_OK(destroyed.Wait());
@@ -217,9 +220,9 @@ TEST(WireClient, CannotBindUnsynchronizedDispatcher) {
   libsync::Completion created;
   async::PostTask(dispatcher->async_dispatcher(), [&] {
     ASSERT_DEATH(client.Bind(std::move(endpoints->client), dispatcher->get()),
-                 "The selected FIDL bindings is thread unsafe. A synchronized fdf_dispatcher_t is "
-                 "required. Ensure the fdf_dispatcher_t does not have the "
-                 "|FDF_DISPATCHER_OPTION_UNSYNCHRONIZED| option.");
+                 "The selected FIDL bindings is thread unsafe\\. A synchronized fdf_dispatcher_t "
+                 "is required\\. Ensure the fdf_dispatcher_t does not have the "
+                 "\\|FDF_DISPATCHER_OPTION_UNSYNCHRONIZED\\| option\\.");
     client = {};
     created.Signal();
   });
