@@ -31,7 +31,6 @@ if (is_host) {
 
   go_library("raw_printer_test_lib") {
     testonly = true
-    name = "cpuperf/printer/tests"
     non_go_deps = [
       ":cpuperf_print",
       ":raw_printer_test_data",

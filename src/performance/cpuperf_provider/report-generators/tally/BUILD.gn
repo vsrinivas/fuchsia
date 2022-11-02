@@ -7,8 +7,6 @@ import("//build/go/go_library.gni")
 import("//build/host.gni")
 
 go_library("lib") {
-  name = "tally"
-
   sources = [ "main.go" ]
 
   deps = [ "//third_party/golibs:github.com/dustin/go-humanize" ]

@@ -18,7 +18,6 @@ go_library("lib") {
 }
 
 go_library("main") {
-  name = "main"
   source_dir = "cmd"
   sources = [ "whereiscl.go" ]
   deps = [ ":lib" ]

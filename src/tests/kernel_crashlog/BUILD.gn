@@ -19,8 +19,6 @@ if (is_linux) {
   go_library("lib") {
     testonly = true
 
-    name = "fuchsia.googlesource.com/tests/kernel_crashlog"
-
     deps = [ "//tools/emulator/emulatortest" ]
 
     sources = [ "kernel_crashlog_test.go" ]

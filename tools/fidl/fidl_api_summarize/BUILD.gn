@@ -8,7 +8,6 @@ import("//build/host.gni")
 
 if (is_host) {
   go_library("gopkg") {
-    name = "main"
     sources = [ "main.go" ]
     deps = [
       "//tools/fidl/lib/fidlgen",

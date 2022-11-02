@@ -9,8 +9,6 @@ import("//build/host.gni")
 import("//build/testing/host_test_data.gni")
 
 go_library("lib") {
-  name = "traceutil"
-
   sources = [
     "actions.go",
     "check_build.go",

@@ -6,7 +6,6 @@ import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 
 go_library("lib") {
-  name = "fake_zedmon"
   sources = [ "fake_zedmon.go" ]
 }
 

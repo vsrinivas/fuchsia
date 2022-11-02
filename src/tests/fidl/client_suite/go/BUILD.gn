@@ -13,7 +13,6 @@ go_binary("bin") {
 }
 
 go_library("lib") {
-  name = "client_suite_under_test_go"
   deps = [
     "//src/lib/component",
     "//src/tests/fidl/client_suite/fidl:fidl.clientsuite_go($go_toolchain)",

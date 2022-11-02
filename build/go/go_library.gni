@@ -46,9 +46,26 @@ template("go_library") {
     source_dir = invoker.source_dir
   }
 
-  # TODO(fxbug.dev/58755): Fail if a go_library sets `name` to the default
-  # value, as it's redundant.
   if (defined(invoker.name)) {
+    # All libraries should use the default `name` value, with just a couple
+    # exceptions:
+    assert(filter_exclude([ rebase_path(source_dir, "//") ],
+                          [
+                            # Third-party repositories must set `name` to the
+                            # canonical go package name.
+                            "third_party/*",
+
+                            # There's no standard naming scheme for libraries
+                            # that are generated at build time, so `name` must
+                            # be set.
+                            rebase_path(root_build_dir, "//") + "/*",
+
+                            # Required to support setting the `syzkaller_dir` GN
+                            # arg to point to a syzkaller checkout outside the
+                            # platform source tree.
+                            "../*",
+                          ]) == [],
+           "go_library name cannot be overridden")
     name_args = [
       "--name",
       invoker.name,

@@ -40,7 +40,6 @@ go_binary("go_fidl_microbenchmarks_bin") {
 
 go_library("go_fidl_microbenchmarks_lib") {
   testonly = true
-  name = "go_fidl_microbenchmarks"
   deps = [
     ":benchmark_suite_go_lib",
     "//src/lib/go-benchmarking",

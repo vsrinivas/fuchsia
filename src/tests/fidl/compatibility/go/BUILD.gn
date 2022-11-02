@@ -10,7 +10,6 @@ import("//build/go/toolchain.gni")
 # The go_binary GN rule requires us to declare a go_library that creates the
 # gopackage, even if the library doesn't have any sources.
 go_library("lib") {
-  name = "compatibility_test"
   deps = [
     "//src/lib/component",
     "//src/tests/fidl/compatibility/fidl:fidl_service_go($go_toolchain)",
