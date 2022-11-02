@@ -21,7 +21,6 @@ source_set("paver-core") {
   sources = [
     "abr-client-vboot.cc",
     "abr-client.cc",
-    "abr.cc",
     "device-partitioner.cc",
     "fvm.cc",
     "partition-client.cc",
@@ -185,6 +184,17 @@ source_set("luis") {
   ]
 }
 
+source_set("pinecrest") {
+  sources = [ "pinecrest.cc" ]
+  deps = [
+    ":gpt",
+    ":paver-core",
+    "//src/devices/lib/amlogic",
+    "//src/lib/uuid",
+    "//src/storage/gpt",
+  ]
+}
+
 source_set("vim3") {
   sources = [ "vim3.cc" ]
   deps = [
@@ -219,6 +229,7 @@ zx_library("paver") {
     ":luis",
     ":nelson",
     ":paver-core",
+    ":pinecrest",
     ":sherlock",
     ":vim3",
     ":x64",

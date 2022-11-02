@@ -40,6 +40,7 @@
 #include "src/storage/lib/paver/chromebook-x64.h"
 #include "src/storage/lib/paver/luis.h"
 #include "src/storage/lib/paver/nelson.h"
+#include "src/storage/lib/paver/pinecrest.h"
 #include "src/storage/lib/paver/sherlock.h"
 #include "src/storage/lib/paver/test/test-utils.h"
 #include "src/storage/lib/paver/utils.h"
@@ -2051,6 +2052,129 @@ TEST_F(NelsonPartitionerTests, ReadBootloaderBSucceed) {
   ASSERT_NO_FATAL_FAILURE(TestBootloaderRead(spec, 0x03, kTplImageValue, &status, read_buf.data()));
   ASSERT_OK(status);
   ASSERT_NO_FATAL_FAILURE(ValidateBootloaderRead(read_buf.data(), kBL2ImageValue, kTplImageValue));
+}
+
+class PinecrestPartitionerTests : public GptDevicePartitionerTests {
+ protected:
+  PinecrestPartitionerTests() : GptDevicePartitionerTests("pinecrest", 512) {}
+
+  // Create a DevicePartition for a device.
+  zx::result<std::unique_ptr<paver::DevicePartitioner>> CreatePartitioner(
+      const fbl::unique_fd& device) {
+    fidl::ClientEnd<fuchsia_io::Directory> svc_root = GetSvcRoot();
+    return paver::PinecrestPartitioner::Initialize(devmgr_.devfs_root().duplicate(), svc_root,
+                                                   device);
+  }
+};
+
+TEST_F(PinecrestPartitionerTests, InitializeWithoutGptFails) {
+  std::unique_ptr<BlockDevice> gpt_dev;
+  ASSERT_NO_FATAL_FAILURE(CreateDisk(&gpt_dev));
+
+  ASSERT_NOT_OK(CreatePartitioner(kDummyDevice));
+}
+
+TEST_F(PinecrestPartitionerTests, InitializeWithoutFvmSucceeds) {
+  std::unique_ptr<BlockDevice> gpt_dev;
+  ASSERT_NO_FATAL_FAILURE(CreateDisk(32 * kGibibyte, &gpt_dev));
+
+  {
+    // Pause the block watcher while we write partitions to the disk.
+    // This is to avoid the block watcher seeing an intermediate state of the partition table
+    // and incorrectly treating it as an MBR.
+    // The watcher is automatically resumed when this goes out of scope.
+    auto pauser = paver::BlockWatcherPauser::Create(GetSvcRoot());
+    ASSERT_OK(pauser);
+
+    // Set up a valid GPT.
+    std::unique_ptr<gpt::GptDevice> gpt;
+    ASSERT_NO_FATAL_FAILURE(CreateGptDevice(gpt_dev.get(), &gpt));
+
+    ASSERT_OK(CreatePartitioner(kDummyDevice));
+  }
+}
+
+TEST_F(PinecrestPartitionerTests, AddPartitionNotSupported) {
+  std::unique_ptr<BlockDevice> gpt_dev;
+  ASSERT_NO_FATAL_FAILURE(CreateDisk(64 * kMebibyte, &gpt_dev));
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
+
+  auto status = CreatePartitioner(gpt_fd.value());
+  ASSERT_OK(status);
+
+  ASSERT_STATUS(status->AddPartition(PartitionSpec(paver::Partition::kZirconB)),
+                ZX_ERR_NOT_SUPPORTED);
+}
+
+TEST_F(PinecrestPartitionerTests, FindPartition) {
+  std::unique_ptr<BlockDevice> gpt_dev;
+  // kBlockCount should be a value large enough to accommodate all partitions and blocks reserved by
+  // gpt. The current value is copied from the case of sherlock.
+  constexpr uint64_t kBlockCount = 0x748034;
+  ASSERT_NO_FATAL_FAILURE(CreateDisk(kBlockCount * block_size_, &gpt_dev));
+
+  // The initial gpt partitions are randomly chosen and does not necessarily reflect the
+  // actual gpt partition layout in product.
+  const std::vector<PartitionDescription> kPinecrestNewPartitions = {
+      {GUID_ABR_META_NAME, kAbrMetaType, 0x10400, 0x10000},
+      {"boot_a", kZirconAType, 0x50400, 0x10000},
+      {"boot_b", kZirconBType, 0x60400, 0x10000},
+      {"system_a", kDummyType, 0x70400, 0x10000},
+      {"system_b", kDummyType, 0x80400, 0x10000},
+      {GPT_VBMETA_A_NAME, kVbMetaAType, 0x90400, 0x10000},
+      {GPT_VBMETA_B_NAME, kVbMetaBType, 0xa0400, 0x10000},
+      {"reserved_a", kDummyType, 0xc0400, 0x10000},
+      {"reserved_b", kDummyType, 0xd0400, 0x10000},
+      {"reserved_c", kVbMetaRType, 0xe0400, 0x10000},
+      {"cache", kZirconRType, 0xf0400, 0x10000},
+      {"data", kFvmType, 0x100400, 0x10000},
+
+  };
+  ASSERT_NO_FATAL_FAILURE(InitializeStartingGPTPartitions(gpt_dev.get(), kPinecrestNewPartitions));
+
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
+  auto status = CreatePartitioner(gpt_fd.value());
+  ASSERT_OK(status);
+  std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
+
+  // Make sure we can find the important partitions.
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconA)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconB)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconR)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaA)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaB)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaR)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kAbrMeta)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager)));
+}
+
+TEST_F(PinecrestPartitionerTests, SupportsPartition) {
+  std::unique_ptr<BlockDevice> gpt_dev;
+  ASSERT_NO_FATAL_FAILURE(CreateDisk(64 * kMebibyte, &gpt_dev));
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
+
+  auto status = CreatePartitioner(gpt_fd.value());
+  ASSERT_OK(status);
+  std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
+
+  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconA)));
+  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconB)));
+  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconR)));
+  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kVbMetaA)));
+  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kVbMetaB)));
+  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kVbMetaR)));
+  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kAbrMeta)));
+  EXPECT_TRUE(
+      partitioner->SupportsPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager)));
+  // Unsupported partition type.
+  EXPECT_FALSE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kUnknown)));
+
+  // Unsupported content type.
+  EXPECT_FALSE(
+      partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconA, "foo_type")));
 }
 
 class Vim3PartitionerTests : public GptDevicePartitionerTests {
