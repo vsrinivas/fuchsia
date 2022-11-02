@@ -54,7 +54,8 @@ impl Session {
     state_accessor!(Session, mutable_state);
 }
 
-state_implementation!(Session, SessionMutableState, {
+#[apply(state_implementation!)]
+impl SessionMutableState<Base = Session> {
     /// Removes the process group from the session. Returns whether the session is empty.
     pub fn remove(&mut self, pid: pid_t) {
         self.process_groups.remove(&pid);
@@ -63,7 +64,7 @@ state_implementation!(Session, SessionMutableState, {
     pub fn insert(&mut self, process_group: &Arc<ProcessGroup>) {
         self.process_groups.insert(process_group.leader, Arc::downgrade(process_group));
     }
-});
+}
 
 /// The controlling terminal of a session.
 #[derive(Clone, Debug)]

@@ -132,7 +132,8 @@ impl ProcessGroup {
     }
 }
 
-state_implementation!(ProcessGroup, ProcessGroupMutableState, {
+#[apply(state_implementation!)]
+impl ProcessGroupMutableState<Base = ProcessGroup> {
     pub fn thread_groups(&self) -> Box<dyn Iterator<Item = Arc<ThreadGroup>> + '_> {
         Box::new(self.thread_groups.values().map(|t| {
             t.upgrade()
@@ -146,4 +147,4 @@ state_implementation!(ProcessGroup, ProcessGroupMutableState, {
 
         self.thread_groups.is_empty()
     }
-});
+}

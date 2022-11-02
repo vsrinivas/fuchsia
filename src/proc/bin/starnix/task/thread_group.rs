@@ -624,7 +624,8 @@ impl ThreadGroup {
     }
 }
 
-state_implementation!(ThreadGroup, ThreadGroupMutableState, {
+#[apply(state_implementation!)]
+impl ThreadGroupMutableState<Base = ThreadGroup> {
     pub fn leader(&self) -> pid_t {
         self.base.leader
     }
@@ -769,7 +770,7 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
         // to dispatch the signal.
         self.get_task().ok()
     }
-});
+}
 
 #[cfg(test)]
 mod test {

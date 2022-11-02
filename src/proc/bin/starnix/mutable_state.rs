@@ -18,12 +18,13 @@
 //! ```
 //! - Write the method on the guards using the state_implementation macro:
 //! ```
-//! state_implementation!(Foo, FooMutableState, {
+//! #[apply(state_implementation!)]
+//! impl FooMutableState<Base=Foo> {
 //!     // Some comment
 //!     fn do_something(&self) -> i32 {
 //!         0
 //!     }
-//! });
+//! }
 //! ```
 //!
 //! # Complete example:
@@ -46,7 +47,8 @@
 //!     state_accessor!(Foo, mutable_state);
 //! }
 //!
-//! state_implementation!(Foo, FooMutableState, {
+//! #[attr(state_implementation!)]
+//! impl FooMutableState<Base=Foo> {
 //!     // Some comment
 //!     fn x_and_y(&self) -> i32 {
 //!         self.base.x + self.y
@@ -74,7 +76,7 @@
 //!     pub fn with_lifecycle_and_type<'a, T>(&self, _n: &'a T) {}
 //!     #[allow(dead_code)]
 //!     pub fn with_lifecycle_on_self<'a, T>(&'a self, _n: &'a T) {}
-//! });
+//! }
 //! ```
 //!
 //! # Generated code
@@ -172,7 +174,7 @@ macro_rules! state_accessor {
 
 /// Create the structs for the read and write guards using the methods defined inside the macro.
 macro_rules! state_implementation {
-    ($base_name:ident, $mutable_name: ident, {
+    (impl $mutable_name:ident<Base=$base_name:ident> {
         $(
             $tt:tt
         )*
@@ -294,7 +296,8 @@ mod test {
         state_accessor!(Foo, mutable_state);
     }
 
-    state_implementation!(Foo, FooMutableState, {
+    #[apply(state_implementation!)]
+    impl FooMutableState<Base = Foo> {
         // Some comment
         fn x_and_y(&self) -> i32 {
             self.base.x + self.y
@@ -322,7 +325,7 @@ mod test {
         pub fn with_lifecycle_and_type<'a, T>(&self, _n: &'a T) {}
         #[allow(dead_code)]
         pub fn with_lifecycle_on_self<'a, T>(&'a self, _n: &'a T) {}
-    });
+    }
 
     fn take_foo_state(foo_state: &FooStateRef<'_>) -> i32 {
         foo_state.pub_x_and_y()

@@ -87,6 +87,7 @@ if (target_cpu == "x64" && !is_asan) {
       "//third_party/rust_crates:futures",
       "//third_party/rust_crates:itertools",
       "//third_party/rust_crates:lazy_static",
+      "//third_party/rust_crates:macro_rules_attribute",
       "//third_party/rust_crates:maplit",
       "//third_party/rust_crates:memchr",
       "//third_party/rust_crates:memoffset",

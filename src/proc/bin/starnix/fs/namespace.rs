@@ -210,7 +210,8 @@ impl Mount {
     state_accessor!(Mount, state);
 }
 
-state_implementation!(Mount, MountState, {
+#[apply(state_implementation!)]
+impl MountState<Base = Mount> {
     /// Add a child mount *without propagating it to the peer group*. For internal use only.
     fn add_submount_internal(&mut self, dir: &DirEntryHandle, mount: MountHandle) {
         if !dir.is_descendant_of(&self.base.root) {
@@ -249,7 +250,7 @@ state_implementation!(Mount, MountState, {
             peer_group.remove(&**self.base);
         }
     }
-});
+}
 
 impl PeerGroup {
     fn new() -> Arc<Self> {

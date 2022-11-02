@@ -5,6 +5,9 @@
 #![warn(clippy::all)]
 #![allow(clippy::too_many_arguments)]
 
+#[macro_use]
+extern crate macro_rules_attribute;
+
 use crate::execution::create_galaxy;
 use anyhow::Error;
 use fidl::endpoints::ControlHandle;

@@ -341,7 +341,8 @@ impl PendingSignals {
     }
 }
 
-state_implementation!(Terminal, TerminalMutableState, {
+#[apply(state_implementation!)]
+impl TerminalMutableState<Base = Terminal> {
     /// Returns the controlling session of the terminal. |is_main| is used to choose whether the
     /// caller needs the controlling session of the main part of the terminal or the replica.
     pub fn get_controlling_session(&self, is_main: bool) -> &Option<ControllingSession> {
@@ -757,7 +758,7 @@ state_implementation!(Terminal, TerminalMutableState, {
 
         (return_value, signals)
     }
-});
+}
 
 impl Drop for Terminal {
     fn drop(&mut self) {
