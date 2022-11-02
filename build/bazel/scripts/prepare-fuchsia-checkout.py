@@ -43,9 +43,24 @@ def clone_git_commit(git_url, git_commit, dst_dir):
     git_cmd(['reset', '--hard', 'FETCH_HEAD'])
 
 
-def get_bazel_download_url(version):
-    return 'https://github.com/bazelbuild/bazel/releases/download/{version}/bazel-{version}-{platform}'.format(
-        version=version, platform='linux-x86_64')
+def get_bazel_download_url(version: str) -> str:
+    """Return Bazel download URL for a specific version and the current host platform."""
+    if sys.platform == 'linux':
+        host_os = 'linux'
+    elif sys.platform == 'darwin':
+        host_os = 'darwin'
+    elif sys.platform in ('win32', 'cygwin'):
+        host_os = 'windows'
+    else:
+        host_os = os.uname().sysname
+
+    host_cpu = os.uname().machine
+    if host_cpu.startswith(('armv8', 'aarch64')):
+        host_cpu = 'arm64'
+
+    ext = '.exe' if host_os == 'windows' else ''
+
+    return f'https://github.com/bazelbuild/bazel/releases/download/{version}/bazel-{version}-{host_os}-{host_cpu}{ext}'
 
 
 def get_bazel_version(bazel_launcher):

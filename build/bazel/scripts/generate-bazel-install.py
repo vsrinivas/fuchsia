@@ -13,6 +13,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import urllib.request
 import zipfile
 
 _SCRIPT_DIR = os.path.dirname(__file__)
@@ -97,17 +98,40 @@ def git_clone_commit(git_url, git_commit, dst_dir):
     git_cmd(['reset', '--hard', git_commit])
 
 
+def get_bazel_download_url(version: str) -> str:
+    """Return Bazel download URL for a specific version and the current host platform."""
+    if sys.platform == 'linux':
+        host_os = 'linux'
+    elif sys.platform == 'darwin':
+        host_os = 'darwin'
+    elif sys.platform in ('win32', 'cygwin'):
+        host_os = 'windows'
+    else:
+        host_os = os.uname().sysname
+
+    host_cpu = os.uname().machine
+    if host_cpu.startswith(('armv8', 'aarch64')):
+        host_cpu = 'arm64'
+
+    ext = '.exe' if host_os == 'windows' else ''
+
+    return f'https://github.com/bazelbuild/bazel/releases/download/{version}/bazel-{version}-{host_os}-{host_cpu}{ext}'
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--bazel", help="Path to input Bazel binary.", required=True)
+    bazel_group = parser.add_mutually_exclusive_group(required=True)
+    bazel_group.add_argument(
+        "--bazel-version", help="Bazel version to download.")
+    bazel_group.add_argument("--bazel", help="Path to local Bazel binary.")
+
     parser.add_argument(
         "--force",
         action="store_true",
         default=False,
         help="Force installation if install_dir already exists.",
     )
-    group = parser.add_mutually_exclusive_group()
+    group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
         "--install-dir", metavar="INSTALL_DIR", help="Install directory.")
     group.add_argument(
@@ -116,6 +140,18 @@ def main():
         help="Generate zip archive.")
 
     args = parser.parse_args()
+
+    bazel_download_dir = None
+
+    if args.bazel_version:
+        bazel_download_dir = tempfile.TemporaryDirectory()
+        bazel_bin = os.path.join(
+            bazel_download_dir.name, 'bazel-' + args.bazel_version)
+        url = get_bazel_download_url(args.bazel_version)
+        print('Downloading %s' % url)
+        urllib.request.urlretrieve(url, bazel_bin)
+        os.chmod(bazel_bin, 0o750)
+        args.bazel = bazel_bin
 
     if not os.path.exists(args.bazel):
         return parser.error("File does not exist: %s" % args.bazel)
