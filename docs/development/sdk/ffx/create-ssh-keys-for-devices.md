@@ -27,6 +27,8 @@ $HOME/.ssh/fuchsia_ed25519
 $HOME/.ssh/fuchsia_authorized_keys
 ```
 
+These files are created by `ffx` if they do not exist.
+
 Note: These keys are not password protected. Don't use these keys for
 non-development devices.
 
@@ -44,44 +46,6 @@ If you have multiple development machines,
 it's recommended that the Fuchsia SSH keys are synchronized across
 your development machines. This may require you to copy the existing
 Fuchsia SSH keys files from one machine to another.
-
-## Generate SSH keys manually
-
-Note: Fuchsia-specific SSH keys are only used to connect to Fuchsia devices
-during development. Generating these SSH keys won't alter your current SSH settings.
-
-To manually generate Fuchsia-specific SSH keys on your host machine, do the following;
-
-1.  Generate a new private and public SSH key pair:
-
-    ```posix-terminal
-    ssh-keygen -P "" -t ed25519 -f "${HOME}/.ssh/fuchsia_ed25519" -C "${USER}@$(hostname -f) Shared SSH Key for Fuchsia"
-    ```
-
-1.  Generate a `fuchsia_authorized_keys` file:
-
-    ```posix-terminal
-    ssh-keygen -y -f "${HOME}/.ssh/fuchsia_ed25519" > "${HOME}/.ssh/fuchsia_authorized_keys"
-    ```
-
-1.  Verify that Fuchsia-specific SSH keys are generated:
-
-    ```posix-terminal
-    ls ~/.ssh | grep fuchsia
-    ```
-
-    This command prints output similar to the following:
-
-    ```none {:.devsite-disable-click-to-copy}
-    $ ls ~/.ssh | grep fuchsia
-    fuchsia_authorized_keys
-    fuchsia_ed25519
-    fuchsia_ed25519.pub
-    ```
-
-After creating new SSH keys, you'd need to
-[flash your Fuchsia device][flash-device] again so that the device is loaded with
-the new `fuchsia_authorized_keys` file.
 
 <!-- Reference links -->
 
