@@ -23,6 +23,12 @@ static constexpr uint16_t kMinERSTEntries = 16;
 // to the HC, at startup.
 static constexpr size_t kTargetEventRingTRBs = 2048;
 
+// The number of TRBs we should update ERDP Reg after. According to note in 4.9.4, we should process
+// as many Events as possible before writing to ERDP. But practically, we need to limit the maximum
+// number of TRBs before writing. Otherwise, the lag between consuming an ED and moving the ERDP
+// forward may cause the ring to become full with consumed EDs which have yet to be relinquished.
+static constexpr size_t kUpdateERDPAfterTRBs = 128;
+
 zx_status_t EventRingSegmentTable::Init(size_t page_size, const zx::bti& bti, bool is_32bit,
                                         uint32_t erst_max, ERSTSZ erst_size,
                                         const dma_buffer::BufferFactory& factory,
@@ -537,6 +543,19 @@ std::optional<Control> EventRing::CurrentErdp() {
   return control;
 }
 
+zx_paddr_t EventRing::UpdateErdpReg(zx_paddr_t last_phys) {
+  if (last_phys != erdp_phys_) {
+    executor_.run_until_idle();
+    {
+      fbl::AutoLock l(&segment_mutex_);
+      erdp_reg_ =
+          erdp_reg_.set_Pointer(erdp_phys_).set_DESI(segment_index_).set_EHB(1).WriteTo(mmio_);
+    }
+    last_phys = erdp_phys_;
+  }
+  return last_phys;
+}
+
 zx_status_t EventRing::HandleIRQ() {
   iman_reg_.set_IP(1).set_IE(1).WriteTo(mmio_);
   bool avoid_yield = false;
@@ -598,18 +617,13 @@ zx_status_t EventRing::HandleIRQ() {
 
       AdvanceErdp();
       control = CurrentErdp();
-    }
 
-    if (last_phys != erdp_phys_) {
-      executor_.run_until_idle();
-      {
-        fbl::AutoLock l(&segment_mutex_);
-        erdp_reg_ =
-            erdp_reg_.set_Pointer(erdp_phys_).set_DESI(segment_index_).set_EHB(1).WriteTo(mmio_);
+      if (processed_trbs % kUpdateERDPAfterTRBs) {
+        last_phys = UpdateErdpReg(last_phys);
       }
-      last_phys = erdp_phys_;
     }
 
+    last_phys = UpdateErdpReg(last_phys);
     if (!hci_->HasCoherentState()) {
       // Check for stale value in cache
       InvalidatePageCache(erdp_virt_, ZX_CACHE_FLUSH_INVALIDATE | ZX_CACHE_FLUSH_DATA);

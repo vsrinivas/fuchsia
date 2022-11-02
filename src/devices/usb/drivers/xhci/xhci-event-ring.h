@@ -135,6 +135,7 @@ class EventRing {
   //                usually expect), but the current TRB already evaluated.
   // Returns the next TRB pointed to by ERDP.
   void AdvanceErdp();
+  zx_paddr_t UpdateErdpReg(zx_paddr_t last_phys);
 
   std::optional<Control> CurrentErdp();
 
