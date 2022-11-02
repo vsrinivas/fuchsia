@@ -158,35 +158,20 @@ The component manifest file defines the attributes of the component's executable
 including program arguments, and the component's capabilities.
 Add the following contents to `meta/echo.cml`:
 
+{% set cml_rust %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/rust/meta/echo.cml" region_tag="manifest" adjust_indentation="auto" %}
+{% endset %}
+
+{% set cml_cpp %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/cpp/meta/echo.cml" region_tag="manifest" adjust_indentation="auto" %}
+{% endset %}
+
 * {Rust}
 
   `echo-args/meta/echo.cml`:
 
   ```json5
-  {
-      include: [
-          // Enable logging.
-          "syslog/client.shard.cml",
-      ],
-
-      // Information about the program to run.
-      program: {
-          // Use the built-in ELF runner.
-          runner: "elf",
-
-          // The binary to run for this component.
-          binary: "bin/echo-args",
-
-          // Program arguments
-          args: [
-              "Alice",
-              "Bob",
-          ],
-
-          // Program environment variables
-          environ: [ "FAVORITE_ANIMAL=Spot" ],
-      },
-  }
+  {{ cml_rust|replace("echo_example_rust","echo-args")|trim() }}
   ```
 
 * {C++}
@@ -194,30 +179,7 @@ Add the following contents to `meta/echo.cml`:
   `echo-args/meta/echo.cml`:
 
   ```json5
-  {
-      include: [
-          // Enable logging.
-          "syslog/client.shard.cml",
-      ],
-
-      // Information about the program to run.
-      program: {
-          // Use the built-in ELF runner.
-          runner: "elf",
-
-          // The binary to run for this component.
-          binary: "bin/echo-args",
-
-          // Program arguments
-          args: [
-              "Alice",
-              "Bob",
-          ],
-
-          // Program environment variables
-          environ: [ "FAVORITE_ANIMAL=Spot" ],
-      },
-  }
+  {{ cml_cpp|replace("echo_example_cpp","echo-args")|trim() }}
   ```
 
 ### Log the arguments
@@ -315,13 +277,28 @@ on the length of the list.
 
 Update the program's dependencies in your `BUILD.gn` file:
 
+{% set gn_rust_binary %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/rust/BUILD.gn" region_tag="executable" adjust_indentation="auto" %}
+{% endset %}
+
+{% set gn_rust_component %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/rust/BUILD.gn" region_tag="component" adjust_indentation="auto" %}
+{% endset %}
+
+{% set gn_cpp_binary %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/cpp/BUILD.gn" region_tag="executable" adjust_indentation="auto" %}
+{% endset %}
+
+{% set gn_cpp_component %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/cpp/BUILD.gn" region_tag="component" adjust_indentation="auto" %}
+{% endset %}
+
 * {Rust}
 
   `echo-args/BUILD.gn`:
 
   ```gn
-  import("//build/components.gni")
-  import("//build/rust/rustc_binary.gni")
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/rust/BUILD.gn" region_tag="imports" adjust_indentation="auto" %}
 
   group("echo-args") {
     testonly = true
@@ -330,26 +307,9 @@ Update the program's dependencies in your `BUILD.gn` file:
     ]
   }
 
-  rustc_binary("bin") {
-    output_name = "echo-args"
-    edition = "2021"
+  {{ gn_rust_binary|replace("echo_example_rust","echo-args")|trim() }}
 
-    with_unit_tests = true
-
-    deps = [
-      "//src/lib/fuchsia",
-      "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:tracing",
-    ]
-
-    sources = [ "src/main.rs" ]
-  }
-
-  fuchsia_component("component") {
-    component_name = "echo-args"
-    manifest = "meta/echo.cml"
-    deps = [ ":bin" ]
-  }
+  {{ gn_rust_component|replace("echo_rust","echo-args")|trim() }}
 
   fuchsia_package("package") {
     package_name = "echo-args"
@@ -362,7 +322,7 @@ Update the program's dependencies in your `BUILD.gn` file:
   `echo-args/BUILD.gn`:
 
   ```gn
-  import("//build/components.gni")
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/cpp/BUILD.gn" region_tag="imports" adjust_indentation="auto" %}
 
   group("echo-args") {
     testonly = true
@@ -371,32 +331,9 @@ Update the program's dependencies in your `BUILD.gn` file:
     ]
   }
 
-  source_set("lib") {
-    sources = [
-      "echo_component.cc",
-      "echo_component.h",
-    ]
-  }
+  {{ gn_cpp_binary|replace("echo_example_cpp","echo-args")|trim() }}
 
-  executable("bin") {
-    output_name = "echo-args"
-
-    sources = [ "main.cc" ]
-
-    deps = [
-      ":lib",
-      "//sdk/lib/syslog/cpp",
-      "//zircon/system/ulib/async-default",
-      "//zircon/system/ulib/async-loop:async-loop-cpp",
-      "//zircon/system/ulib/async-loop:async-loop-default",
-    ]
-  }
-
-  fuchsia_component("component") {
-    component_name = "echo-args"
-    manifest = "meta/echo.cml"
-    deps = [ ":bin" ]
-  }
+  {{ gn_cpp_component|replace("echo_cpp","echo-args")|trim() }}
 
   fuchsia_package("package") {
     package_name = "echo-args"

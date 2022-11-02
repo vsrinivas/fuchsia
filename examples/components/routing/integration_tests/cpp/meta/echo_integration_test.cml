@@ -4,7 +4,6 @@
 
 // [START example_snippet]
 {
-    // [START_EXCLUDE]
     // [START shard_include]
     include: [
         "//src/sys/test_runners/gtest/default.shard.cml",
@@ -18,7 +17,6 @@
     },
 
     // [END shard_include]
-    // [END_EXCLUDE]
 
     // Child components orchestrated by the integration test.
     children: [

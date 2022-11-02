@@ -2,11 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# [START imports]
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
-rustc_binary("echo_server") {
+# [END imports]
+
+# [START executable]
+rustc_binary("bin") {
+  output_name = "echo_server_rust"
   edition = "2021"
+
   deps = [
     "//examples/components/routing/fidl:echo_rust",
     "//src/lib/diagnostics/inspect/runtime/rust",
@@ -20,15 +26,20 @@ rustc_binary("echo_server") {
   sources = [ "src/main.rs" ]
 }
 
+# [END executable]
+
+# [START component]
 fuchsia_component("echo_server_component") {
   component_name = "echo_server"
   manifest = "meta/echo_server.cml"
-  deps = [ ":echo_server" ]
+  deps = [ ":bin" ]
 }
+
+# [END component]
 
 # Subpackagable
 fuchsia_package_with_default_component("echo_server_package") {
   package_name = "echo_server_rust"
   manifest = "meta/echo_server.cml"
-  deps = [ ":echo_server" ]
+  deps = [ ":bin" ]
 }

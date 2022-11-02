@@ -2,10 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# [START imports]
 import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
 
+# [END imports]
+
 # [START example_snippet]
+# [START executable]
 rustc_test("bin") {
   name = "echo_integration_test_rust"
   edition = "2021"
@@ -20,6 +24,9 @@ rustc_test("bin") {
   sources = [ "src/lib.rs" ]
 }
 
+# [END executable]
+
+# [START component]
 fuchsia_component("echo_integration_test_component") {
   testonly = true
   component_name = "echo_integration_test"
@@ -27,11 +34,16 @@ fuchsia_component("echo_integration_test_component") {
   deps = [ ":bin" ]
 }
 
+# [END component]
+
+# [START test_package]
 fuchsia_test_package("echo_integration_test_rust") {
   test_components = [ ":echo_integration_test_component" ]
   deps =
       [ "//examples/components/routing/rust/echo_server:echo_server_component" ]
 }
+
+# [END test_package]
 
 # [END example_snippet]
 

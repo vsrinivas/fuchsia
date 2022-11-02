@@ -3,6 +3,6 @@
         "syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/echo_server"
+        "binary": "bin/echo_server_rust"
     }
 }

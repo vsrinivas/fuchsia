@@ -2,15 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# [START imports]
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
+
+# [END imports]
 
 group("tests") {
   testonly = true
   deps = [ ":echo-rust-unittests" ]
 }
 
-rustc_binary("echo_example_rust") {
+# [START executable]
+rustc_binary("bin") {
+  output_name = "echo_example_rust"
   edition = "2021"
 
   # Generates a GN target for unit-tests with the label `bin_test`,
@@ -26,14 +31,19 @@ rustc_binary("echo_example_rust") {
   sources = [ "src/main.rs" ]
 }
 
-fuchsia_component("rust-component") {
+# [END executable]
+
+# [START component]
+fuchsia_component("component") {
   component_name = "echo_rust"
   manifest = "meta/echo.cml"
-  deps = [ ":echo_example_rust" ]
+  deps = [ ":bin" ]
 }
+
+# [END component]
 
 # [START unittest]
 fuchsia_unittest_package("echo-rust-unittests") {
-  deps = [ ":echo_example_rust_test" ]
+  deps = [ ":bin_test" ]
 }
 # [END unittest]

@@ -41,12 +41,12 @@ fuchsia_component("parent-component") {
 
 fuchsia_package_with_default_component("echo_client") {
   manifest = "meta/echo_client.cml"
-  deps = [ "//examples/components/routing/rust/echo_client" ]
+  deps = [ "//examples/components/routing/rust/echo_client:bin" ]
 }
 
 fuchsia_package_with_default_component("echo_server") {
   manifest = "meta/echo_server.cml"
-  deps = [ "//examples/components/routing/rust/echo_server" ]
+  deps = [ "//examples/components/routing/rust/echo_server:bin" ]
 }
 
 # Run with `fx test subpackage-examples`.

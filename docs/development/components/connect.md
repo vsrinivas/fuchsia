@@ -54,7 +54,7 @@ See the following example that declares a FIDL [protocol capability][doc-protoco
 providing component's manifest:
 
 ```json5
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/rust/echo_server/meta/echo_server.cml" region_tag="example_snippet" adjust_indentation="auto" highlight="4,5,6,7" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/rust/echo_server/meta/echo_server.cml" region_tag="example_snippet" adjust_indentation="auto" highlight="16,17,18,19" %}
 ```
 
 At runtime, the provider component provides an implementation of the capability by serving
@@ -87,7 +87,7 @@ See the following example of a client component's manifest that uses the FIDL pr
 by the previous component:
 
 ```json5
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/rust/echo_client/meta/echo_client.cml" region_tag="example_snippet" adjust_indentation="auto" highlight="4,5,6,7" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/rust/echo_client/meta/echo_client.cml" region_tag="example_snippet" adjust_indentation="auto" highlight="19,20,21,22" %}
 ```
 
 At runtime, the client component connects to the capability handles populated in its namespace
@@ -154,7 +154,7 @@ do the following:
 1.  Add an `offer` or `expose` declaration to the capability provider component:
 
     ```json5
-    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/rust/echo_server/meta/echo_server.cml" region_tag="example_snippet" adjust_indentation="auto" highlight="8,9,10,11,12,13" %}
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/rust/echo_server/meta/echo_server.cml" region_tag="example_snippet" adjust_indentation="auto" highlight="20,21,22,23,24,25" %}
     ```
 
 1.  For each intermediate component in the component instance tree, include additional

@@ -4,7 +4,6 @@
 
 // [START example_snippet]
 {
-    // [START_EXCLUDE]
     include: [
         // Enable logging.
         "syslog/client.shard.cml",
@@ -24,8 +23,6 @@
     },
 
     // [END program_args]
-
-    // [END_EXCLUDE]
 
     // Capabilities used by this component.
     use: [

@@ -2,14 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# [START imports]
 import("//build/components.gni")
+
+# [END imports]
 
 group("tests") {
   testonly = true
   deps = [ ":echo-cpp-unittests" ]
 }
 
-executable("echo_example_cpp") {
+# [START executable]
+executable("bin") {
   output_name = "echo_example_cpp"
 
   sources = [ "main.cc" ]
@@ -30,24 +34,32 @@ source_set("cpp-lib") {
   ]
 }
 
-fuchsia_component("cpp-component") {
+# [END executable]
+
+# [START component]
+fuchsia_component("component") {
   component_name = "echo_cpp"
   manifest = "meta/echo.cml"
-  deps = [ ":echo_example_cpp" ]
+  deps = [ ":bin" ]
 }
 
-executable("echo_example_cpp_test") {
+# [END component]
+
+#[START unittest]
+executable("unittests") {
+  output_name = "echo-cpp-test"
+  testonly = true
+
   sources = [ "echo_unittest.cc" ]
+
   deps = [
     ":cpp-lib",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
-  testonly = true
 }
 
-#[START unittest]
 fuchsia_unittest_package("echo-cpp-unittests") {
-  deps = [ ":echo_example_cpp_test" ]
+  deps = [ ":unittests" ]
 }
 #[END unittest]

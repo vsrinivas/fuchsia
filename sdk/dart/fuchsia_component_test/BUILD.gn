@@ -84,7 +84,7 @@ dart_test_component("fuchsia-component-test-test") {
 fuchsia_component("echo_client_with_binder_component") {
   component_name = "echo_client_with_binder"
   manifest = "meta/echo_client_with_binder.cml"
-  deps = [ "//examples/components/routing/rust/echo_client" ]
+  deps = [ "//examples/components/routing/rust/echo_client:bin" ]
 }
 
 fuchsia_test_package("dart_realm_builder_unittests") {

@@ -26,15 +26,6 @@
         // Program environment variables
         environ: [ "FAVORITE_ANIMAL=Spot" ],
     },
-
-    // [START_EXCLUDE]
-    // Capabilities used by this component.
-    use: [
-        // List your component's dependencies here, ex:
-        // { protocol: "fuchsia.net.name.Lookup" }
-    ],
-
-    // [END_EXCLUDE]
 }
 
 // [END manifest]

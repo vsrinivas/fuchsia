@@ -4,11 +4,8 @@
 
 // [START example_snippet]
 {
-    // [START_EXCLUDE]
     include: [
         "inspect/client.shard.cml",
-
-        // Enable logging on stdout
         "syslog/client.shard.cml",
     ],
 
@@ -18,10 +15,8 @@
         runner: "elf",
 
         // The binary to run for this component.
-        binary: "bin/echo_server",
+        binary: "bin/echo_server_rust",
     },
-
-    // [END_EXCLUDE]
 
     // Capabilities provided by this component.
     capabilities: [

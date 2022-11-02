@@ -160,6 +160,14 @@ Add the following unit test functions to validate the behavior of the
 
 Add the following rules to your `BUILD.gn` file to generate a new unit test package:
 
+{% set gn_rust_testpackage %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/rust/BUILD.gn" region_tag="unittest" adjust_indentation="auto" %}
+{% endset %}
+
+{% set gn_cpp_testpackage %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/cpp/BUILD.gn" region_tag="unittest" adjust_indentation="auto" %}
+{% endset %}
+
 * {Rust}
 
   `echo-args/BUILD.gn`:
@@ -170,9 +178,7 @@ Add the following rules to your `BUILD.gn` file to generate a new unit test pack
     deps = [ ":echo-args-unittests" ]
   }
 
-  fuchsia_unittest_package("echo-args-unittests") {
-    deps = [ ":bin_test" ]
-  }
+  {{ gn_rust_testpackage|replace("echo-rust-unittests","echo-args-unittests")|trim() }}
   ```
 
 * {C++}
@@ -185,25 +191,7 @@ Add the following rules to your `BUILD.gn` file to generate a new unit test pack
     deps = [ ":echo-args-unittests" ]
   }
 
-  executable("unittests") {
-    output_name = "echo-args-test"
-    testonly = true
-
-    sources = [ "echo_unittest.cc" ]
-
-    deps = [
-      ":lib",
-      "//src/lib/fxl/test:gtest_main",
-      "//third_party/googletest:gtest",
-      "//zircon/system/ulib/async-default",
-      "//zircon/system/ulib/async-loop:async-loop-cpp",
-      "//zircon/system/ulib/async-loop:async-loop-default",
-    ]
-  }
-
-  fuchsia_unittest_package("echo-args-unittests") {
-    deps = [ ":unittests" ]
-  }
+  {{ gn_cpp_testpackage|replace("echo-cpp-test","echo-args-test")|replace("echo-cpp-unittests","echo-args-unittests")|trim() }}
   ```
 
 This rule packages your unit tests into a component with the following URL:
@@ -222,8 +210,7 @@ test package:
   `echo-args/BUILD.gn`:
 
   ```gn {:.devsite-disable-click-to-copy}
-  import("//build/components.gni")
-  import("//build/rust/rustc_binary.gni")
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/rust/BUILD.gn" region_tag="imports" adjust_indentation="auto" %}
 
   group("echo-args") {
     testonly = true
@@ -239,7 +226,7 @@ test package:
   `echo-args/BUILD.gn`:
 
   ```gn {:.devsite-disable-click-to-copy}
-  import("//build/components.gni")
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/cpp/BUILD.gn" region_tag="imports" adjust_indentation="auto" %}
 
   group("echo-args") {
     testonly = true

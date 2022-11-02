@@ -2,8 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# [START imports]
 import("//build/components.gni")
 
+# [END imports]
+
+# [START executable]
 executable("bin") {
   output_name = "echo_server_cpp"
   sources = [ "main.cc" ]
@@ -17,11 +21,16 @@ executable("bin") {
   ]
 }
 
+# [END executable]
+
+# [START component]
 fuchsia_component("echo_server_component") {
   component_name = "echo_server"
   manifest = "meta/echo_server.cml"
   deps = [ ":bin" ]
 }
+
+# [END component]
 
 # Subpackagable
 fuchsia_package_with_default_component("echo_server_package") {

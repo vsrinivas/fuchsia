@@ -60,19 +60,19 @@ dart_test_component("dart-component") {
 fuchsia_component("echo_client_component") {
   component_name = "echo_client"
   manifest = "meta/echo_client.cml"
-  deps = [ "//examples/components/routing/rust/echo_client" ]
+  deps = [ "//examples/components/routing/rust/echo_client:bin" ]
 }
 
 fuchsia_component("echo_server_component") {
   component_name = "echo_server"
   manifest = "meta/echo_server.cml"
-  deps = [ "//examples/components/routing/rust/echo_server" ]
+  deps = [ "//examples/components/routing/rust/echo_server:bin" ]
 }
 
 fuchsia_component("echo_server_legacy_component") {
   component_name = "echo_server"
   manifest = "meta/echo_server.cmx"
-  deps = [ "//examples/components/routing/rust/echo_server" ]
+  deps = [ "//examples/components/routing/rust/echo_server:bin" ]
 }
 
 # Run with `fx test realm-builder-examples`.

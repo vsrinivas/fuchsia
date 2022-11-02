@@ -22,7 +22,7 @@ group("tests") {
 
 fuchsia_package("echo-example") {
   deps = [
-    "cpp:cpp-component",
-    "rust:rust-component",
+    "cpp:component",
+    "rust:component",
   ]
 }

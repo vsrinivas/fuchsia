@@ -2,9 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# [START imports]
 import("//build/components.gni")
 
+# [END imports]
+
 # [START example_snippet]
+# [START executable]
 executable("bin") {
   output_name = "echo_integration_test_cpp"
   sources = [ "echo_integration_test.cc" ]
@@ -20,18 +24,26 @@ executable("bin") {
   testonly = true
 }
 
-fuchsia_component("echo_integration_test_component_cpp") {
+# [END executable]
+
+# [START component]
+fuchsia_component("echo_integration_test_component") {
   testonly = true
   component_name = "echo_integration_test"
   manifest = "meta/echo_integration_test.cml"
   deps = [ ":bin" ]
 }
 
+# [END component]
+
+# [START test_package]
 fuchsia_test_package("echo_integration_test_cpp") {
-  test_components = [ ":echo_integration_test_component_cpp" ]
+  test_components = [ ":echo_integration_test_component" ]
   deps =
       [ "//examples/components/routing/cpp/echo_server:echo_server_component" ]
 }
+
+# [END test_package]
 
 # [END example_snippet]
 

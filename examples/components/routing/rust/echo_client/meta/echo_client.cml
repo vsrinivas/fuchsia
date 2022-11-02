@@ -4,7 +4,6 @@
 
 // [START example_snippet]
 {
-    // [START_EXCLUDE]
     include: [
         // Enable logging on stdout
         "syslog/client.shard.cml",
@@ -17,15 +16,13 @@
         runner: "elf",
 
         // The binary to run for this component.
-        binary: "bin/echo_client",
+        binary: "bin/echo_client_rust",
 
         // Program arguments
         args: [ "Hello Fuchsia!" ],
     },
 
     // [END program_args]
-
-    // [END_EXCLUDE]
 
     // Capabilities used by this component.
     use: [
