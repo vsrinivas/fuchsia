@@ -38,9 +38,11 @@
 namespace media_audio {
 namespace {
 
+using ::fuchsia_audio_mixer::wire::CreateEdgeError;
 using ::fuchsia_audio_mixer::wire::CreateGainControlError;
 using ::fuchsia_audio_mixer::wire::CreateNodeError;
 using ::fuchsia_audio_mixer::wire::DeleteGainControlError;
+using ::fuchsia_audio_mixer::wire::DeleteNodeError;
 using ::fuchsia_audio_mixer::wire::RealOrStreamTime;
 using ::fuchsia_audio_mixer::wire::RealTime;
 using ::fuchsia_audio_mixer::wire::StartError;
@@ -1010,8 +1012,6 @@ TEST_F(GraphServerTest, CreateCustomSuccess) {
 //
 
 TEST_F(GraphServerTest, DeleteNodeFails) {
-  using DeleteNodeError = fuchsia_audio_mixer::DeleteNodeError;
-
   // This only tests error cases detected by GraphServer::DeleteNode. Other error cases are detected
   // by Node::DeleteNode -- those cases are tested in node_unittest.cc.
   struct TestCase {
@@ -1053,30 +1053,32 @@ TEST_F(GraphServerTest, DeleteNodeFails) {
 }
 
 TEST_F(GraphServerTest, DeleteNodeSuccess) {
-  NodeId id;
+  NodeId producer_id;
+  NodeId consumer_id;
+  ASSERT_NO_FATAL_FAILURE(CreateProducerAndConsumer(&producer_id, &consumer_id));
 
-  // Create a producer node.
-  {
-    auto result =
-        client()->CreateProducer(MakeDefaultCreateProducerRequestWithRingBuffer(arena_).Build());
-
-    ASSERT_TRUE(result.ok()) << result;
-    ASSERT_FALSE(result->is_error()) << result->error_value();
-    id = result->value()->id();
-  }
-
-  // Delete that node.
+  // Delete the producer.
   {
     auto result = client()->DeleteNode(
-        fuchsia_audio_mixer::wire::GraphDeleteNodeRequest::Builder(arena_).id(id).Build());
+        fuchsia_audio_mixer::wire::GraphDeleteNodeRequest::Builder(arena_).id(producer_id).Build());
 
     ASSERT_TRUE(result.ok()) << result;
     ASSERT_FALSE(result->is_error()) << result->error_value();
   }
-}
 
-// TODO(fxbug.dev/87651): after CreateEdge is implemented, DeleteNodeSuccess should verify that
-// CreateEdge fails when passed the deleted node ID
+  // Verify we cannot create an edge producer -> consumer.
+  {
+    auto result =
+        client()->CreateEdge(fuchsia_audio_mixer::wire::GraphCreateEdgeRequest::Builder(arena_)
+                                 .source_id(producer_id)
+                                 .dest_id(consumer_id)
+                                 .Build());
+
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_TRUE(result->is_error());
+    EXPECT_EQ(result->error_value(), CreateEdgeError::kInvalidSourceId);
+  }
+}
 
 //
 // CreateEdge
@@ -1117,8 +1119,6 @@ void GraphServerTest::CreateProducerAndConsumer(NodeId* producer_id, NodeId* con
 }
 
 TEST_F(GraphServerTest, CreateEdgeFails) {
-  using CreateEdgeError = fuchsia_audio_mixer::CreateEdgeError;
-
   NodeId producer_id;
   NodeId consumer_id;
   ASSERT_NO_FATAL_FAILURE(CreateProducerAndConsumer(&producer_id, &consumer_id));
