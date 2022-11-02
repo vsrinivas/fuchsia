@@ -83,20 +83,43 @@ class ConsumerStage : public BaseConsumerStage {
   // mix job actually consumes frames presented outside of range `R` -- either after `R` (in output
   // pipelines) or before `R` (in input pipelines).
   //
-  // TODO(fxbug.dev/87651): Add a discussion of "safe write range" and "safe read range" to
-  // ../docs/delay.md and reference that here.
-  //
   // ## Output pipelines
   //
   // Since this job may run until `mix_job_start_time + period`, we cannot consume any frames that
   // will be presented before `T = mix_job_start_time + period + downstream_delay`. Hence, we
   // consume frames in the range `[T, T + period)`.
   //
+  // In the diagram below, each `+` represents a frame ordered by presentation time, with
+  // presentation time increasing to the right. The frames marked with `X` are consumed during the
+  // mix job at `mix_job_start_time`.
+  //
+  // ```
+  //                               downstream
+  //             |<-- period -->|<--- delay --->|<-- period -->| ...
+  //  frames: ++++++++++++++++++++++++++++++++++XXXXXXXXXXXXXXX+++++
+  //             ^              ^               ^
+  //          mix job        mix job            T
+  //         start time      end time
+  // ```
+  //
   // ## Input pipelines
   //
   // Since this job starts running as early as `mix_job_start_time`, we cannot consume any frames
   // that are presented after `T = mix_job_start_time - upstream_delay`. Hence, we consume frames in
   // the range `[T - period, T)`.
+  //
+  // In the diagram below, each `+` represents a frame ordered by presentation time, with
+  // presentation time increasing to the right. The frames marked with `X` are consumed during the
+  // mix job at `mix_job_start_time`.
+  //
+  // ```
+  //                               downstream
+  //             |<-- period -->|<--- delay --->|<-- period -->| ...
+  //  frames: +++XXXXXXXXXXXXXXX++++++++++++++++++++++++++++++++++++
+  //                            ^               ^              ^
+  //                            T            mix job        mix job
+  //                                        start time      end time
+  // ```
   Status RunMixJob(MixJobContext& ctx, zx::time mix_job_start_time, zx::duration period);
 
   // Sets the delay introduced by our downstream external output device, such as a physical speaker.

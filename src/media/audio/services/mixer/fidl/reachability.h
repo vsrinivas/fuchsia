@@ -70,7 +70,7 @@ bool ExistsPath(const Node& source, const Node& dest);
 
 // Moves `node` and its source tree to `thread`, where `node` is assumed to be currently attached to
 // `expected_thread`. A node's "source tree" is the set of upstream nodes n ∈ N such that there
-// exists a path from n to `node` that does not go through a consumer node.
+// exists a path from each n to `node`, where the path does not go through a consumer node.
 //
 // For example, in the following diagram:
 //
@@ -93,9 +93,9 @@ bool ExistsPath(const Node& source, const Node& dest);
 //                  N
 // ```
 //
-// If C is a consumer node, then `MoveNodetoThread(N, new_thread, old_thread)` will move the
-// following nodes to new_thread: {N, F, G, P3, H}. This must be a tree: by construction, all
-// fan-out must happen below a consumer node, as in the splitter example above.
+// If C has type `Node::Type::kConsumer`, then `MoveNodetoThread(N, new_thread, old_thread)` will
+// move the following nodes to `new_thread`: {N, F, G, P3, H}. [By
+// construction](../docs/execution_model.md), this set of nodes must form a tree rooted at N.
 //
 // Before a node is moved to `new_thread`, we check that the node is currently attached to
 // `expected_thread`. We will crash if this expectation is not satisfied.

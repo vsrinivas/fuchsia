@@ -200,7 +200,9 @@ be notified earlier. For example, if the client generates audio in 10 ms
 batches, where each batch takes 2 ms to generate, then the client needs to be
 notified by time $$T - D - (2ms) \cdot ceil(D/10ms)$$.
 
-TODO(fxbug.dev/87651): design an API for this
+Lead time changes are reported by the
+[DelayWatcher](https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.audio/delay.fidl;l=10;drc=97de0886d1be546e6d2ca3aac32277ff2c7de791)
+protocol.
 
 ## Buffer size
 
