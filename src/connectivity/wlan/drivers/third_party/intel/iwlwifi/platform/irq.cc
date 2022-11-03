@@ -27,6 +27,22 @@ zx_status_t iwl_irq_timer_start(struct iwl_irq_timer* timer, zx_duration_t delay
   return timer->Post(delay);
 }
 
+zx_status_t iwl_irq_timer_start_at_time(struct iwl_irq_timer* timer, zx_time_t deadline) {
+  zx_time_t now = zx_clock_get_monotonic();
+  if (deadline < now) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  zx_duration_t delay = zx_time_sub_time(deadline, now);
+
+  if (delay == ZX_TIME_INFINITE || delay == ZX_TIME_INFINITE_PAST) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  return timer->Post(delay);
+}
+
 zx_status_t iwl_irq_timer_stop(struct iwl_irq_timer* timer) { return timer->Cancel(); }
+
+zx_status_t iwl_irq_timer_wait(struct iwl_irq_timer* timer) { return timer->Wait(); }
 
 void iwl_irq_timer_release_sync(struct iwl_irq_timer* timer) { delete timer; }

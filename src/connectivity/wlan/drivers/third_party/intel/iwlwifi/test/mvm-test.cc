@@ -4,6 +4,7 @@
 
 #include <lib/mock-function/mock-function.h>
 #include <zircon/compiler.h>
+#include <zircon/syscalls.h>
 
 #include <iterator>
 #include <memory>
@@ -20,6 +21,7 @@ extern "C" {
 }
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/irq.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/memory.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/stats.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-ucode-test.h"
@@ -104,7 +106,7 @@ class MvmTest : public SingleApTest {
     mvmvif_->ifc.recv = recv;
   }
 
-  static void MockRecvCallback (void* ctx, const wlan_rx_packet_t* packet) {
+  static void MockRecvCallback(void* ctx, const wlan_rx_packet_t* packet) {
     TestCtx* test_ctx = reinterpret_cast<TestCtx*>(ctx);
     test_ctx->rx_info = packet->info;
     test_ctx->frame_len = packet->mac_frame_size;
@@ -510,10 +512,10 @@ struct WlanRxPacket {
 
 // The test fixture manages baid_data/mvm/sta, but each test itself
 // must manage WlanRxPackets themselves.
-struct ReorderTest : public MvmTest, public MockTrans {
+struct ReorderTimeoutTest : public MvmTest, public MockTrans {
   static constexpr uint16_t kEntriesPerQueue = 64;
 
-  ReorderTest() {
+  ReorderTimeoutTest() {
     BIND_TEST(mvm_->trans);
 
     // setup station
@@ -527,19 +529,14 @@ struct ReorderTest : public MvmTest, public MockTrans {
     mvm_->baid_map[0] = baid_data_;
   }
 
-  ~ReorderTest() {
+  ~ReorderTimeoutTest() {
     // reorder buffer entries are usually freed by the call to iwl_mvm_release_frames
     // but not all tests call iwl_mvm_release_frames
-    for (uint8_t i = 0; i < kEntriesPerQueue; i++) {
-      auto& entry = GetReorderBufEntry(i);
-      if (entry.e.has_packet && entry.e.rx_packet.mac_frame_buffer) {
-        free((void*)entry.e.rx_packet.mac_frame_buffer);
-      }
-    }
+    iwl_mvm_free_reorder(mvm_, baid_data_);
     free(baid_data_);
   }
 
-  void SetupBaidData() {
+  virtual void SetupBaidData() {
     uint16_t reorder_buf_size = kEntriesPerQueue * sizeof(baid_data_->entries[0]);
 
     baid_data_ = reinterpret_cast<struct iwl_mvm_baid_data*>(
@@ -551,15 +548,15 @@ struct ReorderTest : public MvmTest, public MockTrans {
     baid_data_->baid = 0;
     baid_data_->tid = 0;
 
-    for (auto i = 0; i < mvm_->trans->num_rx_queues; i++) {
-      auto* reorder_buf = &baid_data_->reorder_buf[i];
-      reorder_buf->num_stored = 0;
-      reorder_buf->head_sn = 0;
-      reorder_buf->buf_size = kEntriesPerQueue;
-      reorder_buf->mvm = mvm_;
-      reorder_buf->queue = i;
-      reorder_buf->valid = false;
+    iwl_mvm_init_reorder_buffer(mvm_, baid_data_, 0, kEntriesPerQueue);
+  }
+
+  void SetupReorderTimer(struct iwl_mvm_reorder_buffer* reorder_buf, iwl_irq_timer_func cb,
+                         void* data) {
+    if (reorder_buf->reorder_timer) {
+      iwl_irq_timer_release_sync(reorder_buf->reorder_timer);
     }
+    iwl_irq_timer_create(mvm_->dev, cb, data, &reorder_buf->reorder_timer);
   }
 
   bool Reorder(WlanRxPacket& packet, int queue = 0) {
@@ -641,6 +638,71 @@ struct ReorderTest : public MvmTest, public MockTrans {
   struct iwl_mvm_baid_data* baid_data_{nullptr};
 };
 
+TEST_F(ReorderTimeoutTest, ReleaseExpiredFrames) {
+  constexpr uint8_t kNumPackets = 30;
+  std::vector<WlanRxPacket> packets{kNumPackets};
+
+  MockRecv(&ctx_, MockRecvCallback);
+
+  uint8_t sn = 1;
+  for (WlanRxPacket& packet : packets) {
+    packet.SetSn(sn++);
+    ASSERT_TRUE(Reorder(packet));
+  }
+
+  ASSERT_EQ(kNumPackets, GetReorderBuf().num_stored);
+  ASSERT_OK(iwl_irq_timer_wait(GetReorderBuf().reorder_timer));
+  ASSERT_EQ(packets.size(), ctx_.received.size());
+
+  for (auto i = 0U; i < packets.size(); i++) {
+    ASSERT_TRUE(packets[i].Equals(ctx_.received[i]));
+  }
+}
+
+TEST_F(ReorderTimeoutTest, NoFramesReleasedIfFramesNotExpired) {
+  constexpr uint8_t kNumPackets = 30;
+  std::vector<WlanRxPacket> packets{kNumPackets};
+
+  MockRecv(&ctx_, MockRecvCallback);
+
+  uint8_t sn = 1;
+  for (WlanRxPacket& packet : packets) {
+    packet.SetSn(sn++);
+    ASSERT_TRUE(Reorder(packet));
+  }
+
+  // Stop the timer that gets setup by the Reorder call normally so that we can be sure
+  // the next time the timer callback runs it's because of iwl_mvm_reorder_timer_expired.
+  iwl_irq_timer_stop(GetReorderBuf().reorder_timer);
+
+  ASSERT_EQ(kNumPackets, GetReorderBuf().num_stored);
+
+  // Explicitly call timer_expired callback early and show that no packets get released
+  // This will also restart the reorder timer.
+  iwl_mvm_reorder_timer_expired(&GetReorderBuf());
+
+  ASSERT_TRUE(ctx_.received.empty());
+
+  // Then actually wait for the timer and see that frames get released next time
+  ASSERT_OK(iwl_irq_timer_wait(GetReorderBuf().reorder_timer));
+  ASSERT_EQ(packets.size(), ctx_.received.size());
+
+  for (auto i = 0U; i < packets.size(); i++) {
+    ASSERT_TRUE(packets[i].Equals(ctx_.received[i]));
+  }
+}
+
+struct ReorderTest : public ReorderTimeoutTest {
+  ReorderTest() {
+    // override default timeout callback to do nothing
+    for (auto i = 0; i < mvm_->trans->num_rx_queues; i++) {
+      auto& reorder_buf = GetReorderBuf(i);
+      SetupReorderTimer(
+          &reorder_buf, [](void*) {}, nullptr);
+    }
+  }
+};
+
 TEST_F(ReorderTest, NotBufferedIfInvalidBlockAckId) {
   WlanRxPacket packet;
   packet.SetBlockAckId(IWL_RX_REORDER_DATA_INVALID_BAID);
@@ -671,7 +733,8 @@ TEST_F(ReorderTest, NotBufferedIfInvalidBaidData) {
 }
 
 TEST_F(ReorderTest, BufferPacketsWithDifferentSequenceNumbers) {
-  std::vector<WlanRxPacket> packets{GetReorderBuf().buf_size};
+  constexpr uint8_t kNumPackets = 30;
+  std::vector<WlanRxPacket> packets{kNumPackets};
 
   ASSERT_FALSE(GetReorderBuf().valid);
   uint8_t sn = 1;
@@ -685,7 +748,7 @@ TEST_F(ReorderTest, BufferPacketsWithDifferentSequenceNumbers) {
     ++sn;
   }
 
-  ASSERT_EQ(GetReorderBuf().buf_size, GetReorderBuf().num_stored);
+  ASSERT_EQ(kNumPackets, GetReorderBuf().num_stored);
 }
 
 TEST_F(ReorderTest, DropPacketIfSameSequenceNumber) {
@@ -885,6 +948,23 @@ TEST_F(ReorderTest, FrameNotBufferedIfReorderDataFlagSet) {
   ASSERT_FALSE(Reorder(packet));
   ASSERT_TRUE(BufferIsEmpty());
   ASSERT_FALSE(GetReorderBuf().valid);
+}
+
+TEST_F(ReorderTest, TimeoutCallbackCalled) {
+  bool callback_called = false;
+
+  auto cb = [](void* data) {
+    bool* called = reinterpret_cast<bool*>(data);
+    *called = true;
+  };
+
+  SetupReorderTimer(&GetReorderBuf(), cb, &callback_called);
+
+  WlanRxPacket packet;
+  packet.SetSn(1);
+  ASSERT_TRUE(Reorder(packet));
+  ASSERT_OK(iwl_irq_timer_wait(GetReorderBuf().reorder_timer));
+  ASSERT_TRUE(callback_called);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -725,7 +725,7 @@ struct iwl_mvm_reorder_buffer {
   int queue;
   uint16_t last_amsdu;
   uint8_t last_sub_index;
-  struct timer_list reorder_timer;
+  struct iwl_irq_timer* reorder_timer;
   bool removed;
   bool valid;
   mtx_t lock;
@@ -742,7 +742,7 @@ struct iwl_mvm_reorder_buffer {
 struct _iwl_mvm_reorder_buf_entry {
 	wlan_rx_packet_t rx_packet;
 	struct ieee80211_rx_status rx_status;
-	unsigned long reorder_time;
+	zx_time_t reorder_time;
 	bool has_packet;
 };
 
@@ -778,7 +778,7 @@ struct iwl_mvm_baid_data {
   uint16_t timeout;
   uint16_t entries_per_queue;
   unsigned long last_rx;
-  struct timer_list session_timer;
+  struct iwl_irq_timer* session_timer;
   struct iwl_mvm_baid_data __rcu** rcu_ptr;
   struct iwl_mvm* mvm;
   struct iwl_mvm_reorder_buffer reorder_buf[IWL_MAX_RX_HW_QUEUES];
@@ -1730,6 +1730,23 @@ bool iwl_mvm_reorder(struct iwl_mvm* mvm, struct ieee80211_sta* sta,
 		     struct ieee80211_rx_status* rx_status,
 		     int queue, struct iwl_rx_mpdu_desc* desc);
 
+
+/*
+ * Initializes the reorder buffer owned by baid_data.
+ * This is exposed in this header for unit tests, but isn't used outside of
+ * sta.c
+ */
+void iwl_mvm_init_reorder_buffer(struct iwl_mvm* mvm, struct iwl_mvm_baid_data* data,
+                                        uint16_t ssn, uint16_t buf_size);
+
+/*
+ * Frees the reorder buffer owned by baid_data.
+ * This is exposed in this header for unit tests, but isn't used outside of
+ * sta.c
+ */
+void iwl_mvm_free_reorder(struct iwl_mvm* mvm, struct iwl_mvm_baid_data* baid_data);
+
+
 /* MVM PHY */
 zx_status_t iwl_mvm_phy_ctxt_add(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt,
                                  wlan_channel_t* channeldef, uint8_t chains_static,
@@ -2112,7 +2129,7 @@ struct iwl_mvm_tdls_peer_counter* iwl_mvm_tdls_peer_cache_find(struct iwl_mvm* m
 #endif /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
 void iwl_mvm_sync_rx_queues_internal(struct iwl_mvm* mvm, struct iwl_mvm_internal_rxq_notif* notif,
                                      uint32_t size);
-void iwl_mvm_reorder_timer_expired(struct timer_list* t);
+void iwl_mvm_reorder_timer_expired(void* data);
 struct ieee80211_vif* iwl_mvm_get_bss_vif(struct iwl_mvm* mvm);
 
 // Returns true if any client interface is associated.

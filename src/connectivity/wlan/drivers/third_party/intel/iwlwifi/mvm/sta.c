@@ -40,6 +40,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/rs.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/irq.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/rcu.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/tkip.h"
 
@@ -2500,18 +2501,21 @@ int iwl_mvm_rm_mcast_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
   return ret;
 }
 
+#endif  // NEEDS_PORTING
+
 static void iwl_mvm_sync_rxq_del_ba(struct iwl_mvm *mvm, u8 baid)
 {
+#if 0   // NEEDS_PORTING
 	struct iwl_mvm_delba_data notif = {
 		.baid = baid,
 	};
 
 	iwl_mvm_sync_rx_queues_internal(mvm, IWL_MVM_RXQ_NOTIF_DEL_BA, true,
 					&notif, sizeof(notif));
-};
+#endif  // NEEDS_PORTING
+}
 
-
-static void iwl_mvm_free_reorder(struct iwl_mvm* mvm, struct iwl_mvm_baid_data* data) {
+void iwl_mvm_free_reorder(struct iwl_mvm* mvm, struct iwl_mvm_baid_data* data) {
   int i;
 
   iwl_mvm_sync_rxq_del_ba(mvm, data->baid);
@@ -2521,9 +2525,10 @@ static void iwl_mvm_free_reorder(struct iwl_mvm* mvm, struct iwl_mvm_baid_data* 
     struct iwl_mvm_reorder_buffer* reorder_buf = &data->reorder_buf[i];
     struct iwl_mvm_reorder_buf_entry* entries = &data->entries[i * data->entries_per_queue];
 
-    spin_lock_bh(&reorder_buf->lock);
+    mtx_lock(&reorder_buf->lock);
     if (likely(!reorder_buf->num_stored)) {
-      spin_unlock_bh(&reorder_buf->lock);
+      mtx_unlock(&reorder_buf->lock);
+      iwl_irq_timer_release_sync(reorder_buf->reorder_timer);
       continue;
     }
 
@@ -2535,7 +2540,10 @@ static void iwl_mvm_free_reorder(struct iwl_mvm* mvm, struct iwl_mvm_baid_data* 
     WARN_ON(1);
 
     for (j = 0; j < reorder_buf->buf_size; j++) {
-      __skb_queue_purge(&entries[j].e.frames);
+      if (entries[j].e.has_packet && entries[j].e.rx_packet.mac_frame_buffer) {
+        free((void*)entries[j].e.rx_packet.mac_frame_buffer);
+        memset(&entries[j].e, 0, sizeof(entries[j].e));
+      }
     }
     /*
      * Prevent timer re-arm. This prevents a very far fetched case
@@ -2546,13 +2554,13 @@ static void iwl_mvm_free_reorder(struct iwl_mvm* mvm, struct iwl_mvm_baid_data* 
      * reorder buffer.
      */
     reorder_buf->removed = true;
-    spin_unlock_bh(&reorder_buf->lock);
-    del_timer_sync(&reorder_buf->reorder_timer);
+    mtx_unlock(&reorder_buf->lock);
+    iwl_irq_timer_release_sync(reorder_buf->reorder_timer);
   }
 }
 
-static void iwl_mvm_init_reorder_buffer(struct iwl_mvm* mvm, struct iwl_mvm_baid_data* data,
-                                        uint16_t ssn, uint16_t buf_size) {
+void iwl_mvm_init_reorder_buffer(struct iwl_mvm* mvm, struct iwl_mvm_baid_data* data, uint16_t ssn,
+                                 uint16_t buf_size) {
   int i;
 
   for (i = 0; i < mvm->trans->num_rx_queues; i++) {
@@ -2564,16 +2572,19 @@ static void iwl_mvm_init_reorder_buffer(struct iwl_mvm* mvm, struct iwl_mvm_baid
     reorder_buf->head_sn = ssn;
     reorder_buf->buf_size = buf_size;
     /* rx reorder timer */
-    timer_setup(&reorder_buf->reorder_timer, iwl_mvm_reorder_timer_expired, 0);
-    spin_lock_init(&reorder_buf->lock);
+    iwl_irq_timer_create(mvm->dev, iwl_mvm_reorder_timer_expired, reorder_buf,
+                         &reorder_buf->reorder_timer);
+    mtx_init(&reorder_buf->lock, mtx_plain);
     reorder_buf->mvm = mvm;
     reorder_buf->queue = i;
     reorder_buf->valid = false;
     for (j = 0; j < reorder_buf->buf_size; j++) {
-      __skb_queue_head_init(&entries[j].e.frames);
+      memset(&entries[j].e, 0, sizeof(entries[j].e));
     }
   }
 }
+
+#if 0  // NEEDS_PORTING
 
 static int iwl_mvm_fw_baid_op_sta(struct iwl_mvm *mvm,
 				  struct iwl_mvm_sta *mvm_sta,

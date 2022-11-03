@@ -147,10 +147,6 @@ struct sk_buff_head {
   char dummy;
 };
 
-struct timer_list {
-  char dummy;
-};
-
 struct wait_queue_head {
   char dummy;
 };

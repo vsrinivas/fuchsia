@@ -29,6 +29,9 @@ enum iwl_stats_counter_index {
   IWL_STATS_CNT_DATA_TO_FW,        // Data sent to the firmware
   IWL_STATS_CNT_CMD_TO_FW,         // Host commands sent to the firmware
   IWL_STATS_CNT_TXQ_DROP,          // Times we drop pkts because txq is full
+  IWL_STATS_CNT_FRAMES_BUFFERED,   // Number of frames buffered for reordering
+  IWL_STATS_CNT_REORDER_TIMEOUT,   // Number of times reorder timeout cb runs
+  IWL_STATS_CNT_REORDER_DROP,      // Frames dropped from reordering
   IWL_STATS_CNT_MAX,               // Always at the end of list.
 };
 

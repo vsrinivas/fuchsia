@@ -33,10 +33,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
+#include <zircon/syscalls.h>
+#include <zircon/time.h>
+
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/fw-api.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/irq.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/rcu.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/stats.h"
 
@@ -450,8 +454,7 @@ static void iwl_mvm_sync_nssn(struct iwl_mvm *mvm, u8 baid, u16 nssn)
 #endif // NEEDS_PORTING
 }
 
-
-#define RX_REORDER_BUF_TIMEOUT_MQ (HZ / 10)
+#define RX_REORDER_BUF_TIMEOUT_MQ (ZX_MSEC(100))
 
 enum iwl_mvm_release_flags {
 	IWL_MVM_RELEASE_SEND_RSS_SYNC = BIT(0),
@@ -525,32 +528,40 @@ static void iwl_mvm_release_frames(struct iwl_mvm *mvm,
 			entries[index].e.has_packet = false;
 			free((void*)entries[index].e.rx_packet.mac_frame_buffer);
 			entries[index].e.rx_packet.mac_frame_buffer = NULL;
+			iwl_stats_inc(IWL_STATS_CNT_FRAMES_BUFFERED);
 		}
 	}
 	reorder_buf->head_sn = nssn;
 
  set_timer:
-#if 0  // NEEDS_PORTING
 	if (reorder_buf->num_stored && !reorder_buf->removed) {
 		u16 index = reorder_buf->head_sn % reorder_buf->buf_size;
 
-		while (skb_queue_empty(&entries[index].e.frames))
+		while (!entries[index].e.has_packet)
 			index = (index + 1) % reorder_buf->buf_size;
+
+		zx_time_t next_timeout =
+			zx_time_add_duration(entries[index].e.reorder_time,
+					     RX_REORDER_BUF_TIMEOUT_MQ);
+
 		/* modify timer to match next frame's expiration time */
-		mod_timer(&reorder_buf->reorder_timer,
-			  entries[index].e.reorder_time + 1 +
-			  RX_REORDER_BUF_TIMEOUT_MQ);
+		if (iwl_irq_timer_start_at_time(reorder_buf->reorder_timer,
+						next_timeout) != ZX_OK) {
+			// If starting the timer fails because next_timeout
+			// is invalid (e.g. in the past), just start the
+			// callback immediately.
+			iwl_irq_timer_start(reorder_buf->reorder_timer, 0);
+		}
 	} else {
-		del_timer(&reorder_buf->reorder_timer);
+		iwl_irq_timer_stop(reorder_buf->reorder_timer);
 	}
-#endif // NEEDS_PORTING
 	return;
 }
 
-#if 0 // NEEDS_PORTING
-void iwl_mvm_reorder_timer_expired(struct timer_list *t)
+void iwl_mvm_reorder_timer_expired(void* data)
 {
-	struct iwl_mvm_reorder_buffer *buf = from_timer(buf, t, reorder_timer);
+	struct iwl_mvm_reorder_buffer *buf =
+		(struct iwl_mvm_reorder_buffer*)data;
 	struct iwl_mvm_baid_data *baid_data =
 		iwl_mvm_baid_data_from_reorder_buf(buf);
 	struct iwl_mvm_reorder_buf_entry *entries =
@@ -559,18 +570,20 @@ void iwl_mvm_reorder_timer_expired(struct timer_list *t)
 	u16 sn = 0, index = 0;
 	bool expired = false;
 	bool cont = false;
+	zx_time_t timeout;
 
-	spin_lock(&buf->lock);
+	mtx_lock(&buf->lock);
 
 	if (!buf->num_stored || buf->removed) {
-		spin_unlock(&buf->lock);
+		mtx_unlock(&buf->lock);
 		return;
 	}
 
+	zx_time_t current_time = zx_clock_get_monotonic();
 	for (i = 0; i < buf->buf_size ; i++) {
 		index = (buf->head_sn + i) % buf->buf_size;
 
-		if (skb_queue_empty(&entries[index].e.frames)) {
+		if (!entries[index].e.has_packet) {
 			/*
 			 * If there is a hole and the next frame didn't expire
 			 * we want to break and not advance SN
@@ -578,9 +591,11 @@ void iwl_mvm_reorder_timer_expired(struct timer_list *t)
 			cont = false;
 			continue;
 		}
-		if (!cont &&
-		    !time_after(jiffies, entries[index].e.reorder_time +
-					 RX_REORDER_BUF_TIMEOUT_MQ))
+		timeout = zx_time_add_duration(entries[index].e.reorder_time,
+					       RX_REORDER_BUF_TIMEOUT_MQ);
+
+		// Break on first frame that hasn't expired
+		if (!cont && current_time <= timeout)
 			break;
 
 		expired = true;
@@ -590,35 +605,43 @@ void iwl_mvm_reorder_timer_expired(struct timer_list *t)
 	}
 
 	if (expired) {
-		struct ieee80211_sta *sta;
+		struct ieee80211_sta dummy;
 		struct iwl_mvm_sta *mvmsta;
 		u8 sta_id = baid_data->sta_id;
 
-		rcu_read_lock();
-		sta = rcu_dereference(buf->mvm->fw_id_to_mac_id[sta_id]);
-		mvmsta = iwl_mvm_sta_from_mac80211(sta);
+		iwl_rcu_read_lock(buf->mvm->dev);
+		mvmsta = iwl_rcu_load(buf->mvm->fw_id_to_mac_id[sta_id]);
+		dummy.drv_priv = mvmsta;
 
 		/* SN is set to the last expired frame + 1 */
 		IWL_DEBUG_HT(buf->mvm,
 			     "Releasing expired frames for sta %u, sn %d\n",
 			     sta_id, sn);
+#if 0 // NEEDS_PORTING
 		iwl_mvm_event_frame_timeout_callback(buf->mvm, mvmsta->vif,
 						     sta, baid_data->tid);
-		iwl_mvm_release_frames(buf->mvm, sta, NULL, baid_data,
+#endif // NEEDS_PORTING
+		iwl_mvm_release_frames(buf->mvm, &dummy, baid_data,
 				       buf, sn, IWL_MVM_RELEASE_SEND_RSS_SYNC);
-		rcu_read_unlock();
+		iwl_rcu_read_unlock(buf->mvm->dev);
 	} else {
 		/*
 		 * If no frame expired and there are stored frames, index is now
 		 * pointing to the first unexpired frame - modify timer
 		 * accordingly to this frame.
 		 */
-		mod_timer(&buf->reorder_timer,
-			  entries[index].e.reorder_time +
-			  1 + RX_REORDER_BUF_TIMEOUT_MQ);
+		timeout = zx_time_add_duration(entries[index].e.reorder_time,
+					       RX_REORDER_BUF_TIMEOUT_MQ);
+
+		if (iwl_irq_timer_start_at_time(buf->reorder_timer,
+						timeout) != ZX_OK) {
+			iwl_irq_timer_start(buf->reorder_timer, 0);
+		}
 	}
-	spin_unlock(&buf->lock);
+	mtx_unlock(&buf->lock);
 }
+
+#if 0 // NEEDS_PORTING
 
 static void iwl_mvm_del_ba(struct iwl_mvm* mvm, int queue, struct iwl_mvm_delba_data* data) {
     struct iwl_mvm_baid_data* ba_data;
@@ -921,7 +944,7 @@ bool iwl_mvm_reorder(struct iwl_mvm* mvm,
 	buffer_packet->info = rx_packet->info;
 
 	entries[index].e.rx_status = *rx_status;
-	// entries[index].e.reorder_time = zx_clock_get_monotonic();
+	entries[index].e.reorder_time = zx_clock_get_monotonic();
 	entries[index].e.has_packet = true;
 
 	buffer->num_stored++;
