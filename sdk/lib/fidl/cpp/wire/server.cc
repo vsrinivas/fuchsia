@@ -55,19 +55,20 @@ void Dispatch(void* impl, ::fidl::IncomingHeaderAndMessage& msg,
       auto* hdr = msg.header();
       ::fidl::UnknownMethodType unknown_interaction_type =
           ::fidl::internal::UnknownMethodTypeFromHeader(hdr);
-      if (::fidl::IsFlexibleInteraction(hdr) &&
+      auto is_flexible_interaction = ::fidl::IsFlexibleInteraction(hdr);
+      auto ordinal = hdr->ordinal;
+      std::move(msg).CloseHandles();
+      if (is_flexible_interaction &&
           ::fidl::internal::CanHandleMethod(unknown_method_handler->openness,
                                             unknown_interaction_type)) {
         if (unknown_interaction_type == ::fidl::UnknownMethodType::kTwoWay) {
           auto reply = ::fidl::internal::UnknownMethodReply::MakeReplyFor(
-              hdr->ordinal, ::fidl::MessageDynamicFlags::kFlexibleMethod);
+              ordinal, ::fidl::MessageDynamicFlags::kFlexibleMethod);
           (unknown_method_handler->send_reply)(reply, txn);
         }
-        std::move(msg).CloseHandles();
-        unknown_method_handler->dispatch(impl, hdr->ordinal, unknown_interaction_type, txn);
+        unknown_method_handler->dispatch(impl, ordinal, unknown_interaction_type, txn);
         break;
       }
-      std::move(msg).CloseHandles();
       txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal(), ::fidl::ErrorOrigin::kReceive);
     } break;
     case ::fidl::DispatchResult::kFound:
