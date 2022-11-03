@@ -27,7 +27,33 @@ zx_status_t CheckDataPage(F2fs *fs, pgoff_t data_blkaddr, uint32_t index) {
   return ret;
 }
 
-zx::result<pgoff_t> CheckNodePage(F2fs *fs, NodePage &node_page, const VnodeF2fs &vnode) {
+block_t StartBidxOfNodeWithoutVnode(NodePage &node_page) {
+  constexpr uint32_t kOfsInode = 0;
+  constexpr uint32_t kOfsDirectNode2 = 2;
+  constexpr uint32_t kOfsIndirectNode1 = 3;
+  constexpr uint32_t kOfsIndirectNode2 = 4 + kNidsPerBlock;
+  constexpr uint32_t kOfsDoubleIndirectNode = 5 + 2 * kNidsPerBlock;
+  uint32_t node_ofs = node_page.OfsOfNode(), NumOfIndirectNodes = 0;
+
+  if (node_ofs == kOfsInode) {
+    return 0;
+  } else if (node_ofs <= kOfsDirectNode2) {
+    NumOfIndirectNodes = 0;
+  } else if (node_ofs >= kOfsIndirectNode1 && node_ofs < kOfsIndirectNode2) {
+    NumOfIndirectNodes = 1;
+  } else if (node_ofs >= kOfsIndirectNode2 && node_ofs < kOfsDoubleIndirectNode) {
+    NumOfIndirectNodes = 2;
+  } else {
+    NumOfIndirectNodes = (node_ofs - kOfsDoubleIndirectNode - 2) / (kNidsPerBlock + 1);
+  }
+
+  uint32_t bidx = node_ofs - NumOfIndirectNodes - 1;
+  // Since the test does not use InlineXattr, Use |kAddrsPerInode| value instead of
+  // |VnodeF2fs::GetAddrsPerInode| function.
+  return (kAddrsPerInode + safemath::CheckMul(bidx, kAddrsPerBlock)).ValueOrDie();
+}
+
+zx::result<pgoff_t> CheckNodePage(F2fs *fs, NodePage &node_page) {
   pgoff_t block_count = 0, start_index = 0, checked = 0;
 
   if (IsInode(node_page)) {
@@ -36,7 +62,7 @@ zx::result<pgoff_t> CheckNodePage(F2fs *fs, NodePage &node_page, const VnodeF2fs
     block_count = kAddrsPerBlock;
   }
 
-  start_index = node_page.StartBidxOfNode(vnode);
+  start_index = StartBidxOfNodeWithoutVnode(node_page);
 
   for (pgoff_t index = 0; index < block_count; ++index) {
     block_t data_blkaddr = DatablockAddr(&node_page, index);
@@ -74,7 +100,6 @@ zx::result<fbl::RefPtr<VnodeF2fs>> CreateFileAndWritePages(Dir *dir_vnode,
   return zx::ok(std::move(fsync_vnode));
 }
 
-// TODO: |CheckFsyncedFile| should know the existence of vnode corresponding to |ino|.
 void CheckFsyncedFile(F2fs *fs, ino_t ino, pgoff_t data_page_count, pgoff_t node_page_count) {
   block_t data_blkaddr = fs->GetSegmentManager().NextFreeBlkAddr(CursegType::kCursegWarmNode);
   uint64_t curr_checkpoint_ver = fs->GetSuperblockInfo().GetCheckpoint().checkpoint_ver;
@@ -104,13 +129,7 @@ void CheckFsyncedFile(F2fs *fs, ino_t ino, pgoff_t data_page_count, pgoff_t node
       ASSERT_FALSE(node_page->IsFsyncDnode());
     }
 
-    fbl::RefPtr<VnodeF2fs> vnode;
-    if (auto err = VnodeF2fs::Vget(fs, ino, &vnode); err != ZX_OK) {
-      ASSERT_EQ(err, ZX_ERR_NOT_FOUND);
-      return;
-    }
-
-    auto result = CheckNodePage(fs, *node_page, *vnode);
+    auto result = CheckNodePage(fs, *node_page);
     ASSERT_EQ(result.status_value(), ZX_OK);
     data_blkaddr = node_page->NextBlkaddrOfNode();
     checked_data_page_count += result.value();
