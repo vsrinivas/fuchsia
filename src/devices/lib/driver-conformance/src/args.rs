@@ -47,17 +47,21 @@ impl fmt::Display for TestList {
 #[argh(
     subcommand,
     name = "conformance",
-    example = "To run all tests for a given device:
+    example = "To run all tests for a given driver:
 
-$ ffx driver conformance device /dev/pci-00:05.0
+$ ffx driver conformance test --driver fuchsia-boot:///#driver/my-driver.so
 
-To run all tests of a given categor(ies) for a given device:
+To run all tests for a given device:
 
-$ ffx driver conformance category --device /dev/pci-00:05.0 functional,performance
+$ ffx driver conformance test --device pci-00:05.0-fidl/my-device
 
-To run an arbitrary test(s) against a given device:
+To run all tests of a given type(s) for a given driver:
 
-$ ffx driver conformance test custom --device /dev/pci-00:05.0 fuchsia-pkg://fuchsia.com/my-test#meta/my-test.cm"
+$ ffx driver conformance test --driver fuchsia-boot:///#driver/my-driver.so --types functional,performance
+
+To run an arbitrary test(s) against a given driver:
+
+$ ffx driver conformance test --driver fuchsia-boot:///#driver/my-driver.so --tests fuchsia-pkg://fuchsia.com/my-test#meta/my-test.cm"
 )]
 pub struct ConformanceCommand {
     #[argh(subcommand)]
@@ -74,63 +78,33 @@ pub enum ConformanceSubCommand {
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "test")]
 pub struct TestCommand {
-    #[argh(subcommand)]
-    pub subcommand: TestSubCommand,
-}
+    /// device topological path. e.g. pci-00:05.0-fidl/my-device
+    #[argh(option)]
+    pub device: Option<String>,
 
-#[derive(FromArgs, Clone, PartialEq, Debug)]
-#[argh(subcommand)]
-pub enum TestSubCommand {
-    Device(TestDeviceCommand),
-    Category(TestCategoryCommand),
-    Custom(TestCustomCommand),
-}
+    /// driver libname. e.g. fuchsia-boot:///#driver/my-driver.so
+    #[argh(option)]
+    pub driver: Option<String>,
 
-/// Run all relevant tests against a given device.
-#[derive(FromArgs, Default, Clone, PartialEq, Debug)]
-#[argh(subcommand, name = "device")]
-pub struct TestDeviceCommand {
-    /// device ID. e.g. /dev/pci-00:0a.0
-    #[argh(positional)]
-    pub device: String,
+    /// path to FHCP metadata file.
+    #[argh(option)]
+    pub metadata_path: Option<String>,
 
-    /// local directory storing the resources required for offline testing.
+    /// WIP. comma-separated list of test types. e.g. performance,functional
+    #[argh(option)]
+    pub types: Option<String>,
+
+    /// WIP. comma-separated list of test categories. e.g. imaging::camera,usb
+    #[argh(option)]
+    pub categories: Option<String>,
+
+    /// comma-separated list of test components. e.g. fuchsia-pkg://fuchsia.dev/sometest#meta/sometest.cm,fuchsia-pkg://fuchsia.dev/test2#meta/othertest.cm
+    #[argh(option)]
+    pub tests: Option<TestList>,
+
+    /// WIP. local directory storing the resources required for offline testing.
     #[argh(option)]
     pub cache: Option<String>,
-}
-
-/// Run tests for a given category. e.g. functional
-#[derive(FromArgs, Default, Clone, PartialEq, Debug)]
-#[argh(subcommand, name = "category")]
-pub struct TestCategoryCommand {
-    /// category of tests to run against the driver. e.g. performance
-    #[argh(positional)]
-    pub category_name: String,
-
-    /// local directory storing the resources required for offline testing.
-    #[argh(option)]
-    pub cache: Option<String>,
-
-    /// device ID, e.g. /dev/pci-00:0a.0
-    #[argh(option, short = 'd')]
-    pub device: String,
-}
-
-/// Run the tests listed. comma-separated list of test component URLs.
-#[derive(FromArgs, Default, Clone, PartialEq, Debug)]
-#[argh(subcommand, name = "custom")]
-pub struct TestCustomCommand {
-    /// comma-separated list of test components. e.g. fuchsia-pkg://fuchsia.dev/sometest#meta/sometest.cm
-    #[argh(positional)]
-    pub custom_list: TestList,
-
-    /// local directory storing the resources required for offline testing.
-    #[argh(option)]
-    pub cache: Option<String>,
-
-    /// device ID, e.g. /dev/pci-00:0a.0
-    #[argh(option, short = 'd')]
-    pub device: String,
 }
 
 #[cfg(test)]

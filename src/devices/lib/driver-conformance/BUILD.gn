@@ -16,18 +16,26 @@ if (is_host) {
     name = "conformance_lib"
     with_unit_tests = true
     deps = [
+      "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development_rust",
+      "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager_rust",
       "//src/developer/ffx/config:lib",
       "//src/developer/ffx/lib/errors:lib",
+      "//src/devices/bin/driver_tools/common:lib",
       "//src/devices/bin/driver_tools/connector:lib",
       "//src/sys/run_test_suite:lib",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
       "//third_party/rust_crates:futures",
       "//third_party/rust_crates:regex",
+      "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:serde_json",
+      "//third_party/rust_crates:signal-hook",
     ]
+    test_deps = [ "//sdk/fidl/fuchsia.driver.index:fuchsia.driver.index_rust" ]
     sources = [
       "src/args.rs",
       "src/lib.rs",
+      "src/parser.rs",
     ]
   }
 }
