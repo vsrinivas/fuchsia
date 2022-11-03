@@ -474,22 +474,12 @@ zx_status_t MkfsWorker::WriteCheckPointPack() {
   Checkpoint *checkpoint = reinterpret_cast<Checkpoint *>(checkpoint_block.GetData());
 #endif  // __Fuchsia__
 
-  if (!checkpoint) {
-    FX_LOGS(ERROR) << "Error: Alloc Failed for Checkpoint!!!";
-    return ZX_ERR_NO_MEMORY;
-  }
-
   FsBlock summary_block;
 #ifdef __Fuchsia__
   SummaryBlock *summary = reinterpret_cast<SummaryBlock *>(summary_block.GetData().data());
 #else   // __Fuchsia__
   SummaryBlock *summary = reinterpret_cast<SummaryBlock *>(summary_block.GetData());
 #endif  // __Fuchsia__
-
-  if (!summary) {
-    FX_LOGS(ERROR) << "Error: Alloc Failed for summay_node!!!";
-    return ZX_ERR_NO_MEMORY;
-  }
 
   // 1. cp page 1 of checkpoint pack 1
   checkpoint->checkpoint_ver = 1;
@@ -727,10 +717,6 @@ zx_status_t MkfsWorker::WriteRootInode() {
 #else   // __Fuchsia__
   Node *raw_node = reinterpret_cast<Node *>(raw_block.GetData());
 #endif  // __Fuchsia__
-  if (raw_node == nullptr) {
-    FX_LOGS(ERROR) << "Error: Alloc Failed for raw_node!!!";
-    return ZX_ERR_NO_MEMORY;
-  }
 
   raw_node->footer.nid = super_block_.root_ino;
   raw_node->footer.ino = super_block_.root_ino;
@@ -774,19 +760,7 @@ zx_status_t MkfsWorker::WriteRootInode() {
   node_segment_block_num += safemath::checked_cast<uint64_t>(
       params_.cur_seg[static_cast<int>(CursegType::kCursegHotNode)] * params_.blks_per_seg);
 
-  if (zx_status_t ret = WriteToDisk(raw_block, node_segment_block_num); ret != ZX_OK) {
-    FX_LOGS(ERROR) << "Error: While writing the raw_node to disk!!!, size = " << sizeof(Node);
-    return ret;
-  }
-
-  memset(raw_node, 0xff, sizeof(Node));
-
-  if (zx_status_t ret = WriteToDisk(raw_block, node_segment_block_num + 1); ret != ZX_OK) {
-    FX_LOGS(ERROR) << "Error: While writing the raw_node to disk!!!";
-    return ret;
-  }
-
-  return ZX_OK;
+  return WriteToDisk(raw_block, node_segment_block_num);
 }
 
 zx_status_t MkfsWorker::UpdateNatRoot() {
@@ -796,10 +770,6 @@ zx_status_t MkfsWorker::UpdateNatRoot() {
 #else   // __Fuchsia__
   NatBlock *nat_block = reinterpret_cast<NatBlock *>(raw_nat_block.GetData());
 #endif  // __Fuchsia__
-  if (nat_block == nullptr) {
-    FX_LOGS(ERROR) << "Error: Alloc Failed for nat_blk!!!";
-    return ZX_ERR_NO_MEMORY;
-  }
 
   // update root
   nat_block->entries[super_block_.root_ino].block_addr =
@@ -817,12 +787,7 @@ zx_status_t MkfsWorker::UpdateNatRoot() {
 
   block_t nat_segment_block_num = LeToCpu(super_block_.nat_blkaddr);
 
-  if (zx_status_t ret = WriteToDisk(raw_nat_block, nat_segment_block_num); ret != ZX_OK) {
-    FX_LOGS(ERROR) << "Error: While writing the nat_blk set0 to disk!!!";
-    return ret;
-  }
-
-  return ZX_OK;
+  return WriteToDisk(raw_nat_block, nat_segment_block_num);
 }
 
 zx_status_t MkfsWorker::AddDefaultDentryRoot() {
@@ -832,10 +797,6 @@ zx_status_t MkfsWorker::AddDefaultDentryRoot() {
 #else   // __Fuchsia__
   DentryBlock *dent_block = reinterpret_cast<DentryBlock *>(raw_dent_block.GetData());
 #endif  // __Fuchsia__
-  if (dent_block == nullptr) {
-    FX_LOGS(ERROR) << "Error: Alloc Failed for dent_blk!!!";
-    return ZX_ERR_NO_MEMORY;
-  }
 
   dent_block->dentry[0].hash_code = 0;
   dent_block->dentry[0].ino = super_block_.root_ino;
@@ -855,79 +816,83 @@ zx_status_t MkfsWorker::AddDefaultDentryRoot() {
       LeToCpu(super_block_.main_blkaddr) +
       params_.cur_seg[static_cast<int>(CursegType::kCursegHotData)] * params_.blks_per_seg;
 
-  if (zx_status_t ret = WriteToDisk(raw_dent_block, data_block_num); ret != ZX_OK) {
-    FX_LOGS(ERROR) << "Error: While writing the dentry_blk to disk!!!";
-    return ret;
-  }
+  return WriteToDisk(raw_dent_block, data_block_num);
+}
 
-  return ZX_OK;
+zx_status_t MkfsWorker::PurgeNodeChain() {
+  FsBlock raw_block;
+#ifdef __Fuchsia__
+  Node *raw_node = reinterpret_cast<Node *>(raw_block.GetData().data());
+#else   // __Fuchsia__
+  Node *raw_node = reinterpret_cast<Node *>(raw_block.GetData());
+#endif  // __Fuchsia__
+  block_t node_segment_block_num = LeToCpu(super_block_.main_blkaddr);
+  node_segment_block_num += safemath::checked_cast<uint64_t>(
+      params_.cur_seg[static_cast<int>(CursegType::kCursegWarmNode)] * params_.blks_per_seg);
+
+  memset(raw_node, 0xff, sizeof(Node));
+  // Purge the 1st block of warm node cur_seg to avoid unnecessary roll-forward recovery.
+  return WriteToDisk(raw_block, node_segment_block_num);
 }
 
 zx_status_t MkfsWorker::CreateRootDir() {
-  zx_status_t err = ZX_OK;
-  const char err_msg[] = "Error creating root directry: ";
-  if (err = WriteRootInode(); err != ZX_OK) {
-    FX_LOGS(ERROR) << err_msg << "Failed to write root inode" << err;
+  std::string err_msg = "Error creating root directory: ";
+  if (zx_status_t err = WriteRootInode(); err != ZX_OK) {
+    FX_LOGS(ERROR) << err_msg << "Failed to write root inode " << err;
     return err;
   }
-  if (err = UpdateNatRoot(); err != ZX_OK) {
-    FX_LOGS(ERROR) << err_msg << "Failed to update NAT for root" << err;
+  if (zx_status_t err = PurgeNodeChain(); err != ZX_OK) {
+    FX_LOGS(ERROR) << err_msg << "Failed to purge node chain " << err;
     return err;
   }
-  if (err = AddDefaultDentryRoot(); err != ZX_OK) {
-    FX_LOGS(ERROR) << err_msg << "Failed to add default dentries for root" << err;
+  if (zx_status_t err = UpdateNatRoot(); err != ZX_OK) {
+    FX_LOGS(ERROR) << err_msg << "Failed to update NAT for root " << err;
     return err;
   }
-  return err;
+  if (zx_status_t err = AddDefaultDentryRoot(); err != ZX_OK) {
+    FX_LOGS(ERROR) << err_msg << "Failed to add default dentries for root " << err;
+    return err;
+  }
+  return ZX_OK;
 }
 
 zx_status_t MkfsWorker::TrimDevice() { return bc_->Trim(0, static_cast<block_t>(bc_->Maxblk())); }
 
 zx_status_t MkfsWorker::FormatDevice() {
-  zx_status_t err = ZX_OK;
-  const char err_msg[] = "Error formatting the device: ";
-  if (err = PrepareSuperblock(); err != ZX_OK) {
-    FX_LOGS(ERROR) << err_msg << "Failed to prepare superblock information";
+  if (zx_status_t err = PrepareSuperblock(); err != ZX_OK) {
     return err;
   }
 
-  if (err = TrimDevice(); err != ZX_OK) {
+  if (zx_status_t err = TrimDevice(); err != ZX_OK) {
     if (err == ZX_ERR_NOT_SUPPORTED) {
       FX_LOGS(INFO) << "This device doesn't support TRIM";
     } else {
-      FX_LOGS(ERROR) << err_msg << "Failed to trim whole device" << err;
       return err;
     }
   }
 
-  if (err = InitSitArea(); err != ZX_OK) {
-    FX_LOGS(ERROR) << err_msg << "Failed to Initialise the SIT AREA" << err;
+  if (zx_status_t err = InitSitArea(); err != ZX_OK) {
     return err;
   }
 
-  if (err = InitNatArea(); err != ZX_OK) {
-    FX_LOGS(ERROR) << err_msg << "Failed to Initialise the NAT AREA" << err;
+  if (zx_status_t err = InitNatArea(); err != ZX_OK) {
     return err;
   }
 
-  if (err = CreateRootDir(); err != ZX_OK) {
-    FX_LOGS(ERROR) << err_msg << "Failed to create the root directory" << err;
+  if (zx_status_t err = CreateRootDir(); err != ZX_OK) {
     return err;
   }
 
-  if (err = WriteCheckPointPack(); err != ZX_OK) {
-    FX_LOGS(ERROR) << err_msg << "Failed to write the check point pack" << err;
+  if (zx_status_t err = WriteCheckPointPack(); err != ZX_OK) {
     return err;
   }
 
-  if (err = WriteSuperblock(); err != ZX_OK) {
-    FX_LOGS(ERROR) << err_msg << "Failed to write the Super Block" << err;
+  if (zx_status_t err = WriteSuperblock(); err != ZX_OK) {
     return err;
   }
 
   // Ensure that all cached data is flushed in the underlying block device
-  bc_->Flush();
-  return err;
+  return bc_->Flush();
 }
 
 void PrintUsage() {

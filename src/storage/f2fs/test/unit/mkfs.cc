@@ -365,6 +365,19 @@ TEST(FormatFilesystemTest, MkfsOptionsHeapBasedAlloc) {
   ReadCheckpoint(bc.get(), *sb_or.value(), &ckp);
   VerifyHeapBasedAllocation(*sb_or.value(), ckp, false);
 
+  fit::function<void()> check_node_chain = [&]() {
+    auto warm_node_segment = ckp.cur_node_segno[1];
+    block_t block_addr = (safemath::CheckMul<block_t>(warm_node_segment, kDefaultBlocksPerSegment) +
+                          LeToCpu(sb_or->main_blkaddr))
+                             .ValueOrDie();
+    uint8_t read_buf[kBlockSize], buf[kBlockSize];
+    std::memset(buf, 0xFF, kBlockSize);
+    ASSERT_EQ(bc->Readblk(block_addr, read_buf), ZX_OK);
+    ASSERT_EQ(memcmp(read_buf, buf, kBlockSize), 0);
+  };
+
+  check_node_chain();
+
   // If arg set to 1, using heap-based allocation
   argv.clear();
   argv.push_back("mkfs");
@@ -374,6 +387,7 @@ TEST(FormatFilesystemTest, MkfsOptionsHeapBasedAlloc) {
   sb_or = ReadSuperblock(*bc);
   ReadCheckpoint(bc.get(), *sb_or.value(), &ckp);
   VerifyHeapBasedAllocation(*sb_or.value(), ckp, true);
+  check_node_chain();
 }
 
 TEST(FormatFilesystemTest, MkfsOptionsOverprovision) {

@@ -73,6 +73,7 @@ class MkfsWorker {
   zx_status_t UpdateNatRoot();
   zx_status_t AddDefaultDentryRoot();
   zx_status_t CreateRootDir();
+  zx_status_t PurgeNodeChain();
 
   zx_status_t TrimDevice();
 };
