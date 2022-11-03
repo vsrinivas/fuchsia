@@ -20,8 +20,8 @@ fuchsia::sysmem::ImageFormat_2 StreamConstraints::MakeImageFormat(
     uint32_t width, uint32_t height, fuchsia::sysmem::PixelFormatType format,
     uint32_t original_width, uint32_t original_height) {
   fuchsia::sysmem::PixelFormat pixel_format = {.type = format, .has_format_modifier = false};
-  fuchsia_sysmem_PixelFormat pixel_format_c = ConvertPixelFormatToC(pixel_format);
-  uint32_t bytes_per_row = ImageFormatStrideBytesPerWidthPixel(&pixel_format_c) * width;
+  fuchsia_sysmem::wire::PixelFormat pixel_format_wire = ConvertPixelFormatToWire(pixel_format);
+  uint32_t bytes_per_row = ImageFormatStrideBytesPerWidthPixel(pixel_format_wire) * width;
 
   // All four dimensions must be non-zero to generate a valid aspect ratio.
   bool has_pixel_aspect_ratio = width && height && original_width && original_height;

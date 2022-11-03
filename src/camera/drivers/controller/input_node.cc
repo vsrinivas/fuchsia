@@ -10,7 +10,6 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include "src/camera/lib/format_conversion/buffer_collection_helper.h"
 #include "src/camera/lib/format_conversion/format_conversion.h"
 #include "src/devices/lib/sysmem/sysmem.h"
 
@@ -42,16 +41,12 @@ fpromise::result<std::unique_ptr<InputNode>, zx_status_t> InputNode::Create(
     return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
 
-  // Use a BufferCollectionHelper to manage the conversion
-  // between buffer collection representations.
-  BufferCollectionHelper buffer_collection_helper(pnode->OutputBuffers());
-
-  auto image_format = ConvertHlcppImageFormat2toCType(inode.image_formats[0]);
+  auto image_format = ConvertHlcppImageFormat2toWireType(inode.image_formats[0]);
 
   buffer_collection_info_2 temp_buffer_collection;
   image_format_2_t temp_image_format;
-  sysmem::buffer_collection_info_2_banjo_from_fidl(*buffer_collection_helper.GetC(),
-                                                   temp_buffer_collection);
+  sysmem::buffer_collection_info_2_banjo_from_fidl(
+      ConvertToWireTypeBufferCollectionInfo2(pnode->OutputBuffers()), temp_buffer_collection);
   sysmem::image_format_2_banjo_from_fidl(image_format, temp_image_format);
   output_stream_protocol_t isp_stream_protocol{};
   auto status = isp.CreateOutputStream(

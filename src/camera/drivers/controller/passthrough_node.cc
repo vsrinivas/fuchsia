@@ -14,9 +14,6 @@
 
 #include <safemath/safe_conversions.h>
 
-#include "src/camera/lib/format_conversion/buffer_collection_helper.h"
-#include "src/devices/lib/sysmem/sysmem.h"
-
 namespace camera {
 
 PassthroughNode::PassthroughNode(async_dispatcher_t* dispatcher, BufferAttachments attachments,

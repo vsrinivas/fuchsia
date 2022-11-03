@@ -168,9 +168,9 @@ class TaskTest : public zxtest::Test {
                                      kHeight / 4));
     ASSERT_OK(fake_bti_create(bti_handle_.reset_and_get_address()));
 
-    fuchsia_sysmem_ImageFormat_2 temp_image_format;
+    fuchsia_sysmem::wire::ImageFormat2 temp_image_format;
     sysmem::image_format_2_fidl_from_banjo(watermark_info_.wm_image_format, temp_image_format);
-    uint32_t watermark_size = static_cast<uint32_t>(ImageFormatImageSize(&temp_image_format));
+    uint32_t watermark_size = static_cast<uint32_t>(ImageFormatImageSize(temp_image_format));
 
     zx_status_t status = zx_vmo_create_contiguous(bti_handle_.get(), watermark_size, 0,
                                                   watermark_vmo_.reset_and_get_address());
