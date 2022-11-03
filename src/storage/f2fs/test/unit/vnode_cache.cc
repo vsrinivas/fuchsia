@@ -203,5 +203,54 @@ TEST_F(VnodeCacheTest, VnoceCacheExceptionCase) {
   test_vnode = nullptr;
 }
 
+TEST_F(VnodeCacheTest, VnodeActivation) {
+  fbl::RefPtr<fs::Vnode> test_dir;
+  ASSERT_EQ(root_dir_->Create("test", S_IFDIR, &test_dir), ZX_OK);
+
+  fbl::RefPtr<VnodeF2fs> test_dir_vn = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(test_dir));
+  Dir *test_dir_ptr = static_cast<Dir *>(test_dir_vn.get());
+
+  std::string child_name = "file";
+  FileTester::CreateChild(test_dir_ptr, S_IFDIR, child_name);
+
+  fbl::RefPtr<fs::Vnode> test_vnode;
+  FileTester::Lookup(test_dir_ptr, child_name, &test_vnode);
+  fbl::RefPtr<VnodeF2fs> test_f2fs_vnode = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(test_vnode));
+  ASSERT_TRUE(test_f2fs_vnode->IsActive());
+  ASSERT_EQ(test_f2fs_vnode->GetNameView().compare(child_name), 0);
+  ASSERT_EQ(test_f2fs_vnode->Close(), ZX_OK);
+
+  auto raw_pointer = test_f2fs_vnode.get();
+  test_f2fs_vnode.reset();
+  // "file" is active as VnodeCache::dirty_list_ keeps its ref.
+  ASSERT_TRUE(raw_pointer->IsActive());
+
+  fs_->WriteCheckpoint(false, false);
+  // "file" is inactive after checkpoint writes its vnode to disk.
+  ASSERT_FALSE(raw_pointer->IsActive());
+
+  // Get refptr for "file" from the vnode cache while it is being recycled.
+  std::thread thread1 = std::thread([&]() {
+    int iter = 10000;
+    while (--iter) {
+      fbl::RefPtr<VnodeF2fs> test_vnode;
+      ASSERT_EQ(VnodeF2fs::Vget(fs_.get(), 5, &test_vnode), ZX_OK);
+    }
+  });
+  std::thread thread2 = std::thread([&]() {
+    int iter = 10000;
+    while (--iter) {
+      fbl::RefPtr<VnodeF2fs> test_vnode;
+      ASSERT_EQ(VnodeF2fs::Vget(fs_.get(), 5, &test_vnode), ZX_OK);
+    }
+  });
+
+  thread1.join();
+  thread2.join();
+
+  ASSERT_FALSE(raw_pointer->IsActive());
+  ASSERT_EQ(test_dir_vn->Close(), ZX_OK);
+}
+
 }  // namespace
 }  // namespace f2fs
