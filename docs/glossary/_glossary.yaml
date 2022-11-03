@@ -1242,6 +1242,18 @@ href=\"docs/contribute/governance/rfcs/0100_product_metadata\">RFC-0100</a>."
   related_guides: [""]
   area: ["Session"]
 
+- term: "Starnix"
+  short_description: "A <a href=\"/docs/glossary#runner\">runner</a> that allows
+  for running unmodified Linux binaries on Fuchsia."
+  full_description: "A <a href=\"/docs/glossary#runner\">runner</a> that allows
+  for running unmodified Linux binaries on Fuchsia.
+
+  Linux binaries are not run inside a virtual machine. Instead, starnix creates a
+  compatible runtime environment by implementing the Linux UAPI."
+  see_also: ["<a href=\"/docs/concepts/components/v2/starnix\">starnix</a>"]
+  related_guides: [""]
+  area: ["Component Framework"]
+
 - term: "Storage capability"
   short_description: "A storage capability is a
   <a href=/docs/glossary#capability>capability</a> that allocates per-component
