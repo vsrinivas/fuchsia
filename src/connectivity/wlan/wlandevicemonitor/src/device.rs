@@ -13,7 +13,7 @@ use {
     },
     log::{error, info},
     pin_utils::pin_mut,
-    std::{convert::Infallible, sync::Arc},
+    std::{convert::Infallible, path::Path, sync::Arc},
 };
 
 use crate::{device_watch, inspect, watchable_map::WatchableMap};
@@ -58,11 +58,12 @@ pub type IfaceMap = WatchableMap<u16, IfaceDevice>;
 /// When new PHYs are discovered, the `device_watch` module produces a `NewPhyDevice`.  This struct
 /// contains a PHY proxy and a `wlan_dev::Device`.  This `Device` lifetime is then managed by
 /// `serve_phy`.
-pub async fn serve_phys<Env: wlan_dev::DeviceEnv>(
+pub async fn serve_phys<P: AsRef<Path>, E: wlan_dev::DeviceEnv>(
     phys: Arc<PhyMap>,
     inspect_tree: Arc<inspect::WlanMonitorTree>,
+    device_path: P,
 ) -> Result<Infallible, Error> {
-    let new_phys = device_watch::watch_phy_devices::<Env>()?;
+    let new_phys = device_watch::watch_phy_devices::<_, E>(device_path)?;
     pin_mut!(new_phys);
     let mut active_phys = FuturesUnordered::new();
     loop {
@@ -146,8 +147,6 @@ mod tests {
     struct FaultyDeviceEnv;
 
     impl wlan_dev::DeviceEnv for FaultyDeviceEnv {
-        const PHY_PATH: &'static str = "/some/bogus/path";
-
         fn device_from_path<P: AsRef<Path>>(_path: P) -> Result<wlan_dev::Device, zx::Status> {
             Err(zx::Status::NOT_SUPPORTED)
         }
@@ -163,7 +162,7 @@ mod tests {
 
         // Serve PHYs from the bogus device environment that returns errors for all operations.
         // This will ensure that attempting to watch devices fails immediately.
-        let fut = serve_phys::<FaultyDeviceEnv>(phys.clone(), inspect_tree);
+        let fut = serve_phys::<_, FaultyDeviceEnv>(phys.clone(), inspect_tree, "/bogus/path");
         pin_mut!(fut);
 
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Err(_)));

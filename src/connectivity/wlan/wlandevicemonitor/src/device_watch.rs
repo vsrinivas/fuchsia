@@ -24,9 +24,10 @@ pub struct NewPhyDevice {
     pub device: wlan_dev::Device,
 }
 
-pub fn watch_phy_devices<E: wlan_dev::DeviceEnv>(
+pub fn watch_phy_devices<P: AsRef<Path>, E: wlan_dev::DeviceEnv>(
+    device_path: P,
 ) -> io::Result<impl Stream<Item = Result<NewPhyDevice, anyhow::Error>>> {
-    Ok(watch_new_devices::<_, E>(E::PHY_PATH)?.try_filter_map(|path| {
+    Ok(watch_new_devices(device_path)?.try_filter_map(|path| {
         future::ready(Ok(handle_open_error(&path, new_phy::<E>(&path), "phy")))
     }))
 }
@@ -58,7 +59,7 @@ fn handle_open_error<T>(
 /// # Arguments
 ///
 /// * `path` - Path struct that represents the path to the device directory.
-fn watch_new_devices<P: AsRef<Path>, E: wlan_dev::DeviceEnv>(
+fn watch_new_devices<P: AsRef<Path>>(
     path: P,
 ) -> io::Result<impl Stream<Item = Result<PathBuf, anyhow::Error>>> {
     let raw_dir = File::open(&path)?;
@@ -101,6 +102,7 @@ fn id_from_path(path: &PathBuf) -> Result<u16, anyhow::Error> {
 mod tests {
     use {
         super::*,
+        crate::PHY_PATH,
         fidl_fuchsia_wlan_common as fidl_wlan_common,
         fidl_fuchsia_wlan_device::{self as fidl_wlan_dev},
         fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_tap as fidl_wlantap,
@@ -117,8 +119,8 @@ mod tests {
     #[test]
     fn watch_phys() {
         let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
-        let phy_watcher =
-            watch_phy_devices::<wlan_dev::RealDeviceEnv>().expect("Failed to create phy_watcher");
+        let phy_watcher = watch_phy_devices::<_, wlan_dev::RealDeviceEnv>(PHY_PATH)
+            .expect("Failed to create phy_watcher");
         pin_mut!(phy_watcher);
 
         // Wait for the wlantap to appear.

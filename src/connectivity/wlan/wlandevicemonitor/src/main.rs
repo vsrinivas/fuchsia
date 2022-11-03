@@ -28,6 +28,7 @@ use {
 };
 
 const MAX_LOG_LEVEL: log::LevelFilter = log::LevelFilter::Info;
+const PHY_PATH: &'static str = "/dev/class/wlanphy";
 
 async fn serve_fidl(
     mut fs: ServiceFs<ServiceObjLocal<'_, ()>>,
@@ -59,7 +60,7 @@ fn serve_phys(
     inspect_tree: Arc<inspect::WlanMonitorTree>,
 ) -> BoxFuture<'static, Result<std::convert::Infallible, Error>> {
     info!("Serving real device environment");
-    let fut = device::serve_phys::<wlan_dev::RealDeviceEnv>(phys, inspect_tree);
+    let fut = device::serve_phys::<_, wlan_dev::RealDeviceEnv>(phys, inspect_tree, PHY_PATH);
     Box::pin(fut)
 }
 

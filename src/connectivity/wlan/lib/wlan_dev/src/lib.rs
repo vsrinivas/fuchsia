@@ -56,9 +56,6 @@ impl fmt::Debug for Device {
 
 /// Encapsulate phy and iface devices as well as the environment where they exist
 pub trait DeviceEnv {
-    /// Path to the directory where new phy devices will be spawned
-    const PHY_PATH: &'static str;
-
     /// Creates a Device (defined above) from a file at the given path
     fn device_from_path<P: AsRef<Path>>(path: P) -> Result<Device, zx::Status>;
 }
@@ -67,8 +64,6 @@ pub trait DeviceEnv {
 pub struct RealDeviceEnv;
 
 impl DeviceEnv for RealDeviceEnv {
-    const PHY_PATH: &'static str = "/dev/class/wlanphy";
-
     fn device_from_path<P: AsRef<Path>>(path: P) -> Result<Device, zx::Status> {
         let dev = OpenOptions::new().read(true).write(true).open(path)?;
         Device::new(dev)
