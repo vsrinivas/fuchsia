@@ -402,4 +402,8 @@ size_t VP9Decoder::GetNumReferenceFrames() const {
   return kVp9NumRefFrames;
 }
 
+bool VP9Decoder::IsCurrentFrameKeyframe() const {
+  return curr_frame_hdr_ && curr_frame_hdr_->IsKeyframe();
+}
+
 }  // namespace media

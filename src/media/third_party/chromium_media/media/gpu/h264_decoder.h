@@ -181,6 +181,7 @@ class MEDIA_GPU_EXPORT H264Decoder : public AcceleratedVideoDecoder {
   VideoCodecProfile GetProfile() const override;
   uint8_t GetBitDepth() const override;
   size_t GetRequiredNumOfPictures() const override;
+  bool IsCurrentFrameKeyframe() const override;
   size_t GetNumReferenceFrames() const override;
   gfx::Size GetSarSize() const { return sar_size_; }
 

@@ -82,6 +82,9 @@ class MEDIA_GPU_EXPORT AcceleratedVideoDecoder {
   virtual size_t GetRequiredNumOfPictures() const = 0;
   virtual size_t GetNumReferenceFrames() const = 0;
 
+  // TODO(fxbug.dev/109108): Exposes if kConfigChange was caused by a keyframe
+  virtual bool IsCurrentFrameKeyframe() const = 0;
+
   // About 3 secs for 30 fps video. When the new sized keyframe is missed, the
   // decoder cannot decode the frame. The number of frames are skipped until
   // getting new keyframe. If dropping more than the number of frames, the

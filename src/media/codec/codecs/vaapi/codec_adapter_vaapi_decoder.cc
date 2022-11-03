@@ -328,6 +328,8 @@ class LinearBufferManager : public SurfaceBufferManager {
     return GetRequiredSurfaceSizeLocked(picture_size);
   }
 
+  bool NeedsKeyframeForBufferAllocation() const override { return false; }
+
  protected:
   gfx::Size GetRequiredSurfaceSizeLocked(const gfx::Size& picture_size) FXL_REQUIRE(surface_lock_) {
     // Given the new picture size and the current surface size, create a surface size that will
@@ -670,6 +672,8 @@ class TiledBufferManager : public SurfaceBufferManager {
     return GetRequiredSurfaceSizeLocked(picture_size);
   }
 
+  bool NeedsKeyframeForBufferAllocation() const override { return true; }
+
  protected:
   gfx::Size GetRequiredSurfaceSizeLocked(const gfx::Size& picture_size) FXL_REQUIRE(surface_lock_) {
     // Given the new picture size and the current surface size, create a surface size that will
@@ -935,6 +939,15 @@ void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(media::DecoderBuffer buffer) {
 
       FX_SLOG(INFO, "Are new buffers required for bitstream change?",
               KV("output_re_config_required", output_re_config_required ? "yes" : "no"));
+
+      // TODO(fxbug.dev/109108): This is a temporary workaround until the new media APIs are adopted
+      if (surface_buffer_manager_ &&
+          (surface_buffer_manager_->NeedsKeyframeForBufferAllocation() &&
+           !media_decoder_->IsCurrentFrameKeyframe() && output_re_config_required)) {
+        SetCodecFailure(
+            "SurfaceManager implementation does not support buffer allocation on non-keyframes");
+        break;
+      }
 
       // If buffer reconfiguration is needed, reset mid_stream_output_buffer_reconfig_finish_ since
       // we are going to block the input_processing thread until either the stream is stopped or

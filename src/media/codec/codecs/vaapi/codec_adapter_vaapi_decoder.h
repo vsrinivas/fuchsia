@@ -92,6 +92,11 @@ class SurfaceBufferManager {
   // into account the pixel format.
   virtual gfx::Size GetRequiredSurfaceSize(const gfx::Size& picture_size) = 0;
 
+  // TODO(fxbug.dev/109108): This is a temporary workaround until the new media APIs are adopted
+  // Returns true if the surface manager can not have outstanding reference frames when new buffers
+  // are required to hold the new coded picture size.
+  virtual bool NeedsKeyframeForBufferAllocation() const = 0;
+
   // Updates the picture size of the current stream. If the surfaces that are currently under
   // management are too small to handle the new picture size, OnSurfaceGenerationUpdatedLocked()
   // will be called to generate new surfaces that will be able to hold the new picture size.

@@ -1897,6 +1897,10 @@ size_t H264Decoder::GetRequiredNumOfPictures() const {
   return GetNumReferenceFrames() + kPicsInPipeline;
 }
 
+bool H264Decoder::IsCurrentFrameKeyframe() const {
+  return curr_slice_hdr_ && curr_slice_hdr_->IsISlice();
+}
+
 size_t H264Decoder::GetNumReferenceFrames() const {
   // Use the maximum number of pictures in the Decoded Picture Buffer.
   return dpb_.max_num_pics();

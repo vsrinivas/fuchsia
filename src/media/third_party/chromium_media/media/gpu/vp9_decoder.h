@@ -139,6 +139,7 @@ class MEDIA_GPU_EXPORT VP9Decoder : public AcceleratedVideoDecoder {
   uint8_t GetBitDepth() const override;
   size_t GetRequiredNumOfPictures() const override;
   size_t GetNumReferenceFrames() const override;
+  bool IsCurrentFrameKeyframe() const override;
 
  private:
   // Decode and possibly output |pic| (if the picture is to be shown).
