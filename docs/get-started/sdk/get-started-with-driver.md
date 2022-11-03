@@ -102,9 +102,9 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    $ tools/bazel build --config=fuchsia_x64 //src/qemu_edu/drivers:qemu_edu
    ...
-   INFO: Elapsed time: 147.841s, Critical Path: 54.46s
-   INFO: 964 processes: 591 internal, 373 linux-sandbox.
-   INFO: Build completed successfully, 964 total actions
+   INFO: Elapsed time: 124.509s, Critical Path: 68.29s
+   INFO: 996 processes: 607 internal, 389 linux-sandbox.
+   INFO: Build completed successfully, 996 total actions
    ```
 
 5. To verify that you can use the `ffx` tool in your environment, run the
@@ -118,13 +118,13 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx sdk version
-   10.20221013.1.1
+   10.20221021.1.1
    ```
 
    At this point, you only need to confirm that you can run `ffx` commands
    without error. (However for your information, the output above shows the version
-   `10.20221013.1.1`, which indicates that this SDK was built and published on
-   October 13, 2022.)
+   `10.20221021.1.1`, which indicates that this SDK was built and published on
+   October 21, 2022.)
 
    Note: To ensure that you’re using the right version of `ffx` during development,
    consider updating your `PATH` to include the SDK's `tools` directory
@@ -336,14 +336,14 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/bazel run --config=fuchsia_x64 //src/qemu_edu/drivers:pkg.component
-   INFO: Analyzed target //src/qemu_edu/drivers:pkg.component (9 packages loaded, 522 targets configured).
+   INFO: Analyzed target //src/qemu_edu/drivers:pkg.component (9 packages loaded, 530 targets configured).
    INFO: Found 1 target...
    Target //src/qemu_edu/drivers:pkg.component up-to-date:
      bazel-bin/src/qemu_edu/drivers/pkg.component_run_component.sh
-   INFO: Elapsed time: 89.929s, Critical Path: 53.23s
-   INFO: 982 processes: 600 internal, 381 linux-sandbox, 1 local.
-   INFO: Build completed successfully, 982 total actions
-   INFO: Build completed successfully, 982 total actions
+   INFO: Elapsed time: 101.722s, Critical Path: 65.99s
+   INFO: 1014 processes: 616 internal, 397 linux-sandbox, 1 local.
+   INFO: Build completed successfully, 1014 total actions
+   INFO: Build completed successfully, 1014 total actions
    added repository bazel.pkg.component
    Registering fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm
    Successfully bound:
@@ -361,7 +361,6 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx driver list --loaded
-   fuchsia-boot:///#meta/block.core.cm
    fuchsia-boot:///#meta/bus-pci.cm
    fuchsia-boot:///#meta/display.cm
    fuchsia-boot:///#meta/fvm.cm
@@ -389,6 +388,7 @@ Do the following:
    fuchsia-pkg://fuchsia.com/virtual_audio#meta/virtual_audio_driver.cm
    {{ '<strong>' }}fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm{{ '</strong>' }}
    fuchsia-boot:///#meta/ahci.cm
+   fuchsia-boot:///#meta/block.core.cm
    ```
 
    Notice that the `qemu_edu` driver is shown in the loaded drivers list.
@@ -412,7 +412,7 @@ Do the following:
                             /svc/fuchsia.driver.compat.Service
                             /svc/fuchsia.logger.LogSink
      Exposed Capabilities:  fuchsia.examples.qemuedu.Service
-              Merkle root:  0fc11ccc2e5da8031793c122adc86391f51c5849eb5a449dde7bac131750003a
+              Merkle root:  619c1b8bd5596e2f705eb56b016b89eb68add91f4a406b6d60d1a8d2690b406d
           Execution State:  Running
              Start reason:  Instance is in a single_run collection
     Outgoing Capabilities:  fuchsia.examples.qemuedu.Service
@@ -428,8 +428,9 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx log --tags qemu-edu dump
-   [2022-10-03 23:34:07.972][<ffx>]: logger started.
-   [161.225][universe-pkg-drivers:root.sys.platform.pt.PCI0.bus.00_06_0_.pci-00_06.0-fidl][qemu-edu,driver][I]: [src/qemu_edu/drivers/qemu_edu.cc:179] edu device version major=1 minor=0
+   2022-10-27 21:19:30.189][<ffx>]: logger started.
+   [184.040][universe-pkg-drivers:root.sys.platform.pt.PCI0.bus.00_06_0_.pci-00_06.0-fidl][qemu-edu,driver][I]: [src/qemu_edu/drivers/qemu_edu.cc:65] edu device version major=1 minor=0
+   [184.073][universe-pkg-drivers:root.sys.platform.pt.PCI0.bus.00_06_0_.pci-00_06.0-fidl][qemu-edu,driver][I]: [src/qemu_edu/drivers/qemu_edu.cc:117] Exported devfs_path=sys/platform/pt/PCI0/bus/00:06.0_/qemu-edu service_path=fuchsia.examples.qemuedu.Service/default/device
    ```
 
 ## 5. Build and run a tool {:#build-and-run-a-tool}
@@ -506,10 +507,11 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx log --tags qemu-edu dump
-   [2022-10-03 23:34:07.972][<ffx>]: logger started.
-   [161.225][universe-pkg-drivers:root.sys.platform.pt.PCI0.bus.00_06_0_.pci-00_06.0-fidl][qemu-edu,driver][I]: [src/qemu_edu/drivers/qemu_edu.cc:179] edu device version major=1 minor=0
-   [434.054][universe-pkg-drivers:root.sys.platform.pt.PCI0.bus.00_06_0_.pci-00_06.0-fidl][qemu-edu,driver][I]: [src/qemu_edu/drivers/qemu_edu.cc:108] Replying with result=true
-   [444.714][universe-pkg-drivers:root.sys.platform.pt.PCI0.bus.00_06_0_.pci-00_06.0-fidl][qemu-edu,driver][I]: [src/qemu_edu/drivers/edu_device.cc:124] Replying with factorial=479001600
+   [2022-10-27 21:19:30.189][<ffx>]: logger started.
+   [184.040][universe-pkg-drivers:root.sys.platform.pt.PCI0.bus.00_06_0_.pci-00_06.0-fidl][qemu-edu,driver][I]: [src/qemu_edu/drivers/qemu_edu.cc:65] edu device version major=1 minor=0
+   [184.073][universe-pkg-drivers:root.sys.platform.pt.PCI0.bus.00_06_0_.pci-00_06.0-fidl][qemu-edu,driver][I]: [src/qemu_edu/drivers/qemu_edu.cc:117] Exported devfs_path=sys/platform/pt/PCI0/bus/00:06.0_/qemu-edu service_path=fuchsia.examples.qemuedu.Service/default/device
+   [248.087][universe-pkg-drivers:root.sys.platform.pt.PCI0.bus.00_06_0_.pci-00_06.0-fidl][qemu-edu,driver][I]: [src/qemu_edu/drivers/edu_server.cc:59] Replying with result=true
+   [255.504][universe-pkg-drivers:root.sys.platform.pt.PCI0.bus.00_06_0_.pci-00_06.0-fidl][qemu-edu,driver][I]: [src/qemu_edu/drivers/edu_device.cc:124] Replying with factorial=479001600
    ```
 
    Notice that more messages are now logged from the `qemu-edu` driver.
@@ -936,12 +938,12 @@ Remove all existing configurations and data of `ffx`:
 
 When Bazel fails to build, try the commands below:
 
-Caution: Running `bazel clean` or deleting the `$HOME/.cache/bazel` directory
-deletes all the artifacts downloaded by Bazel, which can be around 4 GB.
-This means Bazel will need to download those dependencies again
-the next time you run `bazel build`.
 
 * {Linux}
+
+  Note: Running `bazel clean` or deleting the `$HOME/.cache/bazel` directory
+  deletes artifacts downloaded by Bazel, which can be around 4 GB. This means
+  Bazel will need to download dependencies again next time you run `bazel build`.
 
   ```posix-terminal
   tools/bazel clean --expunge
@@ -953,6 +955,11 @@ the next time you run `bazel build`.
 
 * {macOS}
 
+  Note: Running `bazel clean` or deleting the `/private/var/tmp/bazel$USER`
+  directory deletes artifacts downloaded by Bazel, which can be around 4 GB.
+  This means Bazel will need to download dependencies again next time you run
+  `bazel build`.
+
   ```posix-terminal
   tools/bazel clean --expunge
   ```
@@ -963,8 +970,8 @@ the next time you run `bazel build`.
 
 Remove the `fuchsia-drivers` directory and its artifacts:
 
-Caution: If the SDK samples repository is cloned to a different location
-than `$HOME/fuchsia-drivers`, adjust the directory path in the command below.
+Caution: If the driver samples repository is cloned to a different location
+than `$HOME/fuchsia-drivers`, adjust the directory in the command below.
 Be extremely careful with the directory path when you run the `rm -rf
 <DIR>` command.
 
