@@ -108,6 +108,24 @@ impl FfxCommandLine {
         }
     }
 
+    /// Creates a string of the process `env::args` but with user-supplied parameter values removed
+    /// for analytics. This only contains the top-level flags before any subcommands have been
+    /// entered.
+    pub fn redact_args_flags_only(&self) -> String {
+        let x = Ffx::redact_arg_values(
+            &Vec::from_iter(self.cmd_iter()),
+            &Vec::from_iter(self.args_iter()),
+        );
+        let res = match x {
+            Ok(a) => {
+                let end = a.iter().position(|s| s == "subcommand").unwrap_or(a.len() - 1);
+                a[1..end].join(" ")
+            }
+            Err(e) => e.output,
+        };
+        res
+    }
+
     /// Returns an iterator of the command part of the command line
     pub fn cmd_iter<'a>(&'a self) -> impl Iterator<Item = &'a str> {
         self.command.iter().map(|s| s.as_str())

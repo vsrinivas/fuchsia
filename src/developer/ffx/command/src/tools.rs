@@ -80,6 +80,14 @@ pub trait ToolSuite: Sized {
         args: &[&str],
     ) -> Result<Option<Box<dyn ToolRunner>>, EarlyExit>;
 
+    /// Parses the given command line into a command, then returns a redacted string usable in
+    /// analytics. See [`FromArgs::redact_arg_values`] for the kind of output to expect.
+    fn redact_arg_values(
+        &self,
+        cmd: &FfxCommandLine,
+        args: &[&str],
+    ) -> Result<Vec<String>, EarlyExit>;
+
     /// Parses the given command line information into a runnable command
     /// object, exiting and printing the early exit output if help is requested
     /// or an error occurs.

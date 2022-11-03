@@ -85,6 +85,15 @@ impl ToolSuite for FfxSuite {
             }
         }
     }
+
+    fn redact_arg_values(
+        &self,
+        ffx_cmd: &FfxCommandLine,
+        args: &[&str],
+    ) -> Result<Vec<String>, argh::EarlyExit> {
+        let cmd_vec = Vec::from_iter(ffx_cmd.cmd_iter());
+        FfxBuiltIn::redact_arg_values(&cmd_vec, args)
+    }
 }
 
 #[async_trait::async_trait(?Send)]

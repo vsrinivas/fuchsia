@@ -9,6 +9,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use argh::FromArgs;
 use ffx_command::{Ffx, FfxCommandLine, FfxToolInfo, FfxToolSource, ToolRunner, ToolSuite};
 use ffx_config::EnvironmentContext;
 
@@ -57,28 +58,13 @@ impl ExternalSubToolSuite {
             find_tools(subtool_paths).map(|tool| (tool.name.to_owned(), tool)).collect();
         Ok(Self { context, available_commands })
     }
-}
 
-#[async_trait::async_trait(?Send)]
-impl ToolSuite for ExternalSubToolSuite {
-    fn from_env(_app: &Ffx, env: &EnvironmentContext) -> Result<Self> {
-        Self::with_tools_from(env.clone(), &env.subtool_paths())
-    }
-    fn global_command_list() -> &'static [&'static argh::CommandInfo] {
-        &[]
-    }
-    fn command_list(&self) -> Vec<FfxToolInfo> {
-        self.available_commands.values().cloned().collect()
-    }
-    fn try_from_args(
+    fn extract_external_subtool(
         &self,
         ffx_cmd: &FfxCommandLine,
         args: &[&str],
-    ) -> Result<Option<Box<(dyn ToolRunner + 'static)>>, argh::EarlyExit> {
-        let name = match args.first().copied() {
-            Some(name) => name,
-            None => return Ok(None),
-        };
+    ) -> Option<ExternalSubTool> {
+        let name = args.first().copied()?;
         let cmd = match self.available_commands.get(name) {
             Some(FfxToolInfo { path: Some(path), .. }) => {
                 let context = self.context.clone();
@@ -86,9 +72,52 @@ impl ToolSuite for ExternalSubToolSuite {
                 let path = path.clone();
                 ExternalSubTool { cmd_line, context, path }
             }
-            _ => return Ok(None),
+            _ => return None,
+        };
+        Some(cmd)
+    }
+}
+
+#[async_trait::async_trait(?Send)]
+impl ToolSuite for ExternalSubToolSuite {
+    fn from_env(_app: &Ffx, env: &EnvironmentContext) -> Result<Self> {
+        Self::with_tools_from(env.clone(), &env.subtool_paths())
+    }
+
+    fn global_command_list() -> &'static [&'static argh::CommandInfo] {
+        &[]
+    }
+
+    fn command_list(&self) -> Vec<FfxToolInfo> {
+        self.available_commands.values().cloned().collect()
+    }
+
+    fn try_from_args(
+        &self,
+        ffx_cmd: &FfxCommandLine,
+        args: &[&str],
+    ) -> Result<Option<Box<(dyn ToolRunner + 'static)>>, argh::EarlyExit> {
+        let cmd = match self.extract_external_subtool(ffx_cmd, args) {
+            Some(c) => c,
+            None => return Ok(None),
         };
         Ok(Some(Box::new(cmd)))
+    }
+
+    fn redact_arg_values(
+        &self,
+        ffx_cmd: &FfxCommandLine,
+        args: &[&str],
+    ) -> Result<Vec<String>, argh::EarlyExit> {
+        if self.extract_external_subtool(ffx_cmd, args).is_none() {
+            return Ok(Vec::new());
+        }
+        // This will likely double-report if this is given to analytics.
+        let mut res =
+            Ffx::redact_arg_values(&Vec::from_iter(ffx_cmd.cmd_iter()), &vec!["n_o_o_p"])?;
+        res.pop();
+        res.push(args.first().copied().unwrap().to_owned());
+        Ok(res)
     }
 }
 

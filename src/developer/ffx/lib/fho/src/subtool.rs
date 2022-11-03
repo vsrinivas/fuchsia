@@ -133,6 +133,15 @@ impl<M: FfxMain> ToolSuite for FhoSuite<M> {
         };
         Ok(Some(Box::new(found)))
     }
+
+    fn redact_arg_values(
+        &self,
+        cmd: &FfxCommandLine,
+        args: &[&str],
+    ) -> Result<Vec<String>, argh::EarlyExit> {
+        let cmd_vec = Vec::from_iter(cmd.cmd_iter());
+        ToolCommand::<M>::redact_arg_values(&cmd_vec, args)
+    }
 }
 
 #[async_trait(?Send)]

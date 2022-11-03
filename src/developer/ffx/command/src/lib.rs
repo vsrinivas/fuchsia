@@ -73,6 +73,11 @@ pub async fn run<T: ToolSuite>() -> Result<()> {
 
     let args_ref = Vec::from_iter(app.subcommand.iter().map(|arg| &**arg));
     let tool = tools.from_args(&cmd, &args_ref);
+    // If the line above succeeds, then this will succeed as well.
+    let sanitized_args = match tools.redact_arg_values(&cmd, &args_ref) {
+        Ok(a) => format!("{} {}", cmd.redact_args_flags_only(), a[1..].join(" ")).trim().to_owned(),
+        Err(e) => e.output,
+    };
 
     let log_to_stdio = tool.as_ref().map(|tool| tool.forces_stdout_log()).unwrap_or(false);
     ffx_config::logging::init(log_to_stdio || app.verbose, !log_to_stdio).await?;
@@ -116,7 +121,6 @@ pub async fn run<T: ToolSuite>() -> Result<()> {
     let timing_in_millis = (command_done - command_start).as_millis().to_string();
 
     let analytics_task = fuchsia_async::Task::local(async move {
-        let sanitized_args = cmd.redact_arg_values();
         if let Err(e) =
             add_ffx_launch_and_timing_events(&context, sanitized_args, timing_in_millis).await
         {
