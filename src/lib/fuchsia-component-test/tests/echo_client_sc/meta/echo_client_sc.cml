@@ -13,6 +13,12 @@
     use: [
         { protocol: "fidl.examples.routing.echo.Echo" },
     ],
+    expose: [
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
+    ],
     config: {
         echo_string: {
             type: "string",

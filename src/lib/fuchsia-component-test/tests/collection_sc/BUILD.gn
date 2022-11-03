@@ -1,0 +1,53 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bin") {
+  testonly = true
+  name = "collection_sc"
+  edition = "2021"
+  deps = [
+    ":config_lib",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component-test",
+  ]
+
+  sources = [ "src/main.rs" ]
+}
+
+fuchsia_component_manifest("manifest") {
+  component_name = "collection_sc"
+  manifest = "meta/collection_sc.cml"
+}
+
+fuchsia_component("component") {
+  testonly = true
+  cm_label = ":manifest"
+  deps = [ ":bin" ]
+
+  # we just want ScopedInstance from fuchsia-component-test, not RealmBuilder
+  check_includes = false
+}
+
+fuchsia_structured_config_values("config_values") {
+  values = {
+    to_override = "lol"
+    dont_override = to_override
+  }
+  cm_label = ":manifest"
+}
+
+fuchsia_structured_config_rust_lib("config_lib") {
+  cm_label = ":manifest"
+}
+
+group("collection_sc") {
+  testonly = true
+  deps = [
+    ":component",
+    ":config_values",
+  ]
+}

@@ -1,0 +1,42 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/collection_sc",
+    },
+    collections: [
+        {
+            name: "test-collection",
+            durability: "transient",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.component.Realm",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fidl.examples.routing.echo.Echo",
+                "fuchsia.logger.LogSink",
+            ],
+            from: "parent",
+            to: [ "#test-collection" ],
+        },
+    ],
+    config: {
+        to_override: {
+            type: "string",
+            max_size: 100,
+        },
+        dont_override: {
+            type: "string",
+            max_size: 100,
+        },
+    },
+}

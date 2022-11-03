@@ -31,6 +31,8 @@ const V2_ECHO_CLIENT_ABSOLUTE_URL: &'static str =
 const V2_ECHO_CLIENT_RELATIVE_URL: &'static str = "#meta/echo_client.cm";
 const V2_ECHO_CLIENT_STRUCTURED_CONFIG_RELATIVE_URL: &'static str = "#meta/echo_client_sc.cm";
 
+const COLLECTION_STRUCTURED_CONFIG_RELATIVE_URL: &'static str = "#meta/collection_sc.cm";
+
 const V1_ECHO_SERVER_URL: &'static str =
     "fuchsia-pkg://fuchsia.com/fuchsia-component-test-tests#meta/echo_server.cmx";
 const V2_ECHO_SERVER_ABSOLUTE_URL: &'static str =
@@ -1023,6 +1025,78 @@ async fn config_mix_packaged_and_set_values() {
                 .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
                 .from(Ref::parent())
                 .to(&echo_client),
+        )
+        .await
+        .unwrap();
+
+    let _instance = builder.build().await.unwrap();
+
+    assert!(receive_echo_server_called.next().await.is_some());
+}
+
+/// This is a regression test for fxb/113503, where we discovered that fshost couldn't launch
+/// blobfs in a collection when fshost's structured config was being overridden by RealmBuilder.
+///
+/// The structure is:
+///
+/// ```
+/// test_root with RB
+///     collection_sc with SC overrides
+///         test-collection
+///             echo_client_sc without SC overrides
+/// ```
+#[fuchsia::test]
+async fn config_override_for_root_with_config_in_collection_without_override() {
+    let (send_echo_server_called, mut receive_echo_server_called) = mpsc::channel(1);
+
+    let builder = RealmBuilder::new().await.unwrap();
+    let collection_launcher = builder
+        .add_child(
+            "collection_launcher",
+            COLLECTION_STRUCTURED_CONFIG_RELATIVE_URL,
+            ChildOptions::new().eager(),
+        )
+        .await
+        .unwrap();
+
+    let echo_server = builder
+        .add_local_child(
+            "echo_server",
+            move |handles| {
+                // assert that we get the packaged config from echo_client_sc
+                echo_server_mock(
+                    "Hello Fuchsia!, Hi, There, false, 100",
+                    send_echo_server_called.clone(),
+                    handles,
+                )
+                .boxed()
+            },
+            ChildOptions::new(),
+        )
+        .await
+        .unwrap();
+
+    // use the packaged values for fields not set by this test
+    builder.init_mutable_config_from_package(&collection_launcher).await.unwrap();
+
+    // set a config override for the RB root
+    builder.set_config_value_string(&collection_launcher, "to_override", "Foobar!").await.unwrap();
+
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol::<fecho::EchoMarker>())
+                .from(&echo_server)
+                .to(&collection_launcher),
+        )
+        .await
+        .unwrap();
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .from(Ref::parent())
+                .to(&collection_launcher),
         )
         .await
         .unwrap();

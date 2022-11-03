@@ -138,6 +138,7 @@ fuchsia_test_package("fuchsia-component-test-tests") {
     ":echo_server_component",
     ":echo_server_empty_component",
     ":fuchsia_component_test_tests_component",
+    "collection_sc",
     "echo_client_sc",
     "//src/sys/component_manager:component-manager-realm-builder-cmp",
     "//src/sys/component_manager/testing/echo_client",

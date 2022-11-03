@@ -318,7 +318,9 @@ impl Registry {
         let config_values = Self::resolve_structured_config(
             &component_decl,
             package_dir_for_config,
-            &component.config_value_replacements,
+            // Since realm builder never generates relative URLs, the component we are resolving
+            // here will never be one with config value replacements set, so don't provide any.
+            &HashMap::new(),
         )
         .await
         .map_err(|_| fresolution::ResolverError::ConfigValuesNotFound)?;
