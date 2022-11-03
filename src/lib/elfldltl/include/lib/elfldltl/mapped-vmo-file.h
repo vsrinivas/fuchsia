@@ -27,7 +27,9 @@ class MappedVmoFile : public DirectMemory {
   MappedVmoFile(const MappedVmoFile&) = delete;
 
   MappedVmoFile(MappedVmoFile&& other) noexcept
-      : DirectMemory(other.image(), other.base()), mapped_size_(other.mapped_size_) {
+      : DirectMemory(other.image(), other.base()),
+        mapped_size_(other.mapped_size_),
+        vmar_(other.vmar_->get()) {
     other.set_image({});
     other.mapped_size_ = 0;
   }

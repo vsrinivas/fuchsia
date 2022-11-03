@@ -34,6 +34,9 @@ TEST(ElfldltlMappedVmoFileTests, Basic) {
   ASSERT_TRUE(res);
   std::string_view sv{res->data(), res->size()};
   EXPECT_EQ(sv, kContents);
+
+  // Test that moving then destroying works.
+  elfldltl::MappedVmoFile moved_vmofile(std::move(vmofile));
 }
 
 TEST(ElfldltlMappedVmoFileTests, BadVmo) {
