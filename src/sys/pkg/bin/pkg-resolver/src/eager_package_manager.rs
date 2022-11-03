@@ -69,7 +69,7 @@ impl EagerPackage {
     ) -> Result<PackageSource, LoadError> {
         let pinned_url_in_cup;
 
-        let (pinned_url, package_source) = match self.load_cup(url, persistent_cup) {
+        let (pinned_url, package_source, cup) = match self.load_cup(url, persistent_cup) {
             Ok(cup) => {
                 let response = parse_omaha_response_from_cup(&cup)?;
                 let (app, pinned_url) = find_app_with_matching_url(&response, url)
@@ -82,11 +82,10 @@ impl EagerPackage {
                             .find_unpinned_url(url)
                             .ok_or(LoadError::RequestedVersionTooLow)?,
                         PackageSource::CachePackages,
+                        None,
                     )
                 } else {
-                    self.cup = Some(cup);
-
-                    (&pinned_url_in_cup, PackageSource::Cup)
+                    (&pinned_url_in_cup, PackageSource::Cup, Some(cup))
                 }
             }
             Err(e) => {
@@ -95,7 +94,11 @@ impl EagerPackage {
                 if !cache_fallback {
                     return Err(e);
                 }
-                (cache_packages.find_unpinned_url(url).ok_or(e)?, PackageSource::CachePackages)
+                (
+                    cache_packages.find_unpinned_url(url).ok_or(e)?,
+                    PackageSource::CachePackages,
+                    None,
+                )
             }
         };
 
@@ -104,6 +107,7 @@ impl EagerPackage {
             .await
             .map_err(LoadError::GetAlreadyCached)?;
         self.package_directory_and_hash = Some((pkg_dir, pinned_url.hash()));
+        self.cup = cup;
         Ok(package_source)
     }
 }
@@ -1075,7 +1079,7 @@ mod tests {
             &data_proxy,
             [
                 // packages can be out of order
-                (url2.clone(), cup2.clone()),
+                (url2.clone(), cup2),
                 // bad packages won't break loading of other valid packages
                 (
                     UnpinnedAbsolutePackageUrl::parse("fuchsia-pkg://unknown/package").unwrap(),
@@ -1117,8 +1121,8 @@ mod tests {
         assert_eq!(manager.packages[&url].cup, Some(cup1));
         assert!(manager.packages[&url2].package_directory_and_hash.is_none());
         assert_matches!(manager.get_package_dir(&url2.clone().into()), Err(_));
-        // cup is still loaded even if resolve fails
-        assert_eq!(manager.packages[&url2].cup, Some(cup2));
+        // cup is not loaded if resolve fails
+        assert_eq!(manager.packages[&url2].cup, None);
     }
 
     #[fasync::run_singlethreaded(test)]
