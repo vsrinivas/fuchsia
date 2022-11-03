@@ -81,6 +81,7 @@ group("dart_allowlist") {
     "//src/diagnostics/validator/logs/encoding/puppet/dart:*",
     "//src/experiences/bin/ermine_testserver:*",
     "//src/experiences/bin/settings/license:*",
+    "//src/experiences/bin/settings/shell:*",
     "//src/experiences/examples/hello_experiences:*",
     "//src/experiences/examples/localized_flutter/localized_flutter_app:*",
     "//src/experiences/examples/localized_flutter/localized_flutter_localization:*",
