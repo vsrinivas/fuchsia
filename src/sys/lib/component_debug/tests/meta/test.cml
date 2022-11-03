@@ -7,7 +7,7 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/component_hub_integration_test",
+        binary: "bin/component_debug_integration_test",
     },
     children: [
         {

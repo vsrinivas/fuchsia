@@ -12,7 +12,7 @@ ffx_plugin("ffx_component_show") {
     "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/writer:lib",
     "//src/developer/ffx/plugins/component/common:ffx_component",
-    "//src/lib/component_hub",
+    "//src/sys/lib/component_debug",
     "//third_party/rust_crates:ansi_term",
     "//third_party/rust_crates:prettytable-rs",
   ]

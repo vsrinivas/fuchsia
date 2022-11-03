@@ -12,14 +12,14 @@ ffx_plugin("ffx_component_list") {
     "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust",
     "//src/developer/ffx/lib/writer:lib",
     "//src/developer/ffx/plugins/component/common:ffx_component",
-    "//src/lib/component_hub",
+    "//src/sys/lib/component_debug",
     "//third_party/rust_crates:ansi_term",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:prettytable-rs",
     "//third_party/rust_crates:serde",
   ]
 
-  args_deps = [ "//src/lib/component_hub" ]
+  args_deps = [ "//src/sys/lib/component_debug" ]
 
   args_sources = [ "src/args.rs" ]
 

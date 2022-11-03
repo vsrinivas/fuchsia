@@ -11,7 +11,7 @@ ffx_plugin("ffx_component_capability") {
   deps = [
     "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust",
     "//src/developer/ffx/plugins/component/common:ffx_component",
-    "//src/lib/component_hub",
+    "//src/sys/lib/component_debug",
   ]
 
   args_sources = [ "src/args.rs" ]

@@ -78,7 +78,6 @@ group("tests") {
     "cmx:tests",
     "cobalt:tests",
     "component:tests",
-    "component_hub:tests",
     "containers/cpp:tests",
     "cstr:tests",
     "cutex:tests",

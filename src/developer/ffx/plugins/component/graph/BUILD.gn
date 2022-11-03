@@ -11,7 +11,7 @@ ffx_plugin("ffx_component_graph") {
   deps = [
     "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust",
     "//src/developer/ffx/plugins/component/common:ffx_component",
-    "//src/lib/component_hub",
+    "//src/sys/lib/component_debug",
     "//src/sys/lib/moniker",
     "//third_party/rust_crates:url",
   ]
@@ -20,7 +20,7 @@ ffx_plugin("ffx_component_graph") {
     "//third_party/rust_crates:pretty_assertions",
   ]
 
-  args_deps = [ "//src/lib/component_hub" ]
+  args_deps = [ "//src/sys/lib/component_debug" ]
 
   args_sources = [ "src/args.rs" ]
 

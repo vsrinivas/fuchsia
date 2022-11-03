@@ -4,7 +4,7 @@
 
 use {
     anyhow::Result,
-    component_hub::storage::{copy, delete, list, make_directory},
+    component_debug::storage::{copy, delete, list, make_directory},
     errors::ffx_error,
     ffx_component::connect_to_lifecycle_controller,
     ffx_component_storage_args::{StorageCommand, SubCommandEnum},

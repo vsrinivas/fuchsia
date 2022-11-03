@@ -7,13 +7,13 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 
 rustc_test("integration_test_bin") {
-  name = "component_hub_integration_test"
+  name = "component_debug_integration_test"
   edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
-    "//src/lib/component_hub",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/sys/lib/component_debug",
     "//src/sys/lib/moniker",
   ]
 
@@ -50,7 +50,7 @@ fuchsia_structured_config_values("foo_config_values") {
   values_source = "config/config_values.json5"
 }
 
-fuchsia_test_package("component_hub_integration_tests") {
+fuchsia_test_package("component_debug_integration_tests") {
   test_components = [ ":test" ]
   deps = [
     ":foo",

@@ -7,11 +7,11 @@ use crate::component::types::{
     ComponentLaunchRequest, ComponentLaunchResponse, ComponentSearchRequest, ComponentSearchResult,
 };
 use anyhow::{format_err, Context as _, Error};
-use component_events::{events::*, matcher::*};
-use component_hub::{
+use component_debug::{
     list::{get_all_instances, ListFilter},
     show::find_instances,
 };
+use component_events::{events::*, matcher::*};
 use fidl_fuchsia_component as fcomponent;
 use fidl_fuchsia_component_decl as fcdecl;
 use fidl_fuchsia_io as fio;

@@ -12,12 +12,12 @@ rustc_library("routing") {
   edition = "2021"
 
   visibility = [
-    "//src/lib/component_hub/*",
     "//src/security/scrutiny/plugins/*",
     "//src/sys/base-resolver:*",
     "//src/sys/component_manager/*",
     "//src/sys/full-resolver:*",
     "//src/sys/lib/cm_rust/testing:*",
+    "//src/sys/lib/component_debug/*",
     "//src/sys/lib/routing/*",
     "//src/sys/test_manager/*",
     "//tools/lib/cm_fidl_analyzer/*",

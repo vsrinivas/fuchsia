@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    component_hub::{capability, list, show},
+    component_debug::{capability, list, show},
     fidl_fuchsia_sys2 as fsys,
     fuchsia_component::client::connect_to_protocol,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},

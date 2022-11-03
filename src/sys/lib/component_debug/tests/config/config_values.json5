@@ -1,0 +1,4 @@
+{
+    my_uint8: 255,
+    my_string: "hello, world!",
+}

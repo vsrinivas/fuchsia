@@ -4,7 +4,9 @@
 
 use {
     anyhow::Result,
-    component_hub::capability::{find_instances_that_expose_or_use_capability, MatchingInstances},
+    component_debug::capability::{
+        find_instances_that_expose_or_use_capability, MatchingInstances,
+    },
     ffx_component::{connect_to_realm_explorer, connect_to_realm_query},
     ffx_component_capability_args::ComponentCapabilityCommand,
     ffx_core::ffx_plugin,

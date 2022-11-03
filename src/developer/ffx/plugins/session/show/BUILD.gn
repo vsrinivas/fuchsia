@@ -14,9 +14,9 @@ ffx_plugin("ffx_session_show") {
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/plugins/component/show:ffx_component_show",
-    "//src/lib/component_hub",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/zircon/rust:fuchsia-zircon-status",
+    "//src/sys/lib/component_debug",
   ]
 
   args_sources = [ "src/args.rs" ]

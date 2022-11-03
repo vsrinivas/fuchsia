@@ -12,6 +12,7 @@ group("tests") {
     "cm_rust:tests",
     "cm_types:tests",
     "component-events:tests",
+    "component_debug:tests",
     "component_id_index:tests",
     "config_encoder:tests",
     "fidl-connector:tests",

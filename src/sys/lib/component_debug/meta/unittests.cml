@@ -7,7 +7,7 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/component_hub_lib_test",
+        binary: "bin/component_debug_lib_test",
     },
     use: [
         {

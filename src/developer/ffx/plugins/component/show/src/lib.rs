@@ -5,7 +5,7 @@
 use {
     ansi_term::Color,
     anyhow::Result,
-    component_hub::show::{find_instances, Instance, Resolved},
+    component_debug::show::{find_instances, Instance, Resolved},
     errors::ffx_bail,
     ffx_component::{connect_to_realm_explorer, connect_to_realm_query},
     ffx_component_show_args::ComponentShowCommand,

@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Context, Result},
-    component_hub::show::find_instances,
+    component_debug::show::find_instances,
     errors::ffx_error,
     ffx_component_show::create_table,
     ffx_core::ffx_plugin,

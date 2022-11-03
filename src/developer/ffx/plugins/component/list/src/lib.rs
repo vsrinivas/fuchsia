@@ -5,7 +5,7 @@
 use {
     ansi_term::Colour,
     anyhow::Result,
-    component_hub::list::{get_all_instances, Instance, InstanceState},
+    component_debug::list::{get_all_instances, Instance, InstanceState},
     ffx_component::{connect_to_realm_explorer, connect_to_realm_query},
     ffx_component_list_args::ComponentListCommand,
     ffx_core::ffx_plugin,

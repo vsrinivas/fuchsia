@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context, Result},
-    component_hub::capability,
+    component_debug::capability,
     ffx_core::ffx_plugin,
     ffx_driver_args::DriverCommand,
     fidl::endpoints::ProtocolMarker,

@@ -5,7 +5,7 @@
 import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
 
-rustc_library("component_hub") {
+rustc_library("component_debug") {
   version = "0.1.0"
   edition = "2021"
   with_unit_tests = true
@@ -59,18 +59,18 @@ rustc_library("component_hub") {
   ]
 }
 
-fuchsia_unittest_package("component_hub_unittests") {
+fuchsia_unittest_package("component_debug_unittests") {
   manifest = "meta/unittests.cml"
-  deps = [ ":component_hub_test" ]
+  deps = [ ":component_debug_test" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":component_hub_unittests" ]
+  deps = [ ":component_debug_unittests" ]
 
   # TODO(fxbug.dev/82186): Failing test disabled on coverage.
   # Please fix test and remove condition below.
   if (!is_coverage) {
-    deps += [ "tests:component_hub_integration_tests" ]
+    deps += [ "tests:component_debug_integration_tests" ]
   }
 }
