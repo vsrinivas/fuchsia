@@ -91,7 +91,7 @@ protocol AnnotationController {
     UpdateAnnotations(resource struct {
         annotations_to_set Annotations;
         annotations_to_delete AnnotationKeys;
-    }) -> (struct {}) error UpdateAnnotationsError;
+    }) -> () error UpdateAnnotationsError;
 
     /// Returns the current `Annotations` for the element.
     ///

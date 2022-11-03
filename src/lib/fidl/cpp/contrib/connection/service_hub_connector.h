@@ -44,11 +44,11 @@ namespace fidl::contrib {
 //   protocol ProtocolFactory {
 //       CreateProtocol(resource struct {
 //           protocol server_end:Protocol;
-//       }) -> (struct {}) error Error;
+//       }) -> () error Error;
 //   };
 //
 //   protocol Protocol {
-//       DoAction() -> (struct {}) error Error;
+//       DoAction() -> () error Error;
 //   };
 //
 // Then you could implement ServiceHubConnector like this:

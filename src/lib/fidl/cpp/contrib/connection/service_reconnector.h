@@ -40,7 +40,7 @@ namespace fidl::contrib {
 //
 //   @discoverable
 //   protocol SimpleProtocol {
-//     DoAction() -> (struct {}) error Error;
+//     DoAction() -> () error Error;
 //   }
 //
 // Then using service connector would be as simple as:

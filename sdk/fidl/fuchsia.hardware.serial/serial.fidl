@@ -74,7 +74,7 @@ protocol Device {
     /// Writes data to the serial port.
     Write(struct {
         data vector<uint8>:MAX;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };
 
 @discoverable

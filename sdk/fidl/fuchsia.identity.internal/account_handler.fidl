@@ -115,7 +115,7 @@ protocol AccountHandlerControl {
     /// `Uninitialized` state.
     Preload(struct {
         pre_auth_state AccountPreAuthState;
-    }) -> (struct {}) error fuchsia.identity.account.Error;
+    }) -> () error fuchsia.identity.account.Error;
 
     /// Reach the `Initialized` state, attempting authentication and unlocking
     /// the account where necessary.
@@ -153,7 +153,7 @@ protocol AccountHandlerControl {
     /// After a successful call to RemoveAccount, all other open interfaces for
     /// this account handler will be closed and any subsequent calls on the
     /// current interface will fail.
-    RemoveAccount() -> (struct {}) error fuchsia.identity.account.Error;
+    RemoveAccount() -> () error fuchsia.identity.account.Error;
 
     /// Connects an interface to read properties of and perform operations on
     /// the account handled by this handler. The AccountHandler must be in the
@@ -165,7 +165,7 @@ protocol AccountHandlerControl {
     /// `Initialized` state.
     GetAccount(resource struct {
         account server_end:fuchsia.identity.account.Account;
-    }) -> (struct {}) error fuchsia.identity.account.Error;
+    }) -> () error fuchsia.identity.account.Error;
 
     /// Signals that the AccountHandler should tear itself down. After the
     /// receiver responds by closing its handle, the caller may terminate the

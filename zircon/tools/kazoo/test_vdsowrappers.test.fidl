@@ -14,12 +14,12 @@ protocol Syscall {
         @voidptr
         buffer vector<byte>;
         offset uint64;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     // Special case for abigen's test wrapper.
     TestWrapper(struct {
         a int32;
         b int32;
         c int32;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 };

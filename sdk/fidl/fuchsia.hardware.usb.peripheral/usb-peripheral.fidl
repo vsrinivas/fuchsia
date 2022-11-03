@@ -56,7 +56,7 @@ protocol Device {
     SetConfiguration(struct {
         device_desc DeviceDescriptor;
         config_descriptors vector<ConfigurationDescriptor>:MAX_CONFIG_DESCRIPTORS;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Tells the device to remove the child devices for the configuration's interfaces
     /// and reset the list of functions to empty.

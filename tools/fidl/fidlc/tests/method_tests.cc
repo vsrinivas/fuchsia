@@ -646,14 +646,14 @@ protocol HasEvent {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidProtocolMember);
 }
 
-TEST(MethodTests, GoodValidEmptyStructPayloadWhenErrorOrFlexible) {
+TEST(MethodTests, GoodValidEmptyPayloads) {
   TestLibrary library(R"FIDL(library example;
 
 open protocol Test {
   strict MethodA() -> ();
   flexible MethodB() -> ();
-  strict MethodC() -> (struct {}) error int32;
-  flexible MethodD() -> (struct {}) error int32;
+  strict MethodC() -> () error int32;
+  flexible MethodD() -> () error int32;
 };
 )FIDL");
   library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);

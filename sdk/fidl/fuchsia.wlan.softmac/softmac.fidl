@@ -366,40 +366,40 @@ protocol WlanSoftmac {
     // Set the radio channel
     SetChannel(struct {
         chan fuchsia.wlan.common.WlanChannel;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     // Configures a BSS which the STA is either joining or managing.
     ConfigureBss(struct {
         config fuchsia.wlan.internal.BssConfig;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     // Enables or disables hardware Beaconing.
     // * |bcn_cfg|: Pass `nullptr` to disable hardware Beacons. Used by hardware beacon offload.
     EnableBeaconing(struct {
         bcn_cfg WlanBcnConfig;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Configures a Beacon frame in hardware to announce the BSS' existence.
     /// * |packet|: Pass `nullptr` to disable hardware Beacons. Used by software generated beacon.
     /// TODO(fxbug.dev/29298): Rename to update_beacon.
     ConfigureBeacon(struct {
         packet WlanTxPacket;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Specify a key for frame protection.
     SetKey(struct {
         key_config WlanKeyConfig;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Notifies MAC and PHY parameters negotiated through a successful association
     ConfigureAssoc(struct {
         assoc_ctx fuchsia.hardware.wlan.associnfo.WlanAssocCtx;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Notifies MAC and PHY that the peer has been de-associated.
     ClearAssoc(struct {
         peer_addr ieee80211.MacAddr;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Start a passive scan in the device driver. Scan results will be delivered as Beacon
     /// frames via WlanSoftmacIfc.Recv(). When complete, WlanSoftmacIfc.ScanComplete() will
@@ -435,11 +435,11 @@ protocol WlanSoftmac {
     /// `fuchsia.wlan.common/ScanOffloadExtension.scan_cancel_supported`.
     CancelScan(struct {
         scan_id uint64;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Notifies change of WMM parameters for specified AC
     UpdateWmmParams(struct {
         ac fuchsia.hardware.wlan.associnfo.WlanAc;
         params fuchsia.hardware.wlan.associnfo.WlanWmmParams;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

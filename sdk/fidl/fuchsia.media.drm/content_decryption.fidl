@@ -48,7 +48,7 @@ protocol ContentDecryptionModule {
     /// * error an [`Error`] indicating the reason for failure.
     SetServerCertificate(struct {
         certificate vector<uint8>:MAX;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Creates a new session for the given type.
     ///

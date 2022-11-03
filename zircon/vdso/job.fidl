@@ -294,7 +294,7 @@ protocol Job {
         @voidptr
         @size32
         policy vector<byte>;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///
@@ -360,5 +360,5 @@ protocol Job {
         job handle:JOB;
         options uint32;
         process handle:PROCESS;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 };

@@ -25,7 +25,7 @@ protocol Debug {
     /// Changes the block's test pattern mode.
     SetTestPatternMode(struct {
         mode uint16;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
     /// Retrieves the test pattern data being used.
     GetTestPatternData() -> (struct {
         data vector<uint32>:MAX_TEST_PATTERN_DATA;
@@ -33,5 +33,5 @@ protocol Debug {
     /// Changes data passed into the test pattern. Only used by certain modes.
     SetTestPatternData(struct {
         data vector<uint32>:MAX_TEST_PATTERN_DATA;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

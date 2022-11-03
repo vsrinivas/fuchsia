@@ -12,7 +12,7 @@ namespace {
 // Test that the |ErrorsIn| template is wired up correctly: it should contain
 // the corresponding domain specific error.
 
-// NoArgsPrimitiveError(struct { should_error bool; }) -> (struct {}) error int32;
+// NoArgsPrimitiveError(struct { should_error bool; }) -> () error int32;
 static_assert(
     std::is_base_of<fidl::internal::ErrorsInImpl<int32_t>,
                     fidl::ErrorsIn<test_error_methods::ErrorMethods::NoArgsPrimitiveError>>::value);

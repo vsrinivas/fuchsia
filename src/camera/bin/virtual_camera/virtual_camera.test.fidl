@@ -23,7 +23,7 @@ protocol VirtualCameraDevice {
     // This allows the fake streams to be picked up by other components
     // in the system. Must be called before proceeding with tests otherwise
     // the virtual camera won't be available to camera clients.
-    AddToDeviceWatcher() -> (struct {}) error Error;
+    AddToDeviceWatcher() -> () error Error;
 
     // Adds a |StreamConfig| at the given |index|. |index| is used to refer
     // to the config in future operations. If this is called multiple times

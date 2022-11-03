@@ -30,7 +30,7 @@ protocol Closeable {
     /// to calling `Close` without knowing when the close has completed or its
     /// status.
     @selector("fuchsia.io/Node.Close")
-    Close() -> (struct {}) error zx.status;
+    Close() -> () error zx.status;
 };
 
 /// Provides a means of identifying a type-erased protocol.

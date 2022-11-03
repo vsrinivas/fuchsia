@@ -93,7 +93,7 @@ protocol Controller {
         actor client_end:Actor;
         actor_type ActorType;
         trip_points vector<TripPoint>:MAX_TRIP_POINT_COUNT;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 };
 
 /// The protocol to receive thermal state updates from the fuchsia.thermal/Controller.

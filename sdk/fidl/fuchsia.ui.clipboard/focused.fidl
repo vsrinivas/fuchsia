@@ -17,7 +17,7 @@ protocol FocusedReaderRegistry {
     RequestReader(resource table {
         1: view_ref fuchsia.ui.views.ViewRef;
         2: reader_request server_end:Reader;
-    }) -> (struct {}) error ClipboardError;
+    }) -> () error ClipboardError;
 };
 
 /// A protocol that allows graphical clients that own `ViewRef`s to request write ("copy") access to
@@ -31,5 +31,5 @@ protocol FocusedWriterRegistry {
     RequestWriter(resource table {
         1: view_ref fuchsia.ui.views.ViewRef;
         2: writer_request server_end:Writer;
-    }) -> (struct {}) error ClipboardError;
+    }) -> () error ClipboardError;
 };

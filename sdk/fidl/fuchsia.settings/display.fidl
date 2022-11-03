@@ -36,7 +36,7 @@ protocol Display {
     /// no-op, and will not make any changes.
     Set(struct {
         settings DisplaySettings;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 };
 
 /// DisplaySettings are used to determine the output state of the display.

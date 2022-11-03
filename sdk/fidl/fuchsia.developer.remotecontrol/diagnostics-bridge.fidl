@@ -69,7 +69,7 @@ protocol RemoteDiagnosticsBridge {
     StreamDiagnostics(resource struct {
         parameters BridgeStreamParameters;
         iterator server_end:ArchiveIterator;
-    }) -> (struct {}) error StreamError;
+    }) -> () error StreamError;
 
     // This is a workaround to ensure the bridge is started by the framework
     // before the frontend attempts to connect to it.

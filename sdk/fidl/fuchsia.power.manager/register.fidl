@@ -45,5 +45,5 @@ protocol DriverManagerRegistration {
     Register(resource struct {
         system_state_transition client_end:fuchsia.device.manager.SystemStateTransition;
         dir client_end:fuchsia.io.Directory;
-    }) -> (struct {}) error RegistrationError;
+    }) -> () error RegistrationError;
 };

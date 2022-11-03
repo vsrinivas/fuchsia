@@ -142,7 +142,7 @@ protocol Peripheral {
     Advertise(resource struct {
         parameters AdvertisingParameters;
         advertised_peripheral client_end:AdvertisedPeripheral;
-    }) -> (struct {}) error PeripheralError;
+    }) -> () error PeripheralError;
 
     /// Start advertising as a LE peripheral. An empty response is sent to indicate when advertising
     /// has successfully initiated. If advertising cannot be initiated, then the response will
@@ -168,7 +168,7 @@ protocol Peripheral {
     StartAdvertising(resource struct {
         parameters AdvertisingParameters;
         handle server_end:AdvertisingHandle;
-    }) -> (struct {}) error PeripheralError;
+    }) -> () error PeripheralError;
 
     /// Event delivered when a remote LE central initiates a connection to this Peripheral when
     /// connectable advertising is enabled via

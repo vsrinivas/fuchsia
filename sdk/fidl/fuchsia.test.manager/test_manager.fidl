@@ -73,7 +73,7 @@ protocol Query {
     Enumerate(resource struct {
         test_url fuchsia.url.Url;
         iterator server_end:CaseIterator;
-    }) -> (struct {}) error LaunchError;
+    }) -> () error LaunchError;
 };
 
 /// This is the entry point of running test suites. A test "run" consists of

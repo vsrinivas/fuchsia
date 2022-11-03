@@ -89,7 +89,7 @@ protocol Access {
     /// * error Reports Error.FAILED if inquiry mode cannot be entered.
     MakeDiscoverable(resource struct {
         token server_end:ProcedureToken;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Start a general discovery procedure. All general discoverable BR/EDR, LE,
     /// and BR/EDR/LE devices will appear in the peer list, which can be observed by calling
@@ -101,7 +101,7 @@ protocol Access {
     /// * error Reports Error.FAILED if discovery on either transport cannot be initiated.
     StartDiscovery(resource struct {
         token server_end:ProcedureToken;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Returns a list of all peers (connectable Bluetooth devices) known to the system. The first
     /// call results in a snapshot of all known peers to be sent immediately in the `updated` return
@@ -127,7 +127,7 @@ protocol Access {
     /// * error Reports `Error.PEER_NOT_FOUND` if `id` is not recognized.
     Connect(struct {
         id bt.PeerId;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Disconnect all logical links to the peer with the given `id`. This includes LE and
     /// BR/EDR links that have been initiated using all Access and fuchsia.bluetooth.le protocol
@@ -137,7 +137,7 @@ protocol Access {
     /// * error Reports `Error.PEER_NOT_FOUND` if `id` is not recognized.
     Disconnect(struct {
         id bt.PeerId;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Initiate a pairing to the remote `id` with the given `options`.
     /// This call completes only once the pairing procedure has completed or aborted.
@@ -160,7 +160,7 @@ protocol Access {
     Pair(struct {
         id bt.PeerId;
         options PairingOptions;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Removes all bonding information and disconnects any existing links with the peer with the
     /// given `id`.
@@ -169,5 +169,5 @@ protocol Access {
     /// * error Reports `Error.PEER_NOT_FOUND` if `id` is not recognized.
     Forget(struct {
         id bt.PeerId;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 };

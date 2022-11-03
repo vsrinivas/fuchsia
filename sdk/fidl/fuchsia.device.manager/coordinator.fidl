@@ -173,12 +173,12 @@ protocol DeviceController {
 
     /// Ask devhost to unbind this device. On success, the remote end of this
     /// interface channel will close instead of returning a result.
-    Unbind() -> (struct {}) error zx.status;
+    Unbind() -> () error zx.status;
 
     /// Ask the devhost to complete the removal of this device, which previously had
     /// invoked `ScheduleRemove`. This is a special case that can be removed
     /// once `device_remove` invokes `unbind`.
-    CompleteRemoval() -> (struct {}) error zx.status;
+    CompleteRemoval() -> () error zx.status;
 
     /// Ask devhost to suspend this device, using the target state indicated by `flags`.
     Suspend(struct {
@@ -328,7 +328,7 @@ protocol Coordinator {
     // the current behavior is a bug.
     BindDevice(struct {
         driver_path string:<DEVICE_PATH_MAX, optional>;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Returns the topological path of this device.
     GetTopologicalPath() -> (struct {
@@ -365,7 +365,7 @@ protocol Coordinator {
     AddMetadata(struct {
         key uint32;
         data vector<uint8>:<METADATA_BYTES_MAX, optional>;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Adds the given composite device.  This causes the driver manager to try to match the
     /// fragments against the existing device tree, and to monitor all new device additions
@@ -373,7 +373,7 @@ protocol Coordinator {
     AddCompositeDevice(struct {
         name string:DEVICE_NAME_MAX;
         comp_desc CompositeDeviceDescriptor;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Adds the given device group. This causes the driver manager to add the device group to
     /// the driver index, and then try to match the nodes against the existing device tree.
@@ -382,5 +382,5 @@ protocol Coordinator {
     AddDeviceGroup(struct {
         name string:DEVICE_NAME_MAX;
         group_desc DeviceGroupDescriptor;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

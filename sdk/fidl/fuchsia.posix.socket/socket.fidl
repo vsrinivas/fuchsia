@@ -41,7 +41,7 @@ protocol BaseSocket {
     /// Set `SOL_SOCKET` -> `SO_REUSEADDR`.
     SetReuseAddress(struct {
         value bool;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_SOCKET` -> `SO_REUSEADDR`.
     GetReuseAddress() -> (struct {
         value bool;
@@ -52,12 +52,12 @@ protocol BaseSocket {
 
     /// Get `SOL_SOCKET` -> `SO_ERROR`.
     /// Returns the last error if there is an error set on the socket.
-    GetError() -> (struct {}) error fuchsia.posix.Errno;
+    GetError() -> () error fuchsia.posix.Errno;
 
     /// Set `SOL_SOCKET` -> `SO_BROADCAST`.
     SetBroadcast(struct {
         value bool;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_SOCKET` -> `SO_BROADCAST`.
     GetBroadcast() -> (struct {
         value bool;
@@ -66,7 +66,7 @@ protocol BaseSocket {
     /// Set `SOL_SOCKET` -> `SO_SNDBUF`.
     SetSendBuffer(struct {
         value_bytes uint64;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_SOCKET` -> `SO_SNDBUF`.
     GetSendBuffer() -> (struct {
         value_bytes uint64;
@@ -75,7 +75,7 @@ protocol BaseSocket {
     /// Set `SOL_SOCKET` -> `SO_RCVBUF`.
     SetReceiveBuffer(struct {
         value_bytes uint64;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_SOCKET` -> `SO_RCVBUF`.
     GetReceiveBuffer() -> (struct {
         value_bytes uint64;
@@ -84,7 +84,7 @@ protocol BaseSocket {
     /// Set `SOL_SOCKET` -> `SO_KEEPALIVE`.
     SetKeepAlive(struct {
         value bool;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_SOCKET` -> `SO_KEEPALIVE`.
     GetKeepAlive() -> (struct {
         value bool;
@@ -93,7 +93,7 @@ protocol BaseSocket {
     /// Set `SOL_SOCKET` -> `SO_OOBINLINE`.
     SetOutOfBandInline(struct {
         value bool;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_SOCKET` -> `SO_OOBINLINE`.
     GetOutOfBandInline() -> (struct {
         value bool;
@@ -102,7 +102,7 @@ protocol BaseSocket {
     /// Set `SOL_SOCKET` -> `SO_NO_CHECK`.
     SetNoCheck(struct {
         value bool;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_SOCKET` -> `SO_NO_CHECK`.
     GetNoCheck() -> (struct {
         value bool;
@@ -112,7 +112,7 @@ protocol BaseSocket {
     SetLinger(struct {
         linger bool;
         length_secs uint32;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_SOCKET` -> `SO_LINGER`.
     GetLinger() -> (struct {
         linger bool;
@@ -122,7 +122,7 @@ protocol BaseSocket {
     /// Set `SOL_SOCKET` -> `SO_REUSEPORT`.
     SetReusePort(struct {
         value bool;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_SOCKET` -> `SO_REUSEPORT`.
     GetReusePort() -> (struct {
         value bool;
@@ -143,7 +143,7 @@ protocol BaseSocket {
     /// Set `SOL_SOCKET` -> `SO_BINDTODEVICE`.
     SetBindToDevice(struct {
         value fuchsia.net.interfaces.Name;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_SOCKET` -> `SO_BINDTODEVICE`.
     GetBindToDevice() -> (struct {
         value fuchsia.net.interfaces.Name;
@@ -155,7 +155,7 @@ protocol BaseSocket {
     @selector("fuchsia.posix.socket/BaseSocket.SetTimestamp2")
     SetTimestampDeprecated(struct {
         value TimestampOption;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_SOCKET` -> `SO_TIMESTAMP`.
     // TODO(https://fxbug.dev/87656): Remove after ABI transition.
     @deprecated("Use GetTimestamp instead")
@@ -170,7 +170,7 @@ protocol BaseSocket {
     // https://github.com/torvalds/linux/blob/dcd68326d29/net/core/sock.c#L790-L801
     SetTimestamp(struct {
         value TimestampOption;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_SOCKET` -> `SO_TIMESTAMP` or `SO_TIMESTAMPNS`.
     GetTimestamp() -> (struct {
         value TimestampOption;
@@ -184,13 +184,13 @@ protocol BaseNetworkSocket {
     /// Sets the local address used for the socket.
     Bind(struct {
         addr fuchsia.net.SocketAddress;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Initiates a connection to a remote address.
     Connect(struct {
         addr fuchsia.net.SocketAddress;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Clears connection information from this socket.
-    Disconnect() -> (struct {}) error fuchsia.posix.Errno;
+    Disconnect() -> () error fuchsia.posix.Errno;
     /// Retrieves the local socket address.
     GetSockName() -> (struct {
         addr fuchsia.net.SocketAddress;
@@ -202,12 +202,12 @@ protocol BaseNetworkSocket {
     /// Shuts down part of the socket.
     Shutdown(struct {
         mode ShutdownMode;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
 
     /// Set `SOL_IP` -> `IP_TOS`.
     SetIpTypeOfService(struct {
         value uint8;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_IP` -> `IP_TOS`.
     GetIpTypeOfService() -> (struct {
         value uint8;
@@ -218,7 +218,7 @@ protocol BaseNetworkSocket {
     // https://github.com/torvalds/linux/blob/6f38be8f2cc/net/ipv4/ip_sockglue.c#L1605-L1612
     SetIpTtl(struct {
         value OptionalUint8;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_IP` -> `IP_TTL`.
     GetIpTtl() -> (struct {
         value uint8;
@@ -227,7 +227,7 @@ protocol BaseNetworkSocket {
     /// Set `SOL_IP` -> `IP_PKTINFO`.
     SetIpPacketInfo(struct {
         value bool;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_IP` -> `IP_PKTINFO`.
     GetIpPacketInfo() -> (struct {
         value bool;
@@ -236,7 +236,7 @@ protocol BaseNetworkSocket {
     /// Set `SOL_IP` -> `IP_RECVTOS`.
     SetIpReceiveTypeOfService(struct {
         value bool;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_IP` -> `IP_RECVTOS`.
     GetIpReceiveTypeOfService() -> (struct {
         value bool;
@@ -245,7 +245,7 @@ protocol BaseNetworkSocket {
     /// Set `SOL_IP` -> `IP_RECVTTL`.
     SetIpReceiveTtl(struct {
         value bool;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_IP` -> `IP_RECVTTL`.
     GetIpReceiveTtl() -> (struct {
         value bool;
@@ -255,7 +255,7 @@ protocol BaseNetworkSocket {
     SetIpMulticastInterface(struct {
         iface fuchsia.net.InterfaceId;
         address fuchsia.net.Ipv4Address;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_IP` -> `IP_MULTICAST_IF`.
     GetIpMulticastInterface() -> (struct {
         value fuchsia.net.Ipv4Address;
@@ -266,7 +266,7 @@ protocol BaseNetworkSocket {
     // https://github.com/torvalds/linux/blob/6f38be8f2cc/net/ipv4/ip_sockglue.c#L1088-L1098
     SetIpMulticastTtl(struct {
         value OptionalUint8;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_IP` -> `IP_MULTICAST_TTL`.
     GetIpMulticastTtl() -> (struct {
         value uint8;
@@ -275,7 +275,7 @@ protocol BaseNetworkSocket {
     /// Set `SOL_IP` -> `IP_MULTICAST_LOOP`.
     SetIpMulticastLoopback(struct {
         value bool;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_IP` -> `IP_MULTICAST_LOOP`.
     GetIpMulticastLoopback() -> (struct {
         value bool;
@@ -284,25 +284,25 @@ protocol BaseNetworkSocket {
     /// Set `SOL_IP` -> `IP_ADD_MEMBERSHIP`
     AddIpMembership(struct {
         membership IpMulticastMembership;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Set `SOL_IP` -> `IP_DROP_MEMBERSHIP`
     DropIpMembership(struct {
         membership IpMulticastMembership;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
 
     /// Set `SOL_IPV6` -> `IPV6_ADD_MEMBERSHIP`.
     AddIpv6Membership(struct {
         membership Ipv6MulticastMembership;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Set `SOL_IPV6` -> `IPV6_DROP_MEMBERSHIP`.
     DropIpv6Membership(struct {
         membership Ipv6MulticastMembership;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
 
     /// Set `SOL_IPV6` -> `IPV6_MULTICAST_IF`.
     SetIpv6MulticastInterface(struct {
         value fuchsia.net.InterfaceId;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_IPV6` -> `IPV6_MULTICAST_IF`.
     GetIpv6MulticastInterface() -> (struct {
         value fuchsia.net.InterfaceId;
@@ -314,7 +314,7 @@ protocol BaseNetworkSocket {
     // https://github.com/torvalds/linux/blob/6f38be8f2cc/net/ipv6/ip6_output.c#L291-L294
     SetIpv6UnicastHops(struct {
         value OptionalUint8;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_IPV6` -> `IPV6_UNICAST_HOPS`.
     GetIpv6UnicastHops() -> (struct {
         value uint8;
@@ -323,7 +323,7 @@ protocol BaseNetworkSocket {
     /// Set `SOL_IPV6` -> `IPV6_RECVHOPLIMIT`.
     SetIpv6ReceiveHopLimit(struct {
         value bool;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_IPV6` -> `IPV6_RECVHOPLIMIT`.
     GetIpv6ReceiveHopLimit() -> (struct {
         value bool;
@@ -334,7 +334,7 @@ protocol BaseNetworkSocket {
     // https://github.com/torvalds/linux/blob/6f38be8f2cc/net/ipv6/ipv6_sockglue.c#L751-L760
     SetIpv6MulticastHops(struct {
         value OptionalUint8;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_IPV6` -> `IPV6_MULTICAST_HOPS`.
     GetIpv6MulticastHops() -> (struct {
         value uint8;
@@ -343,7 +343,7 @@ protocol BaseNetworkSocket {
     /// Set `SOL_IPV6` -> `IPV6_MULTICAST_LOOP`.
     SetIpv6MulticastLoopback(struct {
         value bool;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_IPV6` -> `IPV6_MULTICAST_LOOP`.
     GetIpv6MulticastLoopback() -> (struct {
         value bool;
@@ -352,7 +352,7 @@ protocol BaseNetworkSocket {
     /// Set `SOL_IPV6` -> `IPV6_V6ONLY`.
     SetIpv6Only(struct {
         value bool;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_IPV6` -> `IPV6_V6ONLY`.
     GetIpv6Only() -> (struct {
         value bool;
@@ -363,7 +363,7 @@ protocol BaseNetworkSocket {
     /// Set `SOL_IPV6` -> `IPV6_RECVTCLASS`.
     SetIpv6ReceiveTrafficClass(struct {
         value bool;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_IPV6` -> `IPV6_RECVTCLASS`.
     GetIpv6ReceiveTrafficClass() -> (struct {
         value bool;
@@ -376,7 +376,7 @@ protocol BaseNetworkSocket {
     // https://github.com/torvalds/linux/blob/6f38be8f2cc/net/ipv6/ipv6_sockglue.c#L594-L611
     SetIpv6TrafficClass(struct {
         value OptionalUint8;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_IPV6` -> `IPV6_TCLASS`.
     GetIpv6TrafficClass() -> (struct {
         value uint8;
@@ -385,7 +385,7 @@ protocol BaseNetworkSocket {
     /// Set `SOL_IPV6` -> `IPV6_RECVPKTINFO`.
     SetIpv6ReceivePacketInfo(struct {
         value bool;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_IPV6` -> `IPV6_RECVPKTINFO`.
     GetIpv6ReceivePacketInfo() -> (struct {
         value bool;
@@ -843,7 +843,7 @@ protocol StreamSocket {
     /// connections will be buffered.
     Listen(struct {
         backlog int16;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Accepts a buffered incoming connection.
     Accept(struct {
         want_addr bool;
@@ -861,7 +861,7 @@ protocol StreamSocket {
     /// Set `SOL_TCP` -> `TCP_NODELAY`.
     SetTcpNoDelay(struct {
         value bool;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_TCP` -> `TCP_NODELAY`.
     GetTcpNoDelay() -> (struct {
         value bool;
@@ -870,7 +870,7 @@ protocol StreamSocket {
     /// Set `SOL_TCP` -> `TCP_MAXSEG`.
     SetTcpMaxSegment(struct {
         value_bytes uint32;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_TCP` -> `TCP_MAXSEG`.
     GetTcpMaxSegment() -> (struct {
         value_bytes uint32;
@@ -879,7 +879,7 @@ protocol StreamSocket {
     /// Set `SOL_TCP` -> `TCP_CORK`.
     SetTcpCork(struct {
         value bool;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_TCP` -> `TCP_CORK`.
     GetTcpCork() -> (struct {
         value bool;
@@ -888,7 +888,7 @@ protocol StreamSocket {
     /// Set `SOL_TCP` -> `TCP_KEEPIDLE`.
     SetTcpKeepAliveIdle(struct {
         value_secs uint32;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_TCP` -> `TCP_KEEPIDLE`.
     GetTcpKeepAliveIdle() -> (struct {
         value_secs uint32;
@@ -897,7 +897,7 @@ protocol StreamSocket {
     /// Set `SOL_TCP` -> `TCP_KEEPINTVL`.
     SetTcpKeepAliveInterval(struct {
         value_secs uint32;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_TCP` -> `TCP_KEEPINTVL`.
     GetTcpKeepAliveInterval() -> (struct {
         value_secs uint32;
@@ -906,7 +906,7 @@ protocol StreamSocket {
     /// Set `SOL_TCP` -> `TCP_KEEPCNT`.
     SetTcpKeepAliveCount(struct {
         value uint32;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_TCP` -> `TCP_KEEPCNT`.
     GetTcpKeepAliveCount() -> (struct {
         value uint32;
@@ -915,7 +915,7 @@ protocol StreamSocket {
     /// Set `SOL_TCP` -> `TCP_SYNCNT`.
     SetTcpSynCount(struct {
         value uint32;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_TCP` -> `TCP_SYNCNT`.
     GetTcpSynCount() -> (struct {
         value uint32;
@@ -924,7 +924,7 @@ protocol StreamSocket {
     /// Set `SOL_TCP` -> `TCP_LINGER2`.
     SetTcpLinger(struct {
         value_secs OptionalUint32;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_TCP` -> `TCP_LINGER2`.
     GetTcpLinger() -> (struct {
         value_secs OptionalUint32;
@@ -933,7 +933,7 @@ protocol StreamSocket {
     /// Set `SOL_TCP` -> `TCP_DEFER_ACCEPT`.
     SetTcpDeferAccept(struct {
         value_secs uint32;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_TCP` -> `TCP_DEFER_ACCEPT`.
     GetTcpDeferAccept() -> (struct {
         value_secs uint32;
@@ -942,7 +942,7 @@ protocol StreamSocket {
     /// Set `SOL_TCP` -> `TCP_WINDOW_CLAMP`.
     SetTcpWindowClamp(struct {
         value uint32;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_TCP` -> `TCP_WINDOW_CLAMP`.
     GetTcpWindowClamp() -> (struct {
         value uint32;
@@ -956,7 +956,7 @@ protocol StreamSocket {
     /// Set `SOL_TCP` -> `TCP_QUICKACK`.
     SetTcpQuickAck(struct {
         value bool;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_TCP` -> `TCP_QUICKACK`.
     GetTcpQuickAck() -> (struct {
         value bool;
@@ -965,7 +965,7 @@ protocol StreamSocket {
     /// Set `SOL_TCP` -> `TCP_CONGESTION`.
     SetTcpCongestion(struct {
         value TcpCongestionControl;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_TCP` -> `TCP_CONGESTION`.
     GetTcpCongestion() -> (struct {
         value TcpCongestionControl;
@@ -974,7 +974,7 @@ protocol StreamSocket {
     /// Set `SOL_TCP` -> `TCP_USER_TIMEOUT`.
     SetTcpUserTimeout(struct {
         value_millis uint32;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_TCP` -> `TCP_USER_TIMEOUT`.
     GetTcpUserTimeout() -> (struct {
         value_millis uint32;

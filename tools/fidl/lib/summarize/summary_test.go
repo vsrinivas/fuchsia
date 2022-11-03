@@ -1042,7 +1042,7 @@ library l;
 protocol P {
     -> F1(struct { a int32; });
     F2() -> (struct { a int32; });
-	F3() -> (struct {}) error int32;
+	F3() -> () error int32;
 	F4();
 };
 `,

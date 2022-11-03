@@ -83,7 +83,7 @@ protocol Light {
     SetSimpleValue(struct {
         index uint32;
         value bool;
-    }) -> (struct {}) error LightError;
+    }) -> () error LightError;
 
     /// Returns the current brightness value (0.0 - 1.0) of the light indicated by index, where 0.0
     /// is minimum brightness and 1.0 is maximum.
@@ -104,7 +104,7 @@ protocol Light {
     SetBrightnessValue(struct {
         index uint32;
         value float64;
-    }) -> (struct {}) error LightError;
+    }) -> () error LightError;
 
     /// Returns the current RGB value for the single light.
     /// If the capability 'RGB' is not supported by this light, returns NOT_SUPPORTED.
@@ -123,7 +123,7 @@ protocol Light {
     SetRgbValue(struct {
         index uint32;
         value Rgb;
-    }) -> (struct {}) error LightError;
+    }) -> () error LightError;
 
     /// Returns group info for the light group.
     /// group_id: a number between 0 inclusive and the count received from GetNumLightGroups.
@@ -154,7 +154,7 @@ protocol Light {
     SetGroupSimpleValue(struct {
         group_id uint32;
         values vector<bool>:MAX;
-    }) -> (struct {}) error LightError;
+    }) -> () error LightError;
 
     /// Returns an array of the current brightness values (0.0 - 1.0) for the light group, where 0.0
     /// is minimum brightness and 1.0 is maximum.
@@ -177,7 +177,7 @@ protocol Light {
     SetGroupBrightnessValue(struct {
         group_id uint32;
         values vector<float64>:MAX;
-    }) -> (struct {}) error LightError;
+    }) -> () error LightError;
 
     /// Returns an array of the current RGB values for the light group.
     /// If group_id is invalid, INVALID_INDEX will be returned.
@@ -198,7 +198,7 @@ protocol Light {
     SetGroupRgbValue(struct {
         group_id uint32;
         values vector<Rgb>:MAX;
-    }) -> (struct {}) error LightError;
+    }) -> () error LightError;
 
     // TODO: Ideas for future expansion
     // - Hardware blinking configuration, for lights that have hardware or MCU support for blinking.

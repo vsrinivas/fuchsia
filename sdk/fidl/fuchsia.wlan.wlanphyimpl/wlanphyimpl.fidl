@@ -46,15 +46,15 @@ protocol WlanphyImpl {
     DestroyIface(table {
         /// This field is required.
         1: iface_id uint16;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Set country with a WlanphyCountry
     SetCountry(struct {
         country WlanphyCountry;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Set device to a world-safe country
-    ClearCountry() -> (struct {}) error zx.status;
+    ClearCountry() -> () error zx.status;
 
     /// Read currently configured country. Implementations are advised to read the
     /// country directly from the firmware, where possible.
@@ -67,7 +67,7 @@ protocol WlanphyImpl {
     SetPsMode(table {
         /// This field is required.
         1: ps_mode fuchsia.wlan.common.PowerSaveType;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Get current Power Save Mode from device. In most implementation this
     /// likely to be retrieved from Firmware.

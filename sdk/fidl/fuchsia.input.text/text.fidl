@@ -114,7 +114,7 @@ protocol WritableTextField {
     SetSelection(struct {
         transaction_id TransactionId;
         selection Selection;
-    }) -> (struct {}) error TextFieldError;
+    }) -> () error TextFieldError;
 
     /// Replaces or inserts `new_text` at `old_range`. After the text change, the caret moves to the
     /// position immediately after the end of the edit location.
@@ -126,7 +126,7 @@ protocol WritableTextField {
         transaction_id TransactionId;
         old_range Range;
         new_text string:MAX_STRING_LENGTH;
-    }) -> (struct {}) error TextFieldError;
+    }) -> () error TextFieldError;
 
     /// Commits the changes made so far in the transaction and ends the transaction. The active
     /// transaction ID becomes invalid.
@@ -162,7 +162,7 @@ protocol WritableTextField {
         /// If this ID is out of date, then the server's view of the text field state is stale, so
         /// the composition must fail.
         revision_id RevisionId;
-    }) -> (struct {}) error TextFieldError;
+    }) -> () error TextFieldError;
 
     /// Commits the changes made so far in the transaction, updates the composition metdata, and
     /// ends the transaction. The active transaction ID becomes invalid.
@@ -213,7 +213,7 @@ protocol TextEditServer {
         text_field client_end:TextField;
         server_session server_end:TextEditServerSession;
         options TextFieldOptions;
-    }) -> (struct {}) error TextEditServerError;
+    }) -> () error TextEditServerError;
 };
 
 /// An opaque type representing an `TextField`'s revision ID.
@@ -249,21 +249,21 @@ protocol TextEditServerSession {
     /// Notify the server that the state of the text field has changed.
     NotifyStateChanged(struct {
         state TextFieldState;
-    }) -> (struct {}) error TextEditServerError;
+    }) -> () error TextEditServerError;
 
     /// Notifies the server that the text field has regained focus within its parent view.
-    NotifyFocusGained() -> (struct {}) error TextEditServerError;
+    NotifyFocusGained() -> () error TextEditServerError;
 
     /// Notifies the server that the text field has lost focus (either to some other field within
     /// the same client view, or because the client has lost focus).
-    NotifyFocusLost() -> (struct {}) error TextEditServerError;
+    NotifyFocusLost() -> () error TextEditServerError;
 
     /// Notifies the server that the text field options have changed.
     ///
     /// For example, a user might toggle the visibility of characters in a password field.
     UpdateTextFieldOptions(struct {
         options TextFieldOptions;
-    }) -> (struct {}) error TextEditServerError;
+    }) -> () error TextEditServerError;
 };
 
 /// Describes composition-specific metadata that can be updated in a text field, outside of changes

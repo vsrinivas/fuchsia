@@ -67,7 +67,7 @@ protocol GuestLifecycle {
     /// All other errors are related to VMM initialization.
     Create(resource struct {
         guest_config GuestConfig;
-    }) -> (struct {}) error GuestError;
+    }) -> () error GuestError;
 
     /// Start the primary VCPU and any dispatch loop. This will not return until the VMM stops
     /// running. On a clean shutdown (either guest or client initiated) this will return success.
@@ -78,7 +78,7 @@ protocol GuestLifecycle {
     ///     - CONTROLLER_FORCED_HALT: Stop was called on a running VMM.
     ///     - VCPU_START_FAILURE: Failed to start the primary VCPU.
     ///     - VCPU_RUNTIME_FAILURE: A VCPU encountered a fatal error while running the guest.
-    Run() -> (struct {}) error GuestError;
+    Run() -> () error GuestError;
 
     /// Stop a running VMM. Returns once the dispatch loops have stopped. After Stop returns,
     /// Create and then Run can be called again.
@@ -120,12 +120,12 @@ protocol Guest {
     /// Returns error DEVICE_NOT_PRESENT if the guest was started without a vsock device.
     GetHostVsockEndpoint(resource struct {
         endpoint server_end:HostVsockEndpoint;
-    }) -> (struct {}) error GuestError;
+    }) -> () error GuestError;
 
     /// Get the balloon controller endpoint for the guest.
     ///
     /// Returns error DEVICE_NOT_PRESENT if the guest was started without a balloon device.
     GetBalloonController(resource struct {
         controller server_end:BalloonController;
-    }) -> (struct {}) error GuestError;
+    }) -> () error GuestError;
 };

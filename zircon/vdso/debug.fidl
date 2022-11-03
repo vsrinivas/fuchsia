@@ -125,7 +125,7 @@ protocol Debug {
     /// [`zx_debuglog_write()`]: debuglog_write.md
     Write(struct {
         buffer vector<uchar>:MAX;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///
@@ -167,5 +167,5 @@ protocol Debug {
     SendCommand(resource struct {
         resource handle:RESOURCE;
         buffer vector<uchar>:MAX;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 };

@@ -34,5 +34,5 @@ protocol Bootstrap {
     /// considered initialized even if no bootstrapping data was written. Returns
     /// INVALID_HOST_IDENTITY if any host or bonded peer data is insufficient or inconsistent, with
     /// no effect (the client may retry by obtaining another protocol handle).
-    Commit() -> (struct {}) error BootstrapError;
+    Commit() -> () error BootstrapError;
 };

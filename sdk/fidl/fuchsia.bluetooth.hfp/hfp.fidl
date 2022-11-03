@@ -137,7 +137,7 @@ protocol PeerHandler {
     /// and the system does not support additional calls.
     RequestOutgoingCall(struct {
         action CallAction;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Request the name of the network operator for the call manager. A null
     /// value is returned if there is no operator name available.
@@ -160,7 +160,7 @@ protocol PeerHandler {
     /// Cancellation is not supported by the device.
     SetNrecMode(struct {
         enabled bool;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Headset battery level from 0 ~ 100
     /// See https://www.bluetooth.com/specifications/assigned-numbers/hands-free-profile/
@@ -355,5 +355,5 @@ protocol Call {
     /// the network.
     SendDtmfCode(struct {
         code DtmfCode;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

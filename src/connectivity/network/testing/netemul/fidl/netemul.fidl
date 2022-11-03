@@ -212,7 +212,7 @@ protocol ManagedRealm {
     AddDevice(resource struct {
         path string:MAX;
         device client_end:fuchsia.netemul.network.DeviceProxy;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
     /// Removes virtual device mounted at `path`.
     ///
     /// + request `path` the path to virtual device to be removed from the
@@ -222,7 +222,7 @@ protocol ManagedRealm {
     ///     [`fuchsia.io/MAX_FILENAME`] bytes in length.
     RemoveDevice(struct {
         path string:MAX;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
     /// Connects to netemul's `devfs` instance for this realm.
     ///
     /// + request `devfs` request handle to the `devfs` directory.
@@ -240,7 +240,7 @@ protocol ManagedRealm {
     /// * error `ZX_ERR_INTERNAL` if the call to the service dependency fails.
     StopChildComponent(struct {
         child_name fuchsia.component.name;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
     /// Request that the managed realm shut down.
     ///
     /// The realm will send an `OnShutdown` event when shutdown is complete and

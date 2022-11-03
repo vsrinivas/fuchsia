@@ -57,7 +57,7 @@ protocol Launcher {
         command string:<MAX, optional>;
         /// The namespace layout to create for the dash process
         ns_layout DashNamespaceLayout;
-    }) -> (struct {}) error LauncherError;
+    }) -> () error LauncherError;
 
     /// Launch a dash process scoped to the given moniker, forwarding the given stdio socket.
     ///
@@ -74,7 +74,7 @@ protocol Launcher {
         command string:<MAX, optional>;
         /// The namespace layout to create for the dash process
         ns_layout DashNamespaceLayout;
-    }) -> (struct {}) error LauncherError;
+    }) -> () error LauncherError;
 
     /// This event fires when a shell has terminated.
     -> OnTerminated(struct {

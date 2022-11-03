@@ -43,7 +43,7 @@ protocol AccountManager {
         2: interaction server_end:fuchsia.identity.authentication.Interaction;
         3: reserved; // 3 is reserved for auto_lock in a near-future CL
         4: account server_end:Account;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Connects a channel to read properties of and perform operations on
     /// one account. If the account is locked, the supplied password will be
@@ -65,7 +65,7 @@ protocol AccountManager {
         id AccountId;
         password string:MAX_PASSWORD_SIZE;
         account server_end:Account;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Connects a channel that will receive changes in the provisioned
     /// accounts and their authentication state. Optionally this channel will
@@ -89,14 +89,14 @@ protocol AccountManager {
         3: add_account bool;
         4: remove_account bool;
         5: granularity AuthChangeGranularity;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Removes an account from the device.
     ///
     /// `id` The account's identifier as returned by GetAccountIds()
     RemoveAccount(struct {
         id AccountId;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Adds a new account to the device. If a storage unlock-capable
     /// authentication mechanism is provided, a single enrollment will be
@@ -147,7 +147,7 @@ protocol AccountManager {
         password string:MAX_PASSWORD_SIZE;
         metadata AccountMetadata;
         account server_end:Account;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Returns all available authentication mechanisms.
     // TODO(fxbug.dev/104199): Remove this method once interaction is

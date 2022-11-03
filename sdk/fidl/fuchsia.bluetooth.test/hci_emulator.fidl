@@ -149,7 +149,7 @@ protocol HciEmulator {
     /// already been published.
     Publish(struct {
         settings EmulatorSettings;
-    }) -> (struct {}) error EmulatorError;
+    }) -> () error EmulatorError;
 
     /// Inserts a new LE peer device to be emulated by this controller. Once registered, the state
     /// of the fake peer can be driven and observed using the `peer` handle.
@@ -166,7 +166,7 @@ protocol HciEmulator {
     AddLowEnergyPeer(resource struct {
         parameters LowEnergyPeerParameters;
         peer server_end:Peer;
-    }) -> (struct {}) error EmulatorPeerError;
+    }) -> () error EmulatorPeerError;
 
     /// Inserts a new BR/EDR peer device to be emulated by this controller. Once registered, the state
     /// of the fake peer can be driven and observed using the `peer` handle.
@@ -183,7 +183,7 @@ protocol HciEmulator {
     AddBredrPeer(resource struct {
         parameters BredrPeerParameters;
         peer server_end:Peer;
-    }) -> (struct {}) error EmulatorPeerError;
+    }) -> () error EmulatorPeerError;
 
     /// Returns the current controller parameter state. If the parameters have not changed since the
     /// last time this message was received, then this method does not return until there is a

@@ -2,6 +2,7 @@
 
 // experiment = no_optional_structs
 // experiment = output_index_json
+// experiment = simple_empty_response_syntax
 // experiment = unknown_interactions
 
 #![allow(

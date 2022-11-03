@@ -20,7 +20,7 @@ protocol RepositoryManager {
     ///     * `ZX_ERR_INVALID_ARGS` if the repository is malformed.
     Add(struct {
         repo RepositoryConfig;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Removes a repository.
     ///
@@ -35,7 +35,7 @@ protocol RepositoryManager {
     ///     * `ZX_ERR_NOT_FOUND` if the repository does not exist.
     Remove(struct {
         repo_url string;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Adds a mirror to a repository. This will overwrite the mirror if it already exists.
     ///
@@ -48,7 +48,7 @@ protocol RepositoryManager {
     AddMirror(struct {
         repo_url string;
         mirror MirrorConfig;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Removes a mirror from a repository.
     ///
@@ -63,7 +63,7 @@ protocol RepositoryManager {
     RemoveMirror(struct {
         repo_url string;
         mirror_url string;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Returns an iterator over all repositories.
     ///

@@ -40,7 +40,7 @@ protocol DebugDataSetController {
     AddRealm(struct {
         realm_moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
         url fuchsia.url.Url;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Remove a test realm that was previously added to the set.
     /// This is useful in cases where a realm is added, then fails to launch.

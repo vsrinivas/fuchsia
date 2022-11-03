@@ -198,7 +198,7 @@ protocol Interrupt {
         port_handle handle:PORT;
         key uint64;
         options uint32;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///
@@ -341,7 +341,7 @@ protocol Interrupt {
     /// [`zx_port_wait()`]: port_wait.md
     Destroy(resource struct {
         handle handle:INTERRUPT;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///
@@ -411,7 +411,7 @@ protocol Interrupt {
     /// [`zx_port_wait()`]: port_wait.md
     Ack(resource struct {
         handle handle:INTERRUPT;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///
@@ -479,5 +479,5 @@ protocol Interrupt {
         handle handle:INTERRUPT;
         options uint32;
         timestamp time;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 };

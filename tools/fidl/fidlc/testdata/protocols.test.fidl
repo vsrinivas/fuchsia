@@ -36,8 +36,8 @@ protocol WithErrorSyntax {
         b int64;
         c int64;
     }) error uint32;
-    ErrorAsPrimitive() -> (struct {}) error uint32;
-    ErrorAsEnum() -> (struct {}) error ErrorEnum;
+    ErrorAsPrimitive() -> () error uint32;
+    ErrorAsEnum() -> () error ErrorEnum;
     HandleInResult() -> (resource struct {
         h zx.handle;
     }) error uint32;

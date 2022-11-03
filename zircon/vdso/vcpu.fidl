@@ -241,7 +241,7 @@ protocol Vcpu {
     /// [`zx_vcpu_write_state()`]: vcpu_write_state.md
     Kick(resource struct {
         handle handle:VCPU;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///
@@ -300,7 +300,7 @@ protocol Vcpu {
     Interrupt(resource struct {
         handle handle:VCPU;
         vector uint32;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///
@@ -445,5 +445,5 @@ protocol Vcpu {
         kind uint32;
         @voidptr
         buffer vector<byte>;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 };

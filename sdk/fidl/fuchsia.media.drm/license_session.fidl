@@ -97,7 +97,7 @@ protocol LicenseSession {
     /// * error an [`Error`] indicating the reason for failure.
     GenerateLicenseRequest(struct {
         init_data LicenseInitData;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Initiates the release process for the license session.
     ///
@@ -114,7 +114,7 @@ protocol LicenseSession {
     /// the `LicenseSession` channel.
     ///
     /// * error an [`Error`] indicating the reason for failure.
-    GenerateLicenseRelease() -> (struct {}) error Error;
+    GenerateLicenseRelease() -> () error Error;
 
     /// Updates the [`LicenseSession`] with a message from the license server.
     ///
@@ -126,7 +126,7 @@ protocol LicenseSession {
     /// * error an [`Error`] indicating the reason for failure.
     ProcessLicenseResponse(resource struct {
         response LicenseServerMessage;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Creates a Decryptor [`fuchsia.media/StreamProcessor`] to be used to
     /// decrypt content.

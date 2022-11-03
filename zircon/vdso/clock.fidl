@@ -529,5 +529,5 @@ protocol Clockfuncs {
         options uint64;
         @voidptr
         args experimental_pointer<byte>;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 };

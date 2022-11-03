@@ -140,7 +140,7 @@ protocol Pci {
     EnableBusMaster(resource struct {
         handle handle:PCI_DEVICE;
         enable uint32;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///
@@ -176,7 +176,7 @@ protocol Pci {
     /// TODO(fxbug.dev/32938)
     ResetDevice(resource struct {
         handle handle:PCI_DEVICE;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     // TODO(scottmg): In banjo/abigen out_val wasn't optional, but was an input
     // OUT, so didn't get the __NONNULL() tag, so we match by making it optional
@@ -265,7 +265,7 @@ protocol Pci {
         offset uint16;
         width usize;
         val uint32;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///
@@ -316,7 +316,7 @@ protocol Pci {
         val uint32;
         width usize;
         write uint32;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     // TODO(scottmg): type of out_handle?
     // TODO(scottmg): In banjo/abigen out_bar wasn't optional, but was an input
@@ -485,7 +485,7 @@ protocol Pci {
         handle handle:PCI_DEVICE;
         mode uint32;
         requested_irq_count uint32;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     // Note that init_buf isn't a vector of PciInitArg, it's a variable sized
     // structure starting with a zx_pci_init_arg_t.
@@ -527,7 +527,7 @@ protocol Pci {
         handle handle:RESOURCE;
         init_buf PciInitArg;
         len uint32;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///
@@ -571,5 +571,5 @@ protocol Pci {
         base uint64;
         len uint64;
         add uint32;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 };

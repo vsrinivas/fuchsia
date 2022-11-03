@@ -81,7 +81,7 @@ protocol Flashmap {
         name string:MAX_NAME_LEN;
         offset uint32;
         data fuchsia.mem.Buffer;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Erase the given region of flash. If |offset| or |size| are not erase-block-aligned, then
     /// the erase will fail.
@@ -97,7 +97,7 @@ protocol Flashmap {
         name string:MAX_NAME_LEN;
         offset uint32;
         range uint32;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };
 
 @discoverable

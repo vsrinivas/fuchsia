@@ -65,5 +65,5 @@ protocol Reporter {
     /// * error Returns `ZX_ERR_INVALID_ARGS` if the provided `info` is invalidly formatted.
     Report(resource struct {
         info Information;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

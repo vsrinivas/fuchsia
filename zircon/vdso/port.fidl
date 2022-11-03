@@ -271,7 +271,7 @@ protocol Port {
     Queue(resource struct {
         handle handle:PORT;
         packet PortPacket;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///
@@ -458,5 +458,5 @@ protocol Port {
         handle handle:PORT;
         source handle;
         key uint64;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 };

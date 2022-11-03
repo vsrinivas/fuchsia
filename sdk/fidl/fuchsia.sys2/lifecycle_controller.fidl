@@ -33,14 +33,14 @@ protocol LifecycleController {
     Stop(struct {
         moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
         is_recursive bool;
-    }) -> (struct {}) error fuchsia.component.Error;
+    }) -> () error fuchsia.component.Error;
 
     /// Resolves the instance identified by the given moniker.
     ///
     /// The function returns once the instance has been resolved
     Resolve(struct {
         moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
-    }) -> (struct {}) error fuchsia.component.Error;
+    }) -> () error fuchsia.component.Error;
 
     /// Unresolves the component designated by the provided relative moniker
     /// relative to the component to which the protocol is scoped.
@@ -49,7 +49,7 @@ protocol LifecycleController {
     /// operation fails.
     Unresolve(struct {
         moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
-    }) -> (struct {}) error fuchsia.component.Error;
+    }) -> () error fuchsia.component.Error;
 
     /// Creates a new child instance under a collection. This method is similar to
     /// [`fuchsia.component/Realm.CreateChild`].
@@ -62,7 +62,7 @@ protocol LifecycleController {
         collection fuchsia.component.decl.CollectionRef;
         decl fuchsia.component.decl.Child;
         args fuchsia.component.CreateChildArgs;
-    }) -> (struct {}) error fuchsia.component.Error;
+    }) -> () error fuchsia.component.Error;
 
     /// Destroys a child instance under a collection. This method is similar to
     /// [`fuchsia.component/Realm.DestroyChild`].
@@ -73,7 +73,7 @@ protocol LifecycleController {
     DestroyChild(struct {
         parent_moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
         child fuchsia.component.decl.ChildRef;
-    }) -> (struct {}) error fuchsia.component.Error;
+    }) -> () error fuchsia.component.Error;
 
     /// Opens a [`fuchsia.sys2/StorageAdmin`] protocol for the exposed storage capability of an
     /// instance identified by its moniker. This protocol is served by component manager.
@@ -83,5 +83,5 @@ protocol LifecycleController {
         moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
         capability string:MAX_CAPABILITY_ID_LENGTH;
         admin_server server_end:StorageAdmin;
-    }) -> (struct {}) error fuchsia.component.Error;
+    }) -> () error fuchsia.component.Error;
 };

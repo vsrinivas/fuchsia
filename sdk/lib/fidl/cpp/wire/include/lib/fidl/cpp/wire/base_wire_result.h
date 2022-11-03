@@ -93,7 +93,7 @@ class BaseWireResult<
 
 // Template variant for flexible methods with a response body but which don't
 // need |Unwrap| accessors. This means a flexible method which doesn't use error
-// syntax and has an empty payload: `flexible Foo() -> (struct {});`.
+// syntax and has an empty payload: `flexible Foo() -> ();`.
 template <typename FidlMethod>
 class BaseWireResult<FidlMethod,
                      std::enable_if_t<FidlMethod::kHasResponse && FidlMethod::kHasResponseBody &&

@@ -309,7 +309,7 @@ type Foo = strict union {
 TEST(UnionTests, GoodErrorSyntaxExplicitOrdinals) {
   TestLibrary library(R"FIDL(library example;
 protocol Example {
-    Method() -> (struct {}) error int32;
+    Method() -> () error int32;
 };
 )FIDL");
   ASSERT_COMPILED(library);

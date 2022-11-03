@@ -155,7 +155,7 @@ protocol EditTransaction {
     ///    https://fuchsia.dev/fuchsia-src/concepts/storage/package_url
     Add(struct {
         rule Rule;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Commits this transaction, or detect another transaction that committed
     /// before this one.
@@ -163,7 +163,7 @@ protocol EditTransaction {
     /// * error a zx_status value indicating failure. One of the following:
     ///     * `ZX_ERR_UNAVAILABLE` if another transaction committed before this one.
     ///     * `ZX_ERR_ACCESS_DENIED` if editing dynamic rewrite rules is permanently disabled.
-    Commit() -> (struct {}) error zx.status;
+    Commit() -> () error zx.status;
 };
 
 /// The iterator over all the rewrite rules defined in a [`Engine`].

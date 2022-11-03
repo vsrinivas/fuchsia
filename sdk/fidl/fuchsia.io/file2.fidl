@@ -142,7 +142,7 @@ protocol File {
     @selector("fuchsia.io/File.Resize")
     Resize(struct {
         length uint64;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Acquires a [`zx.handle:VMO`] representing this file, if there is one,
     /// with the requested access rights.

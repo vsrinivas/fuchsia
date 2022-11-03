@@ -15,7 +15,7 @@ protocol CrashReporter {
     /// crash report to a remote crash server depending on the FIDL server's configuration.
     File(resource struct {
         report CrashReport;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };
 
 const MAX_PROGRAM_NAME_LENGTH uint32 = 1024;

@@ -19,7 +19,7 @@ protocol AuthorizedKeys {
     /// Add a key to the device's authorized key list.
     AddKey(struct {
         key SshAuthorizedKeyEntry;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Watch for keys by sending events to the given KeyWatcher.
     WatchKeys(resource struct {
@@ -29,7 +29,7 @@ protocol AuthorizedKeys {
     /// Remove the given key. |key| should be a value returned by |KeyIterator|.
     RemoveKey(struct {
         key SshAuthorizedKeyEntry;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };
 
 type KeyEventType = strict enum {

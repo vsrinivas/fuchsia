@@ -4,5 +4,5 @@
 library test.bad.fi0115;
 
 ajar protocol Protocol {
-    flexible Method() -> (struct {});
+    flexible Method() -> ();
 };

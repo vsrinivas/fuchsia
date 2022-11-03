@@ -42,7 +42,7 @@ protocol AudioRecordingControl {
     /// - response `error` a AudioRecordingError value indicating success or failure.
     ClearInputAudio(resource struct {
         index int32;
-    }) -> (struct {}) error AudioRecordingError;
+    }) -> () error AudioRecordingError;
 
     /// Returns the captured audio data in `zx.handle.VMO`.
     ///
@@ -60,22 +60,22 @@ protocol AudioRecordingControl {
     /// - response `error` a AudioRecordingError value indicating success or failure.
     StartInputInjection(resource struct {
         index int32;
-    }) -> (struct {}) error AudioRecordingError;
+    }) -> () error AudioRecordingError;
 
     /// Stops inject audio data.
     ///
     /// - response `error` a AudioRecordingError value indicating success or failure.
-    StopInputInjection() -> (struct {}) error AudioRecordingError;
+    StopInputInjection() -> () error AudioRecordingError;
 
     /// Start capturing audio output
     ///
     /// - response `error` a AudioRecordingError value indicating success or failure.
-    StartOutputSave() -> (struct {}) error AudioRecordingError;
+    StartOutputSave() -> () error AudioRecordingError;
 
     /// Stops capturing the audio output.
     ///
     /// Use `GetOutputAudio` to get the latest audio capture.
     ///
     /// - response `error` a AudioRecordingError value indicating success or failure.
-    StopOutputSave() -> (struct {}) error AudioRecordingError;
+    StopOutputSave() -> () error AudioRecordingError;
 };

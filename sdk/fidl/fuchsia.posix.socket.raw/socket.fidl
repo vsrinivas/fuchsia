@@ -132,7 +132,7 @@ protocol Socket {
         data vector<uint8>:MAX;
         control fuchsia.posix.socket.NetworkSocketSendControlData;
         flags fuchsia.posix.socket.SendMsgFlags;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
 
     /// Retrieves creation information from the socket.
     ///
@@ -146,7 +146,7 @@ protocol Socket {
     /// Set `SOL_IP` -> `IP_HDRINCL`.
     SetIpHeaderIncluded(struct {
         value bool;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_IP` -> `IP_HDRINCL`.
     GetIpHeaderIncluded() -> (struct {
         value bool;
@@ -155,7 +155,7 @@ protocol Socket {
     /// Set `SOL_ICMPV6` -> `ICMP6_FILTER`.
     SetIcmpv6Filter(struct {
         filter Icmpv6Filter;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_ICMPV6` -> `ICMP6_FILTER`.
     GetIcmpv6Filter() -> (struct {
         filter Icmpv6Filter;
@@ -164,7 +164,7 @@ protocol Socket {
     /// Set `SOL_IPV6` -> `IPV6_CHECKSUM`.
     SetIpv6Checksum(struct {
         config Ipv6ChecksumConfiguration;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
     /// Get `SOL_IPV6` -> `IPV6_CHECKSUM`.
     GetIpv6Checksum() -> (struct {
         config Ipv6ChecksumConfiguration;

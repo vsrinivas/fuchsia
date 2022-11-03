@@ -15,17 +15,17 @@ protocol DspDevice {
     /// `ZX_ERR_NOT_FOUND` if the firmware does not exist.
     LoadFirmware(struct {
         fw_name string:zx.MAX_NAME_LEN;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Start DSP.
     /// error a zx_status value indicating failure. Two of the following:
     /// `ZX_ERR_BAD_STATE` if the DSP firmware fails to load, execute the DSP start command.
     /// `ZX_ERR_OUT_OF_RANGE` if the execution of the smcc command started by the DSP fails.
-    Start() -> (struct {}) error zx.status;
+    Start() -> () error zx.status;
 
     /// Stop DSP.
     /// error a zx_status value indicating failure. Two of the following:
     /// `ZX_ERR_BAD_STATE` if DSP is not started, execute DSP stop.
     /// `ZX_ERR_OUT_OF_RANGE` if the execution of the smcc command stopped by the DSP fails.
-    Stop() -> (struct {}) error zx.status;
+    Stop() -> () error zx.status;
 };

@@ -13,27 +13,27 @@ protocol PeerManager {
     GetBrowseControllerForTarget(resource struct {
         peer_id bt.PeerId;
         client server_end:BrowseController;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Returns a controller client to a remote target (TG) service at the peer specified by
     /// `peer_id`.
     GetControllerForTarget(resource struct {
         peer_id bt.PeerId;
         client server_end:Controller;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Set the absolute volume handler.  Only one handler may be set  at at time.
     /// If a second handler is registered it will be dropped and an error will
     /// be returned.
     SetAbsoluteVolumeHandler(resource struct {
         handler client_end:AbsoluteVolumeHandler;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Sets an implementation of target handler that will vend delegates for each incoming
     /// remote TG -> local CT connections to handle the commands being sent by the remote TG.
     RegisterTargetHandler(resource struct {
         handler client_end:TargetHandler;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };
 
 /// Handler for absolute volume requests from a remote peer. See AVRCP v 1.6.2 section 6.13.2.
@@ -120,18 +120,18 @@ protocol BrowseController {
     PlayFileSystemItem(struct {
         /// UID of folder or media element.
         uid uint64;
-    }) -> (struct {}) error BrowseControllerError;
+    }) -> () error BrowseControllerError;
 
     ///  Used for PlayItem(NowPlayingList). Plays the specified item from the now playing
     /// list aka the queue of the addressed media player.
     PlayNowPlayingItem(struct {
         uid uint64;
-    }) -> (struct {}) error BrowseControllerError;
+    }) -> () error BrowseControllerError;
 
     /// Changes the addressed `player_id` on the target when multiple are supported.
     SetBrowsedPlayer(struct {
         player_id uint16;
-    }) -> (struct {}) error BrowseControllerError;
+    }) -> () error BrowseControllerError;
 };
 
 /// Client wrapper for local controller (CT) -> remote target (TG) AVCTP
@@ -185,7 +185,7 @@ protocol Controller {
     /// Inform target of the controller's battery level.
     InformBatteryStatus(struct {
         battery_status BatteryStatus;
-    }) -> (struct {}) error ControllerError;
+    }) -> () error ControllerError;
 
     /// Filters notifications that will be received with [`OnNotification`]. Not all notifications
     /// are supported by all peers. Resetting the notification filter may trigger all requested
@@ -220,10 +220,10 @@ protocol Controller {
     /// Changes the addressed `player_id` on the target when multiple are supported.
     SetAddressedPlayer(struct {
         player_id uint16;
-    }) -> (struct {}) error ControllerError;
+    }) -> () error ControllerError;
 
     /// Send an AV\C passthrough key command. Sends both a key down and key up event.
     SendCommand(struct {
         command AvcPanelCommand;
-    }) -> (struct {}) error ControllerError;
+    }) -> () error ControllerError;
 };

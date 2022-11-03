@@ -7,5 +7,5 @@ using zx;
 
 protocol TestInspect {
     /// Modify the device's inspect data
-    ModifyInspect() -> (struct {}) error zx.status;
+    ModifyInspect() -> () error zx.status;
 };

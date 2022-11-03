@@ -10,7 +10,7 @@ protocol Qmi {
     /// Give a channel handle that transports bi-directional QMI messages
     SetChannel(resource struct {
         transport zx.handle:<CHANNEL, zx.rights.WAIT | zx.rights.WRITE | zx.rights.READ>;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Configure the network used by the transport
     /// Currently only sets network up/down
@@ -21,5 +21,5 @@ protocol Qmi {
     /// Pass an interface for QMI message snooping
     SetSnoopChannel(resource struct {
         interface client_end:qmi_snoop.Publisher;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

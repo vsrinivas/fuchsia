@@ -65,7 +65,7 @@ protocol Node2 {
     /// This method does not require any rights.
     @available(removed=9)
     @selector("fuchsia.io/Node.Close")
-    Close() -> (struct {}) error zx.status;
+    Close() -> () error zx.status;
 
     /// An event produced eagerly by the server if requested by
     /// [`NodeFlags.GET_REPRESENTATION`]. This event will be the first message
@@ -215,7 +215,7 @@ protocol Node2 {
     /// This method requires the [`Rights.UPDATE_ATTRIBUTES`] right.
     @transitional
     @selector("fuchsia.io/Node.UpdateAttributes")
-    UpdateAttributes(MutableNodeAttributes) -> (struct {}) error zx.status;
+    UpdateAttributes(MutableNodeAttributes) -> () error zx.status;
 
     /// Synchronizes updates to the node to the underlying media, if it exists.
     ///
@@ -227,5 +227,5 @@ protocol Node2 {
     ///
     /// This method does not require any rights.
     @selector("fuchsia.io/Node.Sync")
-    Sync() -> (struct {}) error zx.status;
+    Sync() -> () error zx.status;
 };

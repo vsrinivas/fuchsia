@@ -16,5 +16,5 @@ protocol SamplerTestController {
         value int64;
     }) -> ();
     RemoveOptional() -> ();
-    WaitForSample() -> (struct {}) error SamplingError;
+    WaitForSample() -> () error SamplingError;
 };

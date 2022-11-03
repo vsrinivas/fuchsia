@@ -115,7 +115,7 @@ type A2dpDirectionPriority = strict enum {
 protocol AudioDirectionExt {
     SetPriority(struct {
         priority A2dpDirectionPriority;
-    }) -> (struct {}) error fuchsia.bluetooth.ErrorCode;
+    }) -> () error fuchsia.bluetooth.ErrorCode;
 };
 
 /// L2CAP Parameters Extension. Used to configure L2CAP channel parameters on an open channel.
@@ -273,7 +273,7 @@ protocol Profile {
         services vector<ServiceDefinition>:MAX_SERVICES_PER_ADVERTISEMENT;
         parameters ChannelParameters;
         receiver client_end:ConnectionReceiver;
-    }) -> (struct {}) error fuchsia.bluetooth.ErrorCode;
+    }) -> () error fuchsia.bluetooth.ErrorCode;
 
     /// Register a search for services on newly connected peers.  The SearchResults protocol will be
     /// used to report results for this search.  Any service result with a service matching

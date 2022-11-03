@@ -15,5 +15,5 @@ protocol EngineRegistry {
     /// already registered.
     RegisterEngine(resource struct {
         engine client_end:Engine;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 };

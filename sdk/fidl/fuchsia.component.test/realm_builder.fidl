@@ -32,7 +32,7 @@ protocol RealmBuilderFactory {
         pkg_dir_handle client_end:fuchsia.io.Directory;
         realm_server_end server_end:Realm;
         builder_server_end server_end:Builder;
-    }) -> (struct {}) error RealmBuilderError;
+    }) -> () error RealmBuilderError;
 
     /// Identical to `Create`, but instead of the realm being empty by default
     /// it contains the contents of the manifest located at `relative_url`
@@ -42,7 +42,7 @@ protocol RealmBuilderFactory {
         relative_url fuchsia.url.Url;
         realm_server_end server_end:Realm;
         builder_server_end server_end:Builder;
-    }) -> (struct {}) error RealmBuilderError;
+    }) -> () error RealmBuilderError;
 };
 
 /// Errors that may be returned by the `Realm` and `Builder` protocols.
@@ -376,7 +376,7 @@ protocol Realm {
 
         /// Additional properties for the child.
         options ChildOptions;
-    }) -> (struct {}) error RealmBuilderError;
+    }) -> () error RealmBuilderError;
 
     /// Adds a [legacy
     /// component](https://fuchsia.dev/fuchsia-src/concepts/components/v1) to
@@ -405,7 +405,7 @@ protocol Realm {
 
         /// Additional properties for the child.
         options ChildOptions;
-    }) -> (struct {}) error RealmBuilderError;
+    }) -> () error RealmBuilderError;
 
     /// Adds a component to this realm whose declaration is set to `decl`. When
     /// launched, the component will share the test package as its package
@@ -426,7 +426,7 @@ protocol Realm {
 
         /// Additional properties for the child.
         options ChildOptions;
-    }) -> (struct {}) error RealmBuilderError;
+    }) -> () error RealmBuilderError;
 
     /// Adds a component to the realm whose implementation will be provided by
     /// the client. When this component should be started, the runner channel
@@ -446,7 +446,7 @@ protocol Realm {
 
         /// Additional properties for the child.
         options ChildOptions;
-    }) -> (struct {}) error RealmBuilderError;
+    }) -> () error RealmBuilderError;
 
     /// Adds a child realm which can be built with the client end of
     /// `child_realm`.
@@ -466,7 +466,7 @@ protocol Realm {
         /// The server end of the `Realm` channel that will be used to build the
         /// sub-realm.
         child_realm server_end:Realm;
-    }) -> (struct {}) error RealmBuilderError;
+    }) -> () error RealmBuilderError;
 
     /// Returns the component decl for the given component. `name` must refer to
     /// a component that is one of the following:
@@ -517,7 +517,7 @@ protocol Realm {
 
         /// The new component declaration for `name`.
         component_decl fuchsia.component.decl.Component;
-    }) -> (struct {}) error RealmBuilderError;
+    }) -> () error RealmBuilderError;
 
     /// Returns the component decl for this realm.
     ///
@@ -537,7 +537,7 @@ protocol Realm {
     ReplaceRealmDecl(struct {
         /// The new component declaration for this realm.
         component_decl fuchsia.component.decl.Component;
-    }) -> (struct {}) error RealmBuilderError;
+    }) -> () error RealmBuilderError;
 
     /// Mutates component manifests in the realm such that every component in
     /// `to` will have a valid capability route for each item in `capabilities`
@@ -563,7 +563,7 @@ protocol Realm {
 
         /// The locations that should be able to access `capabilities`.
         to vector<fuchsia.component.decl.Ref>:MAX;
-    }) -> (struct {}) error RealmBuilderError;
+    }) -> () error RealmBuilderError;
 
     /// Offers a directory capability to a component in this realm. The
     /// directory will be read-only (i.e. have `r*` rights), and will have the
@@ -582,7 +582,7 @@ protocol Realm {
 
         /// The contents of the directory.
         directory_contents DirectoryContents;
-    }) -> (struct {}) error RealmBuilderError;
+    }) -> () error RealmBuilderError;
 
     /// Load any packaged configuration for `name` before using values provided to
     /// the builder.
@@ -591,7 +591,7 @@ protocol Realm {
     @available(added=9)
     InitMutableConfigFromPackage(struct {
         name fuchsia.component.name;
-    }) -> (struct {}) error RealmBuilderError;
+    }) -> () error RealmBuilderError;
 
     /// Use only values provided to the builder for `name`'s configuration.
     ///
@@ -599,14 +599,14 @@ protocol Realm {
     @available(added=9)
     InitMutableConfigToEmpty(struct {
         name fuchsia.component.name;
-    }) -> (struct {}) error RealmBuilderError;
+    }) -> () error RealmBuilderError;
 
     // TODO(https://fxbug.dev/103951) delete once all petals are on API level 9
     ReplaceConfigValue(struct {
         name fuchsia.component.name;
         key fuchsia.component.decl.ConfigKey;
         value fuchsia.component.config.ValueSpec;
-    }) -> (struct {}) error RealmBuilderError;
+    }) -> () error RealmBuilderError;
 
     /// Sets the configuration value for a field specified by `key`.
     /// The component specified must have a config schema with this field.
@@ -629,5 +629,5 @@ protocol Realm {
 
         /// The config value being replaced.
         value fuchsia.component.config.ValueSpec;
-    }) -> (struct {}) error RealmBuilderError;
+    }) -> () error RealmBuilderError;
 };

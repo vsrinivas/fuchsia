@@ -29,7 +29,7 @@ protocol TargetHandler {
     SendCommand(struct {
         command AvcPanelCommand;
         pressed bool;
-    }) -> (struct {}) error TargetPassthroughError;
+    }) -> () error TargetPassthroughError;
 
     /// Request the target device to provide all the target supported player application
     /// setting attributes.
@@ -82,7 +82,7 @@ protocol TargetHandler {
     /// Changes the addressed `player_id` on the target when multiple are supported.
     SetAddressedPlayer(struct {
         player_id AddressedPlayerId;
-    }) -> (struct {}) error TargetAvcError;
+    }) -> () error TargetAvcError;
 
     /// Returns a list of media player information about the players on the target.
     GetMediaPlayerItems() -> (struct {

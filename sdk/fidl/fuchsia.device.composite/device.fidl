@@ -13,5 +13,5 @@ protocol DeprecatedCompositeCreator {
     AddCompositeDevice(struct {
         name string:MAX;
         args fuchsia.device.manager.CompositeDeviceDescriptor;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

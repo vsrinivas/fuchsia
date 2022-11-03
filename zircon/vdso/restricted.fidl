@@ -84,7 +84,7 @@ protocol Restricted {
         options uint32;
         vector_table_ptr uintptr;
         context uintptr;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///
@@ -147,7 +147,7 @@ protocol Restricted {
     WriteState(struct {
         @voidptr
         buffer vector<byte>;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///

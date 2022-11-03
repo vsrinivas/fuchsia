@@ -100,5 +100,5 @@ protocol Cprng {
     AddEntropy(struct {
         @voidptr
         buffer vector<byte>;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 };

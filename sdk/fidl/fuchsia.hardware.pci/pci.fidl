@@ -351,7 +351,7 @@ protocol Device {
     /// |ZX_ERR_BAD_STATE|: Method was called while the device is disabled.
     SetBusMastering(struct {
         enabled bool;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Initiates a function level reset for the device. This is a synchronous
     /// operation that will not return ontil the reset is complete. Interrupt
@@ -363,7 +363,7 @@ protocol Device {
     /// |ZX_ERR_TIMED_OUT|: The device did not complete its reset in the
     /// expected amount of time and is presumed to no longer be operating
     /// properly.
-    ResetDevice() -> (struct {}) error zx.status;
+    ResetDevice() -> () error zx.status;
 
     /// Alerts the bus driver to deassert the raised legacy interrupt so that it
     /// may be waited on again. Only used if |SetInterruptMode| was called with
@@ -371,7 +371,7 @@ protocol Device {
     ///
     /// Errors:
     /// |ZX_ERR_BAD_STATE|: device is not configured to use the Legacy interrupt mode.
-    AckInterrupt() -> (struct {}) error zx.status;
+    AckInterrupt() -> () error zx.status;
 
     /// Maps a device's interrupt to a zx:interrupt. The device's interrupt mode
     /// must already be configured with |SetInterruptMode|, and |which_irq| must
@@ -418,7 +418,7 @@ protocol Device {
     SetInterruptMode(struct {
         mode InterruptMode;
         requested_irq_count uint32;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Reads a byte from the device's configuration space. |Offset| must be
     /// within [0x0, 0xFF] if PCI, or [0x0, 0xFFF) if PCIe. In most cases a
@@ -480,7 +480,7 @@ protocol Device {
     WriteConfig8(struct {
         offset ExtendedConfigOffset;
         value uint8;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Writes two bytes to the device's configuration space. The acceptable
     /// ranges of |offset| for writes are [0x40, 0xFE] if PCI, or [0x40,
@@ -497,7 +497,7 @@ protocol Device {
     WriteConfig16(struct {
         offset ExtendedConfigOffset;
         value uint16;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Writes four bytes to the device's configuration space. The acceptable
     /// ranges of |offset| for writes are [0x40, 0xFC] if PCI, or [0x40,
@@ -514,7 +514,7 @@ protocol Device {
     WriteConfig32(struct {
         offset ExtendedConfigOffset;
         value uint32;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
 
     /// Returns a vector of offsets in configuration space corresponding to

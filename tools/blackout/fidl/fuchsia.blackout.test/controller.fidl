@@ -16,7 +16,7 @@ protocol Controller {
         device_label string:MAX_DEVICE_PATH;
         device_path string:<MAX_DEVICE_PATH, optional>;
         seed uint64;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Run the test step for this test. This kicks off the load generation algorithm for this
     /// test, which will run indefinitely. It's expected that this load will be interrupted by a
@@ -29,7 +29,7 @@ protocol Controller {
         device_path string:<MAX_DEVICE_PATH, optional>;
         seed uint64;
         duration uint64;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Run the verify step for this test. Most of the time it involves running fsck on the block
     /// device and returning the result.
@@ -37,5 +37,5 @@ protocol Controller {
         device_label string:MAX_DEVICE_PATH;
         device_path string:<MAX_DEVICE_PATH, optional>;
         seed uint64;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

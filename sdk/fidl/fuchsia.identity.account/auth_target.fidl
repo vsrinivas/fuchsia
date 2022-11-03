@@ -54,7 +54,7 @@ protocol AuthTarget {
         1: listener client_end:AuthListener;
         2: initial_state bool;
         3: granularity AuthChangeGranularity;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     // TODO(fxbug.dev/562): Add methods that request in increase in the
     //                      authentication state or authentication for a
@@ -104,7 +104,7 @@ protocol Account {
     GetPersona(resource struct {
         id PersonaId;
         persona server_end:Persona;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     // TODO(fxbug.dev/563): Add methods to create, delete, and manage personae.
 
@@ -131,14 +131,14 @@ protocol Account {
     /// `enrollment_id` The id of the enrollment to remove.
     RemoveAuthMechanismEnrollment(struct {
         enrollment_id AuthMechanismEnrollmentId;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Lock an account. After a successful call, all Account and Persona
     /// channels for this account will be terminated. If storage unlock is not
     /// enabled for the account, a FailedPrecondition error is returned.
     // TODO(fxbug.dev/101934): Document the side effects on underlying storage
     // that may still be in use by the client.
-    Lock() -> (struct {}) error Error;
+    Lock() -> () error Error;
 
     /// Connects a channel to access a data directory of the account. The
     /// directory is writable, and is initially empty for a newly created
@@ -153,7 +153,7 @@ protocol Account {
     // TODO(fxbug.dev/45799): Support multiple component instance clients.
     GetDataDirectory(resource struct {
         data_directory server_end:fuchsia.io.Directory;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 };
 
 /// A protocol that exposes basic information about a persona and access to the

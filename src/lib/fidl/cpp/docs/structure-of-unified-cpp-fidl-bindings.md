@@ -187,7 +187,7 @@ protocol Speak {
     EmptyAck() -> ();
 
     TryGreet(struct { msg string; }) -> (struct { reply string; }) error GreetError;
-    TryEmptyAck() -> (struct {}) error int32;
+    TryEmptyAck() -> () error int32;
 
     -> OnWordSpoken(struct { word string; });
 };

@@ -267,5 +267,5 @@ protocol Bti {
     /// [`zx_pmt_unpin()`]: pmt_unpin.md
     ReleaseQuarantine(resource struct {
         handle handle:BTI;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 };

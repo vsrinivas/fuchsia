@@ -75,7 +75,7 @@ type Error = strict enum : int32 {
 protocol DeviceSetup {
     SetChannel(resource struct {
         req server_end:Device;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };
 
 @discoverable
@@ -96,7 +96,7 @@ protocol Device {
     /// * `Error::IO_ERROR`: An IO error occurred.
     /// * `Error::UNSPECIFIED`: An unspecified error occurred.
     ///                         See logs for more details.
-    Open() -> (struct {}) error Error;
+    Open() -> () error Error;
 
     /// Close the Spinel connection.
     ///
@@ -117,7 +117,7 @@ protocol Device {
     /// * `Error::IO_ERROR`: An IO error occurred.
     /// * `Error::UNSPECIFIED`: An unspecified error occurred.
     ///                         See logs for more details.
-    Close() -> (struct {}) error Error;
+    Close() -> () error Error;
 
     /// Fetch the max frame size.
     ///

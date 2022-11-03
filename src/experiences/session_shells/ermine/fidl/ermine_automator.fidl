@@ -52,7 +52,7 @@ protocol OobeAutomator {
     /// Returns [`INVALID_ARGS`] if fails to set password with the supplied password.
     SetPassword(struct {
         password string:MAX_PASSWORD_LENGTH;
-    }) -> (struct {}) error AutomatorErrorCode;
+    }) -> () error AutomatorErrorCode;
 
     /// Login with a password on the [`LOGIN`] OOBE page.
     ///
@@ -60,13 +60,13 @@ protocol OobeAutomator {
     /// Returns [`INVALID_ARGS`] if fails to login with the supplied password.
     Login(struct {
         password string:MAX_PASSWORD_LENGTH;
-    }) -> (struct {}) error AutomatorErrorCode;
+    }) -> () error AutomatorErrorCode;
 
     /// Skip an [`UNKNOWN`] OOBE page.
     ///
     /// Returns [`INVALID_STATE`] when not in OOBE or not on a [`UNKNOWN`] page.
     /// Returns [`FAILED`] if a page cannot be skipped for any reason.
-    SkipPage() -> (struct {}) error AutomatorErrorCode;
+    SkipPage() -> () error AutomatorErrorCode;
 };
 
 /// A protocol used to automate Shell functionality by test scripts.
@@ -91,10 +91,10 @@ protocol ShellAutomator {
     /// Returns [`FAILED`] if application fails to launch for any reason.
     Launch(table {
         1: app_name string:128;
-    }) -> (struct {}) error AutomatorErrorCode;
+    }) -> () error AutomatorErrorCode;
 
     /// Closes all applications currently opened in the Shell.
     ///
     /// Returns [`FAILED`] if it fails for any reason.
-    CloseAll() -> (struct {}) error AutomatorErrorCode;
+    CloseAll() -> () error AutomatorErrorCode;
 };

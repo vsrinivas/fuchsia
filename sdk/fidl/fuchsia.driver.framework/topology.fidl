@@ -116,5 +116,5 @@ protocol Node {
         args NodeAddArgs;
         controller server_end:NodeController;
         node server_end:<Node, optional>;
-    }) -> (struct {}) error NodeError;
+    }) -> () error NodeError;
 };

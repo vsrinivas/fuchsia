@@ -138,7 +138,7 @@ protocol VolumeManager {
     SetPartitionName(struct {
         guid partition.GUID;
         name string:<partition.NAME_LENGTH>;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };
 
 /// An arbitrary cap on the number of slices which may be requested when querying

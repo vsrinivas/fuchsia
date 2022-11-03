@@ -64,7 +64,7 @@ protocol Manager {
     PresentRootViewLegacy(resource struct {
         view_holder_token fuchsia.ui.views.ViewHolderToken;
         view_ref fuchsia.ui.views.ViewRef;
-    }) -> (struct {}) error PresentRootViewError;
+    }) -> () error PresentRootViewError;
 
     /// Presents a view tree to the display, via the provided viewport token.
     ///
@@ -82,5 +82,5 @@ protocol Manager {
     /// waiting for the return; if the child view doesn't connect, it is possible to deadlock.
     PresentRootView(resource struct {
         viewport_creation_token fuchsia.ui.views.ViewportCreationToken;
-    }) -> (struct {}) error PresentRootViewError;
+    }) -> () error PresentRootViewError;
 };

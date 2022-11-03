@@ -596,7 +596,7 @@ protocol Echo {
     EchoMinimalWithError(struct {
         forward_to_server string;
         result_variant RespondWith;
-    }) -> (struct {}) error uint32;
+    }) -> () error uint32;
 
     // Same as the above, but the server should use the event to return the
     // response, rather than a return value.

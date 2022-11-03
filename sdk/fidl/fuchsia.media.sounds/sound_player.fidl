@@ -59,7 +59,7 @@ protocol Player {
     PlaySound(struct {
         id uint32;
         usage fuchsia.media.AudioRenderUsage;
-    }) -> (struct {}) error PlaySoundError;
+    }) -> () error PlaySoundError;
 
     /// Stops playback of the sound identified by `id` invoked by the the most recent call to
     /// `PlaySound` for that sound. If `id` doesn't identify an existing sound in the collection

@@ -29,7 +29,7 @@ protocol Device {
     /// and 1.0
     SetStateNormalized(struct {
         state State;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Gets the current backlight brightness in nits
     GetStateAbsolute() -> (struct {
@@ -40,7 +40,7 @@ protocol Device {
     /// set by SetNormalizedBrightnessScale.
     SetStateAbsolute(struct {
         state State;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Gets the maximum supported backlight brightness in nits, if known.
     /// Otherwise returns error ZX_ERR_NOT_SUPPORTED.
@@ -55,7 +55,7 @@ protocol Device {
     /// change the current absolute brightness.
     SetNormalizedBrightnessScale(struct {
         scale float64;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Gets the current normalized brightness scale as a percentage value in
     /// [0.0, 1.0].

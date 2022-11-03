@@ -43,5 +43,5 @@ protocol Debug {
         node_name string:MAX;
         command string:MAX;
         args vector<string:MAX>:MAX;
-    }) -> (struct {}) error MessageError;
+    }) -> () error MessageError;
 };

@@ -69,13 +69,13 @@ protocol RepositoryRegistry {
     }) error RepositoryError;
 
     /// Stop the repository server. This has no effect if the server is already stopped.
-    ServerStop() -> (struct {}) error RepositoryError;
+    ServerStop() -> () error RepositoryError;
 
     /// Add a repository named `name` that has the following [RepositorySpec].
     AddRepository(struct {
         name string:MAX_NAME;
         repository RepositorySpec;
-    }) -> (struct {}) error RepositoryError;
+    }) -> () error RepositoryError;
 
     /// Returns true if the repository was removed, or false if there is no
     /// repository named `name`.
@@ -94,7 +94,7 @@ protocol RepositoryRegistry {
     /// `target_info`: Metadata describing the repository registration.
     RegisterTarget(struct {
         target_info RepositoryTarget;
-    }) -> (struct {}) error RepositoryError;
+    }) -> () error RepositoryError;
 
     /// Deregisters a repository from a target.
     ///
@@ -103,7 +103,7 @@ protocol RepositoryRegistry {
     DeregisterTarget(struct {
         repository_name string:MAX_NAME;
         target_identifier string:<fuchsia.device.DEVICE_NAME_MAX, optional>;
-    }) -> (struct {}) error RepositoryError;
+    }) -> () error RepositoryError;
 
     /// List the packages in the repository named `name`.
     ListPackages(resource struct {
@@ -112,14 +112,14 @@ protocol RepositoryRegistry {
         /// Fields to include. This defaults to being empty (and therefore including none of the
         /// fields that can be toggled by this parameter).
         include_fields ListFields;
-    }) -> (struct {}) error RepositoryError;
+    }) -> () error RepositoryError;
 
     /// List the components in the package named `package_name` from a repo named `repository_name` .
     ShowPackage(resource struct {
         repository_name string:MAX_NAME;
         package_name string:MAX_NAME;
         iterator server_end:PackageEntryIterator;
-    }) -> (struct {}) error RepositoryError;
+    }) -> () error RepositoryError;
 
     /// Get a list associating repositories with the targets they have been registered to.
     ListRegisteredTargets(resource struct {

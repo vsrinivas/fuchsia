@@ -14,7 +14,7 @@ protocol Cup {
         url PackageUrl;
         /// The CUP data from the update check.
         cup CupData;
-    }) -> (struct {}) error WriteError;
+    }) -> () error WriteError;
 
     /// Returns the eager package version and channel of the given package URL.
     GetInfo(struct {

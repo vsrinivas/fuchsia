@@ -17,5 +17,5 @@ type ResetError = flexible enum : uint32 {
 protocol Resetter {
     /// Resets the sytem credential state. This is used when performing
     /// a factory reset.
-    Reset() -> (struct {}) error ResetError;
+    Reset() -> () error ResetError;
 };

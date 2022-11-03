@@ -42,5 +42,5 @@ protocol Counter {
     /// * error `ZX_ERR_IO` if there is some other unspecified error during I/O.
     TryOpenDirectory(struct {
         path string:fuchsia.component.MAX_PATH_LENGTH;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

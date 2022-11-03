@@ -78,5 +78,5 @@ protocol Realm {
     /// Calling `Start` while the realm is already started will return ZX_ERR_ALREADY_BOUND.
     Start(resource struct {
         args RealmArgs;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

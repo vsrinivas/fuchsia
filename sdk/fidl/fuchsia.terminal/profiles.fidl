@@ -36,7 +36,7 @@ protocol Profiles {
     /// This method can fail if a profile with the given id does not exist.
     SetDefault(struct {
         id ProfileId;
-    }) -> (struct {}) error ProfileError;
+    }) -> () error ProfileError;
 
     /// Event which is triggered when the list of profiles have been updated.
     ///
@@ -62,7 +62,7 @@ protocol Profiles {
     UpdateProfile(struct {
         id ProfileId;
         profile Profile;
-    }) -> (struct {}) error ProfileError;
+    }) -> () error ProfileError;
 
     /// Creates a new profile.
     ///

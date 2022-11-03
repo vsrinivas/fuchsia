@@ -30,6 +30,14 @@ template("fidlc") {
   assert(defined(invoker.sources), "sources is required")
 
   experimental_flags = [ "no_optional_structs" ]
+
+  # TODO(fxbug.dev/112767): Remove once soft transition is done.
+  _in_vendor =
+      filter_exclude([ get_path_info(".", "abspath") ], [ "//vendor/*" ]) == []
+  if (!_in_vendor) {
+    experimental_flags += [ "simple_empty_response_syntax" ]
+  }
+
   if (defined(invoker.experimental_flags)) {
     experimental_flags += invoker.experimental_flags
   }

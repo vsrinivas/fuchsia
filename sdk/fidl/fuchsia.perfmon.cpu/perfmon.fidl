@@ -142,7 +142,7 @@ protocol Controller {
     /// later by `StageConfig()`.
     Initialize(struct {
         allocation Allocation;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Free all trace buffers and any other resources allocated for the trace.
     /// This is also done when the connection is closed.
@@ -161,7 +161,7 @@ protocol Controller {
     /// the values for subsequent use by `Start()`.
     StageConfig(struct {
         config Config;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Fetch performance monitor specification for a cpu, if it exists.
     /// Must be called with data collection off and after `StageConfig()`.
@@ -181,7 +181,7 @@ protocol Controller {
     /// Turn on data collection.
     /// Must be called after `Initialize()` + `StageConfig()` and with data
     /// collection off.
-    Start() -> (struct {}) error zx.status;
+    Start() -> () error zx.status;
 
     /// Turn off data collection.
     /// May be called any time after `Initialize()` has been called and before

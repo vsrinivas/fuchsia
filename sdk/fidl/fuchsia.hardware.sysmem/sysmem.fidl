@@ -35,7 +35,7 @@ protocol Sysmem {
     /// Informs sysmem that the channel previously passed to RegisterSecureMem()
     /// will be closing soon, and that this channel closure should not be
     /// considered an error.
-    UnregisterSecureMem() -> (struct {}) error zx.status;
+    UnregisterSecureMem() -> () error zx.status;
 };
 
 service Service {

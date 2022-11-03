@@ -34,7 +34,7 @@ protocol Ipv6RoutingTableController {
     AddRoute(struct {
         addresses Ipv6UnicastSourceAndMulticastDestination;
         route Route;
-    }) -> (struct {}) error strict enum {
+    }) -> () error strict enum {
         /// Indicates that the address is invalid (not a unicast source address
         /// or not a multicast destination address).
         INVALID_ADDRESS = 1;
@@ -55,7 +55,7 @@ protocol Ipv6RoutingTableController {
     /// + request `addresses` the addresses used to identify a route.
     DelRoute(struct {
         addresses Ipv6UnicastSourceAndMulticastDestination;
-    }) -> (struct {}) error strict enum {
+    }) -> () error strict enum {
         /// Indicates that the address is invalid (not a unicast source address
         /// or not a multicast destination address).
         INVALID_ADDRESS = 1;

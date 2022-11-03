@@ -34,7 +34,7 @@ protocol PackageCache {
         meta_far_blob BlobInfo;
         needed_blobs server_end:NeededBlobs;
         dir server_end:<fuchsia.io.Directory, optional>;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Opens the package, or errors out if it is not present on the local system.
     ///
@@ -46,7 +46,7 @@ protocol PackageCache {
     Open(resource struct {
         meta_far_blob_id BlobId;
         dir server_end:fuchsia.io.Directory;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Retrieves a chunk iterator to the base package index.
     ///
@@ -68,7 +68,7 @@ protocol PackageCache {
     ///
     /// * error a zx_status value indicating failure. One of the following:
     ///     * `ZX_ERR_INTERNAL` if the sync fails.
-    Sync() -> (struct {}) error zx.status;
+    Sync() -> () error zx.status;
 };
 
 /// Error type for [`NeededBlobs.OpenMetaBlob`] and [`NeededBlobs.OpenBlob`].

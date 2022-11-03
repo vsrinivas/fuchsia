@@ -41,7 +41,7 @@ type Message = table {
 /// https://fidoalliance.org/specs/fido-v2.1-ps-20210615/fido-client-to-authenticator-protocol-v2.1-ps-20210615.html#usb-message-and-packet-structure
 protocol SecurityKeyDevice {
     /// Send a message (request) to a FIDO key.
-    SendMessage(Message) -> (struct {}) error zx.status;
+    SendMessage(Message) -> () error zx.status;
 
     /// Wait for and receive a message (response) from a FIDO key.
     /// Returns ZX_ERR_ACCESS_DENIED if `channel_id` does not match the

@@ -65,5 +65,5 @@ protocol Controller {
     // The error return indicates the reason for failure of execution.
     SendCommand(struct {
         command Command;
-    }) -> (struct {}) error CommandError;
+    }) -> () error CommandError;
 };

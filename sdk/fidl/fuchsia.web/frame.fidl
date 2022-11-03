@@ -244,7 +244,7 @@ protocol Frame {
     ExecuteJavaScriptNoResult(resource struct {
         origins vector<Url>:MAX;
         script fuchsia.mem.Buffer;
-    }) -> (struct {}) error FrameError;
+    }) -> () error FrameError;
 
     /// Executes a UTF-8 encoded `script` for every subsequent page load where the [`Frame`]'s URL
     /// has an origin reflected in `origins`. The script is executed early, prior to the execution
@@ -267,7 +267,7 @@ protocol Frame {
         id uint64;
         origins vector<Url>:MAX;
         script fuchsia.mem.Buffer;
-    }) -> (struct {}) error FrameError;
+    }) -> () error FrameError;
 
     /// Removes a previously added JavaScript snippet identified by `id`. This is a no-op if there
     /// is no JavaScript snippet identified by `id`.
@@ -291,7 +291,7 @@ protocol Frame {
     PostMessage(resource struct {
         target_origin Url;
         message WebMessage;
-    }) -> (struct {}) error FrameError;
+    }) -> () error FrameError;
 
     /// Sets the listener for handling page navigation events.
     ///
@@ -514,7 +514,7 @@ protocol MessagePort {
     /// - `NO_DATA_IN_MESSAGE`: The `data` property is missing in `message`.
     PostMessage(resource struct {
         message WebMessage;
-    }) -> (struct {}) error FrameError;
+    }) -> () error FrameError;
 
     /// Asynchronously reads the next message from the channel. The client should invoke the
     /// callback when it is ready to process another message. Unreceived messages are buffered

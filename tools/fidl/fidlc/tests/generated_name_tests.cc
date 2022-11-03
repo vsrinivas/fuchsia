@@ -120,7 +120,7 @@ TEST(GeneratedNameTests, GoodInsideResultError) {
 library fidl.test;
 
 protocol Foo {
-  Bar() -> (struct {}) error @generated_name("Good") enum { A = 1; };
+  Bar() -> () error @generated_name("Good") enum { A = 1; };
 };
 
 )FIDL");

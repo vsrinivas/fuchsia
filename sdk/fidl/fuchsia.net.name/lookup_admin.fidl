@@ -19,7 +19,7 @@ protocol LookupAdmin {
     /// conditions above.
     SetDnsServers(struct {
         servers vector<fuchsia.net.SocketAddress>:MAX;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Gets the DNS servers currently in use to resolve name lookups.
     /// - response `servers` The list of servers in use by `LookupAdmin`, in priority order.

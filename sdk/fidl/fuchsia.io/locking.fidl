@@ -92,5 +92,5 @@ protocol AdvisoryLocking {
             /// If this field is absent, the file will not wait.
             3: wait bool;
         };
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

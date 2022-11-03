@@ -22,7 +22,7 @@ protocol FactoryReset {
     /// performs a no-op, and will not make any changes.
     Set(struct {
         settings FactoryResetSettings;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 };
 
 /// Information about the factory reset settings.

@@ -57,5 +57,5 @@ protocol Authenticator {
     ///     wink command.
     IdentifyKey(struct {
         key_id KeyId;
-    }) -> (struct {}) error CtapError;
+    }) -> () error CtapError;
 };

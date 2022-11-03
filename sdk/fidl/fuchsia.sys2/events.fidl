@@ -283,7 +283,7 @@ protocol EventSource {
     Subscribe(resource struct {
         events vector<EventSubscription>:fuchsia.component.MAX_SUBSCRIPTION_REQUESTS;
         stream client_end:EventStream;
-    }) -> (struct {}) error fuchsia.component.Error;
+    }) -> () error fuchsia.component.Error;
 
     /// Returns the server end of a static EventStream of the provided path if it exists.
     /// If this stream is discarded afterward then all `sync` events on the channel will be
@@ -312,7 +312,7 @@ protocol EventSource2 {
     Subscribe(resource struct {
         events vector<fuchsia.component.name>:MAX;
         stream server_end:EventStream2;
-    }) -> (struct {}) error fuchsia.component.Error;
+    }) -> () error fuchsia.component.Error;
 };
 
 /// Listener for events on the component hierarchy.

@@ -236,7 +236,7 @@ protocol Directory2 {
                 MUST_BE_DIRECTORY = 0x01;
             };
         };
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Initiates a directory listing operation over the input channel,
     /// starting at seek offset 0.
@@ -268,7 +268,7 @@ protocol Directory2 {
         src Name;
         dst_parent_token Token;
         dst Name;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     // TODO(https://fxbug.dev/77623): uncomment and implement.
     // /// Creates a link to a node named `src` by the name `dst`,
@@ -292,5 +292,5 @@ protocol Directory2 {
     //     src Name;
     //     dst_parent_token Token;
     //     dst Name;
-    // }) -> (struct {}) error zx.status;
+    // }) -> () error zx.status;
 };

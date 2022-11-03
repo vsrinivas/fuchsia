@@ -87,7 +87,7 @@ func TestAnonymousLayoutAliases(t *testing.T) {
 			desc: "result",
 			fidl: `
 		protocol MyProtocol {
-			MyMethod() -> (struct {}) error enum : uint32 { FOO = 1; };
+			MyMethod() -> () error enum : uint32 { FOO = 1; };
 		};
 		`,
 			expected: map[namingContextKey][]ScopedLayout{

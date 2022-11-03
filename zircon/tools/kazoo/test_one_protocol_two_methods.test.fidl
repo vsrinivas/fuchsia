@@ -14,7 +14,7 @@ protocol Couple {
     /// This does a single thing.
     DoThing(struct {
         an_input int32;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// Does great stuff.
     GetStuff(GetStuffRequestArgs) -> (GetStuffResponseArgs) error status;

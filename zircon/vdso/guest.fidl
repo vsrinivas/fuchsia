@@ -231,5 +231,5 @@ protocol Guest {
         size usize;
         port_handle handle:PORT;
         key uint64;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 };

@@ -21,7 +21,7 @@ protocol Device {
     SendCommand(struct {
         channel uint8;
         mdata MboxTx;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     // |channel| : vendor specific identifier used to communicate with different hardware blocks.
     // |rx_len | : rx_len is equal to the number of bytes of the transmitted data MboxTx.tx_buffer.

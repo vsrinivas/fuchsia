@@ -50,7 +50,7 @@ protocol VolumePolicyController {
 
     RemovePolicy(struct {
         policy_id PolicyId;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 };
 
 type Property = table {

@@ -49,7 +49,7 @@ protocol Realm {
     OpenExposedDir(resource struct {
         child fuchsia.component.decl.ChildRef;
         exposed_dir server_end:fuchsia.io.Directory;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Creates a child component instance dynamically. When this function
     /// returns successfully, the instance exists, but it may not be running.
@@ -70,7 +70,7 @@ protocol Realm {
         collection fuchsia.component.decl.CollectionRef;
         decl fuchsia.component.decl.Child;
         args CreateChildArgs;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Destroys a dynamically-created component instance. When this function
     /// returns, the instance is destroyed and has stopped running.  However,
@@ -85,7 +85,7 @@ protocol Realm {
     /// - `INSTANCE_DIED`: This realm no longer exists.
     DestroyChild(struct {
         child fuchsia.component.decl.ChildRef;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Returns an iterator that lists all instances in a collection.
     ///
@@ -103,7 +103,7 @@ protocol Realm {
     ListChildren(resource struct {
         collection fuchsia.component.decl.CollectionRef;
         iter server_end:ChildIterator;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 };
 
 type CreateChildArgs = resource table {

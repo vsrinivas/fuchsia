@@ -35,5 +35,5 @@ protocol FontResolver {
     Resolve(resource struct {
         package_url string;
         directory_request server_end:fuchsia.io.Directory;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

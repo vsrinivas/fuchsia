@@ -67,5 +67,5 @@ protocol HostWatcher {
     /// * error This can fail if a host with `id` was not found.
     SetActive(struct {
         id bt.HostId;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

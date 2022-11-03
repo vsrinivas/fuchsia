@@ -245,7 +245,7 @@ protocol Device {
     /// are no buffers available to fulfill the request.
     WriteFrame(struct {
         frame Frame;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
     /// Gets the next frame from the device (data coming from host-end).
     ///
     /// If the device was created with the
@@ -347,7 +347,7 @@ protocol DevicePair {
             /// through [`fuchsia.hardware.network/Port.GetMac`].
             3: mac_right fuchsia.net.MacAddress;
         };
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
     /// Removes a logical port created by
     /// [`fuchsia.net.tun/DevicePair.AddPort`].
     ///
@@ -355,7 +355,7 @@ protocol DevicePair {
     /// * error `ZX_ERR_NOT_FOUND` if `id` does not map to an existing port.
     RemovePort(struct {
         id fuchsia.hardware.network.BasePortId;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
     /// Connects to the underlying left device endpoint.
     ///
     /// + request `device` handle serve the left device endpoint on.

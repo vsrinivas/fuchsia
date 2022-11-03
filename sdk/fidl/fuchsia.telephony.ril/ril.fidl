@@ -56,7 +56,7 @@ protocol Setup {
     /// binary formats.
     ConnectTransport(resource struct {
         channel zx.handle:CHANNEL;
-    }) -> (struct {}) error RilError;
+    }) -> () error RilError;
 };
 
 /// The Standard Fuchsia RIL (FRIL)

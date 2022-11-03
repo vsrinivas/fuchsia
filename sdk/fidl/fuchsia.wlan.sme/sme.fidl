@@ -383,7 +383,7 @@ protocol GenericSme {
     ///     * PEER_CLOSED: The underlying SME is shutting down.
     GetClientSme(resource struct {
         sme_server server_end:ClientSme;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
     /// Attempt to establish a new connection to an underlying AP SME.
     /// Connections may be established for the whole lifetime of the SME,
     /// but concurrent connections might lead to unexpected behavior.
@@ -392,7 +392,7 @@ protocol GenericSme {
     ///     * PEER_CLOSED: The underlying SME is shutting down.
     GetApSme(resource struct {
         sme_server server_end:ApSme;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
     /// Attempt to establish a new connection to telemetry information for the
     /// underlying SME.
     /// Connections may be established for the whole lifetime of the SME, and
@@ -402,7 +402,7 @@ protocol GenericSme {
     ///     * PEER_CLOSED: The underlying SME is shutting down.
     GetSmeTelemetry(resource struct {
         telemetry_server server_end:Telemetry;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
     /// Attempt to establish a new connection to feature support information for
     /// the underlying SME.
     /// Connections may be established for the whole lifetime of the SME, and
@@ -411,5 +411,5 @@ protocol GenericSme {
     ///     * PEER_CLOSED: The underlying SME is shutting down.
     GetFeatureSupport(resource struct {
         feature_support_server server_end:FeatureSupport;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

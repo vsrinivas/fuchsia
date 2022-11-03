@@ -38,5 +38,5 @@ protocol AddressSpaceHandler {
         width uint32;
         /// Value to be written.
         value uint64;
-    }) -> (struct {}) error Status;
+    }) -> () error Status;
 };

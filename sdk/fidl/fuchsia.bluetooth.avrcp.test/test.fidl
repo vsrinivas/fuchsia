@@ -24,7 +24,7 @@ protocol PeerManagerExt {
     GetBrowseControllerForTarget(resource struct {
         peer_id bt.PeerId;
         client server_end:BrowseControllerExt;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Returns a test controller client to a remote target service at the
     /// peer specified by `peer_id`. This client is to be used alongside the
@@ -32,7 +32,7 @@ protocol PeerManagerExt {
     GetControllerForTarget(resource struct {
         peer_id bt.PeerId;
         client server_end:ControllerExt;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };
 
 /// Provides additional methods not in `Controller` that are strictly for testing and debug.

@@ -39,7 +39,7 @@ protocol Buttons {
     /// @Returns: `status` : ZX_OK if succeeds.
     RegisterNotify(struct {
         types uint8;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Notify event. Called when state of previously registered button changes.
     /// `type` : Button type.

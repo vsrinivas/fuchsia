@@ -84,12 +84,12 @@ protocol Host {
     /// Sets the local name for this host device.
     SetLocalName(struct {
         local_name bt.DeviceName;
-    }) -> (struct {}) error sys.Error;
+    }) -> () error sys.Error;
 
     /// Sets the device class for this host device.
     SetDeviceClass(struct {
         device_class bt.DeviceClass;
-    }) -> (struct {}) error sys.Error;
+    }) -> () error sys.Error;
 
     /// Initiates a general discovery procedure for BR/EDR and LE devices. On success, discovered
     /// peers can be monitored using the [`fuchsia.bluetooth.host/Host.WatchPeers`] method.
@@ -99,7 +99,7 @@ protocol Host {
     /// Discovery will continue until it is terminated via StopDiscovery() or if the Host protocol
     /// channel gets closed. If the device does not support BR/EDR, only LE discovery will be
     /// performed.
-    StartDiscovery() -> (struct {}) error sys.Error;
+    StartDiscovery() -> () error sys.Error;
 
     /// Terminates discovery if one was started via StartDiscovery().
     ///
@@ -111,12 +111,12 @@ protocol Host {
     /// Sets whether this host should be connectable.
     SetConnectable(struct {
         enabled bool;
-    }) -> (struct {}) error sys.Error;
+    }) -> () error sys.Error;
 
     /// Sets whether this host should be discoverable.
     SetDiscoverable(struct {
         enabled bool;
-    }) -> (struct {}) error sys.Error;
+    }) -> () error sys.Error;
 
     /// Establish a BR/EDR and/or LE connection to the peer with identifier `id`:
     ///
@@ -138,7 +138,7 @@ protocol Host {
     /// error Status will be returned and neither transport will be connected.
     Connect(struct {
         id bt.PeerId;
-    }) -> (struct {}) error sys.Error;
+    }) -> () error sys.Error;
 
     /// Terminate all connections (BR/EDR or LE) to the remote peer with identifier `id`.
     ///
@@ -148,7 +148,7 @@ protocol Host {
     ///                     if the peer is already disconnected.
     Disconnect(struct {
         id bt.PeerId;
-    }) -> (struct {}) error sys.Error;
+    }) -> () error sys.Error;
 
     /// Initiates pairing to the peer with the supplied `id` and `options`. Returns an error if no
     /// connected peer with `id` is found or the pairing procedure fails.
@@ -163,7 +163,7 @@ protocol Host {
     Pair(struct {
         id bt.PeerId;
         options sys.PairingOptions;
-    }) -> (struct {}) error sys.Error;
+    }) -> () error sys.Error;
 
     /// Deletes a peer from the Bluetooth host. If the peer is connected, it will be disconnected.
     /// `device_id` will no longer refer to any peer, even if a device with the same address is
@@ -174,7 +174,7 @@ protocol Host {
     /// disconnected or deleted and still exists.
     Forget(struct {
         id bt.PeerId;
-    }) -> (struct {}) error sys.Error;
+    }) -> () error sys.Error;
 
     /// Enable or disable a passive LE background scan. When enabled, the bt-host
     /// device will continuously perform a passive LE scan in the background when

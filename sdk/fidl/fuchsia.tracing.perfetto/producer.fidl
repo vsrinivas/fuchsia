@@ -15,7 +15,7 @@ protocol BufferReceiver {
     @available(added=9)
     ProvideBuffer(resource struct {
         buffer client_end:fuchsia.io.File;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Called by the system tracing service, to provide a trace buffer
     /// to the Perfetto Producer. The buffer size is specified via
@@ -28,7 +28,7 @@ protocol BufferReceiver {
     @available(removed=9)
     ProvideBuffer(resource struct {
         buffer zx.handle:VMO;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };
 
 /// Specifies how the trace buffer should be exchanged.
@@ -59,5 +59,5 @@ protocol ProducerConnector {
     ConnectProducer(resource struct {
         producer_socket zx.handle:SOCKET;
         buffer TraceBuffer;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

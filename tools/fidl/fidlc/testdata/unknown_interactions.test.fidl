@@ -21,7 +21,7 @@ open protocol UnknownInteractionsProtocol {
         1: some_field int32;
     });
 
-    strict StrictTwoWayErr() -> (struct {}) error int32;
+    strict StrictTwoWayErr() -> () error int32;
     strict StrictTwoWayFieldsErr() -> (struct {
         some_field int32;
     }) error int32;
@@ -32,7 +32,7 @@ open protocol UnknownInteractionsProtocol {
         1: some_field int32;
     }) error int32;
 
-    flexible FlexibleTwoWay() -> (struct {});
+    flexible FlexibleTwoWay() -> ();
     flexible FlexibleTwoWayFields() -> (struct {
         some_field int32;
     });
@@ -43,7 +43,7 @@ open protocol UnknownInteractionsProtocol {
         1: some_field int32;
     });
 
-    flexible FlexibleTwoWayErr() -> (struct {}) error int32;
+    flexible FlexibleTwoWayErr() -> () error int32;
     flexible FlexibleTwoWayFieldsErr() -> (struct {
         some_field int32;
     }) error int32;
@@ -66,7 +66,7 @@ open protocol UnknownInteractionsProtocol {
         1: some_field int32;
     });
 
-    strict -> StrictEventErr(struct {}) error int32;
+    strict -> StrictEventErr() error int32;
     strict -> StrictEventFieldsErr(struct {
         some_field int32;
     }) error int32;
@@ -88,7 +88,7 @@ open protocol UnknownInteractionsProtocol {
         1: some_field int32;
     });
 
-    flexible -> FlexibleEventErr(struct {}) error int32;
+    flexible -> FlexibleEventErr() error int32;
     flexible -> FlexibleEventFieldsErr(struct {
         some_field int32;
     }) error int32;
@@ -117,7 +117,7 @@ ajar protocol UnknownInteractionsAjarProtocol {
         1: some_field int32;
     });
 
-    strict StrictTwoWayErr() -> (struct {}) error int32;
+    strict StrictTwoWayErr() -> () error int32;
     strict StrictTwoWayFieldsErr() -> (struct {
         some_field int32;
     }) error int32;
@@ -140,7 +140,7 @@ ajar protocol UnknownInteractionsAjarProtocol {
         1: some_field int32;
     });
 
-    strict -> StrictEventErr(struct {}) error int32;
+    strict -> StrictEventErr() error int32;
     strict -> StrictEventFieldsErr(struct {
         some_field int32;
     }) error int32;
@@ -162,7 +162,7 @@ ajar protocol UnknownInteractionsAjarProtocol {
         1: some_field int32;
     });
 
-    flexible -> FlexibleEventErr(struct {}) error int32;
+    flexible -> FlexibleEventErr() error int32;
     flexible -> FlexibleEventFieldsErr(struct {
         some_field int32;
     }) error int32;
@@ -190,7 +190,7 @@ closed protocol UnknownInteractionsClosedProtocol {
         1: some_field int32;
     });
 
-    strict StrictTwoWayErr() -> (struct {}) error int32;
+    strict StrictTwoWayErr() -> () error int32;
     strict StrictTwoWayFieldsErr() -> (struct {
         some_field int32;
     }) error int32;
@@ -213,7 +213,7 @@ closed protocol UnknownInteractionsClosedProtocol {
         1: some_field int32;
     });
 
-    strict -> StrictEventErr(struct {}) error int32;
+    strict -> StrictEventErr() error int32;
     strict -> StrictEventFieldsErr(struct {
         some_field int32;
     }) error int32;
@@ -243,7 +243,7 @@ open protocol UnknownInteractionsDriverProtocol {
         1: some_field int32;
     });
 
-    strict StrictTwoWayErr() -> (struct {}) error int32;
+    strict StrictTwoWayErr() -> () error int32;
     strict StrictTwoWayFieldsErr() -> (struct {
         some_field int32;
     }) error int32;
@@ -254,7 +254,7 @@ open protocol UnknownInteractionsDriverProtocol {
         1: some_field int32;
     }) error int32;
 
-    flexible FlexibleTwoWay() -> (struct {});
+    flexible FlexibleTwoWay() -> ();
     flexible FlexibleTwoWayFields() -> (struct {
         some_field int32;
     });
@@ -265,7 +265,7 @@ open protocol UnknownInteractionsDriverProtocol {
         1: some_field int32;
     });
 
-    flexible FlexibleTwoWayErr() -> (struct {}) error int32;
+    flexible FlexibleTwoWayErr() -> () error int32;
     flexible FlexibleTwoWayFieldsErr() -> (struct {
         some_field int32;
     }) error int32;
@@ -295,7 +295,7 @@ ajar protocol UnknownInteractionsAjarDriverProtocol {
         1: some_field int32;
     });
 
-    strict StrictTwoWayErr() -> (struct {}) error int32;
+    strict StrictTwoWayErr() -> () error int32;
     strict StrictTwoWayFieldsErr() -> (struct {
         some_field int32;
     }) error int32;
@@ -324,7 +324,7 @@ closed protocol UnknownInteractionsClosedDriverProtocol {
         1: some_field int32;
     });
 
-    strict StrictTwoWayErr() -> (struct {}) error int32;
+    strict StrictTwoWayErr() -> () error int32;
     strict StrictTwoWayFieldsErr() -> (struct {
         some_field int32;
     }) error int32;

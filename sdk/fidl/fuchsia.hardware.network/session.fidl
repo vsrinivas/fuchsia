@@ -46,7 +46,7 @@ protocol Session {
     Attach(struct {
         port PortId;
         rx_frames vector<FrameType>:MAX_FRAME_TYPES;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
     /// Detaches the session from `port`.
     ///
     /// Once detached, the session stops receiving frames from `port`. Frames
@@ -59,7 +59,7 @@ protocol Session {
     /// the port.
     Detach(struct {
         port PortId;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
     /// Cleanly closes a session.
     ///
     /// This will cause the session to send a `ZX_ERR_CANCELLED` epitaph and

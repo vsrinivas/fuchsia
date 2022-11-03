@@ -28,7 +28,7 @@ protocol NightMode {
     /// the table performs a no-op, and will not make any changes.
     Set(struct {
         settings NightModeSettings;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 };
 
 /// Settings related to Night mode.

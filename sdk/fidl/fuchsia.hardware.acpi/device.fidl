@@ -374,11 +374,11 @@ protocol Device {
     InstallNotifyHandler(resource struct {
         mode NotificationMode;
         handler client_end:NotifyHandler;
-    }) -> (struct {}) error Status;
+    }) -> () error Status;
 
     /// Remove a Device Object Notification handler. Returns AE_OK if either the handler was
     /// successfully removed, or if the device has no handler. Otherwise returns failure.
-    RemoveNotifyHandler() -> (struct {}) error Status;
+    RemoveNotifyHandler() -> () error Status;
 
     /// Acquire the ACPI global lock. This is only permitted for devices which
     /// have a _GLK entry in their namespace. See ACPI v6.4, Section 6.5.7 "_GLK
@@ -397,7 +397,7 @@ protocol Device {
     InstallAddressSpaceHandler(resource struct {
         space AddressSpace;
         handler client_end:AddressSpaceHandler;
-    }) -> (struct {}) error Status;
+    }) -> () error Status;
 
     /// Set a device to be able to wake the system from suspend. The device must have a _PRW
     /// (Power Resource for Wake) method. This method should be called from the driver suspend
@@ -413,7 +413,7 @@ protocol Device {
     /// NOT_EXIST - GPE register could not be found.
     SetWakeDevice(struct {
         requested_state uint8;
-    }) -> (struct {}) error Status;
+    }) -> () error Status;
 };
 
 service Service {

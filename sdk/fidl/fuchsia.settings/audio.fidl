@@ -24,7 +24,7 @@ protocol Audio {
     /// no-op, and will not make any changes.
     Set(struct {
         settings AudioSettings;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 };
 
 /// The source of the volume settings. The volume is set according to the source.

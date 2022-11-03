@@ -19,5 +19,5 @@ protocol Bootstrap {
     /// completion of this call.
     ImportWeaveConfig(resource struct {
         config_json mem.Buffer;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

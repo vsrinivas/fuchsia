@@ -319,5 +319,5 @@ protocol Socket {
         handle handle:<SOCKET, rights.MANAGE_SOCKET>;
         disposition uint32;
         disposition_peer uint32;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 };

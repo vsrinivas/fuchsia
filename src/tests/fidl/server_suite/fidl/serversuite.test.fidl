@@ -155,7 +155,7 @@ open protocol OpenTarget {
     strict StrictTwoWayErr(strict union {
         1: reply_success Empty;
         2: reply_error int32;
-    }) -> (struct {}) error int32;
+    }) -> () error int32;
     strict StrictTwoWayFieldsErr(strict union {
         1: reply_success int32;
         2: reply_error int32;
@@ -163,7 +163,7 @@ open protocol OpenTarget {
         some_field int32;
     }) error int32;
 
-    flexible FlexibleTwoWay() -> (struct {});
+    flexible FlexibleTwoWay() -> ();
     flexible FlexibleTwoWayFields(struct {
         reply_with int32;
     }) -> (struct {
@@ -172,7 +172,7 @@ open protocol OpenTarget {
     flexible FlexibleTwoWayErr(strict union {
         1: reply_success Empty;
         2: reply_error int32;
-    }) -> (struct {}) error int32;
+    }) -> () error int32;
     flexible FlexibleTwoWayFieldsErr(strict union {
         1: reply_success int32;
         2: reply_error int32;

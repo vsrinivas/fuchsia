@@ -109,7 +109,7 @@ protocol SecureMem {
     ///     server propagation of zx_status_t failures.
     AddSecureHeapPhysicalRange(struct {
         heap_range SecureHeapAndRange;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// This request from sysmem to the securemem driver conveys a physical
     /// range to delete, for a heap whose physical range(s) are set up via
@@ -151,7 +151,7 @@ protocol SecureMem {
     ///     server propagation of zx_status_t failures.
     DeleteSecureHeapPhysicalRange(struct {
         heap_range SecureHeapAndRange;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// This request from sysmem to the securemem driver conveys a physical
     /// range to modify and its new base and length, for a heap whose physical
@@ -196,7 +196,7 @@ protocol SecureMem {
     ///     server propagation of zx_status_t failures.
     ModifySecureHeapPhysicalRange(struct {
         range_modification SecureHeapAndRangeModification;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Zero a sub-range of a currently-existing physical range added via
     /// AddSecureHeapPhysicalRange().  The sub-range must be fully covered by
@@ -217,7 +217,7 @@ protocol SecureMem {
     ZeroSubRange(struct {
         is_covering_range_explicit bool;
         heap_range SecureHeapAndRange;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };
 
 type SecureHeapProperties = table {

@@ -57,12 +57,12 @@ protocol ComponentRegistry {
 
         /// Must match ZX_PROP_NAME of the kernel object.
         process_name string:zx.MAX_NAME_LEN;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     // Unregister |global_id| from the registry.
     Unregister(struct {
         id ClientId;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Hanging get to retrieve the Vulkan endpoint of the ffx/vulkan Zircon
     /// socket pair.  This get is first satisfied when the client

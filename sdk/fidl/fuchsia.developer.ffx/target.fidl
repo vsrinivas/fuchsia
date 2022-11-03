@@ -107,7 +107,7 @@ protocol TargetControl {
     @deprecated("Please use target collection -> target handle instead.")
     Reboot(struct {
         state TargetRebootState;
-    }) -> (struct {}) error TargetRebootError;
+    }) -> () error TargetRebootError;
 };
 
 /// An iterator for which the client handles calls to the `Next` function. When
@@ -247,7 +247,7 @@ protocol TargetCollection {
     OpenTarget(resource struct {
         query TargetQuery;
         target_handle server_end:Target;
-    }) -> (struct {}) error OpenTargetError;
+    }) -> () error OpenTargetError;
 
     /// Manually adds a target that cannot be discovered via mDNS. This target
     /// will be retained indefinitely, including across daemon restarts.
@@ -346,7 +346,7 @@ protocol Target {
     ///   nothing on success.
     SetPreferredSshAddress(struct {
         ip TargetIp;
-    }) -> (struct {}) error TargetError;
+    }) -> () error TargetError;
 
     /// Clears an address that was previously configured using
     /// `SetPreferredSshAddress`.
@@ -371,7 +371,7 @@ protocol Target {
     /// * See [TargetError] for failure states.
     OpenRemoteControl(resource struct {
         remote_control server_end:rc.RemoteControl;
-    }) -> (struct {}) error TargetConnectionError;
+    }) -> () error TargetConnectionError;
 
     /// Opens a Fastboot controller for a given target.
     OpenFastboot(resource struct {
@@ -387,7 +387,7 @@ protocol Target {
     /// * See [TargetRebootError] for failure states.
     Reboot(struct {
         state TargetRebootState;
-    }) -> (struct {}) error TargetRebootError;
+    }) -> () error TargetRebootError;
 
 
     /// Runs an iterator over diagnostics data. At present, this means cached log data.

@@ -141,7 +141,7 @@ called `Set`, which takes [AccessibilitySettings](#a11y-table) as an argument:
 ```fidl
 Set(struct {
     settings AccessibilitySettings;
-}) -> (struct {}) error Error;
+}) -> () error Error;
 ```
 
 Changes are conveyed by specifying the desired final state in the table fields.

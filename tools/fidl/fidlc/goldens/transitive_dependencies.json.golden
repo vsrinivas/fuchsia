@@ -2,7 +2,8 @@
   "name": "test.transitivedependencies",
   "experiments": [
     "no_optional_structs",
-    "output_index_json"
+    "output_index_json",
+    "simple_empty_response_syntax"
   ],
   "library_dependencies": [
     {

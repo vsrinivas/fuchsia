@@ -98,7 +98,7 @@ protocol Publisher {
         media Media;
         perform_probe bool;
         publication_responder client_end:PublicationResponder;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 };
 
 /// Client-supplied publication responder interface.

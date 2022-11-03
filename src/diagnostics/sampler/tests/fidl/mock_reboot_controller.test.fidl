@@ -10,6 +10,6 @@ type RebootError = strict enum : int32 {
 
 @discoverable
 protocol MockRebootController {
-    TriggerReboot() -> (struct {}) error RebootError;
-    CrashRebootChannel() -> (struct {}) error RebootError;
+    TriggerReboot() -> () error RebootError;
+    CrashRebootChannel() -> () error RebootError;
 };

@@ -74,7 +74,7 @@ protocol MetricEventLoggerFactory {
     CreateMetricEventLogger(resource struct {
         project_spec ProjectSpec;
         logger server_end:MetricEventLogger;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Create a MetricEventLogger with experiment metadata.
     ///
@@ -88,7 +88,7 @@ protocol MetricEventLoggerFactory {
         project_spec ProjectSpec;
         experiment_ids vector<uint32>:MAX_EXPERIMENT_IDS;
         logger server_end:MetricEventLogger;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 };
 
 /// A vector of event codes. When used in one of the Log*() calls below,
@@ -118,7 +118,7 @@ protocol MetricEventLogger {
         metric_id uint32;
         count uint64;
         event_codes EventVector;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Logs an integer measurement.
     ///
@@ -133,7 +133,7 @@ protocol MetricEventLogger {
         metric_id uint32;
         value int64;
         event_codes EventVector;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Logs a histogram giving many approximate integer measurements.
     ///
@@ -149,7 +149,7 @@ protocol MetricEventLogger {
         metric_id uint32;
         histogram IntegerHistogram;
         event_codes EventVector;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Logs a string value that was observed.
     ///
@@ -164,13 +164,13 @@ protocol MetricEventLogger {
         metric_id uint32;
         string_value string:MAX_STRING_EVENT_SIZE;
         event_codes EventVector;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Bulk logging method, equivalent to making many of the above Log*() calls
     /// at once.
     LogMetricEvents(struct {
         events vector<MetricEvent>:MAX_BATCHED_EVENTS;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Logs a custom Event.
     ///
@@ -183,7 +183,7 @@ protocol MetricEventLogger {
     LogCustomEvent(struct {
         metric_id uint32;
         event_values vector<CustomEventValue>:MAX;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 };
 
 /// A specification of an event that occurred to be passed to LogMetricEvents().

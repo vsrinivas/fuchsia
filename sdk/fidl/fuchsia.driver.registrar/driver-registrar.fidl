@@ -25,5 +25,5 @@ protocol DriverRegistrar {
     ///     * `ZX_ERR_INTERNAL` if an unspecified error was encountered.
     Register(struct {
         package_url fuchsia.pkg.PackageUrl;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

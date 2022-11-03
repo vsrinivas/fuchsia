@@ -65,7 +65,7 @@ protocol Phy {
 
     DestroyIface(struct {
         req DestroyIfaceRequest;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     SetCountry(struct {
         req CountryCode;

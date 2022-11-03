@@ -97,7 +97,7 @@ protocol ScreenCapture {
     /// if the client wishes to change any of the configuration settings. In
     /// this case all the buffers from the previous call to [`Configure`] will
     /// be released.
-    Configure(ScreenCaptureConfig) -> (struct {}) error ScreenCaptureError;
+    Configure(ScreenCaptureConfig) -> () error ScreenCaptureError;
 
     /// Following a successful call to [`Configure`], clients can call
     /// GetNextFrame. This will populate a buffer with the most recent frame.
@@ -125,5 +125,5 @@ protocol ScreenCapture {
     /// the VMO index of the buffer so that the server can reuse it in the future.
     ReleaseFrame(struct {
         buffer_id uint32;
-    }) -> (struct {}) error ScreenCaptureError;
+    }) -> () error ScreenCaptureError;
 };

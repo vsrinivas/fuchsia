@@ -152,7 +152,7 @@ protocol Timer {
         handle handle:TIMER;
         deadline time;
         slack duration;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///
@@ -204,5 +204,5 @@ protocol Timer {
     /// [`zx_timer_set()`]: timer_set.md
     Cancel(resource struct {
         handle handle:TIMER;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 };

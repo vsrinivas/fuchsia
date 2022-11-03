@@ -12,7 +12,7 @@ protocol Rust {
 
     MultipleInHandles(resource struct {
         handles vector<handle>;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     // noreturn handled properly.
     @noreturn
@@ -32,12 +32,12 @@ protocol Rust {
         @inout
         @voidptr
         buffer vector<byte>;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     // |input| treated const
     ConstInput(struct {
         input vector<byte>;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     VariousBasicTypeNames(struct {
         a bool;

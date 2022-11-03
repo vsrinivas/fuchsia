@@ -43,5 +43,5 @@ protocol Provider {
     ///   the service.
     Enable(resource struct {
         handle client_end:ProviderHandle;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

@@ -28,7 +28,7 @@ protocol Accessibility {
     /// no-op, and will not make any changes.
     Set(struct {
         settings AccessibilitySettings;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 };
 
 /// Supported accessibility settings.

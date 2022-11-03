@@ -172,7 +172,7 @@ protocol TestServer {
 
     ReplyWithErrorZero(struct {
         with_error bool;
-    }) -> (struct {}) error uint32;
+    }) -> () error uint32;
     ReplyWithErrorOne(struct {
         with_error bool;
         value string;
@@ -190,7 +190,7 @@ protocol TestServer {
 
     ReplyWithErrorEnumZero(struct {
         with_error bool;
-    }) -> (struct {}) error EnumOne;
+    }) -> () error EnumOne;
     ReplyWithErrorEnumOne(struct {
         with_error bool;
         value string;

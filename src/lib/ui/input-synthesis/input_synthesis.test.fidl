@@ -79,5 +79,5 @@ protocol Mouse {
         device_id uint32;
         report fuchsia.input.report.MouseInputReport;
         event_time uint64;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 };

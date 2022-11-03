@@ -66,9 +66,9 @@ protocol Reader {
 protocol Writer {
     /// Writes a single item to the clipboard. If the client's `View` does not have input focus, an
     /// error will be returned.
-    SetItem(ClipboardItem) -> (struct {}) error ClipboardError;
+    SetItem(ClipboardItem) -> () error ClipboardError;
 
     /// Clears the contents of the clipboard. If the client's `View` does not have input focus, an
     /// error will be returned.
-    Clear(table {}) -> (struct {}) error ClipboardError;
+    Clear(table {}) -> () error ClipboardError;
 };

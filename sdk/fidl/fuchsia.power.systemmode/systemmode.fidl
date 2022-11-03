@@ -64,7 +64,7 @@ protocol Requester {
     Request(struct {
         mode SystemMode;
         set bool;
-    }) -> (struct {}) error ModeRequestError;
+    }) -> () error ModeRequestError;
 };
 
 /// Maximum number of [`ModeMatch`] entries that a [`ClientConfig`] may contain.

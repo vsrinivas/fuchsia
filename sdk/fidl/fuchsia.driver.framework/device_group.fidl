@@ -63,5 +63,5 @@ type DeviceGroupError = strict enum {
 @discoverable
 protocol DeviceGroupManager {
     /// Creates the given device group in the driver framework.
-    CreateDeviceGroup(DeviceGroup) -> (struct {}) error DeviceGroupError;
+    CreateDeviceGroup(DeviceGroup) -> () error DeviceGroupError;
 };

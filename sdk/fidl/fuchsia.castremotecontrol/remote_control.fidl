@@ -20,5 +20,5 @@ protocol Launcher {
     /// identified by |device_id|.
     Launch(struct {
         device_id string:MAX;
-    }) -> (struct {}) error LaunchError;
+    }) -> () error LaunchError;
 };

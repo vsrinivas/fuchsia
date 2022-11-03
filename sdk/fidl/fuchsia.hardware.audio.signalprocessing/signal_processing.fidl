@@ -197,7 +197,7 @@ protocol SignalProcessing {
     SetElementState(struct {
         processing_element_id uint64;
         state ElementState;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Sets the topology to be used using an id to the vector returned by `GetTopologies`.
     /// If `GetTopologies` returns more than one `Topology`, `SetTopology` must be called to put the
@@ -210,7 +210,7 @@ protocol SignalProcessing {
     /// driver state. See `SetElementState` for further discussion.
     SetTopology(struct {
         topology_id uint64;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };
 
 /// For an overview see

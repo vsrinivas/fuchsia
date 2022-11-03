@@ -106,7 +106,7 @@ protocol Ktrace {
         @inout
         @voidptr
         ptr experimental_pointer<byte>;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///
@@ -151,5 +151,5 @@ protocol Ktrace {
         id uint32;
         arg0 uint32;
         arg1 uint32;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 };

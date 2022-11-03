@@ -15,5 +15,5 @@ type ErrorCode = strict enum : uint32 {
 @discoverable
 protocol Manager {
     /// Trigger a garbage collection.
-    Gc() -> (struct {}) error ErrorCode;
+    Gc() -> () error ErrorCode;
 };

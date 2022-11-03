@@ -45,7 +45,7 @@ protocol Provider {
     ListTypefaces(resource struct {
         request ListTypefacesRequest;
         iterator server_end:ListTypefacesIterator;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Returns a `TypefaceInfo` for each font in the requested `family`. The
     /// results' `family` fields will hold the canonical family name, even if

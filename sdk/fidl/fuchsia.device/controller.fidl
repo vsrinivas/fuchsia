@@ -136,7 +136,7 @@ protocol Controller {
     /// deprecated.
     Bind(struct {
         driver string:MAX_DRIVER_PATH_LEN;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// This api will unbind all the children of this device and bind the
     /// requested driver. If the driver is empty, it will autobind.
@@ -144,15 +144,15 @@ protocol Controller {
     /// call.
     Rebind(struct {
         driver string:MAX_DRIVER_PATH_LEN;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// This api will unbind all the children of this device synchronously.
     /// This will avoid watching for device removal by the clients.
-    UnbindChildren() -> (struct {}) error zx.status;
+    UnbindChildren() -> () error zx.status;
 
     /// Disconnect this device and allow its parent to be bound again.
     /// This may not complete before it returns.
-    ScheduleUnbind() -> (struct {}) error zx.status;
+    ScheduleUnbind() -> () error zx.status;
 
     /// Return the topological path for this device
     GetTopologicalPath() -> (struct {

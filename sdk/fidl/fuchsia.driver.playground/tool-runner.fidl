@@ -38,5 +38,5 @@ protocol ToolRunner {
         stdio_params StdioParams;
         /// Used by the playground to signal that the started tool has terminated.
         close_controller server_end:CloseController;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

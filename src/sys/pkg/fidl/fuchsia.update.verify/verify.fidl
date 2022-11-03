@@ -20,7 +20,7 @@ protocol Verifier {
     /// * error a value describing the cause of verification failure.
     Verify(struct {
         options @generated_name("VerifyOptions") table {};
-    }) -> (struct {}) error @generated_name("VerifyError") flexible enum {
+    }) -> () error @generated_name("VerifyError") flexible enum {
         /// A problem occurred when doing update verification.
         INTERNAL = 1;
     };

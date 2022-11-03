@@ -89,7 +89,7 @@ protocol LocalService {
         2: handle Handle;
         3: offset uint32;
         4: value vector<uint8>:MAX_VALUE_LENGTH;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Called to provide GATT information specific to a peer. PeerUpdate will not be called unless
     /// the prior invocation received a response. As such, the implementation can simply ignore the
@@ -187,5 +187,5 @@ protocol Server {
     PublishService(resource struct {
         info ServiceInfo;
         service client_end:LocalService;
-    }) -> (struct {}) error PublishServiceError;
+    }) -> () error PublishServiceError;
 };

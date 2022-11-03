@@ -26,7 +26,7 @@ protocol Intl {
     /// no-op, and will not make any changes.
     Set(struct {
         settings IntlSettings;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 };
 
 /// Whether if the time format should be using 12 hour or 24 hour clock. H indicates the

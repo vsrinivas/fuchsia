@@ -21,7 +21,7 @@ protocol Filter {
     /// * error Reports `NOT_FOUND` if `id` is not a valid interface.
     EnableInterface(struct {
         id fuchsia.net.InterfaceId;
-    }) -> (struct {}) error strict enum {
+    }) -> () error strict enum {
         NOT_FOUND = 1;
     };
 
@@ -34,7 +34,7 @@ protocol Filter {
     /// * error Reports `NOT_FOUND` if `id` is not a valid interface.
     DisableInterface(struct {
         id fuchsia.net.InterfaceId;
-    }) -> (struct {}) error strict enum {
+    }) -> () error strict enum {
         NOT_FOUND = 1;
     };
 
@@ -68,7 +68,7 @@ protocol Filter {
     UpdateRules(struct {
         rules vector<Rule>:MAX_RULES;
         generation uint32;
-    }) -> (struct {}) error strict enum {
+    }) -> () error strict enum {
         GENERATION_MISMATCH = 1;
         BAD_RULE = 2;
     };
@@ -101,7 +101,7 @@ protocol Filter {
     UpdateNatRules(struct {
         rules vector<Nat>:MAX_RULES;
         generation uint32;
-    }) -> (struct {}) error strict enum {
+    }) -> () error strict enum {
         GENERATION_MISMATCH = 1;
         BAD_RULE = 2;
     };
@@ -132,7 +132,7 @@ protocol Filter {
     UpdateRdrRules(struct {
         rules vector<Rdr>:MAX_RULES;
         generation uint32;
-    }) -> (struct {}) error strict enum {
+    }) -> () error strict enum {
         // TODO(https://fxbug.dev/68279): Implement RDR API using gvisor iptables.
         NOT_SUPPORTED = 1;
     };

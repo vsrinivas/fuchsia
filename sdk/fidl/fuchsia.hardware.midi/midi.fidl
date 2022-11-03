@@ -31,5 +31,5 @@ protocol Device {
     /// is_sink.
     Write(struct {
         data vector<uint8>:MAX;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

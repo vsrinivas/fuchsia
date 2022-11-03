@@ -224,5 +224,5 @@ protocol ControlDevice {
     ///       trigger the wait.
     CreateSyncFence(resource struct {
         event zx.handle:EVENTPAIR;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

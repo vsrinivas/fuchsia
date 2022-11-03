@@ -12,7 +12,7 @@ protocol TestDevice {
     /// Sets the test data that can be retrieved from this device using a runtime channel.
     SetTestData(struct {
         in vector<uint8>:MAX_TRANSFER_SIZE;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };
 
 protocol TestDeviceChild {

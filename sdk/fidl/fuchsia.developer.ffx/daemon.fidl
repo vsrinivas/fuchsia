@@ -63,5 +63,5 @@ protocol Daemon {
     ConnectToProtocol(resource struct {
         name fuchsia.io.Name;
         server_end zx.handle:CHANNEL;
-    }) -> (struct {}) error DaemonError;
+    }) -> () error DaemonError;
 };

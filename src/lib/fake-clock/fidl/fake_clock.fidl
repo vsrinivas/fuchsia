@@ -90,7 +90,7 @@ protocol FakeClockControl {
     /// RandomRange). Returns `ZX_ERR_ACCESS_DENIED` if called while the FakeClock is free-running.
     Advance(struct {
         increment Increment;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
     /// Resumes free-running increments on the fake clock.
     /// `real` is the period based on the real monotonic clock over which `increment` is going to be
     /// applied. Returns `ZX_ERR_INVALID_ARGS` if the provided `increment` is invalid (such as a
@@ -98,7 +98,7 @@ protocol FakeClockControl {
     ResumeWithIncrements(struct {
         real zx.duration;
         increment Increment;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
     /// Registers interest in a deadline event.
     /// `deadline_id` and `event_type` identify the named deadline and the event associated with
     /// the deadline. When the event occurs, FakeClock will signal `EVENTPAIR_SIGNALED` on
@@ -118,7 +118,7 @@ protocol FakeClockControl {
         deadline_id fuchsia.testing.deadline.DeadlineId;
         event_type DeadlineEventType;
         on_stop zx.handle:EVENTPAIR;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
     /// Pauses free-running increments on the fake clock.
     Pause() -> ();
 };

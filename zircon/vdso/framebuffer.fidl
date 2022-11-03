@@ -95,5 +95,5 @@ protocol Framebuffer {
         width uint32;
         height uint32;
         stride uint32;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 };

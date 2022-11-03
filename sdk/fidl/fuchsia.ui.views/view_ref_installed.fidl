@@ -39,5 +39,5 @@ protocol ViewRefInstalled {
     ///       the ViewRef is valid.
     Watch(resource struct {
         view_ref ViewRef;
-    }) -> (struct {}) error ViewRefInstalledError;
+    }) -> () error ViewRefInstalledError;
 };

@@ -205,7 +205,7 @@ protocol Vmar {
     /// [`zx_vmar_unmap()`]: vmar_unmap.md
     Destroy(resource struct {
         handle handle:VMAR;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     // TODO(fxbug.dev/32253): TODO handle and vmo and options must all match, and options can't specify them.
     /// ## Summary
@@ -436,7 +436,7 @@ protocol Vmar {
         handle handle:VMAR;
         addr vaddr;
         len usize;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///
@@ -525,7 +525,7 @@ protocol Vmar {
         options VmOption;
         addr vaddr;
         len usize;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///
@@ -640,5 +640,5 @@ protocol Vmar {
         @inout
         @voidptr
         buffer vector<byte>;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 };

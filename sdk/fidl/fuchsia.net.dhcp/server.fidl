@@ -108,7 +108,7 @@ protocol Server {
     /// already serving, `StartServing` is a no-op.
     ///
     /// *error a zx.status indicating why the server could not be started.
-    StartServing() -> (struct {}) error zx.status;
+    StartServing() -> () error zx.status;
 
     /// Stops serving DHCP leases.
     ///
@@ -155,7 +155,7 @@ protocol Server {
     /// * error a zx.status indicating the cause of failure.
     SetOption(struct {
         value Option;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Sets the Parameter to the argument. On success, the new parameter value
     /// can be queried by GetParameter or ListParameter immediately. However,
@@ -170,7 +170,7 @@ protocol Server {
     /// * error a zx.status indicating the cause of failure.
     SetParameter(struct {
         value Parameter;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Lists all DHCP options for which the Server has a value. Any option
     /// which does not have a value will be omitted from the returned list.
@@ -202,7 +202,7 @@ protocol Server {
     /// take effect immediately.
     ///
     /// * error a zx.status indicating the cause of failure.
-    ResetOptions() -> (struct {}) error zx.status;
+    ResetOptions() -> () error zx.status;
 
     /// Resets all DHCP server parameters to their default value. On success,
     /// the reset parameter values can be queried immediately with GetParameter
@@ -213,7 +213,7 @@ protocol Server {
     /// `ZX_ERR_BAD_STATE` is returned otherwise.
     ///
     /// * error a zx.status indicating the cause of failure.
-    ResetParameters() -> (struct {}) error zx.status;
+    ResetParameters() -> () error zx.status;
 
     /// Clears all leases maintained by the Server. On success, ClearLeases will
     /// take effect immediately. Server administrators should take care when
@@ -221,5 +221,5 @@ protocol Server {
     /// which a Server can notify a client that its lease has been cleared.
     ///
     /// * error a zx.status indicating the cause of failure.
-    ClearLeases() -> (struct {}) error zx.status;
+    ClearLeases() -> () error zx.status;
 };

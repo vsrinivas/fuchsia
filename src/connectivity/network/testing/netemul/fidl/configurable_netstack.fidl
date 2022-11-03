@@ -54,7 +54,7 @@ protocol ConfigurableNetstack {
         ///
         /// If not set, interpreted as false.
         7: enable_ipv6_forwarding bool;
-    }) -> (struct {}) error @generated_name("ConfigurationError") strict enum {
+    }) -> () error @generated_name("ConfigurationError") strict enum {
         INVALID_ARGUMENTS = 1;
         REJECTED_BY_NETSTACK = 2;
         INTERNAL = 0xFFFFFFFF;

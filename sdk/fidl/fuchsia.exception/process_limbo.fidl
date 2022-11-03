@@ -98,7 +98,7 @@ protocol ProcessLimbo {
     /// unretrievable in the future from here.
     ReleaseProcess(struct {
         process_koid zx.koid;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Adds filters to the limbo. Filters determine what processes the limbo
     /// will store when receiving an exception. Repeated filters will be
@@ -124,7 +124,7 @@ protocol ProcessLimbo {
     /// Returns ZX_ERR_UNAVAILABLE if limbo is not active.
     AppendFilters(struct {
         filters vector<string:MAX_FILTER_LENGTH>:MAX_FILTERS_PER_CALL;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Removes filters to the limbo. Any filters that are not currently present
     /// on the limbo will be ignored.
@@ -132,7 +132,7 @@ protocol ProcessLimbo {
     /// Returns ZX_ERR_UNAVAILABLE if limbo is not active.
     RemoveFilters(struct {
         filters vector<string:MAX_FILTER_LENGTH>:MAX_FILTERS_PER_CALL;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Returns filters that are currently active within the limbo. If the limbo
     /// is inactive, it will return an empty vector.

@@ -89,7 +89,7 @@ protocol RadarBurstReader {
     RegisterVmos(resource struct {
         vmo_ids vector<uint32>:VMO_VECTOR_MAX_COUNT;
         vmos vector<zx.handle:VMO>:VMO_VECTOR_MAX_COUNT;
-    }) -> (struct {}) error StatusCode;
+    }) -> () error StatusCode;
 
     /// Removes the associations with the given VMO IDs and returns the VMOs to
     /// the client. The driver will not send any more `OnBurst()` events with
@@ -169,5 +169,5 @@ protocol RadarBurstReaderProvider {
     ///         `RadarBurstReader` connection with the driver.
     Connect(resource struct {
         server server_end:RadarBurstReader;
-    }) -> (struct {}) error StatusCode;
+    }) -> () error StatusCode;
 };

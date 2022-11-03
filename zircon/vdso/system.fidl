@@ -497,7 +497,7 @@ protocol System {
         @voidptr
         info experimental_pointer<byte>;
         count usize;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///
@@ -657,7 +657,7 @@ protocol System {
         resource handle:RESOURCE;
         kernel_vmo handle:VMO;
         bootimage_vmo handle:VMO;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///
@@ -869,5 +869,5 @@ protocol System {
         resource handle:RESOURCE;
         cmd uint32;
         arg SystemPowerctlArg;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 };

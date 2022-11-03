@@ -14,5 +14,5 @@ protocol TtsManager {
     /// engine at a time. If already in use, BUSY error is returned.
     OpenEngine(resource struct {
         engine_request server_end:Engine;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 };

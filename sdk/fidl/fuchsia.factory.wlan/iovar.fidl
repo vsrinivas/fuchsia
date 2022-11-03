@@ -33,5 +33,5 @@ protocol Iovar {
         iface_idx int32;
         cmd int32;
         request vector<uint8>:MAX_BUFFER_SIZE;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

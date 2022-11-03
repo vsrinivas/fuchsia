@@ -7,5 +7,5 @@ library driver.multiname.test;
 using zx;
 
 protocol TestAddDevice {
-    AddDevice() -> (struct {}) error zx.status;
+    AddDevice() -> () error zx.status;
 };

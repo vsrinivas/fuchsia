@@ -46,7 +46,7 @@ protocol StoryController {
     /// Existing annotations with the same key will be overwritten.
     Annotate(resource struct {
         annotations vector<Annotation>:MAX_ANNOTATIONS_PER_UPDATE;
-    }) -> (struct {}) error AnnotationError;
+    }) -> () error AnnotationError;
 };
 
 /// Implemented by the client calling StoryController.Watch().

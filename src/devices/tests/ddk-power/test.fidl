@@ -23,7 +23,7 @@ protocol TestDevice {
         info vector<fuchsia.device.DevicePowerStateInfo>;
         perf_state_info vector<fuchsia.device.DevicePerformanceStateInfo>;
         make_visible bool;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
     /// Get current power state of the device
     GetCurrentDevicePowerState() -> (struct {
         cur_state fuchsia.device.DevicePowerState;
@@ -39,7 +39,7 @@ protocol TestDevice {
     }) error zx.status;
     SetTestStatusInfo(struct {
         test_info TestStatusInfo;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     GetSuspendCompletionEvent() -> (resource struct {
         event zx.handle:EVENT;

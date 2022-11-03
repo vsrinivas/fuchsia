@@ -40,46 +40,46 @@ protocol PeerController {
     /// Initiate a stream configuration procedure.
     /// No configuration information is specified because generic config information will
     /// be used to initiate the procedure.
-    SetConfiguration() -> (struct {}) error PeerError;
+    SetConfiguration() -> () error PeerError;
 
     /// Initiate a procedure to get the configuration information of the peer stream.
     /// The result is discarded because PeerController only initiates the procedure.
-    GetConfiguration() -> (struct {}) error PeerError;
+    GetConfiguration() -> () error PeerError;
 
     /// Initiate a suspend request to the stream.
     /// This command will not resume nor reconfigure the stream.
-    SuspendStream() -> (struct {}) error PeerError;
+    SuspendStream() -> () error PeerError;
 
     /// A "chained" set of procedures on the current stream.
     /// SuspendStream() followed by ReconfigureStream().
     /// Reconfigure() configures the stream that is currently open.
-    SuspendAndReconfigure() -> (struct {}) error PeerError;
+    SuspendAndReconfigure() -> () error PeerError;
 
     /// Initiate stream establishment with the peer.
-    EstablishStream() -> (struct {}) error PeerError;
+    EstablishStream() -> () error PeerError;
 
     /// Release the current stream that is owned by the peer.
     /// If the streaming channel doesn't exist, no action will be taken.
-    ReleaseStream() -> (struct {}) error PeerError;
+    ReleaseStream() -> () error PeerError;
 
     /// Initiate an abort procedure on the current stream.
     /// If the streaming channel doesn't exist, no action will be taken.
-    AbortStream() -> (struct {}) error PeerError;
+    AbortStream() -> () error PeerError;
 
     /// Start streaming media on the current stream that is owned by the peer.
     /// If the streaming channel doesn't exist, no action will be taken.
-    StartStream() -> (struct {}) error PeerError;
+    StartStream() -> () error PeerError;
 
     /// Initiate a reconfiguration procedure for the current stream.
     /// No configuration information is specified because a generic set of config
     /// information will be used to initiate the procedure.
-    ReconfigureStream() -> (struct {}) error PeerError;
+    ReconfigureStream() -> () error PeerError;
 
     /// Initiate a procedure to get the capabilities of the peer.
     /// The result is discarded because PeerController only initiates the procedure.
-    GetCapabilities() -> (struct {}) error PeerError;
+    GetCapabilities() -> () error PeerError;
 
     /// Initiate a procedure to get the capabilities of the peer.
     /// The result is discarded because PeerController only initiates the procedure.
-    GetAllCapabilities() -> (struct {}) error PeerError;
+    GetAllCapabilities() -> () error PeerError;
 };

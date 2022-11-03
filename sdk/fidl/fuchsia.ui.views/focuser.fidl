@@ -38,7 +38,7 @@ protocol Focuser {
     /// etc. A denied request is indicated with a Error.
     RequestFocus(resource struct {
         view_ref ViewRef;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Sets the auto focus target to the View specified by `view_ref`.
     /// To unset the target, pass in an empty table.
@@ -72,5 +72,5 @@ protocol Focuser {
     @available(added=9)
     SetAutoFocus(resource table {
         1: view_ref ViewRef;
-    }) -> (struct {}) error AutoFocusError;
+    }) -> () error AutoFocusError;
 };

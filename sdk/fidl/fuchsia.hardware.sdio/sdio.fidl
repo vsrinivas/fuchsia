@@ -70,14 +70,14 @@ protocol Device {
         /// The function number of this device.
         function uint8;
     }) error zx.status;
-    EnableFn() -> (struct {}) error zx.status;
-    DisableFn() -> (struct {}) error zx.status;
-    EnableFnIntr() -> (struct {}) error zx.status;
-    DisableFnIntr() -> (struct {}) error zx.status;
+    EnableFn() -> () error zx.status;
+    DisableFn() -> () error zx.status;
+    EnableFnIntr() -> () error zx.status;
+    DisableFnIntr() -> () error zx.status;
     UpdateBlockSize(struct {
         blk_sz uint16;
         deflt bool;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
     GetBlockSize() -> (struct {
         cur_blk_size uint16;
     }) error zx.status;
@@ -98,7 +98,7 @@ protocol Device {
     }) error zx.status;
     /// The following functions access the card common control registers (CCCR) on function 0.
     /// Aborts an I/O operation occurring on the specified function.
-    IoAbort() -> (struct {}) error zx.status;
+    IoAbort() -> () error zx.status;
     /// Returns true if an interrupt is pending for function fn_idx, false otherwise.
     IntrPending() -> (struct {
         pending bool;

@@ -175,7 +175,7 @@ protocol Selector {
     BindTarget(struct {
         session_id fuchsia.media.sessions2.SessionId;
         target_id Id;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Renders the media session specified by `session_id` on the set of
     /// targets specified by `target_ids`.

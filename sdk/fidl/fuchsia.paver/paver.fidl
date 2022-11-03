@@ -217,7 +217,7 @@ protocol DataSink {
     /// Returns ZX_ERR_NOT_SUPPORTED if the backend does not support opaque volume blobs.
     WriteOpaqueVolume(resource struct {
         payload fuchsia.mem.Buffer;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     // TODO(fxbug.dev/45606): transition users to `WriteFirmware()` and delete this.
     /// Writes bootloader partition with data from `payload`.

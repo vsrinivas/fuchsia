@@ -34,7 +34,7 @@ protocol ServiceInstancePublisher {
         instance instance_name;
         options ServiceInstancePublicationOptions;
         publication_responder client_end:ServiceInstancePublicationResponder;
-    }) -> (struct {}) error PublishServiceInstanceError;
+    }) -> () error PublishServiceInstanceError;
 };
 
 /// Options for `ServiceInstancePublisher.PublishServiceInstance`.

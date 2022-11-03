@@ -56,21 +56,21 @@ protocol CryptManagement {
     AddWrappingKey(struct {
         wrapping_key_id uint64;
         key vector<uint8>:32;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Updates the key which will be used for wrapping keys (Crypt::CreateKey).  `purpose`
     /// describes which active key to modify.
     SetActiveKey(struct {
         purpose KeyPurpose;
         wrapping_key_id uint64;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Forgets a wrapping key, preventing its use for future key-unwrapping.  All future calls to
     /// Crypt::UnwrapKeys with that wrapping key ID will fail.
     /// If either the data or metadata part of the key is active, an error is returned.
     ForgetWrappingKey(struct {
         wrapping_key_id uint64;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };
 
 type MountOptions = resource struct {
@@ -92,18 +92,18 @@ protocol Volume {
     Mount(resource struct {
         outgoing_directory server_end:fuchsia.io.Directory;
         options MountOptions;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Check the volume for consistency.  If the volume is encrypted, `options.crypt` should
     /// provide all key access for the given volume.
     Check(resource struct {
         options CheckOptions;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     // Set the limit in bytes on the volume.
     SetLimit(struct {
         bytes uint64;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };
 
 /// fuchsia.fxfs.Volumes is only used for creating volumes.  Other operations (e.g. enumeration and
@@ -122,11 +122,11 @@ protocol Volumes {
         name string:fuchsia.io.MAX_FILENAME;
         crypt client_end:<Crypt, optional>;
         outgoing_directory server_end:fuchsia.io.Directory;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Permanently deletes a volume identified by `name`.  If the volume is mounted, this call will
     /// fail.
     Remove(resource struct {
         name string:fuchsia.io.MAX_FILENAME;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

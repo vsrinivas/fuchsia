@@ -67,7 +67,7 @@ protocol Hdmi {
     /// Should be called once on boot. Any future calls should do nothing.
     PowerUp(struct {
         display_id uint8;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
     /// This function is called to power down the HDMI interface
     /// Should be called only once on shut down.
     PowerDown(struct {
@@ -82,13 +82,13 @@ protocol Hdmi {
     /// This function resets the HDMI IP block
     Reset(struct {
         display_id uint8;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// This function is called upon HDMI display change
     ModeSet(struct {
         display_id uint8;
         mode DisplayMode;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Similar to I2C FIDL.
     /// Write and read segments of data for EDID.
@@ -133,7 +133,7 @@ protocol Hdmi {
     EnableBist(struct {
         display_id uint8;
         pattern uint32;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// This function prints the value of all HDMI registers
     PrintHdmiRegisters() -> ();

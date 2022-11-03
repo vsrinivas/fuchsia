@@ -47,5 +47,5 @@ protocol TpmImpl {
         locality Locality;
         address RegisterAddress;
         data vector<uint8>:TPM_MAX_DATA_TRANSFER;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

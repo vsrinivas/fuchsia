@@ -32,5 +32,5 @@ protocol EffectsController {
     UpdateEffect(struct {
         effect_name string:MAX_EFFECT_NAME_LENGTH;
         config string:MAX;
-    }) -> (struct {}) error UpdateEffectError;
+    }) -> () error UpdateEffectError;
 };

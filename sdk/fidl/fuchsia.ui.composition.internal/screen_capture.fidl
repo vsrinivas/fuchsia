@@ -84,7 +84,7 @@ protocol ScreenCapture {
     /// enough for the image. If the buffer is too small, an
     /// attempt will be made to render the image, however, it will not be
     /// guaranteed to contain the complete image.
-    Configure(ScreenCaptureConfig) -> (struct {}) error ScreenCaptureError;
+    Configure(ScreenCaptureConfig) -> () error ScreenCaptureError;
 
     /// [`GetNextFrame`] returns the latest unseen-by-the-client frame as soon
     /// as possible. On the first call to [`GetNextFrame`] and any subsequent

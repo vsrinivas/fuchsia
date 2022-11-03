@@ -63,7 +63,7 @@ protocol Manager {
     /// INVALID_LABEL if a label is provided which is not in the tree.
     RemoveCredential(struct {
         label Label;
-    }) -> (struct {}) error CredentialError;
+    }) -> () error CredentialError;
 
     /// Attempts to authenticate a credential. It checks whether the `le_secret`
     /// for a given `label` is correct.

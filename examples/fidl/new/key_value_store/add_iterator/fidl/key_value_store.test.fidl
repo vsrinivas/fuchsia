@@ -25,7 +25,7 @@ protocol Store {
     /// Writes an item to the store.
     WriteItem(struct {
         attempt Item;
-    }) -> (struct {}) error WriteError;
+    }) -> () error WriteError;
 
     // [START diff_1]
 
@@ -42,7 +42,7 @@ protocol Store {
 
         /// The [`Iterator`] server endpoint.
         iterator server_end:Iterator;
-    }) -> (struct {}) error IteratorConnectionError;
+    }) -> () error IteratorConnectionError;
 
     // [END diff_1]
 };

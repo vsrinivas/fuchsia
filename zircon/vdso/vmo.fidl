@@ -211,7 +211,7 @@ protocol Vmo {
         buffer experimental_pointer<byte>;
         offset uint64;
         buffer_size usize;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     // TODO(scottmg): Same problem as Read() above.
     /// ## Summary
@@ -292,7 +292,7 @@ protocol Vmo {
         buffer experimental_pointer<byte>;
         offset uint64;
         buffer_size usize;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     // TODO(fxbug.dev/32803): No rights required?
     /// ## SUMMARY
@@ -426,7 +426,7 @@ protocol Vmo {
     SetSize(resource struct {
         handle handle:VMO;
         size uint64;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## SUMMARY
     ///
@@ -637,7 +637,7 @@ protocol Vmo {
         @inout
         @voidptr
         buffer vector<byte>;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## SUMMARY
     ///
@@ -894,7 +894,7 @@ protocol Vmo {
     SetCachePolicy(resource struct {
         handle handle:VMO;
         cache_policy uint32;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     // TODO(fxbug.dev/32803): handle: No rights required, ZX_RIGHT_EXECUTE added to dup out
     // TODO(fxbug.dev/32803): vmex == ZX_HANDLE_INVALID also accepted.

@@ -53,5 +53,5 @@ protocol Mtrace {
         @inout
         @voidptr
         ptr vector<byte>;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 };

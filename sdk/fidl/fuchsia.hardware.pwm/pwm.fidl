@@ -21,8 +21,8 @@ protocol Pwm {
 
     SetConfig(struct {
         config PwmConfig;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
-    Enable() -> (struct {}) error zx.status;
-    Disable() -> (struct {}) error zx.status;
+    Enable() -> () error zx.status;
+    Disable() -> () error zx.status;
 };

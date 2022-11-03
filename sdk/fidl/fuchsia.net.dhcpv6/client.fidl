@@ -147,5 +147,5 @@ protocol Client {
     /// * error a `zx.status` if any of the addresses were not gracefully
     ///     released, e.g. the client times out waiting for Reply to Release,
     ///     or the interface is down and sending Release fails.
-    Shutdown() -> (struct {}) error zx.status;
+    Shutdown() -> () error zx.status;
 };

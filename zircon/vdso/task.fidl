@@ -331,5 +331,5 @@ protocol Task {
     /// [`zx_process_create()`]: process_create.md
     Kill(resource struct {
         handle handle;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 };

@@ -234,7 +234,7 @@ protocol Thread {
         stack vaddr;
         arg1 uintptr;
         arg2 uintptr;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///
@@ -446,7 +446,7 @@ protocol Thread {
         kind uint32;
         @voidptr
         buffer vector<byte>;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///
@@ -485,5 +485,5 @@ protocol Thread {
     /// [`zx_nanosleep()`]: nanosleep.md
     LegacyYield(resource struct {
         options uint32;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 };

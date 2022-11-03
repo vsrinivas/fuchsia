@@ -51,20 +51,20 @@ protocol Device {
         offset uint64;
         mask uint8;
         value uint8;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
     WriteRegister16(struct {
         offset uint64;
         mask uint16;
         value uint16;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
     WriteRegister32(struct {
         offset uint64;
         mask uint32;
         value uint32;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
     WriteRegister64(struct {
         offset uint64;
         mask uint64;
         value uint64;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

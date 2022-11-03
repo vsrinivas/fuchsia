@@ -134,7 +134,7 @@ protocol PlatformBus {
     /// devhosts.
     NodeAdd(struct {
         node Node;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Adds a device for binding a protocol implementation driver.
     /// These devices are added in the same devhost as the platform bus.
@@ -146,7 +146,7 @@ protocol PlatformBus {
     ProtocolNodeAdd(struct {
         proto_id uint32;
         node Node;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Called by protocol implementation drivers to register their protocol
     /// with the platform bus.
@@ -156,7 +156,7 @@ protocol PlatformBus {
         /// This is the *_protocol_t buffer. In the future we will probably pass
         /// a FIDL client end.
         protocol vector<uint8>:MAX;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
 
     /// Board drivers may use this to get information about the board, and to
@@ -170,15 +170,15 @@ protocol PlatformBus {
     /// Platform device drivers can access this via `pdev_get_board_info()`.
     SetBoardInfo(struct {
         info BoardInfo;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
     /// Board drivers may use this to set information about the bootloader.
     SetBootloaderInfo(struct {
         info BootloaderInfo;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     RegisterSysSuspendCallback(resource struct {
         suspend_cb client_end:SysSuspend;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Adds a composite platform device to the bus.
     /// This will not implicitly include the platform device specified by |dev|
@@ -188,7 +188,7 @@ protocol PlatformBus {
         node Node;
         fragments vector<fuchsia.device.manager.DeviceFragment>:MAX;
         primary_fragment string:<MAX, optional>;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Super deprecated, use AddComposite() instead.
     /// Adds a composite platform device to the bus. The platform device specified by |dev|
@@ -201,7 +201,7 @@ protocol PlatformBus {
         node Node;
         fragments vector<fuchsia.device.manager.DeviceFragment>:MAX;
         primary_fragment string:<MAX, optional>;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };
 
 service Service {

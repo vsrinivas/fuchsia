@@ -47,7 +47,7 @@ protocol GraphicalPresenter {
         view_spec ViewSpec;
         annotation_controller client_end:<AnnotationController, optional>;
         view_controller_request server_end:<ViewController, optional>;
-    }) -> (struct {}) error PresentViewError;
+    }) -> () error PresentViewError;
 };
 
 /// An error returned when `GraphicalPresenter` fails to present a view.

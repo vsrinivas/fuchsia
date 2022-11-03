@@ -195,7 +195,7 @@ protocol VirtioNet {
         start_info StartInfo;
         mac_address fuchsia.hardware.ethernet.MacAddress;
         enable_bridge bool;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };
 
 @discoverable
@@ -248,7 +248,7 @@ protocol VirtioVsock {
         start_info StartInfo;
         guest_cid uint32;
         listeners vector<fuchsia.virtualization.Listener>:MAX;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };
 
 /// Sufficient to contain the opaque image info.

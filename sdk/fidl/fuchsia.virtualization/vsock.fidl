@@ -39,7 +39,7 @@ protocol HostVsockEndpoint {
     ///
     /// Possible errors:
     ///     - ZX_ERR_ALREADY_BOUND: A client is already listening on this port.
-    Listen(Listener) -> (struct {}) error zx.status;
+    Listen(Listener) -> () error zx.status;
 
     /// Attempts to create a vsock connection to a guest on 'guest_port'. Uses a dynamically chosen
     /// ephemeral host port.

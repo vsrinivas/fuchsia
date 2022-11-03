@@ -341,7 +341,7 @@ protocol Process {
         @release
         arg1 handle;
         arg2 uintptr;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///

@@ -104,7 +104,7 @@ protocol StoryPuppetMaster {
     /// deleted if new value is null.
     Annotate(resource struct {
         annotations vector<Annotation>:MAX_ANNOTATIONS_PER_UPDATE;
-    }) -> (struct {}) error AnnotationError;
+    }) -> () error AnnotationError;
 
     /// Returns the annotations attached to this story.
     ///

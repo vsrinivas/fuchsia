@@ -125,7 +125,7 @@ protocol Registry {
         /// well-formed for any reason.  See details on [ILLEGAL_ARGUMENT]
         /// for recommendations.
         shortcut Shortcut;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 };
 
 /// Specifies a single shortcut definition.

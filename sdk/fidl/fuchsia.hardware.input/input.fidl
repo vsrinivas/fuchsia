@@ -80,7 +80,7 @@ protocol Device {
     /// allocates a new FIFO for receiving input reports.
     GetDeviceReportsReader(resource struct {
         reader server_end:DeviceReportsReader;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Read one report out of the report FIFO. Only a single report will be
     /// returned in this API. `time` is the time the report was created, from

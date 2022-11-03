@@ -97,8 +97,9 @@ struct NaturalMethodTypes;
 // |MessageTraits| contains information about a request or response message:
 // |Message| must be either a |fidl::Request<Foo>| or |fidl::Response<Foo>|.
 //
-// - bool kHasPayload: whether the message has a payload object. For example, a
-//                     `Foo(struct {})` has a payload that is an empty struct.
+// - bool kHasPayload: whether the message has a payload object. For example, in
+//                     `strict Foo() -> ()`, neither request nor response have a
+//                     payload, but in `flexible Foo() -> ()` the response does.
 // - Payload:          if |kHasPayload| is true, a type alias to the payload.
 template <typename Message>
 struct MessageTraits;

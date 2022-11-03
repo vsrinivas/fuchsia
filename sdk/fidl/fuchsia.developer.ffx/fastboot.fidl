@@ -77,7 +77,7 @@ protocol VariableListener {
 protocol Fastboot {
     Prepare(resource struct {
         listener client_end:RebootListener;
-    }) -> (struct {}) error RebootError;
+    }) -> () error RebootError;
     GetVar(struct {
         name string:64;
     }) -> (struct {
@@ -85,34 +85,34 @@ protocol Fastboot {
     }) error FastbootError;
     GetAllVars(resource struct {
         listener client_end:VariableListener;
-    }) -> (struct {}) error FastbootError;
+    }) -> () error FastbootError;
     Flash(resource struct {
         partition_name string:64;
         path string:256;
         listener client_end:UploadProgressListener;
-    }) -> (struct {}) error FastbootError;
+    }) -> () error FastbootError;
     Erase(struct {
         partition_name string:64;
-    }) -> (struct {}) error FastbootError;
-    Boot() -> (struct {}) error FastbootError;
-    Reboot() -> (struct {}) error FastbootError;
+    }) -> () error FastbootError;
+    Boot() -> () error FastbootError;
+    Reboot() -> () error FastbootError;
     RebootBootloader(resource struct {
         listener client_end:RebootListener;
-    }) -> (struct {}) error RebootError;
-    ContinueBoot() -> (struct {}) error FastbootError;
+    }) -> () error RebootError;
+    ContinueBoot() -> () error FastbootError;
     GetStaged(resource struct {
         path string:256;
-    }) -> (struct {}) error FastbootError;
+    }) -> () error FastbootError;
     Stage(resource struct {
         path string:256;
         listener client_end:UploadProgressListener;
-    }) -> (struct {}) error FastbootError;
+    }) -> () error FastbootError;
     SetActive(struct {
         slot string:64;
-    }) -> (struct {}) error FastbootError;
+    }) -> () error FastbootError;
     Oem(struct {
         command string:64;
-    }) -> (struct {}) error FastbootError;
+    }) -> () error FastbootError;
 };
 
 type FastbootTarget = table {

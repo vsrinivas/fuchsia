@@ -95,7 +95,7 @@ protocol GuestManager {
     Launch(resource struct {
         guest_config GuestConfig;
         controller server_end:Guest;
-    }) -> (struct {}) error GuestManagerError;
+    }) -> () error GuestManagerError;
 
     /// Forcibly shuts down a running guest. After ForceShutdown returns, Launch can be used to
     /// launch another guest.
@@ -108,7 +108,7 @@ protocol GuestManager {
     ///         has launched before attempting to reconnect.
     Connect(resource struct {
         controller server_end:Guest;
-    }) -> (struct {}) error GuestManagerError;
+    }) -> () error GuestManagerError;
 
     /// Query guest info
     GetInfo() -> (resource struct {

@@ -519,7 +519,7 @@ protocol Channel {
         @release
         @size32
         handles vector<handle>;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///
@@ -701,7 +701,7 @@ protocol Channel {
         @inout
         @size32
         handles vector<HandleDisposition>;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     @internal
     CallNoretry(resource struct {

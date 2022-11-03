@@ -44,11 +44,11 @@ protocol Engine {
     /// is called.
     Enqueue(struct {
         utterance Utterance;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Speaks all enqueued utterances. The method returns the value when they
     /// are all finished playing.
-    Speak() -> (struct {}) error Error;
+    Speak() -> () error Error;
 
     /// Cancels current speech and also empties the queue.
     Cancel() -> ();

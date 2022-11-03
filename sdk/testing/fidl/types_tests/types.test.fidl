@@ -228,15 +228,15 @@ protocol UsesAnonymous {
                 1: data uint8;
             };
         };
-    }) -> (struct {}) error enum {
+    }) -> () error enum {
         FOO = 1;
     };
 };
 
 protocol ErrorSyntax {
-    EmptyPayload() -> (struct {}) error int32;
+    EmptyPayload() -> () error int32;
     FooPayload() -> (FooResponse) error int32;
-    -> EventEmptyPayload(struct {}) error int32;
+    -> EventEmptyPayload() error int32;
     -> EventFooPayload(FooEvent) error int32;
 };
 

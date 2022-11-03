@@ -95,7 +95,7 @@ protocol Controller {
     /// providers are started.
     StartTracing(struct {
         options StartOptions;
-    }) -> (struct {}) error StartErrorCode;
+    }) -> () error StartErrorCode;
 
     /// Requests to stop tracing.
     ///

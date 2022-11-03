@@ -42,21 +42,21 @@ const MAX_REBOOT_WATCHER_RESPONSE_TIME_SECONDS uint32 = 5;
 @discoverable
 protocol Admin {
     /// Asks the device to enter a fully on state.
-    PowerFullyOn() -> (struct {}) error zx.status;
+    PowerFullyOn() -> () error zx.status;
 
     /// Asks the device to reboot.
     Reboot(struct {
         reason RebootReason;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Asks the device to reboot into the bootloader.
-    RebootToBootloader() -> (struct {}) error zx.status;
+    RebootToBootloader() -> () error zx.status;
 
     /// Asks the device to reboot into the recovery partition.
-    RebootToRecovery() -> (struct {}) error zx.status;
+    RebootToRecovery() -> () error zx.status;
 
     /// Asks all devices to enter a powered off state.
-    Poweroff() -> (struct {}) error zx.status;
+    Poweroff() -> () error zx.status;
 
     /// Performs a kernel mexec.
     ///
@@ -66,13 +66,13 @@ protocol Admin {
     Mexec(resource struct {
         kernel_zbi zx.handle:VMO;
         data_zbi zx.handle:VMO;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Asks the device to enter the suspend to RAM (S3) power state. Currently only supported on
     /// x64. If a system state transition is already in progress then ZX_ERR_ALREADY_EXISTS is
     /// returned. If the device fails to reach the suspend power state then ZX_ERR_INTERNAL is
     /// returned. If the device successfully suspends, ZX_OK is returned when the device resumes.
-    SuspendToRam() -> (struct {}) error zx.status;
+    SuspendToRam() -> () error zx.status;
 };
 
 /// Allows components to register a callback that will be executed when a Reboot

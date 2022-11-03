@@ -138,7 +138,7 @@ protocol Stack {
     /// Reset the Weave configuration.
     ResetConfig(struct {
         flags ResetConfigFlags;
-    }) -> (struct {}) error ErrorCode;
+    }) -> () error ErrorCode;
 };
 
 /// Services Provided to WeaveStack by other components.

@@ -75,7 +75,7 @@ protocol Controller {
             /// Netstack2.
             V2 = 1;
         };
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Stops any running hermetic network realm.
     ///
@@ -89,7 +89,7 @@ protocol Controller {
     ///     is not running.
     /// * error `INTERNAL` for internal errors, including failure to destroy the
     ///     realm.
-    StopHermeticNetworkRealm() -> (struct {}) error Error;
+    StopHermeticNetworkRealm() -> () error Error;
 
     /// Attaches an interface to the hermetic Netstack.
     ///
@@ -115,7 +115,7 @@ protocol Controller {
         mac_address fuchsia.net.MacAddress;
         name fuchsia.net.interfaces.Name;
         wait_any_ip_address bool;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Starts a test stub.
     ///
@@ -132,7 +132,7 @@ protocol Controller {
     /// * error `INVALID_ARGUMENTS` if the `component_url` is malformed.
     StartStub(struct {
         component_url fuchsia.url.Url;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Stops the currently running stub.
     ///
@@ -144,7 +144,7 @@ protocol Controller {
     /// * error `STUB_NOT_RUNNING` if there is no running stub.
     /// * error `INTERNAL` for internal errors, including failure to destroy the
     ///     stub component.
-    StopStub() -> (struct {}) error Error;
+    StopStub() -> () error Error;
 
     /// Sends an ICMP echo request to the `target` using a socket provided by
     /// the hermetic Netstack.
@@ -175,7 +175,7 @@ protocol Controller {
         payload_length uint16;
         interface_name string:<fuchsia.net.interfaces.INTERFACE_NAME_LENGTH, optional>;
         timeout zx.duration;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Polls the specified socket address with UDP datagrams containing the specified payload
     /// using a socket provided by the hermetic Netstack.
@@ -223,7 +223,7 @@ protocol Controller {
     JoinMulticastGroup(struct {
         address fuchsia.net.IpAddress;
         interface_id fuchsia.net.InterfaceId;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Leaves a multicast group that was previously joined using the
     /// `JoinMulticastGroup` method.
@@ -243,7 +243,7 @@ protocol Controller {
     LeaveMulticastGroup(struct {
         address fuchsia.net.IpAddress;
         interface_id fuchsia.net.InterfaceId;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Starts a DHCPv6 client with the provided parameters.
     ///
@@ -266,10 +266,10 @@ protocol Controller {
         2: address fuchsia.net.Ipv6Address;
         3: stateful bool;
         4: request_dns_servers bool;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Stops all DHCPv6 clients.
     ///
     /// * error `DHCPV6_CLIENT_NOT_RUNNING` if no DHCPv6 client is running.
-    StopDhcpv6Client() -> (struct {}) error Error;
+    StopDhcpv6Client() -> () error Error;
 };

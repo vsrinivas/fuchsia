@@ -37,5 +37,5 @@ protocol RuntimeConnector {
     Connect(resource struct {
         protocol_name ProtocolName;
         runtime_protocol RuntimeProtocolServerEnd;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

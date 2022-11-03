@@ -27,5 +27,5 @@ protocol DisplayPower {
     // improve this function to better support multi-display use cases.
     SetDisplayPower(struct {
         power_on bool;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

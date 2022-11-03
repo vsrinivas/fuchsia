@@ -35,5 +35,5 @@ protocol Harness {
     ConnectPackage(resource struct {
         backing Backing;
         dir server_end:fuchsia.io.Directory;
-    }) -> (struct {}) error ConnectError;
+    }) -> () error ConnectError;
 };

@@ -224,7 +224,7 @@ protocol Object {
         @inout
         items vector<WaitItem>;
         deadline time;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///
@@ -368,7 +368,7 @@ protocol Object {
         key uint64;
         signals signals;
         options uint32;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///
@@ -431,7 +431,7 @@ protocol Object {
         handle handle;
         clear_mask uint32;
         set_mask uint32;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///
@@ -496,7 +496,7 @@ protocol Object {
         handle handle;
         clear_mask uint32;
         set_mask uint32;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///
@@ -821,7 +821,7 @@ protocol Object {
         property uint32;
         @voidptr
         value vector<byte>;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///
@@ -2092,5 +2092,5 @@ protocol Object {
         handle handle:THREAD;
         profile handle:PROFILE;
         options uint32;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 };

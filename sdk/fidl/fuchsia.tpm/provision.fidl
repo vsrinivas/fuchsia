@@ -26,5 +26,5 @@ protocol Provision {
 
     /// TakeOwnership is a one time setup call that is required on operating
     /// system install or after a factory reset.
-    TakeOwnership(table {}) -> (struct {}) error zx.status;
+    TakeOwnership(table {}) -> () error zx.status;
 };

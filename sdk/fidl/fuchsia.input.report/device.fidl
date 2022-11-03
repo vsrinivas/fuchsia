@@ -53,7 +53,7 @@ protocol InputDevice {
     /// if the output report does not follow the OutputDescriptor.
     SendOutputReport(struct {
         report OutputReport;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Get the feature report for a given device. This requests the state of
     /// the device's features.
@@ -65,7 +65,7 @@ protocol InputDevice {
     /// the device's features.
     SetFeatureReport(struct {
         report FeatureReport;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// For general cases, InputReportReader is the preferred way of getting
     /// InputReports. For devices that don't send InputReports naturally, this

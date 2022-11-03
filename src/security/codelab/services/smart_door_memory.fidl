@@ -20,13 +20,13 @@ protocol Memory {
     GetReader(resource struct {
         token Token;
         request server_end:Reader;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
     // Get a writer to write to smart door memory. The token would be used to
     // identify the storage that could be written to.
     GetWriter(resource struct {
         token Token;
         request server_end:Writer;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 };
 
 @discoverable

@@ -34,7 +34,7 @@ protocol KernelCases {
         @inout
         @voidptr
         ptr vector<byte>;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     // vector of handles isn't turned into user_out_handle*, rather stays as
     // user_out_ptr<zx_handle_t>, because it's not just one.
@@ -55,5 +55,5 @@ protocol KernelCases {
     CompiledOutInNonTest(struct {
         a int32;
         b int32;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 };

@@ -20,7 +20,7 @@ protocol SystemStateTransition {
     /// Each time the api is called the termination state is updated and cached.
     SetTerminationSystemState(struct {
         state fuchsia.hardware.power.statecontrol.SystemPowerState;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     // When the system termination state is MEXEC, in the course of shutting
     // down, driver_manager will perform an mexec itself after suspending all
@@ -43,5 +43,5 @@ protocol SystemStateTransition {
     SetMexecZbis(resource struct {
         kernel_zbi zx.handle:VMO;
         data_zbi zx.handle:VMO;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

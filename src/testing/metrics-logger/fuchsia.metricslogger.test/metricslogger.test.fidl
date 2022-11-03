@@ -129,7 +129,7 @@ protocol MetricsLogger {
         duration_ms uint32;
         output_samples_to_syslog bool;
         output_stats_to_syslog bool;
-    }) -> (struct {}) error MetricsLoggerError;
+    }) -> () error MetricsLoggerError;
 
     /// Initiates logging of specified metrics. Supports concurrent logging of
     /// different metrics. Logging will only end upon a `StopLogging` call.
@@ -151,7 +151,7 @@ protocol MetricsLogger {
         metrics vector<Metric>:MAX;
         output_samples_to_syslog bool;
         output_stats_to_syslog bool;
-    }) -> (struct {}) error MetricsLoggerError;
+    }) -> () error MetricsLoggerError;
 
     /// Terminates all active logging tasks with the given client_id. It is
     /// valid to call this method when logging is inactive.

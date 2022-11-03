@@ -19,29 +19,29 @@ protocol TestDevice {
     /// Removes the child device of the given |id|.
     RemoveChild(struct {
         child_id uint64;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Asynchronously removes a child device.
     /// The remove must be completed with CompleteUnbind.
     AsyncRemoveChild(struct {
         child_id uint64;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Replies to the child init hook.
     /// Returns an error if the child has no pending init.
     CompleteChildInit(struct {
         child_id uint64;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Registers the client for device lifecycle events.
     SubscribeToLifecycle(resource struct {
         client server_end:Lifecycle;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Finishes an unbind started by AsyncRemoveChild.
     CompleteUnbind(struct {
         child_id uint64;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };
 
 protocol Lifecycle {

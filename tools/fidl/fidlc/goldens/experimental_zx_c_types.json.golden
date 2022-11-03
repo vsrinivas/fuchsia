@@ -3,6 +3,7 @@
   "experiments": [
     "no_optional_structs",
     "output_index_json",
+    "simple_empty_response_syntax",
     "zx_c_types"
   ],
   "library_dependencies": [],

@@ -48,7 +48,7 @@ protocol VolumePolicyController {
     /// Any client of this API can remove policies set by any other client.
     RemovePolicy(struct {
         policy_id PolicyId;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 };
 
 /// A controllable property of the fuchsia.settings.Audio API that can have

@@ -291,11 +291,11 @@ open protocol OpenTarget {
 
     strict StrictTwoWay() -> ();
     strict StrictTwoWayFields() -> (NonEmptyPayload);
-    strict StrictTwoWayErr() -> (struct {}) error int32;
+    strict StrictTwoWayErr() -> () error int32;
     strict StrictTwoWayFieldsErr() -> (NonEmptyPayload) error int32;
-    flexible FlexibleTwoWay() -> (struct {});
+    flexible FlexibleTwoWay() -> ();
     flexible FlexibleTwoWayFields() -> (NonEmptyPayload);
-    flexible FlexibleTwoWayErr() -> (struct {}) error int32;
+    flexible FlexibleTwoWayErr() -> () error int32;
     flexible FlexibleTwoWayFieldsErr() -> (NonEmptyPayload) error int32;
 
     strict -> StrictEvent();

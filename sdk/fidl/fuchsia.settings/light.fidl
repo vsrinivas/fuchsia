@@ -115,5 +115,5 @@ protocol Light {
     SetLightGroupValues(struct {
         name string:MAX_LIGHT_NAME_LENGTH;
         state vector<LightState>:MAX;
-    }) -> (struct {}) error LightError;
+    }) -> () error LightError;
 };

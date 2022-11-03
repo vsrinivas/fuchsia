@@ -12,8 +12,8 @@ protocol Listener {
     Listen(struct {
         target_query TargetQuery;
         global_id uint32;
-    }) -> (struct {}) error fuchsia.gpu.agis.Error;
+    }) -> () error fuchsia.gpu.agis.Error;
 
     // Shut down all running listeners.
-    Shutdown() -> (struct {}) error fuchsia.gpu.agis.Error;
+    Shutdown() -> () error fuchsia.gpu.agis.Error;
 };

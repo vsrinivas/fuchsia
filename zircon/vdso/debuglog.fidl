@@ -129,7 +129,7 @@ protocol Debuglog {
         options uint32;
         @voidptr
         buffer vector<byte>;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///

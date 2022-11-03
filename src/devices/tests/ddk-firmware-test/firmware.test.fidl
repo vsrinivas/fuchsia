@@ -9,9 +9,9 @@ protocol TestDevice {
     /// Call load_firmware and make sure it worked.
     LoadFirmware(struct {
         path string;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
     /// Call load_firmware_async and make sure it worked.
     LoadFirmwareAsync(struct {
         path string;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

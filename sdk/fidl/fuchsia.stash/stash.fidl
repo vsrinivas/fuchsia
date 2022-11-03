@@ -114,7 +114,7 @@ protocol StoreAccessor {
     /// modifications were written to disk.
     /// This operation is equivalent to Commit.
     /// Returns a FlushError if this operations could not be committed.
-    Flush() -> (struct {}) error FlushError;
+    Flush() -> () error FlushError;
 };
 
 /// Interface used to interact with a given client's key/value store

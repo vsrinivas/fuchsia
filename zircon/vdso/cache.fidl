@@ -64,5 +64,5 @@ protocol Cache {
         addr experimental_pointer<byte>;
         size usize;
         options uint32;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 };

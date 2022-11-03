@@ -31,5 +31,5 @@ protocol Device {
     Write(struct {
         offset uint32;
         data vector<uint8>:NVRAM_MAX;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

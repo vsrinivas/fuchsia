@@ -25,7 +25,7 @@ protocol Access {
     AddHomeMember(struct {
         name string:MAX_NAME_SIZE;
         passphrase vector<uint8>:MAX_PASSPHRASE_SIZE;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
     // Open the door with the given name and the given passphrase.
     Open(struct {
         name string:MAX_NAME_SIZE;

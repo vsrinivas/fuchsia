@@ -1160,7 +1160,7 @@ protocol ProtocolSuccess {
 };
 
 protocol ProtocolError {
-    Method() -> (struct {}) error ErrorIntegerType;
+    Method() -> () error ErrorIntegerType;
 };
 
 service Service {
@@ -1201,7 +1201,7 @@ protocol AnonymousLayoutsInProtocol {
     Response() -> (struct { member Type; });
     -> Event(struct { member Type; });
     Success() -> (struct { member Type; }) error uint32;
-    Error() -> (struct {}) error ErrorIntegerType;
+    Error() -> () error ErrorIntegerType;
 };
 )FIDL";
 

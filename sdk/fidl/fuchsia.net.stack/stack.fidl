@@ -54,7 +54,7 @@ protocol Stack {
     /// Remove an Ethernet interface from the network stack.
     DelEthernetInterface(struct {
         id fuchsia.net.InterfaceId;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Add an address to the interface. If the interface already has an address
     /// of a given type that does not allow duplicates, this method will return
@@ -64,7 +64,7 @@ protocol Stack {
     AddInterfaceAddressDeprecated(struct {
         id fuchsia.net.InterfaceId;
         addr fuchsia.net.Subnet;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Remove the address from the interface. If the address is not assigned to
     /// the interface, an error is returned.
@@ -73,7 +73,7 @@ protocol Stack {
     DelInterfaceAddressDeprecated(struct {
         id fuchsia.net.InterfaceId;
         addr fuchsia.net.Subnet;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// List all the entries in the forwarding table for the network stack.
     // TODO(https://fxbug.dev/38528): This is unbounded for now, until we change
@@ -88,14 +88,14 @@ protocol Stack {
     /// destination, an already exists error is returned.
     AddForwardingEntry(struct {
         entry ForwardingEntry;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Removes the forwarding entry. The entry must exactly match an entry in
     /// the forwarding table, with the exception of the metric value, which is
     /// ignored.
     DelForwardingEntry(struct {
         entry ForwardingEntry;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Sets the IP forwarding state for an interface.
     // TODO(https://fxbug.dev/94475): Remove this.
@@ -104,7 +104,7 @@ protocol Stack {
         id fuchsia.net.InterfaceId;
         ip_version fuchsia.net.IpVersion;
         enabled bool;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Get a [`fuchsia.net.name/DnsServerWatcher`].
     GetDnsServerWatcher(resource struct {
@@ -117,7 +117,7 @@ protocol Stack {
     SetDhcpClientEnabled(resource struct {
         id fuchsia.net.InterfaceId;
         enable bool;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 };
 
 @discoverable

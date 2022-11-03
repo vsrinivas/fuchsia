@@ -772,13 +772,13 @@ protocol Controller {
     StartCapture(struct {
         signal_event_id uint64;
         image_id uint64;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Releases resources allocated for capture.
     /// Returns ZX_ERR_NOT_SUPPORTED if controller does not support capture
     ReleaseCapture(struct {
         image_id uint64;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Set the minimum value of rgb channels. Valid range [0 255] inclusive. Returns
     /// ZX_ERR_NOT_SUPPORTED when the display hardware does not support this feature.
@@ -789,7 +789,7 @@ protocol Controller {
     /// API should be used with caution.
     SetMinimumRgb(struct {
         minimum_rgb uint8;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Power off/on the display panel.
     ///
@@ -813,5 +813,5 @@ protocol Controller {
     SetDisplayPower(struct {
         display_id uint64;
         power_on bool;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

@@ -26,7 +26,7 @@ protocol UsbAdbImpl {
     /// the completion state of the transmission itself.
     QueueTx(struct {
         data vector<uint8>:MAX;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Request to receive data. This method ensures flow control by allowing the client to queue
     /// |Receive| requests proactively. The driver will complete the requests only when data is
@@ -53,7 +53,7 @@ protocol Device {
     /// Start USB ADB protocol with |interface|.
     Start(resource struct {
         interface server_end:UsbAdbImpl;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };
 
 /// A Provider is a provider for one service which interacts with the adb component to implement
@@ -75,5 +75,5 @@ protocol Provider {
     ConnectToService(resource struct {
         socket zx.handle:SOCKET;
         args string:<MAX_ARGS_LENGTH, optional>;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

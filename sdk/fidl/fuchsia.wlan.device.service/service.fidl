@@ -190,7 +190,7 @@ protocol DeviceMonitor {
     GetClientSme(resource struct {
         iface_id uint16;
         sme_server server_end:fuchsia.wlan.sme.ClientSme;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
     /// Attempt to establish a new connection to an AP SME.
     /// Connections may be established for the whole lifetime of the SME,
     /// but concurrent connections might lead to unexpected behavior.
@@ -201,7 +201,7 @@ protocol DeviceMonitor {
     GetApSme(resource struct {
         iface_id uint16;
         sme_server server_end:fuchsia.wlan.sme.ApSme;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
     /// Attempt to establish a new connection to telemetry for an SME.
     /// Connections may be established for the whole lifetime of the SME, and
     /// concurrent connections are safe since this is a read-only API.
@@ -212,7 +212,7 @@ protocol DeviceMonitor {
     GetSmeTelemetry(resource struct {
         iface_id uint16;
         telemetry_server server_end:fuchsia.wlan.sme.Telemetry;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
     /// Attempt to establish a new connection to feature queries for an SME.
     /// Connections may be established for the whole lifetime of the SME, and
     /// concurrent connections are safe since this is a read-only API.
@@ -222,5 +222,5 @@ protocol DeviceMonitor {
     GetFeatureSupport(resource struct {
         iface_id uint16;
         feature_support_server server_end:fuchsia.wlan.sme.FeatureSupport;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

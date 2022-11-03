@@ -29,20 +29,20 @@ protocol StorageAdmin {
     ListStorageInRealm(resource struct {
         relative_moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
         iterator server_end:StorageIterator;
-    }) -> (struct {}) error fuchsia.component.Error;
+    }) -> () error fuchsia.component.Error;
 
     /// Opens the isolated directory for the given storage ID. The open request will provision
     /// the storage if it hasn't been already.
     OpenComponentStorageById(resource struct {
         id string:MAX_STORAGE_ID_LENGTH;
         object server_end:fuchsia.io.Node;
-    }) -> (struct {}) error fuchsia.component.Error;
+    }) -> () error fuchsia.component.Error;
 
     /// Deletes the contents of the storage for this component. Does not delete the component's
     /// subdirectory itself from the backing directory.
     DeleteComponentStorage(struct {
         relative_moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
-    }) -> (struct {}) error fuchsia.component.Error;
+    }) -> () error fuchsia.component.Error;
 };
 
 /// An iterator protocol for returning a set of components using a storage capability. See

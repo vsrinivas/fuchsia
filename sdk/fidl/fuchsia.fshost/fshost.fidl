@@ -47,12 +47,12 @@ protocol Admin {
         device client_end:fuchsia.hardware.block.Block;
         name string:fuchsia.io.MAX_FILENAME;
         options MountOptions;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Unmounts a previously mounted filesystem.
     Unmount(struct {
         name string:fuchsia.io.MAX_FILENAME;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Returns the device path for the filesystem with the given fs_id.
     GetDevicePath(struct {
@@ -69,7 +69,7 @@ protocol Admin {
     WriteDataFile(resource struct {
         filename string:fuchsia.io.MAX_PATH;
         payload zx.handle:VMO;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Reprovision the first non-ramdisk FVM volume (based on class path index), and format/mount
     /// the blob partition. The formatted Blobfs instance can be accessed via the client end of the
@@ -85,5 +85,5 @@ protocol Admin {
     /// and unseal the zxcrypt volume.
     WipeStorage(resource struct {
         blobfs_root server_end:<fuchsia.io.Directory>;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

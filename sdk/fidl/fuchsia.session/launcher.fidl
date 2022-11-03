@@ -24,7 +24,7 @@ protocol Launcher {
     ///   could not be started. No session will be running at this point.
     Launch(struct {
         configuration LaunchConfiguration;
-    }) -> (struct {}) error LaunchError;
+    }) -> () error LaunchError;
 };
 
 /// An error that occurs when launching a session.
@@ -53,7 +53,7 @@ protocol Restarter {
     ///   could not be destroyed. The existing session remains running at this point.
     /// * error `RestartError.CREATE_COMPONENT_FAILED` if the session component
     ///   could not be started. No session will be running at this point.
-    Restart() -> (struct {}) error RestartError;
+    Restart() -> () error RestartError;
 };
 
 /// An error that occurs when restarting a session.

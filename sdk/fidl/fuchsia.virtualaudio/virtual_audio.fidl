@@ -19,14 +19,14 @@ protocol Control {
     AddInput(resource struct {
         config Configuration;
         server server_end:Device;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Adds an output device to the device tree.
     /// The device lives until the `Device` FIDL channel is closed.
     AddOutput(resource struct {
         config Configuration;
         server server_end:Device;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Returns the number of active input and output virtual devices.
     GetNumDevices() -> (struct {

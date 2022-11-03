@@ -26,7 +26,7 @@ protocol Selection {
         requeue_ptr experimental_pointer<Futex>;
         requeue_count uint32;
         new_requeue_owner handle;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     ObjectWaitOne(resource struct {
         handle handle;
@@ -60,7 +60,7 @@ protocol Selection {
         val uint32;
         width usize;
         write bool;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     // uint32_t for size of a "vector".
     JobSetPolicy(resource struct {
@@ -70,7 +70,7 @@ protocol Selection {
         @voidptr
         @size32
         policy vector<byte>;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     // Handling of enums.
     ClockGet(struct {

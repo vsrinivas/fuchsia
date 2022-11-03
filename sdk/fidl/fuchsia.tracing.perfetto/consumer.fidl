@@ -20,5 +20,5 @@ protocol ConsumerConnector {
     // TODO(fxb/85561): Define error conditions and status codes.
     ConnectConsumer(resource struct {
         consumer_socket zx.handle:SOCKET;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

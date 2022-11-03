@@ -92,7 +92,7 @@ protocol DsiExtended {
     /// Command and Video Mode.
     Config(struct {
         dsi_config DsiConfig;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
     /// This function is called to power up the DSI interface.
     PowerUp() -> ();
     /// This function is called to power down the DSI interface.
@@ -110,7 +110,7 @@ protocol DsiExtended {
     /// This function configures the MIPI D-PHY block if it exists within the DSI IP block.
     PhyConfig(struct {
         dsi_config DsiConfig;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
     /// This function is used to power up the MIPI D-PHY block.
     PhyPowerUp() -> ();
     /// This function is used to power down the MIPI D-PHY block.
@@ -122,13 +122,13 @@ protocol DsiExtended {
     }) -> ();
     /// This function returns ZX_OK once MIPI D-PHY block is ready. MIPI D-PHY block is
     /// considered ready once the LOCK Bit and StopStateClk bit are set.
-    PhyWaitForReady() -> (struct {}) error zx.status;
+    PhyWaitForReady() -> () error zx.status;
     /// This function allows writing to any register within the DSI IP block. This could be used
     /// for debug purposes during development stages.
     WriteReg(struct {
         reg uint32;
         val uint32;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
     /// This function returns the value of any register within the DSI IP block.
     ReadReg(struct {
         reg uint32;
@@ -138,7 +138,7 @@ protocol DsiExtended {
     /// This function enables Built-In Self-Test (BIST) pattern generation.
     EnableBist(struct {
         pattern uint32;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
     /// This function prints the value of all DSI IP block registers.
     PrintDsiRegisters() -> ();
 };

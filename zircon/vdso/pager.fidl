@@ -230,7 +230,7 @@ protocol Pager {
     DetachVmo(resource struct {
         pager handle:PAGER;
         vmo handle:VMO;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///
@@ -311,7 +311,7 @@ protocol Pager {
         length uint64;
         aux_vmo handle:VMO;
         aux_offset uint64;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///
@@ -443,7 +443,7 @@ protocol Pager {
         offset uint64;
         length uint64;
         data uint64;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     /// ## Summary
     ///

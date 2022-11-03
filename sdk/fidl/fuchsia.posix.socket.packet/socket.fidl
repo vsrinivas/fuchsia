@@ -151,7 +151,7 @@ protocol Socket {
             1: all Empty;
             2: specified fuchsia.net.InterfaceId;
         };
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
 
     /// Returns the the socket's properties.
     ///
@@ -214,7 +214,7 @@ protocol Socket {
             1: socket fuchsia.posix.socket.SocketSendControlData;
         };
         flags fuchsia.posix.socket.SendMsgFlags;
-    }) -> (struct {}) error fuchsia.posix.Errno;
+    }) -> () error fuchsia.posix.Errno;
 };
 
 /// A packet socket provider.

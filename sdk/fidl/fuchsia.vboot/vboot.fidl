@@ -140,5 +140,5 @@ protocol FirmwareParam {
     Set(struct {
         key Key;
         value uint32;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

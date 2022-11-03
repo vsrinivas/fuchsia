@@ -227,11 +227,11 @@ protocol DriverDevelopment {
     /// (DFv2) Adds test node under the root node.
     AddTestNode(struct {
         args TestNodeAddArgs;
-    }) -> (struct {}) error fuchsia.driver.framework.NodeError;
+    }) -> () error fuchsia.driver.framework.NodeError;
 
     /// (DFv2) Removes the test node. The node is removed asynchronously and is
     /// not guaranteed to be removed by the time this returns.
     RemoveTestNode(struct {
         name string:fuchsia.device.manager.DEVICE_PATH_MAX;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

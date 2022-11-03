@@ -11,14 +11,14 @@ protocol TestDevice {
     CreateDevice(resource struct {
         lifecycle server_end:Lifecycle;
         client_remote zx.handle:<CHANNEL, optional>;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };
 
 protocol InstanceDevice {
     /// Get a stream of lifecycle events for this instance device
     SubscribeToLifecycle(resource struct {
         lifecycle server_end:Lifecycle;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Request the asynchronous removal of the main device, rather than the instance devices.
     RemoveDevice();

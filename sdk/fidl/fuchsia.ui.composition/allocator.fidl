@@ -105,5 +105,5 @@ protocol Allocator {
     /// See [`RegisterBufferCollectionArgs`] for information on each argument.
     RegisterBufferCollection(resource struct {
         args RegisterBufferCollectionArgs;
-    }) -> (struct {}) error RegisterBufferCollectionError;
+    }) -> () error RegisterBufferCollectionError;
 };

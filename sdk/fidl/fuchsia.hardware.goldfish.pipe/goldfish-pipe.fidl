@@ -62,7 +62,7 @@ protocol GoldfishPipe {
     SetEvent(resource struct {
         id int32;
         pipe_event zx.handle:EVENT;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Open pipe connection. This must be called before any other
     /// commands are issued and will cause the physical address of the
@@ -86,13 +86,13 @@ protocol GoldfishPipe {
     /// Create a sysmem connection - used to implement fuchsia.hardware.sysmem.
     ConnectSysmem(resource struct {
         connection zx.handle:CHANNEL;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Register a sysmem heap.
     RegisterSysmemHeap(resource struct {
         heap uint64;
         connection zx.handle:CHANNEL;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };
 
 service Service {

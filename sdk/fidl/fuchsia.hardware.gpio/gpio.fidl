@@ -30,12 +30,12 @@ protocol Gpio {
     /// Configures a GPIO for input.
     ConfigIn(struct {
         flags GpioFlags;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Configures a GPIO for output.
     ConfigOut(struct {
         initial_value uint8;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Reads the current value of a GPIO (0 or 1).
     Read() -> (struct {
@@ -45,7 +45,7 @@ protocol Gpio {
     /// Sets the current value of the GPIO (any non-zero value maps to 1).
     Write(struct {
         value uint8;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Sets the drive strength of the GPIO.
     /// actual_ds_ua is always >= ds_ua. If ds_ua is larger than max value, the drive strength will be set to the max value.
@@ -71,5 +71,5 @@ protocol Gpio {
     }) error zx.status;
 
     /// Release the interrupt.
-    ReleaseInterrupt() -> (struct {}) error zx.status;
+    ReleaseInterrupt() -> () error zx.status;
 };

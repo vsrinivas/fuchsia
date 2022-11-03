@@ -57,7 +57,7 @@ protocol NavigationController {
     LoadUrl(resource struct {
         url Url;
         params LoadUrlParams;
-    }) -> (struct {}) error NavigationControllerError;
+    }) -> () error NavigationControllerError;
 
     /// Tells the [`Frame`] to navigate to the previous page in its history, if any.
     GoBack();

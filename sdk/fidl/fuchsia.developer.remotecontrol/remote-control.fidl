@@ -43,32 +43,32 @@ protocol RemoteControl {
     /// Connects to the root [`fuchsia.sys2/RealmExplorer`] protocol.
     RootRealmExplorer(resource struct {
         server server_end:sys2.RealmExplorer;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Connects to the root [`fuchsia.sys2/RealmQuery`] protocol.
     RootRealmQuery(resource struct {
         server server_end:sys2.RealmQuery;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Connects to the root [`fuchsia.sys2/LifecycleController`] protocol.
     RootLifecycleController(resource struct {
         server server_end:sys2.LifecycleController;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Connects to the root [`fuchsia.sys2/RouteValidator`] protocol.
     RootRouteValidator(resource struct {
         server server_end:sys2.RouteValidator;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     // Connects to the [`fuchsia.kernel/Stats`] protocol
     KernelStats(resource struct {
         server server_end:kernel.Stats;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     // Connects to the [`fuchsia.boot/Arguments`] protocol
     BootArguments(resource struct {
         server server_end:boot.Arguments;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     IdentifyHost() -> (struct {
         response IdentifyHostResponse;
@@ -116,14 +116,14 @@ protocol RemoteControl {
     ForwardTcp(resource struct {
         addr net.SocketAddress;
         socket zx.handle:SOCKET;
-    }) -> (struct {}) error TunnelError;
+    }) -> () error TunnelError;
 
     // Listens on a TCP port and forwards any incoming connections to newly-created sockets which
     // are passed back via the callback.
     ReverseTcp(resource struct {
         addr net.SocketAddress;
         client client_end:ForwardCallback;
-    }) -> (struct {}) error TunnelError;
+    }) -> () error TunnelError;
 };
 
 protocol ForwardCallback {

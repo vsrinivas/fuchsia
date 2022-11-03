@@ -109,7 +109,7 @@ protocol RemoteService {
         handle Handle;
         value vector<uint8>:MAX_VALUE_LENGTH;
         options WriteOptions;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Reads the value of the characteristic descriptor with `handle` and
     /// returns it in the reply.
@@ -150,7 +150,7 @@ protocol RemoteService {
         handle Handle;
         value vector<uint8>:MAX_VALUE_LENGTH;
         options WriteOptions;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Subscribe to notifications & indications from the characteristic with
     /// the given `handle`.
@@ -182,7 +182,7 @@ protocol RemoteService {
     RegisterCharacteristicNotifier(resource struct {
         handle Handle;
         notifier client_end:CharacteristicNotifier;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 };
 
 protocol Client {

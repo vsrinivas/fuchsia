@@ -11,5 +11,5 @@ using zx;
 protocol Deprovision {
     /// Connects to the Physical Presence Interface via ACPI and
     /// instructs the firmware to reset the TPM on reboot.
-    RemoveOwnership(table {}) -> (struct {}) error zx.status;
+    RemoveOwnership(table {}) -> () error zx.status;
 };

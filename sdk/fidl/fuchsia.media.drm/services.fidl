@@ -39,7 +39,7 @@ protocol KeySystem {
     AddDataStore(resource struct {
         data_store_id uint32;
         data_store_params DataStoreParams;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Destroys the client data store.
     ///

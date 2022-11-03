@@ -11,10 +11,10 @@ protocol SpecialNonBlocking {
     @blocking
     FutexWait(struct {
         a uint32;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     @blocking
     Nanosleep(struct {
         a uint32;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 };

@@ -11,7 +11,7 @@ using zx;
 protocol Setter {
     Set(struct {
         value uint32;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };
 
 @discoverable

@@ -82,14 +82,14 @@ protocol ClientController {
     /// the method will effectively be a no-op.
     SaveNetwork(struct {
         config NetworkConfig;
-    }) -> (struct {}) error NetworkConfigChangeError;
+    }) -> () error NetworkConfigChangeError;
 
     /// Removes a saved network configuration, if one exists.  This method will
     /// automatically trigger a disconnection if the NetworkConfig was used to
     /// establish the connection.
     RemoveNetwork(struct {
         config NetworkConfig;
-    }) -> (struct {}) error NetworkConfigChangeError;
+    }) -> () error NetworkConfigChangeError;
 
     /// Retrieve the currently saved networks using the provided iterator.
     GetSavedNetworks(resource struct {

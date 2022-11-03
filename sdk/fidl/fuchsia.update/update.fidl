@@ -30,7 +30,7 @@ protocol Manager {
     CheckNow(resource struct {
         options CheckOptions;
         monitor client_end:<Monitor, optional>;
-    }) -> (struct {}) error CheckNotStartedReason;
+    }) -> () error CheckNotStartedReason;
 
     /// Performs any pending reboot of the system into an updated OS, if an
     /// update has been staged for the next system startup.

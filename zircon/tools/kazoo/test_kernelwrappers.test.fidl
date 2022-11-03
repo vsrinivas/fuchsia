@@ -12,7 +12,7 @@ protocol Kwrap {
 
     MultipleInHandles(resource struct {
         handles vector<handle>;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     // vdsocall excluded.
     @vdsocall
@@ -33,7 +33,7 @@ protocol Kwrap {
         @inout
         @voidptr
         buffer vector<byte>;
-    }) -> (struct {}) error status;
+    }) -> () error status;
 
     // Output handle copied properly.
     OutputHandle() -> (resource struct {
@@ -48,5 +48,5 @@ protocol Kwrap {
     }) error status;
 
     @testonly
-    CompiledOut() -> (struct {}) error status;
+    CompiledOut() -> () error status;
 };

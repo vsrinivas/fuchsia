@@ -90,7 +90,7 @@ protocol KeyManager {
     GenerateAsymmetricKey(resource struct {
         key_name string:MAX_KEY_NAME_SIZE;
         key server_end:AsymmetricPrivateKey;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Generate an asymmetric key with a specific algorithm.
     ///
@@ -101,7 +101,7 @@ protocol KeyManager {
         key_name string:MAX_KEY_NAME_SIZE;
         key_algorithm AsymmetricKeyAlgorithm;
         key server_end:AsymmetricPrivateKey;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Import an asymmetric private key with a specific algorithm.
     ///
@@ -114,7 +114,7 @@ protocol KeyManager {
         key_name string:MAX_KEY_NAME_SIZE;
         key_algorithm AsymmetricKeyAlgorithm;
         key server_end:AsymmetricPrivateKey;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Get an asymmetric private key handle.
     ///
@@ -123,7 +123,7 @@ protocol KeyManager {
     GetAsymmetricPrivateKey(resource struct {
         key_name string:MAX_KEY_NAME_SIZE;
         key server_end:AsymmetricPrivateKey;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     /// Delete a key.
     ///
@@ -132,7 +132,7 @@ protocol KeyManager {
     /// should close the invalid handles once get `KEY_NOT_FOUND` error.
     DeleteKey(struct {
         key_name string:MAX_KEY_NAME_SIZE;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 };
 
 protocol Key {

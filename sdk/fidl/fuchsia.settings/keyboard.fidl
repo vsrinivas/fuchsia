@@ -26,7 +26,7 @@ protocol KeyboardSet {
     /// To clear a field, set it to its type's "zero" value.
     Set(struct {
         settings KeyboardSettings;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 };
 
 /// The read-only API for monitoring the changes to the keyboard settings.

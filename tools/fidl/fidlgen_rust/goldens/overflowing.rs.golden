@@ -3,6 +3,7 @@
 // experiment = allow_overflowing
 // experiment = no_optional_structs
 // experiment = output_index_json
+// experiment = simple_empty_response_syntax
 
 #![allow(
     unused_parens, // one-element-tuple-case is not a tuple

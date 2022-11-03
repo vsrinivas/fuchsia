@@ -31,7 +31,7 @@ protocol SharedVmoRegister {
         vmo_id uint32;
         vmo fuchsia.mem.Range;
         rights SharedVmoRight;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Unmaps and/or unpins the VMO and returns the handle to the caller.
     UnregisterVmo(struct {
@@ -48,17 +48,17 @@ protocol SharedVmoIo {
     /// Sends the data in buffer to the device.
     Transmit(struct {
         buffer SharedVmoBuffer;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Receives data from the device into buffer.
     Receive(struct {
         buffer SharedVmoBuffer;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Simultaneously transmits and receives data. The size fields of tx_buffer and rx_buffer must
     /// be the same.
     Exchange(struct {
         tx_buffer SharedVmoBuffer;
         rx_buffer SharedVmoBuffer;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 };

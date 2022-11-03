@@ -37,7 +37,7 @@ protocol Input {
     /// will not be modified.
     Set(struct {
         input_states vector<InputState>:MAX;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 
     @available(deprecated=7, removed=9)
     Watch2() -> (struct {
@@ -47,7 +47,7 @@ protocol Input {
     @available(deprecated=7, removed=9)
     SetStates(struct {
         input_states vector<InputState>:MAX;
-    }) -> (struct {}) error Error;
+    }) -> () error Error;
 };
 
 /// A series of flags determining the state of an input device mute toggle.

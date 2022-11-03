@@ -19,12 +19,12 @@ protocol Tunnel {
         target string:<fuchsia.device.DEVICE_NAME_MAX>;
         host_address fuchsia.net.SocketAddress;
         target_address fuchsia.net.SocketAddress;
-    }) -> (struct {}) error TunnelError;
+    }) -> () error TunnelError;
 
     /// Forwards a TCP port on the target to the host address, from the host.
     ReversePort(struct {
         target string:<fuchsia.device.DEVICE_NAME_MAX>;
         host_address fuchsia.net.SocketAddress;
         target_address fuchsia.net.SocketAddress;
-    }) -> (struct {}) error TunnelError;
+    }) -> () error TunnelError;
 };

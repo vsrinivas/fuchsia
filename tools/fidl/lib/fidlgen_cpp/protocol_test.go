@@ -122,13 +122,13 @@ func TestNaturalArgumentRenderingSendPath(t *testing.T) {
 		},
 		{
 			desc:          "flexible empty struct response",
-			fidl:          "open protocol P { flexible Method() -> (struct {}); };",
+			fidl:          "open protocol P { flexible Method() -> (); };",
 			actualChooser: func(p *Protocol) string { return p.Methods[0].NaturalResponseArg("r") },
 			expected:      "",
 		},
 		{
 			desc:          "domain error empty struct response",
-			fidl:          "closed protocol P { strict Method() -> (struct {}) error int32; };",
+			fidl:          "closed protocol P { strict Method() -> () error int32; };",
 			actualChooser: func(p *Protocol) string { return p.Methods[0].NaturalResponseArg("r") },
 			expected:      "const ::fidl::Response<::example::P::Method>& r", // fit::result<int32_t>
 		},

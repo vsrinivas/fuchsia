@@ -4,5 +4,5 @@
 library example;
 
 protocol MyProtocol {
-    -> OnMyEvent(struct {}) error int32;
+    -> OnMyEvent() error int32;
 };

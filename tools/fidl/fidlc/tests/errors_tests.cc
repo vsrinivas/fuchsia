@@ -73,7 +73,7 @@ TEST(ErrorsTests, GoodErrorEmptyStructAsSuccess) {
 library example;
 
 protocol MyProtocol {
-  MyMethod() -> (struct {}) error uint32;
+  MyMethod() -> () error uint32;
 };
 )FIDL");
   ASSERT_COMPILED(library);

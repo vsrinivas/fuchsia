@@ -75,7 +75,7 @@ protocol DeviceManager {
     /// protocol in the device tree, then return.
     OpenForWrite(struct {
         config Config;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Requests that the device in `authoring` mode:
     /// * unbind the child device named `mutable`
@@ -129,7 +129,7 @@ protocol DeviceManager {
     OpenForVerifiedRead(struct {
         config Config;
         seal Seal;
-    }) -> (struct {}) error zx.status;
+    }) -> () error zx.status;
 
     /// Requests that the device in either `authoring` mode or `verified-read` mode
     /// unbind any child devices and return to `closed` mode.
@@ -140,5 +140,5 @@ protocol DeviceManager {
     /// * If the device was in `verified-read` mode, removes the child `verified` device
     /// * Enters `closed` mode.
     /// * Returns from this call
-    Close() -> (struct {}) error zx.status;
+    Close() -> () error zx.status;
 };
