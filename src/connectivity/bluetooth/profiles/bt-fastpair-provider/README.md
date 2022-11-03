@@ -9,6 +9,12 @@ Ensure `//src/connectivity/bluetooth/profiles/bt-fastpair-provider` is in your F
 include it in the universe set of packages, use the `fx set` configuration or `fx args`. To include
 it in the base or cached set of packages, update the product-specific `.gni` file.
 
+`bt-fastpair-provider` provides the [fuchsia.bluetooth.fastpair.Provider](/sdk/fidl/fuchsia.bluetooth.fastpair/provider.fidl)
+capability which allows clients to enable/disable the service. Include the
+[core shard](/src/connectivity/bluetooth/core/bt-init/meta/bt-fastpair.core_shard.cml) in the
+product configuration. For example, for the workstation configuration, add the core shard to the
+`core_realm_shards` list in [workstation.gni](/products/common/workstation.gni).
+
 ## Configuration
 
 The component relies on [structured configuration](https://fuchsia.dev/fuchsia-src/development/components/configuration/structured_config)

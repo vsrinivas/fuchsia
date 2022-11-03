@@ -71,6 +71,10 @@ core_shard("bt-bootstrap-core-shard") {
   shard_file = "meta/bt-bootstrap.core_shard.cml"
 }
 
+core_shard("fastpair-core-shard") {
+  shard_file = "meta/bt-fastpair.core_shard.cml"
+}
+
 # The fuchsia.bluetooth.rfcomm.test.RfcommTest capability is only relevant to test configurations.
 # Product integrators that require it should include this shard to expose the protocol to appmgr via
 # bt-init.
