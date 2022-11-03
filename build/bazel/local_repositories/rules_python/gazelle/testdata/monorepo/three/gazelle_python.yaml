@@ -1,0 +1,6 @@
+manifest:
+  modules_mapping:
+    boto3: threeboto3
+  pip_repository:
+    name: three_pip_deps
+    incremental: true

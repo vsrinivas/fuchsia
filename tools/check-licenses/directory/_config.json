@@ -136,6 +136,14 @@
         "notes": [
           "Skip generated localization directories"
         ]
+      },
+      {
+        "paths": [
+          "build/bazel/local_repositories"
+        ],
+        "notes": [
+          "Skip local copies of external Bazel repositories"
+        ]
       }
     ]
   }

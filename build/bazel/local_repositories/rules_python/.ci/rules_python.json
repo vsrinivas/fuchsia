@@ -1,0 +1,13 @@
+[
+    {
+        "variation": "",
+        "configurations": [
+            {
+                "node": "linux-x86_64"
+            },
+            {
+                "node": "darwin-x86_64"
+            }
+        ]
+    }
+]
