@@ -9,6 +9,7 @@
 
 mod directory;
 pub mod minfs;
+mod state;
 mod volume;
 
 pub use volume::EncryptedVolumeStorageManager;

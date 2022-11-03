@@ -48,7 +48,7 @@ rustc_library("storage_manager") {
     "src/minfs.rs",
     "src/minfs/constants.rs",
     "src/minfs/disk.rs",
-    "src/minfs/state.rs",
+    "src/state.rs",
     "src/volume.rs",
   ]
 }

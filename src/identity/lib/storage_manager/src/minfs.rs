@@ -6,8 +6,8 @@ use crate::{
     minfs::{
         constants::{ACCOUNT_LABEL, FUCHSIA_DATA_GUID},
         disk::{DiskError, DiskManager, EncryptedBlockDevice, Minfs, Partition},
-        state::State,
     },
+    state::State,
     StorageManager as StorageManagerTrait,
 };
 use account_common::AccountManagerError;
@@ -23,7 +23,6 @@ use tracing::{error, info, warn};
 
 pub mod constants;
 pub mod disk;
-mod state;
 
 pub struct StorageManager<DM>
 where
