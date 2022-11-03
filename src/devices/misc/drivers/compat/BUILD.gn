@@ -8,6 +8,7 @@ import("//build/drivers.gni")
 group("compat") {
   deps = [
     ":compat_v1_child_device_instance_test",
+    ":compat_v1_client_remote_test",
     ":compat_v1_create_test",
     ":compat_v1_device_add_null_test",
     ":compat_v1_missing_test",
@@ -115,6 +116,30 @@ fuchsia_driver_component("compat_v1_child_device_instance_test") {
   colocate = true
 }
 
+fidl("fuchsia.test.echo") {
+  sources = [ "test.echo.fidl" ]
+}
+
+fuchsia_driver("v1_client_remote_test") {
+  sources = [
+    "v1_client_remote_test.cc",
+    "v1_client_remote_test.h",
+  ]
+  deps = [
+    ":fuchsia.test.echo_cpp",
+    ":v1_test_bind",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+  ]
+}
+
+fuchsia_driver_component("compat_v1_client_remote_test") {
+  deps = [ ":v1_client_remote_test" ]
+  info = "compat_v1_client_remote_test-info.json"
+  colocate = true
+}
+
 fuchsia_driver("v1_create_test") {
   sources = [
     "v1_create_test.cc",
@@ -182,6 +207,7 @@ executable("unittests") {
     "v1_test.h",
   ]
   deps = [
+    ":fuchsia.test.echo_cpp",
     ":lib",
     ":test-firmware-file",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_cpp_wire_testing",
@@ -207,6 +233,7 @@ fuchsia_unittest_package("compat_test") {
   }
   deps = [
     ":compat_v1_child_device_instance_test",
+    ":compat_v1_client_remote_test",
     ":compat_v1_create_test",
     ":compat_v1_device_add_null_test",
     ":compat_v1_missing_test",

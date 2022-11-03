@@ -591,6 +591,11 @@ void Driver::LoadFirmwareAsync(Device* device, const char* filename,
 }
 
 zx_status_t Driver::AddDevice(Device* parent, device_add_args_t* args, zx_device_t** out) {
+  zx::channel client_remote(args->client_remote);
+  if (client_remote.is_valid() && args->flags & DEVICE_ADD_MUST_ISOLATE) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   zx_device_t* child;
   zx_status_t status = parent->Add(args, &child);
   if (status != ZX_OK) {
@@ -599,6 +604,17 @@ zx_status_t Driver::AddDevice(Device* parent, device_add_args_t* args, zx_device
   }
   if (out) {
     *out = child;
+  }
+
+  if (client_remote.is_valid()) {
+    auto options = fs::VnodeConnectionOptions::FromIoV1Flags(fio::wire::OpenFlags::kRightReadable |
+                                                             fio::wire::OpenFlags::kRightWritable);
+    status = devfs_vfs_->Serve(child->dev_vnode(), std::move(client_remote), options);
+    if (status != ZX_OK) {
+      FDF_LOG(ERROR, "Failed to serve client remote for device %s: %s", args->name,
+              zx_status_get_string(status));
+      return status;
+    }
   }
 
   executor_.schedule_task(child->Export());

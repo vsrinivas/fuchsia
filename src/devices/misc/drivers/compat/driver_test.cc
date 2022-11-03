@@ -27,6 +27,7 @@
 #include <mock-boot-arguments/server.h>
 
 #include "sdk/lib/driver/runtime/testing/loop_fixture/test_loop_fixture.h"
+#include "src/devices/misc/drivers/compat/v1_client_remote_test.h"
 #include "src/devices/misc/drivers/compat/v1_test.h"
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
@@ -533,6 +534,39 @@ TEST_F(DriverTest, Start) {
     const std::lock_guard<std::mutex> lock(v1_test->lock);
     EXPECT_TRUE(v1_test->did_release);
   }
+}
+
+TEST_F(DriverTest, ClientRemote) {
+  const char* kEchoString = "test";
+
+  zx_protocol_device_t ops{
+      .get_protocol = [](void*, uint32_t, void*) { return ZX_OK; },
+  };
+  auto driver = StartDriver("/pkg/driver/v1_client_remote_test.so", &ops);
+
+  // Verify that v1_client_remote.so has added a child device.
+  WaitForChildDeviceAdded();
+
+  // Verify that v1_client_remote.so has set a context.
+  std::unique_ptr<v1_client_remote_test::Context> ctx(
+      static_cast<v1_client_remote_test::Context*>(driver->Context()));
+  ASSERT_NE(nullptr, ctx.get());
+
+  // Verify that the device can process FIDL requests sent from the channel
+  // specified in the "client remote" parameter set when adding the device.
+  {
+    const std::lock_guard<std::mutex> lock(ctx->lock);
+    ASSERT_TRUE(ctx->echo_client.has_value());
+    ASSERT_TRUE(ctx->echo_client.value().is_valid());
+    auto echo_client = fidl::WireSyncClient{*std::move(ctx->echo_client)};
+    auto res = echo_client->EchoString(fidl::StringView::FromExternal(kEchoString));
+    ASSERT_EQ(res.status(), ZX_OK);
+    ASSERT_EQ(res->response.get(), kEchoString);
+  }
+
+  ShutdownDriverDispatcher();
+  driver.reset();
+  ASSERT_TRUE(RunTestLoopUntilIdle());
 }
 
 TEST_F(DriverTest, Start_ChildDeviceInstance) {

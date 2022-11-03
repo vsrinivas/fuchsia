@@ -1,0 +1,10 @@
+{
+    "short_description": "Driver framework DFv1 client remote test driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "DriverFramework",
+        "Test"
+    ]
+}
