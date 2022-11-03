@@ -9,6 +9,7 @@
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <fidl/fuchsia.sysmem2/cpp/natural_types.h>
 #include <fidl/fuchsia.sysmem2/cpp/wire.h>
+#include <fuchsia/sysmem/c/fidl.h>
 #include <lib/fidl/cpp/wire/traits.h>
 #include <lib/fpromise/result.h>
 
@@ -139,28 +140,40 @@ static_assert(2 == fidl_underlying_cast(static_cast<fuchsia_sysmem2::HeapType>(2
     const fuchsia_sysmem::PixelFormat& v1);
 [[nodiscard]] fuchsia_sysmem2::wire::PixelFormat V2CopyFromV1PixelFormat(
     fidl::AnyArena& allocator, const fuchsia_sysmem::wire::PixelFormat& v1);
+[[nodiscard]] fuchsia_sysmem2::wire::PixelFormat V2CopyFromV1PixelFormat(
+    fidl::AnyArena& allocator, const fuchsia_sysmem_PixelFormat& v1);
 
 [[nodiscard]] fuchsia_sysmem2::ColorSpace V2CopyFromV1ColorSpace(
     const fuchsia_sysmem::ColorSpace& v1);
 [[nodiscard]] fuchsia_sysmem2::wire::ColorSpace V2CopyFromV1ColorSpace(
     fidl::AnyArena& allocator, const fuchsia_sysmem::wire::ColorSpace& v1);
+[[nodiscard]] fuchsia_sysmem2::wire::ColorSpace V2CopyFromV1ColorSpace(
+    fidl::AnyArena& allocator, const fuchsia_sysmem_ColorSpace& v1);
 
 [[nodiscard]] fpromise::result<fuchsia_sysmem2::ImageFormatConstraints>
 V2CopyFromV1ImageFormatConstraints(const fuchsia_sysmem::ImageFormatConstraints& v1);
 [[nodiscard]] fpromise::result<fuchsia_sysmem2::wire::ImageFormatConstraints>
 V2CopyFromV1ImageFormatConstraints(fidl::AnyArena& allocator,
                                    const fuchsia_sysmem::wire::ImageFormatConstraints& v1);
+[[nodiscard]] fpromise::result<fuchsia_sysmem2::wire::ImageFormatConstraints>
+V2CopyFromV1ImageFormatConstraints(fidl::AnyArena& allocator,
+                                   const fuchsia_sysmem_ImageFormatConstraints& v1);
 
 [[nodiscard]] fpromise::result<fuchsia_sysmem2::BufferUsage> V2CopyFromV1BufferUsage(
     const fuchsia_sysmem::BufferUsage& v1);
 [[nodiscard]] fpromise::result<fuchsia_sysmem2::wire::BufferUsage> V2CopyFromV1BufferUsage(
     fidl::AnyArena& allocator, const fuchsia_sysmem::wire::BufferUsage& v1);
+[[nodiscard]] fpromise::result<fuchsia_sysmem2::wire::BufferUsage> V2CopyFromV1BufferUsage(
+    fidl::AnyArena& allocator, const fuchsia_sysmem_BufferUsage& v1);
 
 [[nodiscard]] fpromise::result<fuchsia_sysmem2::BufferMemoryConstraints>
 V2CopyFromV1BufferMemoryConstraints(const fuchsia_sysmem::BufferMemoryConstraints& v1);
 [[nodiscard]] fpromise::result<fuchsia_sysmem2::wire::BufferMemoryConstraints>
 V2CopyFromV1BufferMemoryConstraints(fidl::AnyArena& allocator,
                                     const fuchsia_sysmem::wire::BufferMemoryConstraints& v1);
+[[nodiscard]] fpromise::result<fuchsia_sysmem2::wire::BufferMemoryConstraints>
+V2CopyFromV1BufferMemoryConstraints(fidl::AnyArena& allocator,
+                                    const fuchsia_sysmem_BufferMemoryConstraints& v1);
 
 [[nodiscard]] fpromise::result<fuchsia_sysmem2::BufferCollectionConstraints>
 V2CopyFromV1BufferCollectionConstraints(
@@ -170,11 +183,17 @@ V2CopyFromV1BufferCollectionConstraints(
 V2CopyFromV1BufferCollectionConstraints(
     fidl::AnyArena& allocator, const fuchsia_sysmem::wire::BufferCollectionConstraints* v1,
     const fuchsia_sysmem::wire::BufferCollectionConstraintsAuxBuffers* aux_buffers_v1);
+[[nodiscard]] fpromise::result<fuchsia_sysmem2::wire::BufferCollectionConstraints>
+V2CopyFromV1BufferCollectionConstraints(
+    fidl::AnyArena& allocator, const fuchsia_sysmem_BufferCollectionConstraints* v1,
+    const fuchsia_sysmem_BufferCollectionConstraintsAuxBuffers* aux_buffers_v1);
 
 [[nodiscard]] fpromise::result<fuchsia_sysmem2::ImageFormat> V2CopyFromV1ImageFormat(
     const fuchsia_sysmem::ImageFormat2& v1);
 [[nodiscard]] fpromise::result<fuchsia_sysmem2::wire::ImageFormat> V2CopyFromV1ImageFormat(
     fidl::AnyArena& allocator, const fuchsia_sysmem::wire::ImageFormat2& v1);
+[[nodiscard]] fpromise::result<fuchsia_sysmem2::wire::ImageFormat> V2CopyFromV1ImageFormat(
+    fidl::AnyArena& allocator, const fuchsia_sysmem_ImageFormat_2& v1);
 
 [[nodiscard]] fuchsia_sysmem2::BufferMemorySettings V2CopyFromV1BufferMemorySettings(
     const fuchsia_sysmem::BufferMemorySettings& v1);

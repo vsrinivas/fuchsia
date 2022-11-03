@@ -23,8 +23,8 @@ constexpr uint64_t kFrameIndexToVerify = 123;
 fuchsia::sysmem::ImageFormat_2 MakeImageFormat(uint32_t width, uint32_t height,
                                                fuchsia::sysmem::PixelFormatType format) {
   fuchsia::sysmem::PixelFormat pixel_format = {.type = format, .has_format_modifier = false};
-  uint32_t bytes_per_row =
-      ImageFormatStrideBytesPerWidthPixel(ConvertPixelFormatToWire(pixel_format)) * width;
+  fuchsia_sysmem_PixelFormat pixel_format_c = ConvertPixelFormatToC(pixel_format);
+  uint32_t bytes_per_row = ImageFormatStrideBytesPerWidthPixel(&pixel_format_c) * width;
 
   fuchsia::sysmem::ImageFormat_2 ret = {
       .pixel_format = {.type = format, .has_format_modifier = false},
@@ -41,8 +41,8 @@ fuchsia::sysmem::ImageFormat_2 MakeImageFormat(uint32_t width, uint32_t height,
 
 fzl::OwnedVmoMapper GenerateImage(const fuchsia::sysmem::ImageFormat_2 format, uint64_t index) {
   fzl::OwnedVmoMapper buffer;
-  EXPECT_EQ(ZX_OK,
-            buffer.CreateAndMap(ImageFormatImageSize(ConvertImageFormatToWire(format)), "buff"));
+  auto format_c = ConvertImageFormatToC(format);
+  EXPECT_EQ(ZX_OK, buffer.CreateAndMap(ImageFormatImageSize(&format_c), "buff"));
   EXPECT_EQ(ZX_OK, HsvGenerator(buffer.start(), format, static_cast<uint32_t>(index)));
   return buffer;
 }

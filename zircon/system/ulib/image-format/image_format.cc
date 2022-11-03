@@ -90,14 +90,15 @@ constexpr uint32_t kTransactionEliminationAlignment = 64;
 // The transaction elimination buffer is always reported as plane 3.
 constexpr uint32_t kTransactionEliminationPlane = 3;
 
-uint64_t arm_transaction_elimination_row_size(uint32_t width) {
+static uint64_t arm_transaction_elimination_row_size(uint32_t width) {
   uint32_t kTileSize = 32;
   uint32_t kBytesPerTilePerRow = 16;
   uint32_t width_in_tiles = fbl::round_up(width, kTileSize) / kTileSize;
   return fbl::round_up(width_in_tiles * kBytesPerTilePerRow, kTransactionEliminationAlignment);
 }
 
-uint64_t arm_transaction_elimination_buffer_size(uint64_t start, uint32_t width, uint32_t height) {
+static uint64_t arm_transaction_elimination_buffer_size(uint64_t start, uint32_t width,
+                                                        uint32_t height) {
   uint32_t kTileSize = 32;
   uint32_t end = start;
   end = fbl::round_up(end, kTransactionEliminationAlignment);
@@ -474,8 +475,7 @@ class AfbcFormats : public ImageFormatSet {
     if (plane == 0) {
       *offset_out = 0;
       return true;
-    }
-    if (plane == kTransactionEliminationPlane) {
+    } else if (plane == kTransactionEliminationPlane) {
       *offset_out = fbl::round_up(NonTESize(image_format), kTransactionEliminationAlignment);
       return true;
     }
@@ -486,8 +486,7 @@ class AfbcFormats : public ImageFormatSet {
     if (plane == 0) {
       *row_bytes_out = 0;
       return true;
-    }
-    if (plane == kTransactionEliminationPlane) {
+    } else if (plane == kTransactionEliminationPlane) {
       *row_bytes_out = arm_transaction_elimination_row_size(image_format.coded_width().value());
       return true;
     }
@@ -495,7 +494,7 @@ class AfbcFormats : public ImageFormatSet {
   }
 };
 
-uint64_t linear_size(uint32_t coded_height, uint32_t bytes_per_row, PixelFormatType type) {
+static uint64_t linear_size(uint32_t coded_height, uint32_t bytes_per_row, PixelFormatType type) {
   switch (type) {
     case PixelFormatType::kR8G8B8A8:
     case PixelFormatType::kBgra32:
@@ -613,8 +612,7 @@ class LinearFormats : public ImageFormatSet {
     if (plane == 0) {
       *row_bytes_out = image_format.bytes_per_row().value();
       return true;
-    }
-    if (plane == 1) {
+    } else if (plane == 1) {
       switch (image_format.pixel_format()->type().value()) {
         case PixelFormatType::kNv12:
           *row_bytes_out = image_format.bytes_per_row().value();
@@ -686,8 +684,9 @@ class GoldfishFormats : public ImageFormatSet {
     if (plane == 0) {
       *row_bytes_out = image_format.bytes_per_row().value();
       return true;
+    } else {
+      return false;
     }
-    return false;
   }
 };
 
@@ -751,8 +750,7 @@ class ArmTELinearFormats : public ImageFormatSet {
                                   uint32_t plane, uint64_t* offset_out) const override {
     if (plane < kTransactionEliminationPlane) {
       return kLinearFormats.ImageFormatPlaneByteOffset(image_format, plane, offset_out);
-    }
-    if (plane == kTransactionEliminationPlane) {
+    } else if (plane == kTransactionEliminationPlane) {
       ZX_DEBUG_ASSERT(image_format.coded_height().has_value());
       ZX_DEBUG_ASSERT(image_format.bytes_per_row().has_value());
       uint32_t coded_height =
@@ -772,8 +770,7 @@ class ArmTELinearFormats : public ImageFormatSet {
                                 uint32_t* row_bytes_out) const override {
     if (plane < kTransactionEliminationPlane) {
       return kLinearFormats.ImageFormatPlaneRowBytes(image_format, plane, row_bytes_out);
-    }
-    if (plane == kTransactionEliminationPlane) {
+    } else if (plane == kTransactionEliminationPlane) {
       *row_bytes_out = arm_transaction_elimination_row_size(image_format.coded_width().value());
       return true;
     }
@@ -803,7 +800,10 @@ bool ImageFormatIsPixelFormatEqual(const fuchsia_sysmem2::PixelFormat& a,
   uint64_t format_modifier_b = b.format_modifier_value().has_value()
                                    ? b.format_modifier_value().value()
                                    : fuchsia_sysmem2::kFormatModifierNone;
-  return format_modifier_a == format_modifier_b;
+  if (format_modifier_a != format_modifier_b) {
+    return false;
+  }
+  return true;
 }
 
 bool ImageFormatIsPixelFormatEqual(const fuchsia_sysmem2::wire::PixelFormat& wire_a,
@@ -818,6 +818,14 @@ bool ImageFormatIsPixelFormatEqual(const fuchsia_sysmem::wire::PixelFormat& wire
   auto a_v2 = sysmem::V2CopyFromV1PixelFormat(a_v1);
   auto b_v2 = sysmem::V2CopyFromV1PixelFormat(b_v1);
   return ImageFormatIsPixelFormatEqual(a_v2, b_v2);
+}
+
+bool ImageFormatIsPixelFormatEqual(const fuchsia_sysmem_PixelFormat& old_a_v1,
+                                   const fuchsia_sysmem_PixelFormat& old_b_v1) {
+  fidl::Arena allocator;
+  auto wire_a_v2 = sysmem::V2CopyFromV1PixelFormat(allocator, old_a_v1);
+  auto wire_b_v2 = sysmem::V2CopyFromV1PixelFormat(allocator, old_b_v1);
+  return ImageFormatIsPixelFormatEqual(fidl::ToNatural(wire_a_v2), fidl::ToNatural(wire_b_v2));
 }
 
 bool ImageFormatIsSupportedColorSpaceForPixelFormat(
@@ -851,7 +859,10 @@ bool ImageFormatIsSupportedColorSpaceForPixelFormat(
       break;
     }
   }
-  return is_bits_per_sample_match_found;
+  if (!is_bits_per_sample_match_found) {
+    return false;
+  }
+  return true;
 }
 
 bool ImageFormatIsSupportedColorSpaceForPixelFormat(
@@ -871,11 +882,23 @@ bool ImageFormatIsSupportedColorSpaceForPixelFormat(
   return ImageFormatIsSupportedColorSpaceForPixelFormat(color_space_v2, pixel_format_v2);
 }
 
+bool ImageFormatIsSupportedColorSpaceForPixelFormat(
+    const fuchsia_sysmem_ColorSpace& old_color_space_v1,
+    const fuchsia_sysmem_PixelFormat& old_pixel_format_v1) {
+  fidl::Arena allocator;
+  auto wire_color_space_v2 = sysmem::V2CopyFromV1ColorSpace(allocator, old_color_space_v1);
+  auto wire_pixel_format_v2 = sysmem::V2CopyFromV1PixelFormat(allocator, old_pixel_format_v1);
+  return ImageFormatIsSupportedColorSpaceForPixelFormat(fidl::ToNatural(wire_color_space_v2),
+                                                        fidl::ToNatural(wire_pixel_format_v2));
+}
+
 bool ImageFormatIsSupported(const fuchsia_sysmem2::PixelFormat& pixel_format) {
-  return std::any_of(std::begin(kImageFormats), std::end(kImageFormats),
-                     [pixel_format](const ImageFormatSet* format_set) {
-                       return format_set->IsSupported(pixel_format);
-                     });
+  for (auto format_set : kImageFormats) {
+    if (format_set->IsSupported(pixel_format)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 bool ImageFormatIsSupported(const fuchsia_sysmem2::wire::PixelFormat& wire_pixel_format) {
@@ -886,6 +909,13 @@ bool ImageFormatIsSupported(const fuchsia_sysmem::wire::PixelFormat& wire_pixel_
   auto pixel_format_v1 = fidl::ToNatural(wire_pixel_format_v1);
   auto pixel_format_v2 = sysmem::V2CopyFromV1PixelFormat(pixel_format_v1);
   return ImageFormatIsSupported(pixel_format_v2);
+}
+
+bool ImageFormatIsSupported(const fuchsia_sysmem_PixelFormat* old_pixel_format_v1) {
+  ZX_DEBUG_ASSERT(old_pixel_format_v1);
+  fidl::Arena allocator;
+  auto wire_pixel_format_v2 = sysmem::V2CopyFromV1PixelFormat(allocator, *old_pixel_format_v1);
+  return ImageFormatIsSupported(fidl::ToNatural(wire_pixel_format_v2));
 }
 
 uint32_t ImageFormatBitsPerPixel(const fuchsia_sysmem2::PixelFormat& pixel_format) {
@@ -939,6 +969,14 @@ uint32_t ImageFormatBitsPerPixel(const fuchsia_sysmem::wire::PixelFormat& wire_p
   auto pixel_format_v1 = fidl::ToNatural(wire_pixel_format_v1);
   auto pixel_format_v2 = sysmem::V2CopyFromV1PixelFormat(pixel_format_v1);
   return ImageFormatBitsPerPixel(pixel_format_v2);
+}
+
+// Overall bits per pixel, across all pixel data in the whole image.
+uint32_t ImageFormatBitsPerPixel(const fuchsia_sysmem_PixelFormat* old_pixel_format_v1) {
+  ZX_DEBUG_ASSERT(old_pixel_format_v1);
+  fidl::Arena allocator;
+  auto wire_pixel_format_v2 = sysmem::V2CopyFromV1PixelFormat(allocator, *old_pixel_format_v1);
+  return ImageFormatBitsPerPixel(fidl::ToNatural(wire_pixel_format_v2));
 }
 
 uint32_t ImageFormatStrideBytesPerWidthPixel(const fuchsia_sysmem2::PixelFormat& pixel_format) {
@@ -1001,6 +1039,14 @@ uint32_t ImageFormatStrideBytesPerWidthPixel(
   return ImageFormatStrideBytesPerWidthPixel(pixel_format_v2);
 }
 
+uint32_t ImageFormatStrideBytesPerWidthPixel(
+    const fuchsia_sysmem_PixelFormat* old_pixel_format_v1) {
+  ZX_DEBUG_ASSERT(old_pixel_format_v1);
+  fidl::Arena allocator;
+  auto wire_pixel_format_v2 = sysmem::V2CopyFromV1PixelFormat(allocator, *old_pixel_format_v1);
+  return ImageFormatStrideBytesPerWidthPixel(fidl::ToNatural(wire_pixel_format_v2));
+}
+
 uint64_t ImageFormatImageSize(const fuchsia_sysmem2::ImageFormat& image_format) {
   ZX_DEBUG_ASSERT(image_format.pixel_format().has_value());
   for (auto format_set : kImageFormats) {
@@ -1020,7 +1066,16 @@ uint64_t ImageFormatImageSize(const fuchsia_sysmem2::wire::ImageFormat& image_fo
 uint64_t ImageFormatImageSize(const fuchsia_sysmem::wire::ImageFormat2& wire_image_format_v1) {
   auto image_format_v1 = fidl::ToNatural(wire_image_format_v1);
   auto image_format_v2 = sysmem::V2CopyFromV1ImageFormat(image_format_v1).take_value();
-  return ImageFormatImageSize(image_format_v2);
+  return ImageFormatImageSize(std::move(image_format_v2));
+}
+
+uint64_t ImageFormatImageSize(const fuchsia_sysmem_ImageFormat_2* old_image_format_v1) {
+  ZX_DEBUG_ASSERT(old_image_format_v1);
+  fidl::Arena allocator;
+  auto wire_image_format_v2 =
+      sysmem::V2CopyFromV1ImageFormat(allocator, *old_image_format_v1).take_value();
+  return ImageFormatImageSize(fidl::ToNatural(wire_image_format_v2));
+  ;
 }
 
 uint32_t ImageFormatCodedWidthMinDivisor(const fuchsia_sysmem2::PixelFormat& pixel_format) {
@@ -1082,6 +1137,13 @@ uint32_t ImageFormatCodedWidthMinDivisor(
   return ImageFormatCodedWidthMinDivisor(pixel_format_v2);
 }
 
+uint32_t ImageFormatCodedWidthMinDivisor(const fuchsia_sysmem_PixelFormat* old_pixel_format_v1) {
+  ZX_DEBUG_ASSERT(old_pixel_format_v1);
+  fidl::Arena allocator;
+  auto wire_pixel_format_v2 = sysmem::V2CopyFromV1PixelFormat(allocator, *old_pixel_format_v1);
+  return ImageFormatCodedWidthMinDivisor(fidl::ToNatural(wire_pixel_format_v2));
+}
+
 uint32_t ImageFormatCodedHeightMinDivisor(const fuchsia_sysmem2::PixelFormat& pixel_format) {
   ZX_DEBUG_ASSERT(ImageFormatIsSupported(pixel_format));
   switch (pixel_format.type().value()) {
@@ -1141,6 +1203,13 @@ uint32_t ImageFormatCodedHeightMinDivisor(
   return ImageFormatCodedHeightMinDivisor(pixel_format_v2);
 }
 
+uint32_t ImageFormatCodedHeightMinDivisor(const fuchsia_sysmem_PixelFormat* old_pixel_format_v1) {
+  ZX_DEBUG_ASSERT(old_pixel_format_v1);
+  fidl::Arena allocator;
+  auto wire_pixel_format_v2 = sysmem::V2CopyFromV1PixelFormat(allocator, *old_pixel_format_v1);
+  return ImageFormatCodedHeightMinDivisor(fidl::ToNatural(wire_pixel_format_v2));
+}
+
 uint32_t ImageFormatSampleAlignment(const fuchsia_sysmem2::PixelFormat& pixel_format) {
   ZX_DEBUG_ASSERT(ImageFormatIsSupported(pixel_format));
   switch (pixel_format.type().value()) {
@@ -1198,6 +1267,13 @@ uint32_t ImageFormatSampleAlignment(const fuchsia_sysmem::wire::PixelFormat& wir
   return ImageFormatSampleAlignment(pixel_format_v2);
 }
 
+uint32_t ImageFormatSampleAlignment(const fuchsia_sysmem_PixelFormat* old_pixel_format_v1) {
+  ZX_DEBUG_ASSERT(old_pixel_format_v1);
+  fidl::Arena allocator;
+  auto wire_pixel_format_v2 = sysmem::V2CopyFromV1PixelFormat(allocator, *old_pixel_format_v1);
+  return ImageFormatSampleAlignment(fidl::ToNatural(wire_pixel_format_v2));
+}
+
 bool ImageFormatMinimumRowBytes(const fuchsia_sysmem2::ImageFormatConstraints& constraints,
                                 uint32_t width, uint32_t* minimum_row_bytes_out) {
   ZX_DEBUG_ASSERT(minimum_row_bytes_out);
@@ -1227,8 +1303,11 @@ bool ImageFormatMinimumRowBytes(const fuchsia_sysmem2::ImageFormatConstraints& c
       std::max(ImageFormatStrideBytesPerWidthPixel(constraints.pixel_format().value()) * width,
                constraints_min_bytes_per_row),
       constraints_bytes_per_row_divisor);
-  return !(constraints.max_bytes_per_row().has_value() &&
-           *minimum_row_bytes_out > constraints.max_bytes_per_row().value());
+  if (constraints.max_bytes_per_row().has_value() &&
+      *minimum_row_bytes_out > constraints.max_bytes_per_row().value()) {
+    return false;
+  }
+  return true;
 }
 
 bool ImageFormatMinimumRowBytes(
@@ -1245,6 +1324,19 @@ bool ImageFormatMinimumRowBytes(
   auto image_format_constraints_v2 =
       sysmem::V2CopyFromV1ImageFormatConstraints(image_format_constraints_v1).take_value();
   return ImageFormatMinimumRowBytes(image_format_constraints_v2, width, minimum_row_bytes_out);
+}
+
+bool ImageFormatMinimumRowBytes(
+    const fuchsia_sysmem_ImageFormatConstraints* old_image_format_constraints_v1, uint32_t width,
+    uint32_t* minimum_row_bytes_out) {
+  ZX_DEBUG_ASSERT(old_image_format_constraints_v1);
+  ZX_DEBUG_ASSERT(minimum_row_bytes_out);
+  fidl::Arena allocator;
+  auto wire_image_format_constraints_v2 =
+      sysmem::V2CopyFromV1ImageFormatConstraints(allocator, *old_image_format_constraints_v1)
+          .take_value();
+  return ImageFormatMinimumRowBytes(fidl::ToNatural(wire_image_format_constraints_v2), width,
+                                    minimum_row_bytes_out);
 }
 
 bool ImageFormatConvertSysmemToZx(const fuchsia_sysmem2::PixelFormat& pixel_format,
@@ -1310,6 +1402,15 @@ bool ImageFormatConvertSysmemToZx(const fuchsia_sysmem::wire::PixelFormat& wire_
   auto pixel_format_v1 = fidl::ToNatural(wire_pixel_format_v1);
   auto pixel_format_v2 = sysmem::V2CopyFromV1PixelFormat(pixel_format_v1);
   return ImageFormatConvertSysmemToZx(pixel_format_v2, zx_pixel_format_out);
+}
+
+bool ImageFormatConvertSysmemToZx(const fuchsia_sysmem_PixelFormat* old_pixel_format_v1,
+                                  zx_pixel_format_t* zx_pixel_format_out) {
+  ZX_DEBUG_ASSERT(old_pixel_format_v1);
+  ZX_DEBUG_ASSERT(zx_pixel_format_out);
+  fidl::Arena allocator;
+  auto wire_pixel_format_v2 = sysmem::V2CopyFromV1PixelFormat(allocator, *old_pixel_format_v1);
+  return ImageFormatConvertSysmemToZx(fidl::ToNatural(wire_pixel_format_v2), zx_pixel_format_out);
 }
 
 fpromise::result<fuchsia_sysmem2::PixelFormat> ImageFormatConvertZxToSysmem_v2(
@@ -1430,7 +1531,7 @@ fpromise::result<ImageFormat> ImageConstraintsToFormat(const ImageFormatConstrai
   result.coded_height().emplace(height);
   result.display_width().emplace(width);
   result.display_height().emplace(height);
-  if (constraints.color_spaces().has_value() && !constraints.color_spaces()->empty()) {
+  if (constraints.color_spaces().has_value() && constraints.color_spaces()->size()) {
     // parameter is copied
     result.color_space().emplace(constraints.color_spaces()->at(0));
   }
@@ -1475,6 +1576,34 @@ fpromise::result<fuchsia_sysmem::wire::ImageFormat2> ImageConstraintsToFormat(
   return fpromise::ok(wire_v1);
 }
 
+bool ImageConstraintsToFormat(
+    const fuchsia_sysmem_ImageFormatConstraints* old_image_format_constraints_v1, uint32_t width,
+    uint32_t height, fuchsia_sysmem_ImageFormat_2* old_image_format_out) {
+  ZX_DEBUG_ASSERT(old_image_format_constraints_v1);
+  ZX_DEBUG_ASSERT(old_image_format_out);
+  fidl::Arena allocator;
+  auto wire_image_format_constraints_v2 =
+      sysmem::V2CopyFromV1ImageFormatConstraints(allocator, *old_image_format_constraints_v1)
+          .take_value();
+  auto v2_out_result =
+      ImageConstraintsToFormat(fidl::ToNatural(wire_image_format_constraints_v2), width, height);
+  if (!v2_out_result.is_ok()) {
+    return false;
+  }
+  auto v2_out = v2_out_result.take_value();
+  auto v1_out_result = sysmem::V1CopyFromV2ImageFormat(v2_out);
+  if (!v1_out_result.is_ok()) {
+    return false;
+  }
+  fidl::Arena arena;
+  auto wire_v1_out = fidl::ToWire(arena, v1_out_result.take_value());
+  // ImageFormatWire doesn't have any handles, so this struct copy works to convert from v1 LLCPP to
+  // v1 FIDL C.  We can remove this whole function when we're done moving away from FIDL C.
+  static_assert(sizeof(*old_image_format_out) == sizeof(wire_v1_out));
+  *old_image_format_out = *reinterpret_cast<fuchsia_sysmem_ImageFormat_2*>(&wire_v1_out);
+  return true;
+}
+
 bool ImageFormatPlaneByteOffset(const ImageFormat& image_format, uint32_t plane,
                                 uint64_t* offset_out) {
   ZX_DEBUG_ASSERT(offset_out);
@@ -1500,6 +1629,19 @@ bool ImageFormatPlaneByteOffset(const fuchsia_sysmem::wire::ImageFormat2& wire_i
     return false;
   }
   auto image_format_v2 = image_format_v2_result.take_value();
+  return ImageFormatPlaneByteOffset(image_format_v2, plane, offset_out);
+}
+
+bool ImageFormatPlaneByteOffset(const fuchsia_sysmem_ImageFormat_2* old_image_format,
+                                uint32_t plane, uint64_t* offset_out) {
+  ZX_DEBUG_ASSERT(old_image_format);
+  ZX_DEBUG_ASSERT(offset_out);
+  fidl::Arena allocator;
+  auto wire_image_format_v2_result = sysmem::V2CopyFromV1ImageFormat(allocator, *old_image_format);
+  if (!wire_image_format_v2_result.is_ok()) {
+    return false;
+  }
+  auto image_format_v2 = fidl::ToNatural(wire_image_format_v2_result.take_value());
   return ImageFormatPlaneByteOffset(image_format_v2, plane, offset_out);
 }
 
@@ -1531,6 +1673,19 @@ bool ImageFormatPlaneRowBytes(const fuchsia_sysmem::wire::ImageFormat2& wire_ima
   return ImageFormatPlaneRowBytes(image_format_v2, plane, row_bytes_out);
 }
 
+bool ImageFormatPlaneRowBytes(const fuchsia_sysmem_ImageFormat_2* old_image_format, uint32_t plane,
+                              uint32_t* row_bytes_out) {
+  ZX_DEBUG_ASSERT(old_image_format);
+  ZX_DEBUG_ASSERT(row_bytes_out);
+  fidl::Arena allocator;
+  auto wire_image_format_v2_result = sysmem::V2CopyFromV1ImageFormat(allocator, *old_image_format);
+  if (!wire_image_format_v2_result.is_ok()) {
+    return false;
+  }
+  auto wire_image_format_v2 = wire_image_format_v2_result.take_value();
+  return ImageFormatPlaneRowBytes(fidl::ToNatural(wire_image_format_v2), plane, row_bytes_out);
+}
+
 bool ImageFormatCompatibleWithProtectedMemory(const fuchsia_sysmem2::PixelFormat& pixel_format) {
   if (!pixel_format.format_modifier_value().has_value())
     return true;
@@ -1558,4 +1713,11 @@ bool ImageFormatCompatibleWithProtectedMemory(
   auto pixel_format_v1 = fidl::ToNatural(wire_pixel_format_v1);
   auto pixel_format_v2 = sysmem::V2CopyFromV1PixelFormat(pixel_format_v1);
   return ImageFormatCompatibleWithProtectedMemory(pixel_format_v2);
+}
+
+bool ImageFormatCompatibleWithProtectedMemory(const fuchsia_sysmem_PixelFormat* old_pixel_format) {
+  ZX_DEBUG_ASSERT(old_pixel_format);
+  fidl::Arena allocator;
+  auto wire_pixel_format_v2 = sysmem::V2CopyFromV1PixelFormat(allocator, *old_pixel_format);
+  return ImageFormatCompatibleWithProtectedMemory(fidl::ToNatural(wire_pixel_format_v2));
 }

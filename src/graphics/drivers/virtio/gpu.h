@@ -32,7 +32,7 @@ class GpuDevice : public Device,
                   public ddk::DisplayControllerImplProtocol<GpuDevice, ddk::base_protocol> {
  public:
   GpuDevice(zx_device_t* device, zx::bti bti, std::unique_ptr<Backend> backend);
-  ~GpuDevice() override;
+  virtual ~GpuDevice();
 
   zx_status_t Init() override;
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
@@ -49,23 +49,23 @@ class GpuDevice : public Device,
 
   zx_status_t GetVmoAndStride(image_t* image, zx_unowned_handle_t handle, uint32_t index,
                               zx::vmo* vmo_out, size_t* offset_out, uint32_t* pixel_size_out,
-                              uint32_t* row_bytes_out) const;
+                              uint32_t* row_bytes_out);
 
   void DisplayControllerImplSetDisplayControllerInterface(
       const display_controller_interface_protocol_t* intf);
 
-  zx_status_t DisplayControllerImplImportImage(image_t* image, zx_unowned_handle_t handle,
+  zx_status_t DisplayControllerImplImportImage(image_t* image, zx_unowned_handle_t collection,
                                                uint32_t index);
 
   void DisplayControllerImplReleaseImage(image_t* image);
 
-  uint32_t DisplayControllerImplCheckConfiguration(const display_config_t** display_configs,
-                                                   size_t display_count,
-                                                   uint32_t** layer_cfg_results,
+  uint32_t DisplayControllerImplCheckConfiguration(const display_config_t** display_config_list,
+                                                   size_t display_config_count,
+                                                   uint32_t** out_layer_cfg_result_list,
                                                    size_t* layer_cfg_result_count);
 
-  void DisplayControllerImplApplyConfiguration(const display_config_t** display_configs,
-                                               size_t display_count,
+  void DisplayControllerImplApplyConfiguration(const display_config_t** display_config_list,
+                                               size_t display_config_count,
                                                const config_stamp_t* config_stamp);
 
   void DisplayControllerImplSetEld(uint64_t display_id, const uint8_t* raw_eld_list,

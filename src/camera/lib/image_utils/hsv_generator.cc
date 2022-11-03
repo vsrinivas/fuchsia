@@ -34,8 +34,8 @@ void WriteByteAligned(void* start, PixelSize value, uint32_t width, uint32_t hei
 void WriteSingleColorImage(Rgba rgba, const fuchsia::sysmem::ImageFormat_2& format, void* buffer) {
   // Check if valid format
   uint32_t packed_value = RgbaPack(format.pixel_format.type, rgba);
-  uint32_t bytes_per_pixel =
-      ImageFormatBitsPerPixel(ConvertPixelFormatToWire(format.pixel_format)) / 8;
+  auto pixel_format_c = ConvertPixelFormatToC(format.pixel_format);
+  uint32_t bytes_per_pixel = ImageFormatBitsPerPixel(&pixel_format_c) / 8;
 
   if (bytes_per_pixel == 4) {
     WriteByteAligned(buffer, packed_value, format.coded_width, format.coded_height,

@@ -96,17 +96,15 @@ bool IsSupportedPixelFormat(const fuchsia::sysmem::PixelFormatType &type) {
 
 std::vector<fuchsia::sysmem::PixelFormatType> GetSupportedFormats() {
   std::vector<fuchsia::sysmem::PixelFormatType> ret;
-  ret.reserve(kPixelFormatInfo.size());
   for (auto &entry : kPixelFormatInfo) {
     ret.push_back(entry.first);
   }
   return ret;
 }
 
-fuchsia_sysmem::wire::PixelFormat ConvertPixelFormatToWire(
-    const fuchsia::sysmem::PixelFormat &format) {
+fuchsia_sysmem_PixelFormat ConvertPixelFormatToC(const fuchsia::sysmem::PixelFormat &format) {
   return {
-      .type = static_cast<const fuchsia_sysmem::wire::PixelFormatType>(format.type),
+      .type = *reinterpret_cast<const fuchsia_sysmem_PixelFormatType *>(&format.type),
       .has_format_modifier = format.has_format_modifier,
       .format_modifier =
           {
@@ -115,20 +113,20 @@ fuchsia_sysmem::wire::PixelFormat ConvertPixelFormatToWire(
   };
 }
 
-fuchsia_sysmem::wire::ImageFormat2 ConvertImageFormatToWire(
-    const fuchsia::sysmem::ImageFormat_2 &format) {
+fuchsia_sysmem_ColorSpace ConvertColorSpaceToC(const fuchsia::sysmem::ColorSpace &cs) {
+  return {*reinterpret_cast<const fuchsia_sysmem_ColorSpace *>(&cs.type)};
+}
+
+fuchsia_sysmem_ImageFormat_2 ConvertImageFormatToC(const fuchsia::sysmem::ImageFormat_2 &format) {
   return {
-      .pixel_format = ConvertPixelFormatToWire(format.pixel_format),
+      .pixel_format = ConvertPixelFormatToC(format.pixel_format),
       .coded_width = format.coded_width,
       .coded_height = format.coded_height,
       .bytes_per_row = format.bytes_per_row,
       .display_width = format.display_width,
       .display_height = format.display_height,
       .layers = format.layers,
-      .color_space =
-          {
-              .type = static_cast<fuchsia_sysmem::wire::ColorSpaceType>(format.color_space.type),
-          },
+      .color_space = ConvertColorSpaceToC(format.color_space),
       .has_pixel_aspect_ratio = format.has_pixel_aspect_ratio,
       .pixel_aspect_ratio_width = format.pixel_aspect_ratio_width,
       .pixel_aspect_ratio_height = format.pixel_aspect_ratio_height,

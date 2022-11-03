@@ -1,0 +1,37 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/fidl/fidl.gni")
+import("//build/test.gni")
+
+group("test") {
+  testonly = true
+  deps = [ ":fidl-struct-test-package" ]
+}
+
+test("fidl-struct-test") {
+  sources = [ "fidl_struct_test.cc" ]
+  public_deps = [
+    ":fidl.types.test_c",
+    ":fidl.types.test_cpp",
+    "//zircon/system/ulib/fidl-async-2",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxtest",
+  ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
+}
+
+fuchsia_unittest_package("fidl-struct-test-package") {
+  package_name = "fidl-struct-test"
+  deps = [ ":fidl-struct-test" ]
+}
+
+fidl("fidl.types.test") {
+  sources = [ "types.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
+}

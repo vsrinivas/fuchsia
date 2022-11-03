@@ -5,7 +5,7 @@
 #ifndef SRC_CAMERA_LIB_IMAGE_UTILS_IMAGE_FORMAT_RGBA_H_
 #define SRC_CAMERA_LIB_IMAGE_UTILS_IMAGE_FORMAT_RGBA_H_
 
-#include <fidl/fuchsia.sysmem/cpp/wire.h>
+#include <fuchsia/sysmem/c/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
 
 namespace camera {
@@ -57,10 +57,8 @@ bool IsSupportedPixelFormat(const fuchsia::sysmem::PixelFormatType& type);
 
 std::vector<fuchsia::sysmem::PixelFormatType> GetSupportedFormats();
 
-fuchsia_sysmem::wire::PixelFormat ConvertPixelFormatToWire(
-    const fuchsia::sysmem::PixelFormat& format);
-fuchsia_sysmem::wire::ImageFormat2 ConvertImageFormatToWire(
-    const fuchsia::sysmem::ImageFormat_2& format);
+fuchsia_sysmem_PixelFormat ConvertPixelFormatToC(const fuchsia::sysmem::PixelFormat& format);
+fuchsia_sysmem_ImageFormat_2 ConvertImageFormatToC(const fuchsia::sysmem::ImageFormat_2& format);
 
 }  // namespace camera
 

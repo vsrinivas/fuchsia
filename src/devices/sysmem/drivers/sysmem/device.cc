@@ -608,9 +608,9 @@ zx_status_t Device::Bind() {
     constexpr bool kIsReady = true;
     constexpr bool kCanBeTornDown = true;
     auto pooled_allocator = std::make_unique<ContiguousPooledMemoryAllocator>(
-        this, "SysmemContiguousPool", &heaps_,
-        safe_cast<uint64_t>(fuchsia_sysmem::wire::HeapType::kSystemRam), contiguous_memory_size,
-        kIsAlwaysCpuAccessible, kIsEverCpuAccessible, kIsReady, kCanBeTornDown, loop_.dispatcher());
+        this, "SysmemContiguousPool", &heaps_, fuchsia_sysmem_HeapType_SYSTEM_RAM,
+        contiguous_memory_size, kIsAlwaysCpuAccessible, kIsEverCpuAccessible, kIsReady,
+        kCanBeTornDown, loop_.dispatcher());
     if (pooled_allocator->Init() != ZX_OK) {
       DRIVER_ERROR("Contiguous system ram allocator initialization failed");
       return ZX_ERR_NO_MEMORY;
@@ -641,9 +641,9 @@ zx_status_t Device::Bind() {
     // We have no way to tear down secure memory.
     constexpr bool kCanBeTornDown = false;
     auto amlogic_allocator = std::make_unique<ContiguousPooledMemoryAllocator>(
-        this, "SysmemAmlogicProtectedPool", &heaps_,
-        safe_cast<uint64_t>(fuchsia_sysmem::wire::HeapType::kAmlogicSecure), protected_memory_size,
-        kIsAlwaysCpuAccessible, kIsEverCpuAccessible, kIsReady, kCanBeTornDown, loop_.dispatcher());
+        this, "SysmemAmlogicProtectedPool", &heaps_, fuchsia_sysmem_HeapType_AMLOGIC_SECURE,
+        protected_memory_size, kIsAlwaysCpuAccessible, kIsEverCpuAccessible, kIsReady,
+        kCanBeTornDown, loop_.dispatcher());
     // Request 64kB alignment because the hardware can only modify protections along 64kB
     // boundaries.
     status = amlogic_allocator->Init(16);
