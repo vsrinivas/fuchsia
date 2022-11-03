@@ -235,7 +235,6 @@ source_set("sysmem_connection") {
     "..:trace",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp_wire",
     "//zircon/system/ulib/image-format",
-    "//zircon/system/ulib/image-format:image-format-llcpp",
     "//zircon/system/ulib/zx",
   ]
 

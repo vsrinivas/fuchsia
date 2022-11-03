@@ -16,7 +16,6 @@ test("image-format-test") {
   deps = [
     "//sdk/lib/fdio",
     "//zircon/system/ulib/image-format",
-    "//zircon/system/ulib/image-format:image-format-llcpp",
     "//zircon/system/ulib/sysmem-version",
     "//zircon/system/ulib/zxtest",
   ]

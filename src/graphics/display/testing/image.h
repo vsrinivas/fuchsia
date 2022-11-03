@@ -43,9 +43,9 @@ class Image {
   uint32_t stride() { return stride_; }
   zx_pixel_format_t format() { return format_; }
 
-  void GetConfig(fuchsia_hardware_display::wire::ImageConfig* config_out);
+  void GetConfig(fuchsia_hardware_display::wire::ImageConfig* config_out) const;
   bool Import(const fidl::WireSyncClient<fuchsia_hardware_display::Controller>& dc,
-              image_import_t* import_out);
+              image_import_t* info_out) const;
 
  private:
   Image(uint32_t width, uint32_t height, int32_t stride, zx_pixel_format_t format,

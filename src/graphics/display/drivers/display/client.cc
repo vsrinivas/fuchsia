@@ -13,7 +13,7 @@
 #include <lib/edid/edid.h>
 #include <lib/fidl/cpp/wire/server.h>
 #include <lib/fit/defer.h>
-#include <lib/image-format-llcpp/image-format-llcpp.h>
+#include <lib/image-format/image_format.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
@@ -123,8 +123,8 @@ void Client::ImportImage(ImportImageRequestView request, ImportImageCompleter::S
       return;
     }
     uint32_t minimum_row_bytes;
-    if (!image_format::GetMinimumRowBytes(info.settings.image_format_constraints, dc_image.width,
-                                          &minimum_row_bytes)) {
+    if (!ImageFormatMinimumRowBytes(info.settings.image_format_constraints, dc_image.width,
+                                    &minimum_row_bytes)) {
       zxlogf(DEBUG, "Cannot determine minimum row bytes.\n");
       _completer.Reply(ZX_ERR_INVALID_ARGS, 0);
       return;
@@ -212,8 +212,8 @@ void Client::ImportImage2(ImportImage2RequestView request,
       return;
     }
     uint32_t minimum_row_bytes;
-    if (!image_format::GetMinimumRowBytes(info.settings.image_format_constraints, dc_image.width,
-                                          &minimum_row_bytes)) {
+    if (!ImageFormatMinimumRowBytes(info.settings.image_format_constraints, dc_image.width,
+                                    &minimum_row_bytes)) {
       zxlogf(DEBUG, "Cannot determine minimum row bytes.\n");
       _completer.Reply(ZX_ERR_INVALID_ARGS);
       return;
@@ -674,7 +674,7 @@ void Client::SetLayerColorConfig(SetLayerColorConfigRequestView request,
     return;
   }
 
-  layer->SetColorConfig(request->pixel_format, std::move(request->color_bytes));
+  layer->SetColorConfig(request->pixel_format, request->color_bytes);
   pending_config_valid_ = false;
   // no Reply defined
 }
@@ -1163,7 +1163,8 @@ bool Client::CheckConfig(fhd::wire::ConfigResult* res,
   // Return unless we need to finish constructing the response
   if (!layer_fail) {
     return true;
-  } else if (!(res && ops)) {
+  }
+  if (!(res && ops)) {
     return false;
   }
   *res = fhd::wire::ConfigResult::kUnsupportedConfig;
@@ -1192,13 +1193,12 @@ bool Client::CheckConfig(fhd::wire::ConfigResult* res,
 
       for (uint8_t i = 0; i < 32; i++) {
         if (err & (1 << i)) {
-          fhd::wire::ClientCompositionOp op{
+          ops->emplace_back(fhd::wire::ClientCompositionOp{
               .display_id = display_config.id,
               .layer_id = layer_node.layer->id,
               .opcode = static_cast<fhd::wire::ClientCompositionOpcode>(i),
 
-          };
-          ops->push_back(std::move(op));
+          });
         }
       }
       layer_idx++;
@@ -1395,21 +1395,19 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
     if (edid_timings) {
       modes.reserve(edid_timings->size());
       for (auto timing : *edid_timings) {
-        fhd::wire::Mode mode{
+        modes.emplace_back(fhd::wire::Mode{
             .horizontal_resolution = timing.horizontal_addressable,
             .vertical_resolution = timing.vertical_addressable,
             .refresh_rate_e2 = timing.vertical_refresh_e2,
-        };
-        modes.push_back(std::move(mode));
+        });
       }
     } else {
       modes.reserve(1);
-      fhd::wire::Mode mode{
+      modes.emplace_back(fhd::wire::Mode{
           .horizontal_resolution = params->width,
           .vertical_resolution = params->height,
           .refresh_rate_e2 = params->refresh_rate_e2,
-      };
-      modes.push_back(std::move(mode));
+      });
     }
     modes_vector.emplace_back(std::move(modes));
     info.modes = fidl::VectorView<fhd::wire::Mode>::FromExternal(modes_vector.back());
@@ -1426,7 +1424,8 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
                   "Bad struct");
     static_assert(sizeof(cursor_info_t) <= sizeof(fhd::wire::CursorInfo), "Bad size");
     info.cursor_configs = fidl::VectorView<fhd::wire::CursorInfo>::FromExternal(
-        (fhd::wire::CursorInfo*)config->cursor_infos_.data(), config->cursor_infos_.size());
+        reinterpret_cast<fhd::wire::CursorInfo*>(config->cursor_infos_.data()),
+        config->cursor_infos_.size());
 
     const char* manufacturer_name = "";
     const char* monitor_name = "";
@@ -1453,7 +1452,7 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
     info.monitor_name = fidl::StringView::FromExternal(monitor_name);
     info.monitor_serial = fidl::StringView::FromExternal(monitor_serial);
 
-    coded_configs.push_back(std::move(info));
+    coded_configs.push_back(info);
   }
 
   std::vector<uint64_t> removed_ids;

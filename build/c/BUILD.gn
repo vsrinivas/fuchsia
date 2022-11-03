@@ -203,7 +203,6 @@ config("fidl-deprecated-c-bindings") {
     "//zircon/system/ulib/fidl-async-2/test:fidl-struct-test",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/image-format",
-    "//zircon/system/ulib/image-format:image-format-llcpp",
     "//zircon/system/ulib/image-format/test:image-format-test",
     "//zircon/system/ulib/kcounter",
     "//zircon/system/ulib/kernel-debug",

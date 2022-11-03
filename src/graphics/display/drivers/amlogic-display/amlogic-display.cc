@@ -16,7 +16,6 @@
 #include <lib/ddk/platform-defs.h>
 #include <lib/fit/defer.h>
 #include <lib/fzl/vmo-mapper.h>
-#include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/image-format/image_format.h>
 #include <lib/zircon-internal/align.h>
 #include <lib/zx/channel.h>
@@ -37,7 +36,6 @@
 
 #include "src/graphics/display/drivers/amlogic-display/amlogic-display-bind.h"
 #include "src/graphics/display/drivers/amlogic-display/common.h"
-#include "src/graphics/display/drivers/amlogic-display/vpp-regs.h"
 
 namespace sysmem = fuchsia_sysmem;
 
@@ -180,10 +178,10 @@ zx_status_t AmlogicDisplay::DisplayControllerImplImportImage(image_t* image,
       // AFBC does not use canvas.
       uint64_t offset = collection_info.buffers[index].vmo_usable_start;
       size_t size =
-          ZX_ROUNDUP(ImageFormatImageSize(image_format::ConstraintsToFormat(
-                                              collection_info.settings.image_format_constraints,
-                                              image->width, image->height)
-                                              .value()),
+          ZX_ROUNDUP(ImageFormatImageSize(
+                         ImageConstraintsToFormat(collection_info.settings.image_format_constraints,
+                                                  image->width, image->height)
+                             .value()),
                      PAGE_SIZE);
       zx_paddr_t paddr;
       zx_status_t status =
@@ -201,8 +199,8 @@ zx_status_t AmlogicDisplay::DisplayControllerImplImportImage(image_t* image,
     case sysmem::wire::kFormatModifierLinear:
     case sysmem::wire::kFormatModifierArmLinearTe: {
       uint32_t minimum_row_bytes;
-      if (!image_format::GetMinimumRowBytes(collection_info.settings.image_format_constraints,
-                                            image->width, &minimum_row_bytes)) {
+      if (!ImageFormatMinimumRowBytes(collection_info.settings.image_format_constraints,
+                                      image->width, &minimum_row_bytes)) {
         DISP_ERROR("Invalid image width %d for collection\n", image->width);
         return ZX_ERR_INVALID_ARGS;
       }
@@ -275,15 +273,15 @@ uint32_t AmlogicDisplay::DisplayControllerImplCheckConfiguration(
   if (success && display_configs[0]->cc_flags) {
     // Make sure cc values are correct
     if (display_configs[0]->cc_flags & COLOR_CONVERSION_PREOFFSET) {
-      for (int i = 0; i < 3; i++) {
-        success = success && display_configs[0]->cc_preoffsets[i] > -1;
-        success = success && display_configs[0]->cc_preoffsets[i] < 1;
+      for (float cc_preoffset : display_configs[0]->cc_preoffsets) {
+        success = success && cc_preoffset > -1;
+        success = success && cc_preoffset < 1;
       }
     }
     if (success && display_configs[0]->cc_flags & COLOR_CONVERSION_POSTOFFSET) {
-      for (int i = 0; i < 3; i++) {
-        success = success && display_configs[0]->cc_postoffsets[i] > -1;
-        success = success && display_configs[0]->cc_postoffsets[i] < 1;
+      for (float cc_postoffset : display_configs[0]->cc_postoffsets) {
+        success = success && cc_postoffset > -1;
+        success = success && cc_postoffset < 1;
       }
     }
   }
@@ -337,19 +335,18 @@ void AmlogicDisplay::DisplayControllerImplApplyConfiguration(
 
   fbl::AutoLock lock(&display_lock_);
 
-  zx_status_t status;
   if (display_count == 1 && display_configs[0]->layer_count) {
     // Setting up OSD may require Vout framebuffer information, which may be
     // changed on each ApplyConfiguration(), so we need to apply the
     // configuration to Vout first before initializing the display and OSD.
-    status = vout_->ApplyConfiguration(&display_configs[0]->mode);
-    if (status != ZX_OK) {
+    if (zx_status_t status = vout_->ApplyConfiguration(&display_configs[0]->mode);
+        status != ZX_OK) {
       DISP_ERROR("Could not apply config to Vout! %d\n", status);
       return;
     }
 
     if (!fully_initialized()) {
-      if ((status = DisplayInit()) != ZX_OK) {
+      if (zx_status_t status = DisplayInit(); status != ZX_OK) {
         DISP_ERROR("Display Hardware Initialization failed! %d\n", status);
         ZX_ASSERT(0);
       }
@@ -469,7 +466,7 @@ zx_status_t AmlogicDisplay::DdkGetProtocol(uint32_t proto_id, void* out_protocol
 zx_status_t AmlogicDisplay::SetupDisplayInterface() {
   fbl::AutoLock lock(&display_lock_);
 
-  added_display_info_t info{.is_standard_srgb_out = 0};  // Random default
+  added_display_info_t info{.is_standard_srgb_out = false};  // Random default
   if (dc_intf_.is_valid()) {
     added_display_args_t args;
     vout_->PopulateAddedDisplayArgs(&args, display_id_);
@@ -583,9 +580,8 @@ zx_status_t AmlogicDisplay::DisplayControllerImplSetDisplayPower(uint64_t displa
   }
   if (power_on) {
     return vout_->PowerOn().status_value();
-  } else {
-    return vout_->PowerOff().status_value();
   }
+  return vout_->PowerOff().status_value();
 }
 
 void AmlogicDisplay::DisplayCaptureImplSetDisplayCaptureInterface(
@@ -772,8 +768,8 @@ int AmlogicDisplay::VSyncThread() {
 
 int AmlogicDisplay::HpdThread() {
   zx_status_t status;
-  while (1) {
-    status = hpd_irq_.wait(NULL);
+  while (true) {
+    status = hpd_irq_.wait(nullptr);
     if (status != ZX_OK) {
       DISP_ERROR("Waiting in Interrupt failed %d\n", status);
       break;
@@ -814,7 +810,7 @@ int AmlogicDisplay::HpdThread() {
     if (dc_intf_.is_valid() && (display_removed != INVALID_DISPLAY_ID || display_added)) {
       dc_intf_.OnDisplaysChanged(&args, display_added ? 1 : 0, &display_removed,
                                  display_removed != INVALID_DISPLAY_ID, &info,
-                                 display_added ? 1 : 0, NULL);
+                                 display_added ? 1 : 0, nullptr);
       if (display_added) {
         // See if we need to change output color to RGB
         status = vout_->OnDisplaysChanged(info);
@@ -834,128 +830,134 @@ zx_status_t AmlogicDisplay::Bind() {
   }
   SetFormatSupportCheck([this](auto format) { return vout_->IsFormatSupported(format); });
 
-  display_panel_t display_info;
-  size_t actual;
-  zx_status_t status = device_get_metadata(parent_, DEVICE_METADATA_DISPLAY_CONFIG, &display_info,
-                                           sizeof(display_info), &actual);
-  if (status != ZX_OK) {
-    status = vout_->InitHdmi(parent_);
-    if (status != ZX_OK) {
-      DISP_ERROR("Could not initialize HDMI Vout device! %d\n", status);
-      return status;
-    }
-  } else if (actual != sizeof(display_panel_t)) {
-    DISP_ERROR("Could not get display panel metadata %d\n", status);
-    return status;
-  } else {
-    DISP_INFO("Provided Display Info: %d x %d with panel type %d\n", display_info.width,
-              display_info.height, display_info.panel_type);
-    display_attached_ = true;
+  {
+    display_panel_t display_info;
+    size_t actual;
+    switch (zx_status_t status = device_get_metadata(parent_, DEVICE_METADATA_DISPLAY_CONFIG,
+                                                     &display_info, sizeof(display_info), &actual);
+            status) {
+      case ZX_ERR_NOT_FOUND:
+        // If configuration is missing, init HDMI.
+        if (zx_status_t status = vout_->InitHdmi(parent_); status != ZX_OK) {
+          DISP_ERROR("Could not initialize HDMI Vout device! %d\n", status);
+          return status;
+        }
+        break;
+      case ZX_OK:
+        if (actual != sizeof(display_info)) {
+          DISP_ERROR("Could not get display panel metadata %zu/%zu\n", actual,
+                     sizeof(display_info));
+          return ZX_ERR_INTERNAL;
+        }
+        DISP_INFO("Provided Display Info: %d x %d with panel type %d\n", display_info.width,
+                  display_info.height, display_info.panel_type);
+        display_attached_ = true;
 
-    fbl::AutoLock lock(&display_lock_);
-    status =
-        vout_->InitDsi(parent_, display_info.panel_type, display_info.width, display_info.height);
-    if (status != ZX_OK) {
-      DISP_ERROR("Could not initialize DSI Vout device! %d\n", status);
-      return status;
-    }
+        {
+          fbl::AutoLock lock(&display_lock_);
+          if (zx_status_t status = vout_->InitDsi(parent_, display_info.panel_type,
+                                                  display_info.width, display_info.height);
+              status != ZX_OK) {
+            DISP_ERROR("Could not initialize DSI Vout device! %d\n", status);
+            return status;
+          }
+        }
 
-    root_node_.CreateUint("input_panel_type", display_info.panel_type, &inspector_);
-    root_node_.CreateUint("panel_type", vout_->panel_type(), &inspector_);
+        root_node_.CreateUint("input_panel_type", display_info.panel_type, &inspector_);
+        break;
+      default:
+        DISP_ERROR("Could not get display panel metadata %d\n", status);
+        return status;
+    }
   }
+  root_node_.CreateUint("panel_type", vout_->panel_type(), &inspector_);
   root_node_.CreateUint("vout_type", vout_->type(), &inspector_);
 
-  status = ddk::PDev::FromFragment(parent_, &pdev_);
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not get PDEV protocol\n");
+  if (zx_status_t status = ddk::PDev::FromFragment(parent_, &pdev_); status != ZX_OK) {
+    DISP_ERROR("Could not get PDEV protocol %d\n", status);
     return status;
   }
 
   // Get board info
-  status = pdev_.GetBoardInfo(&board_info_);
-  if (status != ZX_OK) {
+  if (zx_status_t status = pdev_.GetBoardInfo(&board_info_); status != ZX_OK) {
     DISP_ERROR("Could not obtain board info\n");
     return status;
   }
 
-  status = ddk::SysmemProtocolClient::CreateFromDevice(parent_, "sysmem", &sysmem_);
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not get Display SYSMEM protocol\n");
+  if (zx_status_t status = ddk::SysmemProtocolClient::CreateFromDevice(parent_, "sysmem", &sysmem_);
+      status != ZX_OK) {
+    DISP_ERROR("Could not get Display SYSMEM protocol %d\n", status);
     return status;
   }
 
-  status = ddk::AmlogicCanvasProtocolClient::CreateFromDevice(parent_, "canvas", &canvas_);
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not obtain CANVAS protocol\n");
+  if (zx_status_t status =
+          ddk::AmlogicCanvasProtocolClient::CreateFromDevice(parent_, "canvas", &canvas_);
+      status != ZX_OK) {
+    DISP_ERROR("Could not obtain CANVAS protocol %d\n", status);
     return status;
   }
 
-  status = pdev_.GetBti(0, &bti_);
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not get BTI handle\n");
+  if (zx_status_t status = pdev_.GetBti(0, &bti_); status != ZX_OK) {
+    DISP_ERROR("Could not get BTI handle %d\n", status);
     return status;
   }
 
   // Setup Display Interface
-  status = SetupDisplayInterface();
-  if (status != ZX_OK) {
+  if (zx_status_t status = SetupDisplayInterface(); status != ZX_OK) {
     DISP_ERROR("Amlogic display setup failed! %d\n", status);
     return status;
   }
 
   // Map VSync Interrupt
-  status = pdev_.GetInterrupt(IRQ_VSYNC, 0, &vsync_irq_);
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not map vsync interrupt\n");
+  if (zx_status_t status = pdev_.GetInterrupt(IRQ_VSYNC, 0, &vsync_irq_); status != ZX_OK) {
+    DISP_ERROR("Could not map vsync interrupt %d\n", status);
     return status;
   }
 
   auto start_thread = [](void* arg) { return static_cast<AmlogicDisplay*>(arg)->VSyncThread(); };
-  status = thrd_create_with_name(&vsync_thread_, start_thread, this, "vsync_thread");
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not create vsync_thread\n");
+  if (int status = thrd_create_with_name(&vsync_thread_, start_thread, this, "vsync_thread");
+      status != 0) {
+    DISP_ERROR("Could not create vsync_thread %d\n", status);
     return status;
   }
 
   if (vout_->supports_capture()) {
     // Map VD1_WR Interrupt (used for capture)
-    status = pdev_.GetInterrupt(IRQ_VD1_WR, 0, &vd1_wr_irq_);
-    if (status != ZX_OK) {
-      DISP_ERROR("Could not map vd1 wr interrupt\n");
+    if (zx_status_t status = pdev_.GetInterrupt(IRQ_VD1_WR, 0, &vd1_wr_irq_); status != ZX_OK) {
+      DISP_ERROR("Could not map vd1 wr interrupt %d\n", status);
       return status;
     }
 
     auto vd_thread = [](void* arg) { return static_cast<AmlogicDisplay*>(arg)->CaptureThread(); };
-    status = thrd_create_with_name(&capture_thread_, vd_thread, this, "capture_thread");
-    if (status != ZX_OK) {
-      DISP_ERROR("Could not create capture_thread\n");
+    if (int status = thrd_create_with_name(&capture_thread_, vd_thread, this, "capture_thread");
+        status != 0) {
+      DISP_ERROR("Could not create capture_thread %d\n", status);
       return status;
     }
   }
 
   if (vout_->supports_hpd()) {
-    status = ddk::GpioProtocolClient::CreateFromDevice(parent_, "gpio", &hpd_gpio_);
-    if (status != ZX_OK) {
-      DISP_ERROR("Could not obtain GPIO protocol\n");
+    if (zx_status_t status = ddk::GpioProtocolClient::CreateFromDevice(parent_, "gpio", &hpd_gpio_);
+        status != ZX_OK) {
+      DISP_ERROR("Could not obtain GPIO protocol %d\n", status);
       return status;
     }
 
-    status = hpd_gpio_.ConfigIn(GPIO_PULL_DOWN);
-    if (status != ZX_OK) {
-      DISP_ERROR("gpio_config_in failed for gpio\n");
+    if (zx_status_t status = hpd_gpio_.ConfigIn(GPIO_PULL_DOWN); status != ZX_OK) {
+      DISP_ERROR("gpio_config_in failed for gpio %d\n", status);
       return status;
     }
 
-    status = hpd_gpio_.GetInterrupt(ZX_INTERRUPT_MODE_LEVEL_HIGH, &hpd_irq_);
-    if (status != ZX_OK) {
-      DISP_ERROR("gpio_get_interrupt failed for gpio\n");
+    if (zx_status_t status = hpd_gpio_.GetInterrupt(ZX_INTERRUPT_MODE_LEVEL_HIGH, &hpd_irq_);
+        status != ZX_OK) {
+      DISP_ERROR("gpio_get_interrupt failed for gpio %d\n", status);
       return status;
     }
 
     auto hpd_thread = [](void* arg) { return static_cast<AmlogicDisplay*>(arg)->HpdThread(); };
-    status = thrd_create_with_name(&hpd_thread_, hpd_thread, this, "hpd_thread");
-    if (status != ZX_OK) {
-      DISP_ERROR("Could not create hpd_thread\n");
+    if (int status = thrd_create_with_name(&hpd_thread_, hpd_thread, this, "hpd_thread");
+        status != 0) {
+      DISP_ERROR("Could not create hpd_thread %d\n", status);
       return status;
     }
   }
@@ -969,14 +971,14 @@ zx_status_t AmlogicDisplay::Bind() {
     const zx_duration_t period = deadline;
 
     zx_handle_t profile = ZX_HANDLE_INVALID;
-    if ((status = device_get_deadline_profile(this->zxdev(), capacity, deadline, period,
-                                              "dev/display/amlogic-display/vsync_thread",
-                                              &profile)) != ZX_OK) {
+    if (zx_status_t status =
+            device_get_deadline_profile(this->zxdev(), capacity, deadline, period,
+                                        "dev/display/amlogic-display/vsync_thread", &profile);
+        status != ZX_OK) {
       DISP_ERROR("Failed to get deadline profile: %d\n", status);
     } else {
       const zx_handle_t thread_handle = thrd_get_zx_handle(vsync_thread_);
-      status = zx_object_set_profile(thread_handle, profile, 0);
-      if (status != ZX_OK) {
+      if (zx_status_t status = zx_object_set_profile(thread_handle, profile, 0); status != ZX_OK) {
         DISP_ERROR("Failed to set deadline profile: %d\n", status);
       }
       zx_handle_close(profile);
@@ -985,11 +987,11 @@ zx_status_t AmlogicDisplay::Bind() {
 
   auto cleanup = fit::defer([&]() { DdkRelease(); });
 
-  status = DdkAdd(ddk::DeviceAddArgs("amlogic-display")
-                      .set_flags(DEVICE_ADD_ALLOW_MULTI_COMPOSITE)
-                      .set_inspect_vmo(inspector_.DuplicateVmo()));
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not add device\n");
+  if (zx_status_t status = DdkAdd(ddk::DeviceAddArgs("amlogic-display")
+                                      .set_flags(DEVICE_ADD_ALLOW_MULTI_COMPOSITE)
+                                      .set_inspect_vmo(inspector_.DuplicateVmo()));
+      status != ZX_OK) {
+    DISP_ERROR("Could not add device %d\n", status);
     return status;
   }
 

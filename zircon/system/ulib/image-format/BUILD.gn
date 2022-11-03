@@ -35,16 +35,3 @@ zx_library("image-format") {
   # Consider switching to the C++ bindings. See linked bug for details.
   public_configs = [ "//build/c:fidl-deprecated-c-bindings" ]
 }
-
-# TODO(dustingreen): Migrate / move anything that's still needed into
-# image-format.
-zx_library("image-format-llcpp") {
-  sdk = "source"
-  sdk_headers = [ "lib/image-format-llcpp/image-format-llcpp.h" ]
-  sources = [ "image-format-llcpp.cc" ]
-  public_deps = [ ":image-format" ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
-}

@@ -2,16 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/image-format/image_format.h>
 #include <lib/sysmem-version/sysmem-version.h>
 
 #include <fbl/array.h>
 #include <zxtest/zxtest.h>
-
-#include "fidl/fuchsia.sysmem/cpp/wire.h"
-#include "fidl/fuchsia.sysmem2/cpp/wire.h"
-#include "fuchsia/sysmem/c/fidl.h"
 
 namespace sysmem_v1 = fuchsia_sysmem;
 namespace sysmem_v2 = fuchsia_sysmem2;
@@ -154,7 +149,7 @@ TEST(ImageFormat, LinearRowBytes_V2_wire) {
   linear.set_type(sysmem_v2::wire::PixelFormatType::kBgra32);
   linear.set_format_modifier_value(allocator, sysmem_v2::wire::kFormatModifierLinear);
   sysmem_v2::wire::ImageFormatConstraints constraints(allocator);
-  constraints.set_pixel_format(allocator, std::move(linear));
+  constraints.set_pixel_format(allocator, linear);
   constraints.set_min_coded_width(12u);
   constraints.set_max_coded_width(100u);
   constraints.set_bytes_per_row_divisor(4u * 8u);
@@ -518,7 +513,7 @@ TEST(ImageFormat, PlaneByteOffset_V2_wire) {
   linear.set_type(sysmem_v2::wire::PixelFormatType::kBgra32);
   linear.set_format_modifier_value(allocator, sysmem_v2::wire::kFormatModifierLinear);
   sysmem_v2::wire::ImageFormatConstraints constraints(allocator);
-  constraints.set_pixel_format(allocator, std::move(linear));
+  constraints.set_pixel_format(allocator, linear);
   constraints.set_min_coded_width(12u);
   constraints.set_max_coded_width(100u);
   constraints.set_min_coded_height(12u);
@@ -730,7 +725,7 @@ TEST(ImageFormat, TransactionEliminationFormats_V2_wire) {
   EXPECT_FALSE(ImageFormatCompatibleWithProtectedMemory(format2));
 
   sysmem_v2::wire::ImageFormatConstraints constraints(allocator);
-  constraints.set_pixel_format(allocator, std::move(format2));
+  constraints.set_pixel_format(allocator, format2);
   constraints.set_min_coded_width(12u);
   constraints.set_max_coded_width(100u);
   constraints.set_min_coded_height(12u);
@@ -771,11 +766,9 @@ TEST(ImageFormat, TransactionEliminationFormats_V1_wire) {
               .value = sysmem_v1::wire::kFormatModifierLinear,
           },
   };
-  EXPECT_TRUE(image_format::FormatCompatibleWithProtectedMemory(format));
   EXPECT_TRUE(ImageFormatCompatibleWithProtectedMemory(format));
 
   format.format_modifier.value = sysmem_v1::wire::kFormatModifierArmLinearTe;
-  EXPECT_FALSE(image_format::FormatCompatibleWithProtectedMemory(format));
   EXPECT_FALSE(ImageFormatCompatibleWithProtectedMemory(format));
 
   sysmem_v1::wire::ImageFormatConstraints constraints = {
@@ -788,25 +781,25 @@ TEST(ImageFormat, TransactionEliminationFormats_V1_wire) {
       .bytes_per_row_divisor = 4 * 8,
   };
 
-  auto optional_format = image_format::ConstraintsToFormat(constraints, 18, 17);
+  auto optional_format = ImageConstraintsToFormat(constraints, 18, 17);
   EXPECT_TRUE(optional_format);
-  auto& image_format = *optional_format;
+  auto& image_format = optional_format.value();
   // The raw size would be 72 without bytes_per_row_divisor of 32.
   EXPECT_EQ(96u, image_format.bytes_per_row);
 
   // Check the color plane data.
   uint32_t row_bytes;
   uint64_t plane_offset;
-  EXPECT_TRUE(image_format::GetPlaneByteOffset(image_format, 0, &plane_offset));
+  EXPECT_TRUE(ImageFormatPlaneByteOffset(image_format, 0, &plane_offset));
   EXPECT_EQ(0u, plane_offset);
-  EXPECT_TRUE(image_format::GetPlaneRowBytes(image_format, 0, &row_bytes));
+  EXPECT_TRUE(ImageFormatPlaneRowBytes(image_format, 0, &row_bytes));
   EXPECT_EQ(image_format.bytes_per_row, row_bytes);
 
   constexpr uint32_t kTePlane = 3;
   // Check the TE plane data.
-  EXPECT_TRUE(image_format::GetPlaneByteOffset(image_format, kTePlane, &plane_offset));
+  EXPECT_TRUE(ImageFormatPlaneByteOffset(image_format, kTePlane, &plane_offset));
   EXPECT_LE(image_format.bytes_per_row * 17, plane_offset);
-  EXPECT_TRUE(image_format::GetPlaneRowBytes(image_format, kTePlane, &row_bytes));
+  EXPECT_TRUE(ImageFormatPlaneRowBytes(image_format, kTePlane, &row_bytes));
 
   // Row size should be rounded up to 64 bytes.
   EXPECT_EQ(64, row_bytes);
@@ -856,7 +849,7 @@ TEST(ImageFormat, BasicSizes_V2_wire) {
   {
     sysmem_v2::wire::PixelFormat pixel_format(allocator);
     pixel_format.set_type(sysmem_v2::wire::PixelFormatType::kBgra32);
-    image_format_bgra32.set_pixel_format(allocator, std::move(pixel_format));
+    image_format_bgra32.set_pixel_format(allocator, pixel_format);
   }
   image_format_bgra32.set_coded_width(kWidth);
   image_format_bgra32.set_coded_height(kHeight);
@@ -870,7 +863,7 @@ TEST(ImageFormat, BasicSizes_V2_wire) {
   {
     sysmem_v2::wire::PixelFormat pixel_format(allocator);
     pixel_format.set_type(sysmem_v2::wire::PixelFormatType::kNv12);
-    image_format_nv12.set_pixel_format(allocator, std::move(pixel_format));
+    image_format_nv12.set_pixel_format(allocator, pixel_format);
   }
   image_format_nv12.set_coded_width(kWidth);
   image_format_nv12.set_coded_height(kHeight);
@@ -959,7 +952,7 @@ TEST(ImageFormat, AfbcFlagFormats_V1_wire) {
           },
   };
 
-  EXPECT_FALSE(image_format::FormatCompatibleWithProtectedMemory(format));
+  EXPECT_FALSE(ImageFormatCompatibleWithProtectedMemory(format));
 
   sysmem_v1::wire::ImageFormatConstraints constraints = {
       .pixel_format = format,
@@ -971,7 +964,7 @@ TEST(ImageFormat, AfbcFlagFormats_V1_wire) {
       .bytes_per_row_divisor = 4 * 8,
   };
 
-  auto optional_format = image_format::ConstraintsToFormat(constraints, 18, 17);
+  auto optional_format = ImageConstraintsToFormat(constraints, 18, 17);
   EXPECT_TRUE(optional_format);
 
   sysmem_v1::wire::PixelFormat tiled_format = {
@@ -985,9 +978,9 @@ TEST(ImageFormat, AfbcFlagFormats_V1_wire) {
 
   constraints.pixel_format = tiled_format;
 
-  optional_format = image_format::ConstraintsToFormat(constraints, 18, 17);
+  optional_format = ImageConstraintsToFormat(constraints, 18, 17);
   EXPECT_TRUE(optional_format);
-  auto& image_format = *optional_format;
+  auto& image_format = optional_format.value();
   constexpr uint32_t kMinHeaderOffset = 4096u;
   constexpr uint32_t kMinWidth = 128;
   constexpr uint32_t kMinHeight = 128;
@@ -1014,17 +1007,23 @@ TEST(ImageFormat, R8G8Formats_V1_wire) {
       .bytes_per_row_divisor = 1,
   };
 
-  auto optional_format = image_format::ConstraintsToFormat(constraints, 18, 17);
-  EXPECT_TRUE(optional_format);
-  EXPECT_EQ(18u * 2, optional_format->bytes_per_row);
-  EXPECT_EQ(18u * 17u * 2, ImageFormatImageSize(*optional_format));
+  {
+    auto optional_format = ImageConstraintsToFormat(constraints, 18, 17);
+    EXPECT_TRUE(optional_format);
+    auto& image_format = optional_format.value();
+    EXPECT_EQ(18u * 2, image_format.bytes_per_row);
+    EXPECT_EQ(18u * 17u * 2, ImageFormatImageSize(image_format));
+  }
 
   constraints.pixel_format.type = sysmem_v1::wire::PixelFormatType::kR8;
 
-  optional_format = image_format::ConstraintsToFormat(constraints, 18, 17);
-  EXPECT_TRUE(optional_format);
-  EXPECT_EQ(18u * 1, optional_format->bytes_per_row);
-  EXPECT_EQ(18u * 17u * 1, ImageFormatImageSize(*optional_format));
+  {
+    auto optional_format = ImageConstraintsToFormat(constraints, 18, 17);
+    EXPECT_TRUE(optional_format);
+    auto& image_format = optional_format.value();
+    EXPECT_EQ(18u * 1, image_format.bytes_per_row);
+    EXPECT_EQ(18u * 17u * 1, ImageFormatImageSize(image_format));
+  }
 }
 
 TEST(ImageFormat, A2R10G10B10_Formats_V1_wire) {
@@ -1049,13 +1048,14 @@ TEST(ImageFormat, A2R10G10B10_Formats_V1_wire) {
         .bytes_per_row_divisor = 1,
     };
 
-    auto optional_format = image_format::ConstraintsToFormat(constraints, 18, 17);
+    auto optional_format = ImageConstraintsToFormat(constraints, 18, 17);
     EXPECT_TRUE(optional_format);
-    EXPECT_EQ(18u * 4, optional_format->bytes_per_row);
-    EXPECT_EQ(18u * 17u * 4, ImageFormatImageSize(*optional_format));
-    EXPECT_EQ(1, ImageFormatCodedWidthMinDivisor(optional_format->pixel_format));
-    EXPECT_EQ(1, ImageFormatCodedHeightMinDivisor(optional_format->pixel_format));
-    EXPECT_EQ(4, ImageFormatSampleAlignment(optional_format->pixel_format));
+    auto& image_format = optional_format.value();
+    EXPECT_EQ(18u * 4, image_format.bytes_per_row);
+    EXPECT_EQ(18u * 17u * 4, ImageFormatImageSize(image_format));
+    EXPECT_EQ(1, ImageFormatCodedWidthMinDivisor(image_format.pixel_format));
+    EXPECT_EQ(1, ImageFormatCodedHeightMinDivisor(image_format.pixel_format));
+    EXPECT_EQ(4, ImageFormatSampleAlignment(image_format.pixel_format));
   }
 }
 
@@ -1107,7 +1107,7 @@ TEST(ImageFormat, GoldfishOptimal_V2_wire) {
   {
     sysmem_v2::wire::PixelFormat pixel_format(allocator);
     pixel_format.set_type(sysmem_v2::wire::PixelFormatType::kBgra32);
-    linear_image_format_bgra32.set_pixel_format(allocator, std::move(pixel_format));
+    linear_image_format_bgra32.set_pixel_format(allocator, pixel_format);
   }
   linear_image_format_bgra32.set_coded_width(kWidth);
   linear_image_format_bgra32.set_coded_height(kHeight);
@@ -1119,7 +1119,7 @@ TEST(ImageFormat, GoldfishOptimal_V2_wire) {
     pixel_format.set_type(sysmem_v2::wire::PixelFormatType::kBgra32);
     pixel_format.set_format_modifier_value(allocator,
                                            sysmem_v2::wire::kFormatModifierGoogleGoldfishOptimal);
-    goldfish_optimal_image_format_bgra32.set_pixel_format(allocator, std::move(pixel_format));
+    goldfish_optimal_image_format_bgra32.set_pixel_format(allocator, pixel_format);
   }
   goldfish_optimal_image_format_bgra32.set_coded_width(kWidth);
   goldfish_optimal_image_format_bgra32.set_coded_height(kHeight);
@@ -1208,7 +1208,7 @@ TEST(ImageFormat, IntelYTiledFormat_V2_wire) {
   pixel_format.set_format_modifier_value(allocator,
                                          sysmem_v2::wire::kFormatModifierIntelI915YTiled);
   sysmem_v2::wire::ImageFormatConstraints constraints(allocator);
-  constraints.set_pixel_format(allocator, std::move(pixel_format));
+  constraints.set_pixel_format(allocator, pixel_format);
   constraints.set_min_coded_width(128u);
   constraints.set_min_coded_height(32u);
   constraints.set_bytes_per_row_divisor(0u);
@@ -1269,10 +1269,9 @@ TEST(ImageFormat, IntelYTiledFormat_V1_wire) {
       .bytes_per_row_divisor = 0u,
   };
 
-  auto optional_format = image_format::ConstraintsToFormat(constraints, 1920u, 1080u);
+  auto optional_format = ImageConstraintsToFormat(constraints, 1920u, 1080u);
   EXPECT_TRUE(optional_format);
-
-  auto& image_format = *optional_format;
+  auto& image_format = optional_format.value();
 
   constexpr uint32_t kTileSize = 4096u;
   constexpr uint32_t kBytesPerRowPerTile = 128u;
@@ -1329,10 +1328,10 @@ TEST(ImageFormat, IntelCcsFormats_V1_wire) {
         .bytes_per_row_divisor = 4 * 8,
     };
 
-    auto optional_format = image_format::ConstraintsToFormat(constraints, 64, 63);
+    auto optional_format = ImageConstraintsToFormat(constraints, 64, 63);
     EXPECT_TRUE(optional_format);
+    auto& image_format = optional_format.value();
 
-    auto& image_format = *optional_format;
     constexpr uint32_t kWidthInTiles = 2;
     constexpr uint32_t kHeightInTiles = 2;
     constexpr uint32_t kTileSize = 4096;

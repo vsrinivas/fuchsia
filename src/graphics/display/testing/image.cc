@@ -12,7 +12,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fidl/txn_header.h>
-#include <lib/image-format-llcpp/image-format-llcpp.h>
+#include <lib/image-format/image_format.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/vmar.h>
@@ -28,6 +28,7 @@
 #include <fbl/algorithm.h>
 
 #include "utils.h"
+#include "zircon/status.h"
 
 static constexpr uint32_t kRenderPeriod = 120;
 
@@ -197,7 +198,7 @@ Image* Image::Create(const fidl::WireSyncClient<fhd::Controller>& dc, uint32_t w
 
   uint32_t minimum_row_bytes;
   if (modifier == sysmem::wire::kFormatModifierLinear) {
-    bool result = image_format::GetMinimumRowBytes(
+    bool result = ImageFormatMinimumRowBytes(
         buffer_collection_info.settings.image_format_constraints, width, &minimum_row_bytes);
     if (!result) {
       fprintf(stderr, "Could not calculate minimum row byte\n");
@@ -433,7 +434,7 @@ void Image::RenderTiled(T pixel_generator, uint32_t start_y, uint32_t end_y) {
   }
 }
 
-void Image::GetConfig(fhd::wire::ImageConfig* config_out) {
+void Image::GetConfig(fhd::wire::ImageConfig* config_out) const {
   config_out->height = height_;
   config_out->width = width_;
   config_out->pixel_format = format_;
@@ -444,19 +445,28 @@ void Image::GetConfig(fhd::wire::ImageConfig* config_out) {
   }
 }
 
-bool Image::Import(const fidl::WireSyncClient<fhd::Controller>& dc, image_import_t* info_out) {
+bool Image::Import(const fidl::WireSyncClient<fhd::Controller>& dc,
+                   image_import_t* info_out) const {
   for (int i = 0; i < 2; i++) {
     static int event_id = fhd::wire::kInvalidDispId + 1;
-    zx::event e1, e2;
-    if (zx::event::create(0, &e1) != ZX_OK || e1.duplicate(ZX_RIGHT_SAME_RIGHTS, &e2) != ZX_OK) {
-      printf("Failed to create event\n");
+    zx::event e1;
+    if (zx_status_t status = zx::event::create(0, &e1); status != ZX_OK) {
+      printf("Failed to create event: %s\n", zx_status_get_string(status));
+      return false;
+    }
+    zx::event e2;
+    if (zx_status_t status = e1.duplicate(ZX_RIGHT_SAME_RIGHTS, &e2); status != ZX_OK) {
+      printf("Failed to duplicate event: %s\n", zx_status_get_string(status));
       return false;
     }
 
     info_out->events[i] = std::move(e1);
     info_out->event_ids[i] = event_id;
-    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
-    (void)dc->ImportEvent(std::move(e2), event_id++);
+    const fidl::WireResult result = dc->ImportEvent(std::move(e2), event_id++);
+    if (!result.ok()) {
+      printf("Failed to import event: %s\n", result.FormatDescription().c_str());
+      return false;
+    }
 
     if (i != WAIT_EVENT) {
       info_out->events[i].signal(0, ZX_EVENT_SIGNALED);
@@ -465,16 +475,20 @@ bool Image::Import(const fidl::WireSyncClient<fhd::Controller>& dc, image_import
 
   fhd::wire::ImageConfig image_config;
   GetConfig(&image_config);
-  auto import_result = dc->ImportImage(image_config, collection_id_, /*index=*/0);
-  if (!import_result.ok() || import_result.value().res != ZX_OK) {
-    printf("Failed to import image\n");
+  const fidl::WireResult import_result = dc->ImportImage(image_config, collection_id_, /*index=*/0);
+  if (!import_result.ok()) {
+    printf("Failed to import image: %s\n", import_result.FormatDescription().c_str());
     return false;
   }
-  info_out->id = import_result.value().image_id;
+  const fidl::WireResponse import_response = import_result.value();
+  if (zx_status_t status = import_response.res; status != ZX_OK) {
+    printf("Failed to import image: %s\n", zx_status_get_string(status));
+    return false;
+  }
+  info_out->id = import_response.image_id;
 
   // image has been imported. we can close the connection
-  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
-  (void)dc->ReleaseBufferCollection(collection_id_);
+  __UNUSED fidl::WireResult result = dc->ReleaseBufferCollection(collection_id_);
   return true;
 }
 

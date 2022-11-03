@@ -77,7 +77,7 @@ source_set("shared") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/hwreg",
-    "//zircon/system/ulib/image-format:image-format-llcpp",
+    "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/sync",

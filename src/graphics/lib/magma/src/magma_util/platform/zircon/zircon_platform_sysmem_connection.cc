@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
-#include <lib/image-format-llcpp/image-format-llcpp.h>
+#include <lib/image-format/image_format.h>
 #include <lib/zx/channel.h>
 
 #include <limits>
@@ -43,9 +43,9 @@ class ZirconPlatformBufferDescription : public PlatformBufferDescription {
   ZirconPlatformBufferDescription(uint32_t buffer_count,
                                   fuchsia_sysmem::wire::SingleBufferSettings settings)
       : buffer_count_(buffer_count), settings_(settings) {}
-  ~ZirconPlatformBufferDescription() override {}
+  ~ZirconPlatformBufferDescription() override = default;
 
-  bool IsValid() {
+  bool IsValid() const {
     using fuchsia_sysmem::wire::CoherencyDomain;
     switch (settings_.buffer_settings.coherency_domain) {
       case CoherencyDomain::kRam:
@@ -115,22 +115,21 @@ class ZirconPlatformBufferDescription : public PlatformBufferDescription {
       planes_out[i].bytes_per_row = 0;
     }
 
-    std::optional<fuchsia_sysmem::wire::ImageFormat2> image_format =
-        image_format::ConstraintsToFormat(settings_.image_format_constraints,
-                                          magma::to_uint32(width), magma::to_uint32(height));
+    fpromise::result<fuchsia_sysmem::wire::ImageFormat2> image_format = ImageConstraintsToFormat(
+        settings_.image_format_constraints, magma::to_uint32(width), magma::to_uint32(height));
     if (!image_format) {
       return DRETF(false, "Image format not valid");
     }
     for (uint32_t plane = 0; plane < MAGMA_MAX_IMAGE_PLANES; ++plane) {
       uint64_t offset;
-      bool plane_valid = image_format::GetPlaneByteOffset(*image_format, plane, &offset);
+      bool plane_valid = ImageFormatPlaneByteOffset(image_format.value(), plane, &offset);
       if (!plane_valid) {
         planes_out[plane].byte_offset = 0;
       } else {
         planes_out[plane].byte_offset = magma::to_uint32(offset);
       }
       uint32_t row_bytes;
-      if (image_format::GetPlaneRowBytes(*image_format, plane, &row_bytes)) {
+      if (ImageFormatPlaneRowBytes(image_format.value(), plane, &row_bytes)) {
         planes_out[plane].bytes_per_row = row_bytes;
       } else {
         planes_out[plane].bytes_per_row = 0;
@@ -149,9 +148,9 @@ class ZirconPlatformBufferDescription : public PlatformBufferDescription {
 
 class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
  public:
-  virtual ~ZirconPlatformBufferConstraints() {}
+  ~ZirconPlatformBufferConstraints() override = default;
 
-  ZirconPlatformBufferConstraints(const magma_buffer_format_constraints_t* constraints) {
+  explicit ZirconPlatformBufferConstraints(const magma_buffer_format_constraints_t* constraints) {
     constraints_.min_buffer_count = constraints->count;
     // Ignore input usage
     fuchsia_sysmem::wire::BufferUsage usage;
@@ -183,11 +182,13 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
     using fuchsia_sysmem::wire::ColorSpaceType;
     using fuchsia_sysmem::wire::PixelFormatType;
 
-    if (index != raw_image_constraints_.size())
+    if (index != raw_image_constraints_.size()) {
       return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Format constraint gaps or changes not allowed");
-    if (merge_result_)
+    }
+    if (merge_result_) {
       return DRET_MSG(MAGMA_STATUS_INVALID_ARGS,
                       "Setting format constraints on merged constraints.");
+    }
 
     fuchsia_sysmem::wire::ImageFormatConstraints constraints;
     constraints.min_coded_width = 0u;
@@ -291,8 +292,7 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
   bool MergeRawConstraints() {
     if (merge_result_)
       return *merge_result_;
-    for (uint32_t i = 0; i < raw_image_constraints_.size(); i++) {
-      auto& in_constraints = raw_image_constraints_[i];
+    for (auto& in_constraints : raw_image_constraints_) {
       uint32_t j = 0;
       for (; j < constraints_.image_format_constraints_count; j++) {
         auto& out_constraints = constraints_.image_format_constraints[j];
@@ -368,17 +368,18 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
 class ZirconPlatformBufferCollection : public PlatformBufferCollection {
  public:
   ~ZirconPlatformBufferCollection() override {
-    if (collection_)
-      // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
-      (void)collection_->Close();
+    if (collection_) {
+      __UNUSED fidl::WireResult result = collection_->Close();
+    }
   }
 
   Status Bind(fidl::WireSyncClient<fuchsia_sysmem::Allocator>& allocator, uint32_t token_handle) {
     DASSERT(!collection_);
     auto endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
-    if (!endpoints.is_ok())
+    if (!endpoints.is_ok()) {
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to create channels: %d",
                       endpoints.status_value());
+    }
 
     zx_status_t status =
         allocator
@@ -411,7 +412,7 @@ class ZirconPlatformBufferCollection : public PlatformBufferCollection {
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Error setting name: %d", status);
     }
 
-    status = collection_->SetConstraints(true, std::move(llcpp_constraints)).status();
+    status = collection_->SetConstraints(true, llcpp_constraints).status();
     if (status != ZX_OK) {
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Error setting constraints: %d", status);
     }
@@ -421,16 +422,18 @@ class ZirconPlatformBufferCollection : public PlatformBufferCollection {
   Status GetBufferDescription(
       std::unique_ptr<PlatformBufferDescription>* description_out) override {
     auto result = collection_->WaitForBuffersAllocated();
-    if (result.status() != ZX_OK)
+    if (result.status() != ZX_OK) {
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed wait for allocation: %d",
                       result.status());
+    }
 
     fidl::WireResponse<fuchsia_sysmem::BufferCollection::WaitForBuffersAllocated>* response =
         result.Unwrap();
 
-    if (response->status != ZX_OK)
+    if (response->status != ZX_OK) {
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "WaitForBuffersAllocated failed: %d",
                       response->status);
+    }
 
     // Buffer settings passed by value
     auto description = std::make_unique<ZirconPlatformBufferDescription>(
@@ -444,16 +447,18 @@ class ZirconPlatformBufferCollection : public PlatformBufferCollection {
 
   Status GetBufferHandle(uint32_t index, uint32_t* handle_out, uint32_t* offset_out) override {
     auto result = collection_->WaitForBuffersAllocated();
-    if (result.status() != ZX_OK)
+    if (result.status() != ZX_OK) {
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed wait for allocation: %d",
                       result.status());
+    }
 
     fidl::WireResponse<fuchsia_sysmem::BufferCollection::WaitForBuffersAllocated>* response =
         result.Unwrap();
 
-    if (response->status != ZX_OK)
+    if (response->status != ZX_OK) {
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "WaitForBuffersAllocated failed: %d",
                       response->status);
+    }
 
     if (response->buffer_collection_info.buffer_count < index) {
       return DRET(MAGMA_STATUS_INVALID_ARGS);
@@ -471,12 +476,11 @@ class ZirconPlatformBufferCollection : public PlatformBufferCollection {
 
 class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
  public:
-  ZirconPlatformSysmemConnection(fidl::WireSyncClient<fuchsia_sysmem::Allocator> allocator)
+  explicit ZirconPlatformSysmemConnection(fidl::WireSyncClient<fuchsia_sysmem::Allocator> allocator)
       : sysmem_allocator_(std::move(allocator)) {
     std::string debug_name =
         std::string("magma[") + magma::PlatformProcessHelper::GetCurrentProcessName() + "]";
-    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
-    (void)sysmem_allocator_->SetDebugClientInfo(
+    __UNUSED fidl::WireResult result = sysmem_allocator_->SetDebugClientInfo(
         fidl::StringView::FromExternal(debug_name),
         magma::PlatformProcessHelper::GetCurrentProcessId());
   }
@@ -547,9 +551,10 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
 
   Status CreateBufferCollectionToken(uint32_t* handle_out) override {
     auto endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
-    if (!endpoints.is_ok())
+    if (!endpoints.is_ok()) {
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to create channels: %d",
                       endpoints.status_value());
+    }
 
     auto result = sysmem_allocator_->AllocateSharedCollection(std::move(endpoints->server));
     if (result.status() != ZX_OK) {
@@ -582,12 +587,13 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
 
  private:
   magma_status_t AllocateBufferCollection(
-      const fuchsia_sysmem::wire::BufferCollectionConstraints& constraints, std::string name,
+      const fuchsia_sysmem::wire::BufferCollectionConstraints& constraints, const std::string& name,
       fuchsia_sysmem::wire::BufferCollectionInfo2* info_out) {
     auto endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
-    if (!endpoints.is_ok())
+    if (!endpoints.is_ok()) {
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to create channels: %d",
                       endpoints.status_value());
+    }
 
     zx_status_t status =
         sysmem_allocator_->AllocateNonSharedCollection(std::move(endpoints->server)).status();
@@ -597,29 +603,30 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
     fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection(std::move(endpoints->client));
 
     if (!name.empty()) {
-      // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
-      (void)collection->SetName(10, fidl::StringView::FromExternal(name));
+      __UNUSED fidl::WireResult result =
+          collection->SetName(10, fidl::StringView::FromExternal(name));
     }
-    status = collection->SetConstraints(true, std::move(constraints)).status();
+    status = collection->SetConstraints(true, constraints).status();
     if (status != ZX_OK)
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to set constraints: %d", status);
 
     auto result = collection->WaitForBuffersAllocated();
 
     // Ignore failure - this just prevents unnecessary logged errors.
-    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
-    (void)collection->Close();
+    { __UNUSED fidl::WireResult result = collection->Close(); }
 
-    if (result.status() != ZX_OK)
+    if (result.status() != ZX_OK) {
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed wait for allocation: %d",
                       result.status());
+    }
 
     fidl::WireResponse<fuchsia_sysmem::BufferCollection::WaitForBuffersAllocated>* response =
         result.Unwrap();
 
-    if (response->status != ZX_OK)
+    if (response->status != ZX_OK) {
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed wait for allocation: %d",
                       response->status);
+    }
 
     *info_out = std::move(response->buffer_collection_info);
     return MAGMA_STATUS_OK;

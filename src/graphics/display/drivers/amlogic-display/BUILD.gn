@@ -59,7 +59,6 @@ source_set("common_srcs") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/hwreg",
     "//zircon/system/ulib/image-format",
-    "//zircon/system/ulib/image-format:image-format-llcpp",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/mipi-dsi",
     "//zircon/system/ulib/sync",

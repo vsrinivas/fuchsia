@@ -7,7 +7,7 @@
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <fidl/fuchsia.ui.composition/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/image-format-llcpp/image-format-llcpp.h>
+#include <lib/image-format/image_format.h>
 #include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/syslog/global.h>
@@ -27,12 +27,12 @@
 
 namespace {
 
-static uint32_t to_uint32(uint64_t value) {
+uint32_t to_uint32(uint64_t value) {
   assert(value <= std::numeric_limits<uint32_t>::max());
   return static_cast<uint32_t>(value);
 }
 
-static uint64_t SysmemModifierToDrmModifier(uint64_t modifier) {
+uint64_t SysmemModifierToDrmModifier(uint64_t modifier) {
   static_assert(DRM_FORMAT_MOD_LINEAR == fuchsia_sysmem::wire::kFormatModifierLinear);
   static_assert(I915_FORMAT_MOD_X_TILED == fuchsia_sysmem::wire::kFormatModifierIntelI915XTiled);
   static_assert(I915_FORMAT_MOD_Y_TILED == fuchsia_sysmem::wire::kFormatModifierIntelI915YTiled);
@@ -80,7 +80,7 @@ class VulkanImageCreator {
   vk::PhysicalDeviceLimits GetPhysicalDeviceLimits();
 
   // Creates the buffer collection and sets constraints.
-  vk::Result CreateCollection(vk::ImageConstraintsInfoFUCHSIA* image_create_info,
+  vk::Result CreateCollection(vk::ImageConstraintsInfoFUCHSIA* image_constraints_info,
                               fuchsia_sysmem::wire::PixelFormatType format,
                               std::vector<uint64_t>& modifiers);
 
@@ -316,7 +316,7 @@ vk::Result VulkanImageCreator::CreateCollection(
     args.set_export_token(std::move(export_token));
     args.set_buffer_collection_token(std::move(scenic_token_endpoint_));
 
-    auto result = scenic_allocator_->RegisterBufferCollection(std::move(args));
+    auto result = scenic_allocator_->RegisterBufferCollection(args);
     if (!result.ok()) {
       LOG_VERBOSE("RegisterBufferCollection returned %d", result.status());
       return vk::Result::eErrorInitializationFailed;
@@ -475,9 +475,8 @@ zx_status_t VulkanImageCreator::GetImageInfo(uint32_t width, uint32_t height, zx
     return ZX_ERR_INTERNAL;
   }
 
-  std::optional<fuchsia_sysmem::wire::ImageFormat2> image_format =
-      image_format::ConstraintsToFormat(collection_info.settings.image_format_constraints, width,
-                                        height);
+  fpromise::result<fuchsia_sysmem::wire::ImageFormat2> image_format =
+      ImageConstraintsToFormat(collection_info.settings.image_format_constraints, width, height);
   if (!image_format) {
     LOG_VERBOSE("Failed to get image format");
     return ZX_ERR_INTERNAL;
@@ -485,23 +484,23 @@ zx_status_t VulkanImageCreator::GetImageInfo(uint32_t width, uint32_t height, zx
 
   for (uint32_t plane = 0; plane < MAGMA_MAX_IMAGE_PLANES; ++plane) {
     uint64_t offset;
-    if (!ImageFormatPlaneByteOffset(*image_format, plane, &offset)) {
+    if (!ImageFormatPlaneByteOffset(image_format.value(), plane, &offset)) {
       image_info_out->plane_offsets[plane] = 0;
     } else {
       image_info_out->plane_offsets[plane] = to_uint32(offset);
     }
 
     uint32_t row_bytes;
-    if (!image_format::GetPlaneRowBytes(*image_format, plane, &row_bytes)) {
+    if (!ImageFormatPlaneRowBytes(image_format.value(), plane, &row_bytes)) {
       image_info_out->plane_strides[plane] = 0;
     } else {
       image_info_out->plane_strides[plane] = row_bytes;
     }
   }
 
-  if (image_format->pixel_format.has_format_modifier) {
+  if (image_format.value().pixel_format.has_format_modifier) {
     image_info_out->drm_format_modifier =
-        SysmemModifierToDrmModifier(image_format->pixel_format.format_modifier.value);
+        SysmemModifierToDrmModifier(image_format.value().pixel_format.format_modifier.value);
   } else {
     image_info_out->drm_format_modifier = DRM_FORMAT_MOD_LINEAR;
   }
@@ -528,7 +527,7 @@ zx_status_t VulkanImageCreator::GetImageInfo(uint32_t width, uint32_t height, zx
   return ZX_OK;
 }
 
-static magma_status_t MagmaStatus(vk::Result result) {
+magma_status_t MagmaStatus(vk::Result result) {
   switch (result) {
     case vk::Result::eSuccess:
       return MAGMA_STATUS_OK;
@@ -547,7 +546,7 @@ static magma_status_t MagmaStatus(vk::Result result) {
   }
 }
 
-static vk::Format DrmFormatToVulkanFormat(uint64_t drm_format) {
+vk::Format DrmFormatToVulkanFormat(uint64_t drm_format) {
   switch (drm_format) {
     case DRM_FORMAT_ARGB8888:
     case DRM_FORMAT_XRGB8888:
@@ -560,7 +559,7 @@ static vk::Format DrmFormatToVulkanFormat(uint64_t drm_format) {
   return vk::Format::eUndefined;
 }
 
-static fuchsia_sysmem::wire::PixelFormatType DrmFormatToSysmemFormat(uint64_t drm_format) {
+fuchsia_sysmem::wire::PixelFormatType DrmFormatToSysmemFormat(uint64_t drm_format) {
   switch (drm_format) {
     case DRM_FORMAT_ARGB8888:
     case DRM_FORMAT_XRGB8888:
@@ -573,7 +572,7 @@ static fuchsia_sysmem::wire::PixelFormatType DrmFormatToSysmemFormat(uint64_t dr
   return fuchsia_sysmem::wire::PixelFormatType::kInvalid;
 }
 
-static uint64_t DrmModifierToSysmemModifier(uint64_t modifier) {
+uint64_t DrmModifierToSysmemModifier(uint64_t modifier) {
   switch (modifier) {
     case DRM_FORMAT_MOD_LINEAR:
       return fuchsia_sysmem::wire::kFormatModifierLinear;
@@ -627,15 +626,15 @@ magma_status_t CreateDrmImage(uint32_t physical_device_index,
   // Convert modifiers provided by client.
   {
     bool terminator_found = false;
-    for (uint32_t i = 0; i < MAGMA_MAX_DRM_FORMAT_MODIFIERS; i++) {
-      if (create_info->drm_format_modifiers[i] == DRM_FORMAT_MOD_INVALID) {
+    for (uint64_t drm_format_modifier : create_info->drm_format_modifiers) {
+      if (drm_format_modifier == DRM_FORMAT_MOD_INVALID) {
         terminator_found = true;
         break;
       }
 
-      uint64_t modifier = DrmModifierToSysmemModifier(create_info->drm_format_modifiers[i]);
+      uint64_t modifier = DrmModifierToSysmemModifier(drm_format_modifier);
       if (modifier == fuchsia_sysmem::wire::kFormatModifierInvalid) {
-        LOG_VERBOSE("Invalid modifier: %#lx", create_info->drm_format_modifiers[i]);
+        LOG_VERBOSE("Invalid modifier: %#lx", drm_format_modifier);
         return MAGMA_STATUS_INVALID_ARGS;
       }
 

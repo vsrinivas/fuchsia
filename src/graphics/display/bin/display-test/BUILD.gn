@@ -16,7 +16,7 @@ executable("display-test") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/image-format:image-format-llcpp",
+    "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
   ]
