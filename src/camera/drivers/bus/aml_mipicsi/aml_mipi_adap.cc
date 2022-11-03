@@ -319,10 +319,12 @@ zx_status_t AmlMipiDevice::MipiAdapInit(const mipi_adap_info_t* info) {
 
     running_.store(true);
 
-    int rc = thrd_create_with_name(&irq_thread_, start_thread, this, "adapter_irq_thread");
+    thrd_t irq_thread;
+    int rc = thrd_create_with_name(&irq_thread, start_thread, this, "adapter_irq_thread");
     if (rc != thrd_success) {
       return ZX_ERR_INTERNAL;
     }
+    irq_thread_ = irq_thread;
   }
 
   // Reset the Frontend

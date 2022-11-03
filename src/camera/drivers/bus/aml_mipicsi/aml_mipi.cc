@@ -226,7 +226,9 @@ zx_status_t AmlMipiDevice::Create(zx_device_t* parent) {
 AmlMipiDevice::~AmlMipiDevice() {
   adap_irq_.destroy();
   running_.store(false);
-  thrd_join(irq_thread_, nullptr);
+  if (irq_thread_.has_value()) {
+    thrd_join(irq_thread_.value(), nullptr);
+  }
 }
 
 zx_status_t aml_mipi_bind(void* /*ctx*/, zx_device_t* device) {
