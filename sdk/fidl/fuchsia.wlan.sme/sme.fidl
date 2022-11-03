@@ -106,22 +106,6 @@ type ScanErrorCode = strict enum {
     CANCELED_BY_DRIVER_OR_FIRMWARE = 5;
 };
 
-type ScanError = struct {
-    code ScanErrorCode;
-    message string;
-};
-
-protocol ScanTransaction {
-    // Can be called several times to deliver incremental scan results
-    -> OnResult(struct {
-        aps vector<ScanResult>;
-    });
-    -> OnFinished();
-    -> OnError(struct {
-        error ScanError;
-    });
-};
-
 type ScanRequest = strict union {
     1: active ActiveScanRequest;
     2: passive PassiveScanRequest;
@@ -223,10 +207,15 @@ type ClientStatusResponse = strict union {
 };
 
 protocol ClientSme {
+    // TODO(fxbug.dev/100478): Remove this denylist when support
+    // for other languages is complete.
+    @bindings_denylist("cpp, dart, go, hlcpp, llcpp")
+    @experimental_overflowing(response=true)
     Scan(resource struct {
         req ScanRequest;
-        txn server_end:ScanTransaction;
-    });
+    }) -> (struct {
+        scan_results vector<ScanResult>;
+    }) error ScanErrorCode;
     Connect(resource struct {
         req ConnectRequest;
         txn server_end:<ConnectTransaction, optional>;

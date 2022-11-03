@@ -222,9 +222,8 @@ impl SmeForScan {
     pub fn scan(
         &self,
         req: &mut fidl_sme::ScanRequest,
-        txn: fidl::endpoints::ServerEnd<fidl_sme::ScanTransactionMarker>,
-    ) -> Result<(), fidl::Error> {
-        self.proxy.scan(req, txn)
+    ) -> <fidl_sme::ClientSmeProxy as fidl_sme::ClientSmeProxyInterface>::ScanResponseFut {
+        self.proxy.scan(req)
     }
 
     pub fn log_aborted_scan_defect(&self) {
@@ -1362,18 +1361,18 @@ mod tests {
             create_proxy::<fidl_sme::ClientSmeMarker>().expect("failed to create client SME");
         let (defect_sender, _defect_receiver) = mpsc::unbounded();
         let sme = SmeForScan::new(proxy, 0, defect_sender);
-        let mut sme_stream = server_end.into_stream().expect("faield to create SME stream");
+        let mut sme_stream = server_end.into_stream().expect("failed to create SME stream");
 
         // Construct a scan request.
         let scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
             ssids: vec![vec![]],
             channels: vec![],
         });
-        let (_, remote) =
-            fidl::endpoints::create_proxy().expect("failed to create SME transaction endpoints");
 
         // Issue the scan request.
-        sme.scan(&mut scan_request.clone(), remote).expect("could not make scan request");
+        let scan_result_fut = sme.scan(&mut scan_request.clone());
+        pin_mut!(scan_result_fut);
+        assert_variant!(exec.run_until_stalled(&mut scan_result_fut), Poll::Pending);
 
         // Poll the server end of the SME and expect that a scan request has been forwarded.
         assert_variant!(

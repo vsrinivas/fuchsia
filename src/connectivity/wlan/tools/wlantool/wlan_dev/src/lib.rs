@@ -13,9 +13,7 @@ use {
     },
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_sme as fidl_sme,
-    fidl_fuchsia_wlan_sme::{
-        ConnectTransactionEvent, ScanTransactionEvent, ScanTransactionEventStream,
-    },
+    fidl_fuchsia_wlan_sme::ConnectTransactionEvent,
     fuchsia_zircon_status as zx_status, fuchsia_zircon_types as zx_sys,
     futures::prelude::*,
     ieee80211::Ssid,
@@ -343,42 +341,35 @@ async fn do_client_connect(
     monitor_proxy: DeviceMonitorProxy,
 ) -> Result<(), Error> {
     async fn try_get_bss_desc(
-        mut events: ScanTransactionEventStream,
+        scan_result: fidl_sme::ClientSmeScanResult,
         ssid: &Ssid,
     ) -> Result<fidl_internal::BssDescription, Error> {
         let mut bss_description = None;
-        while let Some(event) = events
-            .try_next()
-            .await
-            .context("failed to fetch all results before the channel was closed")?
-        {
-            match event {
-                ScanTransactionEvent::OnResult { aps: mut scan_result_list } => {
-                    if bss_description.is_none() {
-                        // Write the first matching `BssDescription`. Any additional information is
-                        // ignored.
-                        if let Some(bss_info) = scan_result_list.drain(0..).find(|scan_result| {
-                            // TODO(fxbug.dev/83708): Until the error produced by
-                            // `ScanResult::try_from` includes some details about the scan result
-                            // which failed conversion, `scan_result` must be cloned for debug
-                            // logging if conversion fails.
-                            match ScanResult::try_from(scan_result.clone()) {
-                                Ok(scan_result) => scan_result.bss_description.ssid == *ssid,
-                                Err(e) => {
-                                    println!("Failed to convert ScanResult: {:?}", e);
-                                    println!("  {:?}", scan_result);
-                                    false
-                                }
+        match scan_result {
+            Ok(mut scan_result_list) => {
+                if bss_description.is_none() {
+                    // Write the first matching `BssDescription`. Any additional information is
+                    // ignored.
+                    if let Some(bss_info) = scan_result_list.drain(0..).find(|scan_result| {
+                        // TODO(fxbug.dev/83708): Until the error produced by
+                        // `ScanResult::try_from` includes some details about the scan result
+                        // which failed conversion, `scan_result` must be cloned for debug
+                        // logging if conversion fails.
+                        match ScanResult::try_from(scan_result.clone()) {
+                            Ok(scan_result) => scan_result.bss_description.ssid == *ssid,
+                            Err(e) => {
+                                println!("Failed to convert ScanResult: {:?}", e);
+                                println!("  {:?}", scan_result);
+                                false
                             }
-                        }) {
-                            bss_description = Some(bss_info.bss_description);
                         }
+                    }) {
+                        bss_description = Some(bss_info.bss_description);
                     }
                 }
-                ScanTransactionEvent::OnFinished {} => break,
-                ScanTransactionEvent::OnError { error } => {
-                    return Err(format_err!("failed to fetch scan result: {:?}", error));
-                }
+            }
+            Err(scan_error_code) => {
+                return Err(format_err!("failed to fetch scan result: {:?}", scan_error_code));
             }
         }
         bss_description.ok_or_else(|| format_err!("failed to find BSS information for SSID"))
@@ -392,7 +383,6 @@ async fn do_client_connect(
     let opts::ClientConnectCmd { iface_id, ssid, password, psk, scan_type } = cmd;
     let ssid = Ssid::try_from(ssid)?;
     let sme = get_client_sme(monitor_proxy, iface_id).await?;
-    let (local, remote) = endpoints::create_proxy()?;
     let mut req = match scan_type {
         ScanTypeArg::Active => fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
             ssids: vec![ssid.to_vec()],
@@ -400,8 +390,8 @@ async fn do_client_connect(
         }),
         ScanTypeArg::Passive => fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}),
     };
-    sme.scan(&mut req, remote).context("error sending scan request")?;
-    let bss_description = try_get_bss_desc(local.take_event_stream(), &ssid).await?;
+    let scan_result = sme.scan(&mut req).await.context("error sending scan request")?;
+    let bss_description = try_get_bss_desc(scan_result, &ssid).await?;
     let authentication = match fidl_security::Authentication::try_from(SecurityContext {
         unparsed_password_text: password,
         unparsed_psk_text: psk,
@@ -442,7 +432,6 @@ async fn do_client_scan(
 ) -> Result<(), Error> {
     let opts::ClientScanCmd { iface_id, scan_type } = cmd;
     let sme = get_client_sme(monitor_proxy, iface_id).await?;
-    let (local, remote) = endpoints::create_proxy()?;
     let mut req = match scan_type {
         ScanTypeArg::Passive => fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}),
         ScanTypeArg::Active => fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
@@ -450,8 +439,9 @@ async fn do_client_scan(
             channels: vec![],
         }),
     };
-    sme.scan(&mut req, remote).context("error sending scan request")?;
-    handle_scan_transaction(local).await
+    let scan_result = sme.scan(&mut req).await.context("error sending scan request")?;
+    print_scan_result(scan_result);
+    Ok(())
 }
 
 async fn print_iface_status(iface_id: u16, monitor_proxy: DeviceMonitor) -> Result<(), Error> {
@@ -646,48 +636,34 @@ impl FromStr for MacAddr {
     }
 }
 
-async fn handle_scan_transaction(scan_txn: fidl_sme::ScanTransactionProxy) -> Result<(), Error> {
-    let mut printed_header = false;
-    let mut events = scan_txn.take_event_stream();
-    while let Some(evt) = events
-        .try_next()
-        .await
-        .context("failed to fetch all results before the channel was closed")?
-    {
-        match evt {
-            ScanTransactionEvent::OnResult { aps: scan_result_list } => {
-                if !printed_header {
-                    print_scan_header();
-                    printed_header = true;
-                }
-                scan_result_list
-                    .into_iter()
-                    .filter_map(
-                        // TODO(fxbug.dev/83708): Until the error produced by
-                        // ScanResult::TryFrom includes some details about the
-                        // scan result which failed conversion, scan_result must
-                        // be cloned for debug logging if conversion fails.
-                        |scan_result| match ScanResult::try_from(scan_result.clone()) {
-                            Ok(scan_result) => Some(scan_result),
-                            Err(e) => {
-                                eprintln!("Failed to convert ScanResult: {:?}", e);
-                                eprintln!("  {:?}", scan_result);
-                                None
-                            }
-                        },
-                    )
-                    .sorted_by(|a, b| a.bss_description.ssid.cmp(&b.bss_description.ssid))
-                    .by_ref()
-                    .for_each(|scan_result| print_scan_result(&scan_result))
-            }
-            ScanTransactionEvent::OnFinished {} => break,
-            ScanTransactionEvent::OnError { error } => {
-                eprintln!("Error: {}", error.message);
-                break;
-            }
+fn print_scan_result(scan_result: fidl_sme::ClientSmeScanResult) {
+    match scan_result {
+        Ok(scan_result_list) => {
+            print_scan_header();
+            scan_result_list
+                .into_iter()
+                .filter_map(
+                    // TODO(fxbug.dev/83708): Until the error produced by
+                    // ScanResult::TryFrom includes some details about the
+                    // scan result which failed conversion, scan_result must
+                    // be cloned for debug logging if conversion fails.
+                    |scan_result| match ScanResult::try_from(scan_result.clone()) {
+                        Ok(scan_result) => Some(scan_result),
+                        Err(e) => {
+                            eprintln!("Failed to convert ScanResult: {:?}", e);
+                            eprintln!("  {:?}", scan_result);
+                            None
+                        }
+                    },
+                )
+                .sorted_by(|a, b| a.bss_description.ssid.cmp(&b.bss_description.ssid))
+                .by_ref()
+                .for_each(|scan_result| print_one_scan_result(&scan_result));
+        }
+        Err(scan_error_code) => {
+            eprintln!("Error: {:?}", scan_error_code);
         }
     }
-    Ok(())
 }
 
 fn print_scan_line(
@@ -705,7 +681,7 @@ fn print_scan_header() {
     print_scan_line("BSSID", "dBm", "Chan", "Protection", "Compatible", "SSID");
 }
 
-fn print_scan_result(scan_result: &wlan_common::scan::ScanResult) {
+fn print_one_scan_result(scan_result: &wlan_common::scan::ScanResult) {
     print_scan_line(
         MacAddr(scan_result.bss_description.bssid.0),
         scan_result.bss_description.rssi_dbm,

@@ -307,42 +307,11 @@ pub async fn disconnect_all(wlan_svc: &WlanService) -> Result<(), Error> {
 pub async fn passive_scan(
     iface_sme_proxy: &fidl_sme::ClientSmeProxy,
 ) -> Result<Vec<fidl_sme::ScanResult>, Error> {
-    let scan_transaction = start_passive_scan_transaction(&iface_sme_proxy)?;
-
-    get_scan_results(scan_transaction).await.map_err(Into::into)
-}
-
-fn start_passive_scan_transaction(
-    iface_sme_proxy: &fidl_sme::ClientSmeProxy,
-) -> Result<fidl_sme::ScanTransactionProxy, Error> {
-    let (scan_txn, remote) = endpoints::create_proxy()?;
-    let mut req = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
-    iface_sme_proxy.scan(&mut req, remote)?;
-    Ok(scan_txn)
-}
-
-async fn get_scan_results(
-    scan_txn: fidl_sme::ScanTransactionProxy,
-) -> Result<Vec<fidl_sme::ScanResult>, Error> {
-    let mut stream = scan_txn.take_event_stream();
-    let mut scan_results = vec![];
-
-    while let Some(event) = stream
-        .try_next()
+    iface_sme_proxy
+        .scan(&mut fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}))
         .await
-        .context("failed to receive scan result before the channel was closed")?
-    {
-        match event {
-            fidl_sme::ScanTransactionEvent::OnResult { aps } => scan_results.extend(aps),
-            fidl_sme::ScanTransactionEvent::OnFinished {} => return Ok(scan_results),
-            fidl_sme::ScanTransactionEvent::OnError { error } => {
-                // error while waiting for scan results
-                return Err(format_err!("error when retrieving scan results {:?}", error));
-            }
-        }
-    }
-
-    return Err(format_err!("ScanTransaction channel closed before scan finished"));
+        .context("error sending scan request")?
+        .map_err(|scan_error_code| format_err!("Scan error: {:?}", scan_error_code))
 }
 
 #[cfg(test)]
@@ -1252,7 +1221,7 @@ mod tests {
         assert!(test_scan_error().is_err())
     }
 
-    fn test_scan(mut scan_results: Vec<fidl_sme::ScanResult>) -> Vec<fidl_sme::ScanResult> {
+    fn test_scan(scan_results: Vec<fidl_sme::ScanResult>) -> Vec<fidl_sme::ScanResult> {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let (client_sme, server) = create_client_sme_proxy();
         let mut client_sme_req = server.into_future();
@@ -1261,7 +1230,7 @@ mod tests {
         pin_mut!(fut);
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
-        send_scan_result_response(&mut exec, &mut client_sme_req, &mut scan_results);
+        send_scan_result_response(&mut exec, &mut client_sme_req, scan_results);
 
         let complete = exec.run_until_stalled(&mut fut);
         let request_result = match complete {
@@ -1276,23 +1245,15 @@ mod tests {
     fn send_scan_result_response(
         exec: &mut TestExecutor,
         server: &mut StreamFuture<fidl_sme::ClientSmeRequestStream>,
-        scan_results: &mut Vec<fidl_sme::ScanResult>,
+        scan_results: Vec<fidl_sme::ScanResult>,
     ) {
-        let transaction = match poll_client_sme_request(exec, server) {
-            Poll::Ready(fidl_sme::ClientSmeRequest::Scan { txn, .. }) => txn,
+        match poll_client_sme_request(exec, server) {
+            Poll::Ready(fidl_sme::ClientSmeRequest::Scan { responder, .. }) => {
+                responder.send(&mut Ok(scan_results)).expect("failed to send scan results")
+            }
             Poll::Pending => panic!("expected a request to be available"),
             _ => panic!("expected a scan request"),
-        };
-
-        // now send the response back
-        let transaction = transaction
-            .into_stream()
-            .expect("failed to create a scan transaction stream")
-            .control_handle();
-        transaction
-            .send_on_result(&mut scan_results.into_iter())
-            .expect("failed to send scan results");
-        transaction.send_on_finished().expect("failed to send OnFinished to ScanTransaction");
+        }
     }
 
     fn test_scan_error() -> Result<(), Error> {
@@ -1313,24 +1274,13 @@ mod tests {
         exec: &mut TestExecutor,
         server: &mut StreamFuture<fidl_sme::ClientSmeRequestStream>,
     ) {
-        let transaction = match poll_client_sme_request(exec, server) {
-            Poll::Ready(fidl_sme::ClientSmeRequest::Scan { txn, .. }) => txn,
+        match poll_client_sme_request(exec, server) {
+            Poll::Ready(fidl_sme::ClientSmeRequest::Scan { responder, .. }) => responder
+                .send(&mut Err(fidl_sme::ScanErrorCode::InternalError))
+                .expect("failed to send ScanError"),
             Poll::Pending => panic!("expected a request to be available"),
             _ => panic!("expected a scan request"),
         };
-
-        // create error to send back
-        let mut scan_error = fidl_sme::ScanError {
-            code: fidl_sme::ScanErrorCode::InternalError,
-            message: "Scan error".to_string(),
-        };
-
-        // now send the response back
-        let transaction = transaction
-            .into_stream()
-            .expect("failed to create a scan transaction stream")
-            .control_handle();
-        transaction.send_on_error(&mut scan_error).expect("failed to send ScanError");
     }
 
     fn create_scan_result(

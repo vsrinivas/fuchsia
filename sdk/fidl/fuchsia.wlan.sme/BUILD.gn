@@ -6,12 +6,11 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.wlan.sme") {
   # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [
-    "string-bounds-not-specified",
-    "vector-bounds-not-specified",
-  ]
+  excluded_checks = [ "vector-bounds-not-specified" ]
 
   sources = [ "sme.fidl" ]
+
+  experimental_flags = [ "allow_overflowing" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.wlan.common",
