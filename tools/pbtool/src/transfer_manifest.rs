@@ -27,7 +27,8 @@ pub struct GenerateTransferManifest {
     #[argh(option)]
     product_bundle: PathBuf,
 
-    /// path to the directory to write the transfer manifest, all_blobs.json, and targets.json.
+    /// path to the directory to write the transfer manifest, all_blobs.json, images.json, and
+    /// targets.json.
     #[argh(option)]
     out_dir: PathBuf,
 }
@@ -53,6 +54,7 @@ impl GenerateTransferManifest {
 
         let rebased_product_bundle_path = diff_paths(&self.product_bundle, &self.out_dir)
             .context("rebasing product bundle directory")?;
+        let canonical_out_dir = &self.out_dir.canonicalize().context("canonicalizing out_dir")?;
         let canonical_product_bundle_path =
             &self.product_bundle.canonicalize().context("canonicalizing product bundle path")?;
 
@@ -163,6 +165,27 @@ impl GenerateTransferManifest {
         all_blobs.sort();
         serde_json::to_writer(all_blobs_file, &all_blobs).context("writing all_blobs.json")?;
         mos_entries.push(ArtifactEntry { name: "all_blobs.json".into() });
+
+        // Add images.json for MOS and tests.
+        // Find the first assembly in the preferential order of A, B, then R.
+        let mut assembly = if let Some(a) = product_bundle.system_a {
+            a.clone()
+        } else if let Some(b) = product_bundle.system_b {
+            b.clone()
+        } else if let Some(r) = product_bundle.system_r {
+            r.clone()
+        } else {
+            bail!("The product bundle does not have any assembly systems");
+        };
+        for image in &mut assembly.images {
+            image.set_source(
+                diff_paths(image.source(), canonical_out_dir).context("rebasing image path")?,
+            );
+        }
+        let images_path = self.out_dir.join("images.json");
+        let images_file = File::create(&images_path).context("creating images.json")?;
+        serde_json::to_writer(images_file, &assembly).context("writing images.json")?;
+        mos_entries.push(ArtifactEntry { name: "images.json".into() });
 
         entries.push(TransferEntry {
             artifact_type: ArtifactType::Files,
@@ -284,6 +307,7 @@ mod tests {
                         entries: vec![
                             ArtifactEntry { name: "targets.json".into() },
                             ArtifactEntry { name: "all_blobs.json".into() },
+                            ArtifactEntry { name: "images.json".into() },
                         ]
                     }
                 ]
@@ -316,6 +340,20 @@ mod tests {
                    },
                 ]
             )
+        );
+
+        let images_path = tempdir.path().join("images.json");
+        let images_file = File::open(&images_path).unwrap();
+        let images: AssemblyManifest = serde_json::from_reader(images_file).unwrap();
+        assert_eq!(
+            images,
+            AssemblyManifest {
+                images: vec![
+                    Image::ZBI { path: "product_bundle/zbi".into(), signed: false },
+                    Image::FVM("product_bundle/fvm".into()),
+                    Image::QemuKernel("product_bundle/kernel".into()),
+                ],
+            },
         );
 
         let targets_path = tempdir.path().join("targets.json");
