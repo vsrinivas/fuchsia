@@ -202,12 +202,6 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
             warn!("Could not get account handler for account removal {:?}", err);
             err.api_error
         })?;
-        // TODO(fxbug.dev/43491): Don't unlock accounts before removing them.
-        account_handler
-            .proxy()
-            .unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY)
-            .await
-            .map_err(|_| ApiError::Resource)??;
         account_handler.proxy().remove_account().await.map_err(|_| ApiError::Resource)??;
         account_handler.terminate().await;
         // Emphemeral accounts were never included in the StoredAccountList and so it does not need

@@ -417,41 +417,49 @@ where
         };
 
         self.inspect.lifecycle.set("finished");
-        let account_arc = match old_lifecycle {
+        match old_lifecycle {
             Lifecycle::Locked { .. } => {
-                warn!("Removing a locked account is not yet implemented");
-                return Err(ApiError::UnsupportedOperation);
+                self.storage_manager.lock().await.destroy().await.map_err(|err| {
+                    warn!("remove_account failed to destroy StorageManager: {:?}", err);
+                    ApiError::Resource
+                })?;
+                // If this account was once unlocked but is now locked, it must
+                // have passed through the Self::lock_now(..) method, which
+                // fetches the task group and cancels it.
+                info!("Deleted account");
+                Ok(())
             }
             Lifecycle::Initialized { account, .. } => {
                 self.storage_manager.lock().await.destroy().await.map_err(|err| {
                     warn!("remove_account failed to destroy StorageManager: {:?}", err);
                     ApiError::Resource
                 })?;
-                account
+                let account_arc = account;
+                // TODO(fxbug.dev/555): After this point, error recovery might
+                // include putting the account back in the lock.
+                if let Err(TaskGroupError::AlreadyCancelled) =
+                    account_arc.task_group().cancel().await
+                {
+                    warn!("Task group was already cancelled prior to account removal.");
+                }
+                // At this point we have exclusive access to the account, so we
+                // move it out of the Arc to destroy it.
+                let account = Arc::try_unwrap(account_arc).map_err(|_| {
+                    warn!("Could not acquire exclusive access to account");
+                    ApiError::Internal
+                })?;
+                account.remove().map_err(|(_account, err)| {
+                    warn!("Could not delete account: {:?}", err);
+                    err.api_error
+                })?;
+                info!("Deleted account");
+                Ok(())
             }
             _ => {
                 warn!("No account is initialized");
-                return Err(ApiError::FailedPrecondition);
+                Err(ApiError::FailedPrecondition)
             }
-        };
-
-        // TODO(fxbug.dev/555): After this point, error recovery might include putting the account back
-        // in the lock.
-        if let Err(TaskGroupError::AlreadyCancelled) = account_arc.task_group().cancel().await {
-            warn!("Task group was already cancelled prior to account removal.");
         }
-        // At this point we have exclusive access to the account, so we move it out of the Arc to
-        // destroy it.
-        let account = Arc::try_unwrap(account_arc).map_err(|_| {
-            warn!("Could not acquire exclusive access to account");
-            ApiError::Internal
-        })?;
-        account.remove().map_err(|(_account, err)| {
-            warn!("Could not delete account: {:?}", err);
-            err.api_error
-        })?;
-        info!("Deleted account");
-        Ok(())
     }
 
     /// Connects the provided `account_server_end` to the `Account` protocol
@@ -1021,7 +1029,7 @@ mod tests {
     }
 
     #[test]
-    fn test_remove_account() {
+    fn test_remove_initialized_account() {
         let location = TempLocation::new();
         let inspector = Arc::new(Inspector::new());
         request_stream_test(
@@ -1091,10 +1099,23 @@ mod tests {
                 .lifetime(location.to_persistent_lifetime())
                 .inspector(Arc::new(Inspector::new()))
                 .test_fn(|proxy| async move {
-                    let pre_auth_state: Vec<u8> = (&*TEST_PRE_AUTH_EMPTY).try_into()?;
-                    // Preloading a non-existing account will succeed, for now
-                    proxy.preload(&pre_auth_state).await??;
-                    assert_eq!(proxy.remove_account().await?, Err(ApiError::UnsupportedOperation));
+                    proxy.create_account(create_account_request(TEST_ACCOUNT_ID_UINT)).await??;
+
+                    // Keep an open channel to an account.
+                    let (account_client_end, account_server_end) = create_endpoints().unwrap();
+                    proxy.get_account(account_server_end).await??;
+                    let account_proxy = account_client_end.into_proxy().unwrap();
+
+                    proxy.lock_account().await??;
+
+                    assert_eq!(proxy.remove_account().await?, Ok(()));
+
+                    // Make sure that the channel is in fact closed.
+                    assert!(account_proxy.get_auth_state().await.is_err());
+
+                    // We cannot remove twice.
+                    assert_eq!(proxy.remove_account().await?, Err(ApiError::FailedPrecondition));
+
                     Ok(())
                 })
                 .build(),
