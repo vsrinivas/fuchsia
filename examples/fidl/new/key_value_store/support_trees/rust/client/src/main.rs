@@ -84,8 +84,7 @@ async fn main() -> Result<(), Error> {
 
     // Each entry in this list is a null value in the store.
     for key in config.write_null.into_iter() {
-        let res = store.write_item(&mut Item { key: key.to_string(), value: None }).await;
-        match res? {
+        match store.write_item(&mut Item { key: key.to_string(), value: None }).await? {
             Ok(_) => println!("WriteItem Success at key: {}", key),
             Err(err) => println!("WriteItem Error: {}", err.into_primitive()),
         }

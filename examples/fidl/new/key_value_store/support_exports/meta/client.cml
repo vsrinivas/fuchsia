@@ -10,5 +10,20 @@
     use: [
         { protocol: "examples.keyvaluestore.supportexports.Store" },
     ],
-    config: {},
+    config: {
+        write_items: {
+            type: "vector",
+            max_count: 16,
+            element: {
+                type: "string",
+                max_size: 64,
+            },
+        },
+
+        // [START diff_1]
+        // The size, in bytes, allotted to the export VMO
+        max_export_size: { type: "uint64" },
+
+        // [END diff_1]
+    },
 }

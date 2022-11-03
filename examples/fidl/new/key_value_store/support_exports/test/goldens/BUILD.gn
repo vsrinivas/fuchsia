@@ -1,0 +1,48 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dist/resource.gni")
+
+resource("test_export_empty_error_client") {
+  sources = [ "test_export_empty_error_client.log.golden" ]
+  outputs = [ "data/goldens/{{source_file_part}}" ]
+}
+
+resource("test_export_empty_error_server") {
+  sources = [ "test_export_empty_error_server.log.golden" ]
+  outputs = [ "data/goldens/{{source_file_part}}" ]
+}
+
+resource("test_export_storage_too_small_error_client") {
+  sources = [ "test_export_storage_too_small_error_client.log.golden" ]
+  outputs = [ "data/goldens/{{source_file_part}}" ]
+}
+
+resource("test_export_storage_too_small_error_server") {
+  sources = [ "test_export_storage_too_small_error_server.log.golden" ]
+  outputs = [ "data/goldens/{{source_file_part}}" ]
+}
+
+resource("test_export_success_client") {
+  sources = [ "test_export_success_client.log.golden" ]
+  outputs = [ "data/goldens/{{source_file_part}}" ]
+}
+
+resource("test_export_success_server") {
+  sources = [ "test_export_success_server.log.golden" ]
+  outputs = [ "data/goldens/{{source_file_part}}" ]
+}
+
+# These are files that are meant to be included with our test component. Each file represents a
+# golden from a single process for a single test.
+group("resources") {
+  deps = [
+    ":test_export_empty_error_client",
+    ":test_export_empty_error_server",
+    ":test_export_storage_too_small_error_client",
+    ":test_export_storage_too_small_error_server",
+    ":test_export_success_client",
+    ":test_export_success_server",
+  ]
+}

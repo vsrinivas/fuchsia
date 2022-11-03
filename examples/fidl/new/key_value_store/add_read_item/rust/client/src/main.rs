@@ -30,8 +30,7 @@ async fn main() -> Result<(), Error> {
         let path = format!("/pkg/data/{}.txt", key);
         let value = std::fs::read_to_string(path.clone())
             .with_context(|| format!("Failed to load {path}"))?;
-        let res = store.write_item(&mut Item { key: key, value: value.into_bytes() }).await;
-        match res? {
+        match store.write_item(&mut Item { key: key, value: value.into_bytes() }).await? {
             Ok(_) => println!("WriteItem Success"),
             Err(err) => println!("WriteItem Error: {}", err.into_primitive()),
         }

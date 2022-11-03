@@ -153,7 +153,7 @@ pub enum TestKind<'a> {
 pub async fn run_test<Fut>(
     protocol_name: &str,
     test_kind: TestKind<'_>,
-    input_setter: impl Fn(RealmBuilder, ChildRef) -> Fut,
+    input_setter: impl FnOnce(RealmBuilder, ChildRef) -> Fut,
     logs_reader: impl Fn(Vec<Data<Logs>>),
 ) -> Result<(), Error>
 where
