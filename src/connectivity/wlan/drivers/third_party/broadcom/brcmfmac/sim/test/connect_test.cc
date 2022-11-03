@@ -98,9 +98,6 @@ class ConnectTest : public SimTest {
   // Send repeated association responses
   void SendMultipleResp();
 
-  // Send association response with WMM IE
-  void SendAssocRespWithWmm();
-
   // Send one authentication response to help client passing through authentication process
   void SendOpenAuthResp();
 
@@ -336,7 +333,8 @@ void ConnectTest::OnConnectConf(const wlan_fullmac_connect_confirm_t* resp) {
   EXPECT_EQ(resp->result_code, context_.expected_results.front());
 
   if (!context_.expected_wmm_param.empty()) {
-    EXPECT_GT(resp->association_ies_count, 0ul);
+    EXPECT_GE(resp->association_ies_count, context_.expected_wmm_param.size());
+    EXPECT_NE(resp->association_ies_list, nullptr);
     bool contains_wmm_param = false;
     for (size_t offset = 0;
          offset <= resp->association_ies_count - context_.expected_wmm_param.size(); offset++) {
@@ -565,7 +563,7 @@ TEST_F(ConnectTest, GetIfaceHistogramStatsNotSupportedTest) {
 
 void ConnectTest::ConnectErrorInject() {
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_SET_SSID, ZX_OK, BCME_OK, client_ifc_.iface_id_);
+  sim->sim_fw->err_inj_.AddErrInjIovar("join", ZX_OK, BCME_OK, client_ifc_.iface_id_);
 }
 
 void ConnectTest::ConnectErrorEventInject(brcmf_fweh_event_status_t ret_status,
@@ -660,7 +658,7 @@ TEST_F(ConnectTest, NoAps) {
 
   const common::MacAddr kBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
   context_.bssid = kBssid;
-  context_.expected_results.push_front(STATUS_CODE_REJECTED_SEQUENCE_TIMEOUT);
+  context_.expected_results.push_front(STATUS_CODE_REFUSED_EXTERNAL_REASON);
   context_.ssid = {.len = 6, .data = "TestAP"};
   context_.tx_info.channel = {.primary = 9, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
 
@@ -732,7 +730,8 @@ TEST_F(ConnectTest, SsidTest) {
   EXPECT_EQ(context_.connect_resp_count, 1U);
 }
 
-// Verify that APs with incorrect SSIDs or BSSIDs are ignored
+// Verify that APs with incorrect SSIDs or BSSIDs are ignored. Since we now use "join" to connect,
+// the join scan will fail (as opposed to AUTH/ASSOC failure).
 TEST_F(ConnectTest, WrongIds) {
   // Create our device instance
   Init();
@@ -753,7 +752,7 @@ TEST_F(ConnectTest, WrongIds) {
   simulation::FakeAp ap3(env_.get(), kDefaultBssid, kWrongSsid, kDefaultChannel);
   aps_.push_back(&ap3);
 
-  context_.expected_results.push_front(STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
+  context_.expected_results.push_front(STATUS_CODE_REFUSED_EXTERNAL_REASON);
 
   env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
 
@@ -798,7 +797,7 @@ TEST_F(ConnectTest, ApIgnoredRequest) {
   ap.SetAssocHandling(simulation::FakeAp::ASSOC_IGNORED);
   aps_.push_back(&ap);
 
-  context_.expected_results.push_front(STATUS_CODE_REJECTED_SEQUENCE_TIMEOUT);
+  context_.expected_results.push_front(STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
 
   env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
 
@@ -934,7 +933,7 @@ TEST_F(ConnectTest, IgnoreRespMismatch) {
 
   aps_.push_back(&ap);
 
-  context_.expected_results.push_front(STATUS_CODE_REJECTED_SEQUENCE_TIMEOUT);
+  context_.expected_results.push_front(STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
   context_.on_assoc_req_callback = std::bind(&ConnectTest::SendBadResp, this);
 
   env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
@@ -958,31 +957,6 @@ void ConnectTest::SendMultipleResp() {
   }
 }
 
-void ConnectTest::SendAssocRespWithWmm() {
-  uint8_t mac_buf[ETH_ALEN];
-  brcmf_simdev* sim = device_->GetSim();
-  struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
-  zx_status_t status = brcmf_fil_iovar_data_get(ifp, "cur_etheraddr", mac_buf, ETH_ALEN, nullptr);
-  EXPECT_EQ(status, ZX_OK);
-  common::MacAddr my_mac(mac_buf);
-  simulation::SimAssocRespFrame assoc_resp_frame(context_.bssid, my_mac,
-                                                 wlan_ieee80211::StatusCode::SUCCESS);
-
-  uint8_t raw_ies[] = {
-      // WMM param
-      0xdd, 0x18, 0x00, 0x50, 0xf2, 0x02, 0x01, 0x01,  // WMM header
-      0x80,                                            // Qos Info - U-ASPD enabled
-      0x00,                                            // reserved
-      0x03, 0xa4, 0x00, 0x00,                          // Best effort AC params
-      0x27, 0xa4, 0x00, 0x00,                          // Background AC params
-      0x42, 0x43, 0x5e, 0x00,                          // Video AC params
-      0x62, 0x32, 0x2f, 0x00,                          // Voice AC params
-  };
-  assoc_resp_frame.AddRawIes(cpp20::span(raw_ies, sizeof(raw_ies)));
-
-  env_->Tx(assoc_resp_frame, context_.tx_info, this);
-}
-
 void ConnectTest::SendOpenAuthResp() {
   common::MacAddr my_mac;
   client_ifc_.GetMacAddr(&my_mac);
@@ -995,6 +969,10 @@ void ConnectTest::SendOpenAuthResp() {
 TEST_F(ConnectTest, IgnoreExtraResp) {
   // Create our device instance
   Init();
+
+  // We need to start an AP since we now use "join" to connect (which performs a join scan).
+  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
+  aps_.push_back(&ap);
 
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
   context_.on_assoc_req_callback = std::bind(&ConnectTest::SendMultipleResp, this);
@@ -1043,14 +1021,26 @@ TEST_F(ConnectTest, AssocWhileScanning) {
 TEST_F(ConnectTest, AssocWithWmm) {
   // Create our device instance
   Init();
+  uint8_t raw_ies[] = {
+      // WMM param
+      0xdd, 0x18, 0x00, 0x50, 0xf2, 0x02, 0x01, 0x01,  // WMM header
+      0x80,                                            // Qos Info - U-ASPD enabled
+      0x00,                                            // reserved
+      0x03, 0xa4, 0x00, 0x00,                          // Best effort AC params
+      0x27, 0xa4, 0x00, 0x00,                          // Background AC params
+      0x42, 0x43, 0x5e, 0x00,                          // Video AC params
+      0x62, 0x32, 0x2f, 0x00,                          // Voice AC params
+  };
 
-  uint8_t expected_wmm_param[] = {0x80, 0x00, 0x03, 0xa4, 0x00, 0x00, 0x27, 0xa4, 0x00,
-                                  0x00, 0x42, 0x43, 0x5e, 0x00, 0x62, 0x32, 0x2f, 0x00};
+  // Start up fake AP (since there is always a join scan and scan will fail without an AP).
+  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
+  ap.AddAssocRespRawIes(cpp20::span(raw_ies, sizeof(raw_ies)));
+  aps_.push_back(&ap);
+  uint8_t expected_wmm_param[sizeof(raw_ies) - 8];
+  memcpy(expected_wmm_param, raw_ies + 8, sizeof(expected_wmm_param));
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
   context_.expected_wmm_param.insert(context_.expected_wmm_param.end(), expected_wmm_param,
                                      expected_wmm_param + sizeof(expected_wmm_param));
-  context_.on_assoc_req_callback = std::bind(&ConnectTest::SendAssocRespWithWmm, this);
-  context_.on_auth_req_callback = std::bind(&ConnectTest::SendOpenAuthResp, this);
 
   env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
 
@@ -1059,12 +1049,13 @@ TEST_F(ConnectTest, AssocWithWmm) {
   EXPECT_EQ(context_.connect_resp_count, 1U);
 }
 
+// Since we perform a join scan the error here is scan failure (no APs running).
 TEST_F(ConnectTest, AssocStatusAndReasonCodeMismatchHandling) {
   // Create our device instance
   Init();
 
   ConnectErrorEventInject(BRCMF_E_STATUS_NO_ACK, STATUS_CODE_SUCCESS);
-  context_.expected_results.push_back(STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
+  context_.expected_results.push_back(STATUS_CODE_REFUSED_EXTERNAL_REASON);
 
   env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(50));
   env_->Run(kTestDuration);

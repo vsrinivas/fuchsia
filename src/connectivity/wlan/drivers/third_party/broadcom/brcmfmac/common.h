@@ -25,7 +25,7 @@
 #include "linuxisms.h"
 
 #define BRCMF_FW_ALTPATH_LEN 256
-constexpr uint32_t kMaxAssocRetries = 0;
+constexpr uint32_t kMaxAssocRetries = 6;
 constexpr uint32_t kMchanState = 0;
 constexpr uint32_t kBufKeyB4M4 = 1;
 

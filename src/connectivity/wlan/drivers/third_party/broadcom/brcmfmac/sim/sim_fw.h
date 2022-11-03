@@ -50,7 +50,7 @@ const common::MacAddr kZeroMac({0x0, 0x0, 0x0, 0x0, 0x0, 0x0});
 // The amount of time we will wait for an association response after an association request
 constexpr zx::duration kAssocTimeout = zx::sec(1);
 // The amount of time we will wait for an authentication response after an authentication request
-constexpr zx::duration kAuthTimeout = zx::sec(1);
+constexpr zx::duration kAuthTimeout = zx::msec(100);
 // The amount of time we will wait for a reassociation response after a reassociation request
 constexpr zx::duration kReassocTimeout = zx::sec(1);
 // The amount of time we will wait for a beacon from an associated device before disassociating

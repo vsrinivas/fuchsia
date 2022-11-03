@@ -1773,7 +1773,7 @@ std::vector<uint8_t> brcmf_find_ssid_in_ies(const uint8_t* ie, size_t ie_len) {
 zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlan_fullmac_connect_req_t* req) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
-  struct brcmf_join_params join_params;
+  struct brcmf_ext_join_params_le join_params;
   wlan_channel_t chan_override;
   uint16_t chanspec;
   size_t join_params_size = 0;
@@ -1858,18 +1858,24 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlan_fullmac_c
   memcpy(&join_params.ssid_le.SSID, ssid.data(), ssid.size());
   join_params.ssid_le.SSID_len = ssid.size();
 
-  memcpy(join_params.params_le.bssid, ifp->connect_req.selected_bss.bssid, ETH_ALEN);
-  join_params.params_le.chanspec_num = 1;
-  join_params.params_le.chanspec_list[0] = chanspec;
+  memcpy(join_params.assoc_le.bssid, ifp->connect_req.selected_bss.bssid, ETH_ALEN);
+  join_params.assoc_le.chanspec_num = 1;
+  join_params.assoc_le.chanspec_list[0] = chanspec;
+
+  join_params.scan_le.scan_type = BRCMF_SCANTYPE_ACTIVE;
+  join_params.scan_le.nprobes = kJoinScanMaxProbes;
+  join_params.scan_le.active_time = -1;
+  join_params.scan_le.home_time = -1;
+  join_params.scan_le.passive_time = -1;
 
   // Attempt to clear counters here and ignore the error. Synaptics indicates that
   // some counters might be active even when the client is not connected.
   brcmf_fil_iovar_data_get(ifp, "reset_cnts", nullptr, 0, &fw_err);
   brcmf_fil_iovar_data_set(ifp, "wme_clear_counters", nullptr, 0, &fw_err);
-  BRCMF_DBG(CONN, "Sending C_SET_SSID to FW");
-  err = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_SSID, &join_params, join_params_size, &fw_err);
+  BRCMF_DBG(CONN, "Sending iovar join to FW");
+  err = brcmf_fil_iovar_data_set(ifp, "join", &join_params, join_params_size, &fw_err);
   if (err != ZX_OK) {
-    BRCMF_ERR("join failed (%d)", err);
+    BRCMF_ERR("join failed (%d) status: %s", err, brcmf_fil_get_errstr(fw_err));
   } else {
     BRCMF_IFDBG(WLANIF, ndev, "Connect timer started.");
     cfg->connect_timer->Start(BRCMF_CONNECT_TIMER_DUR_MS);

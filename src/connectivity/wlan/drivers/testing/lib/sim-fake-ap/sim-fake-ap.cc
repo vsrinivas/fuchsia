@@ -554,7 +554,14 @@ void FakeAp::HandleStopCsaBeaconNotification() {
 void FakeAp::HandleAssocRespNotification(wlan_ieee80211::StatusCode status, common::MacAddr dst) {
   SimAssocRespFrame assoc_resp_frame(bssid_, dst, status);
   assoc_resp_frame.capability_info_.set_val(beacon_state_.beacon_frame_.capability_info_.val());
+  if (assoc_resp_raw_ies_.size()) {
+    assoc_resp_frame.AddRawIes(assoc_resp_raw_ies_);
+  }
   environment_->Tx(assoc_resp_frame, tx_info_, this);
+}
+
+void FakeAp::AddAssocRespRawIes(cpp20::span<const uint8_t> raw_ies) {
+  assoc_resp_raw_ies_.insert(assoc_resp_raw_ies_.end(), raw_ies.begin(), raw_ies.end());
 }
 
 void FakeAp::HandleReassocRespNotification(::fuchsia::wlan::ieee80211::StatusCode status,

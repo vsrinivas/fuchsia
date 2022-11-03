@@ -36,6 +36,7 @@
 #include "workqueue.h"
 
 // clang-format off
+constexpr uint8_t kJoinScanMaxProbes = 10;
 
 #define WL_NUM_SCAN_MAX        10
 #define WL_TLV_INFO_MAX        1024
