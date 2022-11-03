@@ -27,84 +27,6 @@ enum class ContestStatus {
   kAllLosers,
 };
 
-// |InteractionTracker| tracks the life cycle of interactions arriving from Scenic.
-//
-// Every interaction is eventually either consumed or rejected, at which point
-// |OnInteractionHandledCallback| is called with the appropriate arguments.
-class InteractionTracker {
- public:
-  // Callback signature used to indicate to Scenic how an interaction sent to the
-  // a11y gesture arena was handled.
-  using OnInteractionHandledCallback =
-      fit::function<void(uint32_t device_id, uint32_t pointer_id, ContestStatus status)>;
-
-  explicit InteractionTracker(OnInteractionHandledCallback on_interaction_handled_callback);
-  ~InteractionTracker() = default;
-
-  // Resets the handled status for subsequent interactions.
-  void Reset();
-
-  // Rejects all interactions received by the tracker until reset.
-  void RejectPointerEvents();
-
-  // Consumes all interactions received by the tracker until reset.
-  void ConsumePointerEvents();
-
-  // Process the given event, which may add or remove an interaction.
-  //
-  // For ADD events, this records some state to remember to notify the input system
-  // when the interaction is consumed or rejected.
-  void OnEvent(const fuchsia::ui::pointer::augment::TouchEventWithLocalHit& event);
-
-  // Returns true if there are any open interactions.
-  //
-  // An interaction is considered closed when there is an event with phase == REMOVE.
-  bool is_active() const { return !open_interactions_.empty(); }
-
-  // What is the current status of the interaction tracker?
-  //
-  // The tracker can be in "accept mode", "reject mode", or currently "undecided", represented
-  // by the three variants of |ContestStatus|.
-  ContestStatus Status() { return status_; }
-
- private:
-  // Used to identify an interaction. A pair is used rather
-  // than a structure for a comparable key for std::set.
-  using InteractionID = std::pair</*device_id=*/uint32_t, /*pointer_id=*/uint32_t>;
-
-  // Handle all open interactions, and enter a state where all future interactions
-  // will be handled in the same way.
-  void InvokePointerEventCallbacks(ContestStatus status);
-
-  // Callback used to notify how each interaction was handled.
-  //
-  // This gets called once per interaction.
-  OnInteractionHandledCallback on_interaction_handled_callback_;
-
-  // Holds how many times the |on_interaction_handled_callback_| should be invoked,
-  // in order to notify the input system that the interactions were consumed / rejected.
-  //
-  // An interaction is a sequence of pointer events that must start with an ADD
-  // phase event and end with an REMOVE phase event. Since only one callback
-  // call is needed to notify the input system per interaction, on an ADD event
-  // the count is increased.
-  //
-  // Note: this is a map holding just a few keys and follows the map type selection guidance
-  // described at:
-  // https://chromium.googlesource.com/chromium/src/+/HEAD/base/containers/README.md#map-and-set-selection
-  std::map<InteractionID, uint32_t> interaction_callbacks_;
-
-  // Holds the currently open interactions. An interaction is considered open if an event
-  // with phase ADD was seen, but not an event with phase REMOVE yet.
-  std::set<InteractionID> open_interactions_;
-
-  // Whether the tracker is in "accept mode", "reject mode", or currently "undecided".
-  //
-  // Gets set when a user calls `ConsumePointerEvents`, or `RejectPointerEvents`, or
-  // `Reset`.
-  ContestStatus status_;
-};
-
 // Helper class for |GestureArenaV2|.
 //
 // Tracks the status of the current contest, as well as any "open" interactions.
@@ -146,7 +68,7 @@ class InteractionTrackerV2 {
   ContestStatus Status();
 
   // Are there any open interactions?
-  bool HasOpenInteractions();
+  bool HasOpenInteractions() const;
 
  private:
   // Notify all interactions that were on hold, telling them that the
@@ -221,11 +143,11 @@ class GestureRecognizerV2;
 //   they decide to accept.
 class GestureArenaV2 {
  public:
-  // This arena takes |on_interaction_handled_callback|, which is called whenever an
-  // interaction is handled (e.g., is consumed or rejected).
-  explicit GestureArenaV2(
-      InteractionTracker::OnInteractionHandledCallback on_interaction_handled_callback =
-          [](auto...) {});
+  // The arena takes a callback, which is called on each interaction that became
+  // closed before the contest outcome (accept or reject) was decided.
+  //
+  // See `InteractionTracker` for details.
+  explicit GestureArenaV2(InteractionTrackerV2::HeldInteractionCallback callback = [](auto...) {});
   virtual ~GestureArenaV2() = default;
 
   // Adds a new recognizer to the arena. The new recognizer starts participating in the next
@@ -238,14 +160,8 @@ class GestureArenaV2 {
   // Virtual for testing; overridden by a mock.
   virtual ContestStatus OnEvent(const fuchsia::ui::pointer::augment::TouchEventWithLocalHit& event);
 
-  // Tries to resolve the arena if it is not resolved already.
-  //
-  // It follows two rules:
-  //  * Contests remain unresolved until every recognizer has accepted or rejected.
-  //  * Of the recognizers that accept, the win is awarded to one with highest priority.
-  // A resolved arena stays resolved (and the current contest continues) until the winner
-  // releases its |ParticipationToken|, which resets the arena for a new contest.
-  void TryToResolve();
+  // Return the consumption status of the current contest.
+  ContestStatus Status() { return interactions_.Status(); }
 
  private:
   class ParticipationToken;
@@ -288,11 +204,18 @@ class GestureArenaV2 {
   // Reset the arena and notify recognizers that a new contest has started.
   void StartNewContest();
 
-  // Informs Scenic of whether interactions involved in the current contest should be
-  // consumed or rejected.
-  void HandleEvents(bool consumed);
+  // Try to resolve the current contest.
+  //
+  // It follows two rules:
+  //  * Contests remain unresolved until every recognizer has accepted or rejected.
+  //  * Of the recognizers that accept, the win is awarded to one with highest priority.
+  //
+  // A resolved arena stays resolved (and the current contest continues) until the winner
+  // releases its |ParticipationToken| and all open interactions are closed. (Or, if all
+  // recognizers declared defeat, simply once all open interactions are closed.)
+  void TryToResolve();
 
-  InteractionTracker interactions_;
+  InteractionTrackerV2 interactions_;
 
   std::list<RecognizerHandle> recognizers_;
 

@@ -24,81 +24,12 @@ std::tuple<uint32_t, uint32_t, uint32_t> interactionToTriple(
 
 }  // namespace
 
-InteractionTracker::InteractionTracker(OnInteractionHandledCallback on_interaction_handled_callback)
-    : on_interaction_handled_callback_(std::move(on_interaction_handled_callback)) {
-  FX_DCHECK(on_interaction_handled_callback_);
-}
-
-void InteractionTracker::Reset() {
-  status_ = ContestStatus::kUnresolved;
-  interaction_callbacks_.clear();
-  open_interactions_.clear();
-}
-
-void InteractionTracker::RejectPointerEvents() {
-  InvokePointerEventCallbacks(ContestStatus::kAllLosers);
-  // It is also necessary to clear the open interactions, because as they were rejected,
-  // Scenic will not send us the remaining events from those interactions.
-  open_interactions_.clear();
-}
-
-void InteractionTracker::ConsumePointerEvents() {
-  InvokePointerEventCallbacks(ContestStatus::kWinnerAssigned);
-}
-
-void InteractionTracker::InvokePointerEventCallbacks(ContestStatus status) {
-  FX_CHECK(status != ContestStatus::kUnresolved);
-  status_ = status;
-
-  for (const auto& kv : interaction_callbacks_) {
-    const auto [device_id, pointer_id] = kv.first;
-    for (uint32_t times = 1; times <= kv.second; ++times) {
-      on_interaction_handled_callback_(device_id, pointer_id, status);
-    }
-  }
-  interaction_callbacks_.clear();
-}
-
-void InteractionTracker::OnEvent(
-    const fuchsia::ui::pointer::augment::TouchEventWithLocalHit& event) {
-  FX_CHECK(event.touch_event.has_pointer_sample());
-  const auto& sample = event.touch_event.pointer_sample();
-  const auto& interaction = sample.interaction();
-  const InteractionID interaction_id(interaction.device_id, interaction.pointer_id);
-
-  // Note that at some point we must answer whether the interaction was
-  // consumed / rejected. For this reason, for each ADD event we store the
-  // callback that will be responsible for signaling how that interaction was
-  // handled.
-  //
-  // It's worth mentioning that our handling is "all or nothing": we either
-  // consume or reject all interactions in a gesture.
-  switch (sample.phase()) {
-    case fuchsia::ui::pointer::EventPhase::ADD: {
-      if (status_ == ContestStatus::kUnresolved) {
-        interaction_callbacks_[interaction_id]++;
-      } else {
-        on_interaction_handled_callback_(interaction.device_id, interaction.pointer_id, status_);
-      }
-      open_interactions_.insert(interaction_id);
-      break;
-    }
-    case fuchsia::ui::pointer::EventPhase::REMOVE:
-    case fuchsia::ui::pointer::EventPhase::CANCEL:
-      open_interactions_.erase(interaction_id);
-      break;
-    default:
-      break;
-  };
-}
-
 InteractionTrackerV2::InteractionTrackerV2(HeldInteractionCallback callback)
     : callback_(std::move(callback)) {
   FX_DCHECK(callback_);
 }
 
 void InteractionTrackerV2::Reset() {
-  FX_DCHECK(status_ != ContestStatus::kUnresolved);
   FX_DCHECK(open_interactions_.empty());
   FX_DCHECK(held_interactions_.empty());
 
@@ -108,13 +39,13 @@ void InteractionTrackerV2::Reset() {
 }
 
 void InteractionTrackerV2::AcceptInteractions() {
-  FX_CHECK(status_ == ContestStatus::kUnresolved);
+  FX_DCHECK(status_ == ContestStatus::kUnresolved);
   status_ = ContestStatus::kWinnerAssigned;
   NotifyHeldInteractions();
 }
 
 void InteractionTrackerV2::RejectInteractions() {
-  FX_CHECK(status_ == ContestStatus::kUnresolved);
+  FX_DCHECK(status_ == ContestStatus::kUnresolved);
   status_ = ContestStatus::kAllLosers;
   NotifyHeldInteractions();
 
@@ -155,7 +86,7 @@ void InteractionTrackerV2::OnEvent(
 
 ContestStatus InteractionTrackerV2::Status() { return status_; }
 
-bool InteractionTrackerV2::HasOpenInteractions() { return !open_interactions_.empty(); }
+bool InteractionTrackerV2::HasOpenInteractions() const { return !open_interactions_.empty(); }
 
 void InteractionTrackerV2::NotifyHeldInteractions() {
   FX_DCHECK(status_ != ContestStatus::kUnresolved);
@@ -194,7 +125,13 @@ class GestureArenaV2::ParticipationToken : public ParticipationTokenInterface {
   void Accept() override {
     if (arena_ && recognizer_->status == RecognizerStatus::kUndecided) {
       recognizer_->status = RecognizerStatus::kAccepted;
-      arena_->HandleEvents(true);
+
+      // Once the first recognizer accepts, we know that the interactions
+      // in the current contest belong to us.
+      if (arena_->interactions_.Status() == ContestStatus::kUnresolved) {
+        arena_->interactions_.AcceptInteractions();
+      }
+
       // Do |FinalizeState| last in case it releases this token.
       FinalizeState();
     }
@@ -226,9 +163,8 @@ class GestureArenaV2::ParticipationToken : public ParticipationTokenInterface {
   fxl::WeakPtrFactory<ParticipationToken> weak_ptr_factory_;
 };
 
-GestureArenaV2::GestureArenaV2(
-    InteractionTracker::OnInteractionHandledCallback on_interaction_handled_callback)
-    : interactions_(std::move(on_interaction_handled_callback)), weak_ptr_factory_(this) {}
+GestureArenaV2::GestureArenaV2(InteractionTrackerV2::HeldInteractionCallback callback)
+    : interactions_(std::move(callback)), weak_ptr_factory_(this) {}
 
 void GestureArenaV2::Add(GestureRecognizerV2* recognizer) {
   // Initialize status to |kRejected| rather than |kUndecided| just for peace of mind for the case
@@ -271,8 +207,10 @@ void GestureArenaV2::TryToResolve() {
       }
     }
 
+    // If all recognizers reject, we know that the interactions
+    // in the current contest do not belong to us.
     if (!winner_assigned) {
-      HandleEvents(false);
+      interactions_.RejectInteractions();
     }
   }
 }
@@ -301,14 +239,6 @@ void GestureArenaV2::StartNewContest() {
   }
 }
 
-void GestureArenaV2::HandleEvents(bool consumed) {
-  if (consumed) {
-    interactions_.ConsumePointerEvents();
-  } else {
-    interactions_.RejectPointerEvents();
-  }
-}
-
 bool GestureArenaV2::IsHeld() const {
   for (const auto& handle : recognizers_) {
     if (handle.participation_token) {
@@ -318,6 +248,6 @@ bool GestureArenaV2::IsHeld() const {
   return false;
 }
 
-bool GestureArenaV2::IsIdle() const { return !(interactions_.is_active() || IsHeld()); }
+bool GestureArenaV2::IsIdle() const { return !(interactions_.HasOpenInteractions() || IsHeld()); }
 
 }  // namespace a11y
