@@ -21,8 +21,12 @@ use {
     futures::{AsyncWriteExt as _, TryStreamExt as _},
     hyper::{header::CONTENT_LENGTH, StatusCode},
     sdk_metadata::Metadata,
-    std::path::{Path, PathBuf},
+    std::{
+        fs,
+        path::{Path, PathBuf},
+    },
     structured_ui,
+    tempfile::TempDir,
 };
 
 pub(crate) const CONFIG_METADATA: &str = "pbms.metadata";
@@ -235,6 +239,8 @@ where
     I: structured_ui::Interface + Sync,
 {
     // Handy debugging switch to disable images download.
+    let temp_dir = TempDir::new_in(&local_repo_dir)?;
+    let temp_path = temp_dir.path();
     if true {
         let start = std::time::Instant::now();
         tracing::info!(
@@ -242,7 +248,7 @@ where
             product_bundle.name,
             local_repo_dir
         );
-        let local_dir = local_repo_dir.join(&product_bundle.name).join("images");
+        let local_dir = temp_path.join("images");
         async_fs::create_dir_all(&local_dir).await.context("creating directory")?;
 
         for image in &product_bundle.images {
@@ -278,7 +284,7 @@ where
     // Handy debugging switch to disable packages download.
     if true {
         let start = std::time::Instant::now();
-        let local_dir = local_repo_dir.join(&product_bundle.name).join("packages");
+        let local_dir = temp_path.join("packages");
         async_fs::create_dir_all(&local_dir).await.context("creating directory")?;
         tracing::info!(
             "Getting package data for {:?}, local_dir {:?}",
@@ -312,7 +318,10 @@ where
         tracing::debug!("Total fetch packages runtime {} seconds.", start.elapsed().as_secs_f32());
     }
 
+    let final_name = local_repo_dir.join(&product_bundle.name);
     tracing::info!("Download of product data for {:?} is complete.", product_bundle.name);
+    tracing::info!("Renaming temporary directory to {}", final_name.display());
+    fs::rename(temp_path, final_name).expect("Renaming temp directory failed.");
     tracing::info!("Data written to \"{}\".", local_repo_dir.display());
     Ok(())
 }

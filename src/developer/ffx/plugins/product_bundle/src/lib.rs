@@ -243,8 +243,12 @@ where
             remove_dir_all(&product_dir).context("removing product directory")?;
 
             // If there are no more bundles in this directory, delete it too.
+            // Note how we make an exception for directories whose name starts with ".tmp",
+            // since any such directory in the pbms storage path would be a failed
+            // download in a previous operation that wasn't cleaned up properly.
             if !read_dir(&root_dir).context("reading root dir)")?.any(|d| {
-                d.expect("intermittent IO error, please try the command again.").path().is_dir()
+                let d = d.expect("intermittent IO error, please try the command again.");
+                d.path().is_dir() && !d.file_name().to_str().unwrap_or("").starts_with(".tmp")
             }) {
                 remove_dir_all(&root_dir).context("removing root directory")?;
             }
@@ -347,14 +351,7 @@ where
     }
 
     // Go ahead and download the product images.
-    if !get_product_data(
-        &product_url,
-        &output_dir,
-        select_auth(cmd.oob_auth, cmd.auth),
-        ui,
-        cmd.force,
-    )
-    .await?
+    if !get_product_data(&product_url, &output_dir, select_auth(cmd.oob_auth, cmd.auth), ui).await?
     {
         return Ok(());
     }

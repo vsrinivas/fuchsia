@@ -395,7 +395,6 @@ pub async fn get_product_data<I>(
     output_dir: &std::path::Path,
     auth_flow: AuthFlowChoice,
     ui: &mut I,
-    force: bool,
 ) -> Result<bool>
 where
     I: structured_ui::Interface + Sync,
@@ -403,12 +402,8 @@ where
     tracing::debug!("get_product_data {:?} to {:?}", product_url, output_dir);
     let mut should_get_data = true;
     let mut note = TableRows::builder();
-    let path = get_images_dir(product_url).await;
     if is_locally_built(&product_url) {
         note.title("There's no data download necessary for local products.");
-        should_get_data = false;
-    } else if path.is_ok() && path.unwrap().exists() && !force {
-        note.title("This product bundle is already downloaded. Use --force to replace it.");
         should_get_data = false;
     } else if product_url.scheme() != GS_SCHEME {
         note.title("Only GCS downloads are supported at this time.");
