@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![cfg(test)]
-
 use crate::{Key, StorageManager};
 use account_common::{AccountManagerError, ResultExt};
 use anyhow::format_err;
@@ -315,6 +313,7 @@ impl InsecureKeyDirectoryStorageManager {
     }
 }
 
+#[cfg(test)]
 mod test {
     use super::*;
     use fuchsia_async as fasync;

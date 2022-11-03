@@ -12,6 +12,9 @@ pub mod minfs;
 mod state;
 mod volume;
 
+pub use directory::{
+    Args as InsecureKeyDirectoryStorageManagerArgs, InsecureKeyDirectoryStorageManager,
+};
 pub use volume::EncryptedVolumeStorageManager;
 
 use account_common::AccountManagerError;

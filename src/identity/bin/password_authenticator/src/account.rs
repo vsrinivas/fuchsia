@@ -279,17 +279,11 @@ mod test {
         fidl_fuchsia_identity_account::{AccountMarker, AccountProxy},
         fuchsia_fs::{directory, file, node::OpenError},
         fuchsia_zircon::Status,
-        identity_testutil::{
-            make_formatted_account_partition_any_key, CallCounter, Match, MockBlockDevice,
-            MockDiskManager, MockEncryptedBlockDevice as OtherMockEncryptedBlockDevice,
-            MockPartition, UnsealBehavior,
-        },
+        identity_testutil::{CallCounter, Match},
         storage_manager::{
-            minfs::{
-                disk::{DiskError, EncryptedBlockDevice},
-                StorageManager as MinfsStorageManager,
-            },
-            StorageManager,
+            minfs::disk::{DiskError, EncryptedBlockDevice},
+            InsecureKeyDirectoryStorageManager, InsecureKeyDirectoryStorageManagerArgs,
+            Key as SMKey, StorageManager,
         },
         vfs::execution_scope::ExecutionScope,
     };
@@ -362,16 +356,16 @@ mod test {
         Ok(proxy)
     }
 
-    fn make_storage_manager() -> MinfsStorageManager<MockDiskManager> {
-        MinfsStorageManager::new(
-            MockDiskManager::new().with_partition(make_formatted_account_partition_any_key()),
-        )
+    async fn make_storage_manager() -> InsecureKeyDirectoryStorageManager {
+        InsecureKeyDirectoryStorageManager::new(InsecureKeyDirectoryStorageManagerArgs::default())
+            .await
+            .unwrap()
     }
 
     #[fuchsia::test]
     async fn test_check_new_client() {
-        let storage_manager = make_storage_manager();
-        let () = storage_manager.provision(&TEST_KEY).await.expect("provision");
+        let storage_manager = make_storage_manager().await;
+        let () = storage_manager.provision(&SMKey::Key256Bit(TEST_KEY)).await.expect("provision");
         let account = Arc::new(Account::new(TEST_KEY, storage_manager));
 
         assert_eq!(
@@ -388,8 +382,8 @@ mod test {
 
     #[fuchsia::test]
     async fn test_get_data_directory() {
-        let storage_manager = make_storage_manager();
-        let () = storage_manager.provision(&TEST_KEY).await.expect("provision");
+        let storage_manager = make_storage_manager().await;
+        let () = storage_manager.provision(&SMKey::Key256Bit(TEST_KEY)).await.expect("provision");
         let account = Arc::new(Account::new(TEST_KEY, storage_manager));
 
         // The freshly created filesystem should not contain a default client directory.
@@ -418,8 +412,8 @@ mod test {
     async fn lock_account_with_multiple_concurrent_channels() {
         let scope = ExecutionScope::new();
 
-        let storage_manager = make_storage_manager();
-        let () = storage_manager.provision(&TEST_KEY).await.expect("provision");
+        let storage_manager = make_storage_manager().await;
+        let () = storage_manager.provision(&SMKey::Key256Bit(TEST_KEY)).await.expect("provision");
         let account = Arc::new(Account::new([0; KEY_LEN], storage_manager));
 
         let proxy1 = serve_new_client(&account).await.expect("serve client 1");
@@ -462,6 +456,14 @@ mod test {
     /// This is not a common case, but should be handled correctly.
     #[fuchsia::test]
     async fn lock_account_succeeds_with_zxcrypt_seal_bad_state() {
+        use {
+            identity_testutil::{
+                MockBlockDevice, MockDiskManager,
+                MockEncryptedBlockDevice as OtherMockEncryptedBlockDevice, MockPartition,
+                UnsealBehavior,
+            },
+            storage_manager::minfs::StorageManager as MinfsStorageManager,
+        };
         let storage_manager =
             MinfsStorageManager::new(MockDiskManager::new().with_partition(MockPartition {
                 guid_behavior: Ok(Match::Any),
