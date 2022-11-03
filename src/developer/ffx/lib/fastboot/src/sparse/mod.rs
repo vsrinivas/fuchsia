@@ -4,11 +4,10 @@
 
 use {
     anyhow::Result,
-    bytes::{Bytes, BytesMut},
     core::fmt,
-    futures::{AsyncReadExt, AsyncWriteExt},
     serde::Serialize,
-    std::io::Write,
+    std::fs::File,
+    std::io::{copy, Cursor, Read, SeekFrom, Write},
     std::mem,
     std::path::Path,
     tempfile::{NamedTempFile, TempPath},
@@ -92,34 +91,33 @@ impl SparseHeader {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-enum Chunk<'a> {
+enum Chunk {
     /// `Raw` represents a set of bytes to be written to disk as-is.
-    Raw(Vec<&'a [u8]>),
-    /// Represents a Chunk that has the `value` repeated `blocks` times
-    Fill(u32, usize), // Value, Size
+    /// This is a start and a length
+    Raw { start: u64, size: usize },
+    /// Represents a Chunk that has the `value` repeated enough to fill `size`
+    Fill { start: u64, size: usize, value: u32 },
     /// `DontCare` represents a set of blocks that need to be "offset" by the
     /// image recipeint. If an image needs to be broken up into two sparse images,
     /// and we flash n bytes for Sparse Image 1, Sparse Image 2
     /// needs to start with a DontCareChunk with (n/blocksize) blocks as its "size" property.
-    DontCare(usize), // Size
+    DontCare { size: usize },
     /// `Crc32Chunk` is used as a checksum of a given set of Chunks for a SparseImage.
     /// This is not required and unused in most implementations of the Sparse Image
     /// format. The type is included for completeness. It has 4 bytes of CRC32 checksum
     /// as describable in a u32.
     #[allow(dead_code)]
-    Crc32(u32),
+    Crc32 { checksum: u32 },
 }
 
-impl Chunk<'_> {
+impl Chunk {
     /// Return number of blocks the chunk expands to when written to the partition.
     fn output_blocks(&self) -> u32 {
         match self {
-            Self::Raw(raw) => {
-                ((raw.iter().map(|x| x.len()).sum::<usize>() + BLK_SIZE - 1) / BLK_SIZE) as u32
-            }
-            Self::Fill(_value, size) => (*size / BLK_SIZE) as u32,
-            Self::DontCare(size) => *size as u32,
-            Self::Crc32(_) => 0,
+            Self::Raw { size, .. } => ((size + BLK_SIZE - 1) / BLK_SIZE) as u32,
+            Self::Fill { size, .. } => ((*size + BLK_SIZE - 1) / BLK_SIZE) as u32,
+            Self::DontCare { size } => *size as u32,
+            Self::Crc32 { .. } => 0,
         }
     }
 
@@ -127,10 +125,10 @@ impl Chunk<'_> {
     /// to use in the ChunkHeader
     fn chunk_type(&self) -> u16 {
         match self {
-            Self::Raw(_) => 0xCAC1,
-            Self::Fill(_, _) => 0xCAC2,
-            Self::DontCare(_) => 0xCAC3,
-            Self::Crc32(_) => 0xCAC4,
+            Self::Raw { .. } => 0xCAC1,
+            Self::Fill { .. } => 0xCAC2,
+            Self::DontCare { .. } => 0xCAC3,
+            Self::Crc32 { .. } => 0xCAC4,
         }
     }
 
@@ -139,19 +137,17 @@ impl Chunk<'_> {
     fn chunk_data_len(&self) -> usize {
         let header_size = mem::size_of::<ChunkHeader>();
         let data_size = match self {
-            Self::Raw(raw) => raw.iter().map(|x| x.len()).sum(),
-            Self::Fill(_, _) => mem::size_of::<u32>(),
-            Self::DontCare(_) => 0,
-            Self::Crc32(_) => mem::size_of::<u32>(),
+            Self::Raw { size, .. } => *size,
+            Self::Fill { .. } => mem::size_of::<u32>(),
+            Self::DontCare { .. } => 0,
+            Self::Crc32 { .. } => mem::size_of::<u32>(),
         };
         header_size + data_size
     }
 
-    // TODO(colnnelson): have this take an `impl Writer` and just write the
-    // bytes directly
-
-    /// Returns the bytes representing the chunk data structure in the sparse structure.
-    fn chunk_data(&self) -> Result<Bytes> {
+    /// Writes the chunk to the given Writer. The source is a Reader of the
+    /// original file the sparse chunk was created from.
+    fn write<W: Write, R: Read + std::io::Seek>(&self, source: &mut R, dest: &mut W) -> Result<()> {
         let header = ChunkHeader::new(
             self.chunk_type(),
             0x0,
@@ -159,78 +155,45 @@ impl Chunk<'_> {
             self.chunk_data_len() as u32,
         );
 
-        let mut output = BytesMut::with_capacity(self.chunk_data_len());
         let header_bytes: Vec<u8> = bincode::serialize(&header)?;
-        output.extend_from_slice(&header_bytes);
+        copy(&mut Cursor::new(header_bytes), dest)?;
 
         match self {
-            Self::Raw(raw) => {
-                raw.iter().for_each(|r| output.extend_from_slice(&r));
-                // If our data is not an even multiple of BLK_SIZE, we need to
-                // pad it with 0. Make a 0'd out Bytes and write the subset
-                output.resize(self.chunk_data_len(), 0);
+            Self::Raw { start, size } => {
+                // Seek to start
+                source.seek(SeekFrom::Start(*start))?;
+                // Read in the data
+                let mut reader = source.take(*size as u64);
+                copy(&mut reader, dest)?;
             }
-            Self::Fill(value, _) => {
-                let data = bincode::serialize(value)?;
-                output.extend_from_slice(&data);
+            Self::Fill { value, .. } => {
+                // Serliaze the value,
+                bincode::serialize_into(dest, value)?;
             }
-            Self::DontCare(_) => {
+            Self::DontCare { .. } => {
                 // DontCare has no data to write
             }
-            Self::Crc32(checksum) => {
-                let checksum_bytes = bincode::serialize(checksum)?;
-                output.extend_from_slice(&checksum_bytes);
+            Self::Crc32 { checksum } => {
+                bincode::serialize_into(dest, checksum)?;
             }
         }
-        Ok(output.freeze())
-    }
-
-    /// Returns the expected bytes written to the partition
-    fn partition_data(&self) -> Bytes {
-        match self {
-            Self::Raw(raw) => {
-                let mut buf = BytesMut::new();
-                raw.iter().for_each(|x| buf.extend_from_slice(x));
-                buf.freeze()
-            }
-            Self::Fill(byte, size) => {
-                let ser = bincode::serialize(byte).expect("can serialize u32");
-                Bytes::copy_from_slice(&ser.repeat(*size))
-            }
-            Self::DontCare(size) => {
-                // Dont care chunks are treated as zeroes
-                Bytes::copy_from_slice(&[0x0].repeat(*size * BLK_SIZE))
-            }
-            Self::Crc32(_) => {
-                // No data
-                Bytes::new()
-            }
-        }
+        Ok(())
     }
 }
 
-impl TryFrom<&Chunk<'_>> for Vec<u8> {
-    type Error = anyhow::Error;
-
-    fn try_from(var: &Chunk<'_>) -> Result<Self, Self::Error> {
-        let data = var.chunk_data()?;
-        Ok(data.to_vec())
-    }
-}
-
-impl fmt::Display for Chunk<'_> {
+impl fmt::Display for Chunk {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let message = match self {
-            Self::Raw(raw) => {
-                format!("RawChunk: total bytes: {}", raw.iter().map(|x| x.len()).sum::<usize>())
+            Self::Raw { start, size } => {
+                format!("RawChunk: start: {}, total bytes: {}", start, size)
             }
-            Self::Fill(byte, size) => {
-                format!("FillChunk: value: {}, n_blocks: {}", byte, size)
+            Self::Fill { start, size, value } => {
+                format!("FillChunk: start: {}, value: {}, n_blocks: {}", start, value, size)
             }
-            Self::DontCare(size) => {
+            Self::DontCare { size } => {
                 format!("DontCareChunk: n_blocks: {}", size)
             }
-            Self::Crc32(checksum) => format!("Crc32Chunk: checksum: {:?}", checksum),
+            Self::Crc32 { checksum } => format!("Crc32Chunk: checksum: {:?}", checksum),
         };
         write!(f, "{}", message)
     }
@@ -278,12 +241,12 @@ const CHECKSUM: u32 = 0xCAFED00D;
 /// It is made up of a set of Chunks.
 #[derive(Clone, Debug, PartialEq)]
 #[repr(C)]
-struct SparseFile<'a> {
-    chunks: Vec<Chunk<'a>>,
+struct SparseFile {
+    chunks: Vec<Chunk>,
 }
 
-impl<'a> SparseFile<'a> {
-    fn new(chunks: Vec<Chunk<'a>>) -> SparseFile<'a> {
+impl SparseFile {
+    fn new(chunks: Vec<Chunk>) -> SparseFile {
         SparseFile { chunks }
     }
 
@@ -291,11 +254,11 @@ impl<'a> SparseFile<'a> {
         self.chunks.iter().map(|c| c.output_blocks()).sum()
     }
 
-    /// Returns the Byte representation of the SparseFile. Suitable to be
-    /// written to disk.
-    fn sparse_file_data(&self) -> Result<Bytes> {
-        // let mut data = Vec::<u8>::new();
-        let mut data = BytesMut::new();
+    fn write<W: Write, R: Read + std::io::Seek>(
+        &self,
+        reader: &mut R,
+        writer: &mut W,
+    ) -> Result<()> {
         let header = SparseHeader::new(
             MAGIC,
             MAJOR_VERSION,
@@ -308,43 +271,20 @@ impl<'a> SparseFile<'a> {
             CHECKSUM,                              // Checksum verification unused
         );
 
-        tracing::trace!("Created SparseFile header {}", header);
-
         let header_bytes: Vec<u8> = bincode::serialize(&header)?;
-        data.extend_from_slice(&header_bytes);
+        copy(&mut Cursor::new(header_bytes), writer)?;
 
         for chunk in &self.chunks {
-            // Get all chunks... and then extend the data with them
-            data.extend_from_slice(&Vec::<u8>::try_from(chunk)?);
+            chunk.write(reader, writer)?;
         }
 
-        Ok(data.freeze())
-    }
-
-    /// Return the expected bytes from writing the sparse image to a partition.
-    /// All fill chunks are expanded with their fill value
-    /// and all don't care chunks are expanded with zeroes.
-    #[allow(dead_code)]
-    fn expected_partition_data(&self) -> Result<Bytes> {
-        let mut data = Vec::new();
-
-        self.chunks.iter().for_each(|c| data.extend_from_slice(&c.partition_data()));
-        Ok(Bytes::copy_from_slice(&data))
+        Ok(())
     }
 }
 
-impl fmt::Display for SparseFile<'_> {
+impl fmt::Display for SparseFile {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, r"SparseFile: {} Chunks:", self.chunks.len())
-    }
-}
-
-impl TryFrom<SparseFile<'_>> for Vec<u8> {
-    type Error = anyhow::Error;
-
-    fn try_from(var: SparseFile<'_>) -> Result<Self, Self::Error> {
-        let data = var.sparse_file_data()?;
-        Ok(data.to_vec())
     }
 }
 
@@ -354,40 +294,39 @@ impl TryFrom<SparseFile<'_>> for Vec<u8> {
 /// into one chunk.
 ///
 /// Example: A `FillChunk` with value 0 and size 1 is the last chunk
-/// in `v`, and `chunk` is a FillChunk with value 0 and size 1, the returned
-/// `Vec`'s last element will be a FillChunk with value 0 and size 2.
-fn add_sparse_chunk<'a>(r: &Vec<Chunk<'a>>, chunk: Chunk<'a>) -> Result<Vec<Chunk<'a>>> {
-    let mut ret = r.clone();
-    match ret.pop() {
+/// in `v`, and `chunk` is a FillChunk with value 0 and size 1, after this,
+/// `v`'s last element will be a FillChunk with value 0 and size 2.
+fn add_sparse_chunk(r: &mut Vec<Chunk>, chunk: Chunk) -> Result<()> {
+    match r.last_mut() {
         // We've got something in the Vec... if they are both the same type,
         // merge them, otherwise, just push the new one
         Some(last) => match (&last, &chunk) {
-            (Chunk::Raw(last_data), Chunk::Raw(new_data)) => {
-                let mut data = last_data.clone();
-                new_data.iter().for_each(|c| data.push(c));
-                ret.push(Chunk::Raw(data.to_vec()));
+            (Chunk::Raw { start, size }, Chunk::Raw { size: new_length, .. }) => {
+                *last = Chunk::Raw { start: *start, size: size + new_length };
+                return Ok(());
             }
-            (Chunk::Fill(value, size), Chunk::Fill(new_value, new_size)) if value == new_value => {
-                ret.push(Chunk::Fill(*value, size + new_size));
+            (
+                Chunk::Fill { start, size, value },
+                Chunk::Fill { size: new_size, value: new_value, .. },
+            ) if value == new_value => {
+                *last = Chunk::Fill { start: *start, size: size + new_size, value: *value };
+                return Ok(());
             }
-            (Chunk::DontCare(size), Chunk::DontCare(new_size)) => {
-                ret.push(Chunk::DontCare(size + new_size));
+            (Chunk::DontCare { size }, Chunk::DontCare { size: new_size }) => {
+                *last = Chunk::DontCare { size: size + new_size };
+                return Ok(());
             }
-            _ => {
-                // If the chunk types differ they cannot be merged.
-                // If they are both Fill but have different values, they cannot be merged.
-                // Crc32 cannot be merged.
-                ret.push(last);
-                ret.push(chunk);
-            }
+            _ => {}
         },
-        None => {
-            // Dont have any chunks... add it
-            ret.push(chunk);
-        }
+        None => {}
     }
 
-    Ok(ret)
+    // If the chunk types differ they cannot be merged.
+    // If they are both Fill but have different values, they cannot be merged.
+    // Crc32 cannot be merged.
+    // If we dont have any chunks then we add it
+    r.push(chunk);
+    Ok(())
 }
 
 /// `resparse` takes a SparseFile and a maximum size and will
@@ -395,10 +334,7 @@ fn add_sparse_chunk<'a>(r: &Vec<Chunk<'a>>, chunk: Chunk<'a>) -> Result<Vec<Chun
 /// size will not exceed the maximum_download_size.
 ///
 /// This will return an error if max_download_size is <= BLK_SIZE
-fn resparse<'a>(
-    sparse_file: SparseFile<'a>,
-    max_download_size: u64,
-) -> Result<Vec<SparseFile<'a>>> {
+fn resparse(sparse_file: SparseFile, max_download_size: u64) -> Result<Vec<SparseFile>> {
     if max_download_size as usize <= BLK_SIZE {
         anyhow::bail!(
             "Given maximum download size ({}) is less than the block size ({})",
@@ -406,12 +342,13 @@ fn resparse<'a>(
             BLK_SIZE
         );
     }
-    let mut ret = Vec::<SparseFile<'a>>::new();
+    let mut ret = Vec::<SparseFile>::new();
 
     // File length already starts with a header for the SparseFile as
     // well as the size of a potential DontCare and Crc32 Chunk
     let sunk_file_length = mem::size_of::<SparseHeader>()
-        + (Chunk::DontCare(1).chunk_data_len() + Chunk::Crc32(2345).chunk_data_len());
+        + (Chunk::DontCare { size: 1 }.chunk_data_len()
+            + Chunk::Crc32 { checksum: 2345 }.chunk_data_len());
 
     let mut chunk_pos = 0;
     while chunk_pos < sparse_file.chunks.len() {
@@ -420,12 +357,12 @@ fn resparse<'a>(
         let mut file_len = 0;
         file_len += sunk_file_length;
 
-        let mut chunks = Vec::<Chunk<'a>>::new();
+        let mut chunks = Vec::<Chunk>::new();
         if chunk_pos > 0 {
             // If we already have some chunks... add a DontCare block to
             // move the pointer
             tracing::trace!("Adding a DontCare chunk offset: {}", chunk_pos);
-            let dont_care = Chunk::DontCare(chunk_pos);
+            let dont_care = Chunk::DontCare { size: chunk_pos };
             chunks.push(dont_care);
         }
 
@@ -442,12 +379,12 @@ fn resparse<'a>(
                         // simg_dump will produce a warning if a sparse file does not have the same
                         // number of output blocks as declared in the header.
                         let remainder_chunks = sparse_file.chunks.len() - chunk_pos;
-                        let dont_care = Chunk::DontCare(remainder_chunks);
+                        let dont_care = Chunk::DontCare { size: remainder_chunks };
                         chunks.push(dont_care);
                         break;
                     }
                     tracing::trace!("chunk: {} curr_chunk_data_len: {} current file size: {} max_download_size: {} diff: {}", chunk_pos, curr_chunk_data_len, file_len, max_download_size, (max_download_size as usize - file_len - curr_chunk_data_len) );
-                    chunks = add_sparse_chunk(&chunks, chunk.clone())?;
+                    add_sparse_chunk(&mut chunks, chunk.clone())?;
                     file_len += curr_chunk_data_len;
                     chunk_pos = chunk_pos + 1;
                 }
@@ -483,35 +420,57 @@ pub async fn build_sparse_files<W: Write>(
     dir: &Path,
     max_download_size: u64,
 ) -> Result<Vec<TempPath>> {
+    if max_download_size as usize <= BLK_SIZE {
+        anyhow::bail!(
+            "Given maximum download size ({}) is less than the block size ({})",
+            max_download_size,
+            BLK_SIZE
+        );
+    }
     writeln!(writer, "Building sparse files for: {}. File: {}", name, file_to_upload)?;
-    let mut in_file = async_fs::File::open(file_to_upload).await?;
-    let mut in_file_bytes: Vec<u8> = Vec::<u8>::new();
-    in_file.read_to_end(&mut in_file_bytes).await?;
+    let mut in_file = File::open(file_to_upload)?;
 
-    tracing::trace!("File: {}. Read in {} bytes", file_to_upload, in_file_bytes.len());
+    let mut total_read: usize = 0;
+    let mut chunks = Vec::<Chunk>::new();
+    let mut buf = [0u8; BLK_SIZE];
+    loop {
+        let read = in_file.read(&mut buf)?;
+        if read == 0 {
+            break;
+        }
 
-    let mut chunks = Vec::<Chunk<'_>>::new();
-
-    for input_block in in_file_bytes.chunks(BLK_SIZE) {
-        // If all the values in the vec are the same, we need to make a fill block
-        let is_fill =
-            input_block.chunks(4).collect::<Vec<&[u8]>>().windows(2).all(|w| w[0] == w[1]);
-
+        let is_fill = buf.chunks(4).collect::<Vec<&[u8]>>().windows(2).all(|w| w[0] == w[1]);
         if is_fill {
-            let value: u32 = bincode::deserialize(&input_block[0..4])?;
+            // The Android Sparse Image Format specifies that a fill block
+            // is a four-byte u32 repeated to fill BLK_SIZE. Here we use
+            // bincode::deserialize to get the repeated four byte pattern from
+            // the buffer so that it can be serialized later when we write
+            // the sparse file with bincode::serialize.
+            let value: u32 = bincode::deserialize(&buf[0..4])?;
             // Add a fill chunk
-            let fill = Chunk::Fill(value, input_block.len());
+            let fill = Chunk::Fill { start: total_read as u64, size: buf.len(), value };
             tracing::trace!("Sparsing file: {}. Created: {}", file_to_upload, fill);
             chunks.push(fill);
         } else {
             // Add a raw chunk
-            let raw = Chunk::Raw([input_block].to_vec());
+            let raw = Chunk::Raw { start: total_read as u64, size: buf.len() };
             tracing::trace!("Sparsing file: {}. Created: {}", file_to_upload, raw);
             chunks.push(raw);
         }
+        total_read += read;
     }
+
     tracing::trace!("Creating sparse file from: {} chunks", chunks.len());
 
+    // At this point we are making a new sparse file fom an unoptomied set of
+    // Chunks. This primarliy means that adjacent Fill chunks of same value are
+    // not collapsed into a single Fill chunk (with a larger size). The advantage
+    // to this two pass approach is that (with some future work), we can create
+    // the "unoptomized" sparse file from a given image, and then "resparse" it
+    // as many times as desired with different `max_download_size` parameters.
+    // This would simplify the scenario where we want to flash the same image
+    // to multiple physical devices which may have slight differences in their
+    // hardware (and therefore different `max_download_size`es)
     let sparse_file = SparseFile::new(chunks);
     tracing::trace!("Created sparse file: {}", sparse_file);
 
@@ -519,12 +478,10 @@ pub async fn build_sparse_files<W: Write>(
     tracing::trace!("Resparsing sparse file");
     for re_sparsed_file in resparse(sparse_file, max_download_size)? {
         let (file, temp_path) = NamedTempFile::new_in(dir)?.into_parts();
-        let mut file_create = async_fs::File::from(file);
+        let mut file_create = File::from(file);
 
         tracing::trace!("Writing resparsed {} to disk", re_sparsed_file);
-        let bytes = Vec::<u8>::try_from(re_sparsed_file)?;
-        file_create.write_all(&bytes).await?;
-        file_create.flush().await?;
+        re_sparsed_file.write(&mut in_file, &mut file_create)?;
 
         ret.push(temp_path);
     }
@@ -544,109 +501,74 @@ mod test {
     use rand::rngs::SmallRng;
     use rand::{RngCore, SeedableRng};
     use std::io;
+    use std::io::{Cursor, Read};
     use std::process::Command;
 
     const WANT_RAW_BYTES: [u8; 17] = [193, 202, 0, 0, 1, 0, 0, 0, 17, 0, 0, 0, 49, 50, 51, 52, 53];
 
     const WANT_SPARSE_FILE_RAW_BYTES: [u8; 71] = [
-        58, 255, 38, 237, 1, 0, 0, 0, 28, 0, 12, 0, 0, 16, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 13, 208,
-        254, 202, 194, 202, 0, 0, 0, 0, 0, 0, 16, 0, 0, 0, 5, 0, 0, 0, 193, 202, 0, 0, 1, 0, 0, 0,
+        58, 255, 38, 237, 1, 0, 0, 0, 28, 0, 12, 0, 0, 16, 0, 0, 3, 0, 0, 0, 3, 0, 0, 0, 13, 208,
+        254, 202, 194, 202, 0, 0, 1, 0, 0, 0, 16, 0, 0, 0, 5, 0, 0, 0, 193, 202, 0, 0, 1, 0, 0, 0,
         15, 0, 0, 0, 49, 50, 51, 195, 202, 0, 0, 1, 0, 0, 0, 12, 0, 0, 0,
     ];
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_fill_partition_data() -> Result<()> {
-        let (_, _) = setup();
-        let fill_chunk = Chunk::Fill(3, 5);
-        let output = fill_chunk.partition_data();
-        assert_eq!(output, Bytes::from(&b"\x03\0\0\0\x03\0\0\0\x03\0\0\0\x03\0\0\0\x03\0\0\0"[..]));
-        Ok(())
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
     async fn test_fill_into_bytes() -> Result<()> {
         let (_, _) = setup();
-        let fill_chunk = Chunk::Fill(365, 5);
-        let output = Vec::<u8>::try_from(&fill_chunk)?;
-        assert_eq!(output, [194, 202, 0, 0, 0, 0, 0, 0, 16, 0, 0, 0, 109, 1, 0, 0]);
-        Ok(())
-    }
+        let source = Vec::<u8>::new();
+        let mut dest = Vec::<u8>::new();
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_raw_partition_data() -> Result<()> {
-        let data = [&b"12345"[..]].to_vec();
-        let chunk = Chunk::Raw(data);
-        let output = chunk.partition_data();
-        assert_eq!(output, Bytes::from(&b"12345"[..]));
+        let fill_chunk = Chunk::Fill { start: 0, size: 5, value: 365 };
+        let mut seeker = Cursor::new(source);
+        fill_chunk.write(&mut seeker, &mut dest)?;
+        assert_eq!(dest, [194, 202, 0, 0, 1, 0, 0, 0, 16, 0, 0, 0, 109, 1, 0, 0]);
         Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_raw_into_bytes() -> Result<()> {
-        let chunk = Chunk::Raw([&b"12345"[..]].to_vec());
-        let output = Vec::<u8>::try_from(&chunk)?;
-        assert_eq!(output, WANT_RAW_BYTES);
-        Ok(())
-    }
+        let source = Vec::<u8>::from(&b"12345"[..]);
+        let mut dest = Vec::<u8>::new();
+        let chunk = Chunk::Raw { start: 0, size: 5 };
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dont_care_partition_data() -> Result<()> {
-        let chunk = Chunk::DontCare(5);
-        let output = chunk.partition_data();
-        let mut want = String::new();
-        want.push_str("\0".repeat(5 * BLK_SIZE).as_str());
-        assert_eq!(output, Bytes::copy_from_slice(&want.as_bytes()));
+        let mut seeker = Cursor::new(source);
+        chunk.write(&mut seeker, &mut dest)?;
+        assert_eq!(dest, WANT_RAW_BYTES);
         Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_dont_care_into_bytes() -> Result<()> {
-        let chunk = Chunk::DontCare(5);
-        let output = Vec::<u8>::try_from(&chunk)?;
-        assert_eq!(output, [195, 202, 0, 0, 5, 0, 0, 0, 12, 0, 0, 0]);
-        Ok(())
-    }
+        let source = Vec::<u8>::new();
+        let mut dest = Vec::<u8>::new();
+        let chunk = Chunk::DontCare { size: 5 };
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_sparse_file_partition_data() -> Result<()> {
-        let mut chunks = Vec::<Chunk<'_>>::new();
-        // Add a fill chunk
-        let fill = Chunk::Fill(5, 1);
-        chunks.push(fill);
-        // Add a raw chunk
-        let raw = Chunk::Raw([&b"123"[..]].to_vec());
-        chunks.push(raw);
-        // Add a dontcare chunk
-        let dontcare = Chunk::DontCare(1);
-        chunks.push(dontcare);
-
-        let sparsefile = SparseFile::new(chunks);
-
-        let output = sparsefile.expected_partition_data()?;
-        let mut want = String::new();
-        want.push_str("\x05\0\0\0123");
-        want.push_str("\0".repeat(BLK_SIZE).as_str());
-        assert_eq!(output, Bytes::copy_from_slice(&want.as_bytes()));
+        let mut seeker = Cursor::new(source);
+        chunk.write(&mut seeker, &mut dest)?;
+        assert_eq!(dest, [195, 202, 0, 0, 5, 0, 0, 0, 12, 0, 0, 0]);
         Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_sparse_file_into_bytes() -> Result<()> {
-        let mut chunks = Vec::<Chunk<'_>>::new();
+        let source = Vec::<u8>::from(&b"123"[..]);
+        let mut dest = Vec::<u8>::new();
+        let mut chunks = Vec::<Chunk>::new();
         // Add a fill chunk
-        let fill = Chunk::Fill(5, 1);
+        let fill = Chunk::Fill { start: 0, size: 1, value: 5 };
         chunks.push(fill);
         // Add a raw chunk
-        let raw = Chunk::Raw([&b"123"[..]].to_vec());
+        let raw = Chunk::Raw { start: 0, size: 3 };
         chunks.push(raw);
         // Add a dontcare chunk
-        let dontcare = Chunk::DontCare(1);
+        let dontcare = Chunk::DontCare { size: 1 };
         chunks.push(dontcare);
 
         let sparsefile = SparseFile::new(chunks);
 
-        let output = Vec::<u8>::try_from(sparsefile)?;
-        assert_eq!(output, WANT_SPARSE_FILE_RAW_BYTES);
+        let mut seeker = Cursor::new(source);
+        sparsefile.write(&mut seeker, &mut dest)?;
+        assert_eq!(dest, WANT_SPARSE_FILE_RAW_BYTES);
         Ok(())
     }
 
@@ -655,7 +577,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_resparse_bails_on_too_small_size() -> Result<()> {
-        let sparse = SparseFile::new(Vec::<Chunk<'_>>::new());
+        let sparse = SparseFile::new(Vec::<Chunk>::new());
         assert!(resparse(sparse, 4095).is_err());
         Ok(())
     }
@@ -663,12 +585,11 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_resparse_splits() -> Result<()> {
         let max_download_size = 4096 * 2;
-        let fourtynintysixones = &b"1"[..].repeat(4096);
-        let temp_bytes = Chunk::Raw([fourtynintysixones.as_slice()].to_vec());
+        let temp_bytes = Chunk::Raw { start: 0, size: 4096 };
 
-        let mut chunks = Vec::<Chunk<'_>>::new();
+        let mut chunks = Vec::<Chunk>::new();
         chunks.push(temp_bytes.clone());
-        chunks.push(Chunk::Fill(2, 4));
+        chunks.push(Chunk::Fill { start: 4096, size: 4, value: 2 });
         // We want 2 sparse files with the second sparse file having a
         // DontCare chunk and then this chunk
         chunks.push(temp_bytes.clone());
@@ -677,22 +598,16 @@ mod test {
         let resparsed_files = resparse(input_sparse_file, max_download_size)?;
         assert_eq!(2, resparsed_files.len());
 
-        // Make assertions about the first resparsed file
+        // Make assertions about the first resparsed fileDevice
         assert_eq!(3, resparsed_files[0].chunks.len());
-        assert_eq!(
-            Chunk::Raw([b"1"[..].repeat(4096).as_slice()].to_vec()),
-            resparsed_files[0].chunks[0]
-        );
-        assert_eq!(Chunk::Fill(2, 4), resparsed_files[0].chunks[1]);
-        assert_eq!(Chunk::DontCare(1), resparsed_files[0].chunks[2]);
+        assert_eq!(Chunk::Raw { start: 0, size: 4096 }, resparsed_files[0].chunks[0]);
+        assert_eq!(Chunk::Fill { start: 4096, size: 4, value: 2 }, resparsed_files[0].chunks[1]);
+        assert_eq!(Chunk::DontCare { size: 1 }, resparsed_files[0].chunks[2]);
 
         // Make assertsion about the second resparsed file
         assert_eq!(2, resparsed_files[1].chunks.len());
-        assert_eq!(Chunk::DontCare(2), resparsed_files[1].chunks[0]);
-        assert_eq!(
-            Chunk::Raw([b"1"[..].repeat(4096).as_slice()].to_vec()),
-            resparsed_files[1].chunks[1]
-        );
+        assert_eq!(Chunk::DontCare { size: 2 }, resparsed_files[1].chunks[0]);
+        assert_eq!(Chunk::Raw { start: 0, size: 4096 }, resparsed_files[1].chunks[1]);
         Ok(())
     }
 
@@ -701,11 +616,12 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_add_sparse_chunk_adds_empty() -> Result<()> {
-        let init_vec = Vec::<Chunk<'_>>::new();
-        let res = add_sparse_chunk(&init_vec, Chunk::Fill(0, 1))?;
+        let init_vec = Vec::<Chunk>::new();
+        let mut res = init_vec.clone();
+        add_sparse_chunk(&mut res, Chunk::Fill { start: 0, size: 1, value: 1 })?;
         assert_eq!(0, init_vec.len());
         assert_ne!(init_vec, res);
-        assert_eq!(Chunk::Fill(0, 1), res[0]);
+        assert_eq!(Chunk::Fill { start: 0, size: 1, value: 1 }, res[0]);
         Ok(())
     }
 
@@ -713,31 +629,43 @@ mod test {
     async fn test_add_sparse_chunk_fill() -> Result<()> {
         // Test merge
         {
-            let mut init_vec = Vec::<Chunk<'_>>::new();
-            init_vec.push(Chunk::Fill(0, 1));
-            let res = add_sparse_chunk(&init_vec, Chunk::Fill(0, 1))?;
+            let mut init_vec = Vec::<Chunk>::new();
+            init_vec.push(Chunk::Fill { start: 0, size: 2, value: 1 });
+            let mut res = init_vec.clone();
+            add_sparse_chunk(&mut res, Chunk::Fill { start: 0, size: 2, value: 1 })?;
             assert_eq!(1, res.len());
-            assert_eq!(Chunk::Fill(0, 2), res[0]);
+            assert_eq!(Chunk::Fill { start: 0, size: 4, value: 1 }, res[0]);
         }
 
         // Test dont merge on different value
         {
-            let mut init_vec = Vec::<Chunk<'_>>::new();
-            init_vec.push(Chunk::Fill(0, 1));
-            let res = add_sparse_chunk(&init_vec, Chunk::Fill(1, 1))?;
+            let mut init_vec = Vec::<Chunk>::new();
+            init_vec.push(Chunk::Fill { start: 0, size: 1, value: 1 });
+            let mut res = init_vec.clone();
+            add_sparse_chunk(&mut res, Chunk::Fill { start: 0, size: 1, value: 2 })?;
             assert_ne!(res, init_vec);
             assert_eq!(2, res.len());
-            assert_eq!(res, [Chunk::Fill(0, 1), Chunk::Fill(1, 1)]);
+            assert_eq!(
+                res,
+                [
+                    Chunk::Fill { start: 0, size: 1, value: 1 },
+                    Chunk::Fill { start: 0, size: 1, value: 2 }
+                ]
+            );
         }
 
         // Test dont merge on different type
         {
-            let mut init_vec = Vec::<Chunk<'_>>::new();
-            init_vec.push(Chunk::Fill(0, 1));
-            let res = add_sparse_chunk(&init_vec, Chunk::DontCare(1))?;
+            let mut init_vec = Vec::<Chunk>::new();
+            init_vec.push(Chunk::Fill { start: 0, size: 1, value: 2 });
+            let mut res = init_vec.clone();
+            add_sparse_chunk(&mut res, Chunk::DontCare { size: 1 })?;
             assert_ne!(res, init_vec);
             assert_eq!(2, res.len());
-            assert_eq!(res, [Chunk::Fill(0, 1), Chunk::DontCare(1)]);
+            assert_eq!(
+                res,
+                [Chunk::Fill { start: 0, size: 1, value: 2 }, Chunk::DontCare { size: 1 }]
+            );
         }
 
         Ok(())
@@ -747,20 +675,25 @@ mod test {
     async fn test_add_sparse_chunk_dont_care() -> Result<()> {
         // Test they merge
         {
-            let mut init_vec = Vec::<Chunk<'_>>::new();
-            init_vec.push(Chunk::DontCare(1));
-            let res = add_sparse_chunk(&init_vec, Chunk::DontCare(1))?;
+            let mut init_vec = Vec::<Chunk>::new();
+            init_vec.push(Chunk::DontCare { size: 1 });
+            let mut res = init_vec.clone();
+            add_sparse_chunk(&mut res, Chunk::DontCare { size: 1 })?;
             assert_eq!(1, res.len());
-            assert_eq!(Chunk::DontCare(2), res[0]);
+            assert_eq!(Chunk::DontCare { size: 2 }, res[0]);
         }
 
         // Test they dont merge on different type
         {
-            let mut init_vec = Vec::<Chunk<'_>>::new();
-            init_vec.push(Chunk::DontCare(1));
-            let res = add_sparse_chunk(&init_vec, Chunk::Fill(1, 1))?;
+            let mut init_vec = Vec::<Chunk>::new();
+            init_vec.push(Chunk::DontCare { size: 1 });
+            let mut res = init_vec.clone();
+            add_sparse_chunk(&mut res, Chunk::Fill { start: 0, size: 1, value: 1 })?;
             assert_eq!(2, res.len());
-            assert_eq!(res, [Chunk::DontCare(1), Chunk::Fill(1, 1)]);
+            assert_eq!(
+                res,
+                [Chunk::DontCare { size: 1 }, Chunk::Fill { start: 0, size: 1, value: 1 }]
+            );
         }
 
         Ok(())
@@ -770,20 +703,25 @@ mod test {
     async fn test_add_sparse_chunk_raw() -> Result<()> {
         // Test they merge
         {
-            let mut init_vec = Vec::<Chunk<'_>>::new();
-            init_vec.push(Chunk::Raw([&b"foo"[..]].to_vec()));
-            let res = add_sparse_chunk(&init_vec, Chunk::Raw([&b"bar"[..]].to_vec()))?;
+            let mut init_vec = Vec::<Chunk>::new();
+            init_vec.push(Chunk::Raw { start: 0, size: 3 });
+            let mut res = init_vec.clone();
+            add_sparse_chunk(&mut res, Chunk::Raw { start: 0, size: 4 })?;
             assert_eq!(1, res.len());
-            assert_eq!(Chunk::Raw([&b"foo"[..], &b"bar"[..]].to_vec()), res[0]);
+            assert_eq!(Chunk::Raw { start: 0, size: 7 }, res[0]);
         }
 
         // Test they dont merge on different type
         {
-            let mut init_vec = Vec::<Chunk<'_>>::new();
-            init_vec.push(Chunk::Raw([&b"foo"[..]].to_vec()));
-            let res = add_sparse_chunk(&init_vec, Chunk::Fill(1, 1))?;
+            let mut init_vec = Vec::<Chunk>::new();
+            init_vec.push(Chunk::Raw { start: 0, size: 3 });
+            let mut res = init_vec.clone();
+            add_sparse_chunk(&mut res, Chunk::Fill { start: 3, size: 2, value: 1 })?;
             assert_eq!(2, res.len());
-            assert_eq!(res, [Chunk::Raw([&b"foo"[..]].to_vec()), Chunk::Fill(1, 1)]);
+            assert_eq!(
+                res,
+                [Chunk::Raw { start: 0, size: 3 }, Chunk::Fill { start: 3, size: 2, value: 1 }]
+            );
         }
 
         Ok(())
@@ -793,20 +731,25 @@ mod test {
     async fn test_add_sparse_chunk_crc32() -> Result<()> {
         // Test they dont merge on same type (Crc32 is special)
         {
-            let mut init_vec = Vec::<Chunk<'_>>::new();
-            init_vec.push(Chunk::Crc32(1234));
-            let res = add_sparse_chunk(&init_vec, Chunk::Crc32(2345))?;
+            let mut init_vec = Vec::<Chunk>::new();
+            init_vec.push(Chunk::Crc32 { checksum: 1234 });
+            let mut res = init_vec.clone();
+            add_sparse_chunk(&mut res, Chunk::Crc32 { checksum: 2345 })?;
             assert_eq!(2, res.len());
-            assert_eq!(res, [Chunk::Crc32(1234), Chunk::Crc32(2345)]);
+            assert_eq!(res, [Chunk::Crc32 { checksum: 1234 }, Chunk::Crc32 { checksum: 2345 }]);
         }
 
         // Test they dont merge on different type
         {
-            let mut init_vec = Vec::<Chunk<'_>>::new();
-            init_vec.push(Chunk::Crc32(1234));
-            let res = add_sparse_chunk(&init_vec, Chunk::Fill(1, 1))?;
+            let mut init_vec = Vec::<Chunk>::new();
+            init_vec.push(Chunk::Crc32 { checksum: 1234 });
+            let mut res = init_vec.clone();
+            add_sparse_chunk(&mut res, Chunk::Fill { start: 0, size: 1, value: 1 })?;
             assert_eq!(2, res.len());
-            assert_eq!(res, [Chunk::Crc32(1234), Chunk::Fill(1, 1)]);
+            assert_eq!(
+                res,
+                [Chunk::Crc32 { checksum: 1234 }, Chunk::Fill { start: 0, size: 1, value: 1 }]
+            );
         }
 
         Ok(())
@@ -828,7 +771,7 @@ mod test {
 
         // Generate a large temporary file
         let (file, temp_path) = NamedTempFile::new()?.into_parts();
-        let mut file_create = async_fs::File::from(file);
+        let mut file_create = File::from(file);
 
         // Fill buffer and file with random data
         let mut rng = SmallRng::from_entropy();
@@ -836,8 +779,8 @@ mod test {
         buf.resize(4096 * 100, 0);
         rng.fill_bytes(&mut buf);
 
-        file_create.write_all(&buf).await?;
-        file_create.flush().await?;
+        file_create.write_all(&buf)?;
+        file_create.flush()?;
 
         // build sparse files for it
         let files = build_sparse_files(
@@ -851,7 +794,7 @@ mod test {
 
         // Use simg2img to stitch them back together
         let (out_file, out_path) = NamedTempFile::new()?.into_parts();
-        let mut out_create = async_fs::File::from(out_file);
+        let mut out_create = File::from(out_file);
 
         // Add the files to the command args
         let mut args = Vec::<&str>::new();
@@ -866,7 +809,7 @@ mod test {
 
         // Compare
         let mut stitched_file_bytes: Vec<u8> = Vec::<u8>::new();
-        out_create.read_to_end(&mut stitched_file_bytes).await?;
+        out_create.read_to_end(&mut stitched_file_bytes)?;
         assert_eq!(stitched_file_bytes, buf);
         Ok(())
     }
