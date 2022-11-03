@@ -71,7 +71,8 @@ TEST(ConfigTest, OneValidFile) {
     "publications" : [
       {"service" : "_fuchsia._udp.", "port" : 5353, "perform_probe" : false,
        "text": ["chins=2", "thumbs=10"], "media": "wireless"}
-    ]
+    ],
+    "alt_services": [ "_altsvc1._udp.", "_altsvc2._tcp." ]
   })"));
 
   Config under_test;
@@ -91,6 +92,9 @@ TEST(ConfigTest, OneValidFile) {
                     .perform_probe_ = false,
                     .media_ = Media::kWireless}) == under_test.publications()[0]);
   }
+  EXPECT_EQ(2u, under_test.alt_services().size());
+  EXPECT_EQ("_altsvc1._udp.", under_test.alt_services()[0]);
+  EXPECT_EQ("_altsvc2._tcp.", under_test.alt_services()[1]);
 
   EXPECT_TRUE(files::DeletePath(kTestDir, true));
 }

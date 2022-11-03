@@ -48,10 +48,12 @@ TEST_F(ServiceInstancePublisherServiceImplTests, PublicationLifetime) {
   TestTransceiver transceiver;
   Mdns mdns(transceiver);
   bool ready_callback_called = false;
-  mdns.Start(nullptr, "TestHostName", /* perform probe */ false, [&ready_callback_called]() {
-    // Ready callback.
-    ready_callback_called = true;
-  });
+  mdns.Start(nullptr, "TestHostName", /* perform probe */ false,
+             [&ready_callback_called]() {
+               // Ready callback.
+               ready_callback_called = true;
+             },
+             {});
 
   // Create the publisher bound to the |publisher_ptr| channel.
   fuchsia::net::mdns::ServiceInstancePublisherPtr publisher_ptr;

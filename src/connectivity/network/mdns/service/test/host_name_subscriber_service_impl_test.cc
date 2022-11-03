@@ -46,10 +46,12 @@ TEST_F(HostNameSubscriberServiceImplTests, SubscriptionLifetime) {
   TestTransceiver transceiver;
   Mdns mdns(transceiver);
   bool ready_callback_called = false;
-  mdns.Start(nullptr, "TestHostName", /* perform probe */ false, [&ready_callback_called]() {
-    // Ready callback.
-    ready_callback_called = true;
-  });
+  mdns.Start(nullptr, "TestHostName", /* perform probe */ false,
+             [&ready_callback_called]() {
+               // Ready callback.
+               ready_callback_called = true;
+             },
+             {});
 
   // Create the subscriber bound to the |subscriber_ptr| channel.
   fuchsia::net::mdns::HostNameSubscriberPtr subscriber_ptr;

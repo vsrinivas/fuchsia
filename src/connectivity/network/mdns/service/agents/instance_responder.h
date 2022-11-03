@@ -22,8 +22,8 @@ namespace mdns {
 class InstanceResponder : public MdnsAgent {
  public:
   // Creates an |InstanceResponder|. The publisher is consulted to determine how queries are
-  // handled. If |host_name| is empty and |addresses| is empty, the local host name and
-  // local addresses will be used. Otherwise, neither parameter may be empty.
+  // handled. If |host_name| is empty the local host name will be used. If |addresses| is empty,
+  // the local addresses will be used.
   InstanceResponder(MdnsAgent::Owner* owner, std::string host_name,
                     std::vector<inet::IpAddress> addresses, std::string service_name,
                     std::string instance_name, Media media, IpVersions ip_versions,
@@ -37,7 +37,7 @@ class InstanceResponder : public MdnsAgent {
   const ServiceInstance* service_instance() const { return instance_ready_ ? &instance_ : nullptr; }
 
   // Indicates whether the instance is published by a local proxy (true) or the local host (false).
-  bool from_proxy() const { return is_from_proxy_; }
+  bool from_proxy() const { return !addresses_.empty(); }
 
   // MdnsAgent overrides.
   void Start(const std::string& local_host_full_name) override;
@@ -117,7 +117,6 @@ class InstanceResponder : public MdnsAgent {
   const std::vector<inet::IpAddress> addresses_;
   Mdns::ServiceInstance instance_;
   inet::IpPort port_;
-  bool is_from_proxy_;
   bool instance_ready_ = false;
   std::string instance_full_name_;
   Media media_;

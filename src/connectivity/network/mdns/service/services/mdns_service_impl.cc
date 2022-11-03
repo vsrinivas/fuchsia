@@ -119,7 +119,7 @@ void MdnsServiceImpl::Start() {
   fuchsia::net::interfaces::WatcherPtr watcher;
   interfaces_state->GetWatcher(fuchsia::net::interfaces::WatcherOptions(), watcher.NewRequest());
   mdns_.Start(std::move(watcher), local_host_name, config_.perform_host_name_probe(),
-              fit::bind_member<&MdnsServiceImpl::OnReady>(this));
+              fit::bind_member<&MdnsServiceImpl::OnReady>(this), config_.alt_services());
 }
 
 void MdnsServiceImpl::OnReady() {

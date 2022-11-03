@@ -255,4 +255,27 @@ bool MdnsNames::IsValidTextString(const std::vector<uint8_t>& text_string) {
   return text_string.size() <= kMaxTextStringLength;
 }
 
+// static
+std::string MdnsNames::AltHostName(const std::string& host_name) {
+  static constexpr size_t kExpectedUnmodifiedHostNameSize = 22;
+  static constexpr size_t kBlock0Pos = 8;
+  static constexpr size_t kBlock1Pos = 13;
+  static constexpr size_t kBlock2Pos = 18;
+  static constexpr size_t kBlockSize = 4;
+
+  if (host_name.size() != kExpectedUnmodifiedHostNameSize) {
+    return host_name;
+  }
+
+  // "fuchsia-1234-5678-9abc" becomes "12345678ABC".
+  std::string result;
+  result.reserve(kBlockSize * 3);
+  result.append(host_name.substr(kBlock0Pos, kBlockSize));
+  result.append(host_name.substr(kBlock1Pos, kBlockSize));
+  result.append(host_name.substr(kBlock2Pos, kBlockSize));
+  std::transform(result.begin(), result.end(), result.begin(), ::toupper);
+
+  return result;
+}
+
 }  // namespace mdns

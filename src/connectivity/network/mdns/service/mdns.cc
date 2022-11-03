@@ -43,7 +43,7 @@ void Mdns::SetVerbose(bool verbose) {
 
 void Mdns::Start(fuchsia::net::interfaces::WatcherPtr interfaces_watcher,
                  const std::string& local_host_name, bool perform_address_probe,
-                 fit::closure ready_callback) {
+                 fit::closure ready_callback, std::vector<std::string> alt_services) {
   FX_DCHECK(!local_host_name.empty());
   FX_DCHECK(ready_callback);
   FX_DCHECK(state_ == State::kNotStarted);
@@ -53,11 +53,27 @@ void Mdns::Start(fuchsia::net::interfaces::WatcherPtr interfaces_watcher,
 
   original_local_host_name_ = local_host_name;
 
+  alt_services_ = std::move(alt_services);
+
   // Create a resource renewer agent to keep resources alive.
   resource_renewer_ = std::make_shared<ResourceRenewer>(this);
 
   // Create an address responder agent to respond to address queries.
   AddAgent(std::make_shared<AddressResponder>(this, Media::kBoth, IpVersions::kBoth));
+
+  // If alternate services are registered, create an address responder agent to respond to address
+  // queries for the alternate host name. No probe is performed.
+  // TODO(fxb/113901): Remove this when alt_services is no longer needed.
+  if (!alt_services_.empty()) {
+    auto alt_host_name = MdnsNames::AltHostName(local_host_name);
+    if (alt_host_name == local_host_name) {
+      FX_LOGS(ERROR) << "Unexpected host name format, cannot generate alternate host name.";
+    }
+
+    AddAgent(std::make_shared<AddressResponder>(this, MdnsNames::HostFullName(alt_host_name),
+                                                std::vector<inet::IpAddress>{}, Media::kBoth,
+                                                IpVersions::kBoth));
+  }
 
   transceiver_.Start(
       std::move(interfaces_watcher),
@@ -273,15 +289,26 @@ bool Mdns::PublishServiceInstance(std::string host_name, std::vector<inet::IpAdd
     return false;
   }
 
+  // If a host name was provided, the instance is to be published by a proxy host.
+  bool from_proxy = !host_name.empty();
+
+  // If we're not publishing from a proxy host, and the service type is in the list of alternate
+  // services, publish from the alternate host name.
+  if (!from_proxy &&
+      std::find(alt_services_.begin(), alt_services_.end(), service_name) != alt_services_.end()) {
+    // TODO(fxb/113901): Remove this when alt_services is no longer needed.
+    FX_LOGS(INFO) << "Alternate services specified, responding on alternate host name.";
+    host_name = MdnsNames::AltHostName(original_local_host_name_);
+  }
+
   auto agent = std::make_shared<InstanceResponder>(this, host_name, addresses, service_name,
                                                    instance_name, media, ip_versions, publisher);
 
   instance_responders_by_instance_full_name_.emplace(instance_full_name, agent);
-  agent->SetOnQuitCallback(
-      [this, instance_full_name, service_name, instance_name, from_proxy = !host_name.empty()]() {
-        instance_responders_by_instance_full_name_.erase(instance_full_name);
-        OnRemoveLocalServiceInstance(service_name, instance_name, from_proxy);
-      });
+  agent->SetOnQuitCallback([this, instance_full_name, service_name, instance_name, from_proxy]() {
+    instance_responders_by_instance_full_name_.erase(instance_full_name);
+    OnRemoveLocalServiceInstance(service_name, instance_name, from_proxy);
+  });
 
   publisher->Connect(agent);
 
@@ -292,8 +319,7 @@ bool Mdns::PublishServiceInstance(std::string host_name, std::vector<inet::IpAdd
         this, service_name, instance_name,
         host_name.empty() ? local_host_full_name_ : MdnsNames::HostFullName(host_name),
         inet::IpPort::From_uint16_t(0), media, ip_versions,
-        [this, instance_full_name, agent, publisher,
-         from_proxy = !host_name.empty()](bool successful) {
+        [this, instance_full_name, agent, publisher, from_proxy](bool successful) {
           publisher->DisconnectProber();
 
           if (!successful) {

@@ -49,6 +49,9 @@ class Config {
   // Gets the publications.
   const std::vector<Publication>& publications() const { return publications_; }
 
+  // Gets the alternate services.
+  const std::vector<std::string>& alt_services() const { return alt_services_; }
+
  private:
   static const char kConfigDir[];
 
@@ -66,6 +69,7 @@ class Config {
   json::JSONParser parser_;
   std::optional<bool> perform_host_name_probe_;
   std::vector<Publication> publications_;
+  std::vector<std::string> alt_services_;
 
  public:
   // Disallow copy, assign and move.
