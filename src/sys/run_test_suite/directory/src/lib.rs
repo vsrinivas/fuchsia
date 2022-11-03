@@ -8,6 +8,7 @@ mod v1;
 
 use {
     serde::{Deserialize, Serialize},
+    std::collections::hash_map::Iter,
     std::{
         borrow::Cow,
         collections::HashMap,
@@ -261,6 +262,13 @@ impl ArtifactSubDirectory {
     /// directory.
     pub fn contents(&self) -> Vec<PathBuf> {
         self.artifacts.keys().cloned().collect()
+    }
+
+    /// Return an iterator over the artifacts in the directory.
+    ///
+    /// Includes paths relative to the root of the artifact directory and the associated metadata.
+    pub fn artifact_iter(&self) -> Iter<'_, PathBuf, ArtifactMetadata> {
+        self.artifacts.iter()
     }
 }
 
