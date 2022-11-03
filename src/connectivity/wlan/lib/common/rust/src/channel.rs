@@ -316,6 +316,20 @@ impl From<&fidl_common::WlanChannel> for Channel {
     }
 }
 
+impl From<Channel> for banjo_common::WlanChannel {
+    fn from(channel: Channel) -> banjo_common::WlanChannel {
+        let (cbw, secondary80) = channel.cbw.to_banjo();
+        banjo_common::WlanChannel { primary: channel.primary, cbw, secondary80 }
+    }
+}
+
+impl From<&Channel> for banjo_common::WlanChannel {
+    fn from(channel: &Channel) -> banjo_common::WlanChannel {
+        let (cbw, secondary80) = channel.cbw.to_banjo();
+        banjo_common::WlanChannel { primary: channel.primary, cbw, secondary80 }
+    }
+}
+
 /// Derive channel given DSSS param set, HT operation, and VHT operation IEs from
 /// beacon or probe response, and the primary channel from which such frame is
 /// received on.
