@@ -34,7 +34,7 @@ local_repository(
 )
 
 local_repository(
-    name = "bazel_rules_cc",
+    name = "rules_cc",
     path = "third_party/bazel_rules_cc",
 )
 
