@@ -114,7 +114,7 @@ impl std::fmt::Display for CodecId {
         match self.0 {
             0x01 => write!(f, "{}", "CVSD"),
             0x02 => write!(f, "{}", "MSBC"),
-            _x => panic!("Unexpected Codec Id: {}", _x), // Can't occur
+            unknown => write!(f, "Unknown({:#x})", unknown),
         }
     }
 }
@@ -124,4 +124,28 @@ pub fn codecs_to_string(codecs: &Vec<CodecId>) -> String {
     let codecs_string: Vec<&str> = codecs_string.iter().map(AsRef::as_ref).collect();
     let joined = codecs_string.join(", ");
     joined
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[fuchsia::test]
+    fn codecs_format() {
+        let cvsd = CodecId(0x1);
+        let mbsc = CodecId(0x2);
+        let unknown = CodecId(0xf);
+
+        let cvsd_string = format!("{:}", cvsd);
+        assert_eq!(String::from("CVSD"), cvsd_string);
+
+        let mbsc_string = format!("{:}", mbsc);
+        assert_eq!(String::from("MSBC"), mbsc_string);
+
+        let unknown_string = format!("{:}", unknown);
+        assert_eq!(String::from("Unknown(0xf)"), unknown_string);
+
+        let joined_string = codecs_to_string(&vec![cvsd, mbsc, unknown]);
+        assert_eq!(String::from("CVSD, MSBC, Unknown(0xf)"), joined_string);
+    }
 }
