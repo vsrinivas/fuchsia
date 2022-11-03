@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use crate::execution::Galaxy;
+use crate::types::errno;
 use anyhow::{anyhow, Error};
+use fidl::endpoints::ControlHandle;
 use fidl_fuchsia_component_runner as fcrunner;
 use fidl_fuchsia_starnix_binder as fbinder;
 use fidl_fuchsia_starnix_galaxy as fstargalaxy;
@@ -13,7 +15,6 @@ use std::sync::Arc;
 use tracing::error;
 
 use crate::fs::fuchsia::create_fuchsia_pipe;
-use crate::logging::not_implemented;
 use crate::types::OpenFlags;
 
 use super::*;
@@ -56,12 +57,27 @@ pub async fn serve_galaxy_controller(
 
 pub async fn serve_dev_binder(
     mut request_stream: fbinder::DevBinderRequestStream,
-    _galaxy: Arc<Galaxy>,
+    galaxy: Arc<Galaxy>,
 ) -> Result<(), Error> {
     while let Some(event) = request_stream.try_next().await? {
         match event {
-            fbinder::DevBinderRequest::Open { .. } => {
-                not_implemented!("N/A", "Binder FIDL protocol is not implemented!");
+            fbinder::DevBinderRequest::Open { path, process, binder, control_handle } => {
+                let result: Result<(), Error> = (|| {
+                    let node = galaxy.system_task.lookup_path_from_root(&path)?;
+                    let device_type = node.entry.node.info().rdev;
+                    let binder_driver = galaxy
+                        .kernel
+                        .binders
+                        .read()
+                        .get(&device_type)
+                        .ok_or_else(|| errno!(ENOTSUP))?
+                        .clone();
+                    binder_driver.open_external(process, binder).detach();
+                    Ok(())
+                })();
+                if result.is_err() {
+                    control_handle.shutdown();
+                }
             }
         }
     }

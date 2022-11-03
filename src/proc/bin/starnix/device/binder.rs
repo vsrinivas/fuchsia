@@ -24,7 +24,11 @@ use crate::task::{
 };
 use crate::types::*;
 use bitflags::bitflags;
+use fidl::endpoints::{RequestStream, ServerEnd};
+use fidl_fuchsia_starnix_binder as fbinder;
+use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
+use futures::{TryFutureExt, TryStreamExt};
 use slab::Slab;
 use std::collections::{btree_map::Entry as BTreeMapEntry, BTreeMap, BTreeSet, VecDeque};
 use std::sync::{Arc, Weak};
@@ -1356,6 +1360,41 @@ impl BinderDriver {
         (binder_process, binder_thread)
     }
 
+    pub fn open_external(
+        self: &Arc<Self>,
+        _process: zx::Process,
+        server_end: ServerEnd<fbinder::BinderMarker>,
+    ) -> fasync::Task<()> {
+        fasync::Task::local(
+            async move {
+                let mut stream = fbinder::BinderRequestStream::from_channel(
+                    fasync::Channel::from_channel(server_end.into_channel())?,
+                );
+                while let Some(event) = stream.try_next().await? {
+                    match event {
+                        fbinder::BinderRequest::SetVmo {
+                            vmo: _,
+                            mapped_address: _,
+                            control_handle: _,
+                        } => {}
+                        fbinder::BinderRequest::Ioctl {
+                            tid: _,
+                            request: _,
+                            parameter: _,
+                            responder,
+                        } => {
+                            responder.send(uapi::ENOTSUP as u16)?;
+                        }
+                    }
+                }
+                Ok(())
+            }
+            .unwrap_or_else(|err: anyhow::Error| {
+                tracing::warn!("android_hal_health XXXX OUPS {}", err);
+            }),
+        )
+    }
+
     fn get_context_manager(&self) -> Result<(Arc<BinderObject>, Arc<BinderProcess>), Errno> {
         let context_manager =
             self.context_manager.read().as_ref().cloned().ok_or_else(|| errno!(ENOENT))?;
@@ -2610,9 +2649,12 @@ impl FsNodeOps for BinderFsDir {
 const BINDERS: &[&FsStr] = &[b"binder", b"hwbinder", b"vndbinder"];
 
 fn make_binder_nodes(kernel: &Kernel, dir: &DirEntryHandle) -> Result<(), Errno> {
+    let mut registered_binders = kernel.binders.write();
     for name in BINDERS {
-        let dev = kernel.device_registry.write().register_dyn_chrdev(BinderDriver::new())?;
+        let driver = BinderDriver::new();
+        let dev = kernel.device_registry.write().register_dyn_chrdev(driver.clone())?;
         dir.add_node_ops_dev(name, mode!(IFCHR, 0o600), dev, SpecialNode)?;
+        registered_binders.insert(dev, driver);
     }
     Ok(())
 }
@@ -2639,6 +2681,7 @@ mod tests {
     use crate::mm::PAGE_SIZE;
     use crate::testing::*;
     use assert_matches::assert_matches;
+    use fidl::endpoints::create_proxy;
     use memoffset::offset_of;
 
     const BASE_ADDR: UserAddress = UserAddress::from(0x0000000000000100);
@@ -4964,6 +5007,25 @@ mod tests {
 
         // Check that there is a dead reply command for the sending thread.
         assert_matches!(sender_thread.read().command_queue.front(), Some(Command::DeadReply));
+    }
+
+    #[fuchsia::test]
+    async fn external_binder_connection() {
+        let (binder_proxy, binder_server_end) =
+            create_proxy::<fbinder::BinderMarker>().expect("proxy");
+        let task = fasync::Task::spawn(async move {
+            let driver = BinderDriver::new();
+            let process = fuchsia_runtime::process_self()
+                .duplicate(zx::Rights::SAME_RIGHTS)
+                .expect("process");
+            driver.open_external(process, binder_server_end).await;
+        });
+        let vmo = zx::Vmo::create(1024 * 1024).expect("Vmo::create");
+        binder_proxy.set_vmo(vmo, 0).expect("set_vmo");
+        let code = binder_proxy.ioctl(42, 1, 1).await.expect("ioctl") as u32;
+        assert!(code == uapi::ENOTSUP);
+        std::mem::drop(binder_proxy);
+        task.await;
     }
 
     #[fuchsia::test]

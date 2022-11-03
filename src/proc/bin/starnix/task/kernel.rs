@@ -4,13 +4,13 @@
 
 use fuchsia_zircon::{self as zx, AsHandleRef, Process};
 use once_cell::sync::OnceCell;
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::ffi::CStr;
 use std::iter::FromIterator;
 use std::sync::Arc;
 
 use crate::device::framebuffer::Framebuffer;
-use crate::device::{DeviceMode, DeviceRegistry};
+use crate::device::{BinderDriver, DeviceMode, DeviceRegistry};
 use crate::fs::socket::SocketAddress;
 use crate::fs::{FileOps, FileSystemHandle, FsNode};
 use crate::lock::RwLock;
@@ -71,6 +71,9 @@ pub struct Kernel {
     /// When a component is run in that galaxy and also specifies the `framebuffer` feature, the
     /// framebuffer will be served as the view of the component.
     pub framebuffer: Arc<Framebuffer>,
+
+    /// The binder driver registered for this galaxy, indexed by their device type.
+    pub binders: RwLock<BTreeMap<DeviceType, Arc<BinderDriver>>>,
 }
 
 impl Kernel {
@@ -102,6 +105,7 @@ impl Kernel {
             device_registry: RwLock::new(DeviceRegistry::new_with_common_devices()),
             features: HashSet::from_iter(features.iter().cloned()),
             framebuffer: Framebuffer::new().expect("Failed to create framebuffer"),
+            binders: Default::default(),
         })
     }
 
