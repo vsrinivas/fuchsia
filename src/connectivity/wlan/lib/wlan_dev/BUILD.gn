@@ -9,7 +9,6 @@ rustc_library("wlan_dev") {
 
   deps = [
     "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device_rust",
-    "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme_rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

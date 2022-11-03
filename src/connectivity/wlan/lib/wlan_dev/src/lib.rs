@@ -7,7 +7,7 @@
 #![deny(missing_docs)]
 
 use {
-    anyhow, fidl_fuchsia_wlan_device as wlan, fidl_fuchsia_wlan_mlme as mlme, fuchsia_zircon as zx,
+    anyhow, fidl_fuchsia_wlan_device as wlan, fuchsia_zircon as zx,
     std::{
         fmt,
         fs::{File, OpenOptions},
@@ -41,11 +41,6 @@ impl Device {
 /// Connects to a `Device` that represents a wlan phy.
 pub fn connect_wlan_phy(dev: &Device) -> Result<wlan::PhyProxy, anyhow::Error> {
     sys::connect_wlanphy_device(&dev.node)
-}
-
-/// Connects to a `Device` that represents a wlan iface.
-pub fn connect_wlan_iface(dev: &Device) -> Result<mlme::MlmeProxy, anyhow::Error> {
-    sys::connect_wlaniface_device(&dev.node)
 }
 
 impl fmt::Debug for Device {
