@@ -71,7 +71,9 @@ def get_host_tag() -> str:
 
 def force_symlink(target_path: str, dst_path: str):
     '''Create a symlink at |dst_path| that points to |target_path|.'''
-    target_path = os.path.relpath(target_path, os.path.dirname(dst_path))
+    dst_dir = os.path.dirname(dst_path)
+    os.makedirs(dst_dir, exist_ok=True)
+    target_path = os.path.relpath(target_path, dst_dir)
     try:
         os.symlink(target_path, dst_path)
     except OSError as e:
