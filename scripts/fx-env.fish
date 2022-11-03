@@ -32,3 +32,5 @@ set fuchsia_completions "$FUCHSIA_DIR/scripts/fish/completions"
 if not contains $fuchsia_completions $fish_complete_path
   set -x fish_complete_path $fuchsia_completions $fish_complete_path
 end
+
+set -x DEBUGINFOD_URLS (bash -c 'source "$FUCHSIA_DIR/tools/devshell/lib/vars.sh" && echo -n "$DEBUGINFOD_URLS"')
