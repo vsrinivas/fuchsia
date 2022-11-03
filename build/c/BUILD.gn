@@ -197,7 +197,6 @@ config("fidl-deprecated-c-bindings") {
     "//src/zircon/bin/hwstress:lib",
     "//src/zircon/bin/kstress",
     "//src/zircon/testing/mutex_pi_exerciser",
-    "//vendor/*",
     "//zircon/kernel/lib/userabi/userboot/*",
     "//zircon/system/ulib/c/sanitizers",
     "//zircon/system/ulib/hid",
