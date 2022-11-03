@@ -3559,16 +3559,21 @@ static zx_status_t __iwl_mvm_remove_sta_key(struct iwl_mvm* mvm, uint8_t sta_id,
   return ret;
 }
 
+static bool is_group_type(wlan_key_type_t type) {
+  return (type == WLAN_KEY_TYPE_GROUP) ||
+         (type == WLAN_KEY_TYPE_IGTK);
+}
+
 zx_status_t iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
                                 struct iwl_mvm_sta* mvmsta, struct ieee80211_key_conf* keyconf,
                                 uint8_t key_offset) {
-  if (!(keyconf->key_type == WLAN_KEY_TYPE_PAIRWISE ||
-        keyconf->key_type == WLAN_KEY_TYPE_GROUP)) {
+  bool mcast = is_group_type(keyconf->key_type);
+
+  if (!(keyconf->key_type == WLAN_KEY_TYPE_PAIRWISE || mcast)) {
     IWL_ERR(mvm, "Unsupported key type: %d\n", keyconf->key_type);
     return ZX_ERR_INVALID_ARGS;
   }
 
-  bool mcast = keyconf->key_type == WLAN_KEY_TYPE_GROUP;
   uint8_t sta_id = IWL_MVM_INVALID_STA;
   zx_status_t ret = ZX_OK;
   static const uint8_t __maybe_unused zero_addr[ETH_ALEN] = {0};
