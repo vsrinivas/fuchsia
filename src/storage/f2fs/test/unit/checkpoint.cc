@@ -120,8 +120,6 @@ class CheckpointTest : public F2fsFakeDevTestFixture {
         *cp_out = std::move(cp_page1);
         ASSERT_EQ(cp_block2->checkpoint_ver, cp_block1->checkpoint_ver - 1);
       }
-    } else {
-      ASSERT_EQ(0, 1);
     }
   }
 
@@ -844,6 +842,11 @@ TEST_F(CheckpointTest, NatJournal) {
     Checkpoint *cp = cp_page->GetAddress<Checkpoint>();
     ASSERT_EQ(cp->checkpoint_ver, expect_cp_ver);
 
+    uint32_t dummy_nid_count = static_cast<uint32_t>(cp->checkpoint_ver) - 2;
+    uint32_t nid_offset = (kRootInodeNid + 1) +
+                          (kNatJournalEntries * (static_cast<uint32_t>(cp->checkpoint_ver) - 1)) +
+                          dummy_nid_count;
+
     if (!after_mkfs) {
       // 2. Recover compacted data summaries
       ASSERT_TRUE(superblock_info.TestCpFlags(CpFlag::kCpCompactSumFlag));
@@ -855,37 +858,31 @@ TEST_F(CheckpointTest, NatJournal) {
         ASSERT_EQ(NidInJournal(sum, i), nids[i]);
         ASSERT_EQ(NatInJournal(sum, i).version, cp->checkpoint_ver - kMkfsCheckpointVersion);
       }
-    }
 
-    // 4. Fill compact data summary
-    if (!after_mkfs) {
+      // 4. Fill compact data summary
       // Clear NAT journal
       if (NatsInCursum(curseg->sum_blk) >= static_cast<int>(kNatJournalEntries)) {
         // Add dummy dirty NAT entries
-        MapTester::DoWriteNat(fs_.get(), kNatJournalEntries + superblock_info.GetRootIno() + 1,
-                              kNatJournalEntries, static_cast<uint8_t>(cp->checkpoint_ver));
+        MapTester::DoWriteNat(fs_.get(), nid_offset, nid_offset,
+                              static_cast<uint8_t>(cp->checkpoint_ver));
 
         // Move journal sentries to dirty sentries
         ASSERT_TRUE(node_manager.FlushNatsInJournal());
 
-        // Clear dirty sentries
-        MapTester::ClearAllDirtyNatEntries(node_manager);
+        // Flush NAT cache
+        MapTester::RemoveAllNatEntries(node_manager);
       }
     }
     nids.clear();
     nids.shrink_to_fit();
 
     // Fill NAT journal
-    for (uint32_t i = superblock_info.GetRootIno() + 1;
-         i < kNatJournalEntries + superblock_info.GetRootIno() + 1; ++i) {
+    nid_offset += 1;
+    for (uint32_t i = nid_offset; i < nid_offset + kNatJournalEntries; ++i) {
       MapTester::DoWriteNat(fs_.get(), i, i, static_cast<uint8_t>(cp->checkpoint_ver));
       nids.push_back(i);
     }
-
     ASSERT_LT(segment_manager.NpagesForSummaryFlush(), 3);
-
-    // Flush NAT cache
-    MapTester::RemoveAllNatEntries(node_manager);
   };
 
   DoFirstCheckpoint(check_nat_journal);
