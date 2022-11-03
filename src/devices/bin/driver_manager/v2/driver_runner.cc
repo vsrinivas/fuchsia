@@ -165,12 +165,7 @@ DriverRunner::DriverRunner(fidl::ClientEnd<fcomponent::Realm> realm,
       composite_node_manager_(dispatcher_, this),
       device_group_manager_(this) {
   inspector.GetRoot().CreateLazyNode(
-      "driver_runner",
-      [] {
-        // TODO(fxbug.dev/107288): Re-enable inspect once it has been fixed.
-        return fpromise::make_ok_promise(inspect::Inspector());
-      },
-      &inspector);
+      "driver_runner", [this] { return Inspect(); }, &inspector);
 }
 
 void DriverRunner::BindNodesForDeviceGroups() { TryBindAllOrphansUntracked(); }
@@ -217,7 +212,10 @@ void DriverRunner::AddDeviceGroupToDriverIndex(fuchsia_driver_framework::wire::D
 }
 
 fpromise::promise<inspect::Inspector> DriverRunner::Inspect() const {
-  inspect::Inspector inspector;
+  // Create our inspector.
+  // The default maximum size was too small, and so this is double the default size.
+  // If a device loads too much inspect data, this can be increased in the future.
+  inspect::Inspector inspector(inspect::InspectSettings{.maximum_size = 2 * 256 * 1024});
 
   // Make the device tree inspect nodes.
   auto device_tree = inspector.GetRoot().CreateChild("node_topology");
