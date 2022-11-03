@@ -361,6 +361,7 @@ TEST(MiscTestCase, DeviceAlreadyBoundFromDriverIndex) {
                        [&](auto args) -> zx::result<FakeDriverIndex::MatchResult> {
                          return zx::ok(FakeDriverIndex::MatchResult{
                              .url = kFakeDriverUrl,
+                             .colocate = true,
                          });
                        });
   auto config = NullConfig();

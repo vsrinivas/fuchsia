@@ -309,7 +309,7 @@ zx_status_t Device::CreateProxy() {
 
 zx_status_t Device::CreateFidlProxy(fbl::RefPtr<Device>* fidl_proxy_out) {
   auto dev = fbl::MakeRefCounted<Device>(
-      this->coordinator, fbl::String::Concat({name_, "-new-proxy"}), fbl::String(), fbl::String(),
+      this->coordinator, fbl::String::Concat({name_, "-fidl-proxy"}), fbl::String(), fbl::String(),
       fbl::RefPtr(this), 0, zx::vmo(), fidl::ClientEnd<fio::Directory>());
   if (dev == nullptr) {
     return ZX_ERR_NO_MEMORY;
