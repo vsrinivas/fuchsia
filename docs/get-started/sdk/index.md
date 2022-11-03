@@ -116,13 +116,13 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx sdk version
-   10.20221013.1.1
+   10.20221021.1.1
    ```
 
    At this point, you only need to confirm that you can run `ffx` commands
    without error. (However for your information, the output above shows the version
-   `10.20221013.1.1`, which indicates that this SDK was built and published on
-   October 13, 2022.)
+   `10.20221021.1.1`, which indicates that this SDK was built and published on
+   October 21, 2022.)
 
    Note: To ensure that you’re using the right version of `ffx` during development,
    consider updating your `PATH` to include the SDK's `tools` directory
@@ -264,10 +264,10 @@ Do the following:
    Device:
        ...
    Build:
-       Version: "10.20221013.1.1"
+       Version: "10.20221021.1.1"
        Product: "workstation_eng"
        Board: "qemu-x64"
-       Commit: "2022-10-13T20:03:14+00:00"
+       Commit: "2022-10-21T07:03:16+00:00"
    Last Reboot:
        Graceful: "false"
        Reason: "Cold"
@@ -275,7 +275,7 @@ Do the following:
    ```
 
    The example output above shows that the target device is running a
-   `workstation_eng.qemu-x64` prebuilt image whose version is `10.20221013.1.1`.
+   `workstation_eng.qemu-x64` prebuilt image whose version is `10.20221021.1.1`.
 
 1. Verify that you can stream the device logs:
 
@@ -368,14 +368,14 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    $ tools/bazel run --config=fuchsia_x64 //src/hello_world:pkg.component
    INFO: Build options --copt, --cpu, --crosstool_top, and 1 more have changed, discarding analysis cache.
-   INFO: Analyzed target //src/hello_world:pkg.component (55 packages loaded, 2434 targets configured).
+   INFO: Analyzed target //src/hello_world:pkg.component (55 packages loaded, 2443 targets configured).
    INFO: Found 1 target...
    Target //src/hello_world:pkg.component up-to-date:
      bazel-bin/src/hello_world/pkg.component_run_component.sh
-   INFO: Elapsed time: 5.478s, Critical Path: 2.56s
-   INFO: 128 processes: 103 internal, 24 linux-sandbox, 1 local.
-   INFO: Build completed successfully, 128 total actions
-   INFO: Build completed successfully, 128 total actions
+   INFO: Elapsed time: 4.899s, Critical Path: 2.22s
+   INFO: 129 processes: 104 internal, 24 linux-sandbox, 1 local.
+   INFO: Build completed successfully, 129 total actions
+   INFO: Build completed successfully, 129 total actions
    added repository bazel.pkg.component
    WARNING: No component moniker specified. Using value '/core/ffx-laboratory:hello_world'.
    The moniker arg will be required in the future. See fxbug.dev/104212
@@ -403,7 +403,7 @@ Do the following:
           Component State:  Resolved
     Incoming Capabilities:  /svc/fuchsia.logger.LogSink
      Exposed Capabilities:
-              Merkle root:  8db83fbe62d9156b03b5b7665ebb1832316492691969ab5936617c370f3f90a9
+              Merkle root:  e1a21b1f409cb31004e4ed995cebe094a0483056d305d2925b71080ffcfc88d7
           Execution State:  Stopped
    ```
 
@@ -419,12 +419,10 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx log --filter hello_world dump
-   ...
-   [pkg-resolver][pkg-resolver][I] Fetching blobs for fuchsia-pkg://bazel.pkg.component/hello_world: [
-       98ac8f77f52618766aec226c11e2bbd894637d18583b80b29b21938b75d6633a,
-   ]
-   [pkg-resolver][pkg-resolver][I] resolved fuchsia-pkg://bazel.pkg.component/hello_world as fuchsia-pkg://bazel.pkg.component/hello_world to cca474915d74415e302017f567b557c034eed50019d6881f52db916756292662 with TUF
-   {{ '<strong>' }}[core/ffx-laboratory:hello_world][][I] Hello, World!{{ '</strong>' }}
+   [2022-10-27 17:54:26.322][<ffx>]: logger started.
+   [137.639][pkg-resolver][pkg-resolver][I] updated local TUF metadata for "fuchsia-pkg://bazel.pkg.component" to version RepoVersions { root: 1, timestamp: Some(1666893385), snapshot: Some(1666893385), targets: Some(1666893385) } while getting merkle for TargetPath("hello_world/0")
+   [137.732][pkg-resolver][pkg-resolver][I] resolved fuchsia-pkg://bazel.pkg.component/hello_world as fuchsia-pkg://bazel.pkg.component/hello_world to e1a21b1f409cb31004e4ed995cebe094a0483056d305d2925b71080ffcfc88d7 with TUF
+   {{ '<strong>' }}[137.761][ffx-laboratory:hello_world][I] Hello, World!{{ '</strong>' }}
    ```
 
 1. Use a text editor to edit the  `src/hello_world/hello_world.cc` file, for example:
@@ -463,11 +461,8 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx log --filter hello_world dump
    ...
-   [pkg-resolver][pkg-resolver][I] Fetching blobs for fuchsia-pkg://bazel.pkg.component/hello_world: [
-       98ac8f77f52618766aec226c11e2bbd894637d18583b80b29b21938b75d6633a,
-   ]
-   [pkg-resolver][pkg-resolver][I] resolved fuchsia-pkg://bazel.pkg.component/hello_world as fuchsia-pkg://bazel.pkg.component/hello_world to cca474915d74415e302017f567b557c034eed50019d6881f52db916756292662 with TUF
-   {{ '<strong>' }}[core/ffx-laboratory:hello_world][][I] Hello again, World!{{ '</strong>' }}
+   [4885.928][pkg-resolver][pkg-resolver][I] resolved fuchsia-pkg://bazel.pkg.component/hello_world as fuchsia-pkg://bazel.pkg.component/hello_world to 916763545fe9df0299bf049359f6b09b8d9dac2881a6d6c016d929d970738586 with TUF
+   {{ '<strong>' }}[4885.959][ffx-laboratory:hello_world][I] Hello again, World!{{ '</strong>' }}
    ```
 
 ## 5. View symbolized logs {:#view-symbolized-logs}
@@ -661,10 +656,8 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx log --filter hello_world
    ...
-   [pkg-resolver][pkg-resolver][I] Fetching blobs for fuchsia-pkg://bazel.pkg.component/hello_world: [
-       98ac8f77f52618766aec226c11e2bbd894637d18583b80b29b21938b75d6633a,
-   ]
-   [pkg-resolver][pkg-resolver][I] resolved fuchsia-pkg://bazel.pkg.component/hello_world as fuchsia-pkg://bazel.pkg.component/hello_world to cca474915d74415e302017f567b557c034eed50019d6881f52db916756292662 with TUF
+   [6905.421][pkg-resolver][pkg-resolver][I] updated local TUF metadata for "fuchsia-pkg://bazel.pkg.component" to version RepoVersions { root: 1, timestamp: Some(1666898133), snapshot: Some(1666898133), targets: Some(1666898133) } while getting merkle for TargetPath("hello_world/0")
+   [6905.578][pkg-resolver][pkg-resolver][I] resolved fuchsia-pkg://bazel.pkg.component/hello_world as fuchsia-pkg://bazel.pkg.component/hello_world to 916763545fe9df0299bf049359f6b09b8d9dac2881a6d6c016d929d970738586 with TUF
    ```
 
    Notice the `Hello again, World!` line is not printed yet.
@@ -681,7 +674,7 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    ...
    🛑 on bp 1 main() • hello_world.cc:8
-       6 
+       6
        7 int main() {
     ▶  8   std::cout << "Hello again, World!\n";
        9   abort();
@@ -699,7 +692,7 @@ Do the following:
    now printed:
 
    ```none {:.devsite-disable-click-to-copy}
-   [core/ffx-laboratory:hello_world][][I] Hello again, World!
+   [ffx-laboratory:hello_world][I] Hello again, World!
    ```
 
 1. To exit the `zxdb` terminal, type `exit` or press `Ctrl-D`.
@@ -1012,12 +1005,11 @@ Remove all existing configurations and data of `ffx`:
 
 When Bazel fails to build, try the commands below:
 
-Caution: Running `bazel clean` or deleting the `$HOME/.cache/bazel` directory
-deletes all the artifacts downloaded by Bazel, which can be around 4 GB.
-This means Bazel will need to download those dependencies again
-the next time you run `bazel build`.
-
 * {Linux}
+
+  Note: Running `bazel clean` or deleting the `$HOME/.cache/bazel` directory
+  deletes artifacts downloaded by Bazel, which can be around 4 GB. This means
+  Bazel will need to download dependencies again next time you run `bazel build`.
 
   ```posix-terminal
   tools/bazel clean --expunge
@@ -1028,6 +1020,11 @@ the next time you run `bazel build`.
   ```
 
 * {macOS}
+
+  Note: Running `bazel clean` or deleting the `/private/var/temp/bazel$USER`
+  directory deletes artifacts downloaded by Bazel, which can be around 4 GB.
+  This means Bazel will need to download dependencies again next time you run
+  `bazel build`.
 
   ```posix-terminal
   tools/bazel clean --expunge
@@ -1040,7 +1037,7 @@ the next time you run `bazel build`.
 Remove the `fuchsia-getting-started` directory and its artifacts:
 
 Caution: If the SDK samples repository is cloned to a different location
-than `$HOME/fuchsia-getting-started`, adjust the directory path in the command
+than `$HOME/fuchsia-getting-started`, adjust the directory in the command
 below. Be extremely careful with the directory path when you run the
 `rm -rf <DIR>` command.
 
