@@ -69,18 +69,10 @@ use crate::{
         buffer::{IntoBuffers, ReceiveBuffer, SendBuffer},
         socket::{demux::tcp_serialize_segment, isn::IsnGenerator},
         state::{CloseError, Closed, Initial, State, Takeable},
-        BufferSizes,
+        BufferSizes, DEFAULT_MAXIMUM_SEGMENT_SIZE,
     },
     DeviceId, Instant, NonSyncContext, SyncCtx,
 };
-
-/// Per RFC 879 section 1 (https://tools.ietf.org/html/rfc879#section-1):
-///
-/// THE TCP MAXIMUM SEGMENT SIZE IS THE IP MAXIMUM DATAGRAM SIZE MINUS
-/// FORTY.
-///   The default IP Maximum Datagram Size is 576.
-///   The default TCP Maximum Segment Size is 536.
-const DEFAULT_MAXIMUM_SEGMENT_SIZE: u32 = 536;
 
 /// Timer ID for TCP connections.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
@@ -930,7 +922,7 @@ fn do_send_inner<I, SC, C>(
     C: TcpNonSyncContext,
     SC: BufferTransportIpContext<I, C, Buf<Vec<u8>>>,
 {
-    if let Some(seg) = conn.state.poll_send(DEFAULT_MAXIMUM_SEGMENT_SIZE, ctx.now()) {
+    while let Some(seg) = conn.state.poll_send(DEFAULT_MAXIMUM_SEGMENT_SIZE, ctx.now()) {
         let ser = tcp_serialize_segment(seg, addr.ip.clone());
         ip_transport_ctx.send_ip_packet(ctx, &conn.ip_sock, ser, None).unwrap_or_else(
             |(body, err)| {

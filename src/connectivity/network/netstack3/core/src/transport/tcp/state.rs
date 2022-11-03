@@ -15,6 +15,7 @@ use core::{
 };
 
 use assert_matches::assert_matches;
+use derivative::Derivative;
 use explicit::ResultExt as _;
 
 use crate::{
@@ -23,7 +24,7 @@ use crate::{
         rtt::Estimator,
         segment::{Payload, Segment},
         seqnum::{SeqNum, WindowSize},
-        BufferSizes, Control, UserError,
+        BufferSizes, CongestionControl, Control, UserError,
     },
     Instant,
 };
@@ -237,7 +238,7 @@ enum SynSentOnSegmentDisposition<I: Instant, R: ReceiveBuffer, S: SendBuffer, Ac
     Ignore,
 }
 
-impl<I: Instant, ActiveOpen: Takeable> SynSent<I, ActiveOpen> {
+impl<I: Instant + 'static, ActiveOpen: Takeable> SynSent<I, ActiveOpen> {
     /// Processes an incoming segment in the SYN-SENT state.
     ///
     /// Transitions to ESTABLSHED if the incoming segment is a proper SYN-ACK.
@@ -350,6 +351,7 @@ impl<I: Instant, ActiveOpen: Takeable> SynSent<I, ActiveOpen> {
                                     last_seq_ts: None,
                                     rtt_estimator,
                                     timer: None,
+                                    congestion_control: CongestionControl::cubic(),
                                 },
                                 rcv: Recv {
                                     buffer: rcv_buffer,
@@ -463,8 +465,9 @@ impl FinQueued {
 }
 
 /// TCP control block variables that are responsible for sending.
-#[derive(Debug)]
-#[cfg_attr(test, derive(PartialEq, Eq))]
+#[derive(Derivative)]
+#[derivative(Debug)]
+#[cfg_attr(test, derivative(PartialEq, Eq))]
 struct Send<I: Instant, S: SendBuffer, const FIN_QUEUED: bool> {
     nxt: SeqNum,
     max: SeqNum,
@@ -477,6 +480,8 @@ struct Send<I: Instant, S: SendBuffer, const FIN_QUEUED: bool> {
     last_seq_ts: Option<(SeqNum, I)>,
     rtt_estimator: Estimator,
     timer: Option<SendTimer<I>>,
+    #[derivative(PartialEq = "ignore")]
+    congestion_control: CongestionControl<I>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -580,6 +585,7 @@ impl<I: Instant, S: SendBuffer, const FIN_QUEUED: bool> Send<I, S, FIN_QUEUED> {
             last_seq_ts,
             rtt_estimator,
             timer,
+            congestion_control,
         } = self;
         match timer {
             Some(SendTimer::Retrans(retrans_timer)) => {
@@ -597,6 +603,7 @@ impl<I: Instant, S: SendBuffer, const FIN_QUEUED: bool> Send<I, S, FIN_QUEUED> {
                     //         5.5).
                     *snd_nxt = *snd_una;
                     retrans_timer.backoff(now);
+                    congestion_control.on_retransmission();
                 }
             }
             None => {}
@@ -605,8 +612,10 @@ impl<I: Instant, S: SendBuffer, const FIN_QUEUED: bool> Send<I, S, FIN_QUEUED> {
         // their window (it is strongly discouraged), the following conversion
         // will fail and we return early.
         // TODO(https://fxbug.dev/93868): Implement zero window probing.
+        let cwnd = congestion_control.cwnd();
+        let swnd = WindowSize::min(*snd_wnd, cwnd);
         let open_window =
-            u32::try_from(*snd_una + *snd_wnd - *snd_nxt).ok_checked::<TryFromIntError>()?;
+            u32::try_from(*snd_una + swnd - *snd_nxt).ok_checked::<TryFromIntError>()?;
         let offset =
             usize::try_from(*snd_nxt - *snd_una).unwrap_or_else(|TryFromIntError { .. }| {
                 panic!("snd.nxt({:?}) should never fall behind snd.una({:?})", *snd_nxt, *snd_una);
@@ -681,6 +690,7 @@ impl<I: Instant, S: SendBuffer, const FIN_QUEUED: bool> Send<I, S, FIN_QUEUED> {
             last_seq_ts,
             rtt_estimator,
             timer,
+            congestion_control,
         } = self;
         // Note: we rewind SND.NXT to SND.UNA on retransmission; if
         // `seg_ack` is after `snd.max`, it means the segment acks
@@ -727,6 +737,7 @@ impl<I: Instant, S: SendBuffer, const FIN_QUEUED: bool> Send<I, S, FIN_QUEUED> {
                     rtt_estimator.sample(now.duration_since(timestamp));
                 }
             }
+            congestion_control.on_ack(u32::try_from(acked).unwrap(), now, rtt_estimator.rto());
             match timer {
                 Some(SendTimer::Retrans(retrans_timer)) => {
                     // Per https://tools.ietf.org/html/rfc6298#section-5:
@@ -754,14 +765,42 @@ impl<I: Instant, S: SendBuffer, const FIN_QUEUED: bool> Send<I, S, FIN_QUEUED> {
     }
 
     fn take(&mut self) -> Self {
-        Self { buffer: self.buffer.take(), ..*self }
+        Self {
+            buffer: self.buffer.take(),
+            congestion_control: self.congestion_control.take(),
+            ..*self
+        }
     }
 }
 
 impl<I: Instant, S: SendBuffer> Send<I, S, { FinQueued::NO }> {
     fn queue_fin(self) -> Send<I, S, { FinQueued::YES }> {
-        let Self { nxt, max, una, wnd, wl1, wl2, buffer, last_seq_ts, rtt_estimator, timer } = self;
-        Send { nxt, max, una, wnd, wl1, wl2, buffer, last_seq_ts, rtt_estimator, timer }
+        let Self {
+            nxt,
+            max,
+            una,
+            wnd,
+            wl1,
+            wl2,
+            buffer,
+            last_seq_ts,
+            rtt_estimator,
+            timer,
+            congestion_control,
+        } = self;
+        Send {
+            nxt,
+            max,
+            una,
+            wnd,
+            wl1,
+            wl2,
+            buffer,
+            last_seq_ts,
+            rtt_estimator,
+            timer,
+            congestion_control,
+        }
     }
 }
 
@@ -957,7 +996,7 @@ impl<T: Default> Takeable for T {
     }
 }
 
-impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
+impl<I: Instant + 'static, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
     State<I, R, S, ActiveOpen>
 {
     /// Processes an incoming segment and advances the state machine.
@@ -1166,6 +1205,7 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
                                     last_seq_ts: None,
                                     rtt_estimator,
                                     timer: None,
+                                    congestion_control: CongestionControl::cubic(),
                                 },
                                 rcv: Recv {
                                     buffer: rcv_buffer,
@@ -1507,6 +1547,7 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
                         last_seq_ts: None,
                         rtt_estimator: Estimator::NoSample,
                         timer: None,
+                        congestion_control: CongestionControl::cubic(),
                     },
                     rcv: Recv { buffer: rcv_buffer, assembler: Assembler::new(*irs + 1) },
                 });
@@ -1853,6 +1894,7 @@ mod test {
                     },
                     last_seq_ts: None,
                     timer: None,
+                    congestion_control: CongestionControl::cubic(),
                 },
                 rcv: Recv { buffer: NullBuffer, assembler: Assembler::new(ISS_1 + 1) },
             }
@@ -1891,6 +1933,7 @@ mod test {
                 },
                 last_seq_ts: None,
                 timer: None,
+                congestion_control: CongestionControl::cubic(),
             },
             last_ack: ISS_1 + 2,
             last_wnd: WindowSize::ZERO,
@@ -1957,6 +2000,7 @@ mod test {
                 rtt_estimator: Estimator::default(),
                 last_seq_ts: None,
                 timer: None,
+                congestion_control: CongestionControl::cubic(),
             },
             last_ack: ISS_2 + 2,
             last_wnd: WindowSize::new(1).unwrap(),
@@ -1978,6 +2022,7 @@ mod test {
                 rtt_estimator: Estimator::default(),
                 last_seq_ts: None,
                 timer: None,
+                congestion_control: CongestionControl::cubic(),
             },
             last_ack: ISS_2 + 3,
             last_wnd: WindowSize::ZERO,
@@ -2007,6 +2052,7 @@ mod test {
                 rtt_estimator: Estimator::default(),
                 last_seq_ts: None,
                 timer: None,
+                congestion_control: CongestionControl::cubic(),
             },
             rcv: Recv { buffer: RingBuffer::new(2), assembler: Assembler::new(ISS_2 + 1) },
         });
@@ -2035,6 +2081,7 @@ mod test {
             rtt_estimator: Estimator::default(),
             last_seq_ts: None,
             timer: None,
+            congestion_control: CongestionControl::cubic(),
         };
         let new_rcv = || Recv {
             buffer: RingBuffer::new(TEST_BYTES.len()),
@@ -2080,6 +2127,7 @@ mod test {
             rtt_estimator: Estimator::default(),
             last_seq_ts: None,
             timer: None,
+            congestion_control: CongestionControl::cubic(),
         };
         let new_rcv = || Recv { buffer: NullBuffer, assembler: Assembler::new(ISS_2 + 1) };
         for mut state in [
@@ -2174,6 +2222,7 @@ mod test {
                 rtt_estimator: Estimator::default(),
                 last_seq_ts: None,
                 timer: None,
+                congestion_control: CongestionControl::cubic(),
             },
             last_ack: ISS_2 + 2,
             last_wnd: WindowSize::DEFAULT,
@@ -2240,6 +2289,7 @@ mod test {
                 },
                 last_seq_ts: None,
                 timer: None,
+                congestion_control: CongestionControl::cubic(),
             },
             rcv: Recv { buffer: NullBuffer, assembler: Assembler::new(ISS_2 + 1) }
         });
@@ -2263,6 +2313,7 @@ mod test {
                 },
                 last_seq_ts: None,
                 timer: None,
+                congestion_control: CongestionControl::cubic(),
             },
             rcv: Recv { buffer: NullBuffer, assembler: Assembler::new(ISS_1 + 1) }
         })
@@ -2337,6 +2388,7 @@ mod test {
                 },
                 last_seq_ts: None,
                 timer: None,
+                congestion_control: CongestionControl::cubic(),
             },
             rcv: Recv {
                 buffer: NullBuffer,
@@ -2359,6 +2411,7 @@ mod test {
                 },
                 last_seq_ts: None,
                 timer: None,
+                congestion_control: CongestionControl::cubic(),
             },
             rcv: Recv {
                 buffer: NullBuffer,
@@ -2385,6 +2438,7 @@ mod test {
                 rtt_estimator: Estimator::default(),
                 last_seq_ts: None,
                 timer: None,
+                congestion_control: CongestionControl::cubic(),
             },
             rcv: Recv {
                 buffer: RingBuffer::new(BUFFER_SIZE),
@@ -2489,6 +2543,7 @@ mod test {
                 last_seq_ts: None,
                 rtt_estimator: Estimator::default(),
                 timer: None,
+                congestion_control: CongestionControl::cubic(),
             },
             rcv: Recv {
                 buffer: RingBuffer::new(BUFFER_SIZE),
@@ -2682,6 +2737,7 @@ mod test {
                 last_seq_ts: None,
                 rtt_estimator: Estimator::default(),
                 timer: None,
+                congestion_control: CongestionControl::cubic(),
             },
             rcv: Recv {
                 buffer: RingBuffer::new(BUFFER_SIZE),
@@ -2716,6 +2772,7 @@ mod test {
                     last_seq_ts: None,
                     rtt_estimator: Estimator::default(),
                     timer: None,
+                    congestion_control: CongestionControl::cubic(),
                 },
                 last_ack: ISS_2 + 2,
                 last_wnd,
@@ -2806,6 +2863,7 @@ mod test {
                 last_seq_ts: None,
                 rtt_estimator: Estimator::default(),
                 timer: None,
+                congestion_control: CongestionControl::cubic(),
             },
             rcv: Recv {
                 buffer: RingBuffer::new(BUFFER_SIZE),
@@ -2972,6 +3030,7 @@ mod test {
                 last_seq_ts: None,
                 rtt_estimator: Estimator::default(),
                 timer: None,
+                congestion_control: CongestionControl::cubic(),
             },
             rcv: Recv {
                 buffer: RingBuffer::new(BUFFER_SIZE),
@@ -3009,6 +3068,7 @@ mod test {
                 last_seq_ts: None,
                 rtt_estimator: Estimator::default(),
                 timer: None,
+                congestion_control: CongestionControl::cubic(),
             },
             rcv: Recv {
                 buffer: RingBuffer::new(BUFFER_SIZE),
@@ -3115,6 +3175,7 @@ mod test {
                 rtt_estimator: Estimator::Measured { srtt: RTT, rtt_var: RTT / 2 },
                 last_seq_ts: None,
                 timer: None,
+                congestion_control: CongestionControl::cubic(),
             },
             rcv: Recv { buffer: RingBuffer::default(), assembler: Assembler::new(ISS_2 + 5) },
         }),

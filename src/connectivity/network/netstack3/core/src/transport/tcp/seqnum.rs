@@ -140,7 +140,7 @@ impl SeqNum {
 /// >                    max window < 2^30
 ///
 /// [RFC 7323 Section 2.3]: https://tools.ietf.org/html/rfc7323#section-2.3
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
 pub(crate) struct WindowSize(u32);
 
 impl WindowSize {
