@@ -56,7 +56,6 @@ source_set("lib") {
     "//zircon/system/ulib/hwreg",
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/sync",
-    "//zircon/system/ulib/syslog",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/zx",

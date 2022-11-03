@@ -5,7 +5,7 @@
 #include "src/camera/drivers/hw_accel/task/task.h"
 
 #include <fuchsia/sysmem/c/fidl.h>
-#include <lib/syslog/global.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdint.h>
 #include <zircon/pixelformat.h>
 #include <zircon/types.h>
@@ -74,14 +74,14 @@ zx_status_t GenericTask::InitBuffers(
           output_buffers_.Init(cpp20::span(output_vmos, output_buffer_collection->buffer_count),
                                std::move(output_buffers_name));
       status != ZX_OK) {
-    FX_LOG(ERROR, kTag, "Unable to Init VmoPool");
+    FX_LOGST(ERROR, kTag) << "Unable to Init VmoPool";
     return status;
   }
 
   if (zx_status_t status = output_buffers_.PinVmos(bti, fzl::VmoPool::RequireContig::Yes,
                                                    fzl::VmoPool::RequireLowMem::Yes);
       status != ZX_OK) {
-    FX_LOG(ERROR, kTag, "Unable to pin buffers");
+    FX_LOGST(ERROR, kTag) << "Unable to pin buffers";
     return status;
   }
 
@@ -124,11 +124,11 @@ zx_status_t GenericTask::InitInputBuffers(
     __UNUSED zx_handle_t handle = vmo.release();
 
     if (status != ZX_OK) {
-      FX_LOG(ERROR, kTag, "Unable to pin buffers");
+      FX_LOGST(ERROR, kTag) << "Unable to pin buffers";
       return status;
     }
     if (input_buffers_[i].region_count() != 1) {
-      FX_LOG(ERROR, kTag, "buffer is not contiguous");
+      FX_LOGST(ERROR, kTag) << "buffer is not contiguous";
       return ZX_ERR_NO_MEMORY;
     }
   }

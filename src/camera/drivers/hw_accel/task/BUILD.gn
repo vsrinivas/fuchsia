@@ -13,13 +13,13 @@ source_set("camera-task") {
     "//sdk/banjo/fuchsia.sysmem:fuchsia.sysmem_banjo_c",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//sdk/lib/fit-promise",
+    "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
   ]
   deps = [
     "//src/camera/lib/vmo_pool_wrapper",
     "//zircon/system/ulib/image-format",
-    "//zircon/system/ulib/syslog",
     "//zircon/system/ulib/zx",
   ]
 

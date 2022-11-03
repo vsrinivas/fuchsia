@@ -6,7 +6,6 @@
 #include <lib/ddk/debug.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/mmio/mmio.h>
-#include <lib/syslog/global.h>
 #include <zircon/pixelformat.h>
 
 #include <condition_variable>
