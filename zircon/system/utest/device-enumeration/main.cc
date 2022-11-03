@@ -825,7 +825,8 @@ TEST_F(DeviceEnumerationTest, AtlasTest) {
     return;
   }
 
-  // TODO(fxbug.dev/106517): Fix these devices and move them back.
+  // TODO(fxbug.dev/107847): Move this back to the normal kDevicePaths when wlanphy_dfv2 is
+  // re-enabled.
   static const char* kDevicesThatFailInDfv2[] = {
       "sys/platform/pt/pci/01:00.0_/pci-01:00.0-fidl/iwlwifi-wlanphyimpl/wlanphy",
   };
