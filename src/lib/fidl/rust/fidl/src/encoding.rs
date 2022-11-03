@@ -5737,7 +5737,9 @@ mod zx_test {
             )
             .expect("Decoding TestSampleXUnion failed");
 
-            // Ensure we've recorded the unknown variant
+            // Ensure we've recorded the unknown variant. This can't use
+            // assert_matches because it doesn't work with #[allow(deprecated)],
+            // which we need to reference __Unknown.
             #[allow(deprecated)]
             if !matches!(intermediate_missing_variant, TestSampleXUnion::__Unknown { .. }) {
                 panic!("unexpected variant")
