@@ -53,9 +53,7 @@ class VkGbm : public testing::Test {
 
   VulkanContext *context() { return context_.get(); }
 
-  struct gbm_device *device() {
-    return device_;
-  }
+  struct gbm_device *device() { return device_; }
 
   void IsMemoryTypeCoherent(uint32_t memoryTypeIndex, bool *is_coherent_out);
   void WriteLinearImage(vk::DeviceMemory memory, bool is_coherent, uint64_t row_bytes,
@@ -92,7 +90,7 @@ void VkGbm::WriteLinearImage(vk::DeviceMemory memory, bool is_coherent, uint64_t
 
   if (!is_coherent) {
     auto range = vk::MappedMemoryRange().setMemory(memory).setSize(VK_WHOLE_SIZE);
-    context_->device()->flushMappedMemoryRanges(1, &range);
+    EXPECT_EQ(vk::Result::eSuccess, context_->device()->flushMappedMemoryRanges(1, &range));
   }
 
   context_->device()->unmapMemory(memory);
@@ -107,7 +105,7 @@ void VkGbm::CheckLinearImage(vk::DeviceMemory memory, bool is_coherent, uint64_t
 
   if (!is_coherent) {
     auto range = vk::MappedMemoryRange().setMemory(memory).setSize(VK_WHOLE_SIZE);
-    context_->device()->invalidateMappedMemoryRanges(1, &range);
+    EXPECT_EQ(vk::Result::eSuccess, context_->device()->invalidateMappedMemoryRanges(1, &range));
   }
 
   for (uint32_t y = 0; y < height; y++) {
@@ -367,7 +365,7 @@ TEST_P(VkGbmImportWithParam, ImportImageCopy) {
 
   {
     auto info = vk::CommandBufferBeginInfo();
-    command_buffers[0]->begin(&info);
+    EXPECT_EQ(vk::Result::eSuccess, command_buffers[0]->begin(&info));
   }
 
   {
@@ -443,15 +441,15 @@ TEST_P(VkGbmImportWithParam, ImportImageCopy) {
         1 /* imageMemoryBarrierCount */, &barrier);
   }
 
-  command_buffers[0]->end();
+  EXPECT_EQ(vk::Result::eSuccess, command_buffers[0]->end());
 
   {
     auto command_buffer_temp = command_buffers[0].get();
     auto info = vk::SubmitInfo().setCommandBufferCount(1).setPCommandBuffers(&command_buffer_temp);
-    context()->queue().submit(1, &info, vk::Fence());
+    EXPECT_EQ(vk::Result::eSuccess, context()->queue().submit(1, &info, vk::Fence()));
   }
 
-  context()->queue().waitIdle();
+  EXPECT_EQ(vk::Result::eSuccess, context()->queue().waitIdle());
 
   if (param.use_linear_dst)
     CheckLinearImage(dst_memory.get(), dst_is_coherent, dst_row_bytes, kDefaultHeight, kPattern);
