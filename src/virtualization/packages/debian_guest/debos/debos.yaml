@@ -86,7 +86,9 @@ actions:
 
   # Copy the base image into the image.
   - action: filesystem-deploy
-    setup-fstab: true
+    # We configure fstab in the config_rootfs.sh command, so have debos
+    # skip that here.
+    setup-fstab: false
     setup-kernel-cmdline: false
 
   # Copy out the vmlinuz and initrd files.
