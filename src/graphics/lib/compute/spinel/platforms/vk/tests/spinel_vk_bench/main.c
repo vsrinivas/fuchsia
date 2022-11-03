@@ -72,11 +72,11 @@
 
 #define SPN_PLATFORM_EXTENSION_NAMES         // For example: VK_KHR_SWAPCHAIN_MUTABLE_FORMAT_EXTENSION_NAME
 
-#define SPN_PLATFORM_MIN_IMAGE_COUNT         3
+#define SPN_PLATFORM_MIN_IMAGE_COUNT         2
 
-#define SPN_PLATFORM_PRESENT_MODE            VK_PRESENT_MODE_IMMEDIATE_KHR
+#define SPN_PLATFORM_PRESENT_MODE            VK_PRESENT_MODE_FIFO_KHR
+                                             // VK_PRESENT_MODE_IMMEDIATE_KHR
                                              // VK_PRESENT_MODE_MAILBOX_KHR
-                                             // VK_PRESENT_MODE_FIFO_KHR
                                              // VK_PRESENT_MODE_FIFO_RELAXED_KHR
 
 #define SPN_PLATFORM_IMAGE_VIEW_FORMAT       VK_FORMAT_B8G8R8A8_UNORM
@@ -94,7 +94,7 @@
 
 #define SPN_PLATFORM_EXTENSION_NAMES
 
-#define SPN_PLATFORM_MIN_IMAGE_COUNT         3
+#define SPN_PLATFORM_MIN_IMAGE_COUNT         2
 
 #define SPN_PLATFORM_PRESENT_MODE            VK_PRESENT_MODE_FIFO_KHR
                                              // VK_PRESENT_MODE_MAILBOX_KHR
@@ -224,10 +224,9 @@ spinel_usage(char * const argv[])
           " -n <frames>               Maximum frames before exiting. Defaults to UINT32_MAX\n"
           " -p <present mode>         Select present mode [0-3]*. Defaults to %u/%s.\n"
           " -q <compute>:<present>    Select the compute and presentation queue family indices.  Defaults to `0:0`\n"
-          " -r                        Continuously rotate the SVG.\n"
-          " -v                        Verbose SVG parsing output.  Quiet by default.\n"
           " -r                        Rotate the SVG file around the origin.  Disabled by default.\n"
           " -t <seconds>              Maximum seconds before exiting. Defaults to UINT32_MAX\n"
+          " -v                        Verbose SVG parsing output.  Quiet by default.\n"
           " -F                        Use VkFences to meter swapchain image acquires.\n"
           " -Q                        Disable Vulkan validation layers.  Enabled by default.\n"
           " -D                        Disable Vulkan debug info labels.  Enabled by default.\n"

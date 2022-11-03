@@ -143,7 +143,7 @@ rs_fill_rand(uint32_t * vin_h, uint32_t const count, uint32_t const dwords)
 static struct radix_sort_vk_target const *
 rs_load_target(char const * filename)
 {
-  FILE * file = fopen(filename, "r");
+  FILE * file = fopen(filename, "rb");
 
   if (file == NULL)
     {
@@ -159,6 +159,10 @@ rs_load_target(char const * filename)
     }
 
   long int const file_size = ftell(file);
+
+#ifndef NDEBUG
+  fprintf(stderr, "radix_sort_vk_target::file_size = %ld\n", file_size);
+#endif
 
   if (file_size == -1L)
     {

@@ -34,6 +34,10 @@ radix_sort_vk_target_get_requirements(radix_sort_vk_target_t const *        targ
   //
   if ((target == NULL) || (requirements == NULL))
     {
+#ifndef NDEBUG
+      fprintf(stderr, "Error: ((target == NULL) || (requirements == NULL))\n");
+#endif
+
       return false;
     }
 
@@ -49,8 +53,9 @@ radix_sort_vk_target_get_requirements(radix_sort_vk_target_t const *        targ
   if (target->ar_header.magic != TARGET_ARCHIVE_MAGIC)
     {
 #ifndef NDEBUG
-      fprintf(stderr, "Error: Invalid target -- missing magic.");
+      fprintf(stderr, "Error: Missing magic -- Invalid target archive.\n");
 #endif
+
       return NULL;
     }
 #endif
@@ -78,8 +83,9 @@ radix_sort_vk_target_get_requirements(radix_sort_vk_target_t const *        targ
   if (rs_target_header->magic != RS_HEADER_MAGIC)
     {
 #ifndef NDEBUG
-      fprintf(stderr, "Error: Target is not compatible with library.");
+      fprintf(stderr, "Error: Missing magic -- Invalid target archive for radix sort.\n");
 #endif
+
       return NULL;
     }
 #endif

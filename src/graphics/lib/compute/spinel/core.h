@@ -625,7 +625,7 @@
 //
 // XY
 //
-//  0        32
+//  0        31
 //  |  X |  Y |
 //  +----+----+
 //  | 12 | 22 |
@@ -643,12 +643,15 @@
 //
 // NOTE(allanmac): Forthcoming changes will increase the TTCK keyval to 96 bits.
 //
+// TODO(fxbug.dev/112827): The TTSB encoding should encode TTP values between
+// -1073741824 to 1073741823 (signed 31 bit integer).
+//
 //  0                                                  63
 //  | PAYLOAD/TTSB/TTPB_ID | PREFIX | LAYER |  X  |  Y  |
 //  +----------------------+--------+-------+-----+-----+
 //  |          27          |    1   |   18  |  9  |  9  |
 //
-//  0                                         32                     63
+//  0                                         31                     63
 //  | PAYLOAD/TTSB/TTPB_ID | PREFIX | LAYER_LO | LAYER_HI |  X  |  Y  |
 //  +----------------------+--------+----------+----------+-----+-----+
 //  |          27          |    1   |     4    |    14    |  9  |  9  |
@@ -799,7 +802,7 @@
 #define SPN_TTS_BITS_TX                          9  // [   0, 511]
 #define SPN_TTS_BITS_DX                          7  // [ -64,  63] -> [-32,32]
 #define SPN_TTS_BITS_TY                          9  // [   0, 511]
-#define SPN_TTS_BITS_DY                          7  // [ -64,  64] -> [-64,64]
+#define SPN_TTS_BITS_DY                          7  // [ -64,  63] -> [-32,32]
 
 #define SPN_TTS_SUBPIXEL_X_LOG2                  5
 #define SPN_TTS_SUBPIXEL_Y_LOG2                  5

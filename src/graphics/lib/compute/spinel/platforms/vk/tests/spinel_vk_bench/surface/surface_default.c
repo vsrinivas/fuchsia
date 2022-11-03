@@ -568,7 +568,22 @@ surface_default_attach(struct surface *           surface,
 
   surface_debug_surface_capabilities(stderr, &sc);
 
-  assert(sc.minImageCount <= min_image_count);
+  //
+  // verify image count is valid
+  //
+#ifndef NDEBUG
+  if (min_image_count < sc.minImageCount)
+    {
+      fprintf(stderr,
+              "WARNING: min_image_count(%u) < sc.minImageCount(%u)\n",
+              min_image_count,
+              sc.minImageCount);
+    }
+#endif
+
+  min_image_count = MAX_MACRO(uint32_t,  // increase if too small
+                              min_image_count,
+                              sc.minImageCount);
 
   //
   // verify surface supports present mode
