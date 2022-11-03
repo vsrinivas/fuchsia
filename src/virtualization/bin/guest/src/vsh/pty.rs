@@ -5,7 +5,7 @@
 use {
     anyhow::{Context, Result},
     fidl::endpoints::Proxy,
-    fidl_fuchsia_hardware_pty as fpty, fidl_fuchsia_io as fio,
+    fidl_fuchsia_hardware_pty as fpty,
     fuchsia_zircon::{self as zx, HandleBased},
     std::os::unix::io::AsRawFd,
 };
@@ -18,25 +18,18 @@ use {
 /// Returns Ok(None) when the `fd` has been conclusively determined to not be a pty and Err(...) if
 /// we were unable to find out more due to some failure.
 pub async fn get_pty(fd: &impl AsRawFd) -> Result<Option<(fpty::DeviceProxy, zx::EventPair)>> {
-    // If clone_channel succeeds that means we have a channel speaking fuchsia.io.Node which
-    // *might* also be a pty. Otherwise this fd might be connected to a Socket or something else
-    // which is definitely not a pty.
-    let chan = match fdio::clone_channel(fd) {
-        Ok(chan) => chan,
-        Err(_) => return Ok(None),
-    };
-    let async_chan = fidl::handle::AsyncChannel::from_channel(chan)
-        .context("Failed to create AsyncChannel from cloned fd")?;
-    let node = fio::NodeProxy::new(async_chan);
-
-    let node_type = node.query().await.context("Query failed")?;
-    if node_type != fpty::DEVICE_PROTOCOL_NAME.as_bytes() {
+    if unsafe { libc::isatty(fd.as_raw_fd()) == 0 } {
         return Ok(None);
     }
 
-    let device = fpty::DeviceProxy::new(
-        node.into_channel().expect("There should be no remaining active users of this proxy"),
-    );
+    // Clone the handle underlying this fd. Since we've already confirmed that fd is a Pty the
+    // underlying handle should be channel speaking fuchsia.hardware.pty.Device
+    let cloned_handle =
+        fdio::clone_fd(fd.as_raw_fd()).context("Failed to clone underlying handle from fd")?;
+    let chan = fidl::handle::AsyncChannel::from_channel(cloned_handle.into())
+        .context("Failed to create AsyncChannel from cloned fd")?;
+    let device = fpty::DeviceProxy::new(chan);
+
     let eventpair = device
         .describe()
         .await

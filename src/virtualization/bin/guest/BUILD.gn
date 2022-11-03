@@ -24,7 +24,6 @@ rustc_binary("bin") {
   output_name = "guest"
   deps = [
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_rust",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization_rust",
     "//src/lib/fdio",
     "//src/lib/fidl/rust/fidl",
