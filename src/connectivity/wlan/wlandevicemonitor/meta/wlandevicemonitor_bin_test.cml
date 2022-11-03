@@ -12,10 +12,4 @@
     program: {
         binary: "bin/wlandevicemonitor_bin_test",
     },
-    use: [
-        {
-            storage: "tmp",
-            path: "/tmp",
-        },
-    ],
 }

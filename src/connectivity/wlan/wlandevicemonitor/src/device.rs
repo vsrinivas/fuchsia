@@ -13,7 +13,7 @@ use {
     },
     log::{error, info},
     pin_utils::pin_mut,
-    std::{convert::Infallible, path::Path, sync::Arc},
+    std::{convert::Infallible, sync::Arc},
 };
 
 use crate::{device_watch, inspect, watchable_map::WatchableMap};
@@ -39,7 +39,7 @@ pub struct NewIface {
 
 pub struct PhyDevice {
     pub proxy: fidl_wlan_dev::PhyProxy,
-    pub device: wlan_dev::Device,
+    pub device_path: String,
 }
 
 pub struct IfaceDevice {
@@ -52,18 +52,14 @@ pub type IfaceMap = WatchableMap<u16, IfaceDevice>;
 
 /// Handles newly-discovered PHYs.
 ///
-/// `serve_phys` watches for new PHY devices in the appropriate `DeviceEnv` (ie: real or
-/// `IsolatedDevMgr`).
-///
 /// When new PHYs are discovered, the `device_watch` module produces a `NewPhyDevice`.  This struct
-/// contains a PHY proxy and a `wlan_dev::Device`.  This `Device` lifetime is then managed by
-/// `serve_phy`.
-pub async fn serve_phys<P: AsRef<Path>, E: wlan_dev::DeviceEnv>(
+/// contains a PHY id, proxy, and path.
+pub async fn serve_phys(
     phys: Arc<PhyMap>,
     inspect_tree: Arc<inspect::WlanMonitorTree>,
-    device_path: P,
+    device_directory: &str,
 ) -> Result<Infallible, Error> {
-    let new_phys = device_watch::watch_phy_devices::<_, E>(device_path)?;
+    let new_phys = device_watch::watch_phy_devices(device_directory)?;
     pin_mut!(new_phys);
     let mut active_phys = FuturesUnordered::new();
     loop {
@@ -98,7 +94,7 @@ async fn serve_phy(
     new_phy: device_watch::NewPhyDevice,
     inspect_tree: Arc<inspect::WlanMonitorTree>,
 ) {
-    let msg = format!("new phy #{}: {}", new_phy.id, new_phy.device.path().to_string_lossy());
+    let msg = format!("new phy #{}: {}", new_phy.id, new_phy.device_path);
     info!("{}", msg);
     inspect_log!(inspect_tree.device_events.lock(), msg: msg);
     let id = new_phy.id;
@@ -110,7 +106,7 @@ async fn serve_phy(
     // Insert the newly discovered device into the `WatchableMap`.  This will trigger the watchable
     // map to produce an event so that the `DeviceWatcher` service can produce an update for API
     // consumers.
-    phys.insert(id, PhyDevice { proxy: new_phy.proxy, device: new_phy.device });
+    phys.insert(id, PhyDevice { proxy: new_phy.proxy, device_path: new_phy.device_path });
 
     // The event stream's production of an event indicates that the PHY has been removed from the
     // system.  Remove the PHY from the `WatchableMap`.  This will result in the `WatchableMap`
@@ -135,22 +131,10 @@ mod tests {
         fidl::endpoints::create_proxy,
         fuchsia_async as fasync,
         fuchsia_inspect::Inspector,
-        fuchsia_zircon::{self as zx, prelude::*},
+        fuchsia_zircon::prelude::*,
         futures::task::Poll,
-        std::{fs::File, path::Path},
-        tempfile,
         wlan_common::{assert_variant, test_utils::ExpectWithin},
     };
-
-    // This struct is an implementation of the DeviceEnv trait that returns errors in all cases to
-    // enable testing the case where watching for devices fails.
-    struct FaultyDeviceEnv;
-
-    impl wlan_dev::DeviceEnv for FaultyDeviceEnv {
-        fn device_from_path<P: AsRef<Path>>(_path: P) -> Result<wlan_dev::Device, zx::Status> {
-            Err(zx::Status::NOT_SUPPORTED)
-        }
-    }
 
     #[test]
     fn test_serve_phys_exits_when_watching_devices_fails() {
@@ -159,12 +143,8 @@ mod tests {
         let phys = Arc::new(phys);
         let inspector = Inspector::new_with_size(inspect::VMO_SIZE_BYTES);
         let inspect_tree = Arc::new(inspect::WlanMonitorTree::new(inspector));
-
-        // Serve PHYs from the bogus device environment that returns errors for all operations.
-        // This will ensure that attempting to watch devices fails immediately.
-        let fut = serve_phys::<_, FaultyDeviceEnv>(phys.clone(), inspect_tree, "/bogus/path");
+        let fut = serve_phys(phys.clone(), inspect_tree, "/wrong/path");
         pin_mut!(fut);
-
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Err(_)));
     }
 
@@ -176,14 +156,13 @@ mod tests {
         let inspector = Inspector::new_with_size(inspect::VMO_SIZE_BYTES);
         let inspect_tree = Arc::new(inspect::WlanMonitorTree::new(inspector));
 
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let test_path = temp_dir.path().join("test_device");
-        let file = File::create(test_path.clone()).expect("failed to open file");
-        let device = wlan_dev::Device { node: file, path: test_path };
         let (phy_proxy, phy_server) =
             create_proxy::<fidl_wlan_dev::PhyMarker>().expect("failed to create PHY proxy");
-
-        let new_phy = device_watch::NewPhyDevice { id: 0, proxy: phy_proxy, device };
+        let new_phy = device_watch::NewPhyDevice {
+            id: 0,
+            proxy: phy_proxy,
+            device_path: String::from("/test/path"),
+        };
 
         let fut = serve_phy(&phys, new_phy, inspect_tree);
         pin_mut!(fut);

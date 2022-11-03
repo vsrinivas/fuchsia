@@ -30,7 +30,6 @@ wlandevicemonitor_deps = [
   "//sdk/fidl/fuchsia.wlan.device.service:fuchsia.wlan.device.service_rust",
   "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme_rust",
   "//sdk/fidl/fuchsia.wlan.sme:fuchsia.wlan.sme_rust",
-  "//src/connectivity/wlan/lib/wlan_dev",
   "//src/lib/diagnostics/inspect/contrib/rust",
   "//src/lib/diagnostics/inspect/runtime/rust",
   "//src/lib/diagnostics/inspect/rust",
@@ -65,7 +64,6 @@ wlandevicemonitor_test_deps = [
   "//src/connectivity/wlan/lib/common/rust/:wlan-common",
   "//src/connectivity/wlan/lib/ieee80211",
   "//src/connectivity/wlan/testing/wlantap-client",
-  "//third_party/rust_crates:tempfile",
   "//third_party/rust_crates:test-case",
   "//third_party/rust_crates:zerocopy",
 ]

@@ -7,41 +7,36 @@ use {
     fidl::endpoints::Proxy,
     fidl_fuchsia_io as fio, fidl_fuchsia_wlan_device as fidl_wlan_dev, fuchsia_async as fasync,
     fuchsia_vfs_watcher::{WatchEvent, Watcher},
-    fuchsia_zircon::Status as zx_Status,
+    fuchsia_zircon as zx,
     futures::prelude::*,
     log::{error, warn},
-    std::{
-        fs::File,
-        io,
-        path::{Path, PathBuf},
-        str::FromStr,
-    },
+    std::{fs::File, str::FromStr},
 };
 
 pub struct NewPhyDevice {
     pub id: u16,
     pub proxy: fidl_wlan_dev::PhyProxy,
-    pub device: wlan_dev::Device,
+    pub device_path: String,
 }
 
-pub fn watch_phy_devices<P: AsRef<Path>, E: wlan_dev::DeviceEnv>(
-    device_path: P,
-) -> io::Result<impl Stream<Item = Result<NewPhyDevice, anyhow::Error>>> {
-    Ok(watch_new_devices(device_path)?.try_filter_map(|path| {
-        future::ready(Ok(handle_open_error(&path, new_phy::<E>(&path), "phy")))
+pub fn watch_phy_devices(
+    device_directory: &str,
+) -> Result<impl Stream<Item = Result<NewPhyDevice, anyhow::Error>>, anyhow::Error> {
+    Ok(watch_new_devices(device_directory)?.try_filter_map(|device_path| {
+        future::ready(Ok(handle_open_error(new_phy(device_path.clone()), "phy", &device_path)))
     }))
 }
 
 fn handle_open_error<T>(
-    path: &PathBuf,
     r: Result<T, anyhow::Error>,
     device_type: &'static str,
+    device_path: &str,
 ) -> Option<T> {
     if let Err(ref e) = &r {
-        if let Some(&zx_Status::ALREADY_BOUND) = e.downcast_ref::<zx_Status>() {
-            warn!("Cannot open already-bound device: {} '{}'", device_type, path.display())
+        if let Some(&zx::Status::ALREADY_BOUND) = e.downcast_ref::<zx::Status>() {
+            warn!("Cannot open already-bound device: {} '{}'", device_type, device_path)
         } else {
-            error!("Error opening {} '{}': {}", device_type, path.display(), e)
+            error!("Error opening {} '{}': {}", device_type, device_path, e)
         }
     }
     r.ok()
@@ -55,14 +50,10 @@ fn handle_open_error<T>(
 /// Note that a `DeviceEnv` trait is required in order for this function to work.  This enables
 /// wlandevicemonitor to function in real and in simulated environments where devices are presented
 /// differently.
-///
-/// # Arguments
-///
-/// * `path` - Path struct that represents the path to the device directory.
-fn watch_new_devices<P: AsRef<Path>>(
-    path: P,
-) -> io::Result<impl Stream<Item = Result<PathBuf, anyhow::Error>>> {
-    let raw_dir = File::open(&path)?;
+fn watch_new_devices(
+    device_directory: &str,
+) -> Result<impl Stream<Item = Result<String, anyhow::Error>>, anyhow::Error> {
+    let raw_dir = File::open(&device_directory)?;
     let zircon_channel = fdio::clone_channel(&raw_dir)?;
     let async_channel = fasync::Channel::from_channel(zircon_channel)?;
     let directory = fio::DirectoryProxy::from_channel(async_channel);
@@ -72,7 +63,7 @@ fn watch_new_devices<P: AsRef<Path>>(
             .try_filter_map(move |msg| {
                 future::ready(Ok(match msg.event {
                     WatchEvent::EXISTING | WatchEvent::ADD_FILE => {
-                        Some(path.as_ref().join(msg.filename))
+                        Some(String::from(msg.filename.to_string_lossy()))
                     }
                     _ => None,
                 }))
@@ -82,20 +73,24 @@ fn watch_new_devices<P: AsRef<Path>>(
     .try_flatten_stream())
 }
 
-fn new_phy<E: wlan_dev::DeviceEnv>(path: &PathBuf) -> Result<NewPhyDevice, anyhow::Error> {
-    let id = id_from_path(path)?;
-    let device = E::device_from_path(path)?;
-    let proxy = wlan_dev::connect_wlan_phy(&device)?;
-    Ok(NewPhyDevice { id, proxy, device })
-}
+fn new_phy(device_filename: String) -> Result<NewPhyDevice, anyhow::Error> {
+    let device_path = format!("{}/{}", crate::PHY_PATH, device_filename);
+    let device = std::fs::File::open(&device_path)?;
 
-fn id_from_path(path: &PathBuf) -> Result<u16, anyhow::Error> {
-    let file_name = path.file_name().ok_or_else(|| format_err!("Invalid device path"))?;
-    let file_name_str =
-        file_name.to_str().ok_or_else(|| format_err!("Filename is not valid UTF-8"))?;
-    let id = u16::from_str(&file_name_str)
-        .map_err(|e| format_err!("Failed to parse device filename as a numeric ID: {}", e))?;
-    Ok(id)
+    let (local, remote) = zx::Channel::create()?;
+    let connector_channel = fdio::clone_channel(&device)?;
+    let connector = fidl_fuchsia_wlan_device::ConnectorProxy::new(fasync::Channel::from_channel(
+        connector_channel,
+    )?);
+    connector.connect(fidl::endpoints::ServerEnd::new(remote))?;
+    let proxy = fidl_fuchsia_wlan_device::PhyProxy::new(fasync::Channel::from_channel(local)?);
+
+    Ok(NewPhyDevice {
+        id: u16::from_str(&device_filename)
+            .map_err(|e| format_err!("Failed to parse device filename as a numeric ID: {}", e))?,
+        proxy,
+        device_path,
+    })
 }
 
 #[cfg(test)]
@@ -119,8 +114,7 @@ mod tests {
     #[test]
     fn watch_phys() {
         let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
-        let phy_watcher = watch_phy_devices::<_, wlan_dev::RealDeviceEnv>(PHY_PATH)
-            .expect("Failed to create phy_watcher");
+        let phy_watcher = watch_phy_devices(PHY_PATH).expect("Failed to create phy_watcher");
         pin_mut!(phy_watcher);
 
         // Wait for the wlantap to appear.
@@ -162,13 +156,14 @@ mod tests {
 
     #[test]
     fn handle_open_succeeds() {
-        assert!(handle_open_error(&PathBuf::new(), Ok(()), "phy").is_some())
+        assert!(handle_open_error(Ok(()), "phy", "/phy/path").is_some())
     }
 
     #[test]
     fn handle_open_fails() {
-        assert!(handle_open_error::<()>(&PathBuf::new(), Err(format_err!("test failure")), "phy")
-            .is_none())
+        assert!(
+            handle_open_error::<()>(Err(format_err!("test failure")), "phy", "/phy/path").is_none()
+        )
     }
 
     fn create_wlantap_config() -> fidl_wlantap::WlantapPhyConfig {

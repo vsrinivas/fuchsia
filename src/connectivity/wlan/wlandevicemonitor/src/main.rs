@@ -60,7 +60,7 @@ fn serve_phys(
     inspect_tree: Arc<inspect::WlanMonitorTree>,
 ) -> BoxFuture<'static, Result<std::convert::Infallible, Error>> {
     info!("Serving real device environment");
-    let fut = device::serve_phys::<_, wlan_dev::RealDeviceEnv>(phys, inspect_tree, PHY_PATH);
+    let fut = device::serve_phys(phys, inspect_tree, PHY_PATH);
     Box::pin(fut)
 }
 

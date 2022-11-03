@@ -180,7 +180,7 @@ fn list_ifaces(ifaces: &IfaceMap) -> Vec<u16> {
 
 fn get_dev_path(phys: &PhyMap, phy_id: u16) -> Option<String> {
     let phy = phys.get(&phy_id)?;
-    Some(phy.device.path().to_string_lossy().to_string())
+    Some(phy.device_path.clone())
 }
 
 async fn get_country(
@@ -484,8 +484,7 @@ mod tests {
         futures::{future::BoxFuture, task::Poll, StreamExt},
         ieee80211::NULL_MAC_ADDR,
         pin_utils::pin_mut,
-        std::{convert::Infallible, fs::File},
-        tempfile,
+        std::convert::Infallible,
         test_case::test_case,
         wlan_common::assert_variant,
     };
@@ -539,12 +538,8 @@ mod tests {
     fn fake_phy() -> (PhyDevice, fidl_dev::PhyRequestStream) {
         let (proxy, server) =
             create_proxy::<fidl_dev::PhyMarker>().expect("fake_phy: create_proxy() failed");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let test_path = temp_dir.path().join("test");
-        let file = File::create(test_path.clone()).expect("failed to open file");
-        let device = wlan_dev::Device { node: file, path: test_path };
         let stream = server.into_stream().expect("fake_phy: failed to create stream");
-        (PhyDevice { proxy, device }, stream)
+        (PhyDevice { proxy, device_path: String::from("/test/path") }, stream)
     }
 
     fn fake_alpha2() -> [u8; 2] {
@@ -674,15 +669,7 @@ mod tests {
         let test_values = test_setup();
         let (phy, _) = fake_phy();
 
-        let expected_path = phy
-            .device
-            .path
-            .as_path()
-            .as_os_str()
-            .to_os_string()
-            .into_string()
-            .expect("could not convert path to string.");
-
+        let expected_path = phy.device_path.clone();
         test_values.phys.insert(10u16, phy);
 
         let service_fut = serve_monitor_requests(
