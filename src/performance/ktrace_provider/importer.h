@@ -38,7 +38,6 @@ class Importer {
 
  private:
   bool ImportRecord(const ktrace_header_t* record, size_t record_size);
-  bool ImportQuadRecord(const ktrace_rec_32b_t* record, const TagInfo& tag_info);
   bool ImportNameRecord(const ktrace_rec_name_t* record, const TagInfo& tag_info);
   bool ImportProbeRecord(const ktrace_header_t* record, size_t record_size);
   bool ImportDurationRecord(const ktrace_header_t* record, size_t record_size);
@@ -53,39 +52,7 @@ class Importer {
   bool HandleProcessName(zx_koid_t process, std::string_view name);
   bool HandleIRQName(uint32_t irq, std::string_view name);
   bool HandleProbeName(uint32_t probe, std::string_view name);
-  bool HandleVcpuMeta(uint32_t meta, std::string_view name);
-  bool HandleVcpuExitMeta(uint32_t exit, std::string_view name);
 
-  bool HandlePageFaultEnter(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
-                            uint64_t virtual_address, uint32_t flags);
-  bool HandlePageFaultExit(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
-                           uint64_t virtual_address, uint32_t flags);
-  bool HandleAccessFaultEnter(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
-                              uint64_t virtual_address, uint32_t flags);
-  bool HandleAccessFaultExit(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
-                             uint64_t virtual_address, uint32_t flags);
-  bool HandleContextSwitch(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
-                           trace_thread_state_t outgoing_thread_state,
-                           trace_thread_priority_t outgoing_thread_priority,
-                           trace_thread_priority_t incoming_thread_priority,
-                           zx_koid_t outgoing_thread, zx_koid_t incoming_thread);
-  bool HandleInheritPriorityStart(trace_ticks_t event_time, uint32_t id,
-                                  trace_cpu_number_t cpu_number);
-  bool HandleInheritPriority(trace_ticks_t event_time, uint32_t id, uint32_t tid, uint32_t flags,
-                             int old_inherited_prio, int new_inherited_prio, int old_effective_prio,
-                             int new_effective_prio);
-  bool HandleFutexWait(trace_ticks_t event_time, uint64_t futex_id, uint32_t new_owner_tid,
-                       trace_cpu_number_t cpu_number);
-  bool HandleFutexWoke(trace_ticks_t event_time, uint64_t futex_id, zx_status_t wait_result,
-                       trace_cpu_number_t cpu_number);
-  bool HandleFutexWake(trace_ticks_t event_time, uint64_t futex_id, uint32_t new_owner_tid,
-                       uint32_t count, uint32_t flags, trace_cpu_number_t cpu_number);
-  bool HandleFutexRequeue(trace_ticks_t event_time, uint64_t futex_id, uint32_t new_owner_tid,
-                          uint32_t count, uint32_t flags, trace_cpu_number_t cpu_number);
-  bool HandleKernelMutexEvent(trace_ticks_t event_time, uint32_t which_event, uint32_t mutex_id,
-                              uint32_t tid, uint32_t waiter_count, uint32_t flags,
-                              trace_cpu_number_t cpu_number);
-  bool HandleObjectDelete(trace_ticks_t event_time, zx_koid_t thread, zx_koid_t object);
   bool HandleThreadCreate(trace_ticks_t event_time, zx_koid_t thread, zx_koid_t affected_thread,
                           zx_koid_t affected_process);
   bool HandleThreadStart(trace_ticks_t event_time, zx_koid_t thread, zx_koid_t affected_thread);
@@ -155,43 +122,8 @@ class Importer {
   trace_string_ref_t const channel_category_ref_;
   trace_string_ref_t const vcpu_category_ref_;
   trace_string_ref_t const vm_category_ref_;
-  trace_string_ref_t const channel_read_name_ref_;
-  trace_string_ref_t const channel_write_name_ref_;
-  trace_string_ref_t const num_bytes_name_ref_;
-  trace_string_ref_t const num_handles_name_ref_;
-  trace_string_ref_t const page_fault_name_ref_;
-  trace_string_ref_t const access_fault_name_ref_;
-  trace_string_ref_t const vaddr_name_ref_;
-  trace_string_ref_t const flags_name_ref_;
-  trace_string_ref_t const exit_address_name_ref_;
   trace_string_ref_t const arg0_name_ref_;
   trace_string_ref_t const arg1_name_ref_;
-  trace_string_ref_t const inherit_prio_name_ref_;
-  trace_string_ref_t const inherit_prio_old_ip_name_ref_;
-  trace_string_ref_t const inherit_prio_new_ip_name_ref_;
-  trace_string_ref_t const inherit_prio_old_ep_name_ref_;
-  trace_string_ref_t const inherit_prio_new_ep_name_ref_;
-  trace_string_ref_t const futex_wait_name_ref_;
-  trace_string_ref_t const futex_woke_name_ref_;
-  trace_string_ref_t const futex_wake_name_ref_;
-  trace_string_ref_t const futex_requeue_name_ref_;
-  trace_string_ref_t const futex_id_name_ref_;
-  trace_string_ref_t const futex_owner_name_ref_;
-  trace_string_ref_t const futex_wait_res_name_ref_;
-  trace_string_ref_t const futex_count_name_ref_;
-  trace_string_ref_t const futex_was_requeue_name_ref_;
-  trace_string_ref_t const futex_was_active_name_ref_;
-  trace_string_ref_t const kernel_mutex_acquire_name_ref_;
-  trace_string_ref_t const kernel_mutex_block_name_ref_;
-  trace_string_ref_t const kernel_mutex_release_name_ref_;
-  trace_string_ref_t const kernel_mutex_mutex_id_name_ref_;
-  trace_string_ref_t const kernel_mutex_tid_name_ref_;
-  trace_string_ref_t const kernel_mutex_tid_type_ref_;
-  trace_string_ref_t const kernel_mutex_tid_type_user_ref_;
-  trace_string_ref_t const kernel_mutex_tid_type_kernel_ref_;
-  trace_string_ref_t const kernel_mutex_tid_type_none_ref_;
-  trace_string_ref_t const kernel_mutex_waiter_count_name_ref_;
-  trace_string_ref_t const misc_unknown_name_ref_;
 
   uint32_t version_ = 0u;
 

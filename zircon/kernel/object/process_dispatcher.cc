@@ -538,12 +538,6 @@ void ProcessDispatcher::FinishDeadTransition() {
   LTRACEF_LEVEL(2, "signaling waiters\n");
   UpdateState(0u, ZX_TASK_TERMINATED);
 
-  // TODO(fxbug.dev/107507): This event is ignored by ktrace_importer but
-  // consumed by intel_pt_decode's sideband. If intel_pt_decode is no longer
-  // used, this callsite can be deleted.
-  uint32_t koid = static_cast<uint32_t>(get_koid());
-  ktrace(TAG_PROC_EXIT, koid, 0, 0, 0);
-
   // Call job_->RemoveChildProcess(this) outside of |get_lock()|. Otherwise
   // we risk a deadlock as we have |get_lock()| and RemoveChildProcess grabs
   // the job's |lock_|, whereas JobDispatcher::EnumerateChildren obtains the
