@@ -61,7 +61,7 @@ Alternatively, you can enable all the guests with the following command:
 
 ```sh
 $ fx set {{ '<var>' }}PRODUCT{{ '</var>' }}.{{ '<var>' }}BOARD{{ '</var>' }} \
-    --with //src/virtualization/bundles: all_guests \
+    --with //src/virtualization/bundles:all_guests \
     --args='core_realm_shards += [ "//src/virtualization/bundles:all_core_shards" ]'
 ```
 
