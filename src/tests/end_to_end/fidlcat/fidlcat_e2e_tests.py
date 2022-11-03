@@ -6,10 +6,12 @@ import os
 import subprocess
 import sys
 import tempfile
+from threading import Event, Thread
 import unittest
 from pathlib import Path
 
 TEST_DATA_DIR = 'host_x64/test_data/fidlcat_e2e_tests'  # relative to $PWD
+FIDLCAT_TIMEOUT = 60  # timeout when invoking fidlcat
 
 # Convert FUCHSIA_SSH_KEY into an absolute path. Otherwise ffx cannot find
 # key and complains "Timeout attempting to reach target".
@@ -55,6 +57,15 @@ class Fidlcat:
             stderr=stderr)
         self.stdout = ''  # Contains both stdout and stderr, if merge_stderr.
         self.stderr = ''
+        self._timeout_cancel = Event()
+        Thread(target=self._timeout_thread).start()
+
+    def _timeout_thread(self):
+        self._timeout_cancel.wait(FIDLCAT_TIMEOUT)
+        if not self._timeout_cancel.is_set():
+            self.process.kill()
+            self.wait()
+            raise TimeoutError('Fidlcat timeouts\n' + self.get_diagnose_msg())
 
     def wait(self):
         """Wait for the process to terminate, assert the returncode, fill the stdout and stderr."""
@@ -62,6 +73,7 @@ class Fidlcat:
         self.stdout += stdout
         if stderr:  # None if merge_stderr
             self.stderr += stderr
+        self._timeout_cancel.set()
         return self.process.returncode
 
     def read_until(self, pattern: str):
@@ -80,7 +92,7 @@ class Fidlcat:
                 return True
 
     def get_diagnose_msg(self):
-        return "=== stdout ===\n" + self.stdout + "\n\n=== stderr===\n" + self.stderr
+        return '\n=== stdout ===\n' + self.stdout + '\n\n=== stderr===\n' + self.stderr + '\n'
 
     @classmethod
     def setup(cls):
