@@ -34,3 +34,18 @@ Linux compatibility tests (EXPERIMENTAL)
 
 * Run Linux compatibility tests
 > $ fx test f2fs-compatibility-test
+
+Debian guest based Linux compatibility tests (EXPERIMENTAL)
+-------------
+* Prerequisite
+> Generate Linux image
+
+> $ ./src/virtualization/packages/debian_guest/build-image.sh \
+>   prebuilt/virtualization/packages/debian_guest/images/x64 x64
+
+* Build configuration
+> $ fx set core.x64 --with //src/storage/f2fs:tests \
+>   --with //src/storage/f2fs/test/compatibility:tests
+
+* Run the test
+> $ fx test f2fs-compatibility-test-v2

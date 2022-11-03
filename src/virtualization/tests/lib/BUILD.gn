@@ -133,7 +133,10 @@ executable("unit_tests") {
 
 source_set("test_main") {
   testonly = true
-  visibility = [ "//src/virtualization/tests/*" ]
+  visibility = [
+    "//src/storage/f2fs/test/compatibility/*",
+    "//src/virtualization/tests/*",
+  ]
   sources = [ "test_main.cc" ]
   deps = [
     ":logger",
@@ -143,7 +146,10 @@ source_set("test_main") {
 }
 
 source_set("lib") {
-  visibility = [ "//src/virtualization/tests/*" ]
+  visibility = [
+    "//src/storage/f2fs/test/compatibility/*",
+    "//src/virtualization/tests/*",
+  ]
   testonly = true
   sources = [
     "enclosed_guest.cc",

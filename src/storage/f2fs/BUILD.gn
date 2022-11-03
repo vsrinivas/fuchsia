@@ -137,5 +137,6 @@ group("tests") {
   deps = [
     "test:f2fs-fs-tests",
     "test:f2fs-slow-fs-tests",
+    "test/compatibility:tests",
   ]
 }

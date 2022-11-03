@@ -50,6 +50,8 @@ actions:
         # Quality-of-life and debugging packages.
         - pciutils
         - strace
+        # Package for f2fs cross-OS compatibility testing.
+        - f2fs-tools
 
   # Pack the file system
   - action: pack
