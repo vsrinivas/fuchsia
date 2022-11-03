@@ -59,9 +59,6 @@ pub trait DeviceEnv {
     /// Path to the directory where new phy devices will be spawned
     const PHY_PATH: &'static str;
 
-    /// Opens a directory for device watcher to detect new devices
-    fn open_dir<P: AsRef<Path>>(path: P) -> Result<File, zx::Status>;
-
     /// Creates a Device (defined above) from a file at the given path
     fn device_from_path<P: AsRef<Path>>(path: P) -> Result<Device, zx::Status>;
 }
@@ -71,10 +68,6 @@ pub struct RealDeviceEnv;
 
 impl DeviceEnv for RealDeviceEnv {
     const PHY_PATH: &'static str = "/dev/class/wlanphy";
-
-    fn open_dir<P: AsRef<Path>>(path: P) -> Result<File, zx::Status> {
-        File::open(path).map_err(|e| e.into())
-    }
 
     fn device_from_path<P: AsRef<Path>>(path: P) -> Result<Device, zx::Status> {
         let dev = OpenOptions::new().read(true).write(true).open(path)?;

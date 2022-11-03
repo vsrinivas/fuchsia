@@ -27,7 +27,6 @@ rustc_library("wlan-hw-sim") {
     "//src/connectivity/wlan/lib/frame_writer:wlan-frame-writer",
     "//src/connectivity/wlan/lib/ieee80211",
     "//src/connectivity/wlan/lib/rsn:wlan-rsn",
-    "//src/connectivity/wlan/lib/wlan_dev",
     "//src/connectivity/wlan/testing/wlantap-client",
     "//src/lib/diagnostics/log/rust",
     "//src/lib/fdio/rust:fdio",

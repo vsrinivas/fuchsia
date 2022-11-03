@@ -10,9 +10,12 @@ use {
     fuchsia_zircon::Status as zx_Status,
     futures::prelude::*,
     log::{error, warn},
-    std::io,
-    std::path::{Path, PathBuf},
-    std::str::FromStr,
+    std::{
+        fs::File,
+        io,
+        path::{Path, PathBuf},
+        str::FromStr,
+    },
 };
 
 pub struct NewPhyDevice {
@@ -58,7 +61,7 @@ fn handle_open_error<T>(
 fn watch_new_devices<P: AsRef<Path>, E: wlan_dev::DeviceEnv>(
     path: P,
 ) -> io::Result<impl Stream<Item = Result<PathBuf, anyhow::Error>>> {
-    let raw_dir = E::open_dir(&path)?;
+    let raw_dir = File::open(&path)?;
     let zircon_channel = fdio::clone_channel(&raw_dir)?;
     let async_channel = fasync::Channel::from_channel(zircon_channel)?;
     let directory = fio::DirectoryProxy::from_channel(async_channel);
@@ -107,7 +110,6 @@ mod tests {
         pin_utils::pin_mut,
         std::convert::TryInto,
         wlan_common::{ie::*, test_utils::ExpectWithin},
-        wlan_dev::DeviceEnv,
         wlantap_client,
         zerocopy::AsBytes,
     };
@@ -120,7 +122,7 @@ mod tests {
         pin_mut!(phy_watcher);
 
         // Wait for the wlantap to appear.
-        let raw_dir = wlan_dev::RealDeviceEnv::open_dir("/dev").expect("failed to open /dev");
+        let raw_dir = File::open("/dev").expect("failed to open /dev");
         let zircon_channel =
             fdio::clone_channel(&raw_dir).expect("failed to clone directory channel");
         let async_channel = fasync::Channel::from_channel(zircon_channel)

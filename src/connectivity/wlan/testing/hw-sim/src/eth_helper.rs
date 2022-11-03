@@ -17,7 +17,6 @@ use {
     wlan_common::{
         appendable::Appendable, big_endian::BigEndianU16, buffer_reader::BufferReader, mac,
     },
-    wlan_dev::{DeviceEnv, RealDeviceEnv},
 };
 
 const ETH_BUF_FRAME_COUNT: u64 = 256;
@@ -27,7 +26,7 @@ const ETH_BUF_FRAME_COUNT: u64 = 256;
 /// Returns Err(e) if there is an error.
 pub async fn create_eth_client(mac: &[u8; 6]) -> Result<Option<ethernet::Client>, anyhow::Error> {
     const ETH_PATH: &str = "/dev/class/ethernet";
-    let eth_dir = RealDeviceEnv::open_dir(ETH_PATH).expect("opening ethernet dir");
+    let eth_dir = File::open(ETH_PATH).expect("opening ethernet dir");
     let directory_proxy = fio::DirectoryProxy::new(fuchsia_async::Channel::from_channel(
         fdio::clone_channel(&eth_dir)?,
     )?);

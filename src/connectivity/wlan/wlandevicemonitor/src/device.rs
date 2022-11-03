@@ -147,9 +147,6 @@ mod tests {
 
     impl wlan_dev::DeviceEnv for FaultyDeviceEnv {
         const PHY_PATH: &'static str = "/some/bogus/path";
-        fn open_dir<P: AsRef<Path>>(_path: P) -> Result<File, zx::Status> {
-            Err(zx::Status::NOT_FOUND)
-        }
 
         fn device_from_path<P: AsRef<Path>>(_path: P) -> Result<wlan_dev::Device, zx::Status> {
             Err(zx::Status::NOT_SUPPORTED)

@@ -20,6 +20,7 @@ use {
     pin_utils::pin_mut,
     std::{
         convert::TryFrom,
+        fs::File,
         future::Future,
         marker::Unpin,
         pin::Pin,
@@ -28,7 +29,6 @@ use {
     },
     tracing::{debug, info},
     wlan_common::test_utils::ExpectWithin,
-    wlan_dev::DeviceEnv,
     wlantap_client::Wlantap,
 };
 type EventStream = wlantap::WlantapPhyEventStream;
@@ -105,7 +105,7 @@ impl TestHelper {
 
         // The IsolatedDevMgr in CFv2 does not allow a configuration to block until a device is
         // ready. Wait indefinitely here until the device becomes available.
-        let raw_dir = wlan_dev::RealDeviceEnv::open_dir("/dev").expect("failed to open /dev");
+        let raw_dir = File::open("/dev").expect("failed to open /dev");
         let zircon_channel =
             fdio::clone_channel(&raw_dir).expect("failed to clone directory channel");
         let async_channel = fuchsia_async::Channel::from_channel(zircon_channel)
