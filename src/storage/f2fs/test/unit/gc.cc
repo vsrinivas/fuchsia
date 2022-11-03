@@ -22,8 +22,7 @@ class GcManagerTest : public F2fsFakeDevTestFixture {
 
  protected:
   std::vector<std::string> MakeGcTriggerCondition(uint32_t invalidate_ratio = 25) {
-    std::random_device random_device;
-    std::mt19937 prng(random_device());
+    auto prng = std::default_random_engine(testing::UnitTest::GetInstance()->random_seed());
 
     fs_->GetGcManager().DisableFgGc();
     std::vector<std::string> total_file_names;

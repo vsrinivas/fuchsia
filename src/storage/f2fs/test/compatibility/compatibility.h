@@ -28,6 +28,8 @@ class TestFile {
 
   virtual ssize_t Read(void *buf, size_t count) = 0;
   virtual ssize_t Write(const void *buf, size_t count) = 0;
+  virtual ssize_t ReadAt(void *buf, size_t count, off_t offset) = 0;
+  virtual ssize_t WriteAt(const void *buf, size_t count, off_t offset) = 0;
   virtual int Fchmod(mode_t mode) = 0;
   virtual int Fstat(struct stat *file_stat) = 0;
   virtual int Ftruncate(off_t len) = 0;
@@ -42,6 +44,8 @@ class HostTestFile : public TestFile {
 
   ssize_t Read(void *buf, size_t count) final;
   ssize_t Write(const void *buf, size_t count) final;
+  ssize_t ReadAt(void *buf, size_t count, off_t offset) final;
+  ssize_t WriteAt(const void *buf, size_t count, off_t offset) final;
   int Fchmod(mode_t mode) final;
   int Fstat(struct stat *file_stat) final;
   int Ftruncate(off_t len) final;
@@ -64,6 +68,8 @@ class TargetTestFile : public TestFile {
 
   ssize_t Read(void *buf, size_t count) final;
   ssize_t Write(const void *buf, size_t count) final;
+  ssize_t ReadAt(void *buf, size_t count, off_t offset) final;
+  ssize_t WriteAt(const void *buf, size_t count, off_t offset) final;
   int Fchmod(mode_t mode) final;
   int Fstat(struct stat *file_stat) final;
   int Ftruncate(off_t len) final;

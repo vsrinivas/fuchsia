@@ -19,6 +19,14 @@ ssize_t HostTestFile::Read(void *buf, size_t count) { return read(fd_.get(), buf
 
 ssize_t HostTestFile::Write(const void *buf, size_t count) { return write(fd_.get(), buf, count); }
 
+ssize_t HostTestFile::ReadAt(void *buf, size_t count, off_t offset) {
+  return pread(fd_.get(), buf, count, offset);
+}
+
+ssize_t HostTestFile::WriteAt(const void *buf, size_t count, off_t offset) {
+  return pwrite(fd_.get(), buf, count, offset);
+}
+
 int HostTestFile::Fchmod(mode_t mode) { return fchmod(fd_.get(), mode); }
 
 int HostTestFile::Fstat(struct stat *file_stat) { return fstat(fd_.get(), file_stat); }
@@ -73,16 +81,7 @@ void HostOperator::Rename(std::string_view oldpath, std::string_view newpath) {
 bool TargetTestFile::is_valid() const { return (vnode_ != nullptr); }
 
 ssize_t TargetTestFile::Read(void *buf, size_t count) {
-  if (!vnode_->IsReg()) {
-    return 0;
-  }
-
-  File *file = static_cast<File *>(vnode_.get());
-  size_t ret = 0;
-
-  if (file->Read(buf, count, offset_, &ret) != ZX_OK) {
-    return 0;
-  }
+  size_t ret = ReadAt(buf, count, offset_);
 
   offset_ += ret;
 
@@ -90,6 +89,14 @@ ssize_t TargetTestFile::Read(void *buf, size_t count) {
 }
 
 ssize_t TargetTestFile::Write(const void *buf, size_t count) {
+  size_t ret = WriteAt(buf, count, offset_);
+
+  offset_ += ret;
+
+  return ret;
+}
+
+ssize_t TargetTestFile::ReadAt(void *buf, size_t count, off_t offset) {
   if (!vnode_->IsReg()) {
     return 0;
   }
@@ -97,11 +104,24 @@ ssize_t TargetTestFile::Write(const void *buf, size_t count) {
   File *file = static_cast<File *>(vnode_.get());
   size_t ret = 0;
 
-  if (file->Write(buf, count, offset_, &ret) != ZX_OK) {
+  if (file->Read(buf, count, offset, &ret) != ZX_OK) {
     return 0;
   }
 
-  offset_ += ret;
+  return ret;
+}
+
+ssize_t TargetTestFile::WriteAt(const void *buf, size_t count, off_t offset) {
+  if (!vnode_->IsReg()) {
+    return 0;
+  }
+
+  File *file = static_cast<File *>(vnode_.get());
+  size_t ret = 0;
+
+  if (file->Write(buf, count, offset, &ret) != ZX_OK) {
+    return 0;
+  }
 
   return ret;
 }

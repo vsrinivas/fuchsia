@@ -728,5 +728,93 @@ TEST_F(FileCompatibilityTest, FallocatePunchHoleHostToFuchsia) {
   }
 }
 
+TEST_F(FileCompatibilityTest, RepetitiveWriteVerify) {
+  constexpr uint32_t kVerifyPatternSize = 1024 * 1024 * 200;  // 200MB
+  constexpr uint32_t kIteration = 10;
+  std::vector<uint32_t> verify_value(kVerifyPatternSize / kBlockSize, 0);
+
+  // preconditioning
+  {
+    host_operator_->Mkfs();
+    host_operator_->Mount();
+    auto umount = fit::defer([&] { host_operator_->Unmount(); });
+
+    host_operator_->Mkdir("/alpha", 0755);
+
+    auto bravo_file = host_operator_->Open("/alpha/bravo", O_RDWR | O_CREAT, 0644);
+    ASSERT_TRUE(bravo_file->is_valid());
+
+    uint32_t input[kBlockSize / sizeof(uint32_t)];
+    // write to bravo with offset pattern
+    for (uint32_t i = 0; i < kVerifyPatternSize / kBlockSize; ++i) {
+      auto value = rand();
+      input[0] = value;
+      verify_value[i] = value;
+      ASSERT_EQ(bravo_file->Write(input, kBlockSize), static_cast<ssize_t>(kBlockSize));
+    }
+  }
+
+  // Rewrite on Host
+  for (uint32_t iter = 0; iter < kIteration; ++iter) {
+    host_operator_->Mount();
+    auto umount = fit::defer([&] { host_operator_->Unmount(); });
+
+    auto bravo_file = host_operator_->Open("/alpha/bravo", O_RDWR, 0644);
+    ASSERT_TRUE(bravo_file->is_valid());
+
+    uint32_t input[kBlockSize / sizeof(uint32_t)];
+
+    for (uint32_t i = 0; i < kVerifyPatternSize / kBlockSize; ++i) {
+      auto loc = rand() % (kVerifyPatternSize / kBlockSize);
+      auto value = rand();
+      input[0] = value;
+      verify_value[loc] = value;
+      ASSERT_EQ(bravo_file->WriteAt(input, kBlockSize, loc * kBlockSize),
+                static_cast<ssize_t>(kBlockSize));
+    }
+  }
+
+  // Rewrite on Fuchsia
+  {
+    target_operator_->Fsck();
+    for (uint32_t iter = 0; iter < kIteration; ++iter) {
+      target_operator_->Mount();
+      auto umount = fit::defer([&] { target_operator_->Unmount(); });
+
+      auto bravo_file = target_operator_->Open("/alpha/bravo", O_RDWR, 0644);
+      ASSERT_TRUE(bravo_file->is_valid());
+
+      uint32_t input[kBlockSize / sizeof(uint32_t)];
+
+      for (uint32_t i = 0; i < kVerifyPatternSize / kBlockSize; ++i) {
+        auto loc = rand() % (kVerifyPatternSize / kBlockSize);
+        auto value = rand();
+        input[0] = value;
+        verify_value[loc] = value;
+        ASSERT_EQ(bravo_file->WriteAt(input, kBlockSize, loc * kBlockSize),
+                  static_cast<ssize_t>(kBlockSize));
+      }
+    }
+  }
+
+  // verify on Host
+  {
+    host_operator_->Fsck();
+    host_operator_->Mount();
+
+    auto umount = fit::defer([&] { host_operator_->Unmount(); });
+
+    auto bravo_file = host_operator_->Open("/alpha/bravo", O_RDWR, 0644);
+    ASSERT_TRUE(bravo_file->is_valid());
+
+    uint32_t buffer[kBlockSize / sizeof(uint32_t)];
+    for (uint32_t i = 0; i < kVerifyPatternSize / kBlockSize; ++i) {
+      ASSERT_EQ(bravo_file->ReadAt(buffer, kBlockSize, i * kBlockSize),
+                static_cast<ssize_t>(kBlockSize));
+      ASSERT_EQ(buffer[0], verify_value[i]);
+    }
+  }
+}
+
 }  // namespace
 }  // namespace f2fs
