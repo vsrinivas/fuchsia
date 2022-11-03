@@ -438,6 +438,21 @@ build --incompatible_enable_cc_toolchain_resolution
 # Setup the default platform.
 # TODO(digit): Switch to //build/bazel/platforms:common
 build --platforms=//build/bazel/platforms:linux_x64
+
+# Setup remote build
+build:remote --remote_instance_name=projects/rbe-fuchsia-prod/instances/default
+build:remote --java_runtime_version=rbe_jdk
+build:remote --tool_java_runtime_version=rbe_jdk
+build:remote --action_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
+build:remote --define=EXECUTOR=remote
+build:remote --remote_executor=grpcs://remotebuildexecution.googleapis.com
+build:remote --incompatible_strict_action_env=true
+build:remote --google_default_credentials=true
+
+# TODO(fxbug.dev/114100): use @prebuilt_clang//:host_clang_linux_x64_cc_toolchain
+build:remote --extra_toolchains=//build/rbe/bazel/config:cc-toolchain
+# TODO(fxbug.dev/114100): see if this can be removed or simplified
+build:remote --host_platform=//build/rbe/bazel/config:platform
 '''.format(ninja_output_dir=gn_output_dir)
 
     if args.use_bzlmod:
