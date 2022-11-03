@@ -83,24 +83,6 @@ gracefully on invalid parameters is correct behavior.
   As with unit tests, this code can be place in the same file as the code it is testing. For
   example, the code above might be in `toy_example/src/lib.rs`.
 
-<<<<<<< HEAD
-* {Go}
-
-  Note: Go fuzzing is experimental and may not be supported on your development host.
-
-  For Go the fuzz target function must have the signature `func Fuzz(s []byte)` and return nothing.
-
-  ```golang
-  func Fuzz(s []byte) {
-    mypackage.HandleBytes(s)
-  }
-  ```
-
-  This function can be added to and exported from either an existing Go package, or a new Go package
-  if no existing package is a good fit.
-
-=======
->>>>>>> ef1f4e0d86a ([go][fuzzing] Remove go fuzzing support)
 ## Support for Fuzzing More Complex Types {#advanced}
 
 Each language has utilities to facilitate making more complicated fuzz target functions:
@@ -172,32 +154,6 @@ Each language has utilities to facilitate making more complicated fuzz target fu
      }
      ```
 
-<<<<<<< HEAD
-* {Go}
-
-  Note: Go fuzzing is experimental and may not be supported on your development host.
-
-  You can use the ["encoding/binary"][binary-encoding]{:.external} package to "cast" or transform
-  bytes to fixed size types:
-
-  ```golang
-  import (
-    "bytes"
-    "encoding/binary"
-  )
-
-  func Fuzz(s []byte) {
-    var s MyStruct
-    buf := bytes.NewReader(b)
-    if err := binary.Read(buf, binary.LittleEndian, &s); err != nil {
-      return
-    }
-    mypackage.HandleStruct(s)
-  }
-  ```
-
-=======
->>>>>>> ef1f4e0d86a ([go][fuzzing] Remove go fuzzing support)
 Next, you can [build](build-a-fuzzer.md) your newly created fuzzer using GN and Ninja.
 
 [arbitrary]: https://docs.rs/arbitrary/0.4.0/arbitrary

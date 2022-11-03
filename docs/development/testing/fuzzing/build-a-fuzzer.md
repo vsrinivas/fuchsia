@@ -125,7 +125,6 @@ To build host fuzzers, use the [`host_library_fuzzer`][host_library_fuzzer] GN t
 For example:
 
 ```
-<<<<<<< HEAD
 host_library_fuzzer("my_host_fuzzer") {
   sources = [ ... ]
   deps = [ ... ]
@@ -221,11 +220,6 @@ does not, and the _examplesan-fuzzer_ variant is selected, then the package defi
 fuchsia_fuzzer_package("my-fuzzers") {
   cpp_fuzz_components = [ ":my-cpp-fuzzer" ]
   rust_fuzz_components = [ ":my-rust-fuzzer" ]
-=======
-fuzzers_package("my-fuzzers") {
-  cpp_fuzzers = [ ":my-cpp-fuzzer" ]
-  rust_fuzzers = [ ":my-rust-fuzzer" ]
->>>>>>> ef1f4e0d86a ([go][fuzzing] Remove go fuzzing support)
 }
 ```
 
