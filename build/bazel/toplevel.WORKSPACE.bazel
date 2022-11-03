@@ -19,6 +19,15 @@ local_repository(
     path = "build/bazel/local_repositories/platforms",
 )
 
+# Note that this is a fake repository that only contains the minimum
+# amount of declarations required by Bazel to run. The Fuchsia platform
+# build does not support Java, and will likely never will, and using
+# this fake repository prevents unexpected downloads and dependencies.
+local_repository(
+    name = "rules_java",
+    path = "build/bazel/local_repositories/rules_java",
+)
+
 local_repository(
     name = "bazel_skylib",
     path = "third_party/bazel_skylib",
@@ -82,6 +91,7 @@ local_repository(
     path = "third_party/sdk-integration/bazel_rules_fuchsia_experimental",
 )
 
+# buildifier: disable=load-on-top
 load("@rules_fuchsia//cipd:defs.bzl", "cipd_tool_repository")
 
 # Create a stubbed out cipd_tool repository. Doing this is necessary because the
