@@ -57,6 +57,8 @@ template("product_bundle") {
     outdir = "$target_out_dir/$target_name"
     product_bundle_manifest = "${outdir}/product_bundle.json"
     transfer_manifest = "${outdir}/transfer.json"
+    all_blobs_json = "${outdir}/all_blobs.json"
+    targets_json = "${outdir}/targets.json"
     tuf_keys = "//src/sys/pkg/repositories/devhost/keys"
   }
 
@@ -215,14 +217,18 @@ template("product_bundle") {
 
     deps = [ ":${labels.product_bundle}" ]
     inputs = [ files.product_bundle_manifest ]
-    outputs = [ files.transfer_manifest ]
+    outputs = [
+      files.all_blobs_json,
+      files.targets_json,
+      files.transfer_manifest,
+    ]
 
     args = [
       "generate-transfer-manifest",
       "--product-bundle",
       rebase_path(files.outdir, root_build_dir),
-      "--output",
-      rebase_path(files.transfer_manifest, root_build_dir),
+      "--out-dir",
+      rebase_path(files.outdir, root_build_dir),
     ]
   }
 

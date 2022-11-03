@@ -67,6 +67,11 @@ pub struct Repository {
 }
 
 impl Repository {
+    /// Return the path to the targets.json file that contains a list of all the packages.
+    pub fn targets_path(&self) -> Utf8PathBuf {
+        self.metadata_path.join("targets.json")
+    }
+
     /// Return the paths-on-host of the blobs contained in the product bundle.
     pub async fn blobs(&self) -> Result<HashSet<Utf8PathBuf>> {
         let mut all_blobs = HashSet::<Utf8PathBuf>::new();
@@ -378,5 +383,21 @@ mod tests {
 
         let blobs = pb.repositories[0].blobs().await.unwrap();
         assert_eq!(expected, blobs);
+    }
+
+    #[test]
+    fn test_targets_path() {
+        let pb = ProductBundleV2 {
+            partitions: PartitionsConfig::default(),
+            system_a: None,
+            system_b: None,
+            system_r: None,
+            repositories: vec![Repository {
+                name: "fuchsia.com".into(),
+                metadata_path: "repository".into(),
+                blobs_path: "blobs".into(),
+            }],
+        };
+        assert_eq!("repository/targets.json", pb.repositories[0].targets_path());
     }
 }

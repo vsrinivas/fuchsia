@@ -16,15 +16,21 @@ rustc_binary("pbtool") {
     "//src/lib/assembly/assembly_manifest",
     "//src/lib/fuchsia",
     "//src/lib/transfer_manifest",
+    "//src/sys/pkg/lib/fuchsia-merkle",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:pathdiff",
+    "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:walkdir",
   ]
 
   test_deps = [
+    "//src/developer/ffx/lib/pkg:empty-repo-keys",
+    "//src/developer/ffx/lib/pkg:empty-repo-metadata",
     "//src/lib/assembly/partitions_config",
+    "//src/sys/pkg/lib/fuchsia-repo",
+    "//third_party/rust_crates:camino",
     "//third_party/rust_crates:tempfile",
   ]
 

@@ -54,7 +54,7 @@ pub enum ArtifactType {
 }
 
 /// A single artifact inside a local or remote location.
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, PartialOrd, Eq, Ord)]
 pub struct ArtifactEntry {
     /// The path to the file in the local or remote location.
     pub name: PathBuf,
