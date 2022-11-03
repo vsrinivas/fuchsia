@@ -12,26 +12,43 @@
 #include "zircon/types.h"
 
 namespace {
-struct FakeRecord {
+class FakeRecord {
+ public:
+  explicit FakeRecord(std::vector<uint8_t>& buffer) : bytes_(buffer) {}
+  FakeRecord(const FakeRecord&) = delete;
+  FakeRecord& operator=(const FakeRecord&) = delete;
+  FakeRecord(FakeRecord&&) = default;
+
   void WriteWord(uint64_t word) {
+    // Ensure the Record's view stays in sync with the memory it writes to.
+    EXPECT_EQ(bytes_.size(), bytes_written_);
     uint8_t* bytes = reinterpret_cast<uint8_t*>(&word);
     for (unsigned i = 0; i < 8; i++) {
       bytes_.push_back(bytes[i]);
     }
+    bytes_written_ += sizeof(uint64_t);
   }
+
   void WriteBytes(const void* buffer, size_t num_bytes) {
+    // Ensure the Record's view stays in sync with the memory it writes to.
+    EXPECT_EQ(bytes_.size(), bytes_written_);
     for (unsigned i = 0; i < num_bytes; i++) {
       bytes_.push_back(reinterpret_cast<const uint8_t*>(buffer)[i]);
+      bytes_written_ += 1;
     }
 
     // 0 pad the buffer to an 8 byte boundary
     for (size_t i = num_bytes; i % 8 != 0; i++) {
       bytes_.push_back(0);
+      bytes_written_ += 1;
     }
   }
+
   void Commit() {
+    // Ensure the Record's view stays in sync with the memory it writes to.
+    EXPECT_EQ(bytes_.size(), bytes_written_);
     // Records must only be committed once
-    EXPECT_FALSE(committed);
+    EXPECT_FALSE(committed_);
 
     // In all codepaths, we expect that the number of bytes written exactly
     // matches the number of bytes for the record size indicated by the header.
@@ -46,20 +63,22 @@ struct FakeRecord {
     }
     EXPECT_EQ(bytes_.size(), expected_size.SizeInBytes());
 
-    committed = true;
+    committed_ = true;
   }
 
-  bool committed = false;
+ private:
+  bool committed_ = false;
   std::vector<uint8_t>& bytes_;
+  size_t bytes_written_ = 0;
 };
 
 struct FakeWriter {
   using Reservation = FakeRecord;
   std::vector<uint8_t> bytes;
   zx::result<FakeRecord> Reserve(uint64_t header) {
-    FakeRecord rec{false, bytes};
+    FakeRecord rec{bytes};
     rec.WriteWord(header);
-    return zx::ok(rec);
+    return zx::ok(std::move(rec));
   }
 };
 

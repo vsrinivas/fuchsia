@@ -156,7 +156,7 @@ class Argument<ArgumentType::kNull, name_type> {
   }
 
   template <typename Reservation>
-  void Write(Reservation res) const {
+  void Write(Reservation& res) const {
     res.WriteWord(Header());
     name_.Write(res);
   }
@@ -184,7 +184,7 @@ class Argument<ArgumentType::kBool, name_type> {
   }
 
   template <typename Reservation>
-  void Write(Reservation res) const {
+  void Write(Reservation& res) const {
     res.WriteWord(Header());
     name_.Write(res);
   }
@@ -213,7 +213,7 @@ class Argument<ArgumentType::kInt32, name_type> {
   }
 
   template <typename Reservation>
-  void Write(Reservation res) const {
+  void Write(Reservation& res) const {
     res.WriteWord(Header());
     name_.Write(res);
   }
@@ -242,7 +242,7 @@ class Argument<ArgumentType::kUint32, name_type> {
   }
 
   template <typename Reservation>
-  void Write(Reservation res) const {
+  void Write(Reservation& res) const {
     res.WriteWord(Header());
     name_.Write(res);
   }
@@ -270,7 +270,7 @@ class Argument<ArgumentType::kInt64, name_type> {
   }
 
   template <typename Reservation>
-  void Write(Reservation res) const {
+  void Write(Reservation& res) const {
     res.WriteWord(Header());
     name_.Write(res);
     res.WriteWord(val_);
@@ -299,7 +299,7 @@ class Argument<ArgumentType::kUint64, name_type> {
   }
 
   template <typename Reservation>
-  void Write(Reservation res) const {
+  void Write(Reservation& res) const {
     res.WriteWord(Header());
     name_.Write(res);
     res.WriteWord(val_);
@@ -324,7 +324,7 @@ class Argument<ArgumentType::kDouble, name_type> {
   }
 
   template <typename Reservation>
-  void Write(Reservation res) const {
+  void Write(Reservation& res) const {
     res.WriteWord(Header());
     name_.Write(res);
     res.WriteBytes(&val_, 8);
@@ -353,7 +353,7 @@ class Argument<ArgumentType::kPointer, name_type> {
   }
 
   template <typename Reservation>
-  void Write(Reservation res) const {
+  void Write(Reservation& res) const {
     res.WriteWord(Header());
     name_.Write(res);
     res.WriteWord(val_);
@@ -378,7 +378,7 @@ class Argument<ArgumentType::kKoid, name_type> {
   }
 
   template <typename Reservation>
-  void Write(Reservation res) const {
+  void Write(Reservation& res) const {
     res.WriteWord(Header());
     name_.Write(res);
     res.WriteWord(val_);
@@ -406,7 +406,7 @@ class Argument<ArgumentType::kString, name_type, val_type> {
   }
 
   template <typename Reservation>
-  void Write(Reservation res) const {
+  void Write(Reservation& res) const {
     res.WriteWord(Header());
     name_.Write(res);
     val_.Write(res);
