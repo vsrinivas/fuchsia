@@ -573,12 +573,12 @@ to netboot via zedboot.
 
 # How to pass the command line to the kernel
 
-## in the emulator or Qemu, using fx emu or fx qemu
+## in the emulator or Qemu, using ffx emu or fx qemu
 
 Pass each option using -c, for example:
 
 ```
-fx qemu -c gfxconsole.font=18x32 -c gfxconsole.early=false
+ffx emu start -c gfxconsole.font=18x32 -c gfxconsole.early=false
 ```
 
 ## in GigaBoot20x6, when netbooting

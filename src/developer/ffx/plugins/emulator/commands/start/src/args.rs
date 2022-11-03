@@ -101,11 +101,10 @@ pub struct StartCommand {
     #[argh(option, default = "host_is_mac()")]
     pub hidpi_scaling: bool,
 
-    /// experimental(for https://fxbug.dev/95278). Passes the given string to the emulator
-    /// executable, appended after all other arguments (since duplicated values favor the later
-    /// value). This means command-line values will override configuration-provided values for any
-    /// of these kernel arguments. Can be repeated arbitrarily many times for multiple additional
-    /// kernel arguments.
+    /// passes the given string to the emulator executable, appended after all other arguments
+    /// (since duplicated values favor the later value). This means command-line values will
+    /// override configuration-provided values for any of these kernel arguments. Can be repeated
+    /// arbitrarily many times for multiple additional kernel arguments.
     #[argh(option, short = 'c')]
     pub kernel_args: Vec<String>,
 
