@@ -11,7 +11,6 @@
 #include <lib/devicetree/matcher.h>
 #include <lib/devicetree/path.h>
 
-#include <iostream>
 #include <string_view>
 
 namespace devicetree {

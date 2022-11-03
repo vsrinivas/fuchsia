@@ -20,6 +20,13 @@ zx_library("devicetree") {
     "//zircon/system/ulib/zxc:headers",
   ]
 
+  if (is_kernel) {
+    public_deps += [
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+    ]
+  }
+
   # TODO: revisit the following three specifications after the zircon-to-fuchsia
   # build migration. They seem currently required in order to export the host
   # compilation of this library to the fuchsia build.
