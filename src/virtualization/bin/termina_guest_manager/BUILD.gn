@@ -29,6 +29,15 @@ declare_args() {
   # If you change this value you will need to rebuild the guest partition using
   # 'guest wipe termina' for the new size to take effect.
   termina_stateful_partition_size_bytes = 42949672960
+
+  # If 'true', bundle the container image with the termina_guest_manager package
+  # and use that to initialize the linux container.
+  #
+  # If this is 'false', no container image will be bundled and instead the
+  # container will be downloaded by the target at runtime. This makes the build
+  # smaller but requires the target device to have a functional internet
+  # connection at runtime.
+  termina_hermetic_bootstrap = false
 }
 
 fuchsia_component_manifest("manifest") {
@@ -50,8 +59,13 @@ fuchsia_structured_config_values("default_config") {
     start_container_runtime = true
 
     # Empty strings here will pull the container from the internet.
-    container_rootfs_path = ""
-    container_metadata_path = ""
+    if (termina_hermetic_bootstrap) {
+      container_rootfs_path = "/mnt/shared/rootfs.tar.xz"
+      container_metadata_path = "/mnt/shared/lxd.tar.xz"
+    } else {
+      container_rootfs_path = ""
+      container_metadata_path = ""
+    }
   }
 }
 
@@ -151,6 +165,13 @@ romfs_image("extras") {
       "${linux_exe_path}/bench-vk",
       "${linux_exe_path}/gbm_test",
     ]
+
+    if (termina_hermetic_bootstrap) {
+      inputs += [
+        "//prebuilt/virtualization/packages/termina_guest/container/${target_cpu}/lxd.tar.xz",
+        "//prebuilt/virtualization/packages/termina_guest/container/${target_cpu}/rootfs.tar.xz",
+      ]
+    }
 
     if (current_cpu == "x64") {
       deps += [ "//src/graphics/tests/vkgbm(${linux_exe_toolchain})" ]
