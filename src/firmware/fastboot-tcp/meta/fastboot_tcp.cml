@@ -36,5 +36,10 @@
                 "fuchsia.posix.socket.Provider",
             ],
         },
+        {
+            directory: "dev-class-block",
+            rights: [ "r*" ],
+            path: "/dev/class/block",
+        },
     ],
 }

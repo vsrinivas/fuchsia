@@ -160,6 +160,8 @@ class FakePaver : public fidl::WireServer<fuchsia_paver::Paver>,
 
   const AbrData abr_data();
 
+  std::atomic<async_dispatcher_t*>& dispatcher() { return dispatcher_; }
+
  private:
   std::atomic<bool> wait_for_start_signal_ = false;
   sync_completion_t start_signal_;

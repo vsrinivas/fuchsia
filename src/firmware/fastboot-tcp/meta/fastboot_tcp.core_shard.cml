@@ -30,5 +30,12 @@
             from: "#build-info",
             to: "#fastboot-tcp",
         },
+        {
+            directory: "dev-class",
+            from: "parent",
+            as: "dev-class-block",
+            to: "#fastboot-tcp",
+            subdir: "block",
+        },
     ],
 }

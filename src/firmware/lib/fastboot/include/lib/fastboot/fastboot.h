@@ -19,8 +19,11 @@
 
 #include "fastboot_base.h"
 #include "src/developer/sshd-host/constants.h"
+#include "src/storage/lib/paver/gpt.h"
 
 namespace fastboot {
+
+constexpr char kRamDiskString[] = "/ramdisk-";
 
 class __EXPORT Fastboot : public FastbootBase {
  public:
@@ -49,8 +52,12 @@ class __EXPORT Fastboot : public FastbootBase {
   zx::result<> RebootBootloader(const std::string &command, Transport *transport);
   zx::result<> Continue(const std::string &command, Transport *transport);
   zx::result<> OemAddStagedBootloaderFile(const std::string &command, Transport *transport);
+  zx::result<> OemInitPartitionTables(const std::string &command, Transport *transport);
+  zx::result<> OemWipePartitionTables(const std::string &command, Transport *transport);
 
   zx::result<fidl::WireSyncClient<fuchsia_paver::Paver>> ConnectToPaver();
+  zx::result<fidl::WireSyncClient<fuchsia_paver::DynamicDataSink>> ConnectToDynamicDataSink(
+      Transport *);
   zx::result<fidl::WireSyncClient<fuchsia_hardware_power_statecontrol::Admin>>
   ConnectToPowerStateControl();
   zx::result<fidl::WireSyncClient<fuchsia_paver::BootManager>> FindBootManager();
@@ -81,6 +88,11 @@ class __EXPORT Fastboot : public FastbootBase {
   fuchsia_mem::wire::Buffer GetWireBufferFromDownload();
 
   friend class FastbootDownloadTest;
+
+  // For test injection. Fastboot unittest doesn't have a realistic physical block device
+  // environment. Specifically, our goal is to filter out ram disk. But in test we can only create
+  // ramdisk block devices. Thus test will override this method to return fake topology path and fd.
+  virtual bool FindGptDevices(paver::GptDevicePartitioner::GptDevices &gpt_devices);
 };
 
 }  // namespace fastboot

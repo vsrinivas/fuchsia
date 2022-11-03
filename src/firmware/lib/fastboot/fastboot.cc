@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fcntl.h>
 #include <fidl/fuchsia.buildinfo/cpp/wire.h>
 #include <fidl/fuchsia.fshost/cpp/wire.h>
 #include <fidl/fuchsia.paver/cpp/wire.h>
@@ -19,6 +20,7 @@
 #include <thread>
 #include <vector>
 
+#include <fbl/unique_fd.h>
 #include <sdk/lib/syslog/cpp/macros.h>
 
 #include "payload-streamer.h"
@@ -103,6 +105,14 @@ const std::vector<Fastboot::CommandEntry>& Fastboot::GetCommandTable() {
       {
           .name = "oem add-staged-bootloader-file",
           .cmd = &Fastboot::OemAddStagedBootloaderFile,
+      },
+      {
+          .name = "oem init-partition-tables",
+          .cmd = &Fastboot::OemInitPartitionTables,
+      },
+      {
+          .name = "oem wipe-partition-tables",
+          .cmd = &Fastboot::OemWipePartitionTables,
       },
   });
   return *kCommandTable;
@@ -570,6 +580,108 @@ zx::result<> Fastboot::OemAddStagedBootloaderFile(const std::string& command,
 
   if (status != ZX_OK) {
     return SendResponse(ResponseType::kFail, "Failed to write ssh key", transport,
+                        zx::error(status));
+  }
+
+  return SendResponse(ResponseType::kOkay, "", transport);
+}
+
+bool Fastboot::FindGptDevices(paver::GptDevicePartitioner::GptDevices& gpt_devices) {
+  auto fd = fbl::unique_fd(open("/dev", O_RDONLY));
+  return paver::GptDevicePartitioner::FindGptDevices(fd, &gpt_devices);
+}
+
+zx::result<fidl::WireSyncClient<fuchsia_paver::DynamicDataSink>> Fastboot::ConnectToDynamicDataSink(
+    Transport* transport) {
+  auto paver_client_res = ConnectToPaver();
+  if (paver_client_res.is_error()) {
+    return zx::error(SendResponse(ResponseType::kFail, "Failed to connect to paver", transport,
+                                  zx::error(paver_client_res.status_value()))
+                         .status_value());
+  }
+
+  paver::GptDevicePartitioner::GptDevices gpt_devices;
+  if (!FindGptDevices(gpt_devices)) {
+    return zx::error(SendResponse(ResponseType::kFail, "Failed to find gpt devices", transport,
+                                  zx::error(ZX_ERR_INTERNAL))
+                         .status_value());
+  }
+
+  // Filter out ramdisk block devices.
+  paver::GptDevicePartitioner::GptDevices non_ramdisk_devices;
+  for (auto& [path, fd] : gpt_devices) {
+    if (path.find(kRamDiskString) != std::string::npos) {
+      continue;
+    }
+    non_ramdisk_devices.push_back((std::make_pair(path, std::move(fd))));
+  }
+
+  if (non_ramdisk_devices.empty()) {
+    return zx::error(SendResponse(ResponseType::kFail, "No suitable block devices", transport,
+                                  zx::error(ZX_ERR_INTERNAL))
+                         .status_value());
+  } else if (non_ramdisk_devices.size() > 1) {
+    return zx::error(SendResponse(ResponseType::kFail, "More than one suitable devices", transport,
+                                  zx::error(ZX_ERR_INTERNAL))
+                         .status_value());
+  }
+
+  auto data_sink = fidl::CreateEndpoints<fuchsia_paver::DynamicDataSink>();
+  if (data_sink.is_error()) {
+    return zx::error(SendResponse(ResponseType::kFail, "Failed to create end points", transport,
+                                  zx::error(data_sink.status_value()))
+                         .status_value());
+  }
+  auto [data_sink_local, data_sink_remote] = std::move(*data_sink);
+
+  fdio_cpp::FdioCaller caller(std::move(non_ramdisk_devices[0].second));
+  auto channel = caller.take_channel();
+  if (channel.is_error()) {
+    return zx::error(SendResponse(ResponseType::kFail, "Failed to take channel", transport,
+                                  zx::error(channel.status_value()))
+                         .status_value());
+  }
+  fidl::ClientEnd<fuchsia_hardware_block::Block> block_device(std::move(*channel));
+
+  auto res = paver_client_res.value()->UseBlockDevice(
+      std::move(block_device),
+      fidl::ServerEnd<fuchsia_paver::DynamicDataSink>(data_sink_remote.TakeChannel()));
+
+  if (!res.ok()) {
+    return zx::error(SendResponse(ResponseType::kFail, "Failed to create dynamic data sink",
+                                  transport, zx::error(res.status()))
+                         .status_value());
+  }
+
+  return zx::ok(fidl::WireSyncClient(std::move(data_sink_local)));
+}
+
+zx::result<> Fastboot::OemInitPartitionTables(const std::string& command, Transport* transport) {
+  auto data_sink_client = ConnectToDynamicDataSink(transport);
+  if (data_sink_client.is_error()) {
+    return zx::error(data_sink_client.status_value());
+  }
+
+  auto res = data_sink_client.value()->InitializePartitionTables();
+  auto status = res.ok() ? res.value().status : res.status();
+  if (status != ZX_OK) {
+    return SendResponse(ResponseType::kFail, "Failed to init partition table", transport,
+                        zx::error(status));
+  }
+
+  return SendResponse(ResponseType::kOkay, "", transport);
+}
+
+zx::result<> Fastboot::OemWipePartitionTables(const std::string& command, Transport* transport) {
+  auto data_sink_client = ConnectToDynamicDataSink(transport);
+  if (data_sink_client.is_error()) {
+    return zx::error(data_sink_client.status_value());
+  }
+
+  auto res = data_sink_client.value()->WipePartitionTables();
+  auto status = res.ok() ? res.value().status : res.status();
+  if (status != ZX_OK) {
+    return SendResponse(ResponseType::kFail, "Failed to wipe partition table", transport,
                         zx::error(status));
   }
 

@@ -34,6 +34,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_cpp_wire",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_cpp_wire",
     "//src/developer/sshd-host:sshd_constants",
+    "//src/storage/lib/paver:gpt",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/zxc",
   ]

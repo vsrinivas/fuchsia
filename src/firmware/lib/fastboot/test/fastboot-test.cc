@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fcntl.h>
 #include <fidl/fuchsia.buildinfo/cpp/wire.h>
 #include <fidl/fuchsia.buildinfo/cpp/wire_test_base.h>
 #include <fidl/fuchsia.fshost/cpp/wire.h>
@@ -273,6 +274,15 @@ TEST(FastbootTest, DownloadFailsOnetDownloadBuffer) {
   ASSERT_EQ(fastboot.state(), FastbootBase::State::kCommand);
 }
 
+class TestPaver : public paver_test::FakePaver {
+ public:
+  void UseBlockDevice(UseBlockDeviceRequestView request,
+                      UseBlockDeviceCompleter::Sync& _completer) override {
+    fidl::BindServer<fidl::WireServer<fuchsia_paver::DynamicDataSink>>(
+        dispatcher(), std::move(request->data_sink), this);
+  }
+};
+
 class FastbootFlashTest : public FastbootDownloadTest {
  protected:
   FastbootFlashTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread), vfs_(loop_.dispatcher()) {
@@ -372,7 +382,7 @@ class FastbootFlashTest : public FastbootDownloadTest {
 
   async::Loop loop_;
   fs::SynchronousVfs vfs_;
-  paver_test::FakePaver fake_paver_;
+  TestPaver fake_paver_;
   fidl::ClientEnd<fuchsia_io::Directory> svc_local_;
 };
 
@@ -689,6 +699,105 @@ TEST_F(FastbootFlashTest, GetVarIsUserspace) {
   ASSERT_TRUE(ret.is_ok());
   std::vector<std::string> expected_packets = {"OKAYyes"};
   ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
+}
+
+class FastbootFakeGptDevices : public Fastboot {
+ public:
+  using Fastboot::Fastboot;
+
+  bool FindGptDevices(paver::GptDevicePartitioner::GptDevices& gpt_devices) override {
+    for (auto& ele : block_topology_paths_) {
+      // fd doesn't matter, test won't be using it. We just give a valid one.
+      gpt_devices.push_back(std::make_pair(ele, fbl::unique_fd(open("/svc", O_RDONLY))));
+    }
+
+    return true;
+  }
+
+  void set_block_topology_paths(const std::vector<std::string>& path) {
+    block_topology_paths_ = path;
+  }
+
+ private:
+  std::vector<std::string> block_topology_paths_;
+};
+
+TEST_F(FastbootFlashTest, OemInitPartitionTables) {
+  std::vector<std::string> block_devices = {
+      kRamDiskString + std::string("-0"),
+      "block",
+  };
+  FastbootFakeGptDevices fastboot(0x40000, std::move(svc_chan()));
+  fastboot.set_block_topology_paths(block_devices);
+  std::string command = "oem init-partition-tables";
+  TestTransport transport;
+  transport.AddInPacket(command);
+  zx::result<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+
+  std::vector<std::string> expected_packets = {"OKAY"};
+  ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
+
+  ASSERT_EQ(paver().GetCommandTrace(),
+            std::vector<paver_test::Command>{paver_test::Command::kInitPartitionTables});
+}
+
+TEST_F(FastbootFlashTest, OemInitPartitionTablesNoSuitableDevice) {
+  std::vector<std::string> block_devices = {
+      kRamDiskString + std::string("-0"),
+      kRamDiskString + std::string("-1"),
+  };
+  FastbootFakeGptDevices fastboot(0x40000, std::move(svc_chan()));
+  fastboot.set_block_topology_paths(block_devices);
+  std::string command = "oem init-partition-tables";
+  TestTransport transport;
+  transport.AddInPacket(command);
+
+  zx::result<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_error());
+
+  const std::vector<std::string>& sent_packets = transport.GetOutPackets();
+  ASSERT_EQ(sent_packets.size(), 1ULL);
+  ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
+}
+
+TEST_F(FastbootFlashTest, OemInitPartitionTablesMoreThanOneSuitableDevice) {
+  std::vector<std::string> block_devices = {
+      "block-0",
+      "block-1",
+      kRamDiskString + std::string("-0"),
+  };
+  FastbootFakeGptDevices fastboot(0x40000, std::move(svc_chan()));
+  fastboot.set_block_topology_paths(block_devices);
+  std::string command = "oem init-partition-tables";
+  TestTransport transport;
+  transport.AddInPacket(command);
+  zx::result<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_error());
+
+  const std::vector<std::string>& sent_packets = transport.GetOutPackets();
+  ASSERT_EQ(sent_packets.size(), 1ULL);
+  ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
+}
+
+TEST_F(FastbootFlashTest, OemWipePartitionTables) {
+  std::vector<std::string> block_devices = {
+      kRamDiskString + std::string("-0"),
+      "block",
+  };
+  FastbootFakeGptDevices fastboot(0x40000, std::move(svc_chan()));
+  fastboot.set_block_topology_paths(block_devices);
+  std::string command = "oem wipe-partition-tables";
+  TestTransport transport;
+  transport.AddInPacket(command);
+  zx::result<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+
+  std::vector<std::string> expected_packets = {"OKAY"};
+  ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
+
+  ASSERT_EQ(paver().GetCommandTrace(),
+            std::vector<paver_test::Command>{paver_test::Command::kWipePartitionTables});
 }
 
 class FastbootRebootTest : public zxtest::Test,
