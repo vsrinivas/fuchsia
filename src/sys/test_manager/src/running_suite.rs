@@ -507,24 +507,32 @@ lazy_static! {
 }
 
 fn get_allowed_package_value(test_url: &str, suite_facet: &facet::SuiteFacets) -> AllowedPackages {
-    if suite_facet.deprecated_allowed_packages.is_some() {
-        AllowedPackages::from_iter(suite_facet.deprecated_allowed_packages.clone().unwrap())
-    } else if suite_facet.deprecated_allowed_all_packages.is_some() {
-        match suite_facet.deprecated_allowed_all_packages {
-            Some(true) => AllowedPackages::all(test_url.to_string()),
-            Some(false) => AllowedPackages::zero_allowed_pkgs(),
-            None => unreachable!(),
+    let facet::SuiteFacets {
+        collection,
+        deprecated_allowed_packages,
+        deprecated_allowed_all_packages,
+    } = suite_facet;
+    if let Some(deprecated_allowed_packages) = deprecated_allowed_packages {
+        AllowedPackages::from_iter(deprecated_allowed_packages.iter().cloned())
+    } else if let Some(deprecated_allowed_all_packages) = deprecated_allowed_all_packages {
+        if *deprecated_allowed_all_packages {
+            AllowedPackages::all(test_url.to_string())
+        } else {
+            AllowedPackages::zero_allowed_pkgs()
         }
     } else if let Some(allowed_pkgs) = TEST_URL_ALLOWED_PACKAGE_MAP.get(test_url) {
         allowed_pkgs.clone()
     } else {
-        match suite_facet.collection {
+        match *collection {
             HERMETIC_TESTS_COLLECTION => AllowedPackages::zero_allowed_pkgs(),
-            coll if TEST_COLLECTION_ALLOW_ALL_PACKAGES.contains(coll) => {
-                AllowedPackages::all(test_url.to_string())
+            collection => {
+                if TEST_COLLECTION_ALLOW_ALL_PACKAGES.contains(collection) {
+                    AllowedPackages::all(test_url.to_string())
+                } else {
+                    // based on the flag this can be ALL or zero list.
+                    AllowedPackages::default(test_url)
+                }
             }
-            // based on the flag this can be ALL or zero list.
-            _ => AllowedPackages::default(test_url),
         }
     }
 }
