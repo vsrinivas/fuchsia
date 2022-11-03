@@ -111,10 +111,18 @@ async fn apply_command_line_options(
         let available = tap_available();
         if available.is_ok() {
             emu_config.host.networking = NetworkingMode::Tap;
+            println!(
+                "Auto resolving networking to tap-mode. For more information see \
+                https://fuchsia.dev/fuchsia-src/development/build/emulator#networking"
+            );
         } else {
             tracing::debug!(
                 "Falling back on user-mode networking: {}",
                 available.as_ref().unwrap_err()
+            );
+            println!(
+                "Auto resolving networking to user-mode. For more information see \
+                https://fuchsia.dev/fuchsia-src/development/build/emulator#networking"
             );
             emu_config.host.networking = NetworkingMode::User;
         }
