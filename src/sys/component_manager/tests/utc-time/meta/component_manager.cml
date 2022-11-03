@@ -16,6 +16,11 @@
     },
     capabilities: [
         {
+            directory: "hub",
+            rights: [ "rw*" ],
+            path: "/hub",
+        },
+        {
             protocol: [
                 "fuchsia.sys2.EventSource",
                 "fuchsia.sys2.EventStream2",
@@ -38,6 +43,10 @@
         },
     ],
     expose: [
+        {
+            directory: "hub",
+            from: "self",
+        },
         {
             protocol: [
                 "fuchsia.sys2.EventSource",

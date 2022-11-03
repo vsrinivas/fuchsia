@@ -91,11 +91,11 @@ pub struct ShellLaunchCommand {
 pub struct ShellCloseAllCommand {}
 
 /// Path to protocols exposed by session-manager.
-const LOGIN_SHELL_EXPOSED: &str = "/hub-v2/children/core/children/session-manager/children/session:session/children/workstation_session/children/login_shell/exposed";
+const LOGIN_SHELL_EXPOSED: &str = "/hub-v2/children/core/children/session-manager/children/session:session/children/workstation_session/children/login_shell/exec/expose";
 
 /// Path to protocols exposed by the session.
 const ERMINE_SHELL_EXPOSED: &str =
-    "/hub-v2/children/core/children/session-manager/children/session:session/children/workstation_session/children/login_shell/children/ermine_shell/exposed";
+    "/hub-v2/children/core/children/session-manager/children/session:session/children/workstation_session/children/login_shell/children/ermine_shell/exec/expose";
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {

@@ -23,6 +23,7 @@
             from: "framework",
             rights: [ "rw*" ],
             path: "/hub",
+            subdir: "exec",
         },
         {
             directory: "hub",

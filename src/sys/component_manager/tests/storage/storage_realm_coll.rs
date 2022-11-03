@@ -6,8 +6,9 @@ use {
     component_events::{events::*, matcher::*},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_io as fio,
     fuchsia_component::client::connect_to_protocol,
+    std::fs::{read_dir, DirEntry},
 };
 
 #[fuchsia::main]
@@ -61,18 +62,7 @@ async fn main() {
         .unwrap();
 
     // Ensure that memfs does not have a directory for the dynamic child
-    let realm_query =
-        fuchsia_component::client::connect_to_protocol::<fsys::RealmQueryMarker>().unwrap();
-    let resolved_dirs =
-        realm_query.get_instance_directories("./memfs").await.unwrap().unwrap().unwrap();
-    let exposed_dir = resolved_dirs.exposed_dir.into_proxy().unwrap();
-    let memfs_dir = fuchsia_fs::directory::open_directory(
-        &exposed_dir,
-        "memfs",
-        fio::OpenFlags::RIGHT_READABLE,
-    )
-    .await
-    .unwrap();
-    let entries = fuchsia_fs::directory::readdir(&memfs_dir).await.unwrap();
+    let dir = read_dir("/hub/children/memfs/exec/expose/memfs").unwrap();
+    let entries: Vec<DirEntry> = dir.map(|e| e.unwrap()).collect();
     assert!(entries.is_empty());
 }

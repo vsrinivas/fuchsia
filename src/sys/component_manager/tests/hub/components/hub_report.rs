@@ -24,13 +24,7 @@ pub async fn expect_dir_listing(path: &str, mut expected_listing: Vec<&str>) {
         expected_listing.remove(index);
     }
 
-    assert_eq!(
-        expected_listing.len(),
-        0,
-        "{} is missing directories: {:?}",
-        path,
-        expected_listing
-    );
+    assert_eq!(expected_listing.len(), 0);
 }
 
 pub async fn expect_dir_listing_with_optionals(
@@ -60,15 +54,15 @@ pub async fn expect_dir_listing_with_optionals(
     });
 
     // All must_haves are present
-    assert_eq!(must_have.len(), 0, "{} is missing directories: {:?}", path, must_have);
+    assert_eq!(must_have.len(), 0);
     // No actuals are unexpected
-    assert_eq!(actual_listing.len(), 0, "{} has extra directories: {:?}", path, actual_listing);
+    assert_eq!(actual_listing.len(), 0);
 }
 
 pub async fn expect_file_content(path: &str, expected_file_content: &str) {
     info!("{} should contain \"{}\"", path, expected_file_content);
     let actual_file_content = fuchsia_fs::file::read_in_namespace_to_string(path).await.unwrap();
-    assert_eq!(expected_file_content, actual_file_content, "Bad file contents: {}", path);
+    assert_eq!(expected_file_content, actual_file_content);
 }
 
 pub async fn expect_echo_service(path: &str) {

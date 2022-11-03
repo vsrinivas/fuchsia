@@ -104,9 +104,9 @@ metadata.json is a single JSON file that describes the ICD to the loader. Exampl
 The loader service exposes inspect data (under `core/vulkan_loader`) about its
 current state and what components it has loaded. `manifest-fs` and `device-fs`
 are also exposed through the [hub][hub] at
-`/hub-v2/children/core/children/vulkan_loader/out/debug/`. The loader
+`/hub-v2/children/core/children/vulkan_loader/exec/out/debug/`. The loader
 service must be launched first; one way to do that is using [ffx component
-start][ffx-start].
+knock][ffx-knock].
 
 [GetIcdList]: https://fuchsia.dev/reference/fidl/fuchsia.gpu.magma#Device.GetIcdList
 [VMO]: /docs/glossary.md#virtual-memory-object
@@ -118,4 +118,4 @@ start][ffx-start].
 [loaderinterface]: https://github.com/KhronosGroup/Vulkan-Loader/blob/master/loader/LoaderAndLayerInterface.md
 [meta-far]: /docs/concepts/packages/package.md#meta-far
 [hub]: /docs/concepts/components/v2/hub.md
-[ffx-start]: /docs/development/sdk/ffx/start-a-component-during-development.md#start-a-component
+[ffx-knock]: /docs/reference/tools/sdk/ffx.md#knock

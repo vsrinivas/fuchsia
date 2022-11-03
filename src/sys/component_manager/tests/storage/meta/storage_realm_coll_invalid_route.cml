@@ -25,6 +25,12 @@
             ],
             from: "parent",
         },
+        {
+            directory: "hub",
+            from: "framework",
+            rights: [ "r*" ],
+            path: "/hub",
+        },
     ],
     offer: [
         {

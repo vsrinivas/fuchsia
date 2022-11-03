@@ -45,8 +45,10 @@
             from: "parent",
         },
         {
-            protocol: "fuchsia.sys2.RealmQuery",
+            directory: "hub",
             from: "framework",
+            rights: [ "r*" ],
+            path: "/hub",
         },
     ],
     offer: [

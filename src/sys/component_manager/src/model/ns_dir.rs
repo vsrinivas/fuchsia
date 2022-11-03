@@ -37,7 +37,7 @@ impl NamespaceDir {
         pkg_dir: Option<fio::DirectoryProxy>,
     ) -> Result<Self, ModelError> {
         let mut dir = pfs::simple();
-        let tree = DirTree::build_from_uses(route_use_fn, component.clone(), &decl);
+        let tree = DirTree::build_from_uses(route_use_fn, component.clone(), decl);
         tree.install(&component.abs_moniker, &mut dir)?;
 
         if let Some(pkg_dir) = pkg_dir {

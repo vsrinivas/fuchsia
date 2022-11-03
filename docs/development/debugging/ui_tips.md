@@ -69,5 +69,5 @@ attached to the main SceneGraph, you can use `dump-scenes`. From your host
 workstation, run the following command:
 
 ```posix-terminal
-fx shell "cat /hub-v2/children/core/children/ui/children/scenic/out/debug/dump-scenes"
+fx shell "cat /hub-v2/children/core/children/ui/children/scenic/exec/out/debug/dump-scenes"
 ```
