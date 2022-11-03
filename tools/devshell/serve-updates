@@ -309,6 +309,9 @@ state="discover"
 
 # Keep track if we reported any discovery failures
 reported_discovery_failed=0
+
+# exponential backoff in seconds.
+backoff=1
 while true; do
   if [[ -n "${pm_pid}" ]]; then
     if ! kill -0 "${pm_pid}" 2> /dev/null; then
@@ -328,6 +331,7 @@ while true; do
     if [[ "${ping_result}" == 0 ]]; then
       log "Device up"
       reported_discovery_failed=0
+      backoff=1
       state="config"
     elif [[ "${reported_discovery_failed}" == 0 ]]; then
       reported_discovery_failed=1
@@ -343,6 +347,14 @@ while true; do
         fi
       else
         log "Trying to connect to ${device_addr}..."
+      fi
+    fi
+
+    if [[ "${ping_result}" != 0 ]]; then
+      sleep "${backoff}"
+      backoff=$(( $backoff * 2 ))
+      if [[ "${backoff}" -gt 10 ]]; then
+        backoff=10
       fi
     fi
   else
