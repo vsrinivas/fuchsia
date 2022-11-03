@@ -22,6 +22,7 @@ rustc_binary("bin") {
   edition = "2021"
 
   deps = [
+    "//sdk/fidl/fuchsia.input:fuchsia.input_rust",
     "//sdk/fidl/fuchsia.ui.focus:fuchsia.ui.focus_rust",
     "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3_rust",
     "//sdk/fidl/fuchsia.ui.shortcut:fuchsia.ui.shortcut_rust",

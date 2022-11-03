@@ -5,6 +5,7 @@
 //! Implementation of `fuchsia.ui.shortcut2`.
 
 use anyhow::{self, Context, Result};
+use fidl_fuchsia_input::Key;
 use fidl_fuchsia_ui_focus::FocusChain;
 use fidl_fuchsia_ui_input3::{KeyEvent, KeyEventType, KeyMeaning};
 use fidl_fuchsia_ui_shortcut as ui_shortcut;
@@ -20,7 +21,7 @@ use futures::{
 use keymaps;
 use std::{cell::RefCell, rc::Rc};
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::{BTreeMap, BTreeSet, HashMap},
     ops::Deref,
 };
 use tracing::*;
@@ -92,14 +93,117 @@ impl From<&[KeyMeaning]> for KeyChord {
 
 impl KeyChord {
     fn new() -> Self {
-        KeyChord(BTreeSet::new())
+        Self(BTreeSet::new())
     }
 
-    fn update(&mut self, key_meaning: KeyMeaning, event_type: KeyEventType) {
+    fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    fn insert(&mut self, key_meaning: KeyMeaning) {
+        self.0.insert(key_meaning);
+    }
+
+    fn remove(&mut self, key_meaning: &KeyMeaning) {
+        self.0.remove(key_meaning);
+    }
+
+    fn clear(&mut self) {
+        self.0.clear();
+    }
+}
+
+/// A tracker for the currently active key chord.
+///
+/// The key meanings are tracked separately from physical keys, as the meanings
+/// may vary by modifier or keymap that is applied.
+///
+/// Create with [KeyChordState::new].
+#[derive(Debug)]
+struct KeyChordState {
+    /// The currently active key chord.
+    key_chord: KeyChord,
+
+    /// A map of currently pressed physical key to its current meaning.
+    key_map: HashMap<Key, KeyMeaning>,
+
+    /// The inverse of key_map.  Not using bimap since that crate isn't
+    /// all that popular just yet.
+    meaning_map: HashMap<KeyMeaning, Key>,
+
+    /// How many pressed events have been seen so far. This should normally be
+    /// zero or higher. In cases where event processing is for some reason
+    /// broken, and we see more release events than press events, it could
+    /// get negative. However, we artificially prevent that by clearing out
+    /// all key chord state.
+    num_pressed: i16,
+}
+
+impl KeyChordState {
+    /// Creates a new [KeyChordState].
+    fn new() -> Self {
+        Self {
+            key_map: HashMap::new(),
+            meaning_map: HashMap::new(),
+            key_chord: KeyChord::new(),
+            num_pressed: 0,
+        }
+    }
+
+    /// Gets the currently actuated key chord.
+    fn get_chord(&self) -> &KeyChord {
+        &self.key_chord
+    }
+
+    /// Updates the key chord state with the currently pertinent key, event type and
+    /// key meaning.
+    fn update(
+        &mut self,
+        maybe_key: Option<Key>,
+        event_type: KeyEventType,
+        key_meaning: KeyMeaning,
+    ) {
         match event_type {
-            KeyEventType::Pressed | KeyEventType::Sync => self.0.insert(key_meaning),
-            KeyEventType::Released | KeyEventType::Cancel => self.0.remove(&key_meaning),
+            KeyEventType::Pressed | KeyEventType::Sync => {
+                // A Key may be absent, or may carry different key meanings,
+                // depending on the modifier state. To ensure we can cancel the
+                // effect of a key that is pressed now, we must remember what
+                // meaning it brought in when it was pressed.
+                if let Some(key) = maybe_key {
+                    self.key_map.insert(key, key_meaning);
+                    self.meaning_map.insert(key_meaning, key);
+                }
+                self.key_chord.insert(key_meaning);
+                self.num_pressed = self.num_pressed + 1;
+            }
+            KeyEventType::Released | KeyEventType::Cancel => {
+                // When releasing a key, remove the meaning that it brought
+                // in when it was actuated, not its current meaning.
+                if let Some(key) = maybe_key {
+                    if let Some(meaning) = self.key_map.get(&key) {
+                        self.meaning_map.remove(&meaning);
+                        self.key_chord.remove(&meaning);
+                    }
+                    self.key_map.remove(&key);
+                }
+                // ... but also, remove its current key meaning as well.
+                self.key_chord.remove(&key_meaning);
+                self.num_pressed = self.num_pressed - 1;
+            }
         };
+        // In case of completely bogus key meanings, reset the active keys if
+        // the number of released keys goes over the number of pressed keys.
+        if self.num_pressed <= 0 {
+            self.key_chord.clear();
+            self.key_map.clear();
+            self.meaning_map.clear();
+            self.num_pressed = 0;
+        } else if self.key_chord.is_empty() {
+            // Ensure that key_chord size is kept in sync with the number of pressed
+            // keys, e.g. in the case of autorepeats, even if num_pressed is
+            // out of line.
+            self.num_pressed = 0;
+        }
     }
 }
 
@@ -226,7 +330,7 @@ pub struct Shortcut2Impl {
     /// The currently active key chord.
     /// It is currently not borrowed across await calls, so should be OK to
     /// borrow via RefCell only.
-    keys: Rc<RefCell<KeyChord>>,
+    keys: Rc<RefCell<KeyChordState>>,
 
     /// The internal state. It gets mutated from concurrently executing calls,
     /// and must be held across awaits, so it is protected by a mutex.
@@ -237,7 +341,7 @@ impl Shortcut2Impl {
     /// Create a new Shortcut2Impl.
     pub fn new() -> Self {
         Self {
-            keys: Rc::new(RefCell::new(KeyChord::new())),
+            keys: Rc::new(RefCell::new(KeyChordState::new())),
             inner: Rc::new(Mutex::new(Inner {
                 shortcut_map: ShortcutMap::new(),
                 sessions: BTreeMap::new(),
@@ -288,7 +392,7 @@ impl Shortcut2Impl {
             &event.modifiers,
         ));
         debug!("event: {:?}, key_meaning: {:?}", &event, &key_meaning);
-        self.keys.borrow_mut().update(key_meaning, key_event_type);
+        self.keys.borrow_mut().update(event.key, key_event_type, key_meaning);
         debug!("keys: {:?}", &self.keys.borrow());
 
         // Only ever activate a shortcut on a key press. This avoids spurious
@@ -300,7 +404,7 @@ impl Shortcut2Impl {
                 let inner = self.inner.lock().await;
                 debug!("shortcut_map: {:?}", &inner.shortcut_map);
                 debug!("focus_chain: {:?}", &inner.focus_chain_view_ids);
-                if let Some(id_map) = inner.shortcut_map.get(&self.keys.borrow()) {
+                if let Some(id_map) = inner.shortcut_map.get(self.keys.borrow().get_chord()) {
                     inner
                         .focus_chain_view_ids
                         .iter() // &ViewId
@@ -619,12 +723,13 @@ mod tests {
     // reporting results.
     async fn handle_key_sequence(
         handler: &Rc<Shortcut2Impl>,
-        key_sequence: Vec<(finput3::KeyMeaning, finput3::KeyEventType)>,
+        key_sequence: Vec<(Option<Key>, finput3::KeyMeaning, finput3::KeyEventType)>,
     ) -> Vec<fs2::Handled> {
         let mut result = vec![];
-        for (key_meaning, type_) in key_sequence {
+        for (key, key_meaning, type_) in key_sequence {
             let ret = handler
                 .handle_key_event(KeyEvent {
+                    key,
                     key_meaning: Some(key_meaning),
                     type_: Some(type_),
                     ..KeyEvent::EMPTY
@@ -691,20 +796,74 @@ mod tests {
 
     #[test_case(
         vec![cp_key('a')],
-        vec![(cp_key('a'), KeyEventType::Pressed), (cp_key('a'), KeyEventType::Released)],
+        vec![
+          (Some(Key::A), cp_key('a'), KeyEventType::Pressed),
+          (Some(Key::A), cp_key('a'), KeyEventType::Released)
+        ],
         vec![fs2::Handled::Handled, fs2::Handled::NotHandled]; "lowercase 'a'")]
     #[test_case(
         vec![cp_key('a')],
-        vec![(cp_key('A'), KeyEventType::Pressed), (cp_key('A'), KeyEventType::Released)],
+        vec![
+          (Some(Key::A), cp_key('A'), KeyEventType::Pressed),
+          (Some(Key::A), cp_key('A'), KeyEventType::Released)],
         vec![fs2::Handled::Handled, fs2::Handled::NotHandled]; "uppercase 'A'")]
     #[test_case(
         vec![np_key(NonPrintableKey::Tab)],
-        vec![(np_key(NonPrintableKey::Tab), KeyEventType::Pressed), (np_key(NonPrintableKey::Tab), KeyEventType::Released)],
-        vec![fs2::Handled::Handled, fs2::Handled::NotHandled]; "Tab")]
+        vec![
+          (Some(Key::Tab), np_key(NonPrintableKey::Tab), KeyEventType::Pressed),
+          (Some(Key::Tab), np_key(NonPrintableKey::Tab), KeyEventType::Released)
+        ],
+        vec![
+          fs2::Handled::Handled,
+          fs2::Handled::NotHandled,
+        ]; "Tab")]
+    #[test_case(
+        vec![np_key(NonPrintableKey::Alt), cp_key(' ')],
+        vec![
+          (Some(Key::Key2), cp_key('@'), KeyEventType::Pressed),
+          (Some(Key::Key2), cp_key('2'), KeyEventType::Released),
+          (Some(Key::LeftAlt), np_key(NonPrintableKey::Alt), KeyEventType::Pressed),
+          (Some(Key::Space), cp_key(' '), KeyEventType::Pressed),
+          (Some(Key::Space), cp_key(' '), KeyEventType::Released),
+          (Some(Key::LeftAlt), np_key(NonPrintableKey::Alt), KeyEventType::Released)],
+        vec![
+          fs2::Handled::NotHandled,
+          fs2::Handled::NotHandled,
+          fs2::Handled::NotHandled,
+          fs2::Handled::Handled,
+          fs2::Handled::NotHandled,
+          fs2::Handled::NotHandled,
+        ]; "Alt+Space with poisoned key meanings http://fxbug.dev/113054")]
+    #[test_case(
+        vec![np_key(NonPrintableKey::Tab)],
+        vec![
+          (None, np_key(NonPrintableKey::Tab), KeyEventType::Pressed),
+          (None, np_key(NonPrintableKey::Tab), KeyEventType::Released)
+        ],
+        vec![
+          fs2::Handled::Handled,
+          fs2::Handled::NotHandled,
+        ]; "Tab without Key")]
+    #[test_case(
+        vec![np_key(NonPrintableKey::Tab)],
+        vec![
+          (Some(Key::Key2), cp_key('@'), KeyEventType::Pressed),
+          (Some(Key::Key2), cp_key('@'), KeyEventType::Pressed),
+          (Some(Key::Key2), cp_key('2'), KeyEventType::Released),
+          (Some(Key::Tab), np_key(NonPrintableKey::Tab), KeyEventType::Released),
+          (Some(Key::Tab), np_key(NonPrintableKey::Tab), KeyEventType::Pressed),
+        ],
+        vec![
+          fs2::Handled::NotHandled,
+          fs2::Handled::NotHandled,
+          fs2::Handled::NotHandled,
+          fs2::Handled::NotHandled,
+          fs2::Handled::Handled,
+        ]; "Tab triggers after malformed input")]
     #[fasync::run_singlethreaded(test)]
     async fn basic_notification(
         shortcut: Vec<KeyMeaning>,
-        key_sequence: Vec<(KeyMeaning, finput3::KeyEventType)>,
+        key_sequence: Vec<(Option<Key>, KeyMeaning, finput3::KeyEventType)>,
         expected: Vec<fs2::Handled>,
     ) {
         let handler = Rc::new(Shortcut2Impl::new());
@@ -783,7 +942,10 @@ mod tests {
 
         let result = handle_key_sequence(
             &handler,
-            vec![(cp_key('a'), KeyEventType::Pressed), (cp_key('a'), KeyEventType::Released)],
+            vec![
+                (Some(Key::A), cp_key('a'), KeyEventType::Pressed),
+                (Some(Key::A), cp_key('a'), KeyEventType::Released),
+            ],
         )
         .await;
         pretty_assertions::assert_eq!(
@@ -826,9 +988,11 @@ mod tests {
         let (_listener_task, _) =
             new_fake_listener(listener_server_end.into_stream().unwrap(), fs2::Handled::Handled);
 
-        let result =
-            handle_key_sequence(&handler, vec![(cp_key('a'), finput3::KeyEventType::Pressed)])
-                .await;
+        let result = handle_key_sequence(
+            &handler,
+            vec![(Some(Key::A), cp_key('a'), finput3::KeyEventType::Pressed)],
+        )
+        .await;
         assert_eq!(vec![fs2::Handled::NotHandled], result);
     }
 
@@ -868,10 +1032,10 @@ mod tests {
         let result = handle_key_sequence(
             &handler,
             vec![
-                (cp_key('a'), finput3::KeyEventType::Pressed),
-                (cp_key('a'), finput3::KeyEventType::Released),
-                (cp_key('b'), finput3::KeyEventType::Pressed),
-                (cp_key('b'), finput3::KeyEventType::Released),
+                (Some(Key::A), cp_key('a'), finput3::KeyEventType::Pressed),
+                (Some(Key::A), cp_key('a'), finput3::KeyEventType::Released),
+                (Some(Key::B), cp_key('b'), finput3::KeyEventType::Pressed),
+                (Some(Key::B), cp_key('b'), finput3::KeyEventType::Released),
             ],
         )
         .await;
@@ -923,10 +1087,10 @@ mod tests {
         let result = handle_key_sequence(
             &handler,
             vec![
-                (cp_key('a'), finput3::KeyEventType::Pressed),
-                (cp_key('b'), finput3::KeyEventType::Pressed),
-                (cp_key('a'), finput3::KeyEventType::Released),
-                (cp_key('b'), finput3::KeyEventType::Released),
+                (Some(Key::A), cp_key('a'), finput3::KeyEventType::Pressed),
+                (Some(Key::B), cp_key('b'), finput3::KeyEventType::Pressed),
+                (Some(Key::A), cp_key('a'), finput3::KeyEventType::Released),
+                (Some(Key::B), cp_key('b'), finput3::KeyEventType::Released),
             ],
         )
         .await;
@@ -966,8 +1130,8 @@ mod tests {
         let result = handle_key_sequence(
             &handler,
             vec![
-                (cp_key('a'), finput3::KeyEventType::Pressed),
-                (cp_key('b'), finput3::KeyEventType::Pressed),
+                (Some(Key::A), cp_key('a'), finput3::KeyEventType::Pressed),
+                (Some(Key::B), cp_key('b'), finput3::KeyEventType::Pressed),
             ],
         )
         .await;
@@ -994,8 +1158,8 @@ mod tests {
         let result = handle_key_sequence(
             &handler,
             vec![
-                (cp_key('b'), finput3::KeyEventType::Released),
-                (cp_key('a'), finput3::KeyEventType::Released),
+                (Some(Key::B), cp_key('b'), finput3::KeyEventType::Released),
+                (Some(Key::A), cp_key('a'), finput3::KeyEventType::Released),
             ],
         )
         .await;
@@ -1061,8 +1225,8 @@ mod tests {
         let result = handle_key_sequence(
             &handler,
             vec![
-                (cp_key('a'), finput3::KeyEventType::Pressed),
-                (cp_key('a'), finput3::KeyEventType::Released),
+                (Some(Key::A), cp_key('a'), finput3::KeyEventType::Pressed),
+                (Some(Key::A), cp_key('a'), finput3::KeyEventType::Released),
             ],
         )
         .await;
@@ -1131,8 +1295,8 @@ mod tests {
         let result = handle_key_sequence(
             &handler,
             vec![
-                (cp_key('a'), finput3::KeyEventType::Pressed),
-                (cp_key('a'), finput3::KeyEventType::Released),
+                (Some(Key::A), cp_key('a'), finput3::KeyEventType::Pressed),
+                (Some(Key::A), cp_key('a'), finput3::KeyEventType::Released),
             ],
         )
         .await;
