@@ -61,25 +61,11 @@ impl ComponentEventProvider {
                         self.handle_on_directory_ready(component, directory).await
                     );
                 }
-                Ok(ComponentEventListenerRequest::OnStop { component, .. }) => {
-                    break_on_disconnect!(self.handle_on_stop(component).await);
-                }
                 other => {
                     debug!(?other, "unexpected component event listener request");
                 }
             }
         }
-        Ok(())
-    }
-
-    async fn handle_on_stop(&mut self, component: SourceIdentity) -> Result<(), EventError> {
-        let component = ComponentIdentity::try_from(component)?;
-        self.dispatcher
-            .emit(Event {
-                timestamp: zx::Time::get_monotonic(),
-                payload: EventPayload::ComponentStopped(ComponentStoppedPayload { component }),
-            })
-            .await?;
         Ok(())
     }
 
@@ -113,12 +99,10 @@ impl EventProducer for ComponentEventProvider {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::events::sources::event_source::tests::*;
     use fidl_fuchsia_sys_internal::{
         ComponentEventProviderMarker, ComponentEventProviderRequest, SourceIdentity,
     };
     use fuchsia_async as fasync;
-    use fuchsia_zircon as zx;
     use futures::{channel::oneshot, StreamExt};
     use lazy_static::lazy_static;
     use std::collections::BTreeSet;
@@ -163,10 +147,8 @@ mod tests {
     #[fuchsia::test]
     async fn component_event_stream() {
         let (mut provider, listener_receiver) = spawn_fake_component_event_provider();
-        let events = BTreeSet::from([
-            AnyEventType::Singleton(SingletonEventType::DiagnosticsReady),
-            AnyEventType::General(EventType::ComponentStopped),
-        ]);
+        let events =
+            BTreeSet::from([AnyEventType::Singleton(SingletonEventType::DiagnosticsReady)]);
 
         let (mut event_stream, dispatcher) = Dispatcher::new_for_test(events);
         provider.set_dispatcher(dispatcher);
@@ -188,7 +170,6 @@ mod tests {
         listener
             .on_diagnostics_dir_ready(identity.clone().into(), dir)
             .expect("failed to send event 2");
-        listener.on_stop(identity.clone().into()).expect("failed to send event 3");
 
         let event = event_stream.next().await.unwrap();
         match event.payload {
@@ -203,17 +184,6 @@ mod tests {
             }
             payload => unreachable!("never gets {:?}", payload),
         }
-
-        let event = event_stream.next().await.unwrap();
-        compare_events_ignore_timestamp_and_payload(
-            event,
-            Event {
-                timestamp: zx::Time::get_monotonic(),
-                payload: EventPayload::ComponentStopped(ComponentStoppedPayload {
-                    component: identity.clone().into(),
-                }),
-            },
-        );
     }
 
     fn spawn_fake_component_event_provider() -> (

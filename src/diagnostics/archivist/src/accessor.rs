@@ -533,7 +533,8 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<ArchiveAccessorMarker>().unwrap();
         let (snd, _rcv) = mpsc::unbounded();
         fasync::Task::spawn(async move {
-            let pipeline = Arc::new(RwLock::new(Pipeline::for_test(None, DataRepo::default())));
+            let pipeline =
+                Arc::new(RwLock::new(Pipeline::for_test(None, DataRepo::default().await)));
             let accessor =
                 ArchiveAccessor::new(pipeline, Arc::new(AccessorStats::new(Node::default())));
             accessor.spawn_server(stream, snd);
@@ -589,7 +590,8 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<ArchiveAccessorMarker>().unwrap();
         let (snd, _rcv) = mpsc::unbounded();
         fasync::Task::spawn(async move {
-            let pipeline = Arc::new(RwLock::new(Pipeline::for_test(None, DataRepo::default())));
+            let pipeline =
+                Arc::new(RwLock::new(Pipeline::for_test(None, DataRepo::default().await)));
             let accessor =
                 ArchiveAccessor::new(pipeline, Arc::new(AccessorStats::new(Node::default())));
             accessor.spawn_server(stream, snd);

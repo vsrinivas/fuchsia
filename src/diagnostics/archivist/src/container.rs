@@ -15,7 +15,6 @@ use {
     fidl_fuchsia_diagnostics::{LogInterestSelector, StreamMode},
     fuchsia_inspect_derive::WithInspect,
     std::sync::Arc,
-    tracing::debug,
 };
 
 /// Holds all diagnostics data artifacts for a given component in the topology.
@@ -47,18 +46,9 @@ pub struct ComponentDiagnostics {
     pub logs: Option<Arc<LogsArtifactsContainer>>,
     /// Holds the state for `root/sources/MONIKER/*` in Archivist's inspect.
     pub source_node: fuchsia_inspect::Node,
-    /// Whether the component this represents is still running or not. Components which have
-    /// stopped have their containers retained for as long as they still have log messages we want.
-    is_live: bool,
 }
 
 impl ComponentDiagnostics {
-    pub fn empty(identity: Arc<ComponentIdentity>, parent: &fuchsia_inspect::Node) -> Self {
-        let source_node = parent.create_child(identity.relative_moniker.join("/"));
-        source_node.record_string("url", &identity.url);
-        Self { identity, inspect: None, logs: None, source_node, is_live: true }
-    }
-
     pub fn new_with_inspect(
         identity: Arc<ComponentIdentity>,
         inspect: InspectArtifactsContainer,
@@ -67,6 +57,18 @@ impl ComponentDiagnostics {
         let mut new = Self::empty(identity, parent);
         new.inspect = Some(inspect);
         new
+    }
+
+    pub async fn new_with_logs(
+        identity: Arc<ComponentIdentity>,
+        parent: &fuchsia_inspect::Node,
+        budget: &BudgetManager,
+        interest_selectors: &[LogInterestSelector],
+        multiplexers: &mut MultiplexerBroker,
+    ) -> (Self, Arc<LogsArtifactsContainer>) {
+        let mut new = Self::empty(identity, parent);
+        let logs = new.logs(budget, interest_selectors, multiplexers).await;
+        (new, logs)
     }
 
     pub async fn logs(
@@ -102,28 +104,18 @@ impl ComponentDiagnostics {
         self.logs.as_ref().map(|l| l.cursor(mode))
     }
 
-    /// Mark this container as stopped -- the component is no longer running and we should not
-    /// serve inspect results.
-    ///
-    /// Sets `inspect` to `None` so that this component will be excluded from
-    /// accessors for those data types.
-    pub async fn mark_stopped(&mut self) {
-        debug!(%self.identity, "Marking stopped.");
-        self.inspect = None;
-        self.is_live = false;
-        if let Some(logs) = &self.logs {
-            logs.mark_stopped().await;
-        }
-    }
-
     /// Returns `true` if the DataRepo should continue holding this container. This container should
     /// be retained as long as we believe the corresponding component is still running or as long as
     /// we still have logs from its execution.
     pub async fn should_retain(&self) -> bool {
         match self.logs.as_ref() {
-            Some(log) => self.is_live || log.should_retain().await,
-            None => false,
+            Some(log) => self.inspect.is_some() || log.should_retain().await,
+            None => self.inspect.is_some(),
         }
+    }
+
+    pub fn terminate_inspect(&mut self) {
+        self.inspect = None;
     }
 
     /// Ensure that no new log messages can be consumed from the corresponding component, causing
@@ -133,5 +125,19 @@ impl ComponentDiagnostics {
         if let Some(logs) = &self.logs {
             logs.terminate();
         }
+    }
+
+    fn empty(identity: Arc<ComponentIdentity>, parent: &fuchsia_inspect::Node) -> Self {
+        let source_node = parent.create_child(identity.relative_moniker.join("/"));
+        source_node.record_string("url", &identity.url);
+        Self { identity, inspect: None, logs: None, source_node }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn empty_for_test(
+        identity: Arc<ComponentIdentity>,
+        parent: &fuchsia_inspect::Node,
+    ) -> Self {
+        Self::empty(identity, parent)
     }
 }

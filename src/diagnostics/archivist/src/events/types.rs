@@ -81,9 +81,7 @@ pub enum AnyEventType {
 
 /// Event types that don't contain singleton data and can be cloned directly.
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub enum EventType {
-    ComponentStopped,
-}
+pub enum EventType {}
 
 /// Event types that contain singleton data. When these events are cloned, their singleton data
 /// won't be cloned.
@@ -119,9 +117,7 @@ impl From<EventType> for AnyEventType {
 
 impl AsRef<str> for EventType {
     fn as_ref(&self) -> &str {
-        match &self {
-            Self::ComponentStopped => "component_stopped",
-        }
+        ""
     }
 }
 
@@ -146,7 +142,6 @@ impl Event {
 
     pub fn ty(&self) -> AnyEventType {
         match &self.payload {
-            EventPayload::ComponentStopped(_) => EventType::ComponentStopped.into(),
             EventPayload::DiagnosticsReady(_) => SingletonEventType::DiagnosticsReady.into(),
             EventPayload::LogSinkRequested(_) => SingletonEventType::LogSinkRequested.into(),
         }
@@ -156,16 +151,8 @@ impl Event {
 /// The contents of the event depending on the type of event.
 #[derive(Debug, Clone)]
 pub enum EventPayload {
-    ComponentStopped(ComponentStoppedPayload),
     DiagnosticsReady(DiagnosticsReadyPayload),
     LogSinkRequested(LogSinkRequestedPayload),
-}
-
-/// Payload for a stopped event.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ComponentStoppedPayload {
-    /// The component that stopped.
-    pub component: ComponentIdentity,
 }
 
 /// Payload for a CapabilityReady(diagnostics) event.
@@ -346,12 +333,6 @@ impl TryFrom<fsys::Event> for Event {
         );
 
         match event.header.event_type {
-            fsys::EventType::Stopped => Ok(Event {
-                timestamp: zx::Time::from_nanos(event.header.timestamp),
-                payload: EventPayload::ComponentStopped(ComponentStoppedPayload {
-                    component: identity,
-                }),
-            }),
             fsys::EventType::DirectoryReady => {
                 let directory = match event.event_result {
                     Some(fsys::EventResult::Payload(fsys::EventPayload::DirectoryReady(

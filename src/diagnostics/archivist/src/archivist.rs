@@ -91,7 +91,7 @@ impl Archivist {
     /// Creates new instance, sets up inspect and adds 'archive' directory to output folder.
     /// Also installs `fuchsia.diagnostics.Archive` service.
     /// Call `install_log_services`
-    pub fn new(archivist_configuration: &Config) -> Result<Self, Error> {
+    pub async fn new(archivist_configuration: &Config) -> Result<Self, Error> {
         let mut fs = ServiceFs::new();
         diagnostics::serve(&mut fs)?;
 
@@ -100,7 +100,7 @@ impl Archivist {
 
         let logs_budget =
             BudgetManager::new(archivist_configuration.logs_max_cached_original_bytes as usize);
-        let diagnostics_repo = DataRepo::new(&logs_budget, component::inspector().root());
+        let diagnostics_repo = DataRepo::new(&logs_budget, component::inspector().root()).await;
 
         let pipelines_node = component::inspector().root().create_child("pipelines");
         let pipelines_path = Path::new(&archivist_configuration.pipelines_path);
@@ -241,7 +241,7 @@ impl Archivist {
                 self.event_router.add_producer(ProducerConfig {
                     producer: &mut event_source,
                     producer_type: ProducerType::External,
-                    events: vec![EventType::ComponentStopped],
+                    events: vec![],
                     singleton_events: vec![
                         SingletonEventType::LogSinkRequested,
                         SingletonEventType::DiagnosticsReady,
@@ -268,7 +268,7 @@ impl Archivist {
         self.event_router.add_producer(ProducerConfig {
             producer: &mut component_event_provider,
             producer_type: ProducerType::External,
-            events: vec![EventType::ComponentStopped],
+            events: vec![],
             singleton_events: vec![SingletonEventType::DiagnosticsReady],
         });
         self.incoming_external_event_producers.push(fasync::Task::spawn(async move {
@@ -337,7 +337,7 @@ impl Archivist {
         let archivist_state_log_sender = archivist_state.log_sender.clone();
         event_router.add_consumer(ConsumerConfig {
             consumer: &archivist_state,
-            events: vec![EventType::ComponentStopped],
+            events: vec![],
             singleton_events: vec![
                 SingletonEventType::DiagnosticsReady,
                 SingletonEventType::LogSinkRequested,
@@ -409,7 +409,7 @@ async fn maybe_remove_component(
 ) {
     if !diagnostics_repo.is_live(identity).await {
         debug!(%identity, "Removing component from repository.");
-        diagnostics_repo.write().await.data_directories.remove(&*identity.unique_key());
+        diagnostics_repo.write().await.remove(identity);
 
         // TODO(fxbug.dev/55736): The pipeline specific updates should be happening asynchronously.
         for pipeline in diagnostics_pipelines {
@@ -456,8 +456,6 @@ impl ArchivistState {
         if let Some(directory) = directory {
             // Update the central repository to reference the new diagnostics source.
             self.diagnostics_repo
-                .write()
-                .await
                 .add_inspect_artifacts(component.clone(), directory)
                 .await
                 .unwrap_or_else(|err| {
@@ -481,14 +479,6 @@ impl ArchivistState {
         }
     }
 
-    /// Updates the central repository to reference the new diagnostics source.
-    async fn handle_stopped(&self, component: ComponentIdentity) {
-        debug!(identity = %component, "Component stopped");
-        self.diagnostics_repo.write().await.mark_stopped(&component.unique_key()).await;
-        maybe_remove_component(&component, &self.diagnostics_repo, &self.diagnostics_pipelines)
-            .await;
-    }
-
     async fn handle_log_sink_requested(
         &self,
         component: ComponentIdentity,
@@ -506,9 +496,6 @@ impl ArchivistState {
 impl EventConsumer for ArchivistState {
     async fn handle(self: Arc<Self>, event: Event) {
         match event.payload {
-            EventPayload::ComponentStopped(ComponentStoppedPayload { component }) => {
-                self.handle_stopped(component).await;
-            }
             EventPayload::DiagnosticsReady(DiagnosticsReadyPayload { component, directory }) => {
                 self.handle_diagnostics_ready(component, directory).await;
             }
@@ -537,7 +524,7 @@ mod tests {
     use fuchsia_component::client::connect_to_protocol_at_dir_svc;
     use futures::channel::oneshot;
 
-    fn init_archivist() -> Archivist {
+    async fn init_archivist() -> Archivist {
         let config = Config {
             enable_component_event_provider: false,
             enable_klog: false,
@@ -552,14 +539,14 @@ mod tests {
             bind_services: vec![],
         };
 
-        let mut archivist = Archivist::new(&config).unwrap();
+        let mut archivist = Archivist::new(&config).await.unwrap();
         // Install a fake producer that allows all incoming events. This allows skipping
         // validation for the purposes of the tests here.
         let mut fake_producer = FakeProducer {};
         archivist.event_router.add_producer(ProducerConfig {
             producer: &mut fake_producer,
             producer_type: ProducerType::External,
-            events: vec![EventType::ComponentStopped],
+            events: vec![],
             singleton_events: vec![
                 SingletonEventType::LogSinkRequested,
                 SingletonEventType::DiagnosticsReady,
@@ -578,7 +565,7 @@ mod tests {
     // run archivist and send signal when it dies.
     async fn run_archivist_and_signal_on_exit() -> (fio::DirectoryProxy, oneshot::Receiver<()>) {
         let (directory, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
-        let mut archivist = init_archivist();
+        let mut archivist = init_archivist().await;
         archivist.install_log_services().await.serve_test_controller_protocol();
         let (signal_send, signal_recv) = oneshot::channel();
         fasync::Task::spawn(async move {
@@ -595,7 +582,7 @@ mod tests {
     // runs archivist and returns its directory.
     async fn run_archivist() -> fio::DirectoryProxy {
         let (directory, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
-        let mut archivist = init_archivist();
+        let mut archivist = init_archivist().await;
         archivist.install_log_services().await;
         fasync::Task::spawn(async move {
             archivist

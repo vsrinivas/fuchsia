@@ -6,7 +6,6 @@ use {
     crate::{
         container::ComponentDiagnostics,
         error::Error,
-        events::types::UniqueKey,
         identity::ComponentIdentity,
         inspect::container::{InspectArtifactsContainer, UnpopulatedInspectDataContainer},
         logs::{
@@ -33,7 +32,7 @@ use {
     fidl_fuchsia_io as fio,
     fidl_fuchsia_logger::{LogMarker, LogRequest, LogRequestStream},
     fuchsia_async as fasync, fuchsia_fs, fuchsia_inspect as inspect,
-    futures::channel::mpsc,
+    futures::channel::{mpsc, oneshot},
     futures::prelude::*,
     lazy_static::lazy_static,
     selectors,
@@ -65,17 +64,38 @@ impl std::ops::Deref for DataRepo {
     }
 }
 
-#[cfg(test)]
-impl Default for DataRepo {
-    fn default() -> Self {
-        let budget = BudgetManager::new(crate::constants::LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES);
-        DataRepo { inner: DataRepoState::new(budget, &Default::default()) }
-    }
-}
-
 impl DataRepo {
-    pub fn new(logs_budget: &BudgetManager, parent: &fuchsia_inspect::Node) -> Self {
-        DataRepo { inner: DataRepoState::new(logs_budget.clone(), parent) }
+    pub async fn new(logs_budget: &BudgetManager, parent: &fuchsia_inspect::Node) -> Self {
+        DataRepo { inner: DataRepoState::new(logs_budget.clone(), parent).await }
+    }
+
+    pub async fn add_inspect_artifacts(
+        &self,
+        identity: ComponentIdentity,
+        directory_proxy: fio::DirectoryProxy,
+    ) -> Result<(), Error> {
+        let mut guard = self.inner.write().await;
+        let identity = Arc::new(identity);
+        if let Some(on_closed_fut) =
+            guard.insert_inspect_artifact_container(identity.clone(), directory_proxy).await?
+        {
+            let repo_weak = Arc::downgrade(&self.inner);
+            guard
+                .diagnostics_dir_closed_snd
+                .send(fasync::Task::spawn(async move {
+                    if (on_closed_fut.await).is_ok() {
+                        match repo_weak.upgrade() {
+                            None => {}
+                            Some(this) => {
+                                this.write().await.maybe_remove(identity).await;
+                            }
+                        }
+                    }
+                }))
+                .await
+                .unwrap(); // this can't fail unless `self` has been destroyed.
+        }
+        Ok(())
     }
 
     /// Drain the kernel's debug log. The returned future completes once
@@ -158,12 +178,12 @@ impl DataRepo {
                 if dump_logs { StreamMode::Snapshot } else { StreamMode::SnapshotThenSubscribe };
             let logs = self.logs_cursor(mode, None).await;
             if let Some(s) = selectors {
-                self.write().await.update_logs_interest(connection_id, s).await;
+                self.inner.write().await.update_logs_interest(connection_id, s).await;
             }
 
             sender.send(listener.spawn(logs, dump_logs)).await.ok();
         }
-        self.write().await.finish_interest_connection(connection_id).await;
+        self.inner.write().await.finish_interest_connection(connection_id).await;
         Ok(())
     }
 
@@ -179,11 +199,11 @@ impl DataRepo {
             })?;
             match request {
                 LogSettingsRequest::RegisterInterest { selectors, .. } => {
-                    self.write().await.update_logs_interest(connection_id, selectors).await;
+                    self.inner.write().await.update_logs_interest(connection_id, selectors).await;
                 }
             }
         }
-        self.write().await.finish_interest_connection(connection_id).await;
+        self.inner.write().await.finish_interest_connection(connection_id).await;
 
         Ok(())
     }
@@ -193,7 +213,7 @@ impl DataRepo {
         mode: StreamMode,
         selectors: Option<Vec<Selector>>,
     ) -> impl Stream<Item = Arc<LogsData>> + Send + 'static {
-        let mut repo = self.write().await;
+        let mut repo = self.inner.write().await;
         let (mut merged, mpx_handle) = Multiplexer::new();
         if let Some(selectors) = selectors {
             merged.set_selectors(selectors);
@@ -228,16 +248,22 @@ impl DataRepo {
     /// Stop accepting new messages, ensuring that pending Cursors return Poll::Ready(None) after
     /// consuming any messages received before this call.
     pub async fn terminate_logs(&self) {
-        let mut repo = self.write().await;
+        let mut repo = self.inner.write().await;
         for container in repo.data_directories.iter().filter_map(|(_, v)| v) {
             container.terminate_logs();
         }
         repo.logs_multiplexers.terminate().await;
     }
+
+    #[cfg(test)]
+    pub(crate) async fn default() -> Self {
+        let budget = BudgetManager::new(crate::constants::LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES);
+        DataRepo { inner: DataRepoState::new(budget, &Default::default()).await }
+    }
 }
 
 pub struct DataRepoState {
-    pub data_directories: trie::Trie<String, ComponentDiagnostics>,
+    data_directories: trie::Trie<String, ComponentDiagnostics>,
     inspect_node: inspect::Node,
 
     /// A reference to the budget manager, kept to be passed to containers.
@@ -250,10 +276,17 @@ pub struct DataRepoState {
     /// Interest registrations that we have received through fuchsia.logger.Log/ListWithSelectors
     /// or through fuchsia.logger.LogSettings/RegisterInterest.
     interest_registrations: BTreeMap<usize, Vec<LogInterestSelector>>,
+
+    /// Tasks waiting for PEER_CLOSED signals on diagnostics directories are sent here.
+    diagnostics_dir_closed_snd: mpsc::UnboundedSender<fasync::Task<()>>,
+
+    /// Task draining all diagnostics directory PEER_CLOSED signal futures.
+    _diagnostics_dir_closed_drain: fasync::Task<()>,
 }
 
 impl DataRepoState {
-    fn new(logs_budget: BudgetManager, parent: &fuchsia_inspect::Node) -> Arc<RwLock<Self>> {
+    async fn new(logs_budget: BudgetManager, parent: &fuchsia_inspect::Node) -> Arc<RwLock<Self>> {
+        let (snd, rcv) = mpsc::unbounded();
         Arc::new(RwLock::new(Self {
             inspect_node: parent.create_child("sources"),
             data_directories: trie::Trie::new(),
@@ -261,16 +294,11 @@ impl DataRepoState {
             logs_interest: vec![],
             logs_multiplexers: MultiplexerBroker::new(),
             interest_registrations: BTreeMap::new(),
+            diagnostics_dir_closed_snd: snd,
+            _diagnostics_dir_closed_drain: fasync::Task::spawn(async move {
+                rcv.for_each_concurrent(None, |rx| async move { rx.await }).await
+            }),
         }))
-    }
-
-    pub async fn mark_stopped(&mut self, key: &UniqueKey) {
-        if let Some(containers) = self.data_directories.get_mut(key) {
-            let diagnostics_containers = containers.get_values_mut();
-            if diagnostics_containers.len() == 1 {
-                diagnostics_containers[0].mark_stopped().await;
-            }
-        }
     }
 
     /// Returns a container for logs artifacts, constructing one and adding it to the trie if
@@ -284,11 +312,14 @@ impl DataRepoState {
         // we use a macro instead of a closure to avoid lifetime issues
         macro_rules! insert_component {
             () => {{
-                let mut to_insert =
-                    ComponentDiagnostics::empty(Arc::new(identity), &self.inspect_node);
-                let logs = to_insert
-                    .logs(&self.logs_budget, &self.logs_interest, &mut self.logs_multiplexers)
-                    .await;
+                let (to_insert, logs) = ComponentDiagnostics::new_with_logs(
+                    Arc::new(identity),
+                    &self.inspect_node,
+                    &self.logs_budget,
+                    &self.logs_interest,
+                    &mut self.logs_multiplexers,
+                )
+                .await;
                 self.data_directories.insert(trie_key, to_insert);
                 logs
             }};
@@ -339,22 +370,31 @@ impl DataRepoState {
         }
     }
 
-    pub async fn add_inspect_artifacts(
-        &mut self,
-        identity: ComponentIdentity,
-        directory_proxy: fio::DirectoryProxy,
-    ) -> Result<(), Error> {
-        let inspect_container =
-            InspectArtifactsContainer { component_diagnostics_proxy: directory_proxy };
-        self.insert_inspect_artifact_container(inspect_container, identity).await
+    async fn maybe_remove(&mut self, identity: Arc<ComponentIdentity>) {
+        let key: Vec<_> = identity.unique_key().into();
+        let remove = if let Some(containers) = self.data_directories.get_mut(&key) {
+            match &mut containers.get_values_mut()[..] {
+                [] => true,
+                [container] => {
+                    container.terminate_inspect();
+                    !container.should_retain().await
+                }
+                _ => unreachable!("invariant: each trie node has 0-1 entries"),
+            }
+        } else {
+            false
+        };
+        if remove {
+            self.data_directories.remove(&key);
+        }
     }
 
     // Inserts an InspectArtifactsContainer into the data repository.
     async fn insert_inspect_artifact_container(
         &mut self,
-        inspect_container: InspectArtifactsContainer,
-        identity: ComponentIdentity,
-    ) -> Result<(), Error> {
+        identity: Arc<ComponentIdentity>,
+        diagnostics_proxy: fio::DirectoryProxy,
+    ) -> Result<Option<oneshot::Receiver<()>>, Error> {
         let unique_key: Vec<_> = identity.unique_key().into();
         let diag_repo_entry_opt = self.data_directories.get_mut(&unique_key);
 
@@ -369,14 +409,17 @@ impl DataRepoState {
                         // creation of a component lower in the topology before observing this
                         // one. If this is the case, just instantiate as though it's our first
                         // time encountering this moniker segment.
+                        let (inspect_container, on_closed_fut) =
+                            InspectArtifactsContainer::new(diagnostics_proxy);
                         self.data_directories.insert(
                             unique_key,
                             ComponentDiagnostics::new_with_inspect(
-                                Arc::new(identity),
+                                identity,
                                 inspect_container,
                                 &self.inspect_node,
                             ),
-                        )
+                        );
+                        Ok(Some(on_closed_fut))
                     }
                     [existing_diagnostics_artifact_container] => {
                         // Races may occur between synthesized and real diagnostics_ready
@@ -388,8 +431,13 @@ impl DataRepoState {
                             // observed to be started/existing. We now must update the diagnostics
                             // artifact container with the inspect artifacts that accompanied the
                             // diagnostics_ready event.
+                            let (inspect_container, on_closed_fut) =
+                                InspectArtifactsContainer::new(diagnostics_proxy);
                             existing_diagnostics_artifact_container.inspect =
                                 Some(inspect_container);
+                            Ok(Some(on_closed_fut))
+                        } else {
+                            Ok(None)
                         }
                     }
                     _ => {
@@ -399,16 +447,20 @@ impl DataRepoState {
             }
             // This case is expected to be uncommon; we've encountered a diagnostics_ready
             // event before a start or existing event!
-            None => self.data_directories.insert(
-                unique_key,
-                ComponentDiagnostics::new_with_inspect(
-                    Arc::new(identity),
-                    inspect_container,
-                    &self.inspect_node,
-                ),
-            ),
+            None => {
+                let (inspect_container, on_closed_fut) =
+                    InspectArtifactsContainer::new(diagnostics_proxy);
+                self.data_directories.insert(
+                    unique_key,
+                    ComponentDiagnostics::new_with_inspect(
+                        identity,
+                        inspect_container,
+                        &self.inspect_node,
+                    ),
+                );
+                Ok(Some(on_closed_fut))
+            }
         }
-        Ok(())
     }
 
     /// Return all of the DirectoryProxies that contain Inspect hierarchies
@@ -471,7 +523,7 @@ impl DataRepoState {
 
                 // This artifact contains inspect and matches a passed selector.
                 fuchsia_fs::clone_directory(
-                    &inspect_artifacts.component_diagnostics_proxy,
+                    inspect_artifacts.diagnostics_directory(),
                     fio::OpenFlags::CLONE_SAME_RIGHTS,
                 )
                 .ok()
@@ -482,6 +534,21 @@ impl DataRepoState {
                 })
             })
             .collect();
+    }
+
+    pub fn remove(&mut self, identity: &ComponentIdentity) {
+        self.data_directories.remove(&*identity.unique_key());
+    }
+
+    #[cfg(test)]
+    pub(crate) fn get(&self, identity: &ComponentIdentity) -> &[ComponentDiagnostics] {
+        self.data_directories.get(&*identity.unique_key()).unwrap().get_values()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn terminate_inspect(&mut self, identity: &ComponentIdentity) {
+        self.data_directories.get_mut(&*identity.unique_key()).unwrap().get_values_mut()[0]
+            .terminate_inspect()
     }
 }
 
@@ -554,6 +621,7 @@ mod tests {
         diagnostics_log_encoding::{
             encode::Encoder, Argument, Record, Severity as StreamSeverity, Value,
         },
+        fuchsia_zircon::DurationNum,
         selectors::{self, FastError},
         std::{io::Cursor, time::Duration},
     };
@@ -562,8 +630,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn inspect_repo_disallows_duplicated_dirs() {
-        let inspect_repo = DataRepo::default();
-        let mut inspect_repo = inspect_repo.write().await;
+        let inspect_repo = DataRepo::default().await;
         let moniker = vec!["a", "b", "foo.cmx"].into();
         let instance_id = "1234".to_string();
 
@@ -580,21 +647,12 @@ mod tests {
 
         inspect_repo.add_inspect_artifacts(identity.clone(), proxy).await.expect("add to repo");
 
-        assert_eq!(
-            inspect_repo
-                .data_directories
-                .get(&identity.unique_key().into())
-                .unwrap()
-                .get_values()
-                .len(),
-            1
-        );
+        assert_eq!(inspect_repo.read().await.get(&identity).len(), 1);
     }
 
     #[fuchsia::test]
     async fn data_repo_updates_existing_entry_to_hold_inspect_data() {
-        let data_repo = DataRepo::default();
-        let mut data_repo = data_repo.write().await;
+        let data_repo = DataRepo::default().await;
         let moniker = vec!["a", "b", "foo.cmx"].into();
         let instance_id = "1234".to_string();
 
@@ -605,25 +663,18 @@ mod tests {
 
         data_repo.add_inspect_artifacts(identity.clone(), proxy).await.expect("add to repo");
 
-        assert_eq!(
-            data_repo
-                .data_directories
-                .get(&identity.unique_key().into())
-                .unwrap()
-                .get_values()
-                .len(),
-            1
-        );
-        let entry =
-            &data_repo.data_directories.get(&identity.unique_key().into()).unwrap().get_values()[0];
-        assert!(entry.inspect.is_some());
-        assert_eq!(entry.identity.url, TEST_URL);
+        {
+            let data_repo = data_repo.read().await;
+            assert_eq!(data_repo.get(&identity).len(), 1);
+            let entry = &data_repo.get(&identity)[0];
+            assert!(entry.inspect.is_some());
+            assert_eq!(entry.identity.url, TEST_URL);
+        }
     }
 
     #[fuchsia::test]
     async fn diagnostics_repo_cant_have_more_than_one_diagnostics_data_container_per_component() {
-        let data_repo = DataRepo::default();
-        let mut data_repo = data_repo.write().await;
+        let data_repo = DataRepo::default().await;
         let moniker = vec!["a", "b", "foo.cmx"].into();
         let instance_id = "1234".to_string();
 
@@ -634,14 +685,19 @@ mod tests {
             .expect("create directory proxy");
         data_repo.add_inspect_artifacts(identity.clone(), proxy).await.expect("add to repo");
 
-        let mutable_values = data_repo
-            .data_directories
-            .get_mut(&identity.unique_key().into())
-            .unwrap()
-            .get_values_mut();
+        {
+            let mut data_repo = data_repo.inner.write().await;
+            let mutable_values = data_repo
+                .data_directories
+                .get_mut(&identity.unique_key().into())
+                .unwrap()
+                .get_values_mut();
 
-        mutable_values
-            .push(ComponentDiagnostics::empty(Arc::new(identity.clone()), &Default::default()));
+            mutable_values.push(ComponentDiagnostics::empty_for_test(
+                Arc::new(identity.clone()),
+                &Default::default(),
+            ));
+        }
 
         let (proxy, _) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
             .expect("create directory proxy");
@@ -650,8 +706,57 @@ mod tests {
     }
 
     #[fuchsia::test]
+    async fn repo_removes_entries_when_inspect_is_disconnected() {
+        let data_repo = DataRepo::default().await;
+        let moniker = vec!["a", "b", "foo.cmx"].into();
+        let instance_id = "1234".to_string();
+        let component_id = ComponentIdentifier::Legacy { instance_id, moniker };
+        let identity = ComponentIdentity::from_identifier_and_url(component_id, TEST_URL);
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+            .expect("create directory proxy");
+        {
+            data_repo.add_inspect_artifacts(identity.clone(), proxy).await.expect("add to repo");
+            assert_eq!(data_repo.read().await.get(&identity).len(), 1);
+        }
+        drop(server_end);
+        while data_repo.read().await.data_directories.get(&identity.unique_key().into()).is_some() {
+            fasync::Timer::new(fasync::Time::after(100_i64.millis())).await;
+        }
+    }
+
+    #[fuchsia::test]
+    async fn repo_maintains_entries_when_inspect_is_disconnected_but_logs_are_active() {
+        let data_repo = DataRepo::default().await;
+        let moniker = vec!["a", "b", "foo.cmx"].into();
+        let instance_id = "1234".to_string();
+        let component_id = ComponentIdentifier::Legacy { instance_id, moniker };
+        let identity = ComponentIdentity::from_identifier_and_url(component_id, TEST_URL);
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+            .expect("create directory proxy");
+        let _log_container = {
+            data_repo.add_inspect_artifacts(identity.clone(), proxy).await.expect("add to repo");
+            data_repo.write().await.get_log_container(identity.clone()).await
+        };
+        drop(server_end);
+        for _ in 0..10 {
+            assert_eq!(
+                data_repo
+                    .read()
+                    .await
+                    .data_directories
+                    .get(&identity.unique_key().into())
+                    .unwrap()
+                    .get_values()
+                    .len(),
+                1
+            );
+            fasync::Timer::new(fasync::Time::after(100_i64.millis())).await;
+        }
+    }
+
+    #[fuchsia::test]
     async fn data_repo_filters_inspect_by_selectors() {
-        let data_repo = DataRepo::default();
+        let data_repo = DataRepo::default().await;
         let realm_path = vec!["a".to_string(), "b".to_string()];
         let instance_id = "1234".to_string();
 
@@ -661,8 +766,6 @@ mod tests {
         let identity = ComponentIdentity::from_identifier_and_url(component_id, TEST_URL);
 
         data_repo
-            .write()
-            .await
             .add_inspect_artifacts(
                 identity,
                 fuchsia_fs::directory::open_in_namespace(
@@ -683,8 +786,6 @@ mod tests {
         let identity2 = ComponentIdentity::from_identifier_and_url(component_id2, TEST_URL);
 
         data_repo
-            .write()
-            .await
             .add_inspect_artifacts(
                 identity2,
                 fuchsia_fs::directory::open_in_namespace(
@@ -716,7 +817,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn data_repo_filters_logs_by_selectors() {
-        let repo = DataRepo::default();
+        let repo = DataRepo::default().await;
         let foo_container = repo
             .write()
             .await
@@ -758,7 +859,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn multiplexer_broker_cleanup() {
-        let repo = DataRepo::default();
+        let repo = DataRepo::default().await;
         let stream = repo.logs_cursor(StreamMode::SnapshotThenSubscribe, None).await;
 
         assert_eq!(repo.read().await.logs_multiplexers.live_iterators.lock().await.len(), 1);
