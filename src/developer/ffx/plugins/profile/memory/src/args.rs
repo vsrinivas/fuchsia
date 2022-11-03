@@ -34,4 +34,10 @@ pub struct MemoryCommand {
         description = "outputs csv that for every process shows the device uptime in nano seconds, the process koid, the process name, and the private, scale, and total memory usage. This option is not supported with other output options like --machine."
     )]
     pub csv: bool,
+
+    #[argh(
+        switch,
+        description = "outputs the exact byte sizes, as opposed to a human-friendly format. Does not impact machine oriented outputs, such as CSV and JSON outputs."
+    )]
+    pub exact_sizes: bool,
 }

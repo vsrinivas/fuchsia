@@ -68,7 +68,7 @@ pub async fn print_output(
             if writer.is_machine() {
                 writer.machine(&output)
             } else {
-                write_human_readable_output(writer, output)
+                write_human_readable_output(writer, output, cmd.exact_sizes)
             }
         }
     }

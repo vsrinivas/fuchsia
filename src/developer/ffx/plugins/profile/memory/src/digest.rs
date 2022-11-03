@@ -417,7 +417,8 @@ pub mod processed {
             }
         }
 
-        processes.sort_unstable_by(|a, b| b.memory.private.cmp(&a.memory.private));
+        processes.sort_by(|a, b| (b.memory.private, &b.name).cmp(&(a.memory.private, &a.name)));
+
         let total_committed_vmo = {
             let mut total = 0;
             for (_, vmo) in &koid_to_vmo {
