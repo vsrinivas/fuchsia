@@ -1626,9 +1626,11 @@ Client::Init(zx::channel server_channel) {
     zxlogf(ERROR, "GetSysmemConnection failed (continuing) - status: %d", status);
   } else {
     sysmem_allocator_ = fidl::WireSyncClient<sysmem::Allocator>(std::move(sysmem_allocator_client));
+
     // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
-    (void)sysmem_allocator_->SetDebugClientInfo(
-        fidl::StringView::FromExternal(fsl::GetCurrentProcessName()), fsl::GetCurrentProcessKoid());
+    std::string debug_name = std::string("display[") + fsl::GetCurrentProcessName() + "]";
+    (void)sysmem_allocator_->SetDebugClientInfo(fidl::StringView::FromExternal(debug_name),
+                                                fsl::GetCurrentProcessKoid());
   }
 
   return fpromise::ok(binding);

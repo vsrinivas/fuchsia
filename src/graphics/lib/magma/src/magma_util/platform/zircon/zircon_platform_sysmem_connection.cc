@@ -473,9 +473,11 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
  public:
   ZirconPlatformSysmemConnection(fidl::WireSyncClient<fuchsia_sysmem::Allocator> allocator)
       : sysmem_allocator_(std::move(allocator)) {
+    std::string debug_name =
+        std::string("magma[") + magma::PlatformProcessHelper::GetCurrentProcessName() + "]";
     // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
     (void)sysmem_allocator_->SetDebugClientInfo(
-        fidl::StringView::FromExternal(magma::PlatformProcessHelper::GetCurrentProcessName()),
+        fidl::StringView::FromExternal(debug_name),
         magma::PlatformProcessHelper::GetCurrentProcessId());
   }
 
