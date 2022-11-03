@@ -491,6 +491,12 @@ readonly _LOG_DIR="{logs_dir}"
 export BAZEL_FUCHSIA_NINJA_OUTPUT_DIR="{ninja_output_dir}"
 export BAZEL_FUCHSIA_NINJA_PREBUILT="{ninja_prebuilt}"
 
+# An undocumented, but widely used, environment variable that tells Bazel to
+# not auto-detect the host C++ installation. This makes workspace setup faster
+# and ensures this can be used on containers where GCC or Clang are not
+# installed (Bazel would complain otherwise with an error).
+export BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
+
 # Implement log rotation (up to 3 old files)
 # $1: log file name (e.g. "path/to/workspace-events.log")
 logrotate3 () {{
