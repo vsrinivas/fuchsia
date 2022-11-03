@@ -6,7 +6,7 @@ use component_events::matcher::ExitStatusMatcher;
 
 use {
     component_events::{
-        events::{self as events, Event, EventSource, EventSubscription},
+        events::{self as events, Event, EventStream},
         matcher::EventMatcher,
         sequence::EventSequence,
     },
@@ -16,12 +16,7 @@ use {
 
 #[fuchsia::test]
 async fn test_exit_detection() {
-    let event_source = EventSource::new().unwrap();
-    let event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![events::Stopped::NAME])])
-        .await
-        .unwrap();
-
+    let event_stream = EventStream::open_at_path("/events/stopped").await.unwrap();
     let collection_name = String::from("test-collection");
 
     let instance = ScopedInstance::new(
@@ -46,11 +41,7 @@ async fn test_exit_detection() {
 async fn test_exit_after_rendezvous() {
     // Get the event source, install our service injector, and then start the
     // component tree.
-    let event_source = EventSource::new().unwrap();
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![events::Started::NAME, events::Stopped::NAME])])
-        .await
-        .unwrap();
+    let mut event_stream = EventStream::open_at_path("/events/started_stopped").await.unwrap();
 
     // Launch the component under test.
     let collection_name = String::from("test-collection");
