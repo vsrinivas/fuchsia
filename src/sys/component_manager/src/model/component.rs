@@ -13,7 +13,7 @@ use {
         error::ModelError,
         exposed_dir::ExposedDir,
         hooks::{Event, EventPayload, Hooks},
-        namespace::IncomingNamespace,
+        namespace::{populate_and_get_logsink_decl, IncomingNamespace},
         ns_dir::NamespaceDir,
         routing::{
             self, route_and_open_capability, OpenOptions, OpenResourceError, OpenRunnerOptions,
@@ -571,7 +571,7 @@ impl ComponentInstance {
         match &mut *state {
             InstanceState::Resolved(r) => {
                 let pkg_dir = r.package().map(|p| &p.package_dir);
-                let pkg_dir = try_clone_dir_endpoint(pkg_dir);
+                let pkg_dir_endpoint = try_clone_dir_endpoint(pkg_dir);
 
                 let execution_dirs = if let Some(runtime) = &execution.runtime {
                     let out_dir = try_clone_dir_endpoint(runtime.outgoing_dir.as_ref());
@@ -593,12 +593,13 @@ impl ComponentInstance {
                 let exposed_dir =
                     fidl::endpoints::ClientEnd::<fio::DirectoryMarker>::new(exposed_dir);
 
-                let decl = r.decl().clone();
-                let ns_entries = r.get_debug_ns().populate(self.as_weak(), &decl).await.unwrap();
+                let pkg_dir = r.package().map(|p| &p.package_dir);
+                let (ns_entries, _) =
+                    populate_and_get_logsink_decl(pkg_dir, self.as_weak(), r.decl()).await.unwrap();
 
                 Some(Box::new(fsys::ResolvedDirectories {
                     ns_entries,
-                    pkg_dir,
+                    pkg_dir: pkg_dir_endpoint,
                     exposed_dir,
                     execution_dirs,
                 }))
@@ -1426,8 +1427,6 @@ pub struct ResolvedInstanceState {
     exposed_dir: ExposedDir,
     /// Hosts a directory mapping the component's namespace.
     ns_dir: NamespaceDir,
-    /// Namespace creator used for debug purposes (RealmQuery).
-    debug_ns: IncomingNamespace,
     /// Contains information about the package, if one exists
     package: Option<Package>,
     /// Contains the resolved configuration fields for this component, if they exist
@@ -1467,7 +1466,6 @@ impl ResolvedInstanceState {
             decl.clone(),
             package.clone().map(|p| p.package_dir),
         )?;
-        let debug_ns = IncomingNamespace::new(package.clone());
         let mut state = Self {
             execution_scope: ExecutionScope::new(),
             decl: decl.clone(),
@@ -1476,7 +1474,6 @@ impl ResolvedInstanceState {
             environments: Self::instantiate_environments(component, &decl),
             exposed_dir,
             ns_dir,
-            debug_ns,
             package,
             config,
             dynamic_offers: vec![],
@@ -1546,11 +1543,6 @@ impl ResolvedInstanceState {
     /// Returns the namespace directory of this instance.
     pub fn get_ns_dir(&self) -> &NamespaceDir {
         &self.ns_dir
-    }
-
-    /// Returns the debug namespace creator for this instance.
-    pub fn get_debug_ns(&mut self) -> &mut IncomingNamespace {
-        &mut self.debug_ns
     }
 
     /// Returns the resolved structured configuration of this instance, if any.
