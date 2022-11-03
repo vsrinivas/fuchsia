@@ -4,7 +4,7 @@
 
 use {
     component_events::{
-        events::{DebugStarted, Event, EventSource, EventSubscription, Stopped},
+        events::{DebugStarted, EventStream, Stopped},
         matcher::EventMatcher,
     },
     fidl_fuchsia_io as fio,
@@ -16,11 +16,7 @@ use {
 
 #[fuchsia::test]
 async fn test_debug_started() {
-    let event_source = EventSource::new().unwrap();
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![DebugStarted::NAME, Stopped::NAME])])
-        .await
-        .unwrap();
+    let mut event_stream = EventStream::open().await.unwrap();
     let collection_name = "test-collection";
 
     // ScopedInstance kills the component when it goes outside of the scope.
@@ -89,11 +85,7 @@ async fn test_debug_started() {
 
 #[fuchsia::test]
 async fn test_debug_started_with_timeout() {
-    let event_source = EventSource::new().unwrap();
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![DebugStarted::NAME, Stopped::NAME])])
-        .await
-        .unwrap();
+    let mut event_stream = EventStream::open().await.unwrap();
     let collection_name = "test-collection";
 
     // ScopedInstance kills the component when it goes outside of the scope.

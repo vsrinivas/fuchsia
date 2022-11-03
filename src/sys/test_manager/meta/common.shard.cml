@@ -233,6 +233,7 @@
         {
             event_stream: [
                 "capability_requested_v2",
+                "debug_started_v2",
                 "destroyed_v2",
                 "directory_ready_v2",
                 "discovered_v2",
@@ -246,6 +247,7 @@
         {
             event_stream: [
                 "capability_requested_v2",
+                "debug_started_v2",
                 "destroyed_v2",
                 "directory_ready_v2",
                 "discovered_v2",
@@ -259,6 +261,7 @@
         {
             event_stream: [
                 "capability_requested_v2",
+                "debug_started_v2",
                 "destroyed_v2",
                 "directory_ready_v2",
                 "discovered_v2",
@@ -272,6 +275,7 @@
         {
             event_stream: [
                 "capability_requested_v2",
+                "debug_started_v2",
                 "destroyed_v2",
                 "directory_ready_v2",
                 "discovered_v2",

@@ -57,6 +57,9 @@
             event_stream: "directory_ready_v2",
         },
         {
+            event_stream: "debug_started_v2",
+        },
+        {
             event_stream: "started_v2",
         },
         {

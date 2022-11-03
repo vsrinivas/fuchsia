@@ -18,14 +18,11 @@
     ],
     use: [
         {
-            protocol: [ "fuchsia.sys2.EventSource" ],
-        },
-        {
-            event: [
-                "debug_started",
-                "stopped",
+            event_stream: [
+                "debug_started_v2",
+                "stopped_v2",
             ],
-            from: "framework",
+            from: "parent",
         },
     ],
     offer: [

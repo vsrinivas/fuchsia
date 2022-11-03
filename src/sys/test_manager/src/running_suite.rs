@@ -650,6 +650,7 @@ async fn get_realm(
                 .capability(
                     Capability::event_stream("directory_ready_v2").with_scope(&wrapper_realm),
                 )
+                .capability(Capability::event_stream("debug_started_v2").with_scope(&wrapper_realm))
                 .from(Ref::parent())
                 .to(&wrapper_realm),
         )
@@ -740,6 +741,12 @@ async fn get_realm(
                 )
                 .capability(
                     Capability::event_stream("stopped_v2")
+                        .with_scope(&test_root)
+                        .with_scope(&enclosing_env)
+                        .with_scope(&resolver),
+                )
+                .capability(
+                    Capability::event_stream("debug_started_v2")
                         .with_scope(&test_root)
                         .with_scope(&enclosing_env)
                         .with_scope(&resolver),
