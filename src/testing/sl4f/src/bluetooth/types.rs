@@ -946,19 +946,8 @@ impl TryInto<AdvertisingData> for FacadeArg {
             None => bail!("Value 'appearance' missing."),
         };
 
-        let tx_power_level = match self.value.get("tx_power_level") {
-            Some(v) => {
-                if v.is_null() {
-                    None
-                } else {
-                    match v.as_u64() {
-                        Some(c) => Some(c as i8),
-                        None => None,
-                    }
-                }
-            }
-            None => bail!("Value 'tx_power_level' missing."),
-        };
+        let include_tx_power_level =
+            self.value.get("tx_power_level").and_then(|v| Some(!v.is_null()));
 
         let service_data = match self.value.get("service_data") {
             Some(raw) => {
@@ -1014,11 +1003,11 @@ impl TryInto<AdvertisingData> for FacadeArg {
         Ok(AdvertisingData {
             name,
             appearance,
-            tx_power_level,
             service_uuids,
             service_data,
             manufacturer_data,
             uris: uris,
+            include_tx_power_level,
             ..AdvertisingData::EMPTY
         })
     }
@@ -1061,7 +1050,6 @@ impl TryInto<AdvertisingParameters> for FacadeArg {
             data: advertising_data,
             scan_response: scan_response,
             mode_hint: Some(AdvertisingModeHint::VeryFast),
-            connectable: Some(connectable),
             connection_options: conn_opts,
             ..AdvertisingParameters::EMPTY
         })
