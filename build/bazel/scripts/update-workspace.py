@@ -428,6 +428,17 @@ def main():
                 'workspace/.git/' + git_file,
                 os.path.join(fuchsia_git_dir, git_file))
 
+    # Generate a DownloaderUrlRewriter configuration file.
+    # See https://cs.opensource.google/bazel/bazel/+/master:src/main/java/com/google/devtools/build/lib/bazel/repository/downloader/UrlRewriterConfig.java;drc=63bc1c7d0853dc187e4b96a490d733fb29f79664;l=31
+    download_config = '''# Auto-generated - DO NOT EDIT!
+all_blocked_message Repository downloads are forbidden for Fuchsia platform builds
+block *
+'''
+    generated.add_file(
+        'download_config_file',
+        download_config,
+    )
+
     # Generate the content of .bazelrc
     bazelrc_content = '''# Auto-generated - DO NOT EDIT!
 
@@ -460,11 +471,15 @@ build:remote --host_platform=//build/rbe/bazel/config:platform
 # Enable BlzMod, i.e. support for MODULE.bazel files.
 common --experimental_enable_bzlmod
 '''
-
     bazelrc_content += '''
 # Save workspace rule events to a log file for later analysis.
 build --experimental_workspace_rules_log_file={log_file}
 '''.format(log_file=os.path.join(logs_dir, 'workspace-events.log'))
+
+    bazelrc_content += '''
+# Prevent repository downloads with custom downloader config file.
+common --experimental_downloader_config={config_file}
+'''.format(config_file=os.path.join(topdir, 'download_config_file'))
 
     generated.add_file('workspace/.bazelrc', bazelrc_content)
 
@@ -481,6 +496,7 @@ build --experimental_workspace_rules_log_file={log_file}
     bazel_launcher_content = r'''#!/bin/bash
 # Auto-generated - DO NOT EDIT!
 readonly _SCRIPT_DIR="$(cd "$(dirname "${{BASH_SOURCE[0]}}")" >/dev/null 2>&1 && pwd)"
+readonly _DOWNLOAD_CONFIG_FILE=${{_SCRIPT_DIR}}/{download_config_file}
 readonly _WORKSPACE_DIR="${{_SCRIPT_DIR}}/{workspace}"
 readonly _OUTPUT_BASE="${{_SCRIPT_DIR}}/{output_base}"
 readonly _OUTPUT_USER_ROOT="${{_SCRIPT_DIR}}/{output_user_root}"
@@ -539,6 +555,7 @@ cd "${{_WORKSPACE_DIR}}" && USER=unused-bazel-build-user {bazel_bin_path} \
         ninja_prebuilt=os.path.abspath(ninja_binary),
         bazel_bin_path=os.path.abspath(bazel_bin),
         logs_dir=os.path.abspath(logs_dir),
+        download_config_file='download_config_file',
         workspace=os.path.relpath(workspace_dir, topdir),
         output_base=os.path.relpath(output_base_dir, topdir),
         output_user_root=os.path.relpath(output_user_root, topdir))
