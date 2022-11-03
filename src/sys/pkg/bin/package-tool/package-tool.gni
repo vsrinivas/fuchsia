@@ -1,0 +1,86 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+
+# Publish package manifests to a repository.
+#
+# Parameters
+#
+#   output_repository_dir (required)
+#     A publish packages to this directory path.
+#
+#   package_list_manifests (required)
+#     A list of package list manifest paths.
+#
+#   initial_trusted_root_metadata (optional)
+#     Initialize TUF trust with this root metadata. Defaults to
+#     ${repository_dir}/repository/1.root.json if unspecified.
+template("package_tool_repository_publish") {
+  assert(defined(invoker.output_repository_dir) &&
+             invoker.output_repository_dir != "",
+         "output_repository_dir must be defined")
+  _output_repository_dir = invoker.output_repository_dir
+
+  assert(defined(invoker.package_list_manifests),
+         "package_list_manifests must be defined")
+
+  compiled_action(target_name) {
+    tool = "//src/sys/pkg/bin/package-tool"
+    tool_output_name = "package-tool"
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "data_deps",
+                             "inputs",
+                             "testonly",
+                             "visibility",
+                             "metadata",
+                           ])
+
+    # The contents of these folders is dynamic, and managed entirely by this action.
+    hermetic_action_ignored_prefixes =
+        [ "${_output_repository_dir}/repository" ]
+
+    sources = invoker.package_list_manifests
+
+    depfile = "${target_out_dir}/${target_name}.d"
+
+    outputs = [
+      # Note: the first output is the one that appears in the depfile.
+      "${_output_repository_dir}/repository/targets.json",
+      "${_output_repository_dir}/repository/snapshot.json",
+      "${_output_repository_dir}/repository/timestamp.json",
+    ]
+
+    args = [
+      "repository",
+      "publish",
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
+      "--clean",
+      "--time-versioning",
+    ]
+
+    if (defined(invoker.initial_trusted_root_metadata)) {
+      assert(invoker.initial_trusted_root_metadata != "",
+             "initial_trusted_root_metadata cannot be empty")
+      args += [
+        "--trusted-root",
+        rebase_path(invoker.initial_trusted_root_metadata, root_build_dir),
+      ]
+    }
+
+    if (defined(sources)) {
+      foreach(package_list, invoker.package_list_manifests) {
+        args += [
+          "--package-list",
+          rebase_path(package_list, root_build_dir),
+        ]
+      }
+    }
+
+    args += [ rebase_path(_output_repository_dir, root_build_dir) ]
+  }
+}

@@ -7,8 +7,10 @@ import("//build/images/args.gni")
 import("//build/packages/package_metadata.gni")
 import("//build/product.gni")
 import("//build/security.gni")
+import("//src/sys/pkg/bin/package-tool/package-tool.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
 import("//src/sys/pkg/bin/system-updater/epoch/generate_epoch.gni")
+import("//src/sys/pkg/repositories/devhost/devhost.gni")
 
 assert(current_toolchain == default_toolchain,
        "//build/images/* are only valid in the Fuchsia toolchain")
@@ -167,18 +169,39 @@ if (use_bringup_assembly) {
     }
   }
 
-  # initialize and prepare the package repository.
-  pm_prepare_publish("prepare_publish") {
+  _output_repository_dir = "${root_build_dir}/amber-files"
+
+  # Publish all packages to the package repository.
+  devhost_repository_publish("publish") {
     testonly = true
+
+    output_repository_dir = _output_repository_dir
+
+    deps = [ ":all_package_manifests.list" ]
+    package_list_manifests = [ all_package_manifests_list ]
+
+    metadata = {
+      package_repository = [
+        {
+          path = rebase_path("${_output_repository_dir}/repository",
+                             root_build_dir)
+          targets =
+              rebase_path("${_output_repository_dir}/repository/targets.json",
+                          root_build_dir)
+          blobs = rebase_path("${_output_repository_dir}/repository/blobs",
+                              root_build_dir)
+        },
+      ]
+    }
   }
 
-  # publish all packages to the package repository.
-  pm_publish("publish") {
+  # Allow the incremental publisher to stage the repository keys and root metadata so it can publish
+  # without needing to do a full build.
+  group("prepare_publish") {
     testonly = true
     deps = [
-      ":all_package_manifests.list",
-      ":prepare_publish",
+      ":publish_prepare_repository_keys",
+      ":publish_prepare_repository_root_metadata",
     ]
-    inputs = [ all_package_manifests_list ]
   }
 }

@@ -1,0 +1,152 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/pkg/bin/package-tool/package-tool.gni")
+
+_devhost_keys_dir = "//src/sys/pkg/repositories/devhost/keys"
+_devhost_metadata_dir = "//src/sys/pkg/repositories/devhost/metadata"
+
+# The initial trusted root metadata, which is used to establish the TUF chain
+# of trust.
+_devhost_initial_trusted_root_metadata = "9.root.json"
+
+# Copy the devhost keys into a directory.
+#
+# Parameters
+#
+#   output_keys_dir (required)
+#     Copy the devhost keys into this directory.
+template("devhost_keys") {
+  assert(defined(invoker.output_keys_dir) && invoker.output_keys_dir != "",
+         "output_keys_dir must be defined")
+  _output_keys_dir = invoker.output_keys_dir
+
+  # These files are copied from amber_devhost_keys_dir into $amber_keys_dir/keys.
+  copy(target_name) {
+    sources = [
+      "${_devhost_keys_dir}/snapshot.json",
+      "${_devhost_keys_dir}/targets.json",
+      "${_devhost_keys_dir}/timestamp.json",
+    ]
+    outputs = [ "${_output_keys_dir}/{{source_file_part}}" ]
+
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+  }
+}
+
+# Copy the devhost root metadata into a directory.
+#
+# Parameters
+#
+#   output_metadata_dir (required)
+#     Copy the devhost root metadata into this directory.
+template("devhost_root_metadata") {
+  assert(
+      defined(invoker.output_metadata_dir) && invoker.output_metadata_dir != "",
+      "output_metadata_dir must be defined")
+  _output_metadata_dir = invoker.output_metadata_dir
+
+  # TODO(fxbug.dev/38262) In order to be TUF-1.0 conformant, we need to have
+  # versioned-prefixed root metadata files. Fow now this just hard-codes
+  # copying the current metadata to the correct place, but long term this
+  # should be computed so we don't forget to copy the file when we rotate the
+  # root metadata.
+  copy("${target_name}__unversioned_root_metadata") {
+    sources =
+        [ "${_devhost_metadata_dir}/${_devhost_initial_trusted_root_metadata}" ]
+    outputs = [ "${_output_metadata_dir}/root.json" ]
+
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+  }
+
+  # TODO(fxbug.dev/38262) See the comment on `unversioned_root_metadata`.
+  copy(target_name) {
+    sources = [
+      "${_devhost_metadata_dir}/1.root.json",
+      "${_devhost_metadata_dir}/2.root.json",
+      "${_devhost_metadata_dir}/3.root.json",
+      "${_devhost_metadata_dir}/4.root.json",
+      "${_devhost_metadata_dir}/5.root.json",
+      "${_devhost_metadata_dir}/6.root.json",
+      "${_devhost_metadata_dir}/7.root.json",
+      "${_devhost_metadata_dir}/8.root.json",
+      "${_devhost_metadata_dir}/9.root.json",
+    ]
+    outputs = [ "${_output_metadata_dir}/{{source_file_part}}" ]
+    deps = [ ":${target_name}__unversioned_root_metadata" ]
+
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+  }
+}
+
+# Publish package manifests to a devhost-based repository.
+#
+# This will create a devhost that's initialized with the devhost keys and root metadata, then
+# publish all package manifests to it.
+#
+# Parameters
+#
+#   output_repository_dir (required)
+#     A publish packages to this directory path.
+#
+#   package_list_manifests (required)
+#     A list of package list manifest paths.
+template("devhost_repository_publish") {
+  assert(defined(invoker.output_repository_dir) &&
+             invoker.output_repository_dir != "",
+         "output_repository_dir must be defined")
+
+  devhost_keys("${target_name}_prepare_repository_keys") {
+    testonly = true
+    output_keys_dir = "${invoker.output_repository_dir}/keys"
+  }
+
+  devhost_root_metadata("${target_name}_prepare_repository_root_metadata") {
+    testonly = true
+    output_metadata_dir = "${invoker.output_repository_dir}/repository"
+  }
+
+  package_tool_repository_publish(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "data_deps",
+                             "deps",
+                             "inputs",
+                             "metadata",
+                             "output_repository_dir",
+                             "package_list_manifests",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [
+      ":${target_name}_prepare_repository_keys",
+      ":${target_name}_prepare_repository_root_metadata",
+    ]
+
+    if (!defined(inputs)) {
+      inputs = []
+    }
+    inputs += get_target_outputs(":${target_name}_prepare_repository_keys")
+    inputs +=
+        get_target_outputs(":${target_name}_prepare_repository_root_metadata")
+
+    initial_trusted_root_metadata = "${invoker.output_repository_dir}/repository/${_devhost_initial_trusted_root_metadata}"
+  }
+}
