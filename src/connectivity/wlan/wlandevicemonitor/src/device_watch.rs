@@ -107,20 +107,12 @@ mod tests {
         pin_utils::pin_mut,
         std::convert::TryInto,
         wlan_common::{ie::*, test_utils::ExpectWithin},
+        wlan_dev::DeviceEnv,
         wlantap_client,
         zerocopy::AsBytes,
     };
 
-    #[cfg(feature = "v2")]
-    use wlan_dev::DeviceEnv;
-
-    #[cfg(not(feature = "v2"))]
-    use isolated_devmgr::IsolatedDeviceEnv;
-
-    // TODO(78050): When all WLAN components migrate to Component Framework v2 and the v1 manifests
-    // are deprecated, enable this test.
     #[test]
-    #[cfg(feature = "v2")]
     fn watch_phys() {
         let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let phy_watcher =
@@ -151,32 +143,6 @@ mod tests {
         // dropped and cause the phy device to begin unbinding.
         let _wlantap_phy =
             wlantap.create_phy(create_wlantap_config()).expect("failed to create PHY");
-        exec.run_singlethreaded(async {
-            phy_watcher
-                .next()
-                .expect_within(5.seconds(), "phy_watcher did not respond")
-                .await
-                .expect("phy_watcher ended without yielding a phy")
-                .expect("phy_watcher returned an error");
-            if let Poll::Ready(..) = poll!(phy_watcher.next()) {
-                panic!("phy_watcher found more than one phy");
-            }
-        })
-    }
-
-    #[test]
-    #[cfg(not(feature = "v2"))]
-    fn watch_phys() {
-        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
-        let phy_watcher =
-            watch_phy_devices::<IsolatedDeviceEnv>().expect("Failed to create phy_watcher");
-        pin_mut!(phy_watcher);
-        let wlantap = wlantap_client::Wlantap::open_from_isolated_devmgr()
-            .expect("Failed to connect to wlantapctl");
-        // Create an intentionally unused variable instead of a plain
-        // underscore. Otherwise, this end of the channel will be
-        // dropped and cause the phy device to begin unbinding.
-        let _wlantap_phy = wlantap.create_phy(create_wlantap_config());
         exec.run_singlethreaded(async {
             phy_watcher
                 .next()

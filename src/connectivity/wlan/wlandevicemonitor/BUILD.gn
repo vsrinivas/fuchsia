@@ -70,8 +70,6 @@ wlandevicemonitor_test_deps = [
   "//third_party/rust_crates:zerocopy",
 ]
 
-# Because the IsolatedDevMgr works differently in Components Framework v2, a separate build rule is
-# needed so that different test behaviors can be conditionally compiled in.
 rustc_binary("bin") {
   name = "wlandevicemonitor"
   with_unit_tests = true
@@ -80,7 +78,6 @@ rustc_binary("bin") {
   deps = wlandevicemonitor_deps
   test_deps = wlandevicemonitor_test_deps
   sources = wlandevicemonitor_srcs
-  features = [ "v2" ]
 }
 
 fuchsia_package_with_single_component("wlandevicemonitor") {
@@ -91,24 +88,23 @@ fuchsia_package_with_single_component("wlandevicemonitor") {
   manifest = "meta/wlandevicemonitor.cml"
 }
 
-# This component orchestrates the v2 components that are required in order to
-# run the wlandevicemonitor unit tests.
 fuchsia_component("wlandevicemonitor-test-component") {
   testonly = true
   deps = [
     ":bin_test",
+
+    # TODO(fxbug.dev/113869): Replace this dependency with a call
+    # to DriverTestRealm.Start() in the tests themselves.
     "//sdk/lib/driver_test_realm/simple",
     "//src/connectivity/wlan/testing:wlan_test_driver_deps",
   ]
   manifest = "meta/wlandevicemonitor_bin_test.cml"
 }
 
-# This component groups up all of the dependencies to run the v2 unit tests.
 fuchsia_test_package("wlandevicemonitor-tests") {
   test_components = [ ":wlandevicemonitor-test-component" ]
 }
 
-# core_shard for integrating wlandevicemonitor with core.gni.
 core_shard("wlandevicemonitor-core-shard") {
   shard_file = "meta/wlandevicemonitor.core_shard.cml"
 }
