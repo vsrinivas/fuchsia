@@ -12,7 +12,7 @@ if (is_host) {
     with_unit_tests = true
 
     deps = [
-      "//src/developer/ffx/daemon:lib",
+      "//src/developer/ffx/config:lib",
       "//src/lib/fuchsia-async",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:serde",

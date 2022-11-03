@@ -9,8 +9,8 @@ use {
     fuchsia_async::{unblock, TimeoutExt, Timer},
     regex::Regex,
     std::fs::{create_dir_all, File},
-    std::io::Write,
     std::io::{BufRead, BufReader},
+    std::io::{Read, Write},
     std::path::Path,
     std::process::Stdio,
     std::sync::mpsc::channel,
@@ -74,10 +74,10 @@ pub mod include_target {
                 "--",
                 "--run",
                 "/boot/bin/crasher",
-            ])
+            ])?
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::null())
+            .stderr(Stdio::piped())
             .spawn()?;
 
         let (sender, receiver) = channel();
@@ -89,7 +89,11 @@ pub mod include_target {
                 let mut line = String::new();
                 let size = stdout_reader.read_line(&mut line)?;
                 if size == 0 {
-                    ffx_bail!("Unexpected EOF");
+                    let mut stderr = String::new();
+                    match BufReader::new(child.stderr.take().unwrap()).read_to_string(&mut stderr) {
+                        Ok(_) => ffx_bail!("Unexpected EOF (stderr = {:?})", stderr),
+                        Err(e) => ffx_bail!("Unexpected EOF (stderr unreported: {:?})", e),
+                    }
                 }
 
                 let possible_patterns = [

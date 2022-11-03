@@ -27,7 +27,7 @@ pub(crate) async fn test_config_flag() -> Result<()> {
 
     // This should not terminate the daemon just started, as it won't
     // share an overnet socket with it.
-    let mut ascendd_path2 = isolate.ascendd_path.clone();
+    let mut ascendd_path2 = isolate.ascendd_path().clone();
     ascendd_path2.set_extension("2");
     let _out = isolate
         .ffx(&[

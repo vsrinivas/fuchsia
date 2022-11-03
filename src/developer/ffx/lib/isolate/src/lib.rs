@@ -9,14 +9,10 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::Child;
-use std::process::Command;
 use std::process::ExitStatus;
 use std::process::Stdio;
 use std::time::SystemTime;
 use tempfile::TempDir;
-
-// TODO(raggi): extract this too, it's a very large dependency to bring in to this lib
-use ffx_daemon::is_daemon_running_at_path;
 
 #[derive(Debug)]
 pub struct CommandOutput {
@@ -27,13 +23,8 @@ pub struct CommandOutput {
 
 /// Isolate provides an abstraction around an isolated configuration environment for `ffx`.
 pub struct Isolate {
-    _tmpdir: TempDir,
-
-    ffx_path: PathBuf,
-    home_dir: PathBuf,
-    xdg_config_home: PathBuf,
-    pub ascendd_path: PathBuf,
-    ssh_key: PathBuf,
+    tmpdir: TempDir,
+    env_ctx: ffx_config::EnvironmentContext,
 }
 
 impl Isolate {
@@ -45,8 +36,6 @@ impl Isolate {
     /// remove all isolate files.
     pub async fn new(name: &str, ffx_path: PathBuf, ssh_key: PathBuf) -> Result<Isolate> {
         let tmpdir = tempfile::Builder::new().prefix(name).tempdir()?;
-        let home_dir = tmpdir.path().join("user-home");
-        let tmp_dir = tmpdir.path().join("tmp");
 
         let log_dir = if let Ok(d) = std::env::var("FUCHSIA_TEST_OUTDIR") {
             PathBuf::from(d)
@@ -54,27 +43,16 @@ impl Isolate {
             tmpdir.path().join("log")
         };
 
-        for dir in [&home_dir, &tmp_dir, &log_dir].iter() {
-            std::fs::create_dir_all(dir)?;
-        }
-
-        let ascendd_path = tmp_dir.join("ascendd");
-
-        let metrics_path = home_dir.join(".fuchsia/metrics");
+        std::fs::create_dir_all(&log_dir)?;
+        let metrics_path = tmpdir.path().join("metrics_home/.fuchsia/metrics");
         std::fs::create_dir_all(&metrics_path)?;
+
+        // TODO(114011): See if we should get isolate-dir itself to deal with metrics isolation.
+
         // Mark that analytics are disabled
         std::fs::write(metrics_path.join("analytics-status"), "0")?;
         // Mark that the notice has been given
         std::fs::write(metrics_path.join("ffx"), "1")?;
-
-        let xdg_config_home = if cfg!(target_os = "macos") {
-            home_dir.join("Library/Preferences")
-        } else {
-            home_dir.join(".local/share")
-        };
-
-        let user_config_dir = xdg_config_home.join("Fuchsia/ffx/config");
-        std::fs::create_dir_all(&user_config_dir)?;
 
         let mut mdns_discovery = true;
         let mut target_addr = None;
@@ -85,29 +63,22 @@ impl Isolate {
             mdns_discovery = false;
         }
         std::fs::write(
-            user_config_dir.join("config.json"),
+            tmpdir.path().join(".ffx_user_config.json"),
             serde_json::to_string(&UserConfig::for_test(
                 log_dir.to_string_lossy(),
-                ascendd_path.to_string_lossy(),
                 target_addr,
                 mdns_discovery,
             ))?,
         )?;
 
         std::fs::write(
-            user_config_dir.join(".ffx_env"),
+            tmpdir.path().join(".ffx_env"),
             serde_json::to_string(&FfxEnvConfig::for_test(
-                user_config_dir.join("config.json").to_string_lossy(),
+                tmpdir.path().join(".ffx_user_config.json").to_string_lossy(),
             ))?,
         )?;
 
-        Ok(Isolate { _tmpdir: tmpdir, ffx_path, home_dir, xdg_config_home, ascendd_path, ssh_key })
-    }
-
-    pub fn ffx_cmd(&self, args: &[&str]) -> std::process::Command {
-        let mut cmd = Command::new(&self.ffx_path);
-        cmd.args(args);
-        cmd.env_clear();
+        let mut env_vars = HashMap::new();
 
         // Pass along all temp related variables, so as to avoid anything
         // falling back to writing into /tmp. In our CI environment /tmp is
@@ -115,12 +86,19 @@ impl Isolate {
         // dedicated temporary areas.
         for (var, val) in std::env::vars() {
             if var.contains("TEMP") || var.contains("TMP") {
-                cmd.env(var, val);
+                let _ = env_vars.insert(var, val);
             }
         }
 
-        cmd.env("HOME", &*self.home_dir);
-        cmd.env("XDG_CONFIG_HOME", &*self.xdg_config_home);
+        let _ = env_vars.insert(
+            "HOME".to_owned(),
+            tmpdir.path().join("metrics_home").to_string_lossy().to_string(),
+        );
+
+        let _ = env_vars.insert(
+            ffx_config::EnvironmentContext::FFX_BIN_ENV.to_owned(),
+            ffx_path.to_string_lossy().to_string(),
+        );
 
         // On developer systems, FUCHSIA_SSH_KEY is normally not set, and so ffx
         // looks up an ssh key via a $HOME heuristic, however that is broken by
@@ -128,19 +106,37 @@ impl Isolate {
         // variable natively, so, fetching the ssh key path from the config, and
         // then passing that expanded path along explicitly is sufficient to
         // ensure that the isolate has a viable key path.
-        cmd.env("FUCHSIA_SSH_KEY", self.ssh_key.to_string_lossy().to_string());
+        let _ =
+            env_vars.insert("FUCHSIA_SSH_KEY".to_owned(), ssh_key.to_string_lossy().to_string());
 
-        cmd
+        let env_ctx = ffx_config::EnvironmentContext::isolated(
+            tmpdir.path().to_owned(),
+            env_vars,
+            ffx_config::ConfigMap::new(),
+            Some(tmpdir.path().join(".ffx_env").to_owned()),
+        );
+
+        Ok(Isolate { tmpdir, env_ctx })
+    }
+
+    pub fn ascendd_path(&self) -> PathBuf {
+        self.tmpdir.path().join("daemon.sock")
+    }
+
+    pub fn ffx_cmd(&self, args: &[&str]) -> Result<std::process::Command> {
+        let mut cmd = self.env_ctx.rerun_prefix()?;
+        cmd.args(args);
+        Ok(cmd)
     }
 
     pub fn ffx_spawn(&self, args: &[&str]) -> Result<Child> {
-        let mut cmd = self.ffx_cmd(args);
+        let mut cmd = self.ffx_cmd(args)?;
         let child = cmd.stdout(Stdio::null()).stderr(Stdio::null()).spawn()?;
         Ok(child)
     }
 
     pub async fn ffx(&self, args: &[&str]) -> Result<CommandOutput> {
-        let mut cmd = self.ffx_cmd(args);
+        let mut cmd = self.ffx_cmd(args)?;
 
         fuchsia_async::unblock(move || {
             let out = cmd.output().context("failed to execute")?;
@@ -154,15 +150,17 @@ impl Isolate {
 
 impl Drop for Isolate {
     fn drop(&mut self) {
-        if is_daemon_running_at_path(&self.ascendd_path) {
-            let mut cmd = self.ffx_cmd(&["daemon", "stop"]);
-            cmd.stdin(Stdio::null());
-            cmd.stdout(Stdio::null());
-            cmd.stderr(Stdio::null());
-            match cmd.spawn().map(|mut child| child.wait()) {
-                Ok(_) => {}
-                Err(e) => tracing::info!("Failure calling daemon stop: {:#?}", e),
+        match self.ffx_cmd(&["daemon", "stop"]) {
+            Ok(mut cmd) => {
+                cmd.stdin(Stdio::null());
+                cmd.stdout(Stdio::null());
+                cmd.stderr(Stdio::null());
+                match cmd.spawn().map(|mut child| child.wait()) {
+                    Ok(_) => {}
+                    Err(e) => tracing::info!("Failure calling daemon stop: {:#?}", e),
+                }
             }
+            Err(e) => tracing::info!("Failure forming daemon stop command: {:#?}", e),
         }
     }
 }
@@ -170,7 +168,6 @@ impl Drop for Isolate {
 #[derive(Serialize)]
 struct UserConfig<'a> {
     log: UserConfigLog<'a>,
-    overnet: UserConfigOvernet<'a>,
     test: UserConfigTest,
     targets: UserConfigTargets<'a>,
     discovery: UserConfigDiscovery,
@@ -180,11 +177,6 @@ struct UserConfig<'a> {
 struct UserConfigLog<'a> {
     enabled: bool,
     dir: Cow<'a, str>,
-}
-
-#[derive(Serialize)]
-struct UserConfigOvernet<'a> {
-    socket: Cow<'a, str>,
 }
 
 #[derive(Serialize)]
@@ -209,19 +201,13 @@ struct UserConfigMdns {
 }
 
 impl<'a> UserConfig<'a> {
-    fn for_test(
-        dir: Cow<'a, str>,
-        socket: Cow<'a, str>,
-        target: Option<Cow<'a, str>>,
-        discovery: bool,
-    ) -> Self {
+    fn for_test(dir: Cow<'a, str>, target: Option<Cow<'a, str>>, discovery: bool) -> Self {
         let mut manual_targets = HashMap::new();
         if !target.is_none() {
             manual_targets.insert(target.unwrap(), None);
         }
         Self {
             log: UserConfigLog { enabled: true, dir },
-            overnet: UserConfigOvernet { socket },
             test: UserConfigTest { is_isolated: true },
             targets: UserConfigTargets { manual: manual_targets },
             discovery: UserConfigDiscovery { mdns: UserConfigMdns { enabled: discovery } },

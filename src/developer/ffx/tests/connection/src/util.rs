@@ -98,7 +98,7 @@ async fn launch(
         if !output.status.success() {
             Err(anyhow!("Failed to start component: {:?}", output))
         } else {
-            let ascendd_path = isolate.ascendd_path.to_owned();
+            let ascendd_path = isolate.ascendd_path().to_owned();
             let (rcs_proxy, daemon_task) = connect_to_rcs(hoist, nodename, &ascendd_path).await?;
             Ok(LaunchedComponentConnector {
                 nodename: nodename.to_string(),
