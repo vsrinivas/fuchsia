@@ -1,0 +1,24 @@
+[package]
+name = "type_hash_macros"
+version = "0.3.0"
+authors = ["Peter Hall <peterjoel@gmail.com"]
+edition = "2018"
+license = "MIT"
+description = """
+Internal macro definitions. They may not work properly if not used via the type_hash crate.
+"""
+documentation = "https://docs.rs/type_hash"
+homepage = "https://github.com/peterjoel/type_hash"
+repository = "https://github.com/peterjoel/type_hash"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+either = "1.6"
+proc-macro2 = "1"
+quote = "1"
+syn = { version = "1", features = ["full"] }
+
+[dev-dependencies]
+syn = { version = "1", features = ["extra-traits"] }

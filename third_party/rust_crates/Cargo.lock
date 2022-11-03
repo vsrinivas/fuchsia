@@ -1072,9 +1072,9 @@ dependencies = [
 
 [[package]]
 name = "either"
-version = "1.5.0"
+version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3be565ca5c557d7f59e7cfcf1844f9e3033650c929c6566f511e8005f205c1d0"
+checksum = "90e5c1c8368803113bf0c9584fc495a58b86dc8a29edbf8fe877d21d9507e797"
 
 [[package]]
 name = "elliptic-curve"
@@ -1225,9 +1225,9 @@ dependencies = [
 
 [[package]]
 name = "fnv"
-version = "1.0.6"
+version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2fad85553e09a6f881f739c29f0b00b0f01357c743266d478b68951ce23285f3"
+checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
 name = "fragile"
@@ -1477,6 +1477,9 @@ dependencies = [
  "ttf-parser",
  "tuf",
  "tui",
+ "type_hash",
+ "type_hash_core",
+ "type_hash_macros",
  "typed-builder",
  "unic-char-range",
  "unic-ucd-block",
@@ -4357,6 +4360,31 @@ dependencies = [
  "termion",
  "unicode-segmentation",
  "unicode-width",
+]
+
+[[package]]
+name = "type_hash"
+version = "0.3.0"
+dependencies = [
+ "type_hash_core",
+ "type_hash_macros",
+]
+
+[[package]]
+name = "type_hash_core"
+version = "0.2.0"
+dependencies = [
+ "fnv",
+]
+
+[[package]]
+name = "type_hash_macros"
+version = "0.3.0"
+dependencies = [
+ "either",
+ "proc-macro2 1.0.39",
+ "quote 1.0.18",
+ "syn 1.0.98",
 ]
 
 [[package]]

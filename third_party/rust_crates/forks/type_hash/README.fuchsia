@@ -1,0 +1,18 @@
+Source: https://github.com/peterjoel/type_hash
+
+* This crate creates hashes (fingerprints) of the layout of rust structs.
+* It's used to identify format-breaking changes in Fxfs.
+* It is 'forked' here to fix a misconfiguration until it can be addressed upstream.
+* This is a virtual manifest consisting of three package.
+* Nothing else is special about this.
+
+The misconfiguration relates to mixing of versions:
+  1. type_hash v0.3.0 depends on type_hash_core v0.2.0.
+  2. type_hash_core v0.2.0 lacks a repository reference on crates.io, but has one in the latest git repo.
+  3. Fuchsia's license checker depends on this repository reference to find the LICENSE file for a crate.
+
+Also note:
+ * the v0.2.0 version on crates.io also specifies 'license="MIT"' in its Cargo.toml.
+ * this virtual manifest contains a valid LICENSE file.
+
+We can drop this fork when upstream is updated to address these issues.

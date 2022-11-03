@@ -1,0 +1,3 @@
+
+[workspace]
+members = ["core", "type_hash", "macros"]

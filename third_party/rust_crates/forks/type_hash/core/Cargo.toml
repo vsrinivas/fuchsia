@@ -1,0 +1,15 @@
+[package]
+name = "type_hash_core"
+version = "0.2.0"
+authors = ["Peter Hall <peterjoel@gmail.com"]
+edition = "2018"
+license = "MIT"
+description = """
+Internal types for the type_hash crate.
+"""
+documentation = "https://docs.rs/type_hash"
+homepage = "https://github.com/peterjoel/type_hash"
+repository = "https://github.com/peterjoel/type_hash"
+
+[dependencies]
+fnv = "1.0.7"

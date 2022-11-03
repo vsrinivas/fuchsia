@@ -1,0 +1,24 @@
+[package]
+name = "type_hash"
+version = "0.3.0"
+authors = ["Peter Hall <peterjoel@gmail.com>"]
+edition = "2018"
+license = "MIT"
+description = """
+Generate a hash for a Rust type.
+
+The primary use-case for this crate is for detecting differences in message
+types between versions of a crate.
+
+The `TypeHash` trait is implemented for most built-in types and a derive macro
+is provided, for implementing it for your own types.
+"""
+documentation = "https://docs.rs/type_hash"
+homepage = "https://github.com/peterjoel/type_hash"
+repository = "https://github.com/peterjoel/type_hash"
+keywords = ["type", "struct", "hash", "macro"]
+categories = ["data-structures", "rust-patterns"]
+
+[dependencies]
+type_hash_core = { path = "../core" }
+type_hash_macros = { path = "../macros" }

@@ -243,7 +243,7 @@ group("ecdsa") {
 }
 
 group("either") {
-  public_deps = [ ":either-v1_5_0" ]
+  public_deps = [ ":either-v1_8_0" ]
 }
 
 group("elliptic-curve") {
@@ -1002,6 +1002,18 @@ group("tuf") {
 
 group("tui") {
   public_deps = [ ":tui-v0_16_0" ]
+}
+
+group("type_hash") {
+  public_deps = [ ":type_hash-v0_3_0" ]
+}
+
+group("type_hash_core") {
+  public_deps = [ ":type_hash_core-v0_2_0" ]
+}
+
+group("type_hash_macros") {
+  public_deps = [ ":type_hash_macros-v0_3_0($host_toolchain)" ]
 }
 
 group("typed-builder") {
@@ -3188,7 +3200,7 @@ rust_library("darling_core-v0_12_4") {
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
-  deps += [ ":fnv-v1_0_6" ]
+  deps += [ ":fnv-v1_0_7" ]
   deps += [ ":ident_case-v1_0_1" ]
   deps += [ ":proc-macro2-v1_0_39" ]
   deps += [ ":quote-v1_0_18" ]
@@ -3704,10 +3716,10 @@ rust_library("ecdsa-v0_13_4") {
   visibility = [ ":*" ]
 }
 
-rust_library("either-v1_5_0") {
+rust_library("either-v1_8_0") {
   crate_name = "either"
   crate_root = "//third_party/rust_crates/vendor/either/src/lib.rs"
-  output_name = "either-22a1bbc0eb940e7e"
+  output_name = "either-f4134ec734cf166b"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
@@ -3716,9 +3728,9 @@ rust_library("either-v1_5_0") {
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=22a1bbc0eb940e7e",
-    "-Cextra-filename=-22a1bbc0eb940e7e",
+    "--edition=2018",
+    "-Cmetadata=f4134ec734cf166b",
+    "-Cextra-filename=-f4134ec734cf166b",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"use_std\"",
   ]
@@ -4091,10 +4103,10 @@ rust_library("float-cmp-v0_8_0") {
   visibility = [ ":*" ]
 }
 
-rust_library("fnv-v1_0_6") {
+rust_library("fnv-v1_0_7") {
   crate_name = "fnv"
   crate_root = "//third_party/rust_crates/vendor/fnv/lib.rs"
-  output_name = "fnv-aea2659b6e57ee72"
+  output_name = "fnv-8fb9daf136cad9d8"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
@@ -4104,8 +4116,10 @@ rust_library("fnv-v1_0_6") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=aea2659b6e57ee72",
-    "-Cextra-filename=-aea2659b6e57ee72",
+    "-Cmetadata=8fb9daf136cad9d8",
+    "-Cextra-filename=-8fb9daf136cad9d8",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"std\"",
   ]
 
   visibility = [ ":*" ]
@@ -4879,7 +4893,7 @@ rust_library("http-v0_2_4") {
 
   deps = []
   deps += [ ":bytes-v1_0_1" ]
-  deps += [ ":fnv-v1_0_6" ]
+  deps += [ ":fnv-v1_0_7" ]
   deps += [ ":itoa-v0_4_3" ]
 
   rustenv = []
@@ -5293,7 +5307,7 @@ rust_library("itertools-v0_10_1") {
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
-  deps += [ ":either-v1_5_0" ]
+  deps += [ ":either-v1_8_0" ]
 
   rustenv = []
 
@@ -5317,7 +5331,7 @@ rust_library("itertools-v0_8_0") {
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
-  deps += [ ":either-v1_5_0" ]
+  deps += [ ":either-v1_8_0" ]
 
   rustenv = []
 
@@ -8325,7 +8339,7 @@ rust_library("rayon-v1_3_0") {
 
   deps = []
   deps += [ ":crossbeam-deque-v0_7_4" ]
-  deps += [ ":either-v1_5_0" ]
+  deps += [ ":either-v1_8_0" ]
   deps += [ ":rayon-core-v1_7_0" ]
 
   rustenv = []
@@ -9100,7 +9114,7 @@ rust_library("rusty-fork-v0_3_0") {
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
-  deps += [ ":fnv-v1_0_6" ]
+  deps += [ ":fnv-v1_0_7" ]
   deps += [ ":quick-error-v1_2_2" ]
   deps += [ ":tempfile-v3_2_0" ]
   deps += [ ":wait-timeout-v0_2_0" ]
@@ -11198,6 +11212,73 @@ rust_library("tui-v0_16_0") {
     "-Cextra-filename=-60a74c0b9b1f575e",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"termion\"",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_library("type_hash-v0_3_0") {
+  crate_name = "type_hash"
+  crate_root = "//third_party/rust_crates/forks/type_hash/type_hash/src/lib.rs"
+  output_name = "type_hash-bd6fe0fb07664572"
+  configs -= [ "//build/config/rust:2018_idioms" ]
+
+  deps = []
+  deps += [ ":type_hash_core-v0_2_0" ]
+  deps += [ ":type_hash_macros-v0_3_0($host_toolchain)" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=bd6fe0fb07664572",
+    "-Cextra-filename=-bd6fe0fb07664572",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_library("type_hash_core-v0_2_0") {
+  crate_name = "type_hash_core"
+  crate_root = "//third_party/rust_crates/forks/type_hash/core/src/lib.rs"
+  output_name = "type_hash_core-23ddea752b0ad3e"
+  configs -= [ "//build/config/rust:2018_idioms" ]
+
+  deps = []
+  deps += [ ":fnv-v1_0_7" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=23ddea752b0ad3e",
+    "-Cextra-filename=-23ddea752b0ad3e",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_proc_macro("type_hash_macros-v0_3_0") {
+  crate_name = "type_hash_macros"
+  crate_root = "//third_party/rust_crates/forks/type_hash/macros/src/lib.rs"
+  output_name = "type_hash_macros-712b3e7f99087b23"
+  configs -= [ "//build/config/rust:2018_idioms" ]
+
+  deps = []
+  deps += [ ":either-v1_8_0" ]
+  deps += [ ":proc-macro2-v1_0_39" ]
+  deps += [ ":quote-v1_0_18" ]
+  deps += [ ":syn-v1_0_98" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=712b3e7f99087b23",
+    "-Cextra-filename=-712b3e7f99087b23",
   ]
 
   visibility = [ ":*" ]
