@@ -138,6 +138,29 @@ TEST_F(ClientTest, ConnectsToDefault) {
   ASSERT_EQ(result_string, "default-foo: hello");
 }
 
+TEST_F(ClientTest, ConnectsToDefaultExternalServerEnd) {
+  zx::result<EchoService::ServiceClient> open_result = component::OpenServiceAt<EchoService>(svc_);
+  ASSERT_TRUE(open_result.is_ok());
+
+  EchoService::ServiceClient service = std::move(open_result.value());
+
+  zx::result endpoints = ::fidl::CreateEndpoints<::fidl_service_test::Echo>();
+  ASSERT_OK(endpoints.status_value());
+
+  // Connect to the member 'foo'.
+  zx::result<> connect_result = service.connect_foo(std::move(endpoints->server));
+  ASSERT_TRUE(connect_result.is_ok());
+
+  fidl::WireSyncClient client{std::move(endpoints->client)};
+  fidl::WireResult<Echo::EchoString> echo_result = client->EchoString(fidl::StringView("hello"));
+  ASSERT_TRUE(echo_result.ok());
+
+  auto response = echo_result.Unwrap();
+
+  std::string result_string(response->response.data(), response->response.size());
+  ASSERT_EQ(result_string, "default-foo: hello");
+}
+
 TEST_F(ClientTest, ConnectsToOther) {
   zx::result<EchoService::ServiceClient> open_result =
       component::OpenServiceAt<EchoService>(svc_, "other");

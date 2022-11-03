@@ -19,11 +19,11 @@ class {{ .Name }} final {
   static constexpr bool kIsService = true;
   static constexpr char Name[] = "{{ .ServiceName }}";
   using Transport = {{ .Transport.Type }};
-  
+
   {{- IfdefFuchsia -}}
   using ServiceInstanceHandler = fidl::ServiceInstanceHandler<{{ .Transport.Type }}>;
   {{ EndifFuchsia }}
-  
+
   {{- range .Members }}
   {{ "" }}
   class {{ .ClassName }} final {
@@ -48,7 +48,7 @@ class {{ .Name }} final {
     {{- end }}
     {{- range .Members }}
   {{ "" }}
-    // Connects |client_end| to the member protocol "{{ .Name }}".
+    // Connects |server_end| to the member protocol "{{ .Name }}".
     //
     // # Errors
     //
@@ -58,11 +58,11 @@ class {{ .Name }} final {
     // Since the call to |Open| is asynchronous, an error sent by the remote end will not
     // result in a failure of this method. Any errors sent by the remote will appear on
     // the reciprocal |ClientEnd| for the |ServerEnd| passed into this method.
-    ::zx::result<> connect_{{ .Name }}({{ .ClientEnd }} client_end) {
+    ::zx::result<> connect_{{ .Name }}({{ .ServerEnd }} server_end) {
       return connect_func_(
           ::zx::unowned_channel(dir_),
           ::fidl::StringView("{{ .Name }}"),
-          ::fidl::internal::MakeAnyTransport(client_end.TakeChannel()));
+          ::fidl::internal::MakeAnyTransport(server_end.TakeChannel()));
     }
 
     // Connects to the member protocol "{{ .Name }}".
@@ -77,14 +77,11 @@ class {{ .Name }} final {
     // result in a failure of this method. Any errors sent by the remote will appear on
     // the |ClientEnd| returned from this method.
     ::zx::result<{{ .ClientEnd }}> connect_{{ .Name }}() {
-      auto endpoints = {{ .CreateEndpoints }}();
+      ::zx::result endpoints = {{ .CreateEndpoints }}();
       if (endpoints.is_error()) {
         return endpoints.take_error();
       }
-      auto connection = connect_func_(
-          ::zx::unowned_channel(dir_),
-          ::fidl::StringView("{{ .Name }}"),
-          ::fidl::internal::MakeAnyTransport(endpoints->server.TakeChannel()));
+      ::zx::result connection = connect_{{ .Name }}(std::move(endpoints->server));
       if (connection.is_error()) {
         return connection.take_error();
       }

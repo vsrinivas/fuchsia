@@ -668,7 +668,7 @@ class SingleMemberService final {
     ServiceClient(::zx::channel dir, ::fidl::internal::ConnectMemberFunc connect_func)
         : dir_(std::move(dir)), connect_func_(connect_func) {}
 
-    // Connects |client_end| to the member protocol "single_member".
+    // Connects |server_end| to the member protocol "single_member".
     //
     // # Errors
     //
@@ -678,11 +678,11 @@ class SingleMemberService final {
     // Since the call to |Open| is asynchronous, an error sent by the remote end will not
     // result in a failure of this method. Any errors sent by the remote will appear on
     // the reciprocal |ClientEnd| for the |ServerEnd| passed into this method.
-    ::zx::result<> connect_single_member(::fidl::ClientEnd<::test_service::FirstProtocol> client_end) {
+    ::zx::result<> connect_single_member(::fidl::ServerEnd<::test_service::FirstProtocol> server_end) {
       return connect_func_(
           ::zx::unowned_channel(dir_),
           ::fidl::StringView("single_member"),
-          ::fidl::internal::MakeAnyTransport(client_end.TakeChannel()));
+          ::fidl::internal::MakeAnyTransport(server_end.TakeChannel()));
     }
 
     // Connects to the member protocol "single_member".
@@ -697,14 +697,11 @@ class SingleMemberService final {
     // result in a failure of this method. Any errors sent by the remote will appear on
     // the |ClientEnd| returned from this method.
     ::zx::result<::fidl::ClientEnd<::test_service::FirstProtocol>> connect_single_member() {
-      auto endpoints = ::fidl::CreateEndpoints<::test_service::FirstProtocol>();
+      ::zx::result endpoints = ::fidl::CreateEndpoints<::test_service::FirstProtocol>();
       if (endpoints.is_error()) {
         return endpoints.take_error();
       }
-      auto connection = connect_func_(
-          ::zx::unowned_channel(dir_),
-          ::fidl::StringView("single_member"),
-          ::fidl::internal::MakeAnyTransport(endpoints->server.TakeChannel()));
+      ::zx::result connection = connect_single_member(std::move(endpoints->server));
       if (connection.is_error()) {
         return connection.take_error();
       }
@@ -799,7 +796,7 @@ class MultiHeterogeneousMemberService final {
     ServiceClient(::zx::channel dir, ::fidl::internal::ConnectMemberFunc connect_func)
         : dir_(std::move(dir)), connect_func_(connect_func) {}
 
-    // Connects |client_end| to the member protocol "first_member".
+    // Connects |server_end| to the member protocol "first_member".
     //
     // # Errors
     //
@@ -809,11 +806,11 @@ class MultiHeterogeneousMemberService final {
     // Since the call to |Open| is asynchronous, an error sent by the remote end will not
     // result in a failure of this method. Any errors sent by the remote will appear on
     // the reciprocal |ClientEnd| for the |ServerEnd| passed into this method.
-    ::zx::result<> connect_first_member(::fidl::ClientEnd<::test_service::FirstProtocol> client_end) {
+    ::zx::result<> connect_first_member(::fidl::ServerEnd<::test_service::FirstProtocol> server_end) {
       return connect_func_(
           ::zx::unowned_channel(dir_),
           ::fidl::StringView("first_member"),
-          ::fidl::internal::MakeAnyTransport(client_end.TakeChannel()));
+          ::fidl::internal::MakeAnyTransport(server_end.TakeChannel()));
     }
 
     // Connects to the member protocol "first_member".
@@ -828,21 +825,18 @@ class MultiHeterogeneousMemberService final {
     // result in a failure of this method. Any errors sent by the remote will appear on
     // the |ClientEnd| returned from this method.
     ::zx::result<::fidl::ClientEnd<::test_service::FirstProtocol>> connect_first_member() {
-      auto endpoints = ::fidl::CreateEndpoints<::test_service::FirstProtocol>();
+      ::zx::result endpoints = ::fidl::CreateEndpoints<::test_service::FirstProtocol>();
       if (endpoints.is_error()) {
         return endpoints.take_error();
       }
-      auto connection = connect_func_(
-          ::zx::unowned_channel(dir_),
-          ::fidl::StringView("first_member"),
-          ::fidl::internal::MakeAnyTransport(endpoints->server.TakeChannel()));
+      ::zx::result connection = connect_first_member(std::move(endpoints->server));
       if (connection.is_error()) {
         return connection.take_error();
       }
       return ::zx::ok(std::move(endpoints->client));
     }
 
-    // Connects |client_end| to the member protocol "second_member".
+    // Connects |server_end| to the member protocol "second_member".
     //
     // # Errors
     //
@@ -852,11 +846,11 @@ class MultiHeterogeneousMemberService final {
     // Since the call to |Open| is asynchronous, an error sent by the remote end will not
     // result in a failure of this method. Any errors sent by the remote will appear on
     // the reciprocal |ClientEnd| for the |ServerEnd| passed into this method.
-    ::zx::result<> connect_second_member(::fidl::ClientEnd<::test_service::SecondProtocol> client_end) {
+    ::zx::result<> connect_second_member(::fidl::ServerEnd<::test_service::SecondProtocol> server_end) {
       return connect_func_(
           ::zx::unowned_channel(dir_),
           ::fidl::StringView("second_member"),
-          ::fidl::internal::MakeAnyTransport(client_end.TakeChannel()));
+          ::fidl::internal::MakeAnyTransport(server_end.TakeChannel()));
     }
 
     // Connects to the member protocol "second_member".
@@ -871,14 +865,11 @@ class MultiHeterogeneousMemberService final {
     // result in a failure of this method. Any errors sent by the remote will appear on
     // the |ClientEnd| returned from this method.
     ::zx::result<::fidl::ClientEnd<::test_service::SecondProtocol>> connect_second_member() {
-      auto endpoints = ::fidl::CreateEndpoints<::test_service::SecondProtocol>();
+      ::zx::result endpoints = ::fidl::CreateEndpoints<::test_service::SecondProtocol>();
       if (endpoints.is_error()) {
         return endpoints.take_error();
       }
-      auto connection = connect_func_(
-          ::zx::unowned_channel(dir_),
-          ::fidl::StringView("second_member"),
-          ::fidl::internal::MakeAnyTransport(endpoints->server.TakeChannel()));
+      ::zx::result connection = connect_second_member(std::move(endpoints->server));
       if (connection.is_error()) {
         return connection.take_error();
       }
@@ -987,7 +978,7 @@ class MultiHomogeneousMemberService final {
     ServiceClient(::zx::channel dir, ::fidl::internal::ConnectMemberFunc connect_func)
         : dir_(std::move(dir)), connect_func_(connect_func) {}
 
-    // Connects |client_end| to the member protocol "first_member".
+    // Connects |server_end| to the member protocol "first_member".
     //
     // # Errors
     //
@@ -997,11 +988,11 @@ class MultiHomogeneousMemberService final {
     // Since the call to |Open| is asynchronous, an error sent by the remote end will not
     // result in a failure of this method. Any errors sent by the remote will appear on
     // the reciprocal |ClientEnd| for the |ServerEnd| passed into this method.
-    ::zx::result<> connect_first_member(::fidl::ClientEnd<::test_service::FirstProtocol> client_end) {
+    ::zx::result<> connect_first_member(::fidl::ServerEnd<::test_service::FirstProtocol> server_end) {
       return connect_func_(
           ::zx::unowned_channel(dir_),
           ::fidl::StringView("first_member"),
-          ::fidl::internal::MakeAnyTransport(client_end.TakeChannel()));
+          ::fidl::internal::MakeAnyTransport(server_end.TakeChannel()));
     }
 
     // Connects to the member protocol "first_member".
@@ -1016,21 +1007,18 @@ class MultiHomogeneousMemberService final {
     // result in a failure of this method. Any errors sent by the remote will appear on
     // the |ClientEnd| returned from this method.
     ::zx::result<::fidl::ClientEnd<::test_service::FirstProtocol>> connect_first_member() {
-      auto endpoints = ::fidl::CreateEndpoints<::test_service::FirstProtocol>();
+      ::zx::result endpoints = ::fidl::CreateEndpoints<::test_service::FirstProtocol>();
       if (endpoints.is_error()) {
         return endpoints.take_error();
       }
-      auto connection = connect_func_(
-          ::zx::unowned_channel(dir_),
-          ::fidl::StringView("first_member"),
-          ::fidl::internal::MakeAnyTransport(endpoints->server.TakeChannel()));
+      ::zx::result connection = connect_first_member(std::move(endpoints->server));
       if (connection.is_error()) {
         return connection.take_error();
       }
       return ::zx::ok(std::move(endpoints->client));
     }
 
-    // Connects |client_end| to the member protocol "second_member".
+    // Connects |server_end| to the member protocol "second_member".
     //
     // # Errors
     //
@@ -1040,11 +1028,11 @@ class MultiHomogeneousMemberService final {
     // Since the call to |Open| is asynchronous, an error sent by the remote end will not
     // result in a failure of this method. Any errors sent by the remote will appear on
     // the reciprocal |ClientEnd| for the |ServerEnd| passed into this method.
-    ::zx::result<> connect_second_member(::fidl::ClientEnd<::test_service::FirstProtocol> client_end) {
+    ::zx::result<> connect_second_member(::fidl::ServerEnd<::test_service::FirstProtocol> server_end) {
       return connect_func_(
           ::zx::unowned_channel(dir_),
           ::fidl::StringView("second_member"),
-          ::fidl::internal::MakeAnyTransport(client_end.TakeChannel()));
+          ::fidl::internal::MakeAnyTransport(server_end.TakeChannel()));
     }
 
     // Connects to the member protocol "second_member".
@@ -1059,14 +1047,11 @@ class MultiHomogeneousMemberService final {
     // result in a failure of this method. Any errors sent by the remote will appear on
     // the |ClientEnd| returned from this method.
     ::zx::result<::fidl::ClientEnd<::test_service::FirstProtocol>> connect_second_member() {
-      auto endpoints = ::fidl::CreateEndpoints<::test_service::FirstProtocol>();
+      ::zx::result endpoints = ::fidl::CreateEndpoints<::test_service::FirstProtocol>();
       if (endpoints.is_error()) {
         return endpoints.take_error();
       }
-      auto connection = connect_func_(
-          ::zx::unowned_channel(dir_),
-          ::fidl::StringView("second_member"),
-          ::fidl::internal::MakeAnyTransport(endpoints->server.TakeChannel()));
+      ::zx::result connection = connect_second_member(std::move(endpoints->server));
       if (connection.is_error()) {
         return connection.take_error();
       }

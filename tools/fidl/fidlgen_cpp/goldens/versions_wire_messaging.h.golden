@@ -478,7 +478,7 @@ class Service final {
     ServiceClient(::zx::channel dir, ::fidl::internal::ConnectMemberFunc connect_func)
         : dir_(std::move(dir)), connect_func_(connect_func) {}
 
-    // Connects |client_end| to the member protocol "p".
+    // Connects |server_end| to the member protocol "p".
     //
     // # Errors
     //
@@ -488,11 +488,11 @@ class Service final {
     // Since the call to |Open| is asynchronous, an error sent by the remote end will not
     // result in a failure of this method. Any errors sent by the remote will appear on
     // the reciprocal |ClientEnd| for the |ServerEnd| passed into this method.
-    ::zx::result<> connect_p(::fidl::ClientEnd<::test_versions::Protocol> client_end) {
+    ::zx::result<> connect_p(::fidl::ServerEnd<::test_versions::Protocol> server_end) {
       return connect_func_(
           ::zx::unowned_channel(dir_),
           ::fidl::StringView("p"),
-          ::fidl::internal::MakeAnyTransport(client_end.TakeChannel()));
+          ::fidl::internal::MakeAnyTransport(server_end.TakeChannel()));
     }
 
     // Connects to the member protocol "p".
@@ -507,14 +507,11 @@ class Service final {
     // result in a failure of this method. Any errors sent by the remote will appear on
     // the |ClientEnd| returned from this method.
     ::zx::result<::fidl::ClientEnd<::test_versions::Protocol>> connect_p() {
-      auto endpoints = ::fidl::CreateEndpoints<::test_versions::Protocol>();
+      ::zx::result endpoints = ::fidl::CreateEndpoints<::test_versions::Protocol>();
       if (endpoints.is_error()) {
         return endpoints.take_error();
       }
-      auto connection = connect_func_(
-          ::zx::unowned_channel(dir_),
-          ::fidl::StringView("p"),
-          ::fidl::internal::MakeAnyTransport(endpoints->server.TakeChannel()));
+      ::zx::result connection = connect_p(std::move(endpoints->server));
       if (connection.is_error()) {
         return connection.take_error();
       }

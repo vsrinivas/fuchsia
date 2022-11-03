@@ -158,7 +158,7 @@ class DriverOnlyService final {
     ServiceClient(::zx::channel dir, ::fidl::internal::ConnectMemberFunc connect_func)
         : dir_(std::move(dir)), connect_func_(connect_func) {}
 
-    // Connects |client_end| to the member protocol "member".
+    // Connects |server_end| to the member protocol "member".
     //
     // # Errors
     //
@@ -168,11 +168,11 @@ class DriverOnlyService final {
     // Since the call to |Open| is asynchronous, an error sent by the remote end will not
     // result in a failure of this method. Any errors sent by the remote will appear on
     // the reciprocal |ClientEnd| for the |ServerEnd| passed into this method.
-    ::zx::result<> connect_member(::fdf::ClientEnd<::test_driverservice::SomeDriverProtocol> client_end) {
+    ::zx::result<> connect_member(::fdf::ServerEnd<::test_driverservice::SomeDriverProtocol> server_end) {
       return connect_func_(
           ::zx::unowned_channel(dir_),
           ::fidl::StringView("member"),
-          ::fidl::internal::MakeAnyTransport(client_end.TakeChannel()));
+          ::fidl::internal::MakeAnyTransport(server_end.TakeChannel()));
     }
 
     // Connects to the member protocol "member".
@@ -187,14 +187,11 @@ class DriverOnlyService final {
     // result in a failure of this method. Any errors sent by the remote will appear on
     // the |ClientEnd| returned from this method.
     ::zx::result<::fdf::ClientEnd<::test_driverservice::SomeDriverProtocol>> connect_member() {
-      auto endpoints = ::fdf::CreateEndpoints<::test_driverservice::SomeDriverProtocol>();
+      ::zx::result endpoints = ::fdf::CreateEndpoints<::test_driverservice::SomeDriverProtocol>();
       if (endpoints.is_error()) {
         return endpoints.take_error();
       }
-      auto connection = connect_func_(
-          ::zx::unowned_channel(dir_),
-          ::fidl::StringView("member"),
-          ::fidl::internal::MakeAnyTransport(endpoints->server.TakeChannel()));
+      ::zx::result connection = connect_member(std::move(endpoints->server));
       if (connection.is_error()) {
         return connection.take_error();
       }
