@@ -31,5 +31,7 @@ async fn main() {
         .unwrap()
         .connect(sink)
         .unwrap();
+    // TODO(https://fxbug.dev/76579): Remove when pipelining is fixed.
+    std::thread::sleep(std::time::Duration::from_secs(3));
     panic!("This is an expected panic, hopefully our log messages made it out!");
 }
