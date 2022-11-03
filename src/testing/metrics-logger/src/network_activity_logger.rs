@@ -6,9 +6,8 @@ use {
     crate::driver_utils::{connect_proxy, list_drivers},
     crate::MIN_INTERVAL_FOR_SYSLOG_MS,
     anyhow::{format_err, Result},
-    fidl::endpoints::Proxy,
-    fidl_fuchsia_device as fdev, fidl_fuchsia_hardware_network as fhwnet,
-    fidl_fuchsia_metricslogger_test as fmetrics, fuchsia_async as fasync,
+    fidl_fuchsia_hardware_network as fhwnet, fidl_fuchsia_metricslogger_test as fmetrics,
+    fuchsia_async as fasync,
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_zircon as zx,
     futures::{stream::FuturesUnordered, StreamExt},
@@ -25,21 +24,12 @@ pub async fn generate_network_devices() -> Result<Vec<fhwnet::DeviceProxy>> {
     let mut proxies = Vec::new();
     for driver in list_drivers(NETWORK_SERVICE_DIR).await {
         let filepath = format!("{}/{}", NETWORK_SERVICE_DIR, driver);
-        let controller = connect_proxy::<fdev::ControllerMarker>(&filepath)?;
+        let device_instance_proxy = connect_proxy::<fhwnet::DeviceInstanceMarker>(&filepath)?;
 
-        // The same channel is expected to implement `fhwnet::DeviceInstanceMarker`.
-        let channel = controller
-            .into_channel()
-            .map_err(|_| format_err!("failed to get controller's channel"))?
-            .into_zx_channel();
-        let device_instance =
-            fidl::endpoints::ClientEnd::<fhwnet::DeviceInstanceMarker>::new(channel)
-                .into_proxy()?;
-
-        // Get device proxy from device instance.
+        // Get client proxy from device instance.
         let (device, device_server_end) =
             fidl::endpoints::create_endpoints::<fhwnet::DeviceMarker>()?;
-        device_instance.get_device(device_server_end)?;
+        device_instance_proxy.get_device(device_server_end)?;
 
         proxies.push(device.into_proxy()?);
     }
