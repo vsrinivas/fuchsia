@@ -316,8 +316,10 @@ class DriverTest : public gtest::DriverTestLoopFixture {
   void TearDown() override {
     DriverTestLoopFixture::TearDown();
 
-    vfs_->Shutdown([](auto status) {});
+    libsync::Completion vfs_shutdown_complete;
+    vfs_->Shutdown([&vfs_shutdown_complete](auto status) { vfs_shutdown_complete.Signal(); });
     RunUntilDispatchersIdle();
+    ASSERT_EQ(ZX_OK, vfs_shutdown_complete.Wait());
   }
 
   std::unique_ptr<compat::Driver> StartDriver(std::string_view v1_driver_path,
