@@ -9,6 +9,7 @@ group("tests") {
     "add_iterator:tests",
     "add_read_item:tests",
     "baseline:tests",
+    "support_exports:tests",
     "support_trees:tests",
     "use_generic_values:tests",
 

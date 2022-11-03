@@ -1,0 +1,73 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library examples.keyvaluestore.supportexports;
+
+// [START diff_1]
+using zx;
+// [END diff_1]
+
+/// An item in the store. The key must match the regex `^[A-z][A-z0-9_\.\/]{2,62}[A-z0-9]$`. That
+/// is, it must start with a letter, end with a letter or number, contain only letters, numbers,
+/// periods, and slashes, and be between 4 and 64 characters long.
+type Item = struct {
+    key string:128;
+    value vector<byte>:64000;
+};
+
+/// An enumeration of things that may go wrong when trying to write a value to our store.
+type WriteError = flexible enum {
+    UNKNOWN = 0;
+    INVALID_KEY = 1;
+    INVALID_VALUE = 2;
+    ALREADY_EXISTS = 3;
+};
+
+// [START diff_2]
+/// An enumeration of things that may go wrong when trying to mint an export.
+type ExportError = flexible enum {
+    UNKNOWN = 0;
+    EMPTY = 1;
+    STORAGE_TOO_SMALL = 2;
+};
+
+// A data type describing the structure of a single export. We never actually send this data type
+// over the wire (we use the file's VMO instead), but whenever data needs to be written to/read from
+// its backing storage as persistent FIDL, it will have this schema.
+type Exportable = table {
+    1: items vector<Item>;
+};
+// [END diff_2]
+
+/// A very basic key-value store - so basic, in fact, that one may only write to it, never read!
+@discoverable
+protocol Store {
+    /// Writes an item to the store.
+    WriteItem(struct {
+        attempt Item;
+    }) -> () error WriteError;
+
+    // [START diff_3]
+    /// Exports the entire store as a persistent FIDL into a VMO provided by the client.
+    ///
+    /// By having the client provide (and speculatively size) the VMO, we force the party requesting
+    /// the relatively heavy load of generating a backup to acknowledge and bear some of the costs.
+    ///
+    /// This method operates by having the client supply an empty VMO, which the server then
+    /// attempts to fill. Notice that the server removes the `zx.rights.WRITE` and
+    /// `zx.rights.SET_PROPERTY` rights from the returned VMO - not even the requesting client may
+    /// alter the backup once it has been minted by the server.
+    Export(resource struct {
+        /// Note that the empty VMO has more rights than the filled one being returned: it has
+        /// `zx.rights.WRITE` (via `zx.RIGHTS_IO`) so that the VMO may be filled with exported data,
+        /// and `zx.rights.SET_PROPERTY` (via `zx.RIGHTS_PROPERTY`) so that it may be resized to
+        /// truncate any remaining empty buffer.
+        empty zx.handle:<VMO, zx.RIGHTS_BASIC | zx.RIGHTS_PROPERTY | zx.RIGHTS_IO>;
+    }) -> (resource struct {
+        /// The `zx.rights.WRITE` and `zx.rights.SET_PROPERTY` rights have been removed from the now
+        /// filled VMO. No one, not even the client that requested the export, is able to modify
+        /// this VMO going forward.
+        filled zx.handle:<VMO, zx.RIGHTS_BASIC | zx.rights.GET_PROPERTY | zx.rights.READ>;
+    }) error ExportError;
+    // [END diff_3]
+};

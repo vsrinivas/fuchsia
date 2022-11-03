@@ -33,4 +33,8 @@ modified or improved.
 
 <<_add_iterator_tutorial.md>>
 
+### Enabling exporting backups {#support_exports}
+
+<<_support_exports_tutorial.md>>
+
 <!-- /DO_NOT_REMOVE_COMMENT (Why? See: /tools/fidl/scripts/canonical_example/README.md) -->
