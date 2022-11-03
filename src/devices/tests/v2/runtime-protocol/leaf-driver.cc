@@ -9,7 +9,6 @@
 #include <lib/driver/component/cpp/driver_cpp.h>
 #include <lib/driver/component/cpp/logger.h>
 #include <lib/driver/component/cpp/namespace.h>
-#include <lib/driver/component/cpp/service_client.h>
 #include <lib/fdf/cpp/arena.h>
 #include <lib/fdf/cpp/channel.h>
 #include <lib/fdf/cpp/protocol.h>
@@ -39,13 +38,13 @@ class LeafDriver : public driver::DriverBase {
         node_(fidl::WireSharedClient(std::move(node()), dispatcher())) {}
 
   zx::result<> Start() override {
-    auto setter_client = driver::Connect<ft::Service::Setter>(*context().incoming());
+    auto setter_client = context().incoming()->Connect<ft::Service::Setter>();
     if (setter_client.is_error()) {
       return setter_client.take_error();
     }
     setter_.Bind(*std::move(setter_client), driver_dispatcher()->get());
 
-    auto getter_client = driver::Connect<ft::Service::Getter>(*context().incoming());
+    auto getter_client = context().incoming()->Connect<ft::Service::Getter>();
     if (getter_client.is_error()) {
       return getter_client.take_error();
     }

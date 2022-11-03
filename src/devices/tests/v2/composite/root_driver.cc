@@ -5,7 +5,6 @@
 #include <fidl/fuchsia.composite.test/cpp/wire.h>
 #include <lib/driver/compat/cpp/compat.h>
 #include <lib/driver/component/cpp/driver_cpp.h>
-#include <lib/driver/component/cpp/service_client.h>
 
 #include <bind/fuchsia/test/cpp/bind.h>
 

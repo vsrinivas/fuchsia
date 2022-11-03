@@ -6,7 +6,6 @@
 #include <lib/driver/compat/cpp/compat.h>
 #include <lib/driver/component/cpp/device_group.h>
 #include <lib/driver/component/cpp/driver_cpp.h>
-#include <lib/driver/component/cpp/service_client.h>
 
 #include <bind/fuchsia/devicegroupbind/test/cpp/bind.h>
 

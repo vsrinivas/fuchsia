@@ -5,7 +5,6 @@
 #include <fidl/fuchsia.driver.framework/cpp/fidl.h>
 #include <fidl/fuchsia.offers.test/cpp/fidl.h>
 #include <lib/driver/component/cpp/driver_cpp.h>
-#include <lib/driver/component/cpp/service_client.h>
 
 namespace fdf {
 using namespace fuchsia_driver_framework;
@@ -21,7 +20,7 @@ class LeafDriver : public driver::DriverBase {
       : driver::DriverBase("leaf", std::move(start_args), std::move(driver_dispatcher)) {}
 
   zx::result<> Start() override {
-    auto handshake = driver::Connect<ft::Service::Device>(*context().incoming());
+    auto handshake = context().incoming()->Connect<ft::Service::Device>();
     if (handshake.is_error()) {
       return handshake.take_error();
     }

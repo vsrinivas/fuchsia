@@ -5,7 +5,6 @@
 #include <fidl/fuchsia.devicegroup.test/cpp/wire.h>
 #include <lib/async/cpp/task.h>
 #include <lib/driver/component/cpp/driver_cpp.h>
-#include <lib/driver/component/cpp/service_client.h>
 
 namespace fdf {
 using namespace fuchsia_driver_framework;
@@ -50,7 +49,7 @@ class LeafDriver : public driver::DriverBase {
 
  private:
   zx::result<uint32_t> GetNumber(std::string_view instance) {
-    auto device = driver::Connect<ft::Service::Device>(*context().incoming(), instance);
+    auto device = context().incoming()->Connect<ft::Service::Device>(instance);
     if (device.status_value() != ZX_OK) {
       FDF_LOG(ERROR, "Failed to connect to %s: %s", instance.data(), device.status_string());
       return device.take_error();

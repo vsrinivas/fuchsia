@@ -5,14 +5,13 @@
 #include "src/devices/lib/fragment-irq/dfv2/fragment-irq.h"
 
 #include <fidl/fuchsia.hardware.interrupt/cpp/fidl.h>
-#include <lib/driver/component/cpp/service_client.h>
 
 namespace fragment_irq {
 namespace fint = fuchsia_hardware_interrupt;
 
 zx::result<zx::interrupt> GetInterrupt(const driver::Namespace& ns,
                                        std::string_view instance_name) {
-  auto result = driver::Connect<fint::Service::Provider>(ns, instance_name);
+  auto result = ns.Connect<fint::Service::Provider>(instance_name);
   if (result.is_error()) {
     return result.take_error();
   }
