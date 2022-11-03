@@ -5,6 +5,7 @@
 use tracing::info;
 
 use crate::fs::*;
+use crate::mm::MemoryAccessorExt;
 use crate::syscalls::SyscallResult;
 use crate::task::*;
 use crate::types::*;

@@ -13,6 +13,7 @@ use crate::fs::pipe::*;
 use crate::fs::*;
 use crate::lock::Mutex;
 use crate::logging::{not_implemented, strace};
+use crate::mm::{MemoryAccessor, MemoryAccessorExt};
 use crate::syscalls::*;
 use crate::task::*;
 use crate::types::*;

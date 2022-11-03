@@ -11,6 +11,7 @@ use crate::fs::buffers::*;
 use crate::fs::*;
 use crate::logging::{not_implemented, strace};
 use crate::mm::vmo::round_up_to_increment;
+use crate::mm::{MemoryAccessor, MemoryAccessorExt};
 use crate::task::*;
 use crate::types::*;
 

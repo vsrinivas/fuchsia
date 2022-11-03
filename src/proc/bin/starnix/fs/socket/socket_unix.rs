@@ -9,6 +9,7 @@ use super::*;
 use crate::fs::buffers::*;
 use crate::fs::*;
 use crate::lock::Mutex;
+use crate::mm::MemoryAccessorExt;
 use crate::syscalls::{SyscallResult, SUCCESS};
 use crate::task::*;
 use crate::types::*;
@@ -950,6 +951,7 @@ impl UnixSocketInner {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::mm::MemoryAccessor;
     use crate::testing::*;
     use std::convert::TryInto;
 

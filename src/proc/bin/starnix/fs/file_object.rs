@@ -10,7 +10,7 @@ use std::sync::Arc;
 use crate::fs::*;
 use crate::lock::Mutex;
 use crate::logging::{impossible_error, not_implemented};
-use crate::mm::{DesiredAddress, MappedVmo, MappingOptions};
+use crate::mm::{DesiredAddress, MappedVmo, MappingOptions, MemoryAccessorExt};
 use crate::syscalls::*;
 use crate::task::*;
 use crate::types::as_any::*;

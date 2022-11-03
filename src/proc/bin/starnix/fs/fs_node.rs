@@ -876,6 +876,7 @@ impl Drop for FsNode {
 mod tests {
     use super::*;
     use crate::auth::Credentials;
+    use crate::mm::MemoryAccessor;
     use crate::testing::*;
 
     #[::fuchsia::test]

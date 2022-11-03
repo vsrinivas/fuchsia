@@ -4,6 +4,7 @@
 
 use fuchsia_zircon as zx;
 
+use crate::mm::{MemoryAccessor, MemoryAccessorExt};
 use crate::syscalls::decls::SyscallDecl;
 use crate::syscalls::*;
 

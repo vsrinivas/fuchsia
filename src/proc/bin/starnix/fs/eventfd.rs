@@ -4,6 +4,7 @@
 
 use crate::fs::*;
 use crate::lock::Mutex;
+use crate::mm::MemoryAccessorExt;
 use crate::task::*;
 use crate::types::*;
 

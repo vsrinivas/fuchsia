@@ -16,6 +16,7 @@ use crate::device::wayland::image_file::*;
 use crate::fs::*;
 use crate::lock::Mutex;
 use crate::logging::impossible_error;
+use crate::mm::MemoryAccessorExt;
 use crate::syscalls::*;
 use crate::task::CurrentTask;
 use crate::types::*;

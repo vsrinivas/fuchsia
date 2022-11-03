@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::fs::*;
+use crate::mm::MemoryAccessorExt;
 use crate::signals::*;
 use crate::task::*;
 use crate::types::*;

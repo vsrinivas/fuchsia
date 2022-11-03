@@ -16,6 +16,7 @@ use std::sync::Arc;
 use super::BufferCollectionFile;
 use crate::fs::*;
 use crate::mm::vmo::round_up_to_increment;
+use crate::mm::MemoryAccessorExt;
 use crate::syscalls::*;
 use crate::types::*;
 

@@ -17,7 +17,7 @@ use crate::fs::*;
 use crate::loader::*;
 use crate::lock::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use crate::logging::{not_implemented, set_zx_name};
-use crate::mm::MemoryManager;
+use crate::mm::{MemoryAccessorExt, MemoryManager};
 use crate::signals::signal_handling::dequeue_signal;
 use crate::signals::types::*;
 use crate::syscalls::SyscallResult;

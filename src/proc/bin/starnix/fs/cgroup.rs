@@ -15,6 +15,7 @@ use crate::fs::{
     FsNodeOps, FsStr, MemoryDirectoryFile, SeqFileBuf, SeqFileState,
 };
 use crate::lock::Mutex;
+use crate::mm::MemoryAccessorExt;
 use crate::task::{CurrentTask, Task};
 use crate::types::*;
 

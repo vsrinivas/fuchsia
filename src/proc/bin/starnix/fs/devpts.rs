@@ -8,6 +8,7 @@ use crate::auth::FsCred;
 use crate::device::terminal::*;
 use crate::device::DeviceOps;
 use crate::fs::*;
+use crate::mm::MemoryAccessorExt;
 use crate::syscalls::*;
 use crate::task::*;
 use crate::types::*;

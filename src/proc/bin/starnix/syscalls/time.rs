@@ -5,6 +5,7 @@
 use fuchsia_runtime::utc_time;
 use fuchsia_zircon::{self as zx, Task};
 
+use crate::mm::MemoryAccessorExt;
 use crate::syscalls::*;
 use crate::task::*;
 

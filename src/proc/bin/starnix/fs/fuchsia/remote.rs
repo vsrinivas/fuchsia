@@ -15,6 +15,7 @@ use crate::auth::FsCred;
 use crate::fs::*;
 use crate::lock::{Mutex, RwLockReadGuard, RwLockWriteGuard};
 use crate::logging::impossible_error;
+use crate::mm::MemoryAccessorExt;
 use crate::task::*;
 use crate::types::*;
 use crate::vmex_resource::VMEX_RESOURCE;

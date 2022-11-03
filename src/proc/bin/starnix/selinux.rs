@@ -5,6 +5,7 @@
 use crate::fs::*;
 use crate::lock::{Mutex, RwLock};
 use crate::logging::not_implemented;
+use crate::mm::MemoryAccessorExt;
 use crate::task::*;
 use crate::types::as_any::AsAny;
 use crate::types::*;

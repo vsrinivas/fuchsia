@@ -2,6 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fuchsia_zircon as zx;
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Weak};
+
 use crate::fs::FdEvents;
 use crate::fs::WaitAsyncOptions;
 use crate::lock::Mutex;
@@ -9,10 +14,6 @@ use crate::logging::*;
 use crate::task::*;
 use crate::types::Errno;
 use crate::types::*;
-use fuchsia_zircon as zx;
-use std::collections::HashMap;
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Weak};
 
 pub type SignalHandler = Box<dyn FnOnce(zx::Signals) + Send + Sync>;
 pub type EventHandler = Box<dyn FnOnce(FdEvents) + Send + Sync>;
@@ -464,6 +465,7 @@ mod tests {
     use crate::fs::FdEvents;
     use crate::fs::{new_eventfd, EventFdType};
     use crate::mm::PAGE_SIZE;
+    use crate::mm::{MemoryAccessor, MemoryAccessorExt};
     use crate::testing::*;
     use crate::types::UserBuffer;
     use std::sync::atomic::AtomicU64;

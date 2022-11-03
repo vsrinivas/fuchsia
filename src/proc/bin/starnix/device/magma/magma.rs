@@ -15,6 +15,7 @@ use vk_sys as vk;
 use zerocopy::{AsBytes, FromBytes};
 
 use crate::device::wayland::vulkan::*;
+use crate::mm::MemoryAccessorExt;
 use crate::task::CurrentTask;
 use crate::types::*;
 

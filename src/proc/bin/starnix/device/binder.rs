@@ -14,7 +14,10 @@ use crate::fs::{
 use crate::lock::{Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use crate::logging::{not_implemented, not_implemented_log_once};
 use crate::mm::vmo::round_up_to_increment;
-use crate::mm::{DesiredAddress, MappedVmo, MappingOptions, MemoryManager, UserMemoryCursor};
+use crate::mm::{
+    DesiredAddress, MappedVmo, MappingOptions, MemoryAccessor, MemoryAccessorExt, MemoryManager,
+    UserMemoryCursor,
+};
 use crate::syscalls::{SyscallResult, SUCCESS};
 use crate::task::{
     CurrentTask, EventHandler, Kernel, Task, WaitCallback, WaitKey, WaitQueue, Waiter, WaiterRef,
@@ -1410,7 +1413,7 @@ impl BinderDriver {
                 if input.write_size > 0 {
                     // The calling thread wants to write some data to the binder driver.
                     let mut cursor = UserMemoryCursor::new(
-                        &current_task.mm,
+                        &*current_task.mm,
                         UserAddress::from(input.write_buffer),
                         input.write_size,
                     );
@@ -2632,6 +2635,7 @@ pub fn create_binders(current_task: &CurrentTask) -> Result<(), Errno> {
 mod tests {
     use super::*;
     use crate::fs::{DirEntry, FdFlags};
+    use crate::mm::MemoryAccessor;
     use crate::mm::PAGE_SIZE;
     use crate::testing::*;
     use assert_matches::assert_matches;
@@ -4127,7 +4131,7 @@ mod tests {
 
         // Start reading from the receiver's memory, which holds the translated transaction.
         let mut reader = UserMemoryCursor::new(
-            &test.receiver_task.mm,
+            &*test.receiver_task.mm,
             data_buffer.address,
             data_buffer.length as u64,
         );

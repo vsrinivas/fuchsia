@@ -20,8 +20,8 @@ use crate::fs::ext4::ExtFilesystem;
 use crate::fs::fuchsia::{create_file_from_handle, RemoteFs, SyslogFile};
 use crate::fs::*;
 use crate::logging::strace;
-use crate::mm::MemoryManager;
 use crate::mm::{DesiredAddress, MappingOptions, PAGE_SIZE};
+use crate::mm::{MemoryAccessorExt, MemoryManager};
 use crate::signals::dequeue_signal;
 use crate::syscalls::{
     decls::{Syscall, SyscallDecl},

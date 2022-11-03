@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::fs::*;
-use crate::lock::RwLock;
-use crate::task::*;
-use crate::types::*;
 use fuchsia_zircon as zx;
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Weak};
 use zerocopy::{AsBytes, FromBytes};
+
+use crate::fs::*;
+use crate::lock::RwLock;
+use crate::task::*;
+use crate::types::*;
 
 /// Maximum depth of epoll instances monitoring one another.
 /// From https://man7.org/linux/man-pages/man2/epoll_ctl.2.html
@@ -433,6 +434,7 @@ mod tests {
     use crate::fs::pipe::new_pipe;
     use crate::fs::socket::{SocketDomain, SocketType, UnixSocket};
     use crate::fs::FdEvents;
+    use crate::mm::MemoryAccessor;
     use crate::mm::PAGE_SIZE;
     use crate::types::UserBuffer;
     use fuchsia_zircon::HandleBased;

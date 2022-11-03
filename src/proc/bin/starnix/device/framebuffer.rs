@@ -9,6 +9,7 @@ use crate::device::DeviceOps;
 use crate::fs::*;
 use crate::lock::RwLock;
 use crate::logging::*;
+use crate::mm::MemoryAccessorExt;
 use crate::syscalls::{SyscallResult, SUCCESS};
 use crate::task::CurrentTask;
 use crate::types::*;

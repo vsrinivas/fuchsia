@@ -16,6 +16,7 @@ use crate::device::{
     wayland::image_file::{ImageFile, ImageInfo},
 };
 use crate::fs::{Anon, FdFlags, VmoFileObject};
+use crate::mm::{MemoryAccessor, MemoryAccessorExt};
 use crate::task::CurrentTask;
 use crate::types::*;
 

@@ -20,6 +20,7 @@ use zerocopy::{AsBytes, FromBytes};
 use crate::auth::*;
 use crate::fs::*;
 use crate::lock::RwLock;
+use crate::mm::{MemoryAccessor, MemoryAccessorExt};
 use crate::syscalls::*;
 use crate::task::Kernel;
 use crate::types::as_any::AsAny;

@@ -7,6 +7,7 @@ use zerocopy::{AsBytes, FromBytes};
 
 use crate::fs::*;
 use crate::mm::vmo::round_up_to_increment;
+use crate::mm::MemoryAccessor;
 use crate::task::*;
 use crate::types::*;
 

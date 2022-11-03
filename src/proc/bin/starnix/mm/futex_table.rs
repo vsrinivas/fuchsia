@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::lock::Mutex;
+use crate::mm::MemoryAccessorExt;
 use crate::task::*;
 use crate::types::*;
 

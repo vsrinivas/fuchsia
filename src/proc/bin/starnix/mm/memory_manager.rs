@@ -813,6 +813,186 @@ fn create_user_vmar(vmar: &zx::Vmar, vmar_info: &zx::VmarInfo) -> Result<zx::Vma
     Ok(vmar)
 }
 
+pub trait MemoryAccessor {
+    /// Reads exactly `bytes.len()` bytes of memory from `addr`.
+    ///
+    /// # Parameters
+    /// - `addr`: The address to read data from.
+    /// - `bytes`: The byte array to read into.
+    fn read_memory(&self, addr: UserAddress, bytes: &mut [u8]) -> Result<(), Errno>;
+
+    /// Reads bytes starting at `addr`, continuing until either `bytes.len()` bytes have been read
+    /// or no more bytes can be read.
+    ///
+    /// This is used, for example, to read null-terminated strings where the exact length is not
+    /// known, only the maximum length is.
+    ///
+    /// # Parameters
+    /// - `addr`: The address to read data from.
+    /// - `bytes`: The byte array to read into.
+    fn read_memory_partial(&self, addr: UserAddress, bytes: &mut [u8]) -> Result<usize, Errno>;
+
+    /// Writes the provided bytes to `addr`.
+    ///
+    /// # Parameters
+    /// - `addr`: The address to write to.
+    /// - `bytes`: The bytes to write to the VMO.
+    fn write_memory(&self, addr: UserAddress, bytes: &[u8]) -> Result<usize, Errno>;
+}
+
+pub trait MemoryAccessorExt: MemoryAccessor {
+    fn read_buffer(&self, buffer: &UserBuffer) -> Result<Vec<u8>, Errno> {
+        let mut buf = vec![0u8; buffer.length];
+        self.read_memory(buffer.address, &mut buf)?;
+        Ok(buf)
+    }
+
+    fn read_object<T: FromBytes>(&self, user: UserRef<T>) -> Result<T, Errno> {
+        // SAFETY: T is FromBytes, which means that any bit pattern is valid. Interpreting T as u8
+        // is safe because T's alignment requirements are larger than u8.
+        let mut object = T::new_zeroed();
+        let buffer = unsafe {
+            std::slice::from_raw_parts_mut(
+                &mut object as *mut T as *mut u8,
+                std::mem::size_of::<T>(),
+            )
+        };
+        self.read_memory(user.addr(), buffer)?;
+        Ok(object)
+    }
+
+    fn read_objects<T: FromBytes>(&self, user: UserRef<T>, objects: &mut [T]) -> Result<(), Errno> {
+        for (index, object) in objects.iter_mut().enumerate() {
+            *object = self.read_object(user.at(index))?;
+        }
+        Ok(())
+    }
+
+    fn read_iovec(
+        &self,
+        iovec_addr: UserAddress,
+        iovec_count: i32,
+    ) -> Result<Vec<UserBuffer>, Errno> {
+        let iovec_count: usize = iovec_count.try_into().map_err(|_| errno!(EINVAL))?;
+        if iovec_count > UIO_MAXIOV as usize {
+            return error!(EINVAL);
+        }
+
+        let mut data = vec![UserBuffer::default(); iovec_count];
+        self.read_memory(iovec_addr, data.as_mut_slice().as_bytes_mut())?;
+        Ok(data)
+    }
+
+    fn read_each<F>(&self, data: &[UserBuffer], mut callback: F) -> Result<(), Errno>
+    where
+        F: FnMut(&[u8]) -> Result<Option<()>, Errno>,
+    {
+        for buffer in data {
+            if buffer.address.is_null() && buffer.length == 0 {
+                continue;
+            }
+            let bytes = self.read_buffer(buffer)?;
+            if callback(&bytes)?.is_none() {
+                break;
+            }
+        }
+        Ok(())
+    }
+
+    fn read_all(&self, data: &[UserBuffer], bytes: &mut [u8]) -> Result<usize, Errno> {
+        let mut offset = 0;
+        for buffer in data {
+            if buffer.address.is_null() && buffer.length == 0 {
+                continue;
+            }
+            let end = std::cmp::min(offset + buffer.length, bytes.len());
+            self.read_memory(buffer.address, &mut bytes[offset..end])?;
+            offset = end;
+            if offset == bytes.len() {
+                break;
+            }
+        }
+        Ok(offset)
+    }
+
+    fn read_c_string<'a>(
+        &self,
+        string: UserCString,
+        buffer: &'a mut [u8],
+    ) -> Result<&'a [u8], Errno> {
+        let actual = self.read_memory_partial(string.addr(), buffer)?;
+        let buffer = &mut buffer[..actual];
+        let null_index = memchr::memchr(b'\0', buffer).ok_or_else(|| errno!(ENAMETOOLONG))?;
+        Ok(&buffer[..null_index])
+    }
+
+    fn write_object<T: AsBytes>(&self, user: UserRef<T>, object: &T) -> Result<usize, Errno> {
+        self.write_memory(user.addr(), object.as_bytes())
+    }
+
+    fn write_objects<T: AsBytes>(&self, user: UserRef<T>, objects: &[T]) -> Result<usize, Errno> {
+        let mut bytes_written = 0;
+        for (index, object) in objects.iter().enumerate() {
+            bytes_written += self.write_object(user.at(index), object)?;
+        }
+        Ok(bytes_written)
+    }
+
+    fn write_each<F>(&self, data: &[UserBuffer], mut callback: F) -> Result<usize, Errno>
+    where
+        F: FnMut(&mut [u8]) -> Result<&[u8], Errno>,
+    {
+        let mut bytes_written = 0;
+        for buffer in data {
+            if buffer.address.is_null() && buffer.length == 0 {
+                continue;
+            }
+            let mut bytes = vec![0; buffer.length];
+            let result = callback(&mut bytes)?;
+            bytes_written += self.write_memory(buffer.address, result)?;
+            if result.len() != bytes.len() {
+                break;
+            }
+        }
+        Ok(bytes_written)
+    }
+
+    fn write_all(&self, data: &[UserBuffer], bytes: &[u8]) -> Result<usize, Errno> {
+        let mut offset = 0;
+        for buffer in data {
+            if buffer.address.is_null() && buffer.length == 0 {
+                continue;
+            }
+            let end = std::cmp::min(offset + buffer.length, bytes.len());
+            self.write_memory(buffer.address, &bytes[offset..end])?;
+            offset = end;
+            if offset == bytes.len() {
+                break;
+            }
+        }
+        Ok(offset)
+    }
+}
+
+impl MemoryAccessor for MemoryManager {
+    fn read_memory(&self, addr: UserAddress, bytes: &mut [u8]) -> Result<(), Errno> {
+        let state = self.state.read();
+        state.read_memory(addr, bytes)
+    }
+
+    fn read_memory_partial(&self, addr: UserAddress, bytes: &mut [u8]) -> Result<usize, Errno> {
+        let state = self.state.read();
+        state.read_memory_partial(addr, bytes)
+    }
+
+    fn write_memory(&self, addr: UserAddress, bytes: &[u8]) -> Result<usize, Errno> {
+        self.state.read().write_memory(addr, bytes)
+    }
+}
+
+impl MemoryAccessorExt for dyn MemoryAccessor + '_ {}
+impl<T: MemoryAccessor> MemoryAccessorExt for T {}
+
 pub struct MemoryManager {
     /// The root VMAR for the child process.
     ///
@@ -1190,160 +1370,11 @@ impl MemoryManager {
         unsafe { temp_vmar.destroy().unwrap() };
         UserAddress::from_ptr(base)
     }
-
-    pub fn read_memory(&self, addr: UserAddress, bytes: &mut [u8]) -> Result<(), Errno> {
-        let state = self.state.read();
-        state.read_memory(addr, bytes)
-    }
-
-    pub fn read_buffer(&self, buffer: &UserBuffer) -> Result<Vec<u8>, Errno> {
-        let mut buf = vec![0u8; buffer.length];
-        self.read_memory(buffer.address, &mut buf)?;
-        Ok(buf)
-    }
-
-    pub fn read_object<T: FromBytes>(&self, user: UserRef<T>) -> Result<T, Errno> {
-        // SAFETY: T is FromBytes, which means that any bit pattern is valid. Interpreting T as u8
-        // is safe because T's alignment requirements are larger than u8.
-        let mut object = T::new_zeroed();
-        let buffer = unsafe {
-            std::slice::from_raw_parts_mut(
-                &mut object as *mut T as *mut u8,
-                std::mem::size_of::<T>(),
-            )
-        };
-        self.read_memory(user.addr(), buffer)?;
-        Ok(object)
-    }
-
-    pub fn read_objects<T: FromBytes>(
-        &self,
-        user: UserRef<T>,
-        objects: &mut [T],
-    ) -> Result<(), Errno> {
-        for (index, object) in objects.iter_mut().enumerate() {
-            *object = self.read_object(user.at(index))?;
-        }
-        Ok(())
-    }
-
-    pub fn read_c_string<'a>(
-        &self,
-        string: UserCString,
-        buffer: &'a mut [u8],
-    ) -> Result<&'a [u8], Errno> {
-        let actual = self.state.read().read_memory_partial(string.addr(), buffer)?;
-        let buffer = &mut buffer[..actual];
-        let null_index = memchr::memchr(b'\0', buffer).ok_or_else(|| errno!(ENAMETOOLONG))?;
-        Ok(&buffer[..null_index])
-    }
-
-    pub fn read_iovec(
-        &self,
-        iovec_addr: UserAddress,
-        iovec_count: i32,
-    ) -> Result<Vec<UserBuffer>, Errno> {
-        let iovec_count: usize = iovec_count.try_into().map_err(|_| errno!(EINVAL))?;
-        if iovec_count > UIO_MAXIOV as usize {
-            return error!(EINVAL);
-        }
-
-        let mut data = vec![UserBuffer::default(); iovec_count];
-        self.read_memory(iovec_addr, data.as_mut_slice().as_bytes_mut())?;
-        Ok(data)
-    }
-
-    pub fn read_each<F>(&self, data: &[UserBuffer], mut callback: F) -> Result<(), Errno>
-    where
-        F: FnMut(&[u8]) -> Result<Option<()>, Errno>,
-    {
-        for buffer in data {
-            if buffer.address.is_null() && buffer.length == 0 {
-                continue;
-            }
-            let bytes = self.read_buffer(buffer)?;
-            if callback(&bytes)?.is_none() {
-                break;
-            }
-        }
-        Ok(())
-    }
-
-    pub fn read_all(&self, data: &[UserBuffer], bytes: &mut [u8]) -> Result<usize, Errno> {
-        let mut offset = 0;
-        for buffer in data {
-            if buffer.address.is_null() && buffer.length == 0 {
-                continue;
-            }
-            let end = std::cmp::min(offset + buffer.length, bytes.len());
-            self.read_memory(buffer.address, &mut bytes[offset..end])?;
-            offset = end;
-            if offset == bytes.len() {
-                break;
-            }
-        }
-        Ok(offset)
-    }
-
-    pub fn write_memory(&self, addr: UserAddress, bytes: &[u8]) -> Result<usize, Errno> {
-        self.state.read().write_memory(addr, bytes)
-    }
-
-    pub fn write_object<T: AsBytes>(&self, user: UserRef<T>, object: &T) -> Result<usize, Errno> {
-        self.write_memory(user.addr(), object.as_bytes())
-    }
-
-    pub fn write_objects<T: AsBytes>(
-        &self,
-        user: UserRef<T>,
-        objects: &[T],
-    ) -> Result<usize, Errno> {
-        let mut bytes_written = 0;
-        for (index, object) in objects.iter().enumerate() {
-            bytes_written += self.write_object(user.at(index), object)?;
-        }
-        Ok(bytes_written)
-    }
-
-    pub fn write_each<F>(&self, data: &[UserBuffer], mut callback: F) -> Result<usize, Errno>
-    where
-        F: FnMut(&mut [u8]) -> Result<&[u8], Errno>,
-    {
-        let mut bytes_written = 0;
-        for buffer in data {
-            if buffer.address.is_null() && buffer.length == 0 {
-                continue;
-            }
-            let mut bytes = vec![0; buffer.length];
-            let result = callback(&mut bytes)?;
-            bytes_written += self.write_memory(buffer.address, result)?;
-            if result.len() != bytes.len() {
-                break;
-            }
-        }
-        Ok(bytes_written)
-    }
-
-    pub fn write_all(&self, data: &[UserBuffer], bytes: &[u8]) -> Result<usize, Errno> {
-        let mut offset = 0;
-        for buffer in data {
-            if buffer.address.is_null() && buffer.length == 0 {
-                continue;
-            }
-            let end = std::cmp::min(offset + buffer.length, bytes.len());
-            self.write_memory(buffer.address, &bytes[offset..end])?;
-            offset = end;
-            if offset == bytes.len() {
-                break;
-            }
-        }
-        Ok(offset)
-    }
 }
 
 /// Allows for sequential reading of a task's userspace memory.
 pub struct UserMemoryCursor<'a> {
-    mm: &'a MemoryManager,
+    ma: &'a dyn MemoryAccessor,
     addr: UserAddress,
     len: usize,
     consumed: usize,
@@ -1352,8 +1383,8 @@ pub struct UserMemoryCursor<'a> {
 impl<'a> UserMemoryCursor<'a> {
     /// Create a new [`UserMemoryCursor`] starting at userspace address `addr`.
     /// Any reads past `addr + len` will fail with `EINVAL`.
-    pub fn new(mm: &'a MemoryManager, addr: UserAddress, len: u64) -> Self {
-        Self { mm, addr, len: len as usize, consumed: 0 }
+    pub fn new(ma: &'a dyn MemoryAccessor, addr: UserAddress, len: u64) -> Self {
+        Self { ma, addr, len: len as usize, consumed: 0 }
     }
 
     /// Read an object from userspace memory and increment the read position.
@@ -1362,7 +1393,7 @@ impl<'a> UserMemoryCursor<'a> {
         if obj_size > self.len {
             return error!(EINVAL);
         }
-        let obj: T = self.mm.read_object(UserRef::<T>::new(self.addr))?;
+        let obj: T = self.ma.read_object(UserRef::<T>::new(self.addr))?;
         self.addr += obj_size;
         self.len -= obj_size;
         self.consumed += obj_size;

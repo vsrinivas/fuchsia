@@ -301,7 +301,7 @@ impl VsockSocketInner {
 mod tests {
     use super::*;
     use crate::fs::fuchsia::create_fuchsia_pipe;
-    use crate::mm::PAGE_SIZE;
+    use crate::mm::{MemoryAccessor, PAGE_SIZE};
     use crate::testing::*;
     use fidl::SocketOpts as ZirconSocketOpts;
     use fuchsia_zircon as zx;

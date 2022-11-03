@@ -10,6 +10,7 @@ use std::sync::Arc;
 use super::signalfd::*;
 use crate::fs::*;
 use crate::logging::not_implemented;
+use crate::mm::{MemoryAccessor, MemoryAccessorExt};
 use crate::signals::*;
 use crate::syscalls::*;
 use crate::task::*;

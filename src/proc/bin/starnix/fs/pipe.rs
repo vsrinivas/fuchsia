@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 use crate::fs::{buffers::*, *};
 use crate::lock::Mutex;
+use crate::mm::MemoryAccessorExt;
 use crate::mm::PAGE_SIZE;
 use crate::signals::*;
 use crate::syscalls::*;

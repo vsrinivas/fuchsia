@@ -13,7 +13,7 @@ use crate::fs::tmpfs::TmpFs;
 use crate::fs::*;
 use crate::mm::{
     syscalls::{sys_mmap, sys_mremap},
-    MemoryManager, PAGE_SIZE,
+    MemoryAccessor, MemoryManager, PAGE_SIZE,
 };
 use crate::syscalls::SyscallResult;
 use crate::task::*;

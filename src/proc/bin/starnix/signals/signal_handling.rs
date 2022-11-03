@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::logging::strace;
+use crate::mm::MemoryAccessor;
 use crate::signals::*;
 use crate::syscalls::SyscallResult;
 use crate::task::*;

@@ -11,6 +11,7 @@ use super::*;
 use crate::fs::buffers::*;
 use crate::fs::*;
 use crate::lock::Mutex;
+use crate::mm::MemoryAccessorExt;
 use crate::syscalls::SyscallResult;
 use crate::task::*;
 use crate::types::as_any::*;
@@ -465,6 +466,7 @@ impl AcceptQueue {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::mm::MemoryAccessor;
     use crate::testing::*;
 
     #[::fuchsia::test]

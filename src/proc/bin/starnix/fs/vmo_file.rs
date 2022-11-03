@@ -8,6 +8,7 @@ use std::sync::Arc;
 use super::*;
 use crate::logging::impossible_error;
 use crate::mm::vmo::round_up_to_system_page_size;
+use crate::mm::MemoryAccessorExt;
 use crate::syscalls::{SyscallResult, SUCCESS};
 use crate::task::CurrentTask;
 use crate::types::*;

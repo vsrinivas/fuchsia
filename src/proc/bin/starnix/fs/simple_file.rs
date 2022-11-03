@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use super::*;
 use crate::fs::{fileops_impl_nonblocking, fileops_impl_seekable};
+use crate::mm::MemoryAccessorExt;
 use crate::task::*;
 use crate::types::*;
 

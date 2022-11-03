@@ -10,6 +10,7 @@ use crate::auth::FsCred;
 use crate::fs::devpts::*;
 use crate::fs::*;
 use crate::lock::{Mutex, RwLock};
+use crate::mm::MemoryAccessorExt;
 use crate::mutable_state::*;
 use crate::task::*;
 use crate::types::*;

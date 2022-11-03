@@ -8,6 +8,7 @@ use crate::fs::buffers::*;
 use crate::fs::fuchsia::*;
 use crate::fs::*;
 use crate::logging::not_implemented;
+use crate::mm::MemoryAccessorExt;
 use crate::task::*;
 use crate::types::*;
 use fidl_fuchsia_posix_socket as fposix_socket;
