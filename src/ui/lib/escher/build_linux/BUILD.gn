@@ -7,6 +7,7 @@
 # so they were moved into a separate file.
 
 group("examples") {
+  testonly = true
   deps = [
     "//src/ui/examples/escher/rainfall($host_toolchain)",
     "//src/ui/examples/escher/waterfall($host_toolchain)",
