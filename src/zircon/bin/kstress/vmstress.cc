@@ -1128,6 +1128,11 @@ class MultiVmoTestInstance : public TestInstance {
         zx::vmo dup_vmo;
         result = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
         ZX_ASSERT(result == ZX_OK);
+        // Stash the pager handle value to be passed to the writeback thread below before
+        // transferring ownership to the pager thread. A pager handle cannot be duplicated, so we
+        // cannot create another handle for the writeback thread to use. We also cannot make the
+        // pager a class member because we might spawn another root VMO which will take a new pager.
+        const zx_handle_t pager_handle = pager.get();
         if (!make_thread([this, pager = std::move(pager), port = std::move(port),
                           vmo = std::move(dup_vmo)]() mutable {
               pager_thread(std::move(pager), std::move(port), std::move(vmo));
@@ -1137,6 +1142,15 @@ class MultiVmoTestInstance : public TestInstance {
           // thread unrecoverable.
           return;
         }
+
+        // Now that the pager thread has been successfully created, spin up the writeback thread
+        // as well.
+        result = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
+        ZX_ASSERT(result == ZX_OK);
+        make_thread([this, vmo = std::move(dup_vmo), pager_handle]() mutable {
+          writeback_thread(pager_handle, std::move(vmo));
+        });
+
       } else {
         zx_status_t result = zx::vmo::create(vmo_size, options, &vmo);
         ZX_ASSERT(result == ZX_OK);
@@ -1285,6 +1299,94 @@ class MultiVmoTestInstance : public TestInstance {
                      packet.page_request.command == ZX_PAGER_VMO_READ ? "supply" : "dirty", result);
         return;
       }
+    }
+  }
+
+  void writeback_thread(zx_handle_t pager, zx::vmo vmo) {
+    uint64_t total_attempts = 0, successful_attempts = 0;
+    while (!shutdown_) {
+      // If there are only two handles remaining to the VMO, these will belong to the pager thread
+      // and the writeback thread, i.e. no op_thread's will access the VMO anymore. Tear down the
+      // writeback thread too so that the pager thread can clean up. This ensures that no threads
+      // corresponding to this VMO are left lingering behind and our spawn_root_vmo logic in
+      // make_thread works as intended, and creates new VMOs (and new pagers) and new threads for
+      // those VMOs.
+      zx_info_handle_count_t info;
+      zx_status_t status =
+          vmo.get_info(ZX_INFO_HANDLE_COUNT, &info, sizeof(info), nullptr, nullptr);
+      ZX_ASSERT(status == ZX_OK);
+      if (info.handle_count == 2) {
+        break;
+      }
+
+      zx_vmo_dirty_range_t ranges[10];
+      size_t actual = 0, avail = 0;
+      size_t vmo_size;
+      status = vmo.get_size(&vmo_size);
+      ZX_ASSERT_MSG(status == ZX_OK, "Failed to get VMO size %s\n", zx_status_get_string(status));
+      uint64_t start = 0, remaining_len = vmo_size;
+
+      // Make a single pass over the entire VMO during each writeback attempt. The goal is to write
+      // back as much as possible without having to keep retrying in the face of competing writes
+      // and resizes. It is fine if the size we queried above becomes stale; the loop will ignore
+      // any OUT_OF_RANGE errors in the case of a resize down, and a larger size will be written
+      // back in the next attempt.
+      do {
+        status = zx_pager_query_dirty_ranges(pager, vmo.get(), start, remaining_len, &ranges[0],
+                                             sizeof(ranges), &actual, &avail);
+        ZX_ASSERT_MSG(status == ZX_OK || status == ZX_ERR_OUT_OF_RANGE,
+                      "Failed to query dirty ranges %s\n", zx_status_get_string(status));
+        // Nothing more to do if we could not query dirty ranges successfully. The VMO was resized
+        // down from under us. Retry in the next iteration of the outer loop.
+        if (status == ZX_ERR_OUT_OF_RANGE) {
+          break;
+        }
+
+        // No (more) dirty ranges.
+        if (avail == 0) {
+          remaining_len = 0;
+          break;
+        }
+        ZX_ASSERT(actual > 0);
+
+        uint64_t new_start;
+        for (size_t i = 0; i < actual; i++) {
+          status = zx_pager_op_range(pager, ZX_PAGER_OP_WRITEBACK_BEGIN, vmo.get(),
+                                     ranges[i].offset, ranges[i].length, ranges[i].options);
+          ZX_ASSERT_MSG(status == ZX_OK || status == ZX_ERR_OUT_OF_RANGE,
+                        "Failed to begin writeback %s\n", zx_status_get_string(status));
+          if (status == ZX_ERR_OUT_OF_RANGE) {
+            break;
+          }
+          status = zx_pager_op_range(pager, ZX_PAGER_OP_WRITEBACK_END, vmo.get(), ranges[i].offset,
+                                     ranges[i].length, 0);
+          ZX_ASSERT_MSG(status == ZX_OK || status == ZX_ERR_OUT_OF_RANGE,
+                        "Failed to end writeback %s\n", zx_status_get_string(status));
+          if (status == ZX_ERR_OUT_OF_RANGE) {
+            break;
+          }
+          new_start = ranges[i].offset + ranges[i].length;
+        }
+
+        if (new_start < ranges[actual - 1].offset + ranges[actual - 1].length) {
+          break;
+        }
+
+        remaining_len -= (new_start - start);
+        start = new_start;
+      } while (remaining_len > 0);
+
+      if (remaining_len == 0) {
+        successful_attempts++;
+      }
+      total_attempts++;
+
+      // The rate of writeback is kept relatively high to stress the system.
+      zx::nanosleep(zx::deadline_after(zx::msec(200)));
+    }
+    if (successful_attempts != total_attempts) {
+      PrintfAlways("Successful writeback attempts: %lu (out of %lu)\n", successful_attempts,
+                   total_attempts);
     }
   }
 
