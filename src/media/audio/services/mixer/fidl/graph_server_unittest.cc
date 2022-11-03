@@ -38,6 +38,7 @@
 namespace media_audio {
 namespace {
 
+using ::fuchsia_audio_mixer::wire::BindProducerLeadTimeWatcherError;
 using ::fuchsia_audio_mixer::wire::CreateEdgeError;
 using ::fuchsia_audio_mixer::wire::CreateGainControlError;
 using ::fuchsia_audio_mixer::wire::CreateNodeError;
@@ -1958,6 +1959,135 @@ TEST_F(GraphServerTest, StopSuccess) {
     ASSERT_TRUE(result->value()->has_reference_time());
     ASSERT_TRUE(result->value()->has_stream_time());
     ASSERT_TRUE(result->value()->has_packet_timestamp());
+  }
+}
+
+//
+// BindProducerLeadTimeWatcher
+//
+
+TEST_F(GraphServerTest, BindProducerLeadTimeWatcherFails) {
+  NodeId output_producer_id;
+  NodeId input_producer_id;
+
+  {
+    auto result = client()->CreateProducer(MakeDefaultCreateProducerRequestWithRingBuffer(arena_)
+                                               .direction(PipelineDirection::kOutput)
+                                               .Build());
+
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+    ASSERT_TRUE(result->value()->has_id());
+    output_producer_id = result->value()->id();
+  }
+
+  {
+    auto result = client()->CreateProducer(
+        MakeDefaultCreateProducerRequestWithRingBuffer(arena_)
+            .direction(PipelineDirection::kInput)
+            .external_delay_watcher(fuchsia_audio_mixer::wire::ExternalDelayWatcher::Builder(arena_)
+                                        .initial_delay(0)
+                                        .Build())
+            .Build());
+
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+    ASSERT_TRUE(result->value()->has_id());
+    input_producer_id = result->value()->id();
+  }
+
+  struct TestCase {
+    std::string name;
+    std::function<void(fidl::WireTableBuilder<
+                       fuchsia_audio_mixer::wire::GraphBindProducerLeadTimeWatcherRequest>&)>
+        edit;
+    BindProducerLeadTimeWatcherError expected_error;
+  };
+
+  const std::vector<TestCase> cases = {
+      {
+          .name = "MissingId",
+          .edit = [](auto& request) { request.clear_id(); },
+          .expected_error = BindProducerLeadTimeWatcherError::kMissingRequiredField,
+      },
+      {
+          .name = "MissingServerEnd",
+          .edit = [](auto& request) { request.clear_server_end(); },
+          .expected_error = BindProducerLeadTimeWatcherError::kMissingRequiredField,
+      },
+      {
+          .name = "UnknownId",
+          .edit = [](auto& request) { request.id(9999); },
+          .expected_error = BindProducerLeadTimeWatcherError::kInvalidId,
+      },
+      {
+          .name = "InputPipeline",
+          .edit = [input_producer_id](auto& request) { request.id(input_producer_id); },
+          .expected_error = BindProducerLeadTimeWatcherError::kInvalidId,
+      },
+  };
+
+  for (auto& tc : cases) {
+    SCOPED_TRACE("TestCase: " + tc.name);
+    auto [delay_client, delay_server_end] =
+        CreateWireSyncClientOrDie<fuchsia_audio::DelayWatcher>();
+    auto request =
+        fuchsia_audio_mixer::wire::GraphBindProducerLeadTimeWatcherRequest::Builder(arena_)
+            .id(output_producer_id)
+            .server_end(std::move(delay_server_end));
+    tc.edit(request);
+
+    auto result = client()->BindProducerLeadTimeWatcher(request.Build());
+    if (!result.ok()) {
+      ADD_FAILURE() << "failed to send method call: " << result;
+      continue;
+    }
+    if (!result->is_error()) {
+      ADD_FAILURE() << "BindProducerLeadTimeWatcher did not fail";
+      continue;
+    }
+    EXPECT_EQ(result->error_value(), tc.expected_error);
+  }
+}
+
+TEST_F(GraphServerTest, BindProducerLeadTimeWatcherSuccess) {
+  NodeId producer_id;
+  NodeId consumer_id;
+  ASSERT_NO_FATAL_FAILURE(CreateProducerAndConsumer(&producer_id, &consumer_id));
+
+  // Producer -> Consumer
+  {
+    auto result =
+        client()->CreateEdge(fuchsia_audio_mixer::wire::GraphCreateEdgeRequest::Builder(arena_)
+                                 .source_id(producer_id)
+                                 .dest_id(consumer_id)
+                                 .Build());
+
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+  }
+
+  // Bind a watcher.
+  auto [delay_client, delay_server_end] = CreateWireSyncClientOrDie<fuchsia_audio::DelayWatcher>();
+  {
+    auto result = client()->BindProducerLeadTimeWatcher(
+        fuchsia_audio_mixer::wire::GraphBindProducerLeadTimeWatcherRequest::Builder(arena_)
+            .id(producer_id)
+            .server_end(std::move(delay_server_end))
+            .Build());
+
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+  }
+
+  // The default consumer delay is two mix periods.
+  {
+    auto result = delay_client->WatchDelay(
+        fuchsia_audio::wire::DelayWatcherWatchDelayRequest::Builder(arena_).Build());
+
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_TRUE(result->has_delay());
+    EXPECT_EQ(result->delay(), (2 * kDefaultMixPeriod).to_nsecs());
   }
 }
 

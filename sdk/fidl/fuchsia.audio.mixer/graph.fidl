@@ -775,6 +775,9 @@ type StopError = flexible enum {
 
 /// Type of errors return by [`BindProducerLeadTimeWatcher`].
 type BindProducerLeadTimeWatcherError = flexible enum {
+    /// A required field was not provided.
+    MISSING_REQUIRED_FIELD = 1;
+
     /// The given `id` does not refer to a producer in an OUTPUT pipeline.
-    INVALID_ID = 1;
+    INVALID_ID = 2;
 };

@@ -22,6 +22,7 @@
 #include "src/media/audio/services/mixer/fidl/graph_detached_thread.h"
 #include "src/media/audio/services/mixer/fidl/graph_mix_thread.h"
 #include "src/media/audio/services/mixer/fidl/node.h"
+#include "src/media/audio/services/mixer/fidl/producer_node.h"
 #include "src/media/audio/services/mixer/fidl/ptr_decls.h"
 
 namespace media_audio {
@@ -101,8 +102,9 @@ class GraphServer
   std::unordered_map<GainControlId, std::shared_ptr<GainControlServer>> gain_controls_;
   GainControlId next_gain_control_id_ = 1;
 
-  // Nodes mapping.
-  std::unordered_map<NodeId, NodePtr> nodes_;
+  // Nodes mappings.
+  std::unordered_map<NodeId, NodePtr> nodes_;  // contains all nodes
+  std::unordered_map<NodeId, std::shared_ptr<ProducerNode>> producer_nodes_;
   NodeId next_node_id_ = 1;
 
   // Threads mapping.

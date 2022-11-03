@@ -426,7 +426,7 @@ void GraphServer::CreateProducer(CreateProducerRequestView request,
   }
 
   const auto id = NextNodeId();
-  nodes_[id] = ProducerNode::Create({
+  const auto node = ProducerNode::Create({
       .name = name,
       .pipeline_direction = request->direction(),
       .format = *format,
@@ -438,6 +438,8 @@ void GraphServer::CreateProducer(CreateProducerRequestView request,
       .detached_thread = detached_thread_,
       .global_task_queue = global_task_queue_,
   });
+  nodes_[id] = node;
+  producer_nodes_[id] = node;
 
   fidl::Arena arena;
   completer.ReplySuccess(
@@ -781,6 +783,7 @@ void GraphServer::DeleteNode(DeleteNodeRequestView request, DeleteNodeCompleter:
 
   Node::Destroy(ctx_, it->second);
   nodes_.erase(it);
+  producer_nodes_.erase(request->id());
 
   fidl::Arena arena;
   completer.ReplySuccess(
@@ -1206,8 +1209,29 @@ void GraphServer::BindProducerLeadTimeWatcher(
   TRACE_DURATION("audio", "Graph::BindProducerLeadTimeWatcher");
   ScopedThreadChecker checker(thread().checker());
 
-  // TODO(fxbug.dev/87651): implement
-  FX_LOGS(FATAL) << "not implemented";
+  if (!request->has_id() || !request->has_server_end()) {
+    FX_LOGS(WARNING) << "BindProducerLeadTimeWatcher: missing field";
+    completer.ReplyError(
+        fuchsia_audio_mixer::BindProducerLeadTimeWatcherError::kMissingRequiredField);
+    return;
+  }
+
+  auto it = producer_nodes_.find(request->id());
+  if (it == producer_nodes_.end()) {
+    FX_LOGS(WARNING) << "BindProducerLeadTimeWatcher: invalid id";
+    completer.ReplyError(fuchsia_audio_mixer::BindProducerLeadTimeWatcherError::kInvalidId);
+    return;
+  }
+
+  auto node = it->second;
+  if (node->pipeline_direction() != PipelineDirection::kOutput) {
+    FX_LOGS(WARNING) << "BindProducerLeadTimeWatcher: cannot bind to input pipeline";
+    completer.ReplyError(fuchsia_audio_mixer::BindProducerLeadTimeWatcherError::kInvalidId);
+    return;
+  }
+
+  node->BindLeadTimeWatcher(std::move(request->server_end()));
+  completer.ReplySuccess();
 }
 
 void GraphServer::OnShutdown(fidl::UnbindInfo info) {
@@ -1219,6 +1243,7 @@ void GraphServer::OnShutdown(fidl::UnbindInfo info) {
     Node::Destroy(ctx_, node);
   }
   nodes_.clear();
+  producer_nodes_.clear();
 
   // Shutdown all threads.
   for (auto [id, mix_thread] : mix_threads_) {
