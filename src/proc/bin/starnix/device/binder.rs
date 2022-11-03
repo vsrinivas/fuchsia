@@ -4,19 +4,19 @@
 
 #![allow(non_upper_case_globals)]
 
+use crate::auth::Credentials;
 use crate::device::DeviceOps;
 use crate::fs::devtmpfs::dev_tmp_fs;
 use crate::fs::{
-    fs_node_impl_dir_readonly, DirEntryHandle, FdEvents, FdNumber, FileObject, FileOps, FileSystem,
-    FileSystemHandle, FileSystemOps, FsNode, FsNodeOps, FsStr, MemoryDirectoryFile, NamespaceNode,
-    SeekOrigin, SpecialNode, WaitAsyncOptions,
+    fs_node_impl_dir_readonly, DirEntryHandle, FdEvents, FdNumber, FdTable, FileObject, FileOps,
+    FileSystem, FileSystemHandle, FileSystemOps, FsNode, FsNodeOps, FsStr, MemoryDirectoryFile,
+    NamespaceNode, SeekOrigin, SpecialNode, WaitAsyncOptions,
 };
 use crate::lock::{Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use crate::logging::{not_implemented, not_implemented_log_once};
 use crate::mm::vmo::round_up_to_increment;
 use crate::mm::{
-    DesiredAddress, MappedVmo, MappingOptions, MemoryAccessor, MemoryAccessorExt, MemoryManager,
-    UserMemoryCursor,
+    DesiredAddress, MappedVmo, MappingOptions, MemoryAccessor, MemoryAccessorExt, UserMemoryCursor,
 };
 use crate::syscalls::{SyscallResult, SUCCESS};
 use crate::task::{
@@ -139,7 +139,13 @@ impl FileOps for BinderConnection {
         let proc = self.proc(current_task)?;
         let binder_thread =
             proc.thread_pool.write().find_or_register_thread(&proc, current_task.get_tid());
-        self.driver.ioctl(current_task, &proc, &binder_thread, request, user_addr)
+        self.driver.ioctl(
+            &CurrentBinderTask { task: current_task },
+            &proc,
+            &binder_thread,
+            request,
+            user_addr,
+        )
     }
 
     fn get_vmo(
@@ -286,20 +292,29 @@ impl Drop for TransactionState {
 /// an error while dispatching a transaction, this object is meant to cleanup any temporary
 /// resources that were allocated. Once a transaction has been dispatched successfully, this object
 /// can be converted into a [`TransactionState`] to be held for the lifetime of the transaction.
-#[derive(Debug)]
 struct TransientTransactionState<'a> {
     /// The part of the transient state that will live for the lifetime of the transaction.
     state: TransactionState,
     /// The task to which the transient file descriptors belong.
-    task: &'a Task,
+    task: &'a dyn BinderTask,
     /// The file descriptors to close in case of an error.
     transient_fds: Vec<FdNumber>,
+}
+
+impl<'a> std::fmt::Debug for TransientTransactionState<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TransientTransactionState")
+            .field("state", &self.state)
+            .field("task", &self.task)
+            .field("transient_fds", &self.transient_fds)
+            .finish()
+    }
 }
 
 impl<'a> TransientTransactionState<'a> {
     /// Creates a new [`TransientTransactionState`], whose resources will belong to `task` and
     /// `target_proc` for FDs and binder handles respectively.
-    fn new(task: &'a Task, target_proc: &Arc<BinderProcess>) -> Self {
+    fn new(task: &'a dyn BinderTask, target_proc: &Arc<BinderProcess>) -> Self {
         TransientTransactionState {
             state: TransactionState { proc: Arc::downgrade(target_proc), handles: Vec::new() },
             task,
@@ -324,7 +339,7 @@ impl<'a> TransientTransactionState<'a> {
 impl<'a> Drop for TransientTransactionState<'a> {
     fn drop(&mut self) {
         for fd in &self.transient_fds {
-            let _: Result<(), Errno> = self.task.files.close(*fd);
+            let _: Result<(), Errno> = self.task.files().close(*fd);
         }
     }
 }
@@ -1035,7 +1050,11 @@ impl Command {
     }
 
     /// Serializes and writes the command into userspace memory at `buffer`.
-    fn write_to_memory(&self, mm: &MemoryManager, buffer: &UserBuffer) -> Result<usize, Errno> {
+    fn write_to_memory(
+        &self,
+        current_task: &dyn RunningBinderTask,
+        buffer: &UserBuffer,
+    ) -> Result<usize, Errno> {
         match self {
             Self::AcquireRef(obj) | Self::ReleaseRef(obj) => {
                 #[repr(C, packed)]
@@ -1048,7 +1067,7 @@ impl Command {
                 if buffer.length < std::mem::size_of::<AcquireRefData>() {
                     return error!(ENOMEM);
                 }
-                mm.write_object(
+                current_task.write_object(
                     UserRef::new(buffer.address),
                     &AcquireRefData {
                         command: self.driver_return_code(),
@@ -1067,7 +1086,7 @@ impl Command {
                 if buffer.length < std::mem::size_of::<ErrorData>() {
                     return error!(ENOMEM);
                 }
-                mm.write_object(
+                current_task.write_object(
                     UserRef::new(buffer.address),
                     &ErrorData { command: self.driver_return_code(), error_val: *error_val },
                 )
@@ -1082,7 +1101,7 @@ impl Command {
                 if buffer.length < std::mem::size_of::<TransactionData>() {
                     return error!(ENOMEM);
                 }
-                mm.write_object(
+                current_task.write_object(
                     UserRef::new(buffer.address),
                     &TransactionData { command: self.driver_return_code(), data: data.as_bytes() },
                 )
@@ -1094,7 +1113,7 @@ impl Command {
                 if buffer.length < std::mem::size_of::<binder_driver_return_protocol>() {
                     return error!(ENOMEM);
                 }
-                mm.write_object(UserRef::new(buffer.address), &self.driver_return_code())
+                current_task.write_object(UserRef::new(buffer.address), &self.driver_return_code())
             }
             Self::DeadBinder(cookie) => {
                 #[repr(C, packed)]
@@ -1106,7 +1125,7 @@ impl Command {
                 if buffer.length < std::mem::size_of::<DeadBinderData>() {
                     return error!(ENOMEM);
                 }
-                mm.write_object(
+                current_task.write_object(
                     UserRef::new(buffer.address),
                     &DeadBinderData { command: self.driver_return_code(), cookie: *cookie },
                 )
@@ -1326,6 +1345,95 @@ impl std::fmt::Display for Handle {
     }
 }
 
+/// Abstraction over a thread that has a connection to the binder driver.
+trait BinderTask: std::fmt::Debug + MemoryAccessor {
+    // TODO(qsr): This API needs to be changed to access files in remote processes.
+    fn creds(&self) -> Credentials;
+    fn files(&self) -> &FdTable;
+}
+
+impl MemoryAccessorExt for dyn BinderTask + '_ {}
+
+/// Abstraction over the thread that is currently accessing the driver.
+trait RunningBinderTask: BinderTask {
+    fn kernel(&self) -> &Kernel;
+    fn wait_on_waiter(&self, waiter: &Waiter) -> Result<(), Errno>;
+    // This is needed because Rust doesn't support upcasting traits.
+    fn as_memory_accessor(&self) -> &dyn MemoryAccessor;
+}
+
+impl MemoryAccessorExt for dyn RunningBinderTask + '_ {}
+
+/// Implementation of BinderTask and RunningBinderTask for a local task, represented by a
+/// `CurrentTask`.
+#[derive(Debug)]
+struct CurrentBinderTask<'a> {
+    task: &'a CurrentTask,
+}
+
+impl<'a> MemoryAccessor for CurrentBinderTask<'a> {
+    fn read_memory(&self, addr: UserAddress, bytes: &mut [u8]) -> Result<(), Errno> {
+        self.task.mm.read_memory(addr, bytes)
+    }
+    fn read_memory_partial(&self, addr: UserAddress, bytes: &mut [u8]) -> Result<usize, Errno> {
+        self.task.mm.read_memory_partial(addr, bytes)
+    }
+    fn write_memory(&self, addr: UserAddress, bytes: &[u8]) -> Result<usize, Errno> {
+        self.task.mm.write_memory(addr, bytes)
+    }
+}
+
+impl<'a> BinderTask for CurrentBinderTask<'a> {
+    fn creds(&self) -> Credentials {
+        self.task.creds()
+    }
+
+    fn files(&self) -> &FdTable {
+        &self.task.files
+    }
+}
+
+impl<'a> RunningBinderTask for CurrentBinderTask<'a> {
+    fn kernel(&self) -> &Kernel {
+        self.task.kernel()
+    }
+
+    fn wait_on_waiter(&self, waiter: &Waiter) -> Result<(), Errno> {
+        waiter.wait(self.task)
+    }
+    fn as_memory_accessor(&self) -> &dyn MemoryAccessor {
+        self
+    }
+}
+
+/// Implementation of BinderTask for a local task.
+#[derive(Debug)]
+struct LocalBinderTask {
+    task: Arc<Task>,
+}
+
+impl MemoryAccessor for LocalBinderTask {
+    fn read_memory(&self, addr: UserAddress, bytes: &mut [u8]) -> Result<(), Errno> {
+        self.task.mm.read_memory(addr, bytes)
+    }
+    fn read_memory_partial(&self, addr: UserAddress, bytes: &mut [u8]) -> Result<usize, Errno> {
+        self.task.mm.read_memory_partial(addr, bytes)
+    }
+    fn write_memory(&self, addr: UserAddress, bytes: &[u8]) -> Result<usize, Errno> {
+        self.task.mm.write_memory(addr, bytes)
+    }
+}
+
+impl BinderTask for LocalBinderTask {
+    fn creds(&self) -> Credentials {
+        self.task.creds()
+    }
+
+    fn files(&self) -> &FdTable {
+        &self.task.files
+    }
+}
+
 impl BinderDriver {
     fn new() -> Arc<Self> {
         Arc::new(Self { context_manager: RwLock::new(None), procs: RwLock::new(BTreeMap::new()) })
@@ -1404,7 +1512,7 @@ impl BinderDriver {
 
     fn ioctl(
         &self,
-        current_task: &CurrentTask,
+        current_task: &dyn RunningBinderTask,
         binder_proc: &Arc<BinderProcess>,
         binder_thread: &Arc<BinderThread>,
         request: u32,
@@ -1419,7 +1527,7 @@ impl BinderDriver {
                 }
                 let response =
                     binder_version { protocol_version: BINDER_CURRENT_PROTOCOL_VERSION as i32 };
-                current_task.mm.write_object(UserRef::new(user_arg), &response)?;
+                current_task.write_object(UserRef::new(user_arg), &response)?;
                 Ok(SUCCESS)
             }
             uapi::BINDER_SET_CONTEXT_MGR | uapi::BINDER_SET_CONTEXT_MGR_EXT => {
@@ -1443,7 +1551,7 @@ impl BinderDriver {
                 }
 
                 let user_ref = UserRef::<binder_write_read>::new(user_arg);
-                let mut input = current_task.mm.read_object(user_ref)?;
+                let mut input = current_task.read_object(user_ref)?;
 
                 // We will be writing this back to userspace, don't trust what the client gave us.
                 input.write_consumed = 0;
@@ -1452,7 +1560,7 @@ impl BinderDriver {
                 if input.write_size > 0 {
                     // The calling thread wants to write some data to the binder driver.
                     let mut cursor = UserMemoryCursor::new(
-                        &*current_task.mm,
+                        current_task.as_memory_accessor(),
                         UserAddress::from(input.write_buffer),
                         input.write_size,
                     );
@@ -1486,7 +1594,7 @@ impl BinderDriver {
                 }
 
                 // Write back to the calling thread how much data was read/written.
-                current_task.mm.write_object(user_ref, &input)?;
+                current_task.write_object(user_ref, &input)?;
                 Ok(SUCCESS)
             }
             uapi::BINDER_SET_MAX_THREADS => {
@@ -1523,7 +1631,7 @@ impl BinderDriver {
     /// This method will never block.
     fn handle_thread_write<'a>(
         &self,
-        current_task: &CurrentTask,
+        current_task: &dyn RunningBinderTask,
         binder_proc: &Arc<BinderProcess>,
         binder_thread: &Arc<BinderThread>,
         cursor: &mut UserMemoryCursor<'a>,
@@ -1636,7 +1744,7 @@ impl BinderDriver {
     /// binder object.
     fn handle_refcount_operation(
         &self,
-        current_task: &CurrentTask,
+        current_task: &dyn RunningBinderTask,
         command: binder_driver_command_protocol,
         binder_proc: &Arc<BinderProcess>,
         handle: Handle,
@@ -1666,7 +1774,7 @@ impl BinderDriver {
     /// `BR_ACQUIRE`/`BR_INCREFS` command.
     fn handle_refcount_operation_done(
         &self,
-        current_task: &CurrentTask,
+        current_task: &dyn RunningBinderTask,
         command: binder_driver_command_protocol,
         binder_thread: &Arc<BinderThread>,
         object: LocalBinderObject,
@@ -1742,7 +1850,7 @@ impl BinderDriver {
     /// Subscribe a process to the death of the owner of `handle`.
     fn handle_request_death_notification(
         &self,
-        current_task: &CurrentTask,
+        current_task: &dyn RunningBinderTask,
         binder_proc: &Arc<BinderProcess>,
         binder_thread: &Arc<BinderThread>,
         handle: Handle,
@@ -1778,7 +1886,7 @@ impl BinderDriver {
     /// Remove a previously subscribed death notification.
     fn handle_clear_death_notification(
         &self,
-        current_task: &CurrentTask,
+        current_task: &dyn RunningBinderTask,
         binder_proc: &Arc<BinderProcess>,
         handle: Handle,
         cookie: binder_uintptr_t,
@@ -1808,7 +1916,7 @@ impl BinderDriver {
     /// A binder thread is starting a transaction on a remote binder object.
     fn handle_transaction(
         &self,
-        current_task: &CurrentTask,
+        current_task: &dyn RunningBinderTask,
         binder_proc: &Arc<BinderProcess>,
         binder_thread: &Arc<BinderThread>,
         data: binder_transaction_data_sg,
@@ -1826,12 +1934,14 @@ impl BinderDriver {
             }
         };
 
-        let target_task = current_task
-            .kernel()
-            .pids
-            .read()
-            .get_task(target_proc.pid)
-            .ok_or_else(|| errno!(EINVAL))?;
+        let target_task = LocalBinderTask {
+            task: current_task
+                .kernel()
+                .pids
+                .read()
+                .get_task(target_proc.pid)
+                .ok_or_else(|| errno!(EINVAL))?,
+        };
 
         // Copy the transaction data to the target process.
         let (data_buffer, offsets_buffer, transaction_state) = self.copy_transaction_buffers(
@@ -1941,7 +2051,7 @@ impl BinderDriver {
     /// A binder thread is sending a reply to a transaction.
     fn handle_reply(
         &self,
-        current_task: &CurrentTask,
+        current_task: &dyn RunningBinderTask,
         binder_proc: &Arc<BinderProcess>,
         binder_thread: &Arc<BinderThread>,
         data: binder_transaction_data_sg,
@@ -1949,12 +2059,14 @@ impl BinderDriver {
         // Find the process and thread that initiated the transaction. This reply is for them.
         let (target_proc, target_thread) = binder_thread.read().transaction_caller()?;
 
-        let target_task = current_task
-            .kernel()
-            .pids
-            .read()
-            .get_task(target_proc.pid)
-            .ok_or_else(|| errno!(EINVAL))?;
+        let target_task = LocalBinderTask {
+            task: current_task
+                .kernel()
+                .pids
+                .read()
+                .get_task(target_proc.pid)
+                .ok_or_else(|| errno!(EINVAL))?,
+        };
 
         // Copy the transaction data to the target process.
         let (data_buffer, offsets_buffer, transaction_state) = self.copy_transaction_buffers(
@@ -1998,7 +2110,7 @@ impl BinderDriver {
     /// Dequeues a command from the thread's command queue, or blocks until commands are available.
     fn handle_thread_read(
         &self,
-        current_task: &CurrentTask,
+        current_task: &dyn RunningBinderTask,
         binder_proc: &Arc<BinderProcess>,
         binder_thread: &Arc<BinderThread>,
         read_buffer: &UserBuffer,
@@ -2021,7 +2133,7 @@ impl BinderDriver {
 
             if let Some(command) = command_queue.pop_front() {
                 // Attempt to write the command to the thread's buffer.
-                let bytes_written = command.write_to_memory(&current_task.mm, read_buffer)?;
+                let bytes_written = command.write_to_memory(current_task, read_buffer)?;
 
                 match command {
                     Command::Transaction { sender, .. } => {
@@ -2057,7 +2169,7 @@ impl BinderDriver {
             scopeguard::defer! {
                 binder_thread.write().waiter = WaiterRef::empty();
             }
-            waiter.wait(current_task)?;
+            current_task.wait_on_waiter(&waiter)?;
         }
     }
 
@@ -2067,10 +2179,10 @@ impl BinderDriver {
     /// address to the offset buffer.
     fn copy_transaction_buffers<'a>(
         &self,
-        source_task: &Task,
+        source_task: &dyn RunningBinderTask,
         source_proc: &Arc<BinderProcess>,
         source_thread: &Arc<BinderThread>,
-        target_task: &'a Task,
+        target_task: &'a dyn BinderTask,
         target_proc: &Arc<BinderProcess>,
         data: &binder_transaction_data_sg,
     ) -> Result<(UserBuffer, UserBuffer, TransientTransactionState<'a>), TransactionError> {
@@ -2091,9 +2203,8 @@ impl BinderDriver {
 
         // Copy the data straight into the target's buffer.
         source_task
-            .mm
             .read_memory(UserAddress::from(userspace_addrs.buffer), data_buffer.as_mut_bytes())?;
-        source_task.mm.read_objects(
+        source_task.read_objects(
             UserRef::new(UserAddress::from(userspace_addrs.offsets)),
             offsets_buffer.as_mut_bytes(),
         )?;
@@ -2127,10 +2238,10 @@ impl BinderDriver {
     /// `BC_FREE_BUFFER` command.
     fn translate_handles<'a>(
         &self,
-        source_task: &Task,
+        source_task: &dyn RunningBinderTask,
         source_proc: &Arc<BinderProcess>,
         source_thread: &Arc<BinderThread>,
-        target_task: &'a Task,
+        target_task: &'a dyn BinderTask,
         target_proc: &Arc<BinderProcess>,
         offsets: &[binder_uintptr_t],
         transaction_data: &mut [u8],
@@ -2201,8 +2312,8 @@ impl BinderDriver {
                     SerializedBinderObject::Handle { handle, flags, cookie: 0 }
                 }
                 SerializedBinderObject::File { fd, flags, cookie } => {
-                    let (file, fd_flags) = source_task.files.get_with_flags(fd)?;
-                    let new_fd = target_task.files.add_with_flags(file, fd_flags)?;
+                    let (file, fd_flags) = source_task.files().get_with_flags(fd)?;
+                    let new_fd = target_task.files().add_with_flags(file, fd_flags)?;
 
                     // Close this FD if the transaction fails.
                     transaction_state.push_fd(new_fd);
@@ -2214,7 +2325,7 @@ impl BinderDriver {
                     if length > sg_remaining_buffer.length {
                         return error!(EINVAL)?;
                     }
-                    source_task.mm.read_memory(
+                    source_task.read_memory(
                         buffer,
                         &mut sg_buffer.as_mut_bytes()[sg_buffer_offset..sg_buffer_offset + length],
                     )?;
@@ -2302,8 +2413,8 @@ impl BinderDriver {
                     // Dup each file descriptor and re-write the value of the new FD.
                     for fd in fd_array {
                         let (file, flags) =
-                            source_task.files.get_with_flags(FdNumber::from_raw(*fd as i32))?;
-                        let new_fd = target_task.files.add_with_flags(file, flags)?;
+                            source_task.files().get_with_flags(FdNumber::from_raw(*fd as i32))?;
+                        let new_fd = target_task.files().add_with_flags(file, flags)?;
 
                         // Close this FD if the transaction fails.
                         transaction_state.push_fd(new_fd);
@@ -3533,13 +3644,14 @@ mod tests {
         };
 
         // Copy the data from process 1 to process 2
+        let target_binder_task = LocalBinderTask { task: test.receiver_task.task_arc_clone() };
         let (data_buffer, offsets_buffer, _transaction_state) = test
             .driver
             .copy_transaction_buffers(
-                &test.sender_task,
+                &CurrentBinderTask { task: &test.sender_task },
                 &test.sender_proc,
                 &test.sender_thread,
-                &test.receiver_task,
+                &target_binder_task,
                 &test.receiver_proc,
                 &transaction,
             )
@@ -3589,13 +3701,14 @@ mod tests {
 
         const EXPECTED_HANDLE: Handle = Handle::from_raw(1);
 
+        let target_binder_task = LocalBinderTask { task: test.receiver_task.task_arc_clone() };
         let transaction_state = test
             .driver
             .translate_handles(
-                &test.sender_task,
+                &CurrentBinderTask { task: &test.sender_task },
                 &test.sender_proc,
                 &test.sender_thread,
-                &test.receiver_task,
+                &target_binder_task,
                 &test.receiver_proc,
                 &offsets,
                 &mut transaction_data,
@@ -3667,10 +3780,10 @@ mod tests {
 
         test.driver
             .translate_handles(
-                &test.sender_task,
+                &CurrentBinderTask { task: &test.sender_task },
                 &test.sender_proc,
                 &test.sender_thread,
-                &test.receiver_task,
+                &LocalBinderTask { task: test.receiver_task.task_arc_clone() },
                 &test.receiver_proc,
                 &offsets,
                 &mut transaction_data,
@@ -3733,13 +3846,14 @@ mod tests {
             __bindgen_anon_1.handle: SENDING_HANDLE.into(),
         }));
 
+        let target_binder_task = LocalBinderTask { task: test.receiver_task.task_arc_clone() };
         let transaction_state = test
             .driver
             .translate_handles(
-                &test.sender_task,
+                &CurrentBinderTask { task: &test.sender_task },
                 &test.sender_proc,
                 &test.sender_thread,
-                &test.receiver_task,
+                &target_binder_task,
                 &test.receiver_proc,
                 &offsets,
                 &mut transaction_data,
@@ -3859,10 +3973,10 @@ mod tests {
         let (data_buffer, _, _) = test
             .driver
             .copy_transaction_buffers(
-                &test.sender_task,
+                &CurrentBinderTask { task: &test.sender_task },
                 &test.sender_proc,
                 &test.sender_thread,
-                &test.receiver_task,
+                &LocalBinderTask { task: test.receiver_task.task_arc_clone() },
                 &test.receiver_proc,
                 &input,
             )
@@ -3960,10 +4074,10 @@ mod tests {
         // Perform the translation and copying.
         test.driver
             .copy_transaction_buffers(
-                &test.sender_task,
+                &CurrentBinderTask { task: &test.sender_task },
                 &test.sender_proc,
                 &test.sender_thread,
-                &test.receiver_task,
+                &LocalBinderTask { task: test.receiver_task.task_arc_clone() },
                 &test.receiver_proc,
                 &input,
             )
@@ -4037,10 +4151,10 @@ mod tests {
         // Perform the translation and copying.
         test.driver
             .copy_transaction_buffers(
-                &test.sender_task,
+                &CurrentBinderTask { task: &test.sender_task },
                 &test.sender_proc,
                 &test.sender_thread,
-                &test.receiver_task,
+                &LocalBinderTask { task: test.receiver_task.task_arc_clone() },
                 &test.receiver_proc,
                 &input,
             )
@@ -4157,13 +4271,14 @@ mod tests {
         };
 
         // Perform the translation and copying.
+        let target_binder_task = LocalBinderTask { task: test.receiver_task.task_arc_clone() };
         let (data_buffer, _, transient_transaction_state) = test
             .driver
             .copy_transaction_buffers(
-                &test.sender_task,
+                &CurrentBinderTask { task: &test.sender_task },
                 &test.sender_proc,
                 &test.sender_thread,
-                &test.receiver_task,
+                &target_binder_task,
                 &test.receiver_proc,
                 &input,
             )
@@ -4232,10 +4347,10 @@ mod tests {
         let transaction_ref_error = test
             .driver
             .translate_handles(
-                &test.sender_task,
+                &CurrentBinderTask { task: &test.sender_task },
                 &test.sender_proc,
                 &test.sender_thread,
-                &test.receiver_task,
+                &LocalBinderTask { task: test.receiver_task.task_arc_clone() },
                 &test.receiver_proc,
                 &[0 as binder_uintptr_t],
                 &mut transaction_data,
@@ -4264,10 +4379,10 @@ mod tests {
         let transaction_ref_error = test
             .driver
             .translate_handles(
-                &test.sender_task,
+                &CurrentBinderTask { task: &test.sender_task },
                 &test.sender_proc,
                 &test.sender_thread,
-                &test.receiver_task,
+                &LocalBinderTask { task: test.receiver_task.task_arc_clone() },
                 &test.receiver_proc,
                 &[0 as binder_uintptr_t],
                 &mut transaction_data,
@@ -4306,10 +4421,10 @@ mod tests {
 
         test.driver
             .translate_handles(
-                &test.sender_task,
+                &CurrentBinderTask { task: &test.sender_task },
                 &test.sender_proc,
                 &test.sender_thread,
-                &test.receiver_task,
+                &LocalBinderTask { task: test.receiver_task.task_arc_clone() },
                 &test.receiver_proc,
                 &[
                     0 as binder_uintptr_t,
@@ -4427,7 +4542,7 @@ mod tests {
         // Register a death notification handler.
         driver
             .handle_request_death_notification(
-                &current_task,
+                &CurrentBinderTask { task: &current_task },
                 &client_proc,
                 &client_thread,
                 handle,
@@ -4480,7 +4595,7 @@ mod tests {
         // Register a death notification handler.
         driver
             .handle_request_death_notification(
-                &current_task,
+                &CurrentBinderTask { task: &current_task },
                 &client_proc,
                 &client_thread,
                 handle,
@@ -4519,7 +4634,7 @@ mod tests {
         // Register a death notification handler.
         driver
             .handle_request_death_notification(
-                &current_task,
+                &CurrentBinderTask { task: &current_task },
                 &client_proc,
                 &client_thread,
                 handle,
@@ -4530,7 +4645,7 @@ mod tests {
         // Now clear the death notification handler.
         driver
             .handle_clear_death_notification(
-                &current_task,
+                &CurrentBinderTask { task: &current_task },
                 &client_proc,
                 handle,
                 death_notification_cookie,
@@ -4581,13 +4696,14 @@ mod tests {
         });
         let offsets = [0];
 
+        let target_binder_task = LocalBinderTask { task: test.receiver_task.task_arc_clone() };
         let transient_transaction_state = test
             .driver
             .translate_handles(
-                &test.sender_task,
+                &CurrentBinderTask { task: &test.sender_task },
                 &test.sender_proc,
                 &test.sender_thread,
-                &test.receiver_task,
+                &target_binder_task,
                 &test.receiver_proc,
                 &offsets,
                 &mut transaction_data,
@@ -4655,13 +4771,14 @@ mod tests {
         });
         let offsets = [0];
 
+        let target_binder_task = LocalBinderTask { task: test.receiver_task.task_arc_clone() };
         let transaction_state = test
             .driver
             .translate_handles(
-                &test.sender_task,
+                &CurrentBinderTask { task: &test.sender_task },
                 &test.sender_proc,
                 &test.sender_thread,
-                &test.receiver_task,
+                &target_binder_task,
                 &test.receiver_proc,
                 &offsets,
                 &mut transaction_data,
@@ -4729,7 +4846,12 @@ mod tests {
 
         // Submit the transaction.
         driver
-            .handle_transaction(&sender_task, &sender_proc, &sender_thread, transaction)
+            .handle_transaction(
+                &CurrentBinderTask { task: &sender_task },
+                &sender_proc,
+                &sender_thread,
+                transaction,
+            )
             .expect("failed to handle the transaction");
 
         // The thread is ineligible to take the command (not sleeping) so check the process queue.
@@ -4757,7 +4879,12 @@ mod tests {
             buffers_size: 0,
         };
         driver
-            .handle_transaction(&sender_task, &sender_proc, &sender_thread, transaction)
+            .handle_transaction(
+                &CurrentBinderTask { task: &sender_task },
+                &sender_proc,
+                &sender_thread,
+                transaction,
+            )
             .expect("transaction queued");
 
         // There should now be an entry in the queue.
@@ -4844,10 +4971,20 @@ mod tests {
 
         // Submit the transaction twice so that the queue is populated.
         driver
-            .handle_transaction(&sender_task, &sender_proc, &sender_thread, transaction)
+            .handle_transaction(
+                &CurrentBinderTask { task: &sender_task },
+                &sender_proc,
+                &sender_thread,
+                transaction,
+            )
             .expect("failed to handle the transaction");
         driver
-            .handle_transaction(&sender_task, &sender_proc, &sender_thread, transaction)
+            .handle_transaction(
+                &CurrentBinderTask { task: &sender_task },
+                &sender_proc,
+                &sender_thread,
+                transaction,
+            )
             .expect("failed to handle the transaction");
 
         // The thread is ineligible to take the command (not sleeping) so check (and dequeue)
@@ -4879,7 +5016,12 @@ mod tests {
             buffers_size: 0,
         };
         driver
-            .handle_transaction(&sender_task, &sender_proc, &sender_thread, transaction)
+            .handle_transaction(
+                &CurrentBinderTask { task: &sender_task },
+                &sender_proc,
+                &sender_thread,
+                transaction,
+            )
             .expect("sync transaction queued");
 
         assert_eq!(
@@ -4921,7 +5063,7 @@ mod tests {
         // Submit the transaction.
         test.driver
             .handle_transaction(
-                &test.sender_task,
+                &CurrentBinderTask { task: &test.sender_task },
                 &test.sender_proc,
                 &test.sender_thread,
                 transaction,
@@ -4983,7 +5125,7 @@ mod tests {
         // Submit the transaction.
         test.driver
             .handle_transaction(
-                &test.sender_task,
+                &CurrentBinderTask { task: &test.sender_task },
                 &test.sender_proc,
                 &test.sender_thread,
                 transaction,
@@ -5065,7 +5207,7 @@ mod tests {
         // Submit the transaction.
         test.driver
             .handle_transaction(
-                &test.sender_task,
+                &CurrentBinderTask { task: &test.sender_task },
                 &test.sender_proc,
                 &test.sender_thread,
                 transaction,
@@ -5085,7 +5227,7 @@ mod tests {
         let read_buffer_addr = map_memory(&test.receiver_task, UserAddress::default(), *PAGE_SIZE);
         test.driver
             .handle_thread_read(
-                &test.receiver_task,
+                &CurrentBinderTask { task: &test.receiver_task },
                 &test.receiver_proc,
                 &receiver_thread,
                 &UserBuffer { address: read_buffer_addr, length: *PAGE_SIZE as usize },
