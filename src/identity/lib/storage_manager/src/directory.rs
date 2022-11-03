@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![cfg(test)]
+
 use crate::{Key, StorageManager};
 use account_common::{AccountManagerError, ResultExt};
 use anyhow::format_err;
@@ -12,6 +14,8 @@ use fuchsia_fs::directory::{DirEntry, DirentKind};
 use futures::lock::Mutex;
 use lazy_static::lazy_static;
 use std::path::Path;
+use tempfile::TempDir;
+use typed_builder::TypedBuilder;
 
 /// Path to the file containing the expected key.
 const KEY_FILE_PATH: &str = "keyfile";
@@ -72,6 +76,8 @@ pub struct InsecureKeyDirectoryStorageManager {
     state: Mutex<StorageManagerState>,
     /// A handle to the root of the managed directory.
     managed_dir: fio::DirectoryProxy,
+    /// The temporary directory itself, which might be managed by this struct.
+    pub temp_dir: Option<TempDir>,
 }
 
 #[async_trait]
@@ -191,14 +197,58 @@ impl StorageManager for InsecureKeyDirectoryStorageManager {
     }
 }
 
+/// Constructor arguments for InsecureKeyDirectoryStorageManager.
+///
+/// Both |temp_dir| and |directory| may be absent at construction time. If they
+/// are, InsecureKeyDirectoryStorageManager::new(args) will create a default
+/// (directory, directory proxy) and store them. You might choose to provide
+/// your own directory if you need to create a storage manager to an
+/// already-exstant directory.
+#[derive(TypedBuilder)]
+pub struct Args {
+    /// The temporary directory backing this manager. See above for notes on optionality.
+    #[builder(default = None, setter(strip_option))]
+    temp_dir: Option<TempDir>,
+
+    /// The directory proxy backing this manager. See above for notes on optionality.
+    #[builder(default = None, setter(strip_option))]
+    directory: Option<fio::DirectoryProxy>,
+}
+impl Default for Args {
+    fn default() -> Self {
+        Self::builder().build()
+    }
+}
+
 impl InsecureKeyDirectoryStorageManager {
-    /// Create a new `InsecureKeyDirectoryStorageManager` that manages the given
-    /// directory.  The directory must be either empty or previously managed
-    /// by a `InsecureKeyDirectoryStorageManager`.
+    /// Creates a TempDir and DirectoryProxy handle to it.  The TempDir must
+    /// be kept in scope for the duration that DirectoryProxy is used.
+    fn create_temp_directory() -> (TempDir, fio::DirectoryProxy) {
+        let temp_dir = TempDir::new().unwrap();
+        let dir_proxy = fuchsia_fs::directory::open_in_namespace(
+            temp_dir.path().to_str().unwrap(),
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+        )
+        .unwrap();
+        (temp_dir, dir_proxy)
+    }
+
+    /// Create a new `InsecureKeyDirectoryStorageManager` that manages a
+    /// directory. If a directory and directory proxy are not provided via |args|,
+    /// one will be constructed for you.
     #[allow(dead_code)]
-    pub async fn new(managed_dir: fio::DirectoryProxy) -> Result<Self, AccountManagerError> {
+    pub async fn new(args: Args) -> Result<Self, AccountManagerError> {
+        let (temp_dir, dir_proxy): (Option<TempDir>, fio::DirectoryProxy) =
+            match (args.temp_dir, args.directory) {
+                (temp_dir, Some(proxy)) => (temp_dir, proxy),
+                _ => {
+                    let (temp_dir, proxy) = Self::create_temp_directory();
+                    (Some(temp_dir), proxy)
+                }
+            };
+
         // check internal state of filesystem to derive state
-        let dir_entries = fuchsia_fs::directory::readdir(&managed_dir)
+        let dir_entries = fuchsia_fs::directory::readdir(&dir_proxy)
             .await
             .account_manager_error(ApiError::Resource)?;
 
@@ -210,7 +260,11 @@ impl InsecureKeyDirectoryStorageManager {
             return Err(AccountManagerError::new(ApiError::Internal)
                 .with_cause(format_err!("Cannot determine StorageManager state")));
         };
-        Ok(InsecureKeyDirectoryStorageManager { state: Mutex::new(state), managed_dir })
+        Ok(InsecureKeyDirectoryStorageManager {
+            state: Mutex::new(state),
+            managed_dir: dir_proxy,
+            temp_dir,
+        })
     }
 
     /// Stores the correct key.
@@ -261,28 +315,14 @@ impl InsecureKeyDirectoryStorageManager {
     }
 }
 
-#[cfg(test)]
 mod test {
     use super::*;
     use fuchsia_async as fasync;
     use futures::prelude::*;
-    use tempfile::TempDir;
 
     lazy_static! {
         static ref CUSTOM_KEY_CONTENTS: [u8; 32] = [8u8; 32];
         static ref CUSTOM_KEY: Key = Key::Key256Bit(*CUSTOM_KEY_CONTENTS);
-    }
-
-    /// Creates a TempDir and DirectoryProxy handle to it.  The TempDir must
-    /// be kept in scope for the duration that DirectoryProxy is used.
-    fn create_temp_directory() -> (TempDir, fio::DirectoryProxy) {
-        let temp_dir = TempDir::new().unwrap();
-        let dir_proxy = fuchsia_fs::directory::open_in_namespace(
-            temp_dir.path().to_str().unwrap(),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-        )
-        .unwrap();
-        (temp_dir, dir_proxy)
     }
 
     async fn create_file_with_content(dir: &fio::DirectoryProxy, path: &str, content: &str) {
@@ -320,8 +360,7 @@ mod test {
     #[fasync::run_singlethreaded(test)]
     async fn test_directory_storage_manager_destroy_removes_files() {
         run_with_key_variations(|key| async move {
-            let (_dir, dir_proxy) = create_temp_directory();
-            let manager = InsecureKeyDirectoryStorageManager::new(dir_proxy).await.unwrap();
+            let manager = InsecureKeyDirectoryStorageManager::new(Args::default()).await.unwrap();
             manager.provision(&key).await.unwrap();
 
             // Write some data to directories
@@ -344,8 +383,7 @@ mod test {
     #[fasync::run_singlethreaded(test)]
     async fn test_directory_storage_manager_files_persist_across_lock() {
         run_with_key_variations(|key| async move {
-            let (_dir, dir_proxy) = create_temp_directory();
-            let manager = InsecureKeyDirectoryStorageManager::new(dir_proxy).await.unwrap();
+            let manager = InsecureKeyDirectoryStorageManager::new(Args::default()).await.unwrap();
             manager.provision(&key).await.unwrap();
 
             // Write some data to directories
@@ -366,24 +404,35 @@ mod test {
     #[fasync::run_singlethreaded(test)]
     async fn test_directory_storage_manager_files_persist_across_instances() {
         run_with_key_variations(|key| async move {
-            let (dir, dir_proxy) = create_temp_directory();
-            let manager = InsecureKeyDirectoryStorageManager::new(dir_proxy).await.unwrap();
+            let (dir, proxy) = InsecureKeyDirectoryStorageManager::create_temp_directory();
+
+            let mut manager = InsecureKeyDirectoryStorageManager::new(
+                Args::builder().temp_dir(dir).directory(proxy).build(),
+            )
+            .await
+            .unwrap();
             manager.provision(&key).await.unwrap();
 
             // Write some data to directories
             let data_dir = manager.get_root_dir().await.unwrap();
             create_file_with_content(&data_dir, "test-data-file", "test-data-content").await;
             std::mem::drop(data_dir);
+            // Save the temp dir instance, but drop the manager.
+            let temp_dir = std::mem::take(&mut manager.temp_dir).unwrap();
             std::mem::drop(manager);
 
             // Create a new manager with the same directory.
             let new_dir_proxy = fuchsia_fs::directory::open_in_namespace(
-                dir.path().to_str().unwrap(),
+                temp_dir.path().to_str().unwrap(),
                 fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             )
             .unwrap();
 
-            let new_manager = InsecureKeyDirectoryStorageManager::new(new_dir_proxy).await.unwrap();
+            let new_manager = InsecureKeyDirectoryStorageManager::new(
+                Args::builder().temp_dir(temp_dir).directory(new_dir_proxy).build(),
+            )
+            .await
+            .unwrap();
             new_manager.unlock_storage(&key).await.unwrap();
 
             // Files should still exist.
@@ -396,8 +445,7 @@ mod test {
     #[fasync::run_singlethreaded(test)]
     async fn test_directory_storage_manager_unlock_failed_authentication() {
         // Key256Bit given when NoSpecifiedKey expected
-        let (_dir, dir_proxy) = create_temp_directory();
-        let manager = InsecureKeyDirectoryStorageManager::new(dir_proxy).await.unwrap();
+        let manager = InsecureKeyDirectoryStorageManager::new(Args::default()).await.unwrap();
         manager.provision(&Key::NoSpecifiedKey).await.unwrap();
         manager.lock_storage().await.unwrap();
         assert_eq!(
@@ -406,8 +454,7 @@ mod test {
         );
 
         // NoSpecifiedKey given when Key256Bit expected
-        let (_dir, dir_proxy) = create_temp_directory();
-        let manager = InsecureKeyDirectoryStorageManager::new(dir_proxy).await.unwrap();
+        let manager = InsecureKeyDirectoryStorageManager::new(Args::default()).await.unwrap();
         manager.provision(&CUSTOM_KEY).await.unwrap();
         manager.lock_storage().await.unwrap();
         assert_eq!(
@@ -416,8 +463,7 @@ mod test {
         );
 
         // Wrong Key256Bit given
-        let (_dir, dir_proxy) = create_temp_directory();
-        let manager = InsecureKeyDirectoryStorageManager::new(dir_proxy).await.unwrap();
+        let manager = InsecureKeyDirectoryStorageManager::new(Args::default()).await.unwrap();
         manager.provision(&CUSTOM_KEY).await.unwrap();
         manager.lock_storage().await.unwrap();
         let wrong_key = [99; 32];
@@ -427,8 +473,7 @@ mod test {
         );
 
         // Key of all zeros given when NoSpecifiedKey expected
-        let (_dir, dir_proxy) = create_temp_directory();
-        let manager = InsecureKeyDirectoryStorageManager::new(dir_proxy).await.unwrap();
+        let manager = InsecureKeyDirectoryStorageManager::new(Args::default()).await.unwrap();
         manager.provision(&Key::NoSpecifiedKey).await.unwrap();
         manager.lock_storage().await.unwrap();
         assert_eq!(
@@ -437,8 +482,7 @@ mod test {
         );
 
         // NoSpecifiedKey given when key [0; 32] expected
-        let (_dir, dir_proxy) = create_temp_directory();
-        let manager = InsecureKeyDirectoryStorageManager::new(dir_proxy).await.unwrap();
+        let manager = InsecureKeyDirectoryStorageManager::new(Args::default()).await.unwrap();
         manager.provision(&Key::Key256Bit([0; 32])).await.unwrap();
         manager.lock_storage().await.unwrap();
         assert_eq!(

@@ -11,7 +11,6 @@ mod directory;
 pub mod minfs;
 mod volume;
 
-pub use directory::InsecureKeyDirectoryStorageManager;
 pub use volume::EncryptedVolumeStorageManager;
 
 use account_common::AccountManagerError;
