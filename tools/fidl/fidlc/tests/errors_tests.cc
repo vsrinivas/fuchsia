@@ -129,16 +129,11 @@ type ErrorType = enum : int32 {
 }
 
 TEST(ErrorsTests, BadErrorUnknownIdentifier) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol Example {
-    Method() -> (struct { foo string; }) error ErrorType;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0052.test.fidl");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameNotFound);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ErrorType");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ParsingError");
 }
 
 TEST(ErrorsTests, BadErrorWrongPrimitive) {

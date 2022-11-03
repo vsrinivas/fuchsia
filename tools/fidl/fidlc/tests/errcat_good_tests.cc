@@ -279,6 +279,18 @@ TEST(ErrcatTests, Good0051) {
   ASSERT_COMPILED(library);
 }
 
+TEST(ErrcatTests, Good0052a) {
+  TestLibrary library;
+  library.AddFile("good/fi-0052-a.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
+TEST(ErrcatTests, Good0052b) {
+  TestLibrary library;
+  library.AddFile("good/fi-0052-b.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
 TEST(ErrcatTests, Good0058) {
   TestLibrary library;
   library.AddFile("good/fi-0058.test.fidl");

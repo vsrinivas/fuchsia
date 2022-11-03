@@ -110,7 +110,7 @@ constexpr ErrorDef<51, std::vector<std::string_view>, std::vector<std::string_vi
     ErrUnknownDependentLibrary(
         "Unknown dependent library {} or reference to member of "
         "library {}. Did you require it with `using`?");
-constexpr UndocumentedErrorDef<52, std::string_view, std::vector<std::string_view>> ErrNameNotFound(
+constexpr ErrorDef<52, std::string_view, std::vector<std::string_view>> ErrNameNotFound(
     "cannot find '{}' in library '{}'");
 constexpr UndocumentedErrorDef<53, const flat::Decl *> ErrCannotReferToMember(
     "cannot refer to member of {}");
