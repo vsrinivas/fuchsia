@@ -43,28 +43,6 @@ fshost_component_and_config("test-fshost-fxfs") {
   options.data_filesystem_format = "fxfs"
 }
 
-fshost_component_and_config("test-fshost-recovery") {
-  testonly = true
-  options = default_integration_test_options
-  options.data_filesystem_format = "minfs"
-  options.fvm_ramdisk = true
-
-  # Intentionally match against non-existent paths so tests can use ramdisks and they'll still be
-  # matched as non-ramdisks.
-  options.ramdisk_prefix = "/nada/zip/zilch"
-}
-
-fshost_component_and_config("test-fshost-fxfs-recovery") {
-  testonly = true
-  options = default_integration_test_options
-  options.data_filesystem_format = "fxfs"
-  options.fvm_ramdisk = true
-
-  # Intentionally match against non-existent paths so tests can use ramdisks and they'll still be
-  # matched as non-ramdisks.
-  options.ramdisk_prefix = "/nada/zip/zilch"
-}
-
 fshost_component_and_config("test-fshost-no-watcher") {
   testonly = true
   options = default_integration_test_options

@@ -46,7 +46,8 @@ async fn write_test_blob(directory: &fio::DirectoryProxy) {
 // Ensure fuchsia.fshost.Admin/WipeStorage fails if we cannot identify a storage device to wipe.
 #[fuchsia::test]
 async fn wipe_storage_no_fvm_device() {
-    let builder = new_builder();
+    let mut builder = new_builder();
+    builder.fshost().set_fvm_ramdisk().set_ramdisk_prefix("/nada/zip/zilch");
     let fixture = builder.build().await;
     let admin =
         fixture.realm.root.connect_to_protocol_at_exposed_dir::<fshost::AdminMarker>().unwrap();
@@ -64,6 +65,7 @@ async fn wipe_storage_no_fvm_device() {
 #[fuchsia::test]
 async fn wipe_storage_write_blob() {
     let mut builder = new_builder();
+    builder.fshost().set_fvm_ramdisk().set_ramdisk_prefix("/nada/zip/zilch");
     builder.with_disk();
     let fixture = builder.build().await;
 
@@ -83,6 +85,7 @@ async fn wipe_storage_write_blob() {
 #[fuchsia::test]
 async fn wipe_storage_blobfs_formatted() {
     let mut builder = new_builder();
+    builder.fshost().set_fvm_ramdisk().set_ramdisk_prefix("/nada/zip/zilch");
     builder.with_disk();
     let fixture = builder.build().await;
 
@@ -129,6 +132,7 @@ async fn wipe_storage_blobfs_formatted() {
 async fn wipe_storage_data_unformatted() {
     const BUFF_LEN: usize = 512;
     let mut builder = new_builder();
+    builder.fshost().set_fvm_ramdisk().set_ramdisk_prefix("/nada/zip/zilch");
     builder.with_disk().format_data(DATA_FILESYSTEM_FORMAT);
     let fixture = builder.build().await;
 

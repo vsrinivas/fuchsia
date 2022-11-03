@@ -143,30 +143,6 @@ fshost_component_and_config("test-fshost-rust-fxfs") {
   options.use_rust_port = true
 }
 
-fshost_component_and_config("test-fshost-rust-fxfs-recovery") {
-  testonly = true
-  options = default_integration_test_options
-  options.data_filesystem_format = "fxfs"
-  options.fvm_ramdisk = true
-
-  # Intentionally match against non-existent paths so tests can use ramdisks and they'll still be
-  # matched as non-ramdisks.
-  options.ramdisk_prefix = "/nada/zip/zilch"
-  options.use_rust_port = true
-}
-
-fshost_component_and_config("test-fshost-rust-minfs-recovery") {
-  testonly = true
-  options = default_integration_test_options
-  options.data_filesystem_format = "minfs"
-  options.fvm_ramdisk = true
-
-  # Intentionally match against non-existent paths so tests can use ramdisks and they'll still be
-  # matched as non-ramdisks.
-  options.ramdisk_prefix = "/nada/zip/zilch"
-  options.use_rust_port = true
-}
-
 fshost_integration_test("fshost-cpp-integration-test-fxfs") {
   fshost_target = "//src/storage/fshost/testing:test-fshost-fxfs"
   source_root = "tests/fshost_integration_test.rs"
@@ -234,7 +210,7 @@ fshost_integration_test("fshost-rust-integration-test-fxfs") {
 # TODO(fxbug.dev/87511): Port this test to fshost-rust.
 fshost_integration_test(
     "fshost-cpp-wipe-storage-integration-test-fxfs-recovery") {
-  fshost_target = "//src/storage/fshost/testing:test-fshost-fxfs-recovery"
+  fshost_target = "//src/storage/fshost/testing:test-fshost-fxfs"
   source_root = "tests/fshost_recovery_wipe_storage_integration_test.rs"
   sources = [ "tests/fshost_recovery_wipe_storage_integration_test.rs" ]
   deps = [
@@ -248,7 +224,7 @@ fshost_integration_test(
 # TODO(fxbug.dev/87511): Port this test to fshost-rust.
 fshost_integration_test(
     "fshost-cpp-wipe-storage-integration-test-minfs-recovery") {
-  fshost_target = "//src/storage/fshost/testing:test-fshost-recovery"
+  fshost_target = "//src/storage/fshost/testing:test-fshost"
   source_root = "tests/fshost_recovery_wipe_storage_integration_test.rs"
   sources = [ "tests/fshost_recovery_wipe_storage_integration_test.rs" ]
   deps = [
