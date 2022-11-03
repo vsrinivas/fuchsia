@@ -49,6 +49,11 @@ virtio_gpu
 virtio_input
 EOF
 
+# Explicitly disable resume from swap. This is to ensure we never try to to
+# wait for a resume device before finishing booting since we don't use a
+# swap partition anyways.
+echo "RESUME=none" > /etc/initramfs-tools/conf.d/resume
+
 update-initramfs -u
 
 # Enable automatic login for serial getty, most importantly on hvc0. This
