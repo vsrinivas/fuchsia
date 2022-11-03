@@ -4,7 +4,7 @@
 
 use {
     component_events::{
-        events::{Event, EventSource, EventSubscription, Started, Stopped},
+        events::{EventStream, Started},
         matcher::{EventMatcher, ExitStatusMatcher},
         sequence::EventSequence,
     },
@@ -13,11 +13,7 @@ use {
 
 #[fuchsia::test]
 async fn test_normal_behavior() {
-    let event_source = EventSource::new().unwrap();
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Started::NAME, Stopped::NAME])])
-        .await
-        .unwrap();
+    let mut event_stream = EventStream::open().await.unwrap();
     let collection_name = String::from("test-collection");
     // What is going on here? A scoped dynamic instance is created and then
     // dropped. When a the instance is dropped it stops the instance.
