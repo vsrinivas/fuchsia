@@ -225,17 +225,20 @@ void Session::PendingConnection::DataAvailableMainThread(fxl::RefPtr<PendingConn
 
   std::vector<char> serialized;
   serialized.resize(kHelloMessageSize);
-  buffer_->stream().Read(serialized.data(), kHelloMessageSize);
+  size_t read = buffer_->stream().Read(serialized.data(), kHelloMessageSize);
 
   debug_ipc::HelloReply reply;
-  uint32_t transaction_id = 0;
-
   Err err;
-  if (!debug_ipc::Deserialize(std::move(serialized), &reply, &transaction_id, 0) ||
-      reply.signature != debug_ipc::HelloReply::kStreamSignature) {
-    // Corrupt.
-    err = Err("Corrupted reply, service is probably not the debug agent.");
-    reply = debug_ipc::HelloReply();
+
+  if (read != kHelloMessageSize) {
+    err = Err("Connection to the debug agent is broken.");
+  } else {
+    uint32_t transaction_id = 0;
+    if (!debug_ipc::Deserialize(std::move(serialized), &reply, &transaction_id, 0) ||
+        reply.signature != debug_ipc::HelloReply::kStreamSignature) {
+      // Corrupt.
+      err = Err("Corrupted reply, service is probably not the debug agent.");
+    }
   }
 
   HelloCompleteMainThread(std::move(owner), err, reply);
