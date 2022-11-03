@@ -20,8 +20,6 @@ bool ImageFormatIsPixelFormatEqual(const fuchsia_sysmem2::wire::PixelFormat& a,
                                    const fuchsia_sysmem2::wire::PixelFormat& b);
 bool ImageFormatIsPixelFormatEqual(const fuchsia_sysmem::wire::PixelFormat& a,
                                    const fuchsia_sysmem::wire::PixelFormat& b);
-bool ImageFormatIsPixelFormatEqual(const fuchsia_sysmem_PixelFormat& a,
-                                   const fuchsia_sysmem_PixelFormat& b);
 
 // true - The color_space is potentially compatible with the PixelFormat,
 // assuming the correct variant of the ColorSpace is used (with correct bpp).
@@ -40,8 +38,6 @@ bool ImageFormatIsSupportedColorSpaceForPixelFormat(
 bool ImageFormatIsSupportedColorSpaceForPixelFormat(
     const fuchsia_sysmem::wire::ColorSpace& color_space,
     const fuchsia_sysmem::wire::PixelFormat& pixel_format);
-bool ImageFormatIsSupportedColorSpaceForPixelFormat(const fuchsia_sysmem_ColorSpace& color_space,
-                                                    const fuchsia_sysmem_PixelFormat& pixel_format);
 
 // If this returns true, the remainder of the functions in this header can be
 // called with pixel_format.  If this returns false, calling any other method of
@@ -49,7 +45,6 @@ bool ImageFormatIsSupportedColorSpaceForPixelFormat(const fuchsia_sysmem_ColorSp
 bool ImageFormatIsSupported(const fuchsia_sysmem2::PixelFormat& pixel_format);
 bool ImageFormatIsSupported(const fuchsia_sysmem2::wire::PixelFormat& pixel_format);
 bool ImageFormatIsSupported(const fuchsia_sysmem::wire::PixelFormat& pixel_format);
-bool ImageFormatIsSupported(const fuchsia_sysmem_PixelFormat* pixel_format);
 
 // Returns the number of bits per pixel for the given PixelFormat.  This is the
 // bits per pixel (RGB pixel or Y pixel) in the overall image across all bytes
@@ -60,7 +55,6 @@ bool ImageFormatIsSupported(const fuchsia_sysmem_PixelFormat* pixel_format);
 uint32_t ImageFormatBitsPerPixel(const fuchsia_sysmem2::PixelFormat& pixel_format);
 uint32_t ImageFormatBitsPerPixel(const fuchsia_sysmem2::wire::PixelFormat& pixel_format);
 uint32_t ImageFormatBitsPerPixel(const fuchsia_sysmem::wire::PixelFormat& pixel_format);
-uint32_t ImageFormatBitsPerPixel(const fuchsia_sysmem_PixelFormat* pixel_format);
 
 // This is the number of stride bytes per pixel of width (RGB pixel width or Y
 // pixel width) of plane 0.  For formats such as NV12 that separate Y and UV
@@ -71,24 +65,20 @@ uint32_t ImageFormatStrideBytesPerWidthPixel(const fuchsia_sysmem2::PixelFormat&
 uint32_t ImageFormatStrideBytesPerWidthPixel(
     const fuchsia_sysmem2::wire::PixelFormat& pixel_format);
 uint32_t ImageFormatStrideBytesPerWidthPixel(const fuchsia_sysmem::wire::PixelFormat& pixel_format);
-uint32_t ImageFormatStrideBytesPerWidthPixel(const fuchsia_sysmem_PixelFormat* pixel_format);
 
 // This would be height * stride, if it weren't for formats like NV12, where it
 // isn't.  The return value is in bytes.
 uint64_t ImageFormatImageSize(const fuchsia_sysmem2::ImageFormat& image_format);
 uint64_t ImageFormatImageSize(const fuchsia_sysmem2::wire::ImageFormat& image_format);
 uint64_t ImageFormatImageSize(const fuchsia_sysmem::wire::ImageFormat2& image_format);
-uint64_t ImageFormatImageSize(const fuchsia_sysmem_ImageFormat_2* image_format);
 
 uint32_t ImageFormatCodedWidthMinDivisor(const fuchsia_sysmem2::PixelFormat& pixel_format);
 uint32_t ImageFormatCodedWidthMinDivisor(const fuchsia_sysmem2::wire::PixelFormat& pixel_format);
 uint32_t ImageFormatCodedWidthMinDivisor(const fuchsia_sysmem::wire::PixelFormat& pixel_format);
-uint32_t ImageFormatCodedWidthMinDivisor(const fuchsia_sysmem_PixelFormat* pixel_format);
 
 uint32_t ImageFormatCodedHeightMinDivisor(const fuchsia_sysmem2::PixelFormat& pixel_format);
 uint32_t ImageFormatCodedHeightMinDivisor(const fuchsia_sysmem2::wire::PixelFormat& pixel_format);
 uint32_t ImageFormatCodedHeightMinDivisor(const fuchsia_sysmem::wire::PixelFormat& pixel_format);
-uint32_t ImageFormatCodedHeightMinDivisor(const fuchsia_sysmem_PixelFormat* pixel_format);
 
 // The start of image data must be at least this aligned.
 //
@@ -98,7 +88,6 @@ uint32_t ImageFormatCodedHeightMinDivisor(const fuchsia_sysmem_PixelFormat* pixe
 uint32_t ImageFormatSampleAlignment(const fuchsia_sysmem2::PixelFormat& pixel_format);
 uint32_t ImageFormatSampleAlignment(const fuchsia_sysmem2::wire::PixelFormat& pixel_format);
 uint32_t ImageFormatSampleAlignment(const fuchsia_sysmem::wire::PixelFormat& pixel_format);
-uint32_t ImageFormatSampleAlignment(const fuchsia_sysmem_PixelFormat* pixel_format);
 
 // Gets the minimum number of bytes per row possible for an image with a
 // specific width and specific constraints. Returns false if the width would not
@@ -109,16 +98,12 @@ bool ImageFormatMinimumRowBytes(const fuchsia_sysmem2::wire::ImageFormatConstrai
                                 uint32_t width, uint32_t* minimum_row_bytes_out);
 bool ImageFormatMinimumRowBytes(const fuchsia_sysmem::wire::ImageFormatConstraints& constraints,
                                 uint32_t width, uint32_t* minimum_row_bytes_out);
-bool ImageFormatMinimumRowBytes(const fuchsia_sysmem_ImageFormatConstraints* constraints,
-                                uint32_t width, uint32_t* minimum_row_bytes_out);
 
 bool ImageFormatConvertSysmemToZx(const fuchsia_sysmem2::PixelFormat& pixel_format,
                                   zx_pixel_format_t* zx_pixel_format_out);
 bool ImageFormatConvertSysmemToZx(const fuchsia_sysmem2::wire::PixelFormat& pixel_format,
                                   zx_pixel_format_t* zx_pixel_format_out);
 bool ImageFormatConvertSysmemToZx(const fuchsia_sysmem::wire::PixelFormat& pixel_format,
-                                  zx_pixel_format_t* zx_pixel_format_out);
-bool ImageFormatConvertSysmemToZx(const fuchsia_sysmem_PixelFormat* pixel_format,
                                   zx_pixel_format_t* zx_pixel_format_out);
 
 fpromise::result<fuchsia_sysmem2::PixelFormat> ImageFormatConvertZxToSysmem_v2(
@@ -138,9 +123,6 @@ fpromise::result<fuchsia_sysmem2::wire::ImageFormat> ImageConstraintsToFormat(
 fpromise::result<fuchsia_sysmem::wire::ImageFormat2> ImageConstraintsToFormat(
     const fuchsia_sysmem::wire::ImageFormatConstraints& constraints, uint32_t width,
     uint32_t height);
-bool ImageConstraintsToFormat(const fuchsia_sysmem_ImageFormatConstraints* constraints,
-                              uint32_t width, uint32_t height,
-                              fuchsia_sysmem_ImageFormat_2* image_format_out);
 
 bool ImageFormatPlaneByteOffset(const fuchsia_sysmem2::ImageFormat& image_format, uint32_t plane,
                                 uint64_t* offset_out);
@@ -148,8 +130,6 @@ bool ImageFormatPlaneByteOffset(const fuchsia_sysmem2::wire::ImageFormat& image_
                                 uint32_t plane, uint64_t* offset_out);
 bool ImageFormatPlaneByteOffset(const fuchsia_sysmem::wire::ImageFormat2& image_format,
                                 uint32_t plane, uint64_t* offset_out);
-bool ImageFormatPlaneByteOffset(const fuchsia_sysmem_ImageFormat_2* image_format, uint32_t plane,
-                                uint64_t* offset_out);
 
 bool ImageFormatPlaneRowBytes(const fuchsia_sysmem2::ImageFormat& image_format, uint32_t plane,
                               uint32_t* row_bytes_out);
@@ -157,14 +137,11 @@ bool ImageFormatPlaneRowBytes(const fuchsia_sysmem2::wire::ImageFormat& image_fo
                               uint32_t plane, uint32_t* row_bytes_out);
 bool ImageFormatPlaneRowBytes(const fuchsia_sysmem::wire::ImageFormat2& image_format,
                               uint32_t plane, uint32_t* row_bytes_out);
-bool ImageFormatPlaneRowBytes(const fuchsia_sysmem_ImageFormat_2* image_format, uint32_t plane,
-                              uint32_t* row_bytes);
 
 bool ImageFormatCompatibleWithProtectedMemory(const fuchsia_sysmem2::PixelFormat& pixel_format);
 bool ImageFormatCompatibleWithProtectedMemory(
     const fuchsia_sysmem2::wire::PixelFormat& pixel_format);
 bool ImageFormatCompatibleWithProtectedMemory(
     const fuchsia_sysmem::wire::PixelFormat& pixel_format);
-bool ImageFormatCompatibleWithProtectedMemory(const fuchsia_sysmem_PixelFormat* pixel_format);
 
 #endif  // LIB_IMAGE_FORMAT_IMAGE_FORMAT_H_

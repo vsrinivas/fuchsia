@@ -9,20 +9,14 @@ zx_library("sysmem-version") {
   sdk_headers = [ "lib/sysmem-version/sysmem-version.h" ]
   sources = [ "sysmem-version.cc" ]
   public_deps = [
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp",
     "//sdk/fidl/fuchsia.sysmem2:fuchsia.sysmem2_cpp",
-    "//zircon/system/ulib/fidl-async-2",
   ]
   deps = [ "//sdk/lib/fidl" ]
 
   # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
   # rather than builders.
   configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 group("tests") {

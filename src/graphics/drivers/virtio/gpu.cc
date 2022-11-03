@@ -47,10 +47,10 @@ zx_status_t to_zx_status(uint32_t type) {
 
 // DDK level ops
 
-typedef struct imported_image {
+using imported_image_t = struct imported_image {
   uint32_t resource_id;
   zx::pmt pmt;
-} imported_image_t;
+};
 
 zx_status_t GpuDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
   auto* proto = static_cast<ddk::AnyProtocol*>(out);
@@ -83,7 +83,7 @@ void GpuDevice::DisplayControllerImplSetDisplayControllerInterface(
 
 zx_status_t GpuDevice::GetVmoAndStride(image_t* image, zx_unowned_handle_t handle, uint32_t index,
                                        zx::vmo* vmo_out, size_t* offset_out,
-                                       uint32_t* pixel_size_out, uint32_t* row_bytes_out) {
+                                       uint32_t* pixel_size_out, uint32_t* row_bytes_out) const {
   auto wait_result = fidl::WireCall<sysmem::BufferCollection>(zx::unowned_channel(handle))
                          ->WaitForBuffersAllocated();
   if (!wait_result.ok()) {
@@ -115,17 +115,15 @@ zx_status_t GpuDevice::GetVmoAndStride(image_t* image, zx_unowned_handle_t handl
       collection_info.settings.image_format_constraints.pixel_format.format_modifier.value ==
       sysmem::wire::kFormatModifierLinear);
 
-  fuchsia_sysmem_ImageFormatConstraints format_constraints;
-  memcpy(&format_constraints, &collection_info.settings.image_format_constraints,
-         sizeof(format_constraints));
+  const auto& format_constraints = collection_info.settings.image_format_constraints;
   uint32_t minimum_row_bytes;
-  if (!ImageFormatMinimumRowBytes(&format_constraints, image->width, &minimum_row_bytes)) {
+  if (!ImageFormatMinimumRowBytes(format_constraints, image->width, &minimum_row_bytes)) {
     zxlogf(ERROR, "%s: Invalid image width %d for collection", tag(), image->width);
     return ZX_ERR_INVALID_ARGS;
   }
 
   *offset_out = collection_info.buffers[index].vmo_usable_start;
-  *pixel_size_out = ImageFormatStrideBytesPerWidthPixel(&format_constraints.pixel_format);
+  *pixel_size_out = ImageFormatStrideBytesPerWidthPixel(format_constraints.pixel_format);
   *row_bytes_out = minimum_row_bytes;
   *vmo_out = std::move(collection_info.buffers[index].vmo);
   return ZX_OK;
@@ -430,7 +428,7 @@ zx_status_t GpuDevice::attach_backing(uint32_t resource_id, zx_paddr_t ptr, size
   req.req.nr_entries = 1;
 
   req.mem.addr = ptr;
-  req.mem.length = (uint32_t)buf_len;
+  req.mem.length = static_cast<uint32_t>(buf_len);
 
   // Send the command and get a response
   struct virtio_gpu_ctrl_hdr* res;

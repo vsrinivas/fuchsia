@@ -23,7 +23,6 @@ group("tests_no_e2e") {
     "//src/tests/fidl/server_suite",
     "//third_party/go:fidl-tests",
     "//tools/fidl:tests",
-    "//zircon/system/ulib/fidl-async-2/test",
   ]
 }
 
