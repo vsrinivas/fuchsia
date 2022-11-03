@@ -446,11 +446,13 @@ pub mod processed {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::bucket::Bucket;
+    use crate::raw::BucketDefinition;
     use std::collections::{HashMap, HashSet};
 
     #[test]
     fn raw_to_processed_test() {
-        let raw = raw::Capture {
+        let capture = raw::Capture {
             time: 1234567,
             kernel: raw::Kernel::default(),
             processes: vec![
@@ -601,9 +603,25 @@ mod tests {
                 },
             ),
         ]);
+
+        let buckets_definitions = vec![
+            BucketDefinition {
+                event_code: 1000,
+                name: "bucket0".to_string(),
+                process: "process2|process4".to_string(),
+                vmo: "".to_string(),
+            },
+            BucketDefinition {
+                event_code: 1001,
+                name: "bucket1".to_string(),
+                process: "process3|process5".to_string(),
+                vmo: "".to_string(),
+            },
+        ];
+
         let processed = processed::digest_from_memory_monitor_output(
-            raw::MemoryMonitorOutput { capture: raw, buckets_definitions: Vec::new() },
-            false,
+            raw::MemoryMonitorOutput { capture, buckets_definitions },
+            true,
         );
         // Check that the process list is sorted
         {
@@ -623,6 +641,17 @@ mod tests {
                 .expect(&format!("Digest contains unexpected process {:?}", process));
             pretty_assertions::assert_eq!(process, *expected);
         }
+
+        // Check that the buckets have been correctly created.
+        // note: `bucket.rs` contain more in-depth bucketing tests.
+        let buckets = processed.buckets;
+        pretty_assertions::assert_eq!(
+            buckets,
+            vec![
+                Bucket { name: "bucket0".to_string(), size: 400 },
+                Bucket { name: "bucket1".to_string(), size: 100 }
+            ]
+        );
     }
 
     // Reproduce a case similar to how blobfs shares the VMOs containing the file content.
@@ -719,7 +748,6 @@ mod tests {
             raw::MemoryMonitorOutput { capture, buckets_definitions: vec![] },
             false,
         );
-        // processed::Digest::from(raw);
         // Check that the process list is sorted
         {
             let mut pairs = processed.processes.windows(2);
