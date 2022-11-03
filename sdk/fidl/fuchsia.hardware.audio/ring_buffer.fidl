@@ -94,9 +94,19 @@ type RingBufferProperties = table {
     @available(deprecated=9)
     2: fifo_depth uint32;
 
-    /// When set to true, indicates that clients need to make sure that their data has been flushed
-    /// all the way to physical memory (in the case of playback) or that their view of the ring
-    /// buffer will need to be invalidated before read (in the case of capture). Required.
+    /// When set to true, indicates that the ring buffer runs in a different cache coherency domain,
+    /// hence clients need to make sure that their data has been flushed all the way to main memory
+    /// (in the case of playback) or that their view of the ring buffer will need to be invalidated
+    /// before read (in the case of capture).
+    ///
+    /// When set to false, indicates that the ring buffer runs in the same cache coherency domain,
+    /// hence the driver does not require flushing/invalidation, as in there is no hardware external
+    /// to the CPUs reading/writing from/to main memory bypassing the CPUs.
+    /// Note that in this case the driver and client still need to make sure they synchronize their
+    /// access to the data, for instance inserting the appropriate acquire fences before reading
+    /// and release fences after writing.
+    ///
+    /// Required.
     3: needs_cache_flush_or_invalidate bool;
 
     /// The driver's best estimate of the amount of time it takes the hardware to actually start
