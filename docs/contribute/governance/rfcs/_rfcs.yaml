@@ -2576,6 +2576,20 @@
   submitted: '2022-11-01'
   reviewed: '2022-09-26'
 
+- name: 'RFC-0198'
+  title: 'Magma API'
+  short_description: 'Driver API design for GPUs and other compute accelerators.'
+  authors: ['cstout@google.com']
+  file: '0198_magma_api_design.md'
+  area: ['Graphics']
+  issue: ['']
+  gerrit_change_id: ['598606']
+  status: 'Accepted'
+  reviewers: ['jbauman@google.com', 'rlb@google.com']
+  consulted: ['andresoportus@google.com', 'surajmalhotra@google.com']
+  submitted: '2022-09-19'
+  reviewed: '2022-11-01'
+
 - name: 'RFC-0199'
   title: 'Protect child VMARs'
   short_description: 'Allow zx_vmar_protect to apply to mappings in child VMARs.'
