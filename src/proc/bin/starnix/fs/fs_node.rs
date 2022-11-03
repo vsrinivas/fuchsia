@@ -805,53 +805,60 @@ impl FsNode {
         })
     }
 
-    /// Check that `task` can access the extended attributed `name`. Will return the result of
-    /// `error` in case the attributed is trusted and the task has not the CAP_SYS_ADMIN
+    /// Check that `current_task` can access the extended attributed `name`. Will return the result
+    /// of `error` in case the attributed is trusted and the task has not the CAP_SYS_ADMIN
     /// capability.
-    fn check_trusted_attribute_access<F>(task: &Task, name: &FsStr, error: F) -> Result<(), Errno>
-    where
-        F: FnOnce() -> Errno,
-    {
-        if task.creds().has_capability(CAP_SYS_ADMIN)
-            || !name.starts_with(XATTR_TRUSTED_PREFIX.to_bytes())
+    fn check_trusted_attribute_access(
+        &self,
+        current_task: &CurrentTask,
+        name: &FsStr,
+        error: impl FnOnce() -> Errno,
+    ) -> Result<(), Errno> {
+        if name.starts_with(XATTR_TRUSTED_PREFIX.to_bytes())
+            && !current_task.creds().has_capability(CAP_SYS_ADMIN)
         {
-            Ok(())
-        } else {
-            Err(error())
+            return Err(error());
         }
+        if name.starts_with(XATTR_USER_PREFIX.to_bytes()) {
+            let info = self.info();
+            if !info.mode.is_reg() && !info.mode.is_dir() {
+                return Err(error());
+            }
+        }
+        Ok(())
     }
 
-    pub fn get_xattr(&self, task: &Task, name: &FsStr) -> Result<FsString, Errno> {
-        self.check_access(task, Access::READ)?;
-        Self::check_trusted_attribute_access(task, name, || errno!(ENODATA))?;
+    pub fn get_xattr(&self, current_task: &CurrentTask, name: &FsStr) -> Result<FsString, Errno> {
+        self.check_access(current_task, Access::READ)?;
+        self.check_trusted_attribute_access(current_task, name, || errno!(ENODATA))?;
         self.ops().get_xattr(name)
     }
 
     pub fn set_xattr(
         &self,
-        task: &Task,
+        current_task: &CurrentTask,
         name: &FsStr,
         value: &FsStr,
         op: XattrOp,
     ) -> Result<(), Errno> {
-        self.check_access(task, Access::WRITE)?;
-        Self::check_trusted_attribute_access(task, name, || errno!(EPERM))?;
+        self.check_access(current_task, Access::WRITE)?;
+        self.check_trusted_attribute_access(current_task, name, || errno!(EPERM))?;
         self.ops().set_xattr(name, value, op)
     }
 
-    pub fn remove_xattr(&self, task: &Task, name: &FsStr) -> Result<(), Errno> {
-        self.check_access(task, Access::WRITE)?;
-        Self::check_trusted_attribute_access(task, name, || errno!(EPERM))?;
+    pub fn remove_xattr(&self, current_task: &CurrentTask, name: &FsStr) -> Result<(), Errno> {
+        self.check_access(current_task, Access::WRITE)?;
+        self.check_trusted_attribute_access(current_task, name, || errno!(EPERM))?;
         self.ops().remove_xattr(name)
     }
 
-    pub fn list_xattrs(&self, task: &Task) -> Result<Vec<FsString>, Errno> {
+    pub fn list_xattrs(&self, current_task: &CurrentTask) -> Result<Vec<FsString>, Errno> {
         Ok(self
             .ops()
             .list_xattrs()?
             .into_iter()
             .filter(|name| {
-                Self::check_trusted_attribute_access(task, name, || errno!(EPERM)).is_ok()
+                self.check_trusted_attribute_access(current_task, name, || errno!(EPERM)).is_ok()
             })
             .collect())
     }

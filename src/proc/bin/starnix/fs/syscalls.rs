@@ -846,9 +846,6 @@ pub fn sys_lsetxattr(
     flags: u32,
 ) -> Result<(), Errno> {
     let node = lookup_at(current_task, FdNumber::AT_FDCWD, path_addr, LookupFlags::no_follow())?;
-    if node.entry.node.is_lnk() {
-        return error!(EPERM);
-    }
     do_setxattr(current_task, &node, name_addr, value_addr, size, flags)
 }
 
