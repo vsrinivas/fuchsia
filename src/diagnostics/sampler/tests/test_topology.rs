@@ -6,7 +6,7 @@ use crate::mocks;
 use anyhow::Error;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_component_test::{
-    Capability, ChildOptions, Event, LocalComponentHandles, RealmBuilder, RealmInstance, Ref, Route,
+    Capability, ChildOptions, LocalComponentHandles, RealmBuilder, RealmInstance, Ref, Route,
 };
 use futures::{channel::mpsc, lock::Mutex, StreamExt};
 use std::sync::Arc;
@@ -143,7 +143,12 @@ pub async fn create() -> Result<RealmInstance, Error> {
     builder
         .add_route(
             Route::new()
-                .capability(Capability::protocol_by_name("fuchsia.sys2.EventSource"))
+                .capability(
+                    Capability::event_stream("directory_ready_v2").with_scope(&wrapper_realm),
+                )
+                .capability(
+                    Capability::event_stream("capability_requested_v2").with_scope(&wrapper_realm),
+                )
                 .from(Ref::parent())
                 .to(&wrapper_realm),
         )
@@ -168,13 +173,9 @@ pub async fn create() -> Result<RealmInstance, Error> {
     wrapper_realm
         .add_route(
             Route::new()
-                .capability(Capability::event(Event::Started))
-                .capability(Capability::event(Event::Stopped))
-                .capability(Capability::event(Event::directory_ready("diagnostics")))
-                .capability(Capability::event(Event::capability_requested(
-                    "fuchsia.logger.LogSink",
-                )))
-                .from(Ref::framework())
+                .capability(Capability::event_stream("directory_ready_v2"))
+                .capability(Capability::event_stream("capability_requested_v2"))
+                .from(Ref::parent())
                 .to(&test_case_archivist),
         )
         .await?;
