@@ -4,14 +4,17 @@
 
 source_set("format_conversion") {
   sources = [
+    "buffer_collection_helper.h",
     "format_conversion.cc",
-    "format_conversion.h",
   ]
 
   deps = [
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp_wire",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
     "//zircon/system/ulib/image-format",
   ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }

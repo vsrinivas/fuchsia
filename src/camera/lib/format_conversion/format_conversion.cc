@@ -8,13 +8,13 @@
 
 namespace camera {
 
-fuchsia_sysmem::wire::ImageFormat2 ConvertHlcppImageFormat2toWireType(
+fuchsia_sysmem_ImageFormat_2 ConvertHlcppImageFormat2toCType(
     const fuchsia::sysmem::ImageFormat_2& hlcpp_image_format2) {
   return {
       .pixel_format =
           {
-              .type = static_cast<const fuchsia_sysmem::wire::PixelFormatType>(
-                  hlcpp_image_format2.pixel_format.type),
+              .type = *reinterpret_cast<const fuchsia_sysmem_PixelFormatType*>(
+                  &hlcpp_image_format2.pixel_format.type),
               .has_format_modifier = hlcpp_image_format2.pixel_format.has_format_modifier,
               .format_modifier =
                   {
@@ -27,39 +27,36 @@ fuchsia_sysmem::wire::ImageFormat2 ConvertHlcppImageFormat2toWireType(
       .display_width = hlcpp_image_format2.display_width,
       .display_height = hlcpp_image_format2.display_height,
       .layers = hlcpp_image_format2.layers,
-      .color_space =
-          {
-              .type = static_cast<const fuchsia_sysmem::wire::ColorSpaceType>(
-                  hlcpp_image_format2.color_space.type),
-          },
+      .color_space = *reinterpret_cast<const fuchsia_sysmem_ColorSpace*>(
+          &hlcpp_image_format2.color_space.type),
       .has_pixel_aspect_ratio = hlcpp_image_format2.has_pixel_aspect_ratio,
       .pixel_aspect_ratio_width = hlcpp_image_format2.pixel_aspect_ratio_width,
       .pixel_aspect_ratio_height = hlcpp_image_format2.pixel_aspect_ratio_height,
   };
 }
 
-fuchsia_sysmem::wire::BufferCollectionInfo2 ConvertToWireTypeBufferCollectionInfo2(
-    fuchsia::sysmem::BufferCollectionInfo_2& hlcpp_buffer_collection) {
-  fuchsia_sysmem::wire::BufferCollectionInfo2 buffer_collection;
-  buffer_collection.buffer_count = hlcpp_buffer_collection.buffer_count;
+void ConvertToCTypeBufferCollectionInfo2(
+    const fuchsia::sysmem::BufferCollectionInfo_2& hlcpp_buffer_collection,
+    fuchsia_sysmem_BufferCollectionInfo_2* buffer_collection) {
+  buffer_collection->buffer_count = hlcpp_buffer_collection.buffer_count;
 
-  auto& buffer_settings = buffer_collection.settings.buffer_settings;
+  auto& buffer_settings = buffer_collection->settings.buffer_settings;
   auto& hlcpp_buffer_settings = hlcpp_buffer_collection.settings.buffer_settings;
   buffer_settings.size_bytes = hlcpp_buffer_settings.size_bytes;
   buffer_settings.is_physically_contiguous = hlcpp_buffer_settings.is_physically_contiguous;
   buffer_settings.is_secure = hlcpp_buffer_settings.is_secure;
-  buffer_settings.coherency_domain = static_cast<const fuchsia_sysmem::wire::CoherencyDomain>(
-      hlcpp_buffer_settings.coherency_domain);
+  buffer_settings.coherency_domain = *reinterpret_cast<const fuchsia_sysmem_CoherencyDomain*>(
+      &hlcpp_buffer_settings.coherency_domain);
   buffer_settings.heap =
-      static_cast<const fuchsia_sysmem::wire::HeapType>(hlcpp_buffer_settings.heap);
-  buffer_collection.settings.has_image_format_constraints =
+      *reinterpret_cast<const fuchsia_sysmem_HeapType*>(&hlcpp_buffer_settings.heap);
+  buffer_collection->settings.has_image_format_constraints =
       hlcpp_buffer_collection.settings.has_image_format_constraints;
 
-  auto& image_format_constraints = buffer_collection.settings.image_format_constraints;
+  auto& image_format_constraints = buffer_collection->settings.image_format_constraints;
   auto& hlcpp_image_format_constraints = hlcpp_buffer_collection.settings.image_format_constraints;
   image_format_constraints.pixel_format.type =
-      static_cast<const fuchsia_sysmem::wire::PixelFormatType>(
-          hlcpp_image_format_constraints.pixel_format.type);
+      *reinterpret_cast<const fuchsia_sysmem_PixelFormatType*>(
+          &hlcpp_image_format_constraints.pixel_format.type);
   image_format_constraints.pixel_format.has_format_modifier =
       hlcpp_image_format_constraints.pixel_format.has_format_modifier;
   image_format_constraints.pixel_format.format_modifier.value =
@@ -67,9 +64,8 @@ fuchsia_sysmem::wire::BufferCollectionInfo2 ConvertToWireTypeBufferCollectionInf
 
   image_format_constraints.color_spaces_count = hlcpp_image_format_constraints.color_spaces_count;
   for (uint32_t i = 0; i < image_format_constraints.color_spaces_count; ++i) {
-    image_format_constraints.color_space[i].type =
-        static_cast<const fuchsia_sysmem::wire::ColorSpaceType>(
-            hlcpp_image_format_constraints.color_space[i].type);
+    image_format_constraints.color_space[i] = *reinterpret_cast<const fuchsia_sysmem_ColorSpace*>(
+        &hlcpp_image_format_constraints.color_space[i].type);
   }
 
   image_format_constraints.min_coded_width = hlcpp_image_format_constraints.min_coded_width;
@@ -107,18 +103,17 @@ fuchsia_sysmem::wire::BufferCollectionInfo2 ConvertToWireTypeBufferCollectionInf
       hlcpp_image_format_constraints.required_max_bytes_per_row;
 
   for (uint32_t i = 0; i < hlcpp_buffer_collection.buffer_count; ++i) {
-    buffer_collection.buffers[i].vmo = std::move(hlcpp_buffer_collection.buffers[i].vmo);
+    buffer_collection->buffers[i].vmo = hlcpp_buffer_collection.buffers[i].vmo.get();
   }
-  return buffer_collection;
 }
 
-fuchsia_sysmem::wire::ImageFormat2 GetImageFormatFromBufferCollection(
-    const fuchsia_sysmem::wire::BufferCollectionInfo2& buffer_collection, uint32_t coded_width,
+fuchsia_sysmem_ImageFormat_2 GetImageFormatFromBufferCollection(
+    const fuchsia_sysmem_BufferCollectionInfo_2& buffer_collection, uint32_t coded_width,
     uint32_t coded_height) {
   ZX_ASSERT(buffer_collection.settings.has_image_format_constraints);
   auto& constraints = buffer_collection.settings.image_format_constraints;
   uint32_t bytes_per_row;
-  bool success = ImageFormatMinimumRowBytes(constraints, coded_width, &bytes_per_row);
+  bool success = ImageFormatMinimumRowBytes(&constraints, coded_width, &bytes_per_row);
   if (!success) {
     ZX_ASSERT(coded_width > 0);
     ZX_ASSERT(coded_width <= constraints.max_coded_width);
@@ -128,27 +123,24 @@ fuchsia_sysmem::wire::ImageFormat2 GetImageFormatFromBufferCollection(
                   constraints.max_bytes_per_row, coded_width);
   }
   ZX_ASSERT(success);
-  return {
-      .pixel_format = constraints.pixel_format,
-      .coded_width = coded_width,
-      .coded_height = coded_height,
-      .bytes_per_row = bytes_per_row,
-      .display_width = coded_width,
-      .display_height = coded_height,
-      .layers = 1,
-      .color_space = constraints.color_space[0],
-  };
+  return {.pixel_format = constraints.pixel_format,
+          .coded_width = coded_width,
+          .coded_height = coded_height,
+          .bytes_per_row = bytes_per_row,
+          .display_width = coded_width,
+          .display_height = coded_height,
+          .layers = 1,
+          .color_space = constraints.color_space[0]};
 }
 
-fuchsia_sysmem::wire::PixelFormat ConvertPixelFormatToWire(fuchsia::sysmem::PixelFormat format) {
-  fuchsia_sysmem::wire::PixelFormat ret;
+fuchsia_sysmem_PixelFormat ConvertPixelFormatToC(fuchsia::sysmem::PixelFormat format) {
+  fuchsia_sysmem_PixelFormat ret;
   ret.has_format_modifier = format.has_format_modifier;
   // HLCPP and C enum values should always match. Spot-check a single one.
-  static_assert(
-      static_cast<fuchsia_sysmem::wire::PixelFormatType>(fuchsia::sysmem::PixelFormatType::YUY2) ==
-          fuchsia_sysmem::wire::PixelFormatType::kYuy2,
-      "HLCPP and C pixel format types don't match.");
-  ret.type = static_cast<fuchsia_sysmem::wire::PixelFormatType>(format.type);
+  static_assert(static_cast<fuchsia_sysmem_PixelFormatType>(
+                    fuchsia::sysmem::PixelFormatType::YUY2) == fuchsia_sysmem_PixelFormatType_YUY2,
+                "HLCPP and C pixel format types don't match.");
+  ret.type = static_cast<fuchsia_sysmem_PixelFormatType>(format.type);
   return ret;
 }
 

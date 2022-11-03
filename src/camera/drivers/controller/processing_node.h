@@ -90,13 +90,13 @@ class ProcessNode {
   void SendFrame(uint32_t index, frame_metadata_t metadata, fit::closure release_callback) const;
 
   // Provides the node access to the input buffer collection it was created with.
-  fuchsia::sysmem::BufferCollectionInfo_2& InputBuffers();
+  const fuchsia::sysmem::BufferCollectionInfo_2& InputBuffers() const;
 
   // Provides the node access to the image formats associated with its inputs.
   const std::vector<fuchsia::sysmem::ImageFormat_2>& InputFormats() const;
 
   // Provides the node access to the output buffer collection it was created with.
-  fuchsia::sysmem::BufferCollectionInfo_2& OutputBuffers();
+  const fuchsia::sysmem::BufferCollectionInfo_2& OutputBuffers() const;
 
   // Provides the node access to the image formats associated with its outputs.
   const std::vector<fuchsia::sysmem::ImageFormat_2>& OutputFormats() const;

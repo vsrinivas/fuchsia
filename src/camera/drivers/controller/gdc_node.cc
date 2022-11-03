@@ -13,7 +13,7 @@
 #include <safemath/safe_conversions.h>
 
 #include "src/camera/drivers/controller/stream_pipeline_info.h"
-#include "src/camera/lib/format_conversion/format_conversion.h"
+#include "src/camera/lib/format_conversion/buffer_collection_helper.h"
 #include "src/devices/lib/sysmem/sysmem.h"
 
 namespace camera {
@@ -51,17 +51,15 @@ fpromise::result<std::unique_ptr<ProcessNode>, zx_status_t> GdcNode::Create(
   auto node =
       std::make_unique<camera::GdcNode>(dispatcher, attachments, std::move(frame_callback), gdc);
 
-  fuchsia_sysmem::wire::BufferCollectionInfo2 output_buffer_collection =
-      ConvertToWireTypeBufferCollectionInfo2(node->OutputBuffers());
-  fuchsia_sysmem::wire::BufferCollectionInfo2 input_buffer_collection =
-      ConvertToWireTypeBufferCollectionInfo2(node->InputBuffers());
+  BufferCollectionHelper output_buffer_collection_helper(node->OutputBuffers());
+  BufferCollectionHelper input_buffer_collection_helper(node->InputBuffers());
 
   // Convert the formats to C type
   std::vector<image_format_2_t> output_image_formats_c;
   for (const auto& format : internal_gdc_node.image_formats) {
     image_format_2_t value;
-    auto original = GetImageFormatFromBufferCollection(output_buffer_collection, format.coded_width,
-                                                       format.coded_height);
+    auto original = GetImageFormatFromBufferCollection(*output_buffer_collection_helper.GetC(),
+                                                       format.coded_width, format.coded_height);
     sysmem::image_format_2_banjo_from_fidl(original, value);
     output_image_formats_c.push_back(value);
   }
@@ -70,7 +68,7 @@ fpromise::result<std::unique_ptr<ProcessNode>, zx_status_t> GdcNode::Create(
   // moment. So we take the first format from the previous node.
   // All existing usecases we support have only 1 format going into GDC.
   auto input_image_formats_c = GetImageFormatFromBufferCollection(
-      input_buffer_collection, node->InputFormats()[0].coded_width,
+      *input_buffer_collection_helper.GetC(), node->InputFormats()[0].coded_width,
       node->InputFormats()[0].coded_height);
 
   // Image format index refers to the final output format list of the pipeline. If this GDC node
@@ -105,9 +103,9 @@ fpromise::result<std::unique_ptr<ProcessNode>, zx_status_t> GdcNode::Create(
   // Initialize the GDC to get a unique task index
   buffer_collection_info_2 temp_input_collection, temp_output_collection;
   image_format_2_t temp_image_format;
-  sysmem::buffer_collection_info_2_banjo_from_fidl(std::move(input_buffer_collection),
+  sysmem::buffer_collection_info_2_banjo_from_fidl(*input_buffer_collection_helper.GetC(),
                                                    temp_input_collection);
-  sysmem::buffer_collection_info_2_banjo_from_fidl(std::move(output_buffer_collection),
+  sysmem::buffer_collection_info_2_banjo_from_fidl(*output_buffer_collection_helper.GetC(),
                                                    temp_output_collection);
   sysmem::image_format_2_banjo_from_fidl(input_image_formats_c, temp_image_format);
   auto status =

@@ -10,7 +10,10 @@
 #include "src/camera/drivers/controller/sherlock/common_util.h"
 #include "src/camera/drivers/controller/sherlock/monitoring_config.h"
 #include "src/camera/drivers/controller/sherlock/video_conferencing_config.h"
+#include "src/camera/drivers/controller/test/fake_gdc.h"
+#include "src/camera/drivers/controller/test/fake_isp.h"
 #include "src/camera/drivers/controller/test/fake_sysmem.h"
+#include "src/camera/lib/format_conversion/buffer_collection_helper.h"
 #include "src/camera/lib/format_conversion/format_conversion.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
@@ -215,26 +218,27 @@ TEST_F(ControllerMemoryAllocatorTest, ConvertBufferCollectionInfo2TypeTest) {
   ASSERT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(
                        constraints, buffer_collection, "TestConvertBufferCollection2TypeTest"));
 
-  fuchsia_sysmem::wire::BufferCollectionInfo2 wire_buffer_collection =
-      ConvertToWireTypeBufferCollectionInfo2(buffer_collection.buffers);
+  BufferCollectionHelper buffer_collection_helper(buffer_collection.buffers);
 
-  EXPECT_EQ(wire_buffer_collection.buffer_count, buffer_collection.buffers.buffer_count);
-  auto& wire_buffer_collection_settings = wire_buffer_collection.settings.buffer_settings;
+  fuchsia_sysmem_BufferCollectionInfo_2 c_buffer = *buffer_collection_helper.GetC();
+
+  EXPECT_EQ(c_buffer.buffer_count, buffer_collection.buffers.buffer_count);
+  auto& c_buffer_settings = c_buffer.settings.buffer_settings;
   auto& hlcpp_buffer_settings = buffer_collection.buffers.settings.buffer_settings;
 
-  EXPECT_EQ(wire_buffer_collection_settings.size_bytes, hlcpp_buffer_settings.size_bytes);
-  EXPECT_EQ(wire_buffer_collection_settings.heap,
-            static_cast<const fuchsia_sysmem::wire::HeapType>(hlcpp_buffer_settings.heap));
-  EXPECT_EQ(wire_buffer_collection.settings.has_image_format_constraints,
+  EXPECT_EQ(c_buffer_settings.size_bytes, hlcpp_buffer_settings.size_bytes);
+  EXPECT_EQ(c_buffer_settings.heap,
+            *reinterpret_cast<const fuchsia_sysmem_HeapType*>(&hlcpp_buffer_settings.heap));
+  EXPECT_EQ(c_buffer.settings.has_image_format_constraints,
             buffer_collection.buffers.settings.has_image_format_constraints);
 
-  auto& c_image_format_constraints = wire_buffer_collection.settings.image_format_constraints;
+  auto& c_image_format_constraints = c_buffer.settings.image_format_constraints;
   auto& hlcpp_image_format_constraints =
       buffer_collection.buffers.settings.image_format_constraints;
 
   EXPECT_EQ(c_image_format_constraints.pixel_format.type,
-            static_cast<const fuchsia_sysmem::wire::PixelFormatType>(
-                hlcpp_image_format_constraints.pixel_format.type));
+            *reinterpret_cast<const fuchsia_sysmem_PixelFormatType*>(
+                &hlcpp_image_format_constraints.pixel_format.type));
   EXPECT_EQ(c_image_format_constraints.pixel_format.has_format_modifier,
             hlcpp_image_format_constraints.pixel_format.has_format_modifier);
   EXPECT_EQ(c_image_format_constraints.pixel_format.format_modifier.value,
@@ -283,8 +287,8 @@ TEST_F(ControllerMemoryAllocatorTest, ConvertBufferCollectionInfo2TypeTest) {
   EXPECT_EQ(c_image_format_constraints.required_max_bytes_per_row,
             hlcpp_image_format_constraints.required_max_bytes_per_row);
 
-  for (uint32_t i = 0; i < wire_buffer_collection.buffer_count; ++i) {
-    EXPECT_TRUE(wire_buffer_collection.buffers[i].vmo.is_valid());
+  for (uint32_t i = 0; i < c_buffer.buffer_count; ++i) {
+    EXPECT_EQ(ZX_OK, zx_handle_close(c_buffer.buffers[i].vmo));
   }
 }
 
@@ -293,12 +297,11 @@ TEST_F(ControllerMemoryAllocatorTest, ConvertImageFormat2TypeTest) {
   auto vector_image_formats = internal_config.image_formats;
   fuchsia::sysmem::ImageFormat_2 hlcpp_image_format = vector_image_formats[0];
 
-  fuchsia_sysmem::wire::ImageFormat2 c_image_format =
-      ConvertHlcppImageFormat2toWireType(hlcpp_image_format);
+  fuchsia_sysmem_ImageFormat_2 c_image_format = ConvertHlcppImageFormat2toCType(hlcpp_image_format);
 
   EXPECT_EQ(c_image_format.pixel_format.type,
-            static_cast<const fuchsia_sysmem::wire::PixelFormatType>(
-                hlcpp_image_format.pixel_format.type));
+            *reinterpret_cast<const fuchsia_sysmem_PixelFormatType*>(
+                &hlcpp_image_format.pixel_format.type));
   EXPECT_EQ(c_image_format.pixel_format.has_format_modifier,
             hlcpp_image_format.pixel_format.has_format_modifier);
   EXPECT_EQ(c_image_format.pixel_format.format_modifier.value,

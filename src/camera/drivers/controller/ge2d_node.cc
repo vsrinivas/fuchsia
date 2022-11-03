@@ -14,7 +14,7 @@
 
 #include <safemath/safe_conversions.h>
 
-#include "src/camera/lib/format_conversion/format_conversion.h"
+#include "src/camera/lib/format_conversion/buffer_collection_helper.h"
 #include "src/devices/lib/sysmem/sysmem.h"
 
 namespace camera {
@@ -38,17 +38,15 @@ fpromise::result<std::unique_ptr<Ge2dNode>, zx_status_t> Ge2dNode::Create(
   auto node = std::make_unique<camera::Ge2dNode>(dispatcher, attachments, std::move(frame_callback),
                                                  ge2d, internal_ge2d_node);
 
-  fuchsia_sysmem::wire::BufferCollectionInfo2 input_buffer_collection =
-      ConvertToWireTypeBufferCollectionInfo2(node->InputBuffers());
-  fuchsia_sysmem::wire::BufferCollectionInfo2 output_buffer_collection =
-      ConvertToWireTypeBufferCollectionInfo2(node->in_place_ ? node->InputBuffers()
-                                                             : node->OutputBuffers());
+  BufferCollectionHelper input_buffer_collection_helper(node->InputBuffers());
+  BufferCollectionHelper output_buffer_collection_helper(node->in_place_ ? node->InputBuffers()
+                                                                         : node->OutputBuffers());
 
   std::vector<image_format_2_t> output_image_formats_c;
   for (auto& format : internal_ge2d_node.image_formats) {
     image_format_2_t value;
-    auto original = GetImageFormatFromBufferCollection(output_buffer_collection, format.coded_width,
-                                                       format.coded_height);
+    auto original = GetImageFormatFromBufferCollection(*output_buffer_collection_helper.GetC(),
+                                                       format.coded_width, format.coded_height);
     sysmem::image_format_2_banjo_from_fidl(original, value);
     output_image_formats_c.push_back(value);
   }
@@ -56,17 +54,17 @@ fpromise::result<std::unique_ptr<Ge2dNode>, zx_status_t> Ge2dNode::Create(
   std::vector<image_format_2_t> input_image_formats_c;
   for (auto& format : node->InputFormats()) {
     image_format_2_t value;
-    auto original = GetImageFormatFromBufferCollection(input_buffer_collection, format.coded_width,
-                                                       format.coded_height);
+    auto original = GetImageFormatFromBufferCollection(*input_buffer_collection_helper.GetC(),
+                                                       format.coded_width, format.coded_height);
     sysmem::image_format_2_banjo_from_fidl(original, value);
     input_image_formats_c.push_back(value);
   }
 
   // Initialize the GE2D to get a unique task index.
   buffer_collection_info_2 temp_input_collection, temp_output_collection;
-  sysmem::buffer_collection_info_2_banjo_from_fidl(std::move(input_buffer_collection),
+  sysmem::buffer_collection_info_2_banjo_from_fidl(*input_buffer_collection_helper.GetC(),
                                                    temp_input_collection);
-  sysmem::buffer_collection_info_2_banjo_from_fidl(std::move(output_buffer_collection),
+  sysmem::buffer_collection_info_2_banjo_from_fidl(*output_buffer_collection_helper.GetC(),
                                                    temp_output_collection);
   switch (internal_ge2d_node.ge2d_info.config_type) {
     case Ge2DConfig::GE2D_RESIZE: {
@@ -99,8 +97,8 @@ fpromise::result<std::unique_ptr<Ge2dNode>, zx_status_t> Ge2dNode::Create(
         water_mark_info info;
         info.loc_x = internal_ge2d_node.ge2d_info.watermark[i].loc_x;
         info.loc_y = internal_ge2d_node.ge2d_info.watermark[i].loc_y;
-        auto format = ConvertHlcppImageFormat2toWireType(
-            internal_ge2d_node.ge2d_info.watermark[i].image_format);
+        auto format =
+            ConvertHlcppImageFormat2toCType(internal_ge2d_node.ge2d_info.watermark[i].image_format);
         sysmem::image_format_2_banjo_from_fidl(format, info.wm_image_format);
         info.watermark_vmo = watermark_vmos[i].release();
         constexpr float kGlobalAlpha = 200.f / 255;
