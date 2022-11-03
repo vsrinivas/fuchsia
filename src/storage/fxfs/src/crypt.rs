@@ -16,6 +16,7 @@ use {
         Deserialize, Deserializer, Serialize, Serializer,
     },
     std::convert::TryInto,
+    type_hash::TypeHash,
     xts_mode::{get_tweak_default, Xts128},
 };
 
@@ -48,6 +49,16 @@ pub type UnwrappedKeys = Vec<(u64, UnwrappedKey)>;
 #[repr(transparent)]
 #[derive(Clone, Debug, PartialEq)]
 pub struct WrappedKeyBytes(pub [u8; WRAPPED_KEY_SIZE]);
+
+impl TypeHash for WrappedKeyBytes {
+    fn write_hash(hasher: &mut impl std::hash::Hasher) {
+        // Implementation mirrors type_hash_core.
+        // (TypeHash only has generics defined for arrays up to length 32)
+        hasher.write(b"[;]");
+        hasher.write_usize(WRAPPED_KEY_SIZE);
+        u8::write_hash(hasher);
+    }
+}
 
 impl std::ops::Deref for WrappedKeyBytes {
     type Target = [u8; WRAPPED_KEY_SIZE];
@@ -116,7 +127,7 @@ impl<'a> arbitrary::Arbitrary<'a> for WrappedKeyBytes {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, TypeHash, PartialEq)]
 #[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub struct WrappedKey {
     /// The identifier of the wrapping key.  The identifier has meaning to whatever is doing the
@@ -132,7 +143,7 @@ pub struct WrappedKey {
 
 /// To support key rolling and clones, a file can have more than one key.  Each key has an ID that
 /// unique to the file.
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, TypeHash)]
 #[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub struct WrappedKeys(pub Vec<(u64, WrappedKey)>);
 

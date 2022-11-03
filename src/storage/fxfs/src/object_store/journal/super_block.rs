@@ -35,6 +35,7 @@ use {
         time::SystemTime,
     },
     storage_device::Device,
+    type_hash::TypeHash,
     uuid::Uuid,
 };
 
@@ -102,7 +103,7 @@ impl SuperBlockInstance {
 /// Super blocks are updated alternately with a monotonically increasing generation number.
 /// At mount time, the super block used is the valid `SuperBlock` with the highest generation
 /// number.
-#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize, Versioned)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize, TypeHash, Versioned)]
 pub struct SuperBlock {
     /// The globally unique identifier for the filesystem.
     guid: [u8; 16],
@@ -152,7 +153,7 @@ pub struct SuperBlock {
     pub earliest_version: Version,
 }
 
-#[derive(Serialize, Deserialize, Versioned)]
+#[derive(Serialize, Deserialize, TypeHash, Versioned)]
 pub enum SuperBlockRecord {
     // When reading the super-block we know the initial extent, but not subsequent extents, so these
     // records need to exist to allow us to completely read the super-block.

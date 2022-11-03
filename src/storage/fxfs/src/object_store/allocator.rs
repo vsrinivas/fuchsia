@@ -50,6 +50,7 @@ use {
         ops::{Bound, Range},
         sync::{Arc, Mutex, Weak},
     },
+    type_hash::TypeHash,
 };
 
 /// Allocators must implement this.  An allocator is responsible for allocating ranges on behalf of
@@ -305,7 +306,7 @@ pub type Hold<'a> = ReservationImpl<&'a Reservation, Reservation>;
 // Our allocator implementation tracks extents with a reference count.  At time of writing, these
 // reference counts should never exceed 1, but that might change with snapshots and clones.
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, Versioned)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, TypeHash, Versioned)]
 #[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub struct AllocatorKey {
     pub device_range: Range<u64>,
@@ -363,7 +364,7 @@ impl RangeKey for AllocatorKey {
 
 /// Allocations are "owned" by a single ObjectStore and are reference counted
 /// (for future snapshot/clone support).
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, Versioned)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, TypeHash, Versioned)]
 #[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub enum AllocatorValue {
     // Tombstone variant indicating an extent is no longer allocated.
@@ -376,7 +377,7 @@ pub enum AllocatorValue {
 
 pub type AllocatorItem = Item<AllocatorKey, AllocatorValue>;
 
-#[derive(Debug, Default, Clone, Deserialize, Serialize, Versioned)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize, TypeHash, Versioned)]
 pub struct AllocatorInfo {
     /// Holds the set of layer file object_id for the LSM tree (newest first).
     pub layers: Vec<u64>,
@@ -389,7 +390,7 @@ pub struct AllocatorInfo {
     pub limit_bytes: BTreeMap<u64, u64>,
 }
 
-#[derive(Debug, Deserialize, Migrate, Serialize, Versioned)]
+#[derive(Debug, Deserialize, Migrate, Serialize, TypeHash, Versioned)]
 pub struct AllocatorInfoV18 {
     pub layers: Vec<u64>,
     pub allocated_bytes: BTreeMap<u64, u64>,

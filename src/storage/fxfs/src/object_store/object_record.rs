@@ -13,10 +13,11 @@ use {
     serde::{Deserialize, Serialize},
     std::convert::From,
     std::time::{Duration, SystemTime, UNIX_EPOCH},
+    type_hash::TypeHash,
 };
 
 /// ObjectDescriptor is the set of possible records in the object store.
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, TypeHash)]
 #[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub enum ObjectDescriptor {
     /// A file (in the generic sense; i.e. an object with some attributes).
@@ -27,7 +28,7 @@ pub enum ObjectDescriptor {
     Volume,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize, TypeHash)]
 #[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub enum ObjectKeyData {
     /// A generic, untyped object.  This must come first and sort before all other keys for a given
@@ -44,7 +45,7 @@ pub enum ObjectKeyData {
     GraveyardEntry { object_id: u64 },
 }
 
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize, TypeHash)]
 #[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub enum AttributeKey {
     Size,
@@ -52,7 +53,9 @@ pub enum AttributeKey {
 }
 
 /// ObjectKey is a key in the object store.
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize, Versioned)]
+#[derive(
+    Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize, TypeHash, Versioned,
+)]
 #[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub struct ObjectKey {
     /// The ID of the object referred to.
@@ -201,7 +204,9 @@ impl RangeKey for ObjectKey {
 }
 
 /// UNIX epoch based timestamp in the UTC timezone.
-#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
+#[derive(
+    Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize, TypeHash,
+)]
 #[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub struct Timestamp {
     pub secs: u64,
@@ -244,7 +249,7 @@ impl From<Timestamp> for std::time::Duration {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, TypeHash)]
 #[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub enum ObjectKind {
     File {
@@ -260,7 +265,7 @@ pub enum ObjectKind {
     Graveyard,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, TypeHash)]
 #[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub enum EncryptionKeys {
     AES256XTS(WrappedKeys),
@@ -269,7 +274,7 @@ pub enum EncryptionKeys {
 /// Object-level attributes.  Note that these are not the same as "attributes" in the
 /// ObjectValue::Attribute sense, which refers to an arbitrary data payload associated with an
 /// object.  This naming collision is unfortunate.
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, TypeHash)]
 #[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub struct ObjectAttributes {
     /// The timestamp at which the object was created (i.e. crtime).
@@ -281,7 +286,7 @@ pub struct ObjectAttributes {
 /// ObjectValue is the value of an item in the object store.
 /// Note that the tree stores deltas on objects, so these values describe deltas. Unless specified
 /// otherwise, a value indicates an insert/replace mutation.
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Versioned)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, TypeHash, Versioned)]
 #[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub enum ObjectValue {
     /// Some keys have no value (this often indicates a tombstone of some sort).  Records with this

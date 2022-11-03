@@ -72,6 +72,7 @@ use {
         },
     },
     storage_device::Device,
+    type_hash::TypeHash,
     uuid::Uuid,
 };
 
@@ -102,7 +103,8 @@ pub trait HandleOwner: AsRef<ObjectStore> + Send + Sync + 'static {
 
 // StoreInfo stores information about the object store.  This is stored within the parent object
 // store, and is used, for example, to get the persistent layer objects.
-#[derive(Clone, Debug, Default, Serialize, Deserialize, Versioned)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, TypeHash, Versioned)]
+//#[versioned(TypeHash = 0)]
 pub struct StoreInfo {
     /// The globally unique identifier for the associated object store. If unset, will be all zero.
     guid: [u8; 16],
@@ -178,7 +180,7 @@ pub struct NewChildStoreOptions {
     pub object_id: u64,
 }
 
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize, TypeHash)]
 pub struct EncryptedMutations {
     // Information about the mutations are held here, but the actual encrypted data is held within
     // data.  For each transaction, we record the checkpoint and the count of mutations within the

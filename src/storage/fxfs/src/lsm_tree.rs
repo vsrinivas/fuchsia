@@ -373,9 +373,12 @@ mod tests {
         fuchsia_async as fasync,
         rand::{seq::SliceRandom, thread_rng},
         std::{ops::Bound, sync::Arc},
+        type_hash::TypeHash,
     };
 
-    #[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize, Versioned)]
+    #[derive(
+        Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize, TypeHash, Versioned,
+    )]
     struct TestKey(std::ops::Range<u64>);
 
     versioned_type! { 1.. => TestKey }
@@ -571,10 +574,19 @@ mod fuzz {
         },
         arbitrary::Arbitrary,
         fuzz::fuzz,
+        type_hash::TypeHash,
     };
 
     #[derive(
-        Arbitrary, Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize, Versioned,
+        Arbitrary,
+        Clone,
+        Eq,
+        PartialEq,
+        Debug,
+        serde::Serialize,
+        serde::Deserialize,
+        TypeHash,
+        Versioned,
     )]
     struct TestKey(std::ops::Range<u64>);
 

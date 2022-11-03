@@ -698,12 +698,15 @@ mod tests {
         fuchsia_async as fasync,
         rand::Rng,
         std::ops::{Bound, Range},
+        type_hash::TypeHash,
     };
 
-    #[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize, Versioned)]
+    #[derive(
+        Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize, TypeHash, Versioned,
+    )]
     struct TestKey(Range<u64>);
 
-    versioned_type! { 1.. => TestKey, }
+    versioned_type! { 1.. => TestKey }
 
     impl NextKey for TestKey {
         fn next_key(&self) -> Option<Self> {
@@ -1238,7 +1241,9 @@ mod tests {
         .await;
     }
 
-    #[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize, Versioned)]
+    #[derive(
+        Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize, TypeHash, Versioned,
+    )]
     struct TestKeyWithDefaultNextKey(Range<u64>);
 
     versioned_type! { 1.. => TestKeyWithDefaultNextKey }

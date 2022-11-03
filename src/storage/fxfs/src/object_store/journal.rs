@@ -73,6 +73,7 @@ use {
         vec::Vec,
     },
     storage_device::buffer::Buffer,
+    type_hash::TypeHash,
 };
 
 // Exposed for serialized_types.
@@ -101,7 +102,7 @@ const RESET_XOR: u64 = 0xffffffffffffffff;
 // To keep track of offsets within a journal file, we need both the file offset and the check-sum of
 // the preceding block, since the check-sum of the preceding block is an input to the check-sum of
 // every block.
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize, TypeHash)]
 pub struct JournalCheckpoint {
     pub file_offset: u64,
 
@@ -115,7 +116,7 @@ pub struct JournalCheckpoint {
     pub version: Version,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, Versioned)]
+#[derive(Clone, Debug, Serialize, Deserialize, TypeHash, Versioned)]
 #[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub enum JournalRecord {
     // Indicates no more records in this block.

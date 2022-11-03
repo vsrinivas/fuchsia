@@ -40,6 +40,7 @@ fxfs_deps = [
   "//third_party/rust_crates:static_assertions",
   "//third_party/rust_crates:thiserror",
   "//third_party/rust_crates:tracing",
+  "//third_party/rust_crates:type_hash",
   "//third_party/rust_crates:uuid",
   "//third_party/rust_crates:xts-mode",
 ]

@@ -55,16 +55,10 @@ struct Arm {
     pat: PatOpenVersionRange,
     _fat_arrow_token: syn::token::FatArrow,
     ident: syn::Ident,
-    _comma: Option<syn::token::Comma>,
 }
 impl Parse for Arm {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        Ok(Self {
-            pat: input.parse()?,
-            _fat_arrow_token: input.parse()?,
-            ident: input.parse()?,
-            _comma: input.parse()?,
-        })
+        Ok(Self { pat: input.parse()?, _fat_arrow_token: input.parse()?, ident: input.parse()? })
     }
 }
 
@@ -73,14 +67,12 @@ struct Input {
 }
 impl Parse for Input {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        let mut arms = Vec::new();
-        while !input.is_empty() {
-            // Note: We can't use syn::Pat to parse out a range because it doesn't seem to support
-            // open ranges right now (https://docs.rs/syn/1.0.86/src/syn/pat.rs.html#563) so we
-            // roll our own above.
-            arms.push(input.call(Arm::parse)?);
-        }
-        Ok(Self { arms })
+        Ok(Self {
+            arms: input
+                .parse_terminated::<Arm, syn::token::Comma>(Arm::parse)?
+                .into_iter()
+                .collect(),
+        })
     }
 }
 
@@ -91,7 +83,8 @@ impl Parse for Input {
 ///   * Transitive [From] for any version to a newer version.
 #[proc_macro]
 pub fn versioned_type(input: TokenStream) -> TokenStream {
-    let arms = parse_macro_input!(input as Input).arms;
+    let input = parse_macro_input!(input as Input);
+    let arms = input.arms;
 
     let versions: BTreeMap<u32, syn::Ident> =
         arms.iter().map(|x| (x.pat.lo_value(), x.ident.clone())).collect();

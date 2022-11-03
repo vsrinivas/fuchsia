@@ -6,12 +6,15 @@ use {
     crate::serialized_types::{types::LATEST_VERSION, DEFAULT_MAX_SERIALIZED_RECORD_SIZE},
     byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt},
     serde::{Deserialize, Serialize},
+    type_hash::TypeHash,
 };
 
 /// [Version] are themselves serializable both alone and as part
 /// of other [Versioned] structures.
 /// (For obvious recursive reasons, this structure can never be [Versioned] itself.)
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(
+    Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Serialize, Deserialize, TypeHash,
+)]
 pub struct Version {
     /// Major version indicates structural layout/encoding changes.
     /// Note that this is encoded as a u24.
@@ -88,7 +91,7 @@ pub trait Versioned: Serialize + for<'de> Deserialize<'de> {
 
 /// This trait is only assigned to the latest version of a type and allows the type to deserialize
 /// any older versions and upgrade them to the latest format.
-pub trait VersionedLatest: Versioned {
+pub trait VersionedLatest: Versioned + TypeHash {
     /// Deserializes from a given version format and upgrades to the latest version.
     fn deserialize_from_version<R>(reader: &mut R, version: Version) -> anyhow::Result<Self>
     where

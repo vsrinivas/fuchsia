@@ -58,6 +58,21 @@ from a previous storage format version to the latest storage format version.
    Note that the version and the type name suffix don't need to correspond. In
    the above example, it is invalid to decode FooV1 (or Foo) at Fxfs version 1.
 
+### TypeHash
+
+   The latest version of any "`versioned_type`" must also implement the `TypeHash`
+   trait and an entry should be included in the `type_hash` test in `types.rs`.
+
+   This trait is only used in the `type_hash` test and has no impact on
+   production code. It ensures that any structural changes to a versioned type or one
+   of its sub-types (e.g. DeviceRange) will be noticed, providing an additional layer
+   of checking above and beyond our golden image tests.
+
+   A failure of this test serves as reminder that the version must be bumped.
+
+   To derive the initial value, add a zero entry to the test in `types.rs` and run
+   `fx test`. The failed test will then provide the expected value.
+
 #### Examples of struct converters
 
 Since these converters are sometimes deleted from the tree (e.g. deleted after a

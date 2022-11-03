@@ -27,10 +27,11 @@ use {
         vec::Vec,
     },
     storage_device::buffer::Buffer,
+    type_hash::TypeHash,
 };
 
 // The first block of each layer contains metadata for the rest of the layer.
-#[derive(Debug, Serialize, Deserialize, Versioned)]
+#[derive(Debug, Serialize, Deserialize, TypeHash, Versioned)]
 pub struct LayerInfo {
     /// The version of the key and value structs serialized in this layer.
     key_value_version: Version,

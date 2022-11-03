@@ -13,6 +13,7 @@ use {
     async_utils::event::Event,
     serde::{Deserialize, Serialize},
     std::{fmt::Debug, sync::Arc},
+    type_hash::TypeHash,
 };
 
 /// Keys and values need to implement the following traits.  For merging, they need to implement
@@ -83,7 +84,7 @@ impl<'a, K, V> Clone for ItemRef<'a, K, V> {
 impl<'a, K, V> Copy for ItemRef<'a, K, V> {}
 
 /// Item is a struct that combines a key and a value.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, TypeHash)]
 #[cfg_attr(fuzz, derive(arbitrary::Arbitrary))]
 pub struct Item<K, V> {
     pub key: K,

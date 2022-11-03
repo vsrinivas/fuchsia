@@ -668,6 +668,7 @@ mod tests {
             sync::Mutex,
             time::{Duration, Instant},
         },
+        type_hash::TypeHash,
     };
 
     #[derive(
@@ -679,6 +680,7 @@ mod tests {
         Debug,
         serde::Serialize,
         serde::Deserialize,
+        TypeHash,
         Versioned,
     )]
     struct TestKey(i32);

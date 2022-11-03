@@ -23,20 +23,20 @@
 //!
 //! All versioned, serializable struct/enum type should have the [Versioned] trait.
 //! The most recent version of a type should also have the [VersionedLatest] trait.
-//! These traits are largely implemented for you via the `versioned_struct!` macro as follows:
+//! These traits are largely implemented for you via the `versioned_type!` macro as follows:
 //!
 //! ```ignore
 //! versioned_type! {
 //!   3.. => SuperBlockV3,
 //!   2.. => SuperBlockV2,
 //!   1.. => SuperBlockV1,
-//! };
+//! }
 //!
 //! // Note the reuse of SuperBlockRecordV1 for two versions.
 //! versioned_type! {
 //!   3.. => SuperBlockRecordV2,
 //!   1.. => SuperBlockRecordV1,
-//! };
+//! }
 //! ```
 //!
 //! The user is required to implement [From] to migrate from one version to the next.
