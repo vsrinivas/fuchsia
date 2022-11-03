@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{Key, StorageManager};
 use account_common::{AccountManagerError, ResultExt};
 use anyhow::format_err;
 use async_trait::async_trait;
@@ -12,6 +11,7 @@ use fuchsia_fs::directory::{DirEntry, DirentKind};
 use futures::lock::Mutex;
 use lazy_static::lazy_static;
 use std::path::Path;
+use storage_manager::{Key, StorageManager};
 use tempfile::TempDir;
 use typed_builder::TypedBuilder;
 

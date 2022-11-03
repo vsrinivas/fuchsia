@@ -279,10 +279,12 @@ mod test {
         fidl_fuchsia_identity_account::{AccountMarker, AccountProxy},
         fuchsia_fs::{directory, file, node::OpenError},
         fuchsia_zircon::Status,
-        identity_testutil::{CallCounter, Match},
+        identity_testutil::{
+            insecure_storage_manager::{Args as InsecureArgs, InsecureKeyDirectoryStorageManager},
+            CallCounter, Match,
+        },
         storage_manager::{
             minfs::disk::{DiskError, EncryptedBlockDevice},
-            InsecureKeyDirectoryStorageManager, InsecureKeyDirectoryStorageManagerArgs,
             Key as SMKey, StorageManager,
         },
         vfs::execution_scope::ExecutionScope,
@@ -357,9 +359,7 @@ mod test {
     }
 
     async fn make_storage_manager() -> InsecureKeyDirectoryStorageManager {
-        InsecureKeyDirectoryStorageManager::new(InsecureKeyDirectoryStorageManagerArgs::default())
-            .await
-            .unwrap()
+        InsecureKeyDirectoryStorageManager::new(InsecureArgs::default()).await.unwrap()
     }
 
     #[fuchsia::test]

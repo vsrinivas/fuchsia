@@ -16,6 +16,8 @@ use storage_manager::minfs::disk::{
 };
 use vfs::execution_scope::ExecutionScope;
 
+pub mod insecure_storage_manager;
+
 pub const KEY_LEN: usize = 32;
 pub type Key = [u8; KEY_LEN];
 
