@@ -44,6 +44,10 @@ class ComponentContext {
 
   const ExecutorPtr& executor() const { return executor_; }
 
+  // These must match the channel IDs used by fuzz_test_runner.
+  static constexpr uint32_t kRegistrarId = 0;
+  static constexpr uint32_t kCoverageId = 1;
+
   // Takes the |PA_HND(PA_USER0, arg)| startup handle.
   virtual zx::channel TakeChannel(uint32_t arg);
 

@@ -412,9 +412,23 @@ void LibFuzzerRunner::AddArgs() {
 
 ZxPromise<Artifact> LibFuzzerRunner::RunAsync() {
   return fpromise::make_promise([this](Context& context) -> ZxResult<> {
-           process_.set_verbose(verbose_);
-           process_.SetStdoutFdAction(FdAction::kClone);
+           // Nothing is currently written to libFuzzer's stdin or read from its stdout, but they
+           // must be available. For certain workflows, libFuzzer re-executes itself using
+           // `fdio_spawn` with `FDIO_SPAWN_CLONE_ALL`, which will fail if it cannot clone an fd.
+           if (auto status = process_.AddStdinPipe(); status != ZX_OK) {
+             FX_LOGS(WARNING) << "Failed to pipe stdin to libFuzzer";
+             return fpromise::error(status);
+           }
+           if (auto status = process_.AddStdoutPipe(); status != ZX_OK) {
+             FX_LOGS(WARNING) << "Failed to pipe stdout from libFuzzer";
+             return fpromise::error(status);
+           }
+           if (auto status = process_.AddStderrPipe(); status != ZX_OK) {
+             FX_LOGS(WARNING) << "Failed to pipe stderr from libFuzzer";
+             return fpromise::error(status);
+           }
            if (auto status = process_.Spawn(); status != ZX_OK) {
+             FX_LOGS(WARNING) << "Failed to spawn libFuzzer";
              return fpromise::error(status);
            }
            status_.set_running(true);
@@ -503,10 +517,14 @@ ZxPromise<FuzzResult> LibFuzzerRunner::ParseOutput() {
             return fpromise::ok(result);
           }
 
+          auto line = read_line.take_value();
+          if (verbose_) {
+            std::cerr << line << std::endl;
+          }
+
           // See libFuzzer's |Fuzzer::TryDetectingAMemoryLeak|.
           // This match is ugly, but it's the only message in current libFuzzer that this code can
           // rely on to detect a leak.
-          auto line = read_line.take_value();
           if (line == "INFO: to ignore leaks on libFuzzer side use -detect_leaks=0.") {
             result = FuzzResult::LEAK;
             continue;

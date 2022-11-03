@@ -30,8 +30,6 @@ class RealmFuzzerTest : public EngineIntegrationTest {
     return provider_handle.TakeChannel();
   }
 
-  bool verbose() const override { return false; }
-
   void set_options(Options& options) const override {}
 };
 

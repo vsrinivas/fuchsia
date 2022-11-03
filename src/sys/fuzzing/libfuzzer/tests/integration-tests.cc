@@ -8,10 +8,6 @@ namespace fuzzing {
 
 // Test fixtures.
 
-// libFuzzer's output is normally suppressed when testing; but can be enabled using this flag when
-// debugging failed tests.
-#define LIBFUZZER_SHOW_OUTPUT 0
-
 // libFuzzer normally attaches to itself as a debugger to catch crashes; but can be prevented from
 // doing so when another debugger like zxdb is needed to investigate failed tests.
 #define LIBFUZZER_ALLOW_DEBUG 0
@@ -39,11 +35,6 @@ class LibFuzzerTest : public EngineIntegrationTest {
     return channel;
   }
 
-  bool verbose() const override {
-    // See notes on LIBFUZZER_SHOW_OUTPUT above.
-    return LIBFUZZER_SHOW_OUTPUT;
-  }
-
   void set_options(Options& options) const override {
     // See notes on LIBFUZZER_ALLOW_DEBUG above.
     options.set_debug(LIBFUZZER_ALLOW_DEBUG);
@@ -53,7 +44,6 @@ class LibFuzzerTest : public EngineIntegrationTest {
   zx::channel channel_;
 };
 
-#undef LIBFUZZER_SHOW_OUTPUT
 #undef LIBFUZZER_ALLOW_DEBUG
 
 // Integration tests.

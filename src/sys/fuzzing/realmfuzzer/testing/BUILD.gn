@@ -15,6 +15,7 @@ source_set("testing") {
     "coverage.h",
     "module.cc",
     "module.h",
+    "target-main.h",
     "target.cc",
     "target.h",
   ]
@@ -34,7 +35,10 @@ executable("test-target") {
   output_name = "realmfuzzer_test_target"
   visibility = [ "//src/sys/fuzzing/*" ]
   testonly = true
-  sources = [ "target-main.cc" ]
+  sources = [
+    "target-main.cc",
+    "target-main.h",
+  ]
   deps = [
     "//sdk/lib/syslog/cpp",
     "//src/sys/fuzzing/common",

@@ -46,9 +46,6 @@ class EngineIntegrationTest : public AsyncTest {
   // Returns the channel to the debug data service for fuzzer coverage.
   virtual zx::channel fuzz_coverage() = 0;
 
-  // Echoes engine output when true.
-  virtual bool verbose() const = 0;
-
   // Set the options to configure the controller with.
   virtual void set_options(Options& options) const = 0;
 

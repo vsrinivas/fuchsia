@@ -4,6 +4,8 @@
 
 // A simple program that reads an exit code from a channel and exits.
 
+#include "src/sys/fuzzing/realmfuzzer/testing/target-main.h"
+
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
@@ -17,7 +19,7 @@ namespace fuzzing {
 
 zx_status_t RunTestTarget() {
   // Take start up handles.
-  zx::channel channel(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
+  zx::channel channel(zx_take_startup_handle(PA_HND(PA_USER0, kTestChannelId)));
 
   // Wait to read how this process should exit.
   auto status =

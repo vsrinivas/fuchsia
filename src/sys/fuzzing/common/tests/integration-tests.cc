@@ -22,7 +22,7 @@ void EngineIntegrationTest::SetUp() {
 ZxPromise<ControllerPtr> EngineIntegrationTest::Start() {
   registrar_ = std::make_unique<FakeRegistrar>(executor());
   return fpromise::make_promise([this]() -> ZxResult<> {
-           fidl::InterfaceHandle<Registrar> registrar_handle = registrar_->NewBinding();
+           fidl::InterfaceHandle<Registrar> registrar = registrar_->NewBinding();
            engine_->Reset();
            engine_->AddArg(program_binary());
            engine_->AddArg(component_url());
@@ -30,11 +30,8 @@ ZxPromise<ControllerPtr> EngineIntegrationTest::Start() {
              engine_->AddArg(arg);
            }
            engine_->AddArg(FUZZ_MODE);
-           engine_->AddChannel(registrar_handle.TakeChannel());
-           engine_->AddChannel(fuzz_coverage());
-           engine_->SetStdoutFdAction(FdAction::kClone);
-           engine_->SetStderrFdAction(FdAction::kClone);
-           engine_->set_verbose(verbose());
+           engine_->AddChannel(ComponentContextForTest::kRegistrarId, registrar.TakeChannel());
+           engine_->AddChannel(ComponentContextForTest::kCoverageId, fuzz_coverage());
            return fpromise::ok();
          })
       .and_then([this]() { return AsZxResult(engine_->Spawn()); })

@@ -52,11 +52,14 @@ TEST_F(ChildProcessTest, ReadFromStdout) {
   std::string input = hello + "\n" + world;
 
   process.AddArgs({kEcho, "--stdout"});
+  EXPECT_EQ(process.AddStdinPipe(), ZX_OK);
+  EXPECT_EQ(process.AddStdoutPipe(), ZX_OK);
   EXPECT_EQ(process.Spawn(), ZX_OK);
 
   FUZZING_EXPECT_OK(process.ReadFromStdout(), hello);
   FUZZING_EXPECT_OK(process.ReadFromStdout(), world);
-  EXPECT_EQ(process.WriteAndCloseStdin(input), ZX_OK);
+  EXPECT_EQ(process.WriteToStdin(input), ZX_OK);
+  process.CloseStdin();
   RunUntilIdle();
 }
 
@@ -67,11 +70,14 @@ TEST_F(ChildProcessTest, ReadFromStderr) {
   std::string input = hello + "\n" + world;
 
   process.AddArgs({kEcho, "--stderr"});
+  EXPECT_EQ(process.AddStdinPipe(), ZX_OK);
+  EXPECT_EQ(process.AddStderrPipe(), ZX_OK);
   EXPECT_EQ(process.Spawn(), ZX_OK);
 
   FUZZING_EXPECT_OK(process.ReadFromStderr(), hello);
   FUZZING_EXPECT_OK(process.ReadFromStderr(), world);
-  EXPECT_EQ(process.WriteAndCloseStdin(input), ZX_OK);
+  EXPECT_EQ(process.WriteToStdin(input), ZX_OK);
+  process.CloseStdin();
   RunUntilIdle();
 }
 
@@ -91,11 +97,14 @@ TEST_F(ChildProcessTest, SetEnvVar) {
 TEST_F(ChildProcessTest, Kill) {
   ChildProcess process(executor());
   process.AddArgs({kEcho, "--stdout", "--stderr"});
+  EXPECT_EQ(process.AddStdinPipe(), ZX_OK);
+  EXPECT_EQ(process.AddStdoutPipe(), ZX_OK);
+  EXPECT_EQ(process.AddStderrPipe(), ZX_OK);
   EXPECT_EQ(process.Spawn(), ZX_OK);
 
   std::string input("hello\nworld");
-  EXPECT_EQ(process.WriteAndCloseStdin(input), ZX_OK);
-
+  EXPECT_EQ(process.WriteToStdin(input), ZX_OK);
+  process.CloseStdin();
   FUZZING_EXPECT_OK(process.Kill());
   RunUntilIdle();
 

@@ -47,7 +47,7 @@ class RegistryIntegrationTest : public AsyncTest {
     // Connect a channel to the fuzz-registry.
     fidl::InterfaceHandle<Registrar> handle;
     ASSERT_EQ(context_->Connect(handle.NewRequest()), ZX_OK);
-    process_->AddChannel(handle.TakeChannel());
+    process_->AddChannel(ComponentContextForTest::kRegistrarId, handle.TakeChannel());
 
     ASSERT_EQ(process_->Spawn(), ZX_OK);
   }

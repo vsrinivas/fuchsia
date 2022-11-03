@@ -13,6 +13,8 @@
 #include <zircon/status.h>
 #include <zircon/syscalls/exception.h>
 
+#include "src/sys/fuzzing/realmfuzzer/testing/target-main.h"
+
 namespace fuzzing {
 
 TestTarget::TestTarget(ExecutorPtr executor) : executor_(executor), target_(executor) {}
@@ -28,9 +30,7 @@ zx::process TestTarget::Launch() {
   FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
 
   target_.AddArg("bin/realmfuzzer_test_target");
-  target_.AddChannel(std::move(remote));
-  target_.SetStdoutFdAction(FdAction::kClone);
-  target_.SetStderrFdAction(FdAction::kClone);
+  target_.AddChannel(kTestChannelId, std::move(remote));
   status = target_.Spawn();
   FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
 

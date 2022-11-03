@@ -14,7 +14,7 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
-#include <iostream>
+#include <algorithm>
 
 #include "src/lib/files/eintr_wrapper.h"
 
@@ -22,17 +22,6 @@ namespace fuzzing {
 namespace {
 
 constexpr const size_t kBufSize = 0x400;
-
-zx_status_t CreatePipe(int* rpipe, int* wpipe) {
-  int fds[2];
-  if (pipe(fds) != 0) {
-    FX_LOGS(ERROR) << "Failed to transfer file descriptor: " << strerror(errno);
-    return ZX_ERR_IO;
-  }
-  *rpipe = fds[0];
-  *wpipe = fds[1];
-  return ZX_OK;
-}
 
 zx_status_t ReadAndSend(int fd, AsyncSender<std::string> sender) {
   if (fd < 0) {
@@ -52,7 +41,9 @@ zx_status_t ReadAndSend(int fd, AsyncSender<std::string> sender) {
       }
       line += std::string(start, newline - start);
       start = newline + 1;
-      if (auto status = sender.Send(std::move(line)); status != ZX_OK) {
+      // Forward the data. If the receiver closes; just keeping draining the pipe.
+      if (auto status = sender.Send(std::move(line));
+          status != ZX_OK && status != ZX_ERR_PEER_CLOSED) {
         return status;
       }
       line.clear();
@@ -116,101 +107,17 @@ void ChildProcess::SetEnvVar(const std::string& name, const std::string& value) 
   envvars_[name] = value;
 }
 
-void ChildProcess::SetStdoutFdAction(FdAction action) { stdout_action_ = action; }
-
-void ChildProcess::SetStderrFdAction(FdAction action) { stderr_action_ = action; }
-
-void ChildProcess::AddChannel(zx::channel channel) { channels_.emplace_back(std::move(channel)); }
-
-zx_status_t ChildProcess::Spawn() {
-  // Convert args and envvars to C-style strings.
-  // The envvars vector holds the constructed strings backing the pointers in environ.
-  std::vector<std::string> envvars;
-  std::vector<const char*> environ;
-  for (const auto& [key, value] : envvars_) {
-    std::ostringstream oss;
-    oss << key << "=" << value;
-    envvars.push_back(oss.str());
-    if (verbose_) {
-      std::cerr << envvars.back() << " ";
-    }
-    environ.push_back(envvars.back().c_str());
-  }
-  environ.push_back(nullptr);
-
-  std::vector<const char*> argv;
-  argv.reserve(args_.size() + 1);
-  for (const auto& arg : args_) {
-    if (verbose_) {
-      std::cerr << arg << " ";
-    }
-    argv.push_back(arg.c_str());
-  }
-  if (verbose_) {
-    std::cerr << std::endl;
-  }
-  argv.push_back(nullptr);
-
-  // Build spawn actions
-  if (spawned_) {
-    FX_LOGS(ERROR) << "ChildProcess must be reset before it can be respawned.";
-    return ZX_ERR_BAD_STATE;
-  }
-  spawned_ = true;
-
-  auto flags = FDIO_SPAWN_CLONE_ALL & (~FDIO_SPAWN_CLONE_STDIO);
-  std::vector<fdio_spawn_action_t> actions(3);
-
-  auto& stdin_action = actions[0];
-  stdin_action.action = kTransfer;
-  int stdin_wpipe = -1;
-  if (auto status = CreatePipe(&stdin_action.fd.local_fd, &stdin_wpipe); status != ZX_OK) {
+zx_status_t ChildProcess::AddStdinPipe() {
+  int wpipe = -1;
+  if (auto status = AddPipe(STDIN_FILENO, nullptr, &wpipe); status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create pipe to process stdin: " << zx_status_get_string(status);
     return status;
   }
-  stdin_action.fd.target_fd = STDIN_FILENO;
-
-  auto& stdout_action = actions[1];
-  stdout_action.action = stdout_action_;
-  int stdout_rpipe = -1;
-  if (auto status = CreatePipe(&stdout_rpipe, &stdout_action.fd.local_fd); status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create pipe from process stdout: " << zx_status_get_string(status);
-    return status;
+  {
+    std::lock_guard lock(mutex_);
+    input_closed_ = false;
   }
-  stdout_action.fd.target_fd = STDOUT_FILENO;
-
-  auto& stderr_action = actions[2];
-  stderr_action.action = stderr_action_;
-  int stderr_rpipe = -1;
-  if (auto status = CreatePipe(&stderr_rpipe, &stderr_action.fd.local_fd); status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create pipe from process stderr: " << zx_status_get_string(status);
-    return status;
-  }
-  stderr_action.fd.target_fd = STDERR_FILENO;
-
-  // Build channel actions.
-  uint32_t i = 0;
-  for (auto& channel : channels_) {
-    fdio_spawn_action_t action{};
-    action.action = FDIO_SPAWN_ACTION_ADD_HANDLE;
-    action.h.id = PA_HND(PA_USER0, i++);
-    action.h.handle = channel.release();
-    actions.emplace_back(std::move(action));
-  }
-
-  // Spawn the process!
-  auto* handle = process_.reset_and_get_address();
-  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-  if (auto status = fdio_spawn_etc(ZX_HANDLE_INVALID, flags, argv[0], &argv[0], &environ[0],
-                                   actions.size(), actions.data(), handle, err_msg);
-      status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to spawn process: " << err_msg << " (" << zx_status_get_string(status)
-                   << ")";
-    return status;
-  }
-
-  // Start threads to handle stdio.
-  stdin_thread_ = std::thread([this, stdin_wpipe] {
+  stdin_thread_ = std::thread([this, wpipe] {
     bool close_input = false;
     std::vector<std::string> input_lines;
     while (!close_input) {
@@ -228,7 +135,7 @@ zx_status_t ChildProcess::Spawn() {
         size_t off = 0;
         size_t len = line.size();
         while (off < len) {
-          auto num_written = HANDLE_EINTR(write(stdin_wpipe, &buf[off], len - off));
+          auto num_written = HANDLE_EINTR(write(wpipe, &buf[off], len - off));
           if (num_written < 0) {
             FX_LOGS(ERROR) << "Failed to write input to process: " << strerror(errno);
             close_input = true;
@@ -238,25 +145,118 @@ zx_status_t ChildProcess::Spawn() {
         }
       }
     }
-    close(stdin_wpipe);
+    close(wpipe);
   });
+  return ZX_OK;
+}
 
-  if (stdout_action_ == kTransfer) {
-    AsyncSender<std::string> sender;
-    stdout_ = AsyncReceiver<std::string>::MakePtr(&sender);
-    stdout_thread_ = std::thread([this, stdout_rpipe, sender = std::move(sender)]() mutable {
-      stdout_result_ = ReadAndSend(stdout_rpipe, std::move(sender));
-    });
+zx_status_t ChildProcess::AddStdoutPipe() {
+  int rpipe = -1;
+  if (auto status = AddPipe(STDOUT_FILENO, &rpipe, nullptr); status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to create pipe from process stdout: " << zx_status_get_string(status);
+    return status;
   }
+  AsyncSender<std::string> sender;
+  stdout_ = AsyncReceiver<std::string>::MakePtr(&sender);
+  stdout_thread_ = std::thread([this, rpipe, sender = std::move(sender)]() mutable {
+    stdout_result_ = ReadAndSend(rpipe, std::move(sender));
+  });
+  return ZX_OK;
+}
 
-  if (stderr_action_ == kTransfer) {
-    AsyncSender<std::string> sender;
-    stderr_ = AsyncReceiver<std::string>::MakePtr(&sender);
-    stderr_thread_ = std::thread([this, stderr_rpipe, sender = std::move(sender)]() mutable {
-      stderr_result_ = ReadAndSend(stderr_rpipe, std::move(sender));
-    });
+zx_status_t ChildProcess::AddStderrPipe() {
+  int rpipe = -1;
+  if (auto status = AddPipe(STDERR_FILENO, &rpipe, nullptr); status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to create pipe from process stderr: " << zx_status_get_string(status);
+    return status;
   }
+  AsyncSender<std::string> sender;
+  stderr_ = AsyncReceiver<std::string>::MakePtr(&sender);
+  stderr_thread_ = std::thread([this, rpipe, sender = std::move(sender)]() mutable {
+    stderr_result_ = ReadAndSend(rpipe, std::move(sender));
+  });
+  return ZX_OK;
+}
 
+zx_status_t ChildProcess::AddPipe(int target_fd, int* out_rpipe, int* out_wpipe) {
+  if (spawned_) {
+    FX_LOGS(ERROR) << "Cannot add stdio pipes after spawning.";
+    return ZX_ERR_BAD_STATE;
+  }
+  int fds[2];
+  if (pipe(fds) != 0) {
+    FX_LOGS(ERROR) << "Failed to transfer file descriptor: " << strerror(errno);
+    return ZX_ERR_IO;
+  }
+  fdio_spawn_action_t action = {.action = FDIO_SPAWN_ACTION_TRANSFER_FD,
+                                .fd = {
+                                    .local_fd = -1,
+                                    .target_fd = target_fd,
+                                }};
+  if (out_rpipe && !out_wpipe) {
+    *out_rpipe = fds[0];
+    action.fd.local_fd = fds[1];
+  } else if (!out_rpipe && out_wpipe) {
+    action.fd.local_fd = fds[0];
+    *out_wpipe = fds[1];
+  } else {
+    FX_NOTREACHED() << "Exactly one of [out_rpipe, out_wpipe] must be non-null";
+  }
+  actions_.emplace_back(std::move(action));
+  return ZX_OK;
+}
+
+void ChildProcess::AddChannel(uint32_t id, zx::channel channel) {
+  fdio_spawn_action_t action{.action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+                             .h = {
+                                 .id = PA_HND(PA_USER0, id),
+                                 .handle = channel.release(),
+                             }};
+  actions_.emplace_back(std::move(action));
+}
+
+zx_status_t ChildProcess::Spawn() {
+  // Convert args and envvars to C-style strings.
+  // The envvars vector holds the constructed strings backing the pointers in environ.
+  std::vector<std::string> envvars;
+  std::vector<const char*> environ;
+  std::ostringstream log_str;
+  for (const auto& [key, value] : envvars_) {
+    std::ostringstream oss;
+    oss << key << "=" << value;
+    envvars.push_back(oss.str());
+    log_str << envvars.back() << " ";
+    environ.push_back(envvars.back().c_str());
+  }
+  environ.push_back(nullptr);
+
+  std::vector<const char*> argv;
+  argv.reserve(args_.size() + 1);
+  for (const auto& arg : args_) {
+    log_str << arg << " ";
+    argv.push_back(arg.c_str());
+  }
+  argv.push_back(nullptr);
+  FX_LOGS(INFO) << log_str.str();
+
+  // Build spawn actions
+  if (spawned_) {
+    FX_LOGS(ERROR) << "ChildProcess must be reset before it can be respawned.";
+    return ZX_ERR_BAD_STATE;
+  }
+  spawned_ = true;
+
+  // Spawn the process!
+  auto flags = FDIO_SPAWN_CLONE_ALL & (~FDIO_SPAWN_CLONE_STDIO);
+  auto* handle = process_.reset_and_get_address();
+  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+  if (auto status = fdio_spawn_etc(ZX_HANDLE_INVALID, flags, argv[0], &argv[0], &environ[0],
+                                   actions_.size(), actions_.data(), handle, err_msg);
+      status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to spawn process: " << err_msg << " (" << zx_status_get_string(status)
+                   << ")";
+    return status;
+  }
   return ZX_OK;
 }
 
@@ -293,12 +293,34 @@ zx_status_t ChildProcess::WriteToStdin(const std::string& line) {
   return ZX_OK;
 }
 
-zx_status_t ChildProcess::WriteAndCloseStdin(const std::string& line) {
-  if (auto status = WriteToStdin(line); status != ZX_OK) {
-    return status;
+ZxPromise<std::string> ChildProcess::ReadFromStdout() {
+  if (!stdout_) {
+    return fpromise::make_promise(
+        []() -> ZxResult<std::string> { return fpromise::error(ZX_ERR_BAD_STATE); });
   }
-  CloseStdin();
-  return ZX_OK;
+  return stdout_->Receive()
+      .or_else([this]() -> ZxResult<std::string> {
+        if (stdout_thread_.joinable()) {
+          stdout_thread_.join();
+        }
+        return fpromise::error(stdout_result_);
+      })
+      .wrap_with(scope_);
+}
+
+ZxPromise<std::string> ChildProcess::ReadFromStderr() {
+  if (!stderr_) {
+    return fpromise::make_promise(
+        []() -> ZxResult<std::string> { return fpromise::error(ZX_ERR_BAD_STATE); });
+  }
+  return stderr_->Receive()
+      .or_else([this]() -> ZxResult<std::string> {
+        if (stderr_thread_.joinable()) {
+          stderr_thread_.join();
+        }
+        return fpromise::error(stderr_result_);
+      })
+      .wrap_with(scope_);
 }
 
 void ChildProcess::CloseStdin() {
@@ -307,32 +329,6 @@ void ChildProcess::CloseStdin() {
     input_closed_ = true;
   }
   input_cond_.notify_one();
-}
-
-ZxPromise<std::string> ChildProcess::ReadFromStdout() {
-  if (!stdout_) {
-    return fpromise::make_promise(
-        []() -> ZxResult<std::string> { return fpromise::error(ZX_ERR_BAD_STATE); });
-  }
-  return stdout_->Receive().or_else([this]() -> ZxResult<std::string> {
-    if (stdout_thread_.joinable()) {
-      stdout_thread_.join();
-    }
-    return fpromise::error(stdout_result_);
-  });
-}
-
-ZxPromise<std::string> ChildProcess::ReadFromStderr() {
-  if (!stderr_) {
-    return fpromise::make_promise(
-        []() -> ZxResult<std::string> { return fpromise::error(ZX_ERR_BAD_STATE); });
-  }
-  return stderr_->Receive().or_else([this]() -> ZxResult<std::string> {
-    if (stderr_thread_.joinable()) {
-      stderr_thread_.join();
-    }
-    return fpromise::error(stderr_result_);
-  });
 }
 
 ZxResult<ProcessStats> ChildProcess::GetStats() {
@@ -414,7 +410,6 @@ void ChildProcess::Reset() {
   killed_ = false;
   args_.clear();
   envvars_.clear();
-  channels_.clear();
   process_.reset();
   memset(&info_, 0, sizeof(info_));
   {
@@ -426,6 +421,7 @@ void ChildProcess::Reset() {
   stdout_result_ = ZX_OK;
   stderr_.reset();
   stderr_result_ = ZX_OK;
+  actions_.clear();
 }
 
 }  // namespace fuzzing
