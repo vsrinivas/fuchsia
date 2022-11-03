@@ -7,9 +7,7 @@ languages, which may be run locally by executing the following from
 the command line: `fx set core.x64 --with=//examples/fidl/new:tests && fx test
 ${series_flat_case}_${variant_flat_case}`.
 
-First, we need to define our interface definitions and test harness. The FIDL,
-CML, and realm interface definitions set up a scaffold that arbitrary
-implementations can use:
+The FIDL, CML, and realm interface definitions are as follows:
 
 <div>
   <devsite-selector>

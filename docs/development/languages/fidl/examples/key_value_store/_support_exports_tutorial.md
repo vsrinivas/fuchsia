@@ -1,4 +1,48 @@
-<!-- TODO(fxbug.dev/109277): DOCUMENT[key_value_store/support_exports] no need for a header, just a brief description -->
+A simple way to extend the key-value store to support exporting backups would be
+to simply add a new method that stops the world, serializes the state of the
+store, and sends it back as a FIDL `vector<Item>`. There are two downsides to
+this approach, however. The first is that it puts all of the burden of the
+backup on the server - a client pays nothing to ask for a backup operation that
+is very expensive to the server. The second is that it involves a great deal of
+copying: the client is almost certainly just going to write the resulting backup
+to some backing datastore, like a file or a database, as soon as it receives it.
+Having it decode this (potentially very large) FIDL object, just so that it can
+immediately re-encode it as it forwards it to whatever protocol will do the
+actual storage, is very wasteful.
+
+A better solution is to use zircon's [virtual memory
+objects][docs-zx-concepts-vmos]. Instead of constantly copying bytes back and
+forth in a [bucket brigade][wiki-bucket-brigade], we can mint a VMO to hold the
+backup data on the client, send it to the server, then forward it back to our
+target data store without deserializing in between. As long as the target data
+store's protocol has allowances for accepting data transported using a VMO, this
+is the preferred way to accomplish expensive operations like this. In fact,
+Fuchsia's file system, for instance, implements this exact pattern. A benefit of
+this approach is that it forces the client to do some work when asking the
+server for an expensive operation, minimizing the work imbalance between the two
+parties.
+
+[docs-zx-concepts-vmos]: /docs/concepts/kernel/concepts.md#shared_memory_virtual_memory_objects_vmos
+[wiki-bucket-brigade]: https://en.wikipedia.org/wiki/Bucket_brigade
+
+When writing the data to this VMO, we will write the wire-encoded binary from of
+the new FIDL type `Exportable`. Wire-encoded FIDL types can be *persisted* to
+any byte-interfaced storage medium in this manner: they are encoded and written
+to the storage (in this case, a VMO that will later be saved as a file), and
+decoded from it when the data needs to be accessed again, in much the same way
+that a message is encoded, transported, and decoded again later when using FIDL
+over IPC.
+
+To do this securely and adhere to the [principle of least privilege][wiki-polp],
+we should constrain the privileges the handle representing our VMO may carry.
+Enter *handle rights*, FIDL's first-class method of describing the privileges
+available to a particular handle type. In this case, we allow the `empty` VMO
+passed to the server in the `Export` request to be read from, queried for size,
+resized, and written to. When the VMO is returned, we remove right to resize and
+write, ensuring that no process, not even malicious actors in some far away
+component, can modify this data as it moves through the system.
+
+[wiki-bucket-brigade]: https://en.wikipedia.org/wiki/Principle_of_least_privilege
 
 Note: The source code for this example is located at
 [//examples/fidl/new/key_value_store/support_exports](/examples/fidl/new/key_value_store/support_exports).
@@ -7,9 +51,7 @@ languages, which may be run locally by executing the following from
 the command line: `fx set core.x64 --with=//examples/fidl/new:tests && fx test
 keyvaluestore_supportexports`.
 
-First, we need to define our interface definitions and test harness. The FIDL,
-CML, and realm interface definitions set up a scaffold that arbitrary
-implementations can use:
+The FIDL, CML, and realm interface definitions are as follows:
 
 <div>
   <devsite-selector>

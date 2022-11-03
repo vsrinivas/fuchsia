@@ -44,9 +44,13 @@ section.
 
 <<../widgets/_generated_name.md>>
 
+<<../widgets/_handle_rights.md>>
+
 <<../widgets/_named_payload.md>>
 
 <<../widgets/_optionality.md>>
+
+<<../widgets/_persistence.md>>
 
 <<../widgets/_recursive_type.md>>
 
