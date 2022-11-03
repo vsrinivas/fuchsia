@@ -5,6 +5,7 @@
 use {
     crate::match_common::{get_composite_rules_from_composite_driver, node_to_device_property},
     crate::resolved_driver::ResolvedDriver,
+    bind::compiler::symbol_table::{get_deprecated_key_identifier, get_deprecated_key_value},
     bind::compiler::Symbol,
     bind::interpreter::match_bind::{match_bind, DeviceProperties, MatchBindData, PropertyKey},
     fidl_fuchsia_driver_framework as fdf, fidl_fuchsia_driver_index as fdi,
@@ -241,10 +242,29 @@ fn convert_fidl_to_bind_rules(
 
 fn match_node(bind_rules: &DeviceGroupNodeBindRules, device_properties: &DeviceProperties) -> bool {
     for (key, node_prop_values) in bind_rules.iter() {
-        let dev_prop_contains_value = match device_properties.get(key) {
+        let mut dev_prop_contains_value = match device_properties.get(key) {
             Some(val) => node_prop_values.values.contains(val),
             None => false,
         };
+
+        // If the properties don't contain the key, try to convert it to a deprecated
+        // key and check the properties with it.
+        if !dev_prop_contains_value && !device_properties.contains_key(key) {
+            let deprecated_key = match key {
+                PropertyKey::NumberKey(int_key) => get_deprecated_key_identifier(*int_key as u32)
+                    .map(|key| PropertyKey::StringKey(key)),
+                PropertyKey::StringKey(str_key) => {
+                    get_deprecated_key_value(str_key).map(|key| PropertyKey::NumberKey(key as u64))
+                }
+            };
+
+            if let Some(key) = deprecated_key {
+                dev_prop_contains_value = match device_properties.get(&key) {
+                    Some(val) => node_prop_values.values.contains(val),
+                    None => false,
+                };
+            }
+        }
 
         let evaluate_condition = match node_prop_values.condition {
             fdf::Condition::Accept => {
@@ -651,6 +671,69 @@ mod tests {
         // Match node.
         let mut device_properties: DeviceProperties = HashMap::new();
         device_properties.insert(PropertyKey::NumberKey(1), Symbol::NumberValue(200));
+
+        let expected_device_group = fdi::MatchedDeviceGroupInfo {
+            name: Some("test_group".to_string()),
+            node_index: Some(0),
+            num_nodes: Some(1),
+            ..fdi::MatchedDeviceGroupInfo::EMPTY
+        };
+        assert_eq!(
+            Some(fdi::MatchedDriver::DeviceGroupNode(fdi::MatchedDeviceGroupNodeInfo {
+                device_groups: Some(vec![expected_device_group]),
+                ..fdi::MatchedDeviceGroupNodeInfo::EMPTY
+            })),
+            device_group_manager.match_device_group_nodes(&device_properties)
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_deprecated_keys_match() {
+        let bind_rules = vec![
+            fdf::BindRule {
+                key: fdf::NodePropertyKey::StringValue("fuchsia.BIND_PROTOCOL".to_string()),
+                condition: fdf::Condition::Accept,
+                values: vec![fdf::NodePropertyValue::IntValue(200)],
+            },
+            fdf::BindRule {
+                key: fdf::NodePropertyKey::IntValue(0x0201), // "fuchsia.BIND_USB_PID"
+                condition: fdf::Condition::Accept,
+                values: vec![fdf::NodePropertyValue::IntValue(10)],
+            },
+        ];
+
+        let bind_properties = vec![fdf::NodeProperty {
+            key: Some(fdf::NodePropertyKey::IntValue(0x01)),
+            value: Some(fdf::NodePropertyValue::IntValue(50)),
+            ..fdf::NodeProperty::EMPTY
+        }];
+
+        let mut device_group_manager = DeviceGroupManager::new();
+        assert_eq!(
+            Err(Status::NOT_FOUND.into_raw()),
+            device_group_manager.add_device_group(
+                fdf::DeviceGroup {
+                    name: Some("test_group".to_string()),
+                    nodes: Some(vec![fdf::DeviceGroupNode {
+                        bind_rules: bind_rules,
+                        bind_properties: bind_properties,
+                    }]),
+                    ..fdf::DeviceGroup::EMPTY
+                },
+                vec![]
+            )
+        );
+
+        // Match node.
+        let mut device_properties: DeviceProperties = HashMap::new();
+        device_properties.insert(
+            PropertyKey::NumberKey(1), /* "fuchsia.BIND_PROTOCOL" */
+            Symbol::NumberValue(200),
+        );
+        device_properties.insert(
+            PropertyKey::StringKey("fuchsia.BIND_USB_PID".to_string()),
+            Symbol::NumberValue(10),
+        );
 
         let expected_device_group = fdi::MatchedDeviceGroupInfo {
             name: Some("test_group".to_string()),

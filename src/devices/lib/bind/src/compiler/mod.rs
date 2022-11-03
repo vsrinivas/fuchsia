@@ -13,5 +13,6 @@ pub use self::compiler::{
 };
 
 pub use self::symbol_table::{
-    get_deprecated_key_identifier, get_deprecated_key_identifiers, Symbol, SymbolTable,
+    get_deprecated_key_identifier, get_deprecated_key_identifiers, get_deprecated_key_value,
+    Symbol, SymbolTable,
 };
