@@ -682,30 +682,40 @@ impl FsNode {
         self.ops().readlink(self, current_task)
     }
 
-    pub fn link(&self, task: &Task, name: &FsStr, child: &FsNodeHandle) -> Result<(), Errno> {
-        self.check_access(task, Access::WRITE)?;
+    pub fn link(
+        &self,
+        current_task: &CurrentTask,
+        name: &FsStr,
+        child: &FsNodeHandle,
+    ) -> Result<(), Errno> {
+        self.check_access(current_task, Access::WRITE)?;
         self.ops().link(self, name, child)
     }
 
-    pub fn unlink(&self, task: &Task, name: &FsStr, child: &FsNodeHandle) -> Result<(), Errno> {
-        self.check_access(task, Access::WRITE)?;
+    pub fn unlink(
+        &self,
+        current_task: &CurrentTask,
+        name: &FsStr,
+        child: &FsNodeHandle,
+    ) -> Result<(), Errno> {
+        self.check_access(current_task, Access::WRITE)?;
         self.ops().unlink(self, name, child)
     }
 
-    pub fn truncate(&self, task: &Task, length: u64) -> Result<(), Errno> {
-        self.check_access(task, Access::WRITE)?;
+    pub fn truncate(&self, current_task: &CurrentTask, length: u64) -> Result<(), Errno> {
+        self.check_access(current_task, Access::WRITE)?;
         self.ops().truncate(self, length)
     }
 
     /// Check whether the node can be accessed in the current context with the specified access
     /// flags (read, write, or exec). Accounts for capabilities and whether the current user is the
     /// owner or is in the file's group.
-    pub fn check_access(&self, task: &Task, access: Access) -> Result<(), Errno> {
+    pub fn check_access(&self, current_task: &CurrentTask, access: Access) -> Result<(), Errno> {
         let (node_uid, node_gid, mode) = {
             let info = self.info();
             (info.uid, info.gid, info.mode.bits())
         };
-        let creds = task.creds();
+        let creds = current_task.creds();
         if creds.has_capability(CAP_DAC_OVERRIDE) {
             return Ok(());
         }
