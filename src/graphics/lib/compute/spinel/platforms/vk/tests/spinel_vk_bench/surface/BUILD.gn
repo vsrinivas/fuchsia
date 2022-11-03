@@ -56,6 +56,7 @@ source_set("surface") {
     deps += [
       "//sdk/fidl/fuchsia.input:fuchsia.input_hlcpp",
       "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_cpp_wire",
+      "//sdk/lib/component/cpp/incoming",
       "//sdk/lib/fdio",
       "//src/lib/fxl",
       "//zircon/system/ulib/async-loop:async-loop-cpp",

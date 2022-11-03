@@ -7,8 +7,10 @@
 #include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.input.report/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/component/cpp/incoming/service_client.h>
 #include <lib/fdio/fdio.h>
 #include <lib/trace-provider/provider.h>
 #include <vulkan/vulkan_fuchsia.h>
@@ -16,6 +18,8 @@
 #include <algorithm>
 #include <array>
 #include <cinttypes>
+#include <filesystem>
+#include <string_view>
 
 #include "common/macros.h"
 #include "common/vk/assert.h"
@@ -25,13 +29,11 @@
 //
 //
 //
-
 namespace FIR = fuchsia_input_report;
 
 //
 // Ensure that the surface event structs are at least as large as Fuchsia's
 //
-
 static_assert(MEMBER_SIZE_MACRO(struct surface_event, pointer.buttons.dword) * 32 >=
               FIR::wire::kMouseMaxNumButtons);
 
@@ -44,13 +46,11 @@ static_assert(MEMBER_SIZE_MACRO(struct surface_event, touch.buttons.dword) * 32 
 //
 //
 //
-
 struct surface_platform;
 
 //
 //
 //
-
 class reader_ctx : public fidl::WireResponseContext<FIR::InputReportsReader::ReadInputReports> {
   //
   //
@@ -85,7 +85,6 @@ class reader_ctx : public fidl::WireResponseContext<FIR::InputReportsReader::Rea
 //
 //
 //
-
 struct surface_platform
 {
   //
@@ -134,7 +133,7 @@ struct surface_platform
   //
   //
   //
-  surface_platform(uint32_t device_count);
+  surface_platform();
 
   void
   input(surface_input_pfn_t input_pfn, void * data);
@@ -151,7 +150,6 @@ struct surface_platform
 //
 //
 //
-
 void
 surface_platform::input(surface_input_pfn_t input_pfn, void * data)
 {
@@ -162,8 +160,7 @@ surface_platform::input(surface_input_pfn_t input_pfn, void * data)
 //
 //
 //
-
-surface_platform::surface_platform(uint32_t device_count)
+surface_platform::surface_platform()
     : loop(&kAsyncLoopConfigAttachToCurrentThread)
 
 #if !defined(SPN_VK_SURFACE_FUCHSIA_DISABLE_TRACE) && !defined(NTRACE)
@@ -173,69 +170,54 @@ surface_platform::surface_platform(uint32_t device_count)
 #endif
 
 {
-  // limit probing of input-reports to [000,009]
-  device_count = std::min(device_count, 10u);
-
-  // reserve space
-  ctxs.reserve(device_count);
-
   // probe a range of fd names
-  char           path[]    = "/dev/class/input-report/000";
-  uint32_t const digit_idx = (uint32_t)strlen(path) - 1;
+  std::string ir_dir = "/dev/class/input-report";
 
-  for (uint32_t ii = 0; ii < device_count; ii++)
+  for (const auto & ir_path : std::filesystem::directory_iterator(ir_dir))
     {
-      // update name
-      path[digit_idx] = (char)('0' + ii);
+      // try to open path to input-report device
+      zx::result input_client_end = component::Connect<FIR::InputDevice>(ir_path.path().c_str());
 
-      // try to open
-      fbl::unique_fd fd(open(path, O_RDWR));
-
-      if (!fd.is_valid())
+      if (input_client_end.is_error())
         {
           continue;
         }
 #ifndef NDEBUG
       else
         {
-          fprintf(stderr, "%s : %s : opened `%s`\n", __FILE__, __func__, path);
+          fprintf(stderr, "%s : %s : opened `%s`\n", __FILE__, __func__, ir_path.path().c_str());
         }
 #endif
 
-      zx::channel chan;
-      zx_status_t status = fdio_get_service_handle(fd.release(), chan.reset_and_get_address());
+      // create input device
+      auto input_device = fidl::WireSyncClient<FIR::InputDevice>(std::move(*input_client_end));
 
-      if (status == ZX_OK)
+      // create input reports reader
+      zx::result input_endpoints = fidl::CreateEndpoints<FIR::InputReportsReader>();
+
+      if (input_endpoints.is_error())
         {
-          auto input_client_end = fidl::ClientEnd<FIR::InputDevice>(std::move(chan));
+          exit(EXIT_FAILURE);  // Should never happen -- exit with failure.
+        }
 
-          // create input device
-          auto input_device = fidl::WireSyncClient<FIR::InputDevice>(std::move(input_client_end));
+      auto & [reports_client, reports_server] = input_endpoints.value();
 
-          // create input reports reader
-          zx::channel reports_server, reports_client;
+      auto reader_result = input_device->GetInputReportsReader(std::move(reports_server));
 
-          if (zx::channel::create(0, &reports_server, &reports_client) == ZX_OK)
+      if (reader_result.ok())
+        {
+          auto reports_client_end =
+            fidl::ClientEnd<FIR::InputReportsReader>(std::move(reports_client));
+
+          fidl::WireClient<FIR::InputReportsReader> input_reader(std::move(reports_client_end),
+                                                                 loop.dispatcher());
+
+          if (input_reader.is_valid())
             {
-              auto reports_server_end =
-                fidl::ServerEnd<FIR::InputReportsReader>(std::move(reports_server));
-
-              auto result = input_device->GetInputReportsReader(std::move(reports_server_end));
-
-              if (result.status() == ZX_OK)
-                {
-                  auto reports_client_end =
-                    fidl::ClientEnd<FIR::InputReportsReader>(std::move(reports_client));
-
-                  fidl::WireClient<FIR::InputReportsReader> input_reader(
-                    std::move(reports_client_end),
-                    loop.dispatcher());
-
-                  if (input_reader.is_valid())
-                    {
-                      ctxs.emplace_back(new reader_ctx(this, ii, input_device, input_reader));
-                    }
-                }
+              ctxs.emplace_back(new reader_ctx(this,  // Use ctxs.size() as a unique id
+                                               static_cast<uint32_t>(ctxs.size()),
+                                               input_device,
+                                               input_reader));
             }
         }
     }
@@ -257,7 +239,6 @@ surface_platform::surface_platform(uint32_t device_count)
 //
 //
 //
-
 static void
 destroy(struct surface * surface)
 {
@@ -277,7 +258,6 @@ destroy(struct surface * surface)
 //
 //
 //
-
 static void
 input_keyboard(struct surface_platform *              platform,
                uint32_t                               device_id,
@@ -392,7 +372,6 @@ input_keyboard(struct surface_platform *              platform,
 //
 //
 //
-
 static void
 input_buttons_changed(struct surface_platform *     platform,
                       struct surface_event * const  event,
@@ -416,7 +395,6 @@ input_buttons_changed(struct surface_platform *     platform,
 //
 //
 //
-
 static void
 input_mouse(struct surface_platform *           platform,
             uint32_t                            device_id,
@@ -566,7 +544,6 @@ input_mouse(struct surface_platform *           platform,
 //
 //
 //
-
 static void
 input_touch(struct surface_platform *           platform,
             uint32_t                            device_id,
@@ -721,7 +698,6 @@ input_touch(struct surface_platform *           platform,
 //
 //
 //
-
 static void
 input_consumer_control(struct surface_platform *                     platform,
                        uint32_t                                      device_id,
@@ -736,7 +712,6 @@ input_consumer_control(struct surface_platform *                     platform,
 //
 //
 //
-
 void
 reader_ctx::OnResult(fidl::WireUnownedResult<FIR::InputReportsReader::ReadInputReports> & result)
 {
@@ -798,7 +773,6 @@ reader_ctx::OnResult(fidl::WireUnownedResult<FIR::InputReportsReader::ReadInputR
 //
 //
 //
-
 static void
 input(struct surface * surface, surface_input_pfn_t input_pfn, void * data)
 {
@@ -818,7 +792,6 @@ input(struct surface * surface, surface_input_pfn_t input_pfn, void * data)
 //
 //
 //
-
 static VkResult
 regen(struct surface * surface, VkExtent2D * extent, uint32_t * image_count)
 {
@@ -835,7 +808,6 @@ regen(struct surface * surface, VkExtent2D * extent, uint32_t * image_count)
 //
 //
 //
-
 struct surface *
 surface_fuchsia_create(VkInstance vk_i, VkAllocationCallbacks const * vk_ac)
 {
@@ -861,7 +833,7 @@ surface_fuchsia_create(VkInstance vk_i, VkAllocationCallbacks const * vk_ac)
   //
   // platform
   //
-  surface->platform = new surface_platform(10);
+  surface->platform = new surface_platform();
 
   //
   // Fuchsia surface
