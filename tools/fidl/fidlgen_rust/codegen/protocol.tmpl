@@ -460,6 +460,9 @@ impl {{ $protocol.Name }}Event {
                 Ok({{ $protocol.Name }}Event::_UnknownEvent {
                     ordinal: tx_header.ordinal(),
                 })
+                // MessageBufEtc will close handles on drop, before the
+                // application can handle the _UnknownEvent variant, so this
+                // satisfies the RFC-0138 requirement to close handles first.
             }
             {{- end }}
             _ => Err(fidl::Error::UnknownOrdinal {
@@ -599,6 +602,11 @@ impl futures::Stream for {{ $protocol.Name }}RequestStream {
                         direction: fidl::endpoints::UnknownMethodDirection::OneWay,
                         {{- end }}
                     })
+                    // with_tls_decode_buf will clear the handles when we return
+                    // before the application can handle the _UnknownMethod, so
+                    // we don't need to clear it explicitly to meet the RFC
+                    // requirement to close handles before calling an unknown
+                    // interaction handler.
                 }
                 {{- if $protocol.TwoWayUnknownInteractions }}
                 _ if header.dynamic_flags().contains(fidl::encoding::DynamicFlags::FLEXIBLE) => {
@@ -614,6 +622,11 @@ impl futures::Stream for {{ $protocol.Name }}RequestStream {
                         ),
                         body: &mut response,
                     };
+
+                    // RFC-0138 requires us to close handles in the incoming
+                    // message before replying, so we can't wait for
+                    // with_tls_decode_buf to auto-clear handles when we return.
+                    handles.clear();
 
                     // We are inside of with_tls_decode_buf, so we can't use
                     // with_tls_encode_buf. However, we know that the unknown
