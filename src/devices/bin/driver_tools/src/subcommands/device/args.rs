@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {anyhow::format_err, argh::FromArgs};
+use argh::FromArgs;
 
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(
@@ -103,30 +103,15 @@ impl std::str::FromStr for LogLevel {
     }
 }
 
-impl Into<u32> for LogLevel {
-    fn into(self) -> u32 {
+impl Into<fidl_fuchsia_logger::LogLevelFilter> for LogLevel {
+    fn into(self) -> fidl_fuchsia_logger::LogLevelFilter {
         match self {
-            LogLevel::Error => 0x50,
-            LogLevel::Warning => 0x40,
-            LogLevel::Info => 0x30,
-            LogLevel::Debug => 0x20,
-            LogLevel::Trace => 0x10,
-            LogLevel::Serial => std::u32::MAX,
-        }
-    }
-}
-
-impl std::convert::TryFrom<u32> for LogLevel {
-    type Error = anyhow::Error;
-    fn try_from(flags: u32) -> Result<Self, anyhow::Error> {
-        match flags {
-            0x50 => Ok(LogLevel::Error),
-            0x40 => Ok(LogLevel::Warning),
-            0x30 => Ok(LogLevel::Info),
-            0x20 => Ok(LogLevel::Debug),
-            0x10 => Ok(LogLevel::Trace),
-            std::u32::MAX => Ok(LogLevel::Serial),
-            _ => Err(format_err!("'{}' is not a valid value.", flags)),
+            LogLevel::Error => fidl_fuchsia_logger::LogLevelFilter::Error,
+            LogLevel::Warning => fidl_fuchsia_logger::LogLevelFilter::Warn,
+            LogLevel::Info => fidl_fuchsia_logger::LogLevelFilter::Info,
+            LogLevel::Debug => fidl_fuchsia_logger::LogLevelFilter::Debug,
+            LogLevel::Trace => fidl_fuchsia_logger::LogLevelFilter::Trace,
+            LogLevel::Serial => fidl_fuchsia_logger::LogLevelFilter::None,
         }
     }
 }

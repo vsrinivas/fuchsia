@@ -271,11 +271,11 @@ void DevfsVnode::GetMinDriverLogSeverity(GetMinDriverLogSeverityCompleter::Sync&
     return;
   }
   if (!dev_->driver) {
-    completer.Reply(ZX_ERR_UNAVAILABLE, 0);
+    completer.Reply(ZX_ERR_UNAVAILABLE, fuchsia_logger::wire::LogLevelFilter::kNone);
     return;
   }
   uint8_t severity = fx_logger_get_min_severity(dev_->zx_driver()->logger());
-  completer.Reply(ZX_OK, severity);
+  completer.Reply(ZX_OK, fuchsia_logger::wire::LogLevelFilter(severity));
 }
 
 void DevfsVnode::SetMinDriverLogSeverity(SetMinDriverLogSeverityRequestView request,

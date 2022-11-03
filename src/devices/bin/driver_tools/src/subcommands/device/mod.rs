@@ -7,12 +7,10 @@ pub mod args;
 use {
     anyhow::{format_err, Context, Result},
     args::{
-        BindCommand, DeviceCommand, DeviceSubcommand, LogLevel, LogLevelCommand, RebindCommand,
-        UnbindCommand,
+        BindCommand, DeviceCommand, DeviceSubcommand, LogLevelCommand, RebindCommand, UnbindCommand,
     },
     fidl::endpoints::Proxy,
     fidl_fuchsia_device as fdev, fidl_fuchsia_io as fio, fuchsia_zircon_status as zx,
-    std::convert::TryFrom,
 };
 
 pub async fn device(cmd: DeviceCommand, dev: fio::DirectoryProxy) -> Result<()> {
@@ -45,7 +43,7 @@ pub async fn device(cmd: DeviceCommand, dev: fio::DirectoryProxy) -> Result<()> 
             } else {
                 let (status, severity) = device.get_min_driver_log_severity().await?;
                 zx::Status::ok(status).map_err(|err| format_err!("{:?}", err))?;
-                println!("Current log severity: {}", LogLevel::try_from(severity)?);
+                println!("Current log severity: {:#?}", severity);
             }
         }
     }

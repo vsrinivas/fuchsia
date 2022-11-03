@@ -241,7 +241,7 @@ void DevfsVnode::GetTopologicalPath(GetTopologicalPathCompleter::Sync& completer
 
 void DevfsVnode::GetMinDriverLogSeverity(GetMinDriverLogSeverityCompleter::Sync& completer) {
   uint8_t severity = dev_->logger().GetSeverity();
-  completer.Reply(ZX_OK, severity);
+  completer.Reply(ZX_OK, fuchsia_logger::wire::LogLevelFilter(severity));
 }
 
 void DevfsVnode::SetMinDriverLogSeverity(SetMinDriverLogSeverityRequestView request,

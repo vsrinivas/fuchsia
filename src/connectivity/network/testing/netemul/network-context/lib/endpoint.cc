@@ -340,10 +340,10 @@ class NetworkDeviceImpl : public EndpointImpl,
   }
 
   void GetMinDriverLogSeverity(GetMinDriverLogSeverityCallback callback) override {
-    callback(ZX_ERR_NOT_SUPPORTED, 0);
+    callback(ZX_ERR_NOT_SUPPORTED, fuchsia::logger::LogLevelFilter::NONE);
   }
 
-  void SetMinDriverLogSeverity(uint32_t severity,
+  void SetMinDriverLogSeverity(fuchsia::logger::LogLevelFilter severity,
                                SetMinDriverLogSeverityCallback callback) override {
     callback(ZX_ERR_NOT_SUPPORTED);
   }

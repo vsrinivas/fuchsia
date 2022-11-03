@@ -115,6 +115,7 @@ fidl("test.identity") {
     "//sdk/fidl/fuchsia.hardware.block",
     "//sdk/fidl/fuchsia.hardware.block.partition",
     "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.logger",
   ]
 
   # TODO(https://fxbug.dev/88443): Remove this dependency since this target does

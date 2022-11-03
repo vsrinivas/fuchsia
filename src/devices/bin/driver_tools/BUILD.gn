@@ -34,6 +34,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_rust",
     "//sdk/fidl/fuchsia.driver.registrar:fuchsia.driver.registrar_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
     "//src/devices/lib/bind",
     "//src/lib/fidl/rust/fidl",

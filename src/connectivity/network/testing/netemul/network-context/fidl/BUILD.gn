@@ -11,6 +11,7 @@ fidl("internal") {
   public_deps = [
     "//sdk/fidl/fuchsia.device",
     "//sdk/fidl/fuchsia.hardware.network",
+    "//sdk/fidl/fuchsia.logger",
   ]
 }
 

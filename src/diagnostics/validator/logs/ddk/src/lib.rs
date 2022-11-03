@@ -129,8 +129,11 @@ impl Puppet {
         let mut spec = RecordSpec { file: test_file.clone(), line: test_line_32, record };
         self.proxy.emit_log(&mut spec).await?;
 
-        // 0 == Log everything
-        let _ = self.device_proxy.set_min_driver_log_severity(0).await.unwrap();
+        let _ = self
+            .device_proxy
+            .set_min_driver_log_severity(fidl_fuchsia_logger::LogLevelFilter::Trace)
+            .await
+            .unwrap();
 
         let record = Record {
             arguments: vec![Argument {

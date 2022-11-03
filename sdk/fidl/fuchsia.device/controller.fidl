@@ -4,6 +4,7 @@
 library fuchsia.device;
 
 using zx;
+using fuchsia.logger;
 
 /// Maxmium length for a device name
 const MAX_DEVICE_NAME_LEN uint64 = 32;
@@ -162,11 +163,11 @@ protocol Controller {
     /// Return the current logging flags for this device's driver
     GetMinDriverLogSeverity() -> (struct {
         status zx.status;
-        severity uint32;
+        severity fuchsia.logger.LogLevelFilter;
     });
     /// Set the logging flags for this device's driver.
     SetMinDriverLogSeverity(struct {
-        severity uint32;
+        severity fuchsia.logger.LogLevelFilter;
     }) -> (struct {
         status zx.status;
     });

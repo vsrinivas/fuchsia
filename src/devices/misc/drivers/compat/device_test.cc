@@ -737,7 +737,7 @@ TEST_F(DeviceTest, DevfsVnodeSetAndGetMinDriverLogSeverity) {
   client.Bind(std::move(dev_endpoints->client), test_loop().dispatcher());
 
   bool callback_called = false;
-  client->SetMinDriverLogSeverity(FX_LOG_ERROR)
+  client->SetMinDriverLogSeverity(fuchsia_logger::wire::LogLevelFilter::kError)
       .Then([&client, &callback_called](
                 fidl::WireUnownedResult<fuchsia_device::Controller::SetMinDriverLogSeverity>&
                     result) {
@@ -755,13 +755,13 @@ TEST_F(DeviceTest, DevfsVnodeSetAndGetMinDriverLogSeverity) {
                 return;
               }
               ASSERT_EQ(ZX_OK, result->status);
-              ASSERT_EQ(FX_LOG_ERROR, (fx_log_severity_t)result->severity);
+              ASSERT_EQ(fuchsia_logger::wire::LogLevelFilter::kError, result->severity);
 
               // We set and get again because we cannot confirm if the first
               // call to set actually worked. The min driver log severity that
               // the first get compares to may have been unluckily the logger's
               // initial min driver log severity.
-              client->SetMinDriverLogSeverity(FX_LOG_INFO)
+              client->SetMinDriverLogSeverity(fuchsia_logger::wire::LogLevelFilter::kInfo)
                   .Then([&client, &callback_called](
                             fidl::WireUnownedResult<
                                 fuchsia_device::Controller::SetMinDriverLogSeverity>& result) {
@@ -780,7 +780,7 @@ TEST_F(DeviceTest, DevfsVnodeSetAndGetMinDriverLogSeverity) {
                             return;
                           }
                           ASSERT_EQ(ZX_OK, result->status);
-                          ASSERT_EQ(FX_LOG_INFO, (fx_log_severity_t)result->severity);
+                          ASSERT_EQ(fuchsia_logger::wire::LogLevelFilter::kInfo, result->severity);
                           callback_called = true;
                         });
                   });
