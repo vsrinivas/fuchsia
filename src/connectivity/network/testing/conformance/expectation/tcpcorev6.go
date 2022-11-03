@@ -148,7 +148,7 @@ var tcpcorev6Expectations map[AnvlCaseNumber]outcome.Outcome = map[AnvlCaseNumbe
 	{15, 28}: Fail,
 	{15, 29}: Flaky, // TODO(https://fxbug.dev/105259): Fix flake
 	{16, 17}: Pass,
-	{16, 18}: Flaky, // TODO(https://fxbug.dev/104460): Fix flake and/or report bug to Keysight
+	{16, 18}: Pass,
 	{16, 19}: Pass,
 	{16, 20}: Pass,
 	{16, 21}: Pass,
