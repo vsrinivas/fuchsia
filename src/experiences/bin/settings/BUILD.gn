@@ -2,6 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# TODO(fxb/113485): Migrate settings/license into settings/shell
 group("settings") {
-  public_deps = [ "//src/experiences/bin/settings/license:license_settings" ]
+  public_deps = [
+    "//src/experiences/bin/settings/license:license_settings",
+    "//src/experiences/bin/settings/shell:shell_settings",
+  ]
 }
