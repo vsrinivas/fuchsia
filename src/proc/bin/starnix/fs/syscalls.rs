@@ -1194,20 +1194,8 @@ fn do_mount_change_propagation_type(
         return error!(EINVAL);
     }
 
-    if flags.contains(MountFlags::REC) {
-        not_implemented!(current_task, "mount propagation with MS_REC");
-        return error!(EINVAL);
-    }
-
     let mount = target.mount_if_root()?;
-    match propagation_flag {
-        MountFlags::SHARED => mount.write().make_shared(),
-        MountFlags::PRIVATE => mount.write().make_private(),
-        _ => {
-            not_implemented!(current_task, "mount propagation {:?}", propagation_flag);
-            return error!(EINVAL);
-        }
-    }
+    mount.change_propagation(propagation_flag, flags.contains(MountFlags::REC));
     Ok(())
 }
 

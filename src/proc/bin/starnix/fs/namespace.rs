@@ -135,34 +135,44 @@ impl Mount {
         Some(NamespaceNode { mount: Some(mount.upgrade()?), entry: node.clone() })
     }
 
-    /// Add the specified mount as a child. Also propagate it to the mount's peer group.
-    fn add_submount(self: &MountHandle, dir: &DirEntryHandle, mount: MountHandle) {
-        let peers = {
-            let state = self.read();
+    /// Create the specified mount as a child. Also propagate it to the mount's peer group.
+    fn create_submount(
+        self: &MountHandle,
+        dir: &DirEntryHandle,
+        what: WhatToMount,
+        flags: MountFlags,
+    ) {
+        // TODO(tbodt): Making a copy here is necessary for lock ordering, because the peer group
+        // lock nests inside all mount locks (it would be impractical to reverse this because you
+        // need to lock a mount to get its peer group.) But it opens the door to race conditions
+        // where if a peer are concurrently being added, the mount might not get propagated to the
+        // new peer. The only true solution to this is bigger locks, somehow using the same lock
+        // for the peer group and all of the mounts in the group. Since peer groups are fluid and
+        // can have mounts constantly joining and leaving and then joining other groups, the only
+        // sensible locking option is to use a single global lock for all mounts and peer groups.
+        // This is almost impossible to express in rust. Help.
+        //
+        // Update: Also necessary to make a copy to prevent excess replication, see the comment on
+        // the following Mount::new call.
+        let peers =
+            self.state.read().peer_group.as_ref().map(|g| g.copy_peers()).unwrap_or_default();
 
-            // TODO(tbodt): test this
-            if state.is_shared() {
-                mount.write().make_shared();
-            }
+        // Create the mount after copying the peer groups, because in the case of creating a bind
+        // mount inside itself, the new mount would get added to our peer group during the
+        // Mount::new call, but we don't want to replicate into it already. For an example see
+        // MountTest.QuizBRecursion.
+        let mount = Mount::new(what, flags);
 
-            // TODO(tbodt): Making a copy here is necessary for lock ordering, because the peer
-            // group lock nests inside all mount locks (it would be impractical to reverse this
-            // because you need to lock a mount to get its peer group.) But it opens the door to
-            // race conditions where if a peer are concurrently being added, the mount might not get
-            // propagated to the new peer. The only true solution to this is bigger locks, somehow
-            // using the same lock for the peer group and all of the mounts in the group. Since
-            // peer groups are fluid and can have mounts constantly joining and leaving and then
-            // joining other groups, the only sensible locking option is to use a single global
-            // lock for all mounts and peer groups. This is almost impossible to express in rust.
-            // Help.
-            state.peer_group.as_ref().map(|g| g.copy_peers()).unwrap_or_default()
-        };
+        if self.read().is_shared() {
+            mount.write().make_shared();
+        }
 
         for peer in peers {
             if Arc::ptr_eq(self, &peer) {
                 continue;
             }
-            peer.write().add_submount_internal(dir, mount.clone_mount_recursive());
+            let clone = mount.clone_mount_recursive();
+            peer.write().add_submount_internal(dir, clone);
         }
 
         self.write().add_submount_internal(dir, mount)
@@ -205,6 +215,24 @@ impl Mount {
     /// namespaces and creating copies to use for propagation.
     fn clone_mount_recursive(&self) -> MountHandle {
         self.clone_mount(&self.root, MountFlags::REC)
+    }
+
+    pub fn change_propagation(self: &MountHandle, flag: MountFlags, recursive: bool) {
+        let mut state = self.write();
+        match flag {
+            MountFlags::SHARED => state.make_shared(),
+            MountFlags::PRIVATE => state.make_private(),
+            _ => {
+                tracing::warn!("mount propagation {:?}", flag);
+                return;
+            }
+        }
+
+        if recursive {
+            for mount in state.submounts.values() {
+                mount.change_propagation(flag, recursive);
+            }
+        }
     }
 
     state_accessor!(Mount, state);
@@ -622,7 +650,7 @@ impl NamespaceNode {
     pub fn mount(&self, what: WhatToMount, flags: MountFlags) -> Result<(), Errno> {
         let mountpoint = self.enter_mount();
         let mount = mountpoint.mount.as_ref().expect("a mountpoint must be part of a mount");
-        mount.add_submount(&mountpoint.entry, Mount::new(what, flags));
+        mount.create_submount(&mountpoint.entry, what, flags);
         Ok(())
     }
 

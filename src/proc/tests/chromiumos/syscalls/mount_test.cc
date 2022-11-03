@@ -159,7 +159,7 @@ TEST_F(MountTest, FlagVerification) {
 }
 
 // Quiz question B from https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt
-TEST_F(MountTest, DISABLED_QuizBRecursion) {
+TEST_F(MountTest, QuizBRecursion) {
   // Create a hierarchy
   ASSERT_SUCCESS(MakeDir("a"));
   ASSERT_SUCCESS(Mount("1", "a", MS_BIND));
@@ -172,6 +172,7 @@ TEST_F(MountTest, DISABLED_QuizBRecursion) {
   ASSERT_SUCCESS(Mount("a", "a/1/2", MS_BIND | MS_REC));
   ASSERT_TRUE(FileExists("a/1/2/1/2"));
   ASSERT_FALSE(FileExists("a/1/2/1/2/1/2"));
+  ASSERT_FALSE(FileExists("a/1/2/1/2/1/2/1/2"));
 }
 
 // Quiz question C from https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt
@@ -202,5 +203,19 @@ TEST_F(MountTest, PropagateOntoMountRoot) {
   ASSERT_SUCCESS(Mount("2", "1/1", MS_BIND));
   ASSERT_TRUE(FileExists("a/2"));
 }
+
+TEST_F(MountTest, InheritShared) {
+  ASSERT_SUCCESS(MakeDir("a"));
+  ASSERT_SUCCESS(Mount("1", "a", MS_BIND));
+  ASSERT_SUCCESS(Mount(nullptr, "a", MS_SHARED));
+  ASSERT_SUCCESS(Mount("2", "a/1", MS_BIND));
+  ASSERT_SUCCESS(MakeDir("b"));
+  ASSERT_SUCCESS(Mount("a/1", "b", MS_BIND));
+  ASSERT_SUCCESS(Mount("1", "b/2", MS_BIND));
+  ASSERT_TRUE(FileExists("a/1/2/1"));
+}
+
+// TODO(tbodt): write more tests:
+// - A and B are shared, make B downstream, make A private, should now both be private
 
 }  // namespace
