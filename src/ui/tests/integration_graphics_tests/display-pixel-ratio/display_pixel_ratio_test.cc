@@ -153,27 +153,7 @@ TEST_P(DisplayPixelRatioTest, TestScale) {
             ui_testing::Screenshot::kGreen);  // Center
 }
 
-class HistogramDataTest : public DisplayPixelRatioTest {
- public:
-  static std::vector<float> GetPixelDensitiesToTest() {
-    std::vector<float> pixel_density;
-    pixel_density.emplace_back(ui_testing::kLowResolutionDisplayPixelDensity);
-    pixel_density.emplace_back(ui_testing::kHighResolutionDisplayPixelDensity);
-    return pixel_density;
-  }
-};
-
-INSTANTIATE_TEST_SUITE_P(
-    HistogramDataTestWithParams, HistogramDataTest,
-    testing::Combine(::testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
-                                       ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER),
-                     testing::ValuesIn(HistogramDataTest::GetPixelDensitiesToTest())));
-
-// TODO(fxb/111297): Add the histogram test for medium resolution when better display pixel scale
-// values are provided by scene manager. Currently that pixel scale value results in an odd value
-// for logical size (1024 is not divisible by 1.25) which will make assertion on pixel count
-// difficult.
-TEST_P(HistogramDataTest, TestPixelColorDistribution) {
+TEST_P(DisplayPixelRatioTest, TestPixelColorDistribution) {
   auto data = TakeScreenshot();
 
   // Width and height of the rectangle in the center is |display_width_|/4 and |display_height_|/4.
