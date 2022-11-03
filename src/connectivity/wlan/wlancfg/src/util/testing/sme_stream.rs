@@ -24,27 +24,6 @@ pub fn poll_sme_req(
     })
 }
 
-#[track_caller]
-pub fn validate_sme_scan_request_and_send_results(
-    exec: &mut fasync::TestExecutor,
-    sme_stream: &mut fidl_sme::ClientSmeRequestStream,
-    expected_scan_request: &fidl_sme::ScanRequest,
-    scan_results: Vec<fidl_sme::ScanResult>,
-) {
-    // Check that a scan request was sent to the sme and send back results
-    assert_variant!(
-        exec.run_until_stalled(&mut sme_stream.next()),
-        Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
-            req, responder,
-        }))) => {
-            // Validate the request
-            assert_eq!(&req, expected_scan_request);
-            // Send all the APs
-            responder.send(&mut Ok(scan_results)).expect("failed to send scan data");
-        }
-    );
-}
-
 /// It takes an indeterminate amount of time for the scan module to either send the results
 /// to the location sensor, or be notified by the component framework that the location
 /// sensor's channel is closed / non-existent. This function continues trying to advance the

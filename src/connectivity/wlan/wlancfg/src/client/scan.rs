@@ -721,10 +721,7 @@ mod tests {
                 iface_manager_api::{ConnectAttemptRequest, SmeForScan},
                 Defect, IfaceFailure,
             },
-            util::testing::{
-                fakes::FakeSavedNetworksManager, generate_random_sme_scan_result,
-                validate_sme_scan_request_and_send_results,
-            },
+            util::testing::{fakes::FakeSavedNetworksManager, generate_random_sme_scan_result},
         },
         anyhow::Error,
         fidl::endpoints::create_proxy,
@@ -1305,11 +1302,14 @@ mod tests {
             combined_fidl_aps: _,
         } = create_scan_ap_data();
         // Validate the SME received the scan_request and send back mock data
-        validate_sme_scan_request_and_send_results(
-            &mut exec,
-            &mut sme_stream,
-            &scan_request,
-            input_aps.clone(),
+        assert_variant!(
+            exec.run_until_stalled(&mut sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                req, responder,
+            }))) => {
+                assert_eq!(req, scan_request);
+                responder.send(&mut Ok(input_aps.clone())).expect("failed to send scan data");
+            }
         );
 
         // Check for results
@@ -1358,11 +1358,14 @@ mod tests {
             combined_fidl_aps: _,
         } = create_scan_ap_data();
         // Validate the SME received the scan_request and send back mock data
-        validate_sme_scan_request_and_send_results(
-            &mut exec,
-            &mut sme_stream,
-            &scan_request,
-            input_aps.clone(),
+        assert_variant!(
+            exec.run_until_stalled(&mut sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                req, responder,
+            }))) => {
+                assert_eq!(req, scan_request);
+                responder.send(&mut Ok(input_aps.clone())).expect("failed to send scan data");
+            }
         );
 
         // Check for results
@@ -1440,7 +1443,6 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
 
         // Create mock scan data and send it via the SME
-        let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
         let MockScanData {
             passive_input_aps: input_aps,
             passive_internal_aps: internal_aps,
@@ -1449,11 +1451,14 @@ mod tests {
             combined_internal_aps: _,
             combined_fidl_aps: _,
         } = create_scan_ap_data();
-        validate_sme_scan_request_and_send_results(
-            &mut exec,
-            &mut sme_stream,
-            &expected_scan_request,
-            input_aps.clone(),
+        assert_variant!(
+            exec.run_until_stalled(&mut sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                req, responder,
+            }))) => {
+                assert_eq!(req, fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}));
+                responder.send(&mut Ok(input_aps.clone())).expect("failed to send scan data");
+            }
         );
 
         // Process scan handler
@@ -1498,12 +1503,14 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
 
         // Create mock scan data and send it via the SME
-        let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
-        validate_sme_scan_request_and_send_results(
-            &mut exec,
-            &mut sme_stream,
-            &expected_scan_request,
-            vec![],
+        assert_variant!(
+            exec.run_until_stalled(&mut sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                req, responder,
+            }))) => {
+                assert_eq!(req, fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}));
+                responder.send(&mut Ok(vec![])).expect("failed to send scan data");
+            }
         );
 
         // Process response from SME (which is empty) and expect the future to complete.
@@ -1579,12 +1586,14 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
 
         // Create mock scan data and send it via the SME
-        let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
-        validate_sme_scan_request_and_send_results(
-            &mut exec,
-            &mut sme_stream,
-            &expected_scan_request,
-            input_aps.clone(),
+        assert_variant!(
+            exec.run_until_stalled(&mut sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                req, responder,
+            }))) => {
+                assert_eq!(req, fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}));
+                responder.send(&mut Ok(input_aps.clone())).expect("failed to send scan data");
+            }
         );
 
         // Check for results, verifying no active scan results are included.
@@ -1649,12 +1658,14 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
 
         // Create mock scan data and send it via the SME
-        let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
-        validate_sme_scan_request_and_send_results(
-            &mut exec,
-            &mut sme_stream,
-            &expected_scan_request,
-            input_aps.clone(),
+        assert_variant!(
+            exec.run_until_stalled(&mut sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                req, responder,
+            }))) => {
+                assert_eq!(req, fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}));
+                responder.send(&mut Ok(input_aps.clone())).expect("failed to send scan data");
+            }
         );
 
         // Process response from SME. If an active scan is requested for the unseen network this
@@ -1729,12 +1740,14 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
 
         // Create mock scan data and send it via the SME
-        let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
-        validate_sme_scan_request_and_send_results(
-            &mut exec,
-            &mut sme_stream,
-            &expected_scan_request,
-            passive_input_aps.clone(),
+        assert_variant!(
+            exec.run_until_stalled(&mut sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                req, responder,
+            }))) => {
+                assert_eq!(req, fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}));
+                responder.send(&mut Ok(passive_input_aps.clone())).expect("failed to send scan data");
+            }
         );
 
         // Process response from SME
@@ -1747,15 +1760,17 @@ mod tests {
 
         // Create mock active scan data. This should verify that an active scan was
         // issues based on the hidden network probabilties.
-        let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
-            ssids: vec![unseen_ssid.to_vec()],
-            channels: vec![],
-        });
-        validate_sme_scan_request_and_send_results(
-            &mut exec,
-            &mut sme_stream,
-            &expected_scan_request,
-            vec![],
+        assert_variant!(
+            exec.run_until_stalled(&mut sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                req, responder,
+            }))) => {
+                assert_eq!(req, fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+                    ssids: vec![unseen_ssid.to_vec()],
+                    channels: vec![],
+                }));
+                responder.send(&mut Ok(vec![])).expect("failed to send scan data");
+            }
         );
 
         // Get results from scans. Results should just be the passive results.
@@ -1961,12 +1976,14 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
 
         // Respond to the first (passive) scan request
-        let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
-        validate_sme_scan_request_and_send_results(
-            &mut exec,
-            &mut sme_stream,
-            &expected_scan_request,
-            passive_input_aps.clone(),
+        assert_variant!(
+            exec.run_until_stalled(&mut sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                req, responder,
+            }))) => {
+                assert_eq!(req, fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}));
+                responder.send(&mut Ok(passive_input_aps.clone())).expect("failed to send scan data");
+            }
         );
 
         // Process response from SME
@@ -2110,8 +2127,6 @@ mod tests {
 
         if retry_succeeds {
             // Create mock scan data and send it via the SME
-            let expected_scan_request =
-                fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
             let MockScanData {
                 passive_input_aps: input_aps,
                 passive_internal_aps: internal_aps,
@@ -2120,11 +2135,14 @@ mod tests {
                 combined_internal_aps: _,
                 combined_fidl_aps: _,
             } = create_scan_ap_data();
-            validate_sme_scan_request_and_send_results(
-                &mut exec,
-                &mut sme_stream,
-                &expected_scan_request,
-                input_aps.clone(),
+            assert_variant!(
+                exec.run_until_stalled(&mut sme_stream.next()),
+                Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                    req, responder,
+                }))) => {
+                    assert_eq!(req, fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}));
+                    responder.send(&mut Ok(input_aps.clone())).expect("failed to send scan data");
+                }
             );
 
             // Check the scan results.
@@ -2236,16 +2254,32 @@ mod tests {
                 // Progress second scan handler forward
                 assert_variant!(exec.run_until_stalled(&mut scan_fut1), Poll::Pending);
                 // Check that the second scan request was sent to the sme and send back results
-                let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
-                validate_sme_scan_request_and_send_results(&mut exec, &mut sme_stream, &expected_scan_request, passive_input_aps.clone()); // for output_iter_fut1
+                assert_variant!(
+                    exec.run_until_stalled(&mut sme_stream.next()),
+                    Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                        req, responder,
+                    }))) => {
+                        assert_eq!(req, fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}));
+                        responder.send(&mut Ok(passive_input_aps.clone())).expect("failed to send scan data");
+                    }
+                ); // for output_iter_fut1
                 // Process SME result.
                 assert_variant!(exec.run_until_stalled(&mut scan_fut1), Poll::Pending);
                 // The second request should now result in an active scan
-                let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
-                    channels: vec![],
-                    ssids: vec![active_ssid.to_vec()],
-                });
-                validate_sme_scan_request_and_send_results(&mut exec, &mut sme_stream, &expected_scan_request, active_input_aps.clone()); // for output_iter_fut1
+                assert_variant!(
+                    exec.run_until_stalled(&mut sme_stream.next()),
+                    Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                        req, responder,
+                    }))) => {
+                        // Validate the request
+                        assert_eq!(req, fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+                            channels: vec![],
+                            ssids: vec![active_ssid.to_vec()],
+                        }));
+                        // Send all the APs
+                        responder.send(&mut Ok(active_input_aps.clone())).expect("failed to send scan data");
+                    }
+                );
                 // Process SME result.
                 assert_variant!(exec.run_until_stalled(&mut scan_fut1), Poll::Ready(results) => {
                     assert_eq!(results.unwrap(), combined_internal_aps);
@@ -2381,15 +2415,19 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
 
         // Respond to the scan request
-        let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
-            ssids: vec![desired_ssid.to_vec()],
-            channels: desired_channels,
-        });
-        validate_sme_scan_request_and_send_results(
-            &mut exec,
-            &mut sme_stream,
-            &expected_scan_request,
-            scan_result_aps.clone(),
+        assert_variant!(
+            exec.run_until_stalled(&mut sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                req, responder,
+            }))) => {
+                // Validate the request
+                assert_eq!(req, fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+                    ssids: vec![desired_ssid.to_vec()],
+                    channels: desired_channels,
+                }));
+                // Send all the APs
+                responder.send(&mut Ok(scan_result_aps.clone())).expect("failed to send scan data");
+            }
         );
 
         // Check for results
@@ -2751,15 +2789,17 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
 
         // Send back empty scan results
-        let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
-            ssids: vec![ssid.as_bytes().to_vec()],
-            channels: vec![],
-        });
-        validate_sme_scan_request_and_send_results(
-            &mut exec,
-            &mut sme_stream,
-            &expected_scan_request,
-            vec![],
+        assert_variant!(
+            exec.run_until_stalled(&mut sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                req, responder,
+            }))) => {
+                assert_eq!(req, fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+                    ssids: vec![ssid.as_bytes().to_vec()],
+                    channels: vec![],
+                }));
+                responder.send(&mut Ok(vec![])).expect("failed to send scan data");
+            }
         );
 
         // The scan future should complete with an error.
