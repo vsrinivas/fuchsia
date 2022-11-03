@@ -204,6 +204,19 @@ template("update_package") {
         files.update_images_recovery_package_manifest,
         files.update_images_firmware_package_manifest,
       ]
+
+      # But we don't want any of our own dependencies to contribute packages to
+      # any package lists created by metadata walks, those packages referenced
+      # in the `packages` file need to be published by publishing the assembly's
+      # base & cache packages (see //build/images/updates/BUILD.gn)
+      #
+      # Ideally, we'd include the assembly packages, and not the recovery image
+      # packages, but we can't which is which from within this template.
+      distribution_entries_barrier = []
+      package_barrier = []
+      assembly_package_barrier = []
+      system_image_package_barrier = []
+      driver_package_barrier = []
     }
   }
 }

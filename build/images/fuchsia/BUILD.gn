@@ -275,6 +275,10 @@ if (is_fuchsia) {
     deps = [ ":scrutiny_verifiers" ]
 
     metadata = {
+      # Only include the update package(s) manifest(s) in metadata collection,
+      # the base & cache packages all need to be taken from the `images.json`
+      # output of assembly.
+      package_barrier = [ ":update" ]
       assembly_inputs = [
         {
           path = rebase_path(files.assembly_inputs, root_build_dir)
@@ -434,7 +438,7 @@ if (is_fuchsia) {
     base_package_name = "system_image_prime"
   }
 
-  update_package("fuchsia_prime") {
+  update_package("update_prime") {
     testonly = fuchsia_zbi_testonly
     deps = [
       ":fuchsia_prime_assembly",
@@ -450,6 +454,25 @@ if (is_fuchsia) {
     board_name = board_name
     version_file = build_info_files.version
     epoch = "1"
+  }
+
+  group("fuchsia_prime") {
+    testonly = fuchsia_zbi_testonly
+    public_deps = [
+      ":fuchsia_prime_assembly",
+      ":update_prime",
+    ]
+    metadata = {
+      # This is created by the `:fuchsia_prime_assembly` target, but
+      # assembled_system() doesn't produce any metadata about the packages that
+      # it makes, as we don't have enough information about that at GN time.
+      #
+      # So here we note what the package_manifest created by our dep will be,
+      # and that works because this area is fairly tightly-coupled.
+      package_output_manifests = [
+        "${target_out_dir}/fuchsia_prime_assembly/base/package_manifest.json",
+      ]
+    }
   }
 
   ##################################################

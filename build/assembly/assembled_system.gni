@@ -908,10 +908,6 @@ template("assembled_system") {
         forward_variables_from(invoker.metadata, "*")
       }
 
-      if (generate_fvm) {
-        package_output_manifests = [ files.base_package_manifest ]
-      }
-
       if (generate_image_metadata) {
         _image_overrides = {
           zbi = {
@@ -1199,10 +1195,16 @@ template("assembled_system") {
     }
 
     metadata = {
-      # Assemblies have some defined packages, such as the base package.
-      # This barrier prevents a Assembly#1 from including a depending Assembly#2
-      # packages in the package sets (base, cache, system) for Assembly#1.
+      # Assembly does not emit information about the packages that it includes
+      # via metadata, but via its own output files.
+      distribution_entries_barrier = []
+      package_barrier = []
       assembly_package_barrier = []
+      driver_package_barrier = []
+      system_image_package_barrier = []
+      system_image_extra_package_manifest_barrier = []
+      test_component_manifest_barrier = []
+      test_component_manifest_program_barrier = []
 
       assembly_inputs_barrier = []
 

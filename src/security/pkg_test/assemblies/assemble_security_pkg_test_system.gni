@@ -4,6 +4,7 @@
 
 import("//build/assembly/assembled_system.gni")
 import("//build/assembly/generated_partitions_config.gni")
+import("//build/assembly/package_list.gni")
 import("//build/assembly/update_package.gni")
 import("//build/compiled_action.gni")
 import("//build/components/fuchsia_package.gni")
@@ -116,6 +117,9 @@ template("assemble_security_pkg_test_system") {
     system_resources = "${assembly_name}_system_resources"
     update_package_resource = "${assembly_name}_update_package_resource"
     tuf_repo_resources = "${assembly_name}_tuf_repo_resources"
+    base_package_manifests_list = "${assembly_name}.base_packages.list"
+    update_packages_manifests_lists =
+        "${assembly_name}.update_packages_manifests.list"
     all_package_manifests_list = "${assembly_name}_all_package_manifests_list"
     pm_publish_archive = "${assembly_name}_pm_publish_archive"
     packages_for_update = "${assembly_name}_packages_for_update"
@@ -157,6 +161,13 @@ template("assemble_security_pkg_test_system") {
         "${directories.build_info_out}/latest-commit-date.txt"
     build_info_minimum_utc_stamp =
         "${directories.build_info_out}/minimum-utc-stamp.txt"
+    base_package_manifests_list =
+        "${target_out_dir}/${assembly_name}.base_packages.list"
+    update_packages_manifests_list =
+        "${target_out_dir}/${assembly_name}.update_packages.list"
+
+    # The combined set of base packages and the update package manifest(s) that
+    # lists them.
     all_package_manifests_list = "${directories.all_package_manifests_list_out}/all_package_manifests.list"
   }
 
@@ -213,19 +224,6 @@ template("assemble_security_pkg_test_system") {
                             # use.
                             "//src/sys/pkg/bin/system-update-committer:enable_reboot_on_verification_failure",
                           ] + invoker.base_packages
-  all_base_packages = packages_for_assembly
-
-  group(labels.packages_for_update) {
-    testonly = true
-    deps = all_base_packages + [
-             ":${labels.meta_packages}",
-             ":${labels.update_package}",
-           ]
-    metadata = {
-      # Include assembly-generated packages
-      package_output_manifests = [ "${directories.assembly_out}/driver-manager-base-config/package_manifest.json" ]
-    }
-  }
 
   # Main system assembly.
   assembled_system(labels.assembly) {
@@ -283,14 +281,46 @@ template("assemble_security_pkg_test_system") {
   # TODO(fxbug.dev/88453): Verify that contents of `files.build_info_board` and
   # `files.update_board` are identical.
 
-  # Publish TUF repository that corresponds to system update.
-  generate_package_metadata(labels.all_package_manifests_list) {
+  # Get the base packages from the assembled_system()
+  package_list_from_assembly(labels.base_package_manifests_list) {
     testonly = true
-    outputs = [ files.all_package_manifests_list ]
+    system_label = ":${labels.assembly}"
+    package_set = "base"
+    contents = "manifest"
+    outputs = [ files.base_package_manifests_list ]
+  }
+
+  # Get the set of update packages (and image packages) via metadata
+  generate_package_metadata(labels.update_packages_manifests_lists) {
+    testonly = true
+    outputs = [ files.update_packages_manifests_list ]
     data_keys = [ "package_output_manifests" ]
     rebase = root_build_dir
-    deps = [ ":${labels.packages_for_update}" ]
+    deps = [ ":${labels.update_package}" ]
   }
+
+  # Merge the list of base package manifests with the path to the update
+  # package's manifest to create a single list of package manifests.
+  action(labels.all_package_manifests_list) {
+    testonly = true
+    script = "//build/cat.sh"
+    outputs = [ files.all_package_manifests_list ]
+    deps = [
+      ":${labels.base_package_manifests_list}",
+      ":${labels.update_packages_manifests_lists}",
+    ]
+    args = [
+      rebase_path(outputs[0], root_build_dir),
+      rebase_path(files.base_package_manifests_list, root_build_dir),
+      rebase_path(files.update_packages_manifests_list, root_build_dir),
+    ]
+    inputs = [
+      files.base_package_manifests_list,
+      files.update_packages_manifests_list,
+    ]
+  }
+
+  # Publish TUF repository that corresponds to system update.
   pm_publish_archive(labels.pm_publish_archive) {
     testonly = true
     deps = [ ":${labels.all_package_manifests_list}" ]

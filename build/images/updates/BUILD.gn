@@ -123,7 +123,11 @@ if (use_bringup_assembly) {
     rebase = root_build_dir
     deps = [
       ":packages",
+
+      # The update packages for the main image
       labels.images,
+
+      # The base and update packages for the prime package (for N+1 ota tests)
       labels.images_prime,
     ]
   }
