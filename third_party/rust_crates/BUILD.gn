@@ -10736,10 +10736,14 @@ rust_library("tokio-v1_19_2") {
   deps = []
   deps += [ ":pin-project-lite-v0_2_4" ]
   if (!(current_os == "fuchsia")) {
-    deps += [ ":mio-v0_8_2" ]
-    deps += [ ":once_cell-v1_5_2" ]
-    deps += [ ":socket2-v0_4_4" ]
+    deps += [ ":bytes-v1_0_1" ]
     deps += [ ":libc-v0_2_116" ]
+    deps += [ ":memchr-v2_4_0" ]
+    deps += [ ":mio-v0_8_2" ]
+    deps += [ ":num_cpus-v1_13_0" ]
+    deps += [ ":once_cell-v1_5_2" ]
+    deps += [ ":signal-hook-registry-v1_3_0" ]
+    deps += [ ":socket2-v0_4_4" ]
   }
 
   rustenv = []
@@ -10757,9 +10761,12 @@ rust_library("tokio-v1_19_2") {
       "--cfg=feature=\"libc\"",
       "--cfg=feature=\"mio\"",
       "--cfg=feature=\"net\"",
+      "--cfg=feature=\"num_cpus\"",
       "--cfg=feature=\"once_cell\"",
       "--cfg=feature=\"rt\"",
+      "--cfg=feature=\"rt-multi-thread\"",
       "--cfg=feature=\"socket2\"",
+      "--cfg=feature=\"time\"",
       "--cfg=feature=\"winapi\"",
     ]
   }

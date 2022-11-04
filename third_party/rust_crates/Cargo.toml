@@ -602,18 +602,25 @@ rustflags = []
 # target-specific features.
 [gn.package.tokio."1.19.2".platform."cfg(not(target_os = \"fuchsia\"))"]
 deps = [
-  ":mio-v0_8_2",
-  ":once_cell-v1_5_2",
-  ":socket2-v0_4_4",
+  ":bytes-v1_0_1",
   ":libc-v0_2_116",
+  ":memchr-v2_4_0",
+  ":mio-v0_8_2",
+  ":num_cpus-v1_13_0",
+  ":once_cell-v1_5_2",
+  ":signal-hook-registry-v1_3_0",
+  ":socket2-v0_4_4",
 ]
 rustflags = [
   "--cfg=feature=\\\"libc\\\"",
   "--cfg=feature=\\\"mio\\\"",
   "--cfg=feature=\\\"net\\\"",
+  "--cfg=feature=\\\"num_cpus\\\"",
   "--cfg=feature=\\\"once_cell\\\"",
   "--cfg=feature=\\\"rt\\\"",
+  "--cfg=feature=\\\"rt-multi-thread\\\"",
   "--cfg=feature=\\\"socket2\\\"",
+  "--cfg=feature=\\\"time\\\"",
   "--cfg=feature=\\\"winapi\\\"",
 ]
 
