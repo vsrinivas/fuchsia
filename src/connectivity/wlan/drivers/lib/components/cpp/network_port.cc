@@ -16,27 +16,42 @@ NetworkPort::NetworkPort(network_device_ifc_protocol_t netdev_ifc, Callbacks& if
 NetworkPort::~NetworkPort() { RemovePort(); }
 
 void NetworkPort::Init(Role role) {
+  std::lock_guard lock(netdev_ifc_mutex_);
   role_ = role;
+  if (!netdev_ifc_.is_valid()) {
+    zxlogf(WARNING, "netdev_ifc_ invalid, port likely removed.");
+    return;
+  }
   netdev_ifc_.AddPort(port_id_, this, &network_port_protocol_ops_);
 }
 
 void NetworkPort::RemovePort() {
-  if (netdev_ifc_.is_valid()) {
-    netdev_ifc_.RemovePort(port_id_);
-    zx_status_t status = port_removed_.Wait();
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "Failed to wait for port removed completion: %s", zx_status_get_string(status));
-    }
+  std::lock_guard lock(netdev_ifc_mutex_);
+  if (!netdev_ifc_.is_valid()) {
+    zxlogf(WARNING, "netdev_ifc_ invalid, port likely removed.");
+    return;
   }
+  netdev_ifc_.RemovePort(port_id_);
+  zx_status_t status = port_removed_.Wait();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to wait for port removed completion: %s", zx_status_get_string(status));
+  }
+  netdev_ifc_.clear();
 }
 
 void NetworkPort::SetPortOnline(bool online) {
-  std::lock_guard lock(online_mutex_);
-  if (online_ != online) {
-    online_ = online;
-    port_status_t status;
-    GetPortStatusLocked(&status);
+  std::lock_guard online_lock(online_mutex_);
+  if (online_ == online) {
+    return;
+  }
+  online_ = online;
+  port_status_t status;
+  GetPortStatusLocked(&status);
+  std::lock_guard netdev_ifc_lock(netdev_ifc_mutex_);
+  if (netdev_ifc_.is_valid()) {
     netdev_ifc_.PortStatusChanged(port_id_, &status);
+  } else {
+    zxlogf(WARNING, "netdev_ifc_ invalid, port likely removed.");
   }
 }
 
@@ -84,9 +99,9 @@ void NetworkPort::NetworkPortGetMac(mac_addr_protocol_t* out_mac_ifc) {
       .ctx = this,
   };
 }
+
 void NetworkPort::NetworkPortRemoved() {
   iface_.PortRemoved();
-  netdev_ifc_.clear();
   port_removed_.Signal();
 }
 

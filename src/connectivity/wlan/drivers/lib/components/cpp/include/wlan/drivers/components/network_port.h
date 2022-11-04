@@ -80,7 +80,7 @@ class NetworkPort : public ::ddk::NetworkPortProtocol<NetworkPort>,
   void NetworkPortGetStatus(port_status_t* out_status) __TA_EXCLUDES(online_mutex_);
   void NetworkPortSetActive(bool active);
   void NetworkPortGetMac(mac_addr_protocol_t* out_mac_ifc);
-  void NetworkPortRemoved();
+  void NetworkPortRemoved() __TA_EXCLUDES(netdev_ifc_mutex_);
 
   // MacAddrProtocol implementation
   void MacAddrGetAddress(uint8_t out_mac[6]);
@@ -92,7 +92,8 @@ class NetworkPort : public ::ddk::NetworkPortProtocol<NetworkPort>,
 
   Role role_;
   Callbacks& iface_;
-  ::ddk::NetworkDeviceIfcProtocolClient netdev_ifc_;
+  mutable std::mutex netdev_ifc_mutex_;
+  ::ddk::NetworkDeviceIfcProtocolClient netdev_ifc_ __TA_GUARDED(netdev_ifc_mutex_);
   uint8_t port_id_;
   mutable std::mutex online_mutex_;
   bool online_ __TA_GUARDED(online_mutex_) = false;
