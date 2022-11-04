@@ -20,6 +20,7 @@
 #include "src/media/audio/services/common/base_fidl_server.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/fidl/clock_registry.h"
+#include "src/media/audio/services/mixer/fidl/consumer_node.h"
 #include "src/media/audio/services/mixer/fidl/gain_control_server.h"
 #include "src/media/audio/services/mixer/fidl/graph_detached_thread.h"
 #include "src/media/audio/services/mixer/fidl/graph_mix_thread.h"
@@ -106,8 +107,9 @@ class GraphServer
 
   // Nodes mappings.
   std::unordered_map<NodeId, NodePtr> nodes_;  // contains all nodes
-  std::unordered_map<NodeId, std::unordered_set<NodeId>> custom_children_;
   std::unordered_map<NodeId, std::shared_ptr<ProducerNode>> producer_nodes_;
+  std::unordered_map<NodeId, std::shared_ptr<ConsumerNode>> consumer_nodes_;
+  std::unordered_map<NodeId, std::unordered_set<NodeId>> custom_node_children_ids_;
   NodeId next_node_id_ = 1;
 
   // Threads mapping.

@@ -326,6 +326,97 @@ ParseRealOrStreamTime(const fuchsia_audio_mixer::wire::RealOrStreamTime& real_or
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
+template <class ProducerOrConsumerNodeType>
+void StartProducerOrConsumer(const GraphServer::StartRequestView& request,
+                             GraphServer::StartCompleter::Sync& completer,
+                             std::shared_ptr<const FidlThread> fidl_thread,
+                             ProducerOrConsumerNodeType& node) {
+  const auto start_time = ParseRealTime(request->when());
+  if (!start_time.is_ok()) {
+    FX_LOGS(WARNING) << "Start: unsupported option for 'when' field";
+    completer.ReplyError(fuchsia_audio_mixer::StartError::kUnsupportedOption);
+    return;
+  }
+
+  const auto start_position = ParseStreamTime(request->stream_time());
+  if (!start_position.is_ok()) {
+    FX_LOGS(WARNING) << "Start: unsupported option for 'stream_time' field";
+    completer.ReplyError(fuchsia_audio_mixer::StartError::kUnsupportedOption);
+    return;
+  }
+
+  auto callback =
+      [fidl_thread = std::move(fidl_thread), completer = completer.ToAsync()](
+          fpromise::result<StartStopControl::When, StartStopControl::StartError> result) mutable {
+        fidl_thread->PostTask(
+            [result = std::move(result), completer = std::move(completer)]() mutable {
+              if (!result.is_ok()) {
+                FX_LOGS(WARNING) << "Start: canceled";
+                completer.ReplyError(fuchsia_audio_mixer::StartError::kCanceled);
+                return;
+              }
+              auto& value = result.value();
+              fidl::Arena arena;
+              completer.ReplySuccess(fuchsia_audio_mixer::wire::GraphStartResponse::Builder(arena)
+                                         .system_time(value.mono_time.get())
+                                         .reference_time(value.reference_time.get())
+                                         .stream_time(value.media_time.get())
+                                         .packet_timestamp(value.media_ticks)
+                                         .Build());
+            });
+      };
+
+  node.Start(StartStopControl::StartCommand{
+      .start_time = start_time.value(),
+      .start_position = start_position.value(),
+      .callback = std::move(callback),
+  });
+}
+
+template <class ProducerOrConsumerNodeType>
+void StopProducerOrConsumer(const GraphServer::StopRequestView& request,
+                            GraphServer::StopCompleter::Sync& completer,
+                            std::shared_ptr<const FidlThread> fidl_thread,
+                            ProducerOrConsumerNodeType& node) {
+  const auto when = ParseRealOrStreamTime(request->when());
+  if (!when.is_ok()) {
+    FX_LOGS(WARNING) << "Stop: unsupported option for 'when' field";
+    completer.ReplyError(fuchsia_audio_mixer::StopError::kUnsupportedOption);
+    return;
+  }
+
+  auto callback =
+      [fidl_thread = std::move(fidl_thread), completer = completer.ToAsync()](
+          fpromise::result<StartStopControl::When, StartStopControl::StopError> result) mutable {
+        fidl_thread->PostTask(
+            [result = std::move(result), completer = std::move(completer)]() mutable {
+              if (!result.is_ok()) {
+                if (result.error() == StartStopControl::StopError::kCanceled) {
+                  FX_LOGS(WARNING) << "Stop: canceled";
+                  completer.ReplyError(fuchsia_audio_mixer::StopError::kCanceled);
+                } else {
+                  FX_LOGS(WARNING) << "Stop: already stopped";
+                  completer.ReplyError(fuchsia_audio_mixer::StopError::kAlreadyStopped);
+                }
+                return;
+              }
+              auto& value = result.value();
+              fidl::Arena arena;
+              completer.ReplySuccess(fuchsia_audio_mixer::wire::GraphStopResponse::Builder(arena)
+                                         .system_time(value.mono_time.get())
+                                         .reference_time(value.reference_time.get())
+                                         .stream_time(value.media_time.get())
+                                         .packet_timestamp(value.media_ticks)
+                                         .Build());
+            });
+      };
+
+  node.Stop(StartStopControl::StopCommand{
+      .when = when.value(),
+      .callback = std::move(callback),
+  });
+}
+
 }  // namespace
 
 // static
@@ -581,6 +672,7 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
       .global_task_queue = global_task_queue_,
   });
   nodes_[id] = consumer;
+  consumer_nodes_[id] = consumer;
 
   fidl::Arena arena;
   completer.ReplySuccess(
@@ -742,17 +834,17 @@ void GraphServer::CreateCustom(CreateCustomRequestView request,
   nodes_[id] = custom;
 
   // Register built-in child nodes.
-  const auto [custom_children_it, success] =
-      custom_children_.emplace(id, std::unordered_set<NodeId>{});
+  const auto [children_ids_it, success] =
+      custom_node_children_ids_.emplace(id, std::unordered_set<NodeId>{});
   FX_CHECK(success);
   FX_CHECK(custom->child_sources().size() == 1);
   FX_CHECK(custom->child_dests().size() == 1);
   const auto child_source_id = NextNodeId();
   nodes_[child_source_id] = custom->child_sources().front();
-  FX_CHECK(custom_children_it->second.insert(child_source_id).second);
+  FX_CHECK(children_ids_it->second.insert(child_source_id).second);
   const auto child_dest_id = NextNodeId();
   nodes_[child_dest_id] = custom->child_dests().front();
-  FX_CHECK(custom_children_it->second.insert(child_dest_id).second);
+  FX_CHECK(children_ids_it->second.insert(child_dest_id).second);
 
   fidl::Arena arena;
   fidl::VectorView<NodeId> source_ids(arena, 1);
@@ -779,7 +871,8 @@ void GraphServer::DeleteNode(DeleteNodeRequestView request, DeleteNodeCompleter:
     return;
   }
 
-  auto it = nodes_.find(request->id());
+  const auto id = request->id();
+  const auto it = nodes_.find(id);
   if (it == nodes_.end()) {
     FX_LOGS(WARNING) << "DeleteNode: invalid id";
     completer.ReplyError(fuchsia_audio_mixer::DeleteNodeError::kDoesNotExist);
@@ -788,14 +881,15 @@ void GraphServer::DeleteNode(DeleteNodeRequestView request, DeleteNodeCompleter:
 
   Node::Destroy(ctx_, it->second);
   nodes_.erase(it);
-  if (const auto custom_children_it = custom_children_.find(request->id());
-      custom_children_it != custom_children_.end()) {
-    for (const auto& child_id : custom_children_it->second) {
+  producer_nodes_.erase(id);
+  consumer_nodes_.erase(id);
+  if (const auto children_ids_it = custom_node_children_ids_.find(id);
+      children_ids_it != custom_node_children_ids_.end()) {
+    for (const auto& child_id : children_ids_it->second) {
       FX_CHECK(nodes_.erase(child_id) > 0);
     }
-    custom_children_.erase(custom_children_it);
+    custom_node_children_ids_.erase(children_ids_it);
   }
-  producer_nodes_.erase(request->id());
 
   fidl::Arena arena;
   completer.ReplySuccess(
@@ -1084,65 +1178,15 @@ void GraphServer::Start(StartRequestView request, StartCompleter::Sync& complete
     return;
   }
 
-  const auto node_it = nodes_.find(request->node_id());
-  if (node_it == nodes_.end()) {
-    FX_LOGS(WARNING) << "Start: invalid node_id";
-    completer.ReplyError(fuchsia_audio_mixer::StartError::kInvalidParameter);
-    return;
-  }
-
-  auto& node = node_it->second;
-  if (node->type() != Node::Type::kConsumer && node->type() != Node::Type::kProducer) {
-    FX_LOGS(WARNING) << "Start: invalid node type";
-    completer.ReplyError(fuchsia_audio_mixer::StartError::kInvalidParameter);
-    return;
-  }
-
-  const auto start_time = ParseRealTime(request->when());
-  if (!start_time.is_ok()) {
-    FX_LOGS(WARNING) << "Start: unsupported option for 'when' field";
-    completer.ReplyError(fuchsia_audio_mixer::StartError::kUnsupportedOption);
-    return;
-  }
-
-  const auto start_position = ParseStreamTime(request->stream_time());
-  if (!start_position.is_ok()) {
-    FX_LOGS(WARNING) << "Start: unsupported option for 'stream_time' field";
-    completer.ReplyError(fuchsia_audio_mixer::StartError::kUnsupportedOption);
-    return;
-  }
-
-  auto callback =
-      [fidl_thread = thread_ptr(), completer = completer.ToAsync()](
-          fpromise::result<StartStopControl::When, StartStopControl::StartError> result) mutable {
-        fidl_thread->PostTask(
-            [result = std::move(result), completer = std::move(completer)]() mutable {
-              if (!result.is_ok()) {
-                FX_LOGS(WARNING) << "Start: canceled";
-                completer.ReplyError(fuchsia_audio_mixer::StartError::kCanceled);
-                return;
-              }
-              auto& value = result.value();
-              fidl::Arena arena;
-              completer.ReplySuccess(fuchsia_audio_mixer::wire::GraphStartResponse::Builder(arena)
-                                         .system_time(value.mono_time.get())
-                                         .reference_time(value.reference_time.get())
-                                         .stream_time(value.media_time.get())
-                                         .packet_timestamp(value.media_ticks)
-                                         .Build());
-            });
-      };
-  auto cmd = StartStopControl::StartCommand{
-      .start_time = start_time.value(),
-      .start_position = start_position.value(),
-      .callback = std::move(callback),
-  };
-
-  // TODO(fxbug.dev/87651): Define and implement a virtual `Start` method in `Node` instead.
-  if (node->type() == Node::Type::kConsumer) {
-    static_cast<ConsumerNode*>(node.get())->Start(std::move(cmd));
+  if (const auto producer_it = producer_nodes_.find(request->node_id());
+      producer_it != producer_nodes_.end()) {
+    StartProducerOrConsumer(request, completer, thread_ptr(), *producer_it->second);
+  } else if (const auto consumer_it = consumer_nodes_.find(request->node_id());
+             consumer_it != consumer_nodes_.end()) {
+    StartProducerOrConsumer(request, completer, thread_ptr(), *consumer_it->second);
   } else {
-    static_cast<ProducerNode*>(node.get())->Start(std::move(cmd));
+    FX_LOGS(WARNING) << "Start: invalid node id";
+    completer.ReplyError(fuchsia_audio_mixer::StartError::kInvalidParameter);
   }
 }
 
@@ -1156,62 +1200,15 @@ void GraphServer::Stop(StopRequestView request, StopCompleter::Sync& completer) 
     return;
   }
 
-  const auto node_it = nodes_.find(request->node_id());
-  if (node_it == nodes_.end()) {
-    FX_LOGS(WARNING) << "Stop: invalid node_id";
-    completer.ReplyError(fuchsia_audio_mixer::StopError::kInvalidParameter);
-    return;
-  }
-
-  auto& node = node_it->second;
-  if (node->type() != Node::Type::kConsumer && node->type() != Node::Type::kProducer) {
-    FX_LOGS(WARNING) << "Stop: invalid node type";
-    completer.ReplyError(fuchsia_audio_mixer::StopError::kInvalidParameter);
-    return;
-  }
-
-  const auto when = ParseRealOrStreamTime(request->when());
-  if (!when.is_ok()) {
-    FX_LOGS(WARNING) << "Stop: unsupported option for 'when' field";
-    completer.ReplyError(fuchsia_audio_mixer::StopError::kUnsupportedOption);
-    return;
-  }
-
-  auto callback =
-      [fidl_thread = thread_ptr(), completer = completer.ToAsync()](
-          fpromise::result<StartStopControl::When, StartStopControl::StopError> result) mutable {
-        fidl_thread->PostTask(
-            [result = std::move(result), completer = std::move(completer)]() mutable {
-              if (!result.is_ok()) {
-                if (result.error() == StartStopControl::StopError::kCanceled) {
-                  FX_LOGS(WARNING) << "Stop: canceled";
-                  completer.ReplyError(fuchsia_audio_mixer::StopError::kCanceled);
-                } else {
-                  FX_LOGS(WARNING) << "Stop: already stopped";
-                  completer.ReplyError(fuchsia_audio_mixer::StopError::kAlreadyStopped);
-                }
-                return;
-              }
-              auto& value = result.value();
-              fidl::Arena arena;
-              completer.ReplySuccess(fuchsia_audio_mixer::wire::GraphStopResponse::Builder(arena)
-                                         .system_time(value.mono_time.get())
-                                         .reference_time(value.reference_time.get())
-                                         .stream_time(value.media_time.get())
-                                         .packet_timestamp(value.media_ticks)
-                                         .Build());
-            });
-      };
-  auto cmd = StartStopControl::StopCommand{
-      .when = when.value(),
-      .callback = std::move(callback),
-  };
-
-  // TODO(fxbug.dev/87651): Define and implement a virtual `Stop` method in `Node` instead.
-  if (node->type() == Node::Type::kConsumer) {
-    static_cast<ConsumerNode*>(node.get())->Stop(std::move(cmd));
+  if (const auto producer_it = producer_nodes_.find(request->node_id());
+      producer_it != producer_nodes_.end()) {
+    StopProducerOrConsumer(request, completer, thread_ptr(), *producer_it->second);
+  } else if (const auto consumer_it = consumer_nodes_.find(request->node_id());
+             consumer_it != consumer_nodes_.end()) {
+    StopProducerOrConsumer(request, completer, thread_ptr(), *consumer_it->second);
   } else {
-    static_cast<ProducerNode*>(node.get())->Stop(std::move(cmd));
+    FX_LOGS(WARNING) << "Stop: invalid node id";
+    completer.ReplyError(fuchsia_audio_mixer::StopError::kInvalidParameter);
   }
 }
 
