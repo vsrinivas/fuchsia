@@ -73,20 +73,19 @@ legacy_base_package_labels += [
   "//src/developer/sshd-host:config",
 ]
 
-# TODO(fxbug.dev/102390): deprecate appmgr from core.
-import("//src/sys/appmgr/core_shards.gni")
-core_realm_shards += appmgr_core_shards
+# TODO(fxbug.dev/102390): We include this separately from appmgr because if
+# this is excluded when appmgr is removed, it will cause scrutiny errors in
+# test_manager.
+#
+# This is a workaround to make it easier to remove appmgr. Ideally,
+# we ought to create a variant of test_manager that excludes fuchsia.sys routes.
 core_realm_shards +=
     [ "//src/sys/test_manager:test_manager_cmx_support_core_shard" ]
-legacy_base_package_labels += [
-  "//src/security/policy:appmgr_policy_eng",
-  "//src/sys/appmgr",
-  "//src/sys/appmgr:appmgr_scheme_config",
 
-  # All v1 components are allowed to use isolated-persistent-storage, even if
-  # they're not listed in the component ID index.
-  "//src/sys/appmgr:component_id_index_no_restrict_storage",
-]
+# TODO(fxbug.dev/102390): deprecate appmgr from core.
+import("//src/sys/appmgr/appmgr.gni")
+legacy_base_package_labels += appmgr_base_packages
+core_realm_shards += appmgr_core_shards
 
 # Tools to control the pkg subsystem are in the base package set by default
 # so the software delivery system can be debugged and reconfigured without

@@ -4,6 +4,11 @@
 
 import("//products/core.gni")
 
+# TODO(fxbug.dev/102390): deprecate appmgr from speaker.
+import("//src/sys/appmgr/appmgr.gni")
+legacy_base_package_labels += appmgr_base_packages
+core_realm_shards += appmgr_core_shards
+
 legacy_base_package_labels += [ "//src/media/audio/bundles:services" ]
 
 # Remove as much as possible from core to produce a minimal headless system. We

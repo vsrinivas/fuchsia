@@ -15,6 +15,11 @@ legacy_base_package_labels += [
 core_realm_shards += [ "//src/intl/intl_services:intl_services_shard" ]
 core_realm_shards -= [ "//src/intl/intl_services:intl_services_small_shard" ]
 
+# TODO(fxbug.dev/102390): deprecate appmgr from terminal.
+import("//src/sys/appmgr/appmgr.gni")
+legacy_base_package_labels += appmgr_base_packages
+core_realm_shards += appmgr_core_shards
+
 # Include sysmgr.
 # TODO(fxbug.dev/108016, fxbug.dev/100732): Remove once tiles is migrated.
 legacy_base_package_labels += [ "//src/sys/appmgr" ]

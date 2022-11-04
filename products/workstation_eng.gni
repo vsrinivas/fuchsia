@@ -4,6 +4,11 @@
 
 import("//products/common/workstation.gni")
 
+# TODO(fxbug.dev/102390): deprecate appmgr from workstation.
+import("//src/sys/appmgr/appmgr.gni")
+legacy_base_package_labels += appmgr_base_packages
+core_realm_shards += appmgr_core_shards
+
 # Add build type config data
 legacy_base_package_labels += [
   "//src/cobalt/bin/app:build_type_eng",

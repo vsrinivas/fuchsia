@@ -1,0 +1,17 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/appmgr/core_shards.gni")
+
+declare_args() {
+  appmgr_base_packages = [
+    "//src/security/policy:appmgr_policy_eng",
+    "//src/sys/appmgr",
+    "//src/sys/appmgr:appmgr_scheme_config",
+
+    # All v1 components are allowed to use isolated-persistent-storage, even if
+    # they're not listed in the component ID index.
+    "//src/sys/appmgr:component_id_index_no_restrict_storage",
+  ]
+}
