@@ -9,7 +9,7 @@ board_description = "ref board for A5"
 
 _common_bootfs_deps = [
   "//boards/kernel_cmdline:av400",
-  "//src/connectivity/ethernet/drivers/aml-ethernet-s912",
+  "//src/connectivity/ethernet/drivers/aml-ethernet",
   "//src/connectivity/ethernet/drivers/dwmac",
   "//src/connectivity/ethernet/drivers/ethernet",
   "//src/connectivity/ethernet/drivers/realtek-8211f",

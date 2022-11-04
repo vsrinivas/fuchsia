@@ -1,9 +1,11 @@
 {
-    "short_description": "AMLogic S912 ethernet driver",
+    "short_description": "AMLogic ethernet driver",
     "manufacturer": "AMLogic",
     "families": [],
     "models": [
-        "S912"
+        "S912",
+        "A311D",
+        "A5"
     ],
     "areas": [
         "Connectivity",

@@ -23,7 +23,7 @@
 #include <soc/aml-s912/s912-hw.h>
 
 #include "aml-regs.h"
-#include "src/connectivity/ethernet/drivers/aml-ethernet-s912/aml_eth-bind.h"
+#include "src/connectivity/ethernet/drivers/aml-ethernet/aml_eth-bind.h"
 
 namespace eth {
 

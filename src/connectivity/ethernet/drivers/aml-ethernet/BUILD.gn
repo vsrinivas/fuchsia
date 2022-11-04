@@ -12,8 +12,8 @@ driver_bind_rules("aml_eth_bind") {
   deps = [ "//src/devices/bind/fuchsia.amlogic.platform" ]
 }
 
-fuchsia_driver("aml-ethernet-s912-driver") {
-  output_name = "aml-ethernet-s912"
+fuchsia_driver("aml-ethernet-driver") {
+  output_name = "aml-ethernet"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -42,10 +42,10 @@ fuchsia_driver("aml-ethernet-s912-driver") {
   ]
 }
 
-fuchsia_driver_component("aml-ethernet-s912") {
-  component_name = "aml-ethernet-s912"
-  deps = [ ":aml-ethernet-s912-driver" ]
-  info = "aml-ethernet-s912-info.json"
+fuchsia_driver_component("aml-ethernet") {
+  component_name = "aml-ethernet"
+  deps = [ ":aml-ethernet-driver" ]
+  info = "aml-ethernet-info.json"
   colocate = true
 }
 

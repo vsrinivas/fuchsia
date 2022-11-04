@@ -4,7 +4,7 @@
 
 group("drivers") {
   deps = [
-    "drivers/aml-ethernet-s912",
+    "drivers/aml-ethernet",
     "drivers/asix-88179",
     "drivers/asix-88179:fake-asix-88179",
     "drivers/asix-88772b",

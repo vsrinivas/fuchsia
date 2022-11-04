@@ -11,7 +11,7 @@ board_configs += [ "//build/config/arm64:cortex-a53" ]
 
 _common_bootfs_deps = [
   "//boards/kernel_cmdline:vim3",
-  "//src/connectivity/ethernet/drivers/aml-ethernet-s912",
+  "//src/connectivity/ethernet/drivers/aml-ethernet",
   "//src/connectivity/ethernet/drivers/dwmac",
   "//src/connectivity/ethernet/drivers/ethernet",
   "//src/connectivity/ethernet/drivers/realtek-8211f",
