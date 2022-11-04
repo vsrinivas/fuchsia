@@ -8,6 +8,7 @@
 #![warn(clippy::all)]
 
 mod storage_unlock;
+mod test_interaction;
 
 use {
     crate::storage_unlock::{Mode, StorageUnlockMechanism},

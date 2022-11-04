@@ -12,6 +12,7 @@ rustc_binary("bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.identity.authentication:fuchsia.identity.authentication_rust",
+    "//src/lib/async-utils",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
@@ -28,6 +29,7 @@ rustc_binary("bin") {
   sources = [
     "src/main.rs",
     "src/storage_unlock.rs",
+    "src/test_interaction.rs",
   ]
 }
 
