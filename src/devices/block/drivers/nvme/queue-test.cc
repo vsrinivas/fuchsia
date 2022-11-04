@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/devices/block/drivers/nvme-cpp/queue.h"
+#include "src/devices/block/drivers/nvme/queue.h"
 
 #include <lib/ddk/driver.h>
 #include <lib/fake-bti/bti.h>
@@ -10,7 +10,7 @@
 
 #include <zxtest/zxtest.h>
 
-#include "src/devices/block/drivers/nvme-cpp/nvme-bind.h"
+#include "src/devices/block/drivers/nvme/nvme_bind.h"
 
 namespace nvme {
 

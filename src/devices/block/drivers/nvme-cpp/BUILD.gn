@@ -7,15 +7,6 @@ import("//build/components.gni")
 import("//build/drivers.gni")
 import("//build/test.gni")
 
-group("nvme") {
-  deps = [ ":pkg" ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [ ":nvme-tests" ]
-}
-
 driver_bind_rules("bind") {
   rules = "nvme.bind"
   header_output = "nvme-bind.h"
@@ -24,111 +15,5 @@ driver_bind_rules("bind") {
     "//src/devices/bind/fuchsia.driver.framework",
     "//src/devices/bind/fuchsia.pci",
     "//src/devices/bind/fuchsia.pci.massstorage",
-  ]
-}
-
-common_deps = [
-  ":bind",
-  "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
-  "//sdk/lib/driver/runtime:driver_runtime_cpp",
-  "//sdk/lib/fit-promise",
-  "//src/devices/lib/driver",
-  "//src/devices/lib/driver:driver_runtime",
-  "//src/devices/lib/mmio",
-  "//src/devices/pci/lib/device-protocol-pci",
-  "//src/lib/ddktl",
-  "//zircon/system/ulib/async:async-cpp",
-  "//zircon/system/ulib/fbl",
-  "//zircon/system/ulib/fzl",
-  "//zircon/system/ulib/hwreg",
-  "//zircon/system/ulib/inspect",
-  "//zircon/system/ulib/zx",
-]
-
-fuchsia_driver("driver") {
-  output_name = "nvme-cpp"
-  sources = [
-    "namespace.cc",
-    "nvme.cc",
-    "queue-pair.cc",
-    "queue.cc",
-  ]
-  deps = common_deps
-}
-
-fuchsia_driver_component("component") {
-  component_name = "nvme-cpp"
-  deps = [ ":driver" ]
-  info = "nvme-info.json"
-  colocate = false
-}
-
-fuchsia_driver_package("pkg") {
-  package_name = "nvme-cpp"
-  driver_components = [ ":component" ]
-}
-
-test("nvme-queue-tests-bin") {
-  sources = [
-    "queue-test.cc",
-    "queue.cc",
-  ]
-  deps = common_deps + [
-           "//src/devices/testing/fake-bti",
-           "//zircon/system/ulib/zxtest",
-         ]
-}
-
-fuchsia_unittest_component("nvme-queue-tests") {
-  deps = [ ":nvme-queue-tests-bin" ]
-}
-
-test("nvme-queue-pair-tests-bin") {
-  sources = [
-    "queue-pair-test.cc",
-    "queue-pair.cc",
-    "queue.cc",
-  ]
-  deps = common_deps + [
-           "//src/devices/testing/fake-bti",
-           "//src/devices/testing/fake-mmio-reg",
-           "//zircon/system/ulib/zxtest",
-         ]
-}
-
-fuchsia_unittest_component("nvme-queue-pair-tests") {
-  deps = [ ":nvme-queue-pair-tests-bin" ]
-}
-
-test("nvme-unit-tests-bin") {
-  sources = [
-    "fake/admin-commands.cc",
-    "fake/fake-nvme-controller.cc",
-    "fake/fake-nvme-namespace.cc",
-    "fake/fake-nvme-registers.cc",
-    "namespace.cc",
-    "nvme-test.cc",
-    "nvme.cc",
-    "queue-pair.cc",
-    "queue.cc",
-  ]
-  deps = common_deps + [
-           "//sdk/lib/inspect/testing/cpp:zxtest",
-           "//src/devices/testing/driver-runtime-main:zxtest",
-           "//src/devices/testing/fake-bti",
-           "//src/devices/testing/mock-ddk",
-           "//zircon/system/ulib/zxtest",
-         ]
-}
-
-fuchsia_unittest_component("nvme-unit-tests") {
-  deps = [ ":nvme-unit-tests-bin" ]
-}
-
-fuchsia_test_package("nvme-tests") {
-  test_components = [
-    ":nvme-unit-tests",
-    ":nvme-queue-pair-tests",
-    ":nvme-queue-tests",
   ]
 }

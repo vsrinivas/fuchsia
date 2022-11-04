@@ -75,7 +75,6 @@
 //src/devices/block/drivers/ftl:ftl-driver
 //src/devices/block/drivers/gpt:gpt-driver
 //src/devices/block/drivers/mbr:mbr-driver
-//src/devices/block/drivers/nvme-cpp:driver
 //src/devices/block/drivers/nvme:nvme-driver
 //src/devices/block/drivers/pci-sdhci:pci-sdhci-driver
 //src/devices/block/drivers/ramdisk:ramdisk-driver

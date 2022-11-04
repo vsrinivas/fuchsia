@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/devices/block/drivers/nvme-cpp/queue.h"
+#include "src/devices/block/drivers/nvme/queue.h"
 
 #include <lib/ddk/debug.h>
 #include <lib/zx/bti.h>

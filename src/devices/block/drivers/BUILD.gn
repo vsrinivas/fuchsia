@@ -16,7 +16,6 @@ group("tests") {
     "gpt:tests",
     "mbr:tests",
     "nvme:tests",
-    "nvme-cpp:tests",
     "pci-sdhci:tests",
     "ramdisk:tests",
     "sdhci:tests",

@@ -3,8 +3,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_BLOCK_DRIVERS_NVME_CPP_COMMANDS_IDENTIFY_H_
-#define SRC_DEVICES_BLOCK_DRIVERS_NVME_CPP_COMMANDS_IDENTIFY_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_NVME_COMMANDS_IDENTIFY_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_NVME_COMMANDS_IDENTIFY_H_
 
 #include <hwreg/bitfields.h>
 
@@ -250,4 +250,4 @@ static_assert(sizeof(IdentifyNvmeNamespace) == 0x180);
 
 }  // namespace nvme
 
-#endif  // SRC_DEVICES_BLOCK_DRIVERS_NVME_CPP_COMMANDS_IDENTIFY_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_NVME_COMMANDS_IDENTIFY_H_

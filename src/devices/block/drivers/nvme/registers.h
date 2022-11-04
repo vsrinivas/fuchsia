@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_BLOCK_DRIVERS_NVME_CPP_REGISTERS_H_
-#define SRC_DEVICES_BLOCK_DRIVERS_NVME_CPP_REGISTERS_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_NVME_REGISTERS_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_NVME_REGISTERS_H_
 
 #include <hwreg/bitfields.h>
 
@@ -186,4 +186,4 @@ class DoorbellReg : public hwreg::RegisterBase<DoorbellReg, uint32_t> {
 
 }  // namespace nvme
 
-#endif  // SRC_DEVICES_BLOCK_DRIVERS_NVME_CPP_REGISTERS_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_NVME_REGISTERS_H_

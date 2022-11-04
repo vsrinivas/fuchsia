@@ -2,21 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/devices/block/drivers/nvme-cpp/queue-pair.h"
+#include "src/devices/block/drivers/nvme/queue-pair.h"
 
 #include <lib/ddk/debug.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 
 #include "fbl/auto_lock.h"
-#include "src/devices/block/drivers/nvme-cpp/commands.h"
-#include "src/devices/block/drivers/nvme-cpp/registers.h"
+#include "src/devices/block/drivers/nvme/commands.h"
+#include "src/devices/block/drivers/nvme/registers.h"
 
 namespace nvme {
 
 zx::result<std::unique_ptr<QueuePair>> QueuePair::Create(zx::unowned_bti bti, size_t queue_id,
                                                          size_t max_entries, CapabilityReg& caps,
-                                                         fdf::MmioBuffer& mmio) {
+                                                         fdf::MmioBuffer& mmio, size_t utxn_count) {
   auto completion_queue = Queue::Create(bti->borrow(), queue_id, max_entries, sizeof(Completion));
   if (completion_queue.is_error()) {
     return completion_queue.take_error();
@@ -32,54 +32,50 @@ zx::result<std::unique_ptr<QueuePair>> QueuePair::Create(zx::unowned_bti bti, si
 
   return zx::ok(std::make_unique<QueuePair>(std::move(*completion_queue),
                                             std::move(*submission_queue), std::move(bti), mmio,
-                                            completion_doorbell, submission_doorbell));
+                                            completion_doorbell, submission_doorbell, utxn_count));
 }
 
-void QueuePair::CheckForNewCompletions() {
+zx_status_t QueuePair::CheckForNewCompletion(Completion** comp) {
   fbl::AutoLock lock(&completion_lock_);
-  bool handled_completions = false;
-  while (static_cast<Completion*>(completion_.Peek())->phase() == completion_ready_phase_) {
-    handled_completions = true;
-    Completion* comp = static_cast<Completion*>(completion_.Next());
-    if (completion_.NextIndex() == 0) {
-      // Toggle the ready phase when we're about to wrap around.
-      completion_ready_phase_ ^= 1;
-    }
-    sq_head_.store(comp->sq_head());
-
-    TransactionData::Completer completer;
-
-    auto txid = comp->command_id();
-    {
-      fbl::AutoLock txn_lock(&transaction_lock_);
-      if (txid > txns_.size()) {
-        zxlogf(ERROR, "Bad transaction ID!");
-        continue;
-      }
-      TransactionData& txn = txns_[txid];
-      if (!txn.active) {
-        zxlogf(ERROR, "Transaction is not active!");
-        continue;
-      }
-      completer = std::move(txn.completer);
-      txn = {.active = false};
-    }
-
-    if (comp->status_code_type() == StatusCodeType::kGeneric && comp->status_code() == 0) {
-      completer.complete_ok(*comp);
-    } else {
-      completer.complete_error(*comp);
-    }
+  if (static_cast<Completion*>(completion_.Peek())->phase() != completion_ready_phase_) {
+    return ZX_ERR_SHOULD_WAIT;
   }
-  if (handled_completions) {
-    // Ring the doorbell.
-    completion_doorbell_.set_value(static_cast<uint32_t>(completion_.NextIndex())).WriteTo(&mmio_);
+
+  *comp = static_cast<Completion*>(completion_.Next());
+  if (completion_.NextIndex() == 0) {
+    // Toggle the ready phase when we're about to wrap around.
+    completion_ready_phase_ ^= 1;
   }
+  sq_head_.store((*comp)->sq_head());
+
+  auto txid = (*comp)->command_id();
+  {
+    fbl::AutoLock txn_lock(&transaction_lock_);
+    if (txid > txns_.size()) {
+      zxlogf(ERROR, "Bad transaction ID!");
+      return ZX_ERR_BAD_STATE;
+    }
+    TransactionData& txn = txns_[txid];
+    if (!txn.active) {
+      zxlogf(ERROR, "Transaction is not active!");
+      return ZX_ERR_BAD_STATE;
+    }
+    txn = {.active = false};
+  }
+
+  return ZX_OK;
+}
+
+void QueuePair::RingCompletionDb() {
+  // Ring the doorbell.
+  // TODO(fxbug.dev/102133): Retire this lock, and document the class as thread-unsafe.
+  fbl::AutoLock lock(&completion_lock_);
+  completion_doorbell_.set_value(static_cast<uint32_t>(completion_.NextIndex())).WriteTo(&mmio_);
 }
 
 zx::result<> QueuePair::Submit(cpp20::span<uint8_t> submission_data,
                                std::optional<zx::unowned_vmo> data_vmo, zx_off_t vmo_offset,
-                               TransactionData::Completer& completer) {
+                               uint16_t utxn_id) {
   fbl::AutoLock lock(&submission_lock_);
   if ((submission_.NextIndex() + 1) % submission_.entry_count() == sq_head_.load()) {
     // No room. Try again later.
@@ -91,12 +87,11 @@ zx::result<> QueuePair::Submit(cpp20::span<uint8_t> submission_data,
 
   fbl::AutoLock txn_lock(&transaction_lock_);
   // Allocate a new submission
-  size_t index = submission_.NextIndex();
-  TransactionData& txn_data = txns_[index];
+  TransactionData& txn_data = txns_[utxn_id];
   if (txn_data.active) {
     // This should not happen.
-    zxlogf(ERROR, "Trying to submit a new transaction but transaction 0x%zx is already active",
-           index);
+    zxlogf(ERROR, "Trying to submit a new transaction but transaction %d is already active",
+           utxn_id);
     return zx::error(ZX_ERR_BAD_STATE);
   }
   txn_data = {};
@@ -107,8 +102,7 @@ zx::result<> QueuePair::Submit(cpp20::span<uint8_t> submission_data,
 
   // We do not support metadata.
   submission->metadata_pointer = 0;
-  submission->set_cid(static_cast<uint32_t>(index)).set_fused(0).set_data_transfer_mode(0);
-  submission->data_pointer[0] = submission->data_pointer[1] = 0;
+  submission->set_cid(static_cast<uint32_t>(utxn_id)).set_fused(0).set_data_transfer_mode(0);
 
   if (data_vmo.has_value()) {
     // Map the VMO in.
@@ -138,7 +132,6 @@ zx::result<> QueuePair::Submit(cpp20::span<uint8_t> submission_data,
       submission->data_pointer[1] = txn_data.prp_buffer.phys_list()[0];
     }
   }
-  txn_data.completer = std::move(completer);
 
   // We used Peek() before, so advance the pointer, and mark the transaction as in-flight.
   submission_.Next();

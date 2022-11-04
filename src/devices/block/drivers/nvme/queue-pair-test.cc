@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/devices/block/drivers/nvme-cpp/queue-pair.h"
+#include "src/devices/block/drivers/nvme/queue-pair.h"
 
 #include <lib/ddk/driver.h>
 #include <lib/fake-bti/bti.h>
@@ -12,9 +12,9 @@
 #include <fake-mmio-reg/fake-mmio-reg.h>
 #include <zxtest/zxtest.h>
 
-#include "src/devices/block/drivers/nvme-cpp/commands.h"
-#include "src/devices/block/drivers/nvme-cpp/nvme-bind.h"
-#include "src/devices/block/drivers/nvme-cpp/registers.h"
+#include "src/devices/block/drivers/nvme/commands.h"
+#include "src/devices/block/drivers/nvme/nvme_bind.h"
+#include "src/devices/block/drivers/nvme/registers.h"
 
 namespace nvme {
 
@@ -80,7 +80,7 @@ class QueuePairTest : public zxtest::Test {
 };
 
 TEST_F(QueuePairTest, TestSubmit) {
-  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_);
+  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_, 100);
   ASSERT_OK(pair.status_value());
 
   sync_completion_t rang;
@@ -96,20 +96,19 @@ TEST_F(QueuePairTest, TestSubmit) {
     sync_completion_signal(&rang);
   };
 
-  fpromise::bridge<Completion, Completion> completer;
   Submission s(0x9f);
-  ASSERT_OK(pair->Submit(s, std::nullopt, 0, completer.completer).status_value());
+  ASSERT_OK(pair->Submit(s, std::nullopt, 0, 0).status_value());
 
   sync_completion_wait(&rang, ZX_TIME_INFINITE);
 
   rang = {};
   s.set_opcode(0x9f);
-  ASSERT_OK(pair->Submit(s, std::nullopt, 0, completer.completer).status_value());
+  ASSERT_OK(pair->Submit(s, std::nullopt, 0, 1).status_value());
   sync_completion_wait(&rang, ZX_TIME_INFINITE);
 }
 
 TEST_F(QueuePairTest, TestCheckCompletionsNothingReady) {
-  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_);
+  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_, 100);
   ASSERT_OK(pair.status_value());
   Completion* completions = static_cast<Completion*>(pair->completion().head());
   memset(completions, 0, sizeof(*completions));
@@ -118,11 +117,12 @@ TEST_F(QueuePairTest, TestCheckCompletionsNothingReady) {
     ASSERT_FALSE(true, "Doorbell should not have been rung");
   };
 
-  pair->CheckForNewCompletions();
+  Completion* comp;
+  ASSERT_EQ(pair->CheckForNewCompletion(&comp), ZX_ERR_SHOULD_WAIT);
 }
 
 TEST_F(QueuePairTest, TestCheckCompletionsOneReady) {
-  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_);
+  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_, 100);
   ASSERT_OK(pair.status_value());
 
   doorbell_ring_ = [](bool is_completion, size_t queue_id, uint16_t new_value) {
@@ -131,8 +131,7 @@ TEST_F(QueuePairTest, TestCheckCompletionsOneReady) {
     ASSERT_EQ(1, new_value);
   };
   Submission s(0);
-  fpromise::bridge<Completion, Completion> completer;
-  ASSERT_OK(pair->Submit(s, std::nullopt, 0, completer.completer));
+  ASSERT_OK(pair->Submit(s, std::nullopt, 0, 0));
 
   Completion* completions = static_cast<Completion*>(pair->completion().head());
   memset(completions, 0, sizeof(*completions) * pair->completion().entry_count());
@@ -146,11 +145,13 @@ TEST_F(QueuePairTest, TestCheckCompletionsOneReady) {
     ASSERT_EQ(1, new_value);
   };
 
-  pair->CheckForNewCompletions();
+  Completion* comp;
+  ASSERT_EQ(pair->CheckForNewCompletion(&comp), ZX_OK);
+  pair->RingCompletionDb();
 }
 
 TEST_F(QueuePairTest, TestCheckCompletionsMultipleReady) {
-  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_);
+  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_, 100);
   ASSERT_OK(pair.status_value());
 
   uint16_t expected_doorbell = 1;
@@ -161,14 +162,8 @@ TEST_F(QueuePairTest, TestCheckCompletionsMultipleReady) {
     expected_doorbell++;
   };
   Submission s(0);
-  {
-    fpromise::bridge<Completion, Completion> completer;
-    ASSERT_OK(pair->Submit(s, std::nullopt, 0, completer.completer));
-  }
-  {
-    fpromise::bridge<Completion, Completion> completer;
-    ASSERT_OK(pair->Submit(s, std::nullopt, 0, completer.completer));
-  }
+  { ASSERT_OK(pair->Submit(s, std::nullopt, 0, 0)); }
+  { ASSERT_OK(pair->Submit(s, std::nullopt, 0, 1)); }
 
   Completion* completions = static_cast<Completion*>(pair->completion().head());
   memset(completions, 0, sizeof(*completions) * pair->completion().entry_count());
@@ -186,11 +181,14 @@ TEST_F(QueuePairTest, TestCheckCompletionsMultipleReady) {
     ASSERT_EQ(2, new_value);
   };
 
-  pair->CheckForNewCompletions();
+  Completion* comp;
+  ASSERT_EQ(pair->CheckForNewCompletion(&comp), ZX_OK);
+  ASSERT_EQ(pair->CheckForNewCompletion(&comp), ZX_OK);
+  pair->RingCompletionDb();
 }
 
 TEST_F(QueuePairTest, TestSubmitWithDataOnePage) {
-  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_);
+  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_, 100);
   ASSERT_OK(pair.status_value());
 
   doorbell_ring_ = [](bool is_completion, size_t queue_id, uint16_t new_value) {
@@ -201,10 +199,7 @@ TEST_F(QueuePairTest, TestSubmitWithDataOnePage) {
   zx::vmo data_vmo;
   ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &data_vmo));
   Submission s(0xa9);
-  {
-    fpromise::bridge<Completion, Completion> completer;
-    ASSERT_OK(pair->Submit(s, data_vmo.borrow(), 0, completer.completer));
-  }
+  { ASSERT_OK(pair->Submit(s, data_vmo.borrow(), 0, 0)); }
 
   Submission* submitted = static_cast<Submission*>(pair->submission().head());
   ASSERT_EQ(0, submitted->data_transfer_mode());
@@ -219,7 +214,7 @@ TEST_F(QueuePairTest, TestSubmitWithDataOnePage) {
 }
 
 TEST_F(QueuePairTest, TestSubmitWithDataTwoPages) {
-  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_);
+  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_, 100);
   ASSERT_OK(pair.status_value());
 
   doorbell_ring_ = [](bool is_completion, size_t queue_id, uint16_t new_value) {
@@ -230,10 +225,7 @@ TEST_F(QueuePairTest, TestSubmitWithDataTwoPages) {
   zx::vmo data_vmo;
   ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &data_vmo));
   Submission s(0xa9);
-  {
-    fpromise::bridge<Completion, Completion> completer;
-    ASSERT_OK(pair->Submit(s, data_vmo.borrow(), 0, completer.completer));
-  }
+  { ASSERT_OK(pair->Submit(s, data_vmo.borrow(), 0, 0)); }
 
   Submission* submitted = static_cast<Submission*>(pair->submission().head());
   ASSERT_EQ(0, submitted->data_transfer_mode());
@@ -248,7 +240,7 @@ TEST_F(QueuePairTest, TestSubmitWithDataTwoPages) {
 }
 
 TEST_F(QueuePairTest, TestSubmitWithDataManyPages) {
-  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_);
+  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_, 100);
   ASSERT_OK(pair.status_value());
 
   doorbell_ring_ = [](bool is_completion, size_t queue_id, uint16_t new_value) {
@@ -260,10 +252,7 @@ TEST_F(QueuePairTest, TestSubmitWithDataManyPages) {
   constexpr size_t kNumPages = 4;
   ASSERT_OK(zx::vmo::create(kNumPages * zx_system_get_page_size(), 0, &data_vmo));
   Submission s(0xa9);
-  {
-    fpromise::bridge<Completion, Completion> completer;
-    ASSERT_OK(pair->Submit(s, data_vmo.borrow(), 0, completer.completer));
-  }
+  { ASSERT_OK(pair->Submit(s, data_vmo.borrow(), 0, 0)); }
 
   Submission* submitted = static_cast<Submission*>(pair->submission().head());
   ASSERT_EQ(0, submitted->data_transfer_mode());
@@ -283,7 +272,7 @@ TEST_F(QueuePairTest, TestSubmitWithDataManyPages) {
 }
 
 TEST_F(QueuePairTest, TestSubmitWithMultiPagePrp) {
-  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_);
+  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_, 100);
   ASSERT_OK(pair.status_value());
 
   doorbell_ring_ = [](bool is_completion, size_t queue_id, uint16_t new_value) {
@@ -296,10 +285,7 @@ TEST_F(QueuePairTest, TestSubmitWithMultiPagePrp) {
   const size_t kNumAddresses = addr_per_page + 10;
   ASSERT_OK(zx::vmo::create(zx_system_get_page_size() * kNumAddresses, 0, &data_vmo));
   Submission s(0xa9);
-  {
-    fpromise::bridge<Completion, Completion> completer;
-    ASSERT_OK(pair->Submit(s, data_vmo.borrow(), 0, completer.completer));
-  }
+  { ASSERT_OK(pair->Submit(s, data_vmo.borrow(), 0, 0)); }
 
   Submission* submitted = static_cast<Submission*>(pair->submission().head());
   ASSERT_EQ(0, submitted->data_transfer_mode());

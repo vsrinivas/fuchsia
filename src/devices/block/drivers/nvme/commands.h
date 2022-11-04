@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_BLOCK_DRIVERS_NVME_CPP_COMMANDS_H_
-#define SRC_DEVICES_BLOCK_DRIVERS_NVME_CPP_COMMANDS_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_NVME_COMMANDS_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_NVME_COMMANDS_H_
 
 #include <hwreg/bitfields.h>
 
@@ -123,4 +123,4 @@ static_assert(sizeof(Completion) == 16, "completion struct must be 16 bytes");
 
 }  // namespace nvme
 
-#endif  // SRC_DEVICES_BLOCK_DRIVERS_NVME_CPP_COMMANDS_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_NVME_COMMANDS_H_

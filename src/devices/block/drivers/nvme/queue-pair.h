@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_BLOCK_DRIVERS_NVME_CPP_QUEUE_PAIR_H_
-#define SRC_DEVICES_BLOCK_DRIVERS_NVME_CPP_QUEUE_PAIR_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_NVME_QUEUE_PAIR_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_NVME_QUEUE_PAIR_H_
 
 #include <lib/ddk/io-buffer.h>
 #include <lib/fpromise/bridge.h>
@@ -16,16 +16,15 @@
 
 #include <fbl/mutex.h>
 
-#include "src/devices/block/drivers/nvme-cpp/commands.h"
-#include "src/devices/block/drivers/nvme-cpp/queue.h"
-#include "src/devices/block/drivers/nvme-cpp/registers.h"
+#include "src/devices/block/drivers/nvme/commands.h"
+#include "src/devices/block/drivers/nvme/queue.h"
+#include "src/devices/block/drivers/nvme/registers.h"
+
 namespace nvme {
 
+// TODO(fxbug.dev/102133): Merge this struct with nvme_utxn_t in nvme.cc.
 // Data associated with a transaction.
 struct TransactionData {
-  using Completer = fpromise::completer<Completion, Completion>;
-  // Promise completer.
-  Completer completer;
   // Data buffer, provided by the user.
   ddk::IoBuffer buffer;
   // If the first buffer covers more than two pages, this buffer
@@ -44,10 +43,10 @@ class QueuePair {
  public:
   // Prefer |QueuePair::Create|.
   QueuePair(Queue completion, Queue submission, zx::unowned_bti bti, fdf::MmioBuffer& mmio,
-            DoorbellReg completion_doorbell, DoorbellReg submission_doorbell)
+            DoorbellReg completion_doorbell, DoorbellReg submission_doorbell, size_t utxn_count)
       : completion_(std::move(completion)),
         submission_(std::move(submission)),
-        txns_(submission_.entry_count()),
+        txns_(utxn_count),
         bti_(std::move(bti)),
         mmio_(mmio),
         completion_doorbell_(completion_doorbell),
@@ -55,7 +54,7 @@ class QueuePair {
 
   static zx::result<std::unique_ptr<QueuePair>> Create(zx::unowned_bti bti, size_t queue_id,
                                                        size_t max_entries, CapabilityReg& reg,
-                                                       fdf::MmioBuffer& mmio);
+                                                       fdf::MmioBuffer& mmio, size_t utxn_count);
 
   const Queue& completion() { return completion_; }
   const Queue& submission() { return submission_; }
@@ -63,14 +62,15 @@ class QueuePair {
 
   // Check the completion queue for any new completed elements. Should be called from an async task
   // posted by the interrupt handler.
-  void CheckForNewCompletions();
+  zx_status_t CheckForNewCompletion(Completion** comp_ptr);
+  void RingCompletionDb();
 
   // Submit will take ownership of |completer| only if submission succeeds. If submission fails, it
   // is up to the caller to appropriately fail the completer.
   zx::result<> Submit(Submission& submission, std::optional<zx::unowned_vmo> data,
-                      zx_off_t vmo_offset, TransactionData::Completer& completer) {
+                      zx_off_t vmo_offset, uint16_t utxn_id) {
     return Submit(cpp20::span<uint8_t>(reinterpret_cast<uint8_t*>(&submission), sizeof(submission)),
-                  std::move(data), vmo_offset, completer);
+                  std::move(data), vmo_offset, utxn_id);
   }
 
  private:
@@ -78,7 +78,7 @@ class QueuePair {
 
   // Raw implementation of submit that operates on a byte span rather than a submission.
   zx::result<> Submit(cpp20::span<uint8_t> submission, std::optional<zx::unowned_vmo> data,
-                      zx_off_t vmo_offset, TransactionData::Completer& completer);
+                      zx_off_t vmo_offset, uint16_t utxn_id);
 
   // Puts a PRP list in |buf| containing the given addresses.
   zx::result<> PreparePrpList(ddk::IoBuffer& buf, cpp20::span<const zx_paddr_t> pages);
@@ -87,6 +87,7 @@ class QueuePair {
   Queue completion_ __TA_GUARDED(completion_lock_);
   // Submission queue.
   Queue submission_ __TA_GUARDED(submission_lock_);
+  // TODO(fxbug.dev/102133): Merge this array with nvme_->utxn in nvme.h.
   // This is an array of data associated with each transaction.
   // Each transaction's ID is equal to its index in the queue, and this array works the same way.
   std::vector<TransactionData> txns_ __TA_GUARDED(transaction_lock_);
@@ -109,4 +110,4 @@ class QueuePair {
 
 }  // namespace nvme
 
-#endif  // SRC_DEVICES_BLOCK_DRIVERS_NVME_CPP_QUEUE_PAIR_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_NVME_QUEUE_PAIR_H_
