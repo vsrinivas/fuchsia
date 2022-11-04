@@ -65,33 +65,3 @@ fuchsia_component("component") {
 fuchsia_package("ktrace_provider") {
   deps = [ ":component" ]
 }
-
-executable("importer_test_app") {
-  testonly = true
-  output_name = "importer_tests"
-
-  sources = [
-    "importer_unittest.cc",
-    "test_reader.cc",
-    "test_reader.h",
-  ]
-
-  deps = [
-    ":importer",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gtest",
-    "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/trace-engine",
-    "//zircon/system/ulib/trace-test-utils",
-  ]
-}
-
-fuchsia_unittest_package("ktrace_provider_tests") {
-  deps = [ ":importer_test_app" ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [ ":ktrace_provider_tests" ]
-}
