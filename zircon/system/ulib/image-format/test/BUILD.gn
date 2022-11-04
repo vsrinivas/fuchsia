@@ -12,7 +12,10 @@ group("test") {
 
 test("image-format-test") {
   output_name = "image-format-test"
-  sources = [ "image-format-test.cc" ]
+  sources = [
+    "image-format-test.cc",
+    "intel-image-formats.cc",
+  ]
   deps = [
     "//sdk/lib/fdio",
     "//zircon/system/ulib/image-format",

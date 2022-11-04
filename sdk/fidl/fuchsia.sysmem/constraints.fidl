@@ -444,8 +444,9 @@ type ImageFormat_2 = struct {
     /// Number of rows.  Must be >= display_height.
     coded_height uint32;
 
-    // Stride in bytes of plane 0.  Planes beyond plane 0 (if any, depending on
-    // pixel_format) have a known fixed relationship with plane 0's stride.
+    /// Stride in bytes of plane 0.  Planes beyond plane 0 (if any, depending on
+    /// pixel_format) have a known fixed relationship with plane 0's stride.
+    /// For Intel tiled textures, the stride is for the linearized version of the texture.
     bytes_per_row uint32;
 
     /// Row width in pixels that are to be displayed.  This can be <=

@@ -117,6 +117,9 @@ class ImageFormatSet {
                                           uint64_t* offset_out) const = 0;
   virtual bool ImageFormatPlaneRowBytes(const ImageFormat& image_format, uint32_t plane,
                                         uint32_t* row_bytes_out) const = 0;
+  virtual bool ImageFormatMinimumRowBytes(
+      const fuchsia_sysmem2::ImageFormatConstraints& constraints, uint32_t width,
+      uint32_t* minimum_row_bytes_out) const = 0;
 };
 
 class IntelTiledFormats : public ImageFormatSet {
@@ -221,6 +224,41 @@ class IntelTiledFormats : public ImageFormatSet {
     return false;
   }
 
+  bool ImageFormatMinimumRowBytes(const fuchsia_sysmem2::ImageFormatConstraints& constraints,
+                                  uint32_t width, uint32_t* minimum_row_bytes_out) const override {
+    ZX_DEBUG_ASSERT(minimum_row_bytes_out);
+    // Caller must set pixel_format.
+    ZX_DEBUG_ASSERT(constraints.pixel_format().has_value());
+
+    if ((constraints.min_coded_width().has_value() &&
+         width < constraints.min_coded_width().value()) ||
+        (constraints.max_coded_width().has_value() &&
+         width > constraints.max_coded_width().value())) {
+      return false;
+    }
+    uint32_t constraints_min_bytes_per_row =
+        constraints.min_bytes_per_row().has_value() ? constraints.min_bytes_per_row().value() : 0;
+    uint32_t constraints_bytes_per_row_divisor = constraints.bytes_per_row_divisor().has_value()
+                                                     ? constraints.bytes_per_row_divisor().value()
+                                                     : 1;
+    const auto& tiling_data =
+        GetTilingData(GetTilingTypeForPixelFormat(constraints.pixel_format().value()));
+
+    constraints_bytes_per_row_divisor =
+        fbl::round_up(constraints_bytes_per_row_divisor, tiling_data.bytes_per_row_per_tile);
+
+    // This code should match the code in garnet/public/rust/fuchsia-framebuffer/src/sysmem.rs.
+    *minimum_row_bytes_out = fbl::round_up(
+        std::max(ImageFormatStrideBytesPerWidthPixel(constraints.pixel_format().value()) * width,
+                 constraints_min_bytes_per_row),
+        constraints_bytes_per_row_divisor);
+    if (constraints.max_bytes_per_row().has_value() &&
+        *minimum_row_bytes_out > constraints.max_bytes_per_row().value()) {
+      return false;
+    }
+    return true;
+  }
+
  private:
   struct TilingData {
     uint32_t tile_rows;
@@ -290,6 +328,8 @@ class IntelTiledFormats : public ImageFormatSet {
                              uint32_t* height_out) {
     const auto& tiling_data =
         GetTilingData(GetTilingTypeForPixelFormat(image_format.pixel_format().value()));
+    uint32_t bytes_per_row =
+        image_format.bytes_per_row().has_value() ? image_format.bytes_per_row().value() : 0;
 
     const auto& bytes_per_row_per_tile = tiling_data.bytes_per_row_per_tile;
     const auto& tile_rows = tiling_data.tile_rows;
@@ -300,11 +340,7 @@ class IntelTiledFormats : public ImageFormatSet {
         // Format only has one plane
         ZX_DEBUG_ASSERT(plane == 0);
 
-        // Both are 32bpp formats
-        uint32_t tile_pixel_width = (bytes_per_row_per_tile / 4u);
-
-        *width_out =
-            fbl::round_up(image_format.coded_width().value(), tile_pixel_width) / tile_pixel_width;
+        *width_out = fbl::round_up(bytes_per_row, bytes_per_row_per_tile) / bytes_per_row_per_tile;
         *height_out = fbl::round_up(image_format.coded_height().value(), tile_rows) / tile_rows;
       } break;
       // Since NV12 is a biplanar format we must handle the size for each plane separately. From
@@ -314,10 +350,8 @@ class IntelTiledFormats : public ImageFormatSet {
       case PixelFormatTypeWire::kNv12:
         if (plane == 0) {
           // Calculate the Y plane size (8 bpp)
-          uint32_t tile_pixel_width = bytes_per_row_per_tile;
-
-          *width_out = fbl::round_up(image_format.coded_width().value(), tile_pixel_width) /
-                       tile_pixel_width;
+          *width_out =
+              fbl::round_up(bytes_per_row, bytes_per_row_per_tile) / bytes_per_row_per_tile;
           *height_out = fbl::round_up(image_format.coded_height().value(), tile_rows) / tile_rows;
         } else if (plane == 1) {
           // Calculate the UV plane size (4 bpp)
@@ -327,8 +361,8 @@ class IntelTiledFormats : public ImageFormatSet {
           // height boundaries). Ensure the height is aligned 2 before dividing.
           uint32_t adjusted_height = fbl::round_up(image_format.coded_height().value(), 2u) / 2u;
 
-          *width_out = fbl::round_up(image_format.coded_width().value(), bytes_per_row_per_tile) /
-                       bytes_per_row_per_tile;
+          *width_out =
+              fbl::round_up(bytes_per_row, bytes_per_row_per_tile) / bytes_per_row_per_tile;
           *height_out = fbl::round_up(adjusted_height, tile_rows) / tile_rows;
         } else {
           ZX_DEBUG_ASSERT(false);
@@ -493,6 +527,10 @@ class AfbcFormats : public ImageFormatSet {
     }
     return false;
   }
+  bool ImageFormatMinimumRowBytes(const fuchsia_sysmem2::ImageFormatConstraints& constraints,
+                                  uint32_t width, uint32_t* minimum_row_bytes_out) const override {
+    return false;
+  }
 };
 
 uint64_t linear_size(uint32_t coded_height, uint32_t bytes_per_row, PixelFormatType type) {
@@ -522,6 +560,32 @@ uint64_t linear_size(uint32_t coded_height, uint32_t bytes_per_row, PixelFormatT
     default:
       return 0u;
   }
+}
+
+bool linear_minimum_row_bytes(const fuchsia_sysmem2::ImageFormatConstraints& constraints,
+                              uint32_t width, uint32_t* minimum_row_bytes_out) {
+  ZX_DEBUG_ASSERT(minimum_row_bytes_out);
+  // Caller must set pixel_format.
+  ZX_DEBUG_ASSERT(constraints.pixel_format().has_value());
+
+  if ((constraints.min_coded_width().has_value() &&
+       width < constraints.min_coded_width().value()) ||
+      (constraints.max_coded_width().has_value() &&
+       width > constraints.max_coded_width().value())) {
+    return false;
+  }
+  uint32_t constraints_min_bytes_per_row =
+      constraints.min_bytes_per_row().has_value() ? constraints.min_bytes_per_row().value() : 0;
+  uint32_t constraints_bytes_per_row_divisor = constraints.bytes_per_row_divisor().has_value()
+                                                   ? constraints.bytes_per_row_divisor().value()
+                                                   : 1;
+  // This code should match the code in garnet/public/rust/fuchsia-framebuffer/src/sysmem.rs.
+  *minimum_row_bytes_out = fbl::round_up(
+      std::max(ImageFormatStrideBytesPerWidthPixel(constraints.pixel_format().value()) * width,
+               constraints_min_bytes_per_row),
+      constraints_bytes_per_row_divisor);
+  return !(constraints.max_bytes_per_row().has_value() &&
+           *minimum_row_bytes_out > constraints.max_bytes_per_row().value());
 }
 
 class LinearFormats : public ImageFormatSet {
@@ -638,6 +702,10 @@ class LinearFormats : public ImageFormatSet {
     }
     return false;
   }
+  bool ImageFormatMinimumRowBytes(const fuchsia_sysmem2::ImageFormatConstraints& constraints,
+                                  uint32_t width, uint32_t* minimum_row_bytes_out) const override {
+    return linear_minimum_row_bytes(constraints, width, minimum_row_bytes_out);
+  }
 };
 
 constexpr LinearFormats kLinearFormats;
@@ -687,6 +755,10 @@ class GoldfishFormats : public ImageFormatSet {
       *row_bytes_out = image_format.bytes_per_row().value();
       return true;
     }
+    return false;
+  }
+  bool ImageFormatMinimumRowBytes(const fuchsia_sysmem2::ImageFormatConstraints& constraints,
+                                  uint32_t width, uint32_t* minimum_row_bytes_out) const override {
     return false;
   }
 };
@@ -778,6 +850,10 @@ class ArmTELinearFormats : public ImageFormatSet {
       return true;
     }
     return false;
+  }
+  bool ImageFormatMinimumRowBytes(const fuchsia_sysmem2::ImageFormatConstraints& constraints,
+                                  uint32_t width, uint32_t* minimum_row_bytes_out) const override {
+    return linear_minimum_row_bytes(constraints, width, minimum_row_bytes_out);
   }
 };
 
@@ -1203,32 +1279,12 @@ bool ImageFormatMinimumRowBytes(const fuchsia_sysmem2::ImageFormatConstraints& c
   ZX_DEBUG_ASSERT(minimum_row_bytes_out);
   // Caller must set pixel_format.
   ZX_DEBUG_ASSERT(constraints.pixel_format().has_value());
-  // Bytes per row is not well-defined for tiled types.
-  if (constraints.pixel_format()->format_modifier_value().has_value() &&
-      constraints.pixel_format()->format_modifier_value().value() !=
-          fuchsia_sysmem2::kFormatModifierLinear &&
-      constraints.pixel_format()->format_modifier_value().value() !=
-          fuchsia_sysmem2::kFormatModifierArmLinearTe) {
-    return false;
+  for (auto& format_set : kImageFormats) {
+    if (format_set->IsSupported(constraints.pixel_format().value())) {
+      return format_set->ImageFormatMinimumRowBytes(constraints, width, minimum_row_bytes_out);
+    }
   }
-  if ((constraints.min_coded_width().has_value() &&
-       width < constraints.min_coded_width().value()) ||
-      (constraints.max_coded_width().has_value() &&
-       width > constraints.max_coded_width().value())) {
-    return false;
-  }
-  uint32_t constraints_min_bytes_per_row =
-      constraints.min_bytes_per_row().has_value() ? constraints.min_bytes_per_row().value() : 0;
-  uint32_t constraints_bytes_per_row_divisor = constraints.bytes_per_row_divisor().has_value()
-                                                   ? constraints.bytes_per_row_divisor().value()
-                                                   : 1;
-  // This code should match the code in garnet/public/rust/fuchsia-framebuffer/src/sysmem.rs.
-  *minimum_row_bytes_out = fbl::round_up(
-      std::max(ImageFormatStrideBytesPerWidthPixel(constraints.pixel_format().value()) * width,
-               constraints_min_bytes_per_row),
-      constraints_bytes_per_row_divisor);
-  return !(constraints.max_bytes_per_row().has_value() &&
-           *minimum_row_bytes_out > constraints.max_bytes_per_row().value());
+  return false;
 }
 
 bool ImageFormatMinimumRowBytes(
