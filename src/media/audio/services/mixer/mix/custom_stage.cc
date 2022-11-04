@@ -203,7 +203,6 @@ int64_t CustomStage::Process(MixJobContext& ctx, int64_t frame_count) {
 }
 
 void CustomStage::CallFidlProcess(MixJobContext& ctx) {
-  // TODO(fxbug.dev/87651): Do we need to populate the `options`?
   const int64_t frame_count = source_buffer_.frame_count();
 
   // The source data needs to be copied into the pre-negotiated input buffer.

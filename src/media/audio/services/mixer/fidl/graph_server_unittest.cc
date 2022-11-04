@@ -927,10 +927,6 @@ TEST_F(GraphServerTest, CreateSplitterSuccess) {
   }
 }
 
-// TODO(fxbug.dev/109467): After clocks are registered in `PipelineMixThread::clocks_`, write a test
-// with a Producer -> Splitter -> {Consumer, Consumer}, using StreamSink producers and consumers,
-// and verify the producer's data is copied to the consumers.
-
 //
 // CreateCustom
 //

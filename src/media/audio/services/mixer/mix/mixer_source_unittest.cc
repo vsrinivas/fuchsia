@@ -290,8 +290,5 @@ TEST(MixerSourceTest, SetDestGains) {
       UnorderedElementsAre(GainControlId{1}, GainControlId{2}, GainControlId{4}, GainControlId{5}));
 }
 
-// TODO(fxbug.dev/87651): Move the remaining `media::audio::MixerStage` unit tests here once the
-// mixer stage code is fully migrated.
-
 }  // namespace
 }  // namespace media_audio

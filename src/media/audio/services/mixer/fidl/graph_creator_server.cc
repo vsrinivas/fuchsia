@@ -41,7 +41,6 @@ void GraphCreatorServer::Create(CreateRequestView request, CreateCompleter::Sync
     args.name = "Graph" + std::to_string(num_graphs_);
   }
 
-  // TODO(fxbug.dev/87651): Should we be reusing `this->thread_ptr()` here?
   auto fidl_thread = FidlThread::CreateFromNewThread(args.name + "-FidlThread");
   if (request->has_fidl_thread_deadline_profile() &&
       request->fidl_thread_deadline_profile().is_valid()) {
