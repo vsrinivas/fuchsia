@@ -151,32 +151,18 @@ driver initialization. And since zxdb itself uses the network and filesystem, no
 with network communication can be debuged, and neither can many drivers associated with storage or
 other critical system functions.
 
-Driver debugging support is tracked in issue
-[5456](https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=5456).
-
-You can debug running drivers by attaching like any other process (see “Attaching to an existing
-process”). You can delay initialization to allow time to attach by adding a busyloop at the
-beginning of your code:
+You can debug running drivers by attaching to the driver hosts, which can be listed by
+`ffx driver list-hosts`. Initialization of the driver can be delayed by calling `WaitForDebugger()`,
+given the driver is not depended by the debugger.
 
 ```cpp
-volatile bool stop = false;
-while (!stop) {}
+#include "src/lib/debug/debug.h"
+
+debug::WaitForDebugger();
 ```
 
-To break out of the loop after attaching, either set the variable to true:
-
-```none {:.devsite-disable-click-to-copy}
-[zxdb] print stop = true
-true
-[zxdb] continue
-```
-
-Or jump to the line after the loop:
-
-```none {:.devsite-disable-click-to-copy}
-[zxdb] jump <line #>
-[zxdb] continue
-```
+Once the debugger is attached, `WaitForDebugger()` will trigger a software breakpoint.
+After necessary setup is performed, type `continue` to continue the execution.
 
 ## Debugging crash dumps
 

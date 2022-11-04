@@ -41,6 +41,14 @@ inferior("step_plt") {
   cflags = [ "-finline-functions" ]  # inline std::make_shared.
 }
 
+inferior("wait_for_debugger") {
+  sources = [ "wait_for_debugger.cc" ]
+  deps = [ "//src/lib/debug" ]
+}
+
 fuchsia_package("zxdb_e2e_inferiors") {
-  deps = [ ":step_plt" ]
+  deps = [
+    ":step_plt",
+    ":wait_for_debugger",
+  ]
 }

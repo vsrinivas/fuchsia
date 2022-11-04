@@ -11,6 +11,7 @@ group("lib") {
     "callback",
     "chunked-compression",
     "cobalt",
+    "debug",
     "diagnostics",
     "direct-mode",
     "directed_graph",
