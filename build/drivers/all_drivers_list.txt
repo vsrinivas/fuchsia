@@ -133,7 +133,6 @@
 //src/devices/clock/drivers/clock:clock-driver
 //src/devices/cpu/drivers/aml-cpu-legacy:aml-cpu-legacy-driver
 //src/devices/cpu/drivers/aml-cpu:aml-cpu-driver
-//src/devices/gpio/drivers/aml-axg-gpio:aml-axg-gpio-driver
 //src/devices/gpio/drivers/aml-gpio:aml-gpio-driver
 //src/devices/gpio/drivers/as370-gpio:as370-gpio-driver
 //src/devices/gpio/drivers/gpio-test:gpio-test-driver
