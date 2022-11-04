@@ -41,8 +41,11 @@ async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["input-pipeline"]).expect("Failed to init syslog");
     fuchsia_trace_provider::trace_provider_create_with_fdio();
 
-    // Expose InputDeviceRegistry to allow input injection for testing.
     let mut fs = ServiceFs::new_local();
+    let inspector = fuchsia_inspect::component::inspector();
+    inspect_runtime::serve(inspector, &mut fs)?;
+
+    // Expose InputDeviceRegistry to allow input injection for testing.
     fs.dir("svc").add_fidl_service(ExposedServices::FactoryResetCountdown);
     fs.dir("svc").add_fidl_service(ExposedServices::InputDeviceRegistry);
     fs.dir("svc").add_fidl_service(ExposedServices::MediaButtonsListenerRegistry);
@@ -59,9 +62,15 @@ async fn main() -> Result<(), Error> {
     let factory_reset_handler = FactoryResetHandler::new();
     let media_buttons_handler = MediaButtonsHandler::new();
     let input_handlers: Vec<Rc<dyn input_pipeline_lib::input_handler::InputHandler>> = vec![
+        input_pipeline_lib::inspect_handler::InspectHandler::new(
+            inspector.root().create_child("input_pipeline_entry"),
+        ),
         factory_reset_handler.clone(),
         media_buttons_handler.clone(),
         make_touch_injector_handler().await,
+        input_pipeline_lib::inspect_handler::InspectHandler::new(
+            inspector.root().create_child("input_pipeline_exit"),
+        ),
     ];
 
     let input_pipeline = if std::path::Path::new(IGNORE_REAL_DEVICES_CONFIG_PATH).exists() {
