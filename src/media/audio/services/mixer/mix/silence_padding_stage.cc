@@ -107,17 +107,17 @@ std::optional<PipelineStage::Packet> SilencePaddingStage::ReadImpl(MixJobContext
     const Fixed silence_start_frame = *last_data_frame_;
     // Always generate an integral number of frames.
     int64_t silence_frame_count = silence_frame_count_;
-    if (next_packet && next_packet->start() < silence_start_frame + silence_frame_count) {
+    if (next_packet && next_packet->start_frame() < silence_start_frame + silence_frame_count) {
       silence_frame_count = round_down_fractional_frames_
-                                ? Fixed(next_packet->start() - silence_start_frame).Floor()
-                                : Fixed(next_packet->start() - silence_start_frame).Ceiling();
+                                ? Fixed(next_packet->start_frame() - silence_start_frame).Floor()
+                                : Fixed(next_packet->start_frame() - silence_start_frame).Ceiling();
     }
     // If the silent region intersects with our request, return a silent packet.
     if (silence_frame_count > 0) {
       if (const auto intersect = PacketView({
                                                 .format = format(),
-                                                .start = silence_start_frame,
-                                                .length = silence_frame_count,
+                                                .start_frame = silence_start_frame,
+                                                .frame_count = silence_frame_count,
                                                 .payload = silence_buffer_.data(),
                                             })
                                      .IntersectionWith(start_frame, frame_count)) {
@@ -125,15 +125,16 @@ std::optional<PipelineStage::Packet> SilencePaddingStage::ReadImpl(MixJobContext
         if (next_packet) {
           next_packet->set_frames_consumed(0);
         }
-        FX_CHECK(intersect->length() <= silence_frame_count_);
-        return MakeCachedPacket(intersect->start(), intersect->length(), silence_buffer_.data());
+        FX_CHECK(intersect->frame_count() <= silence_frame_count_);
+        return MakeCachedPacket(intersect->start_frame(), intersect->frame_count(),
+                                silence_buffer_.data());
       }
     }
   }
 
   // Passthrough `next_packet`.
   if (next_packet) {
-    last_data_frame_ = next_packet->end();
+    last_data_frame_ = next_packet->end_frame();
     return ForwardPacket(std::move(next_packet));
   }
   return std::nullopt;

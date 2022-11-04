@@ -54,7 +54,7 @@ std::optional<PipelineStage::Packet> PipelineStage::Read(MixJobContext& ctx, Fix
     Advance(ctx, start_frame + Fixed(frame_count));
     return std::nullopt;
   }
-  FX_CHECK(packet->length() > 0);
+  FX_CHECK(packet->frame_count() > 0);
 
   is_locked_ = true;
   if (!packet->is_cached_) {
@@ -121,10 +121,10 @@ std::optional<PipelineStage::Packet> PipelineStage::ForwardPacket(
   // without heap allocation. To break that circular type, we store the forwarded packet in `this`.
   forwarded_packet_ = std::move(packet);
 
-  const auto packet_start = start_frame ? *start_frame : packet->start();
+  const auto packet_start = start_frame ? *start_frame : packet->start_frame();
   return Packet(
       // Wrap the packet with a proxy so we can be notified when the packet is unlocked.
-      {forwarded_packet_->format(), packet_start, forwarded_packet_->length(),
+      {forwarded_packet_->format(), packet_start, forwarded_packet_->frame_count(),
        forwarded_packet_->payload()},
       /*is_cached=*/false, [this, packet_start](int64_t frames_consumed) mutable {
         // Unlock the stream.
@@ -148,7 +148,7 @@ bool PipelineStage::AdvanceSelf(Fixed frame) {
   }
   next_readable_frame_ = frame;
 
-  if (cached_packet_ && frame < cached_packet_->end()) {
+  if (cached_packet_ && frame < cached_packet_->end_frame()) {
     // Cached packet is still in use.
     return false;
   }
@@ -162,7 +162,8 @@ std::optional<PipelineStage::Packet> PipelineStage::ReadFromCachedPacket(Fixed s
                                                                          int64_t frame_count) {
   if (cached_packet_) {
     if (auto intersect = cached_packet_->IntersectionWith(start_frame, frame_count)) {
-      return MakeUncachedPacket(intersect->start(), intersect->length(), intersect->payload());
+      return MakeUncachedPacket(intersect->start_frame(), intersect->frame_count(),
+                                intersect->payload());
     }
   }
   return std::nullopt;

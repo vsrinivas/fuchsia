@@ -45,7 +45,7 @@ void SimplePacketQueueProducerStage::AdvanceSelfImpl(Fixed frame) {
 
   while (!pending_packet_queue_.empty()) {
     const auto& pending_packet = pending_packet_queue_.front();
-    if (pending_packet.end() > frame) {
+    if (pending_packet.end_frame() > frame) {
       return;
     }
     pending_packet_queue_.pop_front();
@@ -61,11 +61,11 @@ std::optional<PipelineStage::Packet> SimplePacketQueueProducerStage::ReadImpl(Mi
   while (!pending_packet_queue_.empty()) {
     auto& pending_packet = pending_packet_queue_.front();
     // If the packet starts before the requested frame and has not been seen before, it underflowed.
-    if (const Fixed underflow_frame_count = start_frame - pending_packet.start();
+    if (const Fixed underflow_frame_count = start_frame - pending_packet.start_frame();
         !pending_packet.seen_in_read_ && underflow_frame_count >= Fixed(1)) {
       ReportUnderflow(underflow_frame_count);
     }
-    if (pending_packet.end() > start_frame) {
+    if (pending_packet.end_frame() > start_frame) {
       pending_packet.seen_in_read_ = true;
       break;
     }
@@ -80,7 +80,8 @@ std::optional<PipelineStage::Packet> SimplePacketQueueProducerStage::ReadImpl(Mi
   const auto& pending_packet = pending_packet_queue_.front();
   if (const auto intersect = pending_packet.IntersectionWith(start_frame, frame_count)) {
     // We don't need to cache the returned packet, since we don't generate any data dynamically.
-    return MakeUncachedPacket(intersect->start(), intersect->length(), intersect->payload());
+    return MakeUncachedPacket(intersect->start_frame(), intersect->frame_count(),
+                              intersect->payload());
   }
   return std::nullopt;
 }

@@ -41,24 +41,24 @@ TEST(SimpleRingBufferProducerStageTest, Read) {
   {
     const auto packet = producer.Read(DefaultCtx(), Fixed(0), 10);
     ASSERT_TRUE(packet);
-    EXPECT_EQ(packet->start(), Fixed(0));
-    EXPECT_EQ(packet->length(), 10);
+    EXPECT_EQ(packet->start_frame(), Fixed(0));
+    EXPECT_EQ(packet->frame_count(), 10);
     EXPECT_EQ(packet->payload(), buffer->offset(0));
   }
 
   {
     const auto packet = producer.Read(DefaultCtx(), Fixed(95), 10);
     ASSERT_TRUE(packet);
-    EXPECT_EQ(packet->start(), Fixed(95));
-    EXPECT_EQ(packet->length(), 5);
+    EXPECT_EQ(packet->start_frame(), Fixed(95));
+    EXPECT_EQ(packet->frame_count(), 5);
     EXPECT_EQ(packet->payload(), buffer->offset(95 * kFormat.bytes_per_frame()));
   }
 
   {
     const auto packet = producer.Read(DefaultCtx(), Fixed(100), 5);
     ASSERT_TRUE(packet);
-    EXPECT_EQ(packet->start(), Fixed(100));
-    EXPECT_EQ(packet->length(), 5);
+    EXPECT_EQ(packet->start_frame(), Fixed(100));
+    EXPECT_EQ(packet->frame_count(), 5);
     EXPECT_EQ(packet->payload(), buffer->offset(0));
   }
 }

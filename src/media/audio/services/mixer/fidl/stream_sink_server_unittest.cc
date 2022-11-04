@@ -45,15 +45,15 @@ MATCHER_P(PushPacketCommandEq, want_packet, "") {
                      << "actual format: " << got_packet.format();
     return false;
   }
-  if (got_packet.start() != want_packet.start()) {
+  if (got_packet.start_frame() != want_packet.start_frame()) {
     *result_listener << ffl::String::DecRational << ""
-                     << "expected start: " << want_packet.start() << " "
-                     << "actual start: " << got_packet.start();
+                     << "expected start_frame " << want_packet.start_frame() << " "
+                     << "actual start_frame " << got_packet.start_frame();
     return false;
   }
-  if (got_packet.length() != want_packet.length()) {
-    *result_listener << "expected length: " << want_packet.length() << " "
-                     << "actual length: " << got_packet.length();
+  if (got_packet.frame_count() != want_packet.frame_count()) {
+    *result_listener << "expected frame_count " << want_packet.frame_count() << " "
+                     << "actual frame_count " << got_packet.frame_count();
     return false;
   }
 
@@ -117,8 +117,8 @@ TEST_F(StreamSinkServerTest, ExplicitTimestamp) {
   ASSERT_TRUE(cmd0);
   EXPECT_THAT(*cmd0, PushPacketCommandEq(PacketView({
                          .format = kFormat,
-                         .start = Fixed(48000),
-                         .length = 480,
+                         .start_frame = Fixed(48000),
+                         .frame_count = 480,
                          .payload = nullptr,  // ignored
                      })));
 
@@ -128,8 +128,8 @@ TEST_F(StreamSinkServerTest, ExplicitTimestamp) {
   ASSERT_TRUE(cmd1);
   EXPECT_THAT(*cmd1, PushPacketCommandEq(PacketView({
                          .format = kFormat,
-                         .start = Fixed(48480),
-                         .length = 1,
+                         .start_frame = Fixed(48480),
+                         .frame_count = 1,
                          .payload = nullptr,  // ignored
                      })));
 
@@ -176,8 +176,8 @@ TEST_F(StreamSinkServerTest, ContinuousTimestamps) {
   ASSERT_TRUE(cmd0);
   EXPECT_THAT(*cmd0, PushPacketCommandEq(PacketView({
                          .format = kFormat,
-                         .start = Fixed(0),
-                         .length = 1,
+                         .start_frame = Fixed(0),
+                         .frame_count = 1,
                          .payload = nullptr,  // ignored
                      })));
 
@@ -186,8 +186,8 @@ TEST_F(StreamSinkServerTest, ContinuousTimestamps) {
   ASSERT_TRUE(cmd1);
   EXPECT_THAT(*cmd1, PushPacketCommandEq(PacketView({
                          .format = kFormat,
-                         .start = Fixed(1),
-                         .length = 1,
+                         .start_frame = Fixed(1),
+                         .frame_count = 1,
                          .payload = nullptr,  // ignored
                      })));
 

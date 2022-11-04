@@ -73,7 +73,7 @@ class FakePipelineStage : public PipelineStage {
     if (!isect) {
       return std::nullopt;
     }
-    return MakeUncachedPacket(isect->start(), isect->length(), isect->payload());
+    return MakeUncachedPacket(isect->start_frame(), isect->frame_count(), isect->payload());
   }
 
   std::unordered_set<PipelineStagePtr> sources_;

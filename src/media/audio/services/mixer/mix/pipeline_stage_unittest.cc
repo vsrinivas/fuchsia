@@ -84,8 +84,8 @@ class FakeStage : public PipelineStage {
 
     auto packet = PacketView({
         .format = format(),
-        .start = packets_.front().start,
-        .length = length.Floor(),
+        .start_frame = packets_.front().start,
+        .frame_count = length.Floor(),
         .payload = packets_.front().payload,
     });
     auto isect = packet.IntersectionWith(start_frame, frame_count);
@@ -96,14 +96,14 @@ class FakeStage : public PipelineStage {
     if (use_cache_) {
       // When caching, the start frame must intersect the request, but we can cache an arbitrary
       // number of frames. See comments for `MakeCachedPacket`.
-      const Fixed packet_end = packet.start() + Fixed(packet.length());
-      const int64_t length = Fixed(packet_end - isect->start()).Floor();
+      const Fixed packet_end = packet.start_frame() + Fixed(packet.frame_count());
+      const int64_t length = Fixed(packet_end - isect->start_frame()).Floor();
       // When caching, we should not see a `ReadImpl` call that intersects the packet we are
       // returning (all of those intersections should be handled by the cache).
-      cached_end_ = isect->start() + Fixed(isect->length());
-      return MakeCachedPacket(isect->start(), length, isect->payload());
+      cached_end_ = isect->start_frame() + Fixed(isect->frame_count());
+      return MakeCachedPacket(isect->start_frame(), length, isect->payload());
     }
-    return MakeUncachedPacket(isect->start(), isect->length(), isect->payload());
+    return MakeUncachedPacket(isect->start_frame(), isect->frame_count(), isect->payload());
   }
 
   std::vector<Fixed>& advance_calls() { return advance_calls_; }
@@ -200,21 +200,21 @@ class PipelineStageTest : public ::testing::TestWithParam<PipelineType> {
   }
 
   void ExpectNullPacket(const std::optional<PipelineStage::Packet>& packet) {
-    EXPECT_FALSE(packet) << "start=" << ffl::String(packet->start()).c_str()
-                         << " end=" << ffl::String(packet->end()).c_str();
+    EXPECT_FALSE(packet) << "start_frame=" << ffl::String(packet->start_frame()).c_str()
+                         << " end_frame=" << ffl::String(packet->end_frame()).c_str();
   }
 
-  void ExpectPacket(const std::optional<PipelineStage::Packet>& packet, Fixed want_start,
-                    Fixed want_end, char* want_payload) {
+  void ExpectPacket(const std::optional<PipelineStage::Packet>& packet, Fixed want_start_frame,
+                    Fixed want_end_frame, char* want_payload) {
     ASSERT_TRUE(packet);
-    EXPECT_EQ(reinterpret_cast<void*>(want_payload), packet->payload());
-    if (want_start != packet->start()) {
-      ADD_FAILURE() << "want_start=" << ffl::String(want_start).c_str()
-                    << " start=" << ffl::String(packet->start()).c_str();
+    EXPECT_EQ(static_cast<void*>(want_payload), packet->payload());
+    if (want_start_frame != packet->start_frame()) {
+      ADD_FAILURE() << "want_start_frame=" << ffl::String(want_start_frame).c_str()
+                    << " start_frame=" << ffl::String(packet->start_frame()).c_str();
     }
-    if (want_end != packet->end()) {
-      ADD_FAILURE() << "want_end=" << ffl::String(want_end).c_str()
-                    << " end=" << ffl::String(packet->end()).c_str();
+    if (want_end_frame != packet->end_frame()) {
+      ADD_FAILURE() << "want_end_frame=" << ffl::String(want_end_frame).c_str()
+                    << " end_frame=" << ffl::String(packet->end_frame()).c_str();
     }
   }
 

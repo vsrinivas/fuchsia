@@ -331,8 +331,8 @@ TEST(SplitterNodeTest, CopySourceToDests) {
   }
   source->fake_pipeline_stage()->SetPacketForRead(PacketView({
       .format = kFormat,
-      .start = Fixed(kMixPeriodFrames),
-      .length = kMixPeriodFrames,
+      .start_frame = Fixed(kMixPeriodFrames),
+      .frame_count = kMixPeriodFrames,
       .payload = source_payload.data(),
   }));
 

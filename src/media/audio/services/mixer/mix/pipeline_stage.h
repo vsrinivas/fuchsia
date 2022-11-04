@@ -55,8 +55,8 @@ class PipelineStage {
     // Call this to indicate that packet frames of `[start(), start() + frames_consumed)` have been
     // consumed. If this is not set, by default, we assume that the entire packet is consumed.
     void set_frames_consumed(int64_t frames_consumed) {
-      FX_CHECK(frames_consumed <= length())
-          << ffl::String::DecRational << frames_consumed << " > " << length();
+      FX_CHECK(frames_consumed <= frame_count())
+          << ffl::String::DecRational << frames_consumed << " > " << frame_count();
       frames_consumed_ = frames_consumed;
     }
 
@@ -69,7 +69,7 @@ class PipelineStage {
     Packet(Args args, bool is_cached, DestructorType destructor)
         : PacketView(args),
           destructor_(std::move(destructor)),
-          frames_consumed_(length()),
+          frames_consumed_(frame_count()),
           is_cached_(is_cached) {}
 
     DestructorType destructor_;
@@ -282,7 +282,7 @@ class PipelineStage {
   //
   //   ```
   //   auto packet = source->Read(frame, frame_count);
-  //   auto start_frame = packet->start().Ceiling();
+  //   auto start_frame = packet->start_frame().Ceiling();
   //   return ForwardPacket(std::move(packet), start_frame);
   //   ```
   //

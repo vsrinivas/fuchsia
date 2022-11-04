@@ -173,9 +173,9 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithStreamSink) {
     MixJobContext ctx(h.clock_snapshots, zx::time(0), zx::time(10));
     const auto packet = h.producer->pipeline_stage()->Read(ctx, Fixed(0), 20);
     ASSERT_TRUE(packet);
-    EXPECT_EQ(packet->start(), 0);
-    EXPECT_EQ(packet->length(), 10);
-    EXPECT_EQ(packet->end(), 10);
+    EXPECT_EQ(packet->start_frame(), 0);
+    EXPECT_EQ(packet->frame_count(), 10);
+    EXPECT_EQ(packet->end_frame(), 10);
   }
 
   // Disconnect producer -> dest.
@@ -239,9 +239,9 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithRingBuffer) {
     MixJobContext ctx(h.clock_snapshots, zx::time(0), zx::time(10));
     const auto packet = h.producer->pipeline_stage()->Read(ctx, Fixed(0), 5);
     ASSERT_TRUE(packet);
-    EXPECT_EQ(packet->start(), 0);
-    EXPECT_EQ(packet->length(), 5);
-    EXPECT_EQ(packet->end(), 5);
+    EXPECT_EQ(packet->start_frame(), 0);
+    EXPECT_EQ(packet->frame_count(), 5);
+    EXPECT_EQ(packet->end_frame(), 5);
     EXPECT_EQ(packet->payload(), h.buffer->start());
 
     auto* data = static_cast<const float*>(packet->payload());

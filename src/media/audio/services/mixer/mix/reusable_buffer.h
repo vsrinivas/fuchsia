@@ -44,18 +44,20 @@ class ReusableBuffer {
   ReusableBuffer& operator=(ReusableBuffer&&) = delete;
 
   // Reports the starting frame of this buffer.
-  // REQUIRES: the buffer has been reset.
-  Fixed start() const {
-    FX_CHECK(start_.has_value());
-    return *start_;
+  // REQUIRED: the buffer has been reset.
+  Fixed start_frame() const {
+    FX_CHECK(start_frame_.has_value());
+    return *start_frame_;
   }
 
   // Reports the end of the buffer. Like std::vector::end(), this is one frame past the last frame.
-  // REQUIRES: the buffer has been reset.
-  Fixed end() const { return start() + Fixed(length()); }
+  // REQUIRED: the buffer has been reset.
+  Fixed end_frame() const { return start_frame() + Fixed(frame_count()); }
 
   // Reports the total number of frames appended to the buffer since the last `Reset`.
-  int64_t length() const { return static_cast<int64_t>(buf_.size()) / format_.bytes_per_frame(); }
+  int64_t frame_count() const {
+    return static_cast<int64_t>(buf_.size()) / format_.bytes_per_frame();
+  }
 
   // Reports whether the buffer is empty.
   bool empty() const { return buf_.empty(); }
@@ -66,7 +68,7 @@ class ReusableBuffer {
   // Returns a pointer to the raw data.
   // It is undefined behavior to access the payload beyond `length()` frames.
   //
-  // REQUIRES: the buffer is not empty.
+  // REQUIRED: the buffer is not empty.
   void* payload() {
     // This is required because of a technicality: although std::vector::reserve() allocates
     // storage for the vector, index operations like `buf_[x]` technically have undefined behavior
@@ -81,13 +83,13 @@ class ReusableBuffer {
   // Clears the buffer and resets the starting position.
   // This must be called at least once after the constructor before appending any data.
   //
-  // REQUIRES: start_frame.Fraction() == 0
+  // REQUIRED: start_frame.Fraction() == 0
   void Reset(Fixed start_frame);
 
   // Appends the given payload buffer.
   // If `payload_start > end()`, silence is automatically inserted in the gap.
   //
-  // REQUIRES: payload_start.Fraction() == 0 &&
+  // REQUIRED: payload_start.Fraction() == 0 &&
   //           payload_start >= end() &&
   //           does not overflow capacity &&
   //           the buffer has been reset
@@ -98,7 +100,7 @@ class ReusableBuffer {
 
   // Appends silent frames.
   //
-  // REQUIRES: silence_start.Fraction() == 0 &&
+  // REQUIRED: silence_start.Fraction() == 0 &&
   //           silence_start >= end() &&
   //           does not overflow capacity &&
   //           the buffer has been reset
@@ -113,7 +115,7 @@ class ReusableBuffer {
   const int64_t capacity_frames_;
   const Format format_;
 
-  std::optional<Fixed> start_;  // first frame in this buffer, or nullopt if not `Reset`
+  std::optional<Fixed> start_frame_;  // first frame in this buffer, or nullopt if not `Reset`
   std::vector<char> buf_;
 };
 

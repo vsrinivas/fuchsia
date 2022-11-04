@@ -81,7 +81,7 @@ std::optional<PipelineStage::Packet> SplitterProducerStage::ReadImpl(MixJobConte
 
   // We don't need to cache the returned packet since we don't generate any data dynamically.
   auto packet = ring_buffer_->Read(consumer_start_frame, consumer_end_frame - consumer_start_frame);
-  return MakeUncachedPacket(packet.start() - *consumer_frame_offset_, packet.length(),
+  return MakeUncachedPacket(packet.start_frame() - *consumer_frame_offset_, packet.frame_count(),
                             packet.payload());
 }
 

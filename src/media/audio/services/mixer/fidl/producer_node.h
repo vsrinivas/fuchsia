@@ -69,7 +69,7 @@ class ProducerNode : public Node {
   void Stop(ProducerStage::StopCommand cmd) const;
 
   // Binds a new lead time watcher.
-  // REQUIRES: `pipeline_direction() == kOutput`
+  // REQUIRED: `pipeline_direction() == kOutput`
   void BindLeadTimeWatcher(fidl::ServerEnd<fuchsia_audio::DelayWatcher> server_end);
 
   // Implements `Node`.

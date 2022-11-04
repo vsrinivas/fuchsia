@@ -164,13 +164,13 @@ int64_t CustomStage::Process(MixJobContext& ctx, int64_t frame_count) {
 
   // Read next `frame_count` frames from `source_`.
   bool has_data = false;
-  while (source_buffer_.length() < frame_count) {
-    const Fixed read_start_frame = source_buffer_.end();
-    const int64_t read_frame_count = frame_count - source_buffer_.length();
+  while (source_buffer_.frame_count() < frame_count) {
+    const Fixed read_start_frame = source_buffer_.end_frame();
+    const int64_t read_frame_count = frame_count - source_buffer_.frame_count();
     const auto packet = source_.Read(ctx, read_start_frame, read_frame_count);
     if (packet) {
       // SampleAndHold: source frame 1.X overlaps dest frame 2.0, so always round up.
-      source_buffer_.AppendData(Fixed(packet->start().Ceiling()), packet->length(),
+      source_buffer_.AppendData(Fixed(packet->start_frame().Ceiling()), packet->frame_count(),
                                 packet->payload());
       has_data = true;
     } else {
@@ -185,7 +185,7 @@ int64_t CustomStage::Process(MixJobContext& ctx, int64_t frame_count) {
   }
 
   // Process this buffer via FIDL connection, the result will be filled into `fidl_buffers_.output`.
-  FX_CHECK(source_buffer_.length() == frame_count);
+  FX_CHECK(source_buffer_.frame_count() == frame_count);
   CallFidlProcess(ctx);
 
   if (latency_frames_to_process >= frame_count) {
@@ -204,7 +204,7 @@ int64_t CustomStage::Process(MixJobContext& ctx, int64_t frame_count) {
 
 void CustomStage::CallFidlProcess(MixJobContext& ctx) {
   // TODO(fxbug.dev/87651): Do we need to populate the `options`?
-  const int64_t frame_count = source_buffer_.length();
+  const int64_t frame_count = source_buffer_.frame_count();
 
   // The source data needs to be copied into the pre-negotiated input buffer.
   std::memmove(fidl_buffers_.input, source_buffer_.payload(),

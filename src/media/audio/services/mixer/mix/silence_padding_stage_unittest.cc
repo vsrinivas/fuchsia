@@ -41,16 +41,16 @@ std::shared_ptr<SimplePacketQueueProducerStage> MakePacketQueueProducerStage() {
 }
 
 void ExpectNullPacket(const std::optional<PipelineStage::Packet>& packet) {
-  EXPECT_FALSE(packet) << ffl::String::DecRational << "start=" << packet->start()
-                       << " end=" << packet->end();
+  EXPECT_FALSE(packet) << ffl::String::DecRational << "start_frame=" << packet->start_frame()
+                       << " end_frame=" << packet->end_frame();
 }
 
 void ExpectPacket(const std::optional<PipelineStage::Packet>& packet, Fixed want_start,
                   Fixed want_end, int16_t want_sample) {
   ASSERT_TRUE(packet);
   EXPECT_EQ(want_sample, reinterpret_cast<int16_t*>(packet->payload())[0]);
-  EXPECT_EQ(want_start, packet->start());
-  EXPECT_EQ(want_end, packet->end());
+  EXPECT_EQ(want_start, packet->start_frame());
+  EXPECT_EQ(want_end, packet->end_frame());
 }
 
 TEST(SilencePaddingStageTest, NoSource) {

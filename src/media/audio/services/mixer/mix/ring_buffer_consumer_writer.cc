@@ -34,14 +34,14 @@ void RingBufferConsumerWriter::WriteInternal(int64_t start_frame, int64_t frame_
   while (start_frame < end_frame) {
     auto packet = buffer_->PrepareToWrite(start_frame, frame_count);
     if (data) {
-      stream_converter_->CopyAndClip(data, packet.payload(), packet.length());
-      data = static_cast<const char*>(data) + packet.length() * bytes_per_frame;
+      stream_converter_->CopyAndClip(data, packet.payload(), packet.frame_count());
+      data = static_cast<const char*>(data) + packet.frame_count() * bytes_per_frame;
     } else {
-      stream_converter_->WriteSilence(packet.payload(), packet.length());
+      stream_converter_->WriteSilence(packet.payload(), packet.frame_count());
     }
 
-    start_frame += packet.length();
-    frame_count -= packet.length();
+    start_frame += packet.frame_count();
+    frame_count -= packet.frame_count();
   }
 }
 

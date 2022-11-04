@@ -213,8 +213,8 @@ void TestCreateEdgeSuccess(CreateEdgeSuccessArgs args) {
   std::vector<float> source_payload(2 * kMixJobFrames);
   source->fake_pipeline_stage()->SetPacketForRead(PacketView({
       .format = kFormat,
-      .start = args.packet_start,
-      .length = 2 * kMixJobFrames,
+      .start_frame = args.packet_start,
+      .frame_count = 2 * kMixJobFrames,
       .payload = source_payload.data(),
   }));
 

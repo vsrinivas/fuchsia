@@ -108,15 +108,15 @@ bool MixerSource::Mix(MixJobContext& ctx, const TimelineFunction& dest_time_to_d
 
     if constexpr (kTracePositionEvents) {
       TRACE_DURATION("audio", "MixerSource::Mix position", "start",
-                     packet->start().Integral().Floor(), "start.frac",
-                     packet->start().Fraction().raw_value(), "length", packet->length(),
+                     packet->start_frame().Integral().Floor(), "start.frac",
+                     packet->start_frame().Fraction().raw_value(), "length", packet->frame_count(),
                      "next_source_frame", state.next_source_frame().Integral().Floor(),
                      "next_source_frame.frac", state.next_source_frame().Fraction().raw_value(),
                      "dest_frame_offset", dest_frame_offset, "dest_frame_count", dest_frame_count);
     }
 
     // We start sampling at `state.next_source_frame`, compute the frame offset for `packet`.
-    Fixed source_frame_offset = state.next_source_frame() - packet->start();
+    Fixed source_frame_offset = state.next_source_frame() - packet->start_frame();
 
     // To compute the destination frame D centered at source frame S, we use frames from a window
     // surrounding S, defined by the positive and negative filter widths. For example, if we are
@@ -135,15 +135,15 @@ bool MixerSource::Mix(MixJobContext& ctx, const TimelineFunction& dest_time_to_d
     // At this point in the code, `D = dest_frame_offset` and `S = state.next_source_frame`. This is
     // our starting point. There are two interesting cases:
     //
-    //  1. `S - 1.0 < packet->start() <= S + pos_filter_width`
+    //  1. `S - 1.0 < packet->start_frame() <= S + pos_filter_width`
     //
     //     The first packet frame can be used to produce frame D. This is the common case for
     //     continuous (i.e. gapless) streams of audio. In this case, `sampler_` has cached all
-    //     source frames in the range `[S - neg_filter_width, X - 1]`, where `X = packet->start()`.
-    //     We combine those cached frames with the first `S + pos_filter_width - X` frames from the
-    //     packet to produce D.
+    //     source frames in the range `[S - neg_filter_width, X - 1]`, where `X =
+    //     packet->start_frame()`. We combine those cached frames with the first `S +
+    //     pos_filter_width - X` frames from the packet to produce D.
     //
-    //  2. `packet->start() > S + pos_filter_width`
+    //  2. `packet->start_frame() > S + pos_filter_width`
     //
     //     The first packet frame is beyond the last frame needed to produce frame D. This means
     //     there is a gap in the source stream. Since our source is wrapped with a
@@ -153,9 +153,9 @@ bool MixerSource::Mix(MixJobContext& ctx, const TimelineFunction& dest_time_to_d
     //     range `[S - neg_filter_width, S + pos_filter_width]` are silent, and hence D is silent as
     //     well. Since `dest_frame_count` should be zeroed before we start mixing, we don't need to
     //     produce frame D. Instead we advance `dest_frame_offset` to the first frame D' whose
-    //     sampling window includes packet->start().
+    //     sampling window includes packet->start_frame().
     int64_t dest_frames_to_advance = 0;
-    if (packet->start() > state.next_source_frame() + pos_filter_width) {
+    if (packet->start_frame() > state.next_source_frame() + pos_filter_width) {
       // To illustrate:
       //
       // ```
@@ -168,15 +168,15 @@ bool MixerSource::Mix(MixJobContext& ctx, const TimelineFunction& dest_time_to_d
       //    destination stream + D +   +   +   +   +   +   +   +   +   +   + D'+   +   +   +   +
       //
       // S  = current source position (state.next_source_frame())
-      // X  = packet->start()
+      // X  = packet->start_frame()
       // D  = current destination position (dest_frame_offset)
-      // D' = first destination frame whose sampling window overlaps with packet->start()
+      // D' = first destination frame whose sampling window overlaps with packet->start_frame()
       // S' = source position after advancing to D'
       // ```
 
       // We need to advance at least this many source frames.
       const auto mix_to_packet_gap =
-          Fixed(packet->start() - state.next_source_frame() - pos_filter_width);
+          Fixed(packet->start_frame() - state.next_source_frame() - pos_filter_width);
 
       // We need to advance this many destination frames to find a D' as illustrated above, but
       // don't advance past the end of the destination buffer.
@@ -224,9 +224,9 @@ bool MixerSource::Mix(MixJobContext& ctx, const TimelineFunction& dest_time_to_d
     if (dest_frame_offset == dest_frame_count) {
       // We skipped so many frames in the destination buffer that we overran the end of the buffer,
       // which means that we are already done with this mix job. This can happen when there is a
-      // large gap between our initial source position and `packet->start()`.
+      // large gap between our initial source position and `packet->start_frame()`.
       packet->set_frames_consumed(0);
-    } else if (Fixed(source_frame_offset) - neg_filter_width >= Fixed(packet->length())) {
+    } else if (Fixed(source_frame_offset) - neg_filter_width >= Fixed(packet->frame_count())) {
       // The source packet was initially within our mix window, but after skipping destination
       // frames, it is now entirely in the past. This can only occur when down-sampling and is
       // made more likely if the rate conversion ratio is very high. In the example below, D and S
@@ -244,25 +244,25 @@ bool MixerSource::Mix(MixJobContext& ctx, const TimelineFunction& dest_time_to_d
       //                                     V                                    V
       //    destination stream +             D                  +                 D'
       // ```
-      packet->set_frames_consumed(packet->length());
+      packet->set_frames_consumed(packet->frame_count());
     } else {
       const int64_t dest_frame_offset_before_mix = dest_frame_offset;
       MixJobSubtask subtask("MixerSource::Mix");
-      sampler_->Process({packet->payload(), &source_frame_offset, packet->length()},
+      sampler_->Process({packet->payload(), &source_frame_offset, packet->frame_count()},
                         {dest_samples, &dest_frame_offset, dest_frame_count}, gain_, accumulate);
       subtask.Done();
       ctx.AddSubtaskMetrics(subtask.FinalMetrics());
 
       packet->set_frames_consumed(
-          std::min(Fixed(source_frame_offset + pos_filter_width).Floor(), packet->length()));
+          std::min(Fixed(source_frame_offset + pos_filter_width).Floor(), packet->frame_count()));
 
       // Check that we did not overflow the buffer.
       FX_CHECK(dest_frame_offset <= dest_frame_count)
           << ffl::String::DecRational
           << "dest_frame_offset(before)=" << dest_frame_offset_before_mix
           << " dest_frame_offset(after)=" << dest_frame_offset
-          << " dest_frame_count=" << dest_frame_count << " packet.start=" << packet->start()
-          << " packet.length=" << packet->length()
+          << " dest_frame_count=" << dest_frame_count << " packet.start=" << packet->start_frame()
+          << " packet.length=" << packet->frame_count()
           << " source_frame_offset(final)=" << source_frame_offset;
     }
 

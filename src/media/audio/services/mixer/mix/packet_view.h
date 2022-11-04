@@ -16,10 +16,17 @@ namespace media_audio {
 class PacketView {
  public:
   struct Args {
-    Format format;   // format of audio frames in this packet
-    Fixed start;     // starting position of the packet
-    int64_t length;  // number of frames in the packet; must be > 0
-    void* payload;   // payload buffer
+    // Format of audio frames in this packet.
+    Format format;
+
+    // Starting position of the packet.
+    Fixed start_frame;
+
+    // Number of frames in the packet. Must be > 0.
+    int64_t frame_count;
+
+    // Pointer to payload buffer.
+    void* payload;
   };
   explicit PacketView(Args args);
 
@@ -27,19 +34,19 @@ class PacketView {
   const Format& format() const { return format_; }
 
   // Reports the position of the packet's first frame.
-  Fixed start() const { return start_; }
+  Fixed start_frame() const { return start_frame_; }
 
   // Reports the position just after the packet's last frame.
-  Fixed end() const { return end_; }
+  Fixed end_frame() const { return end_frame_; }
 
   // Reports the number of frames in this packet.
-  int64_t length() const { return length_; }
+  int64_t frame_count() const { return frame_count_; }
 
   // Returns the payload of this packet.
   void* payload() const { return payload_; }
 
   // Extracts a slice of this packet.
-  // REQUIRES: 0 <= start_offset < end_offset <= length
+  // REQUIRED: 0 <= start_offset < end_offset <= frame_count
   PacketView Slice(int64_t start_offset, int64_t end_offset) const;
 
   // Intersects this packet with the given range, returning a packet that overlaps the given range,
@@ -47,50 +54,51 @@ class PacketView {
   // frame boundary and the intersection is never larger than the packet or the range.
   // That is, for every non-nullopt result:
   //
-  //   result.start = this.start + k*frame_size, for some non-negative integer k, and
-  //   length <= min(packet.length, range_length)
+  //   result.start_frame = this.start_frame + k * frame_size, for some non-negative integer k, and
+  //   frame_count <= min(packet.frame_count, range_length)
   //
   // For example:
   //
-  //   IntersectionWith(this = {.start = 0.0, .length = 10},
+  //   IntersectionWith(this = {.start_frame = 0.0, .frame_count = 10},
   //                    range_start = 1,
   //                    range_length = 2)
   //
   //   returns:
-  //     .start = 1.0
-  //     .length = 2
+  //     .start_frame = 1.0
+  //     .frame_count = 2
   //     .payload = packet.payload + 1 frame
   //
   // When the range starts or ends on a fractional frame, the intersection is shifted to include
   // complete frames. The intersection starts with the first frame in the packet that overlaps the
   // range. For example:
   //
-  //   IntersectionWith(this = {.start = 0.0, .length = 10},
+  //   IntersectionWith(this = {.start_frame = 0.0, .frame_count = 10},
   //                    range_start = 1.5,
   //                    range_length = 2);
   //
   //   returns:
-  //     .start = 1.0
-  //     .length = 2
+  //     .start_frame = 1.0
+  //     .frame_count = 2
   //     .payload = packet.payload + 1 frame
   //
   // The packet may start on a fractional frame position. For example:
   //
-  //   IntersectionWith(this = {.start = 0.9, .length = 10},
+  //   IntersectionWith(this = {.start = 0.9, .frame_count = 10},
   //                    range_start = 2.5,
   //                    range_length = 3);
   //
   //   returns:
-  //     .start = 1.9
-  //     .length = 3
+  //     .start_frame = 1.9
+  //     .frame_count = 3
   //     .payload = packet.payload + 1 frame
-  std::optional<PacketView> IntersectionWith(Fixed range_start, int64_t range_length) const;
+  std::optional<PacketView> IntersectionWith(Fixed range_start_frame,
+                                             int64_t range_frame_count) const;
 
  private:
   Format format_;
-  Fixed start_;
-  Fixed end_;
-  int64_t length_;
+  Fixed start_frame_;
+  Fixed end_frame_;
+  int64_t frame_count_;
   void* payload_;
 };
 

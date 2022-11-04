@@ -50,13 +50,13 @@ void BaseConsumerStage::CopyFromSource(MixJobContext& ctx, int64_t start_frame, 
     }
 
     // SampleAndHold: frame 1.X overlaps frame 2.0, so always round up.
-    auto packet_start_frame = packet->start().Ceiling();
+    auto packet_start_frame = packet->start_frame().Ceiling();
     if (packet_start_frame > start_frame) {
       writer_->WriteSilence(start_frame, packet_start_frame - start_frame);
     }
 
-    writer_->WriteData(packet_start_frame, packet->length(), packet->payload());
-    start_frame = packet->end().Ceiling();
+    writer_->WriteData(packet_start_frame, packet->frame_count(), packet->payload());
+    start_frame = packet->end_frame().Ceiling();
   }
 }
 

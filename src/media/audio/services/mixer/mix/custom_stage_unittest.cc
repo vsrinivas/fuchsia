@@ -355,9 +355,9 @@ class CustomStageTest : public testing::Test {
       const auto packet = custom_stage->Read(DefaultCtx(), Fixed(0), packet_frames);
       ASSERT_TRUE(packet);
       EXPECT_EQ(packet->format(), output_format);
-      EXPECT_EQ(packet->start().Floor(), 0);
-      EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
-      EXPECT_EQ(packet->length(), read_buffer_frames);
+      EXPECT_EQ(packet->start_frame().Floor(), 0);
+      EXPECT_EQ(packet->start_frame().Fraction().raw_value(), 0);
+      EXPECT_EQ(packet->frame_count(), read_buffer_frames);
 
       const auto vec = ToVector(packet->payload(), 0, read_buffer_frames * output_channels);
       EXPECT_THAT(vec, Each(FloatEq(2.0f)));
@@ -476,9 +476,9 @@ TEST_F(CustomStageTest, AddOneWithSourceOffset) {
       // so we should see 1.0s followed by 2.0s.
       const auto packet = custom_stage->Read(DefaultCtx(), Fixed(0), kPacketFrames);
       ASSERT_TRUE(packet);
-      EXPECT_EQ(packet->start().Floor(), 0);
-      EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
-      EXPECT_EQ(packet->length(), kPacketFrames);
+      EXPECT_EQ(packet->start_frame().Floor(), 0);
+      EXPECT_EQ(packet->start_frame().Fraction().raw_value(), 0);
+      EXPECT_EQ(packet->frame_count(), kPacketFrames);
 
       auto vec1 = ToVector(packet->payload(), 0, dest_offset_frames);
       auto vec2 = ToVector(packet->payload(), dest_offset_frames, kPacketFrames);
@@ -490,9 +490,9 @@ TEST_F(CustomStageTest, AddOneWithSourceOffset) {
       // Read the second packet. This should contain the remainder of the 2.0s, followed by 1.0s.
       const auto packet = custom_stage->Read(DefaultCtx(), Fixed(kPacketFrames), kPacketFrames);
       ASSERT_TRUE(packet);
-      EXPECT_EQ(packet->start().Floor(), kPacketFrames);
-      EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
-      EXPECT_EQ(packet->length(), kPacketFrames);
+      EXPECT_EQ(packet->start_frame().Floor(), kPacketFrames);
+      EXPECT_EQ(packet->start_frame().Fraction().raw_value(), 0);
+      EXPECT_EQ(packet->frame_count(), kPacketFrames);
 
       auto vec1 = ToVector(packet->payload(), 0, dest_offset_frames);
       auto vec2 = ToVector(packet->payload(), dest_offset_frames, kPacketFrames);
@@ -528,9 +528,9 @@ TEST_F(CustomStageTest, AddOneWithReadSmallerThanProcessingBuffer) {
     // Read the first packet.
     const auto packet = custom_stage->Read(DefaultCtx(), Fixed(0), 480);
     ASSERT_TRUE(packet);
-    EXPECT_EQ(packet->start().Floor(), 0);
-    EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
-    EXPECT_EQ(packet->length(), 480);
+    EXPECT_EQ(packet->start_frame().Floor(), 0);
+    EXPECT_EQ(packet->start_frame().Fraction().raw_value(), 0);
+    EXPECT_EQ(packet->frame_count(), 480);
 
     // Our effect adds 1.0, and the source packet is 1.0, so the payload should contain all 2.0.
     const auto vec = ToVector(packet->payload(), 0, 480);
@@ -543,9 +543,9 @@ TEST_F(CustomStageTest, AddOneWithReadSmallerThanProcessingBuffer) {
     // should return those 240 frames.
     const auto packet = custom_stage->Read(DefaultCtx(), Fixed(480), 480);
     ASSERT_TRUE(packet);
-    EXPECT_EQ(packet->start().Floor(), 480);
-    EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
-    EXPECT_EQ(packet->length(), 240);
+    EXPECT_EQ(packet->start_frame().Floor(), 480);
+    EXPECT_EQ(packet->start_frame().Fraction().raw_value(), 0);
+    EXPECT_EQ(packet->frame_count(), 240);
 
     // Since the source stream was silent, and our effect adds 1.0, the payload is 1.0.
     const auto vec = ToVector(packet->payload(), 0, 240);
@@ -593,9 +593,9 @@ TEST_F(CustomStageTest, AddOneWithReadSmallerThanProcessingBufferAndSourceOffset
     // Now we have data.
     const auto packet = custom_stage->Read(DefaultCtx(), Fixed(720), 480);
     ASSERT_TRUE(packet);
-    EXPECT_EQ(packet->start().Floor(), 720);
-    EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
-    EXPECT_EQ(packet->length(), 480);
+    EXPECT_EQ(packet->start_frame().Floor(), 720);
+    EXPECT_EQ(packet->start_frame().Fraction().raw_value(), 0);
+    EXPECT_EQ(packet->frame_count(), 480);
 
     // Our effect adds 1.0, and the source packet is 1.0, so the payload should contain all 2.0.
     const auto vec = ToVector(packet->payload(), 0, 480);
@@ -607,9 +607,9 @@ TEST_F(CustomStageTest, AddOneWithReadSmallerThanProcessingBufferAndSourceOffset
     // additional frames from the source. This `Read` should return those 240 frames.
     const auto packet = custom_stage->Read(DefaultCtx(), Fixed(1200), 480);
     ASSERT_TRUE(packet);
-    EXPECT_EQ(packet->start().Floor(), 1200);
-    EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
-    EXPECT_EQ(packet->length(), 240);
+    EXPECT_EQ(packet->start_frame().Floor(), 1200);
+    EXPECT_EQ(packet->start_frame().Fraction().raw_value(), 0);
+    EXPECT_EQ(packet->frame_count(), 240);
 
     // Our effect adds 1.0, and the source range is silent, so the payload should contain all 1.0s.
     const auto vec = ToVector(packet->payload(), 0, 240);
@@ -844,9 +844,9 @@ TEST_F(CustomStageTest, AddOneWithLatencyMoreThanMaxFramesPerCall) {
     // compensate for latency, 10 at a time, which should return the first 8 frames of the packet.
     const auto packet = custom_stage->Read(DefaultCtx(), Fixed(0), 10);
     ASSERT_TRUE(packet);
-    EXPECT_EQ(packet->start().Floor(), 0);
-    EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
-    EXPECT_EQ(packet->length(), 8);
+    EXPECT_EQ(packet->start_frame().Floor(), 0);
+    EXPECT_EQ(packet->start_frame().Fraction().raw_value(), 0);
+    EXPECT_EQ(packet->frame_count(), 8);
     EXPECT_THAT(ToVector(packet->payload(), 0, 8), Each(2.0f));
   }
 
@@ -854,9 +854,9 @@ TEST_F(CustomStageTest, AddOneWithLatencyMoreThanMaxFramesPerCall) {
     // Read the remaining 2 frames.
     const auto packet = custom_stage->Read(DefaultCtx(), Fixed(8), 2);
     ASSERT_TRUE(packet);
-    EXPECT_EQ(packet->start().Floor(), 8);
-    EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
-    EXPECT_EQ(packet->length(), 2);
+    EXPECT_EQ(packet->start_frame().Floor(), 8);
+    EXPECT_EQ(packet->start_frame().Fraction().raw_value(), 0);
+    EXPECT_EQ(packet->frame_count(), 2);
     EXPECT_THAT(ToVector(packet->payload(), 0, 2), Each(2.0f));
   }
 }
@@ -894,9 +894,9 @@ TEST_F(CustomStageTest, AddOneWithLatencyReadOnePacketWithOffset) {
     // starting at frame 16.
     const auto packet = custom_stage->Read(DefaultCtx(), Fixed(10), 10);
     ASSERT_TRUE(packet);
-    EXPECT_EQ(packet->start().Floor(), 15);
-    EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
-    EXPECT_EQ(packet->length(), 5);
+    EXPECT_EQ(packet->start_frame().Floor(), 15);
+    EXPECT_EQ(packet->start_frame().Fraction().raw_value(), 0);
+    EXPECT_EQ(packet->frame_count(), 5);
 
     const auto vec = ToVector(packet->payload(), 0, 5);
     EXPECT_FLOAT_EQ(vec[0], 1.0f);
@@ -910,9 +910,9 @@ TEST_F(CustomStageTest, AddOneWithLatencyReadOnePacketWithOffset) {
     // starting at frame 20.
     const auto packet = custom_stage->Read(DefaultCtx(), Fixed(20), 10);
     ASSERT_TRUE(packet);
-    EXPECT_EQ(packet->start().Floor(), 20);
-    EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
-    EXPECT_EQ(packet->length(), 8);
+    EXPECT_EQ(packet->start_frame().Floor(), 20);
+    EXPECT_EQ(packet->start_frame().Fraction().raw_value(), 0);
+    EXPECT_EQ(packet->frame_count(), 8);
 
     const auto vec = ToVector(packet->payload(), 0, 8);
     for (int i = 0; i < 5; ++i) {
@@ -925,9 +925,9 @@ TEST_F(CustomStageTest, AddOneWithLatencyReadOnePacketWithOffset) {
     // frames followed by silence.
     const auto packet = custom_stage->Read(DefaultCtx(), Fixed(28), 5);
     ASSERT_TRUE(packet);
-    EXPECT_EQ(packet->start().Floor(), 28);
-    EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
-    EXPECT_EQ(packet->length(), 5);
+    EXPECT_EQ(packet->start_frame().Floor(), 28);
+    EXPECT_EQ(packet->start_frame().Fraction().raw_value(), 0);
+    EXPECT_EQ(packet->frame_count(), 5);
 
     const auto vec = ToVector(packet->payload(), 0, 5);
     for (int i = 0; i < 3; ++i) {
@@ -966,9 +966,9 @@ TEST_F(CustomStageTest, AddOneWithLatencyReadTwoPacketsWithGaps) {
     // Read the first 10 frames, this should return the first packet's frames.
     const auto packet = custom_stage->Read(DefaultCtx(), Fixed(0), 10);
     ASSERT_TRUE(packet);
-    EXPECT_EQ(packet->start().Floor(), 0);
-    EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
-    EXPECT_EQ(packet->length(), 10);
+    EXPECT_EQ(packet->start_frame().Floor(), 0);
+    EXPECT_EQ(packet->start_frame().Fraction().raw_value(), 0);
+    EXPECT_EQ(packet->frame_count(), 10);
 
     const auto vec = ToVector(packet->payload(), 0, 10);
     for (int i = 0; i < 10; ++i) {
@@ -981,9 +981,9 @@ TEST_F(CustomStageTest, AddOneWithLatencyReadTwoPacketsWithGaps) {
     // was processed in the first read call.
     const auto packet = custom_stage->Read(DefaultCtx(), Fixed(10), 10);
     ASSERT_TRUE(packet);
-    EXPECT_EQ(packet->start().Floor(), 10);
-    EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
-    EXPECT_EQ(packet->length(), 3);
+    EXPECT_EQ(packet->start_frame().Floor(), 10);
+    EXPECT_EQ(packet->start_frame().Fraction().raw_value(), 0);
+    EXPECT_EQ(packet->frame_count(), 3);
 
     const auto vec = ToVector(packet->payload(), 0, 3);
     for (int i = 0; i < 3; ++i) {
@@ -997,9 +997,9 @@ TEST_F(CustomStageTest, AddOneWithLatencyReadTwoPacketsWithGaps) {
     // frames contain the first 8 frames of the second packet.
     const auto packet = custom_stage->Read(DefaultCtx(), Fixed(13), 7);
     ASSERT_TRUE(packet);
-    EXPECT_EQ(packet->start().Floor(), 13);
-    EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
-    EXPECT_EQ(packet->length(), 7);
+    EXPECT_EQ(packet->start_frame().Floor(), 13);
+    EXPECT_EQ(packet->start_frame().Fraction().raw_value(), 0);
+    EXPECT_EQ(packet->frame_count(), 7);
 
     const auto vec = ToVector(packet->payload(), 0, 7);
     for (int i = 0; i < 7; ++i) {
@@ -1011,9 +1011,9 @@ TEST_F(CustomStageTest, AddOneWithLatencyReadTwoPacketsWithGaps) {
     // Read the next 10 frames, this should return the cached first 8 frames of the second packet.
     const auto packet = custom_stage->Read(DefaultCtx(), Fixed(20), 30);
     ASSERT_TRUE(packet);
-    EXPECT_EQ(packet->start().Floor(), 20);
-    EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
-    EXPECT_EQ(packet->length(), 8);
+    EXPECT_EQ(packet->start_frame().Floor(), 20);
+    EXPECT_EQ(packet->start_frame().Fraction().raw_value(), 0);
+    EXPECT_EQ(packet->frame_count(), 8);
 
     const auto vec = ToVector(packet->payload(), 0, 8);
     for (int i = 0; i < 8; ++i) {
@@ -1044,9 +1044,9 @@ TEST_F(CustomStageTest, AddOneWithLatencyAndRingout) {
     // Read first 10 frames, which should return silence.
     const auto packet = custom_stage->Read(DefaultCtx(), Fixed(0), 10);
     ASSERT_TRUE(packet);
-    EXPECT_EQ(packet->start().Floor(), 0);
-    EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
-    EXPECT_EQ(packet->length(), 10);
+    EXPECT_EQ(packet->start_frame().Floor(), 0);
+    EXPECT_EQ(packet->start_frame().Fraction().raw_value(), 0);
+    EXPECT_EQ(packet->frame_count(), 10);
     EXPECT_THAT(ToVector(packet->payload(), 0, 10), Each(1.0f));
   }
 
@@ -1055,9 +1055,9 @@ TEST_F(CustomStageTest, AddOneWithLatencyAndRingout) {
     // the impulse followed by 5 ring out frames.
     const auto packet = custom_stage->Read(DefaultCtx(), Fixed(10), 10);
     ASSERT_TRUE(packet);
-    EXPECT_EQ(packet->start().Floor(), 10);
-    EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
-    EXPECT_EQ(packet->length(), 6);
+    EXPECT_EQ(packet->start_frame().Floor(), 10);
+    EXPECT_EQ(packet->start_frame().Fraction().raw_value(), 0);
+    EXPECT_EQ(packet->frame_count(), 6);
 
     const auto vec = ToVector(packet->payload(), 0, 6);
     EXPECT_FLOAT_EQ(vec[0], 2.0f);
@@ -1070,9 +1070,9 @@ TEST_F(CustomStageTest, AddOneWithLatencyAndRingout) {
     // Read 10 more frames which should return the remaining 10 ring out frames.
     const auto packet = custom_stage->Read(DefaultCtx(), Fixed(16), 10);
     ASSERT_TRUE(packet);
-    EXPECT_EQ(packet->start().Floor(), 16);
-    EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
-    EXPECT_EQ(packet->length(), 10);
+    EXPECT_EQ(packet->start_frame().Floor(), 16);
+    EXPECT_EQ(packet->start_frame().Fraction().raw_value(), 0);
+    EXPECT_EQ(packet->frame_count(), 10);
     EXPECT_THAT(ToVector(packet->payload(), 0, 10), Each(-1.0f));
   }
 

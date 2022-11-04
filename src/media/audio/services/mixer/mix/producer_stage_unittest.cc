@@ -102,8 +102,8 @@ class ProducerStageTestWithPacketQueue : public ::testing::Test {
         : payload(length, 0.0f),
           view({
               .format = kFormat,
-              .start = Fixed(start),
-              .length = length,
+              .start_frame = Fixed(start),
+              .frame_count = length,
               .payload = payload.data(),
           }) {}
 
@@ -144,9 +144,9 @@ TEST_F(ProducerStageTestWithPacketQueue, ReadWhileStarted) {
     // Packet #0
     const auto buffer = producer.Read(DefaultCtx(), Fixed(0), 20);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(0, buffer->start());
-    EXPECT_EQ(20, buffer->length());
-    EXPECT_EQ(20, buffer->end());
+    EXPECT_EQ(0, buffer->start_frame());
+    EXPECT_EQ(20, buffer->frame_count());
+    EXPECT_EQ(20, buffer->end_frame());
     EXPECT_EQ(payload_0, buffer->payload());
   }
   EXPECT_THAT(released_packets(), ElementsAre(0));
@@ -155,9 +155,9 @@ TEST_F(ProducerStageTestWithPacketQueue, ReadWhileStarted) {
     // Packet #1
     const auto buffer = producer.Read(DefaultCtx(), Fixed(20), 20);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(20, buffer->start());
-    EXPECT_EQ(20, buffer->length());
-    EXPECT_EQ(40, buffer->end());
+    EXPECT_EQ(20, buffer->start_frame());
+    EXPECT_EQ(20, buffer->frame_count());
+    EXPECT_EQ(40, buffer->end_frame());
     EXPECT_EQ(payload_1, buffer->payload());
   }
   EXPECT_THAT(released_packets(), ElementsAre(0, 1));
@@ -169,9 +169,9 @@ TEST_F(ProducerStageTestWithPacketQueue, ReadWhileStarted) {
     // Packet #2
     const auto buffer = producer.Read(DefaultCtx(), Fixed(40), 20);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(40, buffer->start());
-    EXPECT_EQ(20, buffer->length());
-    EXPECT_EQ(60, buffer->end());
+    EXPECT_EQ(40, buffer->start_frame());
+    EXPECT_EQ(20, buffer->frame_count());
+    EXPECT_EQ(60, buffer->end_frame());
     EXPECT_EQ(payload_2, buffer->payload());
   }
   EXPECT_THAT(released_packets(), ElementsAre(0, 1, 2));
@@ -200,9 +200,9 @@ TEST_F(ProducerStageTestWithPacketQueue, ReadAfterClearWhileStarted) {
     // This should return packet #3.
     const auto buffer = producer.Read(DefaultCtx(), Fixed(40), 40);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(60, buffer->start());
-    EXPECT_EQ(20, buffer->length());
-    EXPECT_EQ(80, buffer->end());
+    EXPECT_EQ(60, buffer->start_frame());
+    EXPECT_EQ(20, buffer->frame_count());
+    EXPECT_EQ(80, buffer->end_frame());
     EXPECT_EQ(payload_3, buffer->payload());
   }
   EXPECT_THAT(released_packets(), ElementsAre(0, 1, 2, 3));
@@ -212,9 +212,9 @@ TEST_F(ProducerStageTestWithPacketQueue, ReadAfterClearWhileStarted) {
     // Packet #5.
     const auto buffer = producer.Read(DefaultCtx(), Fixed(80), 20);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(80, buffer->start());
-    EXPECT_EQ(20, buffer->length());
-    EXPECT_EQ(100, buffer->end());
+    EXPECT_EQ(80, buffer->start_frame());
+    EXPECT_EQ(20, buffer->frame_count());
+    EXPECT_EQ(100, buffer->end_frame());
     EXPECT_EQ(payload_4, buffer->payload());
   }
 }
@@ -286,9 +286,9 @@ TEST_F(ProducerStageTestWithPacketQueue, AdvanceWhileStopped) {
   {
     const auto buffer = producer.Read(DefaultCtx(), Fixed(21), 20);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(21, buffer->start());
-    EXPECT_EQ(19, buffer->length());
-    EXPECT_EQ(40, buffer->end());
+    EXPECT_EQ(21, buffer->start_frame());
+    EXPECT_EQ(19, buffer->frame_count());
+    EXPECT_EQ(40, buffer->end_frame());
   }
   EXPECT_THAT(released_packets(), ElementsAre(0, 1));
 }
@@ -309,9 +309,9 @@ TEST_F(ProducerStageTestWithPacketQueue, StartAfterRead) {
   {
     const auto buffer = producer.Read(DefaultCtx(), Fixed(0), 100);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(48, buffer->start());
-    EXPECT_EQ(52, buffer->length());
-    EXPECT_EQ(100, buffer->end());
+    EXPECT_EQ(48, buffer->start_frame());
+    EXPECT_EQ(52, buffer->frame_count());
+    EXPECT_EQ(100, buffer->end_frame());
   }
   EXPECT_THAT(released_packets(), ElementsAre(0));
 }
@@ -333,9 +333,9 @@ TEST_F(ProducerStageTestWithPacketQueue, StopAfterRead) {
   {
     const auto buffer = producer.Read(DefaultCtx(), Fixed(0), 100);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(0, buffer->start());
-    EXPECT_EQ(50, buffer->length());
-    EXPECT_EQ(50, buffer->end());
+    EXPECT_EQ(0, buffer->start_frame());
+    EXPECT_EQ(50, buffer->frame_count());
+    EXPECT_EQ(50, buffer->end_frame());
   }
 
   // Nothing released because the packet was not fully consumed.
@@ -387,9 +387,9 @@ void ProducerStageTestWithPacketQueue::TestInternalFramesOffsetBehind() {
   {
     const auto buffer = producer.Read(DefaultCtx(), Fixed(48), 20);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(48, buffer->start());
-    EXPECT_EQ(20, buffer->length());
-    EXPECT_EQ(68, buffer->end());
+    EXPECT_EQ(48, buffer->start_frame());
+    EXPECT_EQ(20, buffer->frame_count());
+    EXPECT_EQ(68, buffer->end_frame());
     EXPECT_EQ(payload_0, buffer->payload());
   }
   EXPECT_THAT(released_packets(), ElementsAre(0));
@@ -433,9 +433,9 @@ void ProducerStageTestWithPacketQueue::TestInternalFramesOffsetAhead() {
   {
     const auto buffer = producer.Read(DefaultCtx(), Fixed(0), 20);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(0, buffer->start());
-    EXPECT_EQ(20, buffer->length());
-    EXPECT_EQ(20, buffer->end());
+    EXPECT_EQ(0, buffer->start_frame());
+    EXPECT_EQ(20, buffer->frame_count());
+    EXPECT_EQ(20, buffer->end_frame());
     EXPECT_EQ(payload_1, buffer->payload());
   }
   EXPECT_THAT(released_packets(), ElementsAre(0, 1));
@@ -461,9 +461,9 @@ TEST_F(ProducerStageTestWithPacketQueue, DownstreamFramesUpdatedAfterPush) {
   {
     const auto buffer = producer.Read(DefaultCtx(), Fixed(0), 20);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(0, buffer->start());
-    EXPECT_EQ(20, buffer->length());
-    EXPECT_EQ(20, buffer->end());
+    EXPECT_EQ(0, buffer->start_frame());
+    EXPECT_EQ(20, buffer->frame_count());
+    EXPECT_EQ(20, buffer->end_frame());
     EXPECT_EQ(payload_1, buffer->payload());
   }
   EXPECT_THAT(released_packets(), ElementsAre(0, 1));
@@ -529,9 +529,9 @@ TEST_F(ProducerStageTestWithRingBuffer, ReadWhileStarted) {
   {
     const auto buffer = producer.Read(DefaultCtx(), Fixed(0), 10);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(buffer->start(), 0);
-    EXPECT_EQ(buffer->length(), 10);
-    EXPECT_EQ(buffer->end(), 10);
+    EXPECT_EQ(buffer->start_frame(), 0);
+    EXPECT_EQ(buffer->frame_count(), 10);
+    EXPECT_EQ(buffer->end_frame(), 10);
     EXPECT_EQ(buffer->payload(), RingBufferAt(10));
   }
 
@@ -540,9 +540,9 @@ TEST_F(ProducerStageTestWithRingBuffer, ReadWhileStarted) {
     set_safe_read_frame(130);
     const auto buffer = producer.Read(DefaultCtx(), Fixed(110), 10);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(buffer->start(), 110);
-    EXPECT_EQ(buffer->length(), 10);
-    EXPECT_EQ(buffer->end(), 120);
+    EXPECT_EQ(buffer->start_frame(), 110);
+    EXPECT_EQ(buffer->frame_count(), 10);
+    EXPECT_EQ(buffer->end_frame(), 120);
     EXPECT_EQ(buffer->payload(), RingBufferAt(120));
     // This is intended to test wrap-around.
     static_assert(110 > kRingBufferFrames);
@@ -562,9 +562,9 @@ TEST_F(ProducerStageTestWithRingBuffer, StartAfterRead) {
   {
     const auto buffer = producer.Read(DefaultCtx(), Fixed(0), 50);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(buffer->start(), 48);
-    EXPECT_EQ(buffer->length(), 2);
-    EXPECT_EQ(buffer->end(), 50);
+    EXPECT_EQ(buffer->start_frame(), 48);
+    EXPECT_EQ(buffer->frame_count(), 2);
+    EXPECT_EQ(buffer->end_frame(), 50);
     EXPECT_EQ(buffer->payload(), RingBufferAt(48));
   }
 }

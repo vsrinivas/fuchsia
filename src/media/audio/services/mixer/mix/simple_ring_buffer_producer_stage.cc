@@ -32,7 +32,7 @@ std::optional<PipelineStage::Packet> SimpleRingBufferProducerStage::ReadImpl(Mix
                                                                              int64_t frame_count) {
   // We don't need to cache the returned packet since we don't generate any data dynamically.
   auto packet = buffer_->Read(start_frame.Floor(), frame_count);
-  return MakeUncachedPacket(packet.start(), packet.length(), packet.payload());
+  return MakeUncachedPacket(packet.start_frame(), packet.frame_count(), packet.payload());
 }
 
 }  // namespace media_audio

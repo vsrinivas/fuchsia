@@ -68,8 +68,8 @@ class SimplePacketQueueProducerStageTest : public ::testing::Test {
         : payload(length, 0.0f),
           view({
               .format = kFormat,
-              .start = Fixed(start),
-              .length = length,
+              .start_frame = Fixed(start),
+              .frame_count = length,
               .payload = payload.data(),
           }) {}
 
@@ -130,9 +130,9 @@ TEST_F(SimplePacketQueueProducerStageTest, Read) {
     // Packet #0:
     const auto buffer = packet_queue.Read(DefaultCtx(), Fixed(0), 20);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(0, buffer->start());
-    EXPECT_EQ(20, buffer->length());
-    EXPECT_EQ(20, buffer->end());
+    EXPECT_EQ(0, buffer->start_frame());
+    EXPECT_EQ(20, buffer->frame_count());
+    EXPECT_EQ(20, buffer->end_frame());
     EXPECT_EQ(payload_0, buffer->payload());
     EXPECT_FALSE(packet_queue.empty());
   }
@@ -143,9 +143,9 @@ TEST_F(SimplePacketQueueProducerStageTest, Read) {
     // Packet #1:
     const auto buffer = packet_queue.Read(DefaultCtx(), Fixed(20), 20);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(20, buffer->start());
-    EXPECT_EQ(20, buffer->length());
-    EXPECT_EQ(40, buffer->end());
+    EXPECT_EQ(20, buffer->start_frame());
+    EXPECT_EQ(20, buffer->frame_count());
+    EXPECT_EQ(40, buffer->end_frame());
     EXPECT_EQ(payload_1, buffer->payload());
     EXPECT_FALSE(packet_queue.empty());
   }
@@ -156,9 +156,9 @@ TEST_F(SimplePacketQueueProducerStageTest, Read) {
     // Packet #2:
     const auto buffer = packet_queue.Read(DefaultCtx(), Fixed(40), 20);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(40, buffer->start());
-    EXPECT_EQ(20, buffer->length());
-    EXPECT_EQ(60, buffer->end());
+    EXPECT_EQ(40, buffer->start_frame());
+    EXPECT_EQ(20, buffer->frame_count());
+    EXPECT_EQ(60, buffer->end_frame());
     EXPECT_EQ(payload_2, buffer->payload());
     EXPECT_FALSE(packet_queue.empty());
   }
@@ -182,9 +182,9 @@ TEST_F(SimplePacketQueueProducerStageTest, ReadMultiplePerPacket) {
     // Read the first 10 bytes of the packet.
     const auto buffer = packet_queue.Read(DefaultCtx(), Fixed(0), 10);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(0, buffer->start());
-    EXPECT_EQ(10, buffer->length());
-    EXPECT_EQ(10, buffer->end());
+    EXPECT_EQ(0, buffer->start_frame());
+    EXPECT_EQ(10, buffer->frame_count());
+    EXPECT_EQ(10, buffer->end_frame());
     EXPECT_EQ(payload, buffer->payload());
     EXPECT_FALSE(packet_queue.empty());
   }
@@ -195,9 +195,9 @@ TEST_F(SimplePacketQueueProducerStageTest, ReadMultiplePerPacket) {
     // Read the next 10 bytes of the packet.
     const auto buffer = packet_queue.Read(DefaultCtx(), Fixed(10), 10);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(10, buffer->start());
-    EXPECT_EQ(10, buffer->length());
-    EXPECT_EQ(20, buffer->end());
+    EXPECT_EQ(10, buffer->start_frame());
+    EXPECT_EQ(10, buffer->frame_count());
+    EXPECT_EQ(20, buffer->end_frame());
     EXPECT_EQ(static_cast<const uint8_t*>(payload) + 10 * bytes_per_frame, buffer->payload());
     EXPECT_FALSE(packet_queue.empty());
   }
@@ -222,8 +222,8 @@ TEST_F(SimplePacketQueueProducerStageTest, ReadNotFullyConsumed) {
     // Pop, consume 0/20 bytes.
     auto buffer = packet_queue.Read(DefaultCtx(), Fixed(0), 20);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(0, buffer->start());
-    EXPECT_EQ(20, buffer->length());
+    EXPECT_EQ(0, buffer->start_frame());
+    EXPECT_EQ(20, buffer->frame_count());
     buffer->set_frames_consumed(0);
   }
   EXPECT_FALSE(packet_queue.empty());
@@ -233,8 +233,8 @@ TEST_F(SimplePacketQueueProducerStageTest, ReadNotFullyConsumed) {
     // Pop, consume 5/20 bytes.
     auto buffer = packet_queue.Read(DefaultCtx(), Fixed(0), 20);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(0, buffer->start());
-    EXPECT_EQ(20, buffer->length());
+    EXPECT_EQ(0, buffer->start_frame());
+    EXPECT_EQ(20, buffer->frame_count());
     buffer->set_frames_consumed(5);
   }
   EXPECT_FALSE(packet_queue.empty());
@@ -244,8 +244,8 @@ TEST_F(SimplePacketQueueProducerStageTest, ReadNotFullyConsumed) {
     // Pop again, consume 10/15 bytes.
     auto buffer = packet_queue.Read(DefaultCtx(), Fixed(5), 20);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(5, buffer->start());
-    EXPECT_EQ(15, buffer->length());
+    EXPECT_EQ(5, buffer->start_frame());
+    EXPECT_EQ(15, buffer->frame_count());
     buffer->set_frames_consumed(10);
   }
   EXPECT_FALSE(packet_queue.empty());
@@ -255,8 +255,8 @@ TEST_F(SimplePacketQueueProducerStageTest, ReadNotFullyConsumed) {
     // Pop again, this time consume it fully.
     auto buffer = packet_queue.Read(DefaultCtx(), Fixed(15), 20);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(15, buffer->start());
-    EXPECT_EQ(5, buffer->length());
+    EXPECT_EQ(15, buffer->start_frame());
+    EXPECT_EQ(5, buffer->frame_count());
     buffer->set_frames_consumed(5);
   }
   EXPECT_FALSE(packet_queue.empty());
@@ -284,9 +284,9 @@ TEST_F(SimplePacketQueueProducerStageTest, ReadSkipsOverPacket) {
     // Ask for packet 0.
     const auto buffer = packet_queue.Read(DefaultCtx(), Fixed(0), 20);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(0, buffer->start());
-    EXPECT_EQ(20, buffer->length());
-    EXPECT_EQ(20, buffer->end());
+    EXPECT_EQ(0, buffer->start_frame());
+    EXPECT_EQ(20, buffer->frame_count());
+    EXPECT_EQ(20, buffer->end_frame());
   }
   EXPECT_FALSE(packet_queue.empty());
   EXPECT_THAT(released_packets(), ElementsAre(0));
@@ -295,9 +295,9 @@ TEST_F(SimplePacketQueueProducerStageTest, ReadSkipsOverPacket) {
     // Ask for packet 2, skipping over packet 1.
     const auto buffer = packet_queue.Read(DefaultCtx(), Fixed(40), 20);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(40, buffer->start());
-    EXPECT_EQ(20, buffer->length());
-    EXPECT_EQ(60, buffer->end());
+    EXPECT_EQ(40, buffer->start_frame());
+    EXPECT_EQ(20, buffer->frame_count());
+    EXPECT_EQ(60, buffer->end_frame());
   }
   EXPECT_TRUE(packet_queue.empty());
   EXPECT_THAT(released_packets(), ElementsAre(0, 1, 2));
@@ -392,8 +392,8 @@ TEST_F(SimplePacketQueueProducerStageTest, ReportUnderflow) {
     reported_underflows.clear();
     const auto buffer = packet_queue.Read(DefaultCtx(), Fixed(kFrameAt20ms), kPacketSize);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(kFrameAt20ms, buffer->start());
-    EXPECT_EQ(kPacketSize / 2, buffer->length());
+    EXPECT_EQ(kFrameAt20ms, buffer->start_frame());
+    EXPECT_EQ(kPacketSize / 2, buffer->frame_count());
     EXPECT_THAT(reported_underflows, ElementsAre(zx::msec(15), zx::msec(5)));
   }
   // After packet is released, the queue should be empty.

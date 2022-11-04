@@ -108,8 +108,8 @@ TEST_F(SplitterConsumerStageTest, FillBuffer) {
     EXPECT_EQ(consumer().end_of_last_fill(), 8);
 
     auto packet = ring_buffer().Read(0, 11);
-    ASSERT_EQ(packet.start(), 0);
-    ASSERT_EQ(packet.end(), 11);
+    ASSERT_EQ(packet.start_frame(), 0);
+    ASSERT_EQ(packet.end_frame(), 11);
 
     // Last two samples are not filled in yet.
     std::vector<int32_t> samples(static_cast<int32_t*>(packet.payload()),
@@ -130,8 +130,8 @@ TEST_F(SplitterConsumerStageTest, FillBuffer) {
     EXPECT_EQ(consumer().end_of_last_fill(), 10);
 
     auto packet = ring_buffer().Read(0, 11);
-    ASSERT_EQ(packet.start(), 0);
-    ASSERT_EQ(packet.end(), 11);
+    ASSERT_EQ(packet.start_frame(), 0);
+    ASSERT_EQ(packet.end_frame(), 11);
 
     // Samples 8 and 9 are added.
     std::vector<int32_t> samples(static_cast<int32_t*>(packet.payload()),

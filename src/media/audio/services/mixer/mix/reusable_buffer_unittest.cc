@@ -27,30 +27,34 @@ TEST(ReusableBufferTest, AppendDataOneChan) {
 
   // Starts empty.
   // Can call these before Reset().
-  EXPECT_EQ(buffer.length(), 0);
+  EXPECT_EQ(buffer.frame_count(), 0);
   EXPECT_EQ(buffer.capacity(), 20);
   EXPECT_TRUE(buffer.empty());
 
   // Must call these after Reset().
   buffer.Reset(Fixed(0));
-  EXPECT_EQ(buffer.start(), Fixed(0));
-  EXPECT_EQ(buffer.end(), Fixed(0));
-  EXPECT_EQ(buffer.length(), 0);
+  EXPECT_EQ(buffer.start_frame(), Fixed(0));
+  EXPECT_EQ(buffer.end_frame(), Fixed(0));
+  EXPECT_EQ(buffer.frame_count(), 0);
   EXPECT_TRUE(buffer.empty());
 
   buffer.AppendData(Fixed(0), static_cast<int64_t>(payload1.size()), payload1.data());
-  EXPECT_EQ(buffer.start(), Fixed(0)) << "start = " << ffl::String(buffer.start()).c_str();
-  EXPECT_EQ(buffer.end(), Fixed(5)) << "end = " << ffl::String(buffer.end()).c_str();
-  EXPECT_EQ(buffer.length(), 5);
+  EXPECT_EQ(buffer.start_frame(), Fixed(0))
+      << "start_frame = " << ffl::String(buffer.start_frame()).c_str();
+  EXPECT_EQ(buffer.end_frame(), Fixed(5))
+      << "end_frame = " << ffl::String(buffer.end_frame()).c_str();
+  EXPECT_EQ(buffer.frame_count(), 5);
   EXPECT_FALSE(buffer.empty());
   EXPECT_EQ(reinterpret_cast<int16_t*>(buffer.payload())[0], 1);
   EXPECT_EQ(reinterpret_cast<int16_t*>(buffer.payload())[4], 5);
 
   // Append without a gap.
   buffer.AppendData(Fixed(5), static_cast<int64_t>(payload2.size()), payload2.data());
-  EXPECT_EQ(buffer.start(), Fixed(0)) << "start = " << ffl::String(buffer.start()).c_str();
-  EXPECT_EQ(buffer.end(), Fixed(10)) << "end = " << ffl::String(buffer.end()).c_str();
-  EXPECT_EQ(buffer.length(), 10);
+  EXPECT_EQ(buffer.start_frame(), Fixed(0))
+      << "start_frame = " << ffl::String(buffer.start_frame()).c_str();
+  EXPECT_EQ(buffer.end_frame(), Fixed(10))
+      << "end_frame = " << ffl::String(buffer.end_frame()).c_str();
+  EXPECT_EQ(buffer.frame_count(), 10);
   EXPECT_FALSE(buffer.empty());
   EXPECT_EQ(reinterpret_cast<int16_t*>(buffer.payload())[0], 1);
   EXPECT_EQ(reinterpret_cast<int16_t*>(buffer.payload())[4], 5);
@@ -59,9 +63,11 @@ TEST(ReusableBufferTest, AppendDataOneChan) {
 
   // Append with a gap.
   buffer.AppendData(Fixed(15), static_cast<int64_t>(payload3.size()), payload3.data());
-  EXPECT_EQ(buffer.start(), Fixed(0)) << "start = " << ffl::String(buffer.start()).c_str();
-  EXPECT_EQ(buffer.end(), Fixed(20)) << "end = " << ffl::String(buffer.end()).c_str();
-  EXPECT_EQ(buffer.length(), 20);
+  EXPECT_EQ(buffer.start_frame(), Fixed(0))
+      << "start_frame = " << ffl::String(buffer.start_frame()).c_str();
+  EXPECT_EQ(buffer.end_frame(), Fixed(20))
+      << "end_frame = " << ffl::String(buffer.end_frame()).c_str();
+  EXPECT_EQ(buffer.frame_count(), 20);
   EXPECT_FALSE(buffer.empty());
   EXPECT_EQ(reinterpret_cast<int16_t*>(buffer.payload())[0], 1);
   EXPECT_EQ(reinterpret_cast<int16_t*>(buffer.payload())[4], 5);
@@ -78,23 +84,27 @@ TEST(ReusableBufferTest, AppendSilenceOneChan) {
   std::vector<int16_t> payload{1, 2, 3, 4, 5};
 
   buffer.Reset(Fixed(0));
-  EXPECT_EQ(buffer.start(), Fixed(0));
-  EXPECT_EQ(buffer.end(), Fixed(0));
-  EXPECT_EQ(buffer.length(), 0);
+  EXPECT_EQ(buffer.start_frame(), Fixed(0));
+  EXPECT_EQ(buffer.end_frame(), Fixed(0));
+  EXPECT_EQ(buffer.frame_count(), 0);
   EXPECT_TRUE(buffer.empty());
 
   buffer.AppendSilence(Fixed(0), 5);
-  EXPECT_EQ(buffer.start(), Fixed(0)) << "start = " << ffl::String(buffer.start()).c_str();
-  EXPECT_EQ(buffer.end(), Fixed(5)) << "end = " << ffl::String(buffer.end()).c_str();
-  EXPECT_EQ(buffer.length(), 5);
+  EXPECT_EQ(buffer.start_frame(), Fixed(0))
+      << "start_frame = " << ffl::String(buffer.start_frame()).c_str();
+  EXPECT_EQ(buffer.end_frame(), Fixed(5))
+      << "end_frame = " << ffl::String(buffer.end_frame()).c_str();
+  EXPECT_EQ(buffer.frame_count(), 5);
   EXPECT_FALSE(buffer.empty());
   EXPECT_EQ(reinterpret_cast<int16_t*>(buffer.payload())[0], 0);
   EXPECT_EQ(reinterpret_cast<int16_t*>(buffer.payload())[4], 0);
 
   buffer.AppendData(Fixed(5), static_cast<int64_t>(payload.size()), payload.data());
-  EXPECT_EQ(buffer.start(), Fixed(0)) << "start = " << ffl::String(buffer.start()).c_str();
-  EXPECT_EQ(buffer.end(), Fixed(10)) << "end = " << ffl::String(buffer.end()).c_str();
-  EXPECT_EQ(buffer.length(), 10);
+  EXPECT_EQ(buffer.start_frame(), Fixed(0))
+      << "start_frame = " << ffl::String(buffer.start_frame()).c_str();
+  EXPECT_EQ(buffer.end_frame(), Fixed(10))
+      << "end_frame = " << ffl::String(buffer.end_frame()).c_str();
+  EXPECT_EQ(buffer.frame_count(), 10);
   EXPECT_FALSE(buffer.empty());
   EXPECT_EQ(reinterpret_cast<int16_t*>(buffer.payload())[0], 0);
   EXPECT_EQ(reinterpret_cast<int16_t*>(buffer.payload())[4], 0);
@@ -104,9 +114,11 @@ TEST(ReusableBufferTest, AppendSilenceOneChan) {
   // Skip [10, 15).
   buffer.AppendSilence(Fixed(15), 5);
   buffer.AppendSilence(Fixed(20), 5);
-  EXPECT_EQ(buffer.start(), Fixed(0)) << "start = " << ffl::String(buffer.start()).c_str();
-  EXPECT_EQ(buffer.end(), Fixed(25)) << "end = " << ffl::String(buffer.end()).c_str();
-  EXPECT_EQ(buffer.length(), 25);
+  EXPECT_EQ(buffer.start_frame(), Fixed(0))
+      << "start_frame = " << ffl::String(buffer.start_frame()).c_str();
+  EXPECT_EQ(buffer.end_frame(), Fixed(25))
+      << "end_frame = " << ffl::String(buffer.end_frame()).c_str();
+  EXPECT_EQ(buffer.frame_count(), 25);
   EXPECT_FALSE(buffer.empty());
   EXPECT_EQ(reinterpret_cast<int16_t*>(buffer.payload())[0], 0);
   EXPECT_EQ(reinterpret_cast<int16_t*>(buffer.payload())[4], 0);
@@ -126,25 +138,29 @@ TEST(ReusableBufferTest, AppendTwoChan) {
 
   // Starts empty.
   buffer.Reset(Fixed(0));
-  EXPECT_EQ(buffer.start(), Fixed(0));
-  EXPECT_EQ(buffer.end(), Fixed(0));
-  EXPECT_EQ(buffer.length(), 0);
+  EXPECT_EQ(buffer.start_frame(), Fixed(0));
+  EXPECT_EQ(buffer.end_frame(), Fixed(0));
+  EXPECT_EQ(buffer.frame_count(), 0);
   EXPECT_TRUE(buffer.empty());
 
   // Append data.
   buffer.AppendData(Fixed(0), 2, payload1.data());
-  EXPECT_EQ(buffer.start(), Fixed(0)) << "start = " << ffl::String(buffer.start()).c_str();
-  EXPECT_EQ(buffer.end(), Fixed(2)) << "end = " << ffl::String(buffer.end()).c_str();
-  EXPECT_EQ(buffer.length(), 2);
+  EXPECT_EQ(buffer.start_frame(), Fixed(0))
+      << "start_frame = " << ffl::String(buffer.start_frame()).c_str();
+  EXPECT_EQ(buffer.end_frame(), Fixed(2))
+      << "end_frame = " << ffl::String(buffer.end_frame()).c_str();
+  EXPECT_EQ(buffer.frame_count(), 2);
   EXPECT_FALSE(buffer.empty());
   EXPECT_EQ(reinterpret_cast<int16_t*>(buffer.payload())[0], 1);
   EXPECT_EQ(reinterpret_cast<int16_t*>(buffer.payload())[3], 4);
 
   // Append silence.
   buffer.AppendSilence(Fixed(2), 2);
-  EXPECT_EQ(buffer.start(), Fixed(0)) << "start = " << ffl::String(buffer.start()).c_str();
-  EXPECT_EQ(buffer.end(), Fixed(4)) << "end = " << ffl::String(buffer.end()).c_str();
-  EXPECT_EQ(buffer.length(), 4);
+  EXPECT_EQ(buffer.start_frame(), Fixed(0))
+      << "start_frame = " << ffl::String(buffer.start_frame()).c_str();
+  EXPECT_EQ(buffer.end_frame(), Fixed(4))
+      << "end_frame = " << ffl::String(buffer.end_frame()).c_str();
+  EXPECT_EQ(buffer.frame_count(), 4);
   EXPECT_FALSE(buffer.empty());
   EXPECT_EQ(reinterpret_cast<int16_t*>(buffer.payload())[0], 1);
   EXPECT_EQ(reinterpret_cast<int16_t*>(buffer.payload())[3], 4);
@@ -160,9 +176,9 @@ TEST(ReusableBufferTest, AppendResetAppend) {
     SCOPED_TRACE(fxl::StringPrintf("reset#%d", k));
 
     buffer.Reset(Fixed(0));
-    EXPECT_EQ(buffer.start(), Fixed(0));
-    EXPECT_EQ(buffer.end(), Fixed(0));
-    EXPECT_EQ(buffer.length(), 0);
+    EXPECT_EQ(buffer.start_frame(), Fixed(0));
+    EXPECT_EQ(buffer.end_frame(), Fixed(0));
+    EXPECT_EQ(buffer.frame_count(), 0);
 
     if (k == 0) {
       buffer.AppendData(Fixed(0), static_cast<int64_t>(payload.size()), payload.data());
@@ -170,9 +186,11 @@ TEST(ReusableBufferTest, AppendResetAppend) {
       buffer.AppendSilence(Fixed(0), 5);
     }
 
-    EXPECT_EQ(buffer.start(), Fixed(0)) << "start = " << ffl::String(buffer.start()).c_str();
-    EXPECT_EQ(buffer.end(), Fixed(5)) << "end = " << ffl::String(buffer.end()).c_str();
-    EXPECT_EQ(buffer.length(), 5);
+    EXPECT_EQ(buffer.start_frame(), Fixed(0))
+        << "start_frame = " << ffl::String(buffer.start_frame()).c_str();
+    EXPECT_EQ(buffer.end_frame(), Fixed(5))
+        << "end_frame = " << ffl::String(buffer.end_frame()).c_str();
+    EXPECT_EQ(buffer.frame_count(), 5);
     EXPECT_FALSE(buffer.empty());
     EXPECT_EQ(reinterpret_cast<int16_t*>(buffer.payload())[0], (k == 0) ? 1 : 0);
     EXPECT_EQ(reinterpret_cast<int16_t*>(buffer.payload())[4], (k == 0) ? 5 : 0);

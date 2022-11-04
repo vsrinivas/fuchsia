@@ -150,8 +150,8 @@ TEST_F(SplitterProducerStageTest, Read) {
         TimelineFunction(0, 0, kFormat.frac_frames_per_ns()));
 
     auto packet = producer1->Read(ctx, Fixed(0), 5);
-    EXPECT_EQ(packet->start(), Fixed(0));
-    EXPECT_EQ(packet->end(), Fixed(5));
+    EXPECT_EQ(packet->start_frame(), Fixed(0));
+    EXPECT_EQ(packet->end_frame(), Fixed(5));
 
     std::vector<int32_t> samples(static_cast<int32_t*>(packet->payload()),
                                  static_cast<int32_t*>(packet->payload()) + 5);
@@ -168,8 +168,8 @@ TEST_F(SplitterProducerStageTest, Read) {
 
     auto packet = producer2->Read(ctx, Fixed(50), 5);  // producer2 is offset by 50 frames
     ASSERT_TRUE(packet);
-    EXPECT_EQ(packet->start(), Fixed(50));
-    EXPECT_EQ(packet->end(), Fixed(55));
+    EXPECT_EQ(packet->start_frame(), Fixed(50));
+    EXPECT_EQ(packet->end_frame(), Fixed(55));
 
     std::vector<int32_t> samples(static_cast<int32_t*>(packet->payload()),
                                  static_cast<int32_t*>(packet->payload()) + 5);
@@ -186,8 +186,8 @@ TEST_F(SplitterProducerStageTest, Read) {
 
     auto packet = producer3->Read(ctx, Fixed(0), 5);
     ASSERT_TRUE(packet);
-    EXPECT_EQ(packet->start(), Fixed(0));
-    EXPECT_EQ(packet->end(), Fixed(5));
+    EXPECT_EQ(packet->start_frame(), Fixed(0));
+    EXPECT_EQ(packet->end_frame(), Fixed(5));
 
     std::vector<int32_t> samples(static_cast<int32_t*>(packet->payload()),
                                  static_cast<int32_t*>(packet->payload()) + 5);
@@ -204,8 +204,8 @@ TEST_F(SplitterProducerStageTest, Read) {
 
     auto packet = producer4->Read(ctx, Fixed(50), 5);  // producer4 is offset by 50 frames
     ASSERT_TRUE(packet);
-    EXPECT_EQ(packet->start(), Fixed(50));
-    EXPECT_EQ(packet->end(), Fixed(55));
+    EXPECT_EQ(packet->start_frame(), Fixed(50));
+    EXPECT_EQ(packet->end_frame(), Fixed(55));
 
     std::vector<int32_t> samples(static_cast<int32_t*>(packet->payload()),
                                  static_cast<int32_t*>(packet->payload()) + 5);
@@ -217,8 +217,8 @@ TEST_F(SplitterProducerStageTest, Read) {
     SCOPED_TRACE("producer3.Read(5, 10)");
     auto packet = producer3->Read(ctx, Fixed(5), 10);
     ASSERT_TRUE(packet);
-    EXPECT_EQ(packet->start(), Fixed(5));
-    EXPECT_EQ(packet->end(), Fixed(10));  // only filled up through frame 10
+    EXPECT_EQ(packet->start_frame(), Fixed(5));
+    EXPECT_EQ(packet->end_frame(), Fixed(10));  // only filled up through frame 10
 
     std::vector<int32_t> samples(static_cast<int32_t*>(packet->payload()),
                                  static_cast<int32_t*>(packet->payload()) + 5);

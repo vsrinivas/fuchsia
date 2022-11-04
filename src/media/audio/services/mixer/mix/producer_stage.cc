@@ -80,7 +80,7 @@ std::optional<PipelineStage::Packet> ProducerStage::ReadImpl(MixJobContext& ctx,
   if (!packet) {
     return std::nullopt;
   }
-  return ForwardPacket(std::move(packet), packet->start() - *internal_frame_offset_);
+  return ForwardPacket(std::move(packet), packet->start_frame() - *internal_frame_offset_);
 }
 
 std::optional<ProducerStage::CommandSummary> ProducerStage::NextCommand(const MixJobContext& ctx) {

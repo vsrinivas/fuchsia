@@ -99,12 +99,12 @@ void StreamSinkServer::PutPacket(PutPacketRequestView request,
 
   PacketView packet({
       .format = format_,
-      .start = packet_start,
-      .length = static_cast<int64_t>(payload_range.size) / format_.bytes_per_frame(),
+      .start_frame = packet_start,
+      .frame_count = static_cast<int64_t>(payload_range.size) / format_.bytes_per_frame(),
       .payload = static_cast<char*>(buffer.start()) + payload_range.offset,
   });
 
-  next_continuous_frame_ = packet.end();
+  next_continuous_frame_ = packet.end_frame();
   command_queue_->push(SimplePacketQueueProducerStage::PushPacketCommand{
       .packet = packet,
       .fence = std::move(request->release_fence),

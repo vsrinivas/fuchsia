@@ -22,7 +22,7 @@ namespace media_audio {
 using WritablePacketView = RingBuffer::WritablePacketView;
 
 WritablePacketView::~WritablePacketView() {
-  zx_cache_flush(payload(), length() * format().bytes_per_frame(), ZX_CACHE_FLUSH_DATA);
+  zx_cache_flush(payload(), frame_count() * format().bytes_per_frame(), ZX_CACHE_FLUSH_DATA);
 }
 
 RingBuffer::RingBuffer(const Format& format, UnreadableClock reference_clock,
@@ -45,7 +45,7 @@ PacketView RingBuffer::Read(const int64_t start_frame, const int64_t frame_count
   // is out-of-date. This is less important when the buffer is used in SW only because it is more
   // likely that the last write happened long enough ago that our cache has been flushed in the
   // interim, however to be strictly correct, a flush is needed in all cases.
-  const int64_t payload_size = packet.length() * format().bytes_per_frame();
+  const int64_t payload_size = packet.frame_count() * format().bytes_per_frame();
   zx_cache_flush(packet.payload(), payload_size, ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
 
   return packet;
@@ -69,9 +69,10 @@ WritablePacketView RingBuffer::PrepareToWrite(const int64_t start_frame,
       auto old_packet = PacketForRange(*buffer, start, end - start);
       auto new_packet = PacketForRange(*pending, start, end - start);
 
-      const int64_t frames = std::min(old_packet.length(), new_packet.length());
-      std::memmove(new_packet.payload(), old_packet.payload(), frames * format_.bytes_per_frame());
-      start += frames;
+      const int64_t min_frame_count = std::min(old_packet.frame_count(), new_packet.frame_count());
+      std::memmove(new_packet.payload(), old_packet.payload(),
+                   min_frame_count * format_.bytes_per_frame());
+      start += min_frame_count;
     }
 
     // Swap in the new buffer. At this point, the new buffer is accessible to Read.
@@ -113,8 +114,8 @@ PacketView RingBuffer::PacketForRange(const MemoryMappedBuffer& buffer, const in
 
   return PacketView({
       .format = format_,
-      .start = Fixed(start_frame),
-      .length = relative_end_frame - relative_start_frame,
+      .start_frame = Fixed(start_frame),
+      .frame_count = relative_end_frame - relative_start_frame,
       .payload =
           buffer.offset(static_cast<size_t>(relative_start_frame * format_.bytes_per_frame())),
   });

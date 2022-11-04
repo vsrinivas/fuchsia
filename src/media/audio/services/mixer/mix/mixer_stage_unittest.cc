@@ -130,9 +130,9 @@ TEST(MixerStageTest, Read) {
     const std::vector<float> expected = {0.0f, 10.0f, 30.0f, 60.0f, 100.0f};
     const auto packet = mixer_stage.Read(DefaultCtx(), Fixed(10), 5);
     ASSERT_TRUE(packet.has_value());
-    EXPECT_EQ(packet->start(), Fixed(10));
-    EXPECT_EQ(packet->length(), 5);
-    for (int64_t i = 0; i < packet->length(); ++i) {
+    EXPECT_EQ(packet->start_frame(), Fixed(10));
+    EXPECT_EQ(packet->frame_count(), 5);
+    for (int64_t i = 0; i < packet->frame_count(); ++i) {
       EXPECT_FLOAT_EQ(static_cast<float*>(packet->payload())[i], expected[i]) << i;
     }
   }
@@ -143,9 +143,9 @@ TEST(MixerStageTest, Read) {
     SCOPED_TRACE("Read(15, 5)");
     const auto packet = mixer_stage.Read(DefaultCtx(), Fixed(15), 5);
     ASSERT_TRUE(packet.has_value());
-    EXPECT_EQ(packet->start(), Fixed(15));
-    EXPECT_EQ(packet->length(), 5);
-    for (int64_t i = 0; i < packet->length(); ++i) {
+    EXPECT_EQ(packet->start_frame(), Fixed(15));
+    EXPECT_EQ(packet->frame_count(), 5);
+    for (int64_t i = 0; i < packet->frame_count(); ++i) {
       EXPECT_FLOAT_EQ(static_cast<float*>(packet->payload())[i], 100.0f) << i;
     }
   }
@@ -156,9 +156,9 @@ TEST(MixerStageTest, Read) {
     const std::vector<float> expected = {100.0f, 90.0f, 70.0f, 40.0f, 0.0f};
     const auto packet = mixer_stage.Read(DefaultCtx(), Fixed(20), 5);
     ASSERT_TRUE(packet.has_value());
-    EXPECT_EQ(packet->start(), Fixed(20));
-    EXPECT_EQ(packet->length(), 5);
-    for (int64_t i = 0; i < packet->length(); ++i) {
+    EXPECT_EQ(packet->start_frame(), Fixed(20));
+    EXPECT_EQ(packet->frame_count(), 5);
+    for (int64_t i = 0; i < packet->frame_count(); ++i) {
       EXPECT_FLOAT_EQ(static_cast<float*>(packet->payload())[i], expected[i]) << i;
     }
   }
@@ -168,9 +168,9 @@ TEST(MixerStageTest, Read) {
     SCOPED_TRACE("Read(25, 5)");
     const auto packet = mixer_stage.Read(DefaultCtx(), Fixed(25), 5);
     ASSERT_TRUE(packet.has_value());
-    EXPECT_EQ(packet->start(), Fixed(25));
-    EXPECT_EQ(packet->length(), 5);
-    for (int64_t i = 0; i < packet->length(); ++i) {
+    EXPECT_EQ(packet->start_frame(), Fixed(25));
+    EXPECT_EQ(packet->frame_count(), 5);
+    for (int64_t i = 0; i < packet->frame_count(); ++i) {
       EXPECT_FLOAT_EQ(static_cast<float*>(packet->payload())[i], 0.0f) << i;
     }
   }
@@ -210,9 +210,9 @@ TEST(MixerStageTest, ReadMoreThanMaxFrameCount) {
     SCOPED_TRACE("Read(10, 10)");
     const auto packet = mixer_stage.Read(DefaultCtx(), Fixed(10), 10);
     ASSERT_TRUE(packet.has_value());
-    EXPECT_EQ(packet->start(), Fixed(10));
-    EXPECT_EQ(packet->length(), 5);
-    for (int64_t i = 0; i < packet->length(); ++i) {
+    EXPECT_EQ(packet->start_frame(), Fixed(10));
+    EXPECT_EQ(packet->frame_count(), 5);
+    for (int64_t i = 0; i < packet->frame_count(); ++i) {
       EXPECT_FLOAT_EQ(static_cast<float*>(packet->payload())[i], (i >= 2) ? 1.0f : 0.0f) << i;
     }
   }
@@ -222,9 +222,9 @@ TEST(MixerStageTest, ReadMoreThanMaxFrameCount) {
     SCOPED_TRACE("Read(15, 5)");
     const auto packet = mixer_stage.Read(DefaultCtx(), Fixed(15), 5);
     ASSERT_TRUE(packet.has_value());
-    EXPECT_EQ(packet->start(), Fixed(15));
-    EXPECT_EQ(packet->length(), 5);
-    for (int64_t i = 0; i < packet->length(); ++i) {
+    EXPECT_EQ(packet->start_frame(), Fixed(15));
+    EXPECT_EQ(packet->frame_count(), 5);
+    for (int64_t i = 0; i < packet->frame_count(); ++i) {
       EXPECT_FLOAT_EQ(static_cast<float*>(packet->payload())[i], 3.0f) << i;
     }
   }
@@ -235,9 +235,9 @@ TEST(MixerStageTest, ReadMoreThanMaxFrameCount) {
     SCOPED_TRACE("Read(20, 10)");
     const auto packet = mixer_stage.Read(DefaultCtx(), Fixed(20), 10);
     ASSERT_TRUE(packet.has_value());
-    EXPECT_EQ(packet->start(), Fixed(20));
-    EXPECT_EQ(packet->length(), 5);
-    for (int64_t i = 0; i < packet->length(); ++i) {
+    EXPECT_EQ(packet->start_frame(), Fixed(20));
+    EXPECT_EQ(packet->frame_count(), 5);
+    for (int64_t i = 0; i < packet->frame_count(); ++i) {
       EXPECT_FLOAT_EQ(static_cast<float*>(packet->payload())[i], (i >= 2) ? 2.0f : 3.0f) << i;
     }
   }
@@ -248,8 +248,8 @@ TEST(MixerStageTest, ReadMoreThanMaxFrameCount) {
     SCOPED_TRACE("Read(25, 10)");
     const auto packet = mixer_stage.Read(DefaultCtx(), Fixed(25), 10);
     ASSERT_TRUE(packet.has_value());
-    EXPECT_EQ(packet->start(), Fixed(25));
-    EXPECT_EQ(packet->length(), 5);
+    EXPECT_EQ(packet->start_frame(), Fixed(25));
+    EXPECT_EQ(packet->frame_count(), 5);
     EXPECT_THAT(static_cast<float*>(packet->payload()), Pointee(FloatEq(0.0f)));
   }
 
@@ -289,9 +289,9 @@ TEST(MixerStageTest, ReadSilent) {
   // Read the next 5 frames, which should contain the mixed source data now.
   const auto packet = mixer_stage.Read(DefaultCtx(), Fixed(15), 5);
   ASSERT_TRUE(packet.has_value());
-  EXPECT_EQ(packet->start(), Fixed(15));
-  EXPECT_EQ(packet->length(), 5);
-  for (int64_t i = 0; i < packet->length(); ++i) {
+  EXPECT_EQ(packet->start_frame(), Fixed(15));
+  EXPECT_EQ(packet->frame_count(), 5);
+  for (int64_t i = 0; i < packet->frame_count(); ++i) {
     EXPECT_FLOAT_EQ(static_cast<float*>(packet->payload())[i], static_cast<float>(source_count));
   }
 }
@@ -325,8 +325,8 @@ TEST(MixerStageTest, SetDestGains) {
     source_1->push(PacketView({kDefaultFormat, Fixed(10), 1, &value_1}));
     const auto packet = mixer_stage.Read(DefaultCtx(), Fixed(10), 1);
     ASSERT_TRUE(packet.has_value());
-    EXPECT_EQ(packet->start(), Fixed(10));
-    EXPECT_EQ(packet->length(), 1);
+    EXPECT_EQ(packet->start_frame(), Fixed(10));
+    EXPECT_EQ(packet->frame_count(), 1);
     EXPECT_THAT(static_cast<float*>(packet->payload()), Pointee(FloatEq(10.0f)));
   }
 
@@ -343,8 +343,8 @@ TEST(MixerStageTest, SetDestGains) {
     source_1->push(PacketView({kDefaultFormat, Fixed(11), 1, &value_1}));
     const auto packet = mixer_stage.Read(DefaultCtx(), Fixed(11), 1);
     ASSERT_TRUE(packet.has_value());
-    EXPECT_EQ(packet->start(), Fixed(11));
-    EXPECT_EQ(packet->length(), 1);
+    EXPECT_EQ(packet->start_frame(), Fixed(11));
+    EXPECT_EQ(packet->frame_count(), 1);
     EXPECT_THAT(static_cast<float*>(packet->payload()), Pointee(FloatEq(40.0f)));
   }
 
@@ -364,8 +364,8 @@ TEST(MixerStageTest, SetDestGains) {
     source_2->push(PacketView({kDefaultFormat, Fixed(12), 1, &value_2}));
     const auto packet = mixer_stage.Read(DefaultCtx(), Fixed(12), 1);
     ASSERT_TRUE(packet.has_value());
-    EXPECT_EQ(packet->start(), Fixed(12));
-    EXPECT_EQ(packet->length(), 1);
+    EXPECT_EQ(packet->start_frame(), Fixed(12));
+    EXPECT_EQ(packet->frame_count(), 1);
     EXPECT_THAT(static_cast<float*>(packet->payload()), Pointee(FloatEq(48.0f)));
   }
 
@@ -380,8 +380,8 @@ TEST(MixerStageTest, SetDestGains) {
     source_2->push(PacketView({kDefaultFormat, Fixed(13), 1, &value_2}));
     const auto packet = mixer_stage.Read(DefaultCtx(), Fixed(13), 1);
     ASSERT_TRUE(packet.has_value());
-    EXPECT_EQ(packet->start(), Fixed(13));
-    EXPECT_EQ(packet->length(), 1);
+    EXPECT_EQ(packet->start_frame(), Fixed(13));
+    EXPECT_EQ(packet->frame_count(), 1);
     EXPECT_THAT(static_cast<float*>(packet->payload()), Pointee(FloatEq(36.0f)));
   }
 
@@ -396,8 +396,8 @@ TEST(MixerStageTest, SetDestGains) {
     source_2->push(PacketView({kDefaultFormat, Fixed(14), 1, &value_2}));
     const auto packet = mixer_stage.Read(DefaultCtx(), Fixed(14), 1);
     ASSERT_TRUE(packet.has_value());
-    EXPECT_EQ(packet->start(), Fixed(14));
-    EXPECT_EQ(packet->length(), 1);
+    EXPECT_EQ(packet->start_frame(), Fixed(14));
+    EXPECT_EQ(packet->frame_count(), 1);
     EXPECT_THAT(static_cast<float*>(packet->payload()), Pointee(FloatEq(6.0f)));
   }
 }

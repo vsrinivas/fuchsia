@@ -45,78 +45,78 @@ class RingBufferTest : public ::testing::Test {
 
 TEST_F(RingBufferTest, ReadUnwrappedFromStart) {
   const auto packet = ring_buffer().Read(0, 50);
-  EXPECT_EQ(packet.start(), Fixed(0));
-  EXPECT_EQ(packet.length(), 50);
+  EXPECT_EQ(packet.start_frame(), Fixed(0));
+  EXPECT_EQ(packet.frame_count(), 50);
   EXPECT_EQ(packet.payload(), buffer().offset(0));
 }
 
 TEST_F(RingBufferTest, ReadUnwrappedFromMiddle) {
   const auto packet = ring_buffer().Read(50, 10);
-  EXPECT_EQ(packet.start(), Fixed(50));
-  EXPECT_EQ(packet.length(), 10);
+  EXPECT_EQ(packet.start_frame(), Fixed(50));
+  EXPECT_EQ(packet.frame_count(), 10);
   EXPECT_EQ(packet.payload(), buffer().offset(50 * kFormat.bytes_per_frame()));
 }
 
 TEST_F(RingBufferTest, ReadUnwrappedFromEnd) {
   const auto packet = ring_buffer().Read(90, 10);
-  EXPECT_EQ(packet.start(), Fixed(90));
-  EXPECT_EQ(packet.length(), 10);
+  EXPECT_EQ(packet.start_frame(), Fixed(90));
+  EXPECT_EQ(packet.frame_count(), 10);
   EXPECT_EQ(packet.payload(), buffer().offset(90 * kFormat.bytes_per_frame()));
 }
 
 TEST_F(RingBufferTest, ReadUnwrappedOverlapsEnd) {
   const auto packet = ring_buffer().Read(95, 10);
-  EXPECT_EQ(packet.start(), Fixed(95));
-  EXPECT_EQ(packet.length(), 5);
+  EXPECT_EQ(packet.start_frame(), Fixed(95));
+  EXPECT_EQ(packet.frame_count(), 5);
   EXPECT_EQ(packet.payload(), buffer().offset(95 * kFormat.bytes_per_frame()));
 }
 
 TEST_F(RingBufferTest, ReadWrappedFromStart) {
   const auto packet = ring_buffer().Read(100, 10);
-  EXPECT_EQ(packet.start(), Fixed(100));
-  EXPECT_EQ(packet.length(), 10);
+  EXPECT_EQ(packet.start_frame(), Fixed(100));
+  EXPECT_EQ(packet.frame_count(), 10);
   EXPECT_EQ(packet.payload(), buffer().offset(0));
 }
 
 TEST_F(RingBufferTest, ReadWrappedFromMiddle) {
   const auto packet = ring_buffer().Read(150, 10);
-  EXPECT_EQ(packet.start(), Fixed(150));
-  EXPECT_EQ(packet.length(), 10);
+  EXPECT_EQ(packet.start_frame(), Fixed(150));
+  EXPECT_EQ(packet.frame_count(), 10);
   EXPECT_EQ(packet.payload(), buffer().offset(50 * kFormat.bytes_per_frame()));
 }
 
 TEST_F(RingBufferTest, ReadWrappedFromEnd) {
   const auto packet = ring_buffer().Read(190, 10);
-  EXPECT_EQ(packet.start(), Fixed(190));
-  EXPECT_EQ(packet.length(), 10);
+  EXPECT_EQ(packet.start_frame(), Fixed(190));
+  EXPECT_EQ(packet.frame_count(), 10);
   EXPECT_EQ(packet.payload(), buffer().offset(90 * kFormat.bytes_per_frame()));
 }
 
 TEST_F(RingBufferTest, ReadWrappedOverlapsEnd) {
   const auto packet = ring_buffer().Read(195, 10);
-  EXPECT_EQ(packet.start(), Fixed(195));
-  EXPECT_EQ(packet.length(), 5);
+  EXPECT_EQ(packet.start_frame(), Fixed(195));
+  EXPECT_EQ(packet.frame_count(), 5);
   EXPECT_EQ(packet.payload(), buffer().offset(95 * kFormat.bytes_per_frame()));
 }
 
 TEST_F(RingBufferTest, ReadNegativeFrames) {
   const auto packet = ring_buffer().Read(-10, 10);
-  EXPECT_EQ(packet.start(), Fixed(-10));
-  EXPECT_EQ(packet.length(), 10);
+  EXPECT_EQ(packet.start_frame(), Fixed(-10));
+  EXPECT_EQ(packet.frame_count(), 10);
   EXPECT_EQ(packet.payload(), buffer().offset(90 * kFormat.bytes_per_frame()));
 }
 
 TEST_F(RingBufferTest, ReadVeryNegativeFrames) {
   const auto packet = ring_buffer().Read(-110, 10);
-  EXPECT_EQ(packet.start(), Fixed(-110));
-  EXPECT_EQ(packet.length(), 10);
+  EXPECT_EQ(packet.start_frame(), Fixed(-110));
+  EXPECT_EQ(packet.frame_count(), 10);
   EXPECT_EQ(packet.payload(), buffer().offset(90 * kFormat.bytes_per_frame()));
 }
 
 TEST_F(RingBufferTest, ReadNegativeThroughPositiveFrames) {
   const auto packet = ring_buffer().Read(-5, 10);
-  EXPECT_EQ(packet.start(), Fixed(-5));
-  EXPECT_EQ(packet.length(), 5);
+  EXPECT_EQ(packet.start_frame(), Fixed(-5));
+  EXPECT_EQ(packet.frame_count(), 5);
   EXPECT_EQ(packet.payload(), buffer().offset(95 * kFormat.bytes_per_frame()));
 }
 
