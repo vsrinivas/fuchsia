@@ -44,7 +44,6 @@ class PolicyChecker final {
   bool CheckFactoryData(const FuchsiaPkgUrl& pkg_url);
   bool CheckAccountManager(const FuchsiaPkgUrl& pkg_url);
   bool CheckComponentEventProvider(const FuchsiaPkgUrl& pkg_url);
-  bool CheckCpuResource(const FuchsiaPkgUrl& pkg_url);
   bool CheckCr50(const FuchsiaPkgUrl& pkg_url);
   bool CheckDebugResource(const FuchsiaPkgUrl& pkg_url);
   bool CheckHub(const FuchsiaPkgUrl& pkg_url);
