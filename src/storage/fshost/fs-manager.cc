@@ -110,18 +110,13 @@ zx_status_t FsManager::Initialize(
 
   fs_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
 
-  // Construct the list of mount points we will be serving. Durable and Factory are somewhat special
-  // cases - they rarely exist as partitions on the device, but they are always exported as
-  // directory capabilities. If we aren't configured to find these partitions, don't queue requests
-  // for them, and instead point them at an empty, read-only folder in the fs dir, so the directory
-  // capability can be successfully routed.
+  // Construct the list of mount points we will be serving. Factory is a somewhat special case - it
+  // rarely exists as a partition on the device, but it is always exported as a directory
+  // capability. If we aren't configured to find that partition, don't queue requests for it, and
+  // instead point them at an empty, read-only folder in the fs dir, so the directory capability
+  // can be successfully routed.
   std::vector<MountPoint> mount_points;
   mount_points.push_back(MountPoint::kData);
-  if (config.durable()) {
-    mount_points.push_back(MountPoint::kDurable);
-  } else {
-    fs_dir_->AddEntry(MountPointPath(MountPoint::kDurable), fbl::MakeRefCounted<fs::PseudoDir>());
-  }
   if (config.factory()) {
     mount_points.push_back(MountPoint::kFactory);
   } else {
@@ -353,8 +348,6 @@ const char* FsManager::MountPointPath(FsManager::MountPoint point) {
       return "data";
     case MountPoint::kFactory:
       return "factory";
-    case MountPoint::kDurable:
-      return "durable";
   }
 }
 

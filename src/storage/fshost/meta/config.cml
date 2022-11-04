@@ -63,9 +63,6 @@
         // Enables bootpart partitions.
         bootpart: { type: "bool" },
 
-        // Enables the durable partition (small partition of settings that survives factory resets).
-        durable: { type: "bool" },
-
         // Enables the factory partition (small partition of settings set in the factory and never
         // written to otherwise).
         factory: { type: "bool" },

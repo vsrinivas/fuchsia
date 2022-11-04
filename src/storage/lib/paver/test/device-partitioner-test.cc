@@ -1610,9 +1610,7 @@ TEST_F(LuisPartitionerTests, FindPartition) {
       {GPT_ZIRCON_B_NAME, kDummyType, 0xa0400, 0x10000},
       {GPT_ZIRCON_R_NAME, kDummyType, 0xb0400, 0x10000},
       {GPT_FACTORY_NAME, kDummyType, 0xc0400, 0x10000},
-      {GPT_DURABLE_NAME, kDummyType, 0xd0400, 0x10000},
       {GPT_FVM_NAME, kDummyType, 0xe0400, 0x10000},
-
   };
   ASSERT_NO_FATAL_FAILURE(InitializeStartingGPTPartitions(gpt_dev.get(), kLuisStartingPartitions));
 
@@ -2241,8 +2239,7 @@ TEST_F(Vim3PartitionerTests, FindPartition) {
       {GPT_DURABLE_BOOT_NAME, kDummyType, 0, 0x10000}, {GPT_VBMETA_A_NAME, kDummyType, 0, 0x10000},
       {GPT_VBMETA_B_NAME, kDummyType, 0, 0x10000},     {GPT_VBMETA_R_NAME, kDummyType, 0, 0x10000},
       {GPT_ZIRCON_A_NAME, kDummyType, 0, 0x10000},     {GPT_ZIRCON_B_NAME, kDummyType, 0, 0x10000},
-      {GPT_ZIRCON_R_NAME, kDummyType, 0, 0x10000},     {GPT_DURABLE_NAME, kDummyType, 0, 0x10000},
-      {GPT_FVM_NAME, kDummyType, 0, 0x10000},
+      {GPT_ZIRCON_R_NAME, kDummyType, 0, 0x10000},     {GPT_FVM_NAME, kDummyType, 0, 0x10000},
   };
   vim3_partitions[0].start = 0x10400;
   for (size_t i = 1; i < vim3_partitions.size(); i++) {

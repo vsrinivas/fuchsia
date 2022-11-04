@@ -60,7 +60,6 @@ TEST_F(MounterTest, CreateFilesystemMounter) { FilesystemMounter mounter(manager
 enum class FilesystemType {
   kBlobfs,
   kData,
-  kDurable,
   kFactoryfs,
 };
 
@@ -111,9 +110,6 @@ class TestMounter : public FilesystemMounter {
                               zx::channel block_device,
                               const fs_management::MountOptions& options) const final {
     switch (expected_filesystem_) {
-      case FilesystemType::kDurable:
-        EXPECT_EQ(std::string_view(binary), kMinfsPath);
-        break;
       case FilesystemType::kFactoryfs:
         EXPECT_EQ(std::string_view(binary), kFactoryfsPath);
         break;
@@ -136,15 +132,6 @@ class TestMounter : public FilesystemMounter {
   std::mutex flags_lock_;
   async::Loop loop_;
 };
-
-TEST_F(MounterTest, DurableMount) {
-  config_.durable() = true;
-  TestMounter mounter(manager(), &config_);
-
-  mounter.ExpectFilesystem(FilesystemType::kDurable);
-  ASSERT_EQ(mounter.MountDurable(zx::channel(), fs_management::MountOptions()), ZX_OK);
-  ASSERT_TRUE(mounter.DurableMounted());
-}
 
 TEST_F(MounterTest, FactoryMount) {
   config_.factory() = true;

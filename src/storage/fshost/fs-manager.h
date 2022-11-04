@@ -51,7 +51,6 @@ class FsManager {
   enum class MountPoint {
     kData,
     kFactory,
-    kDurable,
   };
 
   // Returns the fully qualified for the given mount point.

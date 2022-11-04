@@ -225,11 +225,6 @@ bool gpt_is_data_guid(const uint8_t* guid, ssize_t len) {
   return len == GPT_GUID_LEN && !memcmp(guid, data_guid, GPT_GUID_LEN);
 }
 
-bool gpt_is_durable_guid(const uint8_t* guid, ssize_t len) {
-  static const uint8_t durable_guid[GPT_GUID_LEN] = GPT_DURABLE_TYPE_GUID;
-  return len == GPT_GUID_LEN && !memcmp(guid, durable_guid, GPT_GUID_LEN);
-}
-
 bool gpt_is_efi_guid(const uint8_t* guid, ssize_t len) {
   static const uint8_t efi_guid[GPT_GUID_LEN] = GUID_EFI_VALUE;
   return len == GPT_GUID_LEN && !memcmp(guid, efi_guid, GPT_GUID_LEN);

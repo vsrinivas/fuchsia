@@ -1520,9 +1520,9 @@ TEST(KnownGuidTest, FindByName) {
   EXPECT_EQ(matches.back()->scheme(), PartitionScheme::kNew);
 
   // New partition scheme.
-  matches = KnownGuid::Find("durable", std::nullopt, std::nullopt);
+  matches = KnownGuid::Find("factory", std::nullopt, std::nullopt);
   EXPECT_EQ(matches.size(), 1);
-  EXPECT_EQ(matches.front()->type_guid(), uuid::Uuid(GPT_DURABLE_TYPE_GUID));
+  EXPECT_EQ(matches.front()->type_guid(), uuid::Uuid(GPT_FACTORY_TYPE_GUID));
 
   // Unknown partition name.
   matches = KnownGuid::Find("unknown_name", std::nullopt, std::nullopt);
@@ -1531,7 +1531,7 @@ TEST(KnownGuidTest, FindByName) {
 
 TEST(KnownGuidTest, FindByPartitionScheme) {
   ASSERT_EQ(KnownGuid::Find(std::nullopt, std::nullopt, PartitionScheme::kLegacy).size(), 26);
-  ASSERT_EQ(KnownGuid::Find(std::nullopt, std::nullopt, PartitionScheme::kNew).size(), 14);
+  ASSERT_EQ(KnownGuid::Find(std::nullopt, std::nullopt, PartitionScheme::kNew).size(), 13);
 }
 
 TEST(KnownGuidTest, FindByAll) {

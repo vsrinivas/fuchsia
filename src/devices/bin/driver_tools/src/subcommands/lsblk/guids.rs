@@ -9,7 +9,6 @@ lazy_static! {
         let mut m = HashMap::new();
         // Definitions taken from //zircon/system/public/zircon/hw/gpt.h.
         m.insert(Uuid::parse_str("FE8A2634-5E2E-46BA-99E3-3A192091A350").unwrap(), "bootloader");
-        m.insert(Uuid::parse_str("D9FD4535-106C-4CEC-8D37-DFC020CA87CB").unwrap(), "durable");
         m.insert(Uuid::parse_str("A409E16B-78AA-4ACC-995C-302352621A41").unwrap(), "durable_boot");
         m.insert(Uuid::parse_str("F95D940E-CABA-4578-9B93-BB6C90F29D3E").unwrap(), "factory");
         m.insert(Uuid::parse_str("10B8DBAA-D2BF-42A9-98C6-A7C5DB3701E7").unwrap(), "factory_boot");

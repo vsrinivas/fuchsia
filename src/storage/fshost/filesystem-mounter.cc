@@ -349,23 +349,6 @@ zx_status_t FilesystemMounter::MountFactoryFs(zx::channel block_device,
   return ZX_OK;
 }
 
-zx_status_t FilesystemMounter::MountDurable(zx::channel block_device,
-                                            const fs_management::MountOptions& options) {
-  if (durable_mounted_) {
-    return ZX_ERR_ALREADY_BOUND;
-  }
-
-  if (auto result = MountLegacyFilesystem(FsManager::MountPoint::kDurable,
-                                          fs_management::DiskFormat::kDiskFormatMinfs, kMinfsPath,
-                                          options, std::move(block_device));
-      result.is_error()) {
-    return result.error_value();
-  }
-
-  durable_mounted_ = true;
-  return ZX_OK;
-}
-
 zx_status_t FilesystemMounter::MountBlob(zx::channel block_device,
                                          const fs_management::MountOptions& options) {
   if (blob_mounted_) {

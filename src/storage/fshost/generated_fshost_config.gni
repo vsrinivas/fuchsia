@@ -91,7 +91,6 @@ template("generated_fshost_config") {
       data = true
       data_max_bytes = 0
       disable_block_watcher = false
-      durable = false
       factory = false
       fvm = true
       fvm_ramdisk = false

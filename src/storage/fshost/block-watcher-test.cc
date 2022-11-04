@@ -44,11 +44,6 @@ fshost_config::Config FactoryOptions() {
   options.factory() = true;
   return options;
 }
-fshost_config::Config DurableOptions() {
-  auto options = fshost::DefaultConfig();
-  options.durable() = true;
-  return options;
-}
 fshost_config::Config NandOptions() {
   auto options = fshost::DefaultConfig();
   options.nand() = true;
@@ -459,71 +454,6 @@ TEST(AddDeviceTestCase, MinfsWithAlternateNameMounts) {
         break;
     }
   }
-}
-
-// Durable partition tests
-// Tests adding minfs on durable partition with a valid type GUID and valid metadata.
-TEST(AddDeviceTestCase, AddValidDurableDevice) {
-  class DurableZxcryptDevice : public MockZxcryptDevice {
-   public:
-    DurableZxcryptDevice()
-        : MockZxcryptDevice(Options{
-              .content_format = fs_management::kDiskFormatZxcrypt,
-              .driver_path = kZxcryptDriverPath,
-              .topological_path =
-                  MockBlockDevice::BaseTopologicalPath() + "/" GPT_DURABLE_NAME "-004/block",
-              .partition_name = GPT_DURABLE_NAME,
-          }) {}
-
-    const fuchsia_hardware_block_partition::wire::Guid& GetTypeGuid() const final {
-      static fuchsia_hardware_block_partition::wire::Guid guid = GPT_DURABLE_TYPE_GUID;
-      return guid;
-    }
-  };
-  class DurableDevice : public MockBlockDevice {
-   public:
-    using MockBlockDevice::MockBlockDevice;
-
-    fs_management::DiskFormat content_format() const final {
-      return fs_management::kDiskFormatMinfs;
-    }
-    const fuchsia_hardware_block_partition::wire::Guid& GetTypeGuid() const final {
-      static fuchsia_hardware_block_partition::wire::Guid guid = GPT_DURABLE_TYPE_GUID;
-      return guid;
-    }
-    zx_status_t CheckFilesystem() final {
-      checked_ = true;
-      return ZX_OK;
-    }
-    zx_status_t FormatFilesystem() final {
-      formatted_ = true;
-      return ZX_OK;
-    }
-    zx_status_t MountFilesystem() final {
-      mounted_ = true;
-      return ZX_OK;
-    }
-
-    bool checked() const { return checked_; }
-    bool formatted() const { return formatted_; }
-    bool mounted() const { return mounted_; }
-
-   private:
-    bool checked_ = false;
-    bool formatted_ = false;
-    bool mounted_ = false;
-  };
-  auto config = DurableOptions();
-  BlockDeviceManager manager(&config);
-  MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
-  EXPECT_EQ(manager.AddDevice(gpt_device), ZX_OK);
-  DurableZxcryptDevice zxcrypt_device;
-  EXPECT_EQ(manager.AddDevice(zxcrypt_device), ZX_OK);
-  DurableDevice device(MockBlockDevice::DurableOptions());
-  EXPECT_EQ(manager.AddDevice(device), ZX_OK);
-  EXPECT_TRUE(device.checked());
-  EXPECT_FALSE(device.formatted());
-  EXPECT_TRUE(device.mounted());
 }
 
 // Tests adding a boot partition device with unknown format can be added with

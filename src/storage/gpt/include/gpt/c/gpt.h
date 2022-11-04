@@ -35,9 +35,6 @@ bool gpt_is_sys_guid(const uint8_t* guid, ssize_t len);
 // determines whether guid is data guid
 bool gpt_is_data_guid(const uint8_t* guid, ssize_t len);
 
-// determines whether guid is durable guid
-bool gpt_is_durable_guid(const uint8_t* guid, ssize_t len);
-
 // determines whether guid is efi guid
 bool gpt_is_efi_guid(const uint8_t* guid, ssize_t len);
 

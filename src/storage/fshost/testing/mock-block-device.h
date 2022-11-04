@@ -43,12 +43,6 @@ class MockBlockDevice : public BlockDeviceInterface {
     return {.content_format = fs_management::kDiskFormatFvm, .driver_path = kFVMDriverPath};
   }
 
-  static Options DurableOptions() {
-    return {
-        .topological_path = MockBlockDevice::BaseTopologicalPath() +
-                            "/" GPT_DURABLE_NAME "-004/block/zxcrypt/unsealed/block",
-    };
-  }
   static Options NandOptions() {
     return {
         .driver_path = kNandBrokerDriverPath,

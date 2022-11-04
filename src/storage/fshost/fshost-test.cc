@@ -149,7 +149,7 @@ TEST(FsManagerTestCase, InstallFsAfterShutdownWillFail) {
 
   FsManager manager(nullptr);
   auto config = EmptyConfig();
-  config.durable() = true;
+  config.factory() = true;
   BlockWatcher watcher(manager, &config);
   ASSERT_EQ(manager.Initialize({}, {}, config, watcher), ZX_OK);
 
@@ -157,7 +157,7 @@ TEST(FsManagerTestCase, InstallFsAfterShutdownWillFail) {
   manager.Shutdown([](zx_status_t status) { EXPECT_EQ(status, ZX_OK); });
   manager.WaitForShutdown();
 
-  EXPECT_FALSE(manager.TakeMountPointServerEnd(FsManager::MountPoint::kDurable).has_value());
+  EXPECT_FALSE(manager.TakeMountPointServerEnd(FsManager::MountPoint::kFactory).has_value());
 }
 
 TEST(FsManagerTestCase, ReportFailureOnUncleanUnmount) {
@@ -166,12 +166,12 @@ TEST(FsManagerTestCase, ReportFailureOnUncleanUnmount) {
 
   FsManager manager(nullptr);
   auto config = EmptyConfig();
-  config.durable() = true;
+  config.factory() = true;
   BlockWatcher watcher(manager, &config);
   ASSERT_EQ(manager.Initialize({}, {}, config, watcher), ZX_OK);
 
   std::optional endpoints_or =
-      manager.TakeMountPointServerEnd(FsManager::MountPoint::kDurable, true);
+      manager.TakeMountPointServerEnd(FsManager::MountPoint::kFactory, true);
   ASSERT_TRUE(endpoints_or.has_value());
   auto [export_root, server_end] = std::move(endpoints_or.value());
   server_end.Close(ZX_ERR_INTERNAL);

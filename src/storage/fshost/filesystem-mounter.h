@@ -69,11 +69,6 @@ class FilesystemMounter {
   zx_status_t MountData(zx::channel block_device_client, std::optional<Copier> copier,
                         fs_management::MountOptions options, fs_management::DiskFormat format);
 
-  // Attempts to mount a block device to "/durable".
-  // Fails if already mounted.
-  zx_status_t MountDurable(zx::channel block_device_client,
-                           const fs_management::MountOptions& options);
-
   // Attempts to mount a block device to "/blob".
   // Fails if already mounted.
   zx_status_t MountBlob(zx::channel block_device_client,
@@ -90,7 +85,6 @@ class FilesystemMounter {
   bool BlobMounted() const { return blob_mounted_; }
   bool DataMounted() const { return data_mounted_; }
   bool FactoryMounted() const { return factory_mounted_; }
-  bool DurableMounted() const { return durable_mounted_; }
 
   FsManager& manager() { return fshost_; }
   FshostInspectManager& inspect_manager() { return fshost_.inspect_manager(); }
@@ -133,7 +127,6 @@ class FilesystemMounter {
   FsManager& fshost_;
   const fshost_config::Config& config_;
   bool data_mounted_ = false;
-  bool durable_mounted_ = false;
   bool blob_mounted_ = false;
   bool factory_mounted_ = false;
   fidl::ClientEnd<fuchsia_io::Directory> crypt_outgoing_directory_;

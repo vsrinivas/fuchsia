@@ -99,19 +99,6 @@ static_assert(GPT_ENTRY_SIZE == sizeof(gpt_entry_t), "Gpt entry size invalid");
 #define GPT_BOOTLOADER_R_NAME         "bootloader_r"
 #define GPT_BOOTLOADER_ABR_TYPE_GUID  GPT_GUID(0xfe8a2634, 0x5e2e, 0x46ba, 0x99e3, 0x3a192091a350)
 
-// durable
-//
-// This partition holds mutable data that must remain intact across factory
-// reset. It differs from durable_boot only in that it is larger, ignored by
-// bootloaders, and is expected to have a filesystem.
-//
-// This partition is expected to be written to by Fuchsia during normal
-// operation. It is expected to be read by Fuchsia, but not by any bootloader
-// or firmware. It is expected to have a filesystem with encryption built in.
-// Use of this partition increases attack surface and should be minimized.
-#define GPT_DURABLE_NAME              "durable"
-#define GPT_DURABLE_TYPE_GUID         GPT_GUID(0xd9fd4535, 0x106c, 0x4cec, 0x8d37, 0xdfc020ca87cb)
-
 // durable_boot
 //
 // This partition holds A/B/R metadata and other very small mutable data that

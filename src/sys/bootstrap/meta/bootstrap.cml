@@ -1057,7 +1057,6 @@
             directory: [
                 "blob",
                 "data",
-                "durable",
                 "factory",
                 "mnt",
                 "tmp",

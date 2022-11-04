@@ -44,7 +44,6 @@ std::array<GuidProperties, kKnownGuidEntries> const KnownGuid::nametab_ = {{
     GuidProperties(GPT_BOOTLOADER_A_NAME, GPT_BOOTLOADER_ABR_TYPE_GUID, PartitionScheme::kNew),
     GuidProperties(GPT_BOOTLOADER_B_NAME, GPT_BOOTLOADER_ABR_TYPE_GUID, PartitionScheme::kNew),
     GuidProperties(GPT_BOOTLOADER_R_NAME, GPT_BOOTLOADER_ABR_TYPE_GUID, PartitionScheme::kNew),
-    GuidProperties(GPT_DURABLE_NAME,      GPT_DURABLE_TYPE_GUID,        PartitionScheme::kNew),
     GuidProperties(GPT_DURABLE_BOOT_NAME, GPT_DURABLE_BOOT_TYPE_GUID,   PartitionScheme::kNew),
     GuidProperties(GPT_FACTORY_NAME,      GPT_FACTORY_TYPE_GUID,        PartitionScheme::kNew),
     GuidProperties(GPT_FACTORY_BOOT_NAME, GPT_FACTORY_BOOT_TYPE_GUID,   PartitionScheme::kNew),

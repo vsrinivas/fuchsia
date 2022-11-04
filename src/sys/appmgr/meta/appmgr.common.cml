@@ -77,11 +77,6 @@
             path: "/dev",
         },
         {
-            directory: "durable",
-            rights: [ "rw*" ],
-            path: "/durable",
-        },
-        {
             directory: "factory",
             rights: [ "r*" ],
             path: "/factory",

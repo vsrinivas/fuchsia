@@ -693,15 +693,6 @@ BlockDeviceManager::BlockDeviceManager(const fshost_config::Config* config,
 
   if (!config_.netboot()) {
     // GPT partitions:
-    if (config_.durable()) {
-      static constexpr fuchsia_hardware_block_partition::wire::Guid durable_type_guid =
-          GPT_DURABLE_TYPE_GUID;
-      matchers_.push_back(std::make_unique<DataPartitionMatcher>(
-          *gpt, DataPartitionMatcher::PartitionNames{GPT_DURABLE_NAME}, std::string_view(),
-          durable_type_guid, DataPartitionMatcher::GetVariantFromConfig(config_),
-          PartitionLimit()));
-      gpt_required = true;
-    }
     if (config_.factory()) {
       matchers_.push_back(std::make_unique<FactoryfsMatcher>(*gpt));
       gpt_required = true;

@@ -195,7 +195,7 @@
   "include/zircon/fidl.h": "3910f2fe1385f56a9cf6548b31106c4d",
   "include/zircon/hw/debug/arm64.h": "62d156c28d474ebb5f80bf767bc9f8db",
   "include/zircon/hw/debug/x86.h": "2fda1cb82f06574331945ddd3dda3696",
-  "include/zircon/hw/gpt.h": "161c346998845e9ee9d51ec1dfd07621",
+  "include/zircon/hw/gpt.h": "48b1e7536159e48e6c530b3c8d795e4a",
   "include/zircon/hw/pci.h": "76a29114bd88e6767cb5dbdd697b096e",
   "include/zircon/limits.h": "564b9d2902c5e1992e2c75cca156ef30",
   "include/zircon/listnode.h": "adc44cc353c4b9b7de4f20c250ddd299",

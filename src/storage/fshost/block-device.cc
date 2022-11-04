@@ -790,13 +790,6 @@ zx_status_t BlockDevice::MountData(const fs_management::MountOptions& options,
   if (gpt_is_data_guid(guid, GPT_GUID_LEN)) {
     return mounter_->MountData(std::move(block_device), std::move(copier), options, format_);
   }
-  if (gpt_is_durable_guid(guid, GPT_GUID_LEN)) {
-    if (copier) {
-      FX_LOGS(ERROR) << "Copier is not supported for durable partitions";
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    return mounter_->MountDurable(std::move(block_device), options);
-  }
   FX_LOGS(ERROR) << "Unrecognized type GUID for data partition; not mounting";
   return ZX_ERR_WRONG_TYPE;
 }

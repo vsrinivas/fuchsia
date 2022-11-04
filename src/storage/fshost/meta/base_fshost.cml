@@ -25,11 +25,6 @@
             path: "/fs/factory",
         },
         {
-            directory: "durable",
-            rights: [ "rw*" ],
-            path: "/fs/durable",
-        },
-        {
             directory: "mnt",
             rights: [ "rw*" ],
             path: "/mnt",
@@ -80,7 +75,6 @@
         {
             directory: [
                 "data",
-                "durable",
                 "factory",
                 "mnt",
             ],
