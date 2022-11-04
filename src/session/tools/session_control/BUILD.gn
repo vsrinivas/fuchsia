@@ -21,16 +21,15 @@ rustc_binary("bin") {
   deps = [
     "//sdk/fidl/fuchsia.element:fuchsia.element_rust",
     "//sdk/fidl/fuchsia.session:fuchsia.session_rust",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
   ]
 
-  test_deps = [
-    "//src/lib/fidl/rust/fidl",
-    "//third_party/rust_crates:futures",
-  ]
+  test_deps = [ "//third_party/rust_crates:futures" ]
 
   sources = [ "src/main.rs" ]
 }

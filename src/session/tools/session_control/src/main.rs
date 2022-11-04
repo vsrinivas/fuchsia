@@ -5,8 +5,9 @@
 use {
     anyhow::{format_err, Error},
     argh::FromArgs,
-    fidl_fuchsia_element as felement, fidl_fuchsia_session as fsession, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_protocol_at,
+    fidl_fuchsia_element as felement, fidl_fuchsia_session as fsession, fidl_fuchsia_sys2 as fsys,
+    fuchsia_async as fasync,
+    fuchsia_component::client::{connect_to_protocol_at_dir_root, connect_to_protocol_at_path},
 };
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -47,21 +48,39 @@ pub struct AddCommand {
     pub element_url: String,
 }
 
-/// Path to protocols exposed by session-manager.
-const SESSION_MANAGER_EXPOSED: &str = "/hub-v2/children/core/children/session-manager/exec/expose";
+/// Moniker of session-manager component
+const SESSION_MANAGER_MONIKER: &str = "./core/session-manager";
 
-/// Path to protocols exposed by the session.
-const SESSION_EXPOSED: &str =
-    "/hub-v2/children/core/children/session-manager/children/session:session/exec/expose";
+// Moniker of session component
+const SESSION_MONIKER: &str = "./core/session-manager/session:session";
+
+async fn connect_to_exposed_protocol<P: fidl::endpoints::DiscoverableProtocolMarker>(
+    realm_query: &fsys::RealmQueryProxy,
+    moniker: &str,
+) -> Result<P::Proxy, Error> {
+    let resolved_dirs = realm_query
+        .get_instance_directories(moniker)
+        .await?
+        .map_err(|e| format_err!("RealmQuery error: {:?}", e))?
+        .ok_or(format_err!("{} is not resolved", moniker))?;
+    let exposed_dir = resolved_dirs.exposed_dir.into_proxy()?;
+    connect_to_protocol_at_dir_root::<P>(&exposed_dir)
+}
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let Args { command } = argh::from_env();
+    let realm_query =
+        connect_to_protocol_at_path::<fsys::RealmQueryMarker>("/svc/fuchsia.sys2.RealmQuery.root")
+            .unwrap();
 
     match command {
         Command::Launch(LaunchCommand { session_url }) => {
-            let launcher =
-                connect_to_protocol_at::<fsession::LauncherMarker>(SESSION_MANAGER_EXPOSED)?;
+            let launcher = connect_to_exposed_protocol::<fsession::LauncherMarker>(
+                &realm_query,
+                SESSION_MANAGER_MONIKER,
+            )
+            .await?;
             match launch_session(&session_url, launcher).await {
                 Ok(_) => {
                     println!("Launched session: {:?}", session_url);
@@ -74,8 +93,11 @@ async fn main() -> Result<(), Error> {
             }
         }
         Command::Restart(RestartCommand {}) => {
-            let restarter =
-                connect_to_protocol_at::<fsession::RestarterMarker>(SESSION_MANAGER_EXPOSED)?;
+            let restarter = connect_to_exposed_protocol::<fsession::RestarterMarker>(
+                &realm_query,
+                SESSION_MANAGER_MONIKER,
+            )
+            .await?;
             match restart_session(restarter).await {
                 Ok(_) => {
                     println!("Restarted the session.");
@@ -88,7 +110,11 @@ async fn main() -> Result<(), Error> {
             }
         }
         Command::Add(AddCommand { element_url }) => {
-            let manager_proxy = connect_to_protocol_at::<felement::ManagerMarker>(SESSION_EXPOSED)?;
+            let manager_proxy = connect_to_exposed_protocol::<felement::ManagerMarker>(
+                &realm_query,
+                SESSION_MONIKER,
+            )
+            .await?;
             match add_element(&element_url, manager_proxy).await {
                 Ok(_) => {
                     println!("Added element: {:?}", element_url);
