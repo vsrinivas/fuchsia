@@ -175,13 +175,20 @@ mod tests {
             let pos2 = pos1
                 + Position {
                     x: 0.0,
+                    y: 1_000.0
+                        + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_BUTTON_CHANGE_MM * 1_000.0,
+                };
+            let pos3 = pos2
+                + Position {
+                    x: 0.0,
                     y: 1_000.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
                 };
             let inputs = vec![
                 touchpad_event(vec![pos1], hashset! {1}),
                 touchpad_event(vec![pos1], hashset! {}),
-                touchpad_event(vec![pos1], hashset! {}),
+                // Move to exit button up state which discards tailing movement of button up.
                 touchpad_event(vec![pos2], hashset! {}),
+                touchpad_event(vec![pos3], hashset! {}),
             ];
             let got = utils::run_gesture_arena_test(inputs).await;
 
@@ -270,8 +277,14 @@ mod tests {
         async fn click_then_one_finger_drag() {
             let finger1_pos0_um = Position { x: 2_000.0, y: 3_000.0 };
             let finger1_pos1_um = finger1_pos0_um.clone();
-            let finger1_pos2_um = finger1_pos1_um.clone();
-            let finger1_pos3_um = finger1_pos2_um
+            let finger1_pos2_um = finger1_pos1_um
+                + Position {
+                    x: 0.0,
+                    y: 1_000.0
+                        + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_BUTTON_CHANGE_MM * 1_000.0,
+                };
+            let finger1_pos3_um = finger1_pos2_um.clone();
+            let finger1_pos4_um = finger1_pos3_um
                 + Position {
                     x: 0.0,
                     y: 1_000.0
@@ -280,12 +293,13 @@ mod tests {
             let inputs = vec![
                 touchpad_event(vec![finger1_pos0_um], hashset! {1}),
                 touchpad_event(vec![finger1_pos1_um], hashset! {}),
-                touchpad_event(vec![finger1_pos2_um], hashset! {1}),
+                touchpad_event(vec![finger1_pos2_um], hashset! {}),
                 touchpad_event(vec![finger1_pos3_um], hashset! {1}),
+                touchpad_event(vec![finger1_pos4_um], hashset! {1}),
             ];
             let got = utils::run_gesture_arena_test(inputs).await;
 
-            assert_eq!(got.len(), 4);
+            assert_eq!(got.len(), 5);
             assert_matches!(got[0].as_slice(), [
               utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
             ] => {
@@ -302,7 +316,8 @@ mod tests {
               assert_eq!(affected_button_a, &hashset! {1});
               assert_eq!(location_a, &utils::NO_MOVEMENT_LOCATION);
             });
-            assert_matches!(got[2].as_slice(), [
+            assert_eq!(got[2].as_slice(), []);
+            assert_matches!(got[3].as_slice(), [
               utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
             ] => {
               assert_eq!(phase_a, &mouse_binding::MousePhase::Down);
@@ -310,7 +325,7 @@ mod tests {
               assert_eq!(affected_button_a, &hashset! {1});
               assert_eq!(location_a, &utils::NO_MOVEMENT_LOCATION);
             });
-            assert_matches!(got[3].as_slice(), [
+            assert_matches!(got[4].as_slice(), [
               utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
             ] => {
               assert_eq!(phase_a, &mouse_binding::MousePhase::Move);

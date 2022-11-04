@@ -300,8 +300,13 @@ mod test {
                         + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_BUTTON_CHANGE_MM * 1_000.0,
                 };
             let finger_pos2_um = finger_pos1_um.clone();
-            let finger_pos3_um = finger_pos2_um.clone();
-            let finger_pos4_um = finger_pos2_um
+            let finger_pos3_um = finger_pos2_um
+                + Position {
+                    x: 0.0,
+                    y: 1_000.0
+                        + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_BUTTON_CHANGE_MM * 1_000.0,
+                };
+            let finger_pos4_um = finger_pos3_um
                 + Position {
                     x: 0.0,
                     y: 1_000.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
@@ -310,6 +315,7 @@ mod test {
                 touchpad_event(vec![finger_pos0_um], hashset! {1}),
                 touchpad_event(vec![finger_pos1_um], hashset! {1}),
                 touchpad_event(vec![finger_pos2_um], hashset! {}),
+                // Move to exit button up state which discards tailing movement of button up.
                 touchpad_event(vec![finger_pos3_um], hashset! {}),
                 touchpad_event(vec![finger_pos4_um], hashset! {}),
             ];
