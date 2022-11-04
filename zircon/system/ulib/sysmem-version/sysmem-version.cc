@@ -7,9 +7,7 @@
 #include <fidl/fuchsia.sysmem/cpp/common_types.h>
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <fidl/fuchsia.sysmem2/cpp/wire.h>
-#include <fuchsia/sysmem/c/fidl.h>
 #include <inttypes.h>
-#include <lib/fidl-async-2/fidl_struct.h>
 #include <lib/fidl/cpp/wire/traits.h>
 #include <zircon/assert.h>
 
@@ -201,7 +199,7 @@ fpromise::result<fidl::VectorView<fuchsia_sysmem2::wire::HeapType>> V2CopyFromV1
   for (uint32_t i = 0; i < v1_count; i++) {
     ASSIGN_SCALAR(v2a[i], v1a[i]);
   }
-  return fpromise::ok(std::move(v2a));
+  return fpromise::ok(v2a);
 }
 
 template <size_t N>
@@ -232,7 +230,7 @@ fpromise::result<fidl::VectorView<fuchsia_sysmem2::wire::ColorSpace>> V2CopyFrom
   for (uint32_t i = 0; i < v1_count; i++) {
     v2a[i] = V2CopyFromV1ColorSpace(allocator, v1a[i]);
   }
-  return fpromise::ok(std::move(v2a));
+  return fpromise::ok(v2a);
 }
 
 template <size_t N>
@@ -270,7 +268,7 @@ V2CopyFromV1ImageFormatConstraintsArray(
     OK_OR_RET_ERROR(result);
     v2a[i] = result.take_value();
   }
-  return fpromise::ok(std::move(v2a));
+  return fpromise::ok(v2a);
 }
 
 fpromise::result<> V2CopyFromV1BufferCollectionConstraintsMain(
@@ -384,12 +382,6 @@ fuchsia_sysmem2::wire::PixelFormat V2CopyFromV1PixelFormat(
   return v2b;
 }
 
-fuchsia_sysmem2::wire::PixelFormat V2CopyFromV1PixelFormat(fidl::AnyArena& allocator,
-                                                           const fuchsia_sysmem_PixelFormat& v1) {
-  using CStruct = FidlStruct<fuchsia_sysmem_PixelFormat, fuchsia_sysmem::wire::PixelFormat>;
-  return V2CopyFromV1PixelFormat(allocator, *CStruct::BorrowAsLlcpp(&v1));
-}
-
 fuchsia_sysmem2::ColorSpace V2CopyFromV1ColorSpace(const fuchsia_sysmem::ColorSpace& v1) {
   fuchsia_sysmem2::ColorSpace v2b;
   PROCESS_SCALAR_FIELD_V1(type);
@@ -401,12 +393,6 @@ fuchsia_sysmem2::wire::ColorSpace V2CopyFromV1ColorSpace(
   fuchsia_sysmem2::wire::ColorSpace v2b(allocator);
   PROCESS_WIRE_SCALAR_FIELD_V1(type);
   return v2b;
-}
-
-fuchsia_sysmem2::wire::ColorSpace V2CopyFromV1ColorSpace(fidl::AnyArena& allocator,
-                                                         const fuchsia_sysmem_ColorSpace& v1) {
-  using CStruct = FidlStruct<fuchsia_sysmem_ColorSpace, fuchsia_sysmem::wire::ColorSpace>;
-  return V2CopyFromV1ColorSpace(allocator, *CStruct::BorrowAsLlcpp(&v1));
 }
 
 fpromise::result<fuchsia_sysmem2::ImageFormatConstraints> V2CopyFromV1ImageFormatConstraints(
@@ -486,14 +472,7 @@ fpromise::result<fuchsia_sysmem2::wire::ImageFormatConstraints> V2CopyFromV1Imag
   PROCESS_WIRE_SCALAR_FIELD_V1(required_max_coded_height);
   PROCESS_WIRE_SCALAR_FIELD_V1(required_min_bytes_per_row);
   PROCESS_WIRE_SCALAR_FIELD_V1(required_max_bytes_per_row);
-  return fpromise::ok(std::move(v2b));
-}
-
-fpromise::result<fuchsia_sysmem2::wire::ImageFormatConstraints> V2CopyFromV1ImageFormatConstraints(
-    fidl::AnyArena& allocator, const fuchsia_sysmem_ImageFormatConstraints& v1) {
-  using CStruct = FidlStruct<fuchsia_sysmem_ImageFormatConstraints,
-                             fuchsia_sysmem::wire::ImageFormatConstraints>;
-  return V2CopyFromV1ImageFormatConstraints(allocator, *CStruct::BorrowAsLlcpp(&v1));
+  return fpromise::ok(v2b);
 }
 
 fpromise::result<fuchsia_sysmem2::BufferUsage> V2CopyFromV1BufferUsage(
@@ -517,13 +496,7 @@ fpromise::result<fuchsia_sysmem2::wire::BufferUsage> V2CopyFromV1BufferUsage(
   PROCESS_WIRE_SCALAR_FIELD_V1(vulkan);
   PROCESS_WIRE_SCALAR_FIELD_V1(display);
   PROCESS_WIRE_SCALAR_FIELD_V1(video);
-  return fpromise::ok(std::move(v2b));
-}
-
-fpromise::result<fuchsia_sysmem2::wire::BufferUsage> V2CopyFromV1BufferUsage(
-    fidl::AnyArena& allocator, const fuchsia_sysmem_BufferUsage& v1) {
-  using CStruct = FidlStruct<fuchsia_sysmem_BufferUsage, fuchsia_sysmem::wire::BufferUsage>;
-  return V2CopyFromV1BufferUsage(allocator, *CStruct::BorrowAsLlcpp(&v1));
+  return fpromise::ok(v2b);
 }
 
 fpromise::result<fuchsia_sysmem2::BufferMemoryConstraints> V2CopyFromV1BufferMemoryConstraints(
@@ -562,15 +535,7 @@ V2CopyFromV1BufferMemoryConstraints(fidl::AnyArena& allocator,
     OK_OR_RET_ERROR(result);
     v2b.set_heap_permitted(allocator, result.take_value());
   }
-  return fpromise::ok(std::move(v2b));
-}
-
-fpromise::result<fuchsia_sysmem2::wire::BufferMemoryConstraints>
-V2CopyFromV1BufferMemoryConstraints(fidl::AnyArena& allocator,
-                                    const fuchsia_sysmem_BufferMemoryConstraints& v1) {
-  using CStruct = FidlStruct<fuchsia_sysmem_BufferMemoryConstraints,
-                             fuchsia_sysmem::wire::BufferMemoryConstraints>;
-  return V2CopyFromV1BufferMemoryConstraints(allocator, *CStruct::BorrowAsLlcpp(&v1));
+  return fpromise::ok(v2b);
 }
 
 // If !v1 && !aux_buffers_v1, the result will be fit::is_ok(), but result.value().IsEmpty().
@@ -615,19 +580,7 @@ V2CopyFromV1BufferCollectionConstraints(
     OK_OR_RET_ERROR(result);
   }
 
-  return fpromise::ok(std::move(v2b));
-}
-
-fpromise::result<fuchsia_sysmem2::wire::BufferCollectionConstraints>
-V2CopyFromV1BufferCollectionConstraints(
-    fidl::AnyArena& allocator, const fuchsia_sysmem_BufferCollectionConstraints* v1,
-    const fuchsia_sysmem_BufferCollectionConstraintsAuxBuffers* aux_buffers_v1) {
-  using CStructMain = FidlStruct<fuchsia_sysmem_BufferCollectionConstraints,
-                                 fuchsia_sysmem::wire::BufferCollectionConstraints>;
-  using CStructAux = FidlStruct<fuchsia_sysmem_BufferCollectionConstraintsAuxBuffers,
-                                fuchsia_sysmem::wire::BufferCollectionConstraintsAuxBuffers>;
-  return V2CopyFromV1BufferCollectionConstraints(allocator, CStructMain::BorrowAsLlcpp(v1),
-                                                 CStructAux::BorrowAsLlcpp(aux_buffers_v1));
+  return fpromise::ok(v2b);
 }
 
 fpromise::result<fuchsia_sysmem2::ImageFormat> V2CopyFromV1ImageFormat(
@@ -675,13 +628,7 @@ fpromise::result<fuchsia_sysmem2::wire::ImageFormat> V2CopyFromV1ImageFormat(
     ZX_DEBUG_ASSERT(!v2b.has_pixel_aspect_ratio_width());
     ZX_DEBUG_ASSERT(!v2b.has_pixel_aspect_ratio_height());
   }
-  return fpromise::ok(std::move(v2b));
-}
-
-fpromise::result<fuchsia_sysmem2::wire::ImageFormat> V2CopyFromV1ImageFormat(
-    fidl::AnyArena& allocator, const fuchsia_sysmem_ImageFormat_2& v1) {
-  using CStruct = FidlStruct<fuchsia_sysmem_ImageFormat_2, fuchsia_sysmem::wire::ImageFormat2>;
-  return V2CopyFromV1ImageFormat(allocator, *CStruct::BorrowAsLlcpp(&v1));
+  return fpromise::ok(v2b);
 }
 
 fuchsia_sysmem2::BufferMemorySettings V2CopyFromV1BufferMemorySettings(
@@ -736,7 +683,7 @@ fpromise::result<fuchsia_sysmem2::wire::SingleBufferSettings> V2CopyFromV1Single
     }
     v2b.set_image_format_constraints(allocator, image_format_constraints_result.take_value());
   }
-  return fpromise::ok(std::move(v2b));
+  return fpromise::ok(v2b);
 }
 
 fuchsia_sysmem2::VmoBuffer V2MoveFromV1VmoBuffer(fuchsia_sysmem::VmoBuffer v1) {
@@ -793,7 +740,7 @@ fpromise::result<fuchsia_sysmem2::wire::BufferCollectionInfo> V2MoveFromV1Buffer
       v2b.buffers()[i] = V2MoveFromV1VmoBuffer(allocator, std::move(v1.buffers[i]));
     }
   }
-  return fpromise::ok(std::move(v2b));
+  return fpromise::ok(v2b);
 }
 
 fuchsia_sysmem::wire::HeapType V1CopyFromV2HeapType(fuchsia_sysmem2::wire::HeapType heap_type) {
@@ -926,7 +873,7 @@ V1CopyFromV2BufferCollectionConstraints(
     v1_aux_buffers.emplace(v1);
   }
 
-  return fpromise::ok(std::make_pair(std::move(v1), std::move(v1_aux_buffers)));
+  return fpromise::ok(std::make_pair(v1, v1_aux_buffers));
 }
 
 fpromise::result<fuchsia_sysmem::BufferMemoryConstraints> V1CopyFromV2BufferMemoryConstraints(
@@ -976,7 +923,7 @@ fpromise::result<fuchsia_sysmem::wire::BufferMemoryConstraints> V1CopyFromV2Buff
       ASSIGN_SCALAR(v1.heap_permitted[i], v2.heap_permitted()[i]);
     }
   }
-  return fpromise::ok(std::move(v1));
+  return fpromise::ok(v1);
 }
 
 fuchsia_sysmem::BufferUsage V1CopyFromV2BufferUsage(const fuchsia_sysmem2::BufferUsage& v2) {
@@ -1138,7 +1085,7 @@ fpromise::result<fuchsia_sysmem::wire::ImageFormatConstraints> V1CopyFromV2Image
   PROCESS_WIRE_SCALAR_FIELD_V2(required_max_coded_height);
   PROCESS_WIRE_SCALAR_FIELD_V2(required_min_bytes_per_row);
   PROCESS_WIRE_SCALAR_FIELD_V2(required_max_bytes_per_row);
-  return fpromise::ok(std::move(v1));
+  return fpromise::ok(v1);
 }
 
 [[nodiscard]] fpromise::result<fuchsia_sysmem::ImageFormat2> V1CopyFromV2ImageFormat(
@@ -1181,12 +1128,12 @@ fpromise::result<fuchsia_sysmem::wire::ImageFormat2> V1CopyFromV2ImageFormat(
     v1.color_space = V1CopyFromV2ColorSpace(v2.color_space());
   }
   v1.has_pixel_aspect_ratio =
-      v2.has_pixel_aspect_ratio_width() && v2.has_pixel_aspect_ratio_height() ? true : false;
+      v2.has_pixel_aspect_ratio_width() && v2.has_pixel_aspect_ratio_height();
   if (v1.has_pixel_aspect_ratio) {
     v1.pixel_aspect_ratio_width = v2.pixel_aspect_ratio_width();
     v1.pixel_aspect_ratio_height = v2.pixel_aspect_ratio_height();
   }
-  return fpromise::ok(std::move(v1));
+  return fpromise::ok(v1);
 }
 
 fpromise::result<fuchsia_sysmem::SingleBufferSettings> V1CopyFromV2SingleBufferSettings(
@@ -1220,7 +1167,7 @@ fpromise::result<fuchsia_sysmem::wire::SingleBufferSettings> V1CopyFromV2SingleB
     }
     v1.image_format_constraints = image_format_constraints_result.take_value();
   }
-  return fpromise::ok(std::move(v1));
+  return fpromise::ok(v1);
 }
 
 // Intentionally just consumes aux_vmo.  The implied extra handle duplications from this behavior go
@@ -1310,7 +1257,7 @@ fpromise::result<fuchsia_sysmem::wire::BufferCollectionInfo2> V1MoveFromV2Buffer
     }
     v1.buffer_count = static_cast<uint32_t>(v2.buffers().count());
     for (uint32_t i = 0; i < v2.buffers().count(); ++i) {
-      v1.buffers[i] = V1MoveFromV2VmoBuffer(std::move(v2.buffers()[i]));
+      v1.buffers[i] = V1MoveFromV2VmoBuffer(v2.buffers()[i]);
     }
   }
   auto settings_result = V1CopyFromV2SingleBufferSettings(v2.settings());
@@ -1358,7 +1305,7 @@ V1AuxBuffersMoveFromV2BufferCollectionInfo(fuchsia_sysmem2::wire::BufferCollecti
     }
     v1.buffer_count = static_cast<uint32_t>(v2.buffers().count());
     for (uint32_t i = 0; i < v2.buffers().count(); ++i) {
-      v1.buffers[i] = V1AuxBuffersMoveFromV2VmoBuffer(std::move(v2.buffers()[i]));
+      v1.buffers[i] = V1AuxBuffersMoveFromV2VmoBuffer(v2.buffers()[i]);
     }
   }
   auto settings_result = V1CopyFromV2SingleBufferSettings(v2.settings());
@@ -1600,7 +1547,7 @@ fpromise::result<fuchsia_sysmem2::wire::VmoBuffer, zx_status_t> V2CloneVmoBuffer
     }
     vmo_buffer.set_aux_vmo(std::move(clone_vmo));
   }
-  return fpromise::ok(std::move(vmo_buffer));
+  return fpromise::ok(vmo_buffer);
 }
 
 fpromise::result<fuchsia_sysmem2::BufferCollectionInfo, zx_status_t> V2CloneBufferCollectionInfo(
@@ -1645,7 +1592,7 @@ V2CloneBufferCollectionInfo(fidl::AnyArena& allocator,
       buffer_collection_info.buffers()[i] = clone_result.take_value();
     }
   }
-  return fpromise::ok(std::move(buffer_collection_info));
+  return fpromise::ok(buffer_collection_info);
 }
 
 fuchsia_sysmem2::wire::CoherencyDomainSupport V2CloneCoherencyDomainSuppoort(

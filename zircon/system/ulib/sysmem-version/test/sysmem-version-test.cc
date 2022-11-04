@@ -4,7 +4,6 @@
 
 #include <fidl/fuchsia.sysmem/cpp/fidl.h>
 #include <fidl/fuchsia.sysmem2/cpp/fidl.h>
-#include <fuchsia/sysmem/c/fidl.h>
 #include <lib/fidl/cpp/message_part.h>
 #include <lib/fidl/cpp/wire/message.h>
 #include <lib/fidl/cpp/wire/traits.h>
