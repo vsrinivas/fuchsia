@@ -237,7 +237,9 @@ struct VmOp {
 
 using VmStream = std::vector<VmOp>;
 
+// Debug formatting capabilities.
 std::ostream& operator<<(std::ostream&, const VmOp& op);
+std::string VmStreamToString(const VmStream& stream);
 
 // Shared implementation for VmBytecodeForwardJump and VmBytecodeForwardJumpIfFalse below.
 class VmBytecodeForwardJumper {

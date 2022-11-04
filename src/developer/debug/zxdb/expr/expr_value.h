@@ -7,6 +7,7 @@
 
 #include <inttypes.h>
 
+#include <iosfwd>
 #include <vector>
 
 #include "lib/fit/function.h"
@@ -167,6 +168,9 @@ double ExprValue::GetAs<double>() const;
 using ErrOrValue = ErrOr<ExprValue>;
 
 using ErrOrValueVector = ErrOr<std::vector<ExprValue>>;
+
+// Unit tests often use ExprValue and we want it to print in unit tests.
+std::ostream& operator<<(std::ostream& out, const ExprValue& value);
 
 }  // namespace zxdb
 

@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -307,6 +308,62 @@ Err ExprValue::PromoteToDouble(double* output) const {
           fxl::StringPrintf("Unexpected value size (%zu), please file a bug.", data_.size()));
   }
   return Err();
+}
+
+std::ostream& operator<<(std::ostream& out, const ExprValue& value) {
+  if (!value.type())
+    return out << "{null ExprValue}";
+
+  out << value.type()->GetFullName() << "(";
+
+  std::string value_str;
+
+  const Type* type = value.type()->StripCVT();
+  if (const BaseType* base = type->As<BaseType>()) {
+    switch (base->base_type()) {
+      case BaseType::kBaseTypeBoolean: {
+        uint64_t as_unsigned = 0;
+        if (value.PromoteTo64(&as_unsigned).ok())
+          value_str = as_unsigned ? "true" : "false";
+        break;
+      }
+      // Ignore kBaseTypeAddress which we don't use (pointers are "ModifiedTypes").
+      case BaseType::kBaseTypeFloat: {
+        double as_double = 0.0;
+        if (value.PromoteToDouble(&as_double).ok())
+          value_str = std::to_string(as_double);
+        break;
+      }
+      case BaseType::kBaseTypeSigned:
+      case BaseType::kBaseTypeSignedChar: {
+        int64_t as_signed = 0;
+        if (value.PromoteTo64(&as_signed).ok())
+          value_str = std::to_string(as_signed);
+        break;
+      }
+      case BaseType::kBaseTypeUnsigned:
+      case BaseType::kBaseTypeUnsignedChar: {
+        uint64_t as_unsigned = 0;
+        if (value.PromoteTo64(&as_unsigned).ok())
+          value_str = std::to_string(as_unsigned);
+        break;
+      }
+    }
+  }
+
+  if (value_str.empty()) {
+    // This catches anything that's not a base type and anything that errored out above. Output as a
+    // hex dump.
+    const auto& bytes = value.data().bytes();
+    for (size_t i = 0; i < bytes.size(); i++) {
+      if (i > 0)
+        value_str.push_back(' ');
+      value_str.append(to_hex_string(bytes[i], 2, true));
+    }
+  }
+
+  out << value_str << ")";
+  return out;
 }
 
 }  // namespace zxdb
