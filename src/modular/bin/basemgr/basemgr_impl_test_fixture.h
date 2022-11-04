@@ -5,6 +5,7 @@
 #ifndef SRC_MODULAR_BIN_BASEMGR_BASEMGR_IMPL_TEST_FIXTURE_H_
 #define SRC_MODULAR_BIN_BASEMGR_BASEMGR_IMPL_TEST_FIXTURE_H_
 
+#include <fuchsia/modular/cpp/fidl_test_base.h>
 #include <fuchsia/modular/internal/cpp/fidl_test_base.h>
 #include <lib/sys/cpp/testing/fake_component.h>
 #include <lib/sys/cpp/testing/fake_launcher.h>
@@ -44,6 +45,10 @@ class FakeComponentWithNamespace {
   void Register(std::string url, sys::testing::FakeLauncher& fake_launcher,
                 async_dispatcher_t* dispatcher = nullptr);
 
+  // Closes all ComponentController handles that have been stored as a result
+  // of this fake component being started.
+  void CloseAllComponentControllerHandles() { ctrls_.clear(); }
+
   int launch_count() const { return launch_count_; }
   NamespaceMap& namespace_map() { return namespace_map_; }
 
@@ -54,10 +59,17 @@ class FakeComponentWithNamespace {
   NamespaceMap namespace_map_;
 };
 
-class FakeSessionmgr : public fuchsia::modular::internal::testing::Sessionmgr_TestBase {
+class FakeSessionmgr : public fuchsia::modular::internal::testing::Sessionmgr_TestBase,
+                       public fuchsia::modular::testing::Lifecycle_TestBase {
  public:
-  explicit FakeSessionmgr(sys::testing::FakeLauncher& launcher) {
-    component_.AddPublicService(bindings_.GetHandler(this));
+  // Providing `on_shutdown` requires the caller to call
+  // component()->CloseAllComponentControllerHandles() after `on_shutdown` is called in order to
+  // avoid basemgr's timeout on waiting for FakeSessionmgr to terminate.
+  explicit FakeSessionmgr(sys::testing::FakeLauncher& launcher,
+                          std::function<void()> on_shutdown = nullptr)
+      : on_shutdown_(std::move(on_shutdown)) {
+    component_.AddPublicService(sessionmgr_bindings_.GetHandler(this));
+    component_.AddPublicService(lifecycle_bindings_.GetHandler(this));
     component_.Register(modular_config::kSessionmgrUrl, launcher);
   }
 
@@ -92,6 +104,16 @@ class FakeSessionmgr : public fuchsia::modular::internal::testing::Sessionmgr_Te
     initialized_ = true;
   }
 
+  // fuchsia.modular.Lifecycle
+  void Terminate() override {
+    if (!!on_shutdown_) {
+      on_shutdown_();
+    } else {
+      // Default implementation that conforms to modular::Lifecycle's contract.
+      component_.CloseAllComponentControllerHandles();
+    }
+  }
+
   FakeComponentWithNamespace* component() { return &component_; }
   bool initialized() const { return initialized_; }
   std::optional<fuchsia::sys::ServiceList>& v2_services_for_sessionmgr() {
@@ -100,8 +122,10 @@ class FakeSessionmgr : public fuchsia::modular::internal::testing::Sessionmgr_Te
 
  private:
   bool initialized_ = false;
+  std::function<void()> on_shutdown_;
   std::optional<fuchsia::sys::ServiceList> v2_services_for_sessionmgr_ = std::nullopt;
-  fidl::BindingSet<fuchsia::modular::internal::Sessionmgr> bindings_;
+  fidl::BindingSet<fuchsia::modular::internal::Sessionmgr> sessionmgr_bindings_;
+  fidl::BindingSet<fuchsia::modular::Lifecycle> lifecycle_bindings_;
   FakeComponentWithNamespace component_;
 };
 

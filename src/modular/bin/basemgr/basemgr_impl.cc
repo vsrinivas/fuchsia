@@ -105,6 +105,13 @@ BasemgrImpl::BasemgrImpl(modular::ModularConfigAccessor config_accessor,
 
   LogLifetimeEvent(
       cobalt_registry::ModularLifetimeEventsMigratedMetricDimensionEventType::BootedToBaseMgr);
+
+  zx::channel lifecycle_request{zx_take_startup_handle(PA_LIFECYCLE)};
+  if (lifecycle_request) {
+    process_lifecycle_bindings_.AddBinding(
+        this, fidl::InterfaceRequest<fuchsia::process::lifecycle::Lifecycle>(
+                  std::move(lifecycle_request)));
+  }
 }
 
 BasemgrImpl::~BasemgrImpl() = default;
