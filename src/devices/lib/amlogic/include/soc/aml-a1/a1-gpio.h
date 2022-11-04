@@ -88,4 +88,20 @@
 #define A1_GPIO_IRQ_4_5_PIN_FILTER_SELECT 0x3
 #define A1_GPIO_IRQ_6_7_PIN_FILTER_SELECT 0x4
 
+// Alternate Functions for I2C
+#define A1_I2C_A_SCL A1_GPIOF(9)
+#define A1_I2C_A_SCL_FN 4
+#define A1_I2C_A_SDA A1_GPIOF(10)
+#define A1_I2C_A_SDA_FN 4
+
+#define A1_I2C_B_SCL A1_GPIOA(4)
+#define A1_I2C_B_SCL_FN 3
+#define A1_I2C_B_SDA A1_GPIOA(5)
+#define A1_I2C_B_SDA_FN 3
+
+#define A1_I2C_C_SCL A1_GPIOA(11)
+#define A1_I2C_C_SCL_FN 2
+#define A1_I2C_C_SDA A1_GPIOA(10)
+#define A1_I2C_C_SDA_FN 2
+
 #endif  // SRC_DEVICES_LIB_AMLOGIC_INCLUDE_SOC_AML_A1_A1_GPIO_H_

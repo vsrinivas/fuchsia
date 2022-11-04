@@ -37,6 +37,11 @@
 #define A1_GPIO_INTERRUPT_LENGTH 0x14
 
 // i2c
+#define A1_I2C_LENGTH 0x200
+#define A1_I2C_A_BASE 0xfe001400
+#define A1_I2C_B_BASE 0xfe005c00
+#define A1_I2C_C_BASE 0xfe006800
+#define A1_I2C_D_BASE 0xfe006c00
 
 // spicc
 
@@ -62,6 +67,7 @@
 // Reset
 
 // IRQs
+#define A1_I2C_A_IRQ 64    // 32+32
 #define A1_GPIO_IRQ_0 81   // 32+49
 #define A1_GPIO_IRQ_1 82   // 32+50
 #define A1_GPIO_IRQ_2 83   // 32+51
@@ -71,6 +77,9 @@
 #define A1_GPIO_IRQ_6 87   // 32+55
 #define A1_GPIO_IRQ_7 88   // 32+56
 #define A1_TS_PLL_IRQ 89   // 57+32
+#define A1_I2C_B_IRQ 100   // 32+68
+#define A1_I2C_C_IRQ 108   // 32+76
+#define A1_I2C_D_IRQ 110   // 32+78
 #define A1_DDR_BW_IRQ 141  // 109+32
 
 // PWM

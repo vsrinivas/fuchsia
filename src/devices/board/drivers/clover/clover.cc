@@ -65,6 +65,11 @@ int Clover::Thread() {
 
   zxlogf(INFO, "Initializing clover board!!!");
 
+  if ((status = I2cInit()) != ZX_OK) {
+    zxlogf(ERROR, "I2cInit() failed: %s", zx_status_get_string(status));
+    init_txn_->Reply(status);
+    return status;
+  }
   if ((status = GpioInit()) != ZX_OK) {
     zxlogf(ERROR, "GpioInit() failed: %s", zx_status_get_string(status));
     init_txn_->Reply(status);

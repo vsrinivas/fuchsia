@@ -33,6 +33,7 @@ fuchsia_driver("clover-driver") {
   sources = [
     "clover-clk.cc",
     "clover-gpio.cc",
+    "clover-i2c.cc",
     "clover-ram.cc",
     "clover-sysmem.cc",
     "clover-tee.cc",

@@ -72,8 +72,8 @@ static const std::vector<fpbus::Irq> gpio_irqs{
 
 // GPIOs to expose from generic GPIO driver.
 static const gpio_pin_t gpio_pins[] = {
-    // place holder
-    DECL_GPIO_PIN(A1_GPIOA(1)),
+    DECL_GPIO_PIN(A1_I2C_A_SCL), DECL_GPIO_PIN(A1_I2C_A_SDA), DECL_GPIO_PIN(A1_I2C_B_SCL),
+    DECL_GPIO_PIN(A1_I2C_B_SDA), DECL_GPIO_PIN(A1_I2C_C_SCL), DECL_GPIO_PIN(A1_I2C_C_SDA),
 };
 
 zx_status_t Clover::GpioInit() {

@@ -252,6 +252,7 @@ TEST_F(DeviceEnumerationTest, CloverTest) {
       "sys/platform/05:08:a/thermal",
       "class/thermal/000",
       "sys/platform/05:08:24/ram",
+      "sys/platform/05:00:2/aml-i2c",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
