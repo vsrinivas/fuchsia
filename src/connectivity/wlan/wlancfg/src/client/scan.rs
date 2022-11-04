@@ -51,6 +51,8 @@ pub const SCAN_REQUEST_BUFFER_SIZE: usize = 100;
 pub enum ScanReason {
     ClientRequest,
     NetworkSelection,
+    BssSelection,
+    BssSelectionAugmentation,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -64,24 +66,20 @@ pub trait ScanRequestApi: Send + Sync {
     async fn perform_scan(
         &self,
         scan_reason: ScanReason,
-    ) -> Result<Vec<types::ScanResult>, types::ScanError>;
-
-    async fn perform_directed_active_scan(
-        &self,
-        ssid: types::Ssid,
-        channels: Option<Vec<u8>>,
+        ssids: Vec<types::Ssid>,
+        channels: Vec<u8>,
     ) -> Result<Vec<types::ScanResult>, types::ScanError>;
 }
 
 pub struct ScanRequester {
-    pub sender: mpsc::Sender<ScanRequest>,
+    pub sender: mpsc::Sender<ApiScanRequest>,
 }
 
-pub enum ScanRequest {
-    Scan(ScanReason, oneshot::Sender<Result<Vec<types::ScanResult>, types::ScanError>>),
-    DirectedActiveScan(
-        types::Ssid,
-        Option<Vec<u8>>,
+pub enum ApiScanRequest {
+    Scan(
+        ScanReason,
+        Vec<types::Ssid>,
+        Vec<u8>,
         oneshot::Sender<Result<Vec<types::ScanResult>, types::ScanError>>,
     ),
 }
@@ -91,27 +89,13 @@ impl ScanRequestApi for ScanRequester {
     async fn perform_scan(
         &self,
         scan_reason: ScanReason,
-    ) -> Result<Vec<types::ScanResult>, types::ScanError> {
-        let (responder, receiver) = oneshot::channel();
-        self.sender.clone().try_send(ScanRequest::Scan(scan_reason, responder)).map_err(|e| {
-            error!("Failed to send ScanRequest: {:?}", e);
-            types::ScanError::GeneralError
-        })?;
-        receiver.await.map_err(|e| {
-            error!("Failed to receive ScanRequest response: {:?}", e);
-            types::ScanError::GeneralError
-        })?
-    }
-
-    async fn perform_directed_active_scan(
-        &self,
-        ssid: types::Ssid,
-        channels: Option<Vec<u8>>,
+        ssids: Vec<types::Ssid>,
+        channels: Vec<u8>,
     ) -> Result<Vec<types::ScanResult>, types::ScanError> {
         let (responder, receiver) = oneshot::channel();
         self.sender
             .clone()
-            .try_send(ScanRequest::DirectedActiveScan(ssid, channels, responder))
+            .try_send(ApiScanRequest::Scan(scan_reason, ssids, channels, responder))
             .map_err(|e| {
                 error!("Failed to send ScanRequest: {:?}", e);
                 types::ScanError::GeneralError
@@ -128,48 +112,44 @@ pub async fn serve_scanning_loop(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     saved_networks_manager: Arc<dyn SavedNetworksManagerApi>,
     telemetry_sender: TelemetrySender,
-    mut scan_request_channel: mpsc::Receiver<ScanRequest>,
+    mut scan_request_channel: mpsc::Receiver<ApiScanRequest>,
 ) -> Result<(), Error> {
     let mut operation_futures = FuturesUnordered::new();
 
     loop {
         select! {
             request = scan_request_channel.next() => {
-                if let Some(request) = request {
-                    match request {
-                        ScanRequest::Scan(reason, responder) => {
-                            let scan_fut = perform_scan(
+                match request {
+                    Some(ApiScanRequest::Scan(reason, ssids, channels, responder)) => {
+                        let scan_fut = if ssids.is_empty() && channels.is_empty() {
+                            perform_scan(
                                 iface_manager.clone(),
                                 saved_networks_manager.clone(),
                                 LocationSensorUpdater { wpa3_supported: true },
                                 reason,
                                 Some(telemetry_sender.clone())
-                            );
-                            let fut = async move {
-                                if let Err(e) = responder.send(scan_fut.await) {
-                                    error!("could not respond to DisconnectRequest: {:?}", e);
-                                }
-                            };
-                            operation_futures.push(fut.boxed());
-                        },
-                        ScanRequest::DirectedActiveScan(ssid, channels, responder) => {
-                            let scan_fut = perform_directed_active_scan(
+                            ).boxed()
+                        } else {
+                            perform_directed_active_scan(
                                 iface_manager.clone(),
-                                ssid,
-                                channels,
+                                ssids,
+                                Some(channels),
                                 Some(telemetry_sender.clone()),
-                            );
-                            let fut = async move {
-                                if let Err(e) = responder.send(scan_fut.await) {
-                                    error!("could not respond to DisconnectRequest: {:?}", e);
-                                }
-                            };
-                            operation_futures.push(fut.boxed());
-                        }
+                            ).boxed()
+                        };
+                        let fut = (async move {
+                            if let Err(e) = responder.send(scan_fut.await) {
+                                error!("could not respond to ScanRequest: {:?}", e);
+                            }
+                        }).boxed();
+                        operation_futures.push(fut);
+                    },
+                    None => {
+                        error!("Unexpected 'None' on scan_request_channel");
                     }
                 }
-            }
-            _  = operation_futures.select_next_some() => {}
+            },
+            () = operation_futures.select_next_some() => {}
         }
     }
 }
@@ -377,12 +357,12 @@ async fn record_undirected_scan_results(
 /// Perform a directed active scan for a given network on given channels.
 async fn perform_directed_active_scan(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
-    ssid: types::Ssid,
+    ssids: Vec<types::Ssid>,
     channels: Option<Vec<u8>>,
     telemetry_sender: Option<TelemetrySender>,
 ) -> Result<Vec<types::ScanResult>, types::ScanError> {
     let scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
-        ssids: vec![ssid.to_vec()],
+        ssids: ssids.iter().map(|ssid| ssid.to_vec()).collect(),
         channels: channels.unwrap_or(vec![]),
     });
 
@@ -403,7 +383,7 @@ async fn perform_directed_active_scan(
         insert_bss_to_network_bss_map(&mut bss_by_network, results, false);
 
         // The active scan targets a specific SSID, ensure only that SSID is present in results
-        bss_by_network.retain(|network_id, _| network_id.ssid == *ssid);
+        bss_by_network.retain(|network_id, _| ssids.contains(&network_id.ssid));
 
         network_bss_map_to_scan_result(bss_by_network)
     })
@@ -2385,7 +2365,7 @@ mod tests {
         let desired_channels = vec![1, 36];
         let scan_fut = perform_directed_active_scan(
             client,
-            desired_ssid.clone(),
+            vec![desired_ssid.clone()],
             Some(desired_channels.clone()),
             None,
         );
@@ -2744,7 +2724,7 @@ mod tests {
         let desired_channels = vec![];
         let scan_fut = perform_directed_active_scan(
             client.clone(),
-            desired_ssid.clone(),
+            vec![desired_ssid.clone()],
             Some(desired_channels.clone()),
             None,
         );
@@ -2781,7 +2761,7 @@ mod tests {
         let desired_channels = vec![];
         let scan_fut = perform_directed_active_scan(
             client.clone(),
-            desired_ssid.clone(),
+            vec![desired_ssid.clone()],
             Some(desired_channels.clone()),
             None,
         );

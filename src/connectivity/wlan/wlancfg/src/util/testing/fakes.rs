@@ -303,8 +303,7 @@ pub fn random_connection_data() -> PastConnectionData {
 pub struct FakeScanRequester {
     pub scan_results:
         Arc<Mutex<VecDeque<Result<Vec<client_types::ScanResult>, client_types::ScanError>>>>,
-    pub scan_requests: Arc<Mutex<Vec<scan::ScanReason>>>,
-    pub directed_active_scan_requests: Arc<Mutex<Vec<(client_types::Ssid, Option<Vec<u8>>)>>>,
+    pub scan_requests: Arc<Mutex<Vec<(scan::ScanReason, Vec<client_types::Ssid>, Vec<u8>)>>>,
 }
 
 impl FakeScanRequester {
@@ -312,7 +311,6 @@ impl FakeScanRequester {
         FakeScanRequester {
             scan_results: Arc::new(Mutex::new(VecDeque::new())),
             scan_requests: Arc::new(Mutex::new(vec![])),
-            directed_active_scan_requests: Arc::new(Mutex::new(vec![])),
         }
     }
     pub async fn add_scan_result(
@@ -328,17 +326,10 @@ impl scan::ScanRequestApi for FakeScanRequester {
     async fn perform_scan(
         &self,
         scan_reason: scan::ScanReason,
+        ssids: Vec<client_types::Ssid>,
+        channels: Vec<u8>,
     ) -> Result<Vec<client_types::ScanResult>, client_types::ScanError> {
-        self.scan_requests.lock().await.push(scan_reason);
-        self.scan_results.lock().await.pop_front().unwrap()
-    }
-
-    async fn perform_directed_active_scan(
-        &self,
-        ssid: client_types::Ssid,
-        channels: Option<Vec<u8>>,
-    ) -> Result<Vec<client_types::ScanResult>, client_types::ScanError> {
-        self.directed_active_scan_requests.lock().await.push((ssid, channels));
+        self.scan_requests.lock().await.push((scan_reason, ssids, channels));
         self.scan_results.lock().await.pop_front().unwrap()
     }
 }

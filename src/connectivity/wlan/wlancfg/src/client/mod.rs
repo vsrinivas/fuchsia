@@ -262,7 +262,8 @@ async fn handle_client_request_scan(
     scan_requester: Arc<dyn scan::ScanRequestApi>,
     output_iterator: fidl::endpoints::ServerEnd<fidl_fuchsia_wlan_policy::ScanResultIteratorMarker>,
 ) {
-    let results = scan_requester.perform_scan(scan::ScanReason::ClientRequest).await;
+    let results =
+        scan_requester.perform_scan(scan::ScanReason::ClientRequest, vec![], vec![]).await;
 
     match results {
         Ok(results) => {
@@ -1082,7 +1083,7 @@ mod tests {
         // Check that a scan request was sent to the scan module
         let scan_request_guard =
             exec.run_singlethreaded(test_values.scan_requester.scan_requests.lock());
-        assert_eq!(*scan_request_guard, vec![scan::ScanReason::ClientRequest]);
+        assert_eq!(*scan_request_guard, vec![(scan::ScanReason::ClientRequest, vec![], vec![])]);
     }
 
     #[fuchsia::test]

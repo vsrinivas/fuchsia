@@ -174,7 +174,7 @@ fn test_setup(exec: &mut TestExecutor) -> TestValues {
     let (telemetry_sender, telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
     let telemetry_sender = TelemetrySender::new(telemetry_sender);
     let (scan_request_sender, scan_request_receiver) =
-        mpsc::channel::<scan::ScanRequest>(scan::SCAN_REQUEST_BUFFER_SIZE);
+        mpsc::channel(scan::SCAN_REQUEST_BUFFER_SIZE);
     let scan_requester = Arc::new(scan::ScanRequester { sender: scan_request_sender });
     let network_selector = Arc::new(network_selection::NetworkSelector::new(
         saved_networks.clone(),

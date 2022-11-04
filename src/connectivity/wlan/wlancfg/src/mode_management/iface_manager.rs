@@ -5248,18 +5248,17 @@ mod tests {
         // module took action.
         let scan_request_guard =
             exec.run_singlethreaded(test_values.scan_requester.scan_requests.lock());
-        let directed_scan_request_guard = exec
-            .run_singlethreaded(test_values.scan_requester.directed_active_scan_requests.lock());
         match test_type {
             NetworkSelectionMissingAttribute::AllAttributesPresent => {
-                assert_eq!(*scan_request_guard, vec![scan::ScanReason::NetworkSelection]);
-                assert_eq!(*directed_scan_request_guard, vec![]);
+                assert_eq!(
+                    *scan_request_guard,
+                    vec![(scan::ScanReason::NetworkSelection, vec![], vec![])]
+                );
             }
             NetworkSelectionMissingAttribute::IdleClient
             | NetworkSelectionMissingAttribute::SavedNetwork
             | NetworkSelectionMissingAttribute::NetworkSelectionInProgress => {
                 assert_eq!(*scan_request_guard, vec![]);
-                assert_eq!(*directed_scan_request_guard, vec![]);
             }
         }
     }

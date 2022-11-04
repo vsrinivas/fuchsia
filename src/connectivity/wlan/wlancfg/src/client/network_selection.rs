@@ -5,7 +5,7 @@
 use {
     crate::{
         client::{
-            scan::{self, ScanReason::NetworkSelection as NetworkSelectionScan},
+            scan::{self, ScanReason},
             state_machine::PeriodicConnectionStats,
             types,
         },
@@ -272,7 +272,9 @@ impl NetworkSelector {
     ) -> Vec<InternalBss> {
         let scan_results = match network {
             Some(ref network) => {
-                self.scan_requester.perform_directed_active_scan(network.ssid.clone(), None).await
+                self.scan_requester
+                    .perform_scan(ScanReason::BssSelection, vec![network.ssid.clone()], vec![])
+                    .await
             }
             None => {
                 let last_scan_result_time = *self.last_scan_result_time.lock().await;
@@ -288,7 +290,7 @@ impl NetworkSelector {
                         ctx: "NetworkSelector::perform_scan",
                     });
                 }
-                self.scan_requester.perform_scan(NetworkSelectionScan).await
+                self.scan_requester.perform_scan(ScanReason::NetworkSelection, vec![], vec![]).await
             }
         };
 
@@ -528,9 +530,10 @@ async fn augment_bss_with_active_scan(
 
         // Perform the scan
         let mut directed_scan_result = scan_requester
-            .perform_directed_active_scan(
-                scanned_candidate.network.ssid.clone(),
-                Some(vec![channel.primary]),
+            .perform_scan(
+                ScanReason::BssSelectionAugmentation,
+                vec![scanned_candidate.network.ssid.clone()],
+                vec![channel.primary],
             )
             .await
             .map_err(|_| {
@@ -1637,10 +1640,8 @@ mod tests {
 
         // Check the right scan request was sent
         assert_eq!(
-            *exec.run_singlethreaded(
-                test_values.scan_requester.directed_active_scan_requests.lock()
-            ),
-            vec![(test_id_1.ssid, Some(vec![scan_channel]))]
+            *exec.run_singlethreaded(test_values.scan_requester.scan_requests.lock()),
+            vec![(ScanReason::BssSelectionAugmentation, vec![test_id_1.ssid], vec![scan_channel])]
         );
     }
 
@@ -1665,7 +1666,7 @@ mod tests {
         // Check that the right scan request was sent
         assert_eq!(
             *exec.run_singlethreaded(test_values.scan_requester.scan_requests.lock()),
-            vec![scan::ScanReason::NetworkSelection]
+            vec![(scan::ScanReason::NetworkSelection, vec![], vec![])]
         );
 
         // Check the network selections were logged
@@ -1825,31 +1826,18 @@ mod tests {
         );
 
         // Check that the right scan requests were sent
-        // Initial passive scan
         assert_eq!(
             *exec.run_singlethreaded(test_values.scan_requester.scan_requests.lock()),
-            vec![scan::ScanReason::NetworkSelection]
-        );
-        // Directed active scan should be made for the selected network
-        assert_eq!(
-            *exec.run_singlethreaded(
-                test_values.scan_requester.directed_active_scan_requests.lock()
-            ),
-            vec![(test_id_1.ssid.clone(), Some(vec![channel_1.primary]))]
-        );
-
-        // Check that the right scan requests were sent
-        // Both initial passive scans
-        assert_eq!(
-            *exec.run_singlethreaded(test_values.scan_requester.scan_requests.lock()),
-            vec![scan::ScanReason::NetworkSelection]
-        );
-        // Both directed active scans
-        assert_eq!(
-            *exec.run_singlethreaded(
-                test_values.scan_requester.directed_active_scan_requests.lock()
-            ),
-            vec![(test_id_1.ssid.clone(), Some(vec![channel_1.primary])),]
+            vec![
+                // Initial passive scan
+                (ScanReason::NetworkSelection, vec![], vec![]),
+                // Directed active scan should be made for the selected network
+                (
+                    ScanReason::BssSelectionAugmentation,
+                    vec![test_id_1.ssid.clone()],
+                    vec![channel_1.primary]
+                )
+            ]
         );
 
         // Check the network selections were logged
@@ -1959,10 +1947,8 @@ mod tests {
 
         // Check that the right scan request was sent
         assert_eq!(
-            *exec.run_singlethreaded(
-                test_values.scan_requester.directed_active_scan_requests.lock()
-            ),
-            vec![(test_id_1.ssid.clone(), None)]
+            *exec.run_singlethreaded(test_values.scan_requester.scan_requests.lock()),
+            vec![(ScanReason::BssSelection, vec![test_id_1.ssid.clone()], vec![])]
         );
 
         // Verify that NetworkSelectionDecision telemetry event is sent
@@ -2003,10 +1989,8 @@ mod tests {
 
         // Check that the right scan request was sent
         assert_eq!(
-            *exec.run_singlethreaded(
-                test_values.scan_requester.directed_active_scan_requests.lock()
-            ),
-            vec![(test_id_1.ssid.clone(), None)]
+            *exec.run_singlethreaded(test_values.scan_requester.scan_requests.lock()),
+            vec![(ScanReason::BssSelection, vec![test_id_1.ssid.clone()], vec![])]
         );
 
         // Verify that NetworkSelectionDecision telemetry event is sent
