@@ -93,6 +93,7 @@ class Buckeye : public BuckeyeType {
   zx_status_t PowerInit();
   zx_status_t CpuInit();
   zx_status_t DmcInit();
+  zx_status_t NnaInit();
 
   int Thread();
 

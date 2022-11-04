@@ -186,6 +186,16 @@ driver_bind_rules("buckeye-buttons-bind") {
   ]
 }
 
+driver_bind_rules("buckeye-nna-bind") {
+  rules = "bind/buckeye-nna.bind"
+  header_output = "buckeye-nna-bind.h"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.registers",
+  ]
+}
+
 fuchsia_driver("buckeye-driver") {
   output_name = "buckeye"
   configs += [
@@ -200,6 +210,7 @@ fuchsia_driver("buckeye-driver") {
     "buckeye-emmc.cc",
     "buckeye-gpio.cc",
     "buckeye-i2c.cc",
+    "buckeye-nna.cc",
     "buckeye-power.cc",
     "buckeye-pwm.cc",
     "buckeye-ram.cc",
@@ -219,6 +230,7 @@ fuchsia_driver("buckeye-driver") {
     ":buckeye-buttons-bind_header",
     ":buckeye-cpu-bind_header",
     ":buckeye-emmc-bind_header",
+    ":buckeye-nna-bind_header",
     ":buckeye-power-domain-bind_header",
     ":buckeye-power-regulator-bind_header",
     ":buckeye-sdio-bind_header",
