@@ -319,20 +319,36 @@ fn main() {
 
     // PARTIALLY FILLED BENCHMARKS
 
-    bench = bench.with_function("SnapshotTree/EmptyVMO", move |b| {
+    bench = bench.with_function("SnapshotTree/VMO0PercentFull/1M", move |b| {
         reader_snapshot_tree_vmo_bench(b, 4096 * 256, 0);
     });
-    bench = bench.with_function("SnapshotTree/QuarterFilledVMO", move |b| {
+    bench = bench.with_function("SnapshotTree/VMO25PercentFull/1M", move |b| {
         reader_snapshot_tree_vmo_bench(b, 4096 * 256, 4096 * 64);
     });
-    bench = bench.with_function("SnapshotTree/HalfFilled_VMO", move |b| {
+    bench = bench.with_function("SnapshotTree/VMO50PercentFull/1M", move |b| {
         reader_snapshot_tree_vmo_bench(b, 4096 * 256, 4096 * 128);
     });
-    bench = bench.with_function("SnapshotTree/ThreeQuarterFilledVMO", move |b| {
+    bench = bench.with_function("SnapshotTree/VMO75PercentFull/1M", move |b| {
         reader_snapshot_tree_vmo_bench(b, 4096 * 256, 4096 * 192);
     });
-    bench = bench.with_function("SnapshotTree/FullVMO", move |b| {
+    bench = bench.with_function("SnapshotTree/VMO100PercentFull/1M", move |b| {
         reader_snapshot_tree_vmo_bench(b, 4096 * 256, 4096 * 256);
+    });
+
+    bench = bench.with_function("SnapshotTree/VMO0PercentFull/32M", move |b| {
+        reader_snapshot_tree_vmo_bench(b, 4096 * 256 * 32, 0);
+    });
+    bench = bench.with_function("SnapshotTree/VMO25PercentFull/32M", move |b| {
+        reader_snapshot_tree_vmo_bench(b, 4096 * 256 * 32, 4096 * 64 * 32);
+    });
+    bench = bench.with_function("SnapshotTree/VMO50PercentFull/32M", move |b| {
+        reader_snapshot_tree_vmo_bench(b, 4096 * 256 * 32, 4096 * 128 * 32);
+    });
+    bench = bench.with_function("SnapshotTree/VMO75PercentFull/32M", move |b| {
+        reader_snapshot_tree_vmo_bench(b, 4096 * 256 * 32, 4096 * 192 * 32);
+    });
+    bench = bench.with_function("SnapshotTree/VMO100PercentFull/32M", move |b| {
+        reader_snapshot_tree_vmo_bench(b, 4096 * 256 * 32, 4096 * 256 * 32);
     });
 
     c.bench("fuchsia.rust_inspect.reader_benchmarks", bench);
