@@ -279,22 +279,19 @@ void ProcessImpl::OnThreadExiting(const debug_ipc::ThreadRecord& record) {
   threads_.erase(found);
 }
 
-void ProcessImpl::OnModules(std::vector<debug_ipc::Module> modules,
-                            const std::vector<debug_ipc::ProcessThreadId>& stopped_threads) {
+void ProcessImpl::OnModules(std::vector<debug_ipc::Module> modules) {
   FixupEmptyModuleNames(modules);
   symbols_.SetModules(modules);
 
-  // The threads loading the library will be stopped so we have time to load symbols and enable any
-  // pending breakpoints. Now that the notification is complete, the thread(s) can continue.
+  // The process is stopped so we have time to load symbols and enable any pending breakpoints.
+  // Now that the notification is complete, resume the process.
   //
   // Note that this is a "blind" resume, as the |this| does not yet know about any threads that are
   // currently running. It will issue a sync call shortly.
-  if (!stopped_threads.empty()) {
-    debug_ipc::ResumeRequest request;
-    request.how = debug_ipc::ResumeRequest::How::kResolveAndContinue;
-    request.ids = stopped_threads;
-    session()->remote_api()->Resume(request, [](const Err& err, debug_ipc::ResumeReply) {});
-  }
+  debug_ipc::ResumeRequest request;
+  request.how = debug_ipc::ResumeRequest::How::kResolveAndContinue;
+  request.ids.push_back({.process = koid_});
+  session()->remote_api()->Resume(request, [](const Err& err, debug_ipc::ResumeReply) {});
 
   // We get the list of threads for the process we are attaching.
   SyncThreads({});

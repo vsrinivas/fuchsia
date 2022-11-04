@@ -1024,8 +1024,6 @@ TEST(Protocol, NotifyModules) {
   initial.modules[0].base = 0x12345;
   initial.modules[1].name = "bar";
   initial.modules[1].base = 0x43567;
-  initial.stopped_threads.push_back({.process = kProcessKoid, .thread = 34});
-  initial.stopped_threads.push_back({.process = kProcessKoid, .thread = 96});
   initial.timestamp = kTestTimestampDefault;
 
   NotifyModules second;
@@ -1037,7 +1035,6 @@ TEST(Protocol, NotifyModules) {
   EXPECT_EQ(initial.modules[0].base, second.modules[0].base);
   EXPECT_EQ(initial.modules[1].name, second.modules[1].name);
   EXPECT_EQ(initial.modules[1].base, second.modules[1].base);
-  EXPECT_EQ(initial.stopped_threads, second.stopped_threads);
   EXPECT_EQ(initial.timestamp, second.timestamp);
 }
 

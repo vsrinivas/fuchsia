@@ -113,13 +113,9 @@ class DebuggedProcess : public ProcessHandleObserver {
   // If it is, handles it and returns true. If it's not, does nothing and returns false.
   bool HandleLoaderBreakpoint(uint64_t address);
 
-  // If the process can know its modules, suspend all thread and send the module list. This does not
-  // refresh the module list.
-  //
-  // This is used in the case where we attach to an existing process or a new forked process and the
-  // debug address is known. The client expects the threads to be suspended so it can resolve
-  // breakpoints and resume them.
-  virtual void SuspendAndSendModulesIfKnown();
+  // Suspend all thread and send the module list. This does not refresh the module list.
+  // The client expects the threads to be suspended so it can resolve breakpoints and resume them.
+  virtual void SuspendAndSendModules();
 
   // Looks for breakpoints at the given address. Null if no breakpoints are at that address.
   virtual SoftwareBreakpoint* FindSoftwareBreakpoint(uint64_t address) const;
@@ -203,10 +199,6 @@ class DebuggedProcess : public ProcessHandleObserver {
   void OnStdout(bool close);
   void OnStderr(bool close);
 
-  // Sends the currently loaded modules to the client with the current list of threads. This does
-  // not refresh the module cache. All threads are assumed to be paused before this call.
-  void SendModuleNotification();
-
   // Sends a IO notification over to the client.
   void SendIO(debug_ipc::NotifyIO::Type, const std::vector<char>& data);
 
@@ -230,6 +222,10 @@ class DebuggedProcess : public ProcessHandleObserver {
   ModuleList module_list_;
 
   std::map<zx_koid_t, std::unique_ptr<DebuggedThread>> threads_;
+
+  // Indicates that new threads, if discovered, should be suspended.
+  // New thread could be spawned even when all known threads are suspended.
+  bool suspend_new_threads_ = false;
 
   // Maps addresses to the ProcessBreakpoint at a location.
   std::map<uint64_t, std::unique_ptr<SoftwareBreakpoint>> software_breakpoints_;

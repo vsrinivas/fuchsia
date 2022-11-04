@@ -41,7 +41,7 @@ void RemoteAPITest::InjectModule(Process* process, fxl::RefPtr<ModuleSymbols> mo
   // Need to convert to an actual ProcessImpl.
   ProcessImpl* process_impl = session().system().ProcessImplFromKoid(process->GetKoid());
   FX_CHECK(process_impl);
-  process_impl->OnModules(modules, {});
+  process_impl->OnModules(modules);
 }
 
 fxl::RefPtr<MockModuleSymbols> RemoteAPITest::InjectMockModule(Process* process,

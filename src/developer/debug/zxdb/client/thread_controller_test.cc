@@ -52,7 +52,8 @@ void ThreadControllerTest::SetUp() {
   modules.push_back(sym_load);
 
   TargetImpl* target = session().system().GetTargetImpls()[0];
-  target->process()->OnModules(modules, {});
+  target->process()->OnModules(modules);
+  mock_remote_api()->GetAndResetResumeCount();  // OnModules will trigger a resume request.
 }
 
 fxl::RefPtr<MockModuleSymbols> ThreadControllerTest::MakeModuleSymbols() {

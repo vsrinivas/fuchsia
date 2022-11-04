@@ -650,7 +650,7 @@ debug::Status DebugAgent::AttachToLimboProcess(zx_koid_t process_koid,
       return;
     if (DebuggedProcess* process = weak_this->GetDebuggedProcess(koid)) {
       process->PopulateCurrentThreads();
-      process->SuspendAndSendModulesIfKnown();
+      process->SuspendAndSendModules();
 
       zx_koid_t thread_koid = exception.thread->GetKoid();
 
@@ -695,7 +695,7 @@ debug::Status DebugAgent::AttachToExistingProcess(zx_koid_t process_koid,
           return;
         if (DebuggedProcess* process = weak_this->GetDebuggedProcess(koid)) {
           process->PopulateCurrentThreads();
-          process->SuspendAndSendModulesIfKnown();
+          process->SuspendAndSendModules();
         }
       });
 
@@ -777,9 +777,7 @@ void DebugAgent::OnProcessStart(std::unique_ptr<ProcessHandle> process_handle) {
 
   SendNotification(notify);
 
-  // In some edge-cases (see DebuggedProcess::RegisterDebugState() for more) the loader state is
-  // known at startup. Send it if so.
-  new_process->SuspendAndSendModulesIfKnown();
+  new_process->SuspendAndSendModules();
 }
 
 void DebugAgent::OnComponentStarted(const std::string& moniker, const std::string& url) {

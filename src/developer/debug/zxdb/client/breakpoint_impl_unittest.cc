@@ -54,6 +54,10 @@ class BreakpointSink : public RemoteAPI {
     thread_request_made = true;
   }
 
+  // No-op.
+  void Resume(const debug_ipc::ResumeRequest& request,
+              fit::callback<void(const Err&, debug_ipc::ResumeReply)> cb) override {}
+
   std::vector<debug_ipc::AddOrChangeBreakpointRequest> adds;
   std::vector<debug_ipc::RemoveBreakpointRequest> removes;
 
@@ -171,7 +175,7 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
   load1.base = kModule1Base;
   load1.build_id = kBuildID1;
   modules.push_back(load1);
-  target->process()->OnModules(modules, {});
+  target->process()->OnModules(modules);
 
   // After adding modules, the client should have asked for threads.
   EXPECT_TRUE(sink().thread_request_made);
@@ -204,7 +208,7 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
   load2.base = kModule2Base;
   load2.build_id = kBuildID2;
   modules.push_back(load2);
-  target->process()->OnModules(modules, {});
+  target->process()->OnModules(modules);
   ASSERT_TRUE(sink().adds.empty());
 
   // Should have sent a notification. It should not be marked user-requested since this was a

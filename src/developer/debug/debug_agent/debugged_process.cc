@@ -138,6 +138,7 @@ debug::Status DebuggedProcess::Init(DebuggedProcessCreateInfo create_info) {
 void DebuggedProcess::OnResume(const debug_ipc::ResumeRequest& request) {
   if (request.ids.empty()) {
     // Empty thread ID list means resume all threads.
+    suspend_new_threads_ = false;
     for (auto& [thread_koid, thread] : threads_)
       thread->ClientResume(request);
   } else {
@@ -146,6 +147,7 @@ void DebuggedProcess::OnResume(const debug_ipc::ResumeRequest& request) {
         // The request may contain resume requests for more than one process.
         continue;
       }
+      suspend_new_threads_ = false;
       if (!id.thread) {
         // A 0 thread koid will resume all threads of the given process.
         for (auto& [thread_koid, thread] : threads_) {
@@ -236,38 +238,24 @@ bool DebuggedProcess::HandleLoaderBreakpoint(uint64_t address) {
     return false;
 
   if (module_list_.Update(process_handle())) {
-    // The debugged process could be multithreaded and have just dynamically loaded a new
-    // module. Suspend all threads so the client can resolve breakpoint addresses before
-    // continuing.
-    SuspendAndSendModulesIfKnown();
+    SuspendAndSendModules();
   }
   return true;
 }
 
-void DebuggedProcess::SuspendAndSendModulesIfKnown() {
-  if (!module_list_.modules().empty()) {
-    // This process' modules can be known. Send them.
-    //
-    // Suspend all threads while the module list is being sent. The client will resume the threads
-    // once it's loaded symbols and processed breakpoints (this may take a while and we'd like to
-    // get any breakpoints as early as possible).
-    ClientSuspendAllThreads();
-    SendModuleNotification();
-  }
-}
+void DebuggedProcess::SuspendAndSendModules() {
+  // Suspend all threads while the module list is being sent. The client will resume the threads
+  // once it's loaded symbols and processed breakpoints (this may take a while and we'd like to
+  // get any breakpoints as early as possible).
+  ClientSuspendAllThreads();
 
-void DebuggedProcess::SendModuleNotification() {
   // Notify the client of any libraries.
   debug_ipc::NotifyModules notify;
   notify.process_koid = koid();
   notify.modules = module_list_.modules();
   notify.timestamp = GetNowTimestamp();
 
-  // All threads are assumed to be stopped.
-  for (auto& [thread_koid, thread_ptr] : threads_)
-    notify.stopped_threads.push_back({.process = koid(), .thread = thread_koid});
-
-  DEBUG_LOG(Process) << LogPreamble(this) << "Sending modules.";
+  DEBUG_LOG(Process) << LogPreamble(this) << "Sending " << notify.modules.size() << " modules.";
 
   debug_agent_->SendNotification(notify);
 }
@@ -457,7 +445,7 @@ void DebuggedProcess::OnProcessTerminated() {
 void DebuggedProcess::OnThreadStarting(std::unique_ptr<ExceptionHandle> exception) {
   auto thread_handle = exception->GetThreadHandle();
   zx_koid_t thread_id = thread_handle->GetKoid();
-  DEBUG_LOG(Process) << LogPreamble(this) << " Thread starting with koid " << thread_id;
+  DEBUG_LOG(Process) << LogPreamble(this) << "Thread starting with koid " << thread_id;
 
   if (threads_.find(thread_id) != threads_.end()) {
     // This is possible when `DebugAgent::AttachToExistingProcess` in the following order:
@@ -471,10 +459,15 @@ void DebuggedProcess::OnThreadStarting(std::unique_ptr<ExceptionHandle> exceptio
   }
 
   auto new_thread = std::make_unique<DebuggedThread>(debug_agent_, this, std::move(thread_handle));
-  auto added = threads_.emplace(thread_id, std::move(new_thread));
+
+  if (suspend_new_threads_) {
+    new_thread->ClientSuspend(true);
+  }
 
   // Notify the client.
-  added.first->second->SendThreadNotification();
+  new_thread->SendThreadNotification();
+
+  threads_.emplace(thread_id, std::move(new_thread));
 }
 
 void DebuggedProcess::OnThreadExiting(std::unique_ptr<ExceptionHandle> exception) {
@@ -566,6 +559,9 @@ void DebuggedProcess::InjectThreadForTest(std::unique_ptr<DebuggedThread> thread
 
 std::vector<debug_ipc::ProcessThreadId> DebuggedProcess::ClientSuspendAllThreads(
     zx_koid_t except_thread) {
+  // Also suspend new threads.
+  suspend_new_threads_ = true;
+
   std::vector<debug_ipc::ProcessThreadId> suspended_thread_ids;
 
   // Issue the suspension order for all the threads.

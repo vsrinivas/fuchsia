@@ -43,7 +43,7 @@ class DebugAgentMockProcess : public MockProcess {
 
   ~DebugAgentMockProcess() = default;
 
-  void SuspendAndSendModulesIfKnown() override {
+  void SuspendAndSendModules() override {
     // Send the modules over to the ipc.
     debug_agent()->SendNotification(modules_to_send_);
   }

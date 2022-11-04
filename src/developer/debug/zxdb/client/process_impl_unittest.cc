@@ -83,11 +83,6 @@ TEST_F(ProcessImplTest, OnModules) {
   notify.modules[0].name = "comctl32.dll";
   notify.modules[0].base = 0x7685348234;
 
-  constexpr uint64_t kThread1Koid = 237645;
-  constexpr uint64_t kThread2Koid = 809712;
-  notify.stopped_threads.push_back({.process = kProcessKoid, .thread = kThread1Koid});
-  notify.stopped_threads.push_back({.process = kProcessKoid, .thread = kThread2Koid});
-
   session().DispatchNotifyModules(notify);
 
   EXPECT_TRUE(sink()->thread_request_made());
@@ -96,7 +91,8 @@ TEST_F(ProcessImplTest, OnModules) {
   ASSERT_EQ(1, sink()->resume_count());
   const debug_ipc::ResumeRequest& resume = sink()->resume_request();
   EXPECT_EQ(debug_ipc::ResumeRequest::How::kResolveAndContinue, resume.how);
-  EXPECT_EQ(notify.stopped_threads, resume.ids);
+  EXPECT_EQ(1U, resume.ids.size());
+  EXPECT_EQ(debug_ipc::ProcessThreadId{.process = kProcessKoid}, resume.ids[0]);
 }
 
 TEST_F(ProcessImplTest, GetTLSHelpers) {
@@ -121,7 +117,7 @@ TEST_F(ProcessImplTest, GetTLSHelpers) {
   modules.push_back(module);
 
   TargetImpl* target = session().system().GetTargetImpls()[0];
-  target->process()->OnModules(modules, {});
+  target->process()->OnModules(modules);
 
   constexpr uint64_t kThrdTAddr = 0x1000;
   constexpr uint64_t kLinkMapTlsModIdAddr = 0x2000;

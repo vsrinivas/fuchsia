@@ -32,7 +32,7 @@ namespace debug_ipc {
 //     should increase kMinimumProtocolVersion to the kCurrentProtocolVersion and the support for
 //     old versions can be dropped.
 
-constexpr uint32_t kCurrentProtocolVersion = 53;
+constexpr uint32_t kCurrentProtocolVersion = 54;
 
 #if !defined(FUCHSIA_API_LEVEL)
 #error FUCHSIA_API_LEVEL must be defined
@@ -657,12 +657,18 @@ struct NotifyModules {
   uint64_t process_koid = 0;
   std::vector<Module> modules;
 
-  // The list of threads in the process stopped automatically as a result of the module load. The
-  // client will want to resume these threads once it has processed the load.
-  std::vector<ProcessThreadId> stopped_threads;
-
   void Serialize(Serializer& ser, uint32_t ver) {
-    ser | timestamp | process_koid | modules | stopped_threads;
+    ser | timestamp | process_koid | modules;
+
+    if (ver < 54) {
+      // The list of threads in the process stopped automatically as a result of the module load.
+      // The client will want to resume these threads once it has processed the load.
+      //
+      // Removed in version 54 but the old client can still use this to resume.
+      std::vector<ProcessThreadId> stopped_threads;
+      stopped_threads.push_back({.process = process_koid});
+      ser | stopped_threads;
+    }
   }
 };
 
