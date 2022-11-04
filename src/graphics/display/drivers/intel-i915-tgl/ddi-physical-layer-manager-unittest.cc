@@ -16,6 +16,8 @@
 
 namespace i915_tgl {
 
+namespace {
+
 const std::unordered_map<PowerWellId, PowerWellInfo> kPowerWellInfoTestDevice = {};
 
 // A fake power well implementation used only for tests.
@@ -300,5 +302,7 @@ TEST(DdiManagerTigerLake, ParseVbtTable_NUC11PAHi5) {
   EXPECT_EQ(ddi_tc_6_info.ddi_type, DdiPhysicalLayer::DdiType::kTypeC);
   EXPECT_NE(ddi_tc_6_info.connection_type, DdiPhysicalLayer::ConnectionType::kBuiltIn);
 }
+
+}  // namespace
 
 }  // namespace i915_tgl

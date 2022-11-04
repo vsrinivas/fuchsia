@@ -11,6 +11,7 @@
 
 #include <fbl/string_printf.h>
 
+#include "src/graphics/display/drivers/intel-i915-tgl/ddi-physical-layer-internal.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/hardware-common.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/intel-i915-tgl.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/poll-until.h"
@@ -117,48 +118,6 @@ DdiPhysicalLayer::PhysicalLayerInfo ComboDdiTigerLake::GetPhysicalLayerInfo() co
       .max_allowed_dp_lane_count = 4u,
   };
 }
-
-// This describes the state machine to Enable / Disable the DDI PHY.
-//
-//       Uninitialized
-//         |    ^
-//         v    |
-//       Type C Cold Blocked
-//         |    ^
-//         v    |
-//       Safe Mode Set
-//         |    ^
-//         v    |
-//       AUX Powered On
-//         |    ^
-//         v    |
-//       Initialized
-//
-// The Top-to-bottom direction represents initialization procedure and bottom-
-// to-top direction represents deinitialization.
-enum class TypeCDdiTigerLake::InitializationPhase {
-  // Initialization hasn't started yet.
-  // This is the only valid starting state to enable a DDI PHY.
-  kUninitialized = 0,
-
-  // The following states are steps of Type-C DDI PHY initialization process.
-  // Each state below means that the driver has *attempted* to take this step
-  // but cannot guarantee whether this step is successful. The driver can only
-  // take a new step when all previous steps have succeeded.
-
-  // Step 1. Block Type-C Cold State.
-  kTypeCColdBlocked = 1,
-
-  // Step 2. Disable Type-C safe mode.
-  kSafeModeSet = 2,
-
-  // Step 3. Setup DDI AUX channel.
-  kAuxPoweredOn = 3,
-
-  // All the steps above have succeeded and the initialization process finishes.
-  // In order to initialize a display device, the DDI PHY must be in this state.
-  kInitialized = 4,
-};
 
 TypeCDdiTigerLake::TypeCDdiTigerLake(DdiId ddi_id, Power* power, fdf::MmioBuffer* mmio_space,
                                      bool is_static_port)

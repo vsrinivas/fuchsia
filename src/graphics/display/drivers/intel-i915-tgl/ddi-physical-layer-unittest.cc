@@ -9,11 +9,14 @@
 #include <fake-mmio-reg/fake-mmio-reg.h>
 #include <gtest/gtest.h>
 
+#include "src/graphics/display/drivers/intel-i915-tgl/ddi-physical-layer-internal.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/hardware-common.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/mock-mmio-range.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-typec.h"
 
 namespace i915_tgl {
+
+namespace {
 
 const std::unordered_map<PowerWellId, PowerWellInfo> kPowerWellInfoTestDevice = {};
 
@@ -45,15 +48,6 @@ class TestPower : public Power {
   std::unordered_map<DdiId, bool> aux_state_;
 };
 
-// This must match the InitializationPhase defined in ddi-physical-layer.cc .
-enum class TypeCDdiTigerLake::InitializationPhase {
-  kUninitialized = 0,
-  kTypeCColdBlocked = 1,
-  kSafeModeSet = 2,
-  kAuxPoweredOn = 3,
-  kInitialized = 4,
-};
-
 class TypeCDdiTigerLakeTest : public ::testing::Test {
  public:
   TypeCDdiTigerLakeTest() = default;
@@ -65,13 +59,9 @@ class TypeCDdiTigerLakeTest : public ::testing::Test {
   TestPower power_{nullptr};
 };
 
-namespace {
-
 constexpr uint32_t kMailboxInterfaceOffset = 0x138124;
 constexpr uint32_t kMailboxData0Offset = 0x138128;
 constexpr uint32_t kMailboxData1Offset = 0x13812c;
-
-}  // namespace
 
 TEST_F(TypeCDdiTigerLakeTest, EnableFsm_TypeCColdBlock_Success) {
   constexpr DdiId kTargetDdiId = DdiId::DDI_TC_1;
@@ -1013,5 +1003,7 @@ TEST_F(TypeCDdiTigerLakeTest, ReadPhysicalLayerInfo_Thunderbolt) {
     EXPECT_EQ(physical_layer_info.max_allowed_dp_lane_count, 4u);
   }
 }
+
+}  // namespace
 
 }  // namespace i915_tgl
