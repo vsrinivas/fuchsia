@@ -561,8 +561,7 @@ constexpr uint32_t kHangcheckTimeoutMs = HANGCHECK_TIMEOUT_MS;
 constexpr uint32_t kHangcheckTimeoutMs = 1000;
 #endif
 
-// TODO(fxbug.dev/79997) - set to 100ms to release forcewakes and allow engines to power down.
-constexpr uint32_t kForceWakeReleaseTimeoutMs = 0;
+constexpr uint32_t kForceWakeReleaseTimeoutMs = 100;
 
 constexpr uint32_t kFreqPollPeriodMs = 16;
 
