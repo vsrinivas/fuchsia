@@ -48,6 +48,8 @@ sdk://pkg/fidl_base
 sdk://pkg/fidl_cpp_base_v2
 sdk://pkg/fidl_cpp_v2
 sdk://pkg/fidl_cpp_wire
+sdk://pkg/fidl_driver
+sdk://pkg/fidl_driver_natural
 sdk://pkg/fidl_driver_transport
 sdk://pkg/fit
 sdk://pkg/fit-promise

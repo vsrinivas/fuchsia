@@ -21,7 +21,9 @@ sdk_source_set("fidl_driver_transport") {
   ]
 }
 
-source_set("fidl_driver") {
+sdk_source_set("fidl_driver") {
+  category = "experimental"
+  sdk_name = "fidl_driver"
   public = [
     "include/lib/fidl_driver/cpp/internal/server_details.h",
     "include/lib/fidl_driver/cpp/internal/wire_client_details.h",
@@ -42,7 +44,9 @@ source_set("fidl_driver") {
   ]
 }
 
-source_set("fidl_driver_natural") {
+sdk_source_set("fidl_driver_natural") {
+  category = "experimental"
+  sdk_name = "fidl_driver_natural"
   public = [
     "include/lib/fidl_driver/cpp/internal/endpoint_conversions.h",
     "include/lib/fidl_driver/cpp/internal/natural_client_details.h",
