@@ -38,7 +38,7 @@ typedef enum ZirconBootResult {
   kBootResultErrorReadImage,
   kBootResultErrorSlotFail,
   kBootResultErrorNoValidSlot,
-  kBootResultErrorGetFirmwareSlot,
+  kBootResultErrorIsSlotSupprotedByFirmware,
   kBootResultErrorMismatchedFirmwareSlot,
   kBootResultRebootReturn,
   kBootResultBootReturn,
@@ -99,18 +99,24 @@ struct ZirconBootOps {
   // The function is not expected to return if boot is successful.
   void (*boot)(ZirconBootOps* ops, zbi_header_t* image, size_t capacity, AbrSlotIndex slot);
 
-  // Gets the A/B/R slot of the currrently running firmware. The method needs to be implemented
-  // to support firmware A/B/R logic. Specifically, device needs to find a way to store and pass
-  // this information from non-A/B/R bootloader, i.e. stashing in registers.
-  //
-  // LoadAndBoot() will check whether this pointer is NULL to decide whether to boot according to
-  // OS ABR or firmware ABR.
+  // Checks whether the currently running firmware can be used to boot the target kernel slot.
+  // If set, zircon_boot will call this before attempting to load/boot/decrease retry counter for
+  // the current active slot. If |out| is true, it proceeds. Otherwise, it will calls the reboot
+  // method below to trigger a device reboot. The typical use case of this method is to extend
+  // A/B/R booting to firmware (firmware ABR booting). Specifically, user can check whether current
+  // firmware slot is compatible with the active kernel slot to boot. If the same, boot can proceeds
+  // Otherwise the library will trigger a reboot and expect that the device can reboot into a
+  // firmware slot that is compatible with the active slot according to current abr metadata, i.e
+  // the slot expected to be returned by AbrGetBootSlot(). The typical approach is to have earlier
+  // stage firmware also boot according to A/B/R. Boards without firmware A/B/R can just leave this
+  // function unimplemented.
   //
   // @ops: Pointer to the host |ZirconBootOps|
-  // @out_slot: An output pointer for returning firmware slot
+  // @kernel_slot: Target slot for kernel.
+  // @out: An output pointer for returning whether current slot can boot the target `kernel_slot`
   //
-  // Returns true on success.
-  bool (*get_firmware_slot)(ZirconBootOps* ops, AbrSlotIndex* out_slot);
+  // Returns true on success, false otherwise.
+  bool (*firmware_can_boot_kernel_slot)(ZirconBootOps* ops, AbrSlotIndex kernel_slot, bool* out);
 
   // Reboots the device.
   //

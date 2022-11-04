@@ -129,7 +129,7 @@ ZirconBootOps GetZirconBootOps() {
   zircon_boot_ops.write_to_partition = WriteToPartition;
   zircon_boot_ops.boot = Boot;
   zircon_boot_ops.add_zbi_items = AddZbiItems;
-  zircon_boot_ops.get_firmware_slot = nullptr;
+  zircon_boot_ops.firmware_can_boot_kernel_slot = nullptr;
 
   // TODO(b/235489025): Implement the following callbacks for libavb integration. These operations
   // might differ from product to product. Thus we may need to implement them as a configurable

@@ -69,7 +69,7 @@ class MockZirconBootOps {
                                 void* dst, size_t* read_size);
   static bool WriteToPartition(ZirconBootOps* ops, const char* part, size_t offset, size_t size,
                                const void* src, size_t* write_size);
-  static bool GetFirmwareSlot(ZirconBootOps* ops, AbrSlotIndex* out_slot);
+  static bool FirmwareCanBootKernelSlot(ZirconBootOps* ops, AbrSlotIndex kernel_slot, bool* out);
   static void Reboot(ZirconBootOps* ops, bool force_recovery);
   static void Boot(ZirconBootOps* ops, zbi_header_t* image, size_t capacity, AbrSlotIndex slot);
   static bool AddDeviceZbiItems(ZirconBootOps* zb_ops, zbi_header_t* image, size_t capacity,

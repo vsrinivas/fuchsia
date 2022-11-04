@@ -125,16 +125,36 @@ static ZirconBootResult LoadKernel(void* load_address, size_t load_address_size,
   return kBootResultOK;
 }
 
-static ZirconBootResult LoadImageOsAbr(ZirconBootOps* ops, void* load_address,
-                                       size_t load_address_size, ForceRecovery force_recovery,
-                                       AbrSlotIndex* out_slot) {
+static AbrSlotIndex GetBootSlot(AbrOps* abr_ops, ForceRecovery force_recovery,
+                                bool update_metadata) {
+  return force_recovery == kForceRecoveryOn ? kAbrSlotIndexR
+                                            : AbrGetBootSlot(abr_ops, update_metadata, NULL);
+}
+
+static ZirconBootResult LoadImage(ZirconBootOps* ops, void* load_address, size_t load_address_size,
+                                  ForceRecovery force_recovery, AbrSlotIndex* out_slot) {
   ZirconBootResult ret;
   AbrSlotIndex cur_slot;
   AbrOps abr_ops = GetAbrOpsFromZirconBootOps(ops);
   do {
-    /* check recovery mode */
-    cur_slot =
-        force_recovery == kForceRecoveryOn ? kAbrSlotIndexR : AbrGetBootSlot(&abr_ops, true, NULL);
+    if (ops->firmware_can_boot_kernel_slot) {
+      // Get the target slot about to be booted
+      AbrSlotIndex target_slot = GetBootSlot(&abr_ops, force_recovery, false);
+      bool supported = false;
+      if (!ZIRCON_BOOT_OPS_CALL(ops, firmware_can_boot_kernel_slot, target_slot, &supported)) {
+        zircon_boot_dlog("Fail to check slot supported\n");
+        return kBootResultErrorIsSlotSupprotedByFirmware;
+      }
+
+      if (!supported) {
+        zircon_boot_dlog("Target kernel slot is not supported by current firmware. Rebooting...\n");
+        ZIRCON_BOOT_OPS_CALL(ops, reboot, force_recovery);
+        zircon_boot_dlog("Should not reach here. Reboot handoff failed\n");
+        return kBootResultRebootReturn;
+      }
+    }
+
+    cur_slot = GetBootSlot(&abr_ops, force_recovery, true);
     ret = LoadKernel(load_address, load_address_size, cur_slot, ops);
     if (ret != kBootResultOK) {
       zircon_boot_dlog("ABR: failed to load slot %d\n", cur_slot);
@@ -153,47 +173,6 @@ static ZirconBootResult LoadImageOsAbr(ZirconBootOps* ops, void* load_address,
   return kBootResultOK;
 }
 
-static ZirconBootResult LoadImageFirmwareAbr(ZirconBootOps* ops, void* load_address,
-                                             size_t load_address_size, ForceRecovery force_recovery,
-                                             AbrSlotIndex* out_slot) {
-  // Only boot to matching firmware and OS slot.
-  AbrSlotIndex firmware_slot;
-  if (!ZIRCON_BOOT_OPS_CALL(ops, get_firmware_slot, &firmware_slot)) {
-    zircon_boot_dlog("Fail to get firmware slot\n");
-    return kBootResultErrorGetFirmwareSlot;
-  }
-
-  AbrOps abr_ops = GetAbrOpsFromZirconBootOps(ops);
-  AbrSlotIndex target_slot =
-      force_recovery == kForceRecoveryOn ? kAbrSlotIndexR : AbrGetBootSlot(&abr_ops, false, NULL);
-  if (firmware_slot != target_slot) {
-    zircon_boot_dlog(
-        "Device is in firmware slot %s. But metadata/force-recovery suggests "
-        "slot %s. Refusing to continue.\n",
-        AbrGetSlotSuffix(firmware_slot), AbrGetSlotSuffix(target_slot));
-    return kBootResultErrorMismatchedFirmwareSlot;
-  }
-  *out_slot = target_slot;
-
-  if (target_slot != kAbrSlotIndexR) {
-    zircon_boot_dlog("updating metadata\n");
-    // set |update_metadat| to true to decrement retry counter if applicable.
-    AbrGetBootSlot(&abr_ops, true, NULL);
-  }
-
-  ZirconBootResult ret = LoadKernel(load_address, load_address_size, target_slot, ops);
-  if (ret != kBootResultOK) {
-    zircon_boot_dlog("ABR: failed to load slot %d\n", target_slot);
-    if (target_slot != kAbrSlotIndexR &&
-        AbrMarkSlotUnbootable(&abr_ops, target_slot) != kAbrResultOk) {
-      return kBootResultErrorMarkUnbootable;
-    }
-    return kBootResultErrorSlotFail;
-  }
-
-  return kBootResultOK;
-}
-
 ZirconBootResult LoadAndBoot(ZirconBootOps* ops, void* load_address, size_t load_address_size,
                              ForceRecovery force_recovery) {
   if (!load_address) {
@@ -201,21 +180,7 @@ ZirconBootResult LoadAndBoot(ZirconBootOps* ops, void* load_address, size_t load
   }
 
   AbrSlotIndex slot;
-  ZirconBootResult res;
-  if (ops->get_firmware_slot) {
-    res = LoadImageFirmwareAbr(ops, load_address, load_address_size, force_recovery, &slot);
-    if (res == kBootResultErrorSlotFail && slot == kAbrSlotIndexR) {
-      // Recovery failure and not because of slot mismatch. Simply return. Up to the device to
-      // decide what to do.
-      return res;
-    } else if (res == kBootResultErrorMismatchedFirmwareSlot || res == kBootResultErrorSlotFail) {
-      ZIRCON_BOOT_OPS_CALL(ops, reboot, force_recovery);
-      zircon_boot_dlog("Should not reach here. Reboot handoff failed\n");
-      return kBootResultRebootReturn;
-    }
-  } else {
-    res = LoadImageOsAbr(ops, load_address, load_address_size, force_recovery, &slot);
-  }
+  ZirconBootResult res = LoadImage(ops, load_address, load_address_size, force_recovery, &slot);
   if (res != kBootResultOK) {
     return res;
   }

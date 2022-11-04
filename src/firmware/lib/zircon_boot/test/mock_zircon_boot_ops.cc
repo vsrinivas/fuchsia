@@ -148,9 +148,10 @@ bool MockZirconBootOps::WriteToPartition(ZirconBootOps* ops, const char* part, s
   return true;
 }
 
-bool MockZirconBootOps::GetFirmwareSlot(ZirconBootOps* ops, AbrSlotIndex* out_slot) {
+bool MockZirconBootOps::FirmwareCanBootKernelSlot(ZirconBootOps* ops, AbrSlotIndex kernel_slot,
+                                                  bool* out) {
   MockZirconBootOps* dev = static_cast<MockZirconBootOps*>(ops->context);
-  *out_slot = dev->GetFirmwareSlot();
+  *out = dev->GetFirmwareSlot() == kernel_slot;
   return true;
 }
 
@@ -218,7 +219,7 @@ ZirconBootOps MockZirconBootOps::GetZirconBootOps() {
   zircon_boot_ops.context = this;
   zircon_boot_ops.read_from_partition = ReadFromPartition;
   zircon_boot_ops.write_to_partition = WriteToPartition;
-  zircon_boot_ops.get_firmware_slot = GetFirmwareSlot;
+  zircon_boot_ops.firmware_can_boot_kernel_slot = FirmwareCanBootKernelSlot;
   zircon_boot_ops.reboot = Reboot;
   zircon_boot_ops.boot = Boot;
   zircon_boot_ops.add_zbi_items = AddDeviceZbiItems;
