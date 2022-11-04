@@ -110,7 +110,7 @@ class DdiPhysicalLayer {
     fbl::String DebugString() const;
   };
 
-  explicit DdiPhysicalLayer(tgl_registers::Ddi ddi_id) : ddi_id_(ddi_id) {}
+  explicit DdiPhysicalLayer(DdiId ddi_id) : ddi_id_(ddi_id) {}
   virtual ~DdiPhysicalLayer() = default;
 
   // Copying and moving are not allowed.
@@ -119,7 +119,7 @@ class DdiPhysicalLayer {
   DdiPhysicalLayer(DdiPhysicalLayer&&) = delete;
   DdiPhysicalLayer& operator=(DdiPhysicalLayer&&) = delete;
 
-  tgl_registers::Ddi ddi_id() const { return ddi_id_; }
+  DdiId ddi_id() const { return ddi_id_; }
 
   // Indicates whether the DDI PHY is already enabled.
   virtual bool IsEnabled() const = 0;
@@ -159,7 +159,7 @@ class DdiPhysicalLayer {
   // last reference is released.
   void Release();
 
-  tgl_registers::Ddi ddi_id_;
+  DdiId ddi_id_;
 
   // The ref-counting is *not* thread-safe.
   int ref_count_ = 0;
@@ -168,7 +168,7 @@ class DdiPhysicalLayer {
 // Instantiation of DDI Physical Layer (DDI A-E) on Skylake / Kaby Lake.
 class DdiSkylake : public DdiPhysicalLayer {
  public:
-  explicit DdiSkylake(tgl_registers::Ddi ddi_id) : DdiPhysicalLayer(ddi_id) {}
+  explicit DdiSkylake(DdiId ddi_id) : DdiPhysicalLayer(ddi_id) {}
   ~DdiSkylake() override = default;
 
   // DdiPhysicalLayer overrides:
@@ -188,7 +188,7 @@ class DdiSkylake : public DdiPhysicalLayer {
 // nothing. Correct Enable() / Disable() logic needs to be implemented.
 class ComboDdiTigerLake : public DdiPhysicalLayer {
  public:
-  explicit ComboDdiTigerLake(tgl_registers::Ddi ddi_id) : DdiPhysicalLayer(ddi_id) {}
+  explicit ComboDdiTigerLake(DdiId ddi_id) : DdiPhysicalLayer(ddi_id) {}
   ~ComboDdiTigerLake() override = default;
 
   // DdiPhysicalLayer overrides:
@@ -205,8 +205,7 @@ class ComboDdiTigerLake : public DdiPhysicalLayer {
 // Instantiation of Type-C DDI Physical Layer (DDI TC 1-6) on Tiger Lake.
 class TypeCDdiTigerLake : public DdiPhysicalLayer {
  public:
-  TypeCDdiTigerLake(tgl_registers::Ddi ddi_id, Power* power, fdf::MmioBuffer* mmio_space,
-                    bool is_static_port);
+  TypeCDdiTigerLake(DdiId ddi_id, Power* power, fdf::MmioBuffer* mmio_space, bool is_static_port);
   ~TypeCDdiTigerLake() override;
 
   // The DDI PHY initialization process contains multiple steps and can be

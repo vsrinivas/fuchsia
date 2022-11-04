@@ -160,8 +160,8 @@ enum class TypeCDdiTigerLake::InitializationPhase {
   kInitialized = 4,
 };
 
-TypeCDdiTigerLake::TypeCDdiTigerLake(tgl_registers::Ddi ddi_id, Power* power,
-                                     fdf::MmioBuffer* mmio_space, bool is_static_port)
+TypeCDdiTigerLake::TypeCDdiTigerLake(DdiId ddi_id, Power* power, fdf::MmioBuffer* mmio_space,
+                                     bool is_static_port)
     : DdiPhysicalLayer(ddi_id),
       power_(power),
       mmio_space_(mmio_space),
@@ -170,8 +170,8 @@ TypeCDdiTigerLake::TypeCDdiTigerLake(tgl_registers::Ddi ddi_id, Power* power,
       physical_layer_info_(DefaultPhysicalLayerInfo()) {
   ZX_ASSERT(power_);
   ZX_ASSERT(mmio_space_);
-  ZX_ASSERT(ddi_id >= tgl_registers::DDI_TC_1);
-  ZX_ASSERT(ddi_id <= tgl_registers::DDI_TC_6);
+  ZX_ASSERT(ddi_id >= DdiId::DDI_TC_1);
+  ZX_ASSERT(ddi_id <= DdiId::DDI_TC_6);
 }
 
 TypeCDdiTigerLake::~TypeCDdiTigerLake() {

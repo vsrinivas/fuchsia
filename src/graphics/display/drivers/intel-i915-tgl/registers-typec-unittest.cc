@@ -35,26 +35,26 @@ TEST_F(DynamicFlexIoDisplayPortMainLinkLaneEnabledTest, Getter) {
   }));
 
   {
-    const auto ddi_to_test = tgl_registers::DDI_TC_1;
-    const auto reg_to_test = tgl_registers::DynamicFlexIoDisplayPortMainLinkLaneEnabled::GetForDdi(
-                                 tgl_registers::DDI_TC_1)
-                                 .ReadFrom(&mmio_buffer_);
+    const auto ddi_to_test = DdiId::DDI_TC_1;
+    const auto reg_to_test =
+        tgl_registers::DynamicFlexIoDisplayPortMainLinkLaneEnabled::GetForDdi(DdiId::DDI_TC_1)
+            .ReadFrom(&mmio_buffer_);
     EXPECT_EQ(reg_to_test.enabled_display_port_main_link_lane_bits(ddi_to_test), 0xcu);
   }
 
   {
-    const auto ddi_to_test = tgl_registers::DDI_TC_4;
-    const auto reg_to_test = tgl_registers::DynamicFlexIoDisplayPortMainLinkLaneEnabled::GetForDdi(
-                                 tgl_registers::DDI_TC_4)
-                                 .ReadFrom(&mmio_buffer_);
+    const auto ddi_to_test = DdiId::DDI_TC_4;
+    const auto reg_to_test =
+        tgl_registers::DynamicFlexIoDisplayPortMainLinkLaneEnabled::GetForDdi(DdiId::DDI_TC_4)
+            .ReadFrom(&mmio_buffer_);
     EXPECT_EQ(reg_to_test.enabled_display_port_main_link_lane_bits(ddi_to_test), 0xfu);
   }
 
   {
-    const auto ddi_to_test = tgl_registers::DDI_TC_5;
-    const auto reg_to_test = tgl_registers::DynamicFlexIoDisplayPortMainLinkLaneEnabled::GetForDdi(
-                                 tgl_registers::DDI_TC_5)
-                                 .ReadFrom(&mmio_buffer_);
+    const auto ddi_to_test = DdiId::DDI_TC_5;
+    const auto reg_to_test =
+        tgl_registers::DynamicFlexIoDisplayPortMainLinkLaneEnabled::GetForDdi(DdiId::DDI_TC_5)
+            .ReadFrom(&mmio_buffer_);
     EXPECT_EQ(reg_to_test.enabled_display_port_main_link_lane_bits(ddi_to_test), 0x1u);
   }
 }
@@ -75,7 +75,7 @@ TEST_F(DynamicFlexIoDisplayPortMainLinkLaneEnabledTest, Setter) {
   }));
 
   {
-    const auto ddi_to_test = tgl_registers::DDI_TC_1;
+    const auto ddi_to_test = DdiId::DDI_TC_1;
     auto reg_to_test =
         tgl_registers::DynamicFlexIoDisplayPortMainLinkLaneEnabled::GetForDdi(ddi_to_test)
             .ReadFrom(&mmio_buffer_);
@@ -84,7 +84,7 @@ TEST_F(DynamicFlexIoDisplayPortMainLinkLaneEnabledTest, Setter) {
   }
 
   {
-    const auto ddi_to_test = tgl_registers::DDI_TC_4;
+    const auto ddi_to_test = DdiId::DDI_TC_4;
     auto reg_to_test =
         tgl_registers::DynamicFlexIoDisplayPortMainLinkLaneEnabled::GetForDdi(ddi_to_test)
             .ReadFrom(&mmio_buffer_);
@@ -93,7 +93,7 @@ TEST_F(DynamicFlexIoDisplayPortMainLinkLaneEnabledTest, Setter) {
   }
 
   {
-    const auto ddi_to_test = tgl_registers::DDI_TC_5;
+    const auto ddi_to_test = DdiId::DDI_TC_5;
     auto reg_to_test =
         tgl_registers::DynamicFlexIoDisplayPortMainLinkLaneEnabled::GetForDdi(ddi_to_test)
             .ReadFrom(&mmio_buffer_);
@@ -104,9 +104,8 @@ TEST_F(DynamicFlexIoDisplayPortMainLinkLaneEnabledTest, Setter) {
 
 TEST_F(DynamicFlexIoDisplayPortMainLinkLaneEnabledTest, GetRejectsComboDdi) {
   // COMBO DDIs should not be supported
-  EXPECT_DEATH(
-      tgl_registers::DynamicFlexIoDisplayPortMainLinkLaneEnabled::GetForDdi(tgl_registers::DDI_A),
-      "DDI_TC_1");
+  EXPECT_DEATH(tgl_registers::DynamicFlexIoDisplayPortMainLinkLaneEnabled::GetForDdi(DdiId::DDI_A),
+               "DDI_TC_1");
 }
 
 TEST_F(DynamicFlexIoDisplayPortMainLinkLaneEnabledTest,
@@ -114,10 +113,9 @@ TEST_F(DynamicFlexIoDisplayPortMainLinkLaneEnabledTest,
   EXPECT_DEATH(
       {
         const auto reg_to_test =
-            tgl_registers::DynamicFlexIoDisplayPortMainLinkLaneEnabled::GetForDdi(
-                tgl_registers::DDI_TC_1)
+            tgl_registers::DynamicFlexIoDisplayPortMainLinkLaneEnabled::GetForDdi(DdiId::DDI_TC_1)
                 .FromValue(0);
-        reg_to_test.enabled_display_port_main_link_lane_bits(tgl_registers::DDI_B);
+        reg_to_test.enabled_display_port_main_link_lane_bits(DdiId::DDI_B);
       },
       "IsDdiCoveredByThisRegister");
 
@@ -125,10 +123,9 @@ TEST_F(DynamicFlexIoDisplayPortMainLinkLaneEnabledTest,
   EXPECT_DEATH(
       {
         const auto reg_to_test =
-            tgl_registers::DynamicFlexIoDisplayPortMainLinkLaneEnabled::GetForDdi(
-                tgl_registers::DDI_TC_1)
+            tgl_registers::DynamicFlexIoDisplayPortMainLinkLaneEnabled::GetForDdi(DdiId::DDI_TC_1)
                 .FromValue(0);
-        reg_to_test.enabled_display_port_main_link_lane_bits(tgl_registers::DDI_TC_3);
+        reg_to_test.enabled_display_port_main_link_lane_bits(DdiId::DDI_TC_3);
       },
       "IsDdiCoveredByThisRegister");
 }
@@ -137,10 +134,10 @@ TEST_F(DynamicFlexIoDisplayPortMainLinkLaneEnabledTest, SetterNotSupportComboDdi
   // COMBO DDIs should not be supported
   EXPECT_DEATH(
       {
-        auto reg_to_test = tgl_registers::DynamicFlexIoDisplayPortMainLinkLaneEnabled::GetForDdi(
-                               tgl_registers::DDI_TC_1)
-                               .FromValue(0);
-        reg_to_test.set_enabled_display_port_main_link_lane_bits(tgl_registers::DDI_B, 0x1u)
+        auto reg_to_test =
+            tgl_registers::DynamicFlexIoDisplayPortMainLinkLaneEnabled::GetForDdi(DdiId::DDI_TC_1)
+                .FromValue(0);
+        reg_to_test.set_enabled_display_port_main_link_lane_bits(DdiId::DDI_B, 0x1u)
             .WriteTo(&mmio_buffer_);
       },
       "IsDdiCoveredByThisRegister");
@@ -151,19 +148,19 @@ TEST_F(DynamicFlexIoDisplayPortMainLinkLaneEnabledTest,
   // DDIs must be in the same FIA.
   EXPECT_DEATH(
       {
-        auto reg_to_test = tgl_registers::DynamicFlexIoDisplayPortMainLinkLaneEnabled::GetForDdi(
-                               tgl_registers::DDI_TC_1)
-                               .FromValue(0);
-        reg_to_test.set_enabled_display_port_main_link_lane_bits(tgl_registers::DDI_TC_3, 0x3u)
+        auto reg_to_test =
+            tgl_registers::DynamicFlexIoDisplayPortMainLinkLaneEnabled::GetForDdi(DdiId::DDI_TC_1)
+                .FromValue(0);
+        reg_to_test.set_enabled_display_port_main_link_lane_bits(DdiId::DDI_TC_3, 0x3u)
             .WriteTo(&mmio_buffer_);
       },
       "IsDdiCoveredByThisRegister");
 
   // enabled_main_links_mask must be valid
   EXPECT_DEATH(
-      tgl_registers::DynamicFlexIoDisplayPortMainLinkLaneEnabled::GetForDdi(tgl_registers::DDI_TC_1)
+      tgl_registers::DynamicFlexIoDisplayPortMainLinkLaneEnabled::GetForDdi(DdiId::DDI_TC_1)
           .FromValue(0)
-          .set_enabled_display_port_main_link_lane_bits(tgl_registers::DDI_TC_1, 0xau)
+          .set_enabled_display_port_main_link_lane_bits(DdiId::DDI_TC_1, 0xau)
           .WriteTo(&mmio_buffer_);
       , "invalid");
 }
@@ -184,7 +181,7 @@ TEST_F(DynamicFlexIoScratchPadTest, Getter) {
   }));
 
   {
-    const auto ddi_to_test = tgl_registers::DDI_TC_1;
+    const auto ddi_to_test = DdiId::DDI_TC_1;
     auto reg_to_test =
         tgl_registers::DynamicFlexIoScratchPad::GetForDdi(ddi_to_test).ReadFrom(&mmio_buffer_);
     EXPECT_EQ(reg_to_test.display_port_assigned_tx_lane_count(ddi_to_test), 2u);
@@ -197,7 +194,7 @@ TEST_F(DynamicFlexIoScratchPadTest, Getter) {
   }
 
   {
-    const auto ddi_to_test = tgl_registers::DDI_TC_4;
+    const auto ddi_to_test = DdiId::DDI_TC_4;
     auto reg_to_test =
         tgl_registers::DynamicFlexIoScratchPad::GetForDdi(ddi_to_test).ReadFrom(&mmio_buffer_);
     EXPECT_EQ(reg_to_test.display_port_assigned_tx_lane_count(ddi_to_test), 1u);
@@ -210,7 +207,7 @@ TEST_F(DynamicFlexIoScratchPadTest, Getter) {
   }
 
   {
-    const auto ddi_to_test = tgl_registers::DDI_TC_5;
+    const auto ddi_to_test = DdiId::DDI_TC_5;
     auto reg_to_test =
         tgl_registers::DynamicFlexIoScratchPad::GetForDdi(ddi_to_test).ReadFrom(&mmio_buffer_);
     EXPECT_EQ(reg_to_test.display_port_assigned_tx_lane_count(ddi_to_test), 4u);
@@ -225,22 +222,22 @@ TEST_F(DynamicFlexIoScratchPadTest, Getter) {
 
 TEST_F(DynamicFlexIoScratchPadTest, GetRejectsComboDdi) {
   // COMBO DDIs should not be supported
-  EXPECT_DEATH(tgl_registers::DynamicFlexIoScratchPad::GetForDdi(tgl_registers::DDI_A), "DDI_TC_1");
+  EXPECT_DEATH(tgl_registers::DynamicFlexIoScratchPad::GetForDdi(DdiId::DDI_A), "DDI_TC_1");
 }
 
 TEST_F(DynamicFlexIoScratchPadTest, HelperMethodsRejectDdiFromDifferentFia) {
   // DDIs must be in the same FIA.
-  EXPECT_DEATH(tgl_registers::DynamicFlexIoScratchPad::GetForDdi(tgl_registers::DDI_TC_1)
+  EXPECT_DEATH(tgl_registers::DynamicFlexIoScratchPad::GetForDdi(DdiId::DDI_TC_1)
                    .FromValue(0)
-                   .display_port_assigned_tx_lane_count(tgl_registers::DDI_TC_3),
+                   .display_port_assigned_tx_lane_count(DdiId::DDI_TC_3),
                "IsDdiCoveredByThisRegister");
-  EXPECT_DEATH(tgl_registers::DynamicFlexIoScratchPad::GetForDdi(tgl_registers::DDI_TC_1)
+  EXPECT_DEATH(tgl_registers::DynamicFlexIoScratchPad::GetForDdi(DdiId::DDI_TC_1)
                    .FromValue(0)
-                   .display_port_tx_lane_assignment(tgl_registers::DDI_TC_3),
+                   .display_port_tx_lane_assignment(DdiId::DDI_TC_3),
                "IsDdiCoveredByThisRegister");
-  EXPECT_DEATH(tgl_registers::DynamicFlexIoScratchPad::GetForDdi(tgl_registers::DDI_TC_1)
+  EXPECT_DEATH(tgl_registers::DynamicFlexIoScratchPad::GetForDdi(DdiId::DDI_TC_1)
                    .FromValue(0)
-                   .type_c_live_state(tgl_registers::DDI_TC_3),
+                   .type_c_live_state(DdiId::DDI_TC_3),
                "IsDdiCoveredByThisRegister");
 }
 
@@ -259,7 +256,7 @@ TEST_F(DynamicFlexIoPinAssignmentTest, Getter) {
   }));
 
   {
-    const auto ddi_to_test = tgl_registers::DDI_TC_1;
+    const auto ddi_to_test = DdiId::DDI_TC_1;
     auto reg_to_test = tgl_registers::DynamicFlexIoDisplayPortPinAssignment::GetForDdi(ddi_to_test)
                            .ReadFrom(&mmio_buffer_);
     EXPECT_EQ(reg_to_test.pin_assignment_for_ddi(ddi_to_test),
@@ -268,36 +265,36 @@ TEST_F(DynamicFlexIoPinAssignmentTest, Getter) {
 
     EXPECT_EQ(
         reg_to_test.set_display_port_pin_assignment_connector_0(0b0000).pin_assignment_for_ddi(
-            tgl_registers::DDI_TC_1),
+            DdiId::DDI_TC_1),
         tgl_registers::DynamicFlexIoDisplayPortPinAssignment::PinAssignment::kNone);
     EXPECT_EQ(
         reg_to_test.set_display_port_pin_assignment_connector_0(0b0001).pin_assignment_for_ddi(
-            tgl_registers::DDI_TC_1),
+            DdiId::DDI_TC_1),
         tgl_registers::DynamicFlexIoDisplayPortPinAssignment::PinAssignment::kA);
     EXPECT_EQ(
         reg_to_test.set_display_port_pin_assignment_connector_0(0b0010).pin_assignment_for_ddi(
-            tgl_registers::DDI_TC_1),
+            DdiId::DDI_TC_1),
         tgl_registers::DynamicFlexIoDisplayPortPinAssignment::PinAssignment::kB);
     EXPECT_EQ(
         reg_to_test.set_display_port_pin_assignment_connector_0(0b0011).pin_assignment_for_ddi(
-            tgl_registers::DDI_TC_1),
+            DdiId::DDI_TC_1),
         tgl_registers::DynamicFlexIoDisplayPortPinAssignment::PinAssignment::kC);
     EXPECT_EQ(
         reg_to_test.set_display_port_pin_assignment_connector_0(0b0100).pin_assignment_for_ddi(
-            tgl_registers::DDI_TC_1),
+            DdiId::DDI_TC_1),
         tgl_registers::DynamicFlexIoDisplayPortPinAssignment::PinAssignment::kD);
     EXPECT_EQ(
         reg_to_test.set_display_port_pin_assignment_connector_0(0b0101).pin_assignment_for_ddi(
-            tgl_registers::DDI_TC_1),
+            DdiId::DDI_TC_1),
         tgl_registers::DynamicFlexIoDisplayPortPinAssignment::PinAssignment::kE);
     EXPECT_EQ(
         reg_to_test.set_display_port_pin_assignment_connector_0(0b0110).pin_assignment_for_ddi(
-            tgl_registers::DDI_TC_1),
+            DdiId::DDI_TC_1),
         tgl_registers::DynamicFlexIoDisplayPortPinAssignment::PinAssignment::kF);
   }
 
   {
-    const auto ddi_to_test = tgl_registers::DDI_TC_4;
+    const auto ddi_to_test = DdiId::DDI_TC_4;
     auto reg_to_test = tgl_registers::DynamicFlexIoDisplayPortPinAssignment::GetForDdi(ddi_to_test)
                            .ReadFrom(&mmio_buffer_);
     EXPECT_EQ(reg_to_test.pin_assignment_for_ddi(ddi_to_test),
@@ -306,7 +303,7 @@ TEST_F(DynamicFlexIoPinAssignmentTest, Getter) {
   }
 
   {
-    const auto ddi_to_test = tgl_registers::DDI_TC_5;
+    const auto ddi_to_test = DdiId::DDI_TC_5;
     auto reg_to_test = tgl_registers::DynamicFlexIoDisplayPortPinAssignment::GetForDdi(ddi_to_test)
                            .ReadFrom(&mmio_buffer_);
     EXPECT_EQ(reg_to_test.pin_assignment_for_ddi(ddi_to_test),
@@ -317,18 +314,16 @@ TEST_F(DynamicFlexIoPinAssignmentTest, Getter) {
 
 TEST_F(DynamicFlexIoPinAssignmentTest, GetRejectsComboDdi) {
   // COMBO DDIs should not be supported
-  EXPECT_DEATH(
-      tgl_registers::DynamicFlexIoDisplayPortPinAssignment::GetForDdi(tgl_registers::DDI_A),
-      "DDI_TC_1");
+  EXPECT_DEATH(tgl_registers::DynamicFlexIoDisplayPortPinAssignment::GetForDdi(DdiId::DDI_A),
+               "DDI_TC_1");
 }
 
 TEST_F(DynamicFlexIoPinAssignmentTest, PinAssignmentRejectDdiFromDifferentFia) {
   // DDIs must be in the same FIA.
-  EXPECT_DEATH(
-      tgl_registers::DynamicFlexIoDisplayPortPinAssignment::GetForDdi(tgl_registers::DDI_TC_1)
-          .FromValue(0)
-          .pin_assignment_for_ddi(tgl_registers::DDI_TC_3),
-      "IsDdiCoveredByThisRegister");
+  EXPECT_DEATH(tgl_registers::DynamicFlexIoDisplayPortPinAssignment::GetForDdi(DdiId::DDI_TC_1)
+                   .FromValue(0)
+                   .pin_assignment_for_ddi(DdiId::DDI_TC_3),
+               "IsDdiCoveredByThisRegister");
 }
 
 using DynamicFlexIoDisplayPortControllerSafeStateSettingsTest = RegisterTypeCTest;
@@ -349,7 +344,7 @@ TEST_F(DynamicFlexIoDisplayPortControllerSafeStateSettingsTest, Getter) {
   }));
 
   {
-    const auto ddi_to_test = tgl_registers::DDI_TC_1;
+    const auto ddi_to_test = DdiId::DDI_TC_1;
     auto reg_to_test =
         tgl_registers::DynamicFlexIoDisplayPortControllerSafeStateSettings::GetForDdi(ddi_to_test)
             .ReadFrom(&mmio_buffer_);
@@ -360,7 +355,7 @@ TEST_F(DynamicFlexIoDisplayPortControllerSafeStateSettingsTest, Getter) {
   }
 
   {
-    const auto ddi_to_test = tgl_registers::DDI_TC_4;
+    const auto ddi_to_test = DdiId::DDI_TC_4;
     auto reg_to_test =
         tgl_registers::DynamicFlexIoDisplayPortControllerSafeStateSettings::GetForDdi(ddi_to_test)
             .ReadFrom(&mmio_buffer_);
@@ -371,7 +366,7 @@ TEST_F(DynamicFlexIoDisplayPortControllerSafeStateSettingsTest, Getter) {
   }
 
   {
-    const auto ddi_to_test = tgl_registers::DDI_TC_5;
+    const auto ddi_to_test = DdiId::DDI_TC_5;
     auto reg_to_test =
         tgl_registers::DynamicFlexIoDisplayPortControllerSafeStateSettings::GetForDdi(ddi_to_test)
             .ReadFrom(&mmio_buffer_);
@@ -384,19 +379,19 @@ TEST_F(DynamicFlexIoDisplayPortControllerSafeStateSettingsTest, Getter) {
 
 TEST_F(DynamicFlexIoDisplayPortControllerSafeStateSettingsTest, GetRejectsComboDdi) {
   // COMBO DDIs should not be supported
-  EXPECT_DEATH(tgl_registers::DynamicFlexIoDisplayPortControllerSafeStateSettings::GetForDdi(
-                   tgl_registers::DDI_A),
-               "DDI_TC_1");
+  EXPECT_DEATH(
+      tgl_registers::DynamicFlexIoDisplayPortControllerSafeStateSettings::GetForDdi(DdiId::DDI_A),
+      "DDI_TC_1");
 }
 
 TEST_F(DynamicFlexIoDisplayPortControllerSafeStateSettingsTest,
        SetSafeModeDisabledRejectsDdiFromDifferentFia) {
   // DDIs must be in the same FIA.
-  EXPECT_DEATH(tgl_registers::DynamicFlexIoDisplayPortControllerSafeStateSettings::GetForDdi(
-                   tgl_registers::DDI_TC_1)
-                   .FromValue(0)
-                   .set_safe_mode_disabled_for_ddi(tgl_registers::DDI_TC_3, true),
-               "IsDdiCoveredByThisRegister");
+  EXPECT_DEATH(
+      tgl_registers::DynamicFlexIoDisplayPortControllerSafeStateSettings::GetForDdi(DdiId::DDI_TC_1)
+          .FromValue(0)
+          .set_safe_mode_disabled_for_ddi(DdiId::DDI_TC_3, true),
+      "IsDdiCoveredByThisRegister");
 }
 
 using DynamicFlexIoDisplayPortPhyModeStatusTest = RegisterTypeCTest;
@@ -414,7 +409,7 @@ TEST_F(DynamicFlexIoDisplayPortPhyModeStatusTest, Getter) {
   }));
 
   {
-    const auto ddi_to_test = tgl_registers::DDI_TC_1;
+    const auto ddi_to_test = DdiId::DDI_TC_1;
     auto reg_to_test = tgl_registers::DynamicFlexIoDisplayPortPhyModeStatus::GetForDdi(ddi_to_test)
                            .ReadFrom(&mmio_buffer_);
     EXPECT_EQ(reg_to_test.display_port_phy_is_ready_connector_0(), 1u);
@@ -423,7 +418,7 @@ TEST_F(DynamicFlexIoDisplayPortPhyModeStatusTest, Getter) {
   }
 
   {
-    const auto ddi_to_test = tgl_registers::DDI_TC_4;
+    const auto ddi_to_test = DdiId::DDI_TC_4;
     auto reg_to_test = tgl_registers::DynamicFlexIoDisplayPortPhyModeStatus::GetForDdi(ddi_to_test)
                            .ReadFrom(&mmio_buffer_);
     EXPECT_EQ(reg_to_test.display_port_phy_is_ready_connector_0(), 1u);
@@ -432,7 +427,7 @@ TEST_F(DynamicFlexIoDisplayPortPhyModeStatusTest, Getter) {
   }
 
   {
-    const auto ddi_to_test = tgl_registers::DDI_TC_5;
+    const auto ddi_to_test = DdiId::DDI_TC_5;
     auto reg_to_test = tgl_registers::DynamicFlexIoDisplayPortPhyModeStatus::GetForDdi(ddi_to_test)
                            .ReadFrom(&mmio_buffer_);
     EXPECT_EQ(reg_to_test.display_port_phy_is_ready_connector_0(), 0u);
@@ -443,25 +438,23 @@ TEST_F(DynamicFlexIoDisplayPortPhyModeStatusTest, Getter) {
 
 TEST_F(DynamicFlexIoDisplayPortPhyModeStatusTest, GetRejectsComboDdi) {
   // COMBO DDIs should not be supported
-  EXPECT_DEATH(
-      tgl_registers::DynamicFlexIoDisplayPortPhyModeStatus::GetForDdi(tgl_registers::DDI_A),
-      "DDI_TC_1");
+  EXPECT_DEATH(tgl_registers::DynamicFlexIoDisplayPortPhyModeStatus::GetForDdi(DdiId::DDI_A),
+               "DDI_TC_1");
 }
 
 TEST_F(DynamicFlexIoDisplayPortPhyModeStatusTest, PhyIsReadyRejectsDdiFromDifferentFia) {
   // DDIs must be in the same FIA.
-  EXPECT_DEATH(
-      tgl_registers::DynamicFlexIoDisplayPortPhyModeStatus::GetForDdi(tgl_registers::DDI_TC_1)
-          .FromValue(0)
-          .phy_is_ready_for_ddi(tgl_registers::DDI_TC_3),
-      "IsDdiCoveredByThisRegister");
+  EXPECT_DEATH(tgl_registers::DynamicFlexIoDisplayPortPhyModeStatus::GetForDdi(DdiId::DDI_TC_1)
+                   .FromValue(0)
+                   .phy_is_ready_for_ddi(DdiId::DDI_TC_3),
+               "IsDdiCoveredByThisRegister");
 }
 
 TEST_F(RegisterTypeCTest, ReadWriteDekelRegister) {
   // TypeC Port 1 (HIP_INDEX_REG0)
   {
     constexpr uint32_t kPhysicalInternalAddress = 0x2200;
-    constexpr auto kDdiToTest = tgl_registers::DDI_TC_1;
+    constexpr auto kDdiToTest = DdiId::DDI_TC_1;
     constexpr uint32_t kHipIndex0Addr = 0x1010a0;
     constexpr uint32_t kBaseAddr = 0x168000;
     constexpr uint32_t kRegMmioAddr = kBaseAddr | (kPhysicalInternalAddress & 0xfff);
@@ -485,7 +478,7 @@ TEST_F(RegisterTypeCTest, ReadWriteDekelRegister) {
   // TypeC Port 6 (HIP_INDEX_REG1)
   {
     constexpr uint32_t kPhysicalInternalAddress = 0x2200;
-    constexpr auto kDdiToTest = tgl_registers::DDI_TC_6;
+    constexpr auto kDdiToTest = DdiId::DDI_TC_6;
     constexpr uint32_t kHipIndex1Addr = 0x1010a4;
     constexpr uint32_t kBaseAddr = 0x16D000;
     constexpr uint32_t kRegMmioAddr = kBaseAddr | (kPhysicalInternalAddress & 0xfff);
@@ -521,8 +514,7 @@ TEST_F(RegisterTypeCTest, DekelLaneRegister) {
         {.address = kRegMmioAddr, .value = 0x000000f0, .write = false},
     }));
 
-    tgl_registers::DekelDisplayPortMode::GetForLaneDdi(0, tgl_registers::DDI_TC_1)
-        .ReadFrom(&mmio_buffer_);
+    tgl_registers::DekelDisplayPortMode::GetForLaneDdi(0, DdiId::DDI_TC_1).ReadFrom(&mmio_buffer_);
   }
 
   {
@@ -538,8 +530,7 @@ TEST_F(RegisterTypeCTest, DekelLaneRegister) {
         {.address = kRegMmioAddr, .value = 0x000000f0, .write = false},
     }));
 
-    tgl_registers::DekelDisplayPortMode::GetForLaneDdi(1, tgl_registers::DDI_TC_1)
-        .ReadFrom(&mmio_buffer_);
+    tgl_registers::DekelDisplayPortMode::GetForLaneDdi(1, DdiId::DDI_TC_1).ReadFrom(&mmio_buffer_);
   }
 }
 

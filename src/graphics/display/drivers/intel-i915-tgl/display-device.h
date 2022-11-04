@@ -43,8 +43,8 @@ class DisplayDevice : public fidl::WireServer<FidlBacklight::Device> {
     kDvi,
   };
 
-  DisplayDevice(Controller* controller, uint64_t id, tgl_registers::Ddi ddi,
-                DdiReference ddi_reference, Type type);
+  DisplayDevice(Controller* controller, uint64_t id, DdiId ddi_id, DdiReference ddi_reference,
+                Type type);
 
   DisplayDevice(const DisplayDevice&) = delete;
   DisplayDevice(DisplayDevice&&) = delete;
@@ -88,7 +88,7 @@ class DisplayDevice : public fidl::WireServer<FidlBacklight::Device> {
   virtual bool HandleHotplug(bool long_pulse) { return false; }
 
   uint64_t id() const { return id_; }
-  tgl_registers::Ddi ddi() const { return ddi_; }
+  DdiId ddi_id() const { return ddi_id_; }
   Controller* controller() { return controller_; }
   const std::optional<DdiReference>& ddi_reference() const { return ddi_reference_; }
 
@@ -157,7 +157,7 @@ class DisplayDevice : public fidl::WireServer<FidlBacklight::Device> {
   Controller* controller_;
 
   uint64_t id_;
-  tgl_registers::Ddi ddi_;
+  DdiId ddi_id_;
 
   Pipe* pipe_ = nullptr;
 

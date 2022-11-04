@@ -34,28 +34,24 @@ TEST(TranscoderDdiControlTest, DdiKabyLake) {
   EXPECT_EQ(std::nullopt, transcoder_ddi_control_a.ddi_kaby_lake());
 
   transcoder_ddi_control_a.set_reg_value(0);
-  transcoder_ddi_control_a.set_ddi_kaby_lake(tgl_registers::Ddi::DDI_B);
+  transcoder_ddi_control_a.set_ddi_kaby_lake(DdiId::DDI_B);
   EXPECT_EQ(0b0'001'0000'00000000'00000000'00000000u, transcoder_ddi_control_a.reg_value());
-  EXPECT_EQ(std::make_optional(tgl_registers::Ddi::DDI_B),
-            transcoder_ddi_control_a.ddi_kaby_lake());
+  EXPECT_EQ(std::make_optional(DdiId::DDI_B), transcoder_ddi_control_a.ddi_kaby_lake());
 
   transcoder_ddi_control_a.set_reg_value(0);
-  transcoder_ddi_control_a.set_ddi_kaby_lake(tgl_registers::Ddi::DDI_C);
+  transcoder_ddi_control_a.set_ddi_kaby_lake(DdiId::DDI_C);
   EXPECT_EQ(0b0'010'0000'00000000'00000000'00000000u, transcoder_ddi_control_a.reg_value());
-  EXPECT_EQ(std::make_optional(tgl_registers::Ddi::DDI_C),
-            transcoder_ddi_control_a.ddi_kaby_lake());
+  EXPECT_EQ(std::make_optional(DdiId::DDI_C), transcoder_ddi_control_a.ddi_kaby_lake());
 
   transcoder_ddi_control_a.set_reg_value(0);
-  transcoder_ddi_control_a.set_ddi_kaby_lake(tgl_registers::Ddi::DDI_D);
+  transcoder_ddi_control_a.set_ddi_kaby_lake(DdiId::DDI_D);
   EXPECT_EQ(0b0'011'0000'00000000'00000000'00000000u, transcoder_ddi_control_a.reg_value());
-  EXPECT_EQ(std::make_optional(tgl_registers::Ddi::DDI_D),
-            transcoder_ddi_control_a.ddi_kaby_lake());
+  EXPECT_EQ(std::make_optional(DdiId::DDI_D), transcoder_ddi_control_a.ddi_kaby_lake());
 
   transcoder_ddi_control_a.set_reg_value(0);
-  transcoder_ddi_control_a.set_ddi_kaby_lake(tgl_registers::Ddi::DDI_E);
+  transcoder_ddi_control_a.set_ddi_kaby_lake(DdiId::DDI_E);
   EXPECT_EQ(0b0'100'0000'00000000'00000000'00000000u, transcoder_ddi_control_a.reg_value());
-  EXPECT_EQ(std::make_optional(tgl_registers::Ddi::DDI_E),
-            transcoder_ddi_control_a.ddi_kaby_lake());
+  EXPECT_EQ(std::make_optional(DdiId::DDI_E), transcoder_ddi_control_a.ddi_kaby_lake());
 }
 
 TEST(TranscoderDdiControlTest, DdiTigerLake) {
@@ -73,58 +69,49 @@ TEST(TranscoderDdiControlTest, DdiTigerLake) {
   EXPECT_EQ(std::nullopt, transcoder_ddi_control_a.ddi_tiger_lake());
 
   transcoder_ddi_control_a.set_reg_value(0);
-  transcoder_ddi_control_a.set_ddi_tiger_lake(tgl_registers::Ddi::DDI_A);
+  transcoder_ddi_control_a.set_ddi_tiger_lake(DdiId::DDI_A);
   EXPECT_EQ(0b0'0001'000'00000000'00000000'00000000u, transcoder_ddi_control_a.reg_value());
-  EXPECT_EQ(std::make_optional(tgl_registers::Ddi::DDI_A),
-            transcoder_ddi_control_a.ddi_tiger_lake());
+  EXPECT_EQ(std::make_optional(DdiId::DDI_A), transcoder_ddi_control_a.ddi_tiger_lake());
 
   transcoder_ddi_control_a.set_reg_value(0);
-  transcoder_ddi_control_a.set_ddi_tiger_lake(tgl_registers::Ddi::DDI_B);
+  transcoder_ddi_control_a.set_ddi_tiger_lake(DdiId::DDI_B);
   EXPECT_EQ(0b0'0010'000'00000000'00000000'00000000u, transcoder_ddi_control_a.reg_value());
-  EXPECT_EQ(std::make_optional(tgl_registers::Ddi::DDI_B),
-            transcoder_ddi_control_a.ddi_tiger_lake());
+  EXPECT_EQ(std::make_optional(DdiId::DDI_B), transcoder_ddi_control_a.ddi_tiger_lake());
 
   transcoder_ddi_control_a.set_reg_value(0);
-  transcoder_ddi_control_a.set_ddi_tiger_lake(tgl_registers::Ddi::DDI_C);
+  transcoder_ddi_control_a.set_ddi_tiger_lake(DdiId::DDI_C);
   EXPECT_EQ(0b0'0011'000'00000000'00000000'00000000u, transcoder_ddi_control_a.reg_value());
-  EXPECT_EQ(std::make_optional(tgl_registers::Ddi::DDI_C),
-            transcoder_ddi_control_a.ddi_tiger_lake());
+  EXPECT_EQ(std::make_optional(DdiId::DDI_C), transcoder_ddi_control_a.ddi_tiger_lake());
 
   transcoder_ddi_control_a.set_reg_value(0);
-  transcoder_ddi_control_a.set_ddi_tiger_lake(tgl_registers::Ddi::DDI_TC_1);
+  transcoder_ddi_control_a.set_ddi_tiger_lake(DdiId::DDI_TC_1);
   EXPECT_EQ(0b0'0100'000'00000000'00000000'00000000u, transcoder_ddi_control_a.reg_value());
-  EXPECT_EQ(std::make_optional(tgl_registers::Ddi::DDI_TC_1),
-            transcoder_ddi_control_a.ddi_tiger_lake());
+  EXPECT_EQ(std::make_optional(DdiId::DDI_TC_1), transcoder_ddi_control_a.ddi_tiger_lake());
 
   transcoder_ddi_control_a.set_reg_value(0);
-  transcoder_ddi_control_a.set_ddi_tiger_lake(tgl_registers::Ddi::DDI_TC_2);
+  transcoder_ddi_control_a.set_ddi_tiger_lake(DdiId::DDI_TC_2);
   EXPECT_EQ(0b0'0101'000'00000000'00000000'00000000u, transcoder_ddi_control_a.reg_value());
-  EXPECT_EQ(std::make_optional(tgl_registers::Ddi::DDI_TC_2),
-            transcoder_ddi_control_a.ddi_tiger_lake());
+  EXPECT_EQ(std::make_optional(DdiId::DDI_TC_2), transcoder_ddi_control_a.ddi_tiger_lake());
 
   transcoder_ddi_control_a.set_reg_value(0);
-  transcoder_ddi_control_a.set_ddi_tiger_lake(tgl_registers::Ddi::DDI_TC_3);
+  transcoder_ddi_control_a.set_ddi_tiger_lake(DdiId::DDI_TC_3);
   EXPECT_EQ(0b0'0110'000'00000000'00000000'00000000u, transcoder_ddi_control_a.reg_value());
-  EXPECT_EQ(std::make_optional(tgl_registers::Ddi::DDI_TC_3),
-            transcoder_ddi_control_a.ddi_tiger_lake());
+  EXPECT_EQ(std::make_optional(DdiId::DDI_TC_3), transcoder_ddi_control_a.ddi_tiger_lake());
 
   transcoder_ddi_control_a.set_reg_value(0);
-  transcoder_ddi_control_a.set_ddi_tiger_lake(tgl_registers::Ddi::DDI_TC_4);
+  transcoder_ddi_control_a.set_ddi_tiger_lake(DdiId::DDI_TC_4);
   EXPECT_EQ(0b0'0111'000'00000000'00000000'00000000u, transcoder_ddi_control_a.reg_value());
-  EXPECT_EQ(std::make_optional(tgl_registers::Ddi::DDI_TC_4),
-            transcoder_ddi_control_a.ddi_tiger_lake());
+  EXPECT_EQ(std::make_optional(DdiId::DDI_TC_4), transcoder_ddi_control_a.ddi_tiger_lake());
 
   transcoder_ddi_control_a.set_reg_value(0);
-  transcoder_ddi_control_a.set_ddi_tiger_lake(tgl_registers::Ddi::DDI_TC_5);
+  transcoder_ddi_control_a.set_ddi_tiger_lake(DdiId::DDI_TC_5);
   EXPECT_EQ(0b0'1000'000'00000000'00000000'00000000u, transcoder_ddi_control_a.reg_value());
-  EXPECT_EQ(std::make_optional(tgl_registers::Ddi::DDI_TC_5),
-            transcoder_ddi_control_a.ddi_tiger_lake());
+  EXPECT_EQ(std::make_optional(DdiId::DDI_TC_5), transcoder_ddi_control_a.ddi_tiger_lake());
 
   transcoder_ddi_control_a.set_reg_value(0);
-  transcoder_ddi_control_a.set_ddi_tiger_lake(tgl_registers::Ddi::DDI_TC_6);
+  transcoder_ddi_control_a.set_ddi_tiger_lake(DdiId::DDI_TC_6);
   EXPECT_EQ(0b0'1001'000'00000000'00000000'00000000u, transcoder_ddi_control_a.reg_value());
-  EXPECT_EQ(std::make_optional(tgl_registers::Ddi::DDI_TC_6),
-            transcoder_ddi_control_a.ddi_tiger_lake());
+  EXPECT_EQ(std::make_optional(DdiId::DDI_TC_6), transcoder_ddi_control_a.ddi_tiger_lake());
 }
 
 TEST(TranscoderDdiControlTest, PortSyncPrimaryTranscoderKabyLake) {
@@ -356,28 +343,24 @@ TEST(TranscoderClockSelectTest, DdiClockKabyLake) {
   EXPECT_EQ(std::nullopt, transcoder_clock_select_a.ddi_clock_kaby_lake());
 
   transcoder_clock_select_a.set_reg_value(0);
-  transcoder_clock_select_a.set_ddi_clock_kaby_lake(tgl_registers::Ddi::DDI_B);
+  transcoder_clock_select_a.set_ddi_clock_kaby_lake(DdiId::DDI_B);
   EXPECT_EQ(0b010'00000'00000000'00000000'00000000u, transcoder_clock_select_a.reg_value());
-  EXPECT_EQ(std::make_optional(tgl_registers::Ddi::DDI_B),
-            transcoder_clock_select_a.ddi_clock_kaby_lake());
+  EXPECT_EQ(std::make_optional(DdiId::DDI_B), transcoder_clock_select_a.ddi_clock_kaby_lake());
 
   transcoder_clock_select_a.set_reg_value(0);
-  transcoder_clock_select_a.set_ddi_clock_kaby_lake(tgl_registers::Ddi::DDI_C);
+  transcoder_clock_select_a.set_ddi_clock_kaby_lake(DdiId::DDI_C);
   EXPECT_EQ(0b011'00000'00000000'00000000'00000000u, transcoder_clock_select_a.reg_value());
-  EXPECT_EQ(std::make_optional(tgl_registers::Ddi::DDI_C),
-            transcoder_clock_select_a.ddi_clock_kaby_lake());
+  EXPECT_EQ(std::make_optional(DdiId::DDI_C), transcoder_clock_select_a.ddi_clock_kaby_lake());
 
   transcoder_clock_select_a.set_reg_value(0);
-  transcoder_clock_select_a.set_ddi_clock_kaby_lake(tgl_registers::Ddi::DDI_D);
+  transcoder_clock_select_a.set_ddi_clock_kaby_lake(DdiId::DDI_D);
   EXPECT_EQ(0b100'00000'00000000'00000000'00000000u, transcoder_clock_select_a.reg_value());
-  EXPECT_EQ(std::make_optional(tgl_registers::Ddi::DDI_D),
-            transcoder_clock_select_a.ddi_clock_kaby_lake());
+  EXPECT_EQ(std::make_optional(DdiId::DDI_D), transcoder_clock_select_a.ddi_clock_kaby_lake());
 
   transcoder_clock_select_a.set_reg_value(0);
-  transcoder_clock_select_a.set_ddi_clock_kaby_lake(tgl_registers::Ddi::DDI_E);
+  transcoder_clock_select_a.set_ddi_clock_kaby_lake(DdiId::DDI_E);
   EXPECT_EQ(0b101'00000'00000000'00000000'00000000u, transcoder_clock_select_a.reg_value());
-  EXPECT_EQ(std::make_optional(tgl_registers::Ddi::DDI_E),
-            transcoder_clock_select_a.ddi_clock_kaby_lake());
+  EXPECT_EQ(std::make_optional(DdiId::DDI_E), transcoder_clock_select_a.ddi_clock_kaby_lake());
 }
 
 TEST(TranscoderClockSelectTest, DdiClockKabyLakePreservesReservedBits) {
@@ -391,10 +374,9 @@ TEST(TranscoderClockSelectTest, DdiClockKabyLakePreservesReservedBits) {
   EXPECT_EQ(std::nullopt, transcoder_clock_select_a.ddi_clock_kaby_lake());
 
   transcoder_clock_select_a.set_reg_value(0xffff'ffff);
-  transcoder_clock_select_a.set_ddi_clock_kaby_lake(tgl_registers::Ddi::DDI_D);
+  transcoder_clock_select_a.set_ddi_clock_kaby_lake(DdiId::DDI_D);
   EXPECT_EQ(0b100'11111'11111111'11111111'11111111u, transcoder_clock_select_a.reg_value());
-  EXPECT_EQ(std::make_optional(tgl_registers::Ddi::DDI_D),
-            transcoder_clock_select_a.ddi_clock_kaby_lake());
+  EXPECT_EQ(std::make_optional(DdiId::DDI_D), transcoder_clock_select_a.ddi_clock_kaby_lake());
 }
 
 TEST(TranscoderClockSelectTest, DdiClockTigerLake) {
@@ -412,58 +394,49 @@ TEST(TranscoderClockSelectTest, DdiClockTigerLake) {
   EXPECT_EQ(std::nullopt, transcoder_clock_select_a.ddi_clock_tiger_lake());
 
   transcoder_clock_select_a.set_reg_value(0);
-  transcoder_clock_select_a.set_ddi_clock_tiger_lake(tgl_registers::Ddi::DDI_A);
+  transcoder_clock_select_a.set_ddi_clock_tiger_lake(DdiId::DDI_A);
   EXPECT_EQ(0b0001'0000'00000000'00000000'00000000u, transcoder_clock_select_a.reg_value());
-  EXPECT_EQ(std::make_optional(tgl_registers::Ddi::DDI_A),
-            transcoder_clock_select_a.ddi_clock_tiger_lake());
+  EXPECT_EQ(std::make_optional(DdiId::DDI_A), transcoder_clock_select_a.ddi_clock_tiger_lake());
 
   transcoder_clock_select_a.set_reg_value(0);
-  transcoder_clock_select_a.set_ddi_clock_tiger_lake(tgl_registers::Ddi::DDI_B);
+  transcoder_clock_select_a.set_ddi_clock_tiger_lake(DdiId::DDI_B);
   EXPECT_EQ(0b0010'0000'00000000'00000000'00000000u, transcoder_clock_select_a.reg_value());
-  EXPECT_EQ(std::make_optional(tgl_registers::Ddi::DDI_B),
-            transcoder_clock_select_a.ddi_clock_tiger_lake());
+  EXPECT_EQ(std::make_optional(DdiId::DDI_B), transcoder_clock_select_a.ddi_clock_tiger_lake());
 
   transcoder_clock_select_a.set_reg_value(0);
-  transcoder_clock_select_a.set_ddi_clock_tiger_lake(tgl_registers::Ddi::DDI_C);
+  transcoder_clock_select_a.set_ddi_clock_tiger_lake(DdiId::DDI_C);
   EXPECT_EQ(0b0011'0000'00000000'00000000'00000000u, transcoder_clock_select_a.reg_value());
-  EXPECT_EQ(std::make_optional(tgl_registers::Ddi::DDI_C),
-            transcoder_clock_select_a.ddi_clock_tiger_lake());
+  EXPECT_EQ(std::make_optional(DdiId::DDI_C), transcoder_clock_select_a.ddi_clock_tiger_lake());
 
   transcoder_clock_select_a.set_reg_value(0);
-  transcoder_clock_select_a.set_ddi_clock_tiger_lake(tgl_registers::Ddi::DDI_TC_1);
+  transcoder_clock_select_a.set_ddi_clock_tiger_lake(DdiId::DDI_TC_1);
   EXPECT_EQ(0b0100'0000'00000000'00000000'00000000u, transcoder_clock_select_a.reg_value());
-  EXPECT_EQ(std::make_optional(tgl_registers::Ddi::DDI_TC_1),
-            transcoder_clock_select_a.ddi_clock_tiger_lake());
+  EXPECT_EQ(std::make_optional(DdiId::DDI_TC_1), transcoder_clock_select_a.ddi_clock_tiger_lake());
 
   transcoder_clock_select_a.set_reg_value(0);
-  transcoder_clock_select_a.set_ddi_clock_tiger_lake(tgl_registers::Ddi::DDI_TC_2);
+  transcoder_clock_select_a.set_ddi_clock_tiger_lake(DdiId::DDI_TC_2);
   EXPECT_EQ(0b0101'0000'00000000'00000000'00000000u, transcoder_clock_select_a.reg_value());
-  EXPECT_EQ(std::make_optional(tgl_registers::Ddi::DDI_TC_2),
-            transcoder_clock_select_a.ddi_clock_tiger_lake());
+  EXPECT_EQ(std::make_optional(DdiId::DDI_TC_2), transcoder_clock_select_a.ddi_clock_tiger_lake());
 
   transcoder_clock_select_a.set_reg_value(0);
-  transcoder_clock_select_a.set_ddi_clock_tiger_lake(tgl_registers::Ddi::DDI_TC_3);
+  transcoder_clock_select_a.set_ddi_clock_tiger_lake(DdiId::DDI_TC_3);
   EXPECT_EQ(0b0110'0000'00000000'00000000'00000000u, transcoder_clock_select_a.reg_value());
-  EXPECT_EQ(std::make_optional(tgl_registers::Ddi::DDI_TC_3),
-            transcoder_clock_select_a.ddi_clock_tiger_lake());
+  EXPECT_EQ(std::make_optional(DdiId::DDI_TC_3), transcoder_clock_select_a.ddi_clock_tiger_lake());
 
   transcoder_clock_select_a.set_reg_value(0);
-  transcoder_clock_select_a.set_ddi_clock_tiger_lake(tgl_registers::Ddi::DDI_TC_4);
+  transcoder_clock_select_a.set_ddi_clock_tiger_lake(DdiId::DDI_TC_4);
   EXPECT_EQ(0b0111'0000'00000000'00000000'00000000u, transcoder_clock_select_a.reg_value());
-  EXPECT_EQ(std::make_optional(tgl_registers::Ddi::DDI_TC_4),
-            transcoder_clock_select_a.ddi_clock_tiger_lake());
+  EXPECT_EQ(std::make_optional(DdiId::DDI_TC_4), transcoder_clock_select_a.ddi_clock_tiger_lake());
 
   transcoder_clock_select_a.set_reg_value(0);
-  transcoder_clock_select_a.set_ddi_clock_tiger_lake(tgl_registers::Ddi::DDI_TC_5);
+  transcoder_clock_select_a.set_ddi_clock_tiger_lake(DdiId::DDI_TC_5);
   EXPECT_EQ(0b1000'0000'00000000'00000000'00000000u, transcoder_clock_select_a.reg_value());
-  EXPECT_EQ(std::make_optional(tgl_registers::Ddi::DDI_TC_5),
-            transcoder_clock_select_a.ddi_clock_tiger_lake());
+  EXPECT_EQ(std::make_optional(DdiId::DDI_TC_5), transcoder_clock_select_a.ddi_clock_tiger_lake());
 
   transcoder_clock_select_a.set_reg_value(0);
-  transcoder_clock_select_a.set_ddi_clock_tiger_lake(tgl_registers::Ddi::DDI_TC_6);
+  transcoder_clock_select_a.set_ddi_clock_tiger_lake(DdiId::DDI_TC_6);
   EXPECT_EQ(0b1001'0000'00000000'00000000'00000000u, transcoder_clock_select_a.reg_value());
-  EXPECT_EQ(std::make_optional(tgl_registers::Ddi::DDI_TC_6),
-            transcoder_clock_select_a.ddi_clock_tiger_lake());
+  EXPECT_EQ(std::make_optional(DdiId::DDI_TC_6), transcoder_clock_select_a.ddi_clock_tiger_lake());
 }
 
 TEST(TranscoderClockSelectTest, GetForTranscoder) {
@@ -813,19 +786,19 @@ TEST(TranscoderChickenTest, GetForKabyLakeDdi) {
   // workarounds with BSpec IDs 1143 and 1144, on pages 30-31.
 
   auto transcoder_chicken_a =
-      tgl_registers::TranscoderChicken::GetForKabyLakeDdi(tgl_registers::Ddi::DDI_B).FromValue(0);
+      tgl_registers::TranscoderChicken::GetForKabyLakeDdi(DdiId::DDI_B).FromValue(0);
   EXPECT_EQ(0x420c0u, transcoder_chicken_a.reg_addr());
 
   auto transcoder_chicken_b =
-      tgl_registers::TranscoderChicken::GetForKabyLakeDdi(tgl_registers::Ddi::DDI_C).FromValue(0);
+      tgl_registers::TranscoderChicken::GetForKabyLakeDdi(DdiId::DDI_C).FromValue(0);
   EXPECT_EQ(0x420c4u, transcoder_chicken_b.reg_addr());
 
   auto transcoder_chicken_c =
-      tgl_registers::TranscoderChicken::GetForKabyLakeDdi(tgl_registers::Ddi::DDI_D).FromValue(0);
+      tgl_registers::TranscoderChicken::GetForKabyLakeDdi(DdiId::DDI_D).FromValue(0);
   EXPECT_EQ(0x420c8u, transcoder_chicken_c.reg_addr());
 
   auto transcoder_chicken_edp =
-      tgl_registers::TranscoderChicken::GetForKabyLakeDdi(tgl_registers::Ddi::DDI_A).FromValue(0);
+      tgl_registers::TranscoderChicken::GetForKabyLakeDdi(DdiId::DDI_A).FromValue(0);
   EXPECT_EQ(0x420ccu, transcoder_chicken_edp.reg_addr());
 }
 

@@ -23,16 +23,15 @@
 
 namespace i915_tgl {
 
-DdiAuxChannel::DdiAuxChannel(fdf::MmioBuffer* mmio_buffer, tgl_registers::Ddi ddi,
-                             uint16_t device_id)
+DdiAuxChannel::DdiAuxChannel(fdf::MmioBuffer* mmio_buffer, DdiId ddi_id, uint16_t device_id)
     : mmio_buffer_(mmio_buffer), large_timeout_us_(0) {
   ZX_ASSERT(mmio_buffer);
 
   if (is_skl(device_id) || is_kbl(device_id)) {
-    aux_control_ = tgl_registers::DdiAuxControl::GetForKabyLakeDdi(ddi).ReadFrom(mmio_buffer);
+    aux_control_ = tgl_registers::DdiAuxControl::GetForKabyLakeDdi(ddi_id).ReadFrom(mmio_buffer);
     large_timeout_us_ = 1'600;
   } else if (is_tgl(device_id)) {
-    aux_control_ = tgl_registers::DdiAuxControl::GetForTigerLakeDdi(ddi).ReadFrom(mmio_buffer);
+    aux_control_ = tgl_registers::DdiAuxControl::GetForTigerLakeDdi(ddi_id).ReadFrom(mmio_buffer);
     large_timeout_us_ = 4'000;
   } else if (is_test_device(device_id)) {
     // Stubbed for integration tests.
@@ -41,14 +40,15 @@ DdiAuxChannel::DdiAuxChannel(fdf::MmioBuffer* mmio_buffer, tgl_registers::Ddi dd
   }
 
 #if ZX_DEBUG_ASSERT_IMPLEMENTED
-  ddi_ = ddi;
+  ddi_id_ = ddi_id;
   device_id_ = device_id;
 #endif  // ZX_DEBUG_ASSERT_IMPLEMENTED
 
   if (aux_control_.transaction_in_progress()) {
     // The boot firmware kicked off an AUX transaction and handed off control to
     // the OS without waiting for the transaction to complete.
-    zxlogf(WARNING, "DDI %u AUX channel initialization blocked by pre-existing transaction.", ddi);
+    zxlogf(WARNING, "DDI %u AUX channel initialization blocked by pre-existing transaction.",
+           ddi_id);
 
     // It's tempting to consider adjusting the AUX parameters below waiting for
     // the transaction to complete. However, we're not allowed to write the AUX
@@ -57,7 +57,8 @@ DdiAuxChannel::DdiAuxChannel(fdf::MmioBuffer* mmio_buffer, tgl_registers::Ddi dd
       // All future transactions will most likely fail. Soldier on and hope the
       // DDI miraculously fixes itself.
       zxlogf(ERROR,
-             "DDI %u AUX channel initialization wait for pre-existing transaction timed out.", ddi);
+             "DDI %u AUX channel initialization wait for pre-existing transaction timed out.",
+             ddi_id);
     }
   }
 }
@@ -76,8 +77,8 @@ void DdiAuxChannel::SetUseThunderbolt(bool use_thunderbolt) {
 #if ZX_DEBUG_ASSERT_IMPLEMENTED
   if (use_thunderbolt) {
     ZX_DEBUG_ASSERT(is_tgl(device_id_));
-    ZX_DEBUG_ASSERT(ddi_ >= tgl_registers::Ddi::DDI_TC_1);
-    ZX_DEBUG_ASSERT(ddi_ <= tgl_registers::Ddi::DDI_TC_6);
+    ZX_DEBUG_ASSERT(ddi_id_ >= DdiId::DDI_TC_1);
+    ZX_DEBUG_ASSERT(ddi_id_ <= DdiId::DDI_TC_6);
   }
 #endif  //  ZX_DEBUG_ASSERT_IMPLEMENTED
 

@@ -87,37 +87,33 @@ class TestPowerWell : public Power {
   PowerWellRef GetPipePowerWellRef(tgl_registers::Pipe pipe) override {
     return PowerWellRef(this, PowerWellId::PG1);
   }
-  PowerWellRef GetDdiPowerWellRef(tgl_registers::Ddi ddi) override {
+  PowerWellRef GetDdiPowerWellRef(DdiId ddi_id) override {
     return PowerWellRef(this, PowerWellId::PG1);
   }
 
-  bool GetDdiIoPowerState(tgl_registers::Ddi ddi) override {
-    if (ddi_state_.find(ddi) == ddi_state_.end()) {
-      ddi_state_[ddi] = false;
+  bool GetDdiIoPowerState(DdiId ddi_id) override {
+    if (ddi_state_.find(ddi_id) == ddi_state_.end()) {
+      ddi_state_[ddi_id] = false;
     }
-    return ddi_state_[ddi];
+    return ddi_state_[ddi_id];
   }
 
-  void SetDdiIoPowerState(tgl_registers::Ddi ddi, bool enable) override {
-    ddi_state_[ddi] = enable;
-  }
+  void SetDdiIoPowerState(DdiId ddi_id, bool enable) override { ddi_state_[ddi_id] = enable; }
 
-  bool GetAuxIoPowerState(tgl_registers::Ddi ddi) override {
-    if (aux_state_.find(ddi) == aux_state_.end()) {
-      aux_state_[ddi] = false;
+  bool GetAuxIoPowerState(DdiId ddi_id) override {
+    if (aux_state_.find(ddi_id) == aux_state_.end()) {
+      aux_state_[ddi_id] = false;
     }
-    return aux_state_[ddi] = true;
+    return aux_state_[ddi_id] = true;
   }
 
-  void SetAuxIoPowerState(tgl_registers::Ddi ddi, bool enable) override {
-    aux_state_[ddi] = enable;
-  }
+  void SetAuxIoPowerState(DdiId ddi_id, bool enable) override { aux_state_[ddi_id] = enable; }
 
  private:
   void SetPowerWell(PowerWellId power_well, bool enable) override {}
 
-  std::unordered_map<tgl_registers::Ddi, bool> ddi_state_;
-  std::unordered_map<tgl_registers::Ddi, bool> aux_state_;
+  std::unordered_map<DdiId, bool> ddi_state_;
+  std::unordered_map<DdiId, bool> aux_state_;
 };
 
 const std::unordered_map<PowerWellId, PowerWellInfo> kPowerWellInfoSkylake = {
@@ -156,22 +152,22 @@ class PowerSkylake : public Power {
   PowerWellRef GetPipePowerWellRef(tgl_registers::Pipe pipe) override {
     return PowerWellRef(this, pipe == tgl_registers::PIPE_A ? PowerWellId::PG1 : PowerWellId::PG2);
   }
-  PowerWellRef GetDdiPowerWellRef(tgl_registers::Ddi ddi) override {
-    return PowerWellRef(this, ddi == tgl_registers::DDI_A ? PowerWellId::PG1 : PowerWellId::PG2);
+  PowerWellRef GetDdiPowerWellRef(DdiId ddi_id) override {
+    return PowerWellRef(this, ddi_id == DdiId::DDI_A ? PowerWellId::PG1 : PowerWellId::PG2);
   }
 
-  bool GetDdiIoPowerState(tgl_registers::Ddi ddi) override {
+  bool GetDdiIoPowerState(DdiId ddi_id) override {
     auto power_well = tgl_registers::PowerWellControl::Get().ReadFrom(mmio_space());
-    return power_well.ddi_io_power_state_skylake(ddi).get();
+    return power_well.ddi_io_power_state_skylake(ddi_id).get();
   }
 
-  void SetDdiIoPowerState(tgl_registers::Ddi ddi, bool enable) override {
+  void SetDdiIoPowerState(DdiId ddi_id, bool enable) override {
     auto power_well = tgl_registers::PowerWellControl::Get().ReadFrom(mmio_space());
-    power_well.ddi_io_power_request_skylake(ddi).set(1);
+    power_well.ddi_io_power_request_skylake(ddi_id).set(1);
     power_well.WriteTo(mmio_space());
   }
 
-  bool GetAuxIoPowerState(tgl_registers::Ddi ddi) override {
+  bool GetAuxIoPowerState(DdiId ddi_id) override {
     // Per https://patchwork.freedesktop.org/series/453/, toggling hardware
     // resources that is controlled by DMC (display microcontroller) firmware
     // is redundant and could interfere with firmware's functionality.
@@ -179,7 +175,7 @@ class PowerSkylake : public Power {
     return true;
   }
 
-  void SetAuxIoPowerState(tgl_registers::Ddi ddi, bool enable) override {
+  void SetAuxIoPowerState(DdiId ddi_id, bool enable) override {
     // See comments above at GetAuxIoPowerState(). This method will not enable /
     // disable Misc IO power on-demand.
   }
@@ -196,7 +192,7 @@ class PowerSkylake : public Power {
     ZX_DEBUG_ASSERT(ok);
   }
 
-  std::unordered_set<tgl_registers::Ddi> aux_io_enabled_ddis_;
+  std::unordered_set<DdiId> aux_io_enabled_ddis_;
 };
 
 // Dependencies between power wells from IHD-OS-TGL-Vol 12-12.21
@@ -286,44 +282,44 @@ class PowerTigerLake : public Power {
     }
   }
 
-  PowerWellRef GetDdiPowerWellRef(tgl_registers::Ddi ddi) override {
+  PowerWellRef GetDdiPowerWellRef(DdiId ddi_id) override {
     // Power well assignments from IHD-OS-TGL-Vol 12-12.21
     // "Functions Within Each Well", pages 219-220.
 
-    switch (ddi) {
-      case tgl_registers::DDI_A:
-      case tgl_registers::DDI_B:
-      case tgl_registers::DDI_C:
+    switch (ddi_id) {
+      case DdiId::DDI_A:
+      case DdiId::DDI_B:
+      case DdiId::DDI_C:
         return PowerWellRef(this, PowerWellId::PG1);
-      case tgl_registers::DDI_TC_1:
-      case tgl_registers::DDI_TC_2:
-      case tgl_registers::DDI_TC_3:
-      case tgl_registers::DDI_TC_4:
-      case tgl_registers::DDI_TC_5:
-      case tgl_registers::DDI_TC_6:
+      case DdiId::DDI_TC_1:
+      case DdiId::DDI_TC_2:
+      case DdiId::DDI_TC_3:
+      case DdiId::DDI_TC_4:
+      case DdiId::DDI_TC_5:
+      case DdiId::DDI_TC_6:
         return PowerWellRef(this, PowerWellId::PG3);
     }
   }
 
-  bool GetDdiIoPowerState(tgl_registers::Ddi ddi) override {
+  bool GetDdiIoPowerState(DdiId ddi_id) override {
     auto power_well = tgl_registers::PowerWellControlDdi2::Get().ReadFrom(mmio_space());
-    return power_well.ddi_io_power_state_tiger_lake(ddi).get();
+    return power_well.ddi_io_power_state_tiger_lake(ddi_id).get();
   }
 
-  void SetDdiIoPowerState(tgl_registers::Ddi ddi, bool enable) override {
+  void SetDdiIoPowerState(DdiId ddi_id, bool enable) override {
     auto power_well = tgl_registers::PowerWellControlDdi2::Get().ReadFrom(mmio_space());
-    power_well.ddi_io_power_request_tiger_lake(ddi).set(enable);
+    power_well.ddi_io_power_request_tiger_lake(ddi_id).set(enable);
     power_well.WriteTo(mmio_space());
   }
 
-  bool GetAuxIoPowerState(tgl_registers::Ddi ddi) override {
+  bool GetAuxIoPowerState(DdiId ddi_id) override {
     auto power_well = tgl_registers::PowerWellControlAux::Get().ReadFrom(mmio_space());
-    return power_well.powered_on_combo_or_usb_c(ddi);
+    return power_well.powered_on_combo_or_usb_c(ddi_id);
   }
 
-  void SetAuxIoPowerState(tgl_registers::Ddi ddi, bool enable) override {
+  void SetAuxIoPowerState(DdiId ddi_id, bool enable) override {
     auto power_well = tgl_registers::PowerWellControlAux::Get().ReadFrom(mmio_space());
-    power_well.set_power_on_request_combo_or_usb_c(ddi, enable);
+    power_well.set_power_on_request_combo_or_usb_c(ddi_id, enable);
     power_well.WriteTo(mmio_space());
   }
 

@@ -13,11 +13,11 @@ TEST(HardwareCommonTest, Skylake) {
   // Skylake has 5 DDIs (A-E), 4 DPLLs, 3 Pipes and 4 Transcoders
   // (including an eDP transcoder).
 
-  auto ddis = Ddis<Platform::kSkylake>();
+  auto ddis = i915_tgl::DdiIds<Platform::kSkylake>();
   EXPECT_EQ(ddis.size(), 5u);
-  EXPECT_THAT(ddis, testing::Contains(DDI_A).Times(1));
-  EXPECT_THAT(ddis, testing::Contains(DDI_E).Times(1));
-  EXPECT_THAT(ddis, testing::Not(testing::Contains(DDI_TC_6)));
+  EXPECT_THAT(ddis, testing::Contains(i915_tgl::DdiId::DDI_A).Times(1));
+  EXPECT_THAT(ddis, testing::Contains(i915_tgl::DdiId::DDI_E).Times(1));
+  EXPECT_THAT(ddis, testing::Not(testing::Contains(i915_tgl::DdiId::DDI_TC_6)));
 
   auto dplls = Dplls<Platform::kSkylake>();
   EXPECT_EQ(dplls.size(), 4u);
@@ -37,11 +37,11 @@ TEST(HardwareCommonTest, KabyLake) {
   // Kaby Lake has 5 DDIs (A-E), 4 DPLLs, 3 Pipes and 4 Transcoders
   // (including an eDP transcoder).
 
-  auto ddis = Ddis<Platform::kKabyLake>();
+  auto ddis = i915_tgl::DdiIds<Platform::kKabyLake>();
   EXPECT_EQ(ddis.size(), 5u);
-  EXPECT_THAT(ddis, testing::Contains(DDI_A).Times(1));
-  EXPECT_THAT(ddis, testing::Contains(DDI_E).Times(1));
-  EXPECT_THAT(ddis, testing::Not(testing::Contains(DDI_TC_6)));
+  EXPECT_THAT(ddis, testing::Contains(i915_tgl::DdiId::DDI_A).Times(1));
+  EXPECT_THAT(ddis, testing::Contains(i915_tgl::DdiId::DDI_E).Times(1));
+  EXPECT_THAT(ddis, testing::Not(testing::Contains(i915_tgl::DdiId::DDI_TC_6)));
 
   auto dplls = Dplls<Platform::kKabyLake>();
   EXPECT_EQ(dplls.size(), 4u);
@@ -61,11 +61,11 @@ TEST(HardwareCommonTest, TigerLake) {
   // Tiger Lake has 9 DDIs (A-C, TC1-TC6), currently it supports 3 Pipes and 3 Transcoders.
   // There is no eDP transcoder in Tiger Lake.
 
-  auto ddis = Ddis<Platform::kTigerLake>();
+  auto ddis = i915_tgl::DdiIds<Platform::kTigerLake>();
   EXPECT_EQ(ddis.size(), 9u);
-  EXPECT_THAT(ddis, testing::Contains(DDI_A).Times(1));
-  EXPECT_THAT(ddis, testing::Contains(DDI_C).Times(1));
-  EXPECT_THAT(ddis, testing::Contains(DDI_TC_6).Times(1));
+  EXPECT_THAT(ddis, testing::Contains(i915_tgl::DdiId::DDI_A).Times(1));
+  EXPECT_THAT(ddis, testing::Contains(i915_tgl::DdiId::DDI_C).Times(1));
+  EXPECT_THAT(ddis, testing::Contains(i915_tgl::DdiId::DDI_TC_6).Times(1));
 
   // TODO(fxbug.dev/109278): Update the test once Pipe D is supported.
   auto pipes = Pipes<Platform::kTigerLake>();

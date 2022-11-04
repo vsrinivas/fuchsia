@@ -12,18 +12,18 @@
 
 namespace i915_tgl {
 
-cpp20::span<const tgl_registers::Ddi> GetDdis(uint16_t device_id) {
+cpp20::span<const DdiId> GetDdiIds(uint16_t device_id) {
   if (is_skl(device_id)) {
-    return tgl_registers::Ddis<tgl_registers::Platform::kSkylake>();
+    return DdiIds<tgl_registers::Platform::kSkylake>();
   }
   if (is_kbl(device_id)) {
-    return tgl_registers::Ddis<tgl_registers::Platform::kKabyLake>();
+    return DdiIds<tgl_registers::Platform::kKabyLake>();
   }
   if (is_tgl(device_id)) {
-    return tgl_registers::Ddis<tgl_registers::Platform::kTigerLake>();
+    return DdiIds<tgl_registers::Platform::kTigerLake>();
   }
   if (is_test_device(device_id)) {
-    return tgl_registers::Ddis<tgl_registers::Platform::kTestDevice>();
+    return DdiIds<tgl_registers::Platform::kTestDevice>();
   }
   ZX_ASSERT_MSG(false, "Device id (%04x) not supported", device_id);
 }

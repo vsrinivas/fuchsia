@@ -22,21 +22,23 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/registers.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/tiling.h"
 
+namespace i915_tgl {
+
 namespace {
 
 zx_status_t backlight_message(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  i915_tgl::DisplayDevice* ptr;
+  DisplayDevice* ptr;
   {
-    fbl::AutoLock lock(&static_cast<i915_tgl::display_ref_t*>(ctx)->mtx);
-    ptr = static_cast<i915_tgl::display_ref_t*>(ctx)->display_device;
+    fbl::AutoLock lock(&static_cast<display_ref_t*>(ctx)->mtx);
+    ptr = static_cast<display_ref_t*>(ctx)->display_device;
   }
   fidl::WireDispatch<fuchsia_hardware_backlight::Device>(
       ptr, fidl::IncomingHeaderAndMessage::FromEncodedCMessage(msg), &transaction);
   return transaction.Status();
 }
 
-void backlight_release(void* ctx) { delete static_cast<i915_tgl::display_ref_t*>(ctx); }
+void backlight_release(void* ctx) { delete static_cast<display_ref_t*>(ctx); }
 
 constexpr zx_protocol_device_t kBacklightDeviceOps = {
     .version = DEVICE_OPS_VERSION,
@@ -46,13 +48,11 @@ constexpr zx_protocol_device_t kBacklightDeviceOps = {
 
 }  // namespace
 
-namespace i915_tgl {
-
-DisplayDevice::DisplayDevice(Controller* controller, uint64_t id, tgl_registers::Ddi ddi,
+DisplayDevice::DisplayDevice(Controller* controller, uint64_t id, DdiId ddi_id,
                              DdiReference ddi_reference, Type type)
     : controller_(controller),
       id_(id),
-      ddi_(ddi),
+      ddi_id_(ddi_id),
       ddi_reference_(std::move(ddi_reference)),
       type_(type) {}
 
@@ -62,7 +62,7 @@ DisplayDevice::~DisplayDevice() {
     controller_->ResetPipePlaneBuffers(pipe_->pipe_id());
   }
   if (inited_) {
-    controller_->ResetDdi(ddi(), pipe()->connected_transcoder_id());
+    controller_->ResetDdi(ddi_id(), pipe()->connected_transcoder_id());
   }
   if (ddi_reference_) {
     ddi_reference_.reset();
@@ -77,7 +77,7 @@ DisplayDevice::~DisplayDevice() {
 fdf::MmioBuffer* DisplayDevice::mmio_space() const { return controller_->mmio_space(); }
 
 bool DisplayDevice::Init() {
-  ddi_power_ = controller_->power()->GetDdiPowerWellRef(ddi_);
+  ddi_power_ = controller_->power()->GetDdiPowerWellRef(ddi_id_);
 
   Pipe* pipe = controller_->pipe_manager()->RequestPipe(*this);
   if (!pipe) {
@@ -187,7 +187,7 @@ bool DisplayDevice::CheckNeedsModeset(const display_mode_t* mode) {
       ComputeDdiPllConfig(static_cast<int32_t>(info_.pixel_clock_10khz));
   ZX_DEBUG_ASSERT_MSG(desired_pll_config.IsEmpty(),
                       "CheckDisplayMode() should have rejected unattainable pixel rates");
-  return !controller()->dpll_manager()->DdiPllMatchesConfig(ddi(), desired_pll_config);
+  return !controller()->dpll_manager()->DdiPllMatchesConfig(ddi_id(), desired_pll_config);
 }
 
 void DisplayDevice::ApplyConfiguration(const display_config_t* config,

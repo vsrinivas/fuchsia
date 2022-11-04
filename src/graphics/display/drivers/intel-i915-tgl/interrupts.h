@@ -31,7 +31,7 @@ class Interrupts {
   // thread dedicated to handling interrupt). However, implementations must be
   // thread-safe, and not rely on any assumptions around the threading model.
   using PipeVsyncCallback = fit::function<void(tgl_registers::Pipe, zx_time_t)>;
-  using HotplugCallback = fit::function<void(tgl_registers::Ddi ddi, bool long_pulse)>;
+  using HotplugCallback = fit::function<void(DdiId ddi_id, bool long_pulse)>;
 
   Interrupts();
   ~Interrupts();

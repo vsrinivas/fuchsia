@@ -23,11 +23,11 @@ namespace i915_tgl {
 
 class GMBusI2c {
  public:
-  GMBusI2c(tgl_registers::Ddi ddi, fdf::MmioBuffer* mmio_space);
+  GMBusI2c(DdiId ddi_id, fdf::MmioBuffer* mmio_space);
   zx_status_t I2cTransact(const i2c_impl_op_t* ops, size_t count);
 
  private:
-  const tgl_registers::Ddi ddi_;
+  const DdiId ddi_id_;
   // The lock protects the registers this class writes to, not the whole register io space.
   fdf::MmioBuffer* mmio_space_ __TA_GUARDED(lock_);
   mtx_t lock_;
@@ -42,8 +42,7 @@ class GMBusI2c {
 
 class HdmiDisplay : public DisplayDevice {
  public:
-  HdmiDisplay(Controller* controller, uint64_t id, tgl_registers::Ddi ddi,
-              DdiReference ddi_reference);
+  HdmiDisplay(Controller* controller, uint64_t id, DdiId ddi_id, DdiReference ddi_reference);
 
   HdmiDisplay(const HdmiDisplay&) = delete;
   HdmiDisplay(HdmiDisplay&&) = delete;
@@ -66,7 +65,7 @@ class HdmiDisplay : public DisplayDevice {
 
   bool CheckPixelRate(uint64_t pixel_rate) final;
 
-  uint32_t i2c_bus_id() const final { return 2 * ddi() + 1; }
+  uint32_t i2c_bus_id() const final { return 2 * ddi_id() + 1; }
 };
 
 }  // namespace i915_tgl

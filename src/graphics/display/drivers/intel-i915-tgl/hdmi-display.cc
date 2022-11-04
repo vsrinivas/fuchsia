@@ -79,12 +79,12 @@ cpp20::span<const DdiPhyConfigEntry> GetHdmiPhyConfigEntries(uint16_t device_id,
   return kPhyConfigHdmiSkylakeUhs;
 }
 
-int ddi_to_pin(tgl_registers::Ddi ddi) {
-  if (ddi == tgl_registers::DDI_B) {
+int ddi_id_to_pin(DdiId ddi_id) {
+  if (ddi_id == DdiId::DDI_B) {
     return tgl_registers::GMBus0::kDdiBPin;
-  } else if (ddi == tgl_registers::DDI_C) {
+  } else if (ddi_id == DdiId::DDI_C) {
     return tgl_registers::GMBus0::kDdiCPin;
-  } else if (ddi == tgl_registers::DDI_D) {
+  } else if (ddi_id == DdiId::DDI_D) {
     return tgl_registers::GMBus0::kDdiDPin;
   }
   return -1;
@@ -113,8 +113,8 @@ static constexpr uint8_t kDdcDataAddress = 0x50;
 static constexpr uint8_t kI2cClockUs = 10;  // 100 kHz
 
 // For bit banging i2c over the gpio pins
-bool i2c_scl(fdf::MmioBuffer* mmio_space, tgl_registers::Ddi ddi, bool hi) {
-  auto gpio = tgl_registers::GpioCtl::Get(ddi).FromValue(0);
+bool i2c_scl(fdf::MmioBuffer* mmio_space, DdiId ddi_id, bool hi) {
+  auto gpio = tgl_registers::GpioCtl::Get(ddi_id).FromValue(0);
 
   if (!hi) {
     gpio.set_clock_direction_val(1);
@@ -144,8 +144,8 @@ bool i2c_scl(fdf::MmioBuffer* mmio_space, tgl_registers::Ddi ddi, bool hi) {
 }
 
 // For bit banging i2c over the gpio pins
-void i2c_sda(fdf::MmioBuffer* mmio_space, tgl_registers::Ddi ddi, bool hi) {
-  auto gpio = tgl_registers::GpioCtl::Get(ddi).FromValue(0);
+void i2c_sda(fdf::MmioBuffer* mmio_space, DdiId ddi_id, bool hi) {
+  auto gpio = tgl_registers::GpioCtl::Get(ddi_id).FromValue(0);
 
   if (!hi) {
     gpio.set_data_direction_val(1);
@@ -160,29 +160,29 @@ void i2c_sda(fdf::MmioBuffer* mmio_space, tgl_registers::Ddi ddi, bool hi) {
 }
 
 // For bit banging i2c over the gpio pins
-bool i2c_send_byte(fdf::MmioBuffer* mmio_space, tgl_registers::Ddi ddi, uint8_t byte) {
+bool i2c_send_byte(fdf::MmioBuffer* mmio_space, DdiId ddi_id, uint8_t byte) {
   // Set the bits from MSB to LSB
   for (int i = 7; i >= 0; i--) {
-    i2c_sda(mmio_space, ddi, (byte >> i) & 0x1);
+    i2c_sda(mmio_space, ddi_id, (byte >> i) & 0x1);
 
-    i2c_scl(mmio_space, ddi, 1);
+    i2c_scl(mmio_space, ddi_id, 1);
 
     // Leave the data line where it is for the rest of the cycle
     zx_nanosleep(zx_deadline_after(ZX_USEC(kI2cClockUs / 2)));
 
-    i2c_scl(mmio_space, ddi, 0);
+    i2c_scl(mmio_space, ddi_id, 0);
   }
 
   // Release the data line and check for an ack
-  i2c_sda(mmio_space, ddi, 1);
-  i2c_scl(mmio_space, ddi, 1);
+  i2c_sda(mmio_space, ddi_id, 1);
+  i2c_scl(mmio_space, ddi_id, 1);
 
-  bool ack = !tgl_registers::GpioCtl::Get(ddi).ReadFrom(mmio_space).data_in();
+  bool ack = !tgl_registers::GpioCtl::Get(ddi_id).ReadFrom(mmio_space).data_in();
 
   // Sleep for the rest of the cycle
   zx_nanosleep(zx_deadline_after(ZX_USEC(kI2cClockUs / 2)));
 
-  i2c_scl(mmio_space, ddi, 0);
+  i2c_scl(mmio_space, ddi_id, 0);
 
   return ack;
 }
@@ -194,30 +194,30 @@ bool i2c_send_byte(fdf::MmioBuffer* mmio_space, tgl_registers::Ddi ddi, uint8_t 
 // set by bit-banging the GPIO pins.
 bool GMBusI2c::SetDdcSegment(uint8_t segment_num) {
   // Reset the clock and data lines
-  i2c_scl(mmio_space_, ddi_, 0);
-  i2c_sda(mmio_space_, ddi_, 0);
+  i2c_scl(mmio_space_, ddi_id_, 0);
+  i2c_sda(mmio_space_, ddi_id_, 0);
 
-  if (!i2c_scl(mmio_space_, ddi_, 1)) {
+  if (!i2c_scl(mmio_space_, ddi_id_, 1)) {
     return false;
   }
-  i2c_sda(mmio_space_, ddi_, 1);
+  i2c_sda(mmio_space_, ddi_id_, 1);
   // Wait for the rest of the cycle
   zx_nanosleep(zx_deadline_after(ZX_USEC(kI2cClockUs / 2)));
 
   // Send a start condition
-  i2c_sda(mmio_space_, ddi_, 0);
-  i2c_scl(mmio_space_, ddi_, 0);
+  i2c_sda(mmio_space_, ddi_id_, 0);
+  i2c_scl(mmio_space_, ddi_id_, 0);
 
   // Send the segment register index and the segment number
   uint8_t segment_write_command = kDdcSegmentAddress << 1;
-  if (!i2c_send_byte(mmio_space_, ddi_, segment_write_command) ||
-      !i2c_send_byte(mmio_space_, ddi_, segment_num)) {
+  if (!i2c_send_byte(mmio_space_, ddi_id_, segment_write_command) ||
+      !i2c_send_byte(mmio_space_, ddi_id_, segment_num)) {
     return false;
   }
 
   // Set the data and clock lines high to prepare for the GMBus start
-  i2c_sda(mmio_space_, ddi_, 1);
-  return i2c_scl(mmio_space_, ddi_, 1);
+  i2c_sda(mmio_space_, ddi_id_, 1);
+  return i2c_scl(mmio_space_, ddi_id_, 1);
 }
 
 zx_status_t GMBusI2c::I2cTransact(const i2c_impl_op_t* ops, size_t size) {
@@ -238,7 +238,7 @@ zx_status_t GMBusI2c::I2cTransact(const i2c_impl_op_t* ops, size_t size) {
     } else if (op->address == kDdcDataAddress) {
       if (!gmbus_set) {
         auto gmbus0 = tgl_registers::GMBus0::Get().FromValue(0);
-        gmbus0.set_pin_pair_select(ddi_to_pin(ddi_));
+        gmbus0.set_pin_pair_select(ddi_id_to_pin(ddi_id_));
         gmbus0.WriteTo(mmio_space_);
 
         gmbus_set = true;
@@ -408,8 +408,8 @@ bool GMBusI2c::I2cClearNack() {
   return true;
 }
 
-GMBusI2c::GMBusI2c(tgl_registers::Ddi ddi, fdf::MmioBuffer* mmio_space)
-    : ddi_(ddi), mmio_space_(mmio_space) {
+GMBusI2c::GMBusI2c(DdiId ddi_id, fdf::MmioBuffer* mmio_space)
+    : ddi_id_(ddi_id), mmio_space_(mmio_space) {
   ZX_ASSERT(mtx_init(&lock_, mtx_plain) == thrd_success);
 }
 
@@ -418,15 +418,15 @@ GMBusI2c::GMBusI2c(tgl_registers::Ddi ddi, fdf::MmioBuffer* mmio_space)
 // On DisplayDevice creation we cannot determine whether it is an HDMI
 // display; this will be updated when intel-i915 Controller gets EDID
 // information for this device (before Init()).
-HdmiDisplay::HdmiDisplay(Controller* controller, uint64_t id, tgl_registers::Ddi ddi,
+HdmiDisplay::HdmiDisplay(Controller* controller, uint64_t id, DdiId ddi_id,
                          DdiReference ddi_reference)
-    : DisplayDevice(controller, id, ddi, std::move(ddi_reference), Type::kHdmi) {}
+    : DisplayDevice(controller, id, ddi_id, std::move(ddi_reference), Type::kHdmi) {}
 
 HdmiDisplay::~HdmiDisplay() = default;
 
 bool HdmiDisplay::Query() {
   // HDMI isn't supported on these DDIs
-  if (ddi_to_pin(ddi()) == -1) {
+  if (ddi_id_to_pin(ddi_id()) == -1) {
     return false;
   }
 
@@ -464,7 +464,7 @@ bool HdmiDisplay::InitDdi() {
 
 bool HdmiDisplay::DdiModeset(const display_mode_t& mode) {
   pipe()->Reset();
-  controller()->ResetDdi(ddi(), pipe()->connected_transcoder_id());
+  controller()->ResetDdi(ddi_id(), pipe()->connected_transcoder_id());
 
   const int32_t pixel_clock_khz = mode.pixel_clock_10khz * 10;
   DdiPllConfig pll_config = {
@@ -475,23 +475,23 @@ bool HdmiDisplay::DdiModeset(const display_mode_t& mode) {
   };
 
   DisplayPll* dpll =
-      controller()->dpll_manager()->SetDdiPllConfig(ddi(), /*is_edp=*/false, pll_config);
+      controller()->dpll_manager()->SetDdiPllConfig(ddi_id(), /*is_edp=*/false, pll_config);
   if (dpll == nullptr) {
     return false;
   }
 
   ZX_DEBUG_ASSERT(controller()->power());
-  controller()->power()->SetDdiIoPowerState(ddi(), /*enable=*/true);
-  if (!PollUntil([&] { return controller()->power()->GetDdiIoPowerState(ddi()); }, zx::usec(1),
+  controller()->power()->SetDdiIoPowerState(ddi_id(), /*enable=*/true);
+  if (!PollUntil([&] { return controller()->power()->GetDdiIoPowerState(ddi_id()); }, zx::usec(1),
                  20)) {
-    zxlogf(ERROR, "DDI %d IO power did not come up in 20us", ddi());
+    zxlogf(ERROR, "DDI %d IO power did not come up in 20us", ddi_id());
     return false;
   }
 
-  controller()->power()->SetAuxIoPowerState(ddi(), /*enable=*/true);
-  if (!PollUntil([&] { return controller()->power()->GetAuxIoPowerState(ddi()); }, zx::usec(1),
+  controller()->power()->SetAuxIoPowerState(ddi_id(), /*enable=*/true);
+  if (!PollUntil([&] { return controller()->power()->GetAuxIoPowerState(ddi_id()); }, zx::usec(1),
                  10)) {
-    zxlogf(ERROR, "DDI %d IO power did not come up in 10us", ddi());
+    zxlogf(ERROR, "DDI %d IO power did not come up in 10us", ddi_id());
     return false;
   }
 
@@ -508,9 +508,9 @@ bool HdmiDisplay::PipeConfigPreamble(const display_mode_t& mode, tgl_registers::
   // Configure Transcoder Clock Select
   auto transcoder_clock_select = transcoder_regs.ClockSelect().ReadFrom(mmio_space());
   if (is_tgl(controller()->device_id())) {
-    transcoder_clock_select.set_ddi_clock_tiger_lake(ddi());
+    transcoder_clock_select.set_ddi_clock_tiger_lake(ddi_id());
   } else {
-    transcoder_clock_select.set_ddi_clock_kaby_lake(ddi());
+    transcoder_clock_select.set_ddi_clock_kaby_lake(ddi_id());
   }
   transcoder_clock_select.WriteTo(mmio_space());
 
@@ -528,9 +528,9 @@ bool HdmiDisplay::PipeConfigEpilogue(const display_mode_t& mode, tgl_registers::
   auto transcoder_ddi_control = transcoder_regs.DdiControl().ReadFrom(mmio_space());
   transcoder_ddi_control.set_enabled(true);
   if (is_tgl(controller()->device_id())) {
-    transcoder_ddi_control.set_ddi_tiger_lake(ddi());
+    transcoder_ddi_control.set_ddi_tiger_lake(ddi_id());
   } else {
-    transcoder_ddi_control.set_ddi_kaby_lake(ddi());
+    transcoder_ddi_control.set_ddi_kaby_lake(ddi_id());
   }
   transcoder_ddi_control.set_ddi_mode(type() == DisplayDevice::Type::kHdmi
                                           ? tgl_registers::TranscoderDdiControl::kModeHdmi
@@ -550,8 +550,8 @@ bool HdmiDisplay::PipeConfigEpilogue(const display_mode_t& mode, tgl_registers::
   // Configure voltage swing and related IO settings.
 
   // kUseDefaultIdx always fails the idx-in-bounds check, so no additional handling is needed
-  uint8_t idx = controller()->igd_opregion().GetHdmiBufferTranslationIndex(ddi());
-  uint8_t i_boost_override = controller()->igd_opregion().GetIBoost(ddi(), false /* is_dp */);
+  uint8_t idx = controller()->igd_opregion().GetHdmiBufferTranslationIndex(ddi_id());
+  uint8_t i_boost_override = controller()->igd_opregion().GetIBoost(ddi_id(), false /* is_dp */);
 
   uint8_t default_iboost;
   const cpp20::span<const DdiPhyConfigEntry> entries =
@@ -560,7 +560,7 @@ bool HdmiDisplay::PipeConfigEpilogue(const display_mode_t& mode, tgl_registers::
     idx = 8;  // Default index
   }
 
-  tgl_registers::DdiRegs ddi_regs(ddi());
+  tgl_registers::DdiRegs ddi_regs(ddi_id());
   auto phy_config_entry1 = ddi_regs.PhyConfigEntry1(9).FromValue(0);
   phy_config_entry1.set_reg_value(entries[idx].entry1);
   if (i_boost_override) {
@@ -573,8 +573,8 @@ bool HdmiDisplay::PipeConfigEpilogue(const display_mode_t& mode, tgl_registers::
 
   auto phy_balance_control = tgl_registers::DdiPhyBalanceControl::Get().ReadFrom(mmio_space());
   phy_balance_control.set_disable_balance_leg(0);
-  phy_balance_control.balance_leg_select_for_ddi(ddi()).set(i_boost_override ? i_boost_override
-                                                                             : default_iboost);
+  phy_balance_control.balance_leg_select_for_ddi(ddi_id()).set(i_boost_override ? i_boost_override
+                                                                                : default_iboost);
   phy_balance_control.WriteTo(mmio_space());
 
   // Configure and enable DDI_BUF_CTL

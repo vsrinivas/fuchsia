@@ -75,7 +75,7 @@ class TranscoderDdiControl : public hwreg::RegisterBase<TranscoderDdiControl, ui
   //
   // The underlying field is ignored by the EDP transcoder, which is attached to
   // DDI A.
-  std::optional<Ddi> ddi_kaby_lake() const {
+  std::optional<i915_tgl::DdiId> ddi_kaby_lake() const {
     // The cast is lossless because `ddi_select_subtle()` is a 4-bit field.
     const int8_t ddi_select_raw_value = static_cast<int8_t>(ddi_select_subtle());
     if (ddi_select_raw_value == 0) {
@@ -84,7 +84,7 @@ class TranscoderDdiControl : public hwreg::RegisterBase<TranscoderDdiControl, ui
 
     // Convert from the Tiger Lake field representation.
     const int ddi_index = (ddi_select_raw_value >> 1);
-    return static_cast<Ddi>(ddi_index);
+    return static_cast<i915_tgl::DdiId>(ddi_index);
   }
 
   // The DDI that the transcoder will connect to.
@@ -96,35 +96,36 @@ class TranscoderDdiControl : public hwreg::RegisterBase<TranscoderDdiControl, ui
   //
   // The underlying field is ignored by the DSI transcoders. Each DSI transcoder
   // is attached to a DDI.
-  std::optional<Ddi> ddi_tiger_lake() const {
+  std::optional<i915_tgl::DdiId> ddi_tiger_lake() const {
     // The cast is lossless because `ddi_select_subtle()` is a 4-bit field.
     const int8_t ddi_select_raw_value = static_cast<int8_t>(ddi_select_subtle());
     if (ddi_select_raw_value == 0) {
       return std::nullopt;
     }
     const int ddi_index = ddi_select_raw_value - 1;
-    return static_cast<Ddi>(ddi_index);
+    return static_cast<i915_tgl::DdiId>(ddi_index);
   }
 
   // See `ddi_kaby_lake()` for details.
-  TranscoderDdiControl& set_ddi_kaby_lake(std::optional<Ddi> ddi) {
-    if (!ddi.has_value()) {
+  TranscoderDdiControl& set_ddi_kaby_lake(std::optional<i915_tgl::DdiId> ddi_id) {
+    if (!ddi_id.has_value()) {
       return set_ddi_select_subtle(0);
     }
 
-    ZX_DEBUG_ASSERT_MSG(*ddi != Ddi::DDI_A, "DDI A cannot be explicitly connected to a transcoder");
-    const int ddi_index = *ddi - Ddi::DDI_A;
+    ZX_DEBUG_ASSERT_MSG(*ddi_id != i915_tgl::DdiId::DDI_A,
+                        "DDI A cannot be explicitly connected to a transcoder");
+    const int ddi_index = *ddi_id - i915_tgl::DdiId::DDI_A;
 
     // Convert to the Tiger Lake field representation.
     return set_ddi_select_subtle(ddi_index << 1);
   }
 
   // See `ddi_tiger_lake()` for details.
-  TranscoderDdiControl& set_ddi_tiger_lake(std::optional<Ddi> ddi) {
-    if (!ddi.has_value()) {
+  TranscoderDdiControl& set_ddi_tiger_lake(std::optional<i915_tgl::DdiId> ddi_id) {
+    if (!ddi_id.has_value()) {
       return set_ddi_select_subtle(0);
     }
-    const int ddi_index = *ddi - Ddi::DDI_A;
+    const int ddi_index = *ddi_id - i915_tgl::DdiId::DDI_A;
     return set_ddi_select_subtle(ddi_index + 1);
   }
 
@@ -378,7 +379,7 @@ class TranscoderDdiControl : public hwreg::RegisterBase<TranscoderDdiControl, ui
   }
 
   // See `display_port_lane_count()` for details.
-  TranscoderDdiControl& set_display_port_lane_count(uint8_t lane_count) {
+  TranscoderDdiControl set_display_port_lane_count(uint8_t lane_count) {
     ZX_DEBUG_ASSERT(lane_count >= 1);
     ZX_DEBUG_ASSERT(lane_count <= 4);
     return set_display_port_lane_count_selection(lane_count - 1);
@@ -525,7 +526,7 @@ class TranscoderClockSelect : public hwreg::RegisterBase<TranscoderClockSelect, 
   // This helper works for Kaby Lake and Skylake.
   //
   // This field must not be changed while the transcoder is enabled.
-  std::optional<Ddi> ddi_clock_kaby_lake() const {
+  std::optional<i915_tgl::DdiId> ddi_clock_kaby_lake() const {
     // Shifting converts from the Tiger Lake field width. The cast is lossless
     // because `ddi_clock_select_subtle()` is a 4-bit field.
     const int8_t ddi_clock_select_raw_value = static_cast<int8_t>(ddi_clock_select_subtle() >> 1);
@@ -533,7 +534,7 @@ class TranscoderClockSelect : public hwreg::RegisterBase<TranscoderClockSelect, 
       return std::nullopt;
     }
     const int ddi_index = ddi_clock_select_raw_value - 1;
-    return static_cast<Ddi>(ddi_index);
+    return static_cast<i915_tgl::DdiId>(ddi_index);
   }
 
   // The DDI whose port clock is used by the transcoder.
@@ -541,22 +542,22 @@ class TranscoderClockSelect : public hwreg::RegisterBase<TranscoderClockSelect, 
   // This helper works for Tiger Lake.
   //
   // This field must not be changed while the transcoder is enabled.
-  std::optional<Ddi> ddi_clock_tiger_lake() const {
+  std::optional<i915_tgl::DdiId> ddi_clock_tiger_lake() const {
     // The cast is lossless because `ddi_clock_select_subtle()` is a 4-bit field.
     const int8_t ddi_select_raw_value = static_cast<int8_t>(ddi_clock_select_subtle());
     if (ddi_select_raw_value == 0) {
       return std::nullopt;
     }
     const int ddi_index = ddi_select_raw_value - 1;
-    return static_cast<Ddi>(ddi_index);
+    return static_cast<i915_tgl::DdiId>(ddi_index);
   }
 
   // See `ddi_clock_kaby_lake()` for details.
-  TranscoderClockSelect& set_ddi_clock_kaby_lake(std::optional<Ddi> ddi) {
-    ZX_DEBUG_ASSERT_MSG(!ddi.has_value() || ddi != Ddi::DDI_A,
+  TranscoderClockSelect& set_ddi_clock_kaby_lake(std::optional<i915_tgl::DdiId> ddi_id) {
+    ZX_DEBUG_ASSERT_MSG(!ddi_id.has_value() || ddi_id != i915_tgl::DdiId::DDI_A,
                         "DDI A cannot be explicitly connected to a transcoder");
 
-    const int8_t ddi_select_raw = RawDdiClockSelect(ddi);
+    const int8_t ddi_select_raw = RawDdiClockSelect(ddi_id);
 
     // Convert to the Tiger Lake field representation.
     const uint32_t reserved_bit = (ddi_clock_select_subtle() & 1);
@@ -564,8 +565,8 @@ class TranscoderClockSelect : public hwreg::RegisterBase<TranscoderClockSelect, 
   }
 
   // See `ddi_clock_tiger_lake()` for details.
-  TranscoderClockSelect& set_ddi_clock_tiger_lake(std::optional<Ddi> ddi) {
-    return set_ddi_clock_select_subtle(RawDdiClockSelect(ddi));
+  TranscoderClockSelect& set_ddi_clock_tiger_lake(std::optional<i915_tgl::DdiId> ddi_id) {
+    return set_ddi_clock_select_subtle(RawDdiClockSelect(ddi_id));
   }
 
   static auto GetForTranscoder(Trans transcoder) {
@@ -579,12 +580,12 @@ class TranscoderClockSelect : public hwreg::RegisterBase<TranscoderClockSelect, 
   }
 
  private:
-  static int8_t RawDdiClockSelect(std::optional<Ddi> ddi) {
+  static int8_t RawDdiClockSelect(std::optional<i915_tgl::DdiId> ddi) {
     if (!ddi.has_value()) {
       return 0;
     }
     // The cast is lossless because DDI indices fit in 4 bits.
-    const int8_t ddi_index = static_cast<int8_t>(*ddi - Ddi::DDI_A);
+    const int8_t ddi_index = static_cast<int8_t>(*ddi - i915_tgl::DdiId::DDI_A);
     // The addition doesn't overflow and the cast is lossless because DDI
     // indices fit in 4 bits.
     return static_cast<int8_t>(ddi_index + 1);
@@ -1048,14 +1049,14 @@ class TranscoderChicken : public hwreg::RegisterBase<TranscoderChicken, uint32_t
   // On Kaby Lake, the transcoder chicken registers are also used for DDI-scoped
   // chicken bits. The mapping of DDIs to registers is not straightforward. This
   // method returns the correct register for accessing a DDI's chicken bits.
-  static auto GetForKabyLakeDdi(Ddi ddi) {
-    ZX_ASSERT(ddi >= Ddi::DDI_A);
-    ZX_ASSERT(ddi <= Ddi::DDI_D);
+  static auto GetForKabyLakeDdi(i915_tgl::DdiId ddi_id) {
+    ZX_ASSERT(ddi_id >= i915_tgl::DdiId::DDI_A);
+    ZX_ASSERT(ddi_id <= i915_tgl::DdiId::DDI_D);
 
     // The DDI-to-MMIO address mapping is specified implicitly in
     // IHD-OS-KBL-Vol 16-1.17 BSpec (workaround) ID 1143, page 30.
     static constexpr uint32_t kMmioAddress[] = {0x420cc, 0x420c0, 0x420c4, 0x420c8};
-    const int ddi_index = ddi - Ddi::DDI_A;
+    const int ddi_index = ddi_id - i915_tgl::DdiId::DDI_A;
     return hwreg::RegisterAddr<TranscoderChicken>(kMmioAddress[ddi_index]);
   }
 

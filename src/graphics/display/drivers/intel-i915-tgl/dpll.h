@@ -142,7 +142,7 @@ class DisplayPllManager {
   // is invalid. Otherwise, returns a valid DdiPllConfig.
   //
   // TODO(fxbug.com/112752): This API needs to be revised.
-  virtual DdiPllConfig LoadState(tgl_registers::Ddi ddi) = 0;
+  virtual DdiPllConfig LoadState(DdiId ddi_id) = 0;
 
   // Configures a DDI's clock source to match the desired configuration.
   //
@@ -159,8 +159,7 @@ class DisplayPllManager {
   // source, configuring the PLL, waiting for the PLL to lock, and associating
   // the PLL with the DDI. If any of these steps fails, the entire operation is
   // considered to have failed.
-  DisplayPll* SetDdiPllConfig(tgl_registers::Ddi ddi, bool is_edp,
-                              const DdiPllConfig& desired_config);
+  DisplayPll* SetDdiPllConfig(DdiId ddi_id, bool is_edp, const DdiPllConfig& desired_config);
 
   // Resets a DDI's clock source configuration.
   //
@@ -176,14 +175,14 @@ class DisplayPllManager {
   //
   // If the PLL that served as the DDI's clock source becomes unused after this
   // operation, the PLL is disabled and powered down, if possible.
-  bool ResetDdiPll(tgl_registers::Ddi ddi);
+  bool ResetDdiPll(DdiId ddi_id);
 
   // True if the PLL configured as a DDI's clock source matches a configuration.
   //
   // Returns false if the DDI does not have any clock source configured.
   //
   // `ddi` must be usable on this display engine (not fused off).
-  bool DdiPllMatchesConfig(tgl_registers::Ddi ddi, const DdiPllConfig& desired_config);
+  bool DdiPllMatchesConfig(DdiId ddi_id, const DdiPllConfig& desired_config);
 
  protected:
   DisplayPllManager() = default;
@@ -199,7 +198,7 @@ class DisplayPllManager {
   //
   // Implementations perform the register-level configuration, while assuming
   // that logging and state updating are taken care of.
-  virtual bool SetDdiClockSource(tgl_registers::Ddi ddi, tgl_registers::Dpll pll) = 0;
+  virtual bool SetDdiClockSource(DdiId ddi_id, tgl_registers::Dpll pll) = 0;
 
   // Resets the DDI's clock source so it doesn't use any PLL.
   //
@@ -211,7 +210,7 @@ class DisplayPllManager {
   //
   // Implementations perform the register-level configuration, while assuming
   // that logging and state updating are taken care of.
-  virtual bool ResetDdiClockSource(tgl_registers::Ddi ddi) = 0;
+  virtual bool ResetDdiClockSource(DdiId ddi_id) = 0;
 
   // Returns the most suitable PLL to serve as a DDI's clock source.
   //
@@ -224,12 +223,11 @@ class DisplayPllManager {
   //
   // Implementations perform the register-level configuration, while assuming
   // that logging and state updating are taken care of.
-  virtual DisplayPll* FindPllFor(tgl_registers::Ddi ddi, bool is_edp,
-                                 const DdiPllConfig& desired_config) = 0;
+  virtual DisplayPll* FindPllFor(DdiId ddi_id, bool is_edp, const DdiPllConfig& desired_config) = 0;
 
   std::unordered_map<tgl_registers::Dpll, std::unique_ptr<DisplayPll>> plls_;
   std::unordered_map<DisplayPll*, size_t> ref_count_;
-  std::unordered_map<tgl_registers::Ddi, DisplayPll*> ddi_to_dpll_;
+  std::unordered_map<DdiId, DisplayPll*> ddi_to_dpll_;
 };
 
 // DPLL (Display PLL) for Kaby Lake and Skylake display engines.
@@ -260,14 +258,13 @@ class DpllManagerSkylake : public DisplayPllManager {
   ~DpllManagerSkylake() override = default;
 
   // DisplayPllManager overrides:
-  DdiPllConfig LoadState(tgl_registers::Ddi ddi) final;
+  DdiPllConfig LoadState(DdiId ddi_id) final;
 
  private:
   // DisplayPllManager overrides:
-  bool SetDdiClockSource(tgl_registers::Ddi ddi, tgl_registers::Dpll pll) final;
-  bool ResetDdiClockSource(tgl_registers::Ddi ddi) final;
-  DisplayPll* FindPllFor(tgl_registers::Ddi ddi, bool is_edp,
-                         const DdiPllConfig& desired_config) final;
+  bool SetDdiClockSource(DdiId ddi_id, tgl_registers::Dpll pll) final;
+  bool ResetDdiClockSource(DdiId ddi_id) final;
+  DisplayPll* FindPllFor(DdiId ddi_id, bool is_edp, const DdiPllConfig& desired_config) final;
 
   fdf::MmioBuffer* mmio_space_ = nullptr;
 };
@@ -300,7 +297,7 @@ class DekelPllTigerLake : public DisplayPll {
   ~DekelPllTigerLake() override = default;
 
   // Returns DDI enum of the DDI tied to current Dekel PLL.
-  tgl_registers::Ddi ddi_id() const;
+  DdiId ddi_id() const;
 
  protected:
   // DisplayPll overrides:
@@ -320,17 +317,16 @@ class DpllManagerTigerLake : public DisplayPllManager {
   ~DpllManagerTigerLake() override = default;
 
   // DisplayPllManager overrides:
-  DdiPllConfig LoadState(tgl_registers::Ddi ddi) final;
+  DdiPllConfig LoadState(DdiId ddi_id) final;
 
  private:
-  DdiPllConfig LoadStateForComboDdi(tgl_registers::Ddi ddi);
-  DdiPllConfig LoadStateForTypeCDdi(tgl_registers::Ddi ddi);
+  DdiPllConfig LoadStateForComboDdi(DdiId ddi_id);
+  DdiPllConfig LoadStateForTypeCDdi(DdiId ddi_id);
 
   // DisplayPllManager overrides:
-  bool SetDdiClockSource(tgl_registers::Ddi ddi, tgl_registers::Dpll pll) final;
-  bool ResetDdiClockSource(tgl_registers::Ddi ddi) final;
-  DisplayPll* FindPllFor(tgl_registers::Ddi ddi, bool is_edp,
-                         const DdiPllConfig& desired_config) final;
+  bool SetDdiClockSource(DdiId ddi_id, tgl_registers::Dpll pll) final;
+  bool ResetDdiClockSource(DdiId ddi_id) final;
+  DisplayPll* FindPllFor(DdiId ddi_id, bool is_edp, const DdiPllConfig& desired_config) final;
 
   uint32_t reference_clock_khz_ = 0u;
   fdf::MmioBuffer* mmio_space_ = nullptr;

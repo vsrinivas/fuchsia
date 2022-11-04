@@ -129,7 +129,7 @@ class PipeManager {
   // DDI (usually by bootloader) for a display device.
   // Return |nullptr| if there is no such a pipe or if there is any other
   // internal error when loading the hardware state.
-  virtual Pipe* GetPipeFromHwState(tgl_registers::Ddi ddi, fdf::MmioBuffer* mmio_space) = 0;
+  virtual Pipe* GetPipeFromHwState(DdiId ddi_id, fdf::MmioBuffer* mmio_space) = 0;
 
  private:
   bool pipes_reallocated_ = false;
@@ -149,7 +149,7 @@ class PipeManagerSkylake : public PipeManager {
                                                        tgl_registers::PIPE_C};
 
   Pipe* GetAvailablePipe() override;
-  Pipe* GetPipeFromHwState(tgl_registers::Ddi ddi, fdf::MmioBuffer* mmio_space) override;
+  Pipe* GetPipeFromHwState(DdiId ddi_id, fdf::MmioBuffer* mmio_space) override;
 
   static std::vector<std::unique_ptr<Pipe>> GetPipes(fdf::MmioBuffer* mmio_space, Power* power);
 
@@ -166,7 +166,7 @@ class PipeManagerTigerLake : public PipeManager {
 
  private:
   Pipe* GetAvailablePipe() override;
-  Pipe* GetPipeFromHwState(tgl_registers::Ddi ddi, fdf::MmioBuffer* mmio_space) override;
+  Pipe* GetPipeFromHwState(DdiId ddi_id, fdf::MmioBuffer* mmio_space) override;
 
   static std::vector<std::unique_ptr<Pipe>> GetPipes(fdf::MmioBuffer* mmio_space, Power* power);
 

@@ -14,7 +14,7 @@
 namespace i915_tgl {
 
 // Get the list of DDIs supported by the device of |device_id|.
-cpp20::span<const tgl_registers::Ddi> GetDdis(uint16_t device_id);
+cpp20::span<const DdiId> GetDdiIds(uint16_t device_id);
 
 }  // namespace i915_tgl
 

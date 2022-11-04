@@ -237,37 +237,33 @@ class IgdOpRegion {
   ~IgdOpRegion();
   zx_status_t Init(const ddk::Pci& pci);
 
-  bool HasDdi(tgl_registers::Ddi ddi) const {
-    return ddi_features_.find(ddi) != ddi_features_.end();
+  bool HasDdi(DdiId ddi_id) const { return ddi_features_.find(ddi_id) != ddi_features_.end(); }
+  bool SupportsHdmi(DdiId ddi_id) const {
+    return HasDdi(ddi_id) && ddi_features_.at(ddi_id).supports_hdmi;
   }
-  bool SupportsHdmi(tgl_registers::Ddi ddi) const {
-    return HasDdi(ddi) && ddi_features_.at(ddi).supports_hdmi;
+  bool SupportsDvi(DdiId ddi_id) const {
+    return HasDdi(ddi_id) && ddi_features_.at(ddi_id).supports_dvi;
   }
-  bool SupportsDvi(tgl_registers::Ddi ddi) const {
-    return HasDdi(ddi) && ddi_features_.at(ddi).supports_dvi;
+  bool SupportsDp(DdiId ddi_id) const {
+    return HasDdi(ddi_id) && ddi_features_.at(ddi_id).supports_dp;
   }
-  bool SupportsDp(tgl_registers::Ddi ddi) const {
-    return HasDdi(ddi) && ddi_features_.at(ddi).supports_dp;
-  }
-  bool IsTypeC(tgl_registers::Ddi ddi) const {
-    return HasDdi(ddi) && ddi_features_.at(ddi).is_type_c;
-  }
-  bool IsEdp(tgl_registers::Ddi ddi) const { return HasDdi(ddi) && ddi_features_.at(ddi).is_edp; }
+  bool IsTypeC(DdiId ddi_id) const { return HasDdi(ddi_id) && ddi_features_.at(ddi_id).is_type_c; }
+  bool IsEdp(DdiId ddi_id) const { return HasDdi(ddi_id) && ddi_features_.at(ddi_id).is_edp; }
 
-  bool IsLowVoltageEdp(tgl_registers::Ddi ddi) const {
+  bool IsLowVoltageEdp(DdiId ddi_id) const {
     // TODO(stevensd): Support the case where more than one type of edp panel is present.
-    return HasDdi(ddi) && ddi_features_.at(ddi).is_edp && edp_is_low_voltage_;
+    return HasDdi(ddi_id) && ddi_features_.at(ddi_id).is_edp && edp_is_low_voltage_;
   }
 
-  uint8_t GetIBoost(tgl_registers::Ddi ddi, bool is_dp) const {
-    return is_dp ? HasDdi(ddi) && ddi_features_.at(ddi).iboosts.dp_iboost
-                 : HasDdi(ddi) && ddi_features_.at(ddi).iboosts.hdmi_iboost;
+  uint8_t GetIBoost(DdiId ddi_id, bool is_dp) const {
+    return is_dp ? HasDdi(ddi_id) && ddi_features_.at(ddi_id).iboosts.dp_iboost
+                 : HasDdi(ddi_id) && ddi_features_.at(ddi_id).iboosts.hdmi_iboost;
   }
 
   static constexpr uint8_t kUseDefaultIdx = 0xff;
-  uint8_t GetHdmiBufferTranslationIndex(tgl_registers::Ddi ddi) const {
-    ZX_DEBUG_ASSERT(SupportsHdmi(ddi) || SupportsDvi(ddi));
-    return ddi_features_.at(ddi).hdmi_buffer_translation_idx;
+  uint8_t GetHdmiBufferTranslationIndex(DdiId ddi_id) const {
+    ZX_DEBUG_ASSERT(SupportsHdmi(ddi_id) || SupportsDvi(ddi_id));
+    return ddi_features_.at(ddi_id).hdmi_buffer_translation_idx;
   }
 
   double GetMinBacklightBrightness() const { return min_backlight_brightness_; }
@@ -275,15 +271,11 @@ class IgdOpRegion {
   // TODO(fxbug.dev/112092): Instead of adding the helper functions, these DDI
   // features should be exported as a data-only struct that can be easily
   // injected by tests.
-  void SetIsEdpForTesting(tgl_registers::Ddi ddi, bool is_edp) {
-    ddi_features_[ddi].is_edp = is_edp;
+  void SetIsEdpForTesting(DdiId ddi_id, bool is_edp) { ddi_features_[ddi_id].is_edp = is_edp; }
+  void SetSupportsDpForTesting(DdiId ddi_id, bool value) {
+    ddi_features_[ddi_id].supports_dp = value;
   }
-  void SetSupportsDpForTesting(tgl_registers::Ddi ddi, bool value) {
-    ddi_features_[ddi].supports_dp = value;
-  }
-  void SetIsTypeCForTesting(tgl_registers::Ddi ddi, bool value) {
-    ddi_features_[ddi].is_type_c = value;
-  }
+  void SetIsTypeCForTesting(DdiId ddi_id, bool value) { ddi_features_[ddi_id].is_type_c = value; }
 
  private:
   template <typename T>
@@ -319,7 +311,7 @@ class IgdOpRegion {
     Iboost iboosts;
     uint8_t hdmi_buffer_translation_idx;
   };
-  std::unordered_map<tgl_registers::Ddi, DdiFeatures> ddi_features_;
+  std::unordered_map<DdiId, DdiFeatures> ddi_features_;
 
   bool edp_is_low_voltage_ = false;
   uint8_t panel_type_;

@@ -18,7 +18,11 @@ enum class Platform {
   kTestDevice,
 };
 
-enum Ddi {
+}  // namespace tgl_registers
+
+namespace i915_tgl {
+
+enum DdiId {
   DDI_A = 0,
   DDI_B,
   DDI_C,
@@ -45,17 +49,21 @@ constexpr std::array kDdisTigerLake = {
 
 }  // namespace internal
 
-template <Platform P>
-constexpr cpp20::span<const Ddi> Ddis() {
+template <tgl_registers::Platform P>
+constexpr cpp20::span<const DdiId> DdiIds() {
   switch (P) {
-    case Platform::kKabyLake:
-    case Platform::kSkylake:
-    case Platform::kTestDevice:
+    case tgl_registers::Platform::kKabyLake:
+    case tgl_registers::Platform::kSkylake:
+    case tgl_registers::Platform::kTestDevice:
       return internal::kDdisKabyLake;
-    case Platform::kTigerLake:
+    case tgl_registers::Platform::kTigerLake:
       return internal::kDdisTigerLake;
   }
 }
+
+}  // namespace i915_tgl
+
+namespace tgl_registers {
 
 // TODO(fxbug.dev/109278): Support Transcoder D on Tiger Lake.
 enum Trans {

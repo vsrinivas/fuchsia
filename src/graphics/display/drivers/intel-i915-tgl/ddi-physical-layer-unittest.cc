@@ -25,26 +25,24 @@ class TestPower : public Power {
 
   PowerWellRef GetCdClockPowerWellRef() override { return PowerWellRef(); }
   PowerWellRef GetPipePowerWellRef(tgl_registers::Pipe pipe) override { return PowerWellRef(); }
-  PowerWellRef GetDdiPowerWellRef(tgl_registers::Ddi ddi) override { return PowerWellRef(); }
+  PowerWellRef GetDdiPowerWellRef(DdiId ddi_id) override { return PowerWellRef(); }
 
-  bool GetDdiIoPowerState(tgl_registers::Ddi ddi) override { return true; }
-  void SetDdiIoPowerState(tgl_registers::Ddi ddi, bool enable) override {}
+  bool GetDdiIoPowerState(DdiId ddi_id) override { return true; }
+  void SetDdiIoPowerState(DdiId ddi_id, bool enable) override {}
 
-  bool GetAuxIoPowerState(tgl_registers::Ddi ddi) override {
-    if (aux_state_.find(ddi) == aux_state_.end()) {
-      aux_state_[ddi] = false;
+  bool GetAuxIoPowerState(DdiId ddi_id) override {
+    if (aux_state_.find(ddi_id) == aux_state_.end()) {
+      aux_state_[ddi_id] = false;
     }
-    return aux_state_[ddi];
+    return aux_state_[ddi_id];
   }
 
-  void SetAuxIoPowerState(tgl_registers::Ddi ddi, bool enable) override {
-    aux_state_[ddi] = enable;
-  }
+  void SetAuxIoPowerState(DdiId ddi_id, bool enable) override { aux_state_[ddi_id] = enable; }
 
  private:
   void SetPowerWell(PowerWellId power_well, bool enable) override {}
 
-  std::unordered_map<tgl_registers::Ddi, bool> aux_state_;
+  std::unordered_map<DdiId, bool> aux_state_;
 };
 
 // This must match the InitializationPhase defined in ddi-physical-layer.cc .
@@ -76,7 +74,7 @@ constexpr uint32_t kMailboxData1Offset = 0x13812c;
 }  // namespace
 
 TEST_F(TypeCDdiTigerLakeTest, EnableFsm_TypeCColdBlock_Success) {
-  constexpr tgl_registers::Ddi kTargetDdiId = tgl_registers::DDI_TC_1;
+  constexpr DdiId kTargetDdiId = DdiId::DDI_TC_1;
 
   mmio_range_.Expect(MockMmioRange::AccessList({
       {.address = kMailboxInterfaceOffset, .value = 0},
@@ -97,7 +95,7 @@ TEST_F(TypeCDdiTigerLakeTest, EnableFsm_TypeCColdBlock_Success) {
 }
 
 TEST_F(TypeCDdiTigerLakeTest, EnableFsm_TypeCColdBlock_Failure) {
-  constexpr tgl_registers::Ddi kTargetDdiId = tgl_registers::DDI_TC_1;
+  constexpr DdiId kTargetDdiId = DdiId::DDI_TC_1;
 
   const size_t kMmioRegCount = kMmioRangeSize / sizeof(uint32_t);
   std::vector<ddk_fake::FakeMmioReg> fake_mmio_regs(kMmioRegCount);
@@ -120,7 +118,7 @@ TEST_F(TypeCDdiTigerLakeTest, EnableFsm_TypeCColdBlock_Failure) {
 }
 
 TEST_F(TypeCDdiTigerLakeTest, EnableFsm_SafeModeSet_Success) {
-  constexpr tgl_registers::Ddi kTargetDdiId = tgl_registers::DDI_TC_1;
+  constexpr DdiId kTargetDdiId = DdiId::DDI_TC_1;
 
   mmio_range_.Expect(MockMmioRange::AccessList({
       // DynamicFlexIoDisplayPortPhyModeStatus
@@ -147,7 +145,7 @@ TEST_F(TypeCDdiTigerLakeTest, EnableFsm_SafeModeSet_Success) {
 }
 
 TEST_F(TypeCDdiTigerLakeTest, EnableFsm_SafeModeSet_Failure) {
-  constexpr tgl_registers::Ddi kTargetDdiId = tgl_registers::DDI_TC_1;
+  constexpr DdiId kTargetDdiId = DdiId::DDI_TC_1;
 
   mmio_range_.Expect(MockMmioRange::AccessList({
       // DynamicFlexIoDisplayPortPhyModeStatus
@@ -164,7 +162,7 @@ TEST_F(TypeCDdiTigerLakeTest, EnableFsm_SafeModeSet_Failure) {
 }
 
 TEST_F(TypeCDdiTigerLakeTest, EnableFsm_AuxPowerOn_Success) {
-  constexpr tgl_registers::Ddi kTargetDdiId = tgl_registers::DDI_TC_1;
+  constexpr DdiId kTargetDdiId = DdiId::DDI_TC_1;
 
   mmio_range_.Expect(MockMmioRange::AccessList({
       // HipIndexReg0
@@ -190,12 +188,12 @@ TEST_F(TypeCDdiTigerLakeTest, EnableFsm_AuxPowerOn_Success) {
 }
 
 TEST_F(TypeCDdiTigerLakeTest, EnableFsm_AuxPowerOn_Failure) {
-  constexpr tgl_registers::Ddi kTargetDdiId = tgl_registers::DDI_TC_1;
+  constexpr DdiId kTargetDdiId = DdiId::DDI_TC_1;
 
   class TestPowerCannotEnableAux : public TestPower {
    public:
     explicit TestPowerCannotEnableAux(fdf::MmioBuffer* mmio_space) : TestPower(mmio_space) {}
-    bool GetAuxIoPowerState(tgl_registers::Ddi ddi) override { return false; }
+    bool GetAuxIoPowerState(DdiId ddi_id) override { return false; }
   };
   TestPowerCannotEnableAux power_cannot_enable_aux(nullptr);
 
@@ -208,7 +206,7 @@ TEST_F(TypeCDdiTigerLakeTest, EnableFsm_AuxPowerOn_Failure) {
 }
 
 TEST_F(TypeCDdiTigerLakeTest, EnableFsm_Initialized_AlwaysSuccess) {
-  constexpr tgl_registers::Ddi kTargetDdiId = tgl_registers::DDI_TC_1;
+  constexpr DdiId kTargetDdiId = DdiId::DDI_TC_1;
 
   TypeCDdiTigerLake ddi(kTargetDdiId, &power_, &mmio_buffer_,
                         /*is_static_port=*/false);
@@ -219,7 +217,7 @@ TEST_F(TypeCDdiTigerLakeTest, EnableFsm_Initialized_AlwaysSuccess) {
 }
 
 TEST_F(TypeCDdiTigerLakeTest, EnableFsm_Initialized_IsTerminal) {
-  constexpr tgl_registers::Ddi kTargetDdiId = tgl_registers::DDI_TC_1;
+  constexpr DdiId kTargetDdiId = DdiId::DDI_TC_1;
 
   TypeCDdiTigerLake ddi(kTargetDdiId, &power_, &mmio_buffer_,
                         /*is_static_port=*/false);
@@ -230,7 +228,7 @@ TEST_F(TypeCDdiTigerLakeTest, EnableFsm_Initialized_IsTerminal) {
 }
 
 TEST_F(TypeCDdiTigerLakeTest, DisableFsm_kInitialized_AlwaysSuccess) {
-  constexpr tgl_registers::Ddi kTargetDdiId = tgl_registers::DDI_TC_1;
+  constexpr DdiId kTargetDdiId = DdiId::DDI_TC_1;
 
   TypeCDdiTigerLake ddi(kTargetDdiId, &power_, &mmio_buffer_,
                         /*is_static_port=*/false);
@@ -241,13 +239,13 @@ TEST_F(TypeCDdiTigerLakeTest, DisableFsm_kInitialized_AlwaysSuccess) {
 }
 
 TEST_F(TypeCDdiTigerLakeTest, DisableFsm_AuxPoweredOn_AlwaysSuccess) {
-  constexpr tgl_registers::Ddi kTargetDdiId = tgl_registers::DDI_TC_1;
+  constexpr DdiId kTargetDdiId = DdiId::DDI_TC_1;
 
   {
     class TestPowerCanDisableAux : public TestPower {
      public:
       explicit TestPowerCanDisableAux(fdf::MmioBuffer* mmio_space) : TestPower(mmio_space) {}
-      bool GetAuxIoPowerState(tgl_registers::Ddi ddi) override { return false; }
+      bool GetAuxIoPowerState(DdiId ddi_id) override { return false; }
     };
     TestPowerCanDisableAux power_can_disable_aux(nullptr);
 
@@ -263,7 +261,7 @@ TEST_F(TypeCDdiTigerLakeTest, DisableFsm_AuxPoweredOn_AlwaysSuccess) {
     class TestPowerCannotDisableAux : public TestPower {
      public:
       explicit TestPowerCannotDisableAux(fdf::MmioBuffer* mmio_space) : TestPower(mmio_space) {}
-      bool GetAuxIoPowerState(tgl_registers::Ddi ddi) override { return true; }
+      bool GetAuxIoPowerState(DdiId ddi_id) override { return true; }
     };
     TestPowerCannotDisableAux power_cannot_disable_aux(nullptr);
 
@@ -277,7 +275,7 @@ TEST_F(TypeCDdiTigerLakeTest, DisableFsm_AuxPoweredOn_AlwaysSuccess) {
 }
 
 TEST_F(TypeCDdiTigerLakeTest, EnableFsm_SafeModeSet_AlwaysSuccess) {
-  constexpr tgl_registers::Ddi kTargetDdiId = tgl_registers::DDI_TC_1;
+  constexpr DdiId kTargetDdiId = DdiId::DDI_TC_1;
 
   mmio_range_.Expect(MockMmioRange::AccessList({
       // DynamicFlexIoDisplayPortControllerSafeStateSettings
@@ -296,7 +294,7 @@ TEST_F(TypeCDdiTigerLakeTest, EnableFsm_SafeModeSet_AlwaysSuccess) {
 }
 
 TEST_F(TypeCDdiTigerLakeTest, DisableFsm_TypeCColdUnblock_Success) {
-  constexpr tgl_registers::Ddi kTargetDdiId = tgl_registers::DDI_TC_1;
+  constexpr DdiId kTargetDdiId = DdiId::DDI_TC_1;
 
   mmio_range_.Expect(MockMmioRange::AccessList({
       {.address = kMailboxInterfaceOffset, .value = 0},
@@ -339,7 +337,7 @@ TEST_F(TypeCDdiTigerLakeTest, DisableFsm_TypeCColdUnblock_Success) {
 }
 
 TEST_F(TypeCDdiTigerLakeTest, DisableFsm_TypeCColdUnblock_Failure) {
-  constexpr tgl_registers::Ddi kTargetDdiId = tgl_registers::DDI_TC_1;
+  constexpr DdiId kTargetDdiId = DdiId::DDI_TC_1;
 
   const size_t kMmioRegCount = kMmioRangeSize / sizeof(uint32_t);
   std::vector<ddk_fake::FakeMmioReg> fake_mmio_regs(kMmioRegCount);
@@ -364,7 +362,7 @@ TEST_F(TypeCDdiTigerLakeTest, DisableFsm_TypeCColdUnblock_Failure) {
 }
 
 TEST_F(TypeCDdiTigerLakeTest, Enable_Idempotency) {
-  TypeCDdiTigerLake ddi(tgl_registers::DDI_TC_1, &power_, &mmio_buffer_,
+  TypeCDdiTigerLake ddi(DdiId::DDI_TC_1, &power_, &mmio_buffer_,
                         /*is_static_port=*/false);
   ddi.SetInitializationPhaseForTesting(TypeCDdiTigerLake::InitializationPhase::kInitialized);
   EXPECT_TRUE(ddi.Enable());
@@ -375,7 +373,7 @@ TEST_F(TypeCDdiTigerLakeTest, Enable_Idempotency) {
 }
 
 TEST_F(TypeCDdiTigerLakeTest, Disable_Idempotency) {
-  TypeCDdiTigerLake ddi(tgl_registers::DDI_TC_1, &power_, &mmio_buffer_,
+  TypeCDdiTigerLake ddi(DdiId::DDI_TC_1, &power_, &mmio_buffer_,
                         /*is_static_port=*/false);
   ddi.SetInitializationPhaseForTesting(TypeCDdiTigerLake::InitializationPhase::kUninitialized);
   EXPECT_TRUE(ddi.Disable());
@@ -386,7 +384,7 @@ TEST_F(TypeCDdiTigerLakeTest, Disable_Idempotency) {
 }
 
 TEST_F(TypeCDdiTigerLakeTest, Enable_OnlyValidOnHealthy) {
-  constexpr tgl_registers::Ddi kTargetDdiId = tgl_registers::DDI_TC_1;
+  constexpr DdiId kTargetDdiId = DdiId::DDI_TC_1;
 
   const size_t kMmioRegCount = kMmioRangeSize / sizeof(uint32_t);
   std::vector<ddk_fake::FakeMmioReg> fake_mmio_regs(kMmioRegCount);
@@ -437,7 +435,7 @@ TEST_F(TypeCDdiTigerLakeTest, Enable_OnlyValidOnHealthy) {
 }
 
 TEST_F(TypeCDdiTigerLakeTest, Disable_FailsOnUnhealthy) {
-  constexpr tgl_registers::Ddi kTargetDdiId = tgl_registers::DDI_TC_1;
+  constexpr DdiId kTargetDdiId = DdiId::DDI_TC_1;
 
   const size_t kMmioRegCount = kMmioRangeSize / sizeof(uint32_t);
   std::vector<ddk_fake::FakeMmioReg> fake_mmio_regs(kMmioRegCount);
@@ -467,7 +465,7 @@ TEST_F(TypeCDdiTigerLakeTest, Disable_FailsOnUnhealthy) {
 }
 
 TEST_F(TypeCDdiTigerLakeTest, Enable_Success) {
-  constexpr tgl_registers::Ddi kTargetDdiId = tgl_registers::DDI_TC_2;
+  constexpr DdiId kTargetDdiId = DdiId::DDI_TC_2;
 
   // Unblock TCCOLD state.
   mmio_range_.Expect(MockMmioRange::AccessList({
@@ -528,7 +526,7 @@ TEST_F(TypeCDdiTigerLakeTest, Enable_Success) {
 }
 
 TEST_F(TypeCDdiTigerLakeTest, Enable_Failure_TcColdCannotBlock) {
-  constexpr tgl_registers::Ddi kTargetDdiId = tgl_registers::DDI_TC_2;
+  constexpr DdiId kTargetDdiId = DdiId::DDI_TC_2;
 
   bool tccold_unblock_requested = false;
   bool tccold_block_requested = false;
@@ -582,7 +580,7 @@ TEST_F(TypeCDdiTigerLakeTest, Enable_Failure_TcColdCannotBlock) {
 }
 
 TEST_F(TypeCDdiTigerLakeTest, Enable_Failure_SafeModePhyNotAvailable) {
-  constexpr tgl_registers::Ddi kTargetDdiId = tgl_registers::DDI_TC_2;
+  constexpr DdiId kTargetDdiId = DdiId::DDI_TC_2;
 
   // Unblock TCCOLD state.
   mmio_range_.Expect(MockMmioRange::AccessList({
@@ -640,17 +638,17 @@ TEST_F(TypeCDdiTigerLakeTest, Enable_Failure_SafeModePhyNotAvailable) {
 }
 
 TEST_F(TypeCDdiTigerLakeTest, Enable_Failure_CannotEnableAux) {
-  static constexpr tgl_registers::Ddi kTargetDdiId = tgl_registers::DDI_TC_2;
+  static constexpr DdiId kTargetDdiId = DdiId::DDI_TC_2;
 
   class TestPowerCannotEnableAux : public TestPower {
    public:
     explicit TestPowerCannotEnableAux(fdf::MmioBuffer* mmio_space) : TestPower(mmio_space) {}
-    void SetAuxIoPowerState(tgl_registers::Ddi ddi, bool target_enabled) override {
-      EXPECT_EQ(ddi, kTargetDdiId);
+    void SetAuxIoPowerState(DdiId ddi_id, bool target_enabled) override {
+      EXPECT_EQ(ddi_id, kTargetDdiId);
       (target_enabled ? enable_requested : disable_requested) = true;
     }
-    bool GetAuxIoPowerState(tgl_registers::Ddi ddi) override {
-      EXPECT_EQ(ddi, kTargetDdiId);
+    bool GetAuxIoPowerState(DdiId ddi_id) override {
+      EXPECT_EQ(ddi_id, kTargetDdiId);
       return false;
     }
 
@@ -731,7 +729,7 @@ TEST_F(TypeCDdiTigerLakeTest, Enable_Failure_CannotEnableAux) {
 }
 
 TEST_F(TypeCDdiTigerLakeTest, Enable_FailureOnBailout) {
-  constexpr tgl_registers::Ddi kTargetDdiId = tgl_registers::DDI_TC_2;
+  constexpr DdiId kTargetDdiId = DdiId::DDI_TC_2;
 
   const size_t kMmioRegCount = kMmioRangeSize / sizeof(uint32_t);
   std::vector<ddk_fake::FakeMmioReg> fake_mmio_regs(kMmioRegCount);
@@ -772,18 +770,18 @@ TEST_F(TypeCDdiTigerLakeTest, Enable_FailureOnBailout) {
 }
 
 TEST_F(TypeCDdiTigerLakeTest, Disable_Success) {
-  static constexpr tgl_registers::Ddi kTargetDdiId = tgl_registers::DDI_TC_2;
+  static constexpr DdiId kTargetDdiId = DdiId::DDI_TC_2;
 
   class TestPowerTrackingAux : public TestPower {
    public:
     explicit TestPowerTrackingAux(fdf::MmioBuffer* mmio_space) : TestPower(mmio_space) {}
-    void SetAuxIoPowerState(tgl_registers::Ddi ddi, bool target_enabled) override {
-      EXPECT_EQ(ddi, kTargetDdiId);
+    void SetAuxIoPowerState(DdiId ddi_id, bool target_enabled) override {
+      EXPECT_EQ(ddi_id, kTargetDdiId);
       EXPECT_FALSE(target_enabled);
       disable_requested = true;
     }
-    bool GetAuxIoPowerState(tgl_registers::Ddi ddi) override {
-      EXPECT_EQ(ddi, kTargetDdiId);
+    bool GetAuxIoPowerState(DdiId ddi_id) override {
+      EXPECT_EQ(ddi_id, kTargetDdiId);
       return !disable_requested;
     }
 
@@ -834,7 +832,7 @@ TEST_F(TypeCDdiTigerLakeTest, Disable_Success) {
 }
 
 TEST_F(TypeCDdiTigerLakeTest, Disable_Failure_TcColdCannotUnblock) {
-  constexpr tgl_registers::Ddi kTargetDdiId = tgl_registers::DDI_TC_2;
+  constexpr DdiId kTargetDdiId = DdiId::DDI_TC_2;
 
   const size_t kMmioRegCount = kMmioRangeSize / sizeof(uint32_t);
   std::vector<ddk_fake::FakeMmioReg> fake_mmio_regs(kMmioRegCount);
@@ -881,18 +879,18 @@ TEST_F(TypeCDdiTigerLakeTest, Disable_Failure_TcColdCannotUnblock) {
 }
 
 TEST_F(TypeCDdiTigerLakeTest, ReadPhysicalLayerInfo_StaticPort) {
-  for (const tgl_registers::Ddi ddi_id : {
-           tgl_registers::DDI_TC_1,
-           tgl_registers::DDI_TC_2,
-           tgl_registers::DDI_TC_3,
-           tgl_registers::DDI_TC_4,
-           tgl_registers::DDI_TC_5,
-           tgl_registers::DDI_TC_6,
+  for (const DdiId ddi_id : {
+           DdiId::DDI_TC_1,
+           DdiId::DDI_TC_2,
+           DdiId::DDI_TC_3,
+           DdiId::DDI_TC_4,
+           DdiId::DDI_TC_5,
+           DdiId::DDI_TC_6,
        }) {
     auto scratch_pad = tgl_registers::DynamicFlexIoScratchPad::GetForDdi(ddi_id).FromValue(0);
     scratch_pad.set_is_modular_flexi_io_adapter(true).set_firmware_supports_mfd(true);
 
-    if ((ddi_id - tgl_registers::DDI_TC_1) % 2 == 0) {
+    if ((ddi_id - DdiId::DDI_TC_1) % 2 == 0) {
       scratch_pad.set_type_c_live_state_connector_0(static_cast<uint32_t>(
           tgl_registers::DynamicFlexIoScratchPad::TypeCLiveState::kNoHotplugDisplay));
     } else {
@@ -914,18 +912,18 @@ TEST_F(TypeCDdiTigerLakeTest, ReadPhysicalLayerInfo_StaticPort) {
 }
 
 TEST_F(TypeCDdiTigerLakeTest, ReadPhysicalLayerInfo_NoTypeC) {
-  for (const tgl_registers::Ddi ddi_id : {
-           tgl_registers::DDI_TC_1,
-           tgl_registers::DDI_TC_2,
-           tgl_registers::DDI_TC_3,
-           tgl_registers::DDI_TC_4,
-           tgl_registers::DDI_TC_5,
-           tgl_registers::DDI_TC_6,
+  for (const DdiId ddi_id : {
+           DdiId::DDI_TC_1,
+           DdiId::DDI_TC_2,
+           DdiId::DDI_TC_3,
+           DdiId::DDI_TC_4,
+           DdiId::DDI_TC_5,
+           DdiId::DDI_TC_6,
        }) {
     auto scratch_pad = tgl_registers::DynamicFlexIoScratchPad::GetForDdi(ddi_id).FromValue(0);
     scratch_pad.set_is_modular_flexi_io_adapter(true).set_firmware_supports_mfd(true);
 
-    if ((ddi_id - tgl_registers::DDI_TC_1) % 2 == 0) {
+    if ((ddi_id - DdiId::DDI_TC_1) % 2 == 0) {
       scratch_pad.set_type_c_live_state_connector_0(static_cast<uint32_t>(
           tgl_registers::DynamicFlexIoScratchPad::TypeCLiveState::kNoHotplugDisplay));
     } else {
@@ -947,18 +945,18 @@ TEST_F(TypeCDdiTigerLakeTest, ReadPhysicalLayerInfo_NoTypeC) {
 }
 
 TEST_F(TypeCDdiTigerLakeTest, ReadPhysicalLayerInfo_TypeCDisplayPortAlt) {
-  for (const tgl_registers::Ddi ddi_id : {
-           tgl_registers::DDI_TC_1,
-           tgl_registers::DDI_TC_2,
-           tgl_registers::DDI_TC_3,
-           tgl_registers::DDI_TC_4,
-           tgl_registers::DDI_TC_5,
-           tgl_registers::DDI_TC_6,
+  for (const DdiId ddi_id : {
+           DdiId::DDI_TC_1,
+           DdiId::DDI_TC_2,
+           DdiId::DDI_TC_3,
+           DdiId::DDI_TC_4,
+           DdiId::DDI_TC_5,
+           DdiId::DDI_TC_6,
        }) {
     auto scratch_pad = tgl_registers::DynamicFlexIoScratchPad::GetForDdi(ddi_id).FromValue(0);
     scratch_pad.set_is_modular_flexi_io_adapter(true).set_firmware_supports_mfd(true);
 
-    if ((ddi_id - tgl_registers::DDI_TC_1) % 2 == 0) {
+    if ((ddi_id - DdiId::DDI_TC_1) % 2 == 0) {
       scratch_pad.set_type_c_live_state_connector_0(static_cast<uint32_t>(
           tgl_registers::DynamicFlexIoScratchPad::TypeCLiveState::kTypeCHotplugDisplay));
       scratch_pad.set_display_port_tx_lane_assignment_bits_connector_0(0b0011);
@@ -983,18 +981,18 @@ TEST_F(TypeCDdiTigerLakeTest, ReadPhysicalLayerInfo_TypeCDisplayPortAlt) {
 }
 
 TEST_F(TypeCDdiTigerLakeTest, ReadPhysicalLayerInfo_Thunderbolt) {
-  for (const tgl_registers::Ddi ddi_id : {
-           tgl_registers::DDI_TC_1,
-           tgl_registers::DDI_TC_2,
-           tgl_registers::DDI_TC_3,
-           tgl_registers::DDI_TC_4,
-           tgl_registers::DDI_TC_5,
-           tgl_registers::DDI_TC_6,
+  for (const DdiId ddi_id : {
+           DdiId::DDI_TC_1,
+           DdiId::DDI_TC_2,
+           DdiId::DDI_TC_3,
+           DdiId::DDI_TC_4,
+           DdiId::DDI_TC_5,
+           DdiId::DDI_TC_6,
        }) {
     auto scratch_pad = tgl_registers::DynamicFlexIoScratchPad::GetForDdi(ddi_id).FromValue(0);
     scratch_pad.set_is_modular_flexi_io_adapter(true).set_firmware_supports_mfd(true);
 
-    if ((ddi_id - tgl_registers::DDI_TC_1) % 2 == 0) {
+    if ((ddi_id - DdiId::DDI_TC_1) % 2 == 0) {
       scratch_pad.set_type_c_live_state_connector_0(static_cast<uint32_t>(
           tgl_registers::DynamicFlexIoScratchPad::TypeCLiveState::kThunderboltHotplugDisplay));
     } else {

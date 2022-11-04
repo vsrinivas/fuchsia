@@ -60,6 +60,8 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/registers.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/tiling.h"
 
+namespace i915_tgl {
+
 namespace {
 
 constexpr zx_pixel_format_t kSupportedFormats[4] = {
@@ -91,7 +93,7 @@ constexpr fuchsia_sysmem::wire::PixelFormatType kYuvPixelFormatTypes[2] = {
 
 constexpr zx_protocol_device_t kGpuCoreDeviceProtocol = {
     .version = DEVICE_OPS_VERSION,
-    .release = [](void* ctx) { static_cast<i915_tgl::Controller*>(ctx)->GpuRelease(); }
+    .release = [](void* ctx) { static_cast<Controller*>(ctx)->GpuRelease(); }
     // zx_gpu_dev_ is removed when unbind is called for zxdev() (in ::DdkUnbind),
     // so it's not necessary to give it its own unbind method.
 };
@@ -108,19 +110,18 @@ constexpr zx_protocol_device_t kDisplayControllerDeviceProtocol = {
 // Can't be const because i2c_impl_protocol_t::ops is non-const.
 i2c_impl_protocol_ops_t g_i2c_protocol_ops = {
     .get_bus_base = [](void* ctx) { return uint32_t{0}; },
-    .get_bus_count =
-        [](void* ctx) { return static_cast<i915_tgl::Controller*>(ctx)->GetBusCount(); },
+    .get_bus_count = [](void* ctx) { return static_cast<Controller*>(ctx)->GetBusCount(); },
     .get_max_transfer_size =
         [](void* ctx, uint32_t bus_id, size_t* out_size) {
-          return static_cast<i915_tgl::Controller*>(ctx)->GetMaxTransferSize(bus_id, out_size);
+          return static_cast<Controller*>(ctx)->GetMaxTransferSize(bus_id, out_size);
         },
     .set_bitrate =
         [](void* ctx, uint32_t bus_id, uint32_t bitrate) {
-          return static_cast<i915_tgl::Controller*>(ctx)->SetBitrate(bus_id, bitrate);
+          return static_cast<Controller*>(ctx)->SetBitrate(bus_id, bitrate);
         },
     .transact =
         [](void* ctx, uint32_t bus_id, const i2c_impl_op_t* ops, size_t count) {
-          return static_cast<i915_tgl::Controller*>(ctx)->Transact(bus_id, ops, count);
+          return static_cast<Controller*>(ctx)->Transact(bus_id, ops, count);
         },
 };
 
@@ -173,10 +174,8 @@ zx::result<FramebufferInfo> GetFramebufferInfo() {
 
 }  // namespace
 
-namespace i915_tgl {
-
-void Controller::HandleHotplug(tgl_registers::Ddi ddi, bool long_pulse) {
-  zxlogf(TRACE, "Hotplug detected on ddi %d (long_pulse=%d)", ddi, long_pulse);
+void Controller::HandleHotplug(DdiId ddi_id, bool long_pulse) {
+  zxlogf(TRACE, "Hotplug detected on ddi %d (long_pulse=%d)", ddi_id, long_pulse);
   std::unique_ptr<DisplayDevice> device = nullptr;
   DisplayDevice* added_device = nullptr;
   uint64_t display_removed = INVALID_DISPLAY_ID;
@@ -184,7 +183,7 @@ void Controller::HandleHotplug(tgl_registers::Ddi ddi, bool long_pulse) {
   fbl::AutoLock lock(&display_lock_);
 
   for (size_t i = 0; i < display_devices_.size(); i++) {
-    if (display_devices_[i]->ddi() == ddi) {
+    if (display_devices_[i]->ddi_id() == ddi_id) {
       if (display_devices_[i]->HandleHotplug(long_pulse)) {
         zxlogf(DEBUG, "hotplug handled by device");
         return;
@@ -198,7 +197,7 @@ void Controller::HandleHotplug(tgl_registers::Ddi ddi, bool long_pulse) {
     display_removed = device->id();
     RemoveDisplay(std::move(device));
   } else {  // New device was plugged in
-    std::unique_ptr<DisplayDevice> device = QueryDisplay(ddi, next_id_);
+    std::unique_ptr<DisplayDevice> device = QueryDisplay(ddi_id, next_id_);
     if (!device || !device->Init()) {
       zxlogf(INFO, "failed to init hotplug display");
     } else {
@@ -465,8 +464,8 @@ void Controller::ResetPipePlaneBuffers(tgl_registers::Pipe pipe) {
   }
 }
 
-bool Controller::ResetDdi(tgl_registers::Ddi ddi, std::optional<tgl_registers::Trans> transcoder) {
-  tgl_registers::DdiRegs ddi_regs(ddi);
+bool Controller::ResetDdi(DdiId ddi_id, std::optional<tgl_registers::Trans> transcoder) {
+  tgl_registers::DdiRegs ddi_regs(ddi_id);
 
   // Disable the port
   auto ddi_buffer_control = ddi_regs.BufferControl().ReadFrom(mmio_space());
@@ -497,19 +496,19 @@ bool Controller::ResetDdi(tgl_registers::Ddi ddi, std::optional<tgl_registers::T
 
   // Disable IO power
   ZX_DEBUG_ASSERT(power_);
-  power_->SetDdiIoPowerState(ddi, /* enable */ false);
+  power_->SetDdiIoPowerState(ddi_id, /* enable */ false);
 
   // Wait for DDI IO power to be fully disabled.
   // This step is not documented in Intel Display PRM, but this step occurs
   // in the drm/i915 driver and experiments on NUC11 hardware indicate that
   // display hotplug may fail without this step.
-  if (!PollUntil([&] { return !power_->GetDdiIoPowerState(ddi); }, zx::usec(1), 1000)) {
+  if (!PollUntil([&] { return !power_->GetDdiIoPowerState(ddi_id); }, zx::usec(1), 1000)) {
     zxlogf(ERROR, "Disable IO power timeout");
     return false;
   }
 
-  if (!dpll_manager_->ResetDdiPll(ddi)) {
-    zxlogf(ERROR, "Failed to unmap DPLL for DDI %d", ddi);
+  if (!dpll_manager_->ResetDdiPll(ddi_id)) {
+    zxlogf(ERROR, "Failed to unmap DPLL for DDI %d", ddi_id);
     return false;
   }
 
@@ -523,61 +522,61 @@ uint64_t Controller::SetupGttImage(const image_t* image, uint32_t rotation) {
   return region->base();
 }
 
-std::unique_ptr<DisplayDevice> Controller::QueryDisplay(tgl_registers::Ddi ddi,
-                                                        uint64_t display_id) {
+std::unique_ptr<DisplayDevice> Controller::QueryDisplay(DdiId ddi_id, uint64_t display_id) {
   fbl::AllocChecker ac;
-  if (!igd_opregion_.HasDdi(ddi)) {
-    zxlogf(INFO, "ddi %d not available.", ddi);
+  if (!igd_opregion_.HasDdi(ddi_id)) {
+    zxlogf(INFO, "ddi %d not available.", ddi_id);
     return nullptr;
   }
 
-  if (igd_opregion_.SupportsDp(ddi)) {
-    zxlogf(DEBUG, "Checking for DisplayPort monitor at DDI %d", ddi);
-    DdiReference ddi_reference_maybe = ddi_manager_->GetDdiReference(ddi);
+  if (igd_opregion_.SupportsDp(ddi_id)) {
+    zxlogf(DEBUG, "Checking for DisplayPort monitor at DDI %d", ddi_id);
+    DdiReference ddi_reference_maybe = ddi_manager_->GetDdiReference(ddi_id);
     if (!ddi_reference_maybe) {
-      zxlogf(DEBUG, "DDI %d PHY not available. Skip querying.", ddi);
+      zxlogf(DEBUG, "DDI %d PHY not available. Skip querying.", ddi_id);
     } else {
       auto dp_disp = fbl::make_unique_checked<DpDisplay>(
-          &ac, this, display_id, ddi, &dp_auxs_[ddi], &pch_engine_.value(),
+          &ac, this, display_id, ddi_id, &dp_auxs_[ddi_id], &pch_engine_.value(),
           std::move(ddi_reference_maybe), &root_node_);
       if (ac.check() && reinterpret_cast<DisplayDevice*>(dp_disp.get())->Query()) {
         return dp_disp;
       }
     }
   }
-  if (igd_opregion_.SupportsHdmi(ddi) || igd_opregion_.SupportsDvi(ddi)) {
-    zxlogf(DEBUG, "Checking for HDMI monitor at DDI %d", ddi);
-    DdiReference ddi_reference_maybe = ddi_manager_->GetDdiReference(ddi);
+  if (igd_opregion_.SupportsHdmi(ddi_id) || igd_opregion_.SupportsDvi(ddi_id)) {
+    zxlogf(DEBUG, "Checking for HDMI monitor at DDI %d", ddi_id);
+    DdiReference ddi_reference_maybe = ddi_manager_->GetDdiReference(ddi_id);
     if (!ddi_reference_maybe) {
-      zxlogf(DEBUG, "DDI %d PHY not available. Skip querying.", ddi);
+      zxlogf(DEBUG, "DDI %d PHY not available. Skip querying.", ddi_id);
     } else {
-      auto hdmi_disp = fbl::make_unique_checked<HdmiDisplay>(&ac, this, display_id, ddi,
+      auto hdmi_disp = fbl::make_unique_checked<HdmiDisplay>(&ac, this, display_id, ddi_id,
                                                              std::move(ddi_reference_maybe));
       if (ac.check() && reinterpret_cast<DisplayDevice*>(hdmi_disp.get())->Query()) {
         return hdmi_disp;
       }
     }
   }
-  zxlogf(TRACE, "Nothing found for ddi %d!", ddi);
+  zxlogf(TRACE, "Nothing found for ddi %d!", ddi_id);
   return nullptr;
 }
 
-bool Controller::LoadHardwareState(tgl_registers::Ddi ddi, DisplayDevice* device) {
-  tgl_registers::DdiRegs regs(ddi);
+bool Controller::LoadHardwareState(DdiId ddi_id, DisplayDevice* device) {
+  tgl_registers::DdiRegs regs(ddi_id);
 
-  if (!power_->GetDdiIoPowerState(ddi) || !regs.BufferControl().ReadFrom(mmio_space()).enabled()) {
+  if (!power_->GetDdiIoPowerState(ddi_id) ||
+      !regs.BufferControl().ReadFrom(mmio_space()).enabled()) {
     return false;
   }
 
-  DdiPllConfig pll_config = dpll_manager()->LoadState(ddi);
+  DdiPllConfig pll_config = dpll_manager()->LoadState(ddi_id);
   if (pll_config.IsEmpty()) {
-    zxlogf(ERROR, "Cannot load DPLL state for DDI %d", ddi);
+    zxlogf(ERROR, "Cannot load DPLL state for DDI %d", ddi_id);
     return false;
   }
 
   bool init_result = device->InitWithDdiPllConfig(pll_config);
   if (!init_result) {
-    zxlogf(ERROR, "Cannot initialize the display with DPLL state for DDI %d", ddi);
+    zxlogf(ERROR, "Cannot initialize the display with DPLL state for DDI %d", ddi_id);
     return false;
   }
 
@@ -607,8 +606,8 @@ void Controller::InitDisplays() {
   // to consume more power, even to the point of exceeding its thermal envelope.
   DisableSystemAgentGeyserville();
 
-  for (const auto ddi : ddis_) {
-    auto disp_device = QueryDisplay(ddi, next_id_);
+  for (const auto ddi_id : ddis_) {
+    auto disp_device = QueryDisplay(ddi_id, next_id_);
     if (disp_device) {
       AddDisplay(std::move(disp_device));
     }
@@ -620,27 +619,26 @@ void Controller::InitDisplays() {
 
   // Make a note of what needs to be reset, so we can finish querying the hardware state
   // before touching it, and so we can make sure transcoders are reset before ddis.
-  std::vector<std::pair<tgl_registers::Ddi, std::optional<tgl_registers::Trans>>>
-      ddi_trans_needs_reset;
+  std::vector<std::pair<DdiId, std::optional<tgl_registers::Trans>>> ddi_trans_needs_reset;
   std::vector<DisplayDevice*> device_needs_init;
 
-  for (const auto ddi : ddis_) {
+  for (const auto ddi_id : ddis_) {
     DisplayDevice* device = nullptr;
-    for (auto& d : display_devices_) {
-      if (d->ddi() == ddi) {
-        device = d.get();
+    for (auto& display_device : display_devices_) {
+      if (display_device->ddi_id() == ddi_id) {
+        device = display_device.get();
         break;
       }
     }
 
     if (device == nullptr) {
-      ddi_trans_needs_reset.emplace_back(ddi, std::nullopt);
+      ddi_trans_needs_reset.emplace_back(ddi_id, std::nullopt);
     } else {
-      if (!LoadHardwareState(ddi, device)) {
+      if (!LoadHardwareState(ddi_id, device)) {
         auto transcoder_maybe = device->pipe()
                                     ? std::make_optional(device->pipe()->connected_transcoder_id())
                                     : std::nullopt;
-        ddi_trans_needs_reset.emplace_back(ddi, transcoder_maybe);
+        ddi_trans_needs_reset.emplace_back(ddi_id, transcoder_maybe);
         device_needs_init.push_back(device);
       } else {
         // On Tiger Lake, if a display device is already initialized by BIOS,
@@ -674,7 +672,7 @@ void Controller::InitDisplays() {
           // and reinitialized by the driver.
           // TODO(fxbug.dev/111747): We should fix the device reset logic so
           // that we don't need to delete the old device.
-          const tgl_registers::Ddi ddi_id = device->ddi();
+          const DdiId ddi_id = device->ddi_id();
           const uint64_t display_id = device->id();
           display_devices_[i].reset();
           display_devices_[i] = QueryDisplay(ddi_id, display_id);
@@ -2203,7 +2201,7 @@ void Controller::DdkResume(ddk::ResumeTxn txn) {
     //
     // Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 1 page 444
     // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 page 440
-    tgl_registers::DdiRegs(tgl_registers::DDI_A)
+    tgl_registers::DdiRegs(DdiId::DDI_A)
         .BufferControl()
         .ReadFrom(mmio_space())
         .set_ddi_e_disabled_kaby_lake(ddi_e_disabled_)
@@ -2267,7 +2265,7 @@ zx_status_t Controller::Init() {
   fuse_config.Log();
 
   zxlogf(TRACE, "Initializing DDIs");
-  ddis_ = GetDdis(device_id_);
+  ddis_ = GetDdiIds(device_id_);
 
   zxlogf(TRACE, "Initializing Power");
   power_ = Power::New(mmio_space(), device_id_);
@@ -2285,7 +2283,7 @@ zx_status_t Controller::Init() {
   }
 
   if (!is_tgl(device_id_)) {
-    ddi_e_disabled_ = tgl_registers::DdiRegs(tgl_registers::DDI_A)
+    ddi_e_disabled_ = tgl_registers::DdiRegs(DdiId::DDI_A)
                           .BufferControl()
                           .ReadFrom(mmio_space())
                           .ddi_e_disabled_kaby_lake();
@@ -2434,7 +2432,7 @@ Controller::~Controller() {
 // static
 zx_status_t Controller::Create(zx_device_t* parent) {
   fbl::AllocChecker alloc_checker;
-  auto dev = fbl::make_unique_checked<i915_tgl::Controller>(&alloc_checker, parent);
+  auto dev = fbl::make_unique_checked<Controller>(&alloc_checker, parent);
   if (!alloc_checker.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -2448,15 +2446,15 @@ zx_status_t Controller::Create(zx_device_t* parent) {
   return status;
 }
 
-}  // namespace i915_tgl
-
 namespace {
 
 constexpr zx_driver_ops_t kDriverOps = {
     .version = DRIVER_OPS_VERSION,
-    .bind = [](void* ctx, zx_device_t* parent) { return i915_tgl::Controller::Create(parent); },
+    .bind = [](void* ctx, zx_device_t* parent) { return Controller::Create(parent); },
 };
 
 }  // namespace
 
-ZIRCON_DRIVER(intel_i915, kDriverOps, "zircon", "0.1");
+}  // namespace i915_tgl
+
+ZIRCON_DRIVER(intel_i915, i915_tgl::kDriverOps, "zircon", "0.1");

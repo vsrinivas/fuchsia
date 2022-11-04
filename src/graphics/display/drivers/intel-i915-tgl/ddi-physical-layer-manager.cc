@@ -45,11 +45,11 @@ DdiPhysicalLayer::PhysicalLayerInfo DdiReference::GetPhysicalLayerInfo() const {
   return phy_->GetPhysicalLayerInfo();
 }
 
-DdiReference DdiManager::GetDdiReference(tgl_registers::Ddi ddi) {
-  auto ddi_state_iter = ddi_map_.find(ddi);
+DdiReference DdiManager::GetDdiReference(DdiId ddi_id) {
+  auto ddi_state_iter = ddi_map_.find(ddi_id);
   ZX_DEBUG_ASSERT_MSG(ddi_state_iter != ddi_map_.end(),
                       "DdiManager: DDI %d is not available. Cannot request reference for DDI.",
-                      ddi);
+                      ddi_id);
   DdiPhysicalLayer* phy = ddi_state_iter->second.get();
   // If there's no existing reference to the PHY, we'll need to enable the PHY
   // first.
@@ -61,7 +61,7 @@ DdiReference DdiManager::GetDdiReference(tgl_registers::Ddi ddi) {
 }
 
 DdiManagerSkylake::DdiManagerSkylake() {
-  for (const tgl_registers::Ddi ddi_id : tgl_registers::Ddis<tgl_registers::Platform::kSkylake>()) {
+  for (const DdiId ddi_id : DdiIds<tgl_registers::Platform::kSkylake>()) {
     ddi_map()[ddi_id] = std::make_unique<DdiSkylake>(ddi_id);
   }
 }
@@ -72,15 +72,14 @@ DdiManagerTigerLake::DdiManagerTigerLake(Controller* controller)
 
 DdiManagerTigerLake::DdiManagerTigerLake(Power* power, fdf::MmioBuffer* mmio_space,
                                          const IgdOpRegion& igd_opregion) {
-  for (const tgl_registers::Ddi ddi_id :
-       tgl_registers::Ddis<tgl_registers::Platform::kTigerLake>()) {
+  for (const DdiId ddi_id : DdiIds<tgl_registers::Platform::kTigerLake>()) {
     if (!igd_opregion.HasDdi(ddi_id)) {
       continue;
     }
-    if (ddi_id >= tgl_registers::DDI_A && ddi_id <= tgl_registers::DDI_C) {
+    if (ddi_id >= DdiId::DDI_A && ddi_id <= DdiId::DDI_C) {
       // COMBO DDI
       ddi_map()[ddi_id] = std::make_unique<ComboDdiTigerLake>(ddi_id);
-    } else if (ddi_id >= tgl_registers::DDI_TC_1 && ddi_id <= tgl_registers::DDI_TC_6) {
+    } else if (ddi_id >= DdiId::DDI_TC_1 && ddi_id <= DdiId::DDI_TC_6) {
       // Type-C DDI
       const bool is_static_port = !igd_opregion.IsTypeC(ddi_id);
       ddi_map()[ddi_id] =

@@ -94,18 +94,18 @@ TEST_F(PowerTest, Skylake_AuxIo) {
   constexpr uint16_t kDeviceIdSkylake = 0x191b;
   auto power = Power::New(&*mmio_buffer_, kDeviceIdSkylake);
 
-  EXPECT_TRUE(power->GetAuxIoPowerState(tgl_registers::DDI_A));
-  EXPECT_TRUE(power->GetAuxIoPowerState(tgl_registers::DDI_B));
+  EXPECT_TRUE(power->GetAuxIoPowerState(DdiId::DDI_A));
+  EXPECT_TRUE(power->GetAuxIoPowerState(DdiId::DDI_B));
 
   // Enable AUX IO.
-  power->SetAuxIoPowerState(tgl_registers::DDI_A, true);
-  power->SetAuxIoPowerState(tgl_registers::DDI_B, true);
+  power->SetAuxIoPowerState(DdiId::DDI_A, true);
+  power->SetAuxIoPowerState(DdiId::DDI_B, true);
 
   // On Skylake, the AUX IO power will be not disabled on-demand.
-  power->SetAuxIoPowerState(tgl_registers::DDI_A, false);
-  power->SetAuxIoPowerState(tgl_registers::DDI_B, false);
-  EXPECT_TRUE(power->GetAuxIoPowerState(tgl_registers::DDI_A));
-  EXPECT_TRUE(power->GetAuxIoPowerState(tgl_registers::DDI_B));
+  power->SetAuxIoPowerState(DdiId::DDI_A, false);
+  power->SetAuxIoPowerState(DdiId::DDI_B, false);
+  EXPECT_TRUE(power->GetAuxIoPowerState(DdiId::DDI_A));
+  EXPECT_TRUE(power->GetAuxIoPowerState(DdiId::DDI_B));
 }
 
 TEST_F(PowerTest, TigerLake_DdiIo) {
@@ -136,51 +136,40 @@ TEST_F(PowerTest, TigerLake_DdiIo) {
   auto power = Power::New(&*mmio_buffer_, kDeviceIdTigerLake);
 
   // Enable DDI IO for DDI_A.
-  EXPECT_FALSE(power->GetDdiIoPowerState(tgl_registers::DDI_A));
-  power->SetDdiIoPowerState(tgl_registers::DDI_A, /*enable=*/true);
+  EXPECT_FALSE(power->GetDdiIoPowerState(DdiId::DDI_A));
+  power->SetDdiIoPowerState(DdiId::DDI_A, /*enable=*/true);
   // Power state should be changed for the fake MMIO.
-  EXPECT_TRUE(power->GetDdiIoPowerState(tgl_registers::DDI_A));
+  EXPECT_TRUE(power->GetDdiIoPowerState(DdiId::DDI_A));
 
-  EXPECT_TRUE(power_well_control_ddi_reg.ddi_io_power_state_tiger_lake(tgl_registers::DDI_A).get());
-  EXPECT_FALSE(
-      power_well_control_ddi_reg.ddi_io_power_state_tiger_lake(tgl_registers::DDI_B).get());
-  EXPECT_FALSE(
-      power_well_control_ddi_reg.ddi_io_power_state_tiger_lake(tgl_registers::DDI_TC_1).get());
+  EXPECT_TRUE(power_well_control_ddi_reg.ddi_io_power_state_tiger_lake(DdiId::DDI_A).get());
+  EXPECT_FALSE(power_well_control_ddi_reg.ddi_io_power_state_tiger_lake(DdiId::DDI_B).get());
+  EXPECT_FALSE(power_well_control_ddi_reg.ddi_io_power_state_tiger_lake(DdiId::DDI_TC_1).get());
 
   // Disable DDI IO for DDI_A.
-  power->SetDdiIoPowerState(tgl_registers::DDI_A, /*enable=*/false);
-  EXPECT_FALSE(power->GetDdiIoPowerState(tgl_registers::DDI_A));
+  power->SetDdiIoPowerState(DdiId::DDI_A, /*enable=*/false);
+  EXPECT_FALSE(power->GetDdiIoPowerState(DdiId::DDI_A));
 
-  EXPECT_FALSE(
-      power_well_control_ddi_reg.ddi_io_power_state_tiger_lake(tgl_registers::DDI_A).get());
-  EXPECT_FALSE(
-      power_well_control_ddi_reg.ddi_io_power_state_tiger_lake(tgl_registers::DDI_B).get());
-  EXPECT_FALSE(
-      power_well_control_ddi_reg.ddi_io_power_state_tiger_lake(tgl_registers::DDI_TC_1).get());
+  EXPECT_FALSE(power_well_control_ddi_reg.ddi_io_power_state_tiger_lake(DdiId::DDI_A).get());
+  EXPECT_FALSE(power_well_control_ddi_reg.ddi_io_power_state_tiger_lake(DdiId::DDI_B).get());
+  EXPECT_FALSE(power_well_control_ddi_reg.ddi_io_power_state_tiger_lake(DdiId::DDI_TC_1).get());
 
   // Enable DDI IO for DDI_TC_1.
-  EXPECT_FALSE(power->GetDdiIoPowerState(tgl_registers::DDI_TC_1));
-  power->SetDdiIoPowerState(tgl_registers::DDI_TC_1, /*enable=*/true);
+  EXPECT_FALSE(power->GetDdiIoPowerState(DdiId::DDI_TC_1));
+  power->SetDdiIoPowerState(DdiId::DDI_TC_1, /*enable=*/true);
   // Power state should be changed for the fake MMIO.
-  EXPECT_TRUE(power->GetDdiIoPowerState(tgl_registers::DDI_TC_1));
+  EXPECT_TRUE(power->GetDdiIoPowerState(DdiId::DDI_TC_1));
 
-  EXPECT_TRUE(
-      power_well_control_ddi_reg.ddi_io_power_state_tiger_lake(tgl_registers::DDI_TC_1).get());
-  EXPECT_FALSE(
-      power_well_control_ddi_reg.ddi_io_power_state_tiger_lake(tgl_registers::DDI_B).get());
-  EXPECT_FALSE(
-      power_well_control_ddi_reg.ddi_io_power_state_tiger_lake(tgl_registers::DDI_TC_6).get());
+  EXPECT_TRUE(power_well_control_ddi_reg.ddi_io_power_state_tiger_lake(DdiId::DDI_TC_1).get());
+  EXPECT_FALSE(power_well_control_ddi_reg.ddi_io_power_state_tiger_lake(DdiId::DDI_B).get());
+  EXPECT_FALSE(power_well_control_ddi_reg.ddi_io_power_state_tiger_lake(DdiId::DDI_TC_6).get());
 
   // Disable DDI IO for DDI_TC_1.
-  power->SetDdiIoPowerState(tgl_registers::DDI_TC_1, /*enable=*/false);
-  EXPECT_FALSE(power->GetDdiIoPowerState(tgl_registers::DDI_TC_1));
+  power->SetDdiIoPowerState(DdiId::DDI_TC_1, /*enable=*/false);
+  EXPECT_FALSE(power->GetDdiIoPowerState(DdiId::DDI_TC_1));
 
-  EXPECT_FALSE(
-      power_well_control_ddi_reg.ddi_io_power_state_tiger_lake(tgl_registers::DDI_TC_1).get());
-  EXPECT_FALSE(
-      power_well_control_ddi_reg.ddi_io_power_state_tiger_lake(tgl_registers::DDI_B).get());
-  EXPECT_FALSE(
-      power_well_control_ddi_reg.ddi_io_power_state_tiger_lake(tgl_registers::DDI_TC_6).get());
+  EXPECT_FALSE(power_well_control_ddi_reg.ddi_io_power_state_tiger_lake(DdiId::DDI_TC_1).get());
+  EXPECT_FALSE(power_well_control_ddi_reg.ddi_io_power_state_tiger_lake(DdiId::DDI_B).get());
+  EXPECT_FALSE(power_well_control_ddi_reg.ddi_io_power_state_tiger_lake(DdiId::DDI_TC_6).get());
 }
 
 // Verify setting Power Well status on Tiger lake platform.

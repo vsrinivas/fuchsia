@@ -90,7 +90,7 @@ class DdiAuxChannel {
   };
 
   // `mmio_buffer` must outlive this instance.
-  DdiAuxChannel(fdf::MmioBuffer* mmio_buffer, tgl_registers::Ddi ddi, uint16_t device_id);
+  DdiAuxChannel(fdf::MmioBuffer* mmio_buffer, DdiId ddi_id, uint16_t device_id);
 
   // No copying.
   DdiAuxChannel(const DdiAuxChannel&) = delete;
@@ -193,7 +193,7 @@ class DdiAuxChannel {
   // The ZX_DEBUG_ASSERT_IMPLEMENTED block aims to clarify that these members
   // are only used for consistency checks. It is not intended as a performance
   // optimization.
-  tgl_registers::Ddi ddi_;
+  DdiId ddi_id_;
   uint16_t device_id_;
 #else
 

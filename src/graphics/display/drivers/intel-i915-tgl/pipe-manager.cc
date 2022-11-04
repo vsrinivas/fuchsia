@@ -33,7 +33,7 @@ Pipe* PipeManager::RequestPipe(DisplayDevice& display) {
 
 Pipe* PipeManager::RequestPipeFromHardwareState(DisplayDevice& display,
                                                 fdf::MmioBuffer* mmio_space) {
-  Pipe* hw_state_pipe = GetPipeFromHwState(display.ddi(), mmio_space);
+  Pipe* hw_state_pipe = GetPipeFromHwState(display.ddi_id(), mmio_space);
   if (hw_state_pipe) {
     hw_state_pipe->AttachToDisplay(display.id(), display.type() == DisplayDevice::Type::kEdp);
     pipes_reallocated_ = true;
@@ -116,9 +116,9 @@ Pipe* PipeManagerSkylake::GetAvailablePipe() {
   return nullptr;
 }
 
-Pipe* PipeManagerSkylake::GetPipeFromHwState(tgl_registers::Ddi ddi, fdf::MmioBuffer* mmio_space) {
+Pipe* PipeManagerSkylake::GetPipeFromHwState(DdiId ddi_id, fdf::MmioBuffer* mmio_space) {
   // On Kaby Lake and Skylake, DDI_A is attached to the EDP transcoder.
-  if (ddi == tgl_registers::DDI_A) {
+  if (ddi_id == DdiId::DDI_A) {
     tgl_registers::TranscoderRegs transcoder_regs(tgl_registers::TRANS_EDP);
     auto transcoder_ddi_control = transcoder_regs.DdiControl().ReadFrom(mmio_space);
 
@@ -136,8 +136,8 @@ Pipe* PipeManagerSkylake::GetPipeFromHwState(tgl_registers::Ddi ddi, fdf::MmioBu
                         "The EDP transcoder is not tied to a pipe");
 
     tgl_registers::TranscoderRegs transcoder_regs(tied_transcoder);
-    if (transcoder_regs.ClockSelect().ReadFrom(mmio_space).ddi_clock_kaby_lake() == ddi &&
-        transcoder_regs.DdiControl().ReadFrom(mmio_space).ddi_kaby_lake() == ddi) {
+    if (transcoder_regs.ClockSelect().ReadFrom(mmio_space).ddi_clock_kaby_lake() == ddi_id &&
+        transcoder_regs.DdiControl().ReadFrom(mmio_space).ddi_kaby_lake() == ddi_id) {
       return pipe;
     }
   }
@@ -170,13 +170,12 @@ Pipe* PipeManagerTigerLake::GetAvailablePipe() {
   return nullptr;
 }
 
-Pipe* PipeManagerTigerLake::GetPipeFromHwState(tgl_registers::Ddi ddi,
-                                               fdf::MmioBuffer* mmio_space) {
+Pipe* PipeManagerTigerLake::GetPipeFromHwState(DdiId ddi_id, fdf::MmioBuffer* mmio_space) {
   for (Pipe* pipe : *this) {
     auto transcoder = static_cast<tgl_registers::Trans>(pipe->pipe_id());
     tgl_registers::TranscoderRegs regs(transcoder);
-    if (regs.ClockSelect().ReadFrom(mmio_space).ddi_clock_tiger_lake() == ddi &&
-        regs.DdiControl().ReadFrom(mmio_space).ddi_tiger_lake() == ddi) {
+    if (regs.ClockSelect().ReadFrom(mmio_space).ddi_clock_tiger_lake() == ddi_id &&
+        regs.DdiControl().ReadFrom(mmio_space).ddi_tiger_lake() == ddi_id) {
       return pipe;
     }
   }

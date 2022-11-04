@@ -63,7 +63,7 @@ class TestDpllManager : public DisplayPllManager {
     }
   }
 
-  DdiPllConfig LoadState(tgl_registers::Ddi ddi) final {
+  DdiPllConfig LoadState(DdiId ddi_id) final {
     return DdiPllConfig{
         .ddi_clock_khz = 2'700'000,  // DisplayPort HBR2 5.4Gbps / lane
         .spread_spectrum_clocking = false,
@@ -76,11 +76,10 @@ class TestDpllManager : public DisplayPllManager {
   constexpr static auto kDplls = {tgl_registers::Dpll::DPLL_0, tgl_registers::Dpll::DPLL_1,
                                   tgl_registers::Dpll::DPLL_2};
 
-  bool SetDdiClockSource(tgl_registers::Ddi ddi, tgl_registers::Dpll pll) final { return true; }
-  bool ResetDdiClockSource(tgl_registers::Ddi ddi) final { return true; }
+  bool SetDdiClockSource(DdiId ddi_id, tgl_registers::Dpll pll) final { return true; }
+  bool ResetDdiClockSource(DdiId ddi_id) final { return true; }
 
-  DisplayPll* FindPllFor(tgl_registers::Ddi ddi, bool is_edp,
-                         const DdiPllConfig& desired_config) final {
+  DisplayPll* FindPllFor(DdiId ddi_id, bool is_edp, const DdiPllConfig& desired_config) final {
     for (const auto dpll : kDplls) {
       if (ref_count_[plls_[dpll].get()] == 0) {
         return plls_[dpll].get();
@@ -105,14 +104,14 @@ class TestPipeManager : public PipeManager {
 
  private:
   Pipe* GetAvailablePipe() override { return At(tgl_registers::PIPE_A); }
-  Pipe* GetPipeFromHwState(tgl_registers::Ddi ddi, fdf::MmioBuffer* mmio_space) override {
+  Pipe* GetPipeFromHwState(DdiId ddi_id, fdf::MmioBuffer* mmio_space) override {
     return At(tgl_registers::PIPE_A);
   }
 };
 
-class TestDdiPhysicalLayer final : public i915_tgl::DdiPhysicalLayer {
+class TestDdiPhysicalLayer final : public DdiPhysicalLayer {
  public:
-  explicit TestDdiPhysicalLayer(tgl_registers::Ddi ddi) : DdiPhysicalLayer(ddi) {}
+  explicit TestDdiPhysicalLayer(DdiId ddi_id) : DdiPhysicalLayer(ddi_id) {}
   bool IsEnabled() const override { return enabled_; }
   bool IsHealthy() const override { return true; }
   bool Enable() override {
@@ -172,20 +171,20 @@ class DpDisplayTest : public ::testing::Test {
     controller_.ResetMmioSpaceForTesting();
   }
 
-  std::unique_ptr<DpDisplay> MakeDisplay(tgl_registers::Ddi ddi, uint64_t id = 1) {
+  std::unique_ptr<DpDisplay> MakeDisplay(DdiId ddi_id, uint64_t id = 1) {
     // TODO(fxbug.dev/86038): In normal operation a DpDisplay is not fully constructed until it
     // receives a call to DisplayDevice::Query, then either DisplayDevice::Init() (for a hotplug or
     // initially powered-off display) OR DisplayDevice::AttachPipe() and
     // DisplayDevice::LoadACtiveMode() (for a pre-initialized display, e.g. bootloader-configured
     // eDP). For testing we only initialize until the Query() stage. The states of a DpDisplay
     // should become easier to reason about if remove the partially-initialized states.
-    if (ddi_phys_[ddi] == nullptr) {
-      ddi_phys_[ddi] = std::make_unique<TestDdiPhysicalLayer>(ddi);
-      ddi_phys_[ddi]->Enable();
+    if (ddi_phys_[ddi_id] == nullptr) {
+      ddi_phys_[ddi_id] = std::make_unique<TestDdiPhysicalLayer>(ddi_id);
+      ddi_phys_[ddi_id]->Enable();
     }
     auto display =
-        std::make_unique<DpDisplay>(&controller_, id, ddi, &fake_dpcd_, &pch_engine_.value(),
-                                    i915_tgl::DdiReference(ddi_phys_[ddi].get()), &node_);
+        std::make_unique<DpDisplay>(&controller_, id, ddi_id, &fake_dpcd_, &pch_engine_.value(),
+                                    DdiReference(ddi_phys_[ddi_id].get()), &node_);
     if (!display->Query()) {
       return nullptr;
     }
@@ -207,7 +206,7 @@ class DpDisplayTest : public ::testing::Test {
   inspect::Node node_;
   testing::FakeDpcdChannel fake_dpcd_;
 
-  std::unordered_map<tgl_registers::Ddi, std::unique_ptr<DdiPhysicalLayer>> ddi_phys_;
+  std::unordered_map<DdiId, std::unique_ptr<DdiPhysicalLayer>> ddi_phys_;
 
   std::optional<PchEngine> pch_engine_;
 };
@@ -215,18 +214,18 @@ class DpDisplayTest : public ::testing::Test {
 // Tests that display creation fails if the DP sink count is not 1, as MST is not supported.
 TEST_F(DpDisplayTest, MultipleSinksNotSupported) {
   fake_dpcd()->SetSinkCount(2);
-  ASSERT_EQ(nullptr, MakeDisplay(tgl_registers::DDI_A));
+  ASSERT_EQ(nullptr, MakeDisplay(DdiId::DDI_A));
 }
 
 // Tests that the maximum supported lane count is 2 when DDI E is enabled.
 TEST_F(DpDisplayTest, ReducedMaxLaneCountWhenDdiEIsEnabled) {
   auto buffer_control =
-      tgl_registers::DdiRegs(tgl_registers::DDI_A).BufferControl().ReadFrom(mmio_buffer());
+      tgl_registers::DdiRegs(DdiId::DDI_A).BufferControl().ReadFrom(mmio_buffer());
   buffer_control.set_ddi_e_disabled_kaby_lake(false).WriteTo(mmio_buffer());
 
   fake_dpcd()->SetMaxLaneCount(4);
 
-  auto display = MakeDisplay(tgl_registers::DDI_A);
+  auto display = MakeDisplay(DdiId::DDI_A);
   ASSERT_NE(nullptr, display);
   EXPECT_EQ(2, display->lane_count());
 }
@@ -234,11 +233,11 @@ TEST_F(DpDisplayTest, ReducedMaxLaneCountWhenDdiEIsEnabled) {
 // Tests that the maximum supported lane count is selected when DDI E is not enabled.
 TEST_F(DpDisplayTest, MaxLaneCount) {
   auto buffer_control =
-      tgl_registers::DdiRegs(tgl_registers::DDI_A).BufferControl().ReadFrom(mmio_buffer());
+      tgl_registers::DdiRegs(DdiId::DDI_A).BufferControl().ReadFrom(mmio_buffer());
   buffer_control.set_ddi_e_disabled_kaby_lake(true).WriteTo(mmio_buffer());
   fake_dpcd()->SetMaxLaneCount(4);
 
-  auto display = MakeDisplay(tgl_registers::DDI_A);
+  auto display = MakeDisplay(DdiId::DDI_A);
   ASSERT_NE(nullptr, display);
   EXPECT_EQ(4, display->lane_count());
 }
@@ -253,7 +252,7 @@ TEST_F(DpDisplayTest, LinkRateSelectionViaInit) {
   // TODO(fxbug.dev/83998): It shouldn't be necessary to rely on this logic in Controller to test
   // DpDisplay. Can DpDisplay be told that it is eDP during construction time instead of querying
   // Controller for it every time?
-  controller()->igd_opregion_for_testing()->SetIsEdpForTesting(tgl_registers::DDI_A, true);
+  controller()->igd_opregion_for_testing()->SetIsEdpForTesting(DdiId::DDI_A, true);
   auto dpll_status = tgl_registers::DisplayPllStatus::Get().ReadFrom(mmio_buffer());
   dpll_status.set_pll0_locked(true).WriteTo(mmio_buffer());
 
@@ -262,13 +261,13 @@ TEST_F(DpDisplayTest, LinkRateSelectionViaInit) {
   panel_status.set_panel_on(1);
   panel_status.WriteTo(mmio_buffer());
 
-  controller()->power()->SetDdiIoPowerState(tgl_registers::DDI_A, /* enable */ true);
-  controller()->power()->SetAuxIoPowerState(tgl_registers::DDI_A, /* enable */ true);
+  controller()->power()->SetDdiIoPowerState(DdiId::DDI_A, /* enable */ true);
+  controller()->power()->SetAuxIoPowerState(DdiId::DDI_A, /* enable */ true);
 
   fake_dpcd()->registers[dpcd::DPCD_LANE0_1_STATUS] = 0xFF;
   fake_dpcd()->SetMaxLinkRate(dpcd::LinkBw::k5400Mbps);
 
-  auto display = MakeDisplay(tgl_registers::DDI_A);
+  auto display = MakeDisplay(DdiId::DDI_A);
   ASSERT_NE(nullptr, display);
 
   EXPECT_TRUE(display->Init());
@@ -281,7 +280,7 @@ TEST_F(DpDisplayTest, LinkRateSelectionViaInitWithDdiPllConfig) {
   // The max link rate should be disregarded by InitWithDdiPllConfig.
   fake_dpcd()->SetMaxLinkRate(dpcd::LinkBw::k5400Mbps);
 
-  auto display = MakeDisplay(tgl_registers::DDI_A);
+  auto display = MakeDisplay(DdiId::DDI_A);
   ASSERT_NE(nullptr, display);
 
   const DdiPllConfig pll_config = {.ddi_clock_khz = 2'160'000,
@@ -295,10 +294,10 @@ TEST_F(DpDisplayTest, LinkRateSelectionViaInitWithDdiPllConfig) {
 // Tests that the brightness value is obtained using the i915 south backlight control register
 // when the related eDP DPCD capability is not supported.
 TEST_F(DpDisplayTest, GetBacklightBrightnessUsesSouthBacklightRegister) {
-  controller()->igd_opregion_for_testing()->SetIsEdpForTesting(tgl_registers::DDI_A, true);
+  controller()->igd_opregion_for_testing()->SetIsEdpForTesting(DdiId::DDI_A, true);
   pch_engine()->SetPanelBrightness(0.5);
 
-  auto display = MakeDisplay(tgl_registers::DDI_A);
+  auto display = MakeDisplay(DdiId::DDI_A);
   ASSERT_NE(nullptr, display);
   EXPECT_FLOAT_EQ(0.5, display->GetBacklightBrightness());
 }
@@ -311,7 +310,7 @@ TEST_F(DpDisplayTest, GetBacklightBrightnessUsesDpcd) {
   // Intentionally configure the PCH PWM brightness value to something different
   // to prove that the PCH backlight is not used.
   pch_engine()->SetPanelBrightness(0.5);
-  controller()->igd_opregion_for_testing()->SetIsEdpForTesting(tgl_registers::DDI_A, true);
+  controller()->igd_opregion_for_testing()->SetIsEdpForTesting(DdiId::DDI_A, true);
 
   fake_dpcd()->SetEdpCapable(dpcd::EdpRevision::k1_4);
   fake_dpcd()->SetEdpBacklightBrightnessCapable();
@@ -320,7 +319,7 @@ TEST_F(DpDisplayTest, GetBacklightBrightnessUsesDpcd) {
   fake_dpcd()->registers[dpcd::DPCD_EDP_BACKLIGHT_BRIGHTNESS_LSB] = kDpcdBrightness100 & 0xFF;
   fake_dpcd()->registers[dpcd::DPCD_EDP_BACKLIGHT_BRIGHTNESS_MSB] = kDpcdBrightness100 >> 8;
 
-  auto display = MakeDisplay(tgl_registers::DDI_A);
+  auto display = MakeDisplay(DdiId::DDI_A);
   ASSERT_NE(nullptr, display);
   EXPECT_FLOAT_EQ(1.0, display->GetBacklightBrightness());
 
@@ -328,7 +327,7 @@ TEST_F(DpDisplayTest, GetBacklightBrightnessUsesDpcd) {
   fake_dpcd()->registers[dpcd::DPCD_EDP_BACKLIGHT_BRIGHTNESS_LSB] = kDpcdBrightness20 & 0xFF;
   fake_dpcd()->registers[dpcd::DPCD_EDP_BACKLIGHT_BRIGHTNESS_MSB] = kDpcdBrightness20 >> 8;
 
-  display = MakeDisplay(tgl_registers::DDI_A);
+  display = MakeDisplay(DdiId::DDI_A);
   ASSERT_NE(nullptr, display);
   EXPECT_FLOAT_EQ(0.2, display->GetBacklightBrightness());
 }

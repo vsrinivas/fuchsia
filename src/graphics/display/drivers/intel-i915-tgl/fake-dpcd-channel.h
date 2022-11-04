@@ -19,7 +19,7 @@ constexpr size_t kMaxLinkRateTableEntries =
 
 // FakeDpcdChannel is a utility that allows the DPCD register space to be mocked for test that need
 // to exercise DisplayPort functionality.
-class FakeDpcdChannel : public i915_tgl::DpcdChannel {
+class FakeDpcdChannel : public DpcdChannel {
  public:
   FakeDpcdChannel() { registers.fill(0); }
 
@@ -56,7 +56,7 @@ class FakeDpcdChannel : public i915_tgl::DpcdChannel {
 
   void PopulateLinkRateTable(std::vector<uint16_t> values);
 
-  // i915_tgl::DpcdChannel overrides:
+  // DpcdChannel overrides:
   bool DpcdRead(uint32_t addr, uint8_t* buf, size_t size) override;
   bool DpcdWrite(uint32_t addr, const uint8_t* buf, size_t size) override;
 

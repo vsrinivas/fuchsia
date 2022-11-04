@@ -394,8 +394,8 @@ bool DpAux::DpcdWrite(uint32_t addr, const uint8_t* buf, size_t size) {
   return DpAuxWrite(DP_REQUEST_NATIVE_WRITE, addr, buf, size) == ZX_OK;
 }
 
-DpAux::DpAux(fdf::MmioBuffer* mmio_buffer, tgl_registers::Ddi ddi, uint16_t device_id)
-    : aux_channel_(mmio_buffer, ddi, device_id) {
+DpAux::DpAux(fdf::MmioBuffer* mmio_buffer, DdiId ddi_id, uint16_t device_id)
+    : aux_channel_(mmio_buffer, ddi_id, device_id) {
   ZX_ASSERT(mtx_init(&lock_, mtx_plain) == thrd_success);
 }
 
@@ -686,7 +686,7 @@ bool DpDisplay::DpcdHandleAdjustRequest(dpcd::TrainingLaneSet* training,
   if (voltage_swing + pre_emphasis > kMaxVoltageSwingPlusPreEmphasis) {
     voltage_swing = static_cast<uint8_t>(kMaxVoltageSwingPlusPreEmphasis - pre_emphasis);
   }
-  const uint8_t max_port_voltage = controller()->igd_opregion().IsLowVoltageEdp(ddi()) ? 3 : 2;
+  const uint8_t max_port_voltage = controller()->igd_opregion().IsLowVoltageEdp(ddi_id()) ? 3 : 2;
   if (voltage_swing > max_port_voltage) {
     voltage_swing = max_port_voltage;
   }
@@ -715,8 +715,8 @@ bool DpDisplay::DpcdHandleAdjustRequest(dpcd::TrainingLaneSet* training,
     //
     // Voltage swing level 3 is only valid for eDP, so we should be on DDI A or
     // E, and should be servicing an eDP port.
-    ZX_ASSERT(controller()->igd_opregion().IsLowVoltageEdp(ddi()));
-    ZX_ASSERT(ddi() == 0 || ddi() == 4);
+    ZX_ASSERT(controller()->igd_opregion().IsLowVoltageEdp(ddi_id()));
+    ZX_ASSERT(ddi_id() == 0 || ddi_id() == 4);
   }
 
   if (is_tgl(controller()->device_id())) {
@@ -729,25 +729,25 @@ bool DpDisplay::DpcdHandleAdjustRequest(dpcd::TrainingLaneSet* training,
 }
 
 void DpDisplay::ConfigureVoltageSwingKabyLake(size_t phy_config_index) {
-  tgl_registers::DdiRegs ddi_regs(ddi());
+  tgl_registers::DdiRegs ddi_regs(ddi_id());
   auto buffer_control = ddi_regs.BufferControl().ReadFrom(mmio_space());
   buffer_control.set_display_port_phy_config_kaby_lake(phy_config_index);
   buffer_control.WriteTo(mmio_space());
 }
 
 void DpDisplay::ConfigureVoltageSwingTigerLake(size_t phy_config_index) {
-  switch (ddi()) {
-    case tgl_registers::DDI_TC_1:
-    case tgl_registers::DDI_TC_2:
-    case tgl_registers::DDI_TC_3:
-    case tgl_registers::DDI_TC_4:
-    case tgl_registers::DDI_TC_5:
-    case tgl_registers::DDI_TC_6:
+  switch (ddi_id()) {
+    case DdiId::DDI_TC_1:
+    case DdiId::DDI_TC_2:
+    case DdiId::DDI_TC_3:
+    case DdiId::DDI_TC_4:
+    case DdiId::DDI_TC_5:
+    case DdiId::DDI_TC_6:
       ConfigureVoltageSwingTypeCTigerLake(phy_config_index);
       return;
-    case tgl_registers::DDI_A:
-    case tgl_registers::DDI_B:
-    case tgl_registers::DDI_C:
+    case DdiId::DDI_A:
+    case DdiId::DDI_B:
+    case DdiId::DDI_C:
       ConfigureVoltageSwingComboTigerLake(phy_config_index);
       return;
     default:
@@ -783,14 +783,14 @@ void DpDisplay::ConfigureVoltageSwingTypeCTigerLake(size_t phy_config_index) {
 
   for (auto tx_lane : {0, 1}) {
     // Flush PMD_LANE_SUS register if display owns this PHY lane.
-    tgl_registers::DekelTransmitterPmdLaneSus::GetForLaneDdi(tx_lane, ddi())
+    tgl_registers::DekelTransmitterPmdLaneSus::GetForLaneDdi(tx_lane, ddi_id())
         .FromValue(0)
         .WriteTo(mmio_space());
 
     // Update DisplayPort control registers with appropriate voltage swing and
     // de-emphasis levels from the table.
     auto display_port_control_0 =
-        tgl_registers::DekelTransmitterDisplayPortControl0::GetForLaneDdi(tx_lane, ddi())
+        tgl_registers::DekelTransmitterDisplayPortControl0::GetForLaneDdi(tx_lane, ddi_id())
             .ReadFrom(mmio_space());
     display_port_control_0
         .set_voltage_swing_control_level_transmitter_1(
@@ -802,7 +802,7 @@ void DpDisplay::ConfigureVoltageSwingTypeCTigerLake(size_t phy_config_index) {
         .WriteTo(mmio_space());
 
     auto display_port_control_1 =
-        tgl_registers::DekelTransmitterDisplayPortControl1::GetForLaneDdi(tx_lane, ddi())
+        tgl_registers::DekelTransmitterDisplayPortControl1::GetForLaneDdi(tx_lane, ddi_id())
             .ReadFrom(mmio_space());
     display_port_control_1
         .set_voltage_swing_control_level_transmitter_2(
@@ -814,7 +814,7 @@ void DpDisplay::ConfigureVoltageSwingTypeCTigerLake(size_t phy_config_index) {
         .WriteTo(mmio_space());
 
     auto display_port_control_2 =
-        tgl_registers::DekelTransmitterDisplayPortControl2::GetForLaneDdi(tx_lane, ddi())
+        tgl_registers::DekelTransmitterDisplayPortControl2::GetForLaneDdi(tx_lane, ddi_id())
             .ReadFrom(mmio_space());
     display_port_control_2.set_display_port_20bit_mode_supported(0).WriteTo(mmio_space());
   }
@@ -850,12 +850,12 @@ bool DpDisplay::LinkTrainingSetupTigerLake() {
   // Configure "Transcoder Clock Select" to direct the Port clock to the
   // transcoder.
   auto clock_select = transcoder_regs.ClockSelect().ReadFrom(mmio_space());
-  clock_select.set_ddi_clock_tiger_lake(ddi());
+  clock_select.set_ddi_clock_tiger_lake(ddi_id());
   clock_select.WriteTo(mmio_space());
 
   // Configure "Transcoder DDI Control" to select DDI and DDI mode.
   auto ddi_control = transcoder_regs.DdiControl().ReadFrom(mmio_space());
-  ddi_control.set_ddi_tiger_lake(ddi());
+  ddi_control.set_ddi_tiger_lake(ddi_id());
   // TODO(fxbug.dev/110411): Support MST (Multi-Stream).
   ddi_control.set_ddi_mode(tgl_registers::TranscoderDdiControl::kModeDisplayPortSingleStream);
   ddi_control.WriteTo(mmio_space());
@@ -880,7 +880,7 @@ bool DpDisplay::LinkTrainingSetupTigerLake() {
 
   // Configure and enable DDI Buffer.
   auto buffer_control =
-      tgl_registers::DdiBufferControl::GetForTigerLakeDdi(ddi()).ReadFrom(mmio_space());
+      tgl_registers::DdiBufferControl::GetForTigerLakeDdi(ddi_id()).ReadFrom(mmio_space());
   buffer_control.set_enabled(true)
       .set_display_port_lane_count(dp_lane_count_)
       .WriteTo(mmio_space());
@@ -948,7 +948,7 @@ bool DpDisplay::LinkTrainingSetupKabyLake() {
   ZX_ASSERT(capabilities_);
   ZX_DEBUG_ASSERT(!is_tgl(controller()->device_id()));
 
-  tgl_registers::DdiRegs ddi_regs(ddi());
+  tgl_registers::DdiRegs ddi_regs(ddi_id());
 
   // Tell the source device to emit the training pattern.
   auto dp_transport_control = ddi_regs.DpTransportControl().ReadFrom(mmio_space());
@@ -965,14 +965,14 @@ bool DpDisplay::LinkTrainingSetupKabyLake() {
   // TODO(fxbug.dev/31313): Read the VBT to handle unique motherboard configs for kaby lake
   uint8_t i_boost;
   const cpp20::span<const DdiPhyConfigEntry> entries =
-      controller()->igd_opregion().IsLowVoltageEdp(ddi())
+      controller()->igd_opregion().IsLowVoltageEdp(ddi_id())
           ? GetEdpPhyConfigEntries(controller()->device_id(), &i_boost)
           : GetDpPhyConfigEntries(controller()->device_id(), &i_boost);
-  const uint8_t i_boost_override = controller()->igd_opregion().GetIBoost(ddi(), /*is_dp=*/true);
+  const uint8_t i_boost_override = controller()->igd_opregion().GetIBoost(ddi_id(), /*is_dp=*/true);
 
   for (int entry_index = 0; entry_index < static_cast<int>(entries.size()); ++entry_index) {
     auto phy_config_entry1 =
-        tgl_registers::DdiPhyConfigEntry1::GetDdiInstance(ddi(), entry_index).FromValue(0);
+        tgl_registers::DdiPhyConfigEntry1::GetDdiInstance(ddi_id(), entry_index).FromValue(0);
     phy_config_entry1.set_reg_value(entries[entry_index].entry1);
     if (i_boost_override) {
       phy_config_entry1.set_balance_leg_enable(1);
@@ -980,16 +980,16 @@ bool DpDisplay::LinkTrainingSetupKabyLake() {
     phy_config_entry1.WriteTo(mmio_space());
 
     auto phy_config_entry2 =
-        tgl_registers::DdiPhyConfigEntry2::GetDdiInstance(ddi(), entry_index).FromValue(0);
+        tgl_registers::DdiPhyConfigEntry2::GetDdiInstance(ddi_id(), entry_index).FromValue(0);
     phy_config_entry2.set_reg_value(entries[entry_index].entry2).WriteTo(mmio_space());
   }
 
   const uint8_t i_boost_val = i_boost_override ? i_boost_override : i_boost;
   auto balance_control = tgl_registers::DdiPhyBalanceControl::Get().ReadFrom(mmio_space());
   balance_control.set_disable_balance_leg(!i_boost && !i_boost_override);
-  balance_control.balance_leg_select_for_ddi(ddi()).set(i_boost_val);
-  if (ddi() == tgl_registers::DDI_A && dp_lane_count_ == 4) {
-    balance_control.balance_leg_select_for_ddi(tgl_registers::DDI_E).set(i_boost_val);
+  balance_control.balance_leg_select_for_ddi(ddi_id()).set(i_boost_val);
+  if (ddi_id() == DdiId::DDI_A && dp_lane_count_ == 4) {
+    balance_control.balance_leg_select_for_ddi(DdiId::DDI_E).set(i_boost_val);
   }
   balance_control.WriteTo(mmio_space());
 
@@ -1114,7 +1114,7 @@ bool DpDisplay::LinkTrainingStage2(dpcd::TrainingPatternSet* tp_set, dpcd::Train
     dp_transport_control.set_training_pattern(tgl_registers::DpTransportControl::kTrainingPattern2);
     dp_transport_control.WriteTo(mmio_space());
   } else {
-    tgl_registers::DdiRegs ddi_regs(ddi());
+    tgl_registers::DdiRegs ddi_regs(ddi_id());
     auto dp_transport_control = ddi_regs.DpTransportControl().ReadFrom(mmio_space());
     dp_transport_control.set_training_pattern(tgl_registers::DpTransportControl::kTrainingPattern2);
     dp_transport_control.WriteTo(mmio_space());
@@ -1182,7 +1182,7 @@ bool DpDisplay::LinkTrainingStage2(dpcd::TrainingPatternSet* tp_set, dpcd::Train
     dp_transport_control.set_training_pattern(tgl_registers::DpTransportControl::kSendPixelData);
     dp_transport_control.WriteTo(mmio_space());
   } else {
-    tgl_registers::DdiRegs ddi_regs(ddi());
+    tgl_registers::DdiRegs ddi_regs(ddi_id());
     auto dp_transport_control = ddi_regs.DpTransportControl().ReadFrom(mmio_space());
     dp_transport_control.set_training_pattern(tgl_registers::DpTransportControl::kSendPixelData)
         .WriteTo(mmio_space());
@@ -1193,19 +1193,19 @@ bool DpDisplay::LinkTrainingStage2(dpcd::TrainingPatternSet* tp_set, dpcd::Train
 }
 
 bool DpDisplay::ProgramDpModeTigerLake() {
-  ZX_ASSERT(ddi() >= tgl_registers::Ddi::DDI_TC_1);
-  ZX_ASSERT(ddi() <= tgl_registers::Ddi::DDI_TC_6);
+  ZX_ASSERT(ddi_id() >= DdiId::DDI_TC_1);
+  ZX_ASSERT(ddi_id() <= DdiId::DDI_TC_6);
 
   auto dp_mode_0 =
-      tgl_registers::DekelDisplayPortMode::GetForLaneDdi(0, ddi()).ReadFrom(mmio_space());
+      tgl_registers::DekelDisplayPortMode::GetForLaneDdi(0, ddi_id()).ReadFrom(mmio_space());
   auto dp_mode_1 =
-      tgl_registers::DekelDisplayPortMode::GetForLaneDdi(1, ddi()).ReadFrom(mmio_space());
+      tgl_registers::DekelDisplayPortMode::GetForLaneDdi(1, ddi_id()).ReadFrom(mmio_space());
 
-  auto pin_assignment = tgl_registers::DynamicFlexIoDisplayPortPinAssignment::GetForDdi(ddi())
+  auto pin_assignment = tgl_registers::DynamicFlexIoDisplayPortPinAssignment::GetForDdi(ddi_id())
                             .ReadFrom(mmio_space())
-                            .pin_assignment_for_ddi(ddi());
+                            .pin_assignment_for_ddi(ddi_id());
   if (!pin_assignment.has_value()) {
-    zxlogf(ERROR, "Cannot get pin assignment for ddi %d", ddi());
+    zxlogf(ERROR, "Cannot get pin assignment for ddi %d", ddi_id());
     return false;
   }
 
@@ -1300,8 +1300,6 @@ bool DpDisplay::DoLinkTraining() {
   return result;
 }
 
-}  // namespace i915_tgl
-
 namespace {
 
 // Convert ratio x/y into the form used by the Link/Data M/N ratio registers.
@@ -1315,19 +1313,16 @@ void CalculateRatio(uint32_t x, uint32_t y, uint32_t* m_out, uint32_t* n_out) {
   *m_out = static_cast<uint32_t>(static_cast<uint64_t>(x) * *n_out / y);
 }
 
-bool IsEdp(i915_tgl::Controller* controller, tgl_registers::Ddi ddi) {
-  return controller && controller->igd_opregion().IsEdp(ddi);
+bool IsEdp(Controller* controller, DdiId ddi_id) {
+  return controller && controller->igd_opregion().IsEdp(ddi_id);
 }
 
 }  // namespace
 
-namespace i915_tgl {
-
-DpDisplay::DpDisplay(Controller* controller, uint64_t id, tgl_registers::Ddi ddi,
-                     DpcdChannel* dp_aux, PchEngine* pch_engine, DdiReference ddi_reference,
-                     inspect::Node* parent_node)
-    : DisplayDevice(controller, id, ddi, std::move(ddi_reference),
-                    IsEdp(controller, ddi) ? Type::kEdp : Type::kDp),
+DpDisplay::DpDisplay(Controller* controller, uint64_t id, DdiId ddi_id, DpcdChannel* dp_aux,
+                     PchEngine* pch_engine, DdiReference ddi_reference, inspect::Node* parent_node)
+    : DisplayDevice(controller, id, ddi_id, std::move(ddi_reference),
+                    IsEdp(controller, ddi_id) ? Type::kEdp : Type::kDp),
       dp_aux_(dp_aux),
       pch_engine_(type() == Type::kEdp ? pch_engine : nullptr) {
   ZX_ASSERT(dp_aux);
@@ -1377,8 +1372,8 @@ bool DpDisplay::Query() {
     //
     // Kaby Lake: IHD-OS-KBL-Vol 12-1.17 "Display Connections" > "DDIs" page 107
     // Skylake: IHD-OS-SKL-Vol 12-05.16 "Display Connections" > "DDIs" page 105
-    if (ddi() == tgl_registers::DDI_A || ddi() == tgl_registers::DDI_E) {
-      const bool ddi_e_enabled = !tgl_registers::DdiRegs(tgl_registers::DDI_A)
+    if (ddi_id() == DdiId::DDI_A || ddi_id() == DdiId::DDI_E) {
+      const bool ddi_e_enabled = !tgl_registers::DdiRegs(DdiId::DDI_A)
                                       .BufferControl()
                                       .ReadFrom(mmio_space())
                                       .ddi_e_disabled_kaby_lake();
@@ -1439,21 +1434,21 @@ bool DpDisplay::InitDdi() {
 
   // 3.b. Program DFLEXDPMLE.DPMLETC* to maximum number of lanes allowed as determined by
   // FIA and panel lane count.
-  if (is_tgl(controller()->device_id()) && ddi() >= tgl_registers::DDI_TC_1 &&
-      ddi() <= tgl_registers::DDI_TC_6) {
+  if (is_tgl(controller()->device_id()) && ddi_id() >= DdiId::DDI_TC_1 &&
+      ddi_id() <= DdiId::DDI_TC_6) {
     auto main_link_lane_enabled =
-        tgl_registers::DynamicFlexIoDisplayPortMainLinkLaneEnabled::GetForDdi(ddi()).ReadFrom(
+        tgl_registers::DynamicFlexIoDisplayPortMainLinkLaneEnabled::GetForDdi(ddi_id()).ReadFrom(
             mmio_space());
     switch (dp_lane_count_) {
       case 1:
-        main_link_lane_enabled.set_enabled_display_port_main_link_lane_bits(ddi(), 0b0001);
+        main_link_lane_enabled.set_enabled_display_port_main_link_lane_bits(ddi_id(), 0b0001);
         break;
       case 2:
         // 1100b cannot be used with Type-C Alt connections.
-        main_link_lane_enabled.set_enabled_display_port_main_link_lane_bits(ddi(), 0b0011);
+        main_link_lane_enabled.set_enabled_display_port_main_link_lane_bits(ddi_id(), 0b0011);
         break;
       case 4:
-        main_link_lane_enabled.set_enabled_display_port_main_link_lane_bits(ddi(), 0b1111);
+        main_link_lane_enabled.set_enabled_display_port_main_link_lane_bits(ddi_id(), 0b1111);
         break;
       default:
         ZX_DEBUG_ASSERT(false);
@@ -1491,15 +1486,15 @@ bool DpDisplay::InitDdi() {
 
   // 4. Enable Port PLL
   DisplayPll* dpll =
-      controller()->dpll_manager()->SetDdiPllConfig(ddi(), type() == Type::kEdp, pll_config);
+      controller()->dpll_manager()->SetDdiPllConfig(ddi_id(), type() == Type::kEdp, pll_config);
   if (dpll == nullptr) {
-    zxlogf(ERROR, "Cannot find an available DPLL for DP display on DDI %d", ddi());
+    zxlogf(ERROR, "Cannot find an available DPLL for DP display on DDI %d", ddi_id());
     return false;
   }
 
   // 5. Enable power for this DDI.
-  controller()->power()->SetDdiIoPowerState(ddi(), /* enable */ true);
-  if (!PollUntil([&] { return controller()->power()->GetDdiIoPowerState(ddi()); }, zx::usec(1),
+  controller()->power()->SetDdiIoPowerState(ddi_id(), /* enable */ true);
+  if (!PollUntil([&] { return controller()->power()->GetDdiIoPowerState(ddi_id()); }, zx::usec(1),
                  20)) {
     zxlogf(ERROR, "Failed to enable IO power for ddi");
     return false;
@@ -1511,13 +1506,13 @@ bool DpDisplay::InitDdi() {
   if (is_tgl(controller()->device_id()) && phy_info.ddi_type == DdiPhysicalLayer::DdiType::kTypeC &&
       phy_info.connection_type != DdiPhysicalLayer::ConnectionType::kTypeCThunderbolt &&
       !ProgramDpModeTigerLake()) {
-    zxlogf(ERROR, "DDI %d: Cannot program DP mode", ddi());
+    zxlogf(ERROR, "DDI %d: Cannot program DP mode", ddi_id());
     return false;
   }
 
   // 7. Do link training
   if (!DoLinkTraining()) {
-    zxlogf(ERROR, "DDI %d: DisplayPort link training failed", ddi());
+    zxlogf(ERROR, "DDI %d: DisplayPort link training failed", ddi_id());
     return false;
   }
 
@@ -1587,14 +1582,14 @@ bool DpDisplay::PipeConfigPreamble(const display_mode_t& mode, tgl_registers::Pi
     // is called). This is because Tiger Lake transcoders contain the
     // DisplayPort Transport modules used for link training.
     auto clock_select = transcoder_regs.ClockSelect().ReadFrom(mmio_space());
-    const std::optional<tgl_registers::Ddi> ddi_clock_source = clock_select.ddi_clock_tiger_lake();
+    const std::optional<DdiId> ddi_clock_source = clock_select.ddi_clock_tiger_lake();
     if (!ddi_clock_source.has_value()) {
       zxlogf(ERROR, "Transcoder %d clock source not set after DisplayPort training", transcoder);
       return false;
     }
-    if (*ddi_clock_source != ddi()) {
+    if (*ddi_clock_source != ddi_id()) {
       zxlogf(ERROR, "Transcoder %d clock set to DDI %d instead of %d after DisplayPort training.",
-             transcoder, ddi(), *ddi_clock_source);
+             transcoder, ddi_id(), *ddi_clock_source);
       return false;
     }
   } else {
@@ -1602,7 +1597,7 @@ bool DpDisplay::PipeConfigPreamble(const display_mode_t& mode, tgl_registers::Pi
     // the pipe, plane and transcoder enablement stage.
     if (transcoder != tgl_registers::TRANS_EDP) {
       auto clock_select = transcoder_regs.ClockSelect().ReadFrom(mmio_space());
-      clock_select.set_ddi_clock_kaby_lake(ddi());
+      clock_select.set_ddi_clock_kaby_lake(ddi_id());
       clock_select.WriteTo(mmio_space());
     }
   }
@@ -1675,16 +1670,15 @@ bool DpDisplay::PipeConfigEpilogue(const display_mode_t& mode, tgl_registers::Pi
   // connected to DDI A. Since the field is ignored (as opposed to reserved),
   // it's still OK to set it. We set it to None, because it seems less misleadng
   // than setting it to one of the other DDIs.
-  const std::optional<tgl_registers::Ddi> transcoder_ddi =
-      (transcoder == tgl_registers::TRANS_EDP) ? std::nullopt : std::make_optional(ddi());
+  const std::optional<DdiId> transcoder_ddi =
+      (transcoder == tgl_registers::TRANS_EDP) ? std::nullopt : std::make_optional(ddi_id());
   if (is_tgl(controller()->device_id())) {
     ZX_DEBUG_ASSERT_MSG(transcoder != tgl_registers::Trans::TRANS_EDP,
                         "The EDP transcoder does not exist on this display engine");
     transcoder_ddi_control.set_ddi_tiger_lake(transcoder_ddi);
   } else {
-    ZX_DEBUG_ASSERT_MSG(
-        transcoder != tgl_registers::Trans::TRANS_EDP || ddi() == tgl_registers::Ddi::DDI_A,
-        "The EDP transcoder is attached to DDI A");
+    ZX_DEBUG_ASSERT_MSG(transcoder != tgl_registers::Trans::TRANS_EDP || ddi_id() == DdiId::DDI_A,
+                        "The EDP transcoder is attached to DDI A");
     transcoder_ddi_control.set_ddi_kaby_lake(transcoder_ddi);
   }
 
@@ -1870,10 +1864,10 @@ bool DpDisplay::HandleHotplug(bool long_pulse) {
   //
   // Tiger Lake: IHD-OS-TGL-Vol 12-1.22-Rev 2.0, Page 203, "HPD Interrupt
   //             Sequence"
-  if (is_tgl(controller()->device_id()) && ddi() >= tgl_registers::DDI_TC_1 &&
-      ddi() <= tgl_registers::DDI_TC_6) {
-    auto dp_sp = tgl_registers::DynamicFlexIoScratchPad::GetForDdi(ddi()).ReadFrom(mmio_space());
-    auto type_c_live_state = dp_sp.type_c_live_state(ddi());
+  if (is_tgl(controller()->device_id()) && ddi_id() >= DdiId::DDI_TC_1 &&
+      ddi_id() <= DdiId::DDI_TC_6) {
+    auto dp_sp = tgl_registers::DynamicFlexIoScratchPad::GetForDdi(ddi_id()).ReadFrom(mmio_space());
+    auto type_c_live_state = dp_sp.type_c_live_state(ddi_id());
 
     // The device has been already connected when `HandleHotplug` is called.
     // If live state is non-zero, keep the existing connection; otherwise

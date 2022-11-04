@@ -34,8 +34,7 @@ class PipeManagerTest : public ::testing::Test {
     mmio_buffer_.emplace(reg_region_->GetMmioBuffer());
 
     controller_.SetMmioForTesting(mmio_buffer_->View(0));
-    controller_.SetPowerWellForTesting(
-        i915_tgl::Power::New(controller_.mmio_space(), i915_tgl::kTestDeviceDid));
+    controller_.SetPowerWellForTesting(Power::New(controller_.mmio_space(), kTestDeviceDid));
   }
 
   void TearDown() override {
@@ -43,20 +42,20 @@ class PipeManagerTest : public ::testing::Test {
     controller_.ResetMmioSpaceForTesting();
   }
 
-  i915_tgl::Controller* controller() { return &controller_; }
+  Controller* controller() { return &controller_; }
 
  protected:
   constexpr static uint32_t kMinimumRegCount = 0xd0000 / sizeof(uint32_t);
   std::unique_ptr<ddk_fake::FakeMmioRegRegion> reg_region_;
   std::vector<ddk_fake::FakeMmioReg> regs_;
   std::optional<fdf::MmioBuffer> mmio_buffer_;
-  i915_tgl::Controller controller_;
+  Controller controller_;
 };
 
 class FakeDisplay : public DisplayDevice {
  public:
-  FakeDisplay(Controller* controller, uint64_t id, tgl_registers::Ddi ddi, Type type)
-      : DisplayDevice(controller, id, ddi, DdiReference(), type) {}
+  FakeDisplay(Controller* controller, uint64_t id, DdiId ddi_id, Type type)
+      : DisplayDevice(controller, id, ddi_id, DdiReference(), type) {}
   ~FakeDisplay() override = default;
 
   // DisplayDevice overrides:
@@ -77,7 +76,7 @@ class FakeDisplay : public DisplayDevice {
   }
   DdiPllConfig ComputeDdiPllConfig(int32_t pixel_clock_10khz) final { return {}; }
   uint32_t LoadClockRateForTranscoder(tgl_registers::Trans transcoder) final { return 0; }
-  uint32_t i2c_bus_id() const final { return 2 * ddi(); }
+  uint32_t i2c_bus_id() const final { return 2 * ddi_id(); }
   bool CheckPixelRate(uint64_t pixel_rate) final { return true; }
 };
 
@@ -90,7 +89,7 @@ TEST_F(PipeManagerTest, SkylakeAllocatePipe) {
   // Allocate pipe for DP display.
   uint64_t kDisplay1Id = 1u;
   std::unique_ptr<DisplayDevice> display1 = std::make_unique<FakeDisplay>(
-      controller(), kDisplay1Id, tgl_registers::DDI_B, DisplayDevice::Type::kDp);
+      controller(), kDisplay1Id, DdiId::DDI_B, DisplayDevice::Type::kDp);
   Pipe* pipe1 = pm->RequestPipe(*display1);
   display1->set_pipe(pipe1);
 
@@ -100,11 +99,11 @@ TEST_F(PipeManagerTest, SkylakeAllocatePipe) {
   EXPECT_EQ(pipe1->tied_transcoder_id(), pipe1->connected_transcoder_id());
 
   // Allocate pipe for eDP display.
-  controller()->igd_opregion_for_testing()->SetIsEdpForTesting(tgl_registers::DDI_A, true);
+  controller()->igd_opregion_for_testing()->SetIsEdpForTesting(DdiId::DDI_A, true);
 
   uint64_t kDisplay2Id = 2u;
   std::unique_ptr<DisplayDevice> display2 = std::make_unique<FakeDisplay>(
-      controller(), kDisplay2Id, tgl_registers::DDI_A, DisplayDevice::Type::kEdp);
+      controller(), kDisplay2Id, DdiId::DDI_A, DisplayDevice::Type::kEdp);
   Pipe* pipe2 = pm->RequestPipe(*display2);
   display2->set_pipe(pipe2);
 
@@ -131,7 +130,7 @@ TEST_F(PipeManagerTest, SkylakeReclaimUsedPipe) {
        display_id <= tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size() * 10;
        display_id++) {
     std::unique_ptr<DisplayDevice> display = std::make_unique<FakeDisplay>(
-        controller(), display_id, tgl_registers::DDI_B, DisplayDevice::Type::kDp);
+        controller(), display_id, DdiId::DDI_B, DisplayDevice::Type::kDp);
     Pipe* pipe = pm->RequestPipe(*display);
     display->set_pipe(pipe);
 

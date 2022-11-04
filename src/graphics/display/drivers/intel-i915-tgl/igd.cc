@@ -15,6 +15,8 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/acpi-memory-region.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/intel-i915-tgl.h"
 
+namespace i915_tgl {
+
 namespace {
 
 // Register definitions from IGD OpRegion/Software SCI documentation. Section
@@ -144,45 +146,43 @@ bool IsPortDisplayPort(uint8_t dvo_port) {
   }
 }
 
-std::optional<tgl_registers::Ddi> PortToDdi(uint8_t dvo_port) {
+std::optional<DdiId> PortToDdi(uint8_t dvo_port) {
   switch (dvo_port) {
     case 0:   // DVO_PORT_HDMIA
     case 10:  // DVO_PORT_DPA
-      return tgl_registers::DDI_A;
+      return DdiId::DDI_A;
     case 1:  // DVO_PORT_HDMIB
     case 7:  // DVO_PORT_DPB
-      return tgl_registers::DDI_B;
+      return DdiId::DDI_B;
     case 2:  // DVO_PORT_HDMIC
     case 8:  // DVO_PORT_DPC
-      return tgl_registers::DDI_C;
+      return DdiId::DDI_C;
     case 3:  // DVO_PORT_HDMID
     case 9:  // DVO_PORT_DPD
       // i.e. DDI_TC_1
-      return tgl_registers::DDI_D;
+      return DdiId::DDI_D;
     case 12:  // DVO_PORT_HDMIE
     case 11:  // DVO_PORT_DPE
       // i.e. DDI_TC_2
-      return tgl_registers::DDI_E;
+      return DdiId::DDI_E;
     case 14:  // DVO_PORT_HDMIF
     case 13:  // DVO_PORT_DPF
-      return tgl_registers::DDI_TC_3;
+      return DdiId::DDI_TC_3;
     case 16:  // DVO_PORT_HDMIG
     case 15:  // DVO_PORT_DPG
-      return tgl_registers::DDI_TC_4;
+      return DdiId::DDI_TC_4;
     case 18:  // DVO_PORT_HDMIH
     case 17:  // DVO_PORT_DPH
-      return tgl_registers::DDI_TC_5;
+      return DdiId::DDI_TC_5;
     case 20:  // DVO_PORT_HDMII
     case 19:  // DVO_PORT_DPI
-      return tgl_registers::DDI_TC_6;
+      return DdiId::DDI_TC_6;
     default:
       return std::nullopt;
   }
 }
 
 }  // namespace
-
-namespace i915_tgl {
 
 IgdOpRegion::~IgdOpRegion() = default;
 

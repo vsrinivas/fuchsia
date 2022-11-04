@@ -287,33 +287,33 @@ class DisplayPllDdiMapKabyLake : public hwreg::RegisterBase<DisplayPllDdiMapKaby
   DEF_BIT(0, ddi_a_clock_programming_enabled);
 
   // If true, the DDI's clock is disabled. This is accomplished by gating.
-  bool ddi_clock_disabled(Ddi ddi) const {
-    ZX_ASSERT(ddi >= Ddi::DDI_A);
-    ZX_ASSERT(ddi <= Ddi::DDI_E);
+  bool ddi_clock_disabled(i915_tgl::DdiId ddi_id) const {
+    ZX_ASSERT(ddi_id >= i915_tgl::DdiId::DDI_A);
+    ZX_ASSERT(ddi_id <= i915_tgl::DdiId::DDI_E);
 
-    const int ddi_index = ddi - Ddi::DDI_A;
+    const int ddi_index = ddi_id - i915_tgl::DdiId::DDI_A;
     const int bit_index = 15 + ddi_index;
     return static_cast<bool>(
         hwreg::BitfieldRef<const uint32_t>(reg_value_ptr(), bit_index, bit_index).get());
   }
 
   // See `ddi_clock_disabled()` for details.
-  DisplayPllDdiMapKabyLake& set_ddi_clock_disabled(Ddi ddi, bool clock_disabled) {
-    ZX_ASSERT(ddi >= Ddi::DDI_A);
-    ZX_ASSERT(ddi <= Ddi::DDI_E);
+  DisplayPllDdiMapKabyLake& set_ddi_clock_disabled(i915_tgl::DdiId ddi_id, bool clock_disabled) {
+    ZX_ASSERT(ddi_id >= i915_tgl::DdiId::DDI_A);
+    ZX_ASSERT(ddi_id <= i915_tgl::DdiId::DDI_E);
 
-    const int ddi_index = ddi - Ddi::DDI_A;
+    const int ddi_index = ddi_id - i915_tgl::DdiId::DDI_A;
     const int bit_index = 15 + ddi_index;
     hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit_index, bit_index).set(clock_disabled ? 1 : 0);
     return *this;
   }
 
   // The DPLL (Display PLL) used as a clock source for a DDI.
-  Dpll ddi_clock_display_pll(Ddi ddi) const {
-    ZX_ASSERT(ddi >= Ddi::DDI_A);
-    ZX_ASSERT(ddi <= Ddi::DDI_E);
+  Dpll ddi_clock_display_pll(i915_tgl::DdiId ddi_id) const {
+    ZX_ASSERT(ddi_id >= i915_tgl::DdiId::DDI_A);
+    ZX_ASSERT(ddi_id <= i915_tgl::DdiId::DDI_E);
 
-    const int ddi_index = ddi - Ddi::DDI_A;
+    const int ddi_index = ddi_id - i915_tgl::DdiId::DDI_A;
     const int bit_index = ddi_index * 3 + 1;
     const uint32_t dpll_index = static_cast<int>(
         hwreg::BitfieldRef<const uint32_t>(reg_value_ptr(), bit_index + 1, bit_index).get());
@@ -322,13 +322,13 @@ class DisplayPllDdiMapKabyLake : public hwreg::RegisterBase<DisplayPllDdiMapKaby
   }
 
   // See `ddi_clock_display_pll()` for details.
-  DisplayPllDdiMapKabyLake& set_ddi_clock_display_pll(Ddi ddi, Dpll dpll) {
-    ZX_ASSERT(ddi >= Ddi::DDI_A);
-    ZX_ASSERT(ddi <= Ddi::DDI_E);
+  DisplayPllDdiMapKabyLake& set_ddi_clock_display_pll(i915_tgl::DdiId ddi_id, Dpll dpll) {
+    ZX_ASSERT(ddi_id >= i915_tgl::DdiId::DDI_A);
+    ZX_ASSERT(ddi_id <= i915_tgl::DdiId::DDI_E);
     ZX_ASSERT(dpll >= Dpll::DPLL_0);
     ZX_ASSERT(dpll <= Dpll::DPLL_3);
 
-    const int ddi_index = ddi - Ddi::DDI_A;
+    const int ddi_index = ddi_id - i915_tgl::DdiId::DDI_A;
     const int bit_index = ddi_index * 3 + 1;
     const int dpll_index = dpll - Dpll::DPLL_0;
     hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit_index + 1, bit_index).set(dpll_index);
@@ -336,22 +336,23 @@ class DisplayPllDdiMapKabyLake : public hwreg::RegisterBase<DisplayPllDdiMapKaby
   }
 
   // If true, the DDI uses the clock configuration in this register.
-  bool ddi_clock_programming_enabled(Ddi ddi) const {
-    ZX_ASSERT(ddi >= Ddi::DDI_A);
-    ZX_ASSERT(ddi <= Ddi::DDI_E);
+  bool ddi_clock_programming_enabled(i915_tgl::DdiId ddi_id) const {
+    ZX_ASSERT(ddi_id >= i915_tgl::DdiId::DDI_A);
+    ZX_ASSERT(ddi_id <= i915_tgl::DdiId::DDI_E);
 
-    const int ddi_index = ddi - Ddi::DDI_A;
+    const int ddi_index = ddi_id - i915_tgl::DdiId::DDI_A;
     const int bit_index = ddi_index * 3;
     return static_cast<bool>(
         hwreg::BitfieldRef<const uint32_t>(reg_value_ptr(), bit_index, bit_index).get());
   }
 
   // See `ddi_clock_programming_enabled()` for details.
-  DisplayPllDdiMapKabyLake& set_ddi_clock_programming_enabled(Ddi ddi, bool programming_enabled) {
-    ZX_ASSERT(ddi >= Ddi::DDI_A);
-    ZX_ASSERT(ddi <= Ddi::DDI_E);
+  DisplayPllDdiMapKabyLake& set_ddi_clock_programming_enabled(i915_tgl::DdiId ddi_id,
+                                                              bool programming_enabled) {
+    ZX_ASSERT(ddi_id >= i915_tgl::DdiId::DDI_A);
+    ZX_ASSERT(ddi_id <= i915_tgl::DdiId::DDI_E);
 
-    const int ddi_index = ddi - Ddi::DDI_A;
+    const int ddi_index = ddi_id - i915_tgl::DdiId::DDI_A;
     const int bit_index = ddi_index * 3;
     hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit_index, bit_index)
         .set(programming_enabled ? 1 : 0);

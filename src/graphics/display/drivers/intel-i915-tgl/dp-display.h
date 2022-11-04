@@ -35,7 +35,7 @@ class DpcdChannel {
 class DpAux : public DpcdChannel {
  public:
   // `mmio_buffer` must outlive this instance.
-  DpAux(fdf::MmioBuffer* mmio_buffer, tgl_registers::Ddi ddi, uint16_t device_id);
+  DpAux(fdf::MmioBuffer* mmio_buffer, DdiId ddi_id, uint16_t device_id);
 
   zx_status_t I2cTransact(const i2c_impl_op_t* ops, size_t count);
 
@@ -181,7 +181,7 @@ class DpCapabilities final {
 
 class DpDisplay : public DisplayDevice {
  public:
-  DpDisplay(Controller* controller, uint64_t id, tgl_registers::Ddi ddi, DpcdChannel* dp_aux,
+  DpDisplay(Controller* controller, uint64_t id, DdiId ddi_id, DpcdChannel* dp_aux,
             PchEngine* pch_engine, DdiReference ddi_reference, inspect::Node* parent_node);
 
   DpDisplay(const DpDisplay&) = delete;
@@ -215,7 +215,7 @@ class DpDisplay : public DisplayDevice {
 
   bool CheckPixelRate(uint64_t pixel_rate) final;
 
-  uint32_t i2c_bus_id() const final { return 2 * ddi(); }
+  uint32_t i2c_bus_id() const final { return 2 * ddi_id(); }
 
   // Returns true if the eDP panel is powered on.
   //

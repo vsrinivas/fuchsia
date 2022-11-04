@@ -69,35 +69,35 @@ TEST_F(DdiAuxChannelConstructorTest, KabyLakeDdiA) {
       {.address = kDdiAuxCtlAOffset, .value = kDdiAuxCtlQuietStart},
   }));
 
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kAtlasGpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_A, kAtlasGpuDeviceId);
 }
 TEST_F(DdiAuxChannelConstructorTest, KabyLakeDdiC) {
   mmio_range_.Expect(MockMmioRange::AccessList({
       {.address = kDdiAuxCtlCOffset, .value = kDdiAuxCtlQuietStart},
   }));
 
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_C, kAtlasGpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_C, kAtlasGpuDeviceId);
 }
 TEST_F(DdiAuxChannelConstructorTest, TigerLakeDdiA) {
   mmio_range_.Expect(MockMmioRange::AccessList({
       {.address = kDdiAuxCtlAOffset, .value = kDdiAuxCtlQuietStart},
   }));
 
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kDell5420GpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_A, kDell5420GpuDeviceId);
 }
 TEST_F(DdiAuxChannelConstructorTest, TigerLakeDdiC) {
   mmio_range_.Expect(MockMmioRange::AccessList({
       {.address = kDdiAuxCtlCOffset, .value = kDdiAuxCtlQuietStart},
   }));
 
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_C, kDell5420GpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_C, kDell5420GpuDeviceId);
 }
 TEST_F(DdiAuxChannelConstructorTest, TigerLakeDdiTC2) {
   mmio_range_.Expect(MockMmioRange::AccessList({
       {.address = kDdiAuxCtlUsbBOffset, .value = kDdiAuxCtlQuietStart},
   }));
 
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_TC_2, kDell5420GpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_TC_2, kDell5420GpuDeviceId);
 }
 
 TEST_F(DdiAuxChannelConstructorTest, WaitsForPendingTransaction) {
@@ -106,7 +106,7 @@ TEST_F(DdiAuxChannelConstructorTest, WaitsForPendingTransaction) {
       {.address = kDdiAuxCtlAOffset, .value = 0x4000'00ff},
   }));
 
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kAtlasGpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_A, kAtlasGpuDeviceId);
 }
 
 TEST_F(DdiAuxChannelConstructorTest, ControlNotChangedDuringPendingTransaction) {
@@ -117,7 +117,7 @@ TEST_F(DdiAuxChannelConstructorTest, ControlNotChangedDuringPendingTransaction) 
       {.address = kDdiAuxCtlAOffset, .value = 0x4000'0000},
   }));
 
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kAtlasGpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_A, kAtlasGpuDeviceId);
 }
 
 class DdiAuxChannelConfigTest : public DdiAuxChannelTest {};
@@ -126,7 +126,7 @@ TEST_F(DdiAuxChannelConfigTest, KabyLakeDefault) {
   mmio_range_.Expect(MockMmioRange::AccessList({
       {.address = kDdiAuxCtlAOffset, .value = kDdiAuxCtlDefault},
   }));
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kAtlasGpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_A, kAtlasGpuDeviceId);
 
   const DdiAuxChannelConfig config = aux_channel.Config();
   EXPECT_EQ(400, config.timeout_us);
@@ -138,7 +138,7 @@ TEST_F(DdiAuxChannelConfigTest, KabyLakeQuietStart) {
   mmio_range_.Expect(MockMmioRange::AccessList({
       {.address = kDdiAuxCtlAOffset, .value = kDdiAuxCtlQuietStart},
   }));
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kAtlasGpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_A, kAtlasGpuDeviceId);
 
   const DdiAuxChannelConfig config = aux_channel.Config();
   EXPECT_EQ(1'600, config.timeout_us);
@@ -150,7 +150,7 @@ TEST_F(DdiAuxChannelConfigTest, KabyLakeZeros) {
   mmio_range_.Expect(MockMmioRange::AccessList({
       {.address = kDdiAuxCtlAOffset, .value = 0},
   }));
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kAtlasGpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_A, kAtlasGpuDeviceId);
 
   const DdiAuxChannelConfig config = aux_channel.Config();
   EXPECT_EQ(400, config.timeout_us);
@@ -162,7 +162,7 @@ TEST_F(DdiAuxChannelConfigTest, KabyLakeOnes) {
   mmio_range_.Expect(MockMmioRange::AccessList({
       {.address = kDdiAuxCtlAOffset, .value = 0x7ef0'03ff},
   }));
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kAtlasGpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_A, kAtlasGpuDeviceId);
 
   const DdiAuxChannelConfig config = aux_channel.Config();
   EXPECT_EQ(1'600, config.timeout_us);
@@ -175,7 +175,7 @@ TEST_F(DdiAuxChannelConfigTest, TigerLakeDefault) {
   mmio_range_.Expect(MockMmioRange::AccessList({
       {.address = kDdiAuxCtlAOffset, .value = kDdiAuxCtlDefault},
   }));
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kDell5420GpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_A, kDell5420GpuDeviceId);
 
   const DdiAuxChannelConfig config = aux_channel.Config();
   EXPECT_EQ(400, config.timeout_us);
@@ -187,7 +187,7 @@ TEST_F(DdiAuxChannelConfigTest, TigerLakeQuietStart) {
   mmio_range_.Expect(MockMmioRange::AccessList({
       {.address = kDdiAuxCtlAOffset, .value = kDdiAuxCtlQuietStart},
   }));
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kDell5420GpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_A, kDell5420GpuDeviceId);
 
   const DdiAuxChannelConfig config = aux_channel.Config();
   EXPECT_EQ(4'000, config.timeout_us);
@@ -199,7 +199,7 @@ TEST_F(DdiAuxChannelConfigTest, TigerLakeZeros) {
   mmio_range_.Expect(MockMmioRange::AccessList({
       {.address = kDdiAuxCtlAOffset, .value = 0},
   }));
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kDell5420GpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_A, kDell5420GpuDeviceId);
 
   const DdiAuxChannelConfig config = aux_channel.Config();
   EXPECT_EQ(400, config.timeout_us);
@@ -211,7 +211,7 @@ TEST_F(DdiAuxChannelConfigTest, TigerLakeOnes) {
   mmio_range_.Expect(MockMmioRange::AccessList({
       {.address = kDdiAuxCtlAOffset, .value = 0x7ef0'0bff},
   }));
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kDell5420GpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_A, kDell5420GpuDeviceId);
 
   const DdiAuxChannelConfig config = aux_channel.Config();
   EXPECT_EQ(4'000, config.timeout_us);
@@ -224,7 +224,7 @@ TEST_F(DdiAuxChannelConfigTest, SetUseThunderbolt) {
       // Start from an all-zeros configuration to verify that the right bit it set.
       {.address = kDdiAuxCtlUsbBOffset, .value = 0},
   }));
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_TC_2, kDell5420GpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_TC_2, kDell5420GpuDeviceId);
   aux_channel.SetUseThunderbolt(true);
 
   const DdiAuxChannelConfig config = aux_channel.Config();
@@ -238,7 +238,7 @@ TEST_F(DdiAuxChannelConfigTest, SetUseThunderboltClear) {
       // Start from an allmost-all-ones configuration to verify that the right bit is cleared.
       {.address = kDdiAuxCtlAOffset, .value = 0x7ef0'0bff},
   }));
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kDell5420GpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_A, kDell5420GpuDeviceId);
   aux_channel.SetUseThunderbolt(false);
 
   const DdiAuxChannelConfig config = aux_channel.Config();
@@ -264,7 +264,7 @@ TEST_F(DdiAuxChannelWriteRequestTest, Read1Byte) {
   mmio_range_.Expect(MockMmioRange::AccessList({
       {.address = kDdiAuxDataA0Offset, .value = 0x9abc'de00, .write = true},
   }));
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kAtlasGpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_A, kAtlasGpuDeviceId);
   aux_channel.WriteRequestForTesting(
       {.address = 0xabcde, .command = 9, .op_size = 1, .data = cpp20::span<uint8_t>()});
 }
@@ -272,7 +272,7 @@ TEST_F(DdiAuxChannelWriteRequestTest, Read16Bytes) {
   mmio_range_.Expect(MockMmioRange::AccessList({
       {.address = kDdiAuxDataA0Offset, .value = 0x9abc'de0f, .write = true},
   }));
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kAtlasGpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_A, kAtlasGpuDeviceId);
   aux_channel.WriteRequestForTesting(
       {.address = 0xabcde, .command = 9, .op_size = 16, .data = cpp20::span<uint8_t>()});
 }
@@ -283,7 +283,7 @@ TEST_F(DdiAuxChannelWriteRequestTest, Write1Byte) {
       {.address = kDdiAuxDataA1Offset, .value = 0x4100'0000, .write = true},
   }));
   static constexpr uint8_t kData[] = {0x41};
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kAtlasGpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_A, kAtlasGpuDeviceId);
   aux_channel.WriteRequestForTesting(
       {.address = 0xabcde, .command = 8, .op_size = 1, .data = kData});
 }
@@ -293,7 +293,7 @@ TEST_F(DdiAuxChannelWriteRequestTest, Write2Bytes) {
       {.address = kDdiAuxDataA1Offset, .value = 0x4142'0000, .write = true},
   }));
   static constexpr uint8_t kData[] = {0x41, 0x42};
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kAtlasGpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_A, kAtlasGpuDeviceId);
   aux_channel.WriteRequestForTesting(
       {.address = 0xabcde, .command = 8, .op_size = 2, .data = kData});
 }
@@ -303,7 +303,7 @@ TEST_F(DdiAuxChannelWriteRequestTest, Write3Bytes) {
       {.address = kDdiAuxDataA1Offset, .value = 0x4142'4300, .write = true},
   }));
   static constexpr uint8_t kData[] = {0x41, 0x42, 0x43};
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kAtlasGpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_A, kAtlasGpuDeviceId);
   aux_channel.WriteRequestForTesting(
       {.address = 0xabcde, .command = 8, .op_size = 3, .data = kData});
 }
@@ -313,7 +313,7 @@ TEST_F(DdiAuxChannelWriteRequestTest, Write4Bytes) {
       {.address = kDdiAuxDataA1Offset, .value = 0x4142'4344, .write = true},
   }));
   static constexpr uint8_t kData[] = {0x41, 0x42, 0x43, 0x44};
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kAtlasGpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_A, kAtlasGpuDeviceId);
   aux_channel.WriteRequestForTesting(
       {.address = 0xabcde, .command = 8, .op_size = 4, .data = kData});
 }
@@ -324,7 +324,7 @@ TEST_F(DdiAuxChannelWriteRequestTest, Write5Bytes) {
       {.address = kDdiAuxDataA2Offset, .value = 0x4500'0000, .write = true},
   }));
   static constexpr uint8_t kData[] = {0x41, 0x42, 0x43, 0x44, 0x45};
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kAtlasGpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_A, kAtlasGpuDeviceId);
   aux_channel.WriteRequestForTesting(
       {.address = 0xabcde, .command = 8, .op_size = 5, .data = kData});
 }
@@ -335,7 +335,7 @@ TEST_F(DdiAuxChannelWriteRequestTest, Write6Bytes) {
       {.address = kDdiAuxDataA2Offset, .value = 0x4546'0000, .write = true},
   }));
   static constexpr uint8_t kData[] = {0x41, 0x42, 0x43, 0x44, 0x45, 0x46};
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kAtlasGpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_A, kAtlasGpuDeviceId);
   aux_channel.WriteRequestForTesting(
       {.address = 0xabcde, .command = 8, .op_size = 6, .data = kData});
 }
@@ -346,7 +346,7 @@ TEST_F(DdiAuxChannelWriteRequestTest, Write7Bytes) {
       {.address = kDdiAuxDataA2Offset, .value = 0x4546'4700, .write = true},
   }));
   static constexpr uint8_t kData[] = {0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47};
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kAtlasGpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_A, kAtlasGpuDeviceId);
   aux_channel.WriteRequestForTesting(
       {.address = 0xabcde, .command = 8, .op_size = 7, .data = kData});
 }
@@ -357,7 +357,7 @@ TEST_F(DdiAuxChannelWriteRequestTest, Write8Bytes) {
       {.address = kDdiAuxDataA2Offset, .value = 0x4546'4748, .write = true},
   }));
   static constexpr uint8_t kData[] = {0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48};
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kAtlasGpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_A, kAtlasGpuDeviceId);
   aux_channel.WriteRequestForTesting(
       {.address = 0xabcde, .command = 8, .op_size = 8, .data = kData});
 }
@@ -372,7 +372,7 @@ TEST_F(DdiAuxChannelWriteRequestTest, Write15Bytes) {
   }));
   static constexpr uint8_t kData[] = {0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48,
                                       0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f};
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kAtlasGpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_A, kAtlasGpuDeviceId);
   aux_channel.WriteRequestForTesting(
       {.address = 0xabcde, .command = 8, .op_size = 15, .data = kData});
 }
@@ -386,7 +386,7 @@ TEST_F(DdiAuxChannelWriteRequestTest, Write16Bytes) {
   }));
   static constexpr uint8_t kData[] = {0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48,
                                       0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, 0x50};
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kAtlasGpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_A, kAtlasGpuDeviceId);
   aux_channel.WriteRequestForTesting(
       {.address = 0xabcde, .command = 8, .op_size = 16, .data = kData});
 }
@@ -403,7 +403,7 @@ class DdiAuxChannelTransactTest : public DdiAuxChannelTest {
 
   // Sets up the AUX channel for a 16-byte read request.
   void SetUpTransaction() {
-    aux_channel_.emplace(&mmio_buffer_, tgl_registers::DDI_A, kAtlasGpuDeviceId);
+    aux_channel_.emplace(&mmio_buffer_, DdiId::DDI_A, kAtlasGpuDeviceId);
     aux_channel_->WriteRequestForTesting(
         {.address = 0xabcde, .command = 9, .op_size = 16, .data = cpp20::span<uint8_t>()});
   }
@@ -421,7 +421,7 @@ TEST_F(DdiAuxChannelTransactTest, TransactAdjustsZeroControl) {
       {.address = kDdiAuxCtlAOffset, .value = 0x6c20'00f9},
   }));
 
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kAtlasGpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_A, kAtlasGpuDeviceId);
   aux_channel.WriteRequestForTesting(
       {.address = 0xabcde, .command = 9, .op_size = 16, .data = cpp20::span<uint8_t>()});
   const zx::result transact_status = aux_channel.TransactForTesting();
@@ -436,7 +436,7 @@ TEST_F(DdiAuxChannelTest, TransactAdjustsDefaultControl) {
       {.address = kDdiAuxCtlAOffset, .value = 0x6c20'00ff},
   }));
 
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kAtlasGpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_A, kAtlasGpuDeviceId);
   aux_channel.WriteRequestForTesting(
       {.address = 0xabcde, .command = 9, .op_size = 16, .data = cpp20::span<uint8_t>()});
   const zx::result transact_status = aux_channel.TransactForTesting();
@@ -581,7 +581,7 @@ class DdiAuxChannelReadReplyTest : public DdiAuxChannelTest {
 
   // Sets up the AUX channel for reading the reply to a 16-byte read request.
   bool SetUpReadReplyForTesting() {
-    aux_channel_.emplace(&mmio_buffer_, tgl_registers::DDI_A, kAtlasGpuDeviceId);
+    aux_channel_.emplace(&mmio_buffer_, DdiId::DDI_A, kAtlasGpuDeviceId);
     aux_channel_->WriteRequestForTesting(
         {.address = 0xabcde, .command = 9, .op_size = 16, .data = cpp20::span<uint8_t>()});
     const zx::result transact_status = aux_channel_->TransactForTesting();
@@ -801,7 +801,7 @@ TEST_F(DdiAuxChannelTest, DoTransactReadAck1Byte) {
       {.address = kDdiAuxCtlAOffset, .value = 0x6c20'00ff},
       {.address = kDdiAuxDataA0Offset, .value = 0x0041'dead},
   }));
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kAtlasGpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_A, kAtlasGpuDeviceId);
 
   const DdiAuxChannel::Request request = {
       .address = 0xabcde, .command = 9, .op_size = 1, .data = cpp20::span<uint8_t>()};
@@ -826,7 +826,7 @@ TEST_F(DdiAuxChannelTest, DoTransactWrite7BytesNack) {
       {.address = kDdiAuxCtlAOffset, .value = 0x6c20'00ff},
       {.address = kDdiAuxDataA0Offset, .value = 0x1004'dead},
   }));
-  DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kAtlasGpuDeviceId);
+  DdiAuxChannel aux_channel(&mmio_buffer_, DdiId::DDI_A, kAtlasGpuDeviceId);
 
   const uint8_t request_data[] = {0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47};
   const DdiAuxChannel::Request request = {

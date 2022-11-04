@@ -43,98 +43,98 @@ TEST(RegistersTest, PowerWellControlAux_TigerLake) {
   auto reg = tgl_registers::PowerWellControlAux::Get().FromValue(0);
 
   // AUX IO Power request
-  reg.set_reg_value(0).set_power_on_request_combo_or_usb_c(tgl_registers::DDI_A, /*enabled=*/true);
+  reg.set_reg_value(0).set_power_on_request_combo_or_usb_c(DdiId::DDI_A, /*enabled=*/true);
   EXPECT_EQ(reg.power_on_request_a(), 1u);
-  EXPECT_EQ(reg.powered_on_combo_or_usb_c(tgl_registers::DDI_A), 0u);
-  reg.set_reg_value(0).set_power_on_request_combo_or_usb_c(tgl_registers::DDI_B, /*enabled=*/true);
+  EXPECT_EQ(reg.powered_on_combo_or_usb_c(DdiId::DDI_A), 0u);
+  reg.set_reg_value(0).set_power_on_request_combo_or_usb_c(DdiId::DDI_B, /*enabled=*/true);
   EXPECT_EQ(reg.power_on_request_b(), 1u);
-  EXPECT_EQ(reg.powered_on_combo_or_usb_c(tgl_registers::DDI_B), 0u);
-  reg.set_reg_value(0).set_power_on_request_combo_or_usb_c(tgl_registers::DDI_C, /*enabled=*/true);
+  EXPECT_EQ(reg.powered_on_combo_or_usb_c(DdiId::DDI_B), 0u);
+  reg.set_reg_value(0).set_power_on_request_combo_or_usb_c(DdiId::DDI_C, /*enabled=*/true);
   EXPECT_EQ(reg.power_on_request_c(), 1u);
-  EXPECT_EQ(reg.powered_on_combo_or_usb_c(tgl_registers::DDI_C), 0u);
+  EXPECT_EQ(reg.powered_on_combo_or_usb_c(DdiId::DDI_C), 0u);
 
   // USB-C Power request
-  reg.set_reg_value(0).set_power_on_request_combo_or_usb_c(tgl_registers::DDI_TC_1,
+  reg.set_reg_value(0).set_power_on_request_combo_or_usb_c(DdiId::DDI_TC_1,
                                                            /*enabled=*/true);
   EXPECT_EQ(reg.power_on_request_usb_c_1(), 1u);
-  EXPECT_EQ(reg.powered_on_combo_or_usb_c(tgl_registers::DDI_TC_1), 0u);
+  EXPECT_EQ(reg.powered_on_combo_or_usb_c(DdiId::DDI_TC_1), 0u);
 
-  reg.set_reg_value(0).set_power_on_request_combo_or_usb_c(tgl_registers::DDI_TC_2,
+  reg.set_reg_value(0).set_power_on_request_combo_or_usb_c(DdiId::DDI_TC_2,
                                                            /*enabled=*/true);
   EXPECT_EQ(reg.power_on_request_usb_c_2(), 1u);
-  EXPECT_EQ(reg.powered_on_combo_or_usb_c(tgl_registers::DDI_TC_2), 0u);
-  reg.set_reg_value(0).set_power_on_request_combo_or_usb_c(tgl_registers::DDI_TC_3,
+  EXPECT_EQ(reg.powered_on_combo_or_usb_c(DdiId::DDI_TC_2), 0u);
+  reg.set_reg_value(0).set_power_on_request_combo_or_usb_c(DdiId::DDI_TC_3,
                                                            /*enabled=*/true);
   EXPECT_EQ(reg.power_on_request_usb_c_3(), 1u);
-  EXPECT_EQ(reg.powered_on_combo_or_usb_c(tgl_registers::DDI_TC_3), 0u);
-  reg.set_reg_value(0).set_power_on_request_combo_or_usb_c(tgl_registers::DDI_TC_4,
+  EXPECT_EQ(reg.powered_on_combo_or_usb_c(DdiId::DDI_TC_3), 0u);
+  reg.set_reg_value(0).set_power_on_request_combo_or_usb_c(DdiId::DDI_TC_4,
                                                            /*enabled=*/true);
   EXPECT_EQ(reg.power_on_request_usb_c_4(), 1u);
-  EXPECT_EQ(reg.powered_on_combo_or_usb_c(tgl_registers::DDI_TC_4), 0u);
-  reg.set_reg_value(0).set_power_on_request_combo_or_usb_c(tgl_registers::DDI_TC_5,
+  EXPECT_EQ(reg.powered_on_combo_or_usb_c(DdiId::DDI_TC_4), 0u);
+  reg.set_reg_value(0).set_power_on_request_combo_or_usb_c(DdiId::DDI_TC_5,
                                                            /*enabled=*/true);
   EXPECT_EQ(reg.power_on_request_usb_c_5(), 1u);
-  EXPECT_EQ(reg.powered_on_combo_or_usb_c(tgl_registers::DDI_TC_5), 0u);
-  reg.set_reg_value(0).set_power_on_request_combo_or_usb_c(tgl_registers::DDI_TC_6,
+  EXPECT_EQ(reg.powered_on_combo_or_usb_c(DdiId::DDI_TC_5), 0u);
+  reg.set_reg_value(0).set_power_on_request_combo_or_usb_c(DdiId::DDI_TC_6,
                                                            /*enabled=*/true);
   EXPECT_EQ(reg.power_on_request_usb_c_6(), 1u);
-  EXPECT_EQ(reg.powered_on_combo_or_usb_c(tgl_registers::DDI_TC_6), 0u);
+  EXPECT_EQ(reg.powered_on_combo_or_usb_c(DdiId::DDI_TC_6), 0u);
 
   // Thunderbolt Power request
-  reg.set_reg_value(0).set_power_on_request_thunderbolt(tgl_registers::DDI_TC_1, /*enabled=*/true);
+  reg.set_reg_value(0).set_power_on_request_thunderbolt(DdiId::DDI_TC_1, /*enabled=*/true);
   EXPECT_EQ(reg.power_on_request_thunderbolt_1(), 1u);
-  EXPECT_EQ(reg.powered_on_thunderbolt(tgl_registers::DDI_TC_1), 0u);
-  reg.set_reg_value(0).set_power_on_request_thunderbolt(tgl_registers::DDI_TC_2, /*enabled=*/true);
+  EXPECT_EQ(reg.powered_on_thunderbolt(DdiId::DDI_TC_1), 0u);
+  reg.set_reg_value(0).set_power_on_request_thunderbolt(DdiId::DDI_TC_2, /*enabled=*/true);
   EXPECT_EQ(reg.power_on_request_thunderbolt_2(), 1u);
-  EXPECT_EQ(reg.powered_on_thunderbolt(tgl_registers::DDI_TC_2), 0u);
-  reg.set_reg_value(0).set_power_on_request_thunderbolt(tgl_registers::DDI_TC_3, /*enabled=*/true);
+  EXPECT_EQ(reg.powered_on_thunderbolt(DdiId::DDI_TC_2), 0u);
+  reg.set_reg_value(0).set_power_on_request_thunderbolt(DdiId::DDI_TC_3, /*enabled=*/true);
   EXPECT_EQ(reg.power_on_request_thunderbolt_3(), 1u);
-  EXPECT_EQ(reg.powered_on_thunderbolt(tgl_registers::DDI_TC_3), 0u);
-  reg.set_reg_value(0).set_power_on_request_thunderbolt(tgl_registers::DDI_TC_4, /*enabled=*/true);
+  EXPECT_EQ(reg.powered_on_thunderbolt(DdiId::DDI_TC_3), 0u);
+  reg.set_reg_value(0).set_power_on_request_thunderbolt(DdiId::DDI_TC_4, /*enabled=*/true);
   EXPECT_EQ(reg.power_on_request_thunderbolt_4(), 1u);
-  EXPECT_EQ(reg.powered_on_thunderbolt(tgl_registers::DDI_TC_4), 0u);
-  reg.set_reg_value(0).set_power_on_request_thunderbolt(tgl_registers::DDI_TC_5, /*enabled=*/true);
+  EXPECT_EQ(reg.powered_on_thunderbolt(DdiId::DDI_TC_4), 0u);
+  reg.set_reg_value(0).set_power_on_request_thunderbolt(DdiId::DDI_TC_5, /*enabled=*/true);
   EXPECT_EQ(reg.power_on_request_thunderbolt_5(), 1u);
-  EXPECT_EQ(reg.powered_on_thunderbolt(tgl_registers::DDI_TC_5), 0u);
-  reg.set_reg_value(0).set_power_on_request_thunderbolt(tgl_registers::DDI_TC_6, /*enabled=*/true);
+  EXPECT_EQ(reg.powered_on_thunderbolt(DdiId::DDI_TC_5), 0u);
+  reg.set_reg_value(0).set_power_on_request_thunderbolt(DdiId::DDI_TC_6, /*enabled=*/true);
   EXPECT_EQ(reg.power_on_request_thunderbolt_6(), 1u);
-  EXPECT_EQ(reg.powered_on_thunderbolt(tgl_registers::DDI_TC_6), 0u);
+  EXPECT_EQ(reg.powered_on_thunderbolt(DdiId::DDI_TC_6), 0u);
 
   // AUX IO Power state
   reg.set_reg_value(0).set_powered_on_a(1);
-  EXPECT_TRUE(reg.powered_on_combo_or_usb_c(tgl_registers::DDI_A));
+  EXPECT_TRUE(reg.powered_on_combo_or_usb_c(DdiId::DDI_A));
   reg.set_reg_value(0).set_powered_on_b(1);
-  EXPECT_TRUE(reg.powered_on_combo_or_usb_c(tgl_registers::DDI_B));
+  EXPECT_TRUE(reg.powered_on_combo_or_usb_c(DdiId::DDI_B));
   reg.set_reg_value(0).set_powered_on_c(1);
-  EXPECT_TRUE(reg.powered_on_combo_or_usb_c(tgl_registers::DDI_C));
+  EXPECT_TRUE(reg.powered_on_combo_or_usb_c(DdiId::DDI_C));
 
   // USB-C Power state
   reg.set_reg_value(0).set_powered_on_usb_c_1(1);
-  EXPECT_TRUE(reg.powered_on_combo_or_usb_c(tgl_registers::DDI_TC_1));
+  EXPECT_TRUE(reg.powered_on_combo_or_usb_c(DdiId::DDI_TC_1));
   reg.set_reg_value(0).set_powered_on_usb_c_2(1);
-  EXPECT_TRUE(reg.powered_on_combo_or_usb_c(tgl_registers::DDI_TC_2));
+  EXPECT_TRUE(reg.powered_on_combo_or_usb_c(DdiId::DDI_TC_2));
   reg.set_reg_value(0).set_powered_on_usb_c_3(1);
-  EXPECT_TRUE(reg.powered_on_combo_or_usb_c(tgl_registers::DDI_TC_3));
+  EXPECT_TRUE(reg.powered_on_combo_or_usb_c(DdiId::DDI_TC_3));
   reg.set_reg_value(0).set_powered_on_usb_c_4(1);
-  EXPECT_TRUE(reg.powered_on_combo_or_usb_c(tgl_registers::DDI_TC_4));
+  EXPECT_TRUE(reg.powered_on_combo_or_usb_c(DdiId::DDI_TC_4));
   reg.set_reg_value(0).set_powered_on_usb_c_5(1);
-  EXPECT_TRUE(reg.powered_on_combo_or_usb_c(tgl_registers::DDI_TC_5));
+  EXPECT_TRUE(reg.powered_on_combo_or_usb_c(DdiId::DDI_TC_5));
   reg.set_reg_value(0).set_powered_on_usb_c_6(1);
-  EXPECT_TRUE(reg.powered_on_combo_or_usb_c(tgl_registers::DDI_TC_6));
+  EXPECT_TRUE(reg.powered_on_combo_or_usb_c(DdiId::DDI_TC_6));
 
   // Thunderbolt Power state
   reg.set_reg_value(0).set_powered_on_thunderbolt_1(1);
-  EXPECT_TRUE(reg.powered_on_thunderbolt(tgl_registers::DDI_TC_1));
+  EXPECT_TRUE(reg.powered_on_thunderbolt(DdiId::DDI_TC_1));
   reg.set_reg_value(0).set_powered_on_thunderbolt_2(1);
-  EXPECT_TRUE(reg.powered_on_thunderbolt(tgl_registers::DDI_TC_2));
+  EXPECT_TRUE(reg.powered_on_thunderbolt(DdiId::DDI_TC_2));
   reg.set_reg_value(0).set_powered_on_thunderbolt_3(1);
-  EXPECT_TRUE(reg.powered_on_thunderbolt(tgl_registers::DDI_TC_3));
+  EXPECT_TRUE(reg.powered_on_thunderbolt(DdiId::DDI_TC_3));
   reg.set_reg_value(0).set_powered_on_thunderbolt_4(1);
-  EXPECT_TRUE(reg.powered_on_thunderbolt(tgl_registers::DDI_TC_4));
+  EXPECT_TRUE(reg.powered_on_thunderbolt(DdiId::DDI_TC_4));
   reg.set_reg_value(0).set_powered_on_thunderbolt_5(1);
-  EXPECT_TRUE(reg.powered_on_thunderbolt(tgl_registers::DDI_TC_5));
+  EXPECT_TRUE(reg.powered_on_thunderbolt(DdiId::DDI_TC_5));
   reg.set_reg_value(0).set_powered_on_thunderbolt_6(1);
-  EXPECT_TRUE(reg.powered_on_thunderbolt(tgl_registers::DDI_TC_6));
+  EXPECT_TRUE(reg.powered_on_thunderbolt(DdiId::DDI_TC_6));
 }
 
 TEST(DataBufferControlTest, GetForSlice) {

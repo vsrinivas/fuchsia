@@ -75,10 +75,10 @@ class DdiManager {
   // Returns a null `DdiReference` if the physical layer of `ddi` cannot be
   // enabled. Otherwise, it returns a `DdiReference` to the enabled DDI physical
   // interface.
-  DdiReference GetDdiReference(tgl_registers::Ddi ddi);
+  DdiReference GetDdiReference(DdiId ddi_id);
 
  protected:
-  using DdiIdToPhyMap = std::unordered_map<tgl_registers::Ddi, std::unique_ptr<DdiPhysicalLayer>>;
+  using DdiIdToPhyMap = std::unordered_map<DdiId, std::unique_ptr<DdiPhysicalLayer>>;
 
   // Made protected so that this class cannot be instantiated by itself.
   DdiManager() = default;

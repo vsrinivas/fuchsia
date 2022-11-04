@@ -249,45 +249,45 @@ TEST(DisplayPllControl1Test, PllProgrammingEnabled) {
 TEST(DisplayPllDdiMapKabyLakeTest, DdiClockDisabled) {
   auto dpll_ddi_map = tgl_registers::DisplayPllDdiMapKabyLake::Get().FromValue(0);
 
-  dpll_ddi_map.set_reg_value(0).set_ddi_clock_disabled(tgl_registers::Ddi::DDI_A, true);
+  dpll_ddi_map.set_reg_value(0).set_ddi_clock_disabled(DdiId::DDI_A, true);
   EXPECT_EQ(true, dpll_ddi_map.ddi_a_clock_disabled());
-  EXPECT_EQ(true, dpll_ddi_map.ddi_clock_disabled(tgl_registers::Ddi::DDI_A));
+  EXPECT_EQ(true, dpll_ddi_map.ddi_clock_disabled(DdiId::DDI_A));
 
-  dpll_ddi_map.set_reg_value(0).set_ddi_clock_disabled(tgl_registers::Ddi::DDI_B, true);
+  dpll_ddi_map.set_reg_value(0).set_ddi_clock_disabled(DdiId::DDI_B, true);
   EXPECT_EQ(true, dpll_ddi_map.ddi_b_clock_disabled());
-  EXPECT_EQ(true, dpll_ddi_map.ddi_clock_disabled(tgl_registers::Ddi::DDI_B));
+  EXPECT_EQ(true, dpll_ddi_map.ddi_clock_disabled(DdiId::DDI_B));
 
-  dpll_ddi_map.set_reg_value(0).set_ddi_clock_disabled(tgl_registers::Ddi::DDI_C, true);
+  dpll_ddi_map.set_reg_value(0).set_ddi_clock_disabled(DdiId::DDI_C, true);
   EXPECT_EQ(true, dpll_ddi_map.ddi_c_clock_disabled());
-  EXPECT_EQ(true, dpll_ddi_map.ddi_clock_disabled(tgl_registers::Ddi::DDI_C));
+  EXPECT_EQ(true, dpll_ddi_map.ddi_clock_disabled(DdiId::DDI_C));
 
-  dpll_ddi_map.set_reg_value(0).set_ddi_clock_disabled(tgl_registers::Ddi::DDI_D, true);
+  dpll_ddi_map.set_reg_value(0).set_ddi_clock_disabled(DdiId::DDI_D, true);
   EXPECT_EQ(true, dpll_ddi_map.ddi_d_clock_disabled());
-  EXPECT_EQ(true, dpll_ddi_map.ddi_clock_disabled(tgl_registers::Ddi::DDI_D));
+  EXPECT_EQ(true, dpll_ddi_map.ddi_clock_disabled(DdiId::DDI_D));
 
-  dpll_ddi_map.set_reg_value(0).set_ddi_clock_disabled(tgl_registers::Ddi::DDI_E, true);
+  dpll_ddi_map.set_reg_value(0).set_ddi_clock_disabled(DdiId::DDI_E, true);
   EXPECT_EQ(true, dpll_ddi_map.ddi_e_clock_disabled());
-  EXPECT_EQ(true, dpll_ddi_map.ddi_clock_disabled(tgl_registers::Ddi::DDI_E));
+  EXPECT_EQ(true, dpll_ddi_map.ddi_clock_disabled(DdiId::DDI_E));
 
-  dpll_ddi_map.set_reg_value(0xffff'ffff).set_ddi_clock_disabled(tgl_registers::Ddi::DDI_A, false);
+  dpll_ddi_map.set_reg_value(0xffff'ffff).set_ddi_clock_disabled(DdiId::DDI_A, false);
   EXPECT_EQ(false, dpll_ddi_map.ddi_a_clock_disabled());
-  EXPECT_EQ(false, dpll_ddi_map.ddi_clock_disabled(tgl_registers::Ddi::DDI_A));
+  EXPECT_EQ(false, dpll_ddi_map.ddi_clock_disabled(DdiId::DDI_A));
 
-  dpll_ddi_map.set_reg_value(0xffff'ffff).set_ddi_clock_disabled(tgl_registers::Ddi::DDI_B, false);
+  dpll_ddi_map.set_reg_value(0xffff'ffff).set_ddi_clock_disabled(DdiId::DDI_B, false);
   EXPECT_EQ(false, dpll_ddi_map.ddi_b_clock_disabled());
-  EXPECT_EQ(false, dpll_ddi_map.ddi_clock_disabled(tgl_registers::Ddi::DDI_B));
+  EXPECT_EQ(false, dpll_ddi_map.ddi_clock_disabled(DdiId::DDI_B));
 
-  dpll_ddi_map.set_reg_value(0xffff'ffff).set_ddi_clock_disabled(tgl_registers::Ddi::DDI_C, false);
+  dpll_ddi_map.set_reg_value(0xffff'ffff).set_ddi_clock_disabled(DdiId::DDI_C, false);
   EXPECT_EQ(false, dpll_ddi_map.ddi_c_clock_disabled());
-  EXPECT_EQ(false, dpll_ddi_map.ddi_clock_disabled(tgl_registers::Ddi::DDI_C));
+  EXPECT_EQ(false, dpll_ddi_map.ddi_clock_disabled(DdiId::DDI_C));
 
-  dpll_ddi_map.set_reg_value(0xffff'ffff).set_ddi_clock_disabled(tgl_registers::Ddi::DDI_D, false);
+  dpll_ddi_map.set_reg_value(0xffff'ffff).set_ddi_clock_disabled(DdiId::DDI_D, false);
   EXPECT_EQ(false, dpll_ddi_map.ddi_d_clock_disabled());
-  EXPECT_EQ(false, dpll_ddi_map.ddi_clock_disabled(tgl_registers::Ddi::DDI_D));
+  EXPECT_EQ(false, dpll_ddi_map.ddi_clock_disabled(DdiId::DDI_D));
 
-  dpll_ddi_map.set_reg_value(0xffff'ffff).set_ddi_clock_disabled(tgl_registers::Ddi::DDI_E, false);
+  dpll_ddi_map.set_reg_value(0xffff'ffff).set_ddi_clock_disabled(DdiId::DDI_E, false);
   EXPECT_EQ(false, dpll_ddi_map.ddi_e_clock_disabled());
-  EXPECT_EQ(false, dpll_ddi_map.ddi_clock_disabled(tgl_registers::Ddi::DDI_E));
+  EXPECT_EQ(false, dpll_ddi_map.ddi_clock_disabled(DdiId::DDI_E));
 }
 
 TEST(DisplayPllDdiMapKabyLakeTest, DdiClockDisplayPll) {
@@ -296,132 +296,115 @@ TEST(DisplayPllDdiMapKabyLakeTest, DdiClockDisplayPll) {
   // The test uses DPLL3 because the bit pattern (0b11) requires 0->1
   // transitions on both edges of the bit field.
 
-  dpll_ddi_map.set_reg_value(0).set_ddi_clock_display_pll(tgl_registers::Ddi::DDI_A,
+  dpll_ddi_map.set_reg_value(0).set_ddi_clock_display_pll(DdiId::DDI_A,
                                                           tgl_registers::Dpll::DPLL_3);
   EXPECT_EQ(3u, dpll_ddi_map.ddi_a_clock_display_pll_index());
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_3,
-            dpll_ddi_map.ddi_clock_display_pll(tgl_registers::Ddi::DDI_A));
+  EXPECT_EQ(tgl_registers::Dpll::DPLL_3, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_A));
 
-  dpll_ddi_map.set_reg_value(0).set_ddi_clock_display_pll(tgl_registers::Ddi::DDI_B,
+  dpll_ddi_map.set_reg_value(0).set_ddi_clock_display_pll(DdiId::DDI_B,
                                                           tgl_registers::Dpll::DPLL_3);
   EXPECT_EQ(3u, dpll_ddi_map.ddi_b_clock_display_pll_index());
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_3,
-            dpll_ddi_map.ddi_clock_display_pll(tgl_registers::Ddi::DDI_B));
+  EXPECT_EQ(tgl_registers::Dpll::DPLL_3, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_B));
 
-  dpll_ddi_map.set_reg_value(0).set_ddi_clock_display_pll(tgl_registers::Ddi::DDI_C,
+  dpll_ddi_map.set_reg_value(0).set_ddi_clock_display_pll(DdiId::DDI_C,
                                                           tgl_registers::Dpll::DPLL_3);
   EXPECT_EQ(3u, dpll_ddi_map.ddi_c_clock_display_pll_index());
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_3,
-            dpll_ddi_map.ddi_clock_display_pll(tgl_registers::Ddi::DDI_C));
+  EXPECT_EQ(tgl_registers::Dpll::DPLL_3, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_C));
 
-  dpll_ddi_map.set_reg_value(0).set_ddi_clock_display_pll(tgl_registers::Ddi::DDI_D,
+  dpll_ddi_map.set_reg_value(0).set_ddi_clock_display_pll(DdiId::DDI_D,
                                                           tgl_registers::Dpll::DPLL_3);
   EXPECT_EQ(3u, dpll_ddi_map.ddi_d_clock_display_pll_index());
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_3,
-            dpll_ddi_map.ddi_clock_display_pll(tgl_registers::Ddi::DDI_D));
+  EXPECT_EQ(tgl_registers::Dpll::DPLL_3, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_D));
 
-  dpll_ddi_map.set_reg_value(0).set_ddi_clock_display_pll(tgl_registers::Ddi::DDI_E,
+  dpll_ddi_map.set_reg_value(0).set_ddi_clock_display_pll(DdiId::DDI_E,
                                                           tgl_registers::Dpll::DPLL_3);
   EXPECT_EQ(3u, dpll_ddi_map.ddi_e_clock_display_pll_index());
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_3,
-            dpll_ddi_map.ddi_clock_display_pll(tgl_registers::Ddi::DDI_E));
+  EXPECT_EQ(tgl_registers::Dpll::DPLL_3, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_E));
 
   // The test uses DPLL0 because the bit pattern (0b00) requires 1->0
   // transitions on both edges of the bit field.
 
   dpll_ddi_map.set_reg_value(0xffff'ffff)
-      .set_ddi_clock_display_pll(tgl_registers::Ddi::DDI_A, tgl_registers::Dpll::DPLL_0);
+      .set_ddi_clock_display_pll(DdiId::DDI_A, tgl_registers::Dpll::DPLL_0);
   EXPECT_EQ(0u, dpll_ddi_map.ddi_a_clock_display_pll_index());
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_0,
-            dpll_ddi_map.ddi_clock_display_pll(tgl_registers::Ddi::DDI_A));
+  EXPECT_EQ(tgl_registers::Dpll::DPLL_0, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_A));
 
   dpll_ddi_map.set_reg_value(0xffff'ffff)
-      .set_ddi_clock_display_pll(tgl_registers::Ddi::DDI_B, tgl_registers::Dpll::DPLL_0);
+      .set_ddi_clock_display_pll(DdiId::DDI_B, tgl_registers::Dpll::DPLL_0);
   EXPECT_EQ(0u, dpll_ddi_map.ddi_b_clock_display_pll_index());
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_0,
-            dpll_ddi_map.ddi_clock_display_pll(tgl_registers::Ddi::DDI_B));
+  EXPECT_EQ(tgl_registers::Dpll::DPLL_0, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_B));
 
   dpll_ddi_map.set_reg_value(0xffff'ffff)
-      .set_ddi_clock_display_pll(tgl_registers::Ddi::DDI_C, tgl_registers::Dpll::DPLL_0);
+      .set_ddi_clock_display_pll(DdiId::DDI_C, tgl_registers::Dpll::DPLL_0);
   EXPECT_EQ(0u, dpll_ddi_map.ddi_c_clock_display_pll_index());
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_0,
-            dpll_ddi_map.ddi_clock_display_pll(tgl_registers::Ddi::DDI_C));
+  EXPECT_EQ(tgl_registers::Dpll::DPLL_0, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_C));
 
   dpll_ddi_map.set_reg_value(0xffff'ffff)
-      .set_ddi_clock_display_pll(tgl_registers::Ddi::DDI_D, tgl_registers::Dpll::DPLL_0);
+      .set_ddi_clock_display_pll(DdiId::DDI_D, tgl_registers::Dpll::DPLL_0);
   EXPECT_EQ(0u, dpll_ddi_map.ddi_d_clock_display_pll_index());
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_0,
-            dpll_ddi_map.ddi_clock_display_pll(tgl_registers::Ddi::DDI_D));
+  EXPECT_EQ(tgl_registers::Dpll::DPLL_0, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_D));
 
   dpll_ddi_map.set_reg_value(0xffff'ffff)
-      .set_ddi_clock_display_pll(tgl_registers::Ddi::DDI_E, tgl_registers::Dpll::DPLL_0);
+      .set_ddi_clock_display_pll(DdiId::DDI_E, tgl_registers::Dpll::DPLL_0);
   EXPECT_EQ(0u, dpll_ddi_map.ddi_e_clock_display_pll_index());
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_0,
-            dpll_ddi_map.ddi_clock_display_pll(tgl_registers::Ddi::DDI_E));
+  EXPECT_EQ(tgl_registers::Dpll::DPLL_0, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_E));
 
   // The test covers the bit patterns for DPLL1-2 to catches any renumbering of
   // the DPLL constants.
 
-  dpll_ddi_map.set_reg_value(0).set_ddi_clock_display_pll(tgl_registers::Ddi::DDI_A,
+  dpll_ddi_map.set_reg_value(0).set_ddi_clock_display_pll(DdiId::DDI_A,
                                                           tgl_registers::Dpll::DPLL_1);
   EXPECT_EQ(1u, dpll_ddi_map.ddi_a_clock_display_pll_index());
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_1,
-            dpll_ddi_map.ddi_clock_display_pll(tgl_registers::Ddi::DDI_A));
+  EXPECT_EQ(tgl_registers::Dpll::DPLL_1, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_A));
 
-  dpll_ddi_map.set_reg_value(0).set_ddi_clock_display_pll(tgl_registers::Ddi::DDI_A,
+  dpll_ddi_map.set_reg_value(0).set_ddi_clock_display_pll(DdiId::DDI_A,
                                                           tgl_registers::Dpll::DPLL_2);
   EXPECT_EQ(2u, dpll_ddi_map.ddi_a_clock_display_pll_index());
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_2,
-            dpll_ddi_map.ddi_clock_display_pll(tgl_registers::Ddi::DDI_A));
+  EXPECT_EQ(tgl_registers::Dpll::DPLL_2, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_A));
 }
 
 TEST(DisplayPllDdiMapKabyLakeTest, DdiClockProgrammingEnabled) {
   auto dpll_ddi_map = tgl_registers::DisplayPllDdiMapKabyLake::Get().FromValue(0);
 
-  dpll_ddi_map.set_reg_value(0).set_ddi_clock_programming_enabled(tgl_registers::Ddi::DDI_A, true);
+  dpll_ddi_map.set_reg_value(0).set_ddi_clock_programming_enabled(DdiId::DDI_A, true);
   EXPECT_EQ(true, dpll_ddi_map.ddi_a_clock_programming_enabled());
-  EXPECT_EQ(true, dpll_ddi_map.ddi_clock_programming_enabled(tgl_registers::Ddi::DDI_A));
+  EXPECT_EQ(true, dpll_ddi_map.ddi_clock_programming_enabled(DdiId::DDI_A));
 
-  dpll_ddi_map.set_reg_value(0).set_ddi_clock_programming_enabled(tgl_registers::Ddi::DDI_B, true);
+  dpll_ddi_map.set_reg_value(0).set_ddi_clock_programming_enabled(DdiId::DDI_B, true);
   EXPECT_EQ(true, dpll_ddi_map.ddi_b_clock_programming_enabled());
-  EXPECT_EQ(true, dpll_ddi_map.ddi_clock_programming_enabled(tgl_registers::Ddi::DDI_B));
+  EXPECT_EQ(true, dpll_ddi_map.ddi_clock_programming_enabled(DdiId::DDI_B));
 
-  dpll_ddi_map.set_reg_value(0).set_ddi_clock_programming_enabled(tgl_registers::Ddi::DDI_C, true);
+  dpll_ddi_map.set_reg_value(0).set_ddi_clock_programming_enabled(DdiId::DDI_C, true);
   EXPECT_EQ(true, dpll_ddi_map.ddi_c_clock_programming_enabled());
-  EXPECT_EQ(true, dpll_ddi_map.ddi_clock_programming_enabled(tgl_registers::Ddi::DDI_C));
+  EXPECT_EQ(true, dpll_ddi_map.ddi_clock_programming_enabled(DdiId::DDI_C));
 
-  dpll_ddi_map.set_reg_value(0).set_ddi_clock_programming_enabled(tgl_registers::Ddi::DDI_D, true);
+  dpll_ddi_map.set_reg_value(0).set_ddi_clock_programming_enabled(DdiId::DDI_D, true);
   EXPECT_EQ(true, dpll_ddi_map.ddi_d_clock_programming_enabled());
-  EXPECT_EQ(true, dpll_ddi_map.ddi_clock_programming_enabled(tgl_registers::Ddi::DDI_D));
+  EXPECT_EQ(true, dpll_ddi_map.ddi_clock_programming_enabled(DdiId::DDI_D));
 
-  dpll_ddi_map.set_reg_value(0).set_ddi_clock_programming_enabled(tgl_registers::Ddi::DDI_E, true);
+  dpll_ddi_map.set_reg_value(0).set_ddi_clock_programming_enabled(DdiId::DDI_E, true);
   EXPECT_EQ(true, dpll_ddi_map.ddi_e_clock_programming_enabled());
-  EXPECT_EQ(true, dpll_ddi_map.ddi_clock_programming_enabled(tgl_registers::Ddi::DDI_E));
+  EXPECT_EQ(true, dpll_ddi_map.ddi_clock_programming_enabled(DdiId::DDI_E));
 
-  dpll_ddi_map.set_reg_value(0xffff'ffff)
-      .set_ddi_clock_programming_enabled(tgl_registers::Ddi::DDI_A, false);
+  dpll_ddi_map.set_reg_value(0xffff'ffff).set_ddi_clock_programming_enabled(DdiId::DDI_A, false);
   EXPECT_EQ(false, dpll_ddi_map.ddi_a_clock_programming_enabled());
-  EXPECT_EQ(false, dpll_ddi_map.ddi_clock_programming_enabled(tgl_registers::Ddi::DDI_A));
+  EXPECT_EQ(false, dpll_ddi_map.ddi_clock_programming_enabled(DdiId::DDI_A));
 
-  dpll_ddi_map.set_reg_value(0xffff'ffff)
-      .set_ddi_clock_programming_enabled(tgl_registers::Ddi::DDI_B, false);
+  dpll_ddi_map.set_reg_value(0xffff'ffff).set_ddi_clock_programming_enabled(DdiId::DDI_B, false);
   EXPECT_EQ(false, dpll_ddi_map.ddi_b_clock_programming_enabled());
-  EXPECT_EQ(false, dpll_ddi_map.ddi_clock_programming_enabled(tgl_registers::Ddi::DDI_B));
+  EXPECT_EQ(false, dpll_ddi_map.ddi_clock_programming_enabled(DdiId::DDI_B));
 
-  dpll_ddi_map.set_reg_value(0xffff'ffff)
-      .set_ddi_clock_programming_enabled(tgl_registers::Ddi::DDI_C, false);
+  dpll_ddi_map.set_reg_value(0xffff'ffff).set_ddi_clock_programming_enabled(DdiId::DDI_C, false);
   EXPECT_EQ(false, dpll_ddi_map.ddi_c_clock_programming_enabled());
-  EXPECT_EQ(false, dpll_ddi_map.ddi_clock_programming_enabled(tgl_registers::Ddi::DDI_C));
+  EXPECT_EQ(false, dpll_ddi_map.ddi_clock_programming_enabled(DdiId::DDI_C));
 
-  dpll_ddi_map.set_reg_value(0xffff'ffff)
-      .set_ddi_clock_programming_enabled(tgl_registers::Ddi::DDI_D, false);
+  dpll_ddi_map.set_reg_value(0xffff'ffff).set_ddi_clock_programming_enabled(DdiId::DDI_D, false);
   EXPECT_EQ(false, dpll_ddi_map.ddi_d_clock_programming_enabled());
-  EXPECT_EQ(false, dpll_ddi_map.ddi_clock_programming_enabled(tgl_registers::Ddi::DDI_D));
+  EXPECT_EQ(false, dpll_ddi_map.ddi_clock_programming_enabled(DdiId::DDI_D));
 
-  dpll_ddi_map.set_reg_value(0xffff'ffff)
-      .set_ddi_clock_programming_enabled(tgl_registers::Ddi::DDI_E, false);
+  dpll_ddi_map.set_reg_value(0xffff'ffff).set_ddi_clock_programming_enabled(DdiId::DDI_E, false);
   EXPECT_EQ(false, dpll_ddi_map.ddi_e_clock_programming_enabled());
-  EXPECT_EQ(false, dpll_ddi_map.ddi_clock_programming_enabled(tgl_registers::Ddi::DDI_E));
+  EXPECT_EQ(false, dpll_ddi_map.ddi_clock_programming_enabled(DdiId::DDI_E));
 }
 
 TEST(DisplayPllDcoFrequencyKabyLakeTest, DcoFrequencyMultiplier) {

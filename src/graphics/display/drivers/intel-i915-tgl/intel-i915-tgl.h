@@ -145,11 +145,11 @@ class Controller : public DeviceType,
   // state and makes the class state machine harder to reason about.
   IgdOpRegion* igd_opregion_for_testing() { return &igd_opregion_; }
 
-  void HandleHotplug(tgl_registers::Ddi ddi, bool long_pulse);
+  void HandleHotplug(DdiId ddi_id, bool long_pulse);
   void HandlePipeVsync(tgl_registers::Pipe pipe_num, zx_time_t timestamp);
 
   void ResetPipePlaneBuffers(tgl_registers::Pipe pipe);
-  bool ResetDdi(tgl_registers::Ddi ddi, std::optional<tgl_registers::Trans> transcoder);
+  bool ResetDdi(DdiId ddi_id, std::optional<tgl_registers::Trans> transcoder);
 
   void SetDpllManagerForTesting(std::unique_ptr<DisplayPllManager> dpll_manager) {
     dpll_manager_ = std::move(dpll_manager);
@@ -187,10 +187,9 @@ class Controller : public DeviceType,
   // Disables the PCU (power controller)'s automated voltage adjustments.
   void DisableSystemAgentGeyserville();
 
-  std::unique_ptr<DisplayDevice> QueryDisplay(tgl_registers::Ddi ddi, uint64_t display_id)
+  std::unique_ptr<DisplayDevice> QueryDisplay(DdiId ddi_id, uint64_t display_id)
       __TA_REQUIRES(display_lock_);
-  bool LoadHardwareState(tgl_registers::Ddi ddi, DisplayDevice* device)
-      __TA_REQUIRES(display_lock_);
+  bool LoadHardwareState(DdiId ddi_id, DisplayDevice* device) __TA_REQUIRES(display_lock_);
   zx_status_t AddDisplay(std::unique_ptr<DisplayDevice> display) __TA_REQUIRES(display_lock_);
   void RemoveDisplay(std::unique_ptr<DisplayDevice> display) __TA_REQUIRES(display_lock_);
   bool BringUpDisplayEngine(bool resume) __TA_REQUIRES(display_lock_);
@@ -290,7 +289,7 @@ class Controller : public DeviceType,
 
   std::unique_ptr<DisplayPllManager> dpll_manager_;
 
-  cpp20::span<const tgl_registers::Ddi> ddis_;
+  cpp20::span<const DdiId> ddis_;
   fbl::Vector<GMBusI2c> gmbus_i2cs_;
   fbl::Vector<DpAux> dp_auxs_;
 

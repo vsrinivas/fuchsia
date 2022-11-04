@@ -34,10 +34,10 @@ HotplugDetectionResult DetectHotplugSkylake(fdf::MmioBuffer* mmio_space) {
   auto sde_int_identity =
       tgl_registers::SdeInterruptBase::Get(tgl_registers ::SdeInterruptBase::kSdeIntIdentity)
           .ReadFrom(mmio_space);
-  auto hp_ctrl1 = tgl_registers::SouthHotplugCtrl ::Get(tgl_registers::DDI_A).ReadFrom(mmio_space);
-  auto hp_ctrl2 = tgl_registers::SouthHotplugCtrl ::Get(tgl_registers::DDI_E).ReadFrom(mmio_space);
-  for (auto ddi : tgl_registers::Ddis<tgl_registers::Platform::kKabyLake>()) {
-    auto hp_ctrl = ddi < tgl_registers::DDI_E ? hp_ctrl1 : hp_ctrl2;
+  auto hp_ctrl1 = tgl_registers::SouthHotplugCtrl ::Get(DdiId::DDI_A).ReadFrom(mmio_space);
+  auto hp_ctrl2 = tgl_registers::SouthHotplugCtrl ::Get(DdiId::DDI_E).ReadFrom(mmio_space);
+  for (auto ddi : DdiIds<tgl_registers::Platform::kKabyLake>()) {
+    auto hp_ctrl = ddi < DdiId::DDI_E ? hp_ctrl1 : hp_ctrl2;
     result.detected[ddi] =
         sde_int_identity.skl_ddi_bit(ddi).get() &
         (hp_ctrl.hpd_long_pulse(ddi).get() || hp_ctrl.hpd_short_pulse(ddi).get());
@@ -61,30 +61,28 @@ HotplugDetectionResult DetectHotplugTigerLake(fdf::MmioBuffer* mmio_space) {
       tgl_registers::HpdInterruptBase::Get(tgl_registers::HpdInterruptBase::kHpdIntIdentity)
           .ReadFrom(mmio_space);
 
-  auto pch_ddi_ctrl =
-      tgl_registers::IclSouthHotplugCtrl::Get(tgl_registers::DDI_A).ReadFrom(mmio_space);
-  auto pch_tc_ctrl =
-      tgl_registers::IclSouthHotplugCtrl::Get(tgl_registers::DDI_TC_1).ReadFrom(mmio_space);
+  auto pch_ddi_ctrl = tgl_registers::IclSouthHotplugCtrl::Get(DdiId::DDI_A).ReadFrom(mmio_space);
+  auto pch_tc_ctrl = tgl_registers::IclSouthHotplugCtrl::Get(DdiId::DDI_TC_1).ReadFrom(mmio_space);
 
   auto tbt_ctrl = tgl_registers::TbtHotplugCtrl::Get().ReadFrom(mmio_space);
   auto tc_ctrl = tgl_registers::TcHotplugCtrl::Get().ReadFrom(mmio_space);
 
-  for (auto ddi : tgl_registers::Ddis<tgl_registers::Platform::kTigerLake>()) {
+  for (auto ddi : DdiIds<tgl_registers::Platform::kTigerLake>()) {
     switch (ddi) {
-      case tgl_registers::DDI_A:
-      case tgl_registers::DDI_B:
-      case tgl_registers::DDI_C: {
+      case DdiId::DDI_A:
+      case DdiId::DDI_B:
+      case DdiId::DDI_C: {
         result.detected[ddi] =
             sde_int_identity.icl_ddi_bit(ddi).get() &
             (pch_ddi_ctrl.hpd_long_pulse(ddi).get() || pch_ddi_ctrl.hpd_short_pulse(ddi).get());
         result.long_pulse[ddi] = pch_ddi_ctrl.hpd_long_pulse(ddi).get();
       } break;
-      case tgl_registers::DDI_TC_1:
-      case tgl_registers::DDI_TC_2:
-      case tgl_registers::DDI_TC_3:
-      case tgl_registers::DDI_TC_4:
-      case tgl_registers::DDI_TC_5:
-      case tgl_registers::DDI_TC_6: {
+      case DdiId::DDI_TC_1:
+      case DdiId::DDI_TC_2:
+      case DdiId::DDI_TC_3:
+      case DdiId::DDI_TC_4:
+      case DdiId::DDI_TC_5:
+      case DdiId::DDI_TC_6: {
         bool sde_detected = sde_int_identity.icl_ddi_bit(ddi).get();
         bool tbt_detected = hpd_int_identity.tbt_hotplug(ddi).get();
         bool tc_detected = hpd_int_identity.tc_hotplug(ddi).get();
@@ -110,26 +108,26 @@ HotplugDetectionResult DetectHotplugTigerLake(fdf::MmioBuffer* mmio_space) {
 void EnableHotplugInterruptsSkylake(fdf::MmioBuffer* mmio_space) {
   auto pch_fuses = tgl_registers::PchDisplayFuses::Get().ReadFrom(mmio_space);
 
-  for (const auto ddi : tgl_registers::Ddis<tgl_registers::Platform::kKabyLake>()) {
+  for (const auto ddi : DdiIds<tgl_registers::Platform::kKabyLake>()) {
     bool enabled = false;
     switch (ddi) {
-      case tgl_registers::DDI_A:
-      case tgl_registers::DDI_E:
+      case DdiId::DDI_A:
+      case DdiId::DDI_E:
         enabled = true;
         break;
-      case tgl_registers::DDI_B:
+      case DdiId::DDI_B:
         enabled = pch_fuses.port_b_present();
         break;
-      case tgl_registers::DDI_C:
+      case DdiId::DDI_C:
         enabled = pch_fuses.port_c_present();
         break;
-      case tgl_registers::DDI_D:
+      case DdiId::DDI_D:
         enabled = pch_fuses.port_d_present();
         break;
-      case tgl_registers::DDI_TC_3:
-      case tgl_registers::DDI_TC_4:
-      case tgl_registers::DDI_TC_5:
-      case tgl_registers::DDI_TC_6:
+      case DdiId::DDI_TC_3:
+      case DdiId::DDI_TC_4:
+      case DdiId::DDI_TC_5:
+      case DdiId::DDI_TC_6:
         ZX_DEBUG_ASSERT_MSG(false, "Unsupported DDI (%d)", ddi);
         break;
     }
@@ -156,14 +154,14 @@ void EnableHotplugInterruptsTigerLake(fdf::MmioBuffer* mmio_space) {
   constexpr uint32_t kSHPD_FILTER_CNT_500_ADJ = 0x001d9;
   mmio_space->Write32(kSHPD_FILTER_CNT_500_ADJ, kSHPD_FILTER_CNT);
 
-  for (const auto ddi : tgl_registers::Ddis<tgl_registers::Platform::kTigerLake>()) {
+  for (const auto ddi : DdiIds<tgl_registers::Platform::kTigerLake>()) {
     switch (ddi) {
-      case tgl_registers::DDI_TC_1:
-      case tgl_registers::DDI_TC_2:
-      case tgl_registers::DDI_TC_3:
-      case tgl_registers::DDI_TC_4:
-      case tgl_registers::DDI_TC_5:
-      case tgl_registers::DDI_TC_6: {
+      case DdiId::DDI_TC_1:
+      case DdiId::DDI_TC_2:
+      case DdiId::DDI_TC_3:
+      case DdiId::DDI_TC_4:
+      case DdiId::DDI_TC_5:
+      case DdiId::DDI_TC_6: {
         auto hp_ctrl = tgl_registers::TcHotplugCtrl::Get().ReadFrom(mmio_space);
         hp_ctrl.hpd_enable(ddi).set(1);
         hp_ctrl.WriteTo(mmio_space);
@@ -182,9 +180,9 @@ void EnableHotplugInterruptsTigerLake(fdf::MmioBuffer* mmio_space) {
         enable.WriteTo(mmio_space);
       }
         __FALLTHROUGH;
-      case tgl_registers::DDI_A:
-      case tgl_registers::DDI_B:
-      case tgl_registers::DDI_C: {
+      case DdiId::DDI_A:
+      case DdiId::DDI_B:
+      case DdiId::DDI_C: {
         auto hp_ctrl = tgl_registers::IclSouthHotplugCtrl::Get(ddi).ReadFrom(mmio_space);
         hp_ctrl.hpd_enable(ddi).set(1);
         hp_ctrl.WriteTo(mmio_space);
@@ -253,7 +251,7 @@ int Interrupts::IrqLoop() {
     if (pch_display_hotplug_pending || display_hotplug_pending) {
       auto detect_result = is_tgl(device_id_) ? DetectHotplugTigerLake(mmio_space_)
                                               : DetectHotplugSkylake(mmio_space_);
-      for (auto ddi : GetDdis(device_id_)) {
+      for (auto ddi : GetDdiIds(device_id_)) {
         if (detect_result.detected[ddi]) {
           zxlogf(TRACE, "Detected hot plug interrupt on ddi %d", ddi);
           hotplug_callback_(ddi, detect_result.long_pulse[ddi]);

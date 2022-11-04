@@ -42,18 +42,18 @@ class SdeInterruptBase : public hwreg::RegisterBase<SdeInterruptBase, uint32_t> 
   static constexpr uint32_t kSdeIntIdentity = 0xc4008;
   static constexpr uint32_t kSdeIntEnable = 0xc400c;
 
-  hwreg::BitfieldRef<uint32_t> skl_ddi_bit(Ddi ddi) {
+  hwreg::BitfieldRef<uint32_t> skl_ddi_bit(i915_tgl::DdiId ddi_id) {
     uint32_t bit;
-    switch (ddi) {
-      case DDI_A:
+    switch (ddi_id) {
+      case i915_tgl::DdiId::DDI_A:
         bit = 24;
         break;
-      case DDI_B:
-      case DDI_C:
-      case DDI_D:
-        bit = 20 + ddi;
+      case i915_tgl::DdiId::DDI_B:
+      case i915_tgl::DdiId::DDI_C:
+      case i915_tgl::DdiId::DDI_D:
+        bit = 20 + ddi_id;
         break;
-      case DDI_E:
+      case i915_tgl::DdiId::DDI_E:
         bit = 25;
         break;
       default:
@@ -62,21 +62,21 @@ class SdeInterruptBase : public hwreg::RegisterBase<SdeInterruptBase, uint32_t> 
     return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
   }
 
-  hwreg::BitfieldRef<uint32_t> icl_ddi_bit(Ddi ddi) {
+  hwreg::BitfieldRef<uint32_t> icl_ddi_bit(i915_tgl::DdiId ddi_id) {
     uint32_t bit;
-    switch (ddi) {
-      case DDI_A:
-      case DDI_B:
-      case DDI_C:
-        bit = 16 + ddi - DDI_A;
+    switch (ddi_id) {
+      case i915_tgl::DdiId::DDI_A:
+      case i915_tgl::DdiId::DDI_B:
+      case i915_tgl::DdiId::DDI_C:
+        bit = 16 + ddi_id - i915_tgl::DdiId::DDI_A;
         break;
-      case DDI_TC_1:
-      case DDI_TC_2:
-      case DDI_TC_3:
-      case DDI_TC_4:
-      case DDI_TC_5:
-      case DDI_TC_6:
-        bit = 24 + ddi - DDI_TC_1;
+      case i915_tgl::DdiId::DDI_TC_1:
+      case i915_tgl::DdiId::DDI_TC_2:
+      case i915_tgl::DdiId::DDI_TC_3:
+      case i915_tgl::DdiId::DDI_TC_4:
+      case i915_tgl::DdiId::DDI_TC_5:
+      case i915_tgl::DdiId::DDI_TC_6:
+        bit = 24 + ddi_id - i915_tgl::DdiId::DDI_TC_1;
         break;
       default:
         bit = -1;
@@ -94,15 +94,17 @@ class HpdInterruptBase : public hwreg::RegisterBase<HpdInterruptBase, uint32_t> 
   static constexpr uint32_t kHpdIntIdentity = 0x44478;
   static constexpr uint32_t kHpdIntEnable = 0x4447c;
 
-  hwreg::BitfieldRef<uint32_t> tc_hotplug(Ddi ddi) {
-    ZX_DEBUG_ASSERT(ddi >= DDI_TC_1 && ddi <= DDI_TC_6);
-    uint32_t bit = 16 + ddi - DDI_TC_1;
+  hwreg::BitfieldRef<uint32_t> tc_hotplug(i915_tgl::DdiId ddi_id) {
+    ZX_DEBUG_ASSERT(ddi_id >= i915_tgl::DdiId::DDI_TC_1);
+    ZX_DEBUG_ASSERT(ddi_id <= i915_tgl::DdiId::DDI_TC_6);
+    uint32_t bit = 16 + ddi_id - i915_tgl::DdiId::DDI_TC_1;
     return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
   }
 
-  hwreg::BitfieldRef<uint32_t> tbt_hotplug(Ddi ddi) {
-    ZX_DEBUG_ASSERT(ddi >= DDI_TC_1 && ddi <= DDI_TC_6);
-    uint32_t bit = ddi - DDI_TC_1;
+  hwreg::BitfieldRef<uint32_t> tbt_hotplug(i915_tgl::DdiId ddi_id) {
+    ZX_DEBUG_ASSERT(ddi_id >= i915_tgl::DdiId::DDI_TC_1);
+    ZX_DEBUG_ASSERT(ddi_id <= i915_tgl::DdiId::DDI_TC_6);
+    uint32_t bit = ddi_id - i915_tgl::DdiId::DDI_TC_1;
     return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
   }
 
@@ -112,18 +114,18 @@ class HpdInterruptBase : public hwreg::RegisterBase<HpdInterruptBase, uint32_t> 
 // TBT_HOTPLUG_CTL : Thunderbolt Hot Plug Control (since gen11)
 class TbtHotplugCtrl : public hwreg::RegisterBase<TbtHotplugCtrl, uint32_t> {
  public:
-  hwreg::BitfieldRef<uint32_t> hpd_enable(Ddi ddi) {
-    uint32_t bit = ddi_to_first_bit(ddi) + kHpdEnableBitSubOffset;
+  hwreg::BitfieldRef<uint32_t> hpd_enable(i915_tgl::DdiId ddi_id) {
+    uint32_t bit = ddi_id_to_first_bit(ddi_id) + kHpdEnableBitSubOffset;
     return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
   }
 
-  hwreg::BitfieldRef<uint32_t> hpd_long_pulse(Ddi ddi) {
-    uint32_t bit = ddi_to_first_bit(ddi) + kHpdLongPulseBitSubOffset;
+  hwreg::BitfieldRef<uint32_t> hpd_long_pulse(i915_tgl::DdiId ddi_id) {
+    uint32_t bit = ddi_id_to_first_bit(ddi_id) + kHpdLongPulseBitSubOffset;
     return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
   }
 
-  hwreg::BitfieldRef<uint32_t> hpd_short_pulse(Ddi ddi) {
-    uint32_t bit = ddi_to_first_bit(ddi) + kHpdShortPulseBitSubOffset;
+  hwreg::BitfieldRef<uint32_t> hpd_short_pulse(i915_tgl::DdiId ddi_id) {
+    uint32_t bit = ddi_id_to_first_bit(ddi_id) + kHpdShortPulseBitSubOffset;
     return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
   }
 
@@ -136,20 +138,20 @@ class TbtHotplugCtrl : public hwreg::RegisterBase<TbtHotplugCtrl, uint32_t> {
   static constexpr uint32_t kHpdLongPulseBitSubOffset = 1;
   static constexpr uint32_t kHpdEnableBitSubOffset = 3;
 
-  static uint32_t ddi_to_first_bit(Ddi ddi) {
-    switch (ddi) {
-      case DDI_A:
-      case DDI_B:
-      case DDI_C:
+  static uint32_t ddi_id_to_first_bit(i915_tgl::DdiId ddi_id) {
+    switch (ddi_id) {
+      case i915_tgl::DdiId::DDI_A:
+      case i915_tgl::DdiId::DDI_B:
+      case i915_tgl::DdiId::DDI_C:
         ZX_DEBUG_ASSERT_MSG(false, "Use south display hot plug registers for DDI A-C");
         return -1;
-      case DDI_TC_1:
-      case DDI_TC_2:
-      case DDI_TC_3:
-      case DDI_TC_4:
-      case DDI_TC_5:
-      case DDI_TC_6:
-        return 4 * (ddi - DDI_TC_1);
+      case i915_tgl::DdiId::DDI_TC_1:
+      case i915_tgl::DdiId::DDI_TC_2:
+      case i915_tgl::DdiId::DDI_TC_3:
+      case i915_tgl::DdiId::DDI_TC_4:
+      case i915_tgl::DdiId::DDI_TC_5:
+      case i915_tgl::DdiId::DDI_TC_6:
+        return 4 * (ddi_id - i915_tgl::DdiId::DDI_TC_1);
     }
   }
 };
@@ -157,18 +159,18 @@ class TbtHotplugCtrl : public hwreg::RegisterBase<TbtHotplugCtrl, uint32_t> {
 // TC_HOTPLUG_CTL : Type-C Hot Plug Control (since gen11)
 class TcHotplugCtrl : public hwreg::RegisterBase<TcHotplugCtrl, uint32_t> {
  public:
-  hwreg::BitfieldRef<uint32_t> hpd_enable(Ddi ddi) {
-    uint32_t bit = ddi_to_first_bit(ddi) + kHpdEnableBitSubOffset;
+  hwreg::BitfieldRef<uint32_t> hpd_enable(i915_tgl::DdiId ddi_id) {
+    uint32_t bit = ddi_id_to_first_bit(ddi_id) + kHpdEnableBitSubOffset;
     return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
   }
 
-  hwreg::BitfieldRef<uint32_t> hpd_long_pulse(Ddi ddi) {
-    uint32_t bit = ddi_to_first_bit(ddi) + kHpdLongPulseBitSubOffset;
+  hwreg::BitfieldRef<uint32_t> hpd_long_pulse(i915_tgl::DdiId ddi_id) {
+    uint32_t bit = ddi_id_to_first_bit(ddi_id) + kHpdLongPulseBitSubOffset;
     return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
   }
 
-  hwreg::BitfieldRef<uint32_t> hpd_short_pulse(Ddi ddi) {
-    uint32_t bit = ddi_to_first_bit(ddi) + kHpdShortPulseBitSubOffset;
+  hwreg::BitfieldRef<uint32_t> hpd_short_pulse(i915_tgl::DdiId ddi_id) {
+    uint32_t bit = ddi_id_to_first_bit(ddi_id) + kHpdShortPulseBitSubOffset;
     return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
   }
 
@@ -181,20 +183,20 @@ class TcHotplugCtrl : public hwreg::RegisterBase<TcHotplugCtrl, uint32_t> {
   static constexpr uint32_t kHpdLongPulseBitSubOffset = 1;
   static constexpr uint32_t kHpdEnableBitSubOffset = 3;
 
-  static uint32_t ddi_to_first_bit(Ddi ddi) {
-    switch (ddi) {
-      case DDI_A:
-      case DDI_B:
-      case DDI_C:
+  static uint32_t ddi_id_to_first_bit(i915_tgl::DdiId ddi_id) {
+    switch (ddi_id) {
+      case i915_tgl::DdiId::DDI_A:
+      case i915_tgl::DdiId::DDI_B:
+      case i915_tgl::DdiId::DDI_C:
         ZX_DEBUG_ASSERT_MSG(false, "Use south display hot plug registers for DDI A-C");
         return -1;
-      case DDI_TC_1:
-      case DDI_TC_2:
-      case DDI_TC_3:
-      case DDI_TC_4:
-      case DDI_TC_5:
-      case DDI_TC_6:
-        return 4 * (ddi - DDI_TC_1);
+      case i915_tgl::DdiId::DDI_TC_1:
+      case i915_tgl::DdiId::DDI_TC_2:
+      case i915_tgl::DdiId::DDI_TC_3:
+      case i915_tgl::DdiId::DDI_TC_4:
+      case i915_tgl::DdiId::DDI_TC_5:
+      case i915_tgl::DdiId::DDI_TC_6:
+        return 4 * (ddi_id - i915_tgl::DdiId::DDI_TC_1);
     }
   }
 };
@@ -202,23 +204,24 @@ class TcHotplugCtrl : public hwreg::RegisterBase<TcHotplugCtrl, uint32_t> {
 // SHOTPLUG_CTL_DDI + SHOTPLUG_CTL_TC
 class IclSouthHotplugCtrl : public hwreg::RegisterBase<IclSouthHotplugCtrl, uint32_t> {
  public:
-  hwreg::BitfieldRef<uint32_t> hpd_enable(Ddi ddi) {
-    uint32_t bit = ddi_to_first_bit(ddi) + kHpdEnableBitSubOffset;
+  hwreg::BitfieldRef<uint32_t> hpd_enable(i915_tgl::DdiId ddi_id) {
+    uint32_t bit = ddi_id_to_first_bit(ddi_id) + kHpdEnableBitSubOffset;
     return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
   }
 
-  hwreg::BitfieldRef<uint32_t> hpd_long_pulse(Ddi ddi) {
-    uint32_t bit = ddi_to_first_bit(ddi) + kHpdLongPulseBitSubOffset;
+  hwreg::BitfieldRef<uint32_t> hpd_long_pulse(i915_tgl::DdiId ddi_id) {
+    uint32_t bit = ddi_id_to_first_bit(ddi_id) + kHpdLongPulseBitSubOffset;
     return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
   }
 
-  hwreg::BitfieldRef<uint32_t> hpd_short_pulse(Ddi ddi) {
-    uint32_t bit = ddi_to_first_bit(ddi) + kHpdShortPulseBitSubOffset;
+  hwreg::BitfieldRef<uint32_t> hpd_short_pulse(i915_tgl::DdiId ddi_id) {
+    uint32_t bit = ddi_id_to_first_bit(ddi_id) + kHpdShortPulseBitSubOffset;
     return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
   }
 
-  static auto Get(Ddi ddi) {
-    return hwreg::RegisterAddr<IclSouthHotplugCtrl>(ddi >= DDI_TC_1 ? kTcOffset : kDdiOffset);
+  static auto Get(i915_tgl::DdiId ddi_id) {
+    return hwreg::RegisterAddr<IclSouthHotplugCtrl>(
+        ddi_id >= i915_tgl::DdiId::DDI_TC_1 ? kTcOffset : kDdiOffset);
   }
 
  private:
@@ -229,19 +232,19 @@ class IclSouthHotplugCtrl : public hwreg::RegisterBase<IclSouthHotplugCtrl, uint
   static constexpr uint32_t kHpdLongPulseBitSubOffset = 1;
   static constexpr uint32_t kHpdEnableBitSubOffset = 3;
 
-  static uint32_t ddi_to_first_bit(Ddi ddi) {
-    switch (ddi) {
-      case DDI_A:
-      case DDI_B:
-      case DDI_C:
-        return 4 * (ddi - DDI_A);  // SHOTPLUG_CTL_DDI
-      case DDI_TC_1:
-      case DDI_TC_2:
-      case DDI_TC_3:
-      case DDI_TC_4:
-      case DDI_TC_5:
-      case DDI_TC_6:
-        return 4 * (ddi - DDI_TC_1);  // SHOTPLUG_CTL_TC
+  static uint32_t ddi_id_to_first_bit(i915_tgl::DdiId ddi_id) {
+    switch (ddi_id) {
+      case i915_tgl::DdiId::DDI_A:
+      case i915_tgl::DdiId::DDI_B:
+      case i915_tgl::DdiId::DDI_C:
+        return 4 * (ddi_id - i915_tgl::DdiId::DDI_A);  // SHOTPLUG_CTL_DDI
+      case i915_tgl::DdiId::DDI_TC_1:
+      case i915_tgl::DdiId::DDI_TC_2:
+      case i915_tgl::DdiId::DDI_TC_3:
+      case i915_tgl::DdiId::DDI_TC_4:
+      case i915_tgl::DdiId::DDI_TC_5:
+      case i915_tgl::DdiId::DDI_TC_6:
+        return 4 * (ddi_id - i915_tgl::DdiId::DDI_TC_1);  // SHOTPLUG_CTL_TC
       default:
         return -1;
     }
@@ -251,23 +254,24 @@ class IclSouthHotplugCtrl : public hwreg::RegisterBase<IclSouthHotplugCtrl, uint
 // SHOTPLUG_CTL + SHOTPLUG_CTL2
 class SouthHotplugCtrl : public hwreg::RegisterBase<SouthHotplugCtrl, uint32_t> {
  public:
-  hwreg::BitfieldRef<uint32_t> hpd_enable(Ddi ddi) {
-    uint32_t bit = ddi_to_first_bit(ddi) + kHpdEnableBitSubOffset;
+  hwreg::BitfieldRef<uint32_t> hpd_enable(i915_tgl::DdiId ddi_id) {
+    uint32_t bit = ddi_id_to_first_bit(ddi_id) + kHpdEnableBitSubOffset;
     return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
   }
 
-  hwreg::BitfieldRef<uint32_t> hpd_long_pulse(Ddi ddi) {
-    uint32_t bit = ddi_to_first_bit(ddi) + kHpdLongPulseBitSubOffset;
+  hwreg::BitfieldRef<uint32_t> hpd_long_pulse(i915_tgl::DdiId ddi_id) {
+    uint32_t bit = ddi_id_to_first_bit(ddi_id) + kHpdLongPulseBitSubOffset;
     return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
   }
 
-  hwreg::BitfieldRef<uint32_t> hpd_short_pulse(Ddi ddi) {
-    uint32_t bit = ddi_to_first_bit(ddi) + kHpdShortPulseBitSubOffset;
+  hwreg::BitfieldRef<uint32_t> hpd_short_pulse(i915_tgl::DdiId ddi_id) {
+    uint32_t bit = ddi_id_to_first_bit(ddi_id) + kHpdShortPulseBitSubOffset;
     return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
   }
 
-  static auto Get(Ddi ddi) {
-    return hwreg::RegisterAddr<SouthHotplugCtrl>(ddi == DDI_E ? kOffset2 : kOffset);
+  static auto Get(i915_tgl::DdiId ddi_id) {
+    return hwreg::RegisterAddr<SouthHotplugCtrl>(ddi_id == i915_tgl::DdiId::DDI_E ? kOffset2
+                                                                                  : kOffset);
   }
 
  private:
@@ -278,15 +282,15 @@ class SouthHotplugCtrl : public hwreg::RegisterBase<SouthHotplugCtrl, uint32_t> 
   static constexpr uint32_t kHpdLongPulseBitSubOffset = 1;
   static constexpr uint32_t kHpdEnableBitSubOffset = 4;
 
-  static uint32_t ddi_to_first_bit(Ddi ddi) {
-    switch (ddi) {
-      case DDI_A:
+  static uint32_t ddi_id_to_first_bit(i915_tgl::DdiId ddi_id) {
+    switch (ddi_id) {
+      case i915_tgl::DdiId::DDI_A:
         return 24;
-      case DDI_B:
-      case DDI_C:
-      case DDI_D:
-        return 8 * (ddi - 1);
-      case DDI_E:
+      case i915_tgl::DdiId::DDI_B:
+      case i915_tgl::DdiId::DDI_C:
+      case i915_tgl::DdiId::DDI_D:
+        return 8 * (ddi_id - 1);
+      case i915_tgl::DdiId::DDI_E:
         return 0;
       default:
         return -1;
@@ -444,20 +448,20 @@ class DdiBufferControl : public hwreg::RegisterBase<DdiBufferControl, uint32_t> 
   DEF_BIT(0, boot_time_port_detect_pin_status);
 
   // For Kaby Lake and Skylake DDI A - DDI E.
-  static auto GetForKabyLakeDdi(Ddi ddi) {
-    ZX_ASSERT(ddi >= DDI_A);
-    ZX_ASSERT(ddi <= DDI_E);
+  static auto GetForKabyLakeDdi(i915_tgl::DdiId ddi_id) {
+    ZX_ASSERT(ddi_id >= i915_tgl::DdiId::DDI_A);
+    ZX_ASSERT(ddi_id <= i915_tgl::DdiId::DDI_E);
 
-    const int ddi_index = ddi - DDI_A;
+    const int ddi_index = ddi_id - i915_tgl::DdiId::DDI_A;
     return hwreg::RegisterAddr<DdiBufferControl>(0x64000 + 0x100 * ddi_index);
   }
 
   // For Tiger Lake and DG1.
-  static auto GetForTigerLakeDdi(Ddi ddi) {
-    ZX_ASSERT(ddi >= DDI_A);
-    ZX_ASSERT(ddi <= DDI_TC_6);
+  static auto GetForTigerLakeDdi(i915_tgl::DdiId ddi_id) {
+    ZX_ASSERT(ddi_id >= i915_tgl::DdiId::DDI_A);
+    ZX_ASSERT(ddi_id <= i915_tgl::DdiId::DDI_TC_6);
 
-    const int ddi_index = ddi - DDI_A;
+    const int ddi_index = ddi_id - i915_tgl::DdiId::DDI_A;
     return hwreg::RegisterAddr<DdiBufferControl>(0x64000 + 0x100 * ddi_index);
   }
 };
@@ -483,13 +487,13 @@ class DdiPhyConfigEntry1 : public hwreg::RegisterBase<DdiPhyConfigEntry1, uint32
   DEF_BIT(31, balance_leg_enable);
   DEF_FIELD(17, 0, deemphasis_level);
 
-  static auto GetDdiInstance(Ddi ddi, int instance_index) {
-    ZX_ASSERT(ddi >= Ddi::DDI_A);
-    ZX_ASSERT(ddi <= Ddi::DDI_E);
+  static auto GetDdiInstance(i915_tgl::DdiId ddi_id, int instance_index) {
+    ZX_ASSERT(ddi_id >= i915_tgl::DdiId::DDI_A);
+    ZX_ASSERT(ddi_id <= i915_tgl::DdiId::DDI_E);
     ZX_ASSERT(instance_index >= 0);
     ZX_ASSERT(instance_index < 10);
 
-    const int ddi_index = ddi - Ddi::DDI_A;
+    const int ddi_index = ddi_id - i915_tgl::DdiId::DDI_A;
     return hwreg::RegisterAddr<DdiPhyConfigEntry1>(0x64e00 + 0x60 * ddi_index + 8 * instance_index);
   }
 };
@@ -503,13 +507,13 @@ class DdiPhyConfigEntry2 : public hwreg::RegisterBase<DdiPhyConfigEntry2, uint32
   DEF_FIELD(20, 16, voltage_reference_select);
   DEF_FIELD(10, 0, voltage_swing);
 
-  static auto GetDdiInstance(Ddi ddi, int instance_index) {
-    ZX_ASSERT(ddi >= Ddi::DDI_A);
-    ZX_ASSERT(ddi <= Ddi::DDI_E);
+  static auto GetDdiInstance(i915_tgl::DdiId ddi_id, int instance_index) {
+    ZX_ASSERT(ddi_id >= i915_tgl::DdiId::DDI_A);
+    ZX_ASSERT(ddi_id <= i915_tgl::DdiId::DDI_E);
     ZX_ASSERT(instance_index >= 0);
     ZX_ASSERT(instance_index < 10);
 
-    const int ddi_index = ddi - Ddi::DDI_A;
+    const int ddi_index = ddi_id - i915_tgl::DdiId::DDI_A;
     return hwreg::RegisterAddr<DdiPhyConfigEntry2>(0x64e04 + 0x60 * ddi_index + 8 * instance_index);
   }
 };
@@ -551,11 +555,11 @@ class DdiPhyBalanceControl : public hwreg::RegisterBase<DdiPhyBalanceControl, ui
   // Not managed by driver software.
   DEF_FIELD(7, 0, h_mode);
 
-  hwreg::BitfieldRef<uint32_t> balance_leg_select_for_ddi(Ddi ddi) {
-    ZX_ASSERT(ddi >= Ddi::DDI_A);
-    ZX_ASSERT(ddi <= Ddi::DDI_E);
+  hwreg::BitfieldRef<uint32_t> balance_leg_select_for_ddi(i915_tgl::DdiId ddi_id) {
+    ZX_ASSERT(ddi_id >= i915_tgl::DdiId::DDI_A);
+    ZX_ASSERT(ddi_id <= i915_tgl::DdiId::DDI_E);
 
-    const int ddi_index = ddi - Ddi::DDI_A;
+    const int ddi_index = ddi_id - i915_tgl::DdiId::DDI_A;
     const int bit_index = 8 + 3 * ddi_index;
     return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit_index + 2, bit_index);
   }
@@ -675,20 +679,20 @@ class DdiAuxControl : public hwreg::RegisterBase<DdiAuxControl, uint32_t> {
   // DDIs A-D. Other manuals, such as IHD-OS-ICLLP-Vol 2c-1.20, document AUX
   // registers for DDIs E-F, and their MMIO addresses are what we'd expect.
   // For now, we assume DDI E has an AUX channel that works like the other DDIs.
-  static auto GetForKabyLakeDdi(Ddi ddi) {
-    ZX_ASSERT(ddi >= Ddi::DDI_A);
-    ZX_ASSERT(ddi <= Ddi::DDI_E);
+  static auto GetForKabyLakeDdi(i915_tgl::DdiId ddi_id) {
+    ZX_ASSERT(ddi_id >= i915_tgl::DdiId::DDI_A);
+    ZX_ASSERT(ddi_id <= i915_tgl::DdiId::DDI_E);
 
-    const int ddi_index = ddi - Ddi::DDI_A;
+    const int ddi_index = ddi_id - i915_tgl::DdiId::DDI_A;
     return hwreg::RegisterAddr<DdiAuxControl>(0x64010 + 0x100 * ddi_index);
   }
 
   // For Tiger Lake and DG1.
-  static auto GetForTigerLakeDdi(Ddi ddi) {
-    ZX_ASSERT(ddi >= Ddi::DDI_A);
-    ZX_ASSERT(ddi <= Ddi::DDI_TC_6);
+  static auto GetForTigerLakeDdi(i915_tgl::DdiId ddi_id) {
+    ZX_ASSERT(ddi_id >= i915_tgl::DdiId::DDI_A);
+    ZX_ASSERT(ddi_id <= i915_tgl::DdiId::DDI_TC_6);
 
-    const int ddi_index = ddi - Ddi::DDI_A;
+    const int ddi_index = ddi_id - i915_tgl::DdiId::DDI_A;
     return hwreg::RegisterAddr<DdiAuxControl>(0x64010 + 0x100 * ddi_index);
   }
 };
@@ -757,17 +761,17 @@ class DdiClockConfig : public hwreg::RegisterBase<DdiClockConfig, uint32_t> {
   DEF_BIT(10, ddi_a_clock_disabled);
 
   // If true, the DDI's clock is disabled. This is accomplished by gating.
-  bool ddi_clock_disabled(Ddi ddi) const {
+  bool ddi_clock_disabled(i915_tgl::DdiId ddi_id) const {
     static constexpr int kComboBitIndices[] = {10, 11, 24};
     static constexpr int kTypeCBitIndices[] = {12, 13, 14, 21, 22, 23};
     int bit_index;
-    if (ddi >= Ddi::DDI_TC_1 && ddi <= Ddi::DDI_TC_6) {
-      const int ddi_index = ddi - Ddi::DDI_TC_1;
+    if (ddi_id >= i915_tgl::DdiId::DDI_TC_1 && ddi_id <= i915_tgl::DdiId::DDI_TC_6) {
+      const int ddi_index = ddi_id - i915_tgl::DdiId::DDI_TC_1;
       bit_index = kTypeCBitIndices[ddi_index];
     } else {
-      ZX_ASSERT(ddi >= Ddi::DDI_A);
-      ZX_ASSERT(ddi <= Ddi::DDI_C);
-      const int ddi_index = ddi - Ddi::DDI_A;
+      ZX_ASSERT(ddi_id >= i915_tgl::DdiId::DDI_A);
+      ZX_ASSERT(ddi_id <= i915_tgl::DdiId::DDI_C);
+      const int ddi_index = ddi_id - i915_tgl::DdiId::DDI_A;
       bit_index = kComboBitIndices[ddi_index];
     }
     return static_cast<bool>(
@@ -775,17 +779,17 @@ class DdiClockConfig : public hwreg::RegisterBase<DdiClockConfig, uint32_t> {
   }
 
   // See `ddi_clock_disabled()` for details.
-  DdiClockConfig& set_ddi_clock_disabled(Ddi ddi, bool clock_disabled) {
+  DdiClockConfig& set_ddi_clock_disabled(i915_tgl::DdiId ddi_id, bool clock_disabled) {
     static constexpr int kComboBitIndices[] = {10, 11, 24};
     static constexpr int kTypeCBitIndices[] = {12, 13, 14, 21, 22, 23};
     int bit_index;
-    if (ddi >= Ddi::DDI_TC_1 && ddi <= Ddi::DDI_TC_6) {
-      const int ddi_index = ddi - Ddi::DDI_TC_1;
+    if (ddi_id >= i915_tgl::DdiId::DDI_TC_1 && ddi_id <= i915_tgl::DdiId::DDI_TC_6) {
+      const int ddi_index = ddi_id - i915_tgl::DdiId::DDI_TC_1;
       bit_index = kTypeCBitIndices[ddi_index];
     } else {
-      ZX_ASSERT(ddi >= Ddi::DDI_A);
-      ZX_ASSERT(ddi <= Ddi::DDI_C);
-      const int ddi_index = ddi - Ddi::DDI_A;
+      ZX_ASSERT(ddi_id >= i915_tgl::DdiId::DDI_A);
+      ZX_ASSERT(ddi_id <= i915_tgl::DdiId::DDI_C);
+      const int ddi_index = ddi_id - i915_tgl::DdiId::DDI_A;
       bit_index = kComboBitIndices[ddi_index];
     }
     hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit_index, bit_index).set(clock_disabled ? 1 : 0);
@@ -808,11 +812,11 @@ class DdiClockConfig : public hwreg::RegisterBase<DdiClockConfig, uint32_t> {
   // The DPLL (Display PLL) used as a clock source for a DDI.
   //
   // Returns DPLL_INVALID if the field is set to an undocumented value.
-  Dpll ddi_clock_display_pll(Ddi ddi) const {
-    ZX_ASSERT(ddi >= Ddi::DDI_A);
-    ZX_ASSERT(ddi <= Ddi::DDI_C);
+  Dpll ddi_clock_display_pll(i915_tgl::DdiId ddi_id) const {
+    ZX_ASSERT(ddi_id >= i915_tgl::DdiId::DDI_A);
+    ZX_ASSERT(ddi_id <= i915_tgl::DdiId::DDI_C);
 
-    const int ddi_index = ddi - Ddi::DDI_A;
+    const int ddi_index = ddi_id - i915_tgl::DdiId::DDI_A;
     const int bit_index = ddi_index * 2;
     const auto dpll_select = static_cast<DdiClockDisplayPllSelect>(
         hwreg::BitfieldRef<const uint32_t>(reg_value_ptr(), bit_index + 1, bit_index).get());
@@ -830,9 +834,9 @@ class DdiClockConfig : public hwreg::RegisterBase<DdiClockConfig, uint32_t> {
   }
 
   // See `ddi_clock_display_pll()` for details.
-  DdiClockConfig& set_ddi_clock_display_pll(Ddi ddi, Dpll display_pll) {
-    ZX_ASSERT(ddi >= Ddi::DDI_A);
-    ZX_ASSERT(ddi <= Ddi::DDI_C);
+  DdiClockConfig& set_ddi_clock_display_pll(i915_tgl::DdiId ddi_id, Dpll display_pll) {
+    ZX_ASSERT(ddi_id >= i915_tgl::DdiId::DDI_A);
+    ZX_ASSERT(ddi_id <= i915_tgl::DdiId::DDI_C);
 
     DdiClockDisplayPllSelect dpll_select;
     switch (display_pll) {
@@ -849,7 +853,7 @@ class DdiClockConfig : public hwreg::RegisterBase<DdiClockConfig, uint32_t> {
         dpll_select = DdiClockDisplayPllSelect::kDisplayPll0;
     }
 
-    const int ddi_index = ddi - Ddi::DDI_A;
+    const int ddi_index = ddi_id - i915_tgl::DdiId::DDI_A;
     const int bit_index = ddi_index * 2;
     hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit_index + 1, bit_index)
         .set(static_cast<uint32_t>(dpll_select));
@@ -903,24 +907,24 @@ class TypeCDdiClockSelect : public hwreg::RegisterBase<TypeCDdiClockSelect, uint
     return set_clock_select_raw(static_cast<ValueType>(clock));
   }
 
-  static auto GetForDdi(Ddi ddi) {
+  static auto GetForDdi(i915_tgl::DdiId ddi_id) {
     // Register address at
     // Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev 2.0 Part 1, Page 356
-    switch (ddi) {
-      case DDI_TC_1:
+    switch (ddi_id) {
+      case i915_tgl::DdiId::DDI_TC_1:
         return hwreg::RegisterAddr<SelfType>(0x4610C);
-      case DDI_TC_2:
+      case i915_tgl::DdiId::DDI_TC_2:
         return hwreg::RegisterAddr<SelfType>(0x46110);
-      case DDI_TC_3:
+      case i915_tgl::DdiId::DDI_TC_3:
         return hwreg::RegisterAddr<SelfType>(0x46114);
-      case DDI_TC_4:
+      case i915_tgl::DdiId::DDI_TC_4:
         return hwreg::RegisterAddr<SelfType>(0x46118);
-      case DDI_TC_5:
+      case i915_tgl::DdiId::DDI_TC_5:
         return hwreg::RegisterAddr<SelfType>(0x4611C);
-      case DDI_TC_6:
+      case i915_tgl::DdiId::DDI_TC_6:
         return hwreg::RegisterAddr<SelfType>(0x46120);
       default:
-        ZX_ASSERT_MSG(false, "DDI_CLK_SEL: Invalid DDI %d", ddi);
+        ZX_ASSERT_MSG(false, "DDI_CLK_SEL: Invalid DDI %d", ddi_id);
     }
   }
 
@@ -1040,11 +1044,11 @@ class DpTransportControl : public hwreg::RegisterBase<DpTransportControl, uint32
   DEF_BIT(6, alternate_scrambler_reset);
 
   // For Kaby Lake and Skylake. The DisplayPort transport logic is in DDIs.
-  static auto GetForKabyLakeDdi(Ddi ddi) {
-    ZX_ASSERT(ddi >= Ddi::DDI_A);
-    ZX_ASSERT(ddi <= Ddi::DDI_E);
+  static auto GetForKabyLakeDdi(i915_tgl::DdiId ddi_id) {
+    ZX_ASSERT(ddi_id >= i915_tgl::DdiId::DDI_A);
+    ZX_ASSERT(ddi_id <= i915_tgl::DdiId::DDI_E);
 
-    const int ddi_index = ddi - Ddi::DDI_A;
+    const int ddi_index = ddi_id - i915_tgl::DdiId::DDI_A;
     return hwreg::RegisterAddr<DpTransportControl>(0x64040 + 0x100 * ddi_index);
   }
 
@@ -1063,31 +1067,31 @@ class DpTransportControl : public hwreg::RegisterBase<DpTransportControl, uint32
 // An instance of DdiRegs represents the registers for a particular DDI.
 class DdiRegs {
  public:
-  explicit DdiRegs(Ddi ddi) : ddi_(ddi) {}
+  explicit DdiRegs(i915_tgl::DdiId ddi_id) : ddi_id_(ddi_id) {}
 
   hwreg::RegisterAddr<DdiBufferControl> BufferControl() {
     // This works for Kaby Lake too, because the Ddi integer mapping takes
     // advantage of MMIO address space.
-    return DdiBufferControl::GetForTigerLakeDdi(ddi_);
+    return DdiBufferControl::GetForTigerLakeDdi(ddi_id_);
   }
   hwreg::RegisterAddr<DpTransportControl> DpTransportControl() {
     // This does not work for Tiger Lake.
-    return DpTransportControl::GetForKabyLakeDdi(ddi_);
+    return DpTransportControl::GetForKabyLakeDdi(ddi_id_);
   }
   hwreg::RegisterAddr<DdiPhyConfigEntry1> PhyConfigEntry1(int entry_index) const {
-    return DdiPhyConfigEntry1::GetDdiInstance(ddi_, entry_index);
+    return DdiPhyConfigEntry1::GetDdiInstance(ddi_id_, entry_index);
   }
   hwreg::RegisterAddr<DdiPhyConfigEntry2> PhyConfigEntry2(int entry_index) const {
-    return DdiPhyConfigEntry2::GetDdiInstance(ddi_, entry_index);
+    return DdiPhyConfigEntry2::GetDdiInstance(ddi_id_, entry_index);
   }
 
  private:
   template <class RegType>
   hwreg::RegisterAddr<RegType> GetReg() {
-    return hwreg::RegisterAddr<RegType>(RegType::kBaseAddr + 0x100 * ddi_);
+    return hwreg::RegisterAddr<RegType>(RegType::kBaseAddr + 0x100 * ddi_id_);
   }
 
-  Ddi ddi_;
+  i915_tgl::DdiId ddi_id_;
 };
 
 }  // namespace tgl_registers
