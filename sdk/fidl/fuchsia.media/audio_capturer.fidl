@@ -42,7 +42,7 @@ type AudioCapturerConfiguration = strict union {
 /// from either the current default audio input device, or the current default
 /// audio output device depending on the flags passed during creation.
 ///
-/// ** Format support **
+/// **Format support**
 ///
 /// See (Get|Set)StreamType below. By default, the captured stream type will be
 /// initially determined by the currently configured stream type of the source
@@ -53,7 +53,7 @@ type AudioCapturerConfiguration = strict union {
 /// meaning that there are no pending capture regions (specified using CaptureAt)
 /// and that the system is not currently running in 'async' capture mode.
 ///
-/// ** Buffers and memory management **
+/// **Buffers and memory management**
 ///
 /// Audio data is captured into a shared memory buffer (a VMO) supplied by the
 /// user to the AudioCapturer during the AddPayloadBuffer call.  Please note the
@@ -75,13 +75,13 @@ type AudioCapturerConfiguration = strict union {
 ///   writable, mappable and transferable.
 /// + Users should always treat the payload buffer as read-only.
 ///
-/// ** Synchronous vs. Asynchronous capture mode **
+/// **Synchronous vs. Asynchronous capture mode**
 ///
 /// The AudioCapturer interface can be used in one of two mutually exclusive
 /// modes: Synchronous and Asynchronous.  A description of each mode and their
 /// tradeoffs is given below.
 ///
-/// ** Synchronous mode **
+/// **Synchronous mode**
 ///
 /// By default, AudioCapturer instances are running in 'sync' mode.  They will
 /// only capture data when a user supplies at least one region to capture into
@@ -106,7 +106,7 @@ type AudioCapturerConfiguration = strict union {
 /// returned, it may overwrite the unfilled portions of a partially filled
 /// buffer which has been returned as a result of a DiscardAllPackets operation.
 ///
-/// ** Asynchronous mode **
+/// **Asynchronous mode**
 ///
 /// While running in 'async' mode, clients do not need to explicitly supply
 /// shared buffer regions to be filled by the AudioCapturer instance. Instead, a
@@ -134,7 +134,7 @@ type AudioCapturerConfiguration = strict union {
 /// + To attempt any operation except for SetGain while in the process of
 ///   stopping.
 ///
-/// ** Synchronizing with a StopAsyncCapture operation **
+/// **Synchronizing with a StopAsyncCapture operation**
 ///
 /// Stopping asynchronous capture mode and returning to synchronous capture mode
 /// is an operation which takes time.  Aside from SetGain, users may not call any
@@ -161,7 +161,7 @@ type AudioCapturerConfiguration = strict union {
 /// users have seen the end-of-stream flag after calling stop, the AudioCapturer
 /// has finished the stop operation and returned to synchronous operating mode.
 ///
-/// ** Timing and Overflows **
+/// **Timing and Overflows**
 ///
 /// All media packets produced by an AudioCapturer instance will have their PTS
 /// field filled out with the capture time of the audio expressed as a timestamp
@@ -216,7 +216,7 @@ type AudioCapturerConfiguration = strict union {
 ///    In practice, however, if it does, the next produced packet will be flagged
 ///    as being discontinuous.
 ///
-/// ** Synchronous vs. Asynchronous Trade-offs **
+/// **Synchronous vs. Asynchronous Trade-offs**
 ///
 /// The choice of operating in synchronous vs. asynchronous mode is up to the
 /// user, and depending on the user's requirements, there are some advantages and
@@ -245,7 +245,7 @@ type AudioCapturerConfiguration = strict union {
 /// they will be able to process their data before an AudioCapturer will be
 /// forced to overwrite it.
 ///
-// ** Future Directions (aka TODOs) **
+// **Future Directions (aka TODOs)**
 //
 // + Consider adding a 'zero message' capture mode where the AudioCapturer
 //   simply supplies a linear transformation and some buffer parameters (max
