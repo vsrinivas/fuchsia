@@ -26,5 +26,5 @@ go_test(
         "tokenizer_test.go",
     ],
     embed = [":core"],
-    deps = ["//third_party/golibs/vendor/github.com/google/go-cmp/cmp"],
+    deps = ["//third_party/golibs:github.com/google/go-cmp/cmp"],
 )

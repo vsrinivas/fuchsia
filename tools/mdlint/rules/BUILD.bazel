@@ -44,7 +44,7 @@ go_test(
     ],
     embed = [":rules"],
     deps = [
-        "//third_party/golibs/vendor/github.com/google/go-cmp/cmp",
+        "//third_party/golibs:github.com/google/go-cmp/cmp",
         "//tools/mdlint/core",
     ],
 )

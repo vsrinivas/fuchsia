@@ -1,0 +1,88 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# TODO(https://fxbug.dev/114144): Look into generating this file with
+# [bazel-gazelle](https://github.com/bazelbuild/bazel-gazelle).
+
+# NOTE: This file is manually maintained on a best-effort basic, the content of
+# this file can go out of sync.
+
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "github.com/google/go-cmp/cmp",
+    srcs = [
+        "vendor/github.com/google/go-cmp/cmp/compare.go",
+        "vendor/github.com/google/go-cmp/cmp/export_panic.go",
+        "vendor/github.com/google/go-cmp/cmp/export_unsafe.go",
+        "vendor/github.com/google/go-cmp/cmp/options.go",
+        "vendor/github.com/google/go-cmp/cmp/path.go",
+        "vendor/github.com/google/go-cmp/cmp/report.go",
+        "vendor/github.com/google/go-cmp/cmp/report_compare.go",
+        "vendor/github.com/google/go-cmp/cmp/report_references.go",
+        "vendor/github.com/google/go-cmp/cmp/report_reflect.go",
+        "vendor/github.com/google/go-cmp/cmp/report_slices.go",
+        "vendor/github.com/google/go-cmp/cmp/report_text.go",
+        "vendor/github.com/google/go-cmp/cmp/report_value.go",
+    ],
+    importpath = "github.com/google/go-cmp/cmp",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//third_party/golibs:github.com/google/go-cmp/cmp/internal/diff",
+        "//third_party/golibs:github.com/google/go-cmp/cmp/internal/flags",
+        "//third_party/golibs:github.com/google/go-cmp/cmp/internal/function",
+        "//third_party/golibs:github.com/google/go-cmp/cmp/internal/value",
+    ],
+)
+
+go_library(
+    name = "github.com/google/go-cmp/cmp/cmpopts",
+    srcs = [
+        "vendor/github.com/google/go-cmp/cmp/cmpopts/equate.go",
+        "vendor/github.com/google/go-cmp/cmp/cmpopts/ignore.go",
+        "vendor/github.com/google/go-cmp/cmp/cmpopts/sort.go",
+        "vendor/github.com/google/go-cmp/cmp/cmpopts/struct_filter.go",
+        "vendor/github.com/google/go-cmp/cmp/cmpopts/xform.go",
+    ],
+    importpath = "github.com/google/go-cmp/cmp/cmpopts",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//third_party/golibs:github.com/google/go-cmp/cmp",
+        "//third_party/golibs:github.com/google/go-cmp/cmp/internal/function",
+    ],
+)
+
+go_library(
+    name = "github.com/google/go-cmp/cmp/internal/diff",
+    srcs = [
+        "vendor/github.com/google/go-cmp/cmp/internal/diff/debug_disable.go",
+        "vendor/github.com/google/go-cmp/cmp/internal/diff/debug_enable.go",
+        "vendor/github.com/google/go-cmp/cmp/internal/diff/diff.go",
+    ],
+    importpath = "github.com/google/go-cmp/cmp/internal/diff",
+    deps = ["//third_party/golibs:github.com/google/go-cmp/cmp/internal/flags"],
+)
+
+go_library(
+    name = "github.com/google/go-cmp/cmp/internal/flags",
+    srcs = ["vendor/github.com/google/go-cmp/cmp/internal/flags/flags.go"],
+    importpath = "github.com/google/go-cmp/cmp/internal/flags",
+)
+
+go_library(
+    name = "github.com/google/go-cmp/cmp/internal/function",
+    srcs = ["vendor/github.com/google/go-cmp/cmp/internal/function/func.go"],
+    importpath = "github.com/google/go-cmp/cmp/internal/function",
+)
+
+go_library(
+    name = "github.com/google/go-cmp/cmp/internal/value",
+    srcs = [
+        "vendor/github.com/google/go-cmp/cmp/internal/value/name.go",
+        "vendor/github.com/google/go-cmp/cmp/internal/value/pointer_purego.go",
+        "vendor/github.com/google/go-cmp/cmp/internal/value/pointer_unsafe.go",
+        "vendor/github.com/google/go-cmp/cmp/internal/value/sort.go",
+    ],
+    importpath = "github.com/google/go-cmp/cmp/internal/value",
+)
