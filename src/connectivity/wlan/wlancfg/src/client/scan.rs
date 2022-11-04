@@ -67,7 +67,7 @@ pub trait ScanRequestApi: Send + Sync {
         &self,
         scan_reason: ScanReason,
         ssids: Vec<types::Ssid>,
-        channels: Vec<u8>,
+        channels: Vec<types::WlanChan>,
     ) -> Result<Vec<types::ScanResult>, types::ScanError>;
 }
 
@@ -79,7 +79,7 @@ pub enum ApiScanRequest {
     Scan(
         ScanReason,
         Vec<types::Ssid>,
-        Vec<u8>,
+        Vec<types::WlanChan>,
         oneshot::Sender<Result<Vec<types::ScanResult>, types::ScanError>>,
     ),
 }
@@ -90,7 +90,7 @@ impl ScanRequestApi for ScanRequester {
         &self,
         scan_reason: ScanReason,
         ssids: Vec<types::Ssid>,
-        channels: Vec<u8>,
+        channels: Vec<types::WlanChan>,
     ) -> Result<Vec<types::ScanResult>, types::ScanError> {
         let (responder, receiver) = oneshot::channel();
         self.sender
@@ -133,7 +133,7 @@ pub async fn serve_scanning_loop(
                             perform_directed_active_scan(
                                 iface_manager.clone(),
                                 ssids,
-                                Some(channels),
+                                channels,
                                 Some(telemetry_sender.clone()),
                             ).boxed()
                         };
@@ -358,12 +358,12 @@ async fn record_undirected_scan_results(
 async fn perform_directed_active_scan(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     ssids: Vec<types::Ssid>,
-    channels: Option<Vec<u8>>,
+    channels: Vec<types::WlanChan>,
     telemetry_sender: Option<TelemetrySender>,
 ) -> Result<Vec<types::ScanResult>, types::ScanError> {
     let scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
         ssids: ssids.iter().map(|ssid| ssid.to_vec()).collect(),
-        channels: channels.unwrap_or(vec![]),
+        channels: channels.iter().map(|chan| chan.primary).collect(),
     });
 
     let sme_proxy = match iface_manager.lock().await.get_sme_proxy_for_scan().await {
@@ -701,7 +701,9 @@ mod tests {
                 iface_manager_api::{ConnectAttemptRequest, SmeForScan},
                 Defect, IfaceFailure,
             },
-            util::testing::{fakes::FakeSavedNetworksManager, generate_random_sme_scan_result},
+            util::testing::{
+                fakes::FakeSavedNetworksManager, generate_channel, generate_random_sme_scan_result,
+            },
         },
         anyhow::Error,
         fidl::endpoints::create_proxy,
@@ -2362,11 +2364,11 @@ mod tests {
 
         // Issue request to scan.
         let desired_ssid = types::Ssid::try_from("test_ssid").unwrap();
-        let desired_channels = vec![1, 36];
+        let desired_channels = vec![generate_channel(1), generate_channel(36)];
         let scan_fut = perform_directed_active_scan(
             client,
             vec![desired_ssid.clone()],
-            Some(desired_channels.clone()),
+            desired_channels.clone(),
             None,
         );
         pin_mut!(scan_fut);
@@ -2403,7 +2405,7 @@ mod tests {
                 // Validate the request
                 assert_eq!(req, fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
                     ssids: vec![desired_ssid.to_vec()],
-                    channels: desired_channels,
+                    channels: desired_channels.iter().map(|chan| chan.primary).collect(),
                 }));
                 // Send all the APs
                 responder.send(&mut Ok(scan_result_aps.clone())).expect("failed to send scan data");
@@ -2725,7 +2727,7 @@ mod tests {
         let scan_fut = perform_directed_active_scan(
             client.clone(),
             vec![desired_ssid.clone()],
-            Some(desired_channels.clone()),
+            desired_channels.clone(),
             None,
         );
         pin_mut!(scan_fut);
@@ -2762,7 +2764,7 @@ mod tests {
         let scan_fut = perform_directed_active_scan(
             client.clone(),
             vec![desired_ssid.clone()],
-            Some(desired_channels.clone()),
+            desired_channels.clone(),
             None,
         );
         pin_mut!(scan_fut);

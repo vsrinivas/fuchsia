@@ -533,7 +533,7 @@ async fn augment_bss_with_active_scan(
             .perform_scan(
                 ScanReason::BssSelectionAugmentation,
                 vec![scanned_candidate.network.ssid.clone()],
-                vec![channel.primary],
+                vec![channel],
             )
             .await
             .map_err(|_| {
@@ -1587,7 +1587,7 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = exec.run_singlethreaded(test_setup());
 
-        let scan_channel = 36;
+        let scan_channel = generate_channel(36);
         let test_id_1 = types::NetworkIdentifier {
             ssid: types::Ssid::try_from("foo").unwrap(),
             security_type: types::SecurityType::Wpa3,
@@ -1608,7 +1608,7 @@ mod tests {
 
         let fut = augment_bss_with_active_scan(
             scanned_candidate.clone(),
-            generate_channel(scan_channel),
+            scan_channel,
             bss_1.bssid,
             test_values.scan_requester.clone(),
         );
@@ -1835,7 +1835,7 @@ mod tests {
                 (
                     ScanReason::BssSelectionAugmentation,
                     vec![test_id_1.ssid.clone()],
-                    vec![channel_1.primary]
+                    vec![channel_1]
                 )
             ]
         );

@@ -303,7 +303,8 @@ pub fn random_connection_data() -> PastConnectionData {
 pub struct FakeScanRequester {
     pub scan_results:
         Arc<Mutex<VecDeque<Result<Vec<client_types::ScanResult>, client_types::ScanError>>>>,
-    pub scan_requests: Arc<Mutex<Vec<(scan::ScanReason, Vec<client_types::Ssid>, Vec<u8>)>>>,
+    pub scan_requests:
+        Arc<Mutex<Vec<(scan::ScanReason, Vec<client_types::Ssid>, Vec<client_types::WlanChan>)>>>,
 }
 
 impl FakeScanRequester {
@@ -327,7 +328,7 @@ impl scan::ScanRequestApi for FakeScanRequester {
         &self,
         scan_reason: scan::ScanReason,
         ssids: Vec<client_types::Ssid>,
-        channels: Vec<u8>,
+        channels: Vec<client_types::WlanChan>,
     ) -> Result<Vec<client_types::ScanResult>, client_types::ScanError> {
         self.scan_requests.lock().await.push((scan_reason, ssids, channels));
         self.scan_results.lock().await.pop_front().unwrap()
