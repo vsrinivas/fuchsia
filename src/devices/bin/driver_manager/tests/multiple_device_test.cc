@@ -411,9 +411,13 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_svchost_fidl) {
   auto service_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_OK(service_endpoints.status_value());
 
-  auto outgoing = component::OutgoingDirectory::Create(coordinator_loop()->dispatcher());
-  coordinator().InitOutgoingServices(outgoing);
-  ASSERT_OK(outgoing.Serve(std::move(service_endpoints->server)).status_value());
+  std::unique_ptr<component::OutgoingDirectory> outgoing;
+  RunOnCoordinatorLoop([&] {
+    outgoing = std::make_unique<component::OutgoingDirectory>(
+        component::OutgoingDirectory::Create(coordinator_loop()->dispatcher()));
+    coordinator().InitOutgoingServices(*outgoing);
+    ASSERT_OK(outgoing->Serve(std::move(service_endpoints->server)).status_value());
+  });
 
   auto client_end = component::ConnectAt<fuchsia_device_manager::SystemStateTransition>(
       service_endpoints->client,
@@ -429,8 +433,12 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_svchost_fidl) {
     call_status = response->error_value();
   }
   ASSERT_OK(call_status);
-  ASSERT_EQ(coordinator().shutdown_system_state(),
-            fuchsia_hardware_power_statecontrol::wire::SystemPowerState::kMexec);
+
+  RunOnCoordinatorLoop([&] {
+    ASSERT_EQ(coordinator().shutdown_system_state(),
+              fuchsia_hardware_power_statecontrol::wire::SystemPowerState::kMexec);
+  });
+  RunOnCoordinatorLoop([&] { outgoing.reset(); });
 }
 
 TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl_wrong_state) {

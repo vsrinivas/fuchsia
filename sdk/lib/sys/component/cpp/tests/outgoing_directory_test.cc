@@ -11,6 +11,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fidl/cpp/wire/client.h>
+#include <lib/sync/cpp/completion.h>
 #include <lib/sys/component/cpp/constants.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
 #include <lib/sys/component/cpp/service_client.h>
@@ -141,6 +142,38 @@ class OutgoingDirectoryTest : public gtest::RealLoopFixture {
   fidl::ClientEnd<fuchsia_io::Directory> client_end_;
   fidl::WireClient<fuchsia_io::Directory> svc_client_;
 };
+
+TEST_F(OutgoingDirectoryTest, MutualExclusionGuarantees_CheckOperations) {
+  auto outgoing_directory = std::make_unique<component::OutgoingDirectory>(
+      component::OutgoingDirectory::Create(dispatcher()));
+
+  // Cannot mutate it from a foreign thread.
+  ASSERT_DEATH(
+      {
+        std::thread t([&] {
+          EXPECT_NE(nullptr, outgoing_directory);
+          EchoImpl impl(/*reversed=*/false);
+          outgoing_directory->AddProtocol<fuchsia_examples::Echo>(&impl).status_value();
+        });
+        t.join();
+      },
+      "\\|component::OutgoingDirectory\\| is thread-unsafe\\.");
+
+  // Cannot destroy it on a foreign thread.
+  ASSERT_DEATH(
+      {
+        std::thread t([&] {
+          EXPECT_NE(nullptr, outgoing_directory);
+          std::unique_ptr destroy = std::move(outgoing_directory);
+          destroy.reset();
+        });
+        t.join();
+      },
+      "\\|component::OutgoingDirectory\\| is thread-unsafe\\.");
+
+  // Properly destroy it on the main thread.
+  outgoing_directory.reset();
+}
 
 TEST_F(OutgoingDirectoryTest, CanBeMovedSafely) {
   auto outgoing_directory = component::OutgoingDirectory::Create(dispatcher());

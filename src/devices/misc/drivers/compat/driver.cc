@@ -11,9 +11,11 @@
 #include <lib/driver/component/cpp/promise.h>
 #include <lib/driver/component/cpp/start_args.h>
 #include <lib/fidl/cpp/wire/connect_service.h>
+#include <lib/fit/defer.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/promise.h>
 #include <lib/fpromise/single_threaded_executor.h>
+#include <lib/sync/cpp/completion.h>
 #include <lib/sys/component/cpp/service_client.h>
 #include <zircon/dlfcn.h>
 
@@ -219,6 +221,39 @@ zx::result<> Driver::Start() {
 }
 
 bool Driver::IsComposite() { return !parent_clients_.empty(); }
+
+bool Driver::IsRunningOnDispatcher() const {
+  fdf::Unowned<fdf::Dispatcher> current_dispatcher = fdf::Dispatcher::GetCurrent();
+  if (current_dispatcher == fdf::Unowned<fdf::Dispatcher>{}) {
+    return false;
+  }
+  return current_dispatcher->async_dispatcher() == dispatcher();
+}
+
+zx_status_t Driver::RunOnDispatcher(fit::callback<zx_status_t()> task) {
+  if (IsRunningOnDispatcher()) {
+    return task();
+  }
+
+  libsync::Completion completion;
+  zx_status_t task_status;
+  auto discarded = fit::defer([&] {
+    task_status = ZX_ERR_CANCELED;
+    completion.Signal();
+  });
+  zx_status_t status =
+      async::PostTask(dispatcher(), [&task_status, &completion, task = std::move(task),
+                                     discarded = std::move(discarded)]() mutable {
+        discarded.cancel();
+        task_status = task();
+        completion.Signal();
+      });
+  if (status != ZX_OK) {
+    return status;
+  }
+  completion.Wait();
+  return status;
+}
 
 void Driver::PrepareStop(PrepareStopContext* context) {
   // TODO(http://fxbug.dev/97457): Query whether we should call suspend or unbind.
@@ -591,34 +626,36 @@ void Driver::LoadFirmwareAsync(Device* device, const char* filename,
 }
 
 zx_status_t Driver::AddDevice(Device* parent, device_add_args_t* args, zx_device_t** out) {
-  zx::channel client_remote(args->client_remote);
-  if (client_remote.is_valid() && args->flags & DEVICE_ADD_MUST_ISOLATE) {
-    return ZX_ERR_INVALID_ARGS;
-  }
+  return RunOnDispatcher([&] {
+    zx::channel client_remote(args->client_remote);
+    if (client_remote.is_valid() && args->flags & DEVICE_ADD_MUST_ISOLATE) {
+      return ZX_ERR_INVALID_ARGS;
+    }
 
-  zx_device_t* child;
-  zx_status_t status = parent->Add(args, &child);
-  if (status != ZX_OK) {
-    FDF_LOG(ERROR, "Failed to add device %s: %s", args->name, zx_status_get_string(status));
-    return status;
-  }
-  if (out) {
-    *out = child;
-  }
-
-  if (client_remote.is_valid()) {
-    auto options = fs::VnodeConnectionOptions::FromIoV1Flags(fio::wire::OpenFlags::kRightReadable |
-                                                             fio::wire::OpenFlags::kRightWritable);
-    status = devfs_vfs_->Serve(child->dev_vnode(), std::move(client_remote), options);
+    zx_device_t* child;
+    zx_status_t status = parent->Add(args, &child);
     if (status != ZX_OK) {
-      FDF_LOG(ERROR, "Failed to serve client remote for device %s: %s", args->name,
-              zx_status_get_string(status));
+      FDF_LOG(ERROR, "Failed to add device %s: %s", args->name, zx_status_get_string(status));
       return status;
     }
-  }
+    if (out) {
+      *out = child;
+    }
 
-  executor_.schedule_task(child->Export());
-  return ZX_OK;
+    if (client_remote.is_valid()) {
+      auto options = fs::VnodeConnectionOptions::FromIoV1Flags(
+          fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable);
+      status = devfs_vfs_->Serve(child->dev_vnode(), std::move(client_remote), options);
+      if (status != ZX_OK) {
+        FDF_LOG(ERROR, "Failed to serve client remote for device %s: %s", args->name,
+                zx_status_get_string(status));
+        return status;
+      }
+    }
+
+    executor_.schedule_task(child->Export());
+    return ZX_OK;
+  });
 }
 
 zx::result<zx::profile> Driver::GetSchedulerProfile(uint32_t priority, const char* name) {

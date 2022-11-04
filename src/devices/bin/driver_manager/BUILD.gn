@@ -223,6 +223,7 @@ test("driver_manager_test") {
     "//src/lib/storage/vfs/cpp:test_support",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/mock-boot-arguments",
+    "//zircon/system/ulib/sync:sync-cpp",
     "//zircon/system/ulib/zxtest",
   ]
 }

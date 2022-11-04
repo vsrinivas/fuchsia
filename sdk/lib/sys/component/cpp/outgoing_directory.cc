@@ -22,6 +22,9 @@ namespace {
 // Path delimiter used by svc library.
 constexpr const char kSvcPathDelimiter[] = "/";
 
+constexpr const char kOutgoingDirectoryThreadSafetyDescription[] =
+    "|component::OutgoingDirectory| is thread-unsafe.";
+
 }  // namespace
 
 namespace component {
@@ -42,48 +45,31 @@ OutgoingDirectory OutgoingDirectory::Create(async_dispatcher_t* dispatcher) {
 }
 
 OutgoingDirectory::OutgoingDirectory(async_dispatcher_t* dispatcher, svc_dir_t* root)
+    : inner_(std::make_unique<Inner>(dispatcher, root)) {}
+
+OutgoingDirectory::Inner::Inner(async_dispatcher_t* dispatcher, svc_dir_t* root)
     : dispatcher_(dispatcher),
+      checker_(dispatcher, kOutgoingDirectoryThreadSafetyDescription),
       root_(root),
-      unbind_protocol_callbacks_(std::make_unique<UnbindCallbackMap>()) {}
-
-OutgoingDirectory::OutgoingDirectory(OutgoingDirectory&& other) noexcept
-    : dispatcher_(other.dispatcher_),
-      root_(other.root_),
-      registered_handlers_(std::move(other.registered_handlers_)),
-      unbind_protocol_callbacks_(std::move(other.unbind_protocol_callbacks_)) {
-  other.dispatcher_ = nullptr;
-  other.root_ = nullptr;
-  other.unbind_protocol_callbacks_ = nullptr;
+      unbind_protocol_callbacks_() {
+  // TODO(fxbug.dev/113997): Post a task onto the dispatcher to verify that the
+  // dispatcher has mutual exclusion guarantees.
 }
 
-OutgoingDirectory& OutgoingDirectory::operator=(OutgoingDirectory&& other) noexcept {
-  // Delete `root_` object before taking pointer from `other`. Lest risk leaking memory.
+OutgoingDirectory::OutgoingDirectory(OutgoingDirectory&& other) noexcept = default;
+
+OutgoingDirectory& OutgoingDirectory::operator=(OutgoingDirectory&& other) noexcept = default;
+
+OutgoingDirectory::~OutgoingDirectory() = default;
+
+OutgoingDirectory::Inner::~Inner() {
+  std::lock_guard guard(checker_);
+
   if (root_) {
 #if __Fuchsia_API_level__ >= 10
     svc_directory_destroy(root_);
 #else
-    svc_dir_destroy(root_);
-#endif
-  }
-
-  dispatcher_ = other.dispatcher_;
-  root_ = other.root_;
-  registered_handlers_ = std::move(other.registered_handlers_);
-  unbind_protocol_callbacks_ = std::move(other.unbind_protocol_callbacks_);
-
-  other.dispatcher_ = nullptr;
-  other.root_ = nullptr;
-  other.unbind_protocol_callbacks_ = nullptr;
-
-  return *this;
-}
-
-OutgoingDirectory::~OutgoingDirectory() {
-  if (root_) {
-#if __Fuchsia_API_level__ >= 10
-    svc_directory_destroy(root_);
-#else
-    svc_dir_destroy(root_);
+    svc_dir_destroy(root);
 #endif
   }
 }
@@ -92,13 +78,14 @@ zx::result<> OutgoingDirectory::Serve(fidl::ServerEnd<fuchsia_io::Directory> dir
   if (!directory_server_end.is_valid()) {
     return zx::error_result(ZX_ERR_BAD_HANDLE);
   }
+  std::lock_guard guard(inner().checker_);
 
 #if __Fuchsia_API_level__ >= 10
-  zx_status_t status =
-      svc_directory_serve(root_, dispatcher_, directory_server_end.TakeHandle().release());
+  zx_status_t status = svc_directory_serve(inner().root_, inner().dispatcher_,
+                                           directory_server_end.TakeHandle().release());
 #else
-  zx_status_t status =
-      svc_dir_serve(root_, dispatcher_, directory_server_end.TakeHandle().release());
+  zx_status_t status = svc_dir_serve(inner().root_, inner().dispatcher_,
+                                     directory_server_end.TakeHandle().release());
 #endif
   if (status != ZX_OK) {
     return zx::error_result(status);
@@ -119,6 +106,8 @@ zx::result<> OutgoingDirectory::AddProtocol(AnyHandler handler, cpp17::string_vi
 
 zx::result<> OutgoingDirectory::AddProtocolAt(AnyHandler handler, cpp17::string_view path,
                                               cpp17::string_view name) {
+  std::lock_guard guard(inner().checker_);
+
   // More thorough path validation is done in |svc_add_service|.
   if (path.empty() || name.empty()) {
     return zx::error_result(ZX_ERR_INVALID_ARGS);
@@ -126,8 +115,8 @@ zx::result<> OutgoingDirectory::AddProtocolAt(AnyHandler handler, cpp17::string_
 
   std::string directory_entry(path);
   std::string protocol_entry(name);
-  if (registered_handlers_.count(directory_entry) != 0 &&
-      registered_handlers_[directory_entry].count(protocol_entry) != 0) {
+  if (inner().registered_handlers_.count(directory_entry) != 0 &&
+      inner().registered_handlers_[directory_entry].count(protocol_entry) != 0) {
     return zx::make_result(ZX_ERR_ALREADY_EXISTS);
   }
 
@@ -140,14 +129,14 @@ zx::result<> OutgoingDirectory::AddProtocolAt(AnyHandler handler, cpp17::string_
       std::make_unique<OnConnectContext>(OnConnectContext{.handler = std::move(handler)});
 #if __Fuchsia_API_level__ >= 10
   zx_status_t status =
-      svc_directory_add_service(root_, directory_entry.c_str(), directory_entry.size(), name.data(),
-                                name.size(), context.get(), OnConnect);
+      svc_directory_add_service(inner().root_, directory_entry.c_str(), directory_entry.size(),
+                                name.data(), name.size(), context.get(), OnConnect);
 #else
-  zx_status_t status =
-      svc_dir_add_service(root_, directory_entry.c_str(), name.data(), context.get(), OnConnect);
+  zx_status_t status = svc_dir_add_service(inner().root_, directory_entry.c_str(), name.data(),
+                                           context.get(), OnConnect);
 #endif
 
-  auto& directory_handlers = registered_handlers_[directory_entry];
+  auto& directory_handlers = inner().registered_handlers_[directory_entry];
   directory_handlers[protocol_entry] = std::move(context);
 
   return zx::make_result(status);
@@ -161,6 +150,8 @@ zx::result<> OutgoingDirectory::AddDirectory(fidl::ClientEnd<fuchsia_io::Directo
 zx::result<> OutgoingDirectory::AddDirectoryAt(fidl::ClientEnd<fuchsia_io::Directory> remote_dir,
                                                cpp17::string_view path,
                                                cpp17::string_view directory_name) {
+  std::lock_guard guard(inner().checker_);
+
   if (!remote_dir.is_valid()) {
     return zx::error_result(ZX_ERR_BAD_HANDLE);
   }
@@ -170,11 +161,11 @@ zx::result<> OutgoingDirectory::AddDirectoryAt(fidl::ClientEnd<fuchsia_io::Direc
 
 #if __Fuchsia_API_level__ >= 10
   zx_status_t status =
-      svc_directory_add_directory(root_, path.data(), path.size(), directory_name.data(),
+      svc_directory_add_directory(inner().root_, path.data(), path.size(), directory_name.data(),
                                   directory_name.size(), remote_dir.TakeChannel().release());
 #else
-  zx_status_t status = svc_dir_add_directory_by_path(root_, path.data(), directory_name.data(),
-                                                     remote_dir.TakeChannel().release());
+  zx_status_t status = svc_dir_add_directory_by_path(
+      inner().root_, path.data(), directory_name.data(), remote_dir.TakeChannel().release());
 #endif
 
   return zx::make_result(status);
@@ -198,7 +189,7 @@ zx::result<> OutgoingDirectory::AddService(ServiceInstanceHandler handler,
     if (status.is_error()) {
       // If we encounter an error with any of the instance members, scrub entire
       // directory entry.
-      registered_handlers_.erase(basepath);
+      inner().registered_handlers_.erase(basepath);
       return status;
     }
   }
@@ -212,13 +203,15 @@ zx::result<> OutgoingDirectory::RemoveProtocol(cpp17::string_view name) {
 
 zx::result<> OutgoingDirectory::RemoveProtocolAt(cpp17::string_view directory,
                                                  cpp17::string_view name) {
+  std::lock_guard guard(inner().checker_);
+
   std::string key(directory);
 
-  if (registered_handlers_.count(key) == 0) {
+  if (inner().registered_handlers_.count(key) == 0) {
     return zx::make_result(ZX_ERR_NOT_FOUND);
   }
 
-  auto& svc_root_handlers = registered_handlers_[key];
+  auto& svc_root_handlers = inner().registered_handlers_[key];
   std::string entry_key = std::string(name);
   if (svc_root_handlers.count(entry_key) == 0) {
     return zx::make_result(ZX_ERR_NOT_FOUND);
@@ -228,10 +221,11 @@ zx::result<> OutgoingDirectory::RemoveProtocolAt(cpp17::string_view directory,
   // handler after we remove the pointer to it in |svc_root_handlers|.
 #if __Fuchsia_API_level__ >= 10
   zx_status_t status = svc_directory_remove_entry(
-      root_, kServiceDirectoryWithNoSlash,
+      inner().root_, kServiceDirectoryWithNoSlash,
       std::char_traits<char>::length(kServiceDirectoryWithNoSlash), name.data(), name.size());
 #else
-  zx_status_t status = svc_dir_remove_service(root_, kServiceDirectoryWithNoSlash, name.data());
+  zx_status_t status =
+      svc_dir_remove_service(inner().root_, kServiceDirectoryWithNoSlash, name.data());
 #endif
   if (status != ZX_OK) {
     return zx::make_result(status);
@@ -250,8 +244,10 @@ zx::result<> OutgoingDirectory::RemoveProtocolAt(cpp17::string_view directory,
 
 zx::result<> OutgoingDirectory::RemoveService(cpp17::string_view service,
                                               cpp17::string_view instance) {
+  std::lock_guard guard(inner().checker_);
+
   std::string path = MakePath(service, instance);
-  if (registered_handlers_.count(path) == 0) {
+  if (inner().registered_handlers_.count(path) == 0) {
     return zx::make_result(ZX_ERR_NOT_FOUND);
   }
 
@@ -260,14 +256,15 @@ zx::result<> OutgoingDirectory::RemoveService(cpp17::string_view service,
   std::string service_path = std::string(kServiceDirectoryWithNoSlash) +
                              std::string(kSvcPathDelimiter) + std::string(service);
 #if __Fuchsia_API_level__ >= 10
-  zx_status_t status = svc_directory_remove_entry(root_, service_path.c_str(), service_path.size(),
-                                                  instance.data(), instance.size());
+  zx_status_t status = svc_directory_remove_entry(
+      inner().root_, service_path.c_str(), service_path.size(), instance.data(), instance.size());
 #else
-  zx_status_t status = svc_dir_remove_service_by_path(root_, service_path.c_str(), instance.data());
+  zx_status_t status =
+      svc_dir_remove_service_by_path(inner().root_, service_path.c_str(), instance.data());
 #endif
 
   // Now it's safe to remove entry from map.
-  registered_handlers_.erase(path);
+  inner().registered_handlers_.erase(path);
 
   return zx::make_result(status);
 }
@@ -278,15 +275,18 @@ zx::result<> OutgoingDirectory::RemoveDirectory(cpp17::string_view directory_nam
 
 zx::result<> OutgoingDirectory::RemoveDirectoryAt(cpp17::string_view path,
                                                   cpp17::string_view directory_name) {
+  std::lock_guard guard(inner().checker_);
+
   if (directory_name.empty()) {
     return zx::make_result(ZX_ERR_INVALID_ARGS);
   }
 
 #if __Fuchsia_API_level__ >= 10
-  zx_status_t status = svc_directory_remove_entry(root_, path.data(), path.size(),
+  zx_status_t status = svc_directory_remove_entry(inner().root_, path.data(), path.size(),
                                                   directory_name.data(), directory_name.size());
 #else
-  zx_status_t status = svc_dir_remove_entry_by_path(root_, path.data(), directory_name.data());
+  zx_status_t status =
+      svc_dir_remove_entry_by_path(inner().root_, path.data(), directory_name.data());
 #endif
   return zx::make_result(status);
 }
@@ -304,13 +304,13 @@ void OutgoingDirectory::AppendUnbindConnectionCallback(UnbindCallbackMap* unbind
 
 void OutgoingDirectory::UnbindAllConnections(cpp17::string_view name) {
   auto key = std::string(name);
-  auto iterator = unbind_protocol_callbacks_->find(key);
-  if (iterator != unbind_protocol_callbacks_->end()) {
+  auto iterator = inner().unbind_protocol_callbacks_.find(key);
+  if (iterator != inner().unbind_protocol_callbacks_.end()) {
     std::vector<UnbindConnectionCallback>& callbacks = iterator->second;
     for (auto& cb : callbacks) {
       cb();
     }
-    unbind_protocol_callbacks_->erase(iterator);
+    inner().unbind_protocol_callbacks_.erase(iterator);
   }
 }
 

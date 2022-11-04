@@ -254,6 +254,7 @@ executable("cpp_outgoing_directory_test_bin") {
     "//src/lib/storage/vfs/cpp",
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",
+    "//zircon/system/ulib/sync:sync-cpp",
   ]
 }
 

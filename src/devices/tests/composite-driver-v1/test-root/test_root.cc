@@ -4,6 +4,9 @@
 
 #include "src/devices/tests/composite-driver-v1/test-root/test_root.h"
 
+#include <lib/async/cpp/task.h>
+#include <lib/sync/cpp/completion.h>
+
 #include "src/devices/tests/composite-driver-v1/test-root/test_root-bind.h"
 
 namespace test_root {
@@ -141,20 +144,38 @@ zx_status_t TestRoot::Bind(const char* name, cpp20::span<const zx_device_prop_t>
   if (auto status = loop_.StartThread("test-root-dispatcher-thread"); status != ZX_OK) {
     return status;
   }
-  outgoing_ = component::OutgoingDirectory::Create(loop_.dispatcher());
-  auto serve_status = outgoing_->AddProtocol<fuchsia_composite_test::Device>(&this->server_);
-  if (serve_status.status_value() != ZX_OK) {
-    return serve_status.status_value();
-  }
-
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   if (endpoints.is_error()) {
     return endpoints.status_value();
   }
-  serve_status = outgoing_->Serve(std::move(endpoints->server));
-  if (serve_status.status_value() != ZX_OK) {
-    return serve_status.status_value();
+
+  libsync::Completion init_complete;
+  zx_status_t init_status;
+  async::TaskClosure init_task([&] {
+    outgoing_ = component::OutgoingDirectory::Create(loop_.dispatcher());
+    auto serve_status = outgoing_->AddProtocol<fuchsia_composite_test::Device>(&this->server_);
+    if (serve_status.status_value() != ZX_OK) {
+      init_status = serve_status.status_value();
+      return;
+    }
+
+    serve_status = outgoing_->Serve(std::move(endpoints->server));
+    if (serve_status.status_value() != ZX_OK) {
+      init_status = serve_status.status_value();
+      return;
+    }
+
+    init_status = ZX_OK;
+    init_complete.Signal();
+  });
+  if (zx_status_t status = init_task.Post(loop_.dispatcher()); status != ZX_OK) {
+    return status;
   }
+  init_complete.Wait();
+  if (init_status != ZX_OK) {
+    return init_status;
+  }
+
   std::array<const char*, 1> offers = {"fuchsia.composite.test.Device"};
 
   is_bound.Set(true);
@@ -165,6 +186,21 @@ zx_status_t TestRoot::Bind(const char* name, cpp20::span<const zx_device_prop_t>
                     .set_fidl_protocol_offers(offers)
                     .set_flags(DEVICE_ADD_MUST_ISOLATE)
                     .set_outgoing_dir(endpoints->client.TakeChannel()));
+}
+
+TestRoot::~TestRoot() {
+  if (!outgoing_) {
+    return;
+  }
+  libsync::Completion shutdown_complete;
+  async::TaskClosure shutdown_task([&] {
+    outgoing_.reset();
+    shutdown_complete.Signal();
+  });
+  if (zx_status_t status = shutdown_task.Post(loop_.dispatcher()); status != ZX_OK) {
+    return;
+  }
+  shutdown_complete.Wait();
 }
 
 void TestRoot::DdkInit(ddk::InitTxn txn) {

@@ -6,6 +6,8 @@
 #define LIB_SYS_COMPONENT_CPP_OUTGOING_DIRECTORY_H_
 
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <lib/async/cpp/sequence_checker.h>
+#include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/wire/traits.h>
 #include <lib/fit/function.h>
@@ -33,30 +35,19 @@ namespace component {
 // to other components. For example the FIDL Protocol `fuchsia.foo.Bar` will be
 // hosted under the path `/svc/fuchsia.foo.Bar`.
 //
-// This class is thread-hostile with respect to its interface. However, its
-// |async_dispatcher_t| may be multithreaded as long as it does not service
-// requests concurrently with any operations on the object's interface or its
-// destruction.
+// # Thread safety
 //
-// # Simple usage
-//
-// Instances of this class should be owned and managed on the same thread
-// that services their connections.
-//
-// # Advanced usage
-//
-// You can use a background thread to service connections provided:
-// async_dispatcher_t for the background thread is stopped or suspended
-// prior to destroying the class object.
+// This class is thread-unsafe. Instances must be managed and used from an async
+// dispatcher with mutual exclusion guarantee. See
+// https://fuchsia.dev/fuchsia-src/development/languages/c-cpp/thread-safe-async#mutual-exclusion-guarantee
 //
 // # Maintainer's Note
 //
 // This class' API is semantically identical to the one found in
 // `//sdk/lib/sys/cpp`. This exists in order to offer equivalent facilities to
 // the new C++ bindings. The other class is designed for the older, HLCPP
-// (High-Level C++) FIDL bindings. It is expected that once
-// all clients of HLCPP are migrated to this unified bindings, that library will
-// be removed.
+// (High-Level C++) FIDL bindings. It is expected that once all clients of HLCPP
+// are migrated to the new C++ bindings, that library will be removed.
 class OutgoingDirectory final {
  public:
   // Creates an OutgoingDirectory which will serve requests when
@@ -76,6 +67,8 @@ class OutgoingDirectory final {
   OutgoingDirectory(const OutgoingDirectory&) = delete;
   OutgoingDirectory& operator=(const OutgoingDirectory&) = delete;
 
+  // Destroying the directory will stop any future attempts to connect to the
+  // services and protocols published within.
   ~OutgoingDirectory();
 
   // Starts serving the outgoing directory on the given channel.
@@ -152,12 +145,12 @@ class OutgoingDirectory final {
   zx::result<> AddProtocol(fidl::Server<Protocol>* impl,
                            cpp17::string_view name = fidl::DiscoverableProtocolName<Protocol>) {
     static_assert(fidl::IsProtocol<Protocol>(), "Type of |Protocol| must be FIDL protocol");
-    if (impl == nullptr || dispatcher_ == nullptr) {
+    if (impl == nullptr || inner().dispatcher_ == nullptr) {
       return zx::make_result(ZX_ERR_INVALID_ARGS);
     }
 
     return AddProtocol<Protocol>(
-        [dispatcher = dispatcher_, impl](fidl::ServerEnd<Protocol> request) {
+        [dispatcher = inner().dispatcher_, impl](fidl::ServerEnd<Protocol> request) {
           // This object is safe to drop. Server will still begin to operate
           // past its lifetime.
           auto _server = fidl::BindServer(dispatcher, std::move(request), impl);
@@ -217,14 +210,14 @@ class OutgoingDirectory final {
   zx::result<> AddProtocolAt(cpp17::string_view path, fidl::WireServer<Protocol>* impl,
                              cpp17::string_view name = fidl::DiscoverableProtocolName<Protocol>) {
     static_assert(fidl::IsProtocol<Protocol>(), "Type of |Protocol| must be FIDL protocol");
-    if (impl == nullptr || dispatcher_ == nullptr) {
+    if (impl == nullptr || inner().dispatcher_ == nullptr) {
       return zx::make_result(ZX_ERR_INVALID_ARGS);
     }
 
     return AddProtocolAt<Protocol>(
         path,
-        [dispatcher = dispatcher_, impl,
-         unbind_protocol_callbacks = unbind_protocol_callbacks_.get(),
+        [dispatcher = inner().dispatcher_, impl,
+         unbind_protocol_callbacks = &inner().unbind_protocol_callbacks_,
          name = std::string(name)](fidl::ServerEnd<Protocol> request) {
           fidl::ServerBindingRef<Protocol> server =
               fidl::BindServer(dispatcher, std::move(request), impl);
@@ -307,6 +300,9 @@ class OutgoingDirectory final {
 
   // Removes a FIDL Protocol entry with the path `/svc/{name}`.
   //
+  // Removing the protocol will stop any future attempts to connect to this
+  // protocol.
+  //
   // # Errors
   //
   // ZX_ERR_NOT_FOUND: The protocol entry was not found.
@@ -348,6 +344,9 @@ class OutgoingDirectory final {
   zx::result<> RemoveProtocolAt(cpp17::string_view directory, cpp17::string_view name);
 
   // Removes an instance of a FIDL Service.
+  //
+  // Removing the service will stop any future attempts to connect to members
+  // within service. Connections to intermediate directories will be closed.
   //
   // # Errors
   //
@@ -408,36 +407,53 @@ class OutgoingDirectory final {
 
   static std::string MakePath(cpp17::string_view service, cpp17::string_view instance);
 
-  async_dispatcher_t* dispatcher_ = nullptr;
+  struct Inner {
+    Inner(async_dispatcher_t* dispatcher, svc_dir_t* root);
+    ~Inner();
+    Inner(Inner&&) noexcept = delete;
+    Inner& operator=(Inner&&) noexcept = delete;
 
-  svc_dir_t* root_ = nullptr;
+    async_dispatcher_t* dispatcher_;
 
-  // Mapping of all registered protocol handlers. Key represents a path to
-  // the directory in which the protocol ought to be installed. For example,
-  // a path may look like `svc/fuchsia.FooService/some_instance`.
-  // The value contains a map of each of the entry's handlers.
-  //
-  // For FIDL Protocols, entries will be stored under "svc" entry
-  // of this type, and then their name will be used as a key for the internal
-  // map.
-  //
-  // For FIDL Services, entries will be stored by instance,
-  // e.g. `svc/fuchsia.FooService/default`, and then the member names will be
-  // used as the keys for the internal maps.
-  //
-  // The OnConnectContext has to be stored in the heap because its pointer
-  // is used by |OnConnect|, a static function, during channel connection attempt.
-  std::map<std::string, std::map<std::string, std::unique_ptr<OnConnectContext>>>
-      registered_handlers_ = {};
+    async::synchronization_checker checker_;
 
-  // Protocol bindings used to initiate teardown when protocol is removed. We
-  // store this in a callback as opposed to a map of fidl::ServerBindingRef<T>
-  // because that object is template parameterized and therefore can't be
-  // stored in a homogeneous container.
-  //
-  // Wrapped in unique_ptr so that we can capture in a lambda without risk of
+    // |root_| is the outgoing directory implementation.
+    // It is thread-unsafe, hence guarded by our synchronization checker using
+    // clang thread-safety annotations. The annotations would help the compiler
+    // statically verify that all accesses are checked for mutual exclusion.
+    svc_dir_t* root_ __TA_GUARDED(checker_);
+
+    // Mapping of all registered protocol handlers. Key represents a path to
+    // the directory in which the protocol ought to be installed. For example,
+    // a path may look like `svc/fuchsia.FooService/some_instance`.
+    // The value contains a map of each of the entry's handlers.
+    //
+    // For FIDL Protocols, entries will be stored under "svc" entry
+    // of this type, and then their name will be used as a key for the internal
+    // map.
+    //
+    // For FIDL Services, entries will be stored by instance,
+    // e.g. `svc/fuchsia.FooService/default`, and then the member names will be
+    // used as the keys for the internal maps.
+    //
+    // The OnConnectContext has to be stored in the heap because its pointer
+    // is used by |OnConnect|, a static function, during channel connection attempt.
+    std::map<std::string, std::map<std::string, std::unique_ptr<OnConnectContext>>>
+        registered_handlers_ = {};
+
+    // Protocol bindings used to initiate teardown when protocol is removed. We
+    // store this in a callback as opposed to a map of fidl::ServerBindingRef<T>
+    // because that object is template parameterized and therefore can't be
+    // stored in a homogeneous container.
+    UnbindCallbackMap unbind_protocol_callbacks_;
+  };
+
+  Inner& inner() { return *inner_; }
+  const Inner& inner() const { return *inner_; }
+
+  // Wrapped in |unique_ptr| so that we can capture in a lambda without risk of
   // it becoming invalid.
-  std::unique_ptr<UnbindCallbackMap> unbind_protocol_callbacks_;
+  std::unique_ptr<Inner> inner_;
 };
 
 }  // namespace component

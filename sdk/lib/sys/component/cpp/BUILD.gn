@@ -27,6 +27,7 @@ sdk_source_set("cpp") {
     "//sdk/lib/stdcompat",
     "//sdk/lib/svc",
     "//zircon/system/ulib/async",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/zx",
   ]
 

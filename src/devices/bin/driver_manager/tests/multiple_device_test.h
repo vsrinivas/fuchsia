@@ -9,6 +9,7 @@
 #include <fidl/fuchsia.device.manager/cpp/wire_test_base.h>
 #include <fidl/fuchsia.fshost/cpp/wire.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/sync/cpp/completion.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
 
@@ -184,6 +185,16 @@ class MultipleDeviceTestCase : public zxtest::Test {
  protected:
   void SetUp() override;
   void TearDown() override;
+
+  // Posts a task on the coordinator loop and waits synchronously until it is completed.
+  void RunOnCoordinatorLoop(fit::closure task) {
+    libsync::Completion task_completion;
+    async::PostTask(coordinator_loop_.dispatcher(), [task = std::move(task), &task_completion]() {
+      task();
+      task_completion.Signal();
+    });
+    task_completion.Wait();
+  }
 
   // These should be listed before driver_host/sys_proxy as it needs to be
   // destroyed after them.

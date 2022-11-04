@@ -529,8 +529,8 @@ TEST_F(DriverTest, Start) {
   AssertDevfsPaths({"/dev/test/my-device/v1"});
 
   // Verify v1_test.so state after release.
+  RunOnDispatcher([&] { driver.reset(); });
   ShutdownDriverDispatcher();
-  driver.reset();
   ASSERT_TRUE(RunTestLoopUntilIdle());
   {
     const std::lock_guard<std::mutex> lock(v1_test->lock);
@@ -566,8 +566,8 @@ TEST_F(DriverTest, ClientRemote) {
     ASSERT_EQ(res->response.get(), kEchoString);
   }
 
+  RunOnDispatcher([&] { driver.reset(); });
   ShutdownDriverDispatcher();
-  driver.reset();
   ASSERT_TRUE(RunTestLoopUntilIdle());
 }
 
@@ -599,8 +599,8 @@ TEST_F(DriverTest, Start_ChildDeviceInstance) {
   AssertDevfsPaths({"/dev/test/my-device/v1", "/dev/test/my-device/v1/v1-child"});
 
   // Verify v1_child_device_instance_test.so state after release.
+  RunOnDispatcher([&] { driver.reset(); });
   ShutdownDriverDispatcher();
-  driver.reset();
   ASSERT_TRUE(RunTestLoopUntilIdle());
   {
     const std::lock_guard<std::mutex> lock(v1_test->lock);
@@ -629,8 +629,8 @@ TEST_F(DriverTest, Start_WithCreate) {
   }
 
   // Verify v1_test.so state after release.
+  RunOnDispatcher([&] { driver.reset(); });
   ShutdownDriverDispatcher();
-  driver.reset();
   ASSERT_TRUE(RunTestLoopUntilIdle());
   {
     const std::lock_guard<std::mutex> lock(v1_test->lock);
@@ -649,6 +649,7 @@ TEST_F(DriverTest, Start_MissingBindAndCreate) {
   // Verify that v1_test.so has not set a context.
   EXPECT_EQ(nullptr, driver->Context());
 
+  RunOnDispatcher([&] { driver.reset(); });
   ShutdownDriverDispatcher();
 }
 
@@ -659,6 +660,7 @@ TEST_F(DriverTest, Start_DeviceAddNull) {
   // Verify that v1_test.so has added a child device.
   WaitForChildDeviceAdded();
 
+  RunOnDispatcher([&] { driver.reset(); });
   ShutdownDriverDispatcher();
 }
 
@@ -687,6 +689,7 @@ TEST_F(DriverTest, Start_CheckCompatService) {
   expected_metadata = {4, 5, 6};
   ASSERT_EQ(metadata, expected_metadata);
 
+  RunOnDispatcher([&] { driver.reset(); });
   ShutdownDriverDispatcher();
 }
 
@@ -725,6 +728,7 @@ TEST_F(DriverTest, Start_GetBackingMemory) {
   // Verify that v1_test.so has not set a context.
   EXPECT_EQ(nullptr, driver->Context());
 
+  RunOnDispatcher([&] { driver.reset(); });
   ShutdownDriverDispatcher();
 }
 
@@ -757,8 +761,8 @@ TEST_F(DriverTest, Start_BindFailed) {
   }
 
   // Verify v1_test.so state after release.
+  RunOnDispatcher([&] { driver.reset(); });
   ShutdownDriverDispatcher();
-  driver.reset();
   ASSERT_TRUE(RunTestLoopUntilIdle());
 
   {
@@ -802,8 +806,8 @@ TEST_F(DriverTest, LoadFirwmareAsync) {
   }
   ASSERT_TRUE(was_called);
 
+  RunOnDispatcher([&] { driver.reset(); });
   ShutdownDriverDispatcher();
-  driver.reset();
   ASSERT_TRUE(RunTestLoopUntilIdle());
 }
 
@@ -836,8 +840,8 @@ TEST_F(DriverTest, GetProfile) {
   } while (sync_completion_wait(&finished, ZX_TIME_INFINITE_PAST) == ZX_ERR_TIMED_OUT);
   thread.join();
 
+  RunOnDispatcher([&] { driver.reset(); });
   ShutdownDriverDispatcher();
-  driver.reset();
   ASSERT_TRUE(RunTestLoopUntilIdle());
 }
 
@@ -875,8 +879,8 @@ TEST_F(DriverTest, GetDeadlineProfile) {
   } while (sync_completion_wait(&finished, ZX_TIME_INFINITE_PAST) == ZX_ERR_TIMED_OUT);
   thread.join();
 
+  RunOnDispatcher([&] { driver.reset(); });
   ShutdownDriverDispatcher();
-  driver.reset();
   ASSERT_TRUE(RunTestLoopUntilIdle());
 }
 
@@ -919,8 +923,8 @@ TEST_F(DriverTest, GetVariable) {
   } while (sync_completion_wait(&finished, ZX_TIME_INFINITE_PAST) == ZX_ERR_TIMED_OUT);
   thread.join();
 
+  RunOnDispatcher([&] { driver.reset(); });
   ShutdownDriverDispatcher();
-  driver.reset();
   ASSERT_TRUE(RunTestLoopUntilIdle());
 }
 
@@ -958,7 +962,7 @@ TEST_F(DriverTest, SetProfileByRole) {
   } while (sync_completion_wait(&finished, ZX_TIME_INFINITE_PAST) == ZX_ERR_TIMED_OUT);
   thread.join();
 
+  RunOnDispatcher([&] { driver.reset(); });
   ShutdownDriverDispatcher();
-  driver.reset();
   ASSERT_TRUE(RunTestLoopUntilIdle());
 }

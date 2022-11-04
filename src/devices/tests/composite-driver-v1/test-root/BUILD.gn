@@ -24,10 +24,12 @@ fuchsia_driver("driver") {
     "//src/devices/lib/driver",
     "//src/devices/tests/composite-driver-v1:fuchsia.composite.test_cpp_wire",
     "//src/lib/ddktl",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/sync:sync-cpp",
     "//zircon/system/ulib/zx",
   ]
 }

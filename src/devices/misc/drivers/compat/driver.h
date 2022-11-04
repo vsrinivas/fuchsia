@@ -43,6 +43,11 @@ class Driver : public driver::DriverBase {
   void LoadFirmwareAsync(Device* device, const char* filename, load_firmware_callback_t callback,
                          void* ctx);
 
+  // # Threading notes
+  //
+  // If this method is not called from a task running on |dispatcher|,
+  // this method will schedule its work on that dispatcher then block until it
+  // is done.
   zx_status_t AddDevice(Device* parent, device_add_args_t* args, zx_device_t** out);
   zx::result<zx::profile> GetSchedulerProfile(uint32_t priority, const char* name);
   zx::result<zx::profile> GetDeadlineProfile(uint64_t capacity, uint64_t deadline, uint64_t period,
@@ -67,6 +72,7 @@ class Driver : public driver::DriverBase {
   // These accessors are used by other classes in the compat driver so we want to expose
   // them publicly since they are protected in DriverBase.
   async_dispatcher_t* dispatcher() { return driver::DriverBase::dispatcher(); }
+  const async_dispatcher_t* dispatcher() const { return driver::DriverBase::dispatcher(); }
   const driver::Namespace& driver_namespace() { return *context().incoming(); }
   driver::OutgoingDirectory& outgoing() { return *context().outgoing(); }
 
@@ -76,6 +82,13 @@ class Driver : public driver::DriverBase {
 
  private:
   bool IsComposite();
+
+  bool IsRunningOnDispatcher() const;
+
+  // If the current thread is running a task from our dispatcher, calls |task|
+  // synchronously. Otherwise, schedules |task| onto our dispatcher and blocks
+  // to receive its result.
+  zx_status_t RunOnDispatcher(fit::callback<zx_status_t()> task);
 
   // Gets the root resource for the DFv1 driver.
   fpromise::promise<zx::resource, zx_status_t> GetRootResource(

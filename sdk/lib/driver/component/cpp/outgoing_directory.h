@@ -22,6 +22,13 @@ constexpr const std::string_view kDefaultInstance = component::kDefaultInstance;
 
 // Driver specific implementation for an outgoing directory that wraps around
 // |component::OutgoingDirectory|.
+//
+// # Thread safety
+//
+// This class is thread-unsafe. Instances must be managed and used from tasks
+// running on the |fdf_dispatcher_t|, and the dispatcher must be synchronized.
+// See
+// https://fuchsia.dev/fuchsia-src/development/languages/c-cpp/thread-safe-async#mutual-exclusion-guarantee
 class OutgoingDirectory final {
  public:
   static OutgoingDirectory Create(fdf_dispatcher_t* dispatcher) {

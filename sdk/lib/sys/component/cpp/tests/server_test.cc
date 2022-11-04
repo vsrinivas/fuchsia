@@ -92,21 +92,20 @@ class ServerTest : public zxtest::Test {
   }
 
   void SetUp() override {
-    loop_.StartThread("server-test-loop");
-
     auto result = outgoing_.AddService<EchoService>(SetUpInstance(&default_foo_, &default_bar_));
     ASSERT_OK(result.status_value());
     result = outgoing_.AddService<EchoService>(SetUpInstance(&other_foo_, &other_bar_), "other");
     ASSERT_OK(result.status_value());
 
     zx::channel remote;
-    ASSERT_OK(zx::channel::create(0, &local_root_, &remote));
+    ASSERT_OK(zx::channel::create(0, &local_root_.channel(), &remote));
 
     result = outgoing_.Serve(std::move(remote));
     ASSERT_OK(result.status_value());
   }
 
-  void TearDown() override { loop_.Shutdown(); }
+  async::Loop& loop() { return loop_; }
+  async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
 
   EchoCommon default_foo_{"default-foo"};
   EchoCommon default_bar_{"default-bar"};
@@ -114,22 +113,17 @@ class ServerTest : public zxtest::Test {
   EchoCommon other_bar_{"other-bar"};
 
   async::Loop loop_;
-  zx::channel local_root_;
+  fidl::ClientEnd<fuchsia_io::Directory> local_root_;
   component::OutgoingDirectory outgoing_;
 };
 
 TEST_F(ServerTest, ConnectsToDefaultMember) {
-  // Open a copy of the local namespace (channel) as a file descriptor.
-  fbl::unique_fd svc_fd = OpenSvcDir(local_root_);
-  ASSERT_TRUE(svc_fd.is_valid());
-
-  // Extract the channel from `svc_fd`.
-  zx_handle_t svc_local;
-  ASSERT_OK(fdio_get_service_handle(svc_fd.release(), &svc_local));
+  auto svc_local = component::ConnectAt<fuchsia_io::Directory>(local_root_, "svc");
+  ASSERT_OK(svc_local.status_value());
 
   // Connect to the `EchoService` at the 'default' instance.
   zx::result<EchoService::ServiceClient> open_result =
-      component::OpenServiceAt<EchoService>(zx::unowned_channel(svc_local));
+      component::OpenServiceAt<EchoService>(*svc_local);
   ASSERT_TRUE(open_result.is_ok());
 
   EchoService::ServiceClient service = std::move(open_result.value());
@@ -138,28 +132,26 @@ TEST_F(ServerTest, ConnectsToDefaultMember) {
   zx::result<fidl::ClientEnd<Echo>> connect_result = service.connect_foo();
   ASSERT_TRUE(connect_result.is_ok());
 
-  fidl::WireSyncClient client{std::move(connect_result.value())};
-  fidl::WireResult<Echo::EchoString> echo_result = client->EchoString(fidl::StringView("hello"));
-  ASSERT_TRUE(echo_result.ok());
+  fidl::WireClient client{std::move(connect_result.value()), dispatcher()};
+  client->EchoString(fidl::StringView("hello"))
+      .ThenExactlyOnce([&](fidl::WireUnownedResult<Echo::EchoString>& echo_result) {
+        ASSERT_TRUE(echo_result.ok(), "%s", echo_result.error().FormatDescription().c_str());
+        auto response = echo_result.Unwrap();
+        std::string result_string(response->response.data(), response->response.size());
+        ASSERT_EQ(result_string, "default-foo: hello");
+        loop().Quit();
+      });
 
-  auto response = echo_result.Unwrap();
-
-  std::string result_string(response->response.data(), response->response.size());
-  ASSERT_EQ(result_string, "default-foo: hello");
+  loop().Run();
 }
 
 TEST_F(ServerTest, ConnectsToOtherMember) {
-  // Open a copy of the local namespace (channel) as a file descriptor.
-  fbl::unique_fd svc_fd = OpenSvcDir(local_root_);
-  ASSERT_TRUE(svc_fd.is_valid());
-
-  // Extract the channel from `svc_fd`.
-  zx_handle_t svc_local;
-  ASSERT_OK(fdio_get_service_handle(svc_fd.release(), &svc_local));
+  auto svc_local = component::ConnectAt<fuchsia_io::Directory>(local_root_, "svc");
+  ASSERT_OK(svc_local.status_value());
 
   // Connect to the `EchoService` at the 'default' instance.
   zx::result<EchoService::ServiceClient> open_result =
-      component::OpenServiceAt<EchoService>(zx::unowned_channel(svc_local), "other");
+      component::OpenServiceAt<EchoService>(*svc_local, "other");
   ASSERT_TRUE(open_result.is_ok());
 
   EchoService::ServiceClient service = std::move(open_result.value());
@@ -168,41 +160,52 @@ TEST_F(ServerTest, ConnectsToOtherMember) {
   zx::result<fidl::ClientEnd<Echo>> connect_result = service.connect_foo();
   ASSERT_TRUE(connect_result.is_ok());
 
-  fidl::WireSyncClient client{std::move(connect_result.value())};
-  fidl::WireResult<Echo::EchoString> echo_result = client->EchoString(fidl::StringView("hello"));
-  ASSERT_TRUE(echo_result.ok());
+  fidl::WireClient client{std::move(connect_result.value()), dispatcher()};
 
-  auto response = echo_result.Unwrap();
-
-  std::string result_string(response->response.data(), response->response.size());
-  ASSERT_EQ(result_string, "other-foo: hello");
+  client->EchoString(fidl::StringView("hello"))
+      .ThenExactlyOnce([&](fidl::WireUnownedResult<Echo::EchoString>& echo_result) {
+        ASSERT_TRUE(echo_result.ok(), "%s", echo_result.error().FormatDescription().c_str());
+        auto response = echo_result.Unwrap();
+        std::string result_string(response->response.data(), response->response.size());
+        ASSERT_EQ(result_string, "other-foo: hello");
+        loop().Quit();
+      });
+  loop().Run();
 }
 
 TEST_F(ServerTest, ListsMembers) {
-  // Open a copy of the local namespace (channel) as a file descriptor.
-  fbl::unique_fd svc_fd = OpenSvcDir(local_root_);
-  ASSERT_TRUE(svc_fd.is_valid());
+  // The POSIX/fd-based APIs are blocking, hence run on a separate thread.
+  std::thread t([&] {
+    auto defer_quit_loop = fit::defer([&] { loop().Quit(); });
 
-  // Open the 'default' instance of the test service.
-  fbl::unique_fd instance_fd = OpenAt(svc_fd, "fidl.service.test.EchoService/default", O_RDONLY);
-  ASSERT_TRUE(instance_fd.is_valid());
+    // Open a copy of the local namespace (channel) as a file descriptor.
+    fbl::unique_fd svc_fd = OpenSvcDir(local_root_.channel());
+    ASSERT_TRUE(svc_fd.is_valid());
 
-  // fdopendir takes ownership of `instance_fd`.
-  DIR* dir = fdopendir(instance_fd.release());
-  ASSERT_NE(dir, nullptr);
-  auto defer_closedir = fit::defer([dir] { closedir(dir); });
+    // Open the 'default' instance of the test service.
+    fbl::unique_fd instance_fd = OpenAt(svc_fd, "fidl.service.test.EchoService/default", O_RDONLY);
+    ASSERT_TRUE(instance_fd.is_valid());
 
-  dirent* entry = readdir(dir);
-  ASSERT_NE(entry, nullptr);
-  ASSERT_EQ(std::string(entry->d_name), ".");
+    // fdopendir takes ownership of `instance_fd`.
+    DIR* dir = fdopendir(instance_fd.release());
+    ASSERT_NE(dir, nullptr);
+    auto defer_closedir = fit::defer([dir] { closedir(dir); });
 
-  entry = readdir(dir);
-  ASSERT_NE(entry, nullptr);
-  ASSERT_EQ(std::string(entry->d_name), "bar");
+    dirent* entry = readdir(dir);
+    ASSERT_NE(entry, nullptr);
+    ASSERT_EQ(std::string(entry->d_name), ".");
 
-  entry = readdir(dir);
-  ASSERT_NE(entry, nullptr);
-  ASSERT_EQ(std::string(entry->d_name), "foo");
+    entry = readdir(dir);
+    ASSERT_NE(entry, nullptr);
+    ASSERT_EQ(std::string(entry->d_name), "bar");
 
-  ASSERT_EQ(readdir(dir), nullptr);
+    entry = readdir(dir);
+    ASSERT_NE(entry, nullptr);
+    ASSERT_EQ(std::string(entry->d_name), "foo");
+
+    ASSERT_EQ(readdir(dir), nullptr);
+  });
+
+  loop().Run();
+  t.join();
 }

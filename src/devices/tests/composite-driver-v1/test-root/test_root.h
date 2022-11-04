@@ -33,7 +33,7 @@ class TestRoot : public DeviceType {
  public:
   explicit TestRoot(zx_device_t* parent)
       : DeviceType(parent), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
-  virtual ~TestRoot() = default;
+  virtual ~TestRoot();
 
   static zx_status_t Bind(void* ctx, zx_device_t* dev);
   zx_status_t Bind(const char* name, cpp20::span<const zx_device_prop_t> props);
