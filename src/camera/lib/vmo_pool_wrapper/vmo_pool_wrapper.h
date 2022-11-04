@@ -20,6 +20,8 @@ class VmoPoolWrapper {
   virtual ~VmoPoolWrapper() = default;
 
   // Initializes the VmoPool with a set of vmos.
+  zx_status_t Init(const zx::vmo* vmos, size_t num_vmos,
+                   std::optional<std::string> name = std::nullopt);
   zx_status_t Init(cpp20::span<zx::unowned_vmo> vmos,
                    std::optional<std::string> name = std::nullopt);
 
