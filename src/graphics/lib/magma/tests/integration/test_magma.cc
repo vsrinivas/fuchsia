@@ -97,17 +97,17 @@ class FakeLogSink : public fidl::WireServer<fuchsia_logger::LogSink> {
  public:
   explicit FakeLogSink(async::Loop& loop) : loop_(loop) {}
 
-  void Connect(ConnectRequestView request, ConnectCompleter::Sync& _completer) override {
-    loop_.Quit();
+  void Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) override {
+    fprintf(stderr, "Unexpected Connect\n");
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
   void WaitForInterestChange(WaitForInterestChangeCompleter::Sync& completer) override {
     fprintf(stderr, "Unexpected WaitForInterestChange\n");
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
   void ConnectStructured(ConnectStructuredRequestView request,
-                         ConnectStructuredCompleter::Sync& completer) override {
-    fprintf(stderr, "Unexpected ConnectStructured\n");
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
+                         ConnectStructuredCompleter::Sync& _completer) override {
+    loop_.Quit();
   }
 
  private:

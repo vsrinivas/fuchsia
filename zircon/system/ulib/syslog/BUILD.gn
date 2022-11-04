@@ -61,10 +61,7 @@ syslog_visibility_allowlist += [
 # Syslog code can depend on syslog.
 syslog_visibility_allowlist += [ "//zircon/system/ulib/syslog:*" ]
 
-syslog_static_visibility_allowlist = [
-  "//src/devices/tests/fx-logger:*",
-  "//src/graphics/lib/magma/src/magma_util/platform/zircon:*",
-]
+syslog_static_visibility_allowlist = [ "//src/devices/tests/fx-logger:*" ]
 
 syslog_static_visibility_allowlist += [
   "//third_party/*",

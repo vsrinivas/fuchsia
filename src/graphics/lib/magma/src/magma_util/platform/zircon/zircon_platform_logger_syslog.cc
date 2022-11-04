@@ -4,13 +4,14 @@
 
 #include <assert.h>
 #include <fidl/fuchsia.logger/cpp/wire.h>
-#include <lib/syslog/global.h>
+#include <lib/syslog/structured_backend/cpp/fuchsia_syslog.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/socket.h>
 #include <stdarg.h>
 #include <stdio.h>
 
 #include "platform_logger.h"
+#include "platform_thread.h"
 #include "zircon_platform_handle.h"
 
 namespace magma {
@@ -18,6 +19,8 @@ namespace magma {
 namespace {
 
 bool g_is_logging_initialized = false;
+// Intentionally leaked on shutdown to ensure there are no destructor ordering problems.
+zx_handle_t log_socket;
 
 }  // namespace
 
@@ -33,39 +36,70 @@ bool PlatformLogger::Initialize(std::unique_ptr<PlatformHandle> channel) {
 
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_logger::LogSink>(
                                    zx::unowned_channel(zircon_handle->get())))
-                    ->Connect(std::move(remote_socket));
+                    ->ConnectStructured(std::move(remote_socket));
   if (result.status() != ZX_OK)
     return false;
 
-  fx_logger_config_t config = {
-      .min_severity = FX_LOG_INFO,
-      .log_sink_socket = local_socket.release(),
-      .tags = nullptr,
-      .num_tags = 0,
-  };
-
-  status = fx_log_reconfigure(&config);
-  if (status != ZX_OK)
-    return false;
+  log_socket = local_socket.release();
 
   g_is_logging_initialized = true;
   return true;
 }
 
-static fx_log_severity_t get_severity(PlatformLogger::LogLevel level) {
+static FuchsiaLogSeverity get_severity(PlatformLogger::LogLevel level) {
   switch (level) {
     case PlatformLogger::LOG_INFO:
-      return FX_LOG_INFO;
+      return FUCHSIA_LOG_INFO;
     case PlatformLogger::LOG_WARNING:
-      return FX_LOG_WARNING;
+      return FUCHSIA_LOG_WARNING;
     case PlatformLogger::LOG_ERROR:
-      return FX_LOG_ERROR;
+      return FUCHSIA_LOG_ERROR;
+  }
+}
+
+static const char* StripPath(const char* path) {
+  auto p = strrchr(path, '/');
+  if (p) {
+    return p + 1;
+  } else {
+    return path;
   }
 }
 
 void PlatformLogger::LogVa(LogLevel level, const char* file, int line, const char* msg,
                            va_list args) {
-  _FX_LOGVF(get_severity(level), "magma", file, line, msg, args);
+  if (log_socket == ZX_HANDLE_INVALID) {
+    return;
+  }
+  constexpr size_t kFormatStringLength = 1024;
+  char fmt_string[kFormatStringLength];
+  fmt_string[kFormatStringLength - 1] = 0;
+  int n = kFormatStringLength;
+  // Format
+  // Number of bytes written not including null terminator
+  int count = vsnprintf(fmt_string, n, msg, args);
+  if (count < 0) {
+    return;
+  }
+
+  // Add null terminator.
+  count++;
+
+  if (count >= n) {
+    // truncated
+    constexpr char kEllipsis[] = "...";
+    constexpr size_t kEllipsisSize = sizeof(kEllipsis);
+    snprintf(fmt_string + kFormatStringLength - 1 - kEllipsisSize, kEllipsisSize, kEllipsis);
+  }
+
+  std::string file_string = StripPath(file);
+  fuchsia_syslog::LogBuffer log_buffer;
+  uint64_t tid = PlatformThreadId().id();
+  uint64_t pid = PlatformProcessHelper::GetCurrentProcessId();
+  log_buffer.BeginRecord(get_severity(level), file, line, fmt_string, /*condition*/ {},
+                         /*is_printf*/ false, zx::unowned_socket(log_socket), 0, pid, tid);
+  log_buffer.WriteKeyValue("tag", "magma");
+  log_buffer.FlushRecord();
 }
 
 }  // namespace magma

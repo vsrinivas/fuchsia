@@ -325,8 +325,10 @@ source_set("logger") {
 
   deps = [
     ":handle",
+    ":thread",
+    "..:thread_header",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_cpp_wire",
-    "//zircon/system/ulib/syslog:syslog-static",
+    "//sdk/lib/syslog/structured_backend",
     "//zircon/system/ulib/zx",
   ]
 }
