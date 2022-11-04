@@ -73,31 +73,48 @@ static const std::vector<fpbus::Irq> gpio_irqs{
 // GPIOs to expose from generic GPIO driver.
 static const gpio_pin_t gpio_pins[] = {
     // place holder
-    DECL_GPIO_PIN(A1_GPIOB(12)),
+    DECL_GPIO_PIN(A1_GPIOA(1)),
 };
-
-static const std::vector<fpbus::Metadata> gpio_metadata{
-    {{
-        .type = DEVICE_METADATA_GPIO_PINS,
-        .data =
-            std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(&gpio_pins),
-                                 reinterpret_cast<const uint8_t*>(&gpio_pins) + sizeof(gpio_pins)),
-    }},
-};
-
-static const fpbus::Node gpio_dev = []() {
-  fpbus::Node dev = {};
-  dev.name() = "gpio";
-  dev.vid() = PDEV_VID_AMLOGIC;
-  dev.pid() = PDEV_PID_AMLOGIC_A1;
-  dev.did() = PDEV_DID_AMLOGIC_GPIO;
-  dev.mmio() = gpio_mmios;
-  dev.irq() = gpio_irqs;
-  dev.metadata() = gpio_metadata;
-  return dev;
-}();
 
 zx_status_t Clover::GpioInit() {
+  fuchsia_hardware_gpio_init::wire::GpioInitMetadata metadata;
+  metadata.steps = fidl::VectorView<fuchsia_hardware_gpio_init::wire::GpioInitStep>::FromExternal(
+      gpio_init_steps_.data(), gpio_init_steps_.size());
+
+  fidl::unstable::OwnedEncodedMessage<fuchsia_hardware_gpio_init::wire::GpioInitMetadata> encoded(
+      fidl::internal::WireFormatVersion::kV2, &metadata);
+  if (!encoded.ok()) {
+    zxlogf(ERROR, "Failed to encode GPIO init metadata: %s", encoded.status_string());
+    return encoded.status();
+  }
+
+  auto message = encoded.GetOutgoingMessage().CopyBytes();
+
+  static const std::vector<fpbus::Metadata> gpio_metadata{
+      {{
+          .type = DEVICE_METADATA_GPIO_PINS,
+          .data = std::vector<uint8_t>(
+              reinterpret_cast<const uint8_t*>(&gpio_pins),
+              reinterpret_cast<const uint8_t*>(&gpio_pins) + sizeof(gpio_pins)),
+      }},
+      {{
+          .type = DEVICE_METADATA_GPIO_INIT_STEPS,
+          .data = std::vector<uint8_t>(message.data(), message.data() + message.size()),
+      }},
+  };
+
+  static const fpbus::Node gpio_dev = []() {
+    fpbus::Node dev = {};
+    dev.name() = "gpio";
+    dev.vid() = PDEV_VID_AMLOGIC;
+    dev.pid() = PDEV_PID_AMLOGIC_A1;
+    dev.did() = PDEV_DID_AMLOGIC_GPIO;
+    dev.mmio() = gpio_mmios;
+    dev.irq() = gpio_irqs;
+    dev.metadata() = gpio_metadata;
+    return dev;
+  }();
+
   fidl::Arena<> fidl_arena;
   fdf::Arena arena('GPIO');
   auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, gpio_dev));

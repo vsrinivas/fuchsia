@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_CLOVER_CLOVER_H_
 #define SRC_DEVICES_BOARD_DRIVERS_CLOVER_CLOVER_H_
 
+#include <fidl/fuchsia.hardware.gpio.init/cpp/wire.h>
 #include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
 #include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <fuchsia/hardware/iommu/cpp/banjo.h>
@@ -74,6 +75,9 @@ class Clover : public CloverType {
   std::optional<ddk::InitTxn> init_txn_;
   ddk::IommuProtocolClient iommu_;
   thrd_t thread_;
+
+  fidl::Arena<> gpio_init_arena_;
+  std::vector<fuchsia_hardware_gpio_init::wire::GpioInitStep> gpio_init_steps_;
 };
 
 }  // namespace clover
