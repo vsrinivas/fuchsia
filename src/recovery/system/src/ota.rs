@@ -12,7 +12,7 @@ use {
     futures::prelude::*,
     hyper::Uri,
     isolated_ota::{download_and_apply_update, OmahaConfig},
-    serde::Deserialize,
+    serde::{Deserialize, Serialize},
     serde_json::{json, Value},
     std::sync::Arc,
     std::{fs::File, io::BufReader, str::FromStr},
@@ -393,7 +393,7 @@ pub async fn run_wellknown_ota(
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum UpdateType {
     /// Designates an Omaha based update
@@ -405,11 +405,11 @@ pub enum UpdateType {
     Tuf,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct RecoveryUpdateConfig {
-    default_channel: String,
-    update_type: UpdateType,
-    override_version: Option<String>,
+    pub default_channel: String,
+    pub update_type: UpdateType,
+    pub override_version: Option<String>,
 }
 
 #[cfg(test)]
