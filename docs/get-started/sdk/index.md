@@ -1,13 +1,13 @@
 # Get started with the Fuchsia SDK
 
-This guide provides step-by-step instructions on setting up the
-Fuchsia SDK development environment on your host machine. The guide then walks
-you through the basic workflows of building, running, debugging, and testing
-Fuchsia components using the [Fuchsia SDK][using-the-sdk].
+This guide provides step-by-step instructions on setting up the Fuchsia SDK
+development environment on your host machine. The guide then walks you through
+the basic workflows of building, running, debugging, and testing Fuchsia
+components using the [Fuchsia SDK][using-the-sdk].
 
-Important: The Fuchsia SDK is in active development. At the moment, Fuchsia
-does not support general public usage of the Fuchsia SDK. The APIs in the
-SDK are subject to change without notice.
+Important: The Fuchsia SDK is in active development. At the moment, Fuchsia does
+not support general public usage of the Fuchsia SDK. The APIs in the SDK are
+subject to change without notice.
 
 Complete the following sections:
 
@@ -26,39 +26,44 @@ Found an issue? Please [let us know][sdk-bug]{:.external}.
 
 This guide requires that your host machine meets the following criteria:
 
-*  An x64-based machine running Linux or macOS.
+- An x64-based machine running Linux or macOS.
 
-   Note: While you can use an x64-based (Intel) macOS machine for this get-started
-   flow, you might run into issues. To help us improve, please
-   [file a bug][sdk-bug]{:.external} if you discover issues on macOS.
+  Note: While you can use an x64-based (Intel) macOS machine for this
+  get-started flow, you might run into issues. To help us improve, please
+  [file a bug][sdk-bug]{:.external} if you discover issues on macOS.
 
-*  Has at least 15 GB of storage space.
-*  Supports [KVM][kvm]{:.external} (Kernel Virtual Machine) for running a
-   [QEMU][qemu]{:.external}-based emulator.
-*  IPv6 is enabled.
-*  [Git][git-install]{:.external} is installed.
+- Has at least 15 GB of storage space.
+
+- Supports [KVM]{:.external} (Kernel Virtual Machine) for running a
+  [QEMU]{:.external}-based emulator.
+
+- IPv6 is enabled.
+
+- [Git][git-install]{:.external} is installed.
 
 ## 2. Clone the SDK samples repository {:#clone-the-sdk-samples-repository}
 
-Clone the [SDK samples repository][sdk-samples-repo]{:.external} on your host machine.
-This repository contains the Bazel-based Fuchsia SDK and sample components.
+Clone the [SDK samples repository][sdk-samples-repo]{:.external} on your host
+machine. This repository contains the Bazel-based Fuchsia SDK and sample
+components.
 
-Note: Support for installing the SDK by itself, without a samples repository, is planned.
-See [this ticket][ticket-01].
+Note: Support for installing the SDK by itself, without a samples repository, is
+planned. See [this ticket][ticket-01].
 
 The tasks include:
 
-*   Bootstrap the SDK samples repository.
-*   Download the SDK toolchain to initialize the SDK environment.
-*   Verify that you can run [`ffx`][ffx] commands.
+- Bootstrap the SDK samples repository.
+- Download the SDK toolchain to initialize the SDK environment.
+- Verify that you can run [`ffx`][ffx] commands.
 
 Do the following:
 
 1. In a terminal, change to your home directory:
 
-   Note: This guide uses the home directory (`$HOME`) as a base directory. This is where a new
-   work directory (`fuchsia-getting-started`) will be created for this guide. You may also select
-   a different base directory (for instance, `cd $HOME/my-fuchsia-project`).
+   Note: This guide uses the home directory (`$HOME`) as a base directory. This
+   is where a new work directory (`fuchsia-getting-started`) will be created for
+   this guide. You may also select a different base directory (for instance,
+   `cd $HOME/my-fuchsia-project`).
 
    ```posix-terminal
    cd $HOME
@@ -70,8 +75,9 @@ Do the following:
    git clone https://fuchsia.googlesource.com/sdk-samples/getting-started fuchsia-getting-started --recurse-submodules
    ```
 
-   This `git clone` command creates a new directory named `fuchsia-getting-started` (see the
-   command's second argument above) and clones the content of the SDK samples repository.
+   This `git clone` command creates a new directory named
+   `fuchsia-getting-started` (see the command's second argument above) and
+   clones the content of the SDK samples repository.
 
 1. Go to the new directory:
 
@@ -91,11 +97,12 @@ Do the following:
    tools/bazel build @fuchsia_sdk//:fuchsia_toolchain_sdk
    ```
 
-   This command may take a few minutes to download all the tools and dependencies, such as
-   Bazel build rules, [Clang][clang]{:.external} and [Fuchsia IDK][fuchsia-idk] (which
-   includes the `ffx` tool).
+   This command may take a few minutes to download all the tools and
+   dependencies, such as Bazel build rules, [Clang]{:.external} and
+   [Fuchsia IDK][fuchsia-idk] (which includes the `ffx` tool).
 
-   When finished successfully, it prints output similar to the following in the end:
+   When finished successfully, it prints output similar to the following in the
+   end:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/bazel build @fuchsia_sdk//:fuchsia_toolchain_sdk
@@ -105,8 +112,8 @@ Do the following:
    INFO: Build completed successfully, 1 total action
    ```
 
-1. To verify that you can use the `ffx` tool in your environment,
-   run the following command:
+1. To verify that you can use the `ffx` tool in your environment, run the
+   following command:
 
    ```posix-terminal
    tools/ffx sdk version
@@ -120,32 +127,33 @@ Do the following:
    ```
 
    At this point, you only need to confirm that you can run `ffx` commands
-   without error. (However for your information, the output above shows the version
-   `10.20221021.1.1`, which indicates that this SDK was built and published on
-   October 21, 2022.)
+   without error. (However for your information, the output above shows the
+   version `10.20221021.1.1`, which indicates that this SDK was built and
+   published on October 21, 2022.)
 
-   Note: To ensure that you’re using the right version of `ffx` during development,
-   consider updating your `PATH` to include the SDK's `tools` directory
-   (for instance, `export PATH="$PATH:$HOME/fuchsia-getting-started/tools"`). However,
-   if you don't wish to update your `PATH`, ensure that you specify the relative path to
-   this `ffx` tool (`tools/ffx`) whenever you run `ffx` commands.
+   Note: To ensure that you’re using the right version of `ffx` during
+   development, consider updating your `PATH` to include the SDK's `tools`
+   directory (for instance,
+   `export PATH="$PATH:$HOME/fuchsia-getting-started/tools"`). However, if you
+   don't wish to update your `PATH`, ensure that you specify the relative path
+   to this `ffx` tool (`tools/ffx`) whenever you run `ffx` commands.
 
 ## 3. Start the emulator {:#start-the-emulator}
 
-Start the [Fuchsia emulator][femu] on the host machine. This guide uses an instance
-of the Fuchsia emulator as the target device for running and testing Fuchsia
-software. And to be able to supply new Fuchsia software to the target device,
-you also need to start the [Fuchsia package server][fuchsia-package-server]
-on the host machine.
+Start the [Fuchsia emulator][femu] on the host machine. This guide uses an
+instance of the Fuchsia emulator as the target device for running and testing
+Fuchsia software. And to be able to supply new Fuchsia software to the target
+device, you also need to start the
+[Fuchsia package server][fuchsia-package-server] on the host machine.
 
 The tasks include:
 
-*   Download one of Fuchsia's prebuilt images from Google Cloud Storage.
-*   Start the Fuchsia emulator to run the downloaded Fuchsia prebuilt image.
-*   Set the emulator instance as the default target device.
-*   Verify that various `ffx` commands can connect to the emulator instance.
-*   Start the Fuchsia package server.
-*   Register the system package repository to the emulator instance.
+- Download one of Fuchsia's prebuilt images from Google Cloud Storage.
+- Start the Fuchsia emulator to run the downloaded Fuchsia prebuilt image.
+- Set the emulator instance as the default target device.
+- Verify that various `ffx` commands can connect to the emulator instance.
+- Start the Fuchsia package server.
+- Register the system package repository to the emulator instance.
 
 Do the following:
 
@@ -156,16 +164,18 @@ Do the following:
    tools/ffx product-bundle get workstation_eng.qemu-x64 --repository workstation-packages
    ```
 
-   This command may take a few minutes to download the image and product metadata.
+   This command may take a few minutes to download the image and product
+   metadata.
 
-   Note: If the `product-bundle` command fails with an error due to multiple product bundle
-   instances or SDK versions, [clean up the environment](#clean-up-the-environment) before
-   proceeding.
+   Note: If the `product-bundle` command fails with an error due to multiple
+   product bundle instances or SDK versions,
+   [clean up the environment](#clean-up-the-environment) before proceeding.
 
-   Once the download is finished, the `ffx product-bundle get` command creates
-   a local Fuchsia package repository named `workstation-packages` on your host machine.
-   This package repository hosts additional system packages for this Workstation prebuilt image.
-   Later in Step 12 you’ll register this package repository to the emulator instance.
+   Once the download is finished, the `ffx product-bundle get` command creates a
+   local Fuchsia package repository named `workstation-packages` on your host
+   machine. This package repository hosts additional system packages for this
+   Workstation prebuilt image. Later in Step 12 you’ll register this package
+   repository to the emulator instance.
 
 1. Stop all running emulator instances:
 
@@ -179,7 +189,8 @@ Do the following:
    tools/ffx emu start workstation_eng.qemu-x64 --headless
    ```
 
-   This command starts a headless emulator instance running the Workstation prebuilt image.
+   This command starts a headless emulator instance running the Workstation
+   prebuilt image.
 
    When the instance is up and running, the command prints output similar to the
    following:
@@ -228,7 +239,6 @@ Do the following:
 
    This command exits silently without output.
 
-
 1. Verify that the default device is set:
 
    ```posix-terminal
@@ -236,7 +246,6 @@ Do the following:
    ```
 
    This command prints output similar to the following:
-
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx target default get
@@ -311,8 +320,8 @@ Do the following:
    ffx repository server is listening on [::]:8083
    ```
 
-1. Check the list of Fuchsia package repositories available on
-   your host machine:
+1. Check the list of Fuchsia package repositories available on your host
+   machine:
 
    ```posix-terminal
    tools/ffx repository list
@@ -329,8 +338,8 @@ Do the following:
    +-----------------------+------+-------------------------------------------------------------------------------------------------+
    ```
 
-   Notice a package repository (`workstation-packages`) is created
-   for the Workstation prebuilt image.
+   Notice a package repository (`workstation-packages`) is created for the
+   Workstation prebuilt image.
 
 1. Register the `workstation-packages` package repository to the target device:
 
@@ -343,15 +352,15 @@ Do the following:
 ## 4. Build and run the sample component {:#build-and-run-the-sample-component}
 
 Build and run the [C++ Hello World component][hello-world-component]{:.external}
-included in the SDK samples repository. [Components][fuchsia-component] are the basic
-unit of executable software on Fuchsia.
+included in the SDK samples repository. [Components][fuchsia-component] are the
+basic unit of executable software on Fuchsia.
 
 The tasks include:
 
-*   Build and run the sample Hello World component.
-*   Make a change to the component.
-*   Repeat the build and run steps.
-*   Verify the change.
+- Build and run the sample Hello World component.
+- Make a change to the component.
+- Repeat the build and run steps.
+- Verify the change.
 
 Do the following:
 
@@ -360,8 +369,10 @@ Do the following:
    ```posix-terminal
    tools/bazel run --config=fuchsia_x64 //src/hello_world:pkg.component
    ```
-   When the build is successful, this command generates build artifacts in a temporary
-   Fuchsia package repository, which is then removed after the component runs.
+
+   When the build is successful, this command generates build artifacts in a
+   temporary Fuchsia package repository, which is then removed after the
+   component runs.
 
    The command prints output similar to the following:
 
@@ -407,7 +418,8 @@ Do the following:
           Execution State:  Stopped
    ```
 
-   The output shows that the `hello_world` component has run and is now terminated (`Stopped`).
+   The output shows that the `hello_world` component has run and is now
+   terminated (`Stopped`).
 
 1. Verify the `Hello, World!` message in the device logs:
 
@@ -425,7 +437,8 @@ Do the following:
    {{ '<strong>' }}[137.761][ffx-laboratory:hello_world][I] Hello, World!{{ '</strong>' }}
    ```
 
-1. Use a text editor to edit the  `src/hello_world/hello_world.cc` file, for example:
+1. Use a text editor to edit the `src/hello_world/hello_world.cc` file, for
+   example:
 
    ```posix-terminal
    nano src/hello_world/hello_world.cc
@@ -467,19 +480,20 @@ Do the following:
 
 ## 5. View symbolized logs {:#view-symbolized-logs}
 
-Examine the [symbolized logs][symbolize-logs] (that is, human readable
-stack traces) of a crashed component.
+Examine the [symbolized logs][symbolize-logs] (that is, human readable stack
+traces) of a crashed component.
 
 The tasks include:
 
-*   Update the sample component to crash when it's started.
-*   Build and run the sample component, which generates and registers the debug symbols
-    of the component.
-*   Verify that the crashed component's logs are in symbolized format.
+- Update the sample component to crash when it's started.
+- Build and run the sample component, which generates and registers the debug
+  symbols of the component.
+- Verify that the crashed component's logs are in symbolized format.
 
 Do the following:
 
-1. Use a text editor to edit the  `src/hello_world/hello_world.cc` file, for example:
+1. Use a text editor to edit the `src/hello_world/hello_world.cc` file, for
+   example:
 
    ```posix-terminal
    nano src/hello_world/hello_world.cc
@@ -501,7 +515,8 @@ Do the following:
    }
    ```
 
-   This update will cause the component to crash immediately after printing a message.
+   This update will cause the component to crash immediately after printing a
+   message.
 
 1. Save the file and exit the text editor.
 
@@ -511,10 +526,11 @@ Do the following:
    tools/bazel run --config=fuchsia_x64 //src/hello_world:pkg.component
    ```
 
-   Building a component automatically generates and registers the component’s debug
-   symbols in your development environment.
+   Building a component automatically generates and registers the component’s
+   debug symbols in your development environment.
 
-1. For newly registered symbols to be used in your environment, restart the `ffx` daemon:
+1. For newly registered symbols to be used in your environment, restart the
+   `ffx` daemon:
 
    Note: This is a temporary workaround. This issue is being tracked in
    [Issue 94614][ticket-94614]{:.external}.
@@ -523,9 +539,11 @@ Do the following:
    tools/ffx daemon stop
    ```
 
-   A new instance of the `ffx `daemon starts the next time you run a `ffx` command.
+   A new instance of the `ffx `daemon starts the next time you run a `ffx`
+   command.
 
-1. Verify that the sample component's crash stack is symbolized in the kernel logs:
+1. Verify that the sample component's crash stack is symbolized in the kernel
+   logs:
 
    ```posix-terminal
    tools/ffx log --kernel
@@ -547,22 +565,23 @@ Do the following:
    [174978.457][klog][klog][I] KERN: terminating process 'hello_world.cm' (32996655)
    ```
 
-   Verify that the lines in the kernel logs show the exact filenames and line numbers (for example,
-   `main() src/hello_world/hello_world.cc:9`) that might've caused the component to crash.
+   Verify that the lines in the kernel logs show the exact filenames and line
+   numbers (for example, `main() src/hello_world/hello_world.cc:9`) that
+   might've caused the component to crash.
 
    Press `CTRL+C` to exit.
 
 ## 6. Debug the sample component {:#debug-the-sample-component}
 
-Launch the Fuchsia debugger ([`zxdb`][fuchsia-debugger]) for debugging the sample
-component, which is now updated to crash when it's started.
+Launch the Fuchsia debugger ([`zxdb`][fuchsia-debugger]) for debugging the
+sample component, which is now updated to crash when it's started.
 
 The tasks include:
 
-*   Start the Fuchsia debugger and connect it to the emulator instance.
-*   Attach the debugger to the sample component.
-*   Set a breakpoint.
-*   Run the sample component and step through the code.
+- Start the Fuchsia debugger and connect it to the emulator instance.
+- Attach the debugger to the sample component.
+- Set a breakpoint.
+- Run the sample component and step through the code.
 
 Do the following:
 
@@ -575,7 +594,8 @@ Do the following:
    This command automatically connects the debugger to the default target
    device, which is the emulator instance.
 
-   When connected to the device, this command starts the `zxdb` terminal, for example:
+   When connected to the device, this command starts the `zxdb` terminal, for
+   example:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx debug connect
@@ -585,11 +605,12 @@ Do the following:
    [zxdb]
    ```
 
-1. In the `zxdb` terminal, attach the debugger to the `hello_world.cm` component:
+1. In the `zxdb` terminal, attach the debugger to the `hello_world.cm`
+   component:
 
-  <pre class="devsite-click-to-copy">
-  <span class="no-select">[zxdb] </span>attach hello_world.cm
-  </pre>
+   <pre class="devsite-click-to-copy">
+   <span class="no-select">[zxdb] </span>attach hello_world.cm
+   </pre>
 
    This command prints output similar to the following:
 
@@ -601,9 +622,9 @@ Do the following:
 
 1. In the `zxdb` terminal, set a breakpoint at the `main()` method:
 
-  <pre class="devsite-click-to-copy">
-  <span class="no-select">[zxdb] </span>break main
-  </pre>
+   <pre class="devsite-click-to-copy">
+   <span class="no-select">[zxdb] </span>break main
+   </pre>
 
    This command prints output similar to the following:
 
@@ -617,14 +638,13 @@ Do the following:
 1. In a different terminal, run the sample component:
 
    Note: In this new terminal, make sure that you change to the same work
-   directory (for instance,  `cd $HOME/fuchsia-getting-started`).
+   directory (for instance, `cd $HOME/fuchsia-getting-started`).
 
    ```posix-terminal
    tools/bazel run --config=fuchsia_x64 //src/hello_world:pkg.component
    ```
 
-   In the `zxdb` terminal, the sample component is paused
-   at the breakpoint:
+   In the `zxdb` terminal, the sample component is paused at the breakpoint:
 
    ```none {:.devsite-disable-click-to-copy}
    Attached Process 1 state=Running koid=17658651 name=hello_world.cm
@@ -641,9 +661,10 @@ Do the following:
    [zxdb]
    ```
 
-   Note: You can re-build and re-run your component as many times as you want, but do not need to
-   restart the debugger or run `attach` again. The debugger will preserve your breakpoints and
-   continue watching for future processes called `hello_world.cm`.
+   Note: You can re-build and re-run your component as many times as you want,
+   but do not need to restart the debugger or run `attach` again. The debugger
+   will preserve your breakpoints and continue watching for future processes
+   called `hello_world.cm`.
 
 1. In the new terminal, monitor device logs for the `hello_world` component:
 
@@ -664,12 +685,11 @@ Do the following:
 
 1. In the `zxdb` terminal, use `next` to step through the code:
 
-  <pre class="devsite-click-to-copy">
-  <span class="no-select">[zxdb] </span>next
-  </pre>
+   <pre class="devsite-click-to-copy">
+   <span class="no-select">[zxdb] </span>next
+   </pre>
 
-   In the `zxdb` terminal, the code get executed line by line, for
-   example:
+   In the `zxdb` terminal, the code get executed line by line, for example:
 
    ```none {:.devsite-disable-click-to-copy}
    ...
@@ -688,8 +708,8 @@ Do the following:
       11 }
    ```
 
-   In the device logs terminal, verify that the `Hello again, World!` line is
-   now printed:
+   In the device logs terminal, verify that the `Hello again, World!` line is now
+   printed:
 
    ```none {:.devsite-disable-click-to-copy}
    [ffx-laboratory:hello_world][I] Hello again, World!
@@ -704,22 +724,22 @@ Do the following:
 
 ## 7. Inspect components {:#inspect-components}
 
-Retrieve a component's data exposed by Fuchsia's Inspect API. This data can be any
-set of specialized information that a Fuchsia component is programmed to collect
-while it is running on the device.
+Retrieve a component's data exposed by Fuchsia's Inspect API. This data can be
+any set of specialized information that a Fuchsia component is programmed to
+collect while it is running on the device.
 
-Note: For a component to collect and expose inspect data, the implementation
-of inspect operations and data types must be placed in the component’s code.
-Developers use this inspect feature to collect and expose information that will be
-helpful for debugging the component or the system. For details,
-see [Fuchsia component inspection overview][inspect-overview].
+Note: For a component to collect and expose inspect data, the implementation of
+inspect operations and data types must be placed in the component’s code.
+Developers use this inspect feature to collect and expose information that will
+be helpful for debugging the component or the system. For details, see
+[Fuchsia component inspection overview][inspect-overview].
 
 The tasks include:
 
-*   Scan the list of components on the device that expose inspect data (for
-    example, the `bootstrap/archivist` component).
-*   Scan the list of selectors provided by the `bootstrap/archivist` component.
-*   Inspect a specific set of data from the `bootstrap/archivist` component.
+- Scan the list of components on the device that expose inspect data (for
+  example, the `bootstrap/archivist` component).
+- Scan the list of selectors provided by the `bootstrap/archivist` component.
+- Inspect a specific set of data from the `bootstrap/archivist` component.
 
 Do the following:
 
@@ -817,18 +837,19 @@ Do the following:
                moniker = core/ffx-laboratory:hello_world
    ```
 
-   This data records all the events triggered by components on the device so far.
+   This data records all the events triggered by components on the device so
+   far.
 
 ## 8. Run tests {:#run-tests}
 
-Run tests on the device by launching test components, which are included
-in the [SDK samples repository][sdk-samples-repo]{:.external}.
+Run tests on the device by launching test components, which are included in the
+[SDK samples repository][sdk-samples-repo]{:.external}.
 
 The tasks include:
 
-*   Build and run the sample test components.
-*   Update one of the tests to fail.
-*   Verify the failure in the test results.
+- Build and run the sample test components.
+- Update one of the tests to fail.
+- Verify the failure in the test results.
 
 Do the following:
 
@@ -882,7 +903,8 @@ Do the following:
    INFO: Build completed successfully, 105 total actions
    ```
 
-1. Use a text editor to edit the `src/hello_world/hello_gtest.cc` file, for example:
+1. Use a text editor to edit the `src/hello_world/hello_gtest.cc` file, for
+   example:
 
    ```posix-terminal
    nano src/hello_world/hello_gtest.cc
@@ -903,12 +925,13 @@ Do the following:
    }
    ```
 
-   This change will cause the [GoogleTest][google-test]{:.external} (`hello_gtest`)
-   to fail.
+   This change will cause the [GoogleTest][google-test]{:.external}
+   (`hello_gtest`) to fail.
 
 1. Save the file and exit the text editor.
 
-1. To verify that the updated test now fails, build and run the `hello_gtest` component:
+1. To verify that the updated test now fails, build and run the `hello_gtest`
+   component:
 
    ```posix-terminal
    tools/bazel test --config=fuchsia_x64 --test_output=all //src/hello_world:test_pkg.hello_gtest
@@ -956,15 +979,16 @@ Do the following:
 
 ## Next steps {:#next-steps}
 
-Learn more about the Fuchsia platform and tools in [Fuchsia SDK Fundamentals][fundamentals].
+Learn more about the Fuchsia platform and tools in
+[Fuchsia SDK Fundamentals][fundamentals].
 
 ## Appendices
 
 ### Clean up the environment {:#clean-up-the-environment}
 
 If you run into a problem while following this guide and decide to start over
-from the beginning, consider running the commands below to clean up
-your development environment (that is, to clean up directories, build artifacts,
+from the beginning, consider running the commands below to clean up your
+development environment (that is, to clean up directories, build artifacts,
 downloaded files, symlinks, configuration settings, and more).
 
 Remove the package repositories created in this guide:
@@ -979,7 +1003,7 @@ tools/ffx repository server stop
 
 Remove all existing configurations and data of `ffx`:
 
-* {Linux}
+- {Linux}
 
   ```posix-terminal
   tools/ffx daemon stop
@@ -989,7 +1013,7 @@ Remove all existing configurations and data of `ffx`:
   rm -rf $HOME/.local/share/Fuchsia/ffx
   ```
 
-* {macOS}
+- {macOS}
 
   ```posix-terminal
   tools/ffx daemon stop
@@ -1005,11 +1029,12 @@ Remove all existing configurations and data of `ffx`:
 
 When Bazel fails to build, try the commands below:
 
-* {Linux}
+- {Linux}
 
   Note: Running `bazel clean` or deleting the `$HOME/.cache/bazel` directory
   deletes artifacts downloaded by Bazel, which can be around 4 GB. This means
-  Bazel will need to download dependencies again next time you run `bazel build`.
+  Bazel will need to download dependencies again next time you run
+  `bazel build`.
 
   ```posix-terminal
   tools/bazel clean --expunge
@@ -1019,7 +1044,7 @@ When Bazel fails to build, try the commands below:
   tools/bazel shutdown && rm -rf $HOME/.cache/bazel
   ```
 
-* {macOS}
+- {macOS}
 
   Note: Running `bazel clean` or deleting the `/private/var/temp/bazel$USER`
   directory deletes artifacts downloaded by Bazel, which can be around 4 GB.
@@ -1036,10 +1061,10 @@ When Bazel fails to build, try the commands below:
 
 Remove the `fuchsia-getting-started` directory and its artifacts:
 
-Caution: If the SDK samples repository is cloned to a different location
-than `$HOME/fuchsia-getting-started`, adjust the directory in the command
-below. Be extremely careful with the directory path when you run the
-`rm -rf <DIR>` command.
+Caution: If the SDK samples repository is cloned to a different location than
+`$HOME/fuchsia-getting-started`, adjust the directory in the command below. Be
+extremely careful with the directory path when you run the `rm -rf <DIR>`
+command.
 
 ```posix-terminal
 rm -rf $HOME/fuchsia-getting-started
@@ -1057,9 +1082,9 @@ killall pm
 
 ### Update the firewall rules {:#update-the-firewall-rules}
 
-When you launch the sample component (for instance, using the command `tools/bazel run`),
-you might run into an issue where the command hangs for a long time and
-eventually fails with the following error:
+When you launch the sample component (for instance, using the command
+`tools/bazel run`), you might run into an issue where the command hangs for a
+long time and eventually fails with the following error:
 
 ```none {:.devsite-disable-click-to-copy}
 Lifecycle protocol could not start the component instance: InstanceCannotResolve
@@ -1077,36 +1102,30 @@ sudo ufw allow proto tcp from fe80::/10 to any port 8083 comment 'Fuchsia Packag
 sudo ufw allow proto tcp from fc00::/7 to any port 8083 comment 'Fuchsia Package Server'
 ```
 
-However, for other non-`ufw`-based firewalls, you will need to ensure that port 8083
-is available for the Fuchsia package server.
+However, for other non-`ufw`-based firewalls, you will need to ensure that port
+8083 is available for the Fuchsia package server.
 
 <!-- Reference links -->
 
-[using-the-sdk]: /docs/development/sdk/index.md
-[sdk-bug]: https://bugs.fuchsia.dev/p/fuchsia/issues/entry?template=Bazel
-[kvm]: https://www.linux-kvm.org/page/Main_Page
-[qemu]: https://www.qemu.org/
-[bazel]: https://bazel.build/docs
-[git]: https://git-scm.com/
-[git-install]: https://git-scm.com/book/en/v2/Getting-Started-Installing-Git
-[bazel-install]: https://bazel.build/install
-[bazelisk-download]: https://github.com/bazelbuild/bazelisk/releases
-[fuchsia-ssh-keys]: /docs/development/sdk/ffx/create-ssh-keys-for-devices.md
-[ticket-01]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=97909
 [clang]: https://clang.llvm.org/
-[fuchsia-idk]: /docs/development/idk/README.md
-[fuchsia-package-repo]: /docs/development/sdk/ffx/create-a-package-repository.md
-[symbolize-logs]: /docs/development/sdk/ffx/symbolize-logs.md
+[femu]: /docs/development/sdk/ffx/start-the-fuchsia-emulator.md
+[ffx]: https://fuchsia.dev/reference/tools/sdk/ffx
 [fuchsia-component]: /docs/concepts/components/v2/README.md
 [fuchsia-debugger]: /docs/development/sdk/ffx/start-the-fuchsia-debugger.md
-[zxdb-user-guide]: /docs/development/debugger/README.md
-[inspect-overview]: /docs/development/diagnostics/inspect/README.md
-[google-test]: https://google.github.io/googletest/
-[ffx]: https://fuchsia.dev/reference/tools/sdk/ffx
-[fundamentals]: /docs/get-started/sdk/learn/README.md
-[femu]: /docs/development/sdk/ffx/start-the-fuchsia-emulator.md
-[sdk-samples-repo]: https://fuchsia.googlesource.com/sdk-samples/getting-started
-[hello-world-component]: https://fuchsia.googlesource.com/sdk-samples/getting-started/+/refs/heads/main/src/hello_world/
+[fuchsia-idk]: /docs/development/idk/README.md
 [fuchsia-package-server]: /docs/development/sdk/ffx/create-a-package-repository.md
+[fundamentals]: /docs/get-started/sdk/learn/README.md
+[git-install]: https://git-scm.com/book/en/v2/Getting-Started-Installing-Git
+[google-test]: https://google.github.io/googletest/
+[hello-world-component]: https://fuchsia.googlesource.com/sdk-samples/getting-started/+/refs/heads/main/src/hello_world/
 [hello-world-test-package]: https://fuchsia.googlesource.com/sdk-samples/getting-started/+/refs/heads/main/src/hello_world/BUILD.bazel#68
+[inspect-overview]: /docs/development/diagnostics/inspect/README.md
+[kvm]: https://www.linux-kvm.org/page/Main_Page
+[qemu]: https://www.qemu.org/
+[sdk-bug]: https://bugs.fuchsia.dev/p/fuchsia/issues/entry?template=Bazel
+[sdk-samples-repo]: https://fuchsia.googlesource.com/sdk-samples/getting-started
+[symbolize-logs]: /docs/development/sdk/ffx/symbolize-logs.md
+[ticket-01]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=97909
 [ticket-94614]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=94614
+[using-the-sdk]: /docs/development/sdk/index.md
+[zxdb-user-guide]: /docs/development/debugger/README.md
