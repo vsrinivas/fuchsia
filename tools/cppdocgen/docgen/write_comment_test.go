@@ -16,33 +16,37 @@ func fixupStringComment(index *Index, input string) string {
 
 func TestFixupLinks(t *testing.T) {
 	index := makeEmptyIndex()
+	settings := MakeIndexSettings(".")
+
+	// Need to declare that we want declarations from the given headers.
+	header1Name := "filename.h"
+	settings.Headers[header1Name] = struct{}{}
 
 	// Functions are indexed by both name and USR.
 	indexedFunction := clangdoc.FunctionInfo{
 		USR:      "SOME_FUNCTION_USR",
 		Name:     "indexed_symbol",
-		Location: []clangdoc.Location{{LineNumber: 16, Filename: "filename.h"}},
+		Location: []clangdoc.Location{{LineNumber: 16, Filename: header1Name}},
 	}
-	index.FunctionUsrs[indexedFunction.USR] = &indexedFunction
-	index.FunctionNames[indexedFunction.Name] = &indexedFunction
+	indexFunction(settings, &index, &indexedFunction)
 
 	index.Defines["INDEXED_DEFINE"] = &Define{
 		Name:     "INDEXED_DEFINE",
-		Location: clangdoc.Location{LineNumber: 16, Filename: "filename.h"},
-	}
-	index.Enums["IndexedEnum"] = &clangdoc.EnumInfo{
-		Name:        "IndexedEnum",
-		DefLocation: clangdoc.Location{LineNumber: 16, Filename: "filename.h"},
+		Location: clangdoc.Location{LineNumber: 16, Filename: header1Name},
 	}
 
-	// Records are indexed by both name USR.
+	indexedEnum := clangdoc.EnumInfo{
+		Name:        "IndexedEnum",
+		DefLocation: clangdoc.Location{LineNumber: 16, Filename: header1Name},
+	}
+	indexEnum(settings, &index, &indexedEnum)
+
 	indexedRecord := clangdoc.RecordInfo{
 		USR:         "SOME_USR",
 		Name:        "indexed_struct",
-		DefLocation: clangdoc.Location{LineNumber: 16, Filename: "filename.h"},
+		DefLocation: clangdoc.Location{LineNumber: 16, Filename: header1Name},
 	}
-	index.RecordNames[indexedRecord.Name] = &indexedRecord
-	index.RecordUsrs[indexedRecord.USR] = &indexedRecord
+	indexRecord(settings, &index, &indexedRecord)
 
 	// Comment with no links.
 	output := fixupStringComment(&index, "comment blah")

@@ -20,6 +20,13 @@ type IndexSettings struct {
 	Headers map[string]struct{}
 }
 
+func MakeIndexSettings(buildDir string) IndexSettings {
+	return IndexSettings{
+		BuildDir: buildDir,
+		Headers:  make(map[string]struct{}),
+	}
+}
+
 func (s IndexSettings) ShouldIndexInHeader(hdrName string) bool {
 	_, found := s.Headers[hdrName]
 	return found
@@ -44,7 +51,7 @@ type Index struct {
 	FunctionUsrs  map[string]*clangdoc.FunctionInfo
 	FunctionNames map[string]*clangdoc.FunctionInfo
 
-	// Records (classes, structs, and unions), indexed by the Name/USR.
+	// Toplevel records (classes, structs, and unions), indexed by the Name/USR.
 	RecordNames map[string]*clangdoc.RecordInfo
 	RecordUsrs  map[string]*clangdoc.RecordInfo
 
@@ -54,7 +61,7 @@ type Index struct {
 	// All unique preprocessor defines in this library indexed by their name.
 	Defines map[string]*Define
 
-	// All enums indexed by their name.
+	// All toplevel and namespaced enums indexed by their name.
 	Enums map[string]*clangdoc.EnumInfo
 }
 
@@ -171,7 +178,7 @@ func indexFunction(settings IndexSettings, index *Index, f *clangdoc.FunctionInf
 		// TODO(brettw) there can be multiple locations! I think this might be for every
 		// forward declaration. In this case we will want to pick the "best" one.
 		index.FunctionUsrs[f.USR] = f
-		index.FunctionNames[f.Name] = f
+		index.FunctionNames[functionFullName(f)] = f
 
 		decl := f.Location[0].Filename
 
@@ -185,7 +192,7 @@ func indexRecord(settings IndexSettings, index *Index, r *clangdoc.RecordInfo) {
 	if settings.ShouldIndexInHeader(r.DefLocation.Filename) &&
 		!commentContains(r.Description, NoDocTag) {
 		index.RecordUsrs[r.USR] = r
-		index.RecordNames[r.Name] = r
+		index.RecordNames[recordFullName(r)] = r
 
 		header := index.HeaderForFileName(r.DefLocation.Filename)
 		header.Records = append(header.Records, r)
@@ -195,7 +202,7 @@ func indexRecord(settings IndexSettings, index *Index, r *clangdoc.RecordInfo) {
 func indexEnum(settings IndexSettings, index *Index, e *clangdoc.EnumInfo) {
 	if settings.ShouldIndexInHeader(e.DefLocation.Filename) &&
 		!commentContains(e.Description, NoDocTag) {
-		index.Enums[e.Name] = e
+		index.Enums[enumFullName(e)] = e
 
 		header := index.HeaderForFileName(e.DefLocation.Filename)
 		header.Enums = append(header.Enums, e)

@@ -107,9 +107,7 @@ func main() {
 	}
 
 	// All other args are the list of headers we want to index.
-	indexSettings := docgen.IndexSettings{
-		BuildDir: flags.buildDir,
-		Headers:  make(map[string]struct{})}
+	indexSettings := docgen.MakeIndexSettings(flags.buildDir)
 	for _, a := range flag.Args() {
 		indexSettings.Headers[a] = struct{}{}
 	}
