@@ -17,6 +17,7 @@
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/mix/mix_job_context.h"
 #include "src/media/audio/services/mixer/mix/packet_view.h"
+#include "src/media/audio/services/mixer/mix/pipeline_detached_thread.h"
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"
 
 namespace media_audio {
@@ -48,7 +49,6 @@ class FakeStage : public PipelineStage {
         use_cache_(use_cache),
         packets_(std::move(packets)) {}
 
-  // TODO(fxbug.dev/87651): Use this instead of the constructor.
   void AddSource(PipelineStagePtr source, AddSourceOptions options) override {}
   void RemoveSource(PipelineStagePtr source) override {}
   void UpdatePresentationTimeToFracFrame(std::optional<TimelineFunction> f) override {
@@ -120,13 +120,18 @@ class FakeStage : public PipelineStage {
 // No-op passthrough stage that wraps a source stage via using `ForwardPacket`.
 class PassthroughStage : public PipelineStage {
  public:
-  explicit PassthroughStage(std::shared_ptr<FakeStage> source)
-      : PipelineStage("PassthroughStage", source->format(), DefaultUnreadableClock()),
-        source_(source) {}
+  explicit PassthroughStage()
+      : PipelineStage("PassthroughStage", kFormat, DefaultUnreadableClock()) {}
 
-  // TODO(fxbug.dev/87651): Use this instead of the constructor.
-  void AddSource(PipelineStagePtr source, AddSourceOptions options) override {}
-  void RemoveSource(PipelineStagePtr source) override {}
+  void AddSource(PipelineStagePtr source, AddSourceOptions options) override {
+    FX_CHECK(!source_);
+    FX_CHECK(source);
+    source_ = std::move(source);
+  }
+  void RemoveSource(PipelineStagePtr source) override {
+    FX_CHECK(source == source_);
+    source_ = nullptr;
+  }
   void UpdatePresentationTimeToFracFrame(std::optional<TimelineFunction> f) override {
     set_presentation_time_to_frac_frame(f);
     source_->UpdatePresentationTimeToFracFrame(f);
@@ -143,7 +148,7 @@ class PassthroughStage : public PipelineStage {
   }
 
  private:
-  std::shared_ptr<FakeStage> source_;
+  PipelineStagePtr source_;
 };
 
 // All tests in this file can be run against four pipelines.
@@ -192,7 +197,10 @@ class PipelineStageTest : public ::testing::TestWithParam<PipelineType> {
     std::shared_ptr<PipelineStage> stage = fake_stage_;
     if (GetParam() == FakeStageWithCachingThenPassthrough ||
         GetParam() == FakeStageWithoutCachingThenPassthrough) {
-      stage = std::make_shared<PassthroughStage>(fake_stage_);
+      stage = std::make_shared<PassthroughStage>();
+      stage->set_thread(std::make_shared<PipelineDetachedThread>());
+      ScopedThreadChecker checker(stage->thread()->checker());
+      stage->AddSource(fake_stage_, /*options=*/{});
     }
 
     stage->UpdatePresentationTimeToFracFrame(DefaultPresentationTimeToFracFrame(stage->format()));
