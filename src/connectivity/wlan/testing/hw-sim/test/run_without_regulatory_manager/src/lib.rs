@@ -32,7 +32,7 @@ async fn run_without_regulatory_manager() {
     // regulatory manager.
     let phy = helper.proxy();
     let scan_event =
-        EventHandlerBuilder::new().on_start_scan(ScanResults::new(&phy, vec![])).build();
+        EventHandlerBuilder::new().on_start_scan(start_scan_handler(&phy, Ok(vec![]))).build();
     let fut = async move {
         let (scan_proxy, server_end) = create_proxy().unwrap();
         client_controller.scan_for_networks(server_end).expect("requesting scan");

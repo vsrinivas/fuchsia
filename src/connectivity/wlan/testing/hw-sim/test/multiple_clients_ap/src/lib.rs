@@ -15,7 +15,7 @@ use {
     fidl_fuchsia_wlan_device_service::DeviceMonitorMarker,
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
     fidl_fuchsia_wlan_sme::{self as fidl_sme, ClientSmeProxy, ConnectRequest},
-    fuchsia_async as fasync,
+    fidl_fuchsia_wlan_tap as wlantap, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon::DurationNum,
     futures::{
@@ -113,11 +113,22 @@ async fn multiple_clients_ap() {
             "serving as an AP",
             EventHandlerBuilder::new()
                 .on_debug_name("ap")
-                .on_tx(
-                    Sequence::start()
-                        .then(Rx::send(&client1_proxy, WLANCFG_DEFAULT_AP_CHANNEL))
-                        .then(Rx::send(&client2_proxy, WLANCFG_DEFAULT_AP_CHANNEL)),
-                )
+                .on_tx(|tx_args: &wlantap::TxArgs| {
+                    client1_proxy
+                        .rx(
+                            0,
+                            &tx_args.packet.data,
+                            &mut create_rx_info(&WLANCFG_DEFAULT_AP_CHANNEL, 0),
+                        )
+                        .expect("client 1 rx failed");
+                    client2_proxy
+                        .rx(
+                            0,
+                            &tx_args.packet.data,
+                            &mut create_rx_info(&WLANCFG_DEFAULT_AP_CHANNEL, 0),
+                        )
+                        .expect("client 2 rx failed");
+                })
                 .build(),
             future::join(client1_confirm_receiver, client2_confirm_receiver).then(|_| {
                 finish_sender.send(()).expect("sending finish notification");
@@ -153,18 +164,26 @@ async fn multiple_clients_ap() {
             "connecting to AP",
             EventHandlerBuilder::new()
                 .on_debug_name("client1")
-                .on_start_scan(ScanResults::new(
+                .on_start_scan(start_scan_handler(
                     &client1_proxy,
-                    vec![BeaconInfo {
+                    Ok(vec![BeaconInfo {
                         channel: WLANCFG_DEFAULT_AP_CHANNEL.clone(),
                         bssid: AP_MAC_ADDR,
                         ssid: AP_SSID.clone(),
                         protection: Open,
                         rssi_dbm: 0,
                         beacon_or_probe: BeaconOrProbeResp::ProbeResp { wsc_ie: None },
-                    }],
+                    }]),
                 ))
-                .on_tx(Rx::send(&ap_proxy, WLANCFG_DEFAULT_AP_CHANNEL))
+                .on_tx(|tx_args: &wlantap::TxArgs| {
+                    ap_proxy
+                        .rx(
+                            0,
+                            &tx_args.packet.data,
+                            &mut create_rx_info(&WLANCFG_DEFAULT_AP_CHANNEL, 0),
+                        )
+                        .expect("ap rx failed")
+                })
                 .build(),
             client1_connect_fut.and_then(|()| {
                 client1_confirm_sender.send(()).expect("sending confirmation");
@@ -200,18 +219,26 @@ async fn multiple_clients_ap() {
             "connecting to AP",
             EventHandlerBuilder::new()
                 .on_debug_name("client2")
-                .on_start_scan(ScanResults::new(
+                .on_start_scan(start_scan_handler(
                     &client2_proxy,
-                    vec![BeaconInfo {
+                    Ok(vec![BeaconInfo {
                         channel: WLANCFG_DEFAULT_AP_CHANNEL.clone(),
                         bssid: AP_MAC_ADDR,
                         ssid: AP_SSID.clone(),
                         protection: Open,
                         rssi_dbm: 0,
                         beacon_or_probe: BeaconOrProbeResp::ProbeResp { wsc_ie: None },
-                    }],
+                    }]),
                 ))
-                .on_tx(Rx::send(&ap_proxy, WLANCFG_DEFAULT_AP_CHANNEL))
+                .on_tx(|tx_args: &wlantap::TxArgs| {
+                    ap_proxy
+                        .rx(
+                            0,
+                            &tx_args.packet.data,
+                            &mut create_rx_info(&WLANCFG_DEFAULT_AP_CHANNEL, 0),
+                        )
+                        .expect("ap rx failed")
+                })
                 .build(),
             client2_connect_fut.and_then(|()| {
                 client2_confirm_sender.send(()).expect("sending confirmation");

@@ -96,13 +96,13 @@ pub fn create_rx_info(channel: &Channel, rssi_dbm: i8) -> WlanRxInfo {
     }
 }
 
-pub enum BeaconOrProbeResp<'a> {
+pub enum BeaconOrProbeResp {
     Beacon,
-    ProbeResp { wsc_ie: Option<&'a [u8]> },
+    ProbeResp { wsc_ie: Option<Vec<u8>> },
 }
 
 fn generate_probe_or_beacon(
-    type_: BeaconOrProbeResp<'_>,
+    type_: BeaconOrProbeResp,
     channel: &Channel,
     bssid: &Bssid,
     ssid: &Ssid,
@@ -122,7 +122,7 @@ fn generate_probe_or_beacon(
         .with_privacy(*protection != Protection::Open);
     let beacon_hdr = match type_ {
         BeaconOrProbeResp::Beacon => Some(mac::BeaconHdr::new(beacon_interval, capabilities)),
-        BeaconOrProbeResp::ProbeResp { wsc_ie: _ } => None,
+        BeaconOrProbeResp::ProbeResp { .. } => None,
     };
     let proberesp_hdr = match type_ {
         BeaconOrProbeResp::Beacon => None,
@@ -140,7 +140,7 @@ fn generate_probe_or_beacon(
                         BeaconOrProbeResp::Beacon => mac::MgmtSubtype::BEACON,
                         BeaconOrProbeResp::ProbeResp{..} => mac::MgmtSubtype::PROBE_RESP
                     }),
-                match type_ {
+                match &type_ {
                     BeaconOrProbeResp::Beacon => mac::BCAST_ADDR,
                     BeaconOrProbeResp::ProbeResp{..} => CLIENT_MAC_ADDR
                 },
@@ -172,7 +172,7 @@ fn generate_probe_or_beacon(
             },
             wsc?: match type_ {
                 BeaconOrProbeResp::Beacon => None,
-                BeaconOrProbeResp::ProbeResp{ wsc_ie } => wsc_ie.clone()
+                BeaconOrProbeResp::ProbeResp{ ref wsc_ie } => wsc_ie.clone()
             }
         },
     })?;
@@ -198,7 +198,7 @@ pub fn send_probe_resp(
     bssid: &Bssid,
     ssid: &Ssid,
     protection: &Protection,
-    wsc_ie: Option<&[u8]>,
+    wsc_ie: Option<Vec<u8>>,
     proxy: &WlantapPhyProxy,
     rssi_dbm: i8,
 ) -> Result<(), anyhow::Error> {
@@ -480,16 +480,16 @@ pub fn process_tx_auth_updates(
     Ok(())
 }
 
-pub struct BeaconInfo<'a> {
+pub struct BeaconInfo {
     pub channel: Channel,
     pub bssid: Bssid,
     pub ssid: Ssid,
     pub protection: Protection,
     pub rssi_dbm: i8,
-    pub beacon_or_probe: BeaconOrProbeResp<'a>,
+    pub beacon_or_probe: BeaconOrProbeResp,
 }
 
-pub fn send_scan_result(phy: &WlantapPhyProxy, beacon_info: &BeaconInfo<'_>) {
+pub fn send_scan_result(phy: &WlantapPhyProxy, beacon_info: &BeaconInfo) {
     match beacon_info.beacon_or_probe {
         BeaconOrProbeResp::Beacon => {
             send_beacon(
@@ -502,12 +502,12 @@ pub fn send_scan_result(phy: &WlantapPhyProxy, beacon_info: &BeaconInfo<'_>) {
             )
             .unwrap();
         }
-        BeaconOrProbeResp::ProbeResp { wsc_ie } => send_probe_resp(
+        BeaconOrProbeResp::ProbeResp { ref wsc_ie } => send_probe_resp(
             &beacon_info.channel,
             &beacon_info.bssid,
             &beacon_info.ssid,
             &beacon_info.protection,
-            wsc_ie,
+            wsc_ie.clone(),
             phy,
             beacon_info.rssi_dbm,
         )
@@ -531,7 +531,7 @@ pub fn send_scan_complete(
 pub fn handle_start_scan_event(
     args: &StartScanArgs,
     phy: &WlantapPhyProxy,
-    beacon_info: &BeaconInfo<'_>,
+    beacon_info: &BeaconInfo,
 ) {
     debug!("Handling start scan event with scan_id {:?}", args.scan_id);
     send_scan_result(phy, beacon_info);
@@ -948,7 +948,7 @@ pub async fn loop_until_iface_is_found(helper: &mut test_utils::TestHelper) {
 
         let phy = helper.proxy();
         let scan_event =
-            EventHandlerBuilder::new().on_start_scan(ScanResults::new(&phy, vec![])).build();
+            EventHandlerBuilder::new().on_start_scan(start_scan_handler(&phy, Ok(vec![]))).build();
 
         // Once a client interface is available for scanning, it takes up to around 30s for a scan
         // to complete (see fxb/109900). Allow at least double that amount of time to reduce

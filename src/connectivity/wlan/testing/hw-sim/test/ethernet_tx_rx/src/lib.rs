@@ -62,24 +62,36 @@ async fn verify_tx_and_rx(client: &mut ethernet::Client, helper: &mut test_utils
             5.seconds(),
             "verify ethernet_tx_rx",
             EventHandlerBuilder::new()
-                .on_tx(MatchTx::new().on_msdu(|msdu: &mac::Msdu<&[u8]>| {
-                    let mac::Msdu { dst_addr, src_addr, llc_frame } = msdu;
-                    if *dst_addr == ETH_DST_MAC && *src_addr == CLIENT_MAC_ADDR {
-                        assert_eq!(llc_frame.hdr.protocol_id.to_native(), mac::ETHER_TYPE_IPV4);
-                        actual.clear();
-                        actual.extend_from_slice(llc_frame.body);
-                        rx_wlan_data_frame(
-                            &Channel::new(1, Cbw::Cbw20),
-                            &CLIENT_MAC_ADDR,
-                            &BSS.0,
-                            &ETH_DST_MAC,
-                            &PAYLOAD,
-                            mac::ETHER_TYPE_IPV4,
-                            &phy,
-                        )
-                        .expect("sending wlan data frame");
-                    }
-                }))
+                .on_tx(
+                    TxHandlerBuilder::new()
+                        .on_data_frame(|data_frame: &Vec<u8>| {
+                            for msdu in
+                                mac::MsduIterator::from_raw_data_frame(&data_frame[..], false)
+                                    .expect("reading msdu from data frame")
+                            {
+                                let mac::Msdu { dst_addr, src_addr, llc_frame } = msdu;
+                                if dst_addr == ETH_DST_MAC && src_addr == CLIENT_MAC_ADDR {
+                                    assert_eq!(
+                                        llc_frame.hdr.protocol_id.to_native(),
+                                        mac::ETHER_TYPE_IPV4
+                                    );
+                                    actual.clear();
+                                    actual.extend_from_slice(llc_frame.body);
+                                    rx_wlan_data_frame(
+                                        &Channel::new(1, Cbw::Cbw20),
+                                        &CLIENT_MAC_ADDR,
+                                        &BSS.0,
+                                        &ETH_DST_MAC,
+                                        &PAYLOAD,
+                                        mac::ETHER_TYPE_IPV4,
+                                        &phy,
+                                    )
+                                    .expect("sending wlan data frame");
+                                }
+                            }
+                        })
+                        .build(),
+                )
                 .build(),
             eth_tx_rx_fut,
         )

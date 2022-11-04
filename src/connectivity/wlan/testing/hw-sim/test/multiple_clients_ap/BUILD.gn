@@ -12,6 +12,7 @@ rustc_test("multiple_clients_ap") {
     "//sdk/fidl/fuchsia.wlan.device.service:fuchsia.wlan.device.service_rust",
     "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_rust",
     "//sdk/fidl/fuchsia.wlan.sme:fuchsia.wlan.sme_rust",
+    "//sdk/fidl/fuchsia.wlan.tap:fuchsia.wlan.tap_rust",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim",
     "//src/lib/fidl/rust/fidl",

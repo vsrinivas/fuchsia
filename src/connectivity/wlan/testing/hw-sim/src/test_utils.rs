@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 use {
     crate::{
+        start_scan_handler,
         wlancfg_helper::{
             init_client_controller, start_ap_and_wait_for_confirmation, NetworkConfigBuilder,
         },
-        BeaconInfo, EventHandlerBuilder, ScanResults,
+        BeaconInfo, EventHandlerBuilder,
     },
     fidl::endpoints::create_proxy,
     fidl::prelude::*,
@@ -258,14 +259,14 @@ impl RetryWithBackoff {
 pub type ScanResult = (Ssid, [u8; 6], bool, i8);
 
 pub async fn scan_for_networks<'a>(
-    phy: &Arc<wlantap::WlantapPhyProxy>,
-    beacons: Vec<BeaconInfo<'a>>,
+    phy: &'a wlantap::WlantapPhyProxy,
+    beacons: Vec<BeaconInfo>,
     helper: &mut TestHelper,
 ) -> Vec<ScanResult> {
     // Create a client controller.
     let (client_controller, _update_stream) = init_client_controller().await;
     let scan_event =
-        EventHandlerBuilder::new().on_start_scan(ScanResults::new(phy, beacons)).build();
+        EventHandlerBuilder::new().on_start_scan(start_scan_handler(phy, Ok(beacons))).build();
     // Request a scan from the policy layer.
     let fut = async move {
         let (scan_proxy, server_end) = create_proxy().unwrap();

@@ -24,44 +24,49 @@ fn build_event_handler<'a>(
     phy: &'a WlantapPhyProxy,
 ) -> impl FnMut(wlantap::WlantapPhyEvent) + 'a {
     EventHandlerBuilder::new()
-        .on_start_scan(ScanResults::new(
+        .on_start_scan(start_scan_handler(
             &phy,
-            vec![BeaconInfo {
+            Ok(vec![BeaconInfo {
                 channel: Channel::new(1, Cbw::Cbw20),
                 bssid,
                 ssid: ssid.clone(),
                 protection: Protection::Wpa2Personal,
                 rssi_dbm: -30,
                 beacon_or_probe: BeaconOrProbeResp::Beacon,
-            }],
+            }]),
         ))
-        .on_tx(MatchTx::new().on_mgmt(move |frame: &Vec<u8>| {
-            match mac::MacFrame::parse(&frame[..], false) {
-                Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) => {
-                    match mac::MgmtBody::parse({ mgmt_hdr.frame_ctrl }.mgmt_subtype(), body) {
-                        Some(mac::MgmtBody::Authentication { .. }) => {
-                            send_open_authentication_success(
-                                &Channel::new(1, Cbw::Cbw20),
-                                &bssid,
-                                &phy,
-                            )
-                            .expect("Error sending fake authentication frame.");
-                        }
-                        Some(mac::MgmtBody::AssociationReq { .. }) => {
-                            send_association_response(
-                                &Channel::new(1, Cbw::Cbw20),
-                                &bssid,
-                                fidl_ieee80211::StatusCode::RefusedTemporarily.into(),
-                                &phy,
-                            )
-                            .expect("Error sending fake association response with failure");
+        .on_tx(
+            TxHandlerBuilder::new()
+                .on_mgmt_frame(move |frame: &Vec<u8>| {
+                    match mac::MacFrame::parse(&frame[..], false) {
+                        Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) => {
+                            match mac::MgmtBody::parse({ mgmt_hdr.frame_ctrl }.mgmt_subtype(), body)
+                            {
+                                Some(mac::MgmtBody::Authentication { .. }) => {
+                                    send_open_authentication_success(
+                                        &Channel::new(1, Cbw::Cbw20),
+                                        &bssid,
+                                        &phy,
+                                    )
+                                    .expect("Error sending fake authentication frame.");
+                                }
+                                Some(mac::MgmtBody::AssociationReq { .. }) => {
+                                    send_association_response(
+                                        &Channel::new(1, Cbw::Cbw20),
+                                        &bssid,
+                                        fidl_ieee80211::StatusCode::RefusedTemporarily.into(),
+                                        &phy,
+                                    )
+                                    .expect("Error sending fake association response with failure");
+                                }
+                                _ => (),
+                            }
                         }
                         _ => (),
                     }
-                }
-                _ => (),
-            }
-        }))
+                })
+                .build(),
+        )
         .build()
 }
 
