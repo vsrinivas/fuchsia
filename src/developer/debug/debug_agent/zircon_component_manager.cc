@@ -173,26 +173,28 @@ void SendLogs(DebugAgent* debug_agent, std::vector<fuchsia::diagnostics::Formatt
 
 }  // namespace
 
+void ZirconComponentManager::GetNextComponentEvent() {
+  event_stream_binding_->GetNext([this](std::vector<fuchsia::sys2::Event> events) {
+    for (auto& event : events) {
+      OnComponentEvent(std::move(event));
+    }
+    GetNextComponentEvent();
+  });
+}
+
 ZirconComponentManager::ZirconComponentManager(SystemInterface* system_interface,
                                                std::shared_ptr<sys::ServiceDirectory> services)
-    : ComponentManager(system_interface),
-      services_(std::move(services)),
-      event_stream_binding_(this),
-      weak_factory_(this) {
+    : ComponentManager(system_interface), services_(std::move(services)), weak_factory_(this) {
   // 1. Subscribe to "debug_started" and "stopped" events.
-  fuchsia::sys2::EventSourceSyncPtr event_source;
-  services_->Connect(event_source.NewRequest());
-  std::vector<fuchsia::sys2::EventSubscription> subscriptions;
-  subscriptions.resize(2);
-  subscriptions[0].set_event_name("debug_started");
-  subscriptions[1].set_event_name("stopped");
-  fuchsia::sys2::EventStreamHandle stream;
-  event_stream_binding_.Bind(stream.NewRequest());
-  fuchsia::sys2::EventSource_Subscribe_Result subscribe_res;
-  event_source->Subscribe(std::move(subscriptions), std::move(stream), &subscribe_res);
-  if (subscribe_res.is_err()) {
-    LOGS(Error) << "Failed to Subscribe: " << static_cast<uint32_t>(subscribe_res.err());
+  fuchsia::sys2::EventStream2SyncPtr event_stream;
+  services_->Connect(event_stream.NewRequest(), "fuchsia.component.EventStream");
+  zx_status_t subscribe_result = event_stream->WaitForReady();
+  if (subscribe_result != ZX_OK) {
+    LOGS(Error) << "Failed to Subscribe: " << static_cast<uint32_t>(subscribe_result);
   }
+  auto handle = event_stream.Unbind();
+  event_stream_binding_.Bind(handle.TakeChannel());
+  GetNextComponentEvent();
 
   // 2. List existing components via fuchsia.sys2.RealmExplorer and fuchsia.sys2.RealmQuery.
   fuchsia::sys2::RealmExplorerSyncPtr realm_explorer;
@@ -256,7 +258,7 @@ void ZirconComponentManager::SetReadyCallback(fit::callback<void()> callback) {
   }
 }
 
-void ZirconComponentManager::OnEvent(fuchsia::sys2::Event event) {
+void ZirconComponentManager::OnComponentEvent(fuchsia::sys2::Event event) {
   if (!event.has_header() || !event.header().has_moniker() || event.header().moniker().empty() ||
       !event.has_event_result() || !event.event_result().is_payload()) {
     return;

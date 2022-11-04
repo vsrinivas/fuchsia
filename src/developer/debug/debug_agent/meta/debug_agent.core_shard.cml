@@ -15,7 +15,6 @@
                 "fuchsia.kernel.RootJob",
                 "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
-                "fuchsia.sys2.EventSource",
                 "fuchsia.sys2.LifecycleController.root",
                 "fuchsia.sys2.RealmExplorer.root",
                 "fuchsia.sys2.RealmQuery.root",
@@ -24,9 +23,9 @@
             to: "#debug_agent",
         },
         {
-            event: [
-                "debug_started",
-                "stopped",
+            event_stream: [
+                "debug_started_v2",
+                "stopped_v2",
             ],
             from: "parent",
             to: "#debug_agent",

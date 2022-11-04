@@ -24,9 +24,6 @@
                 // Used by fdio for running executables.
                 "fuchsia.process.Launcher",
 
-                // To watch and attach to v2 components.
-                "fuchsia.sys2.EventSource",
-
                 // To launch v2 components.
                 "fuchsia.sys2.LifecycleController.root",
                 "fuchsia.sys2.RealmExplorer.root",
@@ -40,9 +37,9 @@
         },
         {
             // To watch and attach to v2 components.
-            event: [
-                "debug_started",
-                "stopped",
+            event_stream: [
+                "debug_started_v2",
+                "stopped_v2",
             ],
             from: "parent",
         },

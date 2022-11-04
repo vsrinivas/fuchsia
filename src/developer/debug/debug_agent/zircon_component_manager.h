@@ -19,7 +19,7 @@
 
 namespace debug_agent {
 
-class ZirconComponentManager : public ComponentManager, public fuchsia::sys2::EventStream {
+class ZirconComponentManager : public ComponentManager {
  public:
   ZirconComponentManager(SystemInterface* system_interface,
                          std::shared_ptr<sys::ServiceDirectory> services);
@@ -33,8 +33,8 @@ class ZirconComponentManager : public ComponentManager, public fuchsia::sys2::Ev
   bool OnProcessStart(const ProcessHandle& process, StdioHandles* out_stdio,
                       std::string* process_name_override) override;
 
-  // fuchsia::sys2::EventStream implementation.
-  void OnEvent(fuchsia::sys2::Event event) override;
+  // Handles an incoming component lifecycle event.
+  void OnComponentEvent(fuchsia::sys2::Event event);
 
   // (For test only) Set the callback that will be invoked when the initialization is ready.
   // If the initialization is already done, callback will still be invoked in the message loop.
@@ -45,6 +45,8 @@ class ZirconComponentManager : public ComponentManager, public fuchsia::sys2::Ev
  private:
   class TestLauncher;
 
+  void GetNextComponentEvent();
+
   fit::callback<void()> ready_callback_ = []() {};
 
   DebugAgent* debug_agent_ = nullptr;  // nullable.
@@ -53,7 +55,7 @@ class ZirconComponentManager : public ComponentManager, public fuchsia::sys2::Ev
 
   // Information of all running components in the system, indexed by their job koids.
   std::map<zx_koid_t, debug_ipc::ComponentInfo> running_component_info_;
-  fidl::Binding<fuchsia::sys2::EventStream> event_stream_binding_;
+  fuchsia::sys2::EventStream2Ptr event_stream_binding_;
 
   // Monikers of v2 components we're expecting.
   // There's no way to set stdio handle for v2 components yet.
