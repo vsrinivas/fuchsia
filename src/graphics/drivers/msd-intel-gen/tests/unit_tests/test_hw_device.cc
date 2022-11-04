@@ -51,6 +51,12 @@ class TestMsdIntelDevice : public testing::Test {
       ASSERT_EQ(expected, value);
 
       EXPECT_TRUE(device->engines_have_context_isolation());
+
+      if (DeviceId::is_gen12(device->device_id())) {
+        EXPECT_EQ(19'200'000ul, device->timestamp_frequency());
+      } else {
+        EXPECT_EQ(12'000'000ul, device->timestamp_frequency());
+      }
     }
   }
 

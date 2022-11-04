@@ -22,6 +22,8 @@ enum MagmaIntelGenQuery {
   kMagmaIntelGenQueryTopology = MAGMA_QUERY_VENDOR_PARAM_0 + 4,
   // Returns boolean (simple result)
   kMagmaIntelGenQueryHasContextIsolation = MAGMA_QUERY_VENDOR_PARAM_0 + 5,
+  // Returns timestamp frequency (simple result)
+  kMagmaIntelGenQueryTimestampFrequency = MAGMA_QUERY_VENDOR_PARAM_0 + 6,
 };
 
 struct magma_intel_gen_timestamp_query {

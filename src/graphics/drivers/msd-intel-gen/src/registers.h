@@ -335,6 +335,23 @@ class PowerGateEnable : public hwreg::RegisterBase<PowerGateEnable, uint32_t> {
   static auto GetAddr() { return hwreg::RegisterAddr<PowerGateEnable>(0xA210); }
 };
 
+class CtcMode : public hwreg::RegisterBase<CtcMode, uint32_t> {
+ public:
+  bool source_is_crystal_clock() const { return source() == 0; }
+
+  uint64_t freq_shift_bits() const {
+    DASSERT(ctc_shift() <= 3);
+    return 3 - ctc_shift();
+  }
+
+  uint64_t get_timestamp_frequency_gen9() const { return 24'000'000 >> freq_shift_bits(); }
+
+  DEF_FIELD(2, 1, ctc_shift);
+  DEF_BIT(0, source);
+
+  static auto GetAddr() { return hwreg::RegisterAddr<CtcMode>(0xA26C); }
+};
+
 // from intel-gfx-prm-osrc-bdw-vol02c-commandreference-registers_4.pdf p.493
 class ForceWakeRequest {
  public:
@@ -351,6 +368,38 @@ class ForceWakeRequest {
     val32 = (val32 << 16) | val;
     reg_io->Write32(val32, offset);
   }
+};
+
+// from
+// https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-tgl-vol02c-commandreference-registers-part1-rev2_0.pdf
+// p.243
+class RenderPerformanceConfig : public hwreg::RegisterBase<RenderPerformanceConfig, uint32_t> {
+ public:
+  uint64_t freq_shift_bits() const {
+    DASSERT(ctc_shift() <= 3);
+    return 3 - ctc_shift();
+  }
+
+  uint64_t get_timestamp_frequency_gen12() const {
+    switch (freq_select()) {
+      case 0:
+        return 24'000'000 >> freq_shift_bits();
+      case 1:
+        return 19'200'000 >> freq_shift_bits();
+      case 2:
+        return 38'400'000 >> freq_shift_bits();
+      case 3:
+        return 25'000'000 >> freq_shift_bits();
+      default:
+        DASSERT(false);
+        return 0;
+    }
+  }
+
+  DEF_FIELD(5, 3, freq_select);
+  DEF_FIELD(2, 1, ctc_shift);
+
+  static auto GetAddr() { return hwreg::RegisterAddr<RenderPerformanceConfig>(0xD00); }
 };
 
 class ForceWakeStatus : public hwreg::RegisterBase<ForceWakeStatus, uint32_t> {

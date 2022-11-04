@@ -64,6 +64,7 @@ class MsdIntelDevice : public msd_device_t,
   uint32_t eu_total() { return eu_total_; }
   std::pair<magma_intel_gen_topology*, uint8_t*> GetTopology();
   bool engines_have_context_isolation() { return engines_have_context_isolation_; }
+  uint64_t timestamp_frequency() const { return timestamp_freq_; }
 
   static MsdIntelDevice* cast(msd_device_t* dev) {
     DASSERT(dev);
@@ -211,6 +212,7 @@ class MsdIntelDevice : public msd_device_t,
                           uint32_t* eu_total_out, Topology* topology_out);
   void QuerySliceInfoGen12(std::shared_ptr<ForceWakeDomain> forcewake, uint32_t* subslice_total_out,
                            uint32_t* eu_total_out, Topology* topology_out);
+  uint64_t GetTimestampFrequency(std::shared_ptr<ForceWakeDomain> domain);
 
   std::shared_ptr<MsdIntelContext> global_context() { return global_context_; }
 
@@ -230,6 +232,7 @@ class MsdIntelDevice : public msd_device_t,
   uint32_t eu_total_{};
   std::unique_ptr<Topology> topology_;
   bool engines_have_context_isolation_ = false;
+  uint64_t timestamp_freq_{};
 
   std::thread device_thread_;
   std::unique_ptr<magma::PlatformThreadId> device_thread_id_;

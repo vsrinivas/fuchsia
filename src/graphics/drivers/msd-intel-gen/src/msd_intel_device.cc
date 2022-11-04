@@ -294,7 +294,19 @@ bool MsdIntelDevice::HardwarePreinit() {
     PerProcessGtt::InitPrivatePat(register_io_.get(), forcewake);
   }
 
+  timestamp_freq_ = GetTimestampFrequency(forcewake);
+
   return true;
+}
+
+uint64_t MsdIntelDevice::GetTimestampFrequency(std::shared_ptr<ForceWakeDomain> domain) {
+  auto ctc_mode = registers::CtcMode::GetAddr().ReadFrom(register_io());
+  DASSERT(ctc_mode.source_is_crystal_clock());
+
+  auto rpm_config = registers::RenderPerformanceConfig::GetAddr().ReadFrom(register_io());
+
+  return DeviceId::is_gen12(device_id()) ? rpm_config.get_timestamp_frequency_gen12()
+                                         : ctc_mode.get_timestamp_frequency_gen9();
 }
 
 bool MsdIntelDevice::CreateEngineCommandStreamers() {
@@ -1193,6 +1205,10 @@ magma_status_t msd_device_query(msd_device_t* device, uint64_t id,
 
     case kMagmaIntelGenQueryExtraPageCount:
       *result_out = PerProcessGtt::ExtraPageCount();
+      break;
+
+    case kMagmaIntelGenQueryTimestampFrequency:
+      *result_out = MsdIntelDevice::cast(device)->timestamp_frequency();
       break;
 
     case kMagmaIntelGenQueryTimestamp: {
