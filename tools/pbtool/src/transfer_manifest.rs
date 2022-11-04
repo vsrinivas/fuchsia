@@ -52,8 +52,6 @@ impl GenerateTransferManifest {
             ProductBundle::V2(pb) => pb,
         };
 
-        let rebased_product_bundle_path = diff_paths(&self.product_bundle, &self.out_dir)
-            .context("rebasing product bundle directory")?;
         let canonical_out_dir = &self.out_dir.canonicalize().context("canonicalizing out_dir")?;
         let canonical_product_bundle_path =
             &self.product_bundle.canonicalize().context("canonicalizing product bundle path")?;
@@ -64,6 +62,7 @@ impl GenerateTransferManifest {
         // And collect them into all_blobs.json.
         let mut all_blobs = HashSet::new();
         for repository in &product_bundle.repositories {
+            let canonical_blobs_path = canonical_product_bundle_path.join(&repository.blobs_path);
             let blobs = repository
                 .blobs()
                 .await
@@ -75,12 +74,12 @@ impl GenerateTransferManifest {
                 let merkle = fuchsia_merkle::Hash::from_str(&blob.to_string())?;
                 all_blobs.insert(AllBlobsEntry { merkle });
             }
-            let local = diff_paths(&repository.blobs_path, canonical_product_bundle_path)
+            let local = diff_paths(canonical_blobs_path, canonical_out_dir)
                 .context("rebasing blobs path")?;
             let blob_transfer = TransferEntry {
                 artifact_type: ArtifactType::Blobs,
                 local,
-                remote: "".into(),
+                remote: "blobs".into(),
                 entries: blob_entries,
             };
             entries.push(blob_transfer);
@@ -142,9 +141,12 @@ impl GenerateTransferManifest {
         }
         product_bundle_entries.sort();
 
+        let rebased_product_bundle_path =
+            diff_paths(canonical_product_bundle_path, canonical_out_dir)
+                .context("rebasing product bundle directory")?;
         entries.push(TransferEntry {
             artifact_type: ArtifactType::Files,
-            local: rebased_product_bundle_path.clone(),
+            local: rebased_product_bundle_path,
             remote: "product_bundle".into(),
             entries: product_bundle_entries,
         });
@@ -269,8 +271,8 @@ mod tests {
                 entries: vec![
                     TransferEntry {
                         artifact_type: transfer_manifest::ArtifactType::Blobs,
-                        local: "blobs".into(),
-                        remote: "".into(),
+                        local: "product_bundle/blobs".into(),
+                        remote: "blobs".into(),
                         entries: vec![
                             ArtifactEntry { name: "050907f009ff634f9aa57bff541fb9e9c2c62b587c23578e77637cda3bd69458".into() },
                             ArtifactEntry { name: "2881455493b5870aaea36537d70a2adc635f516ac2092598f4b6056dabc6b25d".into() },
