@@ -718,6 +718,12 @@ type Foo = struct {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameNotFound);
 }
 
+TEST(TypesTests, BadUsizeWithoutFlag) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0180.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExperimentalZxCTypesDisallowed);
+}
+
 TEST(TypesTests, BadExperimentalZxCTypesWithoutFlag) {
   for (std::string type : {"usize", "uintptr", "uchar", "experimental_pointer<uint32>"}) {
     TestLibrary library("library example; alias T = " + type + ";");

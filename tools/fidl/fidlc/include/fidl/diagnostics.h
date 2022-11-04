@@ -420,14 +420,14 @@ constexpr ErrorDef<178, std::vector<std::string_view>, std::vector<std::string_v
     ErrUnusedImport("Library {} imports {} but does not use it. Either use {}, or remove import.");
 constexpr UndocumentedErrorDef<179, flat::Name> ErrNewTypeCannotHaveConstraint(
     "{} is a new-type, which cannot carry constraints");
-constexpr UndocumentedErrorDef<180, flat::Name> ErrExperimentalZxCTypesDisallowed(
+constexpr ErrorDef<180, flat::Name> ErrExperimentalZxCTypesDisallowed(
     "{} is an experimental type that must be enabled by with `--experimental zx_c_types`");
-constexpr UndocumentedErrorDef<181> ErrReferenceInLibraryAttribute(
+constexpr ErrorDef<181> ErrReferenceInLibraryAttribute(
     "attributes on the 'library' declaration do not support referencing constants");
-constexpr UndocumentedErrorDef<182, const flat::AttributeArg *> ErrLegacyWithoutRemoval(
+constexpr ErrorDef<182, const flat::AttributeArg *> ErrLegacyWithoutRemoval(
     "the argument '{}' is not allowed on an element that is never removed");
-constexpr UndocumentedErrorDef<183, const flat::AttributeArg *, std::string_view,
-                               const flat::AttributeArg *, std::string_view, SourceSpan>
+constexpr ErrorDef<183, const flat::AttributeArg *, std::string_view, const flat::AttributeArg *,
+                   std::string_view, SourceSpan>
     ErrLegacyConflictsWithParent(
         "the argument {}={} conflicts with {}={} at {}; a child element "
         "cannot be added back at LEGACY if its parent is removed");

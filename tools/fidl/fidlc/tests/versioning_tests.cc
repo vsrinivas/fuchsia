@@ -1070,6 +1070,12 @@ library example;
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrLegacyWithoutRemoval);
 }
 
+TEST(VersioningTests, BadLegacyTrueNotRemovedMethod) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0182.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrLegacyWithoutRemoval);
+}
+
 TEST(VersioningTests, GoodRedundantWithParent) {
   TestLibrary library(R"FIDL(
 @available(added=2, deprecated=4, removed=6)
@@ -1365,6 +1371,12 @@ library example;
 @available(legacy=true)
 type Foo = struct {};
 )FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrLegacyConflictsWithParent);
+}
+
+TEST(VersioningTests, BadLegacyParentFalseChildTrueMethod) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0183.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrLegacyConflictsWithParent);
 }
 
