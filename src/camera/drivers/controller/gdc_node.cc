@@ -13,7 +13,7 @@
 #include <safemath/safe_conversions.h>
 
 #include "src/camera/drivers/controller/stream_pipeline_info.h"
-#include "src/camera/lib/format_conversion/buffer_collection_helper.h"
+#include "src/camera/lib/format_conversion/format_conversion.h"
 #include "src/devices/lib/sysmem/sysmem.h"
 
 namespace camera {
@@ -51,25 +51,28 @@ fpromise::result<std::unique_ptr<ProcessNode>, zx_status_t> GdcNode::Create(
   auto node =
       std::make_unique<camera::GdcNode>(dispatcher, attachments, std::move(frame_callback), gdc);
 
-  BufferCollectionHelper output_buffer_collection_helper(node->OutputBuffers());
-  BufferCollectionHelper input_buffer_collection_helper(node->InputBuffers());
+  const fuchsia::sysmem::BufferCollectionInfo_2& output_buffer_collection = node->OutputBuffers();
+  const fuchsia::sysmem::BufferCollectionInfo_2& input_buffer_collection = node->InputBuffers();
+  ZX_ASSERT(output_buffer_collection.settings.has_image_format_constraints);
+  fuchsia_sysmem::wire::ImageFormatConstraints output_buffer_constraints =
+      ConvertToWireType(output_buffer_collection.settings.image_format_constraints);
+  ZX_ASSERT(input_buffer_collection.settings.has_image_format_constraints);
+  fuchsia_sysmem::wire::ImageFormatConstraints input_buffer_constraints =
+      ConvertToWireType(input_buffer_collection.settings.image_format_constraints);
 
-  // Convert the formats to C type
-  std::vector<image_format_2_t> output_image_formats_c;
+  std::vector<image_format_2_t> output_image_formats_wire;
+  output_image_formats_wire.reserve(internal_gdc_node.image_formats.size());
   for (const auto& format : internal_gdc_node.image_formats) {
-    image_format_2_t value;
-    auto original = GetImageFormatFromBufferCollection(*output_buffer_collection_helper.GetC(),
-                                                       format.coded_width, format.coded_height);
-    sysmem::image_format_2_banjo_from_fidl(original, value);
-    output_image_formats_c.push_back(value);
+    output_image_formats_wire.push_back(sysmem::fidl_to_banjo(GetImageFormatFromConstraints(
+        output_buffer_constraints, format.coded_width, format.coded_height)));
   }
 
   // GDC only supports one input format and multiple output format at the
   // moment. So we take the first format from the previous node.
   // All existing usecases we support have only 1 format going into GDC.
-  auto input_image_formats_c = GetImageFormatFromBufferCollection(
-      *input_buffer_collection_helper.GetC(), node->InputFormats()[0].coded_width,
-      node->InputFormats()[0].coded_height);
+  fuchsia_sysmem::wire::ImageFormat2 input_image_formats_wire =
+      GetImageFormatFromConstraints(input_buffer_constraints, node->InputFormats()[0].coded_width,
+                                    node->InputFormats()[0].coded_height);
 
   // Image format index refers to the final output format list of the pipeline. If this GDC node
   // only has one output format, then the image format index must not be meant for this node. If
@@ -101,16 +104,12 @@ fpromise::result<std::unique_ptr<ProcessNode>, zx_status_t> GdcNode::Create(
   });
 
   // Initialize the GDC to get a unique task index
-  buffer_collection_info_2 temp_input_collection, temp_output_collection;
-  image_format_2_t temp_image_format;
-  sysmem::buffer_collection_info_2_banjo_from_fidl(*input_buffer_collection_helper.GetC(),
-                                                   temp_input_collection);
-  sysmem::buffer_collection_info_2_banjo_from_fidl(*output_buffer_collection_helper.GetC(),
-                                                   temp_output_collection);
-  sysmem::image_format_2_banjo_from_fidl(input_image_formats_c, temp_image_format);
+  buffer_collection_info_2 temp_input_collection = sysmem::fidl_to_banjo(input_buffer_collection);
+  buffer_collection_info_2 temp_output_collection = sysmem::fidl_to_banjo(output_buffer_collection);
+  image_format_2_t temp_image_format = sysmem::fidl_to_banjo(input_image_formats_wire);
   auto status =
       gdc.InitTask(&temp_input_collection, &temp_output_collection, &temp_image_format,
-                   output_image_formats_c.data(), output_image_formats_c.size(),
+                   output_image_formats_wire.data(), output_image_formats_wire.size(),
                    output_format_index, config_vmos_info.data(), config_vmos_info.size(),
                    node->GetHwFrameReadyCallback(), node->GetHwFrameResolutionChangeCallback(),
                    node->GetHwTaskRemovedCallback(), &node->task_index_);
