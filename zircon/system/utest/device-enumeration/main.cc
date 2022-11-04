@@ -481,7 +481,7 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "sys/platform/pt/nelson",
       "sys/platform/05:05:1/aml-gpio",
       "sys/platform/05:05:1:1/aml-gpio",
-      "sys/platform/05:05:1/aml-axg-gpio/gpio-5/nelson-buttons/hid-buttons",
+      "sys/platform/05:05:1/aml-gpio/gpio-5/nelson-buttons/hid-buttons",
       "sys/platform/05:00:3/bt-uart/aml-uart/bt-transport-uart",
       "sys/platform/05:00:3/bt-uart/aml-uart/bt-transport-uart/bt-hci-broadcom",
       "sys/platform/05:00:2/aml-i2c",
