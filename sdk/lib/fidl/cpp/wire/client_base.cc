@@ -164,6 +164,9 @@ std::optional<UnbindInfo> ClientBase::Dispatch(fidl::IncomingHeaderAndMessage& m
   auto* hdr = msg.header();
   if (hdr->txid == 0) {
     // Dispatch events (received messages with no txid).
+    // Dispatch will always consume the message even if it is not recognized
+    // (unknown interaction), so it is important to not reference the message or
+    // header again after calling this.
     fidl::Status status = event_dispatcher_->DispatchEvent(msg, storage_view);
     if (status.ok()) {
       return std::nullopt;

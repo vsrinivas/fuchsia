@@ -108,7 +108,7 @@ fidl::internal::WireEventDispatcher<::test_doccomments::Interface>::DispatchEven
       return ::fidl::Status::Ok();
     }
     default:
-
+      std::move(msg).CloseHandles();
       return ::fidl::Status::UnknownOrdinal();
   }
 }

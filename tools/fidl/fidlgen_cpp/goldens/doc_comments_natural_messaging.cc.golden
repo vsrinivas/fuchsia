@@ -68,7 +68,7 @@ fidl::internal::NaturalEventDispatcher<::test_doccomments::Interface>::DispatchE
       return ::fidl::Status::Ok();
     }
     default:
-
+      std::move(msg).CloseHandles();
       return ::fidl::Status::UnknownOrdinal();
   }
 }

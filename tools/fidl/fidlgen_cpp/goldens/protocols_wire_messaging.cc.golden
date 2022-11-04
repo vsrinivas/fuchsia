@@ -592,7 +592,7 @@ extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseOnWithR
         return ::fidl::Status::Ok();
       }
       default:
-        
+        std::move(msg).CloseHandles();
         return ::fidl::Status::UnknownOrdinal();
     }
   }
@@ -2347,7 +2347,7 @@ extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketResponseT
         return ::fidl::Status::Ok();
       }
       default:
-        
+        std::move(msg).CloseHandles();
         return ::fidl::Status::UnknownOrdinal();
     }
   }
@@ -2931,7 +2931,7 @@ extern "C" const fidl_type_t test_protocols_TransitionalEventRequestTable;
         return ::fidl::Status::Ok();
       }
       default:
-        
+        std::move(msg).CloseHandles();
         return ::fidl::Status::UnknownOrdinal();
     }
   }
@@ -3588,7 +3588,7 @@ extern "C" const fidl_type_t test_protocols_HandleRightsProtocolAnEventRequestTa
         return ::fidl::Status::Ok();
       }
       default:
-        
+        std::move(msg).CloseHandles();
         return ::fidl::Status::UnknownOrdinal();
     }
   }

@@ -1311,7 +1311,7 @@ extern "C" const fidl_type_t test_protocolpayloads_MainProtocolOnAnonWithErrorRe
         return ::fidl::Status::Ok();
       }
       default:
-        
+        std::move(msg).CloseHandles();
         return ::fidl::Status::UnknownOrdinal();
     }
   }

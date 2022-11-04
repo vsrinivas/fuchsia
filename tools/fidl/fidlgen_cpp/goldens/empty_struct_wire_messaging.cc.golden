@@ -199,7 +199,7 @@ fidl::internal::WireEventDispatcher<::test_emptystruct::EmptyProtocol>::Dispatch
       return ::fidl::Status::Ok();
     }
     default:
-
+      std::move(msg).CloseHandles();
       return ::fidl::Status::UnknownOrdinal();
   }
 }

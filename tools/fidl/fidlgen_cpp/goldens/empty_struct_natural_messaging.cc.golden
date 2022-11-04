@@ -103,7 +103,7 @@ fidl::internal::NaturalEventDispatcher<::test_emptystruct::EmptyProtocol>::Dispa
       return ::fidl::Status::Ok();
     }
     default:
-
+      std::move(msg).CloseHandles();
       return ::fidl::Status::UnknownOrdinal();
   }
 }

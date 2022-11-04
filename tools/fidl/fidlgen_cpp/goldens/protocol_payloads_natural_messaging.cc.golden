@@ -507,7 +507,7 @@ fidl::internal::NaturalEventDispatcher<::test_protocolpayloads::MainProtocol>::D
       return ::fidl::Status::Ok();
     }
     default:
-
+      std::move(msg).CloseHandles();
       return ::fidl::Status::UnknownOrdinal();
   }
 }

@@ -232,7 +232,7 @@ fidl::internal::NaturalEventDispatcher<::test_protocols::WithAndWithoutRequestRe
       return ::fidl::Status::Ok();
     }
     default:
-
+      std::move(msg).CloseHandles();
       return ::fidl::Status::UnknownOrdinal();
   }
 }
@@ -853,7 +853,7 @@ fidl::internal::NaturalEventDispatcher<::test_protocols::ChannelProtocol>::Dispa
       return ::fidl::Status::Ok();
     }
     default:
-
+      std::move(msg).CloseHandles();
       return ::fidl::Status::UnknownOrdinal();
   }
 }
@@ -1090,7 +1090,7 @@ fidl::internal::NaturalEventDispatcher<::test_protocols::Transitional>::Dispatch
       return ::fidl::Status::Ok();
     }
     default:
-
+      std::move(msg).CloseHandles();
       return ::fidl::Status::UnknownOrdinal();
   }
 }
@@ -1411,7 +1411,7 @@ fidl::internal::NaturalEventDispatcher<::test_protocols::HandleRightsProtocol>::
       return ::fidl::Status::Ok();
     }
     default:
-
+      std::move(msg).CloseHandles();
       return ::fidl::Status::UnknownOrdinal();
   }
 }

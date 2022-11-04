@@ -2083,11 +2083,14 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
         auto* hdr = msg.header();
         ::fidl::UnknownMethodType unknown_interaction_type =
             ::fidl::internal::UnknownMethodTypeFromHeader(hdr);
-        if (::fidl::IsFlexibleInteraction(hdr) &&
+        bool is_flexible_interaction = ::fidl::IsFlexibleInteraction(hdr);
+        auto ordinal = hdr->ordinal;
+        std::move(msg).CloseHandles();
+        if (is_flexible_interaction &&
             ::fidl::internal::CanHandleEvent(::test_unknowninteractions::UnknownInteractionsProtocol::kOpenness, unknown_interaction_type)) {
           if (event_handler()) {
             ::fidl::UnknownEventMetadata<::test_unknowninteractions::UnknownInteractionsProtocol> metadata {
-              .method_ordinal = hdr->ordinal,
+              .method_ordinal = ordinal,
             };
             event_handler()->handle_unknown_event(metadata);
           }
@@ -5794,11 +5797,14 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
         auto* hdr = msg.header();
         ::fidl::UnknownMethodType unknown_interaction_type =
             ::fidl::internal::UnknownMethodTypeFromHeader(hdr);
-        if (::fidl::IsFlexibleInteraction(hdr) &&
+        bool is_flexible_interaction = ::fidl::IsFlexibleInteraction(hdr);
+        auto ordinal = hdr->ordinal;
+        std::move(msg).CloseHandles();
+        if (is_flexible_interaction &&
             ::fidl::internal::CanHandleEvent(::test_unknowninteractions::UnknownInteractionsAjarProtocol::kOpenness, unknown_interaction_type)) {
           if (event_handler()) {
             ::fidl::UnknownEventMetadata<::test_unknowninteractions::UnknownInteractionsAjarProtocol> metadata {
-              .method_ordinal = hdr->ordinal,
+              .method_ordinal = ordinal,
             };
             event_handler()->handle_unknown_event(metadata);
           }
@@ -8564,7 +8570,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
         return ::fidl::Status::Ok();
       }
       default:
-        
+        std::move(msg).CloseHandles();
         return ::fidl::Status::UnknownOrdinal();
     }
   }

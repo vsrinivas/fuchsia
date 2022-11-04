@@ -111,15 +111,21 @@ class {{ .WireEventDispatcher }} final :
       }
     {{- end }}
       default:
-        {{ if .HandlesOneWayUnknownInteractions -}}
+        {{- if .HandlesOneWayUnknownInteractions }}
         auto* hdr = msg.header();
         ::fidl::UnknownMethodType unknown_interaction_type =
             ::fidl::internal::UnknownMethodTypeFromHeader(hdr);
-        if (::fidl::IsFlexibleInteraction(hdr) &&
+        bool is_flexible_interaction = ::fidl::IsFlexibleInteraction(hdr);
+        auto ordinal = hdr->ordinal;
+        {{- end }}
+        {{- /* Close handles regardless of whether there is an unknown interaction handler. */}}
+        std::move(msg).CloseHandles();
+        {{- if .HandlesOneWayUnknownInteractions }}
+        if (is_flexible_interaction &&
             ::fidl::internal::CanHandleEvent({{ . }}::kOpenness, unknown_interaction_type)) {
           if (event_handler()) {
             {{ .UnknownEventMetadata }} metadata {
-              .method_ordinal = hdr->ordinal,
+              .method_ordinal = ordinal,
             };
             event_handler()->handle_unknown_event(metadata);
           }
@@ -242,15 +248,21 @@ class {{ .NaturalEventDispatcher }} final :
       }
     {{- end }}
       default:
-        {{ if .HandlesOneWayUnknownInteractions -}}
+        {{- if .HandlesOneWayUnknownInteractions }}
         auto* hdr = msg.header();
         ::fidl::UnknownMethodType unknown_interaction_type =
             ::fidl::internal::UnknownMethodTypeFromHeader(hdr);
-        if (::fidl::IsFlexibleInteraction(hdr) &&
+        bool is_flexible_interaction = ::fidl::IsFlexibleInteraction(hdr);
+        auto ordinal = hdr->ordinal;
+        {{- end }}
+        {{- /* Close handles regardless of whether there is an unknown interaction handler. */}}
+        std::move(msg).CloseHandles();
+        {{- if .HandlesOneWayUnknownInteractions }}
+        if (is_flexible_interaction &&
             ::fidl::internal::CanHandleEvent({{ . }}::kOpenness, unknown_interaction_type)) {
           if (event_handler()) {
             {{ .UnknownEventMetadata }} metadata {
-              .method_ordinal = hdr->ordinal,
+              .method_ordinal = ordinal,
             };
             event_handler()->handle_unknown_event(metadata);
           }

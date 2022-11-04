@@ -1630,7 +1630,7 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnAnonWithErrorReq
         return ::fidl::Status::Ok();
       }
       default:
-        
+        std::move(msg).CloseHandles();
         return ::fidl::Status::UnknownOrdinal();
     }
   }
