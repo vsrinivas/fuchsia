@@ -11,10 +11,13 @@
         binary: "bin/netstack_management_integration_test",
     },
     use: [
-        // NB: Basic event hookup is performed in integration common shard.
         {
-            event: "started",
-            from: "framework",
+            event_stream: [
+                "started_v2",
+                "stopped_v2",
+            ],
+            from: "parent",
+            path: "/events/started_stopped",
         },
     ],
 }

@@ -16,9 +16,9 @@ pub mod realms;
 
 use std::fmt::Debug;
 
+use component_events::events::EventStream;
 use fidl_fuchsia_netemul as fnetemul;
 use fidl_fuchsia_netstack as fnetstack;
-use fidl_fuchsia_sys2 as fsys2;
 use fuchsia_async::{self as fasync, DurationExt as _};
 use fuchsia_zircon as zx;
 
@@ -113,14 +113,7 @@ pub async fn write_ndp_message<
 
 /// Gets a component event stream yielding component stopped events.
 pub async fn get_component_stopped_event_stream() -> Result<component_events::events::EventStream> {
-    use component_events::events::{self, Event as _, EventSource, EventSubscription};
-
-    let event_source = EventSource::from_proxy(
-        fuchsia_component::client::connect_to_protocol::<fsys2::EventSourceMarker>()
-            .context("failed to connect to event source protocol")?,
-    );
-    event_source
-        .subscribe(vec![EventSubscription::new(vec![events::Stopped::NAME])])
+    EventStream::open_at_path("/events/stopped")
         .await
         .context("failed to subscribe to `Stopped` events")
 }

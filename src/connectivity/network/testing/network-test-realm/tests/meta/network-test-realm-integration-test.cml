@@ -15,8 +15,12 @@
         // the `client.shard.cml` above includes a use statement for "stopped"
         // events.
         {
-            event: "started",
-            from: "framework",
+            event_stream: [
+                "started_v2",
+                "stopped_v2",
+            ],
+            from: "parent",
+            path: "/events/started_stopped",
         },
     ],
 }

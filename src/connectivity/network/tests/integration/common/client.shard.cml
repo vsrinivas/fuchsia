@@ -8,18 +8,15 @@
             protocol: [
                 // Required for tests that read inspect data.
                 "fuchsia.diagnostics.ArchiveAccessor",
-
-                // Required for tests that observe component events; for example, in order to wait
-                // for a component to exit.
-                "fuchsia.sys2.EventSource",
             ],
         },
 
         // Gives a test access to `stopped` events which are emitted when a component under test
         // exits.
         {
-            event: "stopped",
-            from: "framework",
+            event_stream: "stopped_v2",
+            from: "parent",
+            path: "/events/stopped",
         },
     ],
 }

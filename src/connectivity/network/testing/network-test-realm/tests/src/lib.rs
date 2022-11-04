@@ -7,7 +7,7 @@
 use std::{borrow::Cow, collections::HashMap};
 
 use anyhow::Result;
-use component_events::events::Event as _;
+use component_events::events::EventStream;
 use derivative::Derivative;
 use fidl_fuchsia_component as fcomponent;
 use fidl_fuchsia_io as fio;
@@ -907,16 +907,9 @@ async fn start_stub_with_existing_stub() {
         .expect("start_hermetic_network_realm failed")
         .expect("start_hermetic_network_realm error");
 
-    let event_source =
-        component_events::events::EventSource::new().expect("failed to create event source");
-
-    let mut event_stream = event_source
-        .subscribe(vec![component_events::events::EventSubscription::new(vec![
-            component_events::events::Started::NAME,
-            component_events::events::Stopped::NAME,
-        ])])
+    let mut event_stream = EventStream::open_at_path("/events/started_stopped")
         .await
-        .expect("failed to subscribe to EventSource");
+        .expect("failed to subscribe to EventStream");
 
     network_test_realm
         .start_stub(IPV4_STUB_URL)

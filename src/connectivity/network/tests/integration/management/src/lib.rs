@@ -530,7 +530,7 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
 /// Tests that netcfg observes component stop events and exits cleanly.
 #[variants_test]
 async fn observes_stop_events<M: Manager>(name: &str) {
-    use component_events::events::{self, Event as _};
+    use component_events::events::{self};
 
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let realm = sandbox
@@ -547,12 +547,7 @@ async fn observes_stop_events<M: Manager>(name: &str) {
             ],
         )
         .expect("create netstack realm");
-    let event_source = events::EventSource::new().expect("create event source");
-    let mut event_stream = event_source
-        .subscribe(vec![events::EventSubscription::new(vec![
-            events::Started::NAME,
-            events::Stopped::NAME,
-        ])])
+    let mut event_stream = events::EventStream::open_at_path("/events/started_stopped")
         .await
         .expect("subscribe to events");
 
