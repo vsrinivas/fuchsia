@@ -81,7 +81,8 @@ void WaitForRelease(fidl::WireSyncClient<fir::InputReportsReader>& client) {
     auto result = client->ReadInputReports();
     ASSERT_EQ(ZX_OK, result.status());
     for (fir::wire::InputReport& report : result->value()->reports) {
-      if (report.has_touch() && report.touch().contacts().empty()) {
+      ASSERT_TRUE(report.has_touch());
+      if (report.touch().contacts().empty()) {
         fputs("Release detected.\n", stderr);
         return;
       }
@@ -91,43 +92,21 @@ void WaitForRelease(fidl::WireSyncClient<fir::InputReportsReader>& client) {
 
 void WaitForTouch(fidl::WireSyncClient<fir::InputReportsReader>& client, Midpoints midpoints,
                   Quadrant desired_quadrant) {
-  // warned_quadrant stores a value if the manual tester touches the wrong quadrant, so we don't
-  // bombard them with error messages.
-  std::optional<Quadrant> warned_quadrant;
-  while (true) {
-    auto result = client->ReadInputReports();
-    ASSERT_EQ(ZX_OK, result.status());
+  auto result = client->ReadInputReports();
+  ASSERT_EQ(ZX_OK, result.status());
 
-    // If the reports is empty then we definitely haven't received a touch.
-    if (result->value()->reports.empty()) {
-      continue;
-    }
+  ASSERT_FALSE(result->value()->reports.empty()) << "No input reports received.";
 
-    // Wait for a touch event. We ensure that all reports in the FIDL response contain valid touch
-    // reports in the expected quadrant.
-    bool got_touch = true;
-    for (fir::wire::InputReport& report : result->value()->reports) {
-      if (report.has_touch() && !report.touch().contacts().empty()) {
-        const fir::wire::ContactInputReport& contact_report = report.touch().contacts()[0];
-        Quadrant quadrant = GetQuadrant(contact_report, midpoints);
-        if (quadrant != desired_quadrant) {
-          if (warned_quadrant != quadrant) {
-            fprintf(stderr, "Touch detected in the %s. Please touch the %s corner instead.\n",
-                    GetQuadrantName(quadrant), GetQuadrantName(desired_quadrant));
-          }
-          warned_quadrant = quadrant;
-          got_touch = false;
-        }
-      } else {
-        // Report doesn't have touch data or has no contacts.
-        got_touch = false;
-      }
-    }
-
-    if (got_touch) {
-      fputs("Touch detected. Please release finger.\n", stderr);
-      break;
-    }
+  // Wait for a touch event. We ensure that all reports in the FIDL response contain valid touch
+  // reports in the expected quadrant.
+  for (fir::wire::InputReport& report : result->value()->reports) {
+    ASSERT_TRUE(report.has_touch());
+    ASSERT_FALSE(report.touch().contacts().empty());
+    const fir::wire::ContactInputReport& contact_report = report.touch().contacts()[0];
+    Quadrant quadrant = GetQuadrant(contact_report, midpoints);
+    ASSERT_EQ(quadrant, desired_quadrant)
+        << "Touch expected in the " << GetQuadrantName(desired_quadrant) << " but detected in the "
+        << GetQuadrantName(quadrant);
   }
 }
 
@@ -137,6 +116,8 @@ void WaitForTouchAndRelease(fidl::WireSyncClient<fir::InputReportsReader>& clien
           GetQuadrantName(desired_quadrant));
 
   WaitForTouch(client, midpoints, desired_quadrant);
+
+  fputs("Please release finger.\n", stderr);
   WaitForRelease(client);
 }
 
