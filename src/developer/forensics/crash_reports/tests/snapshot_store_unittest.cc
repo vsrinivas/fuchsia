@@ -14,6 +14,7 @@
 #include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/snapshot.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
+#include "src/developer/forensics/feedback/annotations/constants.h"
 #include "src/developer/forensics/feedback/annotations/types.h"
 #include "src/developer/forensics/testing/gmatchers.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
@@ -126,8 +127,8 @@ TEST_F(SnapshotStoreTest, Check_ArchivesMaxSizeIsEnforced) {
 
   EXPECT_THAT(AsMissing(snapshot_store_->GetSnapshot(kTestUuid)).PresenceAnnotations(),
               UnorderedElementsAreArray({
-                  Pair("debug.snapshot.error", "garbage collected"),
-                  Pair("debug.snapshot.present", "false"),
+                  Pair(feedback::kDebugSnapshotErrorKey, "garbage collected"),
+                  Pair(feedback::kDebugSnapshotPresentKey, "false"),
               }));
   EXPECT_THAT(ReadGarbageCollectedSnapshots(), UnorderedElementsAreArray({
                                                    kTestUuid,
@@ -147,8 +148,8 @@ TEST_F(SnapshotStoreTest, Check_Delete) {
     auto snapshot = AsMissing(snapshot_store_->GetSnapshot(kTestUuid));
     EXPECT_THAT(snapshot.PresenceAnnotations(),
                 UnorderedElementsAreArray({
-                    Pair("debug.snapshot.error", "garbage collected"),
-                    Pair("debug.snapshot.present", "false"),
+                    Pair(feedback::kDebugSnapshotErrorKey, "garbage collected"),
+                    Pair(feedback::kDebugSnapshotPresentKey, "false"),
                 }));
   }
   EXPECT_THAT(ReadGarbageCollectedSnapshots(), UnorderedElementsAreArray({
@@ -158,51 +159,56 @@ TEST_F(SnapshotStoreTest, Check_Delete) {
 
 TEST_F(SnapshotStoreTest, Check_GarbageCollected) {
   auto snapshot = AsMissing(snapshot_store_->GetSnapshot(kGarbageCollectedSnapshotUuid));
-  EXPECT_THAT(snapshot.PresenceAnnotations(), UnorderedElementsAreArray({
-                                                  Pair("debug.snapshot.error", "garbage collected"),
-                                                  Pair("debug.snapshot.present", "false"),
-                                              }));
+  EXPECT_THAT(snapshot.PresenceAnnotations(),
+              UnorderedElementsAreArray({
+                  Pair(feedback::kDebugSnapshotErrorKey, "garbage collected"),
+                  Pair(feedback::kDebugSnapshotPresentKey, "false"),
+              }));
 }
 
 TEST_F(SnapshotStoreTest, Check_NotPersisted) {
   auto snapshot = AsMissing(snapshot_store_->GetSnapshot(kNotPersistedSnapshotUuid));
-  EXPECT_THAT(snapshot.PresenceAnnotations(), UnorderedElementsAreArray({
-                                                  Pair("debug.snapshot.error", "not persisted"),
-                                                  Pair("debug.snapshot.present", "false"),
-                                              }));
+  EXPECT_THAT(snapshot.PresenceAnnotations(),
+              UnorderedElementsAreArray({
+                  Pair(feedback::kDebugSnapshotErrorKey, "not persisted"),
+                  Pair(feedback::kDebugSnapshotPresentKey, "false"),
+              }));
 }
 
 TEST_F(SnapshotStoreTest, Check_TimedOut) {
   auto snapshot = AsMissing(snapshot_store_->GetSnapshot(kTimedOutSnapshotUuid));
   EXPECT_THAT(snapshot.PresenceAnnotations(), UnorderedElementsAreArray({
-                                                  Pair("debug.snapshot.error", "timeout"),
-                                                  Pair("debug.snapshot.present", "false"),
+                                                  Pair(feedback::kDebugSnapshotErrorKey, "timeout"),
+                                                  Pair(feedback::kDebugSnapshotPresentKey, "false"),
                                               }));
 }
 
 TEST_F(SnapshotStoreTest, Check_Shutdown) {
   auto snapshot = AsMissing(snapshot_store_->GetSnapshot(kShutdownSnapshotUuid));
-  EXPECT_THAT(snapshot.PresenceAnnotations(), UnorderedElementsAreArray({
-                                                  Pair("debug.snapshot.error", "system shutdown"),
-                                                  Pair("debug.snapshot.present", "false"),
-                                              }));
+  EXPECT_THAT(snapshot.PresenceAnnotations(),
+              UnorderedElementsAreArray({
+                  Pair(feedback::kDebugSnapshotErrorKey, "system shutdown"),
+                  Pair(feedback::kDebugSnapshotPresentKey, "false"),
+              }));
 }
 
 TEST_F(SnapshotStoreTest, Check_UuidForNoSnapshotUuid) {
   auto snapshot = AsMissing(snapshot_store_->GetSnapshot(kNoUuidSnapshotUuid));
-  EXPECT_THAT(snapshot.PresenceAnnotations(), UnorderedElementsAreArray({
-                                                  Pair("debug.snapshot.error", "missing uuid"),
-                                                  Pair("debug.snapshot.present", "false"),
-                                              }));
+  EXPECT_THAT(snapshot.PresenceAnnotations(),
+              UnorderedElementsAreArray({
+                  Pair(feedback::kDebugSnapshotErrorKey, "missing uuid"),
+                  Pair(feedback::kDebugSnapshotPresentKey, "false"),
+              }));
 }
 
 TEST_F(SnapshotStoreTest, Check_DefaultToNotPersisted) {
   const SnapshotUuid uuid("UNKNOWN");
   auto snapshot = AsMissing(snapshot_store_->GetSnapshot(uuid));
-  EXPECT_THAT(snapshot.PresenceAnnotations(), UnorderedElementsAreArray({
-                                                  Pair("debug.snapshot.error", "not persisted"),
-                                                  Pair("debug.snapshot.present", "false"),
-                                              }));
+  EXPECT_THAT(snapshot.PresenceAnnotations(),
+              UnorderedElementsAreArray({
+                  Pair(feedback::kDebugSnapshotErrorKey, "not persisted"),
+                  Pair(feedback::kDebugSnapshotPresentKey, "false"),
+              }));
 }
 
 TEST_F(SnapshotStoreTest, Check_ReadPreviouslyGarbageCollected) {
@@ -217,8 +223,8 @@ TEST_F(SnapshotStoreTest, Check_ReadPreviouslyGarbageCollected) {
     auto snapshot = AsMissing(snapshot_store_->GetSnapshot(kTestUuid));
     EXPECT_THAT(snapshot.PresenceAnnotations(),
                 UnorderedElementsAreArray({
-                    Pair("debug.snapshot.error", "garbage collected"),
-                    Pair("debug.snapshot.present", "false"),
+                    Pair(feedback::kDebugSnapshotErrorKey, "garbage collected"),
+                    Pair(feedback::kDebugSnapshotPresentKey, "false"),
                 }));
   }
   EXPECT_THAT(ReadGarbageCollectedSnapshots(), UnorderedElementsAreArray({
@@ -230,8 +236,8 @@ TEST_F(SnapshotStoreTest, Check_ReadPreviouslyGarbageCollected) {
     auto snapshot = AsMissing(snapshot_store_->GetSnapshot(kTestUuid));
     EXPECT_THAT(snapshot.PresenceAnnotations(),
                 UnorderedElementsAreArray({
-                    Pair("debug.snapshot.error", "garbage collected"),
-                    Pair("debug.snapshot.present", "false"),
+                    Pair(feedback::kDebugSnapshotErrorKey, "garbage collected"),
+                    Pair(feedback::kDebugSnapshotPresentKey, "false"),
                 }));
   }
 }

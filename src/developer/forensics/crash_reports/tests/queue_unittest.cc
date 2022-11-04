@@ -20,6 +20,7 @@
 #include "src/developer/forensics/crash_reports/tests/scoped_test_report_store.h"
 #include "src/developer/forensics/crash_reports/tests/stub_crash_server.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
+#include "src/developer/forensics/feedback/annotations/constants.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/forensics/testing/stubs/network_reachability_provider.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
@@ -166,8 +167,8 @@ class QueueTest : public UnitTestFixture {
     EXPECT_THAT(crash_server_->latest_annotations().Raw(),
                 UnorderedElementsAreArray({
                     Pair(kAnnotationKey, kAnnotationValue),
-                    Pair("debug.snapshot.error", "not persisted"),
-                    Pair("debug.snapshot.present", "false"),
+                    Pair(feedback::kDebugSnapshotErrorKey, "not persisted"),
+                    Pair(feedback::kDebugSnapshotPresentKey, "false"),
                 }));
   }
 

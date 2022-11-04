@@ -24,6 +24,7 @@
 #include "src/developer/forensics/crash_reports/tests/scoped_test_report_store.h"
 #include "src/developer/forensics/crash_reports/tests/stub_crash_server.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
+#include "src/developer/forensics/feedback/annotations/constants.h"
 #include "src/developer/forensics/testing/gmatchers.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
 #include "src/developer/forensics/testing/stubs/data_provider.h"
@@ -299,8 +300,8 @@ TEST_F(SnapshotCollectorTest, Check_Timeout) {
   ASSERT_TRUE(report.has_value());
   auto snapshot = AsMissing(GetSnapshot(report->SnapshotUuid()));
   EXPECT_THAT(snapshot.PresenceAnnotations(), UnorderedElementsAreArray({
-                                                  Pair("debug.snapshot.error", "timeout"),
-                                                  Pair("debug.snapshot.present", "false"),
+                                                  Pair(feedback::kDebugSnapshotErrorKey, "timeout"),
+                                                  Pair(feedback::kDebugSnapshotPresentKey, "false"),
                                               }));
   EXPECT_EQ(GetSnapshotStore()->Size(), 0u);
 }
@@ -317,10 +318,11 @@ TEST_F(SnapshotCollectorTest, Check_Shutdown) {
 
   ASSERT_TRUE(report.has_value());
   auto snapshot = AsMissing(GetSnapshot(report->SnapshotUuid()));
-  EXPECT_THAT(snapshot.PresenceAnnotations(), IsSupersetOf({
-                                                  Pair("debug.snapshot.error", "system shutdown"),
-                                                  Pair("debug.snapshot.present", "false"),
-                                              }));
+  EXPECT_THAT(snapshot.PresenceAnnotations(),
+              IsSupersetOf({
+                  Pair(feedback::kDebugSnapshotErrorKey, "system shutdown"),
+                  Pair(feedback::kDebugSnapshotPresentKey, "false"),
+              }));
 
   report = std::nullopt;
   ScheduleGetReportAndThen(zx::duration::infinite(), 1,
@@ -329,10 +331,11 @@ TEST_F(SnapshotCollectorTest, Check_Shutdown) {
 
   ASSERT_TRUE(report.has_value());
   snapshot = AsMissing(GetSnapshot(report->SnapshotUuid()));
-  EXPECT_THAT(snapshot.PresenceAnnotations(), IsSupersetOf({
-                                                  Pair("debug.snapshot.error", "system shutdown"),
-                                                  Pair("debug.snapshot.present", "false"),
-                                              }));
+  EXPECT_THAT(snapshot.PresenceAnnotations(),
+              IsSupersetOf({
+                  Pair(feedback::kDebugSnapshotErrorKey, "system shutdown"),
+                  Pair(feedback::kDebugSnapshotPresentKey, "false"),
+              }));
 }
 
 TEST_F(SnapshotCollectorTest, Check_SetsPresenceAnnotations) {

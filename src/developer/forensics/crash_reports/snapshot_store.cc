@@ -8,6 +8,7 @@
 
 #include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/snapshot.h"
+#include "src/developer/forensics/feedback/annotations/constants.h"
 
 namespace forensics::crash_reports {
 namespace {
@@ -29,25 +30,26 @@ SnapshotStore::SnapshotStore(feedback::AnnotationManager* annotation_manager,
       current_archives_size_(0u),
       garbage_collected_snapshot_(kGarbageCollectedSnapshotUuid,
                                   feedback::Annotations({
-                                      {"debug.snapshot.error", "garbage collected"},
-                                      {"debug.snapshot.present", "false"},
+                                      {feedback::kDebugSnapshotErrorKey, "garbage collected"},
+                                      {feedback::kDebugSnapshotPresentKey, "false"},
                                   })),
       not_persisted_snapshot_(kNotPersistedSnapshotUuid,
                               feedback::Annotations({
-                                  {"debug.snapshot.error", "not persisted"},
-                                  {"debug.snapshot.present", "false"},
+                                  {feedback::kDebugSnapshotErrorKey, "not persisted"},
+                                  {feedback::kDebugSnapshotPresentKey, "false"},
                               })),
       timed_out_snapshot_(kTimedOutSnapshotUuid, feedback::Annotations({
-                                                     {"debug.snapshot.error", "timeout"},
-                                                     {"debug.snapshot.present", "false"},
+                                                     {feedback::kDebugSnapshotErrorKey, "timeout"},
+                                                     {feedback::kDebugSnapshotPresentKey, "false"},
                                                  })),
-      shutdown_snapshot_(kShutdownSnapshotUuid, feedback::Annotations({
-                                                    {"debug.snapshot.error", "system shutdown"},
-                                                    {"debug.snapshot.present", "false"},
-                                                })),
+      shutdown_snapshot_(kShutdownSnapshotUuid,
+                         feedback::Annotations({
+                             {feedback::kDebugSnapshotErrorKey, "system shutdown"},
+                             {feedback::kDebugSnapshotPresentKey, "false"},
+                         })),
       no_uuid_snapshot_(kNoUuidSnapshotUuid, feedback::Annotations({
-                                                 {"debug.snapshot.error", "missing uuid"},
-                                                 {"debug.snapshot.present", "false"},
+                                                 {feedback::kDebugSnapshotErrorKey, "missing uuid"},
+                                                 {feedback::kDebugSnapshotPresentKey, "false"},
                                              })) {
   // Load the file lines into a set of UUIDs.
   std::ifstream file(garbage_collected_snapshots_path_);

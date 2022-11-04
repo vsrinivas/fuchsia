@@ -19,6 +19,7 @@
 #include "src/developer/forensics/crash_reports/report_id.h"
 #include "src/developer/forensics/crash_reports/report_util.h"
 #include "src/developer/forensics/crash_reports/snapshot.h"
+#include "src/developer/forensics/feedback/annotations/constants.h"
 #include "src/developer/forensics/feedback/annotations/types.h"
 #include "src/lib/uuid/uuid.h"
 
@@ -214,7 +215,7 @@ void SnapshotCollector::CompleteWithSnapshot(const SnapshotUuid& uuid,
   AddAnnotation("debug.snapshot.shared-request.uuid", uuid, annotations);
 
   if (archive.key.empty() || !archive.value.vmo.is_valid()) {
-    AddAnnotation("debug.snapshot.present", std::string("false"), annotations);
+    AddAnnotation(feedback::kDebugSnapshotPresentKey, std::string("false"), annotations);
   }
 
   // The snapshot request is completed and unblock all promises that need |annotations| and

@@ -17,6 +17,7 @@
 
 #include "src/developer/forensics/crash_reports/snapshot.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
+#include "src/developer/forensics/feedback/annotations/constants.h"
 #include "src/developer/forensics/feedback/annotations/types.h"
 #include "src/developer/forensics/testing/stubs/data_provider.h"
 #include "src/developer/forensics/testing/stubs/loader.h"
@@ -65,8 +66,8 @@ class CrashServerTest : public UnitTestFixture {
     // whenever a snapshot is not persisted
     return MissingSnapshot(annotation_manager_.ImmediatelyAvailable(),
                            {
-                               {"debug.snapshot.error", "not persisted"},
-                               {"debug.snapshot.present", "false"},
+                               {feedback::kDebugSnapshotErrorKey, "not persisted"},
+                               {feedback::kDebugSnapshotPresentKey, "false"},
                            });
   }
 
