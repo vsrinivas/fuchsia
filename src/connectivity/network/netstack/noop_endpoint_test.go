@@ -73,7 +73,7 @@ func (ep *noopEndpoint) ARPHardwareType() header.ARPHardwareType {
 	return header.ARPHardwareNone
 }
 
-func (*noopEndpoint) AddHeader(*stack.PacketBuffer) {}
+func (*noopEndpoint) AddHeader(stack.PacketBufferPtr) {}
 
 var _ link.Controller = (*noopController)(nil)
 

@@ -968,11 +968,13 @@ func (e *endpoint) forwardUnicastPacket(pkt stack.PacketBufferPtr) ip.Forwarding
 	r, err := stk.FindRoute(0, "", dstAddr, ProtocolNumber, false /* multicastLoop */)
 	switch err.(type) {
 	case nil:
-	case *tcpip.ErrNoRoute, *tcpip.ErrNetworkUnreachable:
+	// TODO(https://gvisor.dev/issues/8105): We should not observe ErrHostUnreachable from route
+	// lookups.
+	case *tcpip.ErrHostUnreachable, *tcpip.ErrNetworkUnreachable:
 		// We return the original error rather than the result of returning the
 		// ICMP packet because the original error is more relevant to the caller.
 		_ = e.protocol.returnError(&icmpReasonNetUnreachable{}, pkt, false /* deliveredLocally */)
-		return &ip.ErrNoRoute{}
+		return &ip.ErrHostUnreachable{}
 	default:
 		return &ip.ErrOther{Err: err}
 	}
@@ -1044,11 +1046,13 @@ func (e *endpoint) HandlePacket(pkt stack.PacketBufferPtr) {
 		return
 	}
 
-	h, ok := e.protocol.parseAndValidate(pkt)
+	hView, ok := e.protocol.parseAndValidate(pkt)
 	if !ok {
 		stats.MalformedPacketsReceived.Increment()
 		return
 	}
+	defer hView.Release()
+	h := header.IPv6(hView.AsSlice())
 
 	if !e.nic.IsLoopback() {
 		if !e.protocol.options.AllowExternalLoopbackTraffic {
@@ -1099,11 +1103,13 @@ func (e *endpoint) handleLocalPacket(pkt stack.PacketBufferPtr, canSkipRXChecksu
 	defer pkt.DecRef()
 	pkt.RXTransportChecksumValidated = canSkipRXChecksum
 
-	h, ok := e.protocol.parseAndValidate(pkt)
+	hView, ok := e.protocol.parseAndValidate(pkt)
 	if !ok {
 		stats.MalformedPacketsReceived.Increment()
 		return
 	}
+	defer hView.Release()
+	h := header.IPv6(hView.AsSlice())
 
 	e.handleValidatedPacket(h, pkt, e.nic.Name() /* inNICName */)
 }
@@ -1151,7 +1157,7 @@ func (e *endpoint) forwardMulticastPacket(h header.IPv6, pkt stack.PacketBufferP
 	default:
 		panic(fmt.Sprintf("unexpected GetRouteResultState: %s", result.GetRouteResultState))
 	}
-	return &ip.ErrNoRoute{}
+	return &ip.ErrHostUnreachable{}
 }
 
 // forwardValidatedMulticastPacket attempts to forward the pkt using the
@@ -1211,7 +1217,7 @@ func (e *endpoint) forwardMulticastPacketForOutgoingInterface(pkt stack.PacketBu
 	if route == nil {
 		// Failed to convert to a stack.Route. This likely means that the outgoing
 		// endpoint no longer exists.
-		return &ip.ErrNoRoute{}
+		return &ip.ErrHostUnreachable{}
 	}
 	defer route.Release()
 	return e.forwardPacketWithRoute(route, pkt)
@@ -1230,7 +1236,7 @@ func (e *endpoint) handleForwardingError(err ip.ForwardingError) {
 		stats.Forwarding.LinkLocalDestination.Increment()
 	case *ip.ErrTTLExceeded:
 		stats.Forwarding.ExhaustedTTL.Increment()
-	case *ip.ErrNoRoute:
+	case *ip.ErrHostUnreachable:
 		stats.Forwarding.Unrouteable.Increment()
 	case *ip.ErrParameterProblem:
 		stats.Forwarding.ExtensionHeaderProblem.Increment()
@@ -2460,7 +2466,7 @@ func (p *protocol) RemoveMulticastRoute(addresses stack.UnicastSourceAndMulticas
 	}
 
 	if removed := p.multicastRouteTable.RemoveInstalledRoute(addresses); !removed {
-		return &tcpip.ErrNoRoute{}
+		return &tcpip.ErrHostUnreachable{}
 	}
 
 	return nil
@@ -2476,7 +2482,7 @@ func (p *protocol) MulticastRouteLastUsedTime(addresses stack.UnicastSourceAndMu
 	timestamp, found := p.multicastRouteTable.GetLastUsedTimestamp(addresses)
 
 	if !found {
-		return tcpip.MonotonicTime{}, &tcpip.ErrNoRoute{}
+		return tcpip.MonotonicTime{}, &tcpip.ErrHostUnreachable{}
 	}
 
 	return timestamp, nil
@@ -2535,19 +2541,22 @@ func (p *protocol) forwardPendingMulticastPacket(pkt stack.PacketBufferPtr, inst
 func (*protocol) Wait() {}
 
 // parseAndValidate parses the packet (including its transport layer header) and
-// returns the parsed IP header.
+// returns a view containing the parsed IP header. The caller is responsible
+// for releasing the returned View.
 //
 // Returns true if the IP header was successfully parsed.
-func (p *protocol) parseAndValidate(pkt stack.PacketBufferPtr) (header.IPv6, bool) {
+func (p *protocol) parseAndValidate(pkt stack.PacketBufferPtr) (*bufferv2.View, bool) {
 	transProtoNum, hasTransportHdr, ok := p.Parse(pkt)
 	if !ok {
 		return nil, false
 	}
 
-	h := header.IPv6(pkt.NetworkHeader().Slice())
+	hView := pkt.NetworkHeader().View()
+	h := header.IPv6(hView.AsSlice())
 	// Do not include the link header's size when calculating the size of the IP
 	// packet.
 	if !h.IsValid(pkt.Size() - len(pkt.LinkHeader().Slice())) {
+		hView.Release()
 		return nil, false
 	}
 
@@ -2555,7 +2564,7 @@ func (p *protocol) parseAndValidate(pkt stack.PacketBufferPtr) (header.IPv6, boo
 		p.parseTransport(pkt, transProtoNum)
 	}
 
-	return h, true
+	return hView, true
 }
 
 func (p *protocol) parseTransport(pkt stack.PacketBufferPtr, transProtoNum tcpip.TransportProtocolNumber) {

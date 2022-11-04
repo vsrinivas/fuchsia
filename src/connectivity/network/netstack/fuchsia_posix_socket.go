@@ -222,7 +222,7 @@ func (s *streamSocketError) setLocked(err tcpip.Error) {
 	default:
 		switch previous.(type) {
 		case *tcpip.ErrNetworkUnreachable:
-		case *tcpip.ErrNoRoute:
+		case *tcpip.ErrHostUnreachable:
 		// At the time of writing, these errors are triggered by inbound
 		// ICMP Destination Unreachable messages; if another error is to
 		// be set on the endpoint, treat that one as the true error
@@ -249,7 +249,7 @@ func (s *streamSocketError) setLockedInner(err tcpip.Error) tcpip.Error {
 		*tcpip.ErrConnectionRefused,
 		*tcpip.ErrConnectionReset,
 		*tcpip.ErrNetworkUnreachable,
-		*tcpip.ErrNoRoute,
+		*tcpip.ErrHostUnreachable,
 		*tcpip.ErrTimeout:
 		previous := s.mu.err
 		_ = syslog.DebugTf("setLockedInner", "previous=%#v err=%#v", previous, err)
@@ -1608,7 +1608,7 @@ func (s *streamSocketImpl) loopWrite(ch chan<- struct{}) {
 			// TODO(https://fxbug.dev/61594): Allow the socket to be reused for
 			// another connection attempt to match Linux.
 			return
-		case *tcpip.ErrConnectionAborted, *tcpip.ErrConnectionReset, *tcpip.ErrNetworkUnreachable, *tcpip.ErrNoRoute:
+		case *tcpip.ErrConnectionAborted, *tcpip.ErrConnectionReset, *tcpip.ErrNetworkUnreachable, *tcpip.ErrHostUnreachable:
 			return
 		case *tcpip.ErrTimeout:
 			// The maximum duration of missing ACKs was reached, or the maximum
@@ -1749,7 +1749,7 @@ func (s *streamSocketImpl) loopRead(ch chan<- struct{}) {
 			// TODO(https://fxbug.dev/61594): Allow the socket to be reused for
 			// another connection attempt to match Linux.
 			return
-		case *tcpip.ErrConnectionAborted, *tcpip.ErrConnectionReset, *tcpip.ErrNetworkUnreachable, *tcpip.ErrNoRoute:
+		case *tcpip.ErrConnectionAborted, *tcpip.ErrConnectionReset, *tcpip.ErrNetworkUnreachable, *tcpip.ErrHostUnreachable:
 			return
 		case nil, *tcpip.ErrBadBuffer:
 			if err == nil {
@@ -4360,7 +4360,7 @@ func tcpipErrorToCode(err tcpip.Error) posix.Errno {
 		return posix.ErrnoEexist
 	case *tcpip.ErrDuplicateAddress:
 		return posix.ErrnoEexist
-	case *tcpip.ErrNoRoute:
+	case *tcpip.ErrHostUnreachable:
 		return posix.ErrnoEhostunreach
 	case *tcpip.ErrAlreadyBound:
 		return posix.ErrnoEinval

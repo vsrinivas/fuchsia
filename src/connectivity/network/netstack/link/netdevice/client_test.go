@@ -40,14 +40,14 @@ import (
 
 type DeliverNetworkPacketArgs struct {
 	Protocol tcpip.NetworkProtocolNumber
-	Pkt      *stack.PacketBuffer
+	Pkt      stack.PacketBufferPtr
 }
 
 type dispatcherChan chan DeliverNetworkPacketArgs
 
 var _ stack.NetworkDispatcher = (dispatcherChan)(nil)
 
-func (ch dispatcherChan) DeliverNetworkPacket(protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
+func (ch dispatcherChan) DeliverNetworkPacket(protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBufferPtr) {
 	pkt.IncRef()
 
 	ch <- DeliverNetworkPacketArgs{
@@ -56,7 +56,7 @@ func (ch dispatcherChan) DeliverNetworkPacket(protocol tcpip.NetworkProtocolNumb
 	}
 }
 
-func (dispatcherChan) DeliverLinkPacket(tcpip.NetworkProtocolNumber, *stack.PacketBuffer, bool) {
+func (dispatcherChan) DeliverLinkPacket(tcpip.NetworkProtocolNumber, stack.PacketBufferPtr, bool) {
 	panic("not implemented")
 }
 
@@ -723,7 +723,8 @@ func TestReceivePacketNoMemoryLeak(t *testing.T) {
 		if status.Which() == tun.DeviceWriteFrameResultErr {
 			t.Fatalf("unexpected error on WriteFrame: %s", zx.Status(status.Err))
 		}
-		(<-dispatcher).Pkt.DecRef()
+		pkt := (<-dispatcher).Pkt
+		(&pkt).DecRef()
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -1111,7 +1112,7 @@ func TestPairExchangePackets(t *testing.T) {
 		<-info.online
 	}
 
-	makeTestPacket := func(prefix byte, index uint16) *stack.PacketBuffer {
+	makeTestPacket := func(prefix byte, index uint16) stack.PacketBufferPtr {
 		rng := rand.New(rand.NewSource(int64(index)))
 
 		view := []byte{prefix}

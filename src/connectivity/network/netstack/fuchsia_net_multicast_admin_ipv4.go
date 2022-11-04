@@ -129,7 +129,7 @@ func (m *multicastIpv4RoutingTableControllerImpl) DelRoute(_ fidl.Context, addre
 		return admin.Ipv4RoutingTableControllerDelRouteResultWithResponse(admin.Ipv4RoutingTableControllerDelRouteResponse{}), nil
 	case *tcpip.ErrBadAddress:
 		return admin.Ipv4RoutingTableControllerDelRouteResultWithErr(admin.Ipv4RoutingTableControllerDelRouteErrorInvalidAddress), nil
-	case *tcpip.ErrNoRoute:
+	case *tcpip.ErrHostUnreachable:
 		return admin.Ipv4RoutingTableControllerDelRouteResultWithErr(admin.Ipv4RoutingTableControllerDelRouteErrorNotFound), nil
 	default:
 		panic(fmt.Sprintf("m.stack.RemoveMulticastRoute(ipv4.ProtocolNumber, %#v): %s", stackAddresses, err))
@@ -148,7 +148,7 @@ func (m *multicastIpv4RoutingTableControllerImpl) GetRouteStats(_ fidl.Context, 
 		return admin.Ipv4RoutingTableControllerGetRouteStatsResultWithResponse(admin.Ipv4RoutingTableControllerGetRouteStatsResponse{Stats: routeStats}), nil
 	case *tcpip.ErrBadAddress:
 		return admin.Ipv4RoutingTableControllerGetRouteStatsResultWithErr(admin.Ipv4RoutingTableControllerGetRouteStatsErrorInvalidAddress), nil
-	case *tcpip.ErrNoRoute:
+	case *tcpip.ErrHostUnreachable:
 		return admin.Ipv4RoutingTableControllerGetRouteStatsResultWithErr(admin.Ipv4RoutingTableControllerGetRouteStatsErrorNotFound), nil
 	default:
 		panic(fmt.Sprintf("m.stack.MulticastRouteLastUsedTime(ipv4.ProtocolNumber, %#v): %s", stackAddresses, err))

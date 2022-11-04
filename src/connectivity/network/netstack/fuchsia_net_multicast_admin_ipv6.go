@@ -129,7 +129,7 @@ func (m *multicastIpv6RoutingTableControllerImpl) DelRoute(_ fidl.Context, addre
 		return admin.Ipv6RoutingTableControllerDelRouteResultWithResponse(admin.Ipv6RoutingTableControllerDelRouteResponse{}), nil
 	case *tcpip.ErrBadAddress:
 		return admin.Ipv6RoutingTableControllerDelRouteResultWithErr(admin.Ipv6RoutingTableControllerDelRouteErrorInvalidAddress), nil
-	case *tcpip.ErrNoRoute:
+	case *tcpip.ErrHostUnreachable:
 		return admin.Ipv6RoutingTableControllerDelRouteResultWithErr(admin.Ipv6RoutingTableControllerDelRouteErrorNotFound), nil
 	default:
 		panic(fmt.Sprintf("m.stack.RemoveMulticastRoute(ipv6.ProtocolNumber, %#v): %s", stackAddresses, err))
@@ -148,7 +148,7 @@ func (m *multicastIpv6RoutingTableControllerImpl) GetRouteStats(_ fidl.Context, 
 		return admin.Ipv6RoutingTableControllerGetRouteStatsResultWithResponse(admin.Ipv6RoutingTableControllerGetRouteStatsResponse{Stats: routeStats}), nil
 	case *tcpip.ErrBadAddress:
 		return admin.Ipv6RoutingTableControllerGetRouteStatsResultWithErr(admin.Ipv6RoutingTableControllerGetRouteStatsErrorInvalidAddress), nil
-	case *tcpip.ErrNoRoute:
+	case *tcpip.ErrHostUnreachable:
 		return admin.Ipv6RoutingTableControllerGetRouteStatsResultWithErr(admin.Ipv6RoutingTableControllerGetRouteStatsErrorNotFound), nil
 	default:
 		panic(fmt.Sprintf("m.stack.MulticastRouteLastUsedTime(ipv6.ProtocolNumber, %#v): %s", stackAddresses, err))

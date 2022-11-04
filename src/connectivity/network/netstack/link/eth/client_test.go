@@ -36,14 +36,14 @@ import (
 
 type DeliverNetworkPacketArgs struct {
 	Protocol tcpip.NetworkProtocolNumber
-	Pkt      *stack.PacketBuffer
+	Pkt      stack.PacketBufferPtr
 }
 
 type dispatcherChan chan DeliverNetworkPacketArgs
 
 var _ stack.NetworkDispatcher = (dispatcherChan)(nil)
 
-func (ch dispatcherChan) DeliverNetworkPacket(protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
+func (ch dispatcherChan) DeliverNetworkPacket(protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBufferPtr) {
 	pkt.IncRef()
 
 	ch <- DeliverNetworkPacketArgs{
@@ -52,7 +52,7 @@ func (ch dispatcherChan) DeliverNetworkPacket(protocol tcpip.NetworkProtocolNumb
 	}
 }
 
-func (dispatcherChan) DeliverLinkPacket(tcpip.NetworkProtocolNumber, *stack.PacketBuffer, bool) {
+func (dispatcherChan) DeliverLinkPacket(tcpip.NetworkProtocolNumber, stack.PacketBufferPtr, bool) {
 	panic("not implemented")
 }
 
@@ -480,7 +480,8 @@ func TestClient(t *testing.T) {
 				// * heap object growth is ranging from negative 50 to 0.
 				if err := testutil.CheckHeapObjectsGrowth(10000, 100, func() {
 					send("foobarbazfoobar")
-					(<-ch).Pkt.DecRef()
+					pkt := (<-ch).Pkt
+					(&pkt).DecRef()
 				}); err != nil {
 					t.Fatal(err)
 				}

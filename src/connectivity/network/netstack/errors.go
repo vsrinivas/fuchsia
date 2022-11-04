@@ -54,7 +54,7 @@ func (e TcpIpError) ToStackError() stack.Error {
 		return stack.ErrorAlreadyExists
 	case *tcpip.ErrDuplicateAddress:
 		return stack.ErrorAlreadyExists
-	case *tcpip.ErrNoRoute:
+	case *tcpip.ErrHostUnreachable:
 		return stack.ErrorInternal
 	case *tcpip.ErrAlreadyBound:
 		return stack.ErrorAlreadyExists
@@ -136,7 +136,7 @@ func (e TcpIpError) ToZxStatus() zx.Status {
 		return zx.ErrAlreadyExists
 	case *tcpip.ErrDuplicateAddress:
 		return zx.ErrAlreadyExists
-	case *tcpip.ErrNoRoute:
+	case *tcpip.ErrHostUnreachable:
 		return zx.ErrAddressUnreachable
 	case *tcpip.ErrAlreadyBound:
 		return zx.ErrAlreadyBound

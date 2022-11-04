@@ -33,7 +33,6 @@ import (
 	_ "golang.org/x/crypto/ssh"
 	_ "golang.org/x/exp/maps"
 	_ "golang.org/x/exp/slices"
-	_ "golang.org/x/net/context"
 	_ "golang.org/x/net/ipv4"
 	_ "golang.org/x/net/ipv6"
 	_ "golang.org/x/sync/errgroup"

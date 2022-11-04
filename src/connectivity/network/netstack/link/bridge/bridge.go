@@ -211,7 +211,7 @@ func (ep *Endpoint) IsAttached() bool {
 //
 // Endpoint does not implement stack.NetworkEndpoint.DeliverNetworkPacket because we need
 // to know which BridgeableEndpoint the packet was delivered from to prevent packet loops.
-func (ep *Endpoint) DeliverNetworkPacketToBridge(rxEP *BridgeableEndpoint, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
+func (ep *Endpoint) DeliverNetworkPacketToBridge(rxEP *BridgeableEndpoint, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBufferPtr) {
 	ep.mu.RLock()
 	dispatcher := ep.mu.dispatcher
 	ep.mu.RUnlock()
@@ -302,7 +302,7 @@ func (e *Endpoint) ARPHardwareType() header.ARPHardwareType {
 }
 
 // AddHeader implements stack.LinkEndpoint.
-func (e *Endpoint) AddHeader(pkt *stack.PacketBuffer) {
+func (e *Endpoint) AddHeader(pkt stack.PacketBufferPtr) {
 	// Use the first bridged endpoint.
 	for _, link := range e.links {
 		link.AddHeader(pkt)

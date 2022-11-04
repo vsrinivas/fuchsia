@@ -184,7 +184,7 @@ func (c *Client) LinkAddress() tcpip.LinkAddress {
 func (c *Client) write(pkts stack.PacketBufferList) (int, tcpip.Error) {
 	trace.AsyncBegin("net", "eth.Client.write", trace.AsyncID(uintptr(unsafe.Pointer(c))))
 	defer trace.AsyncEnd("net", "eth.Client.write", trace.AsyncID(uintptr(unsafe.Pointer(c))))
-	return c.handler.ProcessWrite(pkts, func(entry *eth.FifoEntry, pkt *stack.PacketBuffer) {
+	return c.handler.ProcessWrite(pkts, func(entry *eth.FifoEntry, pkt stack.PacketBufferPtr) {
 		entry.SetLength(bufferSize)
 		b := c.iob.BufferFromEntry(*entry)
 		var used int
@@ -245,7 +245,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 				})
 				defer pkt.DecRef()
 
-				id := trace.AsyncID(uintptr(unsafe.Pointer(pkt)))
+				id := trace.AsyncID(pkt.ID())
 				trace.AsyncBegin("net", "eth.DeliverNetworkPacket", id)
 				dispatcher.DeliverNetworkPacket(0, pkt)
 				trace.AsyncEnd("net", "eth.DeliverNetworkPacket", id)
@@ -299,7 +299,7 @@ func (*Client) ARPHardwareType() header.ARPHardwareType {
 }
 
 // AddHeader implements stack.LinkEndpoint.
-func (*Client) AddHeader(*stack.PacketBuffer) {}
+func (*Client) AddHeader(stack.PacketBufferPtr) {}
 
 // GSOMaxSize implements stack.GSOEndpoint.
 func (*Client) GSOMaxSize() uint32 {

@@ -150,7 +150,7 @@ func (h *{{ .Handler }}) RxLoop(process func(entry *{{ .EntryType }}) {{ if .Sig
 	}
 }
 
-func (h *{{ .Handler }}) ProcessWrite(pbList stack.PacketBufferList, processor func(*{{ .EntryType }}, *stack.PacketBuffer)) (int, tcpip.Error) {
+func (h *{{ .Handler }}) ProcessWrite(pbList stack.PacketBufferList, processor func(*{{ .EntryType }}, stack.PacketBufferPtr)) (int, tcpip.Error) {
 	pkts := pbList.AsSlice()
 	i := 0
 

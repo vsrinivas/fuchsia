@@ -20,7 +20,7 @@ type PacketBufferParts struct {
 // PacketBufferCmpTransformer transforms a stack.PacketBuffer to a
 // PacketBufferParts which represents the PacketBuffer for the purposes of our
 // tests.
-var PacketBufferCmpTransformer = cmp.Transformer("packetBufferToParts", func(pkt *stack.PacketBuffer) PacketBufferParts {
+var PacketBufferCmpTransformer = cmp.Transformer("packetBufferToParts", func(pkt stack.PacketBufferPtr) PacketBufferParts {
 	return PacketBufferParts{
 		LinkHeader:      pkt.LinkHeader().Slice(),
 		NetworkHeader:   pkt.NetworkHeader().Slice(),

@@ -144,7 +144,7 @@ func (c *Client) write(port network.PortId, pkts stack.PacketBufferList) (int, t
 	if c.mu.closed {
 		return 0, &tcpip.ErrClosedForSend{}
 	}
-	return c.handler.ProcessWrite(pkts, func(descriptorIndex *uint16, pkt *stack.PacketBuffer) {
+	return c.handler.ProcessWrite(pkts, func(descriptorIndex *uint16, pkt stack.PacketBufferPtr) {
 		descriptor := c.getDescriptor(*descriptorIndex)
 		// Reset descriptor to default values before filling it.
 		c.resetTxDescriptor(descriptor)
@@ -188,7 +188,7 @@ func (p *Port) WritePackets(pkts stack.PacketBufferList) (int, tcpip.Error) {
 	return p.client.write(p.portInfo.Id, pkts)
 }
 
-func (p *Port) WriteRawPacket(pkt *stack.PacketBuffer) tcpip.Error {
+func (p *Port) WriteRawPacket(pkt stack.PacketBufferPtr) tcpip.Error {
 	var pkts stack.PacketBufferList
 	pkts.PushBack(pkt)
 	// TODO(https://fxbug.dev/86725): Frame type detection may not work for implementing
@@ -402,7 +402,7 @@ func (c *Client) Run(ctx context.Context) {
 							})
 							defer pkt.DecRef()
 
-							id := trace.AsyncID(uintptr(unsafe.Pointer(pkt)))
+							id := trace.AsyncID(pkt.ID())
 							trace.AsyncBegin("net", "netdevice.DeliverNetworkPacket", id)
 							dispatcher.DeliverNetworkPacket(protocolNumber, pkt)
 							trace.AsyncEnd("net", "netdevice.DeliverNetworkPacket", id)
@@ -445,7 +445,7 @@ func (*Port) ARPHardwareType() header.ARPHardwareType {
 	return header.ARPHardwareNone
 }
 
-func (*Port) AddHeader(*stack.PacketBuffer) {}
+func (*Port) AddHeader(stack.PacketBufferPtr) {}
 
 // GSOMaxSize implements stack.GSOEndpoint.
 func (*Port) GSOMaxSize() uint32 {
