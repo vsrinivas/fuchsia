@@ -35,10 +35,16 @@ enum {
   BTI_USB,
   BTI_MALI,
   BTI_VIDEO,
+  BTI_SPI0,
   BTI_SPI1,
   BTI_AUDIO_OUT,
   BTI_AUDIO_IN,
   BTI_TEE,
+};
+
+// Clover SPI bus arbiters (should match spi_channels[] in clover-spi.cc  ).
+enum {
+  CLOVER_SPICC0,
 };
 
 class Clover;
@@ -71,6 +77,7 @@ class Clover : public CloverType {
   zx_status_t ThermalInit();
   zx_status_t DmcInit();
   zx_status_t I2cInit();
+  zx_status_t SpiInit();
 
   fdf::WireSyncClient<fuchsia_hardware_platform_bus::PlatformBus> pbus_;
   std::optional<ddk::InitTxn> init_txn_;

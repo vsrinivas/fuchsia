@@ -14,6 +14,7 @@ _common_bootfs_deps = [
   "//src/devices/gpio/drivers/aml-gpio",
   "//src/devices/i2c/drivers/aml-i2c",
   "//src/devices/ram/drivers/aml-ram",
+  "//src/devices/spi/drivers/aml-spi",
   "//src/devices/sysmem/drivers/sysmem",
   "//src/devices/tee/drivers/optee",
   "//src/devices/thermal/drivers/aml-thermal-s905d2g",

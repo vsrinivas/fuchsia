@@ -44,6 +44,8 @@
 #define A1_I2C_D_BASE 0xfe006c00
 
 // spicc
+#define A1_SPICC0_BASE 0xfe003800
+#define A1_SPICC0_LENGTH 0x400
 
 // rtc
 
@@ -68,6 +70,7 @@
 
 // IRQs
 #define A1_I2C_A_IRQ 64    // 32+32
+#define A1_SPICC0_IRQ 80   // 32+48
 #define A1_GPIO_IRQ_0 81   // 32+49
 #define A1_GPIO_IRQ_1 82   // 32+50
 #define A1_GPIO_IRQ_2 83   // 32+51

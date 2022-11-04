@@ -70,6 +70,11 @@ int Clover::Thread() {
     init_txn_->Reply(status);
     return status;
   }
+  if ((status = SpiInit()) != ZX_OK) {
+    zxlogf(ERROR, "SpiInit() failed: %s", zx_status_get_string(status));
+    init_txn_->Reply(status);
+    return status;
+  }
   if ((status = GpioInit()) != ZX_OK) {
     zxlogf(ERROR, "GpioInit() failed: %s", zx_status_get_string(status));
     init_txn_->Reply(status);

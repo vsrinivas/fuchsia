@@ -24,6 +24,17 @@ driver_bind_rules("clover-tee-bind") {
   ]
 }
 
+driver_bind_rules("clover-spi-0-bind") {
+  rules = "bind/clover-spi-0.bind"
+  header_output = "clover-spi-0-bind.h"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.a1",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
 fuchsia_driver("clover-driver") {
   output_name = "clover"
   configs += [
@@ -35,6 +46,7 @@ fuchsia_driver("clover-driver") {
     "clover-gpio.cc",
     "clover-i2c.cc",
     "clover-ram.cc",
+    "clover-spi.cc",
     "clover-sysmem.cc",
     "clover-tee.cc",
     "clover-thermal.cc",
@@ -42,6 +54,7 @@ fuchsia_driver("clover-driver") {
   ]
   deps = [
     ":clover-bind",
+    ":clover-spi-0-bind_header",
     ":clover-tee-bind_header",
     "//sdk/banjo/fuchsia.hardware.iommu:fuchsia.hardware.iommu_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",

@@ -104,4 +104,14 @@
 #define A1_I2C_C_SDA A1_GPIOA(10)
 #define A1_I2C_C_SDA_FN 2
 
+// Alternate Functions for SPI
+#define A1_SPI_A_MOSI A1_GPIOX(7)
+#define A1_SPI_A_MOSI_FN 4
+#define A1_SPI_A_MISO A1_GPIOX(8)
+#define A1_SPI_A_MISO_FN 4
+#define A1_SPI_A_SS0 A1_GPIOX(9)
+#define A1_SPI_A_SS0_FN 4
+#define A1_SPI_A_CLK A1_GPIOX(10)
+#define A1_SPI_A_CLK_FN 4
+
 #endif  // SRC_DEVICES_LIB_AMLOGIC_INCLUDE_SOC_AML_A1_A1_GPIO_H_
