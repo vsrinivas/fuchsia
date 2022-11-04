@@ -124,8 +124,6 @@ fuchsia_driver_component("isolated-child") {
   component_name = "isolated-child"
   deps = [ ":isolated-child-driver" ]
   info = "isolated-child-info.json"
-
-  # The FidlProtocolTest.ColocateFlagIsRespected test checks that this flag has its intended effect.
   colocate = false
 }
 

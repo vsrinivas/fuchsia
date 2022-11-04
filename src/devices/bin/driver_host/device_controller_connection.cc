@@ -132,11 +132,9 @@ void DeviceControllerConnection::BindDriver(BindDriverRequestView request,
     LOGD(INFO, *dev, "Binding driver '%.*s'", static_cast<int>(driver_path.size()),
          driver_path.data());
   } else {
-    // Fragment driver binds a lot so we log them at TRACE instead of INFO.
     LOGD(TRACE, *dev, "Binding driver '%.*s'", static_cast<int>(driver_path.size()),
          driver_path.data());
   }
-
   if (dev->flags() & DEV_FLAG_DEAD) {
     LOGD(ERROR, *dev, "Cannot bind to removed device");
     BindReply(dev, completer, ZX_ERR_IO_NOT_PRESENT);

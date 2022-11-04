@@ -15,10 +15,7 @@ driver_bind_rules("aml_mipi_bind") {
   rules = "aml_mipi.bind"
   header_output = "bind.h"
   tests = "bind_tests.json"
-  deps = [
-    "//src/devices/bind/fuchsia.amlogic.platform",
-    "//src/devices/bind/fuchsia.platform",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.amlogic.platform" ]
 }
 
 fuchsia_driver("aml_mipicsi_driver-driver") {

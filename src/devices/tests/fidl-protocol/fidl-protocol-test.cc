@@ -52,69 +52,6 @@ TEST_F(FidlProtocolTest, ChildBinds) {
   ASSERT_EQ(status, ZX_OK);
 }
 
-TEST_F(FidlProtocolTest, ColocateFlagIsRespected) {
-  // Verify that the colocate flag set on isolated-child in BUILD.gn is respected by driver manager.
-  auto realm_builder = component_testing::RealmBuilder::Create();
-  driver_test_realm::Setup(realm_builder);
-  auto realm = realm_builder.Build(dispatcher());
-
-  // Start DriverTestRealm.
-  fidl::SynchronousInterfacePtr<fuchsia::driver::test::Realm> driver_test_realm;
-  ASSERT_EQ(ZX_OK, realm.Connect(driver_test_realm.NewRequest()));
-  fuchsia::driver::test::Realm_Start_Result realm_result;
-  ASSERT_EQ(ZX_OK, driver_test_realm->Start(fuchsia::driver::test::RealmArgs(), &realm_result));
-  ASSERT_FALSE(realm_result.is_err());
-
-  // Connect to dev.
-  fidl::InterfaceHandle<fuchsia::io::Directory> dev;
-  zx_status_t status = realm.Connect("dev", dev.NewRequest().TakeChannel());
-  ASSERT_EQ(status, ZX_OK);
-
-  fbl::unique_fd root_fd;
-  status = fdio_fd_create(dev.TakeChannel().release(), root_fd.reset_and_get_address());
-  ASSERT_EQ(status, ZX_OK);
-
-  // Wait for the device to bind and appear.
-  std::string parent_device_path = "sys/test/parent/child";
-  std::string device_path = parent_device_path + "/isolated-child";
-  fbl::unique_fd fd;
-  status = device_watcher::RecursiveWaitForFile(root_fd, device_path.c_str(), &fd);
-  ASSERT_EQ(status, ZX_OK);
-
-  // Connect to the driver development server.
-  fuchsia::driver::development::DriverDevelopmentSyncPtr driver_dev;
-  status = realm.Connect(driver_dev.NewRequest());
-  ASSERT_EQ(status, ZX_OK);
-
-  // Get the child device's driver host.
-  fuchsia::driver::development::DeviceInfoIteratorSyncPtr iterator;
-  status = driver_dev->GetDeviceInfo({device_path}, iterator.NewRequest());
-  ASSERT_EQ(status, ZX_OK);
-
-  std::vector<fuchsia::driver::development::DeviceInfo> child_device_result;
-  status = iterator->GetNext(&child_device_result);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(child_device_result.size(), 1ull);
-
-  fuchsia::driver::development::DeviceInfo& device_info = child_device_result[0];
-  uint64_t child_driver_host_koid = device_info.driver_host_koid();
-
-  // Get the parent device's driver host.
-  status = driver_dev->GetDeviceInfo({parent_device_path}, iterator.NewRequest());
-  ASSERT_EQ(status, ZX_OK);
-
-  std::vector<fuchsia::driver::development::DeviceInfo> parent_device_result;
-  status = iterator->GetNext(&parent_device_result);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(parent_device_result.size(), 1ull);
-
-  fuchsia::driver::development::DeviceInfo& parent_device_info = parent_device_result[0];
-  uint64_t parent_driver_host_koid = parent_device_info.driver_host_koid();
-
-  // Make sure the parent and child are in different hosts.
-  ASSERT_NE(child_driver_host_koid, parent_driver_host_koid);
-}
-
 TEST_F(FidlProtocolTest, MustIsolateFlagIsPassed) {
   // Verify that the MUST_ISOLATE flag in the driver host is passed on to the driver manager.
   //

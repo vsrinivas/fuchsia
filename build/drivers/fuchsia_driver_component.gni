@@ -41,11 +41,9 @@ import("//tools/cmc/build/cmc.gni")
 #     Type: bool
 #     Default: false
 #   colocate
-#     If this is true, the driver will be put in the same DriverHost as its parent if possible. This
-#     is advisory, and the driver manager may still put the driver in a separate DriverHost, for
-#     instance if the parent device has MUST_ISOLATE set. In DFv1, a driver is always colocated if
-#     the parent device is a composite; isolation may still be enforced by setting MUST_ISOLATE on
-#     the primary fragment of the composite.
+#     If this is true, the driver will be put in the same DriverHost as its parent if possible. If the
+#     parent device was added with DEVICE_ADD_MUST_ISOLATE, then the child device will be put in a
+#     separate DriverHost even with `colocate = true`. This flag is currently only respected in DFv2.
 #     Type: boolean
 #   root_resource (optional)
 #     If this is true, the driver will be given access to the root resource.
