@@ -14,6 +14,7 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
+    ":bt_init_config",
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr_rust",
     "//sdk/fidl/fuchsia.bluetooth.snoop:fuchsia.bluetooth.snoop_rust",
     "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys_rust",
@@ -26,8 +27,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tracing",
   ]
 
@@ -36,33 +35,50 @@ rustc_binary("bin") {
     "//src/lib/zircon/rust:fuchsia-zircon",
   ]
 
-  sources = [
-    "src/config.rs",
-    "src/main.rs",
-  ]
+  sources = [ "src/main.rs" ]
 
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
-resource("default-config") {
-  sources = [ "config/default.json" ]
-  outputs = [ "data/bt-init-default.json" ]
-}
-
-fuchsia_package_with_single_component("bt-init") {
-  deps = [
-    ":bin",
-    ":default-config",
-  ]
+fuchsia_component_manifest("manifest") {
+  component_name = "bt-init"
   manifest = "meta/bt-init.cml"
 }
 
-fuchsia_package_with_single_component("bt-init-testonly") {
+fuchsia_structured_config_rust_lib("bt_init_config") {
+  cm_label = ":manifest"
+}
+
+fuchsia_structured_config_values("default_config_values") {
+  cm_label = ":manifest"
+  values = {
+    autostart_snoop = true
+  }
+}
+
+fuchsia_component("component") {
+  cm_label = ":manifest"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("bt-init") {
   deps = [
-    ":bin",
-    ":default-config",
+    ":component",
+    ":default_config_values",
   ]
+}
+
+fuchsia_component("testonly_component") {
   manifest = "meta/bt-init-testonly.cml"
+  component_name = "bt-init-testonly"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("bt-init-testonly") {
+  deps = [
+    ":default_config_values",
+    ":testonly_component",
+  ]
 }
 
 # The fuchsia.bluetooth.sys.Bootstrap service is not relevant to all configurations, so products
@@ -88,6 +104,6 @@ fuchsia_unittest_package("tests") {
 
   deps = [
     ":bin_test",
-    ":default-config",
+    ":default_config_values",
   ]
 }

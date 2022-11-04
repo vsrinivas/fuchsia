@@ -279,12 +279,23 @@ rustc_test("bt_init_smoke_test_bin") {
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
-fuchsia_component("test-bt-init") {
+fuchsia_component_manifest("test_bt_init_manifest") {
+  component_name = "test-bt-init"
   manifest = "meta/test-bt-init.cml"
+}
+
+fuchsia_structured_config_values("test-bt-init-config") {
+  cm_label = ":test_bt_init_manifest"
+  values = {
+    autostart_snoop = true
+  }
+}
+
+fuchsia_component("test-bt-init") {
+  cm_label = ":test_bt_init_manifest"
   deps = [
     "//src/connectivity/bluetooth/core/bt-gap:component",
     "//src/connectivity/bluetooth/core/bt-init:bin",
-    "//src/connectivity/bluetooth/core/bt-init:default-config",
     "//src/connectivity/bluetooth/profiles/bt-rfcomm:component",
   ]
 }
@@ -298,6 +309,7 @@ fuchsia_test_package("bt-init-smoke-test") {
   test_components = [ ":bt-init-smoke-test-component" ]
   deps = [
     ":test-bt-init",
+    ":test-bt-init-config",
     "//src/sys/stash:stash_secure_v2",
   ]
 }

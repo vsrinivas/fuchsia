@@ -44,6 +44,7 @@ rustc_library("bt-test-harness") {
   # Components included in `deps` because they're used by core_realm and/or host_driver_realm
   deps += [
     ":test-bt-init",
+    ":test-bt-init-config",
     "//sdk/lib/driver_test_realm/realm_builder/rust",
     "//src/connectivity/bluetooth/core/bt-gap:test-stash-secure",
     "//src/connectivity/bluetooth/core/bt-host:driver",
@@ -82,12 +83,23 @@ rustc_library("bt-test-harness") {
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
-fuchsia_component("test-bt-init") {
+fuchsia_component_manifest("test_bt_init_manifest") {
+  component_name = "test-bt-init"
   manifest = "meta/test-bt-init.cml"
+}
+
+fuchsia_structured_config_values("test-bt-init-config") {
+  cm_label = ":test_bt_init_manifest"
+  values = {
+    autostart_snoop = true
+  }
+}
+
+fuchsia_component("test-bt-init") {
+  cm_label = ":test_bt_init_manifest"
   deps = [
     "//src/connectivity/bluetooth/core/bt-gap:component",
     "//src/connectivity/bluetooth/core/bt-init:bin",
-    "//src/connectivity/bluetooth/core/bt-init:default-config",
     "//src/connectivity/bluetooth/profiles/bt-rfcomm:component",
   ]
 }

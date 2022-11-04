@@ -123,4 +123,7 @@
             from: "self",
         },
     ],
+    config: {
+        autostart_snoop: { type: "bool" },
+    },
 }

@@ -4,6 +4,7 @@
 
 use anyhow::{Context as _, Error};
 use async_trait::async_trait;
+use bt_init_config::Config;
 use fdio;
 use fidl::endpoints::{DiscoverableProtocolMarker, Proxy};
 use fidl_fuchsia_bluetooth_bredr::ProfileMarker;
@@ -14,8 +15,6 @@ use fuchsia_async as fasync;
 use fuchsia_component::{client, server};
 use futures::{future, StreamExt};
 use tracing::{error, info, warn};
-
-mod config;
 
 const BT_GAP_CHILD_NAME: &str = "bt-gap";
 const BT_RFCOMM_CHILD_NAME: &str = "bt-rfcomm";
@@ -74,11 +73,11 @@ fn main() -> Result<(), Error> {
     info!("starting bt-init...");
 
     let mut executor = fasync::LocalExecutor::new().context("error creating executor")?;
-    let cfg = config::Config::load().context("error loading config")?;
+    let cfg = Config::take_from_startup_handle();
 
     // Start bt-snoop service before anything else and hold onto the connection until bt-init exits.
     let snoop_connection;
-    if cfg.autostart_snoop() {
+    if cfg.autostart_snoop {
         info!("starting snoop service...");
         snoop_connection = client::connect_to_protocol::<SnoopMarker>();
         if let Err(e) = snoop_connection {
