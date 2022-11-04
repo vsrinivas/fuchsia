@@ -18,9 +18,10 @@
 
 #include <mutex>
 
-class TxCompletionQueue {
+class HostToGuestCompletionQueue {
  public:
-  TxCompletionQueue(async_dispatcher_t* dispatcher, ddk::NetworkDeviceIfcProtocolClient* device)
+  HostToGuestCompletionQueue(async_dispatcher_t* dispatcher,
+                             ddk::NetworkDeviceIfcProtocolClient* device)
       : dispatcher_(dispatcher), device_(device) {}
 
   // Write a completion to the queue, scheduling a task to send a completion to the netstack if
@@ -30,8 +31,8 @@ class TxCompletionQueue {
   // This is safe to call from any thread.
   void Complete(uint32_t buffer_id, zx_status_t status);
 
-  static constexpr uint32_t kMaxTxDepth = 128;
-  static constexpr uint32_t kQueueDepth = kMaxTxDepth * 2;
+  static constexpr uint32_t kMaxDepth = 128;
+  static constexpr uint32_t kQueueDepth = kMaxDepth * 2;
 
  private:
   // Send all pending completions in `kMaxTxDepth` batches. This runs on the dispatch thread.
@@ -50,10 +51,10 @@ class TxCompletionQueue {
   uint32_t count_ __TA_GUARDED(mutex_) = 0;
 };
 
-class RxCompletionQueue {
+class GuestToHostCompletionQueue {
  public:
-  RxCompletionQueue(uint8_t port, async_dispatcher_t* dispatcher,
-                    ddk::NetworkDeviceIfcProtocolClient* device);
+  GuestToHostCompletionQueue(uint8_t port, async_dispatcher_t* dispatcher,
+                             ddk::NetworkDeviceIfcProtocolClient* device);
 
   // Write a completion to the queue, scheduling a task to send a completion to the netstack if
   // needed. If the queue is full, this won't be batched and instead will be scheduled
@@ -66,8 +67,8 @@ class RxCompletionQueue {
   // This is safe to call from any thread.
   void Complete(uint32_t buffer_id, uint32_t length);
 
-  static constexpr uint32_t kMaxRxDepth = 128;
-  static constexpr uint32_t kQueueDepth = kMaxRxDepth * 2;
+  static constexpr uint32_t kMaxDepth = 128;
+  static constexpr uint32_t kQueueDepth = kMaxDepth * 2;
 
  private:
   // Send all pending completions in `kMaxRxDepth` batches. This runs on the dispatch thread.

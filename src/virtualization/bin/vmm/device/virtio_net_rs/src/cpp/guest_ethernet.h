@@ -23,6 +23,7 @@
 #include <virtio/net.h>
 
 #include "src/connectivity/network/drivers/network-device/device/public/network_device.h"
+#include "src/virtualization/bin/vmm/device/virtio_net_rs/src/cpp/completion_queue.h"
 
 class GuestEthernet : public ddk::NetworkDeviceImplProtocol<GuestEthernet>,
                       ddk::MacAddrProtocol<GuestEthernet>,
@@ -31,7 +32,9 @@ class GuestEthernet : public ddk::NetworkDeviceImplProtocol<GuestEthernet>,
   GuestEthernet()
       : loop_(&kAsyncLoopConfigAttachToCurrentThread),
         trace_provider_(loop_.dispatcher()),
-        svc_(sys::ServiceDirectory::CreateFromNamespace()) {}
+        svc_(sys::ServiceDirectory::CreateFromNamespace()),
+        tx_completion_queue_(kPortId, loop_.dispatcher(), &parent_),
+        rx_completion_queue_(loop_.dispatcher(), &parent_) {}
   ~GuestEthernet();
 
   // Starts the dispatch loop on a new thread.
@@ -76,6 +79,9 @@ class GuestEthernet : public ddk::NetworkDeviceImplProtocol<GuestEthernet>,
   void NetworkPortGetMac(mac_addr_protocol_t* out_mac_ifc);
   void NetworkPortSetActive(bool active) {}
   void NetworkPortRemoved() {}
+
+  // Port GuestEthernet uses for communication.
+  static constexpr uint8_t kPortId = 0;
 
  private:
   enum class State {
@@ -137,6 +143,9 @@ class GuestEthernet : public ddk::NetworkDeviceImplProtocol<GuestEthernet>,
   async::Loop loop_;
   trace::TraceProviderWithFdio trace_provider_;
   std::shared_ptr<sys::ServiceDirectory> svc_;
+
+  GuestToHostCompletionQueue tx_completion_queue_;
+  HostToGuestCompletionQueue rx_completion_queue_;
 
   uint8_t mac_address_[VIRTIO_ETH_MAC_SIZE];
 

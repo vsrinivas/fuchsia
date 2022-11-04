@@ -6,7 +6,7 @@
 
 #include <lib/async/cpp/task.h>
 
-void TxCompletionQueue::Complete(uint32_t buffer_id, zx_status_t status) {
+void HostToGuestCompletionQueue::Complete(uint32_t buffer_id, zx_status_t status) {
   std::lock_guard guard(mutex_);
   if (count_ == result_.size()) {
     ScheduleIndividual(buffer_id, status);
@@ -15,7 +15,7 @@ void TxCompletionQueue::Complete(uint32_t buffer_id, zx_status_t status) {
 
   // Schedule a batched completion on the dispatch thread.
   if (count_ == 0) {
-    async::PostTask(dispatcher_, fit::bind_member<&TxCompletionQueue::SendBatched>(this));
+    async::PostTask(dispatcher_, fit::bind_member<&HostToGuestCompletionQueue::SendBatched>(this));
   }
 
   result_[count_++] = {
@@ -24,12 +24,12 @@ void TxCompletionQueue::Complete(uint32_t buffer_id, zx_status_t status) {
   };
 }
 
-void TxCompletionQueue::SendBatched() {
+void HostToGuestCompletionQueue::SendBatched() {
   std::lock_guard guard(mutex_);
 
   uint32_t idx = 0;
   while (idx != count_) {
-    uint32_t batch_count = std::min(count_ - idx, kMaxTxDepth);
+    uint32_t batch_count = std::min(count_ - idx, kMaxDepth);
     device_->CompleteTx(&result_[idx], batch_count);
     idx += batch_count;
   }
@@ -37,7 +37,7 @@ void TxCompletionQueue::SendBatched() {
   count_ = 0;
 }
 
-void TxCompletionQueue::ScheduleIndividual(uint32_t buffer_id, zx_status_t status) {
+void HostToGuestCompletionQueue::ScheduleIndividual(uint32_t buffer_id, zx_status_t status) {
   async::PostTask(dispatcher_, [this, buffer_id, status]() {
     tx_result result = {
         .id = buffer_id,
@@ -48,8 +48,8 @@ void TxCompletionQueue::ScheduleIndividual(uint32_t buffer_id, zx_status_t statu
   });
 }
 
-RxCompletionQueue::RxCompletionQueue(uint8_t port, async_dispatcher_t* dispatcher,
-                                     ddk::NetworkDeviceIfcProtocolClient* device)
+GuestToHostCompletionQueue::GuestToHostCompletionQueue(uint8_t port, async_dispatcher_t* dispatcher,
+                                                       ddk::NetworkDeviceIfcProtocolClient* device)
     : port_(port), dispatcher_(dispatcher), device_(device) {
   // Initialize the static parts of the completion notifications. These will be reused.
   FX_CHECK(buffer_.size() == buffer_part_.size());
@@ -67,7 +67,7 @@ RxCompletionQueue::RxCompletionQueue(uint8_t port, async_dispatcher_t* dispatche
   }
 }
 
-void RxCompletionQueue::Complete(uint32_t buffer_id, uint32_t length) {
+void GuestToHostCompletionQueue::Complete(uint32_t buffer_id, uint32_t length) {
   std::lock_guard guard(mutex_);
   if (count_ == buffer_part_.size()) {
     ScheduleIndividual(buffer_id, length);
@@ -76,7 +76,7 @@ void RxCompletionQueue::Complete(uint32_t buffer_id, uint32_t length) {
 
   // Schedule a batched completion on the dispatch thread.
   if (count_ == 0) {
-    async::PostTask(dispatcher_, fit::bind_member<&RxCompletionQueue::SendBatched>(this));
+    async::PostTask(dispatcher_, fit::bind_member<&GuestToHostCompletionQueue::SendBatched>(this));
   }
 
   buffer_part_[count_++] = {
@@ -86,12 +86,12 @@ void RxCompletionQueue::Complete(uint32_t buffer_id, uint32_t length) {
   };
 }
 
-void RxCompletionQueue::SendBatched() {
+void GuestToHostCompletionQueue::SendBatched() {
   std::lock_guard guard(mutex_);
 
   uint32_t idx = 0;
   while (idx != count_) {
-    uint32_t batch_count = std::min(count_ - idx, kMaxRxDepth);
+    uint32_t batch_count = std::min(count_ - idx, kMaxDepth);
     device_->CompleteRx(&buffer_[idx], batch_count);
     idx += batch_count;
   }
@@ -99,7 +99,7 @@ void RxCompletionQueue::SendBatched() {
   count_ = 0;
 }
 
-void RxCompletionQueue::ScheduleIndividual(uint32_t buffer_id, uint32_t length) {
+void GuestToHostCompletionQueue::ScheduleIndividual(uint32_t buffer_id, uint32_t length) {
   async::PostTask(dispatcher_, [this, buffer_id, length]() {
     rx_buffer_part part = {
         .id = buffer_id,

@@ -10,15 +10,8 @@
 #include "src/virtualization/bin/vmm/device/virtio_net_rs/src/cpp/guest_ethernet_interface.h"
 
 namespace {
-// Port GuestEthernet uses for communication.
-constexpr uint8_t kPortId = 0;
-
 // Maximum Transmission Unit (MTU): the maximum supported size of an incoming/outgoing frame.
 constexpr uint32_t kMtu = 1500;
-
-// Maximum number of in-flight packets.
-constexpr uint16_t kMaxTxDepth = 128;
-constexpr uint16_t kMaxRxDepth = 128;
 
 // Ensure the given buffer can be supported by virtio-net.
 bool IsTxBufferSupported(const tx_buffer& buffer) {
@@ -35,7 +28,7 @@ bool IsTxBufferSupported(const tx_buffer& buffer) {
   }
 
   // Ensure the default port is being used.
-  if (unlikely(buffer.meta.port != kPortId)) {
+  if (unlikely(buffer.meta.port != GuestEthernet::kPortId)) {
     FX_LOGS_FIRST_N(WARNING, 10) << "Packet from host contained invalid device port: "
                                  << buffer.meta.port;
     return false;
@@ -73,7 +66,10 @@ void GuestEthernet::Teardown() {
   network_.Unbind();
   interface_registration_.Unbind();
 
-  device_interface_->Teardown([this]() { loop_.Quit(); });
+  device_interface_->Teardown([this]() {
+    loop_.Quit();
+    loop_.RunUntilIdle();  // Flush remaining tasks.
+  });
 }
 
 zx_status_t GuestEthernet::Initialize(const void* rust_guest_ethernet, const uint8_t* mac,
@@ -202,40 +198,11 @@ void GuestEthernet::Complete(uint32_t buffer_id, zx_status_t status) {
 
 void GuestEthernet::TxComplete(uint32_t buffer_id, size_t length) {
   FX_DCHECK(length < UINT32_MAX);
-  async::PostTask(loop_.dispatcher(), [this, buffer_id, length = static_cast<uint32_t>(length)]() {
-    rx_buffer_part part = {
-        .id = buffer_id,
-        .offset = 0,
-        .length = static_cast<uint32_t>(length),
-    };
-    rx_buffer rx_info = {
-        .meta =
-            {
-                .port = kPortId,
-                .frame_type =
-                    static_cast<uint8_t>(::fuchsia::hardware::network::FrameType::ETHERNET),
-            },
-        .data_list = &part,
-        .data_count = 1,
-    };
-    // Note that this device considers tx from the perspective of the guest, while the netstack
-    // considers rx from the perspective of itself. This is a guest to host packet being completed.
-    // TODO(fxbug.dev/95485): Completes should be batched for performance (up to kMaxRxDepth).
-    parent_.CompleteRx(&rx_info, /*rx_count=*/1);
-  });
+  tx_completion_queue_.Complete(buffer_id, static_cast<uint32_t>(length));
 }
 
 void GuestEthernet::RxComplete(uint32_t buffer_id, zx_status_t status) {
-  async::PostTask(loop_.dispatcher(), [this, buffer_id, status]() {
-    tx_result result = {
-        .id = buffer_id,
-        .status = status,
-    };
-    // Note that this device considers rx from the perspective of the guest, while the netstack
-    // considers tx from the perspective of itself. This is a host to guest packet being completed.
-    // TODO(fxbug.dev/95485): Completes should be batched for performance (up to kMaxTxDepth).
-    parent_.CompleteTx(&result, /*tx_count=*/1);
-  });
+  rx_completion_queue_.Complete(buffer_id, status);
 }
 
 zx::result<cpp20::span<uint8_t>> GuestEthernet::GetIoRegion(uint8_t vmo_id, uint64_t offset,
@@ -317,12 +284,12 @@ void GuestEthernet::NetworkDeviceImplGetInfo(device_info_t* out_info) {
   *out_info = {
       // Allow at most kMaxTxDepth/kMaxRxDepth buffers in flight to TX/RX,
       // respectively.
-      .tx_depth = kMaxTxDepth,
-      .rx_depth = kMaxRxDepth,
+      .tx_depth = HostToGuestCompletionQueue::kMaxDepth,
+      .rx_depth = GuestToHostCompletionQueue::kMaxDepth,
 
       // Netstack should try to refresh our available RX buffers when they get
       // to 50% of MaxRxDepth.
-      .rx_threshold = kMaxRxDepth / 2,
+      .rx_threshold = GuestToHostCompletionQueue::kMaxDepth / 2,
 
       // We only support buffers with 1 memory region (i.e., no scatter/gather).
       .max_buffer_parts = 1,

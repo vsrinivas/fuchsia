@@ -105,7 +105,7 @@ class CompletionQueueTest : public gtest::TestLoopFixture {
 };
 
 TEST_F(CompletionQueueTest, TxCompleteFewerThanMaxDepth) {
-  TxCompletionQueue queue(dispatcher(), &client_);
+  HostToGuestCompletionQueue queue(dispatcher(), &client_);
   queue.Complete(kFirstBufferId, ZX_OK);
 
   // Dispatch loop hasn't run the task yet.
@@ -118,9 +118,9 @@ TEST_F(CompletionQueueTest, TxCompleteFewerThanMaxDepth) {
 }
 
 TEST_F(CompletionQueueTest, TxCompleteMoreThanMaxDepth) {
-  TxCompletionQueue queue(dispatcher(), &client_);
+  HostToGuestCompletionQueue queue(dispatcher(), &client_);
   uint32_t buffer_id = kFirstBufferId;
-  for (uint32_t i = 0; i < TxCompletionQueue::kMaxTxDepth + 1; i++) {
+  for (uint32_t i = 0; i < HostToGuestCompletionQueue::kMaxDepth + 1; i++) {
     queue.Complete(buffer_id++, ZX_OK);
   }
 
@@ -130,13 +130,13 @@ TEST_F(CompletionQueueTest, TxCompleteMoreThanMaxDepth) {
   RunLoopUntilIdle();
 
   // Two batches, one full and one with one element.
-  ASSERT_NO_FATAL_FAILURE(ValidateTxBatches({TxCompletionQueue::kMaxTxDepth, 1}));
+  ASSERT_NO_FATAL_FAILURE(ValidateTxBatches({HostToGuestCompletionQueue::kMaxDepth, 1}));
 }
 
 TEST_F(CompletionQueueTest, TxCompleteMoreThanQueueSize) {
-  TxCompletionQueue queue(dispatcher(), &client_);
+  HostToGuestCompletionQueue queue(dispatcher(), &client_);
   uint32_t buffer_id = kFirstBufferId;
-  for (uint32_t i = 0; i < TxCompletionQueue::kQueueDepth + 3; i++) {
+  for (uint32_t i = 0; i < HostToGuestCompletionQueue::kQueueDepth + 3; i++) {
     queue.Complete(buffer_id++, ZX_OK);
   }
 
@@ -146,7 +146,7 @@ TEST_F(CompletionQueueTest, TxCompleteMoreThanQueueSize) {
   RunLoopUntilIdle();
 
   // Stick some more completions into the now empty queue.
-  for (uint32_t i = 0; i < TxCompletionQueue::kMaxTxDepth / 2; i++) {
+  for (uint32_t i = 0; i < HostToGuestCompletionQueue::kMaxDepth / 2; i++) {
     queue.Complete(buffer_id++, ZX_OK);
   }
 
@@ -154,13 +154,13 @@ TEST_F(CompletionQueueTest, TxCompleteMoreThanQueueSize) {
 
   // Six batches. The first two are batches from the completion queue, and the next 3 are single
   // element overflows, and the last is another iteration from the completion queue.
-  ASSERT_NO_FATAL_FAILURE(
-      ValidateTxBatches({TxCompletionQueue::kMaxTxDepth, TxCompletionQueue::kMaxTxDepth, 1, 1, 1,
-                         TxCompletionQueue::kMaxTxDepth / 2}));
+  ASSERT_NO_FATAL_FAILURE(ValidateTxBatches({HostToGuestCompletionQueue::kMaxDepth,
+                                             HostToGuestCompletionQueue::kMaxDepth, 1, 1, 1,
+                                             HostToGuestCompletionQueue::kMaxDepth / 2}));
 }
 
 TEST_F(CompletionQueueTest, RxCompleteFewerThanMaxDepth) {
-  RxCompletionQueue queue(kPort, dispatcher(), &client_);
+  GuestToHostCompletionQueue queue(kPort, dispatcher(), &client_);
   queue.Complete(kFirstBufferId, kFirstBufferLength);
 
   // Dispatch loop hasn't run the task yet.
@@ -173,39 +173,39 @@ TEST_F(CompletionQueueTest, RxCompleteFewerThanMaxDepth) {
 }
 
 TEST_F(CompletionQueueTest, RxCompleteMoreThanMaxDepth) {
-  RxCompletionQueue queue(kPort, dispatcher(), &client_);
+  GuestToHostCompletionQueue queue(kPort, dispatcher(), &client_);
   uint32_t buffer_id = kFirstBufferId;
   uint32_t buffer_length = kFirstBufferLength;
-  for (uint32_t i = 0; i < TxCompletionQueue::kMaxTxDepth + 1; i++) {
+  for (uint32_t i = 0; i < GuestToHostCompletionQueue::kMaxDepth + 1; i++) {
     queue.Complete(buffer_id++, buffer_length++);
   }
 
   RunLoopUntilIdle();
 
-  for (uint32_t i = 0; i < TxCompletionQueue::kMaxTxDepth / 2; i++) {
+  for (uint32_t i = 0; i < GuestToHostCompletionQueue::kMaxDepth / 2; i++) {
     queue.Complete(buffer_id++, buffer_length++);
   }
 
   RunLoopUntilIdle();
 
   // Three batches, one full, one with one element, and then the last half full.
-  ASSERT_NO_FATAL_FAILURE(
-      ValidateRxBatches({TxCompletionQueue::kMaxTxDepth, 1, TxCompletionQueue::kMaxTxDepth / 2}));
+  ASSERT_NO_FATAL_FAILURE(ValidateRxBatches(
+      {GuestToHostCompletionQueue::kMaxDepth, 1, GuestToHostCompletionQueue::kMaxDepth / 2}));
 }
 
 TEST_F(CompletionQueueTest, RxCompleteMoreThanQueueSize) {
-  RxCompletionQueue queue(kPort, dispatcher(), &client_);
+  GuestToHostCompletionQueue queue(kPort, dispatcher(), &client_);
   uint32_t buffer_id = kFirstBufferId;
   uint32_t buffer_length = kFirstBufferLength;
-  for (uint32_t i = 0; i < RxCompletionQueue::kQueueDepth + 2; i++) {
+  for (uint32_t i = 0; i < GuestToHostCompletionQueue::kQueueDepth + 2; i++) {
     queue.Complete(buffer_id++, buffer_length++);
   }
 
   RunLoopUntilIdle();
 
   // Four batches, two from the completion queue and two single element overflows.
-  ASSERT_NO_FATAL_FAILURE(
-      ValidateRxBatches({TxCompletionQueue::kMaxTxDepth, TxCompletionQueue::kMaxTxDepth, 1, 1}));
+  ASSERT_NO_FATAL_FAILURE(ValidateRxBatches(
+      {GuestToHostCompletionQueue::kMaxDepth, GuestToHostCompletionQueue::kMaxDepth, 1, 1}));
 }
 
 }  // namespace
