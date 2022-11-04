@@ -43,6 +43,9 @@ class PinecrestPartitioner : public DevicePartitioner {
  private:
   explicit PinecrestPartitioner(std::unique_ptr<GptDevicePartitioner> gpt) : gpt_(std::move(gpt)) {}
 
+  zx::result<std::unique_ptr<PartitionClient>> FindPartitionByGuid(const PartitionSpec& spec) const;
+  zx::result<std::unique_ptr<PartitionClient>> FindPartitionByName(const PartitionSpec& spec) const;
+
   std::unique_ptr<GptDevicePartitioner> gpt_;
 };
 

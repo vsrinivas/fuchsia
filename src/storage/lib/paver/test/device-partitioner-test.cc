@@ -2105,7 +2105,7 @@ TEST_F(PinecrestPartitionerTests, AddPartitionNotSupported) {
                 ZX_ERR_NOT_SUPPORTED);
 }
 
-TEST_F(PinecrestPartitionerTests, FindPartition) {
+TEST_F(PinecrestPartitionerTests, FindPartitionByGuid) {
   std::unique_ptr<BlockDevice> gpt_dev;
   // kBlockCount should be a value large enough to accommodate all partitions and blocks reserved by
   // gpt. The current value is copied from the case of sherlock.
@@ -2114,7 +2114,7 @@ TEST_F(PinecrestPartitionerTests, FindPartition) {
 
   // The initial gpt partitions are randomly chosen and does not necessarily reflect the
   // actual gpt partition layout in product.
-  const std::vector<PartitionDescription> kPinecrestNewPartitions = {
+  const std::vector<PartitionDescription> kPinecrestOldPartitions = {
       {GUID_ABR_META_NAME, kAbrMetaType, 0x10400, 0x10000},
       {"boot_a", kZirconAType, 0x50400, 0x10000},
       {"boot_b", kZirconBType, 0x60400, 0x10000},
@@ -2128,6 +2128,44 @@ TEST_F(PinecrestPartitionerTests, FindPartition) {
       {"cache", kZirconRType, 0xf0400, 0x10000},
       {"data", kFvmType, 0x100400, 0x10000},
 
+  };
+  ASSERT_NO_FATAL_FAILURE(InitializeStartingGPTPartitions(gpt_dev.get(), kPinecrestOldPartitions));
+
+  zx::result gpt_fd = fd(*gpt_dev);
+  ASSERT_OK(gpt_fd.status_value());
+  auto status = CreatePartitioner(gpt_fd.value());
+  ASSERT_OK(status);
+  std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
+
+  // Make sure we can find the important partitions.
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconA)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconB)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconR)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaA)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaB)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaR)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kAbrMeta)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager)));
+}
+
+TEST_F(PinecrestPartitionerTests, FindPartitionByName) {
+  std::unique_ptr<BlockDevice> gpt_dev;
+  // kBlockCount should be a value large enough to accommodate all partitions and blocks reserved by
+  // gpt. The current value is copied from the case of sherlock.
+  constexpr uint64_t kBlockCount = 0x748034;
+  ASSERT_NO_FATAL_FAILURE(CreateDisk(kBlockCount * block_size_, &gpt_dev));
+
+  // The initial gpt partitions are randomly chosen and does not necessarily reflect the
+  // actual gpt partition layout in product.
+  const std::vector<PartitionDescription> kPinecrestNewPartitions = {
+      {GUID_ABR_META_NAME, kAbrMetaType, 0x10400, 0x10000},
+      {GPT_VBMETA_A_NAME, kVbMetaType, 0x20400, 0x10000},
+      {GPT_VBMETA_B_NAME, kVbMetaType, 0x30400, 0x10000},
+      {GPT_VBMETA_R_NAME, kVbMetaType, 0x40400, 0x10000},
+      {GPT_ZIRCON_A_NAME, kZirconType, 0x50400, 0x10000},
+      {GPT_ZIRCON_B_NAME, kZirconType, 0x60400, 0x10000},
+      {GPT_ZIRCON_R_NAME, kZirconType, 0x70400, 0x10000},
+      {GPT_FVM_NAME, kNewFvmType, 0x80400, 0x10000},
   };
   ASSERT_NO_FATAL_FAILURE(InitializeStartingGPTPartitions(gpt_dev.get(), kPinecrestNewPartitions));
 

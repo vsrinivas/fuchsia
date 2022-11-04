@@ -65,13 +65,8 @@ zx::result<std::unique_ptr<PartitionClient>> PinecrestPartitioner::AddPartition(
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx::result<std::unique_ptr<PartitionClient>> PinecrestPartitioner::FindPartition(
+zx::result<std::unique_ptr<PartitionClient>> PinecrestPartitioner::FindPartitionByGuid(
     const PartitionSpec& spec) const {
-  if (!SupportsPartition(spec)) {
-    ERROR("Unsupported partition %s\n", spec.ToString().c_str());
-    return zx::error(ZX_ERR_NOT_SUPPORTED);
-  }
-
   Uuid part_info;
   switch (spec.partition) {
     // TODO(fxbug.dev/111512): Also support bootloader partitions.
@@ -111,11 +106,60 @@ zx::result<std::unique_ptr<PartitionClient>> PinecrestPartitioner::FindPartition
   return zx::ok(new BlockPartitionClient(std::move(partition.value())));
 }
 
+zx::result<std::unique_ptr<PartitionClient>> PinecrestPartitioner::FindPartitionByName(
+    const PartitionSpec& spec) const {
+  std::function<bool(const gpt_partition_t&)> filter;
+  switch (spec.partition) {
+    case Partition::kZirconA:
+    case Partition::kZirconB:
+    case Partition::kZirconR:
+    case Partition::kVbMetaA:
+    case Partition::kVbMetaB:
+    case Partition::kVbMetaR:
+    case Partition::kAbrMeta:
+      filter = [&spec](const gpt_partition_t& part) {
+        const auto partition_scheme = spec.partition == Partition::kAbrMeta
+                                          ? PartitionScheme::kLegacy
+                                          : PartitionScheme::kNew;
+        const char* name = PartitionName(spec.partition, partition_scheme);
+        auto partition_type = GptPartitionType(spec.partition, partition_scheme);
+        return partition_type.is_ok() && FilterByTypeAndName(part, partition_type.value(), name);
+      };
+      break;
+    case Partition::kFuchsiaVolumeManager:
+      filter = IsFvmPartition;
+      break;
+    default:
+      ERROR("Pinecrest partitioner cannot find unknown partition type\n");
+      return zx::error(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  auto status = gpt_->FindPartition(filter);
+  if (status.is_error()) {
+    return status.take_error();
+  }
+  return zx::ok(std::move(status->partition));
+}
+
+zx::result<std::unique_ptr<PartitionClient>> PinecrestPartitioner::FindPartition(
+    const PartitionSpec& spec) const {
+  if (!SupportsPartition(spec)) {
+    ERROR("Unsupported partition %s\n", spec.ToString().c_str());
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  auto partition = FindPartitionByGuid(spec);
+  if (partition.is_ok()) {
+    return partition;
+  } else {
+    return FindPartitionByName(spec);
+  }
+}
+
 zx::result<> PinecrestPartitioner::WipeFvm() const { return gpt_->WipeFvm(); }
 
 zx::result<> PinecrestPartitioner::InitPartitionTables() const {
-  // TODO(fxbug.dev/111512): Implement this to initialize partition tables, since we don't have
-  // bootloader fastboot.
+  // GPT provisioning will be done by the bootloader.
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
