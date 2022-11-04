@@ -7,8 +7,9 @@ use {
     // anyhow::Error,
     argh::FromArgs,
     fidl_ermine_tools as fermine,
+    fidl_fuchsia_sys2 as fsys,
     fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_protocol_at,
+    fuchsia_component::client::{connect_to_protocol_at_dir_root, connect_to_protocol_at_path},
 };
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -90,18 +91,39 @@ pub struct ShellLaunchCommand {
 /// Close all running applications.
 pub struct ShellCloseAllCommand {}
 
-/// Path to protocols exposed by session-manager.
-const LOGIN_SHELL_EXPOSED: &str = "/hub-v2/children/core/children/session-manager/children/session:session/children/workstation_session/children/login_shell/exec/expose";
+/// Moniker of login_shell component
+const LOGIN_SHELL_MONIKER: &str =
+    "./core/session-manager/session:session/workstation_session/login_shell";
 
-/// Path to protocols exposed by the session.
-const ERMINE_SHELL_EXPOSED: &str =
-    "/hub-v2/children/core/children/session-manager/children/session:session/children/workstation_session/children/login_shell/children/ermine_shell/exec/expose";
+/// Moniker of ermine_shell component
+const ERMINE_SHELL_MONIKER: &str =
+    "./core/session-manager/session:session/workstation_session/login_shell/ermine_shell";
+
+async fn connect_to_exposed_protocol<P: fidl::endpoints::DiscoverableProtocolMarker>(
+    realm_query: &fsys::RealmQueryProxy,
+    moniker: &str,
+) -> Result<P::Proxy, Error> {
+    let resolved_dirs = realm_query
+        .get_instance_directories(moniker)
+        .await?
+        .map_err(|e| format_err!("RealmQuery error: {:?}", e))?
+        .ok_or(format_err!("{} is not resolved", moniker))?;
+    let exposed_dir = resolved_dirs.exposed_dir.into_proxy()?;
+    connect_to_protocol_at_dir_root::<P>(&exposed_dir)
+}
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let Args { command } = argh::from_env();
-    let oobe_automator =
-        connect_to_protocol_at::<fermine::OobeAutomatorMarker>(LOGIN_SHELL_EXPOSED)?;
+    let realm_query =
+        connect_to_protocol_at_path::<fsys::RealmQueryMarker>("/svc/fuchsia.sys2.RealmQuery.root")
+            .unwrap();
+
+    let oobe_automator = connect_to_exposed_protocol::<fermine::OobeAutomatorMarker>(
+        &realm_query,
+        LOGIN_SHELL_MONIKER,
+    )
+    .await?;
 
     match command {
         None => {
@@ -141,33 +163,39 @@ async fn main() -> Result<(), Error> {
                 }
             }
         },
-        Some(Command::Shell(ShellCommand { command })) => match command {
-            ShellSubCommand::Launch(ShellLaunchCommand { app_name }) => {
-                let shell_automator =
-                    connect_to_protocol_at::<fermine::ShellAutomatorMarker>(ERMINE_SHELL_EXPOSED)?;
-                let result = shell_automator
-                    .launch(fermine::ShellAutomatorLaunchRequest {
-                        app_name: Some(app_name),
-                        ..fermine::ShellAutomatorLaunchRequest::EMPTY
-                    })
+        Some(Command::Shell(ShellCommand { command })) => {
+            match command {
+                ShellSubCommand::Launch(ShellLaunchCommand { app_name }) => {
+                    let shell_automator = connect_to_exposed_protocol::<
+                        fermine::ShellAutomatorMarker,
+                    >(&realm_query, ERMINE_SHELL_MONIKER)
                     .await?;
-                match result {
-                    Ok(()) => println!("ok"),
-                    _ => result
-                        .map_err(|err: fermine::AutomatorErrorCode| format_err!("{:?}", err))?,
+                    let result = shell_automator
+                        .launch(fermine::ShellAutomatorLaunchRequest {
+                            app_name: Some(app_name),
+                            ..fermine::ShellAutomatorLaunchRequest::EMPTY
+                        })
+                        .await?;
+                    match result {
+                        Ok(()) => println!("ok"),
+                        _ => result
+                            .map_err(|err: fermine::AutomatorErrorCode| format_err!("{:?}", err))?,
+                    }
+                }
+                ShellSubCommand::CloseAll(ShellCloseAllCommand {}) => {
+                    let shell_automator = connect_to_exposed_protocol::<
+                        fermine::ShellAutomatorMarker,
+                    >(&realm_query, ERMINE_SHELL_MONIKER)
+                    .await?;
+                    let result = shell_automator.close_all().await?;
+                    match result {
+                        Ok(()) => println!("ok"),
+                        _ => result
+                            .map_err(|err: fermine::AutomatorErrorCode| format_err!("{:?}", err))?,
+                    }
                 }
             }
-            ShellSubCommand::CloseAll(ShellCloseAllCommand {}) => {
-                let shell_automator =
-                    connect_to_protocol_at::<fermine::ShellAutomatorMarker>(ERMINE_SHELL_EXPOSED)?;
-                let result = shell_automator.close_all().await?;
-                match result {
-                    Ok(()) => println!("ok"),
-                    _ => result
-                        .map_err(|err: fermine::AutomatorErrorCode| format_err!("{:?}", err))?,
-                }
-            }
-        },
+        }
     }
     Ok(())
 }
