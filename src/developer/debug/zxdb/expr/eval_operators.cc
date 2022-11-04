@@ -16,6 +16,7 @@
 #include "src/developer/debug/zxdb/expr/expr_node.h"
 #include "src/developer/debug/zxdb/expr/expr_token.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
+#include "src/developer/debug/zxdb/expr/local_expr_value.h"
 #include "src/developer/debug/zxdb/expr/resolve_array.h"
 #include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
@@ -116,6 +117,21 @@ void AssignRegisterWithExistingValue(const fxl::RefPtr<EvalContext>& context,
   }
 }
 
+void DoLocalAssignment(const fxl::RefPtr<EvalContext>& context, const ExprValueSource& dest,
+                       const ExprValue& source, EvalCallback cb) {
+  // Should always be set when we get here.
+  FX_DCHECK(dest.local_value());
+
+  // Types should have been converted already.
+  FX_DCHECK(dest.local_value()->GetValue().data().size() == source.data().size());
+
+  dest.local_value()->SetValue(source);
+
+  // Make the result of this expression the value that was set so its "source" will be set properly
+  // and it can be mutated (the equivalent of returning a reference to "this" from operator=).
+  cb(dest.local_value()->GetValue());
+}
+
 void DoRegisterAssignment(const fxl::RefPtr<EvalContext>& context, const ExprValueSource& dest,
                           const ExprValue& source, EvalCallback cb) {
   const RegisterInfo* info = debug::InfoForRegister(dest.register_id());
@@ -194,7 +210,9 @@ void DoAssignment(const fxl::RefPtr<EvalContext>& context, const ExprValue& left
                   if (coerced.has_error())
                     return cb(coerced);
 
-                  if (dest.type() == ExprValueSource::Type::kRegister) {
+                  if (dest.type() == ExprValueSource::Type::kLocal) {
+                    DoLocalAssignment(context, dest, coerced.value(), std::move(cb));
+                  } else if (dest.type() == ExprValueSource::Type::kRegister) {
                     DoRegisterAssignment(context, dest, coerced.value(), std::move(cb));
                   } else {
                     DoMemoryAssignment(context, dest, coerced.value(), std::move(cb));

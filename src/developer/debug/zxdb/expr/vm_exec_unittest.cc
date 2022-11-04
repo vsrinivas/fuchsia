@@ -40,7 +40,7 @@ class VmExecTest : public TestWithLoop {
     bool called = false;
     VmExec(call_context, std::move(stream), [&](ErrOrValue result) mutable {
       called = true;
-      ASSERT_TRUE(result.ok());
+      ASSERT_TRUE(result.ok()) << result.err().msg();
 
       int64_t result_value = 0;
       result.value().PromoteTo64(&result_value);
@@ -136,6 +136,46 @@ TEST_F(VmExecTest, JumpIfFalse) {
   stream2.push_back(VmOp::MakeLiteral(ExprValue(7)));  // Should be run.
   stream2.push_back(VmOp::MakeBinary(ExprToken(ExprTokenType::kPlus, "+", 0)));
   CallVmExec(std::move(stream2), true, 8);  // 7 + 1
+}
+
+TEST_F(VmExecTest, LocalVar) {
+  // Makes two local variables and adds them.
+  VmStream stream;
+  stream.push_back(VmOp::MakeLiteral(ExprValue(1)));
+  stream.push_back(VmOp::MakeSetLocal(2));
+  stream.push_back(VmOp::MakeLiteral(ExprValue(9)));
+  stream.push_back(VmOp::MakeSetLocal(4));
+  stream.push_back(VmOp::MakeLiteral(ExprValue(5)));  // Overwrite slot 2.
+  stream.push_back(VmOp::MakeSetLocal(2));
+  stream.push_back(VmOp::MakeGetLocal(2));
+  stream.push_back(VmOp::MakeGetLocal(4));
+  stream.push_back(VmOp::MakeBinary(ExprToken(ExprTokenType::kPlus, "+", 0)));
+  CallVmExec(std::move(stream), true, 14);  // 5 + 9 = 14.
+
+  // Create local variables and shrink the stack.
+  ExprToken var0(ExprTokenType::kName, "i", 0);
+  ExprToken var1(ExprTokenType::kName, "j", 2);
+  stream = VmStream();
+  stream.push_back(VmOp::MakeLiteral(ExprValue(1)));
+  stream.push_back(VmOp::MakeSetLocal(0, var0));
+  stream.push_back(VmOp::MakeLiteral(ExprValue(2)));
+  stream.push_back(VmOp::MakeSetLocal(1, var1));
+  stream.push_back(VmOp::MakePopLocals(1));       // Shrinks the local variable stack down to 1.
+  stream.push_back(VmOp::MakeGetLocal(0, var0));  // This should still succeed.
+  stream.push_back(VmOp::MakeGetLocal(1, var1));  // This should now fail.
+  CallVmExec(std::move(stream), true, Err("Bad local variable index 1 when reading 'j'."));
+
+  // Create a local variable, set it, then dereference the variable for the result. This tests the
+  // end-to-end update of these loacals.
+  stream = VmStream();
+  stream.push_back(VmOp::MakeLiteral(ExprValue(1)));
+  stream.push_back(VmOp::MakeSetLocal(0, var0));
+  stream.push_back(VmOp::MakeGetLocal(0, var0));       // Left side of "operator=".
+  stream.push_back(VmOp::MakeLiteral(ExprValue(99)));  // Right side of "operator=".
+  stream.push_back(VmOp::MakeBinary(ExprToken(ExprTokenType::kEquals, "=", 0)));
+  stream.push_back(VmOp::MakeDrop());             // Drop unneeded return value of "operator=".
+  stream.push_back(VmOp::MakeGetLocal(0, var0));  // Read local to see if it got updated.
+  CallVmExec(std::move(stream), true, 99);        // Result should be the updated value.
 }
 
 TEST_F(VmExecTest, Callback1) {

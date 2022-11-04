@@ -36,6 +36,11 @@ enum class VmOpType {
   kJump,
   kJumpIfFalse,  // Pops the top stack element and jumps if false.
 
+  // Local variables: see vm_op.h.
+  kGetLocal,   // Reads the variable at the given variable index and pushes it on the stack.
+  kSetLocal,   // Stores the top stack item to the given variable index.
+  kPopLocals,  // Shrinks the size of the local variable array to the given size.
+
   // Custom callbacks for other functions.
   kCallback0,       // Calls the function to get a result.
   kCallback1,       // Pops one value and passes it to the function.

@@ -195,6 +195,10 @@ void BlockExprNode::EmitBytecode(VmStream& stream) const {
     stream.push_back(VmOp::MakeDrop());  // Discard intermediate statement results.
   }
   statements_.back()->EmitBytecode(stream);
+
+  // Clean up any locals. This removes any variables beyond what were in scope when the block
+  // entered. See "Local variables" in vm_op.h for more info.
+  stream.push_back(VmOp::MakePopLocals(entry_local_var_count_));
 }
 
 void BlockExprNode::Print(std::ostream& out, int indent) const {

@@ -331,6 +331,8 @@ fxl::RefPtr<ExprNode> ExprParser::ParseExpression(int precedence, EmptyExpressio
 // During evaluation, C++ blocks will return empty which will throw errors when using blocks in
 // places where they can't be used in expressions.
 fxl::RefPtr<BlockExprNode> ExprParser::ParseBlockContents(BlockEnd block_end) {
+  size_t begin_local_var_count = local_vars_.size();
+
   // Expect a sequence of semicolon-terminated expressions. In Rust the last expression does not
   // need a semicolon. As we start parsing each new statement, we check whether the previous
   // statement had a separator.
@@ -377,7 +379,11 @@ fxl::RefPtr<BlockExprNode> ExprParser::ParseBlockContents(BlockEnd block_end) {
   if (has_error())
     return nullptr;
 
-  return fxl::MakeRefCounted<BlockExprNode>(std::move(statements));
+  // Remove the records of any local variables.
+  FX_DCHECK(local_vars_.size() >= begin_local_var_count);
+  local_vars_.resize(begin_local_var_count);
+
+  return fxl::MakeRefCounted<BlockExprNode>(std::move(statements), begin_local_var_count);
 }
 
 ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
@@ -415,10 +421,8 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
     kType,        // Identifier is a type.
     kTemplate,    // Identifier is a template, expecting "<" next.
     kNamespace,   // Identifier is a namespace.
-    kOtherName,   // Identifier is something other than the above (normally this
-                  // means a variable).
-    kAnything     // Caller can't do symbol lookups, accept anything that makes
-                  // sense.
+    kOtherName,   // Identifier is something other than the above (normally this means a variable).
+    kAnything     // Caller can't do symbol lookups, accept anything that makes sense.
   };
 
   Mode mode = kBegin;
@@ -1075,7 +1079,7 @@ fxl::RefPtr<ExprNode> ExprParser::LeftBracketPrefix(const ExprToken& token) {
   if (!block)
     return nullptr;
 
-  // Cosume the terminating bracket.
+  // Consume the terminating bracket.
   Consume(ExprTokenType::kRightBracket, "Expected '}' to match.", token);
   if (has_error())
     return nullptr;

@@ -163,11 +163,15 @@ class BlockExprNode : public ExprNode {
   FRIEND_MAKE_REF_COUNTED(BlockExprNode);
 
   BlockExprNode();
-  BlockExprNode(std::vector<fxl::RefPtr<ExprNode>> statements)
-      : statements_(std::move(statements)) {}
+  BlockExprNode(std::vector<fxl::RefPtr<ExprNode>> statements, uint32_t entry_local_var_count)
+      : statements_(std::move(statements)), entry_local_var_count_(entry_local_var_count) {}
   ~BlockExprNode() override = default;
 
   std::vector<fxl::RefPtr<ExprNode>> statements_;
+
+  // The number of local variables in scope at the entry of this block. The block uses this to
+  // emit bytecode at the exit of the block to clean up local variables back to this number.
+  uint32_t entry_local_var_count_ = 0;
 };
 
 // Implements all types of casts.

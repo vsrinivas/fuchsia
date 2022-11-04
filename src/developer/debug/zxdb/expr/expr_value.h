@@ -69,6 +69,7 @@ class ExprValue {
   // Used for tests. If a SymbolType is defined, the string representation is compared since the
   // pointers may not match in practice.
   bool operator==(const ExprValue& other) const;
+  bool operator!=(const ExprValue& other) const { return !operator==(other); }
 
   // May be null if there's no symbol type.
   Type* type() const { return type_.get(); }

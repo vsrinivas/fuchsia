@@ -7,14 +7,15 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <optional>
-#include <stack>
 #include <vector>
 
 #include "src/developer/debug/zxdb/common/ref_ptr_to.h"
 #include "src/developer/debug/zxdb/expr/cast.h"
 #include "src/developer/debug/zxdb/expr/eval_operators.h"
+#include "src/developer/debug/zxdb/expr/local_expr_value.h"
 #include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
 #include "src/lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -28,6 +29,9 @@ enum class Completion {
            // By convention, if code returns this value, it should have already set the error
            // message.
 };
+
+// Sanity check for the maximum local variables alive at a given time.
+constexpr uint32_t kMaxLocals = 256;
 
 // This class wants to run everything sequentially until an asynchronous operation happens. It
 // needs to integrate with the rest of the expression system which takes EvalCallbacks that can
@@ -93,6 +97,9 @@ class VmExecState : public fxl::RefCountedThreadSafe<VmExecState> {
   Completion ExecLiteral(const VmOp& op);
   Completion ExecJump(const VmOp& op);
   Completion ExecJumpIfFalse(const VmOp& op);
+  Completion ExecGetLocal(const VmOp& op);
+  Completion ExecSetLocal(const VmOp& op);
+  Completion ExecPopLocals(const VmOp& op);
   Completion ExecCallback0(const VmOp& op);
   Completion ExecCallback1(const VmOp& op);
   Completion ExecCallback2(const VmOp& op);
@@ -129,7 +136,11 @@ class VmExecState : public fxl::RefCountedThreadSafe<VmExecState> {
 
   size_t stream_index_ = 0;
 
-  std::stack<ExprValue, std::vector<ExprValue>> stack_;
+  std::vector<ExprValue> stack_;
+
+  // The local variable "slots" in the Op::LocalInfo refer into this array. See the comment at the
+  // top of vm_op.h for more on how this works.
+  std::vector<fxl::RefPtr<LocalExprValue>> locals_;
 };
 
 // static
@@ -160,7 +171,7 @@ void VmExecState::Exec(fxl::RefPtr<VmExecState> state) {
   } else {
     // Correct programs should have only one result.
     FX_DCHECK(state->stack_.size() == 1u);
-    state->ReportDone(state->stack_.top());
+    state->ReportDone(state->stack_.back());
   }
 }
 
@@ -176,6 +187,9 @@ Completion VmExecState::ExecOp(const VmOp& op) {
     case VmOpType::kLiteral:        return ExecLiteral(op);
     case VmOpType::kJump:           return ExecJump(op);
     case VmOpType::kJumpIfFalse:    return ExecJumpIfFalse(op);
+    case VmOpType::kGetLocal:       return ExecGetLocal(op);
+    case VmOpType::kSetLocal:       return ExecSetLocal(op);
+    case VmOpType::kPopLocals:      return ExecPopLocals(op);
     case VmOpType::kCallback0:      return ExecCallback0(op);
     case VmOpType::kCallback1:      return ExecCallback1(op);
     case VmOpType::kCallback2:      return ExecCallback2(op);
@@ -247,7 +261,7 @@ Completion VmExecState::ExecDrop(const VmOp& op) {
 Completion VmExecState::ExecDup(const VmOp& op) {
   if (stack_.empty())
     return ReportError("VM stack underflow in 'dup' operation.");
-  stack_.push(stack_.top());
+  stack_.push_back(stack_.back());
   return Completion::kSync;
 }
 
@@ -280,6 +294,52 @@ Completion VmExecState::ExecJumpIfFalse(const VmOp& op) {
     stream_index_ = jump_info.dest;
   }
   // Otherwise just continue at next instruction.
+  return Completion::kSync;
+}
+
+Completion VmExecState::ExecGetLocal(const VmOp& op) {
+  const auto& local_info = std::get<VmOp::LocalInfo>(op.info);
+  if (local_info.slot >= locals_.size()) {
+    // Assume the token blamed for this code is the variable name.
+    return ReportError(fxl::StringPrintf("Bad local variable index %u when reading '%s'.",
+                                         local_info.slot, op.token.value().c_str()));
+  }
+  if (!locals_[local_info.slot]) {
+    return ReportError(
+        fxl::StringPrintf("Reading uninitialized local variable '%s'.", op.token.value().c_str()));
+  }
+
+  Push(locals_[local_info.slot]->GetValue());
+  return Completion::kSync;
+}
+
+// This is NOT a type-safe assignment. This is normally only emitted by the parser when a local
+// variable is created. The "=" binary operator implementation will handle updates to it and do
+// the expected type-checking.
+Completion VmExecState::ExecSetLocal(const VmOp& op) {
+  const auto& local_info = std::get<VmOp::LocalInfo>(op.info);
+  if (local_info.slot > kMaxLocals)
+    return ReportError(fxl::StringPrintf("Local variable index is too large: %u", local_info.slot));
+
+  if (locals_.size() <= local_info.slot)
+    locals_.resize(local_info.slot + 1);
+
+  ExprValue new_value;
+  if (Pop(&new_value) == Completion::kError)
+    return Completion::kError;
+
+  if (locals_[local_info.slot]) {
+    locals_[local_info.slot]->SetValue(std::move(new_value));
+  } else {
+    locals_[local_info.slot] = fxl::MakeRefCounted<LocalExprValue>(std::move(new_value));
+  }
+  return Completion::kSync;
+}
+
+Completion VmExecState::ExecPopLocals(const VmOp& op) {
+  const auto& local_info = std::get<VmOp::LocalInfo>(op.info);
+  if (locals_.size() > local_info.slot)
+    locals_.resize(local_info.slot);
   return Completion::kSync;
 }
 
@@ -397,15 +457,15 @@ Completion VmExecState::ExecAsyncCallbackN(const VmOp& op) {
   return cb_info->SynchronousDone();
 }
 
-void VmExecState::Push(ExprValue v) { stack_.push(std::move(v)); }
+void VmExecState::Push(ExprValue v) { stack_.push_back(std::move(v)); }
 
 Completion VmExecState::Pop(ExprValue* popped) {
   if (stack_.empty()) {
     // TODO report source of error.
     return ReportError("Stack underflow");
   }
-  *popped = std::move(stack_.top());
-  stack_.pop();
+  *popped = std::move(stack_.back());
+  stack_.pop_back();
   return Completion::kSync;
 }
 

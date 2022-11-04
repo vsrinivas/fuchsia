@@ -61,6 +61,7 @@ static_library("expr") {
     "index_walker.h",
     "keywords.cc",
     "keywords.h",
+    "local_expr_value.h",
     "number_parser.cc",
     "number_parser.h",
     "operator_keyword.cc",

@@ -248,6 +248,22 @@ class ExprParser {
   Err err_;
   ExprToken error_token_;
 
+  // For local variable tracking.
+  //
+  //  * When we get a variable declaration, it goes on the end of the local_vars list and references
+  //    the scope depth of the block that it was defined in.
+  //  * To look up a local variable, just search backwards in this list to get the most recently
+  //    declared variable with that name. The index in the locals_ vector is the index into the VM's
+  //    local vars (if we had stack frames, it would be relative to the frame base instead).
+  //  * When a block execution goes out of scope, it puts back the local_vars_ to the size it was at
+  //    entry to delete any local variables.
+  //
+  // See vm_op.h for a discussion on how local variables work.
+  //
+  // If we supported function definitions (which we don't), the scope depth and local var array
+  // would be local to each function scope.
+  std::vector<std::string> local_vars_;
+
   // This is a kInvalid token that we can return in error cases without having to reference
   // something in the tokens_ array.
   static const ExprToken kInvalidToken;

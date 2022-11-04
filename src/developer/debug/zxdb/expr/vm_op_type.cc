@@ -20,6 +20,9 @@ const char* VmOpTypeToString(VmOpType op) {
     case VmOpType::kLiteral:        return "Literal";
     case VmOpType::kJump:           return "Jump";
     case VmOpType::kJumpIfFalse:    return "JumpIfFalse";
+    case VmOpType::kGetLocal:       return "GetLocal";
+    case VmOpType::kSetLocal:       return "SetLocal";
+    case VmOpType::kPopLocals:      return "PopLocals";
     case VmOpType::kCallback0:      return "Callback0";
     case VmOpType::kCallback1:      return "Callback1";
     case VmOpType::kCallback2:      return "Callback2";

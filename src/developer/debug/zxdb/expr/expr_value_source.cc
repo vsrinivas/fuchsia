@@ -6,7 +6,31 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/developer/debug/zxdb/expr/local_expr_value.h"
+
 namespace zxdb {
+
+// Constructors and destructors need to be out-of-line so they can get the definition of
+// LocalExprValue in this file.
+
+ExprValueSource::ExprValueSource(Type type) : type_(type) {}
+
+ExprValueSource::ExprValueSource(uint64_t address, uint32_t bit_size, uint32_t bit_shift)
+    : type_(Type::kMemory), address_(address), bit_size_(bit_size), bit_shift_(bit_shift) {}
+
+ExprValueSource::ExprValueSource(debug::RegisterID id, uint32_t bit_size, uint32_t bit_shift)
+    : type_(Type::kRegister), register_id_(id), bit_size_(bit_size), bit_shift_(bit_shift) {}
+
+ExprValueSource::ExprValueSource(fxl::RefPtr<LocalExprValue> local_source)
+    : type_(Type::kLocal), local_value_(std::move(local_source)) {}
+
+ExprValueSource::ExprValueSource(const ExprValueSource& other) = default;
+ExprValueSource::ExprValueSource(ExprValueSource&& other) = default;
+
+ExprValueSource::~ExprValueSource() {}
+
+ExprValueSource& ExprValueSource::operator=(const ExprValueSource& other) = default;
+ExprValueSource& ExprValueSource::operator=(ExprValueSource&& other) = default;
 
 // static
 const char* ExprValueSource::TypeToString(Type t) {
@@ -21,6 +45,8 @@ const char* ExprValueSource::TypeToString(Type t) {
       return "constant";
     case Type::kComposite:
       return "composite";
+    case Type::kLocal:
+      return "local";
   }
   return "unknown";
 }

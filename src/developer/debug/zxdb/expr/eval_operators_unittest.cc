@@ -9,6 +9,7 @@
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
+#include "src/developer/debug/zxdb/expr/local_expr_value.h"
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
 #include "src/developer/debug/zxdb/expr/mock_expr_node.h"
 #include "src/developer/debug/zxdb/symbols/array_type.h"
@@ -216,6 +217,26 @@ TEST_F(EvalOperators, AssignmentVectorRegister) {
   for (size_t i = 0; i < new_data.size(); i++)
     expected[16 + i] = new_data[i];
   EXPECT_EQ(expected, reg_writes[0].second);
+}
+
+TEST_F(EvalOperators, AssignmentLocal) {
+  auto source_local = fxl::MakeRefCounted<LocalExprValue>(ExprValue(10.0));
+
+  // Left-hand side of the expression is the result of evaluating the source_local. Its
+  // ExprValueSource will refer to the above source_local.
+  ExprValue left_value = source_local->GetValue();
+
+  // New value (this is an integer type that should be promoted to double in the assignment.
+  ExprValue right_value(99);
+
+  ErrOrValue out = SyncEvalBinaryOperator(left_value, ExprTokenType::kEquals, right_value);
+  ASSERT_TRUE(out.ok()) << out.err().msg();
+
+  // This won't have actually modified our "left_value" variable since we passed it in by const
+  // reference.  It was basically the temporary in the expression that referred to the local
+  // variable, which will have been updated. But the source_local will have been updated.
+  double new_value = source_local->GetValue().GetAs<double>();
+  EXPECT_EQ(99.0, new_value);
 }
 
 TEST_F(EvalOperators, IntArithmetic) {

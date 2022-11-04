@@ -9,8 +9,11 @@
 
 #include "src/developer/debug/shared/register_id.h"
 #include "src/developer/debug/zxdb/common/int128_t.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace zxdb {
+
+class LocalExprValue;
 
 // Holds the source of a value. This allows taking the address of an object stored in an ExprValue
 // ("&foo"), and for updating the contents of variables (currently not supported yet).
@@ -43,22 +46,35 @@ class ExprValueSource {
     // their own ExprValueSource. When we extract structure members, also extract the correct
     // sub-region(s).
     kComposite,
+
+    // This value is local to the debugger frontend. It can be read and set, but its value does
+    // not reflect or change anything in the target program.
+    kLocal,
   };
 
   // Returns a string corresponding to the given type, "register", "temporary", etc.
   static const char* TypeToString(Type t);
 
   // Indicates an unknown, temporary (the output of "i + 4"), or constant source.
-  explicit ExprValueSource(Type type = Type::kTemporary) : type_(type) {}
+  explicit ExprValueSource(Type type = Type::kTemporary);
 
   // Initializes indicating a memory address and optional bitfield information.
-  explicit ExprValueSource(uint64_t address, uint32_t bit_size = 0, uint32_t bit_shift = 0)
-      : type_(Type::kMemory), address_(address), bit_size_(bit_size), bit_shift_(bit_shift) {}
+  explicit ExprValueSource(uint64_t address, uint32_t bit_size = 0, uint32_t bit_shift = 0);
 
   // Initializes indicating a register and optional bitfield information. The register does not have
   // to be a canonical register.
-  explicit ExprValueSource(debug::RegisterID id, uint32_t bit_size = 0, uint32_t bit_shift = 0)
-      : type_(Type::kRegister), register_id_(id), bit_size_(bit_size), bit_shift_(bit_shift) {}
+  explicit ExprValueSource(debug::RegisterID id, uint32_t bit_size = 0, uint32_t bit_shift = 0);
+
+  // Initializes indicating a reference to a local value.
+  explicit ExprValueSource(fxl::RefPtr<LocalExprValue> local_source);
+
+  ExprValueSource(const ExprValueSource& other);
+  ExprValueSource(ExprValueSource&& other);
+
+  ~ExprValueSource();
+
+  ExprValueSource& operator=(const ExprValueSource& other);
+  ExprValueSource& operator=(ExprValueSource&& other);
 
   Type type() const { return type_; }
 
@@ -89,6 +105,9 @@ class ExprValueSource {
   // The memory layout will be the result of doing the shift and mask and memcpy-ing out which
   // will reorder the bytes in little-endian.
   uint32_t bit_shift() const { return bit_shift_; }
+
+  // Value when type_ == kLocal.
+  const fxl::RefPtr<LocalExprValue>& local_value() const { return local_value_; }
 
   // Returns a new ExprValueSource pointing to the given offset inside of this one. If this one is
   // not in memory, the returned one will be the same.
@@ -124,6 +143,9 @@ class ExprValueSource {
 
   uint32_t bit_size_ = 0;
   uint32_t bit_shift_ = 0;
+
+  // Indicates the associated local value, set when type_ == kLocal.
+  fxl::RefPtr<LocalExprValue> local_value_;
 };
 
 }  // namespace zxdb
