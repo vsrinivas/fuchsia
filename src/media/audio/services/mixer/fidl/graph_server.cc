@@ -15,6 +15,7 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <unordered_set>
 
 #include "fidl/fuchsia.audio.mixer/cpp/common_types.h"
 #include "fidl/fuchsia.audio.mixer/cpp/wire_types.h"
@@ -741,12 +742,17 @@ void GraphServer::CreateCustom(CreateCustomRequestView request,
   nodes_[id] = custom;
 
   // Register built-in child nodes.
+  const auto [custom_children_it, success] =
+      custom_children_.emplace(id, std::unordered_set<NodeId>{});
+  FX_CHECK(success);
   FX_CHECK(custom->child_sources().size() == 1);
   FX_CHECK(custom->child_dests().size() == 1);
   const auto child_source_id = NextNodeId();
   nodes_[child_source_id] = custom->child_sources().front();
+  FX_CHECK(custom_children_it->second.insert(child_source_id).second);
   const auto child_dest_id = NextNodeId();
   nodes_[child_dest_id] = custom->child_dests().front();
+  FX_CHECK(custom_children_it->second.insert(child_dest_id).second);
 
   fidl::Arena arena;
   fidl::VectorView<NodeId> source_ids(arena, 1);
@@ -782,6 +788,13 @@ void GraphServer::DeleteNode(DeleteNodeRequestView request, DeleteNodeCompleter:
 
   Node::Destroy(ctx_, it->second);
   nodes_.erase(it);
+  if (const auto custom_children_it = custom_children_.find(request->id());
+      custom_children_it != custom_children_.end()) {
+    for (const auto& child_id : custom_children_it->second) {
+      FX_CHECK(nodes_.erase(child_id) > 0);
+    }
+    custom_children_.erase(custom_children_it);
+  }
   producer_nodes_.erase(request->id());
 
   fidl::Arena arena;

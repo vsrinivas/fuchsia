@@ -13,6 +13,8 @@
 #include <list>
 #include <memory>
 #include <optional>
+#include <unordered_map>
+#include <unordered_set>
 
 #include "src/media/audio/lib/clock/timer.h"
 #include "src/media/audio/services/common/base_fidl_server.h"
@@ -104,6 +106,7 @@ class GraphServer
 
   // Nodes mappings.
   std::unordered_map<NodeId, NodePtr> nodes_;  // contains all nodes
+  std::unordered_map<NodeId, std::unordered_set<NodeId>> custom_children_;
   std::unordered_map<NodeId, std::shared_ptr<ProducerNode>> producer_nodes_;
   NodeId next_node_id_ = 1;
 

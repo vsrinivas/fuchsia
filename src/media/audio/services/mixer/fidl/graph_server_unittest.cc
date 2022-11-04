@@ -1081,6 +1081,71 @@ TEST_F(GraphServerTest, DeleteNodeSuccess) {
   }
 }
 
+TEST_F(GraphServerTest, DeleteCustomNodeSuccess) {
+  NodeId producer_id;
+  NodeId consumer_id;
+  ASSERT_NO_FATAL_FAILURE(CreateProducerAndConsumer(&producer_id, &consumer_id));
+
+  // Create custom.
+  NodeId custom_id;
+  NodeId custom_child_source_id;
+  NodeId custom_child_dest_id;
+  {
+    const auto result =
+        client()->CreateCustom(fuchsia_audio_mixer::wire::GraphCreateCustomRequest::Builder(arena_)
+                                   .name(fidl::StringView::FromExternal("custom"))
+                                   .direction(PipelineDirection::kInput)
+                                   .config(MakeDefaultProcessorConfig(arena_).Build())
+                                   .reference_clock(MakeReferenceClock(arena_))
+                                   .Build());
+
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+    ASSERT_TRUE(result->value()->has_id());
+    custom_id = result->value()->id();
+    ASSERT_TRUE(result->value()->has_node_properties());
+    ASSERT_EQ(result->value()->node_properties().source_ids().count(), 1ul);
+    custom_child_source_id = result->value()->node_properties().source_ids().at(0);
+    ASSERT_EQ(result->value()->node_properties().dest_ids().count(), 1ul);
+    custom_child_dest_id = result->value()->node_properties().dest_ids().at(0);
+  }
+
+  // Delete custom.
+  {
+    auto result = client()->DeleteNode(
+        fuchsia_audio_mixer::wire::GraphDeleteNodeRequest::Builder(arena_).id(custom_id).Build());
+
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+  }
+
+  // Verify we cannot create an edge producer -> custom_child_source.
+  {
+    const auto result =
+        client()->CreateEdge(fuchsia_audio_mixer::wire::GraphCreateEdgeRequest::Builder(arena_)
+                                 .source_id(producer_id)
+                                 .dest_id(custom_child_source_id)
+                                 .Build());
+
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_TRUE(result->is_error());
+    EXPECT_EQ(result->error_value(), CreateEdgeError::kInvalidDestId);
+  }
+
+  // Verify we cannot create an edge custom_child_dest -> consumer.
+  {
+    const auto result =
+        client()->CreateEdge(fuchsia_audio_mixer::wire::GraphCreateEdgeRequest::Builder(arena_)
+                                 .source_id(custom_child_dest_id)
+                                 .dest_id(consumer_id)
+                                 .Build());
+
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_TRUE(result->is_error());
+    EXPECT_EQ(result->error_value(), CreateEdgeError::kInvalidSourceId);
+  }
+}
+
 //
 // CreateEdge
 //
