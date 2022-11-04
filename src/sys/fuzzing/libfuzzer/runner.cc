@@ -214,6 +214,7 @@ ZxPromise<FuzzResult> LibFuzzerRunner::Execute(std::vector<Input> inputs) {
     WriteInputToFile(input, test_input);
     process_.AddArg(test_input);
   }
+  print_all_ = true;
   return RunAsync()
       .and_then([](const Artifact& artifact) { return fpromise::ok(artifact.fuzz_result()); })
       .wrap_with(workflow_);
@@ -437,8 +438,7 @@ ZxPromise<Artifact> LibFuzzerRunner::RunAsync() {
          })
       .and_then(ParseOutput())
       .and_then(
-          [this, wait = ZxFuture<int64_t>()](
-              Context& context, const FuzzResult& fuzz_result) mutable -> ZxResult<FuzzResult> {
+          [this, wait = ZxFuture<int64_t>()](Context& context) mutable -> ZxResult<FuzzResult> {
             if (!wait) {
               wait = process_.Wait();
             }
@@ -448,8 +448,8 @@ ZxPromise<Artifact> LibFuzzerRunner::RunAsync() {
             if (wait.is_error()) {
               return fpromise::error(wait.take_error());
             }
-            if (fuzz_result != FuzzResult::NO_ERRORS) {
-              return fpromise::ok(fuzz_result);
+            if (fuzz_result_ != FuzzResult::NO_ERRORS) {
+              return fpromise::ok(fuzz_result_);
             }
             auto exitcode = wait.take_value();
             switch (exitcode) {
@@ -478,6 +478,9 @@ ZxPromise<Artifact> LibFuzzerRunner::RunAsync() {
       .then([this](ZxResult<FuzzResult>& result) -> ZxResult<FuzzResult> {
         status_.set_running(false);
         process_.Reset();
+        print_all_ = false;
+        pid_ = int64_t(-1);
+        fuzz_result_ = FuzzResult::NO_ERRORS;
         return std::move(result);
       })
       .and_then([](const FuzzResult& fuzz_result) -> ZxResult<Artifact> {
@@ -490,10 +493,53 @@ ZxPromise<Artifact> LibFuzzerRunner::RunAsync() {
 ///////////////////////////////////////////////////////////////
 // Output parsing methods.
 
-ZxPromise<FuzzResult> LibFuzzerRunner::ParseOutput() {
+ZxPromise<> LibFuzzerRunner::ParseOutput() {
+  std::vector<ZxPromise<>> outputs;
+  outputs.push_back(ParseStdout());
+  outputs.push_back(ParseStderr());
+  return fpromise::join_promise_vector(std::move(outputs))
+      .or_else([]() -> ZxResult<std::vector<ZxResult<>>> {
+        // Not possible, but needed to transform the joined promise's error type.
+        return fpromise::error(ZX_ERR_INTERNAL);
+      })
+      .and_then([](std::vector<ZxResult<>>& results) -> ZxResult<> {
+        for (const auto& result : results) {
+          if (result.is_error()) {
+            return fpromise::error(result.error());
+          }
+        }
+        return fpromise::ok();
+      });
+}
+
+ZxPromise<> LibFuzzerRunner::ParseStdout() {
   return fpromise::make_promise(
-      [this, read_line = ZxFuture<std::string>(), result = FuzzResult::NO_ERRORS,
-       pid = int64_t(-1)](Context& context) mutable -> ZxResult<FuzzResult> {
+      [this, read_line = ZxFuture<std::string>()](Context& context) mutable -> ZxResult<> {
+        while (true) {
+          if (!read_line) {
+            read_line = process_.ReadFromStdout();
+          }
+          if (!read_line(context)) {
+            return fpromise::pending();
+          }
+          if (read_line.is_error()) {
+            if (auto status = read_line.error(); status != ZX_ERR_PEER_CLOSED) {
+              FX_LOGS(ERROR) << "failed to read libFuzzer stdout: " << zx_status_get_string(status);
+              return fpromise::error(status);
+            }
+            return fpromise::ok();
+          }
+          auto line = read_line.take_value();
+          if (verbose_ && print_all_) {
+            std::cout << line << std::endl;
+          }
+        }
+      });
+}
+
+ZxPromise<> LibFuzzerRunner::ParseStderr() {
+  return fpromise::make_promise(
+      [this, read_line = ZxFuture<std::string>()](Context& context) mutable -> ZxResult<> {
         while (true) {
           if (!read_line) {
             read_line = process_.ReadFromStderr();
@@ -502,19 +548,18 @@ ZxPromise<FuzzResult> LibFuzzerRunner::ParseOutput() {
             return fpromise::pending();
           }
           if (read_line.is_error()) {
-            auto status = read_line.error();
-            if (status != ZX_ERR_PEER_CLOSED) {
-              FX_LOGS(ERROR) << "failed to read libFuzzer output: " << zx_status_get_string(status);
+            if (auto status = read_line.error(); status != ZX_ERR_PEER_CLOSED) {
+              FX_LOGS(ERROR) << "failed to read libFuzzer stderr: " << zx_status_get_string(status);
               return fpromise::error(status);
             }
             // TODO(fxbug.dev/109100): Rarely, the process output will be truncated. This causes
             // problems for tooling like undercoat. This is the only location in the LibFuzzerRunner
             // that returns `ZX_ERR_IO_INVALID`.
-            if (pid < 0 && !process_.is_killed()) {
+            if (pid_ < 0 && !process_.is_killed()) {
               FX_LOGS(ERROR) << "libFuzzer output terminated prematurely.";
               return fpromise::error(ZX_ERR_IO_INVALID);
             }
-            return fpromise::ok(result);
+            return fpromise::ok();
           }
 
           auto line = read_line.take_value();
@@ -526,12 +571,12 @@ ZxPromise<FuzzResult> LibFuzzerRunner::ParseOutput() {
           // This match is ugly, but it's the only message in current libFuzzer that this code can
           // rely on to detect a leak.
           if (line == "INFO: to ignore leaks on libFuzzer side use -detect_leaks=0.") {
-            result = FuzzResult::LEAK;
+            fuzz_result_ = FuzzResult::LEAK;
             continue;
           }
 
           re2::StringPiece input(std::move(line));
-          if (re2::RE2::Consume(&input, "==(\\d+)==", &pid)) {
+          if (re2::RE2::Consume(&input, "==(\\d+)==", &pid_)) {
             continue;
           }
 

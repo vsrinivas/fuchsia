@@ -67,8 +67,10 @@ class LibFuzzerRunner : public Runner {
   ZxPromise<Artifact> RunAsync();
 
   // Returns a promise that reads the output of the process run by |RunAsync|. The promise will
-  // update the fuzzer status accordingly, and return the fuzzing result when idenitifed.
-  ZxPromise<FuzzResult> ParseOutput();
+  // update the fuzzer status and fuzzing result accordingly.
+  ZxPromise<> ParseOutput();
+  ZxPromise<> ParseStdout();
+  ZxPromise<> ParseStderr();
 
   // Update the list of input files in the live corpus.
   void ReloadLiveCorpus();
@@ -85,8 +87,14 @@ class LibFuzzerRunner : public Runner {
   bool has_dictionary_ = false;
   zx::time start_;
 
-  // If true, echoes the piped stderr to this process's stderr.
+  // If true, echoes libFuzzer's stderr to this component's stderr.
   bool verbose_ = true;
+
+  // If true along with `verbose_`, echoes both the target's stdout and stderr.
+  bool print_all_ = false;
+
+  int64_t pid_ = int64_t(-1);
+  FuzzResult fuzz_result_ = FuzzResult::NO_ERRORS;
 
   Status status_;
   std::string result_input_pathname_;
