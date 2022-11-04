@@ -1,0 +1,35 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+import 'package:flutter/material.dart' hide Action;
+import 'package:shell_settings/src/services/task_service.dart';
+import 'package:shell_settings/src/services/timezone_service.dart';
+import 'package:shell_settings/src/states/settings_state_impl.dart';
+import 'package:shell_settings/src/widgets/app.dart';
+import 'package:shell_settings/src/widgets/setting_details.dart';
+
+/// Defines the pages that have a [SettingDetails] widget.
+enum SettingsPage {
+  none,
+  timezone,
+}
+
+/// Defines the state of the main settings overlay.
+abstract class SettingsState implements TaskService {
+  bool get allSettingsPageVisible;
+  bool get timezonesPageVisible;
+  String get selectedTimezone;
+  List<String> get timezones;
+
+  factory SettingsState.fromEnv() {
+    // ignore: unnecessary_cast
+    return SettingsStateImpl(
+      timezoneService: TimezoneService(),
+    ) as SettingsState;
+  }
+
+  void updateTimezone(String tz);
+  void showAllSettings();
+  void showTimezoneSettings();
+}

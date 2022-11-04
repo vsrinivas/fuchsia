@@ -5,15 +5,44 @@
 import("//build/components.gni")
 import("//build/dart/dart_library.gni")
 import("//build/flutter/flutter_component.gni")
+import("//src/lib/icu/tools/static_icu_data.gni")
 
 dart_library("lib") {
   package_name = "shell_settings"
   null_safe = true
-  sources = [ "main.dart" ]
+
+  entrypoints = [ "main.dart" ]
+
+  services = [
+    "src/services/task_service.dart",
+    "src/services/timezone_service.dart",
+  ]
+
+  states = [
+    "src/states/settings_state.dart",
+    "src/states/settings_state_impl.dart",
+  ]
+
+  widgets = [
+    "src/widgets/app.dart",
+    "src/widgets/setting_details.dart",
+    "src/widgets/timezone_settings.dart",
+  ]
+
+  sources = entrypoints + services + states + widgets
+
+  # TODO(fxb/113485): address dep on ermine/internationalization and ermine/utils
   deps = [
     "//sdk/dart/fuchsia_logger",
+    "//sdk/dart/fuchsia_services",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl_dart",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_dart",
     "//src/experiences/session_shells/ermine/internationalization",
+    "//src/experiences/session_shells/ermine/utils:ermine_utils",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/pub/flutter_mobx",
+    "//third_party/dart-pkg/pub/intl",
+    "//third_party/dart-pkg/pub/mobx",
   ]
 }
 
@@ -21,7 +50,33 @@ flutter_component("component") {
   main_dart = "main.dart"
   component_name = "shell_settings"
   manifest = "meta/shell_settings.cml"
-  deps = [ ":lib" ]
+  deps = [
+    ":lib",
+    ":resources",
+    ":time_zone_list",
+  ]
+}
+
+tz_ids_path = "${target_gen_dir}/tz_ids.txt"
+
+static_icu_data("time_zone_list") {
+  command = "tz-ids"
+  output = tz_ids_path
+
+  # Put these time zones at the top for the convenience of Fuchsia developers.
+  fixed_order_ids = [
+    "America/Los_Angeles",
+    "America/New_York",
+    "Europe/Paris",
+    "Australia/Sydney",
+  ]
+  fixed_order = string_join(",", fixed_order_ids)
+  command_args = [ "--fixed-order=${fixed_order}" ]
+}
+
+resource("resources") {
+  sources = [ rebase_path(tz_ids_path) ]
+  outputs = [ "data/{{source_file_part}}" ]
 }
 
 fuchsia_package("shell_settings") {

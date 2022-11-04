@@ -11,6 +11,14 @@
             protocol: [ "fuchsia.ui.app.ViewProvider" ],
         },
     ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.settings.Intl",
+            ],
+        },
+    ],
     expose: [
         {
             protocol: [ "fuchsia.ui.app.ViewProvider" ],

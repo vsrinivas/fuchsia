@@ -5,23 +5,32 @@
 // TODO(http://fxbug.dev/107480): Resolve lint issues and reenable analysis for file
 // ignore_for_file: deprecated_member_use
 
+import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:fuchsia_logger/logger.dart';
+import 'package:shell_settings/src/states/settings_state.dart';
+import 'package:shell_settings/src/widgets/app.dart';
 
-/// Main entry point to the shell settings module (placeholder)
-void main() async {
-  setupLogger(name: 'shell_settings');
+/// Main entry point to the shell settings module
+Future<void> main() async {
+  final runner = CrashReportingRunner();
+  await runner.run(() async {
+    setupLogger(name: 'shell_settings');
 
-  runApp(
-    MaterialApp(
-      home: Scaffold(
-        body: Container(
-          color: Colors.orange,
-          child: Center(
-            child: Text('Settings App Placeholder'),
+    final state = SettingsState.fromEnv();
+    final app = App(state);
+
+    runApp(
+      MaterialApp(
+        home: Scaffold(
+          body: Container(
+            color: Colors.orange,
+            child: Center(
+              child: app,
+            ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  });
 }
