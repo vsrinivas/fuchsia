@@ -15,7 +15,7 @@ use {
     futures::{lock::Mutex, FutureExt, StreamExt, TryStreamExt},
     itertools::Itertools,
     std::{collections::HashSet, sync::Arc},
-    tracing::{error, info, warn},
+    tracing::{error, warn},
 };
 
 type LogSubscriber = dyn tracing::Subscriber + std::marker::Send + std::marker::Sync + 'static;
@@ -60,10 +60,10 @@ impl Drop for NonHermeticPkgList {
                 facet::TEST_DEPRECATED_ALLOWED_PACKAGES_FACET_KEY,
                 list.drain().join(", "));
             // log in both test managers log sink and test's log sink so that it is easy to retrieve.
-            info!("{}", s);
+            warn!("{}", s);
             if let Some(subscriber) = self.logger.get_mut().take() {
                 tracing::subscriber::with_default(subscriber, || {
-                    info!("{}", s);
+                    warn!("{}", s);
                 });
             }
         }
@@ -72,7 +72,7 @@ impl Drop for NonHermeticPkgList {
 
 // Flag to enforce hermetic resolution. If false, default AllowedPackages value would be 'All'.
 // This flag helps us easily revert the changes if there is a problem.
-pub(crate) const ENFORCE_HERMETIC_RESOLUTION: bool = false;
+pub(crate) const ENFORCE_HERMETIC_RESOLUTION: bool = true;
 
 // Enum donating the list of non-hermetic packages allowed to resolved by a test.
 #[derive(Clone, Debug)]
