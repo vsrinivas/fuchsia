@@ -1,0 +1,93 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.amlogic.platform.a1;
+
+// Values taken from <soc/aml-a1/a1-gpio.h>
+
+extend uint fuchsia.BIND_PWM_ID {
+    PWM_A = 0,
+    PWM_B = 1,
+    PWM_C = 2,
+    PWM_D = 3,
+    PWM_E = 4,
+    PWM_F = 5,
+};
+
+uint GPIOP_PIN_ID {
+    PIN_0 = 0,
+    PIN_1 = 1,
+    PIN_2 = 2,
+    PIN_3 = 3,
+    PIN_4 = 4,
+    PIN_5 = 5,
+    PIN_6 = 6,
+    PIN_7 = 7,
+    PIN_8 = 8,
+    PIN_9 = 9,
+    PIN_10 = 10,
+    PIN_11 = 11,
+    PIN_12 = 12,
+};
+
+uint GPIOB_PIN_ID {
+    PIN_0 = 13,
+    PIN_1 = 14,
+    PIN_2 = 15,
+    PIN_3 = 16,
+    PIN_4 = 17,
+    PIN_5 = 18,
+    PIN_6 = 19,
+};
+
+uint GPIOX_PIN_ID {
+    PIN_0 = 20,
+    PIN_1 = 21,
+    PIN_2 = 22,
+    PIN_3 = 23,
+    PIN_4 = 24,
+    PIN_5 = 25,
+    PIN_6 = 26,
+    PIN_7 = 27,
+    PIN_8 = 28,
+    PIN_9 = 29,
+    PIN_10 = 30,
+    PIN_11 = 31,
+    PIN_12 = 32,
+    PIN_13 = 33,
+    PIN_14 = 34,
+    PIN_15 = 35,
+    PIN_16 = 36,
+};
+
+uint GPIOF_PIN_ID {
+    PIN_0 = 37,
+    PIN_1 = 38,
+    PIN_2 = 39,
+    PIN_3 = 40,
+    PIN_4 = 41,
+    PIN_5 = 42,
+    PIN_6 = 43,
+    PIN_7 = 44,
+    PIN_8 = 45,
+    PIN_9 = 46,
+    PIN_10 = 47,
+    PIN_11 = 48,
+    PIN_12 = 49,
+};
+
+uint GPIOA_PIN_ID {
+    PIN_0 = 50,
+    PIN_1 = 51,
+    PIN_2 = 52,
+    PIN_3 = 53,
+    PIN_4 = 54,
+    PIN_5 = 55,
+    PIN_6 = 56,
+    PIN_7 = 57,
+    PIN_8 = 58,
+    PIN_9 = 59,
+    PIN_10 = 60,
+    PIN_11 = 61,
+};
