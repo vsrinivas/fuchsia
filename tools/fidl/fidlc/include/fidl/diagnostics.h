@@ -112,8 +112,7 @@ constexpr ErrorDef<51, std::vector<std::string_view>, std::vector<std::string_vi
         "library {}. Did you require it with `using`?");
 constexpr ErrorDef<52, std::string_view, std::vector<std::string_view>> ErrNameNotFound(
     "cannot find '{}' in library '{}'");
-constexpr UndocumentedErrorDef<53, const flat::Decl *> ErrCannotReferToMember(
-    "cannot refer to member of {}");
+constexpr ErrorDef<53, const flat::Decl *> ErrCannotReferToMember("cannot refer to member of {}");
 constexpr UndocumentedErrorDef<54, const flat::Decl *, std::string_view> ErrMemberNotFound(
     "{} has no member '{}'");
 constexpr UndocumentedErrorDef<55, const flat::Element *, VersionRange, Platform,

@@ -392,4 +392,18 @@ const BAR bool = "not a bool";
   EXPECT_ERR(library.errors()[2], fidl::ErrCouldNotResolveMemberDefault);
 }
 
+TEST(StructsTests, CannotReferToIntMember) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0053-a.test.fidl");
+
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotReferToMember);
+}
+
+TEST(StructsTests, CannotReferToStructMember) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0053-b.test.fidl");
+
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotReferToMember);
+}
+
 }  // namespace
