@@ -7,7 +7,7 @@
 
 #include <zircon/types.h>
 
-#include "guest_ethernet.h"
+#include "src/virtualization/bin/vmm/device/virtio_net_rs/src/cpp/guest_ethernet.h"
 
 extern "C" {
 // Creation, initialization, and destruction functions for the C++ device.

@@ -7,6 +7,8 @@ import("//build/rust/rustc_binary.gni")
 
 static_library("guest-ethernet") {
   sources = [
+    "src/cpp/completion_queue.cc",
+    "src/cpp/completion_queue.h",
     "src/cpp/guest_ethernet.cc",
     "src/cpp/guest_ethernet.h",
     "src/cpp/guest_ethernet_interface.cc",
@@ -33,7 +35,10 @@ static_library("guest-ethernet") {
 
 group("tests") {
   testonly = true
-  deps = [ ":virtio_net_unittests" ]
+  deps = [
+    ":virtio_net_cpp_unittests",
+    ":virtio_net_unittests",
+  ]
 }
 
 rustc_binary("virtio_net_bin") {
@@ -94,4 +99,23 @@ fuchsia_component("virtio_net_component") {
   manifest = "meta/virtio_net.cml"
   deps = [ ":virtio_net_bin" ]
   component_name = "virtio_net_rs"
+}
+
+executable("virtio_net_cpp_unittests_bin") {
+  testonly = true
+
+  sources = [ "src/cpp/completion_queue_test.cc" ]
+
+  deps = [
+    ":guest-ethernet",
+    "//sdk/fidl/fuchsia.net.virtualization:fuchsia.net.virtualization_hlcpp",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/connectivity/network/drivers/network-device/device",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+  ]
+}
+
+fuchsia_unittest_package("virtio_net_cpp_unittests") {
+  deps = [ ":virtio_net_cpp_unittests_bin" ]
 }

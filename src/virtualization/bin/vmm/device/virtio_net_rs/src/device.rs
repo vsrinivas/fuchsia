@@ -547,7 +547,7 @@ mod tests {
         assert_eq!(slice, &random_bytes[std::mem::size_of::<wire::VirtioNetHeader>()..]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn too_many_tx_packets_resumable() {
         let mut executor = fasync::TestExecutor::new().unwrap();
         let device = NetDevice::<TestGuestEthernet>::new().unwrap();

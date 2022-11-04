@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "guest_ethernet.h"
+#include "src/virtualization/bin/vmm/device/virtio_net_rs/src/cpp/guest_ethernet.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include "guest_ethernet_interface.h"
+#include "src/virtualization/bin/vmm/device/virtio_net_rs/src/cpp/guest_ethernet_interface.h"
 
 namespace {
 // Port GuestEthernet uses for communication.
