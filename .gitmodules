@@ -688,3 +688,9 @@
 	name = third_party/zstd
 	ignore = all
 	active = false
+[submodule "third_party/bazel_rules_license"]
+	path = third_party/bazel_rules_license
+	url = https://fuchsia.googlesource.com/third_party/github.com/bazelbuild/rules_license
+	name = third_party/bazel_rules_license
+	ignore = all
+	active = false
