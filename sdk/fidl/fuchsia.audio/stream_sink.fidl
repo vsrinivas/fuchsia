@@ -1,0 +1,117 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.audio;
+
+using fuchsia.drm;
+using fuchsia.media2;
+using zx;
+
+/// A packet sink for cross-process audio stream transport, implemented by audio consumers and used
+/// by audio producers.
+protocol StreamSink {
+    /// Puts a packet to the sink.
+    PutPacket(resource table {
+        /// Describes the packet. This field is required.
+        1: packet Packet;
+
+        /// Eventpair closed when the consumer is done with the packet and the buffer region
+        /// associated with the packet may be reused. Packets may be released in any order. The
+        /// release fence may be duplicated by the service, so it must be sent with right
+        /// `ZX_RIGHT_DUPLICATE`. This field is optional.
+        2: release_fence zx.handle:EVENTPAIR;
+    });
+
+    /// Starts a new segment. Packets following this request and preceding the next such request
+    /// are assigned to the segment.
+    StartSegment(table {
+        /// Identifies the segment. New segment IDs for a given connection must always be strictly
+        /// increasing. This field is required.
+        1: segment_id int64;
+    });
+
+    /// Indicates that the end of the stream has been reached. Consumers such as audio renderers
+    /// signal their clients when the last packet before end-of-stream has been rendered, so the
+    /// client knows when to, for example, change the UI state of a player to let the user know the
+    /// content is done playing. This method is logically scoped to the current segment. A
+    /// `SetSegment` request and (typically) more packets may follow this request.
+    End();
+
+    /// Sent immediately before the producer closes to indicate why the producer is closing the
+    /// connection. After sending this request, the producer must refrain from sending any more
+    /// messages and close the connection promptly.
+    WillClose(table {
+        /// Reason the connection will close.
+        1: reason fuchsia.media2.ProducerClosedReason;
+    });
+
+    /// Sent immediately before the consumer closes to indicate why the consumer is closing the
+    /// connection. After sending this event, the consumer must refrain from sending any more
+    /// messages and close the connection promptly.
+    -> OnWillClose(table {
+        /// Reason the connection will close.
+        1: reason fuchsia.media2.ConsumerClosedReason;
+    });
+};
+
+/// Describes a packet delivered via `StreamSink`.
+type Packet = table {
+    /// Location of the payload for this packet. This field is required.
+    1: payload fuchsia.media2.PayloadRange;
+
+    /// Timestamp indicating when this packet should be presented. Omitting this field implies an
+    /// `unspecified_best_effort` timestamp.
+    2: timestamp Timestamp;
+
+    /// Capture time for this packet as a system monotonic time value. This field is optional and
+    /// may be set by capturers to indicate when this packet was captured.
+    3: capture_timestamp zx.time;
+
+    /// Flags describing the packet. Omitting this field implies all flags are clear.
+    4: flags PacketFlags;
+
+    /// Indicates how many frames should be dropped from the front of the output packet produced by
+    /// a decoder from this input packet. This value should only be provided for compressed streams.
+    /// If this field is omitted, no front frames should be dropped.
+    5: front_frames_to_drop uint32;
+
+    /// Indicates how many frames should be dropped from the back of the output packet produced by
+    /// a decoder from this input packet. This value should only be provided for compressed streams.
+    /// If this field is omitted, no back frames should be dropped.
+    6: back_frames_to_drop uint32;
+
+    /// Describes the encryption applied to this packet. Omitting this field implies the packet is
+    /// not encrypted.
+    7: encryption_properties fuchsia.drm.PacketEncryptionProperties;
+};
+
+/// Indicates the position of an audio packet in the stream timeline.
+type Timestamp = flexible union {
+    /// Specific time in the stream timeline. Units vary and are provided when the connection
+    /// is established.
+    1: specified int64;
+
+    /// Indicates the packet should be presented immediately after the previous packet, if there is
+    /// a previous packet. If there is no previous packet, this option is equivalent to a
+    /// `specified` value of 0.
+    ///
+    /// This option implies that the stream timeline should not ‘slip’ even if the packet
+    /// arrives late. The packet is intended to be presented immediately after the previous packet,
+    /// and the resulting timing is to be maintained regardless of the arrival time of the packet.
+    2: unspecified_continuous struct {};
+
+    /// Indicates the packet should be presented as soon as possible after the previous packet, if
+    /// there is one, as soon as possible if not.
+    ///
+    /// This option implies that the stream time should ‘slip’ if the packet arrives too late
+    /// to be rendered immediately after the previous packet. This option is often used when a gap
+    /// occurs in an un-timestamped stream, perhaps due to a lossy upstream source.
+    3: unspecified_best_effort struct {};
+};
+
+/// Flags describing a packet.
+type PacketFlags = flexible bits {
+    /// Indicates that this packet is provided only so that later packets can be interpreted. A
+    /// decoder should drop the decompressed packets generated from this packet.
+    DROP_AFTER_DECODE = 0x01;
+};

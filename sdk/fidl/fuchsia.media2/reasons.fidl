@@ -1,0 +1,24 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.media2;
+
+/// Used to indicate why a producer has closed a stream sink connection.
+/// TODO(dalesat): Expand this enum as needed.
+type ProducerClosedReason = flexible enum {
+    /// The producer's client requested that the connection be closed.
+    // TODO(dalesat): Alternatives have been proposed to this value:
+    //     CLEAN_CLOSE - because we may want this larger bucket for nominal closures
+    //     EXPECTED - as an alternative spelling of CLEAN_CLOSE
+    REQUESTED_BY_CLIENT = 1;
+};
+
+/// Used to indicate why a consumer has closed a stream sink connection.
+/// TODO(dalesat): Expand this enum as needed.
+type ConsumerClosedReason = flexible enum {
+    /// The consumer's client requested that the connection be closed.
+    // TODO(dalesat): Alternatives have been proposed to this value:
+    //     CLEAN_CLOSE - because we may want this larger bucket for nominal closures
+    //     EXPECTED - as an alternative spelling of CLEAN_CLOSE
+    REQUESTED_BY_CLIENT = 1;
+};

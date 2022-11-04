@@ -1,0 +1,26 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.drm;
+
+/// The maximum number of `EncryptionSubsampleEntry`s allowed.
+const MAX_SUBSAMPLE_ENTRIES uint32 = 16;
+
+/// Properties accompanying a packet in an encrypted stream.
+type PacketEncryptionProperties = table {
+    /// Indicates whether the packet is encrypted.
+    1: is_encrypted bool;
+
+    /// If specified, overrides the previous key id.
+    2: key_id EncryptionKeyId;
+
+    /// If specified, overrides the previous initialization vector.
+    3: init_vector EncryptionInitVector;
+
+    /// If specified, overrides the previous encryption pattern.
+    4: pattern EncryptionPattern;
+
+    /// Subsamples to decrypt. An absent or empty list indicates whole sample
+    /// decryption.
+    5: subsamples vector<EncryptionSubsampleEntry>:MAX_SUBSAMPLE_ENTRIES;
+};

@@ -1,0 +1,243 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.video;
+
+using fuchsia.drm;
+using fuchsia.media2;
+using zx;
+
+/// A packet consumer for cross-process video stream transport, implemented by video consumers
+/// and used by video producers.
+protocol StreamSink {
+    /// Puts a packet to the sink.
+    PutPacket(resource table {
+        /// Describes the packet. This field is required.
+        1: packet Packet;
+
+        /// Eventpair closed when the consumer is done with the packet and the buffer region
+        /// associated with the packet may be reused. Packets may be released in any order. The
+        /// release fence may be duplicated by the service, so it must be sent with right
+        /// `ZX_RIGHT_DUPLICATE`. This field is optional.
+        2: release_fence zx.handle:EVENTPAIR;
+    });
+
+    /// Starts a new segment. Packets following this request and preceding the next such request
+    /// are assigned to the segment.
+    StartSegment(table {
+        /// Identifies the segment. New segment IDs for a given connection must always be strictly
+        /// increasing. This field is required.
+        1: segment_id int64;
+    });
+
+    /// Indicates that the end of the stream has been reached. Consumers such as video renderers
+    /// signal their clients when the last packet before end-of-stream has been rendered, so the
+    /// client knows when to, for example, change the UI state of a player to let the user know the
+    /// content is done playing. This method is logically scoped to the current segment. A
+    /// `SetSegment` request and (typically) more packets may follow this request.
+    End();
+
+    /// Sent immediately before the producer closes to indicate why the producer is closing the
+    /// connection. After sending this request, the producer must refrain from sending any more
+    /// messages and close the connection promptly.
+    WillClose(table {
+        /// Reason the connection will close.
+        1: reason fuchsia.media2.ProducerClosedReason;
+    });
+
+    /// Sent immediately before the consumer closes to indicate why the consumer is closing the
+    /// connection. After sending this event, the consumer must refrain from sending any more
+    /// messages and close the connection promptly.
+    -> OnWillClose(table {
+        /// Reason the connection will close.
+        1: reason fuchsia.media2.ConsumerClosedReason;
+    });
+};
+
+/// An extended packet consumer for cross-process transport of uncompressed video streams
+/// that may change dimensions.
+protocol VariableStreamSink {
+    compose StreamSink;
+
+    /// The provided buffer_collection_id applies to all packets received via `PutPacket` until the
+    /// next `SetBufferCollection` (if any).
+    ///
+    /// `SetBufferCollection` will always be sent on a given `VariableStreamSink` connection before
+    /// the first packet. A new `segment_id` does not imply a new `buffer_collection_id`.
+    ///
+    /// When a new format needs to be set, a `SetBufferCollection` request must be sent before any
+    /// `SetFormat` request that applies to packets using buffers of the new collection.
+    ///
+    /// Redundant `SetBufferCollection` messages are considered a protocol error.  Each
+    /// `SetBufferCollection` must change the current `buffer_collection_id`.  If a protocol error
+    /// is detected, the server should close the `VariableStreamSink` channel.
+    ///
+    /// A new valid `buffer_collection_id` value is established out-of-band. The
+    /// `VariableStreamSink` client must not send the `SetBufferCollection` until the
+    /// `VariableStreamSink` server is already aware of the `buffer_collection_id`.  In some
+    /// scenarios, the new `buffer_collection_id` may be established out-of-band quite a while
+    /// before usage by any packet; in others, only shortly before usage. Out-of-band establishment
+    /// of a new `buffer_collection_id` is not a guarantee that any packet will ever use the
+    /// established `buffer_collection_id`.
+    ///
+    /// If a not-yet-established `buffer_collection_id` is received via
+    /// `SetBufferCollection`, the `VariableStreamSink` connection should be closed by the
+    /// `VariableStreamSink` server.
+    ///
+    /// The `buffer_collection_id` logically starts at 0 and is incremented for each
+    /// `buffer_collection_id`.  However, not all `buffer_collection_id` values necessarily are
+    /// established, nor are all `buffer_collection_id` values ever sent in a `SetBufferCollection`
+    /// message. In other words, gaps must be tolerated.  While the ordering of establishment of
+    /// `buffer_collection_id`s is numerically increasing, the ordering of use of
+    /// `buffer_collection_id`s via `SetBufferCollection` is not necessarily increasing.
+    ///
+    /// This message must be sent before the first `PutPacket` message on the connection, and will
+    /// also be sent before any packet whose `buffer_collection_id` differs from the immediately
+    /// previous packet's `buffer_collection_id`. A packet's `buffer_collection_id` is implicitly
+    /// the most-recently-received `buffer_collection_id`, not stored explicitly in the packet. A
+    /// new `segment_id` does not necessarily imply a new `buffer_collection_id`. If the buffers
+    /// are still suitable, they can continue to be used.
+    SetBufferCollection(table {
+        /// The id of the new buffer collection.
+        1: buffer_collection_id int64;
+    });
+
+    /// Specifies the format of subsequent frames. Only geometry changes are currently supported.
+    SetFormat(table {
+        /// The new format. The `image_format` field must be populated, and all of the required
+        /// fields of the image format must be populated. Given that only geometry changes are
+        /// supported, image format fields `pixel_format`, `pixel_format_modifier`, and
+        /// `color_space` must remain unchanged with respect to the previously-established format.
+        1: format Format;
+    });
+
+    /// Notifies the server that the specified buffer will soon be used.
+    ///
+    /// This message can be sent by the client as soon as the client knows which `buffer_id` of a
+    /// `buffer_collection_id` will be used for the first time (per `buffer_collection_id`). This
+    /// can often be sent well in advance of the buffer being filled and ready to be indicated via
+    /// `PutPacket`, allowing the server to get a significant head start on asking sysmem for the
+    /// buffer's VMO when the server is participating in incremental sysmem buffer allocation.
+    ///
+    /// A client is not required to send this message before using a buffer via `PutPacket`, and a
+    /// server is not required to do anything upon reception of this message. If the client doesn't
+    /// send this message or the server ignores it, the server must ask sysmem for a VMO 
+    /// corresponding to `buffer_collection_id` and `buffer_id` (if the server hasn't already done
+    /// so previously) upon reception of `PutPacket` indicating that buffer at the server.
+    PrepareBuffer(table {
+        /// The buffer collection containing the buffer that will be used.
+        1: buffer_collection_id int64;
+
+        /// The ID of the buffer that will be used.
+        2: buffer_id int64;
+    });
+
+    /// Notifies that server that the specified buffer will no longer be used.
+    ///
+    /// The client will not send any subsequent packets which reference this buffer, so the server
+    /// can drop the corresponding VMO handle as soon as the server no longer needs the VMO for any
+    /// server-specific purpose.
+    ///
+    /// Sysmem will recycle the space used by a VMO with zero VMO handles even if not all the
+    /// buffer collection` channels are closed yet, allowing for incremental deallocation of
+    /// buffers in a buffer collection as the `VariableStreamSink` moves from one buffer collection
+    /// to another (typically with larger buffers).
+    ///
+    /// After all buffers of a buffer collection are decommissioned via `DoneWithBuffer` requests,
+    /// the client won't send any more messages referring to the buffer collection, and the server
+    /// can close the server's corresponding buffer collection channel as soon as the server no
+    /// longer has any use for it.
+    ///
+    /// A server which intentionally fails if the server receives a second `SetBufferCollection`
+    /// request may also ignore this message. This is discouraged, but possible and potentially
+    /// still a useful server for some scenarios (not involving handling of dimension switching
+    /// that needs larger buffers).
+    ///
+    /// A server that handles reception of `SetBufferCollection` beyond the first one must also
+    /// handle this message.
+    DoneWithBuffer(table {
+        /// The buffer collection containing the buffer that will no longer be used.
+        1: buffer_collection_id int64;
+
+        /// The ID of the buffer that will no longer be used.
+        2: buffer_id int64;
+    });
+};
+
+/// Describes a packet delivered via `StreamSink` or `VariableStreamSink`.
+type Packet = table {
+    /// Location of the payload for this packet. This field is required.
+    1: payload fuchsia.media2.PayloadRange;
+
+    /// Timestamp indicating when this packet should be presented as a time in the stream
+    /// timeline. Units vary and are provided when the connection is established. This value is
+    /// required and must be identical for each packet comprising a given access unit.
+    2: timestamp int64;
+
+    /// Capture time for this packet as a system monotonic time value. This field is optional and
+    /// may be set by capturers to indicate when this packet was captured.
+    3: capture_timestamp zx.time;
+
+    /// Flags describing the packet. Omitting this field implies all flags are clear.
+    4: flags PacketFlags;
+
+    /// Describes the encryption applied to this packet. Omitting this field implies the packet is
+    /// not encrypted.
+    5: encryption_properties fuchsia.drm.PacketEncryptionProperties;
+};
+
+/// Flags describing a packet.
+type PacketFlags = flexible bits {
+    /// Indicates that this access unit can be interpreted without information from any other
+    /// packet. Each packet in a given access unit must be consistent with respect to this bit.
+    KEY_FRAME = 0x01;
+
+    /// Indicates that no other access unit requires information from this access unit in order to
+    /// be interpreted. Each packet in a given access unit must be consistent with respect to this
+    /// bit.
+    DROPPABLE = 0x02;
+
+    /// Indicates that this access unit is provided only so that later access units can be
+    /// interpreted. A decoder should drop the decompressed frame generated from this access unit.
+    /// Each packet in a given access unit must be consistent with respect to this bit.
+    DROP_AFTER_DECODE = 0x04;
+
+    /// Indicates whether this packet continues the access unit of which it is a part (set) or is
+    /// the first packet of the access unit (clear).
+    CONTINUES_ACCESS_UNIT = 0x08;
+
+    /// Indicates whether the access unit of which this packet is a part continues with the next
+    /// packet (set), or this packet is the last packet in the access unit (clear).
+    ACCESS_UNIT_CONTINUES = 0x10;
+
+    /// Indicates whether any parsing / processing errors were detected in data prior to the input
+    /// data corresponding to this output packet. Not all data corruptions are detectable. When
+    /// this is set, there may be a discontinuity in packet delivery, in the sense that some prior
+    /// packet(s) may have been skipped / omitted.
+    ///
+    /// If the discontinuity is only a timing discontinuity, this flag will not be set solely for
+    /// that reason, and instead the timestamps (and possibly capture timestamps) will indicate the
+    /// per-frame timing.
+    ///
+    /// In transcoding scenarios, this bit is never expected to be set, but if it is, the transcode
+    /// should be indicated as faulty / incomplete.
+    ///
+    /// Not all codec implementations will be able to detect errors / detect errors reliably. Some
+    /// codec implementations may simply close the connection and report an error via the node
+    /// control channel instead of handling a data corruption, when a corruption is detected at all.
+    ERROR_DETECTED_BEFORE = 0x20;
+
+    /// Indicates whether any parsing / processing errors were detected within the input data
+    /// directly corresponding to this output packet. Not all data corruptions are detectable.
+    /// When this flag is set but `ERROR_DETECTED_BEFORE `is not set, no discontinuity in packet
+    /// delivery has been detected. When this flag is set, the content of this packet is far more
+    /// likely to be corrupted than when this flag is not set.
+    ///
+    /// In transcoding scenarios, this bit is never expected to be set, but if it is, the transcode
+    /// should be indicated as faulty / incomplete.
+    ///
+    /// Not all codec implementations will be able to detect errors / detect errors reliably. Some
+    /// codec implementations may simply close the connection and report an error via the node
+    /// control channel instead of handling a data corruption, when a corruption is detected at all.
+    ERROR_DETECTED_DURING = 0x40;
+};

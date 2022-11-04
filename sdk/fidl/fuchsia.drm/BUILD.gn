@@ -5,7 +5,11 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.drm") {
-  sources = [ "encryption.fidl" ]
+  sources = [
+    "encryption.fidl",
+    "overview.fidl",
+    "packet_encryption_properties.fidl",
+  ]
 
   public_deps = [ "//zircon/vdso/zx" ]
 }
