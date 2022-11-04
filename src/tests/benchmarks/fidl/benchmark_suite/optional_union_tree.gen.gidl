@@ -1,0 +1,101 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// GENERATED FILE: Regen with "fx regen_fidl_benchmark_suite"
+
+// A linked list of unions with depth 8 composed of recursive optional unions
+benchmark("OptionalUnionTree/Depth8") {
+    bindings_denylist = [go, dart],
+    value = OptionalUnionTreeWrapper{
+        d: OptionalUnionTree{
+            s: OptionalUnionTreeWrapper{
+                d: OptionalUnionTree{
+                    s: OptionalUnionTreeWrapper{
+                        d: OptionalUnionTree{
+                            s: OptionalUnionTreeWrapper{
+                                d: OptionalUnionTree{
+                                    s: OptionalUnionTreeWrapper{
+                                        d: OptionalUnionTree{
+                                            s: OptionalUnionTreeWrapper{
+                                                d: OptionalUnionTree{
+                                                    s: OptionalUnionTreeWrapper{
+                                                        d: OptionalUnionTree{
+                                                            s: OptionalUnionTreeWrapper{
+                                                                d: OptionalUnionTree{
+                                                                    s: OptionalUnionTreeWrapper{
+                                                                        d: null,
+                                                                    },
+                                                                },
+                                                            },
+                                                        },
+                                                    },
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+}
+
+// A linked list of unions with depth 6 composed of recursive optional unions
+benchmark("OptionalUnionTree/Depth6") {
+    bindings_denylist = [go, dart],
+    value = OptionalUnionTreeWrapper{
+        d: OptionalUnionTree{
+            s: OptionalUnionTreeWrapper{
+                d: OptionalUnionTree{
+                    s: OptionalUnionTreeWrapper{
+                        d: OptionalUnionTree{
+                            s: OptionalUnionTreeWrapper{
+                                d: OptionalUnionTree{
+                                    s: OptionalUnionTreeWrapper{
+                                        d: OptionalUnionTree{
+                                            s: OptionalUnionTreeWrapper{
+                                                d: OptionalUnionTree{
+                                                    s: OptionalUnionTreeWrapper{
+                                                        d: null,
+                                                    },
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+}
+
+// A linked list of unions with depth 4 composed of recursive optional unions
+benchmark("OptionalUnionTree/Depth4") {
+    bindings_denylist = [dart],
+    value = OptionalUnionTreeWrapper{
+        d: OptionalUnionTree{
+            s: OptionalUnionTreeWrapper{
+                d: OptionalUnionTree{
+                    s: OptionalUnionTreeWrapper{
+                        d: OptionalUnionTree{
+                            s: OptionalUnionTreeWrapper{
+                                d: OptionalUnionTree{
+                                    s: OptionalUnionTreeWrapper{
+                                        d: null,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+}

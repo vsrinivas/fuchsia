@@ -29,6 +29,9 @@ fuchsia.fidl_microbenchmarks: Rust/Builder/MessageHeader/WallTime
 fuchsia.fidl_microbenchmarks: Rust/Builder/OptionalStructTree/Depth4/WallTime
 fuchsia.fidl_microbenchmarks: Rust/Builder/OptionalStructTree/Depth6/WallTime
 fuchsia.fidl_microbenchmarks: Rust/Builder/OptionalStructTree/Depth8/WallTime
+fuchsia.fidl_microbenchmarks: Rust/Builder/OptionalUnionTree/Depth4/WallTime
+fuchsia.fidl_microbenchmarks: Rust/Builder/OptionalUnionTree/Depth6/WallTime
+fuchsia.fidl_microbenchmarks: Rust/Builder/OptionalUnionTree/Depth8/WallTime
 fuchsia.fidl_microbenchmarks: Rust/Builder/PaddedStructTree/Depth8/WallTime
 fuchsia.fidl_microbenchmarks: Rust/Builder/String/16/WallTime
 fuchsia.fidl_microbenchmarks: Rust/Builder/String/256/WallTime
@@ -81,6 +84,9 @@ fuchsia.fidl_microbenchmarks: Rust/Decode/MessageHeader/WallTime
 fuchsia.fidl_microbenchmarks: Rust/Decode/OptionalStructTree/Depth4/WallTime
 fuchsia.fidl_microbenchmarks: Rust/Decode/OptionalStructTree/Depth6/WallTime
 fuchsia.fidl_microbenchmarks: Rust/Decode/OptionalStructTree/Depth8/WallTime
+fuchsia.fidl_microbenchmarks: Rust/Decode/OptionalUnionTree/Depth4/WallTime
+fuchsia.fidl_microbenchmarks: Rust/Decode/OptionalUnionTree/Depth6/WallTime
+fuchsia.fidl_microbenchmarks: Rust/Decode/OptionalUnionTree/Depth8/WallTime
 fuchsia.fidl_microbenchmarks: Rust/Decode/PaddedStructTree/Depth8/WallTime
 fuchsia.fidl_microbenchmarks: Rust/Decode/String/16/WallTime
 fuchsia.fidl_microbenchmarks: Rust/Decode/String/256/WallTime
@@ -138,6 +144,9 @@ fuchsia.fidl_microbenchmarks: Rust/Encode/MessageHeader/WallTime
 fuchsia.fidl_microbenchmarks: Rust/Encode/OptionalStructTree/Depth4/WallTime
 fuchsia.fidl_microbenchmarks: Rust/Encode/OptionalStructTree/Depth6/WallTime
 fuchsia.fidl_microbenchmarks: Rust/Encode/OptionalStructTree/Depth8/WallTime
+fuchsia.fidl_microbenchmarks: Rust/Encode/OptionalUnionTree/Depth4/WallTime
+fuchsia.fidl_microbenchmarks: Rust/Encode/OptionalUnionTree/Depth6/WallTime
+fuchsia.fidl_microbenchmarks: Rust/Encode/OptionalUnionTree/Depth8/WallTime
 fuchsia.fidl_microbenchmarks: Rust/Encode/PaddedStructTree/Depth8/WallTime
 fuchsia.fidl_microbenchmarks: Rust/Encode/String/16/WallTime
 fuchsia.fidl_microbenchmarks: Rust/Encode/String/256/WallTime

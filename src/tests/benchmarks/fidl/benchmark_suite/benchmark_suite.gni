@@ -92,6 +92,12 @@ benchmark_suite_declarations = [
     fidl = [ "padded_struct_tree.gen.test.fidl" ]
   },
   {
+    name = "optional_union_tree"
+    gidl = [ "optional_union_tree.gen.gidl" ]
+    fidl = [ "optional_union_tree.test.fidl" ]
+  },
+
+  {
     name = "result"
     gidl = [ "result.gidl" ]
     fidl = [ "result.test.fidl" ]

@@ -76,6 +76,9 @@ fuchsia.fidl_microbenchmarks: Go/Decode/Media/StreamPacket/WallTime
 fuchsia.fidl_microbenchmarks: Go/Decode/MessageHeader/AllocatedBytes
 fuchsia.fidl_microbenchmarks: Go/Decode/MessageHeader/Allocations
 fuchsia.fidl_microbenchmarks: Go/Decode/MessageHeader/WallTime
+fuchsia.fidl_microbenchmarks: Go/Decode/OptionalUnionTree/Depth4/AllocatedBytes
+fuchsia.fidl_microbenchmarks: Go/Decode/OptionalUnionTree/Depth4/Allocations
+fuchsia.fidl_microbenchmarks: Go/Decode/OptionalUnionTree/Depth4/WallTime
 fuchsia.fidl_microbenchmarks: Go/Decode/PaddedStructTree/Depth8/AllocatedBytes
 fuchsia.fidl_microbenchmarks: Go/Decode/PaddedStructTree/Depth8/Allocations
 fuchsia.fidl_microbenchmarks: Go/Decode/PaddedStructTree/Depth8/WallTime
@@ -250,6 +253,9 @@ fuchsia.fidl_microbenchmarks: Go/Encode/Media/StreamPacket/WallTime
 fuchsia.fidl_microbenchmarks: Go/Encode/MessageHeader/AllocatedBytes
 fuchsia.fidl_microbenchmarks: Go/Encode/MessageHeader/Allocations
 fuchsia.fidl_microbenchmarks: Go/Encode/MessageHeader/WallTime
+fuchsia.fidl_microbenchmarks: Go/Encode/OptionalUnionTree/Depth4/AllocatedBytes
+fuchsia.fidl_microbenchmarks: Go/Encode/OptionalUnionTree/Depth4/Allocations
+fuchsia.fidl_microbenchmarks: Go/Encode/OptionalUnionTree/Depth4/WallTime
 fuchsia.fidl_microbenchmarks: Go/Encode/PaddedStructTree/Depth8/AllocatedBytes
 fuchsia.fidl_microbenchmarks: Go/Encode/PaddedStructTree/Depth8/Allocations
 fuchsia.fidl_microbenchmarks: Go/Encode/PaddedStructTree/Depth8/WallTime

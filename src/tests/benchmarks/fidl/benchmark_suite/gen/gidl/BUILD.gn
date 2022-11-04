@@ -25,6 +25,7 @@ go_library("gidl") {
     "int32_array.go",
     "int32_vector.go",
     "optional_struct_tree.go",
+    "optional_union_tree.go",
     "padded_struct_tree.go",
     "struct_array.go",
     "struct_field.go",

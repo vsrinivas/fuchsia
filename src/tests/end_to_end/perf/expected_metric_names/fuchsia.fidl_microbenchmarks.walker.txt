@@ -31,6 +31,9 @@ fuchsia.fidl_microbenchmarks: Walker/MessageHeader/WallTime
 fuchsia.fidl_microbenchmarks: Walker/OptionalStructTree/Depth4/WallTime
 fuchsia.fidl_microbenchmarks: Walker/OptionalStructTree/Depth6/WallTime
 fuchsia.fidl_microbenchmarks: Walker/OptionalStructTree/Depth8/WallTime
+fuchsia.fidl_microbenchmarks: Walker/OptionalUnionTree/Depth4/WallTime
+fuchsia.fidl_microbenchmarks: Walker/OptionalUnionTree/Depth6/WallTime
+fuchsia.fidl_microbenchmarks: Walker/OptionalUnionTree/Depth8/WallTime
 fuchsia.fidl_microbenchmarks: Walker/PaddedStructTree/Depth8/WallTime
 fuchsia.fidl_microbenchmarks: Walker/String/16/WallTime
 fuchsia.fidl_microbenchmarks: Walker/String/256/WallTime
