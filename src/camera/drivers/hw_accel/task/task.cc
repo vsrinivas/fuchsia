@@ -65,28 +65,22 @@ zx_status_t GenericTask::InitBuffers(
   cur_output_image_format_index_ = output_image_format_index;
 
   // Initialize the VMOPool and pin the output buffers
-  zx::vmo output_vmos[output_buffer_collection->buffer_count];
+  zx::unowned_vmo output_vmos[output_buffer_collection->buffer_count];
   for (uint32_t i = 0; i < output_buffer_collection->buffer_count; ++i) {
-    output_vmos[i] = zx::vmo(output_buffer_collection->buffers[i].vmo);
+    output_vmos[i] = zx::unowned_vmo(output_buffer_collection->buffers[i].vmo);
   }
 
-  zx_status_t status = output_buffers_.Init(output_vmos, output_buffer_collection->buffer_count,
-                                            std::move(output_buffers_name));
-  if (status != ZX_OK) {
+  if (zx_status_t status =
+          output_buffers_.Init(cpp20::span(output_vmos, output_buffer_collection->buffer_count),
+                               std::move(output_buffers_name));
+      status != ZX_OK) {
     FX_LOGST(ERROR, kTag) << "Unable to Init VmoPool";
     return status;
   }
 
-  // Release the vmos so that the buffer collection could be reused.
-  for (uint32_t i = 0; i < output_buffer_collection->buffer_count; ++i) {
-    // output_buffer_collection already has the handle so its okay to discard
-    // this one.
-    __UNUSED zx_handle_t vmo = output_vmos[i].release();
-  }
-
-  status = output_buffers_.PinVmos(bti, fzl::VmoPool::RequireContig::Yes,
-                                   fzl::VmoPool::RequireLowMem::Yes);
-  if (status != ZX_OK) {
+  if (zx_status_t status = output_buffers_.PinVmos(bti, fzl::VmoPool::RequireContig::Yes,
+                                                   fzl::VmoPool::RequireLowMem::Yes);
+      status != ZX_OK) {
     FX_LOGST(ERROR, kTag) << "Unable to pin buffers";
     return status;
   }

@@ -17,6 +17,8 @@
 #include <fbl/intrusive_single_list.h>
 #include <fbl/vector.h>
 
+#include "lib/stdcompat/span.h"
+
 namespace fzl {
 
 // This class is not thread safe.
@@ -59,7 +61,7 @@ class VmoPool {
   enum class RequireLowMem : bool { No = false, Yes };
 
   // Initializes the VmoPool with a set of vmos.
-  zx_status_t Init(const zx::vmo* vmos, size_t num_vmos);
+  zx_status_t Init(cpp20::span<zx::unowned_vmo> vmos);
 
   // Pin all the vmos to physical memory.  This must be called prior to
   // requesting a physical address from any Buffer instance.
@@ -120,8 +122,8 @@ class VmoPool {
     ~Buffer();
 
     // Only allow move constructors.
-    Buffer(Buffer&& other);
-    Buffer& operator=(Buffer&& other);
+    Buffer(Buffer&& other) noexcept;
+    Buffer& operator=(Buffer&& other) noexcept;
 
     // Release the buffer from its write lock, which puts the Buffer instance
     // in the invalid state. If the Buffer was in a valid state before the call,

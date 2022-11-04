@@ -24,17 +24,8 @@
 
 namespace {
 
-static constexpr size_t kVmoTestSize = 512 << 10;  // 512KB
-static constexpr uint32_t kNumVmos = 20;
-
-// Create vmos for each handle in an array of vmo handles:
-void AssignVmos(size_t num_vmos, size_t vmo_size, zx::vmo* vmos) {
-  zx_status_t status;
-  for (size_t i = 0; i < num_vmos; ++i) {
-    status = zx::vmo::create(vmo_size, 0, &vmos[i]);
-    EXPECT_OK(status);
-  }
-}
+constexpr size_t kVmoTestSize = 512 << 10;  // 512KB
+constexpr uint32_t kNumVmos = 20;
 
 // A helper class to initialize the VmoPool, and to check the state.
 // Since we cannot access the VmoPool's free buffer list, we check the
@@ -47,8 +38,14 @@ class VmoPoolTester : public zxtest::Test {
   bool is_pinned_ = false;
 
   void Init() {
-    AssignVmos(kNumVmos, kVmoTestSize, vmo_handles_);
-    ASSERT_OK(pool_.Init(vmo_handles_, kNumVmos));
+    for (zx::vmo& vmo : vmo_handles_) {
+      ASSERT_OK(zx::vmo::create(kVmoTestSize, 0, &vmo));
+    }
+    zx::unowned_vmo vmos[kNumVmos];
+    for (size_t i = 0; i < kNumVmos; ++i) {
+      vmos[i] = vmo_handles_[i].borrow();
+    }
+    ASSERT_OK(pool_.Init(cpp20::span(vmos, kNumVmos)));
   }
 
   void SetUp() override { ASSERT_OK(fake_bti_create(bti_.reset_and_get_address())); }
@@ -61,17 +58,15 @@ class VmoPoolTester : public zxtest::Test {
     }
   }
 
-  // Create vmos for each handle in an array of vmo handles:
-  void CreateContiguousVmos(size_t num_vmos, size_t vmo_size, zx::vmo* vmos) {
-    for (size_t i = 0; i < num_vmos; ++i) {
-      zx_status_t status = zx::vmo::create_contiguous(bti_, vmo_size, 0, &vmos[i]);
-      ASSERT_OK(status);
-    }
-  }
-
   void InitContiguous() {
-    CreateContiguousVmos(kNumVmos, kVmoTestSize, vmo_handles_);
-    ASSERT_OK(pool_.Init(vmo_handles_, kNumVmos));
+    for (zx::vmo& vmo : vmo_handles_) {
+      ASSERT_OK(zx::vmo::create_contiguous(bti_, kVmoTestSize, 0, &vmo));
+    }
+    zx::unowned_vmo vmos[kNumVmos];
+    for (size_t i = 0; i < kNumVmos; ++i) {
+      vmos[i] = vmo_handles_[i].borrow();
+    }
+    ASSERT_OK(pool_.Init(cpp20::span(vmos, kNumVmos)));
   }
 
   void PinVmos(fzl::VmoPool::RequireContig require_contiguous,
@@ -92,10 +87,7 @@ class VmoPoolTester : public zxtest::Test {
     // Test that the pool gives indexes from 0 to kNumVmos-1
     // It is not required to give the indexes in any particular
     // order.
-    bool gave_index[kNumVmos];  // initialized to false
-    for (size_t i = 0; i < kNumVmos; ++i) {
-      gave_index[i] = false;
-    }
+    bool gave_index[kNumVmos] = {};  // initialized to false
     for (size_t i = 0; i < kNumVmos - filled_count; ++i) {
       auto buffer = pool_.LockBufferForWrite();
       ASSERT_TRUE(buffer.has_value());
@@ -113,7 +105,7 @@ class VmoPoolTester : public zxtest::Test {
   }
 
   // Check the Buffer to make sure it gives the correct info
-  void CheckValidBuffer(fzl::VmoPool::Buffer& buffer) {
+  void CheckValidBuffer(fzl::VmoPool::Buffer& buffer) const {
     ASSERT_TRUE(buffer.valid());
     EXPECT_EQ(buffer.size(), kVmoTestSize);
     if (is_mapped_) {
@@ -131,12 +123,13 @@ class VmoPoolTester : public zxtest::Test {
   }
 
   // Check that an invalid buffer acts according to spec.
-  void CheckInvalidBuffer(fzl::VmoPool::Buffer& buffer) {
+  static void CheckInvalidBuffer(fzl::VmoPool::Buffer& buffer) {
     EXPECT_FALSE(buffer.valid());
     ASSERT_DEATH(([&buffer] { buffer.size(); }));
     ASSERT_DEATH(([&buffer] { buffer.virtual_address(); }));
     ASSERT_DEATH(([&buffer] { buffer.physical_address(); }));
   }
+
   // Empties the pool, to make sure all accounting
   // is done correctly.
   // unfilled_count is the number of buffers that are already reserved.
