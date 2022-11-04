@@ -342,6 +342,20 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
     }
   }
 
+  for (const auto& offer : child->runtime_service_offers()) {
+    auto str_property = fuchsia_device_manager::wire::DeviceStrProperty{
+        .key = fidl::StringView(allocator, offer),
+        .value = fuchsia_device_manager::wire::PropertyValue::WithEnumValue(
+            allocator, std::string(offer) + ".DriverTransport"),
+    };
+    str_props_list.push_back(str_property);
+
+    auto prop = fidl_offer_to_device_prop(offer);
+    if (prop) {
+      props_list.push_back(*prop);
+    }
+  }
+
   const auto& coordinator_client = parent->coordinator_client;
   if (!coordinator_client) {
     return ZX_ERR_IO_REFUSED;

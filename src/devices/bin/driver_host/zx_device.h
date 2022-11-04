@@ -443,6 +443,16 @@ struct zx_device
 
   std::vector<const char*> fidl_service_offers_;
 
+  cpp20::span<const char*> runtime_service_offers() {
+    return {runtime_service_offers_.data(), runtime_service_offers_.size()};
+  }
+
+  void set_runtime_service_offers(cpp20::span<const char*> runtime_service_offers) {
+    runtime_service_offers_ = {runtime_service_offers.begin(), runtime_service_offers.end()};
+  }
+
+  std::vector<const char*> runtime_service_offers_;
+
   // driver that has published this device
   fbl::RefPtr<Driver> driver;
   DriverRef driver_ref_;

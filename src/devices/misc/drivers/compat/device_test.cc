@@ -1021,7 +1021,7 @@ TEST_F(DeviceTest, CreateNodeProperties) {
   fidl::Arena<512> arena;
   auto logger = std::make_unique<driver::Logger>("", 0, zx::socket(),
                                                  fidl::WireClient<fuchsia_logger::LogSink>());
-  device_add_args_t args;
+  device_add_args_t args = {};
 
   zx_device_prop_t prop;
   prop.id = 11;
@@ -1045,9 +1045,13 @@ TEST_F(DeviceTest, CreateNodeProperties) {
   args.fidl_service_offers = &service_offer;
   args.fidl_service_offer_count = 1;
 
+  const char* runtime_offer = "fuchsia.hardware.gpio.Service";
+  args.runtime_service_offers = &runtime_offer;
+  args.runtime_service_offer_count = 1;
+
   auto properties = compat::CreateProperties(arena, *logger, &args);
 
-  ASSERT_EQ(6ul, properties.size());
+  ASSERT_EQ(7ul, properties.size());
 
   EXPECT_EQ(11u, properties[0].key().int_value());
   EXPECT_EQ(2u, properties[0].value().int_value());
@@ -1066,6 +1070,10 @@ TEST_F(DeviceTest, CreateNodeProperties) {
   EXPECT_EQ("fuchsia.hardware.i2c.Service.ZirconTransport",
             properties[4].value().enum_value().get());
 
-  EXPECT_EQ(static_cast<uint32_t>(BIND_PROTOCOL), properties[5].key().int_value());
-  EXPECT_EQ(10u, properties[5].value().int_value());
+  EXPECT_EQ("fuchsia.hardware.gpio.Service", properties[5].key().string_value().get());
+  EXPECT_EQ("fuchsia.hardware.gpio.Service.DriverTransport",
+            properties[5].value().enum_value().get());
+
+  EXPECT_EQ(static_cast<uint32_t>(BIND_PROTOCOL), properties[6].key().int_value());
+  EXPECT_EQ(10u, properties[6].value().int_value());
 }

@@ -141,6 +141,17 @@ std::vector<fuchsia_driver_framework::wire::NodeProperty> CreateProperties(
     }
   }
 
+  for (auto value :
+       cpp20::span(zx_args->runtime_service_offers, zx_args->runtime_service_offer_count)) {
+    properties.emplace_back(
+        driver::MakeEnumProperty(arena, value, std::string(value) + ".DriverTransport"));
+
+    auto property = fidl_offer_to_device_prop(arena, value);
+    if (property) {
+      properties.push_back(*property);
+    }
+  }
+
   // Some DFv1 devices expect to be able to set their own protocol, without specifying proto_id.
   // If we see a BIND_PROTOCOL property, don't add our own.
   if (!has_protocol) {

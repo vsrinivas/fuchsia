@@ -156,6 +156,10 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
   if (args->fidl_service_offers) {
     dev->set_fidl_service_offers({args->fidl_service_offers, args->fidl_service_offer_count});
   }
+  if (args->runtime_service_offers) {
+    dev->set_runtime_service_offers(
+        {args->runtime_service_offers, args->runtime_service_offer_count});
+  }
   if (args->flags & DEVICE_ADD_NON_BINDABLE) {
     dev->set_flag(DEV_FLAG_UNBINDABLE);
   }
