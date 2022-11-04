@@ -155,6 +155,7 @@ static void x86_tlb_global_invalidate() {
   auto cr4 = arch::X86Cr4::Read();
   if (likely(cr4.pge())) {
     cr4.set_pge(false).Write();
+    cr4.set_pge(true).Write();
   } else {
     x86_tlb_nonglobal_invalidate();
   }
