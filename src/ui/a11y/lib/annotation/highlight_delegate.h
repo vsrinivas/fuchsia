@@ -26,7 +26,7 @@ class HighlightDelegate {
                              fit::function<void()> callback) = 0;
 
   inline void DrawHighlight(fuchsia::math::Point top_left, fuchsia::math::Point bottom_right) {
-    DrawHighlight(top_left, bottom_right, {});
+    DrawHighlight(top_left, bottom_right, [] {});
   }
 
   // Clears the current highlight (if any).
@@ -34,7 +34,9 @@ class HighlightDelegate {
   // The callback is for synchronization in tests.
   virtual void ClearHighlight(fit::function<void()> callback) = 0;
 
-  inline void ClearHighlight() { ClearHighlight({}); }
+  inline void ClearHighlight() {
+    ClearHighlight([] {});
+  }
 };
 
 }  // namespace a11y
