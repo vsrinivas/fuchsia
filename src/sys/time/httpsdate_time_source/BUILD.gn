@@ -28,7 +28,6 @@ rustc_binary("bin") {
     "//src/lib/network/fidl_fuchsia_net_interfaces_ext",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/time/lib/httpdate-hyper",
-    "//src/sys/time/lib/pull-source",
     "//src/sys/time/lib/push-source",
     "//src/sys/time/lib/time-util",
     "//src/sys/time/lib/time_metrics_registry",

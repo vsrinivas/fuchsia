@@ -17,14 +17,13 @@ use {
     crate::sampler::{HttpsSampler, HttpsSamplerImpl},
     anyhow::{Context, Error},
     fidl_fuchsia_net_interfaces::StateMarker,
-    fidl_fuchsia_time_external::{PullSourceRequestStream, PushSourceRequestStream, Status},
+    fidl_fuchsia_time_external::{PushSourceRequestStream, Status},
     fuchsia_component::server::{ServiceFs, ServiceObj},
     fuchsia_zircon as zx,
     futures::{
         future::{join, Future},
         FutureExt, StreamExt,
     },
-    pull_source::PullSource,
     push_source::PushSource,
     tracing::warn,
 };
@@ -112,88 +111,6 @@ async fn handle_push_source_request<T: push_source::UpdateAlgorithm>(
         .unwrap_or_else(|e| warn!("Error handling PushSource stream: {:?}", e));
 }
 
-/// Serves `PullSource` FIDL API.
-pub struct PullServer<
-    S: HttpsSampler + Send + Sync,
-    D: Diagnostics,
-    N: Future<Output = Result<(), Error>> + Send,
-> {
-    pull_source: PullSource<HttpsDateUpdateAlgorithm<S, D, N>>,
-}
-
-impl<S, D, N> PullServer<S, D, N>
-where
-    S: HttpsSampler + Send + Sync,
-    D: Diagnostics,
-    N: Future<Output = Result<(), Error>> + Send,
-{
-    fn new(diagnostics: D, sampler: S, internet_reachable: N) -> Result<Self, Error> {
-        let update_algorithm =
-            HttpsDateUpdateAlgorithm::new(RETRY_STRATEGY, diagnostics, sampler, internet_reachable);
-        let pull_source = PullSource::new(update_algorithm)?;
-
-        Ok(PullServer { pull_source })
-    }
-
-    /// Start serving `PullSource` FIDL API.
-    fn serve<'a>(
-        &'a self,
-        fs: &'a mut ServiceFs<ServiceObj<'static, PullSourceRequestStream>>,
-    ) -> Result<impl 'a + Future<Output = Result<(), anyhow::Error>>, Error> {
-        fs.dir("svc").add_fidl_service(|stream: PullSourceRequestStream| stream);
-        Ok(fs
-            .for_each_concurrent(None, |stream| {
-                handle_pull_source_request(stream, &self.pull_source)
-            })
-            .map(|_| Ok(())))
-    }
-}
-
-/// Handle next `PullSource` FIDL API request.
-async fn handle_pull_source_request<T: pull_source::UpdateAlgorithm>(
-    stream: PullSourceRequestStream,
-    pull_source: &PullSource<T>,
-) {
-    pull_source
-        .handle_requests_for_stream(stream)
-        .await
-        .unwrap_or_else(|e| warn!("Error handling PullSource stream: {:?}", e));
-}
-
-/// Serves FIDL interfaces provided by the component.
-async fn serve<S, D, N>(
-    _config: &Config,
-    sampler: S,
-    diagnostics: D,
-    internet_reachable: N,
-) -> Result<(), Error>
-where
-    S: HttpsSampler + Send + Sync,
-    D: Diagnostics,
-    N: Future<Output = Result<(), Error>> + Send,
-{
-    // TODO(fxb/113956): Change following line to `config.use_pull_api`.
-    if false {
-        let mut fs = ServiceFs::new();
-        inspect_runtime::serve(fuchsia_inspect::component::inspector(), &mut fs)?;
-
-        fs.take_and_serve_directory_handle()?;
-
-        let server = PushServer::new(diagnostics, sampler, internet_reachable)?;
-        let result = server.serve(&mut fs)?.await;
-        result
-    } else {
-        let mut fs = ServiceFs::new();
-        inspect_runtime::serve(fuchsia_inspect::component::inspector(), &mut fs)?;
-
-        fs.take_and_serve_directory_handle()?;
-
-        let server = PullServer::new(diagnostics, sampler, internet_reachable)?;
-        let result = server.serve(&mut fs)?.await;
-        result
-    }
-}
-
 #[fuchsia::main(logging_tags=["time"])]
 async fn main() -> Result<(), Error> {
     let config: Config = httpsdate_config::Config::take_from_startup_handle().into();
@@ -202,7 +119,12 @@ async fn main() -> Result<(), Error> {
     let (cobalt, cobalt_sender_fut) = CobaltDiagnostics::new();
     let diagnostics = CompositeDiagnostics::new(inspect, cobalt);
 
-    let sampler = HttpsSamplerImpl::new(REQUEST_URI.parse()?, &config);
+    let mut fs = ServiceFs::new();
+    inspect_runtime::serve(fuchsia_inspect::component::inspector(), &mut fs)?;
+
+    fs.take_and_serve_directory_handle()?;
+
+    let sampler = HttpsSamplerImpl::new(REQUEST_URI.parse()?, config);
 
     let interface_state_service = fuchsia_component::client::connect_to_protocol::<StateMarker>()
         .context("failed to connect to fuchsia.net.interfaces/State")?;
@@ -212,8 +134,9 @@ async fn main() -> Result<(), Error> {
     )
     .map(|r| r.context("reachability status stream error"));
 
-    let serve_fut = serve(&config, sampler, diagnostics, internet_reachable);
+    let server = PushServer::new(diagnostics, sampler, internet_reachable)?;
+    let update_fut = server.serve(&mut fs)?;
 
-    let (update_res, _) = join(serve_fut, cobalt_sender_fut).await;
+    let (update_res, _) = join(update_fut, cobalt_sender_fut).await;
     update_res
 }

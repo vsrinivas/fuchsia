@@ -2,24 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::constants::{
-        CONVERGE_SAMPLES, INITIAL_SAMPLE_POLLS, MAX_TIME_BETWEEN_SAMPLES_RANDOMIZATION,
-        SAMPLE_POLLS,
-    },
-    crate::datatypes::Phase,
-    crate::diagnostics::{Diagnostics, Event},
-    crate::sampler::HttpsSampler,
-    anyhow::Error,
-    async_trait::async_trait,
-    fidl_fuchsia_time_external::{Properties, Status, TimeSample, Urgency},
-    fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::{channel::mpsc::Sender, lock::Mutex, Future, SinkExt},
-    httpdate_hyper::HttpsDateErrorType,
-    push_source::Update,
-    rand::Rng,
-    tracing::{error, info, warn},
+use crate::constants::{
+    CONVERGE_SAMPLES, INITIAL_SAMPLE_POLLS, MAX_TIME_BETWEEN_SAMPLES_RANDOMIZATION, SAMPLE_POLLS,
 };
+use crate::datatypes::Phase;
+use crate::diagnostics::{Diagnostics, Event};
+use crate::sampler::HttpsSampler;
+use anyhow::Error;
+use async_trait::async_trait;
+use fidl_fuchsia_time_external::{Properties, Status};
+use fuchsia_async as fasync;
+use fuchsia_zircon as zx;
+use futures::{channel::mpsc::Sender, lock::Mutex, Future, SinkExt};
+use httpdate_hyper::HttpsDateErrorType;
+use push_source::{Update, UpdateAlgorithm};
+use rand::Rng;
+use tracing::{error, info, warn};
 
 /// A definition of how long an algorithm should wait between polls. Defines fixed wait durations
 /// following successful poll attempts, and a capped exponential backoff following failed poll
@@ -60,7 +58,7 @@ pub struct HttpsDateUpdateAlgorithm<
 }
 
 #[async_trait]
-impl<S, D, N> push_source::UpdateAlgorithm for HttpsDateUpdateAlgorithm<S, D, N>
+impl<S, D, N> UpdateAlgorithm for HttpsDateUpdateAlgorithm<S, D, N>
 where
     S: HttpsSampler + Send + Sync,
     D: Diagnostics,
@@ -113,29 +111,6 @@ where
             fasync::Timer::new(fasync::Time::after(maintain_time_between_samples)).await;
             self.try_generate_sample_until_successful(SAMPLE_POLLS, true, &mut sink).await?;
         }
-    }
-}
-
-#[async_trait]
-impl<S, D, N> pull_source::UpdateAlgorithm for HttpsDateUpdateAlgorithm<S, D, N>
-where
-    S: HttpsSampler + Send + Sync,
-    D: Diagnostics,
-    N: Future<Output = Result<(), Error>> + Send,
-{
-    async fn update_device_properties(&self, _properties: Properties) {
-        // since our samples are polled independently for now, we don't need to use
-        // device properties yet.
-    }
-
-    async fn sample(&self, _urgency: Urgency) -> Result<TimeSample, pull_source::SampleError> {
-        // TODO(fxb/105777): implement
-        todo!();
-    }
-
-    async fn next_possible_sample_time(&self) -> zx::Time {
-        // TODO(fxb/105777): implement
-        todo!();
     }
 }
 
@@ -236,7 +211,6 @@ mod test {
     use futures::{channel::mpsc::channel, future::ready, stream::StreamExt, task::Poll as FPoll};
     use httpdate_hyper::HttpsDateError;
     use lazy_static::lazy_static;
-    use push_source::UpdateAlgorithm;
     use std::sync::Arc;
 
     /// Test retry strategy with minimal wait periods.
