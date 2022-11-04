@@ -72,7 +72,7 @@ audio_core_api_test_component("audio-clock-pipeline-test") {
   executable_deps = [
     "//sdk/lib/media/audio/cpp",
     "//sdk/lib/stdcompat",
-    "//src/media/audio/audio_core/mixer",
+    "//src/media/audio/audio_core/v1/mixer",
   ]
 }
 
@@ -95,7 +95,7 @@ audio_core_api_test_component("audio_core_thermal_test") {
 
 audio_core_api_test_component("audio-device-enumerator-test") {
   source = "audio_device_enumerator_test.cc"
-  executable_deps = [ "//src/media/audio/audio_core/testing" ]
+  executable_deps = [ "//src/media/audio/audio_core/v1/testing" ]
 }
 
 audio_core_api_test_component("audio-policy-pipeline-test") {
@@ -115,7 +115,7 @@ audio_core_api_test_component("audio-renderer-test") {
 audio_core_api_test_component("audio-renderer-pipeline-test") {
   source = "audio_renderer_pipeline_test.cc"
   executable_deps = [
-    "//src/media/audio/audio_core/mixer",
+    "//src/media/audio/audio_core/v1/mixer",
     "//src/media/audio/lib/analysis",
   ]
 }

@@ -8,10 +8,10 @@
 #include <algorithm>
 #include <cmath>
 
-#include "src/media/audio/audio_core/driver_output.h"
 #include "src/media/audio/audio_core/test/api/fidelity_results.h"
 #include "src/media/audio/audio_core/testing/integration/hermetic_fidelity_test.h"
-#include "src/media/audio/audio_core/threading_model.h"
+#include "src/media/audio/audio_core/v1/driver_output.h"
+#include "src/media/audio/audio_core/v1/threading_model.h"
 #include "src/media/audio/lib/analysis/generators.h"
 #include "src/media/audio/lib/processing/coefficient_table.h"
 

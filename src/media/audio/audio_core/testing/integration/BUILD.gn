@@ -32,7 +32,7 @@ source_set("hermetic_audio_test") {
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp",
-    "//src/media/audio/audio_core:audio_core_lib",
+    "//src/media/audio/audio_core/v1:audio_core_lib",
     "//src/media/audio/effects/test_effects:test_effects_v2",
     "//src/media/audio/lib/analysis",
     "//src/media/audio/lib/clock",

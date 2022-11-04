@@ -1,0 +1,54 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+source_set("testing") {
+  testonly = true
+
+  sources = [
+    "fake_audio_core_clock_factory.cc",
+    "fake_audio_core_clock_factory.h",
+    "fake_audio_device.h",
+    "fake_audio_driver.cc",
+    "fake_audio_driver.h",
+    "fake_audio_renderer.cc",
+    "fake_audio_renderer.h",
+    "fake_packet_queue.cc",
+    "fake_packet_queue.h",
+    "fake_plug_detector.h",
+    "fake_profile_provider.h",
+    "fake_stream.cc",
+    "fake_stream.h",
+    "matchers.h",
+    "null_audio_capturer.h",
+    "null_audio_renderer.h",
+    "packet_factory.cc",
+    "packet_factory.h",
+    "sine_wave_stream.h",
+    "threading_model_fixture.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/fit-promise",
+    "//zircon/system/ulib/fzl",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_hlcpp",
+    "//sdk/lib/fit",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/testing/loop_fixture",
+    "//src/media/audio/audio_core/v1:audio_core_lib",
+    "//src/media/audio/audio_core/v1/metrics",
+    "//src/media/audio/audio_core/v1/mixer",
+    "//src/media/audio/drivers/lib/audio-proto-utils",
+    "//src/media/audio/lib/analysis",
+    "//src/media/audio/lib/clock",
+    "//src/media/audio/lib/clock/testing",
+    "//src/media/audio/lib/format",
+    "//src/media/audio/lib/processing",
+    "//zircon/system/ulib/async-testing",
+  ]
+}

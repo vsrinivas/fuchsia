@@ -1,0 +1,27 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/cobalt/metrics_registry.gni")
+
+visibility = [ "//src/media/audio/audio_core/v1/*" ]
+
+source_set("metrics") {
+  sources = [
+    "metrics.h",
+    "metrics_impl.cc",
+    "metrics_impl.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_cpp",
+    "//sdk/lib/sys/component/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fidl/cpp/contrib/connection:service_hub_connector",
+  ]
+
+  deps = [
+    "//sdk/lib/fdio",
+    "//src/lib/callback",
+  ]
+}

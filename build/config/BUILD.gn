@@ -783,7 +783,7 @@ config("Wno-conversion") {
     "//src/lib/usb_bulk/cpp:*",
     "//src/lib/vmo_store:*",
     "//src/lib/vulkan/tests:*",
-    "//src/media/audio/audio_core:*",
+    "//src/media/audio/audio_core/v1:*",
     "//src/media/audio/drivers/aml-g12-tdm/test:*",
     "//src/media/audio/drivers/codecs/tas27xx:*",
     "//src/media/audio/drivers/codecs/tas5720:*",

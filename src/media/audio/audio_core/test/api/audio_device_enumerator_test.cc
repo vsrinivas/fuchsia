@@ -6,8 +6,8 @@
 
 #include <gmock/gmock.h>
 
-#include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/integration/hermetic_audio_test.h"
+#include "src/media/audio/audio_core/v1/testing/fake_audio_driver.h"
 
 using ASF = fuchsia::media::AudioSampleFormat;
 using AudioDeviceInfo = fuchsia::media::AudioDeviceInfo;

@@ -20,8 +20,8 @@
 
 #include <gmock/gmock.h>
 
-#include "src/media/audio/audio_core/mixer/sinc_sampler.h"
 #include "src/media/audio/audio_core/testing/integration/hermetic_audio_test.h"
+#include "src/media/audio/audio_core/v1/mixer/sinc_sampler.h"
 #include "src/media/audio/lib/analysis/analysis.h"
 #include "src/media/audio/lib/analysis/generators.h"
 #include "src/media/audio/lib/clock/clone_mono.h"

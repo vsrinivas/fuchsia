@@ -11,10 +11,10 @@
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/split_string.h"
-#include "src/media/audio/audio_core/mix_profile_config.h"
-#include "src/media/audio/audio_core/pin_executable_memory.h"
-#include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/audio_core/tools/output_pipeline_benchmark/output_pipeline_benchmark.h"
+#include "src/media/audio/audio_core/v1/mix_profile_config.h"
+#include "src/media/audio/audio_core/v1/pin_executable_memory.h"
+#include "src/media/audio/audio_core/v1/stream_usage.h"
 
 using media::audio::MixProfileConfig;
 using media::audio::OutputPipelineBenchmark;

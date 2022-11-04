@@ -3,36 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/fuzzing/fuzzer.gni")
 import("//src/media/audio/audio_core_package_v2.gni")
 import("//src/sys/core/build/core_shard.gni")
-import("//third_party/cobalt/metrics_registry.gni")
-
-action_foreach("json_schema_headers") {
-  visibility = [ ":*" ]
-
-  script = "//src/media/audio/audio_core/schema/make_schema_header.py"
-
-  outputs = [ "$target_gen_dir/schema/{{source_name_part}}.inl" ]
-
-  args = [
-    "{{source}}",
-    rebase_path("$target_gen_dir", root_build_dir) +
-        "/schema/{{source_name_part}}.inl",
-  ]
-
-  sources = [
-    "schema/audio_core_config_schema.jsx",
-    "schema/audio_policy_schema.jsx",
-  ]
-}
-
-metrics_registry("media_metrics_registry") {
-  # This must match the ID of our Cobalt project as specified in:
-  # third_party/cobalt_config/projects.yaml
-  project_id = 3142410971
-  generate_cc = true
-}
 
 audio_core_package("audio_core") {
   package_deps = [ "//src/media/audio/effects/passthrough:audio_effects" ]
@@ -42,213 +14,10 @@ core_shard("core_shard") {
   shard_file = "meta/audio_core.core_shard.cml"
 }
 
-source_set("audio_core_lib") {
-  sources = [
-    "active_stream_count_reporter.h",
-    "activity_dispatcher.cc",
-    "activity_dispatcher.h",
-    "audio_admin.cc",
-    "audio_admin.h",
-    "audio_capturer.cc",
-    "audio_capturer.h",
-    "audio_core_impl.cc",
-    "audio_core_impl.h",
-    "audio_device.cc",
-    "audio_device.h",
-    "audio_device_manager.cc",
-    "audio_device_manager.h",
-    "audio_device_settings.cc",
-    "audio_device_settings.h",
-    "audio_driver.cc",
-    "audio_driver.h",
-    "audio_impl.h",
-    "audio_input.cc",
-    "audio_input.h",
-    "audio_object.h",
-    "audio_output.cc",
-    "audio_output.h",
-    "audio_policy.h",
-    "audio_renderer.cc",
-    "audio_renderer.h",
-    "audio_tuner_impl.cc",
-    "audio_tuner_impl.h",
-    "base_capturer.cc",
-    "base_capturer.h",
-    "base_renderer.cc",
-    "base_renderer.h",
-    "capture_packet_queue.cc",
-    "capture_packet_queue.h",
-    "channel_attributes.h",
-    "clock.h",
-    "context.cc",
-    "context.h",
-    "device_config.cc",
-    "device_config.h",
-    "device_registry.h",
-    "driver_output.cc",
-    "driver_output.h",
-    "effects_controller_impl.cc",
-    "effects_controller_impl.h",
-    "effects_stage_v1.cc",
-    "effects_stage_v1.h",
-    "effects_stage_v2.cc",
-    "effects_stage_v2.h",
-    "idle_policy.cc",
-    "idle_policy.h",
-    "link_matrix.cc",
-    "link_matrix.h",
-    "logging_flags.h",
-    "loudness_transform.cc",
-    "loudness_transform.h",
-    "mix_profile_config.h",
-    "mix_stage.cc",
-    "mix_stage.h",
-    "output_pipeline.cc",
-    "output_pipeline.h",
-    "packet.cc",
-    "packet.h",
-    "packet_queue.cc",
-    "packet_queue.h",
-    "pending_flush_token.cc",
-    "pending_flush_token.h",
-    "pin_executable_memory.cc",
-    "pin_executable_memory.h",
-    "pipeline_config.cc",
-    "pipeline_config.h",
-    "plug_detector.cc",
-    "plug_detector.h",
-    "policy_loader.cc",
-    "policy_loader.h",
-    "process_config.cc",
-    "process_config.h",
-    "process_config_loader.cc",
-    "process_config_loader.h",
-    "profile_provider.cc",
-    "profile_provider.h",
-    "reporter.cc",
-    "reporter.h",
-    "reusable_buffer.cc",
-    "reusable_buffer.h",
-    "ring_buffer.cc",
-    "ring_buffer.h",
-    "route_graph.cc",
-    "route_graph.h",
-    "silence_padding_stream.cc",
-    "silence_padding_stream.h",
-    "stage_metrics.h",
-    "stream.cc",
-    "stream.h",
-    "stream_usage.cc",
-    "stream_usage.h",
-    "stream_volume_manager.cc",
-    "stream_volume_manager.h",
-    "tap_stage.cc",
-    "tap_stage.h",
-    "thermal_config.h",
-    "thermal_watcher.cc",
-    "thermal_watcher.h",
-    "threading_model.cc",
-    "threading_model.h",
-    "throttle_output.h",
-    "ultrasound_capturer.cc",
-    "ultrasound_capturer.h",
-    "ultrasound_factory.cc",
-    "ultrasound_factory.h",
-    "ultrasound_renderer.cc",
-    "ultrasound_renderer.h",
-    "usage_gain_reporter_impl.cc",
-    "usage_gain_reporter_impl.h",
-    "usage_reporter_impl.cc",
-    "usage_reporter_impl.h",
-    "usage_settings.cc",
-    "usage_settings.h",
-    "utils.cc",
-    "utils.h",
-    "verbose_log.cc",
-    "verbose_log.h",
-    "versioned_timeline_function.h",
-    "volume_control.cc",
-    "volume_control.h",
-    "volume_curve.cc",
-    "volume_curve.h",
-    "wakeup_event.cc",
-    "wakeup_event.h",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.audio.effects:fuchsia.audio.effects_cpp_wire",
-    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_hlcpp",
-    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
-    "//sdk/fidl/fuchsia.media.tuning:fuchsia.media.tuning_hlcpp",
-    "//sdk/fidl/fuchsia.mediastreams:fuchsia.mediastreams_hlcpp",
-    "//sdk/fidl/fuchsia.thermal:fuchsia.thermal_hlcpp",
-    "//sdk/fidl/fuchsia.ultrasound:fuchsia.ultrasound_hlcpp",
-    "//sdk/lib/fit-promise",
-    "//sdk/lib/sys/component/cpp",
-    "//sdk/lib/sys/inspect/cpp",
-    "//sdk/lib/syslog/cpp",
-    "//src/lib/fxl",
-    "//src/media/audio/audio_core/metrics",
-    "//src/media/audio/audio_core/mixer",
-    "//src/media/audio/lib/analysis",
-    "//src/media/audio/lib/clock",
-    "//src/media/audio/lib/effects_loader",
-    "//src/media/audio/lib/format",
-    "//src/media/audio/lib/processing",
-    "//src/media/audio/lib/timeline",
-    "//src/media/audio/lib/wav",
-    "//third_party/googletest:gtest_prod",
-    "//third_party/rapidjson",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/ffl",
-    "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/trace",
-  ]
-
-  deps = [
-    ":json_schema_headers",
-    ":media_metrics_registry",
-    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
-    "//sdk/lib/fdio",
-    "//sdk/lib/fit",
-    "//sdk/lib/media/audio/cpp",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/fidl/cpp",
-    "//src/lib/fsl",
-    "//src/media/audio/drivers/lib/audio-proto-utils",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/zx",
-  ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
-
-  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
-  # rather than builders.
-  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
-}
-
-source_set("audio_core_main") {
-  sources = [ "main.cc" ]
-
-  deps = [
-    ":audio_core_lib",
-    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
-    "//sdk/lib/syslog/cpp",
-    "//src/lib/fidl/cpp",
-    "//src/lib/fsl",
-    "//zircon/system/ulib/trace-provider",
-  ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
-}
-
 executable("audio_core_bin") {
   output_name = "audio_core"
   deps = [
-    ":audio_core_main",
+    "v1:audio_core_main",
     "//src/media/audio/lib/processing:empty_coefficient_tables",
   ]
 }
@@ -256,124 +25,7 @@ executable("audio_core_bin") {
 executable("audio_core_bin_with_prebuilt_coefficient_tables") {
   output_name = "audio_core_with_prebuilt_coefficient_tables"
   deps = [
-    ":audio_core_main",
-    "//src/media/audio/lib/processing:prebuilt_coefficient_tables",
-  ]
-}
-
-executable("unittest_bin") {
-  visibility = [ ":*" ]
-  testonly = true
-  output_name = "audio_core_unittests"
-
-  sources = [
-    "activity_dispatcher_unittest.cc",
-    "audio_admin_unittest.cc",
-    "audio_capturer_unittest.cc",
-    "audio_device_settings_unittest.cc",
-    "audio_device_unittest.cc",
-    "audio_driver_clock_unittest.cc",
-    "audio_driver_unittest.cc",
-    "audio_input_unittest.cc",
-    "audio_output_unittest.cc",
-    "audio_renderer_unittest.cc",
-    "audio_tuner_impl_unittest.cc",
-    "capture_packet_queue_unittest.cc",
-    "channel_attributes_unittest.cc",
-    "device_config_unittest.cc",
-    "driver_output_unittest.cc",
-    "effects_stage_v1_unittest.cc",
-    "effects_stage_v2_unittest.cc",
-    "link_matrix_unittest.cc",
-    "loudness_transform_unittest.cc",
-    "mix_stage_clock_unittest.cc",
-    "mix_stage_unittest.cc",
-    "output_pipeline_unittest.cc",
-    "packet_queue_unittest.cc",
-    "packet_unittest.cc",
-    "pin_executable_memory_unittest.cc",
-    "pipeline_config_unittest.cc",
-    "plug_detector_unittest.cc",
-    "policy_loader_unittest.cc",
-    "policy_loader_unittest_data.h",
-    "process_config_loader_unittest.cc",
-    "process_config_unittest.cc",
-    "profile_provider_unittest.cc",
-    "reporter_unittest.cc",
-    "reusable_buffer_unittest.cc",
-    "ring_buffer_unittest.cc",
-    "route_graph_unittest.cc",
-    "silence_padding_stream_unittest.cc",
-    "stream_unittest.cc",
-    "stream_usage_unittest.cc",
-    "stream_volume_manager_unittest.cc",
-    "tap_stage_unittest.cc",
-    "thermal_watcher_unittest.cc",
-    "threading_model_unittest.cc",
-    "throttle_output_unittest.cc",
-    "usage_gain_reporter_impl_unittest.cc",
-    "usage_reporter_impl_unittest.cc",
-    "usage_settings_unittest.cc",
-    "utils_unittest.cc",
-    "versioned_timeline_function_unittest.cc",
-    "volume_control_unittest.cc",
-    "volume_curve_unittest.cc",
-    "wakeup_event_unittest.cc",
-  ]
-
-  deps = [
-    ":audio_core_lib",
-    "testing",
-    "//sdk/fidl/fuchsia.audio.effects:fuchsia.audio.effects_hlcpp",
-    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_hlcpp",
-    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
-    "//sdk/lib/fit-promise",
-    "//sdk/lib/inspect/testing/cpp",
-    "//sdk/lib/sys/cpp/testing:unit",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/storage/vfs/cpp",
-    "//src/lib/testing/loop_fixture",
-    "//src/media/audio/audio_core/mixer",
-    "//src/media/audio/effects/test_effects:test_effects_v2",
-    "//src/media/audio/lib/clock/testing",
-    "//src/media/audio/lib/effects_loader",
-    "//src/media/audio/lib/effects_loader/testing",
-    "//src/media/audio/lib/format",
-    "//src/media/audio/lib/processing",
-    "//src/media/audio/lib/processing:prebuilt_coefficient_tables",
-    "//third_party/googletest:gmock",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fzl",
-  ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
-
-  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
-  # rather than builders.
-  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
-}
-
-fuchsia_unittest_package("audio_core_unittests") {
-  manifest = "meta/audio_core_unittests.cml"
-  deps = [
-    ":unittest_bin",
-    "//src/media/audio/effects/test_effects:test_effects_v1",
-  ]
-
-  test_specs = {
-    environments = basic_envs
-    log_settings = {
-      max_severity = "FATAL"
-    }
-  }
-}
-
-fuzzer("audio_core_fuzzer") {
-  sources = [ "policy_loader_fuzzer.cc" ]
-  deps = [
-    ":audio_core_lib",
+    "v1:audio_core_main",
     "//src/media/audio/lib/processing:prebuilt_coefficient_tables",
   ]
 }
@@ -382,13 +34,12 @@ group("tests") {
   testonly = true
 
   deps = [
-    ":audio_core_unittests",
-    "mixer:tests",
     "test",
+    "v1:tests",
   ]
 }
 
 group("tools") {
   testonly = true
-  deps = [ "mixer:tools" ]
+  deps = [ "v1/mixer:tools" ]
 }

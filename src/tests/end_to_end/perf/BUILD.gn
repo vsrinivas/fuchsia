@@ -248,7 +248,7 @@ group("package_deps") {
   public_deps = [
     "//src/diagnostics:benchmarks",
     "//src/lib/diagnostics:benchmarks",
-    "//src/media/audio/audio_core/mixer/tools:audio_mixer_profiler",
+    "//src/media/audio/audio_core/v1/mixer/tools:audio_mixer_profiler",
     "//src/tests/benchmarks:kernel-boot-benchmarks",
     "//src/tests/benchmarks/fidl:benchmarks",
     "//src/tests/microbenchmarks:fuchsia_microbenchmarks_perftestmode",

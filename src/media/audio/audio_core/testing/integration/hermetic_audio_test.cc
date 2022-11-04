@@ -14,11 +14,11 @@
 
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/testing/integration/capturer_shim.h"
 #include "src/media/audio/audio_core/testing/integration/inspect.h"
 #include "src/media/audio/audio_core/testing/integration/renderer_shim.h"
 #include "src/media/audio/audio_core/testing/integration/virtual_device.h"
+#include "src/media/audio/audio_core/v1/audio_device.h"
 #include "src/media/audio/lib/format/format.h"
 #include "src/media/audio/lib/test/test_fixture.h"
 

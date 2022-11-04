@@ -12,9 +12,9 @@
 #include <set>
 #include <vector>
 
-#include "src/media/audio/audio_core/audio_device.h"
-#include "src/media/audio/audio_core/audio_tuner_impl.h"
 #include "src/media/audio/audio_core/testing/integration/hermetic_audio_test.h"
+#include "src/media/audio/audio_core/v1/audio_device.h"
+#include "src/media/audio/audio_core/v1/audio_tuner_impl.h"
 #include "src/media/audio/lib/analysis/analysis.h"
 #include "src/media/audio/lib/analysis/generators.h"
 #include "src/media/audio/lib/processing/gain.h"
