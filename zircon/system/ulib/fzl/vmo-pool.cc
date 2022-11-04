@@ -10,12 +10,11 @@
 
 namespace fzl {
 
-VmoPool::Buffer::Buffer(VmoPool::Buffer&& other) noexcept
-    : VmoPool::Buffer(other.pool_, other.index_) {
+VmoPool::Buffer::Buffer(VmoPool::Buffer&& other) : VmoPool::Buffer(other.pool_, other.index_) {
   other.pool_ = nullptr;
 }
 
-VmoPool::Buffer& VmoPool::Buffer::operator=(VmoPool::Buffer&& other) noexcept {
+VmoPool::Buffer& VmoPool::Buffer::operator=(VmoPool::Buffer&& other) {
   if (valid()) {
     Release();
   }
@@ -115,32 +114,28 @@ zx_status_t VmoPool::ListableBuffer::MapVmo() {
   return status;
 }
 
-zx_status_t VmoPool::Init(cpp20::span<zx::unowned_vmo> vmos) {
+zx_status_t VmoPool::Init(const zx::vmo* vmos, size_t num_vmos) {
   fbl::AllocChecker ac;
-  fbl::Array<ListableBuffer> buffers(new (&ac) ListableBuffer[vmos.size()], vmos.size());
+  fbl::Array<ListableBuffer> buffers(new (&ac) ListableBuffer[num_vmos], num_vmos);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
   buffers_ = std::move(buffers);
   free_buffers_.clear_unsafe();
 
-  zx_status_t status = [&]() {
-    for (size_t i = 0; i < vmos.size(); ++i) {
-      free_buffers_.push_front(&buffers_[i]);
-      if (zx_status_t status = vmos[i]->get_size(&buffers_[i].buffer_size); status != ZX_OK) {
-        return status;
-      }
-      if (status = vmos[i]->duplicate(ZX_RIGHT_SAME_RIGHTS, &buffers_[i].vmo); status != ZX_OK) {
-        return status;
-      }
+  for (size_t i = 0; i < num_vmos; ++i) {
+    free_buffers_.push_front(&buffers_[i]);
+    zx_status_t status = vmos[i].get_size(&buffers_[i].buffer_size);
+    if (status == ZX_OK) {
+      status = vmos[i].duplicate(ZX_RIGHT_SAME_RIGHTS, &buffers_[i].vmo);
     }
-    return ZX_OK;
-  }();
-  if (status != ZX_OK) {
-    free_buffers_.clear_unsafe();
-    buffers_.reset();
+    if (status != ZX_OK) {
+      free_buffers_.clear_unsafe();
+      buffers_.reset();
+      return status;
+    }
   }
-  return status;
+  return ZX_OK;
 }
 
 zx_status_t VmoPool::PinVmos(const zx::bti& bti, VmoPool::RequireContig req_contiguous,

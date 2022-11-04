@@ -15,18 +15,21 @@ namespace {
 constexpr size_t kVmoTestSize = 512 << 10;  // 512KB
 constexpr uint32_t kNumVmos = 20;
 
+// Create vmos for each handle in an array of vmo handles:
+void AssignVmos(size_t num_vmos, size_t vmo_size, zx::vmo* vmos) {
+  zx_status_t status = ZX_OK;
+  for (size_t i = 0; i < num_vmos; ++i) {
+    status = zx::vmo::create(vmo_size, 0, &vmos[i]);
+    EXPECT_EQ(ZX_OK, status);
+  }
+}
+
 class VmoPoolWrapperTest : public testing::Test {
  public:
   void SetUp() override {
     ASSERT_EQ(ZX_OK, fake_bti_create(bti_.reset_and_get_address()));
-    for (zx::vmo& vmo : vmo_handles_) {
-      ASSERT_EQ(ZX_OK, zx::vmo::create(kVmoTestSize, 0, &vmo));
-    }
-    zx::unowned_vmo vmos[kNumVmos];
-    for (size_t i = 0; i < kNumVmos; ++i) {
-      vmos[i] = vmo_handles_[i].borrow();
-    }
-    ASSERT_EQ(ZX_OK, wrapper_.Init(cpp20::span(vmos, kNumVmos)));
+    AssignVmos(kNumVmos, kVmoTestSize, vmo_handles_);
+    ASSERT_EQ(ZX_OK, wrapper_.Init(vmo_handles_, kNumVmos));
     ASSERT_EQ(kNumVmos, wrapper_.total_buffers());
     ASSERT_EQ(kVmoTestSize, wrapper_.buffer_size());
   }

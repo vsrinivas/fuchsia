@@ -120,7 +120,7 @@ class UsbVideoStream : public UsbVideoStreamBase,
   // to DdkUnbind.
   // This method will not be called on the fidl_dispatch_loop_.
   void DdkRelease() { delete this; }
-  ~UsbVideoStream() override = default;
+  ~UsbVideoStream() = default;
 
   // This method will not be called on the fidl_dispatch_loop_.
   static zx_status_t Bind(void* ctx, zx_device_t* device);
@@ -199,14 +199,14 @@ class UsbVideoStream : public UsbVideoStreamBase,
     current_frame_ = nullptr;
     frame_number_ = 0;
     is_streaming_ = false;
-    buffers_.Init({});
+    buffers_.Init(nullptr, 0);
     stream_token_.reset();
   }
 
-  zx_status_t FrameRelease(uint32_t buffer_id);
+  zx_status_t FrameRelease(uint32_t frame_offset);
 
   // Shuts down the stream and unbinds the stream interface
-  void CloseStreamOnError(zx_status_t status, const char* call);
+  void CloseStreamOnError(zx_status_t status, std::string call);
 
   // How the driver gets image data from the usb stack.
   // Multiple requests will complete per frame.
