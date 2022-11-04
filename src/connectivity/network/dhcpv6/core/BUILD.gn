@@ -14,6 +14,7 @@ rustc_library("core") {
     "//src/connectivity/lib/packet-formats-dhcp",
     "//src/lib/network/packet",
     "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:either",
     "//third_party/rust_crates:num",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:thiserror",

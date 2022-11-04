@@ -5,7 +5,6 @@
 //! Implements a DHCPv6 client.
 use {
     anyhow::{Context as _, Result},
-    assert_matches::assert_matches,
     async_utils::futures::{FutureExt as _, ReplaceValue},
     dhcpv6_core,
     dns_server_watcher::DEFAULT_DNS_PORT,
@@ -134,7 +133,7 @@ fn to_dhcpv6_option_codes(information_config: InformationConfig) -> Vec<v6::Opti
 /// `address_config.address_count`.
 fn to_configured_addresses(
     address_config: AddressConfig,
-) -> Result<HashMap<v6::IAID, Option<Ipv6Addr>>, ClientError> {
+) -> Result<HashMap<v6::IAID, Vec<Ipv6Addr>>, ClientError> {
     let AddressConfig { address_count, preferred_addresses, .. } = address_config;
     let address_count =
         address_count.and_then(NonZeroU8::new).ok_or(ClientError::UnsupportedConfigs)?;
@@ -142,22 +141,19 @@ fn to_configured_addresses(
     if preferred_addresses.len() > address_count.get().into() {
         return Err(ClientError::UnsupportedConfigs);
     }
-    let mut configured_addresses = HashMap::new();
-    let preferred_addresses: Vec<Option<Ipv6Addr>> = preferred_addresses
-        .iter()
-        .map(|&fnet::Ipv6Address { addr, .. }| Some(Ipv6Addr::from(addr)))
-        .collect();
-    let addresses = preferred_addresses
-        .into_iter()
-        .chain(std::iter::repeat(None))
-        .take(address_count.get().into());
+
     // TODO(https://fxbug.dev/77790): make IAID consistent across
     // configurations.
-    for (iaid, addr) in (0..).zip(addresses) {
-        assert_matches!(configured_addresses.insert(v6::IAID::new(iaid), addr), None);
-    }
-
-    Ok(configured_addresses)
+    Ok((0..)
+        .map(v6::IAID::new)
+        .zip(
+            preferred_addresses
+                .into_iter()
+                .map(|fnet::Ipv6Address { addr, .. }| vec![Ipv6Addr::from(addr)])
+                .chain(std::iter::repeat_with(Vec::new)),
+        )
+        .take(address_count.get().into())
+        .collect())
 }
 
 /// Creates a state machine for the input client config.
@@ -547,6 +543,7 @@ pub(crate) async fn serve_client(
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fidl::endpoints::{
             create_proxy, create_proxy_and_stream, create_request_stream, ClientEnd,
         },
