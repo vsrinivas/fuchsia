@@ -72,9 +72,6 @@ declare_args() {
 #   test (optional, default: false)
 #     Whether this target defines a test.
 #
-#   carchive (optional, default: false)
-#     Whether to build this target as a C archive.
-#
 #   gcflags (optional)
 #     List of go compiler flags to pass.
 #
@@ -99,17 +96,12 @@ declare_args() {
 template("go_build") {
   main_target_name = target_name
   is_test = defined(invoker.test) && invoker.test
-  carchive = defined(invoker.carchive) && invoker.carchive
-  assert(!(is_test && carchive),
-         "cannot specify both test=true and carchive=true")
 
   output_name = target_name
   if (defined(invoker.output_name)) {
     output_name = invoker.output_name
   }
-  if (carchive) {
-    output_name = "${output_name}.a"
-  } else if (is_win) {
+  if (is_win) {
     output_name = "${output_name}.exe"
   }
 
@@ -123,7 +115,7 @@ template("go_build") {
                       invoker.sdk_category != "excluded" && !is_test
 
   # Strip target binaries and binaries that are included in the SDK.
-  use_strip = (is_fuchsia || define_sdk_target) && !carchive
+  use_strip = is_fuchsia || define_sdk_target
 
   output_path = "${output_dir}/${output_name}"
   if (use_strip) {
@@ -393,19 +385,9 @@ template("go_build") {
       }
     }
 
-    if (carchive) {
-      args += [ "--buildmode=c-archive" ]
-
-      # carchive is only set when building go fuzzers as static libraries,
-      # that is then linked into a fuzzer executables. Make sure that it
-      # is built in the same build variant as the one used for these, to
-      # ensure they grab the right dependencies.
-      variant_selector_target_type = "fuzzed_executable"
-    }
-
     inputs = []
     if (is_fuchsia) {
-      if (!carchive && output_breakpad_syms && host_os != "mac") {
+      if (output_breakpad_syms && host_os != "mac") {
         args += [
           "--dump-syms",
           breakpad_dump_syms,
@@ -414,20 +396,18 @@ template("go_build") {
       }
     }
 
-    if (!carchive) {
-      # Add needed arguments for the buildidtool. We should add the stamp file
-      # output by buildidtool to the list of outputs for this action but because
-      # Ninja (and by consequence GN) limits us to one depfile where that depfile
-      # has only one output and we need the depfile for other things we don't
-      # list it as an output.
-      args += [
-        "--buildidtool",
-        rebase_path("//prebuilt/tools/buildidtool/${host_platform}/buildidtool",
-                    root_build_dir),
-        "--build-id-dir",
-        ".build-id",
-      ]
-    }
+    # Add needed arguments for the buildidtool. We should add the stamp file
+    # output by buildidtool to the list of outputs for this action but because
+    # Ninja (and by consequence GN) limits us to one depfile where that depfile
+    # has only one output and we need the depfile for other things we don't
+    # list it as an output.
+    args += [
+      "--buildidtool",
+      rebase_path("//prebuilt/tools/buildidtool/${host_platform}/buildidtool",
+                  root_build_dir),
+      "--build-id-dir",
+      ".build-id",
+    ]
 
     if (is_test) {
       testonly = true

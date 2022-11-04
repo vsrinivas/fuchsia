@@ -29,7 +29,6 @@ _rust_sanitizers = [ "asan" ]
 #     [string] The name of the package. Defaults to the target name.
 #
 #   cpp_fuzzers (optional)
-#   go_fuzzers (optional)
 #   rust_fuzzers (optional)
 #     [list] A list of fuzzers for targets in the indicated language. Each list is asscoiated with
 #       the corresponding list of sanitizers, e.g. each label in `cpp_fuzzers` is built as a fuzzer
@@ -103,22 +102,6 @@ template("fuzzer_package") {
         fuzz_host = invoker_fuzz_host
         host_only = invoker_host_only
         sanitizers = _cpp_sanitizers
-      },
-    ]
-  }
-  if (defined(invoker.go_fuzzers)) {
-    not_needed([
-                 "invoker_fuzz_host",
-                 "invoker_host_only",
-               ])
-    by_language += [
-      {
-        fuzzers = invoker.go_fuzzers
-
-        # TODO(fxbug.dev/44551): go host fuzzers fail to link on mac-x64
-        fuzz_host = false
-        host_only = false
-        sanitizers = _go_sanitizers
       },
     ]
   }

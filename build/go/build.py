@@ -76,7 +76,6 @@ def main():
         required=True)
     parser.add_argument(
         '--is-test', help='True if the target is a go test', default=False)
-    parser.add_argument('--buildmode', help='Build mode to use')
     parser.add_argument(
         '--gcflag',
         help='Arguments to pass to Go compiler',
@@ -318,12 +317,6 @@ def main():
         # go command line, but Fuchsia currently has an older version of go
         # that hasn't switched to commas.
         cmd += ['-tags', ' '.join(args.tag)]
-    if args.buildmode:
-        cmd += ['-buildmode', args.buildmode]
-        if args.buildmode == 'c-archive':
-            if not args.ar:
-                parser.error('--ar=AR is required with --buildmode=c-archive')
-            args.ldflag.extend(['-extar', os.path.relpath(args.ar, gopath_src)])
     if args.gcflag:
         cmd += ['-gcflags', ' '.join(args.gcflag)]
     # Clear the buildid to make the build reproducible
