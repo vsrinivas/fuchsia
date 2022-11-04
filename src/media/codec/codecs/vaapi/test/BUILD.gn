@@ -3,10 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components/fuchsia_unittest_package.gni")
-import("//build/cpp/cpp_fuzzer.gni")
-import("//build/fuzzing/fuzzer.gni")
-import("//build/fuzzing/fuzzer_package.gni")
-import("//build/fuzzing/fuzzer_package.gni")
+import("//build/fuzz.gni")
 
 group("test") {
   testonly = true
@@ -86,20 +83,29 @@ source_set("decoder_fuzzer") {
   deps = [ "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp" ]
 }
 
-cpp_fuzzer("vaapi_h264_decode_fuzzer") {
+fuchsia_library_fuzzer("vaapi_h264_decode_fuzzer") {
   sources = [ "h264_decode_fuzzer.cc" ]
   deps = [ ":decoder_fuzzer" ]
 }
 
-cpp_fuzzer("vaapi_vp9_decode_fuzzer") {
+fuchsia_library_fuzzer("vaapi_vp9_decode_fuzzer") {
   sources = [ "vp9_decode_fuzzer.cc" ]
   deps = [ ":decoder_fuzzer" ]
 }
 
-fuzzer_package("vaapi_fuzzers") {
-  cpp_fuzzers = [
-    ":vaapi_h264_decode_fuzzer",
-    ":vaapi_vp9_decode_fuzzer",
+fuchsia_fuzzer_component("vaapi_h264_decode_fuzzer_component") {
+  component_name = "vaapi_h264_decode_fuzzer"
+  deps = [ ":vaapi_h264_decode_fuzzer" ]
+}
+
+fuchsia_fuzzer_component("vaapi_vp9_decode_fuzzer_component") {
+  component_name = "vaapi_vp9_decode_fuzzer"
+  deps = [ ":vaapi_vp9_decode_fuzzer" ]
+}
+
+fuchsia_fuzzer_package("vaapi_fuzzers") {
+  cpp_fuzzer_components = [
+    ":vaapi_h264_decode_fuzzer_component",
+    ":vaapi_vp9_decode_fuzzer_component",
   ]
-  fuzz_host = false
 }
