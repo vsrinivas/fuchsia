@@ -169,9 +169,6 @@ std::vector<debug_ipc::Module> ZirconProcessHandle::GetModules() const {
   uintptr_t dl_debug_addr;
   FX_CHECK(process_.get_property(ZX_PROP_PROCESS_DEBUG_ADDR, &dl_debug_addr,
                                  sizeof(dl_debug_addr)) == ZX_OK);
-  if (!dl_debug_addr) {
-    return {};
-  }
   return GetElfModulesForProcess(*this, dl_debug_addr);
 }
 

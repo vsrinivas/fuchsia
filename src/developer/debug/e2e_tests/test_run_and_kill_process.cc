@@ -72,11 +72,6 @@ class RunAndKillProcess : public E2eTest {
     auto threads = console().context().GetActiveTarget()->GetProcess()->GetThreads();
     ASSERT_GT(threads.size(), 0u);
 
-    // All threads should be blocked when we hit the breakpoint.
-    for (auto& thread : threads) {
-      EXPECT_EQ(thread->GetState(), debug_ipc::ThreadRecord::State::kBlocked);
-    }
-
     auto current_bp = console().context().GetActiveBreakpoint();
 
     // Should be the same breakpoint that we just installed.
@@ -118,7 +113,7 @@ class RunAndKillProcess : public E2eTest {
   // ProcessObserver implementation.
   void WillDestroyProcess(Process* process, DestroyReason reason, int exit_code,
                           uint64_t timestamp) override {
-    FX_LOGS(INFO) << "OnThreadStopped";
+    FX_LOGS(INFO) << "WillDestroyProcess";
 
     ASSERT_NE(process, nullptr);
     EXPECT_EQ(process, console().context().GetActiveTarget()->GetProcess());

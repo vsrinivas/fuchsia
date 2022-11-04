@@ -71,6 +71,9 @@ class ElfLib {
   // don't have that note.
   std::string GetGNUBuildID();
 
+  // Get the DT_SONAME.
+  std::optional<std::string> GetSoname();
+
   // Get a symbol from the symbol table. Return nullptr if there is no such
   // symbol. Pointer should live as long as the memory accessor.
   const Elf64_Sym* GetSymbol(const std::string& name);
@@ -227,6 +230,8 @@ class ElfLib {
   std::unique_ptr<ElfLib> debug_;
 
   std::vector<std::string> warnings_;
+
+  Elf64_Xword soname_offset_ = 0;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(ElfLib);
 };

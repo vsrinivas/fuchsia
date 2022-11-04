@@ -239,6 +239,7 @@ test("unit_tests") {
     "debugged_process_unittest.cc",
     "debugged_thread_breakpoint_unittest.cc",
     "debugged_thread_unittest.cc",
+    "elf_utils_unittest.cc",
     "filter_unittest.cc",
     "hardware_breakpoint_unittest.cc",
     "software_breakpoint_unittest.cc",

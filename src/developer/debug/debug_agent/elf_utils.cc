@@ -5,12 +5,13 @@
 #include "src/developer/debug/debug_agent/elf_utils.h"
 
 // clang-format off
-// Included early because of conflicts.
+// link.h contains ELF.h, which causes llvm/BinaryFormat/ELF.h fail to compile.
 #include "src/lib/elflib/elflib.h"
 // clang-format on
 
 #include <link.h>
 
+#include <set>
 #include <string>
 
 #include "src/developer/debug/debug_agent/process_handle.h"
@@ -101,27 +102,58 @@ debug::Status WalkElfModules(const ProcessHandle& process, uint64_t dl_debug_add
 std::vector<debug_ipc::Module> GetElfModulesForProcess(const ProcessHandle& process,
                                                        uint64_t dl_debug_addr) {
   std::vector<debug_ipc::Module> modules;
-  WalkElfModules(process, dl_debug_addr, [&process, &modules](uint64_t base, uint64_t lmap) {
-    debug_ipc::Module module;
-    module.base = base;
-    module.debug_address = lmap;
+  std::set<uint64_t> visited_modules;
 
-    uint64_t str_addr;
-    size_t num_read;
-    if (process
-            .ReadMemory(lmap + offsetof(link_map, l_name), &str_addr, sizeof(str_addr), &num_read)
-            .has_error())
-      return false;
+  // Method 1: Use the dl_debug_addr, which should be the address of a |r_debug| struct.
+  if (dl_debug_addr) {
+    WalkElfModules(process, dl_debug_addr, [&](uint64_t base, uint64_t lmap) {
+      debug_ipc::Module module;
+      module.base = base;
+      module.debug_address = lmap;
 
-    if (ReadNullTerminatedString(process, str_addr, &module.name).has_error())
-      return false;
+      uint64_t str_addr;
+      size_t num_read;
+      if (process
+              .ReadMemory(lmap + offsetof(link_map, l_name), &str_addr, sizeof(str_addr), &num_read)
+              .has_error())
+        return false;
 
-    if (auto elf = elflib::ElfLib::Create(GetElfLibReader(process, module.base)))
-      module.build_id = elf->GetGNUBuildID();
+      if (ReadNullTerminatedString(process, str_addr, &module.name).has_error())
+        return false;
 
-    modules.push_back(std::move(module));
-    return true;
-  });
+      if (auto elf = elflib::ElfLib::Create(GetElfLibReader(process, module.base)))
+        module.build_id = elf->GetGNUBuildID();
+
+      visited_modules.insert(module.base);
+      modules.push_back(std::move(module));
+      return true;
+    });
+  }
+
+  // Method 2: Read the memory map and probe the ELF magic. This is secondary because it cannot
+  // obtain the debug_address, which is used for resolving TLS location.
+  std::vector<debug_ipc::AddressRegion> address_regions = process.GetAddressSpace(0);
+  for (const auto& region : address_regions) {
+    // ELF headers live in read-only regions.
+    if (region.mmu_flags != ZX_VM_PERM_READ) {
+      continue;
+    }
+    if (!visited_modules.insert(region.base).second) {
+      continue;
+    }
+    auto elf = elflib::ElfLib::Create(GetElfLibReader(process, region.base));
+    if (!elf) {
+      continue;
+    }
+
+    std::string name = region.name;
+    if (auto soname = elf->GetSoname()) {
+      name = *soname;
+    }
+    modules.push_back(debug_ipc::Module{
+        .name = std::move(name), .base = region.base, .build_id = elf->GetGNUBuildID()});
+  }
+
   return modules;
 }
 

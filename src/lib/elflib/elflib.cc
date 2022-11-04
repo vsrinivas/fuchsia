@@ -474,6 +474,15 @@ std::string ElfLib::GetGNUBuildID() {
   return ret;
 }
 
+std::optional<std::string> ElfLib::GetSoname() {
+  LoadDynamicSymbols();
+
+  if (soname_offset_) {
+    return GetDynamicString(soname_offset_);
+  }
+  return std::nullopt;
+}
+
 ElfLib::MemoryRegion ElfLib::GetSectionData(size_t section) {
   const Elf64_Shdr* header = GetSectionHeader(section);
 
@@ -656,6 +665,8 @@ bool ElfLib::LoadDynamicSymbols() {
         }
       } else if (dyn->d_tag == DT_PLTREL) {
         dynamic_plt_use_rela_ = dyn->d_un.d_val == DT_RELA;
+      } else if (dyn->d_tag == DT_SONAME) {
+        soname_offset_ = dyn->d_un.d_val;
       }
     }
 
