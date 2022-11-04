@@ -124,6 +124,7 @@ if (use_bringup_assembly) {
     data_keys = [ "package_output_manifests" ]
     rebase = root_build_dir
     deps = [
+      # Universe
       ":packages",
 
       # The update packages for the main image

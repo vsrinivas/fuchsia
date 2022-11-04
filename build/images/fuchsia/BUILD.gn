@@ -258,6 +258,15 @@ if (is_fuchsia) {
     deps = [ ":fuchsia_assembly" ]
   }
 
+  # The `:fuchsia` target assembles the main Fuchsia image, for all non-bringup
+  # product definitions.
+  #
+  # This group only provides GN metadata about the update package(s), none of
+  # packages that are included in the assembled image are present in GN metadata
+  # walks of this target.
+  #
+  # To get the list of packages in this assembly, use the
+  # `package_list_from_assembly()` GN template.
   group("fuchsia") {
     testonly = fuchsia_zbi_testonly
     public_deps = [
@@ -275,9 +284,9 @@ if (is_fuchsia) {
     deps = [ ":scrutiny_verifiers" ]
 
     metadata = {
-      # Only include the update package(s) manifest(s) in metadata collection,
-      # the base & cache packages all need to be taken from the `images.json`
-      # output of assembly.
+      # Only include the update package(s) manifest(s) in metadata collection.
+      # To get a file containing a list of the base & cache packages, use the
+      # `package_list_from_assembly()` GN template.
       package_barrier = [ ":update" ]
       assembly_inputs = [
         {
@@ -456,6 +465,18 @@ if (is_fuchsia) {
     epoch = "1"
   }
 
+  # The `:fuchsia` target assembles the main Fuchsia image, for all non-bringup
+  # product definitions.
+  #
+  # This group only provides GN metadata about the update package(s), none of
+  # packages that are included in the assembled image are present in GN metadata
+  # walks of this target.
+  #
+  # EXCEPTION:  The base package (aka "system_image_prime") is _also_ listed in
+  # the GN metadata, as the //build/images/updates targets for publishing the
+  # assembled packages doesn't get this list of base and cache packages produced
+  # by this target, as they should be the same as those from the `:fuchsia`
+  # assembly above.
   group("fuchsia_prime") {
     testonly = fuchsia_zbi_testonly
     public_deps = [
