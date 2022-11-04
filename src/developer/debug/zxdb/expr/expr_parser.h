@@ -125,6 +125,9 @@ class ExprParser {
     // When the result is a type, this will contain the resolved type. When null, the result is a
     // non-type or an error.
     fxl::RefPtr<Type> type;
+
+    // When the result is a local variable, this will contain the slot number of it.
+    std::optional<uint32_t> local_var_slot;
   };
   ParseNameResult ParseName(bool expand_types);
 
@@ -146,6 +149,11 @@ class ExprParser {
   // "my_ns::MyClass") and the tokens at cur_token() might be "* *" or "&&" or something that's not
   // a valid type modifier at all (which will mark the type parsing complete).
   fxl::RefPtr<Type> ParseType(fxl::RefPtr<Type> optional_base);
+
+  // In C/C++, type names can start things like definitions ("int i") and this function takes a
+  // just-parsed type name and handles these cases. If this type is nothing special, or the language
+  // doesn't have this construct, returns the type node passed in unchanged.
+  fxl::RefPtr<ExprNode> ParseAfterType(fxl::RefPtr<TypeExprNode> type);
 
   // Parse a Rust Array type name, which is of the form [Type] or [Type; 24]
   fxl::RefPtr<Type> ParseRustArrayType();
@@ -177,6 +185,7 @@ class ExprParser {
   fxl::RefPtr<ExprNode> CastPrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> SizeofPrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> IfPrefix(const ExprToken& token);
+  fxl::RefPtr<ExprNode> LetPrefix(const ExprToken& token);
 
   // Returns true if the next token is the given type.
   bool LookAhead(ExprTokenType type) const;
@@ -226,6 +235,10 @@ class ExprParser {
   // Equivalent to cur_token().precedence except this remaps two adjacent ">" to a ">>" precedence.
   // See IsCurTokenShiftRight().
   int CurPrecedenceWithShiftTokenConversion() const;
+
+  // Checks the given name against the local variables currently in scope. If one is found, returns
+  // its slot index. Otherwise, returns a nullopt.
+  std::optional<uint32_t> GetLocalVariable(const ParsedIdentifier& name) const;
 
   // Call this only if !at_end().
   const ExprToken& cur_token() const { return tokens_[cur_]; }

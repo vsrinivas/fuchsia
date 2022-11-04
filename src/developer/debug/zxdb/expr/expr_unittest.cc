@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
+#include "src/developer/debug/zxdb/expr/builtin_types.h"
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
@@ -193,6 +194,52 @@ TEST_F(ExprTest, LogicalAndShortCircuit) {
   int64_t result_value = 0;
   ASSERT_TRUE(result.value().PromoteTo64(&result_value).ok());
   EXPECT_EQ(6, result_value);
+}
+
+TEST_F(ExprTest, CLocalVars) {
+  const char kCode[] = R"(
+  {
+    int source = 45;
+    auto sum(source - 3);
+    sum = sum * 2;
+    sum;  // The result of the program (since everything is an expression).
+  }
+  )";
+
+  bool called = false;
+  EvalExpression(kCode, fxl::MakeRefCounted<MockEvalContext>(), false, [&](ErrOrValue result) {
+    called = true;
+    ASSERT_TRUE(result.ok()) << result.err().msg();
+    // (45 - 3) * 2 = 84
+    // The expression system likes to promote internally to C-style int64 to avoid overflows.
+    EXPECT_EQ(result.value(),
+              ExprValue(static_cast<int64_t>(84), GetBuiltinType(ExprLanguage::kC, "int64_t")));
+  });
+}
+
+TEST_F(ExprTest, RustLocalVars) {
+  const char kCode[] = R"(
+  {
+    let source:i32;
+    source = 45;
+    let sum = source - 3;
+    sum = sum * 2;
+    sum;  // The result of the program (since everything is an expression).
+  }
+  )";
+
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
+  eval_context->set_language(ExprLanguage::kRust);
+
+  bool called = false;
+  EvalExpression(kCode, eval_context, false, [&](ErrOrValue result) {
+    called = true;
+    ASSERT_TRUE(result.ok()) << result.err().msg();
+    // (45 - 3) * 2 = 84
+    // The expression system likes to promote to int64 to avoid overflows (in contrast to C).
+    EXPECT_EQ(result.value(),
+              ExprValue(static_cast<int64_t>(84), GetBuiltinType(ExprLanguage::kC, "int64_t")));
+  });
 }
 
 }  // namespace zxdb

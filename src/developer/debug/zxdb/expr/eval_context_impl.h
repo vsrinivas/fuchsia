@@ -85,6 +85,8 @@ class EvalContextImpl : public EvalContext {
                   std::optional<ExprLanguage> force_language = std::nullopt);
   ~EvalContextImpl() override;
 
+  void set_language(ExprLanguage lang) { language_ = lang; }
+
  private:
   // Converts an extern value to a real Variable by looking the name up in the index.
   Err ResolveExternValue(const fxl::RefPtr<Value>& input_value,

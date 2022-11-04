@@ -14,6 +14,7 @@
 #include "src/developer/debug/zxdb/expr/expr_token.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/parsed_identifier.h"
+#include "src/developer/debug/zxdb/expr/variable_decl.h"
 #include "src/developer/debug/zxdb/expr/vm_op.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -35,10 +36,12 @@ class DereferenceExprNode;
 class FunctionCallExprNode;
 class IdentifierExprNode;
 class LiteralExprNode;
+class LocalVarExprNode;
 class MemberAccessExprNode;
 class SizeofExprNode;
 class TypeExprNode;
 class UnaryOpExprNode;
+class VariableDeclExprNode;
 
 // Represents one node in the abstract syntax tree.
 class ExprNode : public fxl::RefCountedThreadSafe<ExprNode> {
@@ -53,10 +56,12 @@ class ExprNode : public fxl::RefCountedThreadSafe<ExprNode> {
   virtual const FunctionCallExprNode* AsFunctionCall() const { return nullptr; }
   virtual const IdentifierExprNode* AsIdentifier() const { return nullptr; }
   virtual const LiteralExprNode* AsLiteral() const { return nullptr; }
+  virtual const LocalVarExprNode* AsLocalVar() const { return nullptr; }
   virtual const MemberAccessExprNode* AsMemberAccess() const { return nullptr; }
   virtual const SizeofExprNode* AsSizeof() const { return nullptr; }
   virtual const TypeExprNode* AsType() const { return nullptr; }
   virtual const UnaryOpExprNode* AsUnaryOp() const { return nullptr; }
+  virtual const VariableDeclExprNode* AsVariableDecl() const { return nullptr; }
 
   // Appends the bytecode necessary to execute this node.  The bytecode machine is a stack-based
   // machine.
@@ -338,6 +343,24 @@ class LiteralExprNode : public ExprNode {
   ExprToken token_;
 };
 
+// Local variable access. This is different than IdentifierExprNode because we know in advance
+// where the value is coming from.
+class LocalVarExprNode : public ExprNode {
+ public:
+  const LocalVarExprNode* AsLocalVar() const override { return this; }
+  void EmitBytecode(VmStream& stream) const override;
+  void Print(std::ostream& out, int indent) const override;
+
+ private:
+  FRIEND_REF_COUNTED_THREAD_SAFE(LocalVarExprNode);
+  FRIEND_MAKE_REF_COUNTED(LocalVarExprNode);
+
+  explicit LocalVarExprNode(uint32_t slot) : slot_(slot) {}
+  ~LocalVarExprNode() override = default;
+
+  uint32_t slot_;
+};
+
 // Implements both "." and "->" struct/class/union data member accesses.
 class MemberAccessExprNode : public ExprNode {
  public:
@@ -398,15 +421,25 @@ class TypeExprNode : public ExprNode {
   fxl::RefPtr<Type>& type() { return type_; }
   const fxl::RefPtr<Type>& type() const { return type_; }
 
+  fxl::RefPtr<Type>& concrete_type() { return concrete_type_; }
+  const fxl::RefPtr<Type>& concrete_type() const { return concrete_type_; }
+
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(TypeExprNode);
   FRIEND_MAKE_REF_COUNTED(TypeExprNode);
 
   TypeExprNode();
-  TypeExprNode(fxl::RefPtr<Type> type) : type_(std::move(type)) {}
+  TypeExprNode(fxl::RefPtr<Type> type, fxl::RefPtr<Type> concrete_type)
+      : type_(std::move(type)), concrete_type_(std::move(concrete_type)) {}
   ~TypeExprNode() override = default;
 
+  // The type as specified (could be typedef, forward declaration, etc.).
   fxl::RefPtr<Type> type_;
+
+  // The concrete type that type_ resolved to. Guaranteed non-null, it will often be the same as
+  // type_. This is required for certain local variable uses that need the concrete type when
+  // generating bytecode.
+  fxl::RefPtr<Type> concrete_type_;
 };
 
 // Implements unary mathematical operators (the operation depends on the operator token).
@@ -427,6 +460,30 @@ class UnaryOpExprNode : public ExprNode {
 
   ExprToken op_;
   fxl::RefPtr<ExprNode> expr_;
+};
+
+class VariableDeclExprNode : public ExprNode {
+ public:
+  const VariableDeclExprNode* AsVariableDecl() const override { return this; }
+  void EmitBytecode(VmStream& stream) const override;
+  void Print(std::ostream& out, int indent) const override;
+
+ private:
+  FRIEND_REF_COUNTED_THREAD_SAFE(VariableDeclExprNode);
+  FRIEND_MAKE_REF_COUNTED(VariableDeclExprNode);
+
+  VariableDeclExprNode(VariableDeclTypeInfo decl_info, uint32_t local_slot, const ExprToken& name,
+                       fxl::RefPtr<ExprNode> init_expr)
+      : decl_info_(std::move(decl_info)),
+        local_slot_(local_slot),
+        name_(name),
+        init_expr_(std::move(init_expr)) {}
+  ~VariableDeclExprNode() override = default;
+
+  VariableDeclTypeInfo decl_info_;
+  uint32_t local_slot_;
+  ExprToken name_;
+  fxl::RefPtr<ExprNode> init_expr_;
 };
 
 }  // namespace zxdb

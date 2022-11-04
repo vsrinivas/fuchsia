@@ -16,6 +16,7 @@
 #include "src/developer/debug/zxdb/expr/operator_keyword.h"
 #include "src/developer/debug/zxdb/expr/parse_special_identifier.h"
 #include "src/developer/debug/zxdb/expr/template_type_extractor.h"
+#include "src/developer/debug/zxdb/expr/variable_decl.h"
 #include "src/developer/debug/zxdb/symbols/array_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
@@ -160,6 +161,7 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {&ExprParser::LiteralPrefix,     nullptr,                      -1},                             // kFalse
     {&ExprParser::NamePrefix,        nullptr,                      -1},                             // kConst
     {nullptr,                        nullptr,                      -1},                             // kMut
+    {&ExprParser::LetPrefix,         nullptr,                      -1},                             // kLet
     {&ExprParser::NamePrefix,        nullptr,                      -1},                             // kVolatile
     {&ExprParser::NamePrefix,        nullptr,                      -1},                             // kRestrict
     {&ExprParser::CastPrefix,        nullptr,                      -1},                             // kReinterpretCast
@@ -557,9 +559,9 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
       case ExprTokenType::kSpecialName: {
         // Names can only follow nothing or "::".
         if (mode == kType) {
-          // Normally in C++ a name can follow a type, so make a special error for this case.
-          SetError(token, "This looks like a declaration which is not supported.");
-          return ParseNameResult();
+          // This would probably be the case to add support for two-word type names like
+          // "unsigned int". For now, consider the type name done.
+          return result;
         } else if (mode == kBegin) {
           // Found an identifier name with nothing before it.
           result.ident = ParsedIdentifier(GetIdentifierComponent());
@@ -572,7 +574,12 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
         }
 
         // Decode what adding the name just generated.
-        if (eval_context_) {
+        if (std::optional<uint32_t> found_local = GetLocalVariable(result.ident)) {
+          // This is a known local variable.
+          result.local_var_slot = found_local;
+          Consume();  // Eat the name we just saw.
+          return result;
+        } else if (eval_context_) {
           FoundName lookup =
               eval_context_->FindName(FindNameOptions(FindNameOptions::kAllKinds), result.ident);
           switch (lookup.kind()) {
@@ -850,6 +857,73 @@ fxl::RefPtr<Type> ExprParser::ParseType(fxl::RefPtr<Type> optional_base) {
   return type;
 }
 
+fxl::RefPtr<ExprNode> ExprParser::ParseAfterType(fxl::RefPtr<TypeExprNode> type) {
+  if (language_ == ExprLanguage::kRust)
+    return type;  // In Rust types don't start anything.
+
+  // In C/C++ a type name could mean different things.
+  //
+  // A variable declaration:
+  //    int i;
+  //    int some_value = 2;
+  //    double other_value = some_expression * 7;
+  //    char char_value(some_expression - 1);
+  //
+  // We don't support multiple variable declarations like "int i, j;"
+  //
+  // We don't currently support functional-style casts like:
+  //    int(some_value)
+  //    double(23)
+  // but this would be the place to add such support in the future.
+  if (LookAhead(ExprTokenType::kLeftParen)) {
+    // Functional-style cast.
+    SetError(Consume(), "Functional-style casts are not currently supported.");
+    return nullptr;
+  } else if (LookAhead(ExprTokenType::kName)) {
+    // Variable declaration.
+    const ExprToken& name_token = Consume();
+    fxl::RefPtr<ExprNode> init_expr;
+    if (LookAhead(ExprTokenType::kLeftParen)) {
+      // Paren-style initialization (we don't support function declarations so don't need to check
+      // for that here).
+      auto left_paren = Consume();
+
+      init_expr = ParseExpression(0);
+      if (has_error())
+        return nullptr;
+
+      // Closing paren.
+      Consume(ExprTokenType::kRightParen, "Expected ')' to match.", left_paren);
+      if (has_error())
+        return nullptr;
+    } else if (LookAhead(ExprTokenType::kEquals)) {
+      // "=" initialization.
+      Consume();
+      init_expr = ParseExpression(0);
+      if (has_error())
+        return nullptr;
+    }
+    // If we wanted to support {}-style initization "int a{0};" that would go here.
+
+    // Decode the type information.
+    auto decl_or = GetVariableDeclTypeInfo(language_, eval_context_->GetConcreteType(type->type()));
+    if (decl_or.has_error()) {
+      SetError(name_token, decl_or.err());
+      return nullptr;
+    }
+
+    uint32_t local_slot = static_cast<uint32_t>(local_vars_.size());
+    local_vars_.push_back(name_token.value());
+
+    return fxl::MakeRefCounted<VariableDeclExprNode>(decl_or.take_value(), local_slot, name_token,
+                                                     std::move(init_expr));
+  }
+
+  // Anything else is nothing special. Return the type token because it could be an argument to
+  // sizeof() or something.
+  return type;
+}
+
 fxl::RefPtr<Type> ExprParser::ParseRustArrayType() {
   FX_DCHECK(!at_end() && cur_token().type() == ExprTokenType::kLeftSquare);
   Consume();
@@ -1123,7 +1197,9 @@ fxl::RefPtr<ExprNode> ExprParser::RustCastInfix(fxl::RefPtr<ExprNode> left,
   if (has_error())
     return nullptr;
   return fxl::MakeRefCounted<CastExprNode>(
-      CastType::kRust, fxl::MakeRefCounted<TypeExprNode>(std::move(type)), std::move(left));
+      CastType::kRust,
+      fxl::MakeRefCounted<TypeExprNode>(type, eval_context_->GetConcreteType(type)),
+      std::move(left));
 }
 
 fxl::RefPtr<ExprNode> ExprParser::QuestionInfix(fxl::RefPtr<ExprNode> left,
@@ -1184,7 +1260,8 @@ fxl::RefPtr<ExprNode> ExprParser::NamePrefix(const ExprToken& token) {
     fxl::RefPtr<Type> type = ParseType(fxl::RefPtr<Type>());
     if (has_error())
       return nullptr;
-    return fxl::MakeRefCounted<TypeExprNode>(std::move(type));
+    return ParseAfterType(
+        fxl::MakeRefCounted<TypeExprNode>(type, eval_context_->GetConcreteType(type)));
   }
 
   // All other names.
@@ -1192,8 +1269,13 @@ fxl::RefPtr<ExprNode> ExprParser::NamePrefix(const ExprToken& token) {
   if (has_error())
     return nullptr;
 
-  if (result.type)
-    return fxl::MakeRefCounted<TypeExprNode>(std::move(result.type));
+  if (result.type) {
+    return ParseAfterType(fxl::MakeRefCounted<TypeExprNode>(
+        result.type, eval_context_->GetConcreteType(result.type)));
+  }
+  if (result.local_var_slot) {
+    return fxl::MakeRefCounted<LocalVarExprNode>(*result.local_var_slot);
+  }
   return fxl::MakeRefCounted<IdentifierExprNode>(std::move(result.ident));
 }
 
@@ -1239,7 +1321,9 @@ fxl::RefPtr<ExprNode> ExprParser::CastPrefix(const ExprToken& token) {
     return nullptr;
 
   return fxl::MakeRefCounted<CastExprNode>(
-      cast_type, fxl::MakeRefCounted<TypeExprNode>(std::move(dest_type)), std::move(expr));
+      cast_type,
+      fxl::MakeRefCounted<TypeExprNode>(dest_type, eval_context_->GetConcreteType(dest_type)),
+      std::move(expr));
 }
 
 fxl::RefPtr<ExprNode> ExprParser::SizeofPrefix(const ExprToken& token) {
@@ -1328,6 +1412,45 @@ fxl::RefPtr<ExprNode> ExprParser::IfPrefix(const ExprToken& token) {
   }
 
   return fxl::MakeRefCounted<ConditionExprNode>(std::move(conditions), std::move(else_then));
+}
+
+fxl::RefPtr<ExprNode> ExprParser::LetPrefix(const ExprToken& token) {
+  // "let" <name> [ ":" <type> ] [ "=" <expression> ]
+  ExprToken name = Consume(ExprTokenType::kName, "Expecting variable name for 'let' statement.");
+  if (has_error())
+    return nullptr;
+
+  fxl::RefPtr<Type> type;
+  if (LookAhead(ExprTokenType::kColon)) {
+    Consume();
+    type = ParseType(nullptr);
+    if (has_error())
+      return nullptr;
+  }
+
+  fxl::RefPtr<ExprNode> init_expr;
+  if (LookAhead(ExprTokenType::kEquals)) {
+    Consume();
+    init_expr = ParseExpression(0);
+    if (has_error())
+      return nullptr;
+  }
+
+  // Decode the type information (note the type will be null if unspecified).
+  fxl::RefPtr<Type> concrete_type;
+  if (type)
+    concrete_type = eval_context_->GetConcreteType(type);
+  auto decl_or = GetVariableDeclTypeInfo(language_, std::move(concrete_type));
+  if (decl_or.has_error()) {
+    SetError(name, decl_or.err());
+    return nullptr;
+  }
+
+  uint32_t local_slot = static_cast<uint32_t>(local_vars_.size());
+  local_vars_.push_back(name.value());
+
+  return fxl::MakeRefCounted<VariableDeclExprNode>(decl_or.take_value(), local_slot, name,
+                                                   std::move(init_expr));
 }
 
 bool ExprParser::LookAhead(ExprTokenType type) const {
@@ -1459,6 +1582,23 @@ int ExprParser::CurPrecedenceWithShiftTokenConversion() const {
   if (IsCurTokenShiftRightEquals())
     return kPrecedenceAssignment;
   return DispatchForToken(cur_token()).precedence;
+}
+
+std::optional<uint32_t> ExprParser::GetLocalVariable(const ParsedIdentifier& name) const {
+  // Only simple one-compomnent non-special identifiers can be local variables.
+  if (name.qualification() != IdentifierQualification::kRelative || name.components().size() != 1 ||
+      name.components()[0].special() != SpecialIdentifier::kNone) {
+    return std::nullopt;
+  }
+  const std::string& name_str = name.components()[0].name();
+
+  // Since variables are inserted by appending, search backwards to find the most recently
+  // declared one of the given name.
+  for (int i = static_cast<int>(local_vars_.size()) - 1; i >= 0; i--) {
+    if (local_vars_[i] == name_str)
+      return static_cast<uint32_t>(i);
+  }
+  return std::nullopt;
 }
 
 // static

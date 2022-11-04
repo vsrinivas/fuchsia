@@ -84,6 +84,7 @@ enum class ExprTokenType : size_t {
   kFalse,            // false
   kConst,            // const
   kMut,              // mut
+  kLet,              // let
   kVolatile,         // volatile
   kRestrict,         // restrict
   kReinterpretCast,  // reinterpret_cast

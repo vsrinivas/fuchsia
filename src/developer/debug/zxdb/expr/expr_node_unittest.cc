@@ -389,7 +389,8 @@ TEST_F(ExprNodeTest, Cast) {
   // Base2& base2_ref_value = base2_value;
   // static_cast<Derived&>(base2_ref_value);  // <- cast_ref_ref_node
   auto base2_ref_node = fxl::MakeRefCounted<MockExprNode>(true, d.base2_ref_value);
-  auto derived_ref_type_node = fxl::MakeRefCounted<TypeExprNode>(d.derived_ref_type);
+  auto derived_ref_type_node =
+      fxl::MakeRefCounted<TypeExprNode>(d.derived_ref_type, d.derived_ref_type);
   auto cast_ref_ref_node = fxl::MakeRefCounted<CastExprNode>(
       CastType::kStatic, std::move(derived_ref_type_node), std::move(base2_ref_node));
 
@@ -402,7 +403,7 @@ TEST_F(ExprNodeTest, Cast) {
   // of it.
   // static_cast<Base2>(derived_ref_value)
   auto derived_ref_node = fxl::MakeRefCounted<MockExprNode>(true, d.derived_ref_value);
-  auto base2_type_node = fxl::MakeRefCounted<TypeExprNode>(d.base2_type);
+  auto base2_type_node = fxl::MakeRefCounted<TypeExprNode>(d.base2_type, d.base2_type);
   auto cast_node = fxl::MakeRefCounted<CastExprNode>(CastType::kStatic, std::move(base2_type_node),
                                                      std::move(derived_ref_node));
 
@@ -584,7 +585,7 @@ TEST_F(ExprNodeTest, Sizeof) {
   auto char_ref_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kReferenceType, char_type);
   EXPECT_EQ(8u, char_ref_type->byte_size());
 
-  auto char_ref_type_node = fxl::MakeRefCounted<TypeExprNode>(char_ref_type);
+  auto char_ref_type_node = fxl::MakeRefCounted<TypeExprNode>(char_ref_type, char_ref_type);
   auto sizeof_char_ref_type = fxl::MakeRefCounted<SizeofExprNode>(char_ref_type_node);
 
   auto result = EvalAsBytecode(sizeof_char_ref_type, context);

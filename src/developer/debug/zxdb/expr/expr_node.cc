@@ -209,6 +209,9 @@ void BlockExprNode::Print(std::ostream& out, int indent) const {
 
 void CastExprNode::EmitBytecode(VmStream& stream) const {
   from_->EmitBytecode(stream);
+  // Uses the non-concrete type for the "to" type because the cast will internally get the
+  // concrete type, but will preserve the original type in the output so that the result will have
+  // the same type the user typed (like a typedef name).
   stream.push_back(VmOp::MakeAsyncCallback1(
       [cast_type = cast_type_, to_type = to_type_->type()](
           const fxl::RefPtr<EvalContext>& eval_context, ExprValue from, EvalCallback cb) mutable {
@@ -496,6 +499,14 @@ void LiteralExprNode::Print(std::ostream& out, int indent) const {
   out << IndentFor(indent) << "LITERAL(" << token_.value() << ")\n";
 }
 
+void LocalVarExprNode::EmitBytecode(VmStream& stream) const {
+  stream.push_back(VmOp::MakeGetLocal(slot_));
+}
+
+void LocalVarExprNode::Print(std::ostream& out, int indent) const {
+  out << IndentFor(indent) << "LOCAL_VAR(" << slot_ << ")\n";
+}
+
 void MemberAccessExprNode::EmitBytecode(VmStream& stream) const {
   left_->EmitBytecodeExpandRef(stream);
 
@@ -626,6 +637,20 @@ void UnaryOpExprNode::EmitBytecode(VmStream& stream) const {
 void UnaryOpExprNode::Print(std::ostream& out, int indent) const {
   out << IndentFor(indent) << "UNARY(" << op_.value() << ")\n";
   expr_->Print(out, indent + 1);
+}
+
+void VariableDeclExprNode::EmitBytecode(VmStream& stream) const {
+  EmitVariableInitializerOps(decl_info_, local_slot_, init_expr_, stream);
+}
+
+void VariableDeclExprNode::Print(std::ostream& out, int indent) const {
+  out << IndentFor(indent) << "LOCAL_VAR_DECL(" << name_.value() << ", " << local_slot_ << ")\n";
+  out << IndentFor(indent + 1) << decl_info_.ToString() << "\n";
+  if (init_expr_) {
+    init_expr_->Print(out, indent + 1);
+  } else {
+    out << IndentFor(indent + 1) << ";\n";
+  }
 }
 
 }  // namespace zxdb

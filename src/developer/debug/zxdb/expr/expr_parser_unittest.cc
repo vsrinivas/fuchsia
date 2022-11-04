@@ -59,7 +59,8 @@ class ExprParserTest : public testing::Test {
       return nullptr;
     }
 
-    parser_ = std::make_unique<ExprParser>(tokenizer_->TakeTokens(), tokenizer_->language(),
+    eval_context_->set_language(lang);
+    parser_ = std::make_unique<ExprParser>(tokenizer_->TakeTokens(), lang,
                                            include_context ? eval_context_ : nullptr);
     return parser_->ParseExpression();
   }
@@ -1032,7 +1033,7 @@ TEST_F(ExprParserTest, BadRustTuples) {
   // Missing comma
   result = Parse("a as (Type Type)", ExprLanguage::kRust);
   EXPECT_FALSE(result);
-  EXPECT_EQ("This looks like a declaration which is not supported.", parser().err().msg());
+  EXPECT_EQ("Expected ')' or ','.", parser().err().msg());
 
   // Missing end
   result = Parse("a as (Type, Type", ExprLanguage::kRust);
@@ -1074,6 +1075,15 @@ TEST_F(ExprParserTest, CppCast) {
   auto result = Parse("reinterpret_cast<");
   EXPECT_FALSE(result);
   EXPECT_EQ("Expected type name before end of input.", parser().err().msg());
+
+  // Functional-style casts aren't currently supported. Make sure we report that properly.
+  result = Parse("double(5)");
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Functional-style casts are not currently supported.", parser().err().msg());
+
+  result = Parse("Type()");
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Functional-style casts are not currently supported.", parser().err().msg());
 }
 
 TEST_F(ExprParserTest, ParseIdentifier) {
@@ -1268,6 +1278,122 @@ TEST_F(ExprParserTest, Comments) {
   auto result = Parse(" 3 + */");
   EXPECT_FALSE(result);
   EXPECT_EQ("Unexpected */", parser().err().msg());
+}
+
+TEST_F(ExprParserTest, CVariableDecl) {
+  EXPECT_EQ(
+      "LOCAL_VAR_DECL(i, 0)\n"
+      " int\n"
+      " BINARY_OP(+)\n"
+      "  LITERAL(0)\n"
+      "  LITERAL(76)\n",
+      GetParseString("int i = 0 + 76;", ExprLanguage::kC));
+
+  EXPECT_EQ(
+      "LOCAL_VAR_DECL(d, 0)\n"
+      " double\n"
+      " ;\n",
+      GetParseString("double d;", ExprLanguage::kC));
+
+  EXPECT_EQ(
+      "LOCAL_VAR_DECL(i, 0)\n"
+      " <C++-style auto>\n"
+      " LITERAL(76)\n",
+      GetParseString("auto i = 76", ExprLanguage::kC));
+
+  EXPECT_EQ(
+      "LOCAL_VAR_DECL(i, 0)\n"
+      " <C++-style auto&>\n"
+      " IDENTIFIER(\"some_var\")\n",
+      GetParseString("auto& i = some_var", ExprLanguage::kC));
+
+  EXPECT_EQ(
+      "LOCAL_VAR_DECL(i, 0)\n"
+      " <C++-style auto*>\n"
+      " ADDRESS_OF\n"
+      "  IDENTIFIER(\"some_var\")\n",
+      GetParseString("auto* i = &some_var;", ExprLanguage::kC));
+
+  EXPECT_EQ(
+      "LOCAL_VAR_DECL(v, 0)\n"
+      " Type**\n"
+      " ;\n",
+      GetParseString("Type** v;", ExprLanguage::kC));
+
+  // Paren initialization.
+  EXPECT_EQ(
+      "LOCAL_VAR_DECL(v, 0)\n"
+      " Type**\n"
+      " LITERAL(0)\n",
+      GetParseString("Type** v(0);", ExprLanguage::kC));
+}
+
+TEST_F(ExprParserTest, RustVariableDecl) {
+  EXPECT_EQ(
+      "LOCAL_VAR_DECL(i, 0)\n"
+      " <Rust-style auto>\n"
+      " BINARY_OP(+)\n"
+      "  LITERAL(0)\n"
+      "  LITERAL(76)\n",
+      GetParseString("let i = 0 + 76;", ExprLanguage::kRust));
+
+  EXPECT_EQ(
+      "LOCAL_VAR_DECL(i, 0)\n"
+      " i32\n"
+      " ;\n",
+      GetParseString("let i:i32;", ExprLanguage::kRust));
+
+  // Note the type names in the output are formatted like C (i32*). This is just the default
+  // formatting of the type name system whose names aren't really designed for final consumption.
+  EXPECT_EQ(
+      "LOCAL_VAR_DECL(i, 0)\n"
+      " i32*\n"
+      " IDENTIFIER(\"something\")\n",
+      GetParseString("let i:&i32 = something", ExprLanguage::kRust));
+
+  EXPECT_EQ(
+      "LOCAL_VAR_DECL(i, 0)\n"
+      " Type*\n"
+      " ADDRESS_OF\n"
+      "  IDENTIFIER(\"something\")\n",
+      GetParseString("let i:&mut Type = &something", ExprLanguage::kRust));
+}
+
+TEST_F(ExprParserTest, LocalVarAccess) {
+  EXPECT_EQ(
+      "BLOCK\n"
+      " BLOCK\n"
+      "  LOCAL_VAR_DECL(i, 0)\n"
+      "   int\n"
+      "   LITERAL(54)\n"
+      "  BINARY_OP(=)\n"
+      "   LOCAL_VAR(0)\n"
+      "   BINARY_OP(+)\n"
+      "    LOCAL_VAR(0)\n"
+      "    LITERAL(23)\n"
+      " BLOCK\n"
+      "  BINARY_OP(=)\n"
+      "   IDENTIFIER(\"i\")\n"
+      "   LITERAL(2)\n"
+      "  LOCAL_VAR_DECL(j, 0)\n"
+      "   <C++-style auto>\n"
+      "   LITERAL(1)\n"
+      "  LOCAL_VAR_DECL(k, 1)\n"
+      "   double\n"
+      "   LITERAL(0)\n",
+      GetParseString(
+          "{\n"
+          "  {\n"
+          "    int i = 54;\n"
+          "    i = i + 23;\n"
+          "  }\n"
+          "  {\n"
+          "    i = 2;\n"       // No local in scope w/ this name, should be an identifier.
+          "    auto j = 1;\n"  // Gets assigned the same slot as i above since i went out of scope.
+          "    double k = 0;\n"  // Gets assigned next slot.
+          "  }"
+          "}",
+          ExprLanguage::kC));
 }
 
 }  // namespace zxdb

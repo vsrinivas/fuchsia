@@ -63,6 +63,16 @@ const BuiltinTypeInfo kCBuiltinInfo[] = {
     // Special Zircon types (see note below).
     { "zx_status_t", BaseType::kBaseTypeSigned,    4 },
 
+    // In C++, "auto" is not a type but rather a "placeholder type specifier" that the compiler
+    // fills in for you in certain contexts. Our expression language is not statically typed so
+    // it isn't possible to fill in at parse-time, which means we need a placeholder for these
+    // auto types until they can be handled.
+    //
+    // So this is modeled as a "void". The code that can handle "auto" for variable declarations
+    // will check for this name and fill it in. Having this as a type allows you to specify "auto"
+    // as a type like "sizeof(auto)" which does not make sense in C++, but it's not too misleading.
+    { "auto",      BaseType::kBaseTypeNone,        0 },
+
     // clang-format on
 };
 
@@ -96,7 +106,7 @@ const BuiltinTypeInfo kRustBuiltinInfo[] = {
 // Note on zx_status_t: Normally this will be declared in the program as a typedef for an int32.
 // Adding it here allows casting to it even if the typedef is not currently in scope, which in turn
 // will trigger the special-cased pretty-printing to decode status values. This fallback doesn't
-// define it as a typedef for simplicit, that could be added in the future if desired.
+// define it as a typedef for simplicity, that could be added in the future if desired.
 
 using BuiltinTypeInfoMap = std::map<std::string_view, const BuiltinTypeInfo*>;
 
