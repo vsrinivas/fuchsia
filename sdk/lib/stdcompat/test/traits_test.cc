@@ -403,7 +403,7 @@ constexpr auto noop = [] {};
 constexpr auto take_all = [](auto&&...) {};
 constexpr auto lambda_add_one = [](int i) { return i + 1; };
 
-int func_add_one(int i) { return i + 1; }
+[[maybe_unused]] int func_add_one(int i) { return i + 1; }
 
 struct member_pointers {
   virtual int pmf_add_one(int i) { return i + 1; }
