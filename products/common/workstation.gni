@@ -77,7 +77,6 @@ legacy_base_package_labels -=
 
 legacy_base_package_labels += [
   "//src/experiences/bin/settings/license:license_settings",
-  "//src/experiences/bin/settings/shell:shell_settings",
   "//src/experiences/session_shells/ermine",
   "//src/media/playback/bundles:services",
   "//src/session",
