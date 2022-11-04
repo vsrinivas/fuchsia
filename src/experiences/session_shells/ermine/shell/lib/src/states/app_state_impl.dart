@@ -410,6 +410,9 @@ class AppStateImpl with Disposable implements AppState {
     try {
       _clearError(url, 'ProposeElementError');
 
+      log.info(
+          'Launching $title [$url] using ${alternateServiceName ?? 'ElementManager'}');
+
       // For web urls use Chrome's element manager service.
       if (url.startsWith('http')) {
         alternateServiceName ??= kChromeElementManager;
