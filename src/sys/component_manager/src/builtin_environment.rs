@@ -880,6 +880,7 @@ impl BuiltinEnvironment {
 
         // Set up the event source factory.
         let event_source_factory = Arc::new(EventSourceFactory::new(
+            Arc::downgrade(&model),
             Arc::downgrade(&event_registry),
             Arc::downgrade(&event_stream_provider),
         ));

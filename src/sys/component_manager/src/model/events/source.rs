@@ -14,6 +14,7 @@ use {
                 stream::EventStream,
                 stream_provider::EventStreamProvider,
             },
+            model::Model,
         },
     },
     async_trait::async_trait,
@@ -117,6 +118,8 @@ impl EventSourceV2 {
 /// A system responsible for implementing basic events functionality on a scoped realm.
 #[derive(Clone)]
 pub struct EventSource {
+    model: Weak<Model>,
+
     /// A shared reference to the event registry used to subscribe and dispatch events.
     registry: Weak<EventRegistry>,
 
@@ -131,17 +134,19 @@ pub struct EventSource {
 impl EventSource {
     pub async fn new(
         subscriber: ExtendedMoniker,
+        model: Weak<Model>,
         registry: Weak<EventRegistry>,
         stream_provider: Weak<EventStreamProvider>,
     ) -> Result<Self, ModelError> {
-        Ok(Self { registry, stream_provider, subscriber })
+        Ok(Self { model, registry, stream_provider, subscriber })
     }
 
     pub async fn new_for_above_root(
+        model: Weak<Model>,
         registry: Weak<EventRegistry>,
         stream_provider: Weak<EventStreamProvider>,
     ) -> Result<Self, ModelError> {
-        Self::new(ExtendedMoniker::ComponentManager, registry, stream_provider).await
+        Self::new(ExtendedMoniker::ComponentManager, model, registry, stream_provider).await
     }
 
     /// Subscribes to events provided in the `requests` vector.
@@ -178,12 +183,23 @@ impl EventSource {
 impl CapabilityProvider for EventSourceV2 {
     async fn open(
         mut self: Box<Self>,
-        task_scope: TaskScope,
+        _task_scope: TaskScope,
         _flags: fio::OpenFlags,
         _open_mode: u32,
         relative_path: PathBuf,
         server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
+        // Spawn the task in the component's task scope so that when the component is destroyed,
+        // the task is cancelled and does not leak (similar to how framework capabilities are
+        // scoped).
+        let model = self.v1.model.upgrade().ok_or(ModelError::ModelNotAvailable)?;
+        let task_scope = match &self.v1.subscriber {
+            ExtendedMoniker::ComponentInstance(m) => {
+                let target = model.look_up(&m).await?;
+                target.task_scope()
+            }
+            ExtendedMoniker::ComponentManager => model.top_instance().task_scope(),
+        };
         let server_end = channel::take_channel(server_end);
         let stream = ServerEnd::<fsys::EventStream2Marker>::new(server_end);
         task_scope

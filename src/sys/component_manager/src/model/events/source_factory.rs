@@ -13,6 +13,7 @@ use {
                 stream_provider::EventStreamProvider,
             },
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
+            model::Model,
         },
     },
     ::routing::capability_source::InternalCapability,
@@ -29,6 +30,8 @@ lazy_static! {
 
 /// Allows to create `EventSource`s and tracks all the created ones.
 pub struct EventSourceFactory {
+    model: Weak<Model>,
+
     /// The event registry. It subscribes to all events happening in the system and
     /// routes them to subscribers.
     // TODO(fxbug.dev/48512): instead of using a global registry integrate more with the hooks model.
@@ -40,10 +43,11 @@ pub struct EventSourceFactory {
 
 impl EventSourceFactory {
     pub fn new(
+        model: Weak<Model>,
         event_registry: Weak<EventRegistry>,
         event_stream_provider: Weak<EventStreamProvider>,
     ) -> Self {
-        Self { event_registry, event_stream_provider }
+        Self { model, event_registry, event_stream_provider }
     }
 
     /// Creates the subscription to the required events.
@@ -63,6 +67,7 @@ impl EventSourceFactory {
     /// Creates an event source for an above-root subscriber.
     pub async fn create_for_above_root(&self) -> Result<EventSource, ModelError> {
         EventSource::new_for_above_root(
+            self.model.clone(),
             self.event_registry.clone(),
             self.event_stream_provider.clone(),
         )
@@ -73,6 +78,7 @@ impl EventSourceFactory {
     pub async fn create(&self, subscriber: AbsoluteMoniker) -> Result<EventSource, ModelError> {
         EventSource::new(
             ExtendedMoniker::ComponentInstance(subscriber),
+            self.model.clone(),
             self.event_registry.clone(),
             self.event_stream_provider.clone(),
         )
