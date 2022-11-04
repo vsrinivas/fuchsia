@@ -26,7 +26,6 @@ if (is_linux) {
     deps = [ "//src/connectivity/network/testing/conformance/ffx" ]
     non_go_deps = [
       ":ffx_bin",
-      "//build/images/fuchsia:fuchsia_zbi_for_host_tests",
       "//build/images/network-conformance:network-conformance-base-test-data",
     ]
   }
