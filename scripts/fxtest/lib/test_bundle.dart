@@ -72,6 +72,10 @@ class TestBundle {
   /// Supercedes any parallel value stored in the test definition.
   final String? parallelOverride;
 
+  /// Contains a timeout value specified by the user at invocation time if any.
+  /// Supercedes any timeout value stored in the test definition.
+  final String? timeoutOverride;
+
   /// Whether or not to use run-test-suite instead of ffx for running v2 tests.
   final bool useRunTestSuite;
 
@@ -123,6 +127,7 @@ class TestBundle {
     required this.confidence,
     required this.directoryBuilder,
     required this.parallelOverride,
+    required this.timeoutOverride,
     required this.useRunTestSuite,
     this.environment = const <String, String>{},
     this.extraFlags = const [],
@@ -190,6 +195,7 @@ class TestBundle {
       timeElapsedSink: timeElapsedSink,
       workingDirectory: workingDirectory,
       parallelOverride: testsConfig.flags.parallel,
+      timeoutOverride: testsConfig.flags.timeout,
       useRunTestSuite: testsConfig.flags.fallbackUseRunTestSuite,
     );
   }
@@ -208,6 +214,7 @@ class TestBundle {
     var testType = testDefinition.testType;
     var executionHandle = testDefinition.createExecutionHandle(
         parallelOverride: parallelOverride,
+        timeoutSecondsOverride: timeoutOverride,
         useRunTestSuiteForV2: useRunTestSuite);
     if (testType == TestType.unsupportedDeviceTest) {
       yield UnrunnableTestEvent(executionHandle.handle);

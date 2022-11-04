@@ -486,12 +486,14 @@ void main() {
         rawArgs: ['--timeout=5'],
         fxEnv: FakeFxEnv.shared,
       );
-      expect(testsConfig.flags.timeout, 5);
+      expect(testsConfig.flags.timeout, '5');
 
-      expect(testsConfig.runnerTokens[TestType.suite], contains('--timeout'));
-      expect(testsConfig.runnerTokens[TestType.suite], contains('5'));
+      // shouldn't be added yet. TODO - figure out a nicer refactor here so that the flags are
+      // generated just once
+      expect(testsConfig.runnerTokens[TestType.suite],
+          isNot(contains('--timeout')));
       expect(testsConfig.runnerTokens[TestType.component],
-          contains('--timeout=5'));
+          isNot(contains('--timeout=5')));
     });
 
     test('with --count', () {

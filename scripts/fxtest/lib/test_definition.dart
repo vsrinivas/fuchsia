@@ -23,6 +23,7 @@ class TestDefinition {
   final PackageUrl? packageUrl;
   final String? maxLogSeverity;
   final String? parallel;
+  final String? timeoutSeconds;
 
   String? hash;
 
@@ -41,6 +42,7 @@ class TestDefinition {
     this.path,
     this.maxLogSeverity,
     this.parallel,
+    this.timeoutSeconds,
     this.testEnvironments = const [],
   });
 
@@ -71,6 +73,7 @@ class TestDefinition {
       path: testDetails['path'] ?? '',
       maxLogSeverity: logSettings['max_severity'],
       parallel: testDetails['parallel']?.toString(),
+      timeoutSeconds: testDetails['timeout_secs']?.toString(),
       testEnvironments: testEnvironments,
     );
   }
@@ -88,6 +91,7 @@ class TestDefinition {
   os: $os
   max_log_severity: $maxLogSeverity
   parallel: $parallel
+  timeoutSeconds: $timeoutSeconds
 />''';
 
   TestType get testType {
@@ -137,11 +141,19 @@ class TestDefinition {
   /// specified by the invoker.
   ExecutionHandle createExecutionHandle({
     String? parallelOverride,
+    String? timeoutSecondsOverride,
     bool useRunTestSuiteForV2 = false,
   }) {
     switch (testType) {
       case TestType.component:
-        return ExecutionHandle.component(decoratedPackageUrl.toString(), os);
+        List<String> flags = [];
+        if (timeoutSecondsOverride != null) {
+          flags.addAll(['--timeout=$timeoutSecondsOverride']);
+        } else if (timeoutSeconds != null) {
+          flags.addAll(['--timeout=$timeoutSeconds']);
+        }
+        return ExecutionHandle.component(decoratedPackageUrl.toString(), os,
+            flags: flags);
       case TestType.suite:
         List<String> flags = [];
         if (parallelOverride != null) {
@@ -149,6 +161,12 @@ class TestDefinition {
         } else if (parallel != null) {
           flags.addAll(['--parallel', parallel!]);
         }
+        if (timeoutSecondsOverride != null) {
+          flags.addAll(['--timeout', timeoutSecondsOverride]);
+        } else if (timeoutSeconds != null) {
+          flags.addAll(['--timeout', timeoutSeconds!]);
+        }
+
         if (useRunTestSuiteForV2) {
           return ExecutionHandle.suiteFallbackRunTestSuite(
               decoratedPackageUrl.toString(), os,

@@ -183,7 +183,7 @@ this is false and ony the last segment of the moniker is displayed.''')
       defaultsTo: null,
       help: '''directory to collect test outputs produced by ffx test''')
   ..addOption('timeout',
-      defaultsTo: '0',
+      defaultsTo: null,
       help: '''test timeout in seconds. The test is killed if not completed when
 the timeout has elapsed.''')
   ..addFlag('verbose', abbr: 'v', defaultsTo: false, negatable: false);

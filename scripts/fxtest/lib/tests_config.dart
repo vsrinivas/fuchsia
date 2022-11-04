@@ -47,7 +47,7 @@ class Flags {
   final bool shouldUpdateIfInBase;
   final bool shouldUsePackageHash;
   final int slowThreshold;
-  final int timeout;
+  final String? timeout;
 
   // flags for v2 tests
   final List<String>? testFilter;
@@ -84,7 +84,7 @@ class Flags {
     this.shouldUpdateIfInBase = true,
     this.shouldUsePackageHash = true,
     this.slowThreshold = 0,
-    this.timeout = 0,
+    this.timeout,
     this.testFilter,
     this.count,
     this.parallel,
@@ -95,6 +95,9 @@ class Flags {
   });
 
   factory Flags.fromArgResults(ArgResults argResults) {
+    int.parse(argResults['count'] ?? '0');
+    int.parse(argResults['timeout'] ?? '0');
+    int.parse(argResults['parallel'] ?? '0');
     return Flags(
         allOutput: argResults['output'],
         dryRun: argResults['info'] || argResults['dry'],
@@ -126,7 +129,7 @@ class Flags {
         shouldUpdateIfInBase: argResults['updateifinbase'],
         shouldUsePackageHash: argResults['use-package-hash'],
         slowThreshold: int.parse(argResults['slow'] ?? '0'),
-        timeout: int.parse(argResults['timeout'] ?? '0'),
+        timeout: argResults['timeout'],
         count: argResults['count'],
         parallel: argResults['parallel'],
         ffxOutputDirectory: argResults['ffx-output-directory'],
@@ -255,9 +258,6 @@ class TestsConfig {
     if (flags.minSeverityLogs != null) {
       v1runnerTokens.add('--min-severity-logs=${flags.minSeverityLogs}');
     }
-    if (flags.timeout > 0) {
-      v1runnerTokens.add('--timeout=${flags.timeout}');
-    }
 
     var v2runnerTokens = <String>[];
     var v2dynamicTokens = <DynamicRunnerToken>[];
@@ -282,17 +282,12 @@ class TestsConfig {
         ..add('--stop-after-failures')
         ..add('1');
     }
-    // We do not add the parallel option here, as it may also be specified via
-    // test spec. Instead, it is added later.
+    // We do not add the parallel or timeout options here, as they may also be
+    // specified via test spec. Instead, it is added later.
     if (flags.runDisabledTests && flags.fallbackUseRunTestSuite) {
       v2runnerTokens.add('--also-run-disabled-tests');
     } else if (flags.runDisabledTests) {
       v2runnerTokens.add('--run-disabled');
-    }
-    if (flags.timeout > 0) {
-      v2runnerTokens
-        ..add('--timeout')
-        ..add(flags.timeout.toString());
     }
     if (flags.minSeverityLogs != null) {
       v2runnerTokens

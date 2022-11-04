@@ -65,9 +65,9 @@ class ExecutionHandle {
   ExecutionHandle.command(this.handle, this.os, {this.environment = const {}})
       : testType = TestType.command,
         flags = [];
-  ExecutionHandle.component(this.handle, this.os, {this.environment = const {}})
-      : testType = TestType.component,
-        flags = [];
+  ExecutionHandle.component(this.handle, this.os,
+      {this.flags = const [], this.environment = const {}})
+      : testType = TestType.component;
   ExecutionHandle.e2e(this.handle, this.os, {this.environment = const {}})
       : testType = TestType.e2e,
         flags = [];
@@ -142,7 +142,7 @@ class ExecutionHandle {
   CommandTokens _getComponentTokens(List<String> runnerFlags) {
     List<String> subCommand = ['shell', 'run-test-component']
       ..addAll(runnerFlags.map((flag) => "'$flag'"));
-    return CommandTokens(['fx', ...subCommand, handle]);
+    return CommandTokens(['fx', ...subCommand, ...flags, handle]);
   }
 
   /// Handler for `tests.json` entries containing the `packageUrl` key ending
