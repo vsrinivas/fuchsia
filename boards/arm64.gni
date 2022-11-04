@@ -30,7 +30,6 @@ board_recovery_bootfs_labels += _common_bootfs_deps
 
 board_driver_package_labels += [
   "//bundles/packages/prod:drivers-system",
-  "//bundles/packages/prod:wlan_drivers",
   "//src/media/audio/bundles:virtual_audio_driver",
 ]
 

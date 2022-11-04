@@ -32,7 +32,6 @@ group("all") {
     ":terminal",
     ":tiles",
     ":tracing",
-    ":wlan_drivers",
     "//src/connectivity/network/mdns/bundles:services",
     "//src/connectivity/network/mdns/bundles:utils",
     "//src/connectivity/telephony/drivers",
@@ -219,15 +218,5 @@ group("wifi_intel") {
   public_deps = [
     ":wlan_softmac_core_drivers",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:iwlwifi",
-  ]
-}
-
-# TODO(fxbug.dev/105176): Remove target once deps have been removed.
-group("wlan_drivers") {
-  public_deps = [
-    ":wlan_fullmac_core_drivers",
-
-    # from :nxp
-    "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac:nxpfmac_driver",
   ]
 }
