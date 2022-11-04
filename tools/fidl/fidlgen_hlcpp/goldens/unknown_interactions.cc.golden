@@ -23686,8 +23686,14 @@ zx_status_t UnknownInteractionsProtocol_Proxy::Dispatch_(::fidl::HLCPPIncomingMe
       break;
     }
     default: {
-      if (message.txid() == 0 && message.is_flexible()) {
-        handle_unknown_event(message.ordinal());
+      auto txid = message.txid();
+      auto is_flexible = message.is_flexible();
+      auto ordinal = message.ordinal();
+      // To satisfy RFC-0138, move the message so it is destructed before
+      // calling the unknown event handler.
+      { auto message_ = std::move(message); }
+      if (txid == 0 && is_flexible) {
+        handle_unknown_event(ordinal);
         break;
       }
       status = ZX_ERR_NOT_SUPPORTED;
@@ -24294,14 +24300,19 @@ zx_status_t UnknownInteractionsProtocol_Stub::Dispatch_(
   const fidl_type_t* request_type = ::test::unknowninteractions::UnknownInteractionsProtocol_RequestDecoder::GetType(message.ordinal(), &needs_response, &is_known);
 
   if (!is_known) {
-    if (message.is_flexible()) {
+    auto is_flexible = message.is_flexible();
+    auto ordinal = message.ordinal();
+    // To satisfy RFC-0138, move the message so it is destructed before sending
+    // a reply or calling the unknown method handler.
+    { auto message_ = std::move(message); }
+    if (is_flexible) {
       if (response.needs_response()) {
-        ::fidl::MessageEncoder encoder(message.ordinal(), ::fidl::MessageDynamicFlags::kFlexibleMethod);
+        ::fidl::MessageEncoder encoder(ordinal, ::fidl::MessageDynamicFlags::kFlexibleMethod);
         const fidl_type_t* resp_type = &kFidlInternalUnknownMethodResponseTable;
         response.Send(resp_type, ::fidl::internal::EncodeUnknownMethodResponse(&encoder));
-        impl_->handle_unknown_method(message.ordinal(), true);
+        impl_->handle_unknown_method(ordinal, true);
       } else {
-        impl_->handle_unknown_method(message.ordinal(), false);
+        impl_->handle_unknown_method(ordinal, false);
       }
       return ZX_OK;
     }
@@ -25192,8 +25203,14 @@ zx_status_t UnknownInteractionsAjarProtocol_Proxy::Dispatch_(::fidl::HLCPPIncomi
       break;
     }
     default: {
-      if (message.txid() == 0 && message.is_flexible()) {
-        handle_unknown_event(message.ordinal());
+      auto txid = message.txid();
+      auto is_flexible = message.is_flexible();
+      auto ordinal = message.ordinal();
+      // To satisfy RFC-0138, move the message so it is destructed before
+      // calling the unknown event handler.
+      { auto message_ = std::move(message); }
+      if (txid == 0 && is_flexible) {
+        handle_unknown_event(ordinal);
         break;
       }
       status = ZX_ERR_NOT_SUPPORTED;
@@ -25512,9 +25529,14 @@ zx_status_t UnknownInteractionsAjarProtocol_Stub::Dispatch_(
   const fidl_type_t* request_type = ::test::unknowninteractions::UnknownInteractionsAjarProtocol_RequestDecoder::GetType(message.ordinal(), &needs_response, &is_known);
 
   if (!is_known) {
-    if (message.is_flexible()) {
+    auto is_flexible = message.is_flexible();
+    auto ordinal = message.ordinal();
+    // To satisfy RFC-0138, move the message so it is destructed before sending
+    // a reply or calling the unknown method handler.
+    { auto message_ = std::move(message); }
+    if (is_flexible) {
       if (!response.needs_response()) {
-        impl_->handle_unknown_method(message.ordinal());
+        impl_->handle_unknown_method(ordinal);
         return ZX_OK;
       }
     }

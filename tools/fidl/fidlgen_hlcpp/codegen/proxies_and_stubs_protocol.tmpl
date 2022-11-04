@@ -344,8 +344,14 @@ zx_status_t {{ .Proxy.Name }}::Dispatch_(::fidl::HLCPPIncomingMessage message) {
     {{- end }}
     default: {
       {{- if .HandlesOneWayUnknownInteractions }}
-      if (message.txid() == 0 && message.is_flexible()) {
-        handle_unknown_event(message.ordinal());
+      auto txid = message.txid();
+      auto is_flexible = message.is_flexible();
+      auto ordinal = message.ordinal();
+      // To satisfy RFC-0138, move the message so it is destructed before
+      // calling the unknown event handler.
+      { auto message_ = std::move(message); }
+      if (txid == 0 && is_flexible) {
+        handle_unknown_event(ordinal);
         break;
       }
       {{- end }}
@@ -458,20 +464,25 @@ zx_status_t {{ .Stub.Name }}::Dispatch_(
 
   if (!is_known) {
     {{- if .HandlesOneWayUnknownInteractions }}
-    if (message.is_flexible()) {
+    auto is_flexible = message.is_flexible();
+    auto ordinal = message.ordinal();
+    // To satisfy RFC-0138, move the message so it is destructed before sending
+    // a reply or calling the unknown method handler.
+    { auto message_ = std::move(message); }
+    if (is_flexible) {
       {{- if .HandlesTwoWayUnknownInteractions }}
       if (response.needs_response()) {
-        ::fidl::MessageEncoder encoder(message.ordinal(), ::fidl::MessageDynamicFlags::kFlexibleMethod);
+        ::fidl::MessageEncoder encoder(ordinal, ::fidl::MessageDynamicFlags::kFlexibleMethod);
         const fidl_type_t* resp_type = &kFidlInternalUnknownMethodResponseTable;
         response.Send(resp_type, ::fidl::internal::EncodeUnknownMethodResponse(&encoder));
-        impl_->handle_unknown_method(message.ordinal(), true);
+        impl_->handle_unknown_method(ordinal, true);
       } else {
-        impl_->handle_unknown_method(message.ordinal(), false);
+        impl_->handle_unknown_method(ordinal, false);
       }
       return ZX_OK;
       {{- else }}
       if (!response.needs_response()) {
-        impl_->handle_unknown_method(message.ordinal());
+        impl_->handle_unknown_method(ordinal);
         return ZX_OK;
       }
       {{- end }}
