@@ -18,8 +18,9 @@ use {argh::FromArgs, ffx_core::ffx_command};
 
 pub struct CreateComponentCommand {
     #[argh(positional)]
-    /// moniker of a component instance in an existing collection.
-    /// The component instance will be added to the collection if the command succeeds.
+    /// moniker of a component instance in an existing collection. See https://fuchsia.dev/fuchsia-src/reference/components/moniker
+    /// The component instance will be added to the collection if the command
+    /// succeeds.
     pub moniker: String,
 
     #[argh(positional)]
