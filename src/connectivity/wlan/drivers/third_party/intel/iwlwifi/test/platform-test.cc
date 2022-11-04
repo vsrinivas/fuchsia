@@ -197,4 +197,29 @@ TEST_F(PlatformTest, ieee80211_sn_less) {
   EXPECT_TRUE(ieee80211_sn_less(0x0800, 0x0fff));
 }
 
+TEST_F(PlatformTest, u32_encode_bits) {
+  // normal cases
+  EXPECT_EQ(0x00000066, u32_encode_bits(0x5566, 0x000000ff));
+  EXPECT_EQ(0x00556600, u32_encode_bits(0x5566, 0x00ffff00));
+  EXPECT_EQ(0x55660000, u32_encode_bits(0x5566, 0xffff0000));
+  EXPECT_EQ(0x05566180, u32_encode_bits(0x556618, 0x0ffffff0));
+
+  // overflow cases
+  EXPECT_EQ(0x00000001, u32_encode_bits(0xffff, 0x00000001));
+  EXPECT_EQ(0x00018300, u32_encode_bits(0x55660183, 0x00ffff00));
+  EXPECT_EQ(0x66018300, u32_encode_bits(0x55660183, 0xffffff00));
+
+  // unusual masks
+  EXPECT_EQ(0x00001001, u32_encode_bits(0xffff, 0xf0f01001));  // shift 0
+}
+
+TEST_F(PlatformTest, is_power_of_2) {
+  EXPECT_TRUE(is_power_of_2(0));
+  EXPECT_TRUE(is_power_of_2(1));
+  EXPECT_TRUE(is_power_of_2(2));
+  EXPECT_FALSE(is_power_of_2(3));
+  EXPECT_TRUE(is_power_of_2(0x10000000));
+  EXPECT_FALSE(is_power_of_2(0xf0000000));
+}
+
 }  // namespace

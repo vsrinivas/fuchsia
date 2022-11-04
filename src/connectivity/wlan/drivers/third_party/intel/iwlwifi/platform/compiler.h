@@ -286,4 +286,17 @@ static inline uint8_t hweight8(uint8_t bitmap) {
 }  // extern "C"
 #endif  // defined(__cplusplus)
 
+#define LOWEST_BIT_IDX(x) (__builtin_ffsll(x) - 1)
+#define FIELD_PREP(mask, value) (((value) << LOWEST_BIT_IDX(mask)) & (mask))
+#define encode_bits(w, v, field)     FIELD_PREP((u##w)(field), (u##w)(v))
+
+// Encode the 'v' (value) into the 'field' (mask).
+//
+// For example, given v=0x5566 and field=0x00ffff00, this function returns 0x00556600.
+//
+#define u32_encode_bits(v, field)    encode_bits(32, v, field)
+#define le32_encode_bits(v, field)   cpu_to_le32(encode_bits(32, v, field))
+
+#define is_power_of_2(i) (((i) & ((i) - 1)) == 0)
+
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_COMPILER_H_
