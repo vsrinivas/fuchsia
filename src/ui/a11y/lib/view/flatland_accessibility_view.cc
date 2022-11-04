@@ -376,7 +376,6 @@ void FlatlandAccessibilityView::DrawHighlight(fuchsia::math::Point top_left,
                                               fuchsia::math::Point bottom_right,
                                               fit::function<void()> callback) {
   FX_DCHECK(is_initialized_);
-  highlight_is_present_ = true;
 
   int32_t left = top_left.x;
   int32_t top = top_left.y;
@@ -427,8 +426,11 @@ void FlatlandAccessibilityView::DrawHighlight(fuchsia::math::Point top_left,
       TransformId{.value = kRectangleTransformIds[kRightRect]}, fuchsia::math::Vec{right, top});
 
   // Attach the highlight transform to the rest of the graph so that the rects will be rendered!
-  flatland_highlight_.flatland()->AddChild(TransformId{.value = kHighlightViewRootTransformId},
-                                           TransformId{.value = kHighlightTransformId});
+  if (!highlight_is_present_) {
+    flatland_highlight_.flatland()->AddChild(TransformId{.value = kHighlightViewRootTransformId},
+                                             TransformId{.value = kHighlightTransformId});
+    highlight_is_present_ = true;
+  }
 
   flatland_highlight_.Present(fuchsia::ui::composition::PresentArgs{},
                               [callback = std::move(callback)](auto) { callback(); });
@@ -436,11 +438,16 @@ void FlatlandAccessibilityView::DrawHighlight(fuchsia::math::Point top_left,
 
 void FlatlandAccessibilityView::ClearHighlight(fit::function<void()> callback) {
   FX_DCHECK(is_initialized_);
+
+  if (!highlight_is_present_) {
+    callback();
+    return;
+  }
   highlight_is_present_ = false;
 
+  // Detach the highlight transform from the rest of the graph so that the rects won't be rendered.
   flatland_highlight_.flatland()->RemoveChild(TransformId{.value = kHighlightViewRootTransformId},
                                               TransformId{.value = kHighlightTransformId});
-
   flatland_highlight_.Present(fuchsia::ui::composition::PresentArgs{},
                               [callback = std::move(callback)](auto) { callback(); });
 }

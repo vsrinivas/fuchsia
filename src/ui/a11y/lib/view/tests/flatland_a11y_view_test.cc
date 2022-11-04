@@ -394,5 +394,31 @@ TEST_F(FlatlandAccessibilityViewTest, TestClearHighlight) {
   }
 }
 
+// Make sure that calling ClearHighlight and DrawHighlight multiple times
+// doesn't cause a Flatland error.
+TEST_F(FlatlandAccessibilityViewTest, MultipleCallsDontCrash) {
+  a11y_view_->ClearHighlight([this]() { QuitLoop(); });
+  RunLoop();
+
+  a11y_view_->ClearHighlight([this]() { QuitLoop(); });
+  RunLoop();
+
+  const int left = static_cast<int>(display_width_ * 1 / 4);
+  const int top = static_cast<int>(display_height_ * 1 / 4);
+  const int right = static_cast<int>(display_width_ * 3 / 4);
+  const int bottom = static_cast<int>(display_height_ * 3 / 4);
+  a11y_view_->DrawHighlight({left, top}, {right, bottom}, [this]() { QuitLoop(); });
+  RunLoop();
+
+  a11y_view_->DrawHighlight({left, top}, {right, bottom}, [this]() { QuitLoop(); });
+  RunLoop();
+
+  a11y_view_->ClearHighlight([this]() { QuitLoop(); });
+  RunLoop();
+
+  a11y_view_->ClearHighlight([this]() { QuitLoop(); });
+  RunLoop();
+}
+
 }  // namespace
 }  // namespace accessibility_test

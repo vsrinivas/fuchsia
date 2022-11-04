@@ -87,7 +87,9 @@ class FlatlandAccessibilityView : public AccessibilityViewInterface,
   // True if the a11y view and highlight views have been attached to the scene.
   bool is_initialized_ = false;
 
-  // True if DrawHighlight() has been called more recently than ClearHighlight().
+  // True iff DrawHighlight() has been called more recently than ClearHighlight().
+  // Also true iff the transform w/ id kHighlightTransformId is currently a child
+  // of the transform w/ id kHighlightViewRootTransformId.
   bool highlight_is_present_ = false;
 
   // Holds the proxy viewport creation token between the time that `CreateView`
