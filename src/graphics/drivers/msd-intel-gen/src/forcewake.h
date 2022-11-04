@@ -47,7 +47,9 @@ class ForceWake {
   bool Release(MsdIntelRegisterIo* reg_io, ForceWakeDomain domain);
 
   static constexpr uint32_t kThreadShift = 0;
-  static constexpr uint32_t kRetryMaxMs = 3;
+  static constexpr uint32_t kMaxRetries = 20;
+  static constexpr uint32_t kRetryDelayUs = 10;
+  static constexpr uint32_t kRetryMaxUs = kMaxRetries * kRetryDelayUs;
 
  private:
   bool Wait(MsdIntelRegisterIo* register_io, ForceWakeDomain domain, bool set);

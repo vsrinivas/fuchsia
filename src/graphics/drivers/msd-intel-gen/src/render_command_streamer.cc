@@ -20,7 +20,9 @@ std::unique_ptr<RenderInitBatch> RenderEngineCommandStreamer::CreateRenderInitBa
 RenderEngineCommandStreamer::RenderEngineCommandStreamer(EngineCommandStreamer::Owner* owner,
                                                          std::unique_ptr<GpuMapping> hw_status_page)
     : EngineCommandStreamer(owner, RENDER_COMMAND_STREAMER, kRenderEngineMmioBase,
-                            std::move(hw_status_page), Scheduler::CreateFifoScheduler()) {}
+                            std::move(hw_status_page), Scheduler::CreateFifoScheduler()) {
+  set_forcewake_domain(ForceWakeDomain::RENDER);
+}
 
 bool RenderEngineCommandStreamer::RenderInit(std::shared_ptr<MsdIntelContext> context,
                                              std::unique_ptr<RenderInitBatch> init_batch,

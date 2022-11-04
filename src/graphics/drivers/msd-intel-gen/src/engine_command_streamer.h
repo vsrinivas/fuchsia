@@ -31,6 +31,7 @@ class EngineCommandStreamer {
     virtual MsdIntelRegisterIo* register_io() = 0;
     virtual Sequencer* sequencer() = 0;
     virtual uint32_t device_id() = 0;
+    virtual std::shared_ptr<ForceWakeDomain> ForceWakeRequest(ForceWakeDomain domain) = 0;
   };
 
   EngineCommandStreamer(Owner* owner, EngineCommandStreamerId id, uint32_t mmio_base,
@@ -88,6 +89,14 @@ class EngineCommandStreamer {
   // to store the result and this method must be called from the device thread
   std::vector<MappedBatch*> GetInflightBatches();
 
+  void set_forcewake_domain(ForceWakeDomain domain) {
+    // May only be set once.
+    DASSERT(!forcewake_domain_);
+    forcewake_domain_ = domain;
+  }
+
+  std::optional<ForceWakeDomain> get_forcewake_domain() { return forcewake_domain_; }
+
  protected:
   void InitRegisterState(RegisterStateHelper& helper, Ringbuffer* ringbuffer,
                          uint64_t ppgtt_pml4_addr) const;
@@ -105,6 +114,13 @@ class EngineCommandStreamer {
 
   bool StartBatchBuffer(MsdIntelContext* context, uint64_t gpu_addr,
                         AddressSpaceType address_space_type);
+
+  [[nodiscard]] std::shared_ptr<ForceWakeDomain> ForceWakeRequest() {
+    if (forcewake_domain_) {
+      return owner_->ForceWakeRequest(*forcewake_domain_);
+    }
+    return {};
+  }
 
   // from intel-gfx-prm-osrc-kbl-vol03-gpu_overview.pdf p.5
   // https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-tgl-vol08-command_stream_programming_0.pdf
@@ -138,6 +154,7 @@ class EngineCommandStreamer {
   std::unique_ptr<Scheduler> scheduler_;
   std::queue<InflightCommandSequence> inflight_command_sequences_;
   bool context_switch_pending_{};
+  std::optional<ForceWakeDomain> forcewake_domain_;
 
   friend class TestEngineCommandStreamer;
   friend class TestMsdIntelDevice;

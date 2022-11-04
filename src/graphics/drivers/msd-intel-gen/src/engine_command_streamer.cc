@@ -92,6 +92,8 @@ bool EngineCommandStreamer::InitContextCacheConfig(MsdIntelContext* context) {
 }
 
 void EngineCommandStreamer::InitHardware() {
+  auto forcewake = ForceWakeRequest();
+
   Reset();
 
   if (DeviceId::is_gen12(owner_->device_id())) {
@@ -283,6 +285,8 @@ void EngineCommandStreamer::SubmitExeclists(MsdIntelContext* context) {
 
   auto start = std::chrono::high_resolution_clock::now();
 
+  auto forcewake = ForceWakeRequest();
+
   for (bool busy = true; busy;) {
     if (DeviceId::is_gen12(owner_->device_id())) {
       auto reg = registers::ExeclistStatusGen12::GetAddr(mmio_base_).ReadFrom(register_io());
@@ -350,14 +354,18 @@ void EngineCommandStreamer::SubmitExeclists(MsdIntelContext* context) {
 }
 
 uint64_t EngineCommandStreamer::GetActiveHeadPointer() {
+  auto forcewake = ForceWakeRequest();
   return registers::ActiveHeadPointer::read(register_io(), mmio_base_);
 }
 
 uint32_t EngineCommandStreamer::GetRingbufferHeadPointer() {
+  auto forcewake = ForceWakeRequest();
   return registers::RingbufferHead::read(register_io(), mmio_base_);
 }
 
 bool EngineCommandStreamer::Reset() {
+  auto forcewake = ForceWakeRequest();
+
   uint8_t bit;
   switch (id()) {
     case RENDER_COMMAND_STREAMER:

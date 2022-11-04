@@ -144,7 +144,7 @@ class TestPerProcessGtt {
   static void PrivatePat() {
     auto reg_io = std::make_unique<MsdIntelRegisterIo>(MockMmio::Create(8ULL * 1024 * 1024));
 
-    PerProcessGtt::InitPrivatePat(reg_io.get());
+    PerProcessGtt::InitPrivatePat(reg_io.get(), {});
 
     EXPECT_EQ(0xA0907u, reg_io->Read32(registers::PatIndex::kOffsetLow));
     EXPECT_EQ(0x3B2B1B0Bu, reg_io->Read32(registers::PatIndex::kOffsetHigh));
@@ -153,7 +153,7 @@ class TestPerProcessGtt {
   static void PrivatePatGen12() {
     auto reg_io = std::make_unique<MsdIntelRegisterIo>(MockMmio::Create(8ULL * 1024 * 1024));
 
-    PerProcessGtt::InitPrivatePatGen12(reg_io.get());
+    PerProcessGtt::InitPrivatePatGen12(reg_io.get(), {});
 
     for (uint32_t i = 0; i < registers::PatIndexGen12::kIndexCount; i++) {
       switch (i) {

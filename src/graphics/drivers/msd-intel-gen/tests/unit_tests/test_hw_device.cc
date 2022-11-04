@@ -258,6 +258,8 @@ class TestMsdIntelDevice : public testing::Test {
 
       uint32_t tail_start = ringbuffer->tail();
 
+      auto forcewake = command_streamer->ForceWakeRequest();
+
       // Initialize the target
       reinterpret_cast<uint32_t*>(dst_cpu_addr)[offset / sizeof(uint32_t)] = 0xdeadbeef;
       device->register_io()->Write32(0xdeadbeef, kScratchRegOffset);
@@ -311,6 +313,8 @@ class TestMsdIntelDevice : public testing::Test {
     ASSERT_TRUE(ringbuffer);
 
     // General purpose register 0
+    auto forcewake = command_streamer->ForceWakeRequest();
+
     const uint32_t kScratchRegOffset = command_streamer->mmio_base() + 0x600;
     device->register_io()->Write32(0xdeadbeef, kScratchRegOffset);
 

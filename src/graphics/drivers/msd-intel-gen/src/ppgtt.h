@@ -34,8 +34,10 @@ class PerProcessGtt : public AddressSpace {
 
   uint64_t Size() const override { return kSize; }
 
-  static void InitPrivatePat(MsdIntelRegisterIo* reg_io);
-  static void InitPrivatePatGen12(MsdIntelRegisterIo* reg_io);
+  static void InitPrivatePat(MsdIntelRegisterIo* reg_io,
+                             std::shared_ptr<ForceWakeDomain> forcewake);
+  static void InitPrivatePatGen12(MsdIntelRegisterIo* reg_io,
+                                  std::shared_ptr<ForceWakeDomain> forcewake);
 
   uint64_t get_pml4_bus_addr() { return pml4_table_->bus_addr(); }
 

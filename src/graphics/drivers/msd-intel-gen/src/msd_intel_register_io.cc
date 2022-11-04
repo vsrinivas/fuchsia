@@ -17,6 +17,39 @@ MsdIntelRegisterIo::MsdIntelRegisterIo(Owner* owner, std::unique_ptr<magma::Plat
   }
 }
 
+std::shared_ptr<ForceWakeDomain> MsdIntelRegisterIo::GetForceWakeToken(ForceWakeDomain domain) {
+  // Ensure forcewake has been activated before we offer the first token.
+  if (forcewake_token_count(domain) == 0) {
+    DASSERT(owner_);
+    bool enabled = owner_->IsForceWakeDomainActive(domain);
+    DASSERT(enabled);
+  }
+
+  DASSERT(static_cast<size_t>(domain) < per_forcewake_.size());
+
+  per_forcewake_[static_cast<int>(domain)].last_request_time = std::chrono::steady_clock::now();
+
+  return per_forcewake_[static_cast<int>(domain)].token;
+}
+
+std::chrono::steady_clock::duration MsdIntelRegisterIo::GetForceWakeReleaseTimeout(
+    ForceWakeDomain forcewake_domain, uint64_t max_release_timeout_ms,
+    std::chrono::steady_clock::time_point now) {
+  // Don't timeout if a forcewake token is still held
+  if (forcewake_token_count(forcewake_domain) > 0)
+    return std::chrono::steady_clock::duration::max();
+
+  if (!owner_->IsForceWakeDomainActive(forcewake_domain))
+    return std::chrono::steady_clock::duration::max();
+
+  DASSERT(static_cast<size_t>(forcewake_domain) < per_forcewake_.size());
+
+  auto last_request_time = per_forcewake_[static_cast<int>(forcewake_domain)].last_request_time;
+  DASSERT(last_request_time != std::chrono::steady_clock::time_point::max());
+
+  return last_request_time + std::chrono::milliseconds(max_release_timeout_ms) - now;
+}
+
 void MsdIntelRegisterIo::CheckForcewake(uint32_t register_offset) {
   // Skip the forcewake registers
   switch (register_offset) {
@@ -48,11 +81,14 @@ void MsdIntelRegisterIo::CheckForcewake(uint32_t register_offset) {
 }
 
 void MsdIntelRegisterIo::CheckForcewakeForRange(const Range& range, uint32_t register_offset) {
-  DASSERT(owner_);
-  bool enabled = owner_->IsForceWakeDomainActive(range.forcewake_domain);
-  DLOG("CheckForcewakeForRange 0x%x domain %d range 0x%x - 0x%x enabled %d", register_offset,
-       range.forcewake_domain, range.start_offset, range.end_offset, enabled);
-  DASSERT(enabled);
+  if (forcewake_active_check_for_test_) {
+    owner_->IsForceWakeDomainActive(range.forcewake_domain);
+  }
+  if (forcewake_token_count(range.forcewake_domain) == 0) {
+    MAGMA_LOG(WARNING, "Access missing forcewake: register 0x%x domain %d range 0x%x - 0x%x",
+              register_offset, range.forcewake_domain, range.start_offset, range.end_offset);
+    DASSERT(false);
+  }
 }
 
 // static

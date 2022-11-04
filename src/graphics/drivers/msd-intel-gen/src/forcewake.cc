@@ -6,8 +6,10 @@
 
 #include <thread>
 
+#include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 #include "msd_intel_register_io.h"
+#include "platform_trace.h"
 
 ForceWake::ForceWake(MsdIntelRegisterIo* register_io, uint32_t device_id) {
   status_render_ = registers::ForceWakeStatus::GetRender(register_io);
@@ -25,14 +27,21 @@ bool ForceWake::IsActive(MsdIntelRegisterIo* reg_io, ForceWakeDomain domain) {
 }
 
 bool ForceWake::Reset(MsdIntelRegisterIo* reg_io, ForceWakeDomain domain) {
+  TRACE_DURATION("magma", "ForceWakeReset");
+  DLOG("ForceWake::Reset domain %d", domain);
+
   registers::ForceWakeRequest::reset(reg_io, get_request_offset(domain));
 
   return Wait(reg_io, domain, false);
 }
 
 bool ForceWake::Request(MsdIntelRegisterIo* reg_io, ForceWakeDomain domain) {
+  TRACE_DURATION("magma", "ForceWakeRequest");
+
   if (IsActive(reg_io, domain))
     return true;
+
+  DLOG("ForceWake::Request domain %d", domain);
 
   registers::ForceWakeRequest::write(reg_io, get_request_offset(domain), 1 << kThreadShift,
                                      1 << kThreadShift);
@@ -41,8 +50,12 @@ bool ForceWake::Request(MsdIntelRegisterIo* reg_io, ForceWakeDomain domain) {
 }
 
 bool ForceWake::Release(MsdIntelRegisterIo* reg_io, ForceWakeDomain domain) {
+  TRACE_DURATION("magma", "ForceWakeRelease");
+
   if (!IsActive(reg_io, domain))
     return true;
+
+  DLOG("ForceWake::Release domain %d", domain);
 
   registers::ForceWakeRequest::write(reg_io, get_request_offset(domain), 1 << kThreadShift, 0);
 
@@ -50,17 +63,19 @@ bool ForceWake::Release(MsdIntelRegisterIo* reg_io, ForceWakeDomain domain) {
 }
 
 bool ForceWake::Wait(MsdIntelRegisterIo* register_io, ForceWakeDomain domain, bool set) {
+  TRACE_DURATION("magma", "ForceWakeWait");
+
   registers::ForceWakeStatus* status_register = get_status_register(domain);
   DASSERT(status_register);
 
-  for (unsigned int ms = 0; ms < kRetryMaxMs; ms++) {
+  for (unsigned int i = 0; i < kMaxRetries; i++) {
     status_register->ReadFrom(register_io);
 
     uint32_t status = status_register->status();
     if (((status >> kThreadShift) & 1) == (set ? 1 : 0))
       return true;
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    std::this_thread::sleep_for(std::chrono::microseconds(kRetryDelayUs));
   }
   MAGMA_LOG(WARNING, "Timed out waiting for forcewake domain %d set %d", domain, set);
   return false;

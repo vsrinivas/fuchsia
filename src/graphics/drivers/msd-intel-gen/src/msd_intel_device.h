@@ -5,6 +5,7 @@
 #ifndef MSD_INTEL_DEVICE_H
 #define MSD_INTEL_DEVICE_H
 
+#include <array>
 #include <list>
 #include <mutex>
 #include <thread>
@@ -116,7 +117,11 @@ class MsdIntelDevice : public msd_device_t,
     return forcewake_->is_active_cached(domain);
   }
 
+  void ForceWakeRelease(ForceWakeDomain domain);
+
   // EngineCommandStreamer::Owner
+  [[nodiscard]] std::shared_ptr<ForceWakeDomain> ForceWakeRequest(ForceWakeDomain domain) override;
+
   MsdIntelRegisterIo* register_io() override {
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
     DASSERT(register_io_);
@@ -202,10 +207,10 @@ class MsdIntelDevice : public msd_device_t,
   int DeviceThreadLoop();
   static void InterruptCallback(void* data, uint32_t master_interrupt_control, uint64_t timestamp);
 
-  void QuerySliceInfoGen9(uint32_t* subslice_total_out, uint32_t* eu_total_out,
-                          Topology* topology_out);
-  void QuerySliceInfoGen12(uint32_t* subslice_total_out, uint32_t* eu_total_out,
-                           Topology* topology_out);
+  void QuerySliceInfoGen9(std::shared_ptr<ForceWakeDomain> forcewake, uint32_t* subslice_total_out,
+                          uint32_t* eu_total_out, Topology* topology_out);
+  void QuerySliceInfoGen12(std::shared_ptr<ForceWakeDomain> forcewake, uint32_t* subslice_total_out,
+                           uint32_t* eu_total_out, Topology* topology_out);
 
   std::shared_ptr<MsdIntelContext> global_context() { return global_context_; }
 

@@ -72,13 +72,43 @@ class MsdIntelRegisterIo {
 
   magma::RegisterIo::Hook* hook() { return register_io_.hook(); }
 
+  size_t forcewake_token_count(ForceWakeDomain domain) {
+    DASSERT(static_cast<size_t>(domain) < per_forcewake_.size());
+
+    size_t count = per_forcewake_[static_cast<int>(domain)].token.use_count();
+
+    // Don't count the one we always keep internally.
+    DASSERT(count > 0);
+    return count - 1;
+  }
+
+  // This token must be held while accessing registers in the given domain.
+  // Note, releasing the token doesn't release the forcewake because those
+  // are deferred.
+  std::shared_ptr<ForceWakeDomain> GetForceWakeToken(ForceWakeDomain domain);
+
+  std::chrono::steady_clock::duration GetForceWakeReleaseTimeout(
+      ForceWakeDomain forcewake_domain, uint64_t max_release_timeout_ms,
+      std::chrono::steady_clock::time_point now);
+
   void CheckForcewake(uint32_t register_offset);
   void CheckForcewakeForRange(const Range& range, uint32_t register_offset);
+
+  void set_forcewake_active_check_for_test() { forcewake_active_check_for_test_ = true; }
 
  private:
   Owner* owner_;
   magma::RegisterIo register_io_;
   const std::map<uint32_t, Range>* forcewake_map_ = nullptr;
+  bool forcewake_active_check_for_test_ = false;
+
+  struct PerForceWake {
+    std::chrono::steady_clock::time_point last_request_time =
+        std::chrono::steady_clock::time_point::max();
+    std::shared_ptr<ForceWakeDomain> token = std::make_shared<ForceWakeDomain>();
+  };
+  // Array size is the number of enum elements in ForceWakeDomain
+  std::array<PerForceWake, 3> per_forcewake_;
 
   static const std::map<uint32_t, Range> forcewake_map_gen12_;
 };

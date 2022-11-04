@@ -142,6 +142,8 @@ TEST_P(TestMsdIntelRegisterIoForceWake, ForceWakeDomainCheck) {
   auto register_io =
       std::make_unique<MsdIntelRegisterIo>(this, MockMmio::Create(kGen12MmioSize), kGen12DeviceId);
 
+  register_io->set_forcewake_active_check_for_test();
+
   EXPECT_EQ(0u, domain_check_counts_[param.domain]);
 
   uint32_t expected_count = 0;
@@ -153,6 +155,10 @@ TEST_P(TestMsdIntelRegisterIoForceWake, ForceWakeDomainCheck) {
   EXPECT_EQ(expected_count, domain_check_counts_[param.domain]);
   register_io->Read32(0x1CD000);
   EXPECT_EQ(expected_count, domain_check_counts_[param.domain]);
+
+  // Holding a token is required.
+  auto forcewake = register_io->GetForceWakeToken(param.domain);
+  EXPECT_EQ(++expected_count, domain_check_counts_[param.domain]);
 
   // Domain specific lowest
   switch (param.domain) {

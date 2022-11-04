@@ -581,6 +581,8 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
     return nullptr;
   }
 
+  std::shared_ptr<ForceWakeDomain> ForceWakeRequest(ForceWakeDomain domain) override { return {}; }
+
  private:
   std::unique_ptr<MsdIntelRegisterIo> register_io_;
   std::unique_ptr<AddressSpaceOwner> address_space_owner_;

@@ -269,7 +269,8 @@ gen_pte_t PerProcessGtt::get_pte(gpu_addr_t gpu_addr) {
 
 // Initialize the private page attribute registers, used to define the meaning
 // of the pat bits in the page table entries.
-void PerProcessGtt::InitPrivatePat(MsdIntelRegisterIo* reg_io) {
+void PerProcessGtt::InitPrivatePat(MsdIntelRegisterIo* reg_io,
+                                   std::shared_ptr<ForceWakeDomain> forcewake) {
   DASSERT(gen_ppat_index(CACHING_WRITE_THROUGH) == 2);
   DASSERT(gen_ppat_index(CACHING_NONE) == 3);
   DASSERT(gen_ppat_index(CACHING_LLC) == 4);
@@ -297,7 +298,8 @@ void PerProcessGtt::InitPrivatePat(MsdIntelRegisterIo* reg_io) {
   registers::PatIndex::write(reg_io, pat);
 }
 
-void PerProcessGtt::InitPrivatePatGen12(MsdIntelRegisterIo* reg_io) {
+void PerProcessGtt::InitPrivatePatGen12(MsdIntelRegisterIo* reg_io,
+                                        std::shared_ptr<ForceWakeDomain> forcewake) {
   DASSERT(gen_ppat_index(CACHING_WRITE_THROUGH) == 2);
   DASSERT(gen_ppat_index(CACHING_NONE) == 3);
   DASSERT(gen_ppat_index(CACHING_LLC) == 4);

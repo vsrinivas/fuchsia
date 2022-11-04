@@ -64,10 +64,10 @@ TEST_P(TestForceWake, Request) {
   ASSERT_FALSE(forcewake_->Request(register_io_.get(), domain_));
 
   auto end = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double, std::milli> elapsed = end - start;
+  std::chrono::duration<double, std::micro> elapsed = end - start;
 
   EXPECT_EQ(0x00010001u, register_io_->mmio()->Read32(offset_));
-  EXPECT_GE(elapsed.count(), ForceWake::kRetryMaxMs);
+  EXPECT_GE(elapsed.count(), ForceWake::kRetryMaxUs);
 }
 
 TEST_P(TestForceWake, Release) {
@@ -78,10 +78,10 @@ TEST_P(TestForceWake, Release) {
   ASSERT_FALSE(forcewake_->Release(register_io_.get(), domain_));
 
   auto end = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double, std::milli> elapsed = end - start;
+  std::chrono::duration<double, std::micro> elapsed = end - start;
 
   EXPECT_EQ(0x00010000u, register_io_->mmio()->Read32(offset_));
-  EXPECT_GE(elapsed.count(), ForceWake::kRetryMaxMs);
+  EXPECT_GE(elapsed.count(), ForceWake::kRetryMaxUs);
 }
 
 static constexpr uint32_t kGen9DeviceId = 0x5916;

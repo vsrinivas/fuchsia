@@ -163,7 +163,8 @@ bool MsdIntelDevice::Init(void* device_handle) {
   }
 
   if (DeviceId::is_gen12(device_id())) {
-    if (!CacheConfig::InitCacheConfigGen12(register_io()))
+    if (!CacheConfig::InitCacheConfigGen12(register_io(),
+                                           ForceWakeRequest(ForceWakeDomain::RENDER)))
       return DRETF(false, "failed to init cache config");
   }
 
@@ -206,23 +207,13 @@ bool MsdIntelDevice::BaseInit(void* device_handle) {
 
   forcewake_ = std::make_unique<ForceWake>(register_io_.get(), device_id_);
 
-  HardwarePreinit();
+  topology_ = std::make_unique<Topology>();
 
   bus_mapper_ = magma::PlatformBusMapper::Create(platform_device_->GetBusTransactionInitiator());
   if (!bus_mapper_)
     return DRETF(false, "failed to create bus mapper");
 
-  topology_ = std::make_unique<Topology>();
-
-  if (DeviceId::is_gen12(device_id())) {
-    QuerySliceInfoGen12(&subslice_total_, &eu_total_, topology_.get());
-
-    PerProcessGtt::InitPrivatePatGen12(register_io_.get());
-  } else {
-    QuerySliceInfoGen9(&subslice_total_, &eu_total_, topology_.get());
-
-    PerProcessGtt::InitPrivatePat(register_io_.get());
-  }
+  HardwarePreinit();
 
   interrupt_manager_ = InterruptManager::CreateShim(this);
   if (!interrupt_manager_)
@@ -252,22 +243,33 @@ bool MsdIntelDevice::BaseInit(void* device_handle) {
   return true;
 }
 
+std::shared_ptr<ForceWakeDomain> MsdIntelDevice::ForceWakeRequest(ForceWakeDomain domain) {
+  bool result = forcewake_->Request(register_io(), domain);
+  DASSERT(result);
+
+  return register_io()->GetForceWakeToken(domain);
+}
+
+void MsdIntelDevice::ForceWakeRelease(ForceWakeDomain domain) {
+  // Ensure no tokens are held.
+  DASSERT(register_io()->forcewake_token_count(domain) == 0);
+
+  bool result = forcewake_->Release(register_io(), domain);
+  DASSERT(result);
+}
+
 bool MsdIntelDevice::HardwarePreinit() {
   DASSERT(register_io());
 
-  // TODO(fxbug.dev/79999): request and release forcewake as needed. For now we always hold
-  // forcewake for the engines we support, however on some hardware (eg gen12) this prevents
-  // the GPU from reaching max frequency.
   forcewake_->Reset(register_io(), ForceWakeDomain::RENDER);
-  forcewake_->Request(register_io(), ForceWakeDomain::RENDER);
 
   if (DeviceId::is_gen12(device_id_)) {
     forcewake_->Reset(register_io(), ForceWakeDomain::GEN12_VDBOX0);
-    forcewake_->Request(register_io(), ForceWakeDomain::GEN12_VDBOX0);
   } else if (DeviceId::is_gen9(device_id_)) {
     forcewake_->Reset(register_io(), ForceWakeDomain::GEN9_MEDIA);
-    forcewake_->Request(register_io(), ForceWakeDomain::GEN9_MEDIA);
   }
+
+  auto forcewake = ForceWakeRequest(ForceWakeDomain::RENDER);
 
   if (DeviceId::is_gen12(device_id_)) {
     // Power gate everything, assume missing engines will be ignored.
@@ -279,6 +281,18 @@ bool MsdIntelDevice::HardwarePreinit() {
 
   // Clear faults
   registers::AllEngineFault::GetAddr(device_id_).FromValue(0).set_valid(0).WriteTo(register_io());
+
+  DASSERT(topology_);
+
+  if (DeviceId::is_gen12(device_id())) {
+    QuerySliceInfoGen12(forcewake, &subslice_total_, &eu_total_, topology_.get());
+
+    PerProcessGtt::InitPrivatePatGen12(register_io_.get(), forcewake);
+  } else {
+    QuerySliceInfoGen9(forcewake, &subslice_total_, &eu_total_, topology_.get());
+
+    PerProcessGtt::InitPrivatePat(register_io_.get(), forcewake);
+  }
 
   return true;
 }
@@ -547,15 +561,31 @@ constexpr uint32_t kHangcheckTimeoutMs = HANGCHECK_TIMEOUT_MS;
 constexpr uint32_t kHangcheckTimeoutMs = 1000;
 #endif
 
+// TODO(fxbug.dev/79997) - set to 100ms to release forcewakes and allow engines to power down.
+constexpr uint32_t kForceWakeReleaseTimeoutMs = 0;
+
 constexpr uint32_t kFreqPollPeriodMs = 16;
 
+// Returns the minimum timeout across all timer sources.
 std::chrono::milliseconds MsdIntelDevice::GetDeviceRequestTimeoutMs(
     const std::vector<EngineCommandStreamer*>& engines) {
   auto timeout = std::chrono::steady_clock::duration::max();
 
+  auto now = std::chrono::steady_clock::now();
+
+  // Get the minimum hangcheck timeout for active engines.
   for (auto& engine : engines) {
-    timeout = std::min(timeout, engine->progress()->GetHangcheckTimeout(
-                                    kHangcheckTimeoutMs, std::chrono::steady_clock::now()));
+    timeout = std::min(timeout, engine->progress()->GetHangcheckTimeout(kHangcheckTimeoutMs, now));
+  }
+
+  // Account for any forcewake release timeouts.
+  for (auto& engine : engines) {
+    auto maybe_domain = engine->get_forcewake_domain();
+
+    if (maybe_domain && kForceWakeReleaseTimeoutMs) {
+      timeout = std::min(timeout, register_io()->GetForceWakeReleaseTimeout(
+                                      *maybe_domain, kForceWakeReleaseTimeoutMs, now));
+    }
   }
 
   std::chrono::milliseconds timeout_ms =
@@ -585,6 +615,18 @@ void MsdIntelDevice::DeviceRequestTimedOut(const std::vector<EngineCommandStream
     if (engine->progress()->GetHangcheckTimeout(kHangcheckTimeoutMs, now) <=
         std::chrono::steady_clock::duration::zero()) {
       HangCheckTimeout(kHangcheckTimeoutMs, engine->id());
+    }
+  }
+
+  for (auto& engine : engines) {
+    auto maybe_domain = engine->get_forcewake_domain();
+
+    if (maybe_domain && kForceWakeReleaseTimeoutMs) {
+      if (register_io()->GetForceWakeReleaseTimeout(*maybe_domain, kForceWakeReleaseTimeoutMs,
+                                                    now) <=
+          std::chrono::steady_clock::duration::zero()) {
+        ForceWakeRelease(*maybe_domain);
+      }
     }
   }
 }
@@ -953,7 +995,8 @@ uint32_t MsdIntelDevice::GetCurrentFrequency() {
   return 0;
 }
 
-void MsdIntelDevice::QuerySliceInfoGen12(uint32_t* subslice_total_out, uint32_t* eu_total_out,
+void MsdIntelDevice::QuerySliceInfoGen12(std::shared_ptr<ForceWakeDomain> forcewake,
+                                         uint32_t* subslice_total_out, uint32_t* eu_total_out,
                                          Topology* topology_out) {
   // EU mask is shared amongst all subslices
   std::bitset<registers::MirrorEuDisableGen12::kEuDisableBits> eu_disable_bits =
@@ -971,6 +1014,7 @@ void MsdIntelDevice::QuerySliceInfoGen12(uint32_t* subslice_total_out, uint32_t*
       eu_enable_mask |= (enable_bit << (i * 2)) | (enable_bit << (i * 2 + 1));
     }
   }
+  DASSERT(eu_enable_mask);
 
   topology_out->max_slice_count = 1;
   topology_out->max_subslice_count = registers::MirrorDssEnable::kDssPerSlice;
@@ -1013,7 +1057,8 @@ void MsdIntelDevice::QuerySliceInfoGen12(uint32_t* subslice_total_out, uint32_t*
   }
 }
 
-void MsdIntelDevice::QuerySliceInfoGen9(uint32_t* subslice_total_out, uint32_t* eu_total_out,
+void MsdIntelDevice::QuerySliceInfoGen9(std::shared_ptr<ForceWakeDomain> forcewake,
+                                        uint32_t* subslice_total_out, uint32_t* eu_total_out,
                                         Topology* topology_out) {
   uint32_t slice_enable_mask;
   uint32_t subslice_enable_mask;
@@ -1097,6 +1142,8 @@ magma::Status MsdIntelDevice::ProcessTimestampRequest(
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "failed to map query buffer");
     query = reinterpret_cast<magma_intel_gen_timestamp_query*>(ptr);
   }
+
+  auto token = ForceWakeRequest(ForceWakeDomain::RENDER);
 
   // The monotonic raw timestamps represent the start/end of the sample interval.
   query->monotonic_raw_timestamp[0] = get_ns_monotonic(true);

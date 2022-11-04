@@ -11,7 +11,13 @@ VideoCommandStreamer::VideoCommandStreamer(EngineCommandStreamer::Owner* owner,
     : EngineCommandStreamer(
           owner, VIDEO_COMMAND_STREAMER,
           DeviceId::is_gen12(owner->device_id()) ? kVideoEngineMmioBaseGen12 : kVideoEngineMmioBase,
-          std::move(hw_status_page), Scheduler::CreateFifoScheduler()) {}
+          std::move(hw_status_page), Scheduler::CreateFifoScheduler()) {
+  if (DeviceId::is_gen12(owner->device_id())) {
+    set_forcewake_domain(ForceWakeDomain::GEN12_VDBOX0);
+  } else {
+    set_forcewake_domain(ForceWakeDomain::GEN9_MEDIA);
+  }
+}
 
 bool VideoCommandStreamer::WriteBatchToRingBuffer(MappedBatch* mapped_batch,
                                                   uint32_t* sequence_number_out) {

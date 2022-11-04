@@ -83,7 +83,8 @@ void CacheConfig::GetLncfMemoryObjectControlState(std::vector<uint16_t>& mocs) {
   }
 }
 
-bool CacheConfig::InitCacheConfigGen12(MsdIntelRegisterIo* register_io) {
+bool CacheConfig::InitCacheConfigGen12(MsdIntelRegisterIo* register_io,
+                                       std::shared_ptr<ForceWakeDomain> forcewake) {
   std::vector<uint32_t> global_mocs;
   GetMemoryObjectControlStateGen12(global_mocs);
 
