@@ -142,6 +142,7 @@ if (target_cpu == "x64" && !is_asan) {
       "device/wayland/mod.rs",
       "device/wayland/vulkan.rs",
       "device/wayland/wayland.rs",
+      "dynamic_thread_pool.rs",
       "execution/component_runner.rs",
       "execution/exception_executor.rs",
       "execution/galaxy.rs",

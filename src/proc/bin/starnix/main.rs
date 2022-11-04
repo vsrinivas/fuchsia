@@ -22,6 +22,7 @@ mod auth;
 mod bpf;
 mod collections;
 mod device;
+mod dynamic_thread_pool;
 mod execution;
 mod fs;
 mod loader;
