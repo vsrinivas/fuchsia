@@ -106,8 +106,7 @@ ValidateStreamSink(std::string_view debug_description, std::string_view node_nam
       !stream_sink.has_format() ||  //
       !stream_sink.has_reference_clock() || !stream_sink.reference_clock().has_handle() ||
       !stream_sink.has_payload_buffer() || !stream_sink.payload_buffer().is_valid() ||
-      !stream_sink.has_media_ticks_per_second_numerator() ||
-      !stream_sink.has_media_ticks_per_second_denominator()) {
+      !stream_sink.has_media_ticks_per_second()) {
     FX_LOGS(WARNING) << debug_description << ": missing field";
     return fpromise::error(fuchsia_audio_mixer::CreateNodeError::kMissingRequiredField);
   }
@@ -126,11 +125,11 @@ ValidateStreamSink(std::string_view debug_description, std::string_view node_nam
     return fpromise::error(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
   }
 
-  if (stream_sink.media_ticks_per_second_numerator() == 0 ||
-      stream_sink.media_ticks_per_second_denominator() == 0) {
+  if (stream_sink.media_ticks_per_second().numerator == 0 ||
+      stream_sink.media_ticks_per_second().denominator == 0) {
     FX_LOGS(WARNING) << debug_description << ": invalid stream sink media ticks/second="
-                     << stream_sink.media_ticks_per_second_numerator() << "/"
-                     << stream_sink.media_ticks_per_second_denominator();
+                     << stream_sink.media_ticks_per_second().numerator << "/"
+                     << stream_sink.media_ticks_per_second().denominator;
     return fpromise::error(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
   }
 
@@ -146,8 +145,8 @@ ValidateStreamSink(std::string_view debug_description, std::string_view node_nam
       .format = format_result.value(),
       .reference_clock = clock_result.value(),
       .media_ticks_per_ns =
-          TimelineRate(stream_sink.media_ticks_per_second_numerator(),
-                       stream_sink.media_ticks_per_second_denominator() * 1'000'000'000),
+          TimelineRate(stream_sink.media_ticks_per_second().numerator,
+                       stream_sink.media_ticks_per_second().denominator * 1'000'000'000),
   });
 }
 

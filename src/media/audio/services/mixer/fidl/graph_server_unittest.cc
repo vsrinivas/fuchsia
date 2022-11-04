@@ -49,6 +49,7 @@ using ::fuchsia_audio_mixer::wire::RealTime;
 using ::fuchsia_audio_mixer::wire::StartError;
 using ::fuchsia_audio_mixer::wire::StopError;
 using ::fuchsia_audio_mixer::wire::StreamTime;
+using ::fuchsia_math::wire::RatioU64;
 
 const Format kFormat = Format::CreateOrDie({
     .sample_type = ::fuchsia_audio::SampleType::kFloat32,
@@ -115,8 +116,7 @@ fidl::WireTableBuilder<fuchsia_audio_mixer::wire::StreamSinkProducer> MakeDefaul
   builder.format(kFormat.ToWireFidl(arena));
   builder.reference_clock(MakeReferenceClock(arena));
   builder.payload_buffer(MakeVmo());
-  builder.media_ticks_per_second_numerator(1);
-  builder.media_ticks_per_second_denominator(1);
+  builder.media_ticks_per_second(RatioU64{.numerator = 1, .denominator = 1});
   return builder;
 }
 
@@ -129,8 +129,7 @@ fidl::WireTableBuilder<fuchsia_audio_mixer::wire::StreamSinkConsumer> MakeDefaul
   builder.format(kFormat.ToWireFidl(arena));
   builder.reference_clock(MakeReferenceClock(arena));
   builder.payload_buffer(MakeVmo());
-  builder.media_ticks_per_second_numerator(1);
-  builder.media_ticks_per_second_denominator(1);
+  builder.media_ticks_per_second(RatioU64{.numerator = 1, .denominator = 1});
   return builder;
 }
 
@@ -423,13 +422,8 @@ TEST_F(GraphServerTest, CreateProducerStreamSinkFailsBadFields) {
           .expected_error = CreateNodeError::kMissingRequiredField,
       },
       {
-          .name = "MissingTicksPerSecondNumerator",
-          .edit = [](auto data_source) { data_source.clear_media_ticks_per_second_numerator(); },
-          .expected_error = CreateNodeError::kMissingRequiredField,
-      },
-      {
-          .name = "MissingTicksPerSecondDenominator",
-          .edit = [](auto data_source) { data_source.clear_media_ticks_per_second_denominator(); },
+          .name = "MissingTicksPerSecond",
+          .edit = [](auto data_source) { data_source.clear_media_ticks_per_second(); },
           .expected_error = CreateNodeError::kMissingRequiredField,
       },
       {
@@ -444,12 +438,18 @@ TEST_F(GraphServerTest, CreateProducerStreamSinkFailsBadFields) {
       },
       {
           .name = "InvalidMediaTicksPerSecondNumerator",
-          .edit = [](auto data_source) { data_source.media_ticks_per_second_numerator(0); },
+          .edit =
+              [](auto data_source) {
+                data_source.media_ticks_per_second(RatioU64{.numerator = 0, .denominator = 1});
+              },
           .expected_error = CreateNodeError::kInvalidParameter,
       },
       {
           .name = "InvalidMediaTicksPerSecondDenominator",
-          .edit = [](auto data_source) { data_source.media_ticks_per_second_denominator(0); },
+          .edit =
+              [](auto data_source) {
+                data_source.media_ticks_per_second(RatioU64{.numerator = 1, .denominator = 0});
+              },
           .expected_error = CreateNodeError::kInvalidParameter,
       },
   };

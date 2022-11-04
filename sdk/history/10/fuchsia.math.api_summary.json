@@ -187,6 +187,38 @@
     },
     {
         "kind": "struct/member",
+        "name": "fuchsia.math/RatioU32.denominator",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.math/RatioU32.numerator",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.math/RatioU32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.math/RatioU64.denominator",
+        "ordinal": "2",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.math/RatioU64.numerator",
+        "ordinal": "1",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.math/RatioU64"
+    },
+    {
+        "kind": "struct/member",
         "name": "fuchsia.math/Rect.height",
         "ordinal": "4",
         "type": "int32"

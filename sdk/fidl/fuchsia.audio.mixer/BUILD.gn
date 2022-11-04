@@ -16,6 +16,7 @@ fidl("fuchsia.audio.mixer") {
     "//sdk/fidl/fuchsia.audio",
     "//sdk/fidl/fuchsia.audio.effects",
     "//sdk/fidl/fuchsia.hardware.audio",
+    "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.media2",
     "//zircon/vdso/zx",
   ]

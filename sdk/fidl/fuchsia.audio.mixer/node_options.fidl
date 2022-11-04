@@ -5,6 +5,7 @@
 library fuchsia.audio.mixer;
 
 using fuchsia.audio;
+using fuchsia.math;
 using fuchsia.audio.effects;
 using fuchsia.media2;
 using fuchsia.hardware.audio;
@@ -45,10 +46,11 @@ type StreamSinkProducer = resource table {
     4: payload_buffer zx.handle:VMO;
 
     /// Packet timestamps use "media time", which has
-    /// `media_ticks_per_second_numerator` ticks every
-    /// `media_ticks_per_second_denominator` seconds.
-    5: media_ticks_per_second_numerator uint64;
-    6: media_ticks_per_second_denominator uint64;
+    /// `media_ticks_per_second.numerator` ticks every
+    /// `media_ticks_per_second.denominator` seconds.
+    ///
+    /// Required.
+    5: media_ticks_per_second fuchsia.math.RatioU64;
 };
 
 /// A consumer driven by a [`fuchsia.media2/StreamSink`].
@@ -74,15 +76,16 @@ type StreamSinkConsumer = resource table {
     4: payload_buffer zx.handle:VMO;
 
     /// Packet timestamps use "media time", which has
-    /// `media_ticks_per_second_numerator` ticks every
-    /// `media_ticks_per_second_denominator` seconds.
-    5: media_ticks_per_second_numerator uint64;
-    6: media_ticks_per_second_denominator uint64;
+    /// `media_ticks_per_second.numerator` ticks every
+    /// `media_ticks_per_second.denominator` seconds.
+    ///
+    /// Required.
+    5: media_ticks_per_second fuchsia.math.RatioU64;
 
     /// Numer of frames to produce in each packet.
     ///
     /// Optional.
-    7: frames_per_packet uint32;
+    6: frames_per_packet uint32;
 };
 
 /// A handle to a reference clock.

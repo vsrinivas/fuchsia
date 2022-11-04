@@ -327,3 +327,23 @@ type InsetF = struct {
     /// the rectangle.
     left float32;
 };
+
+/// A ratio of unsigned 32-bit numbers.
+@available(added=10)
+type RatioU32 = struct {
+    /// The numerator.
+    numerator uint32;
+
+    /// The denominator.
+    denominator uint32;
+};
+
+/// A ratio of unsigned 64-bit numbers.
+@available(added=10)
+type RatioU64 = struct {
+    /// The numerator.
+    numerator uint64;
+
+    /// The denominator.
+    denominator uint64;
+};
