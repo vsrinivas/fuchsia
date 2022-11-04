@@ -36,9 +36,8 @@ using AmlSdmmcType = ddk::Device<AmlSdmmc, ddk::Suspendable>;
 
 class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::base_protocol> {
  public:
-  AmlSdmmc(zx_device_t* parent, zx::bti bti, fdf::MmioBuffer mmio,
-           fdf::MmioPinnedBuffer pinned_mmio, aml_sdmmc_config_t config, zx::interrupt irq,
-           const ddk::GpioProtocolClient& gpio);
+  AmlSdmmc(zx_device_t* parent, zx::bti bti, fdf::MmioBuffer mmio, aml_sdmmc_config_t config,
+           zx::interrupt irq, const ddk::GpioProtocolClient& gpio);
 
   virtual ~AmlSdmmc() = default;
   static zx_status_t Create(void* ctx, zx_device_t* parent);
@@ -55,7 +54,7 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
   zx_status_t SdmmcSetTiming(sdmmc_timing_t timing);
   void SdmmcHwReset();
   zx_status_t SdmmcPerformTuning(uint32_t cmd_idx);
-  zx_status_t SdmmcRequest(sdmmc_req_t* req);
+  zx_status_t SdmmcRequest(sdmmc_req_t* req) { return ZX_ERR_NOT_SUPPORTED; }
   zx_status_t SdmmcRegisterInBandInterrupt(const in_band_interrupt_protocol_t* interrupt_cb);
   void SdmmcAckInBandInterrupt() {}
   zx_status_t SdmmcRegisterVmo(uint32_t vmo_id, uint8_t client_id, zx::vmo vmo, uint64_t offset,
@@ -171,18 +170,9 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
   uint32_t max_delay() const;
 
   void ConfigureDefaultRegs();
-  void SetupCmdDesc(sdmmc_req_t* req, aml_sdmmc_desc_t** out_desc);
-  aml_sdmmc_desc_t* SetupCmdDescNew(const sdmmc_req_new_t& req);
-  // Prepares the VMO and sets up the data descriptors
-  zx_status_t SetupDataDescsDma(sdmmc_req_t* req, aml_sdmmc_desc_t* cur_desc,
-                                aml_sdmmc_desc_t** last_desc);
-  // Sets up the data descriptors using the ping/pong buffers
-  zx_status_t SetupDataDescsPio(sdmmc_req_t* req, aml_sdmmc_desc_t* desc,
-                                aml_sdmmc_desc_t** last_desc);
-  zx_status_t SetupDataDescs(sdmmc_req_t* req, aml_sdmmc_desc_t* desc,
-                             aml_sdmmc_desc_t** last_desc);
+  aml_sdmmc_desc_t* SetupCmdDesc(const sdmmc_req_new_t& req);
   // Returns a pointer to the LAST descriptor used.
-  zx::result<std::pair<aml_sdmmc_desc_t*, std::vector<fzl::PinnedVmo>>> SetupDataDescsNew(
+  zx::result<std::pair<aml_sdmmc_desc_t*, std::vector<fzl::PinnedVmo>>> SetupDataDescs(
       const sdmmc_req_new_t& req, aml_sdmmc_desc_t* cur_desc);
   // These return pointers to the NEXT descriptor to use.
   zx::result<aml_sdmmc_desc_t*> SetupOwnedVmoDescs(const sdmmc_req_new_t& req,
@@ -194,18 +184,15 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
   zx::result<aml_sdmmc_desc_t*> PopulateDescriptors(const sdmmc_req_new_t& req,
                                                     aml_sdmmc_desc_t* cur_desc,
                                                     fzl::PinnedVmo::Region region);
-  static zx_status_t FinishReq(sdmmc_req_t* req);
-  static zx_status_t FinishReqNew(const sdmmc_req_new_t& req);
+  static zx_status_t FinishReq(const sdmmc_req_new_t& req);
 
   void ClearStatus();
-  zx_status_t WaitForInterrupt(sdmmc_req_t* req);
-  zx::result<std::array<uint32_t, kResponseCount>> WaitForInterruptNew(const sdmmc_req_new_t& req);
+  zx::result<std::array<uint32_t, kResponseCount>> WaitForInterrupt(const sdmmc_req_new_t& req);
 
   void ShutDown();
 
   zx::bti bti_;
 
-  fdf::MmioPinnedBuffer pinned_mmio_;
   const ddk::GpioProtocolClient reset_gpio_;
   zx::interrupt irq_;
   aml_sdmmc_config_t board_config_;

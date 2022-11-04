@@ -28,7 +28,6 @@ class TestAmlSdmmc : public AmlSdmmc {
       // Pass BTI ownership to AmlSdmmc, but keep a copy of the handle so we can get a list of VMOs
       // that are pinned when a request is made.
       : AmlSdmmc(fake_ddk::kFakeParent, zx::bti(bti.get()), fdf::MmioBuffer(mmio),
-                 fdf::MmioPinnedBuffer({&mmio, ZX_HANDLE_INVALID, 0x100}),
                  aml_sdmmc_config_t{
                      .supports_dma = true,
                      .min_freq = 400000,
@@ -1171,9 +1170,10 @@ TEST_F(AmlSdmmcTest, ClearStatus) {
 
   // Set end_of_chain to indicate we're done and to have something to clear
   dut_->SetRequestInterruptStatus(1 << 13);
-  sdmmc_req_t request;
+  sdmmc_req_new_t request;
   memset(&request, 0, sizeof(request));
-  EXPECT_OK(dut_->SdmmcRequest(&request));
+  uint32_t unused_response[4];
+  EXPECT_OK(dut_->SdmmcRequestNew(&request, unused_response));
 
   auto status = AmlSdmmcStatus::Get().FromValue(0);
   EXPECT_EQ(AmlSdmmcStatus::kClearStatus, status.ReadFrom(&mmio_).reg_value());
@@ -1184,9 +1184,10 @@ TEST_F(AmlSdmmcTest, TxCrcError) {
 
   // Set TX CRC error bit (8) and desc_busy bit (30)
   dut_->SetRequestInterruptStatus(1 << 8 | 1 << 30);
-  sdmmc_req_t request;
+  sdmmc_req_new_t request;
   memset(&request, 0, sizeof(request));
-  EXPECT_EQ(ZX_ERR_IO_DATA_INTEGRITY, dut_->SdmmcRequest(&request));
+  uint32_t unused_response[4];
+  EXPECT_EQ(ZX_ERR_IO_DATA_INTEGRITY, dut_->SdmmcRequestNew(&request, unused_response));
 
   auto start = AmlSdmmcStart::Get().FromValue(0);
   // The desc busy bit should now have been cleared because of the error
@@ -1196,14 +1197,15 @@ TEST_F(AmlSdmmcTest, TxCrcError) {
 TEST_F(AmlSdmmcTest, RequestsFailAfterSuspend) {
   ASSERT_OK(dut_->Init({}));
 
-  sdmmc_req_t request;
+  sdmmc_req_new_t request;
   memset(&request, 0, sizeof(request));
-  EXPECT_OK(dut_->SdmmcRequest(&request));
+  uint32_t unused_response[4];
+  EXPECT_OK(dut_->SdmmcRequestNew(&request, unused_response));
 
   ddk::SuspendTxn txn(fake_ddk::kFakeDevice, 0, false, 0);
   dut_->DdkSuspend(std::move(txn));
 
-  EXPECT_NOT_OK(dut_->SdmmcRequest(&request));
+  EXPECT_NOT_OK(dut_->SdmmcRequestNew(&request, unused_response));
 }
 
 TEST_F(AmlSdmmcTest, UnownedVmosBlockMode) {
@@ -2448,46 +2450,53 @@ TEST_F(AmlSdmmcTest, ConsecutiveErrorLogging) {
 
   // First data error.
   dut_->SetRequestInterruptStatus(1 << 8);
-  sdmmc_req_t request;
+  sdmmc_req_new_t request;
   memset(&request, 0, sizeof(request));
-  EXPECT_EQ(ZX_ERR_IO_DATA_INTEGRITY, dut_->SdmmcRequest(&request));
+  uint32_t unused_response[4];
+  EXPECT_EQ(ZX_ERR_IO_DATA_INTEGRITY, dut_->SdmmcRequestNew(&request, unused_response));
 
   // First cmd error.
   dut_->SetRequestInterruptStatus(1 << 11);
   memset(&request, 0, sizeof(request));
-  EXPECT_EQ(ZX_ERR_TIMED_OUT, dut_->SdmmcRequest(&request));
+  EXPECT_EQ(ZX_ERR_TIMED_OUT, dut_->SdmmcRequestNew(&request, unused_response));
 
   // Second data error.
   dut_->SetRequestInterruptStatus(1 << 7);
   memset(&request, 0, sizeof(request));
-  EXPECT_EQ(ZX_ERR_IO_DATA_INTEGRITY, dut_->SdmmcRequest(&request));
+  EXPECT_EQ(ZX_ERR_IO_DATA_INTEGRITY, dut_->SdmmcRequestNew(&request, unused_response));
 
   // Second cmd error.
   dut_->SetRequestInterruptStatus(1 << 11);
   memset(&request, 0, sizeof(request));
-  EXPECT_EQ(ZX_ERR_TIMED_OUT, dut_->SdmmcRequest(&request));
+  EXPECT_EQ(ZX_ERR_TIMED_OUT, dut_->SdmmcRequestNew(&request, unused_response));
+
+  zx::vmo vmo;
+  EXPECT_OK(zx::vmo::create(32, 0, &vmo));
 
   // cmd/data goes through.
+  const sdmmc_buffer_region_t region{
+      .buffer = {.vmo = vmo.get()},
+      .type = SDMMC_BUFFER_TYPE_VMO_HANDLE,
+      .offset = 0,
+      .size = 32,
+  };
   dut_->SetRequestInterruptStatus(1 << 13);
   memset(&request, 0, sizeof(request));
   request.cmd_flags = SDMMC_RESP_DATA_PRESENT;  // Must be set to clear the data error count.
   request.blocksize = 32;
-  request.blockcount = 1;
-  request.use_dma = false;
-  uint8_t buffer[32];
-  request.virt_buffer = buffer;
-  request.virt_size = sizeof(buffer);
-  EXPECT_EQ(ZX_OK, dut_->SdmmcRequest(&request));
+  request.buffers_list = &region;
+  request.buffers_count = 1;
+  EXPECT_EQ(ZX_OK, dut_->SdmmcRequestNew(&request, unused_response));
 
   // Third data error.
   dut_->SetRequestInterruptStatus(1 << 7);
   memset(&request, 0, sizeof(request));
-  EXPECT_EQ(ZX_ERR_IO_DATA_INTEGRITY, dut_->SdmmcRequest(&request));
+  EXPECT_EQ(ZX_ERR_IO_DATA_INTEGRITY, dut_->SdmmcRequestNew(&request, unused_response));
 
   // Third cmd error.
   dut_->SetRequestInterruptStatus(1 << 11);
   memset(&request, 0, sizeof(request));
-  EXPECT_EQ(ZX_ERR_TIMED_OUT, dut_->SdmmcRequest(&request));
+  EXPECT_EQ(ZX_ERR_TIMED_OUT, dut_->SdmmcRequestNew(&request, unused_response));
 }
 
 }  // namespace sdmmc
