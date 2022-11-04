@@ -14,13 +14,13 @@ use {
 
 const SCREENSHOT_FILE: &'static str = "/custom_artifacts/screenshot.png";
 
+/// Captures screenshot and saves it as PNG file to |SCREENSHOT_FILE|
+/// panics if screenshot is blank.
 pub async fn take_screenshot() {
     let screenshot =
         connect_to_protocol::<ScreenshotMarker>().expect("failed to connect to Screenshot");
     let data = screenshot
         .take(ScreenshotTakeRequest {
-            // NOTE: this format is not supported by png::Encoder. Need to support rgba for screen capture.
-            // fxb/108647
             format: Some(ScreenshotFormat::BgraRaw),
             ..ScreenshotTakeRequest::EMPTY
         })
@@ -50,8 +50,36 @@ pub async fn take_screenshot() {
         .expect("failed to map VMO");
         image_vmo_mapping.read_at(0, &mut image_data);
     }
-
-    // TODO: Add a utility that checks if &image_data is all black.
-
+    if is_image_blank(&image_data) {
+        panic!("Captured screenshot is blank.");
+    }
+    // NOTE: Remove once fxb/108647 is added.
+    bgra_to_rbga(&mut image_data);
     writer.write_image_data(&image_data).expect("failed to write image data as PNG");
+}
+
+/// Performs inplace BGRA -> RGBA.
+fn bgra_to_rbga(img_data: &mut Vec<u8>) {
+    let bytes_per_pixel = 4;
+    let mut blue_pos = 0;
+    let mut red_pos = 2;
+    let img_data_size = img_data.len();
+
+    while blue_pos < img_data_size && red_pos < img_data_size {
+        let blue = img_data[blue_pos];
+        img_data[blue_pos] = img_data[red_pos];
+        img_data[red_pos] = blue;
+        blue_pos = blue_pos + bytes_per_pixel;
+        red_pos = red_pos + bytes_per_pixel;
+    }
+}
+
+fn is_image_blank(img_data: &Vec<u8>) -> bool {
+    let img_data_iter = img_data.iter();
+    for data in img_data_iter {
+        if data > &0 {
+            return false;
+        }
+    }
+    return true;
 }

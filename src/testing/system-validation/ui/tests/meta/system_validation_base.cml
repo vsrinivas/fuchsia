@@ -11,10 +11,10 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/ui_app_controller",
+        binary: "bin/ui_app_instrumentor",
     },
 
-    // Defines API used by bin/ui_app_controller
+    // Defines API used by bin/ui_app_instrumentor
     // Note: All UI example apps manifests must also include
     // use: [
     // ...

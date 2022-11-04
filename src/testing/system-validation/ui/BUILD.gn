@@ -7,15 +7,15 @@ import("//build/rust/rustc_binary.gni")
 
 # Create a test wrapper that connects to ViewProvider implemented by example apps
 rustc_binary("bin") {
-  name = "ui_app_controller"
+  name = "ui_app_instrumentor"
   testonly = true
   edition = "2018"
-  source_root = "src/ui_app_controller.rs"
+  source_root = "src/ui_app_instrumentor.rs"
   sources = [
     "src/app_monitor.rs",
     "src/screencapture.rs",
     "src/single_session_trace.rs",
-    "src/ui_app_controller.rs",
+    "src/ui_app_instrumentor.rs",
   ]
   deps = [
     "//sdk/fidl/fuchsia.session.scene:fuchsia.session.scene_rust",

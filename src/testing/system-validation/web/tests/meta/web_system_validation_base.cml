@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Takes care of capability routing for "ui_app_controller" and "context_provider"
+// Takes care of capability routing for "ui_app_instrumentor" and "context_provider"
 {
     include: [
         "//src/testing/system-validation/meta/system_validation_test_facet.cml",
@@ -11,7 +11,7 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/ui_app_controller",
+        binary: "bin/ui_app_instrumentor",
     },
     children: [
         {
