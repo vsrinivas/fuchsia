@@ -1091,6 +1091,7 @@ TEST_F(TxTest, TxSoManyPackets) {
   SetupTxQueue();
   SetupTxPacket();
 
+  op_mode_queue_full_.ExpectCall(txq_id_);
   // Fill up all space.
   for (int i = 0; i < TFD_QUEUE_SIZE_MAX * 2; i++) {
     ASSERT_EQ(ZX_OK, iwl_trans_pcie_tx(trans_, wlan_pkt_->mac_pkt(), &dev_cmd_, txq_id_));
@@ -1101,6 +1102,7 @@ TEST_F(TxTest, TxSoManyPackets) {
   iwl_trans_pcie_reclaim(trans_, txq_id_, /*ssn*/ TFD_QUEUE_SIZE_MAX - TX_RESERVED_SPACE);
   // We don't have much to check. But at least we can ensure the call doesn't crash.
   op_mode_queue_not_full_.VerifyAndClear();
+  op_mode_queue_full_.VerifyAndClear();
 }
 
 //
