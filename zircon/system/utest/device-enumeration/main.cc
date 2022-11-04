@@ -245,7 +245,7 @@ class DeviceEnumerationTest : public zxtest::Test {
 TEST_F(DeviceEnumerationTest, CloverTest) {
   static const char* kDevicePaths[] = {
       "sys/platform/pt/clover",
-      "sys/platform/05:08:1/aml-axg-gpio",
+      "sys/platform/05:08:1/aml-gpio",
       "sys/platform/05:08:32/clocks",
       "sys/platform/00:00:1b/sysmem",
       "sys/platform/00:00:e/tee/optee",
@@ -260,7 +260,7 @@ TEST_F(DeviceEnumerationTest, CloverTest) {
 TEST_F(DeviceEnumerationTest, Av400Test) {
   static const char* kDevicePaths[] = {
       "sys/platform/pt/av400",
-      "sys/platform/05:07:1/aml-axg-gpio",
+      "sys/platform/05:07:1/aml-gpio",
       "sys/platform/05:07:1d",  // pwm
       "sys/platform/05:07:2c/clocks",
       "sys/platform/05:00:2/aml-i2c",
@@ -303,7 +303,7 @@ TEST_F(DeviceEnumerationTest, Av400Test) {
       // RAM (DDR) control.
       "sys/platform/05:07:24/ram",
 
-      "sys/platform/05:07:1/aml-axg-gpio/gpio-35/av400-buttons/hid-buttons",
+      "sys/platform/05:07:1/aml-gpio/gpio-35/av400-buttons/hid-buttons",
       "sys/platform/05:07:1c/aml-nna",
   };
 
@@ -334,7 +334,7 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
   static const char* kDevicePaths[] = {
       "sys/platform/pt/vim3",
       "sys/platform/00:00:1b/sysmem",
-      "sys/platform/05:06:1/aml-axg-gpio",
+      "sys/platform/05:06:1/aml-gpio",
       "sys/platform/05:06:14/clocks",
       "sys/platform/05:00:2/aml-i2c",
       "sys/platform/05:00:2/aml-i2c/i2c/i2c-0-81/rtc",
@@ -391,8 +391,8 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
 TEST_F(DeviceEnumerationTest, AstroTest) {
   static const char* kDevicePaths[] = {
       "sys/platform/pt/astro",
-      "sys/platform/05:03:1/aml-axg-gpio",
-      "sys/platform/05:03:1/aml-axg-gpio/gpio-5/astro-buttons/hid-buttons",
+      "sys/platform/05:03:1/aml-gpio",
+      "sys/platform/05:03:1/aml-gpio/gpio-5/astro-buttons/hid-buttons",
       "sys/platform/05:00:2/aml-i2c",
       "sys/platform/05:03:17/mali/aml-gpu",
       "sys/platform/05:00:18/aml-usb-phy-v2",
@@ -479,8 +479,8 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
 TEST_F(DeviceEnumerationTest, NelsonTest) {
   static const char* kDevicePaths[] = {
       "sys/platform/pt/nelson",
-      "sys/platform/05:05:1/aml-axg-gpio",
-      "sys/platform/05:05:1:1/aml-axg-gpio",
+      "sys/platform/05:05:1/aml-gpio",
+      "sys/platform/05:05:1:1/aml-gpio",
       "sys/platform/05:05:1/aml-axg-gpio/gpio-5/nelson-buttons/hid-buttons",
       "sys/platform/05:00:3/bt-uart/aml-uart/bt-transport-uart",
       "sys/platform/05:00:3/bt-uart/aml-uart/bt-transport-uart/bt-hci-broadcom",
@@ -551,7 +551,7 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "sys/platform/05:00:1c/gpio-light",
       "class/light/000",
 
-      "sys/platform/05:05:1:1/aml-axg-gpio/gpio-82/spi-1/aml-spi-1/spi/spi-1-0/spi-banjo-1-0/selina/selina",
+      "sys/platform/05:05:1:1/aml-gpio/gpio-82/spi-1/aml-spi-1/spi/spi-1-0/spi-banjo-1-0/selina/selina",
 
       "sys/platform/05:05:24/ram",
 
@@ -568,7 +568,7 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
 
   static const char* kTouchscreenDevicePaths[] = {
       // One of these touch devices could be on P0/P1 boards.
-      "sys/platform/05:05:1/aml-axg-gpio/gpio-5/nelson-buttons/hid-buttons/hidbus_function/hid-device/InputReport",
+      "sys/platform/05:05:1/aml-gpio/gpio-5/nelson-buttons/hid-buttons/hidbus_function/hid-device/InputReport",
       // This is the only possible touch device for P2 and beyond.
       "sys/platform/1c:00:1/gt6853-touch/gt6853",
   };
@@ -579,7 +579,7 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
 TEST_F(DeviceEnumerationTest, SherlockTest) {
   static const char* kDevicePaths[] = {
       "sys/platform/pt/sherlock",
-      "sys/platform/05:04:1/aml-axg-gpio",
+      "sys/platform/05:04:1/aml-gpio",
       "sys/platform/05:00:14/clocks",
       "sys/platform/05:00:2/aml-i2c",
       "sys/platform/05:00:10/aml-canvas",
@@ -629,7 +629,7 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "sys/platform/05:00:2/aml-i2c/i2c/i2c-1-56/ft5726-touch",
       "sys/platform/00:00:e/tee/optee",
       "sys/platform/05:00:19/spi-0/aml-spi-0/spi/spi-0-0",
-      "sys/platform/05:04:1/aml-axg-gpio/gpio-4/sherlock-buttons/hid-buttons",
+      "sys/platform/05:04:1/aml-gpio/gpio-4/sherlock-buttons/hid-buttons",
       "sys/platform/00:05:23/nrf52840-radio",
       "sys/platform/05:00:2/aml-i2c/i2c/i2c-2-44/backlight/ti-lp8556",
       "sys/platform/05:00:2/aml-i2c/i2c/i2c-0-57/SherlockLightSensor/tcs-3400",
