@@ -18,3 +18,5 @@ toc:
   path: /docs/development/drivers/concepts/driver_development/interrupts.md
 - title: "DMA"
   path: /docs/development/drivers/concepts/driver_development/dma.md
+- title: "GPIO initialization"
+  path: /docs/development/drivers/concepts/driver_development/gpio-initialization.md
