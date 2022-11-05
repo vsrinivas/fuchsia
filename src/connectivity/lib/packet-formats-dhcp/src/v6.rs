@@ -321,6 +321,12 @@ pub enum NonZeroTimeValue {
     Infinity,
 }
 
+impl From<NonZeroTimeValue> for TimeValue {
+    fn from(v: NonZeroTimeValue) -> TimeValue {
+        TimeValue::NonZero(v)
+    }
+}
+
 /// A representation of time values for lifetimes to relay the fact that certain
 /// values have special significance as described in RFC 8415, [section 14.2]
 /// and [section 7.7].
