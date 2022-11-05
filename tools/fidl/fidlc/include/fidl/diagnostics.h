@@ -180,7 +180,7 @@ constexpr ErrorDef<79, std::string_view, std::string_view, SourceSpan, std::stri
     ErrDuplicateMethodNameCanonical(
         "protocol method '{}' conflicts with method '{}' from {}; both are "
         "represented by the canonical form '{}'");
-constexpr UndocumentedErrorDef<80> ErrGeneratedZeroValueOrdinal("Ordinal value 0 disallowed.");
+constexpr ErrorDef<80> ErrGeneratedZeroValueOrdinal("Ordinal value 0 disallowed.");
 constexpr UndocumentedErrorDef<81, SourceSpan, std::string_view> ErrDuplicateMethodOrdinal(
     "Multiple methods with the same ordinal in a protocol; previous was at {}. "
     "Consider using attribute @selector(\"{}\") to change the name used to "
