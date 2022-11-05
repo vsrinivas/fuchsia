@@ -8,6 +8,8 @@ import("//build/go/go_test.gni")
 
 go_library("lib") {
   sources = [
+    "lib.go",
+    "lib_test.go",
     "nsjail.go",
     "nsjail_test.go",
     "outputs.go",
@@ -23,6 +25,7 @@ go_library("lib") {
     "//third_party/golibs:github.com/pkg/sftp",
     "//third_party/golibs:golang.org/x/crypto",
     "//tools/botanist:constants",
+    "//tools/botanist:targets",
     "//tools/build",
     "//tools/debug/elflib",
     "//tools/integration/testsharder:testsharder_lib",
@@ -34,10 +37,12 @@ go_library("lib") {
     "//tools/lib/osmisc",
     "//tools/lib/retry",
     "//tools/lib/serial",
+    "//tools/lib/streams",
     "//tools/lib/subprocess",
     "//tools/net/sshutil",
     "//tools/testing/runtests",
     "//tools/testing/tap",
+    "//tools/testing/testparser",
   ]
 }
 
@@ -49,29 +54,18 @@ go_library("constants") {
 go_library("main") {
   source_dir = "cmd"
 
-  sources = [
-    "main.go",
-    "main_test.go",
-  ]
+  sources = [ "main.go" ]
 
   deps = [
     ":lib",
     "//tools/botanist:constants",
-    "//tools/botanist:targets",
     "//tools/lib/color",
-    "//tools/lib/environment",
-    "//tools/lib/streams",
-    "//tools/testing/testparser",
+    "//tools/lib/logger",
   ]
 }
 
 go_binary("testrunner") {
   library = ":main"
-}
-
-go_test("testrunner_main_tests") {
-  library = ":main"
-  deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
 }
 
 go_test("testrunner_lib_tests") {
@@ -81,8 +75,5 @@ go_test("testrunner_lib_tests") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":testrunner_lib_tests",
-    ":testrunner_main_tests",
-  ]
+  deps = [ ":testrunner_lib_tests" ]
 }

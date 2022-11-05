@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package main
+package testrunner
 
 import (
 	"bytes"
@@ -26,7 +26,6 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/tap"
-	"go.fuchsia.dev/fuchsia/tools/testing/testrunner"
 )
 
 const (
@@ -42,7 +41,7 @@ type fakeTester struct {
 	outDirs   map[string]bool
 }
 
-func (t *fakeTester) Test(ctx context.Context, test testsharder.Test, stdout, stderr io.Writer, outDir string) (*testrunner.TestResult, error) {
+func (t *fakeTester) Test(ctx context.Context, test testsharder.Test, stdout, stderr io.Writer, outDir string) (*TestResult, error) {
 	t.funcCalls = append(t.funcCalls, testFunc)
 	if t.outDirs == nil {
 		t.outDirs = make(map[string]bool)
@@ -57,7 +56,7 @@ func (t *fakeTester) Test(ctx context.Context, test testsharder.Test, stdout, st
 		return nil, err
 	}
 
-	return &testrunner.TestResult{
+	return &TestResult{
 		Name:    test.Name,
 		GNLabel: test.Label,
 		Result:  result,
@@ -69,7 +68,7 @@ func (t *fakeTester) Close() error {
 	return nil
 }
 
-func (t *fakeTester) EnsureSinks(_ context.Context, _ []runtests.DataSinkReference, _ *testrunner.TestOutputs) error {
+func (t *fakeTester) EnsureSinks(_ context.Context, _ []runtests.DataSinkReference, _ *TestOutputs) error {
 	t.funcCalls = append(t.funcCalls, copySinksFunc)
 	return nil
 }
@@ -749,7 +748,7 @@ func TestRunAndOutputTests(t *testing.T) {
 			}
 
 			runCounts := make(map[string]int)
-			testerForTest := func(testsharder.Test) (testrunner.Tester, *[]runtests.DataSinkReference, error) {
+			testerForTest := func(testsharder.Test) (Tester, *[]runtests.DataSinkReference, error) {
 				return &fakeTester{runTest: func(ctx context.Context, test testsharder.Test, stdout, stderr io.Writer) (runtests.TestResult, error) {
 					runIndex := runCounts[test.Name]
 					runCounts[test.Name]++
@@ -791,7 +790,7 @@ func TestRunAndOutputTests(t *testing.T) {
 			}
 
 			resultsDir := mkdtemp(t, "results")
-			outputs, err := testrunner.CreateTestOutputs(tap.NewProducer(io.Discard), resultsDir)
+			outputs, err := CreateTestOutputs(tap.NewProducer(io.Discard), resultsDir)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -899,20 +898,20 @@ func TestExecute(t *testing.T) {
 				ffxInstance = oldFFXInstance
 			}()
 			fuchsiaTester := &fakeTester{}
-			sshTester = func(_ context.Context, _ net.IPAddr, _, _, _ string, _ bool) (testrunner.Tester, error) {
+			sshTester = func(_ context.Context, _ net.IPAddr, _, _, _ string, _ bool) (Tester, error) {
 				if c.wantErr {
 					return nil, fmt.Errorf("failed to get tester")
 				}
 				return fuchsiaTester, nil
 			}
-			serialTester = func(_ context.Context, _ string) (testrunner.Tester, error) {
+			serialTester = func(_ context.Context, _ string) (Tester, error) {
 				if c.wantErr {
 					return nil, fmt.Errorf("failed to get tester")
 				}
 				return fuchsiaTester, nil
 			}
 			ffx := &ffxutil.MockFFXInstance{}
-			ffxInstance = func(_ context.Context, _ string, _ int, _ string, _ []string, _ net.IPAddr, _, _, _ string) (testrunner.FFXInstance, error) {
+			ffxInstance = func(_ context.Context, _ string, _ int, _ string, _ []string, _ net.IPAddr, _, _, _ string) (FFXInstance, error) {
 				if c.useFFX {
 					return ffx, nil
 				}
@@ -921,13 +920,13 @@ func TestExecute(t *testing.T) {
 
 			var buf bytes.Buffer
 			producer := tap.NewProducer(&buf)
-			o, err := testrunner.CreateTestOutputs(producer, mkdtemp(t, "outputs"))
+			o, err := CreateTestOutputs(producer, mkdtemp(t, "outputs"))
 			if err != nil {
 				t.Fatal(err)
 			}
 			defer o.Close()
 			err = execute(context.Background(), tests, o, net.IPAddr{}, c.sshKeyFile, c.serialSocketPath, t.TempDir(),
-				testrunnerFlags{snapshotFile: "snapshot.zip", ffxExperimentLevel: 2})
+				TestrunnerFlags{SnapshotFile: "snapshot.zip", FfxExperimentLevel: 2})
 			if c.wantErr {
 				if err == nil {
 					t.Errorf("got nil error, want an error for failing to initialize a tester")
