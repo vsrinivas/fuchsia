@@ -195,12 +195,9 @@ impl OwnersDb {
         }
         let file = self.compute_owners_file(metadata)?;
         let owners_path = metadata.path.join("OWNERS");
-        if !file.is_empty() {
-            std::fs::write(owners_path, file.to_string().as_bytes())?;
-        } else {
-            eprintln!("\n{} would be empty, ensuring deleted", owners_path);
-            std::fs::remove_file(owners_path).ok();
-        }
+        // We need to every OWNERS file, even if it would be empty, because
+        // the other OWNERS files may include the empty ones.
+        std::fs::write(owners_path, file.to_string().as_bytes())?;
         eprint!(".");
 
         Ok(())
@@ -356,12 +353,6 @@ struct OwnersFile {
     path: Utf8PathBuf,
     includes: BTreeSet<Utf8PathBuf>,
     source: OwnersSource,
-}
-
-impl OwnersFile {
-    fn is_empty(&self) -> bool {
-        self.includes.is_empty()
-    }
 }
 
 const HEADER: &str = "\
