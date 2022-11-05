@@ -2,10 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# This file is used as the top level BUILD.bazel in the @fuchsia_rust_toolchain
-# repository, which contains the contents of prebuilt/third_party/rust/linux-x64
+"""Top level BUILD.bazel in the @fuchsia_rust_toolchain repository."""
 
 load("@rules_rust//rust:toolchain.bzl", "rust_stdlib_filegroup", "rust_toolchain")
+load("//:generated_constants.bzl", "constants")
+
+host_os = constants.host_os
+host_arch = constants.host_arch
+host_triple = constants.host_triple
 
 rust_stdlib_filegroup(
     name = "rust_std",
@@ -13,8 +17,10 @@ rust_stdlib_filegroup(
     visibility = ["//visibility:private"],
 )
 
+# Define the host Rust toolchain.
+
 rust_toolchain(
-    name = "rust_linux_x64_toolchain",
+    name = "rust_%s_%s_toolchain" % (host_os, host_arch),
     rustc = "//:bin/rustc",
     rust_std = "//:rust_std",
     rust_doc = "//:bin/rustdoc",
@@ -23,22 +29,24 @@ rust_toolchain(
     dylib_ext = ".so",
     stdlib_linkflags = ["-lpthread", "-ldl"],
     os = "linux",
-    exec_triple = "x86_64-unknown-linux-gnu",
-    target_triple = "x86_64-unknown-linux-gnu",
+    exec_triple = host_triple,  # e.g. "x86_64-unknown-linux-gnu",
+    target_triple = host_triple,  # e.g. "x86_64-unknown-linux-gnu",
 )
 
 toolchain(
-    name = "rust_linux_x64",
+    name = "rust_%s_%s" % (host_os, host_arch),
     exec_compatible_with = [
-        "@platforms//cpu:x86_64",
+        constants.host_platform_cpu_constraint,
     ],
     target_compatible_with = [
-        "@platforms//cpu:x86_64",
-        "@platforms//os:linux",
+        constants.host_platform_cpu_constraint,  # e.g. "@platforms//cpu:x86_64",
+        constants.host_platform_os_constraint,  # e.g. "@platforms//os:linux",
     ],
-    toolchain = ":rust_linux_x64_toolchain",
+    toolchain = ":rust_%s_%s_toolchain" % (host_os, host_arch),
     toolchain_type = "@rules_rust//rust:toolchain",
 )
+
+# Define the Fuchsia/x64 Rust toolchain
 
 rust_toolchain(
     name = "rust_fuchsia_x64_toolchain",
@@ -64,5 +72,34 @@ toolchain(
         "@rules_fuchsia//fuchsia/constraints/os:fuchsia",
     ],
     toolchain = ":rust_fuchsia_x64_toolchain",
+    toolchain_type = "@rules_rust//rust:toolchain",
+)
+
+# Define the Fuchsia/arm64 Rust toolchain
+
+rust_toolchain(
+    name = "rust_fuchsia_arm64_toolchain",
+    rustc = "//:bin/rustc",
+    rust_std = "//:rust_std",
+    rust_doc = "//:bin/rustdoc",
+    binary_ext = "",
+    staticlib_ext = ".a",
+    dylib_ext = ".so",
+    stdlib_linkflags = [],
+    os = "fuchsia",
+    exec_triple = "aarch64-unknown-fuchsia",
+    target_triple = "aarch64-fuchsia",
+)
+
+toolchain(
+    name = "rust_fuchsia_arm64",
+    exec_compatible_with = [
+        "@platforms//cpu:aarch64",
+    ],
+    target_compatible_with = [
+        "@platforms//cpu:aarch64",
+        "@rules_fuchsia//fuchsia/constraints/os:fuchsia",
+    ],
+    toolchain = ":rust_fuchsia_arm64_toolchain",
     toolchain_type = "@rules_rust//rust:toolchain",
 )

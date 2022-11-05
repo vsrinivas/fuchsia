@@ -2,8 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+"""BUILD.bazel file for @prebuilt_clang repository."""
+
 load(":generated_constants.bzl", "constants")
-load("@//:build/bazel/toolchains/clang/toolchains.bzl", "prebuilt_clang_cc_toolchain")
+load(
+    "@//:build/bazel/toolchains/clang/toolchains.bzl",
+    "define_host_prebuilt_clang_cc_toolchains",
+)
 
 package(default_visibility = ["//visibility:public"])
 
@@ -64,18 +69,4 @@ exports_files(
     glob(["**/*"]),
 )
 
-prebuilt_clang_cc_toolchain(
-    name = "host_clang_linux_x64",
-    target_os = "linux",
-    target_arch = "x64",
-    sysroot_files = ["@//:linux_sysroot_x64"],
-    sysroot_path = "prebuilt/third_party/sysroot/linux",
-)
-
-prebuilt_clang_cc_toolchain(
-    name = "host_clang_linux_arm64",
-    target_os = "linux",
-    target_arch = "arm64",
-    sysroot_files = ["@//:linux_sysroot_arm64"],
-    sysroot_path = "prebuilt/third_party/sysroot/linux",
-)
+define_host_prebuilt_clang_cc_toolchains("host_clang", constants.host_os, constants.host_arch)

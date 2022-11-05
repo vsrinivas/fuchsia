@@ -30,14 +30,10 @@ Now that you've been warned, here's how this is supposed to work:
     in the source tree.  This is the file you should modify to add new
     top-level targets in the Bazel build graph.
 
-  - A top-level `WORKSPACE.bazel` symlink to
-    `//build/bazel/toplevel.WORKSPACE.bazel` in the source tree. This is the
-    file you should modify to add new external repositories to the Bazel
-    project.
-
-    Also keep this in sync with `//build/bazel/toplevel.MODULE.bazel` which
-    will be used in the future when [BzlMod][BzlMod] is enabled to manage
-    external dependencies instead or workspace directives.
+  - A top-level `WORKSPACE.bazel` generated from
+    `//build/bazel/templates/template.WORKSPACE.bazel` in the source tree.
+    This is the file you should modify to add new external repositories to
+    the Bazel project.
 
   - A top-level auto-generated `.bazelrc` file to configure Bazel.
     Note that this does not support `--config=fuchsia_x64` and
@@ -88,9 +84,12 @@ Now that you've been warned, here's how this is supposed to work:
 
 # IMPLEMENTATION NOTES
 
-The reasons why the `//build/bazel/toplevel.XXX` files are used, instead
-of providing the corresponding files directly at the top of the source tree
-are that:
+The reasons why there are not top-level `WORKSPACE.bazel` or `BUILD.bazel`
+files provided in `$FUCHSIA_DIR` are that:
+
+- The content of WORKSPACE.bazel contain multiple values that depend on
+  the host machine type, and soon on the actual Jiri manifest or
+  git supermodule hierarchy, and thus must always be auto-generated.
 
 - Developers cannot call Bazel directly from the Fuchsia source tree (which
   otherwise would likely fail with very confusing error messages).

@@ -360,6 +360,13 @@ def main():
 
     generated = GeneratedFiles()
 
+    def expand_template_file(filename: str, **kwargs) -> str:
+        """Expand a template file and add it to the set of tracked input files."""
+        template_file = os.path.join(templates_dir, filename)
+        generated.add_file_hash(os.path.abspath(template_file))
+        with open(template_file) as f:
+            return f.read().format(**kwargs)
+
     def write_workspace_file(path, content):
         generated.add_file('workspace/' + path, content)
 
@@ -367,6 +374,8 @@ def main():
         generated.add_symlink('workspace/' + path, target_path)
 
     script_path = os.path.relpath(__file__, fuchsia_dir)
+
+    templates_dir = os.path.join(fuchsia_dir, 'build', 'bazel', 'templates')
 
     if args.use_bzlmod:
         generated.add_file(
@@ -383,10 +392,16 @@ def main():
             os.path.join(
                 fuchsia_dir, 'build', 'bazel', 'toplevel.MODULE.bazel'))
     else:
-        generated.add_symlink(
+        workspace_content = expand_template_file(
+            'template.WORKSPACE.bazel',
+            host_os=host_tag.split('-')[0],
+            host_tag=host_tag,
+            host_tag_alt=host_tag.replace('-', '_'),
+        )
+        generated.add_file(
             'workspace/WORKSPACE.bazel',
-            os.path.join(
-                fuchsia_dir, 'build', 'bazel', 'toplevel.WORKSPACE.bazel'))
+            workspace_content,
+        )
 
     # Generate symlinks
 
@@ -421,9 +436,10 @@ def main():
     # Looking at the Jiri sources reveals that it is looking at a `.git/jiri` sub-directory
     # in all git directories it finds during a `jiri update` operation. To avoid the complaint
     # then symlink all $FUCHSIA_DIR/.git/ files and directories, except the 'jiri' one.
+    # Also ignore the JIRI_HEAD / JIRI_LAST_BASE files to avoid confusion.
     fuchsia_git_dir = os.path.join(fuchsia_dir, '.git')
     for git_file in os.listdir(fuchsia_git_dir):
-        if git_file != 'jiri':
+        if not (git_file == 'jiri' or git_file.startswith('JIRI')):
             generated.add_symlink(
                 'workspace/.git/' + git_file,
                 os.path.join(fuchsia_git_dir, git_file))
@@ -440,47 +456,17 @@ block *
     )
 
     # Generate the content of .bazelrc
-    bazelrc_content = '''# Auto-generated - DO NOT EDIT!
-
-# Ensure that platform-based C++ toolchain selection is performed, instead
-# of relying on --crosstool_top / --cpu / --compiler/
-build --incompatible_enable_cc_toolchain_resolution
-
-# Setup the default platform.
-# TODO(digit): Switch to //build/bazel/platforms:common
-build --platforms=//build/bazel/platforms:linux_x64
-
-# Setup remote build
-build:remote --remote_instance_name=projects/rbe-fuchsia-prod/instances/default
-build:remote --java_runtime_version=rbe_jdk
-build:remote --tool_java_runtime_version=rbe_jdk
-build:remote --action_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
-build:remote --define=EXECUTOR=remote
-build:remote --remote_executor=grpcs://remotebuildexecution.googleapis.com
-build:remote --incompatible_strict_action_env=true
-build:remote --google_default_credentials=true
-
-# TODO(fxbug.dev/114100): use @prebuilt_clang//:host_clang_linux_x64_cc_toolchain
-build:remote --extra_toolchains=//build/rbe/bazel/config:cc-toolchain
-# TODO(fxbug.dev/114100): see if this can be removed or simplified
-build:remote --host_platform=//build/rbe/bazel/config:platform
-'''.format(ninja_output_dir=gn_output_dir)
-
+    bazelrc_content = expand_template_file(
+        'template.bazelrc',
+        default_platform=host_tag.replace('-', '_'),
+        log_file=os.path.join(logs_dir, 'workspace-events.log'),
+        config_file=os.path.join(topdir, 'download_config_file'),
+    )
     if args.use_bzlmod:
         bazelrc_content += '''
 # Enable BlzMod, i.e. support for MODULE.bazel files.
 common --experimental_enable_bzlmod
 '''
-    bazelrc_content += '''
-# Save workspace rule events to a log file for later analysis.
-build --experimental_workspace_rules_log_file={log_file}
-'''.format(log_file=os.path.join(logs_dir, 'workspace-events.log'))
-
-    bazelrc_content += '''
-# Prevent repository downloads with custom downloader config file.
-common --experimental_downloader_config={config_file}
-'''.format(config_file=os.path.join(topdir, 'download_config_file'))
-
     generated.add_file('workspace/.bazelrc', bazelrc_content)
 
     # Create a symlink to the GN-generated file that will contain the list
@@ -493,64 +479,8 @@ common --experimental_downloader_config={config_file}
             'legacy_ninja_build_outputs.inputs_manifest.json'))
 
     # Generate wrapper script in topdir/bazel that invokes Bazel with the right --output_base.
-    bazel_launcher_content = r'''#!/bin/bash
-# Auto-generated - DO NOT EDIT!
-readonly _SCRIPT_DIR="$(cd "$(dirname "${{BASH_SOURCE[0]}}")" >/dev/null 2>&1 && pwd)"
-readonly _DOWNLOAD_CONFIG_FILE=${{_SCRIPT_DIR}}/{download_config_file}
-readonly _WORKSPACE_DIR="${{_SCRIPT_DIR}}/{workspace}"
-readonly _OUTPUT_BASE="${{_SCRIPT_DIR}}/{output_base}"
-readonly _OUTPUT_USER_ROOT="${{_SCRIPT_DIR}}/{output_user_root}"
-readonly _LOG_DIR="{logs_dir}"
-
-# Exported explicitly to be used by repository rules to reference the
-# Ninja output directory and binary.
-export BAZEL_FUCHSIA_NINJA_OUTPUT_DIR="{ninja_output_dir}"
-export BAZEL_FUCHSIA_NINJA_PREBUILT="{ninja_prebuilt}"
-
-# An undocumented, but widely used, environment variable that tells Bazel to
-# not auto-detect the host C++ installation. This makes workspace setup faster
-# and ensures this can be used on containers where GCC or Clang are not
-# installed (Bazel would complain otherwise with an error).
-export BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
-
-# Implement log rotation (up to 3 old files)
-# $1: log file name (e.g. "path/to/workspace-events.log")
-logrotate3 () {{
-  local i
-  local prev_log="$1.3"
-  local cur_log
-  for i in "2" "1"; do
-    rm -f "${{prev_log}}"
-    cur_log="$1.$i"
-    if [[ -f "${{cur_log}}" ]]; then
-      mv "${{cur_log}}" "${{prev_log}}"
-    fi
-    prev_log="${{cur_log}}"
-  done
-  cur_log="$1"
-  if [[ -f "${{cur_log}}" ]]; then
-    mv "${{cur_log}}" "${{prev_log}}"
-  fi
-}}
-
-# Rotate the workspace events log. Note that this file is created
-# through an option set in the .bazelrc file, not the command-line below.
-mkdir -p "${{_LOG_DIR}}"
-logrotate3 "${{_LOG_DIR}}/workspace-events.log"
-
-# Setting $USER so `bazel` won't fail in environments with fake UIDs. Even if
-# the USER is not actually used. See https://fxbug.dev/112206#c9.
-#
-# Explanation for flags:
-#  --nohome_rc: Ignore $HOME/.bazelrc to enforce hermiticity / reproducibility.
-#  --output_base: Ensure the output base is in the Ninja output directory, not under $HOME.
-#  --output_user_root: Ensure the output user root is in the Ninja output directory, not under $HOME.
-cd "${{_WORKSPACE_DIR}}" && USER=unused-bazel-build-user {bazel_bin_path} \
-      --nohome_rc \
-      --output_base="${{_OUTPUT_BASE}}" \
-      --output_user_root="${{_OUTPUT_USER_ROOT}}" \
-      "$@"
-'''.format(
+    bazel_launcher_content = expand_template_file(
+        'template.bazel.sh',
         ninja_output_dir=os.path.abspath(gn_output_dir),
         ninja_prebuilt=os.path.abspath(ninja_binary),
         bazel_bin_path=os.path.abspath(bazel_bin),
@@ -558,13 +488,14 @@ cd "${{_WORKSPACE_DIR}}" && USER=unused-bazel-build-user {bazel_bin_path} \
         download_config_file='download_config_file',
         workspace=os.path.relpath(workspace_dir, topdir),
         output_base=os.path.relpath(output_base_dir, topdir),
-        output_user_root=os.path.relpath(output_user_root, topdir))
+        output_user_root=os.path.relpath(output_user_root, topdir),
+    )
+    generated.add_file('bazel', bazel_launcher_content, executable=True)
 
     # Ensure regeneration when this script's content changes!
     generated.add_file_hash(os.path.abspath(__file__))
 
     force = args.force
-    generated.add_file('bazel', bazel_launcher_content, executable=True)
     generated_json = generated.to_json()
     generated_info_file = os.path.join(topdir, 'generated-info.json')
     if not os.path.exists(generated_info_file):

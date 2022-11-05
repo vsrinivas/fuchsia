@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+"""Definitions related to the prebuilt Linux sysroot used by Fuchsia."""
+
 # Location of Linux sysroot in the platform build.
 # Should we move this to a repository to be shared with the SDK?
 _linux_sysroot = "prebuilt/third_party/sysroot/linux"
@@ -18,14 +20,13 @@ _linux_sysroot_archs = [
 ]
 
 def linux_sysroot(name, sysroot_arch, sysroot_path = _linux_sysroot):
-    """Generates a filegroup() target that exposes a Linux sysroot for
-       a given CPU architecture.
+    """Generates a filegroup() target that exposes a Linux sysroot for a given CPU architecture.
 
-       Args:
-           name: name of the generated filegroup().
-           sysroot_arch: target CPU architecture for the filegroup, must be
-               one of the values listed in _linux_sysroot_archs above.
-           sysroot_path: path to the top-level sysroot directory.
+    Args:
+        name: name of the generated filegroup().
+        sysroot_arch: target CPU architecture for the filegroup, must be
+            one of the values listed in _linux_sysroot_archs above.
+        sysroot_path: path to the top-level sysroot directory.
     """
     if sysroot_arch not in _linux_sysroot_archs:
         fail("The sysroot_arch parameter must be one of: %s" % _linux_sysroot_archs)
@@ -37,9 +38,9 @@ def linux_sysroot(name, sysroot_arch, sysroot_path = _linux_sysroot):
         sysroot_path + "/usr/include/**",
     ]
     if sysroot_arch == "x86_64":
-        glob_patterns += [sysroot_path + "/lib64/ld-linux-x86_64.so.2"]
+        glob_patterns.append(sysroot_path + "/lib64/ld-linux-x86_64.so.2")
     else:
-        glob_patterns += [sysroot_path + "/lib/ld-linux-{arch}.so.*"]
+        glob_patterns.append(sysroot_path + "/lib/ld-linux-{arch}.so.*")
 
     patterns = [
         pattern.format(arch = sysroot_arch)

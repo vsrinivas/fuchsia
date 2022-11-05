@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# AUTO-GENERATED - DO NOT EDIT!
+
 """
 IMPORTANT: This file is only used when BzlMod is NOT enabled when generating
 the Bazel workspace used by the Fuchsia platform build. Keep its content in
@@ -59,15 +61,20 @@ load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies")
 
 rules_rust_dependencies()
 
-new_local_repository(
-    name = "fuchsia_rust_toolchain",
-    path = "prebuilt/third_party/rust/linux-x64",
-    build_file = "build/bazel/toolchains/rust/rust.BUILD.bazel",
+# buildifier: disable=load-on-top
+load(
+    "//:build/bazel/toolchains/rust/repository_rules.bzl",
+    "generate_prebuilt_rust_toolchain_repository",
+)
+
+generate_prebuilt_rust_toolchain_repository(
+    name = "fuchsia_prebuilt_rust",
+    rust_install_dir = "prebuilt/third_party/rust/{host_tag}",
 )
 
 register_toolchains(
-    "@fuchsia_rust_toolchain//:rust_linux_x64",
-    "@fuchsia_rust_toolchain//:rust_fuchsia_x64",
+    "@fuchsia_prebuilt_rust//:rust_{host_tag_alt}",
+    "@fuchsia_prebuilt_rust//:rust_fuchsia_x64",
 )
 
 # buildifier: disable=load-on-top
@@ -80,7 +87,7 @@ load(
 
 go_wrap_sdk(
     name = "go_sdk",
-    root_file = "//:prebuilt/third_party/go/linux-x64/README.md",
+    root_file = "//:prebuilt/third_party/go/{host_tag}/README.md",
 )
 
 go_rules_dependencies()
@@ -159,7 +166,7 @@ register_toolchains("@fuchsia_sdk//:fuchsia_toolchain_sdk")
 
 fuchsia_clang_repository(
     name = "fuchsia_clang",
-    local_path = "prebuilt/third_party/clang/linux-x64",
+    local_path = "prebuilt/third_party/clang/{host_tag}",
 )
 
 # buildifier: disable=load-on-top
@@ -178,7 +185,7 @@ load(
 
 generate_prebuilt_toolchain_repository(
     name = "prebuilt_clang",
-    clang_install_dir = "prebuilt/third_party/clang/linux-x64",
+    clang_install_dir = "prebuilt/third_party/clang/{host_tag}",
 )
-register_toolchains("@prebuilt_clang//:host_clang_linux_x64_cc_toolchain")
-register_toolchains("@prebuilt_clang//:host_clang_linux_arm64_cc_toolchain")
+register_toolchains("@prebuilt_clang//:host_clang_{host_os}_x64_cc_toolchain")
+register_toolchains("@prebuilt_clang//:host_clang_{host_os}_arm64_cc_toolchain")

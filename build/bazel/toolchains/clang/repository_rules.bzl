@@ -8,6 +8,12 @@ load(
     "//:build/bazel/toolchains/clang/clang_utilities.bzl",
     "process_clang_builtins_output",
 )
+load(
+    "//:build/bazel/repository_utils.bzl",
+    "get_fuchsia_host_arch",
+    "get_fuchsia_host_os",
+    "workspace_root_path",
+)
 
 # generate_prebuilt_toolchain_repository() is used to generate
 # an external repository that contains a copy of the prebuilt
@@ -19,16 +25,10 @@ load(
 # the copy, possibly using hard links.
 #
 def _generate_prebuilt_toolchain_impl(repo_ctx):
-    # The following line does not work, Bazel complains that 'repo_ctx'
-    # has no `workspace_root` field or method!?
-    # Fixed in 6.0-preXXX, but not in 5.3.0!
-    # See https://github.com/bazelbuild/bazel/issues/16042
-    #
-    # workspace_dir = str(repo_ctx.workspace_root)
+    workspace_dir = str(workspace_root_path(repo_ctx))
 
-    # This is a work-around that based on
-    # https://github.com/bazelbuild/bazel/pull/15441
-    workspace_dir = str(repo_ctx.path(Label("@//:WORKSPACE.bazel")).dirname)
+    host_os = get_fuchsia_host_os(repo_ctx)
+    host_arch = get_fuchsia_host_arch(repo_ctx)
 
     # Copy the content of the clang installation directory into
     # the repository directory, using hard-links whenever possible.
@@ -70,13 +70,15 @@ def _generate_prebuilt_toolchain_impl(repo_ctx):
 
     repo_ctx.file("generated_constants.bzl", content = '''
 constants = struct(
+  host_os = "{host_os}",
+  host_arch = "{host_arch}",
   clang_long_version = "{long_version}",
   clang_short_version = "{short_version}",
   builtin_include_paths = [
 {builtin_paths}
   ],
 )
-'''.format(long_version = long_version, short_version = short_version, builtin_paths = builtin_include_paths_str))
+'''.format(host_os = host_os, host_arch = host_arch, long_version = long_version, short_version = short_version, builtin_paths = builtin_include_paths_str))
 
     repo_ctx.symlink(
         workspace_dir + "/build/bazel/toolchains/clang/prebuilt_clang.BUILD.bazel",

@@ -17,6 +17,32 @@ import xml.etree.ElementTree as ET
 _SCRIPT_DIR = os.path.dirname(__file__)
 
 
+def get_host_platform() -> str:
+    '''Return host platform name, following Fuchsia conventions.'''
+    if sys.platform == 'linux':
+        return 'linux'
+    elif sys.platform == 'darwin':
+        return 'mac'
+    else:
+        return os.uname().sysname
+
+
+def get_host_arch() -> str:
+    '''Return host CPU architecture, following Fuchsia conventions.'''
+    host_arch = os.uname().machine
+    if host_arch == 'x86_64':
+        return 'x64'
+    elif host_arch.startswith(('armv8', 'aarch64')):
+        return 'arm64'
+    else:
+        return host_arch
+
+
+def get_host_tag():
+    '''Return host tag, following Fuchsia conventions.'''
+    return '%s-%s' % (get_host_platform(), get_host_arch())
+
+
 def write_file(path, content):
     with open(path, 'w') as f:
         f.write(content)
@@ -183,7 +209,7 @@ def main():
 
     # Compare the available Bazel version with the one we need.
     bazel_install_path = os.path.join(
-        args.fuchsia_dir, 'prebuilt', 'third_party', 'bazel', 'linux-x64')
+        args.fuchsia_dir, 'prebuilt', 'third_party', 'bazel', get_host_tag())
     bazel_launcher = os.path.join(bazel_install_path, 'bazel')
     bazel_update = not os.path.exists(bazel_launcher)
     if not bazel_update:
