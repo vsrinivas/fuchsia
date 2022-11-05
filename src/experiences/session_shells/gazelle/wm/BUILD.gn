@@ -15,6 +15,8 @@ rustc_binary("bin") {
   source_root = "src/main.rs"
   sources = [
     "src/main.rs",
+    "src/shortcuts.rs",
+    "src/tests.rs",
     "src/wm.rs",
   ]
 
@@ -26,19 +28,23 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3_rust",
     "//sdk/fidl/fuchsia.ui.shortcut2:fuchsia.ui.shortcut2_rust",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_rust",
-    "//src/lib/fidl/rust/fidl",
+    "//src/experiences/session_shells/gazelle/appkit",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
-    "//src/lib/ui/fuchsia-scenic",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:indexmap",
+    "//third_party/rust_crates:num",
+    "//third_party/rust_crates:num-derive",
+    "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:tracing",
   ]
 
   test_deps = [
     "//sdk/fidl/fuchsia.ui.test.scene:fuchsia.ui.test.scene_rust",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component-test",
+    "//src/lib/ui/fuchsia-scenic",
   ]
 }
 
@@ -50,6 +56,7 @@ fuchsia_unittest_package("wm-tests") {
     "//src/ui/testing/test_ui_stack:test-ui-stack-component",
   ]
   test_specs = {
+    parallel = 1
     log_settings = {
       max_severity = "ERROR"
     }

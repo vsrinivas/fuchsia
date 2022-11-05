@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 {
     include: [
+        "//sdk/lib/inspect/client.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
-        "inspect/client.shard.cml",
         "sys/component/realm_builder.shard.cml",
         "sys/testing/system-test.shard.cml",
         "syslog/client.shard.cml",
@@ -12,6 +12,37 @@
     program: {
         binary: "bin/wm_bin_test",
     },
+    children: [
+        {
+            name: "test-ui-stack",
+            url: "#meta/test-ui-stack.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.sysmem.Allocator",
+            from: "parent",
+        },
+        {
+            protocol: [
+                "fuchsia.element.GraphicalPresenter",
+                "fuchsia.session.scene.Manager",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.composition.Screenshot",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.shortcut2.Registry",
+                "fuchsia.ui.test.input.Registry",
+                "fuchsia.ui.test.scene.Controller",
+            ],
+            from: "#test-ui-stack",
+        },
+        {
+            storage: "custom_artifacts",
+            rights: [ "rw*" ],
+            path: "/custom_artifacts",
+        },
+    ],
     offer: [
         {
             protocol: [
@@ -22,7 +53,7 @@
                 "fuchsia.vulkan.loader.Loader",
             ],
             from: "parent",
-            to: [ "#realm_builder" ],
+            to: "#test-ui-stack",
         },
     ],
     facets: {

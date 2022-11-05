@@ -34,7 +34,7 @@ use crate::{
 /// Defines a type to hold an id to the window. This implementation uses the value of
 /// [ViewCreationToken] to be the window id.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct WindowId(u64);
+pub struct WindowId(pub u64);
 
 impl WindowId {
     pub fn from_view_creation_token(token: &ui_views::ViewCreationToken) -> Self {

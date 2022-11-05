@@ -74,6 +74,8 @@ pub enum ChildViewEvent {
     Attached { view_ref: ui_views::ViewRef },
     /// Child view is detached from the view tree.
     Detached,
+    /// Child view was dismissed by the owning component.
+    Dismissed,
 }
 
 /// Defines a struct to hold the parameters provided during [GraphicalPresenter.present_view]. This

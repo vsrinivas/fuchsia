@@ -82,9 +82,8 @@ async fn test_appkit() -> Result<(), Error> {
                         app.active_window = Some(id);
 
                         let cloned_graphical_presenter = graphical_presenter_proxy.clone();
-                        let cloned_event_sender = event_sender.clone();
                         fasync::Task::spawn(async move {
-                            create_child_view_spec(cloned_graphical_presenter, cloned_event_sender)
+                            create_child_view_spec(cloned_graphical_presenter)
                                 .await
                                 .expect("Failed to create_child_view");
                         })
@@ -97,18 +96,6 @@ async fn test_appkit() -> Result<(), Error> {
                         true,
                         "Redraw event received before window was resized"
                     );
-                }
-                WindowEvent::Keyboard { event, responder } => {
-                    if let KeyEvent { key: Some(Key::Q), .. } = event {
-                        event_sender.send(Event::Exit).expect("Failed to send Event::Exit event");
-                        responder
-                            .send(KeyEventStatus::Handled)
-                            .expect("Failed to respond to keyboard event");
-                    } else {
-                        responder
-                            .send(KeyEventStatus::NotHandled)
-                            .expect("Failed to respond to keyboard event");
-                    }
                 }
                 _ => {}
             },
@@ -148,7 +135,9 @@ async fn test_appkit() -> Result<(), Error> {
                         // Set focus to child view.
                         window.request_focus(view_ref);
                     }
-                    ChildViewEvent::Detached => {}
+                    ChildViewEvent::Detached | ChildViewEvent::Dismissed => {
+                        event_sender.send(Event::Exit).expect("Failed to send Event::Exit event");
+                    }
                 }
             }
             Event::Exit => {
@@ -257,7 +246,6 @@ async fn start_graphical_presenter(
 
 async fn create_child_view_spec(
     graphical_presenter: felement::GraphicalPresenterProxy,
-    parent_sender: EventSender<TestEvent>,
 ) -> Result<(), Error> {
     let ViewCreationTokenPair { view_creation_token, viewport_creation_token } =
         ViewCreationTokenPair::new()?;
@@ -265,7 +253,9 @@ async fn create_child_view_spec(
         viewport_creation_token: Some(viewport_creation_token),
         ..felement::ViewSpec::EMPTY
     };
-    let _ = graphical_presenter.present_view(view_spec, None, None).await;
+    let (view_controller_proxy, view_controller_request) =
+        create_proxy::<felement::ViewControllerMarker>()?;
+    let _ = graphical_presenter.present_view(view_spec, None, Some(view_controller_request)).await;
 
     let (keyboard, keyboard_server) = create_proxy::<ui_test_input::KeyboardMarker>()?;
     let input_registry = connect_to_protocol::<ui_test_input::RegistryMarker>()?;
@@ -359,9 +349,8 @@ async fn create_child_view_spec(
                         assert!(histogram.values().len() >= 2);
 
                         if let KeyEvent { key: Some(Key::Q), .. } = event {
-                            parent_sender
-                                .send(Event::Exit)
-                                .expect("Failed to send Event::Exit event");
+                            // Dismiss the view, allowing the parent to drop it.
+                            view_controller_proxy.dismiss().expect("Failed to dismiss child view");
                             responder
                                 .send(KeyEventStatus::Handled)
                                 .expect("Failed to respond to keyboard event");
