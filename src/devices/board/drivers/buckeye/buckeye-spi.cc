@@ -20,10 +20,24 @@
 #include "src/devices/lib/fidl-metadata/spi.h"
 
 #define CLKCTRL_SPICC_CLK_CNTL (0x5d * 4)
+#define spicc1_clk_sel_oscin_clk (0 << 23)
+#define spicc1_clk_sel_cts_sys_clk (1 << 23)
+#define spicc1_clk_sel_fclk_div4 (2 << 23)
+#define spicc1_clk_sel_fclk_div3 (3 << 23)
 #define spicc1_clk_sel_fclk_div2 (4 << 23)
+#define spicc1_clk_sel_fclk_div5 (5 << 23)
+#define spicc1_clk_sel_fclk_div7 (6 << 23)
+#define spicc1_clk_sel_gp1_pll_clk (7 << 23)
 #define spicc1_clk_en (1 << 22)
 #define spicc1_clk_div(x) (((x)-1) << 16)
+#define spicc0_clk_sel_oscin_clk (0 << 7)
+#define spicc0_clk_sel_cts_sys_clk (1 << 7)
+#define spicc0_clk_sel_fclk_div4 (2 << 7)
+#define spicc0_clk_sel_fclk_div3 (3 << 7)
 #define spicc0_clk_sel_fclk_div2 (4 << 7)
+#define spicc0_clk_sel_fclk_div5 (5 << 7)
+#define spicc0_clk_sel_fclk_div7 (6 << 7)
+#define spicc0_clk_sel_gp1_pll_clk (7 << 7)
 #define spicc0_clk_en (1 << 6)
 #define spicc0_clk_div(x) (((x)-1) << 0)
 
@@ -67,10 +81,11 @@ static constexpr amlogic_spi::amlspi_config_t spi_1_config = {
     .period = 0,
     .bus_id = BUCKEYE_SPICC1,
     .cs_count = 1,
-    .cs = {0},                                     // index into fragments list
-    .clock_divider_register_value = (2 >> 1) - 1,  // SCLK = core clock (32.26MHz) / 2 = 16.18 MHz
-    .use_enhanced_clock_mode = true,               // true  - div_reg = (div >> 1) - 1;
-                                                   // false - div_reg = log2(div) - 2;
+    .cs = {0},  // index into fragments list
+    .clock_divider_register_value =
+        (20 >> 1) - 1,                // SCLK = core clock (~285.71MHz) / 20 = ~14.28 MHz
+    .use_enhanced_clock_mode = true,  // true  - div_reg = (div >> 1) - 1;
+                                      // false - div_reg = log2(div) - 2;
 };
 
 static fpbus::Node spi_1_dev = []() {
@@ -144,10 +159,10 @@ static fpbus::Node spi_0_dev = []() {
 zx_status_t Buckeye::SpiInit() {
   zx_status_t status;
   constexpr uint32_t kSpiccClkValue =
-      // src [25:23]:  4 - fclk_div2(1000M)-fixed
+      // src [25:23]:  4 - fclk_div7(285.71M)-fixed
       // gate   [22]:  1 - enable clk
-      // rate[21:16]: 24 - 1000M/(31) ~= 32.26M
-      spicc1_clk_sel_fclk_div2 | spicc1_clk_en | spicc1_clk_div(31) |
+      // rate[21:16]: 24 - ~285.71M/(1) ~= 285.71M
+      spicc1_clk_sel_fclk_div7 | spicc1_clk_en | spicc1_clk_div(1) |
       // src [9:7]:  4 - fclk_div2(1000M)-fixed
       // gate  [6]:  1 - enable clk
       // rate[5:0]: 24 - 1000M/(24+1) = 40M
