@@ -1,0 +1,20 @@
+Started
+Listening for incoming connections
+WriteItem request received
+Wrote value at key: verse_1
+WriteItem response sent
+WriteItem request received
+Wrote value at key: verse_2
+WriteItem response sent
+WriteItem request received
+Wrote value at key: verse_3
+WriteItem response sent
+WriteItem request received
+Wrote value at key: verse_4
+WriteItem response sent
+Iterate request received
+Iterate response sent
+Iterator page request received
+Iterator page sent
+Iterator page request received
+Iterator page sent

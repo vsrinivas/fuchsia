@@ -1,0 +1,32 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+fuchsia_component_manifest("manifest") {
+  component_name = "client"
+  manifest = "//examples/fidl/new/key_value_store/add_iterator/meta/client.cml"
+}
+
+fuchsia_structured_config_rust_lib("config") {
+  cm_label = ":manifest"
+}
+
+rustc_binary("bin") {
+  output_name = "client_bin"
+  output_dir = target_out_dir + "/rust"
+  edition = "2021"
+  sources = [ "src/main.rs" ]
+  source_root = "src/main.rs"
+  deps = [
+    ":config",
+    "//examples/fidl/new/key_value_store/add_iterator/fidl:examples.keyvaluestore.additerator_rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+}

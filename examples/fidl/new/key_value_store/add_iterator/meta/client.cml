@@ -10,5 +10,23 @@
     use: [
         { protocol: "examples.keyvaluestore.additerator.Store" },
     ],
-    config: {},
+    config: {
+        write_items: {
+            type: "vector",
+            max_count: 16,
+            element: {
+                type: "string",
+                max_size: 64,
+            },
+        },
+
+        // [START diff_1]
+        // A key to iterate from, after all items in `write_items` have been written.
+        iterate_from: {
+            type: "string",
+            max_size: 64,
+        },
+
+        // [END diff_1]
+    },
 }

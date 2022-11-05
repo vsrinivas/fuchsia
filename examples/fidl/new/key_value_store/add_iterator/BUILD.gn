@@ -19,6 +19,8 @@ fuchsia_component_manifest("client_manifest") {
 fuchsia_structured_config_values("client_config_values") {
   cm_label = ":client_manifest"
   values = {
+    write_items = []
+    iterate_from = ""
   }
 }
 
@@ -28,6 +30,7 @@ group("tests") {
   # TODO(fxbug.dev/109277): Add per-binding `:tests` target after building out each implementation.
   deps = [
     # DO_NOT_REMOVE_COMMENT (Why? See: /tools/fidl/scripts/canonical_example/README.md)
+    "rust:tests",
     # /DO_NOT_REMOVE_COMMENT (Why? See: /tools/fidl/scripts/canonical_example/README.md)
   ]
 }
