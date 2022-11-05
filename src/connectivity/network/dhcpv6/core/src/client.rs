@@ -448,8 +448,7 @@ impl IaValue for Subnet<Ipv6Addr> {
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) struct IaValueWithLifetimes<V> {
     value: V,
-    preferred_lifetime: v6::TimeValue,
-    valid_lifetime: v6::NonZeroTimeValue,
+    lifetimes: Lifetimes,
 }
 
 // Holds the information received in an Advertise message.
@@ -599,15 +598,9 @@ fn compute_preferred_ia_count<V: IaValue>(
             configured.get(iaid).map_or(0, |configured_values| {
                 got_values
                     .iter()
-                    .map(
-                        |IaValueWithLifetimes {
-                             value,
-                             preferred_lifetime: _,
-                             valid_lifetime: _,
-                         }| {
-                            usize::from(configured_values.contains(value))
-                        },
-                    )
+                    .map(|IaValueWithLifetimes { value, lifetimes: _ }| {
+                        usize::from(configured_values.contains(value))
+                    })
                     .sum()
             })
         })
@@ -642,7 +635,7 @@ enum LifetimesError {
     PreferredLifetimeGreaterThanValidLifetime(Lifetimes),
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 struct Lifetimes {
     preferred_lifetime: v6::TimeValue,
     valid_lifetime: v6::NonZeroTimeValue,
@@ -1943,9 +1936,7 @@ impl ServerDiscovery {
                 let ia_addrs = ia_addrs
                     .into_iter()
                     .filter_map(|IaValueOption { value, lifetimes }| match lifetimes {
-                        Ok(Lifetimes { preferred_lifetime, valid_lifetime }) => {
-                            Some(IaValueWithLifetimes { value, preferred_lifetime, valid_lifetime })
-                        }
+                        Ok(lifetimes) => Some(IaValueWithLifetimes { value, lifetimes }),
                         e @ Err(
                             LifetimesError::ValidLifetimeZero
                             | LifetimesError::PreferredLifetimeGreaterThanValidLifetime(_),
@@ -1996,9 +1987,7 @@ impl ServerDiscovery {
                 let ia_prefixes = ia_prefixes
                     .into_iter()
                     .filter_map(|IaValueOption { value, lifetimes }| match lifetimes {
-                        Ok(Lifetimes { preferred_lifetime, valid_lifetime }) => {
-                            Some(IaValueWithLifetimes { value, preferred_lifetime, valid_lifetime })
-                        }
+                        Ok(lifetimes) => Some(IaValueWithLifetimes { value, lifetimes }),
                         e @ Err(
                             LifetimesError::ValidLifetimeZero
                             | LifetimesError::PreferredLifetimeGreaterThanValidLifetime(_),
@@ -2647,10 +2636,9 @@ fn compute_new_entries_with_current_ias_and_reply<V: IaValue>(
                 .into_iter()
                 .filter_map(|IaValueOption { value, lifetimes }| {
                     match lifetimes {
-                        Ok(Lifetimes { preferred_lifetime, valid_lifetime }) => Some(IaValueWithLifetimes{
+                        Ok(lifetimes) => Some(IaValueWithLifetimes{
                             value,
-                            preferred_lifetime,
-                            valid_lifetime,
+                            lifetimes,
                         }),
                         Err(e) => {
                             warn!(
@@ -2979,13 +2967,7 @@ fn advertise_to_ia_entries<V: IaValue>(
                     // be different from what was solicited by the
                     // client.
                     ias.into_iter()
-                        .map(
-                            |IaValueWithLifetimes {
-                                 value,
-                                 preferred_lifetime: _,
-                                 valid_lifetime: _,
-                             }| value,
-                        )
+                        .map(|IaValueWithLifetimes { value, lifetimes: _ }| value)
                         .collect()
                 }
                 // The configured address was not advertised; the client
@@ -4626,30 +4608,36 @@ pub(crate) mod testutil {
         ) -> Self {
             Self {
                 value,
-                preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                    preferred_lifetime,
-                )),
-                valid_lifetime: v6::NonZeroTimeValue::Finite(valid_lifetime),
+                lifetimes: Lifetimes {
+                    preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                        preferred_lifetime,
+                    )),
+                    valid_lifetime: v6::NonZeroTimeValue::Finite(valid_lifetime),
+                },
             }
         }
 
         pub(crate) fn new_default(value: V) -> Self {
             Self {
                 value,
-                preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                    PREFERRED_LIFETIME,
-                )),
-                valid_lifetime: v6::NonZeroTimeValue::Finite(VALID_LIFETIME),
+                lifetimes: Lifetimes {
+                    preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                        PREFERRED_LIFETIME,
+                    )),
+                    valid_lifetime: v6::NonZeroTimeValue::Finite(VALID_LIFETIME),
+                },
             }
         }
 
         pub(crate) fn new_renewed_default(value: V) -> Self {
             Self {
                 value,
-                preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                    RENEWED_PREFERRED_LIFETIME,
-                )),
-                valid_lifetime: v6::NonZeroTimeValue::Finite(RENEWED_VALID_LIFETIME),
+                lifetimes: Lifetimes {
+                    preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                        RENEWED_PREFERRED_LIFETIME,
+                    )),
+                    valid_lifetime: v6::NonZeroTimeValue::Finite(RENEWED_VALID_LIFETIME),
+                },
             }
         }
     }
@@ -4803,23 +4791,24 @@ pub(crate) mod testutil {
                     (
                         iaid,
                         Inner {
-                            opt: values
-                                .into_iter()
-                                .map(
-                                    |IaValueWithLifetimes {
-                                         value,
-                                         preferred_lifetime,
-                                         valid_lifetime,
-                                     }| {
-                                        v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-                                            value,
-                                            get_value(preferred_lifetime),
-                                            get_value(valid_lifetime.into()),
-                                            &[],
-                                        ))
-                                    },
-                                )
-                                .collect(),
+                            opt:
+                                values
+                                    .into_iter()
+                                    .map(
+                                        |IaValueWithLifetimes {
+                                             value,
+                                             lifetimes:
+                                                 Lifetimes { preferred_lifetime, valid_lifetime },
+                                         }| {
+                                            v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+                                                value,
+                                                get_value(preferred_lifetime),
+                                                get_value(valid_lifetime.into()),
+                                                &[],
+                                            ))
+                                        },
+                                    )
+                                    .collect(),
                             t1,
                             t2,
                         },
@@ -4831,23 +4820,24 @@ pub(crate) mod testutil {
                     (
                         iaid,
                         Inner {
-                            opt: values
-                                .into_iter()
-                                .map(
-                                    |IaValueWithLifetimes {
-                                         value,
-                                         preferred_lifetime,
-                                         valid_lifetime,
-                                     }| {
-                                        v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(
-                                            get_value(preferred_lifetime),
-                                            get_value(valid_lifetime.into()),
-                                            value,
-                                            &[],
-                                        ))
-                                    },
-                                )
-                                .collect(),
+                            opt:
+                                values
+                                    .into_iter()
+                                    .map(
+                                        |IaValueWithLifetimes {
+                                             value,
+                                             lifetimes:
+                                                 Lifetimes { preferred_lifetime, valid_lifetime },
+                                         }| {
+                                            v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(
+                                                get_value(preferred_lifetime),
+                                                get_value(valid_lifetime.into()),
+                                                value,
+                                                &[],
+                                            ))
+                                        },
+                                    )
+                                    .collect(),
                             t1,
                             t2,
                         },
@@ -5051,49 +5041,13 @@ pub(crate) mod testutil {
         let expected_non_temporary_addresses = non_temporary_addresses_to_assign
             .iter()
             .map(|(iaid, TestIaNa { values, t1: _, t2: _ })| {
-                (
-                    *iaid,
-                    AddressEntry::Assigned(
-                        values
-                            .iter()
-                            .map(
-                                |IaValueWithLifetimes {
-                                     value,
-                                     preferred_lifetime,
-                                     valid_lifetime,
-                                 }| IaValueWithLifetimes {
-                                    value: *value,
-                                    preferred_lifetime: *preferred_lifetime,
-                                    valid_lifetime: *valid_lifetime,
-                                },
-                            )
-                            .collect(),
-                    ),
-                )
+                (*iaid, AddressEntry::Assigned(values.iter().cloned().collect()))
             })
             .collect::<HashMap<_, _>>();
         let expected_delegated_prefixes = delegated_prefixes_to_assign
             .iter()
             .map(|(iaid, TestIaPd { values, t1: _, t2: _ })| {
-                (
-                    *iaid,
-                    PrefixEntry::Assigned(
-                        values
-                            .iter()
-                            .map(
-                                |IaValueWithLifetimes {
-                                     value,
-                                     preferred_lifetime,
-                                     valid_lifetime,
-                                 }| IaValueWithLifetimes {
-                                    value: *value,
-                                    preferred_lifetime: *preferred_lifetime,
-                                    valid_lifetime: *valid_lifetime,
-                                },
-                            )
-                            .collect(),
-                    ),
-                )
+                (*iaid, PrefixEntry::Assigned(values.iter().cloned().collect()))
             })
             .collect::<HashMap<_, _>>();
         let Assigned {
@@ -6351,10 +6305,12 @@ mod tests {
 
         let ia = IaValueWithLifetimes {
             value: CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
-            preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                PREFERRED_LIFETIME,
-            )),
-            valid_lifetime: v6::NonZeroTimeValue::Finite(VALID_LIFETIME),
+            lifetimes: Lifetimes {
+                preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                    PREFERRED_LIFETIME,
+                )),
+                valid_lifetime: v6::NonZeroTimeValue::Finite(VALID_LIFETIME),
+            },
         };
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
             ia.value,
@@ -6809,10 +6765,12 @@ mod tests {
                 iaid2,
                 AddressEntry::Assigned(vec![IaValueWithLifetimes {
                     value: CONFIGURED_NON_TEMPORARY_ADDRESSES[1],
-                    preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                        PREFERRED_LIFETIME,
-                    )),
-                    valid_lifetime: v6::NonZeroTimeValue::Finite(VALID_LIFETIME),
+                    lifetimes: Lifetimes {
+                        preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                            PREFERRED_LIFETIME,
+                        )),
+                        valid_lifetime: v6::NonZeroTimeValue::Finite(VALID_LIFETIME),
+                    },
                 }]),
             ),
         ]);
@@ -7172,10 +7130,12 @@ mod tests {
                 TestIa {
                     values: vec![IaValueWithLifetimes {
                         value: REPLY_NON_TEMPORARY_ADDRESSES[0],
-                        preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                            PREFERRED_LIFETIME,
-                        )),
-                        valid_lifetime: v6::NonZeroTimeValue::Finite(VALID_LIFETIME),
+                        lifetimes: Lifetimes {
+                            preferred_lifetime: v6::TimeValue::NonZero(
+                                v6::NonZeroTimeValue::Finite(PREFERRED_LIFETIME),
+                            ),
+                            valid_lifetime: v6::NonZeroTimeValue::Finite(VALID_LIFETIME),
+                        },
                     }],
                     t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(T1)),
                     t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(T2)),
@@ -7186,10 +7146,12 @@ mod tests {
                 TestIa {
                     values: vec![IaValueWithLifetimes {
                         value: REPLY_DELEGATED_PREFIXES[0],
-                        preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                            PREFERRED_LIFETIME,
-                        )),
-                        valid_lifetime: v6::NonZeroTimeValue::Finite(VALID_LIFETIME),
+                        lifetimes: Lifetimes {
+                            preferred_lifetime: v6::TimeValue::NonZero(
+                                v6::NonZeroTimeValue::Finite(PREFERRED_LIFETIME),
+                            ),
+                            valid_lifetime: v6::NonZeroTimeValue::Finite(VALID_LIFETIME),
+                        },
                     }],
                     t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(T1)),
                     t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(T2)),
@@ -8198,15 +8160,9 @@ mod tests {
                 AddressEntry::Assigned(
                     values
                         .into_iter()
-                        .map(
-                            |IaValueWithLifetimes {
-                                 value,
-                                 preferred_lifetime: _,
-                                 valid_lifetime: _,
-                             }| {
-                                IaValueWithLifetimes::new_renewed_default(value)
-                            },
-                        )
+                        .map(|IaValueWithLifetimes { value, lifetimes: _ }| {
+                            IaValueWithLifetimes::new_renewed_default(value)
+                        })
                         .collect(),
                 )
             }))
@@ -8217,15 +8173,9 @@ mod tests {
                 PrefixEntry::Assigned(
                     values
                         .into_iter()
-                        .map(
-                            |IaValueWithLifetimes {
-                                 value,
-                                 preferred_lifetime: _,
-                                 valid_lifetime: _,
-                             }| {
-                                IaValueWithLifetimes::new_renewed_default(value)
-                            },
-                        )
+                        .map(|IaValueWithLifetimes { value, lifetimes: _ }| {
+                            IaValueWithLifetimes::new_renewed_default(value)
+                        })
                         .collect(),
                 )
             }))
