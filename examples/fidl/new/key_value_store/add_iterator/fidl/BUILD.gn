@@ -11,6 +11,6 @@ import("//build/fidl/fidl.gni")
 #   ":examples.key_value_store.additerator_cpp_wire"
 #   ...and so on
 #
-fidl("examples.key_value_store.additerator") {
+fidl("examples.keyvaluestore.additerator") {
   sources = [ "key_value_store.test.fidl" ]
 }

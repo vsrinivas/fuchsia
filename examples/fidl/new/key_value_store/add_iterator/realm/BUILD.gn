@@ -8,5 +8,5 @@ import("//build/components.gni")
 # new test realm at test runtime.
 fuchsia_component("realm") {
   manifest =
-      "//examples/fidl/new/key_value_store/resource_type/realm/meta/realm.cml"
+      "//examples/fidl/new/key_value_store/add_iterator/realm/meta/realm.cml"
 }

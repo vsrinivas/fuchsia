@@ -7,16 +7,14 @@ languages, which may be run locally by executing the following from
 the command line: `fx set core.x64 --with=//examples/fidl/new:tests && fx test
 key_value_store_add_iterator`.
 
-First, we need to define our interface definitions and test harness. The FIDL,
-CML, and realm interface definitions set up a scaffold that arbitrary
-implementations can use:
+The FIDL, CML, and realm interface definitions are as follows:
 
 <div>
   <devsite-selector>
     <!-- FIDL -->
     <section>
       <h3 id="key_value_store-add_iterator-fidl">FIDL</h3>
-      <pre class="prettyprint">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/add_iterator/fidl/key_value_store.test.fidl" highlight="diff_1,diff_2" %}</pre>
+      <pre class="prettyprint">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/add_iterator/fidl/key_value_store.test.fidl" highlight="diff_1,diff_2,diff_3" %}</pre>
     </section>
     <!-- CML -->
     <section style="padding: 0px;">

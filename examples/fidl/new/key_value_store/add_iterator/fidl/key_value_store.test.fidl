@@ -19,6 +19,14 @@ type WriteError = flexible enum {
     ALREADY_EXISTS = 3;
 };
 
+// [START diff_1]
+/// An enumeration of things that may go wrong when trying to create an iterator.
+type IterateConnectionError = flexible enum {
+    /// The starting key was not found.
+    UNKNOWN_START_AT = 1;
+};
+// [END diff_1]
+
 /// A key-value store which supports insertion and iteration.
 @discoverable
 protocol Store {
@@ -27,45 +35,46 @@ protocol Store {
         attempt Item;
     }) -> () error WriteError;
 
-    // [START diff_1]
-
-    /// Iterates over the items in the store, using lexicographic ordering over
-    /// the keys.
+    // [START diff_2]
+    /// Iterates over the items in the store, using lexicographic ordering over the keys.
     ///
-    /// The [`iterator`] is [pipelined][pipelining] to the server, such that the
-    /// client can immediately send requests over the new connection.
+    /// The [`iterator`] is [pipelined][pipelining] to the server, such that the client can
+    /// immediately send requests over the new connection.
     ///
     /// [pipelining]: https://fuchsia.dev/fuchsia-src/development/api/fidl?hl=en#request-pipelining
     Iterate(resource struct {
         /// If present, requests to start the iteration at this item.
         starting_at string:<128, optional>;
 
-        /// The [`Iterator`] server endpoint.
+        /// The [`Iterator`] server endpoint. The client creates both ends of the channel and
+        /// retains the `client_end` locally to use for pulling iteration pages, while sending the
+        /// `server_end` off to be fulfilled by the server.
         iterator server_end:Iterator;
-    }) -> () error IteratorConnectionError;
-
-    // [END diff_1]
+    }) -> () error IterateConnectionError;
+    // [END diff_2]
 };
 
-// [START diff_2]
-
-type IteratorConnectionError = flexible enum {
-    /// The starting key was not found.
-    UNKNOWN_START_AT = 1;
-};
-
+// [START diff_3]
+/// An iterator for the key-value store. Note that this protocol makes no guarantee of atomicity -
+/// the values may change between pulls from the iterator. Unlike the `Store` protocol above, this
+/// protocol is not `@discoverable`: it is not independently published by the component that
+/// implements it, but rather must have one of its two protocol ends transmitted over an existing
+/// FIDL connection.
+///
+/// As is often the case with iterators, the client indicates that they are done with an instance of
+/// the iterator by simply closing their end of the connection.
 protocol Iterator {
     /// Gets the next batch of keys.
     ///
-    /// The client pulls keys rather than having the server proactively push
-    /// them, to implement [flow control][flow-control] over the messages.
+    /// The client pulls keys rather than having the server proactively push them, to implement
+    /// [flow control][flow-control] over the messages.
     ///
-    /// [flow-control]: https://fuchsia.dev/fuchsia-src/development/api/fidl?hl=en#prefer_pull_to_push
+    /// [flow-control]:
+    ///     https://fuchsia.dev/fuchsia-src/development/api/fidl?hl=en#prefer_pull_to_push
     Get() -> (struct {
-        /// A list of keys. If the iterator has reached the end of iteration,
-        /// the list will be empty.
+        /// A list of keys. If the iterator has reached the end of iteration, the list will be
+        /// empty. The client is expected to then close the connection.
         entries vector<string:128>:10;
     });
 };
-
-// [END diff_2]
+// [END diff_3]
