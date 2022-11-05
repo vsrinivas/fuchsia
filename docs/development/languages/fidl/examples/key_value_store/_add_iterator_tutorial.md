@@ -1,10 +1,39 @@
-<!-- TODO(fxbug.dev/109277): DOCUMENT[key_value_store/add_iterator] no need for a header, just a brief description -->
+A useful operation for key-value stores is in-order iteration: that is, when
+given a key, to return a (usually paginated) list of elements that appear after
+it, in order.
+
+In FIDL, this is best done using an iterator, which is generally implemented as
+a separate protocol over which this iteration can occur. Using a separate
+protocol, and therefore a separate channel, has a number of benefits, including
+de-interleaving the iteration pull requests from other operations done over the
+main protocol.
+
+The client and server side of the channel connection for protocol `P` can be
+represented as FIDL data types, as a `client_end:P` and `server_end:P`,
+respectively. These types are collectively known as *protocol ends*, and
+represent the other (non-`@discoverable`) way of connecting a FIDL client to its
+corresponding server: over an existing FIDL connection!
+
+Protocol ends are specific instances of a general FIDL concept: the *resource
+type*. A resource type is intended to contain FIDL handles, which necessitates
+extra restrictions on how the type can be used. The type must be always be
+unique, as the underlying resource is mediated by some other capability manager
+(usually the Zircon kernel). Duplicating such a resource via a simple in-memory
+copy, without involving the manager, is impossible. To prevent such duplication,
+all resource types in FIDL are always move-only.
+
+Finally, the `Get()` method of the `Iterator` protocol itself makes use of a
+*size constraint* on the return payload. This limits the amount of data that may
+be transmitted in a single pull, allowing for some measure of resource use
+control. It also creates a natural pagination boundary: rather than a giant dump
+of all of the results at once, the server only needs to prepare small batches at
+a time.
 
 Note: The source code for this example is located at
 [//examples/fidl/new/key_value_store/add_iterator](/examples/fidl/new/key_value_store/add_iterator).
 This directory includes tests exercising the implementation in all supported
-languages, which may be run locally by executing the following from
-the command line: `fx set core.x64 --with=//examples/fidl/new:tests && fx test
+languages, which may be run locally by executing the following from the command
+line: `fx set core.x64 --with=//examples/fidl/new:tests && fx test
 key_value_store_add_iterator`.
 
 The FIDL, CML, and realm interface definitions are as follows:

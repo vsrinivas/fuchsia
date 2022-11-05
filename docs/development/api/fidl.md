@@ -348,6 +348,8 @@ sequence up into multiple messages using one of the pagination patterns
 discussed below or consider moving the data out of the message itself, for
 example into a VMO.
 
+<<../languages/fidl/widgets/_size_constraint.md>>
+
 ### String encoding, string contents, and length bounds
 
 FIDL `string`s are encoded in [UTF-8](https://en.wikipedia.org/wiki/UTF-8), a

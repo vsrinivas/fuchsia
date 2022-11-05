@@ -52,9 +52,15 @@ section.
 
 <<../widgets/_persistence.md>>
 
+<<../widgets/_protocol_end.md>>
+
 <<../widgets/_recursive_type.md>>
 
+<<../widgets/_resource_type.md>>
+
 <<../widgets/_scalar_type.md>>
+
+<<../widgets/_size_constraint.md>>
 
 <<../widgets/_table_payload.md>>
 
