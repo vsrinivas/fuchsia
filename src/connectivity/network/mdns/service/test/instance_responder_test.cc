@@ -21,8 +21,6 @@ constexpr char kOtherServiceName[] = "_other._tcp.";
 constexpr char kInstanceName[] = "testinstance";
 constexpr char kHostName[] = "test2host";
 constexpr char kHostFullName[] = "test2host.local.";
-constexpr char kLocalHostNameLong[] = "testhostnamethatislong";
-constexpr char kLocalHostFullNameLong[] = "testhostnamethatislong.local.";
 constexpr char kAltHostName[] = "123456789ABC";
 constexpr char kAltHostFullName[] = "123456789ABC.local.";
 const std::vector<inet::IpAddress> kAddresses{inet::IpAddress(192, 168, 1, 200),
