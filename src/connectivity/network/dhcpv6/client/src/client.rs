@@ -31,7 +31,7 @@ use {
     std::{
         collections::{
             hash_map::{DefaultHasher, Entry},
-            HashMap,
+            HashMap, HashSet,
         },
         convert::TryFrom,
         hash::{Hash, Hasher},
@@ -127,13 +127,9 @@ fn to_dhcpv6_option_codes(information_config: InformationConfig) -> Vec<v6::Opti
     codes
 }
 
-/// Converts `AddressConfig` to a map of `Option<Ipv6Addr>` indexed by IAID.
-/// Returns an error if `address_config.address_count` is `None` or zero, or if
-/// the size of `address_config.preferred_addresses` is greater than
-/// `address_config.address_count`.
 fn to_configured_addresses(
     address_config: AddressConfig,
-) -> Result<HashMap<v6::IAID, Vec<Ipv6Addr>>, ClientError> {
+) -> Result<HashMap<v6::IAID, HashSet<Ipv6Addr>>, ClientError> {
     let AddressConfig { address_count, preferred_addresses, .. } = address_config;
     let address_count =
         address_count.and_then(NonZeroU8::new).ok_or(ClientError::UnsupportedConfigs)?;
@@ -149,8 +145,8 @@ fn to_configured_addresses(
         .zip(
             preferred_addresses
                 .into_iter()
-                .map(|fnet::Ipv6Address { addr, .. }| vec![Ipv6Addr::from(addr)])
-                .chain(std::iter::repeat_with(Vec::new)),
+                .map(|fnet::Ipv6Address { addr, .. }| HashSet::from([Ipv6Addr::from(addr)]))
+                .chain(std::iter::repeat_with(HashSet::new)),
         )
         .take(address_count.get().into())
         .collect())

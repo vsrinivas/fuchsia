@@ -12,10 +12,11 @@ use packet_formats_dhcp::v6;
 use rand::{thread_rng, Rng};
 use std::{
     cmp::{Eq, Ord, PartialEq, PartialOrd},
-    collections::{hash_map::Entry, BinaryHeap, HashMap},
+    collections::{hash_map::Entry, BinaryHeap, HashMap, HashSet},
     convert::TryFrom,
     default::Default,
     fmt::Debug,
+    hash::Hash,
     time::{Duration, Instant},
 };
 use tracing::{debug, info, warn};
@@ -433,7 +434,7 @@ impl IaKind {
     }
 }
 
-trait IaValue: Copy + Clone + Debug + PartialEq {
+trait IaValue: Copy + Clone + Debug + PartialEq + Eq + Hash {
     const KIND: IaKind;
 }
 
@@ -445,12 +446,6 @@ impl IaValue for Subnet<Ipv6Addr> {
     const KIND: IaKind = IaKind::Prefix;
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub(crate) struct IaValueWithLifetimes<V> {
-    value: V,
-    lifetimes: Lifetimes,
-}
-
 // Holds the information received in an Advertise message.
 #[derive(Debug, Clone)]
 struct AdvertiseMessage {
@@ -458,11 +453,11 @@ struct AdvertiseMessage {
     /// The advertised non-temporary addresses.
     ///
     /// Each IA has at least one address.
-    non_temporary_addresses: HashMap<v6::IAID, Vec<IaValueWithLifetimes<Ipv6Addr>>>,
+    non_temporary_addresses: HashMap<v6::IAID, HashSet<Ipv6Addr>>,
     /// The advertised delegated prefixes.
     ///
-    /// Each IA has at least one address.
-    delegated_prefixes: HashMap<v6::IAID, Vec<IaValueWithLifetimes<Subnet<Ipv6Addr>>>>,
+    /// Each IA has at least one prefix.
+    delegated_prefixes: HashMap<v6::IAID, HashSet<Subnet<Ipv6Addr>>>,
     dns_servers: Vec<Ipv6Addr>,
     preference: u8,
     receive_time: Instant,
@@ -590,19 +585,14 @@ impl Eq for AdvertiseMessage {}
 // Returns a count of entries in where the value matches the configured value
 // with the same IAID.
 fn compute_preferred_ia_count<V: IaValue>(
-    got: &HashMap<v6::IAID, Vec<IaValueWithLifetimes<V>>>,
-    configured: &HashMap<v6::IAID, Vec<V>>,
+    got: &HashMap<v6::IAID, HashSet<V>>,
+    configured: &HashMap<v6::IAID, HashSet<V>>,
 ) -> usize {
     got.iter()
         .map(|(iaid, got_values)| {
-            configured.get(iaid).map_or(0, |configured_values| {
-                got_values
-                    .iter()
-                    .map(|IaValueWithLifetimes { value, lifetimes: _ }| {
-                        usize::from(configured_values.contains(value))
-                    })
-                    .sum()
-            })
+            configured
+                .get(iaid)
+                .map_or(0, |configured_values| got_values.intersection(configured_values).count())
         })
         .sum()
 }
@@ -627,7 +617,8 @@ fn get_common_value(values: &Vec<u32>) -> Option<Duration> {
     None
 }
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Copy, Clone, Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 enum LifetimesError {
     #[error("valid lifetime is zero")]
     ValidLifetimeZero,
@@ -648,7 +639,7 @@ struct IaValueOption<V> {
 }
 
 #[derive(thiserror::Error, Debug)]
-enum IaOptionError {
+enum IaOptionError<V: IaValue> {
     #[error("T1={t1:?} greater than T2={t2:?}")]
     T1GreaterThanT2 { t1: v6::TimeValue, t2: v6::TimeValue },
     #[error("status code error: {0}")]
@@ -657,15 +648,21 @@ enum IaOptionError {
     // than a string of the debug representation of the invalid option.
     #[error("invalid option: {0:?}")]
     InvalidOption(String),
+    #[error("IA value={value:?} appeared twice with first={first_lifetimes:?} and second={second_lifetimes:?}")]
+    DuplicateIaValue {
+        value: V,
+        first_lifetimes: Result<Lifetimes, LifetimesError>,
+        second_lifetimes: Result<Lifetimes, LifetimesError>,
+    },
 }
 
 #[derive(Debug)]
-enum IaOption<V> {
+enum IaOption<V: IaValue> {
     Success {
         status_message: Option<String>,
         t1: v6::TimeValue,
         t2: v6::TimeValue,
-        ia_values: Vec<IaValueOption<V>>,
+        ia_values: HashMap<V, Result<Lifetimes, LifetimesError>>,
     },
     Failure(ErrorStatusCode),
 }
@@ -716,7 +713,7 @@ fn check_lifetimes(
 fn process_ia<
     'a,
     V: IaValue,
-    E: From<IaOptionError> + Debug,
+    E: From<IaOptionError<V>> + Debug,
     F: Fn(&v6::ParsedDhcpOption<'a>) -> Result<IaValueOption<V>, E>,
 >(
     t1: v6::TimeValue,
@@ -748,7 +745,7 @@ fn process_ia<
         }
     }
 
-    let mut ia_values = Vec::new();
+    let mut ia_values = HashMap::new();
     let mut success_status_message = None;
     for opt in options {
         match opt {
@@ -783,7 +780,15 @@ fn process_ia<
                 }
             }
             opt @ (v6::ParsedDhcpOption::IaAddr(_) | v6::ParsedDhcpOption::IaPrefix(_)) => {
-                ia_values.push(check(&opt)?)
+                let IaValueOption { value, lifetimes } = check(&opt)?;
+                if let Some(first_lifetimes) = ia_values.insert(value, lifetimes) {
+                    return Err(IaOptionError::DuplicateIaValue {
+                        value,
+                        first_lifetimes,
+                        second_lifetimes: lifetimes,
+                    }
+                    .into());
+                }
             }
             v6::ParsedDhcpOption::ClientId(_)
             | v6::ParsedDhcpOption::ServerId(_)
@@ -811,7 +816,9 @@ fn process_ia<
 
 // TODO(https://fxbug.dev/104519): Move this function and associated types
 // into packet-formats-dhcp.
-fn process_ia_na(ia_na_data: &v6::IanaData<&'_ [u8]>) -> Result<IaNaOption, IaOptionError> {
+fn process_ia_na(
+    ia_na_data: &v6::IanaData<&'_ [u8]>,
+) -> Result<IaNaOption, IaOptionError<Ipv6Addr>> {
     process_ia(ia_na_data.t1(), ia_na_data.t2(), ia_na_data.iter_options(), |opt| match opt {
         v6::ParsedDhcpOption::IaAddr(ia_addr_data) => Ok(IaValueOption {
             value: ia_addr_data.addr(),
@@ -833,7 +840,7 @@ fn process_ia_na(ia_na_data: &v6::IanaData<&'_ [u8]>) -> Result<IaNaOption, IaOp
 #[derive(thiserror::Error, Debug)]
 enum IaPdOptionError {
     #[error("generic IA Option error: {0}")]
-    IaOptionError(#[from] IaOptionError),
+    IaOptionError(#[from] IaOptionError<Subnet<Ipv6Addr>>),
     #[error("invalid subnet")]
     InvalidSubnet,
 }
@@ -900,7 +907,7 @@ enum OptionsError {
     #[error("unknown status code {0} with message '{1}'")]
     InvalidStatusCode(u16, String),
     #[error("IA_NA option error")]
-    IaNaError(#[from] IaOptionError),
+    IaNaError(#[from] IaOptionError<Ipv6Addr>),
     #[error("IA_PD option error")]
     IaPdError(#[from] IaPdOptionError),
     #[error("duplicate IA_NA option with IAID={0:?} {1:?} and {2:?}")]
@@ -1173,7 +1180,7 @@ fn process_options<B: ByteSlice, IaNaChecker: IaChecker, IaPdChecker: IaChecker>
                     IaNaOption::Failure(_) => {}
                     IaNaOption::Success { status_message: _, t1, t2, ref ia_values } => {
                         let mut update_t1_t2 = false;
-                        for IaValueOption { value: _, lifetimes } in ia_values {
+                        for (_value, lifetimes) in ia_values {
                             match lifetimes {
                                 Err(_) => {}
                                 Ok(Lifetimes { preferred_lifetime, valid_lifetime }) => {
@@ -1246,7 +1253,7 @@ fn process_options<B: ByteSlice, IaNaChecker: IaChecker, IaPdChecker: IaChecker>
                     IaPdOption::Failure(_) => {}
                     IaPdOption::Success { status_message: _, t1, t2, ref ia_values } => {
                         let mut update_t1_t2 = false;
-                        for IaValueOption { value: _, lifetimes } in ia_values {
+                        for (_value, lifetimes) in ia_values {
                             match lifetimes {
                                 Err(_) => {}
                                 Ok(Lifetimes { preferred_lifetime, valid_lifetime }) => {
@@ -1561,9 +1568,9 @@ struct ServerDiscovery {
     /// [Client Identifier]: https://datatracker.ietf.org/doc/html/rfc8415#section-21.2
     client_id: [u8; CLIENT_ID_LEN],
     /// The non-temporary addresses the client is configured to negotiate.
-    configured_non_temporary_addresses: HashMap<v6::IAID, Vec<Ipv6Addr>>,
+    configured_non_temporary_addresses: HashMap<v6::IAID, HashSet<Ipv6Addr>>,
     /// The delegated prefixes the client is configured to negotiate.
-    configured_delegated_prefixes: HashMap<v6::IAID, Vec<Subnet<Ipv6Addr>>>,
+    configured_delegated_prefixes: HashMap<v6::IAID, HashSet<Subnet<Ipv6Addr>>>,
     /// The time of the first solicit. `None` before a solicit is sent. Used in
     /// calculating the [elapsed time].
     ///
@@ -1592,8 +1599,8 @@ impl ServerDiscovery {
     fn start<R: Rng>(
         transaction_id: [u8; 3],
         client_id: [u8; CLIENT_ID_LEN],
-        configured_non_temporary_addresses: HashMap<v6::IAID, Vec<Ipv6Addr>>,
-        configured_delegated_prefixes: HashMap<v6::IAID, Vec<Subnet<Ipv6Addr>>>,
+        configured_non_temporary_addresses: HashMap<v6::IAID, HashSet<Ipv6Addr>>,
+        configured_delegated_prefixes: HashMap<v6::IAID, HashSet<Subnet<Ipv6Addr>>>,
         options_to_request: &[v6::OptionCode],
         solicit_max_rt: Duration,
         rng: &mut R,
@@ -1935,8 +1942,8 @@ impl ServerDiscovery {
 
                 let ia_addrs = ia_addrs
                     .into_iter()
-                    .filter_map(|IaValueOption { value, lifetimes }| match lifetimes {
-                        Ok(lifetimes) => Some(IaValueWithLifetimes { value, lifetimes }),
+                    .filter_map(|(value, lifetimes)| match lifetimes {
+                        Ok(Lifetimes { preferred_lifetime: _, valid_lifetime: _ }) => Some(value),
                         e @ Err(
                             LifetimesError::ValidLifetimeZero
                             | LifetimesError::PreferredLifetimeGreaterThanValidLifetime(_),
@@ -1955,7 +1962,7 @@ impl ServerDiscovery {
                             None
                         }
                     })
-                    .collect::<Vec<_>>();
+                    .collect::<HashSet<_>>();
 
                 (!ia_addrs.is_empty()).then(|| (iaid, ia_addrs))
             })
@@ -1986,8 +1993,8 @@ impl ServerDiscovery {
                 }
                 let ia_prefixes = ia_prefixes
                     .into_iter()
-                    .filter_map(|IaValueOption { value, lifetimes }| match lifetimes {
-                        Ok(lifetimes) => Some(IaValueWithLifetimes { value, lifetimes }),
+                    .filter_map(|(value, lifetimes)| match lifetimes {
+                        Ok(Lifetimes { preferred_lifetime: _, valid_lifetime: _ }) => Some(value),
                         e @ Err(
                             LifetimesError::ValidLifetimeZero
                             | LifetimesError::PreferredLifetimeGreaterThanValidLifetime(_),
@@ -2006,7 +2013,7 @@ impl ServerDiscovery {
                             None
                         }
                     })
-                    .collect::<Vec<_>>();
+                    .collect::<HashSet<_>>();
 
                 (!ia_prefixes.is_empty()).then(|| (iaid, ia_prefixes))
             })
@@ -2558,7 +2565,7 @@ fn has_no_assigned_ias<V: IaValue>(entries: &HashMap<v6::IAID, IaEntry<V>>) -> b
     })
 }
 
-struct ComputeNewEntriesWithCurrentIasAndReplyResult<V> {
+struct ComputeNewEntriesWithCurrentIasAndReplyResult<V: IaValue> {
     new_entries: HashMap<v6::IAID, IaEntry<V>>,
     go_to_requesting: bool,
     missing_ias_in_reply: bool,
@@ -2634,12 +2641,12 @@ fn compute_new_entries_with_current_ias_and_reply<V: IaValue>(
 
             let ia_values = ia_values
                 .into_iter()
-                .filter_map(|IaValueOption { value, lifetimes }| {
+                .filter_map(|(value, lifetimes)| {
                     match lifetimes {
-                        Ok(lifetimes) => Some(IaValueWithLifetimes{
+                        Ok(lifetimes) => Some((
                             value,
                             lifetimes,
-                        }),
+                        )),
                         Err(e) => {
                             warn!(
                                 "Reply to {}: {} with IAID {:?}: discarding leases: {}",
@@ -2649,7 +2656,7 @@ fn compute_new_entries_with_current_ias_and_reply<V: IaValue>(
                         }
                     }
                 })
-                .collect::<Vec<_>>();
+                .collect::<HashMap<_, _>>();
 
 
             if ia_values.is_empty() {
@@ -2955,22 +2962,19 @@ fn process_reply_with_leases<B: ByteSlice>(
 /// Create a map of IA entries to be requested, combining the IAs in the
 /// Advertise with the configured IAs that are not included in the Advertise.
 fn advertise_to_ia_entries<V: IaValue>(
-    mut advertised: HashMap<v6::IAID, Vec<IaValueWithLifetimes<V>>>,
-    configured: HashMap<v6::IAID, Vec<V>>,
+    mut advertised: HashMap<v6::IAID, HashSet<V>>,
+    configured: HashMap<v6::IAID, HashSet<V>>,
 ) -> HashMap<v6::IAID, IaEntry<V>> {
     configured
         .into_iter()
         .map(|(iaid, configured)| {
             let addresses_to_request = match advertised.remove(&iaid) {
                 Some(ias) => {
-                    // Note that the advertised address for an IAID may
-                    // be different from what was solicited by the
-                    // client.
-                    ias.into_iter()
-                        .map(|IaValueWithLifetimes { value, lifetimes: _ }| value)
-                        .collect()
+                    // Note that the advertised address/prefix for an IAID may
+                    // be different from what was solicited by the client.
+                    ias
                 }
-                // The configured address was not advertised; the client
+                // The configured address/prefix was not advertised; the client
                 // will continue to request it in subsequent messages, per
                 // RFC 8415 section 18.2:
                 //
@@ -3276,7 +3280,7 @@ impl Requesting {
                                         discard_leases(current_address_entry);
 
                                         *current_address_entry =
-                                            AddressEntry::ToRequest(Vec::new());
+                                            AddressEntry::ToRequest(Default::default());
                                     },
                                 );
                                 // TODO(https://fxbug.dev/96674): append to actions to remove
@@ -3436,31 +3440,31 @@ impl Requesting {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-enum IaEntry<V> {
-    /// The address is assigned.
-    Assigned(Vec<IaValueWithLifetimes<V>>),
-    /// The address is not assigned, and is to be requested in subsequent
+enum IaEntry<V: IaValue> {
+    /// The IA is assigned.
+    Assigned(HashMap<V, Lifetimes>),
+    /// The IA is not assigned, and is to be requested in subsequent
     /// messages.
-    ToRequest(Vec<V>),
+    ToRequest(HashSet<V>),
 }
 
 impl<V: IaValue> IaEntry<V> {
     fn value(&self) -> impl Iterator<Item = V> + '_ {
         match self {
-            Self::Assigned(ias) => either::Either::Left(ias.iter().map(|ia| ia.value)),
+            Self::Assigned(ias) => either::Either::Left(ias.keys().copied()),
             Self::ToRequest(values) => either::Either::Right(values.iter().copied()),
         }
     }
 
     fn to_request(&self, without_hints: bool) -> Self {
-        Self::ToRequest(if without_hints { Vec::new() } else { self.value().collect() })
+        Self::ToRequest(if without_hints { Default::default() } else { self.value().collect() })
     }
 }
 
 /// Extracts the configured values from a map of IA entries.
 fn to_configured_values<V: IaValue>(
     entries: HashMap<v6::IAID, IaEntry<V>>,
-) -> HashMap<v6::IAID, Vec<V>> {
+) -> HashMap<v6::IAID, HashSet<V>> {
     entries.iter().map(|(iaid, entry)| (*iaid, entry.value().collect())).collect()
 }
 
@@ -4296,8 +4300,8 @@ impl<R: Rng> ClientStateMachine<R> {
     pub fn start_stateful(
         transaction_id: [u8; 3],
         client_id: [u8; CLIENT_ID_LEN],
-        configured_non_temporary_addresses: HashMap<v6::IAID, Vec<Ipv6Addr>>,
-        configured_delegated_prefixes: HashMap<v6::IAID, Vec<Subnet<Ipv6Addr>>>,
+        configured_non_temporary_addresses: HashMap<v6::IAID, HashSet<Ipv6Addr>>,
+        configured_delegated_prefixes: HashMap<v6::IAID, HashSet<Subnet<Ipv6Addr>>>,
         options_to_request: Vec<v6::OptionCode>,
         mut rng: R,
         now: Instant,
@@ -4492,36 +4496,32 @@ pub(crate) mod testutil {
 
     pub(crate) fn to_configured_addresses(
         address_count: usize,
-        preferred_addresses: impl IntoIterator<Item = Vec<Ipv6Addr>>,
-    ) -> HashMap<v6::IAID, Vec<Ipv6Addr>> {
+        preferred_addresses: impl IntoIterator<Item = HashSet<Ipv6Addr>>,
+    ) -> HashMap<v6::IAID, HashSet<Ipv6Addr>> {
         let addresses = preferred_addresses
             .into_iter()
-            .chain(std::iter::repeat_with(Vec::new))
+            .chain(std::iter::repeat_with(HashSet::new))
             .take(address_count);
 
-        let configured_addresses: HashMap<v6::IAID, Vec<Ipv6Addr>> =
-            (0..).map(v6::IAID::new).zip(addresses).collect();
-        configured_addresses
+        (0..).map(v6::IAID::new).zip(addresses).collect()
     }
 
     pub(crate) fn to_configured_prefixes(
         prefix_count: usize,
-        preferred_prefixes: impl IntoIterator<Item = Vec<Subnet<Ipv6Addr>>>,
-    ) -> HashMap<v6::IAID, Vec<Subnet<Ipv6Addr>>> {
+        preferred_prefixes: impl IntoIterator<Item = HashSet<Subnet<Ipv6Addr>>>,
+    ) -> HashMap<v6::IAID, HashSet<Subnet<Ipv6Addr>>> {
         let prefixes = preferred_prefixes
             .into_iter()
-            .chain(std::iter::repeat_with(Vec::new))
+            .chain(std::iter::repeat_with(HashSet::new))
             .take(prefix_count);
 
         (0..).map(v6::IAID::new).zip(prefixes).collect()
     }
 
-    pub(super) fn to_default_ias_map<A: IaValue>(
-        addresses: &[A],
-    ) -> HashMap<v6::IAID, Vec<IaValueWithLifetimes<A>>> {
+    pub(super) fn to_default_ias_map<A: IaValue>(addresses: &[A]) -> HashMap<v6::IAID, HashSet<A>> {
         (0..)
             .map(v6::IAID::new)
-            .zip(addresses.iter().map(|address| vec![IaValueWithLifetimes::new_default(*address)]))
+            .zip(addresses.iter().map(|value| HashSet::from([*value])))
             .collect()
     }
 
@@ -4535,8 +4535,8 @@ pub(crate) mod testutil {
     pub(crate) fn start_and_assert_server_discovery<R: Rng + std::fmt::Debug>(
         transaction_id: [u8; 3],
         client_id: [u8; CLIENT_ID_LEN],
-        configured_non_temporary_addresses: HashMap<v6::IAID, Vec<Ipv6Addr>>,
-        configured_delegated_prefixes: HashMap<v6::IAID, Vec<Subnet<Ipv6Addr>>>,
+        configured_non_temporary_addresses: HashMap<v6::IAID, HashSet<Ipv6Addr>>,
+        configured_delegated_prefixes: HashMap<v6::IAID, HashSet<Subnet<Ipv6Addr>>>,
         options_to_request: Vec<v6::OptionCode>,
         rng: R,
         now: Instant,
@@ -4600,59 +4600,48 @@ pub(crate) mod testutil {
         client
     }
 
-    impl<V> IaValueWithLifetimes<V> {
-        pub(crate) fn new_finite(
-            value: V,
+    impl Lifetimes {
+        pub(crate) const fn new_default() -> Self {
+            Lifetimes::new_finite(PREFERRED_LIFETIME, VALID_LIFETIME)
+        }
+
+        pub(crate) const fn new_finite(
             preferred_lifetime: v6::NonZeroOrMaxU32,
             valid_lifetime: v6::NonZeroOrMaxU32,
-        ) -> Self {
-            Self {
-                value,
-                lifetimes: Lifetimes {
-                    preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                        preferred_lifetime,
-                    )),
-                    valid_lifetime: v6::NonZeroTimeValue::Finite(valid_lifetime),
-                },
+        ) -> Lifetimes {
+            Lifetimes {
+                preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                    preferred_lifetime,
+                )),
+                valid_lifetime: v6::NonZeroTimeValue::Finite(valid_lifetime),
             }
         }
 
-        pub(crate) fn new_default(value: V) -> Self {
-            Self {
-                value,
-                lifetimes: Lifetimes {
-                    preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                        PREFERRED_LIFETIME,
-                    )),
-                    valid_lifetime: v6::NonZeroTimeValue::Finite(VALID_LIFETIME),
-                },
-            }
-        }
-
-        pub(crate) fn new_renewed_default(value: V) -> Self {
-            Self {
-                value,
-                lifetimes: Lifetimes {
-                    preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                        RENEWED_PREFERRED_LIFETIME,
-                    )),
-                    valid_lifetime: v6::NonZeroTimeValue::Finite(RENEWED_VALID_LIFETIME),
-                },
+        pub(crate) const fn new_renewed() -> Lifetimes {
+            Lifetimes {
+                preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                    RENEWED_PREFERRED_LIFETIME,
+                )),
+                valid_lifetime: v6::NonZeroTimeValue::Finite(RENEWED_VALID_LIFETIME),
             }
         }
     }
 
-    impl<V> IaEntry<V> {
+    impl<V: IaValue> IaEntry<V> {
         pub(crate) fn new_assigned(
             value: V,
             preferred_lifetime: v6::NonZeroOrMaxU32,
             valid_lifetime: v6::NonZeroOrMaxU32,
         ) -> Self {
-            Self::Assigned(vec![IaValueWithLifetimes::new_finite(
+            Self::Assigned(HashMap::from([(
                 value,
-                preferred_lifetime,
-                valid_lifetime,
-            )])
+                Lifetimes {
+                    preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                        preferred_lifetime,
+                    )),
+                    valid_lifetime: v6::NonZeroTimeValue::Finite(valid_lifetime),
+                },
+            )]))
         }
     }
 
@@ -4662,22 +4651,16 @@ pub(crate) mod testutil {
             non_temporary_addresses: &[Ipv6Addr],
             delegated_prefixes: &[Subnet<Ipv6Addr>],
             dns_servers: &[Ipv6Addr],
-            configured_non_temporary_addresses: &HashMap<v6::IAID, Vec<Ipv6Addr>>,
-            configured_delegated_prefixes: &HashMap<v6::IAID, Vec<Subnet<Ipv6Addr>>>,
+            configured_non_temporary_addresses: &HashMap<v6::IAID, HashSet<Ipv6Addr>>,
+            configured_delegated_prefixes: &HashMap<v6::IAID, HashSet<Subnet<Ipv6Addr>>>,
         ) -> AdvertiseMessage {
             let non_temporary_addresses = (0..)
                 .map(v6::IAID::new)
-                .zip(non_temporary_addresses.iter().fold(Vec::new(), |mut addrs, address| {
-                    addrs.push(vec![IaValueWithLifetimes::new_default(*address)]);
-                    addrs
-                }))
+                .zip(non_temporary_addresses.iter().map(|address| HashSet::from([*address])))
                 .collect();
             let delegated_prefixes = (0..)
                 .map(v6::IAID::new)
-                .zip(delegated_prefixes.iter().fold(Vec::new(), |mut prefixes, prefix| {
-                    prefixes.push(vec![IaValueWithLifetimes::new_default(*prefix)]);
-                    prefixes
-                }))
+                .zip(delegated_prefixes.iter().map(|prefix| HashSet::from([*prefix])))
                 .collect();
             let preferred_non_temporary_addresses_count = compute_preferred_ia_count(
                 &non_temporary_addresses,
@@ -4711,20 +4694,20 @@ pub(crate) mod testutil {
     /// A helper identity association test type specifying T1/T2, for testing
     /// T1/T2 variations across IAs.
     #[derive(Clone)]
-    pub(crate) struct TestIa<V> {
-        pub(crate) values: Vec<IaValueWithLifetimes<V>>,
+    pub(super) struct TestIa<V: IaValue> {
+        pub(crate) values: HashMap<V, Lifetimes>,
         pub(crate) t1: v6::TimeValue,
         pub(crate) t2: v6::TimeValue,
     }
 
-    impl<V> TestIa<V> {
+    impl<V: IaValue> TestIa<V> {
         /// Creates a `TestIa` with default valid values for
         /// lifetimes.
         pub(crate) fn new_default(value: V) -> TestIa<V> {
-            TestIa::new_default_with_values(vec![IaValueWithLifetimes::new_default(value)])
+            TestIa::new_default_with_values(HashMap::from([(value, Lifetimes::new_default())]))
         }
 
-        pub(crate) fn new_default_with_values(values: Vec<IaValueWithLifetimes<V>>) -> TestIa<V> {
+        pub(crate) fn new_default_with_values(values: HashMap<V, Lifetimes>) -> TestIa<V> {
             TestIa {
                 values,
                 t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(T1)),
@@ -4735,31 +4718,29 @@ pub(crate) mod testutil {
         /// Creates a `TestIa` with default valid values for
         /// renewed lifetimes.
         pub(crate) fn new_renewed_default(value: V) -> TestIa<V> {
-            TestIa::new_renewed_default_with_values(vec![
-                IaValueWithLifetimes::new_renewed_default(value),
-            ])
+            TestIa::new_renewed_default_with_values([value].into_iter())
         }
 
         pub(crate) fn new_renewed_default_with_values(
-            values: Vec<IaValueWithLifetimes<V>>,
+            values: impl Iterator<Item = V>,
         ) -> TestIa<V> {
             TestIa {
-                values,
+                values: values.map(|v| (v, Lifetimes::new_renewed())).collect(),
                 t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(RENEWED_T1)),
                 t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(RENEWED_T2)),
             }
         }
     }
 
-    pub(crate) struct TestMessageBuilder<'a, IaNaIter, IaPdIter> {
-        pub(crate) transaction_id: [u8; 3],
-        pub(crate) message_type: v6::MessageType,
-        pub(crate) client_id: &'a [u8],
-        pub(crate) server_id: &'a [u8],
-        pub(crate) preference: Option<u8>,
-        pub(crate) dns_servers: Option<&'a [Ipv6Addr]>,
-        pub(crate) ia_nas: IaNaIter,
-        pub(crate) ia_pds: IaPdIter,
+    pub(super) struct TestMessageBuilder<'a, IaNaIter, IaPdIter> {
+        pub(super) transaction_id: [u8; 3],
+        pub(super) message_type: v6::MessageType,
+        pub(super) client_id: &'a [u8],
+        pub(super) server_id: &'a [u8],
+        pub(super) preference: Option<u8>,
+        pub(super) dns_servers: Option<&'a [Ipv6Addr]>,
+        pub(super) ia_nas: IaNaIter,
+        pub(super) ia_pds: IaPdIter,
     }
 
     impl<
@@ -4768,7 +4749,7 @@ pub(crate) mod testutil {
             IaPdIter: Iterator<Item = (v6::IAID, TestIa<Subnet<Ipv6Addr>>)>,
         > TestMessageBuilder<'a, IaNaIter, IaPdIter>
     {
-        pub(crate) fn build(self) -> Vec<u8> {
+        pub(super) fn build(self) -> Vec<u8> {
             let TestMessageBuilder {
                 transaction_id,
                 message_type,
@@ -4791,24 +4772,17 @@ pub(crate) mod testutil {
                     (
                         iaid,
                         Inner {
-                            opt:
-                                values
-                                    .into_iter()
-                                    .map(
-                                        |IaValueWithLifetimes {
-                                             value,
-                                             lifetimes:
-                                                 Lifetimes { preferred_lifetime, valid_lifetime },
-                                         }| {
-                                            v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-                                                value,
-                                                get_value(preferred_lifetime),
-                                                get_value(valid_lifetime.into()),
-                                                &[],
-                                            ))
-                                        },
-                                    )
-                                    .collect(),
+                            opt: values
+                                .into_iter()
+                                .map(|(value, Lifetimes { preferred_lifetime, valid_lifetime })| {
+                                    v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+                                        value,
+                                        get_value(preferred_lifetime),
+                                        get_value(valid_lifetime.into()),
+                                        &[],
+                                    ))
+                                })
+                                .collect(),
                             t1,
                             t2,
                         },
@@ -4820,24 +4794,17 @@ pub(crate) mod testutil {
                     (
                         iaid,
                         Inner {
-                            opt:
-                                values
-                                    .into_iter()
-                                    .map(
-                                        |IaValueWithLifetimes {
-                                             value,
-                                             lifetimes:
-                                                 Lifetimes { preferred_lifetime, valid_lifetime },
-                                         }| {
-                                            v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(
-                                                get_value(preferred_lifetime),
-                                                get_value(valid_lifetime.into()),
-                                                value,
-                                                &[],
-                                            ))
-                                        },
-                                    )
-                                    .collect(),
+                            opt: values
+                                .into_iter()
+                                .map(|(value, Lifetimes { preferred_lifetime, valid_lifetime })| {
+                                    v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(
+                                        get_value(preferred_lifetime),
+                                        get_value(valid_lifetime.into()),
+                                        value,
+                                        &[],
+                                    ))
+                                })
+                                .collect(),
                             t1,
                             t2,
                         },
@@ -4875,8 +4842,8 @@ pub(crate) mod testutil {
         }
     }
 
-    pub(crate) type TestIaNa = TestIa<Ipv6Addr>;
-    pub(crate) type TestIaPd = TestIa<Subnet<Ipv6Addr>>;
+    pub(super) type TestIaNa = TestIa<Ipv6Addr>;
+    pub(super) type TestIaPd = TestIa<Subnet<Ipv6Addr>>;
 
     /// Creates a stateful client, exchanges messages to bring it in Requesting
     /// state, and sends a Request message. Returns the client in Requesting
@@ -4888,7 +4855,7 @@ pub(crate) mod testutil {
     /// `request_and_assert` panics if the Request message cannot be
     /// parsed or does not contain the expected options, or the Requesting state
     /// is incorrect.
-    pub(crate) fn request_and_assert<R: Rng + std::fmt::Debug>(
+    pub(super) fn request_and_assert<R: Rng + std::fmt::Debug>(
         client_id: [u8; CLIENT_ID_LEN],
         server_id: [u8; TEST_SERVER_ID_LEN],
         non_temporary_addresses_to_assign: Vec<TestIaNa>,
@@ -4904,13 +4871,13 @@ pub(crate) mod testutil {
             non_temporary_addresses_to_assign.len(),
             non_temporary_addresses_to_assign
                 .iter()
-                .map(|TestIaNa { values, t1: _, t2: _ }| values.iter().map(|a| a.value).collect()),
+                .map(|TestIaNa { values, t1: _, t2: _ }| values.keys().cloned().collect()),
         );
         let configured_delegated_prefixes = to_configured_prefixes(
             delegated_prefixes_to_assign.len(),
             delegated_prefixes_to_assign
                 .iter()
-                .map(|TestIaPd { values, t1: _, t2: _ }| values.iter().map(|a| a.value).collect()),
+                .map(|TestIaPd { values, t1: _, t2: _ }| values.keys().cloned().collect()),
         );
         let options_to_request = if expected_dns_servers.is_empty() {
             Vec::new()
@@ -4996,7 +4963,7 @@ pub(crate) mod testutil {
     /// # Panics
     ///
     /// `assign_and_assert` panics if assignment fails.
-    pub(crate) fn assign_and_assert<R: Rng + std::fmt::Debug>(
+    pub(super) fn assign_and_assert<R: Rng + std::fmt::Debug>(
         client_id: [u8; CLIENT_ID_LEN],
         server_id: [u8; TEST_SERVER_ID_LEN],
         non_temporary_addresses_to_assign: Vec<TestIaNa>,
@@ -5041,13 +5008,13 @@ pub(crate) mod testutil {
         let expected_non_temporary_addresses = non_temporary_addresses_to_assign
             .iter()
             .map(|(iaid, TestIaNa { values, t1: _, t2: _ })| {
-                (*iaid, AddressEntry::Assigned(values.iter().cloned().collect()))
+                (*iaid, AddressEntry::Assigned(values.clone()))
             })
             .collect::<HashMap<_, _>>();
         let expected_delegated_prefixes = delegated_prefixes_to_assign
             .iter()
             .map(|(iaid, TestIaPd { values, t1: _, t2: _ })| {
-                (*iaid, PrefixEntry::Assigned(values.iter().cloned().collect()))
+                (*iaid, PrefixEntry::Assigned(values.clone()))
             })
             .collect::<HashMap<_, _>>();
         let Assigned {
@@ -5095,8 +5062,8 @@ pub(crate) mod testutil {
         expected_client_id: &[u8; CLIENT_ID_LEN],
         expected_server_id: Option<&[u8; TEST_SERVER_ID_LEN]>,
         expected_oro: &[v6::OptionCode],
-        expected_non_temporary_addresses: &HashMap<v6::IAID, Vec<Ipv6Addr>>,
-        expected_delegated_prefixes: &HashMap<v6::IAID, Vec<Subnet<Ipv6Addr>>>,
+        expected_non_temporary_addresses: &HashMap<v6::IAID, HashSet<Ipv6Addr>>,
+        expected_delegated_prefixes: &HashMap<v6::IAID, HashSet<Subnet<Ipv6Addr>>>,
     ) {
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         assert_eq!(msg.msg_type(), expected_msg_type);
@@ -5145,14 +5112,15 @@ pub(crate) mod testutil {
 
         // Check that the IA options are correct.
         let sent_non_temporary_addresses = {
-            let mut sent_non_temporary_addresses: HashMap<v6::IAID, Vec<Ipv6Addr>> = HashMap::new();
+            let mut sent_non_temporary_addresses: HashMap<v6::IAID, HashSet<Ipv6Addr>> =
+                HashMap::new();
             for iana_data in iana_opts.iter() {
-                let mut opts = Vec::new();
+                let mut opts = HashSet::new();
 
                 for iana_option in iana_data.iter_options() {
                     match iana_option {
                         v6::ParsedDhcpOption::IaAddr(iaaddr_data) => {
-                            opts.push(iaaddr_data.addr());
+                            assert!(opts.insert(iaaddr_data.addr()));
                         }
                         option => panic!("unexpected option {:?}", option),
                     }
@@ -5168,14 +5136,14 @@ pub(crate) mod testutil {
         assert_eq!(&sent_non_temporary_addresses, expected_non_temporary_addresses);
 
         let sent_prefixes = {
-            let mut sent_prefixes: HashMap<v6::IAID, Vec<Subnet<Ipv6Addr>>> = HashMap::new();
+            let mut sent_prefixes: HashMap<v6::IAID, HashSet<Subnet<Ipv6Addr>>> = HashMap::new();
             for iapd_data in iapd_opts.iter() {
-                let mut opts = Vec::new();
+                let mut opts = HashSet::new();
 
                 for iapd_option in iapd_data.iter_options() {
                     match iapd_option {
                         v6::ParsedDhcpOption::IaPrefix(iaprefix_data) => {
-                            opts.push(iaprefix_data.prefix().unwrap());
+                            assert!(opts.insert(iaprefix_data.prefix().unwrap()));
                         }
                         option => panic!("unexpected option {:?}", option),
                     }
@@ -5201,7 +5169,7 @@ pub(crate) mod testutil {
     ///
     /// `send_renew_and_assert` panics if assignment fails, or if sending a
     /// renew fails.
-    pub(crate) fn send_renew_and_assert<R: Rng + std::fmt::Debug>(
+    pub(super) fn send_renew_and_assert<R: Rng + std::fmt::Debug>(
         client_id: [u8; CLIENT_ID_LEN],
         server_id: [u8; TEST_SERVER_ID_LEN],
         non_temporary_addresses_to_assign: Vec<TestIaNa>,
@@ -5292,20 +5260,22 @@ pub(crate) mod testutil {
         assert_eq!(*got_server_id, server_id);
         assert_eq!(dns_servers, expected_dns_servers_as_slice);
         assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
-        let expected_addresses_to_renew: HashMap<v6::IAID, Vec<Ipv6Addr>> =
-            (0..)
-                .map(v6::IAID::new)
-                .zip(non_temporary_addresses_to_assign.iter().map(
-                    |TestIaNa { values, t1: _, t2: _ }| values.iter().map(|a| a.value).collect(),
-                ))
-                .collect();
-        let expected_prefixes_to_renew: HashMap<v6::IAID, Vec<Subnet<Ipv6Addr>>> =
-            (0..)
-                .map(v6::IAID::new)
-                .zip(delegated_prefixes_to_assign.iter().map(
-                    |TestIaPd { values, t1: _, t2: _ }| values.iter().map(|a| a.value).collect(),
-                ))
-                .collect();
+        let expected_addresses_to_renew: HashMap<v6::IAID, HashSet<Ipv6Addr>> = (0..)
+            .map(v6::IAID::new)
+            .zip(
+                non_temporary_addresses_to_assign
+                    .iter()
+                    .map(|TestIaNa { values, t1: _, t2: _ }| values.keys().cloned().collect()),
+            )
+            .collect();
+        let expected_prefixes_to_renew: HashMap<v6::IAID, HashSet<Subnet<Ipv6Addr>>> = (0..)
+            .map(v6::IAID::new)
+            .zip(
+                delegated_prefixes_to_assign
+                    .iter()
+                    .map(|TestIaPd { values, t1: _, t2: _ }| values.keys().cloned().collect()),
+            )
+            .collect();
         testutil::assert_outgoing_stateful_message(
             &mut buf,
             v6::MessageType::Renew,
@@ -5327,7 +5297,7 @@ pub(crate) mod testutil {
     ///
     /// `send_rebind_and_assert` panics if assignmentment fails, or if sending a
     /// rebind fails.
-    pub(crate) fn send_rebind_and_assert<R: Rng + std::fmt::Debug>(
+    pub(super) fn send_rebind_and_assert<R: Rng + std::fmt::Debug>(
         client_id: [u8; CLIENT_ID_LEN],
         server_id: [u8; TEST_SERVER_ID_LEN],
         non_temporary_addresses_to_assign: Vec<TestIaNa>,
@@ -5385,20 +5355,22 @@ pub(crate) mod testutil {
         assert_eq!(*got_server_id, server_id);
         assert_eq!(dns_servers, expected_dns_servers);
         assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
-        let expected_addresses_to_renew: HashMap<v6::IAID, Vec<Ipv6Addr>> =
-            (0..)
-                .map(v6::IAID::new)
-                .zip(non_temporary_addresses_to_assign.iter().map(
-                    |TestIaNa { values, t1: _, t2: _ }| values.iter().map(|a| a.value).collect(),
-                ))
-                .collect();
-        let expected_prefixes_to_renew: HashMap<v6::IAID, Vec<Subnet<Ipv6Addr>>> =
-            (0..)
-                .map(v6::IAID::new)
-                .zip(delegated_prefixes_to_assign.iter().map(
-                    |TestIaPd { values, t1: _, t2: _ }| values.iter().map(|a| a.value).collect(),
-                ))
-                .collect();
+        let expected_addresses_to_renew: HashMap<v6::IAID, HashSet<Ipv6Addr>> = (0..)
+            .map(v6::IAID::new)
+            .zip(
+                non_temporary_addresses_to_assign
+                    .iter()
+                    .map(|TestIaNa { values, t1: _, t2: _ }| values.keys().cloned().collect()),
+            )
+            .collect();
+        let expected_prefixes_to_renew: HashMap<v6::IAID, HashSet<Subnet<Ipv6Addr>>> = (0..)
+            .map(v6::IAID::new)
+            .zip(
+                delegated_prefixes_to_assign
+                    .iter()
+                    .map(|TestIaPd { values, t1: _, t2: _ }| values.keys().cloned().collect()),
+            )
+            .collect();
         testutil::assert_outgoing_stateful_message(
             &mut buf,
             v6::MessageType::Rebind,
@@ -5617,11 +5589,11 @@ mod tests {
             CLIENT_ID,
             testutil::to_configured_addresses(
                 address_count,
-                preferred_non_temporary_addresses.into_iter().map(|a| vec![a]),
+                preferred_non_temporary_addresses.into_iter().map(|a| HashSet::from([a])),
             ),
             testutil::to_configured_prefixes(
                 prefix_count,
-                preferred_delegated_prefixes.into_iter().map(|a| vec![a]),
+                preferred_delegated_prefixes.into_iter().map(|a| HashSet::from([a])),
             ),
             options_to_request,
             StepRng::new(std::u64::MAX / 2, 0),
@@ -5653,10 +5625,12 @@ mod tests {
         // No preferred addresses configured.
         let got_addresses: HashMap<_, _> = (0..)
             .map(v6::IAID::new)
-            .zip(got_addresses.into_iter().map(|a| vec![IaValueWithLifetimes::new_default(a)]))
+            .zip(got_addresses.into_iter().map(|a| HashSet::from([a])))
             .collect();
-        let configured_non_temporary_addresses =
-            testutil::to_configured_addresses(configure_count, hints.into_iter().map(|a| vec![a]));
+        let configured_non_temporary_addresses = testutil::to_configured_addresses(
+            configure_count,
+            hints.into_iter().map(|a| HashSet::from([a])),
+        );
         assert_eq!(
             super::compute_preferred_ia_count(&got_addresses, &configured_non_temporary_addresses),
             want,
@@ -5674,12 +5648,12 @@ mod tests {
     ) {
         let configured_non_temporary_addresses = testutil::to_configured_addresses(
             2,
-            std::iter::once(vec![CONFIGURED_NON_TEMPORARY_ADDRESSES[0]]),
+            std::iter::once(HashSet::from([CONFIGURED_NON_TEMPORARY_ADDRESSES[0]])),
         );
 
         let configured_delegated_prefixes = testutil::to_configured_prefixes(
             2,
-            std::iter::once(vec![CONFIGURED_DELEGATED_PREFIXES[0]]),
+            std::iter::once(HashSet::from([CONFIGURED_DELEGATED_PREFIXES[0]])),
         );
 
         // Advertise is acceptable even though it does not contain the solicited
@@ -5742,12 +5716,12 @@ mod tests {
     ) {
         let configured_non_temporary_addresses = testutil::to_configured_addresses(
             3,
-            std::iter::once(vec![CONFIGURED_NON_TEMPORARY_ADDRESSES[0]]),
+            std::iter::once(HashSet::from([CONFIGURED_NON_TEMPORARY_ADDRESSES[0]])),
         );
 
         let configured_delegated_prefixes = testutil::to_configured_prefixes(
             3,
-            std::iter::once(vec![CONFIGURED_DELEGATED_PREFIXES[0]]),
+            std::iter::once(HashSet::from([CONFIGURED_DELEGATED_PREFIXES[0]])),
         );
 
         let advertise1 = AdvertiseMessage::new_default(
@@ -5810,6 +5784,129 @@ mod tests {
             ),
             Err(OptionsError::DuplicateOption(_, _, _))
         );
+    }
+
+    #[derive(Copy, Clone)]
+    enum DupIaValue {
+        Address,
+        Prefix,
+    }
+
+    impl DupIaValue {
+        fn second_address(self) -> Ipv6Addr {
+            match self {
+                DupIaValue::Address => CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
+                DupIaValue::Prefix => CONFIGURED_NON_TEMPORARY_ADDRESSES[1],
+            }
+        }
+
+        fn second_prefix(self) -> Subnet<Ipv6Addr> {
+            match self {
+                DupIaValue::Address => CONFIGURED_DELEGATED_PREFIXES[1],
+                DupIaValue::Prefix => CONFIGURED_DELEGATED_PREFIXES[0],
+            }
+        }
+    }
+
+    #[test_case(
+        DupIaValue::Address,
+        |res| {
+            assert_matches!(
+                res,
+                Err(OptionsError::IaNaError(IaOptionError::DuplicateIaValue {
+                    value,
+                    first_lifetimes,
+                    second_lifetimes,
+                })) => {
+                    assert_eq!(value, CONFIGURED_NON_TEMPORARY_ADDRESSES[0]);
+                    (first_lifetimes, second_lifetimes)
+                }
+            )
+        }; "duplicate address")]
+    #[test_case(
+        DupIaValue::Prefix,
+        |res| {
+            assert_matches!(
+                res,
+                Err(OptionsError::IaPdError(IaPdOptionError::IaOptionError(
+                    IaOptionError::DuplicateIaValue {
+                        value,
+                        first_lifetimes,
+                        second_lifetimes,
+                    }
+                ))) => {
+                    assert_eq!(value, CONFIGURED_DELEGATED_PREFIXES[0]);
+                    (first_lifetimes, second_lifetimes)
+                }
+            )
+        }; "duplicate prefix")]
+    fn process_options_duplicate_ia_value(
+        dup_ia_value: DupIaValue,
+        check: fn(
+            Result<ProcessedOptions, OptionsError>,
+        )
+            -> (Result<Lifetimes, LifetimesError>, Result<Lifetimes, LifetimesError>),
+    ) {
+        const IA_VALUE1_LIFETIME: v6::NonZeroOrMaxU32 =
+            const_unwrap::const_unwrap_option(v6::NonZeroOrMaxU32::new(60));
+        const IA_VALUE2_LIFETIME: v6::NonZeroOrMaxU32 =
+            const_unwrap::const_unwrap_option(v6::NonZeroOrMaxU32::new(100));
+        let iana_options = [
+            v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+                CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
+                IA_VALUE1_LIFETIME.get(),
+                IA_VALUE1_LIFETIME.get(),
+                &[],
+            )),
+            v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+                dup_ia_value.second_address(),
+                IA_VALUE2_LIFETIME.get(),
+                IA_VALUE2_LIFETIME.get(),
+                &[],
+            )),
+        ];
+        let iapd_options = [
+            v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(
+                IA_VALUE1_LIFETIME.get(),
+                IA_VALUE1_LIFETIME.get(),
+                CONFIGURED_DELEGATED_PREFIXES[0],
+                &[],
+            )),
+            v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(
+                IA_VALUE2_LIFETIME.get(),
+                IA_VALUE2_LIFETIME.get(),
+                dup_ia_value.second_prefix(),
+                &[],
+            )),
+        ];
+        let iaid = v6::IAID::new(0);
+        let options = [
+            v6::DhcpOption::ClientId(&CLIENT_ID),
+            v6::DhcpOption::ServerId(&SERVER_ID[0]),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(iaid, T1.get(), T2.get(), &iana_options)),
+            v6::DhcpOption::IaPd(v6::IaPdSerializer::new(iaid, T1.get(), T2.get(), &iapd_options)),
+        ];
+        let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, [0, 1, 2], &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        let requested_ia_nas = HashMap::from([(iaid, None::<Ipv6Addr>)]);
+        let (first_lifetimes, second_lifetimes) = check(process_options(
+            &msg,
+            ExchangeType::AdvertiseToSolicit,
+            Some(CLIENT_ID),
+            &requested_ia_nas,
+            &NoIaRequested,
+        ));
+        assert_eq!(
+            first_lifetimes,
+            Ok(Lifetimes::new_finite(IA_VALUE1_LIFETIME, IA_VALUE1_LIFETIME))
+        );
+        assert_eq!(
+            second_lifetimes,
+            Ok(Lifetimes::new_finite(IA_VALUE2_LIFETIME, IA_VALUE2_LIFETIME))
+        )
     }
 
     #[test]
@@ -6091,7 +6188,7 @@ mod tests {
             CLIENT_ID,
             testutil::to_configured_addresses(
                 1,
-                std::iter::once(vec![CONFIGURED_NON_TEMPORARY_ADDRESSES[0]]),
+                std::iter::once(HashSet::from([CONFIGURED_NON_TEMPORARY_ADDRESSES[0]])),
             ),
             Default::default(),
             Vec::new(),
@@ -6170,7 +6267,7 @@ mod tests {
             CLIENT_ID,
             testutil::to_configured_addresses(
                 2,
-                std::iter::once(vec![CONFIGURED_NON_TEMPORARY_ADDRESSES[0]]),
+                std::iter::once(HashSet::from([CONFIGURED_NON_TEMPORARY_ADDRESSES[0]])),
             ),
             Default::default(),
             Vec::new(),
@@ -6295,7 +6392,7 @@ mod tests {
             CLIENT_ID,
             testutil::to_configured_addresses(
                 1,
-                std::iter::once(vec![CONFIGURED_NON_TEMPORARY_ADDRESSES[0]]),
+                std::iter::once(HashSet::from([CONFIGURED_NON_TEMPORARY_ADDRESSES[0]])),
             ),
             Default::default(),
             Vec::new(),
@@ -6303,17 +6400,8 @@ mod tests {
             time,
         );
 
-        let ia = IaValueWithLifetimes {
-            value: CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
-            lifetimes: Lifetimes {
-                preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                    PREFERRED_LIFETIME,
-                )),
-                valid_lifetime: v6::NonZeroTimeValue::Finite(VALID_LIFETIME),
-            },
-        };
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            ia.value,
+            CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
             PREFERRED_LIFETIME.get(),
             VALID_LIFETIME.get(),
             &[],
@@ -6360,7 +6448,13 @@ mod tests {
                         preferred_non_temporary_addresses_count: _,
                         preferred_delegated_prefixes_count: _,
                     }) => {
-                        assert_eq!(non_temporary_addresses, &HashMap::from([(v6::IAID::new(0), vec![ia])]));
+                        assert_eq!(
+                            non_temporary_addresses,
+                            &HashMap::from([(
+                                v6::IAID::new(0),
+                                HashSet::from([CONFIGURED_NON_TEMPORARY_ADDRESSES[0]])
+                            )])
+                        );
                     }
                 )
             }
@@ -6375,7 +6469,7 @@ mod tests {
             CLIENT_ID,
             testutil::to_configured_addresses(
                 1,
-                std::iter::once(vec![CONFIGURED_NON_TEMPORARY_ADDRESSES[0]]),
+                std::iter::once(HashSet::from([CONFIGURED_NON_TEMPORARY_ADDRESSES[0]])),
             ),
             Default::default(),
             Vec::new(),
@@ -6527,7 +6621,7 @@ mod tests {
             .zip(
                 advertised_non_temporary_addresses
                     .iter()
-                    .map(|addr| AddressEntry::ToRequest(vec![*addr])),
+                    .map(|addr| AddressEntry::ToRequest(HashSet::from([*addr]))),
             )
             .collect::<HashMap<v6::IAID, AddressEntry>>();
         {
@@ -6618,7 +6712,7 @@ mod tests {
             state.reply_message_received(&options_to_request, &mut rng, msg, time);
 
         let expected_non_temporary_addresses: HashMap<v6::IAID, AddressEntry> =
-            HashMap::from([(v6::IAID::new(0), AddressEntry::ToRequest(Vec::new()))]);
+            HashMap::from([(v6::IAID::new(0), AddressEntry::ToRequest(Default::default()))]);
         {
             let Requesting {
                 client_id: _,
@@ -6703,7 +6797,7 @@ mod tests {
         let options_to_request = vec![];
         let configured_non_temporary_addresses = testutil::to_configured_addresses(
             2,
-            std::iter::once(vec![CONFIGURED_NON_TEMPORARY_ADDRESSES[0]]),
+            std::iter::once(HashSet::from([CONFIGURED_NON_TEMPORARY_ADDRESSES[0]])),
         );
         let mut rng = StepRng::new(std::u64::MAX / 2, 0);
 
@@ -6760,18 +6854,18 @@ mod tests {
         let Transition { state, actions, transaction_id } =
             state.reply_message_received(&options_to_request, &mut rng, msg, time);
         let expected_non_temporary_addresses = HashMap::from([
-            (iaid1, AddressEntry::ToRequest(Vec::new())),
+            (iaid1, AddressEntry::ToRequest(Default::default())),
             (
                 iaid2,
-                AddressEntry::Assigned(vec![IaValueWithLifetimes {
-                    value: CONFIGURED_NON_TEMPORARY_ADDRESSES[1],
-                    lifetimes: Lifetimes {
+                AddressEntry::Assigned(HashMap::from([(
+                    CONFIGURED_NON_TEMPORARY_ADDRESSES[1],
+                    Lifetimes {
                         preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
                             PREFERRED_LIFETIME,
                         )),
                         valid_lifetime: v6::NonZeroTimeValue::Finite(VALID_LIFETIME),
                     },
-                }]),
+                )])),
             ),
         ]);
         {
@@ -6958,7 +7052,7 @@ mod tests {
                     testutil::to_default_ias_map(&CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2]),
                     testutil::to_configured_addresses(
                         2,
-                        std::iter::once(vec![CONFIGURED_NON_TEMPORARY_ADDRESSES[0]]),
+                        std::iter::once(HashSet::from([CONFIGURED_NON_TEMPORARY_ADDRESSES[0]])),
                     ),
                 ),
                 Default::default(), /* delegated_prefixes */
@@ -7063,11 +7157,11 @@ mod tests {
             CLIENT_ID,
             testutil::to_configured_addresses(
                 CONFIGURED_NON_TEMPORARY_ADDRESSES.len(),
-                CONFIGURED_NON_TEMPORARY_ADDRESSES.map(|a| vec![a]),
+                CONFIGURED_NON_TEMPORARY_ADDRESSES.map(|a| HashSet::from([a])),
             ),
             testutil::to_configured_prefixes(
                 CONFIGURED_DELEGATED_PREFIXES.len(),
-                CONFIGURED_DELEGATED_PREFIXES.map(|a| vec![a]),
+                CONFIGURED_DELEGATED_PREFIXES.map(|a| HashSet::from([a])),
             ),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
@@ -7128,15 +7222,15 @@ mod tests {
             ia_nas: std::iter::once((
                 v6::IAID::new(0),
                 TestIa {
-                    values: vec![IaValueWithLifetimes {
-                        value: REPLY_NON_TEMPORARY_ADDRESSES[0],
-                        lifetimes: Lifetimes {
+                    values: HashMap::from([(
+                        REPLY_NON_TEMPORARY_ADDRESSES[0],
+                        Lifetimes {
                             preferred_lifetime: v6::TimeValue::NonZero(
                                 v6::NonZeroTimeValue::Finite(PREFERRED_LIFETIME),
                             ),
                             valid_lifetime: v6::NonZeroTimeValue::Finite(VALID_LIFETIME),
                         },
-                    }],
+                    )]),
                     t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(T1)),
                     t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(T2)),
                 },
@@ -7144,15 +7238,15 @@ mod tests {
             ia_pds: std::iter::once((
                 v6::IAID::new(0),
                 TestIa {
-                    values: vec![IaValueWithLifetimes {
-                        value: REPLY_DELEGATED_PREFIXES[0],
-                        lifetimes: Lifetimes {
+                    values: HashMap::from([(
+                        REPLY_DELEGATED_PREFIXES[0],
+                        Lifetimes {
                             preferred_lifetime: v6::TimeValue::NonZero(
                                 v6::NonZeroTimeValue::Finite(PREFERRED_LIFETIME),
                             ),
                             valid_lifetime: v6::NonZeroTimeValue::Finite(VALID_LIFETIME),
                         },
-                    }],
+                    )]),
                     t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(T1)),
                     t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(T2)),
                 },
@@ -7204,7 +7298,7 @@ mod tests {
                         .iter()
                         .chain(CONFIGURED_NON_TEMPORARY_ADDRESSES[1..3].iter())
                         .enumerate().map(|(iaid, addr)| {
-                            (v6::IAID::new(iaid.try_into().unwrap()), AddressEntry::ToRequest(vec![*addr]))
+                            (v6::IAID::new(iaid.try_into().unwrap()), AddressEntry::ToRequest(HashSet::from([*addr])))
                         }).collect::<HashMap<_, _>>()
                 );
                 assert_eq!(
@@ -7213,7 +7307,7 @@ mod tests {
                         .iter()
                         .chain(CONFIGURED_DELEGATED_PREFIXES[1..3].iter())
                         .enumerate().map(|(iaid, addr)| {
-                            (v6::IAID::new(iaid.try_into().unwrap()), PrefixEntry::ToRequest(vec![*addr]))
+                            (v6::IAID::new(iaid.try_into().unwrap()), PrefixEntry::ToRequest(HashSet::from([*addr])))
                         }).collect::<HashMap<_, _>>()
                 );
             }
@@ -7230,7 +7324,7 @@ mod tests {
             CLIENT_ID,
             testutil::to_configured_addresses(
                 1,
-                std::iter::once(vec![CONFIGURED_NON_TEMPORARY_ADDRESSES[0]]),
+                std::iter::once(HashSet::from([CONFIGURED_NON_TEMPORARY_ADDRESSES[0]])),
             ),
             Default::default(),
             Vec::new(),
@@ -7710,13 +7804,13 @@ mod tests {
                 ia_nas: vec![TestIaNa::new_default_with_values(
                     CONFIGURED_NON_TEMPORARY_ADDRESSES
                         .into_iter()
-                        .map(IaValueWithLifetimes::new_default)
+                        .map(|a| (a, Lifetimes::new_default()))
                         .collect(),
                 )],
                 ia_pds: vec![TestIaPd::new_default_with_values(
                     CONFIGURED_DELEGATED_PREFIXES
                         .into_iter()
-                        .map(IaValueWithLifetimes::new_default)
+                        .map(|a| (a, Lifetimes::new_default()))
                         .collect(),
                 )],
             }
@@ -7980,20 +8074,22 @@ mod tests {
             assert_eq!(dns_servers, &[] as &[Ipv6Addr]);
             assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
         }
-        let expected_non_temporary_addresses: HashMap<v6::IAID, Vec<Ipv6Addr>> =
-            (0..)
-                .map(v6::IAID::new)
-                .zip(non_temporary_addresses_to_assign.iter().map(
-                    |TestIaNa { values, t1: _, t2: _ }| values.iter().map(|a| a.value).collect(),
-                ))
-                .collect();
-        let expected_delegated_prefixes: HashMap<v6::IAID, Vec<Subnet<Ipv6Addr>>> =
-            (0..)
-                .map(v6::IAID::new)
-                .zip(delegated_prefixes_to_assign.iter().map(
-                    |TestIaPd { values, t1: _, t2: _ }| values.iter().map(|a| a.value).collect(),
-                ))
-                .collect();
+        let expected_non_temporary_addresses: HashMap<v6::IAID, HashSet<Ipv6Addr>> = (0..)
+            .map(v6::IAID::new)
+            .zip(
+                non_temporary_addresses_to_assign
+                    .iter()
+                    .map(|TestIaNa { values, t1: _, t2: _ }| values.keys().cloned().collect()),
+            )
+            .collect();
+        let expected_delegated_prefixes: HashMap<v6::IAID, HashSet<Subnet<Ipv6Addr>>> = (0..)
+            .map(v6::IAID::new)
+            .zip(
+                delegated_prefixes_to_assign
+                    .iter()
+                    .map(|TestIaPd { values, t1: _, t2: _ }| values.keys().cloned().collect()),
+            )
+            .collect();
         testutil::assert_outgoing_stateful_message(
             &mut buf,
             message_type,
@@ -8087,22 +8183,12 @@ mod tests {
             dns_servers: None,
             ia_nas: (0..).map(v6::IAID::new).zip(ia_nas.iter().map(
                 |TestIa { values, t1: _, t2: _ }| {
-                    TestIa::new_renewed_default_with_values(
-                        values
-                            .iter()
-                            .map(|inner| IaValueWithLifetimes::new_renewed_default(inner.value))
-                            .collect(),
-                    )
+                    TestIa::new_renewed_default_with_values(values.keys().cloned())
                 },
             )),
             ia_pds: (0..).map(v6::IAID::new).zip(ia_pds.iter().map(
                 |TestIa { values, t1: _, t2: _ }| {
-                    TestIa::new_renewed_default_with_values(
-                        values
-                            .iter()
-                            .map(|inner| IaValueWithLifetimes::new_renewed_default(inner.value))
-                            .collect(),
-                    )
+                    TestIa::new_renewed_default_with_values(values.keys().cloned())
                 },
             )),
         }
@@ -8158,12 +8244,7 @@ mod tests {
             .map(v6::IAID::new)
             .zip(ia_nas.into_iter().map(|TestIa { values, t1: _, t2: _ }| {
                 AddressEntry::Assigned(
-                    values
-                        .into_iter()
-                        .map(|IaValueWithLifetimes { value, lifetimes: _ }| {
-                            IaValueWithLifetimes::new_renewed_default(value)
-                        })
-                        .collect(),
+                    values.into_keys().map(|value| (value, Lifetimes::new_renewed())).collect(),
                 )
             }))
             .collect();
@@ -8171,12 +8252,7 @@ mod tests {
             .map(v6::IAID::new)
             .zip(ia_pds.into_iter().map(|TestIa { values, t1: _, t2: _ }| {
                 PrefixEntry::Assigned(
-                    values
-                        .into_iter()
-                        .map(|IaValueWithLifetimes { value, lifetimes: _ }| {
-                            IaValueWithLifetimes::new_renewed_default(value)
-                        })
-                        .collect(),
+                    values.into_keys().map(|value| (value, Lifetimes::new_renewed())).collect(),
                 )
             }))
             .collect();
@@ -8676,19 +8752,17 @@ mod tests {
             &client;
         let expected_non_temporary_addresses = HashMap::from([(
             v6::IAID::new(0),
-            AddressEntry::Assigned(vec![IaValueWithLifetimes::new_finite(
+            AddressEntry::Assigned(HashMap::from([(
                 RENEW_NON_TEMPORARY_ADDRESSES[0],
-                RENEWED_PREFERRED_LIFETIME,
-                RENEWED_VALID_LIFETIME,
-            )]),
+                Lifetimes::new_finite(RENEWED_PREFERRED_LIFETIME, RENEWED_VALID_LIFETIME),
+            )])),
         )]);
         let expected_delegated_prefixes = HashMap::from([(
             v6::IAID::new(0),
-            PrefixEntry::Assigned(vec![IaValueWithLifetimes::new_finite(
+            PrefixEntry::Assigned(HashMap::from([(
                 RENEW_DELEGATED_PREFIXES[0],
-                RENEWED_PREFERRED_LIFETIME,
-                RENEWED_VALID_LIFETIME,
-            )]),
+                Lifetimes::new_finite(RENEWED_PREFERRED_LIFETIME, RENEWED_VALID_LIFETIME),
+            )])),
         )]);
         // Expect the client to transition to Assigned and assign the new
         // address.
@@ -8892,7 +8966,7 @@ mod tests {
             (
                 v6::IAID::new(1),
                 if ia_na_no_binding {
-                    AddressEntry::ToRequest(vec![CONFIGURED_NON_TEMPORARY_ADDRESSES[1]])
+                    AddressEntry::ToRequest(HashSet::from([CONFIGURED_NON_TEMPORARY_ADDRESSES[1]]))
                 } else {
                     AddressEntry::new_assigned(
                         CONFIGURED_NON_TEMPORARY_ADDRESSES[1],
@@ -8914,7 +8988,7 @@ mod tests {
             (
                 v6::IAID::new(1),
                 if ia_pd_no_binding {
-                    PrefixEntry::ToRequest(vec![CONFIGURED_DELEGATED_PREFIXES[1]])
+                    PrefixEntry::ToRequest(HashSet::from([CONFIGURED_DELEGATED_PREFIXES[1]]))
                 } else {
                     PrefixEntry::new_assigned(
                         CONFIGURED_DELEGATED_PREFIXES[1],
@@ -8966,11 +9040,11 @@ mod tests {
             &[],
             &(0..NUM_IAS)
                 .map(v6::IAID::new)
-                .zip(CONFIGURED_NON_TEMPORARY_ADDRESSES.into_iter().map(|a| vec![a]))
+                .zip(CONFIGURED_NON_TEMPORARY_ADDRESSES.into_iter().map(|a| HashSet::from([a])))
                 .collect(),
             &(0..NUM_IAS)
                 .map(v6::IAID::new)
-                .zip(CONFIGURED_DELEGATED_PREFIXES.into_iter().map(|p| vec![p]))
+                .zip(CONFIGURED_DELEGATED_PREFIXES.into_iter().map(|p| HashSet::from([p])))
                 .collect(),
         );
     }
@@ -9336,7 +9410,7 @@ mod tests {
             v6::duid_uuid(),
             testutil::to_configured_addresses(
                 1,
-                std::iter::once(vec![CONFIGURED_NON_TEMPORARY_ADDRESSES[0]]),
+                std::iter::once(HashSet::from([CONFIGURED_NON_TEMPORARY_ADDRESSES[0]])),
             ),
             Default::default(),
             Vec::new(),
