@@ -2,6 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
+    children: [
+        {
+            name: "wlanstack",
+            url: "fuchsia-pkg://fuchsia.com/wlanstack#meta/wlanstack.cm",
+            startup: "eager",
+            on_terminate: "reboot",
+        },
+    ],
     use: [
         {
             protocol: [ "fuchsia.wlan.device.service.DeviceService" ],
@@ -34,13 +42,15 @@
             from: "#wlanstack",
             to: [ "#wlandevicemonitor" ],
         },
-    ],
-    children: [
         {
-            name: "wlanstack",
-            url: "fuchsia-pkg://fuchsia.com/wlanstack#meta/wlanstack.cm",
-            startup: "eager",
-            on_terminate: "reboot",
+            protocol: "fuchsia.tracing.provider.Registry",
+            from: "#trace_manager",
+            to: "#wlanstack",
+
+            // Trace manager may be excluded from builds where tracing is not
+            // expected to be used for observability, such as in the bringup
+            // product and non-eng builds of any product.
+            source_availability: "unknown",
         },
     ],
 }

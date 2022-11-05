@@ -64,6 +64,8 @@ impl From<wlanstack_config::Config> for ServiceCfg {
 async fn main() -> Result<(), Error> {
     // Initialize logging with a tag that can be used to select these logs for forwarding to console
     syslog::init_with_tags(&["wlan"]).expect("Syslog init should not fail");
+    fuchsia_trace_provider::trace_provider_create_with_fdio();
+    fuchsia_trace::instant!("wlan", "wlanstack:start", fuchsia_trace::Scope::Process);
 
     info!("Starting");
 
