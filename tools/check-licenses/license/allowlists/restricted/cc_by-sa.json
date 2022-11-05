@@ -3,12 +3,6 @@
     "exceptions": [
       {
         "entries": [
-          {
-            "bug": "fxbug.dev/108597",
-            "projects": [
-              "third_party/rust_crates/vendor/pulldown-cmark/third_party/CommonMark"
-            ]
-          }
         ],
         "example": "http://shortn/_N0IA3zRDzR",
         "licenseType": "cc_by-sa",
