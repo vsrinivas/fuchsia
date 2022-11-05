@@ -7,3 +7,5 @@ include /third_party/rust_crates/vendor/futures/OWNERS
 include /third_party/rust_crates/vendor/futures-lite/OWNERS
 include /third_party/rust_crates/vendor/futures-test/OWNERS
 include /third_party/rust_crates/vendor/futures-util/OWNERS
+include /third_party/rust_crates/vendor/trust-dns-proto/OWNERS
+include /third_party/rust_crates/vendor/tuf/OWNERS

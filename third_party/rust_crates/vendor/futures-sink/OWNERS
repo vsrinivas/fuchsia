@@ -6,5 +6,3 @@ include /third_party/rust_crates/vendor/futures/OWNERS
 include /third_party/rust_crates/vendor/futures-channel/OWNERS
 include /third_party/rust_crates/vendor/futures-test/OWNERS
 include /third_party/rust_crates/vendor/futures-util/OWNERS
-include /third_party/rust_crates/vendor/h2/OWNERS
-include /third_party/rust_crates/vendor/tokio-util/OWNERS

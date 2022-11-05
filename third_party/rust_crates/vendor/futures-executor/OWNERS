@@ -2,7 +2,6 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
-include /src/security/scrutiny/OWNERS
 include /src/sys/pkg/OWNERS
 include /third_party/rust_crates/vendor/futures/OWNERS
 include /third_party/rust_crates/vendor/futures-test/OWNERS

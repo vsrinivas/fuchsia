@@ -3,17 +3,28 @@
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
 include /src/connectivity/bluetooth/OWNERS
-include /src/developer/ffx/lib/gcs/OWNERS
+include /src/connectivity/network/netstack3/OWNERS
+include /src/connectivity/overnet/OWNERS
 include /src/graphics/lib/compute/OWNERS
 include /src/lib/async-utils/OWNERS
 include /src/lib/diagnostics/OWNERS
+include /src/lib/gcs/OWNERS
+include /src/lib/ui/OWNERS
 include /src/lib/ui/carnelian/OWNERS
 include /src/proc/OWNERS
+include /src/security/scrutiny/OWNERS
 include /src/storage/OWNERS
+include /src/sys/component_manager/OWNERS
+include /src/sys/lib/routing/OWNERS
 include /src/sys/pkg/OWNERS
 include /src/testing/sl4f/OWNERS
+include /src/virtualization/OWNERS
 include /third_party/rust_crates/vendor/async-executor/OWNERS
 include /third_party/rust_crates/vendor/async-io/OWNERS
 include /third_party/rust_crates/vendor/blocking/OWNERS
 include /third_party/rust_crates/vendor/pem/OWNERS
+include /third_party/rust_crates/vendor/tokio/OWNERS
 include /tools/auto_owners/OWNERS
+include /tools/cmx2cml/OWNERS
+include /tools/shush/OWNERS
+include /tools/update_crates/OWNERS

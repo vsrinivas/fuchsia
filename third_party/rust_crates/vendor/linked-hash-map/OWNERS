@@ -6,3 +6,4 @@ include /src/lib/storage/OWNERS
 include /src/sys/test_manager/OWNERS
 include /third_party/rust_crates/vendor/lru-cache/OWNERS
 include /third_party/rust_crates/vendor/toml_edit/OWNERS
+include /third_party/rust_crates/vendor/yaml-rust/OWNERS

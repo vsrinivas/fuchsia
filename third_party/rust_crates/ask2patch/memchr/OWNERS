@@ -5,14 +5,12 @@
 include /src/proc/OWNERS
 include /third_party/rust_crates/ask2patch/aho-corasick/OWNERS
 include /third_party/rust_crates/ask2patch/csv-core/OWNERS
-include /third_party/rust_crates/forks/combine/OWNERS
+include /third_party/rust_crates/forks/pulldown-cmark/OWNERS
 include /third_party/rust_crates/vendor/bstr/OWNERS
-include /third_party/rust_crates/vendor/buf_redux/OWNERS
+include /third_party/rust_crates/vendor/combine/OWNERS
 include /third_party/rust_crates/vendor/futures-lite/OWNERS
 include /third_party/rust_crates/vendor/futures-util/OWNERS
 include /third_party/rust_crates/vendor/nom/OWNERS
 include /third_party/rust_crates/vendor/nom_locate/OWNERS
-include /third_party/rust_crates/vendor/pulldown-cmark/OWNERS
 include /third_party/rust_crates/vendor/regex/OWNERS
 include /third_party/rust_crates/vendor/tokio/OWNERS
-include /third_party/rust_crates/vendor/twoway/OWNERS

@@ -3,6 +3,7 @@
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
 include /src/connectivity/overnet/OWNERS
+include /src/storage/OWNERS
 include /third_party/rust_crates/vendor/async-broadcast/OWNERS
 include /third_party/rust_crates/vendor/async-channel/OWNERS
 include /third_party/rust_crates/vendor/async-lock/OWNERS

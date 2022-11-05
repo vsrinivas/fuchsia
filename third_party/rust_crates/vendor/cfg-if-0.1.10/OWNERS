@@ -2,16 +2,16 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
-include /third_party/rust_crates/forks/trust-dns-resolver/OWNERS
+include /src/developer/ffx/plugins/emulator/OWNERS
+include /src/lib/structured_ui/OWNERS
 include /third_party/rust_crates/vendor/backtrace/OWNERS
 include /third_party/rust_crates/vendor/crc32fast/OWNERS
 include /third_party/rust_crates/vendor/crossbeam-epoch-0.8.2/OWNERS
 include /third_party/rust_crates/vendor/crossbeam-queue-0.2.1/OWNERS
 include /third_party/rust_crates/vendor/crossbeam-utils-0.7.2/OWNERS
 include /third_party/rust_crates/vendor/flate2/OWNERS
-include /third_party/rust_crates/vendor/getrandom-0.1.13/OWNERS
 include /third_party/rust_crates/vendor/log/OWNERS
 include /third_party/rust_crates/vendor/parking_lot_core-0.6.2/OWNERS
 include /third_party/rust_crates/vendor/polling/OWNERS
-include /third_party/rust_crates/vendor/tempfile/OWNERS
 include /third_party/rust_crates/vendor/wasm-bindgen/OWNERS
+include /tools/doc_checker/OWNERS

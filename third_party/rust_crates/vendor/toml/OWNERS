@@ -3,5 +3,6 @@
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
 include /src/lib/ui/carnelian/OWNERS
-include /tools/OWNERS
 include /tools/auto_owners/OWNERS
+include /tools/cargo-gnaw/OWNERS
+include /tools/update_crates/OWNERS

@@ -2,5 +2,6 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
+include /src/connectivity/network/dns/OWNERS
 include /third_party/rust_crates/vendor/proc-macro2-0.4.27/OWNERS
 include /third_party/rust_crates/vendor/syn-0.15.26/OWNERS

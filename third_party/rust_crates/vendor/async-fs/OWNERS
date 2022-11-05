@@ -3,5 +3,7 @@
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
 include /src/connectivity/overnet/OWNERS
+include /src/developer/fastboot/OWNERS
 include /src/developer/ffx/OWNERS
-include /src/developer/ffx/lib/pkg/OWNERS
+include /src/developer/ffx/lib/pbms/OWNERS
+include /src/sys/pkg/OWNERS

@@ -2,21 +2,39 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
-include /src/connectivity/telephony/OWNERS
+include /src/connectivity/network/OWNERS
+include /src/connectivity/network/net-cli/OWNERS
 include /src/developer/ffx/OWNERS
+include /src/developer/ffx/plugins/audio/OWNERS
+include /src/developer/ffx/plugins/component/OWNERS
+include /src/developer/ffx/plugins/input/OWNERS
+include /src/developer/ffx/plugins/inspect/OWNERS
+include /src/developer/ffx/plugins/package/OWNERS
+include /src/developer/ffx/plugins/profile/memory/OWNERS
+include /src/developer/ffx/plugins/triage/OWNERS
 include /src/devices/tools/fidlgen_banjo/OWNERS
-include /src/diagnostics/OWNERS
-include /src/diagnostics/iquery/OWNERS
 include /src/diagnostics/lib/triage/OWNERS
 include /src/fonts/OWNERS
 include /src/lib/diagnostics/OWNERS
+include /src/lib/diagnostics/inspect/rust/OWNERS
 include /src/lib/icu/OWNERS
 include /src/lib/test_diagnostics/OWNERS
+include /src/lib/ui/input-synthesis/OWNERS
+include /src/sys/component_manager/OWNERS
 include /src/sys/pkg/OWNERS
 include /src/sys/pkg/bin/omaha-client/OWNERS
+include /src/sys/pkg/lib/channel-config/OWNERS
+include /src/sys/pkg/lib/eager-package-config/OWNERS
 include /src/sys/pkg/lib/omaha-client/OWNERS
 include /src/sys/test_manager/OWNERS
 include /src/sys/test_runners/OWNERS
-include /tools/OWNERS
+include /src/ui/bin/shortcut/OWNERS
+include /src/ui/lib/input_pipeline/OWNERS
+include /src/ui/testing/OWNERS
+include /src/virtualization/OWNERS
 include /tools/auto_owners/OWNERS
+include /tools/cargo-gnaw/OWNERS
 include /tools/component_id_index/OWNERS
+include /tools/gn_desc/OWNERS
+include /tools/lib/OWNERS
+include /tools/rfc/OWNERS

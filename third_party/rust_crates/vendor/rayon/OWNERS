@@ -4,6 +4,7 @@
 
 include /src/fonts/OWNERS
 include /src/graphics/lib/compute/OWNERS
+include /src/lib/assembly/OWNERS
 include /third_party/rust_crates/vendor/criterion/OWNERS
 include /tools/auto_owners/OWNERS
 include /tools/fidl/fidldoc/OWNERS

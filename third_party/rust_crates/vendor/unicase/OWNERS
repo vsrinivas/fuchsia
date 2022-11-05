@@ -3,4 +3,5 @@
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
 include /src/fonts/OWNERS
-include /third_party/rust_crates/vendor/pulldown-cmark/OWNERS
+include /src/lib/network/OWNERS
+include /third_party/rust_crates/forks/pulldown-cmark/OWNERS

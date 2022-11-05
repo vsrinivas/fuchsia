@@ -4,7 +4,12 @@
 
 include /src/connectivity/overnet/OWNERS
 include /src/developer/ffx/OWNERS
-include /src/developer/ffx/daemon/services/repo/OWNERS
-include /src/developer/ffx/lib/gcs/OWNERS
+include /src/developer/ffx/daemon/protocols/repo/OWNERS
+include /src/developer/ffx/logger/OWNERS
+include /src/diagnostics/OWNERS
 include /src/lib/async-utils/OWNERS
+include /src/lib/gcs/OWNERS
+include /src/sys/pkg/OWNERS
+include /src/testing/sl4f/OWNERS
+include /src/virtualization/OWNERS
 include /third_party/rust_crates/vendor/async-fs/OWNERS

@@ -5,3 +5,4 @@
 include /third_party/rust_crates/vendor/futures/OWNERS
 include /third_party/rust_crates/vendor/futures-util/OWNERS
 include /third_party/rust_crates/vendor/hyper/OWNERS
+include /third_party/rust_crates/vendor/trust-dns-proto/OWNERS

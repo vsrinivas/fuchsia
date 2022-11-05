@@ -2,6 +2,10 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
+include /src/developer/ffx/plugins/emulator/OWNERS
+include /src/lib/structured_ui/OWNERS
+include /third_party/rust_crates/vendor/aes/OWNERS
+include /third_party/rust_crates/vendor/chacha20/OWNERS
 include /third_party/rust_crates/vendor/crossbeam/OWNERS
 include /third_party/rust_crates/vendor/crossbeam-channel/OWNERS
 include /third_party/rust_crates/vendor/crossbeam-deque/OWNERS
@@ -16,5 +20,12 @@ include /third_party/rust_crates/vendor/mockall/OWNERS
 include /third_party/rust_crates/vendor/mockall_derive/OWNERS
 include /third_party/rust_crates/vendor/nix/OWNERS
 include /third_party/rust_crates/vendor/parking_lot_core/OWNERS
+include /third_party/rust_crates/vendor/parking_lot_core-0.8.3/OWNERS
+include /third_party/rust_crates/vendor/polyval/OWNERS
+include /third_party/rust_crates/vendor/sha2/OWNERS
+include /third_party/rust_crates/vendor/tempfile/OWNERS
 include /third_party/rust_crates/vendor/test-case/OWNERS
 include /third_party/rust_crates/vendor/tracing/OWNERS
+include /third_party/rust_crates/vendor/trust-dns-proto/OWNERS
+include /third_party/rust_crates/vendor/trust-dns-resolver/OWNERS
+include /tools/doc_checker/OWNERS

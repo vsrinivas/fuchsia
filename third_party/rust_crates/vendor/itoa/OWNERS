@@ -3,7 +3,4 @@
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
 include /src/sys/pkg/OWNERS
-include /third_party/rust_crates/ask2patch/csv/OWNERS
-include /third_party/rust_crates/vendor/http/OWNERS
 include /third_party/rust_crates/vendor/hyper/OWNERS
-include /third_party/rust_crates/vendor/serde_json/OWNERS

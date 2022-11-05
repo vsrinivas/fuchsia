@@ -2,4 +2,5 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
+include /tools/doc_checker/OWNERS
 include /tools/fidl/fidldoc/OWNERS

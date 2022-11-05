@@ -3,3 +3,4 @@
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
 include /src/developer/ffx/plugins/emulator/OWNERS
+include /tools/fvdl/OWNERS

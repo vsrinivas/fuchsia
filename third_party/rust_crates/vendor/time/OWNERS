@@ -2,11 +2,5 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
-include /src/connectivity/wlan/OWNERS
-include /third_party/rust_crates/mirrors/rust-crypto/OWNERS
 include /third_party/rust_crates/vendor/chrono/OWNERS
 include /third_party/rust_crates/vendor/chrono-english/OWNERS
-include /third_party/rust_crates/vendor/hyper/OWNERS
-include /third_party/rust_crates/vendor/pulse/OWNERS
-include /third_party/rust_crates/vendor/rouille/OWNERS
-include /third_party/rust_crates/vendor/timebomb/OWNERS

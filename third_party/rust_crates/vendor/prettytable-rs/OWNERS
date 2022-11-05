@@ -2,7 +2,12 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
-include /src/connectivity/lib/OWNERS
-include /src/connectivity/network/OWNERS
+include /src/connectivity/bluetooth/OWNERS
+include /src/connectivity/network/net-cli/OWNERS
 include /src/connectivity/weave/OWNERS
+include /src/developer/ffx/plugins/component/OWNERS
+include /src/developer/ffx/plugins/package/OWNERS
 include /src/developer/ffx/plugins/repository/OWNERS
+include /src/developer/ffx/plugins/target/repository/OWNERS
+include /src/storage/OWNERS
+include /src/virtualization/OWNERS

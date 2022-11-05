@@ -4,7 +4,9 @@
 
 include /src/connectivity/overnet/OWNERS
 include /src/developer/ffx/OWNERS
-include /src/developer/ffx/lib/pkg/OWNERS
+include /src/developer/ffx/lib/pbms/OWNERS
 include /src/developer/ffx/plugins/debug/OWNERS
+include /src/developer/ffx/plugins/starnix/OWNERS
 include /src/lib/fuchsia-async/OWNERS
 include /src/lib/fuchsia-hyper/OWNERS
+include /src/sys/pkg/OWNERS

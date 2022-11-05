@@ -3,10 +3,7 @@
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
 include /src/developer/ffx/OWNERS
-include /src/developer/ffx/daemon/services/repo/OWNERS
 include /src/developer/ffx/lib/pkg/OWNERS
-include /src/developer/ffx/plugins/assembly/OWNERS
-include /src/developer/ffx/plugins/emulator/OWNERS
-include /src/lib/assembly/OWNERS
 include /src/lib/testing/temp_test_env/OWNERS
 include /tools/auto_owners/OWNERS
+include /tools/fvdl/OWNERS

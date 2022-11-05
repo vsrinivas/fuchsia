@@ -3,7 +3,12 @@
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
 include /src/developer/ffx/OWNERS
-include /src/developer/ffx/plugins/platform/OWNERS
-include /src/diagnostics/OWNERS
+include /src/developer/ffx/plugins/component/OWNERS
+include /src/developer/ffx/plugins/fuzz/OWNERS
+include /src/developer/ffx/plugins/inspect/OWNERS
+include /src/developer/ffx/plugins/log/OWNERS
+include /src/developer/ffx/plugins/platform/preflight/OWNERS
 include /src/security/scrutiny/OWNERS
+include /src/sys/fuzzing/OWNERS
+include /third_party/rust_crates/vendor/tui/OWNERS
 include /tools/create/OWNERS

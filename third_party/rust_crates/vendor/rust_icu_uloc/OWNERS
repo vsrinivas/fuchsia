@@ -4,5 +4,7 @@
 
 include /examples/intl/OWNERS
 include /src/lib/intl/OWNERS
+include /src/settings/OWNERS
 include /src/tests/intl/OWNERS
 include /third_party/rust_crates/vendor/rust_icu_udat/OWNERS
+include /third_party/rust_crates/vendor/rust_icu_unorm2/OWNERS

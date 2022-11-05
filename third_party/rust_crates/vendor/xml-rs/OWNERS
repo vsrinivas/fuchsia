@@ -2,6 +2,6 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
-include /src/intl/OWNERS
 include /src/lib/intl/OWNERS
-include /src/virtualization/bin/wayland/OWNERS
+include /src/lib/ui/wayland/OWNERS
+include /tools/auto_owners/OWNERS

@@ -4,3 +4,4 @@
 
 include /third_party/rust_crates/ask2patch/csv/OWNERS
 include /third_party/rust_crates/vendor/serde_json/OWNERS
+include /third_party/rust_crates/vendor/serde_yaml/OWNERS

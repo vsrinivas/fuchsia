@@ -2,22 +2,26 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
-include /garnet/bin/setui/OWNERS
 include /src/connectivity/wlan/OWNERS
-include /src/connectivity/wlan/wlanstack/OWNERS
-include /src/diagnostics/OWNERS
+include /src/connectivity/wlan/wlancfg/OWNERS
+include /src/identity/bin/credential_manager/OWNERS
+include /src/lib/async-utils/OWNERS
 include /src/lib/diagnostics/hierarchy/rust/OWNERS
 include /src/lib/diagnostics/inspect/derive/OWNERS
 include /src/lib/diagnostics/inspect/rust/OWNERS
 include /src/lib/intl/OWNERS
 include /src/proc/OWNERS
+include /src/settings/OWNERS
 include /src/sys/component_manager/OWNERS
 include /src/sys/lib/component-events/OWNERS
 include /src/sys/test_runners/OWNERS
+include /third_party/rust_crates/vendor/macro_rules_attribute/OWNERS
 include /third_party/rust_crates/vendor/rust_icu_sys/OWNERS
 include /third_party/rust_crates/vendor/rust_icu_ucal/OWNERS
+include /third_party/rust_crates/vendor/rust_icu_uchar/OWNERS
 include /third_party/rust_crates/vendor/rust_icu_udat/OWNERS
 include /third_party/rust_crates/vendor/rust_icu_udata/OWNERS
 include /third_party/rust_crates/vendor/rust_icu_uenum/OWNERS
 include /third_party/rust_crates/vendor/rust_icu_uloc/OWNERS
+include /third_party/rust_crates/vendor/rust_icu_unorm2/OWNERS
 include /third_party/rust_crates/vendor/rust_icu_ustring/OWNERS

@@ -2,11 +2,17 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
-include /src/connectivity/network/dhcp/OWNERS
-include /src/connectivity/telephony/OWNERS
 include /src/connectivity/wlan/OWNERS
-include /src/developer/ffx/lib/pkg/OWNERS
 include /src/identity/OWNERS
-include /src/security/kms/OWNERS
-include /src/sys/OWNERS
-include /third_party/rust_crates/forks/combine/OWNERS
+include /src/lib/async-gunzip/OWNERS
+include /src/recovery/system/OWNERS
+include /src/sys/pkg/OWNERS
+include /src/testing/sl4f/OWNERS
+include /third_party/rust_crates/vendor/combine/OWNERS
+include /third_party/rust_crates/vendor/http/OWNERS
+include /third_party/rust_crates/vendor/http-body/OWNERS
+include /third_party/rust_crates/vendor/hyper/OWNERS
+include /third_party/rust_crates/vendor/prost/OWNERS
+include /third_party/rust_crates/vendor/prost-build/OWNERS
+include /third_party/rust_crates/vendor/prost-types/OWNERS
+include /third_party/rust_crates/vendor/tokio/OWNERS

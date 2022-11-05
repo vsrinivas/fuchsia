@@ -2,29 +2,30 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
-include /src/connectivity/bluetooth/OWNERS
 include /src/connectivity/lib/OWNERS
+include /src/connectivity/lib/net-types/OWNERS
 include /src/connectivity/lowpan/lib/spinel_pack/OWNERS
 include /src/connectivity/network/OWNERS
 include /src/connectivity/network/netstack3/OWNERS
+include /src/connectivity/network/tests/integration/OWNERS
 include /src/connectivity/wlan/OWNERS
 include /src/developer/ffx/OWNERS
+include /src/developer/ffx/plugins/fuzz/OWNERS
 include /src/lib/diagnostics/inspect/derive/OWNERS
 include /src/lib/fidl_table_validation/OWNERS
 include /src/lib/fuchsia/OWNERS
 include /src/lib/fuchsia-async-macro/OWNERS
-include /src/lib/fuzzing/OWNERS
 include /src/lib/storage/OWNERS
-include /src/lib/testing/fixture/OWNERS
-include /src/lib/zerocopy/OWNERS
+include /src/storage/OWNERS
 include /src/sys/lib/cm_rust/OWNERS
 include /src/sys/test_runners/OWNERS
 include /src/sys/time/OWNERS
-include /third_party/rust_crates/vendor/indoc-impl/OWNERS
-include /third_party/rust_crates/vendor/num-derive/OWNERS
+include /third_party/rust_crates/vendor/deepsize_derive/OWNERS
 include /third_party/rust_crates/vendor/proptest-derive/OWNERS
 include /third_party/rust_crates/vendor/quote-0.6.11/OWNERS
-include /third_party/rust_crates/vendor/serde_repr/OWNERS
 include /third_party/rust_crates/vendor/structopt-derive/OWNERS
 include /third_party/rust_crates/vendor/syn-0.15.26/OWNERS
+include /tools/lib/OWNERS
 include /tools/lib/cml/OWNERS
+include /tools/lib/config_client/OWNERS
+include /tools/shush/OWNERS

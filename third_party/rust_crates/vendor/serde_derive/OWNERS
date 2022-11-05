@@ -4,14 +4,11 @@
 
 include /src/diagnostics/OWNERS
 include /src/diagnostics/lib/triage/OWNERS
-include /src/diagnostics/triage/OWNERS
 include /src/power/OWNERS
-include /src/power/power-manager/OWNERS
 include /src/security/tee_manager/OWNERS
 include /src/sys/pkg/OWNERS
-include /third_party/rust_crates/vendor/cargo_metadata/OWNERS
+include /src/testing/metrics-logger/OWNERS
 include /third_party/rust_crates/vendor/criterion/OWNERS
-include /third_party/rust_crates/vendor/rouille/OWNERS
 include /third_party/rust_crates/vendor/serde/OWNERS
-include /tools/OWNERS
-include /tools/create/OWNERS
+include /third_party/rust_crates/vendor/tuf/OWNERS
+include /tools/cargo-gnaw/OWNERS

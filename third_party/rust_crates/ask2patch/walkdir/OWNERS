@@ -3,11 +3,15 @@
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
 include /src/developer/ffx/OWNERS
-include /src/developer/ffx/lib/pkg/OWNERS
-include /src/developer/ffx/plugins/emulator/OWNERS
+include /src/developer/ffx/plugins/fuzz/OWNERS
+include /src/developer/ffx/plugins/package/OWNERS
 include /src/developer/fuchsia-criterion/OWNERS
+include /src/sys/fuzzing/OWNERS
 include /src/sys/pkg/OWNERS
 include /third_party/rust_crates/vendor/criterion/OWNERS
 include /third_party/rust_crates/vendor/notify/OWNERS
-include /tools/OWNERS
 include /tools/auto_owners/OWNERS
+include /tools/cargo-gnaw/OWNERS
+include /tools/fvdl/OWNERS
+include /tools/pbtool/OWNERS
+include /tools/update_crates/OWNERS

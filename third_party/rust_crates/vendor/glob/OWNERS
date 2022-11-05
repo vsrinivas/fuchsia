@@ -2,12 +2,13 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
-include /garnet/bin/setui/OWNERS
 include /src/connectivity/network/OWNERS
+include /src/developer/ffx/OWNERS
+include /src/developer/ffx/lib/fms/OWNERS
+include /src/developer/ffx/plugins/coverage/OWNERS
+include /src/developer/ffx/plugins/fuzz/OWNERS
 include /src/diagnostics/OWNERS
-include /src/diagnostics/iquery/OWNERS
-include /src/lib/test_diagnostics/OWNERS
-include /src/sys/pkg/OWNERS
+include /src/settings/OWNERS
 include /src/sys/test_manager/OWNERS
 include /src/testing/sl4f/OWNERS
-include /tools/fidl/fidldoc/OWNERS
+include /tools/doc_checker/OWNERS

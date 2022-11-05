@@ -2,5 +2,6 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
+include /src/connectivity/network/netstack3/OWNERS
 include /src/developer/fuchsia-criterion/OWNERS
 include /src/tests/benchmarks/fidl/OWNERS

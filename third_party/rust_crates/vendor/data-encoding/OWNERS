@@ -3,3 +3,5 @@
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
 include /src/sys/pkg/OWNERS
+include /third_party/rust_crates/vendor/trust-dns-proto/OWNERS
+include /third_party/rust_crates/vendor/tuf/OWNERS

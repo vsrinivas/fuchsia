@@ -2,8 +2,11 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
+include /src/connectivity/network/netstack3/OWNERS
 include /src/graphics/lib/compute/OWNERS
 include /src/lib/ui/carnelian/OWNERS
-include /third_party/rust_crates/forks/trust-dns-resolver/OWNERS
+include /third_party/rust_crates/vendor/deepsize/OWNERS
 include /third_party/rust_crates/vendor/parking_lot_core/OWNERS
+include /third_party/rust_crates/vendor/parking_lot_core-0.8.3/OWNERS
 include /third_party/rust_crates/vendor/trust-dns-proto/OWNERS
+include /third_party/rust_crates/vendor/trust-dns-resolver/OWNERS

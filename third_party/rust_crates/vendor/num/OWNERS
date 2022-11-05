@@ -3,10 +3,11 @@
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
 include /src/connectivity/bluetooth/OWNERS
+include /src/connectivity/lowpan/lib/openthread_rust/OWNERS
+include /src/connectivity/network/dhcpv6/OWNERS
 include /src/connectivity/wlan/OWNERS
+include /src/experiences/session_shells/OWNERS
 include /src/lib/assembly/OWNERS
 include /src/lib/diagnostics/inspect/rust/OWNERS
 include /src/lib/storage/OWNERS
-include /src/sys/lib/fuchsia-bootfs/OWNERS
-include /src/virtualization/bin/wayland/OWNERS
-include /tools/zedmon/OWNERS
+include /src/lib/ui/wayland/OWNERS

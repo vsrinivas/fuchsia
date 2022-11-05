@@ -3,10 +3,21 @@
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
 include /src/connectivity/bluetooth/OWNERS
-include /src/connectivity/lowpan/drivers/lowpan-spinel-driver/OWNERS
+include /src/connectivity/lib/network-device/rust/OWNERS
+include /src/connectivity/lowpan/OWNERS
+include /src/connectivity/network/netcfg/OWNERS
+include /src/connectivity/network/netstack3/OWNERS
+include /src/connectivity/network/testing/network-test-realm/OWNERS
+include /src/connectivity/network/tests/integration/OWNERS
 include /src/connectivity/wlan/OWNERS
 include /src/diagnostics/iquery/OWNERS
 include /src/lib/diagnostics/inspect/contrib/rust/OWNERS
 include /src/lib/diagnostics/inspect/rust/OWNERS
+include /src/lib/ui/fuchsia-vulkan/OWNERS
+include /src/proc/OWNERS
+include /src/session/OWNERS
 include /src/sys/lib/routing/OWNERS
 include /src/testing/sl4f/OWNERS
+include /src/ui/bin/brightness_manager/OWNERS
+include /src/ui/bin/clipboard/OWNERS
+include /src/ui/input/text/OWNERS

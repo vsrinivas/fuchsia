@@ -4,6 +4,5 @@
 
 include /src/connectivity/lib/at-commands/OWNERS
 include /src/developer/ffx/OWNERS
+include /src/developer/ffx/daemon/protocols/repo/OWNERS
 include /src/security/scrutiny/OWNERS
-include /tools/clidoc/OWNERS
-include /tools/fidl/fidldoc/OWNERS

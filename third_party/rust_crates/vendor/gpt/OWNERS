@@ -3,3 +3,4 @@
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
 include /src/sys/live_usb/OWNERS
+include /tools/OWNERS

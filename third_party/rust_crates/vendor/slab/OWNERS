@@ -4,17 +4,15 @@
 
 include /src/connectivity/bluetooth/OWNERS
 include /src/connectivity/lowpan/OWNERS
-include /src/connectivity/lowpan/drivers/lowpan-spinel-driver/OWNERS
-include /src/connectivity/lowpan/service/OWNERS
-include /src/connectivity/overnet/OWNERS
-include /src/connectivity/telephony/OWNERS
 include /src/lib/async-utils/OWNERS
 include /src/lib/cutex/OWNERS
 include /src/lib/fidl/rust/OWNERS
 include /src/lib/fuchsia-async/OWNERS
 include /src/lib/storage/OWNERS
+include /src/proc/OWNERS
+include /src/storage/OWNERS
 include /src/testing/sl4f/OWNERS
 include /third_party/rust_crates/vendor/async-executor/OWNERS
 include /third_party/rust_crates/vendor/async-io/OWNERS
+include /third_party/rust_crates/vendor/deepsize/OWNERS
 include /third_party/rust_crates/vendor/futures-util/OWNERS
-include /third_party/rust_crates/vendor/h2/OWNERS

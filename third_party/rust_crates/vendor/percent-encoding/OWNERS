@@ -5,5 +5,5 @@
 include /src/connectivity/wlan/wlancfg/OWNERS
 include /src/developer/ffx/lib/pkg/OWNERS
 include /src/lib/fuchsia-url/OWNERS
-include /src/sys/pkg/OWNERS
+include /third_party/rust_crates/vendor/tuf/OWNERS
 include /third_party/rust_crates/vendor/url/OWNERS

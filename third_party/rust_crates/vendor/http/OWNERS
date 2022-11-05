@@ -2,15 +2,13 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
-include /src/connectivity/network/http-client/OWNERS
-include /src/developer/ffx/lib/gcs/OWNERS
 include /src/lib/fuchsia-hyper/OWNERS
+include /src/lib/gcs/OWNERS
 include /src/lib/http-uri-ext/OWNERS
-include /src/lib/testing/fuchsia-hyper-test-support/OWNERS
 include /src/sys/lib/fidl-fuchsia-pkg-ext/OWNERS
 include /src/sys/pkg/OWNERS
 include /src/sys/pkg/lib/omaha-client/OWNERS
-include /src/testing/sl4f/OWNERS
-include /third_party/rust_crates/vendor/h2/OWNERS
 include /third_party/rust_crates/vendor/http-body/OWNERS
 include /third_party/rust_crates/vendor/hyper/OWNERS
+include /third_party/rust_crates/vendor/tuf/OWNERS
+include /tools/doc_checker/OWNERS

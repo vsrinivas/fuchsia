@@ -4,3 +4,4 @@
 
 include /third_party/rust_crates/vendor/signal-hook/OWNERS
 include /third_party/rust_crates/vendor/signal-hook-0.1.17/OWNERS
+include /third_party/rust_crates/vendor/tokio/OWNERS

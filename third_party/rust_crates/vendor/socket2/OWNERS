@@ -3,11 +3,17 @@
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
 include /src/connectivity/lib/ping/OWNERS
+include /src/connectivity/lowpan/OWNERS
 include /src/connectivity/network/OWNERS
-include /src/connectivity/network/dhcp/OWNERS
+include /src/connectivity/network/dhcpv4/OWNERS
+include /src/connectivity/network/dhcpv6/OWNERS
 include /src/connectivity/network/testing/netemul/OWNERS
+include /src/connectivity/network/testing/network-test-realm/OWNERS
+include /src/connectivity/network/tests/fidl/OWNERS
+include /src/connectivity/network/tests/integration/OWNERS
 include /src/developer/ffx/OWNERS
 include /src/lib/fuchsia-async/OWNERS
 include /src/lib/fuchsia-hyper/OWNERS
 include /src/lib/tcp-stream-ext/OWNERS
 include /third_party/rust_crates/vendor/async-io/OWNERS
+include /third_party/rust_crates/vendor/tokio/OWNERS

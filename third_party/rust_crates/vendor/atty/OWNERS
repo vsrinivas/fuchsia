@@ -2,6 +2,8 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
+include /src/developer/ffx/plugins/component/OWNERS
+include /src/lib/structured_ui/OWNERS
 include /third_party/rust_crates/vendor/clap/OWNERS
 include /third_party/rust_crates/vendor/criterion/OWNERS
 include /third_party/rust_crates/vendor/prettytable-rs/OWNERS

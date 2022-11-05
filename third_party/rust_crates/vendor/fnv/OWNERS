@@ -2,8 +2,7 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
+include /third_party/rust_crates/forks/type_hash/core/OWNERS
 include /third_party/rust_crates/vendor/darling_core/OWNERS
-include /third_party/rust_crates/vendor/h2/OWNERS
 include /third_party/rust_crates/vendor/http/OWNERS
 include /third_party/rust_crates/vendor/rusty-fork/OWNERS
-include /third_party/rust_crates/vendor/tokio/OWNERS

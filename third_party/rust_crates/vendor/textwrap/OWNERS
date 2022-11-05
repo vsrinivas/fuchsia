@@ -2,5 +2,8 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
-include /src/developer/ffx/plugins/platform/OWNERS
+include /src/developer/ffx/plugins/assembly/OWNERS
+include /src/developer/ffx/plugins/component/OWNERS
+include /src/developer/ffx/plugins/platform/preflight/OWNERS
+include /src/lib/assembly/OWNERS
 include /third_party/rust_crates/vendor/clap/OWNERS

@@ -10,6 +10,5 @@ include /src/firmware/bin/vboot-fwparam/OWNERS
 include /src/identity/OWNERS
 include /src/lib/diagnostics/OWNERS
 include /src/lib/diagnostics/inspect/format/rust/OWNERS
-include /src/lib/diagnostics/inspect/rust/OWNERS
 include /src/media/OWNERS
 include /src/storage/OWNERS

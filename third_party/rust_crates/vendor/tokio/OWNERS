@@ -2,13 +2,11 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
-include /src/developer/ffx/lib/pkg/OWNERS
 include /src/lib/fuchsia-hyper/OWNERS
 include /src/lib/testing/fuchsia-hyper-test-support/OWNERS
+include /src/security/OWNERS
 include /src/sys/pkg/OWNERS
-include /src/sys/time/OWNERS
-include /third_party/rust_crates/vendor/h2/OWNERS
+include /src/virtualization/OWNERS
 include /third_party/rust_crates/vendor/hyper/OWNERS
 include /third_party/rust_crates/vendor/hyper-rustls/OWNERS
 include /third_party/rust_crates/vendor/tokio-rustls/OWNERS
-include /third_party/rust_crates/vendor/tokio-util/OWNERS

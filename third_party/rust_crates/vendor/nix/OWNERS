@@ -4,5 +4,5 @@
 
 include /src/connectivity/overnet/OWNERS
 include /src/developer/ffx/OWNERS
-include /src/lib/analytics/OWNERS
-include /src/lib/testing/temp_test_env/OWNERS
+include /src/developer/ffx/plugins/emulator/OWNERS
+include /src/lib/fuchsia_nix/OWNERS

@@ -5,10 +5,11 @@
 include /examples/intl/OWNERS
 include /src/lib/icu_data/OWNERS
 include /src/lib/intl/OWNERS
-include /src/tests/intl/OWNERS
 include /third_party/rust_crates/vendor/rust_icu_ucal/OWNERS
+include /third_party/rust_crates/vendor/rust_icu_uchar/OWNERS
 include /third_party/rust_crates/vendor/rust_icu_udat/OWNERS
 include /third_party/rust_crates/vendor/rust_icu_udata/OWNERS
 include /third_party/rust_crates/vendor/rust_icu_uenum/OWNERS
 include /third_party/rust_crates/vendor/rust_icu_uloc/OWNERS
+include /third_party/rust_crates/vendor/rust_icu_unorm2/OWNERS
 include /third_party/rust_crates/vendor/rust_icu_ustring/OWNERS

@@ -2,8 +2,9 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
-include /src/bringup/bin/virtcon2/OWNERS
 include /src/graphics/display/bin/display-factory-test/OWNERS
+include /src/lib/ui/OWNERS
 include /src/lib/ui/carnelian/OWNERS
 include /src/recovery/OWNERS
+include /src/recovery/system/OWNERS
 include /src/ui/bin/terminal/OWNERS

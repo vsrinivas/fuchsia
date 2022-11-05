@@ -3,8 +3,8 @@
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
 include /src/connectivity/lib/packet-formats/OWNERS
-include /src/connectivity/network/OWNERS
-include /src/connectivity/network/netdump/integration/OWNERS
+include /src/connectivity/network/dhcpv4/OWNERS
 include /src/connectivity/network/netstack3/OWNERS
+include /src/connectivity/network/tests/integration/OWNERS
 include /src/connectivity/wlan/OWNERS
 include /src/lib/network/packet/OWNERS

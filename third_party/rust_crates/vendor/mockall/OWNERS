@@ -3,3 +3,8 @@
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
 include /src/developer/ffx/plugins/emulator/OWNERS
+include /src/developer/ffx/plugins/package/OWNERS
+include /src/identity/bin/credential_manager/OWNERS
+include /src/recovery/system/OWNERS
+include /tools/doc_checker/OWNERS
+include /tools/fvdl/OWNERS

@@ -2,5 +2,6 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
-include /src/connectivity/network/OWNERS
-include /third_party/rust_crates/forks/trust-dns-resolver/OWNERS
+include /src/connectivity/network/dns/OWNERS
+include /src/connectivity/network/tests/integration/OWNERS
+include /third_party/rust_crates/vendor/trust-dns-resolver/OWNERS

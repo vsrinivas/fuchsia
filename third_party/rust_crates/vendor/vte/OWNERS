@@ -3,4 +3,3 @@
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
 include /src/sys/run_test_suite/OWNERS
-include /src/ui/bin/terminal/OWNERS

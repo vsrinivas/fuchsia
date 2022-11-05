@@ -3,4 +3,3 @@
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
 include /third_party/rust_crates/vendor/prettytable-rs/OWNERS
-include /third_party/rust_crates/vendor/rouille/OWNERS

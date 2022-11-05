@@ -3,5 +3,3 @@
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
 include /src/connectivity/wlan/OWNERS
-include /src/lib/zerocopy/OWNERS
-include /third_party/rust_crates/vendor/derive_arbitrary/OWNERS

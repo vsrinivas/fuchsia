@@ -3,3 +3,5 @@
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
 include /third_party/rust_crates/vendor/parking_lot/OWNERS
+include /third_party/rust_crates/vendor/parking_lot-0.11.1/OWNERS
+include /third_party/rust_crates/vendor/tracing-mutex/OWNERS

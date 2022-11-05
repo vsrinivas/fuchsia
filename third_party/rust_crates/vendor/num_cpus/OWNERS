@@ -4,5 +4,4 @@
 
 include /third_party/rust_crates/vendor/dashmap/OWNERS
 include /third_party/rust_crates/vendor/rayon-core/OWNERS
-include /third_party/rust_crates/vendor/rouille/OWNERS
-include /third_party/rust_crates/vendor/threadpool/OWNERS
+include /third_party/rust_crates/vendor/tokio/OWNERS

@@ -4,5 +4,7 @@
 
 include /build/sdk/OWNERS
 include /src/developer/ffx/OWNERS
+include /src/lib/async-gunzip/OWNERS
 include /src/storage/OWNERS
 include /third_party/rust_crates/vendor/zip/OWNERS
+include /tools/clidoc/OWNERS

@@ -3,5 +3,5 @@
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
 include /build/OWNERS
-include /tools/cmc/OWNERS
 include /tools/jq5/OWNERS
+include /tools/lib/cml/OWNERS
