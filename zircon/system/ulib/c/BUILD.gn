@@ -286,13 +286,6 @@ verify_public_symbols("verify_abi") {
     "--exclude=__asan*",
     "--exclude=__hwasan*",
     "--exclude=__ubsan*",
-
-    # TODO(fxbug.dev/114037): These aren't weak symbols that libc intentionally
-    # exports like above. These are compiler generated and should be hidden. In
-    # the meantime, ignore them here while we wait for that fix to land. It's
-    # fine to just ignore in libc because it is the only library checked by ifs
-    # that exports any global variables.
-    "--exclude=__odr_asan*",
   ]
 }
 

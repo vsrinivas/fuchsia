@@ -13,6 +13,11 @@ variant("asan") {
     # https://github.com/google/sanitizers/issues/1017.
     "-mllvm",
     "-asan-use-private-alias=1",
+
+    # TODO(fxbug.dev/114037): Investigate if we can turn -fsanitize-address-use-odr-indicator on.
+    # It creates global symbols which we don't want as they change the abi of our shared objects.
+    # We should see if we can change the way the odr checking another way.
+    "-fno-sanitize-address-use-odr-indicator",
   ]
 
   # TODO(phosek): use runtime.json instead of invoking Clang.
