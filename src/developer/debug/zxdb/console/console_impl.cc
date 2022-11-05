@@ -39,50 +39,6 @@ namespace {
 
 const char* kHistoryFilename = ".zxdb_history";
 
-#ifndef __Fuchsia__
-
-termios stdout_saved_termios;
-struct sigaction saved_abort;
-struct sigaction saved_segv;
-
-void TerminalRestoreSignalHandler(int sig, siginfo_t* info, void* ucontext) {
-  struct sigaction _ignore;
-
-  if (sig == SIGABRT) {
-    sigaction(SIGABRT, &saved_abort, &_ignore);
-  } else if (sig == SIGSEGV) {
-    sigaction(SIGSEGV, &saved_segv, &_ignore);
-  } else {
-    // Weird, but I'm not about to assert inside a signal handler.
-    return;
-  }
-
-  tcsetattr(STDOUT_FILENO, TCSAFLUSH, &stdout_saved_termios);
-  raise(sig);
-}
-
-void PreserveStdoutTermios() {
-  if (!isatty(STDOUT_FILENO))
-    return;
-
-  if (tcgetattr(STDOUT_FILENO, &stdout_saved_termios) < 0)
-    return;
-
-  struct sigaction restore_handler;
-
-  restore_handler.sa_sigaction = TerminalRestoreSignalHandler;
-  restore_handler.sa_flags = SA_SIGINFO;
-
-  sigaction(SIGABRT, &restore_handler, &saved_abort);
-  sigaction(SIGSEGV, &restore_handler, &saved_segv);
-}
-
-#else
-
-void PreserveStdoutTermios() {}
-
-#endif  // !__Fuchsia__
-
 }  // namespace
 
 ConsoleImpl::ConsoleImpl(Session* session, line_input::ModalLineInput::Factory line_input_factory)
@@ -127,8 +83,6 @@ ConsoleImpl::~ConsoleImpl() {
 fxl::WeakPtr<ConsoleImpl> ConsoleImpl::GetImplWeakPtr() { return impl_weak_factory_.GetWeakPtr(); }
 
 void ConsoleImpl::Init() {
-  PreserveStdoutTermios();
-
   LoadHistoryFile();
   EnableInput();
 }
@@ -315,8 +269,25 @@ void ConsoleImpl::EnableInput() {
 
   // Callback for input passed to WatchFD().
   auto watch_fn = [this](int fd, bool readable, bool, bool error) {
-    if (error)  // EOF
+    if (error) {
+      // Happens most commonly on EOF.
+      //
+      // This handling isn't quite right when the input isn't the terminal. The error signal is
+      // delivered in parallel with the data which means we'll get it as soon as the calling process
+      // closes the pipe, whether or not we have read all the data.
+      //
+      // This means that if you do something like "echo help | zxdb", the first thing zxdb will
+      // see will often be the error signal because the caller closed the pipe already, and no
+      // input will be processed.
+      //
+      // To work around this, we may need go into a new "input drain mode" when we get the error.
+      // This would ignore the async events on the file hand and read from stdin until read()
+      // reports an error and then Quit(). The harder part is that mode will need to be integrated
+      // the same way that watching stdin does, where we go back to the message loop for other work
+      // to proceed, and stop/start according to Enable/DisableInput() calls.
       Quit();
+      return;
+    }
 
     if (!readable)
       return;
@@ -332,9 +303,20 @@ void ConsoleImpl::EnableInput() {
     // Note if we ever start dispatching more than one byte here, we should check InputEnabled()
     // in case the processing of the previous command has disabled input and no data is
     // expected.
-    char ch;
-    if (read(STDIN_FILENO, &ch, 1) > 0)
+
+    // Note that we need to handle EINTR when using this low-level syscall.
+    char ch = 0;
+    int bytes_read = 0;
+    do {
+      bytes_read = read(STDIN_FILENO, &ch, 1);
+    } while (bytes_read == -1 && errno == EINTR);
+
+    if (bytes_read > 0) {
       line_input_.OnInput(ch);
+    } else {
+      // Error or EOF.
+      Quit();
+    }
   };
   stdio_watch_ = debug::MessageLoop::Current()->WatchFD(debug::MessageLoop::WatchMode::kRead,
                                                         STDIN_FILENO, std::move(watch_fn));

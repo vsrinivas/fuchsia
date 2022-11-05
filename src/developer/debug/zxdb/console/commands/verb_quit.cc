@@ -15,12 +15,20 @@ namespace zxdb {
 
 namespace {
 
+constexpr int kForceQuitSwitch = 1;
+
 const char kQuitShortHelp[] = R"(quit / q / exit: Quits the debugger.)";
 const char kQuitHelp[] =
     R"(quit
 
   Quits the debugger. It will prompt for confirmation if there are running
   processes.
+
+Options
+
+  -f
+  --force
+      Quit without prompting, even in a process is attached.
 )";
 
 void RunVerbQuit(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
@@ -30,8 +38,8 @@ void RunVerbQuit(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
       running_processes++;
   }
 
-  if (running_processes == 0) {
-    // Nothing running, quit immediately.
+  if (running_processes == 0 || cmd.HasSwitch(kForceQuitSwitch)) {
+    // Nothing running or force quit requested, quit immediately.
     cmd_context->console()->Quit();
     return;
   }
@@ -62,8 +70,10 @@ void RunVerbQuit(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
 }  // namespace
 
 VerbRecord GetQuitVerbRecord() {
-  return VerbRecord(&RunVerbQuit, {"quit", "q", "exit"}, kQuitShortHelp, kQuitHelp,
-                    CommandGroup::kGeneral);
+  VerbRecord quit(&RunVerbQuit, {"quit", "q", "exit"}, kQuitShortHelp, kQuitHelp,
+                  CommandGroup::kGeneral);
+  quit.switches = {SwitchRecord(kForceQuitSwitch, false, "force", 'f')};
+  return quit;
 }
 
 }  // namespace zxdb
