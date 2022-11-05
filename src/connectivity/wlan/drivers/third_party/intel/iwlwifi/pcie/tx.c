@@ -655,6 +655,9 @@ static void iwl_pcie_txq_free(struct iwl_trans* trans, int txq_id) {
   iwl_irq_timer_release_sync(txq->stuck_timer);
   txq->stuck_timer = NULL;
 
+  /* Destroy mutex */
+  mtx_destroy(&txq->lock);
+
   /* 0-fill queue descriptor structure */
   memset(txq, 0, sizeof(*txq));
 }

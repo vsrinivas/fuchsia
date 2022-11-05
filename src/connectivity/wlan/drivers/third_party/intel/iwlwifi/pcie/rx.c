@@ -823,6 +823,9 @@ void iwl_pcie_rx_free(struct iwl_trans* trans) {
 
     iwl_pcie_free_rxq_dma(trans, rxq);
 
+    /* Destroy mtx */
+    mtx_destroy(&rxq->lock);
+
 #if 0   // NEEDS_PORTING
     if (rxq->napi.poll) {
       netif_napi_del(&rxq->napi);

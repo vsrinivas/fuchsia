@@ -1837,6 +1837,10 @@ void iwl_trans_pcie_free(struct iwl_trans* trans) {
   zx_interrupt_destroy(trans_pcie->irq_handle);
   thrd_join(trans_pcie->irq_thread, NULL);
 
+  mtx_destroy(&trans_pcie->irq_lock);
+  mtx_destroy(&trans_pcie->reg_lock);
+  mtx_destroy(&trans_pcie->mutex);
+
 #if 0   // NEEDS_PORTING
     int i;
 
