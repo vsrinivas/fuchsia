@@ -859,7 +859,7 @@ void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
 
       // Update the host MSR list entries with the per-CPU variables of the
       // destination processor.
-      edit_msr_list(&host_msr_page_, 5, X86_MSR_IA32_TSC_AUX, read_msr(X86_MSR_IA32_TSC_AUX));
+      edit_msr_list(&host_msr_page_, 4, X86_MSR_IA32_TSC_AUX, read_msr(X86_MSR_IA32_TSC_AUX));
 
       // Update the VMCS with the per-CPU variables of the destination
       // processor.
