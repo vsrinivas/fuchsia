@@ -243,7 +243,7 @@ reg_xa  .req x11
 
     // If we got to here, the exception came from the host or EL2.
     // Continue execution through a jump table based on the HVC index.
-    hvc_jump .Lsync_table 8
+    hvc_jump .Lsync_table 9
 .Lsync_table:
     b el2_hvc_psci        // HVC 0:      psci
     b el2_hvc_mexec       // HVC 1:      mexec
