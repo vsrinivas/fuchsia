@@ -438,14 +438,6 @@ void MapTester::DoWriteNat(F2fs *fs, nid_t nid, block_t blkaddr, uint8_t version
   nm_i->dirty_nat_list_.push_back(cache_entry);
 }
 
-void MapTester::ClearAllDirtyNatEntries(NodeManager &manager) {
-  std::lock_guard nat_lock(manager.nat_tree_lock_);
-  for (auto &dirty_entry : manager.dirty_nat_list_) {
-    manager.dirty_nat_list_.erase(dirty_entry);
-    --manager.nat_entries_count_;
-  }
-}
-
 void MapTester::RemoveAllNatEntries(NodeManager &manager) {
   std::lock_guard nat_lock(manager.nat_tree_lock_);
   for (auto &nat_entry : manager.nat_cache_) {

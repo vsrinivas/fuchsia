@@ -181,9 +181,7 @@ bool SegmentManager::NeedInplaceUpdate(VnodeF2fs *vnode) {
   if (superblock_info_->TestOpt(kMountForceLfs)) {
     return false;
   }
-  if (NeedSSR() && Utilization() > kMinIpuUtil)
-    return true;
-  return false;
+  return NeedSSR() && Utilization() > kMinIpuUtil;
 }
 
 uint32_t SegmentManager::CursegSegno(int type) {

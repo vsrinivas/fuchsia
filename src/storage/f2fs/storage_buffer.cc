@@ -25,7 +25,7 @@ StorageBuffer::StorageBuffer(Bcache *bc, size_t blocks, uint32_t block_size, std
 void StorageBuffer::Init() {
   std::lock_guard lock(mutex_);
   for (size_t i = 0; i < buffer_.capacity(); i += allocation_unit_) {
-    auto key = std::make_unique<VmoBufferKey>(i, buffer_.vmoid());
+    auto key = std::make_unique<VmoBufferKey>(i);
     free_list_.push_back(std::move(key));
   }
 }

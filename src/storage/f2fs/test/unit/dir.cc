@@ -180,11 +180,7 @@ TEST_F(DirectoryTest, MultiSlotDentry) {
 
     unsigned int slots = (namelen + kNameLen - 1) / kNameLen;
     // After creating child, at least one more slot is needed for further testing.
-    if (slots_filled + slots >= kNrDentryInBlock) {
-      continue;
-    }
-
-    if (child_set.find(name) != child_set.end()) {
+    if (slots_filled + slots >= kNrDentryInBlock || child_set.find(name) != child_set.end()) {
       continue;
     }
 

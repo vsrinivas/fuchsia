@@ -13,18 +13,16 @@ namespace f2fs {
 
 class VmoBufferKey : public fbl::DoublyLinkedListable<std::unique_ptr<VmoBufferKey>> {
  public:
-  VmoBufferKey(const uint64_t offset, const vmoid_t vmoid) : vmo_offset_(offset), vmo_id_(vmoid) {}
+  VmoBufferKey(const uint64_t offset) : vmo_offset_(offset) {}
   VmoBufferKey() = delete;
   VmoBufferKey(const VmoBufferKey &) = delete;
   VmoBufferKey &operator=(const VmoBufferKey &) = delete;
   VmoBufferKey(const VmoBufferKey &&) = delete;
   VmoBufferKey &operator=(const VmoBufferKey &&) = delete;
   uint64_t GetKey() const { return vmo_offset_; }
-  vmoid_t GetVmoId() const { return vmo_id_; }
 
  private:
   const uint64_t vmo_offset_;
-  const vmoid_t vmo_id_;
 };
 
 class PageOperations;

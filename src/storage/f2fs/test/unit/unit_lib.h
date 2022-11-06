@@ -101,7 +101,6 @@ class MapTester {
       __TA_EXCLUDES(node_manager.nat_tree_lock_);
   static bool IsCachedNat(NodeManager &node_manager, nid_t n)
       __TA_EXCLUDES(node_manager.nat_tree_lock_);
-  static void ClearAllDirtyNatEntries(NodeManager &manager) __TA_EXCLUDES(manager.nat_tree_lock_);
   static void RemoveAllNatEntries(NodeManager &manager) __TA_EXCLUDES(manager.nat_tree_lock_);
   static nid_t ScanFreeNidList(NodeManager &manager, nid_t start)
       __TA_EXCLUDES(manager.free_nid_list_lock_);

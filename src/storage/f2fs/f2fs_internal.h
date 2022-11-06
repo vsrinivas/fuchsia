@@ -117,19 +117,8 @@ class FlagAcquireGuard {
   FlagAcquireGuard() = delete;
   FlagAcquireGuard(const FlagAcquireGuard &) = delete;
   FlagAcquireGuard &operator=(const FlagAcquireGuard &) = delete;
-  FlagAcquireGuard(FlagAcquireGuard &&flag) noexcept {
-    flag_ = flag.flag_;
-    acquired_ = flag.acquired_;
-    wake_waiters_ = flag.wake_waiters_;
-    flag.acquired_ = false;
-  }
-  FlagAcquireGuard &operator=(FlagAcquireGuard &&flag) noexcept {
-    flag_ = flag.flag_;
-    acquired_ = flag.acquired_;
-    wake_waiters_ = flag.wake_waiters_;
-    flag.acquired_ = false;
-    return *this;
-  }
+  FlagAcquireGuard(FlagAcquireGuard &&flag) = delete;
+  FlagAcquireGuard &operator=(FlagAcquireGuard &&flag) = delete;
   explicit FlagAcquireGuard(std::atomic_flag *flag, bool wake_waiters = false)
       : flag_(flag), wake_waiters_(wake_waiters) {
     // Release-acquire ordering between the writeback (loader) and others such as checkpoint and gc.
