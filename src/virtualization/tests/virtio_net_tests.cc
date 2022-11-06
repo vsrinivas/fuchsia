@@ -64,8 +64,8 @@ fpromise::promise<V, E> SelectPromise(fpromise::promise<V, E>& a, fpromise::prom
       });
 }
 static void TestThread(fuchsia::hardware::ethernet::MacAddress mac_addr, FakeNetstack* netstack,
-                       uint8_t receive_byte, uint8_t send_byte, bool use_raw_packets,
-                       fpromise::consumer<void, void> consumer) {
+                       uint8_t receive_byte, uint8_t send_byte, bool rotate_bytes,
+                       bool use_raw_packets, fpromise::consumer<void, void> consumer) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   // This thread will loop indefinitely until it receives the correct packet.
@@ -110,6 +110,11 @@ static void TestThread(fuchsia::hardware::ethernet::MacAddress mac_addr, FakeNet
     }
     std::vector<uint8_t> send_packet(kTestPacketSize);
     memset(send_packet.data(), send_byte, kTestPacketSize);
+    if (rotate_bytes) {
+      receive_byte++;
+      send_byte++;
+    }
+
     fpromise::promise<void, zx_status_t> promise;
     if (use_raw_packets) {
       promise = netstack->SendPacket(mac_addr, std::move(send_packet));
@@ -147,8 +152,8 @@ TEST_F(VirtioNetMultipleInterfacesZirconGuestTest, ReceiveAndSend) {
   auto handle = std::async(std::launch::async, [this, &bridge] {
     FakeNetstack* netstack = this->GetEnclosedGuest().GetNetstack();
     // Pass the consumer into the test thread here.
-    TestThread(kDefaultMacAddress, netstack, 0xab, 0xba, true /* use_raw_packets */,
-               std::move(bridge.consumer));
+    TestThread(kDefaultMacAddress, netstack, 0xab, 0xba, /*rotate_bytes=*/false,
+               /*use_raw_packets=*/true, std::move(bridge.consumer));
   });
 
   std::string result;
@@ -166,8 +171,8 @@ TEST_F(VirtioNetMultipleInterfacesZirconGuestTest, ReceiveAndSend) {
   // Ensure that the guest's second NIC works as well.
   handle = std::async(std::launch::async, [this, &bridge] {
     FakeNetstack* netstack = this->GetEnclosedGuest().GetNetstack();
-    TestThread(kSecondNicMacAddress, netstack, 0xcd, 0xdc, true /* use_raw_packets */,
-               std::move(bridge.consumer));
+    TestThread(kSecondNicMacAddress, netstack, 0xcd, 0xdc, /*rotate_bytes=*/false,
+               /*use_raw_packets=*/true, std::move(bridge.consumer));
   });
 
   EXPECT_EQ(this->RunUtil(kVirtioNetUtil,
@@ -200,12 +205,63 @@ class VirtioNetMultipleInterfacesDebianGuest : public DebianEnclosedGuest {
 using VirtioNetMultipleInterfacesDebianGuestTest =
     GuestTest<VirtioNetMultipleInterfacesDebianGuest>;
 
+TEST_F(VirtioNetMultipleInterfacesDebianGuestTest, ReceiveAndEchoMultiple) {
+  fpromise::bridge<void, void> bridge;
+  auto handle = std::async(std::launch::async, [this, &bridge] {
+    FakeNetstack* netstack = this->GetEnclosedGuest().GetNetstack();
+    TestThread(kDefaultMacAddress, netstack, 0xab, 0xab, /*rotate_bytes=*/true,
+               /*use_raw_packets=*/false, std::move(bridge.consumer));
+  });
+
+  // The NetworkManager service tries to detect whether there is a working network, and as we
+  // simply drop all unexpected packets this times out and fails during longer running tests.
+  // We can just disable this since we don't actually want our networks managed, but longer term
+  // we need to improve the fake network logic.
+  //
+  // TODO(fxbug.dev/95485): Improve fake network to reply to NetworkManager.
+  EXPECT_EQ(this->Execute({"sudo", "systemctl", "mask", "NetworkManager.service"}), ZX_OK);
+  EXPECT_EQ(this->Execute({"sudo", "systemctl", "stop", "NetworkManager.service"}), ZX_OK);
+
+  // Find the network interface corresponding to the guest's first ethernet device MAC address.
+  std::string network_interface;
+  ASSERT_EQ(this->RunUtil(kVirtioNetUtil,
+                          {
+                              "Find",
+                              kDefaultMacString,
+                          },
+                          &network_interface),
+            ZX_OK);
+  network_interface = std::string(fxl::TrimString(network_interface, "\n"));
+  ASSERT_FALSE(network_interface.empty());
+
+  // Configure the guest IPv4 address.
+  EXPECT_EQ(this->Execute({"ifconfig", network_interface, "192.168.0.10"}), ZX_OK);
+
+  // Manually add a route to the host.
+  EXPECT_EQ(this->Execute({"arp", "-s", "192.168.0.1", kHostMacString}), ZX_OK);
+
+  std::string result;
+  EXPECT_EQ(this->RunUtil(kVirtioNetUtil,
+                          {
+                              "RotatingTransfer",
+                              fxl::StringPrintf("%u", 0xab),
+                              fxl::StringPrintf("%u", 50000),  // Roughly 50MB of data.
+                              fxl::StringPrintf("%zu", kTestPacketSize),
+                          },
+                          &result),
+            ZX_OK);
+  EXPECT_THAT(result, HasSubstr("PASS"));
+
+  bridge.completer.complete_ok();
+  handle.wait();
+}
+
 TEST_F(VirtioNetMultipleInterfacesDebianGuestTest, ReceiveAndSend) {
   fpromise::bridge<void, void> bridge;
   auto handle = std::async(std::launch::async, [this, &bridge] {
     FakeNetstack* netstack = this->GetEnclosedGuest().GetNetstack();
-    TestThread(kDefaultMacAddress, netstack, 0xab, 0xba, false /* use_raw_packets */,
-               std::move(bridge.consumer));
+    TestThread(kDefaultMacAddress, netstack, 0xab, 0xba, /*rotate_bytes=*/false,
+               /*use_raw_packets=*/false, std::move(bridge.consumer));
   });
 
   // Find the network interface corresponding to the guest's first ethernet device MAC address.
@@ -263,8 +319,8 @@ TEST_F(VirtioNetMultipleInterfacesDebianGuestTest, ReceiveAndSend) {
   // Start a new handler thread to validate the data sent over the second NIC.
   handle = std::async(std::launch::async, [this, &bridge] {
     FakeNetstack* netstack = this->GetEnclosedGuest().GetNetstack();
-    TestThread(kSecondNicMacAddress, netstack, 0xcd, 0xdc, false /* use_raw_packets */,
-               std::move(bridge.consumer));
+    TestThread(kSecondNicMacAddress, netstack, 0xcd, 0xdc, /*rotate_bytes=*/false,
+               /*use_raw_packets=*/false, std::move(bridge.consumer));
   });
 
   // Run the net util to generate and validate the data
@@ -281,4 +337,5 @@ TEST_F(VirtioNetMultipleInterfacesDebianGuestTest, ReceiveAndSend) {
   bridge.completer.complete_ok();
   handle.wait();
 }
+
 #endif  // __x86_64__

@@ -19,6 +19,10 @@ enum Command {
     /// Transfer a buffer of <length> containing <send_byte> and wait for a response containing
     /// <receive_byte>.
     Transfer { send_byte: u8, receive_byte: u8, length: usize },
+    /// Transfer a buffer of <length> initially containing <start_byte>, and wait for the same
+    /// byte to be echoed in response. The target byte is then incremented, and the transfer is
+    /// repeated for <iterations>.
+    RotatingTransfer { start_byte: u8, iterations: u32, length: usize },
 }
 
 fn get_interface(mac_address: String) -> std::io::Result<String> {
@@ -37,6 +41,17 @@ fn get_interface(mac_address: String) -> std::io::Result<String> {
         }
     }
     Err(Error::new(ErrorKind::NotFound, "Could not find interface"))
+}
+
+// Generate all 255 packets which will be used in this test. The test will loop through these
+// packets many times, making reallocation inefficient.
+fn generate_all_possible_packets(length: usize) -> Vec<Vec<u8>> {
+    let mut packets = Vec::with_capacity(u8::MAX.into());
+    for i in 0..=u8::MAX {
+        packets.push(vec![i; length]);
+    }
+
+    packets
 }
 
 fn main() -> std::io::Result<()> {
@@ -59,6 +74,27 @@ fn main() -> std::io::Result<()> {
             if actual == length && recv_buf.iter().all(|b| *b == receive_byte) {
                 println!("PASS");
             }
+        }
+        Command::RotatingTransfer { mut start_byte, mut iterations, length } => {
+            // Bind the socket to all addresses, on port 4242.
+            let socket = UdpSocket::bind(("0.0.0.0", 4242))?;
+
+            let mut recv_buf = vec![0; length];
+            let send_packets = generate_all_possible_packets(length);
+            while iterations > 0 {
+                socket.send_to(&send_packets[start_byte as usize], ("192.168.0.1", 4242))?;
+                let actual = socket.recv(&mut recv_buf)?;
+                if actual != length || recv_buf.iter().any(|b| *b != start_byte) {
+                    println!("FAIL");
+                    return Ok(());
+                }
+
+                let (new_byte, _) = start_byte.overflowing_add(1);
+                start_byte = new_byte;
+                iterations -= 1;
+            }
+
+            println!("PASS");
         }
     }
     Ok(())
