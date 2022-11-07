@@ -31,10 +31,16 @@ local_repository(
 )
 
 local_repository(
+    name = "remote_coverage_tools",
+    path = "build/bazel/local_repositories/remote_coverage_tools",
+)
+
+local_repository(
     name = "bazel_skylib",
     path = "third_party/bazel_skylib",
 )
 
+# NOTE this must appear before bazel_skylib_workspace() call.
 local_repository(
     name = "rules_license",
     path = "third_party/bazel_rules_license",
@@ -63,6 +69,14 @@ local_repository(
 
 # buildifier: disable=load-on-top
 load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies")
+
+# buildifier: disable=load-on-top
+load(
+    "@bazel_skylib//:workspace.bzl",
+    "bazel_skylib_workspace",
+)
+
+bazel_skylib_workspace()
 
 rules_rust_dependencies()
 

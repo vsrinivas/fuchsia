@@ -1,0 +1,7 @@
+"""Fake dependency for @bazel_tools."""
+
+filegroup(
+    name = "coverage_report_generator",
+    srcs = [],
+    visibility = ["//visibility:public"],
+)

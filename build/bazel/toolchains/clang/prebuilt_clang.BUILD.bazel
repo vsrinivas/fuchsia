@@ -9,6 +9,10 @@ load(
     "@//:build/bazel/toolchains/clang/toolchains.bzl",
     "define_host_prebuilt_clang_cc_toolchains",
 )
+load(
+    "@//:build/bazel/toolchains/clang/clang_utilities_test.bzl",
+    "include_clang_utilities_test_suite",
+)
 
 package(default_visibility = ["//visibility:public"])
 
@@ -70,3 +74,7 @@ exports_files(
 )
 
 define_host_prebuilt_clang_cc_toolchains("host_clang", constants.host_os, constants.host_arch)
+
+include_clang_utilities_test_suite(
+    name = "test_suite",
+)

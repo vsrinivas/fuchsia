@@ -329,6 +329,10 @@ def main():
     # @fuchsia_clang that can only generate Fuchsia binaries so far.
     run_bazel_command(['run', '//build/bazel/tests/hello_world'])
 
+    # Run a few simple Starlark unit tests.
+    log('@prebuilt_clang test suite')
+    run_bazel_command(['test', '@prebuilt_clang//:test_suite'])
+
     log('bazel_build_action() checks.')
     # This verifies that bazel_build_action() works properly, i.e. that
     # it invokes a Bazel build command that takes inputs from a
