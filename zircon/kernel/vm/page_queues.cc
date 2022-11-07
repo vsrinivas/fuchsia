@@ -807,12 +807,13 @@ void PageQueues::MoveToPagerBackedDirty(vm_page_t* page) {
 
 void PageQueues::SetAnonymousZeroFork(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {
   Guard<CriticalMutex> guard{&lock_};
-  SetQueueBacklinkLocked(page, object, page_offset, PageQueueAnonymousZeroFork);
+  SetQueueBacklinkLocked(page, object, page_offset,
+                         kZeroForkIsReclaimable ? mru_gen_to_queue() : PageQueueAnonymousZeroFork);
 }
 
 void PageQueues::MoveToAnonymousZeroFork(vm_page_t* page) {
   Guard<CriticalMutex> guard{&lock_};
-  MoveToQueueLocked(page, PageQueueAnonymousZeroFork);
+  MoveToQueueLocked(page, kZeroForkIsReclaimable ? mru_gen_to_queue() : PageQueueAnonymousZeroFork);
 }
 
 void PageQueues::ChangeObjectOffset(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {

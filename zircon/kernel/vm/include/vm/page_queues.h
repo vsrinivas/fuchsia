@@ -494,6 +494,11 @@ class PageQueues {
   // TODO(fxbug.dev/60238): Add tests and support options other than hard coding to false.
   static constexpr bool kAnonymousIsReclaimable = false;
 
+  // Determines if anonymous zero page forks are placed in the zero fork queue or in the reclaimable
+  // queue.
+  // TODO(fxbug.dev/60238): Add tests and support options other than hard coding to false.
+  static constexpr bool kZeroForkIsReclaimable = false;
+
   // The lock_ is needed to protect the linked lists queues as these cannot be implemented with
   // atomics.
   DECLARE_CRITICAL_MUTEX(PageQueues) mutable lock_;
