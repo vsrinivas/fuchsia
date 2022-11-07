@@ -142,6 +142,10 @@ zx::result<UsbCdcDescriptorParser> UsbCdcDescriptorParser::Parse(usb::UsbDevice&
       if (descriptor.b_descriptor_type != USB_DT_CS_INTERFACE) {
         continue;
       }
+      if (descriptor.b_length < sizeof(usb_cs_interface_descriptor_t)) {
+        zxlogf(WARNING, "Malformed class specific descriptor");
+        continue;
+      }
 
       const usb_cs_interface_descriptor_t* cs_ifc_desc =
           reinterpret_cast<const usb_cs_interface_descriptor_t*>(&descriptor);
@@ -151,12 +155,20 @@ zx::result<UsbCdcDescriptorParser> UsbCdcDescriptorParser::Parse(usb::UsbDevice&
           zxlogf(ERROR, "Multiple CDC headers");
           return zx::error(ZX_ERR_NOT_SUPPORTED);
         }
+        if (descriptor.b_length < sizeof(usb_cs_header_interface_descriptor_t)) {
+          zxlogf(WARNING, "Malformed CDC header descriptor");
+          continue;
+        }
         cdc_header_desc =
             reinterpret_cast<const usb_cs_header_interface_descriptor_t*>(&descriptor);
       } else if (cs_ifc_desc->b_descriptor_sub_type == USB_CDC_DST_ETHERNET) {
         if (cdc_eth_desc != nullptr) {
           zxlogf(ERROR, "Multiple CDC ethernet descriptors");
           return zx::error(ZX_ERR_NOT_SUPPORTED);
+        }
+        if (descriptor.b_length < sizeof(usb_cs_ethernet_interface_descriptor_t)) {
+          zxlogf(WARNING, "Malformed CDC ethernet descriptor");
+          continue;
         }
         cdc_eth_desc = reinterpret_cast<const usb_cs_ethernet_interface_descriptor_t*>(&descriptor);
       }
