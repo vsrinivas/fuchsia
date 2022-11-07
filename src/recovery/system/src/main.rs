@@ -15,57 +15,57 @@ mod keyboard;
 mod keys;
 mod proxy_view_assistant;
 
-use anyhow::{format_err, Error};
-use carnelian::{
-    app::Config,
-    color::Color,
-    drawing::{path_for_circle, DisplayRotation, FontFace},
-    input, make_message,
-    render::{rive::load_rive, BlendMode, Context as RenderContext, Fill, FillRule, Raster, Style},
-    scene::{
-        facets::{
-            RasterFacet, RiveFacet, TextFacetOptions, TextHorizontalAlignment,
-            TextVerticalAlignment,
+use {
+    anyhow::{format_err, Error},
+    carnelian::{
+        app::Config,
+        color::Color,
+        drawing::{path_for_circle, DisplayRotation, FontFace},
+        input, make_message,
+        render::{
+            rive::load_rive, BlendMode, Context as RenderContext, Fill, FillRule, Raster, Style,
         },
-        layout::{
-            CrossAxisAlignment, Flex, FlexOptions, MainAxisAlignment, MainAxisSize, Stack,
-            StackOptions,
+        scene::{
+            facets::{
+                RasterFacet, RiveFacet, TextFacetOptions, TextHorizontalAlignment,
+                TextVerticalAlignment,
+            },
+            layout::{
+                CrossAxisAlignment, Flex, FlexOptions, MainAxisAlignment, MainAxisSize, Stack,
+                StackOptions,
+            },
+            scene::{Scene, SceneBuilder},
         },
-        scene::{Scene, SceneBuilder},
+        App, AppAssistant, AppAssistantPtr, AppSender, AssistantCreatorFunc, Coord, LocalBoxFuture,
+        MessageTarget, Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
     },
-    App, AppAssistant, AppAssistantPtr, AppSender, AssistantCreatorFunc, Coord, LocalBoxFuture,
-    MessageTarget, Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
+    euclid::size2,
+    fdr_lib::{self as fdr, FactoryResetState, ResetEvent},
+    fidl_fuchsia_input_report::ConsumerControlButton,
+    fidl_fuchsia_recovery_policy::FactoryResetMarker as FactoryResetPolicyMarker,
+    fuchsia_async::{self as fasync, Task},
+    fuchsia_component::client::connect_to_protocol,
+    fuchsia_zircon::{Duration, Event},
+    futures::StreamExt,
+    recovery_ui_config::Config as UiConfig,
+    rive_rs::{self as rive},
+    std::{
+        borrow::{Borrow, Cow},
+        path::Path,
+    },
 };
 
-use euclid::size2;
-use fdr_lib::{self as fdr, FactoryResetState, ResetEvent};
 #[cfg(feature = "http_setup_server")]
-use fidl::endpoints::{DiscoverableProtocolMarker, RequestStream};
-use fidl_fuchsia_input_report::ConsumerControlButton;
-use fidl_fuchsia_recovery_policy::FactoryResetMarker as FactoryResetPolicyMarker;
-#[cfg(feature = "http_setup_server")]
-use fidl_fuchsia_recovery_ui::{
-    ProgressRendererMarker, ProgressRendererRequest, ProgressRendererRequestStream, Status,
-};
-#[cfg(feature = "http_setup_server")]
-use fuchsia_async::DurationExt;
-use fuchsia_async::{self as fasync, Task};
-use fuchsia_component::client::connect_to_protocol;
-#[cfg(feature = "http_setup_server")]
-use fuchsia_runtime::{take_startup_handle, HandleType};
-use fuchsia_zircon::{Duration, Event};
-use futures::StreamExt;
-#[cfg(feature = "http_setup_server")]
-use ota_lib::{ota, setup, OtaComponent, OtaManager, OtaStatus};
-#[cfg(feature = "http_setup_server")]
-use recovery_metrics_registry::cobalt_registry as metrics;
-use recovery_ui_config::Config as UiConfig;
-use rive_rs::{self as rive};
-#[cfg(feature = "http_setup_server")]
-use std::sync::Arc;
-use std::{
-    borrow::{Borrow, Cow},
-    path::Path,
+use {
+    fidl::endpoints::{DiscoverableProtocolMarker, RequestStream},
+    fidl_fuchsia_recovery_ui::{
+        ProgressRendererMarker, ProgressRendererRequest, ProgressRendererRequestStream, Status,
+    },
+    fuchsia_async::DurationExt,
+    fuchsia_runtime::{take_startup_handle, HandleType},
+    ota_lib::{ota, setup, OtaComponent, OtaManager, OtaStatus},
+    recovery_metrics_registry::cobalt_registry as metrics,
+    std::sync::Arc,
 };
 
 // 11 seconds so it can count from 10 down to 0 while displaying each tick for 1 second
@@ -76,28 +76,40 @@ const BG_COLOR: Color = Color::white();
 const HEADING_COLOR: Color = Color::new();
 const BODY_COLOR: Color = Color { r: 0x7e, g: 0x86, b: 0x8d, a: 0xff };
 const COUNTDOWN_COLOR: Color = Color { r: 0x42, g: 0x85, b: 0xf4, a: 0xff };
+
 #[cfg(feature = "http_setup_server")]
-const BUTTON_BORDER: f32 = 7.0;
-#[cfg(feature = "http_setup_server")]
-// Space added to between rows can have any width.
-const SPACE_WIDTH: f32 = 10.0;
-#[cfg(feature = "http_setup_server")]
-// Nice space for text below a button
-const SPACE_HEIGHT: f32 = 10.0;
+mod http_setup_server {
+    #[derive(Clone, PartialEq)]
+    pub(super) enum WiFiMessages {
+        Connecting,
+        Connected(bool),
+    }
+
+    pub(super) const BUTTON_BORDER: f32 = 7.0;
+    // Space added to between rows can have any width.
+    pub(super) const SPACE_WIDTH: f32 = 10.0;
+    // Nice space for text below a button
+    pub(super) const SPACE_HEIGHT: f32 = 10.0;
+
+    pub(super) const WIFI_SSID: &'static str = "WiFi SSID";
+    pub(super) const WIFI_PASSWORD: &'static str = "WiFi Password";
+    pub(super) const WIFI_CONNECT: &'static str = "WiFi Connect";
+    pub(super) const UPDATE: &'static str = "Update";
+}
+
+use crate::proxy_view_assistant::ProxyViewAssistant;
 
 #[cfg(feature = "http_setup_server")]
 use crate::{
     button::{Button, ButtonMessages},
+    http_setup_server::*,
     keyboard::{KeyboardMessages, KeyboardViewAssistant},
+    proxy_view_assistant::ProxyMessages,
     setup::SetupEvent,
 };
 
 #[cfg(feature = "debug_console")]
 use crate::console::{ConsoleMessages, ConsoleViewAssistant};
-
-#[cfg(feature = "http_setup_server")]
-use crate::proxy_view_assistant::ProxyMessages;
-use crate::proxy_view_assistant::ProxyViewAssistant;
 
 fn raster_for_circle(center: Point, radius: Coord, render_context: &mut RenderContext) -> Raster {
     let path = path_for_circle(center, radius, render_context);
@@ -121,29 +133,11 @@ enum RecoveryMessages {
     ResetFailed,
 }
 
-#[derive(Clone, PartialEq)]
-#[cfg(feature = "http_setup_server")]
-enum WiFiMessages {
-    Connecting,
-    Connected(bool),
-}
-
 const RECOVERY_MODE_HEADLINE: &'static str = "Recovery mode";
-
 const COUNTDOWN_MODE_HEADLINE: &'static str = "Factory reset device";
 const COUNTDOWN_MODE_BODY: &'static str =
     "\nContinue holding the keys to the end of the countdown. \
 This will wipe all of your data from this device and reset it to factory settings.";
-
-#[cfg(feature = "http_setup_server")]
-const WIFI_SSID: &'static str = "WiFi SSID";
-#[cfg(feature = "http_setup_server")]
-const WIFI_PASSWORD: &'static str = "WiFi Password";
-#[cfg(feature = "http_setup_server")]
-const WIFI_CONNECT: &'static str = "WiFi Connect";
-#[cfg(feature = "http_setup_server")]
-const UPDATE: &'static str = "Update";
-
 const PATH_TO_FDR_RESTRICTION_CONFIG: &'static str = "/config/data/check_fdr_restriction.json";
 
 /// An enum to track whether fdr is restricted or not.
