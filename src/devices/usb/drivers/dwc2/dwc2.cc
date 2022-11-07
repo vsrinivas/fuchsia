@@ -185,6 +185,8 @@ void Dwc2::HandleInEpInterrupt() {
             // we can expect either an IN or OUT EP0 transfer-complete interrupt to follow. See the
             // special case logic in either diepint/doepint.xfercompl() branches.
             timeout_recovering_ = true;
+            GINTMSK::Get().ReadFrom(mmio).set_ginnakeff(1).WriteTo(mmio);
+            dctl.set_sgnpinnak(1).WriteTo(mmio);
             DIEPINT::Get(ep_num).ReadFrom(mmio).set_timeout(1).WriteTo(mmio);
             break;
           }
