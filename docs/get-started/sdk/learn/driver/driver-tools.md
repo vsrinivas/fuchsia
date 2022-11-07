@@ -90,7 +90,7 @@ to open a connection to the `edu` device using its devfs path:
 ```
 
 Add `liveness_check()` and `compute_factorial()` functions to call methods using
-the `fuchsia.examples.qemuedu/Device` FIDL protocol returned from `OpenDevice()`.
+the `examples.qemuedu/Device` FIDL protocol returned from `OpenDevice()`.
 Finally, update the tool's `main()` function to call the appropriate device
 function based on the argument passed on the command line:
 
@@ -107,7 +107,7 @@ function based on the argument passed on the command line:
 ```
 
 Update the tool's build configuration to depend on the FIDL bindings for the
-`fuchsia.examples.qemuedu` library:
+`examples.qemuedu` library:
 
 `qemu_edu/tools/BUILD.bazel`:
 

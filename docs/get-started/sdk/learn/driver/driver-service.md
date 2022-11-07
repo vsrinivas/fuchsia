@@ -55,7 +55,7 @@ computation and liveness check hardware registers on the `edu` device.
 Add the following build rules to the bottom of the project's build configuration
 to compile the FIDL library and generate C++ bindings:
 
-*   `fuchsia_fidl_library()`: Declares the `fuchsia.examples.qemuedu` FIDL
+*   `fuchsia_fidl_library()`: Declares the `examples.qemuedu` FIDL
     library and describes the FIDL source files it includes.
 *   `fuchsia_fidl_llcpp_library()`: Describes the generated
     [LLCPP (Low-Level C++) bindings][fidl-cpp-bindings] for components to
@@ -91,7 +91,7 @@ structure:
 
 Create the new `qemu_edu/drivers/edu_server.h` file in your project directory
 with the following contents to include the FIDL bindings for the
-`fuchsia.examples.qemuedu` library and create a new `QemuEduServer` class to
+`examples.qemuedu` library and create a new `QemuEduServer` class to
 implement the server end of the FIDL protocol:
 
 `qemu_edu/drivers/edu_server.h`:
@@ -113,7 +113,7 @@ implement the server end of the FIDL protocol:
 ```
 
 Create the new `qemu_edu/drivers/edu_server.cc` file in your project directory
-with the following contents to implement the `fuchsia.examples.qemuedu/Device`
+with the following contents to implement the `examples.qemuedu/Device`
 protocol methods and map them to the device resource methods:
 
 `qemu_edu/drivers/edu_server.cc`:
@@ -145,7 +145,7 @@ as a capability:
 ```
 
 Update the driver's build configuration to depend on the FIDL bindings for the
-new `fuchsia.examples.qemuedu` library:
+new `examples.qemuedu` library:
 
 `qemu_edu/drivers/BUILD.bazel`:
 
@@ -159,7 +159,7 @@ new `fuchsia.examples.qemuedu` library:
 
 ## Export and serve the protocol
 
-The `qemu_edu` driver makes the `fuchsia.examples.qemuedu/Device` protocol
+The `qemu_edu` driver makes the `examples.qemuedu/Device` protocol
 discoverable to other components using devfs. To discover which driver services
 are available in the system, a non-driver component would look up the device
 filesystem (usually mounted to `/dev` in a component’s namespace) and scan for
@@ -185,7 +185,7 @@ capability:
 }
 ```
 
-Update the driver's `Start()` method to begin serving the `fuchsia.examples.qemuedu/Device` protocol
+Update the driver's `Start()` method to begin serving the `examples.qemuedu/Device` protocol
 to a new devfs entry that matches the device node's topological path:
 
 `qemu_edu/drivers/qemu_edu.cc`:

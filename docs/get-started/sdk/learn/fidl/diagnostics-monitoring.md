@@ -60,27 +60,27 @@ Monitoring echo_server.cm
 
 echo_server.cm 58694:58696 zx_channel_read_etc(handle: handle = fb9b5273, options: uint32 = 0, num_bytes: uint32 = 512, num_handles: uint32 = 4)
   -> ZX_OK
-    received request fuchsia.io/Directory.Open = { flags: uint32 = 3, mode: uint32 = 493, path: string = "svc/fidl.examples.routing.echo.Echo", object: handle = Channel:f93b597b(ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_SIGNAL | ZX_RIGHT_SIGNAL_PEER | ZX_RIGHT_WAIT | ZX_RIGHT_INSPECT)(channel:0:svc/fidl.examples.routing.echo.Echo) }
+    received request fuchsia.io/Directory.Open = { flags: uint32 = 3, mode: uint32 = 493, path: string = "svc/examples.routing.echo.Echo", object: handle = Channel:f93b597b(ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_SIGNAL | ZX_RIGHT_SIGNAL_PEER | ZX_RIGHT_WAIT | ZX_RIGHT_INSPECT)(channel:0:svc/examples.routing.echo.Echo) }
 
-echo_server.cm 58694:58696 zx_channel_read_etc(handle: handle = Channel:f93b597b(channel:0:svc/fidl.examples.routing.echo.Echo), options: uint32 = 0, num_bytes: uint32 = 512, num_handles: uint32 = 4)
+echo_server.cm 58694:58696 zx_channel_read_etc(handle: handle = Channel:f93b597b(channel:0:svc/examples.routing.echo.Echo), options: uint32 = 0, num_bytes: uint32 = 512, num_handles: uint32 = 4)
   -> ZX_OK
-    received request fidl.examples.routing.echo/Echo.EchoString = { value: string = "Hello, Fuchsia" }
+    received request examples.routing.echo/Echo.EchoString = { value: string = "Hello, Fuchsia" }
 
-echo_server.cm 58694:58696 zx_channel_write_etc(handle: handle = Channel:f93b597b(channel:0:svc/fidl.examples.routing.echo.Echo), options: uint32 = 0)
-  sent response fidl.examples.routing.echo/Echo.EchoString = { response: string = "Hello, Fuchsia" }
+echo_server.cm 58694:58696 zx_channel_write_etc(handle: handle = Channel:f93b597b(channel:0:svc/examples.routing.echo.Echo), options: uint32 = 0)
+  sent response examples.routing.echo/Echo.EchoString = { response: string = "Hello, Fuchsia" }
   -> ZX_OK
 
-echo_server.cm 58694:58696 zx_channel_read_etc(handle: handle = Channel:f93b597b(channel:0:svc/fidl.examples.routing.echo.Echo), options: uint32 = 0, num_bytes: uint32 = 512, num_handles: uint32 = 4)
+echo_server.cm 58694:58696 zx_channel_read_etc(handle: handle = Channel:f93b597b(channel:0:svc/examples.routing.echo.Echo), options: uint32 = 0, num_bytes: uint32 = 512, num_handles: uint32 = 4)
   -> ZX_ERR_PEER_CLOSED
 
-echo_server.cm 58694:58696 zx_handle_close(handle: handle = Channel:f93b597b(channel:0:svc/fidl.examples.routing.echo.Echo))
+echo_server.cm 58694:58696 zx_handle_close(handle: handle = Channel:f93b597b(channel:0:svc/examples.routing.echo.Echo))
   -> ZX_OK
 ```
 
 Notice the sequence of events:
 
 1.  A channel to the protocol implementation opens at
-    `svc/fidl.examples.routing.echo.Echo`.
+    `svc/examples.routing.echo.Echo`.
 1.  The server receives an `Echo.EchoString` request over the open channel,
     containing the string payload sent by the client.
 1.  The server sends a corresponding response with the same string payload.

@@ -81,7 +81,7 @@ context->svc()->Connect(proxy.NewRequest());
 ## Exercise: Echo server and client
 
 In this section, you'll use the generated FIDL bindings for
-`fidl.examples.routing.echo` to implement client and server components.
+`examples.routing.echo` to implement client and server components.
 
 <<../_common/_start_femu_with_packages.md>>
 
@@ -171,7 +171,7 @@ Add the following code to `main()` to serve the `Echo` protocol:
 This code performs the following steps to serve the `Echo` protocol:
 
 1.  Initialize `ComponentContext` and add an entry under
-    `/svc/fidl.examples.routing.echo.Echo` in the outgoing directory.
+    `/svc/examples.routing.echo.Echo` in the outgoing directory.
 1.  Serve the directory and begin listening for incoming connections.
 1.  Attach the `EchoImplementation` instance as a request handler for any
     matching `Echo` requests.
@@ -201,7 +201,7 @@ structure:
 ```
 
 Create the `echo-client/meta/echo_client.cml` component manifest and configure
-the client component to request the `fidl.examples.routing.echo.Echo` capability
+the client component to request the `examples.routing.echo.Echo` capability
 exposed by the server:
 
 `echo-client/meta/echo_client.cml`:
@@ -292,7 +292,7 @@ following contents:
 ```
 
 This creates a component realm with the server and client as child components,
-and routes the `fidl.examples.routing.echo.Echo` protocol capability to the
+and routes the `examples.routing.echo.Echo` protocol capability to the
 client.
 
 Add a `BUILD.bazel` file to create a build target for the realm component and a
@@ -391,7 +391,7 @@ You should see the following output in the device logs:
 ```
 
 The server component starts once the client makes a connection to the
-`fidl.examples.routing.echo.Echo` capability and continues running to serve
+`examples.routing.echo.Echo` capability and continues running to serve
 additional FIDL requests.
 
 Use `ffx component show` the see the echo server running in the component
@@ -408,14 +408,14 @@ ffx component show echo_server
        Component State: Resolved
  Incoming Capabilities: fuchsia.logger.LogSink
   Exposed Capabilities: diagnostics
-                        fidl.examples.routing.echo.Echo
+                        examples.routing.echo.Echo
        Execution State: Running
                 Job ID: 474691
             Process ID: 474712
            Running for: 2026280474361 ticks
            Merkle root: 666c40477785f89b0ace22b30d65f1338f1d308ecceacb0f65f5140baa889e1b
  Outgoing Capabilities: diagnostics
-                        fidl.examples.routing.echo.Echo
+                        examples.routing.echo.Echo
 ```
 
 ### Destroy the instance

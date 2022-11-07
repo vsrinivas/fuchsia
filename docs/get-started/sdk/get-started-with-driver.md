@@ -411,11 +411,11 @@ Do the following:
     Incoming Capabilities:  /svc/fuchsia.device.fs.Exporter
                             /svc/fuchsia.driver.compat.Service
                             /svc/fuchsia.logger.LogSink
-     Exposed Capabilities:  fuchsia.examples.qemuedu.Service
+     Exposed Capabilities:  examples.qemuedu.Service
               Merkle root:  619c1b8bd5596e2f705eb56b016b89eb68add91f4a406b6d60d1a8d2690b406d
           Execution State:  Running
              Start reason:  Instance is in a single_run collection
-    Outgoing Capabilities:  fuchsia.examples.qemuedu.Service
+    Outgoing Capabilities:  examples.qemuedu.Service
    ```
 
 5. View the device logs of the `qemu-edu` driver:
@@ -430,7 +430,7 @@ Do the following:
    $ tools/ffx log --tags qemu-edu dump
    2022-10-27 21:19:30.189][<ffx>]: logger started.
    [184.040][universe-pkg-drivers:root.sys.platform.pt.PCI0.bus.00_06_0_.pci-00_06.0-fidl][qemu-edu,driver][I]: [src/qemu_edu/drivers/qemu_edu.cc:65] edu device version major=1 minor=0
-   [184.073][universe-pkg-drivers:root.sys.platform.pt.PCI0.bus.00_06_0_.pci-00_06.0-fidl][qemu-edu,driver][I]: [src/qemu_edu/drivers/qemu_edu.cc:117] Exported devfs_path=sys/platform/pt/PCI0/bus/00:06.0_/qemu-edu service_path=fuchsia.examples.qemuedu.Service/default/device
+   [184.073][universe-pkg-drivers:root.sys.platform.pt.PCI0.bus.00_06_0_.pci-00_06.0-fidl][qemu-edu,driver][I]: [src/qemu_edu/drivers/qemu_edu.cc:117] Exported devfs_path=sys/platform/pt/PCI0/bus/00:06.0_/qemu-edu service_path=examples.qemuedu.Service/default/device
    ```
 
 ## 5. Build and run a tool {:#build-and-run-a-tool}
@@ -509,7 +509,7 @@ Do the following:
    $ tools/ffx log --tags qemu-edu dump
    [2022-10-27 21:19:30.189][<ffx>]: logger started.
    [184.040][universe-pkg-drivers:root.sys.platform.pt.PCI0.bus.00_06_0_.pci-00_06.0-fidl][qemu-edu,driver][I]: [src/qemu_edu/drivers/qemu_edu.cc:65] edu device version major=1 minor=0
-   [184.073][universe-pkg-drivers:root.sys.platform.pt.PCI0.bus.00_06_0_.pci-00_06.0-fidl][qemu-edu,driver][I]: [src/qemu_edu/drivers/qemu_edu.cc:117] Exported devfs_path=sys/platform/pt/PCI0/bus/00:06.0_/qemu-edu service_path=fuchsia.examples.qemuedu.Service/default/device
+   [184.073][universe-pkg-drivers:root.sys.platform.pt.PCI0.bus.00_06_0_.pci-00_06.0-fidl][qemu-edu,driver][I]: [src/qemu_edu/drivers/qemu_edu.cc:117] Exported devfs_path=sys/platform/pt/PCI0/bus/00:06.0_/qemu-edu service_path=examples.qemuedu.Service/default/device
    [248.087][universe-pkg-drivers:root.sys.platform.pt.PCI0.bus.00_06_0_.pci-00_06.0-fidl][qemu-edu,driver][I]: [src/qemu_edu/drivers/edu_server.cc:59] Replying with result=true
    [255.504][universe-pkg-drivers:root.sys.platform.pt.PCI0.bus.00_06_0_.pci-00_06.0-fidl][qemu-edu,driver][I]: [src/qemu_edu/drivers/edu_device.cc:124] Replying with factorial=479001600
    ```

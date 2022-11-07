@@ -120,7 +120,7 @@ target:
 Run `bazel build` and verify that the build completes successfully:
 
 ```posix-terminal
-bazel build --config=fuchsia_x64 //fuchsia-codelab/echo-fidl:fidl.examples.routing.echo.fidl_cc
+bazel build --config=fuchsia_x64 //fuchsia-codelab/echo-fidl:examples.routing.echo.fidl_cc
 ```
 
 ### Examine the FIDL bindings
