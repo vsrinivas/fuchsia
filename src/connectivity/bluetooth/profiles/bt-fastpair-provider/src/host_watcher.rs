@@ -198,7 +198,7 @@ pub(crate) mod tests {
             technology: Some(sys::TechnologyType::LowEnergy),
             address: Some(Address::Public([1, 2, 3, 4, 5, 6]).into()),
             active: Some(active),
-            local_name: Some("foobar".to_string()),
+            local_name: Some("fuchsia123".to_string()),
             discoverable: Some(discoverable),
             discovering: Some(true),
             addresses: Some(vec![Address::Public([1, 2, 3, 4, 5, 6]).into()]),

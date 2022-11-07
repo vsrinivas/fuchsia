@@ -109,6 +109,14 @@ pub(crate) mod tests {
         example_aes_key().encrypt(message).to_vec()
     }
 
+    /// Encrypts the provided `message` with the example AES key. Returns the buffer and the example
+    /// public key defined in the GFPS.
+    pub(crate) fn encrypt_message_include_public_key(message: &[u8; 16]) -> Vec<u8> {
+        let mut encrypted_message = example_aes_key().encrypt(message).to_vec();
+        encrypted_message.append(&mut bob_public_key_bytes());
+        encrypted_message
+    }
+
     /// This test verifies the ECDH key exchange algorithm.
     /// The contents of this test case are pulled from the GFPS specification.
     /// See https://developers.google.com/nearby/fast-pair/specifications/appendix/testcases#ecdh_key_exchange

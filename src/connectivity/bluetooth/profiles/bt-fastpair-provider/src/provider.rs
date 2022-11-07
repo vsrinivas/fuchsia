@@ -20,8 +20,8 @@ use crate::pairing::{PairingArgs, PairingManager};
 use crate::types::keys::aes_from_anti_spoofing_and_public;
 use crate::types::packets::{
     decrypt_account_key_request, decrypt_key_based_pairing_request, decrypt_passkey_request,
-    key_based_pairing_response, parse_key_based_pairing_request, passkey_response,
-    personalized_name_response, KeyBasedPairingAction, KeyBasedPairingRequest,
+    decrypt_personalized_name_request, key_based_pairing_response, parse_key_based_pairing_request,
+    passkey_response, personalized_name_response, KeyBasedPairingAction, KeyBasedPairingRequest,
 };
 use crate::types::{AccountKey, AccountKeyList, Error, SharedSecret};
 
@@ -33,11 +33,19 @@ pub enum ServiceRequest {
     EnableFastPair { handle: ProviderHandleProxy, responder: ProviderEnableResponder },
 }
 
+/// State associated with the Fast Pair Provider server.
+struct State {
+    /// The configuration of the Fast Pair Provider server.
+    config: Config,
+    /// The local name set by a remote peer. This is None until it is set by the peer.
+    personalized_name: Option<String>,
+}
+
 /// The toplevel server that manages the current state of the Fast Pair Provider service.
 /// Owns the interfaces for interacting with various BT system services.
 pub struct Provider {
-    /// The configuration of the Fast Pair Provider server.
-    config: Config,
+    /// Current state of the server.
+    state: State,
     /// The upstream client that has requested to enable the Fast Pair Provider service. If unset,
     /// the component will not advertise the service over LE.
     upstream: FastPairConnectionManager,
@@ -65,7 +73,7 @@ impl Provider {
         let host_watcher = HostWatcher::new(watcher);
         let pairing_svc = fuchsia_component::client::connect_to_protocol::<PairingMarker>()?;
         Ok(Self {
-            config,
+            state: State { config, personalized_name: None },
             upstream: FastPairConnectionManager::new(),
             account_keys: AccountKeyList::load()?,
             advertiser,
@@ -76,9 +84,16 @@ impl Provider {
         })
     }
 
+    /// Returns the current local name, if set.
+    fn local_name(&self) -> Option<String> {
+        // If set, the personalized name is always preferred. Otherwise, defaults to the local
+        // name associated with the active host.
+        self.state.personalized_name.clone().map_or(self.host_watcher.local_name(), Some)
+    }
+
     async fn advertise(&mut self, discoverable: bool) -> Result<(), Error> {
         if discoverable {
-            self.advertiser.advertise_model_id(self.config.model_id).await
+            self.advertiser.advertise_model_id(self.state.config.model_id).await
         } else {
             self.advertiser.advertise_account_keys(&self.account_keys).await
         }
@@ -133,7 +148,8 @@ impl Provider {
                 return Err(Error::internal("Active host is not discoverable"));
             }
 
-            let aes_key = aes_from_anti_spoofing_and_public(&self.config.local_private_key, &key)?;
+            let aes_key =
+                aes_from_anti_spoofing_and_public(&self.state.config.local_private_key, &key)?;
             vec![aes_key]
         } else {
             debug!("Trying saved Account Keys");
@@ -179,6 +195,7 @@ impl Provider {
             }
         };
 
+        let name = self.local_name();
         // There must be an active local Host and PairingManager to facilitate pairing.
         let local_public_address = if let Some(addr) = self.host_watcher.public_address() {
             addr
@@ -198,7 +215,9 @@ impl Provider {
         // Some key-based pairing requests require additional steps.
         // TODO(fxbug.dev/96217): Track the salt in `request` to prevent replay attacks.
         match request.action {
-            KeyBasedPairingAction::SeekerInitiatesPairing { received_provider_address } => {
+            KeyBasedPairingAction::SeekerInitiatesPairing { received_provider_address }
+            | KeyBasedPairingAction::PersonalizedNameWrite { received_provider_address } => {
+                // We already check the HostWatcher for the existence of an active Host.
                 let addresses = self.host_watcher.addresses().expect("active host");
                 if !addresses.iter().any(|addr| addr.bytes() == &received_provider_address) {
                     warn!(
@@ -227,8 +246,8 @@ impl Provider {
         }
 
         // Notify the Seeker with the current local host name if known.
-        let name = self.host_watcher.local_name();
         if request.notify_name && name.is_some() {
+            debug!(?peer_id, "Notifying local name (name={:?})", name);
             let encrypted_response = personalized_name_response(&key, name.unwrap());
             if let Err(e) = self.gatt.notify_additional_data(peer_id, encrypted_response) {
                 warn!("Error notifying Additional Data characteristic: {:?}", e);
@@ -303,9 +322,9 @@ impl Provider {
                 .ok_or(Error::internal("No active pairing procedure"))?;
 
             let account_key = decrypt_account_key_request(encrypted_request, key)?;
-            // The key-based pairing procedure is officially complete. The shared secret stored by
-            // the `PairingManager` is no longer valid.
-            pairing_manager.complete_pairing_procedure(peer_id)?;
+            // The key-based pairing procedure is officially complete. The shared secret is still
+            // persisted because the peer may request to set a personalized device name.
+            pairing_manager.account_key_write(peer_id)?;
             Ok(account_key)
         };
 
@@ -324,6 +343,41 @@ impl Provider {
                 }
             }
         }
+    }
+
+    fn handle_additional_data_request(
+        &mut self,
+        peer_id: PeerId,
+        request: Vec<u8>,
+        response: Box<dyn FnOnce(Result<(), gatt::Error>)>,
+    ) {
+        // The request can only be decrypted if there is a procedure in progress.
+        let parse_fn = || -> Result<String, Error> {
+            let pairing_manager =
+                self.pairing.inner_mut().ok_or(Error::internal("No pairing manager"))?;
+            let key = pairing_manager
+                .key_for_procedure(&peer_id)
+                .map(Clone::clone)
+                .ok_or(Error::internal("No active pairing procedure"))?;
+
+            let personalized_name = decrypt_personalized_name_request(&key, request)?;
+            // All mandatory and optional steps are complete. The shared secret is no longer valid
+            // and the procedure can be cleaned up.
+            pairing_manager.complete_pairing_procedure(peer_id)?;
+            Ok(personalized_name)
+        };
+        let result = match parse_fn() {
+            Ok(name) => {
+                debug!(?peer_id, "Received request to save personalized name: {}", name);
+                self.state.personalized_name = Some(name);
+                Ok(())
+            }
+            Err(e) => {
+                warn!(?peer_id, "Couldn't process additional data request: {:?}", e);
+                Err(gatt::Error::UnlikelyError)
+            }
+        };
+        response(result);
     }
 
     fn handle_gatt_update(&mut self, update: GattRequest) {
@@ -345,9 +399,8 @@ impl Provider {
             GattRequest::WriteAccountKey { peer_id, encrypted_account_key, response } => {
                 self.handle_write_account_key_request(peer_id, encrypted_account_key, response);
             }
-            GattRequest::AdditionalData { .. } => {
-                // TODO(fxbug.dev/95796): Handle personalized name write requests.
-                todo!("Handle additional data writes")
+            GattRequest::AdditionalData { peer_id, encrypted_data, response } => {
+                self.handle_additional_data_request(peer_id, encrypted_data, response);
             }
         }
     }
@@ -465,15 +518,17 @@ mod tests {
     use std::convert::{TryFrom, TryInto};
 
     use crate::fidl_client::tests::MockUpstreamClient;
+    use crate::gatt_service::tests::setup_gatt_service;
     use crate::gatt_service::{
-        tests::setup_gatt_service, ACCOUNT_KEY_CHARACTERISTIC_HANDLE,
-        ADDITIONAL_DATA_CHARACTERISTIC_HANDLE, KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE,
-        PASSKEY_CHARACTERISTIC_HANDLE,
+        ACCOUNT_KEY_CHARACTERISTIC_HANDLE, ADDITIONAL_DATA_CHARACTERISTIC_HANDLE,
+        KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE, PASSKEY_CHARACTERISTIC_HANDLE,
     };
     use crate::host_watcher::tests::example_host;
     use crate::pairing::tests::MockPairing;
+    use crate::types::keys::tests::{encrypt_message, encrypt_message_include_public_key};
     use crate::types::packets::tests::{
-        ACCOUNT_KEY_REQUEST, KEY_BASED_PAIRING_REQUEST, PASSKEY_REQUEST,
+        key_based_pairing_request, ACCOUNT_KEY_REQUEST, DEVICE_ACTION_PERSONALIZED_NAME_REQUEST,
+        PASSKEY_REQUEST,
     };
     use crate::types::tests::expect_keys_at_path;
     use crate::types::{keys, ModelId};
@@ -486,7 +541,7 @@ mod tests {
         MockPairing,
         MockUpstreamClient,
     ) {
-        let config = Config::example_config();
+        let state = State { config: Config::example_config(), personalized_name: None };
 
         let (peripheral_proxy, peripheral_server) =
             create_proxy_and_stream::<PeripheralMarker>().unwrap();
@@ -505,7 +560,7 @@ mod tests {
         let upstream = FastPairConnectionManager::new_with_upstream(c);
 
         let this = Provider {
-            config,
+            state,
             upstream,
             account_keys: AccountKeyList::with_capacity_and_keys(10, vec![]),
             advertiser,
@@ -741,12 +796,10 @@ mod tests {
         let _ = exec.run_until_stalled(&mut server_fut).expect_pending("still active");
 
         // A Key-based pairing GATT request should be rejected.
-        let mut encrypted_buf = keys::tests::encrypt_message(&KEY_BASED_PAIRING_REQUEST);
-        encrypted_buf.append(&mut keys::tests::bob_public_key_bytes());
         let write_fut = gatt_write_results_in_expected_notification(
             &gatt,
             KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE,
-            encrypted_buf,
+            encrypt_message_include_public_key(&key_based_pairing_request(0x00)),
             Err(gatt::Error::WriteRequestRejected),
             /* expect_item= */ false,
         );
@@ -834,12 +887,10 @@ mod tests {
 
         // Initiating a Key-based pairing request should succeed. The buffer is encrypted by the key
         // defined in the GFPS.
-        let mut encrypted_buf = keys::tests::encrypt_message(&KEY_BASED_PAIRING_REQUEST);
-        encrypted_buf.append(&mut keys::tests::bob_public_key_bytes());
         let write_fut = gatt_write_results_in_expected_notification(
             &gatt,
             KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE,
-            encrypted_buf,
+            encrypt_message_include_public_key(&key_based_pairing_request(0x00)),
             Ok(()),
             /* expect_item= */ true,
         );
@@ -859,11 +910,10 @@ mod tests {
         let _ = exec.run_until_stalled(&mut pairing_fut).expect_pending("waiting for response");
 
         // Expect the peer to then send the passkey over GATT.
-        let encrypted_buf = keys::tests::encrypt_message(&PASSKEY_REQUEST);
         let write_fut = gatt_write_results_in_expected_notification(
             &gatt,
             PASSKEY_CHARACTERISTIC_HANDLE,
-            encrypted_buf,
+            encrypt_message(&PASSKEY_REQUEST),
             Ok(()),
             /* expect_item= */ true,
         );
@@ -882,20 +932,36 @@ mod tests {
         let _ = exec.run_until_stalled(&mut server_fut).expect_pending("main loop still active");
 
         // After pairing succeeds, the peer will request to write an Account Key.
-        let encrypted_buf = keys::tests::encrypt_message(&ACCOUNT_KEY_REQUEST);
         let write_fut = gatt_write_results_in_expected_notification(
             &gatt,
             ACCOUNT_KEY_CHARACTERISTIC_HANDLE,
-            encrypted_buf,
+            encrypt_message(&ACCOUNT_KEY_REQUEST),
             Ok(()),
             /* expect_item= */ false,
         );
-        let (_, _server_fut) = run_while(&mut exec, server_fut, write_fut);
+        let (_, server_fut) = run_while(&mut exec, server_fut, write_fut);
         // Account Key should be saved to persistent storage.
         expect_keys_at_path(
             AccountKeyList::TEST_PERSISTED_ACCOUNT_KEYS_FILEPATH,
             vec![AccountKey::new(ACCOUNT_KEY_REQUEST)],
         );
+
+        // The peer can optionally request to set a personalized name.
+        let new_name = "myfuchsia123".to_string();
+        let write_fut = gatt_write_results_in_expected_notification(
+            &gatt,
+            ADDITIONAL_DATA_CHARACTERISTIC_HANDLE,
+            personalized_name_response(&keys::tests::example_aes_key(), new_name.clone()),
+            Ok(()),
+            /* expect_item= */ false,
+        );
+        let (_, server_fut) = run_while(&mut exec, server_fut, write_fut);
+
+        // `flags` = notify name. The updated name should be returned.
+        let encrypted_buf = encrypt_message_include_public_key(&key_based_pairing_request(0x20));
+        let name_request_fut = make_personalized_name_request(&gatt, PeerId(999), encrypted_buf);
+        let (returned_name, _server_fut) = run_while(&mut exec, server_fut, name_request_fut);
+        assert_eq!(returned_name, new_name);
 
         // Upstream client should be notified that Fast Pair pairing has successfully completed.
         let pairing_complete_fut = mock_upstream.expect_on_pairing_complete(PEER_ID);
@@ -915,17 +981,12 @@ mod tests {
         );
         let (_sender, _provider_server) = server_task(provider);
 
-        // Initiating a key-based pairing request should succeed. We expect the standard KBP
-        // GATT notification as well as the additional characteristic notification.
-        let mut kbp_request = KEY_BASED_PAIRING_REQUEST;
-        // Flags: Notify name
-        kbp_request[1] = 0x20;
-        let mut encrypted_buf = keys::tests::encrypt_message(&kbp_request);
-        encrypted_buf.append(&mut keys::tests::bob_public_key_bytes());
+        // Initiating a key-based pairing request should succeed. `flags` = notify name
+        // We expect the standard KBP GATT notification as well as the additional data notification.
         gatt_write_results_in_expected_notification(
             &gatt,
             KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE,
-            encrypted_buf,
+            encrypt_message_include_public_key(&key_based_pairing_request(0x20)),
             Ok(()),
             /* expect_item= */ true,
         )
@@ -950,12 +1011,10 @@ mod tests {
 
         // Initiating a valid key-based pairing request should succeed and be handled gracefully.
         // Because there's no active host, we don't expect any subsequent GATT notification.
-        let mut encrypted_buf = keys::tests::encrypt_message(&KEY_BASED_PAIRING_REQUEST);
-        encrypted_buf.append(&mut keys::tests::bob_public_key_bytes());
         gatt_write_results_in_expected_notification(
             &gatt,
             KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE,
-            encrypted_buf,
+            encrypt_message_include_public_key(&key_based_pairing_request(0x00)),
             Err(gatt::Error::WriteRequestRejected),
             /* expect_item= */ false,
         )
@@ -978,16 +1037,14 @@ mod tests {
         // The provided Provider address is the known BLE address - the request should succeed.
 
         // Bytes 2-7 correspond to the address (in BE).
-        let mut request_with_ble_address = KEY_BASED_PAIRING_REQUEST;
+        let mut request_with_ble_address = key_based_pairing_request(0x00);
         let mut address_bytes = ble_address.bytes().clone();
         address_bytes.reverse();
         request_with_ble_address[2..8].copy_from_slice(&address_bytes[..]);
-        let mut encrypted_buf = keys::tests::encrypt_message(&request_with_ble_address);
-        encrypted_buf.append(&mut keys::tests::bob_public_key_bytes());
         gatt_write_results_in_expected_notification(
             &gatt,
             KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE,
-            encrypted_buf,
+            encrypt_message_include_public_key(&request_with_ble_address),
             Ok(()),
             /* expect_item= */ true,
         )
@@ -1009,14 +1066,12 @@ mod tests {
         // should be rejected.
 
         // Bytes 2-7 correspond to the address.
-        let mut request_with_invalid_address = KEY_BASED_PAIRING_REQUEST;
+        let mut request_with_invalid_address = key_based_pairing_request(0x00);
         request_with_invalid_address[4] = 0xff;
-        let mut encrypted_buf = keys::tests::encrypt_message(&request_with_invalid_address);
-        encrypted_buf.append(&mut keys::tests::bob_public_key_bytes());
         gatt_write_results_in_expected_notification(
             &gatt,
             KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE,
-            encrypted_buf,
+            encrypt_message_include_public_key(&request_with_invalid_address),
             Err(gatt::Error::WriteRequestRejected),
             /* expect_item= */ false,
         )
@@ -1037,12 +1092,10 @@ mod tests {
         // Initiating a key-based pairing request with public key should succeed and be handled
         // gracefully. Because the local host is not discoverable, we don't expect a subsequent GATT
         // notification.
-        let mut encrypted_buf = keys::tests::encrypt_message(&KEY_BASED_PAIRING_REQUEST);
-        encrypted_buf.append(&mut keys::tests::bob_public_key_bytes());
         gatt_write_results_in_expected_notification(
             &gatt,
             KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE,
-            encrypted_buf,
+            encrypt_message_include_public_key(&key_based_pairing_request(0x00)),
             Err(gatt::Error::WriteRequestRejected),
             /* expect_item= */ false,
         )
@@ -1063,11 +1116,10 @@ mod tests {
         // Initiating a key-based pairing request should be handled gracefully. Pairing should not
         // continue because the `encrypted_buf` doesn't contain the peer's public key and there are
         // no locally saved Account Keys.
-        let encrypted_buf = keys::tests::encrypt_message(&KEY_BASED_PAIRING_REQUEST);
         gatt_write_results_in_expected_notification(
             &gatt,
             KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE,
-            encrypted_buf,
+            encrypt_message(&key_based_pairing_request(0x00)),
             Err(gatt::Error::WriteRequestRejected),
             /* expect_item= */ false,
         )
@@ -1096,11 +1148,10 @@ mod tests {
 
         // Initiating a key-based pairing request should be handled gracefully. Because there are no
         // saved Account Keys, pairing should not continue.
-        let encrypted_buf = keys::tests::encrypt_message(&KEY_BASED_PAIRING_REQUEST);
         gatt_write_results_in_expected_notification(
             &gatt,
             KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE,
-            encrypted_buf,
+            encrypt_message(&key_based_pairing_request(0x00)),
             Ok(()),
             /* expect_item= */ true,
         )
@@ -1121,11 +1172,10 @@ mod tests {
         // Initiating a passkey write request should be handled gracefully. Because there is no
         // active pairing procedure (e.g a key-based pairing write was never received), pairing
         // should not continue and the GATT request should result in Error.
-        let encrypted_buf = keys::tests::encrypt_message(&PASSKEY_REQUEST);
         gatt_write_results_in_expected_notification(
             &gatt,
             PASSKEY_CHARACTERISTIC_HANDLE,
-            encrypted_buf,
+            encrypt_message(&PASSKEY_REQUEST),
             Err(gatt::Error::WriteRequestRejected),
             /* expect_item= */ false,
         )
@@ -1152,12 +1202,10 @@ mod tests {
         let _ = exec.run_until_stalled(&mut server_fut).expect_pending("still active");
 
         // Key-based pairing begins.
-        let mut encrypted_buf = keys::tests::encrypt_message(&KEY_BASED_PAIRING_REQUEST);
-        encrypted_buf.append(&mut keys::tests::bob_public_key_bytes());
         let write_fut = gatt_write_results_in_expected_notification(
             &gatt,
             KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE,
-            encrypted_buf,
+            encrypt_message_include_public_key(&key_based_pairing_request(0x00)),
             Ok(()),
             /* expect_item= */ true,
         );
@@ -1174,11 +1222,10 @@ mod tests {
         let _ = exec.run_until_stalled(&mut server_fut).expect_pending("main loop still active");
 
         // Because there is no PairingManager, a GATT passkey write request should be rejected.
-        let encrypted_buf = keys::tests::encrypt_message(&PASSKEY_REQUEST);
         let write_fut = gatt_write_results_in_expected_notification(
             &gatt,
             PASSKEY_CHARACTERISTIC_HANDLE,
-            encrypted_buf,
+            encrypt_message(&PASSKEY_REQUEST),
             Err(gatt::Error::WriteRequestRejected),
             /* expect_item= */ false,
         );
@@ -1209,12 +1256,10 @@ mod tests {
 
         // Initiating a Key-based pairing request should succeed. The buffer is encrypted by the key
         // defined in the GFPS.
-        let mut encrypted_buf = keys::tests::encrypt_message(&KEY_BASED_PAIRING_REQUEST);
-        encrypted_buf.append(&mut keys::tests::bob_public_key_bytes());
         let write_fut = gatt_write_results_in_expected_notification(
             &gatt,
             KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE,
-            encrypted_buf,
+            encrypt_message_include_public_key(&key_based_pairing_request(0x00)),
             Ok(()),
             /* expect_item= */ true,
         );
@@ -1233,11 +1278,10 @@ mod tests {
         let _ = exec.run_until_stalled(&mut pairing_fut).expect_pending("waiting for response");
 
         // Expect the peer to then send the passkey over GATT.
-        let encrypted_buf = keys::tests::encrypt_message(&PASSKEY_REQUEST);
         let write_fut = gatt_write_results_in_expected_notification(
             &gatt,
             PASSKEY_CHARACTERISTIC_HANDLE,
-            encrypted_buf,
+            encrypt_message(&PASSKEY_REQUEST),
             Ok(()),
             /* expect_item= */ true,
         );
@@ -1250,15 +1294,108 @@ mod tests {
 
         // The peer requests to write the Account Key before pairing is complete. This should be
         // rejected.
-        let encrypted_buf = keys::tests::encrypt_message(&ACCOUNT_KEY_REQUEST);
         let write_fut = gatt_write_results_in_expected_notification(
             &gatt,
             ACCOUNT_KEY_CHARACTERISTIC_HANDLE,
-            encrypted_buf,
+            encrypt_message(&ACCOUNT_KEY_REQUEST),
             Err(gatt::Error::WriteRequestRejected),
             /* expect_item= */ false,
         );
         let (_, _server_fut) = run_while(&mut exec, server_fut, write_fut);
+    }
+
+    /// Makes a key-based pairing request with the notify personalized name flag set.
+    /// Returns the name that was received on the additional data characteristic.
+    #[track_caller]
+    async fn make_personalized_name_request(
+        gatt: &LocalServiceProxy,
+        id: PeerId,
+        encrypted_buf: Vec<u8>,
+    ) -> String {
+        let () = gatt
+            .write_value(WriteValueRequest {
+                peer_id: Some(id.into()),
+                handle: Some(KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE),
+                offset: Some(0),
+                value: Some(encrypted_buf),
+                ..WriteValueRequest::EMPTY
+            })
+            .await
+            .expect("valid FIDL request")
+            .expect("GATT write is OK");
+
+        // We expect two notifications:
+        // 1) Key-based pairing characteristic acknowledging success
+        // 2) Additional data characteristic with the current local name.
+        let mut stream = gatt.take_event_stream();
+        let ValueChangedParameters { handle, .. } = stream
+            .select_next_some()
+            .await
+            .expect("valid event")
+            .into_on_notify_value()
+            .expect("notification");
+        assert_eq!(handle, Some(KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE));
+
+        let ValueChangedParameters { handle, value, .. } = stream
+            .select_next_some()
+            .await
+            .expect("valid event")
+            .into_on_notify_value()
+            .expect("notification");
+        assert_eq!(handle, Some(ADDITIONAL_DATA_CHARACTERISTIC_HANDLE));
+        let value = value.expect("encrypted notification");
+        decrypt_personalized_name_request(&keys::tests::example_aes_key(), value)
+            .expect("notification correctly formatted")
+    }
+
+    /// Tests the personalized name flow that can be initiated via the key-based pairing
+    /// characteristic. This flow bypasses the main pairing procedure.
+    #[fuchsia::test]
+    async fn personalized_name_write() {
+        let (mut provider, _le_peripheral, gatt, _host_watcher, _mock_pairing, _mock_upstream) =
+            setup_provider().await;
+
+        provider.host_watcher.set_active_host(
+            example_host(HostId(1), /* active= */ true, /* discoverable= */ true)
+                .try_into()
+                .unwrap(),
+        );
+        let (_sender, _provider_server) = server_task(provider);
+
+        // First peer wants to know the personalized name. `flags` = notify name
+        let other_id = PeerId(1001);
+        let encrypted_buf = encrypt_message_include_public_key(&key_based_pairing_request(0x20));
+        let current_name = make_personalized_name_request(&gatt, other_id, encrypted_buf).await;
+        // Because the personalized name has not been set yet, we expect the returned name to be the
+        // default name associated with the local host - set in `example_host()`.
+        assert_eq!(current_name, "fuchsia123".to_string());
+
+        // A different peer wants to set the personalized name by making a Device Action request
+        // via the key-based pairing characteristic.
+        gatt_write_results_in_expected_notification(
+            &gatt,
+            KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE,
+            encrypt_message_include_public_key(&DEVICE_ACTION_PERSONALIZED_NAME_REQUEST),
+            Ok(()),
+            /* expect_item= */ true,
+        )
+        .await;
+        // It then sets the name by writing to the additional data characteristic.
+        gatt_write_results_in_expected_notification(
+            &gatt,
+            ADDITIONAL_DATA_CHARACTERISTIC_HANDLE,
+            personalized_name_response(&keys::tests::example_aes_key(), "myfuchsia".to_string()),
+            Ok(()),
+            /* expect_item= */ false,
+        )
+        .await;
+
+        // Trying to get the name should return the updated name. `flags` = notify name.
+        let random_id = PeerId(999);
+        let encrypted_buf = encrypt_message_include_public_key(&key_based_pairing_request(0x20));
+        let current_name = make_personalized_name_request(&gatt, random_id, encrypted_buf).await;
+        // The returned name should be the personalized name set by the previous peer.
+        assert_eq!(current_name, "myfuchsia".to_string());
     }
 
     #[fuchsia::test]

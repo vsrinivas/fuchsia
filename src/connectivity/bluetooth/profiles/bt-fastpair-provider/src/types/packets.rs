@@ -21,6 +21,10 @@ const GATT_REQUEST_BUFFER_SIZE: usize = 16;
 /// Default size of an encrypted/decrypted GATT response buffer.
 const GATT_RESPONSE_BUFFER_SIZE: usize = 16;
 
+/// The ID associated with a personalized name write request.
+/// Defined in https://developers.google.com/nearby/fast-pair/specifications/extensions/personalizedname
+const PERSONALIZED_NAME_DATA_ID: u8 = 0x01;
+
 /// Attempts to parse the provided key-based pairing `request`.
 /// Returns the encrypted portion of the request and an optional Public Key on success.
 pub fn parse_key_based_pairing_request(
@@ -53,13 +57,26 @@ bitfield! {
     /// https://developers.google.com/nearby/fast-pair/specifications/characteristics
     /// Note: `bitfields` uses the opposite bit endianness from Table 1.2.1 - e.g. Bit 0 in the
     /// table corresponds to Bit 7 in the `bitfields` declaration.
-    struct KeyBasedPairingFlags(u8);
+    pub struct KeyBasedPairingFlags(u8);
     impl Debug;
     // Bits 0-3 are reserved.
     pub bool, retroactive_write, _: 4;
     pub bool, notify_name, _: 5;
     pub bool, provider_initiates_bonding, _: 6;
     // Bit 7 (MSB) is deprecated and ignored.
+}
+
+bitfield! {
+    /// The flags associated with a device action request.
+    /// Defined in Table 1.2.2 in
+    /// https://developers.google.com/nearby/fast-pair/specifications/characteristics#table1.2.2
+    /// Note: `bitfields` uses the opposite bit endianness from Table 1.2.2 - e.g. Bit 0 in the
+    /// table corresponds to Bit 7 in the `bitfields` declaration.
+    pub struct DeviceActionFlags(u8);
+    impl Debug;
+    // Bits 0-5 are reserved.
+    pub bool, has_additional_data, _: 6;
+    pub bool, device_action, _: 7;
 }
 
 /// Actions that the Provider should take after a GATT write to the key-based pairing
@@ -74,6 +91,8 @@ pub enum KeyBasedPairingAction {
     /// Seeker has already paired to the Provider device and wants to retroactively save a Fast Pair
     /// Account Key for this Provider device.
     RetroactiveWrite { seeker_address: Address },
+    /// Seeker wants to write a personalized name for this device.
+    PersonalizedNameWrite { received_provider_address: [u8; 6] },
     // TODO(fxbug.dev/99734): Add Device Action requests.
 }
 
@@ -133,8 +152,25 @@ pub fn decrypt_key_based_pairing_request(
             });
         }
         MessageType::DeviceAction => {
-            let raw_flags = request[1];
-            debug!(?raw_flags, "Device Action request");
+            let flags = DeviceActionFlags(request[1]);
+            debug!(?flags, "Device Action request");
+            let mut received_provider_address = [0; 6];
+            received_provider_address.copy_from_slice(&request[2..8]);
+            received_provider_address.reverse();
+            if flags.has_additional_data() {
+                // The only additional data flow defined in the spec is the personalized name write.
+                if request[10] == PERSONALIZED_NAME_DATA_ID {
+                    return Ok(KeyBasedPairingRequest {
+                        action: KeyBasedPairingAction::PersonalizedNameWrite {
+                            received_provider_address,
+                        },
+                        notify_name: false,
+                        _salt: request[11..].to_vec(),
+                    });
+                }
+                let err = format!("Additional Data request with invalid ID ({})", request[10]);
+                return Err(Error::internal(&err));
+            }
             // TODO(fxbug.dev/99734): Support Device Action requests.
             return Err(Error::internal("Device Action requests not supported"));
         }
@@ -279,12 +315,42 @@ fn encrypt_personalized_name(key: &SharedSecret, name: String, nonce: &[u8; 8]) 
     encrypted_blocks
 }
 
+/// Returns the personalized name or Error if the encrypted `request` could not be parsed.
+pub fn decrypt_personalized_name_request(
+    key: &SharedSecret,
+    request: Vec<u8>,
+) -> Result<String, Error> {
+    // First 8 bytes is the HMAC-SHA256 and is ignored.
+    // Next 8 bytes is the nonce.
+    let mut block_mask = [0; 16];
+    block_mask[8..].copy_from_slice(&request[8..16]);
+    let mut decrypted_blocks = vec![];
+    for (i, block) in request[16..].chunks(16).enumerate() {
+        block_mask[0] = i as u8;
+        let decrypted_block = key.encrypt(&block_mask);
+        let mut combined_decrypted_block =
+            block.iter().zip(decrypted_block.iter()).map(|(&x1, &x2)| x1 ^ x2).collect();
+        decrypted_blocks.append(&mut combined_decrypted_block);
+    }
+    String::from_utf8(decrypted_blocks).map_err(|_| Error::internal("invalid personalized name"))
+}
+
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
 
     use crate::types::keys::tests::{bob_public_key_bytes, encrypt_message, example_aes_key};
     use assert_matches::assert_matches;
+
+    /// Returns a key-based pairing request with the provided `flags`. A fixed address of
+    /// 0x010203040506 is used.
+    pub(crate) fn key_based_pairing_request(flags: u8) -> [u8; 16] {
+        [
+            0x00, flags, // Key Pairing request with flags
+            0x06, 0x05, 0x04, 0x03, 0x02, 0x01, // Provider address (sent in big-endian)
+            0xaa, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc, 0xdd, 0xdd, // Salt
+        ]
+    }
 
     #[test]
     fn parse_empty_key_pairing_request() {
@@ -358,17 +424,19 @@ pub(crate) mod tests {
         assert_matches!(request, Err(Error::InternalError(_)));
     }
 
-    /// Example Key-based pairing request with a fixed address of 0x123456.
-    pub(crate) const KEY_BASED_PAIRING_REQUEST: [u8; 16] = [
-        0x00, 0x00, // Key Pairing request, Flags are empty
+    /// Example device action request with a fixed address of 0x123456.
+    pub(crate) const DEVICE_ACTION_PERSONALIZED_NAME_REQUEST: [u8; 16] = [
+        0x10, 0x40, // Device Action request, Flags indicating additional data characteristic
         0x06, 0x05, 0x04, 0x03, 0x02, 0x01, // Provider address (sent in big-endian)
-        0xaa, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc, 0xdd, 0xdd, // Salt
+        0x00, 0x00, // Message group & code are ignored
+        0x01, // Data ID = 0x01 indicating personalized name
+        0xbb, 0xcc, 0xcc, 0xdd, 0xdd, // Salt
     ];
 
     #[test]
     fn decrypt_request_not_encrypted() {
         let request =
-            decrypt_key_based_pairing_request(&KEY_BASED_PAIRING_REQUEST, &example_aes_key());
+            decrypt_key_based_pairing_request(&key_based_pairing_request(0x00), &example_aes_key());
         assert_matches!(request, Err(_));
     }
 
@@ -376,7 +444,7 @@ pub(crate) mod tests {
     fn decrypt_seeker_initiates_pairing_request() {
         let key = example_aes_key();
         // The request is formatted and encrypted OK.
-        let encrypted_request = key.encrypt(&KEY_BASED_PAIRING_REQUEST);
+        let encrypted_request = key.encrypt(&key_based_pairing_request(0x00));
 
         let request = decrypt_key_based_pairing_request(&encrypted_request, &key)
             .expect("successful decryption");
@@ -393,10 +461,8 @@ pub(crate) mod tests {
     #[test]
     fn decrypt_retroactive_pairing_request() {
         let key = example_aes_key();
-        // The request is formatted and encrypted OK.
-        let mut retroactive_pairing_request = KEY_BASED_PAIRING_REQUEST;
-        retroactive_pairing_request[1] = 0x10; // Flags: Only retroactive pairing
-        let encrypted_request = key.encrypt(&retroactive_pairing_request);
+        // `flags` = Only retroactive pairing.
+        let encrypted_request = key.encrypt(&key_based_pairing_request(0x10));
 
         let request = decrypt_key_based_pairing_request(&encrypted_request, &key)
             .expect("successful decryption");
@@ -415,10 +481,8 @@ pub(crate) mod tests {
     #[test]
     fn decrypt_provider_initiates_pairing_request() {
         let key = example_aes_key();
-        // The request is formatted and encrypted OK.
-        let mut provider_pairing_request = KEY_BASED_PAIRING_REQUEST;
-        provider_pairing_request[1] = 0x60; // Flags: Provider initiates pairing & notify name
-        let encrypted_request = key.encrypt(&provider_pairing_request);
+        // `flags` = Provider initiates pairing & notify name
+        let encrypted_request = key.encrypt(&key_based_pairing_request(0x60));
 
         let request = decrypt_key_based_pairing_request(&encrypted_request, &key)
             .expect("successful decryption");
@@ -430,6 +494,24 @@ pub(crate) mod tests {
             },
             notify_name: true,
             _salt: vec![0xdd, 0xdd],
+        };
+        assert_eq!(request, expected_request);
+    }
+
+    #[test]
+    fn decrypt_personalized_name_pairing_request() {
+        let key = example_aes_key();
+        let encrypted_request = key.encrypt(&DEVICE_ACTION_PERSONALIZED_NAME_REQUEST);
+
+        let request = decrypt_key_based_pairing_request(&encrypted_request, &key)
+            .expect("successful decryption");
+        let expected_provider_address = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06];
+        let expected_request = KeyBasedPairingRequest {
+            action: KeyBasedPairingAction::PersonalizedNameWrite {
+                received_provider_address: expected_provider_address,
+            },
+            notify_name: false,
+            _salt: vec![0xbb, 0xcc, 0xcc, 0xdd, 0xdd],
         };
         assert_eq!(request, expected_request);
     }
@@ -603,5 +685,27 @@ pub(crate) mod tests {
             0x5E, 0x5D, 0xDF, 0xAA, 0x44, 0xB9, 0xE5, 0x53, 0x6A, 0xF4, 0x38, 0xE1, 0xE5, 0xC6,
         ];
         assert_eq!(response[..], expected_encrypted_response);
+    }
+
+    /// This test verifies the parsing and decryption of the personalized name request.
+    /// The contents of this test case are pulled from the GFPS specification.
+    /// See https://developers.google.com/nearby/fast-pair/specifications/appendix/testcases#decode_additional_data_packet_to_get_personalized_name
+    #[test]
+    fn personalized_name_request() {
+        let encrypted_request = vec![
+            0x55, 0xEC, 0x5E, 0x60, 0x55, 0xAF, 0x6E, 0x92, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,
+            0x06, 0x07, 0xEE, 0x4A, 0x24, 0x83, 0x73, 0x80, 0x52, 0xE4, 0x4E, 0x9B, 0x2A, 0x14,
+            0x5E, 0x5D, 0xDF, 0xAA, 0x44, 0xB9, 0xE5, 0x53, 0x6A, 0xF4, 0x38, 0xE1, 0xE5, 0xC6,
+        ];
+
+        let parsed_name =
+            decrypt_personalized_name_request(&personalized_name_key(), encrypted_request)
+                .expect("valid request");
+        let expected_name = String::from_utf8(vec![
+            0x53, 0x6F, 0x6D, 0x65, 0x6F, 0x6E, 0x65, 0x27, 0x73, 0x20, 0x47, 0x6F, 0x6F, 0x67,
+            0x6C, 0x65, 0x20, 0x48, 0x65, 0x61, 0x64, 0x70, 0x68, 0x6F, 0x6E, 0x65,
+        ])
+        .expect("valid utf8 string");
+        assert_eq!(parsed_name, expected_name);
     }
 }

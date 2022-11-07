@@ -58,6 +58,9 @@ enum ProcedureState {
     PasskeyChecked,
     /// Classic/LE pairing was successfully completed.
     PairingComplete,
+    /// The Account Key has been written. The peer is expected to write this key after pairing is
+    /// complete (e.g. In the `PairingComplete` state).
+    AccountKeyWritten,
 }
 
 impl std::fmt::Debug for ProcedureState {
@@ -67,6 +70,7 @@ impl std::fmt::Debug for ProcedureState {
             Self::Pairing { .. } => write!(f, "Pairing"),
             Self::PasskeyChecked => write!(f, "PasskeyChecked"),
             Self::PairingComplete => write!(f, "PairingComplete"),
+            Self::AccountKeyWritten => write!(f, "AccountKeyWritten"),
         }
     }
 }
@@ -115,6 +119,13 @@ impl Procedure {
 
     fn is_passkey_checked(&self) -> bool {
         matches!(self.state, ProcedureState::PasskeyChecked)
+    }
+
+    fn is_complete(&self) -> bool {
+        // The procedure can be completed if either 1) the peer has written the Account Key or 2)
+        // the peer is only doing a personalized name write, in which case only procedure
+        // initialization occurs.
+        matches!(self.state, ProcedureState::AccountKeyWritten) || self.is_started()
     }
 }
 
@@ -336,20 +347,31 @@ impl PairingManager {
         }
     }
 
+    /// Progresses the procedure after an Account Key has been written.
+    /// Returns Error if there is no active procedure in the correct state.
+    // TODO(fxbug.dev/102963): There is an implicit assumption that the peer has already
+    // successfully completed the Classic/LE pairing request (e.g OnPairingComplete
+    // { success = true }) before `account_key_write` is called. While the GFPS does specify this
+    // ordering, this may not always be the case in practice.
+    pub fn account_key_write(&mut self, le_id: PeerId) -> Result<(), Error> {
+        debug!(?le_id, "Processing account key write");
+        let procedure = self
+            .procedures
+            .inner()
+            .get_mut(&le_id)
+            .filter(|p| matches!(p.state, ProcedureState::PairingComplete))
+            .ok_or(Error::internal(&format!(
+                "Procedure with {le_id:?} is not in the correct state"
+            )))?;
+        let _ = procedure.transition(ProcedureState::AccountKeyWritten);
+        Ok(())
+    }
+
     /// Attempts to complete the pairing procedure by handing pairing capabilities back to the
     /// upstream client.
     /// Returns Error if there is no such finished procedure or if the pairing handoff failed.
-    // TODO(fxbug.dev/102963): There is an implicit assumption that the peer has already
-    // successfully completed the Classic/LE pairing request (e.g OnPairingComplete
-    // { success = true }) before `complete_pairing_procedure` is called. While the GFPS does
-    // specify this ordering, this may not always be the case in practice.
     pub fn complete_pairing_procedure(&mut self, le_id: PeerId) -> Result<(), Error> {
-        if !self
-            .procedures
-            .inner()
-            .get(&le_id)
-            .map_or(false, |p| matches!(p.state, ProcedureState::PairingComplete))
-        {
+        if !self.procedures.inner().get(&le_id).map_or(false, |p| p.is_complete()) {
             return Err(Error::internal(&format!(
                 "Procedure with {le_id:?} is not in the correct state"
             )));
@@ -823,7 +845,8 @@ pub(crate) mod tests {
     async fn claim_delegate_with_pairing_events() {
         let (mut manager, mut mock) = MockPairing::new_with_manager().await;
 
-        // A new pairing procedure is started between us and the peer.
+        // A new pairing procedure is started between us and the peer. Expect the delegate to be
+        // claimed.
         let id = PeerId(123);
         assert_matches!(manager.new_pairing_procedure(id, keys::tests::example_aes_key()), Ok(_));
         mock.expect_set_pairing_delegate().await;
@@ -852,8 +875,12 @@ pub(crate) mod tests {
         // Shared secret for the procedure is still available.
         assert_matches!(manager.key_for_procedure(&id), Some(_));
 
-        // PairingManager owner will complete pairing once the peer makes a GATT Write to the
-        // Account Key characteristic.
+        // The peer will make a GATT Write to the Account Key characteristic. The shared secret will
+        // still be available as the peer can optionally set a personalized name via GATT.
+        assert_matches!(manager.account_key_write(id), Ok(_));
+        assert_matches!(manager.key_for_procedure(&id), Some(_));
+
+        // The peer can set the personalized name. This is the last step in the procedure.
         assert_matches!(manager.complete_pairing_procedure(id), Ok(_));
         // All pairing related work is complete, so we expect PairingManager to hand pairing
         // capabilities back to the upstream. The shared secret should no longer be saved.
@@ -1003,8 +1030,35 @@ pub(crate) mod tests {
 
         // Comparing passkeys before pairing begins is an error.
         assert_matches!(manager.compare_passkey(id, 555666), Err(Error::InternalError(_)));
-        // Can't complete a procedure that hasn't verified passkeys.
+        // Put the procedure in the `Pairing` state.
+        let request_fut = mock.make_pairing_request(id, 555666);
+        assert_matches!(manager.select_next_some().now_or_never(), None);
+        assert_matches!(manager.compare_passkey(id, 555666), Ok(_));
+        let result = request_fut.await.expect("fidl response");
+        assert_eq!(result, (true, 555666));
+        // Trying to compare passkeys again is an error.
+        assert_matches!(manager.compare_passkey(id, 555666), Err(Error::InternalError(_)));
+        // Can't complete the procedure when pairing is in progress.
         assert_matches!(manager.complete_pairing_procedure(id), Err(Error::InternalError(_)));
+
+        // Put the procedure in the `PairingComplete` state.
+        let _ = mock
+            .downstream_delegate_client
+            .on_pairing_complete(&mut id.into(), true)
+            .expect("valid fidl request");
+        let result = manager.select_next_some().await;
+        assert_eq!(result, id);
+
+        // Trying to compare passkeys or complete the procedure is an error.
+        assert_matches!(manager.compare_passkey(id, 555666), Err(Error::InternalError(_)));
+        assert_matches!(manager.complete_pairing_procedure(id), Err(Error::InternalError(_)));
+
+        // Put the procedure in the terminal `AccountKeyWritten` state. Procedure can be completed.
+        assert_matches!(manager.account_key_write(id), Ok(_));
+        // Trying to compare passkey or signal an account key write again is an Error.
+        assert_matches!(manager.compare_passkey(id, 555666), Err(Error::InternalError(_)));
+        assert_matches!(manager.account_key_write(id), Err(_));
+        assert_matches!(manager.complete_pairing_procedure(id), Ok(_));
     }
 
     // TODO(fxbug.dev/102963): This test will be obsolete if the PairingManager is resilient to
@@ -1068,12 +1122,18 @@ pub(crate) mod tests {
         let result = manager.select_next_some().await;
         assert_eq!(result, id1);
 
-        // PairingManager owner will complete pairing once the peer makes a GATT Write to the
-        // Account Key characteristic.
+        // Peer makes a GATT write to the Account Key characteristic.
+        assert_matches!(manager.account_key_write(id1), Ok(_));
+
+        // PairingManager owner will complete pairing once the peer optionally sets a personalized
+        // name. If no name is set, then the procedure will eventually time out after
+        // `Procedure::DEFAULT_PROCEDURE_TIMEOUT_DURATION`.
         assert_matches!(manager.complete_pairing_procedure(id1), Ok(_));
-        // However, because a pairing procedure for `id2` is still active, the Pairing Delegate
+        // Because a pairing procedure for `id2` is still active, the Pairing Delegate
         // should not be reset.
         assert_matches!(mock.downstream_pairing_server.next().now_or_never(), None);
+        assert_matches!(manager.key_for_procedure(&id1), None);
+        assert_matches!(manager.key_for_procedure(&id2), Some(_));
     }
 
     #[fuchsia::test]
@@ -1233,12 +1293,97 @@ pub(crate) mod tests {
         // Shared secret for the procedure is still available.
         assert_matches!(manager.key_for_procedure(&le_id), Some(_));
 
-        // PairingManager owner will complete pairing once the peer makes a GATT Write to the
-        // Account Key characteristic.
+        // Expect an Account Key write.
+        assert_matches!(manager.account_key_write(le_id), Ok(_));
+
+        // PairingManager owner will complete pairing once the peer sets a personalized name.
         assert_matches!(manager.complete_pairing_procedure(le_id), Ok(_));
         // All pairing related work is complete, so we expect PairingManager to hand pairing
         // capabilities back to the upstream. The shared secret should no longer be saved.
         mock.expect_set_pairing_delegate().await;
         assert_matches!(manager.key_for_procedure(&le_id), None);
+    }
+
+    /// This test exercises the eviction flow in the event the peer does not set a personalized name
+    /// We expect the procedure to be active for `Procedure::DEFAULT_PROCEDURE_TIMEOUT_DURATION`
+    /// after the Account Key write.
+    #[fuchsia::test]
+    fn procedure_without_name_write_evicted_after_deadline() {
+        let mut exec = fasync::TestExecutor::new_with_fake_time().unwrap();
+        exec.set_fake_time(fasync::Time::from_nanos(1_000_000_000));
+
+        let setup_fut = MockPairing::new_with_manager();
+        pin_mut!(setup_fut);
+        let (mut manager, mut mock) =
+            exec.run_until_stalled(&mut setup_fut).expect("can create pairing manager");
+
+        // New procedure is started.
+        let id = PeerId(123);
+        assert_matches!(manager.new_pairing_procedure(id, keys::tests::example_aes_key()), Ok(_));
+        let _ = exec.run_until_stalled(&mut manager.next()).expect_pending("no stream item");
+        {
+            let expect_fut = mock.expect_set_pairing_delegate();
+            pin_mut!(expect_fut);
+            let () = exec.run_until_stalled(&mut expect_fut).expect("pairing delegate request");
+        }
+
+        // Deadline not reached yet - procedure is still in progress.
+        let half_dur = Procedure::DEFAULT_PROCEDURE_TIMEOUT_DURATION / 2;
+        exec.set_fake_time(fasync::Time::after(half_dur));
+        assert!(!exec.wake_expired_timers());
+        let _ = exec.run_until_stalled(&mut manager.next()).expect_pending("no stream item");
+        assert_matches!(manager.key_for_procedure(&id), Some(_));
+
+        // Peer tries to pair.
+        let request_fut = mock.make_pairing_request(id, 555666);
+        pin_mut!(request_fut);
+        let _ = exec.run_until_stalled(&mut request_fut).expect_pending("waiting for response");
+        let _ = exec.run_until_stalled(&mut manager.next()).expect_pending("no stream item");
+        assert_matches!(manager.key_for_procedure(&id), Some(_));
+
+        // Passkey comparison - pairing request should resolve.
+        let passkey = manager.compare_passkey(id, 555666).expect("successful comparison");
+        assert_eq!(passkey, 555666);
+        let _ = exec.run_until_stalled(&mut manager.next()).expect_pending("no stream item");
+        let _ = exec.run_until_stalled(&mut request_fut).expect("pairing response");
+
+        // Downstream server signals pairing completion - expect the stream item with `id`.
+        let _ = mock
+            .downstream_delegate_client
+            .on_pairing_complete(&mut id.into(), true)
+            .expect("valid fidl request");
+        let finished_id = exec.run_until_stalled(&mut manager.next()).expect("stream item");
+        assert_eq!(finished_id, Some(id));
+
+        // Peer makes an Account Key write. This is the last mandatory step of the procedure.
+        let _ = manager.account_key_write(id).expect("correct state");
+        let _ = exec.run_until_stalled(&mut manager.next()).expect_pending("no stream item");
+
+        // The peer doesn't optionally set the device name. After the deadline, the procedure should
+        // be completed and cleaned up.
+        exec.set_fake_time(fasync::Time::after(Procedure::DEFAULT_PROCEDURE_TIMEOUT_DURATION));
+        assert!(exec.wake_expired_timers());
+        let _ = exec.run_until_stalled(&mut manager.next()).expect_pending("no stream item");
+        assert_matches!(manager.key_for_procedure(&id), None);
+        // Because there are no other active procedures, the PairingDelegate should be handed back.
+        let expect_fut = mock.expect_set_pairing_delegate();
+        pin_mut!(expect_fut);
+        let () = exec.run_until_stalled(&mut expect_fut).expect("pairing delegate request");
+    }
+
+    #[fuchsia::test]
+    async fn complete_procedure_after_initialization() {
+        let (mut manager, mut mock) = MockPairing::new_with_manager().await;
+
+        // Initialize a new procedure.
+        let id = PeerId(123);
+        manager.new_pairing_procedure(id, keys::tests::example_aes_key()).expect("can initialize");
+        mock.expect_set_pairing_delegate().await;
+        assert_matches!(manager.key_for_procedure(&id), Some(_));
+
+        // The procedure can be immediately completed if the peer is simply writing a personalized
+        // name.
+        assert_matches!(manager.complete_pairing_procedure(id), Ok(_));
+        assert_matches!(manager.key_for_procedure(&id), None);
     }
 }
