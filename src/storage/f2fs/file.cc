@@ -399,7 +399,6 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
     off_in_buf += cur_len;
     left -= cur_len;
 
-    SetSize(std::max(static_cast<size_t>(GetSize()), offset + off_in_buf));
     data_page->SetDirty();
 
     if (data_page->IsMmapped()) {
@@ -416,12 +415,16 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
   }
 
   if (off_in_buf > 0) {
+    if (offset + off_in_buf > GetSize()) {
+      SetSize(offset + off_in_buf);
+    }
     timespec cur_time;
     clock_gettime(CLOCK_REALTIME, &cur_time);
     SetCTime(cur_time);
     SetMTime(cur_time);
     MarkInodeDirty();
   }
+
   *out_actual = off_in_buf;
 
   return ZX_OK;

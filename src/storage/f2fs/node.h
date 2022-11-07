@@ -85,7 +85,7 @@ class NatEntry : public fbl::WAVLTreeContainable<std::unique_ptr<NatEntry>>,
 
  private:
   bool checkpointed_ = false;  // whether it is checkpointed or not
-  NodeInfo ni_;      // in-memory node information
+  NodeInfo ni_;                // in-memory node information
 };
 
 inline uint8_t IncNodeVersion(uint8_t version) { return ++version; }
@@ -155,7 +155,7 @@ class NodeManager {
   // and data. To ensure there is no access to the vnodes, it is called with LockType::kFileOp held
   // during ckpt. This way guarantees that RecycleNode() for valid vnodes executes only at ckpt
   // time.
-  pgoff_t SyncNodePages(WritebackOperation &operation);
+  pgoff_t FlushDirtyNodePages(WritebackOperation &operation);
   pgoff_t FsyncNodePages(VnodeF2fs &vnode);
 
   bool AllocNid(nid_t &out);
@@ -174,8 +174,7 @@ class NodeManager {
   bool FlushNatsInJournal();
   void FlushNatEntries();
 
-  int F2fsWriteNodePage(LockedPage &page, bool is_reclaim = false);
-  int F2fsWriteNodePages(VnodeF2fs &vnode, bool is_reclaim = false);
+  zx::result<block_t> GetBlockAddrForDirtyNodePage(LockedPage &page, bool is_reclaim = false);
 
   zx_status_t RecoverInodePage(NodePage &page);
 

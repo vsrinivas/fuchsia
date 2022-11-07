@@ -45,9 +45,12 @@ class GcManagerTest : public F2fsFakeDevTestFixture {
         FileTester::AppendToFile(file_vn.get(), buf.data(), buf.size());
         file_names.push_back(file_name);
         EXPECT_EQ(file_vn->Close(), ZX_OK);
+        WritebackOperation op;
+        file_vn->Writeback(op);
       }
-      WritebackOperation op = {.bSync = true};
-      fs_->SyncDirtyDataPages(op);
+      sync_completion_t completion;
+      fs_->ScheduleWriter(&completion);
+      sync_completion_wait(&completion, ZX_TIME_INFINITE);
       fs_->WriteCheckpoint(false, false);
 
       std::shuffle(file_names.begin(), file_names.end(), prng);
@@ -58,7 +61,6 @@ class GcManagerTest : public F2fsFakeDevTestFixture {
         EXPECT_EQ(root_dir_->Unlink(*iter, false), ZX_OK);
         iter = file_names.erase(iter);
       }
-      fs_->SyncDirtyDataPages(op);
       fs_->WriteCheckpoint(false, false);
       total_file_names.insert(total_file_names.end(), file_names.begin(), file_names.end());
     }
@@ -86,7 +88,7 @@ TEST_F(GcManagerTest, PageColdData) {
   };
   FileTester::AppendToFile(file.get(), buf, sizeof(buf));
   WritebackOperation op = {.bSync = true};
-  fs_->SyncDirtyDataPages(op);
+  file->Writeback(op);
 
   MakeGcTriggerCondition(10);
   fs_->GetGcManager().DisableFgGc();
@@ -102,7 +104,7 @@ TEST_F(GcManagerTest, PageColdData) {
     data_pages[0]->SetDirty();
   }
   // If kPageColdData flag is not set, allocate its block as SSR or LFS.
-  ASSERT_NE(fs_->SyncDirtyDataPages(op), 0UL);
+  ASSERT_NE(file->Writeback(op), 0UL);
   auto new_blk_addr_or = file->FindDataBlkAddr(0);
   ASSERT_EQ(old_blk_addr_or.is_error(), false);
   ASSERT_NE(new_blk_addr_or.value(), old_blk_addr_or.value());
@@ -118,7 +120,7 @@ TEST_F(GcManagerTest, PageColdData) {
   CursegInfo *cold_curseg = fs_->GetSegmentManager().CURSEG_I(CursegType::kCursegColdData);
   auto expected_addr = fs_->GetSegmentManager().NextFreeBlkAddr(CursegType::kCursegColdData);
   ASSERT_EQ(cold_curseg->alloc_type, static_cast<uint8_t>(AllocMode::kLFS));
-  ASSERT_NE(fs_->SyncDirtyDataPages(op), 0UL);
+  ASSERT_NE(file->Writeback(op), 0UL);
   new_blk_addr_or = file->FindDataBlkAddr(0);
   ASSERT_EQ(old_blk_addr_or.is_error(), false);
   ASSERT_NE(new_blk_addr_or.value(), old_blk_addr_or.value());
@@ -145,7 +147,7 @@ TEST_F(GcManagerTest, OrphanFileGc) {
   };
   FileTester::AppendToFile(file.get(), buffer, kPageSize);
   WritebackOperation op = {.bSync = true};
-  fs_->SyncDirtyDataPages(op);
+  file->Writeback(op);
 
   fs_->GetSegmentManager().AllocateNewSegments();
   fs_->WriteCheckpoint(false, false);

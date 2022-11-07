@@ -516,7 +516,7 @@ TEST(SegmentManagerOptionTest, ModeLfs) {
       ASSERT_EQ(ret, ZX_OK);
     }
     WritebackOperation op = {.bSync = true};
-    fs->SyncDirtyDataPages(op);
+    file->Writeback(op);
   }
 
   // Since kMountForceLfs is on, f2fs doesn't allocate segments in ssr manner.

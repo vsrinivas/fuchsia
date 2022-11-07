@@ -365,7 +365,7 @@ TEST(FsckTest, OrphanNodes) {
     };
     FileTester::AppendToFile(file.get(), buf, kPageSize);
     WritebackOperation op = {.bSync = true};
-    fs->SyncDirtyDataPages(op);
+    file->Writeback(op);
     fs->WriteCheckpoint(false, false);
 
     FileTester::DeleteChild(root_dir.get(), "test", false);
@@ -503,7 +503,7 @@ TEST(FsckTest, InvalidSsaEntry) {
     std::vector<char> buf(kBufferSize);
     FileTester::AppendToFile(file.get(), buf.data(), kBufferSize);
     WritebackOperation op = {.bSync = true};
-    fs->SyncDirtyDataPages(op);
+    file->Writeback(op);
 
     // Find data blkaddr.
     {

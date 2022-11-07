@@ -863,17 +863,18 @@ CursegType SegmentManager::GetSegmentType(Page &page, PageType p_type) {
   }
 }
 
-zx_status_t SegmentManager::DoWritePage(LockedPage &page, block_t old_blkaddr, block_t *new_blkaddr,
-                                        Summary *sum, PageType p_type) {
+zx::result<block_t> SegmentManager::GetBlockAddrOnSegment(LockedPage &page, block_t old_blkaddr,
+                                                          Summary *sum, PageType p_type) {
   CursegInfo *curseg;
   CursegType type;
 
   type = GetSegmentType(*page, p_type);
   curseg = CURSEG_I(type);
 
+  block_t new_blkaddr;
   {
     std::lock_guard curseg_lock(curseg->curseg_mutex);
-    *new_blkaddr = NextFreeBlkAddr(type);
+    new_blkaddr = NextFreeBlkAddr(type);
 
     // AddSumEntry should be resided under the curseg_mutex
     // because this function updates a summary entry in the
@@ -887,14 +888,14 @@ zx_status_t SegmentManager::DoWritePage(LockedPage &page, block_t old_blkaddr, b
 
       // SIT information should be updated before segment allocation,
       // since SSR needs latest valid block information.
-      RefreshSitEntry(old_blkaddr, *new_blkaddr);
+      RefreshSitEntry(old_blkaddr, new_blkaddr);
 
       if (!HasCursegSpace(type)) {
         AllocateSegmentByDefault(type, false);
       }
 
       LocateDirtySegment(GetSegmentNumber(old_blkaddr));
-      LocateDirtySegment(GetSegmentNumber(*new_blkaddr));
+      LocateDirtySegment(GetSegmentNumber(new_blkaddr));
     }
 
     if (p_type == PageType::kNode) {
@@ -902,25 +903,64 @@ zx_status_t SegmentManager::DoWritePage(LockedPage &page, block_t old_blkaddr, b
     }
   }
 
-  // writeout dirty page into bdev
-  return fs_->MakeWriteOperation(page, *new_blkaddr, p_type);
+  ZX_ASSERT(page->SetBlockAddr(new_blkaddr).is_ok());
+  return zx::ok(new_blkaddr);
 }
 
-zx_status_t SegmentManager::WriteMetaPage(LockedPage &page, bool is_reclaim) {
-  block_t blkaddr = static_cast<block_t>(page->GetIndex());
-  return fs_->MakeWriteOperation(page, blkaddr, PageType::kMeta);
+zx::result<PageList> SegmentManager::GetBlockAddrsForDirtyDataPages(std::vector<LockedPage> pages,
+                                                                    bool is_reclaim) {
+  PageList pages_to_disk;
+  for (auto &page : pages) {
+    auto &vnode = page->GetVnode();
+    ZX_DEBUG_ASSERT(page->IsUptodate());
+    ZX_ASSERT_MSG(
+        vnode.GetPageType() == PageType::kData,
+        "[f2fs] Failed to allocate blocks for vnode %u that should not have any dirty data Pages.",
+        vnode.Ino());
+    if (!is_reclaim || fs_->CanReclaim()) {
+      auto addr_or = vnode.GetBlockAddrForDirtyDataPage(page, is_reclaim);
+      if (addr_or.is_error()) {
+        if (page->IsUptodate() && addr_or.status_value() != ZX_ERR_NOT_FOUND) {
+          // In case of failure, redirty it.
+          page->SetDirty();
+          FX_LOGS(WARNING) << "[f2fs] Failed to allocate a block: " << addr_or.status_value();
+        }
+        page->ClearWriteback();
+      } else {
+        ZX_ASSERT(*addr_or != kNullAddr && *addr_or != kNewAddr);
+        pages_to_disk.push_back(page.release());
+      }
+    } else {
+      // Writeback for memory reclaim is not allowed for now.
+      fs_->GetDirtyDataPageList().AddDirty(page.get());
+    }
+    page.reset();
+  }
+  return zx::ok(std::move(pages_to_disk));
 }
 
-zx_status_t SegmentManager::WriteNodePage(LockedPage &page, uint32_t nid, block_t old_blkaddr,
-                                          block_t *new_blkaddr) {
+zx::result<block_t> SegmentManager::GetBlockAddrForDirtyMetaPage(LockedPage &page,
+                                                                 bool is_reclaim) {
+  block_t addr = kNullAddr;
+  page->WaitOnWriteback();
+  if (page->ClearDirtyForIo()) {
+    addr = safemath::checked_cast<block_t>(page->GetIndex());
+    page->SetWriteback();
+    ZX_ASSERT(page->SetBlockAddr(addr).is_ok());
+  }
+  return zx::ok(addr);
+}
+
+zx::result<block_t> SegmentManager::GetBlockAddrForNodePage(LockedPage &page, uint32_t nid,
+                                                            block_t old_blkaddr) {
   Summary sum;
   SetSummary(&sum, nid, 0, 0);
-  return DoWritePage(page, old_blkaddr, new_blkaddr, &sum, PageType::kNode);
+  return GetBlockAddrOnSegment(page, old_blkaddr, &sum, PageType::kNode);
 }
 
-zx_status_t SegmentManager::WriteDataPage(VnodeF2fs *vnode, LockedPage &page, nid_t nid,
-                                          uint32_t ofs_in_node, block_t old_blkaddr,
-                                          block_t *new_blkaddr) {
+zx::result<block_t> SegmentManager::GetBlockAddrForDataPage(LockedPage &page, nid_t nid,
+                                                            uint32_t ofs_in_node,
+                                                            block_t old_blkaddr) {
   Summary sum;
   NodeInfo ni;
 
@@ -928,11 +968,7 @@ zx_status_t SegmentManager::WriteDataPage(VnodeF2fs *vnode, LockedPage &page, ni
   fs_->GetNodeManager().GetNodeInfo(nid, ni);
   SetSummary(&sum, nid, ofs_in_node, ni.version);
 
-  return DoWritePage(page, old_blkaddr, new_blkaddr, &sum, PageType::kData);
-}
-
-zx_status_t SegmentManager::RewriteDataPage(LockedPage &page, block_t old_blk_addr) {
-  return fs_->MakeWriteOperation(page, old_blk_addr, PageType::kData);
+  return GetBlockAddrOnSegment(page, old_blkaddr, &sum, PageType::kData);
 }
 
 void SegmentManager::RecoverDataPage(Summary &sum, block_t old_blkaddr, block_t new_blkaddr) {

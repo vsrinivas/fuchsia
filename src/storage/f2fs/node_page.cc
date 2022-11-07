@@ -19,7 +19,7 @@ void NodePage::CopyNodeFooterFrom(NodePage &src) {
 }
 
 void NodePage::FillNodeFooterBlkaddr(block_t blkaddr) {
-  Checkpoint &ckpt = fs_->GetSuperblockInfo().GetCheckpoint();
+  Checkpoint &ckpt = fs()->GetSuperblockInfo().GetCheckpoint();
   GetRawNode().footer.cp_ver = ckpt.checkpoint_ver;
   GetRawNode().footer.next_blkaddr = blkaddr;
 }

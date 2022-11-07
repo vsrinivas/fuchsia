@@ -52,8 +52,7 @@ class StorageBuffer {
   // with kWriteback flag set before. Any writers who want to access |page| wait for
   // its writeback by calling Page::WaitOnWriteback(), but readers are free to
   // access to it.
-  zx::result<size_t> ReserveWriteOperation(fbl::RefPtr<Page> page, block_t blk_addr)
-      __TA_EXCLUDES(mutex_);
+  zx::result<size_t> ReserveWriteOperation(fbl::RefPtr<Page> page) __TA_EXCLUDES(mutex_);
   // It sorts out which Pages need to transfer to fs::TransactionHandler and tries to reserve
   // |buffer_| for the Pages for read I/Os. If successful, it returns PageOpeartions that
   // convey BufferedOperations and the refptr of the Pages for read I/Os.

@@ -329,6 +329,7 @@ zx_status_t GcManager::GcDataSegment(const SummaryBlock &sum_blk, unsigned int s
                                      GcType gc_type) {
   block_t start_addr = fs_->GetSegmentManager().StartBlock(segno);
   const Summary *entry = sum_blk.entries;
+  std::vector<LockedPage> pages;
   for (block_t off = 0; off < fs_->GetSuperblockInfo().GetBlocksPerSeg(); ++off, ++entry) {
     // stop BG_GC if there is not enough free sections. Or, stop GC if the section becomes fully
     // valid caused by race condition along with SSR block allocation.
@@ -380,22 +381,26 @@ zx_status_t GcManager::GcDataSegment(const SummaryBlock &sum_blk, unsigned int s
     }
 
     data_page->WaitOnWriteback();
-    data_page->SetDirty();
+    // No need to add |data_page| to F2fs::dirty_data_page_list_ as victim Pages will be flushed
+    // after this loop.
+    data_page->SetDirty(false);
     data_page->SetColdData();
+    if (gc_type == GcType::kFgGc) {
+      // If |data_page| is already in the list, remove it.
+      [[maybe_unused]] auto page = fs_->GetDirtyDataPageList().RemoveDirty(data_page.get());
+      pages.push_back(std::move(data_page));
+    }
   }
 
-  // TODO: Instead of SyncDirtyDataPages, make a method to flush an array of locked victim Pages
-  // acquired before.
   if (gc_type == GcType::kFgGc) {
-    WritebackOperation op;
-    op.bSync = false;
-    op.if_page = [](const fbl::RefPtr<Page> &page) {
-      if (page->IsColdData()) {
-        return ZX_OK;
-      }
-      return ZX_ERR_NEXT;
-    };
-    fs_->SyncDirtyDataPages(op);
+    auto page_list =
+        fs_->GetSegmentManager().GetBlockAddrsForDirtyDataPages(std::move(pages), false);
+    if (page_list.is_error()) {
+      return ZX_ERR_BAD_STATE;
+    }
+    if (!page_list->is_empty()) {
+      fs_->ScheduleWriter(nullptr, std::move(*page_list));
+    }
   }
 
   if (gc_type == GcType::kFgGc && fs_->GetSegmentManager().GetValidBlocks(segno, 1) != 0) {

@@ -42,7 +42,7 @@ void F2fs::PutSuper() {
   superblock_info_.reset();
 }
 
-void F2fs::ScheduleWriteback() {
+void F2fs::ScheduleWriteback(size_t num_pages) {
   block_t dirty_data_pages = superblock_info_->GetPageCount(CountType::kDirtyData);
   block_t limit = kMaxDirtyDataPages / 2;
 
@@ -52,23 +52,22 @@ void F2fs::ScheduleWriteback() {
     return;
   }
 
-  // Only one writeback task can run for memory reclaim at a time.
+  // Schedule a Writer task after allocating blocks for dirty data Pages.
+  // |writeback_flag_| ensures that neither checkpoint nor gc runs during the
+  // allocation. Flushing N of dirty Pages can produce N of additional dirty node
+  // Pages in the worst case. If there is not enough space, stop writeback.
   if (writeback_flag_.try_acquire()) {
     auto promise = fpromise::make_promise([this, limit]() mutable {
       block_t dirty_pages = superblock_info_->GetPageCount(CountType::kDirtyData);
-      [[maybe_unused]] pgoff_t written = 0;
-      // Flushing kDefaultBlocksPerSegment of dirty Pages can produce kDefaultBlocksPerSegment
-      // of additional dirty node Pages in the worst case. If there is not enough space, stop
-      // writeback.
       while (dirty_pages >= limit && !segment_manager_->HasNotEnoughFreeSecs() && CanReclaim()) {
-        WritebackOperation op = {.to_write = kDefaultBlocksPerSegment, .bReclaim = true};
-        op.if_vnode = [this](fbl::RefPtr<VnodeF2fs> &vnode) {
-          if (!vnode->IsDir() && vnode->GetDirtyPageCount() && CanReclaim()) {
-            return ZX_OK;
+        auto pages = dirty_data_page_list_.TakePages(kDefaultBlocksPerSegment);
+        if (auto page_list_or =
+                GetSegmentManager().GetBlockAddrsForDirtyDataPages(std::move(pages), true);
+            page_list_or.is_ok()) {
+          if (!(*page_list_or).is_empty()) {
+            ScheduleWriter(nullptr, std::move(*page_list_or));
           }
-          return ZX_ERR_NEXT;
-        };
-        written += SyncDirtyDataPages(op);
+        }
         dirty_pages = superblock_info_->GetPageCount(CountType::kDirtyData);
       }
       // Wake waiters of WaitForWriteback().
@@ -105,7 +104,7 @@ void F2fs::SyncFs(bool bShutdown) {
         }
         return ZX_ERR_NEXT;
       };
-      SyncDirtyDataPages(op);
+      FlushDirtyDataPages(op);
     }
     // We don't need to keep dirty data Pages anymore.
     dirty_data_page_list_.Reset();

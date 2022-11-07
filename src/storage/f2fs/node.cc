@@ -59,7 +59,7 @@ bool NodeManager::IncValidNodeCount(VnodeF2fs *vnode, uint32_t count, bool isIno
 
 zx_status_t NodeManager::NextFreeNid(nid_t *nid) {
   if (free_nid_count_ <= 0)
-    return ZX_ERR_OUT_OF_RANGE;
+    return ZX_ERR_NO_RESOURCES;
 
   std::lock_guard free_nid_lock(free_nid_list_lock_);
   FreeNid *fnid = containerof(free_nid_list_.next, FreeNid, list);
@@ -939,7 +939,7 @@ Page *NodeManager::GetNodePageRa(Page *parent, int start) {
 }
 #endif
 
-pgoff_t NodeManager::SyncNodePages(WritebackOperation &operation) {
+pgoff_t NodeManager::FlushDirtyNodePages(WritebackOperation &operation) {
   if (superblock_info_->GetPageCount(CountType::kDirtyNodes) == 0 && !operation.bReleasePages) {
     return 0;
   }
@@ -996,8 +996,9 @@ pgoff_t NodeManager::FsyncNodePages(VnodeF2fs &vnode) {
   return fs_->GetNodeVnode().Writeback(op);
 }
 
-zx_status_t NodeManager::F2fsWriteNodePage(LockedPage &page, bool is_reclaim) {
+zx::result<block_t> NodeManager::GetBlockAddrForDirtyNodePage(LockedPage &page, bool is_reclaim) {
   page->WaitOnWriteback();
+  block_t new_addr = kNullAddr;
   if (page->ClearDirtyForIo()) {
     page->SetWriteback();
     // get old block addr of this node page
@@ -1008,14 +1009,15 @@ zx_status_t NodeManager::F2fsWriteNodePage(LockedPage &page, bool is_reclaim) {
     GetNodeInfo(nid, ni);
     // This page is already truncated
     if (ni.blk_addr == kNullAddr) {
-      return ZX_ERR_NOT_FOUND;
+      return zx::error(ZX_ERR_NOT_FOUND);
     }
 
-    block_t new_addr;
-    fs_->GetSegmentManager().WriteNodePage(page, nid, ni.blk_addr, &new_addr);
+    auto addr_or = fs_->GetSegmentManager().GetBlockAddrForNodePage(page, nid, ni.blk_addr);
+    ZX_ASSERT(addr_or.is_ok());
+    new_addr = *addr_or;
     SetNodeAddr(ni, new_addr);
   }
-  return ZX_OK;
+  return zx::ok(new_addr);
 }
 
 #if 0  // porting needed

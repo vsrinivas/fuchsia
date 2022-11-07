@@ -30,7 +30,7 @@ class DirtyPageList {
   void Reset() __TA_EXCLUDES(list_lock_);
 
   zx_status_t AddDirty(Page *page) __TA_EXCLUDES(list_lock_);
-  zx_status_t RemoveDirty(Page *page) __TA_EXCLUDES(list_lock_);
+  zx::result<fbl::RefPtr<Page>> RemoveDirty(Page *page) __TA_EXCLUDES(list_lock_);
 
   uint64_t Size() const __TA_EXCLUDES(list_lock_) {
     fs::SharedLock read_lock(list_lock_);
@@ -40,13 +40,8 @@ class DirtyPageList {
   std::vector<LockedPage> TakePages(size_t count) __TA_EXCLUDES(list_lock_);
 
  private:
-  // The life cycle of a Page is managed by FileCache, and only a valid Page must be added to
-  // DirtyPagelist. Therefore, |RawPageList| has a Page pointer as an entry without owning
-  // ownership of the Page.
-  using RawPageList = fbl::SizedDoublyLinkedList<Page *>;
-
   mutable fs::SharedMutex list_lock_{};
-  RawPageList dirty_list_ __TA_GUARDED(list_lock_){};
+  PageList dirty_list_ __TA_GUARDED(list_lock_){};
 };
 
 }  // namespace f2fs
