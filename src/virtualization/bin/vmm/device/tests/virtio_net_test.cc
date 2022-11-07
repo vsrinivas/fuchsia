@@ -28,9 +28,10 @@ using fuchsia::virtualization::hardware::VirtioNet_Start_Result;
 using fuchsia_hardware_network::wire::PortId;
 using network::client::NetworkDeviceClient;
 
+constexpr size_t kRxBufferSize = 1526ul;
 constexpr size_t kNumQueues = 2;
 constexpr uint16_t kQueueSize = 64;
-constexpr size_t kVmoSize = 4096ul * kQueueSize;
+constexpr size_t kVmoSize = 4096ul * kQueueSize * kRxBufferSize;
 constexpr size_t kNetclientNumDescriptors = 16;
 
 constexpr auto kCppComponentUrl = "#meta/virtio_net.cm";
@@ -51,20 +52,32 @@ struct Packet {
 } __PACKED;
 
 // Send the given data as an ethernet frame to a NetworkDeviceClient.
-void SendPacketToGuest(NetworkDeviceClient& client, PortId port_id,
+bool SendPacketToGuest(NetworkDeviceClient& client, PortId port_id,
                        cpp20::span<const uint8_t> payload) {
   // Allocate a buffer.
   NetworkDeviceClient::Buffer buffer = client.AllocTx();
-  ASSERT_TRUE(buffer.is_valid()) << "Could not allocate buffer";
+  if (!buffer.is_valid()) {
+    FX_LOGS(ERROR) << "Could not allocate buffer";
+    return false;
+  }
 
   // Set up metadata and copy the data.
   buffer.data().SetFrameType(fuchsia_hardware_network::wire::FrameType::kEthernet);
   buffer.data().SetPortId(port_id);
-  ASSERT_EQ(buffer.data().Write(payload.data(), payload.size()), payload.size())
-      << "Failed to send all data";
+  size_t sent = buffer.data().Write(payload.data(), payload.size());
+  if (sent != payload.size()) {
+    FX_LOGS(ERROR) << "Wanted to send " << payload.size() << ", sent " << sent;
+    return false;
+  }
 
   // Send the packet.
-  ASSERT_EQ(buffer.Send(), ZX_OK) << "Send failed";
+  zx_status_t status = buffer.Send();
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Send failed";
+    return false;
+  }
+
+  return true;
 }
 
 class FakeNetwork : public fuchsia::net::virtualization::Control,
@@ -245,6 +258,8 @@ class VirtioNetTest : public TestWithDevice,
     }
   }
 
+  bool IsCppDevice() { return GetParam().test_name == "cpp"; }
+
   fuchsia::virtualization::hardware::VirtioNetPtr net_;
   VirtioQueueFake rx_queue_;
   VirtioQueueFake tx_queue_;
@@ -273,23 +288,88 @@ TEST_P(VirtioNetTest, ConnectDisconnect) {
   ASSERT_FALSE(fake_network_.device_client()->HasSession());
 }
 
+TEST_P(VirtioNetTest, ConcurrentBidirectionalTransfers) {
+  if (IsCppDevice()) {
+    // TODO(fxbug.dev/95485): The C++ device is buggy and can't pass this test case.
+    GTEST_SKIP();
+  }
+
+  constexpr uint32_t kExpectedPackets = 8192;
+
+  std::atomic<uint32_t> total_tx = 0;
+  std::atomic<uint32_t> total_rx = 0;
+
+  constexpr const char kTxData[] = "I'm a TX packet!";
+  constexpr size_t kTxDataSize = sizeof(kTxData);
+  Packet<kTxDataSize> tx_packet;
+  memcpy(tx_packet.data, kTxData, kTxDataSize);
+
+  // "RX" here is from the perspective of the netstack.
+  fake_network_.device_client()->SetRxCallback([&](NetworkDeviceClient::Buffer buffer) {
+    uint8_t received_data[kTxDataSize];
+    buffer.data().Read(received_data, kTxDataSize);
+    ASSERT_EQ(std::basic_string_view(received_data, kTxDataSize),
+              std::basic_string_view(tx_packet.data, kTxDataSize));
+    total_tx++;
+  });
+
+  for (uint32_t i = 0; i < kExpectedPackets; i++) {
+    zx_status_t status = DescriptorChainBuilder(tx_queue_)
+                             .AppendReadableDescriptor(&tx_packet, sizeof(tx_packet))
+                             .Build();
+    ASSERT_EQ(status, ZX_OK);
+  }
+
+  // Start TX processing (happens in a different thread).
+  net_->NotifyQueue(1);
+
+  // In parallel, start pushing RX packets from the netstack to the guest.
+  constexpr const uint8_t kRxData[] = "I'm an RX packet!";
+  while (total_rx < kExpectedPackets) {
+    Packet<kRxBufferSize>* rx_packet;
+    zx_status_t status = DescriptorChainBuilder(rx_queue_)
+                             .AppendWritableDescriptor(&rx_packet, sizeof(*rx_packet))
+                             .Build();
+    ASSERT_EQ(status, ZX_OK);
+    net_->NotifyQueue(0);
+
+    RunLoopUntil([&]() {
+      return SendPacketToGuest(*fake_network_.device_client(), *fake_network_.port_id(),
+                               cpp20::span(kRxData, sizeof(kRxData)));
+    });
+
+    auto used = rx_queue_.NextUsed();
+    while (!used) {
+      ASSERT_EQ(ZX_OK, WaitOnInterrupt());
+      used = rx_queue_.NextUsed();
+    }
+
+    ASSERT_EQ(std::basic_string_view(rx_packet->data, sizeof(kRxData)),
+              std::basic_string_view(kRxData, sizeof(kRxData)));
+
+    total_rx++;
+  }
+
+  // Ensure TX is done.
+  RunLoopUntil([&]() { return total_tx >= kExpectedPackets; });
+}
+
 TEST_P(VirtioNetTest, SendToGuest) {
   constexpr uint8_t expected_packet[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
   // Add a descriptor to the RX queue, allowing the guest to receive a packet.
   // Note that the C++ device didn't correctly validate RX buffer lengths.
   // TODO(fxbug.dev/95485): Remove the above note once these tests are improved.
-  constexpr size_t kPacketDataSize = 10;
-  constexpr size_t kPacketBufferSize = 1526;
-  Packet<kPacketBufferSize>* packet;
+  constexpr size_t kPacketDataSize = sizeof(expected_packet);
+  Packet<kRxBufferSize>* packet;
   zx_status_t status =
       DescriptorChainBuilder(rx_queue_).AppendWritableDescriptor(&packet, sizeof(*packet)).Build();
   net_->NotifyQueue(0);
   ASSERT_EQ(status, ZX_OK);
 
   // Transmit a packet to the guest.
-  ASSERT_NO_FATAL_FAILURE(SendPacketToGuest(
-      *fake_network_.device_client(), *fake_network_.port_id(), cpp20::span(expected_packet)));
+  ASSERT_TRUE(SendPacketToGuest(*fake_network_.device_client(), *fake_network_.port_id(),
+                                cpp20::span(expected_packet)));
 
   // Wait for the device to receive an interrupt.
   status = WaitOnInterrupt();
