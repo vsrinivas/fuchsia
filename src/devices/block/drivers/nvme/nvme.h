@@ -59,6 +59,7 @@ class Nvme : public DeviceType, public ddk::BlockImplProtocol<Nvme, ddk::base_pr
   zx_handle_t irqh_;
   zx::bti bti_;
   CapabilityReg caps_;
+  VersionReg version_;
 
   // IO submission and completion queues.
   std::unique_ptr<QueuePair> io_queue_;

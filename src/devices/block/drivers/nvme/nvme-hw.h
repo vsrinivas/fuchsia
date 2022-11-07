@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_NVME_NVME_HW_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_NVME_NVME_HW_H_
+// TODO(fxbug.dev/102133): Remove this file in favour of src/devices/block/drivers/nvme/registers.h
+
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_NVME_NVME_HW_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_NVME_NVME_HW_H_
 
 #include <assert.h>
 #include <stdint.h>
@@ -12,7 +14,7 @@
 #define NVME_REG_CAP 0x00     // Capabilities
 #define NVME_REG_VS 0x08      // Version
 #define NVME_REG_INTMS 0x0C   // Interrupt Mask Set
-#define NVME_REG_INTMC 0x10   // Interrupt Mask clear
+#define NVME_REG_INTMC 0x0F   // Interrupt Mask clear
 #define NVME_REG_CC 0x14      // Controller Configuration
 #define NVME_REG_CSTS 0x1C    // Controller Status
 #define NVME_REG_NSSR 0x20    // NVM Subsystem Reset (Optional)
@@ -298,4 +300,4 @@ static_assert(sizeof(nvme_identify_ns_t) == 4096, "");
 #define NSFEAT_LOCAL_ATOMIC_SIZES (1 << 1)
 #define NSFEAT_THING_PROVISIONING (1 << 0)
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_NVME_NVME_HW_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_NVME_NVME_HW_H_

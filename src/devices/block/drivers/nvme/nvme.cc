@@ -593,7 +593,6 @@ static void infostring(const char* prefix, uint8_t* str, size_t len) {
 
 // Convenience accessors for BAR0 registers
 #define MmioVaddr static_cast<MMIO_PTR uint8_t*>(mmio_->get())
-#define rd32(r) MmioRead32(reinterpret_cast<MMIO_PTR uint32_t*>(MmioVaddr + NVME_REG_##r))
 #define rd64(r) MmioRead64(reinterpret_cast<MMIO_PTR uint64_t*>(MmioVaddr + NVME_REG_##r))
 #define wr32(v, r) MmioWrite32(v, reinterpret_cast<MMIO_PTR uint32_t*>(MmioVaddr + NVME_REG_##r))
 #define wr64(v, r) MmioWrite64(v, reinterpret_cast<MMIO_PTR uint64_t*>(MmioVaddr + NVME_REG_##r))
@@ -613,31 +612,43 @@ void Nvme::DdkInit(ddk::InitTxn txn) {
 
   auto cleanup = fit::defer([] { zxlogf(ERROR, "init failed"); });
 
-  uint32_t n = rd32(VS);
-  uint64_t cap = rd64(CAP);
+  caps_ = CapabilityReg::Get().ReadFrom(mmio_.get());
+  version_ = VersionReg::Get().ReadFrom(mmio_.get());
 
-  zxlogf(INFO, "version %d.%d.%d", n >> 16, (n >> 8) & 0xFF, n & 0xFF);
-  zxlogf(DEBUG, "page size: (MPSMIN): %u (MPSMAX): %u", (unsigned)(1 << NVME_CAP_MPSMIN(cap)),
-         (unsigned)(1 << NVME_CAP_MPSMAX(cap)));
-  zxlogf(DEBUG, "doorbell stride: %u", (unsigned)(1 << NVME_CAP_DSTRD(cap)));
-  zxlogf(DEBUG, "timeout: %u ms", (unsigned)(1 << NVME_CAP_TO(cap)));
-  zxlogf(DEBUG, "boot partition support (BPS): %c", NVME_CAP_BPS(cap) ? 'Y' : 'N');
-  zxlogf(DEBUG, "supports NVM command set (CSS:NVM): %c", NVME_CAP_CSS_NVM(cap) ? 'Y' : 'N');
-  zxlogf(DEBUG, "subsystem reset supported (NSSRS): %c", NVME_CAP_NSSRS(cap) ? 'Y' : 'N');
-  zxlogf(DEBUG, "weighted-round-robin (AMS:WRR): %c", NVME_CAP_AMS_WRR(cap) ? 'Y' : 'N');
-  zxlogf(DEBUG, "vendor-specific arbitration (AMS:VS): %c", NVME_CAP_AMS_VS(cap) ? 'Y' : 'N');
-  zxlogf(DEBUG, "contiquous queues required (CQR): %c", NVME_CAP_CQR(cap) ? 'Y' : 'N');
-  zxlogf(DEBUG, "maximum queue entries supported (MQES): %u", ((unsigned)NVME_CAP_MQES(cap)) + 1);
+  zxlogf(INFO, "Version %d.%d.%d", version_.major(), version_.minor(), version_.tertiary());
+  zxlogf(DEBUG, "Memory page size: (MPSMIN) %u bytes, (MPSMAX) %u bytes",
+         caps_.memory_page_size_min_bytes(), caps_.memory_page_size_max_bytes());
+  zxlogf(DEBUG, "Doorbell stride (DSTRD): %u bytes", caps_.doorbell_stride_bytes());
+  zxlogf(DEBUG, "Timeout (TO): %u ms", caps_.timeout_ms());
+  zxlogf(DEBUG, "Boot partition support (BPS): %c", caps_.boot_partition_support() ? 'Y' : 'N');
+  zxlogf(DEBUG, "Supports NVM command set (CSS:NVM): %c",
+         caps_.nvm_command_set_support() ? 'Y' : 'N');
+  zxlogf(DEBUG, "NVM subsystem reset supported (NSSRS): %c",
+         caps_.nvm_subsystem_reset_supported() ? 'Y' : 'N');
+  zxlogf(DEBUG, "Weighted round robin supported (AMS:WRR): %c",
+         caps_.weighted_round_robin_arbitration_supported() ? 'Y' : 'N');
+  zxlogf(DEBUG, "Vendor specific arbitration supported (AMS:VS): %c",
+         caps_.vendor_specific_arbitration_supported() ? 'Y' : 'N');
+  zxlogf(DEBUG, "Contiguous queues required (CQR): %c",
+         caps_.contiguous_queues_required() ? 'Y' : 'N');
+  zxlogf(DEBUG, "Maximum queue entries supported (MQES): %u", caps_.max_queue_entries());
 
-  const size_t kPageSize = zx_system_get_page_size();
-
-  if ((1 << NVME_CAP_MPSMIN(cap)) > kPageSize) {
-    zxlogf(ERROR, "minimum page size larger than platform page size");
+  if (zx_system_get_page_size() < caps_.memory_page_size_min_bytes()) {
+    zxlogf(ERROR, "Page size is too small (ours: 0x%x, min: 0x%x).", zx_system_get_page_size(),
+           caps_.memory_page_size_min_bytes());
     txn.Reply(ZX_ERR_NOT_SUPPORTED);
     return;
   }
+  if (zx_system_get_page_size() > caps_.memory_page_size_max_bytes()) {
+    zxlogf(ERROR, "Page size is too large (ours: 0x%x, max: 0x%x).", zx_system_get_page_size(),
+           caps_.memory_page_size_max_bytes());
+    txn.Reply(ZX_ERR_NOT_SUPPORTED);
+    return;
+  }
+
   // allocate pages for various queues and the utxn scatter lists
   // TODO: these should all be RO to hardware apart from the scratch io page(s)
+  const size_t kPageSize = zx_system_get_page_size();
   if (io_buffer_init(&nvme->iob, bti_.get(), kPageSize * IO_PAGE_COUNT, IO_BUFFER_RW) ||
       io_buffer_physmap(&nvme->iob)) {
     zxlogf(ERROR, "could not allocate io buffers");
@@ -653,46 +664,58 @@ void Nvme::DdkInit(ddk::InitTxn txn) {
     nvme->utxn[n].virt = static_cast<uint8_t*>(nvme->iob.virt) + (IDX_UTXN_POOL + n) * kPageSize;
   }
 
-  if (rd32(CSTS) & NVME_CSTS_RDY) {
-    zxlogf(DEBUG, "controller is active. resetting...");
-    wr32(rd32(CC) & ~NVME_CC_EN, CC);  // disable
-  }
+  if (ControllerStatusReg::Get().ReadFrom(&*mmio_).ready()) {
+    zxlogf(DEBUG, "Controller is already enabled. Resetting it.");
+    ControllerConfigReg::Get().ReadFrom(&*mmio_).set_enabled(0).WriteTo(&*mmio_);
 
-  // ensure previous shutdown (by us or bootloader) has completed
-  unsigned ms_remain = WAIT_MS;
-  while (rd32(CSTS) & NVME_CSTS_RDY) {
-    if (--ms_remain == 0) {
-      zxlogf(ERROR, "timed out waiting for CSTS ~RDY");
-      txn.Reply(ZX_ERR_INTERNAL);
-      return;
+    unsigned ms_remain = WAIT_MS;
+    while (ControllerStatusReg::Get().ReadFrom(&*mmio_).ready()) {
+      if (--ms_remain == 0) {
+        zxlogf(ERROR, "Controller reset timed out.");
+        txn.Reply(ZX_ERR_TIMED_OUT);
+        return;
+      }
+      zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
     }
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
+    zxlogf(DEBUG, "Controller has been reset (took %u ms).", WAIT_MS - ms_remain);
   }
-
-  zxlogf(DEBUG, "controller inactive. (after %u ms)", WAIT_MS - ms_remain);
 
   // configure admin submission and completion queues
   wr64(nvme->iob.phys_list[IDX_ADMIN_SQ], ASQ);
   wr64(nvme->iob.phys_list[IDX_ADMIN_CQ], ACQ);
   wr32(NVME_AQA_ASQS(SQMAX(kPageSize) - 1) | NVME_AQA_ACQS(CQMAX(kPageSize) - 1), AQA);
 
-  zxlogf(DEBUG, "enabling");
-  wr32(NVME_CC_EN | NVME_CC_AMS_RR | NVME_CC_MPS(0) | NVME_CC_IOCQES(NVME_CPL_SHIFT) |
-           NVME_CC_IOSQES(NVME_CMD_SHIFT),
-       CC);
+  zxlogf(DEBUG, "Enabling controller.");
+  ControllerConfigReg::Get()
+      .ReadFrom(&*mmio_)
+      .set_controller_ready_independent_of_media(0)
+      // Queue entry sizes are powers of two.
+      .set_io_completion_queue_entry_size(__builtin_ctzl(sizeof(Completion)))
+      .set_io_submission_queue_entry_size(__builtin_ctzl(sizeof(Submission)))
+      .set_arbitration_mechanism(ControllerConfigReg::ArbitrationMechanism::kRoundRobin)
+      // We know that page size is always at least 4096 (required by spec), and we check
+      // that zx_system_get_page_size is supported by the controller above.
+      .set_memory_page_size(__builtin_ctzl(zx_system_get_page_size()) - 12)
+      .set_io_command_set(ControllerConfigReg::CommandSet::kNvm)
+      .set_enabled(1)
+      .WriteTo(&*mmio_);
 
-  ms_remain = WAIT_MS;
-  while (!(rd32(CSTS) & NVME_CSTS_RDY)) {
+  // Timeout may have changed, so double check it.
+  caps_.ReadFrom(&*mmio_);
+
+  unsigned ms_remain = WAIT_MS;
+  while (!(ControllerStatusReg::Get().ReadFrom(&*mmio_).ready())) {
     if (--ms_remain == 0) {
-      zxlogf(ERROR, "timed out waiting for CSTS RDY");
-      txn.Reply(ZX_ERR_INTERNAL);
+      zxlogf(ERROR, "Timed out waiting for controller to leave reset.");
+      txn.Reply(ZX_ERR_TIMED_OUT);
       return;
     }
     zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
   }
-  zxlogf(DEBUG, "controller ready. (after %u ms)", WAIT_MS - ms_remain);
+  zxlogf(DEBUG, "Controller enabled (took %u ms).", WAIT_MS - ms_remain);
 
   // registers and buffers for admin queues
+  uint64_t cap = rd64(CAP);
   nvme->io_admin_sq_tail_db =
       static_cast<MMIO_PTR uint8_t*>(mmio_->get()) + NVME_REG_SQnTDBL(0, cap);
   nvme->io_admin_cq_head_db =
@@ -709,7 +732,6 @@ void Nvme::DdkInit(ddk::InitTxn txn) {
   nvme->admin_cq_toggle = 1;
 
   // Set up IO submission and completion queues.
-  caps_ = CapabilityReg::Get().ReadFrom(mmio_.get());
   auto io_queue =
       QueuePair::Create(bti_.borrow(), 1, caps_.max_queue_entries(), caps_, *mmio_, UTXN_COUNT);
   if (io_queue.is_error()) {

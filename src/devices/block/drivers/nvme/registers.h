@@ -14,7 +14,7 @@ namespace nvme {
 inline constexpr uint32_t NVME_REG_CAP = 0x00;
 inline constexpr uint32_t NVME_REG_VS = 0x08;
 inline constexpr uint32_t NVME_REG_INTMS = 0x0c;
-inline constexpr uint32_t NVME_REG_INTMC = 0x10;
+inline constexpr uint32_t NVME_REG_INTMC = 0x0f;
 inline constexpr uint32_t NVME_REG_CC = 0x14;
 inline constexpr uint32_t NVME_REG_CSTS = 0x1c;
 inline constexpr uint32_t NVME_REG_NSSR = 0x20;
