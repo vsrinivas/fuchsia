@@ -81,6 +81,8 @@
 //
 //     this_is_an_enum_t OtherTypesEnum(this_is_an_enum_t e);
 //
+//     this_is_abits_t OtherTypesBits(this_is_abits_t e);
+//
 //     void OtherTypesString(const char* s, char* out_s, size_t s_capacity);
 //
 //     void OtherTypesStringSized(const char* s, char* out_s, size_t s_capacity);
@@ -118,6 +120,8 @@
 //     void OtherTypesAsyncUnion(const this_is_aunion_t* u, other_types_async_union_callback callback, void* cookie);
 //
 //     void OtherTypesAsyncEnum(this_is_an_enum_t e, other_types_async_enum_callback callback, void* cookie);
+//
+//     void OtherTypesAsyncBits(this_is_abits_t e, other_types_async_bits_callback callback, void* cookie);
 //
 //     void OtherTypesAsyncString(const char* s, other_types_async_string_callback callback, void* cookie);
 //
@@ -341,6 +345,7 @@ public:
         other_types_protocol_ops_.struct = OtherTypesStruct;
         other_types_protocol_ops_.union = OtherTypesUnion;
         other_types_protocol_ops_.enum = OtherTypesEnum;
+        other_types_protocol_ops_.bits = OtherTypesBits;
         other_types_protocol_ops_.string = OtherTypesString;
         other_types_protocol_ops_.string_sized = OtherTypesStringSized;
         other_types_protocol_ops_.string_sized2 = OtherTypesStringSized2;
@@ -367,6 +372,10 @@ private:
     }
     static this_is_an_enum_t OtherTypesEnum(void* ctx, this_is_an_enum_t e) {
         auto ret = static_cast<D*>(ctx)->OtherTypesEnum(e);
+        return ret;
+    }
+    static this_is_abits_t OtherTypesBits(void* ctx, this_is_abits_t e) {
+        auto ret = static_cast<D*>(ctx)->OtherTypesBits(e);
         return ret;
     }
     static void OtherTypesString(void* ctx, const char* s, char* out_s, size_t s_capacity) {
@@ -467,6 +476,10 @@ public:
         return ops_->enum(ctx_, e);
     }
 
+    this_is_abits_t Bits(this_is_abits_t e) const {
+        return ops_->bits(ctx_, e);
+    }
+
     void String(const char* s, char* out_s, size_t s_capacity) const {
         ops_->string(ctx_, s, out_s, s_capacity);
     }
@@ -496,6 +509,7 @@ public:
         other_types_async_protocol_ops_.struct = OtherTypesAsyncStruct;
         other_types_async_protocol_ops_.union = OtherTypesAsyncUnion;
         other_types_async_protocol_ops_.enum = OtherTypesAsyncEnum;
+        other_types_async_protocol_ops_.bits = OtherTypesAsyncBits;
         other_types_async_protocol_ops_.string = OtherTypesAsyncString;
         other_types_async_protocol_ops_.string_sized = OtherTypesAsyncStringSized;
         other_types_async_protocol_ops_.string_sized2 = OtherTypesAsyncStringSized2;
@@ -521,6 +535,9 @@ private:
     }
     static void OtherTypesAsyncEnum(void* ctx, this_is_an_enum_t e, other_types_async_enum_callback callback, void* cookie) {
         static_cast<D*>(ctx)->OtherTypesAsyncEnum(e, callback, cookie);
+    }
+    static void OtherTypesAsyncBits(void* ctx, this_is_abits_t e, other_types_async_bits_callback callback, void* cookie) {
+        static_cast<D*>(ctx)->OtherTypesAsyncBits(e, callback, cookie);
     }
     static void OtherTypesAsyncString(void* ctx, const char* s, other_types_async_string_callback callback, void* cookie) {
         static_cast<D*>(ctx)->OtherTypesAsyncString(s, callback, cookie);
@@ -614,6 +631,10 @@ public:
 
     void Enum(this_is_an_enum_t e, other_types_async_enum_callback callback, void* cookie) const {
         ops_->enum(ctx_, e, callback, cookie);
+    }
+
+    void Bits(this_is_abits_t e, other_types_async_bits_callback callback, void* cookie) const {
+        ops_->bits(ctx_, e, callback, cookie);
     }
 
     void String(const char* s, other_types_async_string_callback callback, void* cookie) const {

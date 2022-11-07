@@ -283,7 +283,9 @@ fn get_in_params(m: &Method, transform: bool, ir: &FidlIr) -> Result<Vec<String>
                             };
                             Ok(format!("{}{}* {}", prefix, ty_name, c_name))
                         }
-                        Declaration::Enum => Ok(format!("{} {}", ty_name, c_name)),
+                        Declaration::Bits | Declaration::Enum => {
+                            Ok(format!("{} {}", ty_name, c_name))
+                        }
                         decl => Err(anyhow!("Unsupported declaration: {:?}", decl)),
                     }
                 }

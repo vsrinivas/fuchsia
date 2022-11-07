@@ -157,6 +157,11 @@ public:
         return *this;
     }
 
+    virtual MockOtherTypes& ExpectBits(this_is_abits_t out_e, this_is_abits_t e) {
+        mock_bits_.ExpectCall({out_e}, e);
+        return *this;
+    }
+
     virtual MockOtherTypes& ExpectString(std::string s, std::string s) {
         mock_string_.ExpectCall({std::move(out_s)}, std::move(s));
         return *this;
@@ -181,6 +186,7 @@ public:
         mock_struct_.VerifyAndClear();
         mock_union_.VerifyAndClear();
         mock_enum_.VerifyAndClear();
+        mock_bits_.VerifyAndClear();
         mock_string_.VerifyAndClear();
         mock_string_sized_.VerifyAndClear();
         mock_string_sized2_.VerifyAndClear();
@@ -199,6 +205,11 @@ public:
 
     virtual this_is_an_enum_t OtherTypesEnum(this_is_an_enum_t e) {
         std::tuple<this_is_an_enum_t> ret = mock_enum_.Call(e);
+        return std::get<0>(ret);
+    }
+
+    virtual this_is_abits_t OtherTypesBits(this_is_abits_t e) {
+        std::tuple<this_is_abits_t> ret = mock_bits_.Call(e);
         return std::get<0>(ret);
     }
 
@@ -225,6 +236,7 @@ public:
     mock_function::MockFunction<std::tuple<this_is_astruct_t>, this_is_astruct_t>& mock_struct() { return mock_struct_; }
     mock_function::MockFunction<std::tuple<this_is_aunion_t>, this_is_aunion_t>& mock_union() { return mock_union_; }
     mock_function::MockFunction<std::tuple<this_is_an_enum_t>, this_is_an_enum_t>& mock_enum() { return mock_enum_; }
+    mock_function::MockFunction<std::tuple<this_is_abits_t>, this_is_abits_t>& mock_bits() { return mock_bits_; }
     mock_function::MockFunction<std::tuple<std::string>, std::string>& mock_string() { return mock_string_; }
     mock_function::MockFunction<std::tuple<std::string>, std::string>& mock_string_sized() { return mock_string_sized_; }
     mock_function::MockFunction<std::tuple<std::string>, std::string>& mock_string_sized2() { return mock_string_sized2_; }
@@ -234,6 +246,7 @@ protected:
     mock_function::MockFunction<std::tuple<this_is_astruct_t>, this_is_astruct_t> mock_struct_;
     mock_function::MockFunction<std::tuple<this_is_aunion_t>, this_is_aunion_t> mock_union_;
     mock_function::MockFunction<std::tuple<this_is_an_enum_t>, this_is_an_enum_t> mock_enum_;
+    mock_function::MockFunction<std::tuple<this_is_abits_t>, this_is_abits_t> mock_bits_;
     mock_function::MockFunction<std::tuple<std::string>, std::string> mock_string_;
     mock_function::MockFunction<std::tuple<std::string>, std::string> mock_string_sized_;
     mock_function::MockFunction<std::tuple<std::string>, std::string> mock_string_sized2_;
@@ -283,6 +296,11 @@ public:
         return *this;
     }
 
+    virtual MockOtherTypesAsync& ExpectBits(this_is_abits_t e, this_is_abits_t out_e) {
+        mock_bits_.ExpectCall({out_e}, e);
+        return *this;
+    }
+
     virtual MockOtherTypesAsync& ExpectString(std::string s, std::string s) {
         mock_string_.ExpectCall({std::move(out_s)}, std::move(s));
         return *this;
@@ -302,6 +320,7 @@ public:
         mock_struct_.VerifyAndClear();
         mock_union_.VerifyAndClear();
         mock_enum_.VerifyAndClear();
+        mock_bits_.VerifyAndClear();
         mock_string_.VerifyAndClear();
         mock_string_sized_.VerifyAndClear();
         mock_string_sized2_.VerifyAndClear();
@@ -319,6 +338,11 @@ public:
 
     virtual void OtherTypesAsyncEnum(this_is_an_enum_t e, other_types_async_enum_callback callback, void* cookie) {
         std::tuple<this_is_an_enum_t> ret = mock_enum_.Call(e);
+        callback(cookie, std::get<0>(ret));
+    }
+
+    virtual void OtherTypesAsyncBits(this_is_abits_t e, other_types_async_bits_callback callback, void* cookie) {
+        std::tuple<this_is_abits_t> ret = mock_bits_.Call(e);
         callback(cookie, std::get<0>(ret));
     }
 
@@ -340,6 +364,7 @@ public:
     mock_function::MockFunction<std::tuple<this_is_astruct_t>, this_is_astruct_t>& mock_struct() { return mock_struct_; }
     mock_function::MockFunction<std::tuple<this_is_aunion_t>, this_is_aunion_t>& mock_union() { return mock_union_; }
     mock_function::MockFunction<std::tuple<this_is_an_enum_t>, this_is_an_enum_t>& mock_enum() { return mock_enum_; }
+    mock_function::MockFunction<std::tuple<this_is_abits_t>, this_is_abits_t>& mock_bits() { return mock_bits_; }
     mock_function::MockFunction<std::tuple<std::string>, std::string>& mock_string() { return mock_string_; }
     mock_function::MockFunction<std::tuple<std::string>, std::string>& mock_string_sized() { return mock_string_sized_; }
     mock_function::MockFunction<std::tuple<std::string>, std::string>& mock_string_sized2() { return mock_string_sized2_; }
@@ -348,6 +373,7 @@ protected:
     mock_function::MockFunction<std::tuple<this_is_astruct_t>, this_is_astruct_t> mock_struct_;
     mock_function::MockFunction<std::tuple<this_is_aunion_t>, this_is_aunion_t> mock_union_;
     mock_function::MockFunction<std::tuple<this_is_an_enum_t>, this_is_an_enum_t> mock_enum_;
+    mock_function::MockFunction<std::tuple<this_is_abits_t>, this_is_abits_t> mock_bits_;
     mock_function::MockFunction<std::tuple<std::string>, std::string> mock_string_;
     mock_function::MockFunction<std::tuple<std::string>, std::string> mock_string_sized_;
     mock_function::MockFunction<std::tuple<std::string>, std::string> mock_string_sized2_;

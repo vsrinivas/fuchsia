@@ -61,6 +61,9 @@ DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_protocol_uni
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_protocol_enum, OtherTypesEnum,
         this_is_an_enum_t (C::*)(this_is_an_enum_t e));
 
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_protocol_bits, OtherTypesBits,
+        this_is_abits_t (C::*)(this_is_abits_t e));
+
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_protocol_string, OtherTypesString,
         void (C::*)(const char* s, char* out_s, size_t s_capacity));
 
@@ -87,6 +90,10 @@ constexpr void CheckOtherTypesProtocolSubclass() {
     static_assert(internal::has_other_types_protocol_enum<D>::value,
         "OtherTypesProtocol subclasses must implement "
         "this_is_an_enum_t OtherTypesEnum(this_is_an_enum_t e);");
+
+    static_assert(internal::has_other_types_protocol_bits<D>::value,
+        "OtherTypesProtocol subclasses must implement "
+        "this_is_abits_t OtherTypesBits(this_is_abits_t e);");
 
     static_assert(internal::has_other_types_protocol_string<D>::value,
         "OtherTypesProtocol subclasses must implement "
@@ -115,6 +122,9 @@ DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_async_protoc
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_async_protocol_enum, OtherTypesAsyncEnum,
         void (C::*)(this_is_an_enum_t e, other_types_async_enum_callback callback, void* cookie));
 
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_async_protocol_bits, OtherTypesAsyncBits,
+        void (C::*)(this_is_abits_t e, other_types_async_bits_callback callback, void* cookie));
+
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_async_protocol_string, OtherTypesAsyncString,
         void (C::*)(const char* s, other_types_async_string_callback callback, void* cookie));
 
@@ -138,6 +148,10 @@ constexpr void CheckOtherTypesAsyncProtocolSubclass() {
     static_assert(internal::has_other_types_async_protocol_enum<D>::value,
         "OtherTypesAsyncProtocol subclasses must implement "
         "void OtherTypesAsyncEnum(this_is_an_enum_t e, other_types_async_enum_callback callback, void* cookie);");
+
+    static_assert(internal::has_other_types_async_protocol_bits<D>::value,
+        "OtherTypesAsyncProtocol subclasses must implement "
+        "void OtherTypesAsyncBits(this_is_abits_t e, other_types_async_bits_callback callback, void* cookie);");
 
     static_assert(internal::has_other_types_async_protocol_string<D>::value,
         "OtherTypesAsyncProtocol subclasses must implement "

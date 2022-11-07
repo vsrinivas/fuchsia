@@ -15,6 +15,10 @@ type ThisIsAnEnum = strict enum {
     x = 23;
 };
 
+type ThisIsABits = strict bits {
+    x = 0x01;
+};
+
 const strings_size uint32 = 32;
 
 @transport("Banjo")
@@ -35,6 +39,11 @@ protocol OtherTypes {
     }) -> (struct {
         e ThisIsAnEnum;
     });
+    Bits(struct {
+        e ThisIsABits;
+    }) -> (struct {
+        e ThisIsABits;
+    });
     String(struct {
         s string;
     }) -> (struct {
@@ -50,7 +59,7 @@ protocol OtherTypes {
     }) -> (struct {
         s string:strings_size;
     });
-    InlineTable(table{
+    InlineTable(table {
         1: request_member uint32;
     }) -> (table {
         1: response_member uint32;
@@ -77,6 +86,12 @@ protocol OtherTypesAsync {
         e ThisIsAnEnum;
     }) -> (struct {
         e ThisIsAnEnum;
+    });
+    @async
+    Bits(struct {
+        e ThisIsABits;
+    }) -> (struct {
+        e ThisIsABits;
     });
     @async
     String(struct {
