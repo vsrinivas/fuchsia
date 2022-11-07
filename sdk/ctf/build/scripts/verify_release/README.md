@@ -6,7 +6,7 @@ A CTS release may fail for several reasons. A few possible situations are
 below:
 
 When **generating the CTS archive**:
-  *  `//out/default/cts_artifacts.json` may have been populated incorrectly.
+  *  `//out/default/ctf_artifacts.json` may have been populated incorrectly.
 Fuchsia Infra uses this list to collect the CTS archive contents, and if a file
 in that list is missing, it may cause the process to halt.
 

@@ -9,8 +9,8 @@ import("//sdk/ctf/build/verify_sdk_compatibility.gni")
 # Generates a manifest of CTF release artifacts to upload to remote storage.
 build_api_module("ctf_artifacts") {
   testonly = true
-  data_keys = [ "cts_artifacts" ]
-  walk_keys = [ "cts_barrier" ]
+  data_keys = [ "ctf_artifacts" ]
+  walk_keys = [ "ctf_barrier" ]
   deps = [ ":ctf" ]
 }
 
@@ -41,7 +41,7 @@ generated_file("test_manifest") {
   deps = [ "tests" ]
 
   metadata = {
-    cts_artifacts = [ "cts/test_manifest.json" ]
+    ctf_artifacts = [ "cts/test_manifest.json" ]
   }
 }
 
@@ -53,7 +53,7 @@ generated_file("host_test_manifest") {
   deps = [ "tests/examples/host_tool:tests($host_toolchain)" ]
 
   metadata = {
-    cts_artifacts = [ "cts/host_test_manifest.json" ]
+    ctf_artifacts = [ "cts/host_test_manifest.json" ]
   }
 }
 

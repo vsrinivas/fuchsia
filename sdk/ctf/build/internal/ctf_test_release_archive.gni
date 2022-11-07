@@ -101,8 +101,8 @@ template("ctf_test_release_archive") {
     deps = [ ":$copy_target" ]
 
     metadata = {
-      _cts_artifacts = get_target_outputs(":$copy_target")
-      cts_artifacts = rebase_path(_cts_artifacts, root_out_dir)
+      _ctf_artifacts = get_target_outputs(":$copy_target")
+      ctf_artifacts = rebase_path(_ctf_artifacts, root_out_dir)
       test_manifest = [
         {
           archive_name = invoker.archive_name

@@ -14,7 +14,7 @@ group("tests") {
 
   # Don't release examples in CTF
   metadata = {
-    cts_barrier = []
+    ctf_barrier = []
   }
 }
 
@@ -24,6 +24,6 @@ group("e2e_tests") {
 
   # Don't release examples in CTF
   metadata = {
-    cts_barrier = []
+    ctf_barrier = []
   }
 }

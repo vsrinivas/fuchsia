@@ -49,7 +49,7 @@ template("ctf_host_test") {
     deps = invoker.deps
 
     metadata = {
-      cts_artifacts = rebase_path(outputs, root_build_dir)
+      ctf_artifacts = rebase_path(outputs, root_build_dir)
     }
   }
 

@@ -41,7 +41,7 @@ class CTS:
 
         self.release_dir = "{}/prebuilt/cts/{}".format(
             self.fuchsia_dir, self.cts_version)
-        self.cts_artifacts = "{}/cts_artifacts.json".format(self.out_dir)
+        self.ctf_artifacts = "{}/ctf_artifacts.json".format(self.out_dir)
 
     def _print(self, string, end='\n'):
         print(string, end=end)
@@ -76,7 +76,7 @@ class CTS:
         """
         Copy the built CTS to the release directory: //prebuilt/cts/<cts_version>
 
-        Throws an exception if any file listed in cts_artifacts.json does not exist.
+        Throws an exception if any file listed in ctf_artifacts.json does not exist.
         """
         self._print("Releasing the CTS....", end='')
 
@@ -87,11 +87,11 @@ class CTS:
         # Create the release directory.
         pathlib.Path(self.release_dir).mkdir(parents=True, exist_ok=True)
 
-        with open(self.cts_artifacts, 'r') as cts_artifacts:
-            data = cts_artifacts.read()
+        with open(self.ctf_artifacts, 'r') as ctf_artifacts:
+            data = ctf_artifacts.read()
         sdk_files = json.loads(data)
 
-        # Using the cts_artifacts file, copy every file to the release directory.
+        # Using the ctf_artifacts file, copy every file to the release directory.
         for f in sdk_files:
             src = "{}/{}".format(self.out_dir, f)
             dest = "{}/{}".format(self.release_dir, f)
