@@ -150,7 +150,7 @@ void LogListener::PushLogMessage(const fuchsia_logger::wire::LogMessage& message
   ss << "] ";
   size_t size = ss.tellp();
   ZX_ASSERT_MSG(size < max_msg_size_, "message preamble too long: %ld", size);
-  cpp17::string_view contents = message.msg.get();
+  std::string_view contents = message.msg.get();
   size = std::min(max_msg_size_ - size, contents.size());
   ss << contents.substr(0, size);
   if (static_cast<size_t>(ss.tellp()) < max_msg_size_) {

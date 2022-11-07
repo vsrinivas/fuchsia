@@ -35,6 +35,7 @@ sdk://fidl/zx
 sdk://pkg/async
 sdk://pkg/async-cpp
 sdk://pkg/async-default
+sdk://pkg/component_incoming_cpp
 sdk://pkg/driver-record
 sdk://pkg/driver_compat
 sdk://pkg/driver_component_cpp

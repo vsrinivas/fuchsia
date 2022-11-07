@@ -15,6 +15,7 @@
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fit/defer.h>
+#include <lib/stdcompat/string_view.h>
 #include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>

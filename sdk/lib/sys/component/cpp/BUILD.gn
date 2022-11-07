@@ -10,17 +10,16 @@ sdk_source_set("cpp") {
   include_base = "//sdk"
 
   sources = [
-    "constants.h",
     "handlers.h",
     "outgoing_directory.cc",
     "outgoing_directory.h",
-    "service_client.cc",
     "service_client.h",
     "structured_config.h",
   ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
+    "//sdk/lib/component/cpp/incoming",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//sdk/lib/fit-promise",

@@ -9,11 +9,11 @@
 #include <lib/async/cpp/sequence_checker.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
+#include <lib/component/cpp/incoming/constants.h>
 #include <lib/fidl/cpp/wire/traits.h>
 #include <lib/fit/function.h>
 #include <lib/stdcompat/string_view.h>
 #include <lib/svc/dir.h>
-#include <lib/sys/component/cpp/constants.h>
 #include <lib/sys/component/cpp/handlers.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>

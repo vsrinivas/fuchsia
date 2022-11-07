@@ -3,22 +3,20 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <lib/fdio/directory.h>
-#include <lib/fidl/cpp/wire/array.h>
-#include <lib/fidl/cpp/wire/connect_service.h>
-// #include <lib/fpromise/result.h>
 #include <lib/component/cpp/incoming/constants.h>
 #include <lib/component/cpp/incoming/service_client.h>
+#include <lib/fdio/directory.h>
+#include <lib/fidl/cpp/wire/array.h>
 
 namespace component {
 
-zx::result<fidl::ClientEnd<fuchsia_io::Directory>> OpenServiceRoot(cpp17::string_view path) {
+zx::result<fidl::ClientEnd<fuchsia_io::Directory>> OpenServiceRoot(std::string_view path) {
   return component::Connect<fuchsia_io::Directory>(path);
 }
 
 namespace internal {
 
-zx::result<zx::channel> ConnectRaw(cpp17::string_view path) {
+zx::result<zx::channel> ConnectRaw(std::string_view path) {
   zx::channel client_end, server_end;
   if (zx_status_t status = zx::channel::create(0, &client_end, &server_end); status != ZX_OK) {
     return zx::error(status);
@@ -29,7 +27,7 @@ zx::result<zx::channel> ConnectRaw(cpp17::string_view path) {
   return zx::ok(std::move(client_end));
 }
 
-zx::result<> ConnectRaw(zx::channel server_end, cpp17::string_view path) {
+zx::result<> ConnectRaw(zx::channel server_end, std::string_view path) {
   if (zx_status_t status = fdio_service_connect(std::string(path).c_str(), server_end.release());
       status != ZX_OK) {
     return zx::error(status);
@@ -38,7 +36,7 @@ zx::result<> ConnectRaw(zx::channel server_end, cpp17::string_view path) {
 }
 
 zx::result<zx::channel> ConnectAtRaw(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
-                                     cpp17::string_view protocol_name) {
+                                     std::string_view protocol_name) {
   zx::channel client_end, server_end;
   if (zx_status_t status = zx::channel::create(0, &client_end, &server_end); status != ZX_OK) {
     return zx::error(status);
@@ -51,7 +49,7 @@ zx::result<zx::channel> ConnectAtRaw(fidl::UnownedClientEnd<fuchsia_io::Director
 }
 
 zx::result<> ConnectAtRaw(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
-                          zx::channel server_end, cpp17::string_view protocol_name) {
+                          zx::channel server_end, std::string_view protocol_name) {
   if (zx_status_t status = fdio_service_connect_at(
           svc_dir.handle()->get(), std::string(protocol_name).c_str(), server_end.release());
       status != ZX_OK) {
@@ -144,7 +142,7 @@ zx::result<> OpenNamedServiceAt(fidl::UnownedClientEnd<fuchsia_io::Directory> di
   if (!path_result.is_ok()) {
     return path_result.take_error();
   }
-  return internal::DirectoryOpenFunc(dir.channel(), std::move(path_result.value()),
+  return internal::DirectoryOpenFunc(dir.channel(), path_result.value(),
                                      fidl::internal::MakeAnyTransport(std::move(remote)));
 }
 

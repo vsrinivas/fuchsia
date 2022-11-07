@@ -18,11 +18,8 @@ sdk_source_set("incoming") {
   public_deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/fdio",
-    "//sdk/lib/fit",
-    "//sdk/lib/fit-promise",
-    "//sdk/lib/stdcompat",
-    "//zircon/system/ulib/async",
     "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxc",
   ]
 
   public_configs = [ "//sdk/config" ]
