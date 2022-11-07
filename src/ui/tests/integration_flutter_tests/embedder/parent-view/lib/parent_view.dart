@@ -10,6 +10,7 @@ import 'dart:io';
 import 'package:args/args.dart';
 import 'package:fidl_fuchsia_ui_app/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
+import 'package:fidl_fuchsia_ui_scenic/fidl_async.dart';
 import 'package:flutter/material.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:fuchsia_services/services.dart';
@@ -24,14 +25,16 @@ Future<void> main(List<String> args) async {
     ..addFlag('showOverlay', defaultsTo: false)
     ..addFlag('hitTestable', defaultsTo: true)
     ..addFlag('focusable', defaultsTo: true)
-    ..addFlag('useFlatland', defaultsTo: false)
     ..addFlag('usePointerInjection2', defaultsTo: false);
   final arguments = parser.parse(args);
   for (final option in arguments.options) {
     print('parent-view: $option: ${arguments[option]}');
   }
 
-  final useFlatland = arguments['useFlatland'];
+  ScenicProxy scenic = ScenicProxy();
+  Incoming.fromSvcPath().connectToService(scenic);
+
+  final useFlatland = await scenic.usesFlatland();
   if (useFlatland) {
     final viewportCreationToken = _launchFlatlandApp();
     runApp(MaterialApp(
@@ -42,6 +45,8 @@ Future<void> main(List<String> args) async {
         showOverlay: arguments['showOverlay'],
         hitTestable: arguments['hitTestable'],
         focusable: arguments['focusable'],
+        usePointerInjection2: arguments['usePointerInjection2'],
+        useFlatland: true,
       ),
     ));
   } else {
@@ -56,6 +61,7 @@ Future<void> main(List<String> args) async {
         hitTestable: arguments['hitTestable'],
         focusable: arguments['focusable'],
         usePointerInjection2: arguments['usePointerInjection2'],
+        useFlatland: false,
       ),
     ));
   }
@@ -70,14 +76,22 @@ class TestApp extends StatelessWidget {
   final bool hitTestable;
   final bool focusable;
   final bool usePointerInjection2;
+  final bool useFlatland;
 
   final _backgroundColor = ValueNotifier(_blue);
+  var _alpha = 255;
 
   TestApp(this.connection,
       {this.showOverlay = false,
       this.hitTestable = true,
       this.focusable = true,
-      this.usePointerInjection2 = false});
+      this.usePointerInjection2 = false,
+      this.useFlatland = false}) {
+    if (useFlatland) {
+      // Set the alpha channel value as 254 to enable overlays in Flatland.
+      _alpha = 254;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -114,7 +128,7 @@ class TestApp extends StatelessWidget {
                           widthFactor: 0.5,
                           heightFactor: 0.5,
                           child: Container(
-                            color: Color.fromARGB(255, 0, 255, 0),
+                            color: Color.fromARGB(_alpha, 0, 255, 0),
                           ),
                         ),
                       ),
@@ -181,6 +195,6 @@ List<String> _GetArgsFromConfigFile() {
     return List.empty();
   }
   final fileContentCsv = f.readAsStringSync();
-  args = fileContentCsv.split('\n');
+  args = fileContentCsv.split(',');
   return args;
 }

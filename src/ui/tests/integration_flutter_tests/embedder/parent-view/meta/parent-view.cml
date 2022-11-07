@@ -22,6 +22,8 @@
                 "fuchsia.logger.LogSink",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.app.ViewProvider",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.pointerinjector.Registry",
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.vulkan.loader.Loader",

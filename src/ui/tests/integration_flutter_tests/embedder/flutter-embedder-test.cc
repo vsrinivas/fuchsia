@@ -14,10 +14,15 @@
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 
+#include <unordered_set>
+
+#include "src/ui/testing/util/screenshot_helper.h"
+
 namespace {
 
 // Types imported for the realm_builder library.
 using component_testing::ChildRef;
+using component_testing::ConfigValue;
 using component_testing::DirectoryContents;
 using component_testing::ParentRef;
 using component_testing::Protocol;
@@ -64,45 +69,97 @@ namespace flutter_embedder_test {
 constexpr char kChildViewUrl[] = "fuchsia-pkg://fuchsia.com/child-view#meta/child-view-realm.cm";
 constexpr char kParentViewUrl[] = "fuchsia-pkg://fuchsia.com/parent-view#meta/parent-view-realm.cm";
 
+constexpr auto kTestUIStackUrl = "#meta/test-ui-stack.cm";
+
 const ui_testing::Pixel kParentBackgroundColor(0xFF, 0x00, 0x00, 0xFF);  // Blue
 const ui_testing::Pixel kParentTappedColor(0x00, 0x00, 0x00, 0xFF);      // Black
 const ui_testing::Pixel kChildBackgroundColor(0xFF, 0x00, 0xFF, 0xFF);   // Pink
 const ui_testing::Pixel kChildTappedColor(0x00, 0xFF, 0xFF, 0xFF);       // Yellow
 
-// TODO(fxb/64201): Remove forced opacity colors when Flatland is enabled.
-const ui_testing::Pixel kOverlayBackgroundColor1(0x0E, 0xFF, 0x00,
-                                                 0xFF);  // Green, blended with blue (FEMU local)
-const ui_testing::Pixel kOverlayBackgroundColor2(0x0E, 0xFF, 0x0E,
-                                                 0xFF);  // Green, blended with pink (FEMU local)
-const ui_testing::Pixel kOverlayBackgroundColor3(0x0D, 0xFF, 0x00,
-                                                 0xFF);  // Green, blended with blue (AEMU infra)
-const ui_testing::Pixel kOverlayBackgroundColor4(0x0D, 0xFF, 0x0D,
-                                                 0xFF);  // Green, blended with pink (AEMU infra)
-const ui_testing::Pixel kOverlayBackgroundColor5(0x0D, 0xFE, 0x00,
-                                                 0xFF);  // Green, blended with blue (NUC)
-const ui_testing::Pixel kOverlayBackgroundColor6(0x00, 0xFF, 0x0D,
-                                                 0xFF);  // Green, blended with pink (NUC)
+// Overlay values for GFX.
+const ui_testing::Pixel kGFXOverlayBackgroundColor1(0x0E, 0xFF, 0x00,
+                                                    0xFF);  // Green, blended with blue (FEMU local)
+const ui_testing::Pixel kGFXOverlayBackgroundColor2(0x0E, 0xFF, 0x0E,
+                                                    0xFF);  // Green, blended with pink (FEMU local)
+const ui_testing::Pixel kGFXOverlayBackgroundColor3(0x0D, 0xFF, 0x00,
+                                                    0xFF);  // Green, blended with blue (AEMU infra)
+const ui_testing::Pixel kGFXOverlayBackgroundColor4(0x0D, 0xFF, 0x0D,
+                                                    0xFF);  // Green, blended with pink (AEMU infra)
+const ui_testing::Pixel kGFXOverlayBackgroundColor5(0x0D, 0xFE, 0x00,
+                                                    0xFF);  // Green, blended with blue (NUC)
+const ui_testing::Pixel kGFXOverlayBackgroundColor6(0x00, 0xFF, 0x0D,
+                                                    0xFF);  // Green, blended with pink (NUC)
 
-static uint32_t OverlayPixelCount(std::map<ui_testing::Pixel, uint32_t>& histogram) {
-  return histogram[kOverlayBackgroundColor1] + histogram[kOverlayBackgroundColor2] +
-         histogram[kOverlayBackgroundColor3] + histogram[kOverlayBackgroundColor4] +
-         histogram[kOverlayBackgroundColor5] + histogram[kOverlayBackgroundColor6];
+// Overlay values for Flatland. Note that these values are different than GFX because flutter sets
+// the Overlay layer opacity as 254 for GFX. For Flatland, flutter does not use this hack and sets
+// the opacity value between [0,1].
+const ui_testing::Pixel kFlatlandOverlayBackgroundColor1(0x0D, 0xFE, 0x00,
+                                                         0xFF);  // Green blended with blue.
+const ui_testing::Pixel kFlatlandOverlayBackgroundColor2(0x0D, 0xFE, 0x0D,
+                                                         0xFF);  // Green blended with pink.
+const ui_testing::Pixel kFlatlandOverlayBackgroundColor3(0x00, 0xFE, 0x0D,
+                                                         0xFF);  // Green blended with yellow.
+
+std::set<ui_testing::Pixel> GetGFXOverlayPixels() {
+  return {kGFXOverlayBackgroundColor1, kGFXOverlayBackgroundColor2, kGFXOverlayBackgroundColor3,
+          kGFXOverlayBackgroundColor4, kGFXOverlayBackgroundColor5, kGFXOverlayBackgroundColor6};
+}
+
+std::set<ui_testing::Pixel> GetFlatlandOverlayPixels() {
+  return {kFlatlandOverlayBackgroundColor1, kFlatlandOverlayBackgroundColor2,
+          kFlatlandOverlayBackgroundColor3};
+}
+
+static uint32_t OverlayPixelCount(std::map<ui_testing::Pixel, uint32_t>& histogram,
+                                  bool use_flatland) {
+  const auto overlay_pixels = use_flatland ? GetFlatlandOverlayPixels() : GetGFXOverlayPixels();
+  int pixel_count = 0;
+  for (const auto pixel : overlay_pixels) {
+    pixel_count += histogram[pixel];
+  }
+  return pixel_count;
+}
+
+std::vector<UIStackConfig> UIStackConfigsToTest() {
+  std::vector<UIStackConfig> configs;
+
+  // GFX x Root presenter
+  configs.push_back({.use_scene_manager = false, .use_flatland = false});
+
+  // GFX x Scene manager
+  configs.push_back({.use_scene_manager = true, .use_flatland = false});
+
+  // Flatland X Scene manger
+  configs.push_back({.use_scene_manager = true, .use_flatland = true});
+
+  return configs;
 }
 
 void FlutterEmbedderTest::SetUpRealmBase() {
   FX_LOGS(INFO) << "Setting up realm base.";
 
   // Add test UI stack component.
-  realm_builder_.AddChild(kTestUIStack, GetParam());
+  realm_builder_.AddChild(kTestUIStack, kTestUIStackUrl);
+
+  auto ui_stack_config = GetParam();
+  realm_builder_.InitMutableConfigToEmpty(kTestUIStack);
+  realm_builder_.SetConfigValue(kTestUIStack, "use_scene_manager",
+                                ConfigValue::Bool(ui_stack_config.use_scene_manager));
+  realm_builder_.SetConfigValue(kTestUIStack, "use_flatland",
+                                ConfigValue::Bool(ui_stack_config.use_flatland));
+  realm_builder_.SetConfigValue(kTestUIStack, "display_rotation", ConfigValue::Uint32(0));
 
   // Add embedded child component to realm.
   realm_builder_.AddChild(kChildFlutterRealm, kChildViewUrl);
 
   // Add child flutter app routes. Note that we do not route ViewProvider to ParentRef{} as it is
   // embedded.
-  realm_builder_.AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-                                .source = kTestUIStackRef,
-                                .targets = {kChildFlutterRealmRef}});
+  realm_builder_.AddRoute(
+      Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_},
+                             Protocol{fuchsia::ui::composition::Flatland::Name_},
+                             Protocol{fuchsia::ui::composition::Allocator::Name_}},
+            .source = kTestUIStackRef,
+            .targets = {kChildFlutterRealmRef}});
 
   // Route base system services to flutter and the test UI stack.
   realm_builder_.AddRoute(
@@ -151,9 +208,12 @@ void FlutterEmbedderTest::BuildRealmAndLaunchApp(const std::string& component_ur
   realm_builder_.AddChild(kParentFlutterRealm, kParentViewUrl);
 
   // Capabilities routed to embedded flutter app.
-  realm_builder_.AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-                                .source = kTestUIStackRef,
-                                .targets = {kParentFlutterRealmRef}});
+  realm_builder_.AddRoute(
+      Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_},
+                             Protocol{fuchsia::ui::composition::Flatland::Name_},
+                             Protocol{fuchsia::ui::composition::Allocator::Name_}},
+            .source = kTestUIStackRef,
+            .targets = {kParentFlutterRealmRef}});
 
   realm_builder_.AddRoute(
       Route{.capabilities = {Protocol{fuchsia::ui::pointerinjector::Registry::Name_}},
@@ -292,11 +352,8 @@ std::string FlutterEmbedderTest::GetPointerInjectorArgs() {
   return config.str();
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    FlutterEmbedderTestWithParams, FlutterEmbedderTest,
-    ::testing::Values(
-        "fuchsia-pkg://fuchsia.com/gfx-root-presenter-test-ui-stack#meta/test-ui-stack.cm",
-        "fuchsia-pkg://fuchsia.com/gfx-scene-manager-test-ui-stack#meta/test-ui-stack.cm"));
+INSTANTIATE_TEST_SUITE_P(FlutterEmbedderTestWithParams, FlutterEmbedderTest,
+                         ::testing::ValuesIn(UIStackConfigsToTest()));
 
 TEST_P(FlutterEmbedderTest, Embedding) {
   BuildRealmAndLaunchApp(kParentViewUrl);
@@ -332,6 +389,11 @@ TEST_P(FlutterEmbedderTest, HittestEmbedding) {
 }
 
 TEST_P(FlutterEmbedderTest, HittestDisabledEmbedding) {
+  // TODO(fxb/114135): Add Flatland support for this test.
+  if (GetParam().use_flatland) {
+    GTEST_SKIP();
+  }
+
   BuildRealmAndLaunchApp(kParentViewUrl, {"--no-hitTestable"});
 
   // Take screenshots until we see the child-view's embedded color.
@@ -360,7 +422,7 @@ TEST_P(FlutterEmbedderTest, EmbeddingWithOverlay) {
       kChildBackgroundColor, [](std::map<ui_testing::Pixel, uint32_t> histogram) {
         // Expect parent, overlay and child background colors.
         // With parent color > child color and overlay color > child color.
-        const size_t overlay_pixel_count = OverlayPixelCount(histogram);
+        const size_t overlay_pixel_count = OverlayPixelCount(histogram, GetParam().use_flatland);
         EXPECT_GT(histogram[kParentBackgroundColor], 0u);
         EXPECT_GT(overlay_pixel_count, 0u);
         EXPECT_GT(histogram[kChildBackgroundColor], 0u);
@@ -370,7 +432,11 @@ TEST_P(FlutterEmbedderTest, EmbeddingWithOverlay) {
 }
 
 TEST_P(FlutterEmbedderTest, HittestEmbeddingWithOverlay) {
-  BuildRealmAndLaunchApp(kParentViewUrl, {"--showOverlay"});
+  if (GetParam().use_flatland) {
+    BuildRealmAndLaunchApp(kParentViewUrl, {"--showOverlay"}, true /*usePointerInjection2*/);
+  } else {
+    BuildRealmAndLaunchApp(kParentViewUrl, {"--showOverlay"});
+  }
 
   // Take screenshot until we see the child-view's embedded color.
   ASSERT_TRUE(TakeScreenshotUntil(kChildBackgroundColor));
@@ -386,7 +452,7 @@ TEST_P(FlutterEmbedderTest, HittestEmbeddingWithOverlay) {
       TakeScreenshotUntil(kChildTappedColor, [](std::map<ui_testing::Pixel, uint32_t> histogram) {
         // Expect parent, overlay and child background colors.
         // With parent color > child color and overlay color > child color.
-        const size_t overlay_pixel_count = OverlayPixelCount(histogram);
+        const size_t overlay_pixel_count = OverlayPixelCount(histogram, GetParam().use_flatland);
         EXPECT_GT(histogram[kParentBackgroundColor], 0u);
         EXPECT_GT(overlay_pixel_count, 0u);
         EXPECT_EQ(histogram[kChildBackgroundColor], 0u);

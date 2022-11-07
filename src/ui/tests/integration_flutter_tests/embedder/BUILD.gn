@@ -11,7 +11,6 @@ group("tests") {
   testonly = true
   deps = [
     ":flutter-embedder-test",
-    "//src/ui/testing/test_ui_stack:test-ui-stack-flavors",
 
     # The deps below are necessary on minimal product configs.
     "//src/graphics/bin/vulkan_loader",
@@ -30,6 +29,10 @@ fuchsia_unittest_package("flutter-embedder-test") {
     "//src/lib/fuchsia-component-test/realm_builder_server:fuchsia-component-test",
     "//src/ui/tests/integration_flutter_tests/embedder/child-view",
     "//src/ui/tests/integration_flutter_tests/embedder/parent-view",
+
+    # Include some default config (it doesn't matter which, since we're going to override it).
+    "//src/ui/testing/test_ui_stack:flatland_scene_manager_config",
+    "//src/ui/testing/test_ui_stack:test-ui-stack-component",
   ]
   test_specs = {
     log_settings = {
