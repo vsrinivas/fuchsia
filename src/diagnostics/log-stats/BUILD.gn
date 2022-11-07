@@ -15,7 +15,10 @@ group("log-stats") {
 
 group("tests") {
   testonly = true
-  deps = [ ":log-stats-tests" ]
+  deps = [
+    ":log-stats-tests",
+    "tests",
+  ]
 }
 
 fuchsia_component("component") {
@@ -42,6 +45,7 @@ rustc_library("lib") {
   deps = [
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_rust",
     "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_rust",
+    "//sdk/fidl/fuchsia.ui.activity:fuchsia.ui.activity_rust",
     "//src/lib/diagnostics/data/rust",
     "//src/lib/diagnostics/inspect/derive",
     "//src/lib/diagnostics/inspect/runtime/rust",
@@ -76,35 +80,6 @@ fuchsia_unittest_component("log-stats-unit-tests") {
   deps = [ ":lib_test" ]
 }
 
-fuchsia_component("log-stats-integration-tests") {
-  testonly = true
-  manifest = "meta/integration-tests.cml"
-  deps = [
-    ":component",
-    ":test-bin",
-  ]
-}
-
 fuchsia_test_package("log-stats-tests") {
-  test_components = [
-    ":log-stats-unit-tests",
-    ":log-stats-integration-tests",
-  ]
-}
-
-rustc_test("test-bin") {
-  edition = "2021"
-  testonly = true
-  name = "log_stats_integration_tests"
-  deps = [
-    "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
-    "//src/lib/diagnostics/reader/rust",
-    "//src/lib/fuchsia",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-  ]
-
-  source_root = "tests/integration.rs"
-  sources = [ "tests/integration.rs" ]
+  test_components = [ ":log-stats-unit-tests" ]
 }

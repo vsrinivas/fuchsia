@@ -19,6 +19,9 @@
             protocol: [ "fuchsia.metrics.MetricEventLoggerFactory" ],
         },
         {
+            protocol: [ "fuchsia.ui.activity.Provider" ],
+        },
+        {
             directory: "config-data",
             rights: [ "r*" ],
             path: "/config/data",

@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::{format_err, Context, Result};
 use argh::FromArgs;
+use core::panic;
 use diagnostics_reader::{ArchiveReader, Logs};
 use fidl_fuchsia_diagnostics::{ArchiveAccessorMarker, ArchiveAccessorProxy};
+use fidl_fuchsia_ui_activity as factivity;
 use fuchsia_async as fasync;
 use fuchsia_component::{client::connect_to_protocol, server::ServiceFs};
 use fuchsia_inspect::{
@@ -12,7 +15,7 @@ use fuchsia_inspect::{
     health::Reporter,
 };
 use fuchsia_inspect_derive::WithInspect;
-use futures::{future::join, prelude::*};
+use futures::{future::join, prelude::*, select};
 use std::fs::File;
 use std::io::BufReader;
 use tracing::*;
@@ -48,11 +51,14 @@ pub async fn main() -> Result<(), anyhow::Error> {
 
     let accessor = connect_to_protocol::<ArchiveAccessorMarker>()?;
 
+    let activity_provider = connect_to_protocol::<factivity::ProviderMarker>()?;
+
     let metric_logger = create_metric_logger().await;
 
     health().set_ok();
     info!("Maintaining.");
-    join(maintain(stats, accessor, metric_logger), service_fs.collect::<()>()).await;
+    join(maintain(stats, accessor, metric_logger, activity_provider), service_fs.collect::<()>())
+        .await;
     info!("Exiting.");
     Ok(())
 }
@@ -103,6 +109,7 @@ async fn maintain(
     mut stats: LogManagerStats,
     archive: ArchiveAccessorProxy,
     mut metric_logger: Option<MetricLogger>,
+    activity_provider: factivity::ProviderProxy,
 ) {
     let mut reader = ArchiveReader::new();
     reader.with_archive(archive);
@@ -114,23 +121,80 @@ async fn maintain(
         }
     });
 
-    while let Some(log) = logs.next().await {
-        let source = if log.metadata.component_url == Some(KERNEL_URL.to_string()) {
-            LogSource::Kernel
-        } else {
-            LogSource::LogSink
-        };
-        stats.record_log(&log, source);
-        if let Some(ref url) = log.metadata.component_url {
-            stats.get_component_log_stats(url.as_str()).await.record_log(&log);
-            if let Some(ref mut metric_logger) = metric_logger {
-                let res = metric_logger.process(&log).await;
-                if let Err(err) = res {
-                    warn!(%err, "MetricLogger failed");
+    let mut listener_stream = match connect_activity_service(&activity_provider) {
+        Ok(stream) => stream,
+        Err(e) => {
+            panic!("Failed to create listener stream: {}", e);
+        }
+    };
+    // State tuple to send a state of the device and transition time of that state
+    let mut prev_state = None;
+    let mut curr_state = None;
+
+    loop {
+        select! {
+            state = listener_stream.next().fuse() => {
+                match state {
+                    Some(Ok(factivity::ListenerRequest::OnStateChanged {
+                        state,
+                        responder,
+                        transition_time,
+                        ..
+                    })) => {
+                        prev_state = curr_state;
+                        curr_state = Some((state, transition_time));
+
+                        let _ = responder.send();
+                    }
+                    Some(Err(e)) => log::error!("Error polling listener_stream: {}", e),
+                    None => {
+                        log::error!("Listener stream closed. Reconnecting...");
+                        match connect_activity_service(&activity_provider) {
+                            Ok(stream) => listener_stream = stream,
+                            Err(e) => {
+                                log::error!("{}", e);
+                            }
+                        }
+                    }
                 }
-            }
+            },
+
+            next_log = logs.next().fuse() => {
+                match next_log {
+                    Some(log) => {
+                        let source = if log.metadata.component_url == Some(KERNEL_URL.to_string()) {
+                            LogSource::Kernel
+                        } else {
+                            LogSource::LogSink
+                        };
+                        stats.record_log(&log, source);
+                        if let Some(ref url) = log.metadata.component_url {
+                            stats.get_component_log_stats(url.as_str()).await.record_log(&log);
+                            if let Some(ref mut metric_logger) = metric_logger {
+                                let res = metric_logger.process(&log, prev_state, curr_state).await;
+                                if let Err(err) = res {
+                                    warn!(%err, "MetricLogger failed");
+                                }
+                            }
+                        }
+                    }
+                    None => continue,
+                }
+            },
         }
     }
+}
+
+fn connect_activity_service(
+    activity_provider: &factivity::ProviderProxy,
+) -> Result<factivity::ListenerRequestStream> {
+    let (client, stream) = fidl::endpoints::create_request_stream::<factivity::ListenerMarker>()
+        .context("Failed to create request stream")?;
+    activity_provider
+        .watch_state(client)
+        .map_err(|e| format_err!("watch_state failed: {:?}", e))?;
+
+    Ok(stream)
 }
 
 #[cfg(test)]

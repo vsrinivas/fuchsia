@@ -198,7 +198,10 @@
         {
             protocol: [ "fuchsia.ui.activity.Provider" ],
             from: "#activity",
-            to: [ "#cobalt_system_metrics" ],
+            to: [
+                "#cobalt_system_metrics",
+                "#log-stats",
+            ],
         },
         {
             directory: "dev",

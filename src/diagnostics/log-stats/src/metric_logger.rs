@@ -8,7 +8,7 @@ use {
     diagnostics_data::{LogsData, Severity},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_metrics::{MetricEventLoggerFactoryMarker, MetricEventLoggerProxy, ProjectSpec},
-    fuchsia_async as fasync,
+    fidl_fuchsia_ui_activity as factivity, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     serde::Deserialize,
     std::collections::{HashMap, HashSet},
@@ -22,6 +22,7 @@ pub struct MetricSpecs {
     project_id: u32,
     granular_error_count_metric_id: u32,
     granular_error_interval_count_metric_id: u32,
+    granular_idle_state_log_count_metric_id: u32,
 }
 
 #[derive(Hash, PartialEq, Eq, Clone)]
@@ -116,22 +117,26 @@ impl MetricLogger {
         })
     }
 
-    /// Processes one line of log. Logs the metric if the severity is ERROR or FATAL and the file
-    /// path and line number of the location that the log originated from is known.
-    pub async fn process(self: &mut Self, log: &LogsData) -> Result<(), anyhow::Error> {
-        // We can't do anything here if we don't know the component URL.
+    /// - Processes one line of log. If the file path and line number of the
+    /// location that the log originated from is known.
+    /// - Report the idle state metric if the log was generated during idle
+    /// state regardless of the severity of the log.
+    /// - Report the error metric if the severity of the log is ERROR or FATAL
+    /// Input:
+    /// - log: Log data
+    /// - prev_device_state_change: Tuple with a previous state of the device and transition time
+    /// - curr_device_state_change: Tuple with a latest state of the device and transition time
+    pub async fn process(
+        self: &mut Self,
+        log: &LogsData,
+        prev_device_state_change: Option<(factivity::State, i64)>,
+        curr_device_state_change: Option<(factivity::State, i64)>,
+    ) -> Result<(), anyhow::Error> {
         if log.metadata.component_url.is_none() {
             return Ok(());
         }
-
-        // No need to process the logs if Severity is not Error or Fatal.
-        if log.metadata.severity != Severity::Error && log.metadata.severity != Severity::Fatal {
-            return Ok(());
-        }
-
         let url = log.metadata.component_url.as_ref().unwrap();
 
-        self.maybe_clear_errors_and_send_ping().await?;
         let log_identifier = LogIdentifier::try_from(log).unwrap_or(LogIdentifier {
             file_path: UNKNOWN_SOURCE_FILE_PATH.to_string(),
             line_no: EMPTY_LINE_NUMBER,
@@ -139,6 +144,31 @@ impl MetricLogger {
         let event_code = self.component_map.get(url).unwrap_or(&OTHER_EVENT_CODE);
         let identifier_and_component =
             LogIdentifierAndComponent { log_identifier, component_event_code: *event_code };
+
+        match curr_device_state_change {
+            Some(curr_device_state) => match prev_device_state_change {
+                Some(prev_device_state) => {
+                    if self.is_idle_state_log(
+                        log.metadata.timestamp,
+                        curr_device_state,
+                        prev_device_state,
+                    ) {
+                        self.log_metric(
+                            self.specs.granular_idle_state_log_count_metric_id,
+                            &identifier_and_component,
+                        )
+                        .await?;
+                    }
+                }
+                None => (),
+            },
+            None => warn!("Current state of the device is unknown."),
+        }
+
+        if log.metadata.severity != Severity::Error && log.metadata.severity != Severity::Fatal {
+            return Ok(());
+        }
+        self.maybe_clear_errors_and_send_ping().await?;
         self.log_metric(self.specs.granular_error_count_metric_id, &identifier_and_component)
             .await?;
         if self.current_interval_errors.len() >= MAX_ERRORS_PER_INTERVAL {
@@ -225,6 +255,28 @@ impl MetricLogger {
             }
         }
     }
+
+    /// Log will be considered idle state log if it matches following criteria:
+    /// - Current state of the device is Idle and the log is generated after that.
+    /// - Previous state of the device is Idle, current state of the device is Active
+    ///   and the log is reported between those two device states.
+    fn is_idle_state_log(
+        self: &mut Self,
+        log_timestamp: i64,
+        curr_device_state: (factivity::State, i64),
+        prev_device_state: (factivity::State, i64),
+    ) -> bool {
+        let curr_state = curr_device_state.0;
+        let curr_state_change_time = curr_device_state.1;
+        let prev_state = prev_device_state.0;
+        let prev_state_change_time = prev_device_state.1;
+
+        (curr_state == factivity::State::Idle && curr_state_change_time <= log_timestamp)
+            || (prev_state == factivity::State::Idle
+                && curr_state == factivity::State::Active
+                && prev_state_change_time <= log_timestamp
+                && curr_state_change_time > log_timestamp)
+    }
 }
 
 #[cfg(test)]
@@ -245,8 +297,9 @@ mod tests {
     const TEST_METRIC_SPECS: MetricSpecs = MetricSpecs {
         customer_id: 1,
         project_id: 1,
-        granular_error_count_metric_id: 1,
-        granular_error_interval_count_metric_id: 1,
+        granular_error_count_metric_id: 3,
+        granular_error_interval_count_metric_id: 4,
+        granular_idle_state_log_count_metric_id: 5,
     };
 
     /// Test scenario where MetricLogger.log_metric() is successfully able to log the Cobalt Metrics
@@ -323,7 +376,7 @@ mod tests {
 
         verify_single_logged_string_metric(
             stream.try_next().await.unwrap(),
-            1,
+            4,
             PING_FILE_PATH.to_string(),
             get_ping_log_identifier_and_component(),
         )
@@ -352,7 +405,7 @@ mod tests {
         assert!(fake_metric_event_provider.metric_event_logger_stream.next().await.is_none());
     }
 
-    /// MetricLogger.process() doesn't process Severity::Info
+    /// MetricLogger.process() doesn't process Severity::Info under error metric
     #[fasync::run_singlethreaded(test)]
     async fn test_non_error_log_process() -> Result<(), anyhow::Error> {
         let specs = TEST_METRIC_SPECS;
@@ -365,7 +418,7 @@ mod tests {
             fake_metric_event_provider.metric_event_logger_proxy,
         );
         let data = get_sample_logs_data_with_severity(Severity::Info);
-        metric_logger.process(&data).await
+        metric_logger.process(&data, None, None).await
     }
 
     /// MetricLogger.process() processes and reports logs to Cobalt Metrics if the severity is  Severity::Error
@@ -391,20 +444,20 @@ mod tests {
         let mut stream = fake_metric_event_provider.metric_event_logger_stream;
 
         fasync::Task::spawn(async move {
-            let _ = metric_logger.process(&data).await;
+            let _ = metric_logger.process(&data, None, None).await;
         })
         .detach();
 
         verify_single_logged_string_metric(
             stream.try_next().await.unwrap(),
-            1,
+            4,
             PING_FILE_PATH.to_string(),
             get_ping_log_identifier_and_component(),
         )
         .await;
         verify_single_logged_string_metric(
             stream.try_next().await.unwrap(),
-            1,
+            3,
             "path/to/file.cc".to_string(),
             expected_log_identifier_and_component.clone(),
         )
@@ -430,20 +483,20 @@ mod tests {
         let mut stream = fake_metric_event_provider.metric_event_logger_stream;
 
         fasync::Task::spawn(async move {
-            let _ = metric_logger.process(&data).await;
+            let _ = metric_logger.process(&data, None, None).await;
         })
         .detach();
 
         verify_single_logged_string_metric(
             stream.try_next().await.unwrap(),
-            1,
+            4,
             PING_FILE_PATH.to_string(),
             get_ping_log_identifier_and_component(),
         )
         .await;
         verify_single_logged_string_metric(
             stream.try_next().await.unwrap(),
-            1,
+            3,
             "path/to/file.cc".to_string(),
             expected_log_identifier_and_component.clone(),
         )
@@ -479,24 +532,137 @@ mod tests {
         let mut stream = fake_metric_event_provider.metric_event_logger_stream;
 
         fasync::Task::spawn(async move {
-            let _ = metric_logger.process(&data).await;
+            let _ = metric_logger.process(&data, None, None).await;
         })
         .detach();
 
         verify_single_logged_string_metric(
             stream.try_next().await.unwrap(),
-            1,
+            4,
             PING_FILE_PATH.to_string(),
             get_ping_log_identifier_and_component(),
         )
         .await;
         verify_single_logged_string_metric(
             stream.try_next().await.unwrap(),
-            1,
+            3,
             UNKNOWN_SOURCE_FILE_PATH.to_string(),
             expected_log_identifier_and_component.clone(),
         )
         .await;
+    }
+
+    /// Log in scope is generated during idle state:
+    /// Current device state: Idle
+    /// Current device state change time <= Log metadata timestamp
+    #[fasync::run_singlethreaded(test)]
+    async fn test_log_process_for_idle_current_device_state() {
+        let specs = TEST_METRIC_SPECS;
+        let mut component_map = ComponentEventCodeMap::new();
+        component_map.insert(TEST_URL.to_string(), 1);
+        let fake_metric_event_provider = FakeMetricEventProvider::new();
+        let mut metric_logger = MetricLogger::init_for_testing(
+            specs,
+            component_map,
+            fake_metric_event_provider.metric_event_logger_proxy,
+        );
+        let current_device_state =
+            Some((factivity::State::Idle, zx::Time::from_nanos(2).into_nanos()));
+        let previous_device_state =
+            Some((factivity::State::Active, zx::Time::from_nanos(1).into_nanos()));
+        let data = get_sample_logs_data_with_severity(Severity::Info);
+        let expected_log_identifier_and_component = LogIdentifierAndComponent {
+            log_identifier: LogIdentifier {
+                file_path: "path/to/file.cc".to_string(),
+                line_no: 123u64,
+            },
+            component_event_code: 1,
+        };
+        let mut stream = fake_metric_event_provider.metric_event_logger_stream;
+
+        fasync::Task::spawn(async move {
+            let _ = metric_logger.process(&data, previous_device_state, current_device_state).await;
+        })
+        .detach();
+
+        verify_single_logged_string_metric(
+            stream.try_next().await.unwrap(),
+            5,
+            "path/to/file.cc".to_string(),
+            expected_log_identifier_and_component.clone(),
+        )
+        .await;
+    }
+
+    /// Log in scope is generated during idle state:
+    /// Current device state: Active
+    /// Previous device state: Idle
+    /// Previous device state change time <= Log metadata timestamp
+    /// Current device state change time > Log metadata timestamp
+    #[fasync::run_singlethreaded(test)]
+    async fn test_log_process_for_idle_previous_device_state() {
+        let specs = TEST_METRIC_SPECS;
+        let mut component_map = ComponentEventCodeMap::new();
+        component_map.insert(TEST_URL.to_string(), 1);
+        let fake_metric_event_provider = FakeMetricEventProvider::new();
+        let mut metric_logger = MetricLogger::init_for_testing(
+            specs,
+            component_map,
+            fake_metric_event_provider.metric_event_logger_proxy,
+        );
+        let current_device_state =
+            Some((factivity::State::Active, zx::Time::from_nanos(3).into_nanos()));
+        let previous_device_state =
+            Some((factivity::State::Idle, zx::Time::from_nanos(1).into_nanos()));
+        let data = get_sample_logs_data_with_severity(Severity::Info);
+        let expected_log_identifier_and_component = LogIdentifierAndComponent {
+            log_identifier: LogIdentifier {
+                file_path: "path/to/file.cc".to_string(),
+                line_no: 123u64,
+            },
+            component_event_code: 1,
+        };
+        let mut stream = fake_metric_event_provider.metric_event_logger_stream;
+
+        fasync::Task::spawn(async move {
+            let _ = metric_logger.process(&data, previous_device_state, current_device_state).await;
+        })
+        .detach();
+
+        verify_single_logged_string_metric(
+            stream.try_next().await.unwrap(),
+            5,
+            "path/to/file.cc".to_string(),
+            expected_log_identifier_and_component.clone(),
+        )
+        .await;
+    }
+
+    /// Log in scope is generated during active state:
+    /// Current device state: Active
+    #[fasync::run_singlethreaded(test)]
+    async fn test_log_process_for_active_current_device_state() {
+        let specs = TEST_METRIC_SPECS;
+        let mut component_map = ComponentEventCodeMap::new();
+        component_map.insert(TEST_URL.to_string(), 1);
+        let fake_metric_event_provider = FakeMetricEventProvider::new();
+        let mut metric_logger = MetricLogger::init_for_testing(
+            specs,
+            component_map,
+            fake_metric_event_provider.metric_event_logger_proxy,
+        );
+        let current_device_state =
+            Some((factivity::State::Active, zx::Time::from_nanos(1).into_nanos()));
+        let previous_device_state = None;
+        let data = get_sample_logs_data_with_severity(Severity::Info);
+        let mut stream = fake_metric_event_provider.metric_event_logger_stream;
+
+        fasync::Task::spawn(async move {
+            let _ = metric_logger.process(&data, previous_device_state, current_device_state).await;
+        })
+        .detach();
+
+        assert!(stream.next().await.is_none());
     }
 
     async fn verify_single_logged_string_metric(
@@ -543,7 +709,7 @@ mod tests {
 
     fn get_sample_logs_data_with_severity(severity: Severity) -> LogsData {
         LogsDataBuilder::new(BuilderArgs {
-            timestamp_nanos: zx::Time::from_nanos(1).into(),
+            timestamp_nanos: zx::Time::from_nanos(2).into(),
             component_url: Some(TEST_URL.to_string()),
             moniker: TEST_MONIKER.to_string(),
             severity,
