@@ -1,0 +1,14 @@
+{{- define "GenerateZirconIfsFile" -}}
+--- !ifs-v1
+IfsVersion:      3.0
+SoName:          libzircon.so
+Symbols:
+{{- range . }}
+{{- if .Weak }}
+  - { Name: {{ .Name }}, Type: Func, Weak: true }
+{{- else }}
+  - { Name: {{ .Name }}, Type: Func }
+{{- end }}
+{{- end }}
+...
+{{ end }}

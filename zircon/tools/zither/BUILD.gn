@@ -5,6 +5,7 @@
 import("//build/fidl/fidl.gni")
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
+import("//build/toolchain/ifs_shared_library.gni")
 import("//tools/fidl/lib/fidlgentest/fidlgentest_go_test.gni")
 import("zither_golden_files.gni")
 import("zither_library.gni")
@@ -23,6 +24,7 @@ group("tests") {
     ":enums",
     ":multifile",
     ":structs",
+    ":syscalls",
   ]
 
   # TODO(fxbug.dev/110295): These dependencies constitute build-time checks
@@ -48,6 +50,7 @@ if (is_host) {
       "asm",
       "c",
       "golang",
+      "zircon_ifs",
       "//tools/fidl/lib/fidlgen",
       "//tools/lib/color",
       "//tools/lib/flagmisc",
@@ -149,8 +152,7 @@ template("zither_golden_test") {
     assert(defined(case.files) && case.files != [],
            "`${case}` must provide `files`")
 
-    backend_label =
-        ":${library_target}_zither.${case.backend}($default_toolchain)"
+    backend_label = ":${library_target}_zither.${case.backend}"
 
     goldens_target =
         "_zither_golden_test.${target_name}-${case.backend}.zither_golden_files"
@@ -177,15 +179,19 @@ template("zither_golden_test") {
     # Reconstruct the output subdirectory per `zither_library()` documentation.
     backend_info = supported_zither_backend_info[case.backend]
     output_subdir_info = {
-      prefix = ""
-      suffix = ""
-      name_separator = "."
-      forward_variables_from(backend_info["output_subdir"], "*")
-      path = prefix
-      path += string_replace(library_target, ".", name_separator)
-      path += suffix
+      prefix_parts = []
+      suffix_parts = []
+      forward_variables_from(backend_info.output_subdir, "*")
+      parts = prefix_parts
+      if (defined(library_name_separator)) {
+        parts += [ string_replace(library_target, ".", library_name_separator) ]
+      }
+      parts += suffix_parts
+      path = string_join("/", parts)
     }
-    output_subdir = output_subdir_info.path
+    if (output_subdir_info.path != "") {
+      output_subdir = output_subdir_info.path
+    }
 
     # A per (backend, case) output directory for use below, if needed.
     # Not related to the zither output directory.
@@ -270,6 +276,30 @@ template("zither_golden_test") {
         visibility = [ ":*" ]
         testonly = true
       }
+    } else if (case.backend == "zircon_ifs") {
+      if (current_toolchain == default_toolchain) {
+        backend_outputs = get_target_outputs("${backend_label}.gen")
+        ifs = ""
+        foreach(output, backend_outputs) {
+          if (get_path_info(output, "extension") == "ifs") {
+            ifs = output
+          }
+        }
+        ifs_shared_library(compilation_check_target) {
+          abi = ifs
+          deps = [ backend_label ]
+        }
+      } else {
+        group(compilation_check_target) {
+          testonly = true
+          deps = [ ":$compilation_check_target($default_toolchain)" ]
+        }
+        not_needed([ "backend_label" ])
+      }
+      not_needed([
+                   "case_output_dir",
+                   "output_subdir",
+                 ])
     }
 
     case_deps += [ ":$compilation_check_target" ]
@@ -436,6 +466,19 @@ zither_golden_test("aliases") {
         "aliases.go",
         "pkg_name.txt",
       ]
+    },
+  ]
+}
+
+# FIDL: testdata/syscalls/
+# Goldens: testdata/syscalls/goldens/${backend}/
+zither_golden_test("syscalls") {
+  sources = [ "syscalls.test.fidl" ]
+
+  cases = [
+    {
+      backend = "zircon_ifs"
+      files = [ "zircon.ifs" ]
     },
   ]
 }

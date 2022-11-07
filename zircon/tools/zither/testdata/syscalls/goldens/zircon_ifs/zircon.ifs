@@ -1,0 +1,11 @@
+--- !ifs-v1
+IfsVersion:      3.0
+SoName:          libzircon.so
+Symbols:
+  - { Name: _zx_clock_get_monotonic, Type: Func }
+  - { Name: _zx_syscall_test0, Type: Func }
+  - { Name: _zx_system_get_page_size, Type: Func }
+  - { Name: zx_clock_get_monotonic, Type: Func, Weak: true }
+  - { Name: zx_syscall_test0, Type: Func, Weak: true }
+  - { Name: zx_system_get_page_size, Type: Func, Weak: true }
+...

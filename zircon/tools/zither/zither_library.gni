@@ -12,6 +12,7 @@ supported_zither_backends = [
   "asm",  # Assembly data layout bindings.
   "c",  # C data layout bindings.
   "go",  # Go data layout bindings.
+  "zircon_ifs",  # Syscall text ABI bindings.
 ]
 
 _clang_format = {
@@ -34,36 +35,37 @@ _clang_format = {
 #      this path as follows:
 #      ```
 #      output_subdir_info = {
-#        prefix = ""
-#        suffix = ""
-#        name_separator = "."
-#        forward_variables_from(backend_info["output_subdir"], "*")
-#        path = prefix
-#        path += string_replace(library_name, ".", name_separator)
-#        path += suffix
+#        prefix_parts = []
+#        suffix_parts = []
+#        forward_variables_from(backend_info.output_subdir, "*")
+#        parts = prefix_parts
+#        if (defined(library_name_separator)) {
+#         parts += [ string_replace(library_name, ".", library_name_separator) ]
+#        }
+#        path += suffix_parts
+#        path = string_join("/", parts)
 #      }
 #      output_subdir = output_subdir_info.path
 #      ```
 #    - Type: scope
 #
 #    The scope contains the following:
-#      * name_separator
+#      * prefix_parts
+#        - Optional: The path parts that prefix the output subdirectory.
+#        - Type: list(string)
+#        - Default: []
+#
+#      * library_name_separator
 #        - Optional: The separator with which the '.'-separated tokens of the
 #          FIDL library name should be joined in the output subdirectory
-#          namespace. A value of "." will just use the library name unchanged
-#          as path token.
+#          namespace (in between the prefix and suffix parts ). A value of "."
+#          will just use the library name unchanged as path token.
 #        - Type: string
-#        - Default: "."
 #
-#      * prefix
-#        - Optional: The prefix to attach to output subdirectory.
-#        - Type: string
-#        - Default: ""
-#
-#      * suffix
-#        - Optional: The sufffix to attach to output subdirectory.
-#        - Type: string
-#        - Default: ""
+#      * suffix_parts
+#        - Optional: The path parts that suffix the output subdirectory.
+#        - Type: list(string)
+#        - Default: []
 #
 #  * formatter
 #    - Optional: A formatting specification for Zither outputs. The shape and
@@ -77,8 +79,9 @@ _clang_format = {
 supported_zither_backend_info = {
   c = {
     output_subdir = {
-      prefix = "lib/"
-      suffix = "/c"
+      prefix_parts = [ "lib" ]
+      library_name_separator = "."
+      suffix_parts = [ "c" ]
     }
     formatter = _clang_format
 
@@ -86,8 +89,9 @@ supported_zither_backend_info = {
   }
   asm = {
     output_subdir = {
-      prefix = "lib/"
-      suffix = "/asm"
+      prefix_parts = [ "lib" ]
+      library_name_separator = "."
+      suffix_parts = [ "asm" ]
     }
     formatter = _clang_format
 
@@ -95,7 +99,7 @@ supported_zither_backend_info = {
   }
   go = {
     output_subdir = {
-      name_separator = "/"
+      library_name_separator = "/"
     }
     formatter = {
       script = "//prebuilt/third_party/go/$host_platform/bin/gofmt"
@@ -106,6 +110,11 @@ supported_zither_backend_info = {
     }
 
     _library_template = "_zither_go_library"
+  }
+  zircon_ifs = {
+    output_subdir = {
+    }
+    _library_template = "_zither_zircon_ifs_file"
   }
 }
 
@@ -350,6 +359,48 @@ template("_zither_go_library") {
   }
 }
 
+template("_zither_zircon_ifs_file") {
+  assert(invoker.backend == "zircon_ifs")
+
+  main_target = target_name
+  zither_target = "$target_name.gen"
+
+  not_needed(invoker, [ "source_names" ])
+
+  forward_variables_from(invoker, [ "output_dir" ])
+  ifs_file = "${output_dir}/zircon.ifs"
+
+  _zither(zither_target) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                             "deps",
+                             "fidl_ir_json",
+                             "fidl_ir_target",
+                           ])
+    backend = "zircon_ifs"
+    generated_files = [ ifs_file ]
+  }
+
+  group(main_target) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    public_deps = [
+      ":${zither_target}($default_toolchain)",
+      ":${zither_target}.check($default_toolchain)",
+    ]
+
+    metadata = {
+      link_output_barrier = []
+      link_output_path = [ rebase_path(ifs_file, root_build_dir) ]
+    }
+  }
+}
+
 # Define a full set of per-backend targets for a Zither library.
 #
 # `zither_library()` is meant to be instantiated within `fidl()`. It consumes
@@ -363,18 +414,23 @@ template("_zither_go_library") {
 # Subtargets:
 #
 #   * C backend: ${target_name}.c
-#     Public: a C library target (e.g., a source set or static library), whose
-#     generated headers are of the form `<${output_subdir}/${filename}>` for each
-#     basename of the associated FIDL source files.
+#     A C library target (e.g., a source set or static library), whose
+#     generated headers are of the form `<${output_subdir}/${filename}>` for
+#     each basename of the associated FIDL source files.
 #
 #   * Go backend: ${target_name}.go
-#     Public: a `go_library()` with a package name of ${output_subdir} (which
-#     is written to pkg_name.txt alongside the bindings).
+#     A `go_library()` with a package name of ${output_subdir} (which is
+#     written to pkg_name.txt alongside the bindings).
 #
 #   * Assembly backend: ${target_name}.asm
-#     Public: an assembly library target (e.g., a source set), whose generated
-#     headers are of the form `<${output_subdir}/${filename}>` for each
-#     basename of the associated FIDL source files.
+#     An assembly library target (e.g., a source set), whose generated headers
+#     are of the form `<${output_subdir}/${filename}>` for each basename of the
+#     associated FIDL source files.
+#
+#   * zircon.ifs backend: ${target_name}.zircon_ifs
+#     A dependency generating a "zircon.ifs" (i.e., a text ABI specification of
+#     libzircon.so). The file is intended to be accessed via
+#     `zither_golden_files()` and checked in as source.
 #
 # Parameters:
 #
@@ -421,7 +477,6 @@ template("zither_library") {
                              [
                                "testonly",
                                "visibility",
-                               "library_name",
                                "fidl_gen_dir",
                                "fidl_ir_json",
                                "fidl_ir_target",
@@ -431,15 +486,21 @@ template("zither_library") {
 
       output_dir = "${fidl_gen_dir}/${backend}"
       output_subdir_info = {
-        prefix = ""
-        suffix = ""
-        name_separator = "."
-        forward_variables_from(backend_info["output_subdir"], "*")
-        path = prefix
-        path += string_replace(library_name, ".", name_separator)
-        path += suffix
+        prefix_parts = []
+        suffix_parts = []
+        forward_variables_from(backend_info.output_subdir, "*")
+        parts = prefix_parts
+        if (defined(library_name_separator)) {
+          parts += [ string_replace(invoker.library_name,
+                                    ".",
+                                    library_name_separator) ]
+        }
+        parts += suffix_parts
+        path = string_join("/", parts)
       }
-      output_subdir = output_subdir_info.path
+      if (output_subdir_info.path != "") {
+        output_subdir = output_subdir_info.path
+      }
 
       source_names = []
       foreach(source, invoker.sources) {

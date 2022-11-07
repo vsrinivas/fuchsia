@@ -41,6 +41,10 @@ _llvm_ifs = "$clang_tool_dir/llvm-ifs"
 #   * public, public_configs, public_deps
 #     - Optional: As for shared_library().
 #
+#   * deps
+#     - Optional: Any dependencies that went into the creation of the supplied
+#       `.ifs` file.
+#
 template("ifs_shared_library") {
   main_target = target_name
   stub_target = "$target_name.stub"
@@ -104,6 +108,7 @@ template("ifs_shared_library") {
                              [
                                "visibility",
                                "testonly",
+                               "deps",
                              ])
       if (defined(visibility)) {
         visibility += [
@@ -129,6 +134,10 @@ template("ifs_shared_library") {
       ]
     }
   } else {
-    not_needed(invoker, [ "abi" ])
+    not_needed(invoker,
+               [
+                 "abi",
+                 "deps",
+               ])
   }
 }

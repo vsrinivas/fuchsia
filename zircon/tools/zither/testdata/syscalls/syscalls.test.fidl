@@ -1,0 +1,36 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library zither.syscalls;
+
+alias Time = uint64;
+
+@transport("Syscall")
+@no_protocol_prefix
+protocol Clockfuncs {
+    @vdsocall
+    ClockGetMonotonic() -> (struct {
+        time Time;
+    });
+
+    @internal
+    ClockGetMonotonicViaKernel() -> (struct {
+        time Time;
+    });
+};
+
+@transport("Syscall")
+protocol System {
+    @const
+    @vdsocall
+    GetPageSize() -> (struct {
+        size uint32;
+    });
+};
+
+@transport("Syscall")
+protocol Syscall {
+    @testonly
+    Test0();
+};

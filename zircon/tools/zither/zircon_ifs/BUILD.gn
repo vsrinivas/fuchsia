@@ -1,0 +1,18 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+
+go_library("zircon_ifs") {
+  visibility = [ "../*" ]
+
+  sources = [
+    "templates/file.tmpl",
+    "zircon_ifs.go",
+  ]
+  deps = [
+    "..:common",
+    "//tools/fidl/lib/fidlgen",
+  ]
+}
