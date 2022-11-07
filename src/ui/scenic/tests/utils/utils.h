@@ -5,7 +5,10 @@
 #ifndef SRC_UI_SCENIC_TESTS_UTILS_UTILS_H_
 #define SRC_UI_SCENIC_TESTS_UTILS_UTILS_H_
 
+#include <fuchsia/ui/composition/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
+
+#include "src/ui/testing/util/screenshot_helper.h"
 
 namespace integration_tests {
 using Mat3 = std::array<std::array<float, 3>, 3>;
@@ -33,6 +36,14 @@ Vec3& operator/(Vec3& vec, float num);
 
 // |glm::angleAxis|.
 Vec4 angleAxis(float angle, const Vec3& vec);
+
+// Takes a screenshot using the |fuchsia.ui.composition.Screenshot| and wraps it around a
+// |ui_testing::Screenshot|. This function can only be used after |RealmRoot::ConnectSync| is called
+// for the |screenshotter|. |width| and |height| refer to the expected width and height of the
+// display.
+ui_testing::Screenshot TakeScreenshot(
+    const fuchsia::ui::composition::ScreenshotSyncPtr& screenshotter, uint64_t width,
+    uint64_t height, int display_rotation = 0);
 
 }  // namespace integration_tests
 

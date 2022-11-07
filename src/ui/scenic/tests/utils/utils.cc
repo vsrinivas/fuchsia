@@ -149,4 +149,18 @@ Vec4 angleAxis(float angle, const Vec3& vec) {
   return result;
 }
 
+ui_testing::Screenshot TakeScreenshot(
+    const fuchsia::ui::composition::ScreenshotSyncPtr& screenshotter, uint64_t width,
+    uint64_t height, int display_rotation) {
+  fuchsia::ui::composition::ScreenshotTakeRequest request;
+  request.set_format(fuchsia::ui::composition::ScreenshotFormat::BGRA_RAW);
+
+  fuchsia::ui::composition::ScreenshotTakeResponse response;
+  auto status = screenshotter->Take(std::move(request), &response);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to take screenshot: " << zx_status_get_string(status);
+  }
+  return ui_testing::Screenshot(response.vmo(), width, height, display_rotation);
+}
+
 }  // namespace integration_tests

@@ -32,6 +32,7 @@ source_set("common_deps") {
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
+    "//src/ui/testing/util:screenshot_helper",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
@@ -48,6 +49,7 @@ source_set("common_deps_cts") {
     ":scenic_realm_builder",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/ui/scenic/cpp",
+    "//src/ui/testing/util:screenshot_helper",
     "//zircon/system/ulib/async-loop/testing:async-loop-testing",
     "//zircon/system/ulib/zxtest",
   ]
@@ -340,7 +342,6 @@ executable("protected_memory_integration_test_bin") {
     "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
     "//src/ui/scenic/lib/allocation:allocation",
     "//src/ui/scenic/lib/utils:utils",
-    "//src/ui/testing/util:screenshot_helper",
     "//zircon/system/ulib/fbl",
   ]
 }
@@ -433,6 +434,32 @@ fuchsia_test_component("flatland_mouse_integration_test") {
   deps = [ ":flatland_mouse_integration_test_bin" ]
 }
 
+executable("flatland_pixeltest_bin") {
+  testonly = true
+  sources = [ "flatland_integration_tests/flatland_pixeltest.cc" ]
+  deps = [
+    ":common_deps_cts",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
+    "//sdk/fidl/fuchsia.ui.display.singleton:fuchsia.ui.display.singleton_hlcpp",
+    "//src/lib/testing/loop_fixture",
+    "//src/ui/scenic/lib/allocation:allocation",
+    "//src/ui/scenic/lib/gfx/tests:gfx_tests_main",
+    "//src/ui/scenic/lib/gfx/tests:testing_deps",
+    "//src/ui/scenic/lib/utils",
+    "//src/ui/scenic/lib/utils:utils",
+    "//src/ui/testing/util:screenshot_helper",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/fbl",
+  ]
+}
+
+fuchsia_test_component("flatland_pixeltest") {
+  component_name = "flatland_pixeltest"
+  manifest = "meta/flatland_pixeltest.cml"
+  deps = [ ":flatland_pixeltest_bin" ]
+}
+
 fuchsia_test_package("gfx_integration_tests") {
   test_components = [
     ":gfx_focus_integration_test",
@@ -461,6 +488,7 @@ fuchsia_test_package("flatland_integration_tests") {
     ":screen_capture2_integration_test",
     ":flatland_view_ref_installed_integration_test",
     ":flatland_view_integration_test",
+    ":flatland_pixeltest",
   ]
   test_specs = {
     environments = vulkan_envs

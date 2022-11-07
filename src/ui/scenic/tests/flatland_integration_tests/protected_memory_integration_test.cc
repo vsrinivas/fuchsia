@@ -17,6 +17,7 @@
 #include "src/ui/scenic/lib/allocation/buffer_collection_import_export_tokens.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 #include "src/ui/scenic/tests/utils/scenic_realm_builder.h"
+#include "src/ui/scenic/tests/utils/utils.h"
 #include "src/ui/testing/util/screenshot_helper.h"
 
 namespace integration_tests {
@@ -65,6 +66,8 @@ class ProtectedMemoryIntegrationTest : public gtest::RealLoopFixture {
       display_height_ = height;
     });
     BlockingPresent(root_flatland_);
+
+    screenshotter_ = realm_.ConnectSync<fuchsia::ui::composition::Screenshot>();
   }
 
  protected:
@@ -114,22 +117,6 @@ class ProtectedMemoryIntegrationTest : public gtest::RealLoopFixture {
     ASSERT_EQ(ZX_OK, buffer_collection->Close());
   }
 
-  Screenshot TakeScreenshot() {
-    fuchsia::ui::composition::ScreenshotSyncPtr screenshotter =
-        realm_.ConnectSync<fuchsia::ui::composition::Screenshot>();
-
-    fuchsia::ui::composition::ScreenshotTakeRequest request;
-    request.set_format(fuchsia::ui::composition::ScreenshotFormat::BGRA_RAW);
-
-    fuchsia::ui::composition::ScreenshotTakeResponse response;
-    auto status = screenshotter->Take(std::move(request), &response);
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to take screenshot: " << zx_status_get_string(status);
-    }
-    return Screenshot(response.vmo(), display_width_, display_height_,
-                      /*display_rotation=*/0);
-  }
-
   const TransformId kRootTransform{.value = 1};
   uint32_t display_width_ = 0;
   uint32_t display_height_ = 0;
@@ -137,6 +124,7 @@ class ProtectedMemoryIntegrationTest : public gtest::RealLoopFixture {
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
   fuchsia::ui::composition::AllocatorSyncPtr flatland_allocator_;
   FlatlandPtr root_flatland_;
+  fuchsia::ui::composition::ScreenshotSyncPtr screenshotter_;
 
  private:
   component_testing::RealmRoot realm_;
@@ -207,7 +195,7 @@ TEST_F(ProtectedMemoryIntegrationTest, ScreenshotReplacesProtectedImage) {
   BlockingPresent(root_flatland_);
 
   // Verify that screenshot works and replaced the content with black.
-  auto screenshot = TakeScreenshot();
+  auto screenshot = TakeScreenshot(screenshotter_, display_width_, display_height_);
   EXPECT_EQ(screenshot.Histogram()[ui_testing::Screenshot::kBlack],
             screenshot.width() * screenshot.height());
 }
