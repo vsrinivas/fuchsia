@@ -91,6 +91,12 @@ class BootShimBase : public ItemBase {
 // iterates across Items::AppendItems calls.  The shim is now ready to boot.
 template <class... Items>
 class BootShim : public BootShimBase {
+  template <typename F, typename... Args>
+  struct CanInvokeWithTupleArgs {};
+
+  template <typename F, typename... Args>
+  struct CanInvokeWithTupleArgs<F, std::tuple<Args...>> : std::is_invocable<F, Args...> {};
+
  public:
   // Move-only, not default-constructible.
   BootShim() = delete;
@@ -194,6 +200,26 @@ class BootShim : public BootShimBase {
     return std::apply(std::forward<T>(callback), items_);
   }
 
+  // Returns the result of |callback(item_0, ... , item_n)|, where each item used as argument
+  // corresponds to the shim items where |Predicate<decltype(item_i)>| is true. The relative
+  // order between items is preserved.
+  //
+  // Example:
+  // // Assuming the items are:
+  // std::tuple<T0, T1, T2, T3> items_;
+  //
+  // // And Predicate<T>::value for each of item types are respectively:
+  // // {T0: false, T1: true, T2: true, T3: false} then the generated call is
+  // // callback(T1&, T2&) and equivalent to:
+  // callback(std::get<1>(items_), std::get<2>(items)l
+  template <template <typename> typename Predicate, typename T>
+  constexpr decltype(auto) OnSelectItems(T&& callback) {
+    static_assert(CanInvokeWithTupleArgs<T, decltype(SelectItems<Predicate>(
+                                                std::declval<decltype(items_)&>()))>::value,
+                  "|callback| must be callable with the selected items.");
+    return std::apply(std::forward<T>(callback), SelectItems<Predicate>(items_));
+  }
+
   // Calls callback(item) for each of Items.
   // If Base is given, the items not derived from Base are skipped.
   template <typename T, typename Base = void>
@@ -258,6 +284,37 @@ class BootShim : public BootShimBase {
   }
 
  private:
+  template <template <typename> typename Predicate, typename ItemTuple>
+  static constexpr auto SelectItems(ItemTuple& item_tuple) {
+    auto on = [](auto&... items) { return SelectItems<Predicate>(items...); };
+    return std::apply(on, item_tuple);
+  }
+
+  template <template <typename> typename Predicate, typename Item, typename... Unfiltered>
+  static constexpr auto SelectItems(Item& item, Unfiltered&... unfiltered) {
+    return SelectItems<Predicate>(std::tuple<>(), item, unfiltered...);
+  }
+
+  template <template <typename> typename Predicate, typename... Filtered, typename Item,
+            typename... Unfiltered>
+  static constexpr auto SelectItems(std::tuple<Filtered&...> filtered, Item& item,
+                                    Unfiltered&... unfiltered) {
+    if constexpr (Predicate<Item>::value) {
+      auto new_filtered = std::tuple_cat(std::move(filtered), std::forward_as_tuple(item));
+      if constexpr (sizeof...(Unfiltered) == 0) {
+        return new_filtered;
+      } else {
+        return SelectItems<Predicate>(std::move(new_filtered), unfiltered...);
+      }
+    } else {
+      if constexpr (sizeof...(Unfiltered) == 0) {
+        return filtered;
+      } else {
+        return SelectItems<Predicate>(std::move(filtered), unfiltered...);
+      }
+    }
+  }
+
   std::tuple<Cmdline, Items...> items_;
 };
 

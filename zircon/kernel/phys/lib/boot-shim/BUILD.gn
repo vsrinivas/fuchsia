@@ -87,6 +87,7 @@ group("tests") {
 test("boot-shim-unittests") {
   sources = [
     "acpi-tests.cc",
+    "boot-shim-tests.cc",
     "debugdata-tests.cc",
     "efi-boot-shim-tests.cc",
     "efi-tests.cc",
