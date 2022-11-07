@@ -442,6 +442,16 @@ impl FlatlandViewStrategy {
                                 ))
                                 .expect("failed to send MessageInternal.");
                         }
+                        if let Some(fidl_fuchsia_math::VecF { x, y }) =
+                            layout_info.device_pixel_ratio
+                        {
+                            sender
+                                .unbounded_send(MessageInternal::MetricsChanged(
+                                    view_key,
+                                    size2(x, y),
+                                ))
+                                .expect("failed to send MessageInternal.");
+                        }
                     }
                     Err(fidl::Error::ClientChannelClosed { .. }) => {
                         println!("graph link connection closed.");
