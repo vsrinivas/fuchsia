@@ -893,10 +893,14 @@ mod tests {
 
         // Cannot change the foreground process group to a process group in another session.
         let init_pgid = init.thread_group.read().process_group.leader;
-        assert_eq!(ioctl::<i32>(&task2, &opened_replica, TIOCSPGRP, &init_pgid,), error!(EPERM));
+        assert_eq!(ioctl::<i32>(&task2, &opened_replica, TIOCSPGRP, &init_pgid), error!(EPERM));
+
+        // Changing the foreground process while being in background generates SIGTTOU and fails.
+        assert_eq!(ioctl::<i32>(&task2, &opened_replica, TIOCSPGRP, &task2_pgid), error!(EINTR));
+        assert!(task2.read().signals.has_queued(SIGTTOU));
 
         // Set the foregound process to task2 process group
-        ioctl::<i32>(&task2, &opened_replica, TIOCSPGRP, &task2_pgid).unwrap();
+        ioctl::<i32>(&task1, &opened_replica, TIOCSPGRP, &task2_pgid).unwrap();
 
         // Check that the foreground process has been changed.
         let terminal = Arc::clone(

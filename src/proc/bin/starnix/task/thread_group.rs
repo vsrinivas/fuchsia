@@ -509,16 +509,18 @@ impl ThreadGroup {
             send_ttou = process_group.leader != cs.foregound_process_group_leader
                 && !SIGTTOU.is_in_set(current_task.read().signals.mask())
                 && self.signal_actions.get(SIGTTOU).sa_handler != SIG_IGN;
-
-            *controlling_session = controlling_session
-                .as_ref()
-                .unwrap()
-                .set_foregound_process_group(&new_process_group);
+            if !send_ttou {
+                *controlling_session = controlling_session
+                    .as_ref()
+                    .unwrap()
+                    .set_foregound_process_group(&new_process_group);
+            }
         }
 
         // Locks must not be held when sending signals.
         if send_ttou {
             process_group.send_signals(&[SIGTTOU]);
+            return error!(EINTR);
         }
 
         Ok(())
