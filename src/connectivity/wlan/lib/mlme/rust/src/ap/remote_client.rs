@@ -1190,11 +1190,19 @@ mod tests {
         ][..]);
     }
 
-    #[test]
-    fn handle_mlme_deauth_req() {
+    #[test_case(State::Authenticating; "in authenticating state")]
+    #[test_case(State::Authenticated; "in authenticated state")]
+    #[test_case(State::Associated {
+            aid: 1,
+            eapol_controlled_port: None,
+            active_timeout_event_id: None,
+            ps_state: PowerSaveState::Awake,
+        }; "in associated state")]
+    fn handle_mlme_deauth_req(init_state: State) {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let mut r_sta = make_remote_client();
+        r_sta.state = StateMachine::new(init_state);
         let (mut ctx, _) = make_context(fake_device.as_device());
         r_sta
             .handle_mlme_deauth_req(&mut ctx, fidl_ieee80211::ReasonCode::LeavingNetworkDeauth)
@@ -1585,11 +1593,19 @@ mod tests {
         assert_variant!(r_sta.state.as_ref(), State::Authenticated);
     }
 
-    #[test]
-    fn handle_assoc_req_frame() {
+    #[test_case(State::Authenticating; "in authenticating state")]
+    #[test_case(State::Authenticated; "in authenticated state")]
+    #[test_case(State::Associated {
+            aid: 1,
+            eapol_controlled_port: None,
+            active_timeout_event_id: None,
+            ps_state: PowerSaveState::Awake,
+        }; "in associated state")]
+    fn handle_assoc_req_frame(init_state: State) {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
-        let r_sta = make_remote_client();
+        let mut r_sta = make_remote_client();
+        r_sta.state = StateMachine::new(init_state);
         let (mut ctx, _) = make_context(fake_device.as_device());
         r_sta
             .handle_assoc_req_frame(
@@ -1618,11 +1634,19 @@ mod tests {
         );
     }
 
-    #[test]
-    fn handle_auth_frame() {
+    #[test_case(State::Authenticating; "in authenticating state")]
+    #[test_case(State::Authenticated; "in authenticated state")]
+    #[test_case(State::Associated {
+            aid: 1,
+            eapol_controlled_port: None,
+            active_timeout_event_id: None,
+            ps_state: PowerSaveState::Awake,
+        }; "in associated state")]
+    fn handle_auth_frame(init_state: State) {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let mut r_sta = make_remote_client();
+        r_sta.state = StateMachine::new(init_state);
         let (mut ctx, _) = make_context(fake_device.as_device());
 
         r_sta.handle_auth_frame(&mut ctx, AuthAlgorithmNumber::SHARED_KEY).expect("expected OK");
@@ -1664,11 +1688,15 @@ mod tests {
         assert_variant!(r_sta.state.as_ref(), State::Deauthenticated);
     }
 
-    #[test]
-    fn handle_deauth_frame() {
+    #[test_case(false; "from idle state")]
+    #[test_case(true; "while already authenticated")]
+    fn handle_deauth_frame(already_authenticated: bool) {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let mut r_sta = make_remote_client();
+        if already_authenticated {
+            r_sta.state = StateMachine::new(State::Authenticated);
+        }
         let (mut ctx, _) = make_context(fake_device.as_device());
 
         r_sta
@@ -2250,19 +2278,32 @@ mod tests {
             .expect("expected OK");
     }
 
-    #[test]
-    fn handle_mgmt_frame_assoc_req() {
+    #[test_case(Ssid::try_from("coolnet").unwrap(), true; "with ssid and rsne")]
+    #[test_case(Ssid::try_from("").unwrap(), true; "with empty ssid")]
+    #[test_case(Ssid::try_from("coolnet").unwrap(), false; "without rsne")]
+    fn handle_mgmt_frame_assoc_req(ssid: Ssid, has_rsne: bool) {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let mut r_sta = make_remote_client();
         r_sta.state = StateMachine::new(State::Authenticated);
         let (mut ctx, _) = make_context(fake_device.as_device());
 
+        let mut assoc_frame_body = vec![
+            0, 0, // Capability info
+            10, 0, // Listen interval
+            // IEs
+            1, 8, 1, 2, 3, 4, 5, 6, 7, 8, // Rates
+            50, 2, 9, 10, // Extended rates
+        ];
+        if has_rsne {
+            assoc_frame_body.extend(&[48, 2, 77, 88][..]); // RSNE
+        }
+
         r_sta
             .handle_mgmt_frame(
                 &mut ctx,
                 mac::CapabilityInfo(0),
-                Some(Ssid::try_from("coolnet").unwrap()),
+                Some(ssid.clone()),
                 mac::MgmtHdr {
                     frame_ctrl: mac::FrameControl(0b00000000_00000000), // Assoc req frame
                     duration: 0,
@@ -2271,29 +2312,23 @@ mod tests {
                     addr3: [3; 6],
                     seq_ctrl: mac::SequenceControl(10),
                 },
-                &[
-                    0, 0, // Capability info
-                    10, 0, // Listen interval
-                    // IEs
-                    1, 8, 1, 2, 3, 4, 5, 6, 7, 8, // Rates
-                    50, 2, 9, 10, // Extended rates
-                    48, 2, 77, 88, // RSNE
-                ][..],
+                &assoc_frame_body[..],
             )
             .expect("expected OK");
 
         let msg = fake_device
             .next_mlme_msg::<fidl_mlme::AssociateIndication>()
             .expect("expected MLME message");
+        let expected_rsne = if has_rsne { Some(vec![48, 2, 77, 88]) } else { None };
         assert_eq!(
             msg,
             fidl_mlme::AssociateIndication {
                 peer_sta_address: CLIENT_ADDR,
                 listen_interval: 10,
-                ssid: Some(Ssid::try_from("coolnet").unwrap().into()),
+                ssid: Some(ssid.into()),
                 capability_info: CapabilityInfo(0).raw(),
                 rates: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-                rsne: Some(vec![48, 2, 77, 88]),
+                rsne: expected_rsne,
             },
         );
     }

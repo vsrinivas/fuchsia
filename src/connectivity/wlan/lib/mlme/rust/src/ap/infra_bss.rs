@@ -603,6 +603,7 @@ mod tests {
         fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fuchsia_async as fasync,
         ieee80211::Bssid,
         std::convert::TryFrom,
+        test_case::test_case,
         wlan_common::{
             assert_variant,
             big_endian::BigEndianU16,
@@ -615,10 +616,39 @@ mod tests {
     const CLIENT_ADDR: MacAddr = [4u8; 6];
     const BSSID: Bssid = Bssid([2u8; 6]);
     const CLIENT_ADDR2: MacAddr = [6u8; 6];
+    const REMOTE_ADDR: MacAddr = [123u8; 6];
 
     fn make_context(device: Device) -> (Context, TimeStream<TimedEvent>) {
         let (timer, time_stream) = create_timer();
         (Context::new(device, FakeBufferProvider::new(), timer, BSSID), time_stream)
+    }
+
+    fn make_infra_bss(ctx: &mut Context) -> InfraBss {
+        InfraBss::new(
+            ctx,
+            Ssid::try_from("coolnet").unwrap(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
+            CapabilityInfo(0),
+            vec![0b11111000],
+            1,
+            None,
+        )
+        .expect("expected InfraBss::new ok")
+    }
+
+    fn make_protected_infra_bss(ctx: &mut Context) -> InfraBss {
+        InfraBss::new(
+            ctx,
+            Ssid::try_from("coolnet").unwrap(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
+            CapabilityInfo(0),
+            vec![0b11111000],
+            1,
+            Some(fake_wpa2_rsne()),
+        )
+        .expect("expected InfraBss::new ok")
     }
 
     #[test]
@@ -677,17 +707,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, _) = make_context(fake_device.as_device());
-        let bss = InfraBss::new(
-            &mut ctx,
-            Ssid::try_from([1, 2, 3, 4, 5]).unwrap(),
-            TimeUnit::DEFAULT_BEACON_INTERVAL,
-            2,
-            CapabilityInfo(0),
-            vec![0b11111000],
-            1,
-            None,
-        )
-        .expect("expected InfraBss::new ok");
+        let bss = make_infra_bss(&mut ctx);
         bss.stop(&mut ctx).expect("expected InfraBss::stop ok");
         assert!(fake_device.bcn_cfg.is_none());
     }
@@ -697,17 +717,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, _) = make_context(fake_device.as_device());
-        let mut bss = InfraBss::new(
-            &mut ctx,
-            Ssid::try_from("coolnet").unwrap(),
-            TimeUnit::DEFAULT_BEACON_INTERVAL,
-            2,
-            CapabilityInfo(0),
-            vec![0b11111000],
-            1,
-            None,
-        )
-        .expect("expected InfraBss::new ok");
+        let mut bss = make_infra_bss(&mut ctx);
 
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
@@ -743,17 +753,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, _) = make_context(fake_device.as_device());
-        let mut bss = InfraBss::new(
-            &mut ctx,
-            Ssid::try_from("coolnet").unwrap(),
-            TimeUnit::DEFAULT_BEACON_INTERVAL,
-            2,
-            CapabilityInfo(0),
-            vec![0b11111000],
-            1,
-            None,
-        )
-        .expect("expected InfraBss::new ok");
+        let mut bss = make_infra_bss(&mut ctx);
 
         assert_eq!(
             zx::Status::from(
@@ -775,17 +775,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, _) = make_context(fake_device.as_device());
-        let mut bss = InfraBss::new(
-            &mut ctx,
-            Ssid::try_from("coolnet").unwrap(),
-            TimeUnit::DEFAULT_BEACON_INTERVAL,
-            2,
-            CapabilityInfo(0),
-            vec![0b11111000],
-            1,
-            None,
-        )
-        .expect("expected InfraBss::new ok");
+        let mut bss = make_infra_bss(&mut ctx);
 
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
@@ -821,17 +811,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, _) = make_context(fake_device.as_device());
-        let mut bss = InfraBss::new(
-            &mut ctx,
-            Ssid::try_from("coolnet").unwrap(),
-            TimeUnit::DEFAULT_BEACON_INTERVAL,
-            2,
-            CapabilityInfo(0),
-            vec![0b11111000],
-            1,
-            None,
-        )
-        .expect("expected InfraBss::new ok");
+        let mut bss = make_infra_bss(&mut ctx);
 
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
@@ -929,17 +909,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, _) = make_context(fake_device.as_device());
-        let mut bss = InfraBss::new(
-            &mut ctx,
-            Ssid::try_from("coolnet").unwrap(),
-            TimeUnit::DEFAULT_BEACON_INTERVAL,
-            2,
-            CapabilityInfo(0),
-            vec![0b11111000],
-            1,
-            None,
-        )
-        .expect("expected InfraBss::new ok");
+        let mut bss = make_infra_bss(&mut ctx);
 
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
@@ -973,17 +943,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, _) = make_context(fake_device.as_device());
-        let mut bss = InfraBss::new(
-            &mut ctx,
-            Ssid::try_from("coolnet").unwrap(),
-            TimeUnit::DEFAULT_BEACON_INTERVAL,
-            2,
-            CapabilityInfo(0),
-            vec![0b11111000],
-            1,
-            Some(fake_wpa2_rsne()),
-        )
-        .expect("expected InfraBss::new ok");
+        let mut bss = make_protected_infra_bss(&mut ctx);
 
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
@@ -1011,17 +971,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, _) = make_context(fake_device.as_device());
-        let mut bss = InfraBss::new(
-            &mut ctx,
-            Ssid::try_from("coolnet").unwrap(),
-            TimeUnit::DEFAULT_BEACON_INTERVAL,
-            2,
-            CapabilityInfo(0),
-            vec![0b11111000],
-            1,
-            None,
-        )
-        .expect("expected InfraBss::new ok");
+        let mut bss = make_infra_bss(&mut ctx);
 
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
@@ -1065,17 +1015,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, _) = make_context(fake_device.as_device());
-        let mut bss = InfraBss::new(
-            &mut ctx,
-            Ssid::try_from("coolnet").unwrap(),
-            TimeUnit::DEFAULT_BEACON_INTERVAL,
-            2,
-            CapabilityInfo(0),
-            vec![0b11111000],
-            1,
-            None,
-        )
-        .expect("expected InfraBss::new ok");
+        let mut bss = make_infra_bss(&mut ctx);
 
         bss.handle_mgmt_frame(
             &mut ctx,
@@ -1117,17 +1057,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, _) = make_context(fake_device.as_device());
-        let mut bss = InfraBss::new(
-            &mut ctx,
-            Ssid::try_from("coolnet").unwrap(),
-            TimeUnit::DEFAULT_BEACON_INTERVAL,
-            2,
-            CapabilityInfo(0),
-            vec![0b11111000],
-            1,
-            None,
-        )
-        .expect("expected InfraBss::new ok");
+        let mut bss = make_infra_bss(&mut ctx);
 
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
         let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
@@ -1182,17 +1112,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, _) = make_context(fake_device.as_device());
-        let mut bss = InfraBss::new(
-            &mut ctx,
-            Ssid::try_from("coolnet").unwrap(),
-            TimeUnit::DEFAULT_BEACON_INTERVAL,
-            2,
-            CapabilityInfo(0),
-            vec![0b11111000],
-            1,
-            None,
-        )
-        .expect("expected InfraBss::new ok");
+        let mut bss = make_infra_bss(&mut ctx);
 
         assert_variant!(
             bss.handle_mgmt_frame(
@@ -1227,17 +1147,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, _) = make_context(fake_device.as_device());
-        let mut bss = InfraBss::new(
-            &mut ctx,
-            Ssid::try_from("coolnet").unwrap(),
-            TimeUnit::DEFAULT_BEACON_INTERVAL,
-            2,
-            CapabilityInfo(0),
-            vec![0b11111000],
-            1,
-            None,
-        )
-        .expect("expected InfraBss::new ok");
+        let mut bss = make_infra_bss(&mut ctx);
 
         assert_variant!(
             bss.handle_mgmt_frame(
@@ -1272,17 +1182,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, _) = make_context(fake_device.as_device());
-        let mut bss = InfraBss::new(
-            &mut ctx,
-            Ssid::try_from("coolnet").unwrap(),
-            TimeUnit::DEFAULT_BEACON_INTERVAL,
-            2,
-            CapabilityInfo(0),
-            vec![0b11111000],
-            1,
-            None,
-        )
-        .expect("expected InfraBss::new ok");
+        let mut bss = make_infra_bss(&mut ctx);
 
         assert_variant!(
             bss.handle_mgmt_frame(
@@ -1314,17 +1214,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, _) = make_context(fake_device.as_device());
-        let mut bss = InfraBss::new(
-            &mut ctx,
-            Ssid::try_from("coolnet").unwrap(),
-            TimeUnit::DEFAULT_BEACON_INTERVAL,
-            2,
-            CapabilityInfo(0),
-            vec![0b11111000],
-            1,
-            None,
-        )
-        .expect("expected InfraBss::new ok");
+        let mut bss = make_infra_bss(&mut ctx);
 
         assert_variant!(
             bss.handle_mgmt_frame(
@@ -1355,17 +1245,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, _) = make_context(fake_device.as_device());
-        let mut bss = InfraBss::new(
-            &mut ctx,
-            Ssid::try_from("coolnet").unwrap(),
-            TimeUnit::DEFAULT_BEACON_INTERVAL,
-            2,
-            CapabilityInfo(0),
-            vec![0b11111000],
-            1,
-            None,
-        )
-        .expect("expected InfraBss::new ok");
+        let mut bss = make_infra_bss(&mut ctx);
 
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
         let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
@@ -1428,17 +1308,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, _) = make_context(fake_device.as_device());
-        let mut bss = InfraBss::new(
-            &mut ctx,
-            Ssid::try_from("coolnet").unwrap(),
-            TimeUnit::DEFAULT_BEACON_INTERVAL,
-            2,
-            CapabilityInfo(0),
-            vec![0b11111000],
-            1,
-            None,
-        )
-        .expect("expected InfraBss::new ok");
+        let mut bss = make_infra_bss(&mut ctx);
 
         assert_variant!(
             bss.handle_data_frame(
@@ -1475,17 +1345,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, mut time_stream) = make_context(fake_device.as_device());
-        let mut bss = InfraBss::new(
-            &mut ctx,
-            Ssid::try_from("coolnet").unwrap(),
-            TimeUnit::DEFAULT_BEACON_INTERVAL,
-            2,
-            CapabilityInfo(0),
-            vec![0b11111000],
-            1,
-            None,
-        )
-        .expect("expected InfraBss::new ok");
+        let mut bss = make_infra_bss(&mut ctx);
 
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
         let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
@@ -1550,17 +1410,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, _) = make_context(fake_device.as_device());
-        let mut bss = InfraBss::new(
-            &mut ctx,
-            Ssid::try_from("coolnet").unwrap(),
-            TimeUnit::DEFAULT_BEACON_INTERVAL,
-            2,
-            CapabilityInfo(0),
-            vec![0b11111000],
-            1,
-            None,
-        )
-        .expect("expected InfraBss::new ok");
+        let mut bss = make_infra_bss(&mut ctx);
 
         assert_variant!(
             bss.handle_data_frame(
@@ -1613,17 +1463,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, _) = make_context(fake_device.as_device());
-        let mut bss = InfraBss::new(
-            &mut ctx,
-            Ssid::try_from("coolnet").unwrap(),
-            TimeUnit::DEFAULT_BEACON_INTERVAL,
-            2,
-            CapabilityInfo(0),
-            vec![0b11111000],
-            1,
-            None,
-        )
-        .expect("expected InfraBss::new ok");
+        let mut bss = make_infra_bss(&mut ctx);
 
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
         let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
@@ -1687,17 +1527,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, _) = make_context(fake_device.as_device());
-        let mut bss = InfraBss::new(
-            &mut ctx,
-            Ssid::try_from("coolnet").unwrap(),
-            TimeUnit::DEFAULT_BEACON_INTERVAL,
-            2,
-            CapabilityInfo(0),
-            vec![0b11111000],
-            1,
-            None,
-        )
-        .expect("expected InfraBss::new ok");
+        let mut bss = make_infra_bss(&mut ctx);
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
         let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
@@ -1753,17 +1583,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, _) = make_context(fake_device.as_device());
-        let mut bss = InfraBss::new(
-            &mut ctx,
-            Ssid::try_from("coolnet").unwrap(),
-            TimeUnit::DEFAULT_BEACON_INTERVAL,
-            2,
-            CapabilityInfo(0),
-            vec![0b11111000],
-            1,
-            None,
-        )
-        .expect("expected InfraBss::new ok");
+        let mut bss = make_infra_bss(&mut ctx);
 
         assert_variant!(
             bss.handle_eth_frame(
@@ -1787,17 +1607,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, _) = make_context(fake_device.as_device());
-        let mut bss = InfraBss::new(
-            &mut ctx,
-            Ssid::try_from("coolnet").unwrap(),
-            TimeUnit::DEFAULT_BEACON_INTERVAL,
-            2,
-            CapabilityInfo(0),
-            vec![0b11111000],
-            1,
-            Some(fake_wpa2_rsne()),
-        )
-        .expect("expected InfraBss::new ok");
+        let mut bss = make_protected_infra_bss(&mut ctx);
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
         let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
@@ -1837,17 +1647,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, _) = make_context(fake_device.as_device());
-        let mut bss = InfraBss::new(
-            &mut ctx,
-            Ssid::try_from("coolnet").unwrap(),
-            TimeUnit::DEFAULT_BEACON_INTERVAL,
-            2,
-            CapabilityInfo(0),
-            vec![0b11111000],
-            1,
-            Some(fake_wpa2_rsne()),
-        )
-        .expect("expected InfraBss::new ok");
+        let mut bss = make_protected_infra_bss(&mut ctx);
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
         let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
@@ -1902,22 +1702,204 @@ mod tests {
         );
     }
 
+    #[test_case(false; "Controlled port closed")]
+    #[test_case(true; "Controlled port open")]
+    fn handle_data_frame_is_rsn_eapol(controlled_port_open: bool) {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
+        let mut bss = make_protected_infra_bss(&mut ctx);
+        bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
+
+        let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
+        client
+            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCode::Success)
+            .expect("expected OK");
+        client
+            .handle_mlme_assoc_resp(
+                &mut ctx,
+                true,
+                1,
+                mac::CapabilityInfo(0),
+                fidl_mlme::AssociateResultCode::Success,
+                1,
+                &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
+            )
+            .expect("expected OK");
+        fake_device.wlan_queue.clear();
+
+        if controlled_port_open {
+            client
+                .handle_mlme_set_controlled_port_req(fidl_mlme::ControlledPortState::Open)
+                .expect("expected OK");
+        }
+
+        bss.handle_data_frame(
+            &mut ctx,
+            mac::FixedDataHdrFields {
+                frame_ctrl: mac::FrameControl(0)
+                    .with_frame_type(mac::FrameType::DATA)
+                    .with_to_ds(true),
+                duration: 0,
+                addr1: BSSID.0.clone(),
+                addr2: CLIENT_ADDR,
+                addr3: CLIENT_ADDR2,
+                seq_ctrl: mac::SequenceControl(10),
+            },
+            None,
+            None,
+            &[
+                7, 7, 7, // DSAP, SSAP & control
+                8, 8, 8, // OUI
+                0x12, 0x34, // eth type
+                // Trailing bytes
+                1, 2, 3, 4, 5,
+            ][..],
+        )
+        .expect("expected OK");
+
+        if controlled_port_open {
+            assert_eq!(fake_device.eth_queue.len(), 1);
+        } else {
+            assert!(fake_device.eth_queue.is_empty());
+        }
+    }
+
+    fn authenticate_client(
+        fake_device: &mut FakeDevice,
+        ctx: &mut Context,
+        bss: &mut InfraBss,
+        client_addr: MacAddr,
+    ) {
+        bss.handle_mgmt_frame(
+            ctx,
+            mac::MgmtHdr {
+                frame_ctrl: mac::FrameControl(0)
+                    .with_frame_type(mac::FrameType::MGMT)
+                    .with_mgmt_subtype(mac::MgmtSubtype::AUTH),
+                duration: 0,
+                addr1: BSSID.0,
+                addr2: client_addr,
+                addr3: BSSID.0,
+                seq_ctrl: mac::SequenceControl(10),
+            },
+            &[
+                // Auth body
+                0, 0, // Auth Algorithm Number
+                1, 0, // Auth Txn Seq Number
+                0, 0, // Status code
+            ][..],
+        )
+        .expect("failed to handle auth req frame");
+
+        fake_device
+            .next_mlme_msg::<fidl_mlme::AuthenticateIndication>()
+            .expect("expected auth indication");
+        bss.handle_mlme_auth_resp(
+            ctx,
+            fidl_mlme::AuthenticateResponse {
+                peer_sta_address: client_addr.clone(),
+                result_code: fidl_mlme::AuthenticateResultCode::Success,
+            },
+        )
+        .expect("failed to handle auth resp");
+        assert_eq!(fake_device.wlan_queue.len(), 1);
+        fake_device.wlan_queue.clear();
+    }
+
+    fn associate_client(
+        fake_device: &mut FakeDevice,
+        ctx: &mut Context,
+        bss: &mut InfraBss,
+        client_addr: MacAddr,
+        association_id: u16,
+    ) {
+        bss.handle_mgmt_frame(
+            ctx,
+            mac::MgmtHdr {
+                frame_ctrl: mac::FrameControl(0)
+                    .with_frame_type(mac::FrameType::MGMT)
+                    .with_mgmt_subtype(mac::MgmtSubtype::ASSOC_REQ),
+                duration: 0,
+                addr1: BSSID.0,
+                addr2: client_addr,
+                addr3: BSSID.0,
+                seq_ctrl: mac::SequenceControl(10),
+            },
+            &[
+                // Assoc req body
+                0, 0, // Capability info
+                10, 0, // Listen interval
+                // IEs
+                1, 8, 1, 2, 3, 4, 5, 6, 7, 8, // Rates
+                50, 2, 9, 10, // Extended rates
+                48, 2, 77, 88, // RSNE
+            ][..],
+        )
+        .expect("expected OK");
+        let msg = fake_device
+            .next_mlme_msg::<fidl_mlme::AssociateIndication>()
+            .expect("expected assoc indication");
+        bss.handle_mlme_assoc_resp(
+            ctx,
+            fidl_mlme::AssociateResponse {
+                peer_sta_address: client_addr,
+                result_code: fidl_mlme::AssociateResultCode::Success,
+                association_id,
+                capability_info: msg.capability_info,
+                rates: msg.rates,
+            },
+        )
+        .expect("failed to handle assoc resp");
+        assert_eq!(fake_device.wlan_queue.len(), 1);
+        fake_device.wlan_queue.clear();
+    }
+
+    fn send_eth_frame_from_ds_to_client(
+        ctx: &mut Context,
+        bss: &mut InfraBss,
+        client_addr: MacAddr,
+    ) {
+        bss.handle_eth_frame(
+            ctx,
+            EthernetIIHdr {
+                da: client_addr,
+                sa: REMOTE_ADDR,
+                ether_type: BigEndianU16::from_native(0x1234),
+            },
+            &[1, 2, 3, 4, 5][..],
+        )
+        .expect("expected OK");
+    }
+
+    #[test]
+    fn handle_multiple_complete_associations() {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
+        let mut bss = make_infra_bss(&mut ctx);
+
+        authenticate_client(&mut fake_device, &mut ctx, &mut bss, CLIENT_ADDR);
+        authenticate_client(&mut fake_device, &mut ctx, &mut bss, CLIENT_ADDR2);
+
+        associate_client(&mut fake_device, &mut ctx, &mut bss, CLIENT_ADDR, 1);
+        associate_client(&mut fake_device, &mut ctx, &mut bss, CLIENT_ADDR2, 2);
+
+        assert!(bss.clients.contains_key(&CLIENT_ADDR));
+        assert!(bss.clients.contains_key(&CLIENT_ADDR2));
+
+        send_eth_frame_from_ds_to_client(&mut ctx, &mut bss, CLIENT_ADDR);
+        send_eth_frame_from_ds_to_client(&mut ctx, &mut bss, CLIENT_ADDR2);
+
+        assert_eq!(fake_device.wlan_queue.len(), 2);
+    }
+
     #[test]
     fn handle_ps_poll() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, _) = make_context(fake_device.as_device());
-        let mut bss = InfraBss::new(
-            &mut ctx,
-            Ssid::try_from("coolnet").unwrap(),
-            TimeUnit::DEFAULT_BEACON_INTERVAL,
-            2,
-            CapabilityInfo(0),
-            vec![0b11111000],
-            1,
-            None,
-        )
-        .expect("expected InfraBss::new ok");
+        let mut bss = make_infra_bss(&mut ctx);
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
         let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
@@ -1987,17 +1969,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, _) = make_context(fake_device.as_device());
-        let mut bss = InfraBss::new(
-            &mut ctx,
-            Ssid::try_from("coolnet").unwrap(),
-            TimeUnit::DEFAULT_BEACON_INTERVAL,
-            2,
-            CapabilityInfo(0),
-            vec![0b11111000],
-            1,
-            Some(fake_wpa2_rsne()),
-        )
-        .expect("expected InfraBss::new ok");
+        let mut bss = make_protected_infra_bss(&mut ctx);
         bss.handle_mlme_setkeys_req(
             &mut ctx,
             &[fidl_mlme::SetKeyDescriptor {
@@ -2041,17 +2013,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, _) = make_context(fake_device.as_device());
-        let mut bss = InfraBss::new(
-            &mut ctx,
-            Ssid::try_from("coolnet").unwrap(),
-            TimeUnit::DEFAULT_BEACON_INTERVAL,
-            2,
-            CapabilityInfo(0),
-            vec![0b11111000],
-            1,
-            None,
-        )
-        .expect("expected InfraBss::new ok");
+        let mut bss = make_infra_bss(&mut ctx);
         assert_variant!(
             bss.handle_mlme_setkeys_req(
                 &mut ctx,
@@ -2068,6 +2030,7 @@ mod tests {
             .expect_err("expected InfraBss::handle_mlme_setkeys_req error"),
             Error::Status(_, zx::Status::BAD_STATE)
         );
+        assert!(fake_device.keys.is_empty());
     }
 
     #[test]
@@ -2307,17 +2270,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, _) = make_context(fake_device.as_device());
-        let mut bss = InfraBss::new(
-            &mut ctx,
-            Ssid::try_from("coolnet").unwrap(),
-            TimeUnit::DEFAULT_BEACON_INTERVAL,
-            2,
-            CapabilityInfo(0),
-            vec![0b11111000],
-            1,
-            None,
-        )
-        .expect("expected InfraBss::new ok");
+        let mut bss = make_infra_bss(&mut ctx);
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
         let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
@@ -2359,17 +2312,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, _) = make_context(fake_device.as_device());
-        let bss = InfraBss::new(
-            &mut ctx,
-            Ssid::try_from("coolnet").unwrap(),
-            TimeUnit::DEFAULT_BEACON_INTERVAL,
-            2,
-            CapabilityInfo(0),
-            vec![0b11111000],
-            1,
-            None,
-        )
-        .expect("expected InfraBss::new ok");
+        let bss = make_infra_bss(&mut ctx);
 
         let tim = bss.make_tim();
         let (pvb_offset, pvb_bitmap) = tim.make_partial_virtual_bitmap();
@@ -2382,17 +2325,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, _) = make_context(fake_device.as_device());
-        let mut bss = InfraBss::new(
-            &mut ctx,
-            Ssid::try_from("coolnet").unwrap(),
-            TimeUnit::DEFAULT_BEACON_INTERVAL,
-            2,
-            CapabilityInfo(0),
-            vec![0b11111000],
-            1,
-            None,
-        )
-        .expect("expected InfraBss::new ok");
+        let mut bss = make_infra_bss(&mut ctx);
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
         let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
@@ -2537,17 +2470,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let (mut ctx, _) = make_context(fake_device.as_device());
-        let mut bss = InfraBss::new(
-            &mut ctx,
-            Ssid::try_from("coolnet").unwrap(),
-            TimeUnit::DEFAULT_BEACON_INTERVAL,
-            2,
-            CapabilityInfo(0),
-            vec![0b11111000],
-            1,
-            None,
-        )
-        .expect("expected InfraBss::new ok");
+        let mut bss = make_infra_bss(&mut ctx);
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
         let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
