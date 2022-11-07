@@ -658,13 +658,13 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev,
 
   // if this device has no driver_host, first instantiate it
   if (dev->proxy()->host() == nullptr) {
-    zx::channel h0, h1;
+    zx::channel child_channel, parent_channel;
     // the immortal root devices do not provide proxy rpc
     bool need_proxy_rpc = !(dev->flags & DEV_CTX_IMMORTAL);
 
     if (need_proxy_rpc || dev == sys_device_) {
       // create rpc channel for proxy device to talk to the busdev it proxies
-      const zx_status_t status = zx::channel::create(0, &h0, &h1);
+      const zx_status_t status = zx::channel::create(0, &child_channel, &parent_channel);
       if (status != ZX_OK) {
         return status;
       }
@@ -680,21 +680,22 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev,
 
     dev->proxy()->set_host(std::move(target_driver_host));
     if (const zx_status_t status =
-            CreateProxyDevice(dev->proxy(), dev->proxy()->host(), arg1, std::move(h1));
+            CreateProxyDevice(dev->proxy(), dev->proxy()->host(), arg1, std::move(child_channel));
         status != ZX_OK) {
       LOGF(ERROR, "Failed to create proxy device '%s' in driver_host '%s': %s", dev->name().data(),
            driver_hostname, zx_status_get_string(status));
       return status;
     }
     if (need_proxy_rpc) {
-      if (const fidl::Status result = dev->device_controller()->ConnectProxy(std::move(h0));
+      if (const fidl::Status result =
+              dev->device_controller()->ConnectProxy(std::move(parent_channel));
           !result.ok()) {
         LOGF(ERROR, "Failed to connect to proxy device '%s' in driver_host '%s': %s",
              dev->name().data(), driver_hostname, result.status_string());
       }
     }
     if (dev == sys_device_) {
-      if (const zx_status_t status = fdio_service_connect(kItemsPath, h0.release());
+      if (const zx_status_t status = fdio_service_connect(kItemsPath, parent_channel.release());
           status != ZX_OK) {
         LOGF(ERROR, "Failed to connect to %s: %s", kItemsPath, zx_status_get_string(status));
       }
