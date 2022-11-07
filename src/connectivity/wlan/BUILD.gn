@@ -86,6 +86,7 @@ group("tests") {
     "lib/span:wlan-span-tests",
     "lib/stash:wlan-stash-tests",
     "lib/statemachine:wlan-statemachine-tests",
+    "lib/trace:wlan-trace-tests",
     "lib/wep_deprecated:wep-deprecated-tests",
     "testing/hw-sim:wlan-hw-sim-lib-tests",
     "testing/hw-sim/test:wlan-hw-sim-component-tests",

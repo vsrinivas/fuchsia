@@ -17,7 +17,7 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect::component,
     fuchsia_inspect_contrib::auto_persist,
-    fuchsia_syslog as syslog,
+    fuchsia_syslog as syslog, fuchsia_trace as ftrace, fuchsia_trace_provider as ftrace_provider,
     fuchsia_zircon::prelude::*,
     futures::{
         self,
@@ -32,6 +32,7 @@ use {
     rand::Rng,
     std::{convert::Infallible, sync::Arc},
     wlan_common::hasher::WlanHasher,
+    wlan_trace as wtrace,
     wlancfg_lib::{
         access_point::AccessPoint,
         client::{self, network_selection::NetworkSelector, scan},
@@ -435,7 +436,12 @@ async fn main() {
     // Initialize logging with a tag that can be used to select these logs for forwarding to console
     syslog::init_with_tags(&["wlan"]).expect("Syslog init should not fail");
     fuchsia_trace_provider::trace_provider_create_with_fdio();
-    fuchsia_trace::instant!("wlan", "wlancfg:start", fuchsia_trace::Scope::Process);
+    ftrace_provider::trace_provider_create_with_fdio();
+    ftrace::instant!(
+        wtrace::CATEGORY_WLAN!(),
+        wtrace::NAME_WLANCFG_START!(),
+        ftrace::Scope::Process
+    );
     if let Err(e) = run_all_futures().await {
         error!("{:?}", e);
     }

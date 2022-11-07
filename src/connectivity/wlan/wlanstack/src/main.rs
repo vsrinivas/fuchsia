@@ -22,11 +22,14 @@ use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
 use fuchsia_inspect::Inspector;
 use fuchsia_inspect_contrib::auto_persist;
 use fuchsia_syslog as syslog;
+use fuchsia_trace as ftrace;
+use fuchsia_trace_provider as ftrace_provider;
 use futures::future::try_join;
 use futures::prelude::*;
 use log::info;
 use std::sync::Arc;
 use wlan_sme;
+use wlan_trace as wtrace;
 use wlanstack_config;
 
 use crate::device::IfaceMap;
@@ -64,8 +67,12 @@ impl From<wlanstack_config::Config> for ServiceCfg {
 async fn main() -> Result<(), Error> {
     // Initialize logging with a tag that can be used to select these logs for forwarding to console
     syslog::init_with_tags(&["wlan"]).expect("Syslog init should not fail");
-    fuchsia_trace_provider::trace_provider_create_with_fdio();
-    fuchsia_trace::instant!("wlan", "wlanstack:start", fuchsia_trace::Scope::Process);
+    ftrace_provider::trace_provider_create_with_fdio();
+    ftrace::instant!(
+        wtrace::CATEGORY_WLAN!(),
+        wtrace::NAME_WLANSTACK_START!(),
+        ftrace::Scope::Process
+    );
 
     info!("Starting");
 

@@ -32,6 +32,7 @@ rustc_binary("bin") {
     "//src/connectivity/wlan/lib/common/rust/:wlan-common",
     "//src/connectivity/wlan/lib/inspect:wlan-inspect",
     "//src/connectivity/wlan/lib/sme:wlan-sme",
+    "//src/connectivity/wlan/lib/trace:wlan-trace",
     "//src/diagnostics/persistence/fidl:persist_rust",
     "//src/lib/diagnostics/inspect/contrib/rust",
     "//src/lib/diagnostics/inspect/runtime/rust",
