@@ -3574,11 +3574,6 @@ zx_status_t iwl_mvm_mac_add_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* 
   ret = iwl_mvm_set_sta_key(mvm, mvmvif, mvmsta, key, key_offset);
   if (ret != ZX_OK) {
     IWL_ERR(mvm, "set key failed: %s\n", zx_status_get_string(ret));
-    /*
-     * can't add key for RX, but we don't need it
-     * in the device for TX so still return 0
-     */
-    ret = ZX_OK;
     goto out;
   }
 

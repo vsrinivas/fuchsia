@@ -95,6 +95,7 @@ zx_status_t SimMvm::SendCmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd, b
         case ADD_STA:  // fall-thru
         case REMOVE_STA:
         case ADD_STA_KEY:
+        case MGMT_MCAST_KEY:
           build_response_with_status(&resp, ADD_STA_SUCCESS);
           ret = ZX_OK;
           break;

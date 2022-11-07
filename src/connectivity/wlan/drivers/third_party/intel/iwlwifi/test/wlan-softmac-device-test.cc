@@ -1263,7 +1263,7 @@ TEST_F(MacInterfaceTest, SetKeysSupportConfigs) {
     builder.cipher_oui(cipher_oui);
     builder.cipher_type(CIPHER_SUITE_TYPE_BIP_CMAC_128);
     builder.key_type(fuchsia_hardware_wlan_associnfo::wire::WlanKeyType::kIgtk);
-    builder.key_idx(1);
+    builder.key_idx(4);
     builder.rsc(0);
     auto key_config = builder.Build();
     ASSERT_OK(SetKey(&key_config));

@@ -3412,10 +3412,13 @@ static int iwl_mvm_send_sta_igtk(struct iwl_mvm* mvm, const struct ieee80211_key
               (keyconf->cipher != CIPHER_SUITE_TYPE_BIP_CMAC_128 &&
                keyconf->cipher != CIPHER_SUITE_TYPE_BIP_GMAC_128 &&
                keyconf->cipher != CIPHER_SUITE_TYPE_BIP_GMAC_256))) {
+    IWL_ERR(mvm, "invalid IGTK key. type=%d idx=%d cipher=%d\n",
+            keyconf->key_type, keyconf->keyidx, keyconf->cipher);
     return ZX_ERR_INVALID_ARGS;
   }
 
   if (WARN_ON(!iwl_mvm_has_new_rx_api(mvm) && keyconf->cipher != CIPHER_SUITE_TYPE_BIP_CMAC_128)) {
+    IWL_ERR(mvm, "Old Rx API only supports BIP_CMAC_128.\n");
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -3434,6 +3437,7 @@ static int iwl_mvm_send_sta_igtk(struct iwl_mvm* mvm, const struct ieee80211_key
         igtk_cmd.ctrl_flags |= cpu_to_le32(STA_KEY_FLG_GCMP);
         break;
       default:
+        IWL_ERR(mvm, "Invalid cipher=%d\n", keyconf->cipher);
         return ZX_ERR_INVALID_ARGS;
     }
 
