@@ -183,8 +183,8 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
   // The code that handles opt-in/out will set this explicitly.
   schema->AddBool(ClientSettings::System::kEnableAnalytics, kEnableAnalyticsDescription, false);
 
-  // Setting the UI timeout to 0 disables the synchronous mode. This is currently under development.
-  schema->AddInt(ClientSettings::System::kUiTimeoutMs, kUiTimeoutMsDescription, 0);
+  // Set the UI timeout default to 1 second.
+  schema->AddInt(ClientSettings::System::kUiTimeoutMs, kUiTimeoutMsDescription, 1000);
 
   return schema;
 }
