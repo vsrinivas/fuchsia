@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Other
+### Flash Fuchsia onto a buckeye board that has already been provisioned with
+### a fuchsia bootloader.
+### To provision a board, see `fx bootstrap-buckeye`
+
+## usage: fx flash-buckeye
+
+# Bash strict mode.
+set -euo pipefail
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+fx-config-read
+
+# Use the in-tree fastboot.
+FASTBOOT="${FUCHSIA_DIR}/prebuilt/third_party/fastboot/fastboot"
+SSH_KEYS=$(get-ssh-authkeys)
+
+# FVM_PATH="$(fx get-build-dir)/obj/build/images/fuchsia/fuchsia/fvm.fastboot.blk"
+FVM_PATH="$(fx get-build-dir)/$(fx list-build-artifacts --expect-one --name storage-full images)"
+ZBI_PATH="$(fx get-build-dir)/$(fx list-build-artifacts --expect-one --name zircon-a --type zbi images)"
+
+# Install SSH keys before flashing.
+fx-zbi --replace -o "$ZBI_PATH" "$ZBI_PATH" \
+       --entry "data/ssh/authorized_keys=${SSH_KEYS}"
+
+${FASTBOOT} flashing unlock
+${FASTBOOT} flashing unlock_critical
+
+${FASTBOOT} flash recovery "$ZBI_PATH"
+${FASTBOOT} flash -S 128M system "$FVM_PATH"
+
+${FASTBOOT} reboot

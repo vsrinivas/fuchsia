@@ -12,6 +12,7 @@ per-file exec-host-tests=joshuaseaton@google.com
 per-file extract-pprof.fx = file: /src/connectivity/network/OWNERS
 per-file extract-pprof.py = file: /src/connectivity/network/OWNERS
 per-file ffx = file: /src/developer/ffx/OWNERS
+per-file flash-buckeye=gkalsi@google.com
 per-file             force-ota-from-devhost = file: /src/sys/pkg/OWNERS
 # per-file-COMPONENT force-ota-from-devhost = Packages
 per-file format-code=jeremymanson@google.com
