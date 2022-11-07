@@ -20,11 +20,14 @@ Future<void> main() async {
     final state = SettingsState.fromEnv();
     final app = App(state);
 
+    // TODO(fxb/113485): Add stop & dispose calls for state
+    state.start();
+
     runApp(
       MaterialApp(
+        theme: AppTheme.darkTheme,
         home: Scaffold(
           body: Container(
-            color: Colors.orange,
             child: Center(
               child: app,
             ),

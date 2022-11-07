@@ -75,7 +75,11 @@ static_icu_data("time_zone_list") {
 }
 
 resource("resources") {
-  sources = [ rebase_path(tz_ids_path) ]
+  sources = [
+    rebase_path(tz_ids_path),
+    rebase_path(
+        "//prebuilt/third_party/dart/${host_platform}/bin/resources/devtools/assets/fonts/MaterialIcons-Regular.otf"),
+  ]
   outputs = [ "data/{{source_file_part}}" ]
 }
 

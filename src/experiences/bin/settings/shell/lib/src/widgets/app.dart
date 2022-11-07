@@ -7,6 +7,7 @@
 
 import 'dart:math';
 
+import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:internationalization/strings.dart';
@@ -16,6 +17,8 @@ import 'package:shell_settings/src/widgets/timezone_settings.dart';
 
 /// Defines a widget to display shell settings.
 class App extends StatelessWidget {
+  static const kWidth = 900.0;
+
   final SettingsState settingsState;
 
   const App(this.settingsState);
@@ -24,26 +27,72 @@ class App extends StatelessWidget {
   Widget build(BuildContext context) {
     return RepaintBoundary(
       child: Container(
-        decoration: BoxDecoration(
-          border:
-              Border(top: BorderSide(color: Theme.of(context).dividerColor)),
-        ),
         child: Observer(builder: (_) {
           final state = settingsState;
-          return ListTileTheme(
-            iconColor: Theme.of(context).colorScheme.onSurface,
-            selectedColor: Theme.of(context).colorScheme.onPrimary,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                _ListSettings(settingsState),
-                if (state.timezonesPageVisible)
-                  TimezoneSettings(
+          return Row(
+            children: [
+              SizedBox(
+                width: 1,
+                child: Container(
+                  color: Theme.of(context).indicatorColor,
+                ),
+              ),
+              SizedBox(
+                width: kWidth,
+                child: ListTileTheme(
+                  iconColor: Theme.of(context).colorScheme.onSurface,
+                  selectedColor: Theme.of(context).colorScheme.onPrimary,
+                  child: Column(
+                    children: [
+                      AppBar(
+                        elevation: 0,
+                        shape:
+                            Border.all(color: Theme.of(context).indicatorColor),
+                        leading: Icon(Icons.settings),
+                        title: Text(
+                          Strings.settings,
+                          style: Theme.of(context).textTheme.headline6,
+                        ),
+                        actions: [
+                          Center(
+                            child: Text('datetime placeholder'),
+                          ),
+                          SizedBox(width: 12),
+                        ],
+                      ),
+                      Expanded(
+                        child: _ListSettings(settingsState),
+                      ),
+                      SizedBox(
+                        height: 1,
+                        child: Container(
+                          color: Theme.of(context).indicatorColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 1,
+                child: Container(
+                  color: Theme.of(context).indicatorColor,
+                ),
+              ),
+              if (state.allSettingsPageVisible)
+                Expanded(
+                  child: Container(
+                    color: AppTheme.darkTheme.bottomAppBarColor,
+                  ),
+                ),
+              if (state.timezonesPageVisible)
+                Expanded(
+                  child: TimezoneSettings(
                     state: state,
                     onChange: state.updateTimezone,
                   ),
-              ],
-            ),
+                ),
+            ],
           );
         }),
       ),
@@ -59,7 +108,7 @@ class _ListSettings extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.only(top: 24),
+      color: AppTheme.darkTheme.bottomAppBarColor,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -68,7 +117,6 @@ class _ListSettings extends StatelessWidget {
               children: [
                 // Timezone
                 ListTile(
-                  contentPadding: EdgeInsets.symmetric(horizontal: 24),
                   leading: Icon(Icons.schedule),
                   title: Text(Strings.timezone),
                   trailing: Wrap(

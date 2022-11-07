@@ -9,6 +9,7 @@ import 'dart:io';
 
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart' hide Action;
+import 'package:flutter/services.dart';
 import 'package:internationalization/strings.dart';
 import 'package:intl/intl.dart';
 import 'package:mobx/mobx.dart';
@@ -54,6 +55,17 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
         _selectedTimezone = timezoneService.timezone.asObservable() {
     timezoneService.onChanged =
         (timezone) => runInAction(() => selectedTimezone = timezone);
+
+    // We cannot load MaterialIcons font file from pubspec.yaml. So load it
+    // explicitly.
+    File file = File('/pkg/data/MaterialIcons-Regular.otf');
+    if (file.existsSync()) {
+      FontLoader('MaterialIcons')
+        ..addFont(() async {
+          return file.readAsBytesSync().buffer.asByteData();
+        }())
+        ..load();
+    }
   }
 
   @override

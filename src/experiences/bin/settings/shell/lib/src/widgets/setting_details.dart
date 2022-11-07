@@ -28,6 +28,7 @@ class SettingDetails extends StatelessWidget {
         children: [
           AppBar(
             elevation: 0,
+            shape: Border.all(color: Theme.of(context).indicatorColor),
             leading: IconButton(
               autofocus: true,
               onPressed: onBack,
@@ -43,8 +44,7 @@ class SettingDetails extends StatelessWidget {
             child: Material(
               type: MaterialType.canvas,
               color: Theme.of(context).bottomAppBarColor,
-              shape: Border(
-                  top: BorderSide(color: Theme.of(context).indicatorColor)),
+              shape: Border.all(color: Theme.of(context).indicatorColor),
               child: child,
             ),
           ),
