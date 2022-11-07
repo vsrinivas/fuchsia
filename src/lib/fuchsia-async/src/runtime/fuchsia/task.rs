@@ -61,6 +61,11 @@ impl<T: Send> Task<T> {
     /// The passed future will live until either (a) the future completes,
     /// (b) the returned [`Task`] is dropped while the executor is running, or
     /// (c) the executor is destroyed; whichever comes first.
+    ///
+    /// # Panics
+    ///
+    /// `spawn` may panic if not called in the context of an executor (e.g.
+    /// within a call to `run` or `run_singlethreaded`).
     #[cfg_attr(trace_level_logging, track_caller)]
     pub fn spawn(future: impl Future<Output = T> + Send + 'static) -> Task<T> {
         // Fuse is a combinator that will drop the underlying future as soon as it has been
@@ -110,6 +115,11 @@ impl<T> Task<T> {
     ///
     /// NOTE: This is not supported with a [`SendExecutor`] and will cause a
     /// runtime panic. Use [`Task::spawn`] instead.
+    ///
+    /// # Panics
+    ///
+    /// `local` may panic if not called in the context of a local executor (e.g.
+    /// within a call to `run` or `run_singlethreaded`).
     #[cfg_attr(trace_level_logging, track_caller)]
     pub fn local(future: impl Future<Output = T> + 'static) -> Task<T> {
         // Fuse is a combinator that will drop the underlying future as soon as it has been

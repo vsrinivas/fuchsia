@@ -17,7 +17,12 @@ pub mod task {
     pub struct Task<T>(async_executor::Task<T>);
 
     impl<T: 'static> Task<T> {
-        /// spawn a new `Send` task onto the executor.
+        /// Spawn a new `Send` task onto the current executor.
+        ///
+        /// # Panics
+        ///
+        /// `spawn` may panic if not called in the context of an executor (e.g.
+        /// within a call to `run` or `run_singlethreaded`).
         pub fn spawn(fut: impl Future<Output = T> + Send + 'static) -> Self
         where
             T: Send,
@@ -25,7 +30,12 @@ pub mod task {
             Self(super::executor::spawn(fut))
         }
 
-        /// spawn a new non-`Send` task onto the single threaded executor.
+        /// Spawn a new non-`Send` task onto the single threaded executor.
+        ///
+        /// # Panics
+        ///
+        /// `local` may panic if not called in the context of a local executor
+        /// (e.g. within a call to `run` or `run_singlethreaded`).
         pub fn local<'a>(fut: impl Future<Output = T> + 'static) -> Self {
             Self(super::executor::local(fut))
         }

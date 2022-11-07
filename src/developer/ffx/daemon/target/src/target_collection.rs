@@ -1004,8 +1004,8 @@ mod tests {
         assert_eq!(target.nodename(), None);
     }
 
-    #[test]
-    fn test_collection_removal_disconnects_target() {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_collection_removal_disconnects_target() {
         let target = Target::new_named("soggy-falafel");
         target.set_state(TargetConnectionState::Mdns(Instant::now()));
         target.host_pipe.borrow_mut().replace(Task::local(future::pending()));

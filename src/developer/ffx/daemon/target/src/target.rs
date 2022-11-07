@@ -1412,8 +1412,8 @@ mod test {
         assert_eq!(TargetConnectionState::Mdns(instant), t.get_connection_state());
     }
 
-    #[test]
-    fn test_target_connection_state_will_not_drop_rcs_on_mdns_events() {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_connection_state_will_not_drop_rcs_on_mdns_events() {
         let local_hoist = Hoist::new().unwrap();
 
         let t = Target::new_named("hello-kitty");
@@ -1429,8 +1429,8 @@ mod test {
         assert_eq!(t.get_connection_state(), rcs_state);
     }
 
-    #[test]
-    fn test_target_connection_state_will_not_drop_rcs_on_manual_events() {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_connection_state_will_not_drop_rcs_on_manual_events() {
         let local_hoist = Hoist::new().unwrap();
 
         let t = Target::new_named("hello-kitty");
@@ -1596,8 +1596,8 @@ mod test {
         assert!(!target.set_preferred_ssh_address(("fe80::2".parse().unwrap(), 1).into()));
     }
 
-    #[test]
-    fn test_target_ssh_address_priority() {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_ssh_address_priority() {
         let name = Some("bubba");
         let start = std::time::SystemTime::now();
         use std::iter::FromIterator;
@@ -1819,8 +1819,8 @@ mod test {
         assert_eq!(target_addr_info_to_socketaddr(tai), sa);
     }
 
-    #[test]
-    fn test_netsvc_target_has_no_ssh() {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_netsvc_target_has_no_ssh() {
         use std::iter::FromIterator;
         let target = Target::new_with_netsvc_addrs(
             Some("foo"),
@@ -1860,8 +1860,8 @@ mod test {
         assert!(target.ssh_address_info().is_none());
     }
 
-    #[test]
-    fn test_target_is_manual() {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_is_manual() {
         let target = Target::new();
         target.addrs_insert_entry(TargetAddrEntry::new(
             ("::1".parse().unwrap(), 0).into(),
@@ -1874,8 +1874,8 @@ mod test {
         assert!(!target.is_manual());
     }
 
-    #[test]
-    fn test_target_get_manual_timeout() {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_get_manual_timeout() {
         let target = Target::new();
         assert_eq!(target.get_manual_timeout(), None);
 
@@ -1898,8 +1898,8 @@ mod test {
         assert_eq!(target.get_manual_timeout(), Some(now));
     }
 
-    #[test]
-    fn test_update_connection_state_manual_disconnect() {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_update_connection_state_manual_disconnect() {
         let local_hoist = Hoist::new().unwrap();
 
         let target = Target::new();
@@ -1929,8 +1929,8 @@ mod test {
         assert_matches!(target.get_connection_state(), TargetConnectionState::Manual(_));
     }
 
-    #[test]
-    fn test_update_connection_state_expired_ephemeral_disconnect() {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_update_connection_state_expired_ephemeral_disconnect() {
         let local_hoist = Hoist::new().unwrap();
 
         let target = Target::new();
@@ -1960,8 +1960,8 @@ mod test {
         assert_matches!(target.get_connection_state(), TargetConnectionState::Manual(_));
     }
 
-    #[test]
-    fn test_update_connection_state_ephemeral_disconnect() {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_update_connection_state_ephemeral_disconnect() {
         let local_hoist = Hoist::new().unwrap();
 
         let target = Target::new();
@@ -1991,8 +1991,8 @@ mod test {
         assert_matches!(target.get_connection_state(), TargetConnectionState::Manual(_));
     }
 
-    #[test]
-    fn test_target_disconnect() {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_disconnect() {
         let target = Target::new();
         target.set_state(TargetConnectionState::Mdns(Instant::now()));
         target.host_pipe.borrow_mut().replace(Task::local(future::pending()));

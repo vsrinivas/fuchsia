@@ -994,8 +994,8 @@ mod test {
         }
     }
 
-    #[test]
-    fn test_handle_overnet_peers_known_peer_exclusion() {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_handle_overnet_peers_known_peer_exclusion() {
         let queue = events::Queue::<DaemonEvent>::new(&Rc::new(NullDaemonEventSynthesizer {}));
         let mut known_peers: HashSet<PeerSetElement> = Default::default();
 
