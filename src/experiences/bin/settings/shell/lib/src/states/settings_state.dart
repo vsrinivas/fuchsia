@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:flutter/material.dart' hide Action;
+import 'package:shell_settings/src/services/datetime_service.dart';
 import 'package:shell_settings/src/services/task_service.dart';
 import 'package:shell_settings/src/services/timezone_service.dart';
 import 'package:shell_settings/src/states/settings_state_impl.dart';
@@ -18,18 +19,23 @@ enum SettingsPage {
 /// Defines the state of the main settings overlay.
 abstract class SettingsState implements TaskService {
   bool get allSettingsPageVisible;
+  // Timezone
   bool get timezonesPageVisible;
   String get selectedTimezone;
   List<String> get timezones;
+  // Datetime
+  String get dateTime;
 
   factory SettingsState.fromEnv() {
     // ignore: unnecessary_cast
     return SettingsStateImpl(
       timezoneService: TimezoneService(),
+      dateTimeService: DateTimeService(),
     ) as SettingsState;
   }
 
-  void updateTimezone(String tz);
   void showAllSettings();
+  // Timezone
+  void updateTimezone(String tz);
   void showTimezoneSettings();
 }

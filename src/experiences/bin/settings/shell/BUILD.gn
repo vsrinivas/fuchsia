@@ -14,6 +14,7 @@ dart_library("lib") {
   entrypoints = [ "main.dart" ]
 
   services = [
+    "src/services/datetime_service.dart",
     "src/services/task_service.dart",
     "src/services/timezone_service.dart",
   ]

@@ -13,6 +13,7 @@ import 'package:flutter/services.dart';
 import 'package:internationalization/strings.dart';
 import 'package:intl/intl.dart';
 import 'package:mobx/mobx.dart';
+import 'package:shell_settings/src/services/datetime_service.dart';
 import 'package:shell_settings/src/services/task_service.dart';
 import 'package:shell_settings/src/services/timezone_service.dart';
 import 'package:shell_settings/src/states/settings_state.dart';
@@ -21,6 +22,7 @@ import 'package:shell_settings/src/states/settings_state.dart';
 class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   static const kTimezonesFile = '/pkg/data/tz_ids.txt';
 
+  // All
   final settingsPage = SettingsPage.none.asObservable();
 
   @override
@@ -28,6 +30,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   late final _allSettingsPageVisible =
       (() => settingsPage.value == SettingsPage.none).asComputed();
 
+  // Timezone
   @override
   bool get timezonesPageVisible => _timezonesPageVisible.value;
   late final _timezonesPageVisible =
@@ -47,12 +50,24 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
       ..addAll(_timezones.where((zone) => zone != selectedTimezone));
   }
 
+  // Datetime
+  @override
+  String get dateTime => _dateTime.value;
+  late final ObservableValue<String> _dateTime = (() =>
+      // Ex: Mon, Jun 7 2:25 AM
+      DateFormat.MMMEd().add_jm().format(dateTimeNow.value)).asComputed();
+
+  // Services
+  final DateTimeService dateTimeService;
   final TimezoneService timezoneService;
 
+  // Constructor
   SettingsStateImpl({
+    required this.dateTimeService,
     required this.timezoneService,
   })  : _timezones = _loadTimezones(),
         _selectedTimezone = timezoneService.timezone.asObservable() {
+    dateTimeService.onChanged = updateDateTime;
     timezoneService.onChanged =
         (timezone) => runInAction(() => selectedTimezone = timezone);
 
@@ -68,9 +83,11 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     }
   }
 
+  // Task service
   @override
   Future<void> start() async {
     await Future.wait([
+      dateTimeService.start(),
       timezoneService.start(),
     ]);
   }
@@ -78,15 +95,24 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   @override
   Future<void> stop() async {
     showAllSettings();
+    await dateTimeService.stop();
     await timezoneService.stop();
+    _dateTimeNow = null;
   }
 
   @override
   void dispose() {
     super.dispose();
+    dateTimeService.dispose();
     timezoneService.dispose();
   }
 
+  // All
+  @override
+  void showAllSettings() =>
+      runInAction(() => settingsPage.value = SettingsPage.none);
+
+  // Timezone
   @override
   void updateTimezone(String timezone) => runInAction(() {
         selectedTimezone = timezone;
@@ -95,14 +121,19 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
       });
 
   @override
-  void showAllSettings() =>
-      runInAction(() => settingsPage.value = SettingsPage.none);
-
-  @override
   void showTimezoneSettings() =>
       runInAction(() => settingsPage.value = SettingsPage.timezone);
 
   static List<String> _loadTimezones() {
     return File(kTimezonesFile).readAsLinesSync();
   }
+
+  // Datetime
+  Observable<DateTime>? _dateTimeNow;
+  Observable<DateTime> get dateTimeNow =>
+      _dateTimeNow ??= DateTime.now().asObservable();
+
+  late final Action updateDateTime = () {
+    dateTimeNow.value = DateTime.now();
+  }.asAction();
 }

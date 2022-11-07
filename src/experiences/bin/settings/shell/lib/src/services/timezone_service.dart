@@ -7,6 +7,7 @@ import 'dart:async';
 import 'package:fidl_fuchsia_intl/fidl_async.dart';
 import 'package:fidl_fuchsia_settings/fidl_async.dart';
 import 'package:flutter/foundation.dart';
+import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:shell_settings/src/services/task_service.dart';
 
@@ -32,7 +33,9 @@ class TimezoneService implements TaskService {
           locales: _intlSettings?.locales,
           temperatureUnit: _intlSettings?.temperatureUnit,
           timeZoneId: TimeZoneId(id: value));
-      _settingsService!.set(newIntlSettings);
+      _settingsService!.set(newIntlSettings).catchError((e) {
+        log.warning('Error while setting timezone: $e');
+      });
     }
   }
 

@@ -54,8 +54,14 @@ class App extends StatelessWidget {
                           style: Theme.of(context).textTheme.headline6,
                         ),
                         actions: [
+                          // Date time.
                           Center(
-                            child: Text('datetime placeholder'),
+                            child: Observer(builder: (context) {
+                              return Text(
+                                settingsState.dateTime,
+                                style: Theme.of(context).textTheme.bodyText1,
+                              );
+                            }),
                           ),
                           SizedBox(width: 12),
                         ],
