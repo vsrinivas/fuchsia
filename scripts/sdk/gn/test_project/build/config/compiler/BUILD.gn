@@ -68,7 +68,7 @@ config("compiler") {
   }
 
   cflags_c += [ "-std=c11" ]
-  cflags_cc += [ "-std=c++14" ]
+  cflags_cc += [ "-std=c++17" ]
 
   # Pass the same C/C++ flags to the objective C/C++ compiler.
   cflags_objc += cflags_c
