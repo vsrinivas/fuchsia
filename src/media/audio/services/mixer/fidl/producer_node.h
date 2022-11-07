@@ -92,7 +92,7 @@ class ProducerNode : public Node {
   NodePtr CreateNewChildDest() final {
     UNREACHABLE << "CreateNewChildDest should not be called on ordinary nodes";
   }
-  void DestroySelf() final;
+  void PrepareToDeleteSelf() final;
   bool CanAcceptSourceFormat(const Format& format) const final;
   std::optional<size_t> MaxSources() const final;
   bool AllowsDest() const final;
@@ -102,8 +102,8 @@ class ProducerNode : public Node {
   const std::shared_ptr<GlobalTaskQueue> global_task_queue_;
   const std::shared_ptr<DelayWatcherServerGroup> delay_reporter_;
 
-  // Logically const, but non-const so we can discard this in DestroySelf to remove a circular
-  // reference.
+  // Logically const, but non-const so we can discard this in `PrepareToDeleteSelf` to remove a
+  // circular reference.
   std::shared_ptr<DelayWatcherClient> delay_watcher_;
 
   zx::duration upstream_input_delay_;

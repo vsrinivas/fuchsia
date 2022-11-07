@@ -74,21 +74,21 @@ NodePtr FakeNode::CreateNewChildDest() {
   return graph_.CreateOrdinaryNode(std::nullopt, shared_from_this());
 }
 
-void FakeNode::DestroyChildSource(NodePtr child_source) {
-  if (on_destroy_child_source_) {
-    on_destroy_child_source_(child_source);
+void FakeNode::PrepareToDeleteChildSource(NodePtr child_source) {
+  if (on_prepare_to_delete_child_source_) {
+    on_prepare_to_delete_child_source_(child_source);
   }
 }
 
-void FakeNode::DestroyChildDest(NodePtr child_dest) {
-  if (on_destroy_child_dest_) {
-    on_destroy_child_dest_(child_dest);
+void FakeNode::PrepareToDeleteChildDest(NodePtr child_dest) {
+  if (on_prepare_to_delete_child_dest_) {
+    on_prepare_to_delete_child_dest_(child_dest);
   }
 }
 
-void FakeNode::DestroySelf() {
-  if (on_destroy_self_) {
-    on_destroy_self_();
+void FakeNode::PrepareToDeleteSelf() {
+  if (on_prepare_to_delete_self_) {
+    on_prepare_to_delete_self_();
   }
 }
 
@@ -199,13 +199,13 @@ FakeGraph::~FakeGraph() {
     node->on_presentation_delay_for_edge_ = nullptr;
     node->on_create_new_child_source_ = nullptr;
     node->on_create_new_child_dest_ = nullptr;
-    node->on_destroy_child_source_ = nullptr;
-    node->on_destroy_child_dest_ = nullptr;
-    node->on_destroy_self_ = nullptr;
+    node->on_prepare_to_delete_child_source_ = nullptr;
+    node->on_prepare_to_delete_child_dest_ = nullptr;
+    node->on_prepare_to_delete_self_ = nullptr;
     node->on_can_accept_source_format_ = nullptr;
     // Remove all circular references so that every FakeNode and FakePipelineStage can be deleted.
     // Do this after clearing closures so the closures don't run.
-    Node::Destroy(ctx_, node);
+    Node::PrepareToDelete(ctx_, node);
     // Also clear PipelineStage sources. This is necessary in certain error-case tests, such as
     // tests that intentionally create cycles.
     if (node->type() != Node::Type::kMeta) {

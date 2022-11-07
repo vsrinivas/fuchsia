@@ -125,7 +125,7 @@ zx::duration ConsumerNode::PresentationDelayForSourceEdge(const Node* source) co
   return 2 * mix_thread_->mix_period();
 }
 
-void ConsumerNode::DestroySelf() {
+void ConsumerNode::PrepareToDeleteSelf() {
   // Deregister from the thread.
   mix_thread_->RemoveConsumer(consumer_stage_);
   // Drop this to break a circular reference via delay_watcher_->SetCallback.

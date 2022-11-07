@@ -150,7 +150,7 @@ zx::duration ProducerNode::PresentationDelayForSourceEdge(const Node* source) co
   return zx::nsec(0);
 }
 
-void ProducerNode::DestroySelf() {
+void ProducerNode::PrepareToDeleteSelf() {
   if (pipeline_direction() == PipelineDirection::kInput) {
     // Drop this to break a circular reference via delay_watcher_->SetCallback.
     delay_watcher_ = nullptr;

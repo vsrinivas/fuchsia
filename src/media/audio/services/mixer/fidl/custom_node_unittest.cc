@@ -208,7 +208,7 @@ TEST_F(CustomNodeTest, CreateDeleteEdge) {
   EXPECT_EQ(child_source_node->dest(), nullptr);
 
   // Clear all child nodes referring to `custom_node` to ensure that the parent will be destroyed.
-  Node::Destroy(ctx, custom_node);
+  Node::PrepareToDelete(ctx, custom_node);
   EXPECT_TRUE(custom_node->child_sources().empty());
   EXPECT_TRUE(custom_node->child_dests().empty());
 }
@@ -261,7 +261,7 @@ TEST_F(CustomNodeTest, CreateEdgeCannotAcceptSourceFormat) {
   EXPECT_EQ(child_source_node->dest(), nullptr);
 
   // Clear all child nodes referring to `custom_node` to ensure that the parent will be destroyed.
-  Node::Destroy(ctx, custom_node);
+  Node::PrepareToDelete(ctx, custom_node);
   EXPECT_TRUE(custom_node->child_sources().empty());
   EXPECT_TRUE(custom_node->child_dests().empty());
 }
@@ -310,7 +310,7 @@ TEST_F(CustomNodeTest, CreateEdgeDisallowed) {
             fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
 
   // Clear all child nodes referring to `custom_node` to ensure that the parent will be destroyed.
-  Node::Destroy(ctx, custom_node);
+  Node::PrepareToDelete(ctx, custom_node);
   EXPECT_TRUE(custom_node->child_sources().empty());
   EXPECT_TRUE(custom_node->child_dests().empty());
 }

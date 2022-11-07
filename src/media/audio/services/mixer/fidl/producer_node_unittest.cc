@@ -58,9 +58,9 @@ struct TestHarness {
 };
 
 TestHarness::~TestHarness() {
-  // Destroy to cleanup references.
+  // Cleanup references.
   const auto& ctx = graph.ctx();
-  Node::Destroy(ctx, producer);
+  Node::PrepareToDelete(ctx, producer);
   ctx.global_task_queue.RunForThread(ctx.detached_thread->id());
 }
 
@@ -262,8 +262,8 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithRingBuffer) {
   q->RunForThread(ctx.detached_thread->id());
   EXPECT_THAT(dest->fake_pipeline_stage()->sources(), ElementsAre());
 
-  // Destroy to cleanup references.
-  Node::Destroy(ctx, h.producer);
+  // Cleanup references.
+  Node::PrepareToDelete(ctx, h.producer);
   q->RunForThread(ctx.detached_thread->id());
 }
 
@@ -368,8 +368,8 @@ TEST(ProducerNodeTest, InputPipelineUsesExternalDelay) {
   loop.RunUntilIdle();
   EXPECT_EQ(producer->max_upstream_input_pipeline_delay(), zx::nsec(20));
 
-  // Destroy to cleanup references.
-  Node::Destroy(ctx, producer);
+  // Cleanup references.
+  Node::PrepareToDelete(ctx, producer);
   q->RunForThread(ctx.detached_thread->id());
   external_delay_server->Shutdown();
 }
@@ -453,8 +453,8 @@ TEST(ProducerNodeTest, OutputPipelineReportsLeadTime) {
     client2->Expect(zx::nsec(10));
   }
 
-  // Destroy to cleanup references.
-  Node::Destroy(ctx, producer);
+  // Cleanup references.
+  Node::PrepareToDelete(ctx, producer);
   q->RunForThread(ctx.detached_thread->id());
   client1->client->Shutdown();
   client2->client->Shutdown();

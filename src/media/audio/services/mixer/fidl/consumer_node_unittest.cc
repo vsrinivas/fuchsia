@@ -81,7 +81,7 @@ TestHarness MakeTestHarness(FakeGraph::Args graph_args,
 
 // This removes a circular references between the consumer and thread objects.
 TestHarness::~TestHarness() {
-  Node::Destroy(graph->ctx(), consumer_node);
+  Node::PrepareToDelete(graph->ctx(), consumer_node);
   EXPECT_EQ(mix_thread->num_consumers(), 0);
   graph->global_task_queue()->RunForThread(mix_thread->id());
 }

@@ -105,21 +105,23 @@ class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
     on_create_new_child_dest_ = std::move(handler);
   }
 
-  // Registers a handler for `DestroyChildSource`.
+  // Registers a handler for `PrepareToDeleteChildSource`.
   // If a handler is not registered, a default handler is used.
-  void SetOnDestroyChildSource(std::function<void(NodePtr)> handler) {
-    on_destroy_child_source_ = std::move(handler);
+  void SetOnPrepareToDeleteChildSource(std::function<void(NodePtr)> handler) {
+    on_prepare_to_delete_child_source_ = std::move(handler);
   }
 
-  // Registers a handler for `DestroyChildDest`.
+  // Registers a handler for `PrepareToDeleteChildDest`.
   // If a handler is not registered, a default handler is used.
-  void SetOnDestroyChildDest(std::function<void(NodePtr)> handler) {
-    on_destroy_child_dest_ = std::move(handler);
+  void SetOnPrepareToDeleteChildDest(std::function<void(NodePtr)> handler) {
+    on_prepare_to_delete_child_dest_ = std::move(handler);
   }
 
-  // Registers a handler for `DestroySelf`.
+  // Registers a handler for `PrepareToDeleteSelf`.
   // If a handler is not registered, a default handler is used.
-  void SetOnDestroySelf(std::function<void()> handler) { on_destroy_self_ = std::move(handler); }
+  void SetOnPrepareToDeleteSelf(std::function<void()> handler) {
+    on_prepare_to_delete_self_ = std::move(handler);
+  }
 
   // Registers a handler for `CanAcceptSourceFormat`.
   // The default handler always returns true.
@@ -155,9 +157,9 @@ class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
  protected:
   NodePtr CreateNewChildSource() final;
   NodePtr CreateNewChildDest() final;
-  void DestroyChildSource(NodePtr child_source) final;
-  void DestroyChildDest(NodePtr child_dest) final;
-  void DestroySelf() final;
+  void PrepareToDeleteChildSource(NodePtr child_source) final;
+  void PrepareToDeleteChildDest(NodePtr child_dest) final;
+  void PrepareToDeleteSelf() final;
   bool CanAcceptSourceFormat(const Format& format) const final;
   std::optional<size_t> MaxSources() const final { return max_sources_; }
   bool AllowsDest() const final { return allows_dest_; }
@@ -175,9 +177,9 @@ class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
   std::function<zx::duration(const Node*)> on_presentation_delay_for_edge_;
   std::function<NodePtr()> on_create_new_child_source_;
   std::function<NodePtr()> on_create_new_child_dest_;
-  std::function<void(NodePtr)> on_destroy_child_source_;
-  std::function<void(NodePtr)> on_destroy_child_dest_;
-  std::function<void()> on_destroy_self_;
+  std::function<void(NodePtr)> on_prepare_to_delete_child_source_;
+  std::function<void(NodePtr)> on_prepare_to_delete_child_dest_;
+  std::function<void()> on_prepare_to_delete_self_;
   std::function<bool(const Format&)> on_can_accept_source_format_;
 
   std::optional<size_t> max_sources_ = std::nullopt;

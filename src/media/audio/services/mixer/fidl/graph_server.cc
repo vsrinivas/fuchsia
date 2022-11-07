@@ -879,7 +879,7 @@ void GraphServer::DeleteNode(DeleteNodeRequestView request, DeleteNodeCompleter:
     return;
   }
 
-  Node::Destroy(ctx_, it->second);
+  Node::PrepareToDelete(ctx_, it->second);
   nodes_.erase(it);
   producer_nodes_.erase(id);
   consumer_nodes_.erase(id);
@@ -1247,9 +1247,9 @@ void GraphServer::OnShutdown(fidl::UnbindInfo info) {
   // Clearing this list will cancel all pending waiters.
   pending_one_shot_waiters_.clear();
 
-  // Destroy nodes to remove circular references.
+  // Remove circular references.
   for (auto [id, node] : nodes_) {
-    Node::Destroy(ctx_, node);
+    Node::PrepareToDelete(ctx_, node);
   }
   nodes_.clear();
   producer_nodes_.clear();

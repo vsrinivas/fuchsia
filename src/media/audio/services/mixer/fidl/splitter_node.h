@@ -156,7 +156,7 @@ class SplitterNode : public Node, public std::enable_shared_from_this<SplitterNo
 
   NodePtr CreateNewChildSource() final;
   NodePtr CreateNewChildDest() final;
-  void DestroySelf() final;
+  void PrepareToDeleteSelf() final;
 
   bool CanAcceptSourceFormat(const Format& format) const final {
     UNREACHABLE << "CanAcceptSourceFormat should not be called on meta nodes";
@@ -171,7 +171,7 @@ class SplitterNode : public Node, public std::enable_shared_from_this<SplitterNo
   const std::shared_ptr<RingBuffer> ring_buffer_;
 
   // This is logically const, but can't be created until after the SplitterNode is created due to
-  // a circular dependency. This is set by Create then not changed until DestroySelf.
+  // a circular dependency. This is set by `Create` then not changed until `PrepareToDeleteSelf`.
   std::shared_ptr<ChildConsumerNode> consumer_;
 
   // For creating ChildProducerNode names.

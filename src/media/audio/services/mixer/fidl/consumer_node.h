@@ -75,7 +75,7 @@ class ConsumerNode : public Node {
   NodePtr CreateNewChildDest() final {
     UNREACHABLE << "CreateNewChildDest should not be called on ordinary nodes";
   }
-  void DestroySelf() final;
+  void PrepareToDeleteSelf() final;
   bool CanAcceptSourceFormat(const Format& format) const final;
   std::optional<size_t> MaxSources() const final;
   bool AllowsDest() const final;
@@ -85,8 +85,8 @@ class ConsumerNode : public Node {
   const std::shared_ptr<GraphMixThread> mix_thread_;
   const ConsumerStagePtr consumer_stage_;
 
-  // Logically const, but non-const so we can discard this in DestroySelf to remove a circular
-  // reference.
+  // Logically const, but non-const so we can discard this in `PrepareToDeleteSelf` to remove a
+  // circular reference.
   std::shared_ptr<DelayWatcherClient> delay_watcher_;
 };
 

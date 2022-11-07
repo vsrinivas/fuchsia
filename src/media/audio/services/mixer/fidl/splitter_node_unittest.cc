@@ -103,7 +103,7 @@ TEST(SplitterNodeTest, CreateSourceEdge) {
   ASSERT_EQ(splitter->child_dests().size(), 0u);
 
   // Cleanup all references.
-  Node::Destroy(graph.ctx(), splitter);
+  Node::PrepareToDelete(graph.ctx(), splitter);
   q->RunForThread(thread->id());
 }
 
@@ -156,7 +156,7 @@ TEST(SplitterNodeTest, CreateDestEdge) {
   }
 
   // Cleanup all references.
-  Node::Destroy(graph.ctx(), splitter);
+  Node::PrepareToDelete(graph.ctx(), splitter);
   q->RunForThread(thread->id());
 }
 
@@ -371,13 +371,13 @@ TEST(SplitterNodeTest, CopySourceToDests) {
   }
 
   // Cleanup all references.
-  Node::Destroy(graph.ctx(), dest1);
+  Node::PrepareToDelete(graph.ctx(), dest1);
   q->RunForThread(thread1->id());
-  Node::Destroy(graph.ctx(), dest2);
+  Node::PrepareToDelete(graph.ctx(), dest2);
   q->RunForThread(thread2->id());
-  Node::Destroy(graph.ctx(), dest3);
+  Node::PrepareToDelete(graph.ctx(), dest3);
   q->RunForThread(thread3->id());
-  Node::Destroy(graph.ctx(), splitter);
+  Node::PrepareToDelete(graph.ctx(), splitter);
   q->RunForThread(thread1->id());
 }
 

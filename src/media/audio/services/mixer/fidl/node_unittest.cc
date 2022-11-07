@@ -278,15 +278,15 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToMetaIncompatibleFormats) {
     return child;
   });
 
-  bool child_destroyed = false;
-  dest->SetOnDestroyChildSource(
-      [&child_destroyed](NodePtr child_source) { child_destroyed = true; });
+  bool child_deleted = false;
+  dest->SetOnPrepareToDeleteChildSource(
+      [&child_deleted](NodePtr child_source) { child_deleted = true; });
 
   auto q = graph.global_task_queue();
   auto result = Node::CreateEdge(graph.ctx(), /*source=*/graph.node(1), dest, /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
-  EXPECT_TRUE(child_destroyed);
+  EXPECT_TRUE(child_deleted);
 }
 
 TEST_F(NodeCreateEdgeTest, OrdinaryToMetaPipelineMismatch) {
@@ -564,15 +564,15 @@ TEST_F(NodeCreateEdgeTest, MetaToMetaIncompatibleFormats) {
     return child;
   });
 
-  bool child_destroyed = false;
-  dest->SetOnDestroyChildSource(
-      [&child_destroyed](NodePtr child_source) { child_destroyed = true; });
+  bool child_deleted = false;
+  dest->SetOnPrepareToDeleteChildSource(
+      [&child_deleted](NodePtr child_source) { child_deleted = true; });
 
   auto q = graph.global_task_queue();
   auto result = Node::CreateEdge(graph.ctx(), /*source=*/graph.node(1), dest, /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
-  EXPECT_TRUE(child_destroyed);
+  EXPECT_TRUE(child_deleted);
 }
 
 TEST_F(NodeCreateEdgeTest, MetaToMetaPipelineMismatch) {
@@ -808,11 +808,11 @@ TEST_F(NodeDeleteEdgeTest, OrdinaryToMetaSuccess) {
   auto dest_child_source = std::static_pointer_cast<FakeNode>(dest->child_sources()[0]);
   auto dest_stage = dest_child_source->fake_pipeline_stage();
 
-  bool dest_destroyed = false;
-  dest->SetOnDestroyChildSource(
-      [&dest_destroyed, expected = dest_child_source](NodePtr child_source) {
+  bool dest_deleted = false;
+  dest->SetOnPrepareToDeleteChildSource(
+      [&dest_deleted, expected = dest_child_source](NodePtr child_source) {
         EXPECT_EQ(child_source, expected);
-        dest_destroyed = true;
+        dest_deleted = true;
       });
 
   auto q = graph.global_task_queue();
@@ -823,7 +823,7 @@ TEST_F(NodeDeleteEdgeTest, OrdinaryToMetaSuccess) {
   EXPECT_EQ(source->thread(), graph.ctx().detached_thread);
   EXPECT_EQ(dest->child_sources().size(), 0u);
   EXPECT_EQ(dest->child_dests().size(), 0u);
-  EXPECT_TRUE(dest_destroyed);
+  EXPECT_TRUE(dest_deleted);
 
   EXPECT_THAT(graph.thread(kThreadId)->clock_usages(),
               UnorderedElementsAre(Pair(DefaultClock(), 1)));
@@ -872,11 +872,11 @@ TEST_F(NodeDeleteEdgeTest, MetaToOrdinarySuccess) {
   auto source_stage = source_child_dest->fake_pipeline_stage();
   auto dest_stage = dest->fake_pipeline_stage();
 
-  bool source_destroyed = false;
-  source->SetOnDestroyChildDest(
-      [&source_destroyed, expected = source_child_dest](NodePtr child_dest) {
+  bool source_deleted = false;
+  source->SetOnPrepareToDeleteChildDest(
+      [&source_deleted, expected = source_child_dest](NodePtr child_dest) {
         EXPECT_EQ(child_dest, expected);
-        source_destroyed = true;
+        source_deleted = true;
       });
 
   auto q = graph.global_task_queue();
@@ -887,7 +887,7 @@ TEST_F(NodeDeleteEdgeTest, MetaToOrdinarySuccess) {
   EXPECT_EQ(source->child_dests().size(), 0u);
   EXPECT_EQ(dest->sources().size(), 0u);
   EXPECT_EQ(dest->thread(), graph.thread(kThreadId));
-  EXPECT_TRUE(source_destroyed);
+  EXPECT_TRUE(source_deleted);
 
   EXPECT_THAT(graph.thread(kThreadId)->clock_usages(),
               UnorderedElementsAre(Pair(DefaultClock(), 1)));
@@ -949,18 +949,18 @@ TEST_F(NodeDeleteEdgeTest, MetaToMetaSuccess) {
   auto source_stage = source_child_dest->fake_pipeline_stage();
   auto dest_stage = dest_child_source->fake_pipeline_stage();
 
-  bool source_destroyed = false;
-  source->SetOnDestroyChildDest(
-      [&source_destroyed, expected = source_child_dest](NodePtr child_dest) {
+  bool source_deleted = false;
+  source->SetOnPrepareToDeleteChildDest(
+      [&source_deleted, expected = source_child_dest](NodePtr child_dest) {
         EXPECT_EQ(child_dest, expected);
-        source_destroyed = true;
+        source_deleted = true;
       });
 
-  bool dest_destroyed = false;
-  dest->SetOnDestroyChildSource(
-      [&dest_destroyed, expected = dest_child_source](NodePtr child_source) {
+  bool dest_deleted = false;
+  dest->SetOnPrepareToDeleteChildSource(
+      [&dest_deleted, expected = dest_child_source](NodePtr child_source) {
         EXPECT_EQ(child_source, expected);
-        dest_destroyed = true;
+        dest_deleted = true;
       });
 
   auto q = graph.global_task_queue();
@@ -971,8 +971,8 @@ TEST_F(NodeDeleteEdgeTest, MetaToMetaSuccess) {
   EXPECT_EQ(source->child_dests().size(), 0u);
   EXPECT_EQ(dest->child_sources().size(), 0u);
   EXPECT_EQ(dest->child_dests().size(), 0u);
-  EXPECT_TRUE(source_destroyed);
-  EXPECT_TRUE(dest_destroyed);
+  EXPECT_TRUE(source_deleted);
+  EXPECT_TRUE(dest_deleted);
 
   EXPECT_THAT(graph.thread(kThreadId)->clock_usages(),
               UnorderedElementsAre(Pair(DefaultClock(), 1)));
@@ -1434,7 +1434,7 @@ TEST(NodeCreateDeleteEdgeTest, RecomputeDelays) {
 }
 
 //
-// Destroy
+// PrepareToDelete
 //
 // We create the following pairs of edges:
 // - (ordinary -> ordinary)
@@ -1451,9 +1451,9 @@ TEST(NodeCreateDeleteEdgeTest, RecomputeDelays) {
 // - delete A, where there exists an edge (B->A), where B is a built-in child of a meta node
 //
 
-class NodeDestroyTest : public NodeDeleteEdgeTest {};
+class NodePrepareToDeleteTest : public NodeDeleteEdgeTest {};
 
-TEST_F(NodeDestroyTest, OrdinaryToOrdinary) {
+TEST_F(NodePrepareToDeleteTest, OrdinaryToOrdinary) {
   for (int k = 0; k < 2; k++) {
     SCOPED_TRACE(std::string("Delete ") + (k == 0 ? "source" : "dest"));
 
@@ -1466,22 +1466,22 @@ TEST_F(NodeDestroyTest, OrdinaryToOrdinary) {
     auto source = graph.node(1);
     auto dest = graph.node(2);
 
-    auto to_destroy = (k == 0) ? source : dest;
-    bool destroyed = false;
-    to_destroy->SetOnDestroySelf([&destroyed]() { destroyed = true; });
+    auto to_delete = (k == 0) ? source : dest;
+    bool deleted = false;
+    to_delete->SetOnPrepareToDeleteSelf([&deleted]() { deleted = true; });
 
-    Node::Destroy(graph.ctx(), to_destroy);
+    Node::PrepareToDelete(graph.ctx(), to_delete);
 
     EXPECT_EQ(source->dest(), nullptr);
     EXPECT_THAT(dest->sources(), ElementsAre());
-    EXPECT_TRUE(destroyed);
+    EXPECT_TRUE(deleted);
 
     CheckPipelineStagesAfterDelete(graph, source->fake_pipeline_stage(),
                                    dest->fake_pipeline_stage());
   }
 }
 
-TEST_F(NodeDestroyTest, OrdinaryToMeta) {
+TEST_F(NodePrepareToDeleteTest, OrdinaryToMeta) {
   for (int k = 0; k < 2; k++) {
     SCOPED_TRACE(std::string("Delete ") + (k == 0 ? "source" : "dest"));
 
@@ -1499,25 +1499,25 @@ TEST_F(NodeDestroyTest, OrdinaryToMeta) {
     auto dest = graph.node(2);
     auto dest_child_source = std::static_pointer_cast<FakeNode>(dest->child_sources()[0]);
 
-    bool dest_destroyed = false;
-    dest->SetOnDestroyChildSource(
-        [&dest_destroyed, expected = dest_child_source](NodePtr child_source) {
+    bool dest_deleted = false;
+    dest->SetOnPrepareToDeleteChildSource(
+        [&dest_deleted, expected = dest_child_source](NodePtr child_source) {
           EXPECT_EQ(child_source, expected);
-          dest_destroyed = true;
+          dest_deleted = true;
         });
 
-    auto to_destroy = (k == 0) ? source : dest;
-    bool destroyed = false;
-    to_destroy->SetOnDestroySelf([&destroyed]() { destroyed = true; });
+    auto to_delete = (k == 0) ? source : dest;
+    bool deleted = false;
+    to_delete->SetOnPrepareToDeleteSelf([&deleted]() { deleted = true; });
 
-    Node::Destroy(graph.ctx(), to_destroy);
+    Node::PrepareToDelete(graph.ctx(), to_delete);
 
     EXPECT_EQ(source->dest(), nullptr);
     EXPECT_EQ(dest->child_sources().size(), 0u);
-    EXPECT_TRUE(dest_destroyed);
-    EXPECT_TRUE(destroyed);
+    EXPECT_TRUE(dest_deleted);
+    EXPECT_TRUE(deleted);
 
-    if (to_destroy == dest) {
+    if (to_delete == dest) {
       // `source` is moved to detached thread after `dest` edge is deleted.
       EXPECT_THAT(graph.thread(kThreadId)->clock_usages(), UnorderedElementsAre());
     } else {
@@ -1530,7 +1530,7 @@ TEST_F(NodeDestroyTest, OrdinaryToMeta) {
   }
 }
 
-TEST_F(NodeDestroyTest, OrdinaryToMetaWithBuiltinChild) {
+TEST_F(NodePrepareToDeleteTest, OrdinaryToMetaWithBuiltinChild) {
   FakeGraph graph({
       .meta_nodes = {{2, {.source_children = {3}, .built_in_children = true}}},
       .edges = {{1, 3}},
@@ -1545,13 +1545,13 @@ TEST_F(NodeDestroyTest, OrdinaryToMetaWithBuiltinChild) {
   auto dest = graph.node(2);
   auto dest_child_source = graph.node(3);
 
-  NodePtr destroyed;
-  dest->SetOnDestroyChildSource(
-      [&destroyed](NodePtr child_source) mutable { destroyed = child_source; });
+  NodePtr deleted;
+  dest->SetOnPrepareToDeleteChildSource(
+      [&deleted](NodePtr child_source) mutable { deleted = child_source; });
 
-  // When destroying node 1, we disconnect from child node 3, but don't delete child node 3 because
+  // When deleting node 1, we disconnect from child node 3, but don't delete child node 3 because
   // it's a builtin child of meta node 2.
-  Node::Destroy(graph.ctx(), source);
+  Node::PrepareToDelete(graph.ctx(), source);
 
   EXPECT_THAT(graph.thread(kThreadId)->clock_usages(),
               UnorderedElementsAre(Pair(DefaultClock(), 1)));
@@ -1559,10 +1559,10 @@ TEST_F(NodeDestroyTest, OrdinaryToMetaWithBuiltinChild) {
   EXPECT_EQ(source->dest(), nullptr);
   EXPECT_EQ(dest->child_sources().size(), 1u);
   EXPECT_EQ(dest_child_source->sources().size(), 0u);
-  EXPECT_FALSE(destroyed) << "should not have destroyed " << destroyed->name();
+  EXPECT_FALSE(deleted) << "should not have deleted " << deleted->name();
 }
 
-TEST_F(NodeDestroyTest, MetaToOrdinary) {
+TEST_F(NodePrepareToDeleteTest, MetaToOrdinary) {
   for (int k = 0; k < 2; k++) {
     SCOPED_TRACE(std::string("Delete ") + (k == 0 ? "source" : "dest"));
 
@@ -1580,20 +1580,20 @@ TEST_F(NodeDestroyTest, MetaToOrdinary) {
     auto dest = graph.node(2);
     auto source_child_dest = std::static_pointer_cast<FakeNode>(source->child_dests()[0]);
 
-    bool source_destroyed = false;
-    source->SetOnDestroyChildDest(
-        [&source_destroyed, expected = source_child_dest](NodePtr child_dest) {
+    bool source_deleted = false;
+    source->SetOnPrepareToDeleteChildDest(
+        [&source_deleted, expected = source_child_dest](NodePtr child_dest) {
           EXPECT_EQ(child_dest, expected);
-          source_destroyed = true;
+          source_deleted = true;
         });
 
-    auto to_destroy = (k == 0) ? source : dest;
-    bool destroyed = false;
-    to_destroy->SetOnDestroySelf([&destroyed]() { destroyed = true; });
+    auto to_delete = (k == 0) ? source : dest;
+    bool deleted = false;
+    to_delete->SetOnPrepareToDeleteSelf([&deleted]() { deleted = true; });
 
-    Node::Destroy(graph.ctx(), to_destroy);
+    Node::PrepareToDelete(graph.ctx(), to_delete);
 
-    if (to_destroy == dest) {
+    if (to_delete == dest) {
       // `source` is moved to detached thread after `dest` edge is deleted.
       EXPECT_THAT(graph.thread(kThreadId)->clock_usages(), UnorderedElementsAre());
     } else {
@@ -1603,15 +1603,15 @@ TEST_F(NodeDestroyTest, MetaToOrdinary) {
 
     EXPECT_EQ(source->child_dests().size(), 0u);
     EXPECT_EQ(dest->sources().size(), 0u);
-    EXPECT_TRUE(source_destroyed);
-    EXPECT_TRUE(destroyed);
+    EXPECT_TRUE(source_deleted);
+    EXPECT_TRUE(deleted);
 
     CheckPipelineStagesAfterDelete(graph, source_child_dest->fake_pipeline_stage(),
                                    dest->fake_pipeline_stage());
   }
 }
 
-TEST_F(NodeDestroyTest, MetaToOrdinaryWithBuiltinChild) {
+TEST_F(NodePrepareToDeleteTest, MetaToOrdinaryWithBuiltinChild) {
   FakeGraph graph({
       .meta_nodes = {{1, {.dest_children = {3}, .built_in_children = true}}},
       .edges = {{3, 2}},
@@ -1626,13 +1626,13 @@ TEST_F(NodeDestroyTest, MetaToOrdinaryWithBuiltinChild) {
   auto dest = graph.node(2);
   auto source_child_dest = graph.node(3);
 
-  NodePtr destroyed;
-  source->SetOnDestroyChildDest(
-      [&destroyed](NodePtr child_source) mutable { destroyed = std::move(child_source); });
+  NodePtr deleted;
+  source->SetOnPrepareToDeleteChildDest(
+      [&deleted](NodePtr child_source) mutable { deleted = std::move(child_source); });
 
-  // When destroying node 2, we disconnect from child node 3, but don't delete child node 3 because
+  // When deleting node 2, we disconnect from child node 3, but don't delete child node 3 because
   // it's a builtin child of meta node 1.
-  Node::Destroy(graph.ctx(), dest);
+  Node::PrepareToDelete(graph.ctx(), dest);
 
   // Child node 3 is still moved to detached thread.
   EXPECT_THAT(graph.thread(kThreadId)->clock_usages(), UnorderedElementsAre());
@@ -1640,10 +1640,10 @@ TEST_F(NodeDestroyTest, MetaToOrdinaryWithBuiltinChild) {
   EXPECT_EQ(source->child_dests().size(), 1u);
   EXPECT_EQ(source_child_dest->dest(), nullptr);
   EXPECT_EQ(dest->sources().size(), 0u);
-  EXPECT_FALSE(destroyed) << "should not have destroyed " << destroyed->name();
+  EXPECT_FALSE(deleted) << "should not have deleted " << deleted->name();
 }
 
-TEST_F(NodeDestroyTest, MetaToMeta) {
+TEST_F(NodePrepareToDeleteTest, MetaToMeta) {
   for (int k = 0; k < 2; k++) {
     SCOPED_TRACE(std::string("Delete ") + (k == 0 ? "source" : "dest"));
 
@@ -1666,27 +1666,27 @@ TEST_F(NodeDestroyTest, MetaToMeta) {
     auto source_child_dest = std::static_pointer_cast<FakeNode>(source->child_dests()[0]);
     auto dest_child_source = std::static_pointer_cast<FakeNode>(dest->child_sources()[0]);
 
-    bool source_destroyed = false;
-    source->SetOnDestroyChildDest(
-        [&source_destroyed, expected = source_child_dest](NodePtr child_dest) {
+    bool source_deleted = false;
+    source->SetOnPrepareToDeleteChildDest(
+        [&source_deleted, expected = source_child_dest](NodePtr child_dest) {
           EXPECT_EQ(child_dest, expected);
-          source_destroyed = true;
+          source_deleted = true;
         });
 
-    bool dest_destroyed = false;
-    dest->SetOnDestroyChildSource(
-        [&dest_destroyed, expected = dest_child_source](NodePtr child_source) {
+    bool dest_deleted = false;
+    dest->SetOnPrepareToDeleteChildSource(
+        [&dest_deleted, expected = dest_child_source](NodePtr child_source) {
           EXPECT_EQ(child_source, expected);
-          dest_destroyed = true;
+          dest_deleted = true;
         });
 
-    auto to_destroy = (k == 0) ? source : dest;
-    bool destroyed = false;
-    to_destroy->SetOnDestroySelf([&destroyed]() { destroyed = true; });
+    auto to_delete = (k == 0) ? source : dest;
+    bool deleted = false;
+    to_delete->SetOnPrepareToDeleteSelf([&deleted]() { deleted = true; });
 
-    Node::Destroy(graph.ctx(), to_destroy);
+    Node::PrepareToDelete(graph.ctx(), to_delete);
 
-    if (to_destroy == dest) {
+    if (to_delete == dest) {
       // `source` is moved to detached thread after `dest` edge is deleted.
       EXPECT_THAT(graph.thread(kThreadId)->clock_usages(), UnorderedElementsAre());
     } else {
@@ -1696,16 +1696,16 @@ TEST_F(NodeDestroyTest, MetaToMeta) {
 
     EXPECT_EQ(source->child_dests().size(), 0u);
     EXPECT_EQ(dest->child_sources().size(), 0u);
-    EXPECT_TRUE(source_destroyed);
-    EXPECT_TRUE(dest_destroyed);
-    EXPECT_TRUE(destroyed);
+    EXPECT_TRUE(source_deleted);
+    EXPECT_TRUE(dest_deleted);
+    EXPECT_TRUE(deleted);
 
     CheckPipelineStagesAfterDelete(graph, source_child_dest->fake_pipeline_stage(),
                                    dest_child_source->fake_pipeline_stage());
   }
 }
 
-TEST_F(NodeDestroyTest, OrdinaryMultipleSources) {
+TEST_F(NodePrepareToDeleteTest, OrdinaryMultipleSources) {
   FakeGraph graph({
       .edges = {{1, 3}, {2, 3}},
   });
@@ -1715,18 +1715,18 @@ TEST_F(NodeDestroyTest, OrdinaryMultipleSources) {
   auto source2 = graph.node(2);
   auto dest = graph.node(3);
 
-  bool destroyed = false;
-  dest->SetOnDestroySelf([&destroyed]() { destroyed = true; });
+  bool deleted = false;
+  dest->SetOnPrepareToDeleteSelf([&deleted]() { deleted = true; });
 
-  Node::Destroy(graph.ctx(), dest);
+  Node::PrepareToDelete(graph.ctx(), dest);
 
   EXPECT_EQ(source1->dest(), nullptr);
   EXPECT_EQ(source2->dest(), nullptr);
   EXPECT_THAT(dest->sources(), ElementsAre());
-  EXPECT_TRUE(destroyed);
+  EXPECT_TRUE(deleted);
 }
 
-TEST_F(NodeDestroyTest, MetaMultipleChildren) {
+TEST_F(NodePrepareToDeleteTest, MetaMultipleChildren) {
   FakeGraph graph({
       .meta_nodes = {{3, {.source_children = {1, 2}, .dest_children = {4, 5}}}},
       .edges =
@@ -1740,7 +1740,7 @@ TEST_F(NodeDestroyTest, MetaMultipleChildren) {
 
   auto q = graph.global_task_queue();
   auto meta = graph.node(3);
-  Node::Destroy(graph.ctx(), meta);
+  Node::PrepareToDelete(graph.ctx(), meta);
 
   EXPECT_EQ(graph.node(11)->dest(), nullptr);
   EXPECT_EQ(graph.node(12)->dest(), nullptr);

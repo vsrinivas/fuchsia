@@ -121,10 +121,10 @@ fpromise::result<void, CreateEdgeError> Node::CreateEdge(const GraphContext& ctx
 
   auto cleanup_children_on_error = fit::defer([&source_parent, &dest_parent, &source, &dest]() {
     if (source_parent) {
-      source_parent->DestroyChildDest(source);
+      source_parent->PrepareToDeleteChildDest(source);
     }
     if (dest_parent) {
-      dest_parent->DestroyChildSource(dest);
+      dest_parent->PrepareToDeleteChildSource(dest);
     }
   });
 
@@ -381,7 +381,7 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
   return fpromise::ok();
 }
 
-void Node::Destroy(const GraphContext& ctx, NodePtr node) {
+void Node::PrepareToDelete(const GraphContext& ctx, NodePtr node) {
   // We call DeleteEdge for each existing edge. Since these edges exist, DeleteEdge cannot fail.
   auto delete_edge = [&ctx](NodePtr source, NodePtr dest) {
     // When deleting an edge A->B, if A is a dynamically-created child node, then we should delete
@@ -459,7 +459,7 @@ void Node::Destroy(const GraphContext& ctx, NodePtr node) {
     node->child_dests_.clear();
   }
 
-  node->DestroySelf();
+  node->PrepareToDeleteSelf();
 }
 
 const std::vector<NodePtr>& Node::sources() const {
@@ -669,7 +669,7 @@ void Node::RemoveChildSource(NodePtr child_source) {
   const auto it = std::find(child_sources_.begin(), child_sources_.end(), child_source);
   FX_CHECK(it != child_sources_.end());
   child_sources_.erase(it);
-  DestroyChildSource(child_source);
+  PrepareToDeleteChildSource(child_source);
 }
 
 void Node::RemoveChildDest(NodePtr child_dest) {
@@ -680,7 +680,7 @@ void Node::RemoveChildDest(NodePtr child_dest) {
   const auto it = std::find(child_dests_.begin(), child_dests_.end(), child_dest);
   FX_CHECK(it != child_dests_.end());
   child_dests_.erase(it);
-  DestroyChildDest(child_dest);
+  PrepareToDeleteChildDest(child_dest);
 }
 
 }  // namespace media_audio

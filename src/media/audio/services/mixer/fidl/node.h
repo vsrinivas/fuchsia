@@ -144,12 +144,9 @@ class Node {
   static fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> DeleteEdge(
       const GraphContext& ctx, NodePtr source, NodePtr dest);
 
-  // TODO(fxbug.dev/87651): Consider renaming Destroy. It does destroy some internal resources (e.g.
-  // child nodes) but it doesn't fully destroy the `node`, hence the name may be somewhat confusing.
-
-  // Calls DeleteEdge for each incoming and outgoing edge, then deletes all child nodes. After this
-  // is called, all references to this Node can be dropped.
-  static void Destroy(const GraphContext& ctx, NodePtr node);
+  // Calls `DeleteEdge` for each incoming and outgoing edge, then deletes all child nodes. After
+  // this is called, all references to this `node` can be dropped.
+  static void PrepareToDelete(const GraphContext& ctx, NodePtr node);
 
   // Node type. Except for `kMeta`, all types refer to ordinary nodes.
   enum class Type {
@@ -309,14 +306,14 @@ class Node {
 
   // Creates an ordinary child node to accept the next source edge. Returns nullptr if no more child
   // source nodes can be created. If this mutates any internal state, that state must be reverted
-  // back accordingly by a corresponding `DestroyChildSource` call.
+  // back accordingly by a corresponding `PrepareToDeleteChildSource` call.
   //
   // REQUIRED: type() == Type::kMeta
   virtual NodePtr CreateNewChildSource() = 0;
 
   // Creates an ordinary child node to accept the next destination edge. Returns nullptr if no more
   // child destination nodes can be created. If this mutates any internal state, that state must be
-  // reverted back accordingly by a corresponding `DestroyChildDest` call.
+  // reverted back accordingly by a corresponding `PrepareToDeleteChildDest` call.
   //
   // REQUIRED: type() == Type::kMeta
   virtual NodePtr CreateNewChildDest() = 0;
@@ -326,21 +323,21 @@ class Node {
   // default implementation is a no-op.
   //
   // REQUIRED: type() == Type::kMeta
-  virtual void DestroyChildSource(NodePtr child_source) {}
+  virtual void PrepareToDeleteChildSource(NodePtr child_source) {}
 
   // Called just after a destination edge is removed from a meta node. This allows subclasses to
   // delete any bookkeeping for that edge. This does not need to be reimplemented by all subclasses.
   // The default implementation is a no-op.
   //
   // REQUIRED: type() == Type::kMeta
-  virtual void DestroyChildDest(NodePtr child_dest) {}
+  virtual void PrepareToDeleteChildDest(NodePtr child_dest) {}
 
-  // Called by Destroy just after incoming links, outgoing links, and child nodes have been removed.
-  // This allows subclasses to destroy any references to this node which would prevent this node
-  // from being deleted. The default implementation is a no-op.
+  // Called by `PrepareToDelete` just after incoming links, outgoing links, and child nodes have
+  // been removed. This allows subclasses to delete any references to this node which would prevent
+  // this node from being deleted. The default implementation is a no-op.
   //
   // This is called for both meta and ordinary nodes.
-  virtual void DestroySelf() {}
+  virtual void PrepareToDeleteSelf() {}
 
   // Reports whether this node can accept a source edge with the given format. If MaxSources() is 0,
   // this should return false.

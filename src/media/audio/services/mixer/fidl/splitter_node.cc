@@ -85,7 +85,7 @@ NodePtr SplitterNode::CreateNewChildDest() {
   return producer;
 }
 
-void SplitterNode::DestroySelf() {
+void SplitterNode::PrepareToDeleteSelf() {
   // Normally, to destroy a node, it's sufficient to delete all incoming and outgoing edges, since
   // deleting those edges will delete child nodes, removing circular child <-> parent references.
   // In this case we hold onto `consumer_` after edges are deleted, so it gets discarded manually.
