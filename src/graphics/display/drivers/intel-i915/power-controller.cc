@@ -18,6 +18,7 @@
 
 #include "src/graphics/display/drivers/intel-i915/poll-until.h"
 #include "src/graphics/display/drivers/intel-i915/registers-gt-mailbox.h"
+#include "src/graphics/display/drivers/intel-i915/scoped-value-change.h"
 
 namespace i915 {
 
@@ -26,31 +27,50 @@ namespace {
 // The amount of microseconds to wait for PCU to complete a previous command.
 //
 // This should be at least as large as all known command timeouts below.
-constexpr int kPreviousCommandTimeoutUs = 200;
+//
+// Overridden in tests via
+// PowerController::OverridePreviousCommandTimeoutUsForTesting().
+int g_previous_command_timeout_us = 200;
 
 // Timeout for the PCU firmware to reply to a voltage change request.
-constexpr int kVoltageLevelRequestReplyTimeoutUs = 150;
+// Overridden in tests via
+// PowerController::OverrideVoltageLevelRequestReplyTimeoutUsForTesting().
+int g_voltage_level_request_reply_timeout_us = 150;
 
 // Timeout for the PCU firmware to execute a voltage change request.
-constexpr int kVoltageLevelRequestTotalTimeoutUs = 3'000;  // 3ms
+// Overridden in tests via
+// PowerController::OverrideVoltageLevelRequestTotalTimeoutUsForTesting().
+int g_voltage_level_request_total_timeout_us = 3'000;  // 3ms
 
 // Timeout for the PCU firmware to reply to a TCCOLD blocking change request.
-constexpr int kTypeCColdBlockingChangeReplyTimeoutUs = 200;
+// Overridden in tests via
+// PowerController::OverrideTypeCColdBlockingChangeReplyTimeoutUsForTesting().
+int g_typec_cold_blocking_change_reply_timeout_us = 200;
 
 // Timeout for the PCU firmware to execute a TCCOLD blocking change request.
-constexpr int kTypeCColdBlockingChangeTotalTimeoutUs = 600;
+// Overridden in tests via
+// PowerController::OverrideTypeCColdBlockingChangeTotalTimeoutUsForTesting().
+int g_typec_cold_blocking_change_total_timeout_us = 600;
 
 // Timeout for the PCU firmware to reply to a SAGV enablement change request.
-constexpr int kSystemAgentEnablementChangeReplyTimeoutUs = 150;
+// Overridden in tests via
+// PowerController::OverrideSystemAgentEnablementChangeReplyTimeoutUsForTesting().
+int g_system_agent_enablement_change_reply_timeout_us = 150;
 
 // Timeout for the PCU firmware to execute a SAGV enablement change request.
-constexpr int kSystemAgentEnablementChangeTotalTimeoutUs = 1'000;  // 1ms
+// Overridden in tests via
+// PowerController::OverrideSystemAgentEnablementChangeTotalTimeoutUsForTesting().
+int g_system_agent_enablement_change_total_timeout_us = 1'000;  // 1ms
 
 // Timeout for the PCU firmware to reply to a memory subsystem info request.
-constexpr int kGetMemorySubsystemInfoReplyTimeoutUs = 150;
+// Overridden in tests via
+// PowerController::OverrideGetMemorySubsystemInfoReplyTimeoutUsForTesting().
+int g_get_memory_subsystem_info_reply_timeout_us = 150;
 
 // Timeout for the PCU firmware to reply to a memory latency info request.
-constexpr int kGetMemoryLatencyReplyTimeoutUs = 100;
+// Overridden in tests via
+// PowerController::OverrideGetMemoryLatencyReplyTimeoutUsForTesting().
+int g_get_memory_latency_reply_timeout_us = 100;
 
 }  // namespace
 
@@ -62,7 +82,7 @@ zx::result<uint64_t> PowerController::Transact(PowerControllerCommand command) {
   auto mailbox_interface = registers::PowerMailboxInterface::Get().FromValue(0);
 
   if (!PollUntil([&] { return !mailbox_interface.ReadFrom(mmio_buffer_).has_active_transaction(); },
-                 zx::usec(1), kPreviousCommandTimeoutUs)) {
+                 zx::usec(1), g_previous_command_timeout_us)) {
     zxlogf(WARNING, "Timed out while waiting for PCU to finish pre-existing work");
     return zx::error_result(ZX_ERR_IO_MISSED_DEADLINE);
   }
@@ -112,15 +132,16 @@ zx::result<> PowerController::RequestDisplayVoltageLevel(int voltage_level,
   ZX_ASSERT(voltage_level >= 0);
   ZX_ASSERT(voltage_level <= 3);
 
-  const zx::time deadline = (retry_behavior == RetryBehavior::kRetryUntilStateChanges)
-                                ? zx::deadline_after(zx::usec(kVoltageLevelRequestTotalTimeoutUs))
-                                : zx::time::infinite_past();
+  const zx::time deadline =
+      (retry_behavior == RetryBehavior::kRetryUntilStateChanges)
+          ? zx::deadline_after(zx::usec(g_voltage_level_request_total_timeout_us))
+          : zx::time::infinite_past();
 
   do {
     zx::result<uint64_t> mailbox_result = Transact({
         .command = 0x07,
         .data = static_cast<uint64_t>(voltage_level),
-        .timeout_us = kVoltageLevelRequestReplyTimeoutUs,
+        .timeout_us = g_voltage_level_request_reply_timeout_us,
     });
     if (mailbox_result.is_error()) {
       return mailbox_result.take_error();
@@ -145,7 +166,7 @@ zx::result<> PowerController::SetDisplayTypeCColdBlockingTigerLake(bool blocked,
 
   const zx::time deadline =
       (retry_behavior == RetryBehavior::kRetryUntilStateChanges)
-          ? zx::deadline_after(zx::usec(kTypeCColdBlockingChangeTotalTimeoutUs))
+          ? zx::deadline_after(zx::usec(g_typec_cold_blocking_change_total_timeout_us))
           : zx::time::infinite_past();
 
   const uint64_t command_data = blocked ? 0 : 1;
@@ -153,7 +174,7 @@ zx::result<> PowerController::SetDisplayTypeCColdBlockingTigerLake(bool blocked,
     zx::result<uint64_t> mailbox_result = Transact({
         .command = 0x26,
         .data = command_data,
-        .timeout_us = kTypeCColdBlockingChangeReplyTimeoutUs,
+        .timeout_us = g_typec_cold_blocking_change_reply_timeout_us,
     });
     if (mailbox_result.is_error()) {
       return mailbox_result.take_error();
@@ -180,7 +201,7 @@ zx::result<> PowerController::SetSystemAgentGeyservilleEnabled(bool enabled,
 
   const zx::time deadline =
       (retry_behavior == RetryBehavior::kRetryUntilStateChanges)
-          ? zx::deadline_after(zx::usec(kSystemAgentEnablementChangeTotalTimeoutUs))
+          ? zx::deadline_after(zx::usec(g_system_agent_enablement_change_total_timeout_us))
           : zx::time::infinite_past();
 
   // The data is documented as the EL_THLD (Threshold) LTR (most likely "Latency
@@ -190,7 +211,7 @@ zx::result<> PowerController::SetSystemAgentGeyservilleEnabled(bool enabled,
     zx::result<uint64_t> mailbox_result = Transact({
         .command = 0x21,
         .data = command_data,
-        .timeout_us = kSystemAgentEnablementChangeReplyTimeoutUs,
+        .timeout_us = g_system_agent_enablement_change_reply_timeout_us,
     });
     if (mailbox_result.is_error()) {
       return mailbox_result.take_error();
@@ -216,7 +237,7 @@ zx::result<uint32_t> PowerController::GetSystemAgentBlockTimeUsTigerLake() {
       .param1 = 0,
       .param2 = 0,
       .data = 0,
-      .timeout_us = kGetMemoryLatencyReplyTimeoutUs,
+      .timeout_us = g_get_memory_latency_reply_timeout_us,
   });
   if (mailbox_result.is_error()) {
     return mailbox_result.take_error();
@@ -259,7 +280,7 @@ zx::result<std::array<uint8_t, 8>> PowerController::GetRawMemoryLatencyDataUs() 
         .param1 = 0,
         .param2 = 0,
         .data = static_cast<uint64_t>(values_index),
-        .timeout_us = kGetMemoryLatencyReplyTimeoutUs,
+        .timeout_us = g_get_memory_latency_reply_timeout_us,
     });
     if (mailbox_result.is_error()) {
       return mailbox_result.take_error();
@@ -366,7 +387,7 @@ zx::result<MemorySubsystemInfo> PowerController::GetMemorySubsystemInfoTigerLake
         .param1 = 0,
         .param2 = 0,
         .data = 0,
-        .timeout_us = kGetMemorySubsystemInfoReplyTimeoutUs,
+        .timeout_us = g_get_memory_subsystem_info_reply_timeout_us,
     });
     if (global_info.is_error()) {
       return global_info.take_error();
@@ -386,7 +407,7 @@ zx::result<MemorySubsystemInfo> PowerController::GetMemorySubsystemInfoTigerLake
         .param1 = 1,
         .param2 = static_cast<uint8_t>(point_index),
         .data = 0,
-        .timeout_us = kGetMemorySubsystemInfoReplyTimeoutUs,
+        .timeout_us = g_get_memory_subsystem_info_reply_timeout_us,
     });
     if (point_info.is_error()) {
       return point_info.take_error();
@@ -406,6 +427,59 @@ zx::result<MemorySubsystemInfo> PowerController::GetMemorySubsystemInfoTigerLake
   }
 
   return zx::ok(result);
+}
+
+// static
+ScopedValueChange<int> PowerController::OverridePreviousCommandTimeoutUsForTesting(int timeout_us) {
+  return ScopedValueChange(g_previous_command_timeout_us, timeout_us);
+}
+
+// static
+ScopedValueChange<int> PowerController::OverrideVoltageLevelRequestReplyTimeoutUsForTesting(
+    int timeout_us) {
+  return ScopedValueChange(g_voltage_level_request_reply_timeout_us, timeout_us);
+}
+
+// static
+ScopedValueChange<int> PowerController::OverrideVoltageLevelRequestTotalTimeoutUsForTesting(
+    int timeout_us) {
+  return ScopedValueChange(g_voltage_level_request_total_timeout_us, timeout_us);
+}
+
+// static
+ScopedValueChange<int> PowerController::OverrideTypeCColdBlockingChangeReplyTimeoutUsForTesting(
+    int timeout_us) {
+  return ScopedValueChange(g_typec_cold_blocking_change_reply_timeout_us, timeout_us);
+}
+
+// static
+ScopedValueChange<int> PowerController::OverrideTypeCColdBlockingChangeTotalTimeoutUsForTesting(
+    int timeout_us) {
+  return ScopedValueChange(g_typec_cold_blocking_change_total_timeout_us, timeout_us);
+}
+
+// static
+ScopedValueChange<int> PowerController::OverrideSystemAgentEnablementChangeReplyTimeoutUsForTesting(
+    int timeout_us) {
+  return ScopedValueChange(g_system_agent_enablement_change_reply_timeout_us, timeout_us);
+}
+
+// static
+ScopedValueChange<int> PowerController::OverrideSystemAgentEnablementChangeTotalTimeoutUsForTesting(
+    int timeout_us) {
+  return ScopedValueChange(g_system_agent_enablement_change_total_timeout_us, timeout_us);
+}
+
+// static
+ScopedValueChange<int> PowerController::OverrideGetMemorySubsystemInfoReplyTimeoutUsForTesting(
+    int timeout_us) {
+  return ScopedValueChange(g_get_memory_subsystem_info_reply_timeout_us, timeout_us);
+}
+
+// static
+ScopedValueChange<int> PowerController::OverrideGetMemoryLatencyReplyTimeoutUsForTesting(
+    int timeout_us) {
+  return ScopedValueChange(g_get_memory_latency_reply_timeout_us, timeout_us);
 }
 
 }  // namespace i915

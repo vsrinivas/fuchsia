@@ -101,6 +101,8 @@ test("intel-i915-test") {
     "power-controller-unittest.cc",
     "power-unittest.cc",
     "registers-unittest.cc",
+    "scoped-value-change-unittest.cc",
+    "scoped-value-change.cc",
   ]
   deps = [
     ":common_srcs",
@@ -137,6 +139,7 @@ group("tests") {
 fuchsia_unittest_package("intel-i915-test-package") {
   package_name = "intel-i915-test"
   deps = [ ":intel-i915-test" ]
+  manifest = "meta/intel-i915-test.cml"
   test_specs = {
     log_settings = {
       max_severity = "ERROR"
