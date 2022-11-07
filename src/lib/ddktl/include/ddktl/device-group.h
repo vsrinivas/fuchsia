@@ -86,122 +86,270 @@ class DeviceGroupBindRule {
 };
 
 // Factory functions to create a DeviceGroupBindRule.
-
-inline DeviceGroupBindRule BindRuleAcceptInt(uint32_t key, uint32_t val) {
+// std::string values passed in the functions must outlive the returned value.
+inline DeviceGroupBindRule MakeAcceptBindRule(uint32_t key, uint32_t val) {
   return DeviceGroupBindRule(device_bind_prop_int_key(key), DEVICE_BIND_RULE_CONDITION_ACCEPT,
                              device_bind_prop_int_val(val));
 }
 
-inline DeviceGroupBindRule BindRuleAcceptInt(const char* key, uint32_t val) {
+inline DeviceGroupBindRule MakeAcceptBindRule(const std::string& key, uint32_t val) {
+  return DeviceGroupBindRule(device_bind_prop_str_key(key.c_str()),
+                             DEVICE_BIND_RULE_CONDITION_ACCEPT, device_bind_prop_int_val(val));
+}
+
+inline DeviceGroupBindRule MakeAcceptBindRule(const char* key, uint32_t val) {
   return DeviceGroupBindRule(device_bind_prop_str_key(key), DEVICE_BIND_RULE_CONDITION_ACCEPT,
                              device_bind_prop_int_val(val));
 }
 
-inline DeviceGroupBindRule BindRuleAcceptString(const char* key, const char* val) {
-  return DeviceGroupBindRule(device_bind_prop_str_key(key), DEVICE_BIND_RULE_CONDITION_ACCEPT,
-                             device_bind_prop_str_val(val));
+inline DeviceGroupBindRule MakeAcceptBindRule(const std::string& key, bool val) {
+  return DeviceGroupBindRule(device_bind_prop_str_key(key.c_str()),
+                             DEVICE_BIND_RULE_CONDITION_ACCEPT, device_bind_prop_bool_val(val));
 }
 
-inline DeviceGroupBindRule BindRuleAcceptBool(const char* key, bool val) {
+inline DeviceGroupBindRule MakeAcceptBindRule(const char* key, bool val) {
   return DeviceGroupBindRule(device_bind_prop_str_key(key), DEVICE_BIND_RULE_CONDITION_ACCEPT,
                              device_bind_prop_bool_val(val));
 }
 
-inline DeviceGroupBindRule BindRuleAcceptEnum(const char* key, const char* val) {
+inline DeviceGroupBindRule MakeAcceptBindRule(const std::string& key, const std::string& val) {
+  return DeviceGroupBindRule(device_bind_prop_str_key(key.c_str()),
+                             DEVICE_BIND_RULE_CONDITION_ACCEPT,
+                             device_bind_prop_str_val(val.c_str()));
+}
+
+inline DeviceGroupBindRule MakeAcceptBindRule(const char* key, const std::string& val) {
+  return DeviceGroupBindRule(device_bind_prop_str_key(key), DEVICE_BIND_RULE_CONDITION_ACCEPT,
+                             device_bind_prop_str_val(val.c_str()));
+}
+
+inline DeviceGroupBindRule MakeAcceptBindRule(const std::string& key, const char* val) {
+  return DeviceGroupBindRule(device_bind_prop_str_key(key.c_str()),
+                             DEVICE_BIND_RULE_CONDITION_ACCEPT, device_bind_prop_str_val(val));
+}
+
+inline DeviceGroupBindRule MakeAcceptBindRule(const char* key, const char* val) {
+  return DeviceGroupBindRule(device_bind_prop_str_key(key), DEVICE_BIND_RULE_CONDITION_ACCEPT,
+                             device_bind_prop_str_val(val));
+}
+
+inline DeviceGroupBindRule MakeAcceptEnumBindRule(const std::string& key, const std::string& val) {
+  return DeviceGroupBindRule(device_bind_prop_str_key(key.c_str()),
+                             DEVICE_BIND_RULE_CONDITION_ACCEPT,
+                             device_bind_prop_enum_val(val.c_str()));
+}
+
+inline DeviceGroupBindRule MakeAcceptEnumBindRule(const char* key, const std::string& val) {
+  return DeviceGroupBindRule(device_bind_prop_str_key(key), DEVICE_BIND_RULE_CONDITION_ACCEPT,
+                             device_bind_prop_enum_val(val.c_str()));
+}
+
+inline DeviceGroupBindRule MakeAcceptEnumBindRule(const std::string& key, const char* val) {
+  return DeviceGroupBindRule(device_bind_prop_str_key(key.c_str()),
+                             DEVICE_BIND_RULE_CONDITION_ACCEPT, device_bind_prop_enum_val(val));
+}
+
+inline DeviceGroupBindRule MakeAcceptEnumBindRule(const char* key, const char* val) {
   return DeviceGroupBindRule(device_bind_prop_str_key(key), DEVICE_BIND_RULE_CONDITION_ACCEPT,
                              device_bind_prop_enum_val(val));
 }
 
-inline DeviceGroupBindRule BindRuleRejectInt(uint32_t key, uint32_t val) {
+inline DeviceGroupBindRule MakeRejectBindRule(uint32_t key, uint32_t val) {
   return DeviceGroupBindRule(device_bind_prop_int_key(key), DEVICE_BIND_RULE_CONDITION_REJECT,
                              device_bind_prop_int_val(val));
 }
 
-inline DeviceGroupBindRule BindRuleRejectInt(const char* key, uint32_t val) {
+inline DeviceGroupBindRule MakeRejectBindRule(const std::string& key, uint32_t val) {
+  return DeviceGroupBindRule(device_bind_prop_str_key(key.c_str()),
+                             DEVICE_BIND_RULE_CONDITION_REJECT, device_bind_prop_int_val(val));
+}
+
+inline DeviceGroupBindRule MakeRejectBindRule(const char* key, uint32_t val) {
   return DeviceGroupBindRule(device_bind_prop_str_key(key), DEVICE_BIND_RULE_CONDITION_REJECT,
                              device_bind_prop_int_val(val));
 }
 
-inline DeviceGroupBindRule BindRuleRejectString(const char* key, const char* val) {
-  return DeviceGroupBindRule(device_bind_prop_str_key(key), DEVICE_BIND_RULE_CONDITION_REJECT,
-                             device_bind_prop_str_val(val));
+inline DeviceGroupBindRule MakeRejectBindRule(const std::string& key, bool val) {
+  return DeviceGroupBindRule(device_bind_prop_str_key(key.c_str()),
+                             DEVICE_BIND_RULE_CONDITION_REJECT, device_bind_prop_bool_val(val));
 }
 
-inline DeviceGroupBindRule BindRuleRejectBool(const char* key, bool val) {
+inline DeviceGroupBindRule MakeRejectBindRule(const char* key, bool val) {
   return DeviceGroupBindRule(device_bind_prop_str_key(key), DEVICE_BIND_RULE_CONDITION_REJECT,
                              device_bind_prop_bool_val(val));
 }
 
-inline DeviceGroupBindRule BindRuleRejectEnum(const char* key, const char* val) {
+inline DeviceGroupBindRule MakeRejectBindRule(const std::string& key, const std::string& val) {
+  return DeviceGroupBindRule(device_bind_prop_str_key(key.c_str()),
+                             DEVICE_BIND_RULE_CONDITION_REJECT,
+                             device_bind_prop_str_val(val.c_str()));
+}
+
+inline DeviceGroupBindRule MakeRejectBindRule(const char* key, const std::string& val) {
+  return DeviceGroupBindRule(device_bind_prop_str_key(key), DEVICE_BIND_RULE_CONDITION_REJECT,
+                             device_bind_prop_str_val(val.c_str()));
+}
+
+inline DeviceGroupBindRule MakeRejectBindRule(const std::string& key, const char* val) {
+  return DeviceGroupBindRule(device_bind_prop_str_key(key.c_str()),
+                             DEVICE_BIND_RULE_CONDITION_REJECT, device_bind_prop_str_val(val));
+}
+
+inline DeviceGroupBindRule MakeRejectBindRule(const char* key, const char* val) {
+  return DeviceGroupBindRule(device_bind_prop_str_key(key), DEVICE_BIND_RULE_CONDITION_REJECT,
+                             device_bind_prop_str_val(val));
+}
+
+inline DeviceGroupBindRule MakeRejectEnumBindRule(const std::string& key, const std::string& val) {
+  return DeviceGroupBindRule(device_bind_prop_str_key(key.c_str()),
+                             DEVICE_BIND_RULE_CONDITION_REJECT,
+                             device_bind_prop_enum_val(val.c_str()));
+}
+
+inline DeviceGroupBindRule MakeRejectEnumBindRule(const char* key, const std::string& val) {
+  return DeviceGroupBindRule(device_bind_prop_str_key(key), DEVICE_BIND_RULE_CONDITION_REJECT,
+                             device_bind_prop_enum_val(val.c_str()));
+}
+
+inline DeviceGroupBindRule MakeRejectEnumBindRule(const std::string& key, const char* val) {
+  return DeviceGroupBindRule(device_bind_prop_str_key(key.c_str()),
+                             DEVICE_BIND_RULE_CONDITION_REJECT, device_bind_prop_enum_val(val));
+}
+
+inline DeviceGroupBindRule MakeRejectEnumBindRule(const char* key, const char* val) {
   return DeviceGroupBindRule(device_bind_prop_str_key(key), DEVICE_BIND_RULE_CONDITION_REJECT,
                              device_bind_prop_enum_val(val));
 }
 
-inline DeviceGroupBindRule BindRuleAcceptIntList(uint32_t key, cpp20::span<const uint32_t> values) {
+inline DeviceGroupBindRule BindRuleAcceptList(uint32_t key, cpp20::span<const uint32_t> values) {
   return ddk::DeviceGroupBindRule::CreateWithIntList(device_bind_prop_int_key(key),
                                                      DEVICE_BIND_RULE_CONDITION_ACCEPT, values);
 }
 
-inline DeviceGroupBindRule BindRuleAcceptIntList(const char* key,
-                                                 cpp20::span<const uint32_t> values) {
+inline DeviceGroupBindRule BindRuleAcceptList(const std::string& key,
+                                              cpp20::span<const uint32_t> values) {
+  return ddk::DeviceGroupBindRule::CreateWithIntList(device_bind_prop_str_key(key.c_str()),
+                                                     DEVICE_BIND_RULE_CONDITION_ACCEPT, values);
+}
+
+inline DeviceGroupBindRule BindRuleAcceptList(const char* key, cpp20::span<const uint32_t> values) {
   return ddk::DeviceGroupBindRule::CreateWithIntList(device_bind_prop_str_key(key),
                                                      DEVICE_BIND_RULE_CONDITION_ACCEPT, values);
 }
 
-inline DeviceGroupBindRule BindRuleRejectIntList(uint32_t key, cpp20::span<const uint32_t> values) {
-  return ddk::DeviceGroupBindRule::CreateWithIntList(device_bind_prop_int_key(key),
-                                                     DEVICE_BIND_RULE_CONDITION_REJECT, values);
+inline DeviceGroupBindRule BindRuleAcceptList(const std::string& key,
+                                              cpp20::span<const char*> values) {
+  return ddk::DeviceGroupBindRule::CreateWithStringList(device_bind_prop_str_key(key.c_str()),
+                                                        DEVICE_BIND_RULE_CONDITION_ACCEPT, values);
 }
 
-inline DeviceGroupBindRule BindRuleRejectIntList(const char* key,
-                                                 cpp20::span<const uint32_t> values) {
-  return ddk::DeviceGroupBindRule::CreateWithIntList(device_bind_prop_str_key(key),
-                                                     DEVICE_BIND_RULE_CONDITION_REJECT, values);
-}
-
-inline DeviceGroupBindRule BindRuleAcceptStringList(const char* key,
-                                                    cpp20::span<const char*> values) {
+inline DeviceGroupBindRule BindRuleAcceptList(const char* key, cpp20::span<const char*> values) {
   return ddk::DeviceGroupBindRule::CreateWithStringList(device_bind_prop_str_key(key),
                                                         DEVICE_BIND_RULE_CONDITION_ACCEPT, values);
 }
 
-inline DeviceGroupBindRule BindRuleRejectStringList(const char* key,
-                                                    cpp20::span<const char*> values) {
-  return ddk::DeviceGroupBindRule::CreateWithStringList(device_bind_prop_str_key(key),
-                                                        DEVICE_BIND_RULE_CONDITION_REJECT, values);
+inline DeviceGroupBindRule MakeAcceptEnumBindRuleList(const std::string& key,
+                                                      cpp20::span<const char*> values) {
+  return ddk::DeviceGroupBindRule::CreateWithEnumList(device_bind_prop_str_key(key.c_str()),
+                                                      DEVICE_BIND_RULE_CONDITION_ACCEPT, values);
 }
 
-inline DeviceGroupBindRule BindRuleAcceptEnumList(const char* key,
-                                                  cpp20::span<const char*> values) {
+inline DeviceGroupBindRule MakeAcceptEnumBindRuleList(const char* key,
+                                                      cpp20::span<const char*> values) {
   return ddk::DeviceGroupBindRule::CreateWithEnumList(device_bind_prop_str_key(key),
                                                       DEVICE_BIND_RULE_CONDITION_ACCEPT, values);
 }
 
-inline DeviceGroupBindRule BindRuleRejectEnumList(const char* key,
-                                                  cpp20::span<const char*> values) {
+inline DeviceGroupBindRule BindRuleRejectList(uint32_t key, cpp20::span<const uint32_t> values) {
+  return ddk::DeviceGroupBindRule::CreateWithIntList(device_bind_prop_int_key(key),
+                                                     DEVICE_BIND_RULE_CONDITION_REJECT, values);
+}
+
+inline DeviceGroupBindRule BindRuleRejectList(const std::string& key,
+                                              cpp20::span<const uint32_t> values) {
+  return ddk::DeviceGroupBindRule::CreateWithIntList(device_bind_prop_str_key(key.c_str()),
+                                                     DEVICE_BIND_RULE_CONDITION_REJECT, values);
+}
+
+inline DeviceGroupBindRule BindRuleRejectList(const char* key, cpp20::span<const uint32_t> values) {
+  return ddk::DeviceGroupBindRule::CreateWithIntList(device_bind_prop_str_key(key),
+                                                     DEVICE_BIND_RULE_CONDITION_REJECT, values);
+}
+
+inline DeviceGroupBindRule BindRuleRejectList(const std::string& key,
+                                              cpp20::span<const char*> values) {
+  return ddk::DeviceGroupBindRule::CreateWithStringList(device_bind_prop_str_key(key.c_str()),
+                                                        DEVICE_BIND_RULE_CONDITION_REJECT, values);
+}
+
+inline DeviceGroupBindRule BindRuleRejectList(const char* key, cpp20::span<const char*> values) {
+  return ddk::DeviceGroupBindRule::CreateWithStringList(device_bind_prop_str_key(key),
+                                                        DEVICE_BIND_RULE_CONDITION_REJECT, values);
+}
+
+inline DeviceGroupBindRule MakeRejectEnumBindRuleList(const std::string& key,
+                                                      cpp20::span<const char*> values) {
+  return ddk::DeviceGroupBindRule::CreateWithEnumList(device_bind_prop_str_key(key.c_str()),
+                                                      DEVICE_BIND_RULE_CONDITION_REJECT, values);
+}
+
+inline DeviceGroupBindRule MakeRejectEnumBindRuleList(const char* key,
+                                                      cpp20::span<const char*> values) {
   return ddk::DeviceGroupBindRule::CreateWithEnumList(device_bind_prop_str_key(key),
                                                       DEVICE_BIND_RULE_CONDITION_REJECT, values);
 }
 
 // Factory functions to create a device_bind_prop_t.
-
-inline device_bind_prop_t BindPropertyInt(uint32_t key, uint32_t val) {
+// std::string values passed in the functions must outlive the returned value.
+inline device_bind_prop_t MakeProperty(uint32_t key, uint32_t val) {
   return {device_bind_prop_int_key(key), device_bind_prop_int_val(val)};
 }
 
-inline device_bind_prop_t BindPropertyInt(const char* key, uint32_t val) {
+inline device_bind_prop_t MakeProperty(const std::string& key, uint32_t val) {
+  return {device_bind_prop_str_key(key.c_str()), device_bind_prop_int_val(val)};
+}
+
+inline device_bind_prop_t MakeProperty(const char* key, uint32_t val) {
   return {device_bind_prop_str_key(key), device_bind_prop_int_val(val)};
 }
 
-inline device_bind_prop_t BindPropertyBool(const char* key, bool val) {
+inline device_bind_prop_t MakeProperty(const std::string& key, bool val) {
+  return {device_bind_prop_str_key(key.c_str()), device_bind_prop_bool_val(val)};
+}
+
+inline device_bind_prop_t MakeProperty(const char* key, bool val) {
   return {device_bind_prop_str_key(key), device_bind_prop_bool_val(val)};
 }
 
-inline device_bind_prop_t BindPropertyString(const char* key, const char* val) {
+inline device_bind_prop_t MakeProperty(const std::string& key, const std::string& val) {
+  return {device_bind_prop_str_key(key.c_str()), device_bind_prop_str_val(val.c_str())};
+}
+
+inline device_bind_prop_t MakeProperty(const char* key, const std::string& val) {
+  return {device_bind_prop_str_key(key), device_bind_prop_str_val(val.c_str())};
+}
+
+inline device_bind_prop_t MakeProperty(const std::string& key, const char* val) {
+  return {device_bind_prop_str_key(key.c_str()), device_bind_prop_str_val(val)};
+}
+
+inline device_bind_prop_t MakeProperty(const char* key, const char* val) {
   return {device_bind_prop_str_key(key), device_bind_prop_str_val(val)};
 }
 
-inline device_bind_prop_t BindPropertyEnum(const char* key, const char* val) {
+inline device_bind_prop_t MakePropertyEnum(const std::string& key, const std::string& val) {
+  return {device_bind_prop_str_key(key.c_str()), device_bind_prop_enum_val(val.c_str())};
+}
+
+inline device_bind_prop_t MakePropertyEnum(const std::string& key, const char* val) {
+  return {device_bind_prop_str_key(key.c_str()), device_bind_prop_enum_val(val)};
+}
+
+inline device_bind_prop_t MakePropertyEnum(const char* key, const std::string& val) {
+  return {device_bind_prop_str_key(key), device_bind_prop_enum_val(val.c_str())};
+}
+
+inline device_bind_prop_t MakePropertyEnum(const char* key, const char* val) {
   return {device_bind_prop_str_key(key), device_bind_prop_enum_val(val)};
 }
 

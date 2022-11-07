@@ -4,15 +4,17 @@
 
 composite device_group_driver;
 
+using device.group.test.lib;
+
 primary node "test_primary" {
-  fuchsia.BIND_PROTOCOL == 100;
-  fuchsia.BIND_USB_VID == 20;
+  fuchsia.BIND_PROTOCOL == device.group.test.lib.BIND_PROTOCOL.VALUE_1;
+  fuchsia.BIND_USB_VID == device.group.test.lib.BIND_USB_VID.VALUE;
 }
 
 node "child_a" {
-  fuchsia.BIND_PROTOCOL == 20;
+  fuchsia.BIND_PROTOCOL == device.group.test.lib.BIND_PROTOCOL.VALUE_2;
 }
 
 optional node "optional_a" {
-  fuchsia.BIND_PROTOCOL == 42;
+  fuchsia.BIND_PROTOCOL == device.group.test.lib.BIND_PROTOCOL.VALUE_3;
 }

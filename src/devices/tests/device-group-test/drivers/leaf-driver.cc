@@ -6,8 +6,13 @@
 
 #include <lib/ddk/metadata.h>
 
+#include <bind/device/group/test/lib/cpp/bind.h>
+#include <bind/fuchsia/cpp/bind.h>
+
 #include "src/devices/tests/device-group-test/drivers/device-group-driver.h"
 #include "src/devices/tests/device-group-test/drivers/leaf-driver-bind.h"
+
+namespace bind_test = bind_device_group_test_lib;
 
 namespace leaf_driver {
 
@@ -23,33 +28,35 @@ zx_status_t LeafDriver::Bind(void* ctx, zx_device_t* device) {
   // Add device group.
   const uint32_t node_1_bind_rule_1_values[] = {10, 3};
   const ddk::DeviceGroupBindRule node_1_bind_rules[] = {
-      ddk::BindRuleAcceptIntList(50, node_1_bind_rule_1_values),
-      ddk::BindRuleRejectBool("sandpiper", true),
+      ddk::BindRuleAcceptList(50, node_1_bind_rule_1_values),
+      ddk::MakeRejectBindRule(bind_test::FLAG, true),
   };
 
   const device_bind_prop_t node_1_bind_properties[] = {
-      ddk::BindPropertyInt(BIND_PROTOCOL, 100),
-      ddk::BindPropertyInt(BIND_USB_VID, 20),
+      ddk::MakeProperty(bind_fuchsia::PROTOCOL, bind_test::BIND_PROTOCOL_VALUE_1),
+      ddk::MakeProperty(bind_fuchsia::USB_VID, bind_test::BIND_USB_VID_VALUE),
   };
 
-  const char* node_2_props_values_1[] = {"whimbrel", "dunlin"};
+  const char* node_2_props_values_1[] = {bind_test::TEST_PROP_VALUE_1.c_str(),
+                                         bind_test::TEST_PROP_VALUE_2.c_str()};
   const ddk::DeviceGroupBindRule node_2_bind_rules[] = {
-      ddk::BindRuleAcceptStringList("willet", node_2_props_values_1),
-      ddk::BindRuleRejectInt(20, 10),
+      ddk::BindRuleAcceptList(bind_test::TEST_PROP, node_2_props_values_1),
+      ddk::MakeRejectBindRule(20, 10),
   };
 
   const device_bind_prop_t node_2_bind_properties[] = {
-      ddk::BindPropertyInt(BIND_PROTOCOL, 20),
+      ddk::MakeProperty(bind_fuchsia::PROTOCOL, bind_test::BIND_PROTOCOL_VALUE_2),
   };
 
-  const char* node_3_props_values_1[] = {"crow", "dunlin"};
+  const char* node_3_props_values_1[] = {bind_test::TEST_PROP_VALUE_3.c_str(),
+                                         bind_test::TEST_PROP_VALUE_4.c_str()};
   const ddk::DeviceGroupBindRule node_3_bind_rules[] = {
-      ddk::BindRuleAcceptStringList("mockingbird", node_3_props_values_1),
-      ddk::BindRuleRejectInt(20, 10),
+      ddk::BindRuleAcceptList(bind_test::TEST_PROP, node_3_props_values_1),
+      ddk::MakeRejectBindRule(20, 10),
   };
 
   const device_bind_prop_t node_3_bind_properties[] = {
-      ddk::BindPropertyInt(BIND_PROTOCOL, 42),
+      ddk::MakeProperty(bind_fuchsia::PROTOCOL, bind_test::BIND_PROTOCOL_VALUE_3),
   };
 
   const device_metadata_t metadata[] = {
@@ -60,7 +67,7 @@ zx_status_t LeafDriver::Bind(void* ctx, zx_device_t* device) {
       },
   };
 
-  status = dev->DdkAddDeviceGroup("device_group_1",
+  status = dev->DdkAddDeviceGroup("device_group",
                                   ddk::DeviceGroupDesc(node_1_bind_rules, node_1_bind_properties)
                                       .AddNode(node_2_bind_rules, node_2_bind_properties)
                                       .set_metadata(metadata)

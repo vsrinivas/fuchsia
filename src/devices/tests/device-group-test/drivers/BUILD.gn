@@ -16,6 +16,10 @@ group("drivers") {
   ]
 }
 
+bind_library("device.group.test.lib") {
+  source = "device-group-lib.bind"
+}
+
 driver_bind_rules("root-driver-bind") {
   rules = "root-driver.bind"
   header_output = "root-driver-bind.h"
@@ -27,6 +31,7 @@ fuchsia_driver("root-driver") {
   output_name = "root-driver"
   sources = [ "root-driver.cc" ]
   deps = [
+    ":device.group.test.lib_cpp",
     ":root-driver-bind",
     "//src/devices/bind/fuchsia.test:fuchsia.test_cpp",
     "//src/devices/lib/driver",
@@ -52,7 +57,9 @@ fuchsia_driver("leaf-driver") {
   output_name = "leaf-driver"
   sources = [ "leaf-driver.cc" ]
   deps = [
+    ":device.group.test.lib_cpp",
     ":leaf-driver-bind",
+    "//src/devices/bind/fuchsia:fuchsia_cpp",
     "//src/devices/lib/driver",
     "//src/lib/ddktl",
   ]
@@ -69,6 +76,7 @@ driver_bind_rules("device-group-bind") {
   rules = "device-group-driver.bind"
   header_output = "device-group-driver-bind.h"
   bind_output = "device-group-driver.bindbc"
+  deps = [ ":device.group.test.lib" ]
 }
 
 fuchsia_driver("device-group-driver") {

@@ -1,0 +1,24 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library testlib;
+
+extend uint fuchsia.BIND_PROTOCOL {
+  VALUE = 100,
+  VALUE_2 = 200,
+};
+
+string STRING_PROP {
+  VALUE = "value",
+  VALUE_2 = "value_2",
+};
+
+enum ENUM_PROP {
+  VALUE,
+  VALUE_2
+};
+
+bool BOOL_PROP {
+  VALUE = true,
+};

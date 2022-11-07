@@ -7,9 +7,12 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 
+#include <bind/device/group/test/lib/cpp/bind.h>
 #include <bind/fuchsia/test/cpp/bind.h>
 
 #include "src/devices/tests/device-group-test/drivers/root-driver-bind.h"
+
+namespace bind_test = bind_device_group_test_lib;
 
 namespace root_driver {
 
@@ -27,7 +30,7 @@ zx_status_t RootDriver::Bind(void* ctx, zx_device_t* dev) {
   };
 
   zx_device_str_prop_t str_fragment_props_1[] = {
-      {"sandpiper", str_prop_bool_val(false)},
+      {bind_test::FLAG.c_str(), str_prop_bool_val(false)},
   };
 
   auto fragment_dev_a_1 = std::make_unique<RootDriver>(dev);
@@ -68,7 +71,7 @@ zx_status_t RootDriver::Bind(void* ctx, zx_device_t* dev) {
 
   // Add 2 devices that matches the other device group node.
   zx_device_str_prop_t str_fragment_props_2[] = {
-      {"willet", str_prop_str_val("dunlin")},
+      {bind_test::TEST_PROP.c_str(), str_prop_str_val(bind_test::TEST_PROP_VALUE_2.c_str())},
   };
 
   auto fragment_dev_b_1 = std::make_unique<RootDriver>(dev);
@@ -91,9 +94,9 @@ zx_status_t RootDriver::Bind(void* ctx, zx_device_t* dev) {
   }
   __UNUSED auto fragment_b_2_ptr = fragment_dev_b_2.release();
 
-  // Add a third devices that matches the optional device group node.
+  // Add a third device that matches the optional device group node.
   zx_device_str_prop_t str_fragment_props_3[] = {
-      {"mockingbird", str_prop_str_val("crow")},
+      {bind_test::TEST_PROP.c_str(), str_prop_str_val(bind_test::TEST_PROP_VALUE_3.c_str())},
   };
 
   auto fragment_dev_c_2 = std::make_unique<RootDriver>(dev);

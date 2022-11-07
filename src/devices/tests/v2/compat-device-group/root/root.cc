@@ -27,23 +27,23 @@ zx_status_t Root::Bind(void* ctx, zx_device_t* dev) {
 
   const uint32_t node_1_bind_rule_1_values[] = {10, 3};
   const ddk::DeviceGroupBindRule node_1_bind_rules[] = {
-      ddk::BindRuleAcceptIntList(50, node_1_bind_rule_1_values),
-      ddk::BindRuleRejectBool("sandpiper", true),
+      ddk::BindRuleAcceptList(50, node_1_bind_rule_1_values),
+      ddk::MakeRejectBindRule("sandpiper", true),
   };
 
   const device_bind_prop_t node_1_bind_properties[] = {
-      ddk::BindPropertyInt(BIND_PROTOCOL, 100),
-      ddk::BindPropertyInt(BIND_USB_VID, 20),
+      ddk::MakeProperty(BIND_PROTOCOL, 100),
+      ddk::MakeProperty(BIND_USB_VID, 20),
   };
 
   const uint32_t node_2_props_values_1[] = {88, 99};
   const ddk::DeviceGroupBindRule node_2_bind_rules[] = {
-      ddk::BindRuleAcceptIntList(BIND_PLATFORM_DEV_VID, node_2_props_values_1),
-      ddk::BindRuleRejectInt(20, 10),
+      ddk::BindRuleAcceptList(BIND_PLATFORM_DEV_VID, node_2_props_values_1),
+      ddk::MakeRejectBindRule(20, 10),
   };
 
   const device_bind_prop_t node_2_bind_properties[] = {
-      ddk::BindPropertyInt(BIND_PROTOCOL, 20),
+      ddk::MakeProperty(BIND_PROTOCOL, 20),
   };
 
   status = root_dev->DdkAddDeviceGroup(
