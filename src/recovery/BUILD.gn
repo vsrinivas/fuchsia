@@ -28,7 +28,7 @@ group("tests_no_e2e") {
   deps = [
     "factory_reset:tests",
     "integration:tests",
-    "lib/recovery-util:tests",
+    "lib:tests",
     "system:tests",
   ]
 }

@@ -31,7 +31,7 @@ use futures::prelude::*;
 use rand;
 #[cfg(not(feature = "debug_touch_to_update"))]
 use rand as _;
-use recovery_util::ui::progress_bar::{
+use recovery_ui::progress_bar::{
     ProgressBar, ProgressBarConfig, ProgressBarMessages, ProgressBarText,
 };
 use rive_rs::File;
@@ -238,6 +238,7 @@ impl AppAssistant for ProgressBarAppAssistant {
     }
 
     fn filter_config(&mut self, config: &mut Config) {
+        //TODO use display rotation ui config
         config.display_rotation = DisplayRotation::Deg90;
     }
 

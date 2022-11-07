@@ -29,7 +29,7 @@ rustc_binary("bin") {
     "//src/lib/fuchsia-async",
     "//src/lib/ui/carnelian",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/recovery/lib/recovery-util",
+    "//src/recovery/lib/recovery-ui",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:euclid",
     "//third_party/rust_crates:futures",

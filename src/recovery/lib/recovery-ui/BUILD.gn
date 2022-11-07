@@ -1,0 +1,35 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# import("//build/components.gni")
+import("//build/rust/rustc_library.gni")
+rustc_library("recovery-ui") {
+  edition = "2021"
+
+  #   with_unit_tests = true
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/lib/ui/carnelian",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:euclid",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:num-traits",
+  ]
+  sources = [
+    "src/lib.rs",
+    "src/progress_bar.rs",
+  ]
+}
+
+# fuchsia_unittest_package("recovery-ui-test") {
+#   deps = [ ":recovery-ui_test" ]
+# }
+
+group("tests") {
+  testonly = true
+  deps = []
+
+  #   deps = [ ":recovery-ui-test" ]
+}
