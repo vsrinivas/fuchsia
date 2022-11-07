@@ -278,10 +278,15 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToMetaIncompatibleFormats) {
     return child;
   });
 
+  bool child_destroyed = false;
+  dest->SetOnDestroyChildSource(
+      [&child_destroyed](NodePtr child_source) { child_destroyed = true; });
+
   auto q = graph.global_task_queue();
   auto result = Node::CreateEdge(graph.ctx(), /*source=*/graph.node(1), dest, /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
+  EXPECT_TRUE(child_destroyed);
 }
 
 TEST_F(NodeCreateEdgeTest, OrdinaryToMetaPipelineMismatch) {
@@ -559,10 +564,15 @@ TEST_F(NodeCreateEdgeTest, MetaToMetaIncompatibleFormats) {
     return child;
   });
 
+  bool child_destroyed = false;
+  dest->SetOnDestroyChildSource(
+      [&child_destroyed](NodePtr child_source) { child_destroyed = true; });
+
   auto q = graph.global_task_queue();
   auto result = Node::CreateEdge(graph.ctx(), /*source=*/graph.node(1), dest, /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
+  EXPECT_TRUE(child_destroyed);
 }
 
 TEST_F(NodeCreateEdgeTest, MetaToMetaPipelineMismatch) {

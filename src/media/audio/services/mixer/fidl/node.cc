@@ -4,7 +4,9 @@
 
 #include "src/media/audio/services/mixer/fidl/node.h"
 
+#include <fidl/fuchsia.audio.mixer/cpp/common_types.h>
 #include <fidl/fuchsia.audio.mixer/cpp/natural_ostream.h>
+#include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
@@ -14,7 +16,6 @@
 #include <utility>
 #include <vector>
 
-#include "fidl/fuchsia.audio.mixer/cpp/common_types.h"
 #include "src/media/audio/lib/clock/clock.h"
 #include "src/media/audio/lib/clock/clock_synchronizer.h"
 #include "src/media/audio/services/common/logging.h"
@@ -89,8 +90,8 @@ fpromise::result<void, CreateEdgeError> Node::CreateEdge(const GraphContext& ctx
     return fpromise::error(CreateEdgeError::kCycle);
   }
 
-  NodePtr source_parent;
-  NodePtr dest_parent;
+  NodePtr source_parent = nullptr;
+  NodePtr dest_parent = nullptr;
 
   // Create a node in source->child_dests() if needed.
   if (source->type() == Type::kMeta) {
@@ -117,6 +118,15 @@ fpromise::result<void, CreateEdgeError> Node::CreateEdge(const GraphContext& ctx
     dest_parent = dest;
     dest = child;
   }
+
+  auto cleanup_children_on_error = fit::defer([&source_parent, &dest_parent, &source, &dest]() {
+    if (source_parent) {
+      source_parent->DestroyChildDest(source);
+    }
+    if (dest_parent) {
+      dest_parent->DestroyChildSource(dest);
+    }
+  });
 
   const auto& source_format = source->pipeline_stage()->format();
   const auto& dest_format = dest->pipeline_stage()->format();
@@ -157,6 +167,8 @@ fpromise::result<void, CreateEdgeError> Node::CreateEdge(const GraphContext& ctx
       return fpromise::error(CreateEdgeError::kIncompatibleFormats);
     }
   }
+
+  cleanup_children_on_error.cancel();
 
   // Create this edge.
   dest->AddSource(source);

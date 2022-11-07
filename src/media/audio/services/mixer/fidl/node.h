@@ -308,21 +308,15 @@ class Node {
   //
 
   // Creates an ordinary child node to accept the next source edge. Returns nullptr if no more child
-  // source nodes can be created. If this mutates any internal state, that state will NOT be
-  // reverted if CreateEdge fails after calling this method.
-  //
-  // TODO(fxbug.dev/87651): Consider deleting the prior sentence; instead have CreateEdge call
-  // DestroyChildSource on failure.
+  // source nodes can be created. If this mutates any internal state, that state must be reverted
+  // back accordingly by a corresponding `DestroyChildSource` call.
   //
   // REQUIRED: type() == Type::kMeta
   virtual NodePtr CreateNewChildSource() = 0;
 
   // Creates an ordinary child node to accept the next destination edge. Returns nullptr if no more
-  // child destination nodes can be created. If this mutates any internal state, that state will NOT
-  // be reverted if CreateEdge fails after calling this method.
-  //
-  // TODO(fxbug.dev/87651): Consider deleting the prior sentence; instead have CreateEdge call
-  // DestroyChildDest on failure.
+  // child destination nodes can be created. If this mutates any internal state, that state must be
+  // reverted back accordingly by a corresponding `DestroyChildDest` call.
   //
   // REQUIRED: type() == Type::kMeta
   virtual NodePtr CreateNewChildDest() = 0;
