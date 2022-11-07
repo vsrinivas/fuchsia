@@ -10,20 +10,12 @@ use {
     ffx_core::ffx_plugin,
     ffx_log::{log_impl, LogOpts},
     ffx_log_args::LogCommand,
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_developer_ffx::DiagnosticsProxy,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_sys2 as fsys,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
 };
 
 const DEFAULT_COLLECTION: &'static str = "/core/ffx-laboratory";
-
-static MONIKER_ERROR_HELP: &'static str = "Provide a moniker to a (not currently existing) \
-component instance in a collection. To learn more, see \
-https://fuchsia.dev/go/components/collections";
-
-static LIFECYCLE_ERROR_HELP: &'static str = "To learn more, see \
-https://fuchsia.dev/go/components/run-errors";
 
 fn get_deprecated_component_name(url: &String, name: &Option<String>) -> Result<String> {
     let manifest_name = verify_fuchsia_pkg_cm_url(url.as_str())?;
@@ -111,90 +103,19 @@ async fn run_impl<W: std::io::Write>(
     recreate: bool,
     writer: &mut W,
 ) -> Result<()> {
-    let parent = moniker
-        .parent()
-        .ok_or(ffx_error!("Component moniker cannot be the root. {}", MONIKER_ERROR_HELP))?;
-    let leaf = moniker
-        .leaf()
-        .ok_or(ffx_error!("Component moniker cannot be the root. {}", MONIKER_ERROR_HELP))?;
-    let collection = leaf
-        .collection()
-        .ok_or(ffx_error!("Moniker references a static component. {}", MONIKER_ERROR_HELP))?;
-    let name = leaf.name();
-
-    writeln!(writer, "URL: {}", url)?;
-    writeln!(writer, "Moniker: {}", moniker)?;
-    writeln!(writer, "Creating component instance...")?;
-    let mut collection_ref = fdecl::CollectionRef { name: collection.to_string() };
-    let child_decl = fdecl::Child {
-        name: Some(name.to_string()),
-        url: Some(url.clone()),
-        startup: Some(fdecl::StartupMode::Lazy),
-        environment: None,
-        ..fdecl::Child::EMPTY
+    let if_exists = if recreate {
+        ffx_component_create_lib::IfExists::Recreate
+    } else {
+        ffx_component_create_lib::IfExists::Error("Use --recreate to destroy and recreate a new instance, or --name to create a new instance with a different name.".to_string())
     };
-    // LifecycleController accepts RelativeMonikers only
-    let parent_relative_moniker_str = format!(".{}", parent.to_string());
-    let create_result = lifecycle_controller
-        .create_child(
-            &parent_relative_moniker_str,
-            &mut collection_ref,
-            child_decl.clone(),
-            fcomponent::CreateChildArgs::EMPTY,
-        )
-        .await
-        .map_err(|e| ffx_error!("FIDL error while creating component instance: {:?}", e))?;
-
-    match create_result {
-        Err(fcomponent::Error::InstanceAlreadyExists) => {
-            if recreate {
-                // This component already exists, but the user has asked it to be recreated.
-                let mut child = fdecl::ChildRef {
-                    name: name.to_string(),
-                    collection: Some(collection.to_string()),
-                };
-
-                writeln!(writer, "Component instance already exists. Destroying...")?;
-                let destroy_result = lifecycle_controller
-                    .destroy_child(&parent_relative_moniker_str, &mut child)
-                    .await
-                    .map_err(|e| {
-                        ffx_error!("FIDL error while destroying component instance: {:?}", e)
-                    })?;
-
-                if let Err(e) = destroy_result {
-                    ffx_bail!("Lifecycle protocol could not destroy component instance: {:?}", e);
-                }
-
-                writeln!(writer, "Recreating component instance...")?;
-                let create_result = lifecycle_controller
-                    .create_child(
-                        &parent_relative_moniker_str,
-                        &mut collection_ref,
-                        child_decl.clone(),
-                        fcomponent::CreateChildArgs::EMPTY,
-                    )
-                    .await
-                    .map_err(|e| {
-                        ffx_error!("FIDL error while creating component instance: {:?}", e)
-                    })?;
-
-                if let Err(e) = create_result {
-                    ffx_bail!(
-                        "Lifecycle protocol could not recreate component instance: {:?}.\n{}",
-                        e,
-                        LIFECYCLE_ERROR_HELP
-                    );
-                }
-            } else {
-                ffx_bail!("Component instance already exists. Use --recreate to destroy and recreate a new instance, or --name to create a new instance with a different name.")
-            }
-        }
-        Err(e) => {
-            ffx_bail!("Lifecycle protocol could not create component instance: {:?}", e);
-        }
-        Ok(()) => {}
-    }
+    ffx_component_create_lib::create_component(
+        &lifecycle_controller,
+        &moniker,
+        url,
+        if_exists,
+        writer,
+    )
+    .await?;
 
     writeln!(writer, "Starting component instance...")?;
 
@@ -217,7 +138,7 @@ async fn run_impl<W: std::io::Write>(
             ffx_bail!(
                 "Lifecycle protocol could not start the component instance: {:?}.\n{}",
                 e,
-                LIFECYCLE_ERROR_HELP
+                ffx_component_create_lib::LIFECYCLE_ERROR_HELP
             );
         }
     }
@@ -230,7 +151,17 @@ async fn run_impl<W: std::io::Write>(
 
 #[cfg(test)]
 mod test {
-    use {super::*, fidl::endpoints::create_proxy_and_stream, futures::TryStreamExt};
+    use {
+        crate::get_deprecated_component_name,
+        crate::get_url_moniker_from_args,
+        crate::run_impl,
+        anyhow::Result,
+        ffx_component_run_args::RunComponentCommand,
+        fidl::endpoints::create_proxy_and_stream,
+        fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys,
+        futures::TryStreamExt,
+        moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
+    };
 
     fn setup_fake_lifecycle_controller_ok(
         expected_parent_moniker: &'static str,

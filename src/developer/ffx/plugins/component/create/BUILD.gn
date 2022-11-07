@@ -2,29 +2,44 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
+import("//build/rust/rustc_library.gni")
 import("../../../build/ffx_plugin.gni")
 
 ffx_plugin("ffx_component_create") {
   version = "0.1.0"
   edition = "2021"
+  deps = [
+    ":ffx_component_create_lib",
+    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust",
+    "//src/developer/ffx/lib/errors:lib",
+    "//src/developer/ffx/plugins/component/common:ffx_component",
+    "//src/sys/lib/moniker",
+  ]
+
+  args_sources = [ "src/args.rs" ]
+
+  sources = [ "src/lib.rs" ]
+}
+
+rustc_library("ffx_component_create_lib") {
+  version = "0.1.0"
+  edition = "2021"
   with_unit_tests = true
-  args_with_unit_tests = true
   deps = [
     "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
-    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/plugins/component/common:ffx_component",
     "//src/sys/lib/moniker",
+    "//third_party/rust_crates:anyhow",
   ]
   test_deps = [
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:futures",
   ]
-
-  args_sources = [ "src/args.rs" ]
-
-  sources = [ "src/lib.rs" ]
+  source_root = "src/create.rs"
+  sources = [ "src/create.rs" ]
 }

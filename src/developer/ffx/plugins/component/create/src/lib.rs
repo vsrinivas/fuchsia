@@ -4,139 +4,30 @@
 
 use {
     anyhow::Result,
-    errors::{ffx_bail, ffx_error},
-    ffx_component::{connect_to_lifecycle_controller, verify_fuchsia_pkg_cm_url},
+    errors::ffx_error,
+    ffx_component::connect_to_lifecycle_controller,
     ffx_component_create_args::CreateComponentCommand,
+    ffx_component_create_lib::{create_component, IfExists, LIFECYCLE_ERROR_HELP},
     ffx_core::ffx_plugin,
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_sys2 as fsys,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase},
+    fidl_fuchsia_developer_remotecontrol as rc,
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
 };
-
-static MONIKER_ERROR_HELP: &'static str = "Provide a moniker to a (not currently existing) \
-component instance in a collection. To learn more, see \
-https://fuchsia.dev/go/components/collections";
-
-static LIFECYCLE_ERROR_HELP: &'static str = "To learn more, see \
-https://fuchsia.dev/go/components/run-errors";
 
 #[ffx_plugin]
 pub async fn create(rcs_proxy: rc::RemoteControlProxy, cmd: CreateComponentCommand) -> Result<()> {
     let lifecycle_controller = connect_to_lifecycle_controller(&rcs_proxy).await?;
-    create_impl(lifecycle_controller, cmd.moniker, cmd.url, &mut std::io::stdout()).await
-}
-
-async fn create_impl<W: std::io::Write>(
-    lifecycle_controller: fsys::LifecycleControllerProxy,
-    moniker: String,
-    url: String,
-    writer: &mut W,
-) -> Result<()> {
-    verify_fuchsia_pkg_cm_url(url.as_str())?;
-
-    let moniker = AbsoluteMoniker::parse_str(&moniker)
+    let moniker = AbsoluteMoniker::parse_str(&cmd.moniker)
         .map_err(|e| ffx_error!("Moniker could not be parsed: {}", e))?;
-    let parent = moniker
-        .parent()
-        .ok_or(ffx_error!("Component moniker cannot be the root. {}", MONIKER_ERROR_HELP))?;
-    let leaf = moniker
-        .leaf()
-        .ok_or(ffx_error!("Component moniker cannot be the root. {}", MONIKER_ERROR_HELP))?;
-    let collection = leaf
-        .collection()
-        .ok_or(ffx_error!("Moniker references a static component. {}", MONIKER_ERROR_HELP))?;
-    let name = leaf.name();
 
-    writeln!(writer, "URL: {}", url)?;
-    writeln!(writer, "Moniker: {}", moniker)?;
-    writeln!(writer, "Creating component instance...")?;
-
-    let mut collection = fdecl::CollectionRef { name: collection.to_string() };
-    let decl = fdecl::Child {
-        name: Some(name.to_string()),
-        url: Some(url.clone()),
-        startup: Some(fdecl::StartupMode::Lazy),
-        environment: None,
-        ..fdecl::Child::EMPTY
-    };
-    // LifecycleController accepts RelativeMonikers only
-    let parent_moniker = format!(".{}", parent.to_string());
-
-    let result = lifecycle_controller
-        .create_child(&parent_moniker, &mut collection, decl, fcomponent::CreateChildArgs::EMPTY)
-        .await
-        .map_err(|e| ffx_error!("FIDL error while creating component instance: {:?}", e))?;
-
-    match result {
-        Err(fcomponent::Error::InstanceAlreadyExists) => {
-            ffx_bail!("Component instance already exists. Component instances can be destroyed with the `ffx component destroy` command.\n{}", LIFECYCLE_ERROR_HELP)
-        }
-        Err(e) => {
-            ffx_bail!(
-                "Lifecycle protocol could not create component instance: {:?}.\n{}",
-                e,
-                LIFECYCLE_ERROR_HELP
-            );
-        }
-        Ok(()) => Ok(()),
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// tests
-
-#[cfg(test)]
-mod test {
-    use {super::*, fidl::endpoints::create_proxy_and_stream, futures::TryStreamExt};
-
-    fn setup_fake_lifecycle_controller(
-        expected_moniker: &'static str,
-        expected_collection: &'static str,
-        expected_name: &'static str,
-        expected_url: &'static str,
-    ) -> fsys::LifecycleControllerProxy {
-        let (lifecycle_controller, mut stream) =
-            create_proxy_and_stream::<fsys::LifecycleControllerMarker>().unwrap();
-        fuchsia_async::Task::local(async move {
-            let req = stream.try_next().await.unwrap().unwrap();
-            match req {
-                fsys::LifecycleControllerRequest::CreateChild {
-                    parent_moniker,
-                    collection,
-                    decl,
-                    responder,
-                    ..
-                } => {
-                    assert_eq!(expected_moniker, parent_moniker);
-                    assert_eq!(expected_collection, collection.name);
-                    assert_eq!(expected_name, decl.name.unwrap());
-                    assert_eq!(expected_url, decl.url.unwrap());
-                    responder.send(&mut Ok(())).unwrap();
-                }
-                _ => panic!("Unexpected Lifecycle Controller request"),
-            }
-        })
-        .detach();
-        lifecycle_controller
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_success() -> Result<()> {
-        let mut output = Vec::new();
-        let lifecycle_controller = setup_fake_lifecycle_controller(
-            "./core",
-            "ffx-laboratory",
-            "test",
-            "fuchsia-pkg://fuchsia.com/test#meta/test.cm",
-        );
-        let response = create_impl(
-            lifecycle_controller,
-            "/core/ffx-laboratory:test".to_string(),
-            "fuchsia-pkg://fuchsia.com/test#meta/test.cm".to_string(),
-            &mut output,
-        )
-        .await;
-        response.unwrap();
-        Ok(())
-    }
+    create_component(
+        &lifecycle_controller,
+        &moniker,
+        &cmd.url,
+        IfExists::Error(format!(
+            "Component instances can be destroyed with the `ffx component destroy` command.\n{}",
+            LIFECYCLE_ERROR_HELP,
+        )),
+        &mut std::io::stdout(),
+    )
+    .await
 }
