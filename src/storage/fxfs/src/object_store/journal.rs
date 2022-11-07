@@ -80,7 +80,7 @@ use {
 pub use super_block::{SuperBlock, SuperBlockRecord};
 
 // The journal file is written to in blocks of this size.
-const BLOCK_SIZE: u64 = 8192;
+pub const BLOCK_SIZE: u64 = 8192;
 
 // The journal file is extended by this amount when necessary.
 const CHUNK_SIZE: u64 = 131_072;
