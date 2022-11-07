@@ -112,7 +112,7 @@ class AgentContextImpl : fuchsia::modular::AgentController {
   };
   State state() { return state_; }
 
-  component::Services& services() { return app_client_->services(); }
+  sys::ServiceDirectory& services() { return app_client_->services(); }
 
  private:
   // Adds an operation on |operation_queue_| that disconnects from agent protocols

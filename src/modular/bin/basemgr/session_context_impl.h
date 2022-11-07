@@ -17,10 +17,9 @@
 #include <optional>
 
 #include "src/lib/fxl/macros.h"
-#include "src/modular/lib/async/cpp/future.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/modular/lib/common/viewparams.h"
 #include "src/modular/lib/fidl/app_client.h"
-#include "src/modular/lib/fidl/environment.h"
 #include "src/modular/lib/modular_config/modular_config_accessor.h"
 
 namespace modular {

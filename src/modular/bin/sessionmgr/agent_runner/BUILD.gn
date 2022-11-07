@@ -51,7 +51,7 @@ executable("agent_runner_unittest") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/vfs/cpp",
     "//src/lib/testing/loop_fixture",
-    "//src/modular/lib/deprecated_svc",
+    "//src/modular/lib/deprecated_service_provider",
     "//src/modular/lib/fidl:app_client",
     "//src/modular/lib/fidl:array_to_string",
     "//src/modular/lib/modular_config:modular_config",

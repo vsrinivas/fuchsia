@@ -21,17 +21,12 @@
 #include <utility>
 #include <vector>
 
-#include "src/lib/fsl/handles/object_info.h"
-#include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/uuid/uuid.h"
-#include "src/modular/bin/basemgr/cobalt/metrics_logger.h"
+#include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "src/modular/bin/sessionmgr/annotations.h"
 #include "src/modular/bin/sessionmgr/storage/story_storage.h"
 #include "src/modular/bin/sessionmgr/story_runner/story_controller_impl.h"
 #include "src/modular/lib/common/teardown.h"
-#include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/fidl/clone.h"
-#include "src/modular/lib/fidl/proxy.h"
 
 namespace modular {
 
@@ -74,7 +69,6 @@ class StoryProviderImpl::StopStoryCall : public Operation<> {
                                         });
   }
 
- private:
   const std::string story_id_;
   const bool skip_notifying_sessionshell_;
   StoryRuntimesMap* const story_runtime_containers_;
@@ -114,7 +108,7 @@ class StoryProviderImpl::LoadStoryRuntimeCall : public Operation<StoryRuntimeCon
     Cont(std::move(story_data), flow);
   }
 
-  void Cont(fuchsia::modular::internal::StoryDataPtr story_data, FlowToken flow) {
+  void Cont(fuchsia::modular::internal::StoryDataPtr story_data, const FlowToken& flow) {
     auto story_storage = session_storage_->GetStoryStorage(story_id_);
     struct StoryRuntimeContainer container {
       .executor = std::make_unique<async::Executor>(async_get_default_dispatcher()),
@@ -236,11 +230,11 @@ StoryProviderImpl::StoryProviderImpl(
   }
 
   session_storage_->SubscribeStoryDeleted(
-      [weak_this = weak_factory_.GetWeakPtr()](std::string story_id) {
+      [weak_this = weak_factory_.GetWeakPtr()](const std::string& story_id) {
         if (!weak_this) {
           return WatchInterest::kStop;
         }
-        weak_this->OnStoryStorageDeleted(std::move(story_id));
+        weak_this->OnStoryStorageDeleted(story_id);
         return WatchInterest::kContinue;
       });
   session_storage_->SubscribeStoryUpdated(
@@ -304,7 +298,7 @@ void StoryProviderImpl::Watch(
   watchers_.AddInterfacePtr(std::move(watcher_ptr));
 }
 
-StoryControllerImpl* StoryProviderImpl::GetStoryControllerImpl(std::string story_id) {
+StoryControllerImpl* StoryProviderImpl::GetStoryControllerImpl(const std::string& story_id) {
   auto it = story_runtime_containers_.find(story_id);
   if (it == story_runtime_containers_.end()) {
     return nullptr;
@@ -332,7 +326,7 @@ std::unique_ptr<AsyncHolderBase> StoryProviderImpl::StartStoryShell(
   MaybeLoadStoryShell();
   AttachOrPresentStoryShellView(story_id);
 
-  preloaded_story_shell_app_->services().ConnectToService(std::move(story_shell_request));
+  preloaded_story_shell_app_->services().Connect(std::move(story_shell_request));
 
   auto story_shell_holder = std::move(preloaded_story_shell_app_);
 
@@ -358,7 +352,7 @@ void StoryProviderImpl::MaybeLoadStoryShell() {
   service_list->provider = std::move(service_provider);
 
   preloaded_story_shell_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-      session_environment_->GetLauncher(), CloneStruct(*story_shell_config_), /*data_origin=*/"",
+      session_environment_->GetLauncher(), CloneStruct(*story_shell_config_),
       std::move(service_list));
 }
 
@@ -374,7 +368,7 @@ void StoryProviderImpl::AttachOrPresentStoryShellView(std::string story_id) {
     present_view_params.viewport_creation_token =
         std::make_optional(std::move(viewport_creation_token));
     fuchsia::ui::app::ViewProviderPtr view_provider;
-    preloaded_story_shell_app_->services().ConnectToService(view_provider.NewRequest());
+    preloaded_story_shell_app_->services().Connect(view_provider.NewRequest());
     fuchsia::ui::app::CreateView2Args args;
     args.set_view_creation_token(std::move(view_creation_token));
     view_provider->CreateView2(std::move(args));
@@ -386,7 +380,7 @@ void StoryProviderImpl::AttachOrPresentStoryShellView(std::string story_id) {
     present_view_params.view_ref = fidl::Clone(view_ref_pair.view_ref);
 
     fuchsia::ui::app::ViewProviderPtr view_provider;
-    preloaded_story_shell_app_->services().ConnectToService(view_provider.NewRequest());
+    preloaded_story_shell_app_->services().Connect(view_provider.NewRequest());
     view_provider->CreateViewWithViewRef(std::move(view_token.value),
                                          std::move(view_ref_pair.control_ref),
                                          std::move(view_ref_pair.view_ref));
@@ -395,7 +389,7 @@ void StoryProviderImpl::AttachOrPresentStoryShellView(std::string story_id) {
   AttachOrPresentView(std::move(present_view_params));
 }
 
-fuchsia::modular::StoryInfo2Ptr StoryProviderImpl::GetCachedStoryInfo(std::string story_id) {
+fuchsia::modular::StoryInfo2Ptr StoryProviderImpl::GetCachedStoryInfo(const std::string& story_id) {
   auto it = story_runtime_containers_.find(story_id);
   if (it == story_runtime_containers_.end()) {
     return nullptr;
@@ -441,11 +435,12 @@ void StoryProviderImpl::AttachOrPresentView(AttachOrPresentViewParams params) {
   }
 }
 
-void StoryProviderImpl::DetachOrDismissView(std::string story_id, fit::function<void()> done) {
+void StoryProviderImpl::DetachOrDismissView(const std::string& story_id,
+                                            fit::function<void()> done) {
   if (is_graphical_presenter_presentation()) {
-    DismissView(std::move(story_id), std::move(done));
+    DismissView(story_id, std::move(done));
   } else if (is_session_shell_presentation()) {
-    DetachView(std::move(story_id), std::move(done));
+    DetachView(story_id, std::move(done));
   } else {
     FX_LOGS(FATAL) << "Unhandled PresentationProtocolPtr alternative: "
                    << presentation_protocol_.index();
@@ -598,7 +593,7 @@ void StoryProviderImpl::PresentView(AttachOrPresentViewParams params) {
       });
 }
 
-void StoryProviderImpl::DismissView(std::string story_id, fit::function<void()> done) {
+void StoryProviderImpl::DismissView(const std::string& story_id, fit::function<void()> done) {
   FX_DCHECK(is_graphical_presenter_presentation())
       << "DismissView expects a GraphicalPresenter PresentationProtocolPtr";
   auto& graphical_presenter =
@@ -641,7 +636,7 @@ void StoryProviderImpl::DismissView(std::string story_id, fit::function<void()> 
   }
 }
 
-void StoryProviderImpl::NotifyStoryStateChange(std::string story_id) {
+void StoryProviderImpl::NotifyStoryStateChange(const std::string& story_id) {
   auto it = story_runtime_containers_.find(story_id);
   if (it == story_runtime_containers_.end()) {
     // If this call arrives while DeleteStory() is in
@@ -732,7 +727,7 @@ void StoryProviderImpl::OnStoryStorageUpdated(
   NotifyStoryWatchers(&story_data, runtime_state);
 }
 
-void StoryProviderImpl::OnStoryStorageDeleted(std::string story_id) {
+void StoryProviderImpl::OnStoryStorageDeleted(const std::string& story_id) {
   operation_queue_.Add(
       std::make_unique<StopStoryCall>(story_id, false /* skip_notifying_sessionshell */,
                                       &story_runtime_containers_, [this, story_id] {
@@ -776,7 +771,7 @@ void StoryProviderImpl::StoryRuntimeContainer::ResetInspect() {
   if (current_data->story_info().has_annotations()) {
     for (const fuchsia::modular::Annotation& annotation :
          current_data->story_info().annotations()) {
-      std::string value_str = modular::annotations::ToInspect(*annotation.value.get());
+      std::string value_str = modular::annotations::ToInspect(*annotation.value);
       std::string key_with_prefix = "annotation: " + annotation.key;
       if (annotation_inspect_properties.find(key_with_prefix) !=
           annotation_inspect_properties.end()) {

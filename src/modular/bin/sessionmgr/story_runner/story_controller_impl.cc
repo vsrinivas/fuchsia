@@ -28,22 +28,17 @@
 #include <vector>
 
 #include "fuchsia/ui/views/cpp/fidl.h"
-#include "src/lib/fsl/types/type_converters.h"
-#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/join_strings.h"
-#include "src/lib/fxl/strings/split_string.h"
+#include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "src/modular/bin/sessionmgr/annotations.h"
-#include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/add_mod_call.h"
 #include "src/modular/bin/sessionmgr/storage/story_storage.h"
 #include "src/modular/bin/sessionmgr/story_runner/module_context_impl.h"
 #include "src/modular/bin/sessionmgr/story_runner/module_controller_impl.h"
-#include "src/modular/bin/sessionmgr/story_runner/ongoing_activity_impl.h"
 #include "src/modular/bin/sessionmgr/story_runner/story_provider_impl.h"
 #include "src/modular/bin/sessionmgr/story_runner/story_shell_context_impl.h"
 #include "src/modular/lib/async/cpp/future.h"
 #include "src/modular/lib/common/teardown.h"
-#include "src/modular/lib/fidl/array_to_string.h"
-#include "src/modular/lib/fidl/clone.h"
+#include "src/modular/lib/modular_config/modular_config_constants.h"
 #include "src/modular/lib/string_escape/string_escape.h"
 
 namespace modular {
@@ -58,6 +53,7 @@ constexpr char kSurfaceIDSeparator[] = ":";
 std::string ModulePathToSurfaceID(const std::vector<std::string>& module_path) {
   std::vector<std::string> path;
   // Sanitize all the |module_name|s that make up this |module_path|.
+  path.reserve(module_path.size());
   for (const auto& module_name : module_path) {
     path.push_back(StringEscape(module_name, kSurfaceIDSeparator));
   }
@@ -66,8 +62,7 @@ std::string ModulePathToSurfaceID(const std::vector<std::string>& module_path) {
 
 std::vector<std::string> ModulePathFromSurfaceID(const std::string& surface_id) {
   std::vector<std::string> path;
-  for (const auto& parts :
-       SplitEscapedString(std::string_view(surface_id), kSurfaceIDSeparator[0])) {
+  for (const auto& parts : SplitEscapedString(surface_id, kSurfaceIDSeparator[0])) {
     path.emplace_back(parts);
   }
   return path;
@@ -76,7 +71,7 @@ std::vector<std::string> ModulePathFromSurfaceID(const std::string& surface_id) 
 std::vector<std::string> ParentModulePath(const std::vector<std::string>& module_path) {
   std::vector<std::string> ret;
 
-  if (module_path.size() > 0) {
+  if (!module_path.empty()) {
     for (size_t i = 0; i < module_path.size() - 1; i++) {
       ret.push_back(module_path.at(i));
     }
@@ -88,11 +83,7 @@ std::vector<std::string> ParentModulePath(const std::vector<std::string>& module
 
 bool ShouldRestartModuleForNewIntent(const fuchsia::modular::Intent& old_intent,
                                      const fuchsia::modular::Intent& new_intent) {
-  if (old_intent.handler != new_intent.handler) {
-    return true;
-  }
-
-  return false;
+  return old_intent.handler != new_intent.handler;
 }
 
 zx_time_t GetNowUTC() {
@@ -185,7 +176,7 @@ void StoryControllerImpl::RunningModInfo::InitializeInspectProperties(
 void StoryControllerImpl::RunningModInfo::UpdateInspectProperties() {
   module_intent_action_property.Set(module_data->intent().action.value_or(""));
 
-  std::string param_names_str = "";
+  std::string param_names_str;
   if (module_data->intent().parameters.has_value()) {
     for (auto& param : *module_data->intent().parameters) {
       param_names_str.append("name : " + param.name.value_or("") + " ");
@@ -195,7 +186,7 @@ void StoryControllerImpl::RunningModInfo::UpdateInspectProperties() {
 
   if (module_data->has_annotations()) {
     for (const fuchsia::modular::Annotation& annotation : module_data->annotations()) {
-      std::string value_str = modular::annotations::ToInspect(*annotation.value.get());
+      std::string value_str = modular::annotations::ToInspect(*annotation.value);
       std::string key_with_prefix = "annotation: " + annotation.key;
       if (annotation_properties.find(key_with_prefix) != annotation_properties.end()) {
         annotation_properties[key_with_prefix].Set(value_str);
@@ -216,7 +207,7 @@ class StoryControllerImpl::TeardownModuleCall : public Operation<> {
       : Operation("StoryControllerImpl::TeardownModuleCall", std::move(done)),
         story_controller_impl_(story_controller_impl),
         module_path_(std::move(module_path)),
-        notify_story_shell_(std::move(notify_story_shell)) {}
+        notify_story_shell_(notify_story_shell) {}
 
  private:
   void Run() override {
@@ -286,7 +277,7 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
     }
   }
 
-  void Launch(FlowToken /*flow*/) {
+  void Launch(const FlowToken& /*flow*/) {
     FX_LOGS(INFO) << "StoryControllerImpl::LaunchModule() " << module_data_.module_url() << " "
                   << ModulePathToSurfaceID(module_data_.module_path());
     fuchsia::modular::session::AppConfig module_config;
@@ -390,7 +381,7 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
   // anchor module is already known to story shell. Otherwise, we pend its view
   // (StoryControllerImpl::pending_mod_views_) and pass it to the story
   // shell once its anchor module is ready.
-  void MaybeConnectViewToStoryShell(FlowToken flow) {
+  void MaybeConnectViewToStoryShell(const FlowToken& flow) {
     // If this is called during Stop(), story_shell_ might already have been
     // reset. TODO(mesch): Then the whole operation should fail.
     if (!story_controller_impl_->present_mods_as_stories_ &&
@@ -444,7 +435,7 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
     }
   }
 
-  void ConnectViewToStoryShell(FlowToken flow, ModViewInfo mod_view) {
+  void ConnectViewToStoryShell(const FlowToken& flow, ModViewInfo mod_view) {
     if ((!std::holds_alternative<ViewConnection>(mod_view.view_variant) ||
          !std::get<ViewConnection>(mod_view.view_variant).view_holder_token.value) &&
         (!std::holds_alternative<ViewportCreationToken>(mod_view.view_variant) ||
@@ -897,7 +888,7 @@ void StoryControllerImpl::ProcessPendingModViews() {
     added_keys.push_back(kv.first);
   }
 
-  if (added_keys.size()) {
+  if (!added_keys.empty()) {
     for (auto& key : added_keys) {
       pending_mod_views_.erase(key.value_or(""));
     }
@@ -1024,10 +1015,10 @@ void StoryControllerImpl::NotifyOneStoryWatcher(fuchsia::modular::StoryWatcher* 
   watcher->OnStateChange(runtime_state_);
 }
 
-void StoryControllerImpl::EraseRunningModInfo(std::vector<std::string> module_path) {
-  auto it =
-      std::find_if(running_mod_infos_.begin(), running_mod_infos_.end(),
-                   [module_path](auto& e) { return e->module_data->module_path() == module_path; });
+void StoryControllerImpl::EraseRunningModInfo(const std::vector<std::string>& module_path) {
+  auto it = std::find_if(
+      running_mod_infos_.begin(), running_mod_infos_.end(),
+      [&module_path](auto& e) { return e->module_data->module_path() == module_path; });
   FX_CHECK(it != running_mod_infos_.end());
   pending_mod_views_.erase(ModulePathToSurfaceID(module_path));
   running_mod_infos_.erase(it);
@@ -1073,8 +1064,11 @@ void StoryControllerImpl::RemoveModuleFromStory(const std::vector<std::string>& 
       std::make_unique<DeleteModuleAndTeardownStoryIfEmptyCall>(this, module_path, [] {}));
 }
 
-void StoryControllerImpl::OnSurfaceFocused(fidl::StringPtr surface_id) {
-  auto module_path = ModulePathFromSurfaceID(surface_id.value_or(""));
+void StoryControllerImpl::OnSurfaceFocused(const fidl::StringPtr& surface_id) {
+  if (!surface_id.has_value()) {
+    return;
+  }
+  auto module_path = ModulePathFromSurfaceID(surface_id.value());
 
   for (auto& watcher : watchers_.ptrs()) {
     (*watcher)->OnModuleFocused(std::move(module_path));

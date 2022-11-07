@@ -19,6 +19,5 @@ source_set("lifecycle_impl") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
-    "//src/modular/lib/deprecated_svc",
   ]
 }

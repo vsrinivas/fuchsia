@@ -20,7 +20,6 @@
 
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/sessionmgr/agent_services_factory.h"
-#include "src/modular/lib/async/cpp/operation.h"
 #include "src/modular/lib/fidl/app_client.h"
 #include "src/modular/lib/modular_config/modular_config_accessor.h"
 
@@ -82,22 +81,22 @@ class AgentRunner {
   // Connects to an agent (and starts it up if it doesn't exist) through
   // |Agent.Connect|. Called using ComponentContext.
   void ConnectToAgent(
-      const std::string& requestor_url, const std::string& agent_url,
+      std::string requestor_url, std::string agent_url,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services_request,
       fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request);
 
   // Supports implementation of ComponentContext/ConnectToAgentService().
-  void ConnectToAgentService(const std::string& requestor_url,
+  void ConnectToAgentService(std::string requestor_url,
                              fuchsia::modular::AgentServiceRequest request);
 
-  // Return a pointer to the outgoing Services from a running agent. Pointer should NOT
-  // be used outside the scope of the calling frame.
-  component::Services* GetAgentOutgoingServices(std::string agent_url);
+  // Return the outgoing Services from a running agent.
+  std::optional<std::reference_wrapper<sys::ServiceDirectory>> GetAgentOutgoingServices(
+      const std::string& agent_url);
 
   // Removes an agent. Called by AgentContextImpl when it is done.
   // NOTE: This should NOT take a const reference, since |agent_url| will die
   // the moment we delete |AgentContextImpl|.
-  void RemoveAgent(std::string agent_url);
+  void RemoveAgent(const std::string& agent_url);
 
  private:
   // Used by ConnectToAgentService() to connect to the agent (if known) and its
@@ -115,17 +114,18 @@ class AgentRunner {
   void ConnectToService(
       std::string requestor_url, std::string agent_url,
       fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request,
-      std::string service_name, ::zx::channel channel);
+      std::string service_name, zx::channel channel);
 
   // During ConnectToAgentService, if an agent is not found, close the channel
   // established for the service, and indicate the reason with FIDL epitaph
   // error ZX_ERR_NOT_FOUND.
-  void HandleAgentServiceNotFound(::zx::channel channel, std::string service_name);
+  static void HandleAgentServiceNotFound(zx::channel channel, const std::string& service_name);
 
   // Schedules the agent to start running if it isn't already running (e.g.,
   // it could be not running or in the middle of terminating). Once the agent
   // is in a running state, calls |done|.
-  void EnsureAgentIsRunning(const std::string& agent_url, fit::function<void()> done);
+  void EnsureAgentIsRunning(const std::string& agent_url,
+                            fit::function<void(const std::string&)> done);
 
   // Actually starts up an agent (used by |EnsureAgentIsRunning()| above).
   void RunAgent(const std::string& agent_url);
@@ -139,7 +139,7 @@ class AgentRunner {
   // Holds requests to start an agent; in case an agent is already in a
   // terminating state, we pend those requests here until the agent
   // terminates.
-  std::map<std::string, std::vector<fit::function<void()>>> run_agent_callbacks_;
+  std::map<std::string, std::vector<fit::function<void(const std::string&)>>> run_agent_callbacks_;
 
   // agent URL -> modular.fuchsia::modular::AgentContext
   std::map<std::string, std::unique_ptr<AgentContextImpl>> running_agents_;

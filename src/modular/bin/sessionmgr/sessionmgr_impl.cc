@@ -24,16 +24,10 @@
 
 #include <fbl/unique_fd.h>
 
-#include "src/lib/files/directory.h"
-#include "src/lib/fsl/io/fd.h"
-#include "src/lib/fsl/types/type_converters.h"
 #include "src/modular/bin/basemgr/cobalt/metrics_logger.h"
 #include "src/modular/bin/sessionmgr/puppet_master/make_production_impl.h"
-#include "src/modular/bin/sessionmgr/story_runner/story_controller_impl.h"
 #include "src/modular/lib/common/teardown.h"
-#include "src/modular/lib/fidl/array_to_string.h"
-#include "src/modular/lib/fidl/clone.h"
-#include "src/modular/lib/fidl/json_xdr.h"
+#include "src/modular/lib/modular_config/modular_config_constants.h"
 
 namespace modular {
 
@@ -605,10 +599,10 @@ void SessionmgrImpl::LaunchSessionShell(fuchsia::modular::session::AppConfig ses
 
   auto session_shell_app = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
       session_environment_->GetLauncher(), std::move(session_shell_config),
-      /* data_origin = */ "", std::make_unique<fuchsia::sys::ServiceList>(std::move(service_list)));
+      std::make_unique<fuchsia::sys::ServiceList>(std::move(service_list)));
 
   fuchsia::ui::app::ViewProviderPtr view_provider;
-  session_shell_app->services().ConnectToService(view_provider.NewRequest());
+  session_shell_app->services().Connect(view_provider.NewRequest());
 
   if (auto* view_creation_token =
           std::get_if<fuchsia::ui::views::ViewCreationToken>(&view_params)) {

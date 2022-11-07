@@ -32,11 +32,12 @@ SessionContextImpl::SessionContextImpl(
 
   // Launch Sessionmgr in the current environment.
   sessionmgr_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-      launcher, std::move(sessionmgr_app_config), sessions::kSessionDirectoryPath,
-      /*additional_services=*/nullptr, std::move(config_namespace));
+      launcher, std::move(sessionmgr_app_config),
+      /*additional_services=*/nullptr, std::move(config_namespace),
+      sessions::kSessionDirectoryPath);
 
   // Initialize the Sessionmgr service.
-  sessionmgr_app_->services().ConnectToService(sessionmgr_.NewRequest());
+  sessionmgr_app_->services().Connect(sessionmgr_.NewRequest());
   if (view_params.has_value()) {
     if (auto* view_creation_token =
             std::get_if<fuchsia::ui::views::ViewCreationToken>(&*view_params)) {

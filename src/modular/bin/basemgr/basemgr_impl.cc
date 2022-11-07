@@ -14,6 +14,7 @@
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/handle.h>
+#include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
@@ -27,8 +28,6 @@
 #include "src/modular/bin/basemgr/child_listener.h"
 #include "src/modular/bin/basemgr/cobalt/metrics_logger.h"
 #include "src/modular/lib/common/teardown.h"
-#include "src/modular/lib/fidl/app_client.h"
-#include "src/modular/lib/fidl/clone.h"
 #include "src/modular/lib/modular_config/modular_config.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
 
@@ -167,9 +166,9 @@ void BasemgrImpl::CreateSessionProvider(const ModularConfigAccessor* const confi
 
     zx_status_t status;
     status = fdio_open(path.c_str(),
-                       static_cast<uint32_t>(fuchsia_io::wire::OpenFlags::kRightReadable |
-                                             fuchsia_io::wire::OpenFlags::kDirectory |
-                                             fuchsia_io::wire::OpenFlags::kRightWritable),
+                       static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_READABLE |
+                                             fuchsia::io::OpenFlags::RIGHT_WRITABLE |
+                                             fuchsia::io::OpenFlags::DIRECTORY),
                        svc_for_v1_sessionmgr.host_directory.NewRequest().TakeChannel().release());
     FX_CHECK(status == ZX_OK) << "failed to open " << path << ": " << zx_status_get_string(status);
 

@@ -19,12 +19,9 @@
 
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/macros.h"
-#include "src/lib/storage/vfs/cpp/service.h"
-#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
-#include "src/modular/lib/deprecated_svc/service_namespace.h"
+#include "src/modular/lib/deprecated_service_provider/service_provider_impl.h"
 #include "src/modular/lib/fidl/app_client.h"
-#include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/modular_config/modular_config.h"
 #include "src/modular/lib/pseudo_dir/pseudo_dir_server.h"
 
@@ -39,7 +36,8 @@ constexpr char kTestAgentUrl[] = "file:///my_agent";
 
 zx_koid_t get_object_koid(zx_handle_t handle) {
   zx_info_handle_basic_t info;
-  if (zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL) != ZX_OK) {
+  if (zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr) !=
+      ZX_OK) {
     return 0;
   }
   return info.koid;
@@ -51,7 +49,7 @@ class TestAgent : fuchsia::modular::Agent,
  public:
   TestAgent(fidl::InterfaceRequest<fuchsia::io::Directory> directory_request,
             fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl,
-            std::unique_ptr<component::ServiceNamespace> services_ptr = nullptr,
+            std::unique_ptr<component::ServiceProviderImpl> services_ptr = nullptr,
             bool serve_lifecycle_protocol = false)
       : controller_(this, std::move(ctrl)),
         agent_binding_(this),
@@ -89,11 +87,11 @@ class TestAgent : fuchsia::modular::Agent,
 
   void KillApplication() { controller_.Unbind(); }
 
-  int connect_call_count() { return connect_call_count_; }
+  int connect_call_count() const { return connect_call_count_; }
 
-  bool lifecycle_terminate_called() { return lifecycle_terminate_called_; }
+  bool lifecycle_terminate_called() const { return lifecycle_terminate_called_; }
 
-  bool controller_connected() { return controller_connected_; }
+  bool controller_connected() const { return controller_connected_; }
 
  private:
   // |ComponentController|
@@ -117,11 +115,10 @@ class TestAgent : fuchsia::modular::Agent,
     controller_.Close(ZX_OK);
   }
 
- private:
   fidl::Binding<fuchsia::sys::ComponentController> controller_;
   fidl::Binding<fuchsia::modular::Agent> agent_binding_;
   fidl::Binding<fuchsia::modular::Lifecycle> lifecycle_binding_;
-  std::unique_ptr<component::ServiceNamespace> services_ptr_;
+  std::unique_ptr<component::ServiceProviderImpl> services_ptr_;
 
   // `outgoing_dir_server_` must be initialized after `agent_binding_` (which itself serves
   // `services_ptr_`) so that it is guaranteed to be destroyed *before* `agent_binding_` to protect
@@ -370,7 +367,7 @@ TEST_F(AgentRunnerTest, ConnectToAgentService_ConnectToServiceNameSuccess) {
   });
 
   // Create a ServiceNamespace with the test service in it.
-  auto service_namespace = std::make_unique<component::ServiceNamespace>();
+  auto service_namespace = std::make_unique<component::ServiceProviderImpl>();
   bool agent_got_service_request = false;
   service_namespace->AddService<fuchsia::testing::modular::TestProtocol>(
       [&agent_got_service_request,
@@ -416,7 +413,7 @@ TEST_F(AgentRunnerTest, ConnectToAgentService_ConnectToExposeAsServiceNameSucces
   });
 
   // Create a ServiceNamespace with the test service in it.
-  auto service_namespace = std::make_unique<component::ServiceNamespace>();
+  auto service_namespace = std::make_unique<component::ServiceProviderImpl>();
   bool agent_got_service_request = false;
   service_namespace->AddService<fuchsia::testing::modular::TestProtocol>(
       [&agent_got_service_request,
@@ -453,7 +450,7 @@ TEST_F(AgentRunnerTest, AddRunningAgent_CanConnectToAgentService) {
   auto service_ptr_request = service_ptr.NewRequest();
 
   // Create a ServiceNamespace with the test service in it.
-  auto service_namespace = std::make_unique<component::ServiceNamespace>();
+  auto service_namespace = std::make_unique<component::ServiceProviderImpl>();
   bool agent_got_service_request = false;
   service_namespace->AddService<fuchsia::testing::modular::TestProtocol>(
       [&agent_got_service_request,
@@ -510,7 +507,7 @@ TEST_F(AgentRunnerTest, AddRunningAgent_IsGracefullyTornDown) {
   fuchsia::modular::session::AppConfig agent_app_config;
   agent_app_config.set_url(kTestAgentUrl);
   auto agent_app_client = std::make_unique<modular::AppClient<fuchsia::modular::Lifecycle>>(
-      launcher(), std::move(agent_app_config), /* data_origin = */ "");
+      launcher(), std::move(agent_app_config));
   agent_runner->AddRunningAgent(kTestAgentUrl, std::move(agent_app_client));
 
   // Teardown the agent runner.
@@ -544,7 +541,7 @@ TEST_F(AgentRunnerTest, AddRunningAgent_CanBeCriticalAgent) {
   fuchsia::modular::session::AppConfig agent_app_config;
   agent_app_config.set_url(kTestAgentUrl);
   auto agent_app_client = std::make_unique<modular::AppClient<fuchsia::modular::Lifecycle>>(
-      launcher(), std::move(agent_app_config), /* data_origin = */ "");
+      launcher(), std::move(agent_app_config));
   agent_runner->AddRunningAgent(kTestAgentUrl, std::move(agent_app_client));
   RunLoopUntil([&test_agent] { return !!test_agent; });
 
@@ -580,7 +577,7 @@ TEST_F(AgentRunnerTest, AddRunningAgent_NotRestartedIfRestartDisabled) {
   fuchsia::modular::session::AppConfig agent_app_config;
   agent_app_config.set_url(kTestAgentUrl);
   auto agent_app_client = std::make_unique<modular::AppClient<fuchsia::modular::Lifecycle>>(
-      launcher(), std::move(agent_app_config), /* data_origin = */ "");
+      launcher(), std::move(agent_app_config));
   agent_runner->AddRunningAgent(kTestAgentUrl, std::move(agent_app_client));
   RunLoopUntil([&test_agent] { return !!test_agent; });
 
@@ -618,7 +615,7 @@ TEST_F(AgentRunnerTest, GetAgentOutgoingServices) {
                             {kTestAgentUrl, fuchsia::testing::modular::TestProtocol::Name_}}});
 
   auto agent_runner = GetOrCreateAgentRunner();
-  EXPECT_EQ(nullptr, agent_runner->GetAgentOutgoingServices("noexist"));
+  EXPECT_EQ(std::nullopt, agent_runner->GetAgentOutgoingServices("noexist"));
 
   fuchsia::testing::modular::TestProtocolPtr service_ptr1, service_ptr2;
 
@@ -627,9 +624,9 @@ TEST_F(AgentRunnerTest, GetAgentOutgoingServices) {
   request.set_channel(service_ptr1.NewRequest().TakeChannel());
   agent_runner->ConnectToAgentService("requestor_url", std::move(request));
 
-  auto agent_services = agent_runner->GetAgentOutgoingServices(kTestAgentUrl);
-  ASSERT_NE(nullptr, agent_services);
-  agent_services->ConnectToService(service_ptr2.NewRequest());
+  std::optional agent_services = agent_runner->GetAgentOutgoingServices(kTestAgentUrl);
+  ASSERT_TRUE(agent_services.has_value());
+  agent_services.value().get().Connect(service_ptr2.NewRequest());
 
   RunLoopUntil([&] { return service_connect_requests == 2; });
 }
@@ -804,7 +801,7 @@ TEST_F(AgentRunnerTest, SessionRestartOnBrokenAgentOutgoingDir) {
   fuchsia::modular::session::AppConfig agent_app_config;
   agent_app_config.set_url(kTestAgentUrl);
   auto agent_app_client = std::make_unique<modular::AppClient<fuchsia::modular::Lifecycle>>(
-      launcher(), std::move(agent_app_config), /*data_origin=*/"");
+      launcher(), std::move(agent_app_config));
 
   agent_runner->AddRunningAgent(kTestAgentUrl, std::move(agent_app_client));
 

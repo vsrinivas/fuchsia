@@ -14,9 +14,9 @@
 #include <memory>
 #include <string>
 
+#include "lib/sys/cpp/service_directory.h"
 #include "src/lib/fxl/macros.h"
 #include "src/modular/lib/common/async_holder.h"
-#include "src/modular/lib/deprecated_svc/services.h"
 
 namespace modular {
 
@@ -42,16 +42,16 @@ namespace modular {
 class AppClientBase : public AsyncHolderBase {
  public:
   AppClientBase(fuchsia::sys::Launcher* launcher, fuchsia::modular::session::AppConfig config,
-                std::string data_origin = "",
                 fuchsia::sys::ServiceListPtr additional_services = nullptr,
-                fuchsia::sys::FlatNamespacePtr flat_namespace = nullptr);
+                fuchsia::sys::FlatNamespacePtr flat_namespace = nullptr,
+                const std::optional<std::string>& data_origin = std::nullopt);
 
   ~AppClientBase() override;
 
   // Gives access to the services of the started application. Services
   // obtained from it are not involved in life cycle management provided by
   // AppClient, however. This is used for example to obtain the ViewProvider.
-  component::Services& services() { return services_; }
+  sys::ServiceDirectory& services() { return services_.value(); }
 
   // Registers a handler to receive a notification when this application
   // connection encounters an error. This typically happens when this
@@ -69,7 +69,9 @@ class AppClientBase : public AsyncHolderBase {
   virtual void UnbindLifecycleService();
 
   fuchsia::sys::ComponentControllerPtr component_controller_;
-  component::Services services_;
+
+  // Not really optional; needed to allow deferred initialization in the constructor.
+  std::optional<sys::ServiceDirectory> services_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AppClientBase);
 };
@@ -81,12 +83,12 @@ template <class Service>
 class AppClient : public AppClientBase {
  public:
   AppClient(fuchsia::sys::Launcher* const launcher, fuchsia::modular::session::AppConfig config,
-            std::string data_origin = "",
             fuchsia::sys::ServiceListPtr additional_services = nullptr,
-            fuchsia::sys::FlatNamespacePtr flat_namespace = nullptr)
-      : AppClientBase(launcher, std::move(config), std::move(data_origin),
-                      std::move(additional_services), std::move(flat_namespace)) {
-    services().ConnectToService(lifecycle_service_.NewRequest());
+            fuchsia::sys::FlatNamespacePtr flat_namespace = nullptr,
+            const std::optional<std::string>& data_origin = std::nullopt)
+      : AppClientBase(launcher, std::move(config), std::move(additional_services),
+                      std::move(flat_namespace), data_origin) {
+    services().Connect(lifecycle_service_.NewRequest());
   }
   ~AppClient() override = default;
 

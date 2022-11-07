@@ -16,18 +16,22 @@
 
 #include <fbl/unique_fd.h>
 
+#include "lib/sys/cpp/service_directory.h"
 #include "src/lib/files/directory.h"
-#include "src/modular/lib/fidl/clone.h"
 
 namespace modular {
 AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
-                             fuchsia::modular::session::AppConfig config, std::string data_origin,
+                             fuchsia::modular::session::AppConfig config,
                              fuchsia::sys::ServiceListPtr additional_services,
-                             fuchsia::sys::FlatNamespacePtr flat_namespace)
+                             fuchsia::sys::FlatNamespacePtr flat_namespace,
+                             const std::optional<std::string>& data_origin)
     : AsyncHolderBase(config.url()) {
-  fuchsia::sys::LaunchInfo launch_info;
-  launch_info.directory_request = services_.NewRequest();
-  launch_info.url = config.url();
+  fidl::InterfaceHandle<fuchsia::io::Directory> handle;
+  fuchsia::sys::LaunchInfo launch_info = {
+      .url = config.url(),
+      .directory_request = handle.NewRequest(),
+  };
+  services_ = sys::ServiceDirectory(std::move(handle));
   std::vector<std::string> args;
   if (config.has_args()) {
     launch_info.arguments.emplace();
@@ -36,23 +40,26 @@ AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
     }
   }
 
-  if (!data_origin.empty()) {
-    if (!files::CreateDirectory(data_origin)) {
-      FX_LOGS(ERROR) << "Unable to create directory at " << data_origin;
+  if (data_origin.has_value()) {
+    ZX_ASSERT(!data_origin.value().empty());
+    if (!files::CreateDirectory(data_origin.value())) {
+      FX_LOGS(ERROR) << "Unable to create directory at " << data_origin.value();
       return;
     }
     launch_info.flat_namespace = std::make_unique<fuchsia::sys::FlatNamespace>();
     launch_info.flat_namespace->paths.push_back("/data");
 
-    fbl::unique_fd dir(open(data_origin.c_str(), O_DIRECTORY | O_RDONLY));
+    fbl::unique_fd dir(open(data_origin.value().c_str(), O_DIRECTORY | O_RDONLY));
     if (!dir.is_valid()) {
-      FX_LOGS(ERROR) << "Unable to open directory at " << data_origin << ". errno: " << errno;
+      FX_LOGS(ERROR) << "Unable to open directory at " << data_origin.value()
+                     << ". errno: " << errno;
       return;
     }
     fdio_cpp::FdioCaller caller(std::move(dir));
     zx::result channel = caller.take_directory();
     if (channel.is_error()) {
-      FX_PLOGS(ERROR, channel.status_value()) << "Unable create a handle from  " << data_origin;
+      FX_PLOGS(ERROR, channel.status_value())
+          << "Unable create a handle from  " << data_origin.value();
       return;
     }
 

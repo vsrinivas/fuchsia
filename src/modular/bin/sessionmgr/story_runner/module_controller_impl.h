@@ -17,6 +17,7 @@
 
 #include <vector>
 
+#include "lib/sys/cpp/service_directory.h"
 #include "src/lib/fxl/macros.h"
 #include "src/modular/lib/fidl/app_client.h"
 
@@ -42,7 +43,7 @@ class ModuleControllerImpl {
   // notifies state change, and then calls |done|.
   void Teardown(fit::function<void()> done);
 
-  component::Services& services() { return app_client_.services(); }
+  sys::ServiceDirectory& services() { return app_client_.services(); }
 
  private:
   // Used as application error handler on the Module app client.

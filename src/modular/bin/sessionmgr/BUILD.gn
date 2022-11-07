@@ -68,6 +68,7 @@ source_set("sessionmgr_lib") {
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/modular/bin/sessionmgr/agent_runner",
+    "//src/modular/bin/sessionmgr/story_runner",
     "//src/modular/lib/deprecated_service_provider",
   ]
 
@@ -88,7 +89,6 @@ source_set("sessionmgr_lib") {
     "//src/modular/bin/sessionmgr/puppet_master:puppet_master_impl",
     "//src/modular/bin/sessionmgr/puppet_master:story_command_executor",
     "//src/modular/bin/sessionmgr/storage",
-    "//src/modular/bin/sessionmgr/story_runner",
     "//src/modular/lib/app_driver/cpp:app_driver",
     "//src/modular/lib/async/cpp:operation",
     "//src/modular/lib/common:async_holder",
@@ -136,10 +136,7 @@ source_set("startup_agent_launcher") {
     "startup_agent_launcher.h",
   ]
 
-  public_deps = [
-    "//sdk/lib/sys/cpp",
-    "//src/modular/lib/deprecated_svc",
-  ]
+  public_deps = [ "//sdk/lib/sys/cpp" ]
 
   deps = [
     ":agent_services_factory",
@@ -150,6 +147,7 @@ source_set("startup_agent_launcher") {
     "//sdk/fidl/fuchsia.modular:fuchsia.modular_hlcpp",
     "//sdk/lib/syslog/cpp",
     "//src/modular/lib/connect",
+    "//src/modular/lib/deprecated_service_provider",
     "//src/modular/lib/modular_config:modular_config_accessor",
   ]
 }

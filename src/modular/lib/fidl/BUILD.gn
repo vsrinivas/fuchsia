@@ -37,8 +37,8 @@ source_set("app_client") {
   deps = [
     ":clone",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/files",
     "//src/modular/lib/common:async_holder",
-    "//src/modular/lib/deprecated_svc",
     "//zircon/system/ulib/fdio-caller",
   ]
 }

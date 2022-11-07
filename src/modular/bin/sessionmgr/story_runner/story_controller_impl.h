@@ -28,9 +28,7 @@
 #include <string>
 #include <vector>
 
-#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/macros.h"
-#include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/add_mod_call.h"
 #include "src/modular/bin/sessionmgr/storage/session_storage.h"
 #include "src/modular/bin/sessionmgr/storage/story_storage.h"
 #include "src/modular/bin/sessionmgr/story_runner/module_context_impl.h"
@@ -38,9 +36,6 @@
 #include "src/modular/bin/sessionmgr/story_runner/ongoing_activity_impl.h"
 #include "src/modular/bin/sessionmgr/story_runner/story_shell_context_impl.h"
 #include "src/modular/lib/async/cpp/operation.h"
-#include "src/modular/lib/fidl/app_client.h"
-#include "src/modular/lib/fidl/environment.h"
-#include "src/modular/lib/modular_config/modular_config_constants.h"
 
 namespace modular {
 
@@ -153,7 +148,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
     std::map<std::string, inspect::StringProperty> annotation_properties;
 
     // Helper for initializing inspect nodes and properties.
-    void InitializeInspectProperties(StoryControllerImpl* const story_controller_impl);
+    void InitializeInspectProperties(StoryControllerImpl* story_controller_impl);
     void UpdateInspectProperties();
   };
 
@@ -197,11 +192,11 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   bool IsExternalModule(const std::vector<std::string>& module_path);
 
   // Deletes the entry for this module_path from running_mod_infos_.
-  void EraseRunningModInfo(std::vector<std::string> module_path);
+  void EraseRunningModInfo(const std::vector<std::string>& module_path);
 
   // Handles SessionShell OnModuleFocused event that indicates whether or not a
   // surface was focused.
-  void OnSurfaceFocused(fidl::StringPtr surface_id);
+  void OnSurfaceFocused(const fidl::StringPtr& surface_id);
 
   // Finds the active RunningModInfo for a module at the given module path. May
   // return nullptr if the module at the path is not running, regardless of

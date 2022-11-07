@@ -15,7 +15,6 @@
 #include <memory>
 #include <utility>
 
-#include "lib/fdio/directory.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "src/modular/lib/common/teardown.h"
 
@@ -71,8 +70,7 @@ class AgentContextImpl::InitializeAppClientCall : public Operation<> {
     agent_context_impl_->state_ = State::RUNNING;
 
     // Connect to the fuchsia.modular.Agent protocol.
-    agent_context_impl_->app_client_->services().ConnectToService(
-        agent_context_impl_->agent_.NewRequest());
+    agent_context_impl_->app_client_->services().Connect(agent_context_impl_->agent_.NewRequest());
     agent_context_impl_->agent_.set_error_handler(
         [agent_url = agent_context_impl_->url_](zx_status_t status) {
           FX_PLOGS(INFO, status) << "Agent " << agent_url
@@ -81,9 +79,8 @@ class AgentContextImpl::InitializeAppClientCall : public Operation<> {
         });
 
     // Enumerate the services that the agent has published in its outgoing directory.
-    if (auto status = fdio_service_clone_to(
-            agent_context_impl_->app_client_->services().directory().channel().get(),
-            outgoing_dir_ptr_.NewRequest().TakeChannel().release());
+    if (auto status = agent_context_impl_->app_client_->services().CloneChannel(
+            outgoing_dir_ptr_.NewRequest());
         status != ZX_OK) {
       FX_PLOGS(ERROR, status)
           << "Could not clone agent's outgoing directory handle. "
@@ -163,7 +160,7 @@ class AgentContextImpl::StopCall : public Operation<> {
     }
   }
 
-  void Teardown(FlowToken flow) {
+  void Teardown(const FlowToken& flow) {
     FlowTokenHolder branch{flow};
 
     agent_context_impl_->state_ = State::TERMINATING;
@@ -182,7 +179,7 @@ class AgentContextImpl::StopCall : public Operation<> {
         });
   }
 
-  void Stop(FlowToken flow) {
+  void Stop(const FlowToken& flow) {
     agent_context_impl_->state_ = State::TERMINATED;
     agent_context_impl_->agent_.Unbind();
     agent_context_impl_->agent_controller_bindings_.CloseAll();
@@ -262,7 +259,7 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
   }
 
   app_client_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-      info.launcher, std::move(agent_config), /*data_origin=*/"", std::move(service_list));
+      info.launcher, std::move(agent_config), std::move(service_list));
   operation_queue_.Add(std::make_unique<InitializeAppClientCall>(this));
 }
 
@@ -330,7 +327,7 @@ void AgentContextImpl::ConnectToService(
         //    will fail.
         if (app_client_ &&
             (!agent_.is_bound() || agent_outgoing_services_.count(service_name) > 0)) {
-          app_client_->services().ConnectToService(std::move(channel), service_name);
+          app_client_->services().Connect(service_name, std::move(channel));
         } else if (agent_.is_bound()) {
           fuchsia::sys::ServiceProviderPtr agent_services;
           agent_->Connect(requestor_url, agent_services.NewRequest());

@@ -8,17 +8,19 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
-#include "src/lib/files/file.h"
 #include "src/modular/lib/connect/connect.h"
-#include "src/modular/lib/deprecated_svc/service_namespace.h"
+#include "src/modular/lib/deprecated_service_provider/service_provider_impl.h"
 
 namespace modular {
 
 namespace {
 
-static constexpr modular::RateLimitedRetry::Threshold kSessionAgentRetryLimit = {3, zx::sec(45)};
+constexpr modular::RateLimitedRetry::Threshold kSessionAgentRetryLimit = {
+    .count = 3,
+    .period = zx::sec(45),
+};
 
-static constexpr char kInternalAgentRunnerRequestorUrl[] = "builtin://modular";
+constexpr char kInternalAgentRunnerRequestorUrl[] = "builtin://modular";
 
 }  // namespace
 
@@ -57,14 +59,16 @@ StartupAgentLauncher::StartupAgentLauncher(
 
 void StartupAgentLauncher::StartAgents(AgentRunner* agent_runner,
                                        std::vector<std::string> session_agents,
-                                       std::vector<std::string> startup_agents) {
+                                       const std::vector<std::string>& startup_agents) {
   FX_LOGS(INFO) << "Starting session_agents:";
-  for (const auto& agent : session_agents) {
+  for (std::string& agent : session_agents) {
     FX_LOGS(INFO) << " " << agent;
     // Initialize the restart tracker for this session agent.
-    agent_restarts_[agent] = session_restart_tracker_.CreateUint(agent, 0);
+    inspect::UintProperty node = session_restart_tracker_.CreateUint(agent, 0);
+    auto [it, inserted] = agent_restarts_.emplace(std::move(agent), std::move(node));
+    FX_DCHECK(inserted);
 
-    StartSessionAgent(agent_runner, agent);
+    StartSessionAgent(agent_runner, it->first);
   }
 
   FX_LOGS(INFO) << "Starting startup_agents:";
@@ -84,7 +88,7 @@ fuchsia::sys::ServiceList StartupAgentLauncher::GetServicesForAgent(std::string 
 void StartupAgentLauncher::StartAgent(AgentRunner* agent_runner, const std::string& url) {
   fuchsia::sys::ServiceProviderPtr services;
   agent_runner->ConnectToAgent(kInternalAgentRunnerRequestorUrl, url, services.NewRequest(),
-                               /*agent_controller=*/nullptr);
+                               /*agent_controller_request=*/nullptr);
 }
 
 void StartupAgentLauncher::StartSessionAgent(AgentRunner* agent_runner, const std::string& url) {
@@ -158,7 +162,7 @@ void StartupAgentLauncher::StartSessionAgent(AgentRunner* agent_runner, const st
 }
 
 std::vector<std::string> StartupAgentLauncher::AddAgentServices(
-    const std::string& url, component::ServiceNamespace* service_namespace) {
+    const std::string& url, component::ServiceProviderImpl* service_namespace) {
   std::vector<std::string> service_names;
 
   if (session_agents_.find(url) != session_agents_.end()) {

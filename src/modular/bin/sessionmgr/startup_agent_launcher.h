@@ -20,8 +20,7 @@
 #include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "src/modular/bin/sessionmgr/agent_services_factory.h"
 #include "src/modular/bin/sessionmgr/rate_limited_retry.h"
-#include "src/modular/lib/deprecated_svc/service_namespace.h"
-#include "src/modular/lib/deprecated_svc/services.h"
+#include "src/modular/lib/deprecated_service_provider/service_provider_impl.h"
 #include "src/modular/lib/modular_config/modular_config_accessor.h"
 
 namespace modular {
@@ -37,12 +36,12 @@ class StartupAgentLauncher : public AgentServicesFactory {
       fidl::InterfaceRequestHandler<fuchsia::intl::PropertyProvider>
           intl_property_provider_connector,
       fidl::InterfaceRequestHandler<fuchsia::element::Manager> element_manager_connector,
-      inspect::Node agent_restart_tracker, fit::function<bool()> is_terminating_cb);
+      inspect::Node session_restart_tracker, fit::function<bool()> is_terminating_cb);
 
   ~StartupAgentLauncher() override = default;
 
   void StartAgents(AgentRunner* agent_runner, std::vector<std::string> session_agents,
-                   std::vector<std::string> startup_agents);
+                   const std::vector<std::string>& startup_agents);
 
   // |AgentServicesFactory|
   fuchsia::sys::ServiceList GetServicesForAgent(std::string agent_url) override;
@@ -51,7 +50,7 @@ class StartupAgentLauncher : public AgentServicesFactory {
   struct SessionAgentData {
     struct DeferredInterfaceRequest {
       template <class Interface>
-      DeferredInterfaceRequest(fidl::InterfaceRequest<Interface> request);
+      explicit DeferredInterfaceRequest(fidl::InterfaceRequest<Interface> request);
 
       const char* name;
       zx::channel channel;
@@ -74,15 +73,15 @@ class StartupAgentLauncher : public AgentServicesFactory {
     modular::RateLimitedRetry restart;
   };
 
-  using ServiceProviderInitializer =
-      fit::function<void(const std::string& url, component::ServiceNamespace* service_namespace)>;
+  using ServiceProviderInitializer = fit::function<void(
+      const std::string& url, component::ServiceProviderImpl* service_namespace)>;
   // A ServiceProviderInitializer that adds standard agent services, including
   // attributed context entry point. Returns the names
   // of the services added.
   std::vector<std::string> AddAgentServices(const std::string& url,
-                                            component::ServiceNamespace* service_namespace);
+                                            component::ServiceProviderImpl* service_namespace);
 
-  void StartAgent(AgentRunner* agent_runner, const std::string& url);
+  static void StartAgent(AgentRunner* agent_runner, const std::string& url);
 
   void StartSessionAgent(AgentRunner* agent_runner, const std::string& url);
 
@@ -110,7 +109,7 @@ class StartupAgentLauncher : public AgentServicesFactory {
 
   // ServiceNamespace(s) backing the services provided to these agents via its
   // namespace.
-  std::deque<component::ServiceNamespace> agent_namespaces_;
+  std::deque<component::ServiceProviderImpl> agent_namespaces_;
 };
 
 }  // namespace modular

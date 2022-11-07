@@ -25,7 +25,7 @@
 #include <variant>
 
 #include "src/lib/fxl/macros.h"
-#include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
+#include "src/modular/bin/sessionmgr/agent_services_factory.h"
 #include "src/modular/bin/sessionmgr/component_context_impl.h"
 #include "src/modular/bin/sessionmgr/storage/session_storage.h"
 #include "src/modular/bin/sessionmgr/storage/story_storage.h"
@@ -34,7 +34,6 @@
 #include "src/modular/lib/deprecated_service_provider/service_provider_impl.h"
 #include "src/modular/lib/fidl/app_client.h"
 #include "src/modular/lib/fidl/environment.h"
-#include "src/modular/lib/fidl/proxy.h"
 
 namespace modular {
 
@@ -82,7 +81,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
   // Returns a StoryControllerImpl ptr for |story_id| or nullptr if that story
   // is not running. The returned pointer is safe to use for the stack frame of
   // the calling function.
-  StoryControllerImpl* GetStoryControllerImpl(std::string story_id);
+  StoryControllerImpl* GetStoryControllerImpl(const std::string& story_id);
 
   // Called by StoryControllerImpl.
   std::unique_ptr<AsyncHolderBase> StartStoryShell(
@@ -92,7 +91,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
   // Called by StoryControllerImpl.
   //
   // Returns nullptr if the StoryInfo for |story_id| is not cached.
-  fuchsia::modular::StoryInfo2Ptr GetCachedStoryInfo(std::string story_id);
+  fuchsia::modular::StoryInfo2Ptr GetCachedStoryInfo(const std::string& story_id);
 
   // |fuchsia::modular::StoryProvider|.
   void GetStoryInfo(std::string story_id, GetStoryInfoCallback callback) override;
@@ -106,14 +105,14 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
 
   // Called by StoryControllerImpl. Notifies the current session shell or graphical presenter
   // that the view of the story identified by |story_id| is about to close.
-  void DetachOrDismissView(std::string story_id, fit::function<void()> done);
+  void DetachOrDismissView(const std::string& story_id, fit::function<void()> done);
 
   // Converts a StoryInfo2 to StoryInfo.
   static fuchsia::modular::StoryInfo StoryInfo2ToStoryInfo(
       const fuchsia::modular::StoryInfo2& story_info_2);
 
   // Called by StoryProviderImpl when the StoryState changes.
-  void NotifyStoryStateChange(std::string story_id);
+  void NotifyStoryStateChange(const std::string& story_id);
 
   bool is_session_shell_presentation() const {
     return std::holds_alternative<fuchsia::modular::SessionShellPtr>(presentation_protocol_);
@@ -142,7 +141,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
   void Watch(fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher> watcher) override;
 
   // Callbacks invoked through subscriptions on |session_storage_|.
-  void OnStoryStorageDeleted(std::string story_id);
+  void OnStoryStorageDeleted(const std::string& story_id);
   void OnStoryStorageUpdated(std::string story_id,
                              const fuchsia::modular::internal::StoryData& story_data);
   void OnAnnotationsUpdated(std::string story_id,
@@ -166,7 +165,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
   void DetachView(std::string story_id, fit::function<void()> done);
 
   void PresentView(AttachOrPresentViewParams params);
-  void DismissView(std::string story_id, fit::function<void()> done);
+  void DismissView(const std::string& story_id, fit::function<void()> done);
 
   Environment* const session_environment_;  // Not owned.
   SessionStorage* session_storage_;         // Not owned.

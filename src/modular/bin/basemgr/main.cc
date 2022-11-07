@@ -17,14 +17,13 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
 #include <zircon/assert.h>
+#include <zircon/status.h>
 
 #include <algorithm>
 #include <iterator>
 #include <memory>
 #include <string>
 
-#include "src/lib/files/directory.h"
-#include "src/lib/files/path.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 #include "src/modular/bin/basemgr/basemgr_impl.h"
@@ -64,13 +63,13 @@ fit::deferred_action<fit::closure> SetupCobalt(bool enable_cobalt) {
 }
 
 std::unique_ptr<modular::BasemgrImpl> CreateBasemgrImpl(
-    modular::ModularConfigAccessor config_accessor, std::vector<modular::Child> children,
+    modular::ModularConfigAccessor config_accessor, const std::vector<modular::Child>& children,
     size_t backoff_base, bool use_flatland, sys::ComponentContext* component_context,
     modular::BasemgrInspector* inspector, async::Loop* loop) {
   fit::deferred_action<fit::closure> cobalt_cleanup =
       SetupCobalt(config_accessor.basemgr_config().enable_cobalt());
   auto child_listener = std::make_unique<modular::ChildListener>(
-      component_context->svc().get(), loop->dispatcher(), std::move(children), backoff_base,
+      component_context->svc().get(), loop->dispatcher(), children, backoff_base,
       inspector->CreateChildRestartTrackerNode());
 
   // If sessionmgr is not configured to launch a session shell, basemgr should get the session

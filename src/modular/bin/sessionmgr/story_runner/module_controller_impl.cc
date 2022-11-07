@@ -23,13 +23,12 @@ ModuleControllerImpl::ModuleControllerImpl(fuchsia::sys::Launcher* const launche
                                            const fuchsia::modular::ModuleData* const module_data,
                                            fuchsia::sys::ServiceListPtr service_list,
                                            ModuleControllerImplViewParams view_params)
-    : app_client_(launcher, CloneStruct(module_config),
-                  /*data_origin=*/"", std::move(service_list)),
+    : app_client_(launcher, CloneStruct(module_config), std::move(service_list)),
       module_data_(module_data) {
   app_client_.SetAppErrorHandler([this] { OnAppConnectionError(); });
 
   fuchsia::ui::app::ViewProviderPtr view_provider;
-  app_client_.services().ConnectToService(view_provider.NewRequest());
+  app_client_.services().Connect(view_provider.NewRequest());
 
   if (std::holds_alternative<fuchsia::ui::views::ViewCreationToken>(view_params)) {
     fuchsia::ui::app::CreateView2Args args;

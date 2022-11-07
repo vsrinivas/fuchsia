@@ -17,7 +17,9 @@ source_set("deprecated_service_provider") {
   # DO NOT ADD MORE ENTRIES TO THIS LIST.
   visibility = [
     "//src/modular/bin/sessionmgr:sessionmgr_lib",
+    "//src/modular/bin/sessionmgr:startup_agent_launcher",
     "//src/modular/bin/sessionmgr/agent_runner",
+    "//src/modular/bin/sessionmgr/agent_runner:agent_runner_unittest",
     "//src/modular/bin/sessionmgr/story_runner",
   ]
 }

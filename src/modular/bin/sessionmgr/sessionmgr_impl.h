@@ -31,7 +31,6 @@
 #include "src/modular/lib/common/async_holder.h"
 #include "src/modular/lib/common/viewparams.h"
 #include "src/modular/lib/deprecated_service_provider/service_provider_impl.h"
-#include "src/modular/lib/fidl/app_client.h"
 #include "src/modular/lib/fidl/environment.h"
 #include "src/modular/lib/modular_config/modular_config_accessor.h"
 
@@ -151,11 +150,11 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
     // It's expected that services provided by a v2 session shell are added to the session
     // environment via /svc_for_v1_sessionmgr.
     if (session_shell_url_.has_value()) {
-      auto services = agent_runner_->GetAgentOutgoingServices(*session_shell_url_);
-      if (!services) {
+      std::optional services = agent_runner_->GetAgentOutgoingServices(*session_shell_url_);
+      if (!services.has_value()) {
         return;
       }
-      services->ConnectToService(std::move(request));
+      services.value().get().Connect(std::move(request));
     } else {
       FX_DCHECK(v2_service_directory_.has_value());
       v2_service_directory_->Connect(std::move(request));
