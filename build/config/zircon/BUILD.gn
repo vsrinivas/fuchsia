@@ -116,12 +116,15 @@ config("compiler") {
       cflags += [ "-fasynchronous-unwind-tables" ]
       ldflags += [
         "-Wl,--build-id",
-        "-Wl,--eh-frame-hdr",
         "-Wl,--hash-style=gnu",
         "-Wl,-z,now",
         "-Wl,-z,combreloc",
         "-Wl,-z,text",
       ]
+
+      if (!is_kernel) {
+        ldflags += [ "-Wl,--eh-frame-hdr" ]
+      }
 
       if (linker == "" || linker == "bfd") {
         # This is the default in both LLD and Gold, but not in BFD.

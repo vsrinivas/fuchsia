@@ -21,6 +21,26 @@
 
 #include <ktl/enforce.h>
 
+namespace {
+
+constexpr ktl::string_view kDiagnosticsPrefix = "Cannot load ELF image: ";
+
+// TODO(mcgrathr): BFD ld produces a spurious empty .eh_frame with its own
+// empty PT_LOAD segment. This is harmless enough to the actual layout,
+// but triggers a FormatWarning.
+#ifdef __clang__
+auto GetDiagnostics() { return elfldltl::PanicDiagnostics(kDiagnosticsPrefix); }
+#else
+constexpr auto kPanicReport = elfldltl::PanicDiagnosticsReport(kDiagnosticsPrefix);
+using DiagBase = elfldltl::Diagnostics<decltype(kPanicReport), elfldltl::DiagnosticsPanicFlags>;
+struct NoWarnings : public DiagBase {
+  constexpr NoWarnings() : DiagBase(kPanicReport) {}
+  static constexpr auto FormatWarning = [](auto&&...) { return true; };
+};
+auto GetDiagnostics() { return NoWarnings(); }
+#endif
+}  // namespace
+
 fit::result<ElfImage::Error> ElfImage::Init(ElfImage::BootfsDir dir, ktl::string_view name,
                                             bool relocated) {
   auto read_file = [this, &dir, name]() -> fit::result<Error> {
@@ -65,7 +85,7 @@ fit::result<ElfImage::Error> ElfImage::Init(ElfImage::BootfsDir dir, ktl::string
     return result;
   }
 
-  auto diagnostics = elfldltl::PanicDiagnostics("Cannot load ELF image: ");
+  auto diagnostics = GetDiagnostics();
   auto phdr_allocator = elfldltl::NoArrayFromFile<elfldltl::Elf<>::Phdr>();
   auto headers =
       elfldltl::LoadHeadersFromFile<elfldltl::Elf<>>(diagnostics, image_, phdr_allocator);
@@ -150,7 +170,7 @@ Allocation ElfImage::Load() {
 void ElfImage::Relocate() {
   ZX_DEBUG_ASSERT(load_bias_);  // The load address has already been chosen.
   if (!dynamic_.empty()) {
-    auto diagnostics = elfldltl::PanicDiagnostics();
+    auto diagnostics = GetDiagnostics();
     elfldltl::RelocationInfo<elfldltl::Elf<>> reloc_info;
     elfldltl::DecodeDynamic(diagnostics, image_, dynamic_,
                             elfldltl::DynamicRelocationInfoObserver(reloc_info));

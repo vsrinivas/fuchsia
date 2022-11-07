@@ -495,14 +495,6 @@ if (zircon_toolchain == false) {
     "//build/config/zircon:default_template_backtrace_limit",
   ]
 
-  default_shared_library_configs = default_common_binary_configs
-  if (!toolchain_variant.is_pic_default) {
-    default_shared_library_configs += [
-      "//build/config:no_undefined_symbols",
-      "//build/config:shared_library_config",
-    ]
-  }
-
   # NOTE: Contrary to the Fuchsia build, we start by removing common configs
   # then adding new ones. This is necessary because some Zircon kernel
   # toolchains want to move certain configs to the end of the list to ensure
@@ -511,8 +503,10 @@ if (zircon_toolchain == false) {
   default_common_binary_configs -= toolchain_variant.remove_common_configs
   default_common_binary_configs += toolchain_variant.configs
 
-  default_shared_library_configs -= toolchain_variant.remove_shared_configs
-  default_shared_library_configs += toolchain_variant.configs
+  default_shared_library_configs = default_common_binary_configs + [
+                                     "//build/config:symbol_no_undefined",
+                                     "//build/config:shared_library_config",
+                                   ] - toolchain_variant.remove_shared_configs
 
   default_executable_configs = default_common_binary_configs
   default_executable_deps = []

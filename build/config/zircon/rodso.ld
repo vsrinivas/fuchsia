@@ -52,6 +52,9 @@ SECTIONS {
      */
     .note.gnu.gold-version : { *(.note.gnu.gold-version) }
 
+    .note.gnu.build-id : {
+        *(.note.gnu.build-id)
+    } :rodata :note
     .note : {
         *(.note*)
     } :rodata :note

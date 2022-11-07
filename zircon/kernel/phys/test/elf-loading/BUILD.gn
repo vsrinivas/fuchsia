@@ -10,7 +10,9 @@ import("//zircon/kernel/kernel_package.gni")
 import("//zircon/kernel/phys/zbi_executable.gni")
 
 zbi_executable("zbi-basic-elf-loading-test.executable") {
+  visibility = [ ":*" ]
   testonly = true
+
   sources = [ "basic-test.cc" ]
 
   deps = [
@@ -24,34 +26,32 @@ zbi_executable("zbi-basic-elf-loading-test.executable") {
     "//zircon/kernel/phys:zbi-memory",
     "//zircon/kernel/phys:zbitl-allocation",
   ]
-
-  # TODO(fxbug.dev/91448): see related specification on :get-int.exe.
-  exclude_toolchain_tags = [ "gcc" ]
 }
 
-# TODO(fxbug.dev/91402): This would be more appropriate as a loadable_module().
-executable("get-int.exe") {
+loadable_module("get-int") {
+  visibility = [ ":*" ]
   testonly = true
-  output_name = "get-int"
+
   sources = [ "get-int.cc" ]
   ldflags = [ "-Wl,-e,GetInt" ]
 
-  # TODO(fxbug.dev/91448): gcc links get-int with overlapping
-  # `p_align`-aligned file offset ranges, which invalidates an
-  # assumption of the test.
-  exclude_toolchain_tags = [ "gcc" ]
-}
-
-resource("get-int.resource") {
-  testonly = true
-  sources = [ "$root_out_dir/get-int" ]
-  outputs = [ "get-int" ]
-  deps = [ ":get-int.exe" ]
+  metadata = {
+    # This is the same metadata as a resource() target would have.
+    distribution_entries = [
+      {
+        source = rebase_path("$root_out_dir/$target_name.so", root_build_dir)
+        destination = target_name
+        label = get_label_info(":$target_name", "label_with_toolchain")
+      },
+    ]
+  }
 }
 
 kernel_package("loadables") {
+  visibility = [ ":*" ]
   testonly = true
-  deps = [ ":get-int.resource" ]
+
+  deps = [ ":get-int" ]
 }
 
 zbi_test("zbi-basic-elf-loading-test") {

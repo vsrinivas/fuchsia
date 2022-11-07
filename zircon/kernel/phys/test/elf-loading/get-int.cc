@@ -4,7 +4,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-extern "C" int GetInt() {
+#include "get-int.h"
+
+int GetInt() {
   // Exercise some weirdness first to ensure that this module has been
   // properly loaded.
   static int data_location;

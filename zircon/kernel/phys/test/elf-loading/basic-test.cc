@@ -19,6 +19,7 @@
 #include <phys/zbitl-allocation.h>
 
 #include "../test-main.h"
+#include "get-int.h"
 
 #include <ktl/enforce.h>
 
@@ -67,7 +68,7 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks) {
 
   // We should now be able to access GetInt()!
   constexpr int kExpected = 42;
-  if (int actual = elf.Call<int()>(); actual != kExpected) {
+  if (int actual = elf.Call<decltype(GetInt)>(); actual != kExpected) {
     printf("FAILED: Expected %d; got %d\n", kExpected, actual);
     return 1;
   }

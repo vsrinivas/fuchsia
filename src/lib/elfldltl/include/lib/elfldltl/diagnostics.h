@@ -307,6 +307,18 @@ constexpr auto FprintfDiagnosticsReport(FILE* stream, Prefix&&... prefix) {
   return PrintfDiagnosticsReport(printer, std::forward<Prefix>(prefix)...);
 }
 
+// This is PrintfDiagnosticsReport but using ZX_PANIC for printf.
+template <typename... Prefix>
+constexpr auto PanicDiagnosticsReport(Prefix&&... prefix) {
+  constexpr auto panic = [](const char* format, auto&&... args) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+    ZX_PANIC(format, std::forward<decltype(args)>(args)...);
+#pragma GCC diagnostic pop
+  };
+  return PrintfDiagnosticsReport(panic, std::forward<Prefix>(prefix)...);
+}
+
 // This returns a Diagnostics object that crashes immediately for any error or
 // warning.  There are no library dependencies of any kind.  This behavior is
 // appropriate only for self-relocation and bootstrapping cases where if there
@@ -328,15 +340,9 @@ constexpr auto TrapDiagnostics() {
 // they can form a prefix on every message.  Those arguments are forwarded
 // perfectly, so if passed as an lvalue reference, the reference will be stored
 // rather than its referent copied.
-template <typename... PrefixArgs>
-constexpr auto PanicDiagnostics(PrefixArgs&&... prefix_args) {
-  constexpr auto panic = [](const char* format, auto&&... args) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-nonliteral"
-    ZX_PANIC(format, std::forward<decltype(args)>(args)...);
-#pragma GCC diagnostic pop
-  };
-  return Diagnostics(PrintfDiagnosticsReport(panic, std::forward<PrefixArgs>(prefix_args)...),
+template <typename... Prefix>
+constexpr auto PanicDiagnostics(Prefix&&... prefix) {
+  return Diagnostics(PanicDiagnosticsReport(std::forward<Prefix>(prefix)...),
                      DiagnosticsPanicFlags());
 }
 

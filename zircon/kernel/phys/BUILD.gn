@@ -27,6 +27,7 @@ if (current_toolchain == default_toolchain) {
       os = "fuchsia"
       environment = "kernel.phys"
       with_shared = false
+      is_pic_default = true
 
       toolchain_tags = [ "kernel" ]
 
