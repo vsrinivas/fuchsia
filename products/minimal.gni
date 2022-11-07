@@ -90,10 +90,6 @@ policy_labels.swd = "unrestricted"
 # //build/security/policies_swd.gni.
 policy_labels.update_checker = "system_update_checker"
 
-# session_manager also needs a core realm shard but they currently vary between products, they
-# must be added in individual product configs.
-legacy_base_package_labels += [ "//src/session/bin/session_manager" ]
-
 # Use the product assembly config file to specify the product configuration.
 #
 # This should be overridden by products which inherit from minimal.

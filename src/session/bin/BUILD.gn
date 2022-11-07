@@ -6,7 +6,7 @@ group("bin") {
   deps = [
     "//src/session/bin/cursor",
     "//src/session/bin/element_manager",
-    "//src/session/bin/session_manager:bin",
+    "//src/session/bin/session_manager",
   ]
 }
 
