@@ -204,13 +204,6 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
   // The outgoing directory can be used for either out-of-process FIDL protocols,
   // or in-process runtime protocols.
   if (outgoing_dir) {
-    if ((args->fidl_protocol_offer_count > 0) || (args->fidl_service_offer_count > 0)) {
-      if (!(args->flags & DEVICE_ADD_MUST_ISOLATE)) {
-        // It is only valid to provide fidl protocols if child is meant to be spawned in another
-        // driver host.
-        return ZX_ERR_INVALID_ARGS;
-      }
-    }
     if (args->runtime_service_offer_count > 0) {
       if (args->flags & DEVICE_ADD_MUST_ISOLATE) {
         // Runtime protocols are only supported in-process.
