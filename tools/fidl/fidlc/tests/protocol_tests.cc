@@ -829,17 +829,9 @@ protocol MyProtocol {
   ASSERT_COMPILED(library);
 }
 
-TEST(ProtocolTests, BadMethodStructSimpleLayout) {
-  TestLibrary library(R"FIDL(
-library example;
-
-@for_deprecated_c_bindings
-protocol MyProtocol {
-  -> OnMyEvent(struct {
-    b vector<bool>;
-  });
-};
-)FIDL");
+TEST(ProtocolTests, BadMethodStructIncludesVector) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0138.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrElementMustBeSimple);
   EXPECT_SUBSTR(library.errors()[0]->msg.c_str(), "for_deprecated_c_bindings");
 }
@@ -1195,16 +1187,8 @@ protocol MyProtocol {
 }
 
 TEST(ProtocolTests, BadMethodTableSimpleLayout) {
-  TestLibrary library(R"FIDL(
-library example;
-
-@for_deprecated_c_bindings
-protocol MyProtocol {
-  -> OnMyEvent(table {
-    1: b bool;
-  });
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0136.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTableCannotBeSimple);
   EXPECT_SUBSTR(library.errors()[0]->msg.c_str(), "for_deprecated_c_bindings");
 }
@@ -1358,16 +1342,8 @@ protocol MyProtocol {
 }
 
 TEST(ProtocolTests, BadMethodUnionSimpleLayout) {
-  TestLibrary library(R"FIDL(
-library example;
-
-@for_deprecated_c_bindings
-protocol MyProtocol {
-  -> OnMyEvent(flexible union {
-    1: b bool;
-  });
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0137.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnionCannotBeSimple);
   EXPECT_SUBSTR(library.errors()[0]->msg.c_str(), "for_deprecated_c_bindings");
 }

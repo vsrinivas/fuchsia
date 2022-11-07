@@ -324,13 +324,13 @@ constexpr UndocumentedErrorDef<134, const flat::Attribute *> ErrAttributeConstra
     "declaration did not satisfy constraint of attribute '{}'");
 constexpr UndocumentedErrorDef<135, std::string_view> ErrInvalidDiscoverableName(
     "invalid @discoverable name '{}'; must follow the format 'the.library.name.TheProtocolName'");
-constexpr UndocumentedErrorDef<136, flat::Name> ErrTableCannotBeSimple(
+constexpr ErrorDef<136, flat::Name> ErrTableCannotBeSimple(
     "union '{}' is not a simple type, so it cannot be used in "
     "@for_deprecated_c_bindings");
-constexpr UndocumentedErrorDef<137, flat::Name> ErrUnionCannotBeSimple(
+constexpr ErrorDef<137, flat::Name> ErrUnionCannotBeSimple(
     "table '{}' is not a simple type, so it cannot be used in "
     "@for_deprecated_c_bindings");
-constexpr UndocumentedErrorDef<138, std::string_view> ErrElementMustBeSimple(
+constexpr ErrorDef<138, std::string_view> ErrElementMustBeSimple(
     "element '{}' does not have a simple type, so it cannot be used in "
     "@for_deprecated_c_bindings");
 constexpr UndocumentedErrorDef<139, uint32_t, uint32_t> ErrTooManyBytes(
