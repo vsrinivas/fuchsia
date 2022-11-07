@@ -53,6 +53,10 @@ if (is_host) {
         label = "system_tests_reboot"
       },
       {
+        dir = "recovery_test"
+        label = "system_tests_recovery"
+      },
+      {
         dir = "upgrade_test"
         label = "system_tests_upgrade"
       },
@@ -80,6 +84,7 @@ group("system_tests") {
   testonly = true
   deps = [
     "reboot_test:system_tests_reboot($host_toolchain)",
+    "recovery_test:system_tests_recovery($host_toolchain)",
     "tracking_test:system_tests_tracking($host_toolchain)",
     "upgrade_test:system_tests_upgrade($host_toolchain)",
   ]
@@ -100,6 +105,20 @@ if (is_linux || is_mac) {
           device_type = "GCE"
         }
         tags = [ "e2e-isolated" ]
+      },
+    ]
+    timeout = "10m"
+    cycle_count = "5"
+    cycle_timeout = "2m"
+  }
+
+  system_test_recovery_suite("workstation-release-recovery") {
+    environments = [
+      {
+        dimensions = {
+          device_type = "Intel NUC Kit NUC7i5DNHE"
+        }
+        tags = [ "e2e-isolated-recovery" ]
       },
     ]
     timeout = "10m"

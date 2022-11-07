@@ -277,7 +277,7 @@ template("system_test_upgrade_suite") {
 #     installed on the device, instead of from the current build. This has
 #     the form of `1234...`. Conflicts with `release_builder`.
 #   - Type: string
-
+#
 #   service_account
 #   - Optional: The service account that has permission to download the build
 #     artifacts.
@@ -396,6 +396,152 @@ template("system_test_reboot_suite") {
       _args += [
         "-sleep-after-reboot",
         invoker.sleep_after_reboot,
+      ]
+    }
+
+    host_test(_host_test_target_name) {
+      binary_path = _test_binary
+      args = _args
+      deps = [ test ]
+
+      environments = []
+      foreach(env, invoker.environments) {
+        env.service_account = _service_account
+        environments += [ env ]
+      }
+    }
+  }
+
+  # Finally, group all the generated test specs into a group to make it easy to
+  # reference.
+  group(target_name) {
+    testonly = true
+    deps = _deps
+  }
+}
+
+# A template that configures a System Test Recovery Suite against a given release
+# builder.
+#
+# Parameters
+#
+#   release_builder
+#   - Optional: Builder from which build artifacts will be downloaded and
+#     installed on the device, instead of from the current build. This has
+#     the form of `project/bucket/builder id`, like
+#     `fuchsia/ci/fuchsia-x64-release`. Conflicts with `release_build_id`.
+#   - Type: string
+#
+#   release_build_id
+#   - Optional: Build ID from which build artifacts will be downloaded and
+#     installed on the device, instead of from the current build. This has
+#     the form of `1234...`. Conflicts with `release_builder`.
+#   - Type: string
+#
+#   service_account
+#   - Optional: The service account that has permission to download the build
+#     artifacts.
+#   - Type: string
+#
+#   environments
+#   - Required: What environments this test should target.
+#   - Type: see //build/testing/test_spec.gni for more details. Note that
+#     any label and service_account in each environment is ignored.
+#
+#   timeout
+#   - Optional: Err if this test takes longer than this time.
+#   - Type: duration string
+#
+#   cycle_timeout
+#   - Optional: Err if the test cycle takes longer than this time.
+#   - Type: duration string
+#
+#   cycle_count
+#   - Optional: How many test cycles should the test execute. Defaults to 1
+#     cycle.
+#   - Type: integer string
+#
+#   device_connect_timeout
+#   - Optional: How long to wait between connection attempts.
+#   - Type: duration string
+template("system_test_recovery_suite") {
+  assert(is_linux || is_mac, "system_test_recovery_suite is for linux/mac only")
+
+  assert(
+      !(defined(invoker.release_builder) && defined(invoker.release_build_id)),
+      "release_builder and release_build_id are mutually exclusive for $target_name")
+
+  assert(defined(invoker.environments),
+         "environments must be defined for $target_name")
+
+  _tests = [ "//src/sys/pkg/tests/system-tests:system_tests_recovery" ]
+
+  _deps = []
+
+  foreach(test, _tests) {
+    _test_name = get_label_info(test, "name")
+    _test_binary = "$root_out_dir/$_test_name"
+
+    _host_test_target_name = "${target_name}_${_test_name}"
+    _deps += [ ":${_host_test_target_name}" ]
+
+    _args = [ "-test.v" ]  # Print test detailed case status
+
+    if (defined(invoker.release_builder)) {
+      _args += [
+        "-builder-name",
+        invoker.release_builder,
+      ]
+    }
+
+    if (defined(invoker.release_build_id)) {
+      _args += [
+        "-build-id",
+        invoker.release_build_id,
+      ]
+    }
+
+    _service_account = _environment_service_account
+    if (defined(invoker.service_account)) {
+      assert(invoker.service_account != "",
+             "'${_host_test_target_name}' cannot have an empty service_account")
+      _service_account = invoker.service_account
+    }
+
+    if (defined(invoker.timeout)) {
+      assert(invoker.timeout != "",
+             "'${_host_test_target_name}' cannot have an empty timeout")
+      _args += [
+        "-test.timeout",
+        invoker.timeout,
+      ]
+    }
+
+    if (defined(invoker.cycle_timeout)) {
+      assert(invoker.cycle_timeout != "",
+             "'${_host_test_target_name}' cannot have an empty cycle timeout")
+      _args += [
+        "-cycle-timeout",
+        invoker.cycle_timeout,
+      ]
+    }
+
+    if (defined(invoker.cycle_count)) {
+      assert(invoker.cycle_count != "",
+             "'${_host_test_target_name}' cannot have an empty cycle count")
+      _args += [
+        "-cycle-count",
+        invoker.cycle_count,
+      ]
+    }
+
+    if (defined(invoker.device_connect_timeout)) {
+      assert(
+          invoker.device_connect_timeout != "",
+          "'${_host_test_target_name}' cannot have empty device connect timout")
+      _args += [
+        "-device-connect-timeout",
+        invoker.device_connect_timeout,
       ]
     }
 
