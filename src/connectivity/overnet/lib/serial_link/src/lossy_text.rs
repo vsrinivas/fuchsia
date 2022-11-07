@@ -183,7 +183,7 @@ mod test {
                     new_framer(LossyText::new(Duration::from_millis(100)), 1024);
                 framer_writer.write(&test).await.unwrap();
                 let (mut deframer_writer, mut deframer_reader) =
-                    new_deframer(LossyText::new(Duration::from_millis(100)));
+                    new_deframer(LossyText::new(Duration::from_millis(100)), 1024);
                 let encoded = framer_reader.read().await.unwrap();
                 println!("encoded = {:?}", std::str::from_utf8(&encoded).unwrap());
                 deframer_writer.write(&encoded).await.unwrap();

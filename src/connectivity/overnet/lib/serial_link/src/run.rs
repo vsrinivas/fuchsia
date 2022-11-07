@@ -76,7 +76,7 @@ impl<R: AsyncRead + Unpin + Send, W: AsyncWrite + Unpin + Send, S: AsyncWrite + 
         const INCOMING_BYTE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
         let (framer_writer, framer_reader) = new_framer(LossyText::new(INCOMING_BYTE_TIMEOUT), 256);
         let (deframer_writer, deframer_reader) =
-            new_deframer(LossyText::new(INCOMING_BYTE_TIMEOUT));
+            new_deframer(LossyText::new(INCOMING_BYTE_TIMEOUT), 256);
         let (fragment_writer, fragment_reader, fragment_io_runner) =
             new_fragment_io(framer_writer, deframer_reader);
         let fragment_reader = StreamSplitter { fragment_reader, skipped_bytes: &mut self.skipped };

@@ -256,8 +256,8 @@ mod test {
         let (s2c_rx, s2c_tx) = DodgyPipe::new(failures_per_64kib).split();
         let (c_frm_tx, c_frm_rx) = new_framer(LossyText::new(INCOMING_BYTE_TIMEOUT), 256);
         let (s_frm_tx, s_frm_rx) = new_framer(LossyText::new(INCOMING_BYTE_TIMEOUT), 256);
-        let (c_dfrm_tx, c_dfrm_rx) = new_deframer(LossyText::new(INCOMING_BYTE_TIMEOUT));
-        let (s_dfrm_tx, s_dfrm_rx) = new_deframer(LossyText::new(INCOMING_BYTE_TIMEOUT));
+        let (c_dfrm_tx, c_dfrm_rx) = new_deframer(LossyText::new(INCOMING_BYTE_TIMEOUT), 256);
+        let (s_dfrm_tx, s_dfrm_rx) = new_deframer(LossyText::new(INCOMING_BYTE_TIMEOUT), 256);
         let (mut c_tx, c_rx, c_run) = new_fragment_io(c_frm_tx, c_dfrm_rx);
         let (_s_tx, mut s_rx, s_run) = new_fragment_io(s_frm_tx, s_dfrm_rx);
         let (support_fut, support_handle) = try_join4(

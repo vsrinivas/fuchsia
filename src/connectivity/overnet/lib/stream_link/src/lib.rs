@@ -25,7 +25,7 @@ pub fn run_stream_link<'a>(
     drop(node);
 
     let (mut framer, mut framer_read) = new_framer(LosslessBinary, 4096);
-    let (mut deframer_write, mut deframer) = new_deframer(LosslessBinary);
+    let (mut deframer_write, mut deframer) = new_deframer(LosslessBinary, 4096);
 
     futures::future::try_join4(
         async move {
@@ -124,7 +124,7 @@ mod test {
     async fn simple_frame() -> Result<(), Error> {
         let (mut framer_writer, mut framer_reader) = new_framer(LosslessBinary, 1024);
         framer_writer.write(&[1, 2, 3, 4]).await?;
-        let (mut deframer_writer, mut deframer_reader) = new_deframer(LosslessBinary);
+        let (mut deframer_writer, mut deframer_reader) = new_deframer(LosslessBinary, 1024);
         deframer_writer.write(framer_reader.read().await?.as_slice()).await?;
         assert_eq!(deframer_reader.read().await?, ReadBytes::Framed(vec![1, 2, 3, 4]));
         framer_writer.write(&[5, 6, 7, 8]).await?;
