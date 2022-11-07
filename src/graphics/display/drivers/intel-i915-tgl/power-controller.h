@@ -238,10 +238,24 @@ class PowerController {
   // enabled safely.
   zx::result<MemorySubsystemInfo> GetMemorySubsystemInfoTigerLake();
 
+  // Tests that simulate retries must use the overrides below to avoid flakiness
+  // stemming from scheduling variability. Tests that simulate timeouts should
+  // use the overrides below to get the PowerController to issue a deterministic
+  // MMIO access pattern.
+  static ScopedValueChange<int> OverridePreviousCommandTimeoutUsForTesting(int timeout_us);
+  static ScopedValueChange<int> OverrideVoltageLevelRequestReplyTimeoutUsForTesting(int timeout_us);
+  static ScopedValueChange<int> OverrideVoltageLevelRequestTotalTimeoutUsForTesting(int timeout_us);
   static ScopedValueChange<int> OverrideTypeCColdBlockingChangeReplyTimeoutUsForTesting(
       int timeout_us);
   static ScopedValueChange<int> OverrideTypeCColdBlockingChangeTotalTimeoutUsForTesting(
       int timeout_us);
+  static ScopedValueChange<int> OverrideSystemAgentEnablementChangeReplyTimeoutUsForTesting(
+      int timeout_us);
+  static ScopedValueChange<int> OverrideSystemAgentEnablementChangeTotalTimeoutUsForTesting(
+      int timeout_us);
+  static ScopedValueChange<int> OverrideGetMemorySubsystemInfoReplyTimeoutUsForTesting(
+      int timeout_us);
+  static ScopedValueChange<int> OverrideGetMemoryLatencyReplyTimeoutUsForTesting(int timeout_us);
 
  private:
   fdf::MmioBuffer* mmio_buffer_;

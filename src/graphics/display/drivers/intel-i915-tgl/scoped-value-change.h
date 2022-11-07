@@ -44,6 +44,26 @@ namespace i915_tgl {
 //     // When `timeout_change` goes out of scope, the timeout will be restored
 //     // to its initial value.
 //   }
+//
+//   class ComplexSystemTest : public ::testing::Test {
+//    public:
+//     ComplexSystemTest() :
+//         timeout_change_(SomeSystem::OverrideTimeoutMsForTesting(0)) {}
+//     ~ComplexSystemTest() override = default;
+//
+//    protected:
+//     ScopedValueChange<int> timeout_change_;
+//   };
+//
+//   TEST(ComplexSystemTest, ComplexTimeoutScenario) {
+//     // `g_timeout_ms` will be zero here.
+//
+//     // This test needs to undo a variable change in a surrounding scope.
+//     timeout_change_.reset();
+//     timeout_change_ = SomeSystem::OverrideTimeoutMsForTesting(32);
+//
+//     // `g_timeout_ms` will be 32 for the rest of the test.
+//   }
 template <typename T>
 class ScopedValueChange {
  public:
@@ -82,11 +102,18 @@ class ScopedValueChange {
     return *this;
   }
 
-  ~ScopedValueChange() {
+  ~ScopedValueChange() { reset(); }
+
+  // Empties this change, restoring the variable to its initial value.
+  //
+  // After reset(), this ScopedValueChange will be empty, so it will no longer
+  // change the variable when it goes out of scope.
+  void reset() {
     if (changed_variable_ != nullptr) {
       *changed_variable_ = std::move(original_value_);
       RemovedChangeTo(changed_variable_);
     }
+    changed_variable_ = nullptr;
   }
 
  private:
