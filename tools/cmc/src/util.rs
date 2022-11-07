@@ -53,7 +53,7 @@ pub fn write_depfile(
     output: Option<&PathBuf>,
     inputs: &Vec<PathBuf>,
 ) -> Result<(), Error> {
-    if output.is_none() || inputs.is_empty() {
+    if output.is_none() {
         // A non-existent depfile is the same as an empty depfile
         if depfile.exists() {
             // Delete stale depfile
@@ -149,6 +149,20 @@ mod tests {
             depfile_contents,
             format!("{tmp}/foo.cml: {tmp}/bar.cml {tmp}/qux.cml\n", tmp = tmp_path.display())
         );
+    }
+
+    #[test]
+    fn test_write_depfile_no_includes() {
+        let tmp_dir = TempDir::new().unwrap();
+        let tmp_path = tmp_dir.path();
+        let depfile = tmp_path.join("foo.d");
+        let output = tmp_path.join("foo.cml");
+        let includes = vec![];
+        write_depfile(&depfile, Some(&output), &includes).unwrap();
+
+        let mut depfile_contents = String::new();
+        File::open(&depfile).unwrap().read_to_string(&mut depfile_contents).unwrap();
+        assert_eq!(depfile_contents, format!("{tmp}/foo.cml:\n", tmp = tmp_path.display()));
     }
 
     #[test]

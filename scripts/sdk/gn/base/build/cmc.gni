@@ -38,6 +38,7 @@ import("config/config.gni")
 #    List command line args  for  cmc.
 #    Type: list(path)
 #
+#  depfile
 #  deps
 #  public_deps
 #  testonly
@@ -47,6 +48,7 @@ template("_cmc_tool") {
   action(target_name) {
     forward_variables_from(invoker,
                            [
+                             "depfile",
                              "deps",
                              "public_deps",
                              "testonly",

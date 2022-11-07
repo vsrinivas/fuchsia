@@ -592,7 +592,7 @@ mod tests {
                 "binary": "bin/hello_world"
             }
         }));
-        ctx.assert_no_depfile();
+        ctx.assert_depfile_eq(&ctx.output, &[]);
     }
 
     #[test]
@@ -613,7 +613,7 @@ mod tests {
                 "binary": "bin/hello_world"
             }
         }));
-        ctx.assert_no_depfile();
+        ctx.assert_depfile_eq(&ctx.output, &[]);
     }
 
     #[test]
