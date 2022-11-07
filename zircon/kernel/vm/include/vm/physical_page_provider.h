@@ -38,8 +38,6 @@ class PhysicalPageProvider : public PageProvider {
  private:
   // PageProvider methods.
   const PageSourceProperties& properties() const final;
-  bool GetPageSync(uint64_t offset, VmoDebugInfo vmo_debug_info, vm_page_t** const page_out,
-                   paddr_t* const pa_out) final;
   void SendAsyncRequest(PageRequest* request) final;
   void ClearAsyncRequest(PageRequest* request) final;
   void SwapAsyncRequest(PageRequest* old, PageRequest* new_req) final;

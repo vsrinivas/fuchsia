@@ -237,10 +237,6 @@ zx_status_t PageSource::GetPage(uint64_t offset, PageRequest* request, VmoDebugI
     return ZX_ERR_BAD_STATE;
   }
 
-  if (page_provider_->GetPageSync(offset, vmo_debug_info, page_out, pa_out)) {
-    return ZX_OK;
-  }
-
   // Check if request is initialized and initialize it if it isn't (it can be initialized
   // for batch requests).
   if (!request->IsInitialized()) {

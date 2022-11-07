@@ -51,12 +51,6 @@ void PhysicalPageProvider::Init(VmCowPages* cow_pages, PageSource* page_source, 
   phys_base_ = phys_base;
 }
 
-bool PhysicalPageProvider::GetPageSync(uint64_t offset, VmoDebugInfo vmo_debug_info,
-                                       vm_page_t** const page_out, paddr_t* const pa_out) {
-  DEBUG_ASSERT(phys_base_ != kInvalidPhysBase);
-  return false;
-}
-
 // Called under lock of contiguous VMO that needs the pages.  The request is later processed at the
 // start of WaitOnEvent.
 void PhysicalPageProvider::SendAsyncRequest(PageRequest* request) {

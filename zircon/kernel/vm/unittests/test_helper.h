@@ -53,10 +53,6 @@ class StubPageProvider : public PageProvider {
   const PageSourceProperties& properties() const override { return properties_; }
 
  private:
-  bool GetPageSync(uint64_t offset, VmoDebugInfo vmo_debug_info, vm_page_t** const page_out,
-                   paddr_t* const pa_out) override {
-    return false;
-  }
   void SendAsyncRequest(PageRequest* request) override { panic("Not implemented\n"); }
   void ClearAsyncRequest(PageRequest* request) override { panic("Not implemented\n"); }
   void SwapAsyncRequest(PageRequest* old, PageRequest* new_req) override {

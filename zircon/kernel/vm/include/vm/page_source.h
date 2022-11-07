@@ -140,9 +140,6 @@ class PageProvider : public fbl::RefCounted<PageProvider> {
   // The returned properties will last at least as long as PageProvider.
   virtual const PageSourceProperties& properties() const = 0;
 
-  // Synchronously gets a page from the backing source.
-  virtual bool GetPageSync(uint64_t offset, VmoDebugInfo vmo_debug_info, vm_page_t** const page_out,
-                           paddr_t* const pa_out) = 0;
   // Informs the backing source of a page request. The provider has ownership
   // of |request| until the async request is cancelled.
   virtual void SendAsyncRequest(PageRequest* request) = 0;
@@ -164,8 +161,8 @@ class PageProvider : public fbl::RefCounted<PageProvider> {
   // and lack of awareness of contiguous.
   virtual bool DebugIsPageOk(vm_page_t* page, uint64_t offset) = 0;
 
-  // OnDetach is called once no more calls to GetPageSync/SendAsyncRequest will be made. It
-  // will be called before OnClose and will only be called once.
+  // OnDetach is called once no more calls to SendAsyncRequest will be made. It will be called
+  // before OnClose and will only be called once.
   virtual void OnDetach() = 0;
   // After OnClose is called, no more calls will be made except for ::WaitOnEvent.
   virtual void OnClose() = 0;
