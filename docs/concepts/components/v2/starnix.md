@@ -21,9 +21,9 @@ to run Linux binaries, tests, or an interactive Android shell.
 
 Patches that improve Linux compatibility are welcome. If you want
 to report a bug or file a feature request, create an issue in the
-[PosixCompat][posix-compat-monorail-component] component in Monorail.
+[Starnix][starnix-monorail-component] component in Monorail.
 
 [glossary.runner]: /docs/glossary/README.md#runner
 [starnix-rfc]: /docs/contribute/governance/rfcs/0082_starnix.md
 [starnix-readme]: /src/proc/bin/starnix/README.md
-[posix-compat-monorail-component]: https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=component:PosixCompat
+[starnix-monorail-component]: https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=component:Starnix
