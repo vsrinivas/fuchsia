@@ -240,21 +240,22 @@ zx_status_t BindDriverToDevice(const fbl::RefPtr<Device>& dev, const Driver* dri
   dev->device_controller()
       ->BindDriver(fidl::StringView::FromExternal(libname, strlen(libname)), std::move(*vmo))
       .ThenExactlyOnce([dev](fidl::WireUnownedResult<fdm::DeviceController::BindDriver>& result) {
-        // TODO(fxbug.dev/56208): If we're closed from the driver host we only log a warning,
-        // otherwise tests could flake.
         if (result.is_peer_closed()) {
-          LOGF(WARNING, "Failed to bind driver '%s': %s", dev->name().data(),
+          // TODO(fxbug.dev/56208): If we're closed from the driver host we only log a warning,
+          // otherwise tests could flake.
+          LOGF(WARNING, "Failed to bind driver to device '%s': %s", dev->name().data(),
                result.status_string());
           dev->flags &= (~DEV_CTX_BOUND);
           return;
         }
         if (!result.ok()) {
-          LOGF(ERROR, "Failed to bind driver '%s': %s", dev->name().data(), result.status_string());
+          LOGF(ERROR, "Failed to bind driver to device '%s': %s", dev->name().data(),
+               result.status_string());
           dev->flags &= (~DEV_CTX_BOUND);
           return;
         }
         if (result.value().status != ZX_OK) {
-          LOGF(ERROR, "Failed to bind driver '%s': %s", dev->name().data(),
+          LOGF(ERROR, "Failed to bind driver to device '%s': %s", dev->name().data(),
                zx_status_get_string(result.value().status));
           dev->flags &= (~DEV_CTX_BOUND);
           return;
@@ -609,17 +610,22 @@ zx_status_t Coordinator::AddMetadata(const fbl::RefPtr<Device>& dev, uint32_t ty
 // will be created.
 zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev,
                                       fbl::RefPtr<DriverHost> target_driver_host) {
-  ZX_ASSERT(!(dev->flags & DEV_CTX_PROXY) && (dev->flags & DEV_CTX_MUST_ISOLATE));
+  ZX_ASSERT(!(dev->flags & DEV_CTX_PROXY));
 
   // proxy args are "processname,args"
   const char* arg0 = dev->args().data();
   const char* arg1 = strchr(arg0, ',');
-  if (arg1 == nullptr) {
-    LOGF(ERROR, "Missing proxy arguments, expected '%s,args' (see fxbug.dev/33674)", arg0);
-    return ZX_ERR_INTERNAL;
+  size_t arg0len;
+  if (arg1 != nullptr) {
+    arg0len = arg1 - arg0;
+    arg1++;
+  } else {
+    arg0len = dev->args().size();
   }
-  size_t arg0len = arg1 - arg0;
-  arg1++;
+
+  if (arg1 == nullptr) {
+    arg1 = "";
+  }
 
   char driver_hostname[32];
   snprintf(driver_hostname, sizeof(driver_hostname), "driver_host:%.*s", (int)arg0len, arg0);
@@ -732,7 +738,15 @@ zx_status_t Coordinator::AttemptBind(const MatchedDriverInfo matched_driver,
     return ZX_ERR_BAD_STATE;
   }
 
-  if (dev->should_colocate()) {
+  // A driver is colocated with its parent device in two circumstances:
+  //
+  //   (1) The parent device is a composite device. Colocation for composites is handled when the
+  //       composite is created, and the child of the composite is always colocated. Note that the
+  //       other devices that the composite comprises may still be in separate hosts from the child
+  //       driver.
+  //   (2) The driver specified `colocate = true` in its component manifest, AND the parent device
+  //       did not enforce isolation with the MUST_ISOLATE flag.
+  if (dev->is_composite() || (matched_driver.colocate && !(dev->flags & DEV_CTX_MUST_ISOLATE))) {
     VLOGF(1, "Binding driver to %s in same driver host as parent", dev->name().data());
     // non-busdev is pretty simple
     if (dev->host() == nullptr) {
@@ -742,12 +756,19 @@ zx_status_t Coordinator::AttemptBind(const MatchedDriverInfo matched_driver,
     return BindDriverToDevice(dev, drv);
   }
 
+  // If we've gotten this far, we need to prepare a proxy because the driver is going to be bound in
+  // a different host than its parent device. The proxy can either be a FIDL proxy, which is a
+  // lightweight proxy that exposes the parent's outgoing directory so that the child can connect to
+  // its FIDL protocol, or a regular proxy, which is a much more complicated device that implements
+  // Banjo proxying.
+  //
+  // We should prepare a FIDL proxy if the driver has set `colocate = false`, because we only set
+  // that flag if the driver is going to be using FIDL.
   zx_status_t status;
-  if (dev->has_outgoing_directory()) {
+  if (!matched_driver.colocate) {
     VLOGF(1, "Preparing FIDL proxy for %s", dev->name().data());
-    auto target_driver_host = (dev->flags & DEV_CTX_MUST_ISOLATE) ? nullptr : dev->host();
     fbl::RefPtr<Device> fidl_proxy;
-    status = PrepareFidlProxy(dev, target_driver_host, &fidl_proxy);
+    status = PrepareFidlProxy(dev, nullptr /* target_driver_host */, &fidl_proxy);
     if (status != ZX_OK) {
       return status;
     }

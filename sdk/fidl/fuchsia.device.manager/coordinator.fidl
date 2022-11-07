@@ -215,7 +215,9 @@ type ProxyDevice = resource struct {
 };
 
 type FidlProxyDevice = resource struct {
-    incoming_dir client_end:fuchsia.io.Directory;
+    /// If this is present this represents an incoming namespace directory that the
+    /// device can use to access FIDL protocols from its parent.
+    incoming_dir client_end:<fuchsia.io.Directory, optional>;
 };
 
 type CompositeDevice = struct {

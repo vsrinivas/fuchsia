@@ -25,6 +25,7 @@ class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_index::Driv
     std::optional<CompositeDriverInfo> composite;
     std::optional<fuchsia_driver_index::MatchedDeviceGroupInfo> device_group;
     bool is_fallback = false;
+    bool colocate = false;
   };
 
   using MatchCallback =
@@ -125,6 +126,7 @@ class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_index::Driv
         .driver_url(fidl::ObjectView<fidl::StringView>(arena, arena, match.url))
         .url(fidl::ObjectView<fidl::StringView>(arena, arena, match.url))
         .is_fallback(match.is_fallback)
+        .colocate(match.colocate)
         .Build();
   }
 
