@@ -8,8 +8,8 @@ include /src/developer/ffx/plugins/package/OWNERS
 include /src/developer/fuchsia-criterion/OWNERS
 include /src/sys/fuzzing/OWNERS
 include /src/sys/pkg/OWNERS
-include /third_party/rust_crates/vendor/criterion/OWNERS
-include /third_party/rust_crates/vendor/notify/OWNERS
+include /third_party/rust_crates/vendor/criterion-0.2.11/OWNERS
+include /third_party/rust_crates/vendor/notify-5.0.0-pre.10/OWNERS
 include /tools/auto_owners/OWNERS
 include /tools/cargo-gnaw/OWNERS
 include /tools/fvdl/OWNERS

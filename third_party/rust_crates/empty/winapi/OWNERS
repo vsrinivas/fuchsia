@@ -3,4 +3,4 @@
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
 include /third_party/rust_crates/empty/ntapi/OWNERS
-include /third_party/rust_crates/vendor/schannel/OWNERS
+include /third_party/rust_crates/vendor/schannel-0.1.19/OWNERS

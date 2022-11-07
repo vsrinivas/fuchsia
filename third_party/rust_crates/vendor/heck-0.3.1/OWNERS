@@ -7,7 +7,7 @@ include /src/devices/lib/OWNERS
 include /src/devices/tools/fidlgen_banjo/OWNERS
 include /src/fonts/OWNERS
 include /src/lib/fidl_table_validation/OWNERS
-include /third_party/rust_crates/vendor/heck/OWNERS
-include /third_party/rust_crates/vendor/structopt-derive/OWNERS
+include /third_party/rust_crates/vendor/heck-0.4.0/OWNERS
+include /third_party/rust_crates/vendor/structopt-derive-0.2.14/OWNERS
 include /tools/create/OWNERS
 include /tools/fidl/fidldoc/OWNERS

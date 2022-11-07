@@ -6,7 +6,7 @@
           {
             "bug": "https://fxbug.dev/21891",
             "projects": [
-              "third_party/rust_crates/vendor/notify"
+              "third_party/rust_crates/vendor/notify-5.0.0-pre.10"
             ]
           }
         ],

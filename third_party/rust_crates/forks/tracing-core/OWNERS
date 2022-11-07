@@ -3,6 +3,6 @@
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
 include /src/lib/diagnostics/OWNERS
-include /third_party/rust_crates/vendor/tracing/OWNERS
-include /third_party/rust_crates/vendor/tracing-log/OWNERS
-include /third_party/rust_crates/vendor/tracing-subscriber/OWNERS
+include /third_party/rust_crates/vendor/tracing-0.1.34/OWNERS
+include /third_party/rust_crates/vendor/tracing-log-0.1.2/OWNERS
+include /third_party/rust_crates/vendor/tracing-subscriber-0.3.1/OWNERS

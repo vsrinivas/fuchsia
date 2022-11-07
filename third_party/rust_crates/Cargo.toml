@@ -462,7 +462,7 @@ rustflags = [ "--cfg=fn_like_proc_macro" ]
 rustflags = [ "--cfg=relaxed_coherence" ]
 
 [gn.package.getrandom."0.2.2"]
-env_vars = [ "CARGO_PKG_NAME=getrandom", "CARGO_PKG_VERSION=0.2.2", "CARGO_MANIFEST_DIR=../../third_party/rust_crates/vendor/getrandom" ]
+env_vars = [ "CARGO_PKG_NAME=getrandom", "CARGO_PKG_VERSION=0.2.2", "CARGO_MANIFEST_DIR=../../third_party/rust_crates/vendor/getrandom-0.2.2" ]
 rustflags = []
 
 [gn.package.httparse."1.7.1"]
@@ -472,7 +472,7 @@ rustflags = ["--cfg=httparse_simd"]
 rustflags = ["--cfg=has_std"]
 
 [gn.package.js-sys."0.3.40"]
-env_vars = [ "CARGO_PKG_NAME=js-sys", "CARGO_PKG_VERSION=0.3.40", "CARGO_MANIFEST_DIR=../../third_party/rust_crates/vendor/js-sys" ]
+env_vars = [ "CARGO_PKG_NAME=js-sys", "CARGO_PKG_VERSION=0.3.40", "CARGO_MANIFEST_DIR=../../third_party/rust_crates/vendor/js-sys-0.3.40" ]
 
 [gn.package.libc."0.2.116"]
 rustflags = [
@@ -669,7 +669,7 @@ configs = [ "//build/config/fuchsia:libunwind" ]
 
 [gn.package.handlebars."4.3.5"]
 # pest relies on this being set to find the grammar file
-env_vars = [ "CARGO_MANIFEST_DIR=../../third_party/rust_crates/vendor/handlebars" ]
+env_vars = [ "CARGO_MANIFEST_DIR=../../third_party/rust_crates/vendor/handlebars-4.3.5" ]
 
 [gn.package.rust_icu_uchar."2.0.2"]
 configs = [ "//src/lib/icu:version" ]

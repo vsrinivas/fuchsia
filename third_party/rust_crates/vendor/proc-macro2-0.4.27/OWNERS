@@ -20,10 +20,10 @@ include /src/storage/OWNERS
 include /src/sys/lib/cm_rust/OWNERS
 include /src/sys/test_runners/OWNERS
 include /src/sys/time/OWNERS
-include /third_party/rust_crates/vendor/deepsize_derive/OWNERS
-include /third_party/rust_crates/vendor/proptest-derive/OWNERS
+include /third_party/rust_crates/vendor/deepsize_derive-0.1.1/OWNERS
+include /third_party/rust_crates/vendor/proptest-derive-0.3.0/OWNERS
 include /third_party/rust_crates/vendor/quote-0.6.11/OWNERS
-include /third_party/rust_crates/vendor/structopt-derive/OWNERS
+include /third_party/rust_crates/vendor/structopt-derive-0.2.14/OWNERS
 include /third_party/rust_crates/vendor/syn-0.15.26/OWNERS
 include /tools/lib/OWNERS
 include /tools/lib/cml/OWNERS

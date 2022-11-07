@@ -2,5 +2,5 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
-include /third_party/rust_crates/vendor/publicsuffix/OWNERS
+include /third_party/rust_crates/vendor/publicsuffix-1.5.2/OWNERS
 include /third_party/rust_crates/vendor/url-1.7.2/OWNERS

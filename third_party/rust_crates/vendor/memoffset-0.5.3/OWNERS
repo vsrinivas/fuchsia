@@ -4,4 +4,4 @@
 
 include /src/proc/OWNERS
 include /third_party/rust_crates/vendor/crossbeam-epoch-0.8.2/OWNERS
-include /third_party/rust_crates/vendor/memoffset/OWNERS
+include /third_party/rust_crates/vendor/memoffset-0.6.3/OWNERS

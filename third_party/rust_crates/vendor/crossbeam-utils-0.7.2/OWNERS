@@ -6,4 +6,4 @@ include /src/graphics/lib/compute/OWNERS
 include /third_party/rust_crates/vendor/crossbeam-deque-0.7.4/OWNERS
 include /third_party/rust_crates/vendor/crossbeam-epoch-0.8.2/OWNERS
 include /third_party/rust_crates/vendor/crossbeam-queue-0.2.1/OWNERS
-include /third_party/rust_crates/vendor/rayon-core/OWNERS
+include /third_party/rust_crates/vendor/rayon-core-1.7.0/OWNERS

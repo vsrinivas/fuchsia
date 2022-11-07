@@ -4,6 +4,6 @@
 
 include /src/developer/fuchsia-criterion/OWNERS
 include /src/graphics/display/bin/display-factory-test/OWNERS
-include /third_party/rust_crates/vendor/criterion/OWNERS
-include /third_party/rust_crates/vendor/prettytable-rs/OWNERS
+include /third_party/rust_crates/vendor/criterion-0.2.11/OWNERS
+include /third_party/rust_crates/vendor/prettytable-rs-0.8.0/OWNERS
 include /tools/zedmon/OWNERS

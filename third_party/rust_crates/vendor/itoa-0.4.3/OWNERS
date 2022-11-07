@@ -4,7 +4,7 @@
 
 include /src/sys/pkg/OWNERS
 include /third_party/rust_crates/ask2patch/csv/OWNERS
-include /third_party/rust_crates/vendor/http/OWNERS
-include /third_party/rust_crates/vendor/itoa/OWNERS
-include /third_party/rust_crates/vendor/serde_json/OWNERS
-include /third_party/rust_crates/vendor/tuf/OWNERS
+include /third_party/rust_crates/vendor/http-0.2.4/OWNERS
+include /third_party/rust_crates/vendor/itoa-1.0.2/OWNERS
+include /third_party/rust_crates/vendor/serde_json-1.0.59/OWNERS
+include /third_party/rust_crates/vendor/tuf-0.3.0-beta11/OWNERS

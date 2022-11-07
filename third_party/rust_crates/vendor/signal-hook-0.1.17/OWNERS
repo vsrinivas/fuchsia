@@ -10,5 +10,5 @@ include /src/developer/ffx/plugins/session/OWNERS
 include /src/developer/ffx/plugins/starnix/OWNERS
 include /src/developer/ffx/plugins/test/OWNERS
 include /src/devices/lib/OWNERS
-include /third_party/rust_crates/vendor/crossterm/OWNERS
+include /third_party/rust_crates/vendor/crossterm-0.19.0/OWNERS
 include /tools/fvdl/OWNERS

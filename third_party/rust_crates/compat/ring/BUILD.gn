@@ -7,7 +7,7 @@
 # More advanced usages of might require more sophisticated
 # build rules
 
-ring_crate = "../../vendor/ring"
+ring_crate = "../../vendor/ring-0.16.12"
 
 config("ring-config") {
   cflags = [ "-fPIC" ]

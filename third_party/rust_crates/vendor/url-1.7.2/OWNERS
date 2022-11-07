@@ -27,7 +27,7 @@ include /src/sys/lib/routing/OWNERS
 include /src/sys/pkg/OWNERS
 include /src/sys/pkg/lib/omaha-client/OWNERS
 include /src/sys/test_runners/starnix/OWNERS
-include /third_party/rust_crates/vendor/publicsuffix/OWNERS
-include /third_party/rust_crates/vendor/valico/OWNERS
+include /third_party/rust_crates/vendor/publicsuffix-1.5.2/OWNERS
+include /third_party/rust_crates/vendor/valico-2.4.2/OWNERS
 include /tools/doc_checker/OWNERS
 include /tools/lib/cm_fidl_analyzer/OWNERS
