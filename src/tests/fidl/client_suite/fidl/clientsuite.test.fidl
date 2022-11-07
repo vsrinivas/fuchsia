@@ -197,7 +197,7 @@ closed protocol Runner {
         target client_end:OpenTarget;
     }) -> (NonEmptyResultWithErrorClassification);
 
-    // Tell the client to receive an event on the given ajar target and report
+    // Tell the client to receive an event on the given closed target and report
     // what event was received.
     //
     // The client under test should continue handling events on the target until
@@ -323,12 +323,18 @@ closed protocol OpenTargetEventReporter {
 };
 
 type Test = flexible enum : uint32 {
+    // ////////////////////////////////////////////////////////////////////////
     // basic_tests.cc
+    // ////////////////////////////////////////////////////////////////////////
+
     SETUP = 1;
     TWO_WAY_NO_PAYLOAD = 2;
     GRACEFUL_FAILURE_DURING_CALL_AFTER_PEER_CLOSE = 3;
 
+    // ////////////////////////////////////////////////////////////////////////
     // unknown_interactions_tests.cc
+    // ////////////////////////////////////////////////////////////////////////
+
     ONE_WAY_STRICT_SEND = 4;
     ONE_WAY_FLEXIBLE_SEND = 5;
 

@@ -79,6 +79,11 @@ void ServerTest::SetUp() {
           fidl_serversuite::AnyTarget::WithOpenTarget(std::move(target_endpoints->server));
       break;
     }
+    case fidl_serversuite::AnyTarget::Tag::kLargeMessageTarget: {
+      // TODO(fxbug.dev/114261): Test decoding large messages.
+      // TODO(fxbug.dev/114263): Test encoding large messages.
+      ZX_PANIC("Large messages not yet supported in the test harness");
+    }
   }
   auto start_result = runner_->Start(fidl_serversuite::RunnerStartRequest(
       std::move(reporter_endpoints->client), std::move(target_server.value())));

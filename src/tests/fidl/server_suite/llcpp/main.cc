@@ -319,6 +319,11 @@ class RunnerServer : public fidl::WireServer<fidl_serversuite::Runner> {
         completer.Reply();
         break;
       }
+      case ::fidl_serversuite::wire::AnyTarget::Tag::kLargeMessageTarget: {
+        // TODO(fxbug.dev/114261): Test decoding large messages.
+        // TODO(fxbug.dev/114263): Test encoding large messages.
+        ZX_PANIC("Large messages not yet supported in C++ wire bindings");
+      }
     }
   }
 

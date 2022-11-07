@@ -246,6 +246,11 @@ class RunnerImpl extends Runner {
       var binding = OpenTargetBinding();
       var server = OpenTargetImpl(reporter: reporter);
       binding.bind(server, target.openTarget);
+    } else if (target.largeMessageTarget != null) {
+      // TODO(fxbug.dev/114261): Test decoding large messages.
+      // TODO(fxbug.dev/114263): Test encoding large messages.
+      throw ArgumentError(
+          "Unimplemented AnyTarget variant: LargeMessageTarget");
     } else {
       throw ArgumentError("Unknown AnyTarget variant: ${target.$ordinal}");
     }

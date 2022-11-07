@@ -279,6 +279,10 @@ class RunnerServer : public fidl::serversuite::Runner {
 
       open_target_binding_->Bind(std::move(target.open_target()), dispatcher_);
       callback();
+    } else if (target.is_large_message_target()) {
+      // TODO(fxbug.dev/114261): Test decoding large messages.
+      // TODO(fxbug.dev/114263): Test encoding large messages.
+      ZX_PANIC("Large messages not yet supported in HLCPP bindings");
     } else {
       ZX_PANIC("Unrecognized target type.");
     }

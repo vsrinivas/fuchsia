@@ -270,6 +270,10 @@ async fn run_runner_server(stream: RunnerRequestStream) -> Result<(), Error> {
                                 .await
                                 .unwrap_or_else(|e| println!("open target server failed {:?}", e));
                         }
+                        AnyTarget::LargeMessageTarget(_) => {
+                            // TODO(fxbug.dev/114259): Test Rust large message implementation.
+                            panic!("Rust tests for large messages not yet implemented");
+                        }
                     }
                 }
                 RunnerRequest::CheckAlive { responder } => {

@@ -5,7 +5,13 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fidl.serversuite") {
-  sources = [ "serversuite.test.fidl" ]
+  sources = [
+    "largemessages.test.fidl",
+    "serversuite.test.fidl",
+  ]
   public_deps = [ "//zircon/vdso/zx" ]
-  experimental_flags = [ "unknown_interactions" ]
+  experimental_flags = [
+    "allow_overflowing",
+    "unknown_interactions",
+  ]
 }

@@ -210,6 +210,11 @@ func (*runnerImpl) Start(
 	reporter serversuite.ReporterWithCtxInterface,
 	target serversuite.AnyTarget) error {
 
+	if target.Which() == serversuite.AnyTargetLargeMessageTarget {
+		// TODO(fxbug.dev/114266): Test that go properly reports large messages when
+		// it encounters them.
+		return errors.New("Go does not support large messages")
+	}
 	if target.Which() != serversuite.AnyTargetClosedTarget {
 		return errors.New("Go only supports closed protocols")
 	}

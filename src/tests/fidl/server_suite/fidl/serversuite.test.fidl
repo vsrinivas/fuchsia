@@ -34,6 +34,7 @@ type AnyTarget = strict resource union {
     1: closed_target server_end:ClosedTarget;
     2: ajar_target server_end:AjarTarget;
     3: open_target server_end:OpenTarget;
+    4: large_message_target server_end:LargeMessageTarget;
 };
 
 // Empty type used for valid but empty union variants.
@@ -181,6 +182,44 @@ open protocol OpenTarget {
     }) error int32;
 };
 
+// The Target is the server under test. This target is used for tests which specifically involve
+// FIDL's ability to send overly large (>64KiB) messages using a VMO, rather than the traditional
+// channel transport.
+open protocol LargeMessageTarget {
+    strict DecodeBoundedKnownToBeSmall(BoundedKnownToBeSmall);
+    strict DecodeBoundedMaybeLarge(BoundedMaybeLarge);
+
+    // When sending a "large" message, the harness will need to create an unknown union variant with
+    // a vector that is one byte bigger than the known variant.
+    strict DecodeSemiBoundedBelievedToBeSmall(SemiBoundedBelievedToBeSmall);
+    strict DecodeSemiBoundedMaybeLarge(SemiBoundedMaybeLarge);
+    strict DecodeUnboundedMaybeLargeValue(UnboundedMaybeLargeValue);
+    strict DecodeUnboundedMaybeLargeResource(UnboundedMaybeLargeResource);
+
+    // All replies sent back for this method must be small messages.
+    strict EncodeBoundedKnownToBeSmall() -> (BoundedKnownToBeSmall);
+    strict EncodeBoundedMaybeLarge(struct {
+        want_large_message bool;
+    }) -> (BoundedMaybeLarge);
+
+    // All replies sent back for this method must be small messages, since it is impossible to
+    // request an encoding of an unknown variant.
+    strict EncodeSemiBoundedBelievedToBeSmall() -> (SemiBoundedBelievedToBeSmall);
+    strict EncodeSemiBoundedMaybeLarge(struct {
+        want_large_message bool;
+    }) -> (SemiBoundedMaybeLarge);
+    strict EncodeUnboundedMaybeLargeValue(struct {
+        want_large_message bool;
+    }) -> (UnboundedMaybeLargeValue);
+    strict EncodeUnboundedMaybeLargeResource(struct {
+        want_message strict enum {
+            SMALL_MESSAGE_64_HANDLES = 1;
+            LARGE_MESSAGE_63_HANDLES = 2;
+            LARGE_MESSAGE_64_HANDLES = 3;
+        };
+    }) -> (UnboundedMaybeLargeResource);
+};
+
 // Identifies which type of unknown method was received in the unknown
 // interaction handler.
 type UnknownMethodType = strict enum {
@@ -209,7 +248,10 @@ closed protocol Reporter {
 };
 
 type Test = flexible enum : uint32 {
+    // ////////////////////////////////////////////////////////////////////////
     // basic_tests.cc
+    // ////////////////////////////////////////////////////////////////////////
+
     SETUP = 1;
     ONE_WAY_NO_PAYLOAD = 2;
     TWO_WAY_NO_PAYLOAD = 3;
@@ -219,7 +261,10 @@ type Test = flexible enum : uint32 {
     TWO_WAY_TABLE_PAYLOAD = 7;
     TWO_WAY_UNION_PAYLOAD = 8;
 
+    // ////////////////////////////////////////////////////////////////////////
     // message_header_tests.cc
+    // ////////////////////////////////////////////////////////////////////////
+
     ONE_WAY_WITH_NON_ZERO_TXID = 9;
     TWO_WAY_NO_PAYLOAD_WITH_ZERO_TXID = 10;
     UNKNOWN_ORDINAL_CAUSES_CLOSE = 11;
@@ -228,10 +273,16 @@ type Test = flexible enum : uint32 {
     IGNORES_UNRECOGNIZED_AT_REST_FLAGS = 13;
     IGNORES_UNRECOGNIZED_DYNAMIC_FLAGS = 14;
 
+    // ////////////////////////////////////////////////////////////////////////
     // coding_tests.cc
+    // ////////////////////////////////////////////////////////////////////////
+
     BAD_PAYLOAD_ENCODING = 15;
 
+    // ////////////////////////////////////////////////////////////////////////
     // handle_rights_tests.cc
+    // ////////////////////////////////////////////////////////////////////////
+
     CLIENT_SENDS_TOO_FEW_HANDLES = 16;
     CLIENT_SENDS_WRONG_HANDLE_TYPE = 17;
     CLIENT_SENDS_TOO_MANY_RIGHTS = 18;
@@ -241,11 +292,17 @@ type Test = flexible enum : uint32 {
     SERVER_SENDS_TOO_MANY_RIGHTS = 22;
     SERVER_SENDS_TOO_FEW_RIGHTS = 23;
 
+    // ////////////////////////////////////////////////////////////////////////
     // epitaph_tests.cc
+    // ////////////////////////////////////////////////////////////////////////
+
     SERVER_SENDS_EPITAPH = 24;
     SERVER_RECEIVES_EPITAPH_INVALID = 25;
 
+    // ////////////////////////////////////////////////////////////////////////
     // limit_tests.cc
+    // ////////////////////////////////////////////////////////////////////////
+
     REQUEST_MATCHES_BYTE_LIMIT = 26;
     REQUEST_MATCHES_HANDLE_LIMIT = 27;
     RESPONSE_MATCHES_BYTE_LIMIT = 28;
@@ -253,7 +310,10 @@ type Test = flexible enum : uint32 {
     RESPONSE_EXCEEDS_BYTE_LIMIT = 30;
     RESPONSE_EXCEEDS_HANDLE_LIMIT = 31;
 
+    // ////////////////////////////////////////////////////////////////////////
     // unknown_interactions_tests.cc
+    // ////////////////////////////////////////////////////////////////////////
+
     SEND_STRICT_EVENT = 32;
     SEND_FLEXIBLE_EVENT = 33;
 
@@ -291,5 +351,131 @@ type Test = flexible enum : uint32 {
     UNKNOWN_STRICT_TWO_WAY_CLOSED_PROTOCOL = 61;
     UNKNOWN_FLEXIBLE_TWO_WAY_CLOSED_PROTOCOL = 62;
 
-    // Next available: 65
+    // //////////////////////////////////////////////////////////////////////////////////
+    // large_message_tests.cc
+    // //////////////////////////////////////////////////////////////////////////////////
+
+    // Call the `DecodeBoundedKnownToBeSmall(...)` method with the largest possible small message.
+    GOOD_DECODE_REQUEST_BOUNDED_KNOWN_SMALL_MESSAGE = 65;
+
+    // Call the `DecodeBoundedMaybeLarge(...)` method with the largest possible small message.
+    GOOD_DECODE_REQUEST_BOUNDED_MAYBE_SMALL_MESSAGE = 66;
+
+    // Call the `DecodeBoundedMaybeLarge(...)` method with the smallest possible large message.
+    GOOD_DECODE_REQUEST_BOUNDED_MAYBE_LARGE_MESSAGE = 67;
+
+    // Call the `DecodeSemiBoundedBelievedToBeSmall(...)` method with the largest possible small
+    // message. It is "unknownable" because a flexible type like the one used here might always be
+    // larger than expected at decode time, due to possible oevolution on the part of the encoder.
+    GOOD_DECODE_REQUEST_SEMI_BOUNDED_UNKNOWABLE_SMALL_MESSAGE = 68;
+
+    // Call the `DecodeSemiBoundedBelievedToBeSmall(...)` method with the smallest possible large
+    // message. To accomplish this, the test harness will need to send an unkonwn variant exactly
+    // identical to the known one, but one byte (plus the requisite padding) larger, thereby pushing
+    // it into large message territory.
+    GOOD_DECODE_REQUEST_SEMI_BOUNDED_UNKNOWABLE_LARGE_MESSAGE = 69;
+
+    // Call the `DecodeSemiBoundedMaybeLarge(...)` method with the smallest possible large message.
+    GOOD_DECODE_REQUEST_SEMI_BOUNDED_MAYBE_SMALL_MESSAGE = 70;
+
+    // Call the `DecodeSemiBoundedMaybeLarge(...)` method with the largest possible small message.
+    GOOD_DECODE_REQUEST_SEMI_BOUNDED_MAYBE_LARGE_MESSAGE = 71;
+
+    // Call the `DecodeUnboundedMaybeLargeValue(...)` method with the largest possible small
+    // message.
+    GOOD_DECODE_REQUEST_UNBOUNDED_SMALL_MESSAGE = 72;
+
+    // Call the `DecodeUnboundedMaybeLargeValue(...)` method with the smallest possible large
+    // message.
+    GOOD_DECODE_REQUEST_UNBOUNDED_LARGE_MESSAGE = 73;
+
+    // Call the `DecodeUnboundedMaybeLargeResource(...)` method with the largest, highest handle
+    // count small message possible.
+    GOOD_DECODE_HANDLE_COUNT_64_SMALL_MESSAGE = 74;
+
+    // Call the `DecodeUnboundedMaybeLargeResource(...)` method with the smallest, highest handle
+    // count large message possible.
+    GOOD_DECODE_HANDLE_COUNT_63_LARGE_MESSAGE = 75;
+
+    // These tests ensure that otherwise well-formed unknown messages of either size are correctly
+    // read by a protocol with large message aware methods. They don't use any of the named methods
+    // on `LargeMessageTarget`, and instead send an unknown ordinal directly over the wire. The test
+    // harness should send the largest possible small message, and the smallest possible large
+    // message, respectively.
+    GOOD_DECODE_UNKNOWN_SMALL_MESSAGE = 76;
+    GOOD_DECODE_UNKNOWN_LARGE_MESSAGE = 77;
+
+    // Call the `EncodeBoundedKnownToBeSmall(...) -> (...)` method with the largest possible small
+    // message.
+    GOOD_ENCODE_EVENT_BOUNDED_KNOWN_SMALL_MESSAGE = 78;
+
+    // Call the `EncodeBoundedMaybeLarge(...) -> (...)` method with the largest possible small
+    // message.
+    GOOD_ENCODE_EVENT_BOUNDED_MAYBE_SMALL_MESSAGE = 79;
+
+    // Call the `EncodeBoundedMaybeLarge(...) -> (...)` method with the smallest possible large
+    // message.
+    GOOD_ENCODE_EVENT_BOUNDED_MAYBE_LARGE_MESSAGE = 80;
+
+    // Call the `EncodeSemiBoundedBelievedToBeSmall(...) -> (...)` method with the largest possible
+    // small message. Even though the method is called "believed to be small", this is only a
+    // "belief" at decode time. At encode time, it is a certainty, because the encode-side code
+    // always knows the boundedness of the type. This means that there is no need for a similar test
+    // for `GOOD_ENCODE_EVENT_SEMI_BOUNDED_KNOWN_LARGE_MESSAGE`, as such a thing is impossible
+    // without encoding unknown data, which is not allowed.
+    GOOD_ENCODE_EVENT_SEMI_BOUNDED_KNOWN_SMALL_MESSAGE = 81;
+
+    // Call the `EncodeSemiBoundedMaybeLarge(...) -> (...)` method with the smallest possible large
+    // message.
+    GOOD_ENCODE_EVENT_SEMI_BOUNDED_MAYBE_SMALL_MESSAGE = 82;
+
+    // Call the `EncodeSemiBoundedMaybeLarge(...) -> (...)` method with the largest possible small
+    // message.
+    GOOD_ENCODE_EVENT_SEMI_BOUNDED_MAYBE_LARGE_MESSAGE = 83;
+
+    // Call `EncodeUnboundedMaybeLargeValue(...) -> (...)` with the largest possible small message.
+    GOOD_ENCODE_EVENT_UNBOUNDED_SMALL_MESSAGE = 84;
+
+    // Call `EncodeUnboundedMaybeLargeValue(...) -> (...)` with the smallest possible large message.
+    GOOD_ENCODE_EVENT_UNBOUNDED_LARGE_MESSAGE = 85;
+
+    // Call `EncodeUnboundedMaybeLargeResource(...) -> (...)` with the largest possible small
+    // message and 63 handles.
+    GOOD_ENCODE_64_HANDLE_SMALL_MESSAGE = 86;
+
+    // Call `EncodeUnboundedMaybeLargeResource(...) -> (...)` with the smallest possible large
+    // message and 64 handles.
+    GOOD_ENCODE_63_HANDLE_LARGE_MESSAGE = 87;
+
+    // All large message related decode errors that can be checked before the decoder attempts to
+    // read the overflow buffer VMO. All tests should be executed using the method
+    // `DecodeUnboundedMaybeLargeResource(...)`.
+    BAD_DECODE_BYTE_OVERFLOW_FLAG_SET_ON_SMALL_MESSAGE = 88;
+    BAD_DECODE_BYTE_OVERFLOW_FLAG_UNSET_ON_LARGE_MESSAGE = 89;
+    BAD_DECODE_LARGE_MESSAGE_INFO_OMITTED = 90;
+    BAD_DECODE_LARGE_MESSAGE_INFO_TOO_SMALL = 91;
+    BAD_DECODE_LARGE_MESSAGE_INFO_TOO_LARGE = 92;
+    BAD_DECODE_LARGE_MESSAGE_INFO_TOP_HALF_UNZEROED = 93;
+    BAD_DECODE_LARGE_MESSAGE_INFO_BYTE_COUNT_IS_ZERO = 94;
+    BAD_DECODE_LARGE_MESSAGE_INFO_BYTE_COUNT_TOO_SMALL = 95;
+    BAD_DECODE_LARGE_MESSAGE_INFO_BYTE_COUNT_NOT_EQUAL_TO_BOUND = 96;
+    BAD_DECODE_NO_HANDLES = 97;
+    BAD_DECODE_TOO_FEW_HANDLES = 98;
+    BAD_DECODE_64_HANDLE_LARGE_MESSAGE = 99;
+
+    // All large message related decode errors that can only be checked after the receiver attempts
+    // to read the last handle on the message as a VMO. All tests should be executed using the
+    // method `DecodeUnboundedMaybeLargeResource(...)`.
+    BAD_DECODE_LAST_HANDLE_NOT_VMO = 100;
+    BAD_DECODE_LAST_HANDLE_INSUFFICIENT_RIGHTS = 101;
+    BAD_DECODE_VMO_TOO_SMALL = 102;
+    BAD_DECODE_VMO_TOO_LARGE = 103;
+
+    // The lone large message encode test (ie, the only way a user can get an error by attempting to
+    // send an otherwise well-formed FIDL type). This test should be exercised by sending the
+    // smallest possible large message and 64 handles over the wire using the
+    // `EncodeUnboundedMaybeLargeResource(...) -> (...)` method.
+    BAD_ENCODE_64_HANDLE_LARGE_MESSAGE = 104;
+
+    // Next available: 105
 };

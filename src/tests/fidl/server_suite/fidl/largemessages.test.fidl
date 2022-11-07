@@ -1,0 +1,99 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This file defines a set of types used for large message testing by both the server_suite and
+// the client_suite.
+library fidl.serversuite;
+
+using zx;
+
+// This message is provably never a large message - any change to its contents constitutes a binary
+// breakage. This means that the receiving side never needs to check for the `byte_overflow` flag.
+//
+//   16      (header)
+//   16      (vector envelope)
+// + 65504   (maximum vector allocation)
+// ---------
+//   65536
+type BoundedKnownToBeSmall = struct {
+    bytes vector<byte>:65504;
+};
+
+// This message should be sent with a size of either 65536 (the largest small message), or 65537
+// bytes (the smallest large message) to validate that the small/large message boundary is at the
+// correct limit.
+//
+//   16      (header)
+//   16      (vector envelope)
+// + 65505   (maximum vector allocation)
+// ---------
+//   65537
+// +     7   (padding)
+// ---------
+//   65544
+type BoundedMaybeLarge = struct {
+    bytes vector<byte>:65505;
+};
+
+// This type is intentionally constructed such that it appears bounded to the receiver, but, due to
+// its flexibility, is may actually be unbounded. This means decoders are always required to check
+// the `byte_overlfow` flag, no matter what they think they know about the type. To test this type
+// as a small message, use the defined union variant and fill it with the maximum number of bytes
+// (65488). To test it as a large message, set the union's contents to an unknown variant (ordinal
+// 2) with 65489 bytes instead.
+//
+//   16      (header)
+//   16      (union envelope)
+//   16      (vector envelope)
+// + 65488   (maximum vector allocation)
+// ---------
+//   65536
+type SemiBoundedBelievedToBeSmall = union {
+    1: bytes vector<byte>:65488;
+};
+
+// This type is intentionally constructed to be unbounded. This means decoders are always required
+// to check the `byte_overlfow` flag, no matter what they think they know about the type. To test
+// this type as a small message, use the defined union variant and fill it with the maximum number
+// of bytes (65488). To test it as a large message, set the union's contents to an unknown variant
+// (ordinal 2) with 65489 bytes instead.
+//
+//   16      (header)
+//   16      (union envelope)
+//   16      (vector envelope)
+// + 65489   (maximum vector allocation)
+// ---------
+//   65537
+// +     7   (padding)
+// ---------
+//   65544
+type SemiBoundedMaybeLarge = union {
+    1: bytes vector<byte>:65489;
+};
+
+// This type can always be large, and there is no way for decoders to assume otherwise. To test this
+// type as a small message, fill the vector `bytes` with 65504 bytes. To test it as a large message,
+// fill the vector with 65505 bytes instead instead.
+type UnboundedMaybeLargeValue = struct {
+    bytes vector<byte>;
+};
+
+// Large messages exhibit some odd behavior in regards to handles: they work fine with 63 handles,
+// but break with 64 handles. Conversely, small messages work fine with any number of handles up to
+// 64. This type let's us test all of these combinations at the limit: small-message-with-64-handles
+// and large-message-with-63-handles should encode/decode successfully, while
+// large-message-with-64-handles should not.
+//
+//   16         (header)
+//   16         (elements vector envelope)
+// + 63(1032)   (first 63 structs, each 1000 + 32 bytes)
+// ------------
+//   65048
+// +   ???      (64th struct's total size, set to 488 or 489 to make the message small or large)
+type UnboundedMaybeLargeResource = resource struct {
+    elements array< resource struct {
+        bytes vector<byte>:1000;
+        handle zx.handle:optional;
+    }, 64>;
+};
