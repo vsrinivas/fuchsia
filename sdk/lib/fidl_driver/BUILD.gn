@@ -32,6 +32,7 @@ sdk_source_set("fidl_driver") {
     "include/lib/fidl_driver/cpp/unknown_interactions.h",
     "include/lib/fidl_driver/cpp/wire_client.h",
     "include/lib/fidl_driver/cpp/wire_messaging.h",
+    "include/lib/fidl_driver/cpp/wire_messaging_declarations.h",
     "include/lib/fidl_driver/cpp/wire_types.h",
   ]
   sources = [ "unknown_interactions.cc" ]
@@ -54,6 +55,8 @@ sdk_source_set("fidl_driver_natural") {
     "include/lib/fidl_driver/cpp/natural_client.h",
     "include/lib/fidl_driver/cpp/natural_messaging.h",
     "include/lib/fidl_driver/cpp/natural_types.h",
+    "include/lib/fidl_driver/cpp/unified_messaging_declarations.h",
+    "include/lib/fidl_driver/cpp/wire_messaging_declarations.h",
   ]
   sources = [ "natural_messaging.cc" ]
   public_configs = [ ":include" ]
