@@ -13,9 +13,9 @@ use {
     fidl_fuchsia_process_lifecycle::{LifecycleRequest, LifecycleRequestStream},
     fs_management::{
         filesystem::{ServingMultiVolumeFilesystem, ServingSingleVolumeFilesystem},
-        format::{detect_disk_format, DiskFormat},
+        format::{detect_disk_format, round_up, DiskFormat},
         partition::{open_partition, PartitionMatcher},
-        Fxfs, Minfs,
+        F2fs, Fxfs, Minfs,
     },
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol_at_path,
@@ -26,7 +26,7 @@ use {
     fuchsia_runtime::HandleType,
     fuchsia_zircon::{self as zx, Duration},
     futures::{channel::mpsc, StreamExt, TryStreamExt},
-    std::sync::Arc,
+    std::{cmp, sync::Arc},
     vfs::service,
 };
 
@@ -96,8 +96,12 @@ async fn write_data_file(
 
     let fvm_path =
         open_partition(fvm_matcher, OPEN_PARTITION_DURATION).await.context("Failed to find FVM")?;
-    let format =
-        if config.data_filesystem_format == "fxfs" { DiskFormat::Fxfs } else { DiskFormat::Minfs };
+    let format = match config.data_filesystem_format.as_ref() {
+        "fxfs" => DiskFormat::Fxfs,
+        "f2fs" => DiskFormat::F2fs,
+        "minfs" => DiskFormat::Minfs,
+        _ => panic!("unsupported data filesystem format type"),
+    };
     let data_partition_names =
         vec![DATA_PARTITION_LABEL.to_string(), LEGACY_DATA_PARTITION_LABEL.to_string()];
 
@@ -165,6 +169,46 @@ async fn write_data_file(
                     .context("Failed to unlock the data volume")?
             };
             Filesystem::ServingMultiVolume(serving_fxfs)
+        }
+        DiskFormat::F2fs => {
+            let mut different_format = false;
+            if detected_format != format {
+                tracing::info!("Data partition is not in expected format; reformatting");
+                let mut target_size = config.data_max_bytes;
+                let (status, volume_manager_info, _volume_info) = volume_proxy
+                    .get_volume_info()
+                    .await
+                    .context("Transport error on get_volum_info")?;
+                zx::Status::ok(status).context("get_volume_info failed")?;
+                let manager = volume_manager_info.ok_or(anyhow!("Expected volume manager info"))?;
+                let slice_size = manager.slice_size;
+                let mut required_size = round_up(constants::DEFAULT_F2FS_MIN_BYTES, slice_size);
+                // f2fs always requires at least a certain size.
+                if inside_zxcrypt {
+                    // Allocate an additional slice for zxcrypt metadata.
+                    required_size += slice_size;
+                }
+                target_size = cmp::max(target_size, required_size);
+                tracing::info!("Resizing data volume, target = {:?} bytes", target_size);
+                let actual_size = resize_volume(&volume_proxy, target_size, inside_zxcrypt).await?;
+                if actual_size < constants::DEFAULT_F2FS_MIN_BYTES {
+                    return Err(anyhow!(
+                        "Only allocated {:?} bytes but needed {:?}",
+                        actual_size,
+                        constants::DEFAULT_F2FS_MIN_BYTES
+                    ));
+                } else if actual_size < target_size {
+                    tracing::info!("Only allocated {:?} bytes", actual_size);
+                }
+                different_format = true;
+            }
+            let mut f2fs = F2fs::from_channel(volume_proxy.into_channel().unwrap().into())
+                .context("Failed to create f2fs")?;
+            if different_format {
+                f2fs.format().await.context("Failed to format f2fs")?;
+            }
+            let serving_f2fs = f2fs.serve().await.context("Failed to serve f2fs")?;
+            Filesystem::Serving(serving_f2fs)
         }
         DiskFormat::Minfs => {
             let mut minfs = Minfs::from_channel(volume_proxy.into_channel().unwrap().into())

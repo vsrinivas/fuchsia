@@ -9,7 +9,9 @@ use {
     device_watcher::recursive_wait_and_open_node,
     fidl::endpoints::Proxy,
     fidl_fuchsia_hardware_block_encrypted::DeviceManagerProxy,
-    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio,
+    fs_management::format::DiskFormat,
+    fuchsia_zircon as zx,
 };
 
 async fn format(zxcrypt: &DeviceManagerProxy) -> Result<(), Error> {
@@ -49,10 +51,11 @@ async fn unseal(zxcrypt: &DeviceManagerProxy) -> Result<UnsealOutcome, Error> {
     last_res
 }
 
-/// Set up zxcrypt on the given device. It attempts to unseal first, and if the unseal fails
-/// because we had the wrong keys, it formats the device and unseals that. This function assumes
-/// the zxcrypt driver is already bound, but it does do the proper waiting for the device to
-/// appear.
+/// Set up zxcrypt on the given device. It attempts to unseal first only if the detected disk
+/// format is DiskFormat::Zxcrypt. If the unseal fails because we had the wrong keys, or the
+/// detected disk format is not DiskFormat::Zxcrypt, it formats the device and unseals that.
+/// This function assumes the zxcrypt driver is already bound, but it does do the proper waiting
+/// for the device to appear.
 pub async fn unseal_or_format(device: &mut dyn Device) -> Result<(), Error> {
     let controller = fuchsia_fs::directory::open_in_namespace(
         device.topological_path(),
@@ -63,9 +66,11 @@ pub async fn unseal_or_format(device: &mut dyn Device) -> Result<(), Error> {
         .context("waiting for zxcrypt device")?;
     let zxcrypt = DeviceManagerProxy::new(zxcrypt.into_channel().unwrap());
 
-    // Try to unseal.
-    if let UnsealOutcome::Unsealed = unseal(&zxcrypt).await.context("unsealing zxcrypt")? {
-        return Ok(());
+    // Try to unseal if the detected disk format is DiskFormat::Zxcrypt
+    if device.content_format().await? == DiskFormat::Zxcrypt {
+        if let UnsealOutcome::Unsealed = unseal(&zxcrypt).await.context("unsealing zxcrypt")? {
+            return Ok(());
+        }
     }
 
     // Unsealing didn't work. Format the device then unseal that.

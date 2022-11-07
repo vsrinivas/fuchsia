@@ -136,6 +136,13 @@ fshost_component_and_config("test-fshost-rust-minfs") {
   options.use_rust_port = true
 }
 
+fshost_component_and_config("test-fshost-rust-f2fs") {
+  testonly = true
+  options = default_integration_test_options
+  options.data_filesystem_format = "f2fs"
+  options.use_rust_port = true
+}
+
 fshost_component_and_config("test-fshost-rust-fxfs") {
   testonly = true
   options = default_integration_test_options
@@ -175,6 +182,22 @@ fshost_integration_test("fshost-cpp-integration-test-minfs") {
   ]
 }
 
+fshost_integration_test("fshost-cpp-integration-test-f2fs") {
+  fshost_target = "//src/storage/fshost/testing:test-fshost-f2fs"
+  source_root = "tests/fshost_integration_test.rs"
+  sources = [
+    "tests/fshost_integration_test.rs",
+    "tests/write_data_file.rs",
+  ]
+  data_filesystem_format = "f2fs"
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_rust",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
 fshost_integration_test("fshost-rust-integration-test-minfs") {
   fshost_target = ":test-fshost-rust-minfs"
   source_root = "tests/fshost_integration_test.rs"
@@ -183,6 +206,22 @@ fshost_integration_test("fshost-rust-integration-test-minfs") {
     "tests/write_data_file.rs",
   ]
   data_filesystem_format = "minfs"
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_rust",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
+fshost_integration_test("fshost-rust-integration-test-f2fs") {
+  fshost_target = ":test-fshost-rust-f2fs"
+  source_root = "tests/fshost_integration_test.rs"
+  sources = [
+    "tests/fshost_integration_test.rs",
+    "tests/write_data_file.rs",
+  ]
+  data_filesystem_format = "f2fs"
   deps = [
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_rust",
     "//src/lib/fuchsia-async",
@@ -208,6 +247,7 @@ fshost_integration_test("fshost-rust-integration-test-fxfs") {
 }
 
 # TODO(fxbug.dev/87511): Port this test to fshost-rust.
+# TODO(fxbug.dev/113970): Get wipe_storage integration tests working for f2fs
 fshost_integration_test(
     "fshost-cpp-wipe-storage-integration-test-fxfs-recovery") {
   fshost_target = "//src/storage/fshost/testing:test-fshost-fxfs"
@@ -246,8 +286,10 @@ fuchsia_test_package("fshost_integration_tests") {
   test_components = [
     ":fshost-cpp-integration-test-fxfs",
     ":fshost-cpp-integration-test-minfs",
+    ":fshost-cpp-integration-test-f2fs",
     ":fshost-rust-integration-test-fxfs",
     ":fshost-rust-integration-test-minfs",
+    ":fshost-rust-integration-test-f2fs",
     ":fshost-cpp-wipe-storage-integration-test-fxfs-recovery",
     ":fshost-cpp-wipe-storage-integration-test-minfs-recovery",
   ]

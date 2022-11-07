@@ -33,7 +33,10 @@ const VFS_TYPE_MEMFS: u32 = 0x3e694d21;
 const VFS_TYPE_FXFS: u32 = 0x73667866;
 const VFS_TYPE_F2FS: u32 = 0xfe694d21;
 const BLOBFS_MAX_BYTES: u64 = 8765432;
-const DATA_MAX_BYTES: u64 = 7654321;
+// DATA_MAX_BYTES must be greater than DEFAULT_F2FS_MIN_BYTES
+// (defined in device/constants.rs) to ensure that when f2fs is
+// the data filesystem format, we don't run out of space
+const DATA_MAX_BYTES: u64 = 109876543;
 
 fn data_fs_type() -> u32 {
     match DATA_FILESYSTEM_FORMAT {

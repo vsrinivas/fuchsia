@@ -37,6 +37,12 @@ fshost_component_and_config("test-fshost") {
   options.data_filesystem_format = "minfs"
 }
 
+fshost_component_and_config("test-fshost-f2fs") {
+  testonly = true
+  options = default_integration_test_options
+  options.data_filesystem_format = "f2fs"
+}
+
 fshost_component_and_config("test-fshost-fxfs") {
   testonly = true
   options = default_integration_test_options

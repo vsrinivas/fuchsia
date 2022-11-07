@@ -17,7 +17,8 @@ use {
     fidl_fuchsia_io as fio,
     fs_management::{
         filesystem::{ServingMultiVolumeFilesystem, ServingSingleVolumeFilesystem},
-        Blobfs, Fxfs, Minfs,
+        format::{detect_disk_format, DiskFormat},
+        Blobfs, F2fs, Fxfs, Minfs,
     },
     fuchsia_component::client::connect_to_protocol_at_path,
     fuchsia_zircon as zx,
@@ -160,34 +161,32 @@ impl<'a> Environment for FshostEnvironment<'a> {
         if let Err(e) = set_partition_max_size(device, self.config.data_max_bytes).await {
             tracing::warn!("Failed to set max partition size for data: {:?}", e);
         };
-
         let mut filesystem = match self.config.data_filesystem_format.as_ref() {
             "fxfs" => {
+                let detected_format = device.content_format().await?;
                 let mut fs = Fxfs::from_channel(device.proxy()?.into_channel().unwrap().into())?;
-                let mut serving_fs = None;
-                let res = match fs.serve_multi_volume().await {
-                    Ok(fs) => {
-                        serving_fs = Some(fs);
-                        fxfs::unlock_data_volume(serving_fs.as_mut().unwrap(), &self.config).await
-                    }
-                    Err(e) => Err(e),
+                let mut reformatted = false;
+                if detected_format != DiskFormat::Fxfs {
+                    tracing::info!(
+                        "reformatting fxfs: detected different format: {:?}",
+                        detected_format
+                    );
+                    fs.format().await?;
+                    reformatted = true;
+                } else if !fs.fsck().await.is_ok() && self.config.format_data_on_corruption {
+                    tracing::info!("reformatting fxfs: fsck failed, format_on_corruption enabled");
+                    fs.format().await?;
+                    reformatted = true;
+                }
+                let mut serving_fs = fs.serve_multi_volume().await?;
+                let (volume_name, _) = if reformatted {
+                    fxfs::init_data_volume(&mut serving_fs, &self.config).await?
+                } else {
+                    fxfs::unlock_data_volume(&mut serving_fs, &self.config).await?
                 };
-                let (volume_name, _) = match res {
-                    Ok(v) => v,
-                    Err(e) => {
-                        tracing::info!("Failed to mount data partition, reformatting: {}", e);
-                        // TODO(fxbug.dev/102666): We need to ensure the hardware key source is
-                        // also wiped.
-                        let _ = serving_fs.take();
-                        fs.format().await?;
-                        serving_fs = Some(fs.serve_multi_volume().await?);
-                        fxfs::init_data_volume(serving_fs.as_mut().unwrap(), &self.config).await?
-                    }
-                };
-                Filesystem::ServingMultiVolume(serving_fs.unwrap(), volume_name)
+                Filesystem::ServingMultiVolume(serving_fs, volume_name)
             }
-            // Default to minfs
-            _ => {
+            "f2fs" => {
                 let proxy = if self.config.no_zxcrypt || self.config.fvm_ramdisk {
                     device.proxy()?
                 } else {
@@ -201,16 +200,44 @@ impl<'a> Environment for FshostEnvironment<'a> {
                     // immediate children.
                     device.get_child("/zxcrypt/unsealed/block").await?.proxy()?
                 };
+                let detected_format = detect_disk_format(&proxy).await;
+                let mut fs = F2fs::from_channel(proxy.into_channel().unwrap().into())?;
+                if detected_format != DiskFormat::F2fs {
+                    tracing::info!(
+                        "reformatting f2fs: detected different format: {:?}",
+                        detected_format
+                    );
+                    fs.format().await?;
+                } else if !fs.fsck().await.is_ok() && self.config.format_data_on_corruption {
+                    tracing::info!("reformatting f2fs: fsck failed, format_on_corruption enabled");
+                    fs.format().await?;
+                }
+                Filesystem::Serving(fs.serve().await?)
+            }
+            // Default to minfs
+            _ => {
+                let proxy = if self.config.no_zxcrypt || self.config.fvm_ramdisk {
+                    device.proxy()?
+                } else {
+                    self.attach_driver(device, "zxcrypt.so").await?;
+                    zxcrypt::unseal_or_format(device).await?;
 
+                    // Same reasoning as f2fs
+                    device.get_child("/zxcrypt/unsealed/block").await?.proxy()?
+                };
+                let detected_format = detect_disk_format(&proxy).await;
                 let mut fs = Minfs::from_channel(proxy.into_channel().unwrap().into())?;
-                Filesystem::Serving(match fs.serve().await {
-                    Ok(fs) => fs,
-                    Err(e) => {
-                        tracing::info!("Failed to mount data partition, reformatting: {}", e);
-                        fs.format().await?;
-                        fs.serve().await?
-                    }
-                })
+                if detected_format != DiskFormat::Minfs {
+                    tracing::info!(
+                        "reformatting minfs: detected different format: {:?}",
+                        detected_format
+                    );
+                    fs.format().await?;
+                } else if !fs.fsck().await.is_ok() && self.config.format_data_on_corruption {
+                    tracing::info!("reformatting minfs: fsck failed, format_on_corruption enabled");
+                    fs.format().await?;
+                }
+                Filesystem::Serving(fs.serve().await?)
             }
         };
 

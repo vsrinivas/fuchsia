@@ -20,7 +20,13 @@ use {
     uuid::Uuid,
 };
 
-pub const DEFAULT_DISK_SIZE: u64 = 234881024;
+// We set the default disk size to be twice the value of
+// DEFAULT_F2FS_MIN_BYTES (defined in device/constants.rs)
+// to ensure that when f2fs is the data filesystem format,
+// we don't run out of space. Similarly, the size of the data
+// volume should be > DEFAULT_F2FS_MIN_BYTES but < disk size
+pub const DEFAULT_DISK_SIZE: u64 = 200 * 1024 * 1024;
+pub const DEFAULT_DATA_VOLUME_SIZE: u64 = 101 * 1024 * 1024;
 
 // We use a static key-bag so that the crypt instance can be shared across test executions safely.
 // These keys match the DATA_KEY and METADATA_KEY respectively, when wrapped with the "zxcrypt"
@@ -142,6 +148,7 @@ impl Disk {
 
 pub struct DiskBuilder {
     size: u64,
+    data_volume_size: u64,
     format: Option<&'static str>,
     legacy_crypto_format: bool,
     zxcrypt: bool,
@@ -151,6 +158,7 @@ impl DiskBuilder {
     pub fn new() -> DiskBuilder {
         DiskBuilder {
             size: DEFAULT_DISK_SIZE,
+            data_volume_size: DEFAULT_DATA_VOLUME_SIZE,
             format: None,
             legacy_crypto_format: false,
             zxcrypt: true,
@@ -159,6 +167,11 @@ impl DiskBuilder {
 
     pub fn size(&mut self, size: u64) -> &mut Self {
         self.size = size;
+        self
+    }
+
+    pub fn data_volume_size(&mut self, data_volume_size: u64) -> &mut Self {
+        self.data_volume_size = data_volume_size;
         self
     }
 
@@ -214,13 +227,12 @@ impl DiskBuilder {
             .expect("recursive_wait_and_open_node failed");
         let mut blobfs = Blobfs::new(&blobfs_path).expect("new failed");
         blobfs.format().await.expect("format failed");
-
         create_fvm_volume(
             &volume_manager_proxy,
             "data",
             &DATA_TYPE_GUID,
             Uuid::new_v4().as_bytes(),
-            Some(16 * 1024 * 1024),
+            Some(self.data_volume_size),
             0,
         )
         .await
@@ -230,6 +242,7 @@ impl DiskBuilder {
             match format {
                 "fxfs" => self.init_data_fxfs(ramdisk_path, &dev).await,
                 "minfs" => self.init_data_minfs(ramdisk_path, &dev).await,
+                "f2fs" => self.init_data_f2fs(ramdisk_path, &dev).await,
                 _ => panic!("unsupported data filesystem format type"),
             }
         }
@@ -261,6 +274,46 @@ impl DiskBuilder {
         .expect("from_channel failed");
         minfs.format().await.expect("format failed");
         let fs = minfs.serve().await.expect("serve_single_volume failed");
+        // Create a file called "foo" that tests can test for presence.
+        let (file, server) = create_proxy::<fio::NodeMarker>().unwrap();
+        fs.root()
+            .open(
+                fio::OpenFlags::RIGHT_READABLE
+                    | fio::OpenFlags::RIGHT_WRITABLE
+                    | fio::OpenFlags::CREATE,
+                0,
+                "foo",
+                server,
+            )
+            .expect("open failed");
+        // We must solicit a response since otherwise shutdown below could race and creation of
+        // the file could get dropped.
+        let _: Vec<_> = file.query().await.expect("query failed");
+        fs.shutdown().await.expect("shutdown failed");
+    }
+
+    async fn init_data_f2fs(&self, ramdisk_path: &str, dev: &fio::DirectoryProxy) {
+        let data_path = format!("{}/fvm/data-p-2/block", ramdisk_path);
+        let mut data_device =
+            recursive_wait_and_open_node(&dev, &data_path.strip_prefix("/dev/").unwrap())
+                .await
+                .expect("recursive_wait_and_open_node failed");
+        if self.zxcrypt {
+            let zxcrypt_path = zxcrypt::set_up_insecure_zxcrypt(Path::new(&data_path))
+                .await
+                .expect("failed to set up zxcrypt");
+            let zxcrypt_path = zxcrypt_path.as_os_str().to_str().unwrap();
+            data_device =
+                recursive_wait_and_open_node(dev, zxcrypt_path.strip_prefix("/dev/").unwrap())
+                    .await
+                    .expect("recursive_wait_and_open_node failed");
+        }
+        let mut f2fs = fs_management::F2fs::from_channel(
+            data_device.into_channel().unwrap().into_zx_channel(),
+        )
+        .expect("from_channel failed");
+        f2fs.format().await.expect("format failed");
+        let fs = f2fs.serve().await.expect("serve_single_volume failed");
         // Create a file called "foo" that tests can test for presence.
         let (file, server) = create_proxy::<fio::NodeMarker>().unwrap();
         fs.root()
