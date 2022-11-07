@@ -117,12 +117,30 @@ impl Executor {
 
     fn run_singlethreaded(&self) {
         let (tx, rx) = oneshot::channel();
-        *self.quit_tx.lock() = Some(tx);
+
+        // We make sure the quit message channel is `None` before replacing with
+        // the new channel. This ensures that even if it panics, the executor
+        // can still be successfully quit afterwards.
+        let mut quit_tx = self.quit_tx.lock();
+        if quit_tx.is_none() {
+            *quit_tx = Some(tx);
+            drop(quit_tx);
+        } else {
+            // `parking_lot::Mutex` doesn't poison on panic, but dropping the
+            // guard before panicking is good practice in case we migrate away
+            // from it in the future.
+            drop(quit_tx);
+            panic!("run_singlethreaded called but the executor is already running");
+        }
+
         self.executor.lock().run_singlethreaded(async move { rx.await }).unwrap();
     }
 
     fn quit(&self) {
-        self.quit_tx.lock().take().unwrap().send(()).unwrap();
+        // These operations are separate to avoid poisoning the quit message
+        // channel if the executor is not running.
+        let quit_tx = self.quit_tx.lock().take();
+        quit_tx.unwrap().send(()).unwrap();
     }
 
     #[cfg(target_os = "fuchsia")]
@@ -244,19 +262,63 @@ pub extern "C" fn fasync_executor_create(cb_executor: *mut std::ffi::c_void) -> 
     Box::into_raw(Executor::new(cb_executor))
 }
 
-#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99059)
+/// Runs the given executor in a single-threaded fashion.
+///
+/// This will block the calling thread until the executor is quit with
+/// [`fasync_executor_quit`] or destroyed with [`fasync_executor_destroy`]. Note
+/// that after calling this function, `executor` may be a dangling pointer.
+///
+/// # Panics
+///
+/// Panics if the given executor is already running, for example if another
+/// thread is already calling this function.
+///
+/// # Safety
+///
+/// `executor` must be non-null, properly aligned, and point to an initialized
+/// [`Executor`]. To guarantee these properties, `executor` should be a pointer
+/// returned from [`fasync_executor_create`] that has not yet been passed to
+/// [`fasync_executor_destroy`].
 #[no_mangle]
 pub unsafe extern "C" fn fasync_executor_run_singlethreaded(executor: *mut Executor) {
     EPtr(executor).as_ref().run_singlethreaded()
 }
 
-#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99059)
+/// Signals the given executor to shut down.
+///
+/// This function does not wait for the executor to finish shutting down. After
+/// calling this function, running tasks may continue to be processed until the
+/// executor processes the shutdown signal. Once the executor shuts down,
+/// [`fasync_executor_run_singlethreaded`] will return.
+///
+/// # Panics
+///
+/// Panics if the given executor is not currently running.
+///
+/// # Safety
+///
+/// `executor` must be non-null, properly aligned, and point to an initialized
+/// [`Executor`]. To guarantee these properties, `executor` should be a pointer
+/// returned from [`fasync_executor_create`] that has not yet been passed to
+/// [`fasync_executor_destroy`].
 #[no_mangle]
 pub unsafe extern "C" fn fasync_executor_quit(executor: *mut Executor) {
     EPtr(executor).as_ref().quit()
 }
 
-#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99059)
+/// Drops the given executor.
+///
+/// This will block the current thread until all tasks that are currently
+/// spawned onto the executor have been dropped. After calling this function,
+/// `executor` no longer points to an initialized [`Executor`].
+///
+/// # Safety
+///
+/// `executor` must be non-null, properly aligned, and point to an initialized
+/// [`Executor`] that is not currently running. To guarantee these properties,
+/// `executor` should be a pointer returned from [`fasync_executor_create`] that
+/// has not yet been passed to [`fasync_executor_destroy`] and is not currently
+/// running in a call to [`fasync_executor_run_singlethreaded`].
 #[no_mangle]
 pub unsafe extern "C" fn fasync_executor_destroy(executor: *mut Executor) {
     drop(Box::from_raw(executor))

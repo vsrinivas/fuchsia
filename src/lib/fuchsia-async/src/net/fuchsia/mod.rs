@@ -118,12 +118,12 @@ impl<T> EventedFd<T>
 where
     T: AsRawFd,
 {
-    #[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99059)
     /// Creates a new EventedFd.
     ///
-    /// For this function to be safe, the underlying file descriptor from `T::as_raw_fd`
-    /// must be a valid file descriptor which remains valid for the duration of `T`'s
-    /// lifetime.
+    /// # Safety
+    ///
+    /// The raw file descriptor returned from `inner.as_raw_fd()` must not be
+    /// closed until the returned `EventedFd` is dropped.
     pub unsafe fn new(inner: T) -> io::Result<Self> {
         let fdio = syscall::fdio_unsafe_fd_to_io(inner.as_raw_fd());
         let signal_receiver =

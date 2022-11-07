@@ -274,9 +274,14 @@ impl Handle {
         self.0 == INVALID_HANDLE
     }
 
-    #[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99059)
     /// If a raw handle is obtained from some other source, this method converts
     /// it into a type-safe owned handle.
+    ///
+    /// # Safety
+    ///
+    /// `hdl` must be a valid raw handle. The returned `Handle` takes ownership
+    /// of the raw handle, so it must not be modified or closed by other means
+    /// after calling `from_raw`.
     pub unsafe fn from_raw(hdl: u32) -> Handle {
         Handle(hdl)
     }
@@ -288,9 +293,14 @@ impl Handle {
         h
     }
 
-    #[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99059)
-    /// Take this handle and return a new raw handle (leaves this handle invalid)
-    pub unsafe fn raw_take(&mut self) -> u32 {
+    /// Invalidates this handle and returns its raw handle.
+    ///
+    /// To avoid leaking resources, the returned raw handle should eventually be
+    /// closed. This can be done by converting it back to a [`Handle`] with
+    /// [`from_raw`] and dropping it.
+    ///
+    /// [`from_raw`]: Handle::from_raw
+    pub fn raw_take(&mut self) -> u32 {
         let h = self.0;
         self.0 = INVALID_HANDLE;
         h
