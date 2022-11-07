@@ -88,25 +88,29 @@ func TestAddImageDeps(t *testing.T) {
 		want           []string
 	}{
 		{
-			name:  "emulator image deps",
-			pave:  false,
-			isEmu: true,
-			want:  []string{"fuchsia.zbi", "images.json", "multiboot.bin", "obj/build/images/fuchsia/fuchsia/fvm.blk"},
+			name:       "emulator image deps",
+			deviceType: "AEMU",
+			pave:       false,
+			isEmu:      true,
+			want:       []string{"fuchsia.zbi", "images.json", "multiboot.bin", "obj/build/images/fuchsia/fuchsia/fvm.blk"},
 		},
 		{
-			name:  "paving image deps",
-			pave:  true,
-			isEmu: false,
-			want:  []string{"fuchsia.zbi", "images.json", "zedboot.zbi"},
+			name:       "paving image deps",
+			deviceType: "NUC",
+			pave:       true,
+			isEmu:      false,
+			want:       []string{"fuchsia.zbi", "images.json", "zedboot.zbi"},
 		},
 		{
-			name:  "netboot image deps",
-			pave:  false,
-			isEmu: false,
-			want:  []string{"images.json", "netboot.zbi", "zedboot.zbi"},
+			name:       "netboot image deps",
+			deviceType: "NUC",
+			pave:       false,
+			isEmu:      false,
+			want:       []string{"images.json", "netboot.zbi", "zedboot.zbi"},
 		},
 		{
 			name:           "emulator env with image overrides",
+			deviceType:     "AEMU",
 			pave:           false,
 			isEmu:          true,
 			imageOverrides: build.ImageOverrides{build.ZbiImage: {Name: "zbi-image"}, build.QemuKernel: {Label: "//:other-qemu-kernel"}},
@@ -114,6 +118,7 @@ func TestAddImageDeps(t *testing.T) {
 		},
 		{
 			name:           "hardware env with image overrides",
+			deviceType:     "NUC",
 			pave:           false,
 			isEmu:          false,
 			imageOverrides: build.ImageOverrides{build.ZbiImage: {Name: "zbi-image"}, build.VbmetaImage: {Name: "vbmeta-image"}},
@@ -125,6 +130,11 @@ func TestAddImageDeps(t *testing.T) {
 			pave:       false,
 			isEmu:      false,
 			want:       []string{"images.json"},
+		},
+		{
+			name:  "host-test only shard image deps",
+			pave:  false,
+			isEmu: false,
 		},
 	}
 	for _, tc := range testCases {

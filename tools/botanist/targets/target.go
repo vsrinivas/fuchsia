@@ -102,6 +102,9 @@ type Target interface {
 	// UseFFX returns whether to enable using ffx.
 	UseFFX() bool
 
+	// UseFFXExperimental returns whether to enable an experimental ffx feature.
+	UseFFXExperimental(int) bool
+
 	// FFXEnv returns the env vars that the ffx instance should run with
 	FFXEnv() []string
 

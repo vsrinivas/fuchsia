@@ -19,6 +19,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/bootserver"
 	"go.fuchsia.dev/fuchsia/tools/botanist"
 	"go.fuchsia.dev/fuchsia/tools/build"
+	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil"
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/serial"
@@ -264,10 +265,25 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 			return err
 		}
 		var imgs []*bootserver.Image
+		var ffxFlashDeps []string
+		if t.UseFFXExperimental(1) && !t.opts.Netboot {
+			ffxFlashDeps, err = ffxutil.GetFlashDeps(wd, "fuchsia")
+			if err != nil {
+				return err
+			}
+		}
 		for _, img := range images {
 			img := img
-			if t.neededForFlashing(&img) {
-				imgs = append(imgs, &img)
+			if len(ffxFlashDeps) > 0 {
+				for _, dep := range ffxFlashDeps {
+					if img.Path == dep {
+						imgs = append(imgs, &img)
+					}
+				}
+			} else {
+				if t.neededForFlashing(&img) {
+					imgs = append(imgs, &img)
+				}
 			}
 		}
 		if err := copyImagesToDir(ctx, wd, true, imgs...); err != nil {
@@ -319,9 +335,7 @@ func getImgByName(imgs []*bootserver.Image, name string) string {
 
 func (t *DeviceTarget) ramBoot(ctx context.Context, images []*bootserver.Image) error {
 	// TODO(fxbug.dev/91352): Remove experimental condition once stable.
-	if t.UseFFXExperimental(2) {
-		t.ffx.List(ctx)
-		t.ffx.TargetWait(ctx)
+	if t.UseFFXExperimental(1) {
 		zbiImageName := "zbi_zircon-a"
 		vbmetaImageName := "vbmeta_zircon-a"
 		if t.imageOverrides != nil {
@@ -369,13 +383,11 @@ func (t *DeviceTarget) flash(ctx context.Context, images []*bootserver.Image) er
 	}
 
 	// TODO(fxbug.dev/91040): Remove experimental condition once stable.
-	if pubkey != "" && t.UseFFXExperimental(2) {
+	if pubkey != "" && t.UseFFXExperimental(1) {
 		flashManifest := getImgByName(images, "manifest_flash-manifest")
 		if flashManifest == "" {
 			return errors.New("flash manifest not found")
 		}
-		t.ffx.List(ctx)
-		t.ffx.TargetWait(ctx)
 		return t.ffx.Flash(ctx, t.config.FastbootSernum, flashManifest, pubkey)
 	}
 

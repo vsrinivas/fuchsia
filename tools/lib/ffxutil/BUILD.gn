@@ -11,6 +11,8 @@ go_library("ffxutil") {
     "emu_test.go",
     "ffx.go",
     "ffx_test.go",
+    "flash.go",
+    "flash_test.go",
     "mock.go",
     "test.go",
   ]

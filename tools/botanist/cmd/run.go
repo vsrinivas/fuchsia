@@ -485,7 +485,10 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t targets.Target, arg
 		constants.ECCableEnvKey:       os.Getenv(constants.ECCableEnvKey),
 		constants.TestbedConfigEnvKey: testbedConfig,
 	}
-	if t.UseFFX() {
+	// TODO(fxbug.dev/113992): testrunner's use of ffx involves calls to a `ssh` host binary
+	// which may not be available on the host. Put behind an experiment level until
+	// the bug is fixed.
+	if t.UseFFXExperimental(2) {
 		subprocessEnv[constants.FFXPathEnvKey] = r.ffxPath
 		subprocessEnv[constants.FFXExperimentLevelEnvKey] = strconv.Itoa(r.ffxExperimentLevel)
 	}

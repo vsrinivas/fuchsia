@@ -214,11 +214,6 @@ func (f *FFXInstance) BootloaderBoot(ctx context.Context, serialNum, zbi, vbmeta
 	return f.Run(ctx, append([]string{"--target", serialNum, "target", "bootloader", "boot"}, args...)...)
 }
 
-// Flash flashes the target.
-func (f *FFXInstance) Flash(ctx context.Context, serialNum, manifest, sshKey string) error {
-	return f.Run(ctx, "--target", serialNum, "target", "flash", "--authorized-keys", sshKey, manifest)
-}
-
 // List lists all available targets.
 func (f *FFXInstance) List(ctx context.Context, args ...string) error {
 	return f.Run(ctx, append([]string{"target", "list"}, args...)...)

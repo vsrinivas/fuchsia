@@ -74,7 +74,7 @@ func TestAddFFXDeps(t *testing.T) {
 				},
 				Tests: []Test{{Test: build.Test{CPU: tc.targetCPU}}},
 			}
-			if err := AddFFXDeps(s, buildDir); err != nil {
+			if err := AddFFXDeps(s, buildDir, false); err != nil {
 				t.Errorf("failed to add ffx deps: %s", err)
 			}
 			sort.Strings(tc.want)
