@@ -50,6 +50,7 @@ use {
                 Transaction, UpdateMutationsKey,
             },
         },
+        range::RangeExt,
         round::round_up,
         serialized_types::{Version, Versioned, VersionedLatest},
     },
@@ -1089,6 +1090,7 @@ impl ObjectStore {
         let allocator = self.allocator();
         let mut result = TrimResult::Done(None);
         let mut deallocated = 0;
+        let block_size = self.block_size;
 
         while let Some(item_ref) = iter.get() {
             if item_ref.key.object_id != object_id {
@@ -1115,13 +1117,9 @@ impl ObjectStore {
                         .ok_or(FxfsError::Inconsistent)?;
                     end = range.end;
                     let len = end - start;
-                    allocator
-                        .deallocate(
-                            transaction,
-                            self.store_object_id,
-                            device_offset..device_offset + len,
-                        )
-                        .await?;
+                    let device_range = device_offset..device_offset + len;
+                    ensure!(device_range.is_aligned(block_size), FxfsError::Inconsistent);
+                    allocator.deallocate(transaction, self.store_object_id, device_range).await?;
                     deallocated += len;
                     // Stop if the transaction is getting too big.
                     if transaction.mutations.len() >= TRANSACTION_MUTATION_THRESHOLD {
@@ -1387,6 +1385,10 @@ impl ObjectStore {
             .unwrap_key(store_info.mutations_key.as_ref().unwrap(), self.store_object_id)
             .await
             .context("Failed to unwrap mutations keys")?;
+        // The ChaCha20 stream cipher we use supports up to 64 GiB.  By default we'll roll the key
+        // after every 128 MiB.  Here we just need to pick a number that won't cause issues if it
+        // wraps, so we just use u32::MAX (the offset is u64).
+        ensure!(store_info.mutations_cipher_offset <= u32::MAX as u64, FxfsError::Inconsistent);
         let mut mutations_cipher =
             StreamCipher::new(&unwrapped_key, store_info.mutations_cipher_offset);
 
@@ -1615,6 +1617,12 @@ impl ObjectStore {
                 // We lost a race.
                 return Ok(last_object_id.get_next_object_id());
             }
+            // It shouldn't be possible for last_object_id to wrap within our lifetime, so if this
+            // happens, it's most likely due to corruption.
+            ensure!(
+                last_object_id.id & OBJECT_ID_HI_MASK != OBJECT_ID_HI_MASK,
+                FxfsError::Inconsistent
+            );
         }
 
         // Create a key.

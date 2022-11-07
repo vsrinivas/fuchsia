@@ -147,7 +147,7 @@ impl<S: HandleOwner> Directory<S> {
                 ..
             } = item
             {
-                *sub_dirs = sub_dirs.saturating_add(1);
+                *sub_dirs = sub_dirs.saturating_add(1)
             } else {
                 panic!("Expected directory");
             }

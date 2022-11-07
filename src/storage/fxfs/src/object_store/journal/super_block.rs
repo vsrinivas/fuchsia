@@ -517,7 +517,7 @@ impl ItemReader {
                 ReadResult::Reset => bail!("Unexpected reset"),
                 ReadResult::ChecksumMismatch => bail!("Checksum mismatch"),
                 ReadResult::Some(SuperBlockRecord::Extent(extent)) => {
-                    ensure!(extent.valid(), FxfsError::Inconsistent);
+                    ensure!(extent.is_valid(), FxfsError::Inconsistent);
                     self.reader.handle().push_extent(extent)
                 }
                 ReadResult::Some(SuperBlockRecord::ObjectItem(item)) => {

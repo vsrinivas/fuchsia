@@ -678,6 +678,14 @@ impl SimpleAllocator {
             let mut cursor = std::io::Cursor::new(&serialized_info[..]);
             let (mut info, _version) = AllocatorInfo::deserialize_with_version(&mut cursor)
                 .context("Failed to deserialize AllocatorInfo")?;
+
+            // Make sure the allocated_bytes don't exceed the size of the device.
+            let mut device_bytes = self.device_size;
+            for bytes in info.allocated_bytes.values() {
+                ensure!(*bytes <= device_bytes, FxfsError::Inconsistent);
+                device_bytes -= bytes;
+            }
+
             let mut handles = Vec::new();
             let mut total_size = 0;
             for object_id in &info.layers {
@@ -955,6 +963,11 @@ impl Allocator for SimpleAllocator {
                         break last_offset..end;
                     }
                     Some(ItemRef { key: AllocatorKey { device_range, .. }, .. }) => {
+                        ensure!(
+                            device_range.is_aligned(self.block_size)
+                                && device_range.end <= self.device_size,
+                            FxfsError::Inconsistent
+                        );
                         if device_range.start > last_offset {
                             break last_offset..min(last_offset + len, device_range.start);
                         }
@@ -1062,7 +1075,7 @@ impl Allocator for SimpleAllocator {
         debug!(device_range = ?dealloc_range, "deallocate");
         trace_duration!("SimpleAllocator::deallocate");
 
-        ensure!(dealloc_range.valid(), FxfsError::InvalidArgs);
+        ensure!(dealloc_range.is_valid(), FxfsError::InvalidArgs);
 
         let layer_set = self.tree.layer_set();
         let mut merger = layer_set.merger();
@@ -1081,6 +1094,7 @@ impl Allocator for SimpleAllocator {
         let mut deallocated = 0;
         let mut mutation = None;
         while let Some(ItemRef { key: AllocatorKey { device_range, .. }, value, .. }) = iter.get() {
+            ensure!(device_range.is_aligned(self.block_size), FxfsError::Inconsistent);
             if device_range.start > dealloc_range.start {
                 // We expect the entire range to be allocated.
                 bail!(anyhow!(FxfsError::Inconsistent)
@@ -1609,7 +1623,10 @@ impl LayerIterator<AllocatorKey, AllocatorValue> for CoalescingIterator<'_> {
                 None => return Ok(()),
                 Some(right) => {
                     // The two records cannot overlap.
-                    assert!(left.key.device_range.end <= right.key.device_range.start);
+                    ensure!(
+                        left.key.device_range.end <= right.key.device_range.start,
+                        FxfsError::Inconsistent
+                    );
                     // We can only coalesce records if they are touching and have the same value.
                     if left.key.device_range.end < right.key.device_range.start
                         || left.value != *right.value

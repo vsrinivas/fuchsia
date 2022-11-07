@@ -318,13 +318,13 @@ impl Journal {
             Mutation::ObjectStore(_) => {}
             Mutation::EncryptedObjectStore(_) => {}
             Mutation::Allocator(AllocatorMutation::Allocate { device_range, owner_object_id }) => {
-                return device_range.valid() && *owner_object_id != INVALID_OBJECT_ID;
+                return device_range.is_valid() && *owner_object_id != INVALID_OBJECT_ID;
             }
             Mutation::Allocator(AllocatorMutation::Deallocate {
                 device_range,
                 owner_object_id,
             }) => {
-                return device_range.valid() && *owner_object_id != INVALID_OBJECT_ID;
+                return device_range.is_valid() && *owner_object_id != INVALID_OBJECT_ID;
             }
             Mutation::Allocator(AllocatorMutation::MarkForDeletion(owner_object_id)) => {
                 return *owner_object_id != INVALID_OBJECT_ID;

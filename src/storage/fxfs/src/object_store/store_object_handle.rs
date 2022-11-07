@@ -27,9 +27,10 @@ use {
             },
             HandleOptions, ObjectStore, TrimMode, TrimResult,
         },
+        range::RangeExt,
         round::{round_down, round_up},
     },
-    anyhow::{anyhow, bail, Context, Error},
+    anyhow::{anyhow, bail, ensure, Context, Error},
     async_trait::async_trait,
     futures::{
         stream::{FuturesOrdered, FuturesUnordered},
@@ -174,14 +175,15 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         compute_checksum: bool,
     ) -> Result<Checksums, Error> {
         let mut transfer_buf;
-        let bs = self.block_size();
-        let (range, mut transfer_buf_ref) = if offset % bs == 0 && buf.len() as u64 % bs == 0 {
-            (offset..offset + buf.len() as u64, buf)
-        } else {
-            let (range, buf) = self.align_buffer(offset, buf.as_ref()).await?;
-            transfer_buf = buf;
-            (range, transfer_buf.as_mut())
-        };
+        let block_size = self.block_size();
+        let (range, mut transfer_buf_ref) =
+            if offset % block_size == 0 && buf.len() as u64 % block_size == 0 {
+                (offset..offset + buf.len() as u64, buf)
+            } else {
+                let (range, buf) = self.align_buffer(offset, buf.as_ref()).await?;
+                transfer_buf = buf;
+                (range, transfer_buf.as_mut())
+            };
 
         if let Some(keys) = &self.keys {
             // TODO(https://fxbug.dev/92975): Support key_id != 0.
@@ -268,6 +270,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                 if let Some(overlap) = key.overlap(extent_key) {
                     let range = device_offset + overlap.start - extent_key.range.start
                         ..device_offset + overlap.end - extent_key.range.start;
+                    ensure!(range.is_aligned(block_size), FxfsError::Inconsistent);
                     if trace {
                         info!(
                             store_id = self.store().store_object_id(),
@@ -363,7 +366,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                         }
                         break;
                     }
-
+                    ensure!(extent_key.range.is_aligned(block_size), FxfsError::Inconsistent);
                     if extent_key.range.start > end {
                         // If a previous extent has already been visited and we are tracking an
                         // allocated set, we are only interested in an extent where the range of the
@@ -571,6 +574,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                 AttributeKey::Extent(ExtentKey::search_key_from_offset(offset)),
             )))
             .await?;
+        let block_size = self.block_size();
         loop {
             let (device_offset, bytes_to_write) = match iter.get() {
                 Some(ItemRef {
@@ -594,6 +598,10 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                     && *attribute_id == self.attribute_id
                     && range.start <= offset =>
                 {
+                    ensure!(
+                        range.is_aligned(block_size) && device_offset % block_size == 0,
+                        FxfsError::Inconsistent
+                    );
                     let offset_within_extent = offset - range.start;
                     let remaining_length_of_extent =
                         (range.end.checked_sub(offset).ok_or(FxfsError::Inconsistent)?) as usize;
@@ -666,7 +674,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                 .ok_or_else(|| anyhow!(FxfsError::Inconsistent).context("Allocated size overflow"))?
                 .checked_sub(deallocated)
                 .ok_or_else(|| {
-                    anyhow!(FxfsError::Inconsistent).context("Allocated size overflow")
+                    anyhow!(FxfsError::Inconsistent).context("Allocated size underflow")
                 })?;
         } else {
             panic!("Unexpceted object value");
@@ -773,6 +781,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                     let device_offset = device_offset
                         .checked_add(aligned_old_size - extent_key.range.start)
                         .ok_or(FxfsError::Inconsistent)?;
+                    ensure!(device_offset % block_size == 0, FxfsError::Inconsistent);
                     let mut buf = self.allocate_buffer(block_size as usize);
                     self.read_and_decrypt(device_offset, aligned_old_size, buf.as_mut(), *key_id)
                         .await?;
@@ -803,8 +812,8 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         transaction: &mut Transaction<'a>,
         mut file_range: Range<u64>,
     ) -> Result<Vec<Range<u64>>, Error> {
-        assert_eq!(file_range.start % self.block_size(), 0);
-        assert_eq!(file_range.end % self.block_size(), 0);
+        let block_size = self.block_size();
+        assert!(file_range.is_aligned(block_size));
         assert!(self.keys.is_none());
         let mut ranges = Vec::new();
         let tree = &self.store().tree;
@@ -838,11 +847,21 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                         && *attribute_id == self.attribute_id
                         && range.start < file_range.end =>
                     {
+                        ensure!(
+                            range.is_valid()
+                                && range.is_aligned(block_size)
+                                && device_offset % block_size == 0,
+                            FxfsError::Inconsistent
+                        );
                         // If the start of the requested file_range overlaps with an existing extent...
                         if range.start <= file_range.start {
                             // Record the existing extent and move on.
-                            let device_range = device_offset + file_range.start - range.start
-                                ..device_offset + min(range.end, file_range.end) - range.start;
+                            let device_range = device_offset
+                                .checked_add(file_range.start - range.start)
+                                .ok_or(FxfsError::Inconsistent)?
+                                ..device_offset
+                                    .checked_add(min(range.end, file_range.end) - range.start)
+                                    .ok_or(FxfsError::Inconsistent)?;
                             file_range.start += device_range.end - device_range.start;
                             ranges.push(device_range);
                             if file_range.start >= file_range.end {
@@ -1114,6 +1133,10 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ReadObjectHandle for StoreOb
             if *object_id != self.object_id || *attribute_id != self.attribute_id {
                 break;
             }
+            ensure!(
+                extent_key.range.is_valid() && extent_key.range.is_aligned(block_size),
+                FxfsError::Inconsistent
+            );
             if extent_key.range.start > offset {
                 // Zero everything up to the start of the extent.
                 let to_zero = min(extent_key.range.start - offset, buf.len() as u64) as usize;
@@ -1529,8 +1552,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_read_whole_blocks_with_multiple_objects() {
         let (fs, object) = test_filesystem_and_object().await;
-        let bs = object.block_size() as usize;
-        let mut buffer = object.allocate_buffer(bs);
+        let block_size = object.block_size() as usize;
+        let mut buffer = object.allocate_buffer(block_size);
         buffer.as_mut_slice().fill(0xaf);
         object.write_or_append(Some(0), buffer.as_ref()).await.expect("write failed");
 
@@ -1545,23 +1568,29 @@ mod tests {
                 .await
                 .expect("create_object failed");
         transaction.commit().await.expect("commit failed");
-        let mut ef_buffer = object.allocate_buffer(bs);
+        let mut ef_buffer = object.allocate_buffer(block_size);
         ef_buffer.as_mut_slice().fill(0xef);
         object2.write_or_append(Some(0), ef_buffer.as_ref()).await.expect("write failed");
 
-        let mut buffer = object.allocate_buffer(bs);
+        let mut buffer = object.allocate_buffer(block_size);
         buffer.as_mut_slice().fill(0xaf);
-        object.write_or_append(Some(bs as u64), buffer.as_ref()).await.expect("write failed");
-        object.truncate(3 * bs as u64).await.expect("truncate failed");
-        object2.write_or_append(Some(bs as u64), ef_buffer.as_ref()).await.expect("write failed");
+        object
+            .write_or_append(Some(block_size as u64), buffer.as_ref())
+            .await
+            .expect("write failed");
+        object.truncate(3 * block_size as u64).await.expect("truncate failed");
+        object2
+            .write_or_append(Some(block_size as u64), ef_buffer.as_ref())
+            .await
+            .expect("write failed");
 
-        let mut buffer = object.allocate_buffer(4 * bs);
+        let mut buffer = object.allocate_buffer(4 * block_size);
         buffer.as_mut_slice().fill(123);
-        assert_eq!(object.read(0, buffer.as_mut()).await.expect("read failed"), 3 * bs);
-        assert_eq!(&buffer.as_slice()[..2 * bs], &vec![0xaf; 2 * bs]);
-        assert_eq!(&buffer.as_slice()[2 * bs..3 * bs], &vec![0; bs]);
-        assert_eq!(object2.read(0, buffer.as_mut()).await.expect("read failed"), 2 * bs);
-        assert_eq!(&buffer.as_slice()[..2 * bs], &vec![0xef; 2 * bs]);
+        assert_eq!(object.read(0, buffer.as_mut()).await.expect("read failed"), 3 * block_size);
+        assert_eq!(&buffer.as_slice()[..2 * block_size], &vec![0xaf; 2 * block_size]);
+        assert_eq!(&buffer.as_slice()[2 * block_size..3 * block_size], &vec![0; block_size]);
+        assert_eq!(object2.read(0, buffer.as_mut()).await.expect("read failed"), 2 * block_size);
+        assert_eq!(&buffer.as_slice()[..2 * block_size], &vec![0xef; 2 * block_size]);
         fs.close().await.expect("Close failed");
     }
 
