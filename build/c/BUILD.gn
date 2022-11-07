@@ -84,7 +84,6 @@ config("fidl-deprecated-c-bindings") {
     "//src/developer/memory/monitor:lib",
     "//src/devices/block/bin/gpt",
     "//src/devices/block/bin/iochk",
-    "//src/devices/block/bin/lsblk",
     "//src/devices/block/drivers/core:core-unittest-bin",
     "//src/devices/block/drivers/core:shared",
     "//src/devices/block/drivers/ums-function:ums-function-driver",
