@@ -1898,7 +1898,7 @@ size_t H264Decoder::GetRequiredNumOfPictures() const {
 }
 
 bool H264Decoder::IsCurrentFrameKeyframe() const {
-  return curr_slice_hdr_ && curr_slice_hdr_->IsISlice();
+  return curr_slice_hdr_ && curr_slice_hdr_->idr_pic_flag;
 }
 
 size_t H264Decoder::GetNumReferenceFrames() const {
