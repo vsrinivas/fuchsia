@@ -113,9 +113,8 @@ bool driver_host_is_asan() {
   return is_asan;
 }
 
-// send message to driver_host, requesting the creation of a device
-zx_status_t CreateProxyDevice(const fbl::RefPtr<Device>& dev, fbl::RefPtr<DriverHost>& dh,
-                              const char* args, zx::channel rpc_proxy) {
+// Create a stub device in a driver host.
+zx_status_t CreateStubDevice(const fbl::RefPtr<Device>& dev, fbl::RefPtr<DriverHost>& dh) {
   auto coordinator_endpoints = fidl::CreateEndpoints<fdm::Coordinator>();
   if (coordinator_endpoints.is_error()) {
     return coordinator_endpoints.error_value();
@@ -124,52 +123,70 @@ zx_status_t CreateProxyDevice(const fbl::RefPtr<Device>& dev, fbl::RefPtr<Driver
   auto device_controller_request = dev->ConnectDeviceController(dev->coordinator->dispatcher());
 
   fidl::Arena arena;
-  if (dev->libname().size() != 0) {
-    zx::vmo vmo;
-    if (auto status = dev->coordinator->LibnameToVmo(dev->libname(), &vmo); status != ZX_OK) {
-      return status;
-    }
+  fdm::wire::StubDevice stub{dev->protocol_id()};
+  auto type = fdm::wire::DeviceType::WithStub(stub);
+  dh->controller()
+      ->CreateDevice(std::move(coordinator_endpoints->client), std::move(device_controller_request),
+                     std::move(type), dev->local_id())
+      .ThenExactlyOnce(
+          [](fidl::WireUnownedResult<fdm::DriverHostController::CreateDevice>& result) {
+            if (!result.ok()) {
+              LOGF(ERROR, "Failed to create device: %s",
+                   result.error().FormatDescription().c_str());
+              return;
+            }
+            if (result.value().status != ZX_OK) {
+              LOGF(ERROR, "Failed to create device: %s",
+                   zx_status_get_string(result.value().status));
+            }
+          });
 
-    auto driver_path = fidl::StringView::FromExternal(dev->libname().data(), dev->libname().size());
-    auto args_view = fidl::StringView::FromExternal(args, strlen(args));
+  dev->Serve(std::move(coordinator_endpoints->server));
+  return ZX_OK;
+}
 
-    fdm::wire::ProxyDevice proxy{driver_path, std::move(vmo), std::move(rpc_proxy), args_view};
-    auto type = fdm::wire::DeviceType::WithProxy(arena, std::move(proxy));
-
-    dh->controller()
-        ->CreateDevice(std::move(coordinator_endpoints->client),
-                       std::move(device_controller_request), std::move(type), dev->local_id())
-        .ThenExactlyOnce(
-            [](fidl::WireUnownedResult<fdm::DriverHostController::CreateDevice>& result) {
-              if (!result.ok()) {
-                LOGF(ERROR, "Failed to create device: %s",
-                     result.error().FormatDescription().c_str());
-                return;
-              }
-              if (result.value().status != ZX_OK) {
-                LOGF(ERROR, "Failed to create device: %s",
-                     zx_status_get_string(result.value().status));
-              }
-            });
-  } else {
-    fdm::wire::StubDevice stub{dev->protocol_id()};
-    auto type = fdm::wire::DeviceType::WithStub(stub);
-    dh->controller()
-        ->CreateDevice(std::move(coordinator_endpoints->client),
-                       std::move(device_controller_request), std::move(type), dev->local_id())
-        .ThenExactlyOnce(
-            [](fidl::WireUnownedResult<fdm::DriverHostController::CreateDevice>& result) {
-              if (!result.ok()) {
-                LOGF(ERROR, "Failed to create device: %s",
-                     result.error().FormatDescription().c_str());
-                return;
-              }
-              if (result.value().status != ZX_OK) {
-                LOGF(ERROR, "Failed to create device: %s",
-                     zx_status_get_string(result.value().status));
-              }
-            });
+// send message to driver_host, requesting the creation of a device
+zx_status_t CreateProxyDevice(const fbl::RefPtr<Device>& dev, fbl::RefPtr<DriverHost>& dh,
+                              const char* args, zx::channel rpc_proxy) {
+  // If we don't have a driver name, then create a stub instead.
+  if (dev->libname().size() == 0) {
+    return CreateStubDevice(dev, dh);
   }
+
+  auto coordinator_endpoints = fidl::CreateEndpoints<fdm::Coordinator>();
+  if (coordinator_endpoints.is_error()) {
+    return coordinator_endpoints.error_value();
+  }
+
+  auto device_controller_request = dev->ConnectDeviceController(dev->coordinator->dispatcher());
+
+  fidl::Arena arena;
+  zx::vmo vmo;
+  if (auto status = dev->coordinator->LibnameToVmo(dev->libname(), &vmo); status != ZX_OK) {
+    return status;
+  }
+
+  auto driver_path = fidl::StringView::FromExternal(dev->libname().data(), dev->libname().size());
+  auto args_view = fidl::StringView::FromExternal(args, strlen(args));
+
+  fdm::wire::ProxyDevice proxy{driver_path, std::move(vmo), std::move(rpc_proxy), args_view};
+  auto type = fdm::wire::DeviceType::WithProxy(arena, std::move(proxy));
+
+  dh->controller()
+      ->CreateDevice(std::move(coordinator_endpoints->client), std::move(device_controller_request),
+                     std::move(type), dev->local_id())
+      .ThenExactlyOnce(
+          [](fidl::WireUnownedResult<fdm::DriverHostController::CreateDevice>& result) {
+            if (!result.ok()) {
+              LOGF(ERROR, "Failed to create device: %s",
+                   result.error().FormatDescription().c_str());
+              return;
+            }
+            if (result.value().status != ZX_OK) {
+              LOGF(ERROR, "Failed to create device: %s",
+                   zx_status_get_string(result.value().status));
+            }
+          });
 
   dev->Serve(std::move(coordinator_endpoints->server));
   return ZX_OK;
