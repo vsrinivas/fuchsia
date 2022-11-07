@@ -62,7 +62,7 @@ pub trait HttpsSampler {
 }
 
 /// The default implementation of `HttpsSampler` that uses an `HttpsDateClient` to poll a server.
-pub struct HttpsSamplerImpl<C: HttpsDateClient> {
+pub struct HttpsSamplerImpl<'a, C: HttpsDateClient> {
     /// Client used to poll servers for time.
     client: Mutex<C>,
     /// URI called to obtain time.
@@ -72,18 +72,18 @@ pub struct HttpsSamplerImpl<C: HttpsDateClient> {
     /// reported through other means.
     system_clock_for_metrics_only: zx::Clock,
     /// HttpsDate config.
-    config: Config,
+    config: &'a Config,
 }
 
-impl HttpsSamplerImpl<NetworkTimeClient> {
+impl<'a> HttpsSamplerImpl<'a, NetworkTimeClient> {
     /// Create a new `HttpsSamplerImpl` that makes requests against `uri` to poll time.
-    pub fn new(uri: Uri, config: Config) -> Self {
+    pub fn new(uri: Uri, config: &'a Config) -> Self {
         Self::new_with_client(uri, NetworkTimeClient::new(), config)
     }
 }
 
-impl<C: HttpsDateClient + Send> HttpsSamplerImpl<C> {
-    fn new_with_client(uri: Uri, client: C, config: Config) -> Self {
+impl<'a, C: HttpsDateClient + Send> HttpsSamplerImpl<'a, C> {
+    fn new_with_client(uri: Uri, client: C, config: &'a Config) -> Self {
         Self {
             client: Mutex::new(client),
             uri,
@@ -97,7 +97,7 @@ impl<C: HttpsDateClient + Send> HttpsSamplerImpl<C> {
 }
 
 #[async_trait]
-impl<C: HttpsDateClient + Send> HttpsSampler for HttpsSamplerImpl<C> {
+impl<C: HttpsDateClient + Send> HttpsSampler for HttpsSamplerImpl<'_, C> {
     async fn produce_sample(
         &self,
         num_polls: usize,
@@ -155,7 +155,7 @@ impl<C: HttpsDateClient + Send> HttpsSampler for HttpsSamplerImpl<C> {
     }
 }
 
-impl<C: HttpsDateClient + Send> HttpsSamplerImpl<C> {
+impl<C: HttpsDateClient + Send> HttpsSamplerImpl<'_, C> {
     /// Poll the server once to produce a fresh bound on the UTC time. Returns a bound and the
     /// observed round trip time.
     async fn poll_server(&self, measure_offset: bool) -> Result<(Bound, Poll), HttpsDateError> {
@@ -397,7 +397,7 @@ mod test {
         let sampler = HttpsSamplerImpl::new_with_client(
             TEST_URI.clone(),
             TestClient::with_offset_responses(vec![Ok(TEST_UTC_OFFSET)]),
-            config,
+            &config,
         );
         let monotonic_before = zx::Time::get_monotonic();
         let sample = sampler.produce_sample(1, false).await.unwrap().await;
@@ -429,7 +429,7 @@ mod test {
                 Ok(TEST_UTC_OFFSET),
                 Ok(TEST_UTC_OFFSET),
             ]),
-            config,
+            &config,
         );
         let monotonic_before = zx::Time::get_monotonic();
         let sample = sampler.produce_sample(3, false).await.unwrap().await;
@@ -467,7 +467,7 @@ mod test {
                     .absolute_value(monotonic_ref, monotonic_ref + TEST_UTC_OFFSET),
             )
             .unwrap();
-        let config = make_test_config();
+        let config = &make_test_config();
 
         let sampler = HttpsSamplerImpl {
             uri: TEST_URI.clone(),
@@ -496,12 +496,13 @@ mod test {
 
     #[fuchsia::test]
     async fn test_produce_sample_fails_if_initial_poll_fails() {
+        let config = &make_test_config();
         let sampler = HttpsSamplerImpl::new_with_client(
             TEST_URI.clone(),
             TestClient::with_offset_responses(vec![Err(HttpsDateError::new(
                 HttpsDateErrorType::NetworkError,
             ))]),
-            make_test_config(),
+            config,
         );
 
         match sampler.produce_sample(3, false).await {
@@ -512,6 +513,7 @@ mod test {
 
     #[fuchsia::test]
     async fn test_produce_sample_succeeds_if_subsequent_poll_fails() {
+        let config = &make_test_config();
         let sampler = HttpsSamplerImpl::new_with_client(
             TEST_URI.clone(),
             TestClient::with_offset_responses(vec![
@@ -519,7 +521,7 @@ mod test {
                 Ok(TEST_UTC_OFFSET),
                 Err(HttpsDateError::new(HttpsDateErrorType::NetworkError)),
             ]),
-            make_test_config(),
+            config,
         );
 
         let sample = sampler.produce_sample(3, false).await.unwrap().await;
@@ -529,6 +531,7 @@ mod test {
     #[fuchsia::test]
     async fn test_produce_sample_takes_later_poll_if_polls_disagree() {
         let expected_offset = TEST_UTC_OFFSET + zx::Duration::from_hours(1);
+        let config = &make_test_config();
         let sampler = HttpsSamplerImpl::new_with_client(
             TEST_URI.clone(),
             TestClient::with_offset_responses(vec![
@@ -536,7 +539,7 @@ mod test {
                 Ok(TEST_UTC_OFFSET),
                 Ok(expected_offset),
             ]),
-            make_test_config(),
+            config,
         );
 
         let monotonic_before = zx::Time::get_monotonic();
