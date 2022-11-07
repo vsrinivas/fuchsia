@@ -123,6 +123,12 @@ config("compiler") {
         "-Wl,-z,text",
       ]
 
+      if (linker == "" || linker == "bfd") {
+        # This is the default in both LLD and Gold, but not in BFD.
+        # However, Gold doesn't even have the switch.
+        ldflags += [ "-Wl,-z,separate-code" ]
+      }
+
       # In the Clang toolchain assembly files with no explicit marker don't
       # cause the presumption of executable stack as they do in GCC.
       ldflags += [ "-Wl,-z,noexecstack" ]
