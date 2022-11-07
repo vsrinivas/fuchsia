@@ -65,6 +65,10 @@ default_args = {
   pw_chrono_SYSTEM_CLOCK_BACKEND =
       "//third_party/pigweed/src/pw_chrono_stl:system_clock"
 
+  # Pigweed configs for Fuchsia.
+  pw_function_CONFIG =
+      "//third_party/pigweed/backends/pw_function:define_overrides"
+
   # Some Pigweed module implementations need to be link dependencies to avoid circular dependencies.
   pw_build_LINK_DEPS = [
     "//third_party/pigweed/src/pw_assert:impl",

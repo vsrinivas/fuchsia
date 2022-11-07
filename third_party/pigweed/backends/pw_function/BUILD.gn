@@ -1,0 +1,15 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("define_overrides") {
+  public_configs = [ ":define_options" ]
+}
+
+config("define_options") {
+  # When PW_FUNCTION_ENABLE_DYNAMIC_ALLOCATION is enabled, a Function will use
+  # dynamic allocation to store callables that exceed the inline size. When it
+  # is enabled but a compile-time check for the inlining is still required,
+  # pw::InlineFunction can be used.
+  defines = [ "PW_FUNCTION_ENABLE_DYNAMIC_ALLOCATION" ]
+}
