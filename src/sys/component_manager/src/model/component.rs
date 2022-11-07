@@ -935,7 +935,20 @@ impl ComponentInstance {
             );
             futures.push(nf);
         }
-        join_all(futures).await.into_iter().fold(Ok(()), |acc, r| acc.and_then(|_| r))
+        join_all(futures)
+            .await
+            .into_iter()
+            .map(|r| match r {
+                // There's a chance that this races with child destruction, since we dropped the
+                // lock for our resolved state after grabbing the list of children. A non-existent
+                // child is obviously a child that is not running, so we can safely ignore if we
+                // failed to stop the child because it doesn't exist
+                Err(ModelError::ComponentInstanceError {
+                    err: ComponentInstanceError::InstanceNotFound { .. },
+                }) => Ok(()),
+                r => r,
+            })
+            .fold(Ok(()), |acc, r| acc.and_then(|_| r))
     }
 
     /// Destroys this component instance.
