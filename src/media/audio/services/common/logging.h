@@ -44,7 +44,7 @@ class ThrottledLogger {
  public:
   virtual ~ThrottledLogger() = default;
 
-  // TODO(fxbug.dev/87651): Add another implementation that throttles to N log messages per second.
+  // TODO(fxbug.dev/114393): Add another implementation that throttles to N log messages per second.
   // Consider using this instead of FromCounts, especially anywhere that logging frequency is
   // derived from external inputs.
 

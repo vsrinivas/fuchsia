@@ -326,7 +326,7 @@ std::shared_ptr<Sampler> SincSampler::Create(const Format& source_format,
     case fuchsia_audio::SampleType::kFloat32:
       return CreateWith<float>(source_format, dest_format);
     default:
-      // TODO(fxbug.dev/87651): support float64?
+      // TODO(fxbug.dev/114243): Support `SampleType::kFloat64`.
       FX_LOGS(WARNING) << "SincSampler does not support this source sample type: "
                        << static_cast<uint32_t>(source_format.sample_type());
       return nullptr;

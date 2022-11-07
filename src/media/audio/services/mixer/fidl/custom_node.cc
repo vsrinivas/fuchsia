@@ -314,8 +314,8 @@ void CustomNode::InitializeChildNodes(PipelineStagePtr pipeline_stage, NodePtr p
                                       GraphDetachedThreadPtr detached_thread,
                                       const Format& source_format,
                                       zx::duration presentation_delay) {
-  // TODO(fxbug.dev/87651): This is currently hardcoded for the 1 -> 1 `CustomStage` implementation.
-  // Refactor this to use `CustomNodeProperties` instead once M -> N edges are supported.
+  // TODO(fxbug.dev/114246): This is currently hardcoded for the 1 x 1 `CustomStage` implementation.
+  // Refactor this to use `CustomNodeProperties` instead once M x N edges are supported.
   SetBuiltInChildren(
       std::vector<NodePtr>{
           std::make_shared<ChildSourceNode>(std::string(parent->name()) + "ChildSource",

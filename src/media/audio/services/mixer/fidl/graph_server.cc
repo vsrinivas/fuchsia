@@ -265,7 +265,7 @@ ParseCreateEdgeOptions(
   Node::CreateEdgeOptions options;
   if (request->has_mixer_sampler()) {
     if (dest.type() == Node::Type::kMixer && request->mixer_sampler().is_sinc_sampler()) {
-      // TODO(fxbug.dev/87651): Make use of `fuchsia_audio_mixer::wire::SincSampler` parameters.
+      // TODO(fxbug.dev/114373): Make use of `fuchsia_audio_mixer::wire::SincSampler` parameters.
       options.sampler_type = Sampler::Type::kSincSampler;
     } else {
       return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kUnsupportedOption);
@@ -698,7 +698,7 @@ void GraphServer::CreateMixer(CreateMixerRequestView request,
     completer.ReplyError(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
     return;
   }
-  // TODO(fxbug.dev/87651): This check blelow is not a strict FIDL API requirement, but an
+  // TODO(fxbug.dev/114381): This check blelow is not a strict FIDL API requirement, but an
   // enforcement by the underlying `MixerStage`. Revisit if we want to support non-float types.
   if (format.value().sample_type() != fuchsia_audio::wire::SampleType::kFloat32) {
     FX_LOGS(WARNING) << "CreateMixer: destination format must use float";

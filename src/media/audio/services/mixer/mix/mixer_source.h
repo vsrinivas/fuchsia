@@ -101,7 +101,7 @@ class MixerSource {
 
   std::shared_ptr<ClockSynchronizer> clock_sync_;
   std::optional<TimelineFunction> last_source_time_to_source_frac_frame_ = std::nullopt;
-  // TODO(fxbug.dev/87651): This is a workaround to make sure `Advance` and `Mix` calls have the
+  // TODO(fxbug.dev/114405): This is a workaround to make sure `Advance` and `Mix` calls have the
   // most up-to-date clock states after reconciliation. Remove these `Clock` dependencies, and use
   // the corresponding `ClockSnapshot`s via `MixJobContext::clocks` instead.
   std::shared_ptr<Clock> dest_clock_;

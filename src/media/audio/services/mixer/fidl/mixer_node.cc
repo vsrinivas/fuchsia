@@ -51,7 +51,7 @@ zx::duration MixerNode::PresentationDelayForSourceEdge(const Node* source) const
   const int32_t source_frame_rate =
       static_cast<int32_t>(source->pipeline_stage()->format().frames_per_second());
   const int32_t dest_frame_rate = static_cast<int32_t>(dest_format.frames_per_second());
-  // TODO(fxbug.dev/87651): Handle the case where the sampler type is explicitly chosen in the FIDL
+  // TODO(fxbug.dev/114373): Handle the case where the sampler type is explicitly chosen in the FIDL
   // API - this may require to access the actual sampler being used for this source.
   const Fixed delay_frames = (source_frame_rate == dest_frame_rate)
                                  ? kHalfFrame

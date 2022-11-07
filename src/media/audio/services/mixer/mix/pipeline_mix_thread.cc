@@ -27,7 +27,7 @@ const TimelineRate kMonoTicksPerFastestRefTicks(1'000'000,
 std::shared_ptr<PipelineMixThread> PipelineMixThread::Create(Args args) {
   // std::make_shared requires a public ctor, but we hide our ctor to force callers to use Create.
   struct WithPublicCtor : public PipelineMixThread {
-    WithPublicCtor(Args args) : PipelineMixThread(std::move(args)) {}
+    explicit WithPublicCtor(Args args) : PipelineMixThread(std::move(args)) {}
   };
 
   auto thread = std::make_shared<WithPublicCtor>(std::move(args));
@@ -57,7 +57,7 @@ std::shared_ptr<PipelineMixThread> PipelineMixThread::Create(Args args) {
 
 std::shared_ptr<PipelineMixThread> PipelineMixThread::CreateWithoutLoop(Args args) {
   struct WithPublicCtor : public PipelineMixThread {
-    WithPublicCtor(Args args) : PipelineMixThread(std::move(args)) {}
+    explicit WithPublicCtor(Args args) : PipelineMixThread(std::move(args)) {}
   };
 
   auto thread = std::make_shared<WithPublicCtor>(std::move(args));
@@ -154,7 +154,7 @@ void PipelineMixThread::RunLoop() {
 
     // An "event" means tasks are available in the global task queue.
     if (wake_reason.event_set) {
-      // TODO(fxbug.dev/87651): Measure the amount of time spent running these tasks per mix period
+      // TODO(fxbug.dev/114393): Measure the amount of time spent running these tasks per mix period
       // (this can be recorded as a "MixJobSubtask" in RunMixJobs) and protect against "task spam".
       global_task_queue_->RunForThread(id());
 
@@ -212,7 +212,7 @@ zx::time PipelineMixThread::RunMixJobs(const zx::time mono_start_time, const zx:
     const uint64_t period = static_cast<uint64_t>(mix_period_.get());
     const auto underflow_duration =
         zx::duration(static_cast<int64_t>(fbl::round_up(now_minus_start + 1, period)));
-    // TODO(fxbug.dev/87651): report underflow
+    // TODO(fxbug.dev/114393): Report underflow.
     return mono_start_time + underflow_duration;
   }
 
@@ -275,7 +275,7 @@ zx::time PipelineMixThread::RunMixJobs(const zx::time mono_start_time, const zx:
   // If we ran for too long, we underflowed.
   const auto mono_actual_end_time = mono_clock_->now();
   if (mono_actual_end_time > mono_deadline) {
-    // TODO(fxbug.dev/87651): report underflow
+    // TODO(fxbug.dev/114393): Report underflow.
   }
 
   return next_job_mono_start_time;

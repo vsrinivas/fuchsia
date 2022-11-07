@@ -30,7 +30,7 @@
 namespace media_audio {
 
 // Custom effect stage that has a single source stream and a single destination stream.
-// TODO(fxbug.dev/87651): Generalize this for all N inputs K outputs use cases.
+// TODO(fxbug.dev/114246): Generalize this for all M sources x N destinations use cases.
 class CustomStage : public PipelineStage {
  public:
   struct Args {

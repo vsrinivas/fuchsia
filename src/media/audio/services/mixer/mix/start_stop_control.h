@@ -83,7 +83,7 @@ class StartStopControl {
     // This callback is invoked when the start command takes effect (i.e., at `start_time`) or when
     // the command fails. The call back parameter describes when the command was applied (on
     // success) or the error message (on failure). The callback is optional -- it can be nullptr.
-    // TODO(fxbug.dev/87651): use fit::inline_callback or a different mechanism
+    // TODO(fxbug.dev/113389): Use `fit::inline_callback` or a different mechanism.
     fit::callback<void(fpromise::result<When, StartError>)> callback;
   };
 
@@ -95,7 +95,7 @@ class StartStopControl {
     // This callback is invoked when the start command takes effect (i.e., at `when`), or when the
     // command fails. The call back parameter describes when the command was applied (on success) or
     // the error message (on failure). The callback is optional -- it can be nullptr.
-    // TODO(fxbug.dev/87651): use fit::inline_callback or a different mechanism
+    // TODO(fxbug.dev/113389): Use `fit::inline_callback` or a different mechanism.
     fit::callback<void(fpromise::result<When, StopError>)> callback;
   };
 

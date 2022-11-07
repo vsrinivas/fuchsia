@@ -60,7 +60,7 @@ class SimplePacketQueueProducerStage : public PipelineStage {
 
     // A callback to invoke when a packet underflows. Optional: can be nullptr.
     // The duration estimates the packet's lateness relative to the system monotonic clock.
-    // TODO(fxbug.dev/87651): use fit::inline_function
+    // TODO(fxbug.dev/113389): Use `fit::inline_function`.
     fit::function<void(zx::duration)> underflow_reporter;
   };
 

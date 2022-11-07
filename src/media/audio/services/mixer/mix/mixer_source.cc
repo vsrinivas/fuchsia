@@ -395,7 +395,7 @@ std::optional<PipelineStage::Packet> MixerSource::ReadNextSourcePacket(MixJobCon
   return source_->Read(ctx, source_start_frame, source_frame_count.Ceiling());
 }
 
-// TODO(fxbug.dev/87651): Add more logging as needed from `Mixer::ReconcileClocksAndSetStepSize`.
+// TODO(fxbug.dev/114393): Add more logging as needed from `Mixer::ReconcileClocksAndSetStepSize`.
 void MixerSource::UpdateSamplerState(const TimelineFunction& dest_time_to_dest_frac_frame,
                                      int64_t dest_frame) {
   auto& state = sampler_->state();

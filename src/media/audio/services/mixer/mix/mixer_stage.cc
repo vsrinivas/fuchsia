@@ -120,9 +120,6 @@ void MixerStage::PrepareSourceGains(MixJobContext& ctx, Fixed start_frame, int64
   const auto& clocks = ctx.clocks();
   const auto dest_clock = clocks.SnapshotFor(reference_clock());
 
-  // TODO(fxbug.dev/87651): This is actually only needed if a new source, with new set of gain
-  // controls which did not already exist in `gain_controls_`, is added to the mixer. Otherwise,
-  // since `ReadImpl` is never called without advancing to `start_frame`, this is redundant.
   const auto start_mono_time =
       dest_clock.MonotonicTimeFromReferenceTime(PresentationTimeFromFrame(start_frame));
   gain_controls_.Advance(clocks, start_mono_time);
