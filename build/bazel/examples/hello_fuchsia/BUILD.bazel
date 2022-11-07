@@ -1,0 +1,40 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+load(
+    "@rules_fuchsia//fuchsia:defs.bzl",
+    "fuchsia_cc_binary",
+    "fuchsia_component",
+    "fuchsia_component_manifest",
+    "fuchsia_package",
+)
+
+package(default_visibility = ["//visibility:public"])
+
+fuchsia_cc_binary(
+    name = "hello_fuchsia_bin",
+    srcs = ["main.cc"],
+    deps = [
+        "@fuchsia_sdk//pkg/fdio",
+        "@fuchsia_sdk//pkg/syslog",
+    ],
+)
+
+fuchsia_component_manifest(
+    name = "hello_fuchsia_manifest",
+    src = "meta/hello_fuchsia.cml",
+    includes = ["@fuchsia_sdk//pkg/syslog:client"],
+)
+
+fuchsia_component(
+    name = "hello_fuchsia_component",
+    manifest = ":hello_fuchsia_manifest",
+    deps = [":hello_fuchsia_bin"],
+)
+
+fuchsia_package(
+    name = "hello_fuchsia_package",
+    package_name = "hello_fuchsia",
+    components = [":hello_fuchsia_component"],
+)
