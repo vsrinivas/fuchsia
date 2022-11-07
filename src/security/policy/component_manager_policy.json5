@@ -16,14 +16,20 @@
                 // repository.
                 "/core/session-manager/session:session/dart_jit_runner",
                 "/core/session-manager/session:session/flutter_jit_runner",
-                "/core/session-manager/session:session/workstation_session/login_shell/ermine_shell/chrome",
+
+                // TODO(fxbug.dev/114052): The `1` in `application_shell:1` will
+                // change eventually.
+                "/core/session-manager/session:session/workstation_session/login_shell/application_shell:1/chrome",
 
                 // FOR _ENG BUILDS ONLY: We allow elements in the Workstation
                 // session to access ambient accessibility to develop
                 // runnerless Flutter apps using JIT compilation (which enables hot
                 // reload). This should never be exposed to release builds, which
                 // should use AOT compilation instead.
-                "/core/session-manager/session:session/workstation_session/login_shell/ermine_shell/elements:**",
+                //
+                // TODO(fxbug.dev/114052): The `1` in `application_shell:1` will
+                // change eventually.
+                "/core/session-manager/session:session/workstation_session/login_shell/application_shell:1/elements:**",
 
                 // We allow tests to access ambient executability in the same
                 // way that we're permissive with use of the components v1
@@ -241,7 +247,10 @@
                     "/core",
                     "/core/zircon-guest-manager/vmm",
                     "/core/debian-guest-manager/vmm",
-                    "/core/session-manager/session:session/workstation_session/login_shell/ermine_shell/chrome",
+
+                    // TODO(fxbug.dev/114052): The `1` in `application_shell:1`
+                    // will change eventually.
+                    "/core/session-manager/session:session/workstation_session/login_shell/application_shell:1/chrome",
                     "/core/termina-guest-manager/vmm",
                     "/core/starnix_manager/starmium",
                     "/core/starnix_manager/stardroid",
@@ -378,14 +387,19 @@
                     // This protocol is used by CTS tests
                     "/core/test_manager/cts-tests:**",
 
-                    // TODO(fxbug.dev/105828): terminal.cm instances are launched as children of the
-                    // ermine_shell component, via its "elements" collection. Terminal requires some
-                    // additional permissions gated through this policy file. If/when these
-                    // permissions can be migrated to an ermine-specific policy file (outside
-                    // fuchsia.git), the following entry should be removed here.
+                    // TODO(fxbug.dev/105828): terminal.cm instances are
+                    // launched as children of the application shell, via its
+                    // "elements" collection. Terminal requires some additional
+                    // permissions gated through this policy file. If/when these
+                    // permissions can be migrated to an ermine-specific policy
+                    // file (outside fuchsia.git), the following entry should be
+                    // removed here.
                     //
                     // This protocol is available to the terminal in workstation
-                    "/core/session-manager/session:session/workstation_session/login_shell/ermine_shell/elements:**",
+                    //
+                    // TODO(fxbug.dev/114052): The `1` in `application_shell:1`
+                    // will change eventually.
+                    "/core/session-manager/session:session/workstation_session/login_shell/application_shell:1/elements:**",
 
                     // TODO(https://fxbug.dev/106062): Scrutiny throws an routing error unless
                     // this is added. `process_resolver` does not have a `use` declaration for
@@ -431,12 +445,17 @@
                     "/bootstrap/console-launcher",
                     "/core/sshd-host",
 
-                    // TODO(fxbug.dev/105828): terminal.cm instances are launched as children of the
-                    // ermine_shell component, via its "elements" collection. Terminal requires some
-                    // additional permissions gated through this policy file. If/when these
-                    // permissions can be migrated to an ermine-specific policy file (outside
-                    // fuchsia.git), the following entry should be removed here.
-                    "/core/session-manager/session:session/workstation_session/login_shell/ermine_shell/elements:**",
+                    // TODO(fxbug.dev/105828): terminal.cm instances are
+                    // launched as children of the application shell, via its
+                    // "elements" collection. Terminal requires some additional
+                    // permissions gated through this policy file. If/when these
+                    // permissions can be migrated to an ermine-specific policy
+                    // file (outside fuchsia.git), the following entry should be
+                    // removed here.
+                    //
+                    // TODO(fxbug.dev/114052): The `1` in `application_shell:1`
+                    // will change eventually.
+                    "/core/session-manager/session:session/workstation_session/login_shell/application_shell:1/elements:**",
                 ],
             },
             {
@@ -471,12 +490,17 @@
                     "/core/sshd-host",
                     "/core/process_resolver",
 
-                    // TODO(fxbug.dev/105828): terminal.cm instances are launched as children of the
-                    // ermine_shell component, via its "elements" collection. Terminal requires some
-                    // additional permissions gated through this policy file. If/when these
-                    // permissions can be migrated to an ermine-specific policy file (outside
-                    // fuchsia.git), the following entry should be removed here.
-                    "/core/session-manager/session:session/workstation_session/login_shell/ermine_shell/elements:**",
+                    // TODO(fxbug.dev/105828): terminal.cm instances are
+                    // launched as children of the application shell, via its
+                    // "elements" collection. Terminal requires some additional
+                    // permissions gated through this policy file. If/when these
+                    // permissions can be migrated to an ermine-specific policy
+                    // file (outside fuchsia.git), the following entry should be
+                    // removed here.
+                    //
+                    // TODO(fxbug.dev/114052): The `1` in `application_shell:1`
+                    // will change eventually.
+                    "/core/session-manager/session:session/workstation_session/login_shell/application_shell:1/elements:**",
                 ],
             },
             {

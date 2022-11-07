@@ -95,9 +95,11 @@ pub struct ShellCloseAllCommand {}
 const LOGIN_SHELL_MONIKER: &str =
     "./core/session-manager/session:session/workstation_session/login_shell";
 
-/// Moniker of ermine_shell component
+/// Moniker of the application shell component
+// TODO(fxbug.dev/114052): The `1` in `application_shell:1` will change
+// eventually.
 const ERMINE_SHELL_MONIKER: &str =
-    "./core/session-manager/session:session/workstation_session/login_shell/ermine_shell";
+    "./core/session-manager/session:session/workstation_session/login_shell/application_shell:1";
 
 async fn connect_to_exposed_protocol<P: fidl::endpoints::DiscoverableProtocolMarker>(
     realm_query: &fsys::RealmQueryProxy,

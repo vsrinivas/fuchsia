@@ -98,7 +98,7 @@
             // TODO(fxbug.dev/105828): These additional `protocol` offers to
             // `#workstation_session` are only required by the `terminal`
             // component. `terminal` is launched as a member of the `elements`
-            // collection of `#ermine_shell` (a descendent of
+            // collection of the application shell (a descendent of
             // `#workstation_session`). If/when there is a way to route
             // capabilities to specific descendents (and specific collection
             // members), these protocols should be routed only to terminal.
@@ -136,7 +136,7 @@
             // TODO(fxbug.dev/105828): These additional `directory` offers to
             // `#workstation_session` are only required by the `terminal`
             // component. `terminal` is launched as a member of the `elements`
-            // collection of `#ermine_shell` (a descendent of
+            // collection of the application shell (a descendent of
             // `#workstation_session`). If/when there is a way to route
             // capabilities to specific descendents (and specific collection
             // members), these directories should be routed only to terminal.

@@ -3,12 +3,15 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:io';
+import 'dart:convert' show json;
+import 'package:fidl/fidl.dart';
 
 //ignore: unused_import
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:fidl_fuchsia_component/fidl_async.dart';
-import 'package:fidl_fuchsia_component_decl/fidl_async.dart';
-import 'package:fidl_fuchsia_io/fidl_async.dart';
+import 'package:fidl_fuchsia_component_decl/fidl_async.dart' hide Directory;
+import 'package:fidl_fuchsia_io/fidl_async.dart' hide File;
 import 'package:fidl_fuchsia_ui_app/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_scenic/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart' hide FocusState;
@@ -18,6 +21,18 @@ import 'package:fuchsia_services/services.dart';
 import 'package:flutter/material.dart';
 import 'package:mobx/mobx.dart';
 import 'package:zircon/zircon.dart';
+import 'package:fidl_fuchsia_element/fidl_async.dart' as felement;
+
+const kApplicationShellConfigPath = '/pkg/config/application_shell.json';
+
+const kApplicationShellCollectionName = 'application_shell';
+
+/// '1' currently refers to the ID of the account that's logged in. At the end
+/// of the day it doesn't really matter what the instance name is.
+///
+/// TODO(fxbug.dev/114052): There won't always be just a single account with ID
+/// 1, so we'll need to decide what to do with this.
+const kApplicationShellComponentName = '1';
 
 /// Defines a service to launch and support Ermine user shell.
 class ShellService {
@@ -25,6 +40,15 @@ class ShellService {
   late final VoidCallback onShellReady;
   late final VoidCallback onShellExit;
   late final bool _useFlatland;
+  late final String _shellComponentUrl;
+
+  /// A DirectoryProxy for forwarding felement.Manager connections (among
+  /// others) to the application shell, once it's running.
+  final DirectoryProxy _shellExposedDir = DirectoryProxy();
+
+  /// "Request" end of `_shellExposedDir`, to pass to the shell on startup.
+  late InterfaceRequest<Directory> _shellExposedDirRequest;
+
   _ErmineViewConnection? _ermine;
   var _loadedCompleter = Completer();
 
@@ -37,6 +61,29 @@ class ShellService {
     });
     WidgetsFlutterBinding.ensureInitialized();
     _focusSubscription = FocusState.instance.stream().listen(_onFocusChanged);
+
+    File file = File(kApplicationShellConfigPath);
+    final shellConfig = json.decode(file.readAsStringSync());
+    assert(shellConfig is Map);
+    assert(shellConfig["url"] is String);
+    _shellComponentUrl = shellConfig["url"];
+
+    _shellExposedDirRequest = _shellExposedDir.ctrl.request();
+  }
+
+  void serve(ComponentContext componentContext) {
+    componentContext.outgoing
+      ..addPublicService(
+          (request) => Incoming.withDirectory(_shellExposedDir)
+              .connectToServiceByNameWithChannel(
+                  felement.Manager.$serviceName, request.passChannel()),
+          felement.Manager.$serviceName)
+      ..addPublicService(
+          (request) => Incoming.withDirectory(_shellExposedDir)
+              .connectToServiceByNameWithChannel(
+                  felement.GraphicalPresenter.$serviceName,
+                  request.passChannel()),
+          felement.GraphicalPresenter.$serviceName);
   }
 
   /// Returns [true] after call to [Scenic.usesFlatland] completes.
@@ -61,11 +108,17 @@ class ShellService {
         onShellReady();
       },
       onExit: onShellExit,
+      componentUrl: _shellComponentUrl,
+      exposedDir: _shellExposedDir,
+      exposedDirRequest: _shellExposedDirRequest,
     );
     return _ermine!.fuchsiaViewConnection;
   }
 
   void disposeErmineShell() {
+    _shellExposedDir.ctrl.unbind();
+    _shellExposedDirRequest = _shellExposedDir.ctrl.request();
+    _ermine!.dispose();
     _ermine = null;
   }
 
@@ -81,6 +134,7 @@ class _ErmineViewConnection {
   final bool useFlatland;
   final VoidCallback onReady;
   final VoidCallback onExit;
+  late final RealmProxy realm;
   late final FuchsiaViewConnection fuchsiaViewConnection;
   bool _focusRequested = false;
 
@@ -88,15 +142,29 @@ class _ErmineViewConnection {
     required this.useFlatland,
     required this.onReady,
     required this.onExit,
+    required String componentUrl,
+    required DirectoryProxy exposedDir,
+    required InterfaceRequest<Directory> exposedDirRequest,
   }) {
     // Connect to the Realm.
-    final realm = RealmProxy();
+    realm = RealmProxy();
     Incoming.fromSvcPath().connectToService(realm);
 
-    // Get the ermine shell's exposed /svc directory.
-    final exposedDir = DirectoryProxy();
+    log.info("launching application shell with url " + componentUrl);
+    realm.createChild(
+        CollectionRef(name: kApplicationShellCollectionName),
+        Child(
+            name: kApplicationShellComponentName,
+            url: componentUrl,
+            startup: StartupMode.lazy),
+        CreateChildArgs());
+
+    // Get the shell's exposed /svc directory.
     realm.openExposedDir(
-        ChildRef(name: 'ermine_shell'), exposedDir.ctrl.request());
+        ChildRef(
+            collection: kApplicationShellCollectionName,
+            name: kApplicationShellComponentName),
+        exposedDirRequest);
 
     // Get the ermine shell's view provider.
     final viewProvider = ViewProviderProxy();
@@ -104,6 +172,12 @@ class _ErmineViewConnection {
     viewProvider.ctrl.whenClosed.then((_) => onExit());
 
     fuchsiaViewConnection = _launch(viewProvider);
+  }
+
+  void dispose() {
+    realm.destroyChild(ChildRef(
+        collection: kApplicationShellCollectionName,
+        name: kApplicationShellComponentName));
   }
 
   void setFocus() {

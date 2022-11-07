@@ -110,10 +110,10 @@
             // TODO(fxbug.dev/105828): These additional `protocol` offers to
             // `#login_shell` are only required by the `terminal` component.
             // `terminal` is launched as a member of the `elements` collection
-            // of `#ermine_shell` (a descendent of `#login_shell`). If/when
-            // there is a way to route capabilities to specific descendents
-            // (and specific collection members), these protocols should be
-            // routed only to terminal.
+            // of the application shell (a descendent of `#login_shell`).
+            // If/when there is a way to route capabilities to specific
+            // descendents (and specific collection members), these protocols
+            // should be routed only to terminal.
             //
             // Other (current and future) children of `#login_shell` should not
             // `use` these protocols without first getting a security policy
@@ -149,10 +149,10 @@
             // TODO(fxbug.dev/105828): These additional `directory` offers to
             // `#login_shell` are only required by the `terminal` component.
             // `terminal` is launched as a member of the `elements` collection
-            // of `#ermine_shell` (a descendent of `#login_shell`). If/when
-            // there is a way to route capabilities to specific descendents
-            // (and specific collection members), these directories should be
-            // routed only to terminal.
+            // of the application shell (a descendent of `#login_shell`).
+            // If/when there is a way to route capabilities to specific
+            // descendents (and specific collection members), these directories
+            // should be routed only to terminal.
             //
             // Other (current and future) children of `#login_shell` should not
             // `use` these directories without first getting a security policy

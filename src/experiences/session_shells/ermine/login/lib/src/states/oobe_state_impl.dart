@@ -55,7 +55,8 @@ class OobeStateImpl with Disposable implements OobeState {
         _localeStream = channelService.stream.asObservable() {
     shellService
       ..onShellReady = _onErmineShellReady
-      ..onShellExit = _onErmineShellExit;
+      ..onShellExit = _onErmineShellExit
+      ..serve(componentContext);
     automatorService
       ..automator = _AutomatorImpl(this)
       ..serve(componentContext);

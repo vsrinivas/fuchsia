@@ -23,8 +23,10 @@ const simpleBrowserUrl =
 const terminalUrl = 'fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cm';
 const kLoginInspectSelector =
     'core/session-manager/session\\:session/workstation_session/login_shell';
+
+// TODO(fxbug.dev/114052): The `1` in `application_shell:1` will change eventually.
 const kErmineInspectSelector =
-    'core/session-manager/session\\:session/workstation_session/login_shell/ermine_shell';
+    'core/session-manager/session\\:session/workstation_session/login_shell/application_shell\\:1';
 
 // USB HID code for ENTER key.
 // See <https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf>

@@ -104,15 +104,10 @@ flutter_component("component") {
 
   component_name = "login"
 
-  # TODO(fxbug.dev/100284): Make Ermine/Gazelle a dynamic child, rather than
-  # requiring these separate variants.
-  if (application_shell == "ermine") {
-    manifest = "meta/login_ermine.cml"
-  } else if (application_shell == "gazelle") {
-    manifest = "meta/login_gazelle.cml"
-  }
+  manifest = "meta/login.cml"
 
   deps = [
+    ":application_shell_config",
     ":default_config",
     ":images",
     ":lib",
@@ -129,6 +124,22 @@ resource("resources") {
           "//prebuilt/third_party/dart/${host_platform}/bin/resources/devtools/assets/fonts/MaterialIcons-Regular.otf") ]
 
   outputs = [ "data/{{source_file_part}}" ]
+}
+
+# This JSON file configures which application shell (ermine or gazelle) should
+# run after login.
+#
+# TODO(fxbug.dev/100284): Push the ermine vs gazelle decision higher up into the
+# topology: you should be able to run `ffx session launch` and get either one
+# without recompiling.
+resource("application_shell_config") {
+  if (application_shell == "ermine") {
+    sources = [ "config/application_shell_ermine.json" ]
+  } else if (application_shell == "gazelle") {
+    sources = [ "config/application_shell_gazelle.json" ]
+  }
+
+  outputs = [ "config/application_shell.json" ]
 }
 
 # With this JSON, data sharing setup step will be provided in OOBE.
