@@ -5,9 +5,27 @@
 import("//build/components.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
-executable("vkext_bin") {
+source_set("vulkan_extension_test") {
   testonly = true
-  output_name = "vkext"
+  sources = [
+    "vulkan_extension_test.cc",
+    "vulkan_extension_test.h",
+  ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//src/lib/fsl",
+  ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
+    "//src/graphics/tests/common",
+    "//src/lib/vulkan",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("vkext_unprotected_bin") {
+  testonly = true
+  output_name = "vkext_unprotected"
 
   sources = [
     "vk_ext_buffer_collection.cc",
@@ -16,6 +34,30 @@ executable("vkext_bin") {
   ]
 
   deps = [
+    ":vulkan_extension_test",
+    "../vkreadback:helper",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
+    "//sdk/lib/fdio",
+    "//src/graphics/lib/magma/src/magma_util/platform:logger_impl",
+    "//src/graphics/lib/magma/src/magma_util/platform:semaphore",
+    "//src/graphics/tests/common",
+    "//src/lib/fsl",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/vulkan",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/fbl",
+  ]
+}
+
+executable("vkext_protected_bin") {
+  testonly = true
+  output_name = "vkext_protected"
+
+  sources = [ "vk_ext_protected.cc" ]
+
+  deps = [
+    ":vulkan_extension_test",
     "../vkreadback:helper",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
@@ -51,13 +93,13 @@ fuchsia_component("vkext_unprotected_cmp") {
   testonly = true
   component_name = "vkext_unprotected"
   deps = [
-    ":vkext_bin",
+    ":vkext_unprotected_bin",
     "//src/lib/vulkan/validation_layers",
   ]
   manifest = "meta/vkext_unprotected.cml"
 }
 
-fuchsia_test_package("vkext-unprotected-pkg") {
+fuchsia_test_package("vkext-unprotected-package") {
   package_name = "vkext_unprotected"
   test_components = [ ":vkext_unprotected_cmp" ]
   test_specs = {
@@ -81,13 +123,13 @@ fuchsia_component("vkext_protected_cmp") {
   testonly = true
   component_name = "vkext_protected"
   deps = [
-    ":vkext_bin",
+    ":vkext_protected_bin",
     "//src/lib/vulkan/validation_layers",
   ]
   manifest = "meta/vkext_protected.cml"
 }
 
-fuchsia_test_package("vkext-protected-pkg") {
+fuchsia_test_package("vkext-protected-package") {
   package_name = "vkext_protected"
   test_components = [ ":vkext_protected_cmp" ]
   test_specs = {
@@ -101,7 +143,7 @@ fuchsia_test_package("vkext-protected-pkg") {
 group("vkext") {
   testonly = true
   deps = [
-    ":vkext-protected-pkg",
-    ":vkext-unprotected-pkg",
+    ":vkext-protected-package",
+    ":vkext-unprotected-package",
   ]
 }
