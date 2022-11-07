@@ -98,6 +98,11 @@ _environment_service_account =
 #   - Optional: whether or not mock-omaha-server should require that all
 #     incoming requests have CUP enabled.
 #   - Type: boolean, default false
+#
+#   use_flash
+#   - Optional: whether or not to use ffx flash instead of paving when
+#     installing the downgrade build.
+#   - Type: boolean, default false
 template("system_test_upgrade_suite") {
   assert(is_linux || is_mac, "system_tests are for linux/mac only")
 
@@ -237,6 +242,10 @@ template("system_test_upgrade_suite") {
 
     if (defined(invoker.require_cup) && invoker.require_cup) {
       _args += [ "-require-cup" ]
+    }
+
+    if (defined(invoker.use_flash) && invoker.use_flash) {
+      _args += [ "-use-flash" ]
     }
 
     host_test(_host_test_target_name) {

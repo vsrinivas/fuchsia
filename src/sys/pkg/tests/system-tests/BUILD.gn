@@ -162,6 +162,9 @@ if (is_linux || is_mac) {
     pave_timeout = "10m"
     cycle_count = "1"
     cycle_timeout = "10m"
+
+    # We use flashing instead of paving as GCE does not support paving.
+    use_flash = true
   }
 
   system_test_upgrade_suite("workstation-release-upgrade-longevity") {

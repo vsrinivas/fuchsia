@@ -643,6 +643,12 @@ func (c *Client) Flash(ctx context.Context, build artifacts.Build) error {
 		return fmt.Errorf("failed to get flasher to flash device: %w", err)
 	}
 
+	deviceHostname, err := c.deviceResolver.ResolveName(ctx)
+	if err != nil {
+		return fmt.Errorf("error resolving device host: %w", err)
+	}
+	f.SetTarget(deviceHostname)
+
 	if err = f.Flash(ctx); err != nil {
 		return fmt.Errorf("device failed to flash: %w", err)
 	}

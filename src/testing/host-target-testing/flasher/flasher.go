@@ -6,6 +6,7 @@ package flasher
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -20,10 +21,12 @@ type BuildFlasher struct {
 	usePB         bool
 	sshPublicKey  ssh.PublicKey
 	stdout        io.Writer
+	target        string
 }
 
 type Flasher interface {
 	Flash(ctx context.Context) error
+	SetTarget(target string)
 }
 
 // NewBuildFlasher constructs a new flasher that uses `ffxPath` as the path
@@ -65,6 +68,11 @@ func Stdout(writer io.Writer) BuildFlasherOption {
 	}
 }
 
+// SetTarget sets the target to flash.
+func (p *BuildFlasher) SetTarget(target string) {
+	p.target = target
+}
+
 // Flash a device with flash.json manifest.
 func (p *BuildFlasher) Flash(ctx context.Context) error {
 	flasherArgs := []string{}
@@ -94,23 +102,38 @@ func (p *BuildFlasher) Flash(ctx context.Context) error {
 }
 
 func (p *BuildFlasher) runFlash(ctx context.Context, args ...string) error {
-	args = append([]string{"target", "flash"}, args...)
-	args = append(args, p.FlashManifest)
+	var finalArgs []string
+	if p.target != "" {
+		finalArgs = []string{"--target", p.target}
+	}
+	finalArgs = append(finalArgs, []string{"target", "flash"}...)
+	finalArgs = append(finalArgs, args...)
+	finalArgs = append(finalArgs, p.FlashManifest)
 
 	path, err := exec.LookPath(p.FfxToolPath)
 	if err != nil {
 		return err
 	}
 
-	logger.Infof(ctx, "running: %s %q", path, args)
-	cmd := exec.CommandContext(ctx, path, args...)
+	logger.Infof(ctx, "running: %s %q", path, finalArgs)
+	cmd := exec.CommandContext(ctx, path, finalArgs...)
 	if p.stdout != nil {
 		cmd.Stdout = p.stdout
 	} else {
 		cmd.Stdout = os.Stdout
 	}
 	cmd.Stderr = os.Stderr
+
+	// Spawn a new FFX isolate dir and add it to the flash command's env.
+	isoDir, err := os.MkdirTemp("", "systemTestIsoDir*")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(isoDir)
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, fmt.Sprintf("FFX_ISOLATE_DIR=%s", isoDir))
+
 	cmdRet := cmd.Run()
-	logger.Infof(ctx, "finished running %s %q: %q", path, args, cmdRet)
+	logger.Infof(ctx, "finished running %s %q: %q", path, finalArgs, cmdRet)
 	return cmdRet
 }
