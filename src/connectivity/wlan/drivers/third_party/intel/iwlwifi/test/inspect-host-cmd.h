@@ -17,9 +17,14 @@ extern "C" {
 void inspect_host_cmd(const char* func_name, int line_no, struct iwl_host_cmd* cmd);
 
 // |cmd| should be 'struct iwl_host_cmd*'.
-#define INSPECT_HOST_CMD(cmd)                  \
-  do {                                         \
-    inspect_host_cmd(__func__, __LINE__, cmd); \
+//
+// Disable by default. Please manually enable it when needed.
+//
+#define INSPECT_HOST_CMD(cmd)                     \
+  do {                                            \
+    if (false) {                                  \
+      inspect_host_cmd(__func__, __LINE__, cmd);  \
+    }                                             \
   } while (0)
 
 #if defined(__cplusplus)
