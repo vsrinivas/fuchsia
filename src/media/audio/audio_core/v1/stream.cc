@@ -8,8 +8,8 @@
 
 #include <mutex>
 
+#include "src/media/audio/audio_core/shared/mixer/intersect.h"
 #include "src/media/audio/audio_core/v1/logging_flags.h"
-#include "src/media/audio/audio_core/v1/mixer/intersect.h"
 #include "src/media/audio/lib/format/constants.h"
 
 namespace {

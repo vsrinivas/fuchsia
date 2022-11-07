@@ -17,11 +17,11 @@
 
 #include <ffl/string.h>
 
+#include "src/media/audio/audio_core/shared/mixer/gain.h"
+#include "src/media/audio/audio_core/shared/mixer/mixer.h"
+#include "src/media/audio/audio_core/shared/mixer/no_op.h"
 #include "src/media/audio/audio_core/v1/base_renderer.h"
 #include "src/media/audio/audio_core/v1/logging_flags.h"
-#include "src/media/audio/audio_core/v1/mixer/gain.h"
-#include "src/media/audio/audio_core/v1/mixer/mixer.h"
-#include "src/media/audio/audio_core/v1/mixer/no_op.h"
 #include "src/media/audio/audio_core/v1/reporter.h"
 #include "src/media/audio/audio_core/v1/silence_padding_stream.h"
 #include "src/media/audio/lib/processing/gain.h"

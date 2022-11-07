@@ -11,8 +11,8 @@
 #include <ffl/string.h>
 #include <gmock/gmock.h>
 
-#include "src/media/audio/audio_core/v1/mixer/constants.h"
-#include "src/media/audio/audio_core/v1/mixer/gain.h"
+#include "src/media/audio/audio_core/shared/mixer/constants.h"
+#include "src/media/audio/audio_core/shared/mixer/gain.h"
 #include "src/media/audio/audio_core/v1/packet_queue.h"
 #include "src/media/audio/audio_core/v1/ring_buffer.h"
 #include "src/media/audio/audio_core/v1/testing/fake_stream.h"

@@ -16,8 +16,8 @@
 #include <unordered_map>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/media/audio/audio_core/shared/metrics/metrics_impl.h"
 #include "src/media/audio/audio_core/v1/audio_admin.h"
-#include "src/media/audio/audio_core/v1/metrics/metrics_impl.h"
 #include "src/media/audio/audio_core/v1/stream_usage.h"
 #include "src/media/audio/audio_core/v1/threading_model.h"
 #include "src/media/audio/lib/format/format.h"

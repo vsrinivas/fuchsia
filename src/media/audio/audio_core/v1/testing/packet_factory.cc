@@ -7,7 +7,7 @@
 #include <lib/async/cpp/time.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/media/audio/audio_core/v1/mixer/constants.h"
+#include "src/media/audio/audio_core/shared/mixer/constants.h"
 
 namespace media::audio::testing {
 

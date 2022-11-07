@@ -10,8 +10,8 @@ group("services") {
 group("tools") {
   testonly = true
   deps = [
+    "//src/media/audio/audio_core/shared/mixer/tools:audio_mixer_profiler",
     "//src/media/audio/audio_core/tools",
-    "//src/media/audio/audio_core/v1/mixer/tools:audio_mixer_profiler",
     "//src/media/audio/tools/audio_listener",
     "//src/media/audio/tools/signal_generator",
     "//src/media/audio/tools/virtual_audio_util",

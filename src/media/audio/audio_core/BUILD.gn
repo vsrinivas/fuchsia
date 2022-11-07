@@ -41,5 +41,5 @@ group("tests") {
 
 group("tools") {
   testonly = true
-  deps = [ "v1/mixer:tools" ]
+  deps = [ "shared/mixer:tools" ]
 }

@@ -6,8 +6,8 @@
 
 #include <fbl/algorithm.h>
 
+#include "src/media/audio/audio_core/shared/mixer/intersect.h"
 #include "src/media/audio/audio_core/v1/logging_flags.h"
-#include "src/media/audio/audio_core/v1/mixer/intersect.h"
 #include "src/media/audio/audio_core/v1/silence_padding_stream.h"
 #include "src/media/audio/audio_core/v1/threading_model.h"
 #include "src/media/audio/lib/effects_loader/effects_loader_v1.h"

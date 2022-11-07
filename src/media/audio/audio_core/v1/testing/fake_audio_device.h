@@ -5,12 +5,12 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_V1_TESTING_FAKE_AUDIO_DEVICE_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_V1_TESTING_FAKE_AUDIO_DEVICE_H_
 
+#include "src/media/audio/audio_core/shared/mixer/mixer.h"
+#include "src/media/audio/audio_core/shared/mixer/no_op.h"
 #include "src/media/audio/audio_core/v1/audio_device.h"
 #include "src/media/audio/audio_core/v1/audio_driver.h"
 #include "src/media/audio/audio_core/v1/device_config.h"
 #include "src/media/audio/audio_core/v1/device_registry.h"
-#include "src/media/audio/audio_core/v1/mixer/mixer.h"
-#include "src/media/audio/audio_core/v1/mixer/no_op.h"
 
 namespace media::audio::testing {
 

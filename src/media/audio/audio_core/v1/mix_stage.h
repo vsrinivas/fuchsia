@@ -14,8 +14,8 @@
 #include <gtest/gtest_prod.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/media/audio/audio_core/shared/mixer/mixer.h"
 #include "src/media/audio/audio_core/v1/clock.h"
-#include "src/media/audio/audio_core/v1/mixer/mixer.h"
 #include "src/media/audio/audio_core/v1/stream.h"
 #include "src/media/audio/audio_core/v1/versioned_timeline_function.h"
 #include "src/media/audio/lib/clock/clock_synchronizer.h"

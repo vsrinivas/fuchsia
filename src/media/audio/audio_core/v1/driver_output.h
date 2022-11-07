@@ -8,12 +8,12 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 
+#include "src/media/audio/audio_core/shared/mixer/output_producer.h"
 #include "src/media/audio/audio_core/v1/audio_driver.h"
 #include "src/media/audio/audio_core/v1/audio_output.h"
 #include "src/media/audio/audio_core/v1/channel_attributes.h"
 #include "src/media/audio/audio_core/v1/device_config.h"
 #include "src/media/audio/audio_core/v1/mix_profile_config.h"
-#include "src/media/audio/audio_core/v1/mixer/output_producer.h"
 #include "src/media/audio/audio_core/v1/threading_model.h"
 #include "src/media/audio/lib/analysis/dropout.h"
 #include "src/media/audio/lib/wav/wav_writer.h"

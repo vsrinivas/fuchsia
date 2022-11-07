@@ -11,7 +11,7 @@
 #include <utility>
 #include <vector>
 
-#include "src/media/audio/audio_core/v1/mixer/output_producer.h"
+#include "src/media/audio/audio_core/shared/mixer/output_producer.h"
 #include "src/media/audio/lib/format/constants.h"
 #include "src/media/audio/lib/format/format.h"
 

@@ -6,9 +6,9 @@
 
 #include <lib/async/cpp/time.h>
 
+#include "src/media/audio/audio_core/shared/mixer/constants.h"
 #include "src/media/audio/audio_core/v1/audio_output.h"
 #include "src/media/audio/audio_core/v1/clock.h"
-#include "src/media/audio/audio_core/v1/mixer/constants.h"
 #include "src/media/audio/audio_core/v1/packet.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 

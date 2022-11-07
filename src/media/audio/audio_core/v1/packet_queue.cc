@@ -9,10 +9,10 @@
 
 #include <iomanip>
 
+#include "src/media/audio/audio_core/shared/mixer/gain.h"
+#include "src/media/audio/audio_core/shared/mixer/intersect.h"
 #include "src/media/audio/audio_core/v1/audio_object.h"
 #include "src/media/audio/audio_core/v1/logging_flags.h"
-#include "src/media/audio/audio_core/v1/mixer/gain.h"
-#include "src/media/audio/audio_core/v1/mixer/intersect.h"
 #include "src/media/audio/lib/format/format.h"
 #include "src/media/audio/lib/processing/gain.h"
 

@@ -3,6 +3,8 @@
 
 #include "src/media/audio/audio_core/v1/reporter.h"
 
+#include <fidl/fuchsia.io/cpp/markers.h>
+#include <fidl/fuchsia.metrics/cpp/natural_types.h>
 #include <lib/fidl/cpp/wire/internal/transport_channel.h>
 #include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
@@ -11,11 +13,9 @@
 #include <queue>
 #include <vector>
 
-#include "fidl/fuchsia.io/cpp/markers.h"
-#include "fidl/fuchsia.metrics/cpp/natural_types.h"
+#include "src/media/audio/audio_core/shared/metrics/metrics_impl.h"
 #include "src/media/audio/audio_core/v1/audio_driver.h"
 #include "src/media/audio/audio_core/v1/media_metrics_registry.cb.h"
-#include "src/media/audio/audio_core/v1/metrics/metrics_impl.h"
 
 namespace media::audio {
 

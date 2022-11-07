@@ -6,7 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/media/audio/audio_core/v1/mixer/intersect.h"
+#include "src/media/audio/audio_core/shared/mixer/intersect.h"
 
 namespace media::audio::testing {
 

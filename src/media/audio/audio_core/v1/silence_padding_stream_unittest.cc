@@ -9,7 +9,7 @@
 #include <ffl/string.h>
 #include <gtest/gtest.h>
 
-#include "src/media/audio/audio_core/v1/mixer/intersect.h"
+#include "src/media/audio/audio_core/shared/mixer/intersect.h"
 #include "src/media/audio/audio_core/v1/testing/fake_audio_core_clock_factory.h"
 #include "src/media/audio/audio_core/v1/testing/packet_factory.h"
 

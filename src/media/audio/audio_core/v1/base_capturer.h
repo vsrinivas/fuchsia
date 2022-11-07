@@ -16,12 +16,12 @@
 
 #include <fbl/intrusive_double_list.h>
 
+#include "src/media/audio/audio_core/shared/mixer/mixer.h"
+#include "src/media/audio/audio_core/shared/mixer/output_producer.h"
 #include "src/media/audio/audio_core/v1/audio_object.h"
 #include "src/media/audio/audio_core/v1/capture_packet_queue.h"
 #include "src/media/audio/audio_core/v1/clock.h"
 #include "src/media/audio/audio_core/v1/context.h"
-#include "src/media/audio/audio_core/v1/mixer/mixer.h"
-#include "src/media/audio/audio_core/v1/mixer/output_producer.h"
 #include "src/media/audio/audio_core/v1/reporter.h"
 #include "src/media/audio/audio_core/v1/route_graph.h"
 #include "src/media/audio/audio_core/v1/stream_volume_manager.h"

@@ -11,7 +11,7 @@
 #include <optional>
 #include <unordered_set>
 
-#include "src/media/audio/audio_core/v1/mixer/gain.h"
+#include "src/media/audio/audio_core/shared/mixer/gain.h"
 #include "src/media/audio/audio_core/v1/process_config.h"
 #include "src/media/audio/audio_core/v1/usage_settings.h"
 #include "src/media/audio/audio_core/v1/volume_control.h"

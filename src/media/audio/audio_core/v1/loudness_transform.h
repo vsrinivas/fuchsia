@@ -9,7 +9,7 @@
 
 #include <variant>
 
-#include "src/media/audio/audio_core/v1/mixer/gain.h"
+#include "src/media/audio/audio_core/shared/mixer/gain.h"
 #include "src/media/audio/audio_core/v1/volume_curve.h"
 #include "src/media/audio/lib/processing/gain.h"
 
