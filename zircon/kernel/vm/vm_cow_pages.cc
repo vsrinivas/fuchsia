@@ -286,7 +286,7 @@ zx_status_t VmCowPages::ReplaceReferenceWithPageLocked(VmPageOrMarkerRef page_or
   IncrementHierarchyGenerationCountLocked();
   // Add the new page to the page queues for tracking. References are by definition not pinned, so
   // we know this is not wired.
-  SetNotWiredLocked(page_or_mark->Page(), offset);
+  SetNotPinnedLocked(page_or_mark->Page(), offset);
   return ZX_OK;
 }
 
@@ -1436,7 +1436,7 @@ zx_status_t VmCowPages::AddPageLocked(VmPageOrMarker* p, uint64_t offset,
     vm_page_t* low_level_page = p->Page();
     DEBUG_ASSERT(low_level_page->state() == vm_page_state::OBJECT);
     DEBUG_ASSERT(low_level_page->object.pin_count == 0);
-    SetNotWiredLocked(low_level_page, offset);
+    SetNotPinnedLocked(low_level_page, offset);
   }
   *page = ktl::move(*p);
 
@@ -2789,7 +2789,7 @@ zx_status_t VmCowPages::PinRangeLocked(uint64_t offset, uint64_t len) {
 
         page->object.pin_count++;
         if (page->object.pin_count == 1) {
-          MoveToWiredLocked(page, page_offset);
+          MoveToPinnedLocked(page, page_offset);
         }
 
         // Pinning every page in the largest vmo possible as many times as possible can't overflow
@@ -3384,11 +3384,11 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
   return status;
 }
 
-void VmCowPages::MoveToWiredLocked(vm_page_t* page, uint64_t offset) {
+void VmCowPages::MoveToPinnedLocked(vm_page_t* page, uint64_t offset) {
   pmm_page_queues()->MoveToWired(page);
 }
 
-void VmCowPages::MoveToNotWiredLocked(vm_page_t* page, uint64_t offset) {
+void VmCowPages::MoveToNotPinnedLocked(vm_page_t* page, uint64_t offset) {
   if (is_source_preserving_page_content()) {
     DEBUG_ASSERT(is_page_dirty_tracked(page));
     // We can only move Clean pages to the pager backed queues as they track age information for
@@ -3401,11 +3401,17 @@ void VmCowPages::MoveToNotWiredLocked(vm_page_t* page, uint64_t offset) {
       pmm_page_queues()->MoveToPagerBackedDirty(page);
     }
   } else {
-    pmm_page_queues()->MoveToAnonymous(page);
+    // Place pages from contiguous VMOs in the wired queue, as they are notionally pinned until the
+    // owner explicitly releases them.
+    if (can_decommit_zero_pages_locked()) {
+      pmm_page_queues()->MoveToAnonymous(page);
+    } else {
+      pmm_page_queues()->MoveToWired(page);
+    }
   }
 }
 
-void VmCowPages::SetNotWiredLocked(vm_page_t* page, uint64_t offset) {
+void VmCowPages::SetNotPinnedLocked(vm_page_t* page, uint64_t offset) {
   if (is_source_preserving_page_content()) {
     DEBUG_ASSERT(is_page_dirty_tracked(page));
     // We can only move Clean pages to the pager backed queues as they track age information for
@@ -3418,7 +3424,13 @@ void VmCowPages::SetNotWiredLocked(vm_page_t* page, uint64_t offset) {
       pmm_page_queues()->SetPagerBackedDirty(page, this, offset);
     }
   } else {
-    pmm_page_queues()->SetAnonymous(page, this, offset);
+    // Place pages from contiguous VMOs in the wired queue, as they are notionally pinned until the
+    // owner explicitly releases them.
+    if (can_decommit_zero_pages_locked()) {
+      pmm_page_queues()->SetAnonymous(page, this, offset);
+    } else {
+      pmm_page_queues()->SetWired(page, this, offset);
+    }
   }
 }
 
@@ -3612,7 +3624,7 @@ void VmCowPages::UnpinLocked(uint64_t offset, uint64_t len, bool allow_gaps) {
         ASSERT(p->object.pin_count > 0);
         p->object.pin_count--;
         if (p->object.pin_count == 0) {
-          MoveToNotWiredLocked(p, offset);
+          MoveToNotPinnedLocked(p, offset);
 #if (DEBUG_ASSERT_IMPLEMENTED)
           // Check if the current range can be extended.
           if (completely_unpin_start + completely_unpin_len == off) {

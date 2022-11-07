@@ -904,15 +904,15 @@ class VmCowPages final
   // the output.
   VmCowPages* PagedParentOfSliceLocked(uint64_t* offset) TA_REQ(lock_);
 
-  // Moves an existing page to the wired queue, retaining backlink information if applicable.
-  void MoveToWiredLocked(vm_page_t* page, uint64_t offset) TA_REQ(lock_);
+  // Moves an existing page to the wired queue as a consequence of the page being pinned.
+  void MoveToPinnedLocked(vm_page_t* page, uint64_t offset) TA_REQ(lock_);
 
-  // Updates the page queue of an existing page, moving it to whichever non wired queue
-  // is appropriate.
-  void MoveToNotWiredLocked(vm_page_t* page, uint64_t offset) TA_REQ(lock_);
+  // Updates the page queue of an existing non-pinned page, moving it to whichever queue is
+  // appropriate.
+  void MoveToNotPinnedLocked(vm_page_t* page, uint64_t offset) TA_REQ(lock_);
 
-  // Places a newly added page into the appropriate non wired page queue.
-  void SetNotWiredLocked(vm_page_t* page, uint64_t offset) TA_REQ(lock_);
+  // Places a newly added, not yet pinned, page into the appropriate page queue.
+  void SetNotPinnedLocked(vm_page_t* page, uint64_t offset) TA_REQ(lock_);
 
   // Updates any meta data for accessing a page. Currently this moves pager backed pages around in
   // the page queue to track which ones were recently accessed for the purposes of eviction. In

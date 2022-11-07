@@ -190,7 +190,7 @@ static bool vmo_pin_contiguous_test() {
     }
 
     vmo->Unpin(PAGE_SIZE, 3 * PAGE_SIZE);
-    EXPECT_TRUE(PagesInAnyAnonymousQueue(vmo.get(), PAGE_SIZE, 3 * PAGE_SIZE));
+    EXPECT_TRUE(PagesInWiredQueue(vmo.get(), PAGE_SIZE, 3 * PAGE_SIZE));
 
     status = vmo->DecommitRange(PAGE_SIZE, 3 * PAGE_SIZE);
     if (!is_loaning_enabled) {
@@ -316,7 +316,7 @@ static bool vmo_multiple_pin_contiguous_test() {
 
     vmo->Unpin(0, alloc_size);
     EXPECT_TRUE(PagesInWiredQueue(vmo.get(), PAGE_SIZE, 4 * PAGE_SIZE));
-    EXPECT_TRUE(PagesInAnyAnonymousQueue(vmo.get(), 5 * PAGE_SIZE, alloc_size - 5 * PAGE_SIZE));
+    EXPECT_TRUE(PagesInWiredQueue(vmo.get(), 5 * PAGE_SIZE, alloc_size - 5 * PAGE_SIZE));
     status = vmo->DecommitRange(PAGE_SIZE, 4 * PAGE_SIZE);
     if (!is_ppb_enabled) {
       EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, status, "decommitting pinned range\n");
@@ -441,8 +441,9 @@ static bool vmo_create_contiguous_test() {
 
   EXPECT_TRUE(vmo->is_contiguous(), "vmo is contig\n");
 
-  // Contiguous VMOs don't implicitly pin.
-  EXPECT_FALSE(PagesInWiredQueue(vmo.get(), 0, alloc_size));
+  // Contiguous VMOs are not pinned, but they are notionally wired as they will not be automatically
+  // manipulated by the kernel.
+  EXPECT_TRUE(PagesInWiredQueue(vmo.get(), 0, alloc_size));
 
   paddr_t last_pa;
   auto lookup_func = [&last_pa](uint64_t offset, paddr_t pa) {
