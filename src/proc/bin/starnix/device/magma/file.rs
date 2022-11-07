@@ -191,9 +191,12 @@ impl FileOps for MagmaFile {
                         response.result_return = MAGMA_STATUS_OK as u64;
                     }
                     _ => {
-                        tracing::error!("No image info was found for buffer: {:?}", {
-                            control.image
-                        });
+                        strace!(
+                            level = error,
+                            current_task,
+                            "No image info was found for buffer: {:?}",
+                            { control.image }
+                        );
                         response.result_return = MAGMA_STATUS_INVALID_ARGS as u64;
                     }
                 };
@@ -252,7 +255,11 @@ impl FileOps for MagmaFile {
                     match buffers.remove(&(control.buffer as u64)) {
                         Some(_) => release_buffer(control, &mut response),
                         _ => {
-                            tracing::error!("Calling magma_release_buffer with an invalid buffer.");
+                            strace!(
+                                level = error,
+                                current_task,
+                                "Calling magma_release_buffer with an invalid buffer."
+                            );
                         }
                     };
                 }
@@ -591,7 +598,7 @@ impl FileOps for MagmaFile {
                 current_task.mm.write_object(UserRef::new(response_address), &response)
             }
             t => {
-                tracing::warn!("Got unknown request: {:?}", t);
+                strace!(level = warn, current_task, "Got unknown request: {:?}", t);
                 error!(ENOSYS)
             }
         }?;

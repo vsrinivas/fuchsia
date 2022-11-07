@@ -6,9 +6,22 @@ use fuchsia_zircon as zx;
 
 use crate::types::Errno;
 
+macro_rules! strace {
+    (level = $level:ident, tag = $tag:expr, $task:expr, $fmt:expr $(, $($arg:tt)*)?) => {
+        tracing::$level!(tag = $tag, concat!("{:?} ", $fmt), $task $(, $($arg)*)?);
+    };
+    (level = $level:ident, $task:expr, $fmt:expr $(, $($arg:tt)*)?) => {
+        $crate::logging::strace!(level = $level, tag = "strace", $task, $fmt $(, $($arg)*)?)
+
+    };
+    ($task:expr, $fmt:expr $(, $($arg:tt)*)?) => {
+        $crate::logging::strace!(level = trace, $task, $fmt $(, $($arg)*)?)
+    };
+}
+
 macro_rules! not_implemented {
     ($task:expr, $fmt:expr $(, $($arg:tt)*)?) => (
-        tracing::warn!(tag = "not_implemented", concat!("{:?} ", $fmt), $task $(, $($arg)*)?);
+        $crate::logging::strace!(level = warn, tag = "not_implemented", $task, $fmt $(, $($arg)*)?)
     )
 }
 
@@ -20,12 +33,6 @@ macro_rules! not_implemented_log_once {
                 not_implemented!($($arg)*);
             }
         }
-    )
-}
-
-macro_rules! strace {
-    ($task:expr, $fmt:expr $(, $($arg:tt)*)?) => (
-        tracing::trace!(tag = "strace", concat!("{:?} ", $fmt), $task $(, $($arg)*)?);
     )
 }
 

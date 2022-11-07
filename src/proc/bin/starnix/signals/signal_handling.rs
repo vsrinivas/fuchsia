@@ -370,7 +370,7 @@ pub fn sys_restart_syscall(current_task: &mut CurrentTask) -> Result<SyscallResu
             // This may indicate a bug where a syscall returns ERESTART_RESTARTBLOCK without
             // setting a restart func. But it can also be triggered by userspace, e.g. by directly
             // calling restart_syscall or injecting an ERESTART_RESTARTBLOCK error through ptrace.
-            tracing::warn!("restart_syscall called, but nothing to restart");
+            strace!(level = warn, current_task, "restart_syscall called, but nothing to restart");
             error!(EINTR)
         }
     }

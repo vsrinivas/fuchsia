@@ -17,7 +17,7 @@ use std::mem;
 use std::sync::Arc;
 
 use super::shared::*;
-use crate::logging::set_zx_name;
+use crate::logging::{set_zx_name, strace};
 use crate::mm::MemoryManager;
 use crate::signals::*;
 use crate::syscalls::decls::SyscallDecl;
@@ -44,9 +44,10 @@ where
             // without having previous called sys_exit(), and that will swallow the actual error.
             match run_exception_loop(&mut current_task, exceptions) {
                 Err(error) => {
-                    tracing::warn!(
-                        "process {:?} died unexpectedly from {:?}! treating as SIGKILL",
+                    strace!(
+                        level = warn,
                         current_task,
+                        "Died unexpectedly from {:?}! treating as SIGKILL",
                         error
                     );
                     let exit_status = ExitStatus::Kill(SignalInfo::default(SIGKILL));
@@ -149,7 +150,7 @@ fn run_exception_loop(
             }
 
             _ => {
-                tracing::warn!("unhandled exception. info={:?} report.header={:?} synth_code={:?} synth_data={:?}", info, report.header, report.context.synth_code, report.context.synth_data);
+                strace!(level =warn, current_task, "unhandled exception. info={:?} report.header={:?} synth_code={:?} synth_data={:?}", info, report.header, report.context.synth_code, report.context.synth_data);
                 exception.set_exception_state(&ZX_EXCEPTION_STATE_TRY_NEXT)?;
                 continue;
             }

@@ -20,6 +20,7 @@ use crate::execution::{
     get_pkg_hash, parse_numbered_handles,
 };
 use crate::fs::*;
+use crate::logging::strace;
 use crate::task::*;
 use crate::types::*;
 
@@ -123,7 +124,13 @@ pub async fn start_component(
 
     run_component_features(&component_features, &current_task, &mut start_info.outgoing_dir)
         .unwrap_or_else(|e| {
-            tracing::error!("failed to set component features for {} - {:?}", url, e);
+            strace!(
+                level = error,
+                current_task,
+                "failed to set component features for {} - {:?}",
+                url,
+                e
+            );
         });
 
     execute_task(current_task, |result| {

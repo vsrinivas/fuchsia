@@ -3101,7 +3101,6 @@ mod tests {
             };
             addresses.push(address);
         }
-        tracing::warn!("{:?}", addresses);
         addresses
     }
 
