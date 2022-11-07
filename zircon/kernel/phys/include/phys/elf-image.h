@@ -55,6 +55,8 @@ class ElfImage {
     return entry_ + *load_bias_;
   }
 
+  ktl::optional<ktl::string_view> interp() const { return interp_; }
+
   bool has_patches() const { return !patches().empty(); }
 
   // The template parameter must be an `enum class Id : uint32_t` type.
@@ -102,6 +104,10 @@ class ElfImage {
 
   // Apply relocations to the image in place after setting the load address.
   void Relocate();
+
+  // Panic if the loaded file doesn't have a PT_INTERP matching this string.
+  // The prefix is used in the panic message.
+  void AssertInterp(ktl::string_view prefix, ktl::string_view interp);
 
   // Call the image's entry point as a function type F.
   template <typename F, typename... Args>

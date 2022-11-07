@@ -183,3 +183,13 @@ void ElfImage::Relocate() {
     ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
   }
 }
+
+void ElfImage::AssertInterp(ktl::string_view prefix, ktl::string_view interp) {
+  ZX_ASSERT_MSG(interp_, "%.*s: ELF image has no PT_INTERP (expected %.*s)",
+                static_cast<int>(prefix.size()), prefix.data(),  //
+                static_cast<int>(interp.size()), interp.data());
+  ZX_ASSERT_MSG(*interp_ == interp, "%.*s: ELF image PT_INTERP %.*s != expected %.*s)",
+                static_cast<int>(prefix.size()), prefix.data(),      //
+                static_cast<int>(interp_->size()), interp_->data(),  //
+                static_cast<int>(interp.size()), interp.data());
+}

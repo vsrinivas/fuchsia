@@ -7,9 +7,10 @@
 import("//build/dist/resource.gni")
 import("//build/testing/zbi_test.gni")
 import("//zircon/kernel/kernel_package.gni")
+import("//zircon/kernel/phys/kernel_elf_interp.gni")
 import("//zircon/kernel/phys/zbi_executable.gni")
 
-zbi_executable("zbi-basic-elf-loading-test.executable") {
+zbi_executable("basic-elf-loading-test") {
   visibility = [ ":*" ]
   testonly = true
 
@@ -28,12 +29,21 @@ zbi_executable("zbi-basic-elf-loading-test.executable") {
   ]
 }
 
+kernel_elf_interp("basic-elf-loading-test.interp") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  deps = [ ":basic-elf-loading-test" ]
+}
+
 loadable_module("get-int") {
   visibility = [ ":*" ]
   testonly = true
 
   sources = [ "get-int.cc" ]
   ldflags = [ "-Wl,-e,GetInt" ]
+
+  deps = [ ":basic-elf-loading-test.interp" ]
 
   metadata = {
     # This is the same metadata as a resource() target would have.
@@ -47,7 +57,7 @@ loadable_module("get-int") {
   }
 }
 
-kernel_package("loadables") {
+kernel_package("basic-elf-loading-test-data") {
   visibility = [ ":*" ]
   testonly = true
 
@@ -55,10 +65,9 @@ kernel_package("loadables") {
 }
 
 zbi_test("zbi-basic-elf-loading-test") {
-  args = []
   deps = [
-    ":loadables",
-    ":zbi-basic-elf-loading-test.executable",
+    ":basic-elf-loading-test",
+    ":basic-elf-loading-test-data",
   ]
 }
 

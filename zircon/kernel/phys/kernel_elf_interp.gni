@@ -1,0 +1,111 @@
+# Copyright 2022 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/zircon/c_utils.gni")
+
+# Provide an ELF executable() or loadable_module() target with a PT_INTERP
+# string based on the build ID of another linking target.
+#
+# This defines a link-input target (as in source_set() et al) that can
+# be included in $deps of executable() and similar targets.  Doing so
+# gives that executable a PT_INTERP value of the build ID, in canonical
+# hex textual form, of whatever executable-like target was reached by
+# this target's $deps.
+#
+# Parameters
+#
+#   * deps
+#     - Required: Must reach exactly one linking target (executable, etc.) as
+#       per link_output_rspfile(), which see.  That executable's build ID
+#       rendered as hex text will become the PT_INTERP string used if an
+#       executable links in $target_name via its transitive $deps.
+#     - Type: list(label)
+#
+#   * data_deps, metadata, visibility, testonly
+#     - Optional: As for source_set().
+#
+template("kernel_elf_interp") {
+  main_target = target_name
+  inc_target = "$target_name.incbin.inc"
+  inc_label = ":$inc_target($default_toolchain)"
+  gen_dir = get_label_info(inc_label, "target_gen_dir")
+  elf_interp_inc_file = "$target_name.elf-interp.inc"
+  elf_interp_inc = "$gen_dir/$elf_interp_inc_file"
+
+  # Assemble a tiny file that defines an allocated `.interp` section.
+  source_set(main_target) {
+    forward_variables_from(invoker,
+                           [
+                             "data_deps",
+                             "metadata",
+                             "visibility",
+                             "testonly",
+                           ])
+    sources = [ "//zircon/kernel/phys/elf-interp.S" ]
+    defines = [ "ELF_INTERP_INC=\"$elf_interp_inc_file\"" ]
+    include_dirs = [ gen_dir ]
+    inputs = [ elf_interp_inc ]
+    deps = [ inc_label ]
+  }
+
+  if (current_toolchain == default_toolchain) {
+    # Generate a file containing `.incbin "FILENAME"` to be used in the
+    # assembly.  The source_set() depends on this so that elf-interp.S can
+    # #include the file in a fresh build, though since it's an #include the
+    # depfiles from the doing the assembly will track that (redundantly).
+    # However, those depfiles are only from the compiler driver doing the
+    # preprocessing; the assembler itself doesn't emit any depfile information
+    # about the `.incbin` use of the input file.  So to ensure that the
+    # assembler step is repeated when *that* file changes, we unconditionally
+    # update this generated one-liner file whenever the file `.incbin` will
+    # make the assembler read was touched.  This happens only implicitly via
+    # the depfile that the script writes, since we don't know what that actual
+    # file name is until we derive it from the rspfile below.  What we use is
+    # the .stamp file that buildidtool writes.  This has a name that's the same
+    # as the link_ouptut_path plus ".build-id.stamp" and is an implicit output
+    # of the linking step.  GN doesn't really care that this output file
+    # exists, but GN tells Ninja about it being an output of the link step.
+    # That's enough for Ninja to ingest a depfile that refers to it and ensure
+    # that the next incremental build will regenerate $elf_interp_inc when and
+    # only when the $deps linking target was actually relinked.
+
+    rspfile_target = "$target_name.interp.rspfile"
+    interp_rspfile = "$target_gen_dir/$target_name.elf-interp.rspfile"
+
+    action(inc_target) {
+      visibility = [ ":$main_target" ]
+      forward_variables_from(invoker, [ "testonly" ])
+
+      script = "//zircon/kernel/phys/kernel-elf-interp.sh"
+      sources = [ interp_rspfile ]
+      deps = [ ":$rspfile_target" ]
+      outputs = [ elf_interp_inc ]
+      depfile = "$elf_interp_inc.d"
+      args = rebase_path(sources + outputs + [ depfile ], root_build_dir)
+
+      metadata = {
+        # Don't propagate from zbi_input()-compatible targets.
+        zbi_input_barrier = []
+      }
+    }
+
+    # Before all else, we need an rspfile that shows the file name that the
+    # link step wrote.  The handy template generates an rspfile that contains
+    # the name of the main output file.  The buildidtool file we need has a
+    # name that can be derived from this file name.
+    link_output_rspfile(rspfile_target) {
+      visibility = [ ":$inc_target" ]
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "testonly",
+                             ])
+      outputs = [ interp_rspfile ]
+    }
+  } else {
+    not_needed(invoker, [ "deps" ])
+  }
+}

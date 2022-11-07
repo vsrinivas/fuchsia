@@ -431,6 +431,7 @@ template("clang_toolchain") {
               " && $strip --strip-all \"{{UNSTRIPPED_OUTFILE}}\" \"$outfile\""
         }
         if (invoker.toolchain_os != "mac" && invoker.toolchain_os != "win") {
+          outputs += [ "$outfile.build-id.stamp" ]
           command +=
               " && $buildidtool -build-id-dir .build-id" +
               " -stamp \"$outfile.build-id.stamp\"" + " -entry \"=$outfile\"" +
@@ -694,6 +695,7 @@ template("clang_toolchain") {
         } else {
           command +=
               " && $strip {{STRIP_ARGS}} \"$unstripped_outfile\" \"$outfile\""
+          outputs += [ "$outfile.build-id.stamp" ]
           command +=
               " && $buildidtool -build-id-dir .build-id" +
               " -stamp \"$outfile.build-id.stamp\"" + " -entry \"=$outfile\"" +

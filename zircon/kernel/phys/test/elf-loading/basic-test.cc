@@ -29,7 +29,7 @@ namespace {
 constexpr ktl::string_view kGetInt = "get-int";
 
 // The BOOTFS namespace under which kGetInt lives.
-constexpr ktl::string_view kNamespace = "loadables";
+constexpr ktl::string_view kNamespace = "basic-elf-loading-test-data";
 
 }  // namespace
 
@@ -63,6 +63,10 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks) {
 
   elf.Load();
   elf.Relocate();
+
+  // The GN target for get-int uses kernel_elf_interp() on this test binary.
+  printf("Verifying PT_INTERP matches test build ID...\n");
+  elf.AssertInterp(kGetInt, symbolize.BuildIdString());
 
   printf("Calling entry point...\n");
 
