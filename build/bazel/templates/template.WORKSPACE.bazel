@@ -36,6 +36,11 @@ local_repository(
 )
 
 local_repository(
+    name = "rules_license",
+    path = "third_party/bazel_rules_license",
+)
+
+local_repository(
     name = "rules_cc",
     path = "third_party/bazel_rules_cc",
 )
