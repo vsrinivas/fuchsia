@@ -155,6 +155,7 @@ pub struct MockRealmQueryBuilderInner {
     moniker: String,
     exposes: Vec<Expose>,
     out_dir_entry: Vec<String>,
+    svc_dir_entry: Vec<String>,
     diagnostics_dir_entry: Vec<String>,
     parent: Option<Box<MockRealmQueryBuilder>>,
 }
@@ -168,16 +169,22 @@ async fn to_realm_query_result(builder: &MockRealmQueryBuilderInner) -> RealmQue
 
     let mut mock_dir_top = MockDir::new("out".to_owned());
     let mut mock_dir_diagnostics = MockDir::new("diagnostics".to_owned());
+    let mut mock_dir_svc = MockDir::new("svc".to_owned());
 
     for entry in &builder.diagnostics_dir_entry {
         mock_dir_diagnostics = mock_dir_diagnostics.add_entry(MockFile::new_arc(entry.to_owned()));
+    }
+
+    for entry in &builder.svc_dir_entry {
+        mock_dir_svc = mock_dir_svc.add_entry(MockFile::new_arc(entry.to_owned()));
     }
 
     for entry in &builder.out_dir_entry {
         mock_dir_top = mock_dir_top.add_entry(MockFile::new_arc(entry.to_owned()));
     }
 
-    mock_dir_top = mock_dir_top.add_entry(Arc::new(mock_dir_diagnostics));
+    mock_dir_top =
+        mock_dir_top.add_entry(Arc::new(mock_dir_diagnostics)).add_entry(Arc::new(mock_dir_svc));
 
     fuchsia_async::Task::local(async move { Arc::new(mock_dir_top).serve(outdir_server).await })
         .detach();
@@ -229,6 +236,12 @@ impl MockRealmQueryBuilderInner {
         self
     }
 
+    /// Add an entry 'out/svc'.
+    pub fn svc_dir_entry(mut self, entry: &str) -> Self {
+        self.svc_dir_entry.push(entry.to_owned());
+        self
+    }
+
     /// Add an entry `out/diagnostics`.
     pub fn diagnostics_dir_entry(mut self, entry: &str) -> Self {
         self.diagnostics_dir_entry.push(entry.to_owned());
@@ -259,6 +272,7 @@ impl MockRealmQueryBuilder {
             moniker: "".to_owned(),
             exposes: vec![],
             out_dir_entry: vec![],
+            svc_dir_entry: vec![],
             diagnostics_dir_entry: vec![],
             parent: Some(Box::new(self)),
         }
@@ -289,7 +303,8 @@ impl Default for MockRealmQuery {
                 target_name: Some("fuchsia.diagnostics.ArchiveAccessor".to_owned()),
                 ..ExposeProtocol::EMPTY
             })])
-            .out_dir_entry("fuchsia.some.GarbageAccessor")
+            .svc_dir_entry("fuchsia.some.GarbageAccessor")
+            .out_dir_entry("fuchsia.diagnostics.WorkingAccessor")
             .diagnostics_dir_entry("fuchsia.inspect.Tree")
             .add()
             .when("other/component")
@@ -311,7 +326,7 @@ impl Default for MockRealmQuery {
                 target_name: Some("fuchsia.io.MagicStuff".to_owned()),
                 ..ExposeProtocol::EMPTY
             })])
-            .out_dir_entry("fuchsia.diagnostics.MagicArchiveAccessor")
+            .svc_dir_entry("fuchsia.diagnostics.MagicArchiveAccessor")
             .diagnostics_dir_entry("fuchsia.inspect.Tree")
             .add()
             .when("foo/component")

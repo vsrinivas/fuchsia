@@ -1,5 +1,4 @@
 archivist:expose:fuchsia.diagnostics.ArchiveAccessor
-archivist:out/svc:fuchsia.diagnostics.ArchiveAccessor
-archivist:out/svc:fuchsia.diagnostics.FeedbackArchiveAccessor
-archivist:out/svc:fuchsia.diagnostics.LegacyMetricsArchiveAccessor
-archivist:out/svc:fuchsia.diagnostics.LoWPANArchiveAccessor
+archivist:out:fuchsia.diagnostics.FeedbackArchiveAccessor
+archivist:out:fuchsia.diagnostics.LegacyMetricsArchiveAccessor
+archivist:out:fuchsia.diagnostics.LoWPANArchiveAccessor

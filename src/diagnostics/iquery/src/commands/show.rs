@@ -12,6 +12,7 @@ use {
     async_trait::async_trait,
     derivative::Derivative,
     diagnostics_data::{Inspect, InspectData},
+    itertools::Itertools,
     serde::Serialize,
     std::{cmp::Ordering, ops::Deref},
 };
@@ -80,6 +81,8 @@ pub struct ShowCommand {
     /// For example: `bootstrap/archivist:expose:fuchsia.diagnostics.FeedbackArchiveAccessor`
     /// means that the command will connect to the `FeedbackArchiveAccecssor`
     /// exposed by `bootstrap/archivist`.
+    ///
+    /// NOTE: if `<directory>` starts with `out`, then it means `out/svc` implicitly.
     pub accessor: Option<String>,
 }
 
@@ -96,8 +99,28 @@ impl Command for ShowCommand {
         )
         .await?;
         let selectors = utils::expand_selectors(selectors)?;
+
+        let accessor = match &self.accessor {
+            Some(a) => {
+                let elements: Vec<&str> = a.split(":").collect();
+                if elements.len() != 3 {
+                    return Err(Error::InvalidAccessor(a.to_owned()));
+                }
+                // Append "svc" to "out" if needed.
+                let dir = elements[1];
+                let dir = if dir == "out" || dir.starts_with("out/") {
+                    let dir_elements = &dir.split("/").collect::<Vec<_>>();
+                    ["out/svc"].iter().chain(dir_elements[1..].into_iter()).join("/")
+                } else {
+                    dir.to_owned()
+                };
+                Some([elements[0], &dir, elements[2]].join(":"))
+            }
+            _ => None,
+        };
+
         let inspect_data_iter =
-            provider.snapshot::<Inspect>(&self.accessor, &selectors).await?.into_iter();
+            provider.snapshot::<Inspect>(&accessor, &selectors).await?.into_iter();
         // Filter out by filename on the Inspect metadata.
         let filter_fn: Box<dyn Fn(&InspectData) -> bool> = match &self.file {
             Some(file) => {

@@ -55,6 +55,9 @@ pub enum Error {
     #[error("No running component was found whose URL contains the given string: {0}")]
     ManifestNotFound(String),
 
+    #[error("Invalid accessor: {0}")]
+    InvalidAccessor(String),
+
     #[error("Invalid selector: {0}")]
     InvalidSelector(String),
 

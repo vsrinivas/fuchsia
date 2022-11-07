@@ -15,6 +15,7 @@ use {
     itertools::Itertools,
     lazy_static::lazy_static,
     regex::Regex,
+    std::collections::HashSet,
 };
 
 lazy_static! {
@@ -161,6 +162,8 @@ pub async fn get_accessor_selectors(
                 continue;
             }
 
+            let mut seen_accessors_set = HashSet::new();
+
             resolved_state.exposes.iter().for_each(|expose| {
                 if let fcomponent_decl::Expose::Protocol(ref expose_protocol) = expose {
                     if let Some(ref expose_target) = expose_protocol.target_name {
@@ -175,6 +178,7 @@ pub async fn get_accessor_selectors(
                             // Stripes out the leading "./".
                             output_vec
                                 .push(format!("{}:expose:{}", normalized_moniker, expose_target));
+                            seen_accessors_set.insert(String::from(expose_target));
                         }
                     }
                 }
@@ -192,9 +196,18 @@ pub async fn get_accessor_selectors(
                 Ok(proxy) => proxy,
                 Err(_) => continue,
             };
+            // Only look at `out/svc`.
+            let out_svc_dir_proxy = match fuchsia_fs::directory::open_directory_no_describe(
+                &out_dir_proxy,
+                "svc",
+                fuchsia_fs::OpenFlags::RIGHT_READABLE,
+            ) {
+                Ok(proxy) => proxy,
+                Err(_) => continue,
+            };
 
             let entries = fuchsia_fs::directory::readdir_recursive(
-                &out_dir_proxy,
+                &out_svc_dir_proxy,
                 Some(IQUERY_TIMEOUT.into()),
             )
             .collect::<Vec<_>>()
@@ -205,10 +218,13 @@ pub async fn get_accessor_selectors(
                     Ok(ref dir_entry) => {
                         if (dir_entry.kind == fuchsia_fs::directory::DirentKind::File
                             || dir_entry.kind == fuchsia_fs::directory::DirentKind::Service)
+                            && !seen_accessors_set.contains(&dir_entry.name)
                             && expected_accessor_re.is_match(&dir_entry.name)
                         {
                             // Split the entry so that field is a single element.
                             let dir_entry_elements = &dir_entry.name.split("/").collect::<Vec<_>>();
+                            // "out" here implicitly means "out/svc" to be consistent with
+                            // component framework.
                             let (service_prefix, service) = if dir_entry_elements.len() > 1 {
                                 (
                                     ["out"]
@@ -237,7 +253,10 @@ pub async fn get_accessor_selectors(
                         );
                     }
                     Err(e) => {
-                        eprintln!("Warning: Unable to open directory {:?}.", e);
+                        eprintln!(
+                            "Warning: Unable to read directory for component {}, error: {:?}.",
+                            &normalized_moniker, e
+                        );
                     }
                 }
             }
