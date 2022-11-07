@@ -152,6 +152,105 @@ bool IsSliceNalUnitType(uint8_t nal_unit_type) {
   return false;
 }
 
+// Ensures that the format does not exceed the packet allow bytes. It also ensures that the planes
+// do not overlap
+void CheckFormatIntegrity(const fuchsia::media::VideoUncompressedFormat& raw,
+                          const fuchsia::media::Packet& packet) {
+  switch (raw.fourcc) {
+    case make_fourcc('N', 'V', '1', '2'): {
+      size_t y_size = raw.primary_height_pixels * raw.primary_line_stride_bytes;
+      if (raw.secondary_start_offset < y_size) {
+        Exit("raw.secondary_start_offset < y_size");
+      }
+      // NV12 requires UV be same line stride as Y.
+      size_t total_size = raw.secondary_start_offset +
+                          raw.primary_height_pixels / 2 * raw.primary_line_stride_bytes;
+      if (packet.valid_length_bytes() < total_size) {
+        Exit(
+            "packet.valid_length_bytes < total_size (1) - valid_length_bytes: %u total_size: "
+            "%lu",
+            packet.valid_length_bytes(), total_size);
+      }
+      break;
+    }
+    case make_fourcc('Y', 'V', '1', '2'): {
+      size_t y_size = raw.primary_height_pixels * raw.primary_line_stride_bytes;
+      size_t v_size = raw.secondary_height_pixels * raw.secondary_line_stride_bytes;
+      size_t u_size = v_size;
+      size_t total_size = y_size + u_size + v_size;
+
+      if (packet.valid_length_bytes() < total_size) {
+        Exit("packet.valid_length_bytes < total_size (2)");
+      }
+
+      if (raw.secondary_start_offset < y_size) {
+        Exit("raw.secondary_start_offset < y_size");
+      }
+
+      if (raw.tertiary_start_offset < y_size + v_size) {
+        Exit("raw.tertiary_start_offset < y_size + v_size");
+      }
+      break;
+    }
+    default:
+      Exit("fourcc != NV12 && fourcc != YV12");
+  }
+}
+
+// Check to make sure that fields in the VideoUncompressedFormat matches the ImageFormat
+void CheckMismatchedFormats(const fuchsia::media::VideoUncompressedFormat& uncompressed,
+                            const fuchsia::sysmem::ImageFormat_2& image_format) {
+  switch (uncompressed.fourcc) {
+    case make_fourcc('N', 'V', '1', '2'): {
+      if (image_format.pixel_format.type != fuchsia::sysmem::PixelFormatType::NV12) {
+        Exit("Mismatched pixel format types between uncompressed and image format");
+      }
+
+      if ((uncompressed.primary_width_pixels != image_format.coded_width) ||
+          (uncompressed.secondary_width_pixels != image_format.coded_width / 2) ||
+          (uncompressed.primary_display_width_pixels != image_format.display_width)) {
+        Exit("Mismatched width between uncompressed and image format");
+      }
+
+      if ((uncompressed.primary_height_pixels != image_format.coded_height) ||
+          (uncompressed.secondary_height_pixels != image_format.coded_height / 2) ||
+          (uncompressed.primary_display_height_pixels != image_format.display_height)) {
+        Exit("Mismatched height between uncompressed and image format");
+      }
+
+      if ((uncompressed.primary_line_stride_bytes != image_format.bytes_per_row) ||
+          (uncompressed.secondary_line_stride_bytes != image_format.bytes_per_row)) {
+        Exit("Mismatched stride between uncompressed and image format");
+      }
+      break;
+    }
+    case make_fourcc('Y', 'V', '1', '2'): {
+      if (image_format.pixel_format.type != fuchsia::sysmem::PixelFormatType::YV12) {
+        Exit("Mismatched pixel format types between uncompressed and image format");
+      }
+
+      if ((uncompressed.primary_width_pixels != image_format.coded_width) ||
+          (uncompressed.secondary_width_pixels != image_format.coded_width / 2) ||
+          (uncompressed.primary_display_width_pixels != image_format.display_width)) {
+        Exit("Mismatched width between uncompressed and image format");
+      }
+      if ((uncompressed.primary_height_pixels != image_format.coded_height) ||
+          (uncompressed.secondary_height_pixels != image_format.coded_height / 2) ||
+          (uncompressed.primary_display_height_pixels != image_format.display_height)) {
+        Exit("Mismatched height between uncompressed and image format");
+      }
+
+      if ((uncompressed.primary_line_stride_bytes != image_format.bytes_per_row) ||
+          (uncompressed.secondary_line_stride_bytes != image_format.bytes_per_row / 2)) {
+        Exit("Mismatched stride between uncompressed and image format");
+      }
+      break;
+    }
+    default:
+      Exit("Unsupported pixel format");
+  }
+}
+
 class VideoDecoderRunner {
  public:
   VideoDecoderRunner(Format format, UseVideoDecoderParams params);
@@ -911,46 +1010,17 @@ void VideoDecoderRunner::Run() {
           Exit("!video.is_uncompressed()");
         }
 
-        raw = &video_format.uncompressed();
-        switch (raw->fourcc) {
-          case make_fourcc('N', 'V', '1', '2'): {
-            size_t y_size = raw->primary_height_pixels * raw->primary_line_stride_bytes;
-            if (raw->secondary_start_offset < y_size) {
-              Exit("raw.secondary_start_offset < y_size");
-            }
-            // NV12 requires UV be same line stride as Y.
-            size_t total_size = raw->secondary_start_offset +
-                                raw->primary_height_pixels / 2 * raw->primary_line_stride_bytes;
-            if (packet.valid_length_bytes() < total_size) {
-              Exit(
-                  "packet.valid_length_bytes < total_size (1) - valid_length_bytes: %u total_size: "
-                  "%lu",
-                  packet.valid_length_bytes(), total_size);
-            }
-            break;
-          }
-          case make_fourcc('Y', 'V', '1', '2'): {
-            size_t y_size = raw->primary_height_pixels * raw->primary_line_stride_bytes;
-            size_t v_size = raw->secondary_height_pixels * raw->secondary_line_stride_bytes;
-            size_t u_size = v_size;
-            size_t total_size = y_size + u_size + v_size;
+        const fuchsia::media::VideoUncompressedFormat& uncompressed = video_format.uncompressed();
+        const fuchsia::sysmem::ImageFormat_2& image_format = uncompressed.image_format;
 
-            if (packet.valid_length_bytes() < total_size) {
-              Exit("packet.valid_length_bytes < total_size (2)");
-            }
+        // Update uncompressed pointer for emit frame calculations
+        raw = &uncompressed;
 
-            if (raw->secondary_start_offset < y_size) {
-              Exit("raw.secondary_start_offset < y_size");
-            }
+        // Ensure that uncompressed format doesn't exceed packet requirements
+        CheckFormatIntegrity(uncompressed, packet);
 
-            if (raw->tertiary_start_offset < y_size + v_size) {
-              Exit("raw.tertiary_start_offset < y_size + v_size");
-            }
-            break;
-          }
-          default:
-            Exit("fourcc != NV12 && fourcc != YV12");
-        }
+        // Check to make sure that uncompressed matches image format
+        CheckMismatchedFormats(uncompressed, image_format);
       }
 
       if (frame_index == 0) {
