@@ -657,5 +657,58 @@ TEST(FormatFilesystemTest, LabelAsciiToUnicodeConversion) {
   ASSERT_EQ(out, target);
 }
 
+TEST(FormatFilesystemTest, DeviceFailure) {
+  constexpr uint32_t kVolumeSize = 50 * 1024 * 1024;
+  constexpr uint32_t kBlockSize = 4096;
+  constexpr uint32_t kBlockCount = kVolumeSize / kBlockSize;
+
+  auto device = std::make_unique<FakeBlockDevice>(FakeBlockDevice::Config{
+      .block_count = kBlockCount, .block_size = kBlockSize, .supports_trim = true});
+  bool readonly_device = false;
+  auto bc_or = CreateBcache(std::move(device), &readonly_device);
+  ASSERT_TRUE(bc_or.is_ok());
+
+  uint32_t bad_block = std::numeric_limits<uint32_t>::max();
+  bool trim_error = false;
+  // Set a hook to trigger an io error which causes mkfs fail.
+  auto hook = [&bad_block, &trim_error](const block_fifo_request_t &_req, const zx::vmo *_vmo) {
+    if (_req.opcode == BLOCKIO_TRIM && trim_error) {
+      return ZX_ERR_IO_REFUSED;
+    }
+    if (_req.opcode == BLOCKIO_WRITE && _req.dev_offset == bad_block) {
+      return ZX_ERR_IO;
+    }
+    return ZX_OK;
+  };
+  static_cast<FakeBlockDevice *>(bc_or->GetDevice())->set_hook(std::move(hook));
+  MkfsOptions mkfs_options;
+  MkfsWorker mkfs(std::move(*bc_or), mkfs_options);
+
+  // Trim Error
+  {
+    trim_error = true;
+    auto ret = mkfs.DoMkfs();
+    ASSERT_TRUE(ret.is_error());
+    ASSERT_EQ(ret.error_value(), ZX_ERR_IO_REFUSED);
+    trim_error = false;
+  }
+
+  constexpr uint32_t kSitDevOff = 1536;
+  constexpr uint32_t kNatDevOff = 2560;
+  constexpr uint32_t kRootDirDevOff = 11776;
+  constexpr uint32_t kChkpDevOff = 512;
+  constexpr uint32_t kSuperblockDevOff = 0;
+  std::vector<uint32_t> bad_blocks = {kSitDevOff, kNatDevOff, kRootDirDevOff, kChkpDevOff,
+                                      kSuperblockDevOff};
+
+  // Write Error
+  for (auto bad_block_off : bad_blocks) {
+    bad_block = bad_block_off;
+    auto ret = mkfs.DoMkfs();
+    ASSERT_TRUE(ret.is_error());
+    ASSERT_EQ(ret.error_value(), ZX_ERR_IO);
+  }
+}
+
 }  // namespace
 }  // namespace f2fs
