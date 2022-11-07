@@ -151,4 +151,37 @@ TEST_F(BasemgrImplTest, LaunchSessionmgrReplacesExistingSession) {
   RunLoopUntil([&]() { return did_shut_down_; });
 }
 
+// Tests that basemgr waits for sessionmgr to terminate before itself exiting.
+TEST_F(BasemgrImplTest, WaitsForSessionmgrShutdown) {
+  bool did_shut_down_sessionmgr{false};
+  FakeSessionmgr sessionmgr{fake_launcher_, [&] { did_shut_down_sessionmgr = true; }};
+
+  CreateBasemgrImpl(DefaultConfig());
+
+  auto config_buf = BufferFromString(modular::ConfigToJsonString(DefaultConfig()));
+
+  // Launch the session
+  auto session_launcher = GetSessionLauncher();
+  session_launcher->LaunchSessionmgr(std::move(config_buf));
+
+  // sessionmgr should be started and initialized.
+  RunLoopUntil([&]() { return sessionmgr.initialized(); });
+
+  EXPECT_EQ(1, sessionmgr.component()->launch_count());
+
+  // Launch the session again
+  config_buf = BufferFromString(modular::ConfigToJsonString(DefaultConfig()));
+  session_launcher->LaunchSessionmgr(std::move(config_buf));
+
+  RunLoopUntil([&] { return sessionmgr.component()->launch_count() == 2; });
+
+  basemgr_impl_->Terminate();
+  RunLoopUntil([&]() { return did_shut_down_sessionmgr; });
+  // basemgr should not shut down until sessionmgr's component has actually
+  // terminated.
+  EXPECT_FALSE(did_shut_down_);
+  sessionmgr.component()->CloseAllComponentControllerHandles();
+  RunLoopUntil([&]() { return did_shut_down_; });
+}
+
 }  // namespace modular
