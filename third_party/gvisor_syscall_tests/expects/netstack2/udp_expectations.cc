@@ -24,6 +24,10 @@ void AddNonPassingTests(TestMap& tests) {
     ExpectFailure(tests, "AllUDPSockets/NonStreamSocketPairTest.SendMsgTooLarge/*");
   }
 
+  // Tests that flake in Fuchsia's CQ.
+  // https://fxbug.dev/114419
+  SkipTest(tests, "AllInetTests/UdpSocketTest.SendToAddressOtherThanConnected/*");
+
   // https://fxbug.dev/45262
   ExpectFailure(tests, "AllUDPSockets/AllSocketPairTest.BasicSendmmsg/*");
   // https://fxbug.dev/45261
