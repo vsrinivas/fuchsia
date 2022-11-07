@@ -25,9 +25,9 @@ namespace {
 
 using devmgr_integration_test::IsolatedDevmgr;
 
-static constexpr const char kDriverTestDir[] = "/boot/driver";
-static constexpr const char kPassDriverName[] = "unit-test-pass.so";
-static constexpr const char kFailDriverName[] = "unit-test-fail.so";
+constexpr const char kDriverTestDir[] = "/boot/driver";
+constexpr const char kPassDriverName[] = "unit-test-pass.so";
+constexpr const char kFailDriverName[] = "unit-test-fail.so";
 
 void CreateTestDevice(const IsolatedDevmgr& devmgr, const char* driver_name,
                       zx::channel* dev_channel) {
@@ -51,18 +51,26 @@ void CreateTestDevice(const IsolatedDevmgr& devmgr, const char* driver_name,
   *dev_channel = std::move(local);
 }
 
+class DeviceControllerIntegrationTest : public zxtest::Test {
+ public:
+  // NB: this loop is never run. RealmBuilder::Build is in the call stack, and insists on a non-null
+  // dispatcher.
+  //
+  // TODO(https://fxbug.dev/114254): Remove this.
+  async::Loop loop{&kAsyncLoopConfigNeverAttachToThread};
+};
+
 // Test binding second time
-TEST(DeviceControllerIntegrationTest, TestDuplicateBindSameDriver) {
-  IsolatedDevmgr devmgr;
+TEST_F(DeviceControllerIntegrationTest, TestDuplicateBindSameDriver) {
   auto args = IsolatedDevmgr::DefaultArgs();
 
   args.sys_device_driver = "/boot/driver/test-parent-sys.so";
 
-  zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
-  ASSERT_OK(status);
+  zx::result devmgr = IsolatedDevmgr::Create(std::move(args), loop.dispatcher());
+  ASSERT_OK(devmgr.status_value());
 
   zx::channel dev_channel;
-  CreateTestDevice(devmgr, kPassDriverName, &dev_channel);
+  CreateTestDevice(devmgr.value(), kPassDriverName, &dev_channel);
 
   char libpath[PATH_MAX];
   int len = snprintf(libpath, sizeof(libpath), "%s/%s", kDriverTestDir, kPassDriverName);
@@ -89,16 +97,15 @@ TEST(DeviceControllerIntegrationTest, TestDuplicateBindSameDriver) {
   (void)fidl::WireCall<fuchsia_device_test::Device>(zx::unowned_channel{dev_channel})->Destroy();
 }
 
-TEST(DeviceControllerIntegrationTest, TestRebindNoChildrenManualBind) {
-  IsolatedDevmgr devmgr;
+TEST_F(DeviceControllerIntegrationTest, TestRebindNoChildrenManualBind) {
   auto args = IsolatedDevmgr::DefaultArgs();
   args.sys_device_driver = "/boot/driver/test-parent-sys.so";
 
-  zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
-  ASSERT_OK(status);
+  zx::result devmgr = IsolatedDevmgr::Create(std::move(args), loop.dispatcher());
+  ASSERT_OK(devmgr.status_value());
 
   zx::channel dev_channel;
-  CreateTestDevice(devmgr, kPassDriverName, &dev_channel);
+  CreateTestDevice(devmgr.value(), kPassDriverName, &dev_channel);
 
   char libpath[PATH_MAX];
   int len = snprintf(libpath, sizeof(libpath), "%s/%s", kDriverTestDir, kPassDriverName);
@@ -115,7 +122,7 @@ TEST(DeviceControllerIntegrationTest, TestRebindNoChildrenManualBind) {
   (void)fidl::WireCall<fuchsia_device_test::Device>(zx::unowned_channel{dev_channel})->Destroy();
 }
 
-TEST(DeviceControllerIntegrationTest, TestRebindChildrenAutoBind) {
+TEST_F(DeviceControllerIntegrationTest, TestRebindChildrenAutoBind) {
   using driver_integration_test::IsolatedDevmgr;
   driver_integration_test::IsolatedDevmgr::Args args;
   driver_integration_test::IsolatedDevmgr devmgr;
@@ -161,7 +168,7 @@ TEST(DeviceControllerIntegrationTest, TestRebindChildrenAutoBind) {
       &child_fd));
 }
 
-TEST(DeviceControllerIntegrationTest, TestRebindChildrenManualBind) {
+TEST_F(DeviceControllerIntegrationTest, TestRebindChildrenManualBind) {
   using driver_integration_test::IsolatedDevmgr;
   driver_integration_test::IsolatedDevmgr::Args args;
   driver_integration_test::IsolatedDevmgr devmgr;
@@ -207,7 +214,7 @@ TEST(DeviceControllerIntegrationTest, TestRebindChildrenManualBind) {
       &child_fd));
 }
 
-TEST(DeviceControllerIntegrationTest, TestUnbindChildrenSuccess) {
+TEST_F(DeviceControllerIntegrationTest, TestUnbindChildrenSuccess) {
   using driver_integration_test::IsolatedDevmgr;
   driver_integration_test::IsolatedDevmgr::Args args;
   driver_integration_test::IsolatedDevmgr devmgr;
@@ -246,17 +253,16 @@ TEST(DeviceControllerIntegrationTest, TestUnbindChildrenSuccess) {
 }
 
 // Test binding again, but with different driver
-TEST(DeviceControllerIntegrationTest, TestDuplicateBindDifferentDriver) {
-  IsolatedDevmgr devmgr;
+TEST_F(DeviceControllerIntegrationTest, TestDuplicateBindDifferentDriver) {
   auto args = IsolatedDevmgr::DefaultArgs();
 
   args.sys_device_driver = "/boot/driver/test-parent-sys.so";
 
-  zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
-  ASSERT_OK(status);
+  zx::result devmgr = IsolatedDevmgr::Create(std::move(args), loop.dispatcher());
+  ASSERT_OK(devmgr.status_value());
 
   zx::channel dev_channel;
-  CreateTestDevice(devmgr, kPassDriverName, &dev_channel);
+  CreateTestDevice(devmgr.value(), kPassDriverName, &dev_channel);
 
   char libpath[PATH_MAX];
   int len = snprintf(libpath, sizeof(libpath), "%s/%s", kDriverTestDir, kPassDriverName);
@@ -285,18 +291,17 @@ TEST(DeviceControllerIntegrationTest, TestDuplicateBindDifferentDriver) {
   (void)fidl::WireCall<fuchsia_device_test::Device>(zx::unowned_channel{dev_channel})->Destroy();
 }
 
-TEST(DeviceControllerIntegrationTest, AllTestsEnabledBind) {
-  IsolatedDevmgr devmgr;
+TEST_F(DeviceControllerIntegrationTest, AllTestsEnabledBind) {
   auto args = IsolatedDevmgr::DefaultArgs();
 
   args.sys_device_driver = "/boot/driver/test-parent-sys.so";
   args.driver_tests_enable_all = true;
 
-  zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
-  ASSERT_OK(status);
+  zx::result devmgr = IsolatedDevmgr::Create(std::move(args), loop.dispatcher());
+  ASSERT_OK(devmgr.status_value());
 
   zx::channel dev_channel;
-  CreateTestDevice(devmgr, kPassDriverName, &dev_channel);
+  CreateTestDevice(devmgr.value(), kPassDriverName, &dev_channel);
 
   char libpath[PATH_MAX];
   int len = snprintf(libpath, sizeof(libpath), "%s/%s", kDriverTestDir, kPassDriverName);
@@ -313,18 +318,17 @@ TEST(DeviceControllerIntegrationTest, AllTestsEnabledBind) {
   (void)fidl::WireCall<fuchsia_device_test::Device>(zx::unowned_channel{dev_channel})->Destroy();
 }
 
-TEST(DeviceControllerIntegrationTest, AllTestsEnabledBindFail) {
-  IsolatedDevmgr devmgr;
+TEST_F(DeviceControllerIntegrationTest, AllTestsEnabledBindFail) {
   auto args = IsolatedDevmgr::DefaultArgs();
 
   args.sys_device_driver = "/boot/driver/test-parent-sys.so";
   args.driver_tests_enable_all = true;
 
-  zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
-  ASSERT_OK(status);
+  zx::result devmgr = IsolatedDevmgr::Create(std::move(args), loop.dispatcher());
+  ASSERT_OK(devmgr.status_value());
 
   zx::channel dev_channel;
-  CreateTestDevice(devmgr, kFailDriverName, &dev_channel);
+  CreateTestDevice(devmgr.value(), kFailDriverName, &dev_channel);
 
   char libpath[PATH_MAX];
   int len = snprintf(libpath, sizeof(libpath), "%s/%s", kDriverTestDir, kFailDriverName);
@@ -342,18 +346,17 @@ TEST(DeviceControllerIntegrationTest, AllTestsEnabledBindFail) {
 }
 
 // Test the flag using bind failure as a proxy for "the unit test did run".
-TEST(DeviceControllerIntegrationTest, SpecificTestEnabledBindFail) {
-  IsolatedDevmgr devmgr;
+TEST_F(DeviceControllerIntegrationTest, SpecificTestEnabledBindFail) {
   auto args = IsolatedDevmgr::DefaultArgs();
 
   args.sys_device_driver = "/boot/driver/test-parent-sys.so";
   args.driver_tests_enable.push_back("unit_test_fail");
 
-  zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
-  ASSERT_OK(status);
+  zx::result devmgr = IsolatedDevmgr::Create(std::move(args), loop.dispatcher());
+  ASSERT_OK(devmgr.status_value());
 
   zx::channel dev_channel;
-  CreateTestDevice(devmgr, kFailDriverName, &dev_channel);
+  CreateTestDevice(devmgr.value(), kFailDriverName, &dev_channel);
 
   char libpath[PATH_MAX];
   int len = snprintf(libpath, sizeof(libpath), "%s/%s", kDriverTestDir, kFailDriverName);
@@ -370,16 +373,15 @@ TEST(DeviceControllerIntegrationTest, SpecificTestEnabledBindFail) {
 }
 
 // Test the flag using bind success as a proxy for "the unit test didn't run".
-TEST(DeviceControllerIntegrationTest, DefaultTestsDisabledBind) {
-  IsolatedDevmgr devmgr;
+TEST_F(DeviceControllerIntegrationTest, DefaultTestsDisabledBind) {
   auto args = IsolatedDevmgr::DefaultArgs();
 
   args.sys_device_driver = "/boot/driver/test-parent-sys.so";
-  zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
-  ASSERT_OK(status);
+  zx::result devmgr = IsolatedDevmgr::Create(std::move(args), loop.dispatcher());
+  ASSERT_OK(devmgr.status_value());
 
   zx::channel dev_channel;
-  CreateTestDevice(devmgr, kFailDriverName, &dev_channel);
+  CreateTestDevice(devmgr.value(), kFailDriverName, &dev_channel);
 
   char libpath[PATH_MAX];
   int len = snprintf(libpath, sizeof(libpath), "%s/%s", kDriverTestDir, kFailDriverName);
@@ -397,19 +399,18 @@ TEST(DeviceControllerIntegrationTest, DefaultTestsDisabledBind) {
 }
 
 // Test the flag using bind success as a proxy for "the unit test didn't run".
-TEST(DeviceControllerIntegrationTest, SpecificTestDisabledBind) {
-  IsolatedDevmgr devmgr;
+TEST_F(DeviceControllerIntegrationTest, SpecificTestDisabledBind) {
   auto args = IsolatedDevmgr::DefaultArgs();
 
   args.sys_device_driver = "/boot/driver/test-parent-sys.so";
   args.driver_tests_enable_all = true;
   args.driver_tests_disable.push_back("unit_test_fail");
 
-  zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
-  ASSERT_OK(status);
+  zx::result devmgr = IsolatedDevmgr::Create(std::move(args), loop.dispatcher());
+  ASSERT_OK(devmgr.status_value());
 
   zx::channel dev_channel;
-  CreateTestDevice(devmgr, kFailDriverName, &dev_channel);
+  CreateTestDevice(devmgr.value(), kFailDriverName, &dev_channel);
 
   char libpath[PATH_MAX];
   int len = snprintf(libpath, sizeof(libpath), "%s/%s", kDriverTestDir, kFailDriverName);
@@ -425,7 +426,7 @@ TEST(DeviceControllerIntegrationTest, SpecificTestDisabledBind) {
   (void)fidl::WireCall<fuchsia_device_test::Device>(zx::unowned_channel{dev_channel})->Destroy();
 }
 
-TEST(DeviceControllerIntegrationTest, TestRebindWithInit_Success) {
+TEST_F(DeviceControllerIntegrationTest, TestRebindWithInit_Success) {
   using driver_integration_test::IsolatedDevmgr;
   driver_integration_test::IsolatedDevmgr::Args args;
   driver_integration_test::IsolatedDevmgr devmgr;
@@ -468,7 +469,7 @@ TEST(DeviceControllerIntegrationTest, TestRebindWithInit_Success) {
       &child_fd));
 }
 
-TEST(DeviceControllerIntegrationTest, TestRebindWithInit_Failure) {
+TEST_F(DeviceControllerIntegrationTest, TestRebindWithInit_Failure) {
   using driver_integration_test::IsolatedDevmgr;
   driver_integration_test::IsolatedDevmgr::Args args;
   driver_integration_test::IsolatedDevmgr devmgr;

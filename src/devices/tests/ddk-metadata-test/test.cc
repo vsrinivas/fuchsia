@@ -21,13 +21,19 @@ TEST(MetadataTest, RunTests) {
 
   args.sys_device_driver = "/boot/driver/test-parent-sys.so";
 
-  IsolatedDevmgr devmgr;
-  ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
+  // NB: this loop is never run. RealmBuilder::Build is in the call stack, and insists on a non-null
+  // dispatcher.
+  //
+  // TODO(https://fxbug.dev/114254): Remove this.
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+  zx::result devmgr = IsolatedDevmgr::Create(std::move(args), loop.dispatcher());
+  ASSERT_OK(devmgr.status_value());
 
   zx::channel sys_chan;
   {
     fbl::unique_fd fd;
-    ASSERT_OK(device_watcher::RecursiveWaitForFile(devmgr.devfs_root(), "sys/test/test", &fd));
+    ASSERT_OK(
+        device_watcher::RecursiveWaitForFile(devmgr.value().devfs_root(), "sys/test/test", &fd));
     ASSERT_OK(fdio_get_service_handle(fd.release(), sys_chan.reset_and_get_address()));
   }
   fidl::WireSyncClient<fuchsia_device::Controller> sys_dev(std::move(sys_chan));
@@ -80,7 +86,7 @@ TEST(MetadataTest, MetadataArrayTests) {
 // Simple device to test DeviceAddArgs
 class TestDevice : public ddk::Device<TestDevice> {
  public:
-  TestDevice(zx_device_t* parent) : ddk::Device<TestDevice>(parent) {}
+  explicit TestDevice(zx_device_t* parent) : ddk::Device<TestDevice>(parent) {}
   void DdkRelease() {
     // DdkRelease must delete this before it returns.
     delete this;

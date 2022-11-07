@@ -28,9 +28,9 @@ void IntegrationTest::DoSetup() {
   // expensive process.  Ideally we'd do this between every test.
   auto args = IsolatedDevmgr::DefaultArgs();
 
-  zx_status_t status =
-      IsolatedDevmgr::Create(std::move(args), loop_.dispatcher(), &IntegrationTest::devmgr_);
-  ASSERT_EQ(status, ZX_OK) << "failed to create IsolatedDevmgr";
+  zx::result devmgr = IsolatedDevmgr::Create(std::move(args), loop_.dispatcher());
+  ASSERT_TRUE(devmgr.is_ok()) << devmgr.status_string();
+  IntegrationTest::devmgr_ = std::move(devmgr.value());
 }
 
 void IntegrationTest::TearDownTestSuite() { IntegrationTest::devmgr_.reset(); }

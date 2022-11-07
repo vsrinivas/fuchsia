@@ -101,7 +101,8 @@ class EthertapClient {
     if (status != ZX_OK) {
       channel_.reset();
       return status;
-    } else if (o_status != ZX_OK) {
+    }
+    if (o_status != ZX_OK) {
       channel_.reset();
       return o_status;
     }
@@ -287,9 +288,8 @@ zx_status_t OpenEthertapDev(zx::channel* svc, EthertapClient* tap) {
   if (status == ZX_ERR_STOP) {
     *svc = std::move(cookie.device);
     return ZX_OK;
-  } else {
-    return status;
   }
+  return status;
 }
 
 struct FifoEntry : public fbl::SinglyLinkedListable<std::unique_ptr<FifoEntry>> {
@@ -297,7 +297,7 @@ struct FifoEntry : public fbl::SinglyLinkedListable<std::unique_ptr<FifoEntry>> 
 };
 
 struct EthernetOpenInfo {
-  EthernetOpenInfo(const char* name) : name(name) {}
+  explicit EthernetOpenInfo(const char* name) : name(name) {}
   // Special setup until we have IGMP: turn off multicast-promisc in init.
   bool multicast = false;
   const char* name;
@@ -307,7 +307,7 @@ struct EthernetOpenInfo {
 
 class EthernetClient {
  public:
-  EthernetClient() {}
+  EthernetClient() = default;
   ~EthernetClient() { Cleanup(); }
 
   void Cleanup() {
@@ -388,7 +388,7 @@ class EthernetClient {
     }
 
     for (; idx < 2 * nbufs; idx++) {
-      auto entry = std::unique_ptr<FifoEntry>(new FifoEntry);
+      auto entry = std::make_unique<FifoEntry>();
       entry->e.offset = idx * bufsize_;
       entry->e.length = bufsize_;
       entry->e.flags = 0;
@@ -472,10 +472,12 @@ class EthernetClient {
 
   fzl::fifo<eth_fifo_entry_t>* tx_fifo() { return &tx_; }
   fzl::fifo<eth_fifo_entry_t>* rx_fifo() { return &rx_; }
-  uint32_t tx_depth() { return tx_depth_; }
-  uint32_t rx_depth() { return rx_depth_; }
+  uint32_t tx_depth() const { return tx_depth_; }
+  uint32_t rx_depth() const { return rx_depth_; }
 
-  uint8_t* GetRxBuffer(uint32_t offset) { return reinterpret_cast<uint8_t*>(mapped_) + offset; }
+  uint8_t* GetRxBuffer(uint32_t offset) const {
+    return reinterpret_cast<uint8_t*>(mapped_) + offset;
+  }
 
   eth_fifo_entry_t* GetTxBuffer() {
     auto entry_ptr = tx_available_.pop_front();
@@ -738,7 +740,7 @@ TEST(EthernetConfigTests, EthernetMulticastSetsAddresses) {
 
 // This value is implementation dependent, set in
 // src/connectivity/ethernet/drivers/ethernet/ethernet.c
-#define MULTICAST_LIST_LIMIT 32
+enum { MULTICAST_LIST_LIMIT = 32 };
 
 TEST(EthernetConfigTests, EthernetMulticastPromiscOnOverflow) {
   EthertapClient tap;
@@ -936,28 +938,33 @@ int main(int argc, char** argv) {
   auto args = devmgr_integration_test::IsolatedDevmgr::DefaultArgs();
   args.sys_device_driver = "/boot/driver/test-parent-sys.so";
 
-  devmgr_integration_test::IsolatedDevmgr devmgr;
-  zx_status_t status = devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), &devmgr);
-  if (status != ZX_OK) {
-    fprintf(stderr, "Could not create driver manager, %d\n", status);
-    return status;
+  // NB: this loop is never run. RealmBuilder::Build is in the call stack, and insists on a non-null
+  // dispatcher.
+  //
+  // TODO(https://fxbug.dev/114254): Remove this.
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+  zx::result devmgr =
+      devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), loop.dispatcher());
+  if (devmgr.is_error()) {
+    fprintf(stderr, "Could not create driver manager, %d\n", devmgr.status_value());
+    return devmgr.status_value();
   }
 
   fdio_ns_t* ns;
-  status = fdio_ns_get_installed(&ns);
-  if (status != ZX_OK) {
+  if (zx_status_t status = fdio_ns_get_installed(&ns); status != ZX_OK) {
     fprintf(stderr, "Could not create get namespace, %d\n", status);
     return status;
   }
-  status = fdio_ns_bind_fd(ns, "/dev", devmgr.devfs_root().get());
-  if (status != ZX_OK) {
+  if (zx_status_t status = fdio_ns_bind_fd(ns, "/dev", devmgr.value().devfs_root().get());
+      status != ZX_OK) {
     fprintf(stderr, "Could not bind /dev namespace, %d\n", status);
     return status;
   }
 
   fbl::unique_fd ctl;
-  status = device_watcher::RecursiveWaitForFile(devmgr.devfs_root(), "sys/test/tapctl", &ctl);
-  if (status != ZX_OK) {
+  if (zx_status_t status = device_watcher::RecursiveWaitForFile(devmgr.value().devfs_root(),
+                                                                "sys/test/tapctl", &ctl);
+      status != ZX_OK) {
     fprintf(stderr, "sys/test/tapctl failed to enumerate: %d\n", status);
     return status;
   }

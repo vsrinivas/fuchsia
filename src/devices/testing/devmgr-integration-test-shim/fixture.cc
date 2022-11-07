@@ -67,74 +67,57 @@ __EXPORT
 IsolatedDevmgr::IsolatedDevmgr() = default;
 
 __EXPORT
-zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, IsolatedDevmgr* out) {
-  return Create(std::move(args), nullptr, out);
-}
-
-__EXPORT
-zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, async_dispatcher_t* dispatcher,
-                                   IsolatedDevmgr* out) {
+zx::result<IsolatedDevmgr> IsolatedDevmgr::Create(devmgr_launcher::Args args,
+                                                  async_dispatcher_t* dispatcher) {
   IsolatedDevmgr devmgr;
-  devmgr.loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   // Create and build the realm.
   auto realm_builder = component_testing::RealmBuilder::Create();
   driver_test_realm::Setup(realm_builder);
-  devmgr.realm_ = std::make_unique<component_testing::RealmRoot>(
-      realm_builder.Build(devmgr.loop_->dispatcher()));
+  devmgr.realm_ = std::make_unique<component_testing::RealmRoot>(realm_builder.Build(dispatcher));
 
   // Start DriverTestRealm.
   fidl::SynchronousInterfacePtr<fuchsia::driver::test::Realm> driver_test_realm;
-  zx_status_t status = devmgr.realm_->Connect(driver_test_realm.NewRequest());
-  if (status != ZX_OK) {
-    return status;
+  if (zx_status_t status = devmgr.realm_->Connect(driver_test_realm.NewRequest());
+      status != ZX_OK) {
+    return zx::error(status);
   }
 
-  fuchsia::driver::test::Realm_Start_Result realm_result;
-  auto realm_args = fuchsia::driver::test::RealmArgs();
+  fuchsia::driver::test::RealmArgs realm_args;
   realm_args.set_root_driver(PathToUrl(args.sys_device_driver));
   realm_args.set_driver_tests_enable_all(args.driver_tests_enable_all);
-  realm_args.set_driver_tests_enable(args.driver_tests_enable);
-  realm_args.set_driver_tests_disable(args.driver_tests_disable);
-  status = driver_test_realm->Start(std::move(realm_args), &realm_result);
-  if (status != ZX_OK) {
-    return status;
+  realm_args.set_driver_tests_enable(std::move(args.driver_tests_enable));
+  realm_args.set_driver_tests_disable(std::move(args.driver_tests_disable));
+  fuchsia::driver::test::Realm_Start_Result realm_result;
+  if (zx_status_t status = driver_test_realm->Start(std::move(realm_args), &realm_result);
+      status != ZX_OK) {
+    return zx::error(status);
   }
   if (realm_result.is_err()) {
-    return realm_result.err();
+    return zx::error(realm_result.err());
   }
 
   // Connect to dev.
   fidl::InterfaceHandle<fuchsia::io::Directory> dev;
-  status = devmgr.realm_->Connect("dev", dev.NewRequest().TakeChannel());
-  if (status != ZX_OK) {
-    return status;
+  if (zx_status_t status = devmgr.realm_->Connect("dev", dev.NewRequest().TakeChannel());
+      status != ZX_OK) {
+    return zx::error(status);
   }
 
-  status = fdio_fd_create(dev.TakeChannel().release(), devmgr.devfs_root_.reset_and_get_address());
-  if (status != ZX_OK) {
-    return status;
+  if (zx_status_t status =
+          fdio_fd_create(dev.TakeChannel().release(), devmgr.devfs_root_.reset_and_get_address());
+      status != ZX_OK) {
+    return zx::error(status);
   }
 
-  *out = std::move(devmgr);
-  return ZX_OK;
+  return zx::ok(std::move(devmgr));
 }
-
-IsolatedDevmgr::IsolatedDevmgr(IsolatedDevmgr&& other)
-    : loop_(std::move(other.loop_)),
-      realm_(std::move(other.realm_)),
-      devfs_root_(std::move(other.devfs_root_)) {}
 
 __EXPORT
-IsolatedDevmgr& IsolatedDevmgr::operator=(IsolatedDevmgr&& other) {
-  // Order is important here. `realm_` must be moved first because its
-  // destructor depends on a reference to `loop_`. If we destroy `loop_`
-  // first, we'll encounter a use-after-free failure.
-  realm_ = std::move(other.realm_);
-  loop_ = std::move(other.loop_);
-  devfs_root_ = std::move(other.devfs_root_);
-  return *this;
-}
+IsolatedDevmgr::IsolatedDevmgr(IsolatedDevmgr&& other) noexcept = default;
+
+__EXPORT
+IsolatedDevmgr& IsolatedDevmgr::operator=(IsolatedDevmgr&& other) noexcept = default;
 
 __EXPORT
 IsolatedDevmgr::~IsolatedDevmgr() = default;

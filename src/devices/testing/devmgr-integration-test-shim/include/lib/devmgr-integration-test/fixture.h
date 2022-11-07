@@ -10,11 +10,10 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
 
 #include <fbl/unique_fd.h>
 #include <sdk/lib/device-watcher/cpp/device-watcher.h>
-
-#include "sdk/lib/driver_test_realm/realm_builder/cpp/lib.h"
 
 namespace devmgr_launcher {
 
@@ -28,16 +27,14 @@ struct Args {
 
 namespace devmgr_integration_test {
 
-using device_watcher::RecursiveWaitForFile;
-
 class IsolatedDevmgr {
  public:
   IsolatedDevmgr();
   ~IsolatedDevmgr();
   IsolatedDevmgr(const IsolatedDevmgr&) = delete;
   IsolatedDevmgr& operator=(const IsolatedDevmgr&) = delete;
-  IsolatedDevmgr(IsolatedDevmgr&& other);
-  IsolatedDevmgr& operator=(IsolatedDevmgr&& other);
+  IsolatedDevmgr(IsolatedDevmgr&& other) noexcept;
+  IsolatedDevmgr& operator=(IsolatedDevmgr&& other) noexcept;
 
   void reset() { *this = IsolatedDevmgr(); }
 
@@ -45,12 +42,12 @@ class IsolatedDevmgr {
   // test control driver, and the test driver directory.
   static devmgr_launcher::Args DefaultArgs();
 
-  // Launch a new isolated devmgr.  The instance will be destroyed when
-  // |*out|'s dtor runs.
-  // |dispatcher| let's you choose which async loop the exception handler runs on.
-  static zx_status_t Create(devmgr_launcher::Args args, IsolatedDevmgr* out);
-  static zx_status_t Create(devmgr_launcher::Args args, async_dispatcher_t* dispatcher,
-                            IsolatedDevmgr* out);
+  // Launch a new isolated devmgr.
+  //
+  // TODO(https://fxbug.dev/114254): Remove |dispatcher| once RealmBuilder::Build no longer requires
+  // it.
+  static zx::result<IsolatedDevmgr> Create(devmgr_launcher::Args args,
+                                           async_dispatcher_t* dispatcher);
 
   // Get a fd to the root of the isolate devmgr's devfs.  This fd
   // may be used with openat() and fdio_watch_directory().
@@ -60,10 +57,6 @@ class IsolatedDevmgr {
   zx_status_t AddDevfsToOutgoingDir(vfs::PseudoDir* outgoing_root_dir);
 
  private:
-  // `loop_` must come before `realm_` so that they are destroyed in order.
-  // That is, `realm_` needs to be destroyed before `loop_` because it will
-  // hold a reference to `loop_` async dispatcher object.
-  std::unique_ptr<async::Loop> loop_;
   std::unique_ptr<component_testing::RealmRoot> realm_;
 
   // FD to the root of devmgr's devfs

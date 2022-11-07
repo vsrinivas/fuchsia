@@ -97,11 +97,14 @@ class FakeSvc {
 
 class FakeDev {
  public:
-  FakeDev() {
+  explicit FakeDev(async_dispatcher_t* dispatcher) {
     auto args = devmgr_integration_test::IsolatedDevmgr::DefaultArgs();
     args.sys_device_driver = "/boot/driver/platform-bus.so";
 
-    ASSERT_OK(devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), &devmgr_));
+    zx::result devmgr =
+        devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), dispatcher);
+    ASSERT_OK(devmgr.status_value());
+    devmgr_ = std::move(devmgr.value());
     // TODO(https://fxbug.dev/80815): Stop requiring this recursive wait.
     fbl::unique_fd fd;
     ASSERT_OK(device_watcher::RecursiveWaitForFile(devmgr_.devfs_root(),
@@ -120,7 +123,7 @@ class PaverTest : public zxtest::Test {
     loop_.StartThread("paver-test-loop");
   }
 
-  ~PaverTest() {
+  ~PaverTest() override {
     // Need to make sure paver thread exits.
     Wait();
     if (ramdisk_ != nullptr) {
@@ -148,7 +151,7 @@ class PaverTest : public zxtest::Test {
   async::Loop loop_;
   ramdisk_client_t* ramdisk_ = nullptr;
   FakeSvc fake_svc_;
-  FakeDev fake_dev_;
+  FakeDev fake_dev_{loop_.dispatcher()};
   netsvc::Paver paver_;
 };
 
