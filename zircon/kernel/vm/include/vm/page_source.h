@@ -243,15 +243,13 @@ class PageSource final : public PageRequestInterface {
 
   // Sends a request to the backing source to provide the requested page.
   //
-  // Returns ZX_OK if the request was synchronously fulfilled.
   // Returns ZX_ERR_NOT_FOUND if the request cannot be fulfilled.
   // Returns ZX_ERR_SHOULD_WAIT if the request will be asynchronously fulfilled. If
   // |req->BatchAccepting| is true then additional calls to |GetPage| may be performed to add more
   // pages to the request, or if no more pages want to be added the request should be finalized by
   // |req->FinalizeRequest|. If |BatchAccepting| was false, or |req| was finalized, then the caller
   // should wait on |req|.
-  zx_status_t GetPage(uint64_t offset, PageRequest* req, VmoDebugInfo vmo_debug_info,
-                      vm_page_t** const page_out, paddr_t* const pa_out);
+  zx_status_t GetPage(uint64_t offset, PageRequest* req, VmoDebugInfo vmo_debug_info);
 
   void FreePages(list_node* pages);
 

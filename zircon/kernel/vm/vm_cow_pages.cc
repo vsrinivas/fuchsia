@@ -2423,9 +2423,9 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
         }
         VmoDebugInfo vmo_debug_info = {
             .vmo_ptr = reinterpret_cast<uintptr_t>(page_owner->paged_ref_), .vmo_id = user_id};
-        zx_status_t status = page_owner->page_source_->GetPage(owner_offset, page_request->get(),
-                                                               vmo_debug_info, &p, nullptr);
-        // Pager page sources will never synchronously return a page.
+        zx_status_t status =
+            page_owner->page_source_->GetPage(owner_offset, page_request->get(), vmo_debug_info);
+        // Page sources will never synchronously return a page.
         DEBUG_ASSERT(status != ZX_OK);
 
         return status;
