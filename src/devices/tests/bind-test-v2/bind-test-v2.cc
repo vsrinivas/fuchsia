@@ -137,7 +137,8 @@ TEST_F(BindCompilerV2Test, ValidDriver) {
 // Check that calling GetDeviceInfo with a non-existent device path returns an empty vector.
 TEST_F(BindCompilerV2Test, InvalidDevice) {
   fuchsia::driver::development::DeviceInfoIteratorSyncPtr iterator;
-  ASSERT_EQ(driver_dev_->GetDeviceInfo({"abc"}, iterator.NewRequest()), ZX_OK);
+  ASSERT_EQ(driver_dev_->GetDeviceInfo({"abc"}, iterator.NewRequest(), /* exact_match= */ true),
+            ZX_OK);
   std::vector<fuchsia::driver::development::DeviceInfo> devices;
   ASSERT_EQ(iterator->GetNext(&devices), ZX_OK);
   ASSERT_EQ(devices.size(), 0u);
@@ -148,7 +149,9 @@ TEST_F(BindCompilerV2Test, ValidDevice) {
   std::string child_device_path(relative_device_path_ + "/" + kChildDeviceName);
 
   fuchsia::driver::development::DeviceInfoIteratorSyncPtr iterator;
-  ASSERT_EQ(driver_dev_->GetDeviceInfo({child_device_path}, iterator.NewRequest()), ZX_OK);
+  ASSERT_EQ(driver_dev_->GetDeviceInfo({child_device_path}, iterator.NewRequest(),
+                                       /* exact_match= */ true),
+            ZX_OK);
 
   std::vector<fuchsia::driver::development::DeviceInfo> devices;
   ASSERT_EQ(iterator->GetNext(&devices), ZX_OK);

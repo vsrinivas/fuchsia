@@ -916,17 +916,28 @@ void Coordinator::GetDeviceInfo(GetDeviceInfoRequestView request,
     std::optional<Devnode>& root_node_opt = root_device_->self;
     ZX_ASSERT(root_node_opt.has_value());
     Devnode& root_node = root_node_opt.value();
-    for (const auto& device_path : request->device_filter) {
-      zx::result dn = root_node.walk(device_path.get());
-      if (dn.is_error()) {
-        if (dn.status_value() == ZX_ERR_NOT_FOUND) {
-          // If no device matches the filter, continue rather than exiting with an error.
-          continue;
+    for (const fidl::StringView& device_filter : request->device_filter) {
+      if (request->exact_match) {
+        zx::result dn = root_node.walk(device_filter.get());
+        if (dn.is_error()) {
+          if (dn.status_value() == ZX_ERR_NOT_FOUND) {
+            // If no device matches the filter, continue rather than exiting with an error.
+            continue;
+          }
+          request->iterator.Close(dn.status_value());
+          return;
         }
-        request->iterator.Close(dn.status_value());
-        return;
+        device_list.emplace_back(dn.value()->device());
+      } else {
+        for (auto& device : device_manager_->devices()) {
+          char path[fdm::wire::kDevicePathMax] = {};
+          GetTopologicalPath(fbl::RefPtr(&device), path, fdm::wire::kDevicePathMax);
+          std::string_view topo_path = path;
+          if (topo_path.find(device_filter.get()) != std::string_view::npos) {
+            device_list.emplace_back(&device);
+          }
+        }
       }
-      device_list.emplace_back(dn.value()->device());
     }
   }
 

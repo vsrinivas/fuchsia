@@ -189,9 +189,12 @@ pub async fn list_devices(
 ) -> Result<()> {
     let devices: Vec<Device> = match cmd.device {
         Some(device) => {
-            fuchsia_driver_dev::get_device_info(&driver_development_proxy, &[device]).await?
+            fuchsia_driver_dev::get_device_info(&driver_development_proxy, &[device], cmd.exact)
+                .await?
         }
-        None => fuchsia_driver_dev::get_device_info(&driver_development_proxy, &[]).await?,
+        None => {
+            fuchsia_driver_dev::get_device_info(&driver_development_proxy, &[], cmd.exact).await?
+        }
     }
     .into_iter()
     .map(|device_info| Device::from(device_info))

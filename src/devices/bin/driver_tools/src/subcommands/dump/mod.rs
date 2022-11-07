@@ -148,11 +148,15 @@ pub async fn dump(
     writer: &mut impl Write,
     driver_development_proxy: fdd::DriverDevelopmentProxy,
 ) -> Result<()> {
-    let devices: Vec<Device> = fuchsia_driver_dev::get_device_info(&driver_development_proxy, &[])
-        .await?
-        .into_iter()
-        .map(|device| device.into())
-        .collect();
+    let devices: Vec<Device> = fuchsia_driver_dev::get_device_info(
+        &driver_development_proxy,
+        &[],
+        /* exact_match= */ false,
+    )
+    .await?
+    .into_iter()
+    .map(|device| device.into())
+    .collect();
 
     let device_map = devices
         .iter()
@@ -285,6 +289,7 @@ mod tests {
                     device_filter: _,
                     iterator,
                     control_handle: _,
+                    exact_match: _,
                 } => {
                     let parent_id = 0;
                     let child_id = 1;
@@ -340,6 +345,7 @@ mod tests {
                     device_filter: _,
                     iterator,
                     control_handle: _,
+                    exact_match: _,
                 } => {
                     let null_id = 0;
                     let root_id = 1;

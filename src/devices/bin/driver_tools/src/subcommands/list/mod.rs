@@ -24,7 +24,11 @@ pub async fn list(
 
     let driver_info = if cmd.loaded {
         // Query devices and create a hash set of loaded drivers.
-        let device_info = fuchsia_driver_dev::get_device_info(&driver_development_proxy, &empty);
+        let device_info = fuchsia_driver_dev::get_device_info(
+            &driver_development_proxy,
+            &empty,
+            /* exact_match= */ false,
+        );
 
         // Await the futures concurrently.
         let (driver_info, device_info) = join!(driver_info, device_info);

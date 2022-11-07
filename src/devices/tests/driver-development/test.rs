@@ -69,12 +69,13 @@ fn assert_not_found_error(error: fidl::Error) {
 fn send_get_device_info_request(
     service: &fdd::DriverDevelopmentProxy,
     device_filter: &[&str],
+    exact_match: bool,
 ) -> Result<fdd::DeviceInfoIteratorProxy> {
     let (iterator, iterator_server) =
         fidl::endpoints::create_proxy::<fdd::DeviceInfoIteratorMarker>()?;
 
     service
-        .get_device_info(&mut device_filter.iter().map(|i| *i), iterator_server)
+        .get_device_info(&mut device_filter.iter().map(|i| *i), iterator_server, exact_match)
         .context("FIDL call to get device info failed")?;
 
     Ok(iterator)
@@ -83,8 +84,9 @@ fn send_get_device_info_request(
 async fn get_device_info(
     service: &fdd::DriverDevelopmentProxy,
     device_filter: &[&str],
+    exact_match: bool,
 ) -> Result<Vec<fdd::DeviceInfo>> {
-    let iterator = send_get_device_info_request(service, device_filter)?;
+    let iterator = send_get_device_info_request(service, device_filter, exact_match)?;
 
     let mut device_infos = Vec::new();
     loop {
@@ -307,7 +309,7 @@ async fn test_get_driver_info_not_found_filter_dfv2() -> Result<()> {
 #[fasync::run_singlethreaded(test)]
 async fn test_get_device_info_no_filter_dfv1() -> Result<()> {
     let (_instance, driver_dev) = set_up_test_driver_realm(false).await?;
-    let device_infos = get_device_info(&driver_dev, &[]).await?;
+    let device_infos = get_device_info(&driver_dev, &[], /* exact_match= */ true).await?;
 
     let device_nodes = test_utils::create_device_topology(device_infos);
     assert_eq!(device_nodes.len(), 1);
@@ -355,7 +357,8 @@ async fn test_get_device_info_with_filter_dfv1() -> Result<()> {
     const DEVICE_FILTER: [&str; 1] = ["sys/test"];
 
     let (_instance, driver_dev) = set_up_test_driver_realm(false).await?;
-    let device_infos = get_device_info(&driver_dev, &DEVICE_FILTER).await?;
+    let device_infos =
+        get_device_info(&driver_dev, &DEVICE_FILTER, /* exact_match= */ true).await?;
 
     let device_nodes = test_utils::create_device_topology(device_infos);
     assert_eq!(device_nodes.len(), 1);
@@ -385,7 +388,8 @@ async fn test_get_device_info_with_duplicate_filter_dfv1() -> Result<()> {
     const DEVICE_FILTER: [&str; 2] = ["sys/test/sample_driver", "sys/test/sample_driver"];
 
     let (_instance, driver_dev) = set_up_test_driver_realm(false).await?;
-    let device_infos = get_device_info(&driver_dev, &DEVICE_FILTER).await?;
+    let device_infos =
+        get_device_info(&driver_dev, &DEVICE_FILTER, /* exact_match= */ true).await?;
 
     let device_nodes = test_utils::create_device_topology(device_infos);
     assert_eq!(device_nodes.len(), 2);
@@ -428,12 +432,23 @@ async fn test_get_device_info_with_duplicate_filter_dfv1() -> Result<()> {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_get_device_info_with_incomplete_filter_dfv1() -> Result<()> {
+async fn test_get_device_info_with_partial_filter_dfv1() -> Result<()> {
     const DEVICE_FILTER: [&str; 1] = ["sys/test/sample"];
 
     let (_instance, driver_dev) = set_up_test_driver_realm(false).await?;
-    let device_infos = get_device_info(&driver_dev, &DEVICE_FILTER).await?;
-    assert_eq!(device_infos.len(), 0);
+    let device_infos =
+        get_device_info(&driver_dev, &DEVICE_FILTER, /* exact_match= */ false).await?;
+    assert_eq!(device_infos.len(), 1);
+
+    let device_nodes = test_utils::create_device_topology(device_infos);
+    assert_eq!(device_nodes.len(), 1);
+
+    let matched_node = &device_nodes[0];
+    assert_eq!(
+        matched_node.info.topological_path.as_ref().expect("DFv1 device missing topological path"),
+        "/dev/sys/test/sample_driver"
+    );
+
     Ok(())
 }
 
@@ -442,8 +457,30 @@ async fn test_get_device_info_not_found_filter_dfv1() -> Result<()> {
     const DEVICE_FILTER: [&str; 1] = ["foo"];
 
     let (_instance, driver_dev) = set_up_test_driver_realm(false).await?;
-    let device_infos = get_device_info(&driver_dev, &DEVICE_FILTER).await?;
+    let device_infos =
+        get_device_info(&driver_dev, &DEVICE_FILTER, /* exact_match= */ true).await?;
     assert_eq!(device_infos.len(), 0);
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_get_device_info_fuzzy_filter() -> Result<()> {
+    const DEVICE_FILTER: [&str; 1] = ["sample"];
+
+    let (_instance, driver_dev) = set_up_test_driver_realm(false).await?;
+    let device_infos =
+        get_device_info(&driver_dev, &DEVICE_FILTER, /* exact_match= */ false).await?;
+    assert_eq!(device_infos.len(), 1);
+
+    let device_nodes = test_utils::create_device_topology(device_infos);
+    assert_eq!(device_nodes.len(), 1);
+
+    let matched_node = &device_nodes[0];
+    assert_eq!(
+        matched_node.info.topological_path.as_ref().expect("DFv1 device missing topological path"),
+        "/dev/sys/test/sample_driver"
+    );
+
     Ok(())
 }
 
@@ -451,7 +488,7 @@ async fn test_get_device_info_not_found_filter_dfv1() -> Result<()> {
 #[fasync::run_singlethreaded(test)]
 async fn test_get_device_info_no_filter_dfv2() -> Result<()> {
     let (_instance, driver_dev) = set_up_test_driver_realm(true).await?;
-    let device_infos = get_device_info(&driver_dev, &[]).await?;
+    let device_infos = get_device_info(&driver_dev, &[], /* exact_match= */ true).await?;
 
     let device_nodes = test_utils::create_device_topology(device_infos);
     assert_eq!(device_nodes.len(), 1);
@@ -498,7 +535,8 @@ async fn test_get_device_info_with_filter_dfv2() -> Result<()> {
     const DEVICE_FILTER: [&str; 1] = ["root.sys.test"];
 
     let (_instance, driver_dev) = set_up_test_driver_realm(true).await?;
-    let device_infos = get_device_info(&driver_dev, &DEVICE_FILTER).await?;
+    let device_infos =
+        get_device_info(&driver_dev, &DEVICE_FILTER, /* exact_match= */ true).await?;
 
     let device_nodes = test_utils::create_device_topology(device_infos);
     assert_eq!(device_nodes.len(), 1);
@@ -529,7 +567,8 @@ async fn test_get_device_info_with_duplicate_filter_dfv2() -> Result<()> {
     const DEVICE_FILTER: [&str; 2] = ["root.sys.test", "root.sys.test"];
 
     let (_instance, driver_dev) = set_up_test_driver_realm(true).await?;
-    let device_infos = get_device_info(&driver_dev, &DEVICE_FILTER).await?;
+    let device_infos =
+        get_device_info(&driver_dev, &DEVICE_FILTER, /* exact_match= */ true).await?;
 
     let device_nodes = test_utils::create_device_topology(device_infos);
     assert_eq!(device_nodes.len(), 1);
@@ -560,7 +599,8 @@ async fn test_get_device_info_with_incomplete_filter_dfv2() -> Result<()> {
     const DEVICE_FILTER: [&str; 1] = ["root.sys.te"];
 
     let (_instance, driver_dev) = set_up_test_driver_realm(true).await?;
-    let device_infos = get_device_info(&driver_dev, &DEVICE_FILTER).await?;
+    let device_infos =
+        get_device_info(&driver_dev, &DEVICE_FILTER, /* exact_match= */ true).await?;
 
     assert!(device_infos.is_empty());
     Ok(())
@@ -571,7 +611,8 @@ async fn test_get_device_info_not_found_filter_dfv2() -> Result<()> {
     const DEVICE_FILTER: [&str; 1] = ["foo"];
 
     let (_instance, driver_dev) = set_up_test_driver_realm(true).await?;
-    let device_infos = get_device_info(&driver_dev, &DEVICE_FILTER).await?;
+    let device_infos =
+        get_device_info(&driver_dev, &DEVICE_FILTER, /* exact_match= */ true).await?;
 
     assert!(device_infos.is_empty());
     Ok(())

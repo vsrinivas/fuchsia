@@ -152,9 +152,16 @@ void DriverDevelopmentService::GetDeviceInfo(GetDeviceInfoRequestView request,
     if (!request->device_filter.empty()) {
       bool found = false;
       for (const auto& device_path : request->device_filter) {
-        if (topological_name == device_path.get()) {
-          found = true;
-          break;
+        if (request->exact_match) {
+          if (topological_name == device_path.get()) {
+            found = true;
+            break;
+          }
+        } else {
+          if (topological_name.find(device_path.get()) != std::string::npos) {
+            found = true;
+            break;
+          }
         }
       }
       if (!found) {

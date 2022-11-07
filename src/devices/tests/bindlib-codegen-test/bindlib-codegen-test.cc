@@ -43,7 +43,8 @@ class BindLibToFidlCodeGenTest : public testing::Test {
 
 TEST_F(BindLibToFidlCodeGenTest, DeviceProperties) {
   fuchsia::driver::development::DeviceInfoIteratorSyncPtr iterator;
-  ASSERT_EQ(ZX_OK, driver_dev_->GetDeviceInfo({kChildDevicePath}, iterator.NewRequest()));
+  ASSERT_EQ(ZX_OK, driver_dev_->GetDeviceInfo({kChildDevicePath}, iterator.NewRequest(),
+                                              /* exact_match= */ true));
 
   std::vector<fuchsia::driver::development::DeviceInfo> devices;
   ASSERT_EQ(iterator->GetNext(&devices), ZX_OK);

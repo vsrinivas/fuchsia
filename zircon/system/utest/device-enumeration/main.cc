@@ -215,7 +215,8 @@ class DeviceEnumerationTest : public zxtest::Test {
       auto& [client, server] = endpoints.value();
 
       const fidl::WireResult result =
-          fidl::WireCall(driver_development.value())->GetDeviceInfo({}, std::move(server));
+          fidl::WireCall(driver_development.value())
+              ->GetDeviceInfo({}, std::move(server), /* exact_match= */ true);
       ASSERT_OK(result.status());
 
       // NB: this uses iostream (rather than printf) because FIDL strings aren't null-terminated.

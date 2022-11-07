@@ -15,7 +15,7 @@ use argh::FromArgs;
     error_code(1, "Failed to connect to the driver development service")
 )]
 pub struct ListDevicesCommand {
-    /// specific device to list information about.
+    /// device filter - either an exact topo path, or a fuzzy match on the device's name
     #[argh(positional)]
     pub device: Option<String>,
 
@@ -26,4 +26,8 @@ pub struct ListDevicesCommand {
     /// list all device properties.
     #[argh(switch, short = 'v', long = "verbose")]
     pub verbose: bool,
+
+    /// require an exact match on the device filter, instead of a substring match
+    #[argh(switch, long = "exact")]
+    pub exact: bool,
 }

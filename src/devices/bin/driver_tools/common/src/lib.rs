@@ -60,12 +60,17 @@ impl std::convert::From<fdd::DeviceInfo> for Device {
 pub async fn get_device_info(
     service: &fdd::DriverDevelopmentProxy,
     device_filter: &[String],
+    exact_match: bool,
 ) -> Result<Vec<fdd::DeviceInfo>> {
     let (iterator, iterator_server) =
         fidl::endpoints::create_proxy::<fdd::DeviceInfoIteratorMarker>()?;
 
     service
-        .get_device_info(&mut device_filter.iter().map(String::as_str), iterator_server)
+        .get_device_info(
+            &mut device_filter.iter().map(String::as_str),
+            iterator_server,
+            exact_match,
+        )
         .context("FIDL call to get device info failed")?;
 
     let mut info_result = Vec::new();
@@ -147,7 +152,8 @@ pub async fn get_driver_by_device(
     driver_development_proxy: &fdd::DriverDevelopmentProxy,
 ) -> Result<fdd::DriverInfo> {
     let device_filter: [String; 1] = [device_topo_path.to_string()];
-    let mut device_list = get_device_info(&driver_development_proxy, &device_filter).await?;
+    let mut device_list =
+        get_device_info(&driver_development_proxy, &device_filter, /* exact_match= */ true).await?;
 
     if device_list.len() != 1 {
         return Err(anyhow!(
@@ -191,7 +197,8 @@ pub async fn get_devices_by_driver(
 ) -> Result<Vec<Device>> {
     let driver_info = get_driver_by_libname(driver_libname, &driver_development_proxy);
     let empty: [String; 0] = [];
-    let device_list = get_device_info(&driver_development_proxy, &empty);
+    let device_list =
+        get_device_info(&driver_development_proxy, &empty, /* exact_match= */ false);
 
     let (driver_info, device_list) = futures::join!(driver_info, device_list);
     let (driver_info, device_list) = (driver_info?, device_list?);

@@ -38,8 +38,12 @@ pub async fn debug_bind(
             }
         };
 
-    let mut device_info =
-        fuchsia_driver_dev::get_device_info(&driver_development_proxy, &[cmd.device_path]).await?;
+    let mut device_info = fuchsia_driver_dev::get_device_info(
+        &driver_development_proxy,
+        &[cmd.device_path],
+        /* exact_match= */ true,
+    )
+    .await?;
 
     if device_info.len() != 1 {
         return Err(format_err!(
