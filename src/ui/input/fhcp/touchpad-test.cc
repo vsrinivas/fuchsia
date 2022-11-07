@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.input.report/cpp/wire.h>
 #include <lib/fdio/fdio.h>
+#include <lib/fhcp/cpp/fhcp.h>
 
 #include <gtest/gtest.h>
 
@@ -83,7 +84,7 @@ void WaitForRelease(fidl::WireSyncClient<fir::InputReportsReader>& client) {
     for (fir::wire::InputReport& report : result->value()->reports) {
       ASSERT_TRUE(report.has_touch());
       if (report.touch().contacts().empty()) {
-        fputs("Release detected.\n", stderr);
+        fhcp::PrintManualTestingMessage("Release detected.");
         return;
       }
     }
@@ -112,12 +113,12 @@ void WaitForTouch(fidl::WireSyncClient<fir::InputReportsReader>& client, Midpoin
 
 void WaitForTouchAndRelease(fidl::WireSyncClient<fir::InputReportsReader>& client,
                             Midpoints midpoints, Quadrant desired_quadrant) {
-  fprintf(stderr, "\n\n*** Please touch the %s corner of the touchpad and hold\n",
-          GetQuadrantName(desired_quadrant));
+  fhcp::PrintManualTestingMessage("\n\n*** Please touch the %s corner of the touchpad and hold.",
+                                  GetQuadrantName(desired_quadrant));
 
   WaitForTouch(client, midpoints, desired_quadrant);
 
-  fputs("Please release finger.\n", stderr);
+  fhcp::PrintManualTestingMessage("Please release finger.");
   WaitForRelease(client);
 }
 

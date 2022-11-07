@@ -1,0 +1,19 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cpp/sdk_source_set.gni")
+
+sdk_source_set("cpp") {
+  category = "internal"
+
+  sdk_name = "fhcp_cpp"
+
+  include_base = "//sdk"
+  sources = [
+    "fhcp.cc",
+    "fhcp.h",
+  ]
+
+  public_configs = [ "//sdk/config" ]
+}

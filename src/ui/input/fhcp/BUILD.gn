@@ -14,6 +14,7 @@ executable("touchpad-test-bin") {
   deps = [
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_cpp_wire",
     "//sdk/lib/fdio",
+    "//sdk/lib/fhcp/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
