@@ -24,8 +24,6 @@ source_set("utils") {
     "metrics.h",
     "metrics_impl.cc",
     "metrics_impl.h",
-    "shader_warmup.cc",
-    "shader_warmup.h",
     "task_utils.h",
   ]
 
@@ -35,7 +33,6 @@ source_set("utils") {
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
     "//sdk/lib/sys/component/cpp",
     "//src/lib/fidl/cpp/contrib/connection:service_hub_connector",
-    "//src/ui/lib/escher",
     "//src/ui/scenic/lib/scheduling:frame_metrics_registry_cc",
     "//third_party/glm",
     "//zircon/system/ulib/async:async-cpp",

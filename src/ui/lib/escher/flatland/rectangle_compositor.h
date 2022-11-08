@@ -66,26 +66,6 @@ class RectangleCompositor {
   static vk::ImageCreateInfo GetDefaultImageConstraints(const vk::Format& vk_format,
                                                         vk::ImageUsageFlags usage);
 
-  // Pre-generate and cache Vulkan render passes and pipelines at startup to avoid subsequent
-  // jank at runtime: when DrawBatch() looks for the renderpasses and pipelines in their respective
-  // caches, they will already be there.
-  //
-  // WarmPipelineCache() may be called several times with different parameters to accommodate
-  // e.g. different framebuffer formats and layouts.
-  //
-  // Args:
-  // - |output_format|           Describes the target framebuffer.
-  // - |output_swapchain_layout| Describes the target framebuffer.
-  // - |depth_format|            Describes the target framebuffer.
-  // - |depth_swapchain_layout|  Describes the target framebuffer.
-  // - |immutable_samplers|      Support various types of YUV video.
-  // - |use_protected_memory|    If true, allows rendering protected (and unprotected) content into
-  //                             a protected framebuffer.  If false, only unprotected content can be
-  //                             rendered by the generated pipelines.
-  void WarmPipelineCache(vk::Format output_format, vk::ImageLayout output_swapchain_layout,
-                         vk::Format depth_format, const std::vector<SamplerPtr>& immutable_samplers,
-                         bool use_protected_memory);
-
  private:
   RectangleCompositor(const RectangleCompositor&) = delete;
   ImagePtr CreateOrFindTransientImage(const ImagePtr& image);

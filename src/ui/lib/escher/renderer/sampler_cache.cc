@@ -37,7 +37,6 @@ SamplerPtr SamplerCache::ObtainSampler(const Key& key) {
   if (it != samplers_.end()) {
     return it->second;
   }
-
   auto sampler = fxl::MakeRefCounted<Sampler>(resource_recycler_.get(), key.format, key.filter,
                                               key.color_space, key.use_unnormalized_coordinates);
   samplers_[key] = sampler;
