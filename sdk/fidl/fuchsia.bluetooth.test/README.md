@@ -5,7 +5,7 @@ implementations of core Bluetooth system services and hardware protocols.
 
 ## [hci_emulator.fidl](./hci_emulator.fidl)
 
-Defines a management interface to control the Bluetooth controller emulator
-driver (see [bt-hci-emulator](//src/connectivity/bluetooth/hci/emulator)).
+Defines a management interface to create emulated Bluetooth controllers using the
+virtual driver (see [bt-hci-virtual](//src/connectivity/bluetooth/hci/virtual)).
 
 ## TODO(fxbug.dev/1291): fake_profile.fidl

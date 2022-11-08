@@ -29,7 +29,7 @@ In order to run the tests:
 
 ```
   $ fx set [..] \
-    --with-base=src/connectivity/bluetooth/hci/emulator
+    --with-base=src/connectivity/bluetooth/hci/virtual
     --with=src/connectivity/bluetooth
     --with=src/connectivity/bluetooth/tests
 
@@ -58,7 +58,7 @@ First, build the tests - using the x64 platform will allow you to use KVM for im
 
 ```
    $ fx set core.x64 \
-     --with-base=src/connectivity/bluetooth/hci/emulator
+     --with-base=src/connectivity/bluetooth/hci/virtual
      --with=src/connectivity/bluetooth
      --with=src/connectivity/bluetooth/tests
 

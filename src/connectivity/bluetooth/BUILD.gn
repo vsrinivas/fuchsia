@@ -24,13 +24,13 @@ group("drivers") {
   testonly = true
   deps = [
     "core/bt-host:driver",
-    "hci/emulator:driver",
     "hci/passthrough:driver",
     "hci/transport/uart:bt-transport-uart",
     "hci/transport/usb:bt-transport-usb",
     "hci/vendor/atheros:driver",
     "hci/vendor/broadcom:bt-hci-broadcom",
     "hci/vendor/intel:driver",
+    "hci/virtual:driver",
   ]
 }
 
@@ -94,7 +94,7 @@ kernel_cmdline("driver-debug-logging") {
     "driver.bcm_hci.log=debug",
     "driver.bt_hci_atheros.log=debug",
     "driver.bt_hci_broadcom.log=debug",
-    "driver.bt_hci_emulator.log=debug",
+    "driver.bt_hci_virtual.log=debug",
     "driver.bt_hci_intel.log=debug",
     "driver.bt_hci_passthrough.log=debug",
     "driver.bt_host.log=debug",

@@ -6,9 +6,9 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.bluetooth") {
   sources = [
-    "emulator.fidl",
     "hci.fidl",
     "host.fidl",
+    "virtual.fidl",
   ]
 
   public_deps = [ "//zircon/vdso/zx" ]

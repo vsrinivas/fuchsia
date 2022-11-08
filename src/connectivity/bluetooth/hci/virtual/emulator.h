@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CONNECTIVITY_BLUETOOTH_HCI_EMULATOR_DEVICE_H_
-#define SRC_CONNECTIVITY_BLUETOOTH_HCI_EMULATOR_DEVICE_H_
+#ifndef SRC_CONNECTIVITY_BLUETOOTH_HCI_VIRTUAL_EMULATOR_H_
+#define SRC_CONNECTIVITY_BLUETOOTH_HCI_VIRTUAL_EMULATOR_H_
 
 #include <fuchsia/bluetooth/test/cpp/fidl.h>
 #include <fuchsia/hardware/bluetooth/c/fidl.h>
@@ -23,21 +23,16 @@
 #include <unordered_map>
 
 #include "src/connectivity/bluetooth/core/bt-host/testing/fake_controller.h"
-#include "src/connectivity/bluetooth/hci/emulator/peer.h"
+#include "src/connectivity/bluetooth/hci/virtual/peer.h"
 #include "src/connectivity/bluetooth/lib/fidl/hanging_getter.h"
 
-namespace bt_hci_emulator {
+namespace bt_hci_virtual {
 
-enum class Channel {
-  ACL,
-  COMMAND,
-  SNOOP,
-  EMULATOR,
-};
+enum class Channel { ACL, COMMAND, SNOOP, EMULATOR };
 
-class Device : public fuchsia::bluetooth::test::HciEmulator {
+class EmulatorDevice : public fuchsia::bluetooth::test::HciEmulator {
  public:
-  explicit Device(zx_device_t* device);
+  explicit EmulatorDevice(zx_device_t* device);
 
   zx_status_t Bind(std::string_view name);
   void Unbind();
@@ -152,10 +147,10 @@ class Device : public fuchsia::bluetooth::test::HciEmulator {
   zx::channel cmd_channel_;
   zx::channel acl_channel_;
 
-  async::WaitMethod<Device, &Device::HandleCommandPacket> cmd_channel_wait_{this};
-  async::WaitMethod<Device, &Device::HandleAclPacket> acl_channel_wait_{this};
+  async::WaitMethod<EmulatorDevice, &EmulatorDevice::HandleCommandPacket> cmd_channel_wait_{this};
+  async::WaitMethod<EmulatorDevice, &EmulatorDevice::HandleAclPacket> acl_channel_wait_{this};
 };
 
-}  // namespace bt_hci_emulator
+}  // namespace bt_hci_virtual
 
-#endif  // SRC_CONNECTIVITY_BLUETOOTH_HCI_EMULATOR_DEVICE_H_
+#endif  // SRC_CONNECTIVITY_BLUETOOTH_HCI_VIRTUAL_EMULATOR_H_

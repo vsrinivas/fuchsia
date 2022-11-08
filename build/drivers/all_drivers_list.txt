@@ -9,7 +9,7 @@
 //src/camera/drivers/sensors/imx227:fuchsia_driver
 //src/camera/drivers/usb_video:fuchsia_driver
 //src/connectivity/bluetooth/core/bt-host:fuchsia_driver
-//src/connectivity/bluetooth/hci/emulator:fuchsia_driver
+//src/connectivity/bluetooth/hci/virtual:fuchsia_driver
 //src/connectivity/bluetooth/hci/passthrough:fuchsia_driver
 //src/connectivity/bluetooth/hci/transport/uart:bt-transport-uart-driver
 //src/connectivity/bluetooth/hci/transport/usb:bt-transport-usb-driver

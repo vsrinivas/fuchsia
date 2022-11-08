@@ -21,7 +21,7 @@
 #include "src/connectivity/bluetooth/core/bt-host/testing/fake_peer.h"
 #include "src/connectivity/bluetooth/lib/fidl/hanging_getter.h"
 
-namespace bt_hci_emulator {
+namespace bt_hci_virtual {
 
 // Responsible for processing FIDL messages to/from an emulated peer instance. This class is not
 // thread-safe.
@@ -88,6 +88,6 @@ class Peer : public fuchsia::bluetooth::test::Peer {
   DISALLOW_COPY_ASSIGN_AND_MOVE(Peer);
 };
 
-}  // namespace bt_hci_emulator
+}  // namespace bt_hci_virtual
 
 #endif  // SRC_CONNECTIVITY_BLUETOOTH_HCI_EMULATOR_PEER_H_

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "device.h"
+#include "emulator.h"
 
 #include <fuchsia/hardware/bt/hci/c/banjo.h>
 #include <lib/async/cpp/task.h>
@@ -14,7 +14,7 @@
 #include <thread>
 
 #include "src/connectivity/bluetooth/core/bt-host/testing/fake_peer.h"
-#include "src/connectivity/bluetooth/hci/emulator/log.h"
+#include "src/connectivity/bluetooth/hci/virtual/log.h"
 
 namespace fbt = fuchsia::bluetooth;
 namespace ftest = fuchsia::bluetooth::test;
@@ -23,7 +23,7 @@ using bt::DeviceAddress;
 using bt::testing::FakeController;
 using bt::testing::FakePeer;
 
-namespace bt_hci_emulator {
+namespace bt_hci_virtual {
 namespace {
 
 // Arbitrary value to signal between userland eventpairs.
@@ -72,14 +72,14 @@ fuchsia::bluetooth::AddressType LeOwnAddressTypeToFidl(bt::hci_spec::LEOwnAddres
 
 }  // namespace
 
-Device::Device(zx_device_t* device)
+EmulatorDevice::EmulatorDevice(zx_device_t* device)
     : loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
       parent_(device),
       hci_dev_(nullptr),
       emulator_dev_(nullptr),
       binding_(this) {}
 
-#define DEV(c) static_cast<Device*>(c)
+#define DEV(c) static_cast<EmulatorDevice*>(c)
 
 static zx_protocol_device_t bt_emulator_device_ops = {
     .version = DEVICE_OPS_VERSION,
@@ -126,7 +126,7 @@ static bt_hci_protocol_ops_t hci_protocol_ops = {
 
 #undef DEV
 
-zx_status_t Device::Bind(std::string_view name) {
+zx_status_t EmulatorDevice::Bind(std::string_view name) {
   logf(TRACE, "bind\n");
 
   device_add_args_t args = {
@@ -148,18 +148,18 @@ zx_status_t Device::Bind(std::string_view name) {
     UnpublishHci();
   });
   fake_device_.set_controller_parameters_callback(
-      fit::bind_member<&Device::OnControllerParametersChanged>(this));
+      fit::bind_member<&EmulatorDevice::OnControllerParametersChanged>(this));
   fake_device_.set_advertising_state_callback(
-      fit::bind_member<&Device::OnLegacyAdvertisingStateChanged>(this));
+      fit::bind_member<&EmulatorDevice::OnLegacyAdvertisingStateChanged>(this));
   fake_device_.set_connection_state_callback(
-      fit::bind_member<&Device::OnPeerConnectionStateChanged>(this));
+      fit::bind_member<&EmulatorDevice::OnPeerConnectionStateChanged>(this));
 
-  loop_.StartThread("bt_hci_emulator");
+  loop_.StartThread("bt_hci_virtual");
 
   return status;
 }
 
-void Device::Unbind() {
+void EmulatorDevice::Unbind() {
   logf(TRACE, "unbind\n");
   zx::eventpair this_thread_waiter, loop_signaller;
   zx_status_t status = zx::eventpair::create(0, &this_thread_waiter, &loop_signaller);
@@ -194,7 +194,7 @@ void Device::Unbind() {
   emulator_dev_ = nullptr;
 }
 
-void Device::Release() {
+void EmulatorDevice::Release() {
   logf(TRACE, "release\n");
   // Clean up fake_device_ on the dispatcher thread due to its thread-safety requirements. It is OK
   // to capture references to members in the task since this function blocks until the dispatcher
@@ -218,17 +218,17 @@ void Device::Release() {
   delete this;
 }
 
-zx_status_t Device::HciMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t EmulatorDevice::HciMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   logf(TRACE, "HciMessage\n");
   return fuchsia_hardware_bluetooth_Hci_dispatch(this, txn, msg, &hci_fidl_ops_);
 }
 
-zx_status_t Device::EmulatorMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t EmulatorDevice::EmulatorMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   logf(TRACE, "EmulatorMessage\n");
   return fuchsia_hardware_bluetooth_Emulator_dispatch(this, txn, msg, &emul_fidl_ops_);
 }
 
-zx_status_t Device::GetProtocol(uint32_t proto_id, void* out_proto) {
+zx_status_t EmulatorDevice::GetProtocol(uint32_t proto_id, void* out_proto) {
   // The bt-emulator device doesn't support a non-FIDL protocol.
   if (proto_id != ZX_PROTOCOL_BT_HCI) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -241,7 +241,7 @@ zx_status_t Device::GetProtocol(uint32_t proto_id, void* out_proto) {
   return ZX_OK;
 }
 
-zx_status_t Device::OpenChan(Channel chan_type, zx_handle_t in_h) {
+zx_status_t EmulatorDevice::OpenChan(Channel chan_type, zx_handle_t in_h) {
   logf(TRACE, "open HCI channel\n");
 
   zx::channel in(in_h);
@@ -266,7 +266,7 @@ zx_status_t Device::OpenChan(Channel chan_type, zx_handle_t in_h) {
   return ZX_OK;
 }
 
-void Device::StartEmulatorInterface(zx::channel chan) {
+void EmulatorDevice::StartEmulatorInterface(zx::channel chan) {
   logf(TRACE, "start HciEmulator interface\n");
 
   if (binding_.is_bound()) {
@@ -284,7 +284,7 @@ void Device::StartEmulatorInterface(zx::channel chan) {
   });
 }
 
-void Device::Publish(ftest::EmulatorSettings in_settings, PublishCallback callback) {
+void EmulatorDevice::Publish(ftest::EmulatorSettings in_settings, PublishCallback callback) {
   logf(TRACE, "HciEmulator.Publish\n");
 
   ftest::HciEmulator_Publish_Result result;
@@ -304,7 +304,7 @@ void Device::Publish(ftest::EmulatorSettings in_settings, PublishCallback callba
   // Publish the bt-hci device.
   device_add_args_t args = {
       .version = DEVICE_ADD_ARGS_VERSION,
-      .name = "bt_hci_emulator",
+      .name = "bt_hci_virtual",
       .ctx = this,
       .ops = &bt_hci_device_ops,
       .proto_id = ZX_PROTOCOL_BT_HCI,
@@ -319,9 +319,9 @@ void Device::Publish(ftest::EmulatorSettings in_settings, PublishCallback callba
   callback(std::move(result));
 }
 
-void Device::AddLowEnergyPeer(ftest::LowEnergyPeerParameters params,
-                              fidl::InterfaceRequest<ftest::Peer> request,
-                              AddLowEnergyPeerCallback callback) {
+void EmulatorDevice::AddLowEnergyPeer(ftest::LowEnergyPeerParameters params,
+                                      fidl::InterfaceRequest<ftest::Peer> request,
+                                      AddLowEnergyPeerCallback callback) {
   logf(TRACE, "HciEmulator.AddLowEnergyPeer\n");
 
   ftest::HciEmulator_AddLowEnergyPeer_Result fidl_result;
@@ -338,9 +338,9 @@ void Device::AddLowEnergyPeer(ftest::LowEnergyPeerParameters params,
   callback(std::move(fidl_result));
 }
 
-void Device::AddBredrPeer(ftest::BredrPeerParameters params,
-                          fidl::InterfaceRequest<fuchsia::bluetooth::test::Peer> request,
-                          AddBredrPeerCallback callback) {
+void EmulatorDevice::AddBredrPeer(ftest::BredrPeerParameters params,
+                                  fidl::InterfaceRequest<fuchsia::bluetooth::test::Peer> request,
+                                  AddBredrPeerCallback callback) {
   logf(TRACE, "HciEmulator.AddBredrPeer\n");
 
   ftest::HciEmulator_AddBredrPeer_Result fidl_result;
@@ -357,27 +357,27 @@ void Device::AddBredrPeer(ftest::BredrPeerParameters params,
   callback(std::move(fidl_result));
 }
 
-void Device::WatchControllerParameters(WatchControllerParametersCallback callback) {
+void EmulatorDevice::WatchControllerParameters(WatchControllerParametersCallback callback) {
   logf(TRACE, "HciEmulator.WatchControllerParameters\n");
   controller_parameters_getter_.Watch(std::move(callback));
 }
 
-void Device::WatchLeScanStates(WatchLeScanStatesCallback callback) {
+void EmulatorDevice::WatchLeScanStates(WatchLeScanStatesCallback callback) {
   // TODO(fxbug.dev/822): Implement
 }
 
-void Device::WatchLegacyAdvertisingStates(WatchLegacyAdvertisingStatesCallback callback) {
+void EmulatorDevice::WatchLegacyAdvertisingStates(WatchLegacyAdvertisingStatesCallback callback) {
   logf(TRACE, "HciEmulator.WatchLegacyAdvertisingState\n");
   legacy_adv_state_getter_.Watch(std::move(callback));
 }
 
-void Device::AddPeer(std::unique_ptr<Peer> peer) {
+void EmulatorDevice::AddPeer(std::unique_ptr<Peer> peer) {
   auto address = peer->address();
   peer->set_closed_callback([this, address] { peers_.erase(address); });
   peers_[address] = std::move(peer);
 }
 
-void Device::OnControllerParametersChanged() {
+void EmulatorDevice::OnControllerParametersChanged() {
   logf(TRACE, "HciEmulator.OnControllerParametersChanged\n");
 
   ftest::ControllerParameters fidl_value;
@@ -393,7 +393,7 @@ void Device::OnControllerParametersChanged() {
   controller_parameters_getter_.Set(std::move(fidl_value));
 }
 
-void Device::OnLegacyAdvertisingStateChanged() {
+void EmulatorDevice::OnLegacyAdvertisingStateChanged() {
   logf(TRACE, "HciEmulator.OnLegacyAdvertisingStateChanged\n");
 
   // We have requests to resolve. Construct the FIDL table for the current state.
@@ -428,16 +428,16 @@ void Device::OnLegacyAdvertisingStateChanged() {
   legacy_adv_state_getter_.Add(std::move(fidl_state));
 }
 
-void Device::UnpublishHci() {
+void EmulatorDevice::UnpublishHci() {
   if (hci_dev_) {
     device_async_remove(hci_dev_);
     hci_dev_ = nullptr;
   }
 }
 
-void Device::OnPeerConnectionStateChanged(const bt::DeviceAddress& address,
-                                          bt::hci_spec::ConnectionHandle handle, bool connected,
-                                          bool canceled) {
+void EmulatorDevice::OnPeerConnectionStateChanged(const bt::DeviceAddress& address,
+                                                  bt::hci_spec::ConnectionHandle handle,
+                                                  bool connected, bool canceled) {
   logf(TRACE, "Peer connection state changed: %s (handle: %#.4x) (connected: %s) (canceled: %s):\n",
        address.ToString().c_str(), handle, (connected ? "true" : "false"),
        (canceled ? "true" : "false"));
@@ -450,12 +450,12 @@ void Device::OnPeerConnectionStateChanged(const bt::DeviceAddress& address,
 
 // Starts listening for command/event packets on the given channel.
 // Returns false if already listening on a command channel
-bool Device::StartCmdChannel(zx::channel chan) {
+bool EmulatorDevice::StartCmdChannel(zx::channel chan) {
   if (cmd_channel_.is_valid()) {
     return false;
   }
 
-  fake_device_.StartCmdChannel(fit::bind_member<&Device::SendEvent>(this));
+  fake_device_.StartCmdChannel(fit::bind_member<&EmulatorDevice::SendEvent>(this));
 
   cmd_channel_ = std::move(chan);
   cmd_channel_wait_.set_object(cmd_channel_.get());
@@ -471,13 +471,13 @@ bool Device::StartCmdChannel(zx::channel chan) {
 
 // Starts listening for acl packets on the given channel.
 // Returns false if already listening on a acl channel
-bool Device::StartAclChannel(zx::channel chan) {
+bool EmulatorDevice::StartAclChannel(zx::channel chan) {
   if (acl_channel_.is_valid()) {
     return false;
   }
 
   // Enable FakeController to send packets to bt-host.
-  fake_device_.StartAclChannel(fit::bind_member<&Device::SendAclPacket>(this));
+  fake_device_.StartAclChannel(fit::bind_member<&EmulatorDevice::SendAclPacket>(this));
 
   // Enable bt-host to send packets to FakeController.
   acl_channel_ = std::move(chan);
@@ -492,7 +492,7 @@ bool Device::StartAclChannel(zx::channel chan) {
   return true;
 }
 
-void Device::CloseCommandChannel() {
+void EmulatorDevice::CloseCommandChannel() {
   if (cmd_channel_.is_valid()) {
     cmd_channel_wait_.Cancel();
     cmd_channel_.reset();
@@ -500,7 +500,7 @@ void Device::CloseCommandChannel() {
   fake_device_.Stop();
 }
 
-void Device::CloseAclDataChannel() {
+void EmulatorDevice::CloseAclDataChannel() {
   if (acl_channel_.is_valid()) {
     acl_channel_wait_.Cancel();
     acl_channel_.reset();
@@ -508,7 +508,7 @@ void Device::CloseAclDataChannel() {
   fake_device_.Stop();
 }
 
-void Device::SendEvent(std::unique_ptr<bt::hci::EventPacket> event) {
+void EmulatorDevice::SendEvent(std::unique_ptr<bt::hci::EventPacket> event) {
   zx_status_t status =
       cmd_channel_.write(/*flags=*/0, event->view().data().data(), event->view().size(),
                          /*handles=*/nullptr, /*num_handles=*/0);
@@ -517,7 +517,7 @@ void Device::SendEvent(std::unique_ptr<bt::hci::EventPacket> event) {
   }
 }
 
-void Device::SendAclPacket(std::unique_ptr<bt::hci::ACLDataPacket> packet) {
+void EmulatorDevice::SendAclPacket(std::unique_ptr<bt::hci::ACLDataPacket> packet) {
   zx_status_t status =
       acl_channel_.write(/*flags=*/0, packet->view().data().data(), packet->view().size(),
                          /*handles=*/nullptr, /*num_handles=*/0);
@@ -527,8 +527,9 @@ void Device::SendAclPacket(std::unique_ptr<bt::hci::ACLDataPacket> packet) {
 }
 
 // Read and handle packets received over the channels.
-void Device::HandleCommandPacket(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                                 zx_status_t wait_status, const zx_packet_signal_t* signal) {
+void EmulatorDevice::HandleCommandPacket(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                         zx_status_t wait_status,
+                                         const zx_packet_signal_t* signal) {
   bt::StaticByteBuffer<bt::hci_spec::kMaxCommandPacketPayloadSize> buffer;
   uint32_t read_size;
   zx_status_t status = cmd_channel_.read(0u, buffer.mutable_data(), /*handles=*/nullptr,
@@ -569,8 +570,8 @@ void Device::HandleCommandPacket(async_dispatcher_t* dispatcher, async::WaitBase
   }
 }
 
-void Device::HandleAclPacket(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                             zx_status_t wait_status, const zx_packet_signal_t* signal) {
+void EmulatorDevice::HandleAclPacket(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                     zx_status_t wait_status, const zx_packet_signal_t* signal) {
   bt::StaticByteBuffer<bt::hci_spec::kMaxACLPayloadSize + sizeof(bt::hci_spec::ACLDataHeader)>
       buffer;
   uint32_t read_size;
@@ -611,20 +612,20 @@ void Device::HandleAclPacket(async_dispatcher_t* dispatcher, async::WaitBase* wa
   }
 }
 
-zx_status_t Device::OpenCommandChannel(void* ctx, zx_handle_t channel) {
-  return static_cast<Device*>(ctx)->OpenChan(Channel::COMMAND, channel);
+zx_status_t EmulatorDevice::OpenCommandChannel(void* ctx, zx_handle_t channel) {
+  return static_cast<EmulatorDevice*>(ctx)->OpenChan(Channel::COMMAND, channel);
 }
 
-zx_status_t Device::OpenAclDataChannel(void* ctx, zx_handle_t channel) {
-  return static_cast<Device*>(ctx)->OpenChan(Channel::ACL, channel);
+zx_status_t EmulatorDevice::OpenAclDataChannel(void* ctx, zx_handle_t channel) {
+  return static_cast<EmulatorDevice*>(ctx)->OpenChan(Channel::ACL, channel);
 }
 
-zx_status_t Device::OpenSnoopChannel(void* ctx, zx_handle_t channel) {
-  return static_cast<Device*>(ctx)->OpenChan(Channel::SNOOP, channel);
+zx_status_t EmulatorDevice::OpenSnoopChannel(void* ctx, zx_handle_t channel) {
+  return static_cast<EmulatorDevice*>(ctx)->OpenChan(Channel::SNOOP, channel);
 }
 
-zx_status_t Device::OpenEmulatorChannel(void* ctx, zx_handle_t channel) {
-  return static_cast<Device*>(ctx)->OpenChan(Channel::EMULATOR, channel);
+zx_status_t EmulatorDevice::OpenEmulatorChannel(void* ctx, zx_handle_t channel) {
+  return static_cast<EmulatorDevice*>(ctx)->OpenChan(Channel::EMULATOR, channel);
 }
 
-}  // namespace bt_hci_emulator
+}  // namespace bt_hci_virtual

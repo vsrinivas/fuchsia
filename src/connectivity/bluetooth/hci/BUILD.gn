@@ -5,19 +5,19 @@
 group("hci") {
   testonly = true
   deps = [
-    "emulator",
     "passthrough",
     "vendor",
+    "virtual",
   ]
 }
 
 group("tests") {
   testonly = true
   deps = [
-    "emulator:tests",
     "passthrough:tests",
     "transport/uart:tests",
     "transport/usb:tests",
     "vendor:tests",
+    "virtual:tests",
   ]
 }

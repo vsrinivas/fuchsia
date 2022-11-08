@@ -304,7 +304,7 @@ emulation features.
 
 **Note**: For integration tests outside of `bt-host`, this emulation
       functionality can through accessed through the
-      [HCI emulator](https://fuchsia.googlesource.com/fuchsia/+/f28eb81421883d215a654933acf69868dfc67295/src/connectivity/bluetooth/hci/emulator)
+      [HCI emulator](https://fuchsia.googlesource.com/fuchsia/+/f28eb81421883d215a654933acf69868dfc67295/src/connectivity/bluetooth/hci/virtual)
       utilities.
 
 #### [FakeSignalingServer](https://fuchsia.googlesource.com/fuchsia/+/f28eb81421883d215a654933acf69868dfc67295/src/connectivity/bluetooth/core/bt-host/testing/fake_signaling_server.h) (L2CAP)

@@ -1,19 +1,19 @@
-The bt-hci-emulator driver is a Bluetooth controller emulator that allows system
+The bt-hci-virtual driver is a Bluetooth controller emulator that allows system
 Bluetooth components to be tested in integration against the Bluetooth HCI
 procotol.
 
-bt-hci-emulator provides a standard HCI interface to the rest of the system while
-allowing its behavior to be configured using an emulator interface. It
-accomplishes this by publishing two distinct devices:
+bt-hci-virtual provides aa method to add virtual HCI controllers to the system
+which can either be emulated, or loopback the HCI commands to a component.
+
+It accomplishes this by publishing three distinct devices:
 
 * A device of class "bt-emulator". This device allows the emulator's behavior to
   be configured using the
   [fuchsia.bluetooth.test.HciEmulator](//sdk/fidl/fuchsia.bluetooth.test/hci_emulator.fidl)
   protocol (also see
   [fuchsia.hardware.bluetooth.Emulator](//sdk/fidl/fuchsia.hardware.bluetooth/hci.fidl)).
-* A device of class "bt-hci". See
-  [fuchsia.hardware.bluetooth.Hci](//sdk/fidl/fuchsia.hardware.bluetooth/hci.fidl)
-  and [fuchsia.hardware.bt.hci](//sdk/banjo/fuchsia.hardware.bt.hci/bt-hci.fidl).
+* A device of class "bt-loopback". See
+  [fuchsia.bluetooth.test.Loopback](//sdk/fidl/fuchsia.bluetooth.test/loopback.fidl).
 
 ## Usage
 TODO(fxbug.dev/822): Document the driver's device publishing behavior once implement,

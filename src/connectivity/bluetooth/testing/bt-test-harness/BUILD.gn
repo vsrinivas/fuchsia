@@ -48,7 +48,7 @@ rustc_library("bt-test-harness") {
     "//sdk/lib/driver_test_realm/realm_builder/rust",
     "//src/connectivity/bluetooth/core/bt-gap:test-stash-secure",
     "//src/connectivity/bluetooth/core/bt-host:driver",
-    "//src/connectivity/bluetooth/hci/emulator:driver",
+    "//src/connectivity/bluetooth/hci/virtual:driver",
     "//src/devices/bus/drivers/platform",
     "//src/devices/misc/drivers/test",
     "//src/devices/tests/sysdev",

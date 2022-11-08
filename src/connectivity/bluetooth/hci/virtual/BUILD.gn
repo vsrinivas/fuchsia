@@ -6,29 +6,29 @@ import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/drivers.gni")
 
-driver_bind_rules("bt-hci-emulator-bind") {
-  rules = "bt-hci-emulator.bind"
-  header_output = "bt-hci-emulator-bind.h"
+driver_bind_rules("bt-hci-virtual-bind") {
+  rules = "bt-hci-virtual.bind"
+  header_output = "bt-hci-virtual-bind.h"
   tests = "bind-tests.json"
   deps = [ "//src/devices/bind/fuchsia.platform" ]
 }
 
 fuchsia_driver("fuchsia_driver") {
-  output_name = "bt-hci-emulator"
+  output_name = "bt-hci-virtual"
   testonly = true
 
   sources = [
     "controller.h",
-    "device.cc",
-    "device.h",
     "driver.cc",
+    "emulator.cc",
+    "emulator.h",
     "log.h",
     "peer.cc",
     "peer.h",
   ]
 
   deps = [
-    ":bt-hci-emulator-bind",
+    ":bt-hci-virtual-bind",
     "//sdk/banjo/fuchsia.hardware.test:fuchsia.hardware.test_banjo_cpp",
     "//sdk/fidl/fuchsia.bluetooth.test:fuchsia.bluetooth.test_hlcpp",
     "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth_c_client",
@@ -58,13 +58,13 @@ fuchsia_driver("fuchsia_driver") {
 
 fuchsia_driver_component("driver") {
   testonly = true
-  component_name = "bt-hci-emulator"
+  component_name = "bt-hci-virtual"
   deps = [ ":fuchsia_driver" ]
   info = "driver-info.json"
   colocate = true
 }
 
-fuchsia_driver_package("emulator") {
+fuchsia_driver_package("virtual") {
   testonly = true
 
   driver_components = [ ":driver" ]
@@ -74,5 +74,5 @@ fuchsia_driver_package("emulator") {
 
 group("tests") {
   testonly = true
-  deps = [ ":bt-hci-emulator-bind_test" ]
+  deps = [ ":bt-hci-virtual-bind_test" ]
 }

@@ -51,7 +51,7 @@ fuchsia_unittest_package("hci-emulator-client-tests") {
     ":hci-emulator-client_test",
 
     # No bt-host driver because we want to check the HCI device lifecycle directly.
-    "//src/connectivity/bluetooth/hci/emulator:driver",
+    "//src/connectivity/bluetooth/hci/virtual:driver",
     "//src/devices/bus/drivers/platform",
   ]
 }
@@ -60,6 +60,6 @@ group("tests") {
   testonly = true
   deps = [
     ":hci-emulator-client-tests",
-    "//src/connectivity/bluetooth/hci/emulator",
+    "//src/connectivity/bluetooth/hci/virtual",
   ]
 }

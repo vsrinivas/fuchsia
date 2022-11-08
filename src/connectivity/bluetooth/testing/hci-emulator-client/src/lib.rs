@@ -9,7 +9,7 @@ use {
     fidl::endpoints::Proxy,
     fidl_fuchsia_bluetooth_test::{EmulatorSettings, HciEmulatorProxy},
     fidl_fuchsia_device::ControllerProxy,
-    fidl_fuchsia_hardware_bluetooth::{EmulatorControllerProxy, EmulatorProxy},
+    fidl_fuchsia_hardware_bluetooth::{EmulatorProxy, VirtualControllerProxy},
     fidl_fuchsia_io as fio,
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_bluetooth::{
@@ -31,7 +31,7 @@ use {
 pub mod types;
 
 // 0x30 => fuchsia.platform.BIND_PLATFORM_DEV_DID.BT_HCI_EMULATOR
-pub const CONTROL_DEVICE: &str = "/dev/sys/platform/00:00:30/bt_hci_emulator";
+pub const CONTROL_DEVICE: &str = "/dev/sys/platform/00:00:30/bt_hci_virtual";
 pub const EMULATOR_DEVICE_DIR: &str = "/dev/class/bt-emulator";
 pub const HCI_DEVICE_DIR: &str = "/dev/class/bt-hci";
 
@@ -184,9 +184,9 @@ impl TestDevice {
         controller_channel: fasync::Channel,
         dev_directory: Option<fio::DirectoryProxy>,
     ) -> Result<(TestDevice, HciEmulatorProxy), Error> {
-        let controller = EmulatorControllerProxy::new(controller_channel);
+        let controller = VirtualControllerProxy::new(controller_channel);
         let name = controller
-            .create()
+            .create_emulator()
             .map_err(Error::from)
             .on_timeout(WATCH_TIMEOUT.after_now(), || {
                 Err(format_err!("timed out waiting for emulator to create test device"))

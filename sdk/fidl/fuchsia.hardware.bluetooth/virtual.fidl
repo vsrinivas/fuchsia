@@ -7,12 +7,19 @@ using zx;
 
 const MAX_NAME_LENGTH uint32 = 32;
 
-/// Used for spawning bluetooth emulator devices.
-protocol EmulatorController {
+/// Used for spawning virtual Bluetooth devices.
+protocol VirtualController {
     /// Creates a child device, and returns the name of the child created.
-    Create() -> (struct {
+    CreateEmulator() -> (struct {
         name string:<MAX_NAME_LENGTH, optional>;
     }) error zx.status;
+
+    /// Creates a virtual Bluetooth serial device, speaking the BT HCI UART
+    /// protocol on the provided handle.
+    /// The zircon channel is closed in the event of an error.
+    CreateLoopbackDevice(resource struct {
+        channel zx.handle:CHANNEL;
+    });
 };
 
 /// Represents the bt-emulator device protocol. A bt-emulator device is used for configuring and

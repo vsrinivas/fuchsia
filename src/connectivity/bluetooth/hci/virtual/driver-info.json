@@ -1,5 +1,5 @@
 {
-    "short_description": "Bluetooth HCI controller emulator driver for integration tests",
+    "short_description": "Bluetooth HCI virtual controller driver for integration tests",
     "manufacturer": "",
     "families": [
         "generic"

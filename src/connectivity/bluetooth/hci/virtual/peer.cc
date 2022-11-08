@@ -6,12 +6,12 @@
 
 #include <fuchsia/bluetooth/test/cpp/fidl.h>
 
-#include "src/connectivity/bluetooth/hci/emulator/log.h"
+#include "src/connectivity/bluetooth/hci/virtual/log.h"
 
 namespace fbt = fuchsia::bluetooth;
 namespace ftest = fuchsia::bluetooth::test;
 
-namespace bt_hci_emulator {
+namespace bt_hci_virtual {
 namespace {
 
 bt::DeviceAddress::Type LeAddressTypeFromFidl(fbt::AddressType type) {
@@ -178,4 +178,4 @@ void Peer::NotifyChannelClosed() {
   }
 }
 
-}  // namespace bt_hci_emulator
+}  // namespace bt_hci_virtual
