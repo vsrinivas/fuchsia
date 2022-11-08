@@ -1179,6 +1179,7 @@ func goroutineTopFunctionsToIgnore() []goleak.Option {
 func addGoleakCheck(t *testing.T) {
 	opts := append(goroutineTopFunctionsToIgnore(), goleak.IgnoreCurrent())
 
+	t.Helper()
 	t.Cleanup(func() {
 		// If the goleak check is run at a particularly unlucky time, it's possible
 		// to hit an error path in runtime.Stack() [1] that prevents goleak from
@@ -1199,8 +1200,29 @@ func addGoleakCheck(t *testing.T) {
 		// [1] https://cs.opensource.google/go/go/+/master:src/runtime/traceback.go;l=113;drc=f2656f20ea420ada5f15ef06ddf18d2797e18841
 		// [2] https://github.com/uber-go/goleak/blob/89d54f0adef2491e157717f756bf7f918943f3cc/internal/stack/stacks.go#L135
 		// [3] https://github.com/uber-go/goleak/blob/89d54f0adef2491e157717f756bf7f918943f3cc/internal/stack/stacks.go#L124
-		runtime.Gosched()
-		goleak.VerifyNone(t, opts...)
+		//
+		// In the event that goleak does panic within VerifyNone, we expect that it
+		// was due to this bad timing, so we should just recover and try to run the
+		// goleak check again.
+		const maxTries = 5
+		for try := 1; try <= maxTries; try++ {
+			panicked := func() (panicked bool) {
+				defer func() {
+					if r := recover(); r != nil {
+						t.Logf("Recovered from panic in goleak check attempt %d: %s", try, r)
+						panicked = true
+					}
+				}()
+				runtime.Gosched()
+				goleak.VerifyNone(t, opts...)
+				return false
+			}()
+			if !panicked {
+				return
+			}
+		}
+
+		t.Error("Panicked in all 5 attempts at running a goleak check")
 	})
 }
 
