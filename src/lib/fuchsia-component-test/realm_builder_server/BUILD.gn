@@ -25,6 +25,7 @@ rustc_binary("realm_builder_server_bin") {
     "//sdk/fidl/fuchsia.component.test:fuchsia.component.test_rust",
     "//sdk/fidl/fuchsia.data:fuchsia.data_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem_rust",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys_rust",
     "//src/lib/fidl/rust/fidl",
@@ -50,6 +51,7 @@ rustc_binary("realm_builder_server_bin") {
   ]
   test_deps = [
     "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:difference",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:test-case",
   ]

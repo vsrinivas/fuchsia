@@ -4,11 +4,13 @@
 
 use {
     anyhow::{self, Context},
-    cm_rust::{FidlIntoNative, NativeIntoFidl},
+    cm_rust::{FidlIntoNative, NativeIntoFidl, OfferDeclCommon},
+    fidl::endpoints::DiscoverableProtocolMarker,
     fidl::endpoints::{ProtocolMarker, ServerEnd},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_config as fconfig,
     fidl_fuchsia_component_decl as fcdecl, fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_component_test as ftest, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
+    fidl_fuchsia_logger::LogSinkMarker,
     fuchsia_component::server as fserver,
     fuchsia_fs, fuchsia_zircon_status as zx_status,
     futures::{future::BoxFuture, join, lock::Mutex, FutureExt, StreamExt, TryStreamExt},
@@ -848,6 +850,42 @@ impl RealmNodeState {
         });
     }
 
+    /// Function to route common protocols to every component if they are missing.
+    ///
+    /// `route_common_protocols_from_parent` should be called after `self.mutable_children` have
+    /// been inserted to `self.decl.children`.
+    ///
+    /// Protocols are matched via their `target_name`.
+    fn route_common_protocols_from_parent(&mut self) {
+        let protocols_to_offer = &[cm_rust::CapabilityName::from(LogSinkMarker::PROTOCOL_NAME)];
+
+        for protocol in protocols_to_offer {
+            for child in &self.decl.children {
+                if self.decl.offers.iter().any(|offer| {
+                    offer.target_name() == protocol
+                        && match offer.target() {
+                            cm_rust::OfferTarget::Child(child_ref) => child_ref.name == child.name,
+                            cm_rust::OfferTarget::Collection(_) => true,
+                        }
+                }) {
+                    continue;
+                }
+
+                self.decl.offers.push(cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
+                    source: cm_rust::OfferSource::Parent,
+                    target: cm_rust::OfferTarget::Child(cm_rust::ChildRef {
+                        name: child.name.clone(),
+                        collection: None,
+                    }),
+                    source_name: protocol.clone(),
+                    target_name: protocol.clone(),
+                    dependency_type: cm_rust::DependencyType::Strong,
+                    availability: cm_rust::Availability::Required,
+                }));
+            }
+        }
+    }
+
     // Returns children whose manifest must be updated during invocations to
     // AddRoute.
     fn get_updateable_children(&mut self) -> HashMap<String, &mut RealmNode2> {
@@ -1139,6 +1177,7 @@ impl RealmNode2 {
         // futures as the size isn't knowable to rustc at compile time. Put the recursive call
         // into a boxed future, as the redirection makes this possible
         let self_state = self.state.clone();
+        let component_loaded_from_pkg = self.component_loaded_from_pkg;
         async move {
             let mut state_guard = self_state.lock().await;
             // Expose the fuchsia.component.Binder protocol from root in order to give users the ability to manually
@@ -1156,6 +1195,10 @@ impl RealmNode2 {
                 let child_url =
                     node.build(registry.clone(), new_path, Clone::clone(&package_dir)).await?;
                 state_guard.add_child_decl(child_name, child_url, child_options);
+            }
+
+            if !component_loaded_from_pkg {
+                state_guard.route_common_protocols_from_parent();
             }
 
             let name =
@@ -1951,16 +1994,36 @@ mod tests {
     use {
         super::*,
         assert_matches::assert_matches,
+        difference::Changeset,
         fidl::endpoints::{
             create_endpoints, create_proxy, create_proxy_and_stream, create_request_stream,
             ClientEnd,
         },
-        fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem, fuchsia_async as fasync,
-        fuchsia_zircon as zx,
+        fidl_fuchsia_io as fio,
+        fidl_fuchsia_logger::LogSinkMarker,
+        fidl_fuchsia_mem as fmem, fuchsia_async as fasync, fuchsia_zircon as zx,
         maplit::hashmap,
         std::convert::TryInto,
         test_case::test_case,
     };
+
+    /// Assert that two ComponentTrees are equivalent.
+    ///
+    /// Output: the prettified debug output compared line-by-line,
+    /// with a colorized diff. Green is the expected version, red is the actual.
+    macro_rules! assert_decls_eq {
+        ($actual:expr, $($expected:tt)+) => {{
+
+            let actual = $actual.clone();
+            let expected = {$($expected)+}.clone();
+            if actual != expected {
+                let actual = format!("{:#?}", actual);
+                let expected = format!("{:#?}", expected);
+
+                panic!("{}", Changeset::new(&actual, &expected, "\n"));
+            }
+        }}
+    }
 
     const EXAMPLE_LEGACY_URL: &'static str = "fuchsia-pkg://fuchsia.com/a#meta/a.cmx";
 
@@ -2019,6 +2082,45 @@ mod tests {
         fn add_binder_expose(&mut self) {
             self.decl.exposes.push(BINDER_EXPOSE_DECL.clone());
         }
+
+        fn add_recursive_automatic_decls(&mut self) {
+            for child in &self.decl.children {
+                self.decl.offers.push(cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
+                    source: cm_rust::OfferSource::Parent,
+                    target: cm_rust::OfferTarget::Child(cm_rust::ChildRef {
+                        name: child.name.clone(),
+                        collection: None,
+                    }),
+                    source_name: LogSinkMarker::PROTOCOL_NAME.into(),
+                    target_name: LogSinkMarker::PROTOCOL_NAME.into(),
+                    dependency_type: cm_rust::DependencyType::Strong,
+                    availability: cm_rust::Availability::Required,
+                }));
+            }
+
+            for (child_name, _, _) in &self.children {
+                self.decl.offers.push(cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
+                    source: cm_rust::OfferSource::Parent,
+                    target: cm_rust::OfferTarget::Child(cm_rust::ChildRef {
+                        name: child_name.clone(),
+                        collection: None,
+                    }),
+                    source_name: LogSinkMarker::PROTOCOL_NAME.into(),
+                    target_name: LogSinkMarker::PROTOCOL_NAME.into(),
+                    dependency_type: cm_rust::DependencyType::Strong,
+                    availability: cm_rust::Availability::Required,
+                }));
+            }
+
+            for (_, _, child_tree) in &mut self.children {
+                child_tree.add_recursive_automatic_decls();
+            }
+        }
+
+        fn add_auto_decls(&mut self) {
+            self.add_binder_expose();
+            self.add_recursive_automatic_decls();
+        }
     }
 
     fn tree_to_realm_node(tree: ComponentTree) -> BoxFuture<'static, RealmNode2> {
@@ -2044,7 +2146,7 @@ mod tests {
         // builder automatically puts stuff into the root realm when building. Add that to our
         // local tree here, so that our tree looks the same as what hopefully got put in the
         // resolver.
-        tree.add_binder_expose();
+        tree.add_auto_decls();
 
         res
     }
@@ -2234,7 +2336,7 @@ mod tests {
         let mut tree = ComponentTree { decl: cm_rust::ComponentDecl::default(), children: vec![] };
         let (root_url, registry) = build_tree(&mut tree).await.expect("failed to build tree");
         let tree_from_resolver = ComponentTree::new_from_resolver(root_url, registry).await;
-        assert_eq!(Some(tree), tree_from_resolver);
+        assert_decls_eq!(tree_from_resolver.unwrap(), tree);
     }
 
     #[fuchsia::test]
@@ -2243,8 +2345,8 @@ mod tests {
             decl: cm_rust::ComponentDecl {
                 offers: vec![cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
                     source: cm_rust::OfferSource::Parent,
-                    source_name: "fuchsia.logger.LogSink".into(),
-                    target_name: "fuchsia.logger.LogSink".into(),
+                    source_name: LogSinkMarker::PROTOCOL_NAME.into(),
+                    target_name: LogSinkMarker::PROTOCOL_NAME.into(),
                     dependency_type: cm_rust::DependencyType::Strong,
 
                     // This doesn't exist
@@ -2263,20 +2365,144 @@ mod tests {
     }
 
     #[fuchsia::test]
+    async fn build_realm_expect_automatic_routing() {
+        let mut expected_output_tree = ComponentTree {
+            decl: cm_rust::ComponentDecl {
+                offers: vec![
+                    cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
+                        source: cm_rust::OfferSource::Parent,
+                        target: cm_rust::OfferTarget::Child(cm_rust::ChildRef {
+                            name: "a".to_string(),
+                            collection: None,
+                        }),
+                        source_name: LogSinkMarker::PROTOCOL_NAME.into(),
+                        target_name: LogSinkMarker::PROTOCOL_NAME.into(),
+                        dependency_type: cm_rust::DependencyType::Strong,
+                        availability: cm_rust::Availability::Required,
+                    }),
+                    cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
+                        source: cm_rust::OfferSource::Parent,
+                        target: cm_rust::OfferTarget::Child(cm_rust::ChildRef {
+                            name: "b".to_string(),
+                            collection: None,
+                        }),
+                        source_name: LogSinkMarker::PROTOCOL_NAME.into(),
+                        target_name: LogSinkMarker::PROTOCOL_NAME.into(),
+                        dependency_type: cm_rust::DependencyType::Strong,
+                        availability: cm_rust::Availability::Required,
+                    }),
+                ],
+                children: vec![cm_rust::ChildDecl {
+                    name: "a".to_string(),
+                    url: "test://a".to_string(),
+                    startup: fcdecl::StartupMode::Lazy,
+                    on_terminate: None,
+                    environment: None,
+                }],
+                ..cm_rust::ComponentDecl::default()
+            },
+            children: vec![(
+                "b".to_string(),
+                ftest::ChildOptions::EMPTY,
+                ComponentTree {
+                    decl: cm_rust::ComponentDecl {
+                        offers: vec![
+                            cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
+                                source: cm_rust::OfferSource::Parent,
+                                target: cm_rust::OfferTarget::Child(cm_rust::ChildRef {
+                                    name: "b_child_static".to_string(),
+                                    collection: None,
+                                }),
+                                source_name: LogSinkMarker::PROTOCOL_NAME.into(),
+                                target_name: LogSinkMarker::PROTOCOL_NAME.into(),
+                                dependency_type: cm_rust::DependencyType::Strong,
+                                availability: cm_rust::Availability::Required,
+                            }),
+                            cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
+                                source: cm_rust::OfferSource::Parent,
+                                target: cm_rust::OfferTarget::Child(cm_rust::ChildRef {
+                                    name: "b_child_dynamic".to_string(),
+                                    collection: None,
+                                }),
+                                source_name: LogSinkMarker::PROTOCOL_NAME.into(),
+                                target_name: LogSinkMarker::PROTOCOL_NAME.into(),
+                                dependency_type: cm_rust::DependencyType::Strong,
+                                availability: cm_rust::Availability::Required,
+                            }),
+                        ],
+                        children: vec![cm_rust::ChildDecl {
+                            name: "b_child_static".to_string(),
+                            url: "test://b_child_static".to_string(),
+                            startup: fcdecl::StartupMode::Lazy,
+                            on_terminate: None,
+                            environment: None,
+                        }],
+                        ..cm_rust::ComponentDecl::default()
+                    },
+                    children: vec![(
+                        "b_child_dynamic".to_string(),
+                        ftest::ChildOptions::EMPTY,
+                        ComponentTree {
+                            decl: cm_rust::ComponentDecl { ..cm_rust::ComponentDecl::default() },
+                            children: vec![],
+                        },
+                    )],
+                },
+            )],
+        };
+
+        // only binder, don't call the full automatic routing function, or
+        // it will duplicate the expected output.
+        expected_output_tree.add_binder_expose();
+
+        let mut input_tree = ComponentTree {
+            decl: cm_rust::ComponentDecl {
+                offers: vec![],
+                children: vec![cm_rust::ChildDecl {
+                    name: "a".to_string(),
+                    url: "test://a".to_string(),
+                    startup: fcdecl::StartupMode::Lazy,
+                    on_terminate: None,
+                    environment: None,
+                }],
+                ..cm_rust::ComponentDecl::default()
+            },
+            children: vec![(
+                "b".to_string(),
+                ftest::ChildOptions::EMPTY,
+                ComponentTree {
+                    decl: cm_rust::ComponentDecl {
+                        offers: vec![],
+                        children: vec![cm_rust::ChildDecl {
+                            name: "b_child_static".to_string(),
+                            url: "test://b_child_static".to_string(),
+                            startup: fcdecl::StartupMode::Lazy,
+                            on_terminate: None,
+                            environment: None,
+                        }],
+                        ..cm_rust::ComponentDecl::default()
+                    },
+                    children: vec![(
+                        "b_child_dynamic".to_string(),
+                        ftest::ChildOptions::EMPTY,
+                        ComponentTree {
+                            decl: cm_rust::ComponentDecl { ..cm_rust::ComponentDecl::default() },
+                            children: vec![],
+                        },
+                    )],
+                },
+            )],
+        };
+
+        let (root_url, registry) = build_tree(&mut input_tree).await.expect("failed to build tree");
+        let tree_from_resolver = ComponentTree::new_from_resolver(root_url, registry).await;
+        assert_decls_eq!(tree_from_resolver.unwrap(), expected_output_tree);
+    }
+
+    #[fuchsia::test]
     async fn build_realm_with_child_decl() {
         let mut tree = ComponentTree {
             decl: cm_rust::ComponentDecl {
-                offers: vec![cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
-                    source: cm_rust::OfferSource::Parent,
-                    target: cm_rust::OfferTarget::Child(cm_rust::ChildRef {
-                        name: "a".to_string(),
-                        collection: None,
-                    }),
-                    source_name: "fuchsia.logger.LogSink".into(),
-                    target_name: "fuchsia.logger.LogSink".into(),
-                    dependency_type: cm_rust::DependencyType::Strong,
-                    availability: cm_rust::Availability::Required,
-                })],
                 children: vec![cm_rust::ChildDecl {
                     name: "a".to_string(),
                     url: "test://a".to_string(),
@@ -2290,26 +2516,13 @@ mod tests {
         };
         let (root_url, registry) = build_tree(&mut tree).await.expect("failed to build tree");
         let tree_from_resolver = ComponentTree::new_from_resolver(root_url, registry).await;
-        assert_eq!(Some(tree), tree_from_resolver);
+        assert_decls_eq!(tree_from_resolver.unwrap(), tree);
     }
 
     #[fuchsia::test]
     async fn build_realm_with_mutable_child() {
         let mut tree = ComponentTree {
-            decl: cm_rust::ComponentDecl {
-                offers: vec![cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
-                    source: cm_rust::OfferSource::Parent,
-                    target: cm_rust::OfferTarget::Child(cm_rust::ChildRef {
-                        name: "a".to_string(),
-                        collection: None,
-                    }),
-                    source_name: "fuchsia.logger.LogSink".into(),
-                    target_name: "fuchsia.logger.LogSink".into(),
-                    dependency_type: cm_rust::DependencyType::Strong,
-                    availability: cm_rust::Availability::Required,
-                })],
-                ..cm_rust::ComponentDecl::default()
-            },
+            decl: cm_rust::ComponentDecl::default(),
             children: vec![(
                 "a".to_string(),
                 ftest::ChildOptions::EMPTY,
@@ -2318,24 +2531,13 @@ mod tests {
         };
         let (root_url, registry) = build_tree(&mut tree).await.expect("failed to build tree");
         let tree_from_resolver = ComponentTree::new_from_resolver(root_url, registry).await;
-        assert_eq!(Some(tree), tree_from_resolver);
+        assert_decls_eq!(tree_from_resolver.unwrap(), tree);
     }
 
     #[fuchsia::test]
     async fn build_realm_with_child_decl_and_mutable_child() {
         let mut tree = ComponentTree {
             decl: cm_rust::ComponentDecl {
-                offers: vec![cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
-                    source: cm_rust::OfferSource::Parent,
-                    target: cm_rust::OfferTarget::Child(cm_rust::ChildRef {
-                        name: "a".to_string(),
-                        collection: None,
-                    }),
-                    source_name: "fuchsia.logger.LogSink".into(),
-                    target_name: "fuchsia.logger.LogSink".into(),
-                    dependency_type: cm_rust::DependencyType::Strong,
-                    availability: cm_rust::Availability::Required,
-                })],
                 children: vec![cm_rust::ChildDecl {
                     name: "a".to_string(),
                     url: "test://a".to_string(),
@@ -2353,44 +2555,18 @@ mod tests {
         };
         let (root_url, registry) = build_tree(&mut tree).await.expect("failed to build tree");
         let tree_from_resolver = ComponentTree::new_from_resolver(root_url, registry).await;
-        assert_eq!(Some(tree), tree_from_resolver);
+        assert_decls_eq!(tree_from_resolver.unwrap(), tree);
     }
 
     #[fuchsia::test]
     async fn build_realm_with_mutable_grandchild() {
         let mut tree = ComponentTree {
-            decl: cm_rust::ComponentDecl {
-                offers: vec![cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
-                    source: cm_rust::OfferSource::Parent,
-                    target: cm_rust::OfferTarget::Child(cm_rust::ChildRef {
-                        name: "a".to_string(),
-                        collection: None,
-                    }),
-                    source_name: "fuchsia.logger.LogSink".into(),
-                    target_name: "fuchsia.logger.LogSink".into(),
-                    dependency_type: cm_rust::DependencyType::Strong,
-                    availability: cm_rust::Availability::Required,
-                })],
-                ..cm_rust::ComponentDecl::default()
-            },
+            decl: cm_rust::ComponentDecl::default(),
             children: vec![(
                 "a".to_string(),
                 ftest::ChildOptions::EMPTY,
                 ComponentTree {
-                    decl: cm_rust::ComponentDecl {
-                        offers: vec![cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
-                            source: cm_rust::OfferSource::Parent,
-                            target: cm_rust::OfferTarget::Child(cm_rust::ChildRef {
-                                name: "b".to_string(),
-                                collection: None,
-                            }),
-                            source_name: "fuchsia.logger.LogSink".into(),
-                            target_name: "fuchsia.logger.LogSink".into(),
-                            dependency_type: cm_rust::DependencyType::Strong,
-                            availability: cm_rust::Availability::Required,
-                        })],
-                        ..cm_rust::ComponentDecl::default()
-                    },
+                    decl: cm_rust::ComponentDecl::default(),
                     children: vec![(
                         "b".to_string(),
                         ftest::ChildOptions::EMPTY,
@@ -2401,26 +2577,13 @@ mod tests {
         };
         let (root_url, registry) = build_tree(&mut tree).await.expect("failed to build tree");
         let tree_from_resolver = ComponentTree::new_from_resolver(root_url, registry).await;
-        assert_eq!(Some(tree), tree_from_resolver);
+        assert_decls_eq!(tree_from_resolver.unwrap(), tree);
     }
 
     #[fuchsia::test]
     async fn build_realm_with_eager_mutable_child() {
         let mut tree = ComponentTree {
-            decl: cm_rust::ComponentDecl {
-                offers: vec![cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
-                    source: cm_rust::OfferSource::Parent,
-                    target: cm_rust::OfferTarget::Child(cm_rust::ChildRef {
-                        name: "a".to_string(),
-                        collection: None,
-                    }),
-                    source_name: "fuchsia.logger.LogSink".into(),
-                    target_name: "fuchsia.logger.LogSink".into(),
-                    dependency_type: cm_rust::DependencyType::Strong,
-                    availability: cm_rust::Availability::Required,
-                })],
-                ..cm_rust::ComponentDecl::default()
-            },
+            decl: cm_rust::ComponentDecl::default(),
             children: vec![(
                 "a".to_string(),
                 ftest::ChildOptions {
@@ -2432,24 +2595,13 @@ mod tests {
         };
         let (root_url, registry) = build_tree(&mut tree).await.expect("failed to build tree");
         let tree_from_resolver = ComponentTree::new_from_resolver(root_url, registry).await;
-        assert_eq!(Some(tree), tree_from_resolver);
+        assert_decls_eq!(tree_from_resolver.unwrap(), tree);
     }
 
     #[fuchsia::test]
     async fn build_realm_with_mutable_child_in_a_new_environment() {
         let mut tree = ComponentTree {
             decl: cm_rust::ComponentDecl {
-                offers: vec![cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
-                    source: cm_rust::OfferSource::Parent,
-                    target: cm_rust::OfferTarget::Child(cm_rust::ChildRef {
-                        name: "a".to_string(),
-                        collection: None,
-                    }),
-                    source_name: "fuchsia.logger.LogSink".into(),
-                    target_name: "fuchsia.logger.LogSink".into(),
-                    dependency_type: cm_rust::DependencyType::Strong,
-                    availability: cm_rust::Availability::Required,
-                })],
                 environments: vec![cm_rust::EnvironmentDecl {
                     name: "new-env".to_string(),
                     extends: fcdecl::EnvironmentExtends::None,
@@ -2475,26 +2627,13 @@ mod tests {
         };
         let (root_url, registry) = build_tree(&mut tree).await.expect("failed to build tree");
         let tree_from_resolver = ComponentTree::new_from_resolver(root_url, registry).await;
-        assert_eq!(Some(tree), tree_from_resolver);
+        assert_decls_eq!(tree_from_resolver.unwrap(), tree);
     }
 
     #[fuchsia::test]
     async fn build_realm_with_mutable_child_with_on_terminate() {
         let mut tree = ComponentTree {
-            decl: cm_rust::ComponentDecl {
-                offers: vec![cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
-                    source: cm_rust::OfferSource::Parent,
-                    target: cm_rust::OfferTarget::Child(cm_rust::ChildRef {
-                        name: "a".to_string(),
-                        collection: None,
-                    }),
-                    source_name: "fuchsia.logger.LogSink".into(),
-                    target_name: "fuchsia.logger.LogSink".into(),
-                    dependency_type: cm_rust::DependencyType::Strong,
-                    availability: cm_rust::Availability::Required,
-                })],
-                ..cm_rust::ComponentDecl::default()
-            },
+            decl: cm_rust::ComponentDecl::default(),
             children: vec![(
                 "a".to_string(),
                 ftest::ChildOptions {
@@ -2506,7 +2645,7 @@ mod tests {
         };
         let (root_url, registry) = build_tree(&mut tree).await.expect("failed to build tree");
         let tree_from_resolver = ComponentTree::new_from_resolver(root_url, registry).await;
-        assert_eq!(Some(tree), tree_from_resolver);
+        assert_decls_eq!(tree_from_resolver.unwrap(), tree);
     }
 
     #[fuchsia::test]
@@ -2617,8 +2756,8 @@ mod tests {
             },
             children: vec![],
         };
-        expected_tree.add_binder_expose();
-        assert_eq!(expected_tree, tree_from_resolver);
+        expected_tree.add_auto_decls();
+        assert_decls_eq!(tree_from_resolver, expected_tree);
     }
 
     #[fuchsia::test]
@@ -2734,8 +2873,8 @@ mod tests {
                 ComponentTree { decl: a_decl, children: vec![] },
             )],
         };
-        expected_tree.add_binder_expose();
-        assert_eq!(expected_tree, tree_from_resolver);
+        expected_tree.add_auto_decls();
+        assert_decls_eq!(tree_from_resolver, expected_tree);
     }
 
     #[fuchsia::test]
@@ -2780,7 +2919,20 @@ mod tests {
             .fidl_into_native();
 
         let mut expected_tree = ComponentTree {
-            decl: cm_rust::ComponentDecl::default(),
+            decl: cm_rust::ComponentDecl {
+                offers: vec![cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
+                    source: cm_rust::OfferSource::Parent,
+                    target: cm_rust::OfferTarget::Child(cm_rust::ChildRef {
+                        name: "realm_with_child".to_string(),
+                        collection: None,
+                    }),
+                    source_name: LogSinkMarker::PROTOCOL_NAME.into(),
+                    target_name: LogSinkMarker::PROTOCOL_NAME.into(),
+                    dependency_type: cm_rust::DependencyType::Strong,
+                    availability: cm_rust::Availability::Required,
+                })],
+                ..cm_rust::ComponentDecl::default()
+            },
             children: vec![(
                 "realm_with_child".to_string(),
                 ftest::ChildOptions {
@@ -2798,7 +2950,7 @@ mod tests {
             )],
         };
         expected_tree.add_binder_expose();
-        assert_eq!(expected_tree, tree_from_resolver);
+        assert_decls_eq!(tree_from_resolver, expected_tree);
     }
 
     #[fuchsia::test]
@@ -2834,8 +2986,8 @@ mod tests {
                 ComponentTree { decl: expected_a_decl, children: vec![] },
             )],
         };
-        expected_tree.add_binder_expose();
-        assert_eq!(expected_tree, tree_from_resolver);
+        expected_tree.add_auto_decls();
+        assert_decls_eq!(tree_from_resolver, expected_tree);
     }
 
     #[fuchsia::test]
@@ -2931,8 +3083,8 @@ mod tests {
                 ComponentTree { decl: a_decl, children: vec![] },
             )],
         };
-        expected_tree.add_binder_expose();
-        assert_eq!(expected_tree, tree_from_resolver);
+        expected_tree.add_auto_decls();
+        assert_decls_eq!(tree_from_resolver, expected_tree);
     }
 
     #[fuchsia::test]
@@ -3056,8 +3208,8 @@ mod tests {
                 ComponentTree { decl: a_decl, children: vec![] },
             )],
         };
-        expected_tree.add_binder_expose();
-        assert_eq!(expected_tree, tree_from_resolver);
+        expected_tree.add_auto_decls();
+        assert_decls_eq!(tree_from_resolver, expected_tree);
         assert!(realm_and_builder_task
             .runner
             .local_component_proxies()
@@ -3261,8 +3413,8 @@ mod tests {
             },
             children: vec![],
         };
-        expected_tree.add_binder_expose();
-        assert_eq!(expected_tree, tree_from_resolver);
+        expected_tree.add_auto_decls();
+        assert_decls_eq!(tree_from_resolver, expected_tree);
     }
 
     #[fuchsia::test]
@@ -3456,8 +3608,8 @@ mod tests {
                 ComponentTree { decl: b_decl, children: vec![] },
             )],
         };
-        expected_tree.add_binder_expose();
-        assert_eq!(expected_tree, tree_from_resolver);
+        expected_tree.add_auto_decls();
+        assert_decls_eq!(tree_from_resolver, expected_tree);
     }
 
     #[fuchsia::test]
@@ -3558,8 +3710,8 @@ mod tests {
             },
             children: vec![],
         };
-        expected_tree.add_binder_expose();
-        assert_eq!(expected_tree, tree_from_resolver);
+        expected_tree.add_auto_decls();
+        assert_decls_eq!(tree_from_resolver, expected_tree);
     }
 
     #[fuchsia::test]
@@ -3740,8 +3892,8 @@ mod tests {
                 },
             )],
         };
-        expected_tree.add_binder_expose();
-        assert_eq!(expected_tree, tree_from_resolver);
+        expected_tree.add_auto_decls();
+        assert_decls_eq!(tree_from_resolver, expected_tree);
     }
 
     #[fuchsia::test]
@@ -3904,8 +4056,8 @@ mod tests {
                 },
             )],
         };
-        expected_tree.add_binder_expose();
-        assert_eq!(expected_tree, tree_from_resolver);
+        expected_tree.add_auto_decls();
+        assert_decls_eq!(tree_from_resolver, expected_tree);
     }
 
     #[fuchsia::test]
@@ -3945,8 +4097,8 @@ mod tests {
                 },
             )],
         };
-        expected_tree.add_binder_expose();
-        assert_eq!(expected_tree, tree_from_resolver);
+        expected_tree.add_auto_decls();
+        assert_decls_eq!(tree_from_resolver, expected_tree);
     }
 
     #[fuchsia::test]
@@ -4050,15 +4202,15 @@ mod tests {
             .expect("replace_component_decl returned an error");
         let tree_from_resolver = realm_and_builder_task.call_build_and_get_tree().await;
         let mut expected_tree = ComponentTree {
-            decl: cm_rust::ComponentDecl::default(),
             children: vec![(
                 "a".to_string(),
                 ftest::ChildOptions::EMPTY,
                 ComponentTree { decl: a_decl, children: vec![] },
             )],
+            decl: cm_rust::ComponentDecl::default(),
         };
-        expected_tree.add_binder_expose();
-        assert_eq!(expected_tree, tree_from_resolver);
+        expected_tree.add_auto_decls();
+        assert_decls_eq!(tree_from_resolver, expected_tree);
     }
 
     #[fuchsia::test]
@@ -4125,8 +4277,8 @@ mod tests {
             },
             children: vec![],
         };
-        expected_tree.add_binder_expose();
-        assert_eq!(expected_tree, tree_from_resolver);
+        expected_tree.add_auto_decls();
+        assert_decls_eq!(tree_from_resolver, expected_tree);
     }
 
     #[test_case(vec![
@@ -4259,8 +4411,8 @@ mod tests {
                 },
             )],
         };
-        expected_tree.add_binder_expose();
-        assert_eq!(expected_tree, tree_from_resolver);
+        expected_tree.add_auto_decls();
+        assert_decls_eq!(tree_from_resolver, expected_tree);
     }
 
     #[fuchsia::test]
@@ -4337,8 +4489,8 @@ mod tests {
                 ComponentTree { decl: expected_a_decl, children: vec![] },
             )],
         };
-        expected_tree.add_binder_expose();
-        assert_eq!(expected_tree, tree_from_resolver);
+        expected_tree.add_auto_decls();
+        assert_decls_eq!(tree_from_resolver, expected_tree);
     }
 
     #[fuchsia::test]
@@ -4580,8 +4732,8 @@ mod tests {
                 ComponentTree { decl: read_only_dir_decl, children: vec![] },
             )],
         };
-        expected_tree.add_binder_expose();
-        assert_eq!(expected_tree, tree_from_resolver);
+        expected_tree.add_auto_decls();
+        assert_decls_eq!(tree_from_resolver, expected_tree);
         assert!(realm_and_builder_task
             .runner
             .local_component_proxies()
