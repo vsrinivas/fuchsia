@@ -438,6 +438,14 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
         focus_manager_->RegisterViewFocuser(view_ref_koid, std::move(focuser));
       });
   auto flatland_renderer = std::make_shared<flatland::VkRenderer>(escher_->GetWeakPtr());
+  // TODO(fxbug.dev/78186): flatland::VkRenderer hardcodes the framebuffer pixel format.
+  // Eventually we won't, instead choosing one from the list of acceptable formats advertised by
+  // each plugged-in display.  This will raise the issue of where to do pipeline cache warming: it
+  // will be too early to do it here, since we're not yet aware of any displays nor the formats they
+  // support.  It will probably be OK to warm the cache when a new display is plugged in, because
+  // users don't expect plugging in a display to be completely jank-free.
+  flatland_renderer->WarmPipelineCache(ZX_PIXEL_FORMAT_ARGB_8888);
+  flatland_renderer->set_disable_lazy_pipeline_creation(true);
 
   // Flatland compositor must be made first; it is needed by the manager and the engine.
   {

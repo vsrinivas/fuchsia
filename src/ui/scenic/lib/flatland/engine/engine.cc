@@ -21,6 +21,9 @@
 #include <string>
 #include <unordered_set>
 
+// JJOSH delete
+#include <vulkan/vulkan.hpp>
+
 // Hardcoded double buffering.
 // TODO(fxbug.dev/76640): make this configurable.  Even fancier: is it worth considering sharing a
 // pool of framebuffers between multiple displays?  (assuming that their dimensions are similar,
@@ -107,13 +110,9 @@ void Engine::RenderScheduledFrame(uint64_t frame_number, zx::time presentation_t
     // This display hasn't been added to the DisplayCompositor yet.
     hack_seen_display_ids_.insert(hw_display->display_id());
 
-    // TODO(fxbug.dev/78186): VkRenderer::ChoosePreferredPixelFormat() will choose an unusable
-    // pixel format if we give it the whole list, so we hardcode ZX_PIXEL_FORMAT_ARGB_8888 for now.
-    // TODO(fxbug.dev/71344): blocks 78186.  See kDefaultImageFormat in display_compositor.cc
     DisplayInfo display_info{
         .dimensions = glm::uvec2{hw_display->width_in_px(), hw_display->height_in_px()},
-        //.formats = display.display()->pixel_formats()};
-        .formats = {ZX_PIXEL_FORMAT_ARGB_8888}};
+        .formats = display.display()->pixel_formats()};
 
     fuchsia::sysmem::BufferCollectionInfo_2 render_target_info;
     flatland_compositor_->AddDisplay(hw_display, display_info,
