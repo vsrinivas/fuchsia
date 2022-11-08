@@ -36,6 +36,7 @@
 *_LOCAL_*
 *_BASE_*
 *.dSYM
+*.fxt
 *.iml
 *.orig
 *.pyc
