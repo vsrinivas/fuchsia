@@ -34,6 +34,7 @@ impl ContenderFactory for GestureArenaInitialContenders {
                 max_time_elapsed: args::TAP_TIMEOUT,
             }),
             Box::new(scroll::InitialContender {
+                motion_threshold_in_mm: args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM,
                 min_movement_in_mm: args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM,
                 max_movement_in_mm: args::MAX_SPURIOUS_TO_INTENTIONAL_SCROLL_THRESHOLD_MM,
                 limit_tangent_for_direction: args::MAX_SCROLL_DIRECTION_SKEW_DEGREES

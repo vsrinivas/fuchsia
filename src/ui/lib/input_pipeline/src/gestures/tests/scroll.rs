@@ -68,7 +68,6 @@ mod test {
         });
     }
 
-    /// TODO(fxbug.dev/109101): This test shows scroll need extra movement to start.
     #[fuchsia::test(allow_stalls = false)]
     async fn place_first_finger_then_second_finger_then_scroll() {
         let finger1_pos1_um = Position { x: 2_000.0, y: 3_000.0 };
@@ -84,37 +83,19 @@ mod test {
                 x: 0.0,
                 y: 1_000.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
             };
-        let finger1_pos4_um = finger1_pos3_um.clone();
-        let finger2_pos4_um = finger2_pos3_um.clone();
-        let finger1_pos5_um = finger1_pos4_um
-            + Position {
-                x: 0.0,
-                y: 1_000.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
-            };
-        let finger2_pos5_um = finger2_pos4_um
-            + Position {
-                x: 0.0,
-                y: 1_000.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
-            };
         let inputs = vec![
             touchpad_event(vec![finger1_pos1_um], hashset! {}),
             // Place 2 finger, keep trying `secondary_tap`.
             touchpad_event(vec![finger1_pos2_um, finger2_pos2_um], hashset! {}),
-            // movement more than threshold, exit `secondary_tap`.
+            // movement more than threshold, exit `secondary_tap` and `scroll` wins.
             touchpad_event(vec![finger1_pos3_um, finger2_pos3_um], hashset! {}),
-            // start a new matching in gesture_arena
-            touchpad_event(vec![finger1_pos4_um, finger2_pos4_um], hashset! {}),
-            // movement more than threshold, `scroll` wins.
-            touchpad_event(vec![finger1_pos5_um, finger2_pos5_um], hashset! {}),
         ];
         let got = utils::run_gesture_arena_test(inputs).await;
 
-        assert_eq!(got.len(), 5);
+        assert_eq!(got.len(), 3);
         assert_eq!(got[0].as_slice(), []);
         assert_eq!(got[1].as_slice(), []);
-        assert_eq!(got[2].as_slice(), []);
-        assert_eq!(got[3].as_slice(), []);
-        assert_matches!(got[4].as_slice(), [
+        assert_matches!(got[2].as_slice(), [
           utils::expect_mouse_event!(phase: phase, delta_v: delta_v, delta_h: delta_h, location: location),
         ] => {
           assert_eq!(phase, &mouse_binding::MousePhase::Wheel);

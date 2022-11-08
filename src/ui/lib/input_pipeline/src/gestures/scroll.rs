@@ -4,8 +4,8 @@
 
 use {
     super::gesture_arena::{
-        self, DetailedReasonUint, EndGestureEvent, ExamineEventResult, MouseEvent,
-        ProcessBufferedEventsResult, ProcessNewEventResult, Reason, RecognizedGesture,
+        self, DetailedReasonFloat, DetailedReasonUint, EndGestureEvent, ExamineEventResult,
+        MouseEvent, ProcessBufferedEventsResult, ProcessNewEventResult, Reason, RecognizedGesture,
         TouchpadEvent, VerifyEventResult,
     },
     crate::mouse_binding,
@@ -17,6 +17,9 @@ use {
 /// The initial state of this recognizer, before 2 finger contact has been detected.
 #[derive(Debug)]
 pub(super) struct InitialContender {
+    /// When one finger contacted, movement > this threshold, recognizer should exit.
+    pub(super) motion_threshold_in_mm: f32,
+
     /// The minimum movement in millimeters on surface to recognize as a scroll.
     pub(super) min_movement_in_mm: f32,
 
@@ -30,9 +33,30 @@ pub(super) struct InitialContender {
     pub(super) limit_tangent_for_direction: f32,
 }
 
+/// The state when this recognizer has detected 1 finger contact, before 2 finger contact, and finger movement > threshold.
+#[derive(Debug)]
+struct OneFingerContactContender {
+    /// When one finger contacted, movement > this threshold, recognizer should exit.
+    motion_threshold_in_mm: f32,
+
+    /// The minimum movement in millimeters on surface to recognize as a scroll.
+    min_movement_in_mm: f32,
+
+    /// The maximum movement in millimeters on surface to recognize as a scroll. If recognizer can
+    /// not detect the scroll direction when movement more than this number, return Mismatch to
+    /// end this recognizer.
+    max_movement_in_mm: f32,
+
+    /// The limit tangent for direction detect.
+    limit_tangent_for_direction: f32,
+
+    /// The initial contact position on touchpad surface.
+    initial_position: ContactPosition,
+}
+
 /// The state when this recognizer has detected 2 finger contact, before finger movement > threshold.
 #[derive(Debug)]
-struct FingerContactContender {
+struct TwoFingerContactContender {
     /// The minimum movement in millimeters on surface to recognize as a scroll.
     min_movement_in_mm: f32,
 
@@ -211,11 +235,24 @@ impl Movement {
 }
 
 impl InitialContender {
-    fn into_finger_contact_contender(
+    fn into_one_finger_contact_contender(
+        self: Box<Self>,
+        initial_position: ContactPosition,
+    ) -> Box<dyn gesture_arena::Contender> {
+        Box::new(OneFingerContactContender {
+            motion_threshold_in_mm: self.motion_threshold_in_mm,
+            min_movement_in_mm: self.min_movement_in_mm,
+            max_movement_in_mm: self.max_movement_in_mm,
+            limit_tangent_for_direction: self.limit_tangent_for_direction,
+            initial_position,
+        })
+    }
+
+    fn into_two_finger_contact_contender(
         self: Box<Self>,
         initial_positions: ContactPositions,
     ) -> Box<dyn gesture_arena::Contender> {
-        Box::new(FingerContactContender {
+        Box::new(TwoFingerContactContender {
             min_movement_in_mm: self.min_movement_in_mm,
             max_movement_in_mm: self.max_movement_in_mm,
             limit_tangent_for_direction: self.limit_tangent_for_direction,
@@ -226,16 +263,6 @@ impl InitialContender {
 
 impl gesture_arena::Contender for InitialContender {
     fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
-        let num_contacts = event.contacts.len();
-        if num_contacts != 2 {
-            return ExamineEventResult::Mismatch(Reason::DetailedUint(DetailedReasonUint {
-                criterion: "num_contacts",
-                min: Some(2),
-                max: Some(2),
-                actual: num_contacts,
-            }));
-        }
-
         let num_pressed_buttons = event.pressed_buttons.len();
         if num_pressed_buttons > 0 {
             return ExamineEventResult::Mismatch(Reason::DetailedUint(DetailedReasonUint {
@@ -246,19 +273,113 @@ impl gesture_arena::Contender for InitialContender {
             }));
         }
 
-        let current_positions = match ContactPositions::from(event) {
-            Ok(positions) => positions,
-            Err(_) => {
-                fx_log_err!("failed to parse positions");
-                return ExamineEventResult::Mismatch(Reason::Basic("failed to parse positions"));
+        let num_contacts = event.contacts.len();
+        match num_contacts {
+            1 => ExamineEventResult::Contender(self.into_one_finger_contact_contender(
+                ContactPosition { position: event.contacts[0].position, id: event.contacts[0].id },
+            )),
+            2 => {
+                match ContactPositions::from(event) {
+                    Ok(positions) => {
+                        return ExamineEventResult::Contender(
+                            self.into_two_finger_contact_contender(positions),
+                        )
+                    }
+                    Err(_) => {
+                        fx_log_err!("failed to parse positions");
+                        return ExamineEventResult::Mismatch(Reason::Basic(
+                            "failed to parse positions",
+                        ));
+                    }
+                };
             }
-        };
-
-        ExamineEventResult::Contender(self.into_finger_contact_contender(current_positions))
+            _ => ExamineEventResult::Mismatch(Reason::DetailedUint(DetailedReasonUint {
+                criterion: "num_contacts",
+                min: Some(1),
+                max: Some(2),
+                actual: num_contacts,
+            })),
+        }
     }
 }
 
-impl FingerContactContender {
+impl OneFingerContactContender {
+    fn into_two_finger_contact_contender(
+        self: Box<Self>,
+        initial_positions: ContactPositions,
+    ) -> Box<dyn gesture_arena::Contender> {
+        Box::new(TwoFingerContactContender {
+            min_movement_in_mm: self.min_movement_in_mm,
+            max_movement_in_mm: self.max_movement_in_mm,
+            limit_tangent_for_direction: self.limit_tangent_for_direction,
+            initial_positions,
+        })
+    }
+}
+
+impl gesture_arena::Contender for OneFingerContactContender {
+    fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
+        let num_pressed_buttons = event.pressed_buttons.len();
+        if num_pressed_buttons > 0 {
+            return ExamineEventResult::Mismatch(Reason::DetailedUint(DetailedReasonUint {
+                criterion: "num_pressed_buttons",
+                min: None,
+                max: Some(0),
+                actual: num_pressed_buttons,
+            }));
+        }
+
+        let num_contacts = event.contacts.len();
+        // Exit if the initial contact is moved > threshold.
+        if num_contacts > 0 {
+            match event.contacts.iter().find(|&c| c.id == self.initial_position.id) {
+                Some(contact) => {
+                    let displacement_mm =
+                        euclidean_distance(contact.position, self.initial_position.position);
+                    if displacement_mm >= self.motion_threshold_in_mm {
+                        return ExamineEventResult::Mismatch(Reason::DetailedFloat(
+                            DetailedReasonFloat {
+                                criterion: "displacement_mm",
+                                min: None,
+                                max: Some(self.motion_threshold_in_mm),
+                                actual: displacement_mm,
+                            },
+                        ));
+                    }
+                }
+                None => {
+                    return ExamineEventResult::Mismatch(Reason::Basic("initial contact lift"));
+                }
+            }
+        }
+        match num_contacts {
+            1 => ExamineEventResult::Contender(self),
+            2 => {
+                let current_positions = match ContactPositions::from(event) {
+                    Ok(positions) => positions,
+                    Err(_) => {
+                        fx_log_err!("failed to parse positions");
+                        return ExamineEventResult::Mismatch(Reason::Basic(
+                            "failed to parse positions",
+                        ));
+                    }
+                };
+
+                ExamineEventResult::Contender(
+                    self.into_two_finger_contact_contender(current_positions),
+                )
+            }
+            _ => ExamineEventResult::Mismatch(Reason::DetailedUint(DetailedReasonUint {
+                criterion: "num_contacts",
+                min: Some(1),
+                max: Some(2),
+                actual: num_contacts,
+            })),
+        }
+    }
+}
+
+impl TwoFingerContactContender {
     fn into_matched_contender(
         self: Box<Self>,
         direction: ScrollDirection,
@@ -271,7 +392,7 @@ impl FingerContactContender {
     }
 }
 
-impl gesture_arena::Contender for FingerContactContender {
+impl gesture_arena::Contender for TwoFingerContactContender {
     fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
         let num_contacts = event.contacts.len();
         if num_contacts != 2 {
@@ -415,6 +536,14 @@ impl gesture_arena::MatchedContender for MatchedContender {
         let mut mouse_events: Vec<MouseEvent> = Vec::new();
 
         for pair in events.windows(2) {
+            // Ignore events not having 2 contacts. No need to check pair[1],
+            // because if pair[1] is 1 and pair[0] is 2, MatchedContender or
+            // TwoFingerContactContender will return miss match, never reach to
+            // here.
+            if pair[0].contacts.len() != 2 {
+                continue;
+            }
+            assert_eq!(pair[1].contacts.len(), 2);
             let old_positions = match ContactPositions::from(&pair[0]) {
                 Ok(positions) => positions,
                 Err(_) => ContactPositions {
@@ -639,6 +768,7 @@ mod tests {
         test_case::test_case,
     };
 
+    const MOTION_THRESHOLD_IN_MM: f32 = 5.0;
     const MIN_MOVEMENT_IN_MM: f32 = 10.0;
     const MAX_MOVEMENT_IN_MM: f32 = 20.0;
     const LIMIT_TANGENT_FOR_DIRECTION: f32 = 0.2;
@@ -680,16 +810,10 @@ mod tests {
         pressed_buttons: vec![],
         contacts: vec![],
     };"0 fingers")]
-    #[test_case(TouchpadEvent{
-        timestamp: zx::Time::ZERO,
-        pressed_buttons: vec![],
-        contacts: vec![
-            make_touch_contact(1, Position{x: 1.0, y: 1.0}),
-        ],
-    };"1 fingers")]
     #[fuchsia::test]
     fn initial_contender_examine_event_mismatch(event: TouchpadEvent) {
         let contender: Box<dyn gesture_arena::Contender> = Box::new(InitialContender {
+            motion_threshold_in_mm: MOTION_THRESHOLD_IN_MM,
             min_movement_in_mm: MIN_MOVEMENT_IN_MM,
             max_movement_in_mm: MAX_MOVEMENT_IN_MM,
             limit_tangent_for_direction: LIMIT_TANGENT_FOR_DIRECTION,
@@ -700,8 +824,29 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn initial_contender_examine_event_finger_contact_contender() {
+    fn initial_contender_examine_event_one_finger_contact_contender() {
         let contender: Box<dyn gesture_arena::Contender> = Box::new(InitialContender {
+            motion_threshold_in_mm: MOTION_THRESHOLD_IN_MM,
+            min_movement_in_mm: MIN_MOVEMENT_IN_MM,
+            max_movement_in_mm: MAX_MOVEMENT_IN_MM,
+            limit_tangent_for_direction: LIMIT_TANGENT_FOR_DIRECTION,
+        });
+
+        let event = TouchpadEvent {
+            timestamp: zx::Time::ZERO,
+            pressed_buttons: vec![],
+            contacts: vec![make_touch_contact(1, Position { x: 1.0, y: 1.0 })],
+        };
+        let got = contender.examine_event(&event);
+        assert_matches!(got, ExamineEventResult::Contender(contender) => {
+            pretty_assertions::assert_eq!(contender.get_type_name(), "input_pipeline_lib_test::gestures::scroll::OneFingerContactContender");
+        });
+    }
+
+    #[fuchsia::test]
+    fn initial_contender_examine_event_two_finger_contact_contender() {
+        let contender: Box<dyn gesture_arena::Contender> = Box::new(InitialContender {
+            motion_threshold_in_mm: MOTION_THRESHOLD_IN_MM,
             min_movement_in_mm: MIN_MOVEMENT_IN_MM,
             max_movement_in_mm: MAX_MOVEMENT_IN_MM,
             limit_tangent_for_direction: LIMIT_TANGENT_FOR_DIRECTION,
@@ -716,7 +861,111 @@ mod tests {
             ],
         };
         let got = contender.examine_event(&event);
-        assert_matches!(got, ExamineEventResult::Contender(_));
+        assert_matches!(got, ExamineEventResult::Contender(contender) => {
+            pretty_assertions::assert_eq!(contender.get_type_name(), "input_pipeline_lib_test::gestures::scroll::TwoFingerContactContender");
+        });
+    }
+
+    #[test_case(TouchpadEvent{
+        timestamp: zx::Time::ZERO,
+        pressed_buttons: vec![1],
+        contacts: vec![
+            make_touch_contact(1, Position{x: 1.0, y: 1.0}),
+        ],
+    };"button down")]
+    #[test_case(TouchpadEvent{
+        timestamp: zx::Time::ZERO,
+        pressed_buttons: vec![],
+        contacts: vec![],
+    };"0 fingers")]
+    #[test_case(TouchpadEvent{
+        timestamp: zx::Time::ZERO,
+        pressed_buttons: vec![],
+        contacts: vec![
+            make_touch_contact(1, Position{x: 1.0, y: 7.0}),
+        ],
+    };"> motion threshold")]
+    #[test_case(TouchpadEvent{
+        timestamp: zx::Time::ZERO,
+        pressed_buttons: vec![],
+        contacts: vec![
+            make_touch_contact(1, Position{x: 1.0, y: 7.0}),
+            make_touch_contact(2, Position{x: 1.0, y: 5.0}),
+        ],
+    };"2 finger and > motion threshold")]
+    #[test_case(TouchpadEvent{
+        timestamp: zx::Time::ZERO,
+        pressed_buttons: vec![],
+        contacts: vec![
+            make_touch_contact(2, Position{x: 1.0, y: 5.0}),
+        ],
+    };"inital finger lift")]
+    #[fuchsia::test]
+    fn one_finger_contact_contender_examine_event_mismatch(event: TouchpadEvent) {
+        let contender: Box<dyn gesture_arena::Contender> = Box::new(OneFingerContactContender {
+            motion_threshold_in_mm: MOTION_THRESHOLD_IN_MM,
+            min_movement_in_mm: MIN_MOVEMENT_IN_MM,
+            max_movement_in_mm: MAX_MOVEMENT_IN_MM,
+            limit_tangent_for_direction: LIMIT_TANGENT_FOR_DIRECTION,
+            initial_position: ContactPosition { id: 1, position: Position { x: 1.0, y: 1.0 } },
+        });
+
+        let got = contender.examine_event(&event);
+        assert_matches!(got, ExamineEventResult::Mismatch(_));
+    }
+
+    #[test_case(TouchpadEvent{
+        timestamp: zx::Time::ZERO,
+        pressed_buttons: vec![],
+        contacts: vec![
+            make_touch_contact(1, Position{x: 1.0, y: 1.0}),
+        ],
+    };"hold")]
+    #[test_case(TouchpadEvent{
+        timestamp: zx::Time::ZERO,
+        pressed_buttons: vec![],
+        contacts: vec![
+            make_touch_contact(1, Position{x: 1.0, y: 2.0}),
+        ],
+    };"< motion threshold")]
+    #[fuchsia::test]
+    fn one_finger_contact_contender_examine_event_contender(event: TouchpadEvent) {
+        let contender: Box<dyn gesture_arena::Contender> = Box::new(OneFingerContactContender {
+            motion_threshold_in_mm: MOTION_THRESHOLD_IN_MM,
+            min_movement_in_mm: MIN_MOVEMENT_IN_MM,
+            max_movement_in_mm: MAX_MOVEMENT_IN_MM,
+            limit_tangent_for_direction: LIMIT_TANGENT_FOR_DIRECTION,
+            initial_position: ContactPosition { id: 1, position: Position { x: 1.0, y: 1.0 } },
+        });
+
+        let got = contender.examine_event(&event);
+        assert_matches!(got, ExamineEventResult::Contender(contender) => {
+            pretty_assertions::assert_eq!(contender.get_type_name(), "input_pipeline_lib_test::gestures::scroll::OneFingerContactContender");
+        });
+    }
+
+    #[fuchsia::test]
+    fn one_finger_contact_contender_examine_event_two_finger_contact_contender() {
+        let contender: Box<dyn gesture_arena::Contender> = Box::new(OneFingerContactContender {
+            motion_threshold_in_mm: MOTION_THRESHOLD_IN_MM,
+            min_movement_in_mm: MIN_MOVEMENT_IN_MM,
+            max_movement_in_mm: MAX_MOVEMENT_IN_MM,
+            limit_tangent_for_direction: LIMIT_TANGENT_FOR_DIRECTION,
+            initial_position: ContactPosition { id: 1, position: Position { x: 1.0, y: 1.0 } },
+        });
+
+        let event = TouchpadEvent {
+            timestamp: zx::Time::ZERO,
+            pressed_buttons: vec![],
+            contacts: vec![
+                make_touch_contact(1, Position { x: 1.0, y: 1.0 }),
+                make_touch_contact(2, Position { x: 1.0, y: 5.0 }),
+            ],
+        };
+        let got = contender.examine_event(&event);
+        assert_matches!(got, ExamineEventResult::Contender(contender) => {
+            pretty_assertions::assert_eq!(contender.get_type_name(), "input_pipeline_lib_test::gestures::scroll::TwoFingerContactContender");
+        });
     }
 
     #[test_case(TouchpadEvent{
@@ -756,8 +1005,8 @@ mod tests {
         ],
     };"> max movement different direction")]
     #[fuchsia::test]
-    fn finger_contact_contender_examine_event_mismatch(event: TouchpadEvent) {
-        let contender: Box<dyn gesture_arena::Contender> = Box::new(FingerContactContender {
+    fn two_finger_contact_contender_examine_event_mismatch(event: TouchpadEvent) {
+        let contender: Box<dyn gesture_arena::Contender> = Box::new(TwoFingerContactContender {
             min_movement_in_mm: MIN_MOVEMENT_IN_MM,
             max_movement_in_mm: MAX_MOVEMENT_IN_MM,
             limit_tangent_for_direction: LIMIT_TANGENT_FOR_DIRECTION,
@@ -812,8 +1061,8 @@ mod tests {
         ],
     };"different direction")]
     #[fuchsia::test]
-    fn finger_contact_contender_examine_event_finger_contact_contender(event: TouchpadEvent) {
-        let contender: Box<dyn gesture_arena::Contender> = Box::new(FingerContactContender {
+    fn two_finger_contact_contender_examine_event_finger_contact_contender(event: TouchpadEvent) {
+        let contender: Box<dyn gesture_arena::Contender> = Box::new(TwoFingerContactContender {
             min_movement_in_mm: MIN_MOVEMENT_IN_MM,
             max_movement_in_mm: MAX_MOVEMENT_IN_MM,
             limit_tangent_for_direction: LIMIT_TANGENT_FOR_DIRECTION,
@@ -824,16 +1073,18 @@ mod tests {
         });
 
         let got = contender.examine_event(&event);
-        assert_matches!(got, ExamineEventResult::Contender(_));
+        assert_matches!(got, ExamineEventResult::Contender(contender) => {
+            pretty_assertions::assert_eq!(contender.get_type_name(), "input_pipeline_lib_test::gestures::scroll::TwoFingerContactContender");
+        });
     }
 
     #[fuchsia::test]
-    fn finger_contact_contender_examine_event_matched_contender() {
+    fn two_finger_contact_contender_examine_event_matched_contender() {
         let initial_positions = ContactPositions {
             first_contact: ContactPosition { id: 1, position: Position { x: 1.0, y: 1.0 } },
             second_contact: ContactPosition { id: 2, position: Position { x: 5.0, y: 5.0 } },
         };
-        let contender: Box<dyn gesture_arena::Contender> = Box::new(FingerContactContender {
+        let contender: Box<dyn gesture_arena::Contender> = Box::new(TwoFingerContactContender {
             min_movement_in_mm: MIN_MOVEMENT_IN_MM,
             max_movement_in_mm: MAX_MOVEMENT_IN_MM,
             limit_tangent_for_direction: LIMIT_TANGENT_FOR_DIRECTION,
