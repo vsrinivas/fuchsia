@@ -7,7 +7,7 @@ use {
         wlancfg_helper::{
             init_client_controller, start_ap_and_wait_for_confirmation, NetworkConfigBuilder,
         },
-        BeaconInfo, EventHandlerBuilder,
+        ApAdvertisement, EventHandlerBuilder,
     },
     fidl::endpoints::create_proxy,
     fidl::prelude::*,
@@ -260,13 +260,14 @@ pub type ScanResult = (Ssid, [u8; 6], bool, i8);
 
 pub async fn scan_for_networks<'a>(
     phy: &'a wlantap::WlantapPhyProxy,
-    beacons: Vec<BeaconInfo>,
+    ap_advertisements: Vec<impl ApAdvertisement>,
     helper: &mut TestHelper,
 ) -> Vec<ScanResult> {
     // Create a client controller.
     let (client_controller, _update_stream) = init_client_controller().await;
-    let scan_event =
-        EventHandlerBuilder::new().on_start_scan(start_scan_handler(phy, Ok(beacons))).build();
+    let scan_event = EventHandlerBuilder::new()
+        .on_start_scan(start_scan_handler(phy, Ok(ap_advertisements)))
+        .build();
     // Request a scan from the policy layer.
     let fut = async move {
         let (scan_proxy, server_end) = create_proxy().unwrap();

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{send_scan_complete, send_scan_result, BeaconInfo},
+    crate::{send_scan_complete, ApAdvertisement},
     fidl_fuchsia_wlan_tap as wlantap, fuchsia_zircon as zx,
     paste::paste,
     wlan_common::{
@@ -14,15 +14,16 @@ use {
 
 pub fn start_scan_handler<'a>(
     phy: &'a wlantap::WlantapPhyProxy,
-    scan_results: Result<Vec<BeaconInfo>, zx::Status>,
+    ap_advertisements: Result<Vec<impl ApAdvertisement + 'a>, zx::Status>,
 ) -> Box<dyn FnMut(&wlantap::StartScanArgs) + 'a> {
-    match scan_results {
-        Ok(scan_results) => {
+    match ap_advertisements {
+        Ok(ap_advertisements) => {
             Box::new(move |&wlantap::StartScanArgs { wlan_softmac_id: _, scan_id }| {
-                for beacon_info in &scan_results {
-                    send_scan_result(&phy, beacon_info);
+                for ap_advertisement in &ap_advertisements {
+                    ap_advertisement.send(phy).expect("failed to send beacon or probe response");
                 }
-                send_scan_complete(scan_id, zx::Status::OK.into_raw(), &phy).unwrap();
+                send_scan_complete(scan_id, zx::Status::OK.into_raw(), &phy)
+                    .expect("failed to send scan complete");
             })
         }
         Err(status) => Box::new(move |&wlantap::StartScanArgs { wlan_softmac_id: _, scan_id }| {

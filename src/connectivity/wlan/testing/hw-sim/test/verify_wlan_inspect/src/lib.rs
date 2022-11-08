@@ -67,15 +67,13 @@ fn build_event_handler<'a>(
     EventHandlerBuilder::new()
         .on_start_scan(start_scan_handler(
             &phy,
-            Ok(vec![BeaconInfo {
+            Ok(vec![ProbeResponse {
                 channel: Channel::new(1, Cbw::Cbw20),
                 bssid,
                 ssid: ssid.clone(),
                 protection: Protection::Open,
                 rssi_dbm: -10,
-                beacon_or_probe: BeaconOrProbeResp::ProbeResp {
-                    wsc_ie: Some(WSC_IE_BODY.to_vec()),
-                },
+                wsc_ie: Some(WSC_IE_BODY.to_vec()),
             }]),
         ))
         .on_tx(

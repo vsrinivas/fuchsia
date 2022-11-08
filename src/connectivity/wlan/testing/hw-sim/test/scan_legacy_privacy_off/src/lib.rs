@@ -34,29 +34,26 @@ async fn scan_legacy_privacy_off() {
 
     let phy = helper.proxy();
     let beacons = vec![
-        BeaconInfo {
+        Beacon {
             channel: Channel::new(1, Cbw::Cbw20),
             bssid: BSS_WPA1,
             ssid: SSID_WPA1.clone(),
             protection: Protection::Wpa1,
             rssi_dbm: -30,
-            beacon_or_probe: BeaconOrProbeResp::Beacon,
         },
-        BeaconInfo {
+        Beacon {
             channel: Channel::new(1, Cbw::Cbw20),
             bssid: BSS_WEP,
             ssid: SSID_WEP.clone(),
             protection: Protection::Wep,
             rssi_dbm: -40,
-            beacon_or_probe: BeaconOrProbeResp::Beacon,
         },
-        BeaconInfo {
+        Beacon {
             channel: Channel::new(1, Cbw::Cbw20),
             bssid: BSS_MIXED,
             ssid: SSID_MIXED.clone(),
             protection: Protection::Wpa1Wpa2Personal,
             rssi_dbm: -50,
-            beacon_or_probe: BeaconOrProbeResp::Beacon,
         },
     ];
 

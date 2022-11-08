@@ -166,13 +166,13 @@ async fn multiple_clients_ap() {
                 .on_debug_name("client1")
                 .on_start_scan(start_scan_handler(
                     &client1_proxy,
-                    Ok(vec![BeaconInfo {
+                    Ok(vec![ProbeResponse {
                         channel: WLANCFG_DEFAULT_AP_CHANNEL.clone(),
                         bssid: AP_MAC_ADDR,
                         ssid: AP_SSID.clone(),
                         protection: Open,
                         rssi_dbm: 0,
-                        beacon_or_probe: BeaconOrProbeResp::ProbeResp { wsc_ie: None },
+                        wsc_ie: None,
                     }]),
                 ))
                 .on_tx(|tx_args: &wlantap::TxArgs| {
@@ -221,13 +221,13 @@ async fn multiple_clients_ap() {
                 .on_debug_name("client2")
                 .on_start_scan(start_scan_handler(
                     &client2_proxy,
-                    Ok(vec![BeaconInfo {
+                    Ok(vec![ProbeResponse {
                         channel: WLANCFG_DEFAULT_AP_CHANNEL.clone(),
                         bssid: AP_MAC_ADDR,
                         ssid: AP_SSID.clone(),
                         protection: Open,
                         rssi_dbm: 0,
-                        beacon_or_probe: BeaconOrProbeResp::ProbeResp { wsc_ie: None },
+                        wsc_ie: None,
                     }]),
                 ))
                 .on_tx(|tx_args: &wlantap::TxArgs| {

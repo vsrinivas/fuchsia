@@ -118,15 +118,15 @@ async fn eth_and_beacon_sender<'a>(
         // Send a beacon before that to stay connected.
         if (intervals_since_last_beacon * DATA_FRAME_INTERVAL_NANOS).nanos() >= 8765.millis() {
             intervals_since_last_beacon = 0;
-            send_beacon(
-                &Channel::new(1, Cbw::Cbw20),
-                &BSS_MINSTL,
-                &AP_SSID,
-                &Protection::Open,
-                &phy,
-                0,
-            )
-            .unwrap();
+            Beacon {
+                channel: Channel::new(1, Cbw::Cbw20),
+                bssid: BSS_MINSTL,
+                ssid: AP_SSID.clone(),
+                protection: Protection::Open,
+                rssi_dbm: 0,
+            }
+            .send(phy)
+            .expect("failed to send beacon");
         }
         intervals_since_last_beacon += 1;
 

@@ -96,123 +96,6 @@ pub fn create_rx_info(channel: &Channel, rssi_dbm: i8) -> WlanRxInfo {
     }
 }
 
-pub enum BeaconOrProbeResp {
-    Beacon,
-    ProbeResp { wsc_ie: Option<Vec<u8>> },
-}
-
-fn generate_probe_or_beacon(
-    type_: BeaconOrProbeResp,
-    channel: &Channel,
-    bssid: &Bssid,
-    ssid: &Ssid,
-    protection: &Protection,
-) -> Result<Vec<u8>, anyhow::Error> {
-    let wpa1_ie = wpa::fake_wpa_ies::fake_deprecated_wpa1_vendor_ie();
-    // Unrealistically long beacon period so that auth/assoc don't timeout on slow bots.
-    let beacon_interval = TimeUnit::DEFAULT_BEACON_INTERVAL * 20u16;
-    let capabilities = mac::CapabilityInfo(0)
-        // IEEE Std 802.11-2016, 9.4.1.4: An AP sets the ESS subfield to 1 and the IBSS
-        // subfield to 0 within transmitted Beacon or Probe Response frames.
-        .with_ess(true)
-        .with_ibss(false)
-        // IEEE Std 802.11-2016, 9.4.1.4: An AP sets the Privacy subfield to 1 within
-        // transmitted Beacon, Probe Response, (Re)Association Response frames if data
-        // confidentiality is required for all Data frames exchanged within the BSS.
-        .with_privacy(*protection != Protection::Open);
-    let beacon_hdr = match type_ {
-        BeaconOrProbeResp::Beacon => Some(mac::BeaconHdr::new(beacon_interval, capabilities)),
-        BeaconOrProbeResp::ProbeResp { .. } => None,
-    };
-    let proberesp_hdr = match type_ {
-        BeaconOrProbeResp::Beacon => None,
-        BeaconOrProbeResp::ProbeResp { .. } => {
-            Some(mac::ProbeRespHdr::new(beacon_interval, capabilities))
-        }
-    };
-
-    let (buf, _bytes_written) = write_frame_with_dynamic_buf!(vec![], {
-        headers: {
-            mac::MgmtHdr: &mgmt_writer::mgmt_hdr_from_ap(
-                mac::FrameControl(0)
-                    .with_frame_type(mac::FrameType::MGMT)
-                    .with_mgmt_subtype(match type_ {
-                        BeaconOrProbeResp::Beacon => mac::MgmtSubtype::BEACON,
-                        BeaconOrProbeResp::ProbeResp{..} => mac::MgmtSubtype::PROBE_RESP
-                    }),
-                match &type_ {
-                    BeaconOrProbeResp::Beacon => mac::BCAST_ADDR,
-                    BeaconOrProbeResp::ProbeResp{..} => CLIENT_MAC_ADDR
-                },
-                *bssid,
-                mac::SequenceControl(0).with_seq_num(123),
-            ),
-            mac::BeaconHdr?: beacon_hdr,
-            mac::ProbeRespHdr?: proberesp_hdr,
-        },
-        ies: {
-            ssid: ssid,
-            supported_rates: &[0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24, 0x30, 0x48, 0xe0, 0x6c],
-            extended_supported_rates: { /* continues from supported_rates */ },
-            dsss_param_set: &ie::DsssParamSet { current_channel: channel.primary },
-            rsne?: match protection {
-                Protection::Unknown => panic!("Cannot send beacon with unknown protection"),
-                Protection::Open | Protection::Wep | Protection::Wpa1 => None,
-                Protection::Wpa1Wpa2Personal | Protection::Wpa2Personal => Some(rsne::Rsne::wpa2_rsne()),
-                Protection::Wpa2Wpa3Personal => Some(rsne::Rsne::wpa2_wpa3_rsne()),
-                Protection::Wpa3Personal => Some(rsne::Rsne::wpa3_rsne()),
-                _ => panic!("unsupported fake beacon: {:?}", protection),
-            },
-            wpa1?: match protection {
-                Protection::Unknown => panic!("Cannot send beacon with unknown protection"),
-                Protection::Open | Protection::Wep => None,
-                Protection::Wpa1 | Protection::Wpa1Wpa2Personal => Some(&wpa1_ie),
-                Protection::Wpa2Personal | Protection::Wpa2Wpa3Personal | Protection::Wpa3Personal => None,
-                _ => panic!("unsupported fake beacon: {:?}", protection),
-            },
-            wsc?: match type_ {
-                BeaconOrProbeResp::Beacon => None,
-                BeaconOrProbeResp::ProbeResp{ ref wsc_ie } => wsc_ie.clone()
-            }
-        },
-    })?;
-    Ok(buf)
-}
-
-pub fn send_beacon(
-    channel: &Channel,
-    bssid: &Bssid,
-    ssid: &Ssid,
-    protection: &Protection,
-    proxy: &WlantapPhyProxy,
-    rssi_dbm: i8,
-) -> Result<(), anyhow::Error> {
-    let buf =
-        generate_probe_or_beacon(BeaconOrProbeResp::Beacon, channel, bssid, ssid, protection)?;
-    proxy.rx(0, &buf, &mut create_rx_info(channel, rssi_dbm))?;
-    Ok(())
-}
-
-pub fn send_probe_resp(
-    channel: &Channel,
-    bssid: &Bssid,
-    ssid: &Ssid,
-    protection: &Protection,
-    wsc_ie: Option<Vec<u8>>,
-    proxy: &WlantapPhyProxy,
-    rssi_dbm: i8,
-) -> Result<(), anyhow::Error> {
-    let buf = generate_probe_or_beacon(
-        BeaconOrProbeResp::ProbeResp { wsc_ie },
-        channel,
-        bssid,
-        ssid,
-        protection,
-    )?;
-    proxy.rx(0, &buf, &mut create_rx_info(channel, rssi_dbm))?;
-    Ok(())
-}
-
 pub fn send_sae_authentication_frame(
     sae_frame: &fidl_mlme::SaeFrame,
     channel: &Channel,
@@ -480,38 +363,166 @@ pub fn process_tx_auth_updates(
     Ok(())
 }
 
-pub struct BeaconInfo {
+pub enum ApAdvertisementMode {
+    Beacon,
+    ProbeResponse,
+}
+
+pub trait ApAdvertisement {
+    fn mode(&self) -> ApAdvertisementMode;
+    fn channel(&self) -> &Channel;
+    fn bssid(&self) -> &Bssid;
+    fn ssid(&self) -> &Ssid;
+    fn protection(&self) -> &Protection;
+    fn rssi_dbm(&self) -> i8;
+    fn wsc_ie(&self) -> Option<&Vec<u8>>;
+
+    fn beacon_interval(&self) -> TimeUnit {
+        TimeUnit::DEFAULT_BEACON_INTERVAL * 20u16
+    }
+
+    fn capabilities(&self) -> mac::CapabilityInfo {
+        mac::CapabilityInfo(0)
+            // IEEE Std 802.11-2016, 9.4.1.4: An AP sets the ESS subfield to 1 and the IBSS
+            // subfield to 0 within transmitted Beacon or Probe Response frames.
+            .with_ess(true)
+            .with_ibss(false)
+            // IEEE Std 802.11-2016, 9.4.1.4: An AP sets the Privacy subfield to 1 within
+            // transmitted Beacon, Probe Response, (Re)Association Response frames if data
+            // confidentiality is required for all Data frames exchanged within the BSS.
+            .with_privacy(*self.protection() != Protection::Open)
+    }
+
+    fn send(&self, phy: &WlantapPhyProxy) -> Result<(), anyhow::Error> {
+        let buf = self.generate_frame()?;
+        phy.rx(0, &buf, &mut create_rx_info(&self.channel(), self.rssi_dbm()))?;
+        Ok(())
+    }
+
+    fn generate_frame(&self) -> Result<Vec<u8>, anyhow::Error> {
+        let mode = self.mode();
+        let protection = self.protection();
+        let beacon_header = match mode {
+            ApAdvertisementMode::Beacon => {
+                Some(mac::BeaconHdr::new(self.beacon_interval(), self.capabilities()))
+            }
+            _ => None,
+        };
+        let probe_response_header = match mode {
+            ApAdvertisementMode::ProbeResponse => {
+                Some(mac::ProbeRespHdr::new(self.beacon_interval(), self.capabilities()))
+            }
+            _ => None,
+        };
+
+        let (buf, _bytes_written) = write_frame_with_dynamic_buf!(vec![], {
+            headers: {
+                mac::MgmtHdr: &mgmt_writer::mgmt_hdr_from_ap(
+                    mac::FrameControl(0)
+                        .with_frame_type(mac::FrameType::MGMT)
+                        .with_mgmt_subtype(match mode {
+                            ApAdvertisementMode::Beacon => mac::MgmtSubtype::BEACON,
+                            ApAdvertisementMode::ProbeResponse{..} => mac::MgmtSubtype::PROBE_RESP
+                        }),
+                    match mode {
+                        ApAdvertisementMode::Beacon => mac::BCAST_ADDR,
+                        ApAdvertisementMode::ProbeResponse{..} => CLIENT_MAC_ADDR
+                    },
+                    *self.bssid(),
+                    mac::SequenceControl(0).with_seq_num(123),
+                ),
+                mac::BeaconHdr?: beacon_header,
+                mac::ProbeRespHdr?: probe_response_header,
+            },
+            ies: {
+                ssid: &self.ssid(),
+                supported_rates: &[0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24, 0x30, 0x48, 0xe0, 0x6c],
+                extended_supported_rates: { /* continues from supported_rates */ },
+                dsss_param_set: &ie::DsssParamSet { current_channel: self.channel().primary },
+                rsne?: match protection {
+                    Protection::Unknown => panic!("Cannot send beacon with unknown protection"),
+                    Protection::Open | Protection::Wep | Protection::Wpa1 => None,
+                    Protection::Wpa1Wpa2Personal | Protection::Wpa2Personal => Some(rsne::Rsne::wpa2_rsne()),
+                    Protection::Wpa2Wpa3Personal => Some(rsne::Rsne::wpa2_wpa3_rsne()),
+                    Protection::Wpa3Personal => Some(rsne::Rsne::wpa3_rsne()),
+                    _ => panic!("unsupported fake beacon: {:?}", protection),
+                },
+                wpa1?: match protection {
+                    Protection::Unknown => panic!("Cannot send beacon with unknown protection"),
+                    Protection::Open | Protection::Wep => None,
+                    Protection::Wpa1 | Protection::Wpa1Wpa2Personal => Some(wpa::fake_wpa_ies::fake_deprecated_wpa1_vendor_ie()),
+                    Protection::Wpa2Personal | Protection::Wpa2Wpa3Personal | Protection::Wpa3Personal => None,
+                    _ => panic!("unsupported fake beacon: {:?}", protection),
+                },
+                wsc?: self.wsc_ie()
+            },
+        })?;
+        Ok(buf)
+    }
+}
+
+pub struct Beacon {
     pub channel: Channel,
     pub bssid: Bssid,
     pub ssid: Ssid,
     pub protection: Protection,
     pub rssi_dbm: i8,
-    pub beacon_or_probe: BeaconOrProbeResp,
 }
 
-pub fn send_scan_result(phy: &WlantapPhyProxy, beacon_info: &BeaconInfo) {
-    match beacon_info.beacon_or_probe {
-        BeaconOrProbeResp::Beacon => {
-            send_beacon(
-                &beacon_info.channel,
-                &beacon_info.bssid,
-                &beacon_info.ssid,
-                &beacon_info.protection,
-                phy,
-                beacon_info.rssi_dbm,
-            )
-            .unwrap();
-        }
-        BeaconOrProbeResp::ProbeResp { ref wsc_ie } => send_probe_resp(
-            &beacon_info.channel,
-            &beacon_info.bssid,
-            &beacon_info.ssid,
-            &beacon_info.protection,
-            wsc_ie.clone(),
-            phy,
-            beacon_info.rssi_dbm,
-        )
-        .unwrap(),
+impl ApAdvertisement for Beacon {
+    fn mode(&self) -> ApAdvertisementMode {
+        ApAdvertisementMode::Beacon
+    }
+    fn channel(&self) -> &Channel {
+        &self.channel
+    }
+    fn bssid(&self) -> &Bssid {
+        &self.bssid
+    }
+    fn ssid(&self) -> &Ssid {
+        &self.ssid
+    }
+    fn protection(&self) -> &Protection {
+        &self.protection
+    }
+    fn rssi_dbm(&self) -> i8 {
+        self.rssi_dbm
+    }
+    fn wsc_ie(&self) -> Option<&Vec<u8>> {
+        None
+    }
+}
+
+pub struct ProbeResponse {
+    pub channel: Channel,
+    pub bssid: Bssid,
+    pub ssid: Ssid,
+    pub protection: Protection,
+    pub rssi_dbm: i8,
+    pub wsc_ie: Option<Vec<u8>>,
+}
+
+impl ApAdvertisement for ProbeResponse {
+    fn mode(&self) -> ApAdvertisementMode {
+        ApAdvertisementMode::ProbeResponse
+    }
+    fn channel(&self) -> &Channel {
+        &self.channel
+    }
+    fn bssid(&self) -> &Bssid {
+        &self.bssid
+    }
+    fn ssid(&self) -> &Ssid {
+        &self.ssid
+    }
+    fn protection(&self) -> &Protection {
+        &self.protection
+    }
+    fn rssi_dbm(&self) -> i8 {
+        self.rssi_dbm
+    }
+    fn wsc_ie(&self) -> Option<&Vec<u8>> {
+        self.wsc_ie.as_ref()
     }
 }
 
@@ -531,11 +542,11 @@ pub fn send_scan_complete(
 pub fn handle_start_scan_event(
     args: &StartScanArgs,
     phy: &WlantapPhyProxy,
-    beacon_info: &BeaconInfo,
+    ap_advertisement: &impl ApAdvertisement,
 ) {
     debug!("Handling start scan event with scan_id {:?}", args.scan_id);
-    send_scan_result(phy, beacon_info);
-    send_scan_complete(args.scan_id, 0, phy).unwrap();
+    ap_advertisement.send(phy).expect("failed to send beacon");
+    send_scan_complete(args.scan_id, 0, phy).expect("failed to send scan complete");
 }
 
 pub fn handle_tx_event<F>(
@@ -664,16 +675,16 @@ pub fn handle_tx_event<F>(
                     // Normally, the AP would only send probe response on the channel it's
                     // on, but our TestHelper doesn't have that feature yet and it
                     // does not affect any current tests.
-                    send_probe_resp(
-                        &Channel::new(1, Cbw::Cbw20),
-                        &bssid,
-                        ssid,
-                        protection,
-                        None,
-                        &phy,
-                        -10,
-                    )
-                    .expect("Error sending fake probe response frame");
+                    ProbeResponse {
+                        channel: Channel::new(1, Cbw::Cbw20),
+                        bssid: *bssid,
+                        ssid: ssid.clone(),
+                        protection: *protection,
+                        rssi_dbm: -10,
+                        wsc_ie: None,
+                    }
+                    .send(&phy)
+                    .expect("failed to send probe response frame");
                 }
                 _ => {}
             }
@@ -726,13 +737,12 @@ pub fn handle_connect_events(
         WlantapPhyEvent::StartScan { args } => handle_start_scan_event(
             &args,
             phy,
-            &BeaconInfo {
+            &Beacon {
                 channel: Channel::new(1, Cbw::Cbw20),
                 bssid: bssid.clone(),
                 ssid: ssid.clone(),
                 protection: protection.clone(),
                 rssi_dbm: -30,
-                beacon_or_probe: BeaconOrProbeResp::Beacon,
             },
         ),
         WlantapPhyEvent::Tx { args } => match authenticator {
@@ -947,8 +957,9 @@ pub async fn loop_until_iface_is_found(helper: &mut test_utils::TestHelper) {
         pin_mut!(fut);
 
         let phy = helper.proxy();
-        let scan_event =
-            EventHandlerBuilder::new().on_start_scan(start_scan_handler(&phy, Ok(vec![]))).build();
+        let scan_event = EventHandlerBuilder::new()
+            .on_start_scan(start_scan_handler(&phy, Ok(Vec::<Beacon>::new())))
+            .build();
 
         // Once a client interface is available for scanning, it takes up to around 30s for a scan
         // to complete (see fxb/109900). Allow at least double that amount of time to reduce

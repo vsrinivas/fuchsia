@@ -87,18 +87,17 @@ async fn verify_client_connects_to_ap(
         "connecting to AP",
         |event| match event {
             WlantapPhyEvent::StartScan { args } => {
-                send_scan_result(
-                    &client_proxy,
-                    &BeaconInfo {
-                        channel: WLANCFG_DEFAULT_AP_CHANNEL.clone(),
-                        bssid: AP_MAC_ADDR.clone(),
-                        ssid: AP_SSID.clone(),
-                        protection: Wpa2Personal,
-                        rssi_dbm: -30,
-                        beacon_or_probe: BeaconOrProbeResp::Beacon,
-                    },
-                );
-                send_scan_complete(args.scan_id, 0, &client_proxy).unwrap();
+                Beacon {
+                    channel: WLANCFG_DEFAULT_AP_CHANNEL.clone(),
+                    bssid: AP_MAC_ADDR,
+                    ssid: AP_SSID.clone(),
+                    protection: Wpa2Personal,
+                    rssi_dbm: -30,
+                }
+                .send(client_proxy)
+                .expect("failed to send beacon");
+                send_scan_complete(args.scan_id, 0, &client_proxy)
+                    .expect("failed to send scan complete");
             }
             evt => packet_forwarder(&ap_proxy, "frame client -> ap")(evt),
         },

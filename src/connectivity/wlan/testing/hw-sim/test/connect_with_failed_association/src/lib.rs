@@ -26,13 +26,12 @@ fn build_event_handler<'a>(
     EventHandlerBuilder::new()
         .on_start_scan(start_scan_handler(
             &phy,
-            Ok(vec![BeaconInfo {
+            Ok(vec![Beacon {
                 channel: Channel::new(1, Cbw::Cbw20),
                 bssid,
                 ssid: ssid.clone(),
                 protection: Protection::Wpa2Personal,
                 rssi_dbm: -30,
-                beacon_or_probe: BeaconOrProbeResp::Beacon,
             }]),
         ))
         .on_tx(

@@ -40,53 +40,47 @@ async fn simulate_scan() {
 
     let phy = helper.proxy();
     let beacons = vec![
-        BeaconInfo {
+        Beacon {
             channel: Channel::new(1, Cbw::Cbw20),
             bssid: BSS_FOO,
             ssid: SSID_FOO.clone(),
             protection: Protection::Wpa2Personal,
             rssi_dbm: -60,
-            beacon_or_probe: BeaconOrProbeResp::Beacon,
         },
-        BeaconInfo {
+        Beacon {
             channel: Channel::new(2, Cbw::Cbw20),
             bssid: BSS_FOO_2,
             ssid: SSID_FOO.clone(),
             protection: Protection::Open,
             rssi_dbm: -60,
-            beacon_or_probe: BeaconOrProbeResp::Beacon,
         },
-        BeaconInfo {
+        Beacon {
             channel: Channel::new(3, Cbw::Cbw20),
             bssid: BSS_BAR,
             ssid: SSID_BAR.clone(),
             protection: Protection::Wpa2Personal,
             rssi_dbm: -60,
-            beacon_or_probe: BeaconOrProbeResp::Beacon,
         },
-        BeaconInfo {
+        Beacon {
             channel: Channel::new(4, Cbw::Cbw20),
             bssid: BSS_BAR_2,
             ssid: SSID_BAR.clone(),
             protection: Protection::Wpa2Personal,
             rssi_dbm: -40,
-            beacon_or_probe: BeaconOrProbeResp::Beacon,
         },
-        BeaconInfo {
+        Beacon {
             channel: Channel::new(5, Cbw::Cbw20),
             bssid: BSS_BAZ,
             ssid: SSID_BAZ.clone(),
             protection: Protection::Open,
             rssi_dbm: -60,
-            beacon_or_probe: BeaconOrProbeResp::Beacon,
         },
-        BeaconInfo {
+        Beacon {
             channel: Channel::new(6, Cbw::Cbw20),
             bssid: BSS_BAZ_2,
             ssid: SSID_BAZ.clone(),
             protection: Protection::Wpa2Personal,
             rssi_dbm: -60,
-            beacon_or_probe: BeaconOrProbeResp::Beacon,
         },
     ];
     let mut scan_results = test_utils::scan_for_networks(&phy, beacons, &mut helper).await;
