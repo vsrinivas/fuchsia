@@ -657,6 +657,7 @@ enum IaOptionError<V: IaValue> {
 }
 
 #[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 enum IaOption<V: IaValue> {
     Success {
         status_message: Option<String>,
@@ -895,6 +896,7 @@ struct ProcessedOptions {
 }
 
 #[derive(thiserror::Error, Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 #[error("error status code={0}, message='{1}'")]
 struct ErrorStatusCode(v6::ErrorStatusCode, String);
 
@@ -1167,7 +1169,30 @@ fn process_options<B: ByteSlice, IaNaChecker: IaChecker, IaPdChecker: IaChecker>
                     return Err(OptionsError::InvalidOption(format!("{:?}", opt)));
                 }
                 let iaid = v6::IAID::new(iana_data.iaid());
-                let processed_ia_na = process_ia_na(iana_data)?;
+                let processed_ia_na = match process_ia_na(iana_data) {
+                    Ok(o) => o,
+                    Err(IaOptionError::T1GreaterThanT2 { t1: _, t2: _ }) => {
+                        // As per RFC 8415 section 21.4,
+                        //
+                        //   If a client receives an IA_NA with T1 greater than
+                        //   T2 and both T1 and T2 are greater than 0, the
+                        //   client discards the IA_NA option and processes the
+                        //   remainder of the message as though the server had
+                        //   not included the invalid IA_NA option.
+                        continue;
+                    }
+                    Err(
+                        e @ IaOptionError::StatusCode(_)
+                        | e @ IaOptionError::InvalidOption(_)
+                        | e @ IaOptionError::DuplicateIaValue {
+                            value: _,
+                            first_lifetimes: _,
+                            second_lifetimes: _,
+                        },
+                    ) => {
+                        return Err(OptionsError::IaNaError(e));
+                    }
+                };
                 if !iana_checker.was_ia_requested(&iaid) {
                     // The RFC does not explicitly call out what to do with
                     // IAs that were not requested by the client.
@@ -1240,7 +1265,34 @@ fn process_options<B: ByteSlice, IaNaChecker: IaChecker, IaPdChecker: IaChecker>
                     return Err(OptionsError::InvalidOption(format!("{:?}", opt)));
                 }
                 let iaid = v6::IAID::new(iapd_data.iaid());
-                let processed_ia_pd = process_ia_pd(iapd_data)?;
+                let processed_ia_pd = match process_ia_pd(iapd_data) {
+                    Ok(o) => o,
+                    Err(IaPdOptionError::IaOptionError(IaOptionError::T1GreaterThanT2 {
+                        t1: _,
+                        t2: _,
+                    })) => {
+                        // As per RFC 8415 section 21.4,
+                        //
+                        //   If a client receives an IA_NA with T1 greater than
+                        //   T2 and both T1 and T2 are greater than 0, the
+                        //   client discards the IA_NA option and processes the
+                        //   remainder of the message as though the server had
+                        //   not included the invalid IA_NA option.
+                        continue;
+                    }
+                    Err(
+                        e @ IaPdOptionError::IaOptionError(IaOptionError::StatusCode(_))
+                        | e @ IaPdOptionError::IaOptionError(IaOptionError::InvalidOption(_))
+                        | e @ IaPdOptionError::IaOptionError(IaOptionError::DuplicateIaValue {
+                            value: _,
+                            first_lifetimes: _,
+                            second_lifetimes: _,
+                        })
+                        | e @ IaPdOptionError::InvalidSubnet,
+                    ) => {
+                        return Err(OptionsError::IaPdError(e));
+                    }
+                };
                 if !iapd_checker.was_ia_requested(&iaid) {
                     // The RFC does not explicitly call out what to do with
                     // IAs that were not requested by the client.
@@ -5907,6 +5959,106 @@ mod tests {
             second_lifetimes,
             Ok(Lifetimes::new_finite(IA_VALUE2_LIFETIME, IA_VALUE2_LIFETIME))
         )
+    }
+
+    #[test]
+    fn process_options_t1_greather_than_t2() {
+        let iana_options1 = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+            CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
+            MEDIUM_NON_ZERO_OR_MAX_U32.get(),
+            MEDIUM_NON_ZERO_OR_MAX_U32.get(),
+            &[],
+        ))];
+        let iana_options2 = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+            CONFIGURED_NON_TEMPORARY_ADDRESSES[1],
+            MEDIUM_NON_ZERO_OR_MAX_U32.get(),
+            MEDIUM_NON_ZERO_OR_MAX_U32.get(),
+            &[],
+        ))];
+        let iapd_options1 = [v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(
+            LARGE_NON_ZERO_OR_MAX_U32.get(),
+            LARGE_NON_ZERO_OR_MAX_U32.get(),
+            CONFIGURED_DELEGATED_PREFIXES[0],
+            &[],
+        ))];
+        let iapd_options2 = [v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(
+            LARGE_NON_ZERO_OR_MAX_U32.get(),
+            LARGE_NON_ZERO_OR_MAX_U32.get(),
+            CONFIGURED_DELEGATED_PREFIXES[1],
+            &[],
+        ))];
+
+        let iaid1 = v6::IAID::new(1);
+        let iaid2 = v6::IAID::new(2);
+        let options = [
+            v6::DhcpOption::ClientId(&CLIENT_ID),
+            v6::DhcpOption::ServerId(&SERVER_ID[0]),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                iaid1,
+                MEDIUM_NON_ZERO_OR_MAX_U32.get(),
+                SMALL_NON_ZERO_OR_MAX_U32.get(),
+                &iana_options1,
+            )),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                iaid2,
+                SMALL_NON_ZERO_OR_MAX_U32.get(),
+                MEDIUM_NON_ZERO_OR_MAX_U32.get(),
+                &iana_options2,
+            )),
+            v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
+                iaid1,
+                LARGE_NON_ZERO_OR_MAX_U32.get(),
+                TINY_NON_ZERO_OR_MAX_U32.get(),
+                &iapd_options1,
+            )),
+            v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
+                iaid2,
+                TINY_NON_ZERO_OR_MAX_U32.get(),
+                LARGE_NON_ZERO_OR_MAX_U32.get(),
+                &iapd_options2,
+            )),
+        ];
+        let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, [0, 1, 2], &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        let requested_ia_nas = HashMap::from([(iaid1, None::<Ipv6Addr>), (iaid2, None)]);
+        let requested_ia_pds = HashMap::from([(iaid1, None::<Subnet<Ipv6Addr>>), (iaid2, None)]);
+        assert_matches!(
+            process_options(&msg, ExchangeType::AdvertiseToSolicit, Some(CLIENT_ID), &requested_ia_nas, &requested_ia_pds),
+            Ok(ProcessedOptions {
+                server_id: _,
+                solicit_max_rt_opt: _,
+                result: Ok(Options {
+                    success_status_message: _,
+                    next_contact_time: _,
+                    non_temporary_addresses,
+                    delegated_prefixes,
+                    dns_servers: _,
+                    preference: _,
+                }),
+            }) => {
+                assert_eq!(non_temporary_addresses, HashMap::from([(iaid2, IaOption::Success {
+                    status_message: None,
+                    t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(SMALL_NON_ZERO_OR_MAX_U32)),
+                    t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(MEDIUM_NON_ZERO_OR_MAX_U32)),
+                    ia_values: HashMap::from([(CONFIGURED_NON_TEMPORARY_ADDRESSES[1], Ok(Lifetimes{
+                        preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(MEDIUM_NON_ZERO_OR_MAX_U32)),
+                        valid_lifetime: v6::NonZeroTimeValue::Finite(MEDIUM_NON_ZERO_OR_MAX_U32),
+                    }))]),
+                })]));
+                assert_eq!(delegated_prefixes, HashMap::from([(iaid2, IaOption::Success {
+                    status_message: None,
+                    t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(TINY_NON_ZERO_OR_MAX_U32)),
+                    t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(LARGE_NON_ZERO_OR_MAX_U32)),
+                    ia_values: HashMap::from([(CONFIGURED_DELEGATED_PREFIXES[1], Ok(Lifetimes{
+                        preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(LARGE_NON_ZERO_OR_MAX_U32)),
+                        valid_lifetime: v6::NonZeroTimeValue::Finite(LARGE_NON_ZERO_OR_MAX_U32),
+                    }))]),
+                })]));
+            }
+        );
     }
 
     #[test]
