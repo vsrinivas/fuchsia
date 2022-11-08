@@ -213,10 +213,25 @@ async fn handle_runner_request(
                 // completed orderly shutdown by the time we are removing interfaces. This
                 // prevents spurious test failures from the virtual network being torn down
                 // while some components in the test realm may still be running.
-                let destroyed_event = fut.await.context("observe destroyed event")?;
-                let events::DestroyedPayload {} = destroyed_event
-                    .result()
-                    .map_err(|e| anyhow!("error on component destroyed event: {:?}", e))?;
+                match fut.await {
+                    Ok(destroyed_event) => {
+                        let events::DestroyedPayload {} = destroyed_event
+                            .result()
+                            .map_err(|e| anyhow!("error on component destroyed event: {:?}", e))?;
+                    }
+                    Err(e) => {
+                        // Errors are sometimes expected because when the event stream subscriber
+                        // (in this case, the test root) is destroyed, component manager will close
+                        // the event stream, in which case we expect PEER_CLOSED.
+                        //
+                        // TODO(fxbug.dev/114562): PEER_CLOSED is not enough to between normal
+                        // channel closure that happens on component destruction and an internal
+                        // error in component manager that caused the channel to close
+                        // unexpectedly. Ideally, it should be possible to precisely check whether
+                        // the component was destroyed without error.
+                        warn!("Missed destroy event: {}", e);
+                    }
+                }
             }
         }
     }
