@@ -2,21 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::{
-        accessor::ArchiveAccessor, configs, constants, diagnostics::AccessorStats, error::Error,
-        inspect::repository::InspectRepository, logs::repository::LogsRepository,
-        moniker_rewriter::MonikerRewriter, ImmutableString,
-    },
-    async_lock::RwLock,
+    crate::{configs, constants, error::Error, moniker_rewriter::MonikerRewriter, ImmutableString},
     diagnostics_hierarchy::InspectHierarchyMatcher,
     fidl::prelude::*,
     fidl_fuchsia_diagnostics::{self, ArchiveAccessorMarker, Selector},
-    fuchsia_async as fasync,
-    fuchsia_component::server::{ServiceFs, ServiceObj},
-    fuchsia_inspect as inspect,
-    futures::channel::mpsc,
-    selectors,
-    std::{collections::HashMap, convert::TryInto, path::Path, sync::Arc},
+    fuchsia_inspect as inspect, selectors,
+    std::{collections::HashMap, convert::TryInto, path::Path},
 };
 
 struct PipelineParameters {
@@ -35,12 +26,6 @@ pub struct Pipeline {
     /// Static selectors that the pipeline uses. Loaded from configuration.
     static_selectors: Option<Vec<Selector>>,
 
-    /// A hierarchy matcher for any selector present in the static selectors.
-    moniker_to_static_matcher_map: HashMap<ImmutableString, InspectHierarchyMatcher>,
-
-    /// When the pipeline starts serving, this holds stats about requests made to it.
-    stats_node: Option<Arc<AccessorStats>>,
-
     /// The name of the protocol through which the pipeline is served.
     protocol_name: &'static str,
 
@@ -55,6 +40,9 @@ pub struct Pipeline {
 
     /// Whether the pipeline had an error when being created.
     has_error: bool,
+
+    /// A hierarchy matcher for any selector present in the static selectors.
+    moniker_to_static_matcher_map: HashMap<ImmutableString, InspectHierarchyMatcher>,
 }
 
 impl Pipeline {
@@ -117,7 +105,6 @@ impl Pipeline {
             _pipeline_node: None,
             moniker_to_static_matcher_map: HashMap::new(),
             static_selectors,
-            stats_node: None,
             moniker_rewriter: None,
             protocol_name: "test",
             name: "test",
@@ -149,7 +136,6 @@ impl Pipeline {
             moniker_to_static_matcher_map: HashMap::new(),
             static_selectors,
             _pipeline_node,
-            stats_node: None,
             protocol_name: parameters.protocol_name,
             moniker_rewriter: parameters.moniker_rewriter,
             name: parameters.name,
@@ -159,36 +145,6 @@ impl Pipeline {
 
     pub fn config_has_error(&self) -> bool {
         self.has_error
-    }
-
-    /// Serves the pipeline as a protocol in the outgoing svc directory.
-    pub fn serve(
-        mut self,
-        service_fs: &mut ServiceFs<ServiceObj<'static, ()>>,
-        inspect_repo: Arc<InspectRepository>,
-        logs_repo: Arc<LogsRepository>,
-        listen_sender: mpsc::UnboundedSender<fasync::Task<()>>,
-        stats_node_parent: &inspect::Node,
-    ) -> Arc<RwLock<Self>> {
-        let stats = Arc::new(AccessorStats::new(stats_node_parent.create_child(self.name)));
-        let moniker_rewriter = self.moniker_rewriter.take().map(Arc::new);
-        let protocol_name = self.protocol_name;
-        self.stats_node = Some(stats.clone());
-        let this = Arc::new(RwLock::new(self));
-        let pipeline = this.clone();
-        service_fs.dir("svc").add_fidl_service_at(protocol_name, move |stream| {
-            let mut accessor = ArchiveAccessor::new(
-                pipeline.clone(),
-                inspect_repo.clone(),
-                logs_repo.clone(),
-                stats.clone(),
-            );
-            if let Some(rewriter) = &moniker_rewriter {
-                accessor.add_moniker_rewriter(rewriter.clone());
-            }
-            accessor.spawn_server(stream, listen_sender.clone());
-        });
-        this
     }
 
     pub fn remove(&mut self, relative_moniker: &[String]) {
@@ -219,6 +175,21 @@ impl Pipeline {
     pub fn static_selectors_matchers(
         &self,
     ) -> Option<&HashMap<ImmutableString, InspectHierarchyMatcher>> {
-        self.static_selectors.as_ref().map(|_| &self.moniker_to_static_matcher_map)
+        if self.static_selectors.is_some() {
+            return Some(&self.moniker_to_static_matcher_map);
+        }
+        None
+    }
+
+    pub fn name(&self) -> &'static str {
+        self.name
+    }
+
+    pub fn protocol_name(&self) -> &'static str {
+        self.protocol_name
+    }
+
+    pub fn moniker_rewriter(&self) -> Option<&MonikerRewriter> {
+        self.moniker_rewriter.as_ref()
     }
 }

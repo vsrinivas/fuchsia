@@ -10,7 +10,6 @@ use {
         formatter::{new_batcher, FormattedStream, JsonPacketSerializer, JsonString},
         inspect::{self, repository::InspectRepository},
         logs::repository::LogsRepository,
-        moniker_rewriter::MonikerRewriter,
         pipeline::Pipeline,
         ImmutableString,
     },
@@ -49,7 +48,6 @@ pub struct ArchiveAccessor {
     inspect_repository: Arc<InspectRepository>,
     logs_repository: Arc<LogsRepository>,
     archive_accessor_stats: Arc<AccessorStats>,
-    moniker_rewriter: Option<Arc<MonikerRewriter>>,
 }
 
 fn validate_and_parse_selectors(
@@ -116,18 +114,7 @@ impl ArchiveAccessor {
         logs_repository: Arc<LogsRepository>,
         archive_accessor_stats: Arc<AccessorStats>,
     ) -> Self {
-        ArchiveAccessor {
-            pipeline,
-            archive_accessor_stats,
-            inspect_repository,
-            logs_repository,
-            moniker_rewriter: None,
-        }
-    }
-
-    pub fn add_moniker_rewriter(&mut self, rewriter: Arc<MonikerRewriter>) -> &mut Self {
-        self.moniker_rewriter = Some(rewriter);
-        self
+        ArchiveAccessor { pipeline, archive_accessor_stats, inspect_repository, logs_repository }
     }
 
     async fn run_server(
@@ -136,7 +123,6 @@ impl ArchiveAccessor {
         log_repo: Arc<LogsRepository>,
         requests: BatchIteratorRequestStream,
         params: StreamParameters,
-        rewriter: Option<Arc<MonikerRewriter>>,
         accessor_stats: Arc<AccessorStats>,
     ) -> Result<(), AccessorError> {
         let format = params.format.ok_or(AccessorError::MissingFormat)?;
@@ -173,11 +159,12 @@ impl ArchiveAccessor {
                     _ => return Err(AccessorError::InvalidSelectors("unrecognized selectors")),
                 };
 
-                let (selectors, output_rewriter) = match (selectors, rewriter) {
-                    (Some(selectors), Some(rewriter)) => rewriter.rewrite_selectors(selectors),
-                    // behaves correctly whether selectors is Some(_) or None
-                    (selectors, _) => (selectors, None),
-                };
+                let (selectors, output_rewriter) =
+                    match (selectors, pipeline.read().await.moniker_rewriter().as_ref()) {
+                        (Some(selectors), Some(rewriter)) => rewriter.rewrite_selectors(selectors),
+                        // behaves correctly whether selectors is Some(_) or None
+                        (selectors, _) => (selectors, None),
+                    };
 
                 let unpopulated_container_vec = inspect_repo
                     .fetch_inspect_data(
@@ -275,7 +262,6 @@ impl ArchiveAccessor {
                     self.archive_accessor_stats.global_stats.stream_diagnostics_requests.add(1);
                     let pipeline = self.pipeline.clone();
                     let accessor_stats = self.archive_accessor_stats.clone();
-                    let moniker_rewriter = self.moniker_rewriter.clone();
                     let log_repo = self.logs_repository.clone();
                     let inspect_repo = self.inspect_repository.clone();
                     // Store the batch iterator task so that we can ensure that the client finishes
@@ -289,7 +275,6 @@ impl ArchiveAccessor {
                                 log_repo,
                                 requests,
                                 stream_parameters,
-                                moniker_rewriter,
                                 accessor_stats,
                             )
                             .await
@@ -609,9 +594,10 @@ mod tests {
             let inspector = Inspector::new();
             let budget = BudgetManager::new(1_000_000);
             let log_repo = Arc::new(LogsRepository::new(&budget, inspector.root()).await);
+            let inspect_repo = Arc::new(InspectRepository::new(vec![Arc::downgrade(&pipeline)]));
             let accessor = ArchiveAccessor::new(
                 pipeline,
-                Arc::new(InspectRepository::default()),
+                inspect_repo,
                 log_repo,
                 Arc::new(AccessorStats::new(Node::default())),
             );
@@ -672,9 +658,10 @@ mod tests {
             let inspector = Inspector::new();
             let budget = BudgetManager::new(1_000_000);
             let log_repo = Arc::new(LogsRepository::new(&budget, inspector.root()).await);
+            let inspect_repo = Arc::new(InspectRepository::new(vec![Arc::downgrade(&pipeline)]));
             let accessor = ArchiveAccessor::new(
                 pipeline,
-                Arc::new(InspectRepository::default()),
+                inspect_repo,
                 log_repo,
                 Arc::new(AccessorStats::new(Node::default())),
             );

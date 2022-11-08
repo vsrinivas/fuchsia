@@ -378,9 +378,15 @@ mod tests {
         super::collector::InspectData,
         super::*,
         crate::{
-            accessor::BatchIterator, diagnostics::AccessorStats,
-            events::types::ComponentIdentifier, identity::ComponentIdentity,
-            inspect::repository::InspectRepository, pipeline::Pipeline,
+            accessor::BatchIterator,
+            diagnostics::AccessorStats,
+            events::{
+                router::EventConsumer,
+                types::{ComponentIdentifier, DiagnosticsReadyPayload, Event, EventPayload},
+            },
+            identity::ComponentIdentity,
+            inspect::repository::InspectRepository,
+            pipeline::Pipeline,
         },
         async_lock::RwLock,
         fdio,
@@ -747,17 +753,22 @@ mod tests {
                     }))
                     .await;
 
-                let inspect_repo = Arc::new(InspectRepository::default());
                 let pipeline = Arc::new(RwLock::new(Pipeline::for_test(None)));
+                let inspect_repo =
+                    Arc::new(InspectRepository::new(vec![Arc::downgrade(&pipeline)]));
 
                 for (cid, proxy) in id_and_directory_proxy {
                     let identity = ComponentIdentity::from_identifier_and_url(cid, TEST_URL);
-                    inspect_repo.add_inspect_artifacts(identity.clone(), proxy).await.unwrap();
-                    pipeline
-                        .write()
-                        .await
-                        .add_inspect_artifacts(&identity.relative_moniker)
-                        .unwrap();
+                    inspect_repo
+                        .clone()
+                        .handle(Event {
+                            timestamp: zx::Time::get_monotonic(),
+                            payload: EventPayload::DiagnosticsReady(DiagnosticsReadyPayload {
+                                component: identity.clone(),
+                                directory: Some(proxy),
+                            }),
+                        })
+                        .await;
                 }
 
                 let inspector = Inspector::new();
@@ -815,10 +826,11 @@ mod tests {
         let child_2_selector =
             selectors::parse_selector::<VerboseError>(r#"test_component.cmx:root/child_2:*"#)
                 .unwrap();
-        let inspect_repo = Arc::new(InspectRepository::default());
+
         let static_selectors_opt = Some(vec![child_1_1_selector, child_2_selector]);
 
         let pipeline = Arc::new(RwLock::new(Pipeline::for_test(static_selectors_opt)));
+        let inspect_repo = Arc::new(InspectRepository::new(vec![Arc::downgrade(&pipeline)]));
 
         let out_dir_proxy = collector::find_directory_proxy(&path).await.unwrap();
 
@@ -900,8 +912,16 @@ mod tests {
         let inspector_arc = Arc::new(inspector);
 
         let identity = ComponentIdentity::from_identifier_and_url(component_id, TEST_URL);
-        inspect_repo.add_inspect_artifacts(identity.clone(), out_dir_proxy).await.unwrap();
-        pipeline.write().await.add_inspect_artifacts(&identity.relative_moniker).unwrap();
+        inspect_repo
+            .clone()
+            .handle(Event {
+                timestamp: zx::Time::get_monotonic(),
+                payload: EventPayload::DiagnosticsReady(DiagnosticsReadyPayload {
+                    component: identity.clone(),
+                    directory: Some(out_dir_proxy),
+                }),
+            })
+            .await;
 
         let expected_get_next_result_errors = match mode {
             VerifyMode::ExpectComponentFailure => 1u64,

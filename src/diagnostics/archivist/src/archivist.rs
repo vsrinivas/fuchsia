@@ -4,7 +4,9 @@
 
 use {
     crate::{
+        accessor::ArchiveAccessor,
         component_lifecycle, diagnostics,
+        diagnostics::AccessorStats,
         error::Error,
         events::{
             router::{ConsumerConfig, EventConsumer, EventRouter, ProducerConfig, RouterOptions},
@@ -95,12 +97,6 @@ impl Archivist {
         let (log_sender, log_receiver) = mpsc::unbounded();
         let (listen_sender, listen_receiver) = mpsc::unbounded();
 
-        let logs_budget =
-            BudgetManager::new(archivist_configuration.logs_max_cached_original_bytes as usize);
-        let logs_repo =
-            Arc::new(LogsRepository::new(&logs_budget, component::inspector().root()).await);
-        let inspect_repo = Arc::new(InspectRepository::default());
-
         let pipelines_node = component::inspector().root().create_child("pipelines");
         let pipelines_path = Path::new(&archivist_configuration.pipelines_path);
         let pipelines = vec![
@@ -109,27 +105,43 @@ impl Archivist {
             Pipeline::lowpan(pipelines_path, &pipelines_node),
             Pipeline::all_access(pipelines_path, &pipelines_node),
         ];
-        component::inspector().root().record(pipelines_node);
 
         if pipelines.iter().any(|p| p.config_has_error()) {
             component::health().set_unhealthy("Pipeline config has an error");
         } else {
             component::health().set_ok();
         }
+        let pipelines = pipelines.into_iter().map(|p| Arc::new(RwLock::new(p))).collect::<Vec<_>>();
+
+        component::inspector().root().record(pipelines_node);
+
+        let logs_budget =
+            BudgetManager::new(archivist_configuration.logs_max_cached_original_bytes as usize);
+        let logs_repo =
+            Arc::new(LogsRepository::new(&logs_budget, component::inspector().root()).await);
+        let inspect_repo =
+            Arc::new(InspectRepository::new(pipelines.iter().map(Arc::downgrade).collect()));
 
         let stats_node = component::inspector().root().create_child("archive_accessor_stats");
-        let pipelines = pipelines
-            .into_iter()
-            .map(|pipeline| {
-                pipeline.serve(
-                    &mut fs,
-                    inspect_repo.clone(),
-                    logs_repo.clone(),
-                    listen_sender.clone(),
-                    &stats_node,
-                )
-            })
-            .collect();
+        for pipeline in &pipelines {
+            let pipeline_guard = pipeline.read().await;
+            let stats =
+                Arc::new(AccessorStats::new(stats_node.create_child(pipeline_guard.name())));
+            let server_pipeline = pipeline.clone();
+            let server_inspect_repo = inspect_repo.clone();
+            let server_logs_repo = logs_repo.clone();
+            let server_listen_sender = listen_sender.clone();
+
+            fs.dir("svc").add_fidl_service_at(pipeline_guard.protocol_name(), move |stream| {
+                let accessor = ArchiveAccessor::new(
+                    server_pipeline.clone(),
+                    server_inspect_repo.clone(),
+                    server_logs_repo.clone(),
+                    stats.clone(),
+                );
+                accessor.spawn_server(stream, server_listen_sender.clone());
+            });
+        }
         component::inspector().root().record(stats_node);
 
         let archivist_state = Arc::new(ArchivistState::new(
@@ -313,17 +325,15 @@ impl Archivist {
         debug!("Running Archivist.");
 
         let logs_repository = self.archivist_state.logs_repository.clone();
+        let inspect_repository = self.archivist_state.inspect_repository.clone();
         self.fs.serve_connection(outgoing_channel).map_err(Error::ServeOutgoing)?;
         // Start servicing all outgoing services.
         let run_outgoing = self.fs.collect::<()>();
 
         let (snd, rcv) = mpsc::unbounded::<Arc<ComponentIdentity>>();
         self.archivist_state.logs_budget.set_remover(snd).await;
-        let component_removal_task = fasync::Task::spawn(Self::process_removal_of_components(
-            rcv,
-            logs_repository.clone(),
-            self.archivist_state.diagnostics_pipelines.clone(),
-        ));
+        let component_removal_task =
+            fasync::Task::spawn(Self::process_removal_of_components(rcv, logs_repository.clone()));
 
         let logs_budget = self.archivist_state.logs_budget.handle();
         let mut event_router = self.event_router;
@@ -331,7 +341,11 @@ impl Archivist {
         let archivist_state_log_sender = archivist_state.log_sender.clone();
         event_router.add_consumer(ConsumerConfig {
             consumer: &archivist_state,
-            events: vec![EventType::DiagnosticsReady, EventType::LogSinkRequested],
+            events: vec![EventType::LogSinkRequested],
+        });
+        event_router.add_consumer(ConsumerConfig {
+            consumer: &inspect_repository,
+            events: vec![EventType::DiagnosticsReady],
         });
         // panic: can only panic if we didn't register event producers and consumers correctly.
         let (terminate_handle, drain_events_fut) =
@@ -384,18 +398,11 @@ impl Archivist {
     async fn process_removal_of_components(
         mut removal_requests: mpsc::UnboundedReceiver<Arc<ComponentIdentity>>,
         logs_repo: Arc<LogsRepository>,
-        diagnostics_pipelines: Arc<Vec<Arc<RwLock<Pipeline>>>>,
     ) {
         while let Some(identity) = removal_requests.next().await {
             if !logs_repo.is_live(&identity).await {
                 debug!(%identity, "Removing component from repository.");
                 logs_repo.remove(&identity).await;
-
-                // TODO(fxbug.dev/55736): The pipeline specific updates should be happening
-                // asynchronously.
-                for pipeline in diagnostics_pipelines.as_ref() {
-                    pipeline.write().await.remove(&identity.relative_moniker);
-                }
             }
         }
     }
@@ -406,7 +413,7 @@ impl Archivist {
 /// that are populated by the archivist server and exposed in the
 /// service sessions.
 pub struct ArchivistState {
-    diagnostics_pipelines: Arc<Vec<Arc<RwLock<Pipeline>>>>,
+    _diagnostics_pipelines: Arc<Vec<Arc<RwLock<Pipeline>>>>,
     inspect_repository: Arc<InspectRepository>,
     logs_repository: Arc<LogsRepository>,
 
@@ -425,44 +432,12 @@ impl ArchivistState {
         log_sender: mpsc::UnboundedSender<Task<()>>,
     ) -> Result<Self, Error> {
         Ok(Self {
-            diagnostics_pipelines: Arc::new(diagnostics_pipelines),
+            _diagnostics_pipelines: Arc::new(diagnostics_pipelines),
             logs_repository,
             inspect_repository,
             logs_budget,
             log_sender: Arc::new(RwLock::new(log_sender)),
         })
-    }
-
-    async fn handle_diagnostics_ready(
-        &self,
-        component: ComponentIdentity,
-        directory: Option<fio::DirectoryProxy>,
-    ) {
-        debug!(identity = %component, "Diagnostics directory is ready.");
-        if let Some(directory) = directory {
-            // Update the central repository to reference the new diagnostics source.
-            self.inspect_repository
-                .add_inspect_artifacts(component.clone(), directory)
-                .await
-                .unwrap_or_else(|err| {
-                    warn!(identity = %component, ?err, "Failed to add inspect artifacts to repository");
-                });
-
-            // Let each pipeline know that a new component arrived, and allow the pipeline
-            // to eagerly bucket static selectors based on that component's moniker.
-            // TODO(fxbug.dev/55736): The pipeline specific updates should be happening
-            // asynchronously.
-            for pipeline in self.diagnostics_pipelines.iter() {
-                pipeline
-                    .write()
-                    .await
-                    .add_inspect_artifacts(&component.relative_moniker)
-                    .unwrap_or_else(|e| {
-                        warn!(identity = %component, ?e,
-                            "Failed to add inspect artifacts to pipeline wrapper");
-                    });
-            }
-        }
     }
 
     async fn handle_log_sink_requested(
@@ -482,15 +457,13 @@ impl ArchivistState {
 impl EventConsumer for ArchivistState {
     async fn handle(self: Arc<Self>, event: Event) {
         match event.payload {
-            EventPayload::DiagnosticsReady(DiagnosticsReadyPayload { component, directory }) => {
-                self.handle_diagnostics_ready(component, directory).await;
-            }
             EventPayload::LogSinkRequested(LogSinkRequestedPayload {
                 component,
                 request_stream,
             }) => {
                 self.handle_log_sink_requested(component, request_stream).await;
             }
+            _ => unreachable!("Archivist state just subscribes to log sink requested"),
         }
     }
 }
