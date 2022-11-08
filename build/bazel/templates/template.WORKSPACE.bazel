@@ -12,13 +12,9 @@ sync with toplevel.MODULE.bazel whenever possible!!
 
 workspace(name = "main")
 
-# A local copy of the platforms repository, which was already
-# OSRB-approved but doesn't have a mirror on fuchsia.googlesource.com
-# yet. TODO(digit): Move this third_party/bazel_platforms through
-# a Jiri Manifest entry once the mirror is in place.
 local_repository(
     name = "platforms",
-    path = "build/bazel/local_repositories/platforms",
+    path = "third_party/bazel_platforms",
 )
 
 # Note that this is a fake repository that only contains the minimum
@@ -68,12 +64,10 @@ new_local_repository(
     build_file = "third_party/bazel_rules_rust/util/process_wrapper/BUILD.tinyjson.bazel",
 )
 
-# TODO(113330): Use fuchsia.googlesource.com mirror when available.
 local_repository(
     name = "rules_python",
-    path = "build/bazel/local_repositories/rules_python",
+    path = "third_party/bazel_rules_python",
 )
-
 
 # buildifier: disable=load-on-top
 load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies")

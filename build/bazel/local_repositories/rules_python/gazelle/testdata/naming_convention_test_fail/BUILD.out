@@ -1,1 +1,0 @@
-go_test(name = "naming_convention_test_fail_test")

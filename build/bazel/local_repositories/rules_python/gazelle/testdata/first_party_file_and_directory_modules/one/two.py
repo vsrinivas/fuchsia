@@ -1,2 +1,0 @@
-def two():
-    return "two"
