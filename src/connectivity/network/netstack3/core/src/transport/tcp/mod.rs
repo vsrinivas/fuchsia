@@ -5,14 +5,12 @@
 //! The Transmission Control Protocol (TCP).
 
 pub mod buffer;
-mod cubic;
+mod congestion;
 mod rtt;
 pub mod segment;
 mod seqnum;
 pub mod socket;
 pub mod state;
-
-use core::time::Duration;
 
 use rand::RngCore;
 
@@ -27,11 +25,7 @@ const DEFAULT_MAXIMUM_SEGMENT_SIZE: u32 = 536;
 use crate::{
     ip::{IpDeviceId, IpExt},
     sync::Mutex,
-    transport::tcp::{
-        seqnum::WindowSize,
-        socket::{isn::IsnGenerator, TcpNonSyncContext, TcpSockets},
-    },
-    Instant,
+    transport::tcp::socket::{isn::IsnGenerator, TcpNonSyncContext, TcpSockets},
 };
 
 /// Control flags that can alter the state of a TCP control block.
@@ -86,40 +80,3 @@ impl<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext> TcpState<I, D, C> {
 #[derive(Copy, Clone, Debug, Default)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
 pub struct BufferSizes {}
-
-/// Available congestion control algorithms.
-#[derive(Debug)]
-enum CongestionControl<I: Instant> {
-    Cubic(cubic::Cubic<I>),
-}
-
-impl<I: Instant> CongestionControl<I> {
-    /// Called when there are previously unacknowledged bytes being acked.
-    fn on_ack(&mut self, bytes_acked: u32, now: I, rtt: Duration) {
-        match self {
-            Self::Cubic(cubic) => cubic.on_ack(bytes_acked, now, rtt),
-        }
-    }
-
-    /// Called when there is a retransmission.
-    fn on_retransmission(&mut self) {
-        match self {
-            Self::Cubic(cubic) => cubic.on_retransmission(),
-        }
-    }
-
-    /// Gets the current window size in bytes.
-    fn cwnd(&self) -> WindowSize {
-        match self {
-            Self::Cubic(cubic) => cubic.cwnd(),
-        }
-    }
-
-    fn cubic() -> Self {
-        Self::Cubic(Default::default())
-    }
-
-    fn take(&mut self) -> Self {
-        core::mem::replace(self, Self::cubic())
-    }
-}

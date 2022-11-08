@@ -38,11 +38,11 @@ pub(super) struct Cubic<I: Instant> {
     /// The start of the current congestion avoidance epoch.
     epoch_start: Option<I>,
     /// Slow start threshold.
-    ssthresh: u32,
+    pub(super) ssthresh: u32,
     /// Congestion control window size, in bytes.
-    cwnd: u32,
+    pub(super) cwnd: u32,
     /// Sender MSS.
-    mss: u32,
+    pub(super) mss: u32,
     /// Coefficient for the cubic term of time into the current congestion
     /// avoidance epoch.
     k: f32,
@@ -101,9 +101,7 @@ impl<I: Instant> Cubic<I> {
             + (3.0 * (1.0 - CUBIC_BETA) / (1.0 + CUBIC_BETA)) * round_trips * self.mss as f32;
         w_tcp as u32
     }
-}
 
-impl<I: Instant> Cubic<I> {
     pub(super) fn on_ack(&mut self, mut bytes_acked: u32, now: I, rtt: Duration) {
         if self.cwnd < self.ssthresh {
             // Slow start, Per RFC 5681 (https://www.rfc-editor.org/rfc/rfc5681#page-6):
@@ -203,7 +201,7 @@ impl<I: Instant> Cubic<I> {
         }
     }
 
-    pub(super) fn on_retransmission(&mut self) {
+    pub(super) fn on_loss_detected(&mut self) {
         // End the current congestion avoidance epoch.
         self.epoch_start = None;
         // Per RFC 8312 (https://www.rfc-editor.org/rfc/rfc8312#section-4.7):
@@ -212,13 +210,18 @@ impl<I: Instant> Cubic<I> {
         //   Section 4.5) that is different from Standard TCP [RFC5681].
         self.w_max = self.cwnd;
         self.ssthresh = u32::max((self.cwnd as f32 * CUBIC_BETA) as u32, 2 * self.mss);
+        self.cwnd = self.ssthresh;
+        // Reset our running count of the acked bytes.
+        self.bytes_acked = 0;
+    }
+
+    pub(super) fn on_retransmission_timeout(&mut self) {
+        self.on_loss_detected();
         // Per RFC 5681 (https://www.rfc-editor.org/rfc/rfc5681#page-8):
         //   Furthermore, upon a timeout (as specified in [RFC2988]) cwnd MUST be
         //   set to no more than the loss window, LW, which equals 1 full-sized
         //   segment (regardless of the value of IW).
         self.cwnd = self.mss;
-        // Reset our running count of the acked bytes.
-        self.bytes_acked = 0;
     }
 
     pub(super) fn cwnd(&self) -> WindowSize {
@@ -229,6 +232,10 @@ impl<I: Instant> Cubic<I> {
         // Note: cwnd and w_max are in unit of bytes as opposed to segments in
         // RFC, so C should be CUBIC_C * mss for our implementation.
         CUBIC_C * self.mss as f32
+    }
+
+    pub(crate) fn on_loss_recovered(&mut self) {
+        self.cwnd = self.ssthresh;
     }
 }
 
@@ -276,8 +283,7 @@ mod tests {
             let cwnd = u32::from(cubic.cwnd());
             if ack_cnt >= loss_rate_reciprocal {
                 ack_cnt -= loss_rate_reciprocal;
-                cubic.on_retransmission();
-                cubic.cwnd = cubic.ssthresh;
+                cubic.on_loss_detected();
             } else {
                 ack_cnt += cwnd / cubic.mss;
                 // We will get at least one ack for every two segments we send.
@@ -308,7 +314,7 @@ mod tests {
         assert_eq!(cubic.cwnd, 8 * DEFAULT_MAXIMUM_SEGMENT_SIZE);
 
         clock.sleep(RTT);
-        cubic.on_retransmission();
+        cubic.on_retransmission_timeout();
         assert_eq!(cubic.cwnd, DEFAULT_MAXIMUM_SEGMENT_SIZE);
 
         // We are now back in slow start.

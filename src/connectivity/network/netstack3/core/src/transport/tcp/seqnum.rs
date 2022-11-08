@@ -153,6 +153,10 @@ impl WindowSize {
         Self(wnd.into())
     }
 
+    pub(super) fn saturating_add(self, rhs: u32) -> Self {
+        Self::from_u32(u32::from(self).saturating_add(rhs)).unwrap_or(Self::MAX)
+    }
+
     pub(super) fn new(wnd: usize) -> Option<Self> {
         u32::try_from(wnd).ok_checked::<TryFromIntError>().and_then(WindowSize::from_u32)
     }

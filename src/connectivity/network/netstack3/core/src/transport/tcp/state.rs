@@ -21,10 +21,11 @@ use explicit::ResultExt as _;
 use crate::{
     transport::tcp::{
         buffer::{Assembler, IntoBuffers, ReceiveBuffer, SendBuffer, SendPayload},
+        congestion::CongestionControl,
         rtt::Estimator,
         segment::{Payload, Segment},
         seqnum::{SeqNum, WindowSize},
-        BufferSizes, CongestionControl, Control, UserError,
+        BufferSizes, Control, UserError,
     },
     Instant,
 };
@@ -603,11 +604,14 @@ impl<I: Instant, S: SendBuffer, const FIN_QUEUED: bool> Send<I, S, FIN_QUEUED> {
                     //         5.5).
                     *snd_nxt = *snd_una;
                     retrans_timer.backoff(now);
-                    congestion_control.on_retransmission();
+                    congestion_control.on_retransmission_timeout();
                 }
             }
             None => {}
         };
+        // Find the sequence number for the next segment, we start with snd_nxt
+        // unless a fast retransmit is needed.
+        let next_seg = congestion_control.fast_retransmit().unwrap_or(*snd_nxt);
         // First calculate the open window, note that if our peer has shrank
         // their window (it is strongly discouraged), the following conversion
         // will fail and we return early.
@@ -615,10 +619,10 @@ impl<I: Instant, S: SendBuffer, const FIN_QUEUED: bool> Send<I, S, FIN_QUEUED> {
         let cwnd = congestion_control.cwnd();
         let swnd = WindowSize::min(*snd_wnd, cwnd);
         let open_window =
-            u32::try_from(*snd_una + swnd - *snd_nxt).ok_checked::<TryFromIntError>()?;
+            u32::try_from(*snd_una + swnd - next_seg).ok_checked::<TryFromIntError>()?;
         let offset =
-            usize::try_from(*snd_nxt - *snd_una).unwrap_or_else(|TryFromIntError { .. }| {
-                panic!("snd.nxt({:?}) should never fall behind snd.una({:?})", *snd_nxt, *snd_una);
+            usize::try_from(next_seg - *snd_una).unwrap_or_else(|TryFromIntError { .. }| {
+                panic!("next_seg({:?}) should never fall behind snd.una({:?})", *snd_nxt, *snd_una);
             });
         let available = u32::try_from(buffer.len() + usize::from(FIN_QUEUED) - offset)
             .unwrap_or(WindowSize::MAX.into());
@@ -631,7 +635,7 @@ impl<I: Instant, S: SendBuffer, const FIN_QUEUED: bool> Send<I, S, FIN_QUEUED> {
         let has_fin = FIN_QUEUED && can_send == available;
         let seg = buffer.peek_with(offset, |readable| {
             let (seg, discarded) = Segment::with_data(
-                *snd_nxt,
+                next_seg,
                 Some(rcv_nxt),
                 has_fin.then(|| Control::FIN),
                 rcv_wnd,
@@ -640,7 +644,7 @@ impl<I: Instant, S: SendBuffer, const FIN_QUEUED: bool> Send<I, S, FIN_QUEUED> {
             debug_assert_eq!(discarded, 0);
             seg
         });
-        let seq_max = *snd_nxt + can_send;
+        let seq_max = next_seg + can_send;
         match *last_seq_ts {
             Some((seq, _ts)) => {
                 if seq_max.after(seq) {
@@ -654,7 +658,9 @@ impl<I: Instant, S: SendBuffer, const FIN_QUEUED: bool> Send<I, S, FIN_QUEUED> {
             }
             None => *last_seq_ts = Some((seq_max, now)),
         }
-        *snd_nxt = seq_max;
+        if seq_max.after(*snd_nxt) {
+            *snd_nxt = seq_max;
+        }
         if seq_max.after(*max) {
             *max = seq_max;
         }
@@ -675,6 +681,7 @@ impl<I: Instant, S: SendBuffer, const FIN_QUEUED: bool> Send<I, S, FIN_QUEUED> {
         seg_seq: SeqNum,
         seg_ack: SeqNum,
         seg_wnd: WindowSize,
+        pure_ack: bool,
         rcv_nxt: SeqNum,
         rcv_wnd: WindowSize,
         now: I,
@@ -757,6 +764,24 @@ impl<I: Instant, S: SendBuffer, const FIN_QUEUED: bool> Send<I, S, FIN_QUEUED> {
             }
             None
         } else {
+            // Per RFC 5681 (https://www.rfc-editor.org/rfc/rfc5681#section-2):
+            //   DUPLICATE ACKNOWLEDGMENT: An acknowledgment is considered a
+            //   "duplicate" in the following algorithms when (a) the receiver of
+            //   the ACK has outstanding data, (b) the incoming acknowledgment
+            //   carries no data, (c) the SYN and FIN bits are both off, (d) the
+            //   acknowledgment number is equal to the greatest acknowledgment
+            //   received on the given connection (TCP.UNA from [RFC793]) and (e)
+            //   the advertised window in the incoming acknowledgment equals the
+            //   advertised window in the last incoming acknowledgment.
+            let is_dup_ack = {
+                snd_nxt.after(*snd_una) // (a)
+                && pure_ack // (b) & (c)
+                && seg_ack == *snd_una // (d)
+                && seg_wnd == *snd_wnd // (e)
+            };
+            if is_dup_ack {
+                congestion_control.on_dup_ack(seg_ack);
+            }
             // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-72):
             //   If the ACK is a duplicate (SEG.ACK < SND.UNA), it can be
             //   ignored.
@@ -1105,7 +1130,8 @@ impl<I: Instant + 'static, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + 
             //   first check sequence number
             let is_rst = incoming.contents.control() == Some(Control::RST);
             // pure ACKs (empty segments) don't need to be ack'ed.
-            let needs_ack = incoming.contents.len() > 0;
+            let pure_ack = incoming.contents.len() == 0;
+            let needs_ack = !pure_ack;
             let Segment { seq: seg_seq, ack: seg_ack, wnd: seg_wnd, contents } =
                 match incoming.overlap(rcv_nxt, rcv_wnd) {
                     Some(incoming) => incoming,
@@ -1219,16 +1245,16 @@ impl<I: Instant + 'static, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + 
                     }
                     State::Established(Established { snd, rcv: _ })
                     | State::CloseWait(CloseWait { snd, last_ack: _, last_wnd: _ }) => {
-                        if let Some(ack) =
-                            snd.process_ack(seg_seq, seg_ack, seg_wnd, rcv_nxt, rcv_wnd, now)
+                        if let Some(ack) = snd
+                            .process_ack(seg_seq, seg_ack, seg_wnd, pure_ack, rcv_nxt, rcv_wnd, now)
                         {
                             return Some(ack);
                         }
                     }
                     State::LastAck(LastAck { snd, last_ack: _, last_wnd: _ }) => {
                         let fin_seq = snd.una + snd.buffer.len() + 1;
-                        if let Some(ack) =
-                            snd.process_ack(seg_seq, seg_ack, seg_wnd, rcv_nxt, rcv_wnd, now)
+                        if let Some(ack) = snd
+                            .process_ack(seg_seq, seg_ack, seg_wnd, pure_ack, rcv_nxt, rcv_wnd, now)
                         {
                             return Some(ack);
                         } else if seg_ack == fin_seq {
@@ -1238,8 +1264,8 @@ impl<I: Instant + 'static, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + 
                     }
                     State::FinWait1(FinWait1 { snd, rcv }) => {
                         let fin_seq = snd.una + snd.buffer.len() + 1;
-                        if let Some(ack) =
-                            snd.process_ack(seg_seq, seg_ack, seg_wnd, rcv_nxt, rcv_wnd, now)
+                        if let Some(ack) = snd
+                            .process_ack(seg_seq, seg_ack, seg_wnd, pure_ack, rcv_nxt, rcv_wnd, now)
                         {
                             return Some(ack);
                         } else if seg_ack == fin_seq {
@@ -1254,8 +1280,8 @@ impl<I: Instant + 'static, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + 
                     }
                     State::Closing(Closing { snd, last_ack, last_wnd }) => {
                         let fin_seq = snd.una + snd.buffer.len() + 1;
-                        if let Some(ack) =
-                            snd.process_ack(seg_seq, seg_ack, seg_wnd, rcv_nxt, rcv_wnd, now)
+                        if let Some(ack) = snd
+                            .process_ack(seg_seq, seg_ack, seg_wnd, pure_ack, rcv_nxt, rcv_wnd, now)
                         {
                             return Some(ack);
                         } else if seg_ack == fin_seq {
@@ -1648,7 +1674,10 @@ mod test {
             testutil::{FakeInstant, FakeInstantCtx},
             InstantContext as _,
         },
-        transport::tcp::buffer::{Buffer, RingBuffer},
+        transport::tcp::{
+            buffer::{Buffer, RingBuffer},
+            DEFAULT_MAXIMUM_SEGMENT_SIZE,
+        },
     };
 
     const ISS_1: SeqNum = SeqNum::new(100);
@@ -3202,5 +3231,91 @@ mod test {
         let (reply, _): (_, Option<()>) =
             state.on_segment::<_, ClientlessBufferProvider>(seg, FakeInstant::default());
         reply
+    }
+
+    #[test]
+    fn fast_retransmit() {
+        let mut clock = FakeInstantCtx::default();
+        let mut send_buffer = RingBuffer::default();
+        for b in b'A'..=b'D' {
+            assert_eq!(
+                send_buffer.enqueue_data(&[b; DEFAULT_MAXIMUM_SEGMENT_SIZE as usize]),
+                DEFAULT_MAXIMUM_SEGMENT_SIZE as usize
+            );
+        }
+        let mut state: State<_, _, _, ()> = State::Established(Established {
+            snd: Send {
+                nxt: ISS_1,
+                max: ISS_1,
+                una: ISS_1,
+                wnd: WindowSize::DEFAULT,
+                buffer: send_buffer,
+                wl1: ISS_2,
+                wl2: ISS_1,
+                rtt_estimator: Estimator::Measured { srtt: RTT, rtt_var: RTT / 2 },
+                last_seq_ts: None,
+                timer: None,
+                congestion_control: CongestionControl::cubic(),
+            },
+            rcv: Recv { buffer: RingBuffer::default(), assembler: Assembler::new(ISS_2) },
+        });
+
+        assert_eq!(
+            state.poll_send(DEFAULT_MAXIMUM_SEGMENT_SIZE, clock.now()),
+            Some(Segment::data(
+                ISS_1,
+                ISS_2,
+                WindowSize::DEFAULT,
+                SendPayload::Contiguous(&[b'A'; DEFAULT_MAXIMUM_SEGMENT_SIZE as usize])
+            ))
+        );
+
+        let mut dup_ack = |expected_byte: u8| {
+            clock.sleep(Duration::from_millis(10));
+            assert_eq!(
+                state.on_segment::<_, ClientlessBufferProvider>(
+                    Segment::ack(ISS_2, ISS_1, WindowSize::DEFAULT),
+                    clock.now()
+                ),
+                (None, None)
+            );
+
+            assert_eq!(
+                state.poll_send(DEFAULT_MAXIMUM_SEGMENT_SIZE, clock.now()),
+                Some(Segment::data(
+                    ISS_1 + u32::from(expected_byte - b'A') * DEFAULT_MAXIMUM_SEGMENT_SIZE,
+                    ISS_2,
+                    WindowSize::DEFAULT,
+                    SendPayload::Contiguous(
+                        &[expected_byte; DEFAULT_MAXIMUM_SEGMENT_SIZE as usize]
+                    )
+                ))
+            );
+        };
+
+        // The first two dup acks should allow two previously unsent segments
+        // into the network.
+        dup_ack(b'B');
+        dup_ack(b'C');
+        // The third dup ack will cause a fast retransmit of the first segment
+        // at snd.una.
+        dup_ack(b'A');
+        // Afterwards, we continue to send previously unsent data if allowed.
+        dup_ack(b'D');
+
+        // Make sure the window size is deflated after loss is recovered.
+        clock.sleep(Duration::from_millis(10));
+        assert_eq!(
+            state.on_segment::<_, ClientlessBufferProvider>(
+                Segment::ack(ISS_2, ISS_1 + DEFAULT_MAXIMUM_SEGMENT_SIZE, WindowSize::DEFAULT),
+                clock.now()
+            ),
+            (None, None)
+        );
+        let established = assert_matches!(state, State::Established(established) => established);
+        assert_eq!(
+            u32::from(established.snd.congestion_control.cwnd()),
+            2 * DEFAULT_MAXIMUM_SEGMENT_SIZE
+        );
     }
 }
