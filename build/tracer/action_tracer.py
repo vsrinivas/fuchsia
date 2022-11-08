@@ -863,12 +863,16 @@ def main():
     if os.path.basename(script) in ignored_scripts:
         return retval
 
-    hermetic_inputs = None
+    hermetic_inputs = []
+    implicit_inputs = []
     depfile = args.depfile
     if args.hermetic_inputs_file:
         assert args.depfile, '--hermetic-inputs-file requires --depfile!'
         with open(args.hermetic_inputs_file) as f:
-            hermetic_inputs = [os.path.abspath(l.strip()) for l in f]
+            for l in f:
+                line = l.strip()
+                hermetic_inputs.append(os.path.abspath(line))
+                implicit_inputs.append(line)
 
         # Generate the depfile here. Take care of creating the output directory
         # if needed.
@@ -877,8 +881,9 @@ def main():
             os.makedirs(depfile_dir)
         with open(args.depfile, 'w') as f:
             f.write(
-                '%s: %s\n' %
-                (' '.join(args.outputs), ' '.join(hermetic_inputs)))
+                '%s: %s\n' % (
+                    ' '.join(sorted(args.outputs)), ' '.join(
+                        sorted(implicit_inputs))))
 
     # Compute constraints from action properties (from args).
     action = Action(
