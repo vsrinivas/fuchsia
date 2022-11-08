@@ -6,29 +6,29 @@ import("//build/host.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/zircon/tools.gni")
 
-if (is_host) {
-  rustc_library("minfs") {
-    edition = "2021"
-    name = "assembly_minfs"
-    version = "0.1.0"
-    with_unit_tests = true
+assert(is_host, "Assembly libraries are host-only")
 
-    deps = [
-      "//src/lib/assembly/tool",
-      "//src/lib/assembly/util",
-      "//third_party/rust_crates:anyhow",
-    ]
+rustc_library("minfs") {
+  edition = "2021"
+  name = "assembly_minfs"
+  version = "0.1.0"
+  with_unit_tests = true
 
-    sources = [
-      "src/lib.rs",
-      "src/minfs.rs",
-    ]
+  deps = [
+    "//src/lib/assembly/tool",
+    "//src/lib/assembly/util",
+    "//third_party/rust_crates:anyhow",
+  ]
 
-    test_deps = [ "//third_party/rust_crates:serde_json" ]
-  }
+  sources = [
+    "src/lib.rs",
+    "src/minfs.rs",
+  ]
 
-  group("host_tests") {
-    testonly = true
-    deps = [ ":minfs_test" ]
-  }
+  test_deps = [ "//third_party/rust_crates:serde_json" ]
+}
+
+group("host_tests") {
+  testonly = true
+  deps = [ ":minfs_test" ]
 }

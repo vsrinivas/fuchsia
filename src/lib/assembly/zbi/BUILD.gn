@@ -5,25 +5,25 @@
 import("//build/host.gni")
 import("//build/rust/rustc_library.gni")
 
-if (is_host) {
-  rustc_library("zbi") {
-    edition = "2021"
-    version = "0.1.0"
-    with_unit_tests = true
-    deps = [
-      "//src/lib/assembly/tool",
-      "//src/lib/assembly/util",
-      "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:tracing",
-    ]
-    sources = [
-      "src/lib.rs",
-      "src/zbi.rs",
-    ]
-  }
+assert(is_host, "Assembly libraries are host-only")
 
-  group("host_tests") {
-    testonly = true
-    deps = [ ":zbi_test" ]
-  }
+rustc_library("zbi") {
+  edition = "2021"
+  version = "0.1.0"
+  with_unit_tests = true
+  deps = [
+    "//src/lib/assembly/tool",
+    "//src/lib/assembly/util",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:tracing",
+  ]
+  sources = [
+    "src/lib.rs",
+    "src/zbi.rs",
+  ]
+}
+
+group("host_tests") {
+  testonly = true
+  deps = [ ":zbi_test" ]
 }

@@ -4,27 +4,27 @@
 
 import("//build/rust/rustc_library.gni")
 
-if (is_host) {
-  rustc_library("structured_config") {
-    edition = "2021"
-    name = "assembly_structured_config"
-    sources = [ "src/lib.rs" ]
-    deps = [
-      "//src/lib/assembly/validate_util",
-      "//src/lib/fidl/rust/fidl",
-      "//src/sys/lib/cm_fidl_validator",
-      "//src/sys/lib/cm_rust",
-      "//src/sys/lib/config_encoder",
-      "//src/sys/pkg/lib/fuchsia-pkg",
-      "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:serde_json",
-      "//third_party/rust_crates:thiserror",
-      "//tools/lib/config_value_file",
-    ]
-  }
+assert(is_host, "Assembly libraries are host-only")
 
-  group("host_tests") {
-    testonly = true
-    deps = [ "tests:host_tests" ]
-  }
+rustc_library("structured_config") {
+  edition = "2021"
+  name = "assembly_structured_config"
+  sources = [ "src/lib.rs" ]
+  deps = [
+    "//src/lib/assembly/validate_util",
+    "//src/lib/fidl/rust/fidl",
+    "//src/sys/lib/cm_fidl_validator",
+    "//src/sys/lib/cm_rust",
+    "//src/sys/lib/config_encoder",
+    "//src/sys/pkg/lib/fuchsia-pkg",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:thiserror",
+    "//tools/lib/config_value_file",
+  ]
+}
+
+group("host_tests") {
+  testonly = true
+  deps = [ "tests:host_tests" ]
 }

@@ -5,28 +5,28 @@
 import("//build/host.gni")
 import("//build/rust/rustc_library.gni")
 
-if (is_host) {
-  rustc_library("package_list") {
-    edition = "2021"
-    name = "assembly_package_list"
-    version = "0.1.0"
-    with_unit_tests = true
-    deps = [
-      "//src/lib/fuchsia-url",
-      "//src/sys/pkg/lib/fuchsia-hash",
-      "//src/sys/pkg/lib/fuchsia-pkg",
-      "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:serde_json",
-    ]
-    sources = [
-      "src/lib.rs",
-      "src/package_list.rs",
-    ]
-    test_deps = [ "//third_party/rust_crates:serde_json" ]
-  }
+assert(is_host, "Assembly libraries are host-only")
 
-  group("host_tests") {
-    testonly = true
-    deps = [ ":package_list_test" ]
-  }
+rustc_library("package_list") {
+  edition = "2021"
+  name = "assembly_package_list"
+  version = "0.1.0"
+  with_unit_tests = true
+  deps = [
+    "//src/lib/fuchsia-url",
+    "//src/sys/pkg/lib/fuchsia-hash",
+    "//src/sys/pkg/lib/fuchsia-pkg",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:serde_json",
+  ]
+  sources = [
+    "src/lib.rs",
+    "src/package_list.rs",
+  ]
+  test_deps = [ "//third_party/rust_crates:serde_json" ]
+}
+
+group("host_tests") {
+  testonly = true
+  deps = [ ":package_list_test" ]
 }

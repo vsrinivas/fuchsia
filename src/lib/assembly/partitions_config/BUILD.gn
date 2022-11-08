@@ -5,25 +5,25 @@
 import("//build/host.gni")
 import("//build/rust/rustc_library.gni")
 
-if (is_host) {
-  rustc_library("partitions_config") {
-    edition = "2021"
-    name = "assembly_partitions_config"
-    version = "0.1.0"
-    with_unit_tests = true
-    deps = [
-      "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:serde",
-      "//third_party/rust_crates:serde_json5",
-    ]
-    sources = [
-      "src/lib.rs",
-      "src/partitions_config.rs",
-    ]
-  }
+assert(is_host, "Assembly libraries are host-only")
 
-  group("host_tests") {
-    testonly = true
-    deps = [ ":partitions_config_test" ]
-  }
+rustc_library("partitions_config") {
+  edition = "2021"
+  name = "assembly_partitions_config"
+  version = "0.1.0"
+  with_unit_tests = true
+  deps = [
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json5",
+  ]
+  sources = [
+    "src/lib.rs",
+    "src/partitions_config.rs",
+  ]
+}
+
+group("host_tests") {
+  testonly = true
+  deps = [ ":partitions_config_test" ]
 }

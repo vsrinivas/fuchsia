@@ -5,30 +5,30 @@
 import("//build/host.gni")
 import("//build/rust/rustc_library.gni")
 
-if (is_host) {
-  rustc_library("config_data") {
-    edition = "2021"
-    name = "assembly_config_data"
-    version = "0.1.0"
-    with_unit_tests = true
-    deps = [
-      "//src/lib/assembly/util",
-      "//src/sys/pkg/lib/fuchsia-pkg",
-      "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:camino",
-    ]
-    test_deps = [
-      "//src/sys/pkg/lib/far/rust:fuchsia-archive",
-      "//third_party/rust_crates:tempfile",
-    ]
-    sources = [
-      "src/config_data.rs",
-      "src/lib.rs",
-    ]
-  }
+assert(is_host, "Assembly libraries are host-only")
 
-  group("host_tests") {
-    testonly = true
-    deps = [ ":config_data_test" ]
-  }
+rustc_library("config_data") {
+  edition = "2021"
+  name = "assembly_config_data"
+  version = "0.1.0"
+  with_unit_tests = true
+  deps = [
+    "//src/lib/assembly/util",
+    "//src/sys/pkg/lib/fuchsia-pkg",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:camino",
+  ]
+  test_deps = [
+    "//src/sys/pkg/lib/far/rust:fuchsia-archive",
+    "//third_party/rust_crates:tempfile",
+  ]
+  sources = [
+    "src/config_data.rs",
+    "src/lib.rs",
+  ]
+}
+
+group("host_tests") {
+  testonly = true
+  deps = [ ":config_data_test" ]
 }

@@ -4,19 +4,19 @@
 
 import("//build/rust/rustc_library.gni")
 
-if (is_host) {
-  rustc_library("platform_configuration") {
-    edition = "2021"
-    name = "assembly_platform_configuration"
-    sources = [ "src/lib.rs" ]
-    deps = [
-      "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
-      "//src/developer/ffx/config:lib",
-      "//src/lib/assembly/config_schema",
-      "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:futures",
-      "//third_party/rust_crates:serde_json",
-      "//third_party/rust_crates:static_assertions",
-    ]
-  }
+assert(is_host, "Assembly libraries are host-only")
+
+rustc_library("platform_configuration") {
+  edition = "2021"
+  name = "assembly_platform_configuration"
+  sources = [ "src/lib.rs" ]
+  deps = [
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
+    "//src/developer/ffx/config:lib",
+    "//src/lib/assembly/config_schema",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:static_assertions",
+  ]
 }

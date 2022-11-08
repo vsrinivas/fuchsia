@@ -5,11 +5,13 @@
 import("//build/host.gni")
 import("//build/rust/rustc_library.gni")
 
-if (is_host) {
-  rustc_library("test_keys") {
-    edition = "2021"
-    version = "0.1.0"
-    sources = [ "src/lib.rs" ]
-    inputs = [ "//third_party/android/platform/external/avb/test/data/testkey_atx_psk.pem" ]
-  }
+assert(is_host, "Assembly libraries are host-only")
+
+rustc_library("test_keys") {
+  edition = "2021"
+  version = "0.1.0"
+  sources = [ "src/lib.rs" ]
+  inputs = [
+    "//third_party/android/platform/external/avb/test/data/testkey_atx_psk.pem",
+  ]
 }

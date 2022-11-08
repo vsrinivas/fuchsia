@@ -5,32 +5,32 @@
 import("//build/host.gni")
 import("//build/rust/rustc_library.gni")
 
-if (is_host) {
-  rustc_library("config_schema") {
-    edition = "2021"
-    name = "assembly_config_schema"
-    with_unit_tests = true
-    deps = [
-      "//src/lib/assembly/fvm",
-      "//src/lib/assembly/package_utils",
-      "//src/lib/assembly/util",
-      "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:camino",
-      "//third_party/rust_crates:serde",
-    ]
-    test_deps = [
-      "//third_party/rust_crates:assert_matches",
-      "//third_party/rust_crates:serde_json",
-    ]
-    sources = [
-      "src/board_config.rs",
-      "src/lib.rs",
-      "src/product_config.rs",
-    ]
-  }
+assert(is_host, "Assembly libraries are host-only")
 
-  group("host_tests") {
-    testonly = true
-    deps = [ ":config_schema_test" ]
-  }
+rustc_library("config_schema") {
+  edition = "2021"
+  name = "assembly_config_schema"
+  with_unit_tests = true
+  deps = [
+    "//src/lib/assembly/fvm",
+    "//src/lib/assembly/package_utils",
+    "//src/lib/assembly/util",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:camino",
+    "//third_party/rust_crates:serde",
+  ]
+  test_deps = [
+    "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:serde_json",
+  ]
+  sources = [
+    "src/board_config.rs",
+    "src/lib.rs",
+    "src/product_config.rs",
+  ]
+}
+
+group("host_tests") {
+  testonly = true
+  deps = [ ":config_schema_test" ]
 }

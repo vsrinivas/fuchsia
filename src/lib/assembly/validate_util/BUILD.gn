@@ -5,20 +5,20 @@
 import("//build/host.gni")
 import("//build/rust/rustc_library.gni")
 
-if (is_host) {
-  rustc_library("validate_util") {
-    edition = "2021"
-    name = "assembly_validate_util"
-    with_unit_tests = true
-    deps = [
-      "//src/sys/pkg/lib/far/rust:fuchsia-archive",
-      "//third_party/rust_crates:thiserror",
-    ]
-    sources = [ "src/lib.rs" ]
-  }
+assert(is_host, "Assembly libraries are host-only")
 
-  group("host_tests") {
-    testonly = true
-    deps = [ ":validate_util_test" ]
-  }
+rustc_library("validate_util") {
+  edition = "2021"
+  name = "assembly_validate_util"
+  with_unit_tests = true
+  deps = [
+    "//src/sys/pkg/lib/far/rust:fuchsia-archive",
+    "//third_party/rust_crates:thiserror",
+  ]
+  sources = [ "src/lib.rs" ]
+}
+
+group("host_tests") {
+  testonly = true
+  deps = [ ":validate_util_test" ]
 }

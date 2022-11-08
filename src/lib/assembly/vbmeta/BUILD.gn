@@ -6,165 +6,166 @@ import("//build/host.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 
-if (is_host) {
-  rustc_library("vbmeta") {
-    edition = "2021"
-    version = "0.1.0"
-    with_unit_tests = true
+assert(is_host, "Assembly libraries are host-only")
 
-    deps = [
-      "//src/lib/mundane",
-      "//third_party/modinv",
-      "//third_party/rust_crates:byteorder",
-      "//third_party/rust_crates:hex",
-      "//third_party/rust_crates:num",
-      "//third_party/rust_crates:pem",
-      "//third_party/rust_crates:ring",
-      "//third_party/rust_crates:serde",
-      "//third_party/rust_crates:thiserror",
-      "//third_party/rust_crates:zerocopy",
-    ]
+rustc_library("vbmeta") {
+  edition = "2021"
+  version = "0.1.0"
+  with_unit_tests = true
 
-    test_deps = [
-      "//src/lib/assembly/test_keys",
-      "//third_party/rust_crates:assert_matches",
-    ]
+  deps = [
+    "//src/lib/mundane",
+    "//third_party/modinv",
+    "//third_party/rust_crates:byteorder",
+    "//third_party/rust_crates:hex",
+    "//third_party/rust_crates:num",
+    "//third_party/rust_crates:pem",
+    "//third_party/rust_crates:ring",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:zerocopy",
+  ]
 
-    sources = [
-      "src/descriptor.rs",
-      "src/descriptor/builder.rs",
-      "src/header.rs",
-      "src/key.rs",
-      "src/lib.rs",
-      "src/test.rs",
-      "src/vbmeta.rs",
-    ]
-  }
+  test_deps = [
+    "//src/lib/assembly/test_keys",
+    "//third_party/rust_crates:assert_matches",
+  ]
 
-  test_avb_key = "//third_party/android/platform/external/avb/test/data/testkey_atx_psk.pem"
-  test_avb_atx_metadata =
-      "//third_party/android/platform/external/avb/test/data/atx_metadata.bin"
+  sources = [
+    "src/descriptor.rs",
+    "src/descriptor/builder.rs",
+    "src/header.rs",
+    "src/key.rs",
+    "src/lib.rs",
+    "src/test.rs",
+    "src/vbmeta.rs",
+  ]
+}
 
-  salt = "56ebac2038b220d37b9b27e91c9e7afb3d7b7910c03775812c7a16cc01a8b380"
+test_avb_key =
+    "//third_party/android/platform/external/avb/test/data/testkey_atx_psk.pem"
+test_avb_atx_metadata =
+    "//third_party/android/platform/external/avb/test/data/atx_metadata.bin"
 
-  vbmeta_descriptor = "${target_out_dir}/expected_descriptor.vbmeta"
-  test_image = "${target_out_dir}/test_image"
-  action("expected_descriptor") {
-    testonly = true
-    script = "gen_expected_descriptor.py"
+salt = "56ebac2038b220d37b9b27e91c9e7afb3d7b7910c03775812c7a16cc01a8b380"
 
-    inputs = [ "//third_party/android/platform/external/avb/avbtool.py" ]
-    outputs = [
-      vbmeta_descriptor,
-      test_image,
-    ]
+vbmeta_descriptor = "${target_out_dir}/expected_descriptor.vbmeta"
+test_image = "${target_out_dir}/test_image"
+action("expected_descriptor") {
+  testonly = true
+  script = "gen_expected_descriptor.py"
 
-    args = [
-      "--python_path",
-      rebase_path(python_exe_src, root_build_dir),
-      "--avbtool",
-      rebase_path("//third_party/android/platform/external/avb/avbtool.py",
-                  root_build_dir),
-      "--image",
-      rebase_path(test_image, root_build_dir),
-      "--salt",
-      salt,
-      "--output_vbmeta_image",
-      rebase_path(vbmeta_descriptor, root_build_dir),
-    ]
-  }
+  inputs = [ "//third_party/android/platform/external/avb/avbtool.py" ]
+  outputs = [
+    vbmeta_descriptor,
+    test_image,
+  ]
 
-  action("expected_vbmeta") {
-    testonly = true
-    script = "//third_party/android/platform/external/avb/avbtool.py"
-    deps = [ ":expected_descriptor" ]
+  args = [
+    "--python_path",
+    rebase_path(python_exe_src, root_build_dir),
+    "--avbtool",
+    rebase_path("//third_party/android/platform/external/avb/avbtool.py",
+                root_build_dir),
+    "--image",
+    rebase_path(test_image, root_build_dir),
+    "--salt",
+    salt,
+    "--output_vbmeta_image",
+    rebase_path(vbmeta_descriptor, root_build_dir),
+  ]
+}
 
-    output_file = target_name + ".vbmeta"
-    output_file = "$target_out_dir/$output_file"
-    outputs = [ output_file ]
+action("expected_vbmeta") {
+  testonly = true
+  script = "//third_party/android/platform/external/avb/avbtool.py"
+  deps = [ ":expected_descriptor" ]
 
-    inputs = [
-      test_avb_key,
-      test_avb_atx_metadata,
-      vbmeta_descriptor,
-    ]
+  output_file = target_name + ".vbmeta"
+  output_file = "$target_out_dir/$output_file"
+  outputs = [ output_file ]
 
-    args = [
-      "make_vbmeta_image",
-      "--output",  # output of VBMETA image
-      rebase_path(outputs[0], root_build_dir),
-      "--key",  # a key for signing
-      rebase_path(test_avb_key, root_build_dir),
-      "--algorithm",  # an algorithm for signing
-      "SHA512_RSA4096",
-      "--public_key_metadata",  # avb metadata
-      rebase_path(test_avb_atx_metadata, root_build_dir),
-      "--include_descriptors_from_image",
-      rebase_path(vbmeta_descriptor, root_build_dir),
-    ]
-  }
+  inputs = [
+    test_avb_key,
+    test_avb_atx_metadata,
+    vbmeta_descriptor,
+  ]
 
-  # Rust tooling needs the files passed through ENV to be relative to the
-  # directory of the test source file.
-  source_dir = "//" + rebase_path("tests", "//")
-  avb_key_path = rebase_path(test_avb_key, source_dir)
-  avb_metadata_path = rebase_path(test_avb_atx_metadata, source_dir)
-  test_image_path = rebase_path(test_image, source_dir)
+  args = [
+    "make_vbmeta_image",
+    "--output",  # output of VBMETA image
+    rebase_path(outputs[0], root_build_dir),
+    "--key",  # a key for signing
+    rebase_path(test_avb_key, root_build_dir),
+    "--algorithm",  # an algorithm for signing
+    "SHA512_RSA4096",
+    "--public_key_metadata",  # avb metadata
+    rebase_path(test_avb_atx_metadata, root_build_dir),
+    "--include_descriptors_from_image",
+    rebase_path(vbmeta_descriptor, root_build_dir),
+  ]
+}
 
-  avb_outputs = get_target_outputs(":expected_vbmeta")
-  expected_vbmeta_path = avb_outputs[0]
-  expected_vbmeta_path_source_relative =
-      rebase_path(expected_vbmeta_path, source_dir)
+# Rust tooling needs the files passed through ENV to be relative to the
+# directory of the test source file.
+source_dir = "//" + rebase_path("tests", "//")
+avb_key_path = rebase_path(test_avb_key, source_dir)
+avb_metadata_path = rebase_path(test_avb_atx_metadata, source_dir)
+test_image_path = rebase_path(test_image, source_dir)
 
-  rustc_test("integration_test") {
-    edition = "2021"
-    source_root = "tests/integration_test.rs"
-    sources = [ "tests/integration_test.rs" ]
-    deps = [
-      ":vbmeta",
-      "//third_party/rust_crates:hex",
-    ]
-    non_rust_deps = [
-      ":expected_descriptor",
-      ":expected_vbmeta",
-    ]
-    rustenv = [
-      "AVB_KEY=$avb_key_path",
-      "AVB_METADATA=$avb_metadata_path",
-      "EXPECTED_VBMETA=$expected_vbmeta_path_source_relative",
-      "SALT=" + salt,
-      "IMAGE=$test_image_path",
-    ]
+avb_outputs = get_target_outputs(":expected_vbmeta")
+expected_vbmeta_path = avb_outputs[0]
+expected_vbmeta_path_source_relative =
+    rebase_path(expected_vbmeta_path, source_dir)
 
-    # TODO(fxbug.dev/92670): source file references output-dir in env var,
-    # so the remote build won't work with a renamed output-dir.
-    configs += [ "//build/config/rust:output_dir_sensitive" ]
-    inputs = [
-      test_avb_key,
-      test_avb_atx_metadata,
-      test_image,
-      expected_vbmeta_path,
-    ]
-  }
+rustc_test("integration_test") {
+  edition = "2021"
+  source_root = "tests/integration_test.rs"
+  sources = [ "tests/integration_test.rs" ]
+  deps = [
+    ":vbmeta",
+    "//third_party/rust_crates:hex",
+  ]
+  non_rust_deps = [
+    ":expected_descriptor",
+    ":expected_vbmeta",
+  ]
+  rustenv = [
+    "AVB_KEY=$avb_key_path",
+    "AVB_METADATA=$avb_metadata_path",
+    "EXPECTED_VBMETA=$expected_vbmeta_path_source_relative",
+    "SALT=" + salt,
+    "IMAGE=$test_image_path",
+  ]
 
-  group("host_tests") {
-    testonly = true
-    deps = [
-      ":integration_test",
-      ":vbmeta_test",
-    ]
-  }
+  # TODO(fxbug.dev/92670): source file references output-dir in env var,
+  # so the remote build won't work with a renamed output-dir.
+  configs += [ "//build/config/rust:output_dir_sensitive" ]
+  inputs = [
+    test_avb_key,
+    test_avb_atx_metadata,
+    test_image,
+    expected_vbmeta_path,
+  ]
+}
 
-  rustc_binary("bin") {
-    name = "vbmeta"
-    edition = "2021"
+group("host_tests") {
+  testonly = true
+  deps = [
+    ":integration_test",
+    ":vbmeta_test",
+  ]
+}
 
-    sources = [ "src/main.rs" ]
+rustc_binary("bin") {
+  name = "vbmeta"
+  edition = "2021"
 
-    deps = [
-      ":vbmeta",
-      "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:argh",
-    ]
-  }
+  sources = [ "src/main.rs" ]
+
+  deps = [
+    ":vbmeta",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+  ]
 }

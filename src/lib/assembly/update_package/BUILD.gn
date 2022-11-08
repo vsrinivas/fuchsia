@@ -5,40 +5,39 @@
 import("//build/host.gni")
 import("//build/rust/rustc_library.gni")
 
-if (is_host) {
-  rustc_library("update_package") {
-    edition = "2021"
-    name = "assembly_update_package"
-    version = "0.1.0"
-    with_unit_tests = true
-    deps = [
-      "//src/lib/assembly/assembly_manifest",
-      "//src/lib/assembly/blobfs",
-      "//src/lib/assembly/partitions_config",
-      "//src/lib/assembly/tool",
-      "//src/lib/assembly/update_packages_manifest",
-      "//src/lib/assembly/util",
-      "//src/lib/fuchsia-url",
-      "//src/sys/pkg/lib/epoch",
-      "//src/sys/pkg/lib/fuchsia-pkg",
-      "//src/sys/pkg/lib/update-package",
-      "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:serde_json",
-    ]
-    sources = [
-      "src/lib.rs",
-      "src/update_package.rs",
-    ]
-    test_deps = [
-      "//src/lib/fuchsia-url",
-      "//src/sys/pkg/lib/far/rust:fuchsia-archive",
-      "//src/sys/pkg/lib/fuchsia-hash",
-      "//third_party/rust_crates:tempfile",
-    ]
-  }
+assert(is_host, "Assembly libraries are host-only")
+rustc_library("update_package") {
+  edition = "2021"
+  name = "assembly_update_package"
+  version = "0.1.0"
+  with_unit_tests = true
+  deps = [
+    "//src/lib/assembly/assembly_manifest",
+    "//src/lib/assembly/blobfs",
+    "//src/lib/assembly/partitions_config",
+    "//src/lib/assembly/tool",
+    "//src/lib/assembly/update_packages_manifest",
+    "//src/lib/assembly/util",
+    "//src/lib/fuchsia-url",
+    "//src/sys/pkg/lib/epoch",
+    "//src/sys/pkg/lib/fuchsia-pkg",
+    "//src/sys/pkg/lib/update-package",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:serde_json",
+  ]
+  sources = [
+    "src/lib.rs",
+    "src/update_package.rs",
+  ]
+  test_deps = [
+    "//src/lib/fuchsia-url",
+    "//src/sys/pkg/lib/far/rust:fuchsia-archive",
+    "//src/sys/pkg/lib/fuchsia-hash",
+    "//third_party/rust_crates:tempfile",
+  ]
+}
 
-  group("host_tests") {
-    testonly = true
-    deps = [ ":update_package_test" ]
-  }
+group("host_tests") {
+  testonly = true
+  deps = [ ":update_package_test" ]
 }
