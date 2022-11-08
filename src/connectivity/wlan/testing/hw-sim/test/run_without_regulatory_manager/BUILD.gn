@@ -12,7 +12,6 @@ rustc_test("run_without_regulatory_manager") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:pin-utils",
   ]
 

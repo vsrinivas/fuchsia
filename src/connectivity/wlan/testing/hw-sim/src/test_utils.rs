@@ -2,13 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::{
-        start_scan_handler,
-        wlancfg_helper::{
-            init_client_controller, start_ap_and_wait_for_confirmation, NetworkConfigBuilder,
-        },
-        ApAdvertisement, EventHandlerBuilder,
-    },
+    crate::wlancfg_helper::{start_ap_and_wait_for_confirmation, NetworkConfigBuilder},
     fidl::endpoints::create_proxy,
     fidl::prelude::*,
     fidl_fuchsia_io as fio, fidl_fuchsia_wlan_policy as fidl_policy,
@@ -17,10 +11,7 @@ use {
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon::{self as zx, prelude::*},
     futures::{channel::oneshot, FutureExt, StreamExt},
-    ieee80211::Ssid,
-    pin_utils::pin_mut,
     std::{
-        convert::TryFrom,
         fs::File,
         future::Future,
         marker::Unpin,
@@ -256,57 +247,62 @@ impl RetryWithBackoff {
     }
 }
 
-pub type ScanResult = (Ssid, [u8; 6], bool, i8);
-
-pub async fn scan_for_networks<'a>(
-    phy: &'a wlantap::WlantapPhyProxy,
-    ap_advertisements: Vec<impl ApAdvertisement>,
-    helper: &mut TestHelper,
-) -> Vec<ScanResult> {
-    // Create a client controller.
-    let (client_controller, _update_stream) = init_client_controller().await;
-    let scan_event = EventHandlerBuilder::new()
-        .on_start_scan(start_scan_handler(phy, Ok(ap_advertisements)))
-        .build();
-    // Request a scan from the policy layer.
-    let fut = async move {
-        let (scan_proxy, server_end) = create_proxy().unwrap();
-        client_controller.scan_for_networks(server_end).expect("requesting scan");
-        let mut scan_results = Vec::new();
-        loop {
-            let result = scan_proxy.get_next().await.expect("getting scan results");
-            let mut new_scan_results = result.expect("scanning failed");
-            if new_scan_results.is_empty() {
-                break;
-            }
-            scan_results.append(&mut new_scan_results)
-        }
-        return scan_results;
-    };
-    pin_mut!(fut);
-    // Run the scan routine for up to 70s; WLAN policy should have a timeout before this.
-    let scanned_networks = helper
-        .run_until_complete_or_timeout(70.seconds(), "receive a scan response", scan_event, fut)
-        .await;
-
-    let mut scan_results: Vec<ScanResult> = Vec::new();
-    for result in scanned_networks {
-        let id = result.id.expect("empty network ID");
-        let ssid = Ssid::try_from(id.ssid).unwrap();
-        let compatibility = result.compatibility.expect("empty compatibility");
-        for entry in result.entries.expect("empty scan entries") {
-            let bssid = entry.bssid.expect("empty BSSID");
-            let rssi = entry.rssi.expect("empty RSSI");
-            scan_results.push((
-                ssid.clone(),
-                bssid,
-                compatibility == fidl_policy::Compatibility::Supported,
-                rssi,
-            ));
+/// TODO(fxbug.dev/83882): This function strips the `timestamp_nanos` field
+/// from each `fidl_fuchsia_wlan_policy::ScanResult` entry since the `timestamp_nanos`
+/// field is undefined.
+pub fn strip_timestamp_nanos_from_scan_results(
+    mut scan_result_list: Vec<fidl_fuchsia_wlan_policy::ScanResult>,
+) -> Vec<fidl_fuchsia_wlan_policy::ScanResult> {
+    for scan_result in &mut scan_result_list {
+        scan_result
+            .entries
+            .as_mut()
+            .unwrap()
+            .sort_by(|a, b| a.bssid.as_ref().unwrap().cmp(&b.bssid.as_ref().unwrap()));
+        for entry in scan_result.entries.as_mut().unwrap() {
+            // TODO(fxbug.dev/83882): Strip timestamp_nanos since it's not implemented.
+            entry.timestamp_nanos.take();
         }
     }
-    scan_results
+    scan_result_list
 }
+
+/// Sort a list of scan results by the `id` and `bssid` fields.
+///
+/// This function will panic if either of the `id` or `entries` fields
+/// are `None`.
+pub fn sort_policy_scan_result_list(
+    mut scan_result_list: Vec<fidl_fuchsia_wlan_policy::ScanResult>,
+) -> Vec<fidl_fuchsia_wlan_policy::ScanResult> {
+    scan_result_list
+        .sort_by(|a, b| a.id.as_ref().expect("empty id").cmp(&b.id.as_ref().expect("empty id")));
+    scan_result_list
+}
+
+/// Returns a map with the scan results returned by the policy layer. The map is
+/// keyed by the `id` field of each `fidl_fuchsia_policy::ScanResult`.
+///
+/// This function will panic if the `id` field is ever `None` or if policy returns
+/// the same `id` twice. Both of these are invariants we expect the policy layer
+/// to uphold.
+pub async fn policy_scan_for_networks<'a>(
+    client_controller: fidl_policy::ClientControllerProxy,
+) -> Vec<fidl_policy::ScanResult> {
+    // Request a scan from the policy layer.
+    let (scan_proxy, server_end) = create_proxy().unwrap();
+    client_controller.scan_for_networks(server_end).expect("requesting scan");
+    let mut scan_result_list = Vec::new();
+    loop {
+        let proxy_result = scan_proxy.get_next().await.expect("getting scan results");
+        let next_scan_result_list = proxy_result.expect("scanning failed");
+        if next_scan_result_list.is_empty() {
+            break;
+        }
+        scan_result_list.extend(next_scan_result_list);
+    }
+    sort_policy_scan_result_list(strip_timestamp_nanos_from_scan_results(scan_result_list))
+}
+
 /// This function returns `Ok(r)`, where `r` is the return value from `main_future`,
 /// if `main_future` completes before the `timeout` duration. Otherwise, `Err(())` is returned.
 pub async fn timeout_after<R, F: Future<Output = R> + Unpin>(

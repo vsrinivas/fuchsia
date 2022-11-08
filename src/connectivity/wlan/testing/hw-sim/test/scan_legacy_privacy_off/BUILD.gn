@@ -7,11 +7,13 @@ import("//build/rust/rustc_test.gni")
 rustc_test("scan_legacy_privacy_off") {
   edition = "2021"
   deps = [
+    "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy_rust",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/lib/ieee80211",
     "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:pin-utils",
   ]
 
   sources = [ "src/lib.rs" ]

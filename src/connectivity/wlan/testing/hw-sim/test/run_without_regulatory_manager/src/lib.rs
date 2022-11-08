@@ -6,7 +6,6 @@ use {
     fidl::endpoints::{create_endpoints, create_proxy},
     fidl_fuchsia_wlan_policy as fidl_policy,
     fuchsia_component::client::connect_to_protocol,
-    fuchsia_zircon::DurationNum,
     pin_utils::pin_mut,
     wlan_hw_sim::*,
 };
@@ -48,7 +47,12 @@ async fn run_without_regulatory_manager() {
     };
     pin_mut!(fut);
     helper
-        .run_until_complete_or_timeout(70.seconds(), "receive a scan response", scan_event, fut)
+        .run_until_complete_or_timeout(
+            *SCAN_RESPONSE_TEST_TIMEOUT,
+            "receive a scan response",
+            scan_event,
+            fut,
+        )
         .await;
 
     helper.stop().await;

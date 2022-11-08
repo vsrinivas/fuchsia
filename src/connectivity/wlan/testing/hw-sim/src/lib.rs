@@ -58,11 +58,16 @@ lazy_static! {
 pub const ETH_DST_MAC: [u8; 6] = [0x65, 0x74, 0x68, 0x64, 0x73, 0x74];
 pub const WLANCFG_DEFAULT_AP_CHANNEL: Channel = Channel { primary: 11, cbw: Cbw::Cbw20 };
 
-// TODO(fxbug.dev/108667): This sleep was introduced to preserve the old timing behavior
-// of scanning when hw-sim depending on the SoftMAC driver iterating through all of the
-// channels.
 lazy_static! {
+    // TODO(fxbug.dev/108667): This sleep was introduced to preserve the old timing behavior
+    // of scanning when hw-sim depending on the SoftMAC driver iterating through all of the
+    // channels.
     pub static ref ARTIFICIAL_SCAN_SLEEP: fuchsia_zircon::Duration = 2.seconds();
+
+    // Once a client interface is available for scanning, it takes up to around 30s for a scan
+    // to complete (see fxbug.dev/109900). Allow at least double that amount of time to reduce
+    // flakiness and longer than the timeout WLAN policy should have.
+    pub static ref SCAN_RESPONSE_TEST_TIMEOUT: fuchsia_zircon::Duration = 70.seconds();
 }
 
 pub fn default_wlantap_config_client() -> WlantapPhyConfig {
@@ -961,11 +966,13 @@ pub async fn loop_until_iface_is_found(helper: &mut test_utils::TestHelper) {
             .on_start_scan(start_scan_handler(&phy, Ok(Vec::<Beacon>::new())))
             .build();
 
-        // Once a client interface is available for scanning, it takes up to around 30s for a scan
-        // to complete (see fxb/109900). Allow at least double that amount of time to reduce
-        // flakiness and longer than the timeout WLAN policy should have.
         match helper
-            .run_until_complete_or_timeout(70.seconds(), "receive a scan response", scan_event, fut)
+            .run_until_complete_or_timeout(
+                *SCAN_RESPONSE_TEST_TIMEOUT,
+                "receive a scan response",
+                scan_event,
+                fut,
+            )
             .await
         {
             Err(_) => {
