@@ -4,7 +4,7 @@
 
 //! TCP sequence numbers and operations on them.
 
-use core::{convert::TryFrom as _, fmt, num::TryFromIntError, ops};
+use core::{convert::TryFrom as _, num::TryFromIntError, ops};
 
 use explicit::ResultExt as _;
 
@@ -18,29 +18,17 @@ use explicit::ResultExt as _;
 ///   computer modulo arithmetic, so great care should be taken in programming
 ///   the comparison of such values.
 ///
-/// For any sequence number, there are 2**32 numbers after it and 2**32 - 1
+/// For any sequence number, there are 2**31 numbers after it and 2**31 - 1
 /// numbers before it.
-// TODO(https://github.com/rust-lang/rust/issues/87840): i32 is used here
-// instead of the more natural u32 to minimize the usage of `as` casts. Because
-// a signed integer should be used to represent the difference between sequence
-// numbers, without `mixed_integer_ops`, using u32 will require `as` casts when
-// implementing `Sub` or `Add` for `SeqNum`.
-#[derive(PartialEq, Eq, Clone, Copy)]
-pub(crate) struct SeqNum(i32);
-
-impl fmt::Debug for SeqNum {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let Self(seq) = self;
-        f.debug_tuple("SeqNum").field(&(*seq as u32)).finish()
-    }
-}
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub(crate) struct SeqNum(u32);
 
 impl ops::Add<i32> for SeqNum {
     type Output = SeqNum;
 
     fn add(self, rhs: i32) -> Self::Output {
         let Self(lhs) = self;
-        Self(lhs.wrapping_add(rhs))
+        Self(lhs.wrapping_add_signed(rhs))
     }
 }
 
@@ -49,7 +37,7 @@ impl ops::Sub<i32> for SeqNum {
 
     fn sub(self, rhs: i32) -> Self::Output {
         let Self(lhs) = self;
-        Self(lhs.wrapping_sub(rhs))
+        Self(lhs.wrapping_add_signed(rhs.wrapping_neg()))
     }
 }
 
@@ -57,18 +45,8 @@ impl ops::Add<u32> for SeqNum {
     type Output = SeqNum;
 
     fn add(self, rhs: u32) -> Self::Output {
-        // Proof that the following `as` coercion is sound:
-        // Rust uses 2's complement for signed integers [1], so a signed 32 bit
-        // integer (rhs as i32) with bit pattern b_0....b_31 has value
-        //     -b_0 * 2^31 + b_1 * 2^30 + .. + b_i * 2^(31-i) + b_0
-        // Compared to its unsigned interpretation (rhs):
-        //     b_0 * 2^31 + b_1 * 2^30 + .. + b_i * 2^(31-i) + b_0
-        // The difference is 2 * b_0 * 2^31 = b_0 * 2^32. Because the sequence
-        // number space wraps around at 2^32, the difference between the two
-        // interpretations is:
-        //     (b_0 * 2^32) mod 2^32 == 0.
-        // [1]: https://doc.rust-lang.org/reference/types/numeric.html
-        self + (rhs as i32)
+        let Self(lhs) = self;
+        Self(lhs.wrapping_add(rhs))
     }
 }
 
@@ -88,12 +66,23 @@ impl ops::Add<usize> for SeqNum {
 }
 
 impl ops::Sub for SeqNum {
+    // `i32` is more intuitive than `u32`, since subtraction may yield negative
+    // values.
     type Output = i32;
 
     fn sub(self, rhs: Self) -> Self::Output {
         let Self(lhs) = self;
         let Self(rhs) = rhs;
-        lhs.wrapping_sub(rhs)
+        // The following `as` coercion is sound because:
+        // Rust uses 2's complement for signed integers [1], meaning when cast
+        // to an `i32, an `u32` >= 1<<32 becomes negative and an `u32` < 1<<32
+        // becomes positive. `wrapping_sub` ensures that if `rhs` is a `SeqNum`
+        // after `lhs`, the result will wrap into the `u32` space > 1<<32.
+        // Recall that `SeqNums` are only valid for a `WindowSize` < 1<<31; this
+        // prevents the difference of `wrapping_sub` from being so large that it
+        // wraps into the `u32` space < 1<<32.
+        // [1]: https://doc.rust-lang.org/reference/types/numeric.html
+        lhs.wrapping_sub(rhs) as i32
     }
 }
 
@@ -106,13 +95,13 @@ impl From<u32> for SeqNum {
 impl Into<u32> for SeqNum {
     fn into(self) -> u32 {
         let Self(x) = self;
-        x as u32
+        x
     }
 }
 
 impl SeqNum {
     pub(crate) const fn new(x: u32) -> Self {
-        Self(x as i32)
+        Self(x)
     }
 }
 
