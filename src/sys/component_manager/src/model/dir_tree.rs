@@ -27,11 +27,11 @@ impl DirTree {
     pub fn build_from_uses(
         routing_factory: impl Fn(WeakComponentInstance, UseDecl) -> RoutingFn,
         component: WeakComponentInstance,
-        decl: ComponentDecl,
+        decl: &ComponentDecl,
     ) -> Self {
         let mut tree = DirTree { directory_nodes: HashMap::new(), broker_nodes: HashMap::new() };
-        for use_ in decl.uses {
-            tree.add_use_capability(&routing_factory, component.clone(), &use_);
+        for use_ in &decl.uses {
+            tree.add_use_capability(&routing_factory, component.clone(), use_);
         }
         tree
     }
@@ -42,11 +42,11 @@ impl DirTree {
     pub fn build_from_exposes(
         routing_factory: impl Fn(WeakComponentInstance, ExposeDecl) -> RoutingFn,
         component: WeakComponentInstance,
-        decl: ComponentDecl,
+        decl: &ComponentDecl,
     ) -> Self {
         let mut tree = DirTree { directory_nodes: HashMap::new(), broker_nodes: HashMap::new() };
-        for expose in decl.exposes {
-            tree.add_expose_capability(&routing_factory, component.clone(), &expose);
+        for expose in &decl.exposes {
+            tree.add_expose_capability(&routing_factory, component.clone(), expose);
         }
         tree
     }
@@ -182,7 +182,7 @@ mod tests {
             Weak::new(),
             "test://root".to_string(),
         );
-        let tree = DirTree::build_from_uses(routing_factory, root.as_weak(), decl.clone());
+        let tree = DirTree::build_from_uses(routing_factory, root.as_weak(), &decl);
 
         // Convert the tree to a directory.
         let mut in_dir = pfs::simple();
@@ -254,7 +254,7 @@ mod tests {
             Weak::new(),
             "test://root".to_string(),
         );
-        let tree = DirTree::build_from_uses(routing_factory, root.as_weak(), decl.clone());
+        let tree = DirTree::build_from_uses(routing_factory, root.as_weak(), &decl);
 
         // Convert the tree to a directory.
         let mut in_dir = pfs::simple();
@@ -332,7 +332,7 @@ mod tests {
             Weak::new(),
             "test://root".to_string(),
         );
-        let tree = DirTree::build_from_exposes(routing_factory, root.as_weak(), decl.clone());
+        let tree = DirTree::build_from_exposes(routing_factory, root.as_weak(), &decl);
 
         // Convert the tree to a directory.
         let mut expose_dir = pfs::simple();
