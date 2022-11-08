@@ -18,7 +18,7 @@ use netemul::RealmUdpSocket as _;
 use netstack_testing_common::{
     devices::create_tun_device,
     interfaces,
-    realms::{Netstack, Netstack2, NetstackVersion, TestRealmExt as _, TestSandboxExt as _},
+    realms::{Netstack, NetstackVersion, TestRealmExt as _, TestSandboxExt as _},
     ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
 };
 use netstack_testing_macros::variants_test;
@@ -27,11 +27,7 @@ use std::convert::TryInto as _;
 use test_case::test_case;
 
 #[variants_test]
-async fn address_deprecation<E: netemul::Endpoint>(name: &str) {
-    // TODO(https://fxbug.dev/105630, https://fxbug.dev/106959): Test against
-    // Netstack3 once adding deprecated addresses and updating address lifetimes
-    // are supported.
-    type N = Netstack2;
+async fn address_deprecation<N: Netstack, E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
     let device = sandbox.create_endpoint::<E, _>(name).await.expect("create endpoint");
@@ -1749,10 +1745,7 @@ async fn control_owns_interface_lifetime<N: Netstack>(name: &str, detach: bool) 
 }
 
 #[variants_test]
-async fn get_set_forwarding<E: netemul::Endpoint>(name: &str) {
-    // TODO(https://fxbug.dev/76987): Test against Netstack3 once get/set
-    // forwarding is supported.
-    type N = Netstack2;
+async fn get_set_forwarding<N: Netstack, E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create netstack realm");
     let net = sandbox.create_network("net").await.expect("create network");

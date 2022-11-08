@@ -1,0 +1,26 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    actions: [
+        {
+            type: "expect_pass",
+            matchers: [
+                "*",
+            ],
+        },
+        {
+            type: "expect_failure",
+            matchers: [
+                // TODO(https://fxbug.dev/105630, https://fxbug.dev/106959): Should pass
+                // against Netstack3 once adding deprecated addresses and updating
+                // address lifetimes are supported.
+                "address_deprecation_ns3_*",
+
+                // TODO(https://fxbug.dev/76987): Should pass against Netstack3 once
+                // get/set forwarding is supported.
+                "get_set_forwarding_ns3_*",
+            ],
+        },
+    ],
+}

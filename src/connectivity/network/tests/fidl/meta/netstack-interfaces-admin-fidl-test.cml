@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 {
     include: [
+        "//src/connectivity/network/testing/expectation/meta/client.shard.cml",
         "//src/connectivity/network/tests/integration/common/client.shard.cml",
-        "//src/sys/test_runners/rust/default.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {
+        runner: "rust_test_runner",
         binary: "bin/netstack_interfaces_admin_fidl_test",
     },
     use: [
