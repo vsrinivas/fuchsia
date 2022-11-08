@@ -67,11 +67,13 @@ pub fn create_log_sink_requested_event(
     }
 }
 
-impl TestHarness {
-    pub fn new() -> Self {
+impl Default for TestHarness {
+    fn default() -> Self {
         Self::make(false)
     }
+}
 
+impl TestHarness {
     /// Create a new test harness which will keep its LogSinks alive as long as it itself is,
     /// useful for testing inspect hierarchies for attribution.
     // TODO(fxbug.dev/53932) this will be made unnecessary by historical retention of component stats
@@ -104,7 +106,7 @@ impl TestHarness {
     }
 
     pub fn create_default_reader(&self, identity: ComponentIdentity) -> Arc<dyn LogReader> {
-        DefaultLogReader::new(self.log_manager.clone(), Arc::new(identity))
+        Arc::new(DefaultLogReader::new(self.log_manager.clone(), Arc::new(identity)))
     }
 
     pub fn create_event_stream_reader(
@@ -112,7 +114,7 @@ impl TestHarness {
         target_moniker: impl Into<String>,
         target_url: impl Into<String>,
     ) -> Arc<dyn LogReader> {
-        EventStreamLogReader::new(self.log_manager.clone(), target_moniker, target_url)
+        Arc::new(EventStreamLogReader::new(self.log_manager.clone(), target_moniker, target_url))
     }
 
     /// Check to make sure all `TestStream`s have been dropped. This ensures that we repeatedly test
@@ -151,16 +153,16 @@ impl TestHarness {
         let mut lm2 = copy_log_message(&lm1);
         let mut lm3 = copy_log_message(&lm1);
         let mut stream = self.create_stream(Arc::new(ComponentIdentity::unknown())).await;
-        stream.write_packet(&mut p);
+        stream.write_packet(&p);
 
         p.metadata.severity = LogLevelFilter::Info.into_primitive().into();
         lm2.severity = LogLevelFilter::Info.into_primitive().into();
         lm3.severity = LogLevelFilter::Info.into_primitive().into();
-        stream.write_packet(&mut p);
+        stream.write_packet(&p);
 
         p.metadata.pid = 2;
         lm3.pid = 2;
-        stream.write_packet(&mut p);
+        stream.write_packet(&p);
         drop(stream);
         self.check_pending_streams();
         if test_dump_logs {
@@ -176,7 +178,7 @@ impl TestHarness {
         &mut self,
         identity: Arc<ComponentIdentity>,
     ) -> TestStream<LogPacketWriter> {
-        self.make_stream(DefaultLogReader::new(self.log_manager.clone(), identity)).await
+        self.make_stream(Arc::new(DefaultLogReader::new(self.log_manager.clone(), identity))).await
     }
 
     /// Create a [`TestStream`] which should be dropped before calling `filter_test` or
@@ -194,7 +196,7 @@ impl TestHarness {
         &mut self,
         identity: Arc<ComponentIdentity>,
     ) -> TestStream<StructuredMessageWriter> {
-        self.make_stream(DefaultLogReader::new(self.log_manager.clone(), identity)).await
+        self.make_stream(Arc::new(DefaultLogReader::new(self.log_manager.clone(), identity))).await
     }
 
     async fn make_stream<E, P>(&mut self, log_reader: Arc<dyn LogReader>) -> TestStream<E>
@@ -278,11 +280,8 @@ pub struct DefaultLogReader {
 }
 
 impl DefaultLogReader {
-    fn new(
-        log_manager: Arc<LogsRepository>,
-        identity: Arc<ComponentIdentity>,
-    ) -> Arc<dyn LogReader> {
-        Arc::new(Self { log_manager, identity })
+    fn new(log_manager: Arc<LogsRepository>, identity: Arc<ComponentIdentity>) -> DefaultLogReader {
+        Self { log_manager, identity }
     }
 }
 
@@ -310,12 +309,8 @@ impl EventStreamLogReader {
         log_manager: Arc<LogsRepository>,
         target_moniker: impl Into<String>,
         target_url: impl Into<String>,
-    ) -> Arc<dyn LogReader> {
-        Arc::new(Self {
-            log_manager,
-            target_moniker: target_moniker.into(),
-            target_url: target_url.into(),
-        })
+    ) -> EventStreamLogReader {
+        Self { log_manager, target_moniker: target_moniker.into(), target_url: target_url.into() }
     }
 
     async fn handle_event_stream(
@@ -423,7 +418,7 @@ pub fn setup_default_packet() -> fx_log_packet_t {
     p.data[0] = 5;
     p.fill_data(1..6, 65);
     p.fill_data(7..12, 66);
-    return p;
+    p
 }
 
 pub fn copy_log_message(log_message: &LogMessage) -> LogMessage {
@@ -459,11 +454,13 @@ impl crate::logs::debuglog::DebugLog for TestDebugLog {
     }
 }
 
-impl TestDebugLog {
-    pub fn new() -> Self {
+impl Default for TestDebugLog {
+    fn default() -> Self {
         TestDebugLog { read_responses: async_lock::Mutex::new(VecDeque::new()) }
     }
+}
 
+impl TestDebugLog {
     pub async fn enqueue_read(&self, response: zx::sys::zx_log_record_t) {
         self.read_responses.lock().await.push_back(Ok(response));
     }
@@ -509,7 +506,7 @@ pub struct LogSinkHelper {
 
 impl LogSinkHelper {
     pub fn new(directory: &fio::DirectoryProxy) -> Self {
-        let log_sink = connect_to_protocol_at_dir_svc::<LogSinkMarker>(&directory)
+        let log_sink = connect_to_protocol_at_dir_svc::<LogSinkMarker>(directory)
             .expect("cannot connect to log sink");
         let mut s = Self { log_sink: Some(log_sink), sock: None };
         s.sock = Some(s.connect());
@@ -546,7 +543,7 @@ impl LogSinkHelper {
         p.data[0] = 0;
         p.add_data(1, msg.as_bytes());
 
-        sock.write(&mut p.as_bytes()).unwrap();
+        sock.write(p.as_bytes()).unwrap();
     }
 
     pub fn kill_log_sink(&mut self) {
@@ -569,7 +566,7 @@ impl LogProcessor for Listener {
 }
 
 pub fn start_listener(directory: &fio::DirectoryProxy) -> mpsc::UnboundedReceiver<String> {
-    let log_proxy = connect_to_protocol_at_dir_svc::<LogMarker>(&directory)
+    let log_proxy = connect_to_protocol_at_dir_svc::<LogMarker>(directory)
         .expect("cannot connect to log proxy");
     let (send_logs, recv_logs) = mpsc::unbounded();
     let mut options = LogFilterOptions {

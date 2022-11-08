@@ -183,9 +183,9 @@ mod test {
             selectors::parse_selector::<VerboseError>("irrelevant:path/to:data").unwrap();
 
         let (rewritten_1_i, rewriter_1_i) =
-            rewriter.rewrite_selectors(vec![legacy_selector1.clone(), irrelevant_selector.clone()]);
+            rewriter.rewrite_selectors(vec![legacy_selector1.clone(), irrelevant_selector]);
         let (rewritten_2_1, rewriter_2_1) =
-            rewriter.rewrite_selectors(vec![legacy_selector2.clone(), legacy_selector1.clone()]);
+            rewriter.rewrite_selectors(vec![legacy_selector2, legacy_selector1]);
         let rewriter_1_i = rewriter_1_i.unwrap();
         let rewriter_2_1 = rewriter_2_1.unwrap();
 

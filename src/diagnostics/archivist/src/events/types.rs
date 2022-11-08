@@ -47,7 +47,7 @@ impl From<Vec<String>> for Moniker {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct UniqueKey(Vec<String>);
 
-impl<'a> Deref for UniqueKey {
+impl Deref for UniqueKey {
     type Target = Vec<String>;
     fn deref(&self) -> &Self::Target {
         &self.0

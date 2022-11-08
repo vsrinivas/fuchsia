@@ -158,7 +158,7 @@ mod tests {
     fn parse_missing_pipeline() {
         let dir = tempfile::tempdir().unwrap();
         let config_path = dir.path().join("config");
-        fs::create_dir(&config_path).unwrap();
+        fs::create_dir(config_path).unwrap();
 
         let config = PipelineConfig::from_directory("config/missing", EmptyBehavior::Disable);
 

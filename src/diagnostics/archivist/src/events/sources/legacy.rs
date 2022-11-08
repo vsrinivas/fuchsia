@@ -118,26 +118,26 @@ mod tests {
         instance_id: String,
     }
 
-    impl Into<SourceIdentity> for ClonableSourceIdentity {
-        fn into(self) -> SourceIdentity {
+    impl From<ClonableSourceIdentity> for SourceIdentity {
+        fn from(other: ClonableSourceIdentity) -> Self {
             SourceIdentity {
-                realm_path: Some(self.realm_path),
+                realm_path: Some(other.realm_path),
                 component_url: Some(MOCK_URL.clone()),
-                component_name: Some(self.component_name),
-                instance_id: Some(self.instance_id),
+                component_name: Some(other.component_name),
+                instance_id: Some(other.instance_id),
                 ..SourceIdentity::EMPTY
             }
         }
     }
 
-    impl Into<ComponentIdentity> for ClonableSourceIdentity {
-        fn into(self) -> ComponentIdentity {
-            let mut moniker = self.realm_path;
-            moniker.push(self.component_name);
+    impl From<ClonableSourceIdentity> for ComponentIdentity {
+        fn from(other: ClonableSourceIdentity) -> Self {
+            let mut moniker = other.realm_path;
+            moniker.push(other.component_name);
             ComponentIdentity::from_identifier_and_url(
                 ComponentIdentifier::Legacy {
                     moniker: moniker.into(),
-                    instance_id: self.instance_id,
+                    instance_id: other.instance_id,
                 },
                 &*MOCK_URL,
             )

@@ -60,7 +60,7 @@ impl MessageFilter {
                         - (options.verbosity as i32
                             * fidl_fuchsia_logger::LOG_VERBOSITY_STEP_SIZE as i32),
                 );
-                this.min_severity = Some(LegacySeverity::try_from(raw_level as i32)?);
+                this.min_severity = Some(LegacySeverity::try_from(raw_level)?);
             } else if options.min_severity != LogLevelFilter::None {
                 this.min_severity = Some(LegacySeverity::try_from(options.min_severity as i32)?);
             }
@@ -143,205 +143,191 @@ mod tests {
     #[fuchsia::test]
     fn should_send_verbose() {
         let mut message = test_message();
-        let mut filter = MessageFilter::default();
-
-        filter.min_severity = Some(LegacySeverity::Verbose(15));
+        let mut filter = MessageFilter {
+            min_severity: Some(LegacySeverity::Verbose(15)),
+            ..MessageFilter::default()
+        };
         for verbosity in 1..15 {
             message.set_legacy_verbosity(verbosity);
-            assert_eq!(filter.should_send(&message), true);
+            assert!(filter.should_send(&message));
         }
 
         filter.min_severity = Some(LegacySeverity::Debug);
         message.set_legacy_verbosity(1);
-        assert_eq!(filter.should_send(&message), true);
+        assert!(filter.should_send(&message));
     }
 
     #[fuchsia::test]
     fn should_reject_verbose() {
         let mut message = test_message();
-        let mut filter = MessageFilter::default();
+        let mut filter = MessageFilter {
+            min_severity: Some(LegacySeverity::Verbose(1)),
+            ..MessageFilter::default()
+        };
 
-        filter.min_severity = Some(LegacySeverity::Verbose(1));
         for verbosity in 2..15 {
             message.set_legacy_verbosity(verbosity);
-            assert_eq!(filter.should_send(&message), false);
+            assert!(!filter.should_send(&message));
         }
 
         filter.min_severity = Some(LegacySeverity::Info);
         message.set_legacy_verbosity(1);
-        assert_eq!(filter.should_send(&message), false);
+        assert!(!filter.should_send(&message));
     }
 
     #[fuchsia::test]
     fn should_send_info() {
         let mut message = test_message();
-        let mut filter = MessageFilter::default();
+        let mut filter =
+            MessageFilter { min_severity: Some(LegacySeverity::Info), ..MessageFilter::default() };
 
-        filter.min_severity = Some(LegacySeverity::Info);
         message.metadata.severity = Severity::Info;
-        assert_eq!(filter.should_send(&message), true);
+        assert!(filter.should_send(&message));
 
         filter.min_severity = Some(LegacySeverity::Debug);
         message.metadata.severity = Severity::Info;
-        assert_eq!(filter.should_send(&message), true);
+        assert!(filter.should_send(&message));
     }
 
     #[fuchsia::test]
     fn should_reject_info() {
         let mut message = test_message();
-        let mut filter = MessageFilter::default();
+        let filter =
+            MessageFilter { min_severity: Some(LegacySeverity::Warn), ..MessageFilter::default() };
 
-        filter.min_severity = Some(LegacySeverity::Warn);
         message.metadata.severity = Severity::Info;
-        assert_eq!(filter.should_send(&message), false);
+        assert!(!filter.should_send(&message));
     }
 
     #[fuchsia::test]
     fn should_send_warn() {
         let mut message = test_message();
-        let mut filter = MessageFilter::default();
+        let mut filter =
+            MessageFilter { min_severity: Some(LegacySeverity::Warn), ..MessageFilter::default() };
 
-        filter.min_severity = Some(LegacySeverity::Warn);
         message.metadata.severity = Severity::Warn;
-        assert_eq!(filter.should_send(&message), true);
+        assert!(filter.should_send(&message));
 
         filter.min_severity = Some(LegacySeverity::Info);
         message.metadata.severity = Severity::Warn;
-        assert_eq!(filter.should_send(&message), true);
+        assert!(filter.should_send(&message));
     }
 
     #[fuchsia::test]
     fn should_reject_warn() {
         let mut message = test_message();
-        let mut filter = MessageFilter::default();
+        let filter =
+            MessageFilter { min_severity: Some(LegacySeverity::Error), ..MessageFilter::default() };
 
-        filter.min_severity = Some(LegacySeverity::Error);
         message.metadata.severity = Severity::Warn;
-        assert_eq!(filter.should_send(&message), false);
+        assert!(!filter.should_send(&message));
     }
 
     #[fuchsia::test]
     fn should_send_error() {
         let mut message = test_message();
-        let mut filter = MessageFilter::default();
+        let mut filter =
+            MessageFilter { min_severity: Some(LegacySeverity::Error), ..MessageFilter::default() };
 
-        filter.min_severity = Some(LegacySeverity::Error);
         message.metadata.severity = Severity::Error;
-        assert_eq!(filter.should_send(&message), true);
+        assert!(filter.should_send(&message));
 
         filter.min_severity = Some(LegacySeverity::Warn);
         message.metadata.severity = Severity::Error;
-        assert_eq!(filter.should_send(&message), true);
+        assert!(filter.should_send(&message));
     }
 
     #[fuchsia::test]
     fn should_reject_error() {
         let mut message = test_message();
-        let mut filter = MessageFilter::default();
+        let filter =
+            MessageFilter { min_severity: Some(LegacySeverity::Fatal), ..MessageFilter::default() };
 
-        filter.min_severity = Some(LegacySeverity::Fatal);
         message.metadata.severity = Severity::Error;
-        assert_eq!(filter.should_send(&message), false);
+        assert!(!filter.should_send(&message));
     }
 
     #[fuchsia::test]
     fn should_send_debug() {
         let mut message = test_message();
-        let mut filter = MessageFilter::default();
+        let mut filter =
+            MessageFilter { min_severity: Some(LegacySeverity::Debug), ..MessageFilter::default() };
 
-        filter.min_severity = Some(LegacySeverity::Debug);
         message.metadata.severity = Severity::Debug;
-        assert_eq!(filter.should_send(&message), true);
+        assert!(filter.should_send(&message));
 
         filter.min_severity = Some(LegacySeverity::Trace);
         message.metadata.severity = Severity::Debug;
-        assert_eq!(filter.should_send(&message), true);
+        assert!(filter.should_send(&message));
     }
 
     #[fuchsia::test]
     fn should_reject_debug() {
         let mut message = test_message();
-        let mut filter = MessageFilter::default();
+        let filter =
+            MessageFilter { min_severity: Some(LegacySeverity::Info), ..MessageFilter::default() };
 
-        filter.min_severity = Some(LegacySeverity::Info);
         message.metadata.severity = Severity::Debug;
-        assert_eq!(filter.should_send(&message), false);
+        assert!(!filter.should_send(&message));
     }
 
     #[fuchsia::test]
     fn should_send_trace() {
         let mut message = test_message();
-        let mut filter = MessageFilter::default();
+        let filter =
+            MessageFilter { min_severity: Some(LegacySeverity::Trace), ..MessageFilter::default() };
 
-        filter.min_severity = Some(LegacySeverity::Trace);
         message.metadata.severity = Severity::Trace;
-        assert_eq!(filter.should_send(&message), true);
+        assert!(filter.should_send(&message));
     }
 
     #[fuchsia::test]
     fn should_reject_trace() {
         let mut message = test_message();
-        let mut filter = MessageFilter::default();
+        let filter =
+            MessageFilter { min_severity: Some(LegacySeverity::Debug), ..MessageFilter::default() };
 
-        filter.min_severity = Some(LegacySeverity::Debug);
         message.metadata.severity = Severity::Trace;
-        assert_eq!(filter.should_send(&message), false);
+        assert!(!filter.should_send(&message));
     }
 
     #[fuchsia::test]
     fn should_send_attributed_tag() {
         let message = test_message();
-        let mut filter = MessageFilter::default();
+        let filter = MessageFilter {
+            tags: vec!["specious-at-best.cmx".to_string()].into_iter().collect(),
+            ..MessageFilter::default()
+        };
 
-        filter.tags = vec!["specious-at-best.cmx".to_string()].into_iter().collect();
-        assert_eq!(
-            filter.should_send(&message),
-            true,
-            "the filter should have sent {:#?}",
-            message
-        );
+        assert!(filter.should_send(&message), "the filter should have sent {:#?}", message);
     }
 
     #[fuchsia::test]
     fn should_send_prefix_tag() {
         let message = test_message_with_tag(Some("foo::bar::baz"));
 
-        let mut filter = MessageFilter::default();
-        filter.tags = vec!["foo".to_string()].into_iter().collect();
+        let filter = MessageFilter {
+            tags: vec!["foo".to_string()].into_iter().collect(),
+            ..MessageFilter::default()
+        };
 
-        assert_eq!(
-            filter.should_send(&message),
-            true,
-            "the filter should have sent {:#?}",
-            message
-        );
+        assert!(filter.should_send(&message), "the filter should have sent {:#?}", message);
 
         let message2 = test_message_with_tag(Some("foobar"));
-        assert_eq!(
-            filter.should_send(&message2),
-            false,
-            "the filter should not have sent {:#?}",
-            message2
-        );
+        assert!(!filter.should_send(&message2), "the filter should not have sent {:#?}", message2);
 
-        let mut filter = MessageFilter::default();
-        filter.tags = vec!["foo::bar".to_string()].into_iter().collect();
+        let filter = MessageFilter {
+            tags: vec!["foo::bar".to_string()].into_iter().collect(),
+            ..MessageFilter::default()
+        };
 
-        assert_eq!(
-            filter.should_send(&message),
-            true,
-            "the filter should have sent {:#?}",
-            message
-        );
+        assert!(filter.should_send(&message), "the filter should have sent {:#?}", message);
 
-        let mut filter = MessageFilter::default();
-        filter.tags = vec!["foo::ba".to_string()].into_iter().collect();
+        let filter = MessageFilter {
+            tags: vec!["foo:ba".to_string()].into_iter().collect(),
+            ..MessageFilter::default()
+        };
 
-        assert_eq!(
-            filter.should_send(&message),
-            false,
-            "the filter should not have sent {:#?}",
-            message
-        );
+        assert!(!filter.should_send(&message), "the filter should not have sent {:#?}", message);
     }
 }

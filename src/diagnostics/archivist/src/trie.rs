@@ -52,7 +52,7 @@ where
             return;
         }
 
-        Trie::remove_helper(&mut self.root, &key, 0);
+        Trie::remove_helper(&mut self.root, key, 0);
     }
 
     /// Retrieves a node identified by the key fragment vector `key` if it
@@ -61,8 +61,8 @@ where
     where
         K: Hash + Eq + Debug,
     {
-        key.into_iter()
-            .try_fold(&self.root, |curr_node, key_fragment| curr_node.children.get(&key_fragment))
+        key.iter()
+            .try_fold(&self.root, |curr_node, key_fragment| curr_node.children.get(key_fragment))
             .and_then(|node| node.get_value())
     }
 
@@ -72,9 +72,9 @@ where
     where
         K: Hash + Eq + Debug,
     {
-        key.into_iter()
+        key.iter()
             .try_fold(&mut self.root, |curr_node, key_fragment| {
-                curr_node.children.get_mut(&key_fragment)
+                curr_node.children.get_mut(key_fragment)
             })
             .and_then(|node| node.get_value_mut())
     }
@@ -102,10 +102,10 @@ where
             return curr_node.children.is_empty();
         }
         let mut delete_self: bool = false;
-        if let Some(mut child_node) = curr_node.children.get_mut(&key[level]) {
+        if let Some(child_node) = curr_node.children.get_mut(&key[level]) {
             // TODO(lukenicholson): Consider implementing as stack and provide
             // limits to stack size?
-            if Trie::remove_helper(&mut child_node, key, level + 1) {
+            if Trie::remove_helper(child_node, key, level + 1) {
                 curr_node.children.remove(&key[level]);
             }
 
@@ -117,7 +117,7 @@ where
     }
 
     fn get_root(&self) -> &TrieNode<K, V> {
-        return &self.root;
+        &self.root
     }
 }
 
@@ -242,7 +242,7 @@ mod tests {
         test_trie.set("text12".to_string().chars(), "d".to_string());
 
         test_trie.remove("test".to_string().chars().collect::<Vec<_>>().as_ref());
-        test_trie.remove(&vec![]);
+        test_trie.remove(&[]);
         test_trie.remove("text12".to_string().chars().collect::<Vec<_>>().as_ref());
 
         let key: Vec<char> = "test".to_string().chars().collect();

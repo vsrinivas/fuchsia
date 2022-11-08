@@ -209,7 +209,7 @@ mod tests {
                 pid: klog.record.pid,
                 tid: klog.record.tid,
                 time: klog.record.timestamp,
-                severity: i32::from(fdiagnostics::Severity::Info.into_primitive() as i32),
+                severity: fdiagnostics::Severity::Info.into_primitive() as i32,
                 dropped_logs: 0,
                 tags: vec!["klog".to_string()],
                 msg: "test log".to_string(),
@@ -217,7 +217,7 @@ mod tests {
         );
 
         // maximum allowed klog size
-        let klog = TestDebugEntry::new(&vec!['a' as u8; zx::sys::ZX_LOG_RECORD_DATA_MAX]);
+        let klog = TestDebugEntry::new(&vec![b'a'; zx::sys::ZX_LOG_RECORD_DATA_MAX]);
         let data = convert_debuglog_to_log_message(&klog.record).unwrap();
         assert_eq!(
             data,
@@ -230,14 +230,12 @@ mod tests {
             .set_pid(klog.record.pid)
             .set_tid(klog.record.tid)
             .add_tag("klog")
-            .set_message(
-                String::from_utf8(vec!['a' as u8; zx::sys::ZX_LOG_RECORD_DATA_MAX]).unwrap()
-            )
+            .set_message(String::from_utf8(vec![b'a'; zx::sys::ZX_LOG_RECORD_DATA_MAX]).unwrap())
             .build()
         );
 
         // empty message
-        let klog = TestDebugEntry::new(&vec![]);
+        let klog = TestDebugEntry::new(&[]);
         let data = convert_debuglog_to_log_message(&klog.record).unwrap();
         assert_eq!(
             data,
@@ -265,7 +263,7 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn logger_existing_logs_test() {
-        let debug_log = TestDebugLog::new();
+        let debug_log = TestDebugLog::default();
         let klog = TestDebugEntry::new("test log".as_bytes());
         debug_log.enqueue_read_entry(&klog).await;
         debug_log.enqueue_read_fail(zx::Status::SHOULD_WAIT).await;
@@ -277,7 +275,7 @@ mod tests {
                 .await
                 .unwrap()
                 .into_iter()
-                .map(|m| m.parse(&*KERNEL_IDENTITY).unwrap())
+                .map(|m| m.parse(&KERNEL_IDENTITY).unwrap())
                 .collect::<Vec<_>>(),
             vec![LogsDataBuilder::new(BuilderArgs {
                 timestamp_nanos: klog.record.timestamp.into(),
@@ -289,12 +287,11 @@ mod tests {
             .set_tid(klog.record.tid)
             .add_tag("klog")
             .set_message("test log".to_string())
-            .build()
-            .into()]
+            .build()]
         );
 
         // Unprocessable logs should be skipped.
-        let debug_log = TestDebugLog::new();
+        let debug_log = TestDebugLog::default();
         // This is a malformed record because the message contains invalid UTF8.
         let malformed_klog = TestDebugEntry::new(b"\x80");
         debug_log.enqueue_read_entry(&malformed_klog).await;
@@ -306,20 +303,20 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn logger_keep_listening_after_exhausting_initial_contents_test() {
-        let debug_log = TestDebugLog::new();
+        let debug_log = TestDebugLog::default();
         debug_log.enqueue_read_entry(&TestDebugEntry::new("test log".as_bytes())).await;
         debug_log.enqueue_read_fail(zx::Status::SHOULD_WAIT).await;
         debug_log.enqueue_read_entry(&TestDebugEntry::new("second test log".as_bytes())).await;
         let log_bridge = DebugLogBridge::create(debug_log);
         let mut log_stream =
-            Box::pin(log_bridge.listen()).map(|r| r.unwrap().parse(&*KERNEL_IDENTITY));
+            Box::pin(log_bridge.listen()).map(|r| r.unwrap().parse(&KERNEL_IDENTITY));
         let log_message = log_stream.try_next().await.unwrap().unwrap();
         assert_eq!(log_message.msg().unwrap(), "test log");
         let log_message = log_stream.try_next().await.unwrap().unwrap();
         assert_eq!(log_message.msg().unwrap(), "second test log");
 
         // Unprocessable logs should NOT be skipped.
-        let debug_log = TestDebugLog::new();
+        let debug_log = TestDebugLog::default();
         // This is a malformed record because the message contains invalid UTF8.
         let malformed_klog = TestDebugEntry::new(b"\x80");
         debug_log.enqueue_read_entry(&malformed_klog).await;
@@ -328,7 +325,7 @@ mod tests {
         let log_bridge = DebugLogBridge::create(debug_log);
         let mut log_stream = Box::pin(log_bridge.listen());
         let log_message =
-            log_stream.try_next().await.unwrap().unwrap().parse(&*KERNEL_IDENTITY).unwrap();
+            log_stream.try_next().await.unwrap().unwrap().parse(&KERNEL_IDENTITY).unwrap();
         assert_eq!(
             log_message.msg().unwrap(),
             "INVALID UTF-8 SEE https://fxbug.dev/88259, message may be corrupted: �"
@@ -337,7 +334,7 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn severity_parsed_from_log() {
-        let debug_log = TestDebugLog::new();
+        let debug_log = TestDebugLog::default();
         debug_log.enqueue_read_entry(&TestDebugEntry::new("ERROR: first log".as_bytes())).await;
         // We look for the string 'ERROR:' to label this as a Severity::Error.
         debug_log.enqueue_read_entry(&TestDebugEntry::new("first log error".as_bytes())).await;
@@ -356,7 +353,7 @@ mod tests {
 
         let log_bridge = DebugLogBridge::create(debug_log);
         let mut log_stream =
-            Box::pin(log_bridge.listen()).map(|r| r.unwrap().parse(&*KERNEL_IDENTITY));
+            Box::pin(log_bridge.listen()).map(|r| r.unwrap().parse(&KERNEL_IDENTITY));
 
         let log_message = log_stream.try_next().await.unwrap().unwrap();
         assert_eq!(log_message.msg().unwrap(), "ERROR: first log");

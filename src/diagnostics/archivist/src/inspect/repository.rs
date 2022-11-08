@@ -137,7 +137,7 @@ impl InspectRepository {
 
     #[cfg(test)]
     pub(crate) async fn terminate_inspect(&self, identity: &ComponentIdentity) {
-        self.inner.write().await.diagnostics_directories.remove(&*identity.unique_key());
+        self.inner.write().await.diagnostics_directories.remove(&identity.unique_key());
     }
 }
 
@@ -254,7 +254,7 @@ impl InspectRepositoryInner {
         &self,
         identity: &ComponentIdentity,
     ) -> Option<&(Arc<ComponentIdentity>, InspectArtifactsContainer)> {
-        self.diagnostics_directories.get(&*identity.unique_key())
+        self.diagnostics_directories.get(&identity.unique_key())
     }
 }
 
@@ -266,7 +266,7 @@ mod tests {
     use fuchsia_zircon::DurationNum;
     use selectors::{self, FastError};
 
-    const TEST_URL: &'static str = "fuchsia-pkg://test";
+    const TEST_URL: &str = "fuchsia-pkg://test";
 
     #[fuchsia::test]
     async fn inspect_repo_disallows_duplicated_dirs() {

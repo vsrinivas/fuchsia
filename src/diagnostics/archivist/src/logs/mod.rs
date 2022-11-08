@@ -34,12 +34,12 @@ mod tests {
 
     #[fuchsia::test]
     async fn test_log_manager_simple() {
-        TestHarness::new().manager_test(false).await;
+        TestHarness::default().manager_test(false).await;
     }
 
     #[fuchsia::test]
     async fn test_log_manager_dump() {
-        TestHarness::new().manager_test(true).await;
+        TestHarness::default().manager_test(true).await;
     }
 
     #[fuchsia::test]
@@ -69,7 +69,7 @@ mod tests {
         fifth_packet.metadata.severity = LogLevelFilter::Error.into_primitive().into();
         fifth_message.severity = fifth_packet.metadata.severity;
 
-        let mut harness = TestHarness::new();
+        let mut harness = TestHarness::default();
         let mut stream = harness.create_stream(Arc::new(ComponentIdentity::unknown())).await;
         stream.write_packets(vec![
             first_packet,
@@ -142,7 +142,7 @@ mod tests {
             $log_reader1:ident @ $foo_moniker:literal,
             $log_reader2:ident @ $bar_moniker:literal,
         ) => {{
-            let mut packet = setup_default_packet();
+            let packet = setup_default_packet();
             let message = LogMessage {
                 pid: packet.metadata.pid,
                 tid: packet.metadata.tid,
@@ -159,10 +159,10 @@ mod tests {
             message2.severity = packet2.metadata.severity;
 
             let mut foo_stream = $harness.create_stream_from_log_reader($log_reader1).await;
-            foo_stream.write_packet(&mut packet);
+            foo_stream.write_packet(&packet);
 
             let mut bar_stream = $harness.create_stream_from_log_reader($log_reader2).await;
-            bar_stream.write_packet(&mut packet2);
+            bar_stream.write_packet(&packet2);
             drop((foo_stream, bar_stream));
 
             let log_stats_tree = $harness.filter_test(vec![message, message2], None).await;
@@ -343,7 +343,7 @@ mod tests {
             tags: vec![],
         };
 
-        let mut harness = TestHarness::new();
+        let mut harness = TestHarness::default();
         let mut stream = harness.create_stream(Arc::new(ComponentIdentity::unknown())).await;
         stream.write_packets(vec![p, p2]);
         drop(stream);
@@ -375,7 +375,7 @@ mod tests {
             tags: vec![],
         };
 
-        let mut harness = TestHarness::new();
+        let mut harness = TestHarness::default();
         let mut stream = harness.create_stream(Arc::new(ComponentIdentity::unknown())).await;
         stream.write_packets(vec![p, p2]);
         drop(stream);
@@ -414,7 +414,7 @@ mod tests {
             tags: vec![],
         };
 
-        let mut harness = TestHarness::new();
+        let mut harness = TestHarness::default();
         let mut stream = harness.create_stream(Arc::new(ComponentIdentity::unknown())).await;
         stream.write_packets(vec![p, p2, p3, p4, p5]);
         drop(stream);
@@ -449,7 +449,7 @@ mod tests {
             tags: vec![],
         };
 
-        let mut harness = TestHarness::new();
+        let mut harness = TestHarness::default();
         let mut stream = harness.create_stream(Arc::new(ComponentIdentity::unknown())).await;
         stream.write_packets(vec![p, p2, p3]);
         drop(stream);
@@ -498,7 +498,7 @@ mod tests {
             tags: vec![String::from("BBBBB"), String::from("DDDDD")],
         };
 
-        let mut harness = TestHarness::new();
+        let mut harness = TestHarness::default();
         let mut stream = harness.create_stream(Arc::new(ComponentIdentity::unknown())).await;
         stream.write_packets(vec![p, p2]);
         drop(stream);
@@ -579,7 +579,7 @@ mod tests {
                 tags: vec![String::from("tag-1"), String::from("tag-2")],
             },
         ];
-        let mut harness = TestHarness::new();
+        let mut harness = TestHarness::default();
         let mut stream =
             harness.create_structured_stream(Arc::new(ComponentIdentity::unknown())).await;
         stream.write_packets(logs);
@@ -593,7 +593,7 @@ mod tests {
         let log2 = TestDebugEntry::new("log2".as_bytes());
         let log3 = TestDebugEntry::new("log3".as_bytes());
 
-        let klog_reader = TestDebugLog::new();
+        let klog_reader = TestDebugLog::default();
         klog_reader.enqueue_read_entry(&log1).await;
         klog_reader.enqueue_read_entry(&log2).await;
         // logs received after kernel indicates no logs should be read

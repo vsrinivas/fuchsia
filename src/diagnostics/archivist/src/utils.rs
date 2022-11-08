@@ -37,6 +37,6 @@ mod tests {
                 called = true;
             });
         }
-        assert_eq!(called, true);
+        assert!(called);
     }
 }

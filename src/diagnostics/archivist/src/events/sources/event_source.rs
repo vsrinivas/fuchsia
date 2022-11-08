@@ -236,7 +236,7 @@ pub mod tests {
                 component,
                 directory: Some(_),
             }) => assert_eq!(component, expected_identity),
-            _ => assert!(false),
+            other => panic!("unexpected event payload: {other:?}"),
         }
 
         // Assert the last received event was a LogSinkRequested event.
@@ -245,7 +245,7 @@ pub mod tests {
             EventPayload::LogSinkRequested(LogSinkRequestedPayload { component, .. }) => {
                 assert_eq!(component, expected_identity)
             }
-            _ => assert!(false),
+            other => panic!("unexpected event payload: {other:?}"),
         }
     }
 

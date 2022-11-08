@@ -133,8 +133,7 @@ mod tests {
         .set_tid(packet.metadata.tid)
         .add_tag("AAAAA")
         .set_message("BBBBB".to_string())
-        .build()
-        .into();
+        .build();
 
         let bytes = ls.next().await.unwrap();
         assert_eq!(bytes.size(), METADATA_SIZE + 6 /* tag */+ 6 /* msg */,);
@@ -176,8 +175,7 @@ mod tests {
             LogsField::Other("key".to_string()),
             "value".to_string(),
         ))
-        .build()
-        .into();
+        .build();
 
         let mut stream = LogMessageSocket::new_structured(sout, Default::default()).unwrap();
 

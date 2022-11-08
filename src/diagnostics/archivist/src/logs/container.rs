@@ -801,10 +801,7 @@ mod tests {
         LogInterestSelector {
             selector: ComponentSelector {
                 moniker_segments: Some(
-                    moniker
-                        .into_iter()
-                        .map(|s| StringSelector::ExactMatch(s.to_string()))
-                        .collect(),
+                    moniker.iter().map(|s| StringSelector::ExactMatch(s.to_string())).collect(),
                 ),
                 ..ComponentSelector::EMPTY
             },

@@ -90,7 +90,7 @@ impl EventRouter {
     {
         let subscriber_weak = Arc::downgrade(config.consumer);
         for event_type in config.events {
-            self.consumers.entry(event_type.into()).or_default().push(subscriber_weak.clone());
+            self.consumers.entry(event_type).or_default().push(subscriber_weak.clone());
         }
     }
 
@@ -408,7 +408,7 @@ mod tests {
     use futures::{lock::Mutex, FutureExt};
     use lazy_static::lazy_static;
 
-    const TEST_URL: &'static str = "NO-OP URL";
+    const TEST_URL: &str = "NO-OP URL";
     const FAKE_TIMESTAMP: i64 = 5;
     lazy_static! {
         static ref IDENTITY: ComponentIdentity = ComponentIdentity::from_identifier_and_url(
@@ -420,7 +420,7 @@ mod tests {
                 instance_id: "12345".to_string(),
                 moniker: vec!["a", "b", "foo.cmx"].into(),
             },
-            &*TEST_URL
+            TEST_URL
         );
     }
 
@@ -552,7 +552,7 @@ mod tests {
         producer
             .dispatcher
             .emit(Event {
-                timestamp: timestamp.clone(),
+                timestamp,
                 payload: EventPayload::LogSinkRequested(LogSinkRequestedPayload {
                     component: IDENTITY.clone(),
                     request_stream: Some(request_stream),

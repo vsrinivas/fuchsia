@@ -274,7 +274,7 @@ pub struct UnpopulatedInspectDataContainer {
     pub inspect_matcher: Option<InspectHierarchyMatcher>,
 }
 
-impl<'a> UnpopulatedInspectDataContainer {
+impl UnpopulatedInspectDataContainer {
     /// Populates this data container with a timeout. On the timeout firing returns a
     /// container suitable to return to clients, but with timeout error information recorded.
     pub fn populate(
@@ -368,7 +368,7 @@ mod test {
         let (directory, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<fio::DirectoryMarker>().unwrap();
         fasync::Task::spawn(async move {
-            while let Some(_) = stream.next().await {
+            while stream.next().await.is_some() {
                 fasync::Timer::new(fasync::Time::after(100000.second())).await;
             }
         })
