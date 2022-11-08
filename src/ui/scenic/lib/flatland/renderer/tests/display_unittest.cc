@@ -36,7 +36,7 @@ class DisplayTest : public gtest::RealLoopFixture {
     }
     gtest::RealLoopFixture::SetUp();
 
-    sysmem_allocator_ = utils::CreateSysmemAllocatorSyncPtr();
+    sysmem_allocator_ = utils::CreateSysmemAllocatorSyncPtr("display_unittest::Setup");
 
     async_set_default_dispatcher(dispatcher());
     executor_ = std::make_unique<async::Executor>(dispatcher());

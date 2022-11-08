@@ -242,7 +242,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
               requested_presentation_times_[id_pair] = requested_presentation_time;
             }));
 
-    sysmem_allocator_ = utils::CreateSysmemAllocatorSyncPtr();
+    sysmem_allocator_ = utils::CreateSysmemAllocatorSyncPtr("FlatlandTest::SetUp");
 
     flatland_presenter_ = std::shared_ptr<FlatlandPresenter>(mock_flatland_presenter_);
 
@@ -271,8 +271,9 @@ class FlatlandTest : public gtest::TestLoopFixture {
     std::vector<std::shared_ptr<BufferCollectionImporter>> importers;
     std::vector<std::shared_ptr<BufferCollectionImporter>> screenshot_importers;
     importers.push_back(buffer_collection_importer_);
-    return std::make_shared<Allocator>(context_provider_.context(), importers, screenshot_importers,
-                                       utils::CreateSysmemAllocatorSyncPtr("-allocator"));
+    return std::make_shared<Allocator>(
+        context_provider_.context(), importers, screenshot_importers,
+        utils::CreateSysmemAllocatorSyncPtr("FlatlandTest::CreateAllocator"));
   }
 
   std::shared_ptr<Flatland> CreateFlatland() {
@@ -4869,7 +4870,8 @@ TEST_F(FlatlandTest, ImageImportPassesAndFailsOnDifferentImportersTest) {
   std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> screenshot_importers;
   std::shared_ptr<Allocator> allocator =
       std::make_shared<Allocator>(context_provider_.context(), importers, screenshot_importers,
-                                  utils::CreateSysmemAllocatorSyncPtr());
+                                  utils::CreateSysmemAllocatorSyncPtr(
+                                      "FlatlandTest::ImageImportPassesFailsOnDiffImportersTest"));
   auto session_id = scheduling::GetNextSessionId();
   fuchsia::ui::composition::FlatlandPtr flatland_ptr;
   auto flatland = Flatland::New(
@@ -5326,9 +5328,9 @@ TEST_F(FlatlandTest, MultithreadedLinkResolution) {
 TEST_F(FlatlandTest, NoDoubleDestroyRequest) {
   // Create flatland and allocator instances that has two BufferCollectionImporters.
   std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> no_importers;
-  std::shared_ptr<Allocator> allocator =
-      std::make_shared<Allocator>(context_provider_.context(), no_importers, no_importers,
-                                  utils::CreateSysmemAllocatorSyncPtr());
+  std::shared_ptr<Allocator> allocator = std::make_shared<Allocator>(
+      context_provider_.context(), no_importers, no_importers,
+      utils::CreateSysmemAllocatorSyncPtr("FlatlandTest::NoDoubleDestroyRequest"));
 
   auto session_id = scheduling::GetNextSessionId();
   fuchsia::ui::composition::FlatlandPtr flatland_ptr;

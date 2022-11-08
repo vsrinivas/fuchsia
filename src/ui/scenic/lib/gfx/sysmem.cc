@@ -19,7 +19,8 @@ Sysmem::Sysmem() {
     sysmem_allocator_.Unbind();
     FX_LOGS(ERROR) << "Unable to connect to sysmem: " << status;
   }
-  sysmem_allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName(), fsl::GetCurrentProcessKoid());
+  sysmem_allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName() + " gfx::Sysmem()",
+                                        fsl::GetCurrentProcessKoid());
 }
 
 fuchsia::sysmem::BufferCollectionTokenSyncPtr Sysmem::CreateBufferCollection() {

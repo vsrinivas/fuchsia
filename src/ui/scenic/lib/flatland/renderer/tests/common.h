@@ -24,7 +24,7 @@ class RendererTest : public escher::test::TestWithVkValidationLayer {
     // Create the SysmemAllocator.
     zx_status_t status = fdio_service_connect(
         "/svc/fuchsia.sysmem.Allocator", sysmem_allocator_.NewRequest().TakeChannel().release());
-    sysmem_allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName(),
+    sysmem_allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName() + "-RendererTest",
                                           fsl::GetCurrentProcessKoid());
   }
 

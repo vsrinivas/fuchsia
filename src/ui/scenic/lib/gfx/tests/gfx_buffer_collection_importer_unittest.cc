@@ -35,7 +35,8 @@ class GfxBufferCollectionImporterTest : public VkSessionTest {
 
 VK_TEST_F(GfxBufferCollectionImporterTest, ImportBufferCollection) {
   // Create Sysmem tokens.
-  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator = utils::CreateSysmemAllocatorSyncPtr();
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator =
+      utils::CreateSysmemAllocatorSyncPtr("GfxBufferCollectionImporterTest");
   fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
   zx_status_t status = sysmem_allocator->AllocateSharedCollection(local_token.NewRequest());
   EXPECT_EQ(status, ZX_OK);
@@ -59,7 +60,8 @@ VK_TEST_F(GfxBufferCollectionImporterTest, ImportBufferCollection) {
 
 VK_TEST_F(GfxBufferCollectionImporterTest, ExtractImageForMultipleSessions) {
   // Create Sysmem tokens.
-  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator = utils::CreateSysmemAllocatorSyncPtr();
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator =
+      utils::CreateSysmemAllocatorSyncPtr("GfxBufferCollectionImporterTest");
   fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
   zx_status_t status = sysmem_allocator->AllocateSharedCollection(local_token.NewRequest());
   EXPECT_EQ(status, ZX_OK);
@@ -138,7 +140,8 @@ VK_TEST_F(GfxBufferCollectionImporterTest, ExtractImageForMultipleSessions) {
 }
 
 VK_TEST_F(GfxBufferCollectionImporterTest, ErrorCases) {
-  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator = utils::CreateSysmemAllocatorSyncPtr();
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator =
+      utils::CreateSysmemAllocatorSyncPtr("GfxBufferCollectionImporterTest");
 
   const auto collection_id = allocation::GenerateUniqueBufferCollectionId();
   fuchsia::sysmem::BufferCollectionTokenSyncPtr token1;

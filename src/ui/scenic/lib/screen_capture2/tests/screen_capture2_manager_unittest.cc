@@ -46,11 +46,11 @@ class ScreenCapture2ManagerTest : public gtest::TestLoopFixture {
 
   void SetUp() override {
     // Create the SysmemAllocator.
-    sysmem_allocator_ = utils::CreateSysmemAllocatorSyncPtr();
+    sysmem_allocator_ = utils::CreateSysmemAllocatorSyncPtr("ScreenCapture2ManagerTest");
 
     renderer_ = std::make_shared<flatland::NullRenderer>();
     importer_ = std::make_unique<ScreenCaptureBufferCollectionImporter>(
-        utils::CreateSysmemAllocatorSyncPtr("ScreenCapture2ManagerTest"), renderer_,
+        utils::CreateSysmemAllocatorSyncPtr("ScreenCapture2ManagerTest-importer"), renderer_,
         /*enable_copy_fallback=*/false);
 
     manager_ = std::make_unique<ScreenCapture2Manager>(

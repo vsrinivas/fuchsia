@@ -180,7 +180,7 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
   }
 
   // Set display buffer constraints.
-  tokens[1]->SetDebugClientInfo("scenic", 0u);
+  tokens[1]->SetDebugClientInfo("buffer_pool duplicated", 0u);
   auto display_collection_id = allocation::GenerateUniqueBufferCollectionId();
   auto result = scenic_impl::ImportBufferCollection(display_collection_id,
                                                     *environment->display_controller.get(),

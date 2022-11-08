@@ -66,7 +66,7 @@ Session::Session(SessionId id, SessionContext session_context,
     sysmem_allocator_.Unbind();
     error_reporter_->ERROR() << "Session::Session(): Could not connect to sysmem";
   } else {
-    sysmem_allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName(),
+    sysmem_allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName() + " gfx::Session",
                                           fsl::GetCurrentProcessKoid());
   }
 }

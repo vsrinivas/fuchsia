@@ -54,8 +54,8 @@ class DisplayCompositorPixelTest : public DisplayCompositorTestBase {
     zx_status_t status = fdio_service_connect(
         "/svc/fuchsia.sysmem.Allocator", sysmem_allocator_.NewRequest().TakeChannel().release());
     EXPECT_EQ(status, ZX_OK);
-    sysmem_allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName(),
-                                          fsl::GetCurrentProcessKoid());
+    sysmem_allocator_->SetDebugClientInfo(
+        fsl::GetCurrentProcessName() + "-DisplayCompositorPixelTest", fsl::GetCurrentProcessKoid());
 
     executor_ = std::make_unique<async::Executor>(dispatcher());
 

@@ -65,7 +65,8 @@ fuchsia::sysmem::AllocatorSyncPtr CreateSysmemAllocator() {
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
   auto context = sys::ComponentContext::Create();
   context->svc()->Connect(sysmem_allocator.NewRequest());
-  sysmem_allocator->SetDebugClientInfo(fsl::GetCurrentProcessName(), fsl::GetCurrentProcessKoid());
+  sysmem_allocator->SetDebugClientInfo(fsl::GetCurrentProcessName() + " integration_tests",
+                                       fsl::GetCurrentProcessKoid());
   return sysmem_allocator;
 }
 

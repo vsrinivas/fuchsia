@@ -474,7 +474,8 @@ void MultithreadingTest(Renderer* renderer) {
     async::TestLoop loop;
 
     // Make an extra sysmem allocator for tokens.
-    fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator = utils::CreateSysmemAllocatorSyncPtr();
+    fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator =
+        utils::CreateSysmemAllocatorSyncPtr("MultithreadingTest");
 
     auto tokens = SysmemTokens::Create(sysmem_allocator.get());
     auto bcid = allocation::GenerateUniqueBufferCollectionId();

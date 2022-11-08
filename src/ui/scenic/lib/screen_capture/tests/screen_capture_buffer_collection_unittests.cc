@@ -34,7 +34,8 @@ class ScreenCaptureBufferCollectionTest : public scenic_impl::gfx::test::VkSessi
     VkSessionTest::SetUp();
     renderer_ = std::make_shared<flatland::VkRenderer>(escher()->GetWeakPtr());
     importer_ = std::make_unique<ScreenCaptureBufferCollectionImporter>(
-        utils::CreateSysmemAllocatorSyncPtr("ScreenCaptureBufferCollectionTest"), renderer_,
+        utils::CreateSysmemAllocatorSyncPtr("ScreenCaptureBufferCollectionTest-importer"),
+        renderer_,
         /*enable_copy_fallback=*/escher::test::GlobalEscherUsesVirtualGpu());
   }
 
@@ -42,7 +43,8 @@ class ScreenCaptureBufferCollectionTest : public scenic_impl::gfx::test::VkSessi
       fuchsia::sysmem::BufferCollectionConstraints constraints,
       allocation::GlobalBufferCollectionId collection_id) {
     zx_status_t status;
-    fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator = utils::CreateSysmemAllocatorSyncPtr();
+    fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator =
+        utils::CreateSysmemAllocatorSyncPtr("ScreenCaptureBufferCollectionTest");
     // Create Sysmem tokens.
 
     auto [local_token, dup_token] = utils::CreateSysmemTokens(sysmem_allocator.get());
@@ -87,7 +89,8 @@ INSTANTIATE_TEST_SUITE_P(, ScreenCaptureBCTestParameterized,
 VK_TEST_F(ScreenCaptureBufferCollectionTest, ImportAndReleaseBufferCollection) {
   // Create Sysmem tokens.
   zx_status_t status;
-  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator = utils::CreateSysmemAllocatorSyncPtr();
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator =
+      utils::CreateSysmemAllocatorSyncPtr("ScreenCaptureBufferCollectionTest-ImportAndReleaseBC");
   // Create Sysmem tokens.
 
   auto [local_token, dup_token] = utils::CreateSysmemTokens(sysmem_allocator.get());
@@ -156,7 +159,8 @@ VK_TEST_P(ScreenCaptureBCTestParameterized, GetBufferCountFromCollectionId) {
 }
 
 VK_TEST_F(ScreenCaptureBufferCollectionTest, ImportBufferCollection_ErrorCases) {
-  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator = utils::CreateSysmemAllocatorSyncPtr();
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator =
+      utils::CreateSysmemAllocatorSyncPtr("ScreenCaptureBufferCollectionTest-ImportBC_ErrorCases");
 
   const auto collection_id = allocation::GenerateUniqueBufferCollectionId();
   fuchsia::sysmem::BufferCollectionTokenSyncPtr token1;
@@ -265,7 +269,8 @@ VK_TEST_P(ScreenCaptureBCTestParameterized, GetBufferCollectionBufferCount_Error
 VK_TEST_P(ScreenCaptureBCTestParameterized, GetBufferCollectionBufferCount_BuffersNotAllocated) {
   auto collection_id = allocation::GenerateUniqueBufferCollectionId();
   zx_status_t status;
-  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator = utils::CreateSysmemAllocatorSyncPtr();
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator =
+      utils::CreateSysmemAllocatorSyncPtr("ScreenCaptureBCTestParamed-GetBCBC_BuffersNotAllocated");
   // Create Sysmem tokens.
   auto [local_token, dup_token] = utils::CreateSysmemTokens(sysmem_allocator.get());
   // Import into ScreenCaptureBufferCollectionImporter.

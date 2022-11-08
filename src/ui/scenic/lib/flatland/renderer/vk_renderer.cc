@@ -123,6 +123,15 @@ static std::vector<escher::Rectangle2D> GetNormalizedUvRects(
   return normalized_rects;
 }
 
+std::atomic<uint64_t> next_buffer_collection_id = 1;
+
+uint64_t GetNextBufferCollectionId() { return next_buffer_collection_id++; }
+
+std::string GetNextBufferCollectionIdString(const char* prefix) {
+  // Would use std::ostringstream here, except it bloats binary size by ~50kB, causing CQ to fail.
+  return std::string(prefix) + "-" + std::to_string(GetNextBufferCollectionId());
+}
+
 }  // anonymous namespace
 
 namespace flatland {
@@ -226,7 +235,7 @@ bool VkRenderer::ImportBufferCollection(
         break;
     }
 
-    buffer_collection->SetName(10u, image_name);
+    buffer_collection->SetName(10u, GetNextBufferCollectionIdString(image_name));
     status = buffer_collection->SetConstraints(false /* has_constraints */,
                                                fuchsia::sysmem::BufferCollectionConstraints());
     if (status != ZX_OK) {

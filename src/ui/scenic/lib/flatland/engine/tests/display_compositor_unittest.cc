@@ -41,7 +41,7 @@ class DisplayCompositorTest : public DisplayCompositorTestBase {
   void SetUp() override {
     DisplayCompositorTestBase::SetUp();
 
-    sysmem_allocator_ = utils::CreateSysmemAllocatorSyncPtr();
+    sysmem_allocator_ = utils::CreateSysmemAllocatorSyncPtr("DisplayCompositorTest");
 
     renderer_ = std::make_shared<flatland::MockRenderer>();
 
