@@ -14,10 +14,6 @@ constexpr std::string_view kBlobfsPartitionLabel = "blobfs";
 constexpr std::string_view kDataPartitionLabel = "data";
 constexpr std::string_view kLegacyDataPartitionLabel = "minfs";
 
-// This is the path the to fshost admin service that shell tools should see.
-constexpr std::string_view kHubAdminServicePath =
-    "/hub-v2/children/bootstrap/children/fshost/exposed/fuchsia.fshost.Admin";
-
 // Binaries for data partition filesystems are expected to be at well known locations.
 constexpr char kMinfsPath[] = "/pkg/bin/minfs";
 constexpr char kFxfsPath[] = "/pkg/bin/fxfs";

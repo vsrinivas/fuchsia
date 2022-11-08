@@ -11,7 +11,7 @@ executable("mount") {
   deps = [
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_cpp_wire",
     "//sdk/lib/sys/component/cpp",
-    "//src/storage/fshost:headers",
+    "//src/storage/fshost:admin-client",
     "//zircon/system/ulib/fbl",
   ]
 

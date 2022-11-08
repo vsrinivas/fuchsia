@@ -10,7 +10,7 @@ executable("storage-metrics") {
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_cpp_wire",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/component/cpp",
-    "//src/storage/fshost:headers",
+    "//src/storage/fshost:admin-client",
     "//src/storage/minfs",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",

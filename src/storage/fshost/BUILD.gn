@@ -18,6 +18,19 @@ source_set("headers") {
   sources = [ "constants.h" ]
 }
 
+source_set("admin-client") {
+  sources = [
+    "admin-client.cc",
+    "admin-client.h",
+  ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_cpp_wire",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_cpp_wire",
+    "//sdk/lib/sys/component/cpp:cpp",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
 source_set("launcher") {
   visibility = [ ":*" ]
   sources = [ "fdio.cc" ]

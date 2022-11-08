@@ -23,7 +23,7 @@
 #include <fbl/unique_fd.h>
 #include <storage-metrics/block-metrics.h>
 
-#include "src/storage/fshost/constants.h"
+#include "src/storage/fshost/admin-client.h"
 
 namespace {
 
@@ -102,11 +102,9 @@ void RunBlockMetrics(const char* path, const StorageMetricOptions options) {
   fdio_cpp::FdioCaller caller(std::move(fd));
   auto result = fidl::WireCall(caller.directory())->QueryFilesystem();
   if (result.ok() && result.value().s == ZX_OK) {
-    std::string fshost_path(fshost::kHubAdminServicePath);
-    auto fshost_or = component::Connect<fuchsia_fshost::Admin>(fshost_path.c_str());
+    auto fshost_or = fshost::ConnectToAdmin();
     if (fshost_or.is_error()) {
-      fprintf(stderr, "Error connecting to fshost (@ %s): %s\n", fshost_path.c_str(),
-              fshost_or.status_string());
+      fprintf(stderr, "Error connecting to fshost: %s\n", fshost_or.status_string());
     } else {
       auto path_result = fidl::WireCall(*fshost_or)->GetDevicePath(result.value().info->fs_id);
       if (path_result.ok() && path_result->is_ok()) {

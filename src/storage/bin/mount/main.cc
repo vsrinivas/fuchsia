@@ -15,18 +15,19 @@
 
 #include <fbl/unique_fd.h>
 
-#include "src/storage/fshost/constants.h"
+#include "src/storage/fshost/admin-client.h"
 
 int usage(void) {
-  fprintf(stderr,
-          "usage: mount [ <option>* ] devicepath <mount-path>\n"
-          "options:\n"
-          " -r|--readonly  : Open the filesystem as read-only\n"
-          " -v|--verbose   : Verbose mode\n"
-          " --fshost-path  : The path to the fshost admin service (if different from the default)\n"
-          " -h|--help      : Display this message\n"
-          "\n"
-          "Filesystems can only be mounted in /mnt/...\n");
+  fprintf(
+      stderr,
+      "usage: mount [ <option>* ] devicepath <mount-path>\n"
+      "options:\n"
+      " -r|--readonly     : Open the filesystem as read-only\n"
+      " -v|--verbose      : Verbose mode\n"
+      " -p|--fshost-path  : The path to the fshost admin service (if different from the default)\n"
+      " -h|--help         : Display this message\n"
+      "\n"
+      "Filesystems can only be mounted in /mnt/...\n");
   return EXIT_FAILURE;
 }
 
@@ -91,7 +92,7 @@ int parse_args(int argc, char** argv, fidl::AnyArena& arena,
 int main(int argc, char** argv) {
   char* devicepath;
   std::string mount_name;
-  std::string fshost_path(fshost::kHubAdminServicePath);
+  std::string fshost_path;
   fidl::Arena arena;
   fuchsia_fshost::wire::MountOptions options(arena);
   if (int r = parse_args(argc, argv, arena, options, &devicepath, &mount_name, fshost_path)) {
@@ -108,10 +109,17 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
-  auto fshost_or = component::Connect<fuchsia_fshost::Admin>(fshost_path.c_str());
+  zx::result<fidl::ClientEnd<fuchsia_fshost::Admin>> fshost_or;
+
+  if (fshost_path.empty()) {
+    fshost_or = fshost::ConnectToAdmin();
+  } else {
+    // This is used by integration tests to connect to a test-local fshost.
+    fshost_or = component::Connect<fuchsia_fshost::Admin>(fshost_path);
+  }
+
   if (fshost_or.is_error()) {
-    fprintf(stderr, "Error connecting to fshost (@ %s): %s\n", fshost_path.c_str(),
-            fshost_or.status_string());
+    fprintf(stderr, "Error connecting to fshost: %s\n", fshost_or.status_string());
     return EXIT_FAILURE;
   }
 

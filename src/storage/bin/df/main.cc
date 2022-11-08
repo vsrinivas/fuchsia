@@ -23,7 +23,7 @@
 
 #include <fbl/unique_fd.h>
 
-#include "src/storage/fshost/constants.h"
+#include "src/storage/fshost/admin-client.h"
 
 namespace fio = fuchsia_io;
 
@@ -162,11 +162,9 @@ int main(int argc, const char** argv) {
     }
   }
 
-  std::string fshost_path(fshost::kHubAdminServicePath);
-  auto fshost_or = component::Connect<fuchsia_fshost::Admin>(fshost_path.c_str());
+  auto fshost_or = fshost::ConnectToAdmin();
   if (fshost_or.is_error()) {
-    fprintf(stderr, "Error connecting to fshost (@ %s): %s\n", fshost_path.c_str(),
-            fshost_or.status_string());
+    fprintf(stderr, "Error connecting to fshost: %s\n", fshost_or.status_string());
     // Continue...
   }
 
