@@ -4,15 +4,16 @@
 
 // This is a tool to pack a minimal Windows SDK package that allows clang to compile or
 // cross compile a binary targeting Windows. Before running this tool, please make sure
-// you have Visual Studio and Windows SDK installed. The tool was tested with following
+// you have Visual Studio or Visual Studio BuildTools and Windows SDK installed. The
+// tool was tested with following
 // installation procedures:
 //
-// - Download Visual Studio installer
+// - Download Visual Studio or Visual Studio BuildTools installer
 // - Install Visual Studio Build Tools and Windows SDK.
 //
 // To install the necessary components, you can use the following command:
 //
-//	 .\vs_professional.exe --passive ^
+//	 .\vs_BuildTools.exe --passive ^
 //	    --add Microsoft.VisualStudio.Component.VC.CoreBuildTools ^
 //		--add Microsoft.VisualStudio.Component.VC.CoreIde ^
 //		--add Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core ^
@@ -220,6 +221,15 @@ func getVSPath() (string, error) {
 	}
 	if len(matchingVsPath) > 0 {
 		return matchingVsPath, nil
+	}
+	// If MSVC and Windows SDK were installed through VS BuildTools installer,
+	// vswhere.exe will not return the paths of them. In this case, by default,
+	// the VSPath will points to
+	// "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools".
+	// Use the hard coded path for now until we have a better option.
+	BuildToolsDir := `C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools`
+	if info, err := os.Stat(BuildToolsDir); err == nil && info.IsDir() {
+		return BuildToolsDir, nil
 	}
 
 	return "", fmt.Errorf("no matching VSPath was found")
