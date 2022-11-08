@@ -26,6 +26,18 @@ constexpr size_t kMaxTotalDescriptorByteCount = 1 << 30;  // 1GB
 // See http://fxbug.dev/106491
 constexpr size_t kMaxReports = 10000;
 
+// Maximum number of state table entries we allow. See above for the rationale.
+constexpr size_t kMaxStateTableEntries = 10000;
+
+// Maximum number of usages entries we allow.  See above for the rationale.
+constexpr size_t kMaxUsagesCount = 10000;
+
+// Maximum number of usages entries we allow.  See above for the rationale.
+constexpr size_t kMaxReportIDsCount = 10000;
+
+// Maximum number of report fields that we allow.  See above for the rationale.
+constexpr size_t kMaxReportFieldsCount = 65535;
+
 #define DIV_ROUND_UP(n, d) (((n) + (d)-1) / (d))
 
 // Temporary structure to keep report id data.
@@ -63,6 +75,49 @@ class Fixup {
  private:
   const T* const src_base_;
   T* const dest_base_;
+};
+
+// A Vector that will admit only a limited number of elements.
+//
+// The parser code can not have unbounded limits for various parsed elements
+// to ensure that the code behaves predictably in the face of abuse.
+template <typename T>
+class LimitedVector {
+ public:
+  // Create a new vector that will admit a limited number of elements.
+  // `max_elements` is the maximum that will be supported.
+  explicit LimitedVector(size_t max_elements) : max_elements_(max_elements) {}
+
+  size_t size() const { return values_.size(); }
+
+  const T& operator[](size_t index) const { return values_[index]; }
+
+  // This push_back will not push the element unless there are fewer than the
+  // maximum number of elements in the vector already.
+  void push_back(const T& elem, fbl::AllocChecker* ac) {
+    if (values_.size() < max_elements_) {
+      values_.push_back(elem, ac);
+    } else {
+      // Force an allocation error without actually allocating. It gets
+      // translated into an "out of memory" in code.
+      ac->arm(1u, false);
+    }
+  }
+
+  void pop_back() { values_.pop_back(); }
+
+  // Read-only reference to the stored values.
+  const fbl::Vector<T>& values() const { return values_; }
+
+  T& operator[](size_t index) { return values_[index]; }
+
+  void reset() { values_.reset(); }
+
+  void erase(size_t index) { values_.erase(index); }
+
+ private:
+  size_t max_elements_;
+  fbl::Vector<T> values_;
 };
 
 }  // namespace
@@ -226,7 +281,7 @@ class ParseState {
     size_t ix = 0u;
     size_t ifr = 0u;
 
-    for (const ReportID& report_id : report_ids_) {
+    for (const ReportID& report_id : report_ids_.values()) {
       // If we don't have report ids, we start at 0 offset.
       // Otherwise we start at an 8 bit offset because the first
       // byte is the report id.
@@ -251,7 +306,7 @@ class ParseState {
       dev->report[ifr].output_fields = output_fields_start;
       dev->report[ifr].feature_fields = feature_fields_start;
 
-      for (const auto& f : fields_) {
+      for (const auto& f : fields_.values()) {
         if (f.report_id != report_id.report_id)
           continue;
 
@@ -326,7 +381,7 @@ class ParseState {
         return kParseUnexpectedCol;
     }
 
-    uint32_t usage = usages_.is_empty() ? 0 : usages_[0];
+    uint32_t usage = usages_.values().is_empty() ? 0 : usages_.values()[0];
 
     Collection col{static_cast<CollectionType>(data), Usage{table_.attributes.usage.page, usage},
                    parent_coll_};
@@ -364,8 +419,8 @@ class ParseState {
 
       auto curr_col = &coll_[coll_size_ - 1];
 
-      ReportField field{report_ids_[table_.report_ids_index].report_id, attributes, type, flags,
-                        curr_col};
+      ReportField field{report_ids_.values()[table_.report_ids_index].report_id, attributes, type,
+                        flags, curr_col};
 
       // If physical min/max are zero they should be set to logical values.
       if (field.attr.phys_mm.min == 0 && field.attr.phys_mm.max == 0) {
@@ -402,7 +457,11 @@ class ParseState {
   }
 
   ParseResult add_usage(uint32_t data) {  // Local
-    usages_.push_back(data);
+    fbl::AllocChecker ac;
+    usages_.push_back(data, &ac);
+    if (!ac.check()) {
+      return kParseNoMemory;
+    }
     return kParseOk;
   }
 
@@ -491,7 +550,7 @@ class ParseState {
 
     // Check if we've seen the report id before.
     uint8_t id = static_cast<uint8_t>(data);
-    ReportID* report_ids = report_ids_.data();
+    const ReportID* report_ids = report_ids_.values().data();
     for (size_t i = 0; i < report_ids_.size(); i++) {
       if (report_ids[i].report_id == id) {
         table_.report_ids_index = i;
@@ -535,7 +594,7 @@ class ParseState {
     if (stack_.size() == 0)
       return kParserUnexpectedPop;
 
-    table_ = stack_[stack_.size() - 1];
+    table_ = stack_.values()[stack_.size() - 1];
     stack_.pop_back();
     return kParseOk;
   }
@@ -577,11 +636,7 @@ class ParseState {
   class UsageIterator {
    public:
     UsageIterator(ParseState* ps, uint32_t field_type)
-        : usages_(nullptr),
-          usage_range_(),
-          index_(0),
-          last_usage_(0),
-          is_array_(FieldTypeFlags::kArray & field_type) {
+        : usage_range_(), is_array_(FieldTypeFlags::kArray & field_type) {
       usage_page_ = ps->table_.attributes.usage.page;
       if ((ps->usage_range_.max == 0) && (ps->usage_range_.min == 0)) {
         usages_ = &ps->usages_;
@@ -618,11 +673,11 @@ class ParseState {
     }
 
    private:
-    const fbl::Vector<uint32_t>* usages_;
-    MinMax usage_range_;
-    int16_t usage_page_;
-    uint32_t index_;
-    uint32_t last_usage_;
+    const LimitedVector<uint32_t>* usages_{};
+    MinMax usage_range_{};
+    uint16_t usage_page_ = 0;
+    uint32_t index_ = 0;
+    uint32_t last_usage_ = 0;
     bool is_array_;
     bool has_usage_;
   };
@@ -638,14 +693,18 @@ class ParseState {
   // Internal state per spec:
   MinMax usage_range_;
   StateTable table_;
-  fbl::Vector<StateTable> stack_;
-  fbl::Vector<uint32_t> usages_;
+
+  // We forbid vectors that grow without bounds here, as we deal with
+  // externally-supplied values. In this case it makes sense to be
+  // paranoid.  Same in all cases below.
+  LimitedVector<StateTable> stack_{kMaxStateTableEntries};
+  LimitedVector<uint32_t> usages_{kMaxUsagesCount};
   // Temporary output model:
-  Collection* parent_coll_;
-  fbl::Vector<ReportID> report_ids_;
+  Collection* parent_coll_ = nullptr;
+  LimitedVector<ReportID> report_ids_{kMaxReportIDsCount};
   std::array<Collection, kMaxCollectionCount> coll_;
   size_t coll_size_ = 0;
-  fbl::Vector<ReportField> fields_;
+  LimitedVector<ReportField> fields_{kMaxReportFieldsCount};
 };
 
 ParseResult ProcessMainItem(const hid::Item& item, ParseState* state) {
