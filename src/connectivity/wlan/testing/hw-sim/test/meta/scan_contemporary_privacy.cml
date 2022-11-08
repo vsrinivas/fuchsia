@@ -4,6 +4,6 @@
 {
     include: [ "//src/connectivity/wlan/testing/hw-sim/test/meta/shared_test_capabilities.shard.cml" ],
     program: {
-        binary: "bin/scan_legacy_privacy_on",
+        binary: "bin/scan_contemporary_privacy",
     },
 }

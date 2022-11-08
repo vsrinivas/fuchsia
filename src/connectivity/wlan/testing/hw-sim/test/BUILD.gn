@@ -5,16 +5,16 @@
 import("//build/components.gni")
 import("//build/testing/environments.gni")
 
-fuchsia_component("scan-legacy-privacy-off") {
+fuchsia_component("scan-contemporary-privacy") {
   testonly = true
-  manifest = "meta/scan_legacy_privacy_off.cml"
-  deps = [ "scan_legacy_privacy_off" ]
+  manifest = "meta/scan_contemporary_privacy.cml"
+  deps = [ "scan_contemporary_privacy" ]
 }
 
-fuchsia_component("scan-legacy-privacy-on") {
+fuchsia_component("scan-legacy-privacy") {
   testonly = true
-  manifest = "meta/scan_legacy_privacy_on.cml"
-  deps = [ "scan_legacy_privacy_on" ]
+  manifest = "meta/scan_legacy_privacy.cml"
+  deps = [ "scan_legacy_privacy" ]
 }
 
 fuchsia_component("connect-to-all-modern-bss-protections") {
@@ -160,7 +160,7 @@ fuchsia_test_package("wlan-hw-sim-contemporary-privacy-tests") {
       max_severity = "ERROR"
     }
   }
-  test_components = [ ":scan-legacy-privacy-off" ]
+  test_components = [ ":scan-contemporary-privacy" ]
   test_components += hw_sim_test_components_for_all_privacies
   deps = [ "//src/connectivity/wlan/wlanstack:wlanstack-values" ]
   deps += shared_deps
@@ -175,7 +175,7 @@ fuchsia_test_package("wlan-hw-sim-legacy-privacy-tests") {
   test_components = [
     ":connect-with-bad-password",
     ":connect-to-wpa1-network",
-    ":scan-legacy-privacy-on",
+    ":scan-legacy-privacy",
   ]
   test_components += hw_sim_test_components_for_all_privacies
   deps = [ "//src/connectivity/wlan/wlanstack:wlanstack-legacy-privacy-values" ]

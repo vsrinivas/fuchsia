@@ -4,7 +4,7 @@
 
 import("//build/rust/rustc_test.gni")
 
-rustc_test("scan_legacy_privacy_off") {
+rustc_test("scan_legacy_privacy") {
   edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy_rust",
