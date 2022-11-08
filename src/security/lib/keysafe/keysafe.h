@@ -1,8 +1,8 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef SRC_SECURITY_KEYSAFE_KEYSAFE_H_
-#define SRC_SECURITY_KEYSAFE_KEYSAFE_H_
+#ifndef SRC_SECURITY_LIB_KEYSAFE_KEYSAFE_H_
+#define SRC_SECURITY_LIB_KEYSAFE_KEYSAFE_H_
 
 // This UUID is generated with uuidgen
 // the ITU-T UUID generator at http://www.itu.int/ITU-T/asn1/uuid.html */
@@ -41,4 +41,4 @@
 #define TA_KEYSAFE_AES_GCM_TAG_LEN_BYTES (16)
 #define TA_KEYSAFE_AES_GCM_IV_LEN_BYTES (12)
 
-#endif  // SRC_SECURITY_KEYSAFE_KEYSAFE_H_
+#endif  // SRC_SECURITY_LIB_KEYSAFE_KEYSAFE_H_

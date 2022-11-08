@@ -18,7 +18,7 @@ fi
 
 readonly FUCHSIA_HOME=$1
 
-bindgen ${FUCHSIA_HOME}/src/security/keysafe/keysafe.h \
+bindgen ${FUCHSIA_HOME}/src/security/lib/keysafe/keysafe.h \
   -o keysafe.rs
 
 TMP="$(mktemp)"

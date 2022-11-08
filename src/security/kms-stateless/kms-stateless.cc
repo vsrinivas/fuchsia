@@ -18,7 +18,7 @@
 #include <fbl/unique_fd.h>
 #include <ramdevice-client/ramdisk.h>
 
-#include "src/security/keysafe/keysafe.h"
+#include "src/security/lib/keysafe/keysafe.h"
 #include "tee-client-api/tee_client_api.h"
 
 namespace kms_stateless {
