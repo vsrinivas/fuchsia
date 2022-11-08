@@ -6,6 +6,7 @@
 
 use crate::auth::Credentials;
 use crate::device::DeviceOps;
+use crate::dynamic_thread_pool::DynamicThreadPool;
 use crate::fs::devtmpfs::dev_tmp_fs;
 use crate::fs::{
     fs_node_impl_dir_readonly, DirEntryHandle, FdEvents, FdNumber, FdTable, FileObject, FileOps,
@@ -24,6 +25,7 @@ use crate::task::{
 };
 use crate::types::*;
 use bitflags::bitflags;
+use derivative::Derivative;
 use fidl::endpoints::{RequestStream, ServerEnd};
 use fidl_fuchsia_starnix_binder as fbinder;
 use fuchsia_async as fasync;
@@ -35,6 +37,8 @@ use std::sync::{Arc, Weak};
 use zerocopy::{AsBytes, FromBytes};
 
 /// Android's binder kernel driver implementation.
+#[derive(Derivative)]
+#[derivative(Default)]
 pub struct BinderDriver {
     /// The "name server" process that is addressed via the special handle 0 and is responsible
     /// for implementing the binder protocol `IServiceManager`.
@@ -46,6 +50,11 @@ pub struct BinderDriver {
     /// per process. When the last file descriptor to the binder in the process is closed, the
     /// value is removed from the map.
     procs: RwLock<BTreeMap<pid_t, Arc<BinderProcess>>>,
+
+    /// The thread pool to dispatch remote ioctl calls to. This is necessary because these calls
+    /// can block waiting from data from another process.
+    #[derivative(Default(value = "DynamicThreadPool::new(2)"))]
+    thread_pool: DynamicThreadPool,
 }
 
 impl DeviceOps for Arc<BinderDriver> {
@@ -1436,7 +1445,7 @@ impl BinderTask for LocalBinderTask {
 
 impl BinderDriver {
     fn new() -> Arc<Self> {
-        Arc::new(Self { context_manager: RwLock::new(None), procs: RwLock::new(BTreeMap::new()) })
+        Arc::new(Self::default())
     }
 
     fn find_process(&self, pid: pid_t) -> Result<Arc<BinderProcess>, Errno> {
@@ -1473,6 +1482,7 @@ impl BinderDriver {
         _process: zx::Process,
         server_end: ServerEnd<fbinder::BinderMarker>,
     ) -> fasync::Task<()> {
+        let driver = self.clone();
         fasync::Task::local(
             async move {
                 let mut stream = fbinder::BinderRequestStream::from_channel(
@@ -1491,14 +1501,16 @@ impl BinderDriver {
                             parameter: _,
                             responder,
                         } => {
-                            responder.send(uapi::ENOTSUP as u16)?;
+                            driver.thread_pool.dispatch(move || {
+                                let _ = responder.send(uapi::ENOTSUP as u16);
+                            });
                         }
                     }
                 }
                 Ok(())
             }
-            .unwrap_or_else(|err: anyhow::Error| {
-                tracing::warn!("android_hal_health XXXX OUPS {}", err);
+            .unwrap_or_else(|_: anyhow::Error| {
+                // Ignoring the error, as it is coming from a disconnection from the client.
             }),
         )
     }
