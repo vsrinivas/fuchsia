@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fasync::TimeoutExt;
+
 use {
     crate::{
         client::{bss_selection, types},
@@ -37,6 +39,7 @@ use {
 };
 
 const MAX_CONNECTION_ATTEMPTS: u8 = 4; // arbitrarily chosen until we have some data
+const CONNECT_TIMEOUT: zx::Duration = zx::Duration::from_seconds(30);
 type State = state_machine::State<ExitReason>;
 type ReqStream = stream::Fuse<mpsc::Receiver<ManualRequest>>;
 
@@ -333,6 +336,33 @@ async fn handle_connecting_error_and_retry(
     }
 }
 
+/// Wait until stream returns an OnConnectResult event or None. Ignore other event types.
+async fn wait_for_connect_result(
+    mut stream: fidl_sme::ConnectTransactionEventStream,
+) -> Result<fidl_sme::ConnectResult, ExitReason> {
+    loop {
+        let stream_fut = stream.try_next();
+        match stream_fut.await.map_err(|e| {
+            ExitReason(Err(format_err!("Failed to receive connect result from sme: {:?}", e)))
+        })? {
+            Some(fidl_sme::ConnectTransactionEvent::OnConnectResult { result }) => {
+                return Ok(result)
+            }
+            Some(other) => {
+                info!(
+                    "Expected ConnectTransactionEvent::OnConnectResult, got {}. Ignoring.",
+                    connect_txn_event_name(&other)
+                );
+            }
+            None => {
+                return Err(ExitReason(Err(format_err!(
+                    "Server closed the ConnectTransaction channel before sending a response"
+                ))));
+            }
+        };
+    }
+}
+
 /// The CONNECTING state requests an SME connect. It handles the SME connect response:
 /// - for a successful connection, transition to CONNECTED state
 /// - for a failed connection, retry connection by passing a next_network to the
@@ -410,24 +440,13 @@ async fn connecting_state<'a>(
     })?;
     let start_time = fasync::Time::now();
 
-    // Wait for connection result event.
-    let mut stream = connect_txn.take_event_stream();
-    let sme_result = match stream.try_next().await.map_err(|e| {
-        ExitReason(Err(format_err!("Failed to receive connect response from sme: {:?}", e)))
-    })? {
-        Some(fidl_sme::ConnectTransactionEvent::OnConnectResult { result }) => result,
-        Some(other) => {
-            return Err(ExitReason(Err(format_err!(
-                "Expected ConnectTransactionEvent::OnConnectResult, got {}",
-                connect_txn_event_name(&other)
-            ))));
-        }
-        None => {
-            return Err(ExitReason(Err(format_err!(
-                "Server closed the ConnectTransaction channel before sending a response"
-            ))));
-        }
-    };
+    // Wait for connect result or timeout.
+    let stream = connect_txn.take_event_stream();
+    let sme_result = wait_for_connect_result(stream)
+        .on_timeout(CONNECT_TIMEOUT, || {
+            Err(ExitReason(Err(format_err!("Timed out waiting for connect result from SME."))))
+        })
+        .await?;
 
     // Report the connect result to the saved networks manager.
     common_options
@@ -463,7 +482,7 @@ async fn connecting_state<'a>(
             );
             let connected_options = ConnectedOptions {
                 currently_fulfilled_connection: options.connect_selection.clone(),
-                connect_txn_stream: stream,
+                connect_txn_stream: connect_txn.take_event_stream(),
                 latest_ap_state: Box::new(parsed_bss_description.clone()),
                 multiple_bss_candidates: options
                     .connect_selection
@@ -920,6 +939,53 @@ mod tests {
     }
 
     #[fuchsia::test]
+    fn wait_for_connect_result_ignores_other_events() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let (connect_txn, remote) = create_proxy::<fidl_sme::ConnectTransactionMarker>().unwrap();
+        let request_handle = remote.into_stream().unwrap().control_handle();
+        let response_stream = connect_txn.take_event_stream();
+
+        let fut = wait_for_connect_result(response_stream);
+
+        pin_mut!(fut);
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Send some unexpected response
+        let mut ind = fidl_internal::SignalReportIndication { rssi_dbm: -20, snr_db: 25 };
+        request_handle.send_on_signal_report(&mut ind).unwrap();
+
+        // Future should still be waiting for OnConnectResult event
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Send expected ConnectResult response
+        let mut sme_result = fidl_sme::ConnectResult {
+            code: fidl_ieee80211::StatusCode::Success,
+            is_credential_rejected: false,
+            is_reconnect: false,
+        };
+        request_handle.send_on_connect_result(&mut sme_result).unwrap();
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(response)) => {
+            assert_eq!(sme_result, response);
+        });
+    }
+
+    #[fuchsia::test]
+    fn wait_for_connect_result_error() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let (connect_txn, remote) = create_proxy::<fidl_sme::ConnectTransactionMarker>().unwrap();
+        let response_stream = connect_txn.take_event_stream();
+
+        let fut = wait_for_connect_result(response_stream);
+
+        pin_mut!(fut);
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Drop server end, and verify future completes with error
+        drop(remote);
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Err(ExitReason(_))));
+    }
+
+    #[fuchsia::test]
     fn connecting_state_successfully_connects() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -1051,6 +1117,105 @@ mod tests {
             exec.run_until_stalled(&mut test_values.update_receiver.into_future()),
             Poll::Pending
         );
+    }
+
+    #[fuchsia::test]
+    fn connecting_state_times_out() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut test_values = test_setup();
+        // Do SavedNetworksManager set up manually to get functionality and stash server
+        let (saved_networks, mut stash_server) =
+            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server());
+        let saved_networks_manager = Arc::new(saved_networks);
+        test_values.common_options.saved_networks_manager = saved_networks_manager.clone();
+        let next_network_ssid = types::Ssid::try_from("bar").unwrap();
+        let bss_description = random_fidl_bss_description!(Wpa2, ssid: next_network_ssid.clone());
+        let connect_selection = types::ConnectSelection {
+            target: types::ScannedCandidate {
+                network: types::NetworkIdentifier {
+                    ssid: next_network_ssid.clone(),
+                    security_type: types::SecurityType::Wep,
+                },
+                credential: Credential::Password("five0".as_bytes().to_vec()),
+                bss_description: bss_description.clone(),
+                observation: types::ScanObservation::Passive,
+                has_multiple_bss_candidates: true,
+                mutual_security_protocols: [SecurityDescriptor::WEP].into_iter().collect(),
+            },
+            reason: types::ConnectReason::FidlConnectRequest,
+        };
+
+        // Store the network in the saved_networks_manager
+        let save_fut = saved_networks_manager.store(
+            connect_selection.target.network.clone(),
+            connect_selection.target.credential.clone(),
+        );
+        pin_mut!(save_fut);
+        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Pending);
+        process_stash_write(&mut exec, &mut stash_server);
+        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(None)));
+
+        // Prepare state machine
+        let connecting_options =
+            ConnectingOptions { connect_selection: connect_selection.clone(), attempt_counter: 0 };
+        let initial_state = connecting_state(test_values.common_options, connecting_options);
+        let fut = run_state_machine(initial_state);
+        pin_mut!(fut);
+        let sme_fut = test_values.sme_req_stream.into_future();
+        pin_mut!(sme_fut);
+
+        // Run the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Ensure a connect request is sent to the SME
+        let connect_txn_handle = assert_variant!(
+            poll_sme_req(&mut exec, &mut sme_fut),
+            Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
+                assert_eq!(req.ssid, next_network_ssid.to_vec());
+                assert_eq!(connect_selection.target.credential, req.authentication.credentials);
+                assert_eq!(req.bss_description, bss_description);
+                assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
+                assert_eq!(req.multiple_bss_candidates, true);
+                let (_stream, ctrl) = txn.expect("connect txn unused")
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl
+            }
+        );
+
+        // Check for a connecting update
+        let client_state_update = ClientStateUpdate {
+            state: fidl_policy::WlanClientState::ConnectionsEnabled,
+            networks: vec![ClientNetworkState {
+                id: types::NetworkIdentifier {
+                    ssid: next_network_ssid.clone(),
+                    security_type: types::SecurityType::Wep,
+                },
+                state: fidl_policy::ConnectionState::Connecting,
+                status: None,
+            }],
+        };
+        assert_variant!(
+            test_values.update_receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(updates))) => {
+            assert_eq!(updates, client_state_update);
+        });
+
+        // Respond with a SignalReport, which should not unblock connecting_state
+        connect_txn_handle
+            .send_on_signal_report(&mut fidl_internal::SignalReportIndication {
+                rssi_dbm: -25,
+                snr_db: 30,
+            })
+            .expect("failed to send singal report");
+
+        // Run the state machine. Should still be pending
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Wake up the next timer, which is the timeout for the connect request.
+        assert!(exec.wake_next_timer().is_some());
+
+        // State machine should exit.
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
     }
 
     #[fuchsia::test]
