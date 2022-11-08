@@ -15,6 +15,7 @@ zx_library("boot-shim") {
     "lib/boot-shim/boot-shim.h",
     "lib/boot-shim/efi.h",
     "lib/boot-shim/debugdata.h",
+    "lib/boot-shim/devicetree-boot-shim.h",
     "lib/boot-shim/efi-boot-shim.h",
     "lib/boot-shim/item-base.h",
     "lib/boot-shim/pool-mem-config.h",
@@ -37,6 +38,13 @@ zx_library("boot-shim") {
 
     # <lib/boot-shim/efi.h> #include <efi/system-table.h>
     "//zircon/kernel/lib/efi",
+
+    # <lib/boot-shim/devicetree-boot-shim> has include <lib/devictree/matcher.h>
+    # <lib/devicetree/devicetree.h>
+    "//zircon/kernel/lib/devicetree",
+
+    # <lib/boot-shim/devicetree-boot-shim> has include <fbl/macros.h>
+    "//zircon/system/ulib/fbl",
   ]
 
   sources = [
@@ -89,6 +97,7 @@ test("boot-shim-unittests") {
     "acpi-tests.cc",
     "boot-shim-tests.cc",
     "debugdata-tests.cc",
+    "devicetree-boot-shim-tests.cc",
     "efi-boot-shim-tests.cc",
     "efi-tests.cc",
     "pool-mem-config-tests.cc",
@@ -99,11 +108,18 @@ test("boot-shim-unittests") {
     ":boot-shim",
     ":boot-shim-test",
     "//zircon/kernel/lib/acpi_lite",
+    "//zircon/kernel/lib/devicetree/tests:test_helper",
     "//zircon/kernel/phys/lib/memalloc",
     "//zircon/system/ulib/zxtest",
   ]
+  if (is_host) {
+    deps += [ "//zircon/kernel/lib/devicetree/tests:host-test-data" ]
+  }
 }
 
 fuchsia_unittest_package("boot-shim-tests") {
-  deps = [ ":boot-shim-unittests" ]
+  deps = [
+    ":boot-shim-unittests",
+    "//zircon/kernel/lib/devicetree/tests:dtb_resources",
+  ]
 }
