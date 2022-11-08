@@ -8,7 +8,7 @@
     ],
     program: {
         runner: "elf",
-        binary: "bin/virtio_net",
+        binary: "bin/virtio_net_bin",
     },
     capabilities: [
         {

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/virtualization/bin/vmm/device/virtio_net_rs/src/cpp/guest_ethernet.h"
+#include "src/virtualization/bin/vmm/device/virtio_net/src/cpp/guest_ethernet.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/virtualization/bin/vmm/device/virtio_net_rs/src/cpp/guest_ethernet_interface.h"
+#include "src/virtualization/bin/vmm/device/virtio_net/src/cpp/guest_ethernet_interface.h"
 
 namespace {
 // Maximum Transmission Unit (MTU): the maximum supported size of an incoming/outgoing frame.

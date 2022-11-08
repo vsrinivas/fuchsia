@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/virtualization/bin/vmm/device/virtio_net_rs/src/cpp/completion_queue.h"
+#include "src/virtualization/bin/vmm/device/virtio_net/src/cpp/completion_queue.h"
 
 #include <lib/async/cpp/task.h>
 

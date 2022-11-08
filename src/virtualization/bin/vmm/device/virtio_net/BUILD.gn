@@ -1,36 +1,121 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
 
-executable("virtio_net_bin") {
-  visibility = [ ":*" ]
-
-  output_name = "virtio_net"
+static_library("guest-ethernet") {
   sources = [
-    "guest_ethernet.cc",
-    "guest_ethernet.h",
-    "virtio_net.cc",
+    "src/cpp/completion_queue.cc",
+    "src/cpp/completion_queue.h",
+    "src/cpp/guest_ethernet.cc",
+    "src/cpp/guest_ethernet.h",
+    "src/cpp/guest_ethernet_interface.cc",
+    "src/cpp/guest_ethernet_interface.h",
   ]
+
+  public_configs = [ "//build/config/fuchsia:static_cpp_standard_library" ]
+
   deps = [
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_hlcpp",
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_hlcpp",
     "//sdk/fidl/fuchsia.net.virtualization:fuchsia.net.virtualization_hlcpp",
-    "//sdk/lib/fit-promise",
+    "//sdk/lib/fit",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:cpp-macros",
     "//src/connectivity/network/drivers/network-device/device",
     "//src/connectivity/network/lib/net_interfaces/cpp",
-    "//src/virtualization/bin/vmm/device:virtio",
-    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/trace-provider",
+    "//zircon/system/ulib/virtio",
   ]
 }
 
-fuchsia_component("virtio_net_component") {
-  component_name = "virtio_net"
-  manifest = "meta/virtio_net.cml"
-  deps = [ ":virtio_net_bin" ]
+group("tests") {
+  testonly = true
+  deps = [
+    ":virtio_net_cpp_unittests",
+    ":virtio_net_unittests",
+  ]
+}
+
+rustc_binary("virtio_net_bin") {
+  name = "virtio_net_bin"
+  edition = "2021"
+  with_unit_tests = true
+
+  sources = [
+    "src/device.rs",
+    "src/guest_ethernet.rs",
+    "src/interface.rs",
+    "src/main.rs",
+    "src/wire.rs",
+  ]
+
+  deps = [
+    ":guest-ethernet",
+    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_rust",
+    "//sdk/fidl/fuchsia.virtualization.hardware:fuchsia.virtualization.hardware_rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/virtualization/lib/machina-virtio-device",
+    "//src/virtualization/lib/virtio-device",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:libc",
+    "//third_party/rust_crates:num-derive",
+    "//third_party/rust_crates:num-traits",
+    "//third_party/rust_crates:tracing",
+    "//third_party/rust_crates:zerocopy",
+  ]
+
+  test_deps = [
+    "//src/lib/async-utils",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:rand",
+  ]
+}
+
+fuchsia_unittest_package("virtio_net_unittests") {
+  deps = [ ":virtio_net_bin_test" ]
+
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 fuchsia_package("virtio_net") {
+  package_name = "virtio_net"
   deps = [ ":virtio_net_component" ]
+}
+
+fuchsia_component("virtio_net_component") {
+  manifest = "meta/virtio_net.cml"
+  deps = [ ":virtio_net_bin" ]
+  component_name = "virtio_net"
+}
+
+executable("virtio_net_cpp_unittests_bin") {
+  testonly = true
+
+  sources = [ "src/cpp/completion_queue_test.cc" ]
+
+  deps = [
+    ":guest-ethernet",
+    "//sdk/fidl/fuchsia.net.virtualization:fuchsia.net.virtualization_hlcpp",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/connectivity/network/drivers/network-device/device",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+  ]
+}
+
+fuchsia_unittest_package("virtio_net_cpp_unittests") {
+  deps = [ ":virtio_net_cpp_unittests_bin" ]
 }

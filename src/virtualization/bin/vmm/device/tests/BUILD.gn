@@ -249,10 +249,8 @@ device_test("virtio_magma_device_tests") {
 device_test("virtio_net_device_tests") {
   sources = [ "virtio_net_test.cc" ]
   manifest = "meta/virtio_net_device_tests.cml"
-  device_components = [
-    "//src/virtualization/bin/vmm/device/virtio_net:virtio_net_component",
-    "//src/virtualization/bin/vmm/device/virtio_net_rs:virtio_net_component",
-  ]
+  device_components =
+      [ "//src/virtualization/bin/vmm/device/virtio_net:virtio_net_component" ]
 
   deps = [
     ":test_with_device",
