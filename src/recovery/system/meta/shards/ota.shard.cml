@@ -64,6 +64,7 @@
                 "fuchsia.buildinfo.Provider",
                 "fuchsia.fshost.Admin",
                 "fuchsia.logger.LogSink",
+                "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.net.name.Lookup",
                 "fuchsia.paver.Paver",
                 "fuchsia.posix.socket.Provider",
