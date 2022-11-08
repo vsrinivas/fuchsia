@@ -926,6 +926,15 @@ group("thiserror") {
   public_deps = [ ":thiserror-v1_0_23" ]
 }
 
+import("//third_party/rust_crates/private_visibility.gni")
+
+if (!(current_os == "fuchsia")) {
+  group("tinyjson") {
+    public_deps = [ ":tinyjson-v2_5_0" ]
+    visibility = private_visibility
+  }
+}
+
 if (!(current_os == "fuchsia")) {
   group("tokio") {
     public_deps = [ ":tokio-v1_19_2" ]
@@ -10732,6 +10741,26 @@ rust_library("time-v0_1_43") {
     "--edition=2015",
     "-Cmetadata=f3381b83c7164a8b",
     "-Cextra-filename=-f3381b83c7164a8b",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_library("tinyjson-v2_5_0") {
+  crate_name = "tinyjson"
+  crate_root = "//third_party/rust_crates/vendor/tinyjson/src/lib.rs"
+  output_name = "tinyjson-a756eab61975480c"
+  configs -= [ "//build/config/rust:2018_idioms" ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=a756eab61975480c",
+    "-Cextra-filename=-a756eab61975480c",
   ]
 
   visibility = [ ":*" ]

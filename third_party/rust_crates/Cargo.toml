@@ -307,6 +307,7 @@ syn = { version = "1.0.98", features = ["full", "visit", "visit-mut", "extra-tra
 synstructure = "0.12.1"
 tar = "0.4.25"
 termios = "0.3.2"
+tinyjson = "2.5.0"
 # TODO(fxbug.dev/106164) Enable the "rt" and "net" features here once gnaw
 # supports target-specific feature resolution
 tokio = { version = "1.19.2", default-features = false }
@@ -596,6 +597,11 @@ rustflags = []
 
 [gn.package.signal-hook."0.3.8"]
 rustflags = []
+
+# Not actually used in the gn build at all, just for the rules_rust bazel rules.
+[gn.package.tinyjson."2.5.0"]
+group_visibility = { import = "//third_party/rust_crates/private_visibility.gni", variable = "private_visibility" }
+
 
 # TODO(fxbug.dev/106164) This manual configuration enables the "rt" and "net"
 # features on non-Fuchsia targets. It should be removed once gnaw supports

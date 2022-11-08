@@ -61,11 +61,19 @@ local_repository(
     path = "third_party/bazel_rules_rust",
 )
 
+# A dependency of rules_rust
+new_local_repository(
+    name = "rules_rust_tinyjson",
+    path = "third_party/rust_crates/vendor/tinyjson",
+    build_file = "third_party/bazel_rules_rust/util/process_wrapper/BUILD.tinyjson.bazel",
+)
+
 # TODO(113330): Use fuchsia.googlesource.com mirror when available.
 local_repository(
     name = "rules_python",
     path = "build/bazel/local_repositories/rules_python",
 )
+
 
 # buildifier: disable=load-on-top
 load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies")
