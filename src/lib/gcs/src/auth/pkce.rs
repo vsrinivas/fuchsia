@@ -10,7 +10,7 @@
 
 use {
     crate::{
-        auth::info::{CLIENT_ID, CLIENT_SECRET},
+        auth::info::{AUTH_SCOPE, CLIENT_ID, CLIENT_SECRET},
         error::GcsError,
     },
     anyhow::{bail, Context, Result},
@@ -172,10 +172,10 @@ async fn get_auth_code() -> Result<(AuthCode, CodeVerifier, EncodedRedirect)> {
     let authorization_request = format!(
         "{}\
         ?response_type=code\
-        &scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform\
+        &scope={}\
         &redirect_uri={}&client_id={}&state={}&code_challenge={}\
         &code_challenge_method=S256",
-        AUTHORIZATION_ENDPOINT, encoded_redirect, CLIENT_ID, state, code_challenge,
+        AUTHORIZATION_ENDPOINT, AUTH_SCOPE, encoded_redirect, CLIENT_ID, state, code_challenge,
     );
 
     // Simple background listener.

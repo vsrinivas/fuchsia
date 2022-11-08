@@ -18,3 +18,5 @@
 /// secrecy of refresh tokens, which effectively become bearer tokens."
 pub(crate) const CLIENT_ID: &str = "909320924072.apps.googleusercontent.com";
 pub(crate) const CLIENT_SECRET: &str = "p3RlpR10xMFh9ZXBS/ZNLYUu";
+
+pub(crate) const AUTH_SCOPE: &str = "https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform";

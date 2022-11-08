@@ -260,8 +260,53 @@ impl TableRows {
     }
 }
 
+/// A message used for informing the user of important information.
+///
+/// A notice differs from an alert in that a notice does not ask for
+/// acknowledgement. Instead the notice is presented until the action or state
+/// described by the notice completes.
+///
+/// This is similar to a progress where the progress is unknown (like spinner).
+/// The notice is shown until the user cancels the action or the action
+/// completes.
+#[derive(Debug, Default, Deserialize, Serialize)]
+pub struct Notice {
+    /// Always "notice".
+    kind: String,
+
+    /// A overall description. E.g. "Copying files".
+    title: Option<String>,
+
+    /// The body of the message to the user.
+    message: Option<String>,
+}
+
+impl Notice {
+    pub fn builder() -> Self {
+        Notice { kind: "notice".to_string(), ..Default::default() }
+    }
+
+    /// A label shown prominently, such as the dialog or window title in a GUI.
+    pub fn title<'a, S>(&'a mut self, title: S) -> &'a mut Self
+    where
+        S: Into<String>,
+    {
+        self.title = Some(title.into());
+        self
+    }
+
+    pub fn message<'a, S>(&'a mut self, message: S) -> &'a mut Self
+    where
+        S: Into<String>,
+    {
+        self.message = Some(message.into());
+        self
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub enum Presentation {
+    Notice(Notice),
     Progress(Progress),
     StringPrompt(SimplePresentation),
     Table(TableRows),
@@ -370,6 +415,17 @@ impl<'a> TextUi<'a> {
         Ok(Response::Default)
     }
 
+    fn present_notice(&self, element: &Notice) -> Result<Response> {
+        let mut inner = self.inner.lock().expect("present_string_prompt lock");
+        if let Some(title) = &element.title {
+            writeln!(inner.output, "{}", title)?;
+        }
+        if let Some(message) = &element.message {
+            writeln!(inner.output, "{}", message)?;
+        }
+        Ok(Response::Default)
+    }
+
     fn present_string_prompt(&self, element: &SimplePresentation) -> Result<Response> {
         if !is(atty::Stream::Stdout) {
             // If the terminal is non-interactive, it's not reasonable to prompt
@@ -418,6 +474,7 @@ impl<'a> TextUi<'a> {
 impl<'a> Interface for TextUi<'a> {
     fn present(&self, presentation: &Presentation) -> Result<Response> {
         match presentation {
+            Presentation::Notice(p) => self.present_notice(p),
             Presentation::Progress(p) => self.present_progress(p),
             Presentation::StringPrompt(p) => self.present_string_prompt(p),
             Presentation::Table(p) => self.present_table(p),
@@ -430,6 +487,10 @@ pub struct MockUi {}
 impl MockUi {
     pub fn new() -> Self {
         Self {}
+    }
+
+    fn present_notice(&self, _notice: &Notice) -> Result<Response> {
+        Ok(Response::Default)
     }
 
     fn present_progress(&self, _progress: &Progress) -> Result<Response> {
@@ -448,6 +509,7 @@ impl MockUi {
 impl Interface for MockUi {
     fn present(&self, presentation: &Presentation) -> Result<Response> {
         match presentation {
+            Presentation::Notice(p) => self.present_notice(p),
             Presentation::Progress(p) => self.present_progress(p),
             Presentation::StringPrompt(p) => self.present_string_prompt(p),
             Presentation::Table(p) => self.present_table(p),
@@ -458,6 +520,22 @@ impl Interface for MockUi {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_notice() {
+        let mut input = "".as_bytes();
+        let mut output: Vec<u8> = Vec::new();
+        let mut err_out: Vec<u8> = Vec::new();
+        let ui = TextUi::new(&mut input, &mut output, &mut err_out);
+        let mut notice = Notice::builder();
+        notice.title("foo");
+        notice.message("Test message for notice.");
+        ui.present(&Presentation::Notice(notice)).expect("present notice");
+        let output = String::from_utf8(output).expect("string form utf8");
+        assert!(output.contains("foo"));
+        assert!(output.contains("Test message for notice"));
+        assert!(output.contains("notice"));
+    }
 
     #[test]
     fn test_progress() {

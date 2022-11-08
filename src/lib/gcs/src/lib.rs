@@ -35,4 +35,5 @@ pub mod auth;
 pub mod client;
 pub mod error;
 pub mod gs_url;
+pub mod mock_https_client;
 pub mod token_store;

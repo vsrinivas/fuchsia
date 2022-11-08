@@ -73,13 +73,12 @@ impl FromStr for AuthFlowChoice {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_ref() {
             "default" => Ok(AuthFlowChoice::Default),
-            "device" => Ok(AuthFlowChoice::Device),
+            "device-experimental" => Ok(AuthFlowChoice::Device),
             "oob" => Ok(AuthFlowChoice::Oob),
             "pkce" => Ok(AuthFlowChoice::Pkce),
-            _ => {
-                Err("Unknown auth flow choice. Use one of oob, device, pkce, or default."
-                    .to_string())
-            }
+            _ => Err("Unknown auth flow choice. Use one of oob, \
+                    device-experimental, pkce, or default."
+                .to_string()),
         }
     }
 }

@@ -10,11 +10,13 @@ rustc_library("lib") {
   with_unit_tests = true
 
   deps = [
+    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-hyper:fuchsia-hyper",
     "//src/lib/structured_ui",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-lock",
     "//third_party/rust_crates:base64",
+    "//third_party/rust_crates:cfg-if",
     "//third_party/rust_crates:http",
     "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:once_cell",
@@ -44,6 +46,7 @@ rustc_library("lib") {
     "src/error.rs",
     "src/gs_url.rs",
     "src/lib.rs",
+    "src/mock_https_client.rs",
     "src/token_store.rs",
   ]
 }
