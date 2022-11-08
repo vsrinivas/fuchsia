@@ -1724,7 +1724,6 @@ zx_status_t iwl_mvm_add_sta(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_
 
     mvmtxq->txq_id = IWL_MVM_INVALID_QUEUE;
     list_initialize(&mvmtxq->list);
-    mtx_init(&mvmtxq->tx_path_lock, mtx_plain);
   }
 
   mvm_sta->agg_tids = 0;
@@ -2020,6 +2019,7 @@ zx_status_t iwl_mvm_rm_sta(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_s
 
   ret = iwl_mvm_rm_sta_common(mvm, mvm_sta->sta_id);
   iwl_rcu_store(mvm->fw_id_to_mac_id[mvm_sta->sta_id], NULL);
+  mtx_destroy(&mvm_sta->lock);
 
   return ret;
 }
@@ -2555,6 +2555,7 @@ void iwl_mvm_free_reorder(struct iwl_mvm* mvm, struct iwl_mvm_baid_data* data) {
      */
     reorder_buf->removed = true;
     mtx_unlock(&reorder_buf->lock);
+    mtx_destroy(&reorder_buf->lock);
     iwl_irq_timer_release_sync(reorder_buf->reorder_timer);
   }
 }

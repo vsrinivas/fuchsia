@@ -1873,6 +1873,7 @@ void iwl_drv_stop(struct iwl_drv* drv) {
     list_remove_tail(&drv->list);
   }
   mtx_unlock(&iwlwifi_opmode_table_mtx);
+  mtx_destroy(&iwlwifi_opmode_table_mtx);
 
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
   drv->trans->ops->debugfs_cleanup(drv->trans);

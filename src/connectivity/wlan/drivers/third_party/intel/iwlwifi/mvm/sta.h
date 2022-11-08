@@ -352,8 +352,6 @@ struct iwl_mvm_rxq_dup_data {
 struct iwl_mvm_txq {
   list_node_t list;
   uint16_t txq_id;
-  /* Protects TX path invocation from two places */
-  mtx_t tx_path_lock;
   bool stopped;
 };
 
