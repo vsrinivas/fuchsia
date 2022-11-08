@@ -28,6 +28,17 @@ use crate::{
     DeviceClass,
 };
 
+/// Network identifier.
+#[derive(Debug, Clone)]
+pub(super) enum NetworkId {
+    // TODO(https://fxbug.dev/86068): Implement isolation between bridged
+    // networks and change this to represent more than a single bridged
+    // network.
+    /// The unique bridged network consisting of an upstream-providing
+    /// interface and all guest interfaces.
+    Bridged,
+}
+
 /// Wrapper around a [`fnet_virtualization::NetworkRequest`] that allows for the
 /// server to notify all existing interfaces to shut down when the client closes
 /// the `Network` channel.
@@ -42,8 +53,8 @@ pub(super) enum NetworkRequest {
 pub(super) enum Event {
     ControlRequestStream(#[derivative(Debug = "ignore")] fnet_virtualization::ControlRequestStream),
     ControlRequest(fnet_virtualization::ControlRequest),
-    NetworkRequest(NetworkRequest),
-    InterfaceClose(u64),
+    NetworkRequest(NetworkId, NetworkRequest),
+    InterfaceClose(NetworkId, u64),
 }
 
 pub(super) type EventStream = Pin<Box<dyn futures::stream::Stream<Item = Event>>>;
@@ -145,143 +156,141 @@ impl<B: BridgeHandler> Virtualization<B> {
 
     async fn handle_network_request(
         &mut self,
+        network_id: NetworkId,
         request: NetworkRequest,
         events: &mut futures::stream::SelectAll<EventStream>,
     ) -> Result<(), errors::Error> {
         match request {
-            NetworkRequest::Request(request, mut network_close_rx) => {
-                match request {
-                    fnet_virtualization::NetworkRequest::AddPort {
-                        port,
-                        interface,
-                        control_handle: _,
-                    } => {
-                        // TODO(https://fxbug.dev/87111): send a terminal event on the channel if
-                        // the device could not be added to the network due to incompatibility; for
-                        // example, if the network is bridged and the device does not support the
-                        // same L2 protocol as other devices on the bridge.
+            NetworkRequest::Request(
+                fnet_virtualization::NetworkRequest::AddPort { port, interface, control_handle: _ },
+                mut network_close_rx,
+            ) => {
+                // TODO(https://fxbug.dev/87111): send a terminal event on the channel if
+                // the device could not be added to the network due to incompatibility; for
+                // example, if the network is bridged and the device does not support the
+                // same L2 protocol as other devices on the bridge.
 
-                        // Get the device this port belongs to, and install it on the netstack.
-                        let (device, server_end) =
-                            fidl::endpoints::create_endpoints::<fhardware_network::DeviceMarker>()
-                                .context("create endpoints")
-                                .map_err(errors::Error::NonFatal)?;
-                        let port = port.into_proxy().expect("client end into proxy");
-                        port.get_device(server_end)
-                            .context("call get device")
-                            .map_err(errors::Error::NonFatal)?;
+                // Get the device this port belongs to, and install it on the netstack.
+                let (device, server_end) =
+                    fidl::endpoints::create_endpoints::<fhardware_network::DeviceMarker>()
+                        .context("create endpoints")
+                        .map_err(errors::Error::NonFatal)?;
+                let port = port.into_proxy().expect("client end into proxy");
+                port.get_device(server_end)
+                    .context("call get device")
+                    .map_err(errors::Error::NonFatal)?;
 
-                        let (device_control, server_end) = fidl::endpoints::create_proxy::<
-                            fnet_interfaces_admin::DeviceControlMarker,
-                        >()
+                let (device_control, server_end) =
+                    fidl::endpoints::create_proxy::<fnet_interfaces_admin::DeviceControlMarker>()
                         .context("create proxy")
                         .map_err(errors::Error::NonFatal)?;
-                        self.installer
-                            .install_device(device, server_end)
-                            .context("call install device")
-                            .map_err(errors::Error::Fatal)?;
+                self.installer
+                    .install_device(device, server_end)
+                    .context("call install device")
+                    .map_err(errors::Error::Fatal)?;
 
-                        // Create an interface on the device, and enable it.
-                        let fhardware_network::PortInfo { id: port_id, .. } = port
-                            .get_info()
-                            .await
-                            .context("get port info")
-                            .map_err(errors::Error::NonFatal)?;
-                        let mut port_id = port_id
-                            .context("port id not included in port info")
-                            .map_err(errors::Error::NonFatal)?;
-                        let (control, server_end) =
-                            fnet_interfaces_ext::admin::Control::create_endpoints()
-                                .context("create Control endpoints")
-                                .map_err(errors::Error::NonFatal)?;
-                        device_control
-                            .create_interface(
-                                &mut port_id,
-                                server_end,
-                                fnet_interfaces_admin::Options {
-                                    ..fnet_interfaces_admin::Options::EMPTY
-                                },
-                            )
-                            .context("call create interface")
-                            .map_err(errors::Error::NonFatal)?;
-                        let id = control
-                            .get_id()
-                            .await
-                            .context("call get id")
-                            .map_err(errors::Error::NonFatal)?;
+                // Create an interface on the device, and enable it.
+                let fhardware_network::PortInfo { id: port_id, .. } = port
+                    .get_info()
+                    .await
+                    .context("get port info")
+                    .map_err(errors::Error::NonFatal)?;
+                let mut port_id = port_id
+                    .context("port id not included in port info")
+                    .map_err(errors::Error::NonFatal)?;
+                let (control, server_end) = fnet_interfaces_ext::admin::Control::create_endpoints()
+                    .context("create Control endpoints")
+                    .map_err(errors::Error::NonFatal)?;
+                device_control
+                    .create_interface(
+                        &mut port_id,
+                        server_end,
+                        fnet_interfaces_admin::Options { ..fnet_interfaces_admin::Options::EMPTY },
+                    )
+                    .context("call create interface")
+                    .map_err(errors::Error::NonFatal)?;
+                let id = control
+                    .get_id()
+                    .await
+                    .context("call get id")
+                    .map_err(errors::Error::NonFatal)?;
 
-                        if !control
-                            .enable()
-                            .await
-                            .context("call enable")
-                            .map_err(errors::Error::NonFatal)?
-                            .map_err(|e| anyhow!("failed to enable interface: {:?}", e))
-                            .map_err(errors::Error::NonFatal)?
-                        {
-                            warn!("added interface {} was already enabled", id);
-                        }
+                if !control
+                    .enable()
+                    .await
+                    .context("call enable")
+                    .map_err(errors::Error::NonFatal)?
+                    .map_err(|e| anyhow!("failed to enable interface: {:?}", e))
+                    .map_err(errors::Error::NonFatal)?
+                {
+                    warn!("added interface {} was already enabled", id);
+                }
 
+                match network_id {
+                    NetworkId::Bridged => {
                         // Add this interface to the existing bridge, or create one if none exists.
                         self.add_guest_to_bridge(id).await.context("adding interface to bridge")?;
-
-                        // Wait for a signal that this interface should be removed from the bridge
-                        // and the virtual network.
-                        let shutdown_fut = async move {
-                            let mut interface_closure = interface
-                                .into_stream()
-                                .expect("convert server end into stream")
-                                .map(|request| {
-                                    // `fuchsia.net.virtualization/Interface` is a protocol with no
-                                    // methods, so `InterfaceRequest` is an uninstantiable enum.
-                                    // This prevents us from exhaustively matching on its variants,
-                                    // so we just drop the request here.
-                                    request
-                                        .map(|_request: fnet_virtualization::InterfaceRequest| ())
-                                })
-                                .try_collect::<()>();
-                            let mut device_control_closure = device_control.on_closed().fuse();
-                            let control_termination = control.wait_termination().fuse();
-                            futures::pin_mut!(control_termination);
-                            let reason = futures::select! {
-                                // The interface channel has been closed by the client.
-                                result = interface_closure => {
-                                    format!("interface channel closed by client: {:?}", result)
-                                },
-                                // The device has been detached from the netstack.
-                                result = device_control_closure => {
-                                    match result {
-                                        Ok(zx::Signals::CHANNEL_PEER_CLOSED) => {},
-                                        result => error!(
-                                            "got unexpected result waiting for device control \
-                                            channel closure: {:?}",
-                                            result,
-                                        ),
-                                    }
-                                    "device detached from netstack".to_string()
-                                }
-                                // The virtual network has been shut down and is notifying us to
-                                // remove the interface.
-                                result = network_close_rx => {
-                                    let () = result.expect("sender should not be dropped");
-                                    "network has been shut down".to_string()
-                                },
-                                // A terminal event was sent on the interface control channel,
-                                // signaling that the interface was removed.
-                                terminal_error = control_termination => {
-                                    format!(
-                                        "interface control channel closed: {:?}",
-                                        terminal_error
-                                    )
-                                }
-                            };
-                            info!("interface {}: {}, removing interface", id, reason);
-                            id
-                        };
-                        events.push(
-                            futures::stream::once(shutdown_fut.map(Event::InterfaceClose)).boxed(),
-                        );
                     }
                 }
+
+                // Wait for a signal that this interface should be removed from the bridge
+                // and the virtual network.
+                let shutdown_fut = async move {
+                    let mut interface_closure = interface
+                        .into_stream()
+                        .expect("convert server end into stream")
+                        .map(|request| {
+                            // `fuchsia.net.virtualization/Interface` is a protocol with no
+                            // methods, so `InterfaceRequest` is an uninstantiable enum.
+                            // This prevents us from exhaustively matching on its variants,
+                            // so we just drop the request here.
+                            request.map(|_request: fnet_virtualization::InterfaceRequest| ())
+                        })
+                        .try_collect::<()>();
+                    let mut device_control_closure = device_control.on_closed().fuse();
+                    let control_termination = control.wait_termination().fuse();
+                    futures::pin_mut!(control_termination);
+                    let reason = futures::select! {
+                        // The interface channel has been closed by the client.
+                        result = interface_closure => {
+                            format!("interface channel closed by client: {:?}", result)
+                        },
+                        // The device has been detached from the netstack.
+                        result = device_control_closure => {
+                            match result {
+                                Ok(zx::Signals::CHANNEL_PEER_CLOSED) => {},
+                                result => error!(
+                                    "got unexpected result waiting for device control \
+                                    channel closure: {:?}",
+                                    result,
+                                ),
+                            }
+                            "device detached from netstack".to_string()
+                        }
+                        // The virtual network has been shut down and is notifying us to
+                        // remove the interface.
+                        result = network_close_rx => {
+                            let () = result.expect("sender should not be dropped");
+                            "network has been shut down".to_string()
+                        },
+                        // A terminal event was sent on the interface control channel,
+                        // signaling that the interface was removed.
+                        terminal_error = control_termination => {
+                            format!(
+                                "interface control channel closed: {:?}",
+                                terminal_error
+                            )
+                        }
+                    };
+                    info!("interface {}: {}, removing interface", id, reason);
+                    id
+                };
+                events.push(
+                    futures::stream::once(
+                        shutdown_fut.map(|id| Event::InterfaceClose(network_id, id)),
+                    )
+                    .boxed(),
+                );
             }
             NetworkRequest::Finished(network_close_tx) => {
                 // Close down the network.
@@ -592,48 +601,56 @@ impl<B: BridgeHandler> Handler for Virtualization<B> {
                 network,
                 control_handle: _,
             }) => {
-                match config {
+                let network_id = match config {
                     fnet_virtualization::Config::Bridged(fnet_virtualization::Bridged {
                         ..
                     }) => {
                         info!("got a request to create a bridged network");
-                        // Create a oneshot channel we can use when the `Network` channel is
-                        // closed, to notify each interface task to close its corresponding
-                        // `Interface` channel as well.
-                        let (close_channel_tx, close_channel_rx) = oneshot::channel();
-                        let close_channel_rx = close_channel_rx.shared();
-                        let stream = network
-                            .into_stream()
-                            .expect("convert server end into stream")
-                            .filter_map(move |request| {
-                                future::ready(match request {
-                                    Ok(request) => Some(NetworkRequest::Request(
-                                        request,
-                                        close_channel_rx.clone(),
-                                    )),
-                                    Err(e) => {
-                                        error!("network request error: {:?}", e);
-                                        None
-                                    }
-                                })
-                            })
-                            .chain(futures::stream::once(futures::future::ready(
-                                NetworkRequest::Finished(close_channel_tx),
-                            )));
-                        events.push(stream.map(Event::NetworkRequest).boxed());
+                        NetworkId::Bridged
                     }
-                    config => panic!("unsupported network config type {:?}", config),
-                }
+                    config => {
+                        panic!("unsupported network config type {:?}", config);
+                    }
+                };
+                // Create a oneshot channel we can use when the `Network` channel is closed,
+                // to notify each interface task to close its corresponding `Interface` channel
+                // as well.
+                let (close_channel_tx, close_channel_rx) = oneshot::channel();
+                let close_channel_rx = close_channel_rx.shared();
+                let stream = network
+                    .into_stream()
+                    .expect("convert server end into stream")
+                    .filter_map(move |request| {
+                        future::ready(match request {
+                            Ok(request) => {
+                                Some(NetworkRequest::Request(request, close_channel_rx.clone()))
+                            }
+                            Err(e) => {
+                                error!("network request error: {:?}", e);
+                                None
+                            }
+                        })
+                    })
+                    .chain(futures::stream::once(futures::future::ready(
+                        NetworkRequest::Finished(close_channel_tx),
+                    )));
+                events.push(
+                    stream.map(move |r| Event::NetworkRequest(network_id.clone(), r)).boxed(),
+                );
             }
-            Event::NetworkRequest(request) => self
-                .handle_network_request(request, events)
+            Event::NetworkRequest(network_id, request) => self
+                .handle_network_request(network_id, request, events)
                 .await
                 .context("handle network request")?,
-            Event::InterfaceClose(id) => {
-                // Remove this interface from the existing bridge.
-                self.remove_guest_from_bridge(id)
-                    .await
-                    .context("removing interface from bridge")?;
+            Event::InterfaceClose(network_id, id) => {
+                match network_id {
+                    NetworkId::Bridged => {
+                        // Remove this interface from the existing bridge.
+                        self.remove_guest_from_bridge(id)
+                            .await
+                            .context("removing interface from bridge")?;
+                    }
+                }
             }
         }
         Ok(())
