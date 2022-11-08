@@ -5,7 +5,10 @@
 import("//build/packages/prebuilt_package.gni")
 
 group("wl") {
-  deps = [ ":wl_pkg" ]
+  if (current_cpu == "arm64") {
+    # This package is only supported for arm64.
+    deps = [ ":wl_pkg" ]
+  }
 }
 
 prebuilt_archive_base_path =
