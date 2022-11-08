@@ -1,0 +1,61 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    actions: [
+        {
+            type: "expect_pass",
+            matchers: [
+                "*",
+            ],
+        },
+        {
+            type: "expect_failure",
+            matchers: [
+                // Fuchsia does not support Unix sockets.
+                "SocketTest.ProtocolUnix",
+                "SocketTest.UnixSocketPairProtocol",
+                "SocketTest.UnixSocketStat",
+                "SocketTest.UnixSocketStatFS",
+                "SocketTest.UnixSCMRightsOnlyPassedOnce",
+                "SocketTest.Permission",
+                "OpenModes/SocketOpenTest.Unix/*",
+            ],
+        },
+        {
+            type: "skip",
+            matchers: [
+                // https://fxbug.dev/55205
+                //
+                // This test encodes some known incorrect behavior on gVisor.
+                // That incorrect assertion code path is also taken on Fuchsia,
+                // but Fuchsia doesn't have the same bug.
+                //
+                // Our infrastructure here can't deal with "partial" passes, so
+                // we have no choice but to skip this test.
+                "IPUnboundSockets/IPUnboundSocketTest.NullTOS/*",
+
+                // https://fxbug.dev/45778
+                //
+                // [ RUN      ]
+                // AllIPSockets/TcpUdpSocketPairTest.ShutdownWrFollowedBySendIsError/11
+                // Testing with non-blocking connected dual stack TCP socket
+                // third_party/gvisor/test/syscalls/linux/socket_ip_tcp_udp_generic.cc:41:
+                // Failure Value of: shutdown(sockets->first_fd(), 1) Expected:
+                // not -1 (success) Actual: -1 (of type int), with errno
+                // PosixError(errno=32 0)
+                //
+                // [ RUN      ]
+                // AllIPSockets/TcpUdpSocketPairTest.ShutdownWrFollowedBySendIsError/23
+                // Testing with reversed non-blocking connected dual stack TCP
+                // socket [       OK ]
+                // AllIPSockets/TcpUdpSocketPairTest.ShutdownWrFollowedBySendIsError/23
+                // (4 ms)
+                //
+                // Likely caused by being unable to shut down listening sockets.
+                // Possible fix in https://fxrev.dev/437660.
+                "AllIPSockets/TcpUdpSocketPairTest.ShutdownWrFollowedBySendIsError/*",
+            ],
+        },
+    ],
+}

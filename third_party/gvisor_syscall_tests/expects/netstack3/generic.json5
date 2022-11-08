@@ -1,0 +1,90 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    actions: [
+        {
+            type: "expect_pass",
+            matchers: [
+                "*",
+            ],
+        },
+        {
+            type: "expect_failure",
+            matchers: [
+                // Netstack3 does not support Unix domain sockets.
+                "SocketTest.ProtocolUnix",
+                "SocketTest.UnixSCMRightsOnlyPassedOnce",
+                "SocketTest.UnixSocketPairProtocol",
+                "SocketTest.UnixSocketStat",
+                "SocketTest.UnixSocketStatFS",
+                "OpenModes/SocketOpenTest.Unix/*",
+
+                // Netstack3 does not support SO_REUSEADDR and only partially supports
+                // SO_REUSEPORT for UDP sockets.
+                "IPUnboundSockets/IPUnboundSocketTest.ReuseAddrDefault/*",
+                "IPUnboundSockets/IPUnboundSocketTest.SetReuseAddr/*",
+
+                // Netstack3 does not support many UDP socket options or operations
+                "IPUnboundSockets/IPUnboundSocketTest.CheckSkipECN/*",
+                "IPUnboundSockets/IPUnboundSocketTest.InvalidLargeTOS/*",
+                "IPUnboundSockets/IPUnboundSocketTest.InvalidNegativeTOS/*",
+                "IPUnboundSockets/IPUnboundSocketTest.LargeTOSOptionSize/*",
+                "IPUnboundSockets/IPUnboundSocketTest.NegativeTOS/*",
+                "IPUnboundSockets/IPUnboundSocketTest.SetTOS/*",
+                "IPUnboundSockets/IPUnboundSocketTest.SmallTOSOptionSize/*",
+                "IPUnboundSockets/IPUnboundSocketTest.TOSDefault/*",
+                "IPUnboundSockets/IPUnboundSocketTest.ZeroTOS/*",
+                "IPUnboundSockets/IPUnboundSocketTest.ZeroTOSOptionSize/*",
+
+                // Expect failure for setting TTL on non-IPv4 sockets.
+                "IPUnboundSockets/IPUnboundSocketTest.ZeroTtl/[2-7]",
+                "IPUnboundSockets/IPUnboundSocketTest.TtlDefault/[2-7]",
+                "IPUnboundSockets/IPUnboundSocketTest.SetTtl/[2-7]",
+                "IPUnboundSockets/IPUnboundSocketTest.ResetTtlToDefault/[2-7]",
+
+                // Expect failure for TCP sockets.
+                "IPUnboundSockets/IPUnboundSocketTest.NullTOS/2",
+                "IPUnboundSockets/IPUnboundSocketTest.NullTOS/3",
+                "IPUnboundSockets/IPUnboundSocketTest.NullTOS/6",
+                "IPUnboundSockets/IPUnboundSocketTest.NullTOS/7",
+
+                // Netstack3 does not have complete support for multicast sockets.
+                "SocketTest.Permission",
+            ],
+        },
+        {
+            type: "skip",
+            matchers: [
+                // Skip failures for dual-stack and TCP sockets.
+                "AllIPSockets/TcpUdpSocketPairTest.ShutdownWrFollowedBySendIsError/4",
+                "AllIPSockets/TcpUdpSocketPairTest.ShutdownWrFollowedBySendIsError/5",
+                "AllIPSockets/TcpUdpSocketPairTest.ShutdownWrFollowedBySendIsError/6",
+                "AllIPSockets/TcpUdpSocketPairTest.ShutdownWrFollowedBySendIsError/7",
+                "AllIPSockets/TcpUdpSocketPairTest.ShutdownWrFollowedBySendIsError/8",
+                "AllIPSockets/TcpUdpSocketPairTest.ShutdownWrFollowedBySendIsError/9",
+                "AllIPSockets/TcpUdpSocketPairTest.ShutdownWrFollowedBySendIsError/10",
+                "AllIPSockets/TcpUdpSocketPairTest.ShutdownWrFollowedBySendIsError/11",
+                "AllIPSockets/TcpUdpSocketPairTest.ShutdownWrFollowedBySendIsError/16",
+                "AllIPSockets/TcpUdpSocketPairTest.ShutdownWrFollowedBySendIsError/17",
+                "AllIPSockets/TcpUdpSocketPairTest.ShutdownWrFollowedBySendIsError/18",
+                "AllIPSockets/TcpUdpSocketPairTest.ShutdownWrFollowedBySendIsError/19",
+                "AllIPSockets/TcpUdpSocketPairTest.ShutdownWrFollowedBySendIsError/20",
+                "AllIPSockets/TcpUdpSocketPairTest.ShutdownWrFollowedBySendIsError/21",
+                "AllIPSockets/TcpUdpSocketPairTest.ShutdownWrFollowedBySendIsError/22",
+                "AllIPSockets/TcpUdpSocketPairTest.ShutdownWrFollowedBySendIsError/23",
+
+                // Skip TCP variants that would otherwise hang forever.
+                // TODO(b/245940107): Un-skip these.
+                "BlockingIPSockets/BlockingSocketPairTest.RecvBlocks/2",
+                "BlockingIPSockets/BlockingSocketPairTest.RecvBlocks/3",
+                "BlockingIPSockets/BlockingSocketPairTest.RecvBlocks/4",
+                "BlockingIPSockets/BlockingSocketPairTest.RecvBlocks/5",
+                "BlockingIPSockets/BlockingSocketPairTest.RecvBlocks/8",
+                "BlockingIPSockets/BlockingSocketPairTest.RecvBlocks/9",
+                "BlockingIPSockets/BlockingSocketPairTest.RecvBlocks/10",
+                "BlockingIPSockets/BlockingSocketPairTest.RecvBlocks/11",
+            ],
+        },
+    ],
+}

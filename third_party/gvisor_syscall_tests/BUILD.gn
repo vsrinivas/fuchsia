@@ -4,6 +4,8 @@
 
 import("//build/components.gni")
 import("//build/test.gni")
+import(
+    "//src/connectivity/network/testing/expectation/fuchsia_test_with_expectations_package.gni")
 
 source_set("expectations") {
   sources = [
@@ -25,6 +27,12 @@ source_set("expectations") {
     ":gvisor_test_util",
     "//third_party/abseil-cpp/absl/container:flat_hash_map",
   ]
+  testonly = true
+}
+
+source_set("empty_expectations") {
+  sources = [ "expects/empty_expectations.cc" ]
+  deps = [ ":expectations" ]
   testonly = true
 }
 
@@ -326,30 +334,44 @@ local_testing_suffix = "local_testing"
 #     Type: string
 #     Default: When unset, the test source target constructed as
 #              ":${target_name}_socket_tests"
+#
+#   use_expectations_framework (optional)
+#     Use the Fuchsia Test Expectations framework instead of the gvisor-specific
+#     expectations.
+#     Type: bool
+#     Default: false
 template("syscall_test_suite") {
   not_needed([ "invoker" ])
   suite_label = target_name
 
-  netstack3_expectations_target = "${suite_label}_netstack3_expectations"
-  source_set(netstack3_expectations_target) {
-    sources = [ "expects/netstack3/${suite_label}_expectations.cc" ]
-    deps = [
-      ":expectations",
-      ":gvisor_test_util",
-      "//third_party/abseil-cpp/absl/strings",
-    ]
-    testonly = true
+  use_expectations_framework = false
+  if (defined(invoker.use_expectations_framework)) {
+    use_expectations_framework = invoker.use_expectations_framework
   }
 
+  netstack3_expectations_target = "${suite_label}_netstack3_expectations"
   netstack2_expectations_target = "${suite_label}_netstack2_expectations"
-  source_set(netstack2_expectations_target) {
-    sources = [ "expects/netstack2/${suite_label}_expectations.cc" ]
-    deps = [
-      ":expectations",
-      ":gvisor_test_util",
-      "//third_party/abseil-cpp/absl/strings",
-    ]
-    testonly = true
+
+  if (!use_expectations_framework) {
+    source_set(netstack3_expectations_target) {
+      sources = [ "expects/netstack3/${suite_label}_expectations.cc" ]
+      deps = [
+        ":expectations",
+        ":gvisor_test_util",
+        "//third_party/abseil-cpp/absl/strings",
+      ]
+      testonly = true
+    }
+
+    source_set(netstack2_expectations_target) {
+      sources = [ "expects/netstack2/${suite_label}_expectations.cc" ]
+      deps = [
+        ":expectations",
+        ":gvisor_test_util",
+        "//third_party/abseil-cpp/absl/strings",
+      ]
+      testonly = true
+    }
   }
 
   ns3_label = "netstack3"
@@ -405,8 +427,12 @@ template("syscall_test_suite") {
       deps = [
         ":gtest_main",
         "${test_srcs_target}",
-        stack.expectations,
       ]
+      if (use_expectations_framework) {
+        deps += [ ":empty_expectations" ]
+      } else {
+        deps += [ stack.expectations ]
+      }
 
       # In-tree executables automatically get a logging backend dep unless we opt
       # out.
@@ -414,13 +440,32 @@ template("syscall_test_suite") {
     }
 
     test_package_label = "${combined_label}_syscall_tests"
-    fuchsia_unittest_package(test_package_label) {
-      package_name = test_package_label
-      manifest = stack.manifest
-      deps = [
-        ":${test_target_label}",
-        stack.component,
-      ]
+
+    if (use_expectations_framework) {
+      _unittest_component = "${test_package_label}_unittest_component"
+      fuchsia_unittest_component(_unittest_component) {
+        deps = [
+          ":${test_target_label}",
+          stack.component,
+        ]
+        manifest = stack.manifest
+      }
+      fuchsia_test_with_expectations_package(test_package_label) {
+        test_components = [ ":${_unittest_component}" ]
+        expectations = "expects/netstack2/${suite_label}.json5"
+        if (stack.label == ns3_label) {
+          expectations = "expects/netstack3/${suite_label}.json5"
+        }
+      }
+    } else {
+      fuchsia_unittest_package(test_package_label) {
+        package_name = test_package_label
+        manifest = stack.manifest
+        deps = [
+          ":${test_target_label}",
+          stack.component,
+        ]
+      }
     }
 
     local_test_deps += [ ":${test_package_label}" ]
@@ -442,6 +487,7 @@ template("syscall_test_suite") {
 }
 
 syscall_test_suite(generic_test_label) {
+  use_expectations_framework = true
 }
 syscall_test_suite(loopback_test_label) {
 }

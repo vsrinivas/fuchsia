@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [
-        "//third_party/gvisor_syscall_tests/meta/netstack3/use_netstack3.shard.cml",
-        "//third_party/gvisor_syscall_tests/meta/syscall_tests.shard.cml",
+    children: [
+        {
+            name: "netstack",
+            url: "#meta/netstack-debug.cm",
+        },
     ],
 }

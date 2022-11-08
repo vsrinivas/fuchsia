@@ -2,14 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "//third_party/gvisor_syscall_tests/meta/syscall_tests.shard.cml" ],
-    children: [
-        {
-            name: "netstack",
-            url: "#meta/netstack-with-fast-udp-debug.cm",
-        },
+    include: [
+        "//third_party/gvisor_syscall_tests/meta/netstack2/fastudp/use_fast_udp.shard.cml",
+        "//third_party/gvisor_syscall_tests/meta/syscall_tests.shard.cml",
     ],
-    program: {
-        environ: [ "FAST_UDP=1" ],
-    },
 }

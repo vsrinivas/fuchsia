@@ -14,6 +14,7 @@
 #include "absl/flags/parse.h"
 #include "absl/strings/str_split.h"
 #include "expects/expectations.h"
+#include "gtest/gtest.h"
 #include "gvisor/test/util/test_util.h"
 
 namespace netstack_syscall_test {
@@ -100,11 +101,19 @@ void SetEnv(const char* name, const T& value) {
   }
 }
 
+ABSL_FLAG(bool, use_fuchsia_test_expectations, false,
+          "Use Fuchsia Test Expectations framework instead of the gVisor-specific expectations.");
+
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
   absl::ParseCommandLine(argc, argv);
 
   SetEnv(gvisor::testing::kTestOnGvisor, gvisor::testing::Platform::kFuchsia);
+
+  if (absl::GetFlag(FLAGS_use_fuchsia_test_expectations)) {
+    // We're using the Fuchsia Test Expectations framework, so run the tests normally.
+    return RUN_ALL_TESTS();
+  }
 
   auto filter = GTEST_FLAG_GET(filter);
   if (filter != "*") {

@@ -1,0 +1,23 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.posix.socket.packet.Provider",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.posix.socket.raw.Provider",
+            ],
+            from: "#netstack",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: "#netstack",
+        },
+    ],
+}

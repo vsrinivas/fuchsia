@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 {
     include: [
-        "//third_party/gvisor_syscall_tests/meta/netstack2/syncudp/use_netstack_debug.shard.cml",
-        "//third_party/gvisor_syscall_tests/meta/syscall_tests.shard.cml",
+        "//third_party/gvisor_syscall_tests/meta/netstack2/fastudp/use_fast_udp.shard.cml",
+        "//third_party/gvisor_syscall_tests/meta/syscall_tests_with_expectations.shard.cml",
     ],
 }
