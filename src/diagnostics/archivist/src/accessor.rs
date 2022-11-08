@@ -8,7 +8,8 @@ use {
         diagnostics::{AccessorStats, BatchIteratorConnectionStats},
         error::AccessorError,
         formatter::{new_batcher, FormattedStream, JsonPacketSerializer, JsonString},
-        inspect,
+        inspect::{self, repository::InspectRepository},
+        logs::repository::LogsRepository,
         moniker_rewriter::MonikerRewriter,
         pipeline::Pipeline,
         ImmutableString,
@@ -45,6 +46,8 @@ pub struct ArchiveAccessor {
     // The inspect repository containing read-only inspect data shared across
     // all inspect reader instances.
     pipeline: Arc<RwLock<Pipeline>>,
+    inspect_repository: Arc<InspectRepository>,
+    logs_repository: Arc<LogsRepository>,
     archive_accessor_stats: Arc<AccessorStats>,
     moniker_rewriter: Option<Arc<MonikerRewriter>>,
 }
@@ -109,9 +112,17 @@ impl ArchiveAccessor {
     /// data accessed by readers spawned by this accessor.
     pub fn new(
         pipeline: Arc<RwLock<Pipeline>>,
+        inspect_repository: Arc<InspectRepository>,
+        logs_repository: Arc<LogsRepository>,
         archive_accessor_stats: Arc<AccessorStats>,
     ) -> Self {
-        ArchiveAccessor { pipeline, archive_accessor_stats, moniker_rewriter: None }
+        ArchiveAccessor {
+            pipeline,
+            archive_accessor_stats,
+            inspect_repository,
+            logs_repository,
+            moniker_rewriter: None,
+        }
     }
 
     pub fn add_moniker_rewriter(&mut self, rewriter: Arc<MonikerRewriter>) -> &mut Self {
@@ -121,6 +132,8 @@ impl ArchiveAccessor {
 
     async fn run_server(
         pipeline: Arc<RwLock<Pipeline>>,
+        inspect_repo: Arc<InspectRepository>,
+        log_repo: Arc<LogsRepository>,
         requests: BatchIteratorRequestStream,
         params: StreamParameters,
         rewriter: Option<Arc<MonikerRewriter>>,
@@ -166,8 +179,12 @@ impl ArchiveAccessor {
                     (selectors, _) => (selectors, None),
                 };
 
-                let unpopulated_container_vec =
-                    pipeline.read().await.fetch_inspect_data(&selectors, trace_id).await;
+                let unpopulated_container_vec = inspect_repo
+                    .fetch_inspect_data(
+                        &selectors,
+                        pipeline.read().await.static_selectors_matchers(),
+                    )
+                    .await;
 
                 let per_component_budget_opt = if unpopulated_container_vec.is_empty() {
                     None
@@ -217,10 +234,8 @@ impl ArchiveAccessor {
                     Some(ClientSelectorConfiguration::SelectAll(_)) => None,
                     _ => return Err(AccessorError::InvalidSelectors("unrecognized selectors")),
                 };
-                let logs = pipeline
-                    .read()
-                    .await
-                    .logs(mode, selectors, trace_id)
+                let logs = log_repo
+                    .logs_cursor(mode, selectors, trace_id)
                     .await
                     .map(move |inner: _| (*inner).clone());
                 BatchIterator::new_serving_arrays(logs, requests, mode, stats, trace_id)?
@@ -261,6 +276,8 @@ impl ArchiveAccessor {
                     let pipeline = self.pipeline.clone();
                     let accessor_stats = self.archive_accessor_stats.clone();
                     let moniker_rewriter = self.moniker_rewriter.clone();
+                    let log_repo = self.logs_repository.clone();
+                    let inspect_repo = self.inspect_repository.clone();
                     // Store the batch iterator task so that we can ensure that the client finishes
                     // draining items through it when a Controller#Stop call happens. For example,
                     // this allows tests to fetch all isolated logs before finishing.
@@ -268,6 +285,8 @@ impl ArchiveAccessor {
                         .unbounded_send(Task::spawn(async move {
                             if let Err(e) = Self::run_server(
                                 pipeline,
+                                inspect_repo,
+                                log_repo,
                                 requests,
                                 stream_parameters,
                                 moniker_rewriter,
@@ -572,11 +591,11 @@ impl TryFrom<&StreamParameters> for PerformanceConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{pipeline::Pipeline, repository::DataRepo};
+    use crate::{logs::budget::BudgetManager, pipeline::Pipeline};
     use assert_matches::assert_matches;
     use async_lock::RwLock;
     use fidl_fuchsia_diagnostics::{ArchiveAccessorMarker, BatchIteratorMarker};
-    use fuchsia_inspect::Node;
+    use fuchsia_inspect::{Inspector, Node};
     use fuchsia_zircon_status as zx_status;
     use futures::channel::mpsc;
 
@@ -586,10 +605,16 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<ArchiveAccessorMarker>().unwrap();
         let (snd, _rcv) = mpsc::unbounded();
         fasync::Task::spawn(async move {
-            let pipeline =
-                Arc::new(RwLock::new(Pipeline::for_test(None, DataRepo::default().await)));
-            let accessor =
-                ArchiveAccessor::new(pipeline, Arc::new(AccessorStats::new(Node::default())));
+            let pipeline = Arc::new(RwLock::new(Pipeline::for_test(None)));
+            let inspector = Inspector::new();
+            let budget = BudgetManager::new(1_000_000);
+            let log_repo = Arc::new(LogsRepository::new(&budget, inspector.root()).await);
+            let accessor = ArchiveAccessor::new(
+                pipeline,
+                Arc::new(InspectRepository::default()),
+                log_repo,
+                Arc::new(AccessorStats::new(Node::default())),
+            );
             accessor.spawn_server(stream, snd);
         })
         .detach();
@@ -643,10 +668,16 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<ArchiveAccessorMarker>().unwrap();
         let (snd, _rcv) = mpsc::unbounded();
         fasync::Task::spawn(async move {
-            let pipeline =
-                Arc::new(RwLock::new(Pipeline::for_test(None, DataRepo::default().await)));
-            let accessor =
-                ArchiveAccessor::new(pipeline, Arc::new(AccessorStats::new(Node::default())));
+            let pipeline = Arc::new(RwLock::new(Pipeline::for_test(None)));
+            let inspector = Inspector::new();
+            let budget = BudgetManager::new(1_000_000);
+            let log_repo = Arc::new(LogsRepository::new(&budget, inspector.root()).await);
+            let accessor = ArchiveAccessor::new(
+                pipeline,
+                Arc::new(InspectRepository::default()),
+                log_repo,
+                Arc::new(AccessorStats::new(Node::default())),
+            );
             accessor.spawn_server(stream, snd);
         })
         .detach();

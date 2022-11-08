@@ -4,18 +4,17 @@
 use {
     crate::{
         accessor::ArchiveAccessor, configs, constants, diagnostics::AccessorStats, error::Error,
-        inspect::container::UnpopulatedInspectDataContainer, moniker_rewriter::MonikerRewriter,
-        repository::DataRepo, ImmutableString,
+        inspect::repository::InspectRepository, logs::repository::LogsRepository,
+        moniker_rewriter::MonikerRewriter, ImmutableString,
     },
     async_lock::RwLock,
-    diagnostics_data::LogsData,
     diagnostics_hierarchy::InspectHierarchyMatcher,
     fidl::prelude::*,
-    fidl_fuchsia_diagnostics::{self, ArchiveAccessorMarker, Selector, StreamMode},
+    fidl_fuchsia_diagnostics::{self, ArchiveAccessorMarker, Selector},
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObj},
-    fuchsia_inspect as inspect, fuchsia_trace as ftrace,
-    futures::{channel::mpsc, prelude::*},
+    fuchsia_inspect as inspect,
+    futures::channel::mpsc,
     selectors,
     std::{collections::HashMap, convert::TryInto, path::Path, sync::Arc},
 };
@@ -39,9 +38,6 @@ pub struct Pipeline {
     /// A hierarchy matcher for any selector present in the static selectors.
     moniker_to_static_matcher_map: HashMap<ImmutableString, InspectHierarchyMatcher>,
 
-    /// The data repository.
-    data_repo: DataRepo,
-
     /// When the pipeline starts serving, this holds stats about requests made to it.
     stats_node: Option<Arc<AccessorStats>>,
 
@@ -64,11 +60,7 @@ pub struct Pipeline {
 impl Pipeline {
     /// Creates a pipeline for feedback. This applies static selectors configured under
     /// config/data/feedback to inspect exfiltration.
-    pub fn feedback(
-        data_repo: DataRepo,
-        pipelines_path: &Path,
-        parent_node: &inspect::Node,
-    ) -> Self {
+    pub fn feedback(pipelines_path: &Path, parent_node: &inspect::Node) -> Self {
         let parameters = PipelineParameters {
             has_config: true,
             name: "feedback",
@@ -76,16 +68,12 @@ impl Pipeline {
             protocol_name: constants::FEEDBACK_ARCHIVE_ACCESSOR_NAME,
             moniker_rewriter: None,
         };
-        Self::new(parameters, data_repo, pipelines_path, parent_node)
+        Self::new(parameters, pipelines_path, parent_node)
     }
 
     /// Creates a pipeline for legacy metrics. This applies static selectors configured
     /// under config/data/legacy_metrics to inspect exfiltration.
-    pub fn legacy_metrics(
-        data_repo: DataRepo,
-        pipelines_path: &Path,
-        parent_node: &inspect::Node,
-    ) -> Self {
+    pub fn legacy_metrics(pipelines_path: &Path, parent_node: &inspect::Node) -> Self {
         let parameters = PipelineParameters {
             has_config: true,
             name: "legacy_metrics",
@@ -93,17 +81,13 @@ impl Pipeline {
             protocol_name: constants::LEGACY_METRICS_ARCHIVE_ACCESSOR_NAME,
             moniker_rewriter: Some(MonikerRewriter::new()),
         };
-        Self::new(parameters, data_repo, pipelines_path, parent_node)
+        Self::new(parameters, pipelines_path, parent_node)
     }
 
     /// Creates a pipeline for all access. This pipeline is unique in that it has no statically
     /// configured selectors, meaning all diagnostics data is visible. This should not be used for
     /// production services.
-    pub fn all_access(
-        data_repo: DataRepo,
-        pipelines_path: &Path,
-        parent_node: &inspect::Node,
-    ) -> Self {
+    pub fn all_access(pipelines_path: &Path, parent_node: &inspect::Node) -> Self {
         let parameters = PipelineParameters {
             has_config: false,
             name: "all",
@@ -111,12 +95,12 @@ impl Pipeline {
             protocol_name: ArchiveAccessorMarker::PROTOCOL_NAME,
             moniker_rewriter: None,
         };
-        Self::new(parameters, data_repo, pipelines_path, parent_node)
+        Self::new(parameters, pipelines_path, parent_node)
     }
 
     /// Creates a pipeline for LoWPAN metrics. This applies static selectors configured
     /// under config/data/lowpan to inspect exfiltration.
-    pub fn lowpan(data_repo: DataRepo, pipelines_path: &Path, parent_node: &inspect::Node) -> Self {
+    pub fn lowpan(pipelines_path: &Path, parent_node: &inspect::Node) -> Self {
         let parameters = PipelineParameters {
             has_config: true,
             name: "lowpan",
@@ -124,17 +108,16 @@ impl Pipeline {
             protocol_name: constants::LOWPAN_ARCHIVE_ACCESSOR_NAME,
             moniker_rewriter: Some(MonikerRewriter::new()),
         };
-        Self::new(parameters, data_repo, pipelines_path, parent_node)
+        Self::new(parameters, pipelines_path, parent_node)
     }
 
     #[cfg(test)]
-    pub fn for_test(static_selectors: Option<Vec<Selector>>, data_repo: DataRepo) -> Self {
+    pub fn for_test(static_selectors: Option<Vec<Selector>>) -> Self {
         Pipeline {
             _pipeline_node: None,
             moniker_to_static_matcher_map: HashMap::new(),
             static_selectors,
             stats_node: None,
-            data_repo,
             moniker_rewriter: None,
             protocol_name: "test",
             name: "test",
@@ -144,7 +127,6 @@ impl Pipeline {
 
     fn new(
         parameters: PipelineParameters,
-        data_repo: DataRepo,
         pipelines_path: &Path,
         parent_node: &inspect::Node,
     ) -> Self {
@@ -166,7 +148,6 @@ impl Pipeline {
         Pipeline {
             moniker_to_static_matcher_map: HashMap::new(),
             static_selectors,
-            data_repo,
             _pipeline_node,
             stats_node: None,
             protocol_name: parameters.protocol_name,
@@ -184,6 +165,8 @@ impl Pipeline {
     pub fn serve(
         mut self,
         service_fs: &mut ServiceFs<ServiceObj<'static, ()>>,
+        inspect_repo: Arc<InspectRepository>,
+        logs_repo: Arc<LogsRepository>,
         listen_sender: mpsc::UnboundedSender<fasync::Task<()>>,
         stats_node_parent: &inspect::Node,
     ) -> Arc<RwLock<Self>> {
@@ -194,22 +177,18 @@ impl Pipeline {
         let this = Arc::new(RwLock::new(self));
         let pipeline = this.clone();
         service_fs.dir("svc").add_fidl_service_at(protocol_name, move |stream| {
-            let mut accessor = ArchiveAccessor::new(pipeline.clone(), stats.clone());
+            let mut accessor = ArchiveAccessor::new(
+                pipeline.clone(),
+                inspect_repo.clone(),
+                logs_repo.clone(),
+                stats.clone(),
+            );
             if let Some(rewriter) = &moniker_rewriter {
                 accessor.add_moniker_rewriter(rewriter.clone());
             }
             accessor.spawn_server(stream, listen_sender.clone());
         });
         this
-    }
-
-    pub async fn logs(
-        &self,
-        mode: StreamMode,
-        selectors: Option<Vec<Selector>>,
-        parent_trace_id: ftrace::Id,
-    ) -> impl Stream<Item = Arc<LogsData>> {
-        self.data_repo.logs_cursor(mode, selectors, parent_trace_id).await
     }
 
     pub fn remove(&mut self, relative_moniker: &[String]) {
@@ -237,28 +216,9 @@ impl Pipeline {
         Ok(())
     }
 
-    /// Return all of the DirectoryProxies that contain Inspect hierarchies
-    /// which contain data that should be selected from.
-    pub async fn fetch_inspect_data(
+    pub fn static_selectors_matchers(
         &self,
-        component_selectors: &Option<Vec<Selector>>,
-        parent_trace_id: ftrace::Id,
-    ) -> Vec<UnpopulatedInspectDataContainer> {
-        let moniker_to_static_selector_opt =
-            self.static_selectors.as_ref().map(|_| &self.moniker_to_static_matcher_map);
-
-        let trace_id = ftrace::Id::random();
-        let _trace_guard = ftrace::async_enter!(
-            trace_id,
-            "app",
-            "Pipeline::fetch_inspect_data",
-            // An async duration cannot have multiple concurrent child async durations
-            // so we include the nonce as metadata to manually determine relationship.
-            "parent_trace_id" => u64::from(parent_trace_id)
-        );
-        self.data_repo
-            .read()
-            .await
-            .fetch_inspect_data(component_selectors, moniker_to_static_selector_opt)
+    ) -> Option<&HashMap<ImmutableString, InspectHierarchyMatcher>> {
+        self.static_selectors.as_ref().map(|_| &self.moniker_to_static_matcher_map)
     }
 }

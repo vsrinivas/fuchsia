@@ -5,8 +5,7 @@
 use crate::{
     events::types::{Event, EventPayload, LogSinkRequestedPayload},
     identity::ComponentIdentity,
-    logs::budget::BudgetManager,
-    repository::DataRepo,
+    logs::{budget::BudgetManager, repository::LogsRepository},
 };
 use async_trait::async_trait;
 use diagnostics_log_encoding::{encode::Encoder, Record};
@@ -36,7 +35,7 @@ use validating_log_listener::{validate_log_dump, validate_log_stream};
 
 pub struct TestHarness {
     inspector: Inspector,
-    log_manager: DataRepo,
+    log_manager: Arc<LogsRepository>,
     log_proxy: LogProxy,
     /// weak pointers to "pending" TestStreams which haven't dropped yet
     pending_streams: Vec<Weak<()>>,
@@ -83,7 +82,7 @@ impl TestHarness {
     async fn make(hold_sinks: bool) -> Self {
         let inspector = Inspector::new();
         let budget = BudgetManager::new(1_000_000);
-        let log_manager = DataRepo::new(&budget, inspector.root()).await;
+        let log_manager = Arc::new(LogsRepository::new(&budget, inspector.root()).await);
 
         let (listen_sender, listen_receiver) = mpsc::unbounded();
         let (log_proxy, log_stream) =
@@ -274,12 +273,15 @@ pub trait LogReader {
 
 // A LogReader that exercises the handle_log_sink code path.
 pub struct DefaultLogReader {
-    log_manager: DataRepo,
+    log_manager: Arc<LogsRepository>,
     identity: Arc<ComponentIdentity>,
 }
 
 impl DefaultLogReader {
-    fn new(log_manager: DataRepo, identity: Arc<ComponentIdentity>) -> Arc<dyn LogReader> {
+    fn new(
+        log_manager: Arc<LogsRepository>,
+        identity: Arc<ComponentIdentity>,
+    ) -> Arc<dyn LogReader> {
         Arc::new(Self { log_manager, identity })
     }
 }
@@ -289,8 +291,7 @@ impl LogReader for DefaultLogReader {
     async fn handle_request(&self, log_sender: mpsc::UnboundedSender<Task<()>>) -> LogSinkProxy {
         let (log_sink_proxy, log_sink_stream) =
             fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().unwrap();
-        let container =
-            self.log_manager.write().await.get_log_container((*self.identity).clone()).await;
+        let container = self.log_manager.get_log_container((*self.identity).clone()).await;
         container.handle_log_sink(log_sink_stream, log_sender).await;
         log_sink_proxy
     }
@@ -299,14 +300,14 @@ impl LogReader for DefaultLogReader {
 // A LogReader that exercises the components v2 EventStream and CapabilityRequested event
 // code path for log attribution.
 pub struct EventStreamLogReader {
-    log_manager: DataRepo,
+    log_manager: Arc<LogsRepository>,
     target_moniker: String,
     target_url: String,
 }
 
 impl EventStreamLogReader {
     fn new(
-        log_manager: DataRepo,
+        log_manager: Arc<LogsRepository>,
         target_moniker: impl Into<String>,
         target_url: impl Into<String>,
     ) -> Arc<dyn LogReader> {
@@ -320,7 +321,7 @@ impl EventStreamLogReader {
     async fn handle_event_stream(
         mut stream: fsys::EventStreamRequestStream,
         sender: mpsc::UnboundedSender<Task<()>>,
-        log_manager: DataRepo,
+        log_manager: Arc<LogsRepository>,
     ) {
         while let Ok(Some(request)) = stream.try_next().await {
             match request {
@@ -334,14 +335,14 @@ impl EventStreamLogReader {
     async fn handle_event(
         event: fsys::Event,
         sender: mpsc::UnboundedSender<Task<()>>,
-        log_manager: DataRepo,
+        log_manager: Arc<LogsRepository>,
     ) {
         let LogSinkRequestedPayload { component, request_stream } =
             match event.try_into().expect("into component event") {
                 Event { payload: EventPayload::LogSinkRequested(payload), .. } => payload,
                 other => unreachable!("should never see {:?} here", other),
             };
-        let container = log_manager.write().await.get_log_container(component).await;
+        let container = log_manager.get_log_container(component).await;
         container.handle_log_sink(request_stream.unwrap(), sender).await;
     }
 }
@@ -404,7 +405,7 @@ pub async fn debuglog_test(
 
     let inspector = Inspector::new();
     let budget = BudgetManager::new(1_000_000);
-    let lm = DataRepo::new(&budget, inspector.root()).await;
+    let lm = Arc::new(LogsRepository::new(&budget, inspector.root()).await);
     let (log_proxy, log_stream) = fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
     lm.clone().handle_log(log_stream, log_sender);
     fasync::Task::spawn(lm.drain_debuglog(debug_log)).detach();

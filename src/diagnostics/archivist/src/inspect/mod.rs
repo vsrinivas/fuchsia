@@ -27,6 +27,7 @@ use {
 
 pub mod collector;
 pub mod container;
+pub mod repository;
 
 use container::PopulatedInspectDataContainer;
 
@@ -73,14 +74,9 @@ impl From<SnapshotData> for NodeHierarchyData {
 
 /// ReaderServer holds the state and data needed to serve Inspect data
 /// reading requests for a single client.
-///
-/// configured_selectors: are the selectors provided by the client which define
-///                       what inspect data is returned by read requests. A none type
-///                       implies that all available data should be returned.
-///
-/// inspect_repo: the DataRepo which holds the access-points for all relevant
-///               inspect data.
 pub struct ReaderServer {
+    /// Selectors provided by the client which define what inspect data is returned by read
+    /// requests. A none type implies that all available data should be returned.
     selectors: Option<Vec<Selector>>,
     output_rewriter: Option<OutputRewriter>,
 }
@@ -383,15 +379,14 @@ mod tests {
         super::*,
         crate::{
             accessor::BatchIterator, diagnostics::AccessorStats,
-            events::types::ComponentIdentifier, identity::ComponentIdentity, pipeline::Pipeline,
-            repository::DataRepo,
+            events::types::ComponentIdentifier, identity::ComponentIdentity,
+            inspect::repository::InspectRepository, pipeline::Pipeline,
         },
         async_lock::RwLock,
         fdio,
         fidl::endpoints::{create_proxy_and_stream, DiscoverableProtocolMarker},
         fidl_fuchsia_diagnostics::{BatchIteratorMarker, BatchIteratorProxy, StreamMode},
         fidl_fuchsia_inspect::TreeMarker,
-        fidl_fuchsia_io as fio,
         fuchsia_async::{self as fasync, Task},
         fuchsia_component::server::ServiceFs,
         fuchsia_inspect::{assert_data_tree, reader, testing::AnyProperty, Inspector},
@@ -662,28 +657,6 @@ mod tests {
     }
 
     #[fuchsia::test]
-    async fn inspect_repo_disallows_duplicated_dirs() {
-        let inspect_repo = DataRepo::default().await;
-        let instance_id = "1234".to_string();
-
-        let identity = ComponentIdentity::from_identifier_and_url(
-            ComponentIdentifier::Legacy { instance_id, moniker: vec!["a", "b", "foo.cmx"].into() },
-            TEST_URL,
-        );
-        let (proxy, _) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
-            .expect("create directory proxy");
-
-        inspect_repo.add_inspect_artifacts(identity.clone(), proxy).await.expect("add to repo");
-
-        let (proxy, _) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
-            .expect("create directory proxy");
-
-        inspect_repo.add_inspect_artifacts(identity.clone(), proxy).await.expect("add to repo");
-
-        assert!(inspect_repo.read().await.get(&identity).is_some());
-    }
-
-    #[fuchsia::test]
     async fn three_directories_two_batches() {
         stress_test_diagnostics_repository(vec![33, 33, 33], vec![64, 35]).await;
     }
@@ -774,15 +747,13 @@ mod tests {
                     }))
                     .await;
 
-                let inspect_repo = DataRepo::default().await;
-                let pipeline_wrapper =
-                    Arc::new(RwLock::new(Pipeline::for_test(None, inspect_repo.clone())));
+                let inspect_repo = Arc::new(InspectRepository::default());
+                let pipeline = Arc::new(RwLock::new(Pipeline::for_test(None)));
 
                 for (cid, proxy) in id_and_directory_proxy {
                     let identity = ComponentIdentity::from_identifier_and_url(cid, TEST_URL);
                     inspect_repo.add_inspect_artifacts(identity.clone(), proxy).await.unwrap();
-
-                    pipeline_wrapper
+                    pipeline
                         .write()
                         .await
                         .add_inspect_artifacts(&identity.relative_moniker)
@@ -798,7 +769,8 @@ mod tests {
                     Arc::new(test_accessor_stats.new_inspect_batch_iterator());
 
                 let _result_json = read_snapshot_verify_batch_count_and_batch_size(
-                    pipeline_wrapper.clone(),
+                    inspect_repo.clone(),
+                    pipeline.clone(),
                     expected_batch_results,
                     test_batch_iterator_stats1,
                 )
@@ -843,11 +815,10 @@ mod tests {
         let child_2_selector =
             selectors::parse_selector::<VerboseError>(r#"test_component.cmx:root/child_2:*"#)
                 .unwrap();
-        let inspect_repo = DataRepo::default().await;
+        let inspect_repo = Arc::new(InspectRepository::default());
         let static_selectors_opt = Some(vec![child_1_1_selector, child_2_selector]);
 
-        let pipeline_wrapper =
-            Arc::new(RwLock::new(Pipeline::for_test(static_selectors_opt, inspect_repo.clone())));
+        let pipeline = Arc::new(RwLock::new(Pipeline::for_test(static_selectors_opt)));
 
         let out_dir_proxy = collector::find_directory_proxy(&path).await.unwrap();
 
@@ -930,8 +901,7 @@ mod tests {
 
         let identity = ComponentIdentity::from_identifier_and_url(component_id, TEST_URL);
         inspect_repo.add_inspect_artifacts(identity.clone(), out_dir_proxy).await.unwrap();
-
-        pipeline_wrapper.write().await.add_inspect_artifacts(&identity.relative_moniker).unwrap();
+        pipeline.write().await.add_inspect_artifacts(&identity.relative_moniker).unwrap();
 
         let expected_get_next_result_errors = match mode {
             VerifyMode::ExpectComponentFailure => 1u64,
@@ -940,7 +910,8 @@ mod tests {
 
         {
             let result_json = read_snapshot(
-                pipeline_wrapper.clone(),
+                inspect_repo.clone(),
+                pipeline.clone(),
                 inspector_arc.clone(),
                 test_batch_iterator_stats1,
             )
@@ -1034,11 +1005,11 @@ mod tests {
 
         let test_batch_iterator_stats2 = Arc::new(test_accessor_stats.new_inspect_batch_iterator());
 
-        inspect_repo.write().await.terminate_inspect(&identity);
-        pipeline_wrapper.write().await.remove(&identity.relative_moniker);
+        inspect_repo.terminate_inspect(&identity).await;
         {
             let result_json = read_snapshot(
-                pipeline_wrapper.clone(),
+                inspect_repo.clone(),
+                pipeline.clone(),
                 inspector_arc.clone(),
                 test_batch_iterator_stats2,
             )
@@ -1107,7 +1078,8 @@ mod tests {
     }
 
     async fn start_snapshot(
-        inspect_pipeline: Arc<RwLock<Pipeline>>,
+        inspect_repo: Arc<InspectRepository>,
+        pipeline: Arc<RwLock<Pipeline>>,
         stats: Arc<BatchIteratorConnectionStats>,
     ) -> (BatchIteratorProxy, Task<()>) {
         let test_performance_config = PerformanceConfig {
@@ -1117,7 +1089,9 @@ mod tests {
 
         let trace_id = ftrace::Id::random();
         let reader_server = Box::pin(ReaderServer::stream(
-            inspect_pipeline.read().await.fetch_inspect_data(&None, trace_id).await,
+            inspect_repo
+                .fetch_inspect_data(&None, pipeline.read().await.static_selectors_matchers())
+                .await,
             test_performance_config,
             // No selectors
             None,
@@ -1148,11 +1122,12 @@ mod tests {
     }
 
     async fn read_snapshot(
-        inspect_pipeline: Arc<RwLock<Pipeline>>,
+        inspect_repo: Arc<InspectRepository>,
+        pipeline: Arc<RwLock<Pipeline>>,
         _test_inspector: Arc<Inspector>,
         stats: Arc<BatchIteratorConnectionStats>,
     ) -> serde_json::Value {
-        let (consumer, server) = start_snapshot(inspect_pipeline, stats).await;
+        let (consumer, server) = start_snapshot(inspect_repo, pipeline, stats).await;
 
         let mut result_vec: Vec<String> = Vec::new();
         loop {
@@ -1186,11 +1161,12 @@ mod tests {
     }
 
     async fn read_snapshot_verify_batch_count_and_batch_size(
-        inspect_repo: Arc<RwLock<Pipeline>>,
+        inspect_repo: Arc<InspectRepository>,
+        pipeline: Arc<RwLock<Pipeline>>,
         expected_batch_sizes: Vec<usize>,
         stats: Arc<BatchIteratorConnectionStats>,
     ) -> serde_json::Value {
-        let (consumer, server) = start_snapshot(inspect_repo, stats).await;
+        let (consumer, server) = start_snapshot(inspect_repo, pipeline, stats).await;
 
         let mut result_vec: Vec<String> = Vec::new();
         let mut batch_counts = Vec::new();

@@ -19,7 +19,6 @@ pub mod inspect;
 pub mod logs;
 pub(crate) mod moniker_rewriter;
 pub mod pipeline;
-pub mod repository;
 mod trie;
 pub mod utils;
 

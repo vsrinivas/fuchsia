@@ -4,12 +4,10 @@
 use {
     crate::{
         identity::ComponentIdentity,
-        inspect::container::InspectArtifactsContainer,
         logs::{
             budget::BudgetManager, container::LogsArtifactsContainer, multiplex::PinStream,
-            stats::LogStreamStats,
+            repository::MultiplexerBroker, stats::LogStreamStats,
         },
-        repository::MultiplexerBroker,
     },
     diagnostics_data::{self, LogsData},
     fidl_fuchsia_diagnostics::{LogInterestSelector, StreamMode},
@@ -39,10 +37,6 @@ pub struct ComponentDiagnostics {
     /// Container holding the artifacts needed to uniquely identify
     /// a component on the system.
     pub identity: Arc<ComponentIdentity>,
-    /// Container holding the artifacts needed to serve inspect data.
-    /// If absent, this is interpereted as a component existing, but not
-    /// hosting diagnostics data.
-    pub inspect: Option<InspectArtifactsContainer>,
     /// Container holding cached log messages and interest dispatchers.
     pub logs: Option<Arc<LogsArtifactsContainer>>,
     /// Holds the state for `root/sources/MONIKER/*` in Archivist's inspect.
@@ -50,16 +44,6 @@ pub struct ComponentDiagnostics {
 }
 
 impl ComponentDiagnostics {
-    pub fn new_with_inspect(
-        identity: Arc<ComponentIdentity>,
-        inspect: InspectArtifactsContainer,
-        parent: &fuchsia_inspect::Node,
-    ) -> Self {
-        let mut new = Self::empty(identity, parent);
-        new.inspect = Some(inspect);
-        new
-    }
-
     pub async fn new_with_logs(
         identity: Arc<ComponentIdentity>,
         parent: &fuchsia_inspect::Node,
@@ -114,13 +98,9 @@ impl ComponentDiagnostics {
     /// we still have logs from its execution.
     pub async fn should_retain(&self) -> bool {
         match self.logs.as_ref() {
-            Some(log) => self.inspect.is_some() || log.should_retain().await,
-            None => self.inspect.is_some(),
+            Some(log) => log.should_retain().await,
+            None => false,
         }
-    }
-
-    pub fn terminate_inspect(&mut self) {
-        self.inspect = None;
     }
 
     /// Ensure that no new log messages can be consumed from the corresponding component, causing
@@ -135,6 +115,6 @@ impl ComponentDiagnostics {
     fn empty(identity: Arc<ComponentIdentity>, parent: &fuchsia_inspect::Node) -> Self {
         let source_node = parent.create_child(identity.relative_moniker.join("/"));
         source_node.record_string("url", &identity.url);
-        Self { identity, inspect: None, logs: None, source_node }
+        Self { identity, logs: None, source_node }
     }
 }

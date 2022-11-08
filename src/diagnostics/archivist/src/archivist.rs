@@ -14,9 +14,9 @@ use {
             types::*,
         },
         identity::ComponentIdentity,
-        logs::{budget::BudgetManager, KernelDebugLog},
+        inspect::repository::InspectRepository,
+        logs::{budget::BudgetManager, repository::LogsRepository, KernelDebugLog},
         pipeline::Pipeline,
-        repository::DataRepo,
     },
     archivist_config::Config,
     async_lock::RwLock,
@@ -97,15 +97,17 @@ impl Archivist {
 
         let logs_budget =
             BudgetManager::new(archivist_configuration.logs_max_cached_original_bytes as usize);
-        let diagnostics_repo = DataRepo::new(&logs_budget, component::inspector().root()).await;
+        let logs_repo =
+            Arc::new(LogsRepository::new(&logs_budget, component::inspector().root()).await);
+        let inspect_repo = Arc::new(InspectRepository::default());
 
         let pipelines_node = component::inspector().root().create_child("pipelines");
         let pipelines_path = Path::new(&archivist_configuration.pipelines_path);
         let pipelines = vec![
-            Pipeline::feedback(diagnostics_repo.clone(), pipelines_path, &pipelines_node),
-            Pipeline::legacy_metrics(diagnostics_repo.clone(), pipelines_path, &pipelines_node),
-            Pipeline::lowpan(diagnostics_repo.clone(), pipelines_path, &pipelines_node),
-            Pipeline::all_access(diagnostics_repo.clone(), pipelines_path, &pipelines_node),
+            Pipeline::feedback(pipelines_path, &pipelines_node),
+            Pipeline::legacy_metrics(pipelines_path, &pipelines_node),
+            Pipeline::lowpan(pipelines_path, &pipelines_node),
+            Pipeline::all_access(pipelines_path, &pipelines_node),
         ];
         component::inspector().root().record(pipelines_node);
 
@@ -118,13 +120,22 @@ impl Archivist {
         let stats_node = component::inspector().root().create_child("archive_accessor_stats");
         let pipelines = pipelines
             .into_iter()
-            .map(|pipeline| pipeline.serve(&mut fs, listen_sender.clone(), &stats_node))
+            .map(|pipeline| {
+                pipeline.serve(
+                    &mut fs,
+                    inspect_repo.clone(),
+                    logs_repo.clone(),
+                    listen_sender.clone(),
+                    &stats_node,
+                )
+            })
             .collect();
         component::inspector().root().record(stats_node);
 
         let archivist_state = Arc::new(ArchivistState::new(
             pipelines,
-            diagnostics_repo,
+            inspect_repo,
+            logs_repo,
             logs_budget,
             log_sender.clone(),
         )?);
@@ -144,10 +155,6 @@ impl Archivist {
             }),
             incoming_external_event_producers: vec![],
         })
-    }
-
-    pub fn data_repo(&self) -> &DataRepo {
-        &self.archivist_state.diagnostics_repo
     }
 
     pub fn log_sender(&self) -> &mpsc::UnboundedSender<Task<()>> {
@@ -180,8 +187,8 @@ impl Archivist {
 
     /// Installs `LogSink` and `Log` services. Panics if called twice.
     pub async fn install_log_services(&mut self) -> &mut Self {
-        let data_repo_1 = self.data_repo().clone();
-        let data_repo_2 = self.data_repo().clone();
+        let data_repo_1 = self.archivist_state.logs_repository.clone();
+        let data_repo_2 = self.archivist_state.logs_repository.clone();
         let listen_sender = self.listen_sender.clone();
 
         let mut unattributed_log_sink_source = UnattributedLogSinkSource::default();
@@ -289,8 +296,9 @@ impl Archivist {
     /// Spawns a task that will drain klog as another log source.
     pub async fn start_draining_klog(&mut self) -> Result<(), Error> {
         let debuglog = KernelDebugLog::new().await?;
-        self._drain_klog_task =
-            Some(fasync::Task::spawn(self.data_repo().clone().drain_debuglog(debuglog)));
+        self._drain_klog_task = Some(fasync::Task::spawn(
+            self.archivist_state.logs_repository.clone().drain_debuglog(debuglog),
+        ));
         Ok(())
     }
 
@@ -304,7 +312,7 @@ impl Archivist {
     ) -> Result<(), Error> {
         debug!("Running Archivist.");
 
-        let data_repo = { self.data_repo().clone() };
+        let logs_repository = self.archivist_state.logs_repository.clone();
         self.fs.serve_connection(outgoing_channel).map_err(Error::ServeOutgoing)?;
         // Start servicing all outgoing services.
         let run_outgoing = self.fs.collect::<()>();
@@ -313,7 +321,7 @@ impl Archivist {
         self.archivist_state.logs_budget.set_remover(snd).await;
         let component_removal_task = fasync::Task::spawn(Self::process_removal_of_components(
             rcv,
-            data_repo.clone(),
+            logs_repository.clone(),
             self.archivist_state.diagnostics_pipelines.clone(),
         ));
 
@@ -338,7 +346,7 @@ impl Archivist {
         let all_msg = async {
             log_receiver.for_each_concurrent(None, |rx| async move { rx.await }).await;
             debug!("Log ingestion stopped.");
-            data_repo.terminate_logs().await;
+            logs_repository.terminate_logs().await;
             logs_budget.terminate().await;
             debug!("Flushing to listeners.");
             drain_listeners_task.await;
@@ -375,27 +383,20 @@ impl Archivist {
 
     async fn process_removal_of_components(
         mut removal_requests: mpsc::UnboundedReceiver<Arc<ComponentIdentity>>,
-        diagnostics_repo: DataRepo,
+        logs_repo: Arc<LogsRepository>,
         diagnostics_pipelines: Arc<Vec<Arc<RwLock<Pipeline>>>>,
     ) {
         while let Some(identity) = removal_requests.next().await {
-            maybe_remove_component(&identity, &diagnostics_repo, &diagnostics_pipelines).await;
-        }
-    }
-}
+            if !logs_repo.is_live(&identity).await {
+                debug!(%identity, "Removing component from repository.");
+                logs_repo.remove(&identity).await;
 
-async fn maybe_remove_component(
-    identity: &ComponentIdentity,
-    diagnostics_repo: &DataRepo,
-    diagnostics_pipelines: &[Arc<RwLock<Pipeline>>],
-) {
-    if !diagnostics_repo.is_live(identity).await {
-        debug!(%identity, "Removing component from repository.");
-        diagnostics_repo.write().await.remove(identity);
-
-        // TODO(fxbug.dev/55736): The pipeline specific updates should be happening asynchronously.
-        for pipeline in diagnostics_pipelines {
-            pipeline.write().await.remove(&identity.relative_moniker);
+                // TODO(fxbug.dev/55736): The pipeline specific updates should be happening
+                // asynchronously.
+                for pipeline in diagnostics_pipelines.as_ref() {
+                    pipeline.write().await.remove(&identity.relative_moniker);
+                }
+            }
         }
     }
 }
@@ -406,7 +407,8 @@ async fn maybe_remove_component(
 /// service sessions.
 pub struct ArchivistState {
     diagnostics_pipelines: Arc<Vec<Arc<RwLock<Pipeline>>>>,
-    pub diagnostics_repo: DataRepo,
+    inspect_repository: Arc<InspectRepository>,
+    logs_repository: Arc<LogsRepository>,
 
     /// The overall capacity we enforce for log messages across containers.
     logs_budget: BudgetManager,
@@ -417,13 +419,15 @@ pub struct ArchivistState {
 impl ArchivistState {
     pub fn new(
         diagnostics_pipelines: Vec<Arc<RwLock<Pipeline>>>,
-        diagnostics_repo: DataRepo,
+        inspect_repository: Arc<InspectRepository>,
+        logs_repository: Arc<LogsRepository>,
         logs_budget: BudgetManager,
         log_sender: mpsc::UnboundedSender<Task<()>>,
     ) -> Result<Self, Error> {
         Ok(Self {
             diagnostics_pipelines: Arc::new(diagnostics_pipelines),
-            diagnostics_repo,
+            logs_repository,
+            inspect_repository,
             logs_budget,
             log_sender: Arc::new(RwLock::new(log_sender)),
         })
@@ -437,7 +441,7 @@ impl ArchivistState {
         debug!(identity = %component, "Diagnostics directory is ready.");
         if let Some(directory) = directory {
             // Update the central repository to reference the new diagnostics source.
-            self.diagnostics_repo
+            self.inspect_repository
                 .add_inspect_artifacts(component.clone(), directory)
                 .await
                 .unwrap_or_else(|err| {
@@ -468,7 +472,7 @@ impl ArchivistState {
     ) {
         debug!(identity = %component, "LogSink requested.");
         if let Some(request_stream) = request_stream {
-            let container = self.diagnostics_repo.write().await.get_log_container(component).await;
+            let container = self.logs_repository.get_log_container(component).await;
             container.handle_log_sink(request_stream, self.log_sender.read().await.clone()).await;
         }
     }
