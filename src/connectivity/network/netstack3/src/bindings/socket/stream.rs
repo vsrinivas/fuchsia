@@ -464,7 +464,15 @@ where
             // `StreamFuture` and so will resolve into a tuple of the next item
             // in the stream and the rest of the stream.
             let mut futures = OneOrMany::new(request_stream.into_future());
-            while let Some((request, request_stream)) = futures.next().await {
+            // Process requests in order as they arrive. When the last close
+            // request arrives, save it so it can be deferred until after the
+            // socket state is removed from Core.
+            let last_close = loop {
+                let Some((request, request_stream)) = futures.next().await else {
+                    // No close request needs to be deferred.
+                    break None
+                };
+
                 let request = match request {
                     None => continue,
                     Some(Err(e)) => {
@@ -476,8 +484,16 @@ where
 
                 match self.handle_request(request).await {
                     ControlFlow::Continue(None) => {}
-                    ControlFlow::Break(()) => {
-                        request_stream.control_handle().shutdown();
+                    ControlFlow::Break(close_responder) => {
+                        let do_close = move || {
+                            responder_send!(close_responder, &mut Ok(()));
+                            request_stream.control_handle().shutdown();
+                        };
+                        if futures.is_empty() {
+                            break Some(do_close);
+                        }
+                        do_close();
+                        continue;
                     }
                     ControlFlow::Continue(Some(new_request_stream)) => {
                         futures.push(new_request_stream.into_future())
@@ -490,7 +506,7 @@ where
                 // `Shutdown` response, it will be dropped internally by the
                 // `FuturesUnordered`.
                 futures.push(request_stream.into_future())
-            }
+            };
 
             let mut guard = self.ctx.lock().await;
             let Ctx { sync_ctx, non_sync_ctx } = &mut *guard;
@@ -503,6 +519,10 @@ where
                     let _: zx::Socket = non_sync_ctx.unregister_listener(listener);
                     remove_bound::<I, _>(sync_ctx, bound)
                 }
+            }
+
+            if let Some(do_close) = last_close {
+                do_close()
             }
         })
         .detach()
@@ -712,7 +732,10 @@ where
     async fn handle_request(
         &mut self,
         request: fposix_socket::StreamSocketRequest,
-    ) -> ControlFlow<(), Option<fposix_socket::StreamSocketRequestStream>> {
+    ) -> ControlFlow<
+        fposix_socket::StreamSocketCloseResponder,
+        Option<fposix_socket::StreamSocketRequestStream>,
+    > {
         match request {
             fposix_socket::StreamSocketRequest::Bind { addr, responder } => {
                 responder_send!(responder, &mut self.bind(addr).await);
@@ -761,8 +784,7 @@ where
                 // potentially shared by a bunch of sockets because the client
                 // can call `dup` on this socket. We will do the cleanup at the
                 // end of this task.
-                responder_send!(responder, &mut Ok(()));
-                return ControlFlow::Break(());
+                return ControlFlow::Break(responder);
             }
             fposix_socket::StreamSocketRequest::GetConnectionInfo { responder: _ } => {
                 todo!("https://fxbug.dev/77623");

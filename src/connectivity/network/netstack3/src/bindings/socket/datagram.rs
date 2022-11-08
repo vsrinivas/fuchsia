@@ -1535,7 +1535,11 @@ where
         let events = events.into_future().map(with_flags(rights));
 
         let mut futures = OneOrMany::new(events);
-        while let Some(((request, request_stream), rights)) = futures.next().await {
+        let deferred_close = loop {
+            let Some(((request, request_stream), rights)) = futures.next().await  else {
+                // No close request needs to be deferred.
+                break None
+            };
             let request = match request {
                 None => continue,
                 Some(Err(e)) => {
@@ -1553,8 +1557,17 @@ where
             };
             match RequestHandler::new(&mut self, &rights).handle_request(request).await {
                 ControlFlow::Continue(None) => {}
-                ControlFlow::Break(()) => {
-                    request_stream.control_handle().shutdown();
+                ControlFlow::Break(close_responder) => {
+                    let do_close = move || {
+                        responder_send!(close_responder, &mut Ok(()));
+                        request_stream.control_handle().shutdown();
+                    };
+                    if futures.is_empty() {
+                        // Save the final close request to be performed
+                        // after the socket state is removed from Core.
+                        break Some(do_close);
+                    }
+                    do_close();
                     continue;
                 }
                 ControlFlow::Continue(Some(NewStream { stream, flags })) => {
@@ -1562,9 +1575,13 @@ where
                 }
             };
             futures.push(request_stream.into_future().map(with_flags(rights)));
-        }
+        };
 
         self.close_core().await;
+
+        if let Some(do_close) = deferred_close {
+            do_close();
+        }
         Ok(())
     }
 
@@ -1689,7 +1706,8 @@ where
     async fn handle_request(
         mut self,
         request: fposix_socket::SynchronousDatagramSocketRequest,
-    ) -> ControlFlow<(), Option<NewStream>> {
+    ) -> ControlFlow<fposix_socket::SynchronousDatagramSocketCloseResponder, Option<NewStream>>
+    {
         match request {
             fposix_socket::SynchronousDatagramSocketRequest::DescribeDeprecated { responder } => {
                 // If the call to duplicate_handle fails, we have no
@@ -1749,8 +1767,7 @@ where
                 todo!("https://fxbug.dev/77623: rights_request={:?}", rights_request);
             }
             fposix_socket::SynchronousDatagramSocketRequest::Close { responder } => {
-                responder_send!(responder, &mut Ok(()));
-                return ControlFlow::Break(());
+                return ControlFlow::Break(responder);
             }
             fposix_socket::SynchronousDatagramSocketRequest::Sync { responder } => {
                 responder_send!(responder, &mut Err(zx::Status::NOT_SUPPORTED.into_raw()));

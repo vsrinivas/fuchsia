@@ -71,6 +71,16 @@ impl<F> OneOrMany<F> {
             }
         }
     }
+
+    /// Returns true if and only if there are no futures held.
+    pub fn is_empty(&self) -> bool {
+        let Self(this) = self;
+        match this {
+            Impl::One(None) => true,
+            Impl::One(Some(_)) => false,
+            Impl::Many(many) => many.is_empty(),
+        }
+    }
 }
 
 impl<F: Future> Stream for OneOrMany<F> {
@@ -169,11 +179,13 @@ mod tests {
         let one_or_many = OneOrMany::new(futures::future::ready(()));
         pin_mut!(one_or_many);
         assert_eq!(one_or_many.is_terminated(), false);
+        assert_eq!(one_or_many.is_empty(), false);
 
         assert_eq!(one_or_many.as_mut().poll_next(&mut context), Poll::Ready(Some(())));
         assert_eq!(one_or_many.as_mut().poll_next(&mut context), Poll::Ready(None));
         assert_eq!(count, 0);
         assert_eq!(one_or_many.is_terminated(), true);
+        assert_eq!(one_or_many.is_empty(), true);
     }
 
     #[test]
@@ -185,12 +197,14 @@ mod tests {
         one_or_many.push(futures::future::ready(()));
         pin_mut!(one_or_many);
         assert_eq!(one_or_many.is_terminated(), false);
+        assert_eq!(one_or_many.is_empty(), false);
 
         assert_eq!(one_or_many.as_mut().poll_next(&mut context), Poll::Ready(Some(())));
         assert_eq!(one_or_many.as_mut().poll_next(&mut context), Poll::Ready(Some(())));
         assert_eq!(one_or_many.as_mut().poll_next(&mut context), Poll::Ready(None));
         assert_eq!(one_or_many.is_terminated(), true);
         assert_eq!(count, 0);
+        assert_eq!(one_or_many.is_empty(), true);
     }
 
     #[test]
@@ -202,6 +216,7 @@ mod tests {
         let one_or_many = OneOrMany::new(event.wait());
         pin_mut!(one_or_many);
         assert_eq!(one_or_many.as_mut().poll_next(&mut context), Poll::Pending);
+        assert_eq!(one_or_many.is_empty(), false);
 
         let other_event = Event::new();
         one_or_many.push(other_event.wait());
@@ -211,7 +226,8 @@ mod tests {
         assert_eq!(count, 1);
 
         assert_eq!(one_or_many.as_mut().poll_next(&mut context), Poll::Ready(Some(())));
-        assert_eq!(one_or_many.poll_next(&mut context), Poll::Pending);
+        assert_eq!(one_or_many.as_mut().poll_next(&mut context), Poll::Pending);
+        assert_eq!(one_or_many.is_empty(), false);
     }
 
     #[test]
@@ -288,7 +304,8 @@ mod tests {
         let one_or_many: OneOrMany<Ready<()>> = std::iter::empty().collect();
         pin_mut!(one_or_many);
 
-        assert_eq!(one_or_many.poll_next(&mut context), Poll::Ready(None));
+        assert_eq!(one_or_many.as_mut().poll_next(&mut context), Poll::Ready(None));
+        assert_eq!(one_or_many.is_empty(), true);
     }
 
     #[test]
@@ -300,7 +317,8 @@ mod tests {
         pin_mut!(one_or_many);
 
         assert_eq!(one_or_many.as_mut().poll_next(&mut context), Poll::Ready(Some(1)));
-        assert_eq!(one_or_many.poll_next(&mut context), Poll::Ready(None));
+        assert_eq!(one_or_many.as_mut().poll_next(&mut context), Poll::Ready(None));
+        assert_eq!(one_or_many.is_empty(), true);
     }
 
     #[test]
