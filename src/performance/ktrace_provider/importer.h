@@ -37,7 +37,125 @@ class Importer {
   bool Import(Reader& reader);
 
  private:
+  bool ImportRecord(const ktrace_header_t* record, size_t record_size);
+  bool ImportNameRecord(const ktrace_rec_name_t* record, const TagInfo& tag_info);
+  bool ImportProbeRecord(const ktrace_header_t* record, size_t record_size);
+  bool ImportDurationRecord(const ktrace_header_t* record, size_t record_size);
+  bool ImportFlowRecord(const ktrace_header_t* record, size_t record_size);
+  bool ImportCounterRecord(const ktrace_header_t* record, size_t record_size);
+  bool ImportUnknownRecord(const ktrace_header_t* record, size_t record_size);
+
+  bool HandleFxtStringRecord(const uint64_t* record);
+  bool HandleFxtThreadName(const uint64_t* record);
+
+  bool HandleThreadName(zx_koid_t thread, zx_koid_t process, std::string_view name);
+  bool HandleProcessName(zx_koid_t process, std::string_view name);
+  bool HandleIRQName(uint32_t irq, std::string_view name);
+  bool HandleProbeName(uint32_t probe, std::string_view name);
+
+  bool HandleThreadCreate(trace_ticks_t event_time, zx_koid_t thread, zx_koid_t affected_thread,
+                          zx_koid_t affected_process);
+  bool HandleThreadStart(trace_ticks_t event_time, zx_koid_t thread, zx_koid_t affected_thread);
+  bool HandleThreadExit(trace_ticks_t event_time, zx_koid_t thread);
+  bool HandleProcessCreate(trace_ticks_t event_time, zx_koid_t thread, zx_koid_t affected_process);
+  bool HandleProcessStart(trace_ticks_t event_time, zx_koid_t thread, zx_koid_t affected_thread,
+                          zx_koid_t affected_process);
+  bool HandleProcessExit(trace_ticks_t event_time, zx_koid_t thread, zx_koid_t affected_process);
+  bool HandleProbe(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
+                   bool cpu_trace);
+  bool HandleProbe(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
+                   bool cpu_trace, uint32_t arg0, uint32_t arg1);
+  bool HandleProbe(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
+                   bool cpu_trace, uint64_t arg0, uint64_t arg1);
+  bool HandleDurationBegin(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
+                           uint32_t group, bool cpu_trace);
+  bool HandleDurationBegin(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
+                           uint32_t group, bool cpu_trace, uint64_t arg0, uint64_t arg1);
+  bool HandleDurationEnd(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
+                         uint32_t group, bool cpu_trace);
+  bool HandleDurationEnd(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
+                         uint32_t group, bool cpu_trace, uint64_t arg0, uint64_t arg1);
+  bool HandleFlowBegin(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
+                       uint32_t group, bool cpu_trace, trace_flow_id_t flow_id);
+  bool HandleFlowEnd(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
+                     uint32_t group, bool cpu_trace, trace_flow_id_t flow_id);
+  bool HandleFlowStep(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
+                      uint32_t group, bool cpu_trace, trace_flow_id_t flow_id);
+  bool HandleCounter(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
+                     uint32_t group, bool cpu_trace, trace_counter_id_t counter_id, int64_t value);
+  bool HandleVcpuEnter(trace_ticks_t event_time, zx_koid_t thread);
+  bool HandleVcpuExit(trace_ticks_t event_time, zx_koid_t thread, uint32_t exit,
+                      uint64_t exit_address);
+  bool HandleVcpuBlock(trace_ticks_t event_time, zx_koid_t thread, uint32_t meta);
+  bool HandleVcpuUnblock(trace_ticks_t event_time, zx_koid_t thread, uint32_t meta);
+
+  struct CpuInfo {
+    zx_koid_t current_thread = ZX_KOID_INVALID;
+    trace_thread_ref_t current_thread_ref = trace_make_unknown_thread_ref();
+  };
+
+  trace_thread_ref_t GetCpuCurrentThreadRef(trace_cpu_number_t cpu_number);
+  zx_koid_t GetCpuCurrentThread(trace_cpu_number_t cpu_number);
+  trace_thread_ref_t SwitchCpuToThread(trace_cpu_number_t cpu_number, zx_koid_t thread);
+
+  const trace_string_ref_t& GetNameRef(std::unordered_map<uint32_t, trace_string_ref_t>& table,
+                                       const char* kind, uint32_t id);
+  const trace_thread_ref_t& GetThreadRef(zx_koid_t thread);
+  const trace_thread_ref_t& GetCpuPseudoThreadRef(trace_cpu_number_t cpu);
+
+  const trace_string_ref_t& GetCategoryForGroup(uint32_t group);
+
   trace_context_t* const context_;
+  const TagMap& tags_;
+
+  trace_string_ref_t const kernel_string_ref_;
+  trace_string_ref_t const unknown_category_ref_;
+  trace_string_ref_t const arch_category_ref_;
+  trace_string_ref_t const meta_category_ref_;
+  trace_string_ref_t const lifecycle_category_ref_;
+  trace_string_ref_t const tasks_category_ref_;
+  trace_string_ref_t const ipc_category_ref_;
+  trace_string_ref_t const irq_category_ref_;
+  trace_string_ref_t const probe_category_ref_;
+  trace_string_ref_t const sched_category_ref_;
+  trace_string_ref_t const syscall_category_ref_;
+  trace_string_ref_t const channel_category_ref_;
+  trace_string_ref_t const vcpu_category_ref_;
+  trace_string_ref_t const vm_category_ref_;
+  trace_string_ref_t const arg0_name_ref_;
+  trace_string_ref_t const arg1_name_ref_;
+
+  uint32_t version_ = 0u;
+
+  std::vector<CpuInfo> cpu_infos_;
+
+  std::unordered_map<uint32_t, std::string> fxt_string_table_;
+  std::unordered_map<zx_koid_t, trace_thread_ref_t> thread_refs_;
+
+  const trace_thread_ref_t kUnknownThreadRef;
+
+  struct VcpuDuration {
+    trace_ticks_t begin;
+    bool valid = false;
+  };
+  std::unordered_map<zx_koid_t, VcpuDuration> vcpu_durations_;
+
+  std::unordered_map<uint32_t, trace_string_ref_t> irq_names_;
+  std::unordered_map<uint32_t, trace_string_ref_t> probe_names_;
+  std::unordered_map<uint32_t, trace_string_ref_t> vcpu_meta_;
+  std::unordered_map<uint32_t, trace_string_ref_t> vcpu_exit_meta_;
+
+  struct Channels {
+    using ChannelId = uint64_t;
+    using MessageCounter = uint64_t;
+
+    static constexpr size_t kReadCounterIndex = 0;
+    static constexpr size_t kWriteCounterIndex = 1;
+
+    ChannelId next_id_ = 0;
+    std::unordered_map<zx_koid_t, ChannelId> ids_;
+    std::unordered_map<ChannelId, std::tuple<MessageCounter, MessageCounter>> message_counters_;
+  } channels_;
 
   Importer(const Importer&) = delete;
   Importer(Importer&&) = delete;

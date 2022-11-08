@@ -18,6 +18,17 @@ namespace ktrace_thunks {
 
 bool tag_enabled(uint32_t tag) { return KTRACE_STATE.tag_enabled(tag); }
 
+template <typename... Args>
+void write_record(uint32_t effective_tag, uint64_t explicit_ts, Args... args) {
+  if (unlikely(KTRACE_STATE.tag_enabled(effective_tag))) {
+    KTRACE_STATE.WriteRecord(effective_tag, explicit_ts, ktl::forward<Args>(args)...);
+  }
+}
+
+void write_name_etc(uint32_t tag, uint32_t id, uint32_t arg, const char* name, bool always) {
+  KTRACE_STATE.WriteNameEtc(tag, id, arg, name, always);
+}
+
 ssize_t read_user(user_out_ptr<void> ptr, uint32_t off, size_t len) {
   return KTRACE_STATE.ReadUser(ptr, off, len);
 }
@@ -49,19 +60,6 @@ void fxt_context_switch(uint32_t tag, uint64_t timestamp, uint8_t cpu_number,
 void fxt_string_record(uint16_t index, const char* string, size_t string_length) {
   auto writer = KTRACE_STATE.make_fxt_writer(TAG_PROBE_NAME);
   (void)fxt::WriteStringRecord(&writer, index, string, string_length);
-}
-
-template <fxt::RefType thread_type, fxt::RefType category_type, fxt::RefType name_type,
-          fxt::ArgumentType... arg_types, fxt::RefType... ref_types>
-void fxt_instant(uint32_t tag, uint64_t timestamp, const fxt::ThreadRef<thread_type>& thread_ref,
-                 const fxt::StringRef<category_type>& category_ref,
-                 const fxt::StringRef<name_type>& name_ref,
-                 const fxt::Argument<arg_types, ref_types>&... args) {
-  if (unlikely(KTRACE_STATE.tag_enabled(tag))) {
-    auto writer = KTRACE_STATE.make_fxt_writer(tag);
-    (void)fxt::WriteInstantEventRecord(&writer, timestamp, thread_ref, category_ref, name_ref,
-                                       args...);
-  }
 }
 
 template <fxt::RefType thread_type, fxt::RefType category_type, fxt::RefType name_type,
@@ -108,19 +106,6 @@ void fxt_duration_complete(uint32_t tag, uint64_t start,
 
 template <fxt::RefType thread_type, fxt::RefType category_type, fxt::RefType name_type,
           fxt::ArgumentType... arg_types, fxt::RefType... ref_types>
-void fxt_counter(uint32_t tag, uint64_t timestamp, const fxt::ThreadRef<thread_type>& thread_ref,
-                 const fxt::StringRef<category_type>& category_ref,
-                 const fxt::StringRef<name_type>& name_ref, uint64_t counter_id,
-                 const fxt::Argument<arg_types, ref_types>&... args) {
-  if (unlikely(KTRACE_STATE.tag_enabled(tag))) {
-    auto writer = KTRACE_STATE.make_fxt_writer(tag);
-    (void)fxt::WriteCounterEventRecord(&writer, timestamp, thread_ref, category_ref, name_ref,
-                                       counter_id, args...);
-  }
-}
-
-template <fxt::RefType thread_type, fxt::RefType category_type, fxt::RefType name_type,
-          fxt::ArgumentType... arg_types, fxt::RefType... ref_types>
 void fxt_flow_begin(uint32_t tag, uint64_t timestamp, const fxt::ThreadRef<thread_type>& thread_ref,
                     const fxt::StringRef<category_type>& category_ref,
                     const fxt::StringRef<name_type>& name_ref, uint64_t flow_id,
@@ -158,35 +143,22 @@ void fxt_flow_end(uint32_t tag, uint64_t timestamp, const fxt::ThreadRef<thread_
   }
 }
 
+template void write_record(uint32_t effective_tag, uint64_t explicit_ts);
+template void write_record(uint32_t effective_tag, uint64_t explicit_ts, uint32_t a);
+template void write_record(uint32_t effective_tag, uint64_t explicit_ts, uint32_t a, uint32_t b);
+template void write_record(uint32_t effective_tag, uint64_t explicit_ts, uint32_t a, uint32_t b,
+                           uint32_t c);
+template void write_record(uint32_t effective_tag, uint64_t explicit_ts, uint32_t a, uint32_t b,
+                           uint32_t c, uint32_t d);
+template void write_record(uint32_t effective_tag, uint64_t explicit_ts, uint64_t a);
+template void write_record(uint32_t effective_tag, uint64_t explicit_ts, uint64_t a, uint64_t b);
+
 template void fxt_kernel_object(uint32_t tag, bool always, zx_koid_t koid, zx_obj_type_t obj_type,
                                 const fxt::StringRef<fxt::RefType::kInline>& name_arg);
-template void fxt_kernel_object(uint32_t tag, bool always, zx_koid_t koid, zx_obj_type_t obj_type,
-                                const fxt::StringRef<fxt::RefType::kId>& name_arg);
 template void fxt_kernel_object(uint32_t tag, bool always, zx_koid_t koid, zx_obj_type_t obj_type,
                                 const fxt::StringRef<fxt::RefType::kInline>& name_arg,
                                 const fxt::Argument<fxt::ArgumentType::kKoid, fxt::RefType::kId>&);
 
-template void fxt_instant(uint32_t tag, uint64_t timestamp,
-                          const fxt::ThreadRef<fxt::RefType::kInline>& thread_ref,
-                          const fxt::StringRef<fxt::RefType::kId>& category_ref,
-                          const fxt::StringRef<fxt::RefType::kId>& name_ref);
-template void fxt_instant(
-    uint32_t tag, uint64_t timestamp, const fxt::ThreadRef<fxt::RefType::kInline>& thread_ref,
-    const fxt::StringRef<fxt::RefType::kId>& category_ref,
-    const fxt::StringRef<fxt::RefType::kId>& name_ref,
-    const fxt::Argument<fxt::ArgumentType::kUint32, fxt::RefType::kId, fxt::RefType::kId>& arg);
-template void fxt_instant(
-    uint32_t tag, uint64_t timestamp, const fxt::ThreadRef<fxt::RefType::kInline>& thread_ref,
-    const fxt::StringRef<fxt::RefType::kId>& category_ref,
-    const fxt::StringRef<fxt::RefType::kId>& name_ref,
-    const fxt::Argument<fxt::ArgumentType::kUint32, fxt::RefType::kId, fxt::RefType::kId>& arg1,
-    const fxt::Argument<fxt::ArgumentType::kUint32, fxt::RefType::kId, fxt::RefType::kId>& arg2);
-template void fxt_instant(
-    uint32_t tag, uint64_t timestamp, const fxt::ThreadRef<fxt::RefType::kInline>& thread_ref,
-    const fxt::StringRef<fxt::RefType::kId>& category_ref,
-    const fxt::StringRef<fxt::RefType::kId>& name_ref,
-    const fxt::Argument<fxt::ArgumentType::kUint64, fxt::RefType::kId, fxt::RefType::kId>& arg1,
-    const fxt::Argument<fxt::ArgumentType::kUint64, fxt::RefType::kId, fxt::RefType::kId>& arg2);
 template void fxt_duration_begin(uint32_t tag, uint64_t timestamp,
                                  const fxt::ThreadRef<fxt::RefType::kInline>& thread_ref,
                                  const fxt::StringRef<fxt::RefType::kId>& category_ref,
@@ -213,12 +185,6 @@ template void fxt_duration_begin(
     const fxt::StringRef<fxt::RefType::kId>& name_ref,
     const fxt::Argument<fxt::ArgumentType::kUint64, fxt::RefType::kId, fxt::RefType::kId>& arg1,
     const fxt::Argument<fxt::ArgumentType::kUint32, fxt::RefType::kId, fxt::RefType::kId>& arg2);
-template void fxt_duration_begin(
-    uint32_t tag, uint64_t timestamp, const fxt::ThreadRef<fxt::RefType::kInline>& thread_ref,
-    const fxt::StringRef<fxt::RefType::kId>& category_ref,
-    const fxt::StringRef<fxt::RefType::kId>& name_ref,
-    const fxt::Argument<fxt::ArgumentType::kUint64, fxt::RefType::kId, fxt::RefType::kId>& arg1,
-    const fxt::Argument<fxt::ArgumentType::kUint64, fxt::RefType::kId, fxt::RefType::kId>& arg2);
 
 template void fxt_duration_end(uint32_t tag, uint64_t timestamp,
                                const fxt::ThreadRef<fxt::RefType::kInline>& thread_ref,
@@ -246,12 +212,6 @@ template void fxt_duration_end(
     const fxt::StringRef<fxt::RefType::kId>& name_ref,
     const fxt::Argument<fxt::ArgumentType::kUint64, fxt::RefType::kId, fxt::RefType::kId>& arg1,
     const fxt::Argument<fxt::ArgumentType::kUint32, fxt::RefType::kId, fxt::RefType::kId>& arg2);
-template void fxt_duration_end(
-    uint32_t tag, uint64_t timestamp, const fxt::ThreadRef<fxt::RefType::kInline>& thread_ref,
-    const fxt::StringRef<fxt::RefType::kId>& category_ref,
-    const fxt::StringRef<fxt::RefType::kId>& name_ref,
-    const fxt::Argument<fxt::ArgumentType::kUint64, fxt::RefType::kId, fxt::RefType::kId>& arg1,
-    const fxt::Argument<fxt::ArgumentType::kUint64, fxt::RefType::kId, fxt::RefType::kId>& arg2);
 template void fxt_duration_complete(uint32_t tag, uint64_t start_time,
                                     const fxt::ThreadRef<fxt::RefType::kInline>& thread_ref,
                                     const fxt::StringRef<fxt::RefType::kId>& category_ref,
@@ -277,48 +237,18 @@ template void fxt_duration_complete(
     const fxt::Argument<fxt::ArgumentType::kUint32, fxt::RefType::kId, fxt::RefType::kId>& arg3,
     const fxt::Argument<fxt::ArgumentType::kUint32, fxt::RefType::kId, fxt::RefType::kId>& arg4);
 
-template void fxt_counter(uint32_t tag, uint64_t timestamp,
-                          const fxt::ThreadRef<fxt::RefType::kInline>& thread_ref,
-                          const fxt::StringRef<fxt::RefType::kId>& category_ref,
-                          const fxt::StringRef<fxt::RefType::kId>& name_ref, uint64_t counter_id);
-template void fxt_counter(
-    uint32_t tag, uint64_t timestamp, const fxt::ThreadRef<fxt::RefType::kInline>& thread_ref,
-    const fxt::StringRef<fxt::RefType::kId>& category_ref,
-    const fxt::StringRef<fxt::RefType::kId>& name_ref, uint64_t counter_id,
-    const fxt::Argument<fxt::ArgumentType::kInt64, fxt::RefType::kId, fxt::RefType::kId>& arg4);
-template void fxt_counter(
-    uint32_t tag, uint64_t timestamp, const fxt::ThreadRef<fxt::RefType::kInline>& thread_ref,
-    const fxt::StringRef<fxt::RefType::kId>& category_ref,
-    const fxt::StringRef<fxt::RefType::kId>& name_ref, uint64_t counter_id,
-    const fxt::Argument<fxt::ArgumentType::kUint64, fxt::RefType::kId, fxt::RefType::kId>& arg);
-
 template void fxt_flow_begin(uint32_t tag, uint64_t timestamp,
                              const fxt::ThreadRef<fxt::RefType::kInline>& thread_ref,
                              const fxt::StringRef<fxt::RefType::kId>& category_ref,
                              const fxt::StringRef<fxt::RefType::kId>& name_ref, uint64_t flow_id);
-template void fxt_flow_begin(
-    uint32_t tag, uint64_t timestamp, const fxt::ThreadRef<fxt::RefType::kInline>& thread_ref,
-    const fxt::StringRef<fxt::RefType::kId>& category_ref,
-    const fxt::StringRef<fxt::RefType::kId>& name_ref, uint64_t flow_id,
-    const fxt::Argument<fxt::ArgumentType::kUint64, fxt::RefType::kId, fxt::RefType::kId>& arg);
 template void fxt_flow_step(uint32_t tag, uint64_t timestamp,
                             const fxt::ThreadRef<fxt::RefType::kInline>& thread_ref,
                             const fxt::StringRef<fxt::RefType::kId>& category_ref,
                             const fxt::StringRef<fxt::RefType::kId>& name_ref, uint64_t flow_id);
-template void fxt_flow_step(
-    uint32_t tag, uint64_t timestamp, const fxt::ThreadRef<fxt::RefType::kInline>& thread_ref,
-    const fxt::StringRef<fxt::RefType::kId>& category_ref,
-    const fxt::StringRef<fxt::RefType::kId>& name_ref, uint64_t flow_id,
-    const fxt::Argument<fxt::ArgumentType::kUint64, fxt::RefType::kId, fxt::RefType::kId>& arg);
 template void fxt_flow_end(uint32_t tag, uint64_t timestamp,
                            const fxt::ThreadRef<fxt::RefType::kInline>& thread_ref,
                            const fxt::StringRef<fxt::RefType::kId>& category_ref,
                            const fxt::StringRef<fxt::RefType::kId>& name_ref, uint64_t flow_id);
-template void fxt_flow_end(
-    uint32_t tag, uint64_t timestamp, const fxt::ThreadRef<fxt::RefType::kInline>& thread_ref,
-    const fxt::StringRef<fxt::RefType::kId>& category_ref,
-    const fxt::StringRef<fxt::RefType::kId>& name_ref, uint64_t flow_id,
-    const fxt::Argument<fxt::ArgumentType::kUint64, fxt::RefType::kId, fxt::RefType::kId>& arg);
 
 template void fxt_context_switch(uint32_t tag, uint64_t timestamp, uint8_t cpu_number,
                                  zx_thread_state_t outgoing_thread_state,
