@@ -145,14 +145,6 @@ async fn async_main(config: Config) -> Result<(), Error> {
         "only one shutdown mechanism can be specified."
     );
 
-    if config.install_controller {
-        archivist.serve_test_controller_protocol();
-    }
-
-    if config.listen_to_lifecycle {
-        archivist.serve_lifecycle_protocol();
-    }
-
     if config.enable_log_connector {
         archivist.install_log_connector();
     }

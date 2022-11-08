@@ -5,7 +5,8 @@
 use {
     crate::{
         accessor::ArchiveAccessorServer,
-        component_lifecycle, diagnostics,
+        component_lifecycle::{self, TestControllerServer},
+        diagnostics,
         error::Error,
         events::{
             router::{ConsumerConfig, EventRouter, ProducerConfig, RouterOptions},
@@ -30,7 +31,7 @@ use {
     },
     fuchsia_inspect::{component, health::Reporter},
     futures::{
-        channel::mpsc,
+        channel::{mpsc, oneshot},
         future::{self, abortable},
         prelude::*,
     },
@@ -55,8 +56,8 @@ pub struct Archivist {
     /// Handles event routing between archivist parts.
     event_router: EventRouter,
 
-    /// Recieve stop signal to kill this archivist.
-    stop_recv: Option<mpsc::Receiver<()>>,
+    /// Receive stop signal to kill this archivist.
+    stop_recv: Option<oneshot::Receiver<()>>,
 
     /// Listens for lifecycle requests, to handle Stop requests.
     _lifecycle_task: Option<fasync::Task<()>>,
@@ -84,6 +85,9 @@ pub struct Archivist {
 
     /// The server handling fuchsia.diagnostics.ArchiveAccessor
     accessor_server: Arc<ArchiveAccessorServer>,
+
+    /// The server handling fuchsia.diagnostics.test.Controller
+    test_controller_server: Option<TestControllerServer>,
 }
 
 impl Archivist {
@@ -125,13 +129,26 @@ impl Archivist {
         let accessor_server =
             Arc::new(ArchiveAccessorServer::new(inspect_repo.clone(), logs_repo.clone()));
 
+        let (test_controller_server, _lifecycle_task, stop_recv) =
+            if archivist_configuration.install_controller {
+                let (s, r) = TestControllerServer::new();
+                (Some(s), None, Some(r))
+            } else if archivist_configuration.listen_to_lifecycle {
+                debug!("Lifecycle listener initialized.");
+                let (t, r) = component_lifecycle::serve_v2();
+                (None, Some(t), Some(r))
+            } else {
+                (None, None, None)
+            };
+
         Self {
             fs,
+            test_controller_server,
             accessor_server,
             listen_sender,
             event_router: EventRouter::new(component::inspector().root().create_child("events")),
-            stop_recv: None,
-            _lifecycle_task: None,
+            stop_recv,
+            _lifecycle_task,
             _drain_klog_task: None,
             drain_listeners_task: fasync::Task::spawn(async move {
                 listen_receiver.for_each_concurrent(None, |rx| async move { rx.await }).await;
@@ -142,30 +159,6 @@ impl Archivist {
             logs_repository: logs_repo,
             logs_budget,
         }
-    }
-
-    /// Install controller protocol.
-    pub fn serve_test_controller_protocol(&mut self) -> &mut Self {
-        let (stop_sender, stop_recv) = mpsc::channel(0);
-        self.fs.dir("svc").add_fidl_service(move |stream| {
-            fasync::Task::spawn(component_lifecycle::serve_test_controller(
-                stream,
-                stop_sender.clone(),
-            ))
-            .detach()
-        });
-        self.stop_recv = Some(stop_recv);
-        debug!("Controller services initialized.");
-        self
-    }
-
-    /// Listen for v2 lifecycle requests.
-    pub fn serve_lifecycle_protocol(&mut self) -> &mut Self {
-        let (task, stop_recv) = component_lifecycle::serve_v2();
-        self._lifecycle_task = Some(task);
-        self.stop_recv = Some(stop_recv);
-        debug!("Lifecycle listener initialized.");
-        self
     }
 
     /// Installs `LogSink` and `Log` services. Panics if called twice.
@@ -346,7 +339,7 @@ impl Archivist {
         let incoming_external_event_producers = self.incoming_external_event_producers;
         let stop_fut = match self.stop_recv {
             Some(stop_recv) => async move {
-                stop_recv.into_future().await;
+                stop_recv.into_future().await.ok();
                 terminate_handle.terminate().await;
                 for task in incoming_external_event_producers {
                     task.cancel().await;
@@ -369,12 +362,21 @@ impl Archivist {
         diagnostics::serve(&mut self.fs)
             .unwrap_or_else(|err| warn!(?err, "failed to serve diagnostics"));
 
+        let mut svc_dir = self.fs.dir("svc");
+
         // Serve fuchsia.diagnostics.ArchiveAccessors backed by a pipeline.
         for pipeline in &self.pipelines {
             let accessor_server = self.accessor_server.clone();
             let accessor_pipeline = pipeline.clone();
-            self.fs.dir("svc").add_fidl_service_at(pipeline.protocol_name(), move |stream| {
+            svc_dir.add_fidl_service_at(pipeline.protocol_name(), move |stream| {
                 accessor_server.spawn_server(accessor_pipeline.clone(), stream);
+            });
+        }
+
+        // Serevr fuchsia.diagnostics.test.Controller.
+        if let Some(mut server) = self.test_controller_server.take() {
+            svc_dir.add_fidl_service(move |stream| {
+                server.spawn(stream);
             });
         }
     }
@@ -413,7 +415,7 @@ mod tests {
             enable_klog: false,
             enable_event_source: false,
             enable_log_connector: false,
-            install_controller: false,
+            install_controller: true,
             listen_to_lifecycle: false,
             log_to_debuglog: false,
             logs_max_cached_original_bytes: LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES as u64,
