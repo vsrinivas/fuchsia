@@ -10,6 +10,7 @@
 #include <runtime/thread.h>
 
 #include "asan_impl.h"
+#include "dynlink.h"
 #include "libc.h"
 #include "setjmp_impl.h"
 #include "threads_impl.h"
@@ -50,6 +51,17 @@ static void start_main(const struct start_params* p) {
       :
       : "r"(__builtin_return_address(0)));
 #endif
+
+  // Run the __sanitizer_module_loaded hook on all loaded libraries as early as
+  // possible in the initial execution path. At this point, we can safely call
+  // into external libraries now that the PLT and shadow call stack are setup.
+  // This is useful for any library which overrides the
+  // __sanitizer_module_loaded hook that needs to observe something from loaded
+  // libs before we actually call .preinit_arrat/.init_array functions. An
+  // example where this is necessary is with hwasan which will need to register
+  // globals before actually calling __hwasan_init to prevent any more false
+  // positives from globals in between now and when __hwasan_init is called.
+  _dl_iterate_loaded_libs();
 
   uint32_t argc = p->procargs->args_num;
   uint32_t envc = p->procargs->environ_num;

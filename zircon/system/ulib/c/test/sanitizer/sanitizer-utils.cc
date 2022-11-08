@@ -334,13 +334,13 @@ TEST(SanitizerUtilsTest, FillShadowPartialPages) {
 
 #endif
 
-TEST(SanitizerUtilsTest, ProcessExitHook) {
+void RunExe(std::string_view path, uint32_t expected_ret) {
   const char* root_dir = getenv("TEST_ROOT_DIR");
   if (!root_dir) {
     root_dir = "";
   }
   std::string file(root_dir);
-  file += "/bin/sanitizer-exit-hook-test-helper";
+  file += path;
 
   zx::process child;
   const char* argv[] = {file.c_str(), nullptr};
@@ -354,7 +354,15 @@ TEST(SanitizerUtilsTest, ProcessExitHook) {
   zx_info_process_t info;
   ASSERT_OK(child.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr));
 
-  EXPECT_EQ(info.return_code, kHookStatus);
+  EXPECT_EQ(info.return_code, expected_ret);
+}
+
+TEST(SanitizerUtilsTest, ProcessExitHook) {
+  RunExe("/bin/sanitizer-exit-hook-test-helper", kHookStatus);
+}
+
+TEST(SanitizerUtilsTest, ModuleLoadedStartup) {
+  RunExe("/bin/sanitizer-module-loaded-test-helper", 0);
 }
 
 }  // namespace

@@ -97,7 +97,10 @@ test("sanitizer-utils-test") {
     "//zircon/system/ulib/ldmsg",
     "//zircon/system/ulib/zxtest",
   ]
-  data_deps = [ ":sanitizer-exit-hook-test-helper" ]
+  data_deps = [
+    ":sanitizer-exit-hook-test-helper",
+    ":sanitizer-module-loaded-test-helper",
+  ]
 }
 
 executable("sanitizer-exit-hook-test-helper") {
@@ -105,6 +108,47 @@ executable("sanitizer-exit-hook-test-helper") {
   sources = [ "exit-hook-test-helper.cc" ]
   configs -= [ "//build/config/fuchsia:fdio_config" ]
   exclude_toolchain_tags = [ "instrumentation-runtime" ]
+}
+
+executable("sanitizer-module-loaded-test-helper") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  sources = [ "module-loaded-test-helper.cc" ]
+  configs -= [ "//build/config/fuchsia:fdio_config" ]
+  exclude_toolchain_tags = [ "instrumentation-runtime" ]
+  deps = [ ":sanitizer-module-loaded-test-needed-dso" ]
+  data_deps = [ ":sanitizer-module-loaded-test-dlopen-dso" ]
+
+  # The linker can omit some symbols from the .dynsym since it's an executable and
+  # might not be able to find instances it links against at build time where this
+  # symbol can be externally referenced. This forces it to be manifested so weakrefs
+  # in sanitizer-module-loaded-test-dlopen-dso can use the strong definition
+  # provided in this executable.
+  ldflags = [ "-rdynamic" ]
+}
+
+shared_library("sanitizer-module-loaded-test-dlopen-dso") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  sources = [ "sanitizer-module-loaded-test-dlopen-dso.cc" ]
+  deps = [ ":sanitizer-module-loaded-test-dlopen-needed-dso" ]
+}
+
+shared_library("sanitizer-module-loaded-test-needed-dso") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  sources = [ "sanitizer-module-loaded-test-needed-dso.cc" ]
+}
+
+shared_library("sanitizer-module-loaded-test-dlopen-needed-dso") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  # This can just reuse the same source file as sanitizer-module-loaded-test-dlopen-dso since they check the same thing.
+  sources = [ "sanitizer-module-loaded-test-dlopen-dso.cc" ]
 }
 
 source_set("memory-snapshot-test") {

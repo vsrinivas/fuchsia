@@ -2177,6 +2177,46 @@ static void set_global(struct dso* p, int global) {
   }
 }
 
+// This function is unsanitized so this function can easily be called before
+// globals are registered by hwasan, and it can be used to register globals
+// early for hwasan.
+NO_ASAN
+static struct dl_phdr_info get_phdr_info(const struct dso* current) {
+  struct dl_phdr_info info = {
+      .dlpi_addr = (uintptr_t)current->l_map.l_addr,
+      .dlpi_name = current->l_map.l_name,
+      .dlpi_phdr = current->phdr,
+      .dlpi_phnum = current->phnum,
+      .dlpi_adds = gencnt,
+      .dlpi_subs = 0,
+      .dlpi_tls_modid = current->tls_id,
+      .dlpi_tls_data = current->tls.image,
+  };
+  return info;
+}
+
+// Similar to dl_iterate_phdr, iterate over all loaded DSOs, but the only
+// callback is to __sanitizer_module_loaded which a sanitizer runtime can
+// override. This is called in two places:
+//
+// 1) In dlopen right before iterating through .init_array.
+// 2) In the initial execution path at the start of start_main when shadow call
+//    stack is setup.
+//
+// This function is hidden because it should only be used within libc. This
+// function is also unsanitized so this function can easily be called before
+// globals are registered by hwasan, and it can be used to register globals
+// early for hwasan.
+NO_ASAN
+__attribute__((visibility("hidden"))) void _dl_iterate_loaded_libs(void) {
+  for (struct dso* current = tail; current; current = dso_prev(current)) {
+    if (current->constructed)
+      continue;
+    struct dl_phdr_info info = get_phdr_info(current);
+    __sanitizer_module_loaded(&info, sizeof(info));
+  }
+}
+
 static void* dlopen_internal(zx_handle_t vmo, const char* file, int mode) {
   // N.B. This lock order must be consistent with other uses such as
   // ThreadSuspender in the __sanitizer_memory_snapshot implementation.
@@ -2276,6 +2316,14 @@ static void* dlopen_internal(zx_handle_t vmo, const char* file, int mode) {
 
   if (log_libs)
     _dl_log_unlogged();
+
+  // Run the __sanitizer_module_loaded hook on newly loaded libraries. This is
+  // useful for sanitizers that need to observe something from loaded libs
+  // before module constructors are called. An example of this is hwasan with
+  // __hwasan_library_loaded which needs to register interposable globals in
+  // newly loaded libs before module constructors potentially access these
+  // interposed globals.
+  _dl_iterate_loaded_libs();
 
   do_init_fini(new_tail);
 
@@ -2437,17 +2485,9 @@ void* dlsym(void* restrict p, const char* restrict s) {
 int dl_iterate_phdr(int (*callback)(struct dl_phdr_info* info, size_t size, void* data),
                     void* data) {
   struct dso* current;
-  struct dl_phdr_info info;
   int ret = 0;
   for (current = head; current;) {
-    info.dlpi_addr = (uintptr_t)current->l_map.l_addr;
-    info.dlpi_name = current->l_map.l_name;
-    info.dlpi_phdr = current->phdr;
-    info.dlpi_phnum = current->phnum;
-    info.dlpi_adds = gencnt;
-    info.dlpi_subs = 0;
-    info.dlpi_tls_modid = current->tls_id;
-    info.dlpi_tls_data = current->tls.image;
+    struct dl_phdr_info info = get_phdr_info(current);
 
     ret = (callback)(&info, sizeof(info), data);
 

@@ -10,6 +10,8 @@
 // functions.  The purpose of these interfaces is for the sanitizer
 // runtime library to override these definitions.
 
+__WEAK __EXPORT void __sanitizer_module_loaded(const struct dl_phdr_info* info, size_t size) {}
+
 __WEAK __EXPORT void __sanitizer_startup_hook(int argc, char** argv, char** envp, void* stack_base,
                                               size_t stack_size) {}
 

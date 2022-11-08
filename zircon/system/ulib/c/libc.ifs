@@ -109,6 +109,7 @@ Symbols:
   - { Name: __sanitizer_fill_shadow, Type: Func }
   - { Name: __sanitizer_log_write, Type: Func }
   - { Name: __sanitizer_memory_snapshot, Type: Func }
+  - { Name: __sanitizer_module_loaded, Type: Func, Weak: true }
   - { Name: __sanitizer_process_exit_hook, Type: Func, Weak: true }
   - { Name: __sanitizer_publish_data, Type: Func }
   - { Name: __sanitizer_shadow_bounds, Type: Func }

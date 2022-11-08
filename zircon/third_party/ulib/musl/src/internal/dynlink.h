@@ -1,4 +1,5 @@
-#pragma once
+#ifndef ZIRCON_THIRD_PARTY_ULIB_MUSL_SRC_INTERNAL_DYNLINK_H_
+#define ZIRCON_THIRD_PARTY_ULIB_MUSL_SRC_INTERNAL_DYNLINK_H_
 
 #include <elf.h>
 #include <features.h>
@@ -79,4 +80,8 @@ void _dl_unlock(void) ATTR_LIBC_VISIBILITY;
 void _dl_locked_report_globals(sanitizer_memory_snapshot_callback_t* callback,
                                void* callback_arg) ATTR_LIBC_VISIBILITY;
 
+__attribute__((__visibility__("hidden"))) void _dl_iterate_loaded_libs(void);
+
 __END_CDECLS
+
+#endif  // ZIRCON_THIRD_PARTY_ULIB_MUSL_SRC_INTERNAL_DYNLINK_H_
