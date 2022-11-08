@@ -141,7 +141,11 @@ pub fn create_drm_image(
         if (vk_format_features & vk::FORMAT_FEATURE_SAMPLED_IMAGE_BIT) != 0 {
             vk_usage |= vk::IMAGE_USAGE_SAMPLED_BIT;
         }
-        if (vk_format_features & vk::FORMAT_FEATURE_STORAGE_IMAGE_BIT) != 0 {
+        // Intel Vulkan driver doesn't support CCS with storage images; assume the client doesn't need
+        // storage to allow for the performance benefit of CCS.
+        if !loader.is_intel_device()
+            && ((vk_format_features & vk::FORMAT_FEATURE_STORAGE_IMAGE_BIT) != 0)
+        {
             vk_usage |= vk::IMAGE_USAGE_STORAGE_BIT;
         }
         if (vk_format_features & vk::FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) != 0 {

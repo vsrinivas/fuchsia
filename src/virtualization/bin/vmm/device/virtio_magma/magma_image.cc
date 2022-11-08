@@ -90,6 +90,11 @@ class VulkanImageCreator {
   // Scenic is used if client asks for presentable images.
   bool use_scenic() { return scenic_allocator_.is_valid(); }
 
+  bool IsIntelDevice() {
+    auto props = physical_device_.getProperties();
+    return props.vendorID == 0x8086;
+  }
+
   void GetFormatFeatures(vk::Format format, bool linear_tiling,
                          vk::FormatFeatureFlags* features_out) {
     auto result = physical_device_.getFormatProperties(format);
@@ -724,7 +729,10 @@ magma_status_t CreateDrmImage(uint32_t physical_device_index,
     if (vk_format_features & vk::FormatFeatureFlagBits::eSampledImage) {
       vk_usage |= vk::ImageUsageFlagBits::eSampled;
     }
-    if (vk_format_features & vk::FormatFeatureFlagBits::eStorageImage) {
+    // Intel Vulkan driver doesn't support CCS with storage images; assume the client doesn't need
+    // storage to allow for the performance benefit of CCS.
+    if (!image_creator.IsIntelDevice() &&
+        vk_format_features & vk::FormatFeatureFlagBits::eStorageImage) {
       vk_usage |= vk::ImageUsageFlagBits::eStorage;
     }
     if (vk_format_features & vk::FormatFeatureFlagBits::eColorAttachment) {

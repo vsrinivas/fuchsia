@@ -9,6 +9,7 @@ use fuchsia_image_format::*;
 use fuchsia_vulkan::*;
 use fuchsia_zircon as zx;
 use fuchsia_zircon::AsHandleRef;
+use std::mem;
 use vk_sys as vk;
 
 /// `BufferCollectionTokens` contains all the buffer collection tokens required to initialize a
@@ -173,6 +174,14 @@ impl Loader {
             _physical_device: physical_device,
             device,
         })
+    }
+
+    pub fn is_intel_device(&self) -> bool {
+        unsafe {
+            let mut props: vk::PhysicalDeviceProperties = mem::zeroed();
+            self.instance_pointers.GetPhysicalDeviceProperties(self._physical_device, &mut props);
+            props.vendorID == 0x8086
+        }
     }
 
     pub fn get_format_features(
