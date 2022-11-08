@@ -18,7 +18,7 @@
 //!
 //! Reference: https://doc.rust-lang.org/reference/expressions/operator-expr.html#type-cast-expressions
 
-use core::time::Duration;
+use core::{num::NonZeroU32, time::Duration};
 
 use crate::{
     transport::tcp::{seqnum::WindowSize, DEFAULT_MAXIMUM_SEGMENT_SIZE},
@@ -102,20 +102,20 @@ impl<I: Instant> Cubic<I> {
         w_tcp as u32
     }
 
-    pub(super) fn on_ack(&mut self, mut bytes_acked: u32, now: I, rtt: Duration) {
+    pub(super) fn on_ack(&mut self, mut bytes_acked: NonZeroU32, now: I, rtt: Duration) {
         if self.cwnd < self.ssthresh {
             // Slow start, Per RFC 5681 (https://www.rfc-editor.org/rfc/rfc5681#page-6):
             // we RECOMMEND that TCP implementations increase cwnd, per:
             //   cwnd += min (N, SMSS)                      (2)
-            self.cwnd += u32::min(bytes_acked, self.mss);
-            if self.cwnd <= self.ssthresh {
-                return;
-            }
+            self.cwnd += u32::min(bytes_acked.get(), self.mss);
             // Now that we are moving out of slow start, we need to treat the
             // extra bytes differently, set the cwnd back to ssthresh and then
             // backtrack the portion of bytes that should be processed in
             // congestion avoidance.
-            bytes_acked = self.cwnd - self.ssthresh;
+            match self.cwnd.checked_sub(self.ssthresh).and_then(NonZeroU32::new) {
+                None => return,
+                Some(diff) => bytes_acked = diff,
+            }
             self.cwnd = self.ssthresh;
         }
 
@@ -163,7 +163,7 @@ impl<I: Instant> Cubic<I> {
         // keep coming in and we can't increase our congestion window. Use
         // wrapping add here as a defense so that we don't lost ack counts
         // by accident.
-        self.bytes_acked = self.bytes_acked.saturating_add(bytes_acked);
+        self.bytes_acked = self.bytes_acked.saturating_add(bytes_acked.get());
 
         // Per RFC 8312 (https://www.rfc-editor.org/rfc/rfc8312#section-4.3):
         //   cwnd MUST be incremented by (W_cubic(t+RTT) - cwnd)/cwnd for each
@@ -246,6 +246,15 @@ mod tests {
     use super::*;
     use crate::context::{testutil::FakeInstantCtx, InstantContext as _};
 
+    impl<I: Instant> Cubic<I> {
+        // Helper function in test that takes a u32 instead of a NonZeroU32
+        // as we know we never pass 0 in the test and it's a bit clumsy to
+        // convert a u32 into a NonZeroU32 every time.
+        fn on_ack_u32(&mut self, bytes_acked: u32, now: I, rtt: Duration) {
+            self.on_ack(NonZeroU32::new(bytes_acked).unwrap(), now, rtt)
+        }
+    }
+
     // The following expectations are extracted from table. 1 and table. 2 in
     // RFC 8312 (https://www.rfc-editor.org/rfc/rfc8312#section-5.1). Note that
     // some numbers do not match as-is, but the error rate is acceptable (~2%),
@@ -288,7 +297,7 @@ mod tests {
                 ack_cnt += cwnd / cubic.mss;
                 // We will get at least one ack for every two segments we send.
                 for _ in 0..u32::max(cwnd / cubic.mss / 2, 1) {
-                    cubic.on_ack(2 * cubic.mss, clock.now(), rtt);
+                    cubic.on_ack_u32(2 * cubic.mss, clock.now(), rtt);
                 }
             }
             clock.sleep(rtt);
@@ -309,7 +318,7 @@ mod tests {
         // Slow start.
         clock.sleep(RTT);
         for _seg in 0..cubic.cwnd / DEFAULT_MAXIMUM_SEGMENT_SIZE {
-            cubic.on_ack(DEFAULT_MAXIMUM_SEGMENT_SIZE, clock.now(), RTT);
+            cubic.on_ack_u32(DEFAULT_MAXIMUM_SEGMENT_SIZE, clock.now(), RTT);
         }
         assert_eq!(cubic.cwnd, 8 * DEFAULT_MAXIMUM_SEGMENT_SIZE);
 
@@ -319,12 +328,12 @@ mod tests {
 
         // We are now back in slow start.
         clock.sleep(RTT);
-        cubic.on_ack(DEFAULT_MAXIMUM_SEGMENT_SIZE, clock.now(), RTT);
+        cubic.on_ack_u32(DEFAULT_MAXIMUM_SEGMENT_SIZE, clock.now(), RTT);
         assert_eq!(cubic.cwnd, 2 * DEFAULT_MAXIMUM_SEGMENT_SIZE);
 
         clock.sleep(RTT);
         for _ in 0..2 {
-            cubic.on_ack(DEFAULT_MAXIMUM_SEGMENT_SIZE, clock.now(), RTT);
+            cubic.on_ack_u32(DEFAULT_MAXIMUM_SEGMENT_SIZE, clock.now(), RTT);
         }
         assert_eq!(cubic.cwnd, 4 * DEFAULT_MAXIMUM_SEGMENT_SIZE);
 
@@ -334,7 +343,7 @@ mod tests {
         // or 5 full sized segments.
         clock.sleep(RTT);
         for _seg in 0..cubic.cwnd / DEFAULT_MAXIMUM_SEGMENT_SIZE {
-            cubic.on_ack(DEFAULT_MAXIMUM_SEGMENT_SIZE, clock.now(), RTT);
+            cubic.on_ack_u32(DEFAULT_MAXIMUM_SEGMENT_SIZE, clock.now(), RTT);
         }
         assert_eq!(u32::from(cubic.cwnd()), 5 * DEFAULT_MAXIMUM_SEGMENT_SIZE);
 
@@ -342,7 +351,7 @@ mod tests {
         // lease 1 MSS per RTT (standard TCP).
         clock.sleep(RTT);
         for _seg in 0..cubic.cwnd / DEFAULT_MAXIMUM_SEGMENT_SIZE {
-            cubic.on_ack(DEFAULT_MAXIMUM_SEGMENT_SIZE, clock.now(), RTT);
+            cubic.on_ack_u32(DEFAULT_MAXIMUM_SEGMENT_SIZE, clock.now(), RTT);
         }
         assert_eq!(u32::from(cubic.cwnd()), 6 * DEFAULT_MAXIMUM_SEGMENT_SIZE);
     }

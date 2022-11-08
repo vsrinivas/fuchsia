@@ -12,7 +12,11 @@
 
 mod cubic;
 
-use core::{cmp::Ordering, num::NonZeroU8, time::Duration};
+use core::{
+    cmp::Ordering,
+    num::{NonZeroU32, NonZeroU8},
+    time::Duration,
+};
 
 use crate::{
     transport::tcp::seqnum::{SeqNum, WindowSize},
@@ -67,7 +71,7 @@ impl<I: Instant> LossBasedAlgorithm<I> {
         }
     }
 
-    fn on_ack(&mut self, bytes_acked: u32, now: I, rtt: Duration) {
+    fn on_ack(&mut self, bytes_acked: NonZeroU32, now: I, rtt: Duration) {
         match self {
             LossBasedAlgorithm::Cubic(cubic) => cubic.on_ack(bytes_acked, now, rtt),
         }
@@ -82,7 +86,7 @@ impl<I: Instant> LossBasedAlgorithm<I> {
 
 impl<I: Instant> CongestionControl<I> {
     /// Called when there are previously unacknowledged bytes being acked.
-    pub(super) fn on_ack(&mut self, bytes_acked: u32, now: I, rtt: Duration) {
+    pub(super) fn on_ack(&mut self, bytes_acked: NonZeroU32, now: I, rtt: Duration) {
         let Self { algorithm, fast_recovery } = self;
         // Exit fast recovery since there is an ACK that acknowledges new data.
         if let Some(_fast_recovery) = fast_recovery.take() {

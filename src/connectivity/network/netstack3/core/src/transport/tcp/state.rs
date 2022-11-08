@@ -10,7 +10,7 @@
 use core::{
     convert::{Infallible, TryFrom as _},
     fmt::Debug,
-    num::TryFromIntError,
+    num::{NonZeroU32, NonZeroUsize, TryFromIntError},
     time::Duration,
 };
 
@@ -710,8 +710,10 @@ impl<I: Instant, S: SendBuffer, const FIN_QUEUED: bool> Send<I, S, FIN_QUEUED> {
             Some(Segment::ack(*snd_nxt, rcv_nxt, rcv_wnd))
         } else if seg_ack.after(*snd_una) {
             // The unwrap is safe because the result must be positive.
-            let acked =
-                usize::try_from(seg_ack - *snd_una).unwrap_or_else(|TryFromIntError { .. }| {
+            let acked = u32::try_from(seg_ack - *snd_una)
+                .ok_checked::<TryFromIntError>()
+                .and_then(NonZeroU32::new)
+                .unwrap_or_else(|| {
                     panic!("seg_ack({:?}) - snd_una({:?}) must be positive", seg_ack, snd_una);
                 });
             let fin_acked = FIN_QUEUED && seg_ack == *snd_una + buffer.len() + 1;
@@ -719,7 +721,21 @@ impl<I: Instant, S: SendBuffer, const FIN_QUEUED: bool> Send<I, S, FIN_QUEUED> {
             // operation should not panic because we are in this branch
             // means seg_ack is before snd.max, thus seg_ack - snd.una
             // cannot exceed the buffer length.
-            buffer.mark_read(acked - usize::from(fin_acked));
+            buffer.mark_read(
+                NonZeroUsize::try_from(acked)
+                    .unwrap_or_else(|TryFromIntError { .. }| {
+                        // we've checked that acked must be smaller than the outstanding
+                        // bytes we have in the buffer; plus in Rust, any allocation can
+                        // only have a size up to isize::MAX bytes.
+                        panic!(
+                            "acked({:?}) must be smaller than isize::MAX({:?})",
+                            acked,
+                            isize::MAX
+                        )
+                    })
+                    .get()
+                    - usize::from(fin_acked),
+            );
             *snd_una = seg_ack;
             // If the incoming segment acks something that has been sent
             // but not yet retransmitted (`snd.nxt < seg_ack <= snd.max`),
@@ -744,7 +760,7 @@ impl<I: Instant, S: SendBuffer, const FIN_QUEUED: bool> Send<I, S, FIN_QUEUED> {
                     rtt_estimator.sample(now.duration_since(timestamp));
                 }
             }
-            congestion_control.on_ack(u32::try_from(acked).unwrap(), now, rtt_estimator.rto());
+            congestion_control.on_ack(acked, now, rtt_estimator.rto());
             match timer {
                 Some(SendTimer::Retrans(retrans_timer)) => {
                     // Per https://tools.ietf.org/html/rfc6298#section-5:
