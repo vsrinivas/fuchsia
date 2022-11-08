@@ -35,9 +35,9 @@ class VisitState {
   constexpr MatcherResult state() const { return state_; }
   constexpr void set_state(MatcherResult state) { state_ = state; }
 
-  constexpr void Prune(const NodePath& path) { mark_ = &path.back(); }
+  void Prune(const NodePath& path) { mark_ = &path.back(); }
 
-  constexpr void Unprune(const NodePath& path) {
+  void Unprune(const NodePath& path) {
     if (mark_ == &path.back()) {
       *this = VisitState();
     }

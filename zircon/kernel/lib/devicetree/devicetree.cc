@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <inttypes.h>
 #include <lib/devicetree/devicetree.h>
 #include <lib/zircon-internal/align.h>
 #include <zircon/assert.h>
@@ -133,7 +134,7 @@ Properties::iterator& Properties::iterator::operator++() {
       case FDT_PROP:
         break;
       default:
-        ZX_PANIC("unexpected token in property block: %#x", token);
+        ZX_PANIC("unexpected token in property block: %#" PRIx32, token);
     };
     break;
   }
@@ -202,7 +203,7 @@ void Devicetree::WalkTree(NodeVisitor pre_order_visitor, NodeVisitor post_order_
       case FDT_END:
         return;
       default:
-        ZX_PANIC("unknown devicetree token: %#x", token);
+        ZX_PANIC("unknown devicetree token: %#" PRIx32 "\n", token);
     }
   }
 }
