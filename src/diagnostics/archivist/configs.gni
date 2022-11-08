@@ -20,6 +20,7 @@ default_config = {
   logs_max_cached_original_bytes = 4194304
   num_threads = 4
   pipelines_path = "/config/data"
+  serve_unattributed_logs = false
 }
 
 embedded_config = {
@@ -36,6 +37,7 @@ embedded_config = {
 without_attribution_config = {
   forward_variables_from(embedded_config, "*")
   enable_event_source = false
+  serve_unattributed_logs = true
 }
 
 no_detect_config = {

@@ -4,7 +4,10 @@
 // This shard is meant to contain stuff that is meant to be shared across all flavors of the
 // archivist.
 {
-    include: [ "inspect/client.shard.cml" ],
+    include: [
+        "//src/diagnostics/archivist/meta/config.shard.cml",
+        "inspect/client.shard.cml",
+    ],
     program: {
         runner: "elf",
     },
@@ -72,50 +75,4 @@
             from: "self",
         },
     ],
-    config: {
-        // Ingest events coming from CFv1.
-        enable_component_event_provider: { type: "bool" },
-
-        // Drain klog.
-        enable_klog: { type: "bool" },
-
-        // Ingest events coming from CFv2.
-        enable_event_source: { type: "bool" },
-
-        // Ingest attributed log connections coming from CFv1.
-        enable_log_connector: { type: "bool" },
-
-        // Install the test controller to stop the archviist in v1 tests.
-        install_controller: { type: "bool" },
-
-        // Serve the Lifecycle protocol used to stop the archivist in v2.
-        listen_to_lifecycle: { type: "bool" },
-
-        // Send archivist logs to klog.
-        log_to_debuglog: { type: "bool" },
-
-        // Maximum value of the sum of original (format in which they were written) log message
-        // sizes stored in the archivist. Logs are rolled out when this value is exceeded.
-        logs_max_cached_original_bytes: { type: "uint64" },
-
-        // Number of threads that the archivist will use for its multithreaded executor.
-        num_threads: { type: "uint64" },
-
-        // Path to the archivist pipeline configuration.
-        pipelines_path: {
-            type: "string",
-            max_size: 256,
-        },
-
-        // Call the given "fuchsia.component.Binder" protocols at startup. These protocols
-        // must be offered and used in the archivist manifest.
-        bind_services: {
-            type: "vector",
-            max_count: 10,
-            element: {
-                type: "string",
-                max_size: 256,
-            },
-        },
-    },
 }

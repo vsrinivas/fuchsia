@@ -88,6 +88,9 @@ pub struct Archivist {
 
     /// The server handling fuchsia.diagnostics.test.Controller
     test_controller_server: Option<TestControllerServer>,
+
+    /// The source that takes care of routing unattributed log sink request streams.
+    unattributed_log_sink_source: Option<UnattributedLogSinkSource>,
 }
 
 impl Archivist {
@@ -99,26 +102,7 @@ impl Archivist {
 
         let (listen_sender, listen_receiver) = mpsc::unbounded();
 
-        let pipelines_node = component::inspector().root().create_child("pipelines");
-        let accessor_stats_node =
-            component::inspector().root().create_child("archive_accessor_stats");
-        let pipelines_path = Path::new(&archivist_configuration.pipelines_path);
-        let pipelines = vec![
-            Pipeline::feedback(pipelines_path, &pipelines_node, &accessor_stats_node),
-            Pipeline::legacy_metrics(pipelines_path, &pipelines_node, &accessor_stats_node),
-            Pipeline::lowpan(pipelines_path, &pipelines_node, &accessor_stats_node),
-            Pipeline::all_access(pipelines_path, &pipelines_node, &accessor_stats_node),
-        ];
-
-        if pipelines.iter().any(|p| p.config_has_error()) {
-            component::health().set_unhealthy("Pipeline config has an error");
-        } else {
-            component::health().set_ok();
-        }
-        let pipelines = pipelines.into_iter().map(Arc::new).collect::<Vec<_>>();
-
-        component::inspector().root().record(pipelines_node);
-        component::inspector().root().record(accessor_stats_node);
+        let pipelines = Self::init_pipelines(archivist_configuration);
 
         let logs_budget =
             BudgetManager::new(archivist_configuration.logs_max_cached_original_bytes as usize);
@@ -141,12 +125,25 @@ impl Archivist {
                 (None, None, None)
             };
 
+        let mut event_router =
+            EventRouter::new(component::inspector().root().create_child("events"));
+        let unattributed_log_sink_source = if archivist_configuration.serve_unattributed_logs {
+            let mut source = UnattributedLogSinkSource::default();
+            event_router.add_producer(ProducerConfig {
+                producer: &mut source,
+                events: vec![EventType::LogSinkRequested],
+            });
+            Some(source)
+        } else {
+            None
+        };
+
         Self {
             fs,
             test_controller_server,
             accessor_server,
             listen_sender,
-            event_router: EventRouter::new(component::inspector().root().create_child("events")),
+            event_router,
             stop_recv,
             _lifecycle_task,
             _drain_klog_task: None,
@@ -158,7 +155,33 @@ impl Archivist {
             inspect_repository: inspect_repo,
             logs_repository: logs_repo,
             logs_budget,
+            unattributed_log_sink_source,
         }
+    }
+
+    fn init_pipelines(config: &Config) -> Vec<Arc<Pipeline>> {
+        let pipelines_node = component::inspector().root().create_child("pipelines");
+        let accessor_stats_node =
+            component::inspector().root().create_child("archive_accessor_stats");
+        let pipelines_path = Path::new(&config.pipelines_path);
+        let pipelines = [
+            Pipeline::feedback(pipelines_path, &pipelines_node, &accessor_stats_node),
+            Pipeline::legacy_metrics(pipelines_path, &pipelines_node, &accessor_stats_node),
+            Pipeline::lowpan(pipelines_path, &pipelines_node, &accessor_stats_node),
+            Pipeline::all_access(pipelines_path, &pipelines_node, &accessor_stats_node),
+        ];
+
+        if pipelines.iter().any(|p| p.config_has_error()) {
+            component::health().set_unhealthy("Pipeline config has an error");
+        } else {
+            component::health().set_ok();
+        }
+        let pipelines = pipelines.into_iter().map(Arc::new).collect::<Vec<_>>();
+
+        component::inspector().root().record(pipelines_node);
+        component::inspector().root().record(accessor_stats_node);
+
+        pipelines
     }
 
     /// Installs `LogSink` and `Log` services. Panics if called twice.
@@ -166,18 +189,6 @@ impl Archivist {
         let data_repo_1 = self.logs_repository.clone();
         let data_repo_2 = self.logs_repository.clone();
         let listen_sender = self.listen_sender.clone();
-
-        let mut unattributed_log_sink_source = UnattributedLogSinkSource::default();
-        let unattributed_sender = unattributed_log_sink_source.publisher();
-        self.event_router.add_producer(ProducerConfig {
-            producer: &mut unattributed_log_sink_source,
-            events: vec![EventType::LogSinkRequested],
-        });
-        self.incoming_external_event_producers.push(fasync::Task::spawn(async move {
-            unattributed_log_sink_source.spawn().await.unwrap_or_else(|err| {
-                error!(?err, "Failed to run unattributed log sink producer loop");
-            });
-        }));
 
         self.fs
             .dir("svc")
@@ -192,18 +203,6 @@ impl Archivist {
                     data_repo_for_task.handle_log_settings(stream).await.unwrap_or_else(|err| {
                         error!(?err, "Failed to handle LogSettings");
                     });
-                })
-                .detach();
-            })
-            .add_fidl_service(move |stream| {
-                debug!("unattributed fuchsia.logger.LogSink connection");
-                let mut sender = unattributed_sender.clone();
-                // TODO(fxbug.dev/67769): get rid of this Task spawn since it introduces a small
-                // window in which we might lose LogSinks.
-                fasync::Task::spawn(async move {
-                    sender.send(stream).await.unwrap_or_else(|err| {
-                        error!(?err, "Failed to add unattributed LogSink connection")
-                    })
                 })
                 .detach();
             });
@@ -379,6 +378,13 @@ impl Archivist {
                 server.spawn(stream);
             });
         }
+
+        if let Some(mut unattributed_log_sink_source) = self.unattributed_log_sink_source.take() {
+            svc_dir.add_fidl_service(move |stream| {
+                debug!("unattributed fuchsia.logger.LogSink connection");
+                futures::executor::block_on(unattributed_log_sink_source.new_connection(stream));
+            });
+        }
     }
 
     async fn process_removal_of_components(
@@ -419,6 +425,7 @@ mod tests {
             listen_to_lifecycle: false,
             log_to_debuglog: false,
             logs_max_cached_original_bytes: LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES as u64,
+            serve_unattributed_logs: true,
             num_threads: 1,
             pipelines_path: DEFAULT_PIPELINES_PATH.into(),
             bind_services: vec![],
@@ -446,7 +453,7 @@ mod tests {
     async fn run_archivist_and_signal_on_exit() -> (fio::DirectoryProxy, oneshot::Receiver<()>) {
         let (directory, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
         let mut archivist = init_archivist();
-        archivist.install_log_services().await.serve_test_controller_protocol();
+        archivist.install_log_services().await;
         let (signal_send, signal_recv) = oneshot::channel();
         fasync::Task::spawn(async move {
             archivist

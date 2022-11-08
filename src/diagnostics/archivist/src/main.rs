@@ -71,6 +71,7 @@ fn load_v1_config(options: Vec<ArchivistOptionV1>) -> Config {
         logs_max_cached_original_bytes: constants::LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES as u64,
         num_threads: 1,
         pipelines_path: constants::DEFAULT_PIPELINES_PATH.into(),
+        serve_unattributed_logs: true,
         bind_services: vec![],
     };
     for option in options {
