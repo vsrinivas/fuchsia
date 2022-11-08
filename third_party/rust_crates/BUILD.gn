@@ -10748,7 +10748,7 @@ rust_library("time-v0_1_43") {
 
 rust_library("tinyjson-v2_5_0") {
   crate_name = "tinyjson"
-  crate_root = "//third_party/rust_crates/vendor/tinyjson-2.5.0/src/lib.rs"
+  crate_root = "//third_party/rust_crates/vendor/tinyjson/src/lib.rs"
   output_name = "tinyjson-a756eab61975480c"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
