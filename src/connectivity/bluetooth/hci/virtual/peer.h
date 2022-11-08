@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CONNECTIVITY_BLUETOOTH_HCI_EMULATOR_PEER_H_
-#define SRC_CONNECTIVITY_BLUETOOTH_HCI_EMULATOR_PEER_H_
+#ifndef SRC_CONNECTIVITY_BLUETOOTH_HCI_VIRTUAL_PEER_H_
+#define SRC_CONNECTIVITY_BLUETOOTH_HCI_VIRTUAL_PEER_H_
 
 #include <fuchsia/bluetooth/test/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
@@ -90,4 +90,4 @@ class Peer : public fuchsia::bluetooth::test::Peer {
 
 }  // namespace bt_hci_virtual
 
-#endif  // SRC_CONNECTIVITY_BLUETOOTH_HCI_EMULATOR_PEER_H_
+#endif  // SRC_CONNECTIVITY_BLUETOOTH_HCI_VIRTUAL_PEER_H_

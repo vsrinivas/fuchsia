@@ -12,6 +12,7 @@
 
 #include "src/connectivity/bluetooth/hci/virtual/emulator.h"
 #include "src/connectivity/bluetooth/hci/virtual/log.h"
+#include "src/connectivity/bluetooth/hci/virtual/loopback.h"
 
 namespace bt_hci_virtual {
 
@@ -49,7 +50,18 @@ class VirtualController : public VirtualControllerDeviceType {
   }
 
   void CreateLoopbackDevice(CreateLoopbackDeviceRequestView request,
-                            CreateLoopbackDeviceCompleter::Sync& completer) override {}
+                            CreateLoopbackDeviceCompleter::Sync& completer) override {
+    // chain new looback device off this device.
+    auto dev = std::make_unique<bt_hci_virtual::LoopbackDevice>(zxdev());
+    auto channel = request->channel.release();
+    zx_status_t status = dev->Bind(channel);
+    if (status != ZX_OK) {
+      logf(ERROR, "failed to bind: %s\n", zx_status_get_string(status));
+    } else {
+      // The driver runtime has taken ownership of |dev|.
+      __UNUSED bt_hci_virtual::LoopbackDevice* unused = dev.release();
+    }
+  }
 
   uint32_t num_devices_ = 0;
 };

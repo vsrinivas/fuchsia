@@ -23,6 +23,8 @@ fuchsia_driver("fuchsia_driver") {
     "emulator.cc",
     "emulator.h",
     "log.h",
+    "loopback.cc",
+    "loopback.h",
     "peer.cc",
     "peer.h",
   ]
