@@ -285,7 +285,7 @@ mod test {
         },
         storage_manager::{
             minfs::disk::{DiskError, EncryptedBlockDevice},
-            Key as SMKey, StorageManager,
+            StorageManager,
         },
         vfs::execution_scope::ExecutionScope,
     };
@@ -365,7 +365,7 @@ mod test {
     #[fuchsia::test]
     async fn test_check_new_client() {
         let storage_manager = make_storage_manager().await;
-        let () = storage_manager.provision(&SMKey::Key256Bit(TEST_KEY)).await.expect("provision");
+        let () = storage_manager.provision(&TEST_KEY).await.expect("provision");
         let account = Arc::new(Account::new(TEST_KEY, storage_manager));
 
         assert_eq!(
@@ -383,7 +383,7 @@ mod test {
     #[fuchsia::test]
     async fn test_get_data_directory() {
         let storage_manager = make_storage_manager().await;
-        let () = storage_manager.provision(&SMKey::Key256Bit(TEST_KEY)).await.expect("provision");
+        let () = storage_manager.provision(&TEST_KEY).await.expect("provision");
         let account = Arc::new(Account::new(TEST_KEY, storage_manager));
 
         // The freshly created filesystem should not contain a default client directory.
@@ -413,7 +413,7 @@ mod test {
         let scope = ExecutionScope::new();
 
         let storage_manager = make_storage_manager().await;
-        let () = storage_manager.provision(&SMKey::Key256Bit(TEST_KEY)).await.expect("provision");
+        let () = storage_manager.provision(&TEST_KEY).await.expect("provision");
         let account = Arc::new(Account::new([0; KEY_LEN], storage_manager));
 
         let proxy1 = serve_new_client(&account).await.expect("serve client 1");

@@ -80,13 +80,13 @@ pub struct InsecureKeyDirectoryStorageManager {
 
 #[async_trait]
 impl StorageManager for InsecureKeyDirectoryStorageManager {
-    type Key = Key;
+    type Key = [u8; 32];
 
     async fn provision(&self, key: &Self::Key) -> Result<(), AccountManagerError> {
         let mut state_lock = self.state.lock().await;
         match *state_lock {
             StorageManagerState::Uninitialized => {
-                self.store_correct_key(key).await?;
+                self.store_correct_key(&Key::Key256Bit(*key)).await?;
                 fuchsia_fs::directory::create_directory_recursive(
                     &self.managed_dir,
                     CLIENT_ROOT_PATH,
@@ -112,7 +112,7 @@ impl StorageManager for InsecureKeyDirectoryStorageManager {
         let mut state_lock = self.state.lock().await;
         match *state_lock {
             StorageManagerState::Locked => {
-                self.check_unlock_key(key).await?;
+                self.check_unlock_key(&Key::Key256Bit(*key)).await?;
                 *state_lock = StorageManagerState::Available;
                 Ok(())
             }

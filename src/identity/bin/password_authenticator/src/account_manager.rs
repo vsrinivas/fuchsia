@@ -811,6 +811,7 @@ mod test {
         fidl_fuchsia_io as fio,
         fuchsia_zircon::Status,
         identity_testutil::{
+            insecure_storage_manager::{Args as InsecureArgs, InsecureKeyDirectoryStorageManager},
             make_formatted_account_partition, make_formatted_account_partition_any_key,
             make_formatted_account_partition_fail_shred, make_unformatted_account_partition, Match,
             MockBlockDevice, MockDiskManager, MockEncryptedBlockDevice, MockPartition,
@@ -918,6 +919,12 @@ mod test {
         MinfsStorageManager::new(disk_manager)
     }
 
+    fn make_insecure_storage_manager() -> InsecureKeyDirectoryStorageManager {
+        futures::executor::block_on(async {
+            InsecureKeyDirectoryStorageManager::new(InsecureArgs::default()).await.unwrap()
+        })
+    }
+
     #[fuchsia::test]
     async fn test_get_account_ids_empty() {
         let account_metadata_store = MemoryAccountMetadataStore::new();
@@ -950,16 +957,11 @@ mod test {
         let account_metadata_store =
             MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
         let cred_manager_provider = MockCredManagerProvider::new();
-        let storage_manager_factory = || {
-            let disk_manager =
-                MockDiskManager::new().with_partition(make_formatted_account_partition_any_key());
-            make_storage_manager(disk_manager)
-        };
         let account_manager = AccountManager::new(
             DEFAULT_CONFIG,
             account_metadata_store,
             cred_manager_provider,
-            storage_manager_factory,
+            make_insecure_storage_manager,
         );
         let account_ids = account_manager.get_account_ids().await.expect("get account ids");
         assert_eq!(account_ids, vec![GLOBAL_ACCOUNT_ID]);
@@ -970,16 +972,11 @@ mod test {
         let account_metadata_store =
             MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
         let cred_manager_provider = MockCredManagerProvider::new();
-        let storage_manager_factory = || {
-            let disk_manager =
-                MockDiskManager::new().with_partition(make_formatted_account_partition_any_key());
-            make_storage_manager(disk_manager)
-        };
         let account_manager = AccountManager::new(
             DEFAULT_CONFIG,
             account_metadata_store,
             cred_manager_provider,
-            storage_manager_factory,
+            make_insecure_storage_manager,
         );
         let account_metadata =
             account_manager.get_account_metadata(GLOBAL_ACCOUNT_ID).await.unwrap();
@@ -997,17 +994,11 @@ mod test {
         let account_metadata_store =
             MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
         let cred_manager_provider = MockCredManagerProvider::new();
-        let storage_manager_factory = || {
-            let disk_manager =
-                MockDiskManager::new().with_partition(make_formatted_account_partition_any_key());
-
-            make_storage_manager(disk_manager)
-        };
         let account_manager = AccountManager::new(
             DEFAULT_CONFIG,
             account_metadata_store,
             cred_manager_provider,
-            storage_manager_factory,
+            make_insecure_storage_manager,
         );
         let err = account_manager.get_account_metadata(UNSUPPORTED_ACCOUNT_ID).await.unwrap_err();
         assert_eq!(err, faccount::Error::NotFound);
@@ -1015,16 +1006,11 @@ mod test {
 
     #[fuchsia::test]
     async fn test_get_account_no_accounts() {
-        let storage_manager_factory = || {
-            let disk_manager = MockDiskManager::new();
-
-            make_storage_manager(disk_manager)
-        };
         let account_manager = AccountManager::new(
             DEFAULT_CONFIG,
             MemoryAccountMetadataStore::new(),
             MockCredManagerProvider::new(),
-            storage_manager_factory,
+            make_insecure_storage_manager,
         );
         let (_, server) = fidl::endpoints::create_endpoints::<AccountMarker>().unwrap();
         assert_eq!(
@@ -1040,16 +1026,11 @@ mod test {
         let account_metadata_store =
             MemoryAccountMetadataStore::new().with_password_account(&UNSUPPORTED_ACCOUNT_ID);
         let cred_manager_provider = MockCredManagerProvider::new();
-        let storage_manager_factory = || {
-            let disk_manager =
-                MockDiskManager::new().with_partition(make_formatted_account_partition_any_key());
-            make_storage_manager(disk_manager)
-        };
         let account_manager = AccountManager::new(
             DEFAULT_CONFIG,
             account_metadata_store,
             cred_manager_provider,
-            storage_manager_factory,
+            make_insecure_storage_manager,
         );
         let (_, server) = fidl::endpoints::create_endpoints::<AccountMarker>().unwrap();
         assert_eq!(
