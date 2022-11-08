@@ -39,7 +39,7 @@ _common_bootfs_deps = [
   "//src/firmware/bin/vboot-fwparam:bootfs",
   "//src/firmware/bin/vboot-fwparam/client:cros-nvtool",
   "//src/media/audio/drivers/codecs/da7219:component",
-  "//src/security/cr50_agent:bootfs",
+  "//src/security/bin/cr50_agent:bootfs",
   "//src/storage/flashmap:bootfs",
 ]
 
