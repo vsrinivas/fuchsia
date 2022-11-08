@@ -1209,20 +1209,20 @@ func addGoleakCheck(t *testing.T) {
 			panicked := func() (panicked bool) {
 				defer func() {
 					if r := recover(); r != nil {
-						t.Logf("Recovered from panic in goleak check attempt %d: %s", try, r)
+						t.Logf("recovered from panic in goleak check attempt %d: %s", try, r)
 						panicked = true
 					}
 				}()
 				runtime.Gosched()
 				goleak.VerifyNone(t, opts...)
-				return false
+				return panicked
 			}()
 			if !panicked {
 				return
 			}
 		}
 
-		t.Error("Panicked in all 5 attempts at running a goleak check")
+		t.Errorf("panicked in all %d attempts at running a goleak check", maxTries)
 	})
 }
 
