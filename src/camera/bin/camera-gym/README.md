@@ -23,7 +23,7 @@ Include the `camera-gym` package and disable flatland:
 ### How to Run in Manual Mode
 
 ```
-> ffx session add fuchsia-pkg://fuchsia.com/camera-gym#meta/camera-gym-manual.cm              
+> ffx session add fuchsia-pkg://fuchsia.com/camera-gym#meta/camera-gym-manual.cm
 ```
 
 ### camera-gym-ctl
@@ -35,7 +35,7 @@ Start by finding the moniker of the camera-gym-manual that you started above.
 
 ```
 > ffx component show camera-gym-manual
-               Moniker:  /core/session-manager/session:session/workstation_session/login_shell/ermine_shell/elements:vd5ioej4lvcshlgb
+               Moniker:  /core/session-manager/session:session/workstation_session/login_shell/application_shell:1/elements:vd5ioej4lvcshlgb
                    URL:  fuchsia-pkg://fuchsia.com/camera-gym#meta/camera-gym-manual.cm
            Instance ID:  None
                   Type:  CML Component
@@ -51,7 +51,7 @@ Start by finding the moniker of the camera-gym-manual that you started above.
                          fuchsia.component.Binder
            Merkle root:  00b7161f6f83225e1e525819d0fdc2ac17f927adbec8b618e6e536cc44c2046a
        Execution State:  Running
-          Start reason:  '/core/session-manager/session:session/workstation_session/login_shell/ermine_shell/elements:vd5ioej4lvcshlgb' requested capability 'fuchsia.ui.app.ViewProvider'
+          Start reason:  '/core/session-manager/session:session/workstation_session/login_shell/application_shell:1/elements:vd5ioej4lvcshlgb' requested capability 'fuchsia.ui.app.ViewProvider'
          Running since:  2022-09-21 17:13:10.895060505 UTC
                 Job ID:  610356
             Process ID:  610388
@@ -59,10 +59,10 @@ Start by finding the moniker of the camera-gym-manual that you started above.
                          fuchsia.camera.gym.Controller
                          fuchsia.modular.Lifecycle
                          fuchsia.ui.app.ViewProvider
-> ffx component explore /core/session-manager/session:session/workstation_session/login_shell/ermine_shell/elements:vd5ioej4lvcshlgb
+> ffx component explore /core/session-manager/session:session/workstation_session/login_shell/application_shell:1/elements:vd5ioej4lvcshlgb
 $ camera-gym-ctl --set-description=0
 OK
-$ 
+$
 ```
 
 > NOTE: command prompts below beginning with `$` denote the `ffx component
