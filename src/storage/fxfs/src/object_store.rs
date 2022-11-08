@@ -1787,7 +1787,7 @@ impl JournalingObject for ObjectStore {
                                 self.update_last_object_id(item.key.object_id);
                             }
                         }
-                        self.tree.insert(item).await.expect("Insert overwrote existing object.");
+                        self.tree.insert(item).await?;
                     }
                     Operation::ReplaceOrInsert => {
                         self.tree.replace_or_insert(item).await;
