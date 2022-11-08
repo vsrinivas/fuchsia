@@ -490,8 +490,8 @@ void brcmf_btcoex_log_active_bt_tasks(brcmf_if* ifp) {
   brcmf_btcoex_params_read(ifp, 117, &bt_tasks_high);
   // btc_param 39 indicates the # of times wlan was preempted for BT
   brcmf_btcoex_params_read(ifp, 39, &wlan_preempt_count);
-  zxlogf(INFO, "BTCoex: Active_BT_tasks: 0x%04x%04x WlanPreemptCnt: %u", bt_tasks_low,
-         bt_tasks_high, wlan_preempt_count);
+  zxlogf(INFO, "BTCoex: Active_BT_tasks: 0x%04x%04x WlanPreemptCnt: %u", bt_tasks_high,
+         bt_tasks_low, wlan_preempt_count);
 
   // Reset the values as this is called periodically (so we get an indication of the
   // interim activity).
