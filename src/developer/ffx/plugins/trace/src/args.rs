@@ -105,7 +105,9 @@ pub struct Start {
     /// to "app,audio,benchmark,blobfs,gfx,input,kernel:meta,
     /// kernel:sched,ledger,magma,minfs,modular,view,flutter,
     /// dart,dart:compiler,dart:dart,dart:debugger,dart:embedder,
-    /// dart:gc,dart:isolate,dart:profiler,dart:vm"
+    /// dart:gc,dart:isolate,dart:profiler,dart:vm". A trailing *
+    /// may be used to indicate a prefix match. For example, kernel*
+    /// would match any category that starts with kernel.
     #[argh(
         option,
         default = "DEFAULT_CATEGORIES.into_iter().cloned().map(String::from).collect()",
