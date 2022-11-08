@@ -160,6 +160,8 @@ This document lists all errors emitted by the [FIDL compiler][docs-fidlc],
 
 <<error-catalog/_fi-0080.md>>
 
+<<error-catalog/_fi-0081.md>>
+
 <<error-catalog/_fi-0084.md>>
 
 <<error-catalog/_fi-0085.md>>

@@ -995,11 +995,8 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
       auto ordinal_result =
           method_scope.ordinals.Insert(method.generated_ordinal64->value, method.name);
       if (!ordinal_result.ok()) {
-        std::string replacement_method(
-            fidl::ordinals::GetSelector(method.attributes.get(), method.name));
-        replacement_method.push_back('_');
         Fail(ErrDuplicateMethodOrdinal, method.generated_ordinal64->span(),
-             ordinal_result.previous_occurrence(), replacement_method);
+             ordinal_result.previous_occurrence());
       }
 
       // Add a pointer to this method to the protocol_declarations list.

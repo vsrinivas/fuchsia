@@ -46,12 +46,6 @@ protocol Special {
 )FIDL");
   library.UseLibraryZx();
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodOrdinal);
-
-  // The FTP requires the error message as follows
-  const re2::RE2 pattern(R"REGEX(@selector\("(ClashOne|ClashTwo)_"\))REGEX");
-  std::string error_msg(library.errors()[0]->msg);
-  ASSERT_TRUE(re2::RE2::PartialMatch(error_msg, pattern), "%s",
-              ("Selector pattern not found in error: " + library.errors()[0]->msg).c_str());
 }
 
 TEST(OrdinalsTests, BadClashingOrdinalValuesWithAttribute) {
@@ -70,12 +64,12 @@ protocol Special {
 )FIDL");
   library.UseLibraryZx();
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodOrdinal);
+}
 
-  // The FTP requires the error message as follows
-  const re2::RE2 pattern(R"REGEX(@selector\("(ClashOne|ClashTwo)_"\))REGEX");
-  std::string error_msg(library.errors()[0]->msg);
-  ASSERT_TRUE(re2::RE2::PartialMatch(error_msg, pattern), "%s",
-              ("Selector pattern not found in error: " + library.errors()[0]->msg).c_str());
+TEST(OrdinalsTests, BadClashingOrdinalBadSelector) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0081.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodOrdinal);
 }
 
 TEST(OrdinalsTests, GoodAttributeResolvesClashes) {

@@ -655,7 +655,6 @@ protocol Special {
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodOrdinal);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ClashTwo_");
 }
 
 TEST(ProtocolTests, BadSimpleConstraintAppliesToComposedMethodsToo) {

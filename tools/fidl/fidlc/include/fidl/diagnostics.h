@@ -181,10 +181,8 @@ constexpr ErrorDef<79, std::string_view, std::string_view, SourceSpan, std::stri
         "protocol method '{}' conflicts with method '{}' from {}; both are "
         "represented by the canonical form '{}'");
 constexpr ErrorDef<80> ErrGeneratedZeroValueOrdinal("Ordinal value 0 disallowed.");
-constexpr UndocumentedErrorDef<81, SourceSpan, std::string_view> ErrDuplicateMethodOrdinal(
-    "Multiple methods with the same ordinal in a protocol; previous was at {}. "
-    "Consider using attribute @selector(\"{}\") to change the name used to "
-    "calculate the ordinal.");
+constexpr ErrorDef<81, SourceSpan> ErrDuplicateMethodOrdinal(
+    "Multiple methods with the same ordinal in a protocol; previous was at {}.");
 constexpr UndocumentedErrorDef<82> ErrInvalidSelectorValue(
     "invalid selector value, must be a method name or a fully qualified method name");
 constexpr UndocumentedErrorDef<83> ErrFuchsiaIoExplicitOrdinals(
