@@ -6,8 +6,8 @@ group("wlan_test_driver_deps") {
   testonly = true
   deps = [
     "//src/connectivity/ethernet/drivers/ethernet",
-    "//src/connectivity/wlan/drivers/wlan:wlan_driver",
     "//src/connectivity/wlan/drivers/wlanphy:wlanphy_driver",
+    "//src/connectivity/wlan/drivers/wlansoftmac:wlansoftmac_driver",
     "//src/connectivity/wlan/testing/wlantap-driver:wlantap_driver",
   ]
 }

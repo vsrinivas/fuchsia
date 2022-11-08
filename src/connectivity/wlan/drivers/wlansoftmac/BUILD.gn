@@ -7,23 +7,23 @@ import("//build/components.gni")
 import("//build/drivers.gni")
 import("//build/test.gni")
 
-config("wlan_config") {
+config("wlansoftmac_config") {
   include_dirs = [ "." ]
 }
 
-driver_bind_rules("wlan_bind") {
-  rules = "wlan.bind"
-  header_output = "wlan_bind.h"
+driver_bind_rules("wlansoftmac_bind") {
+  rules = "wlansoftmac.bind"
+  header_output = "wlansoftmac_bind.h"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.wlan" ]
 }
 
-wlan_convert_sources = [
+wlansoftmac_convert_sources = [
   "convert.cc",
   "convert.h",
 ]
 
-wlan_convert_deps = [
+wlansoftmac_convert_deps = [
   "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
   "//sdk/banjo/fuchsia.hardware.wlan.softmac:fuchsia.hardware.wlan.softmac_banjo_c",
   "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
@@ -34,13 +34,13 @@ wlan_convert_deps = [
   "//zircon/system/ulib/zx",
 ]
 
-source_set("wlan_convert") {
-  sources = wlan_convert_sources
-  public_deps = wlan_convert_deps
+source_set("wlansoftmac_convert") {
+  sources = wlansoftmac_convert_sources
+  public_deps = wlansoftmac_convert_deps
 }
 
-fuchsia_driver("wlan_driver-driver") {
-  output_name = "wlan"
+fuchsia_driver("wlansoftmac_driver-driver") {
+  output_name = "wlansoftmac"
   sources = [
     "device.cc",
     "device.h",
@@ -49,8 +49,8 @@ fuchsia_driver("wlan_driver-driver") {
     "probe_sequence.h",
   ]
   deps = [
-    ":wlan_bind",
-    ":wlan_convert",
+    ":wlansoftmac_bind",
+    ":wlansoftmac_convert",
     "//sdk/lib/driver/runtime:driver_runtime_cpp",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//src/devices/lib/dev-operation",
@@ -65,24 +65,24 @@ fuchsia_driver("wlan_driver-driver") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-fuchsia_driver_component("wlan_driver") {
-  component_name = "wlan"
-  deps = [ ":wlan_driver-driver" ]
-  info = "wlan_driver-info.json"
+fuchsia_driver_component("wlansoftmac_driver") {
+  component_name = "wlansoftmac"
+  deps = [ ":wlansoftmac_driver-driver" ]
+  info = "wlansoftmac_driver-info.json"
   colocate = true
 }
 
-fuchsia_driver_package("wlan") {
-  package_name = "wlan-system"
-  driver_components = [ ":wlan_driver" ]
+fuchsia_driver_package("wlansoftmac") {
+  package_name = "wlansoftmac"
+  driver_components = [ ":wlansoftmac_driver" ]
 }
 
-test("wlan_convert_unittest") {
+test("wlansoftmac_convert_unittest") {
   testonly = true
-  output_name = "wlan_convert_unittest"
-  sources = wlan_convert_sources + [ "tests/convert_unittest.cc" ]
+  output_name = "wlansoftmac_convert_unittest"
+  sources = wlansoftmac_convert_sources + [ "tests/convert_unittest.cc" ]
 
-  deps = wlan_convert_deps + [
+  deps = wlansoftmac_convert_deps + [
            "//src/lib/fxl/test:gtest_main",
            "//third_party/googletest:gtest",
          ]
@@ -91,18 +91,18 @@ test("wlan_convert_unittest") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-fuchsia_unittest_component("wlan_convert_unittest_component") {
-  deps = [ ":wlan_convert_unittest" ]
+fuchsia_unittest_component("wlansoftmac_convert_unittest_component") {
+  deps = [ ":wlansoftmac_convert_unittest" ]
 }
 
-fuchsia_test_package("wlan_unittests") {
-  test_components = [ ":wlan_convert_unittest_component" ]
+fuchsia_test_package("wlansoftmac_unittests") {
+  test_components = [ ":wlansoftmac_convert_unittest_component" ]
 }
 
 group("tests") {
   testonly = true
   deps = [
-    ":wlan_bind_test",
-    ":wlan_unittests",
+    ":wlansoftmac_bind_test",
+    ":wlansoftmac_unittests",
   ]
 }

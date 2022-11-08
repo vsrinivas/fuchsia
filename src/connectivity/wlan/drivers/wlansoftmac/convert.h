@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_WLAN_CONVERT_H_
-#define SRC_CONNECTIVITY_WLAN_DRIVERS_WLAN_CONVERT_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_WLANSOFTMAC_CONVERT_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_WLANSOFTMAC_CONVERT_H_
 
 #include <fidl/fuchsia.wlan.softmac/cpp/driver/wire.h>
 #include <fuchsia/hardware/wlan/softmac/cpp/banjo.h>
@@ -57,4 +57,4 @@ zx_status_t ConvertAssocCtx(const wlan_assoc_ctx_t& in,
 
 }  // namespace wlan
 
-#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_WLAN_CONVERT_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_WLANSOFTMAC_CONVERT_H_

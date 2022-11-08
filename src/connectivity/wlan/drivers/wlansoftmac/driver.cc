@@ -9,7 +9,7 @@
 #include <memory>
 
 #include "device.h"
-#include "src/connectivity/wlan/drivers/wlan/wlan_bind.h"
+#include "src/connectivity/wlan/drivers/wlansoftmac/wlansoftmac_bind.h"
 
 zx_status_t wlan_bind(void* ctx, zx_device_t* device) {
   std::printf("%s\n", __func__);

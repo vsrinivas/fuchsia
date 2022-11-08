@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_WLAN_DEVICE_H_
-#define SRC_CONNECTIVITY_WLAN_DRIVERS_WLAN_DEVICE_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_WLANSOFTMAC_DEVICE_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_WLANSOFTMAC_DEVICE_H_
 
 #include <fidl/fuchsia.wlan.softmac/cpp/driver/wire.h>
 #include <fuchsia/hardware/ethernet/cpp/banjo.h>
@@ -162,4 +162,4 @@ class Device : public DeviceInterface,
 
 }  // namespace wlan
 
-#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_WLAN_DEVICE_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_WLANSOFTMAC_DEVICE_H_

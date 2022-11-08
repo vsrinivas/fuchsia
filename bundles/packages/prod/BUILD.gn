@@ -209,8 +209,8 @@ group("wlan_fullmac_core_drivers") {
 
 group("wlan_softmac_core_drivers") {
   public_deps = [
-    "//src/connectivity/wlan/drivers/wlan",
     "//src/connectivity/wlan/drivers/wlanphy:wlanphy_dfv2",
+    "//src/connectivity/wlan/drivers/wlansoftmac",
   ]
 }
 

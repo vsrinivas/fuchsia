@@ -109,7 +109,7 @@ Device::~Device() { debugfn(); }
 // should be held.
 zx_status_t Device::Bind(fdf::Channel channel) __TA_NO_THREAD_SAFETY_ANALYSIS {
   debugfn();
-  infof("Binding our new WLAN device.");
+  infof("Binding our new WLAN softmac device.");
 
   zx_status_t status;
   status = DdkServiceConnect(fidl::DiscoverableProtocolName<fuchsia_wlan_softmac::WlanSoftmac>,
@@ -247,7 +247,7 @@ zx_status_t Device::Bind(fdf::Channel channel) __TA_NO_THREAD_SAFETY_ANALYSIS {
 zx_status_t Device::AddEthDevice() {
   device_add_args_t args = {};
   args.version = DEVICE_ADD_ARGS_VERSION;
-  args.name = "wlan-ethernet";
+  args.name = "wlansoftmac-ethernet";
   args.ctx = this;
   args.ops = &eth_device_ops;
   args.proto_id = ZX_PROTOCOL_ETHERNET_IMPL;

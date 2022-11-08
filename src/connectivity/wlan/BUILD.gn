@@ -16,10 +16,10 @@ group("drivers") {
     "drivers/third_party/broadcom/brcmfmac:fuchsia_driver",
     "drivers/third_party/intel/iwlwifi:iwlwifi_driver",
     "drivers/third_party/nxp/nxpfmac:nxpfmac_sdio",
-    "drivers/wlan:wlan_driver",
     "drivers/wlanif:wlanif_driver",
     "drivers/wlanphy:wlanphy_driver",
     "drivers/wlanphy:wlanphy_driver_dfv2",
+    "drivers/wlansoftmac:wlansoftmac_driver",
     "testing/wlantap-driver:wlantap_driver",
   ]
   if (current_cpu == "x64") {
@@ -65,9 +65,9 @@ group("tests") {
     "drivers/third_party/intel/iwlwifi:tests",
     "drivers/third_party/intel/iwlwifi/test:iwlwifi_test",
     "drivers/third_party/nxp/nxpfmac:tests",
-    "drivers/wlan:tests",
     "drivers/wlanif/test:tests",
     "drivers/wlanphy:tests",
+    "drivers/wlansoftmac:tests",
     "lib/bitfield/wlan-bitfield-tests",
     "lib/common/cpp:ieee80211_codes_tests",
     "lib/common/cpp:mcs_rate_lookup_tests",

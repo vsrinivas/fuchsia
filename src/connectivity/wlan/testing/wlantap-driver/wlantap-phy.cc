@@ -16,7 +16,7 @@
 #include <wlan/common/dispatcher.h>
 #include <wlan/common/phy.h>
 
-#include "src/connectivity/wlan/drivers/wlan/convert.h"
+#include "src/connectivity/wlan/drivers/wlansoftmac/convert.h"
 #include "utils.h"
 #include "wlantap-mac.h"
 

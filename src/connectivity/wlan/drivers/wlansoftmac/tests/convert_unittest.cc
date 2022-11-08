@@ -6,7 +6,7 @@
 #include <fuchsia/wlan/stats/cpp/fidl.h>
 
 #include <gtest/gtest.h>
-#include <src/connectivity/wlan/drivers/wlan/convert.h>
+#include <src/connectivity/wlan/drivers/wlansoftmac/convert.h>
 
 namespace wlan {
 namespace {

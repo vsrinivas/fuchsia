@@ -47,10 +47,10 @@
 //src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:fuchsia_driver-driver
 //src/connectivity/wlan/drivers/third_party/intel/iwlwifi:iwlwifi_driver-driver
 //src/connectivity/wlan/drivers/third_party/nxp/nxpfmac:nxpfmac_sdio-driver
-//src/connectivity/wlan/drivers/wlan:wlan_driver-driver
 //src/connectivity/wlan/drivers/wlanif:wlanif_driver-driver
 //src/connectivity/wlan/drivers/wlanphy:wlanphy_driver-driver
 //src/connectivity/wlan/drivers/wlanphy:wlanphy_driver_dfv2-driver
+//src/connectivity/wlan/drivers/wlansoftmac:wlansoftmac_driver-driver
 //src/connectivity/wlan/testing/wlantap-driver:wlantap_driver-driver
 //src/developer/adb/drivers/usb-adb-function:usb-adb-function-driver
 //src/devices/acpi/drivers/acpi-battery:driver

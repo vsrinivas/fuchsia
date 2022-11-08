@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_WLAN_PROBE_SEQUENCE_H_
-#define SRC_CONNECTIVITY_WLAN_DRIVERS_WLAN_PROBE_SEQUENCE_H_
-
-#include <wlan/common/tx_vector.h>
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_WLANSOFTMAC_PROBE_SEQUENCE_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_WLANSOFTMAC_PROBE_SEQUENCE_H_
 
 #include <array>
+
+#include <wlan/common/tx_vector.h>
 
 namespace wlan {
 class ProbeSequence {
@@ -36,4 +36,4 @@ class ProbeSequence {
 };
 }  // namespace wlan
 
-#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_WLAN_PROBE_SEQUENCE_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_WLANSOFTMAC_PROBE_SEQUENCE_H_
