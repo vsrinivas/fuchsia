@@ -31,6 +31,8 @@ source_set("shared") {
     "loudness_transform.cc",
     "loudness_transform.h",
     "mix_profile_config.h",
+    "pin_executable_memory.cc",
+    "pin_executable_memory.h",
     "pipeline_config.cc",
     "pipeline_config.h",
     "policy_loader.cc",
@@ -100,6 +102,7 @@ executable("unittest_bin") {
   sources = [
     "device_config_unittest.cc",
     "loudness_transform_unittest.cc",
+    "pin_executable_memory_unittest.cc",
     "pipeline_config_unittest.cc",
     "policy_loader_unittest.cc",
     "policy_loader_unittest_data.h",

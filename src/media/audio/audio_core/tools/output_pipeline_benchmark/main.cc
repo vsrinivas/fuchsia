@@ -12,9 +12,9 @@
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/media/audio/audio_core/shared/mix_profile_config.h"
+#include "src/media/audio/audio_core/shared/pin_executable_memory.h"
 #include "src/media/audio/audio_core/shared/stream_usage.h"
 #include "src/media/audio/audio_core/tools/output_pipeline_benchmark/output_pipeline_benchmark.h"
-#include "src/media/audio/audio_core/v1/pin_executable_memory.h"
 
 using media::audio::MixProfileConfig;
 using media::audio::OutputPipelineBenchmark;

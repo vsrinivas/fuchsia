@@ -13,9 +13,9 @@
 
 #include "src/media/audio/audio_core/shared/mixer/mixer.h"
 #include "src/media/audio/audio_core/shared/mixer/no_op.h"
+#include "src/media/audio/audio_core/shared/pin_executable_memory.h"
 #include "src/media/audio/audio_core/v1/audio_driver.h"
 #include "src/media/audio/audio_core/v1/base_renderer.h"
-#include "src/media/audio/audio_core/v1/pin_executable_memory.h"
 #include "src/media/audio/audio_core/v1/stage_metrics.h"
 
 namespace media::audio {

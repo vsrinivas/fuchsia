@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/v1/pin_executable_memory.h"
+#include "src/media/audio/audio_core/shared/pin_executable_memory.h"
 
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>

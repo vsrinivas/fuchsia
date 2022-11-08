@@ -8,11 +8,11 @@
 #include <lib/trace-provider/provider.h>
 
 #include "src/lib/fxl/command_line.h"
+#include "src/media/audio/audio_core/shared/pin_executable_memory.h"
 #include "src/media/audio/audio_core/shared/process_config_loader.h"
 #include "src/media/audio/audio_core/v1/audio_core_impl.h"
 #include "src/media/audio/audio_core/v1/base_capturer.h"
 #include "src/media/audio/audio_core/v1/clock.h"
-#include "src/media/audio/audio_core/v1/pin_executable_memory.h"
 #include "src/media/audio/audio_core/v1/plug_detector.h"
 #include "src/media/audio/audio_core/v1/profile_provider.h"
 #include "src/media/audio/audio_core/v1/reporter.h"
