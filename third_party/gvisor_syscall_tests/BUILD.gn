@@ -497,6 +497,7 @@ syscall_test_suite(raw_packet_test_label) {
   run_in_cq_with_ns3 = true
 }
 syscall_test_suite(udp_test_label) {
+  run_in_cq_with_ns3 = true
 }
 syscall_test_suite(udp_unbound_test_label) {
 }
