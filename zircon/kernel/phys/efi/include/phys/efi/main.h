@@ -18,6 +18,11 @@ extern "C" efi_status EfiMain(efi_handle image, efi_system_table* systab);
 
 void SetEfiStdout(efi_system_table* systab);
 
+// Gives whether the current application was launched from the UEFI shell.
+bool EfiLaunchedFromShell();
+
+[[noreturn]] void EfiReboot(bool shutdown = false);
+
 // The canonical entry point of the main program.
 int main(int argc, char* argv[]);
 

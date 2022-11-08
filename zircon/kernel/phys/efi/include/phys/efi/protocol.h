@@ -61,4 +61,12 @@ struct EfiProtocolPtrDeleter {
   }
 };
 
+// Checks to see whether a given protocol interface is present on a handle.
+bool EfiHasProtocol(efi_handle handle, const efi_guid& guid);
+
+template <class Protocol>
+inline bool EfiHasProtocol(efi_handle handle) {
+  return EfiHasProtocol(handle, kEfiProtocolGuid<Protocol>);
+}
+
 #endif  // ZIRCON_KERNEL_PHYS_EFI_INCLUDE_PHYS_EFI_PROTOCOL_H_

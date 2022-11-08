@@ -9,6 +9,7 @@
 
 #include <efi/protocol/loaded-image.h>
 #include <efi/protocol/shell-parameters.h>
+#include <efi/runtime-services.h>
 #include <efi/types.h>
 #include <fbl/alloc_checker.h>
 #include <ktl/move.h>
@@ -164,3 +165,15 @@ efi_status EfiMain(efi_handle image_handle, efi_system_table* systab) {
 void ArchPanicReset() { EfiExit(EFI_ABORTED); }
 
 void InitMemory(void* bootloader_data) {}
+
+bool EfiLaunchedFromShell() {
+  // A shell-launched application is spec'd to have the parameters protocol
+  // present on its image handle.
+  return EfiHasProtocol<efi_shell_parameters_protocol>(gEfiImageHandle);
+}
+
+void EfiReboot(bool shutdown) {
+  gEfiSystemTable->RuntimeServices->ResetSystem(shutdown ? EfiResetShutdown : EfiResetCold,
+                                                EFI_SUCCESS, 0, nullptr);
+  __builtin_trap();
+}

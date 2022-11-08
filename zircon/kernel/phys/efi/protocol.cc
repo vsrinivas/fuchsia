@@ -31,3 +31,9 @@ void EfiCloseProtocol(const efi_guid& guid, efi_handle protocol) {
   ZX_ASSERT_MSG(status == EFI_SUCCESS, "CloseProtocol(%p, <guid> %p, %p, NULL) -> %#zx\n", protocol,
                 &guid, gEfiImageHandle, status);
 }
+
+bool EfiHasProtocol(efi_handle handle, const efi_guid& guid) {
+  return gEfiSystemTable->BootServices->OpenProtocol(handle, &guid, nullptr, gEfiImageHandle,
+                                                     nullptr, EFI_OPEN_PROTOCOL_TEST_PROTOCOL) ==
+         EFI_SUCCESS;
+}

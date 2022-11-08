@@ -67,6 +67,7 @@ if (current_toolchain != default_toolchain) {
     deps = [
       "//zircon/kernel/lib/libc",
       "//zircon/kernel/phys/efi:main",
+      "//zircon/kernel/phys/efi:protocol",
     ]
   }
 

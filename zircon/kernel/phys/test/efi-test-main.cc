@@ -35,5 +35,14 @@ PHYS_SINGLETHREAD int main(int argc, char** argv) {
     printf("\n*** Test FAILED: status %d ***\n\n", status);
   }
 
+  // If we were launched by the shell, let control return to it; else a
+  // graceful shutdown is preferable so as to not clear any test output from
+  // the console it is being viewed on.
+  if (!EfiLaunchedFromShell()) {
+    // TODO(joshuaseaton): Revisit the decision of when to shutdown. We likely
+    // only want to do this within an emulator.
+    EfiReboot(/*shutdown=*/true);
+  }
+
   return status;
 }

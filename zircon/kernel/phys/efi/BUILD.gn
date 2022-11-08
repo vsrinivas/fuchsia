@@ -136,8 +136,8 @@ source_set("protocol") {
   public = [ "include/phys/efi/protocol.h" ]
   public_configs = [ ":includes" ]
   public_deps = [
+    "//sdk/lib/fit",
     "//zircon/kernel/lib/efi",
-    "//zircon/system/ulib/zxc",
   ]
 
   sources = [ "protocol.cc" ]
@@ -157,8 +157,8 @@ source_set("protocol") {
 source_set("file") {
   public = [ "include/phys/efi/file.h" ]
   public_deps = [
+    "//sdk/lib/fit",
     "//zircon/kernel/lib/efi",
-    "//zircon/system/ulib/zxc",
   ]
   if (is_kernel) {
     public_deps += [
