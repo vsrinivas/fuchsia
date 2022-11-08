@@ -227,6 +227,10 @@ rustc_binary("bin") {
     "src/main.rs",
     "src/proxy_view_assistant.rs",
   ]
+  if (enable_recovery_ui_v2) {
+    features += [ "ota_ui" ]
+    sources += [ "src/ui_v2.rs" ]
+  }
 }
 
 rustc_binary("bin_ota") {

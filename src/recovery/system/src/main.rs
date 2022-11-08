@@ -14,6 +14,8 @@ mod keyboard;
 #[cfg(feature = "http_setup_server")]
 mod keys;
 mod proxy_view_assistant;
+#[cfg(feature = "ota_ui")]
+mod ui_v2;
 
 use {
     anyhow::{format_err, Error},
@@ -1294,6 +1296,10 @@ fn make_app_assistant() -> AssistantCreatorFunc {
 
 fn main() -> Result<(), Error> {
     println!("recovery: started");
+    // When UI code is moved and used this main.rs will disppear.
+    #[cfg(feature = "ota_ui")]
+    ui_v2::main()?;
+    // This line always stays here otherwise we have use problems with code that is to be moved later.
     App::run(make_app_assistant())
 }
 

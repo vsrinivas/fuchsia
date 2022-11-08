@@ -23,10 +23,17 @@ rustc_library("recovery-util") {
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
   ]
-  test_deps = [ "//third_party/rust_crates:assert_matches" ]
+  test_deps = [
+    "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:mockall",
+  ]
   sources = [
     "src/block.rs",
     "src/lib.rs",
+    "src/ota/controller.rs",
+    "src/ota/mod.rs",
+    "src/ota/state_machine.rs",
     "src/testing/mod.rs",
     "src/wlan.rs",
   ]

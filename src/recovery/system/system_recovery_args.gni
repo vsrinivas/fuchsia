@@ -6,4 +6,10 @@ declare_args() {
   # Path to file to use for recovery logo
   recovery_logo_path = "//src/recovery/system/res/fuchsia-logo.riv"
   instructions_path = "//src/recovery/system/res/instructions.txt"
+
+  # Whether to use the new UX UI
+  enable_recovery_ui_v2 = false
+
+  # Whether to log lots of debug info including PII
+  enable_recovery_ui_v2_debug_logging = false
 }
