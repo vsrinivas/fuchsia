@@ -2,23 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::api::ComponentResolver as ComponentResolverApi;
-use super::api::ComponentResolverUrl;
-use super::hash::Hash;
-use std::iter;
+// TODO(fxbug.dev/111250): Implement production component resolver API.
 
-/// TODO(fxbug.dev/111250): Implement production component resolver API.
-#[derive(Default)]
-pub(crate) struct ComponentResolver;
+#[cfg(test)]
+pub mod fake {
+    use crate::api::ComponentResolver as ComponentResolverApi;
+    use crate::api::ComponentResolverUrl;
+    use crate::hash::fake::Hash;
+    use std::iter;
 
-impl ComponentResolverApi for ComponentResolver {
-    type Hash = Hash;
+    #[derive(Default)]
+    pub(crate) struct ComponentResolver;
 
-    fn resolve(&self, _url: ComponentResolverUrl) -> Option<Self::Hash> {
-        None
-    }
+    impl ComponentResolverApi for ComponentResolver {
+        type Hash = Hash;
 
-    fn aliases(&self, _hash: Self::Hash) -> Box<dyn Iterator<Item = ComponentResolverUrl>> {
-        Box::new(iter::empty())
+        fn resolve(&self, _url: ComponentResolverUrl) -> Option<Self::Hash> {
+            None
+        }
+
+        fn aliases(&self, _hash: Self::Hash) -> Box<dyn Iterator<Item = ComponentResolverUrl>> {
+            Box::new(iter::empty())
+        }
     }
 }

@@ -2,124 +2,128 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::api::ComponentInstance as ComponentInstanceApi;
-use super::api::Environment as EnvironmentApi;
-use super::api::Moniker as MonikerApi;
-use super::component::Component;
-use super::component_instance_capability::ComponentInstanceCapability;
-use std::iter;
+// TODO(fxbug.dev/111245): Implement production component instance API.
 
-/// TODO(fxbug.dev/111245): Implement production component instance API.
-#[derive(Default)]
-pub(crate) struct ComponentInstance;
+#[cfg(test)]
+pub mod fake {
+    use crate::api::ComponentInstance as ComponentInstanceApi;
+    use crate::api::Environment as EnvironmentApi;
+    use crate::api::Moniker as MonikerApi;
+    use crate::component::fake::Component;
+    use crate::component_instance_capability::fake::ComponentInstanceCapability;
+    use std::iter;
 
-impl ComponentInstanceApi for ComponentInstance {
-    type Moniker = Moniker;
-    type Environment = Environment;
-    type Component = Component;
-    type ComponentInstanceCapability = ComponentInstanceCapability;
+    #[derive(Default)]
+    pub(crate) struct ComponentInstance;
 
-    fn moniker(&self) -> Self::Moniker {
-        Moniker::default()
-    }
+    impl ComponentInstanceApi for ComponentInstance {
+        type Moniker = Moniker;
+        type Environment = Environment;
+        type Component = Component;
+        type ComponentInstanceCapability = ComponentInstanceCapability;
 
-    fn environment(&self) -> Self::Environment {
-        Environment::default()
-    }
+        fn moniker(&self) -> Self::Moniker {
+            Moniker::default()
+        }
 
-    fn component(&self) -> Self::Component {
-        Component::default()
-    }
+        fn environment(&self) -> Self::Environment {
+            Environment::default()
+        }
 
-    fn parent(
-        &self,
-    ) -> Box<
-        dyn ComponentInstanceApi<
-            Moniker = Self::Moniker,
-            Environment = Self::Environment,
-            Component = Self::Component,
-            ComponentInstanceCapability = Self::ComponentInstanceCapability,
-        >,
-    > {
-        Box::new(Self::default())
-    }
+        fn component(&self) -> Self::Component {
+            Component::default()
+        }
 
-    fn children(
-        &self,
-    ) -> Box<
-        dyn Iterator<
-            Item = Box<
-                dyn ComponentInstanceApi<
-                    Moniker = Self::Moniker,
-                    Environment = Self::Environment,
-                    Component = Self::Component,
-                    ComponentInstanceCapability = Self::ComponentInstanceCapability,
+        fn parent(
+            &self,
+        ) -> Box<
+            dyn ComponentInstanceApi<
+                Moniker = Self::Moniker,
+                Environment = Self::Environment,
+                Component = Self::Component,
+                ComponentInstanceCapability = Self::ComponentInstanceCapability,
+            >,
+        > {
+            Box::new(Self::default())
+        }
+
+        fn children(
+            &self,
+        ) -> Box<
+            dyn Iterator<
+                Item = Box<
+                    dyn ComponentInstanceApi<
+                        Moniker = Self::Moniker,
+                        Environment = Self::Environment,
+                        Component = Self::Component,
+                        ComponentInstanceCapability = Self::ComponentInstanceCapability,
+                    >,
                 >,
             >,
-        >,
-    > {
-        Box::new(iter::empty())
-    }
+        > {
+            Box::new(iter::empty())
+        }
 
-    fn descendants(
-        &self,
-    ) -> Box<
-        dyn Iterator<
-            Item = Box<
-                dyn ComponentInstanceApi<
-                    Moniker = Self::Moniker,
-                    Environment = Self::Environment,
-                    Component = Self::Component,
-                    ComponentInstanceCapability = Self::ComponentInstanceCapability,
+        fn descendants(
+            &self,
+        ) -> Box<
+            dyn Iterator<
+                Item = Box<
+                    dyn ComponentInstanceApi<
+                        Moniker = Self::Moniker,
+                        Environment = Self::Environment,
+                        Component = Self::Component,
+                        ComponentInstanceCapability = Self::ComponentInstanceCapability,
+                    >,
                 >,
             >,
-        >,
-    > {
-        Box::new(iter::empty())
-    }
+        > {
+            Box::new(iter::empty())
+        }
 
-    fn ancestors(
-        &self,
-    ) -> Box<
-        dyn Iterator<
-            Item = Box<
-                dyn ComponentInstanceApi<
-                    Moniker = Self::Moniker,
-                    Environment = Self::Environment,
-                    Component = Self::Component,
-                    ComponentInstanceCapability = Self::ComponentInstanceCapability,
+        fn ancestors(
+            &self,
+        ) -> Box<
+            dyn Iterator<
+                Item = Box<
+                    dyn ComponentInstanceApi<
+                        Moniker = Self::Moniker,
+                        Environment = Self::Environment,
+                        Component = Self::Component,
+                        ComponentInstanceCapability = Self::ComponentInstanceCapability,
+                    >,
                 >,
             >,
-        >,
-    > {
-        Box::new(iter::empty())
+        > {
+            Box::new(iter::empty())
+        }
+
+        fn uses(&self) -> Box<dyn Iterator<Item = Self::ComponentInstanceCapability>> {
+            Box::new(iter::empty())
+        }
+
+        fn exposes(&self) -> Box<dyn Iterator<Item = Self::ComponentInstanceCapability>> {
+            Box::new(iter::empty())
+        }
+
+        fn offers(&self) -> Box<dyn Iterator<Item = Self::ComponentInstanceCapability>> {
+            Box::new(iter::empty())
+        }
+
+        fn capabilities(&self) -> Box<dyn Iterator<Item = Self::ComponentInstanceCapability>> {
+            Box::new(iter::empty())
+        }
     }
 
-    fn uses(&self) -> Box<dyn Iterator<Item = Self::ComponentInstanceCapability>> {
-        Box::new(iter::empty())
-    }
+    /// TODO(fxbug.dev/111245): Implement for production component instance API.
+    #[derive(Default)]
+    pub(crate) struct Moniker;
 
-    fn exposes(&self) -> Box<dyn Iterator<Item = Self::ComponentInstanceCapability>> {
-        Box::new(iter::empty())
-    }
+    impl MonikerApi for Moniker {}
 
-    fn offers(&self) -> Box<dyn Iterator<Item = Self::ComponentInstanceCapability>> {
-        Box::new(iter::empty())
-    }
+    /// TODO(fxbug.dev/111245): Implement for production component instance API.
+    #[derive(Default)]
+    pub(crate) struct Environment;
 
-    fn capabilities(&self) -> Box<dyn Iterator<Item = Self::ComponentInstanceCapability>> {
-        Box::new(iter::empty())
-    }
+    impl EnvironmentApi for Environment {}
 }
-
-/// TODO(fxbug.dev/111245): Implement for production component instance API.
-#[derive(Default)]
-pub(crate) struct Moniker;
-
-impl MonikerApi for Moniker {}
-
-/// TODO(fxbug.dev/111245): Implement for production component instance API.
-#[derive(Default)]
-pub(crate) struct Environment;
-
-impl EnvironmentApi for Environment {}

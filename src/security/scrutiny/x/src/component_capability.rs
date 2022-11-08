@@ -2,76 +2,80 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::api::CapabilityDestination;
-use super::api::CapabilityKind;
-use super::api::CapabilitySource;
-use super::api::ComponentCapability as ComponentCapabilityApi;
-use super::api::ComponentCapabilityName as ComponentCapabilityNameApi;
-use super::api::ComponentCapabilityPath as ComponentCapabilityPathApi;
-use super::component::Component;
+// TODO(fxbug.dev/111244): Implement production component capability API.
 
-/// TODO(fxbug.dev/111244): Implement production component capability API.
-#[derive(Default)]
-pub(crate) struct ComponentCapability;
+#[cfg(test)]
+pub mod fake {
+    use crate::api::CapabilityDestination;
+    use crate::api::CapabilityKind;
+    use crate::api::CapabilitySource;
+    use crate::api::ComponentCapability as ComponentCapabilityApi;
+    use crate::api::ComponentCapabilityName as ComponentCapabilityNameApi;
+    use crate::api::ComponentCapabilityPath as ComponentCapabilityPathApi;
+    use crate::component::fake::Component;
 
-impl ComponentCapabilityApi for ComponentCapability {
-    type Component = Component;
-    type CapabilityName = ComponentCapabilityName;
-    type CapabilityPath = ComponentCapabilityPath;
+    #[derive(Default)]
+    pub(crate) struct ComponentCapability;
 
-    fn component(&self) -> Self::Component {
-        Component::default()
+    impl ComponentCapabilityApi for ComponentCapability {
+        type Component = Component;
+        type CapabilityName = ComponentCapabilityName;
+        type CapabilityPath = ComponentCapabilityPath;
+
+        fn component(&self) -> Self::Component {
+            Component::default()
+        }
+
+        fn kind(&self) -> CapabilityKind {
+            CapabilityKind::Unknown
+        }
+
+        fn source(&self) -> CapabilitySource {
+            CapabilitySource::Unknown
+        }
+
+        fn destination(&self) -> CapabilityDestination {
+            CapabilityDestination::Unknown
+        }
+
+        fn source_name(&self) -> Option<Self::CapabilityName> {
+            None
+        }
+
+        fn destination_name(&self) -> Option<Self::CapabilityName> {
+            None
+        }
+
+        fn source_path(&self) -> Option<Self::CapabilityPath> {
+            None
+        }
+
+        fn destination_path(&self) -> Option<Self::CapabilityPath> {
+            None
+        }
     }
 
-    fn kind(&self) -> CapabilityKind {
-        CapabilityKind::Unknown
+    /// TODO(fxbug.dev/111244): Implement for production component capability API.
+    #[derive(Default)]
+    pub(crate) struct ComponentCapabilityName;
+
+    impl ComponentCapabilityNameApi for ComponentCapabilityName {
+        type ComponentCapability = ComponentCapability;
+
+        fn component(&self) -> Self::ComponentCapability {
+            ComponentCapability::default()
+        }
     }
 
-    fn source(&self) -> CapabilitySource {
-        CapabilitySource::Unknown
-    }
+    /// TODO(fxbug.dev/111244): Implement for production component capability API.
+    #[derive(Default)]
+    pub(crate) struct ComponentCapabilityPath;
 
-    fn destination(&self) -> CapabilityDestination {
-        CapabilityDestination::Unknown
-    }
+    impl ComponentCapabilityPathApi for ComponentCapabilityPath {
+        type ComponentCapability = ComponentCapability;
 
-    fn source_name(&self) -> Option<Self::CapabilityName> {
-        None
-    }
-
-    fn destination_name(&self) -> Option<Self::CapabilityName> {
-        None
-    }
-
-    fn source_path(&self) -> Option<Self::CapabilityPath> {
-        None
-    }
-
-    fn destination_path(&self) -> Option<Self::CapabilityPath> {
-        None
-    }
-}
-
-/// TODO(fxbug.dev/111244): Implement for production component capability API.
-#[derive(Default)]
-pub(crate) struct ComponentCapabilityName;
-
-impl ComponentCapabilityNameApi for ComponentCapabilityName {
-    type ComponentCapability = ComponentCapability;
-
-    fn component(&self) -> Self::ComponentCapability {
-        ComponentCapability::default()
-    }
-}
-
-/// TODO(fxbug.dev/111244): Implement for production component capability API.
-#[derive(Default)]
-pub(crate) struct ComponentCapabilityPath;
-
-impl ComponentCapabilityPathApi for ComponentCapabilityPath {
-    type ComponentCapability = ComponentCapability;
-
-    fn component(&self) -> Self::ComponentCapability {
-        ComponentCapability::default()
+        fn component(&self) -> Self::ComponentCapability {
+            ComponentCapability::default()
+        }
     }
 }

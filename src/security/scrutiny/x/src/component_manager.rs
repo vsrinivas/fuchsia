@@ -2,28 +2,32 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::api::ComponentManager as ComponentManagerApi;
-use super::component_capability::ComponentCapability;
-use super::system::ComponentManagerConfiguration;
-use std::iter;
+// TODO(fxbug.dev/111251): Implement for production System API.
 
-/// TODO(fxbug.dev/111251): Implement for production System API.
-#[derive(Default)]
-pub(crate) struct ComponentManager;
+#[cfg(test)]
+pub mod fake {
+    use crate::api::ComponentManager as ComponentManagerApi;
+    use crate::component_capability::fake::ComponentCapability;
+    use crate::system::fake::ComponentManagerConfiguration;
+    use std::iter;
 
-impl ComponentManagerApi for ComponentManager {
-    type ComponentManagerConfiguration = ComponentManagerConfiguration;
-    type ComponentCapability = ComponentCapability;
+    #[derive(Default)]
+    pub(crate) struct ComponentManager;
 
-    fn configuration(&self) -> Self::ComponentManagerConfiguration {
-        ComponentManagerConfiguration::default()
-    }
+    impl ComponentManagerApi for ComponentManager {
+        type ComponentManagerConfiguration = ComponentManagerConfiguration;
+        type ComponentCapability = ComponentCapability;
 
-    fn namespace_capabilities(&self) -> Box<dyn Iterator<Item = Self::ComponentCapability>> {
-        Box::new(iter::empty())
-    }
+        fn configuration(&self) -> Self::ComponentManagerConfiguration {
+            ComponentManagerConfiguration::default()
+        }
 
-    fn builtin_capabilities(&self) -> Box<dyn Iterator<Item = Self::ComponentCapability>> {
-        Box::new(iter::empty())
+        fn namespace_capabilities(&self) -> Box<dyn Iterator<Item = Self::ComponentCapability>> {
+            Box::new(iter::empty())
+        }
+
+        fn builtin_capabilities(&self) -> Box<dyn Iterator<Item = Self::ComponentCapability>> {
+            Box::new(iter::empty())
+        }
     }
 }

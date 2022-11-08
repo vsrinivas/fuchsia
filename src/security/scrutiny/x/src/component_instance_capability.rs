@@ -2,88 +2,92 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::api::ComponentInstanceCapability as ComponentInstanceCapabilityApi;
-use super::component_capability::ComponentCapability;
-use super::component_instance::ComponentInstance;
-use std::iter;
+// TODO(fxbug.dev/111246): Implement production component instance capability API.
 
-/// TODO(fxbug.dev/111246): Implement production component instance capability API.
-#[derive(Default)]
-pub(crate) struct ComponentInstanceCapability;
+#[cfg(test)]
+pub mod fake {
+    use crate::api::ComponentInstanceCapability as ComponentInstanceCapabilityApi;
+    use crate::component_capability::fake::ComponentCapability;
+    use crate::component_instance::fake::ComponentInstance;
+    use std::iter;
 
-impl ComponentInstanceCapabilityApi for ComponentInstanceCapability {
-    type ComponentCapability = ComponentCapability;
-    type ComponentInstance = ComponentInstance;
+    #[derive(Default)]
+    pub(crate) struct ComponentInstanceCapability;
 
-    fn component_capability(&self) -> Self::ComponentCapability {
-        ComponentCapability::default()
-    }
+    impl ComponentInstanceCapabilityApi for ComponentInstanceCapability {
+        type ComponentCapability = ComponentCapability;
+        type ComponentInstance = ComponentInstance;
 
-    fn component_instance(&self) -> Self::ComponentInstance {
-        ComponentInstance::default()
-    }
+        fn component_capability(&self) -> Self::ComponentCapability {
+            ComponentCapability::default()
+        }
 
-    fn source(
-        &self,
-    ) -> Box<
-        dyn ComponentInstanceCapabilityApi<
-            ComponentCapability = Self::ComponentCapability,
-            ComponentInstance = Self::ComponentInstance,
-        >,
-    > {
-        Box::new(ComponentInstanceCapability::default())
-    }
+        fn component_instance(&self) -> Self::ComponentInstance {
+            ComponentInstance::default()
+        }
 
-    fn source_path(
-        &self,
-    ) -> Box<
-        dyn Iterator<
-            Item = Box<
-                dyn ComponentInstanceCapabilityApi<
-                    ComponentCapability = Self::ComponentCapability,
-                    ComponentInstance = Self::ComponentInstance,
+        fn source(
+            &self,
+        ) -> Box<
+            dyn ComponentInstanceCapabilityApi<
+                ComponentCapability = Self::ComponentCapability,
+                ComponentInstance = Self::ComponentInstance,
+            >,
+        > {
+            Box::new(ComponentInstanceCapability::default())
+        }
+
+        fn source_path(
+            &self,
+        ) -> Box<
+            dyn Iterator<
+                Item = Box<
+                    dyn ComponentInstanceCapabilityApi<
+                        ComponentCapability = Self::ComponentCapability,
+                        ComponentInstance = Self::ComponentInstance,
+                    >,
                 >,
             >,
-        >,
-    > {
-        Box::new(iter::empty())
-    }
+        > {
+            Box::new(iter::empty())
+        }
 
-    fn destination_paths(
-        &self,
-    ) -> Box<
-        dyn Iterator<
-            Item = Box<
-                dyn Iterator<
-                    Item = Box<
-                        dyn ComponentInstanceCapabilityApi<
-                            ComponentCapability = Self::ComponentCapability,
-                            ComponentInstance = Self::ComponentInstance,
+        fn destination_paths(
+            &self,
+        ) -> Box<
+            dyn Iterator<
+                Item = Box<
+                    dyn Iterator<
+                        Item = Box<
+                            dyn ComponentInstanceCapabilityApi<
+                                ComponentCapability = Self::ComponentCapability,
+                                ComponentInstance = Self::ComponentInstance,
+                            >,
                         >,
                     >,
                 >,
             >,
-        >,
-    > {
-        Box::new(iter::empty())
-    }
+        > {
+            Box::new(iter::empty())
+        }
 
-    fn all_paths(
-        &self,
-    ) -> Box<
-        dyn Iterator<
-            Item = Box<
-                dyn Iterator<
-                    Item = Box<
-                        dyn ComponentInstanceCapabilityApi<
-                            ComponentCapability = Self::ComponentCapability,
-                            ComponentInstance = Self::ComponentInstance,
+        fn all_paths(
+            &self,
+        ) -> Box<
+            dyn Iterator<
+                Item = Box<
+                    dyn Iterator<
+                        Item = Box<
+                            dyn ComponentInstanceCapabilityApi<
+                                ComponentCapability = Self::ComponentCapability,
+                                ComponentInstance = Self::ComponentInstance,
+                            >,
                         >,
                     >,
                 >,
             >,
-        >,
-    > {
-        Box::new(iter::empty())
+        > {
+            Box::new(iter::empty())
+        }
     }
 }

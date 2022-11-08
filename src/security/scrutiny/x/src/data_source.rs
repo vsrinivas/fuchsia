@@ -2,37 +2,42 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::api::DataSource as DataSourceApi;
-use super::api::DataSourceKind;
-use super::api::DataSourceVersion;
-use std::iter;
+// TODO(fxbug.dev/111251): Implement for production System API.
 
-/// TODO(fxbug.dev/111251): Implement for production System API.
-#[derive(Default)]
-pub(crate) struct DataSource;
+#[cfg(test)]
+pub mod fake {
+    use crate::api::DataSource as DataSourceApi;
+    use crate::api::DataSourceKind;
+    use crate::api::DataSourceVersion;
+    use std::iter;
 
-impl DataSourceApi for DataSource {
-    type SourcePath = &'static str;
+    #[derive(Default)]
+    pub(crate) struct DataSource;
 
-    fn kind(&self) -> DataSourceKind {
-        DataSourceKind::Unknown
-    }
+    impl DataSourceApi for DataSource {
+        type SourcePath = &'static str;
 
-    fn parent(&self) -> Option<Box<dyn DataSourceApi<SourcePath = Self::SourcePath>>> {
-        None
-    }
+        fn kind(&self) -> DataSourceKind {
+            DataSourceKind::Unknown
+        }
 
-    fn children(
-        &self,
-    ) -> Box<dyn Iterator<Item = Box<dyn DataSourceApi<SourcePath = Self::SourcePath>>>> {
-        Box::new(iter::empty())
-    }
+        fn parent(&self) -> Option<Box<dyn DataSourceApi<SourcePath = Self::SourcePath>>> {
+            None
+        }
 
-    fn path(&self) -> Option<Self::SourcePath> {
-        None
-    }
+        fn children(
+            &self,
+        ) -> Box<dyn Iterator<Item = Box<dyn DataSourceApi<SourcePath = Self::SourcePath>>>>
+        {
+            Box::new(iter::empty())
+        }
 
-    fn version(&self) -> DataSourceVersion {
-        DataSourceVersion::Unknown
+        fn path(&self) -> Option<Self::SourcePath> {
+            None
+        }
+
+        fn version(&self) -> DataSourceVersion {
+            DataSourceVersion::Unknown
+        }
     }
 }
