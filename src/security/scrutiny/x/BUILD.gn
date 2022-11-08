@@ -28,6 +28,11 @@ if (is_host) {
       "src/scrutiny.rs",
       "src/system.rs",
     ]
+
+    deps = [
+      "//src/lib/fuchsia",
+      "//src/sys/pkg/lib/fuchsia-merkle",
+    ]
   }
 }
 

@@ -4,6 +4,7 @@
 
 use std::fmt::Debug;
 use std::fmt::Display;
+use std::hash;
 use std::io::Read;
 use std::io::Seek;
 use std::path::Path;
@@ -278,10 +279,9 @@ pub trait Blob {
 
 /// A content-address of a sequence of bytes. In most production cases, this is a Fuchsia merkle
 /// root; see https://fuchsia.dev/fuchsia-src/concepts/packages/merkleroot for details.
-pub trait Hash: Display + Debug {
-    /// Get a byte slice representation of this hash.
-    fn as_bytes(&self) -> &[u8];
-}
+pub trait Hash: Clone + Display + Debug + Eq + PartialEq + hash::Hash {}
+
+impl<H: Clone + Display + Debug + Eq + PartialEq + hash::Hash> Hash for H {}
 
 /// Model of a Fuchsia package. See https://fuchsia.dev/fuchsia-src/concepts/packages/package for
 /// details.
