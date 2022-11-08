@@ -246,6 +246,10 @@ template("assembly_input_bundle_archive") {
 #    [list, GN labels] A list of GN labels of fuchsia_package targets to
 #    include in the cache package set.
 #
+#  bootfs_packages [optional]
+#    [list, GN labels] A list of GN labels of fuchsia_package targets to
+#    include in the bootfs package set.
+#
 #    Note: These are direct labels for specific targets, not deps to walk for
 #    metadata.  If the target isn't a package target, it will cause an error
 #    like:
@@ -367,6 +371,16 @@ template("assembly_input_bundle") {
         ]
       }
     }
+    bootfs = []
+    if (defined(invoker.bootfs_packages)) {
+      foreach(_target, invoker.bootfs_packages) {
+        bootfs += [
+          {
+            package_target = _target
+          },
+        ]
+      }
+    }
 
     drivers = []
     if (defined(invoker.base_driver_packages)) {
@@ -380,6 +394,7 @@ template("assembly_input_bundle") {
             "base",
             "cache",
             "drivers",
+            "bootfs",
           ]) {
     _package_target_details = package_sets[set_name]
     _package_targets = []

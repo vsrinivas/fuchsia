@@ -28,6 +28,10 @@ def create_bundle(args: argparse.Namespace) -> None:
     if args.cache_pkg_list:
         add_pkg_list_from_file(aib_creator, args.cache_pkg_list, "cache")
 
+    if args.bootfs_pkg_list:
+        add_pkg_list_from_file(
+            aib_creator, args.bootfs_pkg_list, "bootfs_packages")
+
     if args.shell_cmds_list:
         add_shell_commands_from_file(aib_creator, args.shell_cmds_list)
 
@@ -261,6 +265,11 @@ def main():
         type=argparse.FileType('r'),
         help=
         "Path to a json list of package manifests for the 'base' package set")
+    bundle_creation_parser.add_argument(
+        "--bootfs-pkg-list",
+        type=argparse.FileType('r'),
+        help=
+        "Path to a json list of package manifests for the 'bootfs' package set")
     bundle_creation_parser.add_argument(
         "--drivers-pkg-list",
         type=argparse.FileType('r'),
