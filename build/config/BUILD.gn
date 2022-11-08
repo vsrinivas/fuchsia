@@ -1107,6 +1107,14 @@ config("thread_safety_annotations") {
   }
 }
 
+config("zero-call-used-regs") {
+  # TODO(fxrev.dev/710262): Enable on arm64 when there's performance data.
+  if (current_cpu == "x64") {
+    cflags = [ "-fzero-call-used-regs=used-gpr" ]
+    defines = [ "ZERO_CALL_USED_REGS" ]
+  }
+}
+
 # libc++ removed a number of transitive includes between version 14 and 15
 # but those were later re-added and conditionally gated on a new define in
 # https://reviews.llvm.org/D128661. In Fuchsia, we have already done the

@@ -233,6 +233,7 @@ if (is_kernel) {
       "arch/$zircon_cpu:abi",
       "arch/$zircon_cpu:kernel",
       "//build/config:no-finite-loops",
+      "//build/config:zero-call-used-regs",
 
       # include/lib/counters.h and kernel.ld depend on -fdata-sections.
       "//build/config/zircon:data_sections",

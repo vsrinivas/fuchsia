@@ -468,6 +468,9 @@ void x86_feature_debug(void) {
 #endif
   print_property("retbleed", g_has_retbleed);
   print_property("stibp_enabled", g_stibp_enabled);
+#ifdef ZERO_CALL_USED_REGS
+  print_property("zero_call_used_regs");
+#endif
   if (arch::BootCpuidSupports<arch::CpuidPerformanceMonitoringA>()) {
     const arch::CpuidPerformanceMonitoringA eax = io.Read<arch::CpuidPerformanceMonitoringA>();
     const arch::CpuidPerformanceMonitoringD edx = io.Read<arch::CpuidPerformanceMonitoringD>();
