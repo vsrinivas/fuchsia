@@ -9,7 +9,7 @@ use {
         diagnostics::AccessorStats,
         error::Error,
         events::{
-            router::{ConsumerConfig, EventConsumer, EventRouter, ProducerConfig, RouterOptions},
+            router::{ConsumerConfig, EventRouter, ProducerConfig, RouterOptions},
             sources::{
                 ComponentEventProvider, EventSource, LogConnector, UnattributedLogSinkSource,
             },
@@ -22,8 +22,7 @@ use {
     },
     archivist_config::Config,
     async_lock::RwLock,
-    async_trait::async_trait,
-    fidl_fuchsia_io as fio, fidl_fuchsia_logger as flogger,
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_sys2::EventSourceMarker,
     fidl_fuchsia_sys_internal as fsys_internal,
     fuchsia_async::{self as fasync, Task},
@@ -44,23 +43,10 @@ use {
 /// Responsible for initializing an `Archivist` instance. Supports multiple configurations by
 /// either calling or not calling methods on the builder like `serve_test_controller_protocol`.
 pub struct Archivist {
-    /// Archive state, including the diagnostics repo which currently stores all logs.
-    archivist_state: Arc<ArchivistState>,
-
     /// ServiceFs object to server outgoing directory.
     fs: ServiceFs<ServiceObj<'static, ()>>,
 
-    /// Receiver for stream which will process LogSink connections.
-    log_receiver: mpsc::UnboundedReceiver<Task<()>>,
-
-    /// Sender which is used to close the stream of LogSink connections.
-    ///
-    /// Clones of the sender keep the receiver end of the channel open. As soon
-    /// as all clones are dropped or disconnected, the receiver will close. The
-    /// receiver must close for `Archivist::run` to return gracefully.
-    log_sender: mpsc::UnboundedSender<Task<()>>,
-
-    /// Sender which is used to close the stream of Log connections after log_sender
+    /// Sender which is used to close the stream of Log connections after ingestion of logsink
     /// completes.
     ///
     /// Clones of the sender keep the receiver end of the channel open. As soon
@@ -83,7 +69,20 @@ pub struct Archivist {
     /// Task draining the receiver for the `listen_sender`s.
     drain_listeners_task: fasync::Task<()>,
 
+    /// Tasks receiving external events from component manager and appmgr.
     incoming_external_event_producers: Vec<fasync::Task<()>>,
+
+    /// The diagnostics pipelines that have been installed.
+    _diagnostics_pipelines: Vec<Arc<RwLock<Pipeline>>>,
+
+    /// The repository holding Inspect data.
+    inspect_repository: Arc<InspectRepository>,
+
+    /// The repository holding active log connections.
+    logs_repository: Arc<LogsRepository>,
+
+    /// The overall capacity we enforce for log messages across containers.
+    logs_budget: BudgetManager,
 }
 
 impl Archivist {
@@ -94,7 +93,6 @@ impl Archivist {
         let mut fs = ServiceFs::new();
         diagnostics::serve(&mut fs)?;
 
-        let (log_sender, log_receiver) = mpsc::unbounded();
         let (listen_sender, listen_receiver) = mpsc::unbounded();
 
         let pipelines_node = component::inspector().root().create_child("pipelines");
@@ -144,19 +142,8 @@ impl Archivist {
         }
         component::inspector().root().record(stats_node);
 
-        let archivist_state = Arc::new(ArchivistState::new(
-            pipelines,
-            inspect_repo,
-            logs_repo,
-            logs_budget,
-            log_sender.clone(),
-        )?);
-
         Ok(Self {
             fs,
-            archivist_state,
-            log_receiver,
-            log_sender,
             listen_sender,
             event_router: EventRouter::new(component::inspector().root().create_child("events")),
             stop_recv: None,
@@ -166,11 +153,11 @@ impl Archivist {
                 listen_receiver.for_each_concurrent(None, |rx| async move { rx.await }).await;
             }),
             incoming_external_event_producers: vec![],
+            _diagnostics_pipelines: pipelines,
+            inspect_repository: inspect_repo,
+            logs_repository: logs_repo,
+            logs_budget,
         })
-    }
-
-    pub fn log_sender(&self) -> &mpsc::UnboundedSender<Task<()>> {
-        &self.log_sender
     }
 
     /// Install controller protocol.
@@ -199,8 +186,8 @@ impl Archivist {
 
     /// Installs `LogSink` and `Log` services. Panics if called twice.
     pub async fn install_log_services(&mut self) -> &mut Self {
-        let data_repo_1 = self.archivist_state.logs_repository.clone();
-        let data_repo_2 = self.archivist_state.logs_repository.clone();
+        let data_repo_1 = self.logs_repository.clone();
+        let data_repo_2 = self.logs_repository.clone();
         let listen_sender = self.listen_sender.clone();
 
         let mut unattributed_log_sink_source = UnattributedLogSinkSource::default();
@@ -308,9 +295,8 @@ impl Archivist {
     /// Spawns a task that will drain klog as another log source.
     pub async fn start_draining_klog(&mut self) -> Result<(), Error> {
         let debuglog = KernelDebugLog::new().await?;
-        self._drain_klog_task = Some(fasync::Task::spawn(
-            self.archivist_state.logs_repository.clone().drain_debuglog(debuglog),
-        ));
+        self._drain_klog_task =
+            Some(fasync::Task::spawn(self.logs_repository.clone().drain_debuglog(debuglog)));
         Ok(())
     }
 
@@ -324,23 +310,21 @@ impl Archivist {
     ) -> Result<(), Error> {
         debug!("Running Archivist.");
 
-        let logs_repository = self.archivist_state.logs_repository.clone();
-        let inspect_repository = self.archivist_state.inspect_repository.clone();
+        let logs_repository = self.logs_repository.clone();
+        let inspect_repository = self.inspect_repository.clone();
         self.fs.serve_connection(outgoing_channel).map_err(Error::ServeOutgoing)?;
         // Start servicing all outgoing services.
         let run_outgoing = self.fs.collect::<()>();
 
         let (snd, rcv) = mpsc::unbounded::<Arc<ComponentIdentity>>();
-        self.archivist_state.logs_budget.set_remover(snd).await;
+        self.logs_budget.set_remover(snd).await;
         let component_removal_task =
             fasync::Task::spawn(Self::process_removal_of_components(rcv, logs_repository.clone()));
 
-        let logs_budget = self.archivist_state.logs_budget.handle();
+        let logs_budget = self.logs_budget.handle();
         let mut event_router = self.event_router;
-        let archivist_state = self.archivist_state;
-        let archivist_state_log_sender = archivist_state.log_sender.clone();
         event_router.add_consumer(ConsumerConfig {
-            consumer: &archivist_state,
+            consumer: &logs_repository,
             events: vec![EventType::LogSinkRequested],
         });
         event_router.add_consumer(ConsumerConfig {
@@ -354,13 +338,11 @@ impl Archivist {
             drain_events_fut.await;
         });
 
-        // Process messages from log sink.
-        let log_receiver = self.log_receiver;
         let drain_listeners_task = self.drain_listeners_task;
+        let logs_repo = logs_repository.clone();
         let all_msg = async {
-            log_receiver.for_each_concurrent(None, |rx| async move { rx.await }).await;
-            debug!("Log ingestion stopped.");
-            logs_repository.terminate_logs().await;
+            logs_repo.wait_for_termination().await;
+            debug!("Terminated logs");
             logs_budget.terminate().await;
             debug!("Flushing to listeners.");
             drain_listeners_task.await;
@@ -372,7 +354,6 @@ impl Archivist {
         let (abortable_fut, abort_handle) = abortable(run_outgoing);
 
         let mut listen_sender = self.listen_sender;
-        let mut log_sender = self.log_sender;
         let incoming_external_event_producers = self.incoming_external_event_producers;
         let stop_fut = match self.stop_recv {
             Some(stop_recv) => async move {
@@ -382,8 +363,7 @@ impl Archivist {
                     task.cancel().await;
                 }
                 listen_sender.disconnect();
-                log_sender.disconnect();
-                archivist_state_log_sender.write().await.disconnect();
+                logs_repository.stop_accepting_new_log_sinks().await;
                 abort_handle.abort()
             }
             .left_future(),
@@ -404,66 +384,6 @@ impl Archivist {
                 debug!(%identity, "Removing component from repository.");
                 logs_repo.remove(&identity).await;
             }
-        }
-    }
-}
-
-/// Archivist owns the tools needed to persist data
-/// to the archive, as well as the service-specific repositories
-/// that are populated by the archivist server and exposed in the
-/// service sessions.
-pub struct ArchivistState {
-    _diagnostics_pipelines: Arc<Vec<Arc<RwLock<Pipeline>>>>,
-    inspect_repository: Arc<InspectRepository>,
-    logs_repository: Arc<LogsRepository>,
-
-    /// The overall capacity we enforce for log messages across containers.
-    logs_budget: BudgetManager,
-
-    log_sender: Arc<RwLock<mpsc::UnboundedSender<Task<()>>>>,
-}
-
-impl ArchivistState {
-    pub fn new(
-        diagnostics_pipelines: Vec<Arc<RwLock<Pipeline>>>,
-        inspect_repository: Arc<InspectRepository>,
-        logs_repository: Arc<LogsRepository>,
-        logs_budget: BudgetManager,
-        log_sender: mpsc::UnboundedSender<Task<()>>,
-    ) -> Result<Self, Error> {
-        Ok(Self {
-            _diagnostics_pipelines: Arc::new(diagnostics_pipelines),
-            logs_repository,
-            inspect_repository,
-            logs_budget,
-            log_sender: Arc::new(RwLock::new(log_sender)),
-        })
-    }
-
-    async fn handle_log_sink_requested(
-        &self,
-        component: ComponentIdentity,
-        request_stream: Option<flogger::LogSinkRequestStream>,
-    ) {
-        debug!(identity = %component, "LogSink requested.");
-        if let Some(request_stream) = request_stream {
-            let container = self.logs_repository.get_log_container(component).await;
-            container.handle_log_sink(request_stream, self.log_sender.read().await.clone()).await;
-        }
-    }
-}
-
-#[async_trait]
-impl EventConsumer for ArchivistState {
-    async fn handle(self: Arc<Self>, event: Event) {
-        match event.payload {
-            EventPayload::LogSinkRequested(LogSinkRequestedPayload {
-                component,
-                request_stream,
-            }) => {
-                self.handle_log_sink_requested(component, request_stream).await;
-            }
-            _ => unreachable!("Archivist state just subscribes to log sink requested"),
         }
     }
 }

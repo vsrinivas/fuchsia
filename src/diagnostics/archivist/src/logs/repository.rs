@@ -4,6 +4,10 @@
 
 use crate::{
     container::ComponentDiagnostics,
+    events::{
+        router::EventConsumer,
+        types::{Event, EventPayload, LogSinkRequestedPayload},
+    },
     identity::ComponentIdentity,
     logs::{
         budget::BudgetManager,
@@ -16,6 +20,7 @@ use crate::{
     trie,
 };
 use async_lock::{Mutex, RwLock};
+use async_trait::async_trait;
 use diagnostics_data::LogsData;
 use fidl::prelude::*;
 use fidl_fuchsia_diagnostics::{
@@ -45,12 +50,17 @@ lazy_static! {
 /// LogsRepository holds all diagnostics data and is a singleton wrapped by multiple
 /// [`pipeline::Pipeline`]s in a given Archivist instance.
 pub struct LogsRepository {
+    log_sender: Arc<RwLock<mpsc::UnboundedSender<fasync::Task<()>>>>,
     inner: RwLock<LogsRepositoryState>,
 }
 
 impl LogsRepository {
     pub async fn new(logs_budget: &BudgetManager, parent: &fuchsia_inspect::Node) -> Self {
-        LogsRepository { inner: LogsRepositoryState::new(logs_budget.clone(), parent).await }
+        let (log_sender, log_receiver) = mpsc::unbounded();
+        LogsRepository {
+            inner: LogsRepositoryState::new(logs_budget.clone(), log_receiver, parent).await,
+            log_sender: Arc::new(RwLock::new(log_sender)),
+        }
     }
 
     /// Drain the kernel's debug log. The returned future completes once
@@ -213,7 +223,11 @@ impl LogsRepository {
     }
     /// Stop accepting new messages, ensuring that pending Cursors return Poll::Ready(None) after
     /// consuming any messages received before this call.
-    pub async fn terminate_logs(&self) {
+    pub async fn wait_for_termination(&self) {
+        let receiver = self.inner.write().await.log_receiver.take().unwrap();
+        receiver.for_each_concurrent(None, |rx| async move { rx.await }).await;
+        // Process messages from log sink.
+        debug!("Log ingestion stopped.");
         let mut repo = self.inner.write().await;
         for container in repo.data_directories.iter().filter_map(|(_, v)| v) {
             container.terminate_logs();
@@ -221,16 +235,47 @@ impl LogsRepository {
         repo.logs_multiplexers.terminate().await;
     }
 
+    /// Closes the connection in which new logger draining tasks are sent. No more logger tasks
+    /// will be accepted when this is called and we'll proceed to terminate logs.
+    pub async fn stop_accepting_new_log_sinks(&self) {
+        self.log_sender.write().await.disconnect();
+    }
+
     #[cfg(test)]
     pub(crate) async fn default() -> Self {
         let budget = BudgetManager::new(crate::constants::LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES);
-        LogsRepository { inner: LogsRepositoryState::new(budget, &Default::default()).await }
+        LogsRepository::new(&budget, &Default::default()).await
+    }
+}
+
+#[async_trait]
+impl EventConsumer for LogsRepository {
+    async fn handle(self: Arc<Self>, event: Event) {
+        match event.payload {
+            EventPayload::LogSinkRequested(LogSinkRequestedPayload {
+                component,
+                request_stream,
+            }) => {
+                debug!(identity = %component, "LogSink requested.");
+                if let Some(request_stream) = request_stream {
+                    let container = self.get_log_container(component).await;
+                    container
+                        .handle_log_sink(request_stream, self.log_sender.read().await.clone())
+                        .await;
+                }
+            }
+            _ => unreachable!("Archivist state just subscribes to log sink requested"),
+        }
     }
 }
 
 pub struct LogsRepositoryState {
     data_directories: trie::Trie<String, ComponentDiagnostics>,
     inspect_node: inspect::Node,
+
+    /// Receives the logger tasks. This will be taken once in wait for termination hence why it's
+    /// an option.
+    log_receiver: Option<mpsc::UnboundedReceiver<fasync::Task<()>>>,
 
     /// A reference to the budget manager, kept to be passed to containers.
     logs_budget: BudgetManager,
@@ -245,11 +290,16 @@ pub struct LogsRepositoryState {
 }
 
 impl LogsRepositoryState {
-    async fn new(logs_budget: BudgetManager, parent: &fuchsia_inspect::Node) -> RwLock<Self> {
+    async fn new(
+        logs_budget: BudgetManager,
+        log_receiver: mpsc::UnboundedReceiver<fasync::Task<()>>,
+        parent: &fuchsia_inspect::Node,
+    ) -> RwLock<Self> {
         RwLock::new(Self {
             inspect_node: parent.create_child("sources"),
             data_directories: trie::Trie::new(),
             logs_budget,
+            log_receiver: Some(log_receiver),
             logs_interest: vec![],
             logs_multiplexers: MultiplexerBroker::new(),
             interest_registrations: BTreeMap::new(),
