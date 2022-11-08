@@ -23,7 +23,7 @@ use net_types::{
     MulticastAddr, MulticastAddress as _, SpecifiedAddr, Witness, ZonedAddr,
 };
 use nonzero_ext::nonzero;
-use packet::{BufferMut, ParsablePacket, ParseBuffer, Serializer};
+use packet::{BufferMut, Nested, ParsablePacket, ParseBuffer, Serializer};
 use packet_formats::{
     error::ParseError,
     ip::IpProto,
@@ -43,9 +43,7 @@ use crate::{
     error::{LocalAddressError, SocketError, ZonedAddressError},
     ip::{
         icmp::IcmpIpExt,
-        socket::{
-            BufferIpSocketHandler, IpSockCreateAndSendError, IpSockCreationError, IpSockSendError,
-        },
+        socket::{IpSockCreateAndSendError, IpSockCreationError, IpSockSendError},
         BufferIpTransportContext, BufferTransportIpContext, IpDeviceId, IpDeviceIdContext, IpExt,
         IpTransportContext, MulticastMembershipHandler, TransportIpContext, TransportReceiveError,
     },
@@ -54,9 +52,9 @@ use crate::{
         address::{ConnAddr, ConnIpAddr, IpPortSpec, ListenerAddr, ListenerIpAddr},
         datagram::{
             self, ConnState, ConnectListenerError, DatagramBoundId, DatagramFlowId,
-            DatagramSocketId, DatagramSocketStateSpec, DatagramSockets, DatagramStateContext,
-            DatagramStateNonSyncContext, InUseError, IpOptions, ListenerState,
-            LocalIdentifierAllocator, MulticastMembershipInterfaceSelector,
+            DatagramSocketId, DatagramSocketSpec, DatagramSocketStateSpec, DatagramSockets,
+            DatagramStateContext, DatagramStateNonSyncContext, InUseError, ListenerState,
+            LocalIdentifierAllocator, MulticastMembershipInterfaceSelector, SendToError,
             SetMulticastMembershipError, SockCreationError, SocketHopLimits, UnboundSocketState,
         },
         posix::{
@@ -360,6 +358,22 @@ impl<I: IpExt, D: IpDeviceId> PosixConflictPolicy<IpPortSpec<I, D>> for Udp<I, D
 impl<I: IpExt, D: IpDeviceId> DatagramSocketStateSpec for Udp<I, D> {
     type UnboundId = UdpUnboundId<I>;
     type UnboundSharingState = PosixSharingOptions;
+}
+
+impl<I: IpExt, D: IpDeviceId> DatagramSocketSpec<IpPortSpec<I, D>> for Udp<I, D> {
+    type Serializer<B: BufferMut> = Nested<B, UdpPacketBuilder<I::Addr>>;
+    fn make_packet<B: BufferMut>(
+        body: B,
+        addr: &ConnIpAddr<I::Addr, NonZeroU16, NonZeroU16>,
+    ) -> Self::Serializer<B> {
+        let ConnIpAddr { local: (local_ip, local_port), remote: (remote_ip, remote_port) } = addr;
+        body.encapsulate(UdpPacketBuilder::new(
+            local_ip.get(),
+            remote_ip.get(),
+            Some(*local_port),
+            *remote_port,
+        ))
+    }
 }
 
 enum LookupResult<I: Ip, D: IpDeviceId> {
@@ -1455,30 +1469,7 @@ impl<
         conn: UdpConnId<I>,
         body: B,
     ) -> Result<(), (B, IpSockSendError)> {
-        self.with_sockets_mut(|sync_ctx, state| {
-            let UdpSockets { sockets: DatagramSockets { bound, unbound: _ }, lazy_port_alloc: _ } =
-                state;
-            let (ConnState { socket, clear_device_on_disconnect: _ }, _sharing, addr) =
-                bound.conns().get_by_id(&conn).expect("no such connection");
-            let ConnAddr {
-                ip: ConnIpAddr { local: (local_ip, local_port), remote: (remote_ip, remote_port) },
-                device: _,
-            } = *addr;
-
-            sync_ctx
-                .send_ip_packet(
-                    ctx,
-                    &socket,
-                    body.encapsulate(UdpPacketBuilder::new(
-                        local_ip.get(),
-                        remote_ip.get(),
-                        Some(local_port),
-                        remote_port,
-                    )),
-                    None,
-                )
-                .map_err(|(body, err)| (body.into_inner(), err))
-        })
+        datagram::send_conn(self, ctx, conn, body).map_err(|(body, err)| (body.into_inner(), err))
     }
 
     fn send_udp_conn_to(
@@ -1489,28 +1480,15 @@ impl<
         remote_port: NonZeroU16,
         body: B,
     ) -> Result<(), (B, UdpSendToError)> {
-        self.with_sockets_mut(|sync_ctx, state| {
-            let UdpSockets { sockets: DatagramSockets { bound, unbound: _ }, lazy_port_alloc: _ } =
-                state;
-            let (
-                ConnState { socket, clear_device_on_disconnect: _ },
-                _,
-                ConnAddr { ip: ConnIpAddr { local, remote: _ }, device },
-            ): &(_, PosixSharingOptions, _) =
-                bound.conns().get_by_id(&conn).expect("no such connection");
-
-            let (local_ip, local_port) = *local;
-
-            send_udp_oneshot(
-                sync_ctx,
-                ctx,
-                (Some(local_ip), local_port),
-                remote_ip,
-                remote_port,
-                device,
-                socket.options(),
-                body,
-            )
+        datagram::send_conn_to(self, ctx, conn, remote_ip, remote_port, body).map_err(|s| match s {
+            SendToError::Zone(body, e) => (body, UdpSendToError::Zone(e)),
+            SendToError::CreateAndSend(ser, e) => (
+                ser.into_inner(),
+                match e {
+                    IpSockCreateAndSendError::Mtu => UdpSendToError::Mtu,
+                    IpSockCreateAndSendError::Create(e) => UdpSendToError::CreateSock(e),
+                },
+            ),
         })
     }
 
@@ -1522,80 +1500,26 @@ impl<
         remote_port: NonZeroU16,
         body: B,
     ) -> Result<(), (B, UdpSendToError)> {
-        // TODO(https://fxbug.dev/92447) If `local_ip` is `None`, and so
-        // `new_ip_socket` picks a local IP address for us, it may cause problems
-        // when we don't match the bound listener addresses. We should revisit
-        // whether that check is actually necessary.
-        //
-        // Also, if the local IP address is a multicast address this function should
-        // probably fail and `send_udp_conn_to` must be used instead.
-        self.with_sockets_mut(|sync_ctx, state| {
-            let UdpSockets { sockets: DatagramSockets { bound, unbound: _ }, lazy_port_alloc: _ } =
-                state;
-            let (
-                ListenerState { ip_options },
-                _,
-                ListenerAddr {
-                    ip: ListenerIpAddr { addr: local_ip, identifier: local_port },
-                    device,
+        datagram::send_listener_to(
+            self,
+            ctx,
+            listener,
+            IpProto::Udp.into(),
+            remote_ip,
+            remote_port,
+            body,
+        )
+        .map_err(|e| match e {
+            SendToError::Zone(body, e) => (body, UdpSendToError::Zone(e)),
+            SendToError::CreateAndSend(ser, e) => (
+                ser.into_inner(),
+                match e {
+                    IpSockCreateAndSendError::Mtu => UdpSendToError::Mtu,
+                    IpSockCreateAndSendError::Create(e) => UdpSendToError::CreateSock(e),
                 },
-            ): &(_, PosixSharingOptions, _) =
-                bound.listeners().get_by_id(&listener).expect("specified listener not found");
-
-            send_udp_oneshot(
-                sync_ctx,
-                ctx,
-                (*local_ip, *local_port),
-                remote_ip,
-                remote_port,
-                device,
-                ip_options,
-                body,
-            )
+            ),
         })
     }
-}
-
-fn send_udp_oneshot<I: IpExt, SC: BufferIpSocketHandler<I, C, B>, C, B: BufferMut>(
-    sync_ctx: &mut SC,
-    ctx: &mut C,
-    (local_ip, local_port): (Option<SpecifiedAddr<I::Addr>>, NonZeroU16),
-    remote_ip: ZonedAddr<I::Addr, SC::DeviceId>,
-    remote_port: NonZeroU16,
-    device: &Option<SC::DeviceId>,
-    ip_options: &IpOptions<I::Addr, SC::DeviceId>,
-    body: B,
-) -> Result<(), (B, UdpSendToError)> {
-    let (remote_ip, device) = match datagram::resolve_addr_with_device(remote_ip, device.as_ref()) {
-        Ok(addr) => addr,
-        Err(e) => return Err((body, UdpSendToError::Zone(e))),
-    };
-
-    sync_ctx
-        .send_oneshot_ip_packet(
-            ctx,
-            device.as_ref(),
-            local_ip,
-            remote_ip,
-            IpProto::Udp.into(),
-            ip_options,
-            |src_ip| {
-                body.encapsulate(UdpPacketBuilder::new(
-                    src_ip.get(),
-                    remote_ip.get(),
-                    Some(local_port),
-                    remote_port,
-                ))
-            },
-            None,
-        )
-        .map_err(|(body, err, _ip_options)| {
-            let err = match err {
-                IpSockCreateAndSendError::Mtu => UdpSendToError::Mtu,
-                IpSockCreateAndSendError::Create(err) => UdpSendToError::CreateSock(err),
-            };
-            (body.into_inner(), err)
-        })
 }
 
 /// Sends a UDP packet on an existing connected socket.

@@ -10,13 +10,14 @@ use core::{
     hash::Hash,
     num::{NonZeroU16, NonZeroU8},
 };
+use packet::{BufferMut, Serializer};
 
 use derivative::Derivative;
 use net_types::{
     ip::{GenericOverIp, Ip, IpAddress},
     MulticastAddr, MulticastAddress as _, SpecifiedAddr, ZonedAddr,
 };
-use packet_formats::ip::IpProto;
+use packet_formats::ip::{IpProto, IpProtoExt};
 use thiserror::Error;
 
 use crate::{
@@ -27,8 +28,12 @@ use crate::{
     },
     error::{LocalAddressError, RemoteAddressError, SocketError, ZonedAddressError},
     ip::{
-        socket::{IpSock, IpSockCreationError, IpSocketHandler, SendOptions},
-        HopLimits, IpDeviceId, IpExt, MulticastMembershipHandler, TransportIpContext,
+        socket::{
+            BufferIpSocketHandler, IpSock, IpSockCreateAndSendError, IpSockCreationError,
+            IpSockSendError, IpSocketHandler as _, SendOptions,
+        },
+        BufferTransportIpContext, HopLimits, IpDeviceId, IpExt, MulticastMembershipHandler,
+        TransportIpContext,
     },
     socket::{
         self,
@@ -251,6 +256,30 @@ pub(crate) trait DatagramStateNonSyncContext<A: SocketMapAddrSpec> {
     ) -> Option<A::LocalIdentifier>;
 }
 
+pub(crate) trait BufferDatagramStateContext<
+    A: SocketMapAddrSpec,
+    C,
+    S: SocketMapStateSpec,
+    B: BufferMut,
+>: DatagramStateContext<A, C, S, IpSocketsCtx = Self::BufferIpSocketsCtx> where
+    Bound<S>: Tagged<AddrVec<A>>,
+{
+    type BufferIpSocketsCtx: BufferTransportIpContext<A::IpVersion, C, B, DeviceId = A::DeviceId>;
+}
+impl<
+        A: SocketMapAddrSpec,
+        C,
+        S: SocketMapStateSpec,
+        B: BufferMut,
+        SC: DatagramStateContext<A, C, S>,
+    > BufferDatagramStateContext<A, C, S, B> for SC
+where
+    Bound<S>: Tagged<AddrVec<A>>,
+    SC::IpSocketsCtx: BufferTransportIpContext<A::IpVersion, C, B, DeviceId = A::DeviceId>,
+{
+    type BufferIpSocketsCtx = SC::IpSocketsCtx;
+}
+
 pub(crate) trait DatagramSocketStateSpec: SocketMapStateSpec {
     type UnboundId: Clone + From<usize> + Into<usize> + Debug;
     type UnboundSharingState: Default;
@@ -270,24 +299,11 @@ pub(crate) trait DatagramSocketSpec<A: SocketMapAddrSpec>:
         A,
     >
 {
-}
-
-impl<A, SS> DatagramSocketSpec<A> for SS
-where
-    A: SocketMapAddrSpec,
-    SS: DatagramSocketStateSpec<
-            ListenerState = ListenerState<A::IpAddr, A::DeviceId>,
-            ConnState = ConnState<A::IpVersion, A::DeviceId>,
-        > + SocketMapConflictPolicy<
-            ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
-            <Self as SocketMapStateSpec>::ListenerSharingState,
-            A,
-        > + SocketMapConflictPolicy<
-            ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
-            <Self as SocketMapStateSpec>::ConnSharingState,
-            A,
-        >,
-{
+    type Serializer<B: BufferMut>: Serializer<Buffer = B>;
+    fn make_packet<B: BufferMut>(
+        body: B,
+        addr: &ConnIpAddr<A::IpAddr, A::LocalIdentifier, A::RemoteIdentifier>,
+    ) -> Self::Serializer<B>;
 }
 
 pub(crate) struct InUseError;
@@ -861,6 +877,166 @@ where
             .expect("inserting listener for disconnected socket failed")
             .id()
     })
+}
+
+pub(crate) fn send_conn<
+    A: SocketMapAddrSpec,
+    C: DatagramStateNonSyncContext<A>,
+    SC: BufferDatagramStateContext<A, C, S, B>,
+    S: DatagramSocketSpec<A>,
+    B: BufferMut,
+>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    id: S::ConnId,
+    body: B,
+) -> Result<(), (S::Serializer<B>, IpSockSendError)>
+where
+    Bound<S>: Tagged<AddrVec<A>>,
+{
+    sync_ctx.with_sockets_mut(|sync_ctx, state, _allocator| {
+        let DatagramSockets { bound, unbound: _ } = state;
+        let (ConnState { socket, clear_device_on_disconnect: _ }, _sharing, addr) =
+            bound.conns().get_by_id(&id).expect("no such connection");
+        let ConnAddr { ip, device: _ } = addr;
+
+        sync_ctx.send_ip_packet(ctx, &socket, S::make_packet(body, &ip), None)
+    })
+}
+
+pub(crate) enum SendToError<B, S> {
+    Zone(B, ZonedAddressError),
+    CreateAndSend(S, IpSockCreateAndSendError),
+}
+
+pub(crate) fn send_conn_to<
+    A: SocketMapAddrSpec,
+    C: DatagramStateNonSyncContext<A>,
+    SC: BufferDatagramStateContext<A, C, S, B>,
+    S: DatagramSocketSpec<A>,
+    B: BufferMut,
+>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    id: S::ConnId,
+    remote_ip: ZonedAddr<A::IpAddr, A::DeviceId>,
+    remote_port: A::RemoteIdentifier,
+    body: B,
+) -> Result<(), SendToError<B, S::Serializer<B>>>
+where
+    Bound<S>: Tagged<AddrVec<A>>,
+{
+    sync_ctx.with_sockets_mut(|sync_ctx, state, _allocator| {
+        let DatagramSockets { bound, unbound: _ } = state;
+        let (
+            ConnState { socket, clear_device_on_disconnect: _ },
+            _,
+            ConnAddr { ip: ConnIpAddr { local, remote: _ }, device },
+        ): &(_, S::ConnSharingState, _) = bound.conns().get_by_id(&id).expect("no such connection");
+
+        let (local_ip, local_id) = local;
+
+        send_oneshot::<A, S, _, _, _>(
+            sync_ctx,
+            ctx,
+            (Some(*local_ip), local_id.clone()),
+            remote_ip,
+            remote_port,
+            device,
+            socket.options(),
+            socket.proto(),
+            body,
+        )
+    })
+}
+
+pub(crate) fn send_listener_to<
+    A: SocketMapAddrSpec,
+    C: DatagramStateNonSyncContext<A>,
+    SC: BufferDatagramStateContext<A, C, S, B>,
+    S: DatagramSocketSpec<A>,
+    B: BufferMut,
+>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    id: S::ListenerId,
+    proto: <A::IpVersion as IpProtoExt>::Proto,
+    remote_ip: ZonedAddr<A::IpAddr, A::DeviceId>,
+    remote_port: A::RemoteIdentifier,
+    body: B,
+) -> Result<(), SendToError<B, S::Serializer<B>>>
+where
+    Bound<S>: Tagged<AddrVec<A>>,
+{
+    // TODO(https://fxbug.dev/92447) If `local_ip` is `None`, and so
+    // `new_ip_socket` picks a local IP address for us, it may cause problems
+    // when we don't match the bound listener addresses. We should revisit
+    // whether that check is actually necessary.
+    //
+    // Also, if the local IP address is a multicast address this function should
+    // probably fail and `send_udp_conn_to` must be used instead.
+    sync_ctx.with_sockets_mut(|sync_ctx, state, _allocator| {
+        let DatagramSockets { bound, unbound: _ } = state;
+        let (
+            ListenerState { ip_options },
+            _,
+            ListenerAddr { ip: ListenerIpAddr { addr: local_ip, identifier: local_port }, device },
+        ): &(_, S::ListenerSharingState, _) =
+            bound.listeners().get_by_id(&id).expect("specified listener not found");
+
+        send_oneshot::<A, S, _, _, _>(
+            sync_ctx,
+            ctx,
+            (*local_ip, local_port.clone()),
+            remote_ip,
+            remote_port,
+            device,
+            ip_options,
+            proto,
+            body,
+        )
+    })
+}
+
+fn send_oneshot<
+    A: SocketMapAddrSpec,
+    S: DatagramSocketSpec<A>,
+    SC: BufferIpSocketHandler<A::IpVersion, C, B, DeviceId = A::DeviceId>,
+    C,
+    B: BufferMut,
+>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    (local_ip, local_id): (Option<SpecifiedAddr<A::IpAddr>>, A::LocalIdentifier),
+    remote_ip: ZonedAddr<A::IpAddr, A::DeviceId>,
+    remote_id: A::RemoteIdentifier,
+    device: &Option<A::DeviceId>,
+    ip_options: &IpOptions<A::IpAddr, A::DeviceId>,
+    proto: <A::IpVersion as IpProtoExt>::Proto,
+    body: B,
+) -> Result<(), SendToError<B, S::Serializer<B>>> {
+    let (remote_ip, device) = match resolve_addr_with_device(remote_ip, device.as_ref()) {
+        Ok(addr) => addr,
+        Err(e) => return Err(SendToError::Zone(body, e)),
+    };
+
+    sync_ctx
+        .send_oneshot_ip_packet(
+            ctx,
+            device.as_ref(),
+            local_ip,
+            remote_ip,
+            proto,
+            ip_options,
+            |local_ip| {
+                S::make_packet(
+                    body,
+                    &ConnIpAddr { local: (local_ip, local_id), remote: (remote_ip, remote_id) },
+                )
+            },
+            None,
+        )
+        .map_err(|(body, err, _ip_options)| SendToError::CreateAndSend(body, err))
 }
 
 #[derive(Derivative)]
@@ -1460,6 +1636,22 @@ mod test {
             // Addresses are completely independent and shadowing doesn't cause
             // conflicts.
             Ok(())
+        }
+    }
+
+    impl<I: DatagramIpExt, D: IpDeviceId> DatagramSocketSpec<FakeAddrSpec<I, D>>
+        for FakeStateSpec<I, D>
+    {
+        type Serializer<B: BufferMut> = B;
+        fn make_packet<B: BufferMut>(
+            body: B,
+            _addr: &ConnIpAddr<
+                <FakeAddrSpec<I, D> as SocketMapAddrSpec>::IpAddr,
+                <FakeAddrSpec<I, D> as SocketMapAddrSpec>::LocalIdentifier,
+                <FakeAddrSpec<I, D> as SocketMapAddrSpec>::RemoteIdentifier,
+            >,
+        ) -> Self::Serializer<B> {
+            body
         }
     }
 
