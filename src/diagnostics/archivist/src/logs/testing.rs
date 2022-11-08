@@ -5,7 +5,7 @@
 use crate::{
     events::types::{Event, EventPayload, LogSinkRequestedPayload},
     identity::ComponentIdentity,
-    logs::{budget::BudgetManager, repository::LogsRepository},
+    logs::{budget::BudgetManager, repository::LogsRepository, servers::LogServer},
 };
 use async_trait::async_trait;
 use diagnostics_log_encoding::{encode::Encoder, Record};
@@ -36,6 +36,7 @@ use validating_log_listener::{validate_log_dump, validate_log_stream};
 pub struct TestHarness {
     inspector: Inspector,
     log_manager: Arc<LogsRepository>,
+    _log_server: LogServer,
     log_proxy: LogProxy,
     /// weak pointers to "pending" TestStreams which haven't dropped yet
     pending_streams: Vec<Weak<()>>,
@@ -85,20 +86,16 @@ impl TestHarness {
         let inspector = Inspector::new();
         let budget = BudgetManager::new(1_000_000);
         let log_manager = Arc::new(LogsRepository::new(&budget, inspector.root()));
+        let log_server = LogServer::new(log_manager.clone());
 
-        let (listen_sender, listen_receiver) = mpsc::unbounded();
         let (log_proxy, log_stream) =
             fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
-
-        log_manager.clone().handle_log(log_stream, listen_sender);
-        fasync::Task::spawn(
-            listen_receiver.for_each_concurrent(None, |rx| async move { rx.await }),
-        )
-        .detach();
+        log_server.spawn(log_stream);
 
         Self {
             inspector,
             log_manager,
+            _log_server: log_server,
             log_proxy,
             pending_streams: vec![],
             sinks: if hold_sinks { Some(vec![]) } else { None },
@@ -394,15 +391,13 @@ pub async fn debuglog_test(
     expected: impl IntoIterator<Item = LogMessage>,
     debug_log: TestDebugLog,
 ) -> Inspector {
-    let (log_sender, log_receiver) = mpsc::unbounded();
-    fasync::Task::spawn(log_receiver.for_each_concurrent(None, |rx| async move { rx.await }))
-        .detach();
-
     let inspector = Inspector::new();
     let budget = BudgetManager::new(1_000_000);
     let lm = Arc::new(LogsRepository::new(&budget, inspector.root()));
+    let log_server = LogServer::new(lm.clone());
     let (log_proxy, log_stream) = fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
-    lm.clone().handle_log(log_stream, log_sender);
+    log_server.spawn(log_stream);
+
     fasync::Task::spawn(lm.drain_debuglog(debug_log)).detach();
 
     validate_log_stream(expected, log_proxy, None).await;

@@ -2,57 +2,42 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::{
-        accessor::ArchiveAccessorServer,
-        component_lifecycle::{self, TestControllerServer},
-        diagnostics,
-        error::Error,
-        events::{
-            router::{ConsumerConfig, EventRouter, ProducerConfig, RouterOptions},
-            sources::{
-                ComponentEventProvider, EventSource, LogConnector, UnattributedLogSinkSource,
-            },
-            types::*,
-        },
-        identity::ComponentIdentity,
-        inspect::repository::InspectRepository,
-        logs::{budget::BudgetManager, repository::LogsRepository, KernelDebugLog},
-        pipeline::Pipeline,
+use crate::{
+    accessor::ArchiveAccessorServer,
+    component_lifecycle::{self, TestControllerServer},
+    diagnostics,
+    error::Error,
+    events::{
+        router::{ConsumerConfig, EventRouter, ProducerConfig, RouterOptions},
+        sources::{ComponentEventProvider, EventSource, LogConnector, UnattributedLogSinkSource},
+        types::*,
     },
-    archivist_config::Config,
-    fidl_fuchsia_io as fio,
-    fidl_fuchsia_sys2::EventSourceMarker,
-    fidl_fuchsia_sys_internal as fsys_internal,
-    fuchsia_async::{self as fasync, Task},
-    fuchsia_component::{
-        client::connect_to_protocol,
-        server::{ServiceFs, ServiceObj},
-    },
-    fuchsia_inspect::{component, health::Reporter},
-    futures::{
-        channel::{mpsc, oneshot},
-        future::{self, abortable},
-        prelude::*,
-    },
-    std::{path::Path, sync::Arc},
-    tracing::{debug, error, info, warn},
+    identity::ComponentIdentity,
+    inspect::repository::InspectRepository,
+    logs::{budget::BudgetManager, repository::LogsRepository, servers::*, KernelDebugLog},
+    pipeline::Pipeline,
 };
+use archivist_config::Config;
+use fidl_fuchsia_io as fio;
+use fidl_fuchsia_sys2::EventSourceMarker;
+use fidl_fuchsia_sys_internal as fsys_internal;
+use fuchsia_async as fasync;
+use fuchsia_component::{
+    client::connect_to_protocol,
+    server::{ServiceFs, ServiceObj},
+};
+use fuchsia_inspect::{component, health::Reporter};
+use futures::{
+    channel::{mpsc, oneshot},
+    future::{self, abortable},
+    prelude::*,
+};
+use std::{path::Path, sync::Arc};
+use tracing::{debug, error, info, warn};
 
 /// Responsible for initializing an `Archivist` instance. Supports multiple configurations by
 /// either calling or not calling methods on the builder like `serve_test_controller_protocol`.
 pub struct Archivist {
-    /// ServiceFs object to server outgoing directory.
-    fs: ServiceFs<ServiceObj<'static, ()>>,
-
-    /// Sender which is used to close the stream of Log connections after ingestion of logsink
-    /// completes.
-    ///
-    /// Clones of the sender keep the receiver end of the channel open. As soon
-    /// as all clones are dropped or disconnected, the receiver will close. The
-    /// receiver must close for `Archivist::run` to return gracefully.
-    listen_sender: mpsc::UnboundedSender<Task<()>>,
-
     /// Handles event routing between archivist parts.
     event_router: EventRouter,
 
@@ -64,9 +49,6 @@ pub struct Archivist {
 
     /// Tasks that drains klog.
     _drain_klog_task: Option<fasync::Task<()>>,
-
-    /// Task draining the receiver for the `listen_sender`s.
-    drain_listeners_task: fasync::Task<()>,
 
     /// Tasks receiving external events from component manager and appmgr.
     incoming_external_event_producers: Vec<fasync::Task<()>>,
@@ -86,6 +68,12 @@ pub struct Archivist {
     /// The server handling fuchsia.diagnostics.ArchiveAccessor
     accessor_server: Arc<ArchiveAccessorServer>,
 
+    /// The server handling fuchsia.logger.Log
+    log_server: Arc<LogServer>,
+
+    /// The server handling fuchsia.diagnostics.LogSettings
+    log_settings_server: Arc<LogSettingsServer>,
+
     /// The server handling fuchsia.diagnostics.test.Controller
     test_controller_server: Option<TestControllerServer>,
 
@@ -98,10 +86,6 @@ impl Archivist {
     /// Also installs `fuchsia.diagnostics.Archive` service.
     /// Call `install_log_services`
     pub fn new(archivist_configuration: &Config) -> Self {
-        let fs = ServiceFs::new();
-
-        let (listen_sender, listen_receiver) = mpsc::unbounded();
-
         let pipelines = Self::init_pipelines(archivist_configuration);
 
         let logs_budget =
@@ -112,6 +96,8 @@ impl Archivist {
 
         let accessor_server =
             Arc::new(ArchiveAccessorServer::new(inspect_repo.clone(), logs_repo.clone()));
+        let log_server = Arc::new(LogServer::new(logs_repo.clone()));
+        let log_settings_server = Arc::new(LogSettingsServer::new(logs_repo.clone()));
 
         let (test_controller_server, _lifecycle_task, stop_recv) =
             if archivist_configuration.install_controller {
@@ -139,17 +125,14 @@ impl Archivist {
         };
 
         Self {
-            fs,
             test_controller_server,
             accessor_server,
-            listen_sender,
+            log_server,
+            log_settings_server,
             event_router,
             stop_recv,
             _lifecycle_task,
             _drain_klog_task: None,
-            drain_listeners_task: fasync::Task::spawn(async move {
-                listen_receiver.for_each_concurrent(None, |rx| async move { rx.await }).await;
-            }),
             incoming_external_event_producers: vec![],
             pipelines,
             inspect_repository: inspect_repo,
@@ -182,32 +165,6 @@ impl Archivist {
         component::inspector().root().record(accessor_stats_node);
 
         pipelines
-    }
-
-    /// Installs `LogSink` and `Log` services. Panics if called twice.
-    pub async fn install_log_services(&mut self) -> &mut Self {
-        let data_repo_1 = self.logs_repository.clone();
-        let data_repo_2 = self.logs_repository.clone();
-        let listen_sender = self.listen_sender.clone();
-
-        self.fs
-            .dir("svc")
-            .add_fidl_service(move |stream| {
-                debug!("fuchsia.logger.Log connection");
-                data_repo_1.clone().handle_log(stream, listen_sender.clone());
-            })
-            .add_fidl_service(move |stream| {
-                debug!("fuchsia.diagnostics.LogSettings connection");
-                let data_repo_for_task = data_repo_2.clone();
-                fasync::Task::spawn(async move {
-                    data_repo_for_task.handle_log_settings(stream).await.unwrap_or_else(|err| {
-                        error!(?err, "Failed to handle LogSettings");
-                    });
-                })
-                .detach();
-            });
-        debug!("Log services initialized.");
-        self
     }
 
     pub async fn install_event_source(&mut self) {
@@ -286,13 +243,14 @@ impl Archivist {
     ) -> Result<(), Error> {
         debug!("Running Archivist.");
 
-        self.serve_protocols().await;
+        let mut fs = ServiceFs::new();
+        self.serve_protocols(&mut fs).await;
 
         let logs_repository = self.logs_repository.clone();
         let inspect_repository = self.inspect_repository.clone();
-        self.fs.serve_connection(outgoing_channel).map_err(Error::ServeOutgoing)?;
+        fs.serve_connection(outgoing_channel).map_err(Error::ServeOutgoing)?;
         // Start servicing all outgoing services.
-        let run_outgoing = self.fs.collect::<()>();
+        let run_outgoing = fs.collect::<()>();
 
         let (snd, rcv) = mpsc::unbounded::<Arc<ComponentIdentity>>();
         self.logs_budget.set_remover(snd).await;
@@ -316,8 +274,8 @@ impl Archivist {
             drain_events_fut.await;
         });
 
-        let drain_listeners_task = self.drain_listeners_task;
         let accessor_server = self.accessor_server.clone();
+        let log_server = self.log_server.clone();
         let logs_repo = logs_repository.clone();
         let all_msg = async {
             logs_repo.wait_for_termination().await;
@@ -325,7 +283,7 @@ impl Archivist {
             logs_budget.terminate().await;
             debug!("Flushing to listeners.");
             accessor_server.wait_for_servers_to_complete().await;
-            drain_listeners_task.await;
+            log_server.wait_for_servers_to_complete().await;
             debug!("Log listeners and batch iterators stopped.");
             component_removal_task.cancel().await;
             debug!("Not processing more component removal requests.");
@@ -333,7 +291,7 @@ impl Archivist {
 
         let (abortable_fut, abort_handle) = abortable(run_outgoing);
 
-        let mut listen_sender = self.listen_sender;
+        let log_server = self.log_server;
         let accessor_server = self.accessor_server;
         let incoming_external_event_producers = self.incoming_external_event_producers;
         let stop_fut = match self.stop_recv {
@@ -343,7 +301,7 @@ impl Archivist {
                 for task in incoming_external_event_producers {
                     task.cancel().await;
                 }
-                listen_sender.disconnect();
+                log_server.stop().await;
                 accessor_server.stop().await;
                 logs_repository.stop_accepting_new_log_sinks().await;
                 abort_handle.abort()
@@ -357,11 +315,10 @@ impl Archivist {
         future::join3(abortable_fut, stop_fut, all_msg).map(|_| Ok(())).await
     }
 
-    async fn serve_protocols(&mut self) {
-        diagnostics::serve(&mut self.fs)
-            .unwrap_or_else(|err| warn!(?err, "failed to serve diagnostics"));
+    async fn serve_protocols(&mut self, fs: &mut ServiceFs<ServiceObj<'static, ()>>) {
+        diagnostics::serve(fs).unwrap_or_else(|err| warn!(?err, "failed to serve diagnostics"));
 
-        let mut svc_dir = self.fs.dir("svc");
+        let mut svc_dir = fs.dir("svc");
 
         // Serve fuchsia.diagnostics.ArchiveAccessors backed by a pipeline.
         for pipeline in &self.pipelines {
@@ -379,12 +336,27 @@ impl Archivist {
             });
         }
 
+        // Ingest unattributed fuchsia.logger.LogSink connections.
         if let Some(mut unattributed_log_sink_source) = self.unattributed_log_sink_source.take() {
             svc_dir.add_fidl_service(move |stream| {
                 debug!("unattributed fuchsia.logger.LogSink connection");
                 futures::executor::block_on(unattributed_log_sink_source.new_connection(stream));
             });
         }
+
+        // Server fuchsia.logger.Log
+        let log_server = self.log_server.clone();
+        svc_dir.add_fidl_service(move |stream| {
+            debug!("fuchsia.logger.Log connection");
+            log_server.spawn(stream);
+        });
+
+        // Server fuchsia.diagnostics.LogSettings
+        let log_settings_server = self.log_settings_server.clone();
+        svc_dir.add_fidl_service(move |stream| {
+            debug!("fuchsia.diagnostics.LogSettings connection");
+            log_settings_server.spawn(stream);
+        });
     }
 
     async fn process_removal_of_components(
@@ -452,8 +424,7 @@ mod tests {
     // run archivist and send signal when it dies.
     async fn run_archivist_and_signal_on_exit() -> (fio::DirectoryProxy, oneshot::Receiver<()>) {
         let (directory, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
-        let mut archivist = init_archivist();
-        archivist.install_log_services().await;
+        let archivist = init_archivist();
         let (signal_send, signal_recv) = oneshot::channel();
         fasync::Task::spawn(async move {
             archivist
@@ -469,8 +440,7 @@ mod tests {
     // runs archivist and returns its directory.
     async fn run_archivist() -> fio::DirectoryProxy {
         let (directory, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
-        let mut archivist = init_archivist();
-        archivist.install_log_services().await;
+        let archivist = init_archivist();
         fasync::Task::spawn(async move {
             archivist
                 .run(server_end, RouterOptions::default())

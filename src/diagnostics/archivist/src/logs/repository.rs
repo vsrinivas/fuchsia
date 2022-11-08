@@ -13,8 +13,6 @@ use crate::{
         budget::BudgetManager,
         container::LogsArtifactsContainer,
         debuglog::{DebugLog, DebugLogBridge, KERNEL_IDENTITY},
-        error::LogsError,
-        listener::Listener,
         multiplex::{Multiplexer, MultiplexerHandle},
     },
     trie,
@@ -22,12 +20,7 @@ use crate::{
 use async_lock::{Mutex, RwLock};
 use async_trait::async_trait;
 use diagnostics_data::LogsData;
-use fidl::prelude::*;
-use fidl_fuchsia_diagnostics::{
-    self, LogInterestSelector, LogSettingsMarker, LogSettingsRequest, LogSettingsRequestStream,
-    Selector, StreamMode,
-};
-use fidl_fuchsia_logger::{LogMarker, LogRequest, LogRequestStream};
+use fidl_fuchsia_diagnostics::{self, LogInterestSelector, Selector, StreamMode};
 use fuchsia_async as fasync;
 use fuchsia_inspect as inspect;
 use fuchsia_trace as ftrace;
@@ -41,24 +34,24 @@ use std::{
         Arc,
     },
 };
-use tracing::{debug, error, warn};
+use tracing::{debug, error};
 
 lazy_static! {
-    static ref CONNECTION_ID: AtomicUsize = AtomicUsize::new(0);
+    pub static ref INTEREST_CONNECTION_ID: AtomicUsize = AtomicUsize::new(0);
 }
 
 /// LogsRepository holds all diagnostics data and is a singleton wrapped by multiple
 /// [`pipeline::Pipeline`]s in a given Archivist instance.
 pub struct LogsRepository {
     log_sender: Arc<RwLock<mpsc::UnboundedSender<fasync::Task<()>>>>,
-    inner: RwLock<LogsRepositoryState>,
+    mutable_state: RwLock<LogsRepositoryState>,
 }
 
 impl LogsRepository {
     pub fn new(logs_budget: &BudgetManager, parent: &fuchsia_inspect::Node) -> Self {
         let (log_sender, log_receiver) = mpsc::unbounded();
         LogsRepository {
-            inner: LogsRepositoryState::new(logs_budget.clone(), log_receiver, parent),
+            mutable_state: LogsRepositoryState::new(logs_budget.clone(), log_receiver, parent),
             log_sender: Arc::new(RwLock::new(log_sender)),
         }
     }
@@ -70,7 +63,8 @@ impl LogsRepository {
         K: DebugLog + Send + Sync + 'static,
     {
         debug!("Draining debuglog.");
-        let container = self.inner.write().await.get_log_container(KERNEL_IDENTITY.clone()).await;
+        let container =
+            self.mutable_state.write().await.get_log_container(KERNEL_IDENTITY.clone()).await;
         let mut kernel_logger = DebugLogBridge::create(klog_reader);
         let mut messages = match kernel_logger.existing_logs().await {
             Ok(messages) => messages,
@@ -96,91 +90,13 @@ impl LogsRepository {
         }
     }
 
-    /// Spawn a task to handle requests from components reading the shared log.
-    pub fn handle_log(
-        self: Arc<LogsRepository>,
-        stream: LogRequestStream,
-        sender: mpsc::UnboundedSender<fasync::Task<()>>,
-    ) {
-        if let Err(e) = sender.clone().unbounded_send(fasync::Task::spawn(async move {
-            if let Err(e) = self.handle_log_requests(stream, sender).await {
-                warn!("error handling Log requests: {}", e);
-            }
-        })) {
-            warn!("Couldn't queue listener task: {:?}", e);
-        }
-    }
-
-    /// Handle requests to `fuchsia.logger.Log`. All request types read the
-    /// whole backlog from memory, `DumpLogs(Safe)` stops listening after that.
-    async fn handle_log_requests(
-        self: Arc<LogsRepository>,
-        mut stream: LogRequestStream,
-        mut sender: mpsc::UnboundedSender<fasync::Task<()>>,
-    ) -> Result<(), LogsError> {
-        let connection_id = CONNECTION_ID.fetch_add(1, Ordering::Relaxed);
-        while let Some(request) = stream.next().await {
-            let request = request.map_err(|source| LogsError::HandlingRequests {
-                protocol: LogMarker::PROTOCOL_NAME,
-                source,
-            })?;
-
-            let (listener, options, dump_logs, selectors) = match request {
-                LogRequest::ListenSafe { log_listener, options, .. } => {
-                    (log_listener, options, false, None)
-                }
-                LogRequest::DumpLogsSafe { log_listener, options, .. } => {
-                    (log_listener, options, true, None)
-                }
-
-                LogRequest::ListenSafeWithSelectors {
-                    log_listener, options, selectors, ..
-                } => (log_listener, options, false, Some(selectors)),
-            };
-
-            let listener = Listener::new(listener, options)?;
-            let mode =
-                if dump_logs { StreamMode::Snapshot } else { StreamMode::SnapshotThenSubscribe };
-            // NOTE: The LogListener code path isn't instrumented for tracing at the moment.
-            let logs = self.logs_cursor(mode, None, ftrace::Id::random()).await;
-            if let Some(s) = selectors {
-                self.inner.write().await.update_logs_interest(connection_id, s).await;
-            }
-
-            sender.send(listener.spawn(logs, dump_logs)).await.ok();
-        }
-        self.inner.write().await.finish_interest_connection(connection_id).await;
-        Ok(())
-    }
-
-    pub async fn handle_log_settings(
-        self: Arc<Self>,
-        mut stream: LogSettingsRequestStream,
-    ) -> Result<(), LogsError> {
-        let connection_id = CONNECTION_ID.fetch_add(1, Ordering::Relaxed);
-        while let Some(request) = stream.next().await {
-            let request = request.map_err(|source| LogsError::HandlingRequests {
-                protocol: LogSettingsMarker::PROTOCOL_NAME,
-                source,
-            })?;
-            match request {
-                LogSettingsRequest::RegisterInterest { selectors, .. } => {
-                    self.inner.write().await.update_logs_interest(connection_id, selectors).await;
-                }
-            }
-        }
-        self.inner.write().await.finish_interest_connection(connection_id).await;
-
-        Ok(())
-    }
-
     pub async fn logs_cursor(
         &self,
         mode: StreamMode,
         selectors: Option<Vec<Selector>>,
         parent_trace_id: ftrace::Id,
     ) -> impl Stream<Item = Arc<LogsData>> + Send + 'static {
-        let mut repo = self.inner.write().await;
+        let mut repo = self.mutable_state.write().await;
         let (mut merged, mpx_handle) = Multiplexer::new(parent_trace_id);
         if let Some(selectors) = selectors {
             merged.set_selectors(selectors);
@@ -204,7 +120,7 @@ impl LogsRepository {
     /// Returns `true` if a container exists for the requested `identity` and that container either
     /// corresponds to a running component or we've decided to still retain it.
     pub async fn is_live(&self, identity: &ComponentIdentity) -> bool {
-        let this = self.inner.read().await;
+        let this = self.mutable_state.read().await;
         match this.data_directories.get(&identity.unique_key()) {
             Some(container) => container.should_retain().await,
             None => false,
@@ -215,20 +131,20 @@ impl LogsRepository {
         &self,
         identity: ComponentIdentity,
     ) -> Arc<LogsArtifactsContainer> {
-        self.inner.write().await.get_log_container(identity).await
+        self.mutable_state.write().await.get_log_container(identity).await
     }
 
     pub async fn remove(&self, identity: &ComponentIdentity) {
-        self.inner.write().await.remove(identity);
+        self.mutable_state.write().await.remove(identity);
     }
     /// Stop accepting new messages, ensuring that pending Cursors return Poll::Ready(None) after
     /// consuming any messages received before this call.
     pub async fn wait_for_termination(&self) {
-        let receiver = self.inner.write().await.log_receiver.take().unwrap();
+        let receiver = self.mutable_state.write().await.log_receiver.take().unwrap();
         receiver.for_each_concurrent(None, |rx| async move { rx.await }).await;
         // Process messages from log sink.
         debug!("Log ingestion stopped.");
-        let mut repo = self.inner.write().await;
+        let mut repo = self.mutable_state.write().await;
         for container in repo.data_directories.iter().filter_map(|(_, v)| v) {
             container.terminate_logs();
         }
@@ -239,6 +155,26 @@ impl LogsRepository {
     /// will be accepted when this is called and we'll proceed to terminate logs.
     pub async fn stop_accepting_new_log_sinks(&self) {
         self.log_sender.write().await.disconnect();
+    }
+
+    /// Returns an id to use for a new interest connection. Used by both LogSettings and Log, to
+    /// ensure shared uniqueness of their connections.
+    pub fn new_interest_connection(&self) -> usize {
+        INTEREST_CONNECTION_ID.fetch_add(1, Ordering::Relaxed)
+    }
+
+    /// Updates log selectors associated with an interest connection.
+    pub async fn update_logs_interest(
+        &self,
+        connection_id: usize,
+        selectors: Vec<LogInterestSelector>,
+    ) {
+        self.mutable_state.write().await.update_logs_interest(connection_id, selectors).await;
+    }
+
+    /// Indicates that the connection associated with the given ID is now done.
+    pub async fn finish_interest_connection(&self, connection_id: usize) {
+        self.mutable_state.write().await.finish_interest_connection(connection_id).await;
     }
 
     #[cfg(test)]
@@ -496,13 +432,18 @@ mod tests {
         let stream =
             repo.logs_cursor(StreamMode::SnapshotThenSubscribe, None, ftrace::Id::random()).await;
 
-        assert_eq!(repo.inner.read().await.logs_multiplexers.live_iterators.lock().await.len(), 1);
+        assert_eq!(
+            repo.mutable_state.read().await.logs_multiplexers.live_iterators.lock().await.len(),
+            1
+        );
 
         // When the multiplexer goes away it must be forgotten by the broker.
         drop(stream);
         loop {
             fasync::Timer::new(Duration::from_millis(100)).await;
-            if repo.inner.read().await.logs_multiplexers.live_iterators.lock().await.len() == 0 {
+            if repo.mutable_state.read().await.logs_multiplexers.live_iterators.lock().await.len()
+                == 0
+            {
                 break;
             }
         }

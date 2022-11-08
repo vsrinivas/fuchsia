@@ -131,8 +131,6 @@ async fn async_main(config: Config) -> Result<(), Error> {
     let mut archivist = Archivist::new(&config);
     debug!("Archivist initialized from configuration.");
 
-    archivist.install_log_services().await;
-
     if config.enable_event_source {
         archivist.install_event_source().await;
     }
