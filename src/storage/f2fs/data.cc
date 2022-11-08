@@ -410,18 +410,18 @@ zx_status_t VnodeF2fs::GetNewDataPage(pgoff_t index, bool new_i_size, LockedPage
 // }
 #endif
 
-zx::result<block_t> VnodeF2fs::GetBlockAddrForDataPage(LockedPage &page) {
+zx_status_t VnodeF2fs::DoWriteDataPage(LockedPage &page) {
   LockedPage dnode_page;
   if (zx_status_t err =
           fs()->GetNodeManager().FindLockedDnodePage(*this, page->GetIndex(), &dnode_page);
       err != ZX_OK) {
-    return zx::error(err);
+    return err;
   }
 
   uint32_t ofs_in_dnode;
   if (auto result = fs()->GetNodeManager().GetOfsInDnode(*this, page->GetIndex());
       result.is_error()) {
-    return result.take_error();
+    return result.error_value();
   } else {
     ofs_in_dnode = result.value();
   }
@@ -429,37 +429,39 @@ zx::result<block_t> VnodeF2fs::GetBlockAddrForDataPage(LockedPage &page) {
   block_t old_blk_addr = DatablockAddr(&dnode_page.GetPage<NodePage>(), ofs_in_dnode);
   // This page is already truncated
   if (old_blk_addr == kNullAddr) {
-    return zx::error(ZX_ERR_NOT_FOUND);
+    return ZX_ERR_NOT_FOUND;
   }
 
-  block_t new_blk_addr = kNullAddr;
+  // If current allocation needs SSR,
+  // it had better in-place writes for updated data.
   if (old_blk_addr != kNewAddr && !page->IsColdData() &&
       fs()->GetSegmentManager().NeedInplaceUpdate(this)) {
-    new_blk_addr = old_blk_addr;
+    fs()->GetSegmentManager().RewriteDataPage(page, old_blk_addr);
   } else {
+    block_t new_blk_addr;
     pgoff_t file_offset = page->GetIndex();
-    auto addr_or = fs()->GetSegmentManager().GetBlockAddrForDataPage(
-        page, dnode_page.GetPage<NodePage>().NidOfNode(), ofs_in_dnode, old_blk_addr);
-    ZX_ASSERT(addr_or.is_ok());
-    new_blk_addr = *addr_or;
+    fs()->GetSegmentManager().WriteDataPage(this, page, dnode_page.GetPage<NodePage>().NidOfNode(),
+                                            ofs_in_dnode, old_blk_addr, &new_blk_addr);
     SetDataBlkaddr(dnode_page.GetPage<NodePage>(), ofs_in_dnode, new_blk_addr);
     UpdateExtentCache(new_blk_addr, file_offset);
     UpdateVersion();
   }
 
-  return zx::ok(new_blk_addr);
+  return ZX_OK;
 }
 
-zx::result<block_t> VnodeF2fs::GetBlockAddrForDirtyDataPage(LockedPage &page, bool is_reclaim) {
+zx_status_t VnodeF2fs::WriteDataPage(LockedPage &page, bool is_reclaim) {
   const pgoff_t end_index = (GetSize() >> kPageCacheShift);
-  block_t blk_addr = kNullAddr;
 
   if (page->GetIndex() >= end_index) {
+    // If the offset is out-of-range of file size,
+    // this page does not have to be written to disk.
     unsigned offset = GetSize() & (kPageSize - 1);
     if ((page->GetIndex() >= end_index + 1) || !offset) {
-      // This page is already truncated
-      page->ClearDirtyForIo();
-      return zx::error(ZX_ERR_NOT_FOUND);
+      if (page->ClearDirtyForIo()) {
+        page->SetWriteback();
+      }
+      return ZX_ERR_OUT_OF_RANGE;
     }
     page->ZeroUserSegment(offset, kPageSize);
   }
@@ -475,15 +477,14 @@ zx::result<block_t> VnodeF2fs::GetBlockAddrForDirtyDataPage(LockedPage &page, bo
 
   if (page->ClearDirtyForIo()) {
     page->SetWriteback();
-    auto addr_or = GetBlockAddrForDataPage(page);
-    if (addr_or.is_error()) {
+    if (zx_status_t err = DoWriteDataPage(page); err != ZX_OK) {
       // TODO: Tracks pages skipping wb
       // ++wbc->pages_skipped;
-      return addr_or.take_error();
+      return err;
     }
-    blk_addr = *addr_or;
   }
-  return zx::ok(blk_addr);
+
+  return ZX_OK;
 }
 
 zx::result<std::vector<LockedPage>> VnodeF2fs::WriteBegin(const size_t offset, const size_t len) {
@@ -546,6 +547,15 @@ zx::result<std::vector<LockedPage>> VnodeF2fs::WriteBegin(const size_t offset, c
   }
 
   return zx::ok(std::move(data_pages));
+}
+
+zx_status_t VnodeF2fs::WriteDirtyPage(LockedPage &page, bool is_reclaim) {
+  if (IsMeta()) {
+    return fs()->F2fsWriteMetaPage(page, is_reclaim);
+  } else if (IsNode()) {
+    return fs()->GetNodeManager().F2fsWriteNodePage(page, is_reclaim);
+  }
+  return WriteDataPage(page, false);
 }
 
 }  // namespace f2fs

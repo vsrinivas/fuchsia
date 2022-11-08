@@ -30,21 +30,25 @@ void StorageBuffer::Init() {
   }
 }
 
-zx::result<size_t> StorageBuffer::ReserveWriteOperation(fbl::RefPtr<Page> page) {
-  if (page->GetBlockAddr() >= max_blocks_) {
+zx::result<size_t> StorageBuffer::ReserveWriteOperation(fbl::RefPtr<Page> page, block_t blk_addr) {
+  if (blk_addr >= max_blocks_) {
     return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
   std::lock_guard lock(mutex_);
-  // No room in |buffer_|.
-  if (free_list_.is_empty()) {
-    return zx::error(ZX_ERR_UNAVAILABLE);
+  // Wait until there is a room in |buffer_|.
+  while (free_list_.is_empty()) {
+    if (auto wait_result = cvar_.wait_for(mutex_, kWriteTimeOut);
+        wait_result == std::cv_status::timeout) {
+      FX_LOGS(ERROR) << "[f2fs] Allocating write buffers timeout. ";
+      return zx::error(ZX_ERR_TIMED_OUT);
+    }
   }
 
   auto key = free_list_.pop_front();
   storage::Operation op = {
       .type = storage::OperationType::kWrite,
       .vmo_offset = key->GetKey(),
-      .dev_offset = page->GetBlockAddr(),
+      .dev_offset = blk_addr,
       .length = 1,
   };
   // Copy |page| to |buffer| at |key|.

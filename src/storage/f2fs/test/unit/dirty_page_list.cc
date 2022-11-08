@@ -26,7 +26,6 @@ TEST_F(DirtyPageListTest, AddAndRemoveDirtyPage) {
 
     // Add dirty Page
     locked_page->SetDirty();
-    ASSERT_FALSE(locked_page->IsLastReference());
     ASSERT_EQ(locked_page->IsDirty(), true);
     ASSERT_EQ(locked_page->InTreeContainer(), true);
     ASSERT_EQ(locked_page->InListContainer(), true);
@@ -35,7 +34,7 @@ TEST_F(DirtyPageListTest, AddAndRemoveDirtyPage) {
     ASSERT_EQ(fs_->GetDirtyDataPageList().AddDirty(locked_page.get()), ZX_ERR_ALREADY_EXISTS);
 
     // Remove dirty Page
-    ASSERT_TRUE(fs_->GetDirtyDataPageList().RemoveDirty(locked_page.get()).is_ok());
+    ASSERT_EQ(fs_->GetDirtyDataPageList().RemoveDirty(locked_page.get()), ZX_OK);
     ASSERT_TRUE(locked_page->IsLastReference());
     locked_page->ClearDirtyForIo();
   }
@@ -97,7 +96,6 @@ TEST_F(DirtyPageListTest, ResetFileCache) {
     raw_page = locked_page.get();
   }
 
-  fs_->GetDirtyDataPageList().Reset();
   raw_page->GetFileCache().Reset();
   ASSERT_EQ(fs_->GetDirtyDataPageList().Size(), 0U);
 

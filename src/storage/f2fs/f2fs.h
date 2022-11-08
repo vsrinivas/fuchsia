@@ -202,6 +202,7 @@ class F2fs final {
   // checkpoint.cc
   zx_status_t GrabMetaPage(pgoff_t index, LockedPage *out);
   zx_status_t GetMetaPage(pgoff_t index, LockedPage *out);
+  zx_status_t F2fsWriteMetaPage(LockedPage &page, bool is_reclaim = false) const;
 
   bool CanReclaim() const;
   bool IsTearDown() const;
@@ -281,18 +282,24 @@ class F2fs final {
     return zx::error(ZX_ERR_UNAVAILABLE);
   }
 
+  // Flush all dirty Pages for the meta vnode that meet |operation|.if_page.
+  pgoff_t SyncMetaPages(WritebackOperation &operation);
+  // Flush all dirty data Pages for dirty vnodes that meet |operation|.if_vnode and if_page.
+  pgoff_t SyncDirtyDataPages(WritebackOperation &operation);
+
   zx::result<std::vector<LockedPage>> MakeReadOperations(std::vector<LockedPage> pages,
                                                          std::vector<block_t> addrs, PageType type,
                                                          bool is_sync = true);
   zx::result<LockedPage> MakeReadOperation(LockedPage page, block_t blk_addr, PageType type,
                                            bool is_sync = true);
+  zx_status_t MakeWriteOperation(LockedPage &page, block_t blk_addr, PageType type);
   zx_status_t MakeTrimOperation(block_t blk_addr, block_t nblocks) const;
 
-  void ScheduleWriter(sync_completion_t *completion = nullptr, PageList pages = {}) {
-    writer_->ScheduleSubmitPages(completion, std::move(pages));
+  void ScheduleWriterSubmitPages(sync_completion_t *completion = nullptr,
+                                 PageType type = PageType::kNrPageType) {
+    writer_->ScheduleSubmitPages(completion, type);
   }
-
-  void ScheduleWriteback(size_t num_pages = kDefaultBlocksPerSegment);
+  void ScheduleWriteback();
   zx::result<> WaitForWriteback() {
     if (!writeback_flag_.try_acquire_for(kWriteTimeOut)) {
       return zx::error(ZX_ERR_TIMED_OUT);
@@ -303,11 +310,6 @@ class F2fs final {
   std::atomic_flag &GetStopReclaimFlag() { return stop_reclaim_flag_; }
 
  private:
-  // Flush all dirty meta Pages that meet |operation|.if_page.
-  pgoff_t FlushDirtyMetaPages(WritebackOperation &operation);
-  // Flush all dirty data Pages that meet |operation|.if_vnode and if_page.
-  pgoff_t FlushDirtyDataPages(WritebackOperation &operation);
-
   std::mutex checkpoint_mutex_;
   std::atomic_flag teardown_flag_ = ATOMIC_FLAG_INIT;
   std::atomic_flag stop_reclaim_flag_ = ATOMIC_FLAG_INIT;

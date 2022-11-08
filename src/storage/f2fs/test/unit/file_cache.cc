@@ -122,7 +122,7 @@ TEST_F(FileCacheTest, EvictActivePages) {
 
   for (auto i = 0; i < 2; ++i) {
     LockedPage page;
-    vn->GrabCachePage(i, &page);
+    vn->GrabCachePage(0, &page);
     ASSERT_TRUE(page->IsWriteback());
   }
 
@@ -145,7 +145,6 @@ TEST_F(FileCacheTest, WritebackOperation) {
                            .end = 2,
                            .to_write = 2,
                            .bSync = false,
-                           .bReleasePages = false,
                            .if_page = [&key](const fbl::RefPtr<Page> &page) {
                              if (page->GetKey() <= key) {
                                return ZX_OK;
@@ -157,47 +156,43 @@ TEST_F(FileCacheTest, WritebackOperation) {
   ASSERT_EQ(vn->GetDirtyPageCount(), 0);
   FileTester::AppendToFile(vn.get(), buf, kPageSize);
   FileTester::AppendToFile(vn.get(), buf, kPageSize);
-  // Flush the Page of 1st block.
+  // Get the Page of 2nd block.
   {
     LockedPage page;
-    vn->GrabCachePage(0, &page);
+    vn->GrabCachePage(1, &page);
     ASSERT_EQ(vn->GetDirtyPageCount(), 2);
     key = page->GetKey();
-    auto unlocked_page = page.release();
-    // Request writeback for dirty Pages. |unlocked_page| should be written out.
-    key = 0;
+
+    // Request writeback for dirty Pages. The Page of 1st block should be written out.
     ASSERT_EQ(vn->Writeback(op), 1UL);
-    // Writeback() should be able to flush |unlocked_page|.
+    // Writeback() should not touch active Pages such as |page|.
     ASSERT_EQ(vn->GetDirtyPageCount(), 1);
     ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kWriteback), 1);
     ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kDirtyData), 1);
-    ASSERT_EQ(unlocked_page->IsWriteback(), true);
-    ASSERT_EQ(unlocked_page->IsDirty(), false);
+    ASSERT_EQ(page->IsWriteback(), false);
+    ASSERT_EQ(page->IsDirty(), true);
   }
-  // Set sync. writeback.
-  op.bSync = true;
+
+  key = 0;
   // Request writeback for dirty Pages, but there is no Page meeting op.if_page.
   ASSERT_EQ(vn->Writeback(op), 0UL);
-  // Every writeback Page has been already flushed since op.bSync is set.
-  ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kWriteback), 0);
-  ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kDirtyData), 1);
-
   key = 1;
-  // Set async. writeback.
-  op.bSync = false;
   // Now, 2nd Page meets op.if_page.
   ASSERT_EQ(vn->Writeback(op), 1UL);
   ASSERT_EQ(vn->GetDirtyPageCount(), 0);
-  ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kWriteback), 1);
+  ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kWriteback), 2);
   ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kDirtyData), 0);
-  // Set sync. writeback.
+
+  // Request sync. writeback.
   op.bSync = true;
   // No dirty Pages to be written.
   // All writeback Pages should be clean.
   ASSERT_EQ(vn->Writeback(op), 0UL);
   ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kWriteback), 0);
 
-  // It should not release any clean Pages since op.bReleasePages is false.
+  // Do not release clean Pages
+  op.bReleasePages = false;
+  // It should not release any clean Pages.
   ASSERT_EQ(vn->Writeback(op), 0UL);
   // Pages at 1st and 2nd blocks should be uptodate
   {

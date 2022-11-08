@@ -37,7 +37,31 @@ zx_status_t F2fs::GetMetaPage(pgoff_t index, LockedPage *out) {
   return ZX_OK;
 }
 
-pgoff_t F2fs::FlushDirtyMetaPages(WritebackOperation &operation) {
+zx_status_t F2fs::F2fsWriteMetaPage(LockedPage &page, bool is_reclaim) const {
+  zx_status_t err = ZX_OK;
+
+  page->WaitOnWriteback();
+
+  if (page->ClearDirtyForIo()) {
+    page->SetWriteback();
+
+    if (err = this->GetSegmentManager().WriteMetaPage(page, is_reclaim); err != ZX_OK) {
+#if 0  // porting needed
+    // ++wbc->pages_skipped;
+#endif
+      return err;
+    }
+  }
+
+  // In this case, we should not unlock this page
+#if 0  // porting needed
+  // if (err != kAopWritepageActivate)
+  // unlock_page(page);
+#endif
+  return err;
+}
+
+pgoff_t F2fs::SyncMetaPages(WritebackOperation &operation) {
   if (superblock_info_->GetPageCount(CountType::kDirtyMeta) == 0 && !operation.bReleasePages) {
     return 0;
   }
@@ -264,7 +288,7 @@ zx_status_t F2fs::GetValidCheckpoint() {
   return ZX_OK;
 }
 
-pgoff_t F2fs::FlushDirtyDataPages(WritebackOperation &operation) {
+pgoff_t F2fs::SyncDirtyDataPages(WritebackOperation &operation) {
   pgoff_t total_nwritten = 0;
   GetVCache().ForDirtyVnodesIf(
       [&](fbl::RefPtr<VnodeF2fs> &vnode) {
@@ -296,7 +320,7 @@ void F2fs::BlockOperations() __TA_NO_THREAD_SAFETY_ANALYSIS {
       }
       return ZX_ERR_NEXT;
     };
-    FlushDirtyDataPages(op);
+    SyncDirtyDataPages(op);
 
     // Stop file operation
     superblock_info.mutex_lock_op(LockType::kFileOp);
@@ -311,7 +335,7 @@ void F2fs::BlockOperations() __TA_NO_THREAD_SAFETY_ANALYSIS {
   // until finishing nat/sit flush.
   while (true) {
     WritebackOperation op = {.bSync = false};
-    GetNodeManager().FlushDirtyNodePages(op);
+    GetNodeManager().SyncNodePages(op);
 
     superblock_info.mutex_lock_op(LockType::kNodeOp);
     if (superblock_info.GetPageCount(CountType::kDirtyNodes)) {
@@ -339,10 +363,10 @@ void F2fs::DoCheckpoint(bool is_umount) {
   // Flush all the NAT/SIT pages
   while (superblock_info.GetPageCount(CountType::kDirtyMeta)) {
     WritebackOperation op = {.bSync = false};
-    FlushDirtyMetaPages(op);
+    SyncMetaPages(op);
   }
 
-  ScheduleWriter();
+  ScheduleWriterSubmitPages();
   GetNodeManager().NextFreeNid(&last_nid);
 
   // modify checkpoint
@@ -440,7 +464,7 @@ void F2fs::DoCheckpoint(bool is_umount) {
   {
     // Write out this checkpoint pack.
     WritebackOperation op = {.bSync = true};
-    FlushDirtyMetaPages(op);
+    SyncMetaPages(op);
   }
 
   // Prepare the commit block.
@@ -462,7 +486,7 @@ void F2fs::DoCheckpoint(bool is_umount) {
     // TODO: Use FUA when it is available.
     GetBc().Flush();
     WritebackOperation op = {.bSync = true};
-    FlushDirtyMetaPages(op);
+    SyncMetaPages(op);
     GetBc().Flush();
 
     GetSegmentManager().ClearPrefreeSegments();

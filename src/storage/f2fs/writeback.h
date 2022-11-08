@@ -32,20 +32,18 @@ class Writer {
   void ScheduleTask(fpromise::promise<> task);
   void ScheduleWriteback(fpromise::promise<> task);
   // It schedules SubmitPages().
-  // If |completion| is set, it notifies the caller of the |pages| write completion.
-  void ScheduleSubmitPages(sync_completion_t *completion = nullptr, PageList pages = {});
-
+  // If |completion| is set, it notifies the caller of the operation completion.
+  void ScheduleSubmitPages(sync_completion_t *completion = nullptr,
+                           PageType type = PageType::kNrPageType);
   // It merges Pages to be written.
-  zx::result<> EnqueuePages() __TA_EXCLUDES(mutex_);
+  zx::result<> EnqueuePage(LockedPage &page, block_t blk_addr, PageType type);
 
  private:
   // It takes write operations from |writer_buffer_| and passes them to RunReqeusts()
   // asynchronously. When the operations are complete, it wakes waiters on the completion of
   // the Page writes.
-  fpromise::promise<> SubmitPages(sync_completion_t *completion);
+  fpromise::promise<> SubmitPages(sync_completion_t *completion, PageType type);
 
-  std::mutex mutex_;
-  PageList pages_ __TA_GUARDED(mutex_);
   std::unique_ptr<StorageBuffer> write_buffer_;
   fs::TransactionHandler *transaction_handler_ = nullptr;
 #ifdef __Fuchsia__

@@ -52,7 +52,6 @@ using PlatformVfs = fs::PagedVfs;
 #else
 using PlatformVfs = fs::Vfs;
 #endif  // __Fuchsia__
-using PageList = fbl::SizedDoublyLinkedList<fbl::RefPtr<Page>>;
 
 #if BYTE_ORDER == BIG_ENDIAN
 inline uint16_t LeToCpu(uint16_t x) { return SWAP_16(x); }

@@ -70,7 +70,7 @@ class PageRefCounted : public fs::VnodeRefCounted<T> {
 class Page : public PageRefCounted<Page>,
              public fbl::Recyclable<Page>,
              public fbl::WAVLTreeContainable<Page *>,
-             public fbl::DoublyLinkedListable<fbl::RefPtr<Page>> {
+             public fbl::DoublyLinkedListable<Page *> {
  public:
   Page() = delete;
   Page(FileCache *file_cache, pgoff_t index);
@@ -144,9 +144,7 @@ class Page : public PageRefCounted<Page>,
   bool SetUptodate();
   void ClearUptodate();
 
-  // Set its dirty flag and increase the corresponding count of its typ of its type.
-  // If |add_to_list| is true and it is data Page, it is inserted into F2fs::dirty_data_page_list_.
-  bool SetDirty(bool add_to_list = true);
+  bool SetDirty();
   bool ClearDirtyForIo();
 
   // It ensures that the contents of |this| is synchronized with the corresponding pager backed vmo.
@@ -169,17 +167,11 @@ class Page : public PageRefCounted<Page>,
   }
 
   static uint32_t BlockSize() { return kPageSize; }
-  block_t GetBlockAddr() const { return block_addr_; }
-  zx::result<> SetBlockAddr(block_t addr);
 
   // Check that |this| Page exists in FileCache.
   bool InTreeContainer() const { return fbl::WAVLTreeContainable<Page *>::InContainer(); }
-  // Check that |this| Page exists in any PageList.
-  bool InListContainer() const {
-    return fbl::DoublyLinkedListable<fbl::RefPtr<Page>>::InContainer();
-  }
-
-  F2fs *fs() const;
+  // Check that |this| Page exists in DirtyPageList.
+  bool InListContainer() const { return fbl::DoublyLinkedListable<Page *>::InContainer(); }
 
  protected:
   // It notifies VmoManager that there is no reference to |this|.
@@ -198,13 +190,7 @@ class Page : public PageRefCounted<Page>,
   void ClearFlag(PageFlag flag) {
     flags_[static_cast<uint8_t>(flag)].clear(std::memory_order_relaxed);
   }
-  void WakeupFlag(PageFlag flag) {
-    if (flag == PageFlag::kPageLocked) {
-      flags_[static_cast<uint8_t>(flag)].notify_one();
-    } else {
-      flags_[static_cast<uint8_t>(flag)].notify_all();
-    }
-  }
+  void WakeupFlag(PageFlag flag) { flags_[static_cast<uint8_t>(flag)].notify_all(); }
   bool SetFlag(PageFlag flag) {
     return flags_[static_cast<uint8_t>(flag)].test_and_set(std::memory_order_acquire);
   }
@@ -225,7 +211,9 @@ class Page : public PageRefCounted<Page>,
   // node, and meta vnodes. For file vnodes, it has file offset. For node vnodes, it indicates the
   // node id. For meta vnode, it points to the block address to which the metadata is written.
   const pgoff_t index_;
-  block_t block_addr_ = kNullAddr;
+
+ protected:
+  F2fs *fs_ = nullptr;
 };
 
 // LockedPage is a wrapper class for f2fs::Page lock management.
@@ -288,7 +276,7 @@ class LockedPage final {
 
   // CopyRefPtr() returns copied RefPtr, so that increases ref_count of page.
   // The page remains locked, and still managed by the LockedPage instance.
-  fbl::RefPtr<Page> CopyRefPtr() { return page_; }
+  fbl::RefPtr<Page> CopyRefPtr() { return fbl::RefPtr<Page>(page_); }
 
   template <typename T = Page>
   T &GetPage() {
@@ -355,7 +343,6 @@ class FileCache {
   void Downgrade(Page *raw_page) __TA_EXCLUDES(tree_lock_);
   bool IsOrphan() { return is_orphan_.test(std::memory_order_relaxed); }
   bool SetOrphan() { return is_orphan_.test_and_set(std::memory_order_relaxed); }
-  F2fs *fs() const;
 #ifdef __Fuchsia__
   VmoManager &GetVmoManager() { return *vmo_manager_; }
 #endif  // __Fuchsia__
@@ -372,8 +359,7 @@ class FileCache {
   // It returns a set of locked dirty Pages that meet |operation|.
   std::vector<LockedPage> GetLockedDirtyPagesUnsafe(const WritebackOperation &operation)
       __TA_REQUIRES(tree_lock_);
-  zx::result<LockedPage> GetLockedPageFromRawUnsafe(Page *raw_page) __TA_REQUIRES(tree_lock_);
-  zx::result<LockedPage> GetPageUnsafe(const pgoff_t index) __TA_REQUIRES(tree_lock_);
+  zx::result<LockedPage> GetPageUnsafe(pgoff_t index) __TA_REQUIRES(tree_lock_);
   zx_status_t AddPageUnsafe(const fbl::RefPtr<Page> &page) __TA_REQUIRES(tree_lock_);
   zx_status_t EvictUnsafe(Page *page) __TA_REQUIRES(tree_lock_);
   // It returns all Pages from |page_tree_| within the range of |start| to |end|.

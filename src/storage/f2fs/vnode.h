@@ -167,7 +167,8 @@ class VnodeF2fs : public fs::Vnode,
   zx::result<std::vector<LockedPage>> GetLockedDataPages(pgoff_t start, pgoff_t end);
   zx_status_t GetNewDataPage(pgoff_t index, bool new_i_size, LockedPage *out);
 
-  zx::result<block_t> GetBlockAddrForDirtyDataPage(LockedPage &page, bool is_reclaim);
+  zx_status_t DoWriteDataPage(LockedPage &page);
+  zx_status_t WriteDataPage(LockedPage &page, bool is_reclaim = false);
   zx::result<std::vector<LockedPage>> WriteBegin(const size_t offset, const size_t len);
 
   virtual zx_status_t RecoverInlineData(NodePage &node_page) __TA_EXCLUDES(mutex_) {
@@ -434,6 +435,9 @@ class VnodeF2fs : public fs::Vnode,
     }
   }
 
+  // TODO: When |is_reclaim| is set, release |page| after the IO completion
+  zx_status_t WriteDirtyPage(LockedPage &page, bool is_reclaim);
+
   PageType GetPageType() {
     if (IsNode()) {
       return PageType::kNode;
@@ -472,7 +476,6 @@ class VnodeF2fs : public fs::Vnode,
   std::condition_variable_any flag_cvar_{};
 
  private:
-  zx::result<block_t> GetBlockAddrForDataPage(LockedPage &page);
   zx_status_t OpenNode(ValidatedOptions options, fbl::RefPtr<Vnode> *out_redirect) final
       __TA_EXCLUDES(mutex_);
   zx_status_t CloseNode() final;

@@ -245,15 +245,14 @@ class SegmentManager {
   CursegType GetSegmentType4(Page &page, PageType p_type);
   CursegType GetSegmentType6(Page &page, PageType p_type);
   CursegType GetSegmentType(Page &page, PageType p_type);
-  zx::result<block_t> GetBlockAddrOnSegment(LockedPage &page, block_t old_blkaddr, Summary *sum,
-                                            PageType p_type);
-  zx::result<block_t> GetBlockAddrForNodePage(LockedPage &page, uint32_t nid, block_t old_blkaddr);
-  zx::result<block_t> GetBlockAddrForDataPage(LockedPage &page, nid_t nid, uint32_t ofs_in_node,
-                                              block_t old_blkaddr);
-  zx::result<block_t> GetBlockAddrForDirtyMetaPage(LockedPage &page, bool is_reclaim = false);
-  zx::result<PageList> GetBlockAddrsForDirtyDataPages(std::vector<LockedPage> pages,
-                                                      bool is_reclaim);
-
+  zx_status_t DoWritePage(LockedPage &page, block_t old_blkaddr, block_t *new_blkaddr, Summary *sum,
+                          PageType p_type);
+  zx_status_t WriteMetaPage(LockedPage &page, bool is_reclaim = false);
+  zx_status_t WriteNodePage(LockedPage &page, uint32_t nid, block_t old_blkaddr,
+                            block_t *new_blkaddr);
+  zx_status_t WriteDataPage(VnodeF2fs *vnode, LockedPage &page, nid_t nid, uint32_t ofs_in_node,
+                            block_t old_blkaddr, block_t *new_blkaddr);
+  zx_status_t RewriteDataPage(LockedPage &page, block_t old_blk_addr);
   void RecoverDataPage(Summary &sum, block_t old_blkaddr, block_t new_blkaddr);
 
   zx_status_t ReadCompactedSummaries();
