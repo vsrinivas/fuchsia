@@ -14,11 +14,11 @@ group("tests") {
     "codelab:tests",
     "cr50_agent:tests",
     "fcrypto:tests",
-    "ffx_test:tests",
     "kms:tests",
     "pkg_test/tests",
     "scrutiny:tests",
     "tee_manager:tests",
+    "tests/ffx_test:tests",
     "tools:tests",
     "zxcrypt:tests",
   ]
