@@ -22,14 +22,14 @@
 
 namespace {
 
-using Echo = ::fidl_service_test::Echo;
-using EchoService = ::fidl_service_test::EchoService;
+using Echo = fidl_service_test::Echo;
+using EchoService = fidl_service_test::EchoService;
 
 class EchoCommon : public fidl::WireServer<Echo> {
  public:
   explicit EchoCommon(const char* prefix) : prefix_(prefix) {}
 
-  zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
+  zx_status_t Connect(async_dispatcher_t* dispatcher, fidl::ServerEnd<Echo> request) {
     return fidl::BindSingleInFlightOnly(dispatcher, std::move(request), this);
   }
 
@@ -92,16 +92,15 @@ class ServerTest : public zxtest::Test {
   }
 
   void SetUp() override {
-    auto result = outgoing_.AddService<EchoService>(SetUpInstance(&default_foo_, &default_bar_));
-    ASSERT_OK(result.status_value());
-    result = outgoing_.AddService<EchoService>(SetUpInstance(&other_foo_, &other_bar_), "other");
-    ASSERT_OK(result.status_value());
+    ASSERT_OK(outgoing_.AddService<EchoService>(SetUpInstance(&default_foo_, &default_bar_))
+                  .status_value());
+    ASSERT_OK(outgoing_.AddService<EchoService>(SetUpInstance(&other_foo_, &other_bar_), "other")
+                  .status_value());
 
-    zx::channel remote;
-    ASSERT_OK(zx::channel::create(0, &local_root_.channel(), &remote));
+    zx::result server = fidl::CreateEndpoints(&local_root_);
+    ASSERT_OK(server.status_value());
 
-    result = outgoing_.Serve(std::move(remote));
-    ASSERT_OK(result.status_value());
+    ASSERT_OK(outgoing_.Serve(std::move(server.value())).status_value());
   }
 
   async::Loop& loop() { return loop_; }

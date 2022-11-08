@@ -20,14 +20,14 @@
 
 namespace {
 
-using Echo = ::fidl_service_test::Echo;
-using EchoService = ::fidl_service_test::EchoService;
+using Echo = fidl_service_test::Echo;
+using EchoService = fidl_service_test::EchoService;
 
 class EchoCommon : public fidl::WireServer<Echo> {
  public:
   explicit EchoCommon(const char* prefix) : prefix_(prefix) {}
 
-  zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
+  zx_status_t Connect(async_dispatcher_t* dispatcher, fidl::ServerEnd<Echo> request) {
     return fidl::BindSingleInFlightOnly(dispatcher, std::move(request), this);
   }
 
@@ -56,20 +56,22 @@ class MockEchoService {
   //
   explicit MockEchoService(async_dispatcher_t* dispatcher)
       : dispatcher_(dispatcher), vfs_(dispatcher) {
-    auto default_member_foo = fbl::MakeRefCounted<fs::Service>([this](zx::channel request) {
-      return default_foo_.Connect(dispatcher_, std::move(request));
-    });
-    auto default_member_bar = fbl::MakeRefCounted<fs::Service>([this](zx::channel request) {
-      return default_bar_.Connect(dispatcher_, std::move(request));
-    });
+    auto default_member_foo =
+        fbl::MakeRefCounted<fs::Service>([this](fidl::ServerEnd<Echo> request) {
+          return default_foo_.Connect(dispatcher_, std::move(request));
+        });
+    auto default_member_bar =
+        fbl::MakeRefCounted<fs::Service>([this](fidl::ServerEnd<Echo> request) {
+          return default_bar_.Connect(dispatcher_, std::move(request));
+        });
     auto default_instance = fbl::MakeRefCounted<fs::PseudoDir>();
     default_instance->AddEntry("foo", std::move(default_member_foo));
     default_instance->AddEntry("bar", std::move(default_member_bar));
 
-    auto other_member_foo = fbl::MakeRefCounted<fs::Service>([this](zx::channel request) {
+    auto other_member_foo = fbl::MakeRefCounted<fs::Service>([this](fidl::ServerEnd<Echo> request) {
       return other_foo_.Connect(dispatcher_, std::move(request));
     });
-    auto other_member_bar = fbl::MakeRefCounted<fs::Service>([this](zx::channel request) {
+    auto other_member_bar = fbl::MakeRefCounted<fs::Service>([this](fidl::ServerEnd<Echo> request) {
       return other_bar_.Connect(dispatcher_, std::move(request));
     });
     auto other_instance = fbl::MakeRefCounted<fs::PseudoDir>();
@@ -144,7 +146,7 @@ TEST_F(ClientTest, ConnectsToDefaultExternalServerEnd) {
 
   EchoService::ServiceClient service = std::move(open_result.value());
 
-  zx::result endpoints = ::fidl::CreateEndpoints<::fidl_service_test::Echo>();
+  zx::result endpoints = fidl::CreateEndpoints<Echo>();
   ASSERT_OK(endpoints.status_value());
 
   // Connect to the member 'foo'.
@@ -209,14 +211,14 @@ struct MockProtocol {
 };
 
 template <>
-struct ::fidl::internal::ProtocolDetails<MockProtocol> {
+struct fidl::internal::ProtocolDetails<MockProtocol> {
   static constexpr char DiscoverableName[] = "mock";
   static constexpr bool kIsProtocol = true;
 };
 
 // Test compile time path concatenation.
 TEST(SingletonService, DefaultPath) {
-  constexpr auto path = ::fidl::DiscoverableProtocolDefaultPath<MockProtocol>;
+  constexpr auto path = fidl::DiscoverableProtocolDefaultPath<MockProtocol>;
   ASSERT_STREQ(path, "/svc/mock", "protocol path should be /svc/mock");
 }
 
