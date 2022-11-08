@@ -59,6 +59,9 @@ class ConnectivityManagerTestDelegate : public ConnectivityManagerImpl::Delegate
   ConnectivityManager::ThreadMode GetThreadMode() {
     return ConnectivityManager::kThreadMode_NotSupported;
   }
+  fuchsia::net::interfaces::admin::ControlSyncPtr* GetTunInterfaceControlSyncPtr() {
+    return nullptr;
+  }
 };
 
 class TestTraitUpdaterDelegate : public TraitUpdaterDelegateImpl {

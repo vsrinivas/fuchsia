@@ -381,6 +381,14 @@ class FakeNetstack : public fuchsia::net::debug::testing::Interfaces_TestBase,
         .name = name,
         .ipv6addrs = std::make_shared<std::vector<OwnedAddress>>(),
     });
+
+    // The real Weavestack installs the Tun Interface, and provides an accessor
+    // to the Control handle via the Connectivity Manager.
+    if (name == kTunInterfaceName) {
+      GetAdmin(last_id_assigned,
+               ConnectivityMgrImpl().GetTunInterfaceControlSyncPtr()->NewRequest());
+    }
+
     return *this;
   }
 
@@ -390,6 +398,13 @@ class FakeNetstack : public fuchsia::net::debug::testing::Interfaces_TestBase,
         std::remove_if(interfaces_.begin(), interfaces_.end(),
                        [&](const OwnedInterface& interface) { return interface.name == name; });
     interfaces_.erase(it, interfaces_.end());
+
+    // Synchronize the Connectivity Manager, which holds a Control handle for
+    // the Tun interface.
+    if (name == kTunInterfaceName) {
+      ConnectivityMgrImpl().GetTunInterfaceControlSyncPtr()->Unbind();
+    }
+
     return *this;
   }
 

@@ -80,4 +80,9 @@ ConnectivityManager::ThreadMode ConnectivityManagerImpl::_GetThreadMode() {
   return delegate_->GetThreadMode();
 }
 
+fuchsia::net::interfaces::admin::ControlSyncPtr*
+ConnectivityManagerImpl::GetTunInterfaceControlSyncPtr() {
+  return delegate_->GetTunInterfaceControlSyncPtr();
+}
+
 }  // namespace nl::Weave::DeviceLayer

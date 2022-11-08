@@ -379,4 +379,9 @@ ThreadMode ConnectivityManagerDelegateImpl::GetThreadMode() {
                                                     : (kThreadMode_Disabled));
 }
 
+fuchsia::net::interfaces::admin::ControlSyncPtr*
+ConnectivityManagerDelegateImpl::GetTunInterfaceControlSyncPtr() {
+  return SrvTunnelAgent()->GetInterfaceControlSyncPtr();
+}
+
 }  // namespace nl::Weave::DeviceLayer

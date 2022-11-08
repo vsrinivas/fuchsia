@@ -279,6 +279,41 @@ std::optional<fidl::SyncClient<fuchsia_net_interfaces_admin::Control>> GetInterf
   return fidl::SyncClient(std::move(control_client_end));
 }
 
+// A client of the `fuchsia.net.interfaces.admin/Control` protocol that is
+// somewhat agnostic to FIDL bindings (e.g. HLCPP vs LLCPP).
+//
+// When Constructed, it takes the `zx::channel` from the given `ControlSyncPtr`
+// (HLCPP) and uses it to create a `fidl::SyncClient` (LLCPP).
+//
+// When Destructed, it takes the `zx::channel` from the `fidl::SyncClient`
+// (LLCPP), and rebinds it to the original `ControlSyncPtr` (HLCPP).
+class LlcppControlClientFromHlcpp {
+ public:
+  // Constructor takes the `zx::channel` from the hlcpp_client.
+  LlcppControlClientFromHlcpp(fuchsia::net::interfaces::admin::ControlSyncPtr *hlcpp_client) {
+    hlcpp_client_ = hlcpp_client;
+    llcpp_client_ = fidl::SyncClient<fuchsia_net_interfaces_admin::Control>(
+        fidl::ClientEnd<fuchsia_net_interfaces_admin::Control>(
+            hlcpp_client_->Unbind().TakeChannel()));
+  }
+
+  // Destructor returns the `zx::channel` to the hlcpp_client.
+  ~LlcppControlClientFromHlcpp() {
+    hlcpp_client_->Bind(llcpp_client_.TakeClientEnd().TakeChannel());
+  }
+
+  const fidl::SyncClient<fuchsia_net_interfaces_admin::Control> &Get() { return llcpp_client_; }
+
+ private:
+  // The HLCPP client whose `zx::channel` is taken when this object is
+  // constructed. The `zx::channel` is rebound to the HLCPP client when this
+  // object is destructed.
+  fuchsia::net::interfaces::admin::ControlSyncPtr *hlcpp_client_;
+  // The LLCPP client that holds the `zx::channel` throughout the lifetime of
+  // this object.
+  fidl::SyncClient<fuchsia_net_interfaces_admin::Control> llcpp_client_;
+};
+
 // A Handler for
 // `fuchsia.net.interfaces.admin/AddressStateProvider.OnAddressRemoved` events
 // that simply records the `AddressRemovalReason`.
@@ -301,21 +336,11 @@ class OnAddressRemovedHandler
 // Netstack.
 //
 // If the address already exists, `kPlatformResultSuccess` will be returned.
-PlatformResult AddAddressInternal(uint64_t interface_id, const Inet::IPAddress &address,
-                                  uint8_t prefix_length) {
+PlatformResult AddAddressInternal(
+    uint64_t interface_id, const Inet::IPAddress &address, uint8_t prefix_length,
+    const fidl::SyncClient<fuchsia_net_interfaces_admin::Control> &control_client) {
   FX_LOGS(INFO) << "Adding address " << AddressToStringInfallible(address)
                 << " to interface with id " << interface_id;
-
-  // TODO(https://fxbug.dev/92768) If the address is being added to the TUN
-  // interface, use the control handle owned by openweave-core.
-  std::optional<fidl::SyncClient<fuchsia_net_interfaces_admin::Control>> control_client =
-      GetInterfaceControlViaDebug(interface_id);
-  if (!control_client) {
-    FX_LOGS(ERROR)
-        << "Failed to acquire |fuchsia.net.interfaces.admin/Control| handle for interface "
-        << interface_id;
-    return kPlatformResultFailure;
-  }
 
   // Construct the IP address for the interface.
   std::array<uint8_t, 16> ipv6_addr_bytes;
@@ -337,8 +362,8 @@ PlatformResult AddAddressInternal(uint64_t interface_id, const Inet::IPAddress &
   }
   auto [asp_client_end, asp_server_end] = std::move(*asp_endpoints);
 
-  auto result = control_client.value()->AddAddress(
-      {std::move(subnet), std::move(params), std::move(asp_server_end)});
+  auto result =
+      control_client->AddAddress({std::move(subnet), std::move(params), std::move(asp_server_end)});
   if (!result.is_ok()) {
     FX_LOGS(ERROR) << "Failed to add address " << AddressToStringInfallible(address)
                    << " to interface with id " << interface_id << ": " << result.error_value();
@@ -416,6 +441,33 @@ PlatformResult RemoveAddressInternal(uint64_t interface_id, const Inet::IPAddres
   return kPlatformResultSuccess;
 }
 
+PlatformResult AddWiFiAddress(uint64_t interface_id, const Inet::IPAddress &address,
+                              uint8_t prefix_length) {
+  std::optional<fidl::SyncClient<fuchsia_net_interfaces_admin::Control>> control_client =
+      GetInterfaceControlViaDebug(interface_id);
+  if (!control_client) {
+    FX_LOGS(ERROR)
+        << "Failed to acquire |fuchsia.net.interfaces.admin/Control| handle for interface "
+        << interface_id;
+    return kPlatformResultFailure;
+  }
+  return AddAddressInternal(interface_id, address, prefix_length, control_client.value());
+}
+
+PlatformResult AddTunnelAddress(uint64_t interface_id, const Inet::IPAddress &address,
+                                uint8_t prefix_length) {
+  fuchsia::net::interfaces::admin::ControlSyncPtr *hlcpp_control_client =
+      ConnectivityMgrImpl().GetTunInterfaceControlSyncPtr();
+  if (hlcpp_control_client == nullptr || !hlcpp_control_client->is_bound()) {
+    FX_LOGS(ERROR) << "Tun Interface does not have an owned Control handle.";
+    return kPlatformResultFailure;
+  }
+  // When dropped, returns the `zx_channel` to `hlcpp_control_client`.
+  LlcppControlClientFromHlcpp llcpp_control_client =
+      LlcppControlClientFromHlcpp(hlcpp_control_client);
+  return AddAddressInternal(interface_id, address, prefix_length, llcpp_control_client.Get());
+}
+
 // Add or remove an address attached to the Thread or WLAN interfaces.
 PlatformResult AddRemoveAddressInternal(InterfaceType interface_type,
                                         const Inet::IPAddress &address, uint8_t prefix_length,
@@ -439,7 +491,15 @@ PlatformResult AddRemoveAddressInternal(InterfaceType interface_type,
   }
 
   if (add) {
-    return AddAddressInternal(interface_id.value(), address, prefix_length);
+    switch (interface_type) {
+      case kInterfaceTypeTunnel:
+        return AddTunnelAddress(interface_id.value(), address, prefix_length);
+      case kInterfaceTypeWiFi:
+        return AddWiFiAddress(interface_id.value(), address, prefix_length);
+      default:
+        FX_LOGS(ERROR) << "Unsupported interface type: " << interface_type;
+        return kPlatformResultFailure;
+    }
   } else {
     return RemoveAddressInternal(interface_id.value(), address);
   }

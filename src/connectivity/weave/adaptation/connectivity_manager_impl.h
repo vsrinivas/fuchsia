@@ -94,6 +94,10 @@ class NL_DLL_EXPORT ConnectivityManagerImpl final
     // Gets the mode of the Thread radio.
     virtual ThreadMode GetThreadMode(void) = 0;
 
+    // Returns a pointer to the Tun Interface's
+    // `fuchsia.net.interfaces.admin/Control` handle.
+    virtual fuchsia::net::interfaces::admin::ControlSyncPtr* GetTunInterfaceControlSyncPtr() = 0;
+
     enum Flags {
       kFlag_HaveIPv4InternetConnectivity = 0x0001,
       kFlag_HaveIPv6InternetConnectivity = 0x0002,
@@ -121,6 +125,10 @@ class NL_DLL_EXPORT ConnectivityManagerImpl final
 
   // Gets the wifi interface name, if available.
   std::optional<std::string> GetWiFiInterfaceName();
+
+  // Returns a pointer to the Tun Interface's
+  // `fuchsia.net.interfaces.admin/Control` handle.
+  fuchsia::net::interfaces::admin::ControlSyncPtr* GetTunInterfaceControlSyncPtr();
 
  private:
   // ===== Members that implement the ConnectivityManager abstract interface.

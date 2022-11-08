@@ -102,6 +102,10 @@ class TestConnectivityManager final
     return error;
   }
 
+  fuchsia::net::interfaces::admin::ControlSyncPtr* GetTunInterfaceControlSyncPtr() override {
+    return &tun_control_sync_ptr_;
+  };
+
   // Set service tunnel agent initialization error.
   void set_init_service_tunnel_error(std::optional<WEAVE_ERROR> init_service_tunnel_error) {
     init_service_tunnel_error_ = init_service_tunnel_error;
@@ -156,6 +160,7 @@ class TestConnectivityManager final
   std::optional<WEAVE_ERROR> init_service_tunnel_error_;
   std::optional<WEAVE_ERROR> refresh_endpoints_error_;
   bool endpoints_refreshed_ = false;
+  fuchsia::net::interfaces::admin::ControlSyncPtr tun_control_sync_ptr_;
 };
 
 }  // namespace weave::adaptation::testing
