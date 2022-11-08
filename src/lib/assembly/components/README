@@ -1,0 +1,4 @@
+# Assembly `component` crate
+
+This Rust crate contains helpers for merging and compiling Fuchsia components
+during the Assembly process.

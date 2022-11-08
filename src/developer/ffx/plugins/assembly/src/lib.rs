@@ -14,6 +14,7 @@ mod fvm;
 mod operations;
 mod util;
 mod zbi;
+use assembly_components as _;
 
 pub mod vbmeta;
 pub mod vfs;

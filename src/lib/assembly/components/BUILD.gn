@@ -1,0 +1,33 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/rust/rustc_library.gni")
+
+assert(is_host, "Assembly libraries are host-only")
+
+rustc_library("components") {
+  edition = "2021"
+  name = "assembly_components"
+  version = "0.1.0"
+  with_unit_tests = true
+  deps = [
+    "//src/lib/assembly/tool",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:camino",
+  ]
+  sources = [
+    "src/components.rs",
+    "src/lib.rs",
+  ]
+  test_deps = [
+    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:tempfile",
+  ]
+}
+
+group("host_tests") {
+  testonly = true
+  deps = [ ":components_test" ]
+}

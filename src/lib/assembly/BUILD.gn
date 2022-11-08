@@ -9,6 +9,7 @@ if (is_host) {
       "assembly_manifest:host_tests",
       "base_package:host_tests",
       "blobfs:host_tests",
+      "components:host_tests",
       "config_data:host_tests",
       "config_schema:host_tests",
       "driver_manifest:host_tests",
