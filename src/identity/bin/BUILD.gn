@@ -11,7 +11,6 @@ group("bin") {
     "account",
     "account_handler",
     "account_manager",
-    "credential_manager",
     "dev_authenticator",
     "password_authenticator",
   ]
@@ -21,7 +20,6 @@ group("tests") {
   testonly = true
   deps = [
     ":identity_bin_unittests",
-    "credential_manager:tests",
     "password_authenticator:tests",
   ]
 }
@@ -57,8 +55,8 @@ group("account_system") {
     "account",
     "account_handler",
     "account_manager",
-    "credential_manager",
     "password_authenticator",
+    "//src/security/bin/credential_manager",
   ]
 }
 
@@ -69,7 +67,7 @@ group("account_system") {
 group("minimal_auth") {
   public_deps = [
     "account",
-    "credential_manager",
     "password_authenticator",
+    "//src/security/bin/credential_manager",
   ]
 }

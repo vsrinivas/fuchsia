@@ -10,6 +10,7 @@ group("security") {
 group("tests") {
   testonly = true
   deps = [
+    "bin/credential_manager:tests",
     "codelab:tests",
     "cr50_agent:tests",
     "csa_helper:tests",
