@@ -55,6 +55,7 @@ DDK_PROTOCOL_DEF(USB_BUS,                 35,   "usb-bus", PF_NOPUB)
 DDK_PROTOCOL_DEF(USB_COMPOSITE,           36,   "usb-composite", PF_NOPUB)
 DDK_PROTOCOL_DEF(USB_DCI,                 37,   "usb-dci", 0)  // Device Controller Interface
 DDK_PROTOCOL_DEF(USB_INTERFACE,           38,   "usb-interface", PF_NOPUB)
+// USB_INTERFACE_ASSOCIATION defined as 166 below.
 DDK_PROTOCOL_DEF(USB_PERIPHERAL,          39,   "usb-peripheral", 0)
 DDK_PROTOCOL_DEF(USB_FUNCTION,            40,   "usb-function", 0)
 DDK_PROTOCOL_DEF(CACHE_TEST,              41,   "usb-cache-test", 0)
@@ -178,5 +179,7 @@ DDK_PROTOCOL_DEF(CTAP,                    162, "ctap", 0)
 DDK_PROTOCOL_DEF(AML_MAILBOX,             163, "aml-mailbox", 0)
 DDK_PROTOCOL_DEF(AML_DSP,                 164, "aml-dsp", 0)
 DDK_PROTOCOL_DEF(ADB,                     165, "adb", 0)
+// Out-of-order (or added later).
+DDK_PROTOCOL_DEF(USB_INTERFACE_ASSOCIATION, 166, "usb-interface-association", PF_NOPUB)
 #undef DDK_PROTOCOL_DEF
 #endif
