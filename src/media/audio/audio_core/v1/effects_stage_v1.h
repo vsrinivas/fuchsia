@@ -9,11 +9,11 @@
 
 #include <gtest/gtest_prod.h>
 
+#include "src/media/audio/audio_core/shared/pipeline_config.h"
+#include "src/media/audio/audio_core/shared/volume_curve.h"
 #include "src/media/audio/audio_core/v1/clock.h"
-#include "src/media/audio/audio_core/v1/pipeline_config.h"
 #include "src/media/audio/audio_core/v1/reusable_buffer.h"
 #include "src/media/audio/audio_core/v1/stream.h"
-#include "src/media/audio/audio_core/v1/volume_curve.h"
 #include "src/media/audio/lib/effects_loader/effects_processor_v1.h"
 
 namespace media::audio {

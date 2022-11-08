@@ -14,9 +14,9 @@
 
 #include <fbl/ref_ptr.h>
 
+#include "src/media/audio/audio_core/shared/device_config.h"
 #include "src/media/audio/audio_core/v1/audio_input.h"
 #include "src/media/audio/audio_core/v1/audio_output.h"
-#include "src/media/audio/audio_core/v1/device_config.h"
 #include "src/media/audio/audio_core/v1/device_registry.h"
 #include "src/media/audio/audio_core/v1/idle_policy.h"
 #include "src/media/audio/audio_core/v1/link_matrix.h"

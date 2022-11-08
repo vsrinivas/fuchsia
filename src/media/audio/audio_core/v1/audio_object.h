@@ -12,11 +12,11 @@
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/shared/mixer/no_op.h"
-#include "src/media/audio/audio_core/v1/pipeline_config.h"
+#include "src/media/audio/audio_core/shared/pipeline_config.h"
+#include "src/media/audio/audio_core/shared/stream_usage.h"
+#include "src/media/audio/audio_core/shared/volume_curve.h"
 #include "src/media/audio/audio_core/v1/stream.h"
-#include "src/media/audio/audio_core/v1/stream_usage.h"
 #include "src/media/audio/audio_core/v1/threading_model.h"
-#include "src/media/audio/audio_core/v1/volume_curve.h"
 #include "src/media/audio/lib/format/format.h"
 
 namespace media::audio {

@@ -10,7 +10,7 @@
 
 #include <memory>
 
-#include "src/media/audio/audio_core/v1/audio_policy.h"
+#include "src/media/audio/audio_core/shared/audio_policy.h"
 
 namespace media::audio {
 

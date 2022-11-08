@@ -12,11 +12,11 @@
 #include <perftest/results.h>
 
 #include "gperftools/profiler.h"
+#include "src/media/audio/audio_core/shared/process_config.h"
+#include "src/media/audio/audio_core/shared/stream_usage.h"
 #include "src/media/audio/audio_core/v1/clock.h"
 #include "src/media/audio/audio_core/v1/output_pipeline.h"
-#include "src/media/audio/audio_core/v1/process_config.h"
 #include "src/media/audio/audio_core/v1/stream.h"
-#include "src/media/audio/audio_core/v1/stream_usage.h"
 #include "src/media/audio/audio_core/v1/testing/fake_audio_core_clock_factory.h"
 #include "src/media/audio/lib/analysis/generators.h"
 #include "src/media/audio/lib/effects_loader/effects_loader_v2.h"

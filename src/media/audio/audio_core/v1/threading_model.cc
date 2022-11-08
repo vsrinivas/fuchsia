@@ -16,7 +16,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "src/media/audio/audio_core/v1/mix_profile_config.h"
+#include "src/media/audio/audio_core/shared/mix_profile_config.h"
 #include "src/media/audio/audio_core/v1/utils.h"
 
 namespace media::audio {

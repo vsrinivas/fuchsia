@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 visibility = [
+  "//src/media/audio/audio_core/shared/*",
   "//src/media/audio/audio_core/v1/*",
   "//src/media/audio/audio_core/v2/*",
 ]

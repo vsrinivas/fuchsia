@@ -13,8 +13,8 @@
 #include <zircon/compiler.h>
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/media/audio/audio_core/shared/process_config.h"
 #include "src/media/audio/audio_core/v1/context.h"
-#include "src/media/audio/audio_core/v1/process_config.h"
 #include "src/media/audio/audio_core/v1/testing/fake_audio_core_clock_factory.h"
 #include "src/media/audio/audio_core/v1/testing/fake_plug_detector.h"
 #include "src/media/audio/audio_core/v1/threading_model.h"

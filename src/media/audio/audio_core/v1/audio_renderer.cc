@@ -11,10 +11,10 @@
 
 #include <string>
 
+#include "src/media/audio/audio_core/shared/stream_usage.h"
 #include "src/media/audio/audio_core/v1/audio_admin.h"
 #include "src/media/audio/audio_core/v1/logging_flags.h"
 #include "src/media/audio/audio_core/v1/reporter.h"
-#include "src/media/audio/audio_core/v1/stream_usage.h"
 #include "src/media/audio/audio_core/v1/stream_volume_manager.h"
 #include "src/media/audio/lib/clock/utils.h"
 

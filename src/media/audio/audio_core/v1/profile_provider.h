@@ -11,7 +11,7 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/time.h>
 
-#include "src/media/audio/audio_core/v1/mix_profile_config.h"
+#include "src/media/audio/audio_core/shared/mix_profile_config.h"
 
 namespace media::audio {
 

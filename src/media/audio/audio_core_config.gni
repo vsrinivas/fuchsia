@@ -61,7 +61,7 @@ template("audio_core_config_test") {
   fuchsia_unittest_package(target_name) {
     deps = [
       ":${test_config_resource}",
-      "//src/media/audio/audio_core/v1/config_validator",
+      "//src/media/audio/audio_core/shared/config_validator",
     ]
     if (defined(invoker.policy_sources)) {
       deps += [ ":${test_policy_resource}" ]

@@ -12,14 +12,14 @@
 
 #include <fbl/ref_ptr.h>
 
+#include "src/media/audio/audio_core/shared/pipeline_config.h"
+#include "src/media/audio/audio_core/shared/stream_usage.h"
+#include "src/media/audio/audio_core/shared/volume_curve.h"
 #include "src/media/audio/audio_core/v1/clock.h"
 #include "src/media/audio/audio_core/v1/effects_stage_v1.h"
 #include "src/media/audio/audio_core/v1/mix_stage.h"
-#include "src/media/audio/audio_core/v1/pipeline_config.h"
 #include "src/media/audio/audio_core/v1/ring_buffer.h"
 #include "src/media/audio/audio_core/v1/stream.h"
-#include "src/media/audio/audio_core/v1/stream_usage.h"
-#include "src/media/audio/audio_core/v1/volume_curve.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"
 
 namespace media::audio {

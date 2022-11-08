@@ -20,8 +20,8 @@
 
 #include <fbl/ref_counted.h>
 
+#include "src/media/audio/audio_core/shared/mix_profile_config.h"
 #include "src/media/audio/audio_core/shared/mixer/constants.h"
-#include "src/media/audio/audio_core/v1/mix_profile_config.h"
 
 namespace media::audio {
 

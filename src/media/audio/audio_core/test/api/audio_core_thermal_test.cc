@@ -4,8 +4,8 @@
 
 #include <string>
 
+#include "src/media/audio/audio_core/shared/mix_profile_config.h"
 #include "src/media/audio/audio_core/testing/integration/hermetic_pipeline_test.h"
-#include "src/media/audio/audio_core/v1/mix_profile_config.h"
 #include "src/media/audio/lib/analysis/generators.h"
 #include "src/media/audio/lib/format/audio_buffer.h"
 #include "src/media/audio/lib/test/comparators.h"

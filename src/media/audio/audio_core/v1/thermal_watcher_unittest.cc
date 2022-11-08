@@ -11,10 +11,10 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/media/audio/audio_core/shared/thermal_config.h"
 #include "src/media/audio/audio_core/v1/context.h"
 #include "src/media/audio/audio_core/v1/testing/fake_plug_detector.h"
 #include "src/media/audio/audio_core/v1/testing/threading_model_fixture.h"
-#include "src/media/audio/audio_core/v1/thermal_config.h"
 
 namespace media::audio {
 

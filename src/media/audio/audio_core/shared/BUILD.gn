@@ -1,0 +1,156 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/fuzzing/fuzzer.gni")
+
+action_foreach("json_schema_headers") {
+  visibility = [ ":*" ]
+  script = "//src/media/audio/audio_core/shared/schema/make_schema_header.py"
+  outputs = [ "$target_gen_dir/schema/{{source_name_part}}.inl" ]
+
+  args = [
+    "{{source}}",
+    rebase_path("$target_gen_dir", root_build_dir) +
+        "/schema/{{source_name_part}}.inl",
+  ]
+
+  sources = [
+    "schema/audio_core_config_schema.jsx",
+    "schema/audio_policy_schema.jsx",
+  ]
+}
+
+source_set("shared") {
+  sources = [
+    "audio_policy.h",
+    "audio_policy.h",
+    "device_config.cc",
+    "device_config.h",
+    "loudness_transform.cc",
+    "loudness_transform.h",
+    "mix_profile_config.h",
+    "pipeline_config.cc",
+    "pipeline_config.h",
+    "policy_loader.cc",
+    "policy_loader.h",
+    "process_config.cc",
+    "process_config.h",
+    "process_config_loader.cc",
+    "process_config_loader.h",
+    "stream_usage.cc",
+    "stream_usage.h",
+    "thermal_config.h",
+    "volume_curve.cc",
+    "volume_curve.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.audio.effects:fuchsia.audio.effects_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_hlcpp",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
+    "//sdk/fidl/fuchsia.media.tuning:fuchsia.media.tuning_hlcpp",
+    "//sdk/fidl/fuchsia.mediastreams:fuchsia.mediastreams_hlcpp",
+    "//sdk/fidl/fuchsia.thermal:fuchsia.thermal_hlcpp",
+    "//sdk/fidl/fuchsia.ultrasound:fuchsia.ultrasound_hlcpp",
+    "//sdk/lib/fit-promise",
+    "//sdk/lib/sys/component/cpp",
+    "//sdk/lib/sys/inspect/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl",
+    "//src/media/audio/audio_core/shared/metrics",
+    "//src/media/audio/audio_core/shared/mixer",
+    "//src/media/audio/lib/analysis",
+    "//src/media/audio/lib/clock",
+    "//src/media/audio/lib/effects_loader",
+    "//src/media/audio/lib/format",
+    "//src/media/audio/lib/processing",
+    "//src/media/audio/lib/timeline",
+    "//src/media/audio/lib/wav",
+    "//third_party/googletest:gtest_prod",
+    "//third_party/rapidjson",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/ffl",
+    "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/trace",
+  ]
+
+  deps = [
+    ":json_schema_headers",
+    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
+    "//sdk/lib/fdio",
+    "//sdk/lib/fit",
+    "//sdk/lib/media/audio/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fidl/cpp",
+    "//src/lib/fsl",
+    "//src/media/audio/drivers/lib/audio-proto-utils",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+executable("unittest_bin") {
+  visibility = [ ":*" ]
+  testonly = true
+  output_name = "audio_core_shared_unittests"
+
+  sources = [
+    "device_config_unittest.cc",
+    "loudness_transform_unittest.cc",
+    "pipeline_config_unittest.cc",
+    "policy_loader_unittest.cc",
+    "policy_loader_unittest_data.h",
+    "process_config_loader_unittest.cc",
+    "process_config_unittest.cc",
+    "stream_usage_unittest.cc",
+    "volume_curve_unittest.cc",
+  ]
+
+  deps = [
+    ":shared",
+    "//sdk/fidl/fuchsia.audio.effects:fuchsia.audio.effects_hlcpp",
+    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_hlcpp",
+    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
+    "//sdk/lib/fit-promise",
+    "//sdk/lib/inspect/testing/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/vfs/cpp",
+    "//src/lib/testing/loop_fixture",
+    "//src/media/audio/audio_core/shared/mixer",
+    "//src/media/audio/effects/test_effects:test_effects_v2",
+    "//src/media/audio/lib/clock/testing",
+    "//src/media/audio/lib/effects_loader",
+    "//src/media/audio/lib/effects_loader/testing",
+    "//src/media/audio/lib/format",
+    "//src/media/audio/lib/processing",
+    "//src/media/audio/lib/processing:prebuilt_coefficient_tables",
+    "//third_party/googletest:gmock",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fzl",
+  ]
+}
+
+fuchsia_unittest_package("audio_core_shared_unittests") {
+  deps = [
+    ":unittest_bin",
+    "//src/media/audio/effects/test_effects:test_effects_v1",
+  ]
+}
+
+fuzzer("audio_core_config_fuzzer") {
+  sources = [ "policy_loader_fuzzer.cc" ]
+  deps = [
+    ":shared",
+    "//src/media/audio/lib/processing:prebuilt_coefficient_tables",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":audio_core_shared_unittests" ]
+}

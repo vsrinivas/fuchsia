@@ -12,9 +12,9 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "src/media/audio/audio_core/shared/loudness_transform.h"
 #include "src/media/audio/audio_core/v1/audio_object.h"
 #include "src/media/audio/audio_core/v1/logging_flags.h"
-#include "src/media/audio/audio_core/v1/loudness_transform.h"
 #include "src/media/audio/audio_core/v1/threading_model.h"
 
 namespace media::audio {

@@ -6,8 +6,8 @@
 
 #include <gmock/gmock.h>
 
+#include "src/media/audio/audio_core/shared/process_config.h"
 #include "src/media/audio/audio_core/v1/packet_queue.h"
-#include "src/media/audio/audio_core/v1/process_config.h"
 #include "src/media/audio/audio_core/v1/testing/fake_stream.h"
 #include "src/media/audio/audio_core/v1/testing/packet_factory.h"
 #include "src/media/audio/audio_core/v1/testing/threading_model_fixture.h"

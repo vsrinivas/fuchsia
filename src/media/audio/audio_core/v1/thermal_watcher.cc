@@ -12,9 +12,9 @@
 
 #include <rapidjson/document.h>
 
+#include "src/media/audio/audio_core/shared/thermal_config.h"
 #include "src/media/audio/audio_core/v1/audio_device_manager.h"
 #include "src/media/audio/audio_core/v1/reporter.h"
-#include "src/media/audio/audio_core/v1/thermal_config.h"
 
 namespace media::audio {
 

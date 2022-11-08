@@ -5,9 +5,9 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_V1_TESTING_SINE_WAVE_STREAM_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_V1_TESTING_SINE_WAVE_STREAM_H_
 
+#include "src/media/audio/audio_core/shared/stream_usage.h"
 #include "src/media/audio/audio_core/v1/clock.h"
 #include "src/media/audio/audio_core/v1/stream.h"
-#include "src/media/audio/audio_core/v1/stream_usage.h"
 #include "src/media/audio/lib/analysis/generators.h"
 #include "src/media/audio/lib/format/audio_buffer.h"
 

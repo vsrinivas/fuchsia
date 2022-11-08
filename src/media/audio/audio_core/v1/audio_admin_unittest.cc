@@ -7,8 +7,8 @@
 #include <unordered_map>
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/media/audio/audio_core/shared/stream_usage.h"
 #include "src/media/audio/audio_core/v1/active_stream_count_reporter.h"
-#include "src/media/audio/audio_core/v1/stream_usage.h"
 #include "src/media/audio/audio_core/v1/stream_volume_manager.h"
 #include "src/media/audio/audio_core/v1/testing/null_audio_capturer.h"
 #include "src/media/audio/audio_core/v1/testing/null_audio_renderer.h"

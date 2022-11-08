@@ -10,12 +10,12 @@
 #include <unordered_set>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/media/audio/audio_core/shared/audio_policy.h"
+#include "src/media/audio/audio_core/shared/stream_usage.h"
 #include "src/media/audio/audio_core/v1/active_stream_count_reporter.h"
 #include "src/media/audio/audio_core/v1/audio_admin.h"
-#include "src/media/audio/audio_core/v1/audio_policy.h"
 #include "src/media/audio/audio_core/v1/device_registry.h"
 #include "src/media/audio/audio_core/v1/logging_flags.h"
-#include "src/media/audio/audio_core/v1/stream_usage.h"
 
 namespace media::audio {
 

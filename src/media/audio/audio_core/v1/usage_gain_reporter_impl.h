@@ -10,10 +10,10 @@
 
 #include <unordered_set>
 
+#include "src/media/audio/audio_core/shared/loudness_transform.h"
+#include "src/media/audio/audio_core/shared/process_config.h"
 #include "src/media/audio/audio_core/v1/audio_device_manager.h"
 #include "src/media/audio/audio_core/v1/context.h"
-#include "src/media/audio/audio_core/v1/loudness_transform.h"
-#include "src/media/audio/audio_core/v1/process_config.h"
 #include "src/media/audio/audio_core/v1/stream_volume_manager.h"
 
 namespace media::audio {

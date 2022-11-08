@@ -11,12 +11,12 @@
 
 #include <optional>
 
+#include "src/media/audio/audio_core/shared/device_config.h"
+#include "src/media/audio/audio_core/shared/process_config.h"
 #include "src/media/audio/audio_core/v1/audio_device.h"
 #include "src/media/audio/audio_core/v1/audio_driver.h"
 #include "src/media/audio/audio_core/v1/clock.h"
-#include "src/media/audio/audio_core/v1/device_config.h"
 #include "src/media/audio/audio_core/v1/output_pipeline.h"
-#include "src/media/audio/audio_core/v1/process_config.h"
 #include "src/media/audio/audio_core/v1/reporter.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"
 

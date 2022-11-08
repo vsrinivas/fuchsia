@@ -11,8 +11,8 @@
 
 #include <unordered_map>
 
+#include "src/media/audio/audio_core/shared/device_config.h"
 #include "src/media/audio/audio_core/v1/context.h"
-#include "src/media/audio/audio_core/v1/device_config.h"
 
 namespace media::audio {
 

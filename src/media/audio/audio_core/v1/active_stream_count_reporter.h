@@ -5,8 +5,8 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_V1_ACTIVE_STREAM_COUNT_REPORTER_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_V1_ACTIVE_STREAM_COUNT_REPORTER_H_
 
-#include "src/media/audio/audio_core/v1/audio_policy.h"
-#include "src/media/audio/audio_core/v1/stream_usage.h"
+#include "src/media/audio/audio_core/shared/audio_policy.h"
+#include "src/media/audio/audio_core/shared/stream_usage.h"
 
 namespace media::audio {
 

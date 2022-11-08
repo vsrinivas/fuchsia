@@ -15,15 +15,15 @@
 #include <fbl/ref_ptr.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/media/audio/audio_core/shared/device_config.h"
+#include "src/media/audio/audio_core/shared/pipeline_config.h"
+#include "src/media/audio/audio_core/shared/process_config.h"
 #include "src/media/audio/audio_core/v1/audio_device_settings.h"
 #include "src/media/audio/audio_core/v1/audio_object.h"
 #include "src/media/audio/audio_core/v1/clock.h"
-#include "src/media/audio/audio_core/v1/device_config.h"
 #include "src/media/audio/audio_core/v1/device_registry.h"
 #include "src/media/audio/audio_core/v1/idle_policy.h"
 #include "src/media/audio/audio_core/v1/link_matrix.h"
-#include "src/media/audio/audio_core/v1/pipeline_config.h"
-#include "src/media/audio/audio_core/v1/process_config.h"
 #include "src/media/audio/audio_core/v1/threading_model.h"
 #include "src/media/audio/audio_core/v1/wakeup_event.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"

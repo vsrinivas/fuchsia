@@ -10,7 +10,7 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
-#include "src/media/audio/audio_core/v1/mix_profile_config.h"
+#include "src/media/audio/audio_core/shared/mix_profile_config.h"
 #include "src/media/audio/audio_core/v1/testing/fake_profile_provider.h"
 
 namespace media::audio {

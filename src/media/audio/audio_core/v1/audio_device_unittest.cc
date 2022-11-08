@@ -9,9 +9,9 @@
 
 #include <gtest/gtest.h>
 
+#include "src/media/audio/audio_core/shared/device_config.h"
 #include "src/media/audio/audio_core/v1/audio_device_manager.h"
 #include "src/media/audio/audio_core/v1/audio_driver.h"
-#include "src/media/audio/audio_core/v1/device_config.h"
 #include "src/media/audio/audio_core/v1/device_registry.h"
 #include "src/media/audio/audio_core/v1/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/v1/testing/threading_model_fixture.h"

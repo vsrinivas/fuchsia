@@ -9,8 +9,8 @@
 #include <lib/zx/channel.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/media/audio/audio_core/shared/device_config.h"
 #include "src/media/audio/audio_core/v1/audio_device.h"
-#include "src/media/audio/audio_core/v1/device_config.h"
 #include "src/media/audio/audio_core/v1/reporter.h"
 
 namespace media::audio {

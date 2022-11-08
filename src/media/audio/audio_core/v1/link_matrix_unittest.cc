@@ -9,9 +9,9 @@
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/media/audio/audio_core/shared/mixer/no_op.h"
+#include "src/media/audio/audio_core/shared/volume_curve.h"
 #include "src/media/audio/audio_core/v1/packet_queue.h"
 #include "src/media/audio/audio_core/v1/testing/fake_audio_core_clock_factory.h"
-#include "src/media/audio/audio_core/v1/volume_curve.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 
 using testing::IsEmpty;

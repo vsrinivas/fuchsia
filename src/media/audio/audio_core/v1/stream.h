@@ -12,11 +12,11 @@
 
 #include <fbl/static_vector.h>
 
+#include "src/media/audio/audio_core/shared/stream_usage.h"
 #include "src/media/audio/audio_core/v1/clock.h"
 #include "src/media/audio/audio_core/v1/logging_flags.h"
 #include "src/media/audio/audio_core/v1/packet.h"
 #include "src/media/audio/audio_core/v1/stage_metrics.h"
-#include "src/media/audio/audio_core/v1/stream_usage.h"
 #include "src/media/audio/audio_core/v1/verbose_log.h"
 #include "src/media/audio/lib/format/format.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"

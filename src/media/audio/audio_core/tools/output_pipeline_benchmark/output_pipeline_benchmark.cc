@@ -13,8 +13,8 @@
 #include <string>
 #include <vector>
 
-#include "src/media/audio/audio_core/v1/process_config.h"
-#include "src/media/audio/audio_core/v1/process_config_loader.h"
+#include "src/media/audio/audio_core/shared/process_config.h"
+#include "src/media/audio/audio_core/shared/process_config_loader.h"
 #include "src/media/audio/audio_core/v1/testing/sine_wave_stream.h"
 
 using ASF = fuchsia::media::AudioSampleFormat;

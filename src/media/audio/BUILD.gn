@@ -19,7 +19,7 @@ group("audio") {
 }
 
 fuzzer_package("audio_fuzzers") {
-  cpp_fuzzers = [ "audio_core/v1:audio_core_fuzzer" ]
+  cpp_fuzzers = [ "audio_core/shared:audio_core_config_fuzzer" ]
 }
 
 group("tests") {

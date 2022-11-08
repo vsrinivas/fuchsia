@@ -6,25 +6,6 @@ import("//build/components.gni")
 import("//build/fuzzing/fuzzer.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 
-action_foreach("json_schema_headers") {
-  visibility = [ ":*" ]
-
-  script = "//src/media/audio/audio_core/v1/schema/make_schema_header.py"
-
-  outputs = [ "$target_gen_dir/schema/{{source_name_part}}.inl" ]
-
-  args = [
-    "{{source}}",
-    rebase_path("$target_gen_dir", root_build_dir) +
-        "/schema/{{source_name_part}}.inl",
-  ]
-
-  sources = [
-    "schema/audio_core_config_schema.jsx",
-    "schema/audio_policy_schema.jsx",
-  ]
-}
-
 metrics_registry("media_metrics_registry") {
   # This must match the ID of our Cobalt project as specified in:
   # third_party/cobalt_config/projects.yaml
@@ -57,7 +38,6 @@ source_set("audio_core_lib") {
     "audio_object.h",
     "audio_output.cc",
     "audio_output.h",
-    "audio_policy.h",
     "audio_renderer.cc",
     "audio_renderer.h",
     "audio_tuner_impl.cc",
@@ -72,8 +52,6 @@ source_set("audio_core_lib") {
     "clock.h",
     "context.cc",
     "context.h",
-    "device_config.cc",
-    "device_config.h",
     "device_registry.h",
     "driver_output.cc",
     "driver_output.h",
@@ -88,9 +66,6 @@ source_set("audio_core_lib") {
     "link_matrix.cc",
     "link_matrix.h",
     "logging_flags.h",
-    "loudness_transform.cc",
-    "loudness_transform.h",
-    "mix_profile_config.h",
     "mix_stage.cc",
     "mix_stage.h",
     "output_pipeline.cc",
@@ -103,16 +78,8 @@ source_set("audio_core_lib") {
     "pending_flush_token.h",
     "pin_executable_memory.cc",
     "pin_executable_memory.h",
-    "pipeline_config.cc",
-    "pipeline_config.h",
     "plug_detector.cc",
     "plug_detector.h",
-    "policy_loader.cc",
-    "policy_loader.h",
-    "process_config.cc",
-    "process_config.h",
-    "process_config_loader.cc",
-    "process_config_loader.h",
     "profile_provider.cc",
     "profile_provider.h",
     "reporter.cc",
@@ -128,13 +95,10 @@ source_set("audio_core_lib") {
     "stage_metrics.h",
     "stream.cc",
     "stream.h",
-    "stream_usage.cc",
-    "stream_usage.h",
     "stream_volume_manager.cc",
     "stream_volume_manager.h",
     "tap_stage.cc",
     "tap_stage.h",
-    "thermal_config.h",
     "thermal_watcher.cc",
     "thermal_watcher.h",
     "threading_model.cc",
@@ -159,8 +123,6 @@ source_set("audio_core_lib") {
     "versioned_timeline_function.h",
     "volume_control.cc",
     "volume_control.h",
-    "volume_curve.cc",
-    "volume_curve.h",
     "wakeup_event.cc",
     "wakeup_event.h",
   ]
@@ -178,6 +140,7 @@ source_set("audio_core_lib") {
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
+    "//src/media/audio/audio_core/shared",
     "//src/media/audio/audio_core/shared/metrics",
     "//src/media/audio/audio_core/shared/mixer",
     "//src/media/audio/lib/analysis",
@@ -196,7 +159,6 @@ source_set("audio_core_lib") {
   ]
 
   deps = [
-    ":json_schema_headers",
     ":media_metrics_registry",
     "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
     "//sdk/lib/fdio",
@@ -254,24 +216,17 @@ executable("unittest_bin") {
     "audio_tuner_impl_unittest.cc",
     "capture_packet_queue_unittest.cc",
     "channel_attributes_unittest.cc",
-    "device_config_unittest.cc",
     "driver_output_unittest.cc",
     "effects_stage_v1_unittest.cc",
     "effects_stage_v2_unittest.cc",
     "link_matrix_unittest.cc",
-    "loudness_transform_unittest.cc",
     "mix_stage_clock_unittest.cc",
     "mix_stage_unittest.cc",
     "output_pipeline_unittest.cc",
     "packet_queue_unittest.cc",
     "packet_unittest.cc",
     "pin_executable_memory_unittest.cc",
-    "pipeline_config_unittest.cc",
     "plug_detector_unittest.cc",
-    "policy_loader_unittest.cc",
-    "policy_loader_unittest_data.h",
-    "process_config_loader_unittest.cc",
-    "process_config_unittest.cc",
     "profile_provider_unittest.cc",
     "reporter_unittest.cc",
     "reusable_buffer_unittest.cc",
@@ -279,7 +234,6 @@ executable("unittest_bin") {
     "route_graph_unittest.cc",
     "silence_padding_stream_unittest.cc",
     "stream_unittest.cc",
-    "stream_usage_unittest.cc",
     "stream_volume_manager_unittest.cc",
     "tap_stage_unittest.cc",
     "thermal_watcher_unittest.cc",
@@ -291,7 +245,6 @@ executable("unittest_bin") {
     "utils_unittest.cc",
     "versioned_timeline_function_unittest.cc",
     "volume_control_unittest.cc",
-    "volume_curve_unittest.cc",
     "wakeup_event_unittest.cc",
   ]
 
@@ -344,16 +297,7 @@ fuchsia_unittest_package("audio_core_v1_unittests") {
   }
 }
 
-fuzzer("audio_core_fuzzer") {
-  sources = [ "policy_loader_fuzzer.cc" ]
-  deps = [
-    ":audio_core_lib",
-    "//src/media/audio/lib/processing:prebuilt_coefficient_tables",
-  ]
-}
-
 group("tests") {
   testonly = true
-
   deps = [ ":audio_core_v1_unittests" ]
 }

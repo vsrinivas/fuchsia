@@ -11,8 +11,8 @@
 #include <optional>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/media/audio/audio_core/shared/stream_usage.h"
 #include "src/media/audio/audio_core/v1/base_renderer.h"
-#include "src/media/audio/audio_core/v1/stream_usage.h"
 #include "src/media/audio/audio_core/v1/stream_volume_manager.h"
 #include "src/media/audio/lib/analysis/dropout.h"
 #include "src/media/audio/lib/processing/gain.h"

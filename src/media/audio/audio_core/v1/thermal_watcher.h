@@ -8,7 +8,7 @@
 #include <fuchsia/thermal/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 
-#include "src/media/audio/audio_core/v1/thermal_config.h"
+#include "src/media/audio/audio_core/shared/thermal_config.h"
 
 namespace media::audio {
 

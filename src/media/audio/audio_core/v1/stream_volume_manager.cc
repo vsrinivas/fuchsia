@@ -6,7 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/media/audio/audio_core/v1/stream_usage.h"
+#include "src/media/audio/audio_core/shared/stream_usage.h"
 
 namespace media::audio {
 namespace {
