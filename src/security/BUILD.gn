@@ -13,13 +13,13 @@ group("tests") {
     "bin/credential_manager:tests",
     "codelab:tests",
     "cr50_agent:tests",
-    "csa_helper:tests",
     "fcrypto:tests",
     "ffx_test:tests",
     "kms:tests",
     "pkg_test/tests",
     "scrutiny:tests",
     "tee_manager:tests",
+    "tools:tests",
     "zxcrypt:tests",
   ]
 }
