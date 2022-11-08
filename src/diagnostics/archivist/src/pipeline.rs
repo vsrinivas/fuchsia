@@ -2,12 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::{configs, constants, error::Error, moniker_rewriter::MonikerRewriter, ImmutableString},
+    crate::{
+        configs, constants, diagnostics::AccessorStats, error::Error,
+        moniker_rewriter::MonikerRewriter, ImmutableString,
+    },
+    async_lock::RwLock,
     diagnostics_hierarchy::InspectHierarchyMatcher,
     fidl::prelude::*,
     fidl_fuchsia_diagnostics::{self, ArchiveAccessorMarker, Selector},
     fuchsia_inspect as inspect, selectors,
-    std::{collections::HashMap, convert::TryInto, path::Path},
+    std::{collections::HashMap, convert::TryInto, ops::Deref, path::Path},
 };
 
 struct PipelineParameters {
@@ -23,14 +27,8 @@ struct PipelineParameters {
 /// make it unique to a specific pipeline, and uses those static configurations
 /// to offer filtered access to the central repository.
 pub struct Pipeline {
-    /// Static selectors that the pipeline uses. Loaded from configuration.
-    static_selectors: Option<Vec<Selector>>,
-
     /// The name of the protocol through which the pipeline is served.
     protocol_name: &'static str,
-
-    /// The name of the pipeline.
-    name: &'static str,
 
     /// A rewriter of monikers that the pipeline uses.
     moniker_rewriter: Option<MonikerRewriter>,
@@ -38,17 +36,23 @@ pub struct Pipeline {
     /// Contains information about the configuration of the pipeline.
     _pipeline_node: Option<inspect::Node>,
 
+    /// Contains information about the accessor requests done for this pipeline.
+    stats: AccessorStats,
+
     /// Whether the pipeline had an error when being created.
     has_error: bool,
 
-    /// A hierarchy matcher for any selector present in the static selectors.
-    moniker_to_static_matcher_map: HashMap<ImmutableString, InspectHierarchyMatcher>,
+    mutable_state: RwLock<PipelineMutableState>,
 }
 
 impl Pipeline {
     /// Creates a pipeline for feedback. This applies static selectors configured under
     /// config/data/feedback to inspect exfiltration.
-    pub fn feedback(pipelines_path: &Path, parent_node: &inspect::Node) -> Self {
+    pub fn feedback(
+        pipelines_path: &Path,
+        parent_node: &inspect::Node,
+        accessor_stats_node: &inspect::Node,
+    ) -> Self {
         let parameters = PipelineParameters {
             has_config: true,
             name: "feedback",
@@ -56,12 +60,16 @@ impl Pipeline {
             protocol_name: constants::FEEDBACK_ARCHIVE_ACCESSOR_NAME,
             moniker_rewriter: None,
         };
-        Self::new(parameters, pipelines_path, parent_node)
+        Self::new(parameters, pipelines_path, parent_node, accessor_stats_node)
     }
 
     /// Creates a pipeline for legacy metrics. This applies static selectors configured
     /// under config/data/legacy_metrics to inspect exfiltration.
-    pub fn legacy_metrics(pipelines_path: &Path, parent_node: &inspect::Node) -> Self {
+    pub fn legacy_metrics(
+        pipelines_path: &Path,
+        parent_node: &inspect::Node,
+        accessor_stats_node: &inspect::Node,
+    ) -> Self {
         let parameters = PipelineParameters {
             has_config: true,
             name: "legacy_metrics",
@@ -69,13 +77,17 @@ impl Pipeline {
             protocol_name: constants::LEGACY_METRICS_ARCHIVE_ACCESSOR_NAME,
             moniker_rewriter: Some(MonikerRewriter::new()),
         };
-        Self::new(parameters, pipelines_path, parent_node)
+        Self::new(parameters, pipelines_path, parent_node, accessor_stats_node)
     }
 
     /// Creates a pipeline for all access. This pipeline is unique in that it has no statically
     /// configured selectors, meaning all diagnostics data is visible. This should not be used for
     /// production services.
-    pub fn all_access(pipelines_path: &Path, parent_node: &inspect::Node) -> Self {
+    pub fn all_access(
+        pipelines_path: &Path,
+        parent_node: &inspect::Node,
+        accessor_stats_node: &inspect::Node,
+    ) -> Self {
         let parameters = PipelineParameters {
             has_config: false,
             name: "all",
@@ -83,12 +95,16 @@ impl Pipeline {
             protocol_name: ArchiveAccessorMarker::PROTOCOL_NAME,
             moniker_rewriter: None,
         };
-        Self::new(parameters, pipelines_path, parent_node)
+        Self::new(parameters, pipelines_path, parent_node, accessor_stats_node)
     }
 
     /// Creates a pipeline for LoWPAN metrics. This applies static selectors configured
     /// under config/data/lowpan to inspect exfiltration.
-    pub fn lowpan(pipelines_path: &Path, parent_node: &inspect::Node) -> Self {
+    pub fn lowpan(
+        pipelines_path: &Path,
+        parent_node: &inspect::Node,
+        accessor_stats_node: &inspect::Node,
+    ) -> Self {
         let parameters = PipelineParameters {
             has_config: true,
             name: "lowpan",
@@ -96,19 +112,21 @@ impl Pipeline {
             protocol_name: constants::LOWPAN_ARCHIVE_ACCESSOR_NAME,
             moniker_rewriter: Some(MonikerRewriter::new()),
         };
-        Self::new(parameters, pipelines_path, parent_node)
+        Self::new(parameters, pipelines_path, parent_node, accessor_stats_node)
     }
 
     #[cfg(test)]
     pub fn for_test(static_selectors: Option<Vec<Selector>>) -> Self {
         Pipeline {
             _pipeline_node: None,
-            moniker_to_static_matcher_map: HashMap::new(),
-            static_selectors,
             moniker_rewriter: None,
             protocol_name: "test",
-            name: "test",
             has_error: false,
+            stats: AccessorStats::new(Default::default()),
+            mutable_state: RwLock::new(PipelineMutableState {
+                moniker_to_static_matcher_map: HashMap::new(),
+                static_selectors,
+            }),
         }
     }
 
@@ -116,6 +134,7 @@ impl Pipeline {
         parameters: PipelineParameters,
         pipelines_path: &Path,
         parent_node: &inspect::Node,
+        accessor_stats_node: &inspect::Node,
     ) -> Self {
         let mut _pipeline_node = None;
         let path = format!("{}/{}", pipelines_path.display(), parameters.name);
@@ -132,14 +151,17 @@ impl Pipeline {
             }
             has_error = Path::new(&path).is_dir() && config.has_error();
         }
+        let stats = AccessorStats::new(accessor_stats_node.create_child(parameters.name));
         Pipeline {
-            moniker_to_static_matcher_map: HashMap::new(),
-            static_selectors,
             _pipeline_node,
+            stats,
             protocol_name: parameters.protocol_name,
             moniker_rewriter: parameters.moniker_rewriter,
-            name: parameters.name,
             has_error,
+            mutable_state: RwLock::new(PipelineMutableState {
+                moniker_to_static_matcher_map: HashMap::new(),
+                static_selectors,
+            }),
         }
     }
 
@@ -147,6 +169,36 @@ impl Pipeline {
         self.has_error
     }
 
+    pub fn protocol_name(&self) -> &'static str {
+        self.protocol_name
+    }
+
+    pub fn moniker_rewriter(&self) -> Option<&MonikerRewriter> {
+        self.moniker_rewriter.as_ref()
+    }
+
+    pub fn accessor_stats(&self) -> &AccessorStats {
+        &self.stats
+    }
+}
+
+pub struct PipelineMutableState {
+    /// Static selectors that the pipeline uses. Loaded from configuration.
+    static_selectors: Option<Vec<Selector>>,
+
+    /// A hierarchy matcher for any selector present in the static selectors.
+    moniker_to_static_matcher_map: HashMap<ImmutableString, InspectHierarchyMatcher>,
+}
+
+impl Deref for Pipeline {
+    type Target = RwLock<PipelineMutableState>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.mutable_state
+    }
+}
+
+impl PipelineMutableState {
     pub fn remove(&mut self, relative_moniker: &[String]) {
         self.moniker_to_static_matcher_map.remove(relative_moniker.join("/").as_str());
     }
@@ -179,17 +231,5 @@ impl Pipeline {
             return Some(&self.moniker_to_static_matcher_map);
         }
         None
-    }
-
-    pub fn name(&self) -> &'static str {
-        self.name
-    }
-
-    pub fn protocol_name(&self) -> &'static str {
-        self.protocol_name
-    }
-
-    pub fn moniker_rewriter(&self) -> Option<&MonikerRewriter> {
-        self.moniker_rewriter.as_ref()
     }
 }

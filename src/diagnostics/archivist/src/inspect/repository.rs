@@ -30,7 +30,7 @@ use tracing::{debug, warn};
 
 pub struct InspectRepository {
     inner: RwLock<InspectRepositoryInner>,
-    pipelines: Vec<Weak<RwLock<Pipeline>>>,
+    pipelines: Vec<Weak<Pipeline>>,
 }
 
 impl Default for InspectRepository {
@@ -40,7 +40,7 @@ impl Default for InspectRepository {
 }
 
 impl InspectRepository {
-    pub fn new(pipelines: Vec<Weak<RwLock<Pipeline>>>) -> InspectRepository {
+    pub fn new(pipelines: Vec<Weak<Pipeline>>) -> InspectRepository {
         let (snd, rcv) = mpsc::unbounded();
         Self {
             pipelines,
@@ -369,7 +369,7 @@ mod tests {
     async fn repo_integrates_with_the_pipeline() {
         let selector = selectors::parse_selector::<FastError>(r#"a/b/foo.cmx:root"#).unwrap();
         let static_selectors_opt = Some(vec![selector]);
-        let pipeline = Arc::new(RwLock::new(Pipeline::for_test(static_selectors_opt)));
+        let pipeline = Arc::new(Pipeline::for_test(static_selectors_opt));
         let data_repo = Arc::new(InspectRepository::new(vec![Arc::downgrade(&pipeline)]));
         let moniker = vec!["a", "b", "foo.cmx"].into();
         let instance_id = "1234".to_string();

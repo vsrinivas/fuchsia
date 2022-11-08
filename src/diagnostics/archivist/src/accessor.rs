@@ -5,15 +5,15 @@
 use {
     crate::{
         constants::{self, FORMATTED_CONTENT_CHUNK_SIZE_TARGET},
-        diagnostics::{AccessorStats, BatchIteratorConnectionStats},
+        diagnostics::BatchIteratorConnectionStats,
         error::AccessorError,
         formatter::{new_batcher, FormattedStream, JsonPacketSerializer, JsonString},
-        inspect::{self, repository::InspectRepository},
+        inspect::{repository::InspectRepository, ReaderServer},
         logs::repository::LogsRepository,
         pipeline::Pipeline,
         ImmutableString,
     },
-    async_lock::{Mutex, RwLock},
+    async_lock::Mutex,
     diagnostics_data::{Data, DiagnosticsData},
     fidl::endpoints::RequestStream,
     fidl_fuchsia_diagnostics::{
@@ -26,28 +26,28 @@ use {
     fuchsia_inspect::NumericProperty,
     fuchsia_trace as ftrace, fuchsia_zircon as zx,
     futures::{
-        channel::mpsc::UnboundedSender,
+        channel::mpsc,
         future::{select, Either},
         prelude::*,
     },
     selectors::{self, FastError},
     serde::Serialize,
-    std::collections::HashMap,
-    std::convert::TryFrom,
-    std::sync::Arc,
+    std::{
+        collections::HashMap,
+        convert::TryFrom,
+        sync::{Arc, Mutex as SyncMutex},
+    },
     tracing::warn,
 };
 
-/// ArchiveAccessor represents an incoming connection from a client to an Archivist
+/// ArchiveAccessorServer represents an incoming connection from a client to an Archivist
 /// instance, through which the client may make Reader requests to the various data
 /// sources the Archivist offers.
-pub struct ArchiveAccessor {
-    // The inspect repository containing read-only inspect data shared across
-    // all inspect reader instances.
-    pipeline: Arc<RwLock<Pipeline>>,
+pub struct ArchiveAccessorServer {
     inspect_repository: Arc<InspectRepository>,
     logs_repository: Arc<LogsRepository>,
-    archive_accessor_stats: Arc<AccessorStats>,
+    server_task_sender: Arc<SyncMutex<mpsc::UnboundedSender<fasync::Task<()>>>>,
+    server_task_drainer: Mutex<Option<fasync::Task<()>>>,
 }
 
 fn validate_and_parse_selectors(
@@ -104,26 +104,44 @@ fn validate_and_parse_log_selectors(
     Ok(selectors)
 }
 
-impl ArchiveAccessor {
+impl ArchiveAccessorServer {
     /// Create a new accessor for interacting with the archivist's data. The pipeline
     /// parameter determines which static configurations scope/restrict the visibility of
     /// data accessed by readers spawned by this accessor.
     pub fn new(
-        pipeline: Arc<RwLock<Pipeline>>,
         inspect_repository: Arc<InspectRepository>,
         logs_repository: Arc<LogsRepository>,
-        archive_accessor_stats: Arc<AccessorStats>,
     ) -> Self {
-        ArchiveAccessor { pipeline, archive_accessor_stats, inspect_repository, logs_repository }
+        let (snd, rcv) = mpsc::unbounded();
+        ArchiveAccessorServer {
+            inspect_repository,
+            logs_repository,
+            server_task_sender: Arc::new(SyncMutex::new(snd)),
+            server_task_drainer: Mutex::new(Some(fasync::Task::spawn(async move {
+                rcv.for_each_concurrent(None, |rx| async move { rx.await }).await
+            }))),
+        }
     }
 
-    async fn run_server(
-        pipeline: Arc<RwLock<Pipeline>>,
+    pub async fn wait_for_servers_to_complete(&self) {
+        match self.server_task_drainer.lock().await.take() {
+            Some(task) => task.await,
+            None => unreachable!("The accessor server task is only awaited for once"),
+        }
+    }
+
+    pub async fn stop(&self) {
+        if let Ok(mut guard) = self.server_task_sender.lock() {
+            guard.disconnect();
+        }
+    }
+
+    async fn spawn(
+        pipeline: Arc<Pipeline>,
         inspect_repo: Arc<InspectRepository>,
         log_repo: Arc<LogsRepository>,
         requests: BatchIteratorRequestStream,
         params: StreamParameters,
-        accessor_stats: Arc<AccessorStats>,
     ) -> Result<(), AccessorError> {
         let format = params.format.ok_or(AccessorError::MissingFormat)?;
         if !matches!(format, Format::Json) {
@@ -139,14 +157,14 @@ impl ArchiveAccessor {
                 let _trace_guard = ftrace::async_enter!(
                     trace_id,
                     "app",
-                    "ArchiveAccessor::run_server",
+                    "ArchiveAccessorServer::spawn",
                     "data_type" => "Inspect",
                     "trace_id" => u64::from(trace_id)
                 );
                 if !matches!(mode, StreamMode::Snapshot) {
                     return Err(AccessorError::UnsupportedMode);
                 }
-                let stats = Arc::new(accessor_stats.new_inspect_batch_iterator());
+                let stats = Arc::new(pipeline.accessor_stats().new_inspect_batch_iterator());
 
                 let selectors =
                     params.client_selector_configuration.ok_or(AccessorError::MissingSelectors)?;
@@ -160,7 +178,7 @@ impl ArchiveAccessor {
                 };
 
                 let (selectors, output_rewriter) =
-                    match (selectors, pipeline.read().await.moniker_rewriter().as_ref()) {
+                    match (selectors, pipeline.moniker_rewriter().as_ref()) {
                         (Some(selectors), Some(rewriter)) => rewriter.rewrite_selectors(selectors),
                         // behaves correctly whether selectors is Some(_) or None
                         (selectors, _) => (selectors, None),
@@ -186,7 +204,7 @@ impl ArchiveAccessor {
                 }
 
                 BatchIterator::new(
-                    inspect::ReaderServer::stream(
+                    ReaderServer::stream(
                         unpopulated_container_vec,
                         performance_config,
                         selectors,
@@ -207,13 +225,13 @@ impl ArchiveAccessor {
                 let _trace_guard = ftrace::async_enter!(
                     trace_id,
                     "app",
-                    "ArchiveAccessor::run_server",
+                    "ArchiveAccessorServer::spawn",
                     "data_type" => "Logs",
                     // An async duration cannot have multiple concurrent child async durations
                     // so we include the nonce as metadata to manually determine relationship.
                     "trace_id" => u64::from(trace_id)
                 );
-                let stats = Arc::new(accessor_stats.new_logs_batch_iterator());
+                let stats = Arc::new(pipeline.accessor_stats().new_logs_batch_iterator());
                 let selectors = match params.client_selector_configuration {
                     Some(ClientSelectorConfiguration::Selectors(selectors)) => {
                         Some(validate_and_parse_log_selectors(selectors)?)
@@ -234,17 +252,17 @@ impl ArchiveAccessor {
 
     /// Spawn an instance `fidl_fuchsia_diagnostics/Archive` that allows clients to open
     /// reader session to diagnostics data.
-    pub fn spawn_server(
-        self,
-        mut stream: ArchiveAccessorRequestStream,
-        task_sender: UnboundedSender<Task<()>>,
-    ) {
+    pub fn spawn_server(&self, pipeline: Arc<Pipeline>, mut stream: ArchiveAccessorRequestStream) {
         // Self isn't guaranteed to live into the exception handling of the async block. We need to clone self
         // to have a version that can be referenced in the exception handling.
-        let batch_iterator_task_sender = task_sender.clone();
-        task_sender
+        let batch_iterator_task_sender = self.server_task_sender.clone();
+        let log_repo = self.logs_repository.clone();
+        let inspect_repo = self.inspect_repository.clone();
+        let Ok(guard) = self.server_task_sender.lock() else { return };
+        guard
             .unbounded_send(fasync::Task::spawn(async move {
-                self.archive_accessor_stats.global_stats.connections_opened.add(1);
+                let stats = pipeline.accessor_stats();
+                stats.global_stats.connections_opened.add(1);
                 while let Ok(Some(ArchiveAccessorRequest::StreamDiagnostics {
                     result_stream,
                     stream_parameters,
@@ -259,23 +277,23 @@ impl ArchiveAccessor {
                         }
                     };
 
-                    self.archive_accessor_stats.global_stats.stream_diagnostics_requests.add(1);
-                    let pipeline = self.pipeline.clone();
-                    let accessor_stats = self.archive_accessor_stats.clone();
-                    let log_repo = self.logs_repository.clone();
-                    let inspect_repo = self.inspect_repository.clone();
+                    stats.global_stats.stream_diagnostics_requests.add(1);
+                    let pipeline = pipeline.clone();
+
                     // Store the batch iterator task so that we can ensure that the client finishes
                     // draining items through it when a Controller#Stop call happens. For example,
                     // this allows tests to fetch all isolated logs before finishing.
-                    batch_iterator_task_sender
+                    let inspect_repo_for_task = inspect_repo.clone();
+                    let log_repo_for_task = log_repo.clone();
+                    let Ok(guard) = batch_iterator_task_sender.lock() else { continue };
+                    guard
                         .unbounded_send(Task::spawn(async move {
-                            if let Err(e) = Self::run_server(
+                            if let Err(e) = Self::spawn(
                                 pipeline,
-                                inspect_repo,
-                                log_repo,
+                                inspect_repo_for_task,
+                                log_repo_for_task,
                                 requests,
                                 stream_parameters,
-                                accessor_stats,
                             )
                             .await
                             {
@@ -284,7 +302,7 @@ impl ArchiveAccessor {
                         }))
                         .ok();
                 }
-                self.archive_accessor_stats.global_stats.connections_closed.add(1);
+                pipeline.accessor_stats().global_stats.connections_closed.add(1);
             }))
             .ok();
     }
@@ -576,34 +594,23 @@ impl TryFrom<&StreamParameters> for PerformanceConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{logs::budget::BudgetManager, pipeline::Pipeline};
+    use crate::{diagnostics::AccessorStats, logs::budget::BudgetManager, pipeline::Pipeline};
     use assert_matches::assert_matches;
-    use async_lock::RwLock;
     use fidl_fuchsia_diagnostics::{ArchiveAccessorMarker, BatchIteratorMarker};
     use fuchsia_inspect::{Inspector, Node};
     use fuchsia_zircon_status as zx_status;
-    use futures::channel::mpsc;
 
     #[fuchsia::test]
     async fn logs_only_accept_basic_component_selectors() {
         let (accessor, stream) =
             fidl::endpoints::create_proxy_and_stream::<ArchiveAccessorMarker>().unwrap();
-        let (snd, _rcv) = mpsc::unbounded();
-        fasync::Task::spawn(async move {
-            let pipeline = Arc::new(RwLock::new(Pipeline::for_test(None)));
-            let inspector = Inspector::new();
-            let budget = BudgetManager::new(1_000_000);
-            let log_repo = Arc::new(LogsRepository::new(&budget, inspector.root()).await);
-            let inspect_repo = Arc::new(InspectRepository::new(vec![Arc::downgrade(&pipeline)]));
-            let accessor = ArchiveAccessor::new(
-                pipeline,
-                inspect_repo,
-                log_repo,
-                Arc::new(AccessorStats::new(Node::default())),
-            );
-            accessor.spawn_server(stream, snd);
-        })
-        .detach();
+        let pipeline = Arc::new(Pipeline::for_test(None));
+        let inspector = Inspector::new();
+        let budget = BudgetManager::new(1_000_000);
+        let log_repo = Arc::new(LogsRepository::new(&budget, inspector.root()));
+        let inspect_repo = Arc::new(InspectRepository::new(vec![Arc::downgrade(&pipeline)]));
+        let server = ArchiveAccessorServer::new(inspect_repo, log_repo);
+        server.spawn_server(pipeline, stream);
 
         // A selector of the form `component:node/path:property` is rejected.
         let (batch_iterator, server_end) =
@@ -652,22 +659,13 @@ mod tests {
     async fn accessor_skips_invalid_selectors() {
         let (accessor, stream) =
             fidl::endpoints::create_proxy_and_stream::<ArchiveAccessorMarker>().unwrap();
-        let (snd, _rcv) = mpsc::unbounded();
-        fasync::Task::spawn(async move {
-            let pipeline = Arc::new(RwLock::new(Pipeline::for_test(None)));
-            let inspector = Inspector::new();
-            let budget = BudgetManager::new(1_000_000);
-            let log_repo = Arc::new(LogsRepository::new(&budget, inspector.root()).await);
-            let inspect_repo = Arc::new(InspectRepository::new(vec![Arc::downgrade(&pipeline)]));
-            let accessor = ArchiveAccessor::new(
-                pipeline,
-                inspect_repo,
-                log_repo,
-                Arc::new(AccessorStats::new(Node::default())),
-            );
-            accessor.spawn_server(stream, snd);
-        })
-        .detach();
+        let pipeline = Arc::new(Pipeline::for_test(None));
+        let inspector = Inspector::new();
+        let budget = BudgetManager::new(1_000_000);
+        let log_repo = Arc::new(LogsRepository::new(&budget, inspector.root()));
+        let inspect_repo = Arc::new(InspectRepository::new(vec![Arc::downgrade(&pipeline)]));
+        let server = Arc::new(ArchiveAccessorServer::new(inspect_repo, log_repo));
+        server.spawn_server(pipeline, stream);
 
         // A selector of the form `component:node/path:property` is rejected.
         let (batch_iterator, server_end) =

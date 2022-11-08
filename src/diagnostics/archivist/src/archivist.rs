@@ -4,9 +4,8 @@
 
 use {
     crate::{
-        accessor::ArchiveAccessor,
+        accessor::ArchiveAccessorServer,
         component_lifecycle, diagnostics,
-        diagnostics::AccessorStats,
         error::Error,
         events::{
             router::{ConsumerConfig, EventRouter, ProducerConfig, RouterOptions},
@@ -21,7 +20,6 @@ use {
         pipeline::Pipeline,
     },
     archivist_config::Config,
-    async_lock::RwLock,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_sys2::EventSourceMarker,
     fidl_fuchsia_sys_internal as fsys_internal,
@@ -73,7 +71,7 @@ pub struct Archivist {
     incoming_external_event_producers: Vec<fasync::Task<()>>,
 
     /// The diagnostics pipelines that have been installed.
-    _diagnostics_pipelines: Vec<Arc<RwLock<Pipeline>>>,
+    pipelines: Vec<Arc<Pipeline>>,
 
     /// The repository holding Inspect data.
     inspect_repository: Arc<InspectRepository>,
@@ -83,25 +81,29 @@ pub struct Archivist {
 
     /// The overall capacity we enforce for log messages across containers.
     logs_budget: BudgetManager,
+
+    /// The server handling fuchsia.diagnostics.ArchiveAccessor
+    accessor_server: Arc<ArchiveAccessorServer>,
 }
 
 impl Archivist {
     /// Creates new instance, sets up inspect and adds 'archive' directory to output folder.
     /// Also installs `fuchsia.diagnostics.Archive` service.
     /// Call `install_log_services`
-    pub async fn new(archivist_configuration: &Config) -> Result<Self, Error> {
-        let mut fs = ServiceFs::new();
-        diagnostics::serve(&mut fs)?;
+    pub fn new(archivist_configuration: &Config) -> Self {
+        let fs = ServiceFs::new();
 
         let (listen_sender, listen_receiver) = mpsc::unbounded();
 
         let pipelines_node = component::inspector().root().create_child("pipelines");
+        let accessor_stats_node =
+            component::inspector().root().create_child("archive_accessor_stats");
         let pipelines_path = Path::new(&archivist_configuration.pipelines_path);
         let pipelines = vec![
-            Pipeline::feedback(pipelines_path, &pipelines_node),
-            Pipeline::legacy_metrics(pipelines_path, &pipelines_node),
-            Pipeline::lowpan(pipelines_path, &pipelines_node),
-            Pipeline::all_access(pipelines_path, &pipelines_node),
+            Pipeline::feedback(pipelines_path, &pipelines_node, &accessor_stats_node),
+            Pipeline::legacy_metrics(pipelines_path, &pipelines_node, &accessor_stats_node),
+            Pipeline::lowpan(pipelines_path, &pipelines_node, &accessor_stats_node),
+            Pipeline::all_access(pipelines_path, &pipelines_node, &accessor_stats_node),
         ];
 
         if pipelines.iter().any(|p| p.config_has_error()) {
@@ -109,41 +111,23 @@ impl Archivist {
         } else {
             component::health().set_ok();
         }
-        let pipelines = pipelines.into_iter().map(|p| Arc::new(RwLock::new(p))).collect::<Vec<_>>();
+        let pipelines = pipelines.into_iter().map(Arc::new).collect::<Vec<_>>();
 
         component::inspector().root().record(pipelines_node);
+        component::inspector().root().record(accessor_stats_node);
 
         let logs_budget =
             BudgetManager::new(archivist_configuration.logs_max_cached_original_bytes as usize);
-        let logs_repo =
-            Arc::new(LogsRepository::new(&logs_budget, component::inspector().root()).await);
+        let logs_repo = Arc::new(LogsRepository::new(&logs_budget, component::inspector().root()));
         let inspect_repo =
             Arc::new(InspectRepository::new(pipelines.iter().map(Arc::downgrade).collect()));
 
-        let stats_node = component::inspector().root().create_child("archive_accessor_stats");
-        for pipeline in &pipelines {
-            let pipeline_guard = pipeline.read().await;
-            let stats =
-                Arc::new(AccessorStats::new(stats_node.create_child(pipeline_guard.name())));
-            let server_pipeline = pipeline.clone();
-            let server_inspect_repo = inspect_repo.clone();
-            let server_logs_repo = logs_repo.clone();
-            let server_listen_sender = listen_sender.clone();
+        let accessor_server =
+            Arc::new(ArchiveAccessorServer::new(inspect_repo.clone(), logs_repo.clone()));
 
-            fs.dir("svc").add_fidl_service_at(pipeline_guard.protocol_name(), move |stream| {
-                let accessor = ArchiveAccessor::new(
-                    server_pipeline.clone(),
-                    server_inspect_repo.clone(),
-                    server_logs_repo.clone(),
-                    stats.clone(),
-                );
-                accessor.spawn_server(stream, server_listen_sender.clone());
-            });
-        }
-        component::inspector().root().record(stats_node);
-
-        Ok(Self {
+        Self {
             fs,
+            accessor_server,
             listen_sender,
             event_router: EventRouter::new(component::inspector().root().create_child("events")),
             stop_recv: None,
@@ -153,11 +137,11 @@ impl Archivist {
                 listen_receiver.for_each_concurrent(None, |rx| async move { rx.await }).await;
             }),
             incoming_external_event_producers: vec![],
-            _diagnostics_pipelines: pipelines,
+            pipelines,
             inspect_repository: inspect_repo,
             logs_repository: logs_repo,
             logs_budget,
-        })
+        }
     }
 
     /// Install controller protocol.
@@ -310,6 +294,8 @@ impl Archivist {
     ) -> Result<(), Error> {
         debug!("Running Archivist.");
 
+        self.serve_protocols().await;
+
         let logs_repository = self.logs_repository.clone();
         let inspect_repository = self.inspect_repository.clone();
         self.fs.serve_connection(outgoing_channel).map_err(Error::ServeOutgoing)?;
@@ -339,12 +325,14 @@ impl Archivist {
         });
 
         let drain_listeners_task = self.drain_listeners_task;
+        let accessor_server = self.accessor_server.clone();
         let logs_repo = logs_repository.clone();
         let all_msg = async {
             logs_repo.wait_for_termination().await;
             debug!("Terminated logs");
             logs_budget.terminate().await;
             debug!("Flushing to listeners.");
+            accessor_server.wait_for_servers_to_complete().await;
             drain_listeners_task.await;
             debug!("Log listeners and batch iterators stopped.");
             component_removal_task.cancel().await;
@@ -354,6 +342,7 @@ impl Archivist {
         let (abortable_fut, abort_handle) = abortable(run_outgoing);
 
         let mut listen_sender = self.listen_sender;
+        let accessor_server = self.accessor_server;
         let incoming_external_event_producers = self.incoming_external_event_producers;
         let stop_fut = match self.stop_recv {
             Some(stop_recv) => async move {
@@ -363,6 +352,7 @@ impl Archivist {
                     task.cancel().await;
                 }
                 listen_sender.disconnect();
+                accessor_server.stop().await;
                 logs_repository.stop_accepting_new_log_sinks().await;
                 abort_handle.abort()
             }
@@ -373,6 +363,20 @@ impl Archivist {
         info!("archivist: Entering core loop.");
         // Combine all three futures into a main future.
         future::join3(abortable_fut, stop_fut, all_msg).map(|_| Ok(())).await
+    }
+
+    async fn serve_protocols(&mut self) {
+        diagnostics::serve(&mut self.fs)
+            .unwrap_or_else(|err| warn!(?err, "failed to serve diagnostics"));
+
+        // Serve fuchsia.diagnostics.ArchiveAccessors backed by a pipeline.
+        for pipeline in &self.pipelines {
+            let accessor_server = self.accessor_server.clone();
+            let accessor_pipeline = pipeline.clone();
+            self.fs.dir("svc").add_fidl_service_at(pipeline.protocol_name(), move |stream| {
+                accessor_server.spawn_server(accessor_pipeline.clone(), stream);
+            });
+        }
     }
 
     async fn process_removal_of_components(
@@ -403,7 +407,7 @@ mod tests {
     use fuchsia_component::client::connect_to_protocol_at_dir_svc;
     use futures::channel::oneshot;
 
-    async fn init_archivist() -> Archivist {
+    fn init_archivist() -> Archivist {
         let config = Config {
             enable_component_event_provider: false,
             enable_klog: false,
@@ -418,7 +422,7 @@ mod tests {
             bind_services: vec![],
         };
 
-        let mut archivist = Archivist::new(&config).await.unwrap();
+        let mut archivist = Archivist::new(&config);
         // Install a fake producer that allows all incoming events. This allows skipping
         // validation for the purposes of the tests here.
         let mut fake_producer = FakeProducer {};
@@ -439,7 +443,7 @@ mod tests {
     // run archivist and send signal when it dies.
     async fn run_archivist_and_signal_on_exit() -> (fio::DirectoryProxy, oneshot::Receiver<()>) {
         let (directory, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
-        let mut archivist = init_archivist().await;
+        let mut archivist = init_archivist();
         archivist.install_log_services().await.serve_test_controller_protocol();
         let (signal_send, signal_recv) = oneshot::channel();
         fasync::Task::spawn(async move {
@@ -456,7 +460,7 @@ mod tests {
     // runs archivist and returns its directory.
     async fn run_archivist() -> fio::DirectoryProxy {
         let (directory, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
-        let mut archivist = init_archivist().await;
+        let mut archivist = init_archivist();
         archivist.install_log_services().await;
         fasync::Task::spawn(async move {
             archivist

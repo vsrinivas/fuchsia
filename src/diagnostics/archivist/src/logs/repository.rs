@@ -55,10 +55,10 @@ pub struct LogsRepository {
 }
 
 impl LogsRepository {
-    pub async fn new(logs_budget: &BudgetManager, parent: &fuchsia_inspect::Node) -> Self {
+    pub fn new(logs_budget: &BudgetManager, parent: &fuchsia_inspect::Node) -> Self {
         let (log_sender, log_receiver) = mpsc::unbounded();
         LogsRepository {
-            inner: LogsRepositoryState::new(logs_budget.clone(), log_receiver, parent).await,
+            inner: LogsRepositoryState::new(logs_budget.clone(), log_receiver, parent),
             log_sender: Arc::new(RwLock::new(log_sender)),
         }
     }
@@ -242,9 +242,9 @@ impl LogsRepository {
     }
 
     #[cfg(test)]
-    pub(crate) async fn default() -> Self {
+    pub(crate) fn default() -> Self {
         let budget = BudgetManager::new(crate::constants::LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES);
-        LogsRepository::new(&budget, &Default::default()).await
+        LogsRepository::new(&budget, &Default::default())
     }
 }
 
@@ -290,7 +290,7 @@ pub struct LogsRepositoryState {
 }
 
 impl LogsRepositoryState {
-    async fn new(
+    fn new(
         logs_budget: BudgetManager,
         log_receiver: mpsc::UnboundedReceiver<fasync::Task<()>>,
         parent: &fuchsia_inspect::Node,
@@ -453,7 +453,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn data_repo_filters_logs_by_selectors() {
-        let repo = LogsRepository::default().await;
+        let repo = LogsRepository::default();
         let foo_container = repo
             .get_log_container(ComponentIdentity::from_identifier_and_url(
                 ComponentIdentifier::parse_from_moniker("./foo").unwrap(),
@@ -492,7 +492,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn multiplexer_broker_cleanup() {
-        let repo = LogsRepository::default().await;
+        let repo = LogsRepository::default();
         let stream =
             repo.logs_cursor(StreamMode::SnapshotThenSubscribe, None, ftrace::Id::random()).await;
 

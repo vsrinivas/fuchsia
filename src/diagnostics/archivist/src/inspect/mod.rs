@@ -388,7 +388,6 @@ mod tests {
             inspect::repository::InspectRepository,
             pipeline::Pipeline,
         },
-        async_lock::RwLock,
         fdio,
         fidl::endpoints::{create_proxy_and_stream, DiscoverableProtocolMarker},
         fidl_fuchsia_diagnostics::{BatchIteratorMarker, BatchIteratorProxy, StreamMode},
@@ -753,7 +752,7 @@ mod tests {
                     }))
                     .await;
 
-                let pipeline = Arc::new(RwLock::new(Pipeline::for_test(None)));
+                let pipeline = Arc::new(Pipeline::for_test(None));
                 let inspect_repo =
                     Arc::new(InspectRepository::new(vec![Arc::downgrade(&pipeline)]));
 
@@ -829,7 +828,7 @@ mod tests {
 
         let static_selectors_opt = Some(vec![child_1_1_selector, child_2_selector]);
 
-        let pipeline = Arc::new(RwLock::new(Pipeline::for_test(static_selectors_opt)));
+        let pipeline = Arc::new(Pipeline::for_test(static_selectors_opt));
         let inspect_repo = Arc::new(InspectRepository::new(vec![Arc::downgrade(&pipeline)]));
 
         let out_dir_proxy = collector::find_directory_proxy(&path).await.unwrap();
@@ -1099,7 +1098,7 @@ mod tests {
 
     async fn start_snapshot(
         inspect_repo: Arc<InspectRepository>,
-        pipeline: Arc<RwLock<Pipeline>>,
+        pipeline: Arc<Pipeline>,
         stats: Arc<BatchIteratorConnectionStats>,
     ) -> (BatchIteratorProxy, Task<()>) {
         let test_performance_config = PerformanceConfig {
@@ -1143,7 +1142,7 @@ mod tests {
 
     async fn read_snapshot(
         inspect_repo: Arc<InspectRepository>,
-        pipeline: Arc<RwLock<Pipeline>>,
+        pipeline: Arc<Pipeline>,
         _test_inspector: Arc<Inspector>,
         stats: Arc<BatchIteratorConnectionStats>,
     ) -> serde_json::Value {
@@ -1182,7 +1181,7 @@ mod tests {
 
     async fn read_snapshot_verify_batch_count_and_batch_size(
         inspect_repo: Arc<InspectRepository>,
-        pipeline: Arc<RwLock<Pipeline>>,
+        pipeline: Arc<Pipeline>,
         expected_batch_sizes: Vec<usize>,
         stats: Arc<BatchIteratorConnectionStats>,
     ) -> serde_json::Value {

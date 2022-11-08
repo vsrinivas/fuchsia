@@ -127,7 +127,7 @@ async fn async_main(config: Config) -> Result<(), Error> {
         .root()
         .record_child("config", |config_node| config.record_inspect(config_node));
 
-    let mut archivist = Archivist::new(&config).await?;
+    let mut archivist = Archivist::new(&config);
     debug!("Archivist initialized from configuration.");
 
     archivist.install_log_services().await;
