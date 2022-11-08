@@ -694,3 +694,15 @@
 	name = third_party/bazel_rules_license
 	ignore = all
 	active = false
+[submodule "third_party/bazel_platforms"]
+	path = third_party/bazel_platforms
+	url = https://fuchsia.googlesource.com/third_party/github.com/bazelbuild/platforms
+	name = third_party/bazel_platforms
+	ignore = all
+	active = false
+[submodule "third_party/bazel_rules_python"]
+	path = third_party/bazel_rules_python
+	url = https://fuchsia.googlesource.com/third_party/github.com/bazelbuild/rules_python
+	name = third_party/bazel_rules_python
+	ignore = all
+	active = false
