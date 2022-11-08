@@ -447,6 +447,27 @@ Example: changing a union declaration from [`strict` to
 `flexible`][example-union-strict-flexible], or [`flexible` to
 `strict`][example-union-flexible-strict].
 
+#### One-way methods and events
+
+Changing a one-way method or event from `strict` to `flexible` or `flexible` to
+`strict` is source compatible and binary compatible. Changing this modifier only
+affects how the receiving end reacts if it receives this one-way method call or
+event and does not recognize the ordinal.
+
+#### Two-way methods
+
+Whether changing a two-way method from `strict` to `flexible` or `flexible` to
+`strict` is binary compatible depends on whether it uses `error` syntax. Whether
+it is source compatible depends on the language.
+
+Changing between `strict` and `flexible` is binary compatible if the method also
+uses `error` syntax. If the method does not use `error` syntax, changing between
+`strict` and `flexible` is binary-incompatible.
+
+Changing a two-way method between `strict` and `flexible` is source compatible
+in LLCPP, Rust, and Dart. In HLCPP, it is not source compatible. Go does not
+support `open` or `ajar` protocols, so this is not applicable to Go.
+
 ### Value vs resource {#value-vs-resource}
 
 Adding or removing the `resource` modifier on a struct, table, or union is
@@ -460,6 +481,20 @@ Adding or removing the `resource` modifier is not source-compatible.
 Furthermore, bindings are encouraged to diverge APIs if they can leverage the
 value type versus resource type distinction for specific benefits in the target
 language (see [RFC-0057][rfc-0057-motivation] for context).
+
+### Open, ajar, and closed {#open-ajar-closed}
+
+Changing between `open`, `ajar`, and `closed` is binary compatible. Going from a
+more closed protocol to a more open one, e.g. `closed` to `ajar` or `ajar` to
+`open` is always possible, however going from a more open protocol to a more
+closed one, e.g. `open` to `ajar` or `ajar` to `closed` may require changing
+methods from `flexible` to `strict`, which is subject to the binary
+compatibility restrictions covered in the [strict vs flexible](#strict-flexible)
+section.
+
+Changing between `open`, `ajar`, and `closed` is not source compatible.
+Soft-transitioning for this change is not currently supported so the source
+changes have to be done atomically with the FIDL change.
 
 ## General advice
 

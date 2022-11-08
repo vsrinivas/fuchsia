@@ -300,6 +300,35 @@ protocol SystemClock {
 };
 // [END layering-systemclock]
 
+type Posts = struct {
+    fake int32;
+};
+type Post = struct {
+    fake int32;
+};
+type Decision = struct {
+    fake int32;
+};
+
+// [START unknown-interactions]
+open protocol Moderator {
+    flexible GetPosts() -> (Posts);
+    strict ApplyModeration(struct {
+        post Post;
+        decision Decision;
+    }) -> ();
+};
+
+ajar protocol Messenger {
+    strict EnableSecureMode();
+    flexible AddMessageContent(struct {
+        content string;
+    });
+    strict SendPending() -> ();
+    flexible -> ReceiveMessage(Message);
+};
+// [END unknown-interactions]
+
 // [START aliasing]
 alias StoryID = string:MAX;
 alias Chapters = vector<StoryID>:5;

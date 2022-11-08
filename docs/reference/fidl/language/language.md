@@ -494,7 +494,7 @@ Unions are denoted by their declared name (e.g. **Result**) and optionality:
 
 ### Strict vs. Flexible {#strict-vs-flexible}
 
-FIDL declarations can either have **strict** or **flexible** behavior:
+FIDL type declarations can either have **strict** or **flexible** behavior:
 
 *   Bits, enums, and unions are flexible unless declared with the `strict`
     modifier.
@@ -745,6 +745,121 @@ So, we create a protocol (`SystemClock`) that composes both:
 ```fidl
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="layering-systemclock" %}
 ```
+
+### Unknown interactions {#unknown-interactions}
+
+Note: Unknown interaction handling is an experimental feature. Most libraries
+currently cannot use it. This notice will be updated when it is available for
+general use. Please contact fidl-dev@fuchsia.dev if you have questions about
+using it.
+
+Protocols can define how they react when they receive a method call or event
+which has an ordinal which isn't recognized. Unrecognized ordinals occur
+primarily when a client and server were built using different versions of a
+protocol which may have more or fewer methods, though it can also occur if
+client and server are mistakenly using different protocols on the same channel.
+
+To control the behavior of the protocol when these unknown interactions occur,
+methods can be marked as either `strict` or `flexible`, and protocols can be
+marked as `closed`, `ajar`, or `open`.
+
+The method strictness modifiers, `strict` and `flexible`, specify how the
+sending end would like the receiving end to react to the interaction if it does
+not recognize the ordinal. For a one-way or two-way method, the sending end is
+the client, and for an event the sending end is the server.
+
+*   `strict` means that it should be an error for the receiving end not to know
+    the interaction. If a `strict` unknown interaction is received, the receiver
+    should close the channel.
+*   `flexible` means that the unknown interaction should be handled by the
+    application. If the protocol allows for that type of unknown interaction,
+    the ordinal is passed to an unknown interaction handler which can then
+    decide how to react to it. What types of unknown interactions a protocol
+    allows is determined by the protocol modifier. `flexible` is the default
+    value if no strictness is specified.
+
+The protocol openness modifiers, `closed`, `ajar` and `open` control how the
+receiving end reacts to `flexible` interactions if it does not recognize the
+ordinal. For a one-way or two-way method, the receiving end is the server, and
+for an event, the receiving end is the client.
+
+*   `closed` means the protocol does not accept any unknown interactions. If any
+    unknown interaction is received, the bindings report an error and end
+    communication, regardless of whether the interaction is `strict` or
+    `flexible`.
+    *   All methods and events must be declared as `strict`.
+*   `ajar` means that the protocol allows unknown `flexible` one-way methods and
+    events. Any unknown two-way methods and `strict` one-way methods or events
+    still cause an error and result in the bindings closing the channel.
+    *   One-way methods and events may be declared as either `strict` or
+        `flexible`.
+    *   Two-way methods must be declared as `strict`.
+*   `open` means that the protocol allows any unknown `flexible` interactions.
+    Any unknown `strict` interactions still cause an error and result in the
+    bindings closing the channel. Open is the default value if no openness is
+    specified.
+    *   All methods and events may be declared as either `strict` or `flexible`.
+
+Here is a summary of which strictness modifiers are allowed for different kinds
+of methods in each protocol type. The default value of openness, `open`, marked
+in _italics_. The default value of strictness, `flexible`, is marked in
+**bold**.
+
+|          | strict M(); | **flexible M();**    | strict -> M(); | **flexible -> M();** | strict M() -> (); | **flexible M() -> ();** |
+|----------|-------------|----------------------|----------------|----------------------|-------------------|-------------------------|
+| _open P_ | _compiles_  | **_compiles_**       | _compiles_     | **_compiles_**       | _compiles_        | **_compiles_**          |
+| ajar P   | compiles    | **compiles**         | compiles       | **compiles**         | compiles          | **fails to compile**    |
+| closed P | compiles    | **fails to compile** | compiles       | **fails to compile** | compiles          | **fails to compile**    |
+
+Example usage of the modifiers on a protocol.
+
+```fidl
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="unknown-interactions" %}
+```
+
+Keep in mind that unknown interaction handling applies only when the receivng
+end doesn't recognize the ordinal and doesn't know what the interaction is.
+This means that the receiving end does not know whether the interaction is
+supposed to be strict or flexible. To allow the receiver to know how to handle
+an unknown interaction, the sender includes a bit in the message header which
+tells the receiver whether to treat the interaction as strict or flexible.
+Therefore, the strictness used in an interaction is based on what strictness the
+sender has for the method it tried to call, but the protocol's openness for that
+interaction depends on what openness the receiver has.
+
+Here's how a method or event with each strictness is handled by a protocol with
+each openness when the receiving side doesn't recognize the method.
+
+|          | strict M(); | flexible M(); | strict -> M(); | flexible -> M(); | strict M() -> (); | flexible M() -> (); |
+|----------|-------------|---------------|----------------|------------------|-------------------|---------------------|
+| open P   | auto-closed | handleable    | auto-closed    | handleable       | auto-closed       | handleable          |
+| ajar P   | auto-closed | handleable    | auto-closed    | handleable       | auto-closed       | auto-closed         |
+| closed P | auto-closed | auto-closed   | auto-closed    | auto-closed      | auto-closed       | auto-closed         |
+
+#### Interaction with composition
+
+`flexible` methods and events cannot be declared in `closed` protocols and
+`flexible` two-way methods cannot be declared in `ajar` protocols. To ensure
+these rules are enforced across protocol composition, a protocol may only
+compose other protocols that are at least as closed as it is:
+
+*   `open`: Can compose any protocol.
+*   `ajar`: Can compose `ajar` and `closed` protocols.
+*   `closed`: Can only compose other `closed` protocols.
+
+#### Behavior prior to unknown interactions
+
+Before unknown interactions support was added to FIDL, all protocols behaved as
+if they were `closed` and all methods behaved as if they were `strict`. The
+default values for protocols and methods with the `unknown_interactions`
+experiment enabled are `open` and `flexible`. This means that to avoid changing
+from `closed` and `strict` to `open` and `flexible` when you enable
+`unknown_interactions`, you need to add explicit `closed` and `strict` modifiers
+to any existing protocols and methods.
+
+See the [compatibility
+guide](/docs/development/languages/fidl/guides/compatibility/README.md) for more
+information about migrating unknown interactions modifiers.
 
 ### Aliasing {#aliasing}
 

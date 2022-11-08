@@ -16,6 +16,7 @@ fidl("fuchsia.examples.docs") {
     "misc.test.fidl",
     "style.test.fidl",
   ]
+  experimental_flags = [ "unknown_interactions" ]
   public_deps = [
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.mem",
