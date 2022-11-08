@@ -27,7 +27,7 @@ pub enum NetstackError {
 
     /// Errors related to sending UDP frames/packets.
     #[error("{}", _0)]
-    SendUdp(crate::transport::udp::UdpSendError),
+    SendUdp(crate::transport::udp::UdpSendToError),
 
     /// Errors related to connections.
     #[error("{}", _0)]

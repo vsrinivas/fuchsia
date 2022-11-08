@@ -26,7 +26,7 @@ use netstack3_core::{
     error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError, ZonedAddressError},
     ip::socket::{IpSockCreationError, IpSockRouteError, IpSockSendError, IpSockUnroutableError},
     socket::datagram::{ConnectListenerError, SetMulticastMembershipError, SockCreationError},
-    transport::udp::{UdpSendError, UdpSendListenerError},
+    transport::udp::UdpSendToError,
     Ctx,
 };
 
@@ -477,22 +477,12 @@ impl IntoErrno for netstack3_core::ip::icmp::IcmpSockCreationError {
     }
 }
 
-impl IntoErrno for UdpSendError {
+impl IntoErrno for UdpSendToError {
     fn into_errno(self) -> Errno {
         match self {
-            UdpSendError::CreateSock(err) => err.into_errno(),
-            UdpSendError::Send(err) => err.into_errno(),
-            UdpSendError::Zone(err) => err.into_errno(),
-        }
-    }
-}
-
-impl IntoErrno for UdpSendListenerError {
-    fn into_errno(self) -> Errno {
-        match self {
-            UdpSendListenerError::CreateSock(err) => err.into_errno(),
-            UdpSendListenerError::LocalIpAddrMismatch => Errno::Einval,
-            UdpSendListenerError::Mtu => Errno::Emsgsize,
+            Self::CreateSock(err) => err.into_errno(),
+            Self::Zone(err) => err.into_errno(),
+            Self::Mtu => Errno::Emsgsize,
         }
     }
 }

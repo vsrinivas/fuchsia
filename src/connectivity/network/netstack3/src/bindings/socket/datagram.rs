@@ -43,8 +43,7 @@ use netstack3_core::{
     sync::Mutex,
     transport::udp::{
         self as core_udp, BufferUdpContext, UdpBoundId, UdpConnId, UdpConnInfo, UdpContext,
-        UdpListenerId, UdpListenerInfo, UdpSendError, UdpSendListenerError, UdpSocketId,
-        UdpUnboundId,
+        UdpListenerId, UdpListenerInfo, UdpSendToError, UdpSocketId, UdpUnboundId,
     },
     BufferNonSyncContext, Ctx, NonSyncContext, SyncCtx,
 };
@@ -367,8 +366,8 @@ pub(crate) trait TransportState<I: Ip>: Transport<I> {
 
 /// An abstraction over transport protocols that allows data to be sent via the Core.
 pub(crate) trait BufferTransportState<I: Ip, B: BufferMut>: TransportState<I> {
-    type SendError: IntoErrno;
     type SendConnError: IntoErrno;
+    type SendConnToError: IntoErrno;
     type SendListenerError: IntoErrno;
 
     fn send_conn<C: BufferNonSyncContext<B>>(
@@ -376,15 +375,21 @@ pub(crate) trait BufferTransportState<I: Ip, B: BufferMut>: TransportState<I> {
         ctx: &mut C,
         conn: Self::ConnId,
         body: B,
-        remote: Option<(SpecifiedAddr<I::Addr>, Self::RemoteIdentifier)>,
     ) -> Result<(), (B, Self::SendConnError)>;
+
+    fn send_conn_to<C: BufferNonSyncContext<B>>(
+        sync_ctx: &SyncCtx<C>,
+        ctx: &mut C,
+        conn: Self::ConnId,
+        body: B,
+        remote: (ZonedAddr<I::Addr, DeviceId<C::Instant>>, Self::RemoteIdentifier),
+    ) -> Result<(), (B, Self::SendConnToError)>;
 
     fn send_listener<C: BufferNonSyncContext<B>>(
         sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         listener: Self::ListenerId,
-        local_ip: Option<SpecifiedAddr<I::Addr>>,
-        remote_ip: SpecifiedAddr<I::Addr>,
+        remote_ip: ZonedAddr<I::Addr, DeviceId<C::Instant>>,
         remote_id: Self::RemoteIdentifier,
         body: B,
     ) -> Result<(), (B, Self::SendListenerError)>;
@@ -642,37 +647,37 @@ impl<I: IpExt> TransportState<I> for Udp {
 }
 
 impl<I: IpExt, B: BufferMut> BufferTransportState<I, B> for Udp {
-    type SendError = UdpSendError;
-    type SendConnError = UdpSendError;
-    type SendListenerError = UdpSendListenerError;
+    type SendConnError = IpSockSendError;
+    type SendConnToError = UdpSendToError;
+    type SendListenerError = UdpSendToError;
 
     fn send_conn<C: BufferNonSyncContext<B>>(
         sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         conn: Self::ConnId,
         body: B,
-        remote: Option<(SpecifiedAddr<I::Addr>, Self::RemoteIdentifier)>,
     ) -> Result<(), (B, Self::SendConnError)> {
-        match remote {
-            None => core_udp::send_udp_conn(sync_ctx, ctx, conn, body)
-                .map_err(|(b, e)| (b, UdpSendError::Send(e))),
-            Some((remote_ip, remote_port)) => core_udp::send_udp_conn_to(
-                sync_ctx,
-                ctx,
-                conn,
-                ZonedAddr::Unzoned(remote_ip),
-                remote_port,
-                body,
-            ),
-        }
+        core_udp::send_udp_conn(sync_ctx, ctx, conn, body)
+    }
+
+    fn send_conn_to<C: BufferNonSyncContext<B>>(
+        sync_ctx: &SyncCtx<C>,
+        ctx: &mut C,
+        conn: Self::ConnId,
+        body: B,
+        (remote_ip, remote_port): (
+            ZonedAddr<I::Addr, DeviceId<C::Instant>>,
+            Self::RemoteIdentifier,
+        ),
+    ) -> Result<(), (B, Self::SendConnToError)> {
+        core_udp::send_udp_conn_to(sync_ctx, ctx, conn, remote_ip, remote_port, body)
     }
 
     fn send_listener<C: BufferNonSyncContext<B>>(
         sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         listener: Self::ListenerId,
-        _local_ip: Option<SpecifiedAddr<I::Addr>>,
-        remote_ip: SpecifiedAddr<I::Addr>,
+        remote_ip: ZonedAddr<I::Addr, DeviceId<C::Instant>>,
         remote_id: Self::RemoteIdentifier,
         body: B,
     ) -> Result<(), (B, Self::SendListenerError)> {
@@ -1147,8 +1152,8 @@ impl<I: IcmpEchoIpExt, B: BufferMut> BufferTransportState<I, B> for IcmpEcho
 where
     IcmpEchoRequest: for<'a> IcmpMessage<I, &'a [u8]>,
 {
-    type SendError = IcmpSendError;
     type SendConnError = IcmpSendError;
+    type SendConnToError = IcmpSendError;
     type SendListenerError = IcmpSendError;
 
     fn send_conn<NonSyncCtx: BufferNonSyncContext<B>>(
@@ -1156,22 +1161,25 @@ where
         ctx: &mut NonSyncCtx,
         conn: Self::ConnId,
         body: B,
-        remote: Option<(SpecifiedAddr<I::Addr>, Self::RemoteIdentifier)>,
     ) -> Result<(), (B, Self::SendConnError)> {
-        match remote {
-            None => I::send_conn(sync_ctx, ctx, conn, body),
-            Some((_remote_ip, IcmpRemoteIdentifier {})) => {
-                todo!("https://fxbug.dev/47321: needs Core implementation")
-            }
-        }
+        I::send_conn(sync_ctx, ctx, conn, body)
+    }
+
+    fn send_conn_to<NonSyncCtx: BufferNonSyncContext<B>>(
+        _sync_ctx: &SyncCtx<NonSyncCtx>,
+        _ctx: &mut NonSyncCtx,
+        _conn: Self::ConnId,
+        _body: B,
+        _remote: (ZonedAddr<I::Addr, DeviceId<NonSyncCtx::Instant>>, Self::RemoteIdentifier),
+    ) -> Result<(), (B, Self::SendConnToError)> {
+        todo!("https://fxbug.dev/47321: needs Core implementation")
     }
 
     fn send_listener<NonSyncCtx: BufferNonSyncContext<B>>(
         _sync_ctx: &SyncCtx<NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         _listener: Self::ListenerId,
-        _local_ip: Option<SpecifiedAddr<I::Addr>>,
-        _remote_ip: SpecifiedAddr<I::Addr>,
+        _remote_ip: ZonedAddr<I::Addr, DeviceId<NonSyncCtx::Instant>>,
         _remote_id: Self::RemoteIdentifier,
         _body: B,
     ) -> Result<(), (B, Self::SendListenerError)> {
@@ -2632,19 +2640,27 @@ where
         data: Vec<u8>,
     ) -> Result<i64, fposix::Errno> {
         let () = self.need_rights(fio::OpenFlags::RIGHT_WRITABLE)?;
-        let remote = if let Some(addr) = addr {
-            let sockaddr = I::SocketAddress::from_sock_addr(addr)?;
-            let addr = sockaddr.get_specified_addr().ok_or(fposix::Errno::Einval)?;
-            let port =
-                T::RemoteIdentifier::from_u16(sockaddr.port()).ok_or(fposix::Errno::Einval)?;
-            Some((addr, port))
-        } else {
-            None
-        };
-        let len = data.len() as i64;
-        let body = Buf::new(data, ..);
+        let remote_addr = addr.map(I::SocketAddress::from_sock_addr).transpose()?;
+
         let mut ctx = self.ctx.lock().await;
         let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
+        let remote = match remote_addr {
+            Some(remote_addr) => {
+                let (remote_addr, port) =
+                    TryFromFidlWithContext::try_from_fidl_with_ctx(&non_sync_ctx, remote_addr)
+                        .map_err(IntoErrno::into_errno)?;
+                // Emulate Linux, which was emulating BSD, by treating the
+                // unspecified remote address as localhost.
+                Some((
+                    remote_addr.unwrap_or(ZonedAddr::Unzoned(I::LOOPBACK_ADDRESS)),
+                    T::RemoteIdentifier::from_u16(port).ok_or(fposix::Errno::Einval)?,
+                ))
+            }
+            None => None,
+        };
+
+        let len = data.len() as i64;
+        let body = Buf::new(data, ..);
         match self.data.info.state {
             SocketState::Unbound { unbound_id } => match remote {
                 Some((addr, port)) => {
@@ -2662,16 +2678,8 @@ where
                     )
                     .and_then(|listener_id| {
                         self.data.info.state = SocketState::BoundListen { listener_id };
-                        T::send_listener(
-                            sync_ctx,
-                            non_sync_ctx,
-                            listener_id,
-                            None,
-                            addr,
-                            port,
-                            body,
-                        )
-                        .map_err(|(_body, err)| err.into_errno())
+                        T::send_listener(sync_ctx, non_sync_ctx, listener_id, addr, port, body)
+                            .map_err(|(_body, err)| err.into_errno())
                     })
                 }
                 None => Err(fposix::Errno::Edestaddrreq),
@@ -2680,12 +2688,16 @@ where
                 if shutdown_write {
                     return Err(fposix::Errno::Epipe);
                 }
-                T::send_conn(sync_ctx, non_sync_ctx, conn_id, body, remote)
-                    .map_err(|(_body, err)| err.into_errno())
+                match remote {
+                    None => T::send_conn(sync_ctx, non_sync_ctx, conn_id, body)
+                        .map_err(|(_body, err)| err.into_errno()),
+                    Some(remote) => T::send_conn_to(sync_ctx, non_sync_ctx, conn_id, body, remote)
+                        .map_err(|(_body, err)| err.into_errno()),
+                }
             }
             SocketState::BoundListen { listener_id } => match remote {
                 Some((addr, port)) => {
-                    T::send_listener(sync_ctx, non_sync_ctx, listener_id, None, addr, port, body)
+                    T::send_listener(sync_ctx, non_sync_ctx, listener_id, addr, port, body)
                         .map_err(|(_body, err)| err.into_errno())
                 }
                 None => Err(fposix::Errno::Edestaddrreq),

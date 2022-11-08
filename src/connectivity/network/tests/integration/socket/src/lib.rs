@@ -26,11 +26,13 @@ use fuchsia_async::{
 };
 use fuchsia_zircon::{self as zx, AsHandleRef as _};
 use futures::{
-    future, io::AsyncReadExt as _, io::AsyncWriteExt as _, Future, FutureExt as _, StreamExt as _,
-    TryFutureExt as _, TryStreamExt as _,
+    future::{self, join_all},
+    io::AsyncReadExt as _,
+    io::AsyncWriteExt as _,
+    Future, FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _,
 };
 use net_declare::{
-    fidl_ip, fidl_ip_v4, fidl_ip_v6, fidl_mac, fidl_subnet, std_ip_v4, std_socket_addr,
+    fidl_ip, fidl_ip_v4, fidl_ip_v6, fidl_mac, fidl_subnet, std_ip_v4, std_ip_v6, std_socket_addr,
 };
 use net_types::ip::{Ipv4, Ipv6};
 use netemul::{RealmTcpListener as _, RealmTcpStream as _, RealmUdpSocket as _, TestInterface};
@@ -1925,4 +1927,105 @@ async fn get_bound_device_errors_after_device_deleted<N: Netstack, E: netemul::E
     let bound_device =
         host_sock.device().map_err(|e| e.raw_os_error().and_then(fposix::Errno::from_primitive));
     assert_eq!(bound_device, Err(Some(fposix::Errno::Enodev)));
+}
+
+#[variants_test]
+async fn send_to_remote_with_zone<N: Netstack, E: netemul::Endpoint>(name: &str) {
+    const PORT: u16 = 80;
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let net_a = sandbox.create_network("a").await.expect("failed to create network");
+    let net_b = sandbox.create_network("b").await.expect("failed to create network");
+
+    let host = sandbox.create_netstack_realm::<N, _>(format!("{name}_host")).expect("create realm");
+
+    async fn make_interface<'a, N: Netstack, E: netemul::Endpoint>(
+        host: &netemul::TestRealm<'a>,
+        id: u8,
+        net: &netemul::TestNetwork<'a>,
+        subnet: fnet::Subnet,
+    ) -> TestInterface<'a> {
+        let interface = host
+            .join_network::<E, _>(net, format!("host-{id}"))
+            .await
+            .expect("host failed to join network");
+
+        interface.add_address(subnet).await.expect("peer add addr");
+        match N::VERSION {
+            // Don't add the link-local subnet route on Netstack3 since it will
+            // conflict with the automatically created one.
+            NetstackVersion::Netstack3 => {}
+            NetstackVersion::Netstack2
+            | NetstackVersion::Netstack2WithFastUdp
+            | NetstackVersion::ProdNetstack2 => {
+                interface.add_subnet_route(subnet).await.expect("peer add route")
+            }
+        };
+        interface
+    }
+
+    let host_interface_a =
+        make_interface::<N, E>(&host, 1, &net_a, fidl_subnet!("fe80::1111/64")).await;
+    let host_interface_b =
+        make_interface::<N, E>(&host, 2, &net_b, fidl_subnet!("fe80::2222/64")).await;
+
+    let peer_a =
+        sandbox.create_netstack_realm::<N, _>(format!("{name}_peer-a")).expect("create realm");
+    let peer_b =
+        sandbox.create_netstack_realm::<N, _>(format!("{name}_peer-b")).expect("create realm");
+
+    // Use the same IP address for both peers in their respective networks.
+    let peer_ip = std_ip_v6!("fe80::3");
+    let peer_subnet =
+        fnet::Subnet { addr: fnet_ext::IpAddress(peer_ip.into()).into(), prefix_len: 64 };
+    let _peer_a_interface = make_interface::<N, E>(&peer_a, 3, &net_a, peer_subnet.clone()).await;
+    let _peer_b_interface = make_interface::<N, E>(&peer_b, 4, &net_b, peer_subnet).await;
+
+    let peer_a_socket = fasync::net::UdpSocket::bind_in_realm(
+        &peer_a,
+        (std::net::Ipv6Addr::UNSPECIFIED, PORT).into(),
+    )
+    .await
+    .expect("failed to create peer socket");
+    let peer_b_socket = fasync::net::UdpSocket::bind_in_realm(
+        &peer_b,
+        (std::net::Ipv6Addr::UNSPECIFIED, PORT).into(),
+    )
+    .await
+    .expect("failed to create peer socket");
+
+    let host_sock =
+        fasync::net::UdpSocket::bind_in_realm(&host, (std::net::Ipv6Addr::UNSPECIFIED, 0).into())
+            .await
+            .expect("failed to create host socket");
+
+    const NUM_BYTES: usize = 10;
+    let _: Vec<()> = join_all(
+        [(&host_interface_a, &peer_a_socket), (&host_interface_b, &peer_b_socket)].into_iter().map(
+            |(interface, peer_socket)| async {
+                let id: u8 = interface.id().try_into().unwrap();
+                assert_eq!(
+                    host_sock
+                        .send_to(
+                            &[id; NUM_BYTES],
+                            std::net::SocketAddrV6::new(peer_ip, PORT, 0, id.into()).into(),
+                        )
+                        .await
+                        .expect("send should succeed"),
+                    NUM_BYTES
+                );
+
+                let mut buf = [0; NUM_BYTES + 1];
+                let (bytes, _sender) = peer_socket
+                    .recv_from(&mut buf)
+                    .on_timeout(fasync::Duration::from_seconds(2), || {
+                        Err(std::io::Error::new(std::io::ErrorKind::TimedOut, "timeout"))
+                    })
+                    .await
+                    .expect("recv succeeds");
+                assert_eq!(bytes, NUM_BYTES);
+                assert_eq!(&buf[..NUM_BYTES], &[id; NUM_BYTES]);
+            },
+        ),
+    )
+    .await;
 }

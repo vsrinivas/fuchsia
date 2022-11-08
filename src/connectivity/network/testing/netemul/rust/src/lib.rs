@@ -1162,6 +1162,32 @@ impl<'a> TestInterface<'a> {
         self.set_dhcp_client_enabled(false).await.context("failed to stop dhcp client")
     }
 
+    /// Adds an address, waiting until the address assignment state is
+    /// `ASSIGNED`.
+    pub async fn add_address(&self, subnet: fnet::Subnet) -> Result<()> {
+        let (address_state_provider, server) =
+            fidl::endpoints::create_proxy::<fnet_interfaces_admin::AddressStateProviderMarker>()
+                .context("create proxy")?;
+        let () = address_state_provider.detach().context("detach address lifetime")?;
+        let () = self
+            .control
+            .add_address(
+                &mut subnet.clone(),
+                fnet_interfaces_admin::AddressParameters::EMPTY,
+                server,
+            )
+            .context("FIDL error")?;
+
+        let mut state_stream =
+            fnet_interfaces_ext::admin::assignment_state_stream(address_state_provider);
+        fnet_interfaces_ext::admin::wait_assignment_state(
+            &mut state_stream,
+            fnet_interfaces_admin::AddressAssignmentState::Assigned,
+        )
+        .await?;
+        Ok(())
+    }
+
     /// Adds an address and a subnet route, waiting until the address assignment
     /// state is `ASSIGNED`.
     pub async fn add_address_and_subnet_route(&self, subnet: fnet::Subnet) -> Result<()> {
