@@ -359,17 +359,17 @@ TEST(DpTransportControlTest, GetForTigerLakeTranscoder) {
   // DG1: IHD-OS-DG1-Vol 2c-2.21 Part 1 pages 572-575
 
   auto dp_tp_ctl_a =
-      tgl_registers::DpTransportControl::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_A)
+      tgl_registers::DpTransportControl::GetForTigerLakeTranscoder(TranscoderId::TRANSCODER_A)
           .FromValue(0);
   EXPECT_EQ(0x60540u, dp_tp_ctl_a.reg_addr());
 
   auto dp_tp_ctl_b =
-      tgl_registers::DpTransportControl::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_B)
+      tgl_registers::DpTransportControl::GetForTigerLakeTranscoder(TranscoderId::TRANSCODER_B)
           .FromValue(0);
   EXPECT_EQ(0x61540u, dp_tp_ctl_b.reg_addr());
 
   auto dp_tp_ctl_c =
-      tgl_registers::DpTransportControl::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_C)
+      tgl_registers::DpTransportControl::GetForTigerLakeTranscoder(TranscoderId::TRANSCODER_C)
           .FromValue(0);
   EXPECT_EQ(0x62540u, dp_tp_ctl_c.reg_addr());
 

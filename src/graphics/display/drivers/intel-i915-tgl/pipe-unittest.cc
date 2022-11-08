@@ -73,13 +73,13 @@ layer_t CreatePrimaryLayerConfig(uint64_t handle, uint32_t z_index = 1u) {
 
 TEST_F(PipeTest, TiedTranscoderId) {
   PipeSkylake pipe_a(&mmio_buffer_.value(), tgl_registers::Pipe::PIPE_A, {});
-  EXPECT_EQ(tgl_registers::Trans::TRANS_A, pipe_a.tied_transcoder_id());
+  EXPECT_EQ(TranscoderId::TRANSCODER_A, pipe_a.tied_transcoder_id());
 
   PipeSkylake pipe_b(&mmio_buffer_.value(), tgl_registers::Pipe::PIPE_B, {});
-  EXPECT_EQ(tgl_registers::Trans::TRANS_B, pipe_b.tied_transcoder_id());
+  EXPECT_EQ(TranscoderId::TRANSCODER_B, pipe_b.tied_transcoder_id());
 
   PipeSkylake pipe_c(&mmio_buffer_.value(), tgl_registers::Pipe::PIPE_C, {});
-  EXPECT_EQ(tgl_registers::Trans::TRANS_C, pipe_c.tied_transcoder_id());
+  EXPECT_EQ(TranscoderId::TRANSCODER_C, pipe_c.tied_transcoder_id());
 
   // TODO(fxbug.dev/109278): Add a test for transcoder D, when we support it.
 }

@@ -137,16 +137,16 @@ class DisplayDevice : public fidl::WireServer<FidlBacklight::Device> {
   virtual DdiPllConfig ComputeDdiPllConfig(int32_t pixel_clock_10khz) = 0;
 
   // Load the clock rate from hardware if it's necessary when changing the transcoder.
-  virtual uint32_t LoadClockRateForTranscoder(tgl_registers::Trans transcoder) = 0;
+  virtual uint32_t LoadClockRateForTranscoder(TranscoderId transcoder_id) = 0;
 
   // Attaching a pipe to a display or configuring a pipe after display mode change has
   // 3 steps. The second step is generic pipe configuration, whereas PipeConfigPreamble
   // and PipeConfigEpilogue are responsible for display-type-specific configuration that
   // must be done before and after the generic configuration.
   virtual bool PipeConfigPreamble(const display_mode_t& mode, tgl_registers::Pipe pipe,
-                                  tgl_registers::Trans transcoder) = 0;
+                                  TranscoderId transcoder_id) = 0;
   virtual bool PipeConfigEpilogue(const display_mode_t& mode, tgl_registers::Pipe pipe,
-                                  tgl_registers::Trans transcoder) = 0;
+                                  TranscoderId transcoder_id) = 0;
 
   fdf::MmioBuffer* mmio_space() const;
 

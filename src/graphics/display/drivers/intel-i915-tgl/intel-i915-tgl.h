@@ -149,7 +149,7 @@ class Controller : public DeviceType,
   void HandlePipeVsync(tgl_registers::Pipe pipe_num, zx_time_t timestamp);
 
   void ResetPipePlaneBuffers(tgl_registers::Pipe pipe);
-  bool ResetDdi(DdiId ddi_id, std::optional<tgl_registers::Trans> transcoder);
+  bool ResetDdi(DdiId ddi_id, std::optional<TranscoderId> transcoder_id);
 
   void SetDpllManagerForTesting(std::unique_ptr<DisplayPllManager> dpll_manager) {
     dpll_manager_ = std::move(dpll_manager);

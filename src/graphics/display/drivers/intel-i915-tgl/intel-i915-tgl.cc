@@ -464,7 +464,7 @@ void Controller::ResetPipePlaneBuffers(tgl_registers::Pipe pipe) {
   }
 }
 
-bool Controller::ResetDdi(DdiId ddi_id, std::optional<tgl_registers::Trans> transcoder) {
+bool Controller::ResetDdi(DdiId ddi_id, std::optional<TranscoderId> transcoder_id) {
   tgl_registers::DdiRegs ddi_regs(ddi_id);
 
   // Disable the port
@@ -478,9 +478,9 @@ bool Controller::ResetDdi(DdiId ddi_id, std::optional<tgl_registers::Trans> tran
         .set_training_pattern(tgl_registers::DpTransportControl::kTrainingPattern1)
         .WriteTo(mmio_space());
   } else {
-    if (transcoder.has_value()) {
+    if (transcoder_id.has_value()) {
       auto dp_transport_control =
-          tgl_registers::DpTransportControl::GetForTigerLakeTranscoder(*transcoder)
+          tgl_registers::DpTransportControl::GetForTigerLakeTranscoder(*transcoder_id)
               .ReadFrom(mmio_space());
       dp_transport_control.set_enabled(false)
           .set_training_pattern(tgl_registers::DpTransportControl::kTrainingPattern1)
@@ -619,7 +619,7 @@ void Controller::InitDisplays() {
 
   // Make a note of what needs to be reset, so we can finish querying the hardware state
   // before touching it, and so we can make sure transcoders are reset before ddis.
-  std::vector<std::pair<DdiId, std::optional<tgl_registers::Trans>>> ddi_trans_needs_reset;
+  std::vector<std::pair<DdiId, std::optional<TranscoderId>>> ddi_trans_needs_reset;
   std::vector<DisplayDevice*> device_needs_init;
 
   for (const auto ddi_id : ddis_) {

@@ -57,8 +57,8 @@ class Pipe {
   // Reset the pipe planes (layers).
   void ResetPlanes();
 
-  // A helper method to reset |transcoder| given its transcoder number.
-  static void ResetTranscoder(tgl_registers::Trans transcoder, tgl_registers::Platform platform,
+  // Resets the transcoder identified by `transcoder_id`.
+  static void ResetTranscoder(TranscoderId transcoder_id, tgl_registers::Platform platform,
                               fdf::MmioBuffer* mmio_space);
 
   void LoadActiveMode(display_mode_t* mode);
@@ -73,9 +73,7 @@ class Pipe {
   //
   // See `connected_transcoder_id()` for identifying the transcoder that the
   // pipe is currently using.
-  tgl_registers::Trans tied_transcoder_id() const {
-    return static_cast<tgl_registers::Trans>(pipe_);
-  }
+  TranscoderId tied_transcoder_id() const { return static_cast<TranscoderId>(pipe_); }
 
   // Identifies the transcoder that is currently receiving the pipe's output.
   //
@@ -89,7 +87,7 @@ class Pipe {
   // output, which can be the general-purpose transcoder tied to the pipe, or
   // one of the shared specialized transcoders. The return value depends on how
   // we configure the display engine.
-  virtual tgl_registers::Trans connected_transcoder_id() const = 0;
+  virtual TranscoderId connected_transcoder_id() const = 0;
 
   uint64_t attached_display_id() const { return attached_display_; }
   bool in_use() const { return attached_display_ != INVALID_DISPLAY_ID; }
@@ -168,8 +166,8 @@ class PipeSkylake : public Pipe {
       : Pipe(mmio_space, tgl_registers::Platform::kSkylake, pipe, std::move(pipe_power)) {}
   ~PipeSkylake() override = default;
 
-  tgl_registers::Trans connected_transcoder_id() const override {
-    return attached_edp() ? tgl_registers::TRANS_EDP : tied_transcoder_id();
+  TranscoderId connected_transcoder_id() const override {
+    return attached_edp() ? TranscoderId::TRANSCODER_EDP : tied_transcoder_id();
   }
 };
 
@@ -179,7 +177,7 @@ class PipeTigerLake : public Pipe {
       : Pipe(mmio_space, tgl_registers::Platform::kTigerLake, pipe, std::move(pipe_power)) {}
   ~PipeTigerLake() override = default;
 
-  tgl_registers::Trans connected_transcoder_id() const override { return tied_transcoder_id(); }
+  TranscoderId connected_transcoder_id() const override { return tied_transcoder_id(); }
 };
 
 }  // namespace i915_tgl

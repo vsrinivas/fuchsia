@@ -25,7 +25,7 @@ TEST(TranscoderDdiControlTest, DdiKabyLake) {
   // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 2 page 927
 
   auto transcoder_ddi_control_a =
-      tgl_registers::TranscoderDdiControl::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_A)
+      tgl_registers::TranscoderDdiControl::GetForKabyLakeTranscoder(TranscoderId::TRANSCODER_A)
           .FromValue(0);
 
   transcoder_ddi_control_a.set_reg_value(0);
@@ -60,7 +60,7 @@ TEST(TranscoderDdiControlTest, DdiTigerLake) {
   // Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 2 pages 1371
 
   auto transcoder_ddi_control_a =
-      tgl_registers::TranscoderDdiControl::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_A)
+      tgl_registers::TranscoderDdiControl::GetForTigerLakeTranscoder(TranscoderId::TRANSCODER_A)
           .FromValue(0);
 
   transcoder_ddi_control_a.set_reg_value(0);
@@ -121,31 +121,31 @@ TEST(TranscoderDdiControlTest, PortSyncPrimaryTranscoderKabyLake) {
   // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 2 page 928
 
   auto transcoder_ddi_control_a =
-      tgl_registers::TranscoderDdiControl::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_A)
+      tgl_registers::TranscoderDdiControl::GetForTigerLakeTranscoder(TranscoderId::TRANSCODER_A)
           .FromValue(0);
 
   transcoder_ddi_control_a.set_reg_value(0);
-  transcoder_ddi_control_a.set_port_sync_primary_kaby_lake(tgl_registers::Trans::TRANS_EDP);
+  transcoder_ddi_control_a.set_port_sync_primary_kaby_lake(TranscoderId::TRANSCODER_EDP);
   EXPECT_EQ(0b00000000'0000'00'00'00000000'00000000u, transcoder_ddi_control_a.reg_value());
-  EXPECT_EQ(tgl_registers::Trans::TRANS_EDP,
+  EXPECT_EQ(TranscoderId::TRANSCODER_EDP,
             transcoder_ddi_control_a.port_sync_primary_transcoder_kaby_lake());
 
   transcoder_ddi_control_a.set_reg_value(0);
-  transcoder_ddi_control_a.set_port_sync_primary_kaby_lake(tgl_registers::Trans::TRANS_A);
+  transcoder_ddi_control_a.set_port_sync_primary_kaby_lake(TranscoderId::TRANSCODER_A);
   EXPECT_EQ(0b00000000'0000'01'00'00000000'00000000u, transcoder_ddi_control_a.reg_value());
-  EXPECT_EQ(tgl_registers::Trans::TRANS_A,
+  EXPECT_EQ(TranscoderId::TRANSCODER_A,
             transcoder_ddi_control_a.port_sync_primary_transcoder_kaby_lake());
 
   transcoder_ddi_control_a.set_reg_value(0);
-  transcoder_ddi_control_a.set_port_sync_primary_kaby_lake(tgl_registers::Trans::TRANS_B);
+  transcoder_ddi_control_a.set_port_sync_primary_kaby_lake(TranscoderId::TRANSCODER_B);
   EXPECT_EQ(0b00000000'0000'10'00'00000000'00000000u, transcoder_ddi_control_a.reg_value());
-  EXPECT_EQ(tgl_registers::Trans::TRANS_B,
+  EXPECT_EQ(TranscoderId::TRANSCODER_B,
             transcoder_ddi_control_a.port_sync_primary_transcoder_kaby_lake());
 
   transcoder_ddi_control_a.set_reg_value(0);
-  transcoder_ddi_control_a.set_port_sync_primary_kaby_lake(tgl_registers::Trans::TRANS_C);
+  transcoder_ddi_control_a.set_port_sync_primary_kaby_lake(TranscoderId::TRANSCODER_C);
   EXPECT_EQ(0b00000000'0000'11'00'00000000'00000000u, transcoder_ddi_control_a.reg_value());
-  EXPECT_EQ(tgl_registers::Trans::TRANS_C,
+  EXPECT_EQ(TranscoderId::TRANSCODER_C,
             transcoder_ddi_control_a.port_sync_primary_transcoder_kaby_lake());
 }
 
@@ -156,7 +156,7 @@ TEST(TranscoderDdiControlTest, InputPipe) {
   // Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 2 page 955
 
   auto transcoder_ddi_control_a =
-      tgl_registers::TranscoderDdiControl::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_A)
+      tgl_registers::TranscoderDdiControl::GetForTigerLakeTranscoder(TranscoderId::TRANSCODER_A)
           .FromValue(0);
 
   transcoder_ddi_control_a.set_reg_value(0);
@@ -189,7 +189,7 @@ TEST(TranscoderDdiControlTest, InputPipe) {
 
 TEST(TranscoderDdiControlTest, DisplayPortLaneCount) {
   auto transcoder_ddi_control_a =
-      tgl_registers::TranscoderDdiControl::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_A)
+      tgl_registers::TranscoderDdiControl::GetForTigerLakeTranscoder(TranscoderId::TRANSCODER_A)
           .FromValue(0);
 
   // The valid values and encodings are listed in the reference manuals.
@@ -226,22 +226,22 @@ TEST(TranscoderDdiControlTest, GetForKabyLakeTranscoder) {
   // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 2 page 926
 
   auto transcoder_ddi_control_a =
-      tgl_registers::TranscoderDdiControl::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_A)
+      tgl_registers::TranscoderDdiControl::GetForKabyLakeTranscoder(TranscoderId::TRANSCODER_A)
           .FromValue(0);
   EXPECT_EQ(0x60400u, transcoder_ddi_control_a.reg_addr());
 
   auto transcoder_ddi_control_b =
-      tgl_registers::TranscoderDdiControl::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_B)
+      tgl_registers::TranscoderDdiControl::GetForKabyLakeTranscoder(TranscoderId::TRANSCODER_B)
           .FromValue(0);
   EXPECT_EQ(0x61400u, transcoder_ddi_control_b.reg_addr());
 
   auto transcoder_ddi_control_c =
-      tgl_registers::TranscoderDdiControl::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_C)
+      tgl_registers::TranscoderDdiControl::GetForKabyLakeTranscoder(TranscoderId::TRANSCODER_C)
           .FromValue(0);
   EXPECT_EQ(0x62400u, transcoder_ddi_control_c.reg_addr());
 
   auto transcoder_ddi_control_edp =
-      tgl_registers::TranscoderDdiControl::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_EDP)
+      tgl_registers::TranscoderDdiControl::GetForKabyLakeTranscoder(TranscoderId::TRANSCODER_EDP)
           .FromValue(0);
   EXPECT_EQ(0x6f400u, transcoder_ddi_control_edp.reg_addr());
 }
@@ -252,17 +252,17 @@ TEST(TranscoderDdiControlTest, GetForTigerLakeTranscoder) {
   // Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 2 pages 1367-1368
 
   auto transcoder_ddi_control_a =
-      tgl_registers::TranscoderDdiControl::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_A)
+      tgl_registers::TranscoderDdiControl::GetForTigerLakeTranscoder(TranscoderId::TRANSCODER_A)
           .FromValue(0);
   EXPECT_EQ(0x60400u, transcoder_ddi_control_a.reg_addr());
 
   auto transcoder_ddi_control_b =
-      tgl_registers::TranscoderDdiControl::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_B)
+      tgl_registers::TranscoderDdiControl::GetForTigerLakeTranscoder(TranscoderId::TRANSCODER_B)
           .FromValue(0);
   EXPECT_EQ(0x61400u, transcoder_ddi_control_b.reg_addr());
 
   auto transcoder_ddi_control_c =
-      tgl_registers::TranscoderDdiControl::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_C)
+      tgl_registers::TranscoderDdiControl::GetForTigerLakeTranscoder(TranscoderId::TRANSCODER_C)
           .FromValue(0);
   EXPECT_EQ(0x62400u, transcoder_ddi_control_c.reg_addr());
 
@@ -277,22 +277,22 @@ TEST(TranscoderConfigTest, GetForKabyLakeTranscoder) {
   // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 2 page 924
 
   auto transcoder_config_a =
-      tgl_registers::TranscoderConfig::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_A)
+      tgl_registers::TranscoderConfig::GetForKabyLakeTranscoder(TranscoderId::TRANSCODER_A)
           .FromValue(0);
   EXPECT_EQ(0x70008u, transcoder_config_a.reg_addr());
 
   auto transcoder_config_b =
-      tgl_registers::TranscoderConfig::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_B)
+      tgl_registers::TranscoderConfig::GetForKabyLakeTranscoder(TranscoderId::TRANSCODER_B)
           .FromValue(0);
   EXPECT_EQ(0x71008u, transcoder_config_b.reg_addr());
 
   auto transcoder_config_c =
-      tgl_registers::TranscoderConfig::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_C)
+      tgl_registers::TranscoderConfig::GetForKabyLakeTranscoder(TranscoderId::TRANSCODER_C)
           .FromValue(0);
   EXPECT_EQ(0x72008u, transcoder_config_c.reg_addr());
 
   auto transcoder_config_edp =
-      tgl_registers::TranscoderConfig::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_EDP)
+      tgl_registers::TranscoderConfig::GetForKabyLakeTranscoder(TranscoderId::TRANSCODER_EDP)
           .FromValue(0);
   EXPECT_EQ(0x7f008u, transcoder_config_edp.reg_addr());
 
@@ -306,17 +306,17 @@ TEST(TranscoderConfigTest, GetForTigerLakeTranscoder) {
   // Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 2 pages 1367-1368
 
   auto transcoder_config_a =
-      tgl_registers::TranscoderConfig::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_A)
+      tgl_registers::TranscoderConfig::GetForTigerLakeTranscoder(TranscoderId::TRANSCODER_A)
           .FromValue(0);
   EXPECT_EQ(0x70008u, transcoder_config_a.reg_addr());
 
   auto transcoder_config_b =
-      tgl_registers::TranscoderConfig::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_B)
+      tgl_registers::TranscoderConfig::GetForTigerLakeTranscoder(TranscoderId::TRANSCODER_B)
           .FromValue(0);
   EXPECT_EQ(0x71008u, transcoder_config_b.reg_addr());
 
   auto transcoder_config_c =
-      tgl_registers::TranscoderConfig::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_C)
+      tgl_registers::TranscoderConfig::GetForTigerLakeTranscoder(TranscoderId::TRANSCODER_C)
           .FromValue(0);
   EXPECT_EQ(0x72008u, transcoder_config_c.reg_addr());
 
@@ -334,7 +334,7 @@ TEST(TranscoderClockSelectTest, DdiClockKabyLake) {
   // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 2 page 923
 
   auto transcoder_clock_select_a =
-      tgl_registers::TranscoderClockSelect::GetForTranscoder(tgl_registers::Trans::TRANS_A)
+      tgl_registers::TranscoderClockSelect::GetForTranscoder(TranscoderId::TRANSCODER_A)
           .FromValue(0);
 
   transcoder_clock_select_a.set_reg_value(0);
@@ -365,7 +365,7 @@ TEST(TranscoderClockSelectTest, DdiClockKabyLake) {
 
 TEST(TranscoderClockSelectTest, DdiClockKabyLakePreservesReservedBits) {
   auto transcoder_clock_select_a =
-      tgl_registers::TranscoderClockSelect::GetForTranscoder(tgl_registers::Trans::TRANS_A)
+      tgl_registers::TranscoderClockSelect::GetForTranscoder(TranscoderId::TRANSCODER_A)
           .FromValue(0);
 
   transcoder_clock_select_a.set_reg_value(0xffff'ffff);
@@ -385,7 +385,7 @@ TEST(TranscoderClockSelectTest, DdiClockTigerLake) {
   // Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 2 pages 1365
 
   auto transcoder_clock_select_a =
-      tgl_registers::TranscoderClockSelect::GetForTranscoder(tgl_registers::Trans::TRANS_A)
+      tgl_registers::TranscoderClockSelect::GetForTranscoder(TranscoderId::TRANSCODER_A)
           .FromValue(0);
 
   transcoder_clock_select_a.set_reg_value(0);
@@ -447,17 +447,17 @@ TEST(TranscoderClockSelectTest, GetForTranscoder) {
   // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 2 page 922
 
   auto transcoder_clock_select_a =
-      tgl_registers::TranscoderClockSelect::GetForTranscoder(tgl_registers::Trans::TRANS_A)
+      tgl_registers::TranscoderClockSelect::GetForTranscoder(TranscoderId::TRANSCODER_A)
           .FromValue(0);
   EXPECT_EQ(0x46140u, transcoder_clock_select_a.reg_addr());
 
   auto transcoder_clock_select_b =
-      tgl_registers::TranscoderClockSelect::GetForTranscoder(tgl_registers::Trans::TRANS_B)
+      tgl_registers::TranscoderClockSelect::GetForTranscoder(TranscoderId::TRANSCODER_B)
           .FromValue(0);
   EXPECT_EQ(0x46144u, transcoder_clock_select_b.reg_addr());
 
   auto transcoder_clock_select_c =
-      tgl_registers::TranscoderClockSelect::GetForTranscoder(tgl_registers::Trans::TRANS_C)
+      tgl_registers::TranscoderClockSelect::GetForTranscoder(TranscoderId::TRANSCODER_C)
           .FromValue(0);
   EXPECT_EQ(0x46148u, transcoder_clock_select_c.reg_addr());
 
@@ -474,7 +474,7 @@ TEST(TranscoderDataMTest, PayloadSize) {
   // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 page 423
   //
   auto data_m_a =
-      tgl_registers::TranscoderDataM::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_A)
+      tgl_registers::TranscoderDataM::GetForKabyLakeTranscoder(TranscoderId::TRANSCODER_A)
           .FromValue(0);
 
   data_m_a.set_reg_value(0);
@@ -495,22 +495,22 @@ TEST(TranscoderDataMTest, GetForKabyLakeTranscoder) {
   // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 page 422
 
   auto data_m_a =
-      tgl_registers::TranscoderDataM::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_A)
+      tgl_registers::TranscoderDataM::GetForKabyLakeTranscoder(TranscoderId::TRANSCODER_A)
           .FromValue(0);
   EXPECT_EQ(0x60030u, data_m_a.reg_addr());
 
   auto data_m_b =
-      tgl_registers::TranscoderDataM::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_B)
+      tgl_registers::TranscoderDataM::GetForKabyLakeTranscoder(TranscoderId::TRANSCODER_B)
           .FromValue(0);
   EXPECT_EQ(0x61030u, data_m_b.reg_addr());
 
   auto data_m_c =
-      tgl_registers::TranscoderDataM::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_C)
+      tgl_registers::TranscoderDataM::GetForKabyLakeTranscoder(TranscoderId::TRANSCODER_C)
           .FromValue(0);
   EXPECT_EQ(0x62030u, data_m_c.reg_addr());
 
   auto data_m_edp =
-      tgl_registers::TranscoderDataM::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_EDP)
+      tgl_registers::TranscoderDataM::GetForKabyLakeTranscoder(TranscoderId::TRANSCODER_EDP)
           .FromValue(0);
   EXPECT_EQ(0x6f030u, data_m_edp.reg_addr());
 }
@@ -521,17 +521,17 @@ TEST(TranscoderDataMTest, GetForTigerLakeTranscoder) {
   // Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 page 328
 
   auto data_m_a =
-      tgl_registers::TranscoderDataM::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_A)
+      tgl_registers::TranscoderDataM::GetForTigerLakeTranscoder(TranscoderId::TRANSCODER_A)
           .FromValue(0);
   EXPECT_EQ(0x60030u, data_m_a.reg_addr());
 
   auto data_m_b =
-      tgl_registers::TranscoderDataM::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_B)
+      tgl_registers::TranscoderDataM::GetForTigerLakeTranscoder(TranscoderId::TRANSCODER_B)
           .FromValue(0);
   EXPECT_EQ(0x61030u, data_m_b.reg_addr());
 
   auto data_m_c =
-      tgl_registers::TranscoderDataM::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_C)
+      tgl_registers::TranscoderDataM::GetForTigerLakeTranscoder(TranscoderId::TRANSCODER_C)
           .FromValue(0);
   EXPECT_EQ(0x62030u, data_m_c.reg_addr());
 
@@ -546,22 +546,22 @@ TEST(TranscoderDataNTest, GetForKabyLakeTranscoder) {
   // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 page 424
 
   auto data_n_a =
-      tgl_registers::TranscoderDataN::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_A)
+      tgl_registers::TranscoderDataN::GetForKabyLakeTranscoder(TranscoderId::TRANSCODER_A)
           .FromValue(0);
   EXPECT_EQ(0x60034u, data_n_a.reg_addr());
 
   auto data_n_b =
-      tgl_registers::TranscoderDataN::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_B)
+      tgl_registers::TranscoderDataN::GetForKabyLakeTranscoder(TranscoderId::TRANSCODER_B)
           .FromValue(0);
   EXPECT_EQ(0x61034u, data_n_b.reg_addr());
 
   auto data_n_c =
-      tgl_registers::TranscoderDataN::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_C)
+      tgl_registers::TranscoderDataN::GetForKabyLakeTranscoder(TranscoderId::TRANSCODER_C)
           .FromValue(0);
   EXPECT_EQ(0x62034u, data_n_c.reg_addr());
 
   auto data_n_edp =
-      tgl_registers::TranscoderDataN::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_EDP)
+      tgl_registers::TranscoderDataN::GetForKabyLakeTranscoder(TranscoderId::TRANSCODER_EDP)
           .FromValue(0);
   EXPECT_EQ(0x6f034u, data_n_edp.reg_addr());
 }
@@ -572,17 +572,17 @@ TEST(TranscoderDataNTest, GetForTigerLakeTranscoder) {
   // Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 page 330
 
   auto data_n_a =
-      tgl_registers::TranscoderDataN::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_A)
+      tgl_registers::TranscoderDataN::GetForTigerLakeTranscoder(TranscoderId::TRANSCODER_A)
           .FromValue(0);
   EXPECT_EQ(0x60034u, data_n_a.reg_addr());
 
   auto data_n_b =
-      tgl_registers::TranscoderDataN::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_B)
+      tgl_registers::TranscoderDataN::GetForTigerLakeTranscoder(TranscoderId::TRANSCODER_B)
           .FromValue(0);
   EXPECT_EQ(0x61034u, data_n_b.reg_addr());
 
   auto data_n_c =
-      tgl_registers::TranscoderDataN::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_C)
+      tgl_registers::TranscoderDataN::GetForTigerLakeTranscoder(TranscoderId::TRANSCODER_C)
           .FromValue(0);
   EXPECT_EQ(0x62034u, data_n_c.reg_addr());
 
@@ -597,22 +597,22 @@ TEST(TranscoderLinkMTest, GetForKabyLakeTranscoder) {
   // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 page 1112
 
   auto link_m_a =
-      tgl_registers::TranscoderLinkM::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_A)
+      tgl_registers::TranscoderLinkM::GetForKabyLakeTranscoder(TranscoderId::TRANSCODER_A)
           .FromValue(0);
   EXPECT_EQ(0x60040u, link_m_a.reg_addr());
 
   auto link_m_b =
-      tgl_registers::TranscoderLinkM::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_B)
+      tgl_registers::TranscoderLinkM::GetForKabyLakeTranscoder(TranscoderId::TRANSCODER_B)
           .FromValue(0);
   EXPECT_EQ(0x61040u, link_m_b.reg_addr());
 
   auto link_m_c =
-      tgl_registers::TranscoderLinkM::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_C)
+      tgl_registers::TranscoderLinkM::GetForKabyLakeTranscoder(TranscoderId::TRANSCODER_C)
           .FromValue(0);
   EXPECT_EQ(0x62040u, link_m_c.reg_addr());
 
   auto link_m_edp =
-      tgl_registers::TranscoderLinkM::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_EDP)
+      tgl_registers::TranscoderLinkM::GetForKabyLakeTranscoder(TranscoderId::TRANSCODER_EDP)
           .FromValue(0);
   EXPECT_EQ(0x6f040u, link_m_edp.reg_addr());
 }
@@ -623,17 +623,17 @@ TEST(TranscoderLinkMTest, GetForTigerLakeTranscoder) {
   // Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 page 1300
 
   auto link_m_a =
-      tgl_registers::TranscoderLinkM::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_A)
+      tgl_registers::TranscoderLinkM::GetForTigerLakeTranscoder(TranscoderId::TRANSCODER_A)
           .FromValue(0);
   EXPECT_EQ(0x60040u, link_m_a.reg_addr());
 
   auto link_m_b =
-      tgl_registers::TranscoderLinkM::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_B)
+      tgl_registers::TranscoderLinkM::GetForTigerLakeTranscoder(TranscoderId::TRANSCODER_B)
           .FromValue(0);
   EXPECT_EQ(0x61040u, link_m_b.reg_addr());
 
   auto link_m_c =
-      tgl_registers::TranscoderLinkM::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_C)
+      tgl_registers::TranscoderLinkM::GetForTigerLakeTranscoder(TranscoderId::TRANSCODER_C)
           .FromValue(0);
   EXPECT_EQ(0x62040u, link_m_c.reg_addr());
 
@@ -648,22 +648,22 @@ TEST(TranscoderLinkNTest, GetForKabyLakeTranscoder) {
   // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 page 1114
 
   auto link_n_a =
-      tgl_registers::TranscoderLinkN::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_A)
+      tgl_registers::TranscoderLinkN::GetForKabyLakeTranscoder(TranscoderId::TRANSCODER_A)
           .FromValue(0);
   EXPECT_EQ(0x60044u, link_n_a.reg_addr());
 
   auto link_n_b =
-      tgl_registers::TranscoderLinkN::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_B)
+      tgl_registers::TranscoderLinkN::GetForKabyLakeTranscoder(TranscoderId::TRANSCODER_B)
           .FromValue(0);
   EXPECT_EQ(0x61044u, link_n_b.reg_addr());
 
   auto link_n_c =
-      tgl_registers::TranscoderLinkN::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_C)
+      tgl_registers::TranscoderLinkN::GetForKabyLakeTranscoder(TranscoderId::TRANSCODER_C)
           .FromValue(0);
   EXPECT_EQ(0x62044u, link_n_c.reg_addr());
 
   auto link_n_edp =
-      tgl_registers::TranscoderLinkN::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_EDP)
+      tgl_registers::TranscoderLinkN::GetForKabyLakeTranscoder(TranscoderId::TRANSCODER_EDP)
           .FromValue(0);
   EXPECT_EQ(0x6f044u, link_n_edp.reg_addr());
 }
@@ -674,17 +674,17 @@ TEST(TranscoderLinkNTest, GetForTigerLakeTranscoder) {
   // Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 page 1301
 
   auto link_n_a =
-      tgl_registers::TranscoderLinkN::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_A)
+      tgl_registers::TranscoderLinkN::GetForTigerLakeTranscoder(TranscoderId::TRANSCODER_A)
           .FromValue(0);
   EXPECT_EQ(0x60044u, link_n_a.reg_addr());
 
   auto link_n_b =
-      tgl_registers::TranscoderLinkN::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_B)
+      tgl_registers::TranscoderLinkN::GetForTigerLakeTranscoder(TranscoderId::TRANSCODER_B)
           .FromValue(0);
   EXPECT_EQ(0x61044u, link_n_b.reg_addr());
 
   auto link_n_c =
-      tgl_registers::TranscoderLinkN::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_C)
+      tgl_registers::TranscoderLinkN::GetForTigerLakeTranscoder(TranscoderId::TRANSCODER_C)
           .FromValue(0);
   EXPECT_EQ(0x62044u, link_n_c.reg_addr());
 
@@ -700,25 +700,25 @@ TEST(TranscoderMainStreamAttributeMiscTest, GetForKabyLakeTranscoder) {
 
   auto transcoder_main_stream_attribute_misc_a =
       tgl_registers::TranscoderMainStreamAttributeMisc::GetForKabyLakeTranscoder(
-          tgl_registers::Trans::TRANS_A)
+          TranscoderId::TRANSCODER_A)
           .FromValue(0);
   EXPECT_EQ(0x60410u, transcoder_main_stream_attribute_misc_a.reg_addr());
 
   auto transcoder_main_stream_attribute_misc_b =
       tgl_registers::TranscoderMainStreamAttributeMisc::GetForKabyLakeTranscoder(
-          tgl_registers::Trans::TRANS_B)
+          TranscoderId::TRANSCODER_B)
           .FromValue(0);
   EXPECT_EQ(0x61410u, transcoder_main_stream_attribute_misc_b.reg_addr());
 
   auto transcoder_main_stream_attribute_misc_c =
       tgl_registers::TranscoderMainStreamAttributeMisc::GetForKabyLakeTranscoder(
-          tgl_registers::Trans::TRANS_C)
+          TranscoderId::TRANSCODER_C)
           .FromValue(0);
   EXPECT_EQ(0x62410u, transcoder_main_stream_attribute_misc_c.reg_addr());
 
   auto transcoder_main_stream_attribute_misc_edp =
       tgl_registers::TranscoderMainStreamAttributeMisc::GetForKabyLakeTranscoder(
-          tgl_registers::Trans::TRANS_EDP)
+          TranscoderId::TRANSCODER_EDP)
           .FromValue(0);
   EXPECT_EQ(0x6f410u, transcoder_main_stream_attribute_misc_edp.reg_addr());
 }
@@ -730,19 +730,19 @@ TEST(TranscoderMainStreamAttributeMiscTest, GetForTigerLakeTranscoder) {
 
   auto transcoder_main_stream_attribute_misc_a =
       tgl_registers::TranscoderMainStreamAttributeMisc::GetForTigerLakeTranscoder(
-          tgl_registers::Trans::TRANS_A)
+          TranscoderId::TRANSCODER_A)
           .FromValue(0);
   EXPECT_EQ(0x60410u, transcoder_main_stream_attribute_misc_a.reg_addr());
 
   auto transcoder_main_stream_attribute_misc_b =
       tgl_registers::TranscoderMainStreamAttributeMisc::GetForTigerLakeTranscoder(
-          tgl_registers::Trans::TRANS_B)
+          TranscoderId::TRANSCODER_B)
           .FromValue(0);
   EXPECT_EQ(0x61410u, transcoder_main_stream_attribute_misc_b.reg_addr());
 
   auto transcoder_main_stream_attribute_misc_c =
       tgl_registers::TranscoderMainStreamAttributeMisc::GetForTigerLakeTranscoder(
-          tgl_registers::Trans::TRANS_C)
+          TranscoderId::TRANSCODER_C)
           .FromValue(0);
   EXPECT_EQ(0x62410u, transcoder_main_stream_attribute_misc_c.reg_addr());
 
@@ -757,19 +757,19 @@ TEST(TranscoderVariableRateRefreshControlTest, GetForTigerLakeTranscoder) {
 
   auto transcoder_variable_rate_refresh_control_a =
       tgl_registers::TranscoderVariableRateRefreshControl::GetForTigerLakeTranscoder(
-          tgl_registers::Trans::TRANS_A)
+          TranscoderId::TRANSCODER_A)
           .FromValue(0);
   EXPECT_EQ(0x60420u, transcoder_variable_rate_refresh_control_a.reg_addr());
 
   auto transcoder_variable_rate_refresh_control_b =
       tgl_registers::TranscoderVariableRateRefreshControl::GetForTigerLakeTranscoder(
-          tgl_registers::Trans::TRANS_B)
+          TranscoderId::TRANSCODER_B)
           .FromValue(0);
   EXPECT_EQ(0x61420u, transcoder_variable_rate_refresh_control_b.reg_addr());
 
   auto transcoder_variable_rate_refresh_control_c =
       tgl_registers::TranscoderVariableRateRefreshControl::GetForTigerLakeTranscoder(
-          tgl_registers::Trans::TRANS_C)
+          TranscoderId::TRANSCODER_C)
           .FromValue(0);
   EXPECT_EQ(0x62420u, transcoder_variable_rate_refresh_control_c.reg_addr());
 
@@ -807,17 +807,17 @@ TEST(TranscoderChickenTest, GetForKabyLakeTranscoder) {
   // at IHD-OS-KBL-Vol 16-1.17 page 31.
 
   auto transcoder_chicken_a =
-      tgl_registers::TranscoderChicken::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_A)
+      tgl_registers::TranscoderChicken::GetForKabyLakeTranscoder(TranscoderId::TRANSCODER_A)
           .FromValue(0);
   EXPECT_EQ(0x420c0u, transcoder_chicken_a.reg_addr());
 
   auto transcoder_chicken_b =
-      tgl_registers::TranscoderChicken::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_B)
+      tgl_registers::TranscoderChicken::GetForKabyLakeTranscoder(TranscoderId::TRANSCODER_B)
           .FromValue(0);
   EXPECT_EQ(0x420c4u, transcoder_chicken_b.reg_addr());
 
   auto transcoder_chicken_c =
-      tgl_registers::TranscoderChicken::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_C)
+      tgl_registers::TranscoderChicken::GetForKabyLakeTranscoder(TranscoderId::TRANSCODER_C)
           .FromValue(0);
   EXPECT_EQ(0x420c8u, transcoder_chicken_c.reg_addr());
 }
@@ -828,17 +828,17 @@ TEST(TranscoderChickenTest, GetForTigerLakeTranscoder) {
   // Tiger Lake: IHD-OS-DG1-Vol 12-2.21 page 192
 
   auto transcoder_chicken_a =
-      tgl_registers::TranscoderChicken::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_A)
+      tgl_registers::TranscoderChicken::GetForTigerLakeTranscoder(TranscoderId::TRANSCODER_A)
           .FromValue(0);
   EXPECT_EQ(0x420c0u, transcoder_chicken_a.reg_addr());
 
   auto transcoder_chicken_b =
-      tgl_registers::TranscoderChicken::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_B)
+      tgl_registers::TranscoderChicken::GetForTigerLakeTranscoder(TranscoderId::TRANSCODER_B)
           .FromValue(0);
   EXPECT_EQ(0x420c4u, transcoder_chicken_b.reg_addr());
 
   auto transcoder_chicken_c =
-      tgl_registers::TranscoderChicken::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_C)
+      tgl_registers::TranscoderChicken::GetForTigerLakeTranscoder(TranscoderId::TRANSCODER_C)
           .FromValue(0);
   EXPECT_EQ(0x420c8u, transcoder_chicken_c.reg_addr());
 

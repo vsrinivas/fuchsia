@@ -1561,8 +1561,8 @@ DdiPllConfig DpDisplay::ComputeDdiPllConfig(int32_t pixel_clock_10khz) {
 bool DpDisplay::DdiModeset(const display_mode_t& mode) { return true; }
 
 bool DpDisplay::PipeConfigPreamble(const display_mode_t& mode, tgl_registers::Pipe pipe,
-                                   tgl_registers::Trans transcoder) {
-  tgl_registers::TranscoderRegs transcoder_regs(transcoder);
+                                   TranscoderId transcoder_id) {
+  tgl_registers::TranscoderRegs transcoder_regs(transcoder_id);
 
   // Transcoder should be disabled first before reconfiguring the transcoder
   // clock. Will be re-enabled at `PipeConfigEpilogue()`.
@@ -1584,18 +1584,18 @@ bool DpDisplay::PipeConfigPreamble(const display_mode_t& mode, tgl_registers::Pi
     auto clock_select = transcoder_regs.ClockSelect().ReadFrom(mmio_space());
     const std::optional<DdiId> ddi_clock_source = clock_select.ddi_clock_tiger_lake();
     if (!ddi_clock_source.has_value()) {
-      zxlogf(ERROR, "Transcoder %d clock source not set after DisplayPort training", transcoder);
+      zxlogf(ERROR, "Transcoder %d clock source not set after DisplayPort training", transcoder_id);
       return false;
     }
     if (*ddi_clock_source != ddi_id()) {
       zxlogf(ERROR, "Transcoder %d clock set to DDI %d instead of %d after DisplayPort training.",
-             transcoder, ddi_id(), *ddi_clock_source);
+             transcoder_id, ddi_id(), *ddi_clock_source);
       return false;
     }
   } else {
     // On Kaby Lake and Skylake, the transcoder clock input must be set during
     // the pipe, plane and transcoder enablement stage.
-    if (transcoder != tgl_registers::TRANS_EDP) {
+    if (transcoder_id != TranscoderId::TRANSCODER_EDP) {
       auto clock_select = transcoder_regs.ClockSelect().ReadFrom(mmio_space());
       clock_select.set_ddi_clock_kaby_lake(ddi_id());
       clock_select.WriteTo(mmio_space());
@@ -1649,8 +1649,8 @@ bool DpDisplay::PipeConfigPreamble(const display_mode_t& mode, tgl_registers::Pi
 }
 
 bool DpDisplay::PipeConfigEpilogue(const display_mode_t& mode, tgl_registers::Pipe pipe,
-                                   tgl_registers::Trans transcoder) {
-  tgl_registers::TranscoderRegs transcoder_regs(transcoder);
+                                   TranscoderId transcoder_id) {
+  tgl_registers::TranscoderRegs transcoder_regs(transcoder_id);
   auto main_stream_attribute_misc = transcoder_regs.MainStreamAttributeMisc().FromValue(0);
   main_stream_attribute_misc.set_video_stream_clock_sync_with_link_clock(true)
       .set_colorimetry_in_vsc_sdp(false)
@@ -1671,13 +1671,13 @@ bool DpDisplay::PipeConfigEpilogue(const display_mode_t& mode, tgl_registers::Pi
   // it's still OK to set it. We set it to None, because it seems less misleadng
   // than setting it to one of the other DDIs.
   const std::optional<DdiId> transcoder_ddi =
-      (transcoder == tgl_registers::TRANS_EDP) ? std::nullopt : std::make_optional(ddi_id());
+      (transcoder_id == TranscoderId::TRANSCODER_EDP) ? std::nullopt : std::make_optional(ddi_id());
   if (is_tgl(controller()->device_id())) {
-    ZX_DEBUG_ASSERT_MSG(transcoder != tgl_registers::Trans::TRANS_EDP,
+    ZX_DEBUG_ASSERT_MSG(transcoder_id != TranscoderId::TRANSCODER_EDP,
                         "The EDP transcoder does not exist on this display engine");
     transcoder_ddi_control.set_ddi_tiger_lake(transcoder_ddi);
   } else {
-    ZX_DEBUG_ASSERT_MSG(transcoder != tgl_registers::Trans::TRANS_EDP || ddi_id() == DdiId::DDI_A,
+    ZX_DEBUG_ASSERT_MSG(transcoder_id != TranscoderId::TRANSCODER_EDP || ddi_id() == DdiId::DDI_A,
                         "The EDP transcoder is attached to DDI A");
     transcoder_ddi_control.set_ddi_kaby_lake(transcoder_ddi);
   }
@@ -1916,8 +1916,8 @@ bool DpDisplay::CheckPixelRate(uint64_t pixel_rate) {
   return pixel_rate <= max_pixel_rate;
 }
 
-uint32_t DpDisplay::LoadClockRateForTranscoder(tgl_registers::Trans transcoder) {
-  tgl_registers::TranscoderRegs transcoder_regs(transcoder);
+uint32_t DpDisplay::LoadClockRateForTranscoder(TranscoderId transcoder_id) {
+  tgl_registers::TranscoderRegs transcoder_regs(transcoder_id);
   const uint32_t data_m = transcoder_regs.DataM().ReadFrom(mmio_space()).m();
   const uint32_t data_n = transcoder_regs.DataN().ReadFrom(mmio_space()).n();
 

@@ -1053,13 +1053,13 @@ class DpTransportControl : public hwreg::RegisterBase<DpTransportControl, uint32
   }
 
   // For Tiger Lake and DG1. The DisplayPort transport logic is in transcoders.
-  static auto GetForTigerLakeTranscoder(Trans transcoder) {
-    ZX_ASSERT(transcoder >= Trans::TRANS_A);
+  static auto GetForTigerLakeTranscoder(i915_tgl::TranscoderId transcoder_id) {
+    ZX_ASSERT(transcoder_id >= i915_tgl::TranscoderId::TRANSCODER_A);
 
     // TODO(fxbug.dev/109278): Allow transcoder D, once we support it.
-    ZX_ASSERT(transcoder <= Trans::TRANS_C);
+    ZX_ASSERT(transcoder_id <= i915_tgl::TranscoderId::TRANSCODER_C);
 
-    const int transcoder_index = transcoder - Trans::TRANS_A;
+    const int transcoder_index = transcoder_id - i915_tgl::TranscoderId::TRANSCODER_A;
     return hwreg::RegisterAddr<DpTransportControl>(0x60540 + 0x1000 * transcoder_index);
   }
 };

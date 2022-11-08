@@ -499,11 +499,11 @@ bool HdmiDisplay::DdiModeset(const display_mode_t& mode) {
 }
 
 bool HdmiDisplay::PipeConfigPreamble(const display_mode_t& mode, tgl_registers::Pipe pipe,
-                                     tgl_registers::Trans transcoder) {
-  ZX_DEBUG_ASSERT_MSG(transcoder != tgl_registers::Trans::TRANS_EDP,
+                                     TranscoderId transcoder_id) {
+  ZX_DEBUG_ASSERT_MSG(transcoder_id != TranscoderId::TRANSCODER_EDP,
                       "The EDP transcoder doesn't do HDMI");
 
-  tgl_registers::TranscoderRegs transcoder_regs(transcoder);
+  tgl_registers::TranscoderRegs transcoder_regs(transcoder_id);
 
   // Configure Transcoder Clock Select
   auto transcoder_clock_select = transcoder_regs.ClockSelect().ReadFrom(mmio_space());
@@ -518,12 +518,12 @@ bool HdmiDisplay::PipeConfigPreamble(const display_mode_t& mode, tgl_registers::
 }
 
 bool HdmiDisplay::PipeConfigEpilogue(const display_mode_t& mode, tgl_registers::Pipe pipe,
-                                     tgl_registers::Trans transcoder) {
+                                     TranscoderId transcoder_id) {
   ZX_DEBUG_ASSERT(type() == DisplayDevice::Type::kHdmi || type() == DisplayDevice::Type::kDvi);
-  ZX_DEBUG_ASSERT_MSG(transcoder != tgl_registers::Trans::TRANS_EDP,
+  ZX_DEBUG_ASSERT_MSG(transcoder_id != TranscoderId::TRANSCODER_EDP,
                       "The EDP transcoder doesn't do HDMI");
 
-  tgl_registers::TranscoderRegs transcoder_regs(transcoder);
+  tgl_registers::TranscoderRegs transcoder_regs(transcoder_id);
 
   auto transcoder_ddi_control = transcoder_regs.DdiControl().ReadFrom(mmio_space());
   transcoder_ddi_control.set_enabled(true);

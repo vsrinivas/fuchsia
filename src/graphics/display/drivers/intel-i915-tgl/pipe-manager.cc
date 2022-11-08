@@ -83,15 +83,15 @@ void PipeManagerSkylake::ResetInactiveTranscoders() {
   bool edp_transcoder_in_use = false;
   for (Pipe* pipe : *this) {
     if (pipe->in_use()) {
-      if (pipe->connected_transcoder_id() == tgl_registers::TRANS_EDP) {
+      if (pipe->connected_transcoder_id() == TranscoderId::TRANSCODER_EDP) {
         edp_transcoder_in_use = true;
 
-        const tgl_registers::Trans unused_transcoder = pipe->tied_transcoder_id();
-        Pipe::ResetTranscoder(unused_transcoder, tgl_registers::Platform::kSkylake, mmio_space_);
+        const TranscoderId unused_transcoder_id = pipe->tied_transcoder_id();
+        Pipe::ResetTranscoder(unused_transcoder_id, tgl_registers::Platform::kSkylake, mmio_space_);
         zxlogf(
             DEBUG,
             "Reset unused transcoder %d tied to pipe %d, which is connected to the EDP transcoder",
-            unused_transcoder, pipe->pipe_id());
+            unused_transcoder_id, pipe->pipe_id());
       }
     } else {
       Pipe::ResetTranscoder(pipe->tied_transcoder_id(), tgl_registers::Platform::kSkylake,
@@ -102,8 +102,9 @@ void PipeManagerSkylake::ResetInactiveTranscoders() {
   }
 
   if (!edp_transcoder_in_use) {
-    Pipe::ResetTranscoder(tgl_registers::TRANS_EDP, tgl_registers::Platform::kSkylake, mmio_space_);
-    zxlogf(DEBUG, "Reset unused transcoder TRANS_EDP (not used by any pipe)");
+    Pipe::ResetTranscoder(TranscoderId::TRANSCODER_EDP, tgl_registers::Platform::kSkylake,
+                          mmio_space_);
+    zxlogf(DEBUG, "Reset unused transcoder TRANSCODER_EDP (not used by any pipe)");
   }
 }
 
@@ -119,20 +120,20 @@ Pipe* PipeManagerSkylake::GetAvailablePipe() {
 Pipe* PipeManagerSkylake::GetPipeFromHwState(DdiId ddi_id, fdf::MmioBuffer* mmio_space) {
   // On Kaby Lake and Skylake, DDI_A is attached to the EDP transcoder.
   if (ddi_id == DdiId::DDI_A) {
-    tgl_registers::TranscoderRegs transcoder_regs(tgl_registers::TRANS_EDP);
+    tgl_registers::TranscoderRegs transcoder_regs(TranscoderId::TRANSCODER_EDP);
     auto transcoder_ddi_control = transcoder_regs.DdiControl().ReadFrom(mmio_space);
 
     const tgl_registers::Pipe pipe = transcoder_ddi_control.input_pipe();
     if (pipe == tgl_registers::Pipe::PIPE_INVALID) {
-      // The transceiver DDI control register is configured incorrectly.
+      // The transcoder DDI control register is configured incorrectly.
       return nullptr;
     }
     return At(pipe);
   }
 
   for (Pipe* pipe : *this) {
-    const tgl_registers::Trans tied_transcoder = pipe->tied_transcoder_id();
-    ZX_DEBUG_ASSERT_MSG(tied_transcoder != tgl_registers::Trans::TRANS_EDP,
+    const TranscoderId tied_transcoder = pipe->tied_transcoder_id();
+    ZX_DEBUG_ASSERT_MSG(tied_transcoder != TranscoderId::TRANSCODER_EDP,
                         "The EDP transcoder is not tied to a pipe");
 
     tgl_registers::TranscoderRegs transcoder_regs(tied_transcoder);
@@ -172,8 +173,8 @@ Pipe* PipeManagerTigerLake::GetAvailablePipe() {
 
 Pipe* PipeManagerTigerLake::GetPipeFromHwState(DdiId ddi_id, fdf::MmioBuffer* mmio_space) {
   for (Pipe* pipe : *this) {
-    auto transcoder = static_cast<tgl_registers::Trans>(pipe->pipe_id());
-    tgl_registers::TranscoderRegs regs(transcoder);
+    auto transcoder_id = static_cast<TranscoderId>(pipe->pipe_id());
+    tgl_registers::TranscoderRegs regs(transcoder_id);
     if (regs.ClockSelect().ReadFrom(mmio_space).ddi_clock_tiger_lake() == ddi_id &&
         regs.DdiControl().ReadFrom(mmio_space).ddi_tiger_lake() == ddi_id) {
       return pipe;

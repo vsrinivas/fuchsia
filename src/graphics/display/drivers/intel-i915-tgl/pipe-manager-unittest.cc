@@ -67,15 +67,15 @@ class FakeDisplay : public DisplayDevice {
   bool InitDdi() final { return true; }
   bool DdiModeset(const display_mode_t& mode) final { return true; }
   bool PipeConfigPreamble(const display_mode_t& mode, tgl_registers::Pipe pipe,
-                          tgl_registers::Trans trans) final {
+                          TranscoderId transcoder_id) final {
     return true;
   }
   bool PipeConfigEpilogue(const display_mode_t& mode, tgl_registers::Pipe pipe,
-                          tgl_registers::Trans trans) final {
+                          TranscoderId transcoder_id) final {
     return true;
   }
   DdiPllConfig ComputeDdiPllConfig(int32_t pixel_clock_10khz) final { return {}; }
-  uint32_t LoadClockRateForTranscoder(tgl_registers::Trans transcoder) final { return 0; }
+  uint32_t LoadClockRateForTranscoder(TranscoderId transcoder_id) final { return 0; }
   uint32_t i2c_bus_id() const final { return 2 * ddi_id(); }
   bool CheckPixelRate(uint64_t pixel_rate) final { return true; }
 };
@@ -111,7 +111,7 @@ TEST_F(PipeManagerTest, SkylakeAllocatePipe) {
   EXPECT_NE(pipe2, pipe1);
   EXPECT_TRUE(pipe2->in_use());
   EXPECT_EQ(pipe2->attached_display_id(), kDisplay2Id);
-  EXPECT_EQ(pipe2->connected_transcoder_id(), tgl_registers::Trans::TRANS_EDP);
+  EXPECT_EQ(pipe2->connected_transcoder_id(), TranscoderId::TRANSCODER_EDP);
 
   display1.reset();
   EXPECT_FALSE(pipe1->in_use());

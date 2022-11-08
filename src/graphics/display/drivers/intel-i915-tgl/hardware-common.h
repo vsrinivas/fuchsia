@@ -61,46 +61,46 @@ constexpr cpp20::span<const DdiId> DdiIds() {
   }
 }
 
-}  // namespace i915_tgl
-
-namespace tgl_registers {
-
 // TODO(fxbug.dev/109278): Support Transcoder D on Tiger Lake.
-enum Trans {
-  TRANS_A = 0,
-  TRANS_B,
-  TRANS_C,
-  TRANS_EDP,
+enum TranscoderId {
+  TRANSCODER_A = 0,
+  TRANSCODER_B,
+  TRANSCODER_C,
+  TRANSCODER_EDP,
 };
 
 namespace internal {
 
 constexpr std::array kTranscodersKabyLake = {
-    TRANS_A,
-    TRANS_B,
-    TRANS_C,
-    TRANS_EDP,
+    TRANSCODER_A,
+    TRANSCODER_B,
+    TRANSCODER_C,
+    TRANSCODER_EDP,
 };
 
 constexpr std::array kTranscodersTigerLake = {
-    TRANS_A,
-    TRANS_B,
-    TRANS_C,
+    TRANSCODER_A,
+    TRANSCODER_B,
+    TRANSCODER_C,
 };
 
 }  // namespace internal
 
-template <Platform P>
-constexpr cpp20::span<const Trans> Transcoders() {
+template <tgl_registers::Platform P>
+constexpr cpp20::span<const TranscoderId> TranscoderIds() {
   switch (P) {
-    case Platform::kKabyLake:
-    case Platform::kSkylake:
-    case Platform::kTestDevice:
+    case tgl_registers::Platform::kKabyLake:
+    case tgl_registers::Platform::kSkylake:
+    case tgl_registers::Platform::kTestDevice:
       return internal::kTranscodersKabyLake;
-    case Platform::kTigerLake:
+    case tgl_registers::Platform::kTigerLake:
       return internal::kTranscodersTigerLake;
   }
 }
+
+}  // namespace i915_tgl
+
+namespace tgl_registers {
 
 // TODO(fxbug.dev/109278): Support Pipe D on Tiger Lake.
 enum Pipe {

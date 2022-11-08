@@ -82,9 +82,9 @@ Pipe::Pipe(fdf::MmioBuffer* mmio_space, tgl_registers::Platform platform, tgl_re
       pipe_power_(std::move(pipe_power)) {}
 
 // static
-void Pipe::ResetTranscoder(tgl_registers::Trans transcoder, tgl_registers::Platform platform,
+void Pipe::ResetTranscoder(TranscoderId transcoder_id, tgl_registers::Platform platform,
                            fdf::MmioBuffer* mmio_space) {
-  tgl_registers::TranscoderRegs transcoder_regs(transcoder);
+  tgl_registers::TranscoderRegs transcoder_regs(transcoder_id);
 
   // Disable transcoder and wait for it to stop. These are the "Disable
   // Transcoder" steps from:
@@ -115,23 +115,24 @@ void Pipe::ResetTranscoder(tgl_registers::Trans transcoder, tgl_registers::Platf
     transcoder_config.set_enabled_target(false).WriteTo(mmio_space);
   } else {
     zxlogf(TRACE, "ResetTranscoder() skipping already-disabled control for transcoder %d",
-           transcoder);
-    zxlogf(TRACE, "Transcoder %d control register: %x", transcoder, transcoder_config.reg_value());
+           transcoder_id);
+    zxlogf(TRACE, "Transcoder %d control register: %x", transcoder_id,
+           transcoder_config.reg_value());
   }
 
   if (platform == tgl_registers::Platform::kTigerLake) {
     auto transcoder_chicken = transcoder_regs.Chicken().ReadFrom(mmio_space);
-    zxlogf(TRACE, "ResetTranscoder() - Transcoder %d chicken register: %x", transcoder,
+    zxlogf(TRACE, "ResetTranscoder() - Transcoder %d chicken register: %x", transcoder_id,
            transcoder_chicken.reg_value());
     if (transcoder_chicken.override_forward_error_correction_tiger_lake()) {
-      zxlogf(INFO, "Disabling FEC override chicken bit for transcoder %d", transcoder);
+      zxlogf(INFO, "Disabling FEC override chicken bit for transcoder %d", transcoder_id);
       transcoder_chicken.set_override_forward_error_correction_tiger_lake(false).WriteTo(
           mmio_space);
 
       // TODO(fxbug.dev/110411): Remove this warning once we support DisplayPort
       // MST (Multi-Stream).
       zxlogf(WARNING, "Transcoder %d was using a DisplayPort MST feature. Reset may be incomplete.",
-             transcoder);
+             transcoder_id);
     }
   }
 
@@ -150,10 +151,10 @@ void Pipe::ResetTranscoder(tgl_registers::Trans transcoder, tgl_registers::Platf
   if (platform == tgl_registers::Platform::kTigerLake) {
     auto transcoder_variable_rate_refresh_control =
         transcoder_regs.VariableRateRefreshControl().ReadFrom(mmio_space);
-    zxlogf(TRACE, "ResetTranscoder() - Transcoder %d VRR register: %x", transcoder,
+    zxlogf(TRACE, "ResetTranscoder() - Transcoder %d VRR register: %x", transcoder_id,
            transcoder_variable_rate_refresh_control.reg_value());
     if (transcoder_variable_rate_refresh_control.enabled()) {
-      zxlogf(INFO, "Disabling VRR (Variable Refresh Rate) for transcoder %d", transcoder);
+      zxlogf(INFO, "Disabling VRR (Variable Refresh Rate) for transcoder %d", transcoder_id);
       transcoder_variable_rate_refresh_control.set_enabled(false).WriteTo(mmio_space);
     }
   }
@@ -176,12 +177,12 @@ void Pipe::ResetTranscoder(tgl_registers::Trans transcoder, tgl_registers::Platf
     transcoder_ddi_control.set_enabled(false).set_ddi_tiger_lake(std::nullopt).WriteTo(mmio_space);
   } else {
     zxlogf(TRACE, "ResetTranscoder() skipping already-disabled DDI functionality for transcoder %d",
-           transcoder);
-    zxlogf(TRACE, "Transcoder %d DDI functionality control register: %x", transcoder,
+           transcoder_id);
+    zxlogf(TRACE, "Transcoder %d DDI functionality control register: %x", transcoder_id,
            transcoder_ddi_control.reg_value());
   }
 
-  if (transcoder != tgl_registers::TRANS_EDP) {
+  if (transcoder_id != TranscoderId::TRANSCODER_EDP) {
     auto transcoder_clock_select = transcoder_regs.ClockSelect().ReadFrom(mmio_space);
 
     // `set_ddi_tiger_lake()` works on both Tiger Lake and Skylake / Kaby Lake
