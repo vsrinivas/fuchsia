@@ -55,7 +55,7 @@ pub(super) async fn route_and_open_capability(
         RouteRequest::UseStorage(use_storage_decl) => {
             let (storage_source_info, relative_moniker, _storage_route, _dir_route) =
                 route_storage_and_backing_directory(use_storage_decl, target).await?;
-            open_storage_capability(storage_source_info, relative_moniker, target, open_options)
+            open_storage_capability(&storage_source_info, relative_moniker, target, open_options)
                 .await
         }
         _ => {
@@ -463,7 +463,7 @@ pub async fn report_routing_failure(
 /// See [`fidl_fuchsia_io::Directory::Open`] for how the `flags`, `open_mode`, `relative_path`,
 /// and `server_chan` parameters are used in the open call.
 async fn open_storage_capability(
-    source: storage::StorageCapabilitySource,
+    source: &storage::StorageCapabilitySource,
     relative_moniker: InstancedRelativeMoniker,
     target: &Arc<ComponentInstance>,
     options: OpenOptions<'_>,
@@ -479,7 +479,7 @@ async fn open_storage_capability(
             ..
         }) => {
             let storage_dir_proxy = storage::open_isolated_storage(
-                source,
+                &source,
                 target.persistent_storage,
                 relative_moniker,
                 target.instance_id().as_ref(),

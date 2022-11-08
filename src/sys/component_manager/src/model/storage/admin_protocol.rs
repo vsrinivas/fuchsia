@@ -221,7 +221,7 @@ impl StorageAdmin {
                         .cloned();
 
                     let dir_proxy = storage::open_isolated_storage(
-                        storage_capability_source_info.clone(),
+                        &storage_capability_source_info,
                         component.persistent_storage,
                         instanced_relative_moniker,
                         instance_id.as_ref(),
@@ -271,11 +271,8 @@ impl StorageAdmin {
                         responder.send(&mut Err(fcomponent::Error::ResourceNotFound))?;
                         continue;
                     }
-                    match storage::open_isolated_storage_by_id(
-                        storage_capability_source_info.clone(),
-                        id,
-                    )
-                    .await
+                    match storage::open_isolated_storage_by_id(&storage_capability_source_info, id)
+                        .await
                     {
                         Ok(dir) => responder.send(
                             &mut dir

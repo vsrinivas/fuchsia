@@ -217,12 +217,12 @@ async fn open_storage_root(
 /// if necessary. The storage sub-directory is based on provided instance ID if present, otherwise
 /// it is based on the provided relative moniker.
 pub async fn open_isolated_storage(
-    storage_source_info: StorageCapabilitySource,
+    storage_source_info: &StorageCapabilitySource,
     persistent_storage: bool,
     relative_moniker: InstancedRelativeMoniker,
     instance_id: Option<&ComponentInstanceId>,
 ) -> Result<fio::DirectoryProxy, ModelError> {
-    let root_dir = open_storage_root(&storage_source_info).await?;
+    let root_dir = open_storage_root(storage_source_info).await?;
     let storage_path = match instance_id {
         Some(id) => generate_instance_id_based_storage_path(id),
         // if persistent_storage is `true`, generate a moniker-based storage path that ignores
@@ -258,10 +258,10 @@ pub async fn open_isolated_storage(
 /// Open the isolated storage sub-directory from the given storage capability source, creating it
 /// if necessary. The storage sub-directory is based on provided instance ID.
 pub async fn open_isolated_storage_by_id(
-    storage_source_info: StorageCapabilitySource,
+    storage_source_info: &StorageCapabilitySource,
     instance_id: ComponentInstanceId,
 ) -> Result<fio::DirectoryProxy, ModelError> {
-    let root_dir = open_storage_root(&storage_source_info).await?;
+    let root_dir = open_storage_root(storage_source_info).await?;
     let storage_path = generate_instance_id_based_storage_path(&instance_id);
 
     fuchsia_fs::directory::create_directory_recursive(
@@ -492,7 +492,7 @@ mod tests {
 
         // Open.
         let dir = open_isolated_storage(
-            StorageCapabilitySource {
+            &StorageCapabilitySource {
                 storage_provider: Some(Arc::clone(&b_component)),
                 backing_directory_path: dir_source_path.clone(),
                 backing_directory_subdir: None,
@@ -510,7 +510,7 @@ mod tests {
 
         // Open again.
         let dir = open_isolated_storage(
-            StorageCapabilitySource {
+            &StorageCapabilitySource {
                 storage_provider: Some(Arc::clone(&b_component)),
                 backing_directory_path: dir_source_path.clone(),
                 backing_directory_subdir: None,
@@ -528,7 +528,7 @@ mod tests {
         let relative_moniker =
             InstancedRelativeMoniker::new(vec!["c:0".into(), "coll:d:1".into(), "e:0".into()]);
         let dir = open_isolated_storage(
-            StorageCapabilitySource {
+            &StorageCapabilitySource {
                 storage_provider: Some(Arc::clone(&b_component)),
                 backing_directory_path: dir_source_path.clone(),
                 backing_directory_subdir: None,
@@ -577,7 +577,7 @@ mod tests {
         // open the storage directory using instance ID.
         let instance_id = Some(component_id_index::gen_instance_id(&mut rand::thread_rng()));
         let mut dir = open_isolated_storage(
-            StorageCapabilitySource {
+            &StorageCapabilitySource {
                 storage_provider: Some(Arc::clone(&b_component)),
                 backing_directory_path: dir_source_path.clone(),
                 backing_directory_subdir: None,
@@ -612,7 +612,7 @@ mod tests {
 
         // check that re-opening the directory gives us the same marker file.
         dir = open_isolated_storage(
-            StorageCapabilitySource {
+            &StorageCapabilitySource {
                 storage_provider: Some(Arc::clone(&b_component)),
                 backing_directory_path: dir_source_path.clone(),
                 backing_directory_subdir: None,
@@ -645,7 +645,7 @@ mod tests {
         // Try to open the storage. We expect an error.
         let relative_moniker = InstancedRelativeMoniker::new(vec!["c:0".into(), "coll:d:1".into()]);
         let res = open_isolated_storage(
-            StorageCapabilitySource {
+            &StorageCapabilitySource {
                 storage_provider: Some(Arc::clone(&test.model.root())),
                 backing_directory_path: CapabilityPath::try_from("/data").unwrap().clone(),
                 backing_directory_subdir: None,
@@ -696,7 +696,7 @@ mod tests {
 
         // Open and write to the storage for child.
         let dir = open_isolated_storage(
-            StorageCapabilitySource {
+            &StorageCapabilitySource {
                 storage_provider: Some(Arc::clone(&b_component)),
                 backing_directory_path: dir_source_path.clone(),
                 backing_directory_subdir: None,
@@ -714,7 +714,7 @@ mod tests {
 
         // Open parent's storage.
         let dir = open_isolated_storage(
-            StorageCapabilitySource {
+            &StorageCapabilitySource {
                 storage_provider: Some(Arc::clone(&b_component)),
                 backing_directory_path: dir_source_path.clone(),
                 backing_directory_subdir: None,
@@ -747,7 +747,7 @@ mod tests {
 
         // Open parent's storage again. Should work.
         let dir = open_isolated_storage(
-            StorageCapabilitySource {
+            &StorageCapabilitySource {
                 storage_provider: Some(Arc::clone(&b_component)),
                 backing_directory_path: dir_source_path.clone(),
                 backing_directory_subdir: None,
@@ -820,7 +820,7 @@ mod tests {
         let instance_id = Some(component_id_index::gen_instance_id(&mut rand::thread_rng()));
         // Open and write to the storage for child.
         let dir = open_isolated_storage(
-            StorageCapabilitySource {
+            &StorageCapabilitySource {
                 storage_provider: Some(Arc::clone(&b_component)),
                 backing_directory_path: dir_source_path.clone(),
                 backing_directory_subdir: None,
