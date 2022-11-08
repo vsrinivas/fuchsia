@@ -33,7 +33,7 @@ fn generate_struct_impl(ast: &syn::DeriveInput) -> Result<proc_macro2::TokenStre
     }
 }
 
-#[proc_macro_derive(FfxTool, attributes(command, ffx))]
+#[proc_macro_derive(FfxTool, attributes(command, ffx, check))]
 pub fn ffx_tool_derive(input: TokenStream) -> TokenStream {
     let ast = syn::parse_macro_input!(input as syn::DeriveInput);
     match generate_struct_impl(&ast) {

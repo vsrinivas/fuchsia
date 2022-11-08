@@ -13,6 +13,7 @@ pub enum ParseError {
     CommandRequired(Span),
     OnlyStructsSupported(Span),
     OnlyNamedFieldStructsSupported(Span),
+    InvalidCheckAttr(Span),
 }
 
 impl ToTokens for ParseError {
@@ -46,6 +47,11 @@ impl ToTokens for ParseError {
             ParseError::OnlyNamedFieldStructsSupported(span) => tokens.extend(
                 quote_spanned! {*span=>
                     std::compile_error!("`#[derive(FfxTool)]` does not support unit or tuple structs");
+                }
+            ),
+            ParseError::InvalidCheckAttr(span) => tokens.extend(
+                quote_spanned! {*span=>
+                    std::compile_error!("`#[check()]` attribute contents must be a call expression");
                 }
             ),
         }

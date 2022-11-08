@@ -179,6 +179,30 @@ pub trait TryFromEnv: Sized {
     async fn try_from_env(env: &FhoEnvironment<'_>) -> Result<Self>;
 }
 
+#[async_trait(?Send)]
+pub trait CheckEnv {
+    async fn check_env(self, env: &FhoEnvironment<'_>) -> Result<()>;
+}
+
+/// Checks if the experimental config flag is set. This gates the execution of the command.
+/// If the flag is set to `true`, this returns `Ok(())`, else returns an error.
+pub struct AvailabilityFlag<T>(pub T);
+
+#[async_trait(?Send)]
+impl<T: AsRef<str>> CheckEnv for AvailabilityFlag<T> {
+    async fn check_env(self, _env: &FhoEnvironment<'_>) -> Result<()> {
+        let flag = self.0.as_ref();
+        if ffx_config::get(flag).await.unwrap_or(false) {
+            Ok(())
+        } else {
+            errors::ffx_bail!(
+                "This is an experimental subcommand.  To enable this subcommand run 'ffx config set {} true'",
+                flag
+            )
+        }
+    }
+}
+
 /// A trait for looking up a Fuchsia component when using the Protocol struct.
 ///
 /// Example usage;
@@ -355,10 +379,12 @@ mod tests {
     use super::*;
     // This keeps the macros from having compiler errors.
     use crate as fho;
+    use crate::testing::FakeInjector;
     use crate::{testing, FhoVersion};
     use argh::FromArgs;
     use async_trait::async_trait;
     use fho_macro::FfxTool;
+    use std::cell::RefCell;
 
     struct NewTypeString(String);
 
@@ -369,7 +395,7 @@ mod tests {
         }
     }
 
-    #[derive(FromArgs)]
+    #[derive(Debug, FromArgs)]
     #[argh(subcommand, name = "fake", description = "fake command")]
     struct FakeCommand {
         #[argh(positional)]
@@ -377,8 +403,27 @@ mod tests {
         stuff: String,
     }
 
+    thread_local! {
+        static SIMPLE_CHECK_COUNTER: RefCell<u64> = RefCell::new(0);
+    }
+
+    struct SimpleCheck(bool);
+
+    #[async_trait(?Send)]
+    impl CheckEnv for SimpleCheck {
+        async fn check_env(self, _env: &FhoEnvironment<'_>) -> Result<()> {
+            SIMPLE_CHECK_COUNTER.with(|counter| *counter.borrow_mut() += 1);
+            if self.0 {
+                Ok(())
+            } else {
+                Err(anyhow::anyhow!("SimpleCheck was false"))
+            }
+        }
+    }
+
     #[derive(FfxTool)]
     #[ffx(forces_stdout_logs)]
+    #[check(SimpleCheck(true))]
     struct FakeTool {
         from_env_string: NewTypeString,
         #[command]
@@ -396,9 +441,7 @@ mod tests {
         }
     }
 
-    // The main testing part will happen in the `main()` function of the tool.
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_run_fake_tool() {
+    fn setup_fho_items<T: FfxMain>() -> (Ffx, EnvironmentContext, FakeInjector, ToolCommand<T>) {
         let context = ffx_config::EnvironmentContext::default();
         let injector = testing::FakeInjectorBuilder::new()
             .writer_closure(|| async { Ok(ffx_writer::Writer::new(None)) })
@@ -409,18 +452,73 @@ mod tests {
             vec!["ffx".to_owned(), "fake".to_owned(), "stuff".to_owned()],
         )
         .unwrap();
-        let ffx = ffx_cmd_line.parse::<FhoSuite<FakeTool>>();
-        let tool_cmd = ToolCommand::<FakeTool>::from_args(
+        let ffx = ffx_cmd_line.parse::<FhoSuite<T>>();
+
+        let tool_cmd = ToolCommand::<T>::from_args(
             &Vec::from_iter(ffx_cmd_line.cmd_iter()),
             &Vec::from_iter(ffx_cmd_line.args_iter()),
         )
         .unwrap();
+        (ffx, context, injector, tool_cmd)
+    }
+
+    // The main testing part will happen in the `main()` function of the tool.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_run_fake_tool() {
+        let (ffx, context, injector, tool_cmd) = setup_fho_items::<FakeTool>();
         let fho_env = FhoEnvironment { ffx: &ffx, context: &context, injector: &injector };
+
+        assert_eq!(
+            SIMPLE_CHECK_COUNTER.with(|counter| *counter.borrow()),
+            0,
+            "tool pre-check should not have been called yet"
+        );
         let mut fake_tool = match tool_cmd.subcommand {
             FhoHandler::Standalone(t) => FakeTool::from_env(fho_env, t).await.unwrap(),
             FhoHandler::Metadata(_) => panic!("Not testing metadata generation"),
         };
+        assert_eq!(
+            SIMPLE_CHECK_COUNTER.with(|counter| *counter.borrow()),
+            1,
+            "tool pre-check should have been called once"
+        );
         fake_tool.main().await.unwrap();
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn negative_precheck_fails() {
+        #[derive(Debug, FfxTool)]
+        #[check(SimpleCheck(false))]
+        struct FakeToolWillFail {
+            #[command]
+            _fake_command: FakeCommand,
+        }
+        #[async_trait(?Send)]
+        impl FfxMain for FakeToolWillFail {
+            async fn main(&mut self) -> Result<()> {
+                panic!("This should never get called")
+            }
+        }
+
+        let (ffx, context, injector, tool_cmd) = setup_fho_items::<FakeToolWillFail>();
+        let fho_env = FhoEnvironment { ffx: &ffx, context: &context, injector: &injector };
+
+        assert_eq!(
+            SIMPLE_CHECK_COUNTER.with(|counter| *counter.borrow()),
+            0,
+            "tool pre-check should not have been called yet"
+        );
+        match tool_cmd.subcommand {
+            FhoHandler::Standalone(t) => FakeToolWillFail::from_env(fho_env, t)
+                .await
+                .expect_err("Should not have been able to create tool with a negative pre-check"),
+            FhoHandler::Metadata(_) => panic!("Not testing metadata generation"),
+        };
+        assert_eq!(
+            SIMPLE_CHECK_COUNTER.with(|counter| *counter.borrow()),
+            1,
+            "tool pre-check should have been called once"
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

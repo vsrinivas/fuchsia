@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use crate::errors::ParseError;
-use crate::types::{FfxAttrTy, NamedField, NamedFieldTy};
+use crate::types::{FfxFlag, FromEnvAttributes, NamedField, NamedFieldTy};
 use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, quote, quote_spanned, ToTokens};
-use syn;
 use syn::spanned::Spanned;
+use syn::{self, ExprCall};
 
 /// Creates an assert to ensure that a type implements TryFromEnv.
 struct TryFromEnvTypeAssertion<'a> {
@@ -161,10 +161,24 @@ impl ToTokens for VariableCreationCollection<'_> {
     }
 }
 
+struct CheckCollection(Vec<ExprCall>);
+
+impl ToTokens for CheckCollection {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        for check in &self.0 {
+            let check_span = check.span();
+            tokens.extend(quote_spanned! { check_span =>
+                fho::CheckEnv::check_env(#check, &_env).await?;
+            })
+        }
+    }
+}
+
 pub struct NamedFieldStruct<'a> {
     forces_stdout_logs: bool,
     command_field_decl: CommandFieldTypeDecl<'a>,
     struct_decl: StructDecl<'a>,
+    checks: CheckCollection,
     vcc: VariableCreationCollection<'a>,
 }
 
@@ -190,21 +204,20 @@ impl<'a> NamedFieldStruct<'a> {
             fields.named.iter().map(NamedFieldTy::parse).collect::<Result<Vec<_>, ParseError>>()?;
         let command_field_decl = CommandFieldTypeDecl(extract_command_field(&mut fields)?);
         let struct_decl = StructDecl(&parent_ast);
-        let forces_stdout_logs = match FfxAttrTy::parse(&parent_ast.attrs)? {
-            Some(FfxAttrTy::ForcesStdoutLogs) => true,
-            _ => false,
-        };
+        let attrs = FromEnvAttributes::from_attrs(&parent_ast.attrs)?;
+        let forces_stdout_logs = attrs.flags.contains(&FfxFlag::ForcesStdoutLogs);
+        let checks = CheckCollection(attrs.checks);
         let mut vcc = VariableCreationCollection::new();
         for field in fields.into_iter() {
             vcc.add_field(field);
         }
-        Ok(Self { forces_stdout_logs, command_field_decl, struct_decl, vcc })
+        Ok(Self { forces_stdout_logs, command_field_decl, struct_decl, checks, vcc })
     }
 }
 
 impl ToTokens for NamedFieldStruct<'_> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let Self { forces_stdout_logs, command_field_decl, struct_decl, vcc } = self;
+        let Self { forces_stdout_logs, command_field_decl, struct_decl, checks, vcc } = self;
         let command_field_name = command_field_decl.0.field_name;
         let try_from_env_type_assertions = &vcc.try_from_env_type_assertions;
         let join_results_names = &vcc.join_results_names;
@@ -222,6 +235,8 @@ impl ToTokens for NamedFieldStruct<'_> {
                     // command).
                     #[allow(unused)]
                     use fho::TryFromEnv;
+
+                    #checks
 
                     #vcc
 
