@@ -581,10 +581,21 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
     const int64_t frames_per_payload_buffer =
         static_cast<int64_t>(result.value().payload_buffer->content_size()) /
         format->bytes_per_frame();
+    if (frames_per_payload_buffer <= 0) {
+      FX_LOGS(WARNING) << "CreateConsumer: invalid field `payload_buffer`";
+      completer.ReplyError(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
+      return;
+    }
+
     const int64_t frames_per_packet =
         stream_sink.has_frames_per_packet()
             ? stream_sink.frames_per_packet()
             : std::min(frames_per_mix_period, frames_per_payload_buffer);
+    if (frames_per_packet <= 0) {
+      FX_LOGS(WARNING) << "CreateConsumer: invalid field `frames_per_packet`";
+      completer.ReplyError(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
+      return;
+    }
 
     const auto packet_queue = std::make_shared<StreamSinkClient::PacketQueue>();
     const auto client = std::make_shared<StreamSinkClient>(StreamSinkClient::Args{

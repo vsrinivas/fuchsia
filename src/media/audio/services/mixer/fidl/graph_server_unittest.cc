@@ -661,6 +661,28 @@ TEST_F(GraphServerTest, CreateConsumerFailsBadFields) {
           .expected_error = CreateNodeError::kInvalidParameter,
       },
       {
+          .name = "ZeroStreamSinkFramesPerPacket",
+          .edit =
+              [this](auto& request) {
+                auto stream_sink = MakeDefaultStreamSinkConsumer(arena_);
+                stream_sink.frames_per_packet(0);
+                request.data_source(fuchsia_audio_mixer::wire::ConsumerDataSource::WithStreamSink(
+                    arena_, stream_sink.Build()));
+              },
+          .expected_error = CreateNodeError::kInvalidParameter,
+      },
+      {
+          .name = "ZeroStreamSinkPayloadBufferContentSize",
+          .edit =
+              [this](auto& request) {
+                auto stream_sink = MakeDefaultStreamSinkConsumer(arena_);
+                stream_sink.payload_buffer(MakeVmo(0));
+                request.data_source(fuchsia_audio_mixer::wire::ConsumerDataSource::WithStreamSink(
+                    arena_, stream_sink.Build()));
+              },
+          .expected_error = CreateNodeError::kInvalidParameter,
+      },
+      {
           .name = "MissingExternalDelayWatcher",
           .edit =
               [](auto& request) {

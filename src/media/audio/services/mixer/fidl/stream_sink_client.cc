@@ -13,7 +13,6 @@ StreamSinkClient::StreamSinkClient(Args args)
       recycled_packet_queue_(std::move(args.recycled_packet_queue)),
       thread_(std::move(args.thread)),
       client_(fidl::WireSharedClient(std::move(args.client_end), thread_->dispatcher())) {
-  // TODO(fxbug.dev/87651): need to fail gracefully when these parameters come from a client
   FX_CHECK(args.frames_per_packet > 0);
 
   // Subdivide each payload buffer into an integer number of packets.
