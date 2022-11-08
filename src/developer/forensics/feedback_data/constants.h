@@ -81,12 +81,7 @@ constexpr zx::duration kActiveLoggingPeriod = zx::min(5);
 
 constexpr char kPreviousLogsFilePath[] = "/tmp/log.system.previous_boot.txt";
 
-// We use the 8 files below to store up to 512 kb of logs. So, assuming all components have logged
-// at least 512 kb of data, we can expect between 448 kb and 512 kb of logs to be persisted due to
-// the log rotation.
-constexpr StorageSize kPersistentLogsMaxSize = StorageSize::Kilobytes(512);
 constexpr char kCurrentLogsDir[] = "/cache/current_system_logs";
-constexpr size_t kMaxNumLogFiles = 8u;
 
 // At most 16KB of logs will be persisted each second.
 constexpr StorageSize kMaxWriteSize = StorageSize::Kilobytes(16);

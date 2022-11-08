@@ -78,6 +78,7 @@ fuchsia_component("feedback") {
   deps = [
     ":crash_reports_default_config",
     ":feedback_data_config",
+    ":feedback_default_board_config",
     ":feedback_exe",
     ":system_log_recorder_exe",
   ]
@@ -157,6 +158,12 @@ config_data("crash_reports_upload_to_prod_server_config") {
   sources = [ "crash_reports/configs/upload_to_prod_server.json" ]
 
   outputs = [ "crash_reports/override_config.json" ]
+}
+
+resource("feedback_default_board_config") {
+  sources = [ "feedback/configs/board/default.json" ]
+
+  outputs = [ "data/board/default_config.json" ]
 }
 
 resource("feedback_data_config") {

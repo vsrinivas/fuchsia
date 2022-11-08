@@ -10,8 +10,18 @@
 #include "src/developer/forensics/crash_reports/config.h"
 #include "src/developer/forensics/feedback/constants.h"
 #include "src/developer/forensics/feedback_data/config.h"
+#include "src/developer/forensics/utils/storage_size.h"
 
 namespace forensics::feedback {
+
+struct BoardConfig {
+  uint64_t persisted_logs_num_files;
+  StorageSize persisted_logs_total_size;
+};
+
+std::optional<BoardConfig> GetBoardConfig(
+    const std::string& default_path = kDefaultBoardConfigPath,
+    const std::string& override_path = kOverrideBoardConfigPath);
 
 std::optional<crash_reports::Config> GetCrashReportsConfig(
     const std::string& default_path = kDefaultCrashReportsConfigPath,

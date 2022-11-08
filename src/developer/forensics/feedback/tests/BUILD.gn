@@ -336,6 +336,22 @@ executable("namespace_init_unittest_exe") {
   ]
 }
 
+executable("prod_configs_unittest_exe") {
+  testonly = true
+
+  # "prod_configs_unittest_exe" exists in //src/developer/forensics/crash_reports/BUILD.gn
+  output_dir = target_out_dir
+
+  sources = [ "prod_configs_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/feedback:config",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/lib/files",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 executable("product_info_provider_unittest_exe") {
   testonly = true
 
@@ -487,6 +503,15 @@ executable("ui_state_provider_unittest_exe") {
 }
 
 ###############################################################################
+# RESOURCES
+###############################################################################
+resource("prod_configs") {
+  sources = [ "//src/developer/forensics/feedback/configs/board/default.json" ]
+
+  outputs = [ "data/configs/{{source_file_part}}" ]
+}
+
+###############################################################################
 # COMPONENTS
 ###############################################################################
 fuchsia_unittest_component("annotation_manager_unittest") {
@@ -593,6 +618,13 @@ fuchsia_unittest_component("namespace_init_unittest") {
   ]
 }
 
+fuchsia_unittest_component("prod_configs_unittest") {
+  deps = [
+    ":prod_configs",
+    ":prod_configs_unittest_exe",
+  ]
+}
+
 fuchsia_unittest_component("product_info_provider_unittest") {
   deps = [ ":product_info_provider_unittest_exe" ]
 }
@@ -657,6 +689,7 @@ fuchsia_test_package("feedback-tests") {
     ":inspect_unittest",
     ":main_service_unittest",
     ":namespace_init_unittest",
+    ":prod_configs_unittest",
     ":product_info_provider_unittest",
     ":redactor_factory_unittest",
     ":startup_annotations_unittest",

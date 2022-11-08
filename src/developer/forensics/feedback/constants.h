@@ -17,6 +17,9 @@ constexpr zx::duration kDirectoryMigratorResponeTimeout = zx::min(1);
 constexpr char kUseRemoteDeviceIdProviderPath[] = "/config/data/feedback/remote_device_id_provider";
 constexpr char kEnableRedactDataPath[] = "/config/data/feedback/redact_data";
 
+const char kDefaultBoardConfigPath[] = "/pkg/data/board/default_config.json";
+const char kOverrideBoardConfigPath[] = "/config/data/board/override_config.json";
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Reboot reporting
 ///////////////////////////////////////////////////////////////////////////////////////////////////
