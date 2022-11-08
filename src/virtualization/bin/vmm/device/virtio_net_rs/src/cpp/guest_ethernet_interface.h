@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_NET_SRC_CPP_GUEST_ETHERNET_INTERFACE_H_
-#define SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_NET_SRC_CPP_GUEST_ETHERNET_INTERFACE_H_
+#ifndef SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_NET_RS_SRC_CPP_GUEST_ETHERNET_INTERFACE_H_
+#define SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_NET_RS_SRC_CPP_GUEST_ETHERNET_INTERFACE_H_
 
 #include <zircon/types.h>
 
-#include "src/virtualization/bin/vmm/device/virtio_net/src/cpp/guest_ethernet.h"
+#include "src/virtualization/bin/vmm/device/virtio_net_rs/src/cpp/guest_ethernet.h"
 
 extern "C" {
 // Creation, initialization, and destruction functions for the C++ device.
@@ -28,4 +28,4 @@ void guest_ethernet_receive_rx(const void* device, const uint8_t* data, size_t l
                                uint32_t buffer_id);
 }
 
-#endif  // SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_NET_SRC_CPP_GUEST_ETHERNET_INTERFACE_H_
+#endif  // SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_NET_RS_SRC_CPP_GUEST_ETHERNET_INTERFACE_H_

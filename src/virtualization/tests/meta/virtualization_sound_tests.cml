@@ -18,6 +18,7 @@
                 "virtio_console",
                 "virtio_magma",
                 "virtio_net",
+                "virtio_net_rs",
                 "virtio_rng",
                 "virtio_sound",
                 "virtio_vsock",
