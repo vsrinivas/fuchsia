@@ -526,10 +526,10 @@ impl ViewController {
 
     pub async fn render(&mut self) {
         if self.render_requested {
-            // Recompute our logical size based on the provided physical size and screen metrics.
-            self.logical_size = size2(
-                self.physical_size.width * self.metrics.width,
-                self.physical_size.height * self.metrics.height,
+            // Recompute our physical size based on the provided logical size and screen metrics.
+            self.physical_size = size2(
+                self.logical_size.width * self.metrics.width,
+                self.logical_size.height * self.metrics.height,
             );
 
             if self.strategy.render(&self.make_view_details(), &mut self.assistant).await {
@@ -556,10 +556,10 @@ impl ViewController {
                 "gfx",
                 "ViewController::metrics_changed",
                 fuchsia_trace::Scope::Process,
-                "old_width" => self.metrics.width as f64,
-                "old_height" => self.metrics.height as f64,
-                "new_width" => metrics.width as f64,
-                "new_height" => metrics.height as f64
+                "old_device_pixel_ratio_x" => self.metrics.width as f64,
+                "old_device_pixel_ratio_y" => self.metrics.height as f64,
+                "new_device_pixel_ratio_x" => metrics.width as f64,
+                "new_device_pixel_ratio_y" => metrics.height as f64
             );
             self.metrics = metrics;
             self.render_requested = true;
@@ -568,17 +568,17 @@ impl ViewController {
     }
 
     pub fn handle_size_changed(&mut self, new_size: Size) {
-        if self.physical_size != new_size {
+        if self.logical_size != new_size {
             instant!(
                 "gfx",
                 "ViewController::size_changed",
                 fuchsia_trace::Scope::Process,
-                "old_width" => self.physical_size.width as f64,
-                "old_height" => self.physical_size.height as f64,
-                "new_width" => new_size.width as f64,
-                "new_height" => new_size.height as f64
+                "old_logical_width" => self.logical_size.width as f64,
+                "old_logical_height" => self.logical_size.height as f64,
+                "new_logical_width" => new_size.width as f64,
+                "new_logical_height" => new_size.height as f64
             );
-            self.physical_size = new_size;
+            self.logical_size = new_size;
             self.assistant
                 .resize(&new_size)
                 .unwrap_or_else(|e| println!("handle_size_changed error: {}", e));
