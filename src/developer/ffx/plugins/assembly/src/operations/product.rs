@@ -46,8 +46,14 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
     // https://fxrev.dev/694448 lands.
     let mut platform_bundles =
         match (&config.platform.feature_set_level, &config.platform.build_type) {
+            (FeatureSupportLevel::Bringup, BuildType::Eng) => {
+                vec!["common_bringup", "common_bringup_eng"]
+            }
             (FeatureSupportLevel::Minimal, BuildType::Eng) => {
-                vec!["common_minimal", "common_minimal_eng"]
+                vec!["common_bringup", "common_bringup_eng", "common_minimal", "common_minimal_eng"]
+            }
+            (FeatureSupportLevel::Bringup, _) => {
+                vec!["common_bringup"]
             }
             (FeatureSupportLevel::Minimal, _) => {
                 vec!["common_minimal"]

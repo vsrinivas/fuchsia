@@ -16,6 +16,10 @@ bringup_base = {
   output_dir = root_build_dir
   generate_fvm = false
 
+  product_assembly_config_file =
+      "//products/bringup/bringup_eng.product_assembly_config.json5"
+  allow_eng_platform_bundle_use = true
+
   include_component_id_index = true
   include_shell_commands = false
   include_config_data = false
