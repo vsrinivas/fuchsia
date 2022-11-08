@@ -68,11 +68,7 @@ MixerNode::MixerNode(std::string_view name, std::shared_ptr<Clock> reference_clo
 
 bool MixerNode::CanAcceptSourceFormat(const Format& format) const { return true; }
 
-std::optional<size_t> MixerNode::MaxSources() const {
-  // TODO(fxbug.dev/87651): Define a concrete limit here (and in the FIDL API) - perhaps repurpose
-  // `fuchsia::audio.effects::MAX_INPUT_STREAMS`?
-  return std::numeric_limits<size_t>::max();
-}
+std::optional<size_t> MixerNode::MaxSources() const { return std::numeric_limits<size_t>::max(); }
 
 bool MixerNode::AllowsDest() const { return true; }
 

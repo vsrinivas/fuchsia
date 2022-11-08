@@ -4,10 +4,11 @@
 
 #include "src/media/audio/services/mixer/fidl/mixer_node.h"
 
+#include <fidl/fuchsia.audio/cpp/common_types.h>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "fidl/fuchsia.audio/cpp/common_types.h"
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/services/mixer/fidl/graph_detached_thread.h"
 #include "src/media/audio/services/mixer/fidl/testing/fake_graph.h"
@@ -167,9 +168,7 @@ TEST(MixerNodeTest, CreateEdgeCannotAcceptSourceFormat) {
       .unconnected_ordinary_nodes = {1},
       .formats = {{&mismatching_format, {1}}},
   });
-
   const auto& ctx = graph.ctx();
-  auto q = graph.global_task_queue();
 
   const auto mixer_node = MixerNode::Create({
       .pipeline_direction = PipelineDirection::kOutput,
