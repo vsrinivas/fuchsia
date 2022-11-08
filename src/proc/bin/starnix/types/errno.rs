@@ -103,6 +103,10 @@ impl ErrnoCode {
     pub fn return_value(&self) -> u64 {
         -(self.0 as i32) as u64
     }
+
+    pub fn error_code(&self) -> u32 {
+        self.0
+    }
 }
 
 impl Display for ErrnoCode {

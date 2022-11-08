@@ -26,7 +26,7 @@ use crate::task::{
 use crate::types::*;
 use bitflags::bitflags;
 use derivative::Derivative;
-use fidl::endpoints::{RequestStream, ServerEnd};
+use fidl::endpoints::{ControlHandle, RequestStream, ServerEnd};
 use fidl_fuchsia_starnix_binder as fbinder;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
@@ -50,6 +50,9 @@ pub struct BinderDriver {
     /// per process. When the last file descriptor to the binder in the process is closed, the
     /// value is removed from the map.
     procs: RwLock<BTreeMap<pid_t, Arc<BinderProcess>>>,
+
+    /// The currently connected remote clients.
+    remote_tasks: RwLock<BTreeMap<pid_t, Arc<RemoteBinderTask>>>,
 
     /// The thread pool to dispatch remote ioctl calls to. This is necessary because these calls
     /// can block waiting from data from another process.
@@ -1415,6 +1418,81 @@ impl<'a> RunningBinderTask for CurrentBinderTask<'a> {
     }
 }
 
+/// Implementation of `BinderTask` and `CurrentBinderTask` for a remote client.
+struct RemoteBinderTask {
+    process: zx::Process,
+    kernel: Arc<Kernel>,
+}
+
+impl std::fmt::Debug for RemoteBinderTask {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RemoteBinderTask").field("process", &self.process).finish()
+    }
+}
+
+/// The maximal amount of memory that can be read or written using process_{read|write}_memory.
+const max_process_read_write_memory_size: usize = 64 * 1024 * 1024;
+
+impl MemoryAccessor for RemoteBinderTask {
+    fn read_memory(&self, addr: UserAddress, bytes: &mut [u8]) -> Result<(), Errno> {
+        let mut index = 0;
+        while index < bytes.len() {
+            let len = std::cmp::min(bytes.len() - index, max_process_read_write_memory_size);
+            let bytes_count = self
+                .process
+                .read_memory(addr.ptr() + index, &mut bytes[index..(index + len)])
+                .map_err(|_| errno!(EINVAL))?;
+            if bytes_count == 0 {
+                return error!(EINVAL);
+            }
+            index += bytes_count;
+        }
+        Ok(())
+    }
+
+    fn read_memory_partial(&self, _addr: UserAddress, _bytes: &mut [u8]) -> Result<usize, Errno> {
+        error!(ENOTSUP)
+    }
+
+    fn write_memory(&self, addr: UserAddress, bytes: &[u8]) -> Result<usize, Errno> {
+        let mut index = 0;
+        while index < bytes.len() {
+            let len = std::cmp::min(bytes.len() - index, max_process_read_write_memory_size);
+            let bytes_count = self
+                .process
+                .write_memory(addr.ptr() + index, &bytes[index..(index + len)])
+                .map_err(|_| errno!(EINVAL))?;
+            if bytes_count == 0 {
+                break;
+            }
+            index += bytes_count;
+        }
+        Ok(index)
+    }
+}
+
+impl BinderTask for RemoteBinderTask {
+    fn creds(&self) -> Credentials {
+        // TODO(qsr): uid/gid should be set in the configuration
+        Credentials::root()
+    }
+    fn files(&self) -> &FdTable {
+        panic!("files is not implemented for remote binder access");
+    }
+}
+
+impl RunningBinderTask for RemoteBinderTask {
+    fn kernel(&self) -> &Kernel {
+        &self.kernel
+    }
+    fn wait_on_waiter(&self, waiter: &Waiter) -> Result<(), Errno> {
+        waiter.wait_without_current_task_dont_use_if_possible()
+    }
+    fn as_memory_accessor(&self) -> &dyn MemoryAccessor {
+        self
+    }
+}
+
 /// Implementation of BinderTask for a local task.
 #[derive(Debug)]
 struct LocalBinderTask {
@@ -1479,30 +1557,82 @@ impl BinderDriver {
 
     pub fn open_external(
         self: &Arc<Self>,
-        _process: zx::Process,
+        kernel: &Arc<Kernel>,
+        process: zx::Process,
         server_end: ServerEnd<fbinder::BinderMarker>,
     ) -> fasync::Task<()> {
+        let kernel = kernel.clone();
         let driver = self.clone();
+
         fasync::Task::local(
             async move {
+                let pid = kernel.pids.write().allocate_pid();
+                let binder_process = Arc::new(BinderProcess::new(pid));
+                let remote_binder_task =
+                    Arc::new(RemoteBinderTask { process, kernel: kernel.clone() });
+                driver.procs.write().insert(pid, binder_process.clone());
+                driver.remote_tasks.write().insert(pid, remote_binder_task.clone());
+                scopeguard::defer! {
+                    driver.procs.write().remove(&pid);
+                    driver.remote_tasks.write().remove(&pid);
+                }
                 let mut stream = fbinder::BinderRequestStream::from_channel(
                     fasync::Channel::from_channel(server_end.into_channel())?,
                 );
+                let mut tid_to_pid: BTreeMap<u64, pid_t> = Default::default();
                 while let Some(event) = stream.try_next().await? {
                     match event {
-                        fbinder::BinderRequest::SetVmo {
-                            vmo: _,
-                            mapped_address: _,
-                            control_handle: _,
-                        } => {}
-                        fbinder::BinderRequest::Ioctl {
-                            tid: _,
-                            request: _,
-                            parameter: _,
-                            responder,
-                        } => {
+                        fbinder::BinderRequest::SetVmo { vmo, mapped_address, control_handle } => {
+                            // Do not support mapping shared memory more than once.
+                            let mut shared_memory = binder_process.shared_memory.lock();
+                            if shared_memory.is_some() {
+                                control_handle.shutdown();
+                                continue;
+                            }
+
+                            if let Ok(size) = vmo.get_size() {
+                                match SharedMemory::map(&vmo, mapped_address.into(), size as usize)
+                                {
+                                    Ok(mem) => {
+                                        *shared_memory = Some(mem);
+                                    }
+                                    Err(_) => {
+                                        control_handle.shutdown();
+                                        continue;
+                                    }
+                                }
+                            } else {
+                                control_handle.shutdown();
+                            }
+                        }
+                        fbinder::BinderRequest::Ioctl { tid, request, parameter, responder } => {
+                            let tid = *tid_to_pid
+                                .entry(tid)
+                                .or_insert_with(|| kernel.pids.write().allocate_pid());
+                            let binder_thread = binder_process
+                                .thread_pool
+                                .write()
+                                .find_or_register_thread(&binder_process, tid);
+
+                            let cloned_driver = driver.clone();
+                            let cloned_remote_binder_task = remote_binder_task.clone();
+                            let cloned_binder_process = binder_process.clone();
+
                             driver.thread_pool.dispatch(move || {
-                                let _ = responder.send(uapi::ENOTSUP as u16);
+                                let result = cloned_driver.ioctl(
+                                    &*cloned_remote_binder_task,
+                                    &cloned_binder_process,
+                                    &binder_thread,
+                                    request,
+                                    parameter.into(),
+                                );
+                                let errno = if let Err(errno) = result {
+                                    errno.code.error_code()
+                                } else {
+                                    0
+                                };
+
+                                let _ = responder.send(errno as u16);
                             });
                         }
                     }
@@ -1925,6 +2055,19 @@ impl BinderDriver {
         Ok(())
     }
 
+    fn get_binder_task(
+        &self,
+        kernel: &Kernel,
+        pid: pid_t,
+    ) -> Result<Box<Arc<dyn BinderTask>>, Errno> {
+        match self.remote_tasks.read().get(&pid) {
+            Some(task) => Ok(Box::new(task.clone())),
+            _ => Ok(Box::new(Arc::new(LocalBinderTask {
+                task: kernel.pids.read().get_task(pid).ok_or_else(|| errno!(EINVAL))?,
+            }))),
+        }
+    }
+
     /// A binder thread is starting a transaction on a remote binder object.
     fn handle_transaction(
         &self,
@@ -1946,21 +2089,14 @@ impl BinderDriver {
             }
         };
 
-        let target_task = LocalBinderTask {
-            task: current_task
-                .kernel()
-                .pids
-                .read()
-                .get_task(target_proc.pid)
-                .ok_or_else(|| errno!(EINVAL))?,
-        };
+        let target_task = self.get_binder_task(current_task.kernel(), target_proc.pid)?;
 
         // Copy the transaction data to the target process.
         let (data_buffer, offsets_buffer, transaction_state) = self.copy_transaction_buffers(
             current_task,
             binder_proc,
             binder_thread,
-            &target_task,
+            target_task.as_ref().as_ref(),
             &target_proc,
             &data,
         )?;
@@ -2071,21 +2207,14 @@ impl BinderDriver {
         // Find the process and thread that initiated the transaction. This reply is for them.
         let (target_proc, target_thread) = binder_thread.read().transaction_caller()?;
 
-        let target_task = LocalBinderTask {
-            task: current_task
-                .kernel()
-                .pids
-                .read()
-                .get_task(target_proc.pid)
-                .ok_or_else(|| errno!(EINVAL))?,
-        };
+        let target_task = self.get_binder_task(current_task.kernel(), target_proc.pid)?;
 
         // Copy the transaction data to the target process.
         let (data_buffer, offsets_buffer, transaction_state) = self.copy_transaction_buffers(
             current_task,
             binder_proc,
             binder_thread,
-            &target_task,
+            target_task.as_ref().as_ref(),
             &target_proc,
             &data,
         )?;
@@ -5163,25 +5292,6 @@ mod tests {
     }
 
     #[fuchsia::test]
-    async fn external_binder_connection() {
-        let (binder_proxy, binder_server_end) =
-            create_proxy::<fbinder::BinderMarker>().expect("proxy");
-        let task = fasync::Task::spawn(async move {
-            let driver = BinderDriver::new();
-            let process = fuchsia_runtime::process_self()
-                .duplicate(zx::Rights::SAME_RIGHTS)
-                .expect("process");
-            driver.open_external(process, binder_server_end).await;
-        });
-        let vmo = zx::Vmo::create(1024 * 1024).expect("Vmo::create");
-        binder_proxy.set_vmo(vmo, 0).expect("set_vmo");
-        let code = binder_proxy.ioctl(42, 1, 1).await.expect("ioctl") as u32;
-        assert!(code == uapi::ENOTSUP);
-        std::mem::drop(binder_proxy);
-        task.await;
-    }
-
-    #[fuchsia::test]
     fn dead_reply_when_transaction_recipient_thread_dies_while_processing_reply() {
         let test = TranslateHandlesTestFixture::new();
 
@@ -5257,6 +5367,69 @@ mod tests {
 
         // Check that there is a dead reply command for the sending thread.
         assert_matches!(sender_thread.read().command_queue.front(), Some(Command::DeadReply));
+    }
+
+    #[fuchsia::test]
+    async fn external_binder_connection() {
+        let (binder_proxy, binder_server_end) =
+            create_proxy::<fbinder::BinderMarker>().expect("proxy");
+        let task = fasync::Task::spawn(async move {
+            let (kernel, _task) = create_kernel_and_task();
+            let driver = BinderDriver::new();
+            let process = fuchsia_runtime::process_self()
+                .duplicate(zx::Rights::SAME_RIGHTS)
+                .expect("process");
+            driver.open_external(&kernel, process, binder_server_end).await;
+        });
+        const vmo_size: usize = 10 * 1024 * 1024;
+        let vmo = zx::Vmo::create(vmo_size as u64).expect("Vmo::create");
+        let addr = fuchsia_runtime::vmar_root_self()
+            .map(0, &vmo, 0, vmo_size, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_WRITE)
+            .expect("map");
+        scopeguard::defer! {
+          // SAFETY This is a ffi call to a kernel syscall.
+          unsafe { fuchsia_runtime::vmar_root_self().unmap(addr, vmo_size).expect("unmap"); }
+        }
+
+        binder_proxy.set_vmo(vmo, addr as u64).expect("set_vmo");
+        let mut version = binder_version { protocol_version: 0 };
+        let version_ref = &mut version as *mut binder_version;
+        let code =
+            binder_proxy.ioctl(42, uapi::BINDER_VERSION, version_ref as u64).await.expect("ioctl")
+                as u32;
+        // SAFETY This is safe, because version is repr(C)
+        let version = unsafe { std::ptr::read_volatile(version_ref) };
+        assert_eq!(code, 0);
+        assert_eq!(version.protocol_version, BINDER_CURRENT_PROTOCOL_VERSION as i32);
+        std::mem::drop(binder_proxy);
+        task.await;
+    }
+
+    #[fuchsia::test]
+    fn remote_binder_task() {
+        const vector_size: usize = max_process_read_write_memory_size * 3 / 2;
+        let (kernel, _task) = create_kernel_and_task();
+        let process =
+            fuchsia_runtime::process_self().duplicate(zx::Rights::SAME_RIGHTS).expect("process");
+        let remote_binder_task = RemoteBinderTask { process, kernel: kernel.clone() };
+        let mut vector = Vec::with_capacity(vector_size);
+        for i in 0..vector_size {
+            vector.push((i & 255) as u8);
+        }
+        let mut other_vector = Vec::new();
+        other_vector.resize(vector_size, 0);
+        remote_binder_task
+            .read_memory((vector.as_ptr() as u64).into(), &mut other_vector)
+            .expect("read_memory");
+        assert_eq!(vector[1], 1);
+        assert_eq!(vector, other_vector);
+        vector.clear();
+        vector.resize(vector_size, 0);
+        remote_binder_task
+            .write_memory((vector.as_ptr() as u64).into(), &other_vector)
+            .expect("read_memory");
+        assert_eq!(vector[1], 1);
+        assert_eq!(vector, other_vector);
     }
 
     // Simulates an mmap call on the binder driver, setting up shared memory between the driver and

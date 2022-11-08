@@ -72,7 +72,7 @@ pub async fn serve_dev_binder(
                         .get(&device_type)
                         .ok_or_else(|| errno!(ENOTSUP))?
                         .clone();
-                    binder_driver.open_external(process, binder).detach();
+                    binder_driver.open_external(&galaxy.kernel, process, binder).detach();
                     Ok(())
                 })();
                 if result.is_err() {

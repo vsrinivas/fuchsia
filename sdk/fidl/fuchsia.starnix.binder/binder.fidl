@@ -31,7 +31,7 @@ protocol Binder {
     });
     Ioctl(struct {
         tid zx.koid;
-        request uint64;
+        request uint32;
         parameter uint64;
     }) -> (struct {
         out_code uint16;
