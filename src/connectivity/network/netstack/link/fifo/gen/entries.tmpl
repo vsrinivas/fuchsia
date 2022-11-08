@@ -79,7 +79,7 @@ func (e * {{ .Entries }}) IncrementQueued(delta uint16) {
 	e.queued = e.mask2(e.queued + delta)
 }
 
-// IncrementQueued marks delta entries as moved from "in-flight" to "ready".
+// IncrementReadied marks delta entries as moved from "in-flight" to "ready".
 // Delta must be limited to the number of in-flight buffers, which is the
 // size of the range returned by GetInFlightRange.
 func (e * {{ .Entries }}) IncrementReadied(delta uint16) {
