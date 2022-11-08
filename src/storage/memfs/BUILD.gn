@@ -37,7 +37,6 @@ static_library("lib") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/async",
     "//zircon/system/ulib/async:async-cpp",
@@ -78,7 +77,10 @@ zx_library("memfs") {
 source_set("cpp") {
   public = [ "scoped_memfs.h" ]
 
-  public_deps = [ ":memfs" ]
+  public_deps = [
+    ":memfs",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
+  ]
 }
 
 fuchsia_component_manifest("manifest") {

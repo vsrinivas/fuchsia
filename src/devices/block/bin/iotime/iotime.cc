@@ -47,8 +47,8 @@ static uint64_t number(const char* str) {
 }
 
 static void bytes_per_second(uint64_t bytes, uint64_t nanos) {
-  double s = ((double)nanos) / ((double)1000000000);
-  double rate = ((double)bytes) / s;
+  double s = (static_cast<double>(nanos)) / (static_cast<double>(1000000000));
+  double rate = (static_cast<double>(bytes)) / s;
 
   const char* unit = "B";
   if (rate > 1024 * 1024) {
@@ -63,7 +63,7 @@ static void bytes_per_second(uint64_t bytes, uint64_t nanos) {
 
 static zx_duration_t iotime_posix(int is_read, int fd, size_t total, size_t bufsz) {
   void* buffer = malloc(bufsz);
-  if (buffer == NULL) {
+  if (buffer == nullptr) {
     fprintf(stderr, "error: out of memory\n");
     return ZX_TIME_INFINITE;
   }
@@ -78,7 +78,7 @@ static zx_duration_t iotime_posix(int is_read, int fd, size_t total, size_t bufs
       fprintf(stderr, "error: %s() error %d\n", fn_name, errno);
       return ZX_TIME_INFINITE;
     }
-    if ((size_t)r != xfer) {
+    if (static_cast<size_t>(r) != xfer) {
       fprintf(stderr, "error: %s() %zu of %zu bytes processed\n", fn_name, r, xfer);
       return ZX_TIME_INFINITE;
     }
@@ -188,7 +188,7 @@ static zx_duration_t iotime_fifo(char* dev, int is_read, int fd, size_t total, s
   return zx_time_sub_time(t1, t0);
 }
 
-static int usage(void) {
+static int usage() {
   fprintf(stderr,
           "usage: iotime <read|write> <posix|block|fifo> <device|--ramdisk> <bytes> <bufsize>\n\n"
           "        <bytes> and <bufsize> must be a multiple of 4k for block mode\n"
@@ -206,10 +206,10 @@ int main(int argc, char** argv) {
   size_t bufsz = number(argv[5]);
 
   int r = -1;
-  ramdisk_client_t* ramdisk = NULL;
+  ramdisk_client_t* ramdisk = nullptr;
   int fd;
   if (!strcmp(argv[3], "--ramdisk")) {
-    if (strcmp(argv[2], "block")) {
+    if (strcmp(argv[2], "block") != 0) {
       fprintf(stderr, "ramdisk only supported for block\n");
       goto done;
     }
@@ -227,8 +227,9 @@ int main(int argc, char** argv) {
       goto done;
     }
   } else {
-    if ((fd = open(argv[3], is_read ? O_RDONLY : O_WRONLY)) < 0) {
-      fprintf(stderr, "error: cannot open '%s'\n", argv[3]);
+    fd = open(argv[3], is_read ? O_RDONLY : O_WRONLY);
+    if (fd < 0) {
+      fprintf(stderr, "error: cannot open '%s': %s\n", argv[3], strerror(errno));
       goto done;
     }
   }
@@ -255,7 +256,7 @@ int main(int argc, char** argv) {
   }
 
 done:
-  if (ramdisk != NULL) {
+  if (ramdisk != nullptr) {
     ramdisk_destroy(ramdisk);
   }
   return r;

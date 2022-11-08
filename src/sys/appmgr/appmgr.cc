@@ -180,19 +180,14 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
   // Connect to the tracing service, and then publish the root realm's hub
   // directory as 'hub/' and the first nested realm's
   // service directory as 'svc/' (either created by sysmgr, or appmgr itself if there is no sysmgr).
-  zx::channel svc_client_chan, svc_server_chan;
-  if (zx_status_t status = zx::channel::create(0, &svc_client_chan, &svc_server_chan);
-      status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to create channel: " << status;
-    return;
-  }
-  if (zx_status_t status = root_realm_->BindFirstNestedRealmSvc(std::move(svc_server_chan));
+  fidl::InterfaceHandle<fuchsia::io::Node> handle;
+  if (zx_status_t status = root_realm_->BindFirstNestedRealmSvc(handle.NewRequest());
       status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to bind to root realm services: " << status;
     return;
   }
   if (zx_status_t status =
-          fdio_service_connect_at(svc_client_chan.get(), "fuchsia.tracing.provider.Registry",
+          fdio_service_connect_at(handle.channel().get(), "fuchsia.tracing.provider.Registry",
                                   args.trace_server_channel.release());
       status != ZX_OK) {
     FX_LOGS(WARNING) << "failed to connect to tracing: " << status;
@@ -201,7 +196,7 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
   }
 
   if (args.pa_directory_request != ZX_HANDLE_INVALID) {
-    auto svc = fbl::MakeRefCounted<fs::RemoteDir>(std::move(svc_client_chan));
+    auto svc = fbl::MakeRefCounted<fs::RemoteDir>(handle.TakeChannel());
     auto diagnostics = fbl::MakeRefCounted<fs::PseudoDir>();
     diagnostics->AddEntry(
         fuchsia::inspect::Tree::Name_,

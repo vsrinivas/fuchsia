@@ -47,7 +47,6 @@
 #include <fbl/string_printf.h>
 #include <mock-boot-arguments/server.h>
 
-#include "lib/vfs/cpp/pseudo_dir.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/pseudo_file.h"
@@ -304,8 +303,8 @@ class FakeBootResolver final : public fidl::WireServer<fuchsia_component_resolut
                                                                              .vmo = std::move(vmo),
                                                                              .size = size,
                                                                          }));
-    component.set_package(arena, std::move(package));
-    completer.ReplySuccess(std::move(component));
+    component.set_package(arena, package);
+    completer.ReplySuccess(component);
   }
 
   void ResolveWithContext(ResolveWithContextRequestView request,
@@ -501,7 +500,7 @@ class DriverTestRealm final : public fidl::WireServer<fuchsia_driver_test::Realm
     return ZX_OK;
   }
 
-  std::map<std::string, std::string> CreateBootArgs(StartRequestView& request) {
+  static std::map<std::string, std::string> CreateBootArgs(StartRequestView& request) {
     std::map<std::string, std::string> boot_args;
 
     bool is_dfv2 = false;
@@ -553,7 +552,7 @@ class DriverTestRealm final : public fidl::WireServer<fuchsia_driver_test::Realm
     if (request->args.has_driver_disable()) {
       std::vector<std::string_view> drivers(request->args.driver_disable().count());
       for (auto& driver : request->args.driver_disable()) {
-        drivers.emplace_back(std::string_view(driver.data()));
+        drivers.emplace_back(driver.get());
         auto string = fbl::StringPrintf("driver.%s.disable", driver.data());
         boot_args[string.data()] = "true";
       }

@@ -39,7 +39,7 @@ class MemfsInstance : public fs_test::FilesystemInstance {
       return status;
     }
     return zx::make_result(fdio_ns_bind(ns, fs_test::StripTrailingSlash(mount_path).c_str(),
-                                        memfs_->root().release()));
+                                        memfs_->root().TakeChannel().release()));
   }
 
   zx::result<> Unmount(const std::string& mount_path) override {

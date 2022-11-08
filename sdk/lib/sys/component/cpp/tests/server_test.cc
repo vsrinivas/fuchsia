@@ -42,27 +42,6 @@ class EchoCommon : public fidl::WireServer<Echo> {
   std::string prefix_;
 };
 
-fbl::unique_fd OpenRootDir(const zx::channel& request) {
-  int root_fd = 0;
-  zx_status_t result = fdio_fd_create(fdio_service_clone(request.get()), &root_fd);
-  if (result != ZX_OK) {
-    return {};
-  }
-  return fbl::unique_fd(root_fd);
-}
-
-fbl::unique_fd OpenSvcDir(const zx::channel& request) {
-  fbl::unique_fd root_fd = OpenRootDir(request);
-  if (!root_fd.is_valid()) {
-    return {};
-  }
-  return fbl::unique_fd(openat(root_fd.get(), "svc", O_RDONLY));
-}
-
-fbl::unique_fd OpenAt(const fbl::unique_fd& dirfd, const char* path, int flags) {
-  return fbl::unique_fd(openat(dirfd.get(), path, flags));
-}
-
 }  // namespace
 
 class ServerTest : public zxtest::Test {
@@ -177,13 +156,14 @@ TEST_F(ServerTest, ListsMembers) {
   std::thread t([&] {
     auto defer_quit_loop = fit::defer([&] { loop().Quit(); });
 
-    // Open a copy of the local namespace (channel) as a file descriptor.
-    fbl::unique_fd svc_fd = OpenSvcDir(local_root_.channel());
-    ASSERT_TRUE(svc_fd.is_valid());
-
     // Open the 'default' instance of the test service.
-    fbl::unique_fd instance_fd = OpenAt(svc_fd, "fidl.service.test.EchoService/default", O_RDONLY);
-    ASSERT_TRUE(instance_fd.is_valid());
+    zx::channel client, server;
+    ASSERT_OK(zx::channel::create(0, &client, &server));
+    ASSERT_OK(fdio_service_connect_at(local_root_.channel().get(),
+                                      "/svc/fidl.service.test.EchoService/default",
+                                      server.release()));
+    fbl::unique_fd instance_fd;
+    ASSERT_OK(fdio_fd_create(client.release(), instance_fd.reset_and_get_address()));
 
     // fdopendir takes ownership of `instance_fd`.
     DIR* dir = fdopendir(instance_fd.release());

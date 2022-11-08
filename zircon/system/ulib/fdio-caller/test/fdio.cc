@@ -72,10 +72,9 @@ class Harness {
     memfs_ = std::make_unique<ScopedMemfs>(std::move(*memfs));
     memfs_->set_cleanup_timeout(zx::sec(3));
 
-    int fd;
-    ASSERT_EQ(fdio_fd_create(memfs_->root().release(), &fd), ZX_OK);
-    fbl::unique_fd dir(fd);
-    ASSERT_TRUE(dir);
+    fbl::unique_fd dir;
+    ASSERT_EQ(fdio_fd_create(memfs_->root().TakeChannel().release(), dir.reset_and_get_address()),
+              ZX_OK);
     fd_.reset(openat(dir.get(), "my-file", O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
     ASSERT_TRUE(fd_);
   }

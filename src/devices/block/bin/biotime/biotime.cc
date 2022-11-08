@@ -46,8 +46,8 @@ static uint64_t number(const char* str) {
 }
 
 static void bytes_per_second(uint64_t bytes, uint64_t nanos) {
-  double s = ((double)nanos) / ((double)1000000000);
-  double rate = ((double)bytes) / s;
+  double s = (static_cast<double>(nanos)) / (static_cast<double>(1000000000));
+  double rate = (static_cast<double>(bytes)) / s;
 
   const char* unit = "B";
   if (rate > 1024 * 1024) {
@@ -61,12 +61,12 @@ static void bytes_per_second(uint64_t bytes, uint64_t nanos) {
 }
 
 static void ops_per_second(uint64_t count, uint64_t nanos) {
-  double s = ((double)nanos) / ((double)1000000000);
-  double rate = ((double)count) / s;
+  double s = (static_cast<double>(nanos)) / (static_cast<double>(1000000000));
+  double rate = (static_cast<double>(count)) / s;
   fprintf(stderr, "%g %s/s\n", rate, "ops");
 }
 
-typedef struct {
+using blkdev_t = struct {
   int fd;
   zx_handle_t vmo;
   zx_handle_t fifo;
@@ -74,7 +74,7 @@ typedef struct {
   fuchsia_hardware_block::wire::VmoId vmoid;
   size_t bufsz;
   fuchsia_hardware_block::wire::BlockInfo info;
-} blkdev_t;
+};
 
 static void blkdev_close(blkdev_t* blk) {
   if (blk->fd >= 0) {
@@ -156,7 +156,7 @@ static zx_status_t blkdev_open(int fd, const char* dev, size_t bufsz, blkdev_t* 
   return ZX_OK;
 }
 
-typedef struct {
+using bio_random_args_t = struct {
   blkdev_t* blk;
   size_t count;
   size_t xfer;
@@ -167,7 +167,7 @@ typedef struct {
 
   std::atomic<int> pending;
   sync_completion_t signal;
-} bio_random_args_t;
+};
 
 std::atomic<reqid_t> next_reqid(0);
 
@@ -218,16 +218,18 @@ static int bio_random_thread(void* arg) {
         fprintf(stderr, "IO tid=%u vid=%u op=%x len=%zu vof=%zu dof=%zu\n",
                 req.reqid, req.vmoid.id, req.opcode, req.length, req.vmo_offset, req.dev_offset);
 #endif
-    zx_status_t r = zx_fifo_write(fifo, sizeof(req), &req, 1, NULL);
+    zx_status_t r = zx_fifo_write(fifo, sizeof(req), &req, 1, nullptr);
     if (r == ZX_ERR_SHOULD_WAIT) {
-      r = zx_object_wait_one(fifo, ZX_FIFO_WRITABLE | ZX_FIFO_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
+      r = zx_object_wait_one(fifo, ZX_FIFO_WRITABLE | ZX_FIFO_PEER_CLOSED, ZX_TIME_INFINITE,
+                             nullptr);
       if (r != ZX_OK) {
         fprintf(stderr, "failed waiting for fifo\n");
         zx_handle_close(fifo);
         return -1;
       }
       continue;
-    } else if (r < 0) {
+    }
+    if (r < 0) {
       fprintf(stderr, "error: failed writing fifo\n");
       zx_handle_close(fifo);
       return -1;
@@ -257,15 +259,17 @@ static zx_status_t bio_random(bio_random_args_t* a, uint64_t* _total, zx_duratio
 
   while (count > 0) {
     block_fifo_response_t resp;
-    zx_status_t r = zx_fifo_read(fifo, sizeof(resp), &resp, 1, NULL);
+    zx_status_t r = zx_fifo_read(fifo, sizeof(resp), &resp, 1, nullptr);
     if (r == ZX_ERR_SHOULD_WAIT) {
-      r = zx_object_wait_one(fifo, ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
+      r = zx_object_wait_one(fifo, ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, ZX_TIME_INFINITE,
+                             nullptr);
       if (r != ZX_OK) {
         fprintf(stderr, "failed waiting for fifo: %d\n", r);
         return r;
       }
       continue;
-    } else if (r < 0) {
+    }
+    if (r < 0) {
       fprintf(stderr, "error: failed reading fifo: %d\n", r);
       return r;
     }
@@ -292,7 +296,7 @@ static zx_status_t bio_random(bio_random_args_t* a, uint64_t* _total, zx_duratio
   return ZX_OK;
 }
 
-void usage(void) {
+void usage() {
   fprintf(stderr,
           "usage: biotime <option>* <device>\n"
           "\n"
@@ -387,7 +391,7 @@ int main(int argc, char** argv) {
       return 0;
     } else if (!strcmp(argv[0], "-iter")) {
       needparam();
-      opt_num_iter = strtoull(argv[0], NULL, 10);
+      opt_num_iter = strtoull(argv[0], nullptr, 10);
       if (opt_num_iter == 0)
         loop_forever = true;
     } else {
@@ -409,12 +413,12 @@ int main(int argc, char** argv) {
   const char* device_filename = argv[0];
 
   do {
-    int fd;
     a.xfer = opt_xfer_size;
     a.max_pending = opt_max_pending;
     a.write = opt_write;
     a.linear = opt_linear;
-    if ((fd = open(device_filename, O_RDONLY)) < 0) {
+    int fd = open(device_filename, O_RDONLY);
+    if (fd < 0) {
       fprintf(stderr, "error: cannot open '%s'\n", device_filename);
       return -1;
     }

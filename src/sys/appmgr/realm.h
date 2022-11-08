@@ -176,7 +176,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   // Binds the given channel to the services directory (/svc) for the very first
   // nested realm created. This function is only supported for the root realm,
   // otherwise it will do nothing and return ZX_ERR_NOT_SUPPORTED.
-  zx_status_t BindFirstNestedRealmSvc(zx::channel channel);
+  zx_status_t BindFirstNestedRealmSvc(fidl::InterfaceRequest<fuchsia::io::Node> node);
 
   void CreateShell(const std::string& path, zx::channel svc);
 

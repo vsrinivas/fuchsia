@@ -5,9 +5,9 @@
 #ifndef SRC_STORAGE_MEMFS_SCOPED_MEMFS_H_
 #define SRC_STORAGE_MEMFS_SCOPED_MEMFS_H_
 
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/memfs/memfs.h>
 #include <lib/sync/completion.h>
-#include <lib/zx/channel.h>
 #include <lib/zx/result.h>
 
 // A wrapper around the C API that sets up and tears down memfs.
@@ -28,28 +28,27 @@
 class ScopedMemfs {
  public:
   static zx::result<ScopedMemfs> Create(async_dispatcher_t* dispatcher) {
-    memfs_filesystem_t* fs = nullptr;
-    zx_handle_t root = 0;
-
-    zx_status_t status = memfs_create_filesystem(dispatcher, &fs, &root);
-    if (status != ZX_OK)
+    memfs_filesystem_t* fs;
+    zx::channel root;
+    zx_status_t status = memfs_create_filesystem(dispatcher, &fs, root.reset_and_get_address());
+    if (status != ZX_OK) {
       return zx::error(status);
-
-    return zx::ok(ScopedMemfs(fs, root));
+    }
+    return zx::ok(ScopedMemfs(fs, fidl::ClientEnd<fuchsia_io::Directory>(std::move(root))));
   }
 
   static zx::result<ScopedMemfs> CreateMountedAt(async_dispatcher_t* dispatcher, const char* path) {
-    memfs_filesystem_t* fs = nullptr;
+    memfs_filesystem_t* fs;
     zx_status_t status = memfs_install_at(dispatcher, path, &fs);
     if (status != ZX_OK)
       return zx::error(status);
 
-    return zx::ok(ScopedMemfs(fs, ZX_HANDLE_INVALID));
+    return zx::ok(ScopedMemfs(fs, {}));
   }
 
   // Moveable but not copyable.
   ScopedMemfs(const ScopedMemfs&) = delete;
-  ScopedMemfs(ScopedMemfs&& other)
+  ScopedMemfs(ScopedMemfs&& other) noexcept
       : cleanup_timeout_(other.cleanup_timeout_),
         memfs_(other.memfs_),
         root_(std::move(other.root_)) {
@@ -76,16 +75,17 @@ class ScopedMemfs {
 
   // The channel to the root directory of the filesystem. Users can move this out, close it, or use
   // in-place as they need.
-  zx::channel& root() { return root_; }
-  const zx::channel& root() const { return root_; }
+  fidl::ClientEnd<fuchsia_io::Directory>& root() { return root_; }
+  const fidl::ClientEnd<fuchsia_io::Directory>& root() const { return root_; }
 
  private:
-  ScopedMemfs(memfs_filesystem_t* memfs, zx_handle_t root) : memfs_(memfs), root_(root) {}
+  ScopedMemfs(memfs_filesystem_t* memfs, fidl::ClientEnd<fuchsia_io::Directory> root)
+      : memfs_(memfs), root_(std::move(root)) {}
 
   zx::duration cleanup_timeout_ = zx::duration::infinite();
 
   memfs_filesystem_t* memfs_;
-  zx::channel root_;
+  fidl::ClientEnd<fuchsia_io::Directory> root_;
 };
 
 #endif  // SRC_STORAGE_MEMFS_SCOPED_MEMFS_H_

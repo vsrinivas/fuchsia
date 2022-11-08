@@ -335,9 +335,8 @@ zx::result<> PartitionCopyClient::Write(const zx::vmo& vmo, size_t size) {
   }
   if (one_succeed) {
     return zx::ok();
-  } else {
-    return zx::error(ZX_ERR_IO);
   }
+  return zx::error(ZX_ERR_IO);
 }
 
 zx::result<> PartitionCopyClient::Trim() {

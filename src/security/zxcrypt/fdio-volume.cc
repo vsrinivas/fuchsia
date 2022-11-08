@@ -30,12 +30,9 @@
 
 namespace zxcrypt {
 
-FdioVolume::FdioVolume(fbl::unique_fd&& block_dev_fd)
-    : Volume(), block_dev_fd_(std::move(block_dev_fd)) {}
+FdioVolume::FdioVolume(fbl::unique_fd&& block_dev_fd) : block_dev_fd_(std::move(block_dev_fd)) {}
 
 zx_status_t FdioVolume::Init(fbl::unique_fd block_dev_fd, std::unique_ptr<FdioVolume>* out) {
-  zx_status_t rc;
-
   if (!block_dev_fd || !out) {
     xprintf("bad parameter(s): block_dev_fd=%d, out=%p\n", block_dev_fd.get(), out);
     return ZX_ERR_INVALID_ARGS;
@@ -48,8 +45,8 @@ zx_status_t FdioVolume::Init(fbl::unique_fd block_dev_fd, std::unique_ptr<FdioVo
     return ZX_ERR_NO_MEMORY;
   }
 
-  if ((rc = volume->Init()) != ZX_OK) {
-    return rc;
+  if (zx_status_t status = volume->Init(); status != ZX_OK) {
+    return status;
   }
 
   *out = std::move(volume);
@@ -58,19 +55,17 @@ zx_status_t FdioVolume::Init(fbl::unique_fd block_dev_fd, std::unique_ptr<FdioVo
 
 zx_status_t FdioVolume::Create(fbl::unique_fd block_dev_fd, const crypto::Secret& key,
                                std::unique_ptr<FdioVolume>* out) {
-  zx_status_t rc;
-
   std::unique_ptr<FdioVolume> volume;
 
-  if ((rc = FdioVolume::Init(std::move(block_dev_fd), &volume)) != ZX_OK) {
-    xprintf("Init failed: %s\n", zx_status_get_string(rc));
-    return rc;
+  if (zx_status_t status = FdioVolume::Init(std::move(block_dev_fd), &volume); status != ZX_OK) {
+    xprintf("Init failed: %s\n", zx_status_get_string(status));
+    return status;
   }
 
   uint8_t slot = 0;
-  if ((rc = volume->Format(key, slot)) != ZX_OK) {
-    xprintf("Format failed: %s\n", zx_status_get_string(rc));
-    return rc;
+  if (zx_status_t status = volume->Format(key, slot); status != ZX_OK) {
+    xprintf("Format failed: %s\n", zx_status_get_string(status));
+    return status;
   }
 
   if (out) {
@@ -81,16 +76,14 @@ zx_status_t FdioVolume::Create(fbl::unique_fd block_dev_fd, const crypto::Secret
 
 zx_status_t FdioVolume::Unlock(fbl::unique_fd block_dev_fd, const crypto::Secret& key,
                                key_slot_t slot, std::unique_ptr<FdioVolume>* out) {
-  zx_status_t rc;
-
   std::unique_ptr<FdioVolume> volume;
-  if ((rc = FdioVolume::Init(std::move(block_dev_fd), &volume)) != ZX_OK) {
-    xprintf("Init failed: %s\n", zx_status_get_string(rc));
-    return rc;
+  if (zx_status_t status = FdioVolume::Init(std::move(block_dev_fd), &volume); status != ZX_OK) {
+    xprintf("Init failed: %s\n", zx_status_get_string(status));
+    return status;
   }
-  if ((rc = volume->Unlock(key, slot)) != ZX_OK) {
-    xprintf("Unlock failed: %s\n", zx_status_get_string(rc));
-    return rc;
+  if (zx_status_t status = volume->Unlock(key, slot); status != ZX_OK) {
+    xprintf("Unlock failed: %s\n", zx_status_get_string(status));
+    return status;
   }
 
   *out = std::move(volume);
@@ -103,40 +96,36 @@ zx_status_t FdioVolume::Unlock(const crypto::Secret& key, key_slot_t slot) {
 
 // Configuration methods
 zx_status_t FdioVolume::Enroll(const crypto::Secret& key, key_slot_t slot) {
-  zx_status_t rc;
-
-  if ((rc = SealBlock(key, slot)) != ZX_OK) {
-    xprintf("SealBlock failed: %s\n", zx_status_get_string(rc));
-    return rc;
+  if (zx_status_t status = SealBlock(key, slot); status != ZX_OK) {
+    xprintf("SealBlock failed: %s\n", zx_status_get_string(status));
+    return status;
   }
-  if ((rc = CommitBlock()) != ZX_OK) {
-    xprintf("CommitBlock failed: %s\n", zx_status_get_string(rc));
-    return rc;
+  if (zx_status_t status = CommitBlock(); status != ZX_OK) {
+    xprintf("CommitBlock failed: %s\n", zx_status_get_string(status));
+    return status;
   }
 
   return ZX_OK;
 }
 
 zx_status_t FdioVolume::Revoke(key_slot_t slot) {
-  zx_status_t rc;
-
   zx_off_t off;
   crypto::Bytes invalid;
-  if ((rc = GetSlotOffset(slot, &off)) != ZX_OK) {
-    xprintf("GetSlotOffset failed: %s\n", zx_status_get_string(rc));
-    return rc;
+  if (zx_status_t status = GetSlotOffset(slot, &off); status != ZX_OK) {
+    xprintf("GetSlotOffset failed: %s\n", zx_status_get_string(status));
+    return status;
   }
-  if ((rc = invalid.Randomize(slot_len_)) != ZX_OK) {
-    xprintf("Randomize failed: %s\n", zx_status_get_string(rc));
-    return rc;
+  if (zx_status_t status = invalid.Randomize(slot_len_); status != ZX_OK) {
+    xprintf("Randomize failed: %s\n", zx_status_get_string(status));
+    return status;
   }
-  if ((rc = block_.Copy(invalid, off)) != ZX_OK) {
-    xprintf("Copy failed: %s\n", zx_status_get_string(rc));
-    return rc;
+  if (zx_status_t status = block_.Copy(invalid, off); status != ZX_OK) {
+    xprintf("Copy failed: %s\n", zx_status_get_string(status));
+    return status;
   }
-  if ((rc = CommitBlock()) != ZX_OK) {
-    xprintf("CommitBlock failed: %s\n", zx_status_get_string(rc));
-    return rc;
+  if (zx_status_t status = CommitBlock(); status != ZX_OK) {
+    xprintf("CommitBlock failed: %s\n", zx_status_get_string(status));
+    return status;
   }
 
   return ZX_OK;
@@ -260,8 +249,8 @@ zx_status_t FdioVolume::Read() {
             strerror(errno));
     return ZX_ERR_IO;
   }
-  ssize_t res;
-  if ((res = read(block_dev_fd_.get(), block_.get(), block_.len())) < 0) {
+  ssize_t res = res = read(block_dev_fd_.get(), block_.get(), block_.len());
+  if (res < 0) {
     xprintf("read(%d, %p, %zu) failed: %s\n", block_dev_fd_.get(), block_.get(), block_.len(),
             strerror(errno));
     return ZX_ERR_IO;
@@ -280,8 +269,8 @@ zx_status_t FdioVolume::Write() {
             strerror(errno));
     return ZX_ERR_IO;
   }
-  ssize_t res;
-  if ((res = write(block_dev_fd_.get(), block_.get(), block_.len())) < 0) {
+  ssize_t res = write(block_dev_fd_.get(), block_.get(), block_.len());
+  if (res < 0) {
     xprintf("write(%d, %p, %zu) failed: %s\n", block_dev_fd_.get(), block_.get(), block_.len(),
             strerror(errno));
     return ZX_ERR_IO;

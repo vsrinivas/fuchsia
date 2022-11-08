@@ -322,20 +322,20 @@ const std::string& BlockDevice::partition_name() const {
   }
   // The block device might not support the partition protocol in which case the connection will
   // be closed, so clone the channel in case that happens.
-  fdio_cpp::UnownedFdioCaller connection(fd_.get());
+  fdio_cpp::UnownedFdioCaller connection(fd_);
   fidl::ClientEnd<fuchsia_hardware_block_partition::Partition> channel(
       zx::channel(fdio_service_clone(connection.borrow_channel())));
-  auto resp = fidl::WireSyncClient(std::move(channel))->GetName();
-  if (resp.status() != ZX_OK) {
-    FX_LOGS(ERROR) << "Unable to get partiton name (fidl error): "
-                   << zx_status_get_string(resp.status());
+  const fidl::WireResult result = fidl::WireCall(channel)->GetName();
+  if (!result.ok()) {
+    FX_LOGS(ERROR) << "Unable to get partition name (fidl error): " << result.FormatDescription();
     return partition_name_;
   }
-  if (resp.value().status != ZX_OK) {
-    FX_LOGS(ERROR) << "Unable to get partiton name: " << zx_status_get_string(resp.value().status);
+  const fidl::WireResponse response = result.value();
+  if (zx_status_t status = response.status; status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Unable to get partition name";
     return partition_name_;
   }
-  partition_name_ = std::string(resp.value().name.data(), resp.value().name.size());
+  partition_name_ = response.name.get();
   return partition_name_;
 }
 
@@ -343,7 +343,7 @@ zx::result<fuchsia_hardware_block::wire::BlockInfo> BlockDevice::GetInfo() const
   if (info_.has_value()) {
     return zx::ok(*info_);
   }
-  fdio_cpp::UnownedFdioCaller connection(fd_.get());
+  fdio_cpp::UnownedFdioCaller connection(fd_);
   auto res = fidl::WireCall(connection.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
   if (!res.ok()) {
     return zx::error(res.status());
@@ -356,63 +356,70 @@ zx::result<fuchsia_hardware_block::wire::BlockInfo> BlockDevice::GetInfo() const
 }
 
 const fuchsia_hardware_block_partition::wire::Guid& BlockDevice::GetInstanceGuid() const {
-  if (instance_guid_) {
-    return *instance_guid_;
+  if (instance_guid_.has_value()) {
+    return instance_guid_.value();
   }
-  instance_guid_.emplace();
-  fdio_cpp::UnownedFdioCaller connection(fd_.get());
+  fuchsia_hardware_block_partition::wire::Guid& guid = instance_guid_.emplace();
   // The block device might not support the partition protocol in which case the connection will
   // be closed, so clone the channel in case that happens.
-  auto response = fidl::WireCall(fidl::ClientEnd<fuchsia_hardware_block_partition::Partition>(
-                                     zx::channel(fdio_service_clone(connection.borrow_channel()))))
-                      ->GetInstanceGuid();
-  if (response.status() != ZX_OK) {
-    FX_LOGS(ERROR) << "Unable to get partition instance GUID (fidl error: "
-                   << zx_status_get_string(response.status()) << ")";
-  } else if (response.value().status != ZX_OK) {
-    FX_LOGS(ERROR) << "Unable to get partition instance GUID: "
-                   << zx_status_get_string(response.value().status);
-  } else {
-    *instance_guid_ = *response.value().guid;
+  fdio_cpp::UnownedFdioCaller connection(fd_);
+  const fidl::WireResult result =
+      fidl::WireCall(fidl::ClientEnd<fuchsia_hardware_block_partition::Partition>(
+                         zx::channel(fdio_service_clone(connection.borrow_channel()))))
+          ->GetInstanceGuid();
+  if (!result.ok()) {
+    FX_LOGS(ERROR) << "Unable to get partition instance GUID (fidl error): "
+                   << result.FormatDescription();
+    return guid;
   }
-  return *instance_guid_;
+  const fidl::WireResponse response = result.value();
+  if (zx_status_t status = response.status; status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Unable to get partition instance GUID";
+    return guid;
+  }
+  guid = *response.guid;
+  return guid;
 }
 
 const fuchsia_hardware_block_partition::wire::Guid& BlockDevice::GetTypeGuid() const {
-  if (type_guid_) {
-    return *type_guid_;
+  if (type_guid_.has_value()) {
+    return type_guid_.value();
   }
-  type_guid_.emplace();
-  fdio_cpp::UnownedFdioCaller connection(fd_.get());
+  fuchsia_hardware_block_partition::wire::Guid& guid = type_guid_.emplace();
   // The block device might not support the partition protocol in which case the connection will
   // be closed, so clone the channel in case that happens.
-  auto response = fidl::WireCall(fidl::ClientEnd<fuchsia_hardware_block_partition::Partition>(
-                                     zx::channel(fdio_service_clone(connection.borrow_channel()))))
-                      ->GetTypeGuid();
-  if (response.status() != ZX_OK) {
-    FX_LOGS(ERROR) << "Unable to get partition type GUID (fidl error: "
-                   << zx_status_get_string(response.status()) << ")";
-  } else if (response.value().status != ZX_OK) {
-    FX_LOGS(ERROR) << "Unable to get partition type GUID: "
-                   << zx_status_get_string(response.value().status);
-  } else {
-    *type_guid_ = *response.value().guid;
+  fdio_cpp::UnownedFdioCaller connection(fd_);
+  const fidl::WireResult result =
+      fidl::WireCall(fidl::ClientEnd<fuchsia_hardware_block_partition::Partition>(
+                         zx::channel(fdio_service_clone(connection.borrow_channel()))))
+          ->GetTypeGuid();
+  if (!result.ok()) {
+    FX_LOGS(ERROR) << "Unable to get partition type GUID (fidl error): "
+                   << result.FormatDescription();
+    return guid;
   }
-  return *type_guid_;
+  const fidl::WireResponse response = result.value();
+  if (zx_status_t status = response.status; status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Unable to get partition type GUID";
+    return guid;
+  }
+  guid = *response.guid;
+  return guid;
 }
 
 zx_status_t BlockDevice::AttachDriver(const std::string_view& driver) {
   FX_LOGS(INFO) << "Binding: " << driver;
-  fdio_cpp::UnownedFdioCaller connection(fd_.get());
-  auto resp = fidl::WireCall(connection.borrow_as<fuchsia_device::Controller>())
-                  ->Bind(::fidl::StringView::FromExternal(driver));
-  zx_status_t io_status = resp.status();
-  if (io_status != ZX_OK) {
-    return io_status;
+  fdio_cpp::UnownedFdioCaller connection(fd_);
+  const fidl::WireResult result = fidl::WireCall(connection.borrow_as<fuchsia_device::Controller>())
+                                      ->Bind(fidl::StringView::FromExternal(driver));
+  if (!result.ok()) {
+    FX_PLOGS(ERROR, result.status()) << "Failed to attach driver: " << driver;
+    return result.status();
   }
-  if (resp->is_error()) {
-    FX_PLOGS(ERROR, resp->error_value()) << "Failed to attach driver: " << driver;
-    return resp->error_value();
+  const fit::result response = result.value();
+  if (response.is_error()) {
+    FX_PLOGS(ERROR, response.error_value()) << "Failed to attach driver: " << driver;
+    return response.error_value();
   }
   return ZX_OK;
 }
@@ -504,7 +511,7 @@ zx_status_t BlockDevice::SetPartitionMaxSize(const std::string& fvm_path, uint64
   fbl::unique_fd fvm_fd(open(fvm_path.c_str(), O_RDONLY));
   if (!fvm_fd)
     return ZX_ERR_NOT_SUPPORTED;  // Not in FVM, nothing to do.
-  fdio_cpp::UnownedFdioCaller fvm_caller(fvm_fd.get());
+  fdio_cpp::UnownedFdioCaller fvm_caller(fvm_fd);
 
   // Get the FVM slice size.
   auto info_response =
@@ -555,7 +562,7 @@ zx_status_t BlockDevice::SetPartitionName(const std::string& fvm_path, std::stri
     return ZX_ERR_NOT_SUPPORTED;  // Not in FVM, nothing to do.
 
   // Actually set the name.
-  fdio_cpp::UnownedFdioCaller caller(fvm_fd.get());
+  fdio_cpp::UnownedFdioCaller caller(fvm_fd);
   auto response =
       fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager>(
                          caller.borrow_channel()))

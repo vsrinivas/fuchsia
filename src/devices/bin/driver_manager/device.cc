@@ -817,8 +817,8 @@ void Device::BindDevice(BindDeviceRequestView request, BindDeviceCompleter::Sync
 void Device::GetTopologicalPath(GetTopologicalPathCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
   char path[fuchsia_device_manager::wire::kDevicePathMax + 1];
-  zx_status_t status;
-  if ((status = dev->coordinator->GetTopologicalPath(dev, path, sizeof(path))) != ZX_OK) {
+  if (zx_status_t status = dev->coordinator->GetTopologicalPath(dev, path, sizeof(path));
+      status != ZX_OK) {
     completer.ReplyError(status);
     return;
   }

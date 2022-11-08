@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
   }
 
   fidl::InterfacePtr<fuchsia::io::Directory> memfs_dir;
-  memfs_dir.Bind(std::move(memfs->root()));
+  memfs_dir.Bind(memfs->root().TakeChannel());
 
   fidl::InterfaceHandle<fuchsia::io::Node> ro_dir;
   fidl::InterfaceHandle<fuchsia::io::Node> rw_dir;

@@ -34,8 +34,8 @@ zx::result<fidl::ClientEnd<fuchsia_io::Directory>> Memfs::GetFilesystemRoot() co
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
-  if (zx_status_t status =
-          fdio_service_clone_to(memfs_.root().get(), endpoints->server.TakeChannel().release());
+  if (zx_status_t status = fdio_service_clone_to(memfs_.root().channel().get(),
+                                                 endpoints->server.TakeChannel().release());
       status != ZX_OK) {
     return zx::error(status);
   }

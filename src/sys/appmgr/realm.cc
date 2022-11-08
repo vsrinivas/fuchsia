@@ -1097,11 +1097,12 @@ Realm* Realm::GetRunnerRealm() {
   return realm;
 }
 
-zx_status_t Realm::BindFirstNestedRealmSvc(zx::channel channel) {
+zx_status_t Realm::BindFirstNestedRealmSvc(fidl::InterfaceRequest<fuchsia::io::Node> node) {
   if (parent_) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  return fdio_service_clone_to(first_nested_realm_svc_client_.channel().get(), channel.release());
+  return fdio_service_clone_to(first_nested_realm_svc_client_.channel().get(),
+                               node.TakeChannel().release());
 }
 
 // A component instance's storage directory is in one of two places:

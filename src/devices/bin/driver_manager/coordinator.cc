@@ -708,29 +708,27 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev,
 zx_status_t Coordinator::PrepareFidlProxy(const fbl::RefPtr<Device>& dev,
                                           fbl::RefPtr<DriverHost> target_driver_host,
                                           fbl::RefPtr<Device>* fidl_proxy_out) {
-  zx_status_t status;
-  if ((status = dev->CreateFidlProxy(fidl_proxy_out)) != ZX_OK) {
-    LOGF(ERROR, "Cannot create FIDL proxy device '%s': %s", dev->name().data(),
+  if (zx_status_t status = dev->CreateFidlProxy(fidl_proxy_out); status != ZX_OK) {
+    LOGF(ERROR, "Failed to create FIDL proxy device '%s': %s", dev->name().c_str(),
          zx_status_get_string(status));
     return status;
   }
 
   char driver_hostname[32];
-  snprintf(driver_hostname, sizeof(driver_hostname), "driver_host:%.*s",
-           static_cast<int>(dev->name().size()), dev->name().data());
+  snprintf(driver_hostname, sizeof(driver_hostname), "driver_host:%s", dev->name().c_str());
 
   if (target_driver_host == nullptr) {
-    if (status = NewDriverHost(driver_hostname, &target_driver_host); status != ZX_OK) {
+    if (zx_status_t status = NewDriverHost(driver_hostname, &target_driver_host); status != ZX_OK) {
       LOGF(ERROR, "Failed to create driver_host '%s': %s", driver_hostname,
            zx_status_get_string(status));
       return status;
     }
   }
   (*fidl_proxy_out)->set_host(std::move(target_driver_host));
-  if (status = CreateFidlProxyDevice(*fidl_proxy_out, (*fidl_proxy_out)->host(),
-                                     dev->clone_outgoing_dir());
+  if (zx_status_t status = CreateFidlProxyDevice(*fidl_proxy_out, (*fidl_proxy_out)->host(),
+                                                 dev->clone_outgoing_dir());
       status != ZX_OK) {
-    LOGF(ERROR, "Failed to create proxy device '%s' in driver_host '%s': %s", dev->name().data(),
+    LOGF(ERROR, "Failed to create proxy device '%s' in driver_host '%s': %s", dev->name().c_str(),
          driver_hostname, zx_status_get_string(status));
     return status;
   }
