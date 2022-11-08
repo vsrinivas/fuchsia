@@ -12,8 +12,10 @@
 #include <vector>
 
 #include "src/developer/forensics/crash_reports/constants.h"
+#include "src/developer/forensics/crash_reports/report.h"
 #include "src/developer/forensics/crash_reports/report_util.h"
 #include "src/developer/forensics/utils/sized_data.h"
+#include "src/developer/forensics/utils/storage_size.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -247,6 +249,39 @@ bool ReportStore::Add(const ReportId report_id, const std::string& program_short
   store_root.Add(report_id, program_shortname, std::move(attachment_keys), report_size);
 
   return true;
+}
+
+void ReportStore::AddAnnotation(ReportId id, const std::string& key, const std::string& value) {
+  FX_CHECK(Contains(id)) << "Contains() should be called before any AddAnnotation()";
+
+  auto& root_metadata = RootFor(id);
+  const auto annotations_path = root_metadata.ReportAttachmentPath(id, "annotations.json");
+
+  if (!annotations_path.has_value()) {
+    FX_LOGST(ERROR, tags_->Get(id)) << "annotations.json doesn't exist";
+    return;
+  }
+
+  AnnotationMap annotations;
+  if (!ReadAnnotations(*annotations_path, &annotations)) {
+    FX_LOGST(ERROR, tags_->Get(id)) << "Failed to read annotations.json";
+    return;
+  }
+
+  if (annotations.Contains(key)) {
+    FX_LOGST(FATAL, tags_->Get(id)) << "Annotation with key: '" << key << "' already exists";
+  }
+
+  annotations.Set(key, value);
+
+  const std::string annotations_json = FormatAnnotationsAsJson(annotations);
+  if (!WriteData(*annotations_path, annotations_json)) {
+    FX_LOGST(ERROR, tags_->Get(id)) << "Failed to update annotations.json";
+    return;
+  }
+
+  root_metadata.IncreaseSize(id, StorageSize::Bytes(key.size()));
+  root_metadata.IncreaseSize(id, StorageSize::Bytes(value.size()));
 }
 
 Report ReportStore::Get(const ReportId report_id) {

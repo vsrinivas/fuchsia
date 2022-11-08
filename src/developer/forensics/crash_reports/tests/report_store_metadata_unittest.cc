@@ -14,6 +14,7 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/forensics/testing/scoped_memfs_manager.h"
+#include "src/developer/forensics/utils/storage_size.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
 
@@ -197,6 +198,32 @@ TEST_F(ReportStoreMetadataTest, RecreateFromFilesystem_FailsInitially) {
   scoped_mem_fs.Create("/cache/delayed/path");
   metadata.RecreateFromFilesystem();
   EXPECT_TRUE(metadata.IsDirectoryUsable());
+}
+
+TEST_F(ReportStoreMetadataTest, ReportAttachmentPath_AttachmentExists) {
+  metadata().Add(0, "program 1", {"key 1", "key 2"}, StorageSize::Bytes(10));
+
+  const auto path = metadata().ReportAttachmentPath(0, "key 1");
+  const std::string expected_path = files::JoinPath(ReportPath("program 1", 0), "key 1");
+
+  EXPECT_EQ(path, expected_path);
+}
+
+TEST_F(ReportStoreMetadataTest, ReportAttachmentPath_AttachmentDoesNotExist) {
+  metadata().Add(0, "program 1", {"key 1", "key 2"}, StorageSize::Bytes(10));
+
+  const auto path = metadata().ReportAttachmentPath(0, "key 3");
+  EXPECT_FALSE(path.has_value());
+}
+
+TEST_F(ReportStoreMetadataTest, IncreaseSize) {
+  const ReportId id = 0;
+  metadata().Add(id, "program 1", {"key 1", "key 2"}, StorageSize::Bytes(1));
+
+  const StorageSize original_size = metadata().CurrentSize();
+  metadata().IncreaseSize(id, StorageSize::Bytes(2));
+
+  EXPECT_EQ(metadata().CurrentSize(), original_size + StorageSize::Bytes(2));
 }
 
 }  // namespace

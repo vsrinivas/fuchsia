@@ -36,6 +36,7 @@ using inspect::testing::NodeMatches;
 using inspect::testing::PropertyList;
 using inspect::testing::StringIs;
 using inspect::testing::UintIs;
+using ::testing::HasSubstr;
 using ::testing::IsEmpty;
 using ::testing::IsSupersetOf;
 using ::testing::UnorderedElementsAreArray;
@@ -221,6 +222,8 @@ class ReportStoreTest : public UnitTestFixture {
 
   ReportId next_report_id_{0};
 };
+
+using ReportStoreDeathTest = ReportStoreTest;
 
 TEST_F(ReportStoreTest, Succeed_AddDefaultsToCache) {
   const std::string expected_program_shortname = "program_shortname";
@@ -709,6 +712,112 @@ TEST_F(ReportStoreTest, Check_InspectTree) {
                           ChildrenMatch(IsEmpty())),
                 }))),
       })));
+}
+
+TEST_F(ReportStoreTest, AddAnnotation) {
+  const std::string expected_program_shortname = "program_shortname";
+
+  const std::map<std::string, std::string> original_annotations = {
+      {"annotation0.cc", "annotation_value0"},
+      {"annotation1.txt", "annotation_value1"},
+      {"annotation2.zip", "annotation_value2"},
+  };
+
+  const std::map<std::string, std::string> expected_annotations = {
+      {"annotation0.cc", "annotation_value0"},
+      {"annotation1.txt", "annotation_value1"},
+      {"annotation2.zip", "annotation_value2"},
+      {"new_annotation", "annotation_value3"},
+  };
+
+  const std::map<std::string, std::string> expected_attachments = {
+      {"attachment_key0", "attachment_value0"},
+      {"attachment_key1", "attachment_value1"},
+      {"attachment_key2", "attachment_value2"},
+  };
+
+  const std::string expected_snapshot_uuid = "snapshot_uuid";
+
+  size_t original_report_size = expected_snapshot_uuid.size();
+  for (const auto& [k, v] : original_annotations) {
+    original_report_size += k.size() + v.size() + 11 /*json formatting*/;
+  }
+  original_report_size += 5 /*json formatting*/;
+  for (const auto& [k, v] : expected_attachments) {
+    original_report_size += v.size();
+  }
+
+  // Make store only have room for 2 reports with |original_annotations|, but only 1 report with
+  // |expected_annotations|.
+  MakeNewStore(StorageSize::Bytes(0), StorageSize::Bytes(2 * original_report_size));
+
+  std::map<std::string, std::string> annotations;
+  std::map<std::string, std::string> attachments;
+  std::optional<std::string> snapshot_uuid;
+  std::optional<std::string> minidump;
+  std::vector<ReportId> garbage_collected_reports;
+
+  const auto report_id = Add(expected_program_shortname, original_annotations, expected_attachments,
+                             expected_snapshot_uuid, std::nullopt, &garbage_collected_reports);
+  EXPECT_TRUE(report_id.has_value());
+  EXPECT_TRUE(garbage_collected_reports.empty());
+
+  ASSERT_TRUE(report_store_->Contains(report_id.value()));
+  ASSERT_TRUE(ReadCache(expected_program_shortname, report_id.value(), &annotations, &attachments,
+                        &snapshot_uuid, &minidump));
+
+  EXPECT_EQ(original_annotations, annotations);
+  EXPECT_EQ(expected_attachments, attachments);
+  ASSERT_TRUE(snapshot_uuid.has_value());
+  EXPECT_EQ(expected_snapshot_uuid, snapshot_uuid.value());
+
+  report_store_->AddAnnotation(*report_id, "new_annotation", "annotation_value3");
+
+  ASSERT_TRUE(ReadCache(expected_program_shortname, report_id.value(), &annotations, &attachments,
+                        &snapshot_uuid, &minidump));
+
+  EXPECT_EQ(expected_annotations, annotations);
+  EXPECT_EQ(expected_attachments, attachments);
+  ASSERT_TRUE(snapshot_uuid.has_value());
+  EXPECT_EQ(expected_snapshot_uuid, snapshot_uuid.value());
+
+  const auto report_id2 =
+      Add(expected_program_shortname, original_annotations, expected_attachments,
+          expected_snapshot_uuid, std::nullopt, &garbage_collected_reports);
+  EXPECT_FALSE(report_id2.has_value());
+}
+
+TEST_F(ReportStoreDeathTest, AddDuplicateAnnotation) {
+  const std::string expected_program_shortname = "program_shortname";
+
+  const std::map<std::string, std::string> expected_annotations = {
+      {"annotation0.cc", "annotation_value0"},
+  };
+
+  const std::map<std::string, std::string> expected_attachments = {
+      {"attachment_key0", "attachment_value0"},
+  };
+
+  const std::string expected_snapshot_uuid = "snapshot_uuid";
+
+  std::map<std::string, std::string> annotations;
+  std::map<std::string, std::string> attachments;
+  std::optional<std::string> snapshot_uuid;
+  std::optional<std::string> minidump;
+  std::vector<ReportId> garbage_collected_reports;
+
+  const auto report_id = Add(expected_program_shortname, expected_annotations, expected_attachments,
+                             expected_snapshot_uuid, std::nullopt, &garbage_collected_reports);
+  EXPECT_TRUE(report_id.has_value());
+
+  ASSERT_TRUE(report_store_->Contains(report_id.value()));
+  ASSERT_TRUE(ReadTmp(expected_program_shortname, report_id.value(), &annotations, &attachments,
+                      &snapshot_uuid, &minidump));
+
+  EXPECT_EQ(expected_annotations, annotations);
+
+  ASSERT_DEATH({ report_store_->AddAnnotation(*report_id, "annotation0.cc", "annotation_value1"); },
+               HasSubstr("already exists"));
 }
 
 }  // namespace

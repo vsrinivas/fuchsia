@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <optional>
 
 #include "src/lib/files/directory.h"
 
@@ -163,6 +164,14 @@ StorageSize ReportStoreMetadata::ReportSize(const ReportId report_id) const {
   return report_metadata_.at(report_id).size;
 }
 
+void ReportStoreMetadata::IncreaseSize(const ReportId report_id,
+                                       const StorageSize additional_size) {
+  FX_CHECK(Contains(report_id));
+
+  current_size_ += additional_size;
+  report_metadata_.at(report_id).size += additional_size;
+}
+
 std::vector<std::string> ReportStoreMetadata::ReportAttachments(ReportId report_id,
                                                                 const bool absolute_paths) const {
   FX_CHECK(Contains(report_id));
@@ -179,6 +188,19 @@ std::vector<std::string> ReportStoreMetadata::ReportAttachments(ReportId report_
   }
 
   return attachments;
+}
+
+std::optional<std::string> ReportStoreMetadata::ReportAttachmentPath(
+    ReportId report_id, const std::string& attachment_name) const {
+  FX_CHECK(Contains(report_id));
+
+  auto& report_metadata = report_metadata_.at(report_id);
+  if (std::find(report_metadata.attachments.begin(), report_metadata.attachments.end(),
+                attachment_name) == report_metadata.attachments.end()) {
+    return std::nullopt;
+  }
+
+  return fs::path(report_metadata.dir) / attachment_name;
 }
 
 }  // namespace crash_reports

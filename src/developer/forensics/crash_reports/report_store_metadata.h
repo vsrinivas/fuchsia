@@ -66,10 +66,18 @@ class ReportStoreMetadata {
   // The size of report |report_id|.
   StorageSize ReportSize(ReportId report_id) const;
 
+  // Increases the size of report |report_id| by |additional_size|.
+  void IncreaseSize(ReportId report_id, StorageSize additional_size);
+
   // The attachments for report |report_id|. If |absolute_paths| is true, the absolute path of the
   // attachments in the filesystem will be returned otherwise the attachment file names will be
   // returned.
   std::vector<std::string> ReportAttachments(ReportId report_id, bool absolute_paths = false) const;
+
+  // Returns the absolute path to |attachment_name| for report |report_id|. Returns std::nullopt if
+  // the attachment doesn't exist.
+  std::optional<std::string> ReportAttachmentPath(ReportId report_id,
+                                                  const std::string& attachment_name) const;
 
  private:
   // Metadata about each program including:
