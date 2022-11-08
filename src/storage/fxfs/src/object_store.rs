@@ -1802,19 +1802,29 @@ impl JournalingObject for ObjectStore {
                 }
             }
             Mutation::BeginFlush => {
+                ensure!(self.parent_store.is_some(), FxfsError::Inconsistent);
                 self.tree.seal().await;
                 self.store_info.lock().unwrap().begin_flush();
             }
             Mutation::EndFlush => {
+                ensure!(self.parent_store.is_some(), FxfsError::Inconsistent);
                 if context.mode.is_replay() {
                     self.tree.reset_immutable_layers();
                     self.store_info.lock().unwrap().end_flush();
                 }
             }
             Mutation::EncryptedObjectStore(data) => {
+                ensure!(
+                    !matches!(&*self.lock_state.lock().unwrap(), LockState::Unencrypted),
+                    FxfsError::Inconsistent
+                );
                 self.store_info.lock().unwrap().push_encrypted_mutation(&context.checkpoint, data);
             }
             Mutation::UpdateMutationsKey(UpdateMutationsKey(key)) => {
+                ensure!(
+                    !matches!(&*self.lock_state.lock().unwrap(), LockState::Unencrypted),
+                    FxfsError::Inconsistent
+                );
                 if context.mode.is_replay() {
                     self.store_info.lock().unwrap().set_mutations_key(key);
                 }
