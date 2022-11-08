@@ -9,7 +9,7 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
-#include "src/media/audio/audio_core/v1/usage_settings.h"
+#include "src/media/audio/audio_core/shared/usage_settings.h"
 
 namespace media::audio {
 

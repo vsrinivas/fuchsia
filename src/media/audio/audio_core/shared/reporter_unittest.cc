@@ -1,18 +1,16 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include "src/media/audio/audio_core/v1/reporter.h"
+#include "src/media/audio/audio_core/shared/reporter.h"
 
 #include <lib/fpromise/single_threaded_executor.h>
 #include <lib/inspect/testing/cpp/inspect.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/media/audio/audio_core/v1/audio_admin.h"
-#include "src/media/audio/audio_core/v1/audio_device_manager.h"
-#include "src/media/audio/audio_core/v1/testing/fake_audio_device.h"
-#include "src/media/audio/audio_core/v1/testing/null_audio_capturer.h"
-#include "src/media/audio/audio_core/v1/testing/null_audio_renderer.h"
-#include "src/media/audio/audio_core/v1/testing/threading_model_fixture.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/media/audio/audio_core/shared/audio_admin.h"
 
 namespace media::audio {
 namespace {
@@ -39,9 +37,10 @@ using ::testing::IsSupersetOf;
       AllOf(NameMatches(name), Not(PropertyList(Contains(UintIs("time since death (ns)", 0))))));
 }
 
-class ReporterTest : public testing::ThreadingModelFixture {
+class ReporterTest : public gtest::TestLoopFixture {
  public:
-  ReporterTest() : under_test_(context().component_context(), threading_model(), false) {}
+  ReporterTest()
+      : under_test_(*component_context_provider_.context(), dispatcher(), dispatcher(), false) {}
 
   inspect::Hierarchy GetHierarchy() {
     zx::vmo duplicate = under_test_.inspector().DuplicateVmo();
@@ -69,6 +68,7 @@ class ReporterTest : public testing::ThreadingModelFixture {
     return result.take_value();
   }
 
+  sys::testing::ComponentContextProvider component_context_provider_;
   Reporter under_test_;
 };
 

@@ -10,8 +10,8 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/trace/event.h>
 
+#include "src/media/audio/audio_core/shared/active_stream_count_reporter.h"
 #include "src/media/audio/audio_core/shared/process_config.h"
-#include "src/media/audio/audio_core/v1/active_stream_count_reporter.h"
 #include "src/media/audio/audio_core/v1/clock.h"
 #include "src/media/audio/audio_core/v1/device_registry.h"
 #include "src/media/audio/audio_core/v1/threading_model.h"

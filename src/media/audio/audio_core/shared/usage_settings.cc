@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/v1/usage_settings.h"
+#include "src/media/audio/audio_core/shared/usage_settings.h"
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>

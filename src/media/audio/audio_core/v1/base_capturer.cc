@@ -14,7 +14,7 @@
 #include <iomanip>
 #include <memory>
 
-#include "src/media/audio/audio_core/v1/audio_admin.h"
+#include "src/media/audio/audio_core/shared/audio_admin.h"
 #include "src/media/audio/audio_core/v1/audio_core_impl.h"
 #include "src/media/audio/audio_core/v1/audio_driver.h"
 #include "src/media/audio/audio_core/v1/logging_flags.h"

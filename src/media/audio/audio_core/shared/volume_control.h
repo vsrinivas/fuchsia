@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_V1_VOLUME_CONTROL_H_
-#define SRC_MEDIA_AUDIO_AUDIO_CORE_V1_VOLUME_CONTROL_H_
+#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_SHARED_VOLUME_CONTROL_H_
+#define SRC_MEDIA_AUDIO_AUDIO_CORE_SHARED_VOLUME_CONTROL_H_
 
 #include <fuchsia/media/audio/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 
 #include <memory>
 
-#include "src/media/audio/audio_core/v1/reporter.h"
+#include "src/media/audio/audio_core/shared/reporter.h"
 
 namespace media::audio {
 
@@ -64,4 +64,4 @@ class VolumeControl {
 
 }  // namespace media::audio
 
-#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_V1_VOLUME_CONTROL_H_
+#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_SHARED_VOLUME_CONTROL_H_

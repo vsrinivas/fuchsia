@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_V1_ACTIVE_STREAM_COUNT_REPORTER_H_
-#define SRC_MEDIA_AUDIO_AUDIO_CORE_V1_ACTIVE_STREAM_COUNT_REPORTER_H_
+#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_SHARED_ACTIVE_STREAM_COUNT_REPORTER_H_
+#define SRC_MEDIA_AUDIO_AUDIO_CORE_SHARED_ACTIVE_STREAM_COUNT_REPORTER_H_
 
 #include "src/media/audio/audio_core/shared/audio_policy.h"
 #include "src/media/audio/audio_core/shared/stream_usage.h"
@@ -21,4 +21,4 @@ class ActiveStreamCountReporter {
 
 }  // namespace media::audio
 
-#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_V1_ACTIVE_STREAM_COUNT_REPORTER_H_
+#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_SHARED_ACTIVE_STREAM_COUNT_REPORTER_H_

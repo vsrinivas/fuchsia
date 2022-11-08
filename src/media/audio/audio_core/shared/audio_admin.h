@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_V1_AUDIO_ADMIN_H_
-#define SRC_MEDIA_AUDIO_AUDIO_CORE_V1_AUDIO_ADMIN_H_
+#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_SHARED_AUDIO_ADMIN_H_
+#define SRC_MEDIA_AUDIO_AUDIO_CORE_SHARED_AUDIO_ADMIN_H_
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
@@ -13,10 +13,9 @@
 #include <unordered_set>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/media/audio/audio_core/shared/active_stream_count_reporter.h"
 #include "src/media/audio/audio_core/shared/policy_loader.h"
 #include "src/media/audio/audio_core/shared/stream_usage.h"
-#include "src/media/audio/audio_core/v1/active_stream_count_reporter.h"
-#include "src/media/audio/audio_core/v1/context.h"
 
 namespace media::audio {
 
@@ -180,4 +179,4 @@ class AudioAdmin {
 
 }  // namespace media::audio
 
-#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_V1_AUDIO_ADMIN_H_
+#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_SHARED_AUDIO_ADMIN_H_

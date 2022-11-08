@@ -4,11 +4,11 @@
 
 #include "src/media/audio/audio_core/v1/output_pipeline.h"
 
+#include "src/media/audio/audio_core/shared/usage_settings.h"
 #include "src/media/audio/audio_core/v1/effects_stage_v1.h"
 #include "src/media/audio/audio_core/v1/effects_stage_v2.h"
 #include "src/media/audio/audio_core/v1/ring_buffer.h"
 #include "src/media/audio/audio_core/v1/tap_stage.h"
-#include "src/media/audio/audio_core/v1/usage_settings.h"
 
 namespace media::audio {
 

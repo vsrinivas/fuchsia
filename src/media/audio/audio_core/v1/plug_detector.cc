@@ -19,7 +19,7 @@
 #include <fbl/unique_fd.h>
 
 #include "src/lib/fsl/io/device_watcher.h"
-#include "src/media/audio/audio_core/v1/reporter.h"
+#include "src/media/audio/audio_core/shared/reporter.h"
 
 namespace media::audio {
 namespace {

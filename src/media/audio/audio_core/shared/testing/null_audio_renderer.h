@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_LIB_TEST_NULL_AUDIO_RENDERER_H_
-#define SRC_MEDIA_AUDIO_LIB_TEST_NULL_AUDIO_RENDERER_H_
+#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_SHARED_TESTING_NULL_AUDIO_RENDERER_H_
+#define SRC_MEDIA_AUDIO_AUDIO_CORE_SHARED_TESTING_NULL_AUDIO_RENDERER_H_
 
 #include <fuchsia/media/cpp/fidl.h>
 
@@ -38,4 +38,4 @@ class NullAudioRenderer : public fuchsia::media::AudioRenderer {
 
 }  // namespace media::audio::test
 
-#endif  // SRC_MEDIA_AUDIO_LIB_TEST_NULL_AUDIO_RENDERER_H_
+#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_SHARED_TESTING_NULL_AUDIO_RENDERER_H_

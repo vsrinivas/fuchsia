@@ -15,14 +15,14 @@
 #include <mutex>
 #include <unordered_map>
 
+#include "src/media/audio/audio_core/shared/reporter.h"
+#include "src/media/audio/audio_core/shared/usage_settings.h"
 #include "src/media/audio/audio_core/v1/audio_object.h"
 #include "src/media/audio/audio_core/v1/clock.h"
 #include "src/media/audio/audio_core/v1/context.h"
 #include "src/media/audio/audio_core/v1/link_matrix.h"
 #include "src/media/audio/audio_core/v1/packet_queue.h"
-#include "src/media/audio/audio_core/v1/reporter.h"
 #include "src/media/audio/audio_core/v1/route_graph.h"
-#include "src/media/audio/audio_core/v1/usage_settings.h"
 #include "src/media/audio/audio_core/v1/utils.h"
 #include "src/media/audio/lib/format/format.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"

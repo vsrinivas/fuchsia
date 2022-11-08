@@ -1039,4 +1039,15 @@ zx_status_t AudioDriver::SetActiveChannels(uint64_t chan_bit_mask) {
   return ZX_OK;
 }
 
+Reporter::AudioDriverInfo AudioDriver::info_for_reporter() const {
+  return {
+      .manufacturer_name = manufacturer_name(),
+      .product_name = product_name(),
+      .external_delay = external_delay(),
+      .fifo_depth_duration = fifo_depth_duration(),
+      .fifo_depth_frames = fifo_depth_frames(),
+      .format = GetFormat(),
+  };
+}
+
 }  // namespace media::audio

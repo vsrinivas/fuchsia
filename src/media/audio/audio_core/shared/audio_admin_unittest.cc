@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/v1/audio_admin.h"
+#include "src/media/audio/audio_core/shared/audio_admin.h"
 
 #include <unordered_map>
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/media/audio/audio_core/shared/active_stream_count_reporter.h"
 #include "src/media/audio/audio_core/shared/stream_usage.h"
-#include "src/media/audio/audio_core/v1/active_stream_count_reporter.h"
-#include "src/media/audio/audio_core/v1/stream_volume_manager.h"
-#include "src/media/audio/audio_core/v1/testing/null_audio_capturer.h"
-#include "src/media/audio/audio_core/v1/testing/null_audio_renderer.h"
+#include "src/media/audio/audio_core/shared/stream_volume_manager.h"
+#include "src/media/audio/audio_core/shared/testing/null_audio_capturer.h"
+#include "src/media/audio/audio_core/shared/testing/null_audio_renderer.h"
 
 namespace media::audio {
 namespace {

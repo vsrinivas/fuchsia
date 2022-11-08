@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_V1_USAGE_SETTINGS_H_
-#define SRC_MEDIA_AUDIO_AUDIO_CORE_V1_USAGE_SETTINGS_H_
+#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_SHARED_USAGE_SETTINGS_H_
+#define SRC_MEDIA_AUDIO_AUDIO_CORE_SHARED_USAGE_SETTINGS_H_
 
 #include <fuchsia/media/cpp/fidl.h>
 
@@ -59,4 +59,4 @@ class UsageVolumeSettings {
 
 }  // namespace media::audio
 
-#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_V1_USAGE_SETTINGS_H_
+#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_SHARED_USAGE_SETTINGS_H_

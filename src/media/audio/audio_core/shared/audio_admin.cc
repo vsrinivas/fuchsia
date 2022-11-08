@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/v1/audio_admin.h"
+#include "src/media/audio/audio_core/shared/audio_admin.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
@@ -10,8 +10,8 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
-#include "src/media/audio/audio_core/v1/reporter.h"
-#include "src/media/audio/audio_core/v1/stream_volume_manager.h"
+#include "src/media/audio/audio_core/shared/reporter.h"
+#include "src/media/audio/audio_core/shared/stream_volume_manager.h"
 
 namespace media::audio {
 
@@ -239,12 +239,12 @@ void AudioAdmin::UpdateActiveStreamCount(StreamUsage stream_usage) {
       auto usage = stream_usage.capture_usage();
       auto usage_index = static_cast<std::underlying_type_t<CaptureUsage>>(usage);
       active_stream_count_reporter_->OnActiveCaptureCountChanged(
-          usage, active_streams_capture_[usage_index].size());
+          usage, static_cast<uint32_t>(active_streams_capture_[usage_index].size()));
     } else {
       auto usage = stream_usage.render_usage();
       auto usage_index = static_cast<std::underlying_type_t<RenderUsage>>(usage);
       active_stream_count_reporter_->OnActiveRenderCountChanged(
-          usage, active_streams_playback_[usage_index].size());
+          usage, static_cast<uint32_t>(active_streams_playback_[usage_index].size()));
     }
   }
 }

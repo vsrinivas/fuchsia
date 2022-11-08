@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_V1_STREAM_VOLUME_MANAGER_H_
-#define SRC_MEDIA_AUDIO_AUDIO_CORE_V1_STREAM_VOLUME_MANAGER_H_
+#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_SHARED_STREAM_VOLUME_MANAGER_H_
+#define SRC_MEDIA_AUDIO_AUDIO_CORE_SHARED_STREAM_VOLUME_MANAGER_H_
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fit/function.h>
@@ -13,8 +13,8 @@
 
 #include "src/media/audio/audio_core/shared/mixer/gain.h"
 #include "src/media/audio/audio_core/shared/process_config.h"
-#include "src/media/audio/audio_core/v1/usage_settings.h"
-#include "src/media/audio/audio_core/v1/volume_control.h"
+#include "src/media/audio/audio_core/shared/usage_settings.h"
+#include "src/media/audio/audio_core/shared/volume_control.h"
 
 namespace media::audio {
 
@@ -107,4 +107,4 @@ class StreamVolumeManager {
 
 }  // namespace media::audio
 
-#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_V1_STREAM_VOLUME_MANAGER_H_
+#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_SHARED_STREAM_VOLUME_MANAGER_H_

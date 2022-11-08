@@ -141,7 +141,7 @@ void AudioInput::OnDriverStartComplete() {
     driver()->Stop();
   }
 
-  reporter_->SetDriverInfo(*driver());
+  reporter_->SetDriverInfo(driver()->info_for_reporter());
 }
 
 void AudioInput::OnDriverStopComplete() {

@@ -9,11 +9,11 @@
 
 #include <gtest/gtest.h>
 
-#include "src/media/audio/audio_core/v1/audio_admin.h"
+#include "src/media/audio/audio_core/shared/audio_admin.h"
+#include "src/media/audio/audio_core/shared/stream_volume_manager.h"
 #include "src/media/audio/audio_core/v1/audio_device_manager.h"
 #include "src/media/audio/audio_core/v1/audio_driver.h"
 #include "src/media/audio/audio_core/v1/audio_input.h"
-#include "src/media/audio/audio_core/v1/stream_volume_manager.h"
 #include "src/media/audio/audio_core/v1/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/v1/testing/threading_model_fixture.h"
 #include "src/media/audio/lib/clock/testing/clock_test.h"

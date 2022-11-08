@@ -8,8 +8,8 @@
 #include <fuchsia/ultrasound/cpp/fidl.h>
 
 #include "src/media/audio/audio_core/shared/stream_usage.h"
+#include "src/media/audio/audio_core/shared/stream_volume_manager.h"
 #include "src/media/audio/audio_core/v1/base_renderer.h"
-#include "src/media/audio/audio_core/v1/stream_volume_manager.h"
 
 namespace media::audio {
 

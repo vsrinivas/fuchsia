@@ -7,10 +7,10 @@
 #include <lib/async/cpp/task.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/media/audio/audio_core/shared/audio_admin.h"
 #include "src/media/audio/audio_core/shared/loudness_transform.h"
 #include "src/media/audio/audio_core/shared/process_config.h"
 #include "src/media/audio/audio_core/shared/stream_usage.h"
-#include "src/media/audio/audio_core/v1/audio_admin.h"
 #include "src/media/audio/audio_core/v1/audio_capturer.h"
 #include "src/media/audio/audio_core/v1/audio_device_manager.h"
 #include "src/media/audio/audio_core/v1/audio_renderer.h"

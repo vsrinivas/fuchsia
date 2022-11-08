@@ -13,10 +13,10 @@
 #include <algorithm>
 #include <iomanip>
 
+#include "src/media/audio/audio_core/shared/reporter.h"
 #include "src/media/audio/audio_core/v1/audio_driver.h"
 #include "src/media/audio/audio_core/v1/idle_policy.h"
 #include "src/media/audio/audio_core/v1/logging_flags.h"
-#include "src/media/audio/audio_core/v1/reporter.h"
 
 constexpr bool VERBOSE_TIMING_DEBUG = false;
 
@@ -575,7 +575,7 @@ void DriverOutput::OnDriverStartComplete() {
     return;
   }
 
-  reporter().SetDriverInfo(*driver());
+  reporter().SetDriverInfo(driver()->info_for_reporter());
 
   // Set up the mix task in the AudioOutput.
   //

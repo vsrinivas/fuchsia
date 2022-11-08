@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_V1_REPORTER_H_
-#define SRC_MEDIA_AUDIO_AUDIO_CORE_V1_REPORTER_H_
+#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_SHARED_REPORTER_H_
+#define SRC_MEDIA_AUDIO_AUDIO_CORE_SHARED_REPORTER_H_
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
@@ -16,15 +16,12 @@
 #include <unordered_map>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/media/audio/audio_core/shared/audio_admin.h"
 #include "src/media/audio/audio_core/shared/metrics/metrics_impl.h"
 #include "src/media/audio/audio_core/shared/stream_usage.h"
-#include "src/media/audio/audio_core/v1/audio_admin.h"
-#include "src/media/audio/audio_core/v1/threading_model.h"
 #include "src/media/audio/lib/format/format.h"
 
 namespace media::audio {
-
-class AudioDriver;
 
 // A singleton instance of |Reporter| handles instrumentation concerns (e.g.
 // exposing information via inspect, cobalt, etc) for an audio_core instance.
@@ -59,7 +56,17 @@ class Reporter {
  public:
   static Reporter& Singleton();
   static void InitializeSingleton(sys::ComponentContext& component_context,
-                                  ThreadingModel& threading_model, bool enable_cobalt);
+                                  async_dispatcher_t* fidl_dispatcher,
+                                  async_dispatcher_t* io_dispatcher, bool enable_cobalt);
+
+  struct AudioDriverInfo {
+    std::string manufacturer_name;
+    std::string product_name;
+    zx::duration external_delay;
+    zx::duration fifo_depth_duration;
+    int64_t fifo_depth_frames;
+    std::optional<Format> format;
+  };
 
   class Device {
    public:
@@ -70,7 +77,7 @@ class Reporter {
     virtual void StartSession(zx::time start_time) = 0;
     virtual void StopSession(zx::time stop_time) = 0;
 
-    virtual void SetDriverInfo(const AudioDriver& driver) = 0;
+    virtual void SetDriverInfo(const AudioDriverInfo& driver) = 0;
     virtual void SetGainInfo(const fuchsia::media::AudioGainInfo& gain_info,
                              fuchsia::media::AudioGainValidFlags set_flags) = 0;
   };
@@ -206,8 +213,8 @@ class Reporter {
   };
 
   Reporter() {}
-  Reporter(sys::ComponentContext& component_context, ThreadingModel& threading_model,
-           bool enable_cobalt);
+  Reporter(sys::ComponentContext& component_context, async_dispatcher_t* fidl_dispatcher,
+           async_dispatcher_t* io_dispatcher, bool enable_cobalt);
 
   static constexpr size_t kObjectsToCache = 4;
   static constexpr size_t kVolumeControlsToCache = 10;
@@ -278,7 +285,8 @@ class Reporter {
   // This object contains internal state shared by multiple reporting objects.
   struct Impl {
     sys::ComponentContext& component_context;
-    ThreadingModel& threading_model;
+    async_dispatcher_t* fidl_dispatcher;
+    async_dispatcher_t* io_dispatcher;
     std::unique_ptr<sys::ComponentInspector> inspector;
     std::unique_ptr<media::audio::MetricsImpl> metrics_impl;
 
@@ -305,7 +313,8 @@ class Reporter {
     uint64_t next_thermal_transition_name FXL_GUARDED_BY(mutex) = 0;
     uint64_t next_volume_control_name FXL_GUARDED_BY(mutex) = 0;
 
-    Impl(sys::ComponentContext& cc, ThreadingModel& tm);
+    Impl(sys::ComponentContext& cc, async_dispatcher_t* fidl_dispatcher,
+         async_dispatcher_t* io_dispatcher);
     ~Impl();
 
     std::string NextRendererName() {
@@ -340,4 +349,4 @@ class Reporter {
 
 }  // namespace media::audio
 
-#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_V1_REPORTER_H_
+#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_SHARED_REPORTER_H_

@@ -11,12 +11,12 @@
 
 #include <string>
 
+#include "src/media/audio/audio_core/shared/reporter.h"
 #include "src/media/audio/audio_core/v1/audio_core_impl.h"
 #include "src/media/audio/audio_core/v1/base_capturer.h"
 #include "src/media/audio/audio_core/v1/base_renderer.h"
 #include "src/media/audio/audio_core/v1/driver_output.h"
 #include "src/media/audio/audio_core/v1/plug_detector.h"
-#include "src/media/audio/audio_core/v1/reporter.h"
 
 namespace media::audio {
 

@@ -10,7 +10,7 @@
 
 #include <vector>
 
-#include "src/media/audio/audio_core/v1/audio_admin.h"
+#include "src/media/audio/audio_core/shared/audio_admin.h"
 
 namespace media::audio {
 

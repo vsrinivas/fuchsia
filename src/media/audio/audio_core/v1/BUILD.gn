@@ -4,22 +4,11 @@
 
 import("//build/components.gni")
 import("//build/fuzzing/fuzzer.gni")
-import("//third_party/cobalt/metrics_registry.gni")
-
-metrics_registry("media_metrics_registry") {
-  # This must match the ID of our Cobalt project as specified in:
-  # third_party/cobalt_config/projects.yaml
-  project_id = 3142410971
-  generate_cc = true
-}
 
 source_set("audio_core_lib") {
   sources = [
-    "active_stream_count_reporter.h",
     "activity_dispatcher.cc",
     "activity_dispatcher.h",
-    "audio_admin.cc",
-    "audio_admin.h",
     "audio_capturer.cc",
     "audio_capturer.h",
     "audio_core_impl.cc",
@@ -80,8 +69,6 @@ source_set("audio_core_lib") {
     "plug_detector.h",
     "profile_provider.cc",
     "profile_provider.h",
-    "reporter.cc",
-    "reporter.h",
     "reusable_buffer.cc",
     "reusable_buffer.h",
     "ring_buffer.cc",
@@ -93,8 +80,6 @@ source_set("audio_core_lib") {
     "stage_metrics.h",
     "stream.cc",
     "stream.h",
-    "stream_volume_manager.cc",
-    "stream_volume_manager.h",
     "tap_stage.cc",
     "tap_stage.h",
     "thermal_watcher.cc",
@@ -112,15 +97,11 @@ source_set("audio_core_lib") {
     "usage_gain_reporter_impl.h",
     "usage_reporter_impl.cc",
     "usage_reporter_impl.h",
-    "usage_settings.cc",
-    "usage_settings.h",
     "utils.cc",
     "utils.h",
     "verbose_log.cc",
     "verbose_log.h",
     "versioned_timeline_function.h",
-    "volume_control.cc",
-    "volume_control.h",
     "wakeup_event.cc",
     "wakeup_event.h",
   ]
@@ -157,7 +138,6 @@ source_set("audio_core_lib") {
   ]
 
   deps = [
-    ":media_metrics_registry",
     "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
@@ -202,7 +182,6 @@ executable("unittest_bin") {
 
   sources = [
     "activity_dispatcher_unittest.cc",
-    "audio_admin_unittest.cc",
     "audio_capturer_unittest.cc",
     "audio_device_settings_unittest.cc",
     "audio_device_unittest.cc",
@@ -225,23 +204,19 @@ executable("unittest_bin") {
     "packet_unittest.cc",
     "plug_detector_unittest.cc",
     "profile_provider_unittest.cc",
-    "reporter_unittest.cc",
     "reusable_buffer_unittest.cc",
     "ring_buffer_unittest.cc",
     "route_graph_unittest.cc",
     "silence_padding_stream_unittest.cc",
     "stream_unittest.cc",
-    "stream_volume_manager_unittest.cc",
     "tap_stage_unittest.cc",
     "thermal_watcher_unittest.cc",
     "threading_model_unittest.cc",
     "throttle_output_unittest.cc",
     "usage_gain_reporter_impl_unittest.cc",
     "usage_reporter_impl_unittest.cc",
-    "usage_settings_unittest.cc",
     "utils_unittest.cc",
     "versioned_timeline_function_unittest.cc",
-    "volume_control_unittest.cc",
     "wakeup_event_unittest.cc",
   ]
 

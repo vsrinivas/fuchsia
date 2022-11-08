@@ -4,6 +4,14 @@
 
 import("//build/components.gni")
 import("//build/fuzzing/fuzzer.gni")
+import("//third_party/cobalt/metrics_registry.gni")
+
+metrics_registry("media_metrics_registry") {
+  # This must match the ID of our Cobalt project as specified in:
+  # third_party/cobalt_config/projects.yaml
+  project_id = 3142410971
+  generate_cc = true
+}
 
 action_foreach("json_schema_headers") {
   visibility = [ ":*" ]
@@ -24,6 +32,9 @@ action_foreach("json_schema_headers") {
 
 source_set("shared") {
   sources = [
+    "active_stream_count_reporter.h",
+    "audio_admin.cc",
+    "audio_admin.h",
     "audio_policy.h",
     "audio_policy.h",
     "device_config.cc",
@@ -41,9 +52,17 @@ source_set("shared") {
     "process_config.h",
     "process_config_loader.cc",
     "process_config_loader.h",
+    "reporter.cc",
+    "reporter.h",
     "stream_usage.cc",
     "stream_usage.h",
+    "stream_volume_manager.cc",
+    "stream_volume_manager.h",
     "thermal_config.h",
+    "usage_settings.cc",
+    "usage_settings.h",
+    "volume_control.cc",
+    "volume_control.h",
     "volume_curve.cc",
     "volume_curve.h",
   ]
@@ -80,6 +99,7 @@ source_set("shared") {
 
   deps = [
     ":json_schema_headers",
+    ":media_metrics_registry",
     "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
@@ -100,6 +120,7 @@ executable("unittest_bin") {
   output_name = "audio_core_shared_unittests"
 
   sources = [
+    "audio_admin_unittest.cc",
     "device_config_unittest.cc",
     "loudness_transform_unittest.cc",
     "pin_executable_memory_unittest.cc",
@@ -108,7 +129,11 @@ executable("unittest_bin") {
     "policy_loader_unittest_data.h",
     "process_config_loader_unittest.cc",
     "process_config_unittest.cc",
+    "reporter_unittest.cc",
     "stream_usage_unittest.cc",
+    "stream_volume_manager_unittest.cc",
+    "usage_settings_unittest.cc",
+    "volume_control_unittest.cc",
     "volume_curve_unittest.cc",
   ]
 
@@ -119,10 +144,12 @@ executable("unittest_bin") {
     "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
     "//sdk/lib/fit-promise",
     "//sdk/lib/inspect/testing/cpp",
+    "//sdk/lib/sys/cpp/testing:cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/vfs/cpp",
     "//src/lib/testing/loop_fixture",
+    "//src/lib/testing/loop_fixture:gtest",
     "//src/media/audio/audio_core/shared/mixer",
     "//src/media/audio/effects/test_effects:test_effects_v2",
     "//src/media/audio/lib/clock/testing",

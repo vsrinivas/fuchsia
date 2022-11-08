@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/v1/volume_control.h"
+#include "src/media/audio/audio_core/shared/volume_control.h"
 
 #include <lib/fidl/cpp/interface_ptr.h>
 

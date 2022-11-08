@@ -9,12 +9,12 @@
 #include <gmock/gmock.h>
 
 #include "src/media/audio/audio_core/shared/device_config.h"
+#include "src/media/audio/audio_core/shared/usage_settings.h"
 #include "src/media/audio/audio_core/v1/audio_device_manager.h"
 #include "src/media/audio/audio_core/v1/audio_driver.h"
 #include "src/media/audio/audio_core/v1/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/v1/testing/fake_audio_renderer.h"
 #include "src/media/audio/audio_core/v1/testing/threading_model_fixture.h"
-#include "src/media/audio/audio_core/v1/usage_settings.h"
 #include "src/media/audio/lib/format/format.h"
 
 using testing::IsEmpty;

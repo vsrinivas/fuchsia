@@ -1,0 +1,16 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+source_set("testing") {
+  testonly = true
+
+  sources = [
+    "null_audio_capturer.h",
+    "null_audio_renderer.h",
+  ]
+
+  public_deps = [ "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp" ]
+}

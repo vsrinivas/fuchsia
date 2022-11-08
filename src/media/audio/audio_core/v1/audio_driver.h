@@ -16,6 +16,7 @@
 #include <mutex>
 #include <string>
 
+#include "src/media/audio/audio_core/shared/reporter.h"
 #include "src/media/audio/audio_core/v1/audio_device.h"
 #include "src/media/audio/audio_core/v1/audio_device_settings.h"
 #include "src/media/audio/audio_core/v1/channel_attributes.h"
@@ -145,6 +146,8 @@ class AudioDriver {
   std::vector<ChannelAttributes> channel_config() { return configured_channel_config_; }
 
   zx_status_t SetActiveChannels(uint64_t chan_bit_mask);
+
+  Reporter::AudioDriverInfo info_for_reporter() const;
 
  private:
   static bool ValidatePcmSupportedFormats(

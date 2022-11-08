@@ -1,7 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include "src/media/audio/audio_core/v1/reporter.h"
+#include "src/media/audio/audio_core/shared/reporter.h"
 
 #include <fidl/fuchsia.io/cpp/markers.h>
 #include <fidl/fuchsia.metrics/cpp/natural_types.h>
@@ -13,9 +13,8 @@
 #include <queue>
 #include <vector>
 
+#include "src/media/audio/audio_core/shared/media_metrics_registry.cb.h"
 #include "src/media/audio/audio_core/shared/metrics/metrics_impl.h"
-#include "src/media/audio/audio_core/v1/audio_driver.h"
-#include "src/media/audio/audio_core/v1/media_metrics_registry.cb.h"
 
 namespace media::audio {
 
@@ -23,6 +22,8 @@ namespace media::audio {
 // Singletons
 
 namespace {
+using AudioDriverInfo = Reporter::AudioDriverInfo;
+
 static std::mutex singleton_mutex;
 static Reporter* const singleton_nop = new Reporter();
 static Reporter* singleton_real;
@@ -75,7 +76,7 @@ class OutputDeviceNop : public Reporter::OutputDevice {
   void StartSession(zx::time start_time) override {}
   void StopSession(zx::time stop_time) override {}
 
-  void SetDriverInfo(const AudioDriver& driver) override {}
+  void SetDriverInfo(const AudioDriverInfo& driver) override {}
   void SetGainInfo(const fuchsia::media::AudioGainInfo& gain_info,
                    fuchsia::media::AudioGainValidFlags set_flags) override {}
   void DeviceUnderflow(zx::time start_time, zx::time end_time) override {}
@@ -89,7 +90,7 @@ class InputDeviceNop : public Reporter::InputDevice {
   void StartSession(zx::time start_time) override {}
   void StopSession(zx::time stop_time) override {}
 
-  void SetDriverInfo(const AudioDriver& driver) override {}
+  void SetDriverInfo(const AudioDriverInfo& driver) override {}
   void SetGainInfo(const fuchsia::media::AudioGainInfo& gain_info,
                    fuchsia::media::AudioGainValidFlags set_flags) override {}
 };
@@ -348,15 +349,15 @@ class Reporter::DeviceDriverInfo {
         format_(parent_node, "format"),
         object_tracker_(std::move(object_tracker)) {}
 
-  void Set(const AudioDriver& d) {
-    name_.Set(d.manufacturer_name() + ' ' + d.product_name());
-    total_delay_.Set((d.external_delay() + d.fifo_depth_duration()).get());
-    external_delay_.Set(d.external_delay().get());
-    fifo_delay_.Set(d.fifo_depth_duration().get());
-    fifo_depth_.Set(d.fifo_depth_frames());
-    if (auto f = d.GetFormat(); f.has_value()) {
-      format_.Set(*f);
-      object_tracker_.SetFormat(*f);
+  void Set(const AudioDriverInfo& d) {
+    name_.Set(d.manufacturer_name + ' ' + d.product_name);
+    total_delay_.Set((d.external_delay + d.fifo_depth_duration).get());
+    external_delay_.Set(d.external_delay.get());
+    fifo_delay_.Set(d.fifo_depth_duration.get());
+    fifo_depth_.Set(d.fifo_depth_frames);
+    if (d.format.has_value()) {
+      format_.Set(*d.format);
+      object_tracker_.SetFormat(*d.format);
       object_tracker_.Enable();
     }
   }
@@ -693,7 +694,7 @@ class Reporter::OutputDeviceImpl : public Reporter::OutputDevice {
     pipeline_underflows_->StopSession(stop_time);
   }
 
-  void SetDriverInfo(const AudioDriver& driver) override { driver_info_.Set(driver); }
+  void SetDriverInfo(const AudioDriverInfo& driver) override { driver_info_.Set(driver); }
 
   void SetGainInfo(const fuchsia::media::AudioGainInfo& gain_info,
                    fuchsia::media::AudioGainValidFlags set_flags) override {
@@ -742,7 +743,7 @@ class Reporter::InputDeviceImpl : public Reporter::InputDevice {
   void StartSession(zx::time start_time) override {}
   void StopSession(zx::time stop_time) override {}
 
-  void SetDriverInfo(const AudioDriver& driver) override { driver_info_.Set(driver); }
+  void SetDriverInfo(const AudioDriverInfo& driver) override { driver_info_.Set(driver); }
 
   void SetGainInfo(const fuchsia::media::AudioGainInfo& gain_info,
                    fuchsia::media::AudioGainValidFlags set_flags) override {
@@ -990,18 +991,19 @@ Reporter& Reporter::Singleton() {
 
 // static
 void Reporter::InitializeSingleton(sys::ComponentContext& component_context,
-                                   ThreadingModel& threading_model, bool enable_cobalt) {
+                                   async_dispatcher_t* fidl_dispatcher,
+                                   async_dispatcher_t* io_dispatcher, bool enable_cobalt) {
   std::lock_guard<std::mutex> lock(singleton_mutex);
   if (singleton_real) {
     FX_LOGS(ERROR) << "Reporter::Singleton double initialized";
     return;
   }
-  singleton_real = new Reporter(component_context, threading_model, enable_cobalt);
+  singleton_real = new Reporter(component_context, fidl_dispatcher, io_dispatcher, enable_cobalt);
 }
 
-Reporter::Reporter(sys::ComponentContext& component_context, ThreadingModel& threading_model,
-                   bool enable_cobalt)
-    : impl_(std::make_unique<Impl>(component_context, threading_model)) {
+Reporter::Reporter(sys::ComponentContext& component_context, async_dispatcher_t* fidl_dispatcher,
+                   async_dispatcher_t* io_dispatcher, bool enable_cobalt)
+    : impl_(std::make_unique<Impl>(component_context, fidl_dispatcher, io_dispatcher)) {
   // This lock isn't necessary, but the lock analysis can't tell that.
   std::lock_guard<std::mutex> lock(mutex_);
   InitInspect();
@@ -1039,7 +1041,7 @@ void Reporter::InitInspect() {
 
 void Reporter::InitCobalt() {
   impl_->metrics_impl = std::make_unique<media::audio::MetricsImpl>(
-      impl_->threading_model.FidlDomain().dispatcher(),
+      impl_->fidl_dispatcher,
       fidl::ClientEnd<fuchsia_io::Directory>(component::OpenServiceRoot()->TakeChannel()),
       kProjectId);
 }
@@ -1157,8 +1159,8 @@ void Reporter::UpdateActiveUsagePolicy(const std::vector<fuchsia::media::Usage>&
                                                               capturer_policies);
 }
 
-Reporter::Impl::Impl(sys::ComponentContext& cc, ThreadingModel& tm)
-    : component_context(cc), threading_model(tm) {}
+Reporter::Impl::Impl(sys::ComponentContext& cc, async_dispatcher_t* fd, async_dispatcher_t* iod)
+    : component_context(cc), fidl_dispatcher(fd), io_dispatcher(iod) {}
 
 Reporter::Impl::~Impl() {}
 
@@ -1224,8 +1226,7 @@ void Reporter::OverflowUnderflowTracker::StartSession(zx::time start_time) {
   last_event_time_ = start_time;
   session_start_time_ = start_time;
   session_real_start_time_ = start_time;
-  restart_session_timer_.PostDelayed(impl_.threading_model.IoDomain().dispatcher(),
-                                     kMaxSessionDuration);
+  restart_session_timer_.PostDelayed(impl_.io_dispatcher, kMaxSessionDuration);
 }
 
 void Reporter::OverflowUnderflowTracker::StopSession(zx::time stop_time) {
@@ -1260,8 +1261,7 @@ void Reporter::OverflowUnderflowTracker::RestartSession() {
 
   last_event_time_ = stop_time;
   session_start_time_ = stop_time;
-  restart_session_timer_.PostDelayed(impl_.threading_model.IoDomain().dispatcher(),
-                                     kMaxSessionDuration);
+  restart_session_timer_.PostDelayed(impl_.io_dispatcher, kMaxSessionDuration);
 }
 
 zx::duration Reporter::OverflowUnderflowTracker::ComputeDurationOfAllSessions() {
@@ -1444,8 +1444,7 @@ void Reporter::ThermalStateTracker::LogCobaltStateDuration(State& old_state, Sta
   // End |old_state| and start |new_state| logging interval.
   old_state.interval_start_time = std::nullopt;
   new_state.interval_start_time = now;
-  restart_interval_timer_.PostDelayed(impl_.threading_model.IoDomain().dispatcher(),
-                                      kCobaltDataCollectionInterval);
+  restart_interval_timer_.PostDelayed(impl_.io_dispatcher, kCobaltDataCollectionInterval);
 }
 
 void Reporter::ThermalStateTracker::ResetInterval() {
