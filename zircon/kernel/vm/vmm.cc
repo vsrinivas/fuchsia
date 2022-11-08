@@ -27,7 +27,6 @@
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
 
-#include "lib/fxt/serializer.h"
 #include "vm_priv.h"
 
 #define LOCAL_TRACE VM_GLOBAL_TRACE(0)
@@ -44,9 +43,7 @@ void vmm_context_switch(VmAspace* oldspace, VmAspace* newaspace) {
 }
 
 zx_status_t vmm_accessed_fault_handler(vaddr_t addr) {
-  Thread* current_thread = Thread::Current::Get();
-  zx_ticks_t start_time = current_ticks();
-  PageFaultTimer timer(current_thread, start_time);
+  PageFaultTimer timer(Thread::Current::Get(), current_ticks());
 
   // Forward fault to the current aspace.
   VmAspace* aspace = VmAspace::vaddr_to_aspace(addr);
@@ -54,16 +51,13 @@ zx_status_t vmm_accessed_fault_handler(vaddr_t addr) {
     return ZX_ERR_NOT_FOUND;
   }
 
+  ktrace(TAG_ACCESS_FAULT, static_cast<uint32_t>(addr >> 32), static_cast<uint32_t>(addr), 0,
+         arch_curr_cpu_num());
+
   const zx_status_t status = aspace->AccessedFault(addr);
 
-  if (unlikely(ktrace_tag_enabled(TAG_ACCESS_FAULT))) {
-    fxt_duration_complete(TAG_ACCESS_FAULT, start_time,
-                          fxt::ThreadRef{current_thread->pid(), current_thread->tid()},
-                          fxt::StringRef{"kernel:vm"_stringref->GetFxtId()},
-                          fxt::StringRef{"access_fault"_stringref->GetFxtId()}, current_ticks(),
-                          fxt::Argument<fxt::ArgumentType::kUint64, fxt::RefType::kId>{
-                              fxt::StringRef{"vaddr"_stringref->GetFxtId()}, addr});
-  }
+  ktrace(TAG_ACCESS_FAULT_EXIT, static_cast<uint32_t>(addr >> 32), static_cast<uint32_t>(addr), 0,
+         arch_curr_cpu_num());
 
   return status;
 }
@@ -73,8 +67,7 @@ zx_status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
   flags |= VMM_PF_FLAG_HW_FAULT;
 
   Thread* current_thread = Thread::Current::Get();
-  zx_ticks_t start_time = current_ticks();
-  PageFaultTimer timer(current_thread, start_time);
+  PageFaultTimer timer(current_thread, current_ticks());
 
   if (TRACE_PAGE_FAULT || LOCAL_TRACE) {
     char flagstr[5];
@@ -90,6 +83,8 @@ zx_status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
     return ZX_ERR_NOT_FOUND;
   }
 
+  ktrace(TAG_PAGE_FAULT, (uint32_t)(addr >> 32), (uint32_t)addr, flags, arch_curr_cpu_num());
+
   // page fault it
   zx_status_t status = aspace->PageFault(addr, flags);
 
@@ -104,15 +99,7 @@ zx_status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
     printf("PageFault: error %d for virtual address 0x%lx\n", status, addr);
   }
 
-  if (unlikely(ktrace_tag_enabled(TAG_PAGE_FAULT))) {
-    fxt_duration_complete(TAG_PAGE_FAULT, start_time,
-                          fxt::ThreadRef{current_thread->pid(), current_thread->tid()},
-                          fxt::StringRef{"kernel:vm"_stringref->GetFxtId()},
-                          fxt::StringRef{"page_fault"_stringref->GetFxtId()}, current_ticks(),
-                          fxt::Argument<fxt::ArgumentType::kUint64, fxt::RefType::kId>{
-                              fxt::StringRef{"vaddr"_stringref->GetFxtId()}, addr},
-                          fxt::Argument{fxt::StringRef{"flags"_stringref->GetFxtId()}, flags});
-  }
+  ktrace(TAG_PAGE_FAULT_EXIT, (uint32_t)(addr >> 32), (uint32_t)addr, flags, arch_curr_cpu_num());
 
   return status;
 }

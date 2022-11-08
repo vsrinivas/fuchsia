@@ -64,29 +64,16 @@ class KTrace<true> : public KTraceBase {
   KTrace() : ts_(ktrace_timestamp()) {}
 
   void FutexWait(FutexId futex_id, Thread* new_owner) {
-    const fxt::Argument<fxt::ArgumentType::kUint64, fxt::RefType::kId> futex_id_arg{
-        fxt::StringRef{"futex_id"_stringref->GetFxtId()}, futex_id.get()};
-    const fxt::Argument<fxt::ArgumentType::kKoid, fxt::RefType::kId> futex_owner_arg{
-        fxt::StringRef{"new_owner_TID"_stringref->GetFxtId()}, new_owner->tid()};
-    const Thread* current_thread = Thread::Current::Get();
-    fxt_duration_complete(TAG_FUTEX_WAIT, ts_,
-                          fxt::ThreadRef{current_thread->pid(), current_thread->tid()},
-                          fxt::StringRef{"kernel:sched"_stringref->GetFxtId()},
-                          fxt::StringRef{"futex_wait"_stringref->GetFxtId()}, ts_ + 50,
-                          futex_id_arg, futex_owner_arg);
+    ktrace(TAG_FUTEX_WAIT, static_cast<uint32_t>(futex_id.get()),
+           static_cast<uint32_t>(futex_id.get() >> 32),
+           static_cast<uint32_t>(new_owner ? new_owner->tid() : 0),
+           static_cast<uint32_t>(arch_curr_cpu_num() & 0xFF), ts_);
   }
 
   void FutexWoke(FutexId futex_id, zx_status_t result) {
-    const fxt::Argument<fxt::ArgumentType::kUint64, fxt::RefType::kId> futex_id_arg{
-        fxt::StringRef{"futex_id"_stringref->GetFxtId()}, futex_id.get()};
-    const fxt::Argument futex_wait_result_arg{fxt::StringRef{"wait_result"_stringref->GetFxtId()},
-                                              result};
-    const Thread* current_thread = Thread::Current::Get();
-    fxt_duration_complete(TAG_FUTEX_WOKE, ts_,
-                          fxt::ThreadRef{current_thread->pid(), current_thread->tid()},
-                          fxt::StringRef{"kernel:sched"_stringref->GetFxtId()},
-                          fxt::StringRef{"futex_woke"_stringref->GetFxtId()}, ts_ + 50,
-                          futex_id_arg, futex_wait_result_arg);
+    ktrace(TAG_FUTEX_WOKE, static_cast<uint32_t>(futex_id.get()),
+           static_cast<uint32_t>(futex_id.get() >> 32), static_cast<uint32_t>(result),
+           static_cast<uint32_t>(arch_curr_cpu_num() & 0xFF), ts_);
   }
 
   void FutexWake(FutexId futex_id, FutexActive active, RequeueOp requeue_op, uint32_t count,
@@ -94,47 +81,30 @@ class KTrace<true> : public KTraceBase {
     if ((count >= kCountSaturate) && (count != kUnlimitedCount)) {
       count = kCountSaturate;
     }
-    const fxt::Argument<fxt::ArgumentType::kUint64, fxt::RefType::kId> futex_id_arg{
-        fxt::StringRef{"futex_id"_stringref->GetFxtId()}, futex_id.get()};
-    const fxt::Argument<fxt::ArgumentType::kKoid, fxt::RefType::kId> futex_owner_arg{
-        fxt::StringRef{"futex_owner"_stringref->GetFxtId()},
-        assigned_owner ? assigned_owner->tid() : ZX_KOID_INVALID};
-    const fxt::Argument futex_count_arg{fxt::StringRef{"futex_count"_stringref->GetFxtId()}, count};
-    const fxt::Argument futex_was_requeue_arg{
-        fxt::StringRef{"futex_was_requeue"_stringref->GetFxtId()}, requeue_op == RequeueOp::Yes};
-    const fxt::Argument futex_was_active_arg{
-        fxt::StringRef{"futex_was_active"_stringref->GetFxtId()}, active == FutexActive::Yes};
 
-    const Thread* current_thread = Thread::Current::Get();
-    fxt_duration_complete(
-        TAG_FUTEX_WAKE, ts_, fxt::ThreadRef{current_thread->pid(), current_thread->tid()},
-        fxt::StringRef{"kernel:sched"_stringref->GetFxtId()},
-        fxt::StringRef{"futex_wake"_stringref->GetFxtId()}, ts_ + 50, futex_id_arg, futex_owner_arg,
-        futex_count_arg, futex_was_requeue_arg, futex_was_active_arg);
+    uint32_t flags = (arch_curr_cpu_num() & KTRACE_FLAGS_FUTEX_CPUID_MASK) |
+                     ((count & KTRACE_FLAGS_FUTEX_COUNT_MASK) << KTRACE_FLAGS_FUTEX_COUNT_SHIFT) |
+                     ((requeue_op == RequeueOp::Yes) ? KTRACE_FLAGS_FUTEX_WAS_REQUEUE_FLAG : 0) |
+                     ((active == FutexActive::Yes) ? KTRACE_FLAGS_FUTEX_WAS_ACTIVE_FLAG : 0);
+
+    ktrace(TAG_FUTEX_WAKE, static_cast<uint32_t>(futex_id.get()),
+           static_cast<uint32_t>(futex_id.get() >> 32),
+           static_cast<uint32_t>(assigned_owner ? assigned_owner->tid() : 0), flags, ts_);
   }
 
   void FutexRequeue(FutexId futex_id, FutexActive active, uint32_t count, Thread* assigned_owner) {
     if ((count >= kCountSaturate) && (count != kUnlimitedCount)) {
       count = kCountSaturate;
     }
-    if ((count >= kCountSaturate) && (count != kUnlimitedCount)) {
-      count = kCountSaturate;
-    }
-    const fxt::Argument<fxt::ArgumentType::kUint64, fxt::RefType::kId> futex_id_arg{
-        fxt::StringRef{"futex_id"_stringref->GetFxtId()}, futex_id.get()};
-    const fxt::Argument<fxt::ArgumentType::kKoid, fxt::RefType::kId> futex_owner_arg{
-        fxt::StringRef{"futex_owner"_stringref->GetFxtId()},
-        assigned_owner ? assigned_owner->tid() : ZX_KOID_INVALID};
-    const fxt::Argument futex_count_arg{fxt::StringRef{"futex_count"_stringref->GetFxtId()}, count};
-    const fxt::Argument futex_was_active_arg{
-        fxt::StringRef{"futex_was_active"_stringref->GetFxtId()}, active == FutexActive::Yes};
 
-    const Thread* current_thread = Thread::Current::Get();
-    fxt_duration_complete(TAG_FUTEX_REQUEUE, ts_,
-                          fxt::ThreadRef{current_thread->pid(), current_thread->tid()},
-                          fxt::StringRef{"kernel:sched"_stringref->GetFxtId()},
-                          fxt::StringRef{"futex_wake"_stringref->GetFxtId()}, ts_ + 50,
-                          futex_id_arg, futex_owner_arg, futex_count_arg, futex_was_active_arg);
+    uint32_t flags = (arch_curr_cpu_num() & KTRACE_FLAGS_FUTEX_CPUID_MASK) |
+                     ((count & KTRACE_FLAGS_FUTEX_COUNT_MASK) << KTRACE_FLAGS_FUTEX_COUNT_SHIFT) |
+                     KTRACE_FLAGS_FUTEX_WAS_REQUEUE_FLAG |
+                     ((active == FutexActive::Yes) ? KTRACE_FLAGS_FUTEX_WAS_ACTIVE_FLAG : 0);
+
+    ktrace(TAG_FUTEX_WAKE, static_cast<uint32_t>(futex_id.get()),
+           static_cast<uint32_t>(futex_id.get() >> 32),
+           static_cast<uint32_t>(assigned_owner ? assigned_owner->tid() : 0), flags, ts_);
   }
 
  private:

@@ -20,6 +20,50 @@
 #include "src/performance/ktrace_provider/reader.h"
 
 namespace ktrace_provider {
+namespace {
+
+constexpr uint64_t ToUInt64(uint32_t lo, uint32_t hi) {
+  return (static_cast<uint64_t>(hi) << 32) | lo;
+}
+
+// Note: Even through priority inheritance chain events are instantaneous, we
+// need to make them into durations in order to have them link-able with flow.
+// We fudge this for now by making them very short duration events.
+//
+// TODO(fxbug.dev/23013): Use the appropriate async event when ready.
+constexpr trace_ticks_t kInheritPriorityDurationWidth = 50;
+constexpr trace_ticks_t kInheritPriorityFlowOffset = 10;
+
+// Synthetic width for the futex events.
+constexpr trace_ticks_t kFutexOpPriorityDurationWidth = 50;
+
+// Synthetic width for the kernel mutex events.
+constexpr trace_ticks_t kKernelMutexOpPriorityDurationWidth = 50;
+
+// The kernel reports different thread state values through ktrace.
+// These values must line up with those in "kernel/include/kernel/thread.h".
+constexpr trace_thread_state_t ToTraceThreadState(int value) {
+  switch (value) {
+    case 0:  // THREAD_INITIAL
+    case 1:  // THREAD_READY
+      return ZX_THREAD_STATE_NEW;
+    case 2:  // THREAD_RUNNING
+      return ZX_THREAD_STATE_RUNNING;
+    case 3:  // THREAD_BLOCKED
+    case 4:  // THREAD_BLOCKED_READ_LOCK
+    case 5:  // THREAD_SLEEPING
+      return ZX_THREAD_STATE_BLOCKED;
+    case 6:  // THREAD_SUSPENDED
+      return ZX_THREAD_STATE_SUSPENDED;
+    case 7:  // THREAD_DEATH
+      return ZX_THREAD_STATE_DEAD;
+    default:  // ???
+      FX_LOGS(WARNING) << "Imported unknown thread state from ktrace: " << value;
+      return INT32_MAX;
+  }
+}
+
+}  // namespace
 
 #define MAKE_STRING(literal) trace_context_make_registered_string_literal(context_, literal)
 
@@ -40,8 +84,47 @@ Importer::Importer(trace_context_t* context)
       channel_category_ref_(MAKE_STRING("kernel:channel")),
       vcpu_category_ref_(MAKE_STRING("kernel:vcpu")),
       vm_category_ref_(MAKE_STRING("kernel:vm")),
+      channel_read_name_ref_(MAKE_STRING("read")),
+      channel_write_name_ref_(MAKE_STRING("write")),
+      num_bytes_name_ref_(MAKE_STRING("num_bytes")),
+      num_handles_name_ref_(MAKE_STRING("num_handles")),
+      page_fault_name_ref_(MAKE_STRING("page_fault")),
+      access_fault_name_ref_(MAKE_STRING("access_fault")),
+      vaddr_name_ref_(MAKE_STRING("vaddr")),
+      flags_name_ref_(MAKE_STRING("flags")),
+      exit_address_name_ref_(MAKE_STRING("exit_address")),
       arg0_name_ref_(MAKE_STRING("arg0")),
       arg1_name_ref_(MAKE_STRING("arg1")),
+      // Priority inheritance related strings.
+      inherit_prio_name_ref_(MAKE_STRING("inherit_prio")),
+      inherit_prio_old_ip_name_ref_(MAKE_STRING("old_inherited_prio")),
+      inherit_prio_new_ip_name_ref_(MAKE_STRING("new_inherited_prio")),
+      inherit_prio_old_ep_name_ref_(MAKE_STRING("old_effective_prio")),
+      inherit_prio_new_ep_name_ref_(MAKE_STRING("new_effective_prio")),
+      // Futex operation related strings
+      futex_wait_name_ref_(MAKE_STRING("futex_wait")),
+      futex_woke_name_ref_(MAKE_STRING("Thread_woke_from_futex_wait")),
+      futex_wake_name_ref_(MAKE_STRING("futex_wake")),
+      futex_requeue_name_ref_(MAKE_STRING("futex_requeue")),
+      futex_id_name_ref_(MAKE_STRING("futex_id")),
+      futex_owner_name_ref_(MAKE_STRING("new_owner_TID")),
+      futex_wait_res_name_ref_(MAKE_STRING("wait_result")),
+      futex_count_name_ref_(MAKE_STRING("count")),
+      futex_was_requeue_name_ref_(MAKE_STRING("was_requeue")),
+      futex_was_active_name_ref_(MAKE_STRING("futex_was_active")),
+      // Kernel Mutex operation related strings
+      kernel_mutex_acquire_name_ref_(MAKE_STRING("kernel_mutex_acquire")),
+      kernel_mutex_block_name_ref_(MAKE_STRING("kernel_mutex_block")),
+      kernel_mutex_release_name_ref_(MAKE_STRING("kernel_mutex_release")),
+      kernel_mutex_mutex_id_name_ref_(MAKE_STRING("mutex_id")),
+      kernel_mutex_tid_name_ref_(MAKE_STRING("tid")),
+      kernel_mutex_tid_type_ref_(MAKE_STRING("tid_type")),
+      kernel_mutex_tid_type_user_ref_(MAKE_STRING("user_mode")),
+      kernel_mutex_tid_type_kernel_ref_(MAKE_STRING("kernel_mode")),
+      kernel_mutex_tid_type_none_ref_(MAKE_STRING("none")),
+      kernel_mutex_waiter_count_name_ref_(MAKE_STRING("waiter_count")),
+      // misc strings
+      misc_unknown_name_ref_(MAKE_STRING("unknown")),
       kUnknownThreadRef(trace_make_unknown_thread_ref()) {}
 
 #undef MAKE_STRING
@@ -126,8 +209,9 @@ bool Importer::ImportRecord(const ktrace_header_t* record, size_t record_size) {
         FX_LOGS(WARNING) << "Found basic record that is expected to be migrated to FXT.";
         return false;
       case TagType::kQuad:
-        FX_LOGS(WARNING) << "Found quad record that is expected to be migrated to FXT.";
-        return false;
+        if (sizeof(ktrace_rec_32b_t) > record_size)
+          return false;
+        return ImportQuadRecord(reinterpret_cast<const ktrace_rec_32b_t*>(record), tag_info);
       case TagType::kName:
         if (sizeof(ktrace_rec_name_t) > record_size)
           return false;
@@ -158,6 +242,129 @@ bool Importer::ImportRecord(const ktrace_header_t* record, size_t record_size) {
   return ImportUnknownRecord(record, record_size);
 }
 
+bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record, const TagInfo& tag_info) {
+  FX_VLOGS(5) << "QUAD: tag=0x" << std::hex << record->tag << " (" << tag_info.name
+              << "), tid=" << std::dec << record->tid << ", timestamp=" << record->ts << ", a=0x"
+              << std::hex << record->a << ", b=0x" << record->b << ", c=0x" << record->c << ", d=0x"
+              << record->d;
+
+  const uint32_t event_id = KTRACE_EVENT(record->tag);
+  switch (event_id) {
+    case KTRACE_EVENT(TAG_VERSION):
+      version_ = record->a;
+      return true;
+    case KTRACE_EVENT(TAG_TICKS_PER_MS): {
+      trace_ticks_t kernel_ticks_per_second = ToUInt64(record->a, record->b) * 1000u;
+      trace_ticks_t user_ticks_per_second = zx_ticks_per_second();
+      if (kernel_ticks_per_second != user_ticks_per_second) {
+        FX_LOGS(WARNING) << "Kernel and userspace are using different tracing "
+                            "timebases, "
+                            "tracks may be misaligned: "
+                         << "kernel_ticks_per_second=" << kernel_ticks_per_second
+                         << "user_ticks_per_second=" << user_ticks_per_second;
+      }
+      return true;
+    }
+    case KTRACE_EVENT(TAG_PAGE_FAULT):
+      return HandlePageFaultEnter(record->ts, record->d, ToUInt64(record->b, record->a), record->c);
+    case KTRACE_EVENT(TAG_PAGE_FAULT_EXIT):
+      return HandlePageFaultExit(record->ts, record->d, ToUInt64(record->b, record->a), record->c);
+    case KTRACE_EVENT(TAG_ACCESS_FAULT):
+      return HandleAccessFaultEnter(record->ts, record->d, ToUInt64(record->b, record->a),
+                                    record->c);
+    case KTRACE_EVENT(TAG_ACCESS_FAULT_EXIT):
+      return HandleAccessFaultExit(record->ts, record->d, ToUInt64(record->b, record->a),
+                                   record->c);
+    case KTRACE_EVENT(TAG_CONTEXT_SWITCH): {
+      trace_cpu_number_t cpu = record->b & 0xff;
+      trace_thread_state_t outgoing_thread_state = ToTraceThreadState((record->b >> 8) & 0xff);
+      trace_thread_priority_t outgoing_thread_priority =
+          record->c == 0 ? (record->b >> 16) & 0xff : record->c;
+      trace_thread_priority_t incoming_thread_priority =
+          record->d == 0 ? record->b >> 24 : record->d;
+      return HandleContextSwitch(record->ts, cpu, outgoing_thread_state, outgoing_thread_priority,
+                                 incoming_thread_priority, record->tid, record->a);
+    }
+
+    case KTRACE_EVENT(TAG_INHERIT_PRIORITY_START):
+      return HandleInheritPriorityStart(record->ts, record->a,
+                                        static_cast<trace_cpu_number_t>(record->d & 0xFF));
+
+    case KTRACE_EVENT(TAG_INHERIT_PRIORITY): {
+      int old_effective_prio = static_cast<int8_t>(record->c & 0xFF);
+      int new_effective_prio = static_cast<int8_t>((record->c >> 8) & 0xFF);
+      int old_inherited_prio = static_cast<int8_t>((record->c >> 16) & 0xFF);
+      int new_inherited_prio = static_cast<int8_t>((record->c >> 24) & 0xFF);
+
+      return HandleInheritPriority(record->ts, record->a, record->b, record->d, old_inherited_prio,
+                                   new_inherited_prio, old_effective_prio, new_effective_prio);
+    }
+    case KTRACE_EVENT(TAG_FUTEX_WAIT): {
+      auto cpu = static_cast<trace_cpu_number_t>(record->d & KTRACE_FLAGS_FUTEX_CPUID_MASK);
+      uint32_t owner_tid = record->c;
+      uint64_t futex_id = (static_cast<uint64_t>(record->b) << 32) | record->a;
+
+      return HandleFutexWait(record->ts, futex_id, owner_tid, cpu);
+    }
+    case KTRACE_EVENT(TAG_FUTEX_WOKE): {
+      auto cpu = static_cast<trace_cpu_number_t>(record->d & KTRACE_FLAGS_FUTEX_CPUID_MASK);
+      uint64_t futex_id = (static_cast<uint64_t>(record->b) << 32) | record->a;
+      zx_status_t wait_result = static_cast<zx_status_t>(record->c);
+
+      return HandleFutexWoke(record->ts, futex_id, wait_result, cpu);
+    }
+    case KTRACE_EVENT(TAG_FUTEX_WAKE): {
+      uint64_t futex_id = (static_cast<uint64_t>(record->b) << 32) | record->a;
+      uint32_t owner_tid = record->c;
+      auto cpu = static_cast<trace_cpu_number_t>(record->d & KTRACE_FLAGS_FUTEX_CPUID_MASK);
+      uint32_t count =
+          (record->d >> KTRACE_FLAGS_FUTEX_COUNT_SHIFT) & KTRACE_FLAGS_FUTEX_COUNT_MASK;
+      uint32_t flags = (record->d & KTRACE_FLAGS_FUTEX_FLAGS_MASK);
+
+      if (count == KTRACE_FLAGS_FUTEX_UNBOUND_COUNT_VAL) {
+        count = std::numeric_limits<uint32_t>::max();
+      }
+
+      return HandleFutexWake(record->ts, futex_id, owner_tid, count, flags, cpu);
+    }
+    case KTRACE_EVENT(TAG_FUTEX_REQUEUE): {
+      uint64_t futex_id = (static_cast<uint64_t>(record->b) << 32) | record->a;
+      uint32_t owner_tid = record->c;
+      auto cpu = static_cast<trace_cpu_number_t>(record->d & KTRACE_FLAGS_FUTEX_CPUID_MASK);
+      uint32_t count =
+          (record->d >> KTRACE_FLAGS_FUTEX_COUNT_SHIFT) & KTRACE_FLAGS_FUTEX_COUNT_MASK;
+      uint32_t flags = (record->d & KTRACE_FLAGS_FUTEX_FLAGS_MASK);
+
+      if (count == KTRACE_FLAGS_FUTEX_UNBOUND_COUNT_VAL) {
+        count = std::numeric_limits<uint32_t>::max();
+      }
+
+      return HandleFutexRequeue(record->ts, futex_id, owner_tid, count, flags, cpu);
+    }
+    case KTRACE_EVENT(TAG_KERNEL_MUTEX_ACQUIRE):
+    case KTRACE_EVENT(TAG_KERNEL_MUTEX_RELEASE):
+    case KTRACE_EVENT(TAG_KERNEL_MUTEX_BLOCK): {
+      auto cpu = static_cast<trace_cpu_number_t>(record->d & KTRACE_FLAGS_KERNEL_MUTEX_CPUID_MASK);
+      uint32_t flags = (record->d & KTRACE_FLAGS_KERNEL_MUTEX_FLAGS_MASK);
+
+      return HandleKernelMutexEvent(record->ts, event_id, record->a, record->b, record->c, flags,
+                                    cpu);
+    }
+    case KTRACE_EVENT(TAG_OBJECT_DELETE):
+      return HandleObjectDelete(record->ts, record->tid, record->a);
+    case KTRACE_EVENT(TAG_VCPU_ENTER):
+      return HandleVcpuEnter(record->ts, record->tid);
+    case KTRACE_EVENT(TAG_VCPU_EXIT):
+      return HandleVcpuExit(record->ts, record->tid, record->a, ToUInt64(record->b, record->c));
+    case KTRACE_EVENT(TAG_VCPU_BLOCK):
+      return HandleVcpuBlock(record->ts, record->tid, record->a);
+    case KTRACE_EVENT(TAG_VCPU_UNBLOCK):
+      return HandleVcpuUnblock(record->ts, record->tid, record->a);
+    default:
+      return false;
+  }
+}
+
 bool Importer::ImportNameRecord(const ktrace_rec_name_t* record, const TagInfo& tag_info) {
   std::string_view name(record->name, strnlen(record->name, ZX_MAX_NAME_LEN - 1));
   FX_VLOGS(5) << "NAME: tag=0x" << std::hex << record->tag << " (" << tag_info.name << "), id=0x"
@@ -173,6 +380,10 @@ bool Importer::ImportNameRecord(const ktrace_rec_name_t* record, const TagInfo& 
       return HandleIRQName(record->id, name);
     case KTRACE_EVENT(TAG_PROBE_NAME):
       return HandleProbeName(record->id, name);
+    case KTRACE_EVENT(TAG_VCPU_META):
+      return HandleVcpuMeta(record->id, name);
+    case KTRACE_EVENT(TAG_VCPU_EXIT_META):
+      return HandleVcpuExitMeta(record->id, name);
     default:
       return false;
   }
@@ -371,6 +582,271 @@ bool Importer::HandleProbeName(uint32_t event_name_id, std::string_view name) {
   return true;
 }
 
+bool Importer::HandleVcpuMeta(uint32_t meta, std::string_view name) {
+  vcpu_meta_.emplace(
+      meta, trace_context_make_registered_string_copy(context_, name.data(), name.length()));
+  return true;
+}
+
+bool Importer::HandleVcpuExitMeta(uint32_t exit, std::string_view name) {
+  vcpu_exit_meta_.emplace(
+      exit, trace_context_make_registered_string_copy(context_, name.data(), name.length()));
+  return true;
+}
+
+bool Importer::HandlePageFaultEnter(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
+                                    uint64_t virtual_address, uint32_t flags) {
+  trace_thread_ref_t thread_ref = GetCpuCurrentThreadRef(cpu_number);
+  if (!trace_is_unknown_thread_ref(&thread_ref)) {
+    trace_arg_t args[] = {
+        trace_make_arg(vaddr_name_ref_, trace_make_pointer_arg_value(virtual_address)),
+        trace_make_arg(flags_name_ref_, trace_make_uint32_arg_value(flags))};
+    trace_context_write_duration_begin_event_record(context_, event_time, &thread_ref,
+                                                    &vm_category_ref_, &page_fault_name_ref_, args,
+                                                    std::size(args));
+  }
+  return true;
+}
+
+bool Importer::HandlePageFaultExit(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
+                                   uint64_t virtual_address, uint32_t flags) {
+  trace_thread_ref_t thread_ref = GetCpuCurrentThreadRef(cpu_number);
+  if (!trace_is_unknown_thread_ref(&thread_ref)) {
+    trace_arg_t args[] = {
+        trace_make_arg(vaddr_name_ref_, trace_make_pointer_arg_value(virtual_address)),
+        trace_make_arg(flags_name_ref_, trace_make_uint32_arg_value(flags))};
+    trace_context_write_duration_end_event_record(context_, event_time, &thread_ref,
+                                                  &vm_category_ref_, &page_fault_name_ref_, args,
+                                                  std::size(args));
+  }
+  return true;
+}
+
+bool Importer::HandleAccessFaultEnter(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
+                                      uint64_t virtual_address, uint32_t flags) {
+  trace_thread_ref_t thread_ref = GetCpuCurrentThreadRef(cpu_number);
+  if (!trace_is_unknown_thread_ref(&thread_ref)) {
+    trace_arg_t args[] = {
+        trace_make_arg(vaddr_name_ref_, trace_make_pointer_arg_value(virtual_address)),
+        trace_make_arg(flags_name_ref_, trace_make_uint32_arg_value(flags))};
+    trace_context_write_duration_begin_event_record(context_, event_time, &thread_ref,
+                                                    &vm_category_ref_, &access_fault_name_ref_,
+                                                    args, std::size(args));
+  }
+  return true;
+}
+
+bool Importer::HandleAccessFaultExit(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
+                                     uint64_t virtual_address, uint32_t flags) {
+  trace_thread_ref_t thread_ref = GetCpuCurrentThreadRef(cpu_number);
+  if (!trace_is_unknown_thread_ref(&thread_ref)) {
+    trace_arg_t args[] = {
+        trace_make_arg(vaddr_name_ref_, trace_make_pointer_arg_value(virtual_address)),
+        trace_make_arg(flags_name_ref_, trace_make_uint32_arg_value(flags))};
+    trace_context_write_duration_end_event_record(context_, event_time, &thread_ref,
+                                                  &vm_category_ref_, &access_fault_name_ref_, args,
+                                                  std::size(args));
+  }
+  return true;
+}
+
+bool Importer::HandleContextSwitch(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
+                                   trace_thread_state_t outgoing_thread_state,
+                                   trace_thread_priority_t outgoing_thread_priority,
+                                   trace_thread_priority_t incoming_thread_priority,
+                                   zx_koid_t outgoing_thread, zx_koid_t incoming_thread) {
+  trace_thread_ref_t outgoing_thread_ref = GetCpuCurrentThreadRef(cpu_number);
+  trace_thread_ref_t incoming_thread_ref = SwitchCpuToThread(cpu_number, incoming_thread);
+  if (!trace_is_unknown_thread_ref(&outgoing_thread_ref) ||
+      !trace_is_unknown_thread_ref(&incoming_thread_ref)) {
+    trace_context_write_context_switch_record(
+        context_, event_time, cpu_number, outgoing_thread_state, &outgoing_thread_ref,
+        &incoming_thread_ref, outgoing_thread_priority, incoming_thread_priority);
+  }
+  return true;
+}
+
+bool Importer::HandleInheritPriorityStart(trace_ticks_t event_time, uint32_t id,
+                                          trace_cpu_number_t cpu_number) {
+  trace_thread_ref_t thread_ref = GetCpuCurrentThreadRef(cpu_number);
+
+  const trace_ticks_t start_time = event_time - kInheritPriorityDurationWidth;
+  const trace_ticks_t end_time = event_time;
+  const trace_ticks_t flow_time = event_time - kInheritPriorityFlowOffset;
+
+  trace_context_write_duration_event_record(context_, start_time, end_time, &thread_ref,
+                                            &sched_category_ref_, &inherit_prio_name_ref_, nullptr,
+                                            0);
+
+  trace_context_write_flow_begin_event_record(context_, flow_time, &thread_ref,
+                                              &sched_category_ref_, &inherit_prio_name_ref_, id,
+                                              nullptr, 0);
+
+  return true;
+}
+
+bool Importer::HandleInheritPriority(trace_ticks_t event_time, uint32_t id, uint32_t tid,
+                                     uint32_t flags, int old_inherited_prio, int new_inherited_prio,
+                                     int old_effective_prio, int new_effective_prio) {
+  trace_thread_ref_t thread_ref = GetThreadRef(tid);
+
+  trace_arg_t args[] = {
+      trace_make_arg(inherit_prio_old_ip_name_ref_, trace_make_int32_arg_value(old_inherited_prio)),
+      trace_make_arg(inherit_prio_new_ip_name_ref_, trace_make_int32_arg_value(new_inherited_prio)),
+      trace_make_arg(inherit_prio_old_ep_name_ref_, trace_make_int32_arg_value(old_effective_prio)),
+      trace_make_arg(inherit_prio_new_ep_name_ref_, trace_make_int32_arg_value(new_effective_prio)),
+  };
+
+  const trace_ticks_t start_time = event_time;
+  const trace_ticks_t end_time = event_time + kInheritPriorityDurationWidth;
+  const trace_ticks_t flow_time = event_time + kInheritPriorityFlowOffset;
+
+  trace_context_write_duration_event_record(context_, start_time, end_time, &thread_ref,
+                                            &sched_category_ref_, &inherit_prio_name_ref_, args,
+                                            std::size(args));
+
+  auto trace_thunk = ((flags & KTRACE_FLAGS_INHERIT_PRIORITY_FINAL_EVT) != 0)
+                         ? trace_context_write_flow_end_event_record
+                         : trace_context_write_flow_step_event_record;
+
+  trace_thunk(context_, flow_time, &thread_ref, &sched_category_ref_, &inherit_prio_name_ref_, id,
+              nullptr, 0);
+
+  return true;
+}
+
+bool Importer::HandleFutexWait(trace_ticks_t event_time, uint64_t futex_id, uint32_t new_owner_tid,
+                               trace_cpu_number_t cpu_number) {
+  trace_thread_ref_t thread_ref = GetCpuCurrentThreadRef(cpu_number);
+  trace_arg_t args[] = {
+      trace_make_arg(futex_id_name_ref_, trace_make_uint64_arg_value(futex_id)),
+      trace_make_arg(futex_owner_name_ref_, trace_make_uint32_arg_value(new_owner_tid)),
+  };
+
+  const trace_ticks_t end_time = event_time + kFutexOpPriorityDurationWidth;
+
+  trace_context_write_duration_event_record(context_, event_time, end_time, &thread_ref,
+                                            &sched_category_ref_, &futex_wait_name_ref_, args,
+                                            std::size(args));
+
+  return true;
+}
+
+bool Importer::HandleFutexWoke(trace_ticks_t event_time, uint64_t futex_id, zx_status_t wait_result,
+                               trace_cpu_number_t cpu_number) {
+  trace_thread_ref_t thread_ref = GetCpuCurrentThreadRef(cpu_number);
+  trace_arg_t args[] = {
+      trace_make_arg(futex_id_name_ref_, trace_make_uint64_arg_value(futex_id)),
+      trace_make_arg(futex_wait_res_name_ref_, trace_make_int32_arg_value(wait_result)),
+  };
+
+  const trace_ticks_t end_time = event_time + kFutexOpPriorityDurationWidth;
+
+  trace_context_write_duration_event_record(context_, event_time, end_time, &thread_ref,
+                                            &sched_category_ref_, &futex_woke_name_ref_, args,
+                                            std::size(args));
+
+  return true;
+}
+
+bool Importer::HandleFutexWake(trace_ticks_t event_time, uint64_t futex_id, uint32_t new_owner_tid,
+                               uint32_t count, uint32_t flags, trace_cpu_number_t cpu_number) {
+  trace_thread_ref_t thread_ref = GetCpuCurrentThreadRef(cpu_number);
+  const bool was_requeue = (flags & KTRACE_FLAGS_FUTEX_WAS_REQUEUE_FLAG) != 0;
+  const bool was_active = (flags & KTRACE_FLAGS_FUTEX_WAS_ACTIVE_FLAG) != 0;
+
+  trace_arg_t args[] = {
+      trace_make_arg(futex_id_name_ref_, trace_make_uint64_arg_value(futex_id)),
+      trace_make_arg(futex_owner_name_ref_, trace_make_uint32_arg_value(new_owner_tid)),
+      trace_make_arg(futex_count_name_ref_, trace_make_uint32_arg_value(count)),
+      trace_make_arg(futex_was_requeue_name_ref_, trace_make_bool_arg_value(was_requeue)),
+      trace_make_arg(futex_was_active_name_ref_, trace_make_bool_arg_value(was_active)),
+  };
+
+  const trace_ticks_t end_time = event_time + kFutexOpPriorityDurationWidth;
+
+  trace_context_write_duration_event_record(context_, event_time, end_time, &thread_ref,
+                                            &sched_category_ref_, &futex_wake_name_ref_, args,
+                                            std::size(args));
+
+  return true;
+}
+
+bool Importer::HandleFutexRequeue(trace_ticks_t event_time, uint64_t futex_id,
+                                  uint32_t new_owner_tid, uint32_t count, uint32_t flags,
+                                  trace_cpu_number_t cpu_number) {
+  trace_thread_ref_t thread_ref = GetCpuCurrentThreadRef(cpu_number);
+  const bool was_active = (flags & KTRACE_FLAGS_FUTEX_WAS_ACTIVE_FLAG) != 0;
+
+  trace_arg_t args[] = {
+      trace_make_arg(futex_id_name_ref_, trace_make_uint64_arg_value(futex_id)),
+      trace_make_arg(futex_owner_name_ref_, trace_make_uint32_arg_value(new_owner_tid)),
+      trace_make_arg(futex_count_name_ref_, trace_make_uint32_arg_value(count)),
+      trace_make_arg(futex_was_active_name_ref_, trace_make_bool_arg_value(was_active)),
+  };
+
+  const trace_ticks_t end_time = event_time + kFutexOpPriorityDurationWidth;
+
+  trace_context_write_duration_event_record(context_, event_time, end_time, &thread_ref,
+                                            &sched_category_ref_, &futex_requeue_name_ref_, args,
+                                            std::size(args));
+
+  return true;
+}
+
+bool Importer::HandleKernelMutexEvent(trace_ticks_t event_time, uint32_t which_event,
+                                      uint32_t mutex_id, uint32_t tid, uint32_t waiter_count,
+                                      uint32_t flags, trace_cpu_number_t cpu_number) {
+  trace_thread_ref_t thread_ref = GetCpuCurrentThreadRef(cpu_number);
+  auto tid_type = trace_make_string_arg_value(kernel_mutex_tid_type_none_ref_);
+  if (tid != 0) {
+    tid_type = (flags & KTRACE_FLAGS_KERNEL_MUTEX_USER_MODE_TID)
+                   ? trace_make_string_arg_value(kernel_mutex_tid_type_user_ref_)
+                   : trace_make_string_arg_value(kernel_mutex_tid_type_kernel_ref_);
+  }
+
+  trace_arg_t args[] = {
+      trace_make_arg(kernel_mutex_mutex_id_name_ref_, trace_make_uint32_arg_value(mutex_id)),
+      trace_make_arg(kernel_mutex_tid_name_ref_, trace_make_uint32_arg_value(tid)),
+      trace_make_arg(kernel_mutex_tid_type_ref_, tid_type),
+      trace_make_arg(kernel_mutex_waiter_count_name_ref_,
+                     trace_make_uint32_arg_value(waiter_count)),
+  };
+
+  const trace_ticks_t end_time = event_time + kKernelMutexOpPriorityDurationWidth;
+
+  const trace_string_ref_t* event_name = nullptr;
+  switch (which_event) {
+    case KTRACE_EVENT(TAG_KERNEL_MUTEX_ACQUIRE):
+      event_name = &kernel_mutex_acquire_name_ref_;
+      break;
+    case KTRACE_EVENT(TAG_KERNEL_MUTEX_RELEASE):
+      event_name = &kernel_mutex_release_name_ref_;
+      break;
+    case KTRACE_EVENT(TAG_KERNEL_MUTEX_BLOCK):
+      event_name = &kernel_mutex_block_name_ref_;
+      break;
+    default:
+      event_name = &misc_unknown_name_ref_;
+      break;
+  }
+
+  trace_context_write_duration_event_record(context_, event_time, end_time, &thread_ref,
+                                            &sched_category_ref_, event_name, args,
+                                            std::size(args));
+
+  return true;
+}
+
+bool Importer::HandleObjectDelete(trace_ticks_t event_time, zx_koid_t thread, zx_koid_t object) {
+  auto it = channels_.ids_.find(object);
+  if (it != channels_.ids_.end()) {
+    channels_.message_counters_.erase(it->second);
+  }
+
+  return true;
+}
+
 bool Importer::HandleProbe(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
                            bool cpu_trace) {
   trace_thread_ref_t thread_ref =
@@ -406,6 +882,27 @@ bool Importer::HandleProbe(trace_ticks_t event_time, zx_koid_t thread, uint32_t 
   trace_context_write_instant_event_record(context_, event_time, &thread_ref, &probe_category_ref_,
                                            &name_ref, TRACE_SCOPE_THREAD, args, std::size(args));
   return true;
+}
+
+bool Importer::HandleVcpuEnter(trace_ticks_t event_time, zx_koid_t thread) {
+  FX_LOGS(WARNING) << "Found vcpu enter event that is expected to be migrated to FXT.";
+  return false;
+}
+
+bool Importer::HandleVcpuExit(trace_ticks_t event_time, zx_koid_t thread, uint32_t exit,
+                              uint64_t exit_addr) {
+  FX_LOGS(WARNING) << "Found vcpu exit event that is expected to be migrated to FXT.";
+  return false;
+}
+
+bool Importer::HandleVcpuBlock(trace_ticks_t event_time, zx_koid_t thread, uint32_t meta) {
+  FX_LOGS(WARNING) << "Found vcpu exit event that is expected to be migrated to FXT.";
+  return false;
+}
+
+bool Importer::HandleVcpuUnblock(trace_ticks_t event_time, zx_koid_t thread, uint32_t meta) {
+  FX_LOGS(WARNING) << "Found vcpu exit event that is expected to be migrated to FXT.";
+  return false;
 }
 
 bool Importer::HandleDurationBegin(trace_ticks_t event_time, zx_koid_t thread,

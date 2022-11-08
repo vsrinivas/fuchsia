@@ -47,42 +47,6 @@ void fxt_duration_end(uint32_t tag, uint64_t timestamp,
                       const fxt::StringRef<name_type>& name_ref,
                       const fxt::Argument<arg_types, ref_types>&... args);
 
-template <fxt::RefType thread_type, fxt::RefType category_type, fxt::RefType name_type,
-          fxt::ArgumentType... arg_types, fxt::RefType... ref_types>
-void fxt_duration_complete(uint32_t tag, uint64_t start_time,
-                           const fxt::ThreadRef<thread_type>& thread_ref,
-                           const fxt::StringRef<category_type>& category_ref,
-                           const fxt::StringRef<name_type>& name_ref, uint64_t end_time,
-                           const fxt::Argument<arg_types, ref_types>&... args);
-
-template <fxt::RefType thread_type, fxt::RefType category_type, fxt::RefType name_type,
-          fxt::ArgumentType... arg_types, fxt::RefType... ref_types>
-void fxt_flow_begin(uint32_t tag, uint64_t timestamp, const fxt::ThreadRef<thread_type>& thread_ref,
-                    const fxt::StringRef<category_type>& category_ref,
-                    const fxt::StringRef<name_type>& name_ref, uint64_t flow_id,
-                    const fxt::Argument<arg_types, ref_types>&... args);
-
-template <fxt::RefType thread_type, fxt::RefType category_type, fxt::RefType name_type,
-          fxt::ArgumentType... arg_types, fxt::RefType... ref_types>
-void fxt_flow_step(uint32_t tag, uint64_t timestamp, const fxt::ThreadRef<thread_type>& thread_ref,
-                   const fxt::StringRef<category_type>& category_ref,
-                   const fxt::StringRef<name_type>& name_ref, uint64_t flow_id,
-                   const fxt::Argument<arg_types, ref_types>&... args);
-
-template <fxt::RefType thread_type, fxt::RefType category_type, fxt::RefType name_type,
-          fxt::ArgumentType... arg_types, fxt::RefType... ref_types>
-void fxt_flow_end(uint32_t tag, uint64_t timestamp, const fxt::ThreadRef<thread_type>& thread_ref,
-                  const fxt::StringRef<category_type>& category_ref,
-                  const fxt::StringRef<name_type>& name_ref, uint64_t flow_id,
-                  const fxt::Argument<arg_types, ref_types>&... args);
-
-template <fxt::RefType outgoing_type, fxt::RefType incoming_type>
-void fxt_context_switch(uint32_t tag, uint64_t timestamp, uint8_t cpu_number,
-                        zx_thread_state_t outgoing_thread_state,
-                        const fxt::ThreadRef<outgoing_type>& outgoing_thread,
-                        const fxt::ThreadRef<incoming_type>& incoming_thread,
-                        uint8_t outgoing_thread_priority, uint8_t incoming_thread_priority);
-
 void fxt_string_record(uint16_t index, const char* string, size_t string_length);
 
 }  // namespace ktrace_thunks
@@ -135,6 +99,37 @@ inline constexpr uint64_t kRecordCurrentTimestamp = 0xffffffff'ffffffff;
 
 // Check if tracing is enabled for the given tag.
 inline bool ktrace_tag_enabled(uint32_t tag) { return ktrace_thunks::tag_enabled(tag); }
+
+// Emits a new trace record in the given context. Compiles to no-op if |enabled|
+// is false.
+template <bool enabled>
+inline void ktrace(TraceEnabled<enabled>, TraceContext context, uint32_t tag, uint32_t a,
+                   uint32_t b, uint32_t c, uint32_t d,
+                   uint64_t explicit_ts = kRecordCurrentTimestamp) {
+  if constexpr (!enabled) {
+    return;
+  }
+
+  const uint32_t effective_tag =
+      KTRACE_TAG_FLAGS(tag, context == TraceContext::Thread ? 0 : KTRACE_FLAGS_CPU);
+  ktrace_thunks::write_record(effective_tag, explicit_ts, a, b, c, d);
+}
+
+// Backwards-compatible API for existing users of unconditional thread-context
+// traces.
+static inline void ktrace(uint32_t tag, uint32_t a, uint32_t b, uint32_t c, uint32_t d,
+                          uint64_t explicit_ts = kRecordCurrentTimestamp) {
+  ktrace(TraceAlways, TraceContext::Thread, tag, a, b, c, d, explicit_ts);
+}
+
+// Backwards-compatible API for existing users of unconditional thread-context
+// pointer traces.
+static inline void ktrace_ptr(uint32_t tag, const void* ptr, uint32_t c, uint32_t d) {
+  const uintptr_t raw_value = reinterpret_cast<uintptr_t>(ptr);
+  const uint32_t ptr_high = static_cast<uint32_t>(raw_value >> 32);
+  const uint32_t ptr_low = static_cast<uint32_t>(raw_value);
+  ktrace(tag, ptr_high, ptr_low, c, d);
+}
 
 template <bool enabled>
 inline void ktrace_probe(TraceEnabled<enabled>, TraceContext context, StringRef* string_ref) {
@@ -300,16 +295,6 @@ inline void fxt_kernel_object(uint32_t tag, bool always, zx_koid_t koid, zx_obj_
   ktrace_thunks::fxt_kernel_object(tag, always, koid, obj_type, name_arg, args...);
 }
 
-template <fxt::RefType outgoing_type, fxt::RefType incoming_type>
-inline void fxt_context_switch(uint32_t tag, uint64_t timestamp, uint8_t cpu_num,
-                               zx_thread_state_t outgoing_thread_state,
-                               const fxt::ThreadRef<outgoing_type>& outgoing_thread,
-                               const fxt::ThreadRef<incoming_type>& incoming_thread,
-                               uint8_t outgoing_priority, uint8_t incoming_priority) {
-  ktrace_thunks::fxt_context_switch(tag, timestamp, cpu_num, outgoing_thread_state, outgoing_thread,
-                                    incoming_thread, outgoing_priority, incoming_priority);
-}
-
 inline void fxt_string_record(uint16_t index, const char* string, size_t string_length) {
   ktrace_thunks::fxt_string_record(index, string, string_length);
 }
@@ -332,49 +317,6 @@ inline void fxt_duration_end(uint32_t tag, uint64_t timestamp,
                              const fxt::StringRef<name_type>& name_ref,
                              const fxt::Argument<arg_types, ref_types>&... args) {
   ktrace_thunks::fxt_duration_end(tag, timestamp, thread_ref, category_ref, name_ref, args...);
-}
-
-template <fxt::RefType thread_type, fxt::RefType category_type, fxt::RefType name_type,
-          fxt::ArgumentType... arg_types, fxt::RefType... ref_types>
-inline void fxt_duration_complete(uint32_t tag, uint64_t start_time,
-                                  const fxt::ThreadRef<thread_type>& thread_ref,
-                                  const fxt::StringRef<category_type>& category_ref,
-                                  const fxt::StringRef<name_type>& name_ref, uint64_t end_time,
-                                  const fxt::Argument<arg_types, ref_types>&... args) {
-  ktrace_thunks::fxt_duration_complete(tag, start_time, thread_ref, category_ref, name_ref,
-                                       end_time, args...);
-}
-
-template <fxt::RefType thread_type, fxt::RefType category_type, fxt::RefType name_type,
-          fxt::ArgumentType... arg_types, fxt::RefType... ref_types>
-inline void fxt_flow_begin(uint32_t tag, uint64_t timestamp,
-                           const fxt::ThreadRef<thread_type>& thread_ref,
-                           const fxt::StringRef<category_type>& category_ref,
-                           const fxt::StringRef<name_type>& name_ref, uint64_t flow_id,
-                           const fxt::Argument<arg_types, ref_types>&... args) {
-  ktrace_thunks::fxt_flow_begin(tag, timestamp, thread_ref, category_ref, name_ref, flow_id,
-                                args...);
-}
-
-template <fxt::RefType thread_type, fxt::RefType category_type, fxt::RefType name_type,
-          fxt::ArgumentType... arg_types, fxt::RefType... ref_types>
-inline void fxt_flow_step(uint32_t tag, uint64_t timestamp,
-                          const fxt::ThreadRef<thread_type>& thread_ref,
-                          const fxt::StringRef<category_type>& category_ref,
-                          const fxt::StringRef<name_type>& name_ref, uint64_t flow_id,
-                          const fxt::Argument<arg_types, ref_types>&... args) {
-  ktrace_thunks::fxt_flow_step(tag, timestamp, thread_ref, category_ref, name_ref, flow_id,
-                               args...);
-}
-
-template <fxt::RefType thread_type, fxt::RefType category_type, fxt::RefType name_type,
-          fxt::ArgumentType... arg_types, fxt::RefType... ref_types>
-inline void fxt_flow_end(uint32_t tag, uint64_t timestamp,
-                         const fxt::ThreadRef<thread_type>& thread_ref,
-                         const fxt::StringRef<category_type>& category_ref,
-                         const fxt::StringRef<name_type>& name_ref, uint64_t flow_id,
-                         const fxt::Argument<arg_types, ref_types>&... args) {
-  ktrace_thunks::fxt_flow_end(tag, timestamp, thread_ref, category_ref, name_ref, flow_id, args...);
 }
 
 zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr);

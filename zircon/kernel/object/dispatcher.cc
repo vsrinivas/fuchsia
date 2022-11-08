@@ -61,7 +61,10 @@ Dispatcher::Dispatcher(zx_signals_t signals)
   kcounter_add(dispatcher_create_count, 1);
 }
 
-Dispatcher::~Dispatcher() { kcounter_add(dispatcher_destroy_count, 1); }
+Dispatcher::~Dispatcher() {
+  ktrace(TAG_OBJECT_DELETE, (uint32_t)koid_, 0, 0, 0);
+  kcounter_add(dispatcher_destroy_count, 1);
+}
 
 // The refcount of this object has reached zero: delete self
 // using the SafeDeleter to avoid potential recursion hazards.
