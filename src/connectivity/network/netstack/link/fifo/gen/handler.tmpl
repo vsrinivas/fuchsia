@@ -182,9 +182,12 @@ func (h *{{ .Handler }}) ProcessWrite(pbList stack.PacketBufferList, processor f
 		batch := h.tx.mu.scratch[:len(h.tx.mu.scratch) - int(h.tx.mu.entries.InFlight())]
 		n := h.tx.mu.entries.GetQueued(batch)
 		h.tx.mu.entries.IncrementSent(uint16(n))
+		// We must write to the FIFO under lock because `batch` is aliased from
+		// `h.tx.mu.scratch`.
+		status, count := FifoWrite(h.TxFifo, batch[:n])
 		h.tx.mu.Unlock()
 
-		switch status, count := FifoWrite(h.TxFifo, batch[:n]); status {
+		switch status {
 		case zx.ErrOk:
 			if n := uint32(n); count != n {
 				panic(fmt.Sprintf("FifoWrite(TX): tx_depth invariant violation; observed=%d expected=%d", h.TxDepth-n+count, h.TxDepth))
