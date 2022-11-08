@@ -40,8 +40,8 @@ using allocation::BufferCollectionUsage;
 class DisplayCompositor final : public allocation::BufferCollectionImporter,
                                 public std::enable_shared_from_this<DisplayCompositor> {
  public:
-#ifdef DISABLE_DISPLAY_COMPOSITION
-  // Uses the GPU/Vulkan compositor by default, instead of attempting to composit using the display
+#ifdef FLATLAND_DISABLE_DISPLAY_COMPOSITION
+  // Uses the GPU/Vulkan compositor by default, instead of attempting to composite using the display
   // controller.
   constexpr static bool kDisableDisplayComposition = true;
 #else
