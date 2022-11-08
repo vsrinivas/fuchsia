@@ -61,7 +61,7 @@ const (
 	elfSizesManifestName = "elf_sizes.json"
 
 	// A mapping of fidl mangled names to api functions.
-	fidlMangledToApiMappingManifestName = "fidl_mangled_to_api_mapping.json"
+	fidlMangledToApiMappingManifestName = "ctf_fidl_mangled_to_api_mapping.json"
 )
 
 type upCommand struct {
