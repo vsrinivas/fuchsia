@@ -59,6 +59,14 @@ struct StorageAdminProtocolProvider {
 }
 
 impl StorageAdminProtocolProvider {
+    /// # Arguments
+    /// * `storage_decl`: The declaration in the defining `component`'s
+    ///    manifest.
+    /// * `component`: Reference to the component that defined the storage
+    ///    capability.
+    /// * `storage_admin`: An implementer of the StorageAdmin protocol. If this
+    ///   StorageAdminProtocolProvider is opened, this will be used to actually
+    ///   serve the StorageAdmin protocol.
     pub fn new(
         storage_decl: StorageDecl,
         component: WeakComponentInstance,
@@ -150,6 +158,18 @@ impl StorageAdmin {
         Ok(decl.find_storage_source(source_capability_name.unwrap()).cloned())
     }
 
+    /// If `capability_provider` is `None` this attempts to create a provider
+    /// based on the declaration represented by `source_capability` evaluated
+    /// in the context of `component`. If `source_capability` contains a valid
+    /// capability declaration this function returns the provider, otherwise an
+    /// error.
+    ///
+    /// # Arguments
+    /// * `source_capability`: The capability that represents the storage.
+    /// * `component`: The component that defined the storage capability.
+    /// * `capability_provider`: The provider of the capability, if any.
+    ///   Normally we expect this to be `None` because component_manager is
+    ///   usually the provider.
     async fn on_scoped_framework_capability_routed_async<'a>(
         self: Arc<Self>,
         source_capability: &'a ComponentCapability,
@@ -175,6 +195,15 @@ impl StorageAdmin {
         Ok(None)
     }
 
+    /// Serves the `fuchsia.sys2/StorageAdmin` protocol over the provided
+    /// channel based on the information provided by the other arguments.
+    ///
+    /// # Arguments
+    /// * `storage_decl`: The manifest declaration where the storage
+    ///   capability was defined.
+    /// * `component`: Reference to the component which defined the storage
+    ///   capability.
+    /// * `server_end`: Channel to server the protocol over.
     pub async fn serve(
         self: Arc<Self>,
         storage_decl: StorageDecl,
