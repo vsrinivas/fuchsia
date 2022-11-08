@@ -10,40 +10,10 @@ assert(is_fuchsia,
 group("assembly") {
   testonly = true
   deps = [
-    ":common_bringup",
-    ":common_bringup_eng",
     ":common_minimal",
     ":common_minimal_eng",
     ":emulator_support",
   ]
-}
-
-# The most-common, most-basic, Assembly Input Bundle that is included by all
-# products.  No product can function without these.
-#
-# This corresponds to a subset the "bringup" platform configuration, the
-# most-basic configuration that can boot.
-#
-# WARNING:  The only way to remove items from this AIB for a given product is to
-# move them to other AIBs that are included by all other products.
-#
-assembly_input_bundle("common_bringup") {
-  bootfs_packages = []
-
-  # Create package and archive for use OOT.
-  create_aib_package = true
-  create_aib_archive = true
-}
-
-# This is common across all eng-mode products, including "bringup"
-# configurations
-#
-assembly_input_bundle("common_bringup_eng") {
-  bootfs_packages = []
-
-  # Create package and archive for use OOT.
-  create_aib_package = true
-  create_aib_archive = true
 }
 
 # The most-common, most-basic, Assembly Input Bundle that is included by all

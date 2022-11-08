@@ -316,17 +316,14 @@ template("assembled_system") {
 
     # The names of all of the platform's Assembly Input Bundles
     _platform_aib_names = [
-      "common_bringup",
+      # "common_base",
       "common_minimal",
       "emulator_support",
     ]
     if (defined(invoker.allow_eng_platform_bundle_use) &&
         invoker.allow_eng_platform_bundle_use) {
       # Add the "eng" mode platform Assembly Input Bundles to the set of inputs
-      _platform_aib_names += [
-        "common_bringup_eng",
-        "common_minimal_eng",
-      ]
+      _platform_aib_names += [ "common_minimal_eng" ]
     }
 
     # Add platform AIBs, by their names:
