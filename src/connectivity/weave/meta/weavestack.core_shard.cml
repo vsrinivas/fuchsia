@@ -62,6 +62,9 @@
         },
         {
             protocol: [
+                // TODO (https://fxbug.dev/111695) Don't use the Debug API once
+                // Weavestack no longer needs it.
+                "fuchsia.net.debug.Interfaces_OnlyForWeavestack",
                 "fuchsia.net.interfaces.admin.Installer",
                 "fuchsia.net.interfaces.State",
                 "fuchsia.net.name.Lookup",

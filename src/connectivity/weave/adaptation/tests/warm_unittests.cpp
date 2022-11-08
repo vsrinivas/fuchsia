@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/net/cpp/fidl.h>
+#include <fuchsia/net/debug/cpp/fidl_test_base.h>
+#include <fuchsia/net/interfaces/admin/cpp/fidl_test_base.h>
 #include <fuchsia/net/interfaces/cpp/fidl_test_base.h>
 #include <fuchsia/net/stack/cpp/fidl_test_base.h>
 #include <fuchsia/netstack/cpp/fidl_test_base.h>
@@ -12,6 +14,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -73,11 +76,156 @@ bool CompareIpAddress(const ::nl::Inet::IPAddress& right, const ::fuchsia::net::
 
 }  // namespace
 
+// Forward declare the Fake FIDL impls needed by `OwnedAddress`/`OwnedInterface`
+class FakeAddressStateProvider;
+class FakeControl;
+
+class TestNotifier {
+ public:
+  void Notify() {
+    std::unique_lock lock(mu_);
+    was_notified_ = true;
+    cv_.notify_one();
+  }
+  // Returns True if the wait completed without timing out.
+  bool WaitWithTimeout(std::chrono::duration<uint64_t> timeout) {
+    std::unique_lock lock(mu_);
+    if (was_notified_) {
+      return true;
+    } else {
+      return cv_.wait_for(lock, timeout) != std::cv_status::timeout;
+    }
+  }
+
+ private:
+  bool was_notified_ = false;
+  std::mutex mu_;
+  std::condition_variable cv_;
+};
+
+struct OwnedAddress {
+  fuchsia::net::Subnet address;
+  std::unique_ptr<FakeAddressStateProvider> fake_asp;
+  std::shared_ptr<TestNotifier> on_hangup_notifier;
+};
+
 struct OwnedInterface {
   uint64_t id;
   std::string name;
-  fuchsia::net::IpAddress addr;
-  std::vector<fuchsia::net::Subnet> ipv6addrs;
+  std::shared_ptr<std::vector<OwnedAddress>> ipv6addrs;
+  std::unique_ptr<FakeControl> fake_control;
+};
+
+// A fake implementation of the
+// `fuchsia.net.interfaces.admin/AddressStateProvider` protocol for a single
+// address.
+class FakeAddressStateProvider
+    : public fuchsia::net::interfaces::admin::testing::AddressStateProvider_TestBase {
+ public:
+  FakeAddressStateProvider() = delete;
+  FakeAddressStateProvider(
+      const fuchsia::net::Subnet& address, std::shared_ptr<std::vector<OwnedAddress>> addresses,
+      std::shared_ptr<TestNotifier> on_hangup_notifier, async_dispatcher_t* dispatcher,
+      fidl::InterfaceRequest<fuchsia::net::interfaces::admin::AddressStateProvider> request) {
+    address.Clone(&address_);
+    addresses_ = addresses;
+    on_hangup_notifier_ = on_hangup_notifier;
+
+    binding_.Bind(std::move(request), dispatcher);
+    binding_.set_error_handler([this](zx_status_t error) { OnHangUp(error); });
+  }
+
+  void SendOnAddressRemoved(fuchsia::net::interfaces::admin::AddressRemovalReason reason) {
+    binding_.events().OnAddressRemoved(reason);
+  }
+
+ private:
+  // Default implementation for any API method not explicitly overridden.
+  void NotImplemented_(const std::string& name) override { FAIL() << "Not implemented: " << name; }
+
+  void WatchAddressAssignmentState(WatchAddressAssignmentStateCallback callback) override {
+    callback(fuchsia::net::interfaces::admin::AddressAssignmentState::ASSIGNED);
+  }
+
+  // Callback to remove the address when the client hangs up.
+  void OnHangUp(zx_status_t error) {
+    // When removing the `OwnedAddress` from `addresses_` it's important not to
+    // drop its `fake_asp`, as that is a unique pointer to this class. `self`
+    // allows us to hold onto this class and prevent the destructor from running
+    // until after this function exits.
+    std::unique_ptr<FakeAddressStateProvider> self;
+    auto it = std::remove_if(addresses_->begin(), addresses_->end(), [&](OwnedAddress& addr) {
+      bool found = CompareIpAddress(addr.address.addr, address_.addr);
+      if (found) {
+        self.swap(addr.fake_asp);
+      }
+      return found;
+    });
+    if (it != addresses_->end()) {
+      addresses_->erase(it, addresses_->end());
+    }
+    on_hangup_notifier_->Notify();
+  }
+
+  fuchsia::net::Subnet address_;
+  std::shared_ptr<std::vector<OwnedAddress>> addresses_;
+  std::shared_ptr<TestNotifier> on_hangup_notifier_;
+  fidl::Binding<fuchsia::net::interfaces::admin::AddressStateProvider> binding_{this};
+};
+
+// A fake implementation of the `fuchsia.net.interfaces.admin/Control` protocol
+// for a single interface.
+class FakeControl : public fuchsia::net::interfaces::admin::testing::Control_TestBase {
+ public:
+  FakeControl() = delete;
+  FakeControl(std::shared_ptr<std::vector<OwnedAddress>> addresses, async_dispatcher_t* dispatcher,
+              fidl::InterfaceRequest<fuchsia::net::interfaces::admin::Control> request) {
+    addresses_ = addresses;
+    // Hang on to the dispatcher for later; which will allow us to spawn
+    // `FakeAddressStateProvider` handlers when serving `AddAddress`.
+    dispatcher_ = dispatcher;
+    binding_.Bind(std::move(request), dispatcher);
+  }
+
+  ~FakeControl() {
+    // Interface removal triggers address removal. Note that each `OwnedAddress`
+    // inside of `addresses_` has a shared_ptr to `addresses_`. If `addresses_`
+    // is non-empty, there would be pointer cycles leading to a memory leak.
+    addresses_->clear();
+  }
+
+ private:
+  // Default implementation for any API method not explicitly overridden.
+  void NotImplemented_(const std::string& name) override { FAIL() << "Not implemented: " << name; }
+
+  void AddAddress(fuchsia::net::Subnet address,
+                  fuchsia::net::interfaces::admin::AddressParameters parameters,
+                  fidl::InterfaceRequest<::fuchsia::net::interfaces::admin::AddressStateProvider>
+                      server_end) override {
+    // Confirm that the configured address is a V6 address.
+    ASSERT_TRUE(address.addr.is_ipv6());
+
+    std::shared_ptr<TestNotifier> on_hangup_notifier = std::make_shared<TestNotifier>();
+    std::unique_ptr<FakeAddressStateProvider> fake_asp = std::make_unique<FakeAddressStateProvider>(
+        address, addresses_, on_hangup_notifier, dispatcher_, std::move(server_end));
+
+    // Verify that the address does not already exist.
+    auto it = std::find_if(addresses_->begin(), addresses_->end(), [&](const OwnedAddress& addr) {
+      return CompareIpAddress(addr.address.addr, address.addr);
+    });
+    if (it != addresses_->end()) {
+      fake_asp->SendOnAddressRemoved(
+          fuchsia::net::interfaces::admin::AddressRemovalReason::ALREADY_ASSIGNED);
+      return;
+    }
+    addresses_->push_back({.address = std::move(address),
+                           .fake_asp = std::move(fake_asp),
+                           .on_hangup_notifier = on_hangup_notifier});
+  }
+
+  fidl::Binding<fuchsia::net::interfaces::admin::Control> binding_{this};
+  std::shared_ptr<std::vector<OwnedAddress>> addresses_;
+  async_dispatcher_t* dispatcher_;
 };
 
 class FakeNetInterfaces : public fuchsia::net::interfaces::testing::State_TestBase,
@@ -157,67 +305,26 @@ class FakeNetInterfaces : public fuchsia::net::interfaces::testing::State_TestBa
 };
 
 // The minimal set of fuchsia networking protocols required for WARM to run.
-class FakeNetstack : public fuchsia::net::stack::testing::Stack_TestBase,
+class FakeNetstack : public fuchsia::net::debug::testing::Interfaces_TestBase,
+                     public fuchsia::net::stack::testing::Stack_TestBase,
                      public fuchsia::netstack::testing::Netstack_TestBase {
  private:
+  // Default implementation for any API method not explicitly overridden.
   void NotImplemented_(const std::string& name) override { FAIL() << "Not implemented: " << name; }
 
-  void AddInterfaceAddressDeprecated(uint64_t nicid, ::fuchsia::net::Subnet subnet,
-                                     AddInterfaceAddressDeprecatedCallback callback) override {
-    // Confirm that the configured address is a V6 address.
-    ASSERT_TRUE(subnet.addr.is_ipv6());
-
-    // Find the interface with the specified ID and append the address.
+  // TODO(https://fxbug.dev/111695) Delete this once Weavestack no longer relies
+  // on the debug API.
+  void GetAdmin(
+      uint64_t id,
+      fidl::InterfaceRequest<::fuchsia::net::interfaces::admin::Control> server_end) override {
     auto it = std::find_if(interfaces_.begin(), interfaces_.end(),
-                           [&](const OwnedInterface& interface) { return nicid == interface.id; });
+                           [&](const OwnedInterface& interface) { return id == interface.id; });
     if (it == interfaces_.end()) {
-      callback(fuchsia::net::stack::Stack_AddInterfaceAddressDeprecated_Result::WithErr(
-          fuchsia::net::stack::Error::NOT_FOUND));
-      return;
+      server_end.Close(ZX_ERR_NOT_FOUND);
+    } else {
+      it->fake_control =
+          std::make_unique<FakeControl>(it->ipv6addrs, dispatcher_, std::move(server_end));
     }
-
-    // Verify that the interface does not already have the address being added.
-    auto addr_it = std::find_if(
-        it->ipv6addrs.begin(), it->ipv6addrs.end(),
-        [&](const fuchsia::net::Subnet& ipv6) { return CompareIpAddress(subnet.addr, ipv6.addr); });
-    if (addr_it != it->ipv6addrs.end()) {
-      callback(fuchsia::net::stack::Stack_AddInterfaceAddressDeprecated_Result::WithErr(
-          fuchsia::net::stack::Error::ALREADY_EXISTS));
-      return;
-    }
-
-    it->ipv6addrs.push_back(std::move(subnet));
-    callback(fuchsia::net::stack::Stack_AddInterfaceAddressDeprecated_Result::WithResponse({}));
-  }
-
-  void DelInterfaceAddressDeprecated(uint64_t nicid, ::fuchsia::net::Subnet subnet,
-                                     DelInterfaceAddressDeprecatedCallback callback) override {
-    // If forced, return INTERNAL.
-    if (del_interface_address_internal_error_) {
-      callback(fuchsia::net::stack::Stack_DelInterfaceAddressDeprecated_Result::WithErr(
-          fuchsia::net::stack::Error::INTERNAL));
-      return;
-    }
-
-    // Find the interface with the specified ID and remove the address.
-    auto it = std::find_if(interfaces_.begin(), interfaces_.end(),
-                           [&](const OwnedInterface& interface) { return nicid == interface.id; });
-    if (it == interfaces_.end()) {
-      callback(fuchsia::net::stack::Stack_DelInterfaceAddressDeprecated_Result::WithErr(
-          fuchsia::net::stack::Error::NOT_FOUND));
-      return;
-    }
-
-    auto addr_it = std::remove_if(
-        it->ipv6addrs.begin(), it->ipv6addrs.end(),
-        [&](const fuchsia::net::Subnet& ipv6) { return CompareIpAddress(subnet.addr, ipv6.addr); });
-    if (addr_it == it->ipv6addrs.end()) {
-      callback(fuchsia::net::stack::Stack_DelInterfaceAddressDeprecated_Result::WithErr(
-          fuchsia::net::stack::Error::NOT_FOUND));
-      return;
-    }
-    it->ipv6addrs.erase(addr_it, it->ipv6addrs.end());
-    callback(fuchsia::net::stack::Stack_DelInterfaceAddressDeprecated_Result::WithResponse({}));
   }
 
   // fuchsia::net::stack::Stack interface definitions.
@@ -267,16 +374,12 @@ class FakeNetstack : public fuchsia::net::stack::testing::Stack_TestBase,
  public:
   // Mutators, accessors, and helpers for tests.
 
-  // Force DelInterfaceAddressDeprecated to return an INTERNAL error.
-  void SetDelInterfaceAddressDeprecatedInternalError(bool enable) {
-    del_interface_address_internal_error_ = enable;
-  }
-
   // Add a fake interface with the given name. Does not check for duplicates.
   FakeNetstack& AddOwnedInterface(std::string name) {
     interfaces_.push_back({
         .id = ++last_id_assigned,
         .name = name,
+        .ipv6addrs = std::make_shared<std::vector<OwnedAddress>>(),
     });
     return *this;
   }
@@ -344,7 +447,20 @@ class FakeNetstack : public fuchsia::net::stack::testing::Stack_TestBase,
     };
   }
 
+  // TODO(https://fxbug.dev/111695) Delete this once Weavestack no longer relies
+  // on the debug API.
+  fidl::InterfaceRequestHandler<fuchsia::net::debug::Interfaces> GetDebugHandler(
+      async_dispatcher_t* dispatcher) {
+    dispatcher_ = dispatcher;
+    return [this](fidl::InterfaceRequest<fuchsia::net::debug::Interfaces> request) {
+      debug_binding_.Bind(std::move(request), dispatcher_);
+    };
+  }
+
  private:
+  // TODO(https://fxbug.dev/111695) Delete this once Weavestack no longer relies
+  // on the debug API.
+  fidl::Binding<fuchsia::net::debug::Interfaces> debug_binding_{this};
   fidl::Binding<fuchsia::net::stack::Stack> stack_binding_{this};
   fidl::Binding<fuchsia::netstack::Netstack> netstack_binding_{this};
   async_dispatcher_t* dispatcher_;
@@ -352,7 +468,6 @@ class FakeNetstack : public fuchsia::net::stack::testing::Stack_TestBase,
   std::vector<OwnedInterface> interfaces_;
   std::vector<uint64_t> ip_forwarded_interfaces_;
   bool forwarding_success_ = true;
-  bool del_interface_address_internal_error_ = false;
   uint32_t last_id_assigned = 0;
 };
 
@@ -368,6 +483,11 @@ class WarmTest : public testing::WeaveTestFixture<> {
         fake_net_stack_.GetNetstackHandler(dispatcher()));
     context_provider_.service_directory_provider()->AddService(
         fake_net_stack_.GetStackHandler(dispatcher()));
+    // TODO(https://fxbug.dev/111695) Delete this once Weavestack no longer
+    // relies on the debug API.
+    context_provider_.service_directory_provider()->AddService(
+        fake_net_stack_.GetDebugHandler(dispatcher()),
+        "fuchsia.net.debug.Interfaces_OnlyForWeavestack");
 
     PlatformMgrImpl().SetComponentContextForProcess(context_provider_.TakeContext());
     ConfigurationMgrImpl().SetDelegate(std::make_unique<TestConfigurationManager>());
@@ -438,7 +558,7 @@ TEST_F(WarmTest, AddRemoveAddressTunnel) {
 
   // Sanity check - no addresses assigned.
   OwnedInterface& weave_tun = GetTunnelInterface();
-  EXPECT_EQ(weave_tun.ipv6addrs.size(), 0u);
+  EXPECT_EQ(weave_tun.ipv6addrs->size(), 0u);
 
   // Attempt to add the address.
   ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
@@ -446,15 +566,17 @@ TEST_F(WarmTest, AddRemoveAddressTunnel) {
   EXPECT_EQ(result, kPlatformResultSuccess);
 
   // Confirm that it worked.
-  ASSERT_EQ(weave_tun.ipv6addrs.size(), 1u);
-  EXPECT_TRUE(CompareIpAddress(addr, weave_tun.ipv6addrs[0].addr));
+  ASSERT_EQ(weave_tun.ipv6addrs->size(), 1u);
+  EXPECT_TRUE(CompareIpAddress(addr, (*weave_tun.ipv6addrs)[0].address.addr));
 
   // Attempt to remove the address.
+  std::shared_ptr<TestNotifier> on_hangup_notifier = (*weave_tun.ipv6addrs)[0].on_hangup_notifier;
   result = AddRemoveHostAddress(kInterfaceTypeTunnel, addr, kPrefixLength, /*add*/ false);
   EXPECT_EQ(result, kPlatformResultSuccess);
 
   // Confirm that it worked.
-  EXPECT_EQ(weave_tun.ipv6addrs.size(), 0u);
+  EXPECT_TRUE(on_hangup_notifier->WaitWithTimeout(std::chrono::seconds(1)));
+  EXPECT_EQ(weave_tun.ipv6addrs->size(), 0u);
 }
 
 TEST_F(WarmTest, AddRemoveAddressWiFi) {
@@ -464,7 +586,7 @@ TEST_F(WarmTest, AddRemoveAddressWiFi) {
 
   // Sanity check - no addresses assigned.
   OwnedInterface& wlan = GetWiFiInterface();
-  EXPECT_EQ(wlan.ipv6addrs.size(), 0u);
+  EXPECT_EQ(wlan.ipv6addrs->size(), 0u);
 
   // Attempt to add the address.
   ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
@@ -472,15 +594,17 @@ TEST_F(WarmTest, AddRemoveAddressWiFi) {
   EXPECT_EQ(result, kPlatformResultSuccess);
 
   // Confirm that it worked.
-  ASSERT_EQ(wlan.ipv6addrs.size(), 1u);
-  EXPECT_TRUE(CompareIpAddress(addr, wlan.ipv6addrs[0].addr));
+  ASSERT_EQ(wlan.ipv6addrs->size(), 1u);
+  EXPECT_TRUE(CompareIpAddress(addr, (*wlan.ipv6addrs)[0].address.addr));
 
   // Attempt to remove the address.
+  std::shared_ptr<TestNotifier> on_hangup_notifier = (*wlan.ipv6addrs)[0].on_hangup_notifier;
   result = AddRemoveHostAddress(kInterfaceTypeWiFi, addr, kPrefixLength, /*add*/ false);
   EXPECT_EQ(result, kPlatformResultSuccess);
 
   // Confirm that it worked.
-  EXPECT_EQ(wlan.ipv6addrs.size(), 0u);
+  EXPECT_TRUE(on_hangup_notifier->WaitWithTimeout(std::chrono::seconds(1)));
+  EXPECT_EQ(wlan.ipv6addrs->size(), 0u);
 }
 
 TEST_F(WarmTest, AddRemoveSameAddress) {
@@ -490,7 +614,7 @@ TEST_F(WarmTest, AddRemoveSameAddress) {
 
   // Sanity check - no addresses assigned.
   OwnedInterface& wlan = GetWiFiInterface();
-  EXPECT_EQ(wlan.ipv6addrs.size(), 0u);
+  EXPECT_EQ(wlan.ipv6addrs->size(), 0u);
 
   // Attempt to add the address.
   ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
@@ -503,10 +627,11 @@ TEST_F(WarmTest, AddRemoveSameAddress) {
   EXPECT_EQ(result, kPlatformResultSuccess);
 
   // Confirm that it worked and only added a single address.
-  ASSERT_EQ(wlan.ipv6addrs.size(), 1u);
-  EXPECT_TRUE(CompareIpAddress(addr, wlan.ipv6addrs[0].addr));
+  ASSERT_EQ(wlan.ipv6addrs->size(), 1u);
+  EXPECT_TRUE(CompareIpAddress(addr, (*wlan.ipv6addrs)[0].address.addr));
 
   // Attempt to remove the address.
+  std::shared_ptr<TestNotifier> on_hangup_notifier = (*wlan.ipv6addrs)[0].on_hangup_notifier;
   result = AddRemoveHostAddress(kInterfaceTypeWiFi, addr, kPrefixLength, /*add*/ false);
   EXPECT_EQ(result, kPlatformResultSuccess);
 
@@ -516,43 +641,8 @@ TEST_F(WarmTest, AddRemoveSameAddress) {
   EXPECT_EQ(result, kPlatformResultSuccess);
 
   // Confirm that it worked.
-  EXPECT_EQ(wlan.ipv6addrs.size(), 0u);
-}
-
-TEST_F(WarmTest, RemoveAddressInternalError) {
-  constexpr char kSubnetIp[] = "2001:0DB8:0042::";
-  constexpr uint8_t kPrefixLength = 48;
-  Inet::IPAddress addr;
-
-  // Sanity check - no addresses assigned.
-  OwnedInterface& wlan = GetWiFiInterface();
-  EXPECT_EQ(wlan.ipv6addrs.size(), 0u);
-
-  // Attempt to add the address.
-  ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
-  auto result = AddRemoveHostAddress(kInterfaceTypeWiFi, addr, kPrefixLength, /*add*/ true);
-  EXPECT_EQ(result, kPlatformResultSuccess);
-
-  // Confirm that it worked and only added a single address.
-  ASSERT_EQ(wlan.ipv6addrs.size(), 1u);
-  EXPECT_TRUE(CompareIpAddress(addr, wlan.ipv6addrs[0].addr));
-
-  // Attempt to remove the address, but simulate an UNKNOWN_ERROR.
-  fake_net_stack().SetDelInterfaceAddressDeprecatedInternalError(true);
-  result = AddRemoveHostAddress(kInterfaceTypeWiFi, addr, kPrefixLength, /*add*/ false);
-  EXPECT_EQ(result, kPlatformResultFailure);
-
-  // Confirm that we still have a single address.
-  ASSERT_EQ(wlan.ipv6addrs.size(), 1u);
-  EXPECT_TRUE(CompareIpAddress(addr, wlan.ipv6addrs[0].addr));
-
-  // Attempt to remove the address, after recovering from UNKNOWN_ERROR.
-  fake_net_stack().SetDelInterfaceAddressDeprecatedInternalError(false);
-  result = AddRemoveHostAddress(kInterfaceTypeWiFi, addr, kPrefixLength, /*add*/ false);
-  EXPECT_EQ(result, kPlatformResultSuccess);
-
-  // Confirm that it worked.
-  EXPECT_EQ(wlan.ipv6addrs.size(), 0u);
+  EXPECT_TRUE(on_hangup_notifier->WaitWithTimeout(std::chrono::seconds(1)));
+  EXPECT_EQ(wlan.ipv6addrs->size(), 0u);
 }
 
 TEST_F(WarmTest, RemoveAddressTunnelNotFound) {
@@ -562,7 +652,7 @@ TEST_F(WarmTest, RemoveAddressTunnelNotFound) {
 
   // Sanity check - no addresses assigned.
   OwnedInterface& weave_tun = GetTunnelInterface();
-  EXPECT_EQ(weave_tun.ipv6addrs.size(), 0u);
+  EXPECT_EQ(weave_tun.ipv6addrs->size(), 0u);
 
   // Attempt to remove the address, expecting success - if the interface isn't
   // available, assume it's removed. WARM may invoke us after the interface is
@@ -572,7 +662,7 @@ TEST_F(WarmTest, RemoveAddressTunnelNotFound) {
   EXPECT_EQ(result, kPlatformResultSuccess);
 
   // Sanity check - still no addresses assigned.
-  EXPECT_EQ(weave_tun.ipv6addrs.size(), 0u);
+  EXPECT_EQ(weave_tun.ipv6addrs->size(), 0u);
 }
 
 TEST_F(WarmTest, RemoveAddressWiFiNotFound) {
@@ -582,7 +672,7 @@ TEST_F(WarmTest, RemoveAddressWiFiNotFound) {
 
   // Sanity check - no addresses assigned.
   OwnedInterface& wlan = GetWiFiInterface();
-  EXPECT_EQ(wlan.ipv6addrs.size(), 0u);
+  EXPECT_EQ(wlan.ipv6addrs->size(), 0u);
 
   // Attempt to remove the address, expecting success - if the interface isn't
   // available, assume it's removed. WARM may invoke us after the interface is
@@ -592,7 +682,7 @@ TEST_F(WarmTest, RemoveAddressWiFiNotFound) {
   EXPECT_EQ(result, kPlatformResultSuccess);
 
   // Sanity check - still no addresses assigned.
-  EXPECT_EQ(wlan.ipv6addrs.size(), 0u);
+  EXPECT_EQ(wlan.ipv6addrs->size(), 0u);
 }
 
 TEST_F(WarmTest, AddAddressTunnelNoInterface) {

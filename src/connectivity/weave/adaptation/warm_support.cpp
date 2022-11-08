@@ -9,10 +9,14 @@
 #include <Warm/Warm.h>
 // clang-format on
 
+#include <fidl/fuchsia.net.debug/cpp/fidl.h>
+#include <fidl/fuchsia.net.interfaces.admin/cpp/fidl.h>
 #include <fuchsia/net/cpp/fidl.h>
 #include <fuchsia/net/interfaces/cpp/fidl.h>
 #include <fuchsia/net/stack/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
+#include <lib/fidl/cpp/wire/channel.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <netinet/ip6.h>
 
@@ -25,6 +29,9 @@ namespace nl::Weave::Warm::Platform {
 namespace {
 using DeviceLayer::ConnectivityMgrImpl;
 
+constexpr char kFuchsiaNetDebugInterfacesProtocolName[] =
+    "fuchsia.net.debug.Interfaces_OnlyForWeavestack";
+
 // Fixed name for tunnel interface.
 constexpr char kTunInterfaceName[] = "weav-tun0";
 
@@ -33,6 +40,84 @@ constexpr char kTunInterfaceName[] = "weav-tun0";
 constexpr uint32_t kRouteMetric_HighPriority = 0;
 constexpr uint32_t kRouteMetric_MediumPriority = 99;
 constexpr uint32_t kRouteMetric_LowPriority = 999;
+
+std::optional<std::string> AddressToString(const Inet::IPAddress &address) {
+  const uint8_t IPV6ADDR_STRLEN_MAX = 46;
+  char buf[IPV6ADDR_STRLEN_MAX];
+  if (address.ToString(buf, IPV6ADDR_STRLEN_MAX)) {
+    return std::string(buf);
+  } else {
+    return std::nullopt;
+  }
+}
+
+std::string AddressToStringInfallible(const Inet::IPAddress &address) {
+  return AddressToString(address).value_or("<UNFORMATTABLE ADDRESS>");
+}
+
+class AddressStateProviderRepository {
+ public:
+  // Add the `AddressStateProvider` handle to the repository. If an entry
+  // already exists, it will be overwritten.
+  PlatformResult Add(
+      uint64_t interface_id, const Inet::IPAddress &address,
+      fidl::SyncClient<fuchsia_net_interfaces_admin::AddressStateProvider> asp_client) {
+    std::optional<std::string> key = GetKey(interface_id, address);
+    if (!key.has_value()) {
+      FX_LOGS(ERROR) << "Could not generate a key for address " << AddressToStringInfallible
+                     << " on interface " << interface_id;
+      return kPlatformResultFailure;
+    }
+    if (repo_.find(*key) != repo_.end()) {
+      FX_LOGS(WARNING) << "Overwritting existing AddressStateProvider client stored for address "
+                       << AddressToStringInfallible(address) << " on interface " << interface_id;
+    }
+    repo_[*key] =
+        std::make_unique<fidl::SyncClient<fuchsia_net_interfaces_admin::AddressStateProvider>>(
+            std::move(asp_client));
+    return kPlatformResultSuccess;
+  }
+
+  // Erase the `AddressStateProvider` handle from the repository.
+  // Returns true if the handle was present, false otherwise.
+  // Note that erase causes the handle to be dropped, which triggers removal
+  // of the address from the Netstack, if not detached.
+  bool Erase(uint64_t interface_id, const Inet::IPAddress &address) {
+    std::optional<std::string> key = GetKey(interface_id, address);
+    if (!key.has_value()) {
+      FX_LOGS(ERROR) << "Could not generate a key for address " << AddressToStringInfallible
+                     << " on interface " << interface_id;
+      return false;
+    }
+    return repo_.erase(*key);
+  }
+
+ private:
+  // Deterministically converts the given interface_id and address into a unique
+  // key for the local storage.
+  // Returns std::nullopt if the address could not be formatted into a key.
+  std::optional<std::string> GetKey(uint64_t interface_id, const Inet::IPAddress &address) {
+    std::optional<std::string> addr_str = AddressToString(address);
+    if (addr_str.has_value()) {
+      return std::to_string(interface_id) + ":" + *addr_str;
+    } else {
+      return std::nullopt;
+    }
+  }
+
+  // The underlying storage of `AddressStateProvider` handles. Note that the
+  // `fidl::SyncClient` is wrapped in a unique_ptr, because it cannot be
+  // assigned to.
+  std::map<std::string,
+           std::unique_ptr<fidl::SyncClient<fuchsia_net_interfaces_admin::AddressStateProvider>>>
+      repo_;
+};
+
+// A Global Store of `AddressStateProvider` client-side handles for all
+// addresses installed by Weavestack. The `AddressStateProvider` protocol
+// expresses strong ownership; storing them here prevents the handles from being
+// dropped and consequently prevents the Netstack from removing the addresses.
+AddressStateProviderRepository global_asp_repo;
 
 // Returns the interface name associated with the given interface type.
 // Unsupported interface types will not populate the optional.
@@ -122,22 +207,222 @@ std::string_view StackErrorToString(fuchsia::net::stack::Error error) {
   }
 }
 
+std::string_view AddressRemovalReasonToString(
+    fuchsia_net_interfaces_admin::AddressRemovalReason reason) {
+  switch (reason) {
+    case fuchsia_net_interfaces_admin::AddressRemovalReason::kInvalid:
+      return "invalid";
+    case fuchsia_net_interfaces_admin::AddressRemovalReason::kAlreadyAssigned:
+      return "already assigned";
+    case fuchsia_net_interfaces_admin::AddressRemovalReason::kDadFailed:
+      return "DAD failed";
+    case fuchsia_net_interfaces_admin::AddressRemovalReason::kInterfaceRemoved:
+      return "interface removed";
+    case fuchsia_net_interfaces_admin::AddressRemovalReason::kUserRemoved:
+      return "user removed";
+  }
+}
+
+std::string_view AddressAssignmentStateToString(
+    fuchsia_net_interfaces_admin::AddressAssignmentState state) {
+  switch (state) {
+    case fuchsia_net_interfaces_admin::AddressAssignmentState::kTentative:
+      return "tentative";
+    case fuchsia_net_interfaces_admin::AddressAssignmentState::kAssigned:
+      return "assigned";
+    case fuchsia_net_interfaces_admin::AddressAssignmentState::kUnavailable:
+      return "unavailable";
+  }
+}
+
+// Retrieve a handle to the `fuchsia.net.interfaces.admin/Control' API.
+//
+// Note that this uses `fuchsia.net.debug/Interfaces.GetAdmin` to do so, which
+// circumvents the strong ownership model of the `fuchsia.net.interfaces.api`.
+// This pattern is discouraged, but approved for this use case in Weavestack,
+// see (https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=92768#c6).
+// TODO(https://fxbug.dev/111695) Delete the usage of the debug API once an
+// alternative API is available.
+std::optional<fidl::SyncClient<fuchsia_net_interfaces_admin::Control>> GetInterfaceControlViaDebug(
+    uint64_t interface_id) {
+  auto svc = nl::Weave::DeviceLayer::PlatformMgrImpl().GetComponentContextForProcess()->svc();
+
+  zx::result debug_endpoints = fidl::CreateEndpoints<fuchsia_net_debug::Interfaces>();
+  if (!debug_endpoints.is_ok()) {
+    FX_LOGS(ERROR)
+        << "Synchronous Error while connecting to the |fuchsia.net.debug/Interfaces| protocol: "
+        << debug_endpoints.status_string();
+    return std::nullopt;
+  }
+  auto [debug_client_end, debug_server_end] = std::move(*debug_endpoints);
+  if (zx_status_t status =
+          svc->Connect(kFuchsiaNetDebugInterfacesProtocolName, debug_server_end.TakeChannel());
+      status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to connect to debug: " << zx_status_get_string(status);
+    return std::nullopt;
+  }
+  fidl::SyncClient debug_client{std::move(debug_client_end)};
+
+  zx::result control_endpoints = fidl::CreateEndpoints<fuchsia_net_interfaces_admin::Control>();
+  if (!control_endpoints.is_ok()) {
+    FX_LOGS(ERROR) << "Synchronous error when connecting to the "
+                      "|fuchsia.net.interfaces.admin/Control| protocol: "
+                   << control_endpoints.status_string();
+    return std::nullopt;
+  }
+  auto [control_client_end, control_server_end] = std::move(*control_endpoints);
+  auto result = debug_client->GetAdmin({interface_id, std::move(control_server_end)});
+  if (!result.is_ok()) {
+    FX_LOGS(ERROR) << "Failure while invoking |GetAdmin| FIDL method: " << result.error_value();
+    return std::nullopt;
+  }
+  return fidl::SyncClient(std::move(control_client_end));
+}
+
+// A Handler for
+// `fuchsia.net.interfaces.admin/AddressStateProvider.OnAddressRemoved` events
+// that simply records the `AddressRemovalReason`.
+class OnAddressRemovedHandler
+    : public fidl::SyncEventHandler<fuchsia_net_interfaces_admin::AddressStateProvider> {
+ public:
+  void OnAddressRemoved(
+      fidl::Event<fuchsia_net_interfaces_admin::AddressStateProvider::OnAddressRemoved> &event)
+      override {
+    removal_reason = event.error();
+  }
+
+  fuchsia_net_interfaces_admin::AddressRemovalReason removal_reason;
+};
+
+// Adds the given address to the given interface.
+//
+// This function waits for the given address to be assigned, and then detaches
+// the AddressStateProvider FIDL client from the address lifetime in the
+// Netstack.
+//
+// If the address already exists, `kPlatformResultSuccess` will be returned.
+PlatformResult AddAddressInternal(uint64_t interface_id, const Inet::IPAddress &address,
+                                  uint8_t prefix_length) {
+  FX_LOGS(INFO) << "Adding address " << AddressToStringInfallible(address)
+                << " to interface with id " << interface_id;
+
+  // TODO(https://fxbug.dev/92768) If the address is being added to the TUN
+  // interface, use the control handle owned by openweave-core.
+  std::optional<fidl::SyncClient<fuchsia_net_interfaces_admin::Control>> control_client =
+      GetInterfaceControlViaDebug(interface_id);
+  if (!control_client) {
+    FX_LOGS(ERROR)
+        << "Failed to acquire |fuchsia.net.interfaces.admin/Control| handle for interface "
+        << interface_id;
+    return kPlatformResultFailure;
+  }
+
+  // Construct the IP address for the interface.
+  std::array<uint8_t, 16> ipv6_addr_bytes;
+  std::memcpy(ipv6_addr_bytes.data(), reinterpret_cast<const uint8_t *>(address.Addr),
+              ipv6_addr_bytes.size());
+  fuchsia_net::Ipv6Address ipv6_addr = fuchsia_net::Ipv6Address(ipv6_addr_bytes);
+  fuchsia_net::IpAddress ip_addr = fuchsia_net::IpAddress::WithIpv6(ipv6_addr);
+  fuchsia_net::Subnet subnet = fuchsia_net::Subnet(std::move(ip_addr), prefix_length);
+
+  // Empty `AddressParameters`.
+  fuchsia_net_interfaces_admin::AddressParameters params;
+  // FIDL Handle for the `AddressStateProvider` protocol.
+  zx::result asp_endpoints =
+      fidl::CreateEndpoints<fuchsia_net_interfaces_admin::AddressStateProvider>();
+  if (!asp_endpoints.is_ok()) {
+    FX_LOGS(ERROR) << "Synchronous error when connecting to the AddressStateProvider protocol: "
+                   << asp_endpoints.status_string();
+    return kPlatformResultFailure;
+  }
+  auto [asp_client_end, asp_server_end] = std::move(*asp_endpoints);
+
+  auto result = control_client.value()->AddAddress(
+      {std::move(subnet), std::move(params), std::move(asp_server_end)});
+  if (!result.is_ok()) {
+    FX_LOGS(ERROR) << "Failed to add address " << AddressToStringInfallible(address)
+                   << " to interface with id " << interface_id << ": " << result.error_value();
+    return kPlatformResultFailure;
+  }
+
+  // Adding an address is asynchronous: After successfully calling "AddAddress"
+  // we must wait either for the AddressStateProvider protocol to be closed
+  // (indicating an error) or for the Address to become `ASSIGNED`.
+  FX_LOGS(INFO) << "Waiting for address to be assigned...";
+  fidl::SyncClient asp_client{std::move(asp_client_end)};
+  fuchsia_net_interfaces_admin::AddressAssignmentState state;
+  do {
+    fidl::Result result = asp_client->WatchAddressAssignmentState();
+    if (!result.is_ok()) {
+      // Non Peer Closed errors are unexpected.
+      if (!result.error_value().is_peer_closed()) {
+        FX_LOGS(ERROR) << "Failure while invoking |WatchAddressAssignmentState|: "
+                       << result.error_value();
+        return kPlatformResultFailure;
+      }
+      // Peer Closed errors will be accompanied by an `OnAddressRemoved` event.
+      // That provides additional context as to why the error was observed.
+      OnAddressRemovedHandler handler;
+      fidl::Status status = handler.HandleOneEvent(asp_client.client_end());
+      if (!status.ok()) {
+        FX_LOGS(ERROR) << "Failure while handling |OnAddressRemoved|: " << status.status_string();
+        return kPlatformResultFailure;
+      }
+      if (handler.removal_reason ==
+          fuchsia_net_interfaces_admin::AddressRemovalReason::kAlreadyAssigned) {
+        FX_LOGS(WARNING) << "Address " << AddressToStringInfallible(address)
+                         << " was already assigned to interface " << interface_id;
+        return kPlatformResultSuccess;
+      } else {
+        FX_LOGS(ERROR) << "Failed to add address " << AddressToStringInfallible(address)
+                       << " to Interface " << interface_id << " : "
+                       << AddressRemovalReasonToString(handler.removal_reason);
+        return kPlatformResultFailure;
+      }
+    }
+    state = result.value().assignment_state();
+    FX_LOGS(INFO) << "Observed state change for " << AddressToStringInfallible(address) << ": "
+                  << AddressAssignmentStateToString(state);
+  } while (state != fuchsia_net_interfaces_admin::AddressAssignmentState::kAssigned);
+
+  PlatformResult store_handle_result =
+      global_asp_repo.Add(interface_id, address, std::move(asp_client));
+  if (store_handle_result == kPlatformResultFailure) {
+    FX_LOGS(ERROR) << "Failed to Store AddressStateProvider handle for address "
+                   << AddressToStringInfallible(address) << " on interface with id "
+                   << interface_id;
+  } else {
+    FX_LOGS(INFO) << "Successfully added address " << AddressToStringInfallible(address)
+                  << " to interface with id " << interface_id;
+  }
+  return store_handle_result;
+}
+
+// Removes the given address from the given interface.
+//
+// If the address was not found, `kPlatformResultSuccess` will be returned.
+PlatformResult RemoveAddressInternal(uint64_t interface_id, const Inet::IPAddress &address) {
+  FX_LOGS(INFO) << "Removing address " << AddressToStringInfallible(address)
+                << " from interface with id " << interface_id;
+  // Erase the ASP client-side handle from the global repository. Note that when
+  // the handle is dropped, the Netstack will remove the address.
+  if (!global_asp_repo.Erase(interface_id, address)) {
+    FX_LOGS(WARNING) << "Did not remove non-existant address " << AddressToStringInfallible(address)
+                     << " from interface with id " << interface_id;
+  } else {
+    FX_LOGS(INFO) << "Successfully removed address " << AddressToStringInfallible(address)
+                  << " from interface with id " << interface_id;
+  }
+  return kPlatformResultSuccess;
+}
+
 // Add or remove an address attached to the Thread or WLAN interfaces.
 PlatformResult AddRemoveAddressInternal(InterfaceType interface_type,
                                         const Inet::IPAddress &address, uint8_t prefix_length,
                                         bool add) {
-  auto svc = nl::Weave::DeviceLayer::PlatformMgrImpl().GetComponentContextForProcess()->svc();
-
   // Determine interface name to add/remove from.
   std::optional<std::string> interface_name = GetInterfaceName(interface_type);
   if (!interface_name) {
-    return kPlatformResultFailure;
-  }
-
-  fuchsia::net::stack::StackSyncPtr net_stack_sync_ptr;
-  zx_status_t status = svc->Connect(net_stack_sync_ptr.NewRequest());
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to connect to netstack: " << zx_status_get_string(status);
     return kPlatformResultFailure;
   }
 
@@ -153,69 +438,11 @@ PlatformResult AddRemoveAddressInternal(InterfaceType interface_type,
     return kPlatformResultFailure;
   }
 
-  // Construct the IP address for the interface.
-  fuchsia::net::IpAddress ip_addr;
-  fuchsia::net::Ipv6Address ipv6_addr;
-
-  std::memcpy(ipv6_addr.addr.data(), reinterpret_cast<const uint8_t *>(address.Addr),
-              ipv6_addr.addr.size());
-  ip_addr.set_ipv6(ipv6_addr);
-
-  fuchsia::net::Subnet subnet{
-      .addr = std::move(ip_addr),
-      .prefix_len = prefix_length,
-  };
-
-  // Add or remove the address from the interface.
-  // TODO(https://fxbug.dev/92768): Migrate to fuchsia.net.interfaces.admin/Control.
-  std::optional<fuchsia::net::stack::Error> error;
   if (add) {
-    fuchsia::net::stack::Stack_AddInterfaceAddressDeprecated_Result result;
-    status = net_stack_sync_ptr->AddInterfaceAddressDeprecated(interface_id.value(),
-                                                               std::move(subnet), &result);
-    if (status == ZX_OK && result.is_err()) {
-      error = result.err();
-    }
+    return AddAddressInternal(interface_id.value(), address, prefix_length);
   } else {
-    fuchsia::net::stack::Stack_DelInterfaceAddressDeprecated_Result result;
-    status = net_stack_sync_ptr->DelInterfaceAddressDeprecated(interface_id.value(),
-                                                               std::move(subnet), &result);
-    if (status == ZX_OK && result.is_err()) {
-      error = result.err();
-    }
+    return RemoveAddressInternal(interface_id.value(), address);
   }
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to configure interface address to interface id "
-                   << interface_id.value() << ": " << zx_status_get_string(status);
-    return kPlatformResultFailure;
-  }
-
-  // Verify that the result from netstack confirms that the address was actually
-  // added or removed.
-  if (error.has_value()) {
-    if (add) {
-      constexpr std::string_view msg = "Failed to add address on interface id ";
-      if (error.value() == fuchsia::net::stack::Error::ALREADY_EXISTS) {
-        FX_LOGS(WARNING) << msg << interface_id.value() << ": "
-                         << StackErrorToString(error.value());
-        return kPlatformResultSuccess;
-      }
-      FX_LOGS(ERROR) << msg << interface_id.value() << ": " << StackErrorToString(error.value());
-    } else {
-      constexpr std::string_view msg = "Failed to remove address on interface id ";
-      if (error.value() == fuchsia::net::stack::Error::NOT_FOUND) {
-        FX_LOGS(WARNING) << msg << interface_id.value() << ": "
-                         << StackErrorToString(error.value());
-        return kPlatformResultSuccess;
-      }
-      FX_LOGS(ERROR) << msg << interface_id.value() << ": " << StackErrorToString(error.value());
-    }
-    return kPlatformResultFailure;
-  }
-
-  FX_LOGS(INFO) << (add ? "Added" : "Removed") << " address from interface id "
-                << interface_id.value();
-  return kPlatformResultSuccess;
 }
 
 // Add or remove route to/from forwarding table.
