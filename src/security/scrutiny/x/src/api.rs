@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::error;
 use std::fmt::Debug;
 use std::fmt::Display;
 use std::hash;
@@ -226,8 +227,45 @@ pub trait DataSource {
     fn version(&self) -> DataSourceVersion;
 }
 
+impl<SourcePath: AsRef<Path>> PartialEq for dyn DataSource<SourcePath = SourcePath> {
+    fn eq(&self, other: &dyn DataSource<SourcePath = SourcePath>) -> bool {
+        if self.kind() != other.kind()
+            || self.parent() != other.parent()
+            || self.version() != other.version()
+        {
+            return false;
+        }
+
+        match (self.path(), other.path()) {
+            (None, Some(_)) | (Some(_), None) => return false,
+            (None, None) => {}
+            (Some(self_path), Some(other_path)) => {
+                if self_path.as_ref() != other_path.as_ref() {
+                    return false;
+                }
+            }
+        }
+
+        let mut self_children = self.children();
+        let mut other_children = other.children();
+        loop {
+            let self_current_child = self_children.next();
+            let other_current_child = other_children.next();
+            if self_current_child != other_current_child {
+                return false;
+            }
+            if self_current_child == None {
+                break;
+            }
+        }
+
+        true
+    }
+}
+
 /// Kinds of artifacts that may constitute a source of truth for a [`Scrutiny`] instance reasoning
 /// about a built Fuchsia system.
+#[derive(Eq, PartialEq)]
 pub enum DataSourceKind {
     /// A product bundle directory that contains various artifacts at known paths within the
     /// directory.
@@ -255,6 +293,7 @@ pub enum DataSourceKind {
 
 /// A version identifier associated with an artifact or unit of software used to interpret
 /// artifacts.
+#[derive(Eq, PartialEq)]
 pub enum DataSourceVersion {
     /// Either no version information is available, or the information was malformed.
     Unknown,
@@ -267,14 +306,23 @@ pub trait Blob {
     /// https://fuchsia.dev/fuchsia-src/concepts/packages/merkleroot for details.
     type Hash: Hash;
 
-    // Concrete type for readable and seekable file content access API.
+    /// Concrete type for readable and seekable file content access API.
     type ReaderSeeker: Read + Seek;
+
+    /// Concrete type for the data sources that provide this blob.
+    type DataSource: DataSource;
+
+    /// Concrete type for errors that may arise from attempting to open this blob for reading.
+    type Error: error::Error;
 
     /// Accessor for the hash (i.e., content-addressed identity) of this file.
     fn hash(&self) -> Self::Hash;
 
     /// Gets a readable and seekable file content access API.
-    fn reader_seeker(&self) -> Self::ReaderSeeker;
+    fn reader_seeker(&self) -> Result<Self::ReaderSeeker, Self::Error>;
+
+    /// Iterate over the data sources that provide this blob.
+    fn data_sources(&self) -> Box<dyn Iterator<Item = Self::DataSource>>;
 }
 
 /// A content-address of a sequence of bytes. In most production cases, this is a Fuchsia merkle

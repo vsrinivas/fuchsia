@@ -32,6 +32,7 @@ if (is_host) {
     deps = [
       "//src/lib/fuchsia",
       "//src/sys/pkg/lib/fuchsia-merkle",
+      "//third_party/rust_crates:thiserror",
     ]
   }
 }

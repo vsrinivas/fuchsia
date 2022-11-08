@@ -11,7 +11,7 @@ pub mod fake {
     use crate::api::DataSourceVersion;
     use std::iter;
 
-    #[derive(Default)]
+    #[derive(Clone, Debug, Default, Eq, PartialEq)]
     pub(crate) struct DataSource;
 
     impl DataSourceApi for DataSource {
