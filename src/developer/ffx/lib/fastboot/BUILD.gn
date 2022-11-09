@@ -21,7 +21,6 @@ if (is_host) {
       "//src/developer/ffx/lib/pbms:lib",
       "//src/lib/assembly/assembly_manifest",
       "//src/lib/assembly/partitions_config",
-      "//src/lib/assembly/util",
       "//src/lib/fidl/rust/fidl",
       "//src/lib/fuchsia-async",
       "//src/lib/gcs:lib",

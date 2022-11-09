@@ -4,6 +4,7 @@
 
 use assembly_structured_config::{validate_component, Repackager, ValidationError};
 use assembly_validate_product::{validate_package, PackageValidationError};
+use camino::Utf8Path;
 use fuchsia_archive::Utf8Reader;
 use fuchsia_pkg::{BlobInfo, PackageBuilder, PackageManifest};
 use maplit::btreemap;
@@ -20,15 +21,17 @@ fn test_package_manifest() -> (PackageManifest, TempDir) {
         Utf8Reader::new(Cursor::new(std::fs::read(env!("TEST_PACKAGE_FAR")).unwrap())).unwrap();
 
     // unpack the archive and create a manifest
-    let outdir = TempDir::new().unwrap();
-    let mut builder = PackageBuilder::from_archive(archive, outdir.path()).unwrap();
-    let manifest_path = outdir.path().join("package_manifest.json");
+    let tmp = TempDir::new().unwrap();
+    let outdir = Utf8Path::from_path(tmp.path()).unwrap();
+
+    let mut builder = PackageBuilder::from_archive(archive, outdir).unwrap();
+    let manifest_path = outdir.join("package_manifest.json");
     builder.manifest_path(&manifest_path);
-    builder.build(&outdir, outdir.path().join("meta.far")).unwrap();
+    builder.build(&outdir, outdir.join("meta.far")).unwrap();
 
     // load the manifest back into memory for testing
     let manifest = PackageManifest::try_load_from(&manifest_path).unwrap();
-    (manifest, outdir)
+    (manifest, tmp)
 }
 
 fn test_meta_far() -> (Utf8Reader<Cursor<Vec<u8>>>, TempDir) {
@@ -53,7 +56,9 @@ fn adding_config_makes_invalid_package_valid() {
 
     // provide config values for the previously-invalid component
     let temp = TempDir::new().unwrap();
-    let mut repackager = Repackager::new(original_manifest.clone(), temp.path()).unwrap();
+    let tempdir = Utf8Path::from_path(temp.path()).unwrap();
+
+    let mut repackager = Repackager::new(original_manifest.clone(), tempdir).unwrap();
     repackager
         .set_component_config(FAIL_MISSING_CONFIG, btreemap! { "foo".to_string() => true.into() })
         .unwrap();
@@ -69,7 +74,8 @@ fn adding_config_makes_invalid_package_valid() {
 fn cant_add_config_on_top_of_existing_values() {
     let (original_manifest, _unpacked_original) = test_package_manifest();
     let temp = TempDir::new().unwrap();
-    let mut repackager = Repackager::new(original_manifest.clone(), temp.path()).unwrap();
+    let tempdir = Utf8Path::from_path(temp.path()).unwrap();
+    let mut repackager = Repackager::new(original_manifest.clone(), tempdir).unwrap();
     repackager
         .set_component_config(PASS_WITH_CONFIG, btreemap! { "foo".to_string() => true.into() })
         .unwrap_err();
@@ -81,7 +87,8 @@ fn repackaging_with_no_config_produces_identical_manifest() {
     let (original_manifest, _unpacked_original) = test_package_manifest();
 
     let temp = TempDir::new().unwrap();
-    let repackager = Repackager::new(original_manifest.clone(), temp.path()).unwrap();
+    let tempdir = Utf8Path::from_path(temp.path()).unwrap();
+    let repackager = Repackager::new(original_manifest.clone(), tempdir).unwrap();
     let new_manifest_path = repackager.build().unwrap();
 
     let new_manifest = PackageManifest::try_load_from(new_manifest_path).unwrap();

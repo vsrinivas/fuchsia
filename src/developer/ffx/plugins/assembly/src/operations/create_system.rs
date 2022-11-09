@@ -14,12 +14,12 @@ use assembly_images_config::{Fvm, Image, ImagesConfig, VBMeta, Zbi};
 use assembly_manifest::AssemblyManifest;
 use assembly_tool::{SdkToolProvider, ToolProvider};
 use assembly_update_packages_manifest::UpdatePackagesManifest;
+use camino::{Utf8Path, Utf8PathBuf};
 use ffx_assembly_args::{CreateSystemArgs, PackageMode};
 use fuchsia_pkg::{PackageManifest, PackagePath};
 use serde_json::ser;
 use std::collections::BTreeSet;
 use std::fs::File;
-use std::path::{Path, PathBuf};
 use tracing::info;
 
 pub fn create_system(args: CreateSystemArgs) -> Result<()> {
@@ -81,7 +81,7 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
     };
 
     // Find the first standard FVM that was generated.
-    let fvm_for_zbi: Option<PathBuf> = match &mode {
+    let fvm_for_zbi: Option<Utf8PathBuf> = match &mode {
         PackageMode::FvmInZbi => assembly_manifest.images.iter().find_map(|i| match i {
             assembly_manifest::Image::FVM(path) => Some(path.clone()),
             _ => None,
@@ -95,7 +95,7 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
         _ => None,
     });
 
-    let zbi_path: Option<PathBuf> = if let Some(zbi_config) = zbi_config {
+    let zbi_path: Option<Utf8PathBuf> = if let Some(zbi_config) = zbi_config {
         Some(zbi::construct_zbi(
             tools.get_tool("zbi")?,
             &mut assembly_manifest,
@@ -172,7 +172,7 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
 }
 
 fn create_package_manifest(
-    outdir: impl AsRef<Path>,
+    outdir: impl AsRef<Utf8Path>,
     base_package_name: impl AsRef<str>,
     assembly_config: &ImageAssemblyConfig,
     base_package: Option<&BasePackage>,
@@ -180,12 +180,12 @@ fn create_package_manifest(
     let packages_path = outdir.as_ref().join("packages.json");
     let packages_file = File::create(&packages_path).context("Creating the packages manifest")?;
     let mut packages_manifest = UpdatePackagesManifest::V1(BTreeSet::new());
-    let mut add_packages_to_update = |packages: &Vec<PathBuf>| -> Result<()> {
+    let mut add_packages_to_update = |packages: &Vec<Utf8PathBuf>| -> Result<()> {
         for package_path in packages {
             let manifest = PackageManifest::try_load_from(package_path)?;
             packages_manifest
                 .add_by_manifest(manifest)
-                .context(format!("Adding manifest: {}", package_path.display()))?;
+                .with_context(|| format!("Adding manifest: {}", package_path))?;
         }
         Ok(())
     };

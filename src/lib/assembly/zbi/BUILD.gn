@@ -13,8 +13,8 @@ rustc_library("zbi") {
   with_unit_tests = true
   deps = [
     "//src/lib/assembly/tool",
-    "//src/lib/assembly/util",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:camino",
     "//third_party/rust_crates:tracing",
   ]
   sources = [

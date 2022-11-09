@@ -11,7 +11,6 @@ use {
     fuchsia_hash::Hash,
     fuchsia_url::{RepositoryUrl, UnpinnedAbsolutePackageUrl},
     serde::{Deserialize, Serialize},
-    std::path::PathBuf,
     std::{
         collections::BTreeMap,
         fs::{self, File},
@@ -46,9 +45,11 @@ impl PackageManifest {
 
     pub async fn archive(
         self,
-        root_dir: PathBuf,
+        root_dir: impl AsRef<Path>,
         out: impl Write,
     ) -> Result<(), PackageManifestError> {
+        let root_dir = root_dir.as_ref();
+
         let mut contents: BTreeMap<_, (_, Box<dyn Read>)> = BTreeMap::new();
         for blob in self.into_blobs() {
             let source_path = root_dir.join(blob.source_path);
@@ -320,24 +321,21 @@ pub struct BlobInfo {
 
 pub mod host {
     use super::*;
-    use crate::PathToStringExt;
     use anyhow::Context;
     use assembly_util::{path_relative_from_file, resolve_path_from_file};
+    use camino::Utf8Path;
     use std::fs::File;
     use std::io::BufReader;
-    use std::path::Path;
 
     impl PackageManifest {
-        pub fn try_load_from(manifest_path: impl AsRef<Path>) -> anyhow::Result<Self> {
-            fn inner(manifest_path: &Path) -> anyhow::Result<PackageManifest> {
-                let file = File::open(manifest_path).with_context(|| {
-                    format!("Opening package manifest: {}", manifest_path.display())
-                })?;
+        pub fn try_load_from(manifest_path: impl AsRef<Utf8Path>) -> anyhow::Result<Self> {
+            fn inner(manifest_path: &Utf8Path) -> anyhow::Result<PackageManifest> {
+                let file = File::open(manifest_path)
+                    .with_context(|| format!("Opening package manifest: {}", manifest_path))?;
 
                 let versioned: VersionedPackageManifest =
-                    serde_json::from_reader(BufReader::new(file)).with_context(|| {
-                        format!("Reading package manifest: {}", manifest_path.display())
-                    })?;
+                    serde_json::from_reader(BufReader::new(file))
+                        .with_context(|| format!("Reading package manifest: {}", manifest_path))?;
 
                 let versioned = match versioned {
                     VersionedPackageManifest::Version1(manifest) => {
@@ -354,9 +352,9 @@ pub mod host {
 
         pub fn write_with_relative_blob_paths(
             self,
-            path: impl AsRef<Path>,
+            path: impl AsRef<Utf8Path>,
         ) -> anyhow::Result<Self> {
-            fn inner(this: PackageManifest, path: &Path) -> anyhow::Result<PackageManifest> {
+            fn inner(this: PackageManifest, path: &Utf8Path) -> anyhow::Result<PackageManifest> {
                 let versioned = match this.0 {
                     VersionedPackageManifest::Version1(manifest) => {
                         VersionedPackageManifest::Version1(
@@ -374,11 +372,11 @@ pub mod host {
     impl PackageManifestV1 {
         pub fn write_with_relative_blob_paths(
             self,
-            manifest_path: impl AsRef<Path>,
+            manifest_path: impl AsRef<Utf8Path>,
         ) -> anyhow::Result<PackageManifestV1> {
             fn inner(
                 this: PackageManifestV1,
-                manifest_path: &Path,
+                manifest_path: &Utf8Path,
             ) -> anyhow::Result<PackageManifestV1> {
                 let manifest = if let RelativeTo::WorkingDir = &this.blob_sources_relative {
                     // manifest contains working-dir relative source paths, make
@@ -407,11 +405,11 @@ pub mod host {
     impl PackageManifestV1 {
         pub fn resolve_blob_source_paths(
             self,
-            manifest_path: impl AsRef<Path>,
+            manifest_path: impl AsRef<Utf8Path>,
         ) -> anyhow::Result<Self> {
             fn inner(
                 this: PackageManifestV1,
-                manifest_path: &Path,
+                manifest_path: &Utf8Path,
             ) -> anyhow::Result<PackageManifestV1> {
                 if let RelativeTo::File = &this.blob_sources_relative {
                     let blobs = this
@@ -430,23 +428,21 @@ pub mod host {
 
     fn relativize_blob_source_path(
         blob: BlobInfo,
-        manifest_path: &Path,
+        manifest_path: &Utf8Path,
     ) -> anyhow::Result<BlobInfo> {
         let source_path = path_relative_from_file(blob.source_path, manifest_path)?;
-        let source_path = source_path.path_to_string().with_context(|| {
-            format!(
-                "Path from UTF-8 string, made relative, is no longer utf-8: {}",
-                source_path.display()
-            )
-        })?;
+        let source_path = source_path.into_string();
 
         Ok(BlobInfo { source_path, ..blob })
     }
 
-    fn resolve_blob_source_path(blob: BlobInfo, manifest_path: &Path) -> anyhow::Result<BlobInfo> {
-        let source_path = resolve_path_from_file(&blob.source_path, manifest_path)?
-            .path_to_string()
-            .context(format!("Resolving blob path: {}", &blob.source_path))?;
+    fn resolve_blob_source_path(
+        blob: BlobInfo,
+        manifest_path: &Utf8Path,
+    ) -> anyhow::Result<BlobInfo> {
+        let source_path = resolve_path_from_file(&blob.source_path, manifest_path)
+            .with_context(|| format!("Resolving blob path: {}", blob.source_path))?
+            .into_string();
         Ok(BlobInfo { source_path, ..blob })
     }
 }
@@ -736,19 +732,20 @@ mod tests {
 #[cfg(all(test, not(target_os = "fuchsia")))]
 mod host_tests {
     use super::*;
-    use crate::PathToStringExt;
+    use camino::Utf8Path;
     use serde_json::Value;
     use std::fs::File;
     use tempfile::TempDir;
 
     #[test]
     fn test_load_from_simple() {
-        let temp_dir = TempDir::new().unwrap();
+        let temp = TempDir::new().unwrap();
+        let temp_dir = Utf8Path::from_path(temp.path()).unwrap();
 
-        let data_dir = temp_dir.path().join("data_source");
-        let manifest_dir = temp_dir.path().join("manifest_dir");
+        let data_dir = temp_dir.join("data_source");
+        let manifest_dir = temp_dir.join("manifest_dir");
         let manifest_path = manifest_dir.join("package_manifest.json");
-        let expected_blob_source_path = data_dir.join("p1").path_to_string().unwrap();
+        let expected_blob_source_path = data_dir.join("p1").to_string();
 
         std::fs::create_dir_all(&data_dir).unwrap();
         std::fs::create_dir_all(&manifest_dir).unwrap();
@@ -785,12 +782,13 @@ mod host_tests {
 
     #[test]
     fn test_load_from_resolves_source_paths() {
-        let temp_dir = TempDir::new().unwrap();
+        let temp = TempDir::new().unwrap();
+        let temp_dir = Utf8Path::from_path(temp.path()).unwrap();
 
-        let data_dir = temp_dir.path().join("data_source");
-        let manifest_dir = temp_dir.path().join("manifest_dir");
+        let data_dir = temp_dir.join("data_source");
+        let manifest_dir = temp_dir.join("manifest_dir");
         let manifest_path = manifest_dir.join("package_manifest.json");
-        let expected_blob_source_path = data_dir.join("p1").path_to_string().unwrap();
+        let expected_blob_source_path = data_dir.join("p1").to_string();
 
         std::fs::create_dir_all(&data_dir).unwrap();
         std::fs::create_dir_all(&manifest_dir).unwrap();
@@ -827,10 +825,11 @@ mod host_tests {
 
     #[test]
     fn test_write_package_manifest_already_relative() {
-        let temp_dir = TempDir::new().unwrap();
+        let temp = TempDir::new().unwrap();
+        let temp_dir = Utf8Path::from_path(temp.path()).unwrap();
 
-        let data_dir = temp_dir.path().join("data_source");
-        let manifest_dir = temp_dir.path().join("manifest_dir");
+        let data_dir = temp_dir.join("data_source");
+        let manifest_dir = temp_dir.join("manifest_dir");
         let manifest_path = manifest_dir.join("package_manifest.json");
 
         std::fs::create_dir_all(&data_dir).unwrap();
@@ -876,12 +875,13 @@ mod host_tests {
 
     #[test]
     fn test_write_package_manifest_making_paths_relative() {
-        let temp_dir = TempDir::new().unwrap();
+        let temp = TempDir::new().unwrap();
+        let temp_dir = Utf8Path::from_path(temp.path()).unwrap();
 
-        let data_dir = temp_dir.path().join("data_source");
-        let manifest_dir = temp_dir.path().join("manifest_dir");
+        let data_dir = temp_dir.join("data_source");
+        let manifest_dir = temp_dir.join("manifest_dir");
         let manifest_path = manifest_dir.join("package_manifest.json");
-        let blob_source_path = data_dir.join("p2").path_to_string().unwrap();
+        let blob_source_path = data_dir.join("p2").to_string();
 
         std::fs::create_dir_all(&data_dir).unwrap();
         std::fs::create_dir_all(&manifest_dir).unwrap();

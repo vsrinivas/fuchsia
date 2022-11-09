@@ -61,10 +61,7 @@ pub fn verify_product_budgets(args: ProductSizeCheckArgs) -> Result<bool> {
     let blobfs_contents = match extract_blobfs_contents(&assembly_manifest) {
         Some(contents) => contents,
         None => {
-            tracing::info!(
-                "No blobfs image was found in {}",
-                args.assembly_manifest.to_string_lossy()
-            );
+            tracing::info!("No blobfs image was found in {}", args.assembly_manifest);
             return Ok(true);
         }
     };
@@ -91,10 +88,12 @@ pub fn verify_product_budgets(args: ProductSizeCheckArgs) -> Result<bool> {
     if let Some(base_assembly_manifest) = args.base_assembly_manifest {
         let other_assembly_manifest = read_config(&base_assembly_manifest)?;
         let other_blobfs_contents =
-            extract_blobfs_contents(&other_assembly_manifest).ok_or(format_err!(
-                "Attempted to diff with {} which does not contain a blobfs image",
-                base_assembly_manifest.to_string_lossy()
-            ))?;
+            extract_blobfs_contents(&other_assembly_manifest).ok_or_else(|| {
+                format_err!(
+                    "Attempted to diff with {} which does not contain a blobfs image",
+                    base_assembly_manifest
+                )
+            })?;
         let other_package_sizes = calculate_package_sizes(&other_blobfs_contents)?;
         print_size_diff(&package_sizes, &other_package_sizes);
     } else if args.verbose {
@@ -103,11 +102,12 @@ pub fn verify_product_budgets(args: ProductSizeCheckArgs) -> Result<bool> {
     }
 
     if let Some(gerrit_output) = args.gerrit_output {
-        let max_contents_size = max_contents_size
-            .ok_or(format_err!("Cannot create gerrit report when max_contents_size is none"))?;
-        let blobfs_creep_budget = args
-            .blobfs_creep_budget
-            .ok_or(format_err!("Cannot create gerrit report when blobfs_creep_budget is none"))?;
+        let max_contents_size = max_contents_size.ok_or_else(|| {
+            format_err!("Cannot create gerrit report when max_contents_size is none")
+        })?;
+        let blobfs_creep_budget = args.blobfs_creep_budget.ok_or_else(|| {
+            format_err!("Cannot create gerrit report when blobfs_creep_budget is none")
+        })?;
         fs::write(
             gerrit_output,
             serde_json::to_string(&create_gerrit_report(
@@ -154,7 +154,7 @@ pub fn verify_product_budgets(args: ProductSizeCheckArgs) -> Result<bool> {
         )
         .context("creating data.js for visualization")?;
         if args.verbose {
-            println!("Wrote visualization to {}", visualization_dir.join("index.html").display());
+            println!("Wrote visualization to {}", visualization_dir.join("index.html"));
         }
     }
 
@@ -652,13 +652,13 @@ mod tests {
         AssemblyManifest, BlobfsContents, Image, PackageMetadata, PackageSetMetadata,
         PackagesMetadata,
     };
+    use camino::{Utf8Path, Utf8PathBuf};
     use ffx_assembly_args::ProductSizeCheckArgs;
     use fuchsia_hash::Hash;
     use serde_json::json;
     use std::collections::{HashMap, HashSet};
     use std::fs;
     use std::io::Write;
-    use std::path::Path;
     use std::str::FromStr;
     use tempfile::TempDir;
     use tempfile::{tempdir, NamedTempFile};
@@ -681,8 +681,8 @@ mod tests {
             write_json_file(&path, &value).unwrap()
         }
 
-        fn path(&self, rel_path: &str) -> std::path::PathBuf {
-            self.root.path().join(rel_path)
+        fn path(&self, rel_path: &str) -> Utf8PathBuf {
+            self.root.path().join(rel_path).try_into().unwrap()
         }
     }
 
@@ -1792,16 +1792,17 @@ test_base_package                                                            65 
     }
 
     fn create_blobfs_contents() -> BlobfsContents {
-        let dir = tempdir().unwrap();
+        let tmp = tempdir().unwrap();
+        let dir = Utf8Path::from_path(tmp.path()).unwrap();
+
         // Create base package manifest file
         let base_content = BASE_PACKAGE_MANIFEST.to_string();
         let base_package_manifest_file_name = "base_package_manifest.json".to_string();
-        create_package_manifest_file(base_content, &base_package_manifest_file_name, dir.path())
-            .unwrap();
+        create_package_manifest_file(base_content, &base_package_manifest_file_name, dir).unwrap();
         // Create cache package manifest file
         let cache_content = CACHE_PACKAGE_MANIFEST.to_string();
         let cache_package_manifest_file_name = "cache_package_manifest.json".to_string();
-        create_package_manifest_file(cache_content, &cache_package_manifest_file_name, dir.path())
+        create_package_manifest_file(cache_content, &cache_package_manifest_file_name, dir)
             .unwrap();
 
         let mut blobfs_contents = BlobfsContents::default();
@@ -1816,10 +1817,10 @@ test_base_package                                                            65 
             ("fffff84d26416c1821fd8972e0d835eedaf7468e5a9ebe01e594446241112345".to_string(), 5),
         ]);
         blobfs_contents
-            .add_base_package(dir.path().join(base_package_manifest_file_name), &merkle_size_map)
+            .add_base_package(dir.join(base_package_manifest_file_name), &merkle_size_map)
             .unwrap();
         blobfs_contents
-            .add_cache_package(dir.path().join(cache_package_manifest_file_name), &merkle_size_map)
+            .add_cache_package(dir.join(cache_package_manifest_file_name), &merkle_size_map)
             .unwrap();
         blobfs_contents
     }
@@ -1827,7 +1828,7 @@ test_base_package                                                            65 
     fn create_package_manifest_file(
         content: String,
         file_name: &String,
-        dir_path: &Path,
+        dir_path: &Utf8Path,
     ) -> Result<()> {
         let mut package_manifest_file = NamedTempFile::new()?;
         write!(package_manifest_file, "{}", content)?;

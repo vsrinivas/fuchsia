@@ -6,19 +6,16 @@
 
 use anyhow::{ensure, format_err, Context};
 use assembly_validate_util::PkgNamespace;
+use camino::{Utf8Path, Utf8PathBuf};
 use cm_rust::{FidlIntoNative, NativeIntoFidl};
 use fidl::encoding::{decode_persistent, Persistable};
 use fuchsia_pkg::{PackageBuilder, PackageManifest};
-use std::{
-    collections::BTreeMap,
-    fmt::Debug,
-    path::{Path, PathBuf},
-};
+use std::{collections::BTreeMap, fmt::Debug};
 
 /// Add structured configuration values to an existing package.
 pub struct Repackager<B> {
     builder: B,
-    outdir: PathBuf,
+    outdir: Utf8PathBuf,
 }
 
 impl Repackager<PackageBuilder> {
@@ -26,16 +23,16 @@ impl Repackager<PackageBuilder> {
     /// `outdir` along with any needed temporary files.
     pub fn new(
         original_manifest: PackageManifest,
-        outdir: impl AsRef<Path>,
+        outdir: impl Into<Utf8PathBuf>,
     ) -> Result<Self, RepackageError> {
-        let outdir = outdir.as_ref().to_owned();
+        let outdir = outdir.into();
         let builder = PackageBuilder::from_manifest(original_manifest, &outdir)
             .map_err(RepackageError::CreatePackageBuilder)?;
         Ok(Self { builder, outdir })
     }
 
     /// Build the modified package, returning a path to its new manifest.
-    pub fn build(self) -> Result<PathBuf, RepackageError> {
+    pub fn build(self) -> Result<Utf8PathBuf, RepackageError> {
         let Self { mut builder, outdir } = self;
         let manifest_path = outdir.join("package_manifest.json");
         builder.manifest_path(&manifest_path);
@@ -44,9 +41,12 @@ impl Repackager<PackageBuilder> {
     }
 }
 
-impl<'f> Repackager<&'f mut BTreeMap<String, PathBuf>> {
-    pub fn for_bootfs(files: &'f mut BTreeMap<String, PathBuf>, outdir: impl AsRef<Path>) -> Self {
-        Self { builder: files, outdir: outdir.as_ref().to_owned() }
+impl<'f> Repackager<&'f mut BTreeMap<String, Utf8PathBuf>> {
+    pub fn for_bootfs(
+        files: &'f mut BTreeMap<String, Utf8PathBuf>,
+        outdir: impl Into<Utf8PathBuf>,
+    ) -> Self {
+        Self { builder: files, outdir: outdir.into() }
     }
 }
 
@@ -95,7 +95,7 @@ pub trait PkgNamespaceBuilder {
         &mut self,
         path: &str,
         contents: &[u8],
-        outdir: impl AsRef<Path>,
+        outdir: impl AsRef<Utf8Path>,
     ) -> anyhow::Result<()>;
 }
 
@@ -109,29 +109,28 @@ impl PkgNamespaceBuilder for PackageBuilder {
         &mut self,
         path: &str,
         contents: &[u8],
-        outdir: impl AsRef<Path>,
+        outdir: impl AsRef<Utf8Path>,
     ) -> anyhow::Result<()> {
         ensure!(path.starts_with("meta/"), "writing outside of meta/ is not supported");
-        self.add_contents_to_far(path, contents, outdir)
+        self.add_contents_to_far(path, contents, outdir.as_ref().as_std_path())
     }
 }
 
-impl PkgNamespaceBuilder for &mut BTreeMap<String, PathBuf> {
+impl PkgNamespaceBuilder for &mut BTreeMap<String, Utf8PathBuf> {
     fn read_contents(&self, path: &str) -> anyhow::Result<Vec<u8>> {
         let src_path = self.get(path).ok_or_else(|| format_err!("missing {path}"))?;
-        Ok(std::fs::read(&src_path).with_context(|| format!("reading {}", src_path.display()))?)
+        Ok(std::fs::read(&src_path).with_context(|| format!("reading {}", src_path))?)
     }
 
     fn add_contents(
         &mut self,
         path: &str,
         contents: &[u8],
-        outdir: impl AsRef<Path>,
+        outdir: impl AsRef<Utf8Path>,
     ) -> anyhow::Result<()> {
         let out_path = outdir.as_ref().join("bootfs/repackaging/components").join(path);
         std::fs::create_dir_all(out_path.parent().unwrap()).context("creating outdir")?;
-        std::fs::write(&out_path, contents)
-            .with_context(|| format!("writing {}", out_path.display()))?;
+        std::fs::write(&out_path, contents).with_context(|| format!("writing {}", out_path))?;
         self.insert(path.to_owned(), out_path);
         Ok(())
     }

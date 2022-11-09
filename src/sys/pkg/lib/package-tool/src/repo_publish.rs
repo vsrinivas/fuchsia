@@ -50,7 +50,7 @@ pub async fn cmd_repo_publish(cmd: RepoPublishCommand) -> Result<()> {
     let mut deps = BTreeSet::new();
     let mut packages = vec![];
     for package_manifest_path in cmd.package_manifests {
-        let package_manifest = PackageManifest::try_load_from(package_manifest_path.as_std_path())
+        let package_manifest = PackageManifest::try_load_from(&package_manifest_path)
             .with_context(|| format!("reading package manifest {}", package_manifest_path))?;
 
         // Track the package manifest path as a dependency.

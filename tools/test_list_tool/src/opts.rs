@@ -3,26 +3,26 @@
 // found in the LICENSE file.
 
 use anyhow::{ensure, Error};
-use std::path::PathBuf;
+use camino::Utf8PathBuf;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
 pub struct Opt {
-    #[structopt(short = "i", long = "input", parse(from_os_str))]
+    #[structopt(short = "i", long = "input")]
     // Path to the tests.json file.
-    pub input: PathBuf,
+    pub input: Utf8PathBuf,
 
-    #[structopt(short = "o", long = "output", parse(from_os_str))]
+    #[structopt(short = "o", long = "output")]
     // Path to output test-list.
-    pub output: PathBuf,
+    pub output: Utf8PathBuf,
 
-    #[structopt(short = "b", long = "build-dir", parse(from_os_str))]
+    #[structopt(short = "b", long = "build-dir")]
     // Path to the build directory.
-    pub build_dir: PathBuf,
+    pub build_dir: Utf8PathBuf,
 
-    #[structopt(short = "d", long = "depfile", parse(from_os_str))]
+    #[structopt(short = "d", long = "depfile")]
     // Path to output a depfile.
-    pub depfile: Option<PathBuf>,
+    pub depfile: Option<Utf8PathBuf>,
 }
 
 impl Opt {

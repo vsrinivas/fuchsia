@@ -10,6 +10,7 @@ use assembly_partitions_config::PartitionsConfig;
 use assembly_tool::ToolProvider;
 use assembly_update_packages_manifest::UpdatePackagesManifest;
 use assembly_util::PathToStringExt;
+use camino::{Utf8Path, Utf8PathBuf};
 use epoch::EpochFile;
 use fuchsia_merkle::Hash;
 use fuchsia_pkg::{PackageBuilder, PackageManifest};
@@ -63,10 +64,10 @@ pub struct UpdatePackageBuilder {
     abi_revision: Option<u64>,
 
     /// Directory to write outputs.
-    outdir: PathBuf,
+    outdir: Utf8PathBuf,
 
     /// Directory to write intermediate files.
-    gendir: PathBuf,
+    gendir: Utf8PathBuf,
 }
 
 /// A set of images to be updated in a particular slot.
@@ -116,17 +117,14 @@ impl Slot {
 
 /// A mapping between an image source path on host to the destination in an UpdatePackage.
 struct ImageMapping {
-    source: PathBuf,
+    source: Utf8PathBuf,
     destination: String,
 }
 
 impl ImageMapping {
     /// Create a new Image Mapping from |source | to |destination|.
-    fn new(source: impl AsRef<Path>, destination: impl AsRef<str>) -> Self {
-        Self {
-            source: source.as_ref().to_path_buf(),
-            destination: destination.as_ref().to_string(),
-        }
+    fn new(source: impl Into<Utf8PathBuf>, destination: impl AsRef<str>) -> Self {
+        Self { source: source.into(), destination: destination.as_ref().to_string() }
     }
 
     /// Create an ImageMapping from the |image| and |slot|.
@@ -162,9 +160,9 @@ impl ImageMapping {
 struct SubpackageBuilder {
     package: PackageBuilder,
     package_name: String,
-    manifest_path: PathBuf,
-    far_path: PathBuf,
-    gendir: PathBuf,
+    manifest_path: Utf8PathBuf,
+    far_path: Utf8PathBuf,
+    gendir: Utf8PathBuf,
 }
 
 impl SubpackageBuilder {
@@ -206,7 +204,7 @@ impl UpdatePackageBuilder {
         version_file: impl AsRef<Path>,
         epoch: EpochFile,
         abi_revision: Option<u64>,
-        outdir: impl AsRef<Path>,
+        outdir: impl AsRef<Utf8Path>,
     ) -> Self {
         Self {
             tool_provider,
@@ -230,8 +228,8 @@ impl UpdatePackageBuilder {
     }
 
     /// Set the directory for writing intermediate files.
-    pub fn set_gendir(&mut self, gendir: impl AsRef<Path>) {
-        self.gendir = gendir.as_ref().to_path_buf();
+    pub fn set_gendir(&mut self, gendir: impl Into<Utf8PathBuf>) {
+        self.gendir = gendir.into();
     }
 
     /// Update the images in |slot|.
@@ -256,7 +254,7 @@ impl UpdatePackageBuilder {
             .filter_map(|i| ImageMapping::try_from(i, slot).ok())
             .collect();
         for ImageMapping { source, destination } in mappings {
-            builder.add_file_as_blob(destination, source.path_to_string()?)?;
+            builder.add_file_as_blob(destination, source.to_string())?;
         }
         Ok(())
     }
@@ -312,12 +310,10 @@ impl UpdatePackageBuilder {
             let (zbi, vbmeta) =
                 slot.zbi_and_vbmeta().ok_or(anyhow!("primary slot missing a zbi image"))?;
 
-            builder.package.add_file_as_blob(&zbi.destination, zbi.source.path_to_string()?)?;
+            builder.package.add_file_as_blob(&zbi.destination, zbi.source.to_string())?;
 
             if let Some(vbmeta) = &vbmeta {
-                builder
-                    .package
-                    .add_file_as_blob(&vbmeta.destination, vbmeta.source.path_to_string()?)?;
+                builder.package.add_file_as_blob(&vbmeta.destination, vbmeta.source.to_string())?;
             }
 
             let (url, manifest) = builder.build(&mut blobfs_builder)?;
@@ -337,12 +333,10 @@ impl UpdatePackageBuilder {
             let (zbi, vbmeta) =
                 slot.zbi_and_vbmeta().ok_or(anyhow!("recovery slot missing a zbi image"))?;
 
-            builder.package.add_file_as_blob(&zbi.destination, zbi.source.path_to_string()?)?;
+            builder.package.add_file_as_blob(&zbi.destination, zbi.source.to_string())?;
 
             if let Some(vbmeta) = &vbmeta {
-                builder
-                    .package
-                    .add_file_as_blob(&vbmeta.destination, vbmeta.source.path_to_string()?)?;
+                builder.package.add_file_as_blob(&vbmeta.destination, vbmeta.source.to_string())?;
             }
 
             let (url, manifest) = builder.build(&mut blobfs_builder)?;
@@ -367,9 +361,7 @@ impl UpdatePackageBuilder {
                     "" => "firmware".to_string(),
                     t => format!("firmware_{}", t),
                 };
-                builder
-                    .package
-                    .add_file_as_blob(destination, bootloader.image.path_to_string()?)?;
+                builder.package.add_file_as_blob(destination, bootloader.image.to_string())?;
             }
 
             let (url, manifest) = builder.build(&mut blobfs_builder)?;
@@ -432,7 +424,7 @@ impl UpdatePackageBuilder {
                 "" => "firmware".to_string(),
                 t => format!("firmware_{}", t),
             };
-            builder.package.add_file_as_blob(destination, bootloader.image.path_to_string()?)?;
+            builder.package.add_file_as_blob(destination, bootloader.image.to_string())?;
         }
         let (_, manifest) = builder.build(&mut blobfs_builder)?;
         let merkle = manifest.hash();
@@ -471,17 +463,20 @@ mod tests {
 
     #[test]
     fn build() {
-        let outdir = tempdir().unwrap();
+        let tmp = tempdir().unwrap();
+        let outdir = Utf8Path::from_path(tmp.path()).unwrap();
         let tools = FakeToolProvider::default();
 
-        let fake_bootloader = NamedTempFile::new().unwrap();
+        let fake_bootloader_tmp = NamedTempFile::new().unwrap();
+        let fake_bootloader = Utf8Path::from_path(fake_bootloader_tmp.path()).unwrap();
+
         let partitions_config = PartitionsConfig {
             bootstrap_partitions: vec![],
             unlock_credentials: vec![],
             bootloader_partitions: vec![BootloaderPartition {
                 partition_type: "tpl".into(),
                 name: Some("firmware_tpl".into()),
-                image: fake_bootloader.path().to_path_buf(),
+                image: fake_bootloader.to_path_buf(),
             }],
             partitions: vec![Partition::ZBI { name: "zircon_a".into(), slot: PartitionSlot::A }],
             hardware_revision: "hw".into(),
@@ -496,21 +491,23 @@ mod tests {
             fake_version.path().to_path_buf(),
             epoch.clone(),
             Some(0xECDB841C251A8CB9),
-            &outdir.path(),
+            &outdir,
         );
 
         // Add a ZBI to the update.
-        let fake_zbi = NamedTempFile::new().unwrap();
+        let fake_zbi_tmp = NamedTempFile::new().unwrap();
+        let fake_zbi = Utf8Path::from_path(fake_zbi_tmp.path()).unwrap();
+
         builder.add_slot_images(Slot::Primary(AssemblyManifest {
-            images: vec![Image::ZBI { path: fake_zbi.path().to_path_buf(), signed: true }],
+            images: vec![Image::ZBI { path: fake_zbi.to_path_buf(), signed: true }],
         }));
 
         builder.build().unwrap();
 
         // Ensure the blobfs tool was invoked correctly.
-        let blob_blk_path = outdir.path().join("update.blob.blk");
-        let blobs_json_path = outdir.path().join("blobs.json");
-        let blob_manifest_path = outdir.path().join("blob.manifest");
+        let blob_blk_path = outdir.join("update.blob.blk");
+        let blobs_json_path = outdir.join("blobs.json");
+        let blob_manifest_path = outdir.join("blob.manifest");
         let expected_commands: ToolCommandLog = serde_json::from_value(json!({
             "commands": [
                 {
@@ -529,7 +526,7 @@ mod tests {
         .unwrap();
         assert_eq!(&expected_commands, tools.log());
 
-        let file = File::open(outdir.path().join("images.json.orig")).unwrap();
+        let file = File::open(outdir.join("images.json.orig")).unwrap();
         let reader = BufReader::new(file);
         let i: serde_json::Value = serde_json::from_reader(reader).unwrap();
 
@@ -559,21 +556,21 @@ mod tests {
             i
         );
 
-        let file = File::open(outdir.path().join("packages.json")).unwrap();
+        let file = File::open(outdir.join("packages.json")).unwrap();
         let reader = BufReader::new(file);
         let p: UpdatePackagesManifest = serde_json::from_reader(reader).unwrap();
         assert_eq!(UpdatePackagesManifest::default(), p);
 
-        let file = File::open(outdir.path().join("epoch.json")).unwrap();
+        let file = File::open(outdir.join("epoch.json")).unwrap();
         let reader = BufReader::new(file);
         let e: EpochFile = serde_json::from_reader(reader).unwrap();
         assert_eq!(epoch, e);
 
-        let b = std::fs::read_to_string(outdir.path().join("board")).unwrap();
+        let b = std::fs::read_to_string(outdir.join("board")).unwrap();
         assert_eq!("board", b);
 
         // Read the output and ensure it contains the right files (and their hashes).
-        let far_path = outdir.path().join("update.far");
+        let far_path = outdir.join("update.far");
         let mut far_reader = Utf8Reader::new(File::open(&far_path).unwrap()).unwrap();
         let package = far_reader.read_file("meta/package").unwrap();
         assert_eq!(package, br#"{"name":"update","version":"0"}"#);
@@ -591,7 +588,7 @@ mod tests {
         .to_string();
         assert_eq!(expected_contents, contents);
 
-        let far_path = outdir.path().join("update_images_fuchsia.far");
+        let far_path = outdir.join("update_images_fuchsia.far");
         let mut far_reader = Utf8Reader::new(File::open(&far_path).unwrap()).unwrap();
         let package = far_reader.read_file("meta/package").unwrap();
         assert_eq!(package, br#"{"name":"update_images_fuchsia","version":"0"}"#);
@@ -603,7 +600,7 @@ mod tests {
         .to_string();
         assert_eq!(expected_contents, contents);
 
-        let far_path = outdir.path().join("update_images_recovery.far");
+        let far_path = outdir.join("update_images_recovery.far");
         let mut far_reader = Utf8Reader::new(File::open(&far_path).unwrap()).unwrap();
         let package = far_reader.read_file("meta/package").unwrap();
         assert_eq!(package, br#"{"name":"update_images_recovery","version":"0"}"#);
@@ -614,7 +611,7 @@ mod tests {
         .to_string();
         assert_eq!(expected_contents, contents);
 
-        let far_path = outdir.path().join("update_images_firmware.far");
+        let far_path = outdir.join("update_images_firmware.far");
         let mut far_reader = Utf8Reader::new(File::open(&far_path).unwrap()).unwrap();
         let package = far_reader.read_file("meta/package").unwrap();
         assert_eq!(package, br#"{"name":"update_images_firmware","version":"0"}"#);
@@ -627,29 +624,32 @@ mod tests {
         assert_eq!(expected_contents, contents);
 
         // Ensure the expected package fars/manifests were generated.
-        assert!(outdir.path().join("update.far").exists());
-        assert!(outdir.path().join("update_package_manifest.json").exists());
-        assert!(outdir.path().join("update_images_fuchsia.far").exists());
-        assert!(outdir.path().join("update_images_recovery.far").exists());
-        assert!(outdir.path().join("update_images_firmware.far").exists());
-        assert!(outdir.path().join("update_images_fuchsia_package_manifest.json").exists());
-        assert!(outdir.path().join("update_images_recovery_package_manifest.json").exists());
-        assert!(outdir.path().join("update_images_firmware_package_manifest.json").exists());
+        assert!(outdir.join("update.far").exists());
+        assert!(outdir.join("update_package_manifest.json").exists());
+        assert!(outdir.join("update_images_fuchsia.far").exists());
+        assert!(outdir.join("update_images_recovery.far").exists());
+        assert!(outdir.join("update_images_firmware.far").exists());
+        assert!(outdir.join("update_images_fuchsia_package_manifest.json").exists());
+        assert!(outdir.join("update_images_recovery_package_manifest.json").exists());
+        assert!(outdir.join("update_images_firmware_package_manifest.json").exists());
     }
 
     #[test]
     fn build_full() {
-        let outdir = tempdir().unwrap();
+        let tmp = tempdir().unwrap();
+        let outdir = Utf8Path::from_path(tmp.path()).unwrap();
         let tools = FakeToolProvider::default();
 
-        let fake_bootloader = NamedTempFile::new().unwrap();
+        let fake_bootloader_tmp = NamedTempFile::new().unwrap();
+        let fake_bootloader = Utf8Path::from_path(fake_bootloader_tmp.path()).unwrap();
+
         let partitions_config = PartitionsConfig {
             bootstrap_partitions: vec![],
             unlock_credentials: vec![],
             bootloader_partitions: vec![BootloaderPartition {
                 partition_type: "tpl".into(),
                 name: Some("firmware_tpl".into()),
-                image: fake_bootloader.path().to_path_buf(),
+                image: fake_bootloader.to_path_buf(),
             }],
             partitions: vec![Partition::ZBI { name: "zircon_a".into(), slot: PartitionSlot::A }],
             hardware_revision: "hw".into(),
@@ -664,22 +664,28 @@ mod tests {
             fake_version.path().to_path_buf(),
             epoch.clone(),
             Some(0xECDB841C251A8CB9),
-            &outdir.path(),
+            &outdir,
         );
 
         // Add a ZBI to the update.
-        let fake_zbi = NamedTempFile::new().unwrap();
+        let fake_zbi_tmp = NamedTempFile::new().unwrap();
+        let fake_zbi = Utf8Path::from_path(fake_zbi_tmp.path()).unwrap();
+
         builder.add_slot_images(Slot::Primary(AssemblyManifest {
-            images: vec![Image::ZBI { path: fake_zbi.path().to_path_buf(), signed: true }],
+            images: vec![Image::ZBI { path: fake_zbi.to_path_buf(), signed: true }],
         }));
 
         // Add a Recovery ZBI/VBMeta to the update.
-        let fake_recovery_zbi = NamedTempFile::new().unwrap();
-        let fake_recovery_vbmeta = NamedTempFile::new().unwrap();
+        let fake_recovery_zbi_tmp = NamedTempFile::new().unwrap();
+        let fake_recovery_zbi = Utf8Path::from_path(fake_recovery_zbi_tmp.path()).unwrap();
+
+        let fake_recovery_vbmeta_tmp = NamedTempFile::new().unwrap();
+        let fake_recovery_vbmeta = Utf8Path::from_path(fake_recovery_vbmeta_tmp.path()).unwrap();
+
         builder.add_slot_images(Slot::Recovery(AssemblyManifest {
             images: vec![
-                Image::ZBI { path: fake_recovery_zbi.path().to_path_buf(), signed: true },
-                Image::VBMeta(fake_recovery_vbmeta.path().to_path_buf()),
+                Image::ZBI { path: fake_recovery_zbi.to_path_buf(), signed: true },
+                Image::VBMeta(fake_recovery_vbmeta.to_path_buf()),
             ],
         }));
 
@@ -692,9 +698,9 @@ mod tests {
         assert_eq!(update_package.package_manifests.len(), 4);
 
         // Ensure the blobfs tool was invoked correctly.
-        let blob_blk_path = outdir.path().join("update.blob.blk");
-        let blobs_json_path = outdir.path().join("blobs.json");
-        let blob_manifest_path = outdir.path().join("blob.manifest");
+        let blob_blk_path = outdir.join("update.blob.blk");
+        let blobs_json_path = outdir.join("blobs.json");
+        let blob_manifest_path = outdir.join("blob.manifest");
         let expected_commands: ToolCommandLog = serde_json::from_value(json!({
             "commands": [
                 {
@@ -713,7 +719,7 @@ mod tests {
         .unwrap();
         assert_eq!(&expected_commands, tools.log());
 
-        let file = File::open(outdir.path().join("images.json.orig")).unwrap();
+        let file = File::open(outdir.join("images.json.orig")).unwrap();
         let reader = BufReader::new(file);
         let i: serde_json::Value = serde_json::from_reader(reader).unwrap();
         assert_eq!(
@@ -760,21 +766,21 @@ mod tests {
             i
         );
 
-        let file = File::open(outdir.path().join("packages.json")).unwrap();
+        let file = File::open(outdir.join("packages.json")).unwrap();
         let reader = BufReader::new(file);
         let p: UpdatePackagesManifest = serde_json::from_reader(reader).unwrap();
         assert_eq!(UpdatePackagesManifest::default(), p);
 
-        let file = File::open(outdir.path().join("epoch.json")).unwrap();
+        let file = File::open(outdir.join("epoch.json")).unwrap();
         let reader = BufReader::new(file);
         let e: EpochFile = serde_json::from_reader(reader).unwrap();
         assert_eq!(epoch, e);
 
-        let b = std::fs::read_to_string(outdir.path().join("board")).unwrap();
+        let b = std::fs::read_to_string(outdir.join("board")).unwrap();
         assert_eq!("board", b);
 
         // Read the output and ensure it contains the right files (and their hashes).
-        let far_path = outdir.path().join("update.far");
+        let far_path = outdir.join("update.far");
         let mut far_reader = Utf8Reader::new(File::open(&far_path).unwrap()).unwrap();
         let package = far_reader.read_file("meta/package").unwrap();
         assert_eq!(package, br#"{"name":"update","version":"0"}"#);
@@ -794,7 +800,7 @@ mod tests {
         .to_string();
         assert_eq!(expected_contents, contents);
 
-        let far_path = outdir.path().join("update_images_fuchsia.far");
+        let far_path = outdir.join("update_images_fuchsia.far");
         let mut far_reader = Utf8Reader::new(File::open(&far_path).unwrap()).unwrap();
         let package = far_reader.read_file("meta/package").unwrap();
         assert_eq!(package, br#"{"name":"update_images_fuchsia","version":"0"}"#);
@@ -806,7 +812,7 @@ mod tests {
         .to_string();
         assert_eq!(expected_contents, contents);
 
-        let far_path = outdir.path().join("update_images_recovery.far");
+        let far_path = outdir.join("update_images_recovery.far");
         let mut far_reader = Utf8Reader::new(File::open(&far_path).unwrap()).unwrap();
         let package = far_reader.read_file("meta/package").unwrap();
         assert_eq!(package, br#"{"name":"update_images_recovery","version":"0"}"#);
@@ -819,7 +825,7 @@ mod tests {
         .to_string();
         assert_eq!(expected_contents, contents);
 
-        let far_path = outdir.path().join("update_images_firmware.far");
+        let far_path = outdir.join("update_images_firmware.far");
         let mut far_reader = Utf8Reader::new(File::open(&far_path).unwrap()).unwrap();
         let package = far_reader.read_file("meta/package").unwrap();
         assert_eq!(package, br#"{"name":"update_images_firmware","version":"0"}"#);
@@ -832,19 +838,20 @@ mod tests {
         assert_eq!(expected_contents, contents);
 
         // Ensure the expected package fars/manifests were generated.
-        assert!(outdir.path().join("update.far").exists());
-        assert!(outdir.path().join("update_package_manifest.json").exists());
-        assert!(outdir.path().join("update_images_fuchsia.far").exists());
-        assert!(outdir.path().join("update_images_recovery.far").exists());
-        assert!(outdir.path().join("update_images_firmware.far").exists());
-        assert!(outdir.path().join("update_images_fuchsia_package_manifest.json").exists());
-        assert!(outdir.path().join("update_images_recovery_package_manifest.json").exists());
-        assert!(outdir.path().join("update_images_firmware_package_manifest.json").exists());
+        assert!(outdir.join("update.far").exists());
+        assert!(outdir.join("update_package_manifest.json").exists());
+        assert!(outdir.join("update_images_fuchsia.far").exists());
+        assert!(outdir.join("update_images_recovery.far").exists());
+        assert!(outdir.join("update_images_firmware.far").exists());
+        assert!(outdir.join("update_images_fuchsia_package_manifest.json").exists());
+        assert!(outdir.join("update_images_recovery_package_manifest.json").exists());
+        assert!(outdir.join("update_images_firmware_package_manifest.json").exists());
     }
 
     #[test]
     fn build_emits_empty_image_packages() {
-        let outdir = tempdir().unwrap();
+        let tmp = tempdir().unwrap();
+        let outdir = Utf8Path::from_path(tmp.path()).unwrap();
         let tools = FakeToolProvider::default();
 
         let partitions_config = PartitionsConfig::default();
@@ -858,32 +865,33 @@ mod tests {
             fake_version.path().to_path_buf(),
             epoch.clone(),
             Some(0xECDB841C251A8CB9),
-            &outdir.path(),
+            &outdir,
         );
 
         builder.build().unwrap();
 
         // Ensure the generated images.json manifest is empty.
-        let file = File::open(outdir.path().join("images.json.orig")).unwrap();
+        let file = File::open(outdir.join("images.json.orig")).unwrap();
         let reader = BufReader::new(file);
         let i: ::update_package::VersionedImagePackagesManifest =
             serde_json::from_reader(reader).unwrap();
         assert_eq!(ImagePackagesManifest::builder().build(), i);
 
         // Ensure the expected package fars/manifests were generated.
-        assert!(outdir.path().join("update.far").exists());
-        assert!(outdir.path().join("update_package_manifest.json").exists());
-        assert!(outdir.path().join("update_images_fuchsia.far").exists());
-        assert!(outdir.path().join("update_images_recovery.far").exists());
-        assert!(outdir.path().join("update_images_firmware.far").exists());
-        assert!(outdir.path().join("update_images_fuchsia_package_manifest.json").exists());
-        assert!(outdir.path().join("update_images_recovery_package_manifest.json").exists());
-        assert!(outdir.path().join("update_images_firmware_package_manifest.json").exists());
+        assert!(outdir.join("update.far").exists());
+        assert!(outdir.join("update_package_manifest.json").exists());
+        assert!(outdir.join("update_images_fuchsia.far").exists());
+        assert!(outdir.join("update_images_recovery.far").exists());
+        assert!(outdir.join("update_images_firmware.far").exists());
+        assert!(outdir.join("update_images_fuchsia_package_manifest.json").exists());
+        assert!(outdir.join("update_images_recovery_package_manifest.json").exists());
+        assert!(outdir.join("update_images_firmware_package_manifest.json").exists());
     }
 
     #[test]
     fn name() {
-        let outdir = tempdir().unwrap();
+        let tmp = tempdir().unwrap();
+        let outdir = Utf8Path::from_path(tmp.path()).unwrap();
         let tools = FakeToolProvider::default();
 
         let mut fake_version = NamedTempFile::new().unwrap();
@@ -895,20 +903,21 @@ mod tests {
             fake_version.path().to_path_buf(),
             EpochFile::Version1 { epoch: 0 },
             Some(0xECDB841C251A8CB9),
-            &outdir.path(),
+            &outdir,
         );
         builder.set_name("update_2");
         assert!(builder.build().is_ok());
 
         // Read the package manifest and ensure it contains the updated name.
-        let manifest_path = outdir.path().join("update_package_manifest.json");
+        let manifest_path = outdir.join("update_package_manifest.json");
         let manifest = PackageManifest::try_load_from(manifest_path).unwrap();
         assert_eq!("update_2", manifest.name().as_ref());
     }
 
     #[test]
     fn packages() {
-        let outdir = tempdir().unwrap();
+        let tmp = tempdir().unwrap();
+        let outdir = Utf8Path::from_path(tmp.path()).unwrap();
         let tools = FakeToolProvider::default();
 
         let mut fake_version = NamedTempFile::new().unwrap();
@@ -920,7 +929,7 @@ mod tests {
             fake_version.path().to_path_buf(),
             EpochFile::Version1 { epoch: 0 },
             Some(0xECDB841C251A8CB9),
-            &outdir.path(),
+            &outdir,
         );
 
         let hash = Hash::from([0u8; HASH_SIZE]);
@@ -937,7 +946,7 @@ mod tests {
         assert!(builder.build().is_ok());
 
         // Read the package list and ensure it contains the correct contents.
-        let package_list_path = outdir.path().join("packages.json");
+        let package_list_path = outdir.join("packages.json");
         let package_list_file = File::open(package_list_path).unwrap();
         let list3: UpdatePackagesManifest = serde_json::from_reader(package_list_file).unwrap();
         let UpdatePackagesManifest::V1(pkg_urls) = list3;

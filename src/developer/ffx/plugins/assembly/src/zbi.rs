@@ -10,9 +10,9 @@ use assembly_images_config::{Zbi, ZbiCompression};
 use assembly_manifest::{AssemblyManifest, Image};
 use assembly_package_list::{PackageList, WritablePackageList};
 use assembly_tool::Tool;
-use assembly_util::{path_relative_from_current_dir, PathToStringExt};
+use assembly_util::path_relative_from_current_dir;
+use camino::{Utf8Path, Utf8PathBuf};
 use fuchsia_pkg::PackageManifest;
-use std::path::{Path, PathBuf};
 use zbi::ZbiBuilder;
 
 /// The path to the package index file for bootfs packages in gendir and
@@ -22,13 +22,13 @@ const BOOTFS_PACKAGE_INDEX: &str = "data/bootfs_packages";
 pub fn construct_zbi(
     zbi_tool: Box<dyn Tool>,
     assembly_manifest: &mut AssemblyManifest,
-    outdir: impl AsRef<Path>,
-    gendir: impl AsRef<Path>,
+    outdir: impl AsRef<Utf8Path>,
+    gendir: impl AsRef<Utf8Path>,
     product: &ImageAssemblyConfig,
     zbi_config: &Zbi,
     base_package: Option<&BasePackage>,
-    fvm: Option<impl AsRef<Path>>,
-) -> Result<PathBuf> {
+    fvm: Option<impl Into<Utf8PathBuf>>,
+) -> Result<Utf8PathBuf> {
     let mut zbi_builder = ZbiBuilder::new(zbi_tool);
 
     // Add the kernel image.
@@ -100,8 +100,8 @@ pub fn construct_zbi(
     }
 
     // Add the FVM as a ramdisk in the ZBI if necessary.
-    if let Some(fvm) = &fvm {
-        zbi_builder.add_ramdisk(&fvm);
+    if let Some(fvm) = fvm {
+        zbi_builder.add_ramdisk(fvm);
     }
 
     // Set the zbi compression to use.
@@ -133,10 +133,10 @@ pub fn construct_zbi(
 pub fn vendor_sign_zbi(
     signing_tool: Box<dyn Tool>,
     assembly_manifest: &mut AssemblyManifest,
-    outdir: impl AsRef<Path>,
+    outdir: impl AsRef<Utf8Path>,
     zbi_config: &Zbi,
-    zbi: impl AsRef<Path>,
-) -> Result<PathBuf> {
+    zbi: impl AsRef<Utf8Path>,
+) -> Result<Utf8PathBuf> {
     let script = match &zbi_config.postprocessing_script {
         Some(script) => script,
         _ => return Err(anyhow!("Missing postprocessing_script")),
@@ -151,9 +151,9 @@ pub fn vendor_sign_zbi(
 
     // Add the parameters of the script that are required:
     args.push("-z".to_string());
-    args.push(zbi.as_ref().path_to_string()?);
+    args.push(zbi.as_ref().to_string());
     args.push("-o".to_string());
-    args.push(signed_path.path_to_string()?);
+    args.push(signed_path.to_string());
 
     // Run the tool.
     signing_tool.run(&args)?;
@@ -171,14 +171,14 @@ mod tests {
     use assembly_manifest::AssemblyManifest;
     use assembly_tool::testing::FakeToolProvider;
     use assembly_tool::{ToolCommandLog, ToolProvider};
-    use assembly_util::PathToStringExt;
+    use camino::{Utf8Path, Utf8PathBuf};
     use fuchsia_hash::Hash;
     use regex::Regex;
     use serde_json::json;
     use std::collections::BTreeMap;
     use std::fs::File;
     use std::io::Write;
-    use std::path::{Path, PathBuf};
+    use std::path::PathBuf;
     use std::str::FromStr;
     use tempfile::tempdir;
 
@@ -188,10 +188,11 @@ mod tests {
     // the open file descriptor, preventing the other test from executing it.
     #[test]
     fn construct() {
-        let dir = tempdir().unwrap();
+        let tmp = tempdir().unwrap();
+        let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
         // Create fake product/board definitions.
-        let kernel_path = dir.path().join("kernel");
+        let kernel_path = dir.join("kernel");
         let mut product_config = ImageAssemblyConfig::new_for_testing(&kernel_path, 0);
 
         let zbi_config = Zbi {
@@ -209,11 +210,11 @@ mod tests {
         std::fs::write(&kernel_path, kernel_bytes).unwrap();
 
         // Create a fake pkgfs.
-        let pkgfs_manifest_path = generate_test_manifest_file(dir.path(), "pkgfs");
+        let pkgfs_manifest_path = generate_test_manifest_file(dir, "pkgfs");
         product_config.base.push(pkgfs_manifest_path);
 
         // Create a fake base package.
-        let base_path = dir.path().join("base.far");
+        let base_path = dir.join("base.far");
         std::fs::write(&base_path, "fake base").unwrap();
         let base = BasePackage {
             merkle: Hash::from_str(
@@ -222,7 +223,7 @@ mod tests {
             .unwrap(),
             contents: BTreeMap::default(),
             path: base_path,
-            manifest_path: PathBuf::default(),
+            manifest_path: Utf8PathBuf::default(),
         };
 
         // Create a fake zbi tool.
@@ -233,21 +234,20 @@ mod tests {
         construct_zbi(
             zbi_tool,
             &mut assembly_manifest,
-            dir.path(),
-            dir.path(),
+            dir,
+            dir,
             &product_config,
             &zbi_config,
             Some(&base),
-            None::<PathBuf>,
+            None::<Utf8PathBuf>,
         )
         .unwrap();
 
-        let bootfs_index_string =
-            std::fs::read_to_string(dir.path().join(BOOTFS_PACKAGE_INDEX)).unwrap();
+        let bootfs_index_string = std::fs::read_to_string(dir.join(BOOTFS_PACKAGE_INDEX)).unwrap();
         assert_eq!("", bootfs_index_string);
 
         // Create a fake archivist.
-        let archivist_manifest_path = generate_test_manifest_file(dir.path(), "archivist");
+        let archivist_manifest_path = generate_test_manifest_file(dir, "archivist");
         product_config.bootfs_packages.push(archivist_manifest_path);
 
         // Create a new fake zbi tool for isolated logs.
@@ -258,17 +258,16 @@ mod tests {
         construct_zbi(
             zbi_tool,
             &mut assembly_manifest,
-            dir.path(),
-            dir.path(),
+            dir,
+            dir,
             &product_config,
             &zbi_config,
             Some(&base),
-            None::<PathBuf>,
+            None::<Utf8PathBuf>,
         )
         .unwrap();
 
-        let bootfs_index_string =
-            std::fs::read_to_string(dir.path().join(BOOTFS_PACKAGE_INDEX)).unwrap();
+        let bootfs_index_string = std::fs::read_to_string(dir.join(BOOTFS_PACKAGE_INDEX)).unwrap();
 
         assert_eq!(
             "archivist/1=0000000000000000000000000000000000000000000000000000000000000000\n",
@@ -303,11 +302,12 @@ mod tests {
 
     #[test]
     fn vendor_sign() {
-        let dir = tempdir().unwrap();
-        let expected_output = dir.path().join("fuchsia.zbi.signed");
+        let tmp = tempdir().unwrap();
+        let dir = Utf8Path::from_path(tmp.path()).unwrap();
+        let expected_output = dir.join("fuchsia.zbi.signed");
 
         // Create a fake zbi.
-        let zbi_path = dir.path().join("fuchsia.zbi");
+        let zbi_path = dir.join("fuchsia.zbi");
         std::fs::write(&zbi_path, "fake zbi").unwrap();
 
         // Create fake zbi config.
@@ -325,8 +325,7 @@ mod tests {
         let signing_tool = tools.get_tool("fake").unwrap();
         let mut assembly_manifest = AssemblyManifest::default();
         let signed_zbi_path =
-            vendor_sign_zbi(signing_tool, &mut assembly_manifest, dir.path(), &zbi, &zbi_path)
-                .unwrap();
+            vendor_sign_zbi(signing_tool, &mut assembly_manifest, dir, &zbi, &zbi_path).unwrap();
         assert_eq!(signed_zbi_path, expected_output);
 
         let expected_commands: ToolCommandLog = serde_json::from_value(json!({
@@ -337,9 +336,9 @@ mod tests {
                         "arg1",
                         "arg2",
                         "-z",
-                        zbi_path.path_to_string().unwrap(),
+                        zbi_path.as_str(),
                         "-o",
-                        expected_output.path_to_string().unwrap(),
+                        expected_output.as_str(),
                     ]
                 }
             ]
@@ -352,7 +351,10 @@ mod tests {
     // into `dir`, and the location is returned. The `name` is used in the blob
     // file names to make each manifest somewhat unique.
     // TODO(fxbug.dev/76993): See if we can share this with BasePackage.
-    pub fn generate_test_manifest_file(dir: impl AsRef<Path>, name: impl AsRef<str>) -> PathBuf {
+    pub fn generate_test_manifest_file(
+        dir: impl AsRef<Utf8Path>,
+        name: impl AsRef<str>,
+    ) -> Utf8PathBuf {
         // Create a data file for the package.
         let data_file_name = format!("{}_data.txt", name.as_ref());
         let data_path = dir.as_ref().join(&data_file_name);

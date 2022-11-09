@@ -6,6 +6,7 @@
 
 use {
     anyhow::Error,
+    camino::{Utf8Path, Utf8PathBuf},
     fidl::encoding::decode_persistent,
     fidl_fuchsia_component_decl::Component,
     fidl_fuchsia_data as fdata, fuchsia_archive, fuchsia_pkg,
@@ -18,7 +19,6 @@ use {
         fmt::Debug,
         fs,
         io::Read,
-        path::PathBuf,
     },
     structopt::StructOpt,
     test_list::{ExecutionEntry, FuchsiaComponentExecutionEntry, TestList, TestListEntry, TestTag},
@@ -101,7 +101,7 @@ impl TestEntry {
     }
 }
 
-fn find_meta_far(build_dir: &PathBuf, manifest_path: String) -> Result<PathBuf, Error> {
+fn find_meta_far(build_dir: &Utf8Path, manifest_path: String) -> Result<Utf8PathBuf, Error> {
     let package_manifest =
         fuchsia_pkg::PackageManifest::try_load_from(build_dir.join(&manifest_path))?;
 
@@ -113,7 +113,7 @@ fn find_meta_far(build_dir: &PathBuf, manifest_path: String) -> Result<PathBuf, 
     Err(error::TestListToolError::MissingMetaBlob(manifest_path).into())
 }
 
-fn cm_decl_from_meta_far(meta_far_path: &PathBuf, cm_path: &str) -> Result<Component, Error> {
+fn cm_decl_from_meta_far(meta_far_path: &Utf8PathBuf, cm_path: &str) -> Result<Component, Error> {
     let mut meta_far = fs::File::open(meta_far_path)?;
     let mut far_reader = fuchsia_archive::Utf8Reader::new(&mut meta_far)?;
     let cm_contents = far_reader.read_file(cm_path)?;
@@ -275,7 +275,7 @@ fn main() -> Result<(), Error> {
     run_tool()
 }
 
-fn read_tests_json(file: &PathBuf) -> Result<Vec<TestsJsonEntry>, Error> {
+fn read_tests_json(file: &Utf8PathBuf) -> Result<Vec<TestsJsonEntry>, Error> {
     let mut buffer = String::new();
     fs::File::open(&file)?.read_to_string(&mut buffer)?;
     let t: Vec<TestsJsonEntry> = serde_json::from_str(&buffer)?;
@@ -285,7 +285,7 @@ fn read_tests_json(file: &PathBuf) -> Result<Vec<TestsJsonEntry>, Error> {
 fn update_tags_from_manifest(
     test_tags: &mut FuchsiaTestTags,
     package_url: String,
-    meta_far_path: &PathBuf,
+    meta_far_path: &Utf8PathBuf,
 ) -> Result<(), Error> {
     let pkg_url = AbsoluteComponentUrl::parse(&package_url)?;
     let cm_path = pkg_url.resource();
@@ -301,15 +301,16 @@ fn update_tags_from_manifest(
     }
 }
 
-fn write_depfile(depfile: &PathBuf, output: &PathBuf, inputs: &Vec<PathBuf>) -> Result<(), Error> {
+fn write_depfile(
+    depfile: &Utf8PathBuf,
+    output: &Utf8PathBuf,
+    inputs: &Vec<Utf8PathBuf>,
+) -> Result<(), Error> {
     if inputs.len() == 0 {
         return Ok(());
     }
-    let contents = format!(
-        "{}: {}\n",
-        output.display(),
-        &inputs.iter().map(|i| format!(" {}", i.display())).collect::<String>(),
-    );
+    let contents =
+        format!("{}: {}\n", output, &inputs.iter().map(|i| format!(" {}", i)).collect::<String>(),);
     fs::write(depfile, contents)?;
     Ok(())
 }
@@ -320,7 +321,7 @@ fn run_tool() -> Result<(), Error> {
 
     let tests_json = read_tests_json(&opt.input)?;
     let mut test_list = TestList::Experimental { data: vec![] };
-    let mut inputs: Vec<PathBuf> = vec![];
+    let mut inputs: Vec<Utf8PathBuf> = vec![];
 
     for entry in tests_json {
         // Construct the base TestListEntry.
@@ -374,7 +375,8 @@ mod tests {
 
     #[test]
     fn test_find_meta_far() {
-        let build_dir = tempdir().expect("failed to get tempdir");
+        let tmp = tempdir().expect("failed to get tempdir");
+        let build_dir = Utf8Path::from_path(tmp.path()).unwrap();
         let package_manifest_path = "package_manifest.json";
 
         // Test the working case.
@@ -395,11 +397,11 @@ mod tests {
                     }
                 ]
             }"#;
-        fs::write(build_dir.path().join(package_manifest_path), contents)
+        fs::write(build_dir.join(package_manifest_path), contents)
             .expect("failed to write fake package manifest");
         assert_eq!(
-            find_meta_far(&build_dir.path().to_path_buf(), package_manifest_path.into()).unwrap(),
-            build_dir.path().join("obj/build/components/tests/echo-integration-test/meta.far"),
+            find_meta_far(&build_dir.to_path_buf(), package_manifest_path.into()).unwrap(),
+            build_dir.join("obj/build/components/tests/echo-integration-test/meta.far"),
         );
 
         // Test the error case.
@@ -413,9 +415,9 @@ mod tests {
                 },
                 "blobs": []
             }"#;
-        fs::write(build_dir.path().join(package_manifest_path), contents)
+        fs::write(build_dir.join(package_manifest_path), contents)
             .expect("failed to write fake package manifest");
-        let err = find_meta_far(&build_dir.path().to_path_buf(), package_manifest_path.into())
+        let err = find_meta_far(&build_dir.to_path_buf(), package_manifest_path.into())
             .expect_err("find_meta_far failed unexpectedly");
         match err.downcast_ref::<error::TestListToolError>() {
             Some(error::TestListToolError::MissingMetaBlob(path)) => {
@@ -1023,8 +1025,9 @@ mod tests {
                     }
                 }
             ]"#;
-        let dir = tempdir().expect("failed to get tempdir");
-        let tests_json_path = dir.path().join("tests.json");
+        let tmp = tempdir().expect("failed to get tempdir");
+        let dir = Utf8Path::from_path(tmp.path()).unwrap();
+        let tests_json_path = dir.join("tests.json");
         fs::write(&tests_json_path, data).expect("failed to write tests.json to tempfile");
         let tests_json = read_tests_json(&tests_json_path).expect("read_tests_json() failed");
         assert_eq!(

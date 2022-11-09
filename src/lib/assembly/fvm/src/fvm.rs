@@ -31,16 +31,15 @@
 ///
 use anyhow::{Context, Result};
 use assembly_tool::Tool;
-use assembly_util::PathToStringExt;
+use camino::{Utf8Path, Utf8PathBuf};
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
 
 /// The FVM builder.
 pub struct FvmBuilder {
     /// The fvm host tool.
     tool: Box<dyn Tool>,
     /// The path to write the FVM to.
-    output: PathBuf,
+    output: Utf8PathBuf,
     /// The size of a slice for the FVM.
     slice_size: u64,
     /// Whether to compress the FVM.
@@ -74,14 +73,14 @@ pub enum Filesystem {
     /// A blobfs filesystem.
     BlobFS {
         /// The path to the filesystem block file on the host.
-        path: PathBuf,
+        path: Utf8PathBuf,
         /// The attributes of the filesystem to create.
         attributes: FilesystemAttributes,
     },
     /// A minfs filesystem.
     MinFS {
         /// The path to the filesystem block file on the host.
-        path: PathBuf,
+        path: Utf8PathBuf,
         /// The attributes of the filesystem to create.
         attributes: FilesystemAttributes,
     },
@@ -113,7 +112,7 @@ impl FvmBuilder {
     /// Construct a new FvmBuilder.
     pub fn new(
         tool: Box<dyn Tool>,
-        output: impl AsRef<Path>,
+        output: impl AsRef<Utf8Path>,
         slice_size: u64,
         compress: bool,
         fvm_type: FvmType,
@@ -129,7 +128,7 @@ impl FvmBuilder {
     }
 
     /// Set the output path.
-    pub fn output(&mut self, output: impl AsRef<Path>) {
+    pub fn output(&mut self, output: impl AsRef<Utf8Path>) {
         self.output = output.as_ref().to_path_buf();
     }
 
@@ -147,7 +146,7 @@ impl FvmBuilder {
     /// Build the arguments to pass to the fvm tool.
     fn build_args(&self) -> Result<Vec<String>> {
         let mut args: Vec<String> = Vec::new();
-        args.push(self.output.path_to_string()?);
+        args.push(self.output.to_string());
 
         // Append key and value to the `args` if the value is present.
         fn maybe_append_value(
@@ -198,10 +197,10 @@ impl FvmBuilder {
         for fs in &self.filesystems {
             match fs {
                 Filesystem::BlobFS { path, attributes } => {
-                    append_filesystem(&mut args, path.path_to_string()?, attributes);
+                    append_filesystem(&mut args, path.to_string(), attributes);
                 }
                 Filesystem::MinFS { path, attributes } => {
-                    append_filesystem(&mut args, path.path_to_string()?, attributes);
+                    append_filesystem(&mut args, path.to_string(), attributes);
                 }
                 Filesystem::EmptyMinFS => {
                     args.push("--with-empty-minfs".to_string());
@@ -245,7 +244,7 @@ mod tests {
         let fvm_tool = tools.get_tool("fvm").unwrap();
         let mut builder = FvmBuilder::new(fvm_tool, "mypath", 1, false, default_standard());
         builder.filesystem(Filesystem::BlobFS {
-            path: PathBuf::from("path/to/blob.blk"),
+            path: Utf8PathBuf::from("path/to/blob.blk"),
             attributes: FilesystemAttributes {
                 name: "blob".to_string(),
                 minimum_inodes: Some(100),

@@ -17,7 +17,6 @@ use {
     anyhow::{anyhow, Context, Result},
     assembly_manifest::AssemblyManifest,
     assembly_partitions_config::{Partition, Slot},
-    assembly_util::PathToStringExt,
     async_trait::async_trait,
     chrono::Utc,
     errors::{ffx_bail, ffx_error},
@@ -149,7 +148,7 @@ impl FlashManifestVersion {
         // Copy the unlock credentials from the partitions config to the flash manifest.
         let mut credentials = vec![];
         for c in &product_bundle.partitions.unlock_credentials {
-            credentials.push(c.path_to_string()?);
+            credentials.push(c.to_string());
         }
 
         // Copy the bootloader partitions from the partitions config to the flash manifest.
@@ -158,7 +157,7 @@ impl FlashManifestVersion {
             if let Some(name) = &p.name {
                 bootloader_partitions.push(v3::Partition {
                     name: name.to_string(),
-                    path: p.image.path_to_string()?,
+                    path: p.image.to_string(),
                     condition: None,
                 });
             }
@@ -175,7 +174,7 @@ impl FlashManifestVersion {
             };
             all_bootloader_partitions.push(v3::Partition {
                 name: p.name.to_string(),
-                path: p.image.path_to_string()?,
+                path: p.image.to_string(),
                 condition,
             });
         }
@@ -259,10 +258,10 @@ fn add_images_to_map(
     for image in &manifest.images {
         match image {
             assembly_manifest::Image::ZBI { path, .. } => {
-                slot_entry.insert(ImageType::ZBI, path.path_to_string()?)
+                slot_entry.insert(ImageType::ZBI, path.to_string())
             }
             assembly_manifest::Image::VBMeta(path) => {
-                slot_entry.insert(ImageType::VBMeta, path.path_to_string()?)
+                slot_entry.insert(ImageType::VBMeta, path.to_string())
             }
             assembly_manifest::Image::FVMFastboot(path) => {
                 if let Slot::R = slot {
@@ -270,7 +269,7 @@ fn add_images_to_map(
                     // ZBI as a ramdisk.
                     None
                 } else {
-                    slot_entry.insert(ImageType::FVM, path.path_to_string()?)
+                    slot_entry.insert(ImageType::FVM, path.to_string())
                 }
             }
             _ => None,

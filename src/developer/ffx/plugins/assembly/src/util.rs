@@ -21,10 +21,11 @@ where
 }
 
 /// Serializes the given object to a JSON file.
-pub fn write_json_file<T: ?Sized>(json_path: &Path, value: &T) -> Result<()>
+pub fn write_json_file<T: ?Sized>(json_path: impl AsRef<Path>, value: &T) -> Result<()>
 where
     T: Serialize,
 {
+    let json_path = json_path.as_ref();
     if let Some(parent) = json_path.parent() {
         fs::create_dir_all(parent)
             .with_context(|| format!("cannot create {}", parent.display()))?;

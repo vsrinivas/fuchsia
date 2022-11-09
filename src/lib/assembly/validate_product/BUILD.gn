@@ -18,6 +18,7 @@ rustc_library("validate_product") {
     "//src/sys/pkg/lib/far/rust:fuchsia-archive",
     "//src/sys/pkg/lib/fuchsia-pkg",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:camino",
     "//third_party/rust_crates:rayon",
     "//third_party/rust_crates:textwrap",
   ]

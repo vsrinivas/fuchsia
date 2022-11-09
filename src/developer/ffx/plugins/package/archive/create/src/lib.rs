@@ -12,10 +12,9 @@ use std::fs::{create_dir_all, File};
 pub async fn cmd_create(cmd: CreateCommand) -> Result<()> {
     let package_manifest = PackageManifest::try_load_from(&cmd.package_manifest)?;
     let output_dir = cmd.output.parent().expect("output path needs to have a parent").to_path_buf();
-    create_dir_all(&output_dir)
-        .with_context(|| format!("creating directory {}", output_dir.display()))?;
+    create_dir_all(&output_dir).with_context(|| format!("creating directory {}", output_dir))?;
     let output = File::create(&cmd.output)
-        .with_context(|| format!("creating package archive file {}", cmd.output.display()))?;
+        .with_context(|| format!("creating package archive file {}", cmd.output))?;
     package_manifest.archive(cmd.root_dir, output).await?;
     Ok(())
 }
@@ -23,14 +22,14 @@ pub async fn cmd_create(cmd: CreateCommand) -> Result<()> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use camino::{Utf8Path, Utf8PathBuf};
     use fuchsia_pkg::PackageBuilder;
     use std::fs;
-    use std::path::PathBuf;
 
     fn create_package_manifest(
-        package_manifest_path: PathBuf,
-        meta_far_path: PathBuf,
-        blob_path: PathBuf,
+        package_manifest_path: Utf8PathBuf,
+        meta_far_path: Utf8PathBuf,
+        blob_path: Utf8PathBuf,
     ) {
         let tmp = tempfile::TempDir::new().unwrap();
 
@@ -57,16 +56,17 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_archive() {
         let tempdir = tempfile::tempdir().unwrap();
-        let root = tempdir.path().join("blobs");
-        fs::create_dir_all(&root).unwrap();
+        let root = Utf8Path::from_path(tempdir.path()).unwrap();
+        let blobs_dir = root.join("blobs");
+        fs::create_dir_all(&blobs_dir).unwrap();
 
-        let package_manifest_path = root.join("package_manifest.json");
-        let meta_far_path = root.join("meta.far");
-        let blob = root.join("blob");
+        let package_manifest_path = blobs_dir.join("package_manifest.json");
+        let meta_far_path = blobs_dir.join("meta.far");
+        let blob = blobs_dir.join("blob");
         fs::File::create(&blob).unwrap();
         create_package_manifest(package_manifest_path.clone(), meta_far_path, blob);
 
-        let result_dir = tempdir.path().join("results");
+        let result_dir = root.join("results");
         fs::create_dir_all(&result_dir).unwrap();
         let result_far = result_dir.join("test_package.far");
 

@@ -4,10 +4,10 @@
 
 use crate::operations::size_check_package::BlobJsonEntry;
 use crate::util::read_config;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use assembly_images_config::BlobFSLayout;
 use assembly_tool::ToolProvider;
-use std::path::Path;
+use camino::Utf8Path;
 use tempfile::NamedTempFile;
 use tempfile::TempDir;
 
@@ -26,7 +26,7 @@ impl BlobJsonGenerator {
     }
 
     /// Returns information blobs used by the specified packages.
-    pub fn build(&self, package_manifests: &Vec<&Path>) -> Result<Vec<BlobJsonEntry>> {
+    pub fn build(&self, package_manifests: &Vec<&Utf8Path>) -> Result<Vec<BlobJsonEntry>> {
         let mut builder = assembly_blobfs::BlobFSBuilder::new(
             self.tools.get_tool("blobfs")?,
             self.layout.to_string(),
@@ -39,10 +39,15 @@ impl BlobJsonGenerator {
             .map(|manifest| builder.add_package(&manifest))
             .collect::<Result<Vec<()>>>()?;
 
-        let tmp_working_dir = TempDir::new()?;
-        let blobfs_named_file = NamedTempFile::new()?;
-        builder.build(tmp_working_dir.path(), blobfs_named_file.path())?;
-        read_config(tmp_working_dir.path().join("blobs.json"))
+        let tmp = TempDir::new()?;
+        let tmp_working_dir = Utf8Path::from_path(tmp.path()).context("creating temp directory")?;
+
+        let blobfs_named_file_tmp = NamedTempFile::new()?;
+        let blobfs_named_file_path =
+            Utf8Path::from_path(blobfs_named_file_tmp.path()).context("creating temp file")?;
+
+        builder.build(tmp_working_dir, blobfs_named_file_path)?;
+        read_config(tmp_working_dir.join("blobs.json"))
     }
 }
 
@@ -52,6 +57,7 @@ mod tests {
     use crate::util::write_json_file;
     use assembly_images_config::BlobFSLayout;
     use assembly_tool::testing::FakeToolProvider;
+    use camino::Utf8Path;
     use fuchsia_hash::Hash;
     use serde_json::json;
     use std::path::Path;
@@ -60,11 +66,13 @@ mod tests {
     #[test]
     fn generate_blobfs() {
         let temp_dir = TempDir::new().unwrap();
-        let my_content_path = temp_dir.path().join("my_content.txt");
+        let root = Utf8Path::from_path(temp_dir.path()).unwrap();
+
+        let my_content_path = root.join("my_content.txt");
         write_json_file(&my_content_path, &json!("some file content")).unwrap();
-        let manifest_path = temp_dir.path().join("my_package.json");
+        let manifest_path = root.join("my_package.json");
         write_json_file(
-            manifest_path.as_path(),
+            &manifest_path,
             &json!({
               "version": "1",
               "package": {
@@ -80,7 +88,7 @@ mod tests {
             }),
         )
         .unwrap();
-        let blobs_path = temp_dir.path().join("blobs.json");
+        let blobs_path = root.join("blobs.json");
         write_json_file(
             blobs_path.as_path(),
             &json!([{

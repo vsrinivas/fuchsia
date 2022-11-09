@@ -9,8 +9,8 @@ use assembly_config_schema::{
     board_config::BoardInformation,
     product_config::{BuildType, FeatureSupportLevel, ProductAssemblyConfig},
 };
+use camino::Utf8PathBuf;
 use ffx_assembly_args::ProductArgs;
-use std::path::PathBuf;
 use tracing::info;
 
 mod assembly_builder;
@@ -27,7 +27,7 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
     } = args;
 
     info!("Loading configuration files.");
-    info!("  product: {}", product.display());
+    info!("  product: {}", product);
 
     let config: ProductAssemblyConfig =
         util::read_config(&product).context("Loading product configuration")?;
@@ -66,18 +66,14 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
     for platform_bundle_name in platform_bundles {
         let platform_bundle_path = make_bundle_path(&input_bundles_dir, platform_bundle_name);
         builder.add_bundle(&platform_bundle_path).with_context(|| {
-            format!(
-                "Adding platform bundle {} ({})",
-                platform_bundle_name,
-                platform_bundle_path.display()
-            )
+            format!("Adding platform bundle {} ({})", platform_bundle_name, platform_bundle_path)
         })?;
     }
 
     let legacy_bundle_path = legacy_bundle.join("assembly_config.json");
     builder
         .add_bundle(&legacy_bundle_path)
-        .context(format!("Adding legacy bundle: {}", legacy_bundle_path.display()))?;
+        .context(format!("Adding legacy bundle: {}", legacy_bundle_path))?;
 
     // Set structured configuration
     builder.set_bootfs_structured_config(assembly_platform_configuration::define_bootfs_config(
@@ -109,15 +105,13 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
     assembly_validate_product::validate_product(&image_assembly)?;
 
     let image_assembly_path = outdir.join("image_assembly.json");
-    let image_assembly_file = std::fs::File::create(&image_assembly_path).context(format!(
-        "Failed to create image assembly config file: {}",
-        image_assembly_path.display()
-    ))?;
+    let image_assembly_file = std::fs::File::create(&image_assembly_path)
+        .context(format!("Failed to create image assembly config file: {}", image_assembly_path))?;
     serde_json::to_writer_pretty(image_assembly_file, &image_assembly)?;
 
     Ok(())
 }
 
-fn make_bundle_path(bundles_dir: &PathBuf, name: &str) -> PathBuf {
+fn make_bundle_path(bundles_dir: &Utf8PathBuf, name: &str) -> Utf8PathBuf {
     bundles_dir.join(name).join("assembly_config.json")
 }

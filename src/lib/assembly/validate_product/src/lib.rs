@@ -5,6 +5,7 @@
 use anyhow::Context as _;
 use assembly_config_schema::{FileEntry, ImageAssemblyConfig};
 use assembly_validate_util::{BootfsContents, PkgNamespace};
+use camino::Utf8PathBuf;
 use fuchsia_pkg::PackageManifest;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use std::{collections::BTreeMap, fmt, fs::File, path::PathBuf};
@@ -108,7 +109,7 @@ pub struct ProductValidationError {
     /// Files in bootfs which failed validation.
     bootfs: Option<BootfsValidationError>,
     /// Packages which failed validation.
-    packages: BTreeMap<PathBuf, PackageValidationError>,
+    packages: BTreeMap<Utf8PathBuf, PackageValidationError>,
 }
 
 impl From<ProductValidationError> for anyhow::Error {
@@ -126,7 +127,7 @@ impl fmt::Display for ProductValidationError {
         }
         for (package, error) in &self.packages {
             let error_msg = textwrap::indent(&error.to_string(), "        ");
-            write!(f, "    └── {}: {}", package.display(), error_msg)?;
+            write!(f, "    └── {}: {}", package, error_msg)?;
         }
         Ok(())
     }

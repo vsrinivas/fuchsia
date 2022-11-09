@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use anyhow::{Context, Result};
+use camino::Utf8PathBuf;
 use serde::{Deserialize, Serialize};
 use std::io::Read;
-use std::path::PathBuf;
 
 /// The configuration file specifying where the generated images should be placed when flashing of
 /// OTAing. This file lists the partitions used in three different flashing configurations:
@@ -30,7 +30,7 @@ pub struct PartitionsConfig {
 
     /// Zip files containing the fastboot unlock credentials.
     #[serde(default)]
-    pub unlock_credentials: Vec<PathBuf>,
+    pub unlock_credentials: Vec<Utf8PathBuf>,
 }
 
 impl PartitionsConfig {
@@ -52,7 +52,7 @@ pub struct BootstrapPartition {
     pub name: String,
 
     /// The path on host to the bootloader image.
-    pub image: PathBuf,
+    pub image: Utf8PathBuf,
 
     /// The condition that must be met before attempting to flash.
     pub condition: Option<BootstrapCondition>,
@@ -83,7 +83,7 @@ pub struct BootloaderPartition {
     pub name: Option<String>,
 
     /// The path on host to the bootloader image.
-    pub image: PathBuf,
+    pub image: Utf8PathBuf,
 }
 
 /// A non-bootloader partition which

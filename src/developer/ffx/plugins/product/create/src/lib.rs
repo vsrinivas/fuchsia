@@ -11,7 +11,7 @@ use assembly_partitions_config::PartitionsConfig;
 use assembly_tool::{SdkToolProvider, ToolProvider};
 use assembly_update_package::{Slot, UpdatePackageBuilder};
 use assembly_update_packages_manifest::UpdatePackagesManifest;
-use camino::Utf8Path;
+use camino::{Utf8Path, Utf8PathBuf};
 use epoch::EpochFile;
 use ffx_core::ffx_plugin;
 use ffx_product_create_args::CreateCommand;
@@ -21,7 +21,6 @@ use fuchsia_repo::{
 };
 use sdk_metadata::{ProductBundle, ProductBundleV2, Repository};
 use std::fs::File;
-use std::path::{Path, PathBuf};
 use tempfile::TempDir;
 
 /// Create a product bundle.
@@ -67,42 +66,45 @@ pub async fn pb_create_with_tools(cmd: CreateCommand, tools: Box<dyn ToolProvide
         load_assembly_manifest(&cmd.system_r, &cmd.out_dir.join("system_r"))?;
 
     // Generate the update packages if necessary.
-    let (update_package_hash, update_packages) = if let Some((version, epoch)) = update_details {
-        let epoch: EpochFile = EpochFile::Version1 { epoch };
-        let abi_revision = None;
-        let gen_dir = TempDir::new().context("creating temporary directory")?;
-        let mut builder = UpdatePackageBuilder::new(
-            tools,
-            partitions.clone(),
-            partitions.hardware_revision.clone(),
-            version,
-            epoch,
-            abi_revision,
-            gen_dir,
-        );
-        let mut all_packages = UpdatePackagesManifest::default();
-        for package in &packages_a {
-            all_packages.add_by_manifest(package.clone())?;
-        }
-        builder.add_packages(all_packages);
-        if let Some(manifest) = &system_a {
-            builder.add_slot_images(Slot::Primary(manifest.clone()));
-        }
-        if let Some(manifest) = &system_r {
-            builder.add_slot_images(Slot::Recovery(manifest.clone()));
-        }
-        let update_package = builder.build()?;
-        (Some(update_package.merkle), update_package.package_manifests)
-    } else {
-        (None, vec![])
-    };
+    let (_gen_dir, update_package_hash, update_packages) =
+        if let Some((version, epoch)) = update_details {
+            let epoch: EpochFile = EpochFile::Version1 { epoch };
+            let abi_revision = None;
+            let gen_dir = TempDir::new().context("creating temporary directory")?;
+            let mut builder = UpdatePackageBuilder::new(
+                tools,
+                partitions.clone(),
+                partitions.hardware_revision.clone(),
+                version,
+                epoch,
+                abi_revision,
+                Utf8Path::from_path(gen_dir.path())
+                    .context("checkinf if temporary directory is UTF-8")?,
+            );
+            let mut all_packages = UpdatePackagesManifest::default();
+            for package in &packages_a {
+                all_packages.add_by_manifest(package.clone())?;
+            }
+            builder.add_packages(all_packages);
+            if let Some(manifest) = &system_a {
+                builder.add_slot_images(Slot::Primary(manifest.clone()));
+            }
+            if let Some(manifest) = &system_r {
+                builder.add_slot_images(Slot::Recovery(manifest.clone()));
+            }
+            let update_package = builder.build()?;
+            (Some(gen_dir), Some(update_package.merkle), update_package.package_manifests)
+        } else {
+            (None, None, vec![])
+        };
 
     let repositories = if let Some(tuf_keys) = &cmd.tuf_keys {
-        let repo_path = Utf8Path::from_path(&cmd.out_dir).context("Creating repository path")?;
+        let repo_path = &cmd.out_dir;
         let metadata_path = repo_path.join("repository");
         let blobs_path = repo_path.join("blobs");
         let repo = FileSystemRepository::new(metadata_path.to_path_buf(), blobs_path.to_path_buf());
-        let repo_keys = RepoKeys::from_dir(&tuf_keys).context("Gathering repo keys")?;
+        let repo_keys =
+            RepoKeys::from_dir(tuf_keys.as_std_path()).context("Gathering repo keys")?;
 
         RepoBuilder::create(&repo, &repo_keys)
             .add_packages(packages_a.into_iter())?
@@ -132,9 +134,12 @@ pub async fn pb_create_with_tools(cmd: CreateCommand, tools: Box<dyn ToolProvide
 
 /// Open and parse a PartitionsConfig from a path, copying the images into `out_dir`.
 fn load_partitions_config(
-    path: impl AsRef<Path>,
-    out_dir: impl AsRef<Path>,
+    path: impl AsRef<Utf8Path>,
+    out_dir: impl AsRef<Utf8Path>,
 ) -> Result<PartitionsConfig> {
+    let path = path.as_ref();
+    let out_dir = out_dir.as_ref();
+
     // Make sure `out_dir` is created.
     std::fs::create_dir_all(&out_dir).context("Creating the out_dir")?;
 
@@ -158,17 +163,19 @@ fn load_partitions_config(
 /// Open and parse an AssemblyManifest from a path, copying the images into `out_dir`.
 /// Returns None if the given path is None.
 fn load_assembly_manifest(
-    path: &Option<PathBuf>,
-    out_dir: impl AsRef<Path>,
+    path: &Option<Utf8PathBuf>,
+    out_dir: impl AsRef<Utf8Path>,
 ) -> Result<(Option<AssemblyManifest>, Vec<PackageManifest>)> {
+    let out_dir = out_dir.as_ref();
+
     if let Some(path) = path {
         // Make sure `out_dir` is created.
         std::fs::create_dir_all(&out_dir).context("Creating the out_dir")?;
 
-        let file = File::open(path)
-            .with_context(|| format!("Opening assembly manifest: {}", path.display()))?;
+        let file =
+            File::open(path).with_context(|| format!("Opening assembly manifest: {}", path))?;
         let manifest: AssemblyManifest = serde_json::from_reader(file)
-            .with_context(|| format!("Parsing assembly manifest: {}", path.display()))?;
+            .with_context(|| format!("Parsing assembly manifest: {}", path))?;
 
         // Filter out the base package, and the blobfs contents.
         let mut images = Vec::<Image>::new();
@@ -182,7 +189,7 @@ fn load_assembly_manifest(
                     for package in all_packages {
                         let manifest = PackageManifest::try_load_from(&package.manifest)
                             .with_context(|| {
-                                format!("reading package manifest: {}", package.manifest.display())
+                                format!("reading package manifest: {}", package.manifest)
                             })?;
                         packages.push(manifest);
                     }
@@ -210,9 +217,11 @@ fn load_assembly_manifest(
 
 /// Copy a file from `source` to `out_dir` preserving the filename.
 /// Returns the destination, which is equal to {out_dir}{filename}.
-fn copy_file(source: impl AsRef<Path>, out_dir: impl AsRef<Path>) -> Result<PathBuf> {
-    let filename = source.as_ref().file_name().context("getting file name")?;
-    let destination = out_dir.as_ref().join(filename);
+fn copy_file(source: impl AsRef<Utf8Path>, out_dir: impl AsRef<Utf8Path>) -> Result<Utf8PathBuf> {
+    let source = source.as_ref();
+    let out_dir = out_dir.as_ref();
+    let filename = source.file_name().context("getting file name")?;
+    let destination = out_dir.join(filename);
     std::fs::copy(source, &destination).context("copying file")?;
     Ok(destination)
 }
@@ -223,32 +232,35 @@ mod test {
     use assembly_manifest::AssemblyManifest;
     use assembly_partitions_config::PartitionsConfig;
     use assembly_tool::testing::FakeToolProvider;
-    use camino::Utf8PathBuf;
     use fuchsia_repo::test_utils;
     use std::io::Write;
     use tempfile::TempDir;
 
     #[test]
     fn test_copy_file() {
-        let tempdir1 = TempDir::new().unwrap();
-        let tempdir2 = TempDir::new().unwrap();
-        let source_path = tempdir1.path().join("source.txt");
+        let temp1 = TempDir::new().unwrap();
+        let tempdir1 = Utf8Path::from_path(temp1.path()).unwrap();
+        let temp2 = TempDir::new().unwrap();
+        let tempdir2 = Utf8Path::from_path(temp2.path()).unwrap();
+
+        let source_path = tempdir1.join("source.txt");
         let mut source_file = File::create(&source_path).unwrap();
         write!(source_file, "contents").unwrap();
-        let destination = copy_file(&source_path, tempdir2.path()).unwrap();
+        let destination = copy_file(&source_path, tempdir2).unwrap();
         assert!(destination.exists());
     }
 
     #[test]
     fn test_load_partitions_config() {
-        let tempdir = TempDir::new().unwrap();
-        let pb_dir = tempdir.path().join("pb");
+        let temp = TempDir::new().unwrap();
+        let tempdir = Utf8Path::from_path(temp.path()).unwrap();
+        let pb_dir = tempdir.join("pb");
 
-        let config_path = tempdir.path().join("config.json");
+        let config_path = tempdir.join("config.json");
         let config_file = File::create(&config_path).unwrap();
         serde_json::to_writer(&config_file, &PartitionsConfig::default()).unwrap();
 
-        let error_path = tempdir.path().join("error.json");
+        let error_path = tempdir.join("error.json");
         let mut error_file = File::create(&error_path).unwrap();
         error_file.write_all("error".as_bytes()).unwrap();
 
@@ -261,20 +273,21 @@ mod test {
 
     #[test]
     fn test_load_assembly_manifest() {
-        let tempdir = TempDir::new().unwrap();
-        let pb_dir = tempdir.path().join("pb");
+        let temp = TempDir::new().unwrap();
+        let tempdir = Utf8Path::from_path(temp.path()).unwrap();
+        let pb_dir = tempdir.join("pb");
 
-        let manifest_path = tempdir.path().join("manifest.json");
+        let manifest_path = tempdir.join("manifest.json");
         let manifest_file = File::create(&manifest_path).unwrap();
         serde_json::to_writer(&manifest_file, &AssemblyManifest::default()).unwrap();
 
-        let error_path = tempdir.path().join("error.json");
+        let error_path = tempdir.join("error.json");
         let mut error_file = File::create(&error_path).unwrap();
         error_file.write_all("error".as_bytes()).unwrap();
 
         let (parsed, packages) = load_assembly_manifest(&Some(manifest_path), &pb_dir).unwrap();
         assert!(parsed.is_some());
-        assert_eq!(packages, vec![]);
+        assert_eq!(packages, Vec::<PackageManifest>::new());
 
         let error = load_assembly_manifest(&Some(error_path), &pb_dir);
         assert!(error.is_err());
@@ -285,10 +298,11 @@ mod test {
 
     #[fuchsia::test]
     async fn test_pb_create_minimal() {
-        let tempdir = TempDir::new().unwrap();
-        let pb_dir = tempdir.path().join("pb");
+        let temp = TempDir::new().unwrap();
+        let tempdir = Utf8Path::from_path(temp.path()).unwrap();
+        let pb_dir = tempdir.join("pb");
 
-        let partitions_path = tempdir.path().join("partitions.json");
+        let partitions_path = tempdir.join("partitions.json");
         let partitions_file = File::create(&partitions_path).unwrap();
         serde_json::to_writer(&partitions_file, &PartitionsConfig::default()).unwrap();
 
@@ -325,14 +339,15 @@ mod test {
 
     #[fuchsia::test]
     async fn test_pb_create_a_and_r() {
-        let tempdir = TempDir::new().unwrap();
-        let pb_dir = tempdir.path().join("pb");
+        let temp = TempDir::new().unwrap();
+        let tempdir = Utf8Path::from_path(temp.path()).unwrap();
+        let pb_dir = tempdir.join("pb");
 
-        let partitions_path = tempdir.path().join("partitions.json");
+        let partitions_path = tempdir.join("partitions.json");
         let partitions_file = File::create(&partitions_path).unwrap();
         serde_json::to_writer(&partitions_file, &PartitionsConfig::default()).unwrap();
 
-        let system_path = tempdir.path().join("system.json");
+        let system_path = tempdir.join("system.json");
         let system_file = File::create(&system_path).unwrap();
         serde_json::to_writer(&system_file, &AssemblyManifest::default()).unwrap();
 
@@ -369,20 +384,20 @@ mod test {
 
     #[fuchsia::test]
     async fn test_pb_create_a_and_r_and_repository() {
-        let tempdir = TempDir::new().unwrap();
-        let pb_dir = tempdir.path().join("pb");
+        let temp = TempDir::new().unwrap();
+        let tempdir = Utf8Path::from_path(temp.path()).unwrap();
+        let pb_dir = tempdir.join("pb");
 
-        let partitions_path = tempdir.path().join("partitions.json");
+        let partitions_path = tempdir.join("partitions.json");
         let partitions_file = File::create(&partitions_path).unwrap();
         serde_json::to_writer(&partitions_file, &PartitionsConfig::default()).unwrap();
 
-        let system_path = tempdir.path().join("system.json");
+        let system_path = tempdir.join("system.json");
         let system_file = File::create(&system_path).unwrap();
         serde_json::to_writer(&system_file, &AssemblyManifest::default()).unwrap();
 
-        let tuf_keys = tempdir.path().join("keys");
-        let tuf_keys_path = Utf8Path::from_path(&tuf_keys).unwrap();
-        test_utils::make_repo_keys_dir(&tuf_keys_path);
+        let tuf_keys = tempdir.join("keys");
+        test_utils::make_repo_keys_dir(&tuf_keys);
 
         let tools = FakeToolProvider::default();
         pb_create_with_tools(
@@ -411,8 +426,8 @@ mod test {
                 system_r: Some(AssemblyManifest::default()),
                 repositories: vec![Repository {
                     name: "fuchsia.com".into(),
-                    metadata_path: Utf8PathBuf::from_path_buf(pb_dir.join("repository")).unwrap(),
-                    blobs_path: Utf8PathBuf::from_path_buf(pb_dir.join("blobs")).unwrap(),
+                    metadata_path: pb_dir.join("repository"),
+                    blobs_path: pb_dir.join("blobs"),
                 }],
                 update_package_hash: None,
             })
@@ -421,19 +436,20 @@ mod test {
 
     #[fuchsia::test]
     async fn test_pb_create_with_update() {
-        let tempdir = TempDir::new().unwrap();
-        let pb_dir = tempdir.path().join("pb");
+        let tmp = TempDir::new().unwrap();
+        let tempdir = Utf8Path::from_path(tmp.path()).unwrap();
 
-        let partitions_path = tempdir.path().join("partitions.json");
+        let pb_dir = tempdir.join("pb");
+
+        let partitions_path = tempdir.join("partitions.json");
         let partitions_file = File::create(&partitions_path).unwrap();
         serde_json::to_writer(&partitions_file, &PartitionsConfig::default()).unwrap();
 
-        let version_path = tempdir.path().join("version.txt");
+        let version_path = tempdir.join("version.txt");
         std::fs::write(&version_path, "").unwrap();
 
-        let tuf_keys = tempdir.path().join("keys");
-        let tuf_keys_path = Utf8Path::from_path(&tuf_keys).unwrap();
-        test_utils::make_repo_keys_dir(&tuf_keys_path);
+        let tuf_keys = tempdir.join("keys");
+        test_utils::make_repo_keys_dir(&tuf_keys);
 
         let tools = FakeToolProvider::default();
         pb_create_with_tools(
@@ -464,8 +480,8 @@ mod test {
                 system_r: None,
                 repositories: vec![Repository {
                     name: "fuchsia.com".into(),
-                    metadata_path: Utf8PathBuf::from_path_buf(pb_dir.join("repository")).unwrap(),
-                    blobs_path: Utf8PathBuf::from_path_buf(pb_dir.join("blobs")).unwrap(),
+                    metadata_path: pb_dir.join("repository"),
+                    blobs_path: pb_dir.join("blobs"),
                 }],
                 update_package_hash: Some(expected_hash),
             })

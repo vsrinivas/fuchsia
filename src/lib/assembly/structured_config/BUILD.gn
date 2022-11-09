@@ -18,6 +18,7 @@ rustc_library("structured_config") {
     "//src/sys/lib/config_encoder",
     "//src/sys/pkg/lib/fuchsia-pkg",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:camino",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
     "//tools/lib/config_value_file",

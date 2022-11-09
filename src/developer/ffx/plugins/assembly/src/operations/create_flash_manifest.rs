@@ -5,17 +5,17 @@
 use anyhow::{Context, Result};
 use assembly_manifest::AssemblyManifest;
 use assembly_partitions_config::PartitionsConfig;
+use camino::Utf8Path;
 use ffx_assembly_args::CreateFlashManifestArgs;
 use ffx_fastboot::manifest::FlashManifestVersion;
 use sdk_metadata::{ProductBundle, ProductBundleV2};
 use std::fs::File;
 use std::io::BufReader;
-use std::path::Path;
 
 /// Create a flash manifest that can be used to flash the partitions of a target device.
 pub fn create_flash_manifest(args: CreateFlashManifestArgs) -> Result<()> {
     let mut file = File::open(&args.partitions)
-        .context(format!("Failed to open: {}", args.partitions.display()))?;
+        .with_context(|| format!("Failed to open: {}", args.partitions))?;
     let partitions_config = PartitionsConfig::from_reader(&mut file)
         .context("Failed to parse the partitions config")?;
 
@@ -35,51 +35,57 @@ pub fn create_flash_manifest(args: CreateFlashManifestArgs) -> Result<()> {
     // Write the flash manifest.
     let flash_manifest_path = args.outdir.join("flash.json");
     let mut flash_manifest_file = File::create(&flash_manifest_path)
-        .context(format!("Failed to create: {}", flash_manifest_path.display()))?;
+        .with_context(|| format!("Failed to create: {}", flash_manifest_path))?;
     manifest.write(&mut flash_manifest_file)?;
 
     Ok(())
 }
 
 /// Read an AssemblyManifest from a file.
-fn manifest_from_file(path: impl AsRef<Path>) -> Result<AssemblyManifest> {
-    let file = File::open(path.as_ref())
-        .context(format!("Failed to open the system images file: {}", path.as_ref().display()))?;
+fn manifest_from_file(path: impl AsRef<Utf8Path>) -> Result<AssemblyManifest> {
+    let path = path.as_ref();
+    let file = File::open(path)
+        .with_context(|| format!("Failed to open the system images file: {}", path))?;
     serde_json::from_reader(BufReader::new(file))
-        .context(format!("Failed to parse the system images file: {}", path.as_ref().display()))
+        .with_context(|| format!("Failed to parse the system images file: {}", path))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::util::{read_config, write_json_file};
+    use camino::Utf8PathBuf;
     use serde_json::json;
     use std::fs;
     use tempfile::TempDir;
 
     struct TestFs {
-        root: TempDir,
+        _tmp: TempDir,
+        root: Utf8PathBuf,
     }
 
     impl TestFs {
         fn new() -> TestFs {
-            TestFs { root: TempDir::new().unwrap() }
+            let tmp = TempDir::new().unwrap();
+            let root = Utf8Path::from_path(tmp.path()).unwrap().to_path_buf();
+
+            TestFs { _tmp: tmp, root }
         }
 
         fn write(&self, rel_path: &str, value: serde_json::Value) {
-            let path = self.root.path().join(rel_path);
+            let path = self.root.join(rel_path);
             fs::create_dir_all(path.parent().unwrap()).unwrap();
             write_json_file(&path, &value).unwrap()
         }
 
         fn assert_eq(&self, rel_path: &str, expected: serde_json::Value) {
-            let path = self.root.path().join(rel_path);
+            let path = self.root.join(rel_path);
             let actual: serde_json::Value = read_config(&path).unwrap();
             assert_eq!(actual, expected);
         }
 
-        fn path(&self, rel_path: &str) -> std::path::PathBuf {
-            self.root.path().join(rel_path)
+        fn path(&self, rel_path: &str) -> Utf8PathBuf {
+            self.root.join(rel_path)
         }
     }
 
@@ -200,7 +206,7 @@ mod tests {
             system_a: Some(test_fs.path("system_a.json")),
             system_b: Some(test_fs.path("system_b.json")),
             system_r: Some(test_fs.path("system_r.json")),
-            outdir: test_fs.root.path().to_path_buf(),
+            outdir: test_fs.root.clone(),
         })
         .unwrap();
 

@@ -16,6 +16,7 @@ rustc_library("base_package") {
     "//src/lib/assembly/package_list",
     "//src/sys/pkg/lib/fuchsia-pkg",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:camino",
   ]
   test_deps = [
     "//src/lib/assembly/test_util",

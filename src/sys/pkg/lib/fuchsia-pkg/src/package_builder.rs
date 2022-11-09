@@ -8,6 +8,7 @@ use {
         PackageManifest, RelativeTo,
     },
     anyhow::{anyhow, bail, ensure, Context, Result},
+    camino::Utf8PathBuf,
     fuchsia_merkle::Hash,
     fuchsia_url::RelativePackageUrl,
     std::{
@@ -42,7 +43,7 @@ pub struct PackageBuilder {
     blobs: BTreeMap<String, String>,
 
     /// Optional path to serialize the PackageManifest to
-    manifest_path: Option<PathBuf>,
+    manifest_path: Option<Utf8PathBuf>,
 
     /// Optionally make the blob 'source_path's relative to the path the
     /// PackageManifest is serialized to.
@@ -225,7 +226,7 @@ impl PackageBuilder {
     }
 
     /// Specify a path to write out the json package manifest to.
-    pub fn manifest_path(&mut self, manifest_path: impl Into<PathBuf>) {
+    pub fn manifest_path(&mut self, manifest_path: impl Into<Utf8PathBuf>) {
         self.manifest_path = Some(manifest_path.into())
     }
 
@@ -465,23 +466,20 @@ impl PackageBuilder {
                     || {
                         format!(
                         "Failed to create package manifest with relative blob source_paths at: {}",
-                        manifest_path.display()
+                        manifest_path
                     )
                     },
                 )?
             } else {
                 // Write the package manifest to a file.
-                let package_manifest_file = std::fs::File::create(&manifest_path).context(
-                    format!("Failed to create package manifest: {}", manifest_path.display()),
-                )?;
+                let package_manifest_file = std::fs::File::create(&manifest_path)
+                    .context(format!("Failed to create package manifest: {}", manifest_path))?;
 
                 serde_json::ser::to_writer(
                     BufWriter::new(package_manifest_file),
                     &package_manifest,
                 )
-                .with_context(|| {
-                    format!("writing package manifest to {}", manifest_path.display())
-                })?;
+                .with_context(|| format!("writing package manifest to {}", manifest_path))?;
 
                 package_manifest
             };
@@ -595,6 +593,7 @@ fn create_meta_subpackages_file(
 mod tests {
     use {
         super::*,
+        camino::Utf8Path,
         fuchsia_merkle::MerkleTreeBuilder,
         tempfile::{NamedTempFile, TempDir},
     };
@@ -897,25 +896,25 @@ mod tests {
 
     #[test]
     fn test_builder_makes_file_relative_manifests_when_asked() {
-        let outdir = TempDir::new().unwrap();
-        let metafar_path = outdir.path().join("meta.far");
-        let manifest_path = outdir.path().join("package_manifest.json");
+        let tmp = TempDir::new().unwrap();
+        let outdir = Utf8Path::from_path(tmp.path()).unwrap();
+
+        let metafar_path = outdir.join("meta.far");
+        let manifest_path = outdir.join("package_manifest.json");
 
         // Create a file to write to the package metafar
         let far_source_file_path = NamedTempFile::new_in(&outdir).unwrap();
         std::fs::write(&far_source_file_path, "some data for far").unwrap();
 
         // Create a file to include as a blob
-        let blob_source_file_path = outdir.path().join("contents/data_file");
+        let blob_source_file_path = outdir.join("contents/data_file");
         std::fs::create_dir_all(blob_source_file_path.parent().unwrap()).unwrap();
         let blob_contents = "some data for blob";
         std::fs::write(&blob_source_file_path, blob_contents).unwrap();
 
         // Create the builder
         let mut builder = PackageBuilder::new("some_pkg_name");
-        builder
-            .add_file_as_blob("some/blob", blob_source_file_path.path_to_string().unwrap())
-            .unwrap();
+        builder.add_file_as_blob("some/blob", blob_source_file_path.to_string()).unwrap();
         builder
             .add_file_to_far(
                 "meta/some/file",

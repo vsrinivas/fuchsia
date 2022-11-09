@@ -19,7 +19,7 @@ pub fn create_update(args: CreateUpdateArgs) -> Result<()> {
     let sdk_tools = SdkToolProvider::try_new().context("Getting SDK tools")?;
 
     let mut file = File::open(&args.partitions)
-        .context(format!("Failed to open: {}", args.partitions.display()))?;
+        .with_context(|| format!("Failed to open: {}", args.partitions))?;
     let partitions = PartitionsConfig::from_reader(&mut file)
         .context("Failed to parse the partitions config")?;
     let epoch: EpochFile = EpochFile::Version1 { epoch: args.epoch };
@@ -42,7 +42,7 @@ pub fn create_update(args: CreateUpdateArgs) -> Result<()> {
     // Add the packages to update.
     if let Some(packages_path) = &args.packages {
         let mut file = File::open(packages_path)
-            .context(format!("Failed to open: {}", packages_path.display()))?;
+            .with_context(|| format!("Failed to open: {}", packages_path))?;
         let packages: UpdatePackagesManifest =
             from_reader(&mut file).context("Failed to parse the packages manifest")?;
         builder.add_packages(packages);

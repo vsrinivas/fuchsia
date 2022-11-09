@@ -30,6 +30,7 @@ use {
     },
     ::gcs::client::ProgressResponse,
     anyhow::{bail, Context, Result},
+    camino::Utf8Path,
     ffx_config::sdk,
     fms::Entries,
     futures::TryStreamExt as _,
@@ -99,7 +100,7 @@ pub async fn load_product_bundle(
     tracing::debug!("Loading a product bundle: {:?}", product_bundle);
 
     //  If `product_bundle` is a local path, load it directly.
-    if let Some(path) = product_bundle.as_ref().map(|s| Path::new(s)).filter(|p| p.exists()) {
+    if let Some(path) = product_bundle.as_ref().map(|s| Utf8Path::new(s)).filter(|p| p.exists()) {
         return ProductBundle::try_load_from(path);
     }
 

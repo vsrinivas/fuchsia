@@ -10,17 +10,17 @@ use assembly_config_schema::ImageAssemblyConfig;
 use assembly_images_config::BlobFS;
 use assembly_manifest::BlobfsContents;
 use assembly_tool::Tool;
+use camino::{Utf8Path, Utf8PathBuf};
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
 
 pub fn construct_blobfs(
     blobfs_tool: Box<dyn Tool>,
-    outdir: impl AsRef<Path>,
-    gendir: impl AsRef<Path>,
+    outdir: impl AsRef<Utf8Path>,
+    gendir: impl AsRef<Utf8Path>,
     image_config: &ImageAssemblyConfig,
     blobfs_config: &BlobFS,
     base_package: &BasePackage,
-) -> Result<(PathBuf, BlobfsContents)> {
+) -> Result<(Utf8PathBuf, BlobfsContents)> {
     let mut contents = BlobfsContents::default();
     let mut blobfs_builder = BlobFSBuilder::new(blobfs_tool, blobfs_config.layout.to_string());
     blobfs_builder.set_compressed(blobfs_config.compress);
@@ -65,6 +65,7 @@ mod tests {
     use assembly_images_config::{BlobFS, BlobFSLayout};
     use assembly_tool::testing::FakeToolProvider;
     use assembly_tool::ToolProvider;
+    use camino::Utf8Path;
     use fuchsia_hash::Hash;
     use std::collections::BTreeMap;
     use std::fs::File;
@@ -74,7 +75,9 @@ mod tests {
 
     #[test]
     fn construct() {
-        let dir = tempdir().unwrap();
+        let tmp = tempdir().unwrap();
+        let dir = Utf8Path::from_path(tmp.path()).unwrap();
+
         let image_config = ImageAssemblyConfig::new_for_testing("kernel", 0);
         let blobfs_config = BlobFS {
             name: "blob".into(),
@@ -87,9 +90,9 @@ mod tests {
         };
 
         // Create a fake base package.
-        let base_path = dir.path().join("base.far");
+        let base_path = dir.join("base.far");
         std::fs::write(&base_path, "fake base").unwrap();
-        let base_package_manifest_path = dir.path().join("package_manifest.json");
+        let base_package_manifest_path = dir.join("package_manifest.json");
         let mut base_package_manifest_file = File::create(&base_package_manifest_path).unwrap();
         let contents = r#"{
             "version": "1",
@@ -116,7 +119,6 @@ mod tests {
         let blobfs_tool = tools.get_tool("blobfs").unwrap();
 
         // Construct blobfs, and ensure no error is returned.
-        construct_blobfs(blobfs_tool, dir.path(), dir.path(), &image_config, &blobfs_config, &base)
-            .unwrap();
+        construct_blobfs(blobfs_tool, dir, dir, &image_config, &blobfs_config, &base).unwrap();
     }
 }

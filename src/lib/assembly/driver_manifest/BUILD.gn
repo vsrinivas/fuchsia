@@ -16,6 +16,7 @@ rustc_library("driver_manifest") {
     "//src/lib/assembly/config_schema",
     "//src/sys/pkg/lib/fuchsia-pkg",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:camino",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
   ]

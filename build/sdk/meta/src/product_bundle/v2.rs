@@ -20,14 +20,13 @@
 use anyhow::{anyhow, Context, Result};
 use assembly_manifest::AssemblyManifest;
 use assembly_partitions_config::PartitionsConfig;
-use camino::Utf8PathBuf;
+use camino::{Utf8Path, Utf8PathBuf};
 use fidl_fuchsia_developer_ffx::ListFields;
 use fuchsia_merkle::Hash;
 use fuchsia_repo::{repo_client::RepoClient, repository::FileSystemRepository};
-use pathdiff::diff_paths;
+use pathdiff::diff_utf8_paths;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
-use std::path::Path;
 
 /// Description of the data needed to set up (flash) a device.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -108,26 +107,26 @@ impl ProductBundleV2 {
     /// paths.
     pub(crate) fn canonicalize_paths(
         &mut self,
-        product_bundle_dir: impl AsRef<Path>,
+        product_bundle_dir: impl AsRef<Utf8Path>,
     ) -> Result<()> {
         let product_bundle_dir = product_bundle_dir.as_ref();
 
         // Canonicalize the partitions.
         for part in &mut self.partitions.bootstrap_partitions {
-            part.image = product_bundle_dir.join(&part.image).canonicalize()?;
+            part.image = product_bundle_dir.join(&part.image).canonicalize_utf8()?;
         }
         for part in &mut self.partitions.bootloader_partitions {
-            part.image = product_bundle_dir.join(&part.image).canonicalize()?;
+            part.image = product_bundle_dir.join(&part.image).canonicalize_utf8()?;
         }
         for cred in &mut self.partitions.unlock_credentials {
-            *cred = product_bundle_dir.join(&cred).canonicalize()?;
+            *cred = product_bundle_dir.join(&cred).canonicalize_utf8()?;
         }
 
         // Canonicalize the systems.
         let canonicalize_system = |system: &mut Option<AssemblyManifest>| -> Result<()> {
             if let Some(system) = system {
                 for image in &mut system.images {
-                    image.set_source(product_bundle_dir.join(image.source()).canonicalize()?);
+                    image.set_source(product_bundle_dir.join(image.source()).canonicalize_utf8()?);
                 }
             }
             Ok(())
@@ -141,9 +140,8 @@ impl ProductBundleV2 {
                 let dir = product_bundle_dir.join(path);
                 // Create the directory to ensure that canonicalize will work.
                 std::fs::create_dir_all(&dir)
-                    .with_context(|| format!("Creating the directory: {}", dir.display()))?;
-                let path = Utf8PathBuf::from_path_buf(dir.canonicalize()?)
-                    .map_err(|_| anyhow::anyhow!("converting to utf8 path: {}", &path))?;
+                    .with_context(|| format!("Creating the directory: {}", dir))?;
+                let path = dir.canonicalize_utf8()?;
                 Ok(path)
             };
             repository.metadata_path = canonicalize_dir(&repository.metadata_path)?;
@@ -159,27 +157,30 @@ impl ProductBundleV2 {
     /// Note: This function is intentionally only accessible inside the crate to ensure this method
     /// is only called during deserialization. Clients should not be canonicalizing their own
     /// paths.
-    pub(crate) fn relativize_paths(&mut self, product_bundle_dir: impl AsRef<Path>) -> Result<()> {
+    pub(crate) fn relativize_paths(
+        &mut self,
+        product_bundle_dir: impl AsRef<Utf8Path>,
+    ) -> Result<()> {
         let product_bundle_dir = product_bundle_dir.as_ref();
 
         // Relativize the partitions.
         for part in &mut self.partitions.bootstrap_partitions {
             part.image =
-                diff_paths(&part.image, &product_bundle_dir).context("rebasing file path")?;
+                diff_utf8_paths(&part.image, &product_bundle_dir).context("rebasing file path")?;
         }
         for part in &mut self.partitions.bootloader_partitions {
             part.image =
-                diff_paths(&part.image, &product_bundle_dir).context("rebasing file path")?;
+                diff_utf8_paths(&part.image, &product_bundle_dir).context("rebasing file path")?;
         }
         for cred in &mut self.partitions.unlock_credentials {
-            *cred = diff_paths(&cred, &product_bundle_dir).context("rebasing file path")?;
+            *cred = diff_utf8_paths(&cred, &product_bundle_dir).context("rebasing file path")?;
         }
 
         // Relativize the systems.
         let relativize_system = |system: &mut Option<AssemblyManifest>| -> Result<()> {
             if let Some(system) = system {
                 for image in &mut system.images {
-                    let path = diff_paths(&image.source(), &product_bundle_dir)
+                    let path = diff_utf8_paths(&image.source(), &product_bundle_dir)
                         .ok_or(anyhow!("failed to rebase the file"))?;
                     image.set_source(path);
                 }
@@ -192,10 +193,7 @@ impl ProductBundleV2 {
 
         for repository in &mut self.repositories {
             let relativize_dir = |path: &Utf8PathBuf| -> Result<Utf8PathBuf> {
-                let dir = diff_paths(&path, &product_bundle_dir).context("rebasing repository")?;
-                let path = Utf8PathBuf::from_path_buf(dir)
-                    .map_err(|_| anyhow::anyhow!("converting to utf8 path: {}", &path))?;
-                Ok(path)
+                diff_utf8_paths(&path, &product_bundle_dir).context("rebasing repository")
             };
             repository.metadata_path = relativize_dir(&repository.metadata_path)?;
             repository.blobs_path = relativize_dir(&repository.blobs_path)?;
@@ -214,7 +212,6 @@ mod tests {
     use fuchsia_repo::test_utils;
     use std::fs::File;
     use std::io::Write;
-    use std::path::PathBuf;
     use tempfile::TempDir;
 
     #[test]
@@ -233,15 +230,17 @@ mod tests {
             repositories: vec![],
             update_package_hash: None,
         };
-        let result = pb.canonicalize_paths(&PathBuf::from("path/to/product_bundle"));
+        let result = pb.canonicalize_paths(&Utf8PathBuf::from("path/to/product_bundle"));
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_canonicalize_with_paths() {
-        let tempdir = TempDir::new().unwrap();
+        let tmp = TempDir::new().unwrap();
+        let tempdir = Utf8Path::from_path(tmp.path()).unwrap();
+
         let create_temp_file = |name: &str| {
-            let path = tempdir.path().join(name);
+            let path = tempdir.join(name);
             let mut file = File::create(path).unwrap();
             write!(file, "{}", name).unwrap();
         };
@@ -286,7 +285,7 @@ mod tests {
             repositories: vec![],
             update_package_hash: None,
         };
-        let result = pb.canonicalize_paths(tempdir.path());
+        let result = pb.canonicalize_paths(tempdir);
         assert!(result.is_ok());
     }
 
@@ -306,38 +305,26 @@ mod tests {
             repositories: vec![],
             update_package_hash: None,
         };
-        let result = pb.relativize_paths(&PathBuf::from("path/to/product_bundle"));
+        let result = pb.relativize_paths(&Utf8PathBuf::from("path/to/product_bundle"));
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_relativize_with_paths() {
-        let tempdir = TempDir::new().unwrap();
-        let create_temp_file = |name: &str| {
-            let path = tempdir.path().join(name);
-            let mut file = File::create(path).unwrap();
-            write!(file, "{}", name).unwrap();
-        };
-
-        // These files must exist for diff_paths() to work.
-        create_temp_file("bootstrap");
-        create_temp_file("bootloader");
-        create_temp_file("zbi");
-        create_temp_file("vbmeta");
-        create_temp_file("fvm");
-        create_temp_file("unlock_credentials");
+        let tmp = TempDir::new().unwrap();
+        let tempdir = Utf8Path::from_path(tmp.path()).unwrap();
 
         let mut pb = ProductBundleV2 {
             partitions: PartitionsConfig {
                 bootstrap_partitions: vec![BootstrapPartition {
                     name: "bootstrap".into(),
-                    image: tempdir.path().join("bootstrap"),
+                    image: tempdir.join("bootstrap"),
                     condition: None,
                 }],
                 bootloader_partitions: vec![BootloaderPartition {
                     partition_type: "bl2".into(),
                     name: None,
-                    image: tempdir.path().join("bootloader"),
+                    image: tempdir.join("bootloader"),
                 }],
                 partitions: vec![
                     Partition::ZBI { name: "zbi".into(), slot: Slot::A },
@@ -345,13 +332,13 @@ mod tests {
                     Partition::FVM { name: "fvm".into() },
                 ],
                 hardware_revision: "board".into(),
-                unlock_credentials: vec![tempdir.path().join("unlock_credentials")],
+                unlock_credentials: vec![tempdir.join("unlock_credentials")],
             },
             system_a: Some(AssemblyManifest {
                 images: vec![
-                    Image::ZBI { path: tempdir.path().join("zbi"), signed: false },
-                    Image::VBMeta(tempdir.path().join("vbmeta")),
-                    Image::FVM(tempdir.path().join("fvm")),
+                    Image::ZBI { path: tempdir.join("zbi"), signed: false },
+                    Image::VBMeta(tempdir.join("vbmeta")),
+                    Image::FVM(tempdir.join("fvm")),
                 ],
             }),
             system_b: None,
@@ -359,7 +346,7 @@ mod tests {
             repositories: vec![],
             update_package_hash: None,
         };
-        let result = pb.relativize_paths(tempdir.path());
+        let result = pb.relativize_paths(tempdir);
         assert!(result.is_ok());
     }
 

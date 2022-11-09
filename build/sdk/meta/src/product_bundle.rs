@@ -8,9 +8,9 @@ mod v1;
 mod v2;
 
 use anyhow::{Context, Result};
+use camino::Utf8Path;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
-use std::path::{Path, PathBuf};
 pub use v1::*;
 pub use v2::{ProductBundleV2, Repository};
 
@@ -44,8 +44,8 @@ const PRODUCT_BUNDLE_SCHEMA_V1: &str =
 
 impl ProductBundle {
     /// Load a ProductBundle from a path on disk.
-    pub fn try_load_from(path: impl AsRef<Path>) -> Result<Self> {
-        let product_bundle_path: PathBuf = path.as_ref().join("product_bundle.json");
+    pub fn try_load_from(path: impl AsRef<Utf8Path>) -> Result<Self> {
+        let product_bundle_path = path.as_ref().join("product_bundle.json");
         let file = File::open(&product_bundle_path)
             .with_context(|| format!("opening product bundle: {:?}", &product_bundle_path))?;
         let helper: SerializationHelper =
@@ -62,7 +62,7 @@ impl ProductBundle {
 
     /// Write a product bundle to a directory on disk at `path`.
     /// Note that this only writes the manifest file, and not the artifacts, images, blobs.
-    pub fn write(&self, path: impl AsRef<Path>) -> Result<()> {
+    pub fn write(&self, path: impl AsRef<Utf8Path>) -> Result<()> {
         let helper = match self {
             Self::V1(data) => SerializationHelper::V1 {
                 schema_id: PRODUCT_BUNDLE_SCHEMA_V1.into(),
@@ -74,7 +74,7 @@ impl ProductBundle {
                 SerializationHelper::V2(SerializationHelperVersioned::V2(data))
             }
         };
-        let product_bundle_path: PathBuf = path.as_ref().join("product_bundle.json");
+        let product_bundle_path = path.as_ref().join("product_bundle.json");
         let file = File::create(product_bundle_path).context("creating product bundle file")?;
         serde_json::to_writer(file, &helper).context("writing product bundle file")?;
         Ok(())
@@ -113,8 +113,10 @@ mod tests {
 
     #[test]
     fn test_parse_v1() {
-        let pb_dir = TempDir::new().unwrap();
-        let pb_file = File::create(pb_dir.path().join("product_bundle.json")).unwrap();
+        let tmp = TempDir::new().unwrap();
+        let pb_dir = Utf8Path::from_path(tmp.path()).unwrap();
+
+        let pb_file = File::create(pb_dir.join("product_bundle.json")).unwrap();
         serde_json::to_writer(&pb_file, &json!({
             "schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json",
             "data": {
@@ -133,14 +135,16 @@ mod tests {
                 }]
             }
         })).unwrap();
-        let pb = ProductBundle::try_load_from(pb_dir.path()).unwrap();
+        let pb = ProductBundle::try_load_from(pb_dir).unwrap();
         assert!(matches!(pb, ProductBundle::V1 { .. }));
     }
 
     #[test]
     fn test_parse_v2() {
-        let pb_dir = TempDir::new().unwrap();
-        let pb_file = File::create(pb_dir.path().join("product_bundle.json")).unwrap();
+        let tmp = TempDir::new().unwrap();
+        let pb_dir = Utf8Path::from_path(tmp.path()).unwrap();
+
+        let pb_file = File::create(pb_dir.join("product_bundle.json")).unwrap();
         serde_json::to_writer(
             &pb_file,
             &json!({
@@ -155,7 +159,7 @@ mod tests {
             }),
         )
         .unwrap();
-        let pb = ProductBundle::try_load_from(pb_dir.path()).unwrap();
+        let pb = ProductBundle::try_load_from(pb_dir).unwrap();
         assert!(matches!(pb, ProductBundle::V2 { .. }));
     }
 }

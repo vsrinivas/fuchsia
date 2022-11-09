@@ -7,8 +7,8 @@
 //! Construct and parse a transfer manifest that indicates how to move artifacts between local and
 //! remote locations.
 
+use camino::Utf8PathBuf;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 
 /// A verioned manifest describing what to upload or download.
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
@@ -34,9 +34,9 @@ pub struct TransferEntry {
     pub artifact_type: ArtifactType,
     /// The local directory to find or download the artifact into that is relative to the transfer
     /// manifest itself.
-    pub local: PathBuf,
+    pub local: Utf8PathBuf,
     /// The remote directory to store or download the artifact from.
-    pub remote: PathBuf,
+    pub remote: Utf8PathBuf,
     /// Which files inside either `local` or `remote` that should be transferred.
     pub entries: Vec<ArtifactEntry>,
 }
@@ -57,7 +57,7 @@ pub enum ArtifactType {
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, PartialOrd, Eq, Ord)]
 pub struct ArtifactEntry {
     /// The path to the file in the local or remote location.
-    pub name: PathBuf,
+    pub name: Utf8PathBuf,
 }
 
 #[cfg(test)]
@@ -70,20 +70,20 @@ mod tests {
             entries: vec![
                 TransferEntry {
                     artifact_type: ArtifactType::Blobs,
-                    local: PathBuf::from("path/to/local/a"),
+                    local: Utf8PathBuf::from("path/to/local/a"),
                     remote: "gs://bucket/a".into(),
                     entries: vec![
-                        ArtifactEntry { name: PathBuf::from("one") },
-                        ArtifactEntry { name: PathBuf::from("two") },
+                        ArtifactEntry { name: Utf8PathBuf::from("one") },
+                        ArtifactEntry { name: Utf8PathBuf::from("two") },
                     ],
                 },
                 TransferEntry {
                     artifact_type: ArtifactType::Files,
-                    local: PathBuf::from("path/to/local/b"),
+                    local: Utf8PathBuf::from("path/to/local/b"),
                     remote: "gs://bucket/b".into(),
                     entries: vec![
-                        ArtifactEntry { name: PathBuf::from("three") },
-                        ArtifactEntry { name: PathBuf::from("four") },
+                        ArtifactEntry { name: Utf8PathBuf::from("three") },
+                        ArtifactEntry { name: Utf8PathBuf::from("four") },
                     ],
                 },
             ],

@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use anyhow::{Context, Result};
+use camino::{Utf8Path, Utf8PathBuf};
 use fuchsia_pkg::PackageManifest;
 use serde::de::{self, Deserializer};
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashMap};
-use std::path::{Path, PathBuf};
 
 /// A manifest containing a list of images produced by the Image Assembler.
 ///
@@ -40,62 +40,62 @@ pub struct AssemblyManifest {
 #[derive(Clone, PartialEq, Debug)]
 pub enum Image {
     /// Base Package.
-    BasePackage(PathBuf),
+    BasePackage(Utf8PathBuf),
 
     /// Zircon Boot Image.
     ZBI {
         /// Path to the ZBI image.
-        path: PathBuf,
+        path: Utf8PathBuf,
         /// Whether the ZBI is signed.
         signed: bool,
     },
 
     /// Verified Boot Metadata.
-    VBMeta(PathBuf),
+    VBMeta(Utf8PathBuf),
 
     /// BlobFS image.
     BlobFS {
         /// Path to the BlobFS image.
-        path: PathBuf,
+        path: Utf8PathBuf,
         /// Contents metadata.
         contents: BlobfsContents,
     },
 
     /// Fuchsia Volume Manager.
-    FVM(PathBuf),
+    FVM(Utf8PathBuf),
 
     /// Sparse FVM.
-    FVMSparse(PathBuf),
+    FVMSparse(Utf8PathBuf),
 
     /// Sparse blobfs-only FVM.
-    FVMSparseBlob(PathBuf),
+    FVMSparseBlob(Utf8PathBuf),
 
     /// Fastboot FVM.
-    FVMFastboot(PathBuf),
+    FVMFastboot(Utf8PathBuf),
 
     /// Qemu Kernel.
-    QemuKernel(PathBuf),
+    QemuKernel(Utf8PathBuf),
 }
 
 impl Image {
     /// Get the path of the image on the host.
-    pub fn source(&self) -> &PathBuf {
+    pub fn source(&self) -> &Utf8Path {
         match self {
-            Image::BasePackage(s) => s,
-            Image::ZBI { path, signed: _ } => path,
-            Image::VBMeta(s) => s,
-            Image::BlobFS { path, .. } => path,
-            Image::FVM(s) => s,
-            Image::FVMSparse(s) => s,
-            Image::FVMSparseBlob(s) => s,
-            Image::FVMFastboot(s) => s,
-            Image::QemuKernel(s) => s,
+            Image::BasePackage(s) => s.as_path(),
+            Image::ZBI { path, signed: _ } => path.as_path(),
+            Image::VBMeta(s) => s.as_path(),
+            Image::BlobFS { path, .. } => path.as_path(),
+            Image::FVM(s) => s.as_path(),
+            Image::FVMSparse(s) => s.as_path(),
+            Image::FVMSparseBlob(s) => s.as_path(),
+            Image::FVMFastboot(s) => s.as_path(),
+            Image::QemuKernel(s) => s.as_path(),
         }
     }
 
     /// Set the path of the image on the host.
-    pub fn set_source(&mut self, source: impl AsRef<Path>) {
-        let source = source.as_ref().to_path_buf();
+    pub fn set_source(&mut self, source: impl Into<Utf8PathBuf>) {
+        let source = source.into();
         match self {
             Image::BasePackage(s) => *s = source,
             Image::ZBI { path, signed: _ } => *path = source,
@@ -115,7 +115,7 @@ struct ImageSerializeHelper<'a> {
     #[serde(rename = "type")]
     partition_type: &'a str,
     name: &'a str,
-    path: &'a Path,
+    path: &'a Utf8Path,
     #[serde(skip_serializing_if = "Option::is_none")]
     signed: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -220,7 +220,7 @@ impl BlobfsContents {
     /// Add base package info into BlobfsContents
     pub fn add_base_package(
         &mut self,
-        path: impl AsRef<Path>,
+        path: impl AsRef<Utf8Path>,
         merkle_size_map: &HashMap<String, u64>,
     ) -> anyhow::Result<()> {
         Self::add_package(&mut self.packages.base, path, merkle_size_map)?;
@@ -230,7 +230,7 @@ impl BlobfsContents {
     /// Add cache package info into BlobfsContents
     pub fn add_cache_package(
         &mut self,
-        path: impl AsRef<Path>,
+        path: impl AsRef<Utf8Path>,
         merkle_size_map: &HashMap<String, u64>,
     ) -> anyhow::Result<()> {
         Self::add_package(&mut self.packages.cache, path, merkle_size_map)?;
@@ -239,7 +239,7 @@ impl BlobfsContents {
 
     fn add_package(
         package_set: &mut PackageSetMetadata,
-        path: impl AsRef<Path>,
+        path: impl AsRef<Utf8Path>,
         merkle_size_map: &HashMap<String, u64>,
     ) -> anyhow::Result<()> {
         let manifest = path.as_ref().to_owned();
@@ -281,7 +281,7 @@ pub struct PackageMetadata {
     /// The package's name.
     pub name: String,
     /// Path to the package's manifest.
-    pub manifest: PathBuf,
+    pub manifest: Utf8PathBuf,
     /// List of blobs in this package.
     pub blobs: Vec<PackageBlob>,
 }
@@ -301,7 +301,7 @@ struct ImageDeserializeHelper {
     #[serde(rename = "type")]
     partition_type: String,
     name: String,
-    path: PathBuf,
+    path: Utf8PathBuf,
     signed: Option<bool>,
     contents: Option<ImageContentsDeserializeHelper>,
 }
@@ -365,9 +365,9 @@ mod tests {
     #[test]
     fn image_source() {
         let mut image = Image::FVM("path/to/fvm.blk".into());
-        assert_eq!(image.source(), &PathBuf::from("path/to/fvm.blk"));
+        assert_eq!(image.source(), &Utf8PathBuf::from("path/to/fvm.blk"));
         image.set_source("path/to/fvm2.blk");
-        assert_eq!(image.source(), &PathBuf::from("path/to/fvm2.blk"));
+        assert_eq!(image.source(), &Utf8PathBuf::from("path/to/fvm2.blk"));
     }
 
     #[test]
@@ -442,7 +442,7 @@ mod tests {
                 Image::FVMFastboot(path) => ("path/to/fvm.fastboot.blk", path),
                 Image::QemuKernel(path) => ("path/to/qemu/kernel", path),
             };
-            assert_eq!(&PathBuf::from(expected), actual);
+            assert_eq!(&Utf8PathBuf::from(expected), actual);
         }
     }
 
@@ -465,6 +465,7 @@ mod tests {
 
         let mut package_manifest_temp_file = NamedTempFile::new()?;
         let dir = tempdir().unwrap();
+        let root = Utf8Path::from_path(dir.path()).unwrap();
         write!(package_manifest_temp_file, "{}", content)?;
         let path = package_manifest_temp_file.into_temp_path();
         path.persist(dir.path().join("package_manifest_temp_file.json"))?;
@@ -483,14 +484,10 @@ mod tests {
             "eabdb84d26416c1821fd8972e0d835eedaf7468e5a9ebe01e5944462411aec70".to_string(),
             30,
         );
-        contents.add_base_package(
-            dir.path().join("package_manifest_temp_file.json"),
-            &merkle_size_map,
-        )?;
-        contents.add_cache_package(
-            dir.path().join("package_manifest_temp_file.json"),
-            &merkle_size_map,
-        )?;
+        contents
+            .add_base_package(root.join("package_manifest_temp_file.json"), &merkle_size_map)?;
+        contents
+            .add_cache_package(root.join("package_manifest_temp_file.json"), &merkle_size_map)?;
         let actual_package_blobs_base = &(contents.packages.base.0[0].blobs);
         let actual_package_blobs_cache = &(contents.packages.cache.0[0].blobs);
 

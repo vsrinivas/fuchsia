@@ -363,7 +363,6 @@ mod tests {
     use super::*;
     use crate::PartialKernelConfig;
     use assembly_util as util;
-    use std::path::PathBuf;
 
     #[test]
     fn test_product_assembly_config_from_json5() {
@@ -700,17 +699,17 @@ mod tests {
         "#;
         let bundle =
             util::from_reader::<_, AssemblyInputBundle>(&mut std::io::Cursor::new(json5)).unwrap();
-        assert_eq!(bundle.image_assembly.system, vec!(PathBuf::from("package0")));
+        assert_eq!(bundle.image_assembly.system, vec!(Utf8PathBuf::from("package0")));
         assert_eq!(
             bundle.image_assembly.base,
-            vec!(PathBuf::from("package1"), PathBuf::from("package2"))
+            vec!(Utf8PathBuf::from("package1"), Utf8PathBuf::from("package2"))
         );
         assert_eq!(
             bundle.image_assembly.cache,
-            vec!(PathBuf::from("package3"), PathBuf::from("package4"))
+            vec!(Utf8PathBuf::from("package3"), Utf8PathBuf::from("package4"))
         );
         let expected_kernel = PartialKernelConfig {
-            path: Some(PathBuf::from("path/to/kernel")),
+            path: Some(Utf8PathBuf::from("path/to/kernel")),
             args: vec!["arg1".to_string(), "arg2".to_string()],
             clock_backstop: Some(0),
         };
@@ -719,14 +718,14 @@ mod tests {
         assert_eq!(
             bundle.image_assembly.bootfs_files,
             vec!(FileEntry {
-                source: PathBuf::from("path/to/source"),
+                source: Utf8PathBuf::from("path/to/source"),
                 destination: "path/to/destination".to_string()
             })
         );
         assert_eq!(
             bundle.config_data.get("package1").unwrap(),
             &vec!(FileEntry {
-                source: PathBuf::from("path/to/source.json"),
+                source: Utf8PathBuf::from("path/to/source.json"),
                 destination: "config.json".to_string()
             })
         );

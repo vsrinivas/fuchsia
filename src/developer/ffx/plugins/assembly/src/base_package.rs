@@ -7,25 +7,25 @@ use assembly_base_package::BasePackageBuilder;
 use assembly_config_schema::ImageAssemblyConfig;
 use assembly_manifest::{AssemblyManifest, Image};
 use assembly_util::path_relative_from_current_dir;
+use camino::{Utf8Path, Utf8PathBuf};
 use fuchsia_hash::Hash;
 use fuchsia_merkle::MerkleTree;
 use fuchsia_pkg::PackageManifest;
 use std::collections::BTreeMap;
 use std::fs::File;
-use std::path::{Path, PathBuf};
 use tracing::info;
 
 pub struct BasePackage {
     pub merkle: Hash,
     pub contents: BTreeMap<String, String>,
-    pub path: PathBuf,
-    pub manifest_path: PathBuf,
+    pub path: Utf8PathBuf,
+    pub manifest_path: Utf8PathBuf,
 }
 
 pub fn construct_base_package(
     assembly_manifest: &mut AssemblyManifest,
-    outdir: impl AsRef<Path>,
-    gendir: impl AsRef<Path>,
+    outdir: impl AsRef<Utf8Path>,
+    gendir: impl AsRef<Utf8Path>,
     name: impl AsRef<str>,
     product: &ImageAssemblyConfig,
 ) -> Result<BasePackage> {
@@ -43,14 +43,14 @@ pub fn construct_base_package(
         let pkg_manifest = PackageManifest::try_load_from(pkg_manifest_path)?;
         base_pkg_builder.add_base_package(pkg_manifest).context(format!(
             "Failed to add package to base package list with manifest: {}",
-            pkg_manifest_path.display()
+            pkg_manifest_path
         ))?;
     }
     for pkg_manifest_path in &product.cache {
         let pkg_manifest = PackageManifest::try_load_from(pkg_manifest_path)?;
         base_pkg_builder.add_cache_package(pkg_manifest).context(format!(
             "Failed to add package to cache package list with manifest: {}",
-            pkg_manifest_path.display()
+            pkg_manifest_path
         ))?;
     }
 
@@ -92,12 +92,13 @@ mod tests {
 
     #[test]
     fn construct() {
-        let dir = tempdir().unwrap();
+        let tmp = tempdir().unwrap();
+        let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
         // Prepare package manifests to add to the base package.
-        let system_manifest = generate_test_manifest_file(&dir.path(), "extra_base");
-        let base_manifest = generate_test_manifest_file(&dir.path(), "test_static");
-        let cache_manifest = generate_test_manifest_file(&dir.path(), "test_cache");
+        let system_manifest = generate_test_manifest_file(&dir, "extra_base");
+        let base_manifest = generate_test_manifest_file(&dir, "test_static");
+        let cache_manifest = generate_test_manifest_file(&dir, "test_cache");
         let mut product_config = ImageAssemblyConfig::new_for_testing("kernel", 0);
         product_config.system.push(system_manifest);
         product_config.base.push(base_manifest);
@@ -107,15 +108,15 @@ mod tests {
         let mut assembly_manifest = AssemblyManifest::default();
         let base_package = construct_base_package(
             &mut assembly_manifest,
-            dir.path(),
-            dir.path(),
+            dir,
+            dir,
             "system_image",
             &product_config,
         )
         .unwrap();
         assert_eq!(
             base_package.path,
-            path_relative_from_current_dir(dir.path().join("base/meta.far")).unwrap()
+            path_relative_from_current_dir(dir.join("base/meta.far")).unwrap()
         );
 
         // Read the base package, and assert the contents are correct.
@@ -134,12 +135,13 @@ mod tests {
 
     #[test]
     fn construct_prime() {
-        let dir = tempdir().unwrap();
+        let tmp = tempdir().unwrap();
+        let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
         // Prepare package manifests to add to the base package.
-        let system_manifest = generate_test_manifest_file(&dir.path(), "extra_base");
-        let base_manifest = generate_test_manifest_file(&dir.path(), "test_static");
-        let cache_manifest = generate_test_manifest_file(&dir.path(), "test_cache");
+        let system_manifest = generate_test_manifest_file(&dir, "extra_base");
+        let base_manifest = generate_test_manifest_file(&dir, "test_static");
+        let cache_manifest = generate_test_manifest_file(&dir, "test_cache");
         let mut product_config = ImageAssemblyConfig::new_for_testing("kernel", 0);
         product_config.system.push(system_manifest);
         product_config.base.push(base_manifest);
@@ -149,15 +151,15 @@ mod tests {
         let mut assembly_manifest = AssemblyManifest::default();
         let base_package = construct_base_package(
             &mut assembly_manifest,
-            dir.path(),
-            dir.path(),
+            dir,
+            dir,
             "system_image",
             &product_config,
         )
         .unwrap();
         assert_eq!(
             base_package.path,
-            path_relative_from_current_dir(dir.path().join("base/meta.far")).unwrap()
+            path_relative_from_current_dir(dir.join("base/meta.far")).unwrap()
         );
 
         // Read the base package, and assert the contents are correct.
@@ -175,7 +177,10 @@ mod tests {
     // into `dir`, and the location is returned. The `name` is used in the blob
     // file names to make each manifest somewhat unique.
     // TODO(fxbug.dev/76993): See if we can share this with BasePackage.
-    pub fn generate_test_manifest_file(dir: impl AsRef<Path>, name: impl AsRef<str>) -> PathBuf {
+    pub fn generate_test_manifest_file(
+        dir: impl AsRef<Utf8Path>,
+        name: impl AsRef<str>,
+    ) -> Utf8PathBuf {
         // Create a data file for the package.
         let data_file_name = format!("{}_data.txt", name.as_ref());
         let data_path = dir.as_ref().join(&data_file_name);

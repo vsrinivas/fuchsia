@@ -19,6 +19,7 @@ rustc_binary("pbtool") {
     "//src/sys/pkg/lib/fuchsia-merkle",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:camino",
     "//third_party/rust_crates:pathdiff",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",

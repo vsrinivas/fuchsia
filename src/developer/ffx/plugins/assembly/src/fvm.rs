@@ -13,8 +13,8 @@ use assembly_manifest::{AssemblyManifest, Image};
 use assembly_minfs::MinFSBuilder;
 use assembly_tool::ToolProvider;
 use assembly_util::path_relative_from_current_dir;
+use camino::{Utf8Path, Utf8PathBuf};
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
 use tracing::info;
 
 /// Constructs up-to four FVM files. Calling this function generates
@@ -28,8 +28,8 @@ use tracing::info;
 /// If the |fvm_config| includes information for a NAND, then an NAND-supported
 /// sparse FVM will also be generated for fastboot flashing.
 pub fn construct_fvm<'a>(
-    outdir: impl AsRef<Path>,
-    gendir: impl AsRef<Path>,
+    outdir: impl AsRef<Utf8Path>,
+    gendir: impl AsRef<Utf8Path>,
     tools: &impl ToolProvider,
     assembly_manifest: &mut AssemblyManifest,
     assembly_config: &ImageAssemblyConfig,
@@ -62,9 +62,9 @@ pub struct MultiFvmBuilder<'a> {
     /// List of the FVMs to generate.
     outputs: Vec<FvmOutput>,
     /// The directory to write the outputs into.
-    outdir: PathBuf,
+    outdir: Utf8PathBuf,
     /// The directory to write the intermediate outputs into.
-    gendir: PathBuf,
+    gendir: Utf8PathBuf,
     /// The image assembly config.
     assembly_config: &'a ImageAssemblyConfig,
     /// The manifest of images to add new FVMs to.
@@ -87,8 +87,8 @@ impl<'a> MultiFvmBuilder<'a> {
     /// Construct a new MultiFvmBuilder.
     /// These parameters are constant across all generated FVMs.
     pub fn new(
-        outdir: impl AsRef<Path>,
-        gendir: impl AsRef<Path>,
+        outdir: impl AsRef<Utf8Path>,
+        gendir: impl AsRef<Utf8Path>,
         assembly_config: &'a ImageAssemblyConfig,
         assembly_manifest: &'a mut AssemblyManifest,
         slice_size: u64,
@@ -346,16 +346,17 @@ mod tests {
     use assembly_manifest::AssemblyManifest;
     use assembly_tool::testing::FakeToolProvider;
     use assembly_tool::{ToolCommandLog, ToolProvider};
+    use camino::{Utf8Path, Utf8PathBuf};
     use serde_json::json;
     use std::collections::BTreeMap;
     use std::fs::File;
     use std::io::Write;
-    use std::path::PathBuf;
     use tempfile::tempdir;
 
     #[test]
     fn construct_no_outputs() {
-        let dir = tempdir().unwrap();
+        let tmp = tempdir().unwrap();
+        let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
         let assembly_config = ImageAssemblyConfig {
             system: Vec::new(),
@@ -376,12 +377,12 @@ mod tests {
             merkle: [0u8; 32].into(),
             contents: BTreeMap::new(),
             path: "path/to/base_package".into(),
-            manifest_path: PathBuf::default(),
+            manifest_path: Utf8PathBuf::default(),
         };
         let slice_size = 0;
         let mut builder = MultiFvmBuilder::new(
-            dir.path(),
-            dir.path(),
+            dir,
+            dir,
             &assembly_config,
             &mut assembly_manifest,
             slice_size,
@@ -399,7 +400,8 @@ mod tests {
 
     #[test]
     fn construct_standard_no_fs() {
-        let dir = tempdir().unwrap();
+        let tmp = tempdir().unwrap();
+        let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
         let assembly_config = ImageAssemblyConfig {
             system: Vec::new(),
@@ -420,12 +422,12 @@ mod tests {
             merkle: [0u8; 32].into(),
             contents: BTreeMap::new(),
             path: "path/to/base_package".into(),
-            manifest_path: PathBuf::default(),
+            manifest_path: Utf8PathBuf::default(),
         };
         let slice_size = 0;
         let mut builder = MultiFvmBuilder::new(
-            dir.path(),
-            dir.path(),
+            dir,
+            dir,
             &assembly_config,
             &mut assembly_manifest,
             slice_size,
@@ -441,7 +443,7 @@ mod tests {
         let tools = FakeToolProvider::default();
         builder.build(&tools).unwrap();
 
-        let output_path = dir.path().join("fvm.blk");
+        let output_path = dir.join("fvm.blk");
         let expected_log: ToolCommandLog = serde_json::from_value(json!({
             "commands": [
             {
@@ -461,7 +463,8 @@ mod tests {
 
     #[test]
     fn construct_multiple_no_fs() {
-        let dir = tempdir().unwrap();
+        let tmp = tempdir().unwrap();
+        let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
         let assembly_config = ImageAssemblyConfig {
             system: Vec::new(),
@@ -482,12 +485,12 @@ mod tests {
             merkle: [0u8; 32].into(),
             contents: BTreeMap::new(),
             path: "path/to/base_package".into(),
-            manifest_path: PathBuf::default(),
+            manifest_path: Utf8PathBuf::default(),
         };
         let slice_size = 0;
         let mut builder = MultiFvmBuilder::new(
-            dir.path(),
-            dir.path(),
+            dir,
+            dir,
             &assembly_config,
             &mut assembly_manifest,
             slice_size,
@@ -518,10 +521,10 @@ mod tests {
         let tools = FakeToolProvider::default();
         builder.build(&tools).unwrap();
 
-        let standard_path = dir.path().join("fvm.blk");
-        let sparse_path = dir.path().join("fvm.sparse.blk");
-        let nand_tmp_path = dir.path().join("fvm.nand.tmp.blk");
-        let nand_path = dir.path().join("fvm.nand.blk");
+        let standard_path = dir.join("fvm.blk");
+        let sparse_path = dir.join("fvm.sparse.blk");
+        let nand_tmp_path = dir.join("fvm.nand.tmp.blk");
+        let nand_path = dir.join("fvm.nand.blk");
         let expected_log: ToolCommandLog = serde_json::from_value(json!({
             "commands": [
             {
@@ -580,7 +583,8 @@ mod tests {
 
     #[test]
     fn construct_standard_with_fs() {
-        let dir = tempdir().unwrap();
+        let tmp = tempdir().unwrap();
+        let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
         let assembly_config = ImageAssemblyConfig {
             system: Vec::new(),
@@ -598,10 +602,10 @@ mod tests {
         };
         let mut assembly_manifest = AssemblyManifest::default();
 
-        let base_package_path = dir.path().join("base.far");
+        let base_package_path = dir.join("base.far");
         let mut base_package_file = File::create(&base_package_path).unwrap();
         write!(base_package_file, "base package").unwrap();
-        let base_package_manifest_path = dir.path().join("package_manifest.json");
+        let base_package_manifest_path = dir.join("package_manifest.json");
         let mut base_package_manifest_file = File::create(&base_package_manifest_path).unwrap();
         let contents = r#"{
             "version": "1",
@@ -622,8 +626,8 @@ mod tests {
 
         let slice_size = 0;
         let mut builder = MultiFvmBuilder::new(
-            dir.path(),
-            dir.path(),
+            dir,
+            dir,
             &assembly_config,
             &mut assembly_manifest,
             slice_size,
@@ -664,11 +668,11 @@ mod tests {
         let tools = FakeToolProvider::default();
         builder.build(&tools).unwrap();
 
-        let blobfs_path = dir.path().join("blob.blk");
-        let blobs_json_path = dir.path().join("blobs.json");
-        let blob_manifest_path = dir.path().join("blob.manifest");
-        let minfs_path = dir.path().join("data.blk");
-        let standard_path = dir.path().join("fvm.blk");
+        let blobfs_path = dir.join("blob.blk");
+        let blobs_json_path = dir.join("blobs.json");
+        let blob_manifest_path = dir.join("blob.manifest");
+        let minfs_path = dir.join("data.blk");
+        let standard_path = dir.join("fvm.blk");
         let expected_log: ToolCommandLog = serde_json::from_value(json!({
             "commands": [
             {
@@ -714,7 +718,8 @@ mod tests {
 
     #[test]
     fn construct_multiple_with_fs() {
-        let dir = tempdir().unwrap();
+        let tmp = tempdir().unwrap();
+        let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
         let assembly_config = ImageAssemblyConfig {
             system: Vec::new(),
@@ -732,10 +737,10 @@ mod tests {
         };
         let mut assembly_manifest = AssemblyManifest::default();
 
-        let base_package_path = dir.path().join("base.far");
+        let base_package_path = dir.join("base.far");
         let mut base_package_file = File::create(&base_package_path).unwrap();
         write!(base_package_file, "base package").unwrap();
-        let base_package_manifest_path = dir.path().join("package_manifest.json");
+        let base_package_manifest_path = dir.join("package_manifest.json");
         let mut base_package_manifest_file = File::create(&base_package_manifest_path).unwrap();
         let contents = r#"{
             "version": "1",
@@ -756,8 +761,8 @@ mod tests {
 
         let slice_size = 0;
         let mut builder = MultiFvmBuilder::new(
-            dir.path(),
-            dir.path(),
+            dir,
+            dir,
             &assembly_config,
             &mut assembly_manifest,
             slice_size,
@@ -803,14 +808,14 @@ mod tests {
         let tools = FakeToolProvider::default();
         builder.build(&tools).unwrap();
 
-        let blobfs_path = dir.path().join("blob.blk");
-        let blobs_json_path = dir.path().join("blobs.json");
-        let blob_manifest_path = dir.path().join("blob.manifest");
-        let minfs_path = dir.path().join("data.blk");
-        let standard_path = dir.path().join("fvm.blk");
-        let sparse_path = dir.path().join("fvm.sparse.blk");
-        let nand_tmp_path = dir.path().join("fvm.nand.tmp.blk");
-        let nand_path = dir.path().join("fvm.nand.blk");
+        let blobfs_path = dir.join("blob.blk");
+        let blobs_json_path = dir.join("blobs.json");
+        let blob_manifest_path = dir.join("blob.manifest");
+        let minfs_path = dir.join("data.blk");
+        let standard_path = dir.join("fvm.blk");
+        let sparse_path = dir.join("fvm.sparse.blk");
+        let nand_tmp_path = dir.join("fvm.nand.tmp.blk");
+        let nand_path = dir.join("fvm.nand.blk");
         let expected_log: ToolCommandLog = serde_json::from_value(json!({
             "commands": [
             {

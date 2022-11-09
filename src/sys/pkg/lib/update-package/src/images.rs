@@ -7,15 +7,13 @@ use {
         image::{Image, ImageClass, ImageType},
         update_mode::UpdateMode,
     },
+    camino::Utf8Path,
     fidl_fuchsia_io as fio,
     fuchsia_hash::Hash,
     fuchsia_url::{AbsoluteComponentUrl, ParseError, PinnedAbsolutePackageUrl},
     fuchsia_zircon_status::Status,
     serde::{Deserialize, Serialize},
-    std::{
-        collections::{BTreeMap, BTreeSet, HashSet},
-        path::Path,
-    },
+    std::collections::{BTreeMap, BTreeSet, HashSet},
     thiserror::Error,
 };
 
@@ -371,7 +369,7 @@ impl ImageMetadata {
     /// Compute the size and hash for the image file located at `path`, determining the image's
     /// fuchsia-pkg URL using the given base `url` and `resource` path within the package.
     pub fn for_path(
-        path: &Path,
+        path: &Utf8Path,
         url: PinnedAbsolutePackageUrl,
         resource: String,
     ) -> Result<Self, ImageMetadataError> {
@@ -842,7 +840,7 @@ mod tests {
     #[test]
     fn image_metadata_for_path_empty() {
         let tmp = tempfile::tempdir().expect("/tmp to exist");
-        let path = tmp.path().join("empty");
+        let path = Utf8Path::from_path(tmp.path()).unwrap().join("empty");
         let mut f = File::create(&path).unwrap();
         f.write_all(b"").unwrap();
         drop(f);
@@ -863,7 +861,7 @@ mod tests {
     #[test]
     fn image_metadata_for_path_with_unaligned_data() {
         let tmp = tempfile::tempdir().expect("/tmp to exist");
-        let path = tmp.path().join("empty");
+        let path = Utf8Path::from_path(tmp.path()).unwrap().join("empty");
         let mut f = File::create(&path).unwrap();
         f.write_all(&[0; 8192 + 4096]).unwrap();
         drop(f);

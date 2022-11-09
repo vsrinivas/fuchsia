@@ -7,12 +7,12 @@
 use anyhow::{bail, Context, Result};
 use argh::FromArgs;
 use assembly_manifest::AssemblyManifest;
-use pathdiff::diff_paths;
+use camino::{Utf8Path, Utf8PathBuf};
+use pathdiff::diff_utf8_paths;
 use sdk_metadata::ProductBundle;
 use serde::Serialize;
 use std::collections::HashSet;
 use std::fs::File;
-use std::path::PathBuf;
 use std::str::FromStr;
 use transfer_manifest::{
     ArtifactEntry, ArtifactType, TransferEntry, TransferManifest, TransferManifestV1,
@@ -25,12 +25,12 @@ use walkdir::{DirEntry, WalkDir};
 pub struct GenerateTransferManifest {
     /// path to a product bundle.
     #[argh(option)]
-    product_bundle: PathBuf,
+    product_bundle: Utf8PathBuf,
 
     /// path to the directory to write the transfer manifest, all_blobs.json, images.json, and
     /// targets.json.
     #[argh(option)]
-    out_dir: PathBuf,
+    out_dir: Utf8PathBuf,
 }
 
 /// The format of all_blobs.json.
@@ -52,9 +52,12 @@ impl GenerateTransferManifest {
             ProductBundle::V2(pb) => pb,
         };
 
-        let canonical_out_dir = &self.out_dir.canonicalize().context("canonicalizing out_dir")?;
-        let canonical_product_bundle_path =
-            &self.product_bundle.canonicalize().context("canonicalizing product bundle path")?;
+        let canonical_out_dir =
+            &self.out_dir.canonicalize_utf8().context("canonicalizing out_dir")?;
+        let canonical_product_bundle_path = &self
+            .product_bundle
+            .canonicalize_utf8()
+            .context("canonicalizing product bundle path")?;
 
         let mut entries = vec![];
 
@@ -74,7 +77,7 @@ impl GenerateTransferManifest {
                 let merkle = fuchsia_merkle::Hash::from_str(&blob.to_string())?;
                 all_blobs.insert(AllBlobsEntry { merkle });
             }
-            let local = diff_paths(canonical_blobs_path, canonical_out_dir)
+            let local = diff_utf8_paths(canonical_blobs_path, canonical_out_dir)
                 .context("rebasing blobs path")?;
             let blob_transfer = TransferEntry {
                 artifact_type: ArtifactType::Blobs,
@@ -90,19 +93,19 @@ impl GenerateTransferManifest {
         product_bundle_entries.push(ArtifactEntry { name: "product_bundle.json".into() });
         for partition in &product_bundle.partitions.bootstrap_partitions {
             product_bundle_entries.push(ArtifactEntry {
-                name: diff_paths(&partition.image, &canonical_product_bundle_path)
+                name: diff_utf8_paths(&partition.image, &canonical_product_bundle_path)
                     .context("rebasing bootstrap partition")?,
             });
         }
         for partition in &product_bundle.partitions.bootloader_partitions {
             product_bundle_entries.push(ArtifactEntry {
-                name: diff_paths(&partition.image, &canonical_product_bundle_path)
+                name: diff_utf8_paths(&partition.image, &canonical_product_bundle_path)
                     .context("rebasing bootloader partition")?,
             });
         }
         for credential in &product_bundle.partitions.unlock_credentials {
             product_bundle_entries.push(ArtifactEntry {
-                name: diff_paths(&credential, &canonical_product_bundle_path)
+                name: diff_utf8_paths(&credential, &canonical_product_bundle_path)
                     .context("rebasing unlock credential")?,
             });
         }
@@ -112,7 +115,7 @@ impl GenerateTransferManifest {
             if let Some(system) = system {
                 for image in &system.images {
                     product_bundle_entries.push(ArtifactEntry {
-                        name: diff_paths(image.source(), &canonical_product_bundle_path)
+                        name: diff_utf8_paths(image.source(), &canonical_product_bundle_path)
                             .context("rebasing system image")?,
                     });
                 }
@@ -132,8 +135,11 @@ impl GenerateTransferManifest {
             })?;
             for entry in entries {
                 if entry.file_type().is_file() {
+                    let entry_path =
+                        Utf8Path::from_path(entry.path()).context("converting to UTF-8")?;
+
                     product_bundle_entries.push(ArtifactEntry {
-                        name: diff_paths(entry.path(), canonical_product_bundle_path)
+                        name: diff_utf8_paths(entry_path, canonical_product_bundle_path)
                             .context("rebasing tuf metadata")?,
                     });
                 }
@@ -142,7 +148,7 @@ impl GenerateTransferManifest {
         product_bundle_entries.sort();
 
         let rebased_product_bundle_path =
-            diff_paths(canonical_product_bundle_path, canonical_out_dir)
+            diff_utf8_paths(canonical_product_bundle_path, canonical_out_dir)
                 .context("rebasing product bundle directory")?;
         entries.push(TransferEntry {
             artifact_type: ArtifactType::Files,
@@ -181,7 +187,8 @@ impl GenerateTransferManifest {
         };
         for image in &mut assembly.images {
             image.set_source(
-                diff_paths(image.source(), canonical_out_dir).context("rebasing image path")?,
+                diff_utf8_paths(image.source(), canonical_out_dir)
+                    .context("rebasing image path")?,
             );
         }
         let images_path = self.out_dir.join("images.json");
@@ -220,21 +227,24 @@ mod tests {
 
     #[fuchsia::test]
     async fn test_generate() {
-        let tempdir = tempdir().unwrap();
-        let pb_path = tempdir.path().join("product_bundle");
+        let tmp = tempdir().unwrap();
+        let tempdir = Utf8Path::from_path(tmp.path()).unwrap();
+
+        let pb_path = tempdir.join("product_bundle");
         std::fs::create_dir_all(&pb_path).unwrap();
 
-        let create_temp_file = |name: &str| -> PathBuf {
+        let create_temp_file = |name: &str| -> Utf8PathBuf {
             let path = pb_path.join(name);
             let mut file = File::create(&path).unwrap();
             write!(file, "{}", name).unwrap();
             path
         };
 
-        let utf8_tempdir = Utf8Path::from_path(&tempdir.path()).unwrap();
-        let utf8_pb_path = utf8_tempdir.join("product_bundle");
-        let _repo =
-            test_utils::make_repo_dir(&pb_path.join("repository"), &pb_path.join("blobs")).await;
+        let _repo = test_utils::make_repo_dir(
+            pb_path.join("repository").as_std_path(),
+            &pb_path.join("blobs").as_std_path(),
+        )
+        .await;
 
         let pb = ProductBundle::V2(ProductBundleV2 {
             partitions: PartitionsConfig::default(),
@@ -249,8 +259,8 @@ mod tests {
             system_r: None,
             repositories: vec![Repository {
                 name: "fuchsia.com".into(),
-                metadata_path: utf8_pb_path.join("repository"),
-                blobs_path: utf8_pb_path.join("blobs"),
+                metadata_path: pb_path.join("repository"),
+                blobs_path: pb_path.join("blobs"),
             }],
             update_package_hash: None,
         });
@@ -258,11 +268,11 @@ mod tests {
 
         let cmd = GenerateTransferManifest {
             product_bundle: pb_path.clone(),
-            out_dir: tempdir.path().to_path_buf(),
+            out_dir: tempdir.to_path_buf(),
         };
         cmd.generate().await.unwrap();
 
-        let output = tempdir.path().join("transfer.json");
+        let output = tempdir.join("transfer.json");
         let transfer_manifest_file = File::open(&output).unwrap();
         let transfer_manifest: TransferManifest =
             serde_json::from_reader(transfer_manifest_file).unwrap();
@@ -317,7 +327,7 @@ mod tests {
             }),
         );
 
-        let all_blobs_path = tempdir.path().join("all_blobs.json");
+        let all_blobs_path = tempdir.join("all_blobs.json");
         let all_blobs_file = File::open(&all_blobs_path).unwrap();
         let all_blobs_value: serde_json::Value = serde_json::from_reader(all_blobs_file).unwrap();
         assert_eq!(
@@ -345,7 +355,7 @@ mod tests {
             )
         );
 
-        let images_path = tempdir.path().join("images.json");
+        let images_path = tempdir.join("images.json");
         let images_file = File::open(&images_path).unwrap();
         let images: AssemblyManifest = serde_json::from_reader(images_file).unwrap();
         assert_eq!(
@@ -359,7 +369,7 @@ mod tests {
             },
         );
 
-        let targets_path = tempdir.path().join("targets.json");
+        let targets_path = tempdir.join("targets.json");
         assert!(targets_path.exists());
     }
 }

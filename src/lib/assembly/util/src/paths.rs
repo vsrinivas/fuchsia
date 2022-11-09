@@ -3,14 +3,13 @@
 // found in the LICENSE file.
 
 use anyhow::{anyhow, Context, Result};
-use camino::{Utf8Path, Utf8PathBuf};
-use pathdiff::diff_paths;
+use camino::{Utf8Component, Utf8Path, Utf8PathBuf};
+use pathdiff::diff_utf8_paths;
 use serde::{Deserialize, Serialize};
 use std::{
-    env::current_dir,
     hash::Hash,
     marker::PhantomData,
-    path::{Component, Path, PathBuf},
+    path::{Path, PathBuf},
 };
 
 /// A base trait for TypePath's marker traits.
@@ -148,6 +147,18 @@ mod from_impls {
         }
     }
 
+    impl<P: PathTypeMarker> From<TypedPathBuf<P>> for Utf8PathBuf {
+        fn from(path: TypedPathBuf<P>) -> Self {
+            path.inner
+        }
+    }
+
+    impl<P: PathTypeMarker> From<TypedPathBuf<P>> for PathBuf {
+        fn from(path: TypedPathBuf<P>) -> Self {
+            path.inner.into()
+        }
+    }
+
     impl<P: PathTypeMarker> From<String> for TypedPathBuf<P> {
         fn from(s: String) -> TypedPathBuf<P> {
             TypedPathBuf::from(Utf8PathBuf::from(s))
@@ -207,42 +218,49 @@ impl<P: PathTypeMarker> Hash for TypedPathBuf<P> {
 /// To do the calculation, both 'path' and 'base' are made absolute, using the
 /// current working dir as the basis for converting a relative path to absolute,
 /// and then the relative path from one to the other is computed.
-pub fn path_relative_from(path: impl AsRef<Path>, base: impl AsRef<Path>) -> Result<PathBuf> {
+pub fn path_relative_from(
+    path: impl AsRef<Utf8Path>,
+    base: impl AsRef<Utf8Path>,
+) -> Result<Utf8PathBuf> {
     let path = normalized_absolute_path(&path).with_context(|| {
-        format!("converting path to normalized absolute path: {}", path.as_ref().display())
+        format!("converting path to normalized absolute path: {}", path.as_ref())
     })?;
     let base = normalized_absolute_path(&base).with_context(|| {
-        format!("converting base to normalized absolute path: {}", base.as_ref().display())
+        format!("converting base to normalized absolute path: {}", base.as_ref())
     })?;
 
-    diff_paths(&path, &base).ok_or_else(|| {
-        anyhow!("unable to compute relative path to {} from {}", path.display(), base.display())
-    })
+    diff_utf8_paths(&path, &base)
+        .ok_or_else(|| anyhow!("unable to compute relative path to {} from {}", path, base))
 }
 
 /// Helper to convert an absolute path into a path relative to the current directory
-pub fn path_relative_from_current_dir(path: impl AsRef<Path>) -> Result<PathBuf> {
-    path_relative_from(path, current_dir()?)
+pub fn path_relative_from_current_dir(path: impl AsRef<Utf8Path>) -> Result<Utf8PathBuf> {
+    let current_dir = std::env::current_dir()?;
+    path_relative_from(path, Utf8PathBuf::try_from(current_dir)?)
 }
 
 /// Helper to make a path relative to the path to a file.  This is the same as
 /// [path_relative_from(file.parent()?)]
 ///
-pub fn path_relative_from_file(path: impl AsRef<Path>, file: impl AsRef<Path>) -> Result<PathBuf> {
+pub fn path_relative_from_file(
+    path: impl AsRef<Utf8Path>,
+    file: impl AsRef<Utf8Path>,
+) -> Result<Utf8PathBuf> {
     let file = file.as_ref();
     let base = file.parent().ok_or_else(|| {
         anyhow!(
             "The path to the file to be relative to does not appear to be the path to a file: {}",
-            file.display()
+            file
         )
     })?;
     path_relative_from(path, base)
 }
 
-fn normalized_absolute_path(path: impl AsRef<Path>) -> Result<PathBuf> {
+fn normalized_absolute_path(path: impl AsRef<Utf8Path>) -> Result<Utf8PathBuf> {
     let path = path.as_ref();
     if path.is_relative() {
-        normalize_path_impl(std::env::current_dir()?.join(path).components())
+        let current_dir = std::env::current_dir()?;
+        normalize_path_impl(Utf8PathBuf::try_from(current_dir)?.join(path).components())
     } else {
         normalize_path_impl(path.components())
     }
@@ -264,13 +282,12 @@ fn normalized_absolute_path(path: impl AsRef<Path>) -> Result<PathBuf> {
 /// ```
 ///
 pub fn resolve_path_from_file(
-    path: impl AsRef<Path>,
-    resolve_from: impl AsRef<Path>,
-) -> Result<PathBuf> {
+    path: impl AsRef<Utf8Path>,
+    resolve_from: impl AsRef<Utf8Path>,
+) -> Result<Utf8PathBuf> {
     let resolve_from = resolve_from.as_ref();
-    let resolve_from_dir = resolve_from
-        .parent()
-        .with_context(|| format!("Not a path to a file: {}", resolve_from.display()))?;
+    let resolve_from_dir =
+        resolve_from.parent().with_context(|| format!("Not a path to a file: {}", resolve_from))?;
     resolve_path(path, resolve_from_dir)
 }
 /// Helper to resolve a path that's relative to some other path into a
@@ -288,15 +305,17 @@ pub fn resolve_path_from_file(
 ///   assert_eq!(rebased.unwrap(), "some/path/to/some/internal/path")
 /// ```
 ///
-pub fn resolve_path(path: impl AsRef<Path>, resolve_from: impl AsRef<Path>) -> Result<PathBuf> {
+pub fn resolve_path(
+    path: impl AsRef<Utf8Path>,
+    resolve_from: impl AsRef<Utf8Path>,
+) -> Result<Utf8PathBuf> {
     let path = path.as_ref();
     let resolve_from = resolve_from.as_ref();
     if path.is_absolute() {
         Ok(path.to_owned())
     } else {
-        normalize_path_impl(resolve_from.components().chain(path.components())).with_context(|| {
-            format!("resolving {} from {}", path.display(), resolve_from.display())
-        })
+        normalize_path_impl(resolve_from.components().chain(path.components()))
+            .with_context(|| format!("resolving {} from {}", path, resolve_from))
     }
 }
 
@@ -304,49 +323,49 @@ pub fn resolve_path(path: impl AsRef<Path>, resolve_from: impl AsRef<Path>) -> R
 ///
 /// This does not consult the filesystem to follow symlinks, it only operates
 /// on the path components themselves.
-pub fn normalize_path(path: impl AsRef<Path>) -> Result<PathBuf> {
-    normalize_path_impl(path.as_ref().components())
-        .with_context(|| format!("Normalizing: {}", path.as_ref().display()))
+pub fn normalize_path(path: impl AsRef<Utf8Path>) -> Result<Utf8PathBuf> {
+    let path = path.as_ref();
+    normalize_path_impl(path.components()).with_context(|| format!("Normalizing: {}", path))
 }
 
 fn normalize_path_impl<'a>(
-    path_components: impl IntoIterator<Item = Component<'a>>,
-) -> Result<PathBuf> {
+    path_components: impl IntoIterator<Item = Utf8Component<'a>>,
+) -> Result<Utf8PathBuf> {
     let result =
         path_components.into_iter().try_fold(Vec::new(), |mut components, component| {
             match component {
                 // accumulate normal segments.
-                value @ Component::Normal(_) => components.push(value),
+                value @ Utf8Component::Normal(_) => components.push(value),
                 // Drop current directory segments.
-                Component::CurDir => {}
+                Utf8Component::CurDir => {}
                 // Parent dir segments require special handling
-                Component::ParentDir => {
+                Utf8Component::ParentDir => {
                     // Inspect the last item in the acculuated path
                     let popped = components.pop();
                     match popped {
                         // acculator is empty, so just append the parent.
-                        None => components.push(Component::ParentDir),
+                        None => components.push(Utf8Component::ParentDir),
 
                         // If the last item was normal, then drop it.
-                        Some(Component::Normal(_)) => {}
+                        Some(Utf8Component::Normal(_)) => {}
 
                         // The last item was a parent, and this is a parent, so push
                         // them BOTH onto the stack (we're going deeper).
-                        Some(value @ Component::ParentDir) => {
+                        Some(value @ Utf8Component::ParentDir) => {
                             components.push(value);
                             components.push(component);
                         }
                         // If the last item in the stack is an absolute path root
                         // then fail.
-                        Some(Component::RootDir) | Some(Component::Prefix(_)) => {
+                        Some(Utf8Component::RootDir) | Some(Utf8Component::Prefix(_)) => {
                             return Err(anyhow!("Attempted to get parent of path root"))
                         }
                         // Never pushed to stack, can't happen.
-                        Some(Component::CurDir) => unreachable!(),
+                        Some(Utf8Component::CurDir) => unreachable!(),
                     }
                 }
                 // absolute path roots get pushed onto the stack, but only if empty.
-                abs_root @ Component::RootDir | abs_root @ Component::Prefix(_) => {
+                abs_root @ Utf8Component::RootDir | abs_root @ Utf8Component::Prefix(_) => {
                     if components.is_empty() {
                         components.push(abs_root);
                     } else {
@@ -364,8 +383,8 @@ fn normalize_path_impl<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::iter::FromIterator;
     use std::str::FromStr;
-    use std::{iter::FromIterator, path::PathBuf};
 
     struct TestPathType {}
     impl_path_type_marker!(TestPathType);
@@ -420,7 +439,7 @@ mod tests {
     #[test]
     fn typed_path_buf_into_path_buf() {
         let typed = TypedPathBuf::<TestPathType>::from("some/path");
-        assert_eq!(typed.into_std_path_buf(), PathBuf::from("some/path"));
+        assert_eq!(typed.into_std_path_buf(), Utf8PathBuf::from("some/path"));
     }
 
     #[test]
@@ -447,7 +466,7 @@ mod tests {
     #[test]
     fn resolve_path_from_file_simple() {
         let result = resolve_path_from_file("an/internal/path", "path/to/manifest.txt").unwrap();
-        assert_eq!(result, PathBuf::from("path/to/an/internal/path"))
+        assert_eq!(result, Utf8PathBuf::from("path/to/an/internal/path"))
     }
 
     #[test]
@@ -459,37 +478,37 @@ mod tests {
     #[test]
     fn resolve_path_simple() {
         let result = resolve_path("an/internal/path", "path/to/manifest_dir").unwrap();
-        assert_eq!(result, PathBuf::from("path/to/manifest_dir/an/internal/path"))
+        assert_eq!(result, Utf8PathBuf::from("path/to/manifest_dir/an/internal/path"))
     }
 
     #[test]
     fn resolve_path_with_abs_manifest_path_stays_abs() {
         let result = resolve_path("an/internal/path", "/path/to/manifest_dir").unwrap();
-        assert_eq!(result, PathBuf::from("/path/to/manifest_dir/an/internal/path"))
+        assert_eq!(result, Utf8PathBuf::from("/path/to/manifest_dir/an/internal/path"))
     }
 
     #[test]
     fn resolve_path_removes_cur_dirs() {
         let result = resolve_path("./an/./internal/path", "./path/to/./manifest_dir").unwrap();
-        assert_eq!(result, PathBuf::from("path/to/manifest_dir/an/internal/path"))
+        assert_eq!(result, Utf8PathBuf::from("path/to/manifest_dir/an/internal/path"))
     }
 
     #[test]
     fn resolve_path_with_simple_parent_dirs() {
         let result = resolve_path("../../an/internal/path", "path/to/manifest_dir").unwrap();
-        assert_eq!(result, PathBuf::from("path/an/internal/path"))
+        assert_eq!(result, Utf8PathBuf::from("path/an/internal/path"))
     }
 
     #[test]
     fn resolve_path_with_parent_dirs_past_manifest_start() {
         let result = resolve_path("../../../../an/internal/path", "path/to/manifest_dir").unwrap();
-        assert_eq!(result, PathBuf::from("../an/internal/path"))
+        assert_eq!(result, Utf8PathBuf::from("../an/internal/path"))
     }
 
     #[test]
     fn resolve_path_with_abs_internal_path() {
         let result = resolve_path("/an/absolute/path", "path/to/manifest_dir").unwrap();
-        assert_eq!(result, PathBuf::from("/an/absolute/path"))
+        assert_eq!(result, Utf8PathBuf::from("/an/absolute/path"))
     }
 
     #[test]
@@ -500,24 +519,24 @@ mod tests {
 
     #[test]
     fn test_relative_from_absolute_when_already_relative() {
-        let cwd = std::env::current_dir().unwrap();
+        let cwd = Utf8PathBuf::try_from(std::env::current_dir().unwrap()).unwrap();
 
         let base = cwd.join("path/to/base/dir");
         let path = "path/but/to/another/dir";
 
         let relative_path = path_relative_from(path, base).unwrap();
-        assert_eq!(relative_path, PathBuf::from("../../../but/to/another/dir"));
+        assert_eq!(relative_path, Utf8PathBuf::from("../../../but/to/another/dir"));
     }
 
     #[test]
     fn test_relative_from_absolute_when_absolute() {
-        let cwd = std::env::current_dir().unwrap();
+        let cwd = Utf8PathBuf::try_from(std::env::current_dir().unwrap()).unwrap();
 
         let base = cwd.join("path/to/base/dir");
         let path = cwd.join("path/but/to/another/dir");
 
         let relative_path = path_relative_from(path, base).unwrap();
-        assert_eq!(relative_path, PathBuf::from("../../../but/to/another/dir"));
+        assert_eq!(relative_path, Utf8PathBuf::from("../../../but/to/another/dir"));
     }
 
     #[test]
@@ -533,12 +552,13 @@ mod tests {
         // To compute this path, we need to convert the "normal" segments of the
         // cwd path into ParentDir ("..") components.
 
-        let cwd = std::env::current_dir().unwrap();
-        let expected_path = PathBuf::from_iter(
+        let cwd = Utf8PathBuf::try_from(std::env::current_dir().unwrap()).unwrap();
+
+        let expected_path = Utf8PathBuf::from_iter(
             cwd.components()
                 .into_iter()
                 .filter_map(|comp| match comp {
-                    Component::Normal(_) => Some(Component::ParentDir),
+                    Utf8Component::Normal(_) => Some(Utf8Component::ParentDir),
                     _ => None,
                 })
                 // Skip one of the '..' segments, because the 'base' we are
@@ -557,13 +577,13 @@ mod tests {
 
     #[test]
     fn test_relative_from_relative_when_absolute_and_shared_root_path() {
-        let cwd = std::env::current_dir().unwrap();
+        let cwd = Utf8PathBuf::try_from(std::env::current_dir().unwrap()).unwrap();
 
         let base = "some/relative/path";
         let path = cwd.join("foo/bar");
 
         let relative_path = path_relative_from(path, base).unwrap();
-        assert_eq!(relative_path, PathBuf::from("../../../foo/bar"));
+        assert_eq!(relative_path, Utf8PathBuf::from("../../../foo/bar"));
     }
 
     #[test]
@@ -572,18 +592,18 @@ mod tests {
         let path = "another/relative/path";
 
         let relative_path = path_relative_from(path, base).unwrap();
-        assert_eq!(relative_path, PathBuf::from("../../../another/relative/path"));
+        assert_eq!(relative_path, Utf8PathBuf::from("../../../another/relative/path"));
     }
 
     #[test]
     fn test_relative_from_when_base_has_parent_component() {
         assert_eq!(
             path_relative_from("foo/bar", "baz/different_thing").unwrap(),
-            PathBuf::from("../../foo/bar")
+            Utf8PathBuf::from("../../foo/bar")
         );
         assert_eq!(
             path_relative_from("foo/bar", "baz/thing/../different_thing").unwrap(),
-            PathBuf::from("../../foo/bar")
+            Utf8PathBuf::from("../../foo/bar")
         );
     }
 
@@ -593,7 +613,7 @@ mod tests {
         let path = "some/path/to/data/file";
 
         let relative_path = path_relative_from_file(path, file).unwrap();
-        assert_eq!(relative_path, PathBuf::from("data/file"));
+        assert_eq!(relative_path, Utf8PathBuf::from("data/file"));
     }
 
     #[test]
@@ -607,12 +627,12 @@ mod tests {
 
     #[test]
     fn test_relative_from_current_dir() {
-        let cwd = std::env::current_dir().unwrap();
+        let cwd = Utf8PathBuf::try_from(std::env::current_dir().unwrap()).unwrap();
 
         let base = "some/relative/path";
         let path = cwd.join(base);
 
         let relative_path = path_relative_from_current_dir(path).unwrap();
-        assert_eq!(relative_path, PathBuf::from(base));
+        assert_eq!(relative_path, Utf8PathBuf::from(base));
     }
 }

@@ -6,10 +6,11 @@ use crate::manifest::BlobManifest;
 use anyhow::{Context, Result};
 use assembly_tool::Tool;
 use assembly_util::PathToStringExt;
+use camino::{Utf8Path, Utf8PathBuf};
 use fuchsia_pkg::PackageManifest;
 use serde::Deserialize;
 use std::fs::File;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 /// Builder for BlobFS.
 ///
@@ -48,24 +49,28 @@ impl BlobFSBuilder {
 
     /// Add a package to blobfs by inserting every blob mentioned in the
     /// `package_manifest_path` on the host.
-    pub fn add_package(&mut self, package_manifest_path: impl AsRef<Path>) -> Result<()> {
+    pub fn add_package(&mut self, package_manifest_path: impl AsRef<Utf8Path>) -> Result<()> {
+        let package_manifest_path = package_manifest_path.as_ref();
         let manifest = PackageManifest::try_load_from(package_manifest_path)?;
         self.manifest.add_package(manifest)
     }
 
     /// Add a file to blobfs from the `path` on the host.
-    pub fn add_file(&mut self, path: impl AsRef<Path>) -> Result<()> {
-        self.manifest.add_file(path)
+    pub fn add_file(&mut self, path: impl AsRef<Utf8Path>) -> Result<()> {
+        self.manifest.add_file(path.as_ref())
     }
 
     /// Build blobfs, and write it to `output`, while placing intermediate files in `gendir`.
-    pub fn build(&self, gendir: impl AsRef<Path>, output: impl AsRef<Path>) -> Result<PathBuf> {
+    pub fn build(
+        &self,
+        gendir: impl AsRef<Utf8Path>,
+        output: impl AsRef<Utf8Path>,
+    ) -> Result<Utf8PathBuf> {
         // Delete the output file if it exists.
-        if output.as_ref().exists() {
-            std::fs::remove_file(&output).context(format!(
-                "Failed to delete previous blobfs file: {}",
-                output.as_ref().display()
-            ))?;
+        let output = output.as_ref();
+        if output.exists() {
+            std::fs::remove_file(&output)
+                .with_context(|| format!("Failed to delete previous blobfs file: {}", output))?;
         }
 
         // Write the blob manifest.
@@ -91,7 +96,7 @@ impl BlobFSBuilder {
     }
 
     /// Read blobs.json file into BlobsJson struct
-    pub fn read_blobs_json(&self, path_buf: impl AsRef<Path>) -> anyhow::Result<BlobsJson> {
+    pub fn read_blobs_json(&self, path_buf: impl AsRef<Utf8Path>) -> anyhow::Result<BlobsJson> {
         let mut file = File::open(path_buf.as_ref())
             .context(format!("Unable to open file blobs json file"))?;
         let blobs_json: BlobsJson =
@@ -203,16 +208,17 @@ mod tests {
     fn blobfs_builder() {
         // Prepare a temporary directory where the intermediate files as well
         // as the input and output files will go.
-        let dir = TempDir::new().unwrap();
+        let tmp = TempDir::new().unwrap();
+        let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
         // Create a test file.
-        let filepath = dir.path().join("file.txt");
+        let filepath = dir.join("file.txt");
         let mut file = File::create(&filepath).unwrap();
         write!(file, "Boaty McBoatface").unwrap();
 
         // Get the path of the output.
-        let output_path = dir.path().join("blob.blk");
-        let output_path_str = output_path.path_to_string().unwrap();
+        let output_path = dir.join("blob.blk");
+        let output_path_str = output_path.to_string();
 
         // Build blobfs.
         let tools = FakeToolProvider::new_with_side_effect(|_name, args| {
@@ -240,7 +246,7 @@ mod tests {
         builder.set_compressed(true);
         builder.add_file(&filepath).unwrap();
 
-        let blobs_json_path = builder.build(&dir.path(), output_path).unwrap();
+        let blobs_json_path = builder.build(&dir, output_path).unwrap();
         let actual_blobs_json = builder.read_blobs_json(blobs_json_path).unwrap();
         let expected_blobs_json = vec![
             BlobJsonEntry {
@@ -265,8 +271,8 @@ mod tests {
         drop(builder);
 
         // Ensure the command was run correctly.
-        let blobs_json_path = dir.path().join("blobs.json");
-        let blob_manifest_path = dir.path().join("blob.manifest");
+        let blobs_json_path = dir.join("blobs.json");
+        let blob_manifest_path = dir.join("blob.manifest");
         let expected_commands: ToolCommandLog = serde_json::from_value(json!({
             "commands": [
                 {

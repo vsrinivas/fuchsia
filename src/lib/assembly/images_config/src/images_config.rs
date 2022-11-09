@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{anyhow, Context, Result};
+use camino::Utf8PathBuf;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 use std::fmt;
@@ -130,10 +131,10 @@ pub struct VBMeta {
     pub name: String,
 
     /// Path on host to the key for signing VBMeta.
-    pub key: PathBuf,
+    pub key: Utf8PathBuf,
 
     /// Path on host to the key metadata to add to the VBMeta.
-    pub key_metadata: PathBuf,
+    pub key_metadata: Utf8PathBuf,
 
     /// Optional descriptors to add to the VBMeta image.
     #[serde(default)]

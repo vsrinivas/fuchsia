@@ -7,9 +7,9 @@
 use anyhow::{anyhow, Context, Result};
 use assembly_fvm::FilesystemAttributes;
 use assembly_util as util;
+use camino::{Utf8Path, Utf8PathBuf};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::{Path, PathBuf};
 
 pub mod board_config;
 pub mod product_config;
@@ -24,27 +24,27 @@ pub struct PartialImageAssemblyConfig {
     /// extracted and added to the base package. These files are needed
     /// to bootstrap pkgfs.
     #[serde(default)]
-    pub system: Vec<PathBuf>,
+    pub system: Vec<Utf8PathBuf>,
 
     /// The packages that are in the base package list, excluding drivers,
     /// which are to be added to the base package (data/static_packages).
     /// These packages get updated by flashing and OTAing, and cannot
     /// be garbage collected.
     #[serde(default)]
-    pub base: Vec<PathBuf>,
+    pub base: Vec<Utf8PathBuf>,
 
     /// The packages that are in the cache package list, which is added
     /// to the base package (data/cache_packages). These packages get
     /// updated by flashing and OTAing, but can be garbage collected.
     #[serde(default)]
-    pub cache: Vec<PathBuf>,
+    pub cache: Vec<Utf8PathBuf>,
 
     /// The parameters that specify which kernel to put into the ZBI.
     pub kernel: Option<PartialKernelConfig>,
 
     /// The qemu kernel to use when starting the emulator.
     #[serde(default)]
-    pub qemu_kernel: Option<PathBuf>,
+    pub qemu_kernel: Option<Utf8PathBuf>,
 
     /// The list of additional boot args to add.
     #[serde(default)]
@@ -53,7 +53,7 @@ pub struct PartialImageAssemblyConfig {
     /// The packages that are in the bootfs package list, which are
     /// added to the BOOTFS in the ZBI.
     #[serde(default)]
-    pub bootfs_packages: Vec<PathBuf>,
+    pub bootfs_packages: Vec<Utf8PathBuf>,
 
     /// The set of files to be placed in BOOTFS in the ZBI.
     #[serde(default)]
@@ -145,26 +145,26 @@ pub struct ImageAssemblyConfig {
     /// extracted and added to the base package. These files are needed
     /// to bootstrap pkgfs.
     #[serde(default)]
-    pub system: Vec<PathBuf>,
+    pub system: Vec<Utf8PathBuf>,
 
     /// The packages that are in the base package list, excluding drivers
     /// which are added to the base package (data/static_packages).
     /// These packages get updated by flashing and OTAing, and cannot
     /// be garbage collected.
     #[serde(default)]
-    pub base: Vec<PathBuf>,
+    pub base: Vec<Utf8PathBuf>,
 
     /// The packages that are in the cache package list, which is added
     /// to the base package (data/cache_packages). These packages get
     /// updated by flashing and OTAing, but can be garbage collected.
     #[serde(default)]
-    pub cache: Vec<PathBuf>,
+    pub cache: Vec<Utf8PathBuf>,
 
     /// The parameters that specify which kernel to put into the ZBI.
     pub kernel: KernelConfig,
 
     /// The qemu kernel to use when starting the emulator.
-    pub qemu_kernel: PathBuf,
+    pub qemu_kernel: Utf8PathBuf,
 
     /// The list of additional boot args to add.
     #[serde(default)]
@@ -177,13 +177,13 @@ pub struct ImageAssemblyConfig {
     /// The packages that are in the bootfs package list, which are
     /// added to the BOOTFS in the ZBI.
     #[serde(default)]
-    pub bootfs_packages: Vec<PathBuf>,
+    pub bootfs_packages: Vec<Utf8PathBuf>,
 }
 
 impl ImageAssemblyConfig {
     /// Helper function for constructing a ImageAssemblyConfig in tests in this
     /// and other modules within the crate.
-    pub fn new_for_testing(kernel_path: impl AsRef<Path>, clock_backstop: u64) -> Self {
+    pub fn new_for_testing(kernel_path: impl AsRef<Utf8Path>, clock_backstop: u64) -> Self {
         Self {
             system: Vec::default(),
             base: Vec::default(),
@@ -255,9 +255,7 @@ fn add_bootfs_file(
         if existing_entry.source != entry.source {
             return Err(anyhow!(format!(
                 "Found a duplicate bootfs entry for destination: {}, with sources:\n{}\n{}",
-                entry.destination,
-                entry.source.display(),
-                existing_entry.source.display()
+                entry.destination, entry.source, existing_entry.source
             )));
         }
     } else {
@@ -272,7 +270,7 @@ fn add_bootfs_file(
 #[serde(deny_unknown_fields)]
 pub struct PartialKernelConfig {
     /// The path to the prebuilt kernel.
-    pub path: Option<PathBuf>,
+    pub path: Option<Utf8PathBuf>,
 
     /// The list of command line arguments to pass to the kernel on startup.
     #[serde(default)]
@@ -287,7 +285,7 @@ pub struct PartialKernelConfig {
 #[serde(deny_unknown_fields)]
 pub struct KernelConfig {
     /// The path to the prebuilt kernel.
-    pub path: PathBuf,
+    pub path: Utf8PathBuf,
 
     /// The list of command line arguments to pass to the kernel on startup.
     #[serde(default)]
@@ -331,7 +329,7 @@ fn default_base_package_name() -> String {
 #[serde(deny_unknown_fields)]
 pub struct FileEntry {
     /// The path of the source file.
-    pub source: PathBuf,
+    pub source: Utf8PathBuf,
 
     /// The destination path to put the file.
     pub destination: String,
@@ -345,14 +343,14 @@ pub struct VBMetaConfig {
     pub kernel_partition: String,
 
     /// The path on the host to the VBMeta key.
-    pub key: PathBuf,
+    pub key: Utf8PathBuf,
 
     /// The metadata used to verify the VBMeta key.
-    pub key_metadata: PathBuf,
+    pub key_metadata: Utf8PathBuf,
 
     /// Paths to descriptors to add to the VBMeta.
     #[serde(default)]
-    pub additional_descriptor_files: Vec<PathBuf>,
+    pub additional_descriptor_files: Vec<Utf8PathBuf>,
 }
 
 /// A bootloader to add to the update package and flash-files.
@@ -370,7 +368,7 @@ pub struct BootloaderEntry {
     pub bootloader_type: String,
 
     /// The path on the host to the bootloader.
-    pub source: PathBuf,
+    pub source: Utf8PathBuf,
 }
 
 /// The information required to construct a ZBI.
@@ -424,7 +422,7 @@ impl Default for ZbiConfig {
 #[serde(deny_unknown_fields)]
 pub struct ZbiSigningScript {
     /// The path to the tool to use
-    pub tool: PathBuf,
+    pub tool: Utf8PathBuf,
 
     /// Extra arguments to pass to the tool.  These are passed to the tool after
     /// the above-documented, required, arguments, are passed to the tool.
@@ -580,10 +578,10 @@ pub enum FvmFilesystemEntry {
 #[serde(deny_unknown_fields)]
 pub struct RecoveryConfig {
     /// The path on the host to the prebuilt recovery ZBI.
-    pub zbi: PathBuf,
+    pub zbi: Utf8PathBuf,
 
     /// The path on the host to the prebuilt recovery VBMeta.
-    pub vbmeta: Option<PathBuf>,
+    pub vbmeta: Option<Utf8PathBuf>,
 }
 
 #[cfg(test)]

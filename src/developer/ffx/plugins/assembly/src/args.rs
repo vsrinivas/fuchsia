@@ -4,8 +4,8 @@
 
 use anyhow::{anyhow, Result};
 use argh::FromArgs;
+use camino::Utf8PathBuf;
 use ffx_core::ffx_command;
-use std::path::PathBuf;
 use std::str::FromStr;
 
 use assembly_images_config::BlobFSLayout;
@@ -37,19 +37,19 @@ pub struct CreateSystemArgs {
     /// the configuration file that specifies the packages, binaries, and
     /// settings specific to the product being assembled.
     #[argh(option)]
-    pub image_assembly_config: PathBuf,
+    pub image_assembly_config: Utf8PathBuf,
 
     /// the configuration file that specifies which images to generate and how.
     #[argh(option)]
-    pub images: PathBuf,
+    pub images: Utf8PathBuf,
 
     /// the directory to write assembled outputs to.
     #[argh(option)]
-    pub outdir: PathBuf,
+    pub outdir: Utf8PathBuf,
 
     /// the directory to write generated intermediate files to.
     #[argh(option)]
-    pub gendir: Option<PathBuf>,
+    pub gendir: Option<Utf8PathBuf>,
 
     /// name to give the Base Package. This is useful if you must publish multiple
     /// base packages to the same TUF repository.
@@ -96,20 +96,20 @@ fn default_package_mode() -> PackageMode {
 pub struct CreateUpdateArgs {
     /// path to a packages manifest, which specifies what packages to update.
     #[argh(option)]
-    pub packages: Option<PathBuf>,
+    pub packages: Option<Utf8PathBuf>,
 
     /// path to a partitions config, which specifies where in the partition
     /// table the images are put.
     #[argh(option)]
-    pub partitions: PathBuf,
+    pub partitions: Utf8PathBuf,
 
     /// path to an images manifest, which specifies images to put in slot A.
     #[argh(option)]
-    pub system_a: Option<PathBuf>,
+    pub system_a: Option<Utf8PathBuf>,
 
     /// path to an images manifest, which specifies images to put in slot R.
     #[argh(option)]
-    pub system_r: Option<PathBuf>,
+    pub system_r: Option<Utf8PathBuf>,
 
     /// name of the board.
     /// Fuchsia will reject an Update Package with a different board name.
@@ -118,7 +118,7 @@ pub struct CreateUpdateArgs {
 
     /// file containing the version of the Fuchsia system.
     #[argh(option)]
-    pub version_file: PathBuf,
+    pub version_file: Utf8PathBuf,
 
     /// backstop OTA version.
     /// Fuchsia will reject updates with a lower epoch.
@@ -133,11 +133,11 @@ pub struct CreateUpdateArgs {
 
     /// directory to write the UpdatePackage.
     #[argh(option)]
-    pub outdir: PathBuf,
+    pub outdir: Utf8PathBuf,
 
     /// directory to write intermediate files.
     #[argh(option)]
-    pub gendir: Option<PathBuf>,
+    pub gendir: Option<Utf8PathBuf>,
 }
 
 /// construct a flash manifest.
@@ -147,23 +147,23 @@ pub struct CreateFlashManifestArgs {
     /// path to a partitions config, which specifies where in the partition
     /// table the images are put.
     #[argh(option)]
-    pub partitions: PathBuf,
+    pub partitions: Utf8PathBuf,
 
     /// path to an images manifest, which specifies images to put in slot A.
     #[argh(option)]
-    pub system_a: Option<PathBuf>,
+    pub system_a: Option<Utf8PathBuf>,
 
     /// path to an images manifest, which specifies images to put in slot B.
     #[argh(option)]
-    pub system_b: Option<PathBuf>,
+    pub system_b: Option<Utf8PathBuf>,
 
     /// path to an images manifest, which specifies images to put in slot R.
     #[argh(option)]
-    pub system_r: Option<PathBuf>,
+    pub system_r: Option<Utf8PathBuf>,
 
     /// directory to write the UpdatePackage.
     #[argh(option)]
-    pub outdir: PathBuf,
+    pub outdir: Utf8PathBuf,
 }
 
 /// Perform size checks (on packages or product based on the sub-command).
@@ -194,24 +194,24 @@ pub struct PackageSizeCheckArgs {
     /// Each size budget has a `name`, a `size` which is the maximum
     /// number of bytes, and `packages` a list of path to manifest files.
     #[argh(option)]
-    pub budgets: PathBuf,
+    pub budgets: Utf8PathBuf,
     /// path to a `blobs.json` file. It provides the size of each blob
     /// composing the package on device.
     #[argh(option)]
-    pub blob_sizes: Vec<PathBuf>,
+    pub blob_sizes: Vec<Utf8PathBuf>,
     /// the layout of blobs in blobfs.
     #[argh(option, default = "default_blobfs_layout()")]
     pub blobfs_layout: BlobFSLayout,
     /// path where to write the verification report, in JSON format.
     #[argh(option)]
-    pub gerrit_output: Option<PathBuf>,
+    pub gerrit_output: Option<Utf8PathBuf>,
     /// show the storage consumption of each component broken down by package
     /// regardless of whether the component exceeded its budget.
     #[argh(switch, short = 'v')]
     pub verbose: bool,
     /// path where to write the verbose JSON output.
     #[argh(option)]
-    pub verbose_json_output: Option<PathBuf>,
+    pub verbose_json_output: Option<Utf8PathBuf>,
 }
 
 /// (Not implemented yet) Check that the set of all blobs included in the product
@@ -221,23 +221,23 @@ pub struct PackageSizeCheckArgs {
 pub struct ProductSizeCheckArgs {
     /// path to assembly_manifest.json.
     #[argh(option)]
-    pub assembly_manifest: PathBuf,
+    pub assembly_manifest: Utf8PathBuf,
     /// path to the bast assembly_manifest.json which will be used to compare with the current
     /// assembly_manifest.json to produce a diff.
     #[argh(option)]
-    pub base_assembly_manifest: Option<PathBuf>,
+    pub base_assembly_manifest: Option<Utf8PathBuf>,
     /// whether to show the verbose output.
     #[argh(switch, short = 'v')]
     pub verbose: bool,
     /// path to the directory where HTML visualization should be stored.
     #[argh(option)]
-    pub visualization_dir: Option<PathBuf>,
+    pub visualization_dir: Option<Utf8PathBuf>,
     /// path where to write the gerrit size report.
     #[argh(option)]
-    pub gerrit_output: Option<PathBuf>,
+    pub gerrit_output: Option<Utf8PathBuf>,
     /// path where to write the size breakdown.
     #[argh(option)]
-    pub size_breakdown_output: Option<PathBuf>,
+    pub size_breakdown_output: Option<Utf8PathBuf>,
     /// maximum amount that the size of blobfs can increase in one CL.
     /// This value is propagated to the gerrit size report.
     #[argh(option)]
@@ -254,31 +254,31 @@ fn default_blobfs_layout() -> BlobFSLayout {
 pub struct ProductArgs {
     /// the configuration file that describes the product assembly to perform.
     #[argh(option)]
-    pub product: PathBuf,
+    pub product: Utf8PathBuf,
 
     /// the file containing information about the board that the product is
     /// being assembled to run on.
     #[argh(option)]
-    pub board_info: Option<PathBuf>,
+    pub board_info: Option<Utf8PathBuf>,
 
     /// the directory to write assembled outputs to.
     #[argh(option)]
-    pub outdir: PathBuf,
+    pub outdir: Utf8PathBuf,
 
     /// the directory to write generated intermediate files to.
     #[argh(option)]
-    pub gendir: Option<PathBuf>,
+    pub gendir: Option<Utf8PathBuf>,
 
     /// the directory in which to find the platform assembly input bundles
     #[argh(option)]
-    pub input_bundles_dir: PathBuf,
+    pub input_bundles_dir: Utf8PathBuf,
 
     /// the path to the legacy assembly input bundle directory
     #[argh(option)]
-    pub legacy_bundle: PathBuf,
+    pub legacy_bundle: Utf8PathBuf,
 
     /// a file containing a ProductPackageConfig with additional packages
     /// to include which are not in the assembly input bundle
     #[argh(option)]
-    pub additional_packages_path: Option<PathBuf>,
+    pub additional_packages_path: Option<Utf8PathBuf>,
 }

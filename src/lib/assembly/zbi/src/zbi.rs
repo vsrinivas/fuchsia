@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{anyhow, Context, Error, Result};
+use anyhow::{anyhow, Error, Result};
 use assembly_tool::Tool;
-use assembly_util::PathToStringExt;
+use camino::{Utf8Path, Utf8PathBuf};
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::Write;
-use std::path::{Path, PathBuf};
 use tracing::debug;
 
 /// Builder for the Zircon Boot Image (ZBI), which takes in a kernel, BootFS, boot args, and kernel
@@ -17,20 +16,20 @@ pub struct ZbiBuilder {
     /// The zbi host tool.
     tool: Box<dyn Tool>,
 
-    kernel: Option<PathBuf>,
+    kernel: Option<Utf8PathBuf>,
     // Map from file destination in the ZBI to the path of the source file on the host.
-    bootfs_files: BTreeMap<String, PathBuf>,
+    bootfs_files: BTreeMap<String, Utf8PathBuf>,
     bootargs: Vec<String>,
     cmdline: Vec<String>,
 
     // A ramdisk to add to the ZBI.
-    ramdisk: Option<PathBuf>,
+    ramdisk: Option<Utf8PathBuf>,
 
     /// optional compression to use.
     compression: Option<String>,
 
     /// optional output manifest file
-    output_manifest: Option<PathBuf>,
+    output_manifest: Option<Utf8PathBuf>,
 }
 
 impl ZbiBuilder {
@@ -49,17 +48,21 @@ impl ZbiBuilder {
     }
 
     /// Set the kernel to be used.
-    pub fn set_kernel(&mut self, kernel: impl AsRef<Path>) {
-        self.kernel = Some(kernel.as_ref().to_path_buf());
+    pub fn set_kernel(&mut self, kernel: impl Into<Utf8PathBuf>) {
+        self.kernel = Some(kernel.into());
     }
 
     /// Add a BootFS file to the ZBI.
-    pub fn add_bootfs_file(&mut self, source: impl AsRef<Path>, destination: impl AsRef<str>) {
+    pub fn add_bootfs_file(
+        &mut self,
+        source: impl Into<Utf8PathBuf>,
+        destination: impl AsRef<str>,
+    ) {
         if self.bootfs_files.contains_key(destination.as_ref()) {
             println!("Found duplicate bootfs destination: {}", destination.as_ref());
             return;
         }
-        self.bootfs_files.insert(destination.as_ref().to_string(), source.as_ref().to_path_buf());
+        self.bootfs_files.insert(destination.as_ref().to_string(), source.into());
     }
 
     /// Add a boot argument to the ZBI.
@@ -73,8 +76,8 @@ impl ZbiBuilder {
     }
 
     /// Add a ramdisk to the ZBI.
-    pub fn add_ramdisk(&mut self, source: impl AsRef<Path>) {
-        self.ramdisk = Some(source.as_ref().to_path_buf());
+    pub fn add_ramdisk(&mut self, source: impl Into<Utf8PathBuf>) {
+        self.ramdisk = Some(source.into());
     }
 
     /// Set the compression to use with the ZBI.
@@ -83,12 +86,12 @@ impl ZbiBuilder {
     }
 
     /// Set the path to an optional JSON output manifest to produce.
-    pub fn set_output_manifest(&mut self, manifest: impl AsRef<Path>) {
-        self.output_manifest = Some(manifest.as_ref().to_path_buf());
+    pub fn set_output_manifest(&mut self, manifest: impl Into<Utf8PathBuf>) {
+        self.output_manifest = Some(manifest.into());
     }
 
     /// Build the ZBI.
-    pub fn build(&self, gendir: impl AsRef<Path>, output: impl AsRef<Path>) -> Result<()> {
+    pub fn build(&self, gendir: impl AsRef<Utf8Path>, output: impl AsRef<Utf8Path>) -> Result<()> {
         // Create the devmgr_config.
         // TODO(fxbug.dev/77387): Switch to the boot args file once we are no longer
         // comparing to the GN build.
@@ -105,7 +108,7 @@ impl ZbiBuilder {
         self.write_bootfs_manifest(devmgr_config_path, &mut bootfs_manifest)?;
 
         // Run the zbi tool to construct the ZBI.
-        let zbi_args = self.build_zbi_args(&bootfs_manifest_path, None::<PathBuf>, output)?;
+        let zbi_args = self.build_zbi_args(&bootfs_manifest_path, None::<Utf8PathBuf>, output)?;
         debug!("ZBI command args: {:?}", zbi_args);
 
         self.tool.run(&zbi_args)
@@ -113,20 +116,16 @@ impl ZbiBuilder {
 
     fn write_bootfs_manifest(
         &self,
-        devmgr_config_path: impl AsRef<Path>,
+        devmgr_config_path: impl Into<Utf8PathBuf>,
         out: &mut impl Write,
     ) -> Result<()> {
         let mut bootfs_files = self.bootfs_files.clone();
-        bootfs_files.insert("config/devmgr".to_string(), devmgr_config_path.as_ref().to_path_buf());
+        bootfs_files.insert("config/devmgr".to_string(), devmgr_config_path.into());
         for (destination, source) in bootfs_files {
             write!(out, "{}", destination)?;
             write!(out, "=")?;
             // TODO(fxbug.dev76135): Use the zbi tool's set of valid inputs instead of constraining
             // to valid UTF-8.
-            let source = source.to_str().ok_or(anyhow!(format!(
-                "source path {} is not valid UTF-8",
-                source.to_string_lossy().to_string()
-            )))?;
             writeln!(out, "{}", source)?;
         }
         Ok(())
@@ -141,23 +140,12 @@ impl ZbiBuilder {
 
     fn build_zbi_args(
         &self,
-        bootfs_manifest_path: impl AsRef<Path>,
-        boot_args_path: Option<impl AsRef<Path>>,
-        output_path: impl AsRef<Path>,
+        bootfs_manifest_path: impl AsRef<Utf8Path>,
+        boot_args_path: Option<impl AsRef<Utf8Path>>,
+        output_path: impl AsRef<Utf8Path>,
     ) -> Result<Vec<String>> {
         // Ensure a kernel is supplied.
         let kernel = &self.kernel.as_ref().ok_or(anyhow!("No kernel image supplied"))?;
-
-        // Ensure the files are valid UTF-8.
-        let kernel = kernel.to_str().ok_or(anyhow!("Kernel path is not valid UTF-8"))?;
-        let bootfs_manifest_path = bootfs_manifest_path
-            .as_ref()
-            .to_str()
-            .ok_or(anyhow!("BootFS manifest path is not valid UTF-8"))?;
-        let output_path = output_path
-            .as_ref()
-            .path_to_string()
-            .context("Output manifest path cannot be converted to a string")?;
 
         let mut args: Vec<String> = Vec::new();
 
@@ -173,15 +161,12 @@ impl ZbiBuilder {
 
         // Then, add the bootfs files.
         args.push("--files".to_string());
-        args.push(bootfs_manifest_path.to_string());
+        args.push(bootfs_manifest_path.as_ref().to_string());
 
         // Instead of supplying the devmgr_config.txt file, we could use boot args. This is disabled
         // by default, in order to allow for binary diffing the ZBI to the in-tree built ZBI.
         if let Some(boot_args_path) = boot_args_path {
-            let boot_args_path = boot_args_path
-                .as_ref()
-                .to_str()
-                .ok_or(anyhow!("Boot args path is not valid UTF-8"))?;
+            let boot_args_path = boot_args_path.as_ref().to_string();
             args.push("--type=image_args".to_string());
             args.push(format!("--entry={}", boot_args_path));
         }
@@ -192,7 +177,7 @@ impl ZbiBuilder {
             if let Some(compression) = &self.compression {
                 args.push(format!("--compress={}", compression));
             }
-            args.push(ramdisk.path_to_string()?);
+            args.push(ramdisk.to_string());
         }
 
         // Set the compression level for bootfs files.
@@ -202,16 +187,12 @@ impl ZbiBuilder {
 
         // Set the output file to write.
         args.push("--output".into());
-        args.push(output_path);
+        args.push(output_path.as_ref().to_string());
 
         // Create an output manifest that describes the contents of the built ZBI.
         if let Some(output_manifest) = &self.output_manifest {
             args.push("--json-output".into());
-            args.push(
-                output_manifest
-                    .path_to_string()
-                    .context("Output manifest path cannot be converted to a string")?,
-            );
+            args.push(output_manifest.to_string());
         }
         Ok(args)
     }
@@ -223,8 +204,6 @@ mod tests {
 
     use assembly_tool::testing::FakeToolProvider;
     use assembly_tool::ToolProvider;
-    use std::ffi::OsString;
-    use std::os::unix::ffi::OsStringExt;
 
     #[test]
     fn bootfs_manifest_devmgr_only() {
@@ -247,19 +226,6 @@ mod tests {
             "bin/file2=path/to/file2\nconfig/devmgr=devmgr_config.txt\nlib/file1=path/to/file1\n"
                 .to_string()
         );
-    }
-
-    #[test]
-    fn bootfs_manifest_invalid_utf8_source() {
-        let tools = FakeToolProvider::default();
-        let zbi_tool = tools.get_tool("zbi").unwrap();
-        let mut builder = ZbiBuilder::new(zbi_tool);
-        let mut output: Vec<u8> = Vec::new();
-
-        let invalid_source = OsString::from_vec(b"invalid\xe7".to_vec());
-        builder.add_bootfs_file(invalid_source, "lib/file1");
-        let result = builder.write_bootfs_manifest("devmgr_config.txt", &mut output);
-        assert!(result.is_err());
     }
 
     #[test]

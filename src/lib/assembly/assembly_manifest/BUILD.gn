@@ -15,6 +15,7 @@ rustc_library("assembly_manifest") {
   deps = [
     "//src/sys/pkg/lib/fuchsia-pkg",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:camino",
     "//third_party/rust_crates:serde",
   ]
   sources = [

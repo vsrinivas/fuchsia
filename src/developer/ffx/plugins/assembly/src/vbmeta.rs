@@ -8,16 +8,17 @@ use anyhow::Result;
 use assembly_images_config::{VBMeta, VBMetaDescriptor};
 use assembly_manifest::{AssemblyManifest, Image};
 use assembly_util::path_relative_from_current_dir;
-use std::path::{Path, PathBuf};
+use camino::{Utf8Path, Utf8PathBuf};
+use std::path::Path;
 use vbmeta::VBMeta as VBMetaImage;
 use vbmeta::{HashDescriptor, Key, Salt};
 
 pub fn construct_vbmeta(
     assembly_manifest: &mut AssemblyManifest,
-    outdir: impl AsRef<Path>,
+    outdir: impl AsRef<Utf8Path>,
     vbmeta_config: &VBMeta,
     zbi: impl AsRef<Path>,
-) -> Result<PathBuf> {
+) -> Result<Utf8PathBuf> {
     // Generate the salt.
     let salt = Salt::random()?;
 
@@ -90,16 +91,18 @@ mod tests {
     use assembly_images_config::VBMeta;
     use assembly_manifest::AssemblyManifest;
     use assembly_util::path_relative_from_current_dir;
+    use camino::Utf8Path;
     use std::convert::TryFrom;
     use tempfile::tempdir;
     use vbmeta::{Key, Salt};
 
     #[test]
     fn construct() {
-        let dir = tempdir().unwrap();
+        let tmp = tempdir().unwrap();
+        let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
-        let key_path = dir.path().join("key");
-        let metadata_path = dir.path().join("key_metadata");
+        let key_path = dir.join("key");
+        let metadata_path = dir.join("key_metadata");
         std::fs::write(&key_path, test_keys::ATX_TEST_KEY).unwrap();
         std::fs::write(&metadata_path, test_keys::TEST_RSA_4096_PEM).unwrap();
 
@@ -111,15 +114,15 @@ mod tests {
         };
 
         // Create a fake zbi.
-        let zbi_path = dir.path().join("fuchsia.zbi");
+        let zbi_path = dir.join("fuchsia.zbi");
         std::fs::write(&zbi_path, "fake zbi").unwrap();
 
         let mut assembly_manifest = AssemblyManifest::default();
         let vbmeta_path =
-            construct_vbmeta(&mut assembly_manifest, dir.path(), &vbmeta_config, zbi_path).unwrap();
+            construct_vbmeta(&mut assembly_manifest, dir, &vbmeta_config, zbi_path).unwrap();
         assert_eq!(
             vbmeta_path,
-            path_relative_from_current_dir(dir.path().join("fuchsia.vbmeta")).unwrap()
+            path_relative_from_current_dir(dir.join("fuchsia.vbmeta")).unwrap()
         );
     }
 

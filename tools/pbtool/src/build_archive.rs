@@ -7,9 +7,9 @@
 use anyhow::{bail, Context, Result};
 use argh::FromArgs;
 use assembly_manifest::{AssemblyManifest, Image};
+use camino::Utf8PathBuf;
 use sdk_metadata::ProductBundle;
 use std::fs::File;
-use std::path::PathBuf;
 
 /// Generate a build archive using the specified `args`.
 #[derive(FromArgs, PartialEq, Debug)]
@@ -17,11 +17,11 @@ use std::path::PathBuf;
 pub struct GenerateBuildArchive {
     /// path to a product bundle.
     #[argh(option)]
-    product_bundle: PathBuf,
+    product_bundle: Utf8PathBuf,
 
     /// path to the directory to write a build archive into.
     #[argh(option)]
-    out_dir: PathBuf,
+    out_dir: Utf8PathBuf,
 }
 
 impl GenerateBuildArchive {
@@ -45,7 +45,7 @@ impl GenerateBuildArchive {
 
         // Ensure the `out_dir` exists.
         std::fs::create_dir_all(&self.out_dir)
-            .with_context(|| format!("Creating the out_dir: {}", &self.out_dir.display()))?;
+            .with_context(|| format!("Creating the out_dir: {}", &self.out_dir))?;
 
         // Collect the Images with the final destinations to add to an images manifest later.
         let mut images = vec![];
@@ -61,9 +61,8 @@ impl GenerateBuildArchive {
             if let Some((path, name)) = entry {
                 // Copy the image to the out_dir.
                 let destination = self.out_dir.join(name);
-                std::fs::copy(&path, &destination).with_context(|| {
-                    format!("Copying image {} to {}", path.display(), destination.display())
-                })?;
+                std::fs::copy(&path, &destination)
+                    .with_context(|| format!("Copying image {} to {}", path, destination))?;
 
                 // Create a new Image with the new path.
                 let mut new_image = image.clone();
@@ -89,15 +88,18 @@ mod tests {
 
     use assembly_manifest::Image;
     use assembly_partitions_config::PartitionsConfig;
+    use camino::Utf8Path;
     use sdk_metadata::ProductBundleV2;
     use std::io::Write;
     use tempfile::tempdir;
 
     #[test]
     fn test_generate_build_archive() {
-        let tempdir = tempdir().unwrap();
+        let tmp = tempdir().unwrap();
+        let tempdir = Utf8Path::from_path(tmp.path()).unwrap();
+
         let create_temp_file = |name: &str| {
-            let path = tempdir.path().join(name);
+            let path = tempdir.join(name);
             let mut file = File::create(path).unwrap();
             write!(file, "{}", name).unwrap();
         };
@@ -110,9 +112,9 @@ mod tests {
             partitions: PartitionsConfig::default(),
             system_a: Some(AssemblyManifest {
                 images: vec![
-                    Image::ZBI { path: tempdir.path().join("zbi"), signed: false },
-                    Image::FVM(tempdir.path().join("fvm")),
-                    Image::QemuKernel(tempdir.path().join("kernel")),
+                    Image::ZBI { path: tempdir.join("zbi"), signed: false },
+                    Image::FVM(tempdir.join("fvm")),
+                    Image::QemuKernel(tempdir.join("kernel")),
                 ],
             }),
             system_b: None,
@@ -120,11 +122,11 @@ mod tests {
             repositories: vec![],
             update_package_hash: None,
         });
-        let pb_path = tempdir.path().join("product_bundle");
+        let pb_path = tempdir.join("product_bundle");
         std::fs::create_dir_all(&pb_path).unwrap();
         pb.write(&pb_path).unwrap();
 
-        let ba_path = tempdir.path().join("build_archive");
+        let ba_path = tempdir.join("build_archive");
         let cmd =
             GenerateBuildArchive { product_bundle: pb_path.clone(), out_dir: ba_path.clone() };
         cmd.generate().unwrap();

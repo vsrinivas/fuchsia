@@ -4,15 +4,14 @@
 
 use anyhow::Result;
 use assembly_tool::Tool;
-use assembly_util::PathToStringExt;
-use std::path::PathBuf;
+use camino::Utf8PathBuf;
 
 /// A builder that receives a sparse FVM, and prepares it for nand flashing.
 ///
 /// ```
 /// let builder = NandFvmBuilder {
-///     output: PathBuf::from("path/to/output.blk"),
-///     sparse_blob_fvm: PathBuf::from("path/to/fvm.blob.sparse.blk"),
+///     output: Utf8PathBuf::from("path/to/output.blk"),
+///     sparse_blob_fvm: Utf8PathBuf::from("path/to/fvm.blob.sparse.blk"),
 ///     max_disk_size: None,
 ///     compression: None,
 ///     page_size: 0,
@@ -27,9 +26,9 @@ pub struct NandFvmBuilder {
     /// The fvm host tool.
     pub tool: Box<dyn Tool>,
     /// The path to write the FVM to.
-    pub output: PathBuf,
+    pub output: Utf8PathBuf,
     /// The path to the sparse, blob-only FVM on the host.
-    pub sparse_blob_fvm: PathBuf,
+    pub sparse_blob_fvm: Utf8PathBuf,
     /// The maximum disk size for the sparse FVM.
     /// The build will fail if the sparse FVM is larger than this.
     pub max_disk_size: Option<u64>,
@@ -54,7 +53,7 @@ impl NandFvmBuilder {
 
     fn build_args(&self) -> Result<Vec<String>> {
         let mut args: Vec<String> = Vec::new();
-        args.push(self.output.path_to_string()?);
+        args.push(self.output.to_string());
         args.push("ftl-raw-nand".to_string());
 
         // Append key and value to the `args` if the value is present.
@@ -77,7 +76,7 @@ impl NandFvmBuilder {
         maybe_append_value(&mut args, "compress", self.compression.as_ref());
 
         // A quirk of the FVM tool means the sparse argument *must* go last.
-        maybe_append_value(&mut args, "sparse", Some(self.sparse_blob_fvm.path_to_string()?));
+        maybe_append_value(&mut args, "sparse", Some(self.sparse_blob_fvm.to_string()));
 
         Ok(args)
     }

@@ -12,14 +12,13 @@ use anyhow::Context;
 use anyhow::Result;
 use assembly_tool::SdkToolProvider;
 use assembly_tool::ToolProvider;
+use camino::{Utf8Path, Utf8PathBuf};
 use ffx_assembly_args::PackageSizeCheckArgs;
 use fuchsia_hash::Hash;
 use fuchsia_pkg::PackageManifest;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::path::Path;
-use std::path::PathBuf;
 use url::Url;
 
 /// Blob information. Entry of the "blobs.json" file.
@@ -59,7 +58,7 @@ pub struct PackageSetBudget {
     #[serde(default)]
     pub creep_budget_bytes: u64,
     /// List of paths to `package_manifest.json` files for each package of the set of the group.
-    pub packages: Vec<PathBuf>,
+    pub packages: Vec<Utf8PathBuf>,
     /// Blobs are de-duplicated by hash across the packages of this set.
     /// This is intended to approximate the process of merging packages.
     #[serde(default)]
@@ -92,7 +91,7 @@ struct BlobSizeAndCount {
 struct BlobInstance {
     // Hash of the blob merkle root.
     hash: Hash,
-    package: PathBuf,
+    package: Utf8PathBuf,
     path: String,
 }
 
@@ -116,7 +115,7 @@ struct BudgetResult {
     /// Number of bytes used by the packages this budget applies to.
     pub used_bytes: u64,
     /// Breakdown of storage consumption by package.
-    pub package_breakdown: HashMap<PathBuf, PackageSizeInfo>,
+    pub package_breakdown: HashMap<Utf8PathBuf, PackageSizeInfo>,
 }
 
 /// Verifies that no package budget is exceeded.
@@ -223,7 +222,7 @@ fn verify_budgets_with_tools(
                 .package_breakdown
                 .iter()
                 .map(|(key, value)| {
-                    let name = key.file_name().and_then(|name| name.to_str()).ok_or_else(|| {
+                    let name = key.file_name().ok_or_else(|| {
                         format_err!("Can't extract file name from path {:?}", key)
                     })?;
                     Ok((name, value))
@@ -235,7 +234,7 @@ fn verify_budgets_with_tools(
             }
         }
         if let Some(out_path) = &args.gerrit_output {
-            println!("Report written to {}", out_path.to_string_lossy());
+            println!("Report written to {}", out_path);
         }
     }
 
@@ -293,7 +292,7 @@ fn load_manifests_blobs_match_budgets(budgets: &Vec<PackageSetBudget>) -> Result
 
 /// Reads blob declaration file, and count how many times blobs are used.
 /// TODO(fxbug.dev/103906): Pass BlobsJson struct from blobfs.rs as input.
-fn load_blob_info(blob_size_paths: &Vec<PathBuf>) -> Result<Vec<BlobJsonEntry>> {
+fn load_blob_info(blob_size_paths: &Vec<Utf8PathBuf>) -> Result<Vec<BlobJsonEntry>> {
     let mut result = vec![];
     for blobs_path in blob_size_paths.iter() {
         let mut blobs: Vec<BlobJsonEntry> = read_config(&blobs_path)?;
@@ -333,12 +332,12 @@ fn count_blobs(
     index_blobs_by_hash(blob_sizes, &mut blob_count_by_hash)?;
 
     // Select packages for which one or more blob is missing.
-    let incomplete_packages: Vec<&Path> = blob_usages
+    let incomplete_packages: Vec<&Utf8Path> = blob_usages
         .iter()
         .flat_map(|budget| &budget.blobs)
         .filter(|blob| !blob_count_by_hash.contains_key(&blob.hash))
         .map(|blob| blob.package.as_path())
-        .collect::<HashSet<&Path>>()
+        .collect::<HashSet<&Utf8Path>>()
         .drain()
         .collect();
 
@@ -362,7 +361,7 @@ fn count_blobs(
                     return Err(anyhow!(
                         "ERROR: Blob not found for budget '{}' package '{}' path '{}' hash '{}'",
                         budget_usage.budget.name,
-                        blob.package.display(),
+                        blob.package,
                         blob.path,
                         blob.hash
                     ))
@@ -500,13 +499,14 @@ mod tests {
     use anyhow::Result;
     use assembly_images_config::BlobFSLayout;
     use assembly_tool::testing::FakeToolProvider;
+    use camino::Utf8PathBuf;
     use errors::ResultExt;
     use ffx_assembly_args::PackageSizeCheckArgs;
     use fuchsia_hash::Hash;
     use serde_json::json;
     use std::collections::{HashMap, HashSet};
     use std::fs;
-    use std::path::{Path, PathBuf};
+    use std::path::Path;
     use std::str::FromStr;
     use tempfile::TempDir;
 
@@ -532,8 +532,8 @@ mod tests {
             assert_eq!(actual, expected);
         }
 
-        fn path(&self, rel_path: &str) -> std::path::PathBuf {
-            self.root.path().join(rel_path)
+        fn path(&self, rel_path: &str) -> Utf8PathBuf {
+            self.root.path().join(rel_path).try_into().unwrap()
         }
     }
 
@@ -1109,7 +1109,7 @@ mod tests {
                   "creep_budget_bytes": 1,
                   "used_bytes": 106,
                   "package_breakdown": {
-                    test_fs.path("obj/src/sys/pkg/bin/pkg-cache/pkg-cache/package_manifest.json").to_str().unwrap(): {
+                    test_fs.path("obj/src/sys/pkg/bin/pkg-cache/pkg-cache/package_manifest.json").to_string(): {
                       "proportional_size": 53,
                       "used_space_in_blobfs": 159,
                       "name": "",
@@ -1123,7 +1123,7 @@ mod tests {
                         }
                       ]
                     },
-                    test_fs.path("obj/src/sys/pkg/bin/pkgfs/pkgfs/package_manifest.json").to_str().unwrap(): {
+                    test_fs.path("obj/src/sys/pkg/bin/pkgfs/pkgfs/package_manifest.json").to_string(): {
                       "proportional_size": 53,
                       "used_space_in_blobfs": 159,
                       "name": "",
@@ -1145,7 +1145,7 @@ mod tests {
                   "creep_budget_bytes": 1,
                   "used_bytes": 53,
                   "package_breakdown": {
-                    test_fs.path("obj/src/connectivity/bluetooth/core/bt-gap/bt-gap/package_manifest.json").to_str().unwrap(): {
+                    test_fs.path("obj/src/connectivity/bluetooth/core/bt-gap/bt-gap/package_manifest.json").to_string(): {
                       "proportional_size": 53,
                       "used_space_in_blobfs": 159,
                       "name": "",
@@ -1405,9 +1405,9 @@ mod tests {
         let blob1_path: &str = "/a/x/blob1";
         let blob2_path: &str = "/a/x/blob2";
         let blob3_path: &str = "/a/x/blob3";
-        let package1_path: PathBuf = PathBuf::from("x/a/s/package1");
-        let package2_path: PathBuf = PathBuf::from("x/a/s/package2");
-        let package3_path: PathBuf = PathBuf::from("x/a/s/package3");
+        let package1_path = Utf8PathBuf::from("x/a/s/package1");
+        let package2_path = Utf8PathBuf::from("x/a/s/package2");
+        let package3_path = Utf8PathBuf::from("x/a/s/package3");
 
         let resource_budget_blobs: Vec<BudgetBlobs> = vec![
             BudgetBlobs {

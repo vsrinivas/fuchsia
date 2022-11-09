@@ -3,15 +3,14 @@
 // found in the LICENSE file.
 
 use anyhow::{anyhow, Context, Result};
-use assembly_util::{DuplicateKeyError, InsertUniqueExt, MapEntry, PathToStringExt};
-use camino::Utf8PathBuf;
+use assembly_util::{DuplicateKeyError, InsertUniqueExt, MapEntry};
+use camino::{Utf8Path, Utf8PathBuf};
 use fuchsia_pkg::{PackageBuilder, RelativeTo};
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
 
 /// The mapping of a config_data entry's file-path in the package's config_data
 /// to it's source path on the filesystem.
-type FileEntryMap = BTreeMap<Utf8PathBuf, PathBuf>;
+type FileEntryMap = BTreeMap<Utf8PathBuf, Utf8PathBuf>;
 
 /// A typename to clarify intent around what Strings are package names.
 type PackageName = String;
@@ -34,7 +33,7 @@ impl ConfigDataBuilder {
         &mut self,
         package_name: &PackageName,
         destination: Utf8PathBuf,
-        source: PathBuf,
+        source: Utf8PathBuf,
     ) -> Result<()> {
         let package_entries = self.for_packages.entry(package_name.clone()).or_default();
         package_entries.try_insert_unique(MapEntry(destination, source)).map_err(|error|
@@ -42,13 +41,13 @@ impl ConfigDataBuilder {
                 "Found a duplicate config_data entry for package '{}' at path: '{}': '{}' and was already '{}'",
                 package_name,
                 error.key(),
-                error.new_value().display(),
-                error.previous_value().display()))
+                error.new_value(),
+                error.previous_value()))
     }
 
     /// Build the config_data package, in the specified outdir, and return the
     /// path to the `config_data` package's manifest.
-    pub fn build(self, outdir: impl AsRef<Path>) -> Result<PathBuf> {
+    pub fn build(self, outdir: impl AsRef<Utf8Path>) -> Result<Utf8PathBuf> {
         let outdir = outdir.as_ref().join("config_data");
         let mut package_builder = PackageBuilder::new("config-data");
 
@@ -57,7 +56,7 @@ impl ConfigDataBuilder {
                 let config_data_package_path =
                     Utf8PathBuf::from("meta/data").join(&package_name).join(destination_path);
                 package_builder
-                    .add_file_to_far(config_data_package_path, source_file.path_to_string()?)?;
+                    .add_file_to_far(config_data_package_path, source_file.to_string())?;
             }
         }
 
@@ -68,10 +67,9 @@ impl ConfigDataBuilder {
         package_builder.manifest_blobs_relative_to(RelativeTo::File);
         package_builder.repository("fuchsia.com");
 
-        package_builder.build(outdir, &metafar_path).context(format!(
-            "Building `config_data` package at path '{}'",
-            metafar_path.display()
-        ))?;
+        package_builder
+            .build(outdir, &metafar_path)
+            .context(format!("Building `config_data` package at path '{}'", metafar_path))?;
 
         Ok(manifest_path)
     }
@@ -80,14 +78,17 @@ impl ConfigDataBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use camino::Utf8Path;
     use fuchsia_pkg::PackageManifest;
     use std::fs::File;
     use tempfile::{NamedTempFile, TempDir};
 
     #[test]
     fn test_builder() {
-        let outdir = TempDir::new().unwrap();
-        let config_data_metafar_path = outdir.path().join("config_data").join("meta.far");
+        let tmp = TempDir::new().unwrap();
+        let outdir = Utf8Path::from_path(tmp.path()).unwrap();
+
+        let config_data_metafar_path = outdir.join("config_data").join("meta.far");
 
         // Create a file to write to the package.
         let source_file_path = NamedTempFile::new().unwrap();
@@ -98,7 +99,11 @@ mod tests {
         // Add the file.
         let mut builder = ConfigDataBuilder::default();
         builder
-            .add_entry(&"foo".to_string(), "dest/path".into(), source_file_path.to_owned())
+            .add_entry(
+                &"foo".to_string(),
+                "dest/path".into(),
+                Utf8Path::from_path(source_file_path.as_ref()).unwrap().to_owned(),
+            )
             .unwrap();
 
         // Build the package.

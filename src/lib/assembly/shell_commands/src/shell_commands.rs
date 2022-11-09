@@ -5,17 +5,16 @@
 use anyhow::{Context, Result};
 use assembly_config_schema::product_config::ShellCommands;
 use assembly_package_utils::PackageInternalPathBuf;
-use camino::Utf8PathBuf;
+use camino::{Utf8Path, Utf8PathBuf};
 use fuchsia_pkg::PackageBuilder;
 use std::collections::BTreeSet;
-use std::path::{Path, PathBuf};
 
 type RefToPackage<'a> = (&'a String, &'a BTreeSet<PackageInternalPathBuf>);
 
 const SHELL_COMMANDS_PACKAGE_NAME: &str = "shell-commands";
 const SHELL_COMMANDS_MANIFEST_FILE_NAME: &str = "package_manifest.json";
 
-type ShellCommandsManifestPath = PathBuf;
+type ShellCommandsManifestPath = Utf8PathBuf;
 
 /// A builder for the shell commands manifest package.
 // #[derive(Default)]
@@ -38,16 +37,9 @@ impl ShellCommandsBuilder {
 
     /// Builds the package, after the add_shell_commands function has been called to configure
     /// the builder instance
-    pub fn build(self, out_dir: impl AsRef<Path>) -> Result<ShellCommandsManifestPath> {
+    pub fn build(self, out_dir: impl AsRef<Utf8Path>) -> Result<ShellCommandsManifestPath> {
         let mut package_builder = PackageBuilder::new(SHELL_COMMANDS_PACKAGE_NAME);
-        let packages_dir = Utf8PathBuf::from_path_buf(out_dir.as_ref().to_path_buf())
-            .map_err(|_| {
-                anyhow::anyhow!(
-                    "Unable to convert {} into Utf8PathBuf on the system",
-                    out_dir.as_ref().display()
-                )
-            })?
-            .join(SHELL_COMMANDS_PACKAGE_NAME);
+        let packages_dir = out_dir.as_ref().join(SHELL_COMMANDS_PACKAGE_NAME);
         let manifest_path = packages_dir.join(SHELL_COMMANDS_MANIFEST_FILE_NAME);
         package_builder.repository(&self.repository);
         package_builder.manifest_path(&manifest_path);
@@ -56,7 +48,7 @@ impl ShellCommandsBuilder {
             .build(&packages_dir, &packages_dir.join("meta.far"))
             .context("Building the package manifest")?;
 
-        Ok(manifest_path.into_std_path_buf())
+        Ok(manifest_path)
     }
 
     /// Iterates through self.shell_commands, writing each (package, binary) pair to a file

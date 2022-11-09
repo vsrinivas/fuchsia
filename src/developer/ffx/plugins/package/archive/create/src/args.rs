@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use argh::FromArgs;
+use camino::Utf8PathBuf;
 use ffx_core::ffx_command;
-use std::path::PathBuf;
 
 #[ffx_command()]
 #[derive(FromArgs, PartialEq, Debug)]
@@ -15,16 +15,16 @@ use std::path::PathBuf;
 )]
 pub struct CreateCommand {
     #[argh(positional, description = "package_manifest.json to archive")]
-    pub package_manifest: PathBuf,
+    pub package_manifest: Utf8PathBuf,
 
     #[argh(option, description = "output package archive", short = 'o')]
-    pub output: PathBuf,
+    pub output: Utf8PathBuf,
 
     #[argh(
         option,
         description = "root directory for paths in package_manifest.json",
-        default = "PathBuf::from(\".\")",
+        default = "Utf8PathBuf::from(\".\")",
         short = 'r'
     )]
-    pub root_dir: PathBuf,
+    pub root_dir: Utf8PathBuf,
 }

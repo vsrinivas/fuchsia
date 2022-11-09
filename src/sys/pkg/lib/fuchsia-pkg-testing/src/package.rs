@@ -7,6 +7,7 @@
 use {
     crate::process::wait_for_process_termination,
     anyhow::{anyhow, format_err, Context as _, Error},
+    camino::{Utf8Path, Utf8PathBuf},
     fdio::SpawnBuilder,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io as fio,
@@ -33,7 +34,8 @@ use {
 pub struct Package {
     name: PackageName,
     meta_far_merkle: Hash,
-    artifacts: TempDir,
+    _artifacts_tmp: TempDir,
+    artifacts: Utf8PathBuf,
     // If None then the package has subpackages but this `Package` does not have all the blobs
     // needed by those subpackages.
     subpackage_blobs: Option<HashMap<Hash, Vec<u8>>>,
@@ -72,7 +74,7 @@ impl Package {
 
     /// The package's meta.far.
     pub fn meta_far(&self) -> io::Result<File> {
-        File::open(self.artifacts.path().join("meta.far"))
+        File::open(self.artifacts.join("meta.far"))
     }
 
     /// The name of the package.
@@ -81,8 +83,8 @@ impl Package {
     }
 
     /// The directory containing the blobs contained in the package, including the meta.far.
-    pub fn artifacts(&self) -> &Path {
-        self.artifacts.path()
+    pub fn artifacts(&self) -> &Utf8Path {
+        &self.artifacts
     }
 
     /// Builds and returns the package located at "/pkg" in the current namespace.
@@ -176,7 +178,7 @@ impl Package {
                 .unwrap();
         struct Blob {
             merkle: fuchsia_merkle::Hash,
-            path: PathBuf,
+            path: Utf8PathBuf,
         }
         #[allow(clippy::needless_collect)]
         let blobs = manifest
@@ -687,8 +689,12 @@ impl PackageBuilder {
         // -   contents/
         // -     file{N}
 
-        let packagedir = tempfile::tempdir().context("create /packages")?;
-        fs::create_dir(packagedir.path().join("contents")).context("create /packages/contents")?;
+        let packagedir_tmp = tempfile::tempdir().context("create /packages")?;
+        let packagedir = Utf8Path::from_path(packagedir_tmp.path())
+            .context("checking packagedir is UTF-8")?
+            .to_path_buf();
+
+        fs::create_dir(packagedir.join("contents")).context("create /packages/contents")?;
         let package_mount_path = format!("/packages/{}", &self.name);
 
         {
@@ -727,7 +733,7 @@ impl PackageBuilder {
                     _ => continue,
                 };
                 let path = format!("file{}", i);
-                fs::write(packagedir.path().join("contents").join(&path), contents)?;
+                fs::write(packagedir.join("contents").join(&path), contents)?;
                 writeln!(
                     manifest,
                     "{}={}/contents/{}",
@@ -759,30 +765,30 @@ impl PackageBuilder {
             .add_dir_to_namespace("/in".to_owned(), File::open(indir.path()).context("open /in")?)?
             .add_dir_to_namespace(
                 package_mount_path.clone(),
-                File::open(packagedir.path()).context("open /packages")?,
+                File::open(&packagedir).context("open /packages")?,
             )?
             .spawn_from_path("/pkg/bin/pm", &fuchsia_runtime::job_default())
             .context("spawning pm to build package")?;
 
         wait_for_process_termination(pm).await.context("waiting for pm to build package")?;
 
-        let meta_far_merkle =
-            fs::read_to_string(packagedir.path().join("meta.far.merkle"))?.parse()?;
+        let meta_far_merkle = fs::read_to_string(packagedir.join("meta.far.merkle"))?.parse()?;
 
         // clean up after pm
-        fs::remove_file(packagedir.path().join("meta/fuchsia.abi/abi-revision"))?;
-        fs::remove_dir(packagedir.path().join("meta/fuchsia.abi"))?;
+        fs::remove_file(packagedir.join("meta/fuchsia.abi/abi-revision"))?;
+        fs::remove_dir(packagedir.join("meta/fuchsia.abi"))?;
         if !self.subpackages.is_empty() {
-            fs::remove_file(packagedir.path().join("meta/fuchsia.pkg/subpackages"))?;
-            fs::remove_dir(packagedir.path().join("meta/fuchsia.pkg"))?;
+            fs::remove_file(packagedir.join("meta/fuchsia.pkg/subpackages"))?;
+            fs::remove_dir(packagedir.join("meta/fuchsia.pkg"))?;
         }
-        fs::remove_file(packagedir.path().join("meta/contents"))?;
-        fs::remove_dir(packagedir.path().join("meta"))?;
-        fs::remove_file(packagedir.path().join("meta.far.merkle"))?;
+        fs::remove_file(packagedir.join("meta/contents"))?;
+        fs::remove_dir(packagedir.join("meta"))?;
+        fs::remove_file(packagedir.join("meta.far.merkle"))?;
 
         Ok(Package {
             name: self.name,
             meta_far_merkle,
+            _artifacts_tmp: packagedir_tmp,
             artifacts: packagedir,
             subpackage_blobs: self.subpackage_blobs,
         })

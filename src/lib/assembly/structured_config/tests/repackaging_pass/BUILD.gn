@@ -84,6 +84,7 @@ if (is_host) {
       "//src/lib/assembly/validate_product",
       "//src/sys/pkg/lib/far/rust:fuchsia-archive",
       "//src/sys/pkg/lib/fuchsia-pkg",
+      "//third_party/rust_crates:camino",
       "//third_party/rust_crates:maplit",
       "//third_party/rust_crates:tempfile",
     ]
