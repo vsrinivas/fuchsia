@@ -106,8 +106,7 @@ class ProducerStage : public PipelineStage {
 
  private:
   struct CommandSummary {
-    // True if Start, otherwise Stop.
-    bool is_start;
+    StartStopControl::CommandType type;
     // When this command took effect, in three different units.
     zx::time presentation_time;
     Fixed internal_frame;

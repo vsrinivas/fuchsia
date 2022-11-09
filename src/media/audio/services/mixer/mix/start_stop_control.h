@@ -130,8 +130,8 @@ class StartStopControl {
   // REQUIRED: `reference_time` is >= the last advanced-to time
   void AdvanceTo(const ClockSnapshots& clocks, zx::time reference_time);
 
-  // Reports if there is a command scheduled to execute. If so, returns the scheduled times and
-  // `true` if the next command is a StartCommand (or `false` if it's a StopCommand).
+  // Reports if there is a command scheduled to execute. If so, returns the scheduled times and the
+  // type of the next command.
   //
   // If the next command is scheduled a long ways in the future on the system monotonic clock, the
   // returned time may be inaccurate because the reference clock may change rate in unpredictable
@@ -141,9 +141,8 @@ class StartStopControl {
   // REQUIRED: `AdvanceTo` must called at least once before this method (we need a "current time" to
   // report a scheduled time for commands that happen "immediately" and before the first AdvanceTo,
   // the current time is unknown).
-  //
-  // TODO(fxbug.dev/87651): consider returning an enum instead of a bool
-  [[nodiscard]] std::optional<std::pair<When, bool>> PendingCommand(
+  enum class CommandType { kStart, kStop };
+  [[nodiscard]] std::optional<std::pair<When, CommandType>> PendingCommand(
       const ClockSnapshots& clocks) const;
 
  private:
@@ -157,8 +156,8 @@ class StartStopControl {
 
   // Reports when the pending command should happen, using `reference_time_for_immediate` as the
   // scheduled time if the pending command should happen immediately.
-  std::pair<When, bool> PendingCommand(const ClockSnapshot& ref_clock,
-                                       zx::time reference_time_for_immediate) const;
+  std::pair<When, CommandType> PendingCommand(const ClockSnapshot& ref_clock,
+                                              zx::time reference_time_for_immediate) const;
   When PendingStartCommand(const ClockSnapshot& ref_clock, const StartCommand& cmd,
                            zx::time reference_time_for_immediate) const;
   When PendingStopCommand(const ClockSnapshot& ref_clock, const StopCommand& cmd,

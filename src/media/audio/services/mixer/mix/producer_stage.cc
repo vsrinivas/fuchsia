@@ -50,13 +50,15 @@ std::optional<PipelineStage::Packet> ProducerStage::ReadImpl(MixJobContext& ctx,
   if (presentation_time_to_internal_frac_frame_) {
     // The producer is currently started. Shrink the request if the producer stops before
     // `end_frame`.
-    if (auto cmd = NextCommand(ctx); cmd && !cmd->is_start && cmd->downstream_frame < end_frame) {
+    if (auto cmd = NextCommand(ctx); cmd && cmd->type == StartStopControl::CommandType::kStop &&
+                                     cmd->downstream_frame < end_frame) {
       end_frame = cmd->downstream_frame;
     }
   } else {
     // The producer is currently stopped. If the producer starts before `end_frame`, advance to that
     // starting frame.
-    if (auto cmd = NextCommand(ctx); cmd && cmd->is_start && cmd->downstream_frame < end_frame) {
+    if (auto cmd = NextCommand(ctx); cmd && cmd->type == StartStopControl::CommandType::kStart &&
+                                     cmd->downstream_frame < end_frame) {
       start_frame = cmd->downstream_frame;
       AdvanceStartStopControlTo(ctx, cmd->presentation_time);
       FX_CHECK(start_stop_control_.is_started());
@@ -93,7 +95,7 @@ std::optional<ProducerStage::CommandSummary> ProducerStage::NextCommand(const Mi
   }
 
   return CommandSummary{
-      .is_start = pending->second,
+      .type = pending->second,
       .presentation_time = pending->first.reference_time,
       .internal_frame = pending->first.frame,
       .downstream_frame = *PresentationTimeToDownstreamFrame(pending->first.reference_time),

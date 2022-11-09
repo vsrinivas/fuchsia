@@ -593,7 +593,7 @@ TEST_F(StartStopControlTest, PendingImmediateCommand) {
   EXPECT_EQ(pending->first.mono_time, zx::time(0));
   EXPECT_EQ(pending->first.reference_time, zx::time(0));
   EXPECT_EQ(pending->first.frame, Fixed(1));
-  EXPECT_EQ(pending->second, true);
+  EXPECT_EQ(pending->second, StartStopControl::CommandType::kStart);
 }
 
 TEST_F(StartStopControlTest, PendingStartCommand) {
@@ -611,7 +611,7 @@ TEST_F(StartStopControlTest, PendingStartCommand) {
   EXPECT_EQ(pending->first.mono_time, kMonoT0);
   EXPECT_EQ(pending->first.reference_time, kRefT0);
   EXPECT_EQ(pending->first.frame, Fixed(1));
-  EXPECT_EQ(pending->second, true);
+  EXPECT_EQ(pending->second, StartStopControl::CommandType::kStart);
 }
 
 TEST_F(StartStopControlTest, PendingStopCommand) {
@@ -636,7 +636,7 @@ TEST_F(StartStopControlTest, PendingStopCommand) {
   EXPECT_EQ(pending->first.mono_time, kMonoT0);
   EXPECT_EQ(pending->first.reference_time, kRefT0);
   EXPECT_EQ(pending->first.frame, kFrameAtRefT0);
-  EXPECT_EQ(pending->second, false);
+  EXPECT_EQ(pending->second, StartStopControl::CommandType::kStop);
 }
 
 }  // namespace

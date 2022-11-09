@@ -115,15 +115,17 @@ void ConsumerStage::UpdateStatus(const MixJobContext& ctx,
 
   if (start_stop_control_.is_started()) {
     internal_status_ = InternalStartedStatus{
-        .next_stop_presentation_time = pending && !pending->second
-                                           ? std::optional(pending->first.reference_time)
-                                           : std::nullopt,
+        .next_stop_presentation_time =
+            pending && pending->second == StartStopControl::CommandType::kStop
+                ? std::optional(pending->first.reference_time)
+                : std::nullopt,
     };
   } else {
     internal_status_ = InternalStoppedStatus{
-        .next_start_presentation_time = pending && pending->second
-                                            ? std::optional(pending->first.reference_time)
-                                            : std::nullopt,
+        .next_start_presentation_time =
+            pending && pending->second == StartStopControl::CommandType::kStart
+                ? std::optional(pending->first.reference_time)
+                : std::nullopt,
     };
   }
 

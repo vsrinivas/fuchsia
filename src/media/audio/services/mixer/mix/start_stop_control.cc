@@ -97,7 +97,7 @@ void StartStopControl::AdvanceTo(const ClockSnapshots& clocks, zx::time referenc
   pending_ = std::nullopt;
 }
 
-std::optional<std::pair<When, bool>> StartStopControl::PendingCommand(
+std::optional<std::pair<When, StartStopControl::CommandType>> StartStopControl::PendingCommand(
     const ClockSnapshots& clocks) const {
   FX_CHECK(reference_time_now_);
 
@@ -114,18 +114,18 @@ void StartStopControl::CancelPendingCommand() {
   }
 }
 
-std::pair<When, bool> StartStopControl::PendingCommand(
+std::pair<When, StartStopControl::CommandType> StartStopControl::PendingCommand(
     const ClockSnapshot& ref_clock, zx::time reference_time_for_immediate) const {
   FX_CHECK(pending_);
 
   if (std::holds_alternative<StartCommand>(*pending_)) {
     return std::make_pair(PendingStartCommand(ref_clock, std::get<StartCommand>(*pending_),
                                               reference_time_for_immediate),
-                          true);
+                          CommandType::kStart);
   } else {
     return std::make_pair(PendingStopCommand(ref_clock, std::get<StopCommand>(*pending_),
                                              reference_time_for_immediate),
-                          false);
+                          CommandType::kStop);
   }
 }
 
