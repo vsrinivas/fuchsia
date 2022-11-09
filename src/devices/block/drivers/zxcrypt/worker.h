@@ -15,8 +15,8 @@
 
 #include "src/devices/block/drivers/zxcrypt/extra.h"
 #include "src/devices/block/drivers/zxcrypt/queue.h"
-#include "src/security/fcrypto/cipher.h"
-#include "src/security/zxcrypt/ddk-volume.h"
+#include "src/security/lib/fcrypto/cipher.h"
+#include "src/security/lib/zxcrypt/ddk-volume.h"
 
 namespace zxcrypt {
 

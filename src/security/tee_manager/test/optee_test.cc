@@ -14,7 +14,7 @@
 #include <vector>
 
 #include <gtest/gtest.h>
-#include <src/security/tee/third_party/optee_test/ta_storage.h>
+#include <src/security/lib/tee/third_party/optee_test/ta_storage.h>
 #include <tee-client-api/tee_client_api.h>
 
 #include "common.h"

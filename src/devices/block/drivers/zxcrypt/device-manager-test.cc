@@ -20,9 +20,9 @@
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
 
-#include "src/security/fcrypto/digest.h"
-#include "src/security/fcrypto/secret.h"
-#include "src/security/zxcrypt/client.h"
+#include "src/security/lib/fcrypto/digest.h"
+#include "src/security/lib/fcrypto/secret.h"
+#include "src/security/lib/zxcrypt/client.h"
 
 namespace {
 constexpr zx::duration kTimeout = zx::sec(3);

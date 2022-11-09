@@ -20,7 +20,7 @@
 #include "lib/fidl/cpp/wire/internal/transport_channel.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/lib/storage/fs_management/cpp/options.h"
-#include "src/security/fcrypto/bytes.h"
+#include "src/security/lib/fcrypto/bytes.h"
 #include "src/storage/fshost/copier.h"
 #include "src/storage/fshost/fs-manager.h"
 #include "src/storage/fshost/fshost-boot-args.h"

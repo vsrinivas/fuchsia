@@ -67,7 +67,7 @@ source_set("test_common") {
     "//sdk/fidl/fuchsia.tee:fuchsia.tee_hlcpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
-    "//src/security/tee/tee-client-api",
+    "//src/security/lib/tee/tee-client-api",
   ]
 }
 

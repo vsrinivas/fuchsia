@@ -29,7 +29,7 @@
 #include "src/lib/storage/fs_management/cpp/fvm.h"
 #include "src/lib/storage/fs_management/cpp/mkfs_with_default.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
-#include "src/security/zxcrypt/client.h"
+#include "src/security/lib/zxcrypt/client.h"
 #include "src/storage/bin/start-storage-benchmark/running-filesystem.h"
 #include "src/storage/fs_test/crypt_service.h"
 #include "src/storage/lib/utils/topological_path.h"

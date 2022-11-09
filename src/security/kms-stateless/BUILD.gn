@@ -3,10 +3,10 @@
 # found in the LICENSE file.
 
 source_set("kms-stateless") {
-  sources = [ "kms-stateless.cc" ]
   public = [ "kms-stateless.h" ]
 
   public_deps = [
+    "//src/security/lib/kms-stateless",
     "//zircon/system/public",
     "//zircon/system/ulib/fbl",
   ]
@@ -15,7 +15,7 @@ source_set("kms-stateless") {
     "//sdk/lib/fdio",
     "//src/lib/storage/ramdevice_client/cpp",
     "//src/security/lib/keysafe",
-    "//src/security/tee/tee-client-api",
+    "//src/security/lib/tee/tee-client-api",
     "//zircon/system/ulib/zx",
   ]
 }

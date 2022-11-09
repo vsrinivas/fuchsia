@@ -25,7 +25,7 @@ rustc_binary("bin") {
     "//src/lib/fuchsia-component",
     "//src/lib/mundane:mundane",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/security/tee/rust",
+    "//src/security/lib/tee/rust",
     "//third_party/boringssl/rust/boringssl-sys",
     "//third_party/rust_crates:aes-gcm",
     "//third_party/rust_crates:anyhow",
@@ -43,7 +43,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:tempfile",
   ]
 
-  non_rust_deps = [ "//src/security/tee/tee-client-api" ]
+  non_rust_deps = [ "//src/security/lib/tee/tee-client-api" ]
 
   sources = [
     "src/common.rs",

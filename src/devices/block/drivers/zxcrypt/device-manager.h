@@ -17,7 +17,7 @@
 #include <fbl/mutex.h>
 
 #include "lib/inspect/cpp/inspector.h"
-#include "src/security/zxcrypt/volume.h"
+#include "src/security/lib/zxcrypt/volume.h"
 
 namespace zxcrypt {
 

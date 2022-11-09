@@ -5,13 +5,6 @@
 #ifndef SRC_SECURITY_FCRYPTO_ERROR_H_
 #define SRC_SECURITY_FCRYPTO_ERROR_H_
 
-#include <zircon/types.h>
-
-namespace crypto {
-
-// Prints the crypto errors.  Use when a call to the crypto implementation indicates failure.
-void xprintf_crypto_errors(zx_status_t* out);
-
-}  // namespace crypto
+#include <src/security/lib/fcrypto/error.h>
 
 #endif  // SRC_SECURITY_FCRYPTO_ERROR_H_

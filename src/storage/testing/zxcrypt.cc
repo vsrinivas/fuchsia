@@ -9,7 +9,7 @@
 
 #include <ramdevice-client/ramdisk.h>
 
-#include "src/security/zxcrypt/client.h"
+#include "src/security/lib/zxcrypt/client.h"
 #include "src/storage/lib/utils/topological_path.h"
 
 namespace storage {

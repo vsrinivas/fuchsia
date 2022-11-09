@@ -22,9 +22,9 @@
 #include "src/devices/block/drivers/zxcrypt/device-info.h"
 #include "src/devices/block/drivers/zxcrypt/device.h"
 #include "src/devices/block/drivers/zxcrypt/zxcrypt-bind.h"
-#include "src/security/fcrypto/secret.h"
-#include "src/security/zxcrypt/ddk-volume.h"
-#include "src/security/zxcrypt/volume.h"
+#include "src/security/lib/fcrypto/secret.h"
+#include "src/security/lib/zxcrypt/ddk-volume.h"
+#include "src/security/lib/zxcrypt/volume.h"
 
 namespace zxcrypt {
 

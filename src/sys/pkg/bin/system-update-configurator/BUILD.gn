@@ -30,7 +30,7 @@ rustc_library("lib") {
   ]
   test_deps = [ "//third_party/rust_crates:assert_matches" ]
 
-  non_rust_deps = [ "//src/security/tee/tee-client-api" ]
+  non_rust_deps = [ "//src/security/lib/tee/tee-client-api" ]
 
   source_root = "src/main.rs"
   sources = [

@@ -15,7 +15,7 @@
 #include <fbl/macros.h>
 
 #include "src/devices/block/drivers/zxcrypt/extra.h"
-#include "src/security/zxcrypt/volume.h"
+#include "src/security/lib/zxcrypt/volume.h"
 
 namespace zxcrypt {
 

@@ -43,7 +43,7 @@
 #include <gpt/gpt.h>
 
 #include "src/lib/storage/fs_management/cpp/mount.h"
-#include "src/security/zxcrypt/client.h"
+#include "src/security/lib/zxcrypt/client.h"
 #include "src/storage/fshost/block-device-manager.h"
 #include "src/storage/fshost/block-device.h"
 #include "src/storage/fshost/fs-manager.h"

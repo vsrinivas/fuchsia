@@ -1,0 +1,7 @@
+Name: optee_test
+URL: https://github.com/OP-TEE/optee_test/blob/ff1be9e9bc2d2fc5e8dd94a716f6df20179d6dd9/ta/include/ta_storage.h
+License: BSD 2-Clause
+License File: LICENSE
+Revision: ff1be9e9bc2d2fc5e8dd94a716f6df20179d6dd9
+
+Only imported the header of the storage trusted application used for testing purposes.

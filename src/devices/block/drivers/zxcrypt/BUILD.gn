@@ -40,8 +40,8 @@ fuchsia_driver("zxcrypt-driver") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//src/lib/uuid",
-    "//src/security/fcrypto",
-    "//src/security/zxcrypt:zxcrypt-dev",
+    "//src/security/lib/fcrypto",
+    "//src/security/lib/zxcrypt:zxcrypt-dev",
     "//zircon/system/ulib/bitmap",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/pretty",
@@ -54,17 +54,17 @@ fuchsia_driver("zxcrypt-driver") {
   # library dependencies.
   assert_no_deps = [
     # This seems to get pulled in by //src/devices/lib/driver, which is
-    # needed by //src/security/zxcrypt:zxcrypt-dev.  But happily it doesn't show
+    # needed by //src/security/lib/zxcrypt:zxcrypt-dev.  But happily it doesn't show
     # up in our dynamically-linked shared libraries, so we're okay.
     #"//zircon/system/ulib/trace-engine",
 
     # Some day, we'd also like to be able to assert we don't pull in fdio here,
     # but it is pulled in transitively by //src/devices/lib/driver, which is
-    # needed by //src/security/zxcrypt:zxcrypt-dev for the symbol
+    # needed by //src/security/lib/zxcrypt:zxcrypt-dev for the symbol
     # |device_get_protocol|.
     #"//sdk/lib/fdio",
-    "//src/security/zxcrypt:zxcrypt-client",
-    "//src/security/zxcrypt:zxcrypt-fdio",
+    "//src/security/lib/zxcrypt:zxcrypt-client",
+    "//src/security/lib/zxcrypt:zxcrypt-fdio",
   ]
 
   # TODO(fxbug.dev/33820): This target uses the deprecated GetSizable.
@@ -114,9 +114,9 @@ test("device-manager-test-bin") {
     "//src/lib/fxl",
     "//src/lib/storage/ramdevice_client/cpp",
     "//src/lib/uuid",
-    "//src/security/fcrypto",
-    "//src/security/zxcrypt:zxcrypt-client",
-    "//src/security/zxcrypt:zxcrypt-dev",
+    "//src/security/lib/fcrypto",
+    "//src/security/lib/zxcrypt:zxcrypt-client",
+    "//src/security/lib/zxcrypt:zxcrypt-dev",
     "//zircon/system/ulib/zxtest",
   ]
 }

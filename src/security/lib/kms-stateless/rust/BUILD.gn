@@ -1,0 +1,20 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+
+rustc_library("rust") {
+  name = "kms_stateless"
+  edition = "2021"
+  deps = [
+    "//sdk/lib/device-watcher/rust",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-fs",
+    "//src/security/lib/tee/rust",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
+  ]
+  sources = [ "src/lib.rs" ]
+}

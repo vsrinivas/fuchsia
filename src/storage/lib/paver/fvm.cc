@@ -36,7 +36,7 @@
 #include "src/lib/storage/block_client/cpp/client.h"
 #include "src/lib/storage/fs_management/cpp/fvm.h"
 #include "src/lib/uuid/uuid.h"
-#include "src/security/zxcrypt/client.h"
+#include "src/security/lib/zxcrypt/client.h"
 #include "src/storage/fshost/constants.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/fvm_sparse.h"

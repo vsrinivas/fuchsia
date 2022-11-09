@@ -44,7 +44,7 @@ source_set("storage_driver_test_support") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/storage/fs_management/cpp:fs-management",
-    "//src/security/zxcrypt:zxcrypt-client",
+    "//src/security/lib/zxcrypt:zxcrypt-client",
     "//src/storage/lib/utils:topological_path",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/sync",

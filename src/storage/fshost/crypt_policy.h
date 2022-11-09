@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_FSHOST_CRYPT_POLICY_H_
 #define SRC_STORAGE_FSHOST_CRYPT_POLICY_H_
 
-#include "src/security/zxcrypt/client.h"
+#include "src/security/lib/zxcrypt/client.h"
 
 namespace fshost {
 

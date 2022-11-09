@@ -1,0 +1,21 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("kms-stateless") {
+  sources = [ "kms-stateless.cc" ]
+  public = [ "kms-stateless.h" ]
+
+  public_deps = [
+    "//zircon/system/public",
+    "//zircon/system/ulib/fbl",
+  ]
+
+  deps = [
+    "//sdk/lib/fdio",
+    "//src/lib/storage/ramdevice_client/cpp",
+    "//src/security/lib/keysafe",
+    "//src/security/lib/tee/tee-client-api",
+    "//zircon/system/ulib/zx",
+  ]
+}

@@ -1,0 +1,43 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("fcrypto") {
+  sources = [
+    "aead.cc",
+    "bytes.cc",
+    "cipher.cc",
+    "digest.cc",
+    "error.cc",
+    "error.h",
+    "hkdf.cc",
+    "hmac.cc",
+    "secret.cc",
+  ]
+
+  public = [
+    "aead.h",
+    "bytes.h",
+    "cipher.h",
+    "digest.h",
+    "hkdf.h",
+    "hmac.h",
+    "secret.h",
+  ]
+
+  public_deps = [
+    "//zircon/system/public",
+    "//zircon/system/ulib/fbl",
+  ]
+
+  deps = [
+    "//third_party/boringssl",
+    "//zircon/system/ulib/explicit-memory",
+    "//zircon/system/ulib/zircon-internal",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

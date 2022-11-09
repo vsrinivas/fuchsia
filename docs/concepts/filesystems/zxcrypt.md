@@ -9,7 +9,7 @@ bound, the zxcrypt device will publish another block device in the device tree t
 interact with normally.
 
 ## Usage
-zxcrypt contains both a [driver](/src/devices/block/drivers/zxcrypt) and [library](/src/security/zxcrypt)
+zxcrypt contains both a [driver](/src/devices/block/drivers/zxcrypt) and [library](/src/security/lib/zxcrypt)
 Provided by libzxcrypt.so are four functions for managing zxcrypt devices.  Each takes one or more
 `zxcrypt_key_t` keys, which associates the key data, length, and slot in the case of multiple keys.
 
@@ -79,7 +79,7 @@ DdkIotxnQueue -+
 The "encrypter" worker encrypts the data in every I/O write request before sending it to the
 underlying block device, and the "decrypter" worker decrypts the data in every I/O read response
 coming from the underlying block device.  The
-[cipher](/src/security/fcrypto/cipher.h) must have a key length of at least 16 bytes,
+[cipher](/src/security/lib/fcrypto/cipher.h) must have a key length of at least 16 bytes,
 be semantically secure ([IND-CCA2][ind-cca2]) and incorporate the block offset as a
 "[tweak][tweak]".  Currently, [AES256-XTS][aes-xts] is in use.
 
@@ -124,11 +124,11 @@ The superblock format is as follows, with each field described in turn:
 * [_HMAC_][hmac]: A keyed digest of the superblock up to this point (including the Reserved field).
 
 The wrap key, wrap [IV][iv], and HMAC key are all derived from a
-[KDF](/src/security/fcrypto/hkdf.h).  This KDF is an [RFC 5869 HKDF][hkdf], which
+[KDF](/src/security/lib/fcrypto/hkdf.h).  This KDF is an [RFC 5869 HKDF][hkdf], which
 combines the key provided, the "salt" of the instance GUID and a per-use label such as "wrap" or
 "hmac".  The KDF does __NOT__ try to do any rate-limiting.  The KDF mitigates the risk of key reuse,
 as a new random instance salt will lead to new derived keys.  The
-[HMAC](/src/security/fcrypto/hmac.h) prevents accidental or malicious modification to
+[HMAC](/src/security/lib/fcrypto/hmac.h) prevents accidental or malicious modification to
 go undetected, without leaking any useful information about the zxcrypt key.
 
 _NOTE: The KDF does __NOT__ do any [key stretching][stretch].  It is assumed that an attacker can

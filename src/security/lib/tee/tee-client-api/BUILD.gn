@@ -1,0 +1,46 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cpp/library_headers.gni")
+
+library_headers("tee-client-api-headers") {
+  headers = [
+    "tee-client-api/tee_client_api.h",
+    "tee-client-api/tee-client-types.h",
+  ]
+}
+
+shared_library("tee-client-api") {
+  sources = [ "tee-client-api.cc" ]
+  public_deps = [ ":tee-client-api-headers" ]
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.tee:fuchsia.hardware.tee_cpp_wire",
+    "//sdk/fidl/fuchsia.tee:fuchsia.tee_cpp_wire",
+    "//sdk/lib/fdio",
+    "//sdk/lib/fidl",
+    "//sdk/lib/sys/component/cpp",
+    "//zircon/system/ulib/zx",
+  ]
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
+}
+
+static_library("tee-client-api-static") {
+  sources = [ "tee-client-api.cc" ]
+  public_deps = [ ":tee-client-api-headers" ]
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.tee:fuchsia.hardware.tee_cpp_wire",
+    "//sdk/fidl/fuchsia.tee:fuchsia.tee_cpp_wire",
+    "//sdk/lib/fdio",
+    "//sdk/lib/fidl",
+    "//sdk/lib/sys/component/cpp",
+    "//zircon/system/ulib/zx",
+  ]
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
+}

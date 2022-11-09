@@ -16,7 +16,7 @@
 
 #include <fbl/macros.h>
 
-#include "src/security/zxcrypt/ddk-volume.h"
+#include "src/security/lib/zxcrypt/ddk-volume.h"
 
 namespace zxcrypt {
 

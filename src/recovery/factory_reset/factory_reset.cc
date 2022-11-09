@@ -15,8 +15,8 @@
 
 #include "lib/fdio/cpp/caller.h"
 #include "src/lib/storage/fs_management/cpp/format.h"
-#include "src/security/kms-stateless/kms-stateless.h"
-#include "src/security/zxcrypt/client.h"
+#include "src/security/lib/kms-stateless/kms-stateless.h"
+#include "src/security/lib/zxcrypt/client.h"
 
 namespace factory_reset {
 

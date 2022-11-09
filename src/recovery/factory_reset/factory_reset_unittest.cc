@@ -28,8 +28,8 @@
 
 #include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/fs_management/cpp/fvm.h"
-#include "src/security/fcrypto/secret.h"
-#include "src/security/zxcrypt/client.h"
+#include "src/security/lib/fcrypto/secret.h"
+#include "src/security/lib/zxcrypt/client.h"
 
 namespace {
 
