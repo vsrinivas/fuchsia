@@ -33,6 +33,7 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/pipe.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/poll-until.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/power-controller.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/registers-ddi-phy-tiger-lake.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-ddi.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-dpll.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-pipe.h"
@@ -821,7 +822,315 @@ void DpDisplay::ConfigureVoltageSwingTypeCTigerLake(size_t phy_config_index) {
 }
 
 void DpDisplay::ConfigureVoltageSwingComboTigerLake(size_t phy_config_index) {
-  // TODO(fxbug.com/112730): Implement Combo PHY programming.
+  // This implements the "Digital Display Interface" > "Combo PHY DDI Buffer" >
+  // "Voltage Swing Programming Sequence" section in the display PRMs.
+  //
+  // Tiger Lake: IHD-OS-TGL-Vol 12-1.22-Rev2.0 pages 392-395
+  // DG1: IHD-OS-DG1-Vol 12-2.21 pages 338-342
+  // Ice Lake: IHD-OS-ICLLP-Vol 12-1.22-Rev2.0 pages 335-339
+
+  zxlogf(TRACE, "Voltage Swing for DDI %d, Link rate %d MHz, PHY config: %d", ddi_id(),
+         dp_link_rate_mhz_, static_cast<int>(phy_config_index));
+  zxlogf(TRACE, "Logging pre-configuration register state for debugging");
+
+  static constexpr tgl_registers::PortLane kMainLinkLanes[] = {
+      tgl_registers::PortLane::kMainLinkLane0, tgl_registers::PortLane::kMainLinkLane1,
+      tgl_registers::PortLane::kMainLinkLane2, tgl_registers::PortLane::kMainLinkLane3};
+  for (tgl_registers::PortLane lane : kMainLinkLanes) {
+    auto physical_coding1 =
+        tgl_registers::PortPhysicalCoding1::GetForDdiLane(ddi_id(), lane).ReadFrom(mmio_space());
+    const int lane_index =
+        static_cast<int>(lane) - static_cast<int>(tgl_registers::PortLane::kMainLinkLane0);
+    zxlogf(TRACE, "DDI %d Lane %d PORT_PCS_DW1: %08x, common mode keeper: %s", ddi_id(), lane_index,
+           physical_coding1.reg_value(),
+           physical_coding1.common_mode_keeper_enabled() ? "enabled" : "disabled");
+    physical_coding1.set_common_mode_keeper_enabled(true).WriteTo(mmio_space());
+  }
+
+  cpp20::span<const bool> load_generation;
+  if (dp_link_rate_mhz_ >= 6'000) {
+    static constexpr bool kHighSpeedLoadGeneration[] = {false, false, false, false};
+    load_generation = kHighSpeedLoadGeneration;
+  } else if (dp_lane_count_ == 4) {
+    static constexpr bool kLowSpeedFullLinkLoadGeneration[] = {false, true, true, true};
+    load_generation = kLowSpeedFullLinkLoadGeneration;
+  } else {
+    static constexpr bool kPartialLinkLoadGeneration[] = {false, true, true, false};
+    load_generation = kPartialLinkLoadGeneration;
+  }
+  for (tgl_registers::PortLane lane : kMainLinkLanes) {
+    auto lane_equalization =
+        tgl_registers::PortTransmitterEqualization::GetForDdiLane(ddi_id(), lane)
+            .ReadFrom(mmio_space());
+    const int lane_index =
+        static_cast<int>(lane) - static_cast<int>(tgl_registers::PortLane::kMainLinkLane0);
+    zxlogf(TRACE,
+           "DDI %d Lane %d PORT_TX_DW4: %08x, load generation select: %d, equalization "
+           "C0: %02x C1: %02x C2: %02x",
+           ddi_id(), lane_index, lane_equalization.reg_value(),
+           lane_equalization.load_generation_select(), lane_equalization.cursor_coefficient(),
+           lane_equalization.post_cursor_coefficient1(),
+           lane_equalization.post_cursor_coefficient2());
+    lane_equalization.set_load_generation_select(load_generation[lane_index]).WriteTo(mmio_space());
+  }
+
+  auto common_lane5 = tgl_registers::PortCommonLane5::GetForDdi(ddi_id()).ReadFrom(mmio_space());
+  zxlogf(TRACE, "DDI %d PORT_CL_DW5 %08x, suspend clock config %d", ddi_id(),
+         common_lane5.reg_value(), common_lane5.suspend_clock_config());
+  common_lane5.set_suspend_clock_config(0b11).WriteTo(mmio_space());
+
+  // Lane training must be disabled while we configure new voltage settings into
+  // the AFE (Analog Front-End) registers.
+  for (tgl_registers::PortLane lane : kMainLinkLanes) {
+    auto lane_voltage =
+        tgl_registers::PortTransmitterVoltage::GetForDdiLane(ddi_id(), lane).ReadFrom(mmio_space());
+    const int lane_index =
+        static_cast<int>(lane) - static_cast<int>(tgl_registers::PortLane::kMainLinkLane0);
+    zxlogf(TRACE,
+           "DDI %d Lane %d PORT_TX_DW5: %08x, scaling mode select: %d, "
+           "terminating resistor select: %d, equalization 3-tap: %s 2-tap: %s, "
+           "cursor programming: %s, coefficient polarity: %s",
+           ddi_id(), lane_index, lane_voltage.reg_value(), lane_voltage.scaling_mode_select(),
+           lane_voltage.terminating_resistor_select(),
+           lane_voltage.three_tap_equalization_disabled() ? "disabled" : "enabled",
+           lane_voltage.two_tap_equalization_disabled() ? "disabled" : "enabled",
+           lane_voltage.cursor_programming_disabled() ? "disabled" : "enabled",
+           lane_voltage.coefficient_polarity_disabled() ? "disabled" : "enabled");
+    lane_voltage.set_training_enabled(false).WriteTo(mmio_space());
+  }
+
+  // The ordering of the fields matches the column order in the "Voltage Swing
+  // Programming" table. The post-cursor is omitted because it can be derived by
+  // solving the equation cursor + post_cursor = 0x3f. It is not surprising that
+  // the coefficients of a 2-tap equalizer add up to (a fixed-point
+  // representation of) 1.
+  struct ComboSwingConfig {
+    uint8_t swing_select;
+    uint8_t n_scalar;
+    uint8_t cursor;
+  };
+
+  cpp20::span<const ComboSwingConfig> swing_configs;
+  // TODO(fxbug.dev/113951):
+  const int use_edp_voltages = false;
+  if (use_edp_voltages) {
+    if (dp_link_rate_mhz_ <= 5'400) {  // Up to HBR2
+      static constexpr ComboSwingConfig kEmbeddedDisplayPortHbr2Configs[] = {
+          // Voltage swing 0, pre-emphasis levels 0-3
+          {.swing_select = 0b0000, .n_scalar = 0x7f, .cursor = 0x3f},
+          {.swing_select = 0b1000, .n_scalar = 0x7f, .cursor = 0x38},
+          {.swing_select = 0b0001, .n_scalar = 0x7f, .cursor = 0x33},
+          {.swing_select = 0b1001, .n_scalar = 0x7f, .cursor = 0x31},
+
+          // Voltage swing 1, pre-emphasis levels 0-2
+          {.swing_select = 0b1000, .n_scalar = 0x7f, .cursor = 0x3f},
+          {.swing_select = 0b0001, .n_scalar = 0x7f, .cursor = 0x38},
+          {.swing_select = 0b1001, .n_scalar = 0x7f, .cursor = 0x33},
+
+          // Voltage swing 2, pre-emphasis levels 0-1
+          {.swing_select = 0b0001, .n_scalar = 0x7f, .cursor = 0x3f},
+          {.swing_select = 0b1001, .n_scalar = 0x7f, .cursor = 0x38},
+
+          // Voltage swing 3, pre-emphasis level 0
+          {.swing_select = 0b1001, .n_scalar = 0x7f, .cursor = 0x3f},
+
+          // Optimized config, opt-in via VBT.
+          // TODO(fxbug.dev/114461): This entry is currently unused.
+          {.swing_select = 0b0110, .n_scalar = 0x7f, .cursor = 0x3f},
+      };
+      swing_configs = kEmbeddedDisplayPortHbr2Configs;
+    } else {  // Up to HBR3
+      // The "XED Overview" > "Port Configurations" section on
+      // IHD-OS-TGL-Vol 12-1.22-Rev2.0 page 113 states that combo PHYs support
+      // HBR3, but only for eDP (Embedded DisplayPort). DisplayPort connections
+      // can only go up to HBR2.
+      static constexpr ComboSwingConfig kEmbeddedDisplayPortHbr3Configs[] = {
+          // Voltage swing 0, pre-emphasis levels 0-3
+          {.swing_select = 0b1010, .n_scalar = 0x35, .cursor = 0x3f},
+          {.swing_select = 0b1010, .n_scalar = 0x4f, .cursor = 0x37},
+          {.swing_select = 0b1100, .n_scalar = 0x71, .cursor = 0x2f},
+          {.swing_select = 0b0110, .n_scalar = 0x7f, .cursor = 0x2b},
+
+          // Voltage swing 1, pre-emphasis levels 0-2
+          {.swing_select = 0b1010, .n_scalar = 0x4c, .cursor = 0x3f},
+          {.swing_select = 0b1100, .n_scalar = 0x73, .cursor = 0x34},
+          {.swing_select = 0b0110, .n_scalar = 0x7f, .cursor = 0x2f},
+
+          // Voltage swing 2, pre-emphasis levels 0-1
+          {.swing_select = 0b1100, .n_scalar = 0x6c, .cursor = 0x3f},
+          {.swing_select = 0b0110, .n_scalar = 0x7f, .cursor = 0x35},
+
+          // Voltage swing 3, pre-emphasis level 0
+          {.swing_select = 0b0110, .n_scalar = 0x7f, .cursor = 0x3f},
+      };
+      swing_configs = kEmbeddedDisplayPortHbr3Configs;
+    }
+  } else {
+    if (dp_link_rate_mhz_ <= 2'700) {  // Up to HBR
+      static constexpr ComboSwingConfig kDisplayPortHbrConfigs[] = {
+          // Voltage swing 0, pre-emphasis levels 0-3
+          {.swing_select = 0b1010, .n_scalar = 0x32, .cursor = 0x3f},
+          {.swing_select = 0b1010, .n_scalar = 0x4f, .cursor = 0x37},
+          {.swing_select = 0b1100, .n_scalar = 0x71, .cursor = 0x2f},
+          {.swing_select = 0b0110, .n_scalar = 0x7d, .cursor = 0x2b},
+
+          // Voltage swing 1, pre-emphasis levels 0-2
+          {.swing_select = 0b1010, .n_scalar = 0x4c, .cursor = 0x3f},
+          {.swing_select = 0b1100, .n_scalar = 0x73, .cursor = 0x34},
+          {.swing_select = 0b0110, .n_scalar = 0x7f, .cursor = 0x2f},
+
+          // Voltage swing 2, pre-emphasis levels 0-1
+          {.swing_select = 0b1100, .n_scalar = 0x4c, .cursor = 0x3c},
+          {.swing_select = 0b0110, .n_scalar = 0x73, .cursor = 0x35},
+
+          // Voltage swing 3, pre-emphasis level 0
+          {.swing_select = 0b0110, .n_scalar = 0x7f, .cursor = 0x3f},
+      };
+      swing_configs = kDisplayPortHbrConfigs;
+    } else {  // Up to HBR2
+      if (dp_link_rate_mhz_ >= 5'400) {
+        // TODO(fxbug.dev/114668): DpDisplay::ComputeDdiPllConfig() should
+        // reject configs that would entail HBR3 on DisplayPort. Then we can
+        // have a ZX_ASSERT() / ZX_DEBUG_ASSERT() here.
+        zxlogf(WARNING,
+               "Attempting to use unsupported DisplayPort speed on DDI %d which tops out at HBR2",
+               ddi_id());
+      }
+
+      // The IHD-OS-TGL-Vol 12-1.22-Rev2.0 "Voltage Swing Programming" table on
+      // pages 393-395 has an ambiguity -- there are two sets of entries labeled
+      // "DP HBR2", without any further explanation.
+      //
+      // We resolve this ambiguity based on the OpenBSD i915 driver, which (in
+      // intel_ddi_buf_trans.c) uses the 2nd set of entries for "U/Y" SKUs, and
+      // the 1st set of entries for all other processors.
+      //
+      // Y SKUs seem to be undocumented / unreleased, since they're not listed
+      // in the IHD-OS-TGL-Vol 4-12.21 "Steppings and Device IDs" table on page
+      // 9. So, we're using the 2nd set of entries for the U SKUs, and the first
+      // set of entries for the H SKUs.
+      const uint16_t device_id = controller()->device_id();
+
+      // TODO(fxbug.dev/114667): PCI device ID-based selection is insufficient.
+      // Display engines with PCI device ID 0x9a49 may be UP3 or H35 SKUs.
+      if (is_tgl_u(device_id)) {
+        static constexpr ComboSwingConfig kDisplayPortHbr2UConfigs[] = {
+            // Voltage swing 0, pre-emphasis levels 0-3
+            {.swing_select = 0b1010, .n_scalar = 0x35, .cursor = 0x3f},
+            {.swing_select = 0b1010, .n_scalar = 0x4f, .cursor = 0x36},
+            {.swing_select = 0b1100, .n_scalar = 0x60, .cursor = 0x32},
+            {.swing_select = 0b1100, .n_scalar = 0x7f, .cursor = 0x2d},
+
+            // Voltage swing 1, pre-emphasis levels 0-2
+            {.swing_select = 0b1100, .n_scalar = 0x47, .cursor = 0x3f},
+            {.swing_select = 0b1100, .n_scalar = 0x6f, .cursor = 0x36},
+            {.swing_select = 0b0110, .n_scalar = 0x7d, .cursor = 0x32},
+
+            // Voltage swing 2, pre-emphasis levels 0-1
+            {.swing_select = 0b0110, .n_scalar = 0x60, .cursor = 0x3c},
+            {.swing_select = 0b0110, .n_scalar = 0x7f, .cursor = 0x34},
+
+            // Voltage swing 3, pre-emphasis level 0
+            {.swing_select = 0b0110, .n_scalar = 0x7f, .cursor = 0x3f},
+        };
+        swing_configs = kDisplayPortHbr2UConfigs;
+      } else {
+        static constexpr ComboSwingConfig kDisplayPortHbr2HConfigs[] = {
+            // Voltage swing 0, pre-emphasis levels 0-3
+            {.swing_select = 0b1010, .n_scalar = 0x35, .cursor = 0x3f},
+            {.swing_select = 0b1010, .n_scalar = 0x4f, .cursor = 0x37},
+            {.swing_select = 0b1100, .n_scalar = 0x63, .cursor = 0x2f},
+            {.swing_select = 0b0110, .n_scalar = 0x7f, .cursor = 0x2b},
+
+            // Voltage swing 1, pre-emphasis levels 0-2
+            {.swing_select = 0b1010, .n_scalar = 0x47, .cursor = 0x3f},
+            {.swing_select = 0b1100, .n_scalar = 0x63, .cursor = 0x34},
+            {.swing_select = 0b0110, .n_scalar = 0x7f, .cursor = 0x2f},
+
+            // Voltage swing 2, pre-emphasis levels 0-1
+            {.swing_select = 0b1100, .n_scalar = 0x61, .cursor = 0x3c},
+            {.swing_select = 0b0110, .n_scalar = 0x7b, .cursor = 0x35},
+
+            // Voltage swing 3, pre-emphasis level 0
+            {.swing_select = 0b0110, .n_scalar = 0x7f, .cursor = 0x3f},
+        };
+        swing_configs = kDisplayPortHbr2HConfigs;
+      }
+    }
+  }
+
+  const ComboSwingConfig& swing_config = swing_configs[phy_config_index];
+  for (tgl_registers::PortLane lane : kMainLinkLanes) {
+    const int lane_index =
+        static_cast<int>(lane) - static_cast<int>(tgl_registers::PortLane::kMainLinkLane0);
+
+    auto lane_voltage_swing =
+        tgl_registers::PortTransmitterVoltageSwing::GetForDdiLane(ddi_id(), lane)
+            .ReadFrom(mmio_space());
+    zxlogf(TRACE, "DDI %d Lane %d PORT_TX_DW2: %08x, Rcomp scalar: %02x, Swing select: %d",
+           ddi_id(), lane_index, lane_voltage_swing.reg_value(),
+           lane_voltage_swing.resistance_compensation_code_scalar(),
+           lane_voltage_swing.voltage_swing_select());
+    lane_voltage_swing.set_resistance_compensation_code_scalar(0x98)
+        .set_voltage_swing_select(swing_config.swing_select)
+        .WriteTo(mmio_space());
+
+    auto lane_equalization =
+        tgl_registers::PortTransmitterEqualization::GetForDdiLane(ddi_id(), lane)
+            .ReadFrom(mmio_space());
+    lane_equalization.set_cursor_coefficient(swing_config.cursor)
+        .set_post_cursor_coefficient1(0x3f - swing_config.cursor)
+        .set_post_cursor_coefficient2(0)
+        .WriteTo(mmio_space());
+
+    auto lane_voltage =
+        tgl_registers::PortTransmitterVoltage::GetForDdiLane(ddi_id(), lane).ReadFrom(mmio_space());
+    lane_voltage.set_scaling_mode_select(2)
+        .set_terminating_resistor_select(6)
+        .set_three_tap_equalization_disabled(true)
+        .set_two_tap_equalization_disabled(false)
+        .set_cursor_programming_disabled(false)
+        .set_coefficient_polarity_disabled(false)
+        .WriteTo(mmio_space());
+
+    auto lane_n_scalar =
+        tgl_registers::PortTransmitterNScalar::GetForDdiLane(ddi_id(), lane).ReadFrom(mmio_space());
+    zxlogf(TRACE, "DDI %d Lane %d PORT_TX_DW7: %08x, N Scalar: %02x", ddi_id(), lane_index,
+           lane_n_scalar.reg_value(), lane_n_scalar.n_scalar());
+  }
+
+  // Re-enabling training causes the AFE (Analog Front-End) to pick up the new
+  // voltage configuration.
+  for (tgl_registers::PortLane lane : kMainLinkLanes) {
+    auto lane_voltage =
+        tgl_registers::PortTransmitterVoltage::GetForDdiLane(ddi_id(), lane).ReadFrom(mmio_space());
+    lane_voltage.set_training_enabled(true);
+  }
+
+  // This step follows voltage swing configuration in the "Sequences for
+  // DisplayPort" > "Enable Sequence" section in the display engine PRMs.
+  auto common_lane_main_link_power =
+      tgl_registers::PortCommonLaneMainLinkPower::GetForDdi(ddi_id()).ReadFrom(mmio_space());
+  zxlogf(TRACE,
+         "DDI %d PORT_CL_DW10 %08x, lanes: 0 %s 1 %s 2 %s 3 %s, eDP power-optimized %s %s, "
+         "terminating resistor %s %d Ohm",
+         ddi_id(), common_lane_main_link_power.reg_value(),
+         common_lane_main_link_power.power_down_lane0() ? "off" : "on",
+         common_lane_main_link_power.power_down_lane1() ? "off" : "on",
+         common_lane_main_link_power.power_down_lane2() ? "off" : "on",
+         common_lane_main_link_power.power_down_lane3() ? "off" : "on",
+         common_lane_main_link_power.edp_power_optimized_mode_valid() ? "valid" : "invalid",
+         common_lane_main_link_power.edp_power_optimized_mode_enabled() ? "enabled" : "disabled",
+         common_lane_main_link_power.terminating_resistor_override_valid() ? "valid" : "invalid",
+         (common_lane_main_link_power.terminating_resistor_override() ==
+          tgl_registers::PortCommonLaneMainLinkPower::TerminatingResistorOverride::k100Ohms)
+             ? 100
+             : 150);
+  if (phy_config_index == 10) {
+    common_lane_main_link_power.set_edp_power_optimized_mode_valid(true)
+        .set_edp_power_optimized_mode_enabled(true);
+  }
+  common_lane_main_link_power.set_powered_up_lanes(dp_lane_count_).WriteTo(mmio_space());
 }
 
 bool DpDisplay::LinkTrainingSetupTigerLake() {

@@ -44,6 +44,10 @@ constexpr bool is_kbl_u(uint16_t device_id) {
 
 constexpr bool is_kbl_y(uint16_t device_id) { return device_id == 0x591c || device_id == 0x591e; }
 
+constexpr bool is_tgl_u(uint16_t device_id) {
+  return device_id == 0x9a49 || device_id == 0x9a78 || device_id == 0x9a40;
+}
+
 constexpr uint16_t kTestDeviceDid = 0xffff;
 constexpr bool is_test_device(uint16_t device_id) { return device_id == kTestDeviceDid; }
 

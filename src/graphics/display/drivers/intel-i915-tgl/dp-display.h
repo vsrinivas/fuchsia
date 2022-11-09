@@ -241,6 +241,8 @@ class DpDisplay : public DisplayDevice {
 
   bool DoLinkTraining();
 
+  // TODO(fxbug.dev/114460): Move voltage swing configuration logic to a
+  // DDI-specific class.
   void ConfigureVoltageSwingKabyLake(size_t phy_config_index);
   void ConfigureVoltageSwingTigerLake(size_t phy_config_index);
   void ConfigureVoltageSwingTypeCTigerLake(size_t phy_config_index);

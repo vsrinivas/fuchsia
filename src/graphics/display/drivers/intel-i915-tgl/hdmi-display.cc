@@ -548,6 +548,9 @@ bool HdmiDisplay::PipeConfigEpilogue(const display_mode_t& mode, tgl_registers::
       .WriteTo(mmio_space());
 
   // Configure voltage swing and related IO settings.
+  //
+  // TODO(fxbug.dev/114460): Move voltage swing configuration logic to a
+  // DDI-specific class.
 
   // kUseDefaultIdx always fails the idx-in-bounds check, so no additional handling is needed
   uint8_t idx = controller()->igd_opregion().GetHdmiBufferTranslationIndex(ddi_id());
