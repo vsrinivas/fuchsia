@@ -161,7 +161,6 @@ static_library("client") {
     "//src/lib/elflib",
     "//src/lib/llvm:LLVMMC",
     "//src/lib/llvm:LLVMObject",
-    "//third_party/crashpad/client",
     "//third_party/crashpad/compat",
     "//third_party/crashpad/snapshot",
     "//third_party/crashpad/util",
@@ -302,7 +301,6 @@ source_set("tests") {
     "//third_party/googletest:gtest",
 
     # Duplicate the crashpad dependency below to avoid making it into public_deps of :client.
-    "//third_party/crashpad/client",
     "//third_party/crashpad/compat",
     "//third_party/crashpad/snapshot",
     "//third_party/crashpad/util",
