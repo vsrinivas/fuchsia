@@ -158,7 +158,7 @@ import("//tools/configc/build/config.gni")
 #     shell command dependencies to include in the shell command distribution manifest and it's
 #     subsequent metadata walk
 #
-#   is_shell_command (optional)
+#   is_shell_package (optional)
 #     Used internally to implement fuchsia_shell_package(). Use with caution, as this flag marks
 #     all the package's binaries as shell commands and includes them in the shell_commands package
 #     during the generation of the legacy_assembly_input_bundle

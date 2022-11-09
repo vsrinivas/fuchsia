@@ -147,12 +147,14 @@ template("generate_meta_subpackages") {
     if (defined(subpackage.name)) {
       name = subpackage.name
     } else {
-      subpackage_target = subpackage.package + "_meta_package"
-      subpackage_target_gen_dir =
-          get_label_info(subpackage_target, "target_gen_dir")
-      subpackage_target_name = get_label_info(subpackage_target, "name")
+      subpackage_target =
+          get_label_info(subpackage.package, "label_no_toolchain")
+      meta_package_target = subpackage_target + "_meta_package"
+      meta_package_target_gen_dir =
+          get_label_info(meta_package_target, "target_gen_dir")
+      meta_package_target_name = get_label_info(meta_package_target, "name")
       package_output =
-          subpackage_target_gen_dir + "/" + subpackage_target_name + ".txt"
+          meta_package_target_gen_dir + "/" + meta_package_target_name + ".txt"
       meta_package_file = rebase_path(package_output, root_build_dir)
     }
     merkle_file = rebase_path(
