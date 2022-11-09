@@ -12,6 +12,12 @@ use fuchsia_zircon_types as zircon_types;
 pub const FAVORITE_ECHO: EchoMe = EchoMe.zero;
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq)]
+pub struct Echo_EchoEmpty_Response {
+
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct EchoMore {
     pub first: u32,
     pub second: u64,
@@ -67,4 +73,17 @@ impl std::ops::BitXorAssign for EchoMe {
 }
 
 
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union Echo_EchoEmpty_Result {
+    pub response: Echo_EchoEmpty_Response,
+    pub err: u32,
+}
+
+// unions can't autoderive debug, but it's useful for their parent types to
+impl std::fmt::Debug for Echo_EchoEmpty_Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "<Echo_EchoEmpty_Result>")
+    }
+}
 

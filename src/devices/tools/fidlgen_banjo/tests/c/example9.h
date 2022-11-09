@@ -14,6 +14,8 @@
 __BEGIN_CDECLS
 
 // Forward declarations
+typedef struct echo_echo_empty_response echo_echo_empty_response_t;
+typedef union echo_echo_empty_result echo_echo_empty_result_t;
 typedef struct echo_more echo_more_t;
 typedef uint32_t echo_me_t;
 #define ECHO_ME_ZERO UINT32_C(0)
@@ -23,6 +25,15 @@ typedef struct echo_protocol echo_protocol_t;
 typedef struct echo_protocol_ops echo_protocol_ops_t;
 
 // Declarations
+struct echo_echo_empty_response {
+    uint8_t unused;
+};
+
+union echo_echo_empty_result {
+    echo_echo_empty_response_t response;
+    uint32_t err;
+};
+
 struct echo_more {
     uint32_t first;
     uint64_t second;
@@ -35,6 +46,7 @@ struct echo_protocol_ops {
     void (*echo_handle)(void* ctx, zx_handle_t req, zx_handle_t* out_response);
     void (*echo_channel)(void* ctx, zx_handle_t req, zx_handle_t* out_response);
     void (*echo_struct)(void* ctx, const echo_more_t* req, echo_more_t* out_response);
+    void (*echo_empty)(void* ctx, echo_echo_empty_result_t* out_result);
 };
 
 
@@ -67,6 +79,10 @@ static inline void echo_echo_channel(const echo_protocol_t* proto, zx_handle_t r
 
 static inline void echo_echo_struct(const echo_protocol_t* proto, const echo_more_t* req, echo_more_t* out_response) {
     proto->ops->echo_struct(proto->ctx, req, out_response);
+}
+
+static inline void echo_echo_empty(const echo_protocol_t* proto, echo_echo_empty_result_t* out_result) {
+    proto->ops->echo_empty(proto->ctx, out_result);
 }
 
 

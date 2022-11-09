@@ -673,6 +673,8 @@ impl<'a, W: io::Write> CBackend<'a, W> {
             })
             .collect::<Result<Vec<_>, Error>>()?
             .join("\n");
+        // We add an extraneous member if there are no members to support empty structs.
+        let members = if members.is_empty() { "    uint8_t unused;".to_string() } else { members };
         let mut accum = String::new();
         accum.push_str(get_doc_comment(&data.maybe_attributes, 0).as_str());
         accum.push_str(

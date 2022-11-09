@@ -30,6 +30,9 @@ DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_echo_protocol_echo_chann
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_echo_protocol_echo_struct, EchoEchoStruct,
         void (C::*)(const echo_more_t* req, echo_more_t* out_response));
 
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_echo_protocol_echo_empty, EchoEchoEmpty,
+        void (C::*)(echo_echo_empty_result_t* out_result));
+
 
 template <typename D>
 constexpr void CheckEchoProtocolSubclass() {
@@ -56,6 +59,10 @@ constexpr void CheckEchoProtocolSubclass() {
     static_assert(internal::has_echo_protocol_echo_struct<D>::value,
         "EchoProtocol subclasses must implement "
         "void EchoEchoStruct(const echo_more_t* req, echo_more_t* out_response);");
+
+    static_assert(internal::has_echo_protocol_echo_empty<D>::value,
+        "EchoProtocol subclasses must implement "
+        "void EchoEchoEmpty(echo_echo_empty_result_t* out_result);");
 
 }
 

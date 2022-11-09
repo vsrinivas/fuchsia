@@ -48,6 +48,7 @@ protocol Echo {
     }) -> (struct {
         response EchoMore;
     });
+    EchoEmpty() -> () error uint32;
 };
 
 const favorite_echo EchoMe = EchoMe.zero;
