@@ -101,9 +101,17 @@ pub async fn run_stream<'a>(
     path: Option<String>,
 ) -> Result<(), Error> {
     let mut id = [0; 8];
-    rx.read_exact(&mut id).await?;
+    let mut read = 0;
 
-    if id == CIRCUIT_ID {
+    while read < 8 {
+        match rx.read(&mut id[read..]).await {
+            Ok(got) if got > 0 => read += got,
+            // If the socket errors early it's the link's job to handle it.
+            Ok(_) | Err(_) => break,
+        }
+    }
+
+    if read == 8 && id == CIRCUIT_ID {
         #[cfg(not(feature = "circuit"))]
         let ret = Err(format_err!("Circuit-switched interconnect disabled"));
         #[cfg(feature = "circuit")]
@@ -128,7 +136,9 @@ pub async fn run_stream<'a>(
             ))
         });
 
-        run_stream_link(node, Some(id), rx, tx, Default::default(), config).await
+        let read = if read != 0 { Some(id[..read].to_vec()) } else { None };
+
+        run_stream_link(node, read, rx, tx, Default::default(), config).await
     }
 }
 

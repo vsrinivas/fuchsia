@@ -15,7 +15,7 @@ use {
 
 pub fn run_stream_link<'a>(
     node: Arc<Router>,
-    pre_received: Option<[u8; 8]>,
+    pre_received: Option<Vec<u8>>,
     rx_bytes: &'a mut (dyn AsyncRead + Unpin + Send),
     tx_bytes: &'a mut (dyn AsyncWrite + Unpin + Send),
     introduction_facts: LinkIntroductionFacts,
