@@ -178,6 +178,10 @@ kernel_cmdline("minimal") {
   ]
 }
 
+kernel_cmdline("driver.usb.peripheral--cdc_adb") {
+  args = [ "driver.usb.peripheral=cdc_adb" ]
+}
+
 # Should only be visible on x64.
 if (target_cpu == "x64") {
   kernel_cmdline("kernel.serial--legacy") {
