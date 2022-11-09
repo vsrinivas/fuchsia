@@ -137,6 +137,14 @@ fidl_outgoing_msg_t OutgoingMessage::ReleaseToEncodedCMessage() && {
   return result;
 }
 
+uint32_t OutgoingMessage::CountBytes() const {
+  uint32_t byte_count = 0;
+  for (uint32_t i = 0; i < iovec_actual(); ++i) {
+    byte_count += iovecs()[i].capacity;
+  }
+  return byte_count;
+}
+
 bool OutgoingMessage::BytesMatch(const OutgoingMessage& other) const {
   uint32_t iovec_index = 0, other_iovec_index = 0;
   uint32_t byte_index = 0, other_byte_index = 0;

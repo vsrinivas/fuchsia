@@ -416,6 +416,7 @@ TEST(OutgoingMessage, OutgoingMessageCopiedBytes) {
   auto msg = fidl::OutgoingMessage::FromEncodedCMessage(&c_msg);
 
   uint8_t expected_bytes[] = {1, 2, 3, 4};
+  EXPECT_EQ(4u, msg.CountBytes());
   fidl::OutgoingMessage::CopiedBytes msg_bytes = msg.CopyBytes();
   EXPECT_EQ(std::size(expected_bytes), msg_bytes.size());
   EXPECT_EQ(0, memcmp(expected_bytes, msg_bytes.data(), std::size(expected_bytes)));

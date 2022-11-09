@@ -56,5 +56,6 @@ const char* const kCodingErrorTableFrameLargerThanExpected = "table frame larger
 const char* const kCodingErrorInvalidNullEnvelope = "null envelope contained non-null bytes";
 const char* const kCodingErrorInvalidHandleInInput = "invalid handle in input";
 const char* const kCodingErrorZeroTagButNonZeroEnvelope = "zero tag but non-zero envelope";
+const char* const kCodingErrorDataTooShort = "input data is too short";
 
 }  // namespace fidl::internal

@@ -9,6 +9,7 @@
 #include <lib/fidl/cpp/internal/natural_types.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
 #include <lib/fidl/cpp/wire/message.h>
+#include <lib/fidl/cpp/wire/traits.h>
 #include <lib/fidl/cpp/wire/wire_types.h>
 #include <lib/fidl/cpp/wire_format_metadata.h>
 #include <lib/fidl/cpp/wire_natural_conversions.h>
@@ -136,6 +137,12 @@ EncodeResult EncodeWithTransport(FidlType&& value) {
       });
 }
 
+std::vector<uint8_t> ConcatMetadataAndMessage(fidl::WireFormatMetadata metadata,
+                                              fidl::OutgoingMessage& message);
+
+fit::result<fidl::Error, std::tuple<fidl::WireFormatMetadata, std::vector<uint8_t>>>
+SplitMetadataAndMessage(cpp20::span<const uint8_t> persisted);
+
 }  // namespace internal
 
 // |OwnedEncodeResult| holds an encoded message along with the required storage.
@@ -219,6 +226,77 @@ template <typename FidlType>
     return ::fit::error(status);
   }
   return ::fit::ok(std::move(value));
+}
+
+// |Persist| encodes a natural domain object |FidlType| into bytes, following
+// the [convention for FIDL data persistence][persistence-convention]: the
+// wire format metadata followed by the encoded bytes. |FidlType| needs to
+// satisfy these requirements:
+//
+// - |FidlType| is a natural struct/union/table.
+// - |FidlType| is not a resource type.
+//
+// Example:
+//
+//     fuchsia_my_lib::SomeType obj = ...;
+//     fit::result result = fidl::Persist(obj);
+//     if (result.is_error()) {
+//       // Handle errors...
+//     }
+//     // Get the persisted data.
+//     std::vector<uint8_t>& data = result.value();
+//
+// [persistence-convention]:
+// https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0120_standalone_use_of_fidl_wire_format?hl=en#convention_for_data_persistence
+template <typename FidlType>
+fit::result<fidl::Error, std::vector<uint8_t>> Persist(const FidlType& value) {
+  static_assert(fidl::IsFidlType<FidlType>::value, "|FidlType| must be a FIDL domain object.");
+  static_assert(
+      !fidl::IsResource<FidlType>::value,
+      "|FidlType| cannot be a resource type. Resources cannot be persisted. "
+      "If you need to send resource types to another process, consider using a FIDL protocol.");
+
+  fidl::OwnedEncodeResult encoded = fidl::Encode(value);
+  if (!encoded.message().ok()) {
+    return fit::error(encoded.message().error());
+  }
+  return fit::ok(
+      internal::ConcatMetadataAndMessage(encoded.wire_format_metadata(), encoded.message()));
+}
+
+// |Unpersist| reads a const sequence of bytes stored in the
+// [convention for FIDL data persistence][persistence-convention] into an
+// instance of |FidlType|. |FidlType| needs to satisfy these requirements:
+//
+// - |FidlType| is a natural struct/union/table.
+// - |FidlType| is not a resource type.
+//
+// Example:
+//
+//     std::vector<uint8_t> data = ...;
+//     fit::result result = fidl::Unpersist<fuchsia_my_lib::SomeType>(cpp20::span(data));
+//     if (result.is_error()) {
+//       // Handle errors...
+//     }
+//     // Get the decoded object.
+//     fuchsia_my_lib::SomeType& obj = result.value();
+//
+// [persistence-convention]:
+// https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0120_standalone_use_of_fidl_wire_format?hl=en#convention_for_data_persistence
+template <typename FidlType>
+fit::result<fidl::Error, FidlType> Unpersist(cpp20::span<const uint8_t> data) {
+  static_assert(fidl::IsFidlType<FidlType>::value, "|FidlType| must be a FIDL domain object.");
+  static_assert(
+      !fidl::IsResource<FidlType>::value,
+      "|FidlType| cannot be a resource type. Resources cannot be persisted. "
+      "If you need to send resource types to another process, consider using a FIDL protocol.");
+
+  fit::result split = internal::SplitMetadataAndMessage(data);
+  if (split.is_error()) {
+    return split.take_error();
+  }
+  auto [metadata, bytes] = split.value();
+  return fidl::Decode<FidlType>(fidl::EncodedMessage::Create(bytes), metadata);
 }
 
 }  // namespace fidl

@@ -16,6 +16,7 @@ test("fidl_cpp_natural_coding_tests_bin") {
   sources = [
     "natural_response_test.cc",
     "natural_struct_test.cc",
+    "persistence_test.cc",
     "test_util.h",
   ]
   deps = [

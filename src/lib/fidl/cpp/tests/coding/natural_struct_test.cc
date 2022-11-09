@@ -4,6 +4,7 @@
 
 #include <fidl/test.types/cpp/fidl.h>
 #include <lib/zx/event.h>
+#include <zircon/fidl.h>
 
 #include <iostream>
 #include <string>

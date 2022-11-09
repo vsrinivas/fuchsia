@@ -167,6 +167,9 @@ class OutgoingMessage : public ::fidl::Status {
   // This should only be called while the message is in its encoded form.
   fidl_outgoing_msg_t ReleaseToEncodedCMessage() &&;
 
+  // Returns the number of bytes in the message.
+  uint32_t CountBytes() const;
+
   // Returns true iff the bytes in this message are identical to the bytes in the argument.
   bool BytesMatch(const OutgoingMessage& other) const;
 

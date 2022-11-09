@@ -48,6 +48,7 @@ extern const char* const kCodingErrorTableFrameLargerThanExpected;
 extern const char* const kCodingErrorInvalidNullEnvelope;
 extern const char* const kCodingErrorInvalidHandleInInput;
 extern const char* const kCodingErrorZeroTagButNonZeroEnvelope;
+extern const char* const kCodingErrorDataTooShort;
 
 }  // namespace fidl::internal
 
