@@ -4,7 +4,7 @@
 
 use crate::execution::Galaxy;
 use crate::types::errno;
-use anyhow::{anyhow, Error};
+use anyhow::Error;
 use fidl::endpoints::ControlHandle;
 use fidl_fuchsia_component_runner as fcrunner;
 use fidl_fuchsia_starnix_binder as fbinder;
@@ -89,18 +89,12 @@ async fn connect_to_vsock(
     bridge_socket: fidl::Socket,
     galaxy: &Arc<Galaxy>,
 ) -> Result<(), Error> {
-    static MAX_WAITS: u32 = 10;
-    let mut waits = 0;
     let socket = loop {
         if let Ok(socket) = galaxy.kernel.default_abstract_vsock_namespace.lookup(&port) {
-            break Ok(socket);
+            break socket;
         };
         fasync::Timer::new(fasync::Duration::from_millis(100).after_now()).await;
-        waits += 1;
-        if waits >= MAX_WAITS {
-            break Err(anyhow!("Failed to find socket."));
-        }
-    }?;
+    };
 
     let pipe = create_fuchsia_pipe(
         &galaxy.system_task,
