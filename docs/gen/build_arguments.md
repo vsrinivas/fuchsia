@@ -1041,7 +1041,7 @@ Makes clippy targets fail to build when any "deny" lints are found
 
 From //build/rust/config.gni:61
 
-### clippy_force_warn
+### clippy_force_warn_all
 Force the lint level for all clippy lints to "warn".
 Note: this overrides both source attributes and our default lint levels, and
 should only be used to collect stats about clippy lints in our source tree.
@@ -1050,7 +1050,7 @@ should only be used to collect stats about clippy lints in our source tree.
 
 From //build/rust/config.gni:58
 
-### clippy_warn
+### clippy_warn_all
 Set the lint level for all clippy lints to "warn".
 Note: setting lint levels in source takes precedence over this.
 

@@ -78,11 +78,11 @@ template("clippy") {
       "-Wwarnings",  # undo -Dwarnings
     ]
 
-    if (clippy_force_warn) {
+    if (clippy_force_warn_all) {
       args += [ "--force-warn=clippy::all" ]
     } else {
       _level = "A"
-      if (clippy_warn) {
+      if (clippy_warn_all) {
         _level = "W"
       }
       args += [

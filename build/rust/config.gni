@@ -50,12 +50,12 @@ declare_args() {
 
   # Set the lint level for all clippy lints to "warn".
   # Note: setting lint levels in source takes precedence over this.
-  clippy_warn = false
+  clippy_warn_all = false
 
   # Force the lint level for all clippy lints to "warn".
   # Note: this overrides both source attributes and our default lint levels, and
   # should only be used to collect stats about clippy lints in our source tree.
-  clippy_force_warn = false
+  clippy_force_warn_all = false
 
   # Makes clippy targets fail to build when any "deny" lints are found
   clippy_cause_failure = false

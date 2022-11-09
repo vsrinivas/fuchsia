@@ -185,7 +185,7 @@ fx lint # Same as --files but implicitly runs on locally changed files
 **By default all clippy lints are silenced.** To see lints for your target you'll need to enable them in one of the following ways:
 
 - Put an attribute in your source root such as `#![warn(clippy::needless_return)]` or `#![warn(clippy::all)]`.
-- Locally enable all clippy lints as warnings with the gn arg: `fx set core.x64 --args clippy_warn=true`. This is useful for figuring out which lints are common before enabling them for your targets, or gathering statistics like lint frequency across the project.
+- Locally enable all clippy lints as warnings with the gn arg: `fx set core.x64 --args clippy_warn_all=true`. This is useful for figuring out which lints are common before enabling them for your targets, or gathering statistics like lint frequency across the project.
 
 [Here is the list](https://rust-lang.github.io/rust-clippy/stable/) of all available clippy lints and their names.
 
