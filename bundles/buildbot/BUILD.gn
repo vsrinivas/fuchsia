@@ -5,14 +5,6 @@
 import("//build/dart/config.gni")
 import("//build/flutter/config.gni")
 
-# TODO(fxbug.dev/105827): Remove group when all bringup tests pass with DFv2 is
-# enabled and all builder bots with DFv2 do not include this group into their
-# base package set.
-group("bringup_dfv2") {
-  testonly = true
-  deps = [ "//bundles/buildbot/dfv2:bringup" ]
-}
-
 # This group contains tests that can only run with the enable_suspend flag set.
 group("host_suspend_tests_e2e") {
   testonly = true
