@@ -279,7 +279,14 @@ fbl::unique_fd TryBindToFvmDriver(const fbl::unique_fd& devfs_root,
     ERROR("Error waiting for fvm driver to bind\n");
     return fbl::unique_fd();
   }
-  return fbl::unique_fd(openat(devfs_root.get(), fvm_path, O_RDWR));
+
+  auto fvm_device_fd = openat(devfs_root.get(), fvm_path, O_RDWR);
+  if (fvm_device_fd == -1) {
+    ERROR("Failed to open fvm dev file at \"%s\": %s\n", fvm_path, strerror(errno));
+    return fbl::unique_fd();
+  }
+
+  return fbl::unique_fd(fvm_device_fd);
 }
 
 fbl::unique_fd FvmPartitionFormat(const fbl::unique_fd& devfs_root, fbl::unique_fd partition_fd,
