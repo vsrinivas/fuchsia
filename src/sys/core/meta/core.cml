@@ -882,6 +882,11 @@
             subdir: "mdns",
         },
         {
+            directory: "boot",
+            from: "parent",
+            to: "#mdns",
+        },
+        {
             protocol: [ "fuchsia.time.Maintenance" ],
             from: "parent",
             to: [ "#timekeeper" ],

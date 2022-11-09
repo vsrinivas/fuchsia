@@ -91,15 +91,35 @@ const char kAltServicesKey[] = "alt_services";
 
 //  static
 const char Config::kConfigDir[] = "/config/data";
+const char Config::kBootConfigDir[] = "/boot/data/mdns";
 
-void Config::ReadConfigFiles(const std::string& local_host_name, const std::string& config_dir) {
+void Config::ReadConfigFiles(const std::string& local_host_name, const std::string& boot_config_dir,
+                             const std::string& config_dir) {
   FX_DCHECK(MdnsNames::IsValidHostName(local_host_name));
 
   auto schema_result = json_parser::InitSchema(kSchema);
   FX_CHECK(schema_result.is_ok()) << schema_result.error_value().ToString();
   auto schema = std::move(schema_result.value());
+
+  // Order of parsing matters here. The boot configuration is read first, and has precedence over
+  // the default configuration which is part of the image assembly.
   // |ParseFromDirectory| treats a non-existent directory the same as an empty directory, which
   // is what we want.
+
+  // Read boot configuration first. This enables the emulator to pass along additional txt records
+  // withe the _fuchsia record.
+  parser_.ParseFromDirectory(
+      boot_config_dir, [this, &schema, &local_host_name](rapidjson::Document document) {
+        auto validation_result = json_parser::ValidateSchema(document, schema);
+        if (validation_result.is_error()) {
+          parser_.ReportError(validation_result.error_value());
+          return;
+        }
+
+        IntegrateDocument(document, local_host_name);
+      });
+
+  // Read the default configuration.
   parser_.ParseFromDirectory(
       config_dir, [this, &schema, &local_host_name](rapidjson::Document document) {
         auto validation_result = json_parser::ValidateSchema(document, schema);

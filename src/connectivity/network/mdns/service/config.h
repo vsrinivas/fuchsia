@@ -32,6 +32,7 @@ class Config {
   // defined by the operating system (e.g. the result of posix's |gethostname|).
   // The default value for |config_dir| is "/config/data".
   void ReadConfigFiles(const std::string& local_host_name,
+                       const std::string& boot_config_dir = kBootConfigDir,
                        const std::string& config_dir = kConfigDir);
 
   // Indicates whether the configuration is valid.
@@ -53,7 +54,12 @@ class Config {
   const std::vector<std::string>& alt_services() const { return alt_services_; }
 
  private:
+  // Directory containing configuration that is included at image assembly.
   static const char kConfigDir[];
+
+  // Directory containing configuration added at boot time, this is only
+  // used for emulated devices, and does not exist for physical devices.
+  static const char kBootConfigDir[];
 
   // Integrates the config file represented by |document| into this
   // configuration.

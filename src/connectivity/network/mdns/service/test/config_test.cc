@@ -15,10 +15,12 @@ namespace mdns {
 namespace test {
 
 const char kTestDir[] = "/tmp/mdns_config_test";
+const char kBootTestDir[] = "/tmp/mdns_config_boot_test";
 const char kHostName[] = "test-host-name";
 
-bool WriteFile(const std::string& file, const std::string& to_write) {
-  return files::WriteFile(std::string(kTestDir) + std::string("/") + file, to_write.c_str(),
+bool WriteFile(const std::string& file, const std::string& to_write,
+               const std::string& directory = kTestDir) {
+  return files::WriteFile(std::string(directory) + std::string("/") + file, to_write.c_str(),
                           to_write.length());
 }
 
@@ -199,6 +201,97 @@ TEST(ConfigTest, TwoConflictingValidFiles) {
   EXPECT_NE("", under_test.error());
 
   EXPECT_TRUE(files::DeletePath(kTestDir, true));
+}
+
+// Test with a boot config directory with no config files
+TEST(ConfigTest, EmptyBootConfigDir) {
+  EXPECT_TRUE(files::CreateDirectory(kBootTestDir));
+  EXPECT_TRUE(files::CreateDirectory(kTestDir));
+  EXPECT_TRUE(WriteFile("valid1", R"({
+    "perform_host_name_probe": false,
+    "publications" : [
+      {"service" : "_fuchsia._udp.", "port" : 5353, "perform_probe" : false}
+    ]
+  })"));
+
+  Config under_test;
+  under_test.ReadConfigFiles(kHostName, kBootTestDir, kTestDir);
+  EXPECT_TRUE(under_test.valid());
+  EXPECT_EQ("", under_test.error());
+
+  EXPECT_TRUE(files::DeletePath(kTestDir, true));
+  EXPECT_TRUE(files::DeletePath(kBootTestDir, true));
+}
+
+// Test with a boot config directory with overriding services.
+TEST(ConfigTest, OverrideBootConfigDir) {
+  EXPECT_TRUE(files::CreateDirectory(kBootTestDir));
+  EXPECT_TRUE(files::CreateDirectory(kTestDir));
+  EXPECT_TRUE(WriteFile("valid1", R"({
+    "perform_host_name_probe": false,
+    "publications" : [
+      {"service" : "_fuchsia._udp.", "port" : 5353, "perform_probe" : false}
+    ]
+  })",
+                        kTestDir));
+  EXPECT_TRUE(WriteFile("valid1", R"({
+    "perform_host_name_probe": false,
+    "publications" : [
+      {"service" : "_fuchsia._udp.", "port" : 12345, "perform_probe" : false,
+      "media" : "wired",
+      "text" : [ "one", "two"]}
+    ]
+  })",
+                        kBootTestDir));
+
+  Config under_test;
+  under_test.ReadConfigFiles(kHostName, kBootTestDir, kTestDir);
+  EXPECT_TRUE(under_test.valid());
+  EXPECT_EQ("", under_test.error());
+
+  // Config from boot dir should always be first.
+  EXPECT_TRUE((Config::Publication{.service_ = "_fuchsia._udp.",
+                                   .instance_ = kHostName,
+                                   .publication_ = Mdns::Publication::Create(
+                                       inet::IpPort::From_uint16_t(12345),
+                                       {fidl::To<std::vector<uint8_t>>(std::string("one")),
+                                        fidl::To<std::vector<uint8_t>>(std::string("two"))}),
+                                   .perform_probe_ = false,
+                                   .media_ = Media::kWired}) == under_test.publications()[0]);
+  EXPECT_TRUE(
+      (Config::Publication{.service_ = "_fuchsia._udp.",
+                           .instance_ = kHostName,
+                           .publication_ = std::make_unique<Mdns::Publication>(
+                               Mdns::Publication{.port_ = inet::IpPort::From_uint16_t(5353)}),
+                           .perform_probe_ = false,
+                           .media_ = Media::kBoth}) == under_test.publications()[1]);
+
+  Config under_test_reversed;
+  under_test_reversed.ReadConfigFiles(kHostName, kTestDir, kBootTestDir);
+  EXPECT_TRUE(under_test_reversed.valid());
+  EXPECT_EQ("", under_test_reversed.error());
+
+  // Config from boot dir should always be first, in this case the parameters are reversed, so the
+  // order should be too.
+  EXPECT_TRUE((Config::Publication{.service_ = "_fuchsia._udp.",
+                                   .instance_ = kHostName,
+                                   .publication_ = Mdns::Publication::Create(
+                                       inet::IpPort::From_uint16_t(12345),
+                                       {fidl::To<std::vector<uint8_t>>(std::string("one")),
+                                        fidl::To<std::vector<uint8_t>>(std::string("two"))}),
+                                   .perform_probe_ = false,
+                                   .media_ = Media::kWired}) ==
+              under_test_reversed.publications()[1]);
+  EXPECT_TRUE(
+      (Config::Publication{.service_ = "_fuchsia._udp.",
+                           .instance_ = kHostName,
+                           .publication_ = std::make_unique<Mdns::Publication>(
+                               Mdns::Publication{.port_ = inet::IpPort::From_uint16_t(5353)}),
+                           .perform_probe_ = false,
+                           .media_ = Media::kBoth}) == under_test_reversed.publications()[0]);
+
+  EXPECT_TRUE(files::DeletePath(kTestDir, true));
+  EXPECT_TRUE(files::DeletePath(kBootTestDir, true));
 }
 
 }  // namespace test

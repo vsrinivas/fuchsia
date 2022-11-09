@@ -38,6 +38,11 @@
             rights: [ "r*" ],
             path: "/config/data",
         },
+        {
+            directory: "boot",
+            rights: [ "r*" ],
+            path: "/boot",
+        },
     ],
     expose: [
         {
