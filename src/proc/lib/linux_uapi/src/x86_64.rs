@@ -1545,6 +1545,79 @@ pub const MAP_HUGE_512MB: u32 = 1946157056;
 pub const MAP_HUGE_1GB: u32 = 2013265920;
 pub const MAP_HUGE_2GB: u32 = 2080374784;
 pub const MAP_HUGE_16GB: u32 = 2281701376;
+pub const _K_SS_MAXSIZE: u32 = 128;
+pub const SOCK_SNDBUF_LOCK: u32 = 1;
+pub const SOCK_RCVBUF_LOCK: u32 = 2;
+pub const SOCK_BUF_LOCK_MASK: u32 = 3;
+pub const SOCK_TXREHASH_DEFAULT: u32 = 255;
+pub const SOCK_TXREHASH_DISABLED: u32 = 0;
+pub const SOCK_TXREHASH_ENABLED: u32 = 1;
+pub const NETLINK_ROUTE: u32 = 0;
+pub const NETLINK_UNUSED: u32 = 1;
+pub const NETLINK_USERSOCK: u32 = 2;
+pub const NETLINK_FIREWALL: u32 = 3;
+pub const NETLINK_SOCK_DIAG: u32 = 4;
+pub const NETLINK_NFLOG: u32 = 5;
+pub const NETLINK_XFRM: u32 = 6;
+pub const NETLINK_SELINUX: u32 = 7;
+pub const NETLINK_ISCSI: u32 = 8;
+pub const NETLINK_AUDIT: u32 = 9;
+pub const NETLINK_FIB_LOOKUP: u32 = 10;
+pub const NETLINK_CONNECTOR: u32 = 11;
+pub const NETLINK_NETFILTER: u32 = 12;
+pub const NETLINK_IP6_FW: u32 = 13;
+pub const NETLINK_DNRTMSG: u32 = 14;
+pub const NETLINK_KOBJECT_UEVENT: u32 = 15;
+pub const NETLINK_GENERIC: u32 = 16;
+pub const NETLINK_SCSITRANSPORT: u32 = 18;
+pub const NETLINK_ECRYPTFS: u32 = 19;
+pub const NETLINK_RDMA: u32 = 20;
+pub const NETLINK_CRYPTO: u32 = 21;
+pub const NETLINK_SMC: u32 = 22;
+pub const NETLINK_INET_DIAG: u32 = 4;
+pub const MAX_LINKS: u32 = 32;
+pub const NLM_F_REQUEST: u32 = 1;
+pub const NLM_F_MULTI: u32 = 2;
+pub const NLM_F_ACK: u32 = 4;
+pub const NLM_F_ECHO: u32 = 8;
+pub const NLM_F_DUMP_INTR: u32 = 16;
+pub const NLM_F_DUMP_FILTERED: u32 = 32;
+pub const NLM_F_ROOT: u32 = 256;
+pub const NLM_F_MATCH: u32 = 512;
+pub const NLM_F_ATOMIC: u32 = 1024;
+pub const NLM_F_DUMP: u32 = 768;
+pub const NLM_F_REPLACE: u32 = 256;
+pub const NLM_F_EXCL: u32 = 512;
+pub const NLM_F_CREATE: u32 = 1024;
+pub const NLM_F_APPEND: u32 = 2048;
+pub const NLM_F_NONREC: u32 = 256;
+pub const NLM_F_BULK: u32 = 512;
+pub const NLM_F_CAPPED: u32 = 256;
+pub const NLM_F_ACK_TLVS: u32 = 512;
+pub const NLMSG_ALIGNTO: u32 = 4;
+pub const NLMSG_NOOP: u32 = 1;
+pub const NLMSG_ERROR: u32 = 2;
+pub const NLMSG_DONE: u32 = 3;
+pub const NLMSG_OVERRUN: u32 = 4;
+pub const NLMSG_MIN_TYPE: u32 = 16;
+pub const NETLINK_ADD_MEMBERSHIP: u32 = 1;
+pub const NETLINK_DROP_MEMBERSHIP: u32 = 2;
+pub const NETLINK_PKTINFO: u32 = 3;
+pub const NETLINK_BROADCAST_ERROR: u32 = 4;
+pub const NETLINK_NO_ENOBUFS: u32 = 5;
+pub const NETLINK_RX_RING: u32 = 6;
+pub const NETLINK_TX_RING: u32 = 7;
+pub const NETLINK_LISTEN_ALL_NSID: u32 = 8;
+pub const NETLINK_LIST_MEMBERSHIPS: u32 = 9;
+pub const NETLINK_CAP_ACK: u32 = 10;
+pub const NETLINK_EXT_ACK: u32 = 11;
+pub const NETLINK_GET_STRICT_CHK: u32 = 12;
+pub const NL_MMAP_MSG_ALIGNMENT: u32 = 4;
+pub const NET_MAJOR: u32 = 36;
+pub const NLA_F_NESTED: u32 = 32768;
+pub const NLA_F_NET_BYTEORDER: u32 = 16384;
+pub const NLA_TYPE_MASK: i32 = -49153;
+pub const NLA_ALIGNTO: u32 = 4;
 pub const PR_SET_PDEATHSIG: u32 = 1;
 pub const PR_GET_PDEATHSIG: u32 = 2;
 pub const PR_GET_DUMPABLE: u32 = 3;
@@ -1890,13 +1963,6 @@ pub const SS_AUTODISARM: u32 = 2147483648;
 pub const SS_FLAG_BITS: u32 = 2147483648;
 pub const SFD_CLOEXEC: u32 = 524288;
 pub const SFD_NONBLOCK: u32 = 2048;
-pub const _K_SS_MAXSIZE: u32 = 128;
-pub const SOCK_SNDBUF_LOCK: u32 = 1;
-pub const SOCK_RCVBUF_LOCK: u32 = 2;
-pub const SOCK_BUF_LOCK_MASK: u32 = 3;
-pub const SOCK_TXREHASH_DEFAULT: u32 = 255;
-pub const SOCK_TXREHASH_DISABLED: u32 = 0;
-pub const SOCK_TXREHASH_ENABLED: u32 = 1;
 pub const S_IFMT: u32 = 61440;
 pub const S_IFSOCK: u32 = 49152;
 pub const S_IFLNK: u32 = 40960;
@@ -6452,6 +6518,160 @@ pub const membarrier_cmd_MEMBARRIER_CMD_SHARED: membarrier_cmd = 1;
 pub type membarrier_cmd = crate::x86_64_types::c_uint;
 pub const membarrier_cmd_flag_MEMBARRIER_CMD_FLAG_CPU: membarrier_cmd_flag = 1;
 pub type membarrier_cmd_flag = crate::x86_64_types::c_uint;
+pub type __kernel_sa_family_t = crate::x86_64_types::c_ushort;
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct __kernel_sockaddr_storage {
+    pub __bindgen_anon_1: __kernel_sockaddr_storage__bindgen_ty_1,
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union __kernel_sockaddr_storage__bindgen_ty_1 {
+    pub __bindgen_anon_1: __kernel_sockaddr_storage__bindgen_ty_1__bindgen_ty_1,
+    pub __align: *mut crate::x86_64_types::c_void,
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct __kernel_sockaddr_storage__bindgen_ty_1__bindgen_ty_1 {
+    pub ss_family: __kernel_sa_family_t,
+    pub __data: [crate::x86_64_types::c_char; 126usize],
+}
+impl Default for __kernel_sockaddr_storage__bindgen_ty_1__bindgen_ty_1 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+impl Default for __kernel_sockaddr_storage__bindgen_ty_1 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+impl Default for __kernel_sockaddr_storage {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct sockaddr_nl {
+    pub nl_family: __kernel_sa_family_t,
+    pub nl_pad: crate::x86_64_types::c_ushort,
+    pub nl_pid: __u32,
+    pub nl_groups: __u32,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct nlmsghdr {
+    pub nlmsg_len: __u32,
+    pub nlmsg_type: __u16,
+    pub nlmsg_flags: __u16,
+    pub nlmsg_seq: __u32,
+    pub nlmsg_pid: __u32,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct nlmsgerr {
+    pub error: crate::x86_64_types::c_int,
+    pub msg: nlmsghdr,
+}
+pub const nlmsgerr_attrs_NLMSGERR_ATTR_UNUSED: nlmsgerr_attrs = 0;
+pub const nlmsgerr_attrs_NLMSGERR_ATTR_MSG: nlmsgerr_attrs = 1;
+pub const nlmsgerr_attrs_NLMSGERR_ATTR_OFFS: nlmsgerr_attrs = 2;
+pub const nlmsgerr_attrs_NLMSGERR_ATTR_COOKIE: nlmsgerr_attrs = 3;
+pub const nlmsgerr_attrs_NLMSGERR_ATTR_POLICY: nlmsgerr_attrs = 4;
+pub const nlmsgerr_attrs___NLMSGERR_ATTR_MAX: nlmsgerr_attrs = 5;
+pub const nlmsgerr_attrs_NLMSGERR_ATTR_MAX: nlmsgerr_attrs = 4;
+pub type nlmsgerr_attrs = crate::x86_64_types::c_uint;
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct nl_pktinfo {
+    pub group: __u32,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct nl_mmap_req {
+    pub nm_block_size: crate::x86_64_types::c_uint,
+    pub nm_block_nr: crate::x86_64_types::c_uint,
+    pub nm_frame_size: crate::x86_64_types::c_uint,
+    pub nm_frame_nr: crate::x86_64_types::c_uint,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct nl_mmap_hdr {
+    pub nm_status: crate::x86_64_types::c_uint,
+    pub nm_len: crate::x86_64_types::c_uint,
+    pub nm_group: __u32,
+    pub nm_pid: __u32,
+    pub nm_uid: __u32,
+    pub nm_gid: __u32,
+}
+pub const nl_mmap_status_NL_MMAP_STATUS_UNUSED: nl_mmap_status = 0;
+pub const nl_mmap_status_NL_MMAP_STATUS_RESERVED: nl_mmap_status = 1;
+pub const nl_mmap_status_NL_MMAP_STATUS_VALID: nl_mmap_status = 2;
+pub const nl_mmap_status_NL_MMAP_STATUS_COPY: nl_mmap_status = 3;
+pub const nl_mmap_status_NL_MMAP_STATUS_SKIP: nl_mmap_status = 4;
+pub type nl_mmap_status = crate::x86_64_types::c_uint;
+pub const NETLINK_UNCONNECTED: _bindgen_ty_41 = 0;
+pub const NETLINK_CONNECTED: _bindgen_ty_41 = 1;
+pub type _bindgen_ty_41 = crate::x86_64_types::c_uint;
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct nlattr {
+    pub nla_len: __u16,
+    pub nla_type: __u16,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct nla_bitfield32 {
+    pub value: __u32,
+    pub selector: __u32,
+}
+pub const netlink_attribute_type_NL_ATTR_TYPE_INVALID: netlink_attribute_type = 0;
+pub const netlink_attribute_type_NL_ATTR_TYPE_FLAG: netlink_attribute_type = 1;
+pub const netlink_attribute_type_NL_ATTR_TYPE_U8: netlink_attribute_type = 2;
+pub const netlink_attribute_type_NL_ATTR_TYPE_U16: netlink_attribute_type = 3;
+pub const netlink_attribute_type_NL_ATTR_TYPE_U32: netlink_attribute_type = 4;
+pub const netlink_attribute_type_NL_ATTR_TYPE_U64: netlink_attribute_type = 5;
+pub const netlink_attribute_type_NL_ATTR_TYPE_S8: netlink_attribute_type = 6;
+pub const netlink_attribute_type_NL_ATTR_TYPE_S16: netlink_attribute_type = 7;
+pub const netlink_attribute_type_NL_ATTR_TYPE_S32: netlink_attribute_type = 8;
+pub const netlink_attribute_type_NL_ATTR_TYPE_S64: netlink_attribute_type = 9;
+pub const netlink_attribute_type_NL_ATTR_TYPE_BINARY: netlink_attribute_type = 10;
+pub const netlink_attribute_type_NL_ATTR_TYPE_STRING: netlink_attribute_type = 11;
+pub const netlink_attribute_type_NL_ATTR_TYPE_NUL_STRING: netlink_attribute_type = 12;
+pub const netlink_attribute_type_NL_ATTR_TYPE_NESTED: netlink_attribute_type = 13;
+pub const netlink_attribute_type_NL_ATTR_TYPE_NESTED_ARRAY: netlink_attribute_type = 14;
+pub const netlink_attribute_type_NL_ATTR_TYPE_BITFIELD32: netlink_attribute_type = 15;
+pub type netlink_attribute_type = crate::x86_64_types::c_uint;
+pub const netlink_policy_type_attr_NL_POLICY_TYPE_ATTR_UNSPEC: netlink_policy_type_attr = 0;
+pub const netlink_policy_type_attr_NL_POLICY_TYPE_ATTR_TYPE: netlink_policy_type_attr = 1;
+pub const netlink_policy_type_attr_NL_POLICY_TYPE_ATTR_MIN_VALUE_S: netlink_policy_type_attr = 2;
+pub const netlink_policy_type_attr_NL_POLICY_TYPE_ATTR_MAX_VALUE_S: netlink_policy_type_attr = 3;
+pub const netlink_policy_type_attr_NL_POLICY_TYPE_ATTR_MIN_VALUE_U: netlink_policy_type_attr = 4;
+pub const netlink_policy_type_attr_NL_POLICY_TYPE_ATTR_MAX_VALUE_U: netlink_policy_type_attr = 5;
+pub const netlink_policy_type_attr_NL_POLICY_TYPE_ATTR_MIN_LENGTH: netlink_policy_type_attr = 6;
+pub const netlink_policy_type_attr_NL_POLICY_TYPE_ATTR_MAX_LENGTH: netlink_policy_type_attr = 7;
+pub const netlink_policy_type_attr_NL_POLICY_TYPE_ATTR_POLICY_IDX: netlink_policy_type_attr = 8;
+pub const netlink_policy_type_attr_NL_POLICY_TYPE_ATTR_POLICY_MAXTYPE: netlink_policy_type_attr = 9;
+pub const netlink_policy_type_attr_NL_POLICY_TYPE_ATTR_BITFIELD32_MASK: netlink_policy_type_attr =
+    10;
+pub const netlink_policy_type_attr_NL_POLICY_TYPE_ATTR_PAD: netlink_policy_type_attr = 11;
+pub const netlink_policy_type_attr_NL_POLICY_TYPE_ATTR_MASK: netlink_policy_type_attr = 12;
+pub const netlink_policy_type_attr___NL_POLICY_TYPE_ATTR_MAX: netlink_policy_type_attr = 13;
+pub const netlink_policy_type_attr_NL_POLICY_TYPE_ATTR_MAX: netlink_policy_type_attr = 12;
+pub type netlink_policy_type_attr = crate::x86_64_types::c_uint;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct prctl_mm_map {
@@ -6838,51 +7058,6 @@ pub struct signalfd_siginfo {
     pub ssi_call_addr: __u64,
     pub ssi_arch: __u32,
     pub __pad: [__u8; 28usize],
-}
-pub type __kernel_sa_family_t = crate::x86_64_types::c_ushort;
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct __kernel_sockaddr_storage {
-    pub __bindgen_anon_1: __kernel_sockaddr_storage__bindgen_ty_1,
-}
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub union __kernel_sockaddr_storage__bindgen_ty_1 {
-    pub __bindgen_anon_1: __kernel_sockaddr_storage__bindgen_ty_1__bindgen_ty_1,
-    pub __align: *mut crate::x86_64_types::c_void,
-}
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct __kernel_sockaddr_storage__bindgen_ty_1__bindgen_ty_1 {
-    pub ss_family: __kernel_sa_family_t,
-    pub __data: [crate::x86_64_types::c_char; 126usize],
-}
-impl Default for __kernel_sockaddr_storage__bindgen_ty_1__bindgen_ty_1 {
-    fn default() -> Self {
-        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
-        unsafe {
-            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
-            s.assume_init()
-        }
-    }
-}
-impl Default for __kernel_sockaddr_storage__bindgen_ty_1 {
-    fn default() -> Self {
-        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
-        unsafe {
-            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
-            s.assume_init()
-        }
-    }
-}
-impl Default for __kernel_sockaddr_storage {
-    fn default() -> Self {
-        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
-        unsafe {
-            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
-            s.assume_init()
-        }
-    }
 }
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
