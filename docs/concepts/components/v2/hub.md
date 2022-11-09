@@ -26,11 +26,13 @@ hub
 ```
 
 When a component instance is resolved, the following directories are present in its hub:
+
 -   `children`: Hub directories of the children of this component instance.
 -   `exposed`: Capabilities exposed by this component instance in its manifest.
 -   `ns`: Capabilities used by this component instance in its manifest.
 
 When a component instance is running, the following directories are also present:
+
 -   `out`: Capabilities served by the program of this component instance.
 -   `runtime`: Debug information served by the runner of this component instance.
 
