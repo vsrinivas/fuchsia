@@ -49,7 +49,6 @@ void AddNonPassingTests(TestMap& tests) {
   ExpectFailure(tests,
                 "AllInetTests/"
                 "UdpSocketTest.SendPacketLargerThanSendBufOnNonBlockingSocket/*");
-  ExpectFailure(tests, "AllInetTests/UdpSocketTest.SendToAddressOtherThanConnected/*");
   ExpectFailure(tests, "AllInetTests/UdpSocketTest.SoNoCheck/*");
   ExpectFailure(tests, "AllInetTests/UdpSocketTest.SoNoCheckOffByDefault/*");
   ExpectFailure(tests, "AllInetTests/UdpSocketTest.SoTimestamp/*");
