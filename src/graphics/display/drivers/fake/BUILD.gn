@@ -103,6 +103,7 @@ static_library("fake-display-device-tree") {
   sources = [
     "fake-display-device-tree.cc",
     "fake-display-device-tree.h",
+    "sysmem-device-wrapper.h",
   ]
   public_deps = [
     ":fake-lib",
