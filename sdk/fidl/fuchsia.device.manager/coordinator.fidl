@@ -361,9 +361,10 @@ protocol Coordinator {
     }) error zx.status;
 
     /// Add metadata blob associated with this device and the given key.
-    // TODO(teisenbe): Document the behavior of calling this twice with the same
-    // key.  I believe the current behavior results in inaccessible data that is
-    // kept around for the lifetime of the device.
+    /// If the same key is specified multiple times, the new data will be
+    /// ignored in favor of the data from first call with the specified key.
+    // TODO(fxbug.dev/112547): Return ZX_ERR_ALREADY_EXISTS on duplicate key
+    // instead.
     AddMetadata(struct {
         key uint32;
         data vector<uint8>:<METADATA_BYTES_MAX, optional>;

@@ -16,7 +16,8 @@ zx_status_t DeviceServer::AddMetadata(uint32_t type, const void* data, size_t si
   std::copy(begin, begin + size, metadata.begin());
   auto [_, inserted] = metadata_.emplace(type, std::move(metadata));
   if (!inserted) {
-    return ZX_ERR_ALREADY_EXISTS;
+    // TODO(fxbug.dev/112547): Return ZX_ERR_ALREADY_EXISTS instead once we do so in DFv1.
+    return ZX_OK;
   }
   return ZX_OK;
 }

@@ -572,7 +572,7 @@ TEST_F(DeviceTest, DeviceMetadata) {
 
   // Add the same metadata again.
   status = device.AddMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
-  ASSERT_EQ(ZX_ERR_ALREADY_EXISTS, status);
+  ASSERT_EQ(ZX_OK, status);
 
   // Check the metadata size.
   size_t size = 0;
