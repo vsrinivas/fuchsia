@@ -116,7 +116,7 @@ zx_status_t CompositeDevice::Create(std::string_view name,
     std::string name(fidl_fragment.name.data(), fidl_fragment.name.size());
     auto fragment =
         std::make_unique<CompositeDeviceFragment>(dev.get(), name, i, std::move(bind_rules));
-    dev->unbound_fragments_.push_back(std::move(fragment));
+    dev->fragments_.push_back(std::move(fragment));
   }
   *out = std::move(dev);
   return ZX_OK;
@@ -135,7 +135,7 @@ std::unique_ptr<CompositeDevice> CompositeDevice::CreateFromDriverIndex(
     std::string name = driver.composite.node_names[i];
     auto fragment = std::make_unique<CompositeDeviceFragment>(dev.get(), std::string(name), i,
                                                               fbl::Array<const zx_bind_inst_t>());
-    dev->unbound_fragments_.push_back(std::move(fragment));
+    dev->fragments_.push_back(std::move(fragment));
   }
   dev->driver_index_driver_ = driver.driver_info;
   return dev;
@@ -146,21 +146,27 @@ bool CompositeDevice::IsFragmentMatch(const fbl::RefPtr<Device>& dev, size_t* in
     return false;
   }
 
-  for (auto itr = bound_fragments_.begin(); itr != bound_fragments_.end(); ++itr) {
-    if (itr->TryMatch(dev)) {
-      LOGF(ERROR, "Ambiguous bind for composite device %p '%s': device 1 '%s', device 2 '%s'", this,
-           name_.data(), itr->bound_device()->name().data(), dev->name().data());
-      return false;
+  // Check bound fragments for ambiguous binds.
+  for (auto& fragment : fragments_) {
+    if (!fragment.IsBound() || !fragment.TryMatch(dev)) {
+      continue;
     }
+    LOGF(ERROR, "Ambiguous bind for composite device %p '%s': device 1 '%s', device 2 '%s'", this,
+         name_.data(), fragment.bound_device()->name().data(), dev->name().data());
+    return false;
   }
-  for (auto itr = unbound_fragments_.begin(); itr != unbound_fragments_.end(); ++itr) {
-    if (itr->TryMatch(dev)) {
-      VLOGF(1, "Found a match for composite device %p '%s': device '%s'", this, name_.data(),
-            dev->name().data());
-      *index_out = itr->index();
-      return true;
+
+  // Check unbound fragments for matches.
+  for (auto& fragment : fragments_) {
+    if (fragment.IsBound() || !fragment.TryMatch(dev)) {
+      continue;
     }
+    VLOGF(1, "Found a match for composite device %p '%s': device '%s'", this, name_.data(),
+          dev->name().data());
+    *index_out = fragment.index();
+    return true;
   }
+
   VLOGF(1, "No match for composite device %p '%s': device '%s'", this, name_.data(),
         dev->name().data());
   return false;
@@ -190,14 +196,14 @@ zx_status_t CompositeDevice::TryMatchBindFragments(const fbl::RefPtr<Device>& de
 zx_status_t CompositeDevice::BindFragment(size_t index, const fbl::RefPtr<Device>& dev) {
   // Find the fragment we're binding
   CompositeDeviceFragment* fragment = nullptr;
-  for (auto& unbound_fragment : unbound_fragments_) {
-    if (unbound_fragment.index() == index) {
-      fragment = &unbound_fragment;
+  for (auto& f : fragments_) {
+    if (f.index() == index) {
+      fragment = &f;
       break;
     }
   }
 
-  if (!fragment) {
+  if (!fragment || fragment->IsBound()) {
     LOGF(ERROR, "Attempted to bind bound fragment %zu in composite device %p", index, name_.data());
     return ZX_OK;
   }
@@ -206,7 +212,6 @@ zx_status_t CompositeDevice::BindFragment(size_t index, const fbl::RefPtr<Device
   if (status != ZX_OK) {
     return status;
   }
-  bound_fragments_.push_back(unbound_fragments_.erase(*fragment));
   if (dev->has_outgoing_directory()) {
     status = TryAssemble();
     if (status != ZX_OK && status != ZX_ERR_SHOULD_WAIT) {
@@ -220,11 +225,12 @@ zx_status_t CompositeDevice::BindFragment(size_t index, const fbl::RefPtr<Device
 
 zx_status_t CompositeDevice::TryAssemble() {
   ZX_ASSERT(device_ == nullptr);
-  if (!unbound_fragments_.is_empty()) {
-    return ZX_ERR_SHOULD_WAIT;
-  }
 
-  for (auto& fragment : bound_fragments_) {
+  for (auto& fragment : fragments_) {
+    if (!fragment.IsBound()) {
+      return ZX_ERR_SHOULD_WAIT;
+    }
+
     // Make sure the fragment driver has created its device
     // or that it didn't need one.
     if (fragment.fragment_device() == nullptr &&
@@ -244,10 +250,10 @@ zx_status_t CompositeDevice::TryAssemble() {
   Coordinator* coordinator = nullptr;
 
   fidl::Arena allocator;
-  fidl::VectorView<fdm::wire::Fragment> fragments(allocator, bound_fragments_.size_slow());
+  fidl::VectorView<fdm::wire::Fragment> fragments(allocator, fragments_.size_slow());
 
   // Create all of the proxies for the fragment devices, in the same process
-  for (auto& fragment : bound_fragments_) {
+  for (auto& fragment : fragments_) {
     const auto& fragment_dev = fragment.fragment_device();
     auto bound_dev = fragment.bound_device();
     coordinator = bound_dev->coordinator;
@@ -386,7 +392,6 @@ void CompositeDevice::UnbindFragment(CompositeDeviceFragment* fragment) {
   }
   ZX_ASSERT(device_ == nullptr);
   ZX_ASSERT(fragment->composite() == this);
-  unbound_fragments_.push_back(bound_fragments_.erase(*fragment));
 }
 
 void CompositeDevice::Remove() {

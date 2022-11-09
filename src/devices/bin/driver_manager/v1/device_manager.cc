@@ -246,29 +246,25 @@ zx_status_t DeviceManager::RemoveDevice(const fbl::RefPtr<Device>& dev, bool for
   // Check if this device is a composite device, and if so disconnects from it
   if (std::optional composite_opt = dev->composite(); composite_opt.has_value()) {
     CompositeDevice& composite = composite_opt.value().get();
-    for (auto itr = composite.bound_fragments().begin();
-         itr != composite.bound_fragments().end();) {
-      const CompositeDeviceFragment& bound_fragment = *itr;
-      // Advance the iterator because we will erase the current element from the list in Unbind.
-      ++itr;
-
-      // Ignore any fragments that are associated with a fragment device.
-      if (bound_fragment.fragment_device() != nullptr) {
+    for (auto& fragment : composite.fragments()) {
+      if (!fragment.IsBound()) {
         continue;
       }
 
-      ZX_ASSERT_MSG(bound_fragment.bound_device() != nullptr,
-                    "Composite device has an unbound fragment in bound fragments list");
+      // Ignore any fragments that are associated with a fragment device.
+      if (fragment.fragment_device()) {
+        continue;
+      }
 
-      const fbl::RefPtr<Device>& parent = bound_fragment.bound_device();
-
-      // Erase from the parent the fragment that matches this composite device.
-      CompositeDeviceFragment* fragment =
-          parent->fragments().erase_if([&composite](const CompositeDeviceFragment& fragment) {
+      // The `bound_device` has its own list of fragments, so remove ourselves from there.
+      CompositeDeviceFragment* device_fragment = fragment.bound_device()->fragments().erase_if(
+          [&composite](const CompositeDeviceFragment& fragment) {
             return fragment.composite() == &composite;
           });
-      ZX_ASSERT_MSG(fragment != nullptr, "Unable to find fragment in bound device's fragments");
-      fragment->Unbind();
+      ZX_ASSERT_MSG(device_fragment != nullptr,
+                    "Unable to find fragment in bound device's fragments");
+
+      fragment.Unbind();
     }
 
     composite.Remove();

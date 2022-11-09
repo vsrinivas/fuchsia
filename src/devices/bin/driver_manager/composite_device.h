@@ -71,6 +71,8 @@ class CompositeDeviceFragment
   // Unbind this fragment.
   void Unbind();
 
+  bool IsBound() const { return bound_device_ != nullptr; }
+
   std::string_view name() const { return name_; }
   uint32_t index() const { return index_; }
   CompositeDevice* composite() const { return composite_; }
@@ -169,11 +171,11 @@ class CompositeDevice : public fbl::DoublyLinkedListable<std::unique_ptr<Composi
 
   using FragmentList = fbl::TaggedDoublyLinkedList<std::unique_ptr<CompositeDeviceFragment>,
                                                    CompositeDeviceFragment::ListTag>;
-  FragmentList& bound_fragments() { return bound_fragments_; }
-  const FragmentList& bound_fragments() const { return bound_fragments_; }
+  FragmentList& fragments() { return fragments_; }
+  const FragmentList& fragments() const { return fragments_; }
 
   CompositeDeviceFragment* primary_fragment() {
-    for (auto& fragment : bound_fragments_) {
+    for (auto& fragment : fragments_) {
       if (fragment.index() == primary_fragment_index_) {
         return &fragment;
       }
@@ -181,7 +183,7 @@ class CompositeDevice : public fbl::DoublyLinkedListable<std::unique_ptr<Composi
     return nullptr;
   }
   const CompositeDeviceFragment* primary_fragment() const {
-    for (auto& fragment : bound_fragments_) {
+    for (auto& fragment : fragments_) {
       if (fragment.index() == primary_fragment_index_) {
         return &fragment;
       }
@@ -208,8 +210,7 @@ class CompositeDevice : public fbl::DoublyLinkedListable<std::unique_ptr<Composi
   const bool from_driver_index_;
   MatchedDriverInfo driver_index_driver_;
 
-  FragmentList unbound_fragments_;
-  FragmentList bound_fragments_;
+  FragmentList fragments_;
 
   // Once the composite has been assembled, this refers to the constructed
   // device.

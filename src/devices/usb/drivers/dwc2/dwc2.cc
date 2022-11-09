@@ -136,7 +136,6 @@ void Dwc2::HandleInEpInterrupt() {
       diepint.set_reg_value(diepint.reg_value() & DIEPMSK::Get().ReadFrom(mmio).reg_value());
 
       if (diepint.xfercompl()) {
-
         if (timeout_recovering_) {
           // (special case) We're recovering from a diepint.timeout interrupt.
           // TODO(105382) remove logging once timeout recovery has stabilized.
@@ -162,14 +161,15 @@ void Dwc2::HandleInEpInterrupt() {
       if (diepint.timeout() && ep_num == DWC_EP0_IN) {
         switch (ep0_state_) {
           case Ep0State::DATA_IN: {
-
             // TODO(105382) remove logging once timeout recovery has stabilized.
             //   - what does the core think it's doing at wrt NAK status?
             //   - Is the core globally NAK-ing all non-periodic IN endpoints at the moment?
             auto dctl = DCTL::Get().ReadFrom(mmio);
             auto depctl0 = DEPCTL0::Get(0).ReadFrom(mmio);
-            zxlogf(ERROR, "Got diepint.timeout for DATA_IN phase, attempting to recover. "
-                   "DCTL=0x%08x DEPCTL0=0x%08x", dctl.reg_value(), depctl0.reg_value());
+            zxlogf(ERROR,
+                   "Got diepint.timeout for DATA_IN phase, attempting to recover. "
+                   "DCTL=0x%08x DEPCTL0=0x%08x",
+                   dctl.reg_value(), depctl0.reg_value());
 
             // The timeout is due to one of two cases:
             //   1. The core never received an ACK to sent IN-data.
@@ -294,7 +294,7 @@ void Dwc2::HandleOutEpInterrupt() {
           zxlogf(ERROR, "(diepint.timeout recovery) OUT-EP0 xfer-complete interrupt");
 
           FlushTxFifo(0);
-          ep0_state_ = Ep0State::IDLE; // Reset for next transaction.
+          ep0_state_ = Ep0State::IDLE;  // Reset for next transaction.
           timeout_recovering_ = false;
         } else {
           DOEPINT::Get(ep_num).FromValue(0).set_xfercompl(1).WriteTo(mmio);
@@ -932,10 +932,12 @@ zx_status_t Dwc2::Init() {
     ep->ep_num = i;
   }
 
-  size_t actual;
-  auto status = DdkGetMetadata(DEVICE_METADATA_PRIVATE, &metadata_, sizeof(metadata_), &actual);
+  size_t actual = 0;
+  auto status = DdkGetFragmentMetadata("pdev", DEVICE_METADATA_PRIVATE, &metadata_,
+                                       sizeof(metadata_), &actual);
   if (status != ZX_OK || actual != sizeof(metadata_)) {
-    zxlogf(ERROR, "Dwc2::Init can't get driver metadata");
+    zxlogf(ERROR, "Dwc2::Init can't get driver metadata: %s, actual size: %ld expected size: %ld",
+           zx_status_get_string(status), actual, sizeof(metadata_));
     return ZX_ERR_INTERNAL;
   }
 

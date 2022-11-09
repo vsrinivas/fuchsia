@@ -33,7 +33,10 @@ bool ResumeTask::AddParentResumeTask() {
     // be resumed.
     if (std::optional composite = device_->composite(); composite.has_value()) {
       bool parent_dependency_added = false;
-      for (const auto& fragment : composite.value().get().bound_fragments()) {
+      for (const auto& fragment : composite.value().get().fragments()) {
+        if (!fragment.IsBound()) {
+          continue;
+        }
         auto dev = fragment.bound_device();
         if (dev != nullptr) {
           switch (dev->state()) {

@@ -1054,11 +1054,22 @@ TEST_F(CompositeMetadataTestCase, FailGetMetadata) {
 TEST_F(CompositeMetadataTestCase, FailGetMetadataFromParent) {
   size_t len = 0;
   ASSERT_NO_FATAL_FAILURE(AddCompositeDevice());
-  fbl::RefPtr<Device> parent =
-      composite_device->composite()->get().bound_fragments().front().bound_device();
-  ASSERT_EQ(
-      platform_bus()->device->coordinator->GetMetadata(parent, kMetadataKey, nullptr, 0, &len),
-      ZX_ERR_NOT_FOUND);
+
+  // Find the first bound fragment and get its metadata.
+  bool found_fragment = false;
+  for (auto& fragment : composite_device->composite()->get().fragments()) {
+    if (!fragment.IsBound()) {
+      continue;
+    }
+    fbl::RefPtr<Device> parent =
+        composite_device->composite()->get().fragments().front().bound_device();
+    ASSERT_EQ(
+        platform_bus()->device->coordinator->GetMetadata(parent, kMetadataKey, nullptr, 0, &len),
+        ZX_ERR_NOT_FOUND);
+    found_fragment = true;
+    break;
+  }
+  ASSERT_TRUE(found_fragment);
 }
 
 TEST_F(CompositeMetadataTestCase, DefineAfterDevices) {
