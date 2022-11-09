@@ -6,6 +6,7 @@ group("tests") {
   testonly = true
   deps = [
     "autobind:tests",
+    "banjo-proxy:tests",
     "bind-fail-test",
     "bind-test-v2",
     "bindlib-codegen-test",
@@ -46,6 +47,7 @@ group("drivers") {
   testonly = true
   deps = [
     "autobind:drivers",
+    "banjo-proxy:drivers",
     "bind-fail-test:driver",
     "bind-test-v2:bind-test-driver-v2",
     "bindlib-codegen-test:child-driver",

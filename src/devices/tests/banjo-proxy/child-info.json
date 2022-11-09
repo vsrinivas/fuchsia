@@ -1,0 +1,10 @@
+{
+    "short_description": "Driver Framework banjo proxy child driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "DriverFramework",
+        "Test"
+    ]
+}

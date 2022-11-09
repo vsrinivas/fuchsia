@@ -206,6 +206,8 @@
 //src/devices/temperature/drivers/shtv3:shtv3-driver
 //src/devices/temperature/drivers/tmp112:tmp112-driver
 //src/devices/tests/autobind:driver
+//src/devices/tests/banjo-proxy:child-driver
+//src/devices/tests/banjo-proxy:parent-driver
 //src/devices/tests/bind-fail-test:fuchsia_driver
 //src/devices/tests/bind-test-v2:bind-test-driver-v2-driver
 //src/devices/tests/bindlib-codegen-test:child-driver-driver
