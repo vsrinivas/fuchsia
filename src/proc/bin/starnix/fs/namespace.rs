@@ -7,7 +7,6 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Weak};
 
-use once_cell::sync::OnceCell;
 use ref_cast::RefCast;
 
 use super::devpts::dev_pts_fs;
@@ -56,12 +55,15 @@ impl fmt::Debug for Namespace {
 /// At a mount, path traversal switches from one filesystem to another.
 /// The client sees a composed directory structure that glues together the
 /// directories from the underlying FsNodes from those filesystems.
+///
+/// The mounts in a namespace form a mount tree, with `mountpoint` pointing to the parent and
+/// `submounts` pointing to the children.
 pub struct Mount {
-    mountpoint: OnceCell<(Weak<Mount>, DirEntryHandle)>,
     root: DirEntryHandle,
     flags: MountFlags,
     _fs: FileSystemHandle,
 
+    // Lock ordering: mount -> submount
     state: RwLock<MountState>,
     // Mount used to contain a Weak<Namespace>. It no longer does because since the mount point
     // hash was moved from Namespace to Mount, nothing actually uses it. Now that
@@ -74,6 +76,12 @@ type MountHandle = Arc<Mount>;
 
 #[derive(Default)]
 pub struct MountState {
+    /// The namespace node that this mount is mounted on. This is a tuple instead of a
+    /// NamespaceNode because the Mount pointer has to be weak because this is the pointer to the
+    /// parent mount, the parent has a pointer to the children too, and making both strong would be
+    /// a cycle.
+    mountpoint: Option<(Weak<Mount>, DirEntryHandle)>,
+
     // The keys of this map are always descendants of this mount's root.
     //
     // Each directory entry can only have one mount attached. Mount shadowing works by using the
@@ -115,13 +123,7 @@ impl Mount {
             flags - MountFlags::STORED_FLAGS
         );
         let fs = root.node.fs();
-        Arc::new(Self {
-            mountpoint: OnceCell::new(),
-            root,
-            flags,
-            _fs: fs,
-            state: Default::default(),
-        })
+        Arc::new(Self { root, flags, _fs: fs, state: Default::default() })
     }
 
     /// A namespace node referring to the root of the mount.
@@ -131,8 +133,9 @@ impl Mount {
 
     /// The NamespaceNode on which this Mount is mounted.
     fn mountpoint(&self) -> Option<NamespaceNode> {
-        let (ref mount, ref node) = &self.mountpoint.get()?;
-        Some(NamespaceNode { mount: Some(mount.upgrade()?), entry: node.clone() })
+        let state = self.state.read();
+        let (ref mount, ref entry) = state.mountpoint.as_ref()?;
+        Some(NamespaceNode { mount: Some(mount.upgrade()?), entry: entry.clone() })
     }
 
     /// Create the specified mount as a child. Also propagate it to the mount's peer group.
@@ -203,7 +206,8 @@ impl Mount {
         }
 
         // Put the clone in the same peer group
-        if let Some(peer_group) = self.state.read().peer_group.clone() {
+        let peer_group = self.state.read().peer_group.clone();
+        if let Some(peer_group) = peer_group {
             peer_group.add(&clone);
             clone.write().peer_group = Some(peer_group);
         }
@@ -247,14 +251,24 @@ impl MountState<Base = Mount> {
         }
 
         dir.register_mount();
-        mount
-            .mountpoint
-            .set((Arc::downgrade(self.base), Arc::clone(dir)))
-            .expect("add_submount can only take a newly created mount");
+        let old_mountpoint =
+            mount.state.write().mountpoint.replace((Arc::downgrade(self.base), Arc::clone(dir)));
+        assert!(old_mountpoint.is_none(), "add_submount can only take a newly created mount");
         // Mount shadowing is implemented by mounting onto the root of the first mount, not by
         // creating two mounts on the same mountpoint.
-        let old_mount = self.submounts.insert(ArcKey(dir.clone()), mount);
-        assert!(old_mount.is_none(), "can't create two mounts on the same mount point");
+        let old_mount = self.submounts.insert(ArcKey(dir.clone()), Arc::clone(&mount));
+
+        // In rare cases, mount propagation might result in a request to mount on a directory where
+        // something is already mounted. MountTest.LotsOfShadowing will trigger this. Linux handles
+        // this by inserting the new mount between the old mount and the current mount.
+        if let Some(old_mount) = old_mount {
+            // Previous state: self[dir] = old_mount
+            // New state: self[dir] = new_mount, new_mount[new_mount.root] = old_mount
+            // The new mount has already been inserted into self, now just update the old mount to
+            // be a child of the new mount.
+            old_mount.write().mountpoint = Some((Arc::downgrade(&mount), Arc::clone(dir)));
+            mount.write().submounts.insert(ArcKey(Arc::clone(&mount.root)), old_mount);
+        }
     }
 
     /// Is the mount in a peer group? Corresponds to MS_SHARED.
@@ -300,10 +314,10 @@ impl PeerGroup {
 
 impl Drop for Mount {
     fn drop(&mut self) {
-        if let Some((_mount, node)) = self.mountpoint.get() {
+        let mut state = self.state.write();
+        if let Some((_mount, node)) = &state.mountpoint {
             node.unregister_mount()
         }
-        let mut state = self.state.write();
         if let Some(peer_group) = &mut state.peer_group {
             peer_group.remove(&*self);
         }
@@ -315,8 +329,8 @@ impl fmt::Debug for Mount {
         let state = self.state.read();
         f.debug_struct("Mount")
             .field("id", &(self as *const Mount))
-            .field("mountpoint", &self.mountpoint)
             .field("root", &self.root)
+            .field("mountpoint", &state.mountpoint)
             .field("submounts", &state.submounts)
             .finish()
     }

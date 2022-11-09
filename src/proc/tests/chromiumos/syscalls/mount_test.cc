@@ -215,7 +215,14 @@ TEST_F(MountTest, InheritShared) {
   ASSERT_TRUE(FileExists("a/1/2/1"));
 }
 
+TEST_F(MountTest, LotsOfShadowing) {
+  ASSERT_SUCCESS(MakeDir("a"));
+  ASSERT_SUCCESS(Mount(nullptr, "1", MS_SHARED));
+  ASSERT_SUCCESS(Mount("1", "a", MS_BIND));
+  ASSERT_SUCCESS(Mount("1", "a", MS_BIND));
+  ASSERT_SUCCESS(Mount("1", "a", MS_BIND));
+}
+
 // TODO(tbodt): write more tests:
 // - A and B are shared, make B downstream, make A private, should now both be private
-
 }  // namespace
