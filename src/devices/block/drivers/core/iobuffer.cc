@@ -6,14 +6,14 @@
 
 IoBuffer::IoBuffer(zx::vmo vmo, vmoid_t id) : io_vmo_(std::move(vmo)), vmoid_(id) {}
 
-IoBuffer::~IoBuffer() {}
+IoBuffer::~IoBuffer() = default;
 
 zx_status_t IoBuffer::ValidateVmoHack(uint64_t length, uint64_t vmo_offset) {
   uint64_t vmo_size;
-  zx_status_t status;
-  if ((status = io_vmo_.get_size(&vmo_size)) != ZX_OK) {
+  if (zx_status_t status = io_vmo_.get_size(&vmo_size); status != ZX_OK) {
     return status;
-  } else if ((vmo_offset > vmo_size) || (vmo_size - vmo_offset < length)) {
+  }
+  if ((vmo_offset > vmo_size) || (vmo_size - vmo_offset < length)) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   return ZX_OK;

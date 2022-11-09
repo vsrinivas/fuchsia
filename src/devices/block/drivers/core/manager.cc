@@ -6,6 +6,8 @@
 
 #include <assert.h>
 #include <lib/ddk/debug.h>
+#include <lib/zx/profile.h>
+#include <lib/zx/thread.h>
 #include <zircon/threads.h>
 
 #include <utility>
@@ -45,8 +47,7 @@ zx_status_t Manager::StartServer(zx_device_t* device, ddk::BlockProtocolClient* 
   ZX_DEBUG_ASSERT(server_ == nullptr);
   std::unique_ptr<Server> server;
   fzl::fifo<block_fifo_request_t, block_fifo_response_t> fifo;
-  zx_status_t status = Server::Create(protocol, &fifo, &server);
-  if (status != ZX_OK) {
+  if (zx_status_t status = Server::Create(protocol, &fifo, &server); status != ZX_OK) {
     return status;
   }
   server_ = std::move(server);
@@ -76,19 +77,22 @@ zx_status_t Manager::StartServer(zx_device_t* device, ddk::BlockProtocolClient* 
   const zx_duration_t deadline = ZX_MSEC(2);
   const zx_duration_t period = deadline;
 
-  zx_handle_t profile = ZX_HANDLE_INVALID;
-  status = device_get_deadline_profile(device, capacity, deadline, period,
-                                       "driver_host:pdev:05:00:f:block_server", &profile);
-  if (status != ZX_OK) {
-    zxlogf(WARNING, "block: Failed to get deadline profile: %d\n", status);
-  } else {
-    const zx_handle_t thread_handle = thrd_get_zx_handle(thread_);
-    status = zx_object_set_profile(thread_handle, profile, 0);
-    if (status != ZX_OK) {
-      zxlogf(WARNING, "block: Failed to set deadline profile: %d\n", status);
+  [&]() {
+    zx::profile profile;
+    if (zx_status_t status = device_get_deadline_profile(device, capacity, deadline, period,
+                                                         "driver_host:pdev:05:00:f:block_server",
+                                                         profile.reset_and_get_address());
+        status != ZX_OK) {
+      zxlogf(WARNING, "block: Failed to get deadline profile: %s\n", zx_status_get_string(status));
+      return;
     }
-    zx_handle_close(profile);
-  }
+    if (zx_status_t status =
+            zx::unowned_thread(thrd_get_zx_handle(thread_))->set_profile(profile, 0);
+        status != ZX_OK) {
+      zxlogf(WARNING, "block: Failed to set deadline profile: %s\n", zx_status_get_string(status));
+      return;
+    }
+  }();
 
   *out_fifo = zx::fifo(fifo.release());
   return ZX_OK;

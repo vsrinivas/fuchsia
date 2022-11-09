@@ -83,16 +83,15 @@ TEST(ManagerTest, CloseVMO) {
   ASSERT_OK(manager.CloseFifoServer());
 }
 
-zx_status_t FillVMO(zx::unowned_vmo vmo, size_t size) {
+zx_status_t FillVMO(const zx::vmo& vmo, size_t size) {
   std::vector<uint8_t> buf(zx_system_get_page_size());
   memset(buf.data(), 0x44, zx_system_get_page_size());
-  zx_status_t status;
   for (size_t i = 0; i < size; i += zx_system_get_page_size()) {
     size_t remain = size - i;
     if (remain > zx_system_get_page_size()) {
       remain = zx_system_get_page_size();
     }
-    if ((status = vmo->write(buf.data(), i, remain)) != ZX_OK) {
+    if (zx_status_t status = vmo.write(buf.data(), i, remain); status != ZX_OK) {
       return status;
     }
   }
@@ -109,7 +108,7 @@ TEST(ManagerTest, ReadSingleTest) {
   const size_t vmo_size = 8192;
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(vmo_size, 0, &vmo));
-  ASSERT_OK(FillVMO(zx::unowned_vmo(vmo), vmo_size));
+  ASSERT_OK(FillVMO(vmo, vmo_size));
 
   vmoid_t vmoid;
   ASSERT_OK(manager.AttachVmo(std::move(vmo), &vmoid));
@@ -158,7 +157,7 @@ TEST(ManagerTest, ReadManyBlocksHasOneResponse) {
   const size_t vmo_size = 8192;
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(vmo_size, 0, &vmo));
-  ASSERT_OK(FillVMO(zx::unowned_vmo(vmo), vmo_size));
+  ASSERT_OK(FillVMO(vmo, vmo_size));
 
   vmoid_t vmoid;
   ASSERT_OK(manager.AttachVmo(std::move(vmo), &vmoid));
@@ -226,7 +225,7 @@ TEST(ManagerTest, TestLargeGroupedTransaction) {
   const size_t vmo_size = 8192;
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(vmo_size, 0, &vmo));
-  ASSERT_OK(FillVMO(zx::unowned_vmo(vmo), vmo_size));
+  ASSERT_OK(FillVMO(vmo, vmo_size));
 
   vmoid_t vmoid;
   ASSERT_OK(manager.AttachVmo(std::move(vmo), &vmoid));
@@ -281,12 +280,12 @@ TEST(BlockTest, TestReadWriteSingle) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   ASSERT_OK(loop.StartThread("fidl-thread"));
 
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_block::Block>();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_block_volume::Volume>();
   ASSERT_OK(endpoints.status_value());
+  auto& [client, server] = endpoints.value();
 
-  fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), dut);
-  auto sync_client =
-      fidl::WireSyncClient<fuchsia_hardware_block::Block>(std::move(endpoints->client));
+  fidl::BindServer(loop.dispatcher(), std::move(server), dut);
+  auto sync_client = fidl::WireSyncClient(std::move(client));
   auto info_result = sync_client->GetInfo();
   ASSERT_TRUE(info_result.ok());
 

@@ -26,9 +26,9 @@ constexpr groupid_t kNoGroup = MAX_TXN_GROUP_COUNT;
 class MessageGroup {
  public:
   explicit MessageGroup(Server& server, groupid_t group = kNoGroup)
-      : pending_(false),
-        response_(block_fifo_response_t{.status = ZX_OK, .group = group, .count = 0}),
-        op_count_(0),
+      : response_({
+            .group = group,
+        }),
         server_(server) {}
 
   MessageGroup(const MessageGroup&) = delete;
@@ -47,9 +47,9 @@ class MessageGroup {
 
  private:
   fbl::Mutex lock_;
-  bool pending_ TA_GUARDED(lock_);
+  bool pending_ TA_GUARDED(lock_) = false;
   block_fifo_response_t response_ TA_GUARDED(lock_);
-  uint32_t op_count_ TA_GUARDED(lock_);
+  uint32_t op_count_ TA_GUARDED(lock_) = 0;
   Server& server_ TA_GUARDED(lock_);
 };
 

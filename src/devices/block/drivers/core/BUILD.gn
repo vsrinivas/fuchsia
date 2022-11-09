@@ -66,10 +66,6 @@ test("core-unittest-bin") {
   # Please migrate away from these features.
   configs += [ "//src/lib/ddktl:deprecated-read-write" ]
 
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
-
   # TODO(fxbug.dev/33820): This target uses the deprecated GetSizable.
   # Please migrate away from this feature.
   configs += [ "//src/lib/ddktl:deprecated-getsizable" ]
@@ -117,8 +113,8 @@ source_set("shared") {
     "//sdk/banjo/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_cpp_wire",
-    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_c",
-    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
+    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_cpp_wire",
     "//src/devices/lib/block",
     "//src/devices/lib/dev-operation",
     "//zircon/system/ulib/fidl-utils",
@@ -130,16 +126,7 @@ source_set("shared") {
   # Please migrate away from these features.
   configs += [ "//src/lib/ddktl:deprecated-read-write" ]
 
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
-
   # TODO(fxbug.dev/33820): This target uses the deprecated GetSizable.
   # Please migrate away from this feature.
   configs += [ "//src/lib/ddktl:deprecated-getsizable" ]
-
-  # TODO(fxbug.dev/85473): This target uses |fidl::WireTryDispatch| which is deprecated.
-  # Please remove ad-hoc composition of FIDL protocols and migrate to |fidl::WireDispatch|.
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-wire-try-dispatch" ]
 }

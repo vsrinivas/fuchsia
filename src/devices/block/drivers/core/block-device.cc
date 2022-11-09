@@ -4,9 +4,7 @@
 
 #include "src/devices/block/drivers/core/block-device.h"
 
-#include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/hardware/block/partition/cpp/banjo.h>
-#include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/operation/block.h>
 
@@ -34,24 +32,6 @@ zx_status_t BlockDevice::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
     }
     default:
       return ZX_ERR_NOT_SUPPORTED;
-  }
-}
-
-void BlockDevice::DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn) {
-  // Try the block protocol first, then fall back to the other protocols.
-  if (fidl::WireTryDispatch(this, msg, &txn) == fidl::DispatchResult::kFound) {
-    return;
-  }
-
-  fidl_incoming_msg_t message = std::move(msg).ReleaseToEncodedCMessage();
-  if (parent_volume_protocol_.is_valid()) {
-    txn.set_status(
-        fuchsia_hardware_block_volume_Volume_dispatch(this, txn.fidl_txn(), &message, VolumeOps()));
-  } else if (parent_partition_protocol_.is_valid()) {
-    txn.set_status(fuchsia_hardware_block_partition_Partition_dispatch(this, txn.fidl_txn(),
-                                                                       &message, PartitionOps()));
-  } else {
-    txn.set_status(ZX_ERR_NOT_SUPPORTED);
   }
 }
 
@@ -193,11 +173,9 @@ void BlockDevice::BlockQueue(block_op_t* op, block_impl_queue_callback completio
 }
 
 void BlockDevice::GetInfo(GetInfoCompleter::Sync& completer) {
-  static_assert(sizeof(block_info_t) == sizeof(fuchsia_hardware_block::wire::BlockInfo),
-                "Unsafe to cast between internal / FIDL types");
-
   fuchsia_hardware_block::wire::BlockInfo info;
-  size_t block_op_size = 0;
+  static_assert(sizeof(info) == sizeof(block_info_t));
+  size_t block_op_size;
   parent_protocol_.Query(reinterpret_cast<block_info_t*>(&info), &block_op_size);
   // Set or clear BLOCK_FLAG_BOOTPART appropriately.
   if (has_bootpart_) {
@@ -206,8 +184,7 @@ void BlockDevice::GetInfo(GetInfoCompleter::Sync& completer) {
     info.flags &= ~BLOCK_FLAG_BOOTPART;
   }
 
-  completer.Reply(ZX_OK,
-                  fidl::ObjectView<fuchsia_hardware_block::wire::BlockInfo>::FromExternal(&info));
+  completer.Reply(ZX_OK, fidl::ObjectView<decltype(info)>::FromExternal(&info));
 }
 
 void BlockDevice::GetStats(GetStatsRequestView request, GetStatsCompleter::Sync& completer) {
@@ -258,87 +235,110 @@ void BlockDevice::WriteBlocks(WriteBlocksRequestView request,
       DoIo(request->vmo, request->length, request->dev_offset, request->vmo_offset, true));
 }
 
-zx_status_t BlockDevice::FidlPartitionGetTypeGuid(fidl_txn_t* txn) {
-  fuchsia_hardware_block_partition_GUID guid;
-  static_assert(sizeof(guid.value) == sizeof(guid_t), "Mismatched GUID size");
-  guid_t* guid_ptr = reinterpret_cast<guid_t*>(&guid.value[0]);
-  zx_status_t status = parent_partition_protocol_.GetGuid(GUIDTYPE_TYPE, guid_ptr);
-  return fuchsia_hardware_block_partition_PartitionGetTypeGuid_reply(
-      txn, status, status != ZX_OK ? nullptr : &guid);
-}
-
-zx_status_t BlockDevice::FidlPartitionGetInstanceGuid(fidl_txn_t* txn) {
-  fuchsia_hardware_block_partition_GUID guid;
-  static_assert(sizeof(guid.value) == sizeof(guid_t), "Mismatched GUID size");
-  guid_t* guid_ptr = reinterpret_cast<guid_t*>(&guid.value[0]);
-  zx_status_t status = parent_partition_protocol_.GetGuid(GUIDTYPE_INSTANCE, guid_ptr);
-  return fuchsia_hardware_block_partition_PartitionGetInstanceGuid_reply(
-      txn, status, status != ZX_OK ? nullptr : &guid);
-}
-
-zx_status_t BlockDevice::FidlPartitionGetName(fidl_txn_t* txn) {
-  char name[fuchsia_hardware_block_partition_NAME_LENGTH];
-  zx_status_t status = parent_partition_protocol_.GetName(name, sizeof(name));
-
-  const char* out_name = nullptr;
-  size_t out_name_length = 0;
-  if (status == ZX_OK) {
-    out_name = name;
-    out_name_length = strnlen(name, sizeof(name));
+void BlockDevice::GetTypeGuid(GetTypeGuidCompleter::Sync& completer) {
+  if (!parent_partition_protocol_.is_valid()) {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+    return;
   }
-  return fuchsia_hardware_block_partition_PartitionGetName_reply(txn, status, out_name,
-                                                                 out_name_length);
+  fuchsia_hardware_block_partition::wire::Guid guid;
+  static_assert(sizeof(guid.value) == sizeof(guid_t));
+  guid_t* guid_ptr = reinterpret_cast<guid_t*>(guid.value.data());
+  zx_status_t status = parent_partition_protocol_.GetGuid(GUIDTYPE_TYPE, guid_ptr);
+  completer.Reply(status, fidl::ObjectView<decltype(guid)>::FromExternal(&guid));
 }
 
-zx_status_t BlockDevice::FidlVolumeGetVolumeInfo(fidl_txn_t* txn) {
-  fuchsia_hardware_block_volume_VolumeManagerInfo manager_info;
-  fuchsia_hardware_block_volume_VolumeInfo volume_info;
-  static_assert(sizeof(volume_manager_info_t) == sizeof(manager_info), "Mismatched volume info");
-  static_assert(sizeof(volume_info_t) == sizeof(volume_info), "Mismatched volume info");
+void BlockDevice::GetInstanceGuid(GetInstanceGuidCompleter::Sync& completer) {
+  if (!parent_partition_protocol_.is_valid()) {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+    return;
+  }
+  fuchsia_hardware_block_partition::wire::Guid guid;
+  static_assert(sizeof(guid.value) == sizeof(guid_t));
+  guid_t* guid_ptr = reinterpret_cast<guid_t*>(guid.value.data());
+  zx_status_t status = parent_partition_protocol_.GetGuid(GUIDTYPE_INSTANCE, guid_ptr);
+  completer.Reply(status, fidl::ObjectView<decltype(guid)>::FromExternal(&guid));
+}
+
+void BlockDevice::GetName(GetNameCompleter::Sync& completer) {
+  if (!parent_partition_protocol_.is_valid()) {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+    return;
+  }
+  char name[fuchsia_hardware_block_partition::wire::kNameLength];
+  zx_status_t status = parent_partition_protocol_.GetName(name, sizeof(name));
+  completer.Reply(status,
+                  status == ZX_OK ? fidl::StringView::FromExternal(name) : fidl::StringView{});
+}
+
+void BlockDevice::QuerySlices(QuerySlicesRequestView request,
+                              QuerySlicesCompleter::Sync& completer) {
+  if (!parent_volume_protocol_.is_valid()) {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+    return;
+  }
+  fidl::Array<fuchsia_hardware_block_volume::wire::VsliceRange,
+              fuchsia_hardware_block_volume::wire::kMaxSliceRequests>
+      ranges;
+  static_assert(sizeof(decltype(ranges)::value_type) == sizeof(slice_region_t));
+  slice_region_t* ranges_ptr = reinterpret_cast<slice_region_t*>(ranges.data());
+  size_t range_count;
+  zx_status_t status = parent_volume_protocol_.QuerySlices(
+      request->start_slices.data(), request->start_slices.count(), ranges_ptr, std::size(ranges),
+      &range_count);
+  completer.Reply(status, ranges, range_count);
+}
+
+void BlockDevice::GetVolumeInfo(GetVolumeInfoCompleter::Sync& completer) {
+  if (!parent_volume_protocol_.is_valid()) {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+    return;
+  }
+  fuchsia_hardware_block_volume::wire::VolumeManagerInfo manager_info;
+  static_assert(sizeof(manager_info) == sizeof(volume_manager_info_t));
+  fuchsia_hardware_block_volume::wire::VolumeInfo volume_info;
+  static_assert(sizeof(volume_info) == sizeof(volume_info_t));
   zx_status_t status =
       parent_volume_protocol_.GetInfo(reinterpret_cast<volume_manager_info_t*>(&manager_info),
                                       reinterpret_cast<volume_info_t*>(&volume_info));
-  if (status != ZX_OK)
-    return fuchsia_hardware_block_volume_VolumeGetVolumeInfo_reply(txn, status, nullptr, nullptr);
-  return fuchsia_hardware_block_volume_VolumeGetVolumeInfo_reply(txn, status, &manager_info,
-                                                                 &volume_info);
+  fidl::ObjectView<decltype(manager_info)> manager_info_view;
+  fidl::ObjectView<decltype(volume_info)> volume_info_view;
+  if (status == ZX_OK) {
+    manager_info_view = decltype(manager_info_view)::FromExternal(&manager_info);
+    volume_info_view = decltype(volume_info_view)::FromExternal(&volume_info);
+  }
+  completer.Reply(status, manager_info_view, volume_info_view);
 }
 
-zx_status_t BlockDevice::FidlVolumeQuerySlices(const uint64_t* start_slices_data,
-                                               size_t start_slices_count, fidl_txn_t* txn) {
-  fuchsia_hardware_block_volume_VsliceRange
-      ranges[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
-  memset(ranges, 0, sizeof(ranges));
-  size_t range_count = 0;
-  static_assert(sizeof(fuchsia_hardware_block_volume_VsliceRange) == sizeof(slice_region_t),
-                "Mismatched range size");
-  auto banjo_ranges = reinterpret_cast<slice_region_t*>(ranges);
-  zx_status_t status = parent_volume_protocol_.QuerySlices(
-      start_slices_data, start_slices_count, banjo_ranges, std::size(ranges), &range_count);
-  return fuchsia_hardware_block_volume_VolumeQuerySlices_reply(txn, status, ranges, range_count);
+void BlockDevice::Extend(ExtendRequestView request, ExtendCompleter::Sync& completer) {
+  if (!parent_volume_protocol_.is_valid()) {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+    return;
+  }
+  slice_extent_t extent = {
+      .offset = request->start_slice,
+      .length = request->slice_count,
+  };
+  completer.Reply(parent_volume_protocol_.Extend(&extent));
 }
 
-zx_status_t BlockDevice::FidlVolumeExtend(uint64_t start_slice, uint64_t slice_count,
-                                          fidl_txn_t* txn) {
-  slice_extent_t extent;
-  extent.offset = start_slice;
-  extent.length = slice_count;
-  zx_status_t status = parent_volume_protocol_.Extend(&extent);
-  return fuchsia_hardware_block_volume_VolumeExtend_reply(txn, status);
+void BlockDevice::Shrink(ShrinkRequestView request, ShrinkCompleter::Sync& completer) {
+  if (!parent_volume_protocol_.is_valid()) {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+    return;
+  }
+  slice_extent_t extent = {
+      .offset = request->start_slice,
+      .length = request->slice_count,
+  };
+  completer.Reply(parent_volume_protocol_.Shrink(&extent));
 }
 
-zx_status_t BlockDevice::FidlVolumeShrink(uint64_t start_slice, uint64_t slice_count,
-                                          fidl_txn_t* txn) {
-  slice_extent_t extent;
-  extent.offset = start_slice;
-  extent.length = slice_count;
-  zx_status_t status = parent_volume_protocol_.Shrink(&extent);
-  return fuchsia_hardware_block_volume_VolumeShrink_reply(txn, status);
-}
-
-zx_status_t BlockDevice::FidlVolumeDestroy(fidl_txn_t* txn) {
-  zx_status_t status = parent_volume_protocol_.Destroy();
-  return fuchsia_hardware_block_volume_VolumeDestroy_reply(txn, status);
+void BlockDevice::Destroy(DestroyCompleter::Sync& completer) {
+  if (!parent_volume_protocol_.is_valid()) {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+    return;
+  }
+  completer.Reply(parent_volume_protocol_.Destroy());
 }
 
 zx_status_t BlockDevice::Bind(void* ctx, zx_device_t* dev) {

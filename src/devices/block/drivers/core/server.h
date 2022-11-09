@@ -5,7 +5,6 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_CORE_SERVER_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_CORE_SERVER_H_
 
-#include <fuchsia/hardware/block/c/banjo.h>
 #include <fuchsia/hardware/block/cpp/banjo.h>
 #include <lib/fzl/fifo.h>
 #include <lib/sync/completion.h>
@@ -63,7 +62,7 @@ class Server {
 
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Server);
-  Server(ddk::BlockProtocolClient* bp);
+  explicit Server(ddk::BlockProtocolClient* bp);
 
   // Helper for processing a single message read from the FIFO.
   void ProcessRequest(block_fifo_request_t* request);

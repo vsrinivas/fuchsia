@@ -27,7 +27,7 @@ class Message final : public fbl::DoublyLinkedListable<Message*> {
   void* operator new(size_t size, size_t block_op_size) {
     return calloc(1, size + block_op_size - sizeof(block_op_t));
   }
-  void operator delete(void* msg) { free(msg); }
+  void operator delete(void* msg, size_t block_op_size) { free(msg); }
 
   // Allocate a new, uninitialized Message whose block_op begins in a memory region that
   // is block_op_size bytes long.
@@ -38,7 +38,7 @@ class Message final : public fbl::DoublyLinkedListable<Message*> {
   // End the transaction specified by reqid and group, and release iobuf.
   void Complete();
 
-  zx_status_t result() { return result_; }
+  zx_status_t result() const { return result_; }
   void set_result(zx_status_t res) { result_ = res; }
 
   block_op_t* Op() { return &op_; }

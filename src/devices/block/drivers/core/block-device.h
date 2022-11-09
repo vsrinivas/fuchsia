@@ -6,11 +6,11 @@
 #define SRC_DEVICES_BLOCK_DRIVERS_CORE_BLOCK_DEVICE_H_
 
 #include <assert.h>
+#include <fidl/fuchsia.hardware.block.partition/cpp/wire.h>
+#include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <fuchsia/hardware/block/cpp/banjo.h>
-#include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/hardware/block/partition/cpp/banjo.h>
-#include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <fuchsia/hardware/block/volume/cpp/banjo.h>
 #include <inttypes.h>
 #include <lib/ddk/device.h>
@@ -53,12 +53,12 @@ struct StatsCookie {
 
 class BlockDevice;
 using BlockDeviceType =
-    ddk::Device<BlockDevice, ddk::GetProtocolable, ddk::MessageableManual, ddk_deprecated::Readable,
-                ddk_deprecated::Writable, ddk_deprecated::GetSizable>;
+    ddk::Device<BlockDevice, ddk::GetProtocolable,
+                ddk::Messageable<fuchsia_hardware_block_volume::Volume>::Mixin,
+                ddk_deprecated::Readable, ddk_deprecated::Writable, ddk_deprecated::GetSizable>;
 
 class BlockDevice : public BlockDeviceType,
-                    public ddk::BlockProtocol<BlockDevice, ddk::base_protocol>,
-                    public fidl::WireServer<fuchsia_hardware_block::Block> {
+                    public ddk::BlockProtocol<BlockDevice, ddk::base_protocol> {
  public:
   explicit BlockDevice(zx_device_t* parent)
       : BlockDeviceType(parent),
@@ -78,9 +78,8 @@ class BlockDevice : public BlockDeviceType,
 
   void DdkRelease();
 
-  // ddk::GetProtocolable, ddk::MessageableManual
+  // ddk::GetProtocolable
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_protocol);
-  void DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn);
 
   // ddk::Readable, ddk::Writable, ddk::GetSizable
   zx_status_t DdkRead(void* buf, size_t buf_len, zx_off_t off, size_t* actual);
@@ -91,7 +90,7 @@ class BlockDevice : public BlockDeviceType,
   void BlockQuery(block_info_t* block_info, size_t* op_size);
   void BlockQueue(block_op_t* op, block_impl_queue_callback completion_cb, void* cookie);
 
-  // fuchsia.hardware.block.Block fidl
+  // fuchsia_hardware_block_volume::Volume
   void GetInfo(GetInfoCompleter::Sync& completer) override;
   void GetStats(GetStatsRequestView request, GetStatsCompleter::Sync& completer) override;
   void GetFifo(GetFifoCompleter::Sync& completer) override;
@@ -101,49 +100,23 @@ class BlockDevice : public BlockDeviceType,
   void ReadBlocks(ReadBlocksRequestView request, ReadBlocksCompleter::Sync& completer) override;
   void WriteBlocks(WriteBlocksRequestView request, WriteBlocksCompleter::Sync& completer) override;
 
+  void GetTypeGuid(GetTypeGuidCompleter::Sync& completer) override;
+  void GetInstanceGuid(GetInstanceGuidCompleter::Sync& completer) override;
+  void GetName(GetNameCompleter::Sync& completer) override;
+
+  void QuerySlices(QuerySlicesRequestView request, QuerySlicesCompleter::Sync& completer) override;
+  void GetVolumeInfo(GetVolumeInfoCompleter::Sync& completer) override;
+  void Extend(ExtendRequestView request, ExtendCompleter::Sync& completer) override;
+  void Shrink(ShrinkRequestView request, ShrinkCompleter::Sync& completer) override;
+  void Destroy(DestroyCompleter::Sync& completer) override;
+
  private:
   zx_status_t DoIo(zx::vmo& vmo, size_t buf_len, zx_off_t off, zx_off_t vmo_off, bool write);
-
-  zx_status_t FidlPartitionGetTypeGuid(fidl_txn_t* txn);
-  zx_status_t FidlPartitionGetInstanceGuid(fidl_txn_t* txn);
-  zx_status_t FidlPartitionGetName(fidl_txn_t* txn);
-
-  zx_status_t FidlVolumeGetVolumeInfo(fidl_txn_t* txn);
-  zx_status_t FidlVolumeQuerySlices(const uint64_t* start_slices_data, size_t start_slices_count,
-                                    fidl_txn_t* txn);
-  zx_status_t FidlVolumeExtend(uint64_t start_slice, uint64_t slice_count, fidl_txn_t* txn);
-  zx_status_t FidlVolumeShrink(uint64_t start_slice, uint64_t slice_count, fidl_txn_t* txn);
-  zx_status_t FidlVolumeDestroy(fidl_txn_t* txn);
 
   // Completion callback that expects StatsCookie as |cookie| and calls upper
   // layer completion cookie.
   static void UpdateStatsAndCallCompletion(void* cookie, zx_status_t status, block_op_t* op);
   void UpdateStats(bool success, zx::ticks start_tick, block_op_t* op);
-
-  static const fuchsia_hardware_block_partition_Partition_ops* PartitionOps() {
-    using Binder = fidl::Binder<BlockDevice>;
-    static const fuchsia_hardware_block_partition_Partition_ops kOps = {
-        .GetTypeGuid = Binder::BindMember<&BlockDevice::FidlPartitionGetTypeGuid>,
-        .GetInstanceGuid = Binder::BindMember<&BlockDevice::FidlPartitionGetInstanceGuid>,
-        .GetName = Binder::BindMember<&BlockDevice::FidlPartitionGetName>,
-    };
-    return &kOps;
-  }
-
-  static const fuchsia_hardware_block_volume_Volume_ops* VolumeOps() {
-    using Binder = fidl::Binder<BlockDevice>;
-    static const fuchsia_hardware_block_volume_Volume_ops kOps = {
-        .GetTypeGuid = Binder::BindMember<&BlockDevice::FidlPartitionGetTypeGuid>,
-        .GetInstanceGuid = Binder::BindMember<&BlockDevice::FidlPartitionGetInstanceGuid>,
-        .GetName = Binder::BindMember<&BlockDevice::FidlPartitionGetName>,
-        .QuerySlices = Binder::BindMember<&BlockDevice::FidlVolumeQuerySlices>,
-        .GetVolumeInfo = Binder::BindMember<&BlockDevice::FidlVolumeGetVolumeInfo>,
-        .Extend = Binder::BindMember<&BlockDevice::FidlVolumeExtend>,
-        .Shrink = Binder::BindMember<&BlockDevice::FidlVolumeShrink>,
-        .Destroy = Binder::BindMember<&BlockDevice::FidlVolumeDestroy>,
-    };
-    return &kOps;
-  }
 
   // The block protocol of the device we are binding against.
   ddk::BlockImplProtocolClient parent_protocol_;
