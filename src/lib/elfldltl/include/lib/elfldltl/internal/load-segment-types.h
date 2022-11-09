@@ -33,9 +33,11 @@ class LoadConstantSegmentType : public SegmentType {
 
   constexpr bool readable() const { return flags_ & Flags::kRead; }
 
+  constexpr bool writable() const { return flags_ & Flags::kWrite; }
+
   constexpr bool executable() const { return flags_ & Flags::kExecute; }
 
-  constexpr bool relro() const { return flags_ & Flags::kWrite; }
+  constexpr bool relro() const { return writable(); }
 
  private:
   using Flags = PhdrBase::Flags;
@@ -57,9 +59,16 @@ struct LoadSegmentTypes {
   };
 
   // Every kind of segment needs an offset and a size.
+  // Only a ConstantSegment is ever executable, or not readable and writable.
   class SegmentBase {
    public:
     using size_type = LoadSegmentTypes::size_type;
+
+    constexpr std::true_type readable() const { return {}; }
+
+    constexpr std::true_type writable() const { return {}; }
+
+    constexpr std::false_type executable() const { return {}; }
 
     constexpr size_type offset() const { return offset_; }
 

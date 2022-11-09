@@ -165,9 +165,9 @@ class Writer {
   // Emits the markup for the load image of a module. The given permissions
   // must admit at least one of reading, writing, or execution.
   //
-  // {{mmap:$start:$size:load:$module_id:$perms:$load_bias}}
+  // {{mmap:$start:$size:load:$module_id:$perms:$static_start}}
   Writer& LoadImageMmap(uintptr_t start, size_t size, unsigned int module_id,
-                        const MemoryPermissions& perms, uint64_t load_bias) {
+                        const MemoryPermissions& perms, uint64_t static_start) {
     ZX_ASSERT(perms.read || perms.write || perms.execute);
     char perm_str[3];
     size_t perm_size = 0;
@@ -187,7 +187,7 @@ class Writer {
         .Field(kLoad)
         .DecimalField(module_id)
         .Field({perm_str, perm_size})
-        .HexField(load_bias)
+        .HexField(static_start)
         .EndElement();
   }
 
@@ -196,7 +196,9 @@ class Writer {
   //
 
   constexpr Writer& Literal(std::string_view str) {
-    sink_(str);
+    if (!str.empty()) {
+      sink_(str);
+    }
     return *this;
   }
 

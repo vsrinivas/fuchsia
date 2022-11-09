@@ -10,6 +10,7 @@
 #include <lib/elfldltl/static-vector.h>
 #include <lib/stdcompat/source_location.h>
 #include <lib/stdcompat/span.h>
+#include <lib/symbolizer-markup/writer.h>
 
 #include <zxtest/zxtest.h>
 
@@ -675,5 +676,50 @@ constexpr auto ApplyRelroCantMerge = [](auto&& elf) {
 };
 
 TEST(ElfldltlLoadTests, ApplyRelroCantMerge) { TestAllFormats(ApplyRelroCantMerge); }
+
+constexpr auto SymbolizerContext = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using size_type = typename Elf::size_type;
+  using Phdr = typename Elf::Phdr;
+
+  auto diag = ExpectOkDiagnostics();
+
+  elfldltl::LoadInfo<Elf, elfldltl::StdContainer<std::vector>::Container> info;
+
+  constexpr std::array kBuildId{std::byte{0x12}, std::byte{0x34}, std::byte{0xab}, std::byte{0xcd}};
+
+  size_type offset = 0;
+  for (uint32_t flags : (const uint32_t[]){
+           Phdr::kRead,
+           Phdr::kExecute,
+           Phdr::kRead | Phdr::kWrite,
+       }) {
+    Phdr phdr = {
+        .type = elfldltl::ElfPhdrType::kLoad,
+        .offset = offset,
+        .vaddr = offset,
+        .filesz = kPageSize,
+        .memsz = kPageSize,
+    };
+    phdr.flags = flags;
+    offset += kPageSize;
+    ASSERT_TRUE(info.AddSegment(diag, kPageSize, phdr));
+  };
+
+  constexpr char kExpectedContext[] = R"""(foo: {{{module:17:foo:elf:1234abcd}}}
+foo: {{{mmap:0x12340000:0x1000:load:17:r:0x0}}}
+foo: {{{mmap:0x12341000:0x1000:load:17:x:0x1000}}}
+foo: {{{mmap:0x12342000:0x1000:load:17:rw:0x2000}}}
+)""";
+
+  std::string markup;
+  symbolizer_markup::Writer writer([&markup](std::string_view str) { markup += str; });
+  EXPECT_EQ(&writer, &(info.SymbolizerContext(writer, 17, "foo", cpp20::span(kBuildId), 0x12340000,
+                                              "foo: ")));
+
+  EXPECT_STREQ(kExpectedContext, markup);
+};
+
+TEST(ElfldltlLoadTests, SymbolizerContext) { TestAllFormats(SymbolizerContext); }
 
 }  // namespace

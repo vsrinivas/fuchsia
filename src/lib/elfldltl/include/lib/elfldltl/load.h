@@ -358,6 +358,29 @@ class LoadInfo {
     return diagnostics.FormatError(kMissing);
   }
 
+  // This uses the symbolizer_markup::Writer API to emit the contextual
+  // elements describing this ELF module.  The ID number should be unique among
+  // modules in the same address space, i.e. since the last Reset() in the same
+  // markup output stream.
+  template <class Writer>
+  Writer& SymbolizerContext(Writer& writer, unsigned int id, std::string_view name,
+                            cpp20::span<const std::byte> build_id, size_type load_address,
+                            std::string_view prefix = {}) {
+    writer.Literal(prefix).ElfModule(id, name, build_id).Newline();
+    VisitSegments([&](const auto& segment) {
+      size_type load_vaddr = segment.vaddr() - vaddr_start() + load_address;
+      writer.Literal(prefix)
+          .LoadImageMmap(load_vaddr, segment.memsz(), id,
+                         {.read = segment.readable(),
+                          .write = segment.writable(),
+                          .execute = segment.executable()},
+                         segment.vaddr())
+          .Newline();
+      return true;
+    });
+    return writer;
+  }
+
  private:
   // Making this static with a universal reference parameter avoids having to
   // repeat the actual body in the const and non-const methods that call it.

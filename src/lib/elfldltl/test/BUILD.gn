@@ -41,6 +41,7 @@ source_set("unittests") {
   deps = [
     "..",
     "//sdk/lib/stdcompat",
+    "//src/lib/symbolizer-markup",
     "//zircon/system/ulib/zxtest",
   ]
   if (is_elf) {
