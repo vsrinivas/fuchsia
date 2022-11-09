@@ -116,17 +116,91 @@ class DisplayFuses : public hwreg::RegisterBase<DisplayFuses, uint32_t> {
 // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 pages 545-546
 //
 // This register is based on the Tiger Lake definition.
-class Dssm : public hwreg::RegisterBase<Dssm, uint32_t> {
+class DisplayStraps : public hwreg::RegisterBase<DisplayStraps, uint32_t> {
  public:
-  enum class RefFrequency : uint8_t {
-    k24Mhz = 0,
-    k19_2Mhz = 1,
-    k38_4Mhz = 2,
+  // Documented values for the `reference_frequency_select` field.
+  enum class ReferenceFrequencySelectTigerLake : uint8_t {
+    k24Mhz = 0b00,
+    k19_2Mhz = 0b01,
+    k38_4Mhz = 0b10,
   };
-  DEF_FIELD(31, 29, ref_frequency);
-  RefFrequency GetRefFrequency() const { return static_cast<RefFrequency>(ref_frequency()); }
 
-  static auto Get() { return hwreg::RegisterAddr<Dssm>(0x51004); }
+  // Possible values for the `audio_io_location` field.
+  enum class AudioIoLocationTigerLake {
+    kSouth = 0,
+    kNorth = 1,
+  };
+
+  // This field has a non-trivial representation and should be accessed via the
+  // `reference_frequency_khz()` helper.
+  DEF_ENUM_FIELD(ReferenceFrequencySelectTigerLake, 31, 29, reference_frequency_select_tiger_lake);
+
+  // If true, the maximum supported display width is 5120 pixels.
+  //
+  // The display width is the result of combinining the widths of all the pipes
+  // that make up the display. If this field is true, the hardware cannot drive
+  // displays above 5k, under any configuration.
+  //
+  // This field is reserved on Kaby Lake and Skylake.
+  DEF_BIT(6, display_width_at_most_5120_pixels_tiger_lake);
+
+  // If true, the Audio I/O flop is bypassed.
+  //
+  // This is enabled on dies where the path to I/O is unsuitably long.
+  //
+  // This field is reserved on Kaby Lake and Skylake.
+  DEF_BIT(5, audio_io_flop_bypassed_tiger_lake);
+
+  // The location where PCH audio is connected to the CPU die.
+  //
+  // This field is reserved on Kaby Lake and Skylake.
+  DEF_ENUM_FIELD(AudioIoLocationTigerLake, 4, 4, audio_io_location_tiger_lake);
+
+  // The WD (Wireless Display; display capture) behavior on page faults.
+  //
+  // If this field is true, the display capture functionality continues writing
+  // data after a page fault. If this field is false, page faults result stop
+  // display capture.
+  //
+  // This field is reserved on Kaby Lake and Skylake.
+  DEF_BIT(3, continue_writes_on_display_capture_fault_tiger_lake);
+
+  // If true, some LCPLL (LC-tank PLL) output frequencies are not available.
+  //
+  // This field is reserved on Tiger Lake.
+  DEF_BIT(2, lcpll_frequencies_disabled);
+
+  // True for SoC (System-on-Chip) parts, false for non-SoC parts.
+  //
+  // This field is reserved on Kaby Lake and Skylake.
+  DEF_BIT(1, is_system_on_chip_tiger_lake);
+
+  // If true, (DisplayPort) DDI A was present during system initialization.
+  //
+  // This field is reserved on Kaby Lake and Skylake.
+  DEF_BIT(0, ddi_a_present);
+
+  // The frequency of the display reference clock, in kHz.
+  //
+  // This frequency is used to compute the frequency multipliers for all the
+  // programmable clocks in the display engine.
+  //
+  // Returns 0 if the field has an undocumented value.
+  int32_t reference_frequency_khz_tiger_lake() const {
+    const ReferenceFrequencySelectTigerLake frequency_select =
+        reference_frequency_select_tiger_lake();
+    switch (frequency_select) {
+      case ReferenceFrequencySelectTigerLake::k19_2Mhz:
+        return 19'200;
+      case ReferenceFrequencySelectTigerLake::k24Mhz:
+        return 24'000;
+      case ReferenceFrequencySelectTigerLake::k38_4Mhz:
+        return 38'400;
+    }
+    return 0;  // The field is set to an undocumented value.
+  }
+
+  static auto Get() { return hwreg::RegisterAddr<DisplayStraps>(0x51004); }
 };
 
 // DISPLAY_INT_CTL (Display Interrupt Control)

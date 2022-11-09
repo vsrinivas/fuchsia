@@ -39,6 +39,26 @@ TEST(RegistersTest, CdClockCtlFreqDecimal) {
   EXPECT_EQ(0b10'1000'1100'0u, tgl_registers::CdClockCtl::FreqDecimal(652'800));
 }
 
+TEST(DisplayStrapsTest, ReferenceFrequencyKhzTigerLake) {
+  auto display_straps = tgl_registers::DisplayStraps::Get().FromValue(0);
+
+  display_straps.set_reg_value(0).set_reference_frequency_select_tiger_lake(
+      tgl_registers::DisplayStraps::ReferenceFrequencySelectTigerLake::k19_2Mhz);
+  EXPECT_EQ(19'200, display_straps.reference_frequency_khz_tiger_lake());
+
+  display_straps.set_reg_value(0).set_reference_frequency_select_tiger_lake(
+      tgl_registers::DisplayStraps::ReferenceFrequencySelectTigerLake::k24Mhz);
+  EXPECT_EQ(24'000, display_straps.reference_frequency_khz_tiger_lake());
+
+  display_straps.set_reg_value(0).set_reference_frequency_select_tiger_lake(
+      tgl_registers::DisplayStraps::ReferenceFrequencySelectTigerLake::k38_4Mhz);
+  EXPECT_EQ(38'400, display_straps.reference_frequency_khz_tiger_lake());
+
+  display_straps.set_reg_value(0).set_reference_frequency_select_tiger_lake(
+      static_cast<tgl_registers::DisplayStraps::ReferenceFrequencySelectTigerLake>(0b11));
+  EXPECT_EQ(0, display_straps.reference_frequency_khz_tiger_lake());
+}
+
 TEST(RegistersTest, PowerWellControlAux_TigerLake) {
   auto reg = tgl_registers::PowerWellControlAux::Get().FromValue(0);
 

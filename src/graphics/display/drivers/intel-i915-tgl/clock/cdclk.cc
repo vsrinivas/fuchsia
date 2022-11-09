@@ -200,22 +200,14 @@ CoreDisplayClockTigerLake::CoreDisplayClockTigerLake(fdf::MmioBuffer* mmio_space
 }
 
 bool CoreDisplayClockTigerLake::LoadState() {
-  // Load ref clock frequency.
-  auto dssm = tgl_registers::Dssm::Get().ReadFrom(mmio_space_);
-  switch (dssm.GetRefFrequency()) {
-    case tgl_registers::Dssm::RefFrequency::k19_2Mhz:
-      ref_clock_khz_ = 19'200;
-      break;
-    case tgl_registers::Dssm::RefFrequency::k24Mhz:
-      ref_clock_khz_ = 24'000;
-      break;
-    case tgl_registers::Dssm::RefFrequency::k38_4Mhz:
-      ref_clock_khz_ = 38'400;
-      break;
-    default:
-      // Unreachable
-      ZX_DEBUG_ASSERT(false);
+  auto display_straps = tgl_registers::DisplayStraps::Get().ReadFrom(mmio_space_);
+  ref_clock_khz_ = display_straps.reference_frequency_khz_tiger_lake();
+  if (ref_clock_khz_ == 0) {
+    zxlogf(ERROR, "Invalid reference clock frequency select! Display straps register: %x",
+           display_straps.reg_value());
+    return false;
   }
+  zxlogf(TRACE, "Display reference clock frequency: %d kHz", ref_clock_khz_);
 
   auto cdclk_pll_enable = tgl_registers::IclCdClkPllEnable::Get().ReadFrom(mmio_space_);
   if (!cdclk_pll_enable.pll_lock()) {

@@ -476,27 +476,8 @@ bool DisplayPllTigerLake::DoEnable(const DdiPllConfig& pll_config) {
     return false;
   }
 
-  // TODO(costan): Land https://fxrev.dev/740590 first and replace this block
-  //               with a call to reference_frequency_khz_tiger_lake().
-  int32_t reference_clock_khz;
-  {
-    // Load reference clock frequency.
-    auto dssm = tgl_registers::Dssm::Get().ReadFrom(mmio_space_);
-    switch (dssm.GetRefFrequency()) {
-      case tgl_registers::Dssm::RefFrequency::k19_2Mhz:
-        reference_clock_khz = 19'200;
-        break;
-      case tgl_registers::Dssm::RefFrequency::k24Mhz:
-        reference_clock_khz = 24'000;
-        break;
-      case tgl_registers::Dssm::RefFrequency::k38_4Mhz:
-        reference_clock_khz = 38'400;
-        break;
-      default:
-        // Unreachable
-        ZX_ASSERT_MSG(false, "DSSM: Invalid reference frequency field: 0x%x", dssm.ref_frequency());
-    }
-  }
+  auto display_straps = tgl_registers::DisplayStraps::Get().ReadFrom(mmio_space_);
+  const int32_t reference_clock_khz = display_straps.reference_frequency_khz_tiger_lake();
 
   auto pll_dco_frequency =
       tgl_registers::DisplayPllDcoFrequencyTigerLake::GetForDpll(dpll()).FromValue(0);
@@ -818,22 +799,8 @@ DpllManagerTigerLake::DpllManagerTigerLake(fdf::MmioBuffer* mmio_space) : mmio_s
 
   // TODO(fxbug.dev/99980): Add Thunderbolt PLL (DPLL 2) to the `plls_` map.
 
-  // Load reference clock frequency.
-  auto dssm = tgl_registers::Dssm::Get().ReadFrom(mmio_space_);
-  switch (dssm.GetRefFrequency()) {
-    case tgl_registers::Dssm::RefFrequency::k19_2Mhz:
-      reference_clock_khz_ = 19'200;
-      break;
-    case tgl_registers::Dssm::RefFrequency::k24Mhz:
-      reference_clock_khz_ = 24'000;
-      break;
-    case tgl_registers::Dssm::RefFrequency::k38_4Mhz:
-      reference_clock_khz_ = 38'400;
-      break;
-    default:
-      // Unreachable
-      ZX_ASSERT_MSG(false, "DSSM: Invalid reference frequency field: 0x%x", dssm.ref_frequency());
-  }
+  auto display_straps = tgl_registers::DisplayStraps::Get().ReadFrom(mmio_space_);
+  reference_clock_khz_ = display_straps.reference_frequency_khz_tiger_lake();
 }
 
 bool DpllManagerTigerLake::SetDdiClockSource(DdiId ddi_id, tgl_registers::Dpll pll) {
