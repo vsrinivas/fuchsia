@@ -8,7 +8,6 @@
 #![recursion_limit = "256"]
 
 mod device;
-mod future_util;
 mod inspect;
 mod service;
 #[cfg(test)]
