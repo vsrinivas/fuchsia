@@ -12,7 +12,7 @@ rustc_library("routing") {
   edition = "2021"
 
   visibility = [
-    "//src/security/scrutiny/plugins/*",
+    "//src/security/lib/scrutiny/plugins/*",
     "//src/sys/base-resolver:*",
     "//src/sys/component_manager/*",
     "//src/sys/full-resolver:*",

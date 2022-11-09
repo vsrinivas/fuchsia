@@ -12,7 +12,7 @@ if (is_host) {
     edition = "2021"
     deps = [
       "//src/lib/fuchsia-url",
-      "//src/security/scrutiny/utils",
+      "//src/security/lib/scrutiny/utils",
       "//third_party/rust_crates:serde",
     ]
     non_rust_deps = [ "//src/lib/chunked-compression" ]

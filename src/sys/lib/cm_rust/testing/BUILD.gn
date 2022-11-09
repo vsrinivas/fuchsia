@@ -26,7 +26,7 @@ rustc_library("testing") {
 
   visibility = [
     "//src/connectivity/network/testing/netemul/runner:*",
-    "//src/security/scrutiny/plugins:*",
+    "//src/security/lib/scrutiny/plugins:*",
     "//src/sys/component_manager/*",
     "//src/sys/lib/cm_rust/testing:*",
     "//src/sys/lib/routing/testing/*",

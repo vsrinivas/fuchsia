@@ -4,7 +4,7 @@
  * found in the LICENSE file.
  */
 
-#include "src/security/scrutiny/utils/ffi/blobfs-export.h"
+#include "src/security/lib/scrutiny/utils/ffi/blobfs-export.h"
 
 #include <fcntl.h>
 #include <string.h>

@@ -11,7 +11,7 @@ rustc_library("fuchsia-pkg-cache-url") {
 
   visibility = [
     ":*",
-    "//src/security/scrutiny/*",
+    "//src/security/lib/scrutiny/*",
     "//src/sys/base-resolver/*",
     "//src/sys/pkg/lib",
   ]

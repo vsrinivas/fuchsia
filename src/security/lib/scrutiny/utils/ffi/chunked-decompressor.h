@@ -4,8 +4,8 @@
  * found in the LICENSE file.
  */
 
-#ifndef SRC_SECURITY_SCRUTINY_UTILS_FFI_CHUNKED_DECOMPRESSOR_H_
-#define SRC_SECURITY_SCRUTINY_UTILS_FFI_CHUNKED_DECOMPRESSOR_H_
+#ifndef SRC_SECURITY_LIB_SCRUTINY_UTILS_FFI_CHUNKED_DECOMPRESSOR_H_
+#define SRC_SECURITY_LIB_SCRUTINY_UTILS_FFI_CHUNKED_DECOMPRESSOR_H_
 
 #include <cstddef>
 
@@ -15,4 +15,4 @@
 extern "C" size_t zstd_chunked_decompress(const void* src, size_t src_len, void* dst,
                                           size_t dst_capacity);
 
-#endif  // SRC_SECURITY_SCRUTINY_UTILS_FFI_CHUNKED_DECOMPRESSOR_H_
+#endif  // SRC_SECURITY_LIB_SCRUTINY_UTILS_FFI_CHUNKED_DECOMPRESSOR_H_

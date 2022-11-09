@@ -14,8 +14,8 @@ ffx_plugin("ffx_scrutiny") {
     "verify:ffx_scrutiny_verify",
   ]
   deps = [
-    "//src/security/scrutiny/config",
-    "//src/security/scrutiny/frontend",
+    "//src/security/lib/scrutiny/config",
+    "//src/security/lib/scrutiny/frontend",
   ]
   non_rust_deps = [ "//src/lib/chunked-compression" ]
 

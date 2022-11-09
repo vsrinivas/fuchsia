@@ -11,7 +11,7 @@ if (is_host) {
     with_unit_tests = true
     edition = "2021"
     visibility = [
-      "//src/security/scrutiny/*",
+      "//src/security/lib/scrutiny/*",
 
       # TODO(fxbug.dev/93569): Shared types should be exposed on a public
       # interface instead of making this visibility exception.
@@ -30,9 +30,9 @@ if (is_host) {
       "//sdk/fidl/fuchsia.component.internal:fuchsia.component.internal_rust",
       "//src/lib/fidl/rust/fidl",
       "//src/lib/fuchsia-url",
-      "//src/security/scrutiny/config",
-      "//src/security/scrutiny/framework",
-      "//src/security/scrutiny/utils",
+      "//src/security/lib/scrutiny/config",
+      "//src/security/lib/scrutiny/framework",
+      "//src/security/lib/scrutiny/utils",
       "//src/sys/lib/cm_fidl_validator",
       "//src/sys/lib/cm_rust",
       "//src/sys/lib/component_id_index",
@@ -64,7 +64,7 @@ if (is_host) {
     test_deps = [
       "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
       "//src/lib/fuchsia",
-      "//src/security/scrutiny/testing",
+      "//src/security/lib/scrutiny/testing",
       "//src/sys/lib/fuchsia-zbi/abi",
       "//third_party/rust_crates:assert_matches",
       "//third_party/rust_crates:sha2",

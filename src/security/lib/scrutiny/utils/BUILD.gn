@@ -72,7 +72,7 @@ if (is_host) {
     edition = "2021"
     visibility = [
       "//src/developer/ffx/plugins/scrutiny/*",
-      "//src/security/scrutiny/*",
+      "//src/security/lib/scrutiny/*",
     ]
     deps = [
       "//src/lib/fuchsia-url",
@@ -99,7 +99,7 @@ if (is_host) {
 
     non_rust_deps = [
       "//src/lib/chunked-compression",
-      "//src/security/scrutiny/utils/ffi",
+      "//src/security/lib/scrutiny/utils/ffi",
       "//third_party/zstd",
     ]
 
@@ -158,7 +158,7 @@ if (is_host) {
 
     non_rust_deps = [
       "//src/lib/chunked-compression",
-      "//src/security/scrutiny/utils/ffi",
+      "//src/security/lib/scrutiny/utils/ffi",
       "//third_party/zstd",
     ]
   }

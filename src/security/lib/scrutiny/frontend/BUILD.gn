@@ -11,9 +11,9 @@ if (is_host) {
     with_unit_tests = true
     edition = "2021"
     deps = [
-      "//src/security/scrutiny/config",
-      "//src/security/scrutiny/framework",
-      "//src/security/scrutiny/plugins",
+      "//src/security/lib/scrutiny/config",
+      "//src/security/lib/scrutiny/framework",
+      "//src/security/lib/scrutiny/plugins",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:simplelog",
@@ -26,7 +26,7 @@ if (is_host) {
     non_rust_deps = [ "//src/lib/chunked-compression" ]
 
     test_deps = [
-      "//src/security/scrutiny/testing",
+      "//src/security/lib/scrutiny/testing",
       "//third_party/rust_crates:uuid",
     ]
 

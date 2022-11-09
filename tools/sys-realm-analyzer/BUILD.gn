@@ -11,8 +11,8 @@ rustc_binary("sys_realm_analyzer") {
   edition = "2021"
   visibility = [ ":*" ]
   deps = [
-    "//src/security/scrutiny/config",
-    "//src/security/scrutiny/frontend",
+    "//src/security/lib/scrutiny/config",
+    "//src/security/lib/scrutiny/frontend",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",

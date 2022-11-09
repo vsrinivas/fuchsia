@@ -10,8 +10,8 @@ ffx_plugin("ffx_scrutiny_blobfs") {
   with_unit_tests = true
 
   deps = [
-    "//src/security/scrutiny/config",
-    "//src/security/scrutiny/frontend",
+    "//src/security/lib/scrutiny/config",
+    "//src/security/lib/scrutiny/frontend",
   ]
   non_rust_deps = [ "//src/lib/chunked-compression" ]
 

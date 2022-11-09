@@ -72,8 +72,8 @@ group("non_hermetic_deps") {
   # will not be resolved except by moving to Bazel.
   visibility += [
     "//build/images/*",
+    "//src/security/lib/scrutiny/tests/*",
     "//src/security/pkg_test/tests/*",
-    "//src/security/scrutiny/tests/*",
     "//src/security/tests/ffx_test/*",
     "//src/sys/component_manager/tests/fuchsia_boot_resolver:*",
     "//src/tests/assembly/*",

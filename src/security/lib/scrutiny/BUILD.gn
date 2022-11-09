@@ -11,12 +11,12 @@ group("scrutiny") {
 group("lib") {
   if (is_host) {
     public_deps = [
-      "//src/security/scrutiny/config",
-      "//src/security/scrutiny/framework",
-      "//src/security/scrutiny/frontend",
-      "//src/security/scrutiny/plugins",
-      "//src/security/scrutiny/testing",
-      "//src/security/scrutiny/utils",
+      "//src/security/lib/scrutiny/config",
+      "//src/security/lib/scrutiny/framework",
+      "//src/security/lib/scrutiny/frontend",
+      "//src/security/lib/scrutiny/plugins",
+      "//src/security/lib/scrutiny/testing",
+      "//src/security/lib/scrutiny/utils",
     ]
   }
 }

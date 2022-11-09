@@ -4,8 +4,8 @@
  * found in the LICENSE file.
  */
 
-#ifndef SRC_SECURITY_SCRUTINY_UTILS_FFI_BLOBFS_EXPORT_H_
-#define SRC_SECURITY_SCRUTINY_UTILS_FFI_BLOBFS_EXPORT_H_
+#ifndef SRC_SECURITY_LIB_SCRUTINY_UTILS_FFI_BLOBFS_EXPORT_H_
+#define SRC_SECURITY_LIB_SCRUTINY_UTILS_FFI_BLOBFS_EXPORT_H_
 
 #include <cstddef>
 
@@ -14,4 +14,4 @@
 // be used by the rust FFI.
 extern "C" int blobfs_export_blobs(const char* source_path, const char* output_path);
 
-#endif  // SRC_SECURITY_SCRUTINY_UTILS_FFI_BLOBFS_EXPORT_H_
+#endif  // SRC_SECURITY_LIB_SCRUTINY_UTILS_FFI_BLOBFS_EXPORT_H_

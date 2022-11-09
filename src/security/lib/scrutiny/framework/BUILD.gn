@@ -10,9 +10,9 @@ if (is_host) {
     name = "scrutiny"
     with_unit_tests = true
     edition = "2021"
-    visibility = [ "//src/security/scrutiny/*" ]
+    visibility = [ "//src/security/lib/scrutiny/*" ]
     deps = [
-      "//src/security/scrutiny/config",
+      "//src/security/lib/scrutiny/config",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_json",
@@ -21,7 +21,7 @@ if (is_host) {
       "//third_party/rust_crates:uuid",
     ]
     non_rust_deps = [ "//src/lib/chunked-compression" ]
-    test_deps = [ "//src/security/scrutiny/testing" ]
+    test_deps = [ "//src/security/lib/scrutiny/testing" ]
     sources = [
       "src/engine/dispatcher.rs",
       "src/engine/hook.rs",

@@ -9,10 +9,10 @@ ffx_plugin("ffx_scrutiny_verify") {
   edition = "2021"
   with_unit_tests = true
   deps = [
-    "//src/security/scrutiny/config",
-    "//src/security/scrutiny/frontend",
-    "//src/security/scrutiny/plugins",
-    "//src/security/scrutiny/utils",
+    "//src/security/lib/scrutiny/config",
+    "//src/security/lib/scrutiny/frontend",
+    "//src/security/lib/scrutiny/plugins",
+    "//src/security/lib/scrutiny/utils",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
