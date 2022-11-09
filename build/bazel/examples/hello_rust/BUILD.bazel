@@ -1,0 +1,56 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+load(
+    "@rules_fuchsia//fuchsia:defs.bzl",
+    "fuchsia_component",
+    "fuchsia_component_manifest",
+    "fuchsia_package",
+    "fuchsia_wrap_rust_binary",
+    "if_fuchsia",
+)
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_doc")
+
+rust_binary(
+    name = "hello_rust_native",
+    srcs = ["src/main.rs"],
+    edition = "2021",
+    rustc_flags = [
+        "-Cpanic=abort",
+    ],
+
+    # TODO(fxbug.dev/114636) make this be included automatically for all rust binaries.
+    deps = if_fuchsia(["@fuchsia_sdk//pkg/fdio"]),
+)
+
+fuchsia_wrap_rust_binary(
+    name = "hello_rust",
+    native_binary = ":hello_rust_native",
+)
+
+fuchsia_component_manifest(
+    name = "manifest",
+    src = "meta/hello_rust.cml",
+    includes = ["@fuchsia_sdk//pkg/syslog:client"],
+)
+
+fuchsia_component(
+    name = "component",
+    manifest = ":manifest",
+    deps = [":hello_rust"],
+)
+
+fuchsia_package(
+    name = "pkg",
+    package_name = "hello_rust",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":component",
+    ],
+)
+
+rust_doc(
+    name = "hello_rust_doc",
+    crate = ":hello_rust_native",
+)
