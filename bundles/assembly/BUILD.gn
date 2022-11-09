@@ -7,11 +7,24 @@ import("//build/assembly/assembly_input_bundle.gni")
 assert(is_fuchsia,
        "Assembly Input Bundles can only be in the Fuchsia toolchain")
 
+# All of the platform assembly input bundles.
 group("assembly") {
   testonly = true
   deps = [
-    ":common_minimal",
+    # The non-testonly assembly bundles
+    ":prod_only",
+
+    # The testonly assembly bundles
     ":common_minimal_eng",
+  ]
+}
+
+# This group is used to easily get the set of production (non-testonly) platform
+# assembly input bundles.
+group("prod_only") {
+  testonly = false
+  deps = [
+    ":common_minimal",
     ":emulator_support",
   ]
 }

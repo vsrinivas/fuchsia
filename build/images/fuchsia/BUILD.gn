@@ -413,12 +413,9 @@ if (is_fuchsia) {
     partitions_config = files.partitions_config
     output_path = files.assembly_inputs
 
-    sources = [
-      "${files.outdir}/legacy",
-      "${files.platform_aib_dir}/common_minimal",
-      "${files.platform_aib_dir}/common_minimal_eng",
-      "${files.platform_aib_dir}/emulator_support",
-    ]
+    # Add the legacy AIB for the fuchsia assembly.  The platform AIBs are added
+    # automatically from the build_api_module("assembly_input_archives")
+    sources = [ "${files.outdir}/legacy" ]
 
     deps = [
       ":fuchsia_assembly",

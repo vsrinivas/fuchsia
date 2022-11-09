@@ -30,6 +30,39 @@ template("generated_assembly_inputs") {
   assert(defined(invoker.partitions_config), "Need to define partitions_config")
   assert(defined(invoker.output_path), "Need to define output_path")
 
+  labels = {
+    platform_aibs = "platform_assembly_input_bundles"
+  }
+
+  files = {
+    platform_aibs = "${target_out_dir}/platform_assembly_input_bundles.json"
+  }
+
+  generated_file(labels.platform_aibs) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    outputs = [ files.platform_aibs ]
+    data_keys = [ "assembly_input_archives" ]
+    output_conversion = "json"
+
+    deps = []
+
+    # The platform bundles
+    if (testonly) {
+      deps += [ "//bundles/assembly" ]
+    } else {
+      deps += [ "//bundles/assembly:prod_only" ]
+    }
+
+    # The legacy bundle from the assembly.
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+  }
+
   python_action(target_name) {
     forward_variables_from(invoker,
                            [
@@ -39,11 +72,17 @@ template("generated_assembly_inputs") {
                            ])
     binary_label = "//build/assembly/scripts:generated_assembly_inputs"
 
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [ ":${labels.platform_aibs}" ]
+
     depfile_path = "$target_out_dir/$target_name.depfile"
     depfile = depfile_path
 
     outputs = [ invoker.output_path ]
     inputs = [
+      files.platform_aibs,
       invoker.images_config,
       invoker.partitions_config,
       invoker.product_config,
@@ -52,6 +91,8 @@ template("generated_assembly_inputs") {
     args = [
       "--product-config",
       rebase_path(invoker.product_config, root_build_dir),
+      "--assembly-input-bundles",
+      rebase_path(files.platform_aibs, root_build_dir),
       "--images-config",
       rebase_path(invoker.images_config, root_build_dir),
       "--partitions-config",

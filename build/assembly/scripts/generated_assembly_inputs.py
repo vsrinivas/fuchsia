@@ -21,6 +21,8 @@ def main():
     parser.add_argument(
         '--product-config', type=argparse.FileType('r'), required=True)
     parser.add_argument(
+        "--assembly-input-bundles", type=argparse.FileType('r'), required=True)
+    parser.add_argument(
         '--images-config', type=argparse.FileType('r'), required=True)
     parser.add_argument(
         '--partitions-config', type=argparse.FileType('r'), required=True)
@@ -74,6 +76,14 @@ def main():
                 add_package(package)
             for package in packages.get("cache", []):
                 add_package(package)
+
+    # Add the assembly input bundles
+    assembly_input_bundles = json.load(args.assembly_input_bundles)
+    for bundle_entry in assembly_input_bundles:
+        dirname, basename = os.path.split(bundle_entry["path"])
+        if basename.endswith(".tgz"):
+            basename = basename[:-4]
+        add_source(os.path.join(dirname, basename))
 
     # Add the images config.
     add_source(args.images_config.name)
