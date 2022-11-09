@@ -151,7 +151,7 @@ func clonePkts(pkts stack.PacketBufferList) stack.PacketBufferList {
 	return newPkts
 }
 
-// WritePackets returns the number of packets in hdrs that were successfully
+// WritePackets returns the number of packets in `pkts` that were successfully
 // written to all links.
 func (ep *Endpoint) WritePackets(pkts stack.PacketBufferList) (int, tcpip.Error) {
 	minPkts := pkts.Len()
