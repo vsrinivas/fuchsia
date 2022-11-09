@@ -15,11 +15,13 @@ executable("touchpad-test-bin") {
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_cpp_wire",
     "//sdk/lib/fdio",
     "//sdk/lib/fhcp/cpp",
+    "//sdk/lib/fit",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/sync:sync-cpp",
   ]
 }
 

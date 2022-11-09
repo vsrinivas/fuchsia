@@ -7,12 +7,16 @@
 #include <fidl/fuchsia.input.report/cpp/wire.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fhcp/cpp/fhcp.h>
+#include <lib/fit/function.h>
+#include <lib/sync/cpp/completion.h>
 
 #include <gtest/gtest.h>
 
 #include "src/lib/fsl/io/device_watcher.h"
 
 namespace fir = fuchsia_input_report;
+
+constexpr zx::duration kPerQuadrantTimeout = zx::sec(30);
 
 struct Midpoints {
   int64_t x_midpoint;
@@ -26,6 +30,7 @@ void ConnectToTouchpad(fidl::WireSyncClient<fir::InputDevice>* out_client,
                        Midpoints* out_midpoints);
 void WaitForTouchAndRelease(fidl::WireSyncClient<fir::InputReportsReader>& client,
                             Midpoints midpoints, Quadrant desired_quadrant);
+zx_status_t RunWithTimeout(zx::duration timeout, fit::closure f);
 
 TEST(TouchpadTests, AreaCoverage) {
   // This test verifies that the touchpad driver can report touches at all four corners of the
@@ -46,10 +51,22 @@ TEST(TouchpadTests, AreaCoverage) {
   auto reader_client = fidl::WireSyncClient<fir::InputReportsReader>(std::move(endpoints->client));
 
   // The test itself - check for touches in each corner.
-  WaitForTouchAndRelease(reader_client, midpoints, Quadrant::kTopLeft);
-  WaitForTouchAndRelease(reader_client, midpoints, Quadrant::kTopRight);
-  WaitForTouchAndRelease(reader_client, midpoints, Quadrant::kBottomRight);
-  WaitForTouchAndRelease(reader_client, midpoints, Quadrant::kBottomLeft);
+  //
+  // We specify a time-out in the code itself rather than in the build rule to ensure that it is
+  // honored in all contexts that the test is run. For instance, `ffx test` does not use the
+  // time-out in the build file, nor does `ffx driver conformance`.
+  ASSERT_EQ(ZX_OK, RunWithTimeout(kPerQuadrantTimeout, [&reader_client, midpoints]() {
+              WaitForTouchAndRelease(reader_client, midpoints, Quadrant::kTopLeft);
+            }));
+  ASSERT_EQ(ZX_OK, RunWithTimeout(kPerQuadrantTimeout, [&reader_client, midpoints]() {
+              WaitForTouchAndRelease(reader_client, midpoints, Quadrant::kTopRight);
+            }));
+  ASSERT_EQ(ZX_OK, RunWithTimeout(kPerQuadrantTimeout, [&reader_client, midpoints]() {
+              WaitForTouchAndRelease(reader_client, midpoints, Quadrant::kBottomRight);
+            }));
+  ASSERT_EQ(ZX_OK, RunWithTimeout(kPerQuadrantTimeout, [&reader_client, midpoints]() {
+              WaitForTouchAndRelease(reader_client, midpoints, Quadrant::kBottomLeft);
+            }));
 }
 
 Quadrant GetQuadrant(const fir::wire::ContactInputReport& contact, Midpoints midpoints) {
@@ -115,6 +132,8 @@ void WaitForTouchAndRelease(fidl::WireSyncClient<fir::InputReportsReader>& clien
                             Midpoints midpoints, Quadrant desired_quadrant) {
   fhcp::PrintManualTestingMessage("\n\n*** Please touch the %s corner of the touchpad and hold.",
                                   GetQuadrantName(desired_quadrant));
+  fhcp::PrintManualTestingMessage("\nThe test will automatically time out after %ld seconds.",
+                                  kPerQuadrantTimeout.to_secs());
 
   WaitForTouch(client, midpoints, desired_quadrant);
 
@@ -187,4 +206,25 @@ void ConfigureTouchEvents(fidl::WireSyncClient<fir::InputDevice>& client) {
   auto feature_report = fir::wire::FeatureReport::Builder(allocator);
   feature_report.touch(touch_report.Build());
   ASSERT_EQ(ZX_OK, client->SetFeatureReport(feature_report.Build()).status());
+}
+
+zx_status_t RunWithTimeout(zx::duration timeout, fit::closure f) {
+  libsync::Completion completion;
+  std::thread thrd = std::thread([&f, &completion]() {
+    f();
+    completion.Signal();
+  });
+
+  zx_status_t status = completion.Wait(timeout);
+  if (status == ZX_OK) {
+    thrd.join();
+  } else {
+    // Detach the thread to be killed when the process exits. We can't join here because that would
+    // defeat the purpose of the time-out.
+    thrd.detach();
+    if (status == ZX_ERR_TIMED_OUT) {
+      ADD_FAILURE() << "Test timed out after " << kPerQuadrantTimeout.to_secs() << " seconds.";
+    }
+  }
+  return status;
 }
