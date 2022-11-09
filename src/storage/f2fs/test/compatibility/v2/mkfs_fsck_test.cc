@@ -17,5 +17,13 @@ TEST_F(MkfsFsckCompatibilityTest, MkfsFsckLinuxToFuchsia) {
   GetEnclosedGuest().GetFuchsiaOperator().Fsck();
 }
 
+TEST_F(MkfsFsckCompatibilityTest, MkfsFsckFuchsiaToLinux) {
+  // mkfs on Fuchsia
+  GetEnclosedGuest().GetFuchsiaOperator().Mkfs();
+
+  // fsck on Linux
+  GetEnclosedGuest().GetLinuxOperator().Fsck();
+}
+
 }  // namespace
 }  // namespace f2fs
