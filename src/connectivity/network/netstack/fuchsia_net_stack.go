@@ -9,7 +9,6 @@ package netstack
 import (
 	"errors"
 	"fmt"
-	"syscall/zx"
 	"syscall/zx/fidl"
 
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
@@ -19,14 +18,12 @@ import (
 
 	fidlethernet "fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/net"
-	"fidl/fuchsia/net/interfaces/admin"
 	"fidl/fuchsia/net/name"
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
 
 	"gvisor.dev/gvisor/pkg/atomicbitops"
 	"gvisor.dev/gvisor/pkg/tcpip"
-	tcpipstack "gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
 var _ stack.StackWithCtx = (*stackImpl)(nil)
@@ -51,91 +48,6 @@ func (ns *Netstack) delInterface(id uint64) stack.StackDelEthernetInterfaceResul
 	}
 
 	return result
-}
-
-func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr net.Subnet) stack.StackAddInterfaceAddressDeprecatedResult {
-	protocolAddr := fidlconv.ToTCPIPProtocolAddress(ifAddr)
-	if protocolAddr.AddressWithPrefix.PrefixLen > 8*len(protocolAddr.AddressWithPrefix.Address) {
-		return stack.StackAddInterfaceAddressDeprecatedResultWithErr(stack.ErrorInvalidArgs)
-	}
-
-	_ = syslog.Infof("NIC %d: adding IP %s with subnet route", id, protocolAddr.AddressWithPrefix)
-
-	nicid := tcpip.NICID(id)
-	info, ok := ns.stack.NICInfo()[nicid]
-	if !ok {
-		return stack.StackAddInterfaceAddressDeprecatedResultWithErr(stack.ErrorNotFound)
-	}
-	ifs := info.Context.(*ifState)
-	for _, candidate := range info.ProtocolAddresses {
-		if protocolAddr.AddressWithPrefix.Address == candidate.AddressWithPrefix.Address {
-			if protocolAddr.AddressWithPrefix.PrefixLen == candidate.AddressWithPrefix.PrefixLen {
-				return stack.StackAddInterfaceAddressDeprecatedResultWithErr(stack.ErrorAlreadyExists)
-			}
-			// Same address but different prefix. Remove the address and re-add it
-			// with the new prefix (below).
-			switch err := ifs.removeAddress(protocolAddr); err {
-			case zx.ErrOk:
-			case zx.ErrBadState:
-				return stack.StackAddInterfaceAddressDeprecatedResultWithErr(stack.ErrorNotFound)
-			case zx.ErrNotFound:
-				// We lost a race, the address was already removed.
-			default:
-				panic(fmt.Sprintf("NIC %d: failed to remove address %s: %s", nicid, protocolAddr.AddressWithPrefix, err))
-			}
-			break
-		}
-	}
-
-	if ok, reason := ifs.addAddress(protocolAddr, tcpipstack.AddressProperties{}); !ok {
-		switch reason {
-		case admin.AddressRemovalReasonAlreadyAssigned:
-			return stack.StackAddInterfaceAddressDeprecatedResultWithErr(stack.ErrorAlreadyExists)
-		case admin.AddressRemovalReasonInterfaceRemoved:
-			return stack.StackAddInterfaceAddressDeprecatedResultWithErr(stack.ErrorNotFound)
-		default:
-			panic(fmt.Sprintf("NIC %d: ifs.addAddress(%s, {}) unexpected removal reason: %s", nicid, protocolAddr.AddressWithPrefix, reason))
-		}
-	}
-
-	route := addressWithPrefixRoute(nicid, protocolAddr.AddressWithPrefix)
-	_ = syslog.Infof("creating subnet route %s with metric=<not-set>, dynamic=false", route)
-	if err := ns.AddRoute(route, metricNotSet, false /* dynamic */); err != nil {
-		if !errors.Is(err, routes.ErrNoSuchNIC) {
-			panic(fmt.Sprintf("NIC %d: failed to add subnet route %s: %s", nicid, route, err))
-		}
-		return stack.StackAddInterfaceAddressDeprecatedResultWithErr(stack.ErrorNotFound)
-	}
-	return stack.StackAddInterfaceAddressDeprecatedResultWithResponse(stack.StackAddInterfaceAddressDeprecatedResponse{})
-}
-
-func (ns *Netstack) delInterfaceAddr(id uint64, ifAddr net.Subnet) stack.StackDelInterfaceAddressDeprecatedResult {
-	protocolAddr := fidlconv.ToTCPIPProtocolAddress(ifAddr)
-	if protocolAddr.AddressWithPrefix.PrefixLen > 8*len(protocolAddr.AddressWithPrefix.Address) {
-		return stack.StackDelInterfaceAddressDeprecatedResultWithErr(stack.ErrorInvalidArgs)
-	}
-
-	nicid := tcpip.NICID(id)
-	route := addressWithPrefixRoute(nicid, protocolAddr.AddressWithPrefix)
-	_ = syslog.Infof("removing subnet route %s", route)
-	if routesDeleted := ns.DelRoute(route); len(routesDeleted) == 0 {
-		// The route might have been removed by user action. Continue.
-	}
-
-	info, ok := ns.stack.NICInfo()[nicid]
-	if !ok {
-		return stack.StackDelInterfaceAddressDeprecatedResultWithErr(stack.ErrorNotFound)
-	}
-	ifs := info.Context.(*ifState)
-	switch status := ifs.removeAddress(protocolAddr); status {
-	case zx.ErrOk:
-		return stack.StackDelInterfaceAddressDeprecatedResultWithResponse(stack.StackDelInterfaceAddressDeprecatedResponse{})
-	case zx.ErrBadState, zx.ErrNotFound:
-		return stack.StackDelInterfaceAddressDeprecatedResultWithErr(stack.ErrorNotFound)
-	default:
-		_ = syslog.Errorf("(*Netstack).delInterfaceAddr(%s) failed (NIC %d): %s", protocolAddr.AddressWithPrefix, id, status)
-		return stack.StackDelInterfaceAddressDeprecatedResultWithErr(stack.ErrorInternal)
-	}
 }
 
 func (ns *Netstack) getForwardingTable() []stack.ForwardingEntry {
@@ -232,14 +144,6 @@ func (ni *stackImpl) AddEthernetInterface(_ fidl.Context, topologicalPath string
 
 func (ni *stackImpl) DelEthernetInterface(_ fidl.Context, id uint64) (stack.StackDelEthernetInterfaceResult, error) {
 	return ni.ns.delInterface(id), nil
-}
-
-func (ni *stackImpl) AddInterfaceAddressDeprecated(_ fidl.Context, id uint64, addr net.Subnet) (stack.StackAddInterfaceAddressDeprecatedResult, error) {
-	return ni.ns.addInterfaceAddr(id, addr), nil
-}
-
-func (ni *stackImpl) DelInterfaceAddressDeprecated(_ fidl.Context, id uint64, addr net.Subnet) (stack.StackDelInterfaceAddressDeprecatedResult, error) {
-	return ni.ns.delInterfaceAddr(id, addr), nil
 }
 
 func (ni *stackImpl) GetForwardingTable(fidl.Context) ([]stack.ForwardingEntry, error) {

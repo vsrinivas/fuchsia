@@ -1219,6 +1219,28 @@ impl<'a> TestInterface<'a> {
         Ok(())
     }
 
+    /// Removes an address and a subnet route.
+    pub async fn del_address_and_subnet_route(&self, subnet: fnet::Subnet) -> Result<bool> {
+        let subnet = fnet_ext::apply_subnet_mask(subnet);
+        let mut entry =
+            fnet_stack::ForwardingEntry { subnet, device_id: self.id, next_hop: None, metric: 0 };
+        let () = self.stack.del_forwarding_entry(&mut entry).await.squash_result().with_context(
+            || {
+                format!(
+                    "stack.add_forwarding_entry({:?}) for endpoint {} failed",
+                    entry, self.endpoint.name
+                )
+            },
+        )?;
+        self.control.remove_address(&mut subnet.clone()).await.context("FIDL error").and_then(
+            |res| {
+                res.map_err(|e: fnet_interfaces_admin::ControlRemoveAddressError| {
+                    anyhow::anyhow!("{:?}", e)
+                })
+            },
+        )
+    }
+
     /// Consumes this [`TestInterface`] and removes the associated interface
     /// in the Netstack, returning the device lifetime-carrying channels.
     pub async fn remove(

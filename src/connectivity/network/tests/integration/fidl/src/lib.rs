@@ -17,6 +17,7 @@ use net_declare::{fidl_mac, fidl_subnet, std_ip_v4, std_ip_v6, std_socket_addr};
 use netemul::RealmUdpSocket as _;
 use netstack_testing_common::{
     get_component_moniker,
+    interfaces::add_address_wait_assigned,
     realms::{
         constants, KnownServiceProvider, Netstack, Netstack2, NetstackVersion, TestRealmExt as _,
         TestSandboxExt as _,
@@ -151,190 +152,6 @@ async fn test_no_duplicate_interface_names() {
     assert_eq!(result, Err(zx::Status::ALREADY_EXISTS));
 }
 
-#[variants_test]
-#[test_case(true; "after_enabling_interface_first")]
-#[test_case(false; "without_enabling_interface_first")]
-async fn add_del_interface_address_deprecated<N: Netstack>(
-    test_name: &str,
-    enable_interface: bool,
-) {
-    let name = format!("{}_enable_if_{}", test_name, enable_interface);
-
-    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let realm = sandbox.create_netstack_realm::<N, _>(name.as_str()).expect("create realm");
-    let stack =
-        realm.connect_to_protocol::<fnet_stack::StackMarker>().expect("connect to protocol");
-    let interfaces_state = realm
-        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .expect("connect to protocol");
-    let device = sandbox
-        .create_endpoint::<netemul::Ethernet, _>(name.as_str())
-        .await
-        .expect("create endpoint");
-
-    let iface = device.into_interface_in_realm(&realm).await.expect("add device");
-    let id = iface.id();
-
-    if enable_interface {
-        // Ethernet Devices start enabled in Netstack3.
-        let expect_enable = N::VERSION != NetstackVersion::Netstack3;
-        assert_eq!(
-            expect_enable,
-            iface.control().enable().await.expect("send enable").expect("enable interface")
-        );
-        let () = iface.set_link_up(true).await.expect("bring device up");
-        fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
-            fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
-                .expect("interface stream"),
-            &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(id),
-            |fidl_fuchsia_net_interfaces_ext::Properties {
-                 id: _,
-                 name: _,
-                 device_class: _,
-                 online,
-                 addresses: _,
-                 has_default_ipv4_route: _,
-                 has_default_ipv6_route: _,
-             }| (*online).then(|| ()),
-        )
-        .await
-        .expect("wait device online");
-    }
-
-    let mut interface_address = fidl_subnet!("1.1.1.1/32");
-    let res = stack
-        .add_interface_address_deprecated(id, &mut interface_address)
-        .await
-        .expect("add_interface_address_deprecated");
-    assert_eq!(res, Ok(()));
-
-    // Should be an error the second time.
-    let res = stack
-        .add_interface_address_deprecated(id, &mut interface_address)
-        .await
-        .expect("add_interface_address_deprecated");
-    assert_eq!(res, Err(fnet_stack::Error::AlreadyExists));
-
-    let res = stack
-        .add_interface_address_deprecated(id + 1, &mut interface_address)
-        .await
-        .expect("add_interface_address_deprecated");
-    assert_eq!(res, Err(fnet_stack::Error::NotFound));
-
-    let error = stack
-        .add_interface_address_deprecated(
-            id,
-            &mut fidl_fuchsia_net::Subnet { prefix_len: 43, ..interface_address },
-        )
-        .await
-        .expect("add_interface_address_deprecated")
-        .unwrap_err();
-    assert_eq!(error, fnet_stack::Error::InvalidArgs);
-
-    let interface = fidl_fuchsia_net_interfaces_ext::existing(
-        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
-            .expect("create event stream"),
-        fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(id),
-    )
-    .await
-    .expect("retrieve existing interface");
-    // We use contains here because netstack can generate link-local addresses
-    // that can't be predicted.
-    assert_matches::assert_matches!(
-        interface,
-        fidl_fuchsia_net_interfaces_ext::InterfaceState::Known(p)
-            if p.addresses.contains(&fidl_fuchsia_net_interfaces_ext::Address {
-                addr: interface_address,
-                valid_until: zx::sys::ZX_TIME_INFINITE,
-            })
-    );
-
-    let res = stack
-        .del_interface_address_deprecated(id, &mut interface_address)
-        .await
-        .expect("del_interface_address_deprecated");
-    assert_eq!(res, Ok(()));
-
-    let interface = fidl_fuchsia_net_interfaces_ext::existing(
-        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
-            .expect("create watcher event stream"),
-        fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(id),
-    )
-    .await
-    .expect("retrieve existing interface");
-    // We use contains here because netstack can generate link-local addresses
-    // that can't be predicted.
-    assert_matches::assert_matches!(
-        interface,
-        fidl_fuchsia_net_interfaces_ext::InterfaceState::Known(p)
-            if !p.addresses.contains(&fidl_fuchsia_net_interfaces_ext::Address {
-                addr: interface_address,
-                valid_until: zx::sys::ZX_TIME_INFINITE,
-            })
-    );
-}
-
-// Regression test which asserts that racing an address removal and interface
-// removal doesn't cause a Netstack panic.
-#[variants_test]
-async fn remove_interface_and_address<E: netemul::Endpoint, N: Netstack>(name: &str) {
-    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
-    let stack =
-        realm.connect_to_protocol::<fnet_stack::StackMarker>().expect("connect to protocol");
-
-    let mut addresses = (0..32)
-        .map(|i| fidl_fuchsia_net::Subnet {
-            addr: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-                addr: [1, 2, 3, i],
-            }),
-            prefix_len: 16,
-        })
-        .collect::<Vec<_>>();
-
-    for i in 0..8 {
-        let ep =
-            sandbox.create_endpoint::<E, _>(format!("ep{}", i)).await.expect("create endpoint");
-        let iface = ep.into_interface_in_realm(&realm).await.expect("add device");
-
-        futures::stream::iter(addresses.iter_mut())
-            .for_each_concurrent(None, |addr| {
-                stack
-                    .add_interface_address_deprecated(iface.id(), addr)
-                    .map(|r| r.expect("call add_interface_address"))
-                    .map(|r| r.expect("add interface address"))
-            })
-            .await;
-
-        // Removing many addresses increases the chances that address removal
-        // will be handled concurrently with interface removal.
-        let iface_id = iface.id();
-        let remove_addr_fut =
-            futures::stream::iter(addresses.iter_mut()).for_each_concurrent(None, |addr| {
-                stack.del_interface_address_deprecated(iface_id, addr).map(|r| {
-                    match r.expect("call del_interface_address_deprecated") {
-                        Ok(()) | Err(fnet_stack::Error::NotFound) => {}
-                        Err(e) => panic!("delete interface address error: {:?}", e),
-                    }
-                })
-            });
-
-        // NB: The async block is necessary because calls on FIDL proxy
-        // types make the request immediately and return a future which
-        // resolves when the response is returned. Without the async block,
-        // interface removal will be handled by Netstack immediately rather
-        // concurrently with address removal, which is not the desired
-        // behavior.
-        let remove_interface_fut = async move {
-            // NB: iface.remove uses a different channel to remove the interface
-            // which can race with removing addresses above.
-            let (_endpoint, _control) = iface.remove().await.expect("failed to remove interface");
-        };
-
-        futures::future::join(remove_addr_fut, remove_interface_fut).await;
-    }
-}
-
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_log_packets() {
     let name = "test_log_packets";
@@ -418,69 +235,44 @@ async fn add_remove_address_on_loopback<N: Netstack>(name: &str) {
         .into_iter()
         .map(|fidl_fuchsia_net_interfaces_ext::Address { addr, .. }| addr)
         .collect();
-    assert_eq!(addresses[..], [IPV4_LOOPBACK, IPV6_LOOPBACK,]);
+    assert_eq!(addresses[..], [IPV4_LOOPBACK, IPV6_LOOPBACK]);
 
-    let stack = realm
-        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
+    let debug = realm
+        .connect_to_protocol::<fidl_fuchsia_net_debug::InterfacesMarker>()
         .expect("connect to protocol");
-    let stack = &stack;
 
-    let del_addr = |mut addr| async move {
-        stack
-            .del_interface_address_deprecated(loopback_id, &mut addr)
-            .await
-            .expect("del_interface_address")
-            .expect("expected to remove address")
-    };
-    del_addr(IPV4_LOOPBACK).await;
-    del_addr(IPV6_LOOPBACK).await;
+    let (control, server_end) =
+        fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints().expect("create proxy");
+    let () = debug.get_admin(loopback_id, server_end).expect("get admin");
 
-    const NEW_IPV4_ADDRESS: fidl_fuchsia_net::Subnet = fidl_subnet!("1.1.1.1/24");
-    const NEW_IPV6_ADDRESS: fidl_fuchsia_net::Subnet = fidl_subnet!("a::1/64");
-    let add_addr = |mut addr| async move {
-        stack
-            .add_interface_address_deprecated(loopback_id, &mut addr)
-            .await
-            .expect("add_interface_address")
-            .expect("expected to add address")
-    };
-    add_addr(NEW_IPV4_ADDRESS).await;
-    add_addr(NEW_IPV6_ADDRESS).await;
-
-    // Wait for the addresses to be set.
-    let interface_state = realm
-        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .expect("connect to protocol");
-    let mut state = fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(loopback_id);
-    fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
-        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
-            .expect("get interface event stream"),
-        &mut state,
-        |fidl_fuchsia_net_interfaces_ext::Properties {
-             id,
-             name: _,
-             device_class: _,
-             online: _,
-             addresses,
-             has_default_ipv4_route: _,
-             has_default_ipv6_route: _,
-         }| {
-            assert_eq!(loopback_id, *id, "Don't expect to see other interfaces");
-            let addresses: Vec<_> = addresses
-                .into_iter()
-                .map(|fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| addr)
-                .collect();
-            if addresses.len() < 2 {
-                println!("waiting for at least two addresses to be set; got {:?}", addresses);
-                None
-            } else {
-                assert_eq!(addresses[..], [&NEW_IPV4_ADDRESS, &NEW_IPV6_ADDRESS,]);
-                Some(())
+    futures::stream::iter([IPV4_LOOPBACK, IPV6_LOOPBACK].into_iter())
+        .for_each_concurrent(None, |mut addr| {
+            let control = &control;
+            async move {
+                let did_remove = control
+                    .remove_address(&mut addr)
+                    .await
+                    .expect("remove_address")
+                    .expect("remove address");
+                // Netstack3 does not allow addresses to be removed from the loopback device, for
+                // some reason?
+                if N::VERSION == NetstackVersion::Netstack3 {
+                    assert!(!did_remove, "{:?}", addr);
+                } else {
+                    assert!(did_remove, "{:?}", addr);
+                }
             }
-        },
-    )
-    .await
-    .expect("new addresses should be observed");
+        })
+        .await;
+
+    futures::stream::iter([fidl_subnet!("1.1.1.1/24"), fidl_subnet!("a::1/64")].into_iter())
+        .for_each_concurrent(None, |addr| {
+            add_address_wait_assigned(&control, addr, finterfaces_admin::AddressParameters::EMPTY)
+                .map(|res| {
+                    let _: finterfaces_admin::AddressStateProviderProxy = res.expect("add address");
+                })
+        })
+        .await;
 }
 
 #[variants_test]

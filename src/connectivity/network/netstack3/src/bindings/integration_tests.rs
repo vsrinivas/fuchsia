@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use std::collections::{HashMap, HashSet};
-use std::convert::TryFrom as _;
 use std::num::NonZeroU16;
 use std::ops::{Deref as _, DerefMut as _};
 use std::sync::{Arc, Once};
@@ -19,13 +18,13 @@ use fuchsia_async as fasync;
 use futures::lock::Mutex;
 use net_types::ip::{Ip as _, Ipv4, Ipv6, Subnet};
 use net_types::{
-    ip::{AddrSubnetEither, IpAddr, Ipv4Addr, Ipv6Addr},
+    ip::{AddrSubnetEither, Ipv4Addr},
     SpecifiedAddr,
 };
 use netstack3_core::{
+    add_ip_addr_subnet,
     context::{CounterContext, EventContext, InstantContext, RngContext, TimerContext},
     device::{BufferDeviceLayerEventDispatcher, DeviceId, DeviceLayerEventDispatcher},
-    get_all_ip_addr_subnets,
     ip::{
         icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
         types::{AddableEntry, AddableEntryEither},
@@ -55,7 +54,7 @@ use crate::bindings::{
         datagram::{IcmpEcho, SocketCollectionIpExt, Udp},
         stream,
     },
-    util::{ConversionContext as _, IntoFidl as _, TryFromFidlWithContext as _, TryIntoFidl as _},
+    util::{ConversionContext as _, IntoFidl as _, TryFromFidlWithContext as _},
     BindingsNonSyncCtxImpl, DeviceStatusNotifier, InterfaceControlRunner,
     InterfaceEventProducerFactory as _, InterfaceProperties, InterfaceUpdate, LockableContext,
     RequestStreamExt as _, StackTime, DEFAULT_LOOPBACK_MTU, LOOPBACK_NAME,
@@ -373,7 +372,6 @@ pub(crate) struct TestStack {
 struct InterfaceInfo {
     admin_enabled: bool,
     phy_up: bool,
-    addresses: Vec<fidl_net::Subnet>,
 }
 
 impl TestStack {
@@ -490,12 +488,8 @@ impl TestStack {
 
     async fn get_interface_info(&self, id: u64) -> InterfaceInfo {
         let ctx = self.ctx().await;
-        let Ctx { sync_ctx, non_sync_ctx } = ctx.deref();
+        let Ctx { sync_ctx: _, non_sync_ctx } = ctx.deref();
         let device = non_sync_ctx.get_device_info(id).expect("device");
-        let addresses = get_all_ip_addr_subnets(sync_ctx, device.core_id())
-            .into_iter()
-            .map(|addr| addr.try_into_fidl().expect("convert to FIDL"))
-            .collect();
 
         let (admin_enabled, phy_up) = assert_matches::assert_matches!(
             device.info(),
@@ -514,7 +508,7 @@ impl TestStack {
                 phy_up,
                 interface_control: _,
             }) => (*admin_enabled, *phy_up));
-        InterfaceInfo { admin_enabled, phy_up, addresses }
+        InterfaceInfo { admin_enabled, phy_up }
     }
 }
 
@@ -752,15 +746,48 @@ impl TestSetupBuilder {
                 // get the endpoint from the sandbox config:
                 let endpoint = setup.get_endpoint(&ep_name).await?;
                 let cli = stack.connect_stack()?;
-                let if_id = add_stack_endpoint(&cli, endpoint).await?;
+                // add interface:
+                let if_id = cli
+                    .add_ethernet_interface("fake_topo_path", endpoint)
+                    .await
+                    .squash_result()
+                    .context("Add ethernet interface")?;
+
                 // We'll ALWAYS await for the newly created interface to come up
                 // online before returning, so users of `TestSetupBuilder` can
                 // be 100% sure of the state once the setup is done.
                 stack.wait_for_interface_online(if_id).await;
                 if let Some(addr) = addr {
-                    configure_endpoint_address(&cli, if_id, addr).await?;
-                }
+                    stack
+                        .with_ctx(|Ctx { sync_ctx, non_sync_ctx }| {
+                            let device_info =
+                                non_sync_ctx.get_device_info(if_id).ok_or_else(|| {
+                                    format_err!("Failed to get device {} info", if_id)
+                                })?;
 
+                            add_ip_addr_subnet(
+                                sync_ctx,
+                                non_sync_ctx,
+                                &device_info.core_id().clone(),
+                                addr,
+                            )
+                            .context("add interface address")
+                        })
+                        .await?;
+
+                    let (_, subnet) = addr.addr_subnet();
+
+                    let () = cli
+                        .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
+                            subnet: subnet.into_fidl(),
+                            device_id: if_id,
+                            next_hop: None,
+                            metric: 0,
+                        })
+                        .await
+                        .squash_result()
+                        .context("add forwarding entry")?;
+                }
                 assert_eq!(stack.endpoint_ids.insert(ep_name, if_id), None);
             }
 
@@ -769,28 +796,6 @@ impl TestSetupBuilder {
 
         Ok(setup)
     }
-}
-
-/// Shorthand function to create an IPv4 [`AddrSubnetEither`].
-///
-/// # Panics
-///
-/// May panic if `prefix` is longer than the number of bits in this type of IP
-/// address (32 for IPv4), or if `ip` is not a unicast address in the resulting
-/// subnet (see [`net_types::ip::IpAddress::is_unicast_in_subnet`]).
-pub fn new_ipv4_addr_subnet(ip: [u8; 4], prefix: u8) -> AddrSubnetEither {
-    AddrSubnetEither::new(IpAddr::V4(Ipv4Addr::from(ip)), prefix).unwrap()
-}
-
-/// Shorthand function to create an IPv6 [`AddrSubnetEither`].
-///
-/// # Panics
-///
-/// May panic if `prefix` is longer than the number of bits in this type of IP
-/// address (128 for IPv6), or if `ip` is not a unicast address in the resulting
-/// subnet (see [`net_types::ip::IpAddress::is_unicast_in_subnet`]).
-pub fn new_ipv6_addr_subnet(ip: [u8; 16], prefix: u8) -> AddrSubnetEither {
-    AddrSubnetEither::new(IpAddr::V6(Ipv6Addr::from(ip)), prefix).unwrap()
 }
 
 /// Helper struct to create stack configuration for [`TestSetupBuilder`].
@@ -821,49 +826,6 @@ impl StackSetupBuilder {
         self.endpoints.push((name.into(), address));
         self
     }
-}
-
-async fn add_stack_endpoint(
-    cli: &fidl_fuchsia_net_stack::StackProxy,
-    endpoint: fidl::endpoints::ClientEnd<fidl_fuchsia_hardware_ethernet::DeviceMarker>,
-) -> Result<u64, Error> {
-    // add interface:
-    let if_id = cli
-        .add_ethernet_interface("fake_topo_path", endpoint)
-        .await
-        .squash_result()
-        .context("Add ethernet interface")?;
-    Ok(if_id)
-}
-
-async fn configure_endpoint_address(
-    cli: &fidl_fuchsia_net_stack::StackProxy,
-    if_id: u64,
-    addr: AddrSubnetEither,
-) -> Result<(), Error> {
-    // add address:
-    let () = cli
-        .add_interface_address_deprecated(if_id, &mut addr.into_fidl())
-        .await
-        .squash_result()
-        .context("Add interface address")?;
-
-    // add route to ensure `addr` is valid, the result can be safely discarded
-    let _ =
-        AddrSubnetEither::try_from(addr).expect("Invalid test subnet configuration").addr_subnet();
-
-    let () = cli
-        .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
-            subnet: addr.addr_subnet().1.into_fidl(),
-            device_id: if_id,
-            next_hop: None,
-            metric: 0,
-        })
-        .await
-        .squash_result()
-        .context("Add forwarding entry")?;
-
-    Ok(())
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -997,60 +959,6 @@ fn check_ip_enabled<NonSyncCtx: NonSyncContext>(
         netstack3_core::device::get_ipv6_configuration(sync_ctx, core_id).ip_config.ip_enabled;
 
     assert_eq!((ipv4_enabled, ipv6_enabled), (expected, expected));
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_add_del_interface_address_deprecated() {
-    let mut t = TestSetupBuilder::new()
-        .add_endpoint()
-        .add_stack(StackSetupBuilder::new().add_endpoint(1, None))
-        .build()
-        .await
-        .unwrap();
-    let test_stack = t.get(0);
-    let stack = test_stack.connect_stack().unwrap();
-    let if_id = test_stack.get_endpoint_id(1);
-    for addr in [
-        new_ipv4_addr_subnet([192, 168, 0, 1], 24).into_fidl(),
-        new_ipv6_addr_subnet([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], 64)
-            .into_fidl(),
-    ]
-    .iter_mut()
-    {
-        // The first IP address added should succeed.
-        let () = stack
-            .add_interface_address_deprecated(if_id, addr)
-            .await
-            .squash_result()
-            .expect("Add interface address should succeed");
-        let if_info = test_stack.get_interface_info(if_id).await;
-        assert!(if_info.addresses.contains(&addr));
-
-        // Adding the same IP address again should fail with already exists.
-        let err = stack
-            .add_interface_address_deprecated(if_id, addr)
-            .await
-            .expect("Add interface address FIDL call should succeed")
-            .expect_err("Adding same address should fail");
-        assert_eq!(err, fidl_net_stack::Error::AlreadyExists);
-
-        // Deleting an IP address that exists should succeed.
-        let () = stack
-            .del_interface_address_deprecated(if_id, addr)
-            .await
-            .squash_result()
-            .expect("Delete interface address succeeds");
-        let if_info = test_stack.get_interface_info(if_id).await;
-        assert!(!if_info.addresses.contains(&addr));
-
-        // Deleting an IP address that doesn't exist should fail with not found.
-        let err = stack
-            .del_interface_address_deprecated(if_id, addr)
-            .await
-            .expect("Delete interface address FIDL call should succeed")
-            .expect_err("Deleting non-existent address should fail");
-        assert_eq!(err, fidl_net_stack::Error::NotFound);
-    }
 }
 
 #[fasync::run_singlethreaded(test)]

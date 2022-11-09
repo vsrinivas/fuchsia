@@ -56,25 +56,6 @@ protocol Stack {
         id fuchsia.net.InterfaceId;
     }) -> () error Error;
 
-    /// Add an address to the interface. If the interface already has an address
-    /// of a given type that does not allow duplicates, this method will return
-    /// an error.
-    // TODO(https://fxbug.dev/92767): Remove this when N3 implements Control.
-    @deprecated("Use fuchsia.net.interfaces.admin/Control.AddAddress")
-    AddInterfaceAddressDeprecated(struct {
-        id fuchsia.net.InterfaceId;
-        addr fuchsia.net.Subnet;
-    }) -> () error Error;
-
-    /// Remove the address from the interface. If the address is not assigned to
-    /// the interface, an error is returned.
-    // TODO(https://fxbug.dev/92767): Remove this when N3 implements Control.
-    @deprecated("Use fuchsia.net.interfaces.admin/Control.RemoveAddress")
-    DelInterfaceAddressDeprecated(struct {
-        id fuchsia.net.InterfaceId;
-        addr fuchsia.net.Subnet;
-    }) -> () error Error;
-
     /// List all the entries in the forwarding table for the network stack.
     // TODO(https://fxbug.dev/38528): This is unbounded for now, until we change
     // the API to allow for pagination.

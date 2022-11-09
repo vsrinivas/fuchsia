@@ -23,7 +23,6 @@ import (
 	"fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/logger"
 	fidlnet "fidl/fuchsia/net"
-	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
 	"fidl/fuchsia/unknown"
 
@@ -1012,6 +1011,7 @@ func TestStaticIPConfiguration(t *testing.T) {
 
 	addr := fidlconv.ToNetIpAddress(testV4Address)
 	ifAddr := fidlnet.Subnet{Addr: addr, PrefixLen: 32}
+	protocolAddr := fidlconv.ToTCPIPProtocolAddress(ifAddr)
 	for _, test := range []struct {
 		name     string
 		features ethernet.Features
@@ -1037,9 +1037,8 @@ func TestStaticIPConfiguration(t *testing.T) {
 			})
 
 			name := ifs.ns.name(ifs.nicid)
-			result := ns.addInterfaceAddr(uint64(ifs.nicid), ifAddr)
-			if result != stack.StackAddInterfaceAddressDeprecatedResultWithResponse(stack.StackAddInterfaceAddressDeprecatedResponse{}) {
-				t.Fatalf("got ns.addInterfaceAddr(%d, %#v) = %#v, want = Response()", ifs.nicid, ifAddr, result)
+			if ok, status := ifs.addAddress(protocolAddr, tcpipstack.AddressProperties{}); !ok {
+				t.Fatalf("ifs.addAddress(%#v, {}): %s", protocolAddr, status)
 			}
 
 			if mainAddr, err := ns.stack.GetMainNICAddress(ifs.nicid, ipv4.ProtocolNumber); err != nil {
@@ -1313,13 +1312,9 @@ func TestListInterfaceAddresses(t *testing.T) {
 					Addr:      fidlconv.ToNetIpAddress(addr.Address),
 					PrefixLen: uint8(addr.PrefixLen),
 				}
-
-				result, err := ni.AddInterfaceAddressDeprecated(context.Background(), uint64(ifState.nicid), ifAddr)
-				if err != nil {
-					t.Fatalf("ni.AddInterfaceAddressDeprecated(%d, %#v): %s", ifState.nicid, ifAddr, err)
-				}
-				if result != stack.StackAddInterfaceAddressDeprecatedResultWithResponse(stack.StackAddInterfaceAddressDeprecatedResponse{}) {
-					t.Fatalf("got ni.AddInterfaceAddressDeprecated(%d, %#v) = %#v, want = Response()", ifState.nicid, ifAddr, result)
+				protocolAddr := fidlconv.ToTCPIPProtocolAddress(ifAddr)
+				if ok, status := ifState.addAddress(protocolAddr, tcpipstack.AddressProperties{}); !ok {
+					t.Fatalf("ifState.addAddress(%#v): %s", protocolAddr, status)
 				}
 				expectDad := header.IsV6UnicastAddress(addr.Address)
 				clock.Advance(dadResolutionTimeout)
@@ -1351,13 +1346,9 @@ func TestListInterfaceAddresses(t *testing.T) {
 					Addr:      fidlconv.ToNetIpAddress(addr.Address),
 					PrefixLen: uint8(addr.PrefixLen),
 				}
-
-				result, err := ni.DelInterfaceAddressDeprecated(context.Background(), uint64(ifState.nicid), ifAddr)
-				if err != nil {
-					t.Fatalf("ni.DelInterfaceAddressDeprecated(%d, %#v): %s", ifState.nicid, ifAddr, err)
-				}
-				if result != stack.StackDelInterfaceAddressDeprecatedResultWithResponse(stack.StackDelInterfaceAddressDeprecatedResponse{}) {
-					t.Fatalf("got ni.DelInterfaceAddressDeprecated(%d, %#v) = %#v, want = Response()", ifState.nicid, ifAddr, result)
+				protocolAddr := fidlconv.ToTCPIPProtocolAddress(ifAddr)
+				if status := ifState.removeAddress(protocolAddr); status != zx.ErrOk {
+					t.Fatalf("ifState.removeAddress(%#v): %s", protocolAddr, status)
 				}
 
 				// Remove address from list.
@@ -1372,56 +1363,6 @@ func TestListInterfaceAddresses(t *testing.T) {
 			})
 		}
 	})
-}
-
-// Test that adding an address with one prefix and then adding the same address
-// but with a different prefix will simply replace the first address.
-func TestAddAddressesThenChangePrefix(t *testing.T) {
-	addGoleakCheck(t)
-	ns, _ := newNetstack(t, netstackTestOptions{})
-	ni := &stackImpl{ns: ns}
-	ifState := addNoopEndpoint(t, ns, "")
-	t.Cleanup(ifState.RemoveByUser)
-
-	// The call to ns.addEndpoint() added addresses to the stack. Make sure we include
-	// those in our want list.
-	initialAddrs := getInterfaceAddresses(t, ni, ifState.nicid)
-
-	// Add address.
-	addr := tcpip.AddressWithPrefix{Address: "\x01\x01\x01\x01", PrefixLen: 8}
-	ifAddr := fidlnet.Subnet{
-		Addr:      fidlconv.ToNetIpAddress(addr.Address),
-		PrefixLen: uint8(addr.PrefixLen),
-	}
-
-	result, err := ni.AddInterfaceAddressDeprecated(context.Background(), uint64(ifState.nicid), ifAddr)
-	if err != nil {
-		t.Fatalf("ni.AddInterfaceAddressDeprecated(%d, %#v): %s", ifState.nicid, ifAddr, err)
-	}
-	if result != stack.StackAddInterfaceAddressDeprecatedResultWithResponse(stack.StackAddInterfaceAddressDeprecatedResponse{}) {
-		t.Fatalf("got ni.AddInterfaceAddressDeprecated(%d, %#v) = %#v, want = Response()", ifState.nicid, ifAddr, result)
-	}
-
-	wantAddrs := append(initialAddrs, addr)
-	gotAddrs := getInterfaceAddresses(t, ni, ifState.nicid)
-	compareInterfaceAddresses(t, gotAddrs, wantAddrs)
-
-	// Add the same address with a different prefix.
-	addr.PrefixLen *= 2
-	ifAddr.PrefixLen *= 2
-
-	result, err = ni.AddInterfaceAddressDeprecated(context.Background(), uint64(ifState.nicid), ifAddr)
-	if err != nil {
-		t.Fatalf("ni.AddInterfaceAddressDeprecated(%d, %#v): %s", ifState.nicid, ifAddr, err)
-	}
-	if result != stack.StackAddInterfaceAddressDeprecatedResultWithResponse(stack.StackAddInterfaceAddressDeprecatedResponse{}) {
-		t.Fatalf("got ni.AddInterfaceAddressDeprecated(%d, %#v) = %#v, want = Response()", ifState.nicid, ifAddr, result)
-	}
-
-	wantAddrs = append(initialAddrs, addr)
-	gotAddrs = getInterfaceAddresses(t, ni, ifState.nicid)
-
-	compareInterfaceAddresses(t, gotAddrs, wantAddrs)
 }
 
 func addAddressAndRoute(t *testing.T, ns *Netstack, ifState *ifState, addr tcpip.ProtocolAddress) {

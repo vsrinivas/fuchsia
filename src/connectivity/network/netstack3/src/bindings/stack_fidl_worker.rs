@@ -22,11 +22,8 @@ use fidl_fuchsia_net_stack::{
 };
 use futures::{FutureExt as _, TryFutureExt as _, TryStreamExt as _};
 use log::{debug, error};
-use net_types::{ethernet::Mac, SpecifiedAddr, UnicastAddr};
-use netstack3_core::{
-    add_ip_addr_subnet, add_route, del_ip_addr, del_route, device::DeviceId,
-    ip::types::AddableEntryEither, Ctx,
-};
+use net_types::{ethernet::Mac, UnicastAddr};
+use netstack3_core::{add_route, del_route, device::DeviceId, ip::types::AddableEntryEither, Ctx};
 use std::collections::HashMap;
 
 pub(crate) struct StackFidlWorker<C> {
@@ -78,18 +75,6 @@ where
                                 );
                             }
                         }
-                    }
-                    StackRequest::AddInterfaceAddressDeprecated { id, addr, responder } => {
-                        responder_send!(
-                            responder,
-                            &mut worker.lock_worker().await.fidl_add_interface_address(id, addr)
-                        );
-                    }
-                    StackRequest::DelInterfaceAddressDeprecated { id, addr, responder } => {
-                        responder_send!(
-                            responder,
-                            &mut worker.lock_worker().await.fidl_del_interface_address(id, addr)
-                        );
                     }
                     StackRequest::GetForwardingTable { responder } => {
                         responder_send!(
@@ -327,41 +312,6 @@ where
     C: LockableContext,
     C::NonSyncCtx: AsRef<Devices<DeviceId<StackTime>>>,
 {
-    fn fidl_add_interface_address(
-        mut self,
-        id: u64,
-        addr: fidl_net::Subnet,
-    ) -> Result<(), fidl_net_stack::Error> {
-        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
-
-        let device_info =
-            non_sync_ctx.as_ref().get_device(id).ok_or(fidl_net_stack::Error::NotFound)?;
-        let device_id = device_info.core_id().clone();
-
-        add_ip_addr_subnet(
-            sync_ctx,
-            non_sync_ctx,
-            &device_id,
-            addr.try_into_core().map_err(IntoFidl::into_fidl)?,
-        )
-        .map_err(IntoFidl::into_fidl)
-    }
-
-    fn fidl_del_interface_address(
-        mut self,
-        id: u64,
-        addr: fidl_net::Subnet,
-    ) -> Result<(), fidl_net_stack::Error> {
-        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
-
-        let device_info =
-            non_sync_ctx.as_ref().get_device(id).ok_or(fidl_net_stack::Error::NotFound)?;
-        let device_id = device_info.core_id().clone();
-        let addr: SpecifiedAddr<_> = addr.addr.try_into_core().map_err(IntoFidl::into_fidl)?;
-
-        del_ip_addr(sync_ctx, non_sync_ctx, &device_id, addr.into()).map_err(IntoFidl::into_fidl)
-    }
-
     fn fidl_get_forwarding_table(self) -> Vec<fidl_net_stack::ForwardingEntry> {
         let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref();
 
