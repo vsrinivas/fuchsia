@@ -156,16 +156,11 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, const bool is_ho
 
   tags_->Register(report_id, {Logname(program_name)});
 
-  // Logs a cobalt event and error message on why filing |report| didn't succeed.
-  auto record_failure = [this, report_id](const auto cobalt_error, const auto log) {
-    FX_LOGST(ERROR, tags_->Get(report_id)) << log;
-    info_.LogCrashState(cobalt_error);
-    tags_->Unregister(report_id);
-  };
-
   if (!product_quotas_.HasQuotaRemaining(product)) {
-    return record_failure(cobalt::CrashState::kOnDeviceQuotaReached,
-                          "Daily report quota reached. Won't retry");
+    FX_LOGST(INFO, tags_->Get(report_id)) << "Daily report quota reached. Won't retry";
+    info_.LogCrashState(cobalt::CrashState::kOnDeviceQuotaReached);
+    tags_->Unregister(report_id);
+    return;
   }
 
   product_quotas_.DecrementRemainingQuota(product);
@@ -181,13 +176,19 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, const bool is_ho
   auto p = snapshot_collector_
                .GetReport(kSnapshotTimeout, std::move(report), report_id, current_time, product,
                           is_hourly_snapshot, reporting_policy_watcher_->CurrentPolicy())
-               .then([this, report_id, is_hourly_snapshot,
-                      record_failure](fpromise::result<Report>& result) {
+               .then([this, report_id, is_hourly_snapshot](fpromise::result<Report>& result) {
                  if (is_hourly_snapshot) {
                    FX_LOGST(INFO, tags_->Get(report_id)) << "Generated hourly snapshot";
                  } else {
                    FX_LOGST(INFO, tags_->Get(report_id)) << "Generated report";
                  }
+
+                 // Logs a cobalt event and error message on why filing |report| didn't succeed.
+                 auto record_failure = [this, report_id](const auto cobalt_error, const auto log) {
+                   FX_LOGST(ERROR, tags_->Get(report_id)) << log;
+                   info_.LogCrashState(cobalt_error);
+                   tags_->Unregister(report_id);
+                 };
 
                  if (!result.is_ok()) {
                    return record_failure(cobalt::CrashState::kDropped,
