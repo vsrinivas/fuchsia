@@ -218,8 +218,16 @@ int main(int argc, const char** argv) {
                  "            where L can be CRITICAL, WARNING or NORMAL. Clients can\n"
                  "            use this command to test their response to memory pressure.\n"
                  "            Does not affect the real memory pressure level on the system,\n"
-                 "            or trigger any kernel memory reclamation tasks.\n";
+                 "            or trigger any kernel memory reclamation tasks.\n"
+                 " --no-deprecation-warning\n"
+                 "            Hides the deprecation warning.\n";
     return EXIT_SUCCESS;
+  }
+
+  if (!command_line.HasOption("no-deprecation-warning")) {
+    std::cout << "Warning: `fx mem` is being deprecated in favor of `ffx profile memory`.\n"
+                 "Please file bugs regarding the deprecation in Tools>ffx>Profile>Memory\n"
+                 "Use the option `--no-deprecation-warning` to disable the warning.\n";
   }
 
   if (command_line.HasOption("trace")) {
