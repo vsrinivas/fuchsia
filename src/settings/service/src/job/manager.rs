@@ -266,7 +266,7 @@ impl Manager {
             }
             None => {
                 // The end of the stream has been reached (None), so clean up the source.
-                self.complete_source(source);
+                self.cancel_source(source);
                 self.event_publisher
                     .send_event(Event::Source(SourceEvent::Complete(source, Ok(()))));
                 return;
@@ -277,14 +277,8 @@ impl Manager {
         self.process_next_job(id).await;
     }
 
-    fn complete_source(&mut self, source_id: source::Id) {
-        self.sources.get_mut(&source_id).expect("should find source").complete();
-        self.remove_source_if_necessary(source_id);
-    }
-
     fn cancel_source(&mut self, source_id: source::Id) {
-        let source = self.sources.get_mut(&source_id).expect("should find source");
-        source.cancel();
+        self.sources.get_mut(&source_id).expect("should find source").cancel();
         self.remove_source_if_necessary(source_id);
     }
 
@@ -673,5 +667,53 @@ mod tests {
         // Confirm received value matches the value sent from workload.
         assert_matches!(receptor.next_of::<test::Payload>().await.expect("should have payload").0,
             test::Payload::Integer(value) if value == result);
+    }
+
+    // Validates that sequential jobs like hanging gets are canceled when the source stream ends,
+    // which corresponds to a client closing their connection.
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_manager_cancels_jobs_on_stream_end() {
+        // Create delegate for communication between components.
+        let message_hub_delegate = MessageHub::create_hub();
+
+        let manager_signature = Manager::spawn(&message_hub_delegate).await;
+
+        // Create a messenger to send job sources to the manager.
+        let messenger = message_hub_delegate
+            .create(MessengerType::Unbound)
+            .await
+            .expect("should create messenger")
+            .0;
+
+        // Send a job source with one job that hangs forever, to mimic a hanging get.
+        let (_tx, rx) = oneshot::channel();
+        let (execute_tx, execute_rx) = oneshot::channel();
+        let (cancelation_tx, cancelation_rx) = oneshot::channel();
+        let (requests_tx, requests_rx) = mpsc::unbounded();
+        requests_tx
+            .unbounded_send(Ok(Job::new_with_cancellation(
+                job::work::Load::Sequential(
+                    Box::new(WaitingWorkload::new(rx, execute_tx)),
+                    job::Signature::new::<usize>(),
+                ),
+                cancelation_tx,
+            )))
+            .expect("Should be able to send queue");
+        messenger
+            .message(
+                Payload::Source(Arc::new(Mutex::new(Some(requests_rx.boxed())))).into(),
+                Audience::Messenger(manager_signature),
+            )
+            .send()
+            .ack();
+
+        // Ensure the request is in the hanging portion of execute.
+        execute_rx.await.expect("Should have started hung execution");
+
+        // Send the end of the source stream, to mimic a client closing its connection.
+        requests_tx.close_channel();
+
+        // Expect that the job received the cancelation signal.
+        cancelation_rx.await.expect("Hanging is cancelled");
     }
 }
