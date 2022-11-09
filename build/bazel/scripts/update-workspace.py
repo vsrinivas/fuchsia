@@ -316,6 +316,9 @@ def main():
     ninja_binary = os.path.join(
         fuchsia_dir, 'prebuilt', 'third_party', 'ninja', host_tag, 'ninja')
 
+    python_prebuilt_dir = os.path.join(
+        fuchsia_dir, 'prebuilt', 'third_party', 'python3', host_tag)
+
     output_base_dir = os.path.abspath(os.path.join(topdir, 'output_base'))
     output_user_root = os.path.abspath(os.path.join(topdir, 'output_user_root'))
     workspace_dir = os.path.abspath(os.path.join(topdir, 'workspace'))
@@ -485,6 +488,7 @@ common --experimental_enable_bzlmod
         ninja_prebuilt=os.path.abspath(ninja_binary),
         bazel_bin_path=os.path.abspath(bazel_bin),
         logs_dir=os.path.abspath(logs_dir),
+        python_prebuilt_dir=os.path.abspath(python_prebuilt_dir),
         download_config_file='download_config_file',
         workspace=os.path.relpath(workspace_dir, topdir),
         output_base=os.path.relpath(output_base_dir, topdir),

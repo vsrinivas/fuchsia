@@ -17,6 +17,11 @@ readonly _LOG_DIR="{logs_dir}"
 export BAZEL_FUCHSIA_NINJA_OUTPUT_DIR="{ninja_output_dir}"
 export BAZEL_FUCHSIA_NINJA_PREBUILT="{ninja_prebuilt}"
 
+# Ensure our prebuilt Python3 executable is in the PATH to run repository
+# rules that invoke Python programs correctly in containers or jails that
+# do not expose the system-installed one.
+export PATH={python_prebuilt_dir}/bin:${{PATH}}
+
 # An undocumented, but widely used, environment variable that tells Bazel to
 # not auto-detect the host C++ installation. This makes workspace setup faster
 # and ensures this can be used on containers where GCC or Clang are not
