@@ -38,6 +38,19 @@ impl FromExt<ip::Ipv6Addr> for fidl::Ipv6Address {
     }
 }
 
+impl FromExt<ip::IpAddr> for fidl::IpAddress {
+    fn from_ext(f: ip::IpAddr) -> fidl::IpAddress {
+        match f {
+            ip::IpAddr::V4(v4) => {
+                <ip::Ipv4Addr as IntoExt<fidl::Ipv4Address>>::into_ext(v4).into_ext()
+            }
+            ip::IpAddr::V6(v6) => {
+                <ip::Ipv6Addr as IntoExt<fidl::Ipv6Address>>::into_ext(v6).into_ext()
+            }
+        }
+    }
+}
+
 /// Extension trait to allow user-friendly formatting.
 pub trait DisplayExt {
     type Displayable: Display;

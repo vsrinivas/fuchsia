@@ -130,16 +130,10 @@ void AddNonPassingTests(TestMap& tests) {
                 "ListenV4MappedLoopback_ConnectV4MappedLoopback");
   ExpectFailure(tests,
                 "All/SocketInetLoopbackTest.TCPListenShutdownListen/"
-                "ListenV6Any_ConnectV4Any");
-  ExpectFailure(tests,
-                "All/SocketInetLoopbackTest.TCPListenShutdownListen/"
                 "ListenV6Any_ConnectV4MappedAny");
   ExpectFailure(tests,
                 "All/SocketInetLoopbackTest.TCPListenShutdownListen/"
                 "ListenV6Any_ConnectV4MappedLoopback");
-  SkipTest(tests,
-           "All/SocketInetLoopbackTest.TCPListenShutdownListen/"
-           "ListenV6Any_ConnectV4Loopback");
   ExpectFailure(tests,
                 "All/SocketInetLoopbackTest.TCPListenShutdown/"
                 "ListenV6Any_ConnectV4MappedAny");
@@ -176,37 +170,6 @@ void AddNonPassingTests(TestMap& tests) {
   ExpectFailure(tests,
                 "All/SocketInetLoopbackTest.TCPListenShutdown/"
                 "ListenV4MappedLoopback_ConnectV4MappedLoopback");
-  SkipTest(tests,
-           "All/SocketInetLoopbackTest.TCPListenShutdown/"
-           "ListenV6Any_ConnectV4Loopback");
-
-  // TODO(https://fxbug.dev/113477): Netstack3 does not yet follow the Linux/BSD
-  // convention that connecting to the unspecified address is equivalent to
-  // connecting to loopback.
-  ExpectFailure(tests,
-                "All/SocketInetLoopbackTest.TCPListenShutdownListen/"
-                "ListenV4Loopback_ConnectV4Any");
-  ExpectFailure(tests,
-                "All/SocketInetLoopbackTest.TCPListenShutdownListen/"
-                "ListenV4Any_ConnectV4Any");
-  ExpectFailure(tests,
-                "All/SocketInetLoopbackTest.TCPListenShutdownListen/"
-                "ListenV6Loopback_ConnectV6Any");
-  ExpectFailure(tests,
-                "All/SocketInetLoopbackTest.TCPListenShutdownListen/"
-                "ListenV6Any_ConnectV6Any");
-  ExpectFailure(tests,
-                "All/SocketInetLoopbackTest.TCPListenShutdownListen/"
-                "ListenV6Any_ConnectV6Any");
-  ExpectFailure(tests, "All/SocketInetLoopbackTest.TCPListenShutdown/ListenV6Any_ConnectV6Any");
-  ExpectFailure(tests, "All/SocketInetLoopbackTest.TCPListenShutdown/ListenV4Any_ConnectV4Any");
-  ExpectFailure(tests,
-                "All/SocketInetLoopbackTest.TCPListenShutdown/"
-                "ListenV6Loopback_ConnectV6Any");
-  ExpectFailure(tests,
-                "All/SocketInetLoopbackTest.TCPListenShutdown/"
-                "ListenV4Loopback_ConnectV4Any");
-  ExpectFailure(tests, "All/SocketInetLoopbackTest.TCPListenShutdown/ListenV6Any_ConnectV4Any");
 
   // TODO(https://fxbug.dev/113481): Netstack3 does not interpret listener
   // backlog exactly as Linux does.
@@ -222,6 +185,18 @@ void AddNonPassingTests(TestMap& tests) {
   ExpectFailure(tests,
                 "All/SocketInetLoopbackTest.TCPListenShutdown/"
                 "ListenV4Loopback_ConnectV4Loopback");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdown/ListenV4Loopback_ConnectV4Any");
+  ExpectFailure(tests, "All/SocketInetLoopbackTest.TCPListenShutdown/ListenV4Any_ConnectV4Any");
+  ExpectFailure(tests,
+                "All/SocketInetLoopbackTest.TCPListenShutdown/ListenV6Loopback_ConnectV6Any");
+  ExpectFailure(tests, "All/SocketInetLoopbackTest.TCPListenShutdown/ListenV6Any_ConnectV6Any");
+  SkipTest(tests, "All/SocketInetLoopbackTest.TCPListenShutdownListen/ListenV6Any_ConnectV4Any");
+  SkipTest(tests,
+           "All/SocketInetLoopbackTest.TCPListenShutdownListen/ListenV6Any_ConnectV4Loopback");
+  SkipTest(tests, "All/SocketInetLoopbackTest.TCPListenShutdown/ListenV6Any_ConnectV4Loopback");
+  SkipTest(tests, "All/SocketInetLoopbackTest.TCPListenShutdown/ListenV6Any_ConnectV4Any");
+
 }  // NOLINT(readability/fn_size)
 
 }  // namespace netstack_syscall_test

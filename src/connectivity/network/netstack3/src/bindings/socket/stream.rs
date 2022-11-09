@@ -553,7 +553,7 @@ where
 
     async fn connect(&mut self, addr: fnet::SocketAddress) -> Result<(), fposix::Errno> {
         let addr = I::SocketAddress::from_sock_addr(addr)?;
-        let ip = SpecifiedAddr::new(addr.addr()).ok_or(fposix::Errno::Einval)?;
+        let ip = SpecifiedAddr::new(addr.addr()).unwrap_or(I::LOOPBACK_ADDRESS);
         let port = NonZeroU16::new(addr.port()).ok_or(fposix::Errno::Einval)?;
         let mut guard = self.ctx.lock().await;
         let Ctx { sync_ctx, non_sync_ctx } = guard.deref_mut();

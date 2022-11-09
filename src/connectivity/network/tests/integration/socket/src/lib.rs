@@ -8,7 +8,7 @@ use anyhow::Context as _;
 use assert_matches::assert_matches;
 use fidl_fuchsia_hardware_network as fhardware_network;
 use fidl_fuchsia_net as fnet;
-use fidl_fuchsia_net_ext as fnet_ext;
+use fidl_fuchsia_net_ext::{self as fnet_ext, IntoExt as _};
 use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
 use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
@@ -30,9 +30,12 @@ use futures::{
     Future, FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _,
 };
 use net_declare::{
-    fidl_ip, fidl_ip_v4, fidl_ip_v6, fidl_mac, fidl_subnet, std_ip_v4, std_ip_v6, std_socket_addr,
+    fidl_ip_v4, fidl_ip_v6, fidl_mac, fidl_subnet, std_ip_v4, std_ip_v6, std_socket_addr,
 };
-use net_types::ip::{Ipv4, Ipv6};
+use net_types::{
+    ip::{IpAddress as _, Ipv4, Ipv6},
+    Witness as _,
+};
 use netemul::{RealmTcpListener as _, RealmTcpStream as _, RealmUdpSocket as _, TestInterface};
 use netstack_testing_common::{
     ping,
@@ -77,7 +80,12 @@ async fn run_udp_socket_test(
         let (r, from) = server_sock.recv_from(&mut buf[..]).await.expect("recvfrom failed");
         assert_eq!(r, PAYLOAD.as_bytes().len());
         assert_eq!(&buf[..r], PAYLOAD.as_bytes());
-        assert_eq!(from, client_addr);
+        // Unspecified addresses will use loopback as their source
+        if client_addr.ip().is_unspecified() {
+            assert!(from.ip().is_loopback());
+        } else {
+            assert_eq!(from, client_addr);
+        }
     };
 
     let ((), ()) = futures::future::join(client_fut, server_fut).await;
@@ -697,7 +705,12 @@ async fn run_tcp_socket_test(
         let mut buf = [0u8; 1024];
         let read_count = stream.read(&mut buf).await.expect("read from tcp server stream failed");
 
-        assert_eq!(from.ip(), client_addr.ip());
+        // Unspecified addresses will use loopback as their source
+        if client_addr.ip().is_unspecified() {
+            assert!(from.ip().is_loopback())
+        } else {
+            assert_eq!(from.ip(), client_addr.ip());
+        }
         assert_eq!(read_count, PAYLOAD.as_bytes().len());
         assert_eq!(&buf[..read_count], PAYLOAD.as_bytes());
 
@@ -1492,27 +1505,35 @@ async fn ping<E: netemul::Endpoint>(name: &str) {
         .expect("failed to ping between nodes");
 }
 
-#[variants_test]
-async fn udpv4_loopback<N: Netstack>(name: &str) {
-    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
-    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("failed to create realm");
-
-    const IPV4_LOOPBACK: fnet::IpAddress = fidl_ip!("127.0.0.1");
-    run_udp_socket_test(&realm, IPV4_LOOPBACK, &realm, IPV4_LOOPBACK).await
-}
-
-#[variants_test]
-async fn udpv6_loopback<N: Netstack>(name: &str) {
-    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
-    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("failed to create realm");
-
-    const IPV6_LOOPBACK: fnet::IpAddress = fidl_ip!("::1");
-    run_udp_socket_test(&realm, IPV6_LOOPBACK, &realm, IPV6_LOOPBACK).await
-}
-
 enum SocketType {
     Udp,
     Tcp,
+}
+
+#[variants_test]
+#[test_case(SocketType::Udp, true; "UDP specified")]
+#[test_case(SocketType::Udp, false; "UDP unspecified")]
+#[test_case(SocketType::Tcp, true; "TCP specified")]
+#[test_case(SocketType::Tcp, false; "TCP unspecified")]
+// Verify socket connectivity over loopback.
+// The Netstack is expected to treat the unspecified address as loopback.
+async fn socket_loopback_test<N: Netstack, I: net_types::ip::Ip>(
+    name: &str,
+    socket_type: SocketType,
+    specified: bool,
+) {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("failed to create realm");
+    let address = specified
+        .then_some(I::LOOPBACK_ADDRESS.get())
+        .unwrap_or(I::UNSPECIFIED_ADDRESS)
+        .to_ip_addr()
+        .into_ext();
+
+    match socket_type {
+        SocketType::Udp => run_udp_socket_test(&realm, address, &realm, address).await,
+        SocketType::Tcp => run_tcp_socket_test(&realm, address, &realm, address).await,
+    }
 }
 
 #[variants_test]
