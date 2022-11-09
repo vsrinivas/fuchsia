@@ -93,6 +93,34 @@ type InfoFeaturesBits = strict bits : uint32 {
 };
 // [END bits-binary]
 
+// [START method-strictness]
+open protocol Logger {
+    flexible AddRecord(struct {
+        message string;
+    });
+    strict EnablePIIMode();
+    flexible DisablePIIMode();
+    flexible Flush() -> ();
+};
+// [END method-strictness]
+
+// [START ajar-tear-off]
+ajar protocol BazTransaction {
+    flexible Add(resource struct {
+        bars vector<client_end:Bar>;
+    });
+    strict Commit() -> (struct {
+        args Args;
+    });
+};
+
+open protocol Foo2 {
+    flexible StartBazTransaction(resource struct {
+        transaction server_end:BazTransaction;
+    });
+};
+// [END ajar-tear-off]
+
 // [START pipelining-1]
 // GOOD:
 protocol GoodFoo {

@@ -802,7 +802,7 @@ transition later on. This situation is rare: experience has shown that most
 messages do not contain resources, and passing resources in protocols requires
 care and upfront planning.
 
-### Should I use `strict` or `flexible`?
+### Should I use `strict` or `flexible` on types?
 
 Marking a type as [`flexible`][flexible-lang] makes it possible to handle data
 that is unknown to the current FIDL schema, and is recommended for types that
@@ -863,6 +863,110 @@ be present.
 
 This section describes several good design patterns that recur in many FIDL
 protocols.
+
+### Should I use `strict` or `flexible` on methods and events?
+
+Marking a method or event as [`flexible`][unknown-interactions-lang] makes it
+easier to deal with removing the method or event when different components might
+have been built at different versions, such that some components think the
+method or event exists while others that they communicate with do not. Because
+flexibility for evolving protocols is generally desirable, it is recommended to
+choose `flexible` for methods and events unless there is a good reason to choose
+`strict`.
+
+Making a method `flexible` has no overhead for one-way methods or events. For
+two-way methods, choosing `flexible` adds a tiny amount of overhead (16 bytes or
+fewer) to the message and possibly some tiny additional time to message
+decoding. Overall the cost of making a two-way method flexible should be small
+enough not to be a consideration for almost all use cases.
+
+Methods and events should be made `strict` only when they are so critical to the
+correct behavior of the protocol that the absence of that method or event on the
+receiving side is serious enough that all communication between the two ends
+should be aborted and the connection closed.
+
+This can be particularly useful when designing for [feed-forward
+dataflow](#feed-forward). Consider this logger protocol which supports a mode
+for safely handling logs with personally identifiable information (PII). It uses
+the feed-forward pattern to add records so that the client can initiate many
+operations sequentially without waiting for the round-trip time, and just flush
+the pending operations at the end.
+
+```fidl
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="method-strictness" %}
+```
+
+All the methods here are `flexible` except `EnablePIIMode`; consider what
+happens if the server doesn't recognize any one of the methods:
+
+*   `AddRecord`: the server just fails to add the data to the log output. The
+    sending application behaves normally, though its log records become less
+    useful. This is inconvenient, but safe.
+*   `EnablePIIMode`: the server fails to enable PII mode, meaning it might fail
+    to take security precautions and leak PII. This is a serious issue, so it is
+    preferable to close the channel if the server doesn't recognize this method.
+*   `DisablePIIMode`: the server takes unnecessary security precautions for
+    messages that don't need PII logging. This might be inconvenient for someone
+    trying to read the logs, but is safe for the system.
+*   `Flush`: the server fails to flush the records as requested, which is
+    potentially inconvenient, but still safe.
+
+An alternative way of designing this protocol to be fully flexible would be to
+make `EnablePIIMode` a two-way method (`flexible EnablePIIMode() -> ();`) so
+that the client can find out if the server doesn't have the method. Notice how
+this creates additional flexbility for the client; with this setup, the client
+has the choice of whether to respond to the server not recognizing
+`EnablePIIMode` by closing the connection or by just choosing not to log PII,
+whereas with `strict` the protocol is always closed automatically. However this
+does interrupt the feed-forward flow.
+
+Keep in mind that strictness is based on the sender. Suppose you have some
+method `strict A();` in version 1, then change it to `flexible A();` in version
+2, and then delete it in version 3. If a client built at version 1 tries to call
+`A()` on a server built at version `3`, the method will be treated as strict,
+because the client at version 1 thinks the method is strict, and the server at
+version 3 takes the client's word for it because it doesn't recognize the method
+at all.
+
+It is
+[stylish](/docs/development/languages/fidl/guides/style.md#explicit-strict-flexible-method)
+to always specify this modifier. The Fuchsia project enforces this style with a
+linter check.
+
+### Should I use `open`, `ajar`, or `closed`?
+
+Marking a protocol as [`open`][unknown-interactions-lang] makes it
+easier to deal with removing methods or events when different components might
+have been built at different versions, such that each component has a different
+view of which methods and events exist. Because flexibility for evolving
+protocols is generally desirable, it is recommended to choose `open` for
+protocols unless there is a reason to choose a more closed protocol.
+
+Deciding to use `ajar` or `closed` should be based on expected constraints on
+the evolution of a protocol. Using `closed` or `ajar` does not prevent protocol
+evolution, however it does impose the requirement for a longer roll-out period
+where methods and events exist but aren't used in order to ensure all clients
+and servers agree about what methods exist. The flexibility of using `flexible`
+applies to both adding and removing methods and events, depending on whether the
+client or server is updated first.
+
+`ajar` could be useful for a protocol which uses [feed-forward
+dataflow](#feed-forward) but which is only expected to have its evolution
+limited to one-way methods. For example, this could apply to a [tear-off
+protocol](#paginating-writes) representing a transaction, where the only two-way
+method is a commit operation which must be strict while other operations on the
+transaction may evolve.
+
+```fidl
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="ajar-tear-off" %}
+```
+
+`closed` is useful for critical protocols where any unknown method is a serious
+issue which should result in closing the channel rather than continuing in a
+potentially bad state. It is also reasonable to use it for protocols which are
+very unlikely to change, or at least where any change is likely to involve an
+extremely long rollout cycle anyway, such that the extra cost involved in
+changing `strict` methods is already expected in the rollout cycle.
 
 ### Protocol request pipelining {#request-pipelining}
 
@@ -1037,7 +1141,7 @@ implement sending of the notification message.
 
 <<../languages/fidl/widgets/_acknowledgement_pattern.md>>
 
-### Feed-forward dataflow
+### Feed-forward dataflow {#feed-forward}
 
 Some protocols have _feed-forward dataflow_, which avoids round-trip latency by
 having data flow primarily in one direction, typically from client to server.
@@ -1240,7 +1344,7 @@ reasonable amounts of data, but there are use cases for transmitting large (or
 even unbounded) amounts of data.  One way to transmit a large or unbounded
 amount of information is to use a _pagination pattern_.
 
-#### Paginating writes
+#### Paginating writes {#paginating-writes}
 
 A simple approach to paginating writes to the server is to let the client send
 data in multiple messages and then have a "finalize" method that causes the
@@ -1637,3 +1741,4 @@ a more idiomatic interface:
 [resource-lang]: /docs/reference/fidl/language/language.md#value-vs-resource
 [flexible-lang]: /docs/reference/fidl/language/language.md#strict-vs-flexible
 [flexible-transition]: /docs/development/languages/fidl/guides/compatibility/README.md#strict-flexible
+[unknown-interactions-lang]: /docs/reference/fidl/language/language.md#unknown-interactions
