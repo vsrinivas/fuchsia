@@ -126,6 +126,7 @@ test("intel-i915-tgl-test") {
     "poll-until-unittest.cc",
     "power-controller-unittest.cc",
     "power-unittest.cc",
+    "registers-ddi-phy-tiger-lake-unittest.cc",
     "registers-ddi-unittest.cc",
     "registers-dpll-unittest.cc",
     "registers-pipe-unittest.cc",
