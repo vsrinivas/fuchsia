@@ -2,16 +2,51 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fidl_fuchsia_wlan_policy::SecurityType;
 #[cfg(test)]
 use mockall::*;
 
 // This component maps the current state with a new event to produce a
-// new state.
-// The only statue held by the state machine is the current state.
+// new state. The states, events and state logic have all ben derived
+// from the Recovery OTA UX design.
+// The only state held by the state machine is the current state.
+
+/// Holds the network information necessary for showing the user
+/// the signal strength and whether the network is password protected.
+#[derive(Clone, Debug)]
+pub struct NetworkInfo {
+    pub ssid: String,
+    pub rssi: i8,
+    pub security_type: SecurityType,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Operation {
+    FactoryDataReset,
+    Reinstall,
+}
+
+type Network = String;
+type Password = String;
+type Text = String;
+type ErrorMessage = String;
+type PercentProgress = i32;
 
 #[derive(Debug, Clone)]
 pub enum State {
+    Connecting(Network, Password),
+    ConnectionFailed(Network, Password),
+    Done(Operation),
+    EnterPassword(Network),
+    EnterWiFi,
+    ExecuteReinstall(PercentProgress),
+    FactoryReset,
+    Failed(Operation, Option<ErrorMessage>),
     Home,
+    Reinstall,
+    SetPrivacy(bool),
+    GetWiFiNetworks,
+    SelectWiFi(Vec<NetworkInfo>),
 }
 
 impl PartialEq for State {
@@ -22,7 +57,20 @@ impl PartialEq for State {
 
 #[derive(Debug, Clone)]
 pub enum Event {
+    AddNetwork,
     Cancel,
+    ChooseNetwork,
+    Fail(ErrorMessage),
+    WiFiConnected,
+    Networks(Vec<NetworkInfo>),
+    Progress(PercentProgress),
+    Reinstall,
+    SendReports(bool),
+    StartFactoryReset,
+    TryAnotherWay,
+    TryAgain,
+    UserInput(Text),
+    UserInputUnsecuredNetwork(Network),
 }
 
 // This tests only for enum entry not the value contained in the enum.
@@ -56,6 +104,72 @@ impl StateMachine {
         let new_state = match (&self.current_state, event) {
             // Any cancel sends us back to the start.
             (_, Event::Cancel) => Some(State::Home),
+
+            (State::Home, Event::StartFactoryReset) => Some(State::FactoryReset),
+            (State::Home, Event::TryAnotherWay) => Some(State::Reinstall),
+
+            (State::FactoryReset, Event::Fail(_reason)) => {
+                Some(State::Failed(Operation::FactoryDataReset, None))
+            }
+
+            (State::Failed(op, _), Event::TryAgain) => match op {
+                Operation::FactoryDataReset => Some(State::FactoryReset),
+                Operation::Reinstall => Some(State::Reinstall),
+            },
+
+            (State::Reinstall, Event::Reinstall) => Some(State::GetWiFiNetworks),
+
+            (State::GetWiFiNetworks, Event::AddNetwork) => Some(State::EnterWiFi),
+            (State::GetWiFiNetworks, Event::Networks(networks)) => {
+                Some(State::SelectWiFi(networks))
+            }
+
+            (State::SelectWiFi(_), Event::UserInput(network)) => {
+                Some(State::EnterPassword(network))
+            }
+            (State::SelectWiFi(_), Event::UserInputUnsecuredNetwork(network)) => {
+                Some(State::Connecting(network, String::new()))
+            }
+            (State::SelectWiFi(_), Event::AddNetwork) => Some(State::EnterWiFi),
+
+            (State::EnterWiFi, Event::UserInput(network)) if network.is_empty() => {
+                Some(State::GetWiFiNetworks)
+            }
+            (State::EnterWiFi, Event::UserInput(network)) => Some(State::EnterPassword(network)),
+
+            (State::EnterPassword(network), Event::UserInput(password)) => {
+                Some(State::Connecting(network.clone(), password.clone()))
+            }
+
+            (State::Connecting(_, _), Event::WiFiConnected) => Some(State::SetPrivacy(false)),
+            (State::Connecting(network, password), Event::Fail(_reason)) => {
+                Some(State::ConnectionFailed(network.clone(), password.clone()))
+            }
+
+            (State::ConnectionFailed(..), Event::ChooseNetwork) => Some(State::GetWiFiNetworks),
+            (State::ConnectionFailed(network, password), Event::TryAgain) => {
+                Some(State::Connecting(network.clone(), password.clone()))
+            }
+
+            (State::SetPrivacy(_), Event::SendReports(user_data_sharing_consent)) => {
+                Some(State::SetPrivacy(user_data_sharing_consent))
+            }
+            (State::SetPrivacy(_), Event::Reinstall) => Some(State::ExecuteReinstall(0)),
+
+            (State::ExecuteReinstall(_), Event::Progress(100)) => {
+                Some(State::Done(Operation::Reinstall))
+            }
+            (State::ExecuteReinstall(_), Event::Progress(percent)) => {
+                Some(State::ExecuteReinstall(percent))
+            }
+            (State::ExecuteReinstall(_), Event::Fail(error)) => {
+                Some(State::Failed(Operation::Reinstall, Some(error)))
+            }
+
+            (state, event) => {
+                println!("Error unexpected event {:?} for state {:?}", event, state);
+                None
+            }
         };
         if new_state.is_some() {
             #[cfg(feature = "debug_logging")]
@@ -78,7 +192,7 @@ mod test {
     // TODO(b/258049697): Tests to check the expected flow through more than one state.
     // c.f. https://cs.opensource.google/fuchsia/fuchsia/+/main:src/recovery/system/src/fdr.rs;l=183.
 
-    use crate::ota::state_machine::{Event, State, StateMachine};
+    use crate::ota::state_machine::{Event, Operation, State, StateMachine};
     use lazy_static::lazy_static;
 
     lazy_static! {
@@ -108,5 +222,26 @@ mod test {
                 }
             }
         }
+    }
+
+    #[test]
+    fn run_through_a_sucessful_user_flow() {
+        let mut sm = StateMachine::new(State::Home);
+        let mut state = sm.event(Event::TryAnotherWay).unwrap();
+        assert_eq!(state, State::Reinstall);
+        state = sm.event(Event::Reinstall).unwrap();
+        assert_eq!(state, State::GetWiFiNetworks);
+        state = sm.event(Event::AddNetwork).unwrap();
+        assert_eq!(state, State::EnterWiFi);
+        state = sm.event(Event::UserInput("Network".to_string())).unwrap();
+        assert_eq!(state, State::EnterPassword("Network".to_string()));
+        state = sm.event(Event::UserInput("Password".to_string())).unwrap();
+        assert_eq!(state, State::Connecting("Network".to_string(), "Password".to_string()));
+        state = sm.event(Event::WiFiConnected).unwrap();
+        assert_eq!(state, State::SetPrivacy(false));
+        state = sm.event(Event::Reinstall).unwrap();
+        assert_eq!(state, State::ExecuteReinstall(0));
+        state = sm.event(Event::Progress(100)).unwrap();
+        assert_eq!(state, State::Done(Operation::Reinstall));
     }
 }
