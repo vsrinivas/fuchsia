@@ -5,6 +5,7 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::hash::{Hash, Hasher};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Weak};
 
 use ref_cast::RefCast;
@@ -17,10 +18,11 @@ use super::tmpfs::TmpFs;
 use super::*;
 use crate::bpf::BpfFs;
 use crate::device::BinderFs;
-use crate::lock::RwLock;
+use crate::lock::{Mutex, RwLock};
 use crate::mutable_state::*;
 use crate::selinux::selinux_fs;
 use crate::task::CurrentTask;
+use crate::task::Task;
 use crate::types::*;
 
 /// A mount namespace.
@@ -62,6 +64,12 @@ pub struct Mount {
     root: DirEntryHandle,
     flags: MountFlags,
     _fs: FileSystemHandle,
+
+    /// A unique identifier for this mount reported in /proc/pid/mountinfo.
+    id: u64,
+
+    /// If this is a bind mount, the mount of what it was bind mounted from, otherwise None.
+    origin_mount: Option<MountHandle>,
 
     // Lock ordering: mount -> submount
     state: RwLock<MountState>,
@@ -105,25 +113,38 @@ pub enum WhatToMount {
     Bind(NamespaceNode),
 }
 
+static NEXT_MOUNT_ID: AtomicU64 = AtomicU64::new(0);
+
 impl Mount {
     fn new(what: WhatToMount, flags: MountFlags) -> MountHandle {
         match what {
-            WhatToMount::Fs(fs) => Self::new_with_root(fs.root().clone(), flags),
+            WhatToMount::Fs(fs) => Self::new_with_root(fs.root().clone(), None, flags),
             WhatToMount::Bind(node) => {
                 let mount = node.mount.expect("can't bind mount from an anonymous node");
-                mount.clone_mount(&node.entry, flags)
+                mount.clone_mount(&node.entry, Some(&mount), flags)
             }
         }
     }
 
-    fn new_with_root(root: DirEntryHandle, flags: MountFlags) -> MountHandle {
+    fn new_with_root(
+        root: DirEntryHandle,
+        origin_mount: Option<MountHandle>,
+        flags: MountFlags,
+    ) -> MountHandle {
         assert!(
             !flags.intersects(!MountFlags::STORED_FLAGS),
             "mount created with extra flags {:?}",
             flags - MountFlags::STORED_FLAGS
         );
         let fs = root.node.fs();
-        Arc::new(Self { root, flags, _fs: fs, state: Default::default() })
+        Arc::new(Self {
+            id: NEXT_MOUNT_ID.fetch_add(1, Ordering::Relaxed),
+            root,
+            origin_mount,
+            flags,
+            _fs: fs,
+            state: Default::default(),
+        })
     }
 
     /// A namespace node referring to the root of the mount.
@@ -183,11 +204,17 @@ impl Mount {
 
     /// Create a new mount with the same filesystem, flags, and peer group. Used to implement bind
     /// mounts.
-    fn clone_mount(&self, new_root: &DirEntryHandle, flags: MountFlags) -> MountHandle {
+    fn clone_mount(
+        &self,
+        new_root: &DirEntryHandle,
+        new_origin: Option<&MountHandle>,
+        flags: MountFlags,
+    ) -> MountHandle {
         assert!(new_root.is_descendant_of(&self.root));
         // According to mount(2) on bind mounts, all flags other than MS_REC are ignored when doing
         // a bind mount.
-        let clone = Self::new_with_root(Arc::clone(new_root), self.flags);
+        let clone =
+            Self::new_with_root(Arc::clone(new_root), new_origin.map(Arc::clone), self.flags);
 
         if flags.contains(MountFlags::REC) {
             // This is two steps because the alternative (locking clone.state while iterating over
@@ -218,7 +245,7 @@ impl Mount {
     /// Do a clone of the full mount hierarchy below this mount. Used for creating mount
     /// namespaces and creating copies to use for propagation.
     fn clone_mount_recursive(&self) -> MountHandle {
-        self.clone_mount(&self.root, MountFlags::REC)
+        self.clone_mount(&self.root, self.origin_mount.as_ref(), MountFlags::REC)
     }
 
     pub fn change_propagation(self: &MountHandle, flag: MountFlags, recursive: bool) {
@@ -366,6 +393,86 @@ pub fn create_filesystem(
     }
 
     Ok(WhatToMount::Fs(fs))
+}
+
+pub struct ProcMountinfoFile {
+    task: Arc<Task>,
+    seq: Mutex<SeqFileState<()>>,
+}
+
+impl ProcMountinfoFile {
+    pub fn new_node(task: &Arc<Task>) -> impl FsNodeOps {
+        let task = Arc::clone(task);
+        SimpleFileNode::new(move || {
+            Ok(ProcMountinfoFile { task: Arc::clone(&task), seq: Mutex::new(SeqFileState::new()) })
+        })
+    }
+}
+
+impl FileOps for ProcMountinfoFile {
+    fileops_impl_seekable!();
+    fileops_impl_nonblocking!();
+
+    fn read_at(
+        &self,
+        _file: &FileObject,
+        current_task: &CurrentTask,
+        offset: usize,
+        data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        // TODO(tbodt): We should figure out a way to have a real iterator instead of grabbing the
+        // entire list in one go. Should we have a BTreeMap<u64, Weak<Mount>> in the Namespace?
+        // Also has the benefit of correct (i.e. chronological) ordering. But then we have to do
+        // extra work to maintain it.
+        let ns = self.task.fs().namespace();
+        let iter = move |_cursor, sink: &mut SeqFileBuf| {
+            for_each_mount(&ns.root_mount, &mut |mount| {
+                let mountpoint = mount.mountpoint().unwrap_or_else(|| mount.root());
+                // Can't fail, mountpoint() and root() can't return a NamespaceNode with no mount
+                let parent = mountpoint.mount.as_ref().unwrap();
+                let origin = NamespaceNode {
+                    mount: mount.origin_mount.clone(),
+                    entry: Arc::clone(&mount.root),
+                };
+                writeln!(
+                    sink,
+                    "{} {} {} {} {}",
+                    mount.id,
+                    parent.id,
+                    mount.root.node.fs().dev_id,
+                    String::from_utf8_lossy(&origin.path()),
+                    String::from_utf8_lossy(&mountpoint.path())
+                )?;
+                Ok(())
+            })?;
+            Ok(None)
+        };
+        self.seq.lock().read_at(current_task, iter, offset, data)
+    }
+
+    fn write_at(
+        &self,
+        _file: &FileObject,
+        _current_task: &CurrentTask,
+        _offset: usize,
+        _data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        error!(ENOSYS)
+    }
+}
+
+fn for_each_mount<E>(
+    mount: &Arc<Mount>,
+    callback: &mut impl FnMut(&MountHandle) -> Result<(), E>,
+) -> Result<(), E> {
+    callback(mount)?;
+    // Collect list first to avoid self deadlock when ProcMountinfoFile::read_at tries to call
+    // NamespaceNode::path()
+    let submounts: Vec<_> = mount.read().submounts.values().map(Arc::clone).collect();
+    for submount in submounts {
+        for_each_mount(&submount, callback)?;
+    }
+    Ok(())
 }
 
 /// The `SymlinkMode` enum encodes how symlinks are followed during path traversal.

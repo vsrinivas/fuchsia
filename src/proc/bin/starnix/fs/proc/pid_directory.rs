@@ -46,6 +46,7 @@ fn static_directory_builder_with_common_task_entries<'a>(
         .entry(b"comm", CommFile::new_node(task), mode!(IFREG, 0o444))
         .node(b"attr", attr_directory(task, fs))
         .entry(b"ns", NsDirectory { task: task.clone() }, mode!(IFDIR, 0o777))
+        .entry(b"mountinfo", ProcMountinfoFile::new_node(task), mode!(IFREG, 0o444))
         .dir_creds(task.as_fscred())
 }
 

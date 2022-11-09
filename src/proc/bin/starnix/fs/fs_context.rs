@@ -117,6 +117,10 @@ impl FsContext {
         let mut state = self.state.write();
         state.namespace = state.namespace.clone_namespace();
     }
+
+    pub fn namespace(&self) -> Arc<Namespace> {
+        Arc::clone(&self.state.read().namespace)
+    }
 }
 
 #[cfg(test)]

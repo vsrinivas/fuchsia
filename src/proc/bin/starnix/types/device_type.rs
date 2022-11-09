@@ -4,6 +4,8 @@
 
 use crate::types::uapi::*;
 
+use std::fmt;
+
 pub const MEM_MAJOR: u32 = 1;
 pub const TTY_ALT_MAJOR: u32 = 5;
 pub const MISC_MAJOR: u32 = 10;
@@ -52,6 +54,12 @@ impl DeviceType {
 
     pub const fn minor(&self) -> u32 {
         ((self.0 >> 12 & 0xffffff00) | (self.0 & 0xff)) as u32
+    }
+}
+
+impl fmt::Display for DeviceType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        write!(f, "{}:{}", self.major(), self.minor())
     }
 }
 
