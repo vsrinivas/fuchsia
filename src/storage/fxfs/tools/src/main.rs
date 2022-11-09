@@ -154,6 +154,7 @@ async fn main() -> Result<(), Error> {
                 ImageSubCommand::Rm(rmargs) => {
                     let device = DeviceHolder::new(FileBackedDevice::new(
                         std::fs::OpenOptions::new().read(true).write(true).open(cmd.file)?,
+                        512,
                     ));
                     let fs = FxFilesystem::open(device).await?;
                     let vol = ops::open_volume(&fs, crypt.clone()).await?;
@@ -164,6 +165,7 @@ async fn main() -> Result<(), Error> {
                 ImageSubCommand::Get(getargs) => {
                     let device = DeviceHolder::new(FileBackedDevice::new(
                         std::fs::OpenOptions::new().read(true).open(cmd.file)?,
+                        512,
                     ));
                     let fs = FxFilesystem::open_with_options(device, OpenOptions::read_only(true))
                         .await?;
@@ -177,6 +179,7 @@ async fn main() -> Result<(), Error> {
                 ImageSubCommand::Put(putargs) => {
                     let device = DeviceHolder::new(FileBackedDevice::new(
                         std::fs::OpenOptions::new().read(true).write(true).open(cmd.file)?,
+                        512,
                     ));
                     let fs = FxFilesystem::open(device).await?;
                     let vol = ops::open_volume(&fs, crypt.clone()).await?;
@@ -189,6 +192,7 @@ async fn main() -> Result<(), Error> {
                 ImageSubCommand::Format(_) => {
                     let device = DeviceHolder::new(FileBackedDevice::new(
                         std::fs::OpenOptions::new().read(true).write(true).open(cmd.file)?,
+                        512,
                     ));
                     mkfs_with_default(device, Some(crypt)).await?;
                     Ok(())
@@ -196,6 +200,7 @@ async fn main() -> Result<(), Error> {
                 ImageSubCommand::Fsck(_) => {
                     let device = DeviceHolder::new(FileBackedDevice::new(
                         std::fs::OpenOptions::new().read(true).open(cmd.file)?,
+                        512,
                     ));
                     let fs = FxFilesystem::open_with_options(device, OpenOptions::read_only(true))
                         .await?;
@@ -209,6 +214,7 @@ async fn main() -> Result<(), Error> {
                 ImageSubCommand::Ls(lsargs) => {
                     let device = DeviceHolder::new(FileBackedDevice::new(
                         std::fs::OpenOptions::new().read(true).open(cmd.file)?,
+                        512,
                     ));
                     let fs = FxFilesystem::open_with_options(device, OpenOptions::read_only(true))
                         .await?;
@@ -220,6 +226,7 @@ async fn main() -> Result<(), Error> {
                 ImageSubCommand::Mkdir(mkdirargs) => {
                     let device = DeviceHolder::new(FileBackedDevice::new(
                         std::fs::OpenOptions::new().read(true).write(true).open(cmd.file)?,
+                        512,
                     ));
                     let fs = FxFilesystem::open(device).await?;
                     let vol = ops::open_volume(&fs, crypt.clone()).await?;
@@ -230,6 +237,7 @@ async fn main() -> Result<(), Error> {
                 ImageSubCommand::Rmdir(rmdirargs) => {
                     let device = DeviceHolder::new(FileBackedDevice::new(
                         std::fs::OpenOptions::new().read(true).write(true).open(cmd.file)?,
+                        512,
                     ));
                     let fs = FxFilesystem::open(device).await?;
                     let vol = ops::open_volume(&fs, crypt.clone()).await?;

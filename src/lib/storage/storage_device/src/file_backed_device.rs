@@ -24,25 +24,25 @@ pub struct FileBackedDevice {
     allocator: BufferAllocator,
     file: std::fs::File,
     block_count: u64,
+    block_size: u32,
 }
 
-const BLOCK_SIZE: u32 = 512;
 const TRANSFER_HEAP_SIZE: usize = 32 * 1024 * 1024;
 
 impl FileBackedDevice {
     /// Creates a new FileBackedDevice over |file|. The size of the file will be used as the size of
     /// the Device.
-    pub fn new(file: std::fs::File) -> Self {
+    pub fn new(file: std::fs::File, block_size: u32) -> Self {
         let size = file.metadata().unwrap().len();
-        let block_count = size / BLOCK_SIZE as u64;
+        let block_count = size / block_size as u64;
         // TODO(jfsulliv): If file is S_ISBLK, we should use its block size. Rust does not appear to
         // expose this information in a portable way, so we may need to dip into non-portable code
         // to do so.
         let allocator = BufferAllocator::new(
-            BLOCK_SIZE as usize,
+            block_size as usize,
             Box::new(MemBufferSource::new(TRANSFER_HEAP_SIZE)),
         );
-        Self { allocator, file, block_count }
+        Self { allocator, file, block_count, block_size }
     }
 }
 
@@ -53,7 +53,7 @@ impl Device for FileBackedDevice {
     }
 
     fn block_size(&self) -> u32 {
-        BLOCK_SIZE
+        self.block_size
     }
 
     fn block_count(&self) -> u64 {
@@ -122,7 +122,7 @@ mod tests {
     #[fuchsia::test]
     async fn test_lifecycle() {
         let (_path, file) = create_file();
-        let device = FileBackedDevice::new(file);
+        let device = FileBackedDevice::new(file, 512);
 
         {
             let _buf = device.allocate_buffer(8192);
@@ -134,7 +134,7 @@ mod tests {
     #[fuchsia::test]
     async fn test_read_write() {
         let (_path, file) = create_file();
-        let device = FileBackedDevice::new(file);
+        let device = FileBackedDevice::new(file, 512);
 
         {
             let mut buf1 = device.allocate_buffer(8192);
@@ -157,7 +157,7 @@ mod tests {
     #[fuchsia::test]
     async fn test_read_write_past_end_of_file_fails() {
         let (_path, file) = create_file();
-        let device = FileBackedDevice::new(file);
+        let device = FileBackedDevice::new(file, 512);
 
         {
             let mut buf = device.allocate_buffer(8192);
@@ -173,7 +173,7 @@ mod tests {
     #[fuchsia::test]
     async fn test_writes_persist() {
         let (path, file) = create_file();
-        let device = FileBackedDevice::new(file);
+        let device = FileBackedDevice::new(file, 512);
 
         {
             let mut buf1 = device.allocate_buffer(8192);
@@ -186,7 +186,7 @@ mod tests {
         device.close().await.expect("Close failed");
 
         let file = File::open(path.as_path()).expect("Open failed");
-        let device = FileBackedDevice::new(file);
+        let device = FileBackedDevice::new(file, 512);
 
         {
             let mut buf = device.allocate_buffer(16384);
