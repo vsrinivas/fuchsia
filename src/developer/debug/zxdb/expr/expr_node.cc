@@ -20,6 +20,7 @@
 #include "src/developer/debug/zxdb/expr/resolve_array.h"
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
 #include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
+#include "src/developer/debug/zxdb/expr/vm_stream.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/developer/debug/zxdb/symbols/array_type.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
@@ -264,7 +265,7 @@ void ConditionExprNode::EmitBytecode(VmStream& stream) const {
 
   // Fixup all previous jumps to the end of the blocks.
   for (size_t jump_source : done_jumps) {
-    stream[jump_source].SetJumpDest(stream.size());
+    stream[jump_source].SetJumpDest(static_cast<uint32_t>(stream.size()));
   }
 }
 

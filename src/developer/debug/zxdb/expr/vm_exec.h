@@ -8,6 +8,7 @@
 #include "src/developer/debug/zxdb/expr/eval_callback.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/vm_op.h"
+#include "src/developer/debug/zxdb/expr/vm_stream.h"
 
 namespace zxdb {
 

@@ -112,6 +112,8 @@ static_library("expr") {
     "vm_op.h",
     "vm_op_type.cc",
     "vm_op_type.h",
+    "vm_stream.cc",
+    "vm_stream.h",
   ]
 
   public_deps = [
@@ -196,7 +198,7 @@ source_set("tests") {
     "virtual_inheritance_test_setup.cc",
     "virtual_inheritance_test_setup.h",
     "vm_exec_unittest.cc",
-    "vm_op_unittest.cc",
+    "vm_stream_unittest.cc",
   ]
 
   # Note: this should not depend on client/ or console/ libraries, including their test_support.

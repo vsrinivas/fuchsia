@@ -12,6 +12,7 @@
 #include "src/developer/debug/zxdb/expr/expr_tokenizer.h"
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
 #include "src/developer/debug/zxdb/expr/vm_op.h"
+#include "src/developer/debug/zxdb/expr/vm_stream.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 

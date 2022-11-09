@@ -6,6 +6,7 @@
 
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/expr/vm_stream.h"
 
 namespace zxdb {
 

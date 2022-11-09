@@ -15,7 +15,7 @@
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/parsed_identifier.h"
 #include "src/developer/debug/zxdb/expr/variable_decl.h"
-#include "src/developer/debug/zxdb/expr/vm_op.h"
+#include "src/developer/debug/zxdb/expr/vm_stream.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 

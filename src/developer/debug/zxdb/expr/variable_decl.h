@@ -10,7 +10,7 @@
 #include "src/developer/debug/zxdb/common/err_or.h"
 #include "src/developer/debug/zxdb/expr/eval_callback.h"
 #include "src/developer/debug/zxdb/expr/expr_language.h"
-#include "src/developer/debug/zxdb/expr/vm_op.h"
+#include "src/developer/debug/zxdb/expr/vm_stream.h"
 
 // This file contains the backend implementation for VariableDeclExprNode.
 

@@ -21,6 +21,7 @@
 #include "src/developer/debug/zxdb/expr/mock_expr_node.h"
 #include "src/developer/debug/zxdb/expr/pretty_type.h"
 #include "src/developer/debug/zxdb/expr/vm_exec.h"
+#include "src/developer/debug/zxdb/expr/vm_stream.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/code_block.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
