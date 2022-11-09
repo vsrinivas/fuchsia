@@ -418,6 +418,11 @@ protocol Controller {
     //
     // Clients are encouraged to use the CheckConfig API to confirm support for correction and to
     // validate their color correction input values.
+    //
+    // This a stateful call. Once color conversion values have been succesfully applied via a call
+    // to ApplyConfig() they will remain in place until changed and another ApplyConfig() call is
+    // successful. If SetDisplayColorConversion() is called and then the config is discarded, then
+    // the last successfully applied state is restored.
     SetDisplayColorConversion(struct {
         display_id uint64;
         preoffsets array<float32, 3>;
@@ -787,6 +792,9 @@ protocol Controller {
     /// API is highly hardware and product dependant and therefore as products evolve, this
     /// API may change or support for this API may become non-existent. Therefore, this
     /// API should be used with caution.
+    ///
+    /// Unlike other calls in this API, SetMiniumRgb is applied immediately, and does not
+    /// wait for ApplyConfig(). It is, however, still stateful.
     SetMinimumRgb(struct {
         minimum_rgb uint8;
     }) -> () error zx.status;
