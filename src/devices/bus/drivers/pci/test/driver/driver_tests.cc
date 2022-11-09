@@ -4,12 +4,11 @@
 
 #include "src/devices/bus/drivers/pci/test/driver/driver_tests.h"
 
-#include <fuchsia/device/test/c/fidl.h>
+#include <fidl/fuchsia.device.test/cpp/wire.h>
 #include <getopt.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/driver-integration-test/fixture.h>
-#include <lib/fdio/fdio.h>
-#include <lib/zx/channel.h>
+#include <lib/fdio/cpp/caller.h>
 #include <sys/stat.h>
 
 #include <array>
@@ -66,8 +65,7 @@ TEST_F(PciDriverTests, TestRunner) {
         break;
     }
   }
-  zx_status_t st = IsolatedDevmgr::Create(&args, &devmgr_);
-  ASSERT_OK(st);
+  ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
 
   // The final path is made up of the FakeBusDriver, the bind point it creates, and
   // the final protocol test driver.
@@ -76,18 +74,18 @@ TEST_F(PciDriverTests, TestRunner) {
            "sys/platform/%02x:%02x:%01x/%s/%02x:%02x.%1x/%s", kDeviceEntry.vid, kDeviceEntry.pid,
            kDeviceEntry.did, kDeviceEntry.name, PCI_TEST_BUS_ID, PCI_TEST_DEV_ID, PCI_TEST_FUNC_ID,
            kProtocolTestDriverName);
-  st = device_watcher::RecursiveWaitForFile(devmgr_.devfs_root(), proto_driver_path.data(),
-                                            &protocol_fd_);
-  ASSERT_OK(st);
-  zx::channel ch;
-  struct fuchsia_device_test_TestReport report = {};
-
-  ASSERT_OK(fdio_get_service_handle(protocol_fd_.release(), ch.reset_and_get_address()));
-  // Flush the ouput to this point so it doesn't interleave with the proxy's
+  ASSERT_OK(device_watcher::RecursiveWaitForFile(devmgr_.devfs_root(), proto_driver_path.data(),
+                                                 &protocol_fd_));
+  const fdio_cpp::UnownedFdioCaller caller(protocol_fd_);
+  // Flush the output to this point so it doesn't interleave with the proxy's
   // test output.
   fflush(stdout);
-  ASSERT_OK(fuchsia_device_test_TestRunTests(ch.get(), &st, &report));
-  ASSERT_OK(st);
+  const fidl::WireResult result =
+      fidl::WireCall(caller.borrow_as<fuchsia_device_test::Test>())->RunTests();
+  ASSERT_OK(result.status());
+  const fidl::WireResponse response = result.value();
+  ASSERT_OK(response.status);
+  const fuchsia_device_test::wire::TestReport& report = response.report;
   ASSERT_NE(report.test_count, 0);
   ASSERT_EQ(report.test_count, report.success_count);
   EXPECT_EQ(report.failure_count, 0);

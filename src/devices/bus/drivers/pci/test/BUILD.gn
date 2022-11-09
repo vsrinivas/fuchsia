@@ -78,18 +78,14 @@ test("pci-driver") {
 
   sources = [ "driver/driver_tests.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_c",
-    "//sdk/lib/fdio",
+    "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_cpp_wire",
     "//src/devices/testing/driver-integration-test-shim",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/zxtest",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 # These drivers are not 'test' drivers because at the moment having other
@@ -138,17 +134,13 @@ fuchsia_driver("pci_protocol_test_driver-driver") {
   sources = [ "driver/protocol_test_driver.cc" ]
   deps = [
     "driver:pci_protocol_test_driver_bind",
-    "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_c",
+    "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_cpp_wire",
     "//src/devices/bus/drivers/pci:user_pci",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/system/ulib/zxtest",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_driver_component("pci_protocol_test_driver") {

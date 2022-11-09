@@ -4,7 +4,7 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PCI_TEST_DRIVER_PROTOCOL_TEST_DRIVER_H_
 #define SRC_DEVICES_BUS_DRIVERS_PCI_TEST_DRIVER_PROTOCOL_TEST_DRIVER_H_
 
-#include <fuchsia/device/test/c/fidl.h>
+#include <fidl/fuchsia.device.test/cpp/wire.h>
 #include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/ddk/device.h>
 
@@ -24,14 +24,15 @@ class TestObserver : public zxtest::LifecycleObserver {
   void OnTestFailure(const zxtest::TestCase&, const zxtest::TestInfo&) final {
     report_.failure_count++;
   }
-  const fuchsia_device_test_TestReport& report() { return report_; }
+  const fuchsia_device_test::wire::TestReport& report() const { return report_; }
 
- protected:
-  fuchsia_device_test_TestReport report_ = {};
+ private:
+  fuchsia_device_test::wire::TestReport report_ = {};
 };
 
 class ProtocolTestDriver;
-using ProtocolTestDriverType = ddk::Device<ProtocolTestDriver, ddk::MessageableManual>;
+using ProtocolTestDriverType =
+    ddk::Device<ProtocolTestDriver, ddk::Messageable<fuchsia_device_test::Test>::Mixin>;
 class ProtocolTestDriver : public ProtocolTestDriverType, public TestObserver {
  public:
   // A singleton instance is used so that the test fixture has no issues working
@@ -48,11 +49,11 @@ class ProtocolTestDriver : public ProtocolTestDriverType, public TestObserver {
   static ProtocolTestDriver* GetInstance() { return instance_; }
   const ddk::PciProtocolClient& pci() { return pci_; }
 
-  void DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn);
+  void RunTests(RunTestsCompleter::Sync& completer) override;
   void DdkRelease() { delete this; }
 
  private:
-  ProtocolTestDriver(zx_device_t* parent) : ProtocolTestDriverType(parent), pci_(parent) {}
+  explicit ProtocolTestDriver(zx_device_t* parent) : ProtocolTestDriverType(parent), pci_(parent) {}
 
   static ProtocolTestDriver* instance_;
   ddk::PciProtocolClient pci_;
@@ -65,6 +66,7 @@ class PciProtocolTests : public zxtest::Test {
  protected:
   PciProtocolTests() : drv_(ProtocolTestDriver::GetInstance()) {}
 
+ private:
   ProtocolTestDriver* drv_;
 };
 

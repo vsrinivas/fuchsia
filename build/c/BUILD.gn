@@ -99,8 +99,6 @@ config("fidl-deprecated-c-bindings") {
     "//src/devices/board/drivers/sherlock:sherlock-factory-rndis-driver",
     "//src/devices/board/drivers/sherlock:sherlock_driver",
     "//src/devices/board/drivers/vim3:vim3-driver",
-    "//src/devices/bus/drivers/pci/test:pci-driver",
-    "//src/devices/bus/drivers/pci/test:pci_protocol_test_driver-driver",
     "//src/devices/clock/bin/clock",
     "//src/devices/i2c/drivers/intel-i2c:intel-i2c-driver",
     "//src/devices/nand/bin/nand-util",

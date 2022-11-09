@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 #include "protocol_test_driver.h"
 
-#include <fuchsia/device/test/c/fidl.h>
+#include <fidl/fuchsia.device.test/cpp/wire.h>
 #include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/platform-defs.h>
@@ -592,21 +592,12 @@ TEST_F(PciProtocolTests, GetBti) {
   ASSERT_STATUS(pci().GetBti(0, &bti), ZX_ERR_NOT_SUPPORTED);
 }
 
-zx_status_t fidl_RunTests(void*, fidl_txn_t* txn) {
+void ProtocolTestDriver::RunTests(RunTestsCompleter::Sync& completer) {
   auto* driver = ProtocolTestDriver::GetInstance();
   auto* zxt = zxtest::Runner::GetInstance();
   zxt->AddObserver(driver);
   RUN_ALL_TESTS(0, nullptr);
-  return fuchsia_device_test_DeviceRunTests_reply(txn, ZX_OK, &driver->report());
-}
-
-void ProtocolTestDriver::DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn) {
-  static const fuchsia_device_test_Test_ops_t kOps = {
-      .RunTests = fidl_RunTests,
-  };
-
-  fidl_incoming_msg_t message = std::move(msg).ReleaseToEncodedCMessage();
-  txn.set_status(fuchsia_device_test_Test_dispatch(this, txn.fidl_txn(), &message, &kOps));
+  completer.Reply(ZX_OK, driver->report());
 }
 
 static zx_status_t pci_test_driver_bind(void* ctx, zx_device_t* parent) {
