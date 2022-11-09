@@ -336,7 +336,9 @@ pub fn dequeue_signal(current_task: &mut CurrentTask) {
     );
     if let Some(siginfo) = siginfo {
         let sigaction = task.thread_group.signal_actions.get(siginfo.signal);
-        match action_for_signal(&siginfo, sigaction) {
+        let action = action_for_signal(&siginfo, sigaction);
+        strace!(current_task, "handling signal {:?} with action {:?}", siginfo, action);
+        match action {
             DeliveryAction::Ignore => {}
             DeliveryAction::CallHandler => {
                 dispatch_signal_handler(current_task, &mut task_state.signals, siginfo, sigaction);
