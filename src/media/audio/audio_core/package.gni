@@ -1,0 +1,237 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//tools/cmc/build/cmc.gni")
+
+# Creates an 'audio_core' component.
+# For example:
+# ```
+#   audio_core_component("foo_audio") {
+#     manifest_shards = [ "meta/with_extra_service.cml" ]
+#   }
+# ```
+#
+# Parameters:
+#
+#     manifest_shards (optional)
+#       Additional component manifest shards that will be merged with the base
+#       audio_core manifest. This can be used to add additional services or
+#       features that may be needed by a specific audio_core configuration.
+#       Type: list(path)
+#
+#     use_prebuilt_coefficient_tables (optional)
+#       If set, we will include a few prebuilt tables in the executable. This
+#       improves startup performance at the cost of a larger executable image.
+#       Type: bool
+#
+#     testonly (optional)
+#       If true, all generated rules are marked testonly. Defaults to false.
+#       Type: bool
+#
+#     visibility (optional)
+#       Set the component's visibility
+#       Type: string
+#
+template("audio_core_component") {
+  use_prebuilt_coefficient_tables =
+      defined(invoker.use_prebuilt_coefficient_tables) &&
+      invoker.use_prebuilt_coefficient_tables
+
+  manifest_shards = [ "//src/media/audio/audio_core/meta/audio_core.cml" ]
+  if (defined(invoker.manifest_shards)) {
+    manifest_shards += invoker.manifest_shards
+  }
+
+  # Add a shard to define the binary name.
+  if (use_prebuilt_coefficient_tables) {
+    manifest_shards += [ "//src/media/audio/audio_core/meta/audio_core.shard.binary_with_prebuilt_coefficient_tables.cml" ]
+  } else {
+    manifest_shards += [
+      "//src/media/audio/audio_core/meta/audio_core.shard.binary_basic.cml",
+    ]
+  }
+
+  # Merge the manifest shards into a single manifest file.
+  manifest_merge_target = "${target_name}_audio_core_manifest_merge"
+  cmc_merge(manifest_merge_target) {
+    sources = manifest_shards
+    output_name = "${manifest_merge_target}.cml"
+  }
+  manifest = get_target_outputs(":$manifest_merge_target")
+  manifest = manifest[0]
+
+  fuchsia_component(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    component_name = "audio_core"
+    manifest = manifest
+    if (!defined(visibility)) {
+      visibility = []
+    }
+    visibility += [
+      ":*",
+      "/*",
+    ]
+
+    if (use_prebuilt_coefficient_tables) {
+      deps = [ "//src/media/audio/audio_core:audio_core_bin_with_prebuilt_coefficient_tables" ]
+    } else {
+      deps = [ "//src/media/audio/audio_core:audio_core_bin" ]
+    }
+
+    deps += [ ":$manifest_merge_target" ]
+  }
+}
+
+# This is a small wrapper around audio_core_component that sets some defaults
+# for tests. All parameters are available except `testonly`, which is set to
+# true.
+template("audio_core_test_component") {
+  audio_core_component(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "manifest_shards",
+                             "visibility",
+                             "use_prebuilt_coefficient_tables",
+                           ])
+
+    testonly = true
+
+    # Tests run faster with prebuilt tables and don't have tight executable size
+    # requirements, so default to using prebuilt tables unless otherwise requested.
+    if (!defined(invoker.use_prebuilt_coefficient_tables)) {
+      use_prebuilt_coefficient_tables = true
+    }
+  }
+}
+
+# Creates an 'audio_core' package which includes an audio_core_component.
+# For example:
+# ```
+#   audio_core_package("foo_audio") {
+#     package_name = "audio_core_package"
+#     manifest_shards = [ "meta/with_extra_service.cml" ]
+#   }
+# ```
+#
+# Parameters:
+#
+#     package_name (optional)
+#       The name of the package. Defaults to 'target_name'.
+#       Type: string
+#       Default: '${target_name}'
+#
+#     package_deps (optional)
+#       Extra deps to include in the package.
+#       Type: list(target)
+#
+#     package_visibility (optional)
+#       Set the package's visibility
+#       Type: string
+#
+#     audio_core_manifest_shards (optional)
+#       Additional component manifest shards that will be merged with the base
+#       audio_core manifest. see audio_core_component.
+#       Type: list(path)
+#
+#     use_prebuilt_coefficient_tables (optional)
+#       If set, we will include a few prebuilt tables in the executable.
+#       see audio_core_component.
+#       Type: bool
+#
+#     testonly (optional)
+#       If true, all generated rules are marked testonly. Defaults to false.
+#       Type: bool
+template("audio_core_package") {
+  component_target = "${target_name}_audio_core_component"
+  audio_core_component(component_target) {
+    forward_variables_from(invoker,
+                           [
+                             "use_prebuilt_coefficient_tables",
+                             "testonly",
+                           ])
+    visibility = [
+      ":*",
+      "/*",
+    ]
+
+    if (defined(invoker.audio_core_manifest_shards)) {
+      manifest_shards = invoker.audio_core_manifest_shards
+    }
+  }
+
+  fuchsia_package(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "package_name",
+                             "testonly",
+                           ])
+
+    deps = [ ":${component_target}" ]
+    if (defined(invoker.package_deps)) {
+      deps += invoker.package_deps
+    }
+    if (defined(invoker.package_visibility)) {
+      visibility = invoker.package_visibility
+    }
+  }
+}
+
+# This is similar to audio_core_package, but uses audio_core_component to
+# create the component and fuchsia_test_package to create the test. The package
+# automatically includes every component needed to start a hermetic audio test
+# environment. The caller can add to this set of components through the
+# `package_deps` parameter.
+#
+# Additional parameters:
+#
+#     test_components (required)
+#       See fuchsia_test_package.
+#
+#     test_specs (optional)
+#       See fuchsia_test_package.
+#
+template("audio_core_test_package") {
+  component_target = "${target_name}_audio_core_component"
+  audio_core_test_component(component_target) {
+    forward_variables_from(invoker, [ "use_prebuilt_coefficient_tables" ])
+    visibility = [
+      ":*",
+      "/*",
+    ]
+
+    if (defined(invoker.audio_core_manifest_shards)) {
+      manifest_shards = invoker.audio_core_manifest_shards
+    }
+  }
+
+  fuchsia_test_package(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "package_name",
+                             "test_components",
+                             "test_specs",
+                           ])
+
+    # The set of components needed to start a hermetic audio test environment.
+    # Note: If the `test_components` use audio_core/testing/integration, then a test
+    # driver realm is automatically included along with the virtual audio driver.
+    deps = [
+      ":${component_target}",
+      "//src/cobalt/bin/testing/mock_cobalt:component_v2",
+      "//src/power/testing/thermal-test-control:thermal-test-control-v2",
+    ]
+    if (defined(invoker.package_deps)) {
+      deps += invoker.package_deps
+    }
+
+    if (defined(invoker.package_visibility)) {
+      visibility = invoker.package_visibility
+    }
+  }
+}

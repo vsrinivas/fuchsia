@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//src/media/audio/audio_core_config.gni")
+import("//src/media/audio/audio_core/config.gni")
 
 audio_core_config("chromebook") {
   for_pkg = "audio_core"

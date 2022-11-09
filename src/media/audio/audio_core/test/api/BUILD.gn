@@ -4,8 +4,8 @@
 
 import("//build/components.gni")
 import("//build/testing/environments.gni")
+import("//src/media/audio/audio_core/package.gni")
 import("//src/media/audio/audio_core/test/api/api_test_component.gni")
-import("//src/media/audio/audio_core_package_v2.gni")
 import("//src/media/audio/hardware.gni")
 
 group("api") {

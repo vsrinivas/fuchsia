@@ -4,7 +4,7 @@
 
 import("//build/cipd.gni")
 import("//build/components.gni")
-import("//src/media/audio/audio_core_package_v2.gni")
+import("//src/media/audio/audio_core/package.gni")
 import("//src/virtualization/buildtools/linux_paths.gni")
 import("//src/virtualization/buildtools/romfs_image.gni")
 
