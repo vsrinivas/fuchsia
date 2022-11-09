@@ -1,0 +1,75 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    actions: [
+        // Netstack3 does not support TCP (yet).
+        {
+            type: "expect_pass",
+            matchers: [
+                "*",
+            ],
+        },
+        {
+            type: "skip",
+            matchers: [
+                // Skip tests that will otherwise hang forever.
+                // TODO(https://fxbug.dev/111877): un-skip some of these when the data path is ready.
+                "AllTCPSockets/*.*/*",
+                "AllUnixDomainSockets/*.*/*",
+                "AllInetTests/SimpleTcpSocketTest.*/*",
+
+                // Skip tests that sometimes crash the Netstack.
+                //
+                // https://fxbug.dev/111364
+                "AllInetTests/TcpSocketTest.NoDelayDefault/*",
+            ],
+        },
+        {
+            type: "expect_failure",
+            matchers: [
+                // Otherwise, expect failure.
+                "AllInetTests/TcpSocketTest.ConnectedAcceptedPeerAndLocalAreReciprocals/*",
+                "AllInetTests/TcpSocketTest.ConnectOnEstablishedConnection/*",
+                "AllInetTests/TcpSocketTest.ShutdownWriteInTimeWait/*",
+                "AllInetTests/TcpSocketTest.ShutdownWriteInFinWait1/*",
+                "AllInetTests/TcpSocketTest.DataCoalesced/*",
+                "AllInetTests/TcpSocketTest.SenderAddressIgnored/*",
+                "AllInetTests/TcpSocketTest.SenderAddressIgnoredOnPeek/*",
+                "AllInetTests/TcpSocketTest.SendtoAddressIgnored/*",
+                "AllInetTests/TcpSocketTest.WritevZeroIovec/*",
+                "AllInetTests/TcpSocketTest.ZeroWriteAllowed/*",
+                "AllInetTests/TcpSocketTest.NonblockingLargeWrite/*",
+                "AllInetTests/TcpSocketTest.BlockingLargeWrite/*",
+                "AllInetTests/TcpSocketTest.LargeSendDontWait/*",
+                "AllInetTests/TcpSocketTest.NonblockingLargeSend/*",
+                "AllInetTests/TcpSocketTest.BlockingLargeSend/*",
+                "AllInetTests/TcpSocketTest.PollWithFullBufferBlocks/*",
+                "AllInetTests/TcpSocketTest.ClosedWriteBlockingSocket/*",
+                "AllInetTests/TcpSocketTest.ClosedReadBlockingSocket/*",
+                "AllInetTests/TcpSocketTest.MsgTrunc/*",
+                "AllInetTests/TcpSocketTest.MsgTruncWithCtrunc/*",
+                "AllInetTests/TcpSocketTest.MsgTruncWithCtruncOnly/*",
+                "AllInetTests/TcpSocketTest.MsgTruncLargeSize/*",
+                "AllInetTests/TcpSocketTest.MsgTruncPeek/*",
+                "AllInetTests/TcpSocketTest.NoDelayDefault/*",
+                "AllInetTests/TcpSocketTest.SetNoDelay/*",
+                "AllInetTests/TcpSocketTest.TcpInqSetSockOpt/*",
+                "AllInetTests/TcpSocketTest.TcpInq/*",
+                "AllInetTests/TcpSocketTest.Tiocinq/*",
+                "AllInetTests/TcpSocketTest.TcpSCMPriority/*",
+                "AllInetTests/TcpSocketTest.TimeWaitPollHUP/*",
+                "AllInetTests/TcpSocketTest.FullBuffer/*",
+                "AllInetTests/TcpSocketTest.PollAfterShutdown/*",
+                "AllInetTests/TcpSocketTest.GetSocketAcceptConnListener/*",
+                "AllInetTests/TcpSocketTest.GetSocketAcceptConnNonListener/*",
+                "AllInetTests/TcpSocketTest.SendUnblocksOnSendBufferIncrease/*",
+
+                // Expect failure for tests that set the TCP_NODELAY socket option.
+                "NonBlockingTCPSockets/NonBlockingSocketPairTest.ReadNothingAvailable/[2367]",
+                "NonBlockingTCPSockets/NonBlockingSocketPairTest.RecvNothingAvailable/[2367]",
+                "NonBlockingTCPSockets/NonBlockingSocketPairTest.RecvMsgNothingAvailable/[2367]",
+            ],
+        },
+    ],
+}

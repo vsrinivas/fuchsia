@@ -465,6 +465,7 @@ template("syscall_test_suite") {
             invoker.with_distinct_fast_udp_expectations
       }
       fuchsia_test_with_expectations_package(test_package_label) {
+        forward_variables_from(invoker, [ "test_specs" ])
         test_components = [ ":${_unittest_component}" ]
 
         if (stack.label == ns3_label) {
@@ -486,6 +487,7 @@ template("syscall_test_suite") {
       }
     } else {
       fuchsia_unittest_package(test_package_label) {
+        forward_variables_from(invoker, [ "test_specs" ])
         package_name = test_package_label
         manifest = stack.manifest
         deps = [
@@ -562,6 +564,10 @@ syscall_test_suite(loopback_isolated_tcp_linger_timeout_test_label) {
 }
 syscall_test_suite(tcp_test_label) {
   run_with_fast_udp = false
+  use_expectations_framework = true
+  test_specs = {
+    timeout_secs = 600
+  }
 }
 
 group("tests") {

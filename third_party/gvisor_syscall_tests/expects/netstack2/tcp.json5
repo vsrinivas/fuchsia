@@ -1,0 +1,146 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    actions: [
+        {
+            type: "expect_pass",
+            matchers: [
+                "*",
+            ],
+        },
+        {
+            type: "skip",
+            matchers: [
+                // Tests that flake in Fuchsia's CQ.
+                // https://fxbug.dev/112125
+                "AllInetTests/TcpSocketTest.ClosedWriteBlockingSocket/*",
+
+                // https://fxbug.dev/112126
+                "AllInetTests/TcpSocketTest.PollWithFullBufferBlocks/*",
+
+                // https://fxbug.dev/112041
+                "AllInetTests/SimpleTcpSocketTest.SynRcvdOnListenerShutdown/*",
+
+                // https://fxbug.dev/73028
+                "AllTCPSockets/TCPSocketPairTest.RSTCausesPollHUP/*",
+
+                // https://fxbug.dev/73031
+                "AllTCPSockets/TCPSocketPairTest.RSTSentOnCloseWithUnreadDataAllowsReadBuffered/*",
+
+                // https://fxbug.dev/70837
+                // Skip this test as it flakes often because of reaching file descriptor
+                // resource limits on Fuchsia. Bumping up the resource limit in Fuchsia might
+                // be more involved.
+                "AllTCPSockets/TCPSocketPairTest.TCPResetDuringClose/*",
+
+                // This test hangs until cl/390312274 is in the Fuchsia SDK.
+                "AllInetTests/TcpSocketTest.SendUnblocksOnSendBufferIncrease/*",
+
+                // https://fxbug.dev/62744
+                // Skip flaky test.
+                "AllInetTests/SimpleTcpSocketTest.SelfConnectSendRecv/*",
+
+                // https://fxbug.dev/73043
+                "AllInetTests/SimpleTcpSocketTest.NonBlockingConnect_PollWrNorm/*",
+
+                // https://fxbug.dev/85279
+                "AllInetTests/SimpleTcpSocketTest.ShutdownReadConnectingSocket/*",
+
+                // https://fxbug.dev/85279
+                "AllInetTests/SimpleTcpSocketTest.ShutdownWriteConnectingSocket/*",
+
+                // https://fxbug.dev/85279
+                "AllInetTests/SimpleTcpSocketTest.ShutdownReadWriteConnectingSocket/*",
+            ],
+        },
+        {
+            type: "expect_failure",
+            matchers: [
+                // third_party/gvisor/test/syscalls/linux/socket_ip_tcp_generic.cc:125
+                // Value of: RetryEINTR(read)(sockets->first_fd(), buf, sizeof(buf))
+                // Expected: -1 (failure), with errno PosixError(errno=104 0)
+                //   Actual: 0 (of type long)
+                "AllTCPSockets/TCPSocketPairTest.RSTSentOnCloseWithUnreadData/*",
+
+                // https://fxbug.dev/73032
+                "AllTCPSockets/TCPSocketPairTest.ShutdownRdUnreadDataShouldCauseNoPacketsUnlessClosed/*",
+
+                // https://fxbug.dev/20628
+                "AllTCPSockets/TCPSocketPairTest.MsgTruncMsgPeek/*",
+
+                // Fuchsia does not support Unix sockets.
+                "AllUnixDomainSockets/AllSocketPairTest.BasicSendmmsg/*",
+
+                // Fuchsia does not support Unix sockets.
+                "AllUnixDomainSockets/AllSocketPairTest.BasicRecvmmsg/*",
+
+                // Fuchsia does not support Unix sockets.
+                "AllUnixDomainSockets/AllSocketPairTest.RecvmmsgTimeoutBeforeRecv/*",
+
+                // Fuchsia does not support Unix sockets.
+                "AllUnixDomainSockets/AllSocketPairTest.RecvmmsgInvalidTimeout/*",
+
+                // Fuchsia does not support Unix sockets.
+                "AllUnixDomainSockets/AllSocketPairTest.SendmmsgIsLimitedByMAXIOV/*",
+
+                // Fuchsia does not support Unix sockets.
+                "AllUnixDomainSockets/AllSocketPairTest.SendmsgRecvmsg10KB/*",
+
+                // Fuchsia does not support Unix sockets.
+                "AllUnixDomainSockets/AllSocketPairTest.SendmsgRecvmsg16KB/*",
+
+                // Fuchsia does not support Unix sockets.
+                "AllUnixDomainSockets/AllSocketPairTest.SendmsgRecvmsgMsgCtruncNoop/*",
+
+                // Fuchsia does not support Unix sockets.
+                "AllUnixDomainSockets/AllSocketPairTest.RecvmsgMsghdrFlagsCleared/*",
+
+                // Fuchsia does not support Unix sockets.
+                "AllUnixDomainSockets/AllSocketPairTest.RecvmsgPeekMsghdrFlagsCleared/*",
+
+                // Fuchsia does not support Unix sockets.
+                "AllUnixDomainSockets/AllSocketPairTest.RecvWaitAll/*",
+
+                // Fuchsia does not support Unix sockets.
+                "AllUnixDomainSockets/AllSocketPairTest.RecvWaitAllDontWait/*",
+
+                // Fuchsia does not support Unix sockets.
+                "AllUnixDomainSockets/AllSocketPairTest.RecvTimeoutWaitAll/*",
+
+                // https://fxbug.dev/74836
+                "AllUnixDomainSockets/AllSocketPairTest.SetAndGetBooleanSocketOptions/*",
+
+                // https://fxbug.dev/74639
+                "AllUnixDomainSockets/AllSocketPairTest.GetSetSocketRcvlowatOption/*",
+
+                // https://fxbug.dev/20628
+                "AllInetTests/TcpSocketTest.MsgTrunc/*",
+
+                // https://fxbug.dev/20628
+                "AllInetTests/TcpSocketTest.MsgTruncWithCtrunc/*",
+
+                // https://fxbug.dev/20628
+                "AllInetTests/TcpSocketTest.MsgTruncWithCtruncOnly/*",
+
+                // https://fxbug.dev/20628
+                "AllInetTests/TcpSocketTest.MsgTruncLargeSize/*",
+
+                // https://fxbug.dev/20628
+                "AllInetTests/TcpSocketTest.MsgTruncPeek/*",
+
+                // https://fxbug.dev/41617
+                "AllInetTests/TcpSocketTest.TcpInqSetSockOpt/*",
+
+                // https://fxbug.dev/41617
+                "AllInetTests/TcpSocketTest.TcpInq/*",
+
+                // https://fxbug.dev/41617
+                "AllInetTests/TcpSocketTest.TcpSCMPriority/*",
+
+                // https://fxbug.dev/20628
+                "AllTCPSockets/TCPSocketPairTest.MsgTruncMsgPeek/*",
+            ],
+        },
+    ],
+}
