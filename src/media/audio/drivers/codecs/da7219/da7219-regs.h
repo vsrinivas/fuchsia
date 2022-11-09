@@ -7,7 +7,7 @@
 
 #include <hwreg/i2c.h>
 
-namespace audio {
+namespace audio::da7219 {
 
 // This class adds defaults and helpers to the hwreg-i2c library.
 // Since all registers read/write one byte at the time IntType is uint8_t and AddrIntSize 1.
@@ -22,7 +22,7 @@ struct I2cRegister : public hwreg::I2cRegisterBase<DerivedType, uint8_t, 1> {
 #endif
     zx_status_t status = ret.ReadFrom(i2c);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "I2C read reg 0x%02x error: %s", ret.reg_addr(), zx_status_get_string(status));
+      // TODO(102079): Add logging here compatible with DFv2's logger_ requirement.
       return zx::error(status);
     }
     return zx::ok(ret);
@@ -33,13 +33,8 @@ struct I2cRegister : public hwreg::I2cRegisterBase<DerivedType, uint8_t, 1> {
     printf("Writting register 0x%02X\n",
            hwreg::I2cRegisterBase<DerivedType, uint8_t, 1>::reg_addr());
 #endif
-    zx_status_t status = hwreg::I2cRegisterBase<DerivedType, uint8_t, 1>::WriteTo(i2c);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "I2C write reg 0x%02x error: %s",
-             hwreg::I2cRegisterBase<DerivedType, uint8_t, 1>::reg_addr(),
-             zx_status_get_string(status));
-    }
-    return status;
+    // TODO(102079): Add logging here compatible with DFv2's logger_ requirement.
+    return hwreg::I2cRegisterBase<DerivedType, uint8_t, 1>::WriteTo(i2c);
   }
   static DerivedType Get() { return hwreg::I2cRegisterAddr<DerivedType>(address).FromValue(0); }
 };
@@ -318,6 +313,6 @@ struct SystemActive : public I2cRegister<SystemActive, 0xfd> {
   DEF_BIT(0, system_active);
 };
 
-}  // namespace audio
+}  // namespace audio::da7219
 
 #endif  // SRC_MEDIA_AUDIO_DRIVERS_CODECS_DA7219_DA7219_REGS_H_

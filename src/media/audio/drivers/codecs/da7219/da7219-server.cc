@@ -2,32 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/drivers/codecs/da7219/da7219.h"
+#include "da7219-server.h"
 
-#include <lib/ddk/platform-defs.h>
 #include <lib/zx/clock.h>
 
-#include "src/devices/lib/acpi/client.h"
-#include "src/media/audio/drivers/codecs/da7219/da7219-bind.h"
-#include "src/media/audio/drivers/codecs/da7219/da7219-regs.h"
+#include "da7219-regs.h"
 
 namespace audio::da7219 {
 
 // Core methods.
 
-Core::Core(fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c, zx::interrupt irq)
-    : i2c_(std::move(i2c)), irq_(std::move(irq)) {
-  async_loop_config_t config = kAsyncLoopConfigNeverAttachToThread;
-  config.irq_support = true;
-  loop_.emplace(&config);
+Core::Core(Logger* logger, fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c, zx::interrupt irq)
+    : logger_(logger),
+      i2c_(std::move(i2c)),
+      irq_(std::move(irq)),
+      config_(MakeConfig()),
+      loop_(&config_) {
   irq_handler_.set_object(irq_.get());
-  irq_handler_.Begin(loop_->dispatcher());
-  loop_->StartThread();
+  irq_handler_.Begin(loop_.dispatcher());
+  loop_.StartThread();
 }
 
 void Core::PlugDetected(bool plugged, bool with_mic) {
-  zxlogf(INFO, "Plug event: %s %s", plugged ? "plugged" : "unplugged",
-         with_mic ? "with mic" : "no mic");
+  DA7219_LOG(INFO, "Plug event: %s %s", plugged ? "plugged" : "unplugged",
+             with_mic ? "with mic" : "no mic");
 
   // Enable/disable HP left.
   auto hplctrl = HpLCtrl::Read(i2c_);
@@ -55,7 +53,8 @@ void Core::PlugDetected(bool plugged, bool with_mic) {
 
   // No errors, now update callbacks. Input is plugged only if the HW detected a 4-pole jack.
   if (plug_callback_input_.has_value()) {
-    (*plug_callback_input_)(plugged && with_mic);
+    bool plugged_with_mic = plugged && with_mic;
+    (*plug_callback_input_)(plugged_with_mic);
   }
 
   if (plug_callback_output_.has_value()) {
@@ -74,10 +73,10 @@ void Core::AddPlugCallback(bool is_input, PlugCallback cb) {
 void Core::Shutdown() {
   zx_status_t status = SystemActive::Get().set_system_active(false).Write(i2c_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not deactive the HW: %s", zx_status_get_string(status));
+    DA7219_LOG(ERROR, "Could not deactive the HW: %s", zx_status_get_string(status));
   }
 
-  loop_->Shutdown();
+  loop_.Shutdown();
   irq_handler_.Cancel();
   irq_.destroy();
 }
@@ -98,12 +97,12 @@ zx_status_t Core::Initialize() {
   constexpr uint8_t kSupportedChipId1 = 0x23;
   constexpr uint8_t kSupportedChipId2 = 0x93;
   if (chip_id1->chip_id1() != kSupportedChipId1 || chip_id2->chip_id2() != kSupportedChipId2) {
-    zxlogf(ERROR, "Found not supported CHIP ids 0x%02X:0x%02X", chip_id1->chip_id1(),
-           chip_id2->chip_id2());
+    DA7219_LOG(ERROR, "Found not supported CHIP ids 0x%02X:0x%02X", chip_id1->chip_id1(),
+               chip_id2->chip_id2());
     return ZX_ERR_NOT_SUPPORTED;
   }
-  zxlogf(INFO, "Found device ID:0x%02X/0x%02X REV:0x%01X/0x%01X", chip_id1->chip_id1(),
-         chip_id2->chip_id2(), chip_revision->chip_major(), chip_revision->chip_minor());
+  DA7219_LOG(INFO, "Found device ID:0x%02X/0x%02X REV:0x%01X/0x%01X", chip_id1->chip_id1(),
+             chip_id2->chip_id2(), chip_revision->chip_major(), chip_revision->chip_minor());
 
   return ZX_OK;
 }
@@ -257,11 +256,45 @@ zx_status_t Core::Reset() {
       .Write(i2c_);
 }
 
-// Driver methods.
+void Core::HandleIrq(async_dispatcher_t* dispatcher, async::IrqBase* irq, zx_status_t status,
+                     const zx_packet_interrupt_t* interrupt) {
+  if (status != ZX_OK) {
+    // Do not log canceled cases which happens too often in particular in test cases.
+    if (status != ZX_ERR_CANCELED) {
+      DA7219_LOG(ERROR, "IRQ wait: %s", zx_status_get_string(status));
+    }
+    return;
+  }
 
-Driver::Driver(zx_device_t* parent, std::shared_ptr<Core> core, bool is_input)
-    : Base(parent), core_(core), is_input_(is_input) {
-  ddk_proto_id_ = ZX_PROTOCOL_CODEC;
+  auto event_a = AccdetIrqEventA::Read(i2c_);
+  if (!event_a.is_ok())
+    return;
+
+  auto status_a = AccdetStatusA::Read(i2c_);
+  if (!status_a.is_ok())
+    return;
+
+  if (event_a->e_jack_detect_complete()) {
+    // Only report once we are done with detection.
+    PlugDetected(true, status_a->jack_type_sts());
+  } else if (event_a->e_jack_removed()) {
+    PlugDetected(false, status_a->jack_type_sts());
+  }
+
+  irq_.ack();
+  status = AccdetIrqEventA::Get()
+               .set_e_jack_detect_complete(true)  // Set to clear.
+               .set_e_jack_removed(true)          // Set to clear.
+               .set_e_jack_inserted(true)         // Set to clear.
+               .Write(i2c_);
+  if (status != ZX_OK)
+    return;
+}
+
+// Server methods.
+
+Server::Server(Logger* logger, std::shared_ptr<Core> core, bool is_input)
+    : logger_(logger), core_(std::move(core)), is_input_(is_input) {
   core_->AddPlugCallback(is_input_, [this](bool plugged) {
     // Update plug state if we haven't set it yet, or if changed.
     if (!plugged_time_.get() || plugged_ != plugged) {
@@ -281,27 +314,7 @@ Driver::Driver(zx_device_t* parent, std::shared_ptr<Core> core, bool is_input)
   });
 }
 
-void Driver::Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) {
-  if (bound_) {
-    completer.Close(ZX_ERR_NO_RESOURCES);  // Only allow one connection.
-    return;
-  }
-  bound_ = true;
-  fidl::OnUnboundFn<fidl::WireServer<fuchsia_hardware_audio::Codec>> on_unbound =
-      [this](fidl::WireServer<fuchsia_hardware_audio::Codec>*, fidl::UnbindInfo info,
-             fidl::ServerEnd<fuchsia_hardware_audio::Codec>) {
-        // Do not log canceled cases which happens too often in particular in test cases.
-        if (info.status() != ZX_ERR_CANCELED) {
-          zxlogf(INFO, "Codec channel closing: %s", info.FormatDescription().c_str());
-        }
-        bound_ = false;
-      };
-
-  fidl::BindServer<fidl::WireServer<fuchsia_hardware_audio::Codec>>(
-      core_->dispatcher(), std::move(request->codec_protocol), this, std::move(on_unbound));
-}
-
-void Driver::Reset(ResetCompleter::Sync& completer) {
+void Server::Reset(ResetCompleter::Sync& completer) {
   // Either driver resets the whole core.
   zx_status_t status = core_->Reset();
   if (status != ZX_OK) {
@@ -311,28 +324,28 @@ void Driver::Reset(ResetCompleter::Sync& completer) {
   completer.Reply();
 }
 
-void Driver::GetInfo(GetInfoCompleter::Sync& completer) {
+void Server::GetInfo(GetInfoCompleter::Sync& completer) {
   fuchsia_hardware_audio::wire::CodecInfo info{
       .unique_id = "", .manufacturer = "Dialog", .product_name = "DA7219"};
   completer.Reply(info);
 }
 
-void Driver::Stop(StopCompleter::Sync& completer) { completer.Close(ZX_ERR_NOT_SUPPORTED); }
+void Server::Stop(StopCompleter::Sync& completer) { completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
-void Driver::Start(StartCompleter::Sync& completer) {
+void Server::Start(StartCompleter::Sync& completer) {
   completer.Reply({});  // Always started.
 }
 
-void Driver::GetHealthState(GetHealthStateCompleter::Sync& completer) { completer.Reply({}); }
+void Server::GetHealthState(GetHealthStateCompleter::Sync& completer) { completer.Reply({}); }
 
-void Driver::IsBridgeable(IsBridgeableCompleter::Sync& completer) { completer.Reply(false); }
+void Server::IsBridgeable(IsBridgeableCompleter::Sync& completer) { completer.Reply(false); }
 
-void Driver::SetBridgedMode(SetBridgedModeRequestView request,
+void Server::SetBridgedMode(SetBridgedModeRequestView request,
                             SetBridgedModeCompleter::Sync& completer) {
   completer.Close(ZX_ERR_NOT_SUPPORTED);
 }
 
-void Driver::GetDaiFormats(GetDaiFormatsCompleter::Sync& completer) {
+void Server::GetDaiFormats(GetDaiFormatsCompleter::Sync& completer) {
   // TODO(104023): Add handling for the other formats supported by this hardware.
   fidl::Arena arena;
   static std::vector<uint32_t> kChannels = {2};
@@ -358,13 +371,13 @@ void Driver::GetDaiFormats(GetDaiFormatsCompleter::Sync& completer) {
       .bits_per_sample = fidl::VectorView<uint8_t>(arena, kBitsPerSample),
   };
   std::vector<fuchsia_hardware_audio::wire::DaiSupportedFormats> all_formats;
-  all_formats.emplace_back(std::move(formats));
+  all_formats.emplace_back(formats);
   fidl::VectorView<fuchsia_hardware_audio::wire::DaiSupportedFormats> all_formats2(arena,
                                                                                    all_formats);
-  completer.ReplySuccess(std::move(all_formats2));
+  completer.ReplySuccess(all_formats2);
 }
 
-void Driver::SetDaiFormat(SetDaiFormatRequestView request, SetDaiFormatCompleter::Sync& completer) {
+void Server::SetDaiFormat(SetDaiFormatRequestView request, SetDaiFormatCompleter::Sync& completer) {
   auto format = request->format;
   uint8_t dai_word_length = 0;
   // clang-format off
@@ -429,46 +442,11 @@ void Driver::SetDaiFormat(SetDaiFormatRequestView request, SetDaiFormatCompleter
   completer.ReplySuccess({});
 }
 
-void Driver::GetPlugDetectCapabilities(GetPlugDetectCapabilitiesCompleter::Sync& completer) {
+void Server::GetPlugDetectCapabilities(GetPlugDetectCapabilitiesCompleter::Sync& completer) {
   completer.Reply(fuchsia_hardware_audio::wire::PlugDetectCapabilities::kCanAsyncNotify);
 }
 
-void Core::HandleIrq(async_dispatcher_t* dispatcher, async::IrqBase* irq, zx_status_t status,
-                     const zx_packet_interrupt_t* interrupt) {
-  if (status != ZX_OK) {
-    // Do not log canceled cases which happens too often in particular in test cases.
-    if (status != ZX_ERR_CANCELED) {
-      zxlogf(ERROR, "IRQ wait: %s", zx_status_get_string(status));
-    }
-    return;
-  }
-
-  auto event_a = AccdetIrqEventA::Read(i2c_);
-  if (!event_a.is_ok())
-    return;
-
-  auto status_a = AccdetStatusA::Read(i2c_);
-  if (!status_a.is_ok())
-    return;
-
-  if (event_a->e_jack_detect_complete()) {
-    // Only report once we are done with detection.
-    PlugDetected(true, status_a->jack_type_sts());
-  } else if (event_a->e_jack_removed()) {
-    PlugDetected(false, status_a->jack_type_sts());
-  }
-
-  irq_.ack();
-  status = AccdetIrqEventA::Get()
-               .set_e_jack_detect_complete(true)  // Set to clear.
-               .set_e_jack_removed(true)          // Set to clear.
-               .set_e_jack_inserted(true)         // Set to clear.
-               .Write(i2c_);
-  if (status != ZX_OK)
-    return;
-}
-
-void Driver::WatchPlugState(WatchPlugStateCompleter::Sync& completer) {
+void Server::WatchPlugState(WatchPlugStateCompleter::Sync& completer) {
   fidl::Arena arena;
   auto plug_state = fuchsia_hardware_audio::wire::PlugState::Builder(arena);
   plug_state.plugged(plugged_).plug_state_time(plugged_time_.get());
@@ -478,89 +456,11 @@ void Driver::WatchPlugState(WatchPlugStateCompleter::Sync& completer) {
   } else if (!plug_state_completer_) {
     plug_state_completer_.emplace(completer.ToAsync());
   } else {
-    zxlogf(WARNING, "Client called WatchPlugState when another hanging get was pending");
+    DA7219_LOG(WARNING, "Client called WatchPlugState when another hanging get was pending");
   }
 }
 
-zx_status_t Driver::Bind(void* ctx, zx_device_t* parent) {
-  auto client = acpi::Client::Create(parent);
-  if (!client.is_ok()) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  auto i2c_endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
-  if (i2c_endpoints.is_error()) {
-    zxlogf(ERROR, "Failed to create I2C endpoints");
-    return i2c_endpoints.error_value();
-  }
-
-  zx_status_t status = device_connect_fragment_fidl_protocol(
-      parent, "i2c000", fidl::DiscoverableProtocolName<fuchsia_hardware_i2c::Device>,
-      i2c_endpoints->server.TakeChannel().release());
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not get i2c protocol");
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  auto result = client->borrow()->MapInterrupt(0);
-  if (!result.ok() || result.value().is_error()) {
-    zxlogf(WARNING, "Could not get IRQ: %s",
-           result.ok() ? zx_status_get_string(result.value().error_value())
-                       : result.FormatDescription().data());
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  // There is a core class that implements the core logic and interaction with the hardware, and a
-  // Driver class that allows the creation of multiple instances (one for input and one for output)
-  // via multiple DdkAdd invocations.
-  auto core = std::make_shared<Core>(std::move(i2c_endpoints->client),
-                                     std::move(result.value().value()->irq));
-  status = core->Initialize();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not initialize");
-    return status;
-  }
-
-  auto output_driver = std::make_unique<Driver>(parent, core, false);
-  zx_device_prop_t output_props[] = {
-      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_DIALOG},
-      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_DIALOG_DA7219},
-      {BIND_CODEC_INSTANCE, 0, 1},
-  };
-  status = output_driver->DdkAdd(ddk::DeviceAddArgs("DA7219-output").set_props(output_props));
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not add to DDK");
-    return status;
-  }
-  output_driver.release();
-
-  auto input_driver = std::make_unique<Driver>(parent, core, true);
-  zx_device_prop_t input_props[] = {
-      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_DIALOG},
-      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_DIALOG_DA7219},
-      {BIND_CODEC_INSTANCE, 0, 2},
-  };
-  status = input_driver->DdkAdd(ddk::DeviceAddArgs("DA7219-input").set_props(input_props));
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not add to DDK");
-    return status;
-  }
-  input_driver.release();
-
-  return ZX_OK;
-}
-
-void Driver::DdkInit(ddk::InitTxn txn) { txn.Reply(ZX_OK); }
-
-void Driver::DdkRelease() { delete this; }
-
-static zx_driver_ops_t driver_ops = []() -> zx_driver_ops_t {
-  zx_driver_ops_t ops = {};
-  ops.version = DRIVER_OPS_VERSION;
-  ops.bind = Driver::Bind;
-  return ops;
-}();
+void Server::SignalProcessingConnect(SignalProcessingConnectRequestView request,
+                                     SignalProcessingConnectCompleter::Sync& completer) {}
 
 }  // namespace audio::da7219
-
-ZIRCON_DRIVER(Da7219, audio::da7219::driver_ops, "zircon", "0.1");

@@ -7,11 +7,10 @@
 
 #include <memory>
 
-#include <sdk/lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <zxtest/zxtest.h>
 
 #include "src/devices/testing/mock-ddk/mock-device.h"
-#include "src/media/audio/drivers/codecs/da7219/da7219.h"
+#include "src/media/audio/drivers/codecs/da7219/da7219-dfv1.h"
 
 namespace audio::da7219 {
 
@@ -35,7 +34,7 @@ class Da7219Test : public zxtest::Test {
     zx::interrupt irq2;
     ASSERT_OK(irq_.duplicate(ZX_RIGHT_SAME_RIGHTS, &irq2));
 
-    core_ = std::make_shared<Core>(std::move(i2c_endpoints->client), std::move(irq2));
+    core_ = std::make_shared<Core>(nullptr, std::move(i2c_endpoints->client), std::move(irq2));
     ASSERT_OK(core_->Initialize());
 
     auto codec_connector_endpoints =

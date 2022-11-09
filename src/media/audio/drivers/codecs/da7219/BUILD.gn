@@ -31,14 +31,21 @@ driver_bind_rules("bind") {
   deps = [ "//src/devices/bind/fuchsia.acpi" ]
 }
 
-fuchsia_driver("driver") {
-  output_name = "da7219"
+config("logging-dfv1") {
+  defines = [ "LOGGING_PATH=\"da7219-logging-dfv1.h\"" ]
+}
+
+source_set("common-dfv1") {
   sources = [
+    "da7219-dfv1.cc",
+    "da7219-dfv1.h",
+    "da7219-logging-dfv1.h",
     "da7219-regs.h",
-    "da7219.cc",
-    "da7219.h",
+    "da7219-server.cc",
+    "da7219-server.h",
   ]
-  deps = [
+  public_configs = [ ":logging-dfv1" ]
+  public_deps = [
     ":bind",
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_cpp_wire",
@@ -46,11 +53,16 @@ fuchsia_driver("driver") {
     "//src/devices/lib/driver",
     "//src/lib/ddktl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hwreg-i2c",
-    "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxc",
   ]
+}
+
+fuchsia_driver("driver") {
+  output_name = "da7219"
+  sources = []
+  deps = [ ":common-dfv1" ]
 }
 
 fuchsia_driver_component("component") {
@@ -66,25 +78,11 @@ fuchsia_driver_package("pkg") {
 }
 
 test("da7219-unit-tests") {
-  sources = [
-    "da7219.cc",
-    "da7219.h",
-    "unit-tests.cc",
-  ]
+  sources = [ "unit-tests.cc" ]
   deps = [
-    ":bind",
-    "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_cpp_wire",
-    "//sdk/lib/inspect/testing/cpp:zxtest",
+    ":common-dfv1",
     "//src/devices/i2c/testing/mock-i2c",
-    "//src/devices/lib/acpi",
-    "//src/devices/lib/driver",
     "//src/devices/testing/mock-ddk",
-    "//src/lib/ddktl",
-    "//src/media/audio/lib/simple-codec",
-    "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/hwreg-i2c",
-    "//zircon/system/ulib/inspect",
-    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }
