@@ -773,7 +773,8 @@ TEST(HidDescriptorTest, LimitManyReportAllocations) {
   FreeDeviceDescriptor(desc);
 }
 
-// Another fuzzer discovery.
+// Discovered from fuzzing. This descriptor attempts to allocate a large amount of
+// usages.
 TEST(HidDescriptorTest, LimitManyReportAllocations2) {
   const uint8_t report_desc[] = {
       0x35, 0xE2,  // Physical Minimum (-30)
