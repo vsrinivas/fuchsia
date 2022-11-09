@@ -320,7 +320,8 @@ class LibGptTest {
     // device. We also ignore any backup copies on the device.
     // Once there exists an api in libgpt to get size and location(s) of gpt,
     // we can setup/cleanup before/after running tests in a better way.
-    destroy_gpt(result->device_, result->GetBlockSize(), 0, result->GptMetadataBlocksCount());
+    destroy_gpt(result->gpt_->device(), result->GetBlockSize(), 0,
+                result->GptMetadataBlocksCount());
 
     result->Reset();
 
@@ -356,13 +357,9 @@ class LibGptTest {
 
   // Remove all partition from GPT and keep device in GPT initialized state.
   void Reset() {
-    std::unique_ptr<GptDevice> gpt;
-
     zx::result device = component::Connect<fuchsia_hardware_block::Block>(disk_path_);
     ASSERT_OK(device);
-    device_ = std::move(device.value());
-    ASSERT_OK(GptDevice::Create(device_, GetBlockSize(), GetBlockCount(), &gpt));
-    gpt_ = std::move(gpt);
+    ASSERT_OK(GptDevice::Create(std::move(device.value()), GetBlockSize(), GetBlockCount(), &gpt_));
   }
 
   // Finalize uninitialized disk and verify.
@@ -398,7 +395,7 @@ class LibGptTest {
 
     // Read the block containing the MBR.
     char buff[blk_size_];
-    if (block_client::SingleReadBytes(device_, buff, blk_size_, 0) != ZX_OK) {
+    if (block_client::SingleReadBytes(gpt_->device(), buff, blk_size_, 0) != ZX_OK) {
       return ZX_ERR_IO;
     }
 
@@ -493,7 +490,7 @@ class LibGptTest {
     blk_count_ = info_res.value().info->block_count;
 
     ASSERT_GE(GetDiskSize(), kAcceptableMinimumSize, "Insufficient disk space for tests");
-    device_ = std::move(device.value());
+    ASSERT_OK(GptDevice::Create(std::move(device.value()), GetBlockSize(), GetBlockCount(), &gpt_));
   }
 
   // Create and initialize and ramdisk.
@@ -513,9 +510,6 @@ class LibGptTest {
 
   // pointer to read GptDevice.
   std::unique_ptr<gpt::GptDevice> gpt_;
-
-  // Open file descriptor to block device.
-  fidl::ClientEnd<fuchsia_hardware_block::Block> device_;
 
   // An optional ramdisk structure.
   ramdisk_client_t* ramdisk_ = nullptr;

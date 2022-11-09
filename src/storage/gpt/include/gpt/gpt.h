@@ -123,7 +123,7 @@ zx::result<> GetPartitionName(const gpt_entry_t& entry, char* name, size_t capac
 
 class GptDevice {
  public:
-  static zx_status_t Create(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device,
+  static zx_status_t Create(fidl::ClientEnd<fuchsia_hardware_block::Block> device,
                             uint32_t blocksize, uint64_t blocks,
                             std::unique_ptr<GptDevice>* out_dev);
 
@@ -232,15 +232,16 @@ class GptDevice {
   // Return total number of blocks in the device
   uint64_t TotalBlockCount() const { return blocks_; }
 
+  const fidl::ClientEnd<fuchsia_hardware_block::Block>& device() const;
+
  private:
   GptDevice() { valid_ = false; }
 
   zx_status_t FinalizeAndSync(bool persist);
 
   // read the partition table from the device.
-  static zx_status_t Init(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device,
-                          uint32_t blocksize, uint64_t block_count,
-                          std::unique_ptr<GptDevice>* out_dev);
+  static zx_status_t Init(fidl::ClientEnd<fuchsia_hardware_block::Block> device, uint32_t blocksize,
+                          uint64_t block_count, std::unique_ptr<GptDevice>* out_dev);
 
   zx_status_t LoadEntries(const uint8_t* buffer, uint64_t buffer_size, uint64_t block_count);
 
@@ -256,7 +257,7 @@ class GptDevice {
   gpt_partition_t* partitions_[kPartitionCount] = {};
 
 #ifdef __Fuchsia__
-  std::optional<fidl::UnownedClientEnd<fuchsia_hardware_block::Block>> device_ = {};
+  fidl::ClientEnd<fuchsia_hardware_block::Block> device_;
 #endif
 
   // block size in bytes

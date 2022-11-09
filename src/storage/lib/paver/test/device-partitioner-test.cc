@@ -29,12 +29,12 @@
 #include <string_view>
 #include <utility>
 
+#include <fbl/unique_fd.h>
 #include <gpt/cros.h>
 #include <gpt/gpt.h>
 #include <soc/aml-common/aml-guid.h>
 #include <zxtest/zxtest.h>
 
-#include "fbl/unique_fd.h"
 #include "src/storage/lib/paver/as370.h"
 #include "src/storage/lib/paver/astro.h"
 #include "src/storage/lib/paver/chromebook-x64.h"
@@ -402,7 +402,11 @@ class GptDevicePartitionerTests : public zxtest::Test {
 
   // Create GPT from a device.
   static void CreateGptDevice(BlockDevice* device, std::unique_ptr<gpt::GptDevice>* gpt) {
-    ASSERT_OK(gpt::GptDevice::Create(device->block_interface(),
+    // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+    zx::result clone =
+        component::Clone(device->block_interface(), component::AssumeProtocolComposesNode);
+    ASSERT_OK(clone);
+    ASSERT_OK(gpt::GptDevice::Create(std::move(clone.value()),
                                      /*blocksize=*/device->block_size(),
                                      /*blocks=*/device->block_count(), gpt));
     ASSERT_OK((*gpt)->Sync());
@@ -418,9 +422,7 @@ class GptDevicePartitionerTests : public zxtest::Test {
     ASSERT_OK(pauser);
 
     std::unique_ptr<gpt::GptDevice> gpt;
-    ASSERT_OK(gpt::GptDevice::Create(gpt_dev->block_interface(), gpt_dev->block_size(),
-                                     gpt_dev->block_count(), &gpt));
-    ASSERT_OK(gpt->Sync());
+    ASSERT_NO_FATAL_FAILURE(CreateGptDevice(gpt_dev, &gpt));
 
     for (const auto& part : init_partitions) {
       ASSERT_OK(
@@ -547,8 +549,13 @@ TEST_F(EfiDevicePartitionerTests, InitializeWithoutFvmSucceeds) {
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kBlockCount, &gpt_dev));
 
   // Set up a valid GPT.
+  //
+  // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+  zx::result clone =
+      component::Clone(gpt_dev->block_interface(), component::AssumeProtocolComposesNode);
+  ASSERT_OK(clone);
   std::unique_ptr<gpt::GptDevice> gpt;
-  ASSERT_OK(gpt::GptDevice::Create(gpt_dev->block_interface(), kBlockSize, kBlockCount, &gpt));
+  ASSERT_OK(gpt::GptDevice::Create(std::move(clone.value()), kBlockSize, kBlockCount, &gpt));
   ASSERT_OK(gpt->Sync());
 
   ASSERT_OK(CreatePartitioner(kDummyDevice));
@@ -566,8 +573,13 @@ TEST_F(EfiDevicePartitionerTests, InitializeTwoCandidatesWithoutFvmFails) {
   ASSERT_NO_FATAL_FAILURE(BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, &gpt_dev2));
 
   // Set up a valid GPT.
+  //
+  // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+  zx::result clone =
+      component::Clone(gpt_dev->block_interface(), component::AssumeProtocolComposesNode);
+  ASSERT_OK(clone);
   std::unique_ptr<gpt::GptDevice> gpt2;
-  ASSERT_OK(gpt::GptDevice::Create(gpt_dev->block_interface(), kBlockSize, kBlockCount, &gpt2));
+  ASSERT_OK(gpt::GptDevice::Create(std::move(clone.value()), kBlockSize, kBlockCount, &gpt2));
   ASSERT_OK(gpt2->Sync());
 
   ASSERT_NOT_OK(CreatePartitioner(kDummyDevice));

@@ -135,8 +135,12 @@ class ChromebookX64AbrTests : public zxtest::Test {
     auto pauser = BlockWatcherPauser::Create(GetFshostSvcRoot());
     ASSERT_OK(pauser);
 
+    // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+    zx::result clone =
+        component::Clone(disk_->block_interface(), component::AssumeProtocolComposesNode);
+    ASSERT_OK(clone);
     std::unique_ptr<gpt::GptDevice> gpt;
-    ASSERT_OK(gpt::GptDevice::Create(disk_->block_interface(),
+    ASSERT_OK(gpt::GptDevice::Create(std::move(clone.value()),
                                      /*blocksize=*/disk_->block_size(),
                                      /*blocks=*/disk_->block_count(), &gpt));
     ASSERT_OK(gpt->Sync());
@@ -259,8 +263,12 @@ TEST_F(ChromebookX64AbrTests, AbrAlwaysMarksRSuccessful) {
   ASSERT_OK(client->MarkSlotUnbootable(kAbrSlotIndexA).status_value());
   ASSERT_OK(client->Flush().status_value());
 
+  // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+  zx::result clone =
+      component::Clone(disk_->block_interface(), component::AssumeProtocolComposesNode);
+  ASSERT_OK(clone);
   std::unique_ptr<gpt::GptDevice> gpt;
-  ASSERT_OK(gpt::GptDevice::Create(disk_->block_interface(),
+  ASSERT_OK(gpt::GptDevice::Create(std::move(clone.value()),
                                    /*blocksize=*/disk_->block_size(),
                                    /*blocks=*/disk_->block_count(), &gpt));
   gpt_partition_t* part = GetPartitionByName(gpt, GPT_ZIRCON_R_NAME);
@@ -289,7 +297,11 @@ class CurrentSlotUuidTest : public zxtest::Test {
   }
 
   void CreateDiskWithPartition(const char* partition) {
-    ASSERT_OK(gpt::GptDevice::Create(disk_->block_interface(),
+    // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+    zx::result clone =
+        component::Clone(disk_->block_interface(), component::AssumeProtocolComposesNode);
+    ASSERT_OK(clone);
+    ASSERT_OK(gpt::GptDevice::Create(std::move(clone.value()),
                                      /*blocksize=*/disk_->block_size(),
                                      /*blocks=*/disk_->block_count(), &gpt_));
     ASSERT_OK(gpt_->Sync());

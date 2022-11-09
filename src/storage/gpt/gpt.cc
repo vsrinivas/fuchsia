@@ -62,7 +62,7 @@ void print_array(const gpt_partition_t* const partitions[kPartitionCount], int c
 
 // Write a block to device "fd", writing "size" bytes followed by zero-byte padding to the next
 // block size.
-zx_status_t write_partial_block(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device,
+zx_status_t write_partial_block(const fidl::ClientEnd<fuchsia_hardware_block::Block>& device,
                                 void* data, size_t size, off_t offset, size_t blocksize) {
   // If input block is already rounded to blocksize, just directly write from our buffer.
   if (size % blocksize == 0) {
@@ -95,7 +95,7 @@ void partition_init(gpt_partition_t* part, const char* name, const uint8_t* type
                    sizeof(part->name) / num_utf16_bits);
 }
 
-zx_status_t gpt_sync_current(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device,
+zx_status_t gpt_sync_current(const fidl::ClientEnd<fuchsia_hardware_block::Block>& device,
                              uint64_t blocksize, gpt_header_t* header, gpt_partition_t* ptable) {
   // Check all offset calculations are valid
   off_t table_offset;
@@ -487,20 +487,19 @@ zx_status_t GptDevice::FinalizeAndSync(bool persist) {
   if (persist) {
     // Write protective MBR.
     mbr::Mbr mbr = MakeProtectiveMbr(blocks_);
-    zx_status_t status =
-        write_partial_block(device_.value(), &mbr, sizeof(mbr), /*offset=*/0, blocksize_);
+    zx_status_t status = write_partial_block(device_, &mbr, sizeof(mbr), /*offset=*/0, blocksize_);
     if (status != ZX_OK) {
       return status;
     }
 
     // write backup to disk
-    status = gpt_sync_current(device_.value(), blocksize_, &header, buf.get());
+    status = gpt_sync_current(device_, blocksize_, &header, buf.get());
     if (status != ZX_OK) {
       return status;
     }
 
     // write primary copy to disk
-    status = gpt_sync_current(device_.value(), blocksize_, &header_, buf.get());
+    status = gpt_sync_current(device_, blocksize_, &header_, buf.get());
     if (status != ZX_OK) {
       return status;
     }
@@ -649,7 +648,7 @@ zx_status_t GptDevice::GetDiffs(uint32_t idx, uint32_t* diffs) const {
   return ZX_OK;
 }
 
-zx_status_t GptDevice::Init(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device,
+zx_status_t GptDevice::Init(fidl::ClientEnd<fuchsia_hardware_block::Block> device,
                             uint32_t blocksize, uint64_t block_count,
                             std::unique_ptr<GptDevice>* out_dev) {
   off_t offset;
@@ -689,15 +688,15 @@ zx_status_t GptDevice::Init(fidl::UnownedClientEnd<fuchsia_hardware_block::Block
     dev->blocksize_ = blocksize;
     dev->blocks_ = block_count;
   }
-  dev->device_ = device;
+  dev->device_ = std::move(device);
   *out_dev = std::move(dev);
   return ZX_OK;
 }
 
-zx_status_t GptDevice::Create(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device,
+zx_status_t GptDevice::Create(fidl::ClientEnd<fuchsia_hardware_block::Block> device,
                               uint32_t blocksize, uint64_t blocks,
                               std::unique_ptr<GptDevice>* out) {
-  return Init(device, blocksize, blocks, out);
+  return Init(std::move(device), blocksize, blocks, out);
 }
 
 zx_status_t GptDevice::Load(const uint8_t* buffer, uint64_t buffer_size, uint32_t blocksize,
@@ -836,7 +835,7 @@ zx_status_t GptDevice::ClearPartition(uint64_t offset, uint64_t blocks) {
       return ZX_ERR_OUT_OF_RANGE;
     }
 
-    auto status = block_client::SingleWriteBytes(device_.value(), zero, sizeof(zero), offset);
+    auto status = block_client::SingleWriteBytes(device_, zero, sizeof(zero), offset);
     if (status != ZX_OK) {
       G_PRINTF("Failed to write to block %zu; errno: %d\n", i, status);
       return ZX_ERR_IO;
@@ -971,5 +970,7 @@ zx_status_t GptDevice::SetPartitionFlags(uint32_t partition_index, uint64_t flag
 void GptDevice::GetHeaderGuid(uint8_t (*disk_guid_out)[GPT_GUID_LEN]) const {
   memcpy(disk_guid_out, header_.guid, GPT_GUID_LEN);
 }
+
+const fidl::ClientEnd<fuchsia_hardware_block::Block>& GptDevice::device() const { return device_; }
 
 }  // namespace gpt

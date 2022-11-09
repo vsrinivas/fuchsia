@@ -704,7 +704,6 @@ config("Wno-conversion") {
     "//src/developer/memory/monitor/tests:*",
     "//src/developer/shell/josh/console:*",
     "//src/developer/shell/josh/lib:*",
-    "//src/devices/block/bin/gpt:*",
     "//src/devices/block/drivers/ftl:*",
     "//src/devices/block/drivers/ftl/tests:*",
     "//src/devices/block/drivers/nvme:*",

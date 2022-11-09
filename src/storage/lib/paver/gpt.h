@@ -102,12 +102,11 @@ class GptDevicePartitioner {
       fbl::unique_fd gpt_device);
 
   GptDevicePartitioner(fbl::unique_fd devfs_root,
-                       fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root, fbl::unique_fd fd,
+                       fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
                        std::unique_ptr<GptDevice> gpt,
                        fuchsia_hardware_block::wire::BlockInfo block_info)
       : devfs_root_(std::move(devfs_root)),
         svc_root_(component::MaybeClone(svc_root)),
-        caller_(std::move(fd)),
         gpt_(std::move(gpt)),
         block_info_(block_info) {}
 
@@ -116,7 +115,6 @@ class GptDevicePartitioner {
 
   const fbl::unique_fd devfs_root_;
   fidl::ClientEnd<fuchsia_io::Directory> svc_root_;
-  fdio_cpp::FdioCaller caller_;
   mutable std::unique_ptr<GptDevice> gpt_;
   fuchsia_hardware_block::wire::BlockInfo block_info_;
 };

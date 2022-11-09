@@ -184,11 +184,15 @@ zx::result<std::unique_ptr<GptDevicePartitioner>> GptDevicePartitioner::Initiali
     ERROR("Failed to pause the block watcher\n");
     return pauser.take_error();
   }
-  fdio_cpp::UnownedFdioCaller caller(gpt_device.get());
-  fidl::UnownedClientEnd device = caller.borrow_as<block::Block>();
-  auto result = fidl::WireCall(device)->GetInfo();
+  fdio_cpp::FdioCaller caller(std::move(gpt_device));
+  zx::result device = caller.clone_as<block::Block>();
+  if (device.is_error()) {
+    ERROR("Warning: Could not acquire GPT block info: %s\n", device.status_string())
+    return device.take_error();
+  }
+  const fidl::WireResult result = fidl::WireCall(device.value())->GetInfo();
   if (!result.ok()) {
-    ERROR("Warning: Could not acquire GPT block info: %s\n", zx_status_get_string(result.status()));
+    ERROR("Warning: Could not acquire GPT block info: %s\n", result.FormatDescription().c_str());
     return zx::error(result.status());
   }
   const auto& response = result.value();
@@ -198,8 +202,8 @@ zx::result<std::unique_ptr<GptDevicePartitioner>> GptDevicePartitioner::Initiali
   }
 
   std::unique_ptr<GptDevice> gpt;
-  if (GptDevice::Create(device, response.info->block_size, response.info->block_count, &gpt) !=
-      ZX_OK) {
+  if (GptDevice::Create(std::move(device.value()), response.info->block_size,
+                        response.info->block_count, &gpt) != ZX_OK) {
     ERROR("Failed to get GPT info\n");
     return zx::error(ZX_ERR_BAD_STATE);
   }
@@ -222,8 +226,8 @@ zx::result<std::unique_ptr<GptDevicePartitioner>> GptDevicePartitioner::Initiali
     printf("Rebound GPT driver successfully\n");
   }
 
-  return zx::ok(new GptDevicePartitioner(devfs_root.duplicate(), svc_root, std::move(gpt_device),
-                                         std::move(gpt), *(response.info)));
+  return zx::ok(
+      new GptDevicePartitioner(devfs_root.duplicate(), svc_root, std::move(gpt), *response.info));
 }
 
 zx::result<GptDevicePartitioner::InitializeGptResult> GptDevicePartitioner::InitializeGpt(
@@ -248,12 +252,15 @@ zx::result<GptDevicePartitioner::InitializeGptResult> GptDevicePartitioner::Init
 
   std::unique_ptr<GptDevicePartitioner> gpt_partitioner;
   for (auto& [_, gpt_device] : gpt_devices) {
-    fdio_cpp::UnownedFdioCaller caller(gpt_device);
-    fidl::UnownedClientEnd device = caller.borrow_as<block::Block>();
-    auto result = fidl::WireCall(device)->GetInfo();
+    fdio_cpp::FdioCaller caller(std::move(gpt_device));
+    zx::result device = caller.clone_as<block::Block>();
+    if (device.is_error()) {
+      ERROR("Warning: Could not acquire GPT block info: %s\n", device.status_string());
+      return device.take_error();
+    }
+    const fidl::WireResult result = fidl::WireCall(device.value())->GetInfo();
     if (!result.ok()) {
-      ERROR("Warning: Could not acquire GPT block info: %s\n",
-            zx_status_get_string(result.status()));
+      ERROR("Warning: Could not acquire GPT block info: %s\n", result.FormatDescription().c_str());
       return zx::error(result.status());
     }
     const auto& response = result.value();
@@ -268,8 +275,8 @@ zx::result<GptDevicePartitioner::InitializeGptResult> GptDevicePartitioner::Init
     }
 
     std::unique_ptr<GptDevice> gpt;
-    if (GptDevice::Create(device, response.info->block_size, response.info->block_count, &gpt) !=
-        ZX_OK) {
+    if (GptDevice::Create(std::move(device.value()), response.info->block_size,
+                          response.info->block_count, &gpt) != ZX_OK) {
       ERROR("Failed to get GPT info\n");
       return zx::error(ZX_ERR_BAD_STATE);
     }
@@ -278,10 +285,10 @@ zx::result<GptDevicePartitioner::InitializeGptResult> GptDevicePartitioner::Init
       continue;
     }
 
-    non_removable_gpt_devices.emplace_back(gpt_device.duplicate());
+    non_removable_gpt_devices.emplace_back(caller.release());
 
-    auto partitioner = WrapUnique(new GptDevicePartitioner(
-        devfs_root.duplicate(), svc_root, std::move(gpt_device), std::move(gpt), *(response.info)));
+    auto partitioner = WrapUnique(
+        new GptDevicePartitioner(devfs_root.duplicate(), svc_root, std::move(gpt), *response.info));
 
     if (partitioner->FindPartition(IsFvmPartition).is_error()) {
       continue;
@@ -398,7 +405,9 @@ zx::result<Uuid> GptDevicePartitioner::CreateGptPartition(const char* name, cons
     ERROR("Failed to clear first block of new partition\n");
     return status.take_error();
   }
-  if (auto status = RebindGptDriver(svc_root_, caller_.borrow_as<fuchsia_device::Controller>());
+  // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+  if (auto status = RebindGptDriver(svc_root_, fidl::UnownedClientEnd<fuchsia_device::Controller>(
+                                                   gpt_->device().channel().borrow()));
       status.is_error()) {
     ERROR("Failed to rebind GPT\n");
     return status.take_error();
@@ -499,7 +508,10 @@ zx::result<> GptDevicePartitioner::WipePartitions(FilterCallback filter) const {
     gpt_->Sync();
     LOG("Immediate reboot strongly recommended\n");
   }
-  static_cast<void>(RebindGptDriver(svc_root_, caller_.borrow_as<fuchsia_device::Controller>()));
+
+  // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+  static_cast<void>(RebindGptDriver(svc_root_, fidl::UnownedClientEnd<fuchsia_device::Controller>(
+                                                   gpt_->device().channel().borrow())));
   return zx::ok();
 }
 

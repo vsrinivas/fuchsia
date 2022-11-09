@@ -2055,8 +2055,12 @@ class PaverServiceGptDeviceTest : public PaverServiceTest {
     auto pauser = paver::BlockWatcherPauser::Create(GetSvcRoot());
     ASSERT_OK(pauser);
 
+    // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+    zx::result clone =
+        component::Clone(gpt_dev->block_interface(), component::AssumeProtocolComposesNode);
+    ASSERT_OK(clone);
     std::unique_ptr<gpt::GptDevice> gpt;
-    ASSERT_OK(gpt::GptDevice::Create(gpt_dev->block_interface(), gpt_dev->block_size(),
+    ASSERT_OK(gpt::GptDevice::Create(std::move(clone.value()), gpt_dev->block_size(),
                                      gpt_dev->block_count(), &gpt));
     ASSERT_OK(gpt->Sync());
 
@@ -2093,7 +2097,7 @@ class PaverServiceLuisTest : public PaverServiceGptDeviceTest {
   static constexpr size_t kFvmBlockStart = 0x20400;
   static constexpr size_t kFvmBlockSize = 0x10000;
 
-  PaverServiceLuisTest() { ASSERT_NO_FATAL_FAILURE(InitializeGptDevice("luis", 0x748034, 512)); }
+  void SetUp() override { ASSERT_NO_FATAL_FAILURE(InitializeGptDevice("luis", 0x748034, 512)); }
 
   void InitializeLuisGPTPartitions() {
     constexpr uint8_t kDummyType[GPT_GUID_LEN] = {0xaf, 0x3d, 0xc6, 0x0f, 0x83, 0x84, 0x72, 0x47,
