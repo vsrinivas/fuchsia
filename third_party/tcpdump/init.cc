@@ -18,8 +18,8 @@
 namespace {
 
 constexpr char kServiceDirectory[] = "/svc";
-constexpr char kNetstackExposeDir[] =
-    "/hub-v2/children/core/children/network/children/netstack/exec/expose";
+constexpr char kNetstackExposedDir[] =
+    "/hub-v2/children/core/children/network/children/netstack/out/svc";
 constexpr const char* kPacketSocketProviderName =
     fidl::DiscoverableProtocolName<fuchsia_posix_socket_packet::Provider>;
 
@@ -37,15 +37,15 @@ __attribute__((constructor)) void init_packet_socket_provider() {
     return;
   }
 
-  zx::result netstack_expose_dir = component::OpenServiceRoot(kNetstackExposeDir);
-  switch (zx_status_t status = netstack_expose_dir.status_value(); status) {
+  zx::result netstack_exposed_dir = component::OpenServiceRoot(kNetstackExposedDir);
+  switch (zx_status_t status = netstack_exposed_dir.status_value(); status) {
     case ZX_OK:
       break;
     case ZX_ERR_NOT_FOUND:
       // Most likely in the non-root realm.
       return;
     default:
-      ZX_PANIC("Failed to open netstack expose directory at %s: %s", kNetstackExposeDir,
+      ZX_PANIC("Failed to open netstack exposed directory at %s: %s", kNetstackExposedDir,
                zx_status_get_string(status));
   }
 
@@ -69,10 +69,10 @@ __attribute__((constructor)) void init_packet_socket_provider() {
   composed_svc_dir.AddService(
       kPacketSocketProviderName,
       std::make_unique<vfs::Service>(
-          [netstack_expose_dir = std::move(netstack_expose_dir.value())](
+          [netstack_exposed_dir = std::move(netstack_exposed_dir.value())](
               zx::channel request, async_dispatcher_t* dispatcher) mutable {
             zx::result result = component::ConnectAt(
-                netstack_expose_dir.borrow(),
+                netstack_exposed_dir.borrow(),
                 fidl::ServerEnd<fuchsia_posix_socket_packet::Provider>(std::move(request)));
             ZX_ASSERT_MSG(result.is_ok(), "Failed to connect to packet socker provider: %s",
                           result.status_string());
