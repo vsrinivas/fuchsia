@@ -75,7 +75,7 @@ pub enum ConformanceSubCommand {
 }
 
 /// Runs driver conformance tests.
-#[derive(FromArgs, PartialEq, Debug)]
+#[derive(FromArgs, PartialEq, Debug, Default)]
 #[argh(subcommand, name = "test")]
 pub struct TestCommand {
     /// device topological path. e.g. pci-00:05.0-fidl/my-device
@@ -105,6 +105,14 @@ pub struct TestCommand {
     /// WIP. local directory storing the resources required for offline testing.
     #[argh(option)]
     pub cache: Option<String>,
+
+    /// run only the automated tests.
+    #[argh(switch)]
+    pub automated_only: bool,
+
+    /// run only the manual tests.
+    #[argh(switch)]
+    pub manual_only: bool,
 }
 
 #[cfg(test)]

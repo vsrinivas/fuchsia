@@ -7,7 +7,7 @@ pub mod parser;
 
 use {
     anyhow::Result,
-    args::{ConformanceCommand, ConformanceSubCommand},
+    args::{ConformanceCommand, ConformanceSubCommand, TestCommand},
     driver_connector::DriverConnector,
     errors::ffx_bail,
     ffx_config, fidl_fuchsia_driver_development as fdd, fidl_fuchsia_test_manager as ftm,
@@ -79,6 +79,95 @@ async fn run_tests(
     .await)
 }
 
+/// Collection of various trivial flag validation.
+fn validate_test_flags(cmd: &TestCommand) -> Result<()> {
+    if let (Some(_), Some(_)) = (&cmd.device, &cmd.driver) {
+        ffx_bail!("Either --device or --driver is required, but not both.");
+    }
+    if let (None, None) = (&cmd.device, &cmd.driver) {
+        ffx_bail!("Either --device or --driver is required.");
+    }
+
+    if cmd.automated_only && cmd.manual_only {
+        ffx_bail!("Either --automated-only or --manual-only can be provided, but not both.");
+    }
+    Ok(())
+}
+
+/// Parse the FHCP metadata.
+///
+/// Currently is requiring the --metadata-path argument, but in the future we might not
+/// have that requirement. This is why the TestCommand is passed in to allow for flexibility
+/// with handling other possibilities in the future.
+fn parse_metadata(cmd: &TestCommand) -> Result<parser::TestMetadata> {
+    let metadata_str = match &cmd.metadata_path {
+        Some(metadata_path_str) => match fs::read_to_string(&metadata_path_str) {
+            Ok(v) => v,
+            Err(e) => ffx_bail!("Unable to parse {}. {}", &metadata_path_str, e),
+        },
+        None => ffx_bail!("The --metadata-path argument is required for now."),
+    };
+    println!("meta str: {}", metadata_str.to_string());
+    match serde_json::from_str(&metadata_str) {
+        Ok(val) => Ok(val),
+        Err(e) => Err(e.into()),
+    }
+}
+
+/// Find the driver and bound devices.
+async fn get_driver_and_devices(
+    cmd: &TestCommand,
+    driver_connector: &dyn DriverConnector,
+) -> Result<(Box<fdd::DriverInfo>, Box<Vec<Device>>)> {
+    let mut driver_info: Option<Box<fdd::DriverInfo>> = None;
+    let mut device_list: Option<Box<Vec<Device>>> = None;
+    let driver_service = driver_connector.get_driver_development_proxy(false).await?;
+    if let Some(device) = &cmd.device {
+        driver_info = Some(Box::new(get_driver_by_device(&device, &driver_service).await?));
+    }
+
+    if let Some(driver) = &cmd.driver {
+        driver_info = Some(Box::new(get_driver_by_libname(&driver, &driver_service).await?));
+        device_list = Some(Box::new(get_devices_by_driver(&driver, &driver_service).await?));
+    } else if let Some(driver) = &driver_info {
+        if let Some(driver_libname) = &driver.libname {
+            device_list =
+                Some(Box::new(get_devices_by_driver(&driver_libname, &driver_service).await?));
+        }
+    }
+
+    match (driver_info, device_list) {
+        (Some(driver), Some(devices)) => {
+            println!(
+                "Testing driver {} using {} device(s).",
+                driver.libname.as_ref().unwrap_or(&"".to_string()),
+                devices.len()
+            );
+            return Ok((driver, devices));
+        }
+        (Some(_), None) => {
+            ffx_bail!("We were unable to resolve the devices for the given driver.")
+        }
+        (None, Some(_)) => {
+            ffx_bail!("We were unable to resolve the driver for the given device.")
+        }
+        _ => ffx_bail!("We were unable to resolve any devices or drivers."),
+    }
+}
+
+/// Filter the test list down further, if necessary.
+fn filter_tests(
+    cmd: &TestCommand,
+    mut tests: Vec<parser::TestInfo>,
+) -> Result<Vec<parser::TestInfo>> {
+    if cmd.automated_only {
+        tests.retain(|x| x.is_automated);
+    } else if cmd.manual_only {
+        tests.retain(|x| !x.is_automated);
+    }
+    Ok(tests)
+}
+
 /// Entry-point for the command `ffx driver conformance`.
 pub async fn conformance(
     cmd: ConformanceCommand,
@@ -94,79 +183,39 @@ pub async fn conformance(
             )
         }
     }
-    let mut filtered_tests: Option<Vec<parser::TestInfo>> = None;
     match cmd.subcommand {
         ConformanceSubCommand::Test(subcmd) => {
-            // Parse the metadata
-            let metadata_str = match subcmd.metadata_path {
-                Some(metadata_path_str) => match fs::read_to_string(&metadata_path_str) {
-                    Ok(v) => v,
-                    Err(e) => ffx_bail!("Unable to parse {}. {}", &metadata_path_str, e),
-                },
-                None => ffx_bail!("The --metadata-path argument is required for now."),
-            };
-            let metadata: parser::TestMetadata =
-                serde_json::from_str(&metadata_str).expect("Metadata was not valid JSON");
+            validate_test_flags(&subcmd)?;
 
-            if let (Some(_), Some(_)) = (&subcmd.device, &subcmd.driver) {
-                ffx_bail!("Either --device or --driver is required, but not both.");
-            }
-            if let (None, None) = (&subcmd.device, &subcmd.driver) {
-                ffx_bail!("Either --device or --driver is required.");
-            }
+            let metadata = parse_metadata(&subcmd)?;
 
-            let mut driver_info: Option<fdd::DriverInfo> = None;
-            let mut device_list: Option<Vec<Device>> = None;
-            let driver_service = driver_connector.get_driver_development_proxy(false).await?;
-            if let Some(device) = subcmd.device {
-                driver_info = Some(get_driver_by_device(&device, &driver_service).await?);
-            }
+            // _device_list will be used when we add support for running specific tests on specific
+            // devices.
+            let (driver_info, _device_list) =
+                get_driver_and_devices(&subcmd, driver_connector).await?;
 
-            if let Some(driver) = subcmd.driver {
-                driver_info = Some(get_driver_by_libname(&driver, &driver_service).await?);
-                device_list = Some(get_devices_by_driver(&driver, &driver_service).await?);
-            } else if let Some(driver) = &driver_info {
-                if let Some(driver_libname) = &driver.libname {
-                    device_list =
-                        Some(get_devices_by_driver(&driver_libname, &driver_service).await?);
-                }
-            }
-
-            match (&driver_info, &device_list) {
-                (Some(driver), Some(devices)) => {
-                    println!(
-                        "Testing driver {} using {} device(s).",
-                        driver.libname.as_ref().unwrap_or(&"".to_string()),
-                        devices.len()
-                    );
-                }
-                (Some(_), None) => {
-                    ffx_bail!("We were unable to resolve the devices for the given driver.")
-                }
-                (None, Some(_)) => {
-                    ffx_bail!("We were unable to resolve the driver for the given device.")
-                }
-                _ => ffx_bail!("We were unable to resolve any devices or drivers."),
-            }
             // TODO(fxb/113736): Enforce the custom list to be a strict subset of the available
             // tests according to `get_tests_for_driver()`.
-            if let Some(custom_list) = subcmd.tests {
+            let filtered_tests: Option<Vec<parser::TestInfo>>;
+            if let Some(custom_list) = &subcmd.tests {
                 filtered_tests = Some(metadata.tests_by_url(&custom_list.list[..]).unwrap());
-            } else if let Some(driver_info) = &driver_info {
+            } else {
                 filtered_tests = Some(metadata.tests_by_driver(&driver_info)?);
             }
-        }
-    }
-    match filtered_tests {
-        Some(tests) => {
-            if tests.is_empty() {
-                println!("There were no tests to run for the given command.");
+
+            match filtered_tests {
+                Some(mut tests) => {
+                    tests = filter_tests(&subcmd, tests)?;
+                    if tests.is_empty() {
+                        println!("There were no tests to run for the given command.");
+                    }
+                    // We are ignoring the return value because we will read the results from
+                    // the report generated via `run_test_suite_lib::create_reporter()`.
+                    let _ = run_tests(tests, driver_connector.get_run_builder_proxy().await?).await;
+                }
+                None => ffx_bail!("We were unable to create a list of tests to run."),
             }
-            // We are ignoring the return value because we will read the results from
-            // the report generated via `run_test_suite_lib::create_reporter()`.
-            let _ = run_tests(tests, driver_connector.get_run_builder_proxy().await?).await;
         }
-        None => ffx_bail!("We were unable to create a list of tests to run."),
     }
     Ok(())
 }
@@ -174,6 +223,7 @@ pub async fn conformance(
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::io::Write;
 
     #[test]
     fn test_process_test_list() {
@@ -247,5 +297,180 @@ mod test {
                 e.to_string()
             );
         }
+    }
+
+    #[test]
+    fn test_validate_test_flags() {
+        assert!(validate_test_flags(&TestCommand {
+            driver: Some("val".to_string()),
+            device: Some("val".to_string()),
+            ..Default::default()
+        })
+        .is_err());
+
+        assert!(validate_test_flags(&TestCommand {
+            driver: Some("val".to_string()),
+            ..Default::default()
+        })
+        .is_ok());
+
+        assert!(validate_test_flags(&TestCommand {
+            device: Some("val".to_string()),
+            ..Default::default()
+        })
+        .is_ok());
+
+        assert!(validate_test_flags(&TestCommand { ..Default::default() }).is_err());
+
+        assert!(validate_test_flags(&TestCommand {
+            driver: Some("val".to_string()),
+            automated_only: true,
+            ..Default::default()
+        })
+        .is_ok());
+
+        assert!(validate_test_flags(&TestCommand {
+            driver: Some("val".to_string()),
+            manual_only: true,
+            ..Default::default()
+        })
+        .is_ok());
+
+        assert!(validate_test_flags(&TestCommand {
+            driver: Some("val".to_string()),
+            automated_only: true,
+            manual_only: true,
+            ..Default::default()
+        })
+        .is_err());
+    }
+
+    #[test]
+    fn test_parse_metadata() {
+        // No path.
+        assert!(parse_metadata(&TestCommand { ..Default::default() }).is_err());
+
+        // Bad path.
+        assert!(parse_metadata(&TestCommand {
+            metadata_path: Some("/".to_string()),
+            ..Default::default()
+        })
+        .is_err());
+
+        // Valid path, no json.
+        let mut file = tempfile::NamedTempFile::new().unwrap();
+        let path = file.path().to_path_buf().into_os_string().into_string().unwrap();
+        file.write_all("".as_bytes()).unwrap();
+
+        assert!(parse_metadata(&TestCommand {
+            metadata_path: Some(path.to_string()),
+            ..Default::default()
+        })
+        .is_err());
+
+        file.write_all(
+            r#"{
+            "certification_type": {
+              "device_driver": {}
+            },
+            "system_types": {
+              "workstation": {}
+            },
+            "driver_test_types": {
+              "generic_driver_tests": {},
+              "functional": {}
+            },
+            "device_category_types": {
+              "misc": {},
+              "imaging": {
+                "camera": {}
+              }
+            },
+            "tests": [
+              {
+                "url": "fuchsia-pkg://a/b#meta/c.cm",
+                "test_types": [
+                  "functional"
+                ],
+                "device_categories": [
+                  {
+                    "category": "imaging",
+                    "subcategory": "camera"
+                  }
+                ],
+                "is_automated": true
+              },
+              {
+                "url": "fuchsia-pkg://a/d#meta/e.cm",
+                "test_types": [
+                  "functional"
+                ],
+                "device_categories": [
+                  {
+                    "category": "misc",
+                    "subcategory": ""
+                  }
+                ],
+                "is_automated": false
+              }
+            ]
+          }"#
+            .as_bytes(),
+        )
+        .unwrap();
+
+        // Valid path, valid json.
+        let metadata = parse_metadata(&TestCommand {
+            metadata_path: Some(path.to_string()),
+            ..Default::default()
+        });
+        assert!(metadata.is_ok());
+        let data = metadata.unwrap();
+        assert_eq!(data.tests.len(), 2);
+        assert_eq!(data.device_category_types.len(), 2);
+        assert_eq!(data.driver_test_types.len(), 2);
+        assert_eq!(data.driver_test_types.len(), 2);
+        assert_eq!(data.system_types.len(), 1);
+        assert_eq!(data.certification_type.len(), 1);
+        assert_eq!(data.device_category_types["imaging"].len(), 1);
+        for (key, _) in data.device_category_types["imaging"].iter() {
+            assert_eq!(key, &"camera".to_string());
+        }
+    }
+
+    #[test]
+    fn test_filter_tests() {
+        let tests = vec![
+            parser::TestInfo {
+                url: "automated".to_string(),
+                is_automated: true,
+                ..Default::default()
+            },
+            parser::TestInfo {
+                url: "manual".to_string(),
+                is_automated: false,
+                ..Default::default()
+            },
+        ];
+        let test0 = filter_tests(&TestCommand { ..Default::default() }, tests.clone());
+        assert!(test0.is_ok());
+        let test0_val = test0.unwrap();
+        assert_eq!(test0_val.len(), 2);
+
+        let test1 = filter_tests(
+            &TestCommand { automated_only: true, ..Default::default() },
+            tests.clone(),
+        );
+        assert!(test1.is_ok());
+        let test1_val = test1.unwrap();
+        assert_eq!(test1_val.len(), 1);
+        assert_eq!(test1_val.first().unwrap().url, "automated".to_string());
+
+        let test2 =
+            filter_tests(&TestCommand { manual_only: true, ..Default::default() }, tests.clone());
+        assert!(test2.is_ok());
+        let test2_val = test2.unwrap();
+        assert_eq!(test2_val.len(), 1);
+        assert_eq!(test2_val.first().unwrap().url, "manual".to_string());
     }
 }

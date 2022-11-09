@@ -18,7 +18,7 @@ pub struct DeviceCategory {
     pub subcategory: String,
 }
 
-#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub struct TestInfo {
     #[allow(unused)]
     pub url: String,

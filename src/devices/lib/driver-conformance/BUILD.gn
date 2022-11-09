@@ -31,7 +31,10 @@ if (is_host) {
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:signal-hook",
     ]
-    test_deps = [ "//sdk/fidl/fuchsia.driver.index:fuchsia.driver.index_rust" ]
+    test_deps = [
+      "//sdk/fidl/fuchsia.driver.index:fuchsia.driver.index_rust",
+      "//third_party/rust_crates:tempfile",
+    ]
     sources = [
       "src/args.rs",
       "src/lib.rs",
