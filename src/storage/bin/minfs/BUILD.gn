@@ -19,10 +19,21 @@ executable("minfs") {
   ]
 }
 
+expect_includes("fs_management_shard") {
+  includes = [ "//src/lib/storage/fs_management/client.shard.cml" ]
+}
+
 fuchsia_component("minfs-component") {
   manifest = "meta/minfs.cml"
   component_name = "minfs"
   deps = [ ":minfs" ]
+}
+
+group("minfs-test-component") {
+  deps = [
+    ":fs_management_shard",
+    ":minfs-component",
+  ]
 }
 
 test("minfs_component_test") {

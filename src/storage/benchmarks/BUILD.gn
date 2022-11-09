@@ -34,6 +34,7 @@ rustc_binary("storage-benchmarks") {
     "//src/lib/trace/rust:trace-provider",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/storage/bin/blobfs:blobfs-component",
+    "//src/storage/bin/minfs:minfs-component",
     "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup_rust",
     "//src/storage/fxfs:fuchsia.fxfs_rust",
     "//src/storage/testing/rust:storage-isolated-driver-manager",
@@ -50,10 +51,7 @@ rustc_binary("storage-benchmarks") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tracing",
   ]
-  data_deps = [
-    "//src/storage/bin/f2fs",
-    "//src/storage/bin/minfs",
-  ]
+  data_deps = [ "//src/storage/bin/f2fs" ]
   test_deps = [
     "//src/lib/test_util",
     "//third_party/rust_crates:futures",

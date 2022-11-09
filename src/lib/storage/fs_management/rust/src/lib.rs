@@ -207,6 +207,38 @@ impl Minfs {
 
 impl FSConfig for Minfs {
     fn mode(&self) -> Mode<'_> {
+        Mode::Component { name: "minfs", reuse_component_after_serving: false }
+    }
+}
+
+/// MinfsLegacy Filesystem Configuration
+/// MinfsLegacy allows us to launch minfs as a legacy binary
+/// DON'T USE!! This is only for //src/identity (fxbug.dev/114443)
+/// If fields are None or false, they will not be set in arguments.
+#[derive(Clone, Default)]
+pub struct MinfsLegacy {
+    // TODO(xbhatnag): Add support for fvm_data_slices
+    pub verbose: bool,
+    pub readonly: bool,
+    pub fsck_after_every_transaction: bool,
+}
+
+impl MinfsLegacy {
+    /// Manages a block device at a given path using
+    /// the default configuration.
+    pub fn new(path: &str) -> Result<filesystem::Filesystem<Self>, Error> {
+        filesystem::Filesystem::from_path(path, Self::default())
+    }
+
+    /// Manages a block device at a given channel using
+    /// the default configuration.
+    pub fn from_channel(channel: zx::Channel) -> Result<filesystem::Filesystem<Self>, Error> {
+        filesystem::Filesystem::from_channel(channel, Self::default())
+    }
+}
+
+impl FSConfig for MinfsLegacy {
+    fn mode(&self) -> Mode<'_> {
         Mode::Legacy(LegacyConfig {
             binary_path: cstr!("/pkg/bin/minfs"),
             generic_args: {

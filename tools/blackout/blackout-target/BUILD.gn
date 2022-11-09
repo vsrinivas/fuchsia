@@ -73,7 +73,10 @@ rustc_test("blackout-target-test-with-path") {
 
 storage_driver_test_realm_v2_component("blackout-target-test-component") {
   component_name = "blackout-target-test"
-  deps = [ ":blackout-target_test" ]
+  deps = [
+    ":blackout-target_test",
+    "//src/storage/bin/minfs:minfs-test-component",
+  ]
 }
 
 storage_driver_test_realm_v2_component(
@@ -100,7 +103,6 @@ fuchsia_test_package("blackout-target-test") {
       max_severity = "ERROR"
     }
   }
-  deps = [ "//src/storage/bin/minfs" ]
 }
 
 group("tests") {

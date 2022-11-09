@@ -55,6 +55,7 @@ storage_driver_test_realm_v2_component("fs-management-rust-tests-component") {
   deps = [
     ":fs_management_test",
     "//src/storage/bin/blobfs:blobfs-component",
+    "//src/storage/bin/minfs:minfs-component",
     "//src/storage/fxfs:fxfs_component",
     "//src/storage/fxfs:test_fxfs_component_manifest_shard",
   ]

@@ -125,10 +125,8 @@ fuchsia_test_package("storage-stress-tests") {
     ":f2fs-no-crash",
   ]
   deps = [
-    "//src/storage/bin/blobfs",
     "//src/storage/bin/f2fs",
-    "//src/storage/bin/minfs",
-    "//src/storage/fxfs",
+    "//src/storage/bin/minfs:minfs-component",
     "//src/storage/testing:storage_driver_test_realm",
   ]
   test_specs = {
@@ -157,10 +155,8 @@ fuchsia_test_package("storage-stress-tests-short") {
     ":f2fs-short",
   ]
   deps = [
-    "//src/storage/bin/blobfs",
     "//src/storage/bin/f2fs",
-    "//src/storage/bin/minfs",
-    "//src/storage/fxfs",
+    "//src/storage/bin/minfs:minfs-component",
     "//src/storage/testing:storage_driver_test_realm",
   ]
   test_specs = {
