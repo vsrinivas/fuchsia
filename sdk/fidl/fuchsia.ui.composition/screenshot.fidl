@@ -19,7 +19,11 @@ type ScreenshotFormat = flexible enum : uint8 {
 @discoverable
 protocol Screenshot {
     /// Collects the current graphical content of a display in a specified buffer `format` in the
-    /// sRGB color space.
+    /// sRGB color space. Note that the sRGB color space is non-linear, meaning that unit tests
+    /// doing pixel equality checks making use of non-fully saturated colors should convert to a
+    /// linear color space.
+    ///
+    /// TODO(fxbug.dev/114595): Link to fuchsia.dev documentation when it's up.
     ///
     /// Screenshot is taken immediately, populated with the display's content from the most recent
     /// VSYNC.
