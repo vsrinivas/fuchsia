@@ -3083,6 +3083,11 @@ LogicalBufferCollection::GenerateUnpopulatedBufferCollectionInfo(
              min_buffer_count, fuchsia_sysmem::kMaxCountBufferCollectionInfoBuffers);
     return fpromise::error(ZX_ERR_NOT_SUPPORTED);
   }
+  if (min_buffer_count == 0) {
+    // Client(s) must request at least 1 buffer.
+    LogError(FROM_HERE, "aggregate min_buffer_count == 0");
+    return fpromise::error(ZX_ERR_NOT_SUPPORTED);
+  }
 
   result.buffers().emplace(min_buffer_count);
   result.buffers()->resize(min_buffer_count);
