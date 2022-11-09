@@ -340,6 +340,10 @@ local_testing_suffix = "local_testing"
 #     expectations.
 #     Type: bool
 #     Default: false
+#
+#   with_distinct_fast_udp_expectations (optional)
+#     If this is true, and use_expectations_framework is true, then we'll look
+#     for expectation files with _syncudp and _fastudp suffixes.
 template("syscall_test_suite") {
   not_needed([ "invoker" ])
   suite_label = target_name
@@ -396,16 +400,20 @@ template("syscall_test_suite") {
     run_with_fast_udp = invoker.run_with_fast_udp
   }
 
+  ns2_fastudp_label = "netstack2_fastudp"
+
   if (run_with_fast_udp) {
     stacks += [
       {
-        label = "netstack2_fastudp"
+        label = ns2_fastudp_label
         component =
             "//src/connectivity/network/netstack:component-with-fast-udp-debug"
         expectations = ":${netstack2_expectations_target}"
         manifest = "meta/netstack2/fastudp/${suite_label}_syscall_tests.cml"
       },
     ]
+  } else {
+    not_needed([ "ns2_fastudp_label" ])
   }
 
   run_in_cq_with_ns3 = false
@@ -450,11 +458,30 @@ template("syscall_test_suite") {
         ]
         manifest = stack.manifest
       }
+
+      with_distinct_fast_udp_expectations = false
+      if (defined(invoker.with_distinct_fast_udp_expectations)) {
+        with_distinct_fast_udp_expectations =
+            invoker.with_distinct_fast_udp_expectations
+      }
       fuchsia_test_with_expectations_package(test_package_label) {
         test_components = [ ":${_unittest_component}" ]
-        expectations = "expects/netstack2/${suite_label}.json5"
+
         if (stack.label == ns3_label) {
           expectations = "expects/netstack3/${suite_label}.json5"
+        } else {
+          _netstack2_expects_dir = "expects/netstack2"
+          if (with_distinct_fast_udp_expectations) {
+            if (stack.label == ns2_fastudp_label) {
+              expectations =
+                  "$_netstack2_expects_dir/${suite_label}_fastudp.json5"
+            } else {
+              expectations =
+                  "$_netstack2_expects_dir/${suite_label}_syncudp.json5"
+            }
+          } else {
+            expectations = "$_netstack2_expects_dir/${suite_label}.json5"
+          }
         }
       }
     } else {
@@ -500,6 +527,8 @@ syscall_test_suite(raw_packet_test_label) {
 }
 syscall_test_suite(udp_test_label) {
   run_in_cq_with_ns3 = true
+  use_expectations_framework = true
+  with_distinct_fast_udp_expectations = true
 }
 syscall_test_suite(udp_unbound_test_label) {
   run_in_cq_with_ns3 = true
