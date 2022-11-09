@@ -29,7 +29,7 @@ const auto kBytesPerPacket = kFramesPerPacket * kFormat.bytes_per_frame();
 const auto stream_converter = StreamConverter::Create(kFormat, kFormat);
 
 struct TestHarness {
-  fidl::Endpoints<fuchsia_media2::StreamSink> endpoints;
+  fidl::Endpoints<fuchsia_audio::StreamSink> endpoints;
   std::map<uint32_t, std::shared_ptr<MemoryMappedBuffer>> payload_buffers;
   std::shared_ptr<PacketQueue> recycled_packet_queue;
   std::shared_ptr<const FidlThread> thread;
@@ -38,7 +38,7 @@ struct TestHarness {
 
 TestHarness MakeTestHarness(
     std::map<uint32_t, std::shared_ptr<MemoryMappedBuffer>> payload_buffers) {
-  auto endpoints = fidl::CreateEndpoints<fuchsia_media2::StreamSink>();
+  auto endpoints = fidl::CreateEndpoints<fuchsia_audio::StreamSink>();
   if (!endpoints.is_ok()) {
     FX_PLOGS(FATAL, endpoints.status_value()) << "fidl::CreateEndpoints failed";
   }
@@ -87,9 +87,8 @@ TEST(StreamSinkClientTest, CreatePackets) {
       (*packet)->Recycle(stream_converter, std::nullopt);
 
       auto fidl = (*packet)->ToFidl(arena);
-      ASSERT_EQ(fidl.payload.count(), 1u);
-      EXPECT_EQ(fidl.payload[0].buffer_id, i);
-      EXPECT_EQ(fidl.payload[0].offset, static_cast<uint64_t>(k * kBytesPerPacket));
+      EXPECT_EQ(fidl.payload().buffer_id, i);
+      EXPECT_EQ(fidl.payload().offset, static_cast<uint64_t>(k * kBytesPerPacket));
       EXPECT_EQ((*packet)->FramesRemaining(), kFramesPerPacket);
     }
   }
@@ -100,7 +99,7 @@ TEST(StreamSinkClientTest, CreatePackets) {
 
 TEST(StreamSinkClientTest, RecyclePackets) {
   // Local server implementation.
-  class StreamSinkServer : public fidl::WireServer<fuchsia_media2::StreamSink> {
+  class StreamSinkServer : public fidl::WireServer<fuchsia_audio::StreamSink> {
    public:
     libsync::Completion& packet_received() { return packet_received_; }
     libsync::Completion& end_received() { return end_received_; }
@@ -110,22 +109,26 @@ TEST(StreamSinkClientTest, RecyclePackets) {
       fence_ = zx::eventpair();
     }
 
-    // Implementation of fidl::WireServer<fuchsia_media2::StreamSink>.
+    // Implementation of fidl::WireServer<fuchsia_audio::StreamSink>.
     void PutPacket(PutPacketRequestView request, PutPacketCompleter::Sync& completer) final {
-      ASSERT_EQ(request->packet.payload.count(), 1u);
-      EXPECT_EQ(request->packet.payload[0].buffer_id, 0u);
-      EXPECT_EQ(request->packet.payload[0].offset, 0u);
-      EXPECT_EQ(request->packet.payload[0].size, static_cast<uint64_t>(kBytesPerPacket));
-      ASSERT_TRUE(request->release_fence.is_valid());
+      ASSERT_TRUE(request->has_packet());
+      ASSERT_TRUE(request->packet().has_payload());
+      EXPECT_EQ(request->packet().payload().buffer_id, 0u);
+      EXPECT_EQ(request->packet().payload().offset, 0u);
+      EXPECT_EQ(request->packet().payload().size, static_cast<uint64_t>(kBytesPerPacket));
+      ASSERT_TRUE(request->has_release_fence());
+      ASSERT_TRUE(request->release_fence().is_valid());
       {
         std::lock_guard<std::mutex> guard(mutex_);
-        fence_ = std::move(request->release_fence);
+        fence_ = std::move(request->release_fence());
       }
       packet_received_.Signal();
     }
 
     void End(EndCompleter::Sync& completer) final { end_received_.Signal(); }
-    void Clear(ClearRequestView request, ClearCompleter::Sync& completer) final {}
+    void StartSegment(StartSegmentRequestView request,
+                      StartSegmentCompleter::Sync& completer) final {}
+    void WillClose(WillCloseRequestView request, WillCloseCompleter::Sync& completer) final {}
 
    private:
     libsync::Completion packet_received_;
@@ -170,17 +173,16 @@ TEST(StreamSinkClientTest, RecyclePackets) {
     }
     fidl::Arena<> arena;
     auto fidl = (*packet)->ToFidl(arena);
-    EXPECT_EQ(fidl.payload.count(), 1u);
-    EXPECT_EQ(fidl.payload[0].buffer_id, 0u);
-    EXPECT_EQ(fidl.payload[0].offset, static_cast<uint64_t>(0));
-    EXPECT_EQ(fidl.payload[0].size, static_cast<uint64_t>(kBytesPerPacket));
+    EXPECT_EQ(fidl.payload().buffer_id, 0u);
+    EXPECT_EQ(fidl.payload().offset, static_cast<uint64_t>(0));
+    EXPECT_EQ(fidl.payload().size, static_cast<uint64_t>(kBytesPerPacket));
     return true;
   }));
 }
 
 TEST(StreamSinkClientTest, Shutdown) {
   // Local server implementation.
-  class StreamSinkServer : public fidl::WireServer<fuchsia_media2::StreamSink> {
+  class StreamSinkServer : public fidl::WireServer<fuchsia_audio::StreamSink> {
    public:
     libsync::Completion& packet_received() { return packet_received_; }
     int64_t put_packet_calls() {
@@ -192,13 +194,14 @@ TEST(StreamSinkClientTest, Shutdown) {
       return end_calls_;
     }
 
-    // Implementation of fidl::WireServer<fuchsia_media2::StreamSink>.
+    // Implementation of fidl::WireServer<fuchsia_audio::StreamSink>.
     void PutPacket(PutPacketRequestView request, PutPacketCompleter::Sync& completer) final {
-      ASSERT_TRUE(request->release_fence.is_valid());
+      ASSERT_TRUE(request->has_release_fence());
+      ASSERT_TRUE(request->release_fence().is_valid());
 
       std::lock_guard<std::mutex> guard(mutex_);
       if (put_packet_calls_ == 0) {
-        fence_ = std::move(request->release_fence);
+        fence_ = std::move(request->release_fence());
       }
       put_packet_calls_++;
       packet_received_.Signal();
@@ -207,7 +210,9 @@ TEST(StreamSinkClientTest, Shutdown) {
       std::lock_guard<std::mutex> guard(mutex_);
       end_calls_++;
     }
-    void Clear(ClearRequestView request, ClearCompleter::Sync& completer) final {}
+    void StartSegment(StartSegmentRequestView request,
+                      StartSegmentCompleter::Sync& completer) final {}
+    void WillClose(WillCloseRequestView request, WillCloseCompleter::Sync& completer) final {}
 
    private:
     libsync::Completion packet_received_;
@@ -228,7 +233,7 @@ TEST(StreamSinkClientTest, Shutdown) {
   auto binding =
       fidl::BindServer(server_thread->dispatcher(), std::move(h.endpoints.server), server,
                        [&server_unbound](StreamSinkServer* server, fidl::UnbindInfo info,
-                                         fidl::ServerEnd<fuchsia_media2::StreamSink> server_end) {
+                                         fidl::ServerEnd<fuchsia_audio::StreamSink> server_end) {
                          EXPECT_TRUE(info.is_peer_closed());
                          server_unbound.Signal();
                        });

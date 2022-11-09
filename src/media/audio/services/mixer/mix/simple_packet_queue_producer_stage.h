@@ -30,17 +30,18 @@ class SimplePacketQueueProducerStage : public PipelineStage {
  public:
   struct PushPacketCommand {
     PacketView packet;
+    // Must be greater-or-equal to the `segment_id` of all prior packets.
+    int64_t segment_id;
     // Closed after `packet` is fully consumed.
     zx::eventpair fence;
   };
 
-  struct ClearCommand {
-    // Closed after the queue is cleared. If the queue was not empty, this fence does not occur
-    // until all queued packets are released.
-    zx::eventpair fence;
+  struct ReleasePacketsCommand {
+    // Release all packets with `segment_id < before_segment_id`.
+    int64_t before_segment_id;
   };
 
-  using Command = std::variant<PushPacketCommand, ClearCommand>;
+  using Command = std::variant<PushPacketCommand, ReleasePacketsCommand>;
   using CommandQueue = ThreadSafeQueue<Command>;
 
   struct Args {
@@ -78,11 +79,6 @@ class SimplePacketQueueProducerStage : public PipelineStage {
   }
   void UpdatePresentationTimeToFracFrame(std::optional<TimelineFunction> f) final;
 
-  // Clears the queue.
-  //
-  // REQUIRED: `Args::command_queue` was not specified.
-  void clear();
-
   // Reports whether the queue is empty or not.
   //
   // REQUIRED: `Args::command_queue` was not specified.
@@ -102,8 +98,8 @@ class SimplePacketQueueProducerStage : public PipelineStage {
  private:
   class PendingPacket : public PacketView {
    public:
-    PendingPacket(PacketView view, zx::eventpair fence)
-        : PacketView(view), fence_(std::move(fence)) {}
+    PendingPacket(PacketView view, int64_t segment_id, zx::eventpair fence)
+        : PacketView(view), segment_id_(segment_id), fence_(std::move(fence)) {}
 
     PendingPacket(PendingPacket&& rhs) = default;
     PendingPacket& operator=(PendingPacket&& rhs) = default;
@@ -111,9 +107,12 @@ class SimplePacketQueueProducerStage : public PipelineStage {
     PendingPacket(const PendingPacket& rhs) = delete;
     PendingPacket& operator=(const PendingPacket& rhs) = delete;
 
+    int64_t segment_id() const { return segment_id_; }
+
    private:
     friend class SimplePacketQueueProducerStage;
 
+    int64_t segment_id_;
     zx::eventpair fence_;
     bool seen_in_read_ = false;
   };
@@ -125,6 +124,7 @@ class SimplePacketQueueProducerStage : public PipelineStage {
   const fit::function<void(zx::duration)> underflow_reporter_;
 
   std::deque<PendingPacket> pending_packet_queue_;
+  std::optional<int64_t> released_before_segment_id_;
   size_t underflow_count_;
 };
 

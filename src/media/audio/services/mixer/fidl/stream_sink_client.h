@@ -5,7 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_STREAM_SINK_CLIENT_H_
 #define SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_STREAM_SINK_CLIENT_H_
 
-#include <fidl/fuchsia.media2/cpp/wire.h>
+#include <fidl/fuchsia.audio/cpp/wire.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/wire/client.h>
 #include <lib/zx/eventpair.h>
@@ -33,7 +33,7 @@ class StreamSinkClient : public std::enable_shared_from_this<StreamSinkClient> {
     int64_t frames_per_packet;
 
     // FIDL handle.
-    fidl::ClientEnd<fuchsia_media2::StreamSink> client_end;
+    fidl::ClientEnd<fuchsia_audio::StreamSink> client_end;
 
     // Payload buffers available to this StreamSink, indexed by buffer ID.
     // Each buffer must be large enough to fit at least one packet.
@@ -48,11 +48,11 @@ class StreamSinkClient : public std::enable_shared_from_this<StreamSinkClient> {
 
   explicit StreamSinkClient(Args args);
 
-  // Calls fuchsia_media2.StreamSink/PutPacket.
+  // Calls fuchsia.audio.StreamSink/PutPacket.
   // This method is safe to call from any thread.
   void PutPacket(std::unique_ptr<Packet> packet);
 
-  // Calls fuchsia_media2.StreamSink/End.
+  // Calls fuchsia.audio.StreamSink/End.
   // This method is safe to call from any thread.
   void End();
 
@@ -69,7 +69,7 @@ class StreamSinkClient : public std::enable_shared_from_this<StreamSinkClient> {
   const std::shared_ptr<PacketQueue> recycled_packet_queue_;
   const std::shared_ptr<const FidlThread> thread_;
 
-  std::optional<fidl::WireSharedClient<fuchsia_media2::StreamSink>> client_;
+  std::optional<fidl::WireSharedClient<fuchsia_audio::StreamSink>> client_;
 
   struct InflightPacket {
     InflightPacket(std::shared_ptr<StreamSinkClient> c, std::unique_ptr<Packet> p, zx::eventpair f)

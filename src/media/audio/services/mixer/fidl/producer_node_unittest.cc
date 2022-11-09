@@ -33,10 +33,9 @@ constexpr uint32_t kStreamSinkBufferId = 0;
 constexpr uint64_t kStreamSinkBufferSize = 4096;
 constexpr int64_t kRingBufferFrames = 10;
 
-std::unique_ptr<TestStreamSinkServerAndClient> MakeStreamSink() {
+std::unique_ptr<TestStreamSinkServerAndClient> MakeStreamSink(async::TestLoop& loop) {
   return std::make_unique<TestStreamSinkServerAndClient>(
-      FidlThread::CreateFromNewThread("test_fidl_thread"), kStreamSinkBufferId,
-      kStreamSinkBufferSize, kFormat, kMediaTicksPerNs);
+      loop, kStreamSinkBufferId, kStreamSinkBufferSize, kFormat, kMediaTicksPerNs);
 }
 
 enum class TestDataSource {
@@ -51,6 +50,7 @@ struct TestHarness {
   FakeGraph& graph;
   std::shared_ptr<Clock> clock;
   ClockSnapshots clock_snapshots;
+  std::unique_ptr<async::TestLoop> loop;
   std::unique_ptr<TestStreamSinkServerAndClient> stream_sink;
   std::shared_ptr<MemoryMappedBuffer> buffer;
   std::shared_ptr<RingBuffer> ring_buffer;
@@ -71,7 +71,8 @@ TestHarness MakeTestHarness(FakeGraph& graph, TestDataSource source) {
   h.clock_snapshots.Update(zx::clock::get_monotonic());
 
   if (source == TestDataSource::kStreamSink) {
-    h.stream_sink = MakeStreamSink();
+    h.loop = std::make_unique<async::TestLoop>();
+    h.stream_sink = MakeStreamSink(*h.loop);
   } else {
     h.buffer = MemoryMappedBuffer::CreateOrDie(kRingBufferFrames * kFormat.bytes_per_frame(), true);
     h.ring_buffer = std::make_shared<RingBuffer>(kFormat, UnreadableClock(h.clock), h.buffer);
@@ -165,7 +166,8 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithStreamSink) {
             .offset = 0,
             .size = static_cast<uint64_t>(10 * kFormat.bytes_per_frame()),
         },
-        fuchsia_media2::wire::PacketTimestamp::WithSpecified(arena, 0), fence.Take()));
+        fuchsia_audio::wire::Timestamp::WithSpecified(arena, 0), fence.Take()));
+    h.loop->RunUntilIdle();
   }
 
   // Verify those commands were received by the ProducerStage.
@@ -342,7 +344,7 @@ TEST(ProducerNodeTest, InputPipelineUsesExternalDelay) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_audio::DelayWatcher>();
   auto external_delay_server = DelayWatcherServer::Create(thread, std::move(endpoints->server), {});
 
-  auto stream_sink = MakeStreamSink();
+  auto stream_sink = MakeStreamSink(loop);
   auto producer = ProducerNode::Create({
       .pipeline_direction = PipelineDirection::kInput,
       .format = kFormat,
@@ -386,7 +388,7 @@ TEST(ProducerNodeTest, OutputPipelineReportsLeadTime) {
   async::TestLoop loop;
   auto thread = FidlThread::CreateFromCurrentThread("TestFidlThread", loop.dispatcher());
 
-  auto stream_sink = MakeStreamSink();
+  auto stream_sink = MakeStreamSink(loop);
   auto producer = ProducerNode::Create({
       .pipeline_direction = PipelineDirection::kOutput,
       .format = kFormat,

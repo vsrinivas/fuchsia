@@ -55,8 +55,11 @@ void StreamSinkClient::PutPacket(std::unique_ptr<Packet> packet) {
 
     // Make the FIDL call.
     fidl::Arena<> arena;
-    if (auto result = (*client_)->PutPacket(packet->ToFidl(arena), std::move(remote_fence));
-        !result.ok()) {
+    auto request = fuchsia_audio::wire::StreamSinkPutPacketRequest::Builder(arena)
+                       .packet(packet->ToFidl(arena))
+                       .release_fence(std::move(remote_fence))
+                       .Build();
+    if (auto result = (*client_)->PutPacket(request); !result.ok()) {
       FX_LOGS(INFO) << "StreamSinkClient connection closed: " << result;
       client_ = std::nullopt;
       return;

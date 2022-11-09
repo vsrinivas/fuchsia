@@ -37,10 +37,9 @@ protocol GraphCreator {
 
         /// Deadline profile for the FIDL thread.
         ///
-        /// This is to ensure time-sensitive requests are handled properly.
-        /// For example, packets sent using `[fuchsia.media2/StreamSink`]
-        /// protocols must be read immediately, otherwise the caller may miss
-        /// their deadline.
+        /// This is to ensure time-sensitive requests are handled properly. For
+        /// example, packets sent on a `[fuchsia.audio.StreamSink`] channel must
+        /// be read immediately, otherwise the caller may miss their deadline.
         ///
         /// Optional. If not specified, the FIDL thread runs at a normal priority.
         3: fidl_thread_deadline_profile zx.handle:PROFILE;

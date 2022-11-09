@@ -21,4 +21,11 @@ type ConsumerClosedReason = flexible enum {
     //     CLEAN_CLOSE - because we may want this larger bucket for nominal closures
     //     EXPECTED - as an alternative spelling of CLEAN_CLOSE
     REQUESTED_BY_CLIENT = 1;
+
+    /// The client violated the StreamSink protocol. For example, the client's
+    /// StartSegmeent call did not use a strictly-increasing ID.
+    PROTOCOL_ERROR = 2;
+
+    /// The client sent an invalid Packet.
+    INVALID_PACKET = 3;
 };

@@ -46,21 +46,20 @@ int64_t StreamSinkConsumerWriter::Packet::FramesRemaining() const {
   return static_cast<int64_t>(payload_range_max_size_ - write_offset_) / bytes_per_frame();
 }
 
-fuchsia_media2::wire::Packet StreamSinkConsumerWriter::Packet::ToFidl(fidl::AnyArena& arena) const {
+fuchsia_audio::wire::Packet StreamSinkConsumerWriter::Packet::ToFidl(fidl::AnyArena& arena) const {
   FX_CHECK(0 <= write_offset_ < payload_range_max_size_)
       << "write_offset_=" << write_offset_  //
       << ", payload_range_max_size_=" << payload_range_max_size_;
 
-  fidl::VectorView<fuchsia_media2::wire::PayloadRange> payload_ranges(arena, 1);
-  payload_ranges[0].buffer_id = payload_range_buffer_id_;
-  payload_ranges[0].offset = payload_range_offset_;
-  payload_ranges[0].size = write_offset_;
-  return {
-      .payload = payload_ranges,
-      .timestamp = timestamp_
-                       ? fuchsia_media2::wire::PacketTimestamp::WithSpecified(arena, *timestamp_)
-                       : fuchsia_media2::wire::PacketTimestamp::WithUnspecifiedContinuous({}),
-  };
+  return fuchsia_audio::wire::Packet::Builder(arena)
+      .payload({
+          .buffer_id = payload_range_buffer_id_,
+          .offset = payload_range_offset_,
+          .size = write_offset_,
+      })
+      .timestamp(timestamp_ ? fuchsia_audio::wire::Timestamp::WithSpecified(arena, *timestamp_)
+                            : fuchsia_audio::wire::Timestamp::WithUnspecifiedContinuous({}))
+      .Build();
 }
 
 StreamSinkConsumerWriter::StreamSinkConsumerWriter(Args args)

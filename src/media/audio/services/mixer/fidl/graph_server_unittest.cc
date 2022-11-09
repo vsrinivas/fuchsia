@@ -110,7 +110,7 @@ zx::vmo MakeInvalidVmo(size_t size = 1024) {
 fidl::WireTableBuilder<fuchsia_audio_mixer::wire::StreamSinkProducer> MakeDefaultStreamSinkProducer(
     fidl::AnyArena& arena) {
   auto [stream_sink_client, stream_sink_server] =
-      CreateWireSyncClientOrDie<fuchsia_media2::StreamSink>();
+      CreateWireSyncClientOrDie<fuchsia_audio::StreamSink>();
   auto builder = fuchsia_audio_mixer::wire::StreamSinkProducer::Builder(arena);
   builder.server_end(std::move(stream_sink_server));
   builder.format(kFormat.ToWireFidl(arena));
@@ -123,7 +123,7 @@ fidl::WireTableBuilder<fuchsia_audio_mixer::wire::StreamSinkProducer> MakeDefaul
 fidl::WireTableBuilder<fuchsia_audio_mixer::wire::StreamSinkConsumer> MakeDefaultStreamSinkConsumer(
     fidl::AnyArena& arena) {
   auto [stream_sink_client, stream_sink_server] =
-      CreateWireSyncClientOrDie<fuchsia_media2::StreamSink>();
+      CreateWireSyncClientOrDie<fuchsia_audio::StreamSink>();
   auto builder = fuchsia_audio_mixer::wire::StreamSinkConsumer::Builder(arena);
   builder.client_end(stream_sink_client.TakeClientEnd());
   builder.format(kFormat.ToWireFidl(arena));

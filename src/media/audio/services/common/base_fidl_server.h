@@ -112,6 +112,8 @@ class BaseFidlServer : public FidlServerT<ProtocolT>, public internal::BaseFidlS
  protected:
   BaseFidlServer() = default;
 
+  const fidl::ServerBindingRef<ProtocolT>& binding() const { return *binding_; }
+
   // Helper to create a server. The ServerT object is constructed via `ServerT(args...)`.
   // Methods received on `server_end` will be dispatched on `thread->dispatcher()`.
   template <typename... Args>

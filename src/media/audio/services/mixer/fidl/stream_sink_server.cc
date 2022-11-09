@@ -12,10 +12,13 @@
 
 namespace media_audio {
 
+using fuchsia_audio::wire::Timestamp;
+using fuchsia_media2::ConsumerClosedReason;
+
 // static
 std::shared_ptr<StreamSinkServer> StreamSinkServer::Create(
-    std::shared_ptr<const FidlThread> thread,
-    fidl::ServerEnd<fuchsia_media2::StreamSink> server_end, Args args) {
+    std::shared_ptr<const FidlThread> thread, fidl::ServerEnd<fuchsia_audio::StreamSink> server_end,
+    Args args) {
   return BaseFidlServer::Create(std::move(thread), std::move(server_end), std::move(args));
 }
 
@@ -24,112 +27,139 @@ StreamSinkServer::StreamSinkServer(Args args)
       frac_frames_per_media_ticks_(
           TimelineRate::Product(format_.frac_frames_per_ns(), args.media_ticks_per_ns.Inverse())),
       payload_buffers_(std::move(args.payload_buffers)),
-      command_queue_(std::make_shared<CommandQueue>()) {}
+      command_queue_(std::make_shared<CommandQueue>()),
+      segment_id_(args.initial_segment_id) {}
 
 void StreamSinkServer::PutPacket(PutPacketRequestView request,
                                  PutPacketCompleter::Sync& completer) {
   TRACE_DURATION("audio", "StreamSink::PutPacket");
   ScopedThreadChecker checker(thread().checker());
 
-  auto cleanup = fit::defer([this] {
-    ScopedThreadChecker checker(thread().checker());
-    ++fidl_calls_completed_;
-  });
+  if (!request->has_packet()) {
+    FX_LOGS(WARNING) << "PutPacket: missing packet";
+    CloseWithReason(ConsumerClosedReason::kInvalidPacket);
+    return;
+  }
+  if (!request->packet().has_payload()) {
+    FX_LOGS(WARNING) << "PutPacket: missing payload";
+    CloseWithReason(ConsumerClosedReason::kInvalidPacket);
+    return;
+  }
 
-  // TODO(fxbug.dev/87651): For now, until the StreamSink API is finalized, we ignore errors in the
-  // input and we ignore all unsupported cases.
+  const auto& packet = request->packet();
+  if (packet.has_flags() || packet.has_front_frames_to_drop() || packet.has_back_frames_to_drop() ||
+      packet.has_encryption_properties()) {
+    FX_LOGS(WARNING) << "PutPacket: unsupported field";
+    CloseWithReason(ConsumerClosedReason::kInvalidPacket);
+    return;
+  }
+
+  const auto which_timestamp =
+      packet.has_timestamp() ? packet.timestamp().Which() : Timestamp::Tag::kUnspecifiedBestEffort;
 
   Fixed packet_start;
-  switch (request->packet.timestamp.Which()) {
-    case fuchsia_media2::wire::PacketTimestamp::Tag::kSpecified:
+  switch (which_timestamp) {
+    case Timestamp::Tag::kSpecified:
       // Media and frame timestamps share the same epoch. Hence, the translation is just a rate
       // change. See ../docs/timelines.md.
       packet_start =
-          Fixed::FromRaw(frac_frames_per_media_ticks_.Scale(request->packet.timestamp.specified()));
+          Fixed::FromRaw(frac_frames_per_media_ticks_.Scale(packet.timestamp().specified()));
       break;
-    case fuchsia_media2::wire::PacketTimestamp::Tag::kUnspecifiedContinuous:
+    case Timestamp::Tag::kUnspecifiedContinuous:
       packet_start = next_continuous_frame_;
       break;
-    case fuchsia_media2::wire::PacketTimestamp::Tag::kUnspecifiedBestEffort:
+    case Timestamp::Tag::kUnspecifiedBestEffort:
+      // TODO(fxbug.dev/114712): support unspecified_best_effort
       FX_LOGS(WARNING) << "Skipping packet: unspecified_best_effort timestamps not supported";
       return;
     default:
-      FX_LOGS(WARNING) << "Skipping packet: unepxected packet timestamp tag = "
-                       << static_cast<int>(request->packet.timestamp.Which());
+      FX_LOGS(WARNING) << "PutPacket: unepxected packet timestamp tag = "
+                       << static_cast<int>(packet.timestamp().Which());
+      CloseWithReason(ConsumerClosedReason::kInvalidPacket);
       return;
   }
 
-  if (request->packet.compression_properties.has_value()) {
-    FX_LOGS(WARNING) << "Skipping packet: compression_properties not supported";
-    return;
-  }
-  if (request->packet.encryption_properties) {
-    FX_LOGS(WARNING) << "Skipping packet: encryption_properties not supported";
-    return;
-  }
-
-  if (request->packet.payload.empty()) {
-    FX_LOGS(WARNING) << "Skipping packet: payload ranges not specified";
-    return;
-  }
-  if (request->packet.payload.count() > 1) {
-    FX_LOGS(WARNING) << "Skipping packet: multiple payload ranges not supported";
-    return;
-  }
-
-  auto& payload_range = request->packet.payload[0];
-  auto buffer_it = payload_buffers_.find(payload_range.buffer_id);
+  const auto& payload = packet.payload();
+  auto buffer_it = payload_buffers_.find(payload.buffer_id);
   if (buffer_it == payload_buffers_.end()) {
-    FX_LOGS(WARNING) << "Skipping packet: unknown payload buffer id " << payload_range.buffer_id;
+    FX_LOGS(WARNING) << "PutPacket: unknown payload buffer id " << payload.buffer_id;
+    CloseWithReason(ConsumerClosedReason::kInvalidPacket);
     return;
   }
 
   // Since the offset is an unsigned integer, the payload is out-of-range if its endpoint is too
   // large or wraps around.
   const auto& buffer = *buffer_it->second;
-  uint64_t payload_offset_end = payload_range.offset + payload_range.size;
-  if (payload_offset_end > buffer.size() || payload_offset_end < payload_range.offset) {
-    FX_LOGS(WARNING) << "Skipping packet: payload buffer out-of-range";
+  const uint64_t payload_offset_end = payload.offset + payload.size;
+  if (payload_offset_end > buffer.size() || payload_offset_end < payload.offset) {
+    FX_LOGS(WARNING) << "PutPacket: payload buffer out-of-range: offset=" << payload.offset
+                     << ", size=" << payload.size << " buffer_size=" << buffer.size();
+    CloseWithReason(ConsumerClosedReason::kInvalidPacket);
     return;
   }
-  if (payload_range.size % format_.bytes_per_frame() != 0) {
-    FX_LOGS(WARNING) << "Skipping packet: payload buffer has a non-integral number of frames";
+  if (payload.size % format_.bytes_per_frame() != 0) {
+    FX_LOGS(WARNING) << "PutPacket: payload buffer has a non-integral number of frames";
+    CloseWithReason(ConsumerClosedReason::kInvalidPacket);
     return;
   }
 
-  PacketView packet({
+  PacketView packet_view({
       .format = format_,
       .start_frame = packet_start,
-      .frame_count = static_cast<int64_t>(payload_range.size) / format_.bytes_per_frame(),
-      .payload = static_cast<char*>(buffer.start()) + payload_range.offset,
+      .frame_count = static_cast<int64_t>(payload.size) / format_.bytes_per_frame(),
+      .payload = static_cast<char*>(buffer.start()) + payload.offset,
   });
 
-  next_continuous_frame_ = packet.end_frame();
+  next_continuous_frame_ = packet_view.end_frame();
   command_queue_->push(SimplePacketQueueProducerStage::PushPacketCommand{
-      .packet = packet,
-      .fence = std::move(request->release_fence),
+      .packet = packet_view,
+      .fence = request->has_release_fence() ? std::move(request->release_fence()) : zx::eventpair(),
   });
+}
+
+void StreamSinkServer::StartSegment(StartSegmentRequestView request,
+                                    StartSegmentCompleter::Sync& completer) {
+  TRACE_DURATION("audio", "StreamSink::StartSegment");
+  ScopedThreadChecker checker(thread().checker());
+
+  if (!request->has_segment_id() || request->segment_id() <= segment_id_) {
+    FX_LOGS(WARNING) << "StartSegment: invalid segment_id";
+    CloseWithReason(ConsumerClosedReason::kProtocolError);
+    return;
+  }
+
+  segment_id_ = request->segment_id();
 }
 
 void StreamSinkServer::End(EndCompleter::Sync& completer) {
-  // This is a no-op. We don't need to tell the mix threads when a stream has "ended".
+  // This is a no-op. We don't need to tell the mixer when a stream has "ended".
   // It's sufficient to let the queue stay empty.
-  ScopedThreadChecker checker(thread().checker());
-  ++fidl_calls_completed_;
 }
 
-void StreamSinkServer::Clear(ClearRequestView request, ClearCompleter::Sync& completer) {
-  TRACE_DURATION("audio", "StreamSink::Clear");
+void StreamSinkServer::WillClose(WillCloseRequestView request,
+                                 WillCloseCompleter::Sync& completer) {
+  TRACE_DURATION("audio", "StreamSink::WillClose");
   ScopedThreadChecker checker(thread().checker());
 
-  auto cleanup = fit::defer([this] {
-    ScopedThreadChecker checker(thread().checker());
-    ++fidl_calls_completed_;
-  });
+  if (request->has_reason()) {
+    FX_LOGS(INFO) << "StreamSink closing with reason " << static_cast<uint32_t>(request->reason());
+  }
+}
 
-  command_queue_->push(SimplePacketQueueProducerStage::ClearCommand{
-      .fence = std::move(request->completion_fence),
+void StreamSinkServer::ReleasePackets(int64_t before_segment_id) {
+  TRACE_DURATION("audio", "StreamSink::ReleasePackets");
+  ScopedThreadChecker checker(thread().checker());
+
+  command_queue_->push(SimplePacketQueueProducerStage::ReleasePacketsCommand{
+      .before_segment_id = before_segment_id,
   });
+}
+
+void StreamSinkServer::CloseWithReason(ConsumerClosedReason reason) {
+  fidl::Arena<> arena;
+  std::ignore = fidl::WireSendEvent(binding())->OnWillClose(
+      fuchsia_audio::wire::StreamSinkOnWillCloseRequest::Builder(arena).reason(reason).Build());
+  Shutdown();
 }
 
 }  // namespace media_audio

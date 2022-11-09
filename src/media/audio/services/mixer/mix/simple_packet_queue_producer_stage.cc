@@ -21,11 +21,6 @@ SimplePacketQueueProducerStage::SimplePacketQueueProducerStage(Args args)
       pending_commands_(std::move(args.command_queue)),
       underflow_reporter_(std::move(args.underflow_reporter)) {}
 
-void SimplePacketQueueProducerStage::clear() {
-  FX_CHECK(!pending_commands_);
-  pending_packet_queue_.clear();
-}
-
 bool SimplePacketQueueProducerStage::empty() const {
   FX_CHECK(!pending_commands_);
   return pending_packet_queue_.empty();
@@ -33,7 +28,7 @@ bool SimplePacketQueueProducerStage::empty() const {
 
 void SimplePacketQueueProducerStage::push(PacketView packet, zx::eventpair fence) {
   FX_CHECK(!pending_commands_);
-  pending_packet_queue_.emplace_back(packet, std::move(fence));
+  pending_packet_queue_.emplace_back(packet, 0, std::move(fence));
 }
 
 void SimplePacketQueueProducerStage::UpdatePresentationTimeToFracFrame(
@@ -99,14 +94,25 @@ void SimplePacketQueueProducerStage::FlushPendingCommands() {
     }
 
     if (auto* cmd = std::get_if<PushPacketCommand>(&*cmd_or_null); cmd) {
-      pending_packet_queue_.emplace_back(cmd->packet, std::move(cmd->fence));
+      // Skip if this segment has already been released.
+      if (released_before_segment_id_ && cmd->segment_id < *released_before_segment_id_) {
+        continue;
+      }
+      pending_packet_queue_.emplace_back(cmd->packet, cmd->segment_id, std::move(cmd->fence));
 
-    } else if (std::holds_alternative<ClearCommand>(*cmd_or_null)) {
-      // The fence is cleared when `cmd_or_null` is destructed.
-      pending_packet_queue_.clear();
+    } else if (auto* cmd = std::get_if<ReleasePacketsCommand>(&*cmd_or_null); cmd) {
+      auto start = pending_packet_queue_.begin();
+      auto end = start;
+      for (; end != pending_packet_queue_.end(); end++) {
+        if (end->segment_id() >= cmd->before_segment_id) {
+          break;
+        }
+      }
+      pending_packet_queue_.erase(start, end);
+      released_before_segment_id_ = cmd->before_segment_id;
 
     } else {
-      FX_CHECK(false) << "unhandled Command variant";
+      UNREACHABLE << "unhandled Command variant";
     }
   }
 }

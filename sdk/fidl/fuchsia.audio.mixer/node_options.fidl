@@ -7,7 +7,6 @@ library fuchsia.audio.mixer;
 using fuchsia.audio;
 using fuchsia.math;
 using fuchsia.audio.effects;
-using fuchsia.media2;
 using fuchsia.hardware.audio;
 using zx;
 
@@ -23,12 +22,12 @@ type ConsumerDataSource = flexible resource union {
     2: ring_buffer fuchsia.audio.RingBuffer;
 };
 
-/// A producer driven by a [`fuchsia.media2/StreamSink`].
+/// A producer driven by a [`fuchsia.audio.StreamSink`].
 type StreamSinkProducer = resource table {
     /// Channel to receive packets.
     ///
     /// Required.
-    1: server_end server_end:fuchsia.media2.StreamSink;
+    1: server_end server_end:fuchsia.audio.StreamSink;
 
     /// Encoding of this audio stream.
     ///
@@ -51,14 +50,19 @@ type StreamSinkProducer = resource table {
     ///
     /// Required.
     5: media_ticks_per_second fuchsia.math.RatioU64;
+
+    /// Initial segment ID for the StreamSink.
+    ///
+    /// Optional. If not specified, defaults to zero.
+    6: initial_segment_id int64;
 };
 
-/// A consumer driven by a [`fuchsia.media2/StreamSink`].
+/// A consumer driven by a [`fuchsia.audio.StreamSink`].
 type StreamSinkConsumer = resource table {
     /// Channel to send packets.
     ///
     /// Required.
-    1: client_end client_end:fuchsia.media2.StreamSink;
+    1: client_end client_end:fuchsia.audio.StreamSink;
 
     /// Encoding of this audio stream.
     ///

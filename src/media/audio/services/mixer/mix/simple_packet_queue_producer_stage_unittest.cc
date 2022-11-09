@@ -25,17 +25,22 @@ namespace media_audio {
 namespace {
 
 using ::fuchsia_audio::SampleType;
+using CommandQueue = SimplePacketQueueProducerStage::CommandQueue;
+using PushPacketCommand = SimplePacketQueueProducerStage::PushPacketCommand;
+using ReleasePacketsCommand = SimplePacketQueueProducerStage::ReleasePacketsCommand;
 using ::testing::ElementsAre;
 
 const Format kFormat = Format::CreateOrDie({SampleType::kFloat32, 2, 48000});
 
 class SimplePacketQueueProducerStageTest : public ::testing::Test {
  public:
-  SimplePacketQueueProducerStageTest()
-      : packet_queue_producer_stage_({
+  SimplePacketQueueProducerStageTest(std::shared_ptr<CommandQueue> command_queue = nullptr)
+      : command_queue_(command_queue),
+        packet_queue_producer_stage_({
             .format = kFormat,
             .reference_clock = DefaultUnreadableClock(),
             .initial_thread = std::make_shared<FakePipelineThread>(1),
+            .command_queue = command_queue,
             .underflow_reporter = [this](auto duration) { ReportUnderflow(duration); },
         }) {
     packet_queue_producer_stage_.UpdatePresentationTimeToFracFrame(
@@ -64,7 +69,7 @@ class SimplePacketQueueProducerStageTest : public ::testing::Test {
 
   void SetOnUnderflow(std::function<void(zx::duration)> f) { on_underflow_ = f; }
 
- private:
+ protected:
   struct Packet {
     explicit Packet(int64_t start, int64_t length)
         : payload(length, 0.0f),
@@ -93,6 +98,10 @@ class SimplePacketQueueProducerStageTest : public ::testing::Test {
     }
   }
 
+  std::shared_ptr<CommandQueue> command_queue() const { return command_queue_; }
+
+ private:
+  std::shared_ptr<CommandQueue> command_queue_;
   SimplePacketQueueProducerStage packet_queue_producer_stage_;
   std::map<int32_t, Packet> packets_;  // ordered map so iteration is deterministic
   std::vector<uint32_t> released_packets_;
@@ -108,11 +117,6 @@ TEST_F(SimplePacketQueueProducerStageTest, Push) {
   PushPacket(0);
   EXPECT_FALSE(packet_queue.empty());
   EXPECT_TRUE(released_packets().empty());
-
-  // Flush the queue.
-  packet_queue.clear();
-  EXPECT_TRUE(packet_queue.empty());
-  EXPECT_THAT(released_packets(), ElementsAre(0));
 }
 
 TEST_F(SimplePacketQueueProducerStageTest, Read) {
@@ -263,11 +267,6 @@ TEST_F(SimplePacketQueueProducerStageTest, ReadNotFullyConsumed) {
   }
   EXPECT_FALSE(packet_queue.empty());
   EXPECT_THAT(released_packets(), ElementsAre(0));
-
-  // Flush the queue to release the remaining packets.
-  packet_queue.clear();
-  EXPECT_TRUE(packet_queue.empty());
-  EXPECT_THAT(released_packets(), ElementsAre(0, 1, 2));
 }
 
 TEST_F(SimplePacketQueueProducerStageTest, ReadSkipsOverPacket) {
@@ -301,24 +300,6 @@ TEST_F(SimplePacketQueueProducerStageTest, ReadSkipsOverPacket) {
     EXPECT_EQ(20, buffer->frame_count());
     EXPECT_EQ(60, buffer->end_frame());
   }
-  EXPECT_TRUE(packet_queue.empty());
-  EXPECT_THAT(released_packets(), ElementsAre(0, 1, 2));
-}
-
-TEST_F(SimplePacketQueueProducerStageTest, ReadNulloptThenClear) {
-  SimplePacketQueueProducerStage& packet_queue = packet_queue_producer_stage();
-  EXPECT_TRUE(packet_queue.empty());
-  EXPECT_TRUE(released_packets().empty());
-
-  // Since the queue is empty, this should return nullopt.
-  const auto buffer = packet_queue.Read(DefaultCtx(), Fixed(0), 10);
-  EXPECT_FALSE(buffer.has_value());
-
-  // Push some packets, then flush them immediately.
-  PushPacket(0, 0, 20);
-  PushPacket(1, 20, 20);
-  PushPacket(2, 40, 20);
-  packet_queue.clear();
   EXPECT_TRUE(packet_queue.empty());
   EXPECT_THAT(released_packets(), ElementsAre(0, 1, 2));
 }
@@ -401,6 +382,64 @@ TEST_F(SimplePacketQueueProducerStageTest, ReportUnderflow) {
   // After packet is released, the queue should be empty.
   EXPECT_TRUE(packet_queue.empty());
   EXPECT_THAT(released_packets(), ElementsAre(0, 1));
+}
+
+class SimplePacketQueueProducerStageTestWithCommandQueue
+    : public SimplePacketQueueProducerStageTest {
+ public:
+  SimplePacketQueueProducerStageTestWithCommandQueue()
+      : SimplePacketQueueProducerStageTest(std::make_shared<CommandQueue>()) {}
+
+  const void* PushPacket(int64_t segment_id, uint32_t packet_id, int64_t start = 0,
+                         int64_t length = 1) {
+    auto& packet = NewPacket(packet_id, start, length);
+    command_queue()->push(PushPacketCommand{
+        .packet = packet.view,
+        .segment_id = segment_id,
+        .fence = packet.fence.Take(),
+    });
+    return packet.payload.data();
+  }
+
+  void ReleasePackets(int64_t before_segment_id) {
+    command_queue()->push(ReleasePacketsCommand{.before_segment_id = before_segment_id});
+  }
+
+ private:
+  std::shared_ptr<CommandQueue> command_queue_;
+};
+
+TEST_F(SimplePacketQueueProducerStageTestWithCommandQueue, ReleaseAndRead) {
+  SimplePacketQueueProducerStage& packet_queue = packet_queue_producer_stage();
+  EXPECT_TRUE(released_packets().empty());
+
+  // Send PushPacket commands.
+  PushPacket(0, 0, 0, 20);
+  PushPacket(0, 1, 20, 20);
+  PushPacket(1, 2, 40, 20);
+  EXPECT_TRUE(released_packets().empty());
+
+  // Release all packets before segment_id=2, which is all above packets.
+  ReleasePackets(2);
+  {
+    const auto buffer = packet_queue.Read(DefaultCtx(), Fixed(0), 60);
+    ASSERT_FALSE(buffer);
+  }
+  EXPECT_THAT(released_packets(), ElementsAre(0, 1, 2));
+
+  // Send more PushPacket commands.
+  PushPacket(1, 3, 60, 20);
+  PushPacket(2, 4, 80, 20);
+
+  // Packet 3 should be released immediately, so Read should return packet 4.
+  {
+    const auto buffer = packet_queue.Read(DefaultCtx(), Fixed(60), 40);
+    ASSERT_TRUE(buffer);
+    EXPECT_EQ(80, buffer->start_frame());
+  }
+
+  // Now all packets are released.
+  EXPECT_THAT(released_packets(), ElementsAre(0, 1, 2, 3, 4));
 }
 
 }  // namespace

@@ -65,11 +65,6 @@ class ProducerStageTestWithPacketQueue : public ::testing::Test {
     return packet.payload.data();
   }
 
-  void SendClearCommand(zx::eventpair fence) {
-    packet_command_queue_->push(
-        SimplePacketQueueProducerStage::ClearCommand{.fence = std::move(fence)});
-  }
-
   void SendStartCommand(zx::time start_presentation_time, Fixed start_frame) {
     pending_start_stop_command_->set_must_be_empty(ProducerStage::StartCommand{
         .start_time = RealTime{.clock = WhichClock::kReference, .time = start_presentation_time},
@@ -177,48 +172,6 @@ TEST_F(ProducerStageTestWithPacketQueue, ReadWhileStarted) {
     EXPECT_EQ(payload_2, buffer->payload());
   }
   EXPECT_THAT(released_packets(), ElementsAre(0, 1, 2));
-}
-
-TEST_F(ProducerStageTestWithPacketQueue, ReadAfterClearWhileStarted) {
-  ProducerStage& producer = producer_stage();
-  EXPECT_TRUE(released_packets().empty());
-
-  // Start the Producer at t=0.
-  // The internal and downstream frame timelines are identical.
-  SendStartCommand(zx::time(0), Fixed(0));
-
-  // Push some packets, then a clear command, then payload_3 and payload_4.
-  // This should drop everything before payload_3.
-  SendPushPacketCommand(0, 0, 20);
-  SendPushPacketCommand(1, 20, 20);
-  SendPushPacketCommand(2, 40, 20);
-  TestFence clear_fence;
-  SendClearCommand(clear_fence.Take());
-  const void* payload_3 = SendPushPacketCommand(3, 60, 20);
-  const void* payload_4 = SendPushPacketCommand(4, 80, 20);
-
-  {
-    // Start reading at packet #2 but allow up through packet #3.
-    // This should return packet #3.
-    const auto buffer = producer.Read(DefaultCtx(), Fixed(40), 40);
-    ASSERT_TRUE(buffer);
-    EXPECT_EQ(60, buffer->start_frame());
-    EXPECT_EQ(20, buffer->frame_count());
-    EXPECT_EQ(80, buffer->end_frame());
-    EXPECT_EQ(payload_3, buffer->payload());
-  }
-  EXPECT_THAT(released_packets(), ElementsAre(0, 1, 2, 3));
-  EXPECT_TRUE(clear_fence.Done());
-
-  {
-    // Packet #5.
-    const auto buffer = producer.Read(DefaultCtx(), Fixed(80), 20);
-    ASSERT_TRUE(buffer);
-    EXPECT_EQ(80, buffer->start_frame());
-    EXPECT_EQ(20, buffer->frame_count());
-    EXPECT_EQ(100, buffer->end_frame());
-    EXPECT_EQ(payload_4, buffer->payload());
-  }
 }
 
 TEST_F(ProducerStageTestWithPacketQueue, AdvanceWhileStarted) {

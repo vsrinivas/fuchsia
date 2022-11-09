@@ -5,7 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_STREAM_SINK_CONSUMER_WRITER_H_
 #define SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_STREAM_SINK_CONSUMER_WRITER_H_
 
-#include <fidl/fuchsia.media2/cpp/wire.h>
+#include <fidl/fuchsia.audio/cpp/wire.h>
 #include <lib/fidl/cpp/wire/client.h>
 
 #include <memory>
@@ -21,13 +21,13 @@ namespace media_audio {
 // Enables consumers to write to a FIDL StreamSink.
 class StreamSinkConsumerWriter : public ConsumerStage::Writer {
  public:
-  // Intermediate representation of a fuchsia.media2.Packet.
+  // Intermediate representation of a fuchsia.audio.Packet.
   class Packet {
    public:
     // Packets have the following properties:
     //
     // * `buffer` is the VMO which contains this packet.
-    // * `payload_range` is the offset and size of the packet within `buffer`.
+    // * `payload_range` contains the offset and size of the packet within `buffer`.
     // * `payload` is a pointer to the start of the packet within `buffer`.
     Packet(std::shared_ptr<MemoryMappedBuffer> buffer,
            fuchsia_media2::wire::PayloadRange payload_range, void* payload);
@@ -55,7 +55,7 @@ class StreamSinkConsumerWriter : public ConsumerStage::Writer {
     int64_t FramesRemaining() const;
 
     // Conversion to a FIDL object that can be passed to PutPacket.
-    fuchsia_media2::wire::Packet ToFidl(fidl::AnyArena& arena) const;
+    fuchsia_audio::wire::Packet ToFidl(fidl::AnyArena& arena) const;
 
    private:
     int64_t bytes_per_frame() const { return stream_converter_->dest_format().bytes_per_frame(); }
@@ -85,10 +85,10 @@ class StreamSinkConsumerWriter : public ConsumerStage::Writer {
     // Ticks of media time per nanoseconds of reference time.
     TimelineRate media_ticks_per_ns;
 
-    // Callback which invokes fuchsia.media2.StreamSink/PutPacket.
+    // Callback which invokes fuchsia.audio.StreamSink/PutPacket.
     std::function<void(std::unique_ptr<Packet>)> call_put_packet;
 
-    // Callback which invokes fuchsia.media2.StreamSink/End.
+    // Callback which invokes fuchsia.audio.StreamSink/End.
     std::function<void()> call_end;
 
     // TODO(fxbug.dev/114393): Callback to report overflow.

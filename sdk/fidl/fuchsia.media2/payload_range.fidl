@@ -1,0 +1,17 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.media2;
+
+/// Describes a packet payload.
+type PayloadRange = struct {
+    /// The id of the buffer in which the payload resides.
+    buffer_id uint32;
+
+    /// The offset of the payload in the specified buffer.
+    offset uint64;
+
+    /// The size in bytes of the payload.
+    size uint64;
+};

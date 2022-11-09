@@ -24,7 +24,7 @@ using Packet = StreamSinkConsumerWriter::Packet;
 using PacketQueue = StreamSinkConsumerWriter::PacketQueue;
 
 using ::fuchsia_audio::SampleType;
-using ::fuchsia_media2::wire::PacketTimestamp;
+using ::fuchsia_audio::wire::Timestamp;
 using ::testing::ElementsAre;
 
 const Format kFormat = Format::CreateOrDie({SampleType::kFloat32, 2, 48000});
@@ -57,7 +57,7 @@ TestHarness MakeTestHarness(TimelineRate media_ticks_per_ns = kFormat.frames_per
       .call_put_packet =
           [&h](auto packet) mutable {
             fidl::Arena<> arena;
-            h.last_payload_offset = packet->ToFidl(arena).payload[0].offset;
+            h.last_payload_offset = packet->ToFidl(arena).payload().offset;
             h.packets.push_back(std::move(packet));
           },
       .call_end = [&h]() mutable { h.end_calls.push_back(h.last_payload_offset); },
@@ -119,21 +119,21 @@ TEST(StreamSinkConsumerWriterTest, WriteAlignedPackets) {
   auto fidl1 = h.packets[1]->ToFidl(arena);
   auto fidl2 = h.packets[2]->ToFidl(arena);
 
-  EXPECT_EQ(fidl0.payload[0].buffer_id, kBufferId);
-  EXPECT_EQ(fidl0.payload[0].offset, static_cast<uint64_t>(0 * kBytesPerPacket));
-  EXPECT_EQ(fidl0.payload[0].size, static_cast<uint64_t>(kBytesPerPacket));
-  EXPECT_EQ(fidl0.timestamp.Which(), PacketTimestamp::Tag::kSpecified);
-  EXPECT_EQ(fidl0.timestamp.specified(), 100);
+  EXPECT_EQ(fidl0.payload().buffer_id, kBufferId);
+  EXPECT_EQ(fidl0.payload().offset, static_cast<uint64_t>(0 * kBytesPerPacket));
+  EXPECT_EQ(fidl0.payload().size, static_cast<uint64_t>(kBytesPerPacket));
+  EXPECT_EQ(fidl0.timestamp().Which(), Timestamp::Tag::kSpecified);
+  EXPECT_EQ(fidl0.timestamp().specified(), 100);
 
-  EXPECT_EQ(fidl1.payload[0].buffer_id, kBufferId);
-  EXPECT_EQ(fidl1.payload[0].offset, static_cast<uint64_t>(1 * kBytesPerPacket));
-  EXPECT_EQ(fidl1.payload[0].size, static_cast<uint64_t>(kBytesPerPacket));
-  EXPECT_EQ(fidl1.timestamp.Which(), PacketTimestamp::Tag::kUnspecifiedContinuous);
+  EXPECT_EQ(fidl1.payload().buffer_id, kBufferId);
+  EXPECT_EQ(fidl1.payload().offset, static_cast<uint64_t>(1 * kBytesPerPacket));
+  EXPECT_EQ(fidl1.payload().size, static_cast<uint64_t>(kBytesPerPacket));
+  EXPECT_EQ(fidl1.timestamp().Which(), Timestamp::Tag::kUnspecifiedContinuous);
 
-  EXPECT_EQ(fidl2.payload[0].buffer_id, kBufferId);
-  EXPECT_EQ(fidl2.payload[0].offset, static_cast<uint64_t>(2 * kBytesPerPacket));
-  EXPECT_EQ(fidl2.payload[0].size, static_cast<uint64_t>(kBytesPerPacket));
-  EXPECT_EQ(fidl2.timestamp.Which(), PacketTimestamp::Tag::kUnspecifiedContinuous);
+  EXPECT_EQ(fidl2.payload().buffer_id, kBufferId);
+  EXPECT_EQ(fidl2.payload().offset, static_cast<uint64_t>(2 * kBytesPerPacket));
+  EXPECT_EQ(fidl2.payload().size, static_cast<uint64_t>(kBytesPerPacket));
+  EXPECT_EQ(fidl2.timestamp().Which(), Timestamp::Tag::kUnspecifiedContinuous);
 
   EXPECT_EQ(GetPayload(h, 0 * kBytesPerPacket, kFramesPerPacket), payload0);
   EXPECT_EQ(GetPayload(h, 1 * kBytesPerPacket, kFramesPerPacket), payload1);
@@ -164,21 +164,21 @@ TEST(StreamSinkConsumerWriterTest, WriteUnalignedPackets) {
   auto fidl1 = h.packets[1]->ToFidl(arena);
   auto fidl2 = h.packets[2]->ToFidl(arena);
 
-  EXPECT_EQ(fidl0.payload[0].buffer_id, kBufferId);
-  EXPECT_EQ(fidl0.payload[0].offset, static_cast<uint64_t>(0 * kBytesPerPacket));
-  EXPECT_EQ(fidl0.payload[0].size, static_cast<uint64_t>(kBytesPerPacket));
-  EXPECT_EQ(fidl0.timestamp.Which(), PacketTimestamp::Tag::kSpecified);
-  EXPECT_EQ(fidl0.timestamp.specified(), 100);
+  EXPECT_EQ(fidl0.payload().buffer_id, kBufferId);
+  EXPECT_EQ(fidl0.payload().offset, static_cast<uint64_t>(0 * kBytesPerPacket));
+  EXPECT_EQ(fidl0.payload().size, static_cast<uint64_t>(kBytesPerPacket));
+  EXPECT_EQ(fidl0.timestamp().Which(), Timestamp::Tag::kSpecified);
+  EXPECT_EQ(fidl0.timestamp().specified(), 100);
 
-  EXPECT_EQ(fidl1.payload[0].buffer_id, kBufferId);
-  EXPECT_EQ(fidl1.payload[0].offset, static_cast<uint64_t>(1 * kBytesPerPacket));
-  EXPECT_EQ(fidl1.payload[0].size, static_cast<uint64_t>(kBytesPerPacket));
-  EXPECT_EQ(fidl1.timestamp.Which(), PacketTimestamp::Tag::kUnspecifiedContinuous);
+  EXPECT_EQ(fidl1.payload().buffer_id, kBufferId);
+  EXPECT_EQ(fidl1.payload().offset, static_cast<uint64_t>(1 * kBytesPerPacket));
+  EXPECT_EQ(fidl1.payload().size, static_cast<uint64_t>(kBytesPerPacket));
+  EXPECT_EQ(fidl1.timestamp().Which(), Timestamp::Tag::kUnspecifiedContinuous);
 
-  EXPECT_EQ(fidl2.payload[0].buffer_id, kBufferId);
-  EXPECT_EQ(fidl2.payload[0].offset, static_cast<uint64_t>(2 * kBytesPerPacket));
-  EXPECT_EQ(fidl2.payload[0].size, static_cast<uint64_t>(kBytesPerPacket));
-  EXPECT_EQ(fidl2.timestamp.Which(), PacketTimestamp::Tag::kUnspecifiedContinuous);
+  EXPECT_EQ(fidl2.payload().buffer_id, kBufferId);
+  EXPECT_EQ(fidl2.payload().offset, static_cast<uint64_t>(2 * kBytesPerPacket));
+  EXPECT_EQ(fidl2.payload().size, static_cast<uint64_t>(kBytesPerPacket));
+  EXPECT_EQ(fidl2.timestamp().Which(), Timestamp::Tag::kUnspecifiedContinuous);
 
   std::vector<float> expected_payload0;
   std::vector<float> expected_payload1;
@@ -221,22 +221,22 @@ TEST(StreamSinkConsumerWriterTest, WriteEndWrite) {
   auto fidl1 = h.packets[1]->ToFidl(arena);
   auto fidl2 = h.packets[2]->ToFidl(arena);
 
-  EXPECT_EQ(fidl0.payload[0].buffer_id, kBufferId);
-  EXPECT_EQ(fidl0.payload[0].offset, static_cast<uint64_t>(0 * kBytesPerPacket));
-  EXPECT_EQ(fidl0.payload[0].size, static_cast<uint64_t>(kBytesPerPacket));
-  EXPECT_EQ(fidl0.timestamp.Which(), PacketTimestamp::Tag::kSpecified);
-  EXPECT_EQ(fidl0.timestamp.specified(), 100);
+  EXPECT_EQ(fidl0.payload().buffer_id, kBufferId);
+  EXPECT_EQ(fidl0.payload().offset, static_cast<uint64_t>(0 * kBytesPerPacket));
+  EXPECT_EQ(fidl0.payload().size, static_cast<uint64_t>(kBytesPerPacket));
+  EXPECT_EQ(fidl0.timestamp().Which(), Timestamp::Tag::kSpecified);
+  EXPECT_EQ(fidl0.timestamp().specified(), 100);
 
-  EXPECT_EQ(fidl1.payload[0].buffer_id, kBufferId);
-  EXPECT_EQ(fidl1.payload[0].offset, static_cast<uint64_t>(1 * kBytesPerPacket));
-  EXPECT_EQ(fidl1.payload[0].size, static_cast<uint64_t>(kBytesPerPacket));
-  EXPECT_EQ(fidl1.timestamp.Which(), PacketTimestamp::Tag::kUnspecifiedContinuous);
+  EXPECT_EQ(fidl1.payload().buffer_id, kBufferId);
+  EXPECT_EQ(fidl1.payload().offset, static_cast<uint64_t>(1 * kBytesPerPacket));
+  EXPECT_EQ(fidl1.payload().size, static_cast<uint64_t>(kBytesPerPacket));
+  EXPECT_EQ(fidl1.timestamp().Which(), Timestamp::Tag::kUnspecifiedContinuous);
 
-  EXPECT_EQ(fidl2.payload[0].buffer_id, kBufferId);
-  EXPECT_EQ(fidl2.payload[0].offset, static_cast<uint64_t>(2 * kBytesPerPacket));
-  EXPECT_EQ(fidl2.payload[0].size, static_cast<uint64_t>(kBytesPerPacket));
-  EXPECT_EQ(fidl2.timestamp.Which(), PacketTimestamp::Tag::kSpecified);
-  EXPECT_EQ(fidl2.timestamp.specified(), 120);
+  EXPECT_EQ(fidl2.payload().buffer_id, kBufferId);
+  EXPECT_EQ(fidl2.payload().offset, static_cast<uint64_t>(2 * kBytesPerPacket));
+  EXPECT_EQ(fidl2.payload().size, static_cast<uint64_t>(kBytesPerPacket));
+  EXPECT_EQ(fidl2.timestamp().Which(), Timestamp::Tag::kSpecified);
+  EXPECT_EQ(fidl2.timestamp().specified(), 120);
 
   EXPECT_EQ(GetPayload(h, 0 * kBytesPerPacket, kFramesPerPacket), payload0);
   EXPECT_EQ(GetPayload(h, 1 * kBytesPerPacket, kFramesPerPacket), payload1);
@@ -264,17 +264,17 @@ TEST(StreamSinkConsumerWriterTest, WriteEndGapWrite) {
   auto fidl0 = h.packets[0]->ToFidl(arena);
   auto fidl1 = h.packets[1]->ToFidl(arena);
 
-  EXPECT_EQ(fidl0.payload[0].buffer_id, kBufferId);
-  EXPECT_EQ(fidl0.payload[0].offset, static_cast<uint64_t>(0 * kBytesPerPacket));
-  EXPECT_EQ(fidl0.payload[0].size, static_cast<uint64_t>(kBytesPerPacket));
-  EXPECT_EQ(fidl0.timestamp.Which(), PacketTimestamp::Tag::kSpecified);
-  EXPECT_EQ(fidl0.timestamp.specified(), 100);
+  EXPECT_EQ(fidl0.payload().buffer_id, kBufferId);
+  EXPECT_EQ(fidl0.payload().offset, static_cast<uint64_t>(0 * kBytesPerPacket));
+  EXPECT_EQ(fidl0.payload().size, static_cast<uint64_t>(kBytesPerPacket));
+  EXPECT_EQ(fidl0.timestamp().Which(), Timestamp::Tag::kSpecified);
+  EXPECT_EQ(fidl0.timestamp().specified(), 100);
 
-  EXPECT_EQ(fidl1.payload[0].buffer_id, kBufferId);
-  EXPECT_EQ(fidl1.payload[0].offset, static_cast<uint64_t>(1 * kBytesPerPacket));
-  EXPECT_EQ(fidl1.payload[0].size, static_cast<uint64_t>(kBytesPerPacket));
-  EXPECT_EQ(fidl1.timestamp.Which(), PacketTimestamp::Tag::kSpecified);
-  EXPECT_EQ(fidl1.timestamp.specified(), 200);
+  EXPECT_EQ(fidl1.payload().buffer_id, kBufferId);
+  EXPECT_EQ(fidl1.payload().offset, static_cast<uint64_t>(1 * kBytesPerPacket));
+  EXPECT_EQ(fidl1.payload().size, static_cast<uint64_t>(kBytesPerPacket));
+  EXPECT_EQ(fidl1.timestamp().Which(), Timestamp::Tag::kSpecified);
+  EXPECT_EQ(fidl1.timestamp().specified(), 200);
 
   EXPECT_EQ(GetPayload(h, 0 * kBytesPerPacket, kFramesPerPacket), payload0);
   EXPECT_EQ(GetPayload(h, 1 * kBytesPerPacket, kFramesPerPacket), payload1);
@@ -298,12 +298,12 @@ TEST(StreamSinkConsumerWriterTest, PartialWrite) {
   fidl::Arena<> arena;
   auto fidl0 = h.packets[0]->ToFidl(arena);
 
-  EXPECT_EQ(fidl0.payload[0].buffer_id, kBufferId);
-  EXPECT_EQ(fidl0.payload[0].offset, static_cast<uint64_t>(0 * kBytesPerPacket));
-  EXPECT_EQ(fidl0.payload[0].size,
+  EXPECT_EQ(fidl0.payload().buffer_id, kBufferId);
+  EXPECT_EQ(fidl0.payload().offset, static_cast<uint64_t>(0 * kBytesPerPacket));
+  EXPECT_EQ(fidl0.payload().size,
             static_cast<uint64_t>(kFramesWritten * kFormat.bytes_per_frame()));
-  EXPECT_EQ(fidl0.timestamp.Which(), PacketTimestamp::Tag::kSpecified);
-  EXPECT_EQ(fidl0.timestamp.specified(), 100);
+  EXPECT_EQ(fidl0.timestamp().Which(), Timestamp::Tag::kSpecified);
+  EXPECT_EQ(fidl0.timestamp().specified(), 100);
 
   EXPECT_EQ(GetPayload(h, 0 * kBytesPerPacket, kFramesWritten), payload0);
 }
@@ -328,17 +328,17 @@ TEST(StreamSinkConsumerWriterTest, WriteUnderflowWrite) {
   auto fidl0 = h.packets[0]->ToFidl(arena);
   auto fidl1 = h.packets[1]->ToFidl(arena);
 
-  EXPECT_EQ(fidl0.payload[0].buffer_id, kBufferId);
-  EXPECT_EQ(fidl0.payload[0].offset, static_cast<uint64_t>(0 * kBytesPerPacket));
-  EXPECT_EQ(fidl0.payload[0].size, static_cast<uint64_t>(kBytesPerPacket));
-  EXPECT_EQ(fidl0.timestamp.Which(), PacketTimestamp::Tag::kSpecified);
-  EXPECT_EQ(fidl0.timestamp.specified(), 100);
+  EXPECT_EQ(fidl0.payload().buffer_id, kBufferId);
+  EXPECT_EQ(fidl0.payload().offset, static_cast<uint64_t>(0 * kBytesPerPacket));
+  EXPECT_EQ(fidl0.payload().size, static_cast<uint64_t>(kBytesPerPacket));
+  EXPECT_EQ(fidl0.timestamp().Which(), Timestamp::Tag::kSpecified);
+  EXPECT_EQ(fidl0.timestamp().specified(), 100);
 
-  EXPECT_EQ(fidl1.payload[0].buffer_id, kBufferId);
-  EXPECT_EQ(fidl1.payload[0].offset, static_cast<uint64_t>(1 * kBytesPerPacket));
-  EXPECT_EQ(fidl1.payload[0].size, static_cast<uint64_t>(kBytesPerPacket));
-  EXPECT_EQ(fidl1.timestamp.Which(), PacketTimestamp::Tag::kSpecified);
-  EXPECT_EQ(fidl1.timestamp.specified(), 200);
+  EXPECT_EQ(fidl1.payload().buffer_id, kBufferId);
+  EXPECT_EQ(fidl1.payload().offset, static_cast<uint64_t>(1 * kBytesPerPacket));
+  EXPECT_EQ(fidl1.payload().size, static_cast<uint64_t>(kBytesPerPacket));
+  EXPECT_EQ(fidl1.timestamp().Which(), Timestamp::Tag::kSpecified);
+  EXPECT_EQ(fidl1.timestamp().specified(), 200);
 
   EXPECT_EQ(GetPayload(h, 0 * kBytesPerPacket, kFramesPerPacket), payload0);
   EXPECT_EQ(GetPayload(h, 1 * kBytesPerPacket, kFramesPerPacket), payload1);
@@ -357,7 +357,7 @@ TEST(StreamSinkConsumerWriterTest, TranslateToMediaTime) {
 
   fidl::Arena<> arena;
   auto fidl0 = h.packets[0]->ToFidl(arena);
-  EXPECT_EQ(fidl0.timestamp.specified(), 50);
+  EXPECT_EQ(fidl0.timestamp().specified(), 50);
 }
 
 }  // namespace

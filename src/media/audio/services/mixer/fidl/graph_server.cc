@@ -467,6 +467,8 @@ void GraphServer::CreateProducer(CreateProducerRequestView request,
             .format = *format,
             .media_ticks_per_ns = media_ticks_per_ns,
             .payload_buffers = {{0, std::move(result.value().payload_buffer)}},
+            .initial_segment_id =
+                stream_sink.has_initial_segment_id() ? stream_sink.initial_segment_id() : 0,
         });
     AddChildServer(server);
     source = std::move(server);
