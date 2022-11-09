@@ -244,23 +244,33 @@ std::string VmStreamToString(const VmStream& stream);
 // Shared implementation for VmBytecodeForwardJump and VmBytecodeForwardJumpIfFalse below.
 class VmBytecodeForwardJumper {
  public:
-  VmBytecodeForwardJumper(VmStream& stream, VmOpType op);
+  VmBytecodeForwardJumper() = default;
+  VmBytecodeForwardJumper(VmStream* stream, VmOpType op);
   ~VmBytecodeForwardJumper();
 
+  // This will be a no-op if the source was never set (either by the constructor or SetSource()).
   void JumpToHere();
 
+ protected:
+  void SetSourceAndOp(VmStream* stream, VmOpType op);
+
  private:
-  VmStream& stream_;
-  size_t jump_source_index_;
+  VmStream* stream_ = nullptr;
+  size_t jump_source_index_ = VmOp::kBadJumpDest;
 };
 
 // These helper classes assist in filling out a forward jump where the destination of the jump
 // is not yet known.
 //
-// When the class is instantiated, the corresponding jump instruction is emitted with an invalid
-// destination. When the stream has been appended such that the destination of the jump is now the
-// end of the stream, call JumpToHere() which will fill in the current stream index into the
-// destination of the previously emitted instruction.
+// When used, the corresponding jump instruction is emitted with an invalid destination. When the
+// stream has been appended such that the destination of the jump is now the end of the stream, call
+// JumpToHere() which will fill in the current stream index into the destination of the previously
+// emitted instruction.
+//
+// "Using" means either instantiating it with the constructor that takes parameters or using
+// SetSource(). SetSource() is provided for jumps that may be conditionally included: if the
+// zero-arg constructor is called and SetSource() is never called, nothing will happen when the
+// destination is known.
 //
 // This will assert if you forget to call JumpToHere() and the class goes out of scope.
 //
@@ -272,13 +282,19 @@ class VmBytecodeForwardJumper {
 //   jump_out.JumpToHere();  // The previous jump should end up here.
 class VmBytecodeForwardJump : public VmBytecodeForwardJumper {
  public:
-  explicit VmBytecodeForwardJump(VmStream& stream)
+  VmBytecodeForwardJump() = default;
+  explicit VmBytecodeForwardJump(VmStream* stream)
       : VmBytecodeForwardJumper(stream, VmOpType::kJump) {}
+
+  void SetSource(VmStream* stream) { SetSourceAndOp(stream, VmOpType::kJump); }
 };
 class VmBytecodeForwardJumpIfFalse : public VmBytecodeForwardJumper {
  public:
-  explicit VmBytecodeForwardJumpIfFalse(VmStream& stream)
+  VmBytecodeForwardJumpIfFalse() = default;
+  explicit VmBytecodeForwardJumpIfFalse(VmStream* stream)
       : VmBytecodeForwardJumper(stream, VmOpType::kJumpIfFalse) {}
+
+  void SetSource(VmStream* stream) { SetSourceAndOp(stream, VmOpType::kJumpIfFalse); }
 };
 
 }  // namespace zxdb

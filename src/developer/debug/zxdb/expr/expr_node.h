@@ -37,6 +37,7 @@ class FunctionCallExprNode;
 class IdentifierExprNode;
 class LiteralExprNode;
 class LocalVarExprNode;
+class LoopExprNode;
 class MemberAccessExprNode;
 class SizeofExprNode;
 class TypeExprNode;
@@ -57,6 +58,7 @@ class ExprNode : public fxl::RefCountedThreadSafe<ExprNode> {
   virtual const IdentifierExprNode* AsIdentifier() const { return nullptr; }
   virtual const LiteralExprNode* AsLiteral() const { return nullptr; }
   virtual const LocalVarExprNode* AsLocalVar() const { return nullptr; }
+  virtual const LoopExprNode* AsLoop() const { return nullptr; }
   virtual const MemberAccessExprNode* AsMemberAccess() const { return nullptr; }
   virtual const SizeofExprNode* AsSizeof() const { return nullptr; }
   virtual const TypeExprNode* AsType() const { return nullptr; }
@@ -168,7 +170,8 @@ class BlockExprNode : public ExprNode {
   FRIEND_MAKE_REF_COUNTED(BlockExprNode);
 
   BlockExprNode();
-  BlockExprNode(std::vector<fxl::RefPtr<ExprNode>> statements, uint32_t entry_local_var_count)
+  BlockExprNode(std::vector<fxl::RefPtr<ExprNode>> statements,
+                std::optional<uint32_t> entry_local_var_count)
       : statements_(std::move(statements)), entry_local_var_count_(entry_local_var_count) {}
   ~BlockExprNode() override = default;
 
@@ -176,7 +179,10 @@ class BlockExprNode : public ExprNode {
 
   // The number of local variables in scope at the entry of this block. The block uses this to
   // emit bytecode at the exit of the block to clean up local variables back to this number.
-  uint32_t entry_local_var_count_ = 0;
+  //
+  // Nullopt means that there were no local variables used in the block so they don't have to be
+  // popped.
+  std::optional<uint32_t> entry_local_var_count_;
 };
 
 // Implements all types of casts.
@@ -359,6 +365,56 @@ class LocalVarExprNode : public ExprNode {
   ~LocalVarExprNode() override = default;
 
   uint32_t slot_;
+};
+
+// Represents all types of loops. By supporting both pre- and post-condition termination checks,
+// do/while loops can be represented at the same time as for and while loops. Any expression can be
+// null if it doesn't apply to the current loop type, or is omitted by the user:
+//
+//   for ( <init>; <precondition>; <incr> ) <contents>
+//   while ( <precondition> ) <contents>
+//   do <contents> while ( <postcondition> )
+class LoopExprNode : public ExprNode {
+ public:
+  const ExprToken& token() const { return token_; }
+
+  const LoopExprNode* AsLoop() const override { return this; }
+  void EmitBytecode(VmStream& stream) const override;
+  void Print(std::ostream& out, int indent) const override;
+
+ private:
+  FRIEND_REF_COUNTED_THREAD_SAFE(LoopExprNode);
+  FRIEND_MAKE_REF_COUNTED(LoopExprNode);
+
+  LoopExprNode() = default;
+
+  // The init_local_var_count is the number of local variables in scope at the beginning of the
+  // init expression. This allows us to pop any local variables introduced by the init expression
+  // (as in C++ "for (int i = 0; ..."). If it is nullopt, nothing needs to be popped.
+  LoopExprNode(ExprToken token, fxl::RefPtr<ExprNode> init,
+               std::optional<uint32_t> init_local_var_count, fxl::RefPtr<ExprNode> precondition,
+               fxl::RefPtr<ExprNode> postcondition, fxl::RefPtr<ExprNode> incr,
+               fxl::RefPtr<ExprNode> contents)
+      : token_(std::move(token)),
+        init_(std::move(init)),
+        precondition_(std::move(precondition)),
+        postcondition_(std::move(postcondition)),
+        incr_(std::move(incr)),
+        contents_(std::move(contents)),
+        init_local_var_count_(init_local_var_count) {}
+  ~LoopExprNode() override = default;
+
+  // The token is the opening "for", "do", "while", "loop" token.
+  ExprToken token_;
+
+  // All expressions can be null.
+  fxl::RefPtr<ExprNode> init_;           // Executed before any loops are executed.
+  fxl::RefPtr<ExprNode> precondition_;   // Checked at top of each loop iteration.
+  fxl::RefPtr<ExprNode> postcondition_;  // Checked at bottom of each loop iteration (do/while).
+  fxl::RefPtr<ExprNode> incr_;           // Executed after every loop iteration.
+  fxl::RefPtr<ExprNode> contents_;       // Loop body.
+
+  std::optional<uint32_t> init_local_var_count_;
 };
 
 // Implements both "." and "->" struct/class/union data member accesses.

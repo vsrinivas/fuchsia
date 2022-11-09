@@ -8,7 +8,10 @@
 
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/expr/builtin_types.h"
+#include "src/developer/debug/zxdb/expr/expr_parser.h"
+#include "src/developer/debug/zxdb/expr/expr_tokenizer.h"
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
+#include "src/developer/debug/zxdb/expr/vm_op.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 
@@ -215,6 +218,7 @@ TEST_F(ExprTest, CLocalVars) {
     EXPECT_EQ(result.value(),
               ExprValue(static_cast<int64_t>(84), GetBuiltinType(ExprLanguage::kC, "int64_t")));
   });
+  EXPECT_TRUE(called);
 }
 
 TEST_F(ExprTest, RustLocalVars) {
@@ -240,6 +244,122 @@ TEST_F(ExprTest, RustLocalVars) {
     EXPECT_EQ(result.value(),
               ExprValue(static_cast<int64_t>(84), GetBuiltinType(ExprLanguage::kC, "int64_t")));
   });
+  EXPECT_TRUE(called);
+}
+
+TEST_F(ExprTest, CForLoop) {
+  const char kCode[] = R"(
+  {
+    int sum = 0;
+    for (int i = 0; i < 10; i = i + 1) {
+      sum = sum + i;
+    }
+    sum;  // The result of the program (since everything is an expression).
+  }
+  )";
+
+  bool called = false;
+  EvalExpression(kCode, fxl::MakeRefCounted<MockEvalContext>(), false, [&](ErrOrValue result) {
+    called = true;
+    ASSERT_TRUE(result.ok()) << result.err().msg();
+    // 0+1+2+3+4+5+6+7+8+9 = 45
+    EXPECT_EQ(result.value(), ExprValue(45, GetBuiltinType(ExprLanguage::kC, "int")));
+  });
+  EXPECT_TRUE(called);
+
+  // Check the bytecode. This should be relatively stable.
+  ExprTokenizer tokenizer(kCode, ExprLanguage::kC);
+  ASSERT_TRUE(tokenizer.Tokenize());
+  ExprParser parser(tokenizer.TakeTokens(), tokenizer.language(),
+                    fxl::MakeRefCounted<MockEvalContext>());
+  auto node = parser.ParseStandaloneExpression();
+  ASSERT_TRUE(node);
+
+  VmStream stream;
+  node->EmitBytecode(stream);
+  // clang-format off
+  EXPECT_EQ(
+      // "int sum = 0"
+      "0: Literal(int(0))\n"    // Literal for "sum" initialization.
+      "1: AsyncCallback1()\n"   // Cast to "int" (strictly unnecessary here).
+      "2: Dup()\n"              // Make a copy to save as the local.
+      "3: SetLocal(0)\n"        // Save the 0 to local var slot 0 (the "sum" variable").
+      "4: Drop()\n"             // Discard the result of the declaration.
+
+      // "int i = 0" (same as the above except for "i" in slot 1).
+      "5: Literal(int(0))\n"
+      "6: AsyncCallback1()\n"
+      "7: Dup()\n"
+      "8: SetLocal(1)\n"
+      "9: Drop()\n"
+
+      // "i < 10"
+      "10: GetLocal(1)\n"       // Get "i".
+      "11: ExpandRef()\n"       // Make sure "i" isn't a reference (derefs the addr to its value).
+      "12: Literal(int(10))\n"  // "10"
+      "13: Binary(<)\n"
+      "14: JumpIfFalse(32)\n"   // End of loop is #32.
+
+      // "sum = sum + i"
+      "15: GetLocal(0)\n"       // "sum" (for the left-side of the assignment).
+      "16: ExpandRef()\n"
+      "17: GetLocal(0)\n"       // "sum" (for adding to "i").
+      "18: ExpandRef()\n"
+      "19: GetLocal(1)\n"       // "i"
+      "20: Binary(+)\n"
+      "21: Binary(=)\n"
+      "22: Drop()\n"            // Discard the result of the assignment expression.
+
+      // "i = i + 1"
+      "23: GetLocal(1)\n"       // "i" (for left side of assignment).
+      "24: ExpandRef()\n"
+      "25: GetLocal(1)\n"       // "i" (for adding to 1).
+      "26: ExpandRef()\n"
+      "27: Literal(int(1))\n"   // "1"
+      "28: Binary(+)\n"
+      "29: Binary(=)\n"
+      "30: Drop()\n"            // Discard the result of the increment expression.
+
+      // Loop back to the precondition on line 10.
+      "31: Jump(10)\n"
+
+      // Loop end cleanup.
+      "32: PopLocals(1)\n"      // Discard the "i" local variable, now only one ("sum") in scope.
+      "33: Literal({null ExprValue})\n"  // Result of loop expression (nothing).
+      "34: Drop()\n"            // Discard the result of the loop expression.
+
+      // "sum"
+      "35: GetLocal(0)\n"
+
+      // Clean up outer block state.
+      "36: PopLocals(0)\n",     // Discard "sum" variable.
+      VmStreamToString(stream));
+  // clang-format on
+}
+
+TEST_F(ExprTest, RustWhileLoop) {
+  // This program computes the next power of 2 greater than 3000.
+  const char kCode[] = R"(
+  {
+    let sum: i32 = 1;
+    while sum < 3000 {
+      sum = sum * 2
+    }
+    sum
+  }
+  )";
+
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
+  eval_context->set_language(ExprLanguage::kRust);
+
+  bool called = false;
+  EvalExpression(kCode, eval_context, false, [&](ErrOrValue result) {
+    called = true;
+    ASSERT_TRUE(result.ok()) << result.err().msg();
+    EXPECT_EQ(result.value(), ExprValue(4096, GetBuiltinType(ExprLanguage::kRust, "i32")));
+  });
+
+  EXPECT_TRUE(called);
 }
 
 }  // namespace zxdb

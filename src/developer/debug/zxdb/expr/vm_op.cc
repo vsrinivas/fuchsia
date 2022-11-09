@@ -65,9 +65,8 @@ std::string VmStreamToString(const VmStream& stream) {
   return out.str();
 }
 
-VmBytecodeForwardJumper::VmBytecodeForwardJumper(VmStream& stream, VmOpType op)
-    : stream_(stream), jump_source_index_(stream_.size()) {
-  stream_.push_back(VmOp{.op = op, .info = VmOp::JumpInfo{.dest = VmOp::kBadJumpDest}});
+VmBytecodeForwardJumper::VmBytecodeForwardJumper(VmStream* stream, VmOpType op) {
+  SetSourceAndOp(stream, op);
 }
 
 VmBytecodeForwardJumper::~VmBytecodeForwardJumper() {
@@ -76,13 +75,24 @@ VmBytecodeForwardJumper::~VmBytecodeForwardJumper() {
 }
 
 void VmBytecodeForwardJumper::JumpToHere() {
+  if (!stream_)
+    return;  // Stream never set, this jump was never initialized.
+
   // If this hits you called JumpToHere() twice on the same object.
   FX_DCHECK(jump_source_index_ != VmOp::kBadJumpDest);
 
-  stream_[jump_source_index_].SetJumpDest(stream_.size());
+  (*stream_)[jump_source_index_].SetJumpDest(stream_->size());
 
   // Help catch usage errors later.
   jump_source_index_ = VmOp::kBadJumpDest;
+}
+
+void VmBytecodeForwardJumper::SetSourceAndOp(VmStream* stream, VmOpType op) {
+  FX_DCHECK(!stream_);  // Will hit if called on an already-initialized jumper.
+  stream_ = stream;
+  jump_source_index_ = stream_->size();
+
+  stream_->push_back(VmOp{.op = op, .info = VmOp::JumpInfo{.dest = VmOp::kBadJumpDest}});
 }
 
 }  // namespace zxdb

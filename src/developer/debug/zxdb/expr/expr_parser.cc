@@ -84,6 +84,35 @@ constexpr int kPrecedenceCallAccess = 160;            // () . -> []
 //constexpr int kPrecedenceScope = 170;               // ::  (Highest precedence)
 //  clang-format on
 
+// When there is a block or block-like construct, any local variables created inside it must be
+// freed when that scope exits.
+//
+// This object is created on the stack before parsing such a block, and at the bottom the caller
+// calls GetExitVarCount() to tell what should have happen. If no local variables were created, it
+// will return nullopt, but if the local variable stack needs to be popped, it will return the
+// number of items that should be remaining. See vm_op.h for more on local variables.
+class LocalVarCounter {
+ public:
+  explicit LocalVarCounter(std::vector<std::string>* local_vars)
+      : local_vars_(local_vars),
+        init_var_count_(local_vars->size()) {}
+
+  std::optional<uint32_t> GetExitVarCount() const {
+    // The scope should not have reduced the local variable count from when it entered.
+    FX_DCHECK(init_var_count_ <= local_vars_->size());
+
+    if (local_vars_->size() > init_var_count_) {
+      local_vars_->resize(init_var_count_);           // Trim the local variable record.
+      return static_cast<uint32_t>(init_var_count_);  // Tell the caller what to do in bytecode.
+    }
+    return std::nullopt;  // No local vars were created, do nothing.
+  }
+
+ private:
+  std::vector<std::string>* local_vars_;
+  size_t init_var_count_;
+};
+
 }  // namespace
 
 struct ExprParser::DispatchInfo {
@@ -170,6 +199,10 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {nullptr,                        &ExprParser::RustCastInfix,   kPrecedenceRustCast},            // kAs
     {&ExprParser::IfPrefix,          nullptr,                      -1},                             // kIf
     {nullptr,                        nullptr,                      -1},                             // kElse
+    {&ExprParser::ForPrefix,         nullptr,                      -1},                             // kFor
+    {&ExprParser::DoPrefix,          nullptr,                      -1},                             // kDo
+    {&ExprParser::WhilePrefix,       nullptr,                      -1},                             // kWhile
+    {&ExprParser::LoopPrefix,        nullptr,                      -1},                             // kLoop
     {&ExprParser::NamePrefix,        nullptr,                      -1},                             // kOperator
     {&ExprParser::NamePrefix,        nullptr,                      -1},                             // kNew
     {&ExprParser::NamePrefix,        nullptr,                      -1},                             // kDelete
@@ -193,7 +226,7 @@ ExprParser::ExprParser(std::vector<ExprToken> tokens, ExprLanguage lang,
       tokens_.end());
 }
 
-fxl::RefPtr<ExprNode> ExprParser::ParseExpression() {
+fxl::RefPtr<ExprNode> ExprParser::ParseStandaloneExpression() {
   auto result = ParseExpression(0, EmptyExpression::kReject, StatementEnd::kAny);
 
   // That should have consumed everything, as we don't support multiple expressions being next to
@@ -241,7 +274,7 @@ Err ExprParser::ParseIdentifier(const std::string& input, ParsedIdentifier* outp
     return tokenizer.err();
 
   ExprParser parser(tokenizer.TakeTokens(), tokenizer.language());
-  auto root = parser.ParseExpression();
+  auto root = parser.ParseStandaloneExpression();
   if (!root)
     return parser.err();
 
@@ -259,7 +292,7 @@ fxl::RefPtr<ExprNode> ExprParser::ParseExpression(int precedence, EmptyExpressio
   if (had_statement_end)
     *had_statement_end = false;
   if (at_end()) {
-    if (empty_expr == EmptyExpression::kReject)
+    if (empty_expr == EmptyExpression::kReject || statement_end == StatementEnd::kExplicit)
       SetError(ExprToken(), "Expected expression instead of end of input.");
     return nullptr;
   }
@@ -285,9 +318,9 @@ fxl::RefPtr<ExprNode> ExprParser::ParseExpression(int precedence, EmptyExpressio
   if (has_error())
     return left;  // In both C++ and Rust, the end of a block is the end of a statement.
 
-  // Checks for the next thing being a semicolon or the last thing being a {} which indicates the
+  // Checks for the next thing being a semicolon or otherwise the end of a statement.
   // end of the expression.
-  while (!at_end() && !LookAhead(ExprTokenType::kSemicolon) && !left->AsBlock() &&
+  while (!at_end() && !LookAhead(ExprTokenType::kSemicolon) && !CountsAsStatementEnd(left.get()) &&
          precedence < CurPrecedenceWithShiftTokenConversion()) {
     const ExprToken& next_token = ConsumeWithShiftTokenConversion();
     InfixFunc infix = DispatchForToken(next_token).infix;
@@ -304,8 +337,7 @@ fxl::RefPtr<ExprNode> ExprParser::ParseExpression(int precedence, EmptyExpressio
   switch (statement_end) {
     case StatementEnd::kAny:
     case StatementEnd::kExplicit:
-      if (left->AsBlock()) {
-        // Blocks are their own statements, nothing to do.
+      if (CountsAsStatementEnd(left.get())) {
         if (had_statement_end)
           *had_statement_end = true;
         break;
@@ -333,7 +365,7 @@ fxl::RefPtr<ExprNode> ExprParser::ParseExpression(int precedence, EmptyExpressio
 // During evaluation, C++ blocks will return empty which will throw errors when using blocks in
 // places where they can't be used in expressions.
 fxl::RefPtr<BlockExprNode> ExprParser::ParseBlockContents(BlockEnd block_end) {
-  size_t begin_local_var_count = local_vars_.size();
+  LocalVarCounter var_counter(&local_vars_);
 
   // Expect a sequence of semicolon-terminated expressions. In Rust the last expression does not
   // need a semicolon. As we start parsing each new statement, we check whether the previous
@@ -381,11 +413,7 @@ fxl::RefPtr<BlockExprNode> ExprParser::ParseBlockContents(BlockEnd block_end) {
   if (has_error())
     return nullptr;
 
-  // Remove the records of any local variables.
-  FX_DCHECK(local_vars_.size() >= begin_local_var_count);
-  local_vars_.resize(begin_local_var_count);
-
-  return fxl::MakeRefCounted<BlockExprNode>(std::move(statements), begin_local_var_count);
+  return fxl::MakeRefCounted<BlockExprNode>(std::move(statements), var_counter.GetExitVarCount());
 }
 
 ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
@@ -1453,6 +1481,137 @@ fxl::RefPtr<ExprNode> ExprParser::LetPrefix(const ExprToken& token) {
                                                    std::move(init_expr));
 }
 
+fxl::RefPtr<ExprNode> ExprParser::ForPrefix(const ExprToken& token) {
+  // This is called only for C/C++. In Rust, the "for" token is not recognized by the tokenizer
+  // because we can't handle Rust for loops (they require iterators). We also don't support C++
+  // range-based for loops for the same reason. So the syntax we support is only:
+  //
+  //   "for" "(" [<expr>] ";" [<expr>] ";" [<expr>] ")" <statement>
+
+  // "(" at beginning.
+  ExprToken left_paren = Consume(ExprTokenType::kLeftParen, "Expected '(' for 'for' loop.");
+  if (has_error())
+    return nullptr;
+
+  // We need to be able to pop any local variables created by the init expression at the bottom of
+  // the loop.
+  LocalVarCounter var_counter(&local_vars_);
+
+  // Init expression (optional).
+  fxl::RefPtr<ExprNode> init = ParseExpression(0, EmptyExpression::kAllow, StatementEnd::kExplicit);
+  if (has_error())
+    return nullptr;
+
+  // Termination expression (optional).
+  fxl::RefPtr<ExprNode> term = ParseExpression(0, EmptyExpression::kAllow, StatementEnd::kExplicit);
+  if (has_error())
+    return nullptr;
+
+  // Increment expression (optional). Since this expression isn't terminated with a semicolon, we
+  // need to filter out the empty case here or else ParseExpression will be confused by the closing
+  // paren.
+  fxl::RefPtr<ExprNode> incr;
+  if (!LookAhead(ExprTokenType::kRightParen)) {
+    incr = ParseExpression(0, EmptyExpression::kAllow, StatementEnd::kNone);
+    if (has_error())
+      return nullptr;
+  }
+
+  // ")" at end.
+  Consume(ExprTokenType::kRightParen, "Expected ')' to match.", left_paren);
+  if (has_error())
+    return nullptr;
+
+  // Loop contents.
+  auto contents = ParseExpression(0, EmptyExpression::kAllow, StatementEnd::kExplicit);
+  if (has_error())
+    return nullptr;
+
+  return fxl::MakeRefCounted<LoopExprNode>(token, std::move(init), var_counter.GetExitVarCount(),
+                                           std::move(term), nullptr, std::move(incr),
+                                           std::move(contents));
+}
+
+fxl::RefPtr<ExprNode> ExprParser::DoPrefix(const ExprToken& token) {
+  // Loop contents.
+  fxl::RefPtr<ExprNode> contents =
+      ParseExpression(0, EmptyExpression::kReject, StatementEnd::kNone);
+  if (has_error())
+    return nullptr;
+
+  // Terminating "while" statement.
+  Consume(ExprTokenType::kWhile, "Expected 'while' for do-while loop.");
+  if (has_error())
+    return nullptr;
+
+  // Opening "(".
+  ExprToken left_paren = Consume(ExprTokenType::kLeftParen, "Expected '(' for 'do-while' loop.");
+  if (has_error())
+    return nullptr;
+
+  // Condition expression.
+  fxl::RefPtr<ExprNode> expr = ParseExpression(0, EmptyExpression::kReject, StatementEnd::kNone);
+  if (has_error())
+    return nullptr;
+
+  // Closing ")".
+  Consume(ExprTokenType::kRightParen, "Expected ')' to match.", left_paren);
+  if (has_error())
+    return nullptr;
+
+  return fxl::MakeRefCounted<LoopExprNode>(token, nullptr, std::nullopt, nullptr, std::move(expr),
+                                           nullptr, std::move(contents));
+}
+
+fxl::RefPtr<ExprNode> ExprParser::WhilePrefix(const ExprToken& token) {
+  bool need_cond_parens = language_ == ExprLanguage::kC;
+
+  // Opening "(".
+  ExprToken left_paren;
+  if (need_cond_parens) {
+    left_paren = Consume(ExprTokenType::kLeftParen, "Expected '(' for 'while' loop.");
+    if (has_error())
+      return nullptr;
+  }
+
+  // Condition expression (always required).
+  fxl::RefPtr<ExprNode> expr = ParseExpression(0, EmptyExpression::kReject, StatementEnd::kNone);
+  if (has_error())
+    return nullptr;
+
+  // Closing ")".
+  if (need_cond_parens) {
+    Consume(ExprTokenType::kRightParen, "Expected ')' to match.", left_paren);
+    if (has_error())
+      return nullptr;
+  }
+
+  // Loop contents.
+  fxl::RefPtr<ExprNode> contents;
+  if (language_ == ExprLanguage::kRust) {
+    // Rust loops require {}.
+    contents = ParseBlock(BlockDelimiter::kExplicit);
+  } else {
+    // C also allows statements without {}.
+    contents = ParseExpression(0, EmptyExpression::kAllow, StatementEnd::kExplicit);
+  }
+  if (has_error())
+    return nullptr;
+
+  return fxl::MakeRefCounted<LoopExprNode>(token, nullptr, std::nullopt, std::move(expr), nullptr,
+                                           nullptr, std::move(contents));
+}
+
+// Rust ininite loop:
+//   loop { ... }
+fxl::RefPtr<ExprNode> ExprParser::LoopPrefix(const ExprToken& token) {
+  fxl::RefPtr<ExprNode> contents = ParseBlock(BlockDelimiter::kExplicit);
+  if (has_error())
+    return nullptr;
+  return fxl::MakeRefCounted<LoopExprNode>(token, nullptr, std::nullopt, nullptr, nullptr, nullptr,
+                                           std::move(contents));
+}
+
 bool ExprParser::LookAhead(ExprTokenType type) const {
   if (at_end())
     return false;
@@ -1599,6 +1758,28 @@ std::optional<uint32_t> ExprParser::GetLocalVariable(const ParsedIdentifier& nam
       return static_cast<uint32_t>(i);
   }
   return std::nullopt;
+}
+
+bool ExprParser::CountsAsStatementEnd(const ExprNode* node) const {
+  // This function does the checking so that, for example:
+  //   if (foo) {
+  //     ...
+  //   }
+  // doesn't need a semicolon at the end to indicate the end of a statement.
+  switch (language_) {
+    case ExprLanguage::kC:
+      if (node->AsBlock() || node->AsCondition())
+        return true;
+      if (const LoopExprNode* loop = node->AsLoop()) {
+        // For and while loops don't need semicolons in C, but do-while loops do!
+        return loop->token().type() == ExprTokenType::kFor ||
+               loop->token().type() == ExprTokenType::kWhile;
+      }
+      return false;
+    case ExprLanguage::kRust:
+      return node->AsBlock() || node->AsCondition() || node->AsLoop();
+  }
+  return false;
 }
 
 // static

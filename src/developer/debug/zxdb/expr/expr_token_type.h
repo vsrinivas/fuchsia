@@ -93,6 +93,10 @@ enum class ExprTokenType : size_t {
   kAs,               // as
   kIf,               // if
   kElse,             // else
+  kFor,              // for
+  kDo,               // do
+  kWhile,            // while
+  kLoop,             // loop (Rust)
   kOperator,         // operator
   kNew,              // new
   kDelete,           // delete

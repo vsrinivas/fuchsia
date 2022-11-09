@@ -62,7 +62,7 @@ class ExprParserTest : public testing::Test {
     eval_context_->set_language(lang);
     parser_ = std::make_unique<ExprParser>(tokenizer_->TakeTokens(), lang,
                                            include_context ? eval_context_ : nullptr);
-    return parser_->ParseExpression();
+    return parser_->ParseStandaloneExpression();
   }
 
   // Does the parse and returns the string dump of the structure.
@@ -1262,6 +1262,303 @@ TEST_F(ExprParserTest, CTernaryIf) {
   result = Parse("a ? b : c", ExprLanguage::kRust);
   EXPECT_FALSE(result);
   EXPECT_EQ("Rust '?' operators are not supported.", parser().err().msg());
+}
+
+TEST_F(ExprParserTest, ForLoop) {
+  EXPECT_EQ(
+      "LOOP(for)\n"
+      " ;\n"
+      " ;\n"
+      " ;\n"
+      " ;\n"
+      " BLOCK\n",
+      GetParseString("for (;;) {}"));
+
+  EXPECT_EQ(
+      "LOOP(for)\n"
+      " BINARY_OP(=)\n"
+      "  IDENTIFIER(\"i\")\n"
+      "  LITERAL(0)\n"
+      " ;\n"
+      " ;\n"
+      " ;\n"
+      " ;\n",
+      GetParseString("for (i = 0;;);"));
+
+  // Note: we can't write "i < 100" here because in this test environment there is no variable or
+  // type information so the parser can't know what "i" is. When there is no such information, it
+  // assumes the < is for a template (this behavior is important since the same parser is used for
+  // parsing breakpoint names with no context; real expressions will have this context).
+  EXPECT_EQ(
+      "LOOP(for)\n"
+      " IDENTIFIER(\"i\")\n"
+      " BINARY_OP(<=)\n"
+      "  IDENTIFIER(\"i\")\n"
+      "  LITERAL(100)\n"
+      " ;\n"
+      " BINARY_OP(=)\n"
+      "  IDENTIFIER(\"i\")\n"
+      "  BINARY_OP(+)\n"
+      "   IDENTIFIER(\"i\")\n"
+      "   LITERAL(1)\n"
+      " BLOCK\n"
+      "  FUNCTIONCALL\n"
+      "   IDENTIFIER(\"print\")\n"
+      "   IDENTIFIER(\"i\")\n"
+      "  FUNCTIONCALL\n"
+      "   IDENTIFIER(\"beep\")\n",
+      GetParseString("for (i; i <= 100; i = i + 1) {\n"
+                     "  print(i);\n"
+                     "  beep();\n"
+                     "}"));
+
+  // Variable declaration in the loop (this needs the name lookup to get the builtin types).
+  EXPECT_EQ(
+      "LOOP(for)\n"
+      " LOCAL_VAR_DECL(i, 0)\n"
+      "  size_t\n"
+      "  LITERAL(0)\n"
+      " BINARY_OP(<)\n"
+      "  LOCAL_VAR(0)\n"
+      "  LITERAL(100)\n"
+      " ;\n"
+      " BINARY_OP(=)\n"
+      "  LOCAL_VAR(0)\n"
+      "  BINARY_OP(+)\n"
+      "   LOCAL_VAR(0)\n"
+      "   LITERAL(1)\n"
+      " BLOCK\n",
+      GetParseString("for (size_t i = 0; i < 100; i = i + 1) {}"));
+
+  // No loop body.
+  auto result = Parse("for (;;)");
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected expression instead of end of input.", parser().err().msg());
+
+  // Unterminated loop body.
+  result = Parse("for (;;) j");
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected ';'. Hit the end of input instead.", parser().err().msg());
+
+  // Not enough semicolons.
+  result = Parse("for (i = 0;)");
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Unexpected token ')'.", parser().err().msg());
+
+  result = Parse("for (i = 0 i <= 100; i++)");
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected ';'.", parser().err().msg());
+
+  // Missing "()"
+  result = Parse("for i = 0 {}");
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected '(' for 'for' loop.", parser().err().msg());
+
+  result = Parse("for (i = 0; i; j");
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected ')' to match. Hit the end of input instead.", parser().err().msg());
+}
+
+TEST_F(ExprParserTest, DoLoop) {
+  EXPECT_EQ(
+      "LOOP(do)\n"
+      " ;\n"
+      " ;\n"
+      " LITERAL(true)\n"
+      " ;\n"
+      " BLOCK\n",
+      GetParseString("do {} while (true);"));
+
+  EXPECT_EQ(
+      "LOOP(do)\n"
+      " ;\n"
+      " ;\n"
+      " BINARY_OP(>=)\n"
+      "  IDENTIFIER(\"i\")\n"
+      "  LITERAL(0)\n"
+      " ;\n"
+      " BLOCK\n"
+      "  FUNCTIONCALL\n"
+      "   IDENTIFIER(\"print\")\n"
+      "   IDENTIFIER(\"i\")\n",
+      GetParseString("do { print(i); } while (i >= 0);"));
+
+  // Semicolon loop body.
+  auto result = Parse("do ; while (true);");
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Empty expression not permitted here.", parser().err().msg());
+
+  // No loop expression.
+  result = Parse("do {} while();");
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Unexpected token ')'.", parser().err().msg());
+}
+
+TEST_F(ExprParserTest, CWhileLoop) {
+  EXPECT_EQ(
+      "LOOP(while)\n"
+      " ;\n"
+      " LITERAL(true)\n"
+      " ;\n"
+      " ;\n"
+      " BLOCK\n",
+      GetParseString("while (true) {}"));
+
+  EXPECT_EQ(
+      "LOOP(while)\n"
+      " ;\n"
+      " BINARY_OP(>=)\n"
+      "  IDENTIFIER(\"i\")\n"
+      "  LITERAL(0)\n"
+      " ;\n"
+      " ;\n"
+      " ;\n",
+      GetParseString("while (i >= 0);"));
+
+  EXPECT_EQ(
+      "LOOP(while)\n"
+      " ;\n"
+      " IDENTIFIER(\"i\")\n"
+      " ;\n"
+      " ;\n"
+      " BINARY_OP(=)\n"
+      "  IDENTIFIER(\"i\")\n"
+      "  BINARY_OP(+)\n"
+      "   IDENTIFIER(\"i\")\n"
+      "   LITERAL(1)\n",
+      GetParseString("while (i) i = i + 1;"));
+
+  EXPECT_EQ(
+      "LOOP(while)\n"
+      " ;\n"
+      " IDENTIFIER(\"i\")\n"
+      " ;\n"
+      " ;\n"
+      " BLOCK\n"
+      "  FUNCTIONCALL\n"
+      "   IDENTIFIER(\"print\")\n"
+      "   IDENTIFIER(\"i\")\n"
+      "  BINARY_OP(=)\n"
+      "   IDENTIFIER(\"i\")\n"
+      "   BINARY_OP(+)\n"
+      "    IDENTIFIER(\"i\")\n"
+      "    LITERAL(1)\n",
+      GetParseString("while (i) { print(i); i = i + 1; }"));
+
+  // No loop body.
+  auto result = Parse("while (true)");
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected expression instead of end of input.", parser().err().msg());
+
+  // Unterminated loop body.
+  result = Parse("while (foo) j");
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected ';'. Hit the end of input instead.", parser().err().msg());
+
+  // No loop expression.
+  result = Parse("while () j;");
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Unexpected token ')'.", parser().err().msg());
+
+  // Semicolon loop expression
+  result = Parse("while (i;) j;");
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected ')' to match.", parser().err().msg());
+}
+
+TEST_F(ExprParserTest, RustWhileLoop) {
+  EXPECT_EQ(
+      "LOOP(while)\n"
+      " ;\n"
+      " LITERAL(true)\n"
+      " ;\n"
+      " ;\n"
+      " BLOCK\n",
+      GetParseString("while true {}", ExprLanguage::kRust));
+
+  EXPECT_EQ(
+      "LOOP(while)\n"
+      " ;\n"
+      " BINARY_OP(>=)\n"
+      "  IDENTIFIER(\"i\")\n"
+      "  LITERAL(0)\n"
+      " ;\n"
+      " ;\n"
+      " BLOCK\n"
+      "  BINARY_OP(=)\n"
+      "   IDENTIFIER(\"i\")\n"
+      "   BINARY_OP(-)\n"
+      "    IDENTIFIER(\"i\")\n"
+      "    LITERAL(1)\n",
+      GetParseString("while i >= 0 { i = i - 1; }", ExprLanguage::kRust));
+
+  // Parens are still permitted, and this omits the semicolon for the last block statement.
+  EXPECT_EQ(
+      "LOOP(while)\n"
+      " ;\n"
+      " IDENTIFIER(\"i\")\n"
+      " ;\n"
+      " ;\n"
+      " BLOCK\n"
+      "  FUNCTIONCALL\n"
+      "   IDENTIFIER(\"print\")\n"
+      "   IDENTIFIER(\"i\")\n"
+      "  BINARY_OP(=)\n"
+      "   IDENTIFIER(\"i\")\n"
+      "   BINARY_OP(+)\n"
+      "    IDENTIFIER(\"i\")\n"
+      "    LITERAL(1)\n",
+      GetParseString("while (i) { print(i); i = i + 1 }", ExprLanguage::kRust));
+
+  // No loop body.
+  auto result = Parse("while true", ExprLanguage::kRust);
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected '{'. Hit the end of input instead.", parser().err().msg());
+
+  // No {}.
+  result = Parse("while foo j;", ExprLanguage::kRust);
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Unexpected identifier, did you forget an operator?", parser().err().msg());
+}
+
+TEST_F(ExprParserTest, RustLoop) {
+  EXPECT_EQ(
+      "LOOP(loop)\n"
+      " ;\n"
+      " ;\n"
+      " ;\n"
+      " ;\n"
+      " BLOCK\n",
+      GetParseString("loop {}", ExprLanguage::kRust));
+
+  EXPECT_EQ(
+      "LOOP(loop)\n"
+      " ;\n"
+      " ;\n"
+      " ;\n"
+      " ;\n"
+      " BLOCK\n"
+      "  BINARY_OP(=)\n"
+      "   IDENTIFIER(\"i\")\n"
+      "   BINARY_OP(-)\n"
+      "    IDENTIFIER(\"i\")\n"
+      "    LITERAL(1)\n",
+      GetParseString("loop { i = i - 1; }", ExprLanguage::kRust));
+
+  // Extra expression.
+  auto result = Parse("loop true {}", ExprLanguage::kRust);
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected '{'.", parser().err().msg());
+
+  // Missing body.
+  result = Parse("loop", ExprLanguage::kRust);
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected '{'. Hit the end of input instead.", parser().err().msg());
+
+  // Unterminated body.
+  result = Parse("loop {", ExprLanguage::kRust);
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected '}'. Hit the end of input instead.", parser().err().msg());
 }
 
 // Tests that comments are ignored.

@@ -60,6 +60,11 @@ const BuiltinTypeInfo kCBuiltinInfo[] = {
     { "int128_t",  BaseType::kBaseTypeSigned,      16 },
     { "uint128_t", BaseType::kBaseTypeUnsigned,    16 },
 
+    { "size_t",   BaseType::kBaseTypeUnsigned,     8 },
+    { "ssize_t",  BaseType::kBaseTypeSigned,       8 },
+    { "intptr_t", BaseType::kBaseTypeSigned,       8 },
+    { "uintptr_t", BaseType::kBaseTypeUnsigned,    8 },
+
     // Special Zircon types (see note below).
     { "zx_status_t", BaseType::kBaseTypeSigned,    4 },
 

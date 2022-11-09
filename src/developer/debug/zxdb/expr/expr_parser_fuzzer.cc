@@ -31,7 +31,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   }
 
   zxdb::ExprParser parser(tokenizer.tokens(), language);
-  parser.ParseExpression();
+  parser.ParseStandaloneExpression();
 
   return 0;
 }

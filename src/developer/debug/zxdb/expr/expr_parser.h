@@ -40,9 +40,13 @@ class ExprParser {
   ExprParser(std::vector<ExprToken> tokens, ExprLanguage lang,
              fxl::RefPtr<EvalContext> eval_context = nullptr);
 
+  // Parses an expression by itself, for example, the content of the debugger frontend "print"
+  // command. This should never be called internally by the parser to parse subexpressions, use
+  // ParseExpression() for that.
+  //
   // Returns the root expression node on successful parsing. On error, returns an empty pointer in
-  // which case the error message can be read from err() ad error_token()
-  fxl::RefPtr<ExprNode> ParseExpression();
+  // which case the error message can be read from err() and error_token()
+  fxl::RefPtr<ExprNode> ParseStandaloneExpression();
 
   // Parses a block. { and } will be consumed. The input is counted as being complete.
   fxl::RefPtr<BlockExprNode> ParseBlock(BlockDelimiter delimiter);
@@ -186,6 +190,10 @@ class ExprParser {
   fxl::RefPtr<ExprNode> SizeofPrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> IfPrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> LetPrefix(const ExprToken& token);
+  fxl::RefPtr<ExprNode> ForPrefix(const ExprToken& token);
+  fxl::RefPtr<ExprNode> DoPrefix(const ExprToken& token);
+  fxl::RefPtr<ExprNode> WhilePrefix(const ExprToken& token);
+  fxl::RefPtr<ExprNode> LoopPrefix(const ExprToken& token);
 
   // Returns true if the next token is the given type.
   bool LookAhead(ExprTokenType type) const;
@@ -239,6 +247,10 @@ class ExprParser {
   // Checks the given name against the local variables currently in scope. If one is found, returns
   // its slot index. Otherwise, returns a nullopt.
   std::optional<uint32_t> GetLocalVariable(const ParsedIdentifier& name) const;
+
+  // Returns true if the given node can count as a statement end such that a semicolon is not
+  // needed.
+  bool CountsAsStatementEnd(const ExprNode* node) const;
 
   // Call this only if !at_end().
   const ExprToken& cur_token() const { return tokens_[cur_]; }

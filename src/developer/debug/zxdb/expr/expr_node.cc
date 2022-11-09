@@ -54,6 +54,15 @@ void DoResolveConcreteMember(const fxl::RefPtr<EvalContext>& context, const Expr
   return ResolveMember(context, value, member, std::move(cb));
 }
 
+// Prints the expression, or if null, ";".
+void PrintExprOrSemicolon(std::ostream& out, int indent, const fxl::RefPtr<ExprNode>& expr) {
+  if (expr) {
+    expr->Print(out, indent);
+  } else {
+    out << IndentFor(indent) << ";\n";
+  }
+}
+
 }  // namespace
 
 void ExprNode::EmitBytecodeExpandRef(VmStream& stream) const {
@@ -126,22 +135,22 @@ void BinaryOpExprNode::EmitBytecode(VmStream& stream) const {
   left_->EmitBytecodeExpandRef(stream);
   if (op_.type() == ExprTokenType::kLogicalOr) {
     // Emit the equivalent of: "left ? true : (right ? true : false)".
-    VmBytecodeForwardJumpIfFalse jump_to_right(stream);  // -> RIGHT
+    VmBytecodeForwardJumpIfFalse jump_to_right(&stream);  // -> RIGHT
 
     // Left is true, emit a "true" value and jump to the end.
     stream.push_back(VmOp::MakeLiteral(ExprValue(true)));
-    VmBytecodeForwardJump left_jump_out(stream);  // -> END
+    VmBytecodeForwardJump left_jump_out(&stream);  // -> END
 
     // RIGHT: Evaluate right side. The first condition jump goes here.
     jump_to_right.JumpToHere();
     right_->EmitBytecodeExpandRef(stream);
 
     // On false, jump to the end (after the "then").
-    VmBytecodeForwardJumpIfFalse final_cond_jump(stream);  // -> FALSE
+    VmBytecodeForwardJumpIfFalse final_cond_jump(&stream);  // -> FALSE
 
     // Right is true, emit a "true" value and jump to the end.
     stream.push_back(VmOp::MakeLiteral(ExprValue(true)));
-    VmBytecodeForwardJump right_jump_out(stream);  // -> END
+    VmBytecodeForwardJump right_jump_out(&stream);  // -> END
 
     // FALSE: Condition is false.
     final_cond_jump.JumpToHere();
@@ -151,15 +160,15 @@ void BinaryOpExprNode::EmitBytecode(VmStream& stream) const {
     left_jump_out.JumpToHere();
     right_jump_out.JumpToHere();
   } else if (op_.type() == ExprTokenType::kDoubleAnd) {
-    VmBytecodeForwardJumpIfFalse left_jump_to_false(stream);  // -> FALSE
+    VmBytecodeForwardJumpIfFalse left_jump_to_false(&stream);  // -> FALSE
 
     // Left was true, now evaluate right.
     right_->EmitBytecodeExpandRef(stream);
-    VmBytecodeForwardJumpIfFalse right_jump_to_false(stream);  // -> FALSE
+    VmBytecodeForwardJumpIfFalse right_jump_to_false(&stream);  // -> FALSE
 
     // True case.
     stream.push_back(VmOp::MakeLiteral(ExprValue(true)));
-    VmBytecodeForwardJump jump_to_end(stream);  // -> END
+    VmBytecodeForwardJump jump_to_end(&stream);  // -> END
 
     // FALSE: The failure cases end up here.
     left_jump_to_false.JumpToHere();
@@ -198,7 +207,8 @@ void BlockExprNode::EmitBytecode(VmStream& stream) const {
 
   // Clean up any locals. This removes any variables beyond what were in scope when the block
   // entered. See "Local variables" in vm_op.h for more info.
-  stream.push_back(VmOp::MakePopLocals(entry_local_var_count_));
+  if (entry_local_var_count_)
+    stream.push_back(VmOp::MakePopLocals(*entry_local_var_count_));
 }
 
 void BlockExprNode::Print(std::ostream& out, int indent) const {
@@ -233,7 +243,7 @@ void ConditionExprNode::EmitBytecode(VmStream& stream) const {
     pair.cond->EmitBytecodeExpandRef(stream);
 
     // Jump over the "then" case if false.
-    VmBytecodeForwardJumpIfFalse jump_to_next(stream);
+    VmBytecodeForwardJumpIfFalse jump_to_next(&stream);
 
     pair.then->EmitBytecode(stream);
 
@@ -507,6 +517,62 @@ void LocalVarExprNode::Print(std::ostream& out, int indent) const {
   out << IndentFor(indent) << "LOCAL_VAR(" << slot_ << ")\n";
 }
 
+void LoopExprNode::EmitBytecode(VmStream& stream) const {
+  if (init_) {
+    init_->EmitBytecode(stream);
+    stream.push_back(VmOp::MakeDrop());  // The result of the initialization expression is ignored.
+  }
+
+  // Top of actual loop contents.
+  uint32_t loop_top = stream.size();
+
+  VmBytecodeForwardJumpIfFalse precondition_jumper;
+  if (precondition_) {
+    precondition_->EmitBytecode(stream);
+    precondition_jumper.SetSource(&stream);  // Jump out of loop if precondition is false.
+  }
+
+  if (contents_) {
+    contents_->EmitBytecode(stream);
+    stream.push_back(VmOp::MakeDrop());  // The result of the contents is ignored.
+  }
+
+  VmBytecodeForwardJumpIfFalse postcondition_jumper;
+  if (postcondition_) {
+    postcondition_->EmitBytecode(stream);
+    postcondition_jumper.SetSource(&stream);  // Jump out of loop if postcondition is false.
+  }
+
+  if (incr_) {
+    incr_->EmitBytecode(stream);
+    stream.push_back(VmOp::MakeDrop());  // The result of the increment expression is ignored.
+  }
+
+  // Jump back to the top of the loop.
+  stream.push_back(VmOp::MakeJump(loop_top));
+
+  // The end of the loop (these will do nothing if we never called SetSource() on them).
+  precondition_jumper.JumpToHere();
+  postcondition_jumper.JumpToHere();
+
+  // Clean up any locals. This removes any variables beyond what were in scope when the init
+  // expression started. See "Local variables" in vm_op.h for more info.
+  if (init_local_var_count_)
+    stream.push_back(VmOp::MakePopLocals(*init_local_var_count_));
+
+  // Push the result of the loop expression (no value).
+  stream.push_back(VmOp::MakeLiteral(ExprValue()));
+}
+
+void LoopExprNode::Print(std::ostream& out, int indent) const {
+  out << IndentFor(indent) << "LOOP(" << token_.value() << ")\n";
+  PrintExprOrSemicolon(out, indent + 1, init_);
+  PrintExprOrSemicolon(out, indent + 1, precondition_);
+  PrintExprOrSemicolon(out, indent + 1, postcondition_);
+  PrintExprOrSemicolon(out, indent + 1, incr_);
+  PrintExprOrSemicolon(out, indent + 1, contents_);
+}
+
 void MemberAccessExprNode::EmitBytecode(VmStream& stream) const {
   left_->EmitBytecodeExpandRef(stream);
 
@@ -646,11 +712,7 @@ void VariableDeclExprNode::EmitBytecode(VmStream& stream) const {
 void VariableDeclExprNode::Print(std::ostream& out, int indent) const {
   out << IndentFor(indent) << "LOCAL_VAR_DECL(" << name_.value() << ", " << local_slot_ << ")\n";
   out << IndentFor(indent + 1) << decl_info_.ToString() << "\n";
-  if (init_expr_) {
-    init_expr_->Print(out, indent + 1);
-  } else {
-    out << IndentFor(indent + 1) << ";\n";
-  }
+  PrintExprOrSemicolon(out, indent + 1, init_expr_);
 }
 
 }  // namespace zxdb

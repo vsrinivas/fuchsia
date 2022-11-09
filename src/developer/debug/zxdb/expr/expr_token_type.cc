@@ -123,6 +123,10 @@ constexpr ExprTokenRecord kRecords[kNumExprTokenTypes] = {
     {ExprTokenType::kAs,               kLangRust, "as"},
     {ExprTokenType::kIf,               kLangAll,  "if"},
     {ExprTokenType::kElse,             kLangAll,  "else"},
+    {ExprTokenType::kFor,              kLangC,    "for"},  // We don't support in Rust.
+    {ExprTokenType::kDo,               kLangC,    "do"},
+    {ExprTokenType::kWhile,            kLangAll,  "while"},
+    {ExprTokenType::kLoop,             kLangRust, "loop"},
     {ExprTokenType::kOperator,         kLangC,    "operator"},
     {ExprTokenType::kNew,              kLangC,    "new"},
     {ExprTokenType::kDelete,           kLangC,    "delete"},
