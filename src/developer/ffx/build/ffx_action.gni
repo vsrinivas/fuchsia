@@ -149,7 +149,7 @@ template("ffx_action") {
 
     # Use a builddir-specific environment, not the user's own environment.
     _ffx_config = [
-      "analytics.disabled=true",
+      "ffx.analytics.disabled=true",
       "sdk.root=" + rebase_path(root_build_dir, root_build_dir),
       "sdk.type=in-tree",
       "sdk.module=host_tools.modular",
