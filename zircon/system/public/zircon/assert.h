@@ -45,7 +45,7 @@ __END_CDECLS
 #define ZX_ASSERT_MSG(x, msg, msgargs...)                                                     \
   do {                                                                                        \
     if (unlikely(!(x))) {                                                                     \
-      ZX_PANIC("ASSERT FAILED at (%s:%d): %s\n" msg "\n", __FILE__, __LINE__, #x, ##msgargs); \
+      ZX_PANIC("ASSERT FAILED at (%s:%d): %s\n" msg, __FILE__, __LINE__, #x, ##msgargs); \
     }                                                                                         \
   } while (0)
 
@@ -78,7 +78,7 @@ __END_CDECLS
 #define ZX_DEBUG_ASSERT_MSG(x, msg, msgargs...)                                         \
   do {                                                                                  \
     if (ZX_DEBUG_ASSERT_IMPLEMENTED && unlikely(!(x))) {                                \
-      ZX_PANIC("DEBUG ASSERT FAILED at (%s:%d): %s\n" msg "\n", __FILE__, __LINE__, #x, \
+      ZX_PANIC("DEBUG ASSERT FAILED at (%s:%d): %s\n" msg, __FILE__, __LINE__, #x, \
                ##msgargs);                                                              \
     }                                                                                   \
   } while (0)

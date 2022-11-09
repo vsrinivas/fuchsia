@@ -180,7 +180,7 @@
   "include/wctype.h": "be937a38432a65054b71dcaec2eb9192",
   "include/wordexp.h": "9292e9010208e98f9c741420c6b1c591",
   "include/zircon/analyzer.h": "ccdcddc2bd51d8059f5544bc9186ec16",
-  "include/zircon/assert.h": "d0b46982fa734172f153827218318922",
+  "include/zircon/assert.h": "131f3167bb5bd12651e905ddb4b5a72b",
   "include/zircon/availability.h": "cea2f5f210c5049d79ddbfc190e9f3ac",
   "include/zircon/boot/bootfs.h": "4c5eb6145bf3ff4577a3e8533f966c52",
   "include/zircon/boot/crash-reason.h": "bc3e234ad14b75ec8e479e94147509f8",
