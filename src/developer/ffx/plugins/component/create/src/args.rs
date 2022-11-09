@@ -27,20 +27,3 @@ pub struct CreateComponentCommand {
     /// url of the component to create.
     pub url: String,
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    const CMD_NAME: &'static [&'static str] = &["create"];
-
-    #[test]
-    fn test_command() {
-        let moniker = "/core/ffx-laboratory:foo";
-        let url = "fuchsia-pkg://fuchsia.com/test#meta/test.cm";
-        let args = &[moniker, url];
-        assert_eq!(
-            CreateComponentCommand::from_args(CMD_NAME, args),
-            Ok(CreateComponentCommand { moniker: moniker.to_string(), url: url.to_string() })
-        )
-    }
-}

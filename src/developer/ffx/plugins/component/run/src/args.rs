@@ -40,32 +40,3 @@ pub struct RunComponentCommand {
     /// start printing logs from the started component after it has started
     pub follow_logs: bool,
 }
-
-#[cfg(test)]
-mod tests {
-    use {super::*, assert_matches::assert_matches};
-
-    const CMD_NAME: &'static [&'static str] = &["run"];
-
-    #[test]
-    fn test_command() {
-        let url = "http://test.com";
-        let args = &[url, "--recreate"];
-
-        assert_matches!(
-            RunComponentCommand::from_args(CMD_NAME, args),
-            Err(argh::EarlyExit { .. })
-        );
-        let moniker = "/core/ffx-lab";
-        let args = &[moniker, url, "--recreate", "--follow-logs"];
-        assert_eq!(
-            RunComponentCommand::from_args(CMD_NAME, args),
-            Ok(RunComponentCommand {
-                moniker: moniker.to_string(),
-                url: url.to_string(),
-                recreate: true,
-                follow_logs: true,
-            })
-        )
-    }
-}

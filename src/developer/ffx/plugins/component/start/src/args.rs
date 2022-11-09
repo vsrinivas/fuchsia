@@ -20,22 +20,3 @@ pub struct ComponentStartCommand {
     /// A moniker to a component instance
     pub moniker: String,
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    const CMD_NAME: &'static [&'static str] = &["start"];
-
-    #[test]
-    fn test_command() {
-        fn check(args: &[&str], expected_moniker: String) {
-            assert_eq!(
-                ComponentStartCommand::from_args(CMD_NAME, args),
-                Ok(ComponentStartCommand { moniker: expected_moniker })
-            )
-        }
-
-        let test_moniker = "core/brightness_manager";
-        check(&[test_moniker], test_moniker.to_string());
-    }
-}

@@ -28,39 +28,3 @@ pub struct RunComponentCommand {
     /// switch to turn on background info
     pub background: bool,
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    const CMD_NAME: &'static [&'static str] = &["run-legacy"];
-
-    #[test]
-    fn test_command() {
-        fn check(
-            args: &[&str],
-            expected_url: String,
-            expected_args: Vec<String>,
-            expected_background: bool,
-        ) {
-            assert_eq!(
-                RunComponentCommand::from_args(CMD_NAME, args),
-                Ok(RunComponentCommand {
-                    url: expected_url,
-                    args: expected_args,
-                    background: expected_background
-                })
-            )
-        }
-
-        let test_url = "http://test.com";
-        let arg1 = "test1";
-        let arg2 = "test2";
-        let args = vec![arg1.to_string(), arg2.to_string()];
-        let background = "--background";
-
-        check(&[test_url, arg1, arg2, background], test_url.to_string(), args.clone(), true);
-        check(&[test_url, arg1, arg2], test_url.to_string(), args.clone(), false);
-        check(&[test_url, background, arg1, arg2], test_url.to_string(), args.clone(), true);
-        check(&[background, test_url, arg1, arg2], test_url.to_string(), args.clone(), true);
-    }
-}

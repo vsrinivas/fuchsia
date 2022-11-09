@@ -8,7 +8,6 @@ ffx_plugin("ffx_component_run") {
   version = "0.1.0"
   edition = "2021"
   with_unit_tests = true
-  args_with_unit_tests = true
   deps = [
     "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx_rust",
     "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust",
@@ -27,7 +26,6 @@ ffx_plugin("ffx_component_run") {
     "//third_party/rust_crates:futures",
   ]
 
-  args_test_deps = [ "//third_party/rust_crates:assert_matches" ]
   args_sources = [ "src/args.rs" ]
 
   sources = [ "src/lib.rs" ]

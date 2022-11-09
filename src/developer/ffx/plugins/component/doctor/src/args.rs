@@ -26,19 +26,3 @@ pub struct DoctorCommand {
     /// whether or not to display the output without color and wrapping.
     pub plain_output: bool,
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    const CMD_NAME: &'static [&'static str] = &["doctor"];
-
-    #[test]
-    fn test_command() {
-        let moniker = "/core/ffx-laboratory:foo";
-        let args = &[moniker];
-        assert_eq!(
-            DoctorCommand::from_args(CMD_NAME, args),
-            Ok(DoctorCommand { moniker: moniker.to_string(), plain_output: false })
-        )
-    }
-}

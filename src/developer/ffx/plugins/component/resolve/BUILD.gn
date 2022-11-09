@@ -8,7 +8,6 @@ ffx_plugin("ffx_component_resolve") {
   version = "0.1.0"
   edition = "2021"
   with_unit_tests = true
-  args_with_unit_tests = true
   deps = [
     "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",

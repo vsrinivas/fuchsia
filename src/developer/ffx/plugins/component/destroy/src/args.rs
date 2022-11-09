@@ -22,19 +22,3 @@ pub struct DestroyComponentCommand {
     /// This component instance will be removed from the collection if this command succeeds.
     pub moniker: String,
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    const CMD_NAME: &'static [&'static str] = &["destroy"];
-
-    #[test]
-    fn test_command() {
-        let moniker = "/core/ffx-laboratory:foo";
-        let args = &[moniker];
-        assert_eq!(
-            DestroyComponentCommand::from_args(CMD_NAME, args),
-            Ok(DestroyComponentCommand { moniker: moniker.to_string() })
-        )
-    }
-}

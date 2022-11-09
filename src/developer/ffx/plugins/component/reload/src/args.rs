@@ -21,19 +21,3 @@ pub struct ReloadComponentCommand {
     /// moniker of a component instance or realm
     pub moniker: String,
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    const CMD_NAME: &'static [&'static str] = &["reload"];
-
-    #[test]
-    fn test_command() {
-        let moniker = "/core/ffx-laboratory:foo";
-        let args = &[moniker];
-        assert_eq!(
-            ReloadComponentCommand::from_args(CMD_NAME, args),
-            Ok(ReloadComponentCommand { moniker: moniker.to_string() })
-        )
-    }
-}

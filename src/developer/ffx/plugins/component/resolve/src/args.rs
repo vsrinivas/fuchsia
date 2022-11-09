@@ -19,22 +19,3 @@ pub struct ComponentResolveCommand {
     /// A moniker to a component instance
     pub moniker: String,
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    const CMD_NAME: &'static [&'static str] = &["resolve"];
-
-    #[test]
-    fn test_command() {
-        fn check(args: &[&str], expected_moniker: String) {
-            assert_eq!(
-                ComponentResolveCommand::from_args(CMD_NAME, args),
-                Ok(ComponentResolveCommand { moniker: expected_moniker })
-            )
-        }
-
-        let test_moniker = "core/brightness_manager";
-        check(&[test_moniker], test_moniker.to_string());
-    }
-}
