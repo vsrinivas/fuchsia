@@ -1,0 +1,85 @@
+# Copyright 2022 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("kernel_elf_image.gni")
+
+# Compile an ELF binary image to be loaded via <phys/elf-image.h>.
+#
+# This defines a kernel_elf_image(target_name) main target that wraps an
+# executable() or similar target called "$target_name.binary".  See
+# kernel_elf_image() for details of how to use this in image construction.
+#
+# This can be instantiated in any environment where the underlying binary
+# target should be compiled, whether user, kernel or kernel.phys.  The image
+# target is then usually embedded in a kernel_package() that itself might be
+# instantiated in the kernel or kernel.phys environment.
+#
+# Parameters
+#
+#   * target_type
+#    - Optional: Type of target to define.  Since we don't support dynamic
+#      symbol tables or TLS in ELF kernels, there isn't really much difference
+#      between compiling as PIE and compiling as PIC or between an executable()
+#      and a loadable_module().
+#    - Type: string
+#    - Default: "executable"
+#
+#   * data_deps, has_patches, metadata, output_name, testonly, visibility
+#     - See kernel_elf_image().
+#
+#   * output_dir, output_extension
+#     - Not allowed.
+#
+# All other parameters are as for executable().
+#
+template("kernel_elf_binary") {
+  image_target = target_name
+  binary_target = "$target_name.binary"
+
+  if (defined(invoker.target_type)) {
+    target_type = invoker.target_type
+  } else {
+    target_type = "executable"
+  }
+
+  kernel_elf_image(image_target) {
+    forward_variables_from(invoker,
+                           [
+                             "data_deps",
+                             "has_patches",
+                             "metadata",
+                             "output_name",
+                             "target_type",
+                             "testonly",
+                             "visibility",
+                           ])
+    deps = [ ":$binary_target" ]
+  }
+
+  target(target_type, binary_target) {
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "data_deps",
+                             "has_patches",
+                             "metadata",
+                             "output_dir",
+                             "output_extension",
+                             "output_name",
+                             "target_type",
+                             "testonly",
+                             "visibility",
+                           ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    if (defined(visibility)) {
+      visibility += [ ":$image_target" ]
+    }
+  }
+}

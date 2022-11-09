@@ -8,7 +8,7 @@ import("//build/testing/zbi_test.gni")
 import("//build/zbi/zbi_input.gni")
 import("//zircon/kernel/kernel_package.gni")
 import("//zircon/kernel/lib/code-patching/code-patching.gni")
-import("//zircon/kernel/phys/kernel_elf_image.gni")
+import("//zircon/kernel/phys/kernel_elf_binary.gni")
 import("//zircon/kernel/phys/kernel_elf_interp.gni")
 import("//zircon/kernel/phys/zbi_executable.gni")
 
@@ -150,47 +150,37 @@ kernel_package("elf-code-patching-test-data") {
   testonly = true
 
   deps = [
-    ":elf-code-patching-test-add-one.image($phys_toolchain)",
-    ":elf-code-patching-test-multiply.image($phys_toolchain)",
+    ":elf-code-patching-test-add-one($phys_toolchain)",
+    ":elf-code-patching-test-multiply($phys_toolchain)",
   ]
 }
 
-loadable_module("elf-code-patching-test-add-one") {
+kernel_elf_binary("elf-code-patching-test-add-one") {
   visibility = [ ":*" ]
   testonly = true
 
+  output_name = "add-one"
+
   ldflags = [ "-Wl,-e,AddOne" ]
+
   deps = [
     ":add-one",
     ":elf-code-patching-test.interp",
   ]
 }
 
-kernel_elf_image("elf-code-patching-test-add-one.image") {
-  visibility = [ ":*" ]
-  testonly = true
-
-  output_name = "add-one"
-  deps = [ ":elf-code-patching-test-add-one" ]
-}
-
-loadable_module("elf-code-patching-test-multiply") {
-  visibility = [ ":*" ]
-  testonly = true
-
-  ldflags = [ "-Wl,-e,multiply_by_factor" ]
-  deps = [
-    ":elf-code-patching-test.interp",
-    ":multiply_by_factor",
-  ]
-}
-
-kernel_elf_image("elf-code-patching-test-multiply.image") {
+kernel_elf_binary("elf-code-patching-test-multiply") {
   visibility = [ ":*" ]
   testonly = true
 
   output_name = "multiply_by_factor"
-  deps = [ ":elf-code-patching-test-multiply" ]
+
+  ldflags = [ "-Wl,-e,multiply_by_factor" ]
+
+  deps = [
+    ":elf-code-patching-test.interp",
+    ":multiply_by_factor",
+  ]
 }
 
 zbi_test("zbi-elf-code-patching-test") {
