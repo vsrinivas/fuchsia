@@ -128,8 +128,8 @@ zx::result<std::unique_ptr<CompositeDeviceAssembler>> CompositeDeviceAssembler::
         break;
 
       case fuchsia_device_manager::PropertyValue::Tag::kEnumValue:
-        assembler->properties_.emplace_back(driver::MakeEnumProperty(
-            assembler->arena_, prop.key(), prop.value().enum_value().value()));
+        assembler->properties_.emplace_back(
+            driver::MakeProperty(assembler->arena_, prop.key(), prop.value().enum_value().value()));
         break;
     }
   }

@@ -112,7 +112,7 @@ std::vector<fuchsia_driver_framework::wire::NodeProperty> CreateProperties(
         properties.emplace_back(driver::MakeProperty(arena, key, value.data.int_val));
         break;
       case ZX_DEVICE_PROPERTY_VALUE_ENUM:
-        properties.emplace_back(driver::MakeEnumProperty(arena, key, value.data.enum_val));
+        properties.emplace_back(driver::MakeProperty(arena, key, value.data.enum_val));
         break;
       default:
         FDF_LOGL(ERROR, logger, "Unsupported property type, key: %s", key);
@@ -123,7 +123,7 @@ std::vector<fuchsia_driver_framework::wire::NodeProperty> CreateProperties(
   for (auto value :
        cpp20::span(zx_args->fidl_protocol_offers, zx_args->fidl_protocol_offer_count)) {
     properties.emplace_back(
-        driver::MakeEnumProperty(arena, value, std::string(value) + ".ZirconTransport"));
+        driver::MakeProperty(arena, value, std::string(value) + ".ZirconTransport"));
 
     auto property = fidl_offer_to_device_prop(arena, value);
     if (property) {
@@ -133,7 +133,7 @@ std::vector<fuchsia_driver_framework::wire::NodeProperty> CreateProperties(
 
   for (auto value : cpp20::span(zx_args->fidl_service_offers, zx_args->fidl_service_offer_count)) {
     properties.emplace_back(
-        driver::MakeEnumProperty(arena, value, std::string(value) + ".ZirconTransport"));
+        driver::MakeProperty(arena, value, std::string(value) + ".ZirconTransport"));
 
     auto property = fidl_offer_to_device_prop(arena, value);
     if (property) {
@@ -144,7 +144,7 @@ std::vector<fuchsia_driver_framework::wire::NodeProperty> CreateProperties(
   for (auto value :
        cpp20::span(zx_args->runtime_service_offers, zx_args->runtime_service_offer_count)) {
     properties.emplace_back(
-        driver::MakeEnumProperty(arena, value, std::string(value) + ".DriverTransport"));
+        driver::MakeProperty(arena, value, std::string(value) + ".DriverTransport"));
 
     auto property = fidl_offer_to_device_prop(arena, value);
     if (property) {

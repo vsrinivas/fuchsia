@@ -167,13 +167,24 @@ fn compare_symbols(
     lhs: &Symbol,
     rhs: &Symbol,
 ) -> Result<bool, BytecodeError> {
-    if std::mem::discriminant(lhs) != std::mem::discriminant(rhs) {
+    // If either side is an EnumValue type, convert it into a StringValue type for the comparison.
+    // This is because both of these types contain a string inside of them and as long as that
+    // value is the same, then the equality is satisfied.
+    let mut lhs_for_compare = lhs.clone();
+    let mut rhs_for_compare = rhs.clone();
+    if let Symbol::EnumValue(val) = lhs {
+        lhs_for_compare = Symbol::StringValue(val.to_string());
+    };
+    if let Symbol::EnumValue(val) = rhs {
+        rhs_for_compare = Symbol::StringValue(val.to_string());
+    };
+    if std::mem::discriminant(&lhs_for_compare) != std::mem::discriminant(&rhs_for_compare) {
         return Err(BytecodeError::MismatchValueTypes);
     }
 
     Ok(match condition {
-        Condition::Equal => lhs == rhs,
-        Condition::Inequal => lhs != rhs,
+        Condition::Equal => lhs_for_compare == rhs_for_compare,
+        Condition::Inequal => lhs_for_compare != rhs_for_compare,
         Condition::Unconditional => {
             panic!("This function shouldn't be called for Unconditional.")
         }

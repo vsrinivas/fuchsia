@@ -27,23 +27,20 @@ const std::string_view kOptionalName = "optional-node";
 // Group 1 is created before creating both the left and right nodes.
 fdf::DeviceGroup DeviceGroupOne() {
   auto bind_rules_left = std::vector{
-      driver::MakeAcceptEnumBindRule(bindlib::TEST_BIND_PROPERTY,
-                                     bindlib::TEST_BIND_PROPERTY_ONE_LEFT),
+      driver::MakeAcceptBindRule(bindlib::TEST_BIND_PROPERTY, bindlib::TEST_BIND_PROPERTY_ONE_LEFT),
   };
 
   auto bind_properties_left = std::vector{
-      driver::MakeEnumProperty(bindlib::TEST_BIND_PROPERTY,
-                               bindlib::TEST_BIND_PROPERTY_DRIVER_LEFT),
+      driver::MakeProperty(bindlib::TEST_BIND_PROPERTY, bindlib::TEST_BIND_PROPERTY_DRIVER_LEFT),
   };
 
   auto bind_rules_right = std::vector{
-      driver::MakeAcceptEnumBindRule(bindlib::TEST_BIND_PROPERTY,
-                                     bindlib::TEST_BIND_PROPERTY_ONE_RIGHT),
+      driver::MakeAcceptBindRule(bindlib::TEST_BIND_PROPERTY,
+                                 bindlib::TEST_BIND_PROPERTY_ONE_RIGHT),
   };
 
   auto bind_properties_right = std::vector{
-      driver::MakeEnumProperty(bindlib::TEST_BIND_PROPERTY,
-                               bindlib::TEST_BIND_PROPERTY_DRIVER_RIGHT),
+      driver::MakeProperty(bindlib::TEST_BIND_PROPERTY, bindlib::TEST_BIND_PROPERTY_DRIVER_RIGHT),
   };
 
   auto nodes = std::vector{
@@ -63,23 +60,20 @@ fdf::DeviceGroup DeviceGroupOne() {
 // Group 2 is created after creating the right node, but before creating the left node.
 fdf::DeviceGroup DeviceGroupTwo() {
   auto bind_rules_left = std::vector{
-      driver::MakeAcceptEnumBindRule(bindlib::TEST_BIND_PROPERTY,
-                                     bindlib::TEST_BIND_PROPERTY_TWO_LEFT),
+      driver::MakeAcceptBindRule(bindlib::TEST_BIND_PROPERTY, bindlib::TEST_BIND_PROPERTY_TWO_LEFT),
   };
 
   auto bind_properties_left = std::vector{
-      driver::MakeEnumProperty(bindlib::TEST_BIND_PROPERTY,
-                               bindlib::TEST_BIND_PROPERTY_DRIVER_LEFT),
+      driver::MakeProperty(bindlib::TEST_BIND_PROPERTY, bindlib::TEST_BIND_PROPERTY_DRIVER_LEFT),
   };
 
   auto bind_rules_right = std::vector{
-      driver::MakeAcceptEnumBindRule(bindlib::TEST_BIND_PROPERTY,
-                                     bindlib::TEST_BIND_PROPERTY_TWO_RIGHT),
+      driver::MakeAcceptBindRule(bindlib::TEST_BIND_PROPERTY,
+                                 bindlib::TEST_BIND_PROPERTY_TWO_RIGHT),
   };
 
   auto bind_properties_right = std::vector{
-      driver::MakeEnumProperty(bindlib::TEST_BIND_PROPERTY,
-                               bindlib::TEST_BIND_PROPERTY_DRIVER_RIGHT),
+      driver::MakeProperty(bindlib::TEST_BIND_PROPERTY, bindlib::TEST_BIND_PROPERTY_DRIVER_RIGHT),
   };
 
   auto nodes = std::vector{
@@ -99,23 +93,21 @@ fdf::DeviceGroup DeviceGroupTwo() {
 // Group 3 is created after creating both the left and right nodes.
 fdf::DeviceGroup DeviceGroupThree() {
   auto bind_rules_left = std::vector{
-      driver::MakeAcceptEnumBindRule(bindlib::TEST_BIND_PROPERTY,
-                                     bindlib::TEST_BIND_PROPERTY_THREE_LEFT),
+      driver::MakeAcceptBindRule(bindlib::TEST_BIND_PROPERTY,
+                                 bindlib::TEST_BIND_PROPERTY_THREE_LEFT),
   };
 
   auto bind_properties_left = std::vector{
-      driver::MakeEnumProperty(bindlib::TEST_BIND_PROPERTY,
-                               bindlib::TEST_BIND_PROPERTY_DRIVER_LEFT),
+      driver::MakeProperty(bindlib::TEST_BIND_PROPERTY, bindlib::TEST_BIND_PROPERTY_DRIVER_LEFT),
   };
 
   auto bind_rules_right = std::vector{
-      driver::MakeAcceptEnumBindRule(bindlib::TEST_BIND_PROPERTY,
-                                     bindlib::TEST_BIND_PROPERTY_THREE_RIGHT),
+      driver::MakeAcceptBindRule(bindlib::TEST_BIND_PROPERTY,
+                                 bindlib::TEST_BIND_PROPERTY_THREE_RIGHT),
   };
 
   auto bind_properties_right = std::vector{
-      driver::MakeEnumProperty(bindlib::TEST_BIND_PROPERTY,
-                               bindlib::TEST_BIND_PROPERTY_DRIVER_RIGHT),
+      driver::MakeProperty(bindlib::TEST_BIND_PROPERTY, bindlib::TEST_BIND_PROPERTY_DRIVER_RIGHT),
   };
 
   auto nodes = std::vector{
@@ -135,33 +127,31 @@ fdf::DeviceGroup DeviceGroupThree() {
 // Group 4 is created before creating the left, optional, and right nodes.
 fdf::DeviceGroup DeviceGroupFour() {
   auto bind_rules_left = std::vector{
-      driver::MakeAcceptEnumBindRule(bindlib::TEST_BIND_PROPERTY,
-                                     bindlib::TEST_BIND_PROPERTY_FOUR_LEFT),
+      driver::MakeAcceptBindRule(bindlib::TEST_BIND_PROPERTY,
+                                 bindlib::TEST_BIND_PROPERTY_FOUR_LEFT),
   };
 
   auto bind_properties_left = std::vector{
-      driver::MakeEnumProperty(bindlib::TEST_BIND_PROPERTY,
-                               bindlib::TEST_BIND_PROPERTY_DRIVER_LEFT),
+      driver::MakeProperty(bindlib::TEST_BIND_PROPERTY, bindlib::TEST_BIND_PROPERTY_DRIVER_LEFT),
   };
 
   auto bind_rules_right = std::vector{
-      driver::MakeAcceptEnumBindRule(bindlib::TEST_BIND_PROPERTY,
-                                     bindlib::TEST_BIND_PROPERTY_FOUR_RIGHT),
+      driver::MakeAcceptBindRule(bindlib::TEST_BIND_PROPERTY,
+                                 bindlib::TEST_BIND_PROPERTY_FOUR_RIGHT),
   };
 
   auto bind_properties_right = std::vector{
-      driver::MakeEnumProperty(bindlib::TEST_BIND_PROPERTY,
-                               bindlib::TEST_BIND_PROPERTY_DRIVER_RIGHT),
+      driver::MakeProperty(bindlib::TEST_BIND_PROPERTY, bindlib::TEST_BIND_PROPERTY_DRIVER_RIGHT),
   };
 
   auto bind_rules_optional = std::vector{
-      driver::MakeAcceptEnumBindRule(bindlib::TEST_BIND_PROPERTY,
-                                     bindlib::TEST_BIND_PROPERTY_FOUR_OPTIONAL),
+      driver::MakeAcceptBindRule(bindlib::TEST_BIND_PROPERTY,
+                                 bindlib::TEST_BIND_PROPERTY_FOUR_OPTIONAL),
   };
 
   auto bind_properties_optional = std::vector{
-      driver::MakeEnumProperty(bindlib::TEST_BIND_PROPERTY,
-                               bindlib::TEST_BIND_PROPERTY_DRIVER_OPTIONAL),
+      driver::MakeProperty(bindlib::TEST_BIND_PROPERTY,
+                           bindlib::TEST_BIND_PROPERTY_DRIVER_OPTIONAL),
   };
 
   auto nodes = std::vector{
@@ -393,8 +383,7 @@ class RootDriver : public driver::DriverBase {
                 fit::closure callback) {
     auto node_name = std::string(name) + "-" + std::to_string(group);
     // Set the properties of the node that a driver will bind to.
-    fdf::NodeProperty node_property =
-        driver::MakeEnumProperty(bindlib::TEST_BIND_PROPERTY, property);
+    fdf::NodeProperty node_property = driver::MakeProperty(bindlib::TEST_BIND_PROPERTY, property);
     fdf::NodeAddArgs args({.name = node_name,
                            .offers = {{driver::MakeOffer<ft::Service>(name)}},
                            .properties = {{node_property}}});

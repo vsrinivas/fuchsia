@@ -64,13 +64,6 @@ inline fuchsia_driver_framework::NodeProperty MakeProperty(std::string_view key,
        .value = fuchsia_driver_framework::NodePropertyValue::WithIntValue(value)}};
 }
 
-inline fuchsia_driver_framework::NodeProperty MakeEnumProperty(std::string_view key,
-                                                               std::string_view value) {
-  return fuchsia_driver_framework::NodeProperty{
-      {.key = fuchsia_driver_framework::NodePropertyKey::WithStringValue(std::string(key)),
-       .value = fuchsia_driver_framework::NodePropertyValue::WithEnumValue(std::string(value))}};
-}
-
 inline fuchsia_driver_framework::wire::NodeProperty MakeProperty(fidl::AnyArena& arena,
                                                                  uint32_t key, uint32_t value) {
   return fuchsia_driver_framework::wire::NodeProperty::Builder(arena)
@@ -108,15 +101,6 @@ inline fuchsia_driver_framework::wire::NodeProperty MakeProperty(fidl::AnyArena&
   return fuchsia_driver_framework::wire::NodeProperty::Builder(arena)
       .key(fuchsia_driver_framework::wire::NodePropertyKey::WithStringValue(arena, key))
       .value(fuchsia_driver_framework::wire::NodePropertyValue::WithIntValue(value))
-      .Build();
-}
-
-inline fuchsia_driver_framework::wire::NodeProperty MakeEnumProperty(fidl::AnyArena& arena,
-                                                                     std::string_view key,
-                                                                     std::string_view value) {
-  return fuchsia_driver_framework::wire::NodeProperty::Builder(arena)
-      .key(fuchsia_driver_framework::wire::NodePropertyKey::WithStringValue(arena, key))
-      .value(fuchsia_driver_framework::wire::NodePropertyValue::WithEnumValue(arena, value))
       .Build();
 }
 

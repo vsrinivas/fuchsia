@@ -406,9 +406,9 @@ TEST_F(DeviceTest, AddChildWithStringProps) {
     prop = rv->args.properties()[3];
     ASSERT_EQ(
         strncmp(prop.key().string_value().data(), "enum_key", prop.key().string_value().size()), 0);
-    ASSERT_EQ(
-        strncmp(prop.value().enum_value().data(), "enum_value", prop.value().enum_value().size()),
-        0);
+    ASSERT_EQ(strncmp(prop.value().string_value().data(), "enum_value",
+                      prop.value().string_value().size()),
+              0);
   });
 
   // Add a child device.
@@ -1061,18 +1061,18 @@ TEST_F(DeviceTest, CreateNodeProperties) {
 
   EXPECT_EQ("fuchsia.hardware.i2c.Device", properties[2].key().string_value().get());
   EXPECT_EQ("fuchsia.hardware.i2c.Device.ZirconTransport",
-            properties[2].value().enum_value().get());
+            properties[2].value().string_value().get());
 
   EXPECT_EQ(static_cast<uint32_t>(BIND_FIDL_PROTOCOL), properties[3].key().int_value());
   EXPECT_EQ(3u, properties[3].value().int_value());
 
   EXPECT_EQ("fuchsia.hardware.i2c.Service", properties[4].key().string_value().get());
   EXPECT_EQ("fuchsia.hardware.i2c.Service.ZirconTransport",
-            properties[4].value().enum_value().get());
+            properties[4].value().string_value().get());
 
   EXPECT_EQ("fuchsia.hardware.gpio.Service", properties[5].key().string_value().get());
   EXPECT_EQ("fuchsia.hardware.gpio.Service.DriverTransport",
-            properties[5].value().enum_value().get());
+            properties[5].value().string_value().get());
 
   EXPECT_EQ(static_cast<uint32_t>(BIND_PROTOCOL), properties[6].key().int_value());
   EXPECT_EQ(10u, properties[6].value().int_value());

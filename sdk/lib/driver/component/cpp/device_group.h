@@ -212,48 +212,6 @@ inline fuchsia_driver_framework::BindRule MakeRejectBindRule(const std::string_v
   return MakeBindRule(key, fuchsia_driver_framework::Condition::kReject, values);
 }
 
-// String keys with enum values
-inline fuchsia_driver_framework::BindRule MakeEnumBindRule(
-    const std::string_view key, const fuchsia_driver_framework::Condition condition,
-    cpp20::span<const std::string_view> values) {
-  std::vector<fuchsia_driver_framework::NodePropertyValue> values_vec;
-  values_vec.reserve(values.size());
-  for (auto val : values) {
-    values_vec.push_back(
-        fuchsia_driver_framework::NodePropertyValue::WithEnumValue(std::string(val)));
-  }
-
-  return fuchsia_driver_framework::BindRule(
-      fuchsia_driver_framework::NodePropertyKey::WithStringValue(std::string(key)), condition,
-      values_vec);
-}
-
-inline fuchsia_driver_framework::BindRule MakeEnumBindRule(
-    const std::string_view key, const fuchsia_driver_framework::Condition condition,
-    const std::string_view value) {
-  return MakeEnumBindRule(key, condition, cpp20::span<const std::string_view>{{value}});
-}
-
-inline fuchsia_driver_framework::BindRule MakeAcceptEnumBindRule(const std::string_view key,
-                                                                 const std::string_view value) {
-  return MakeEnumBindRule(key, fuchsia_driver_framework::Condition::kAccept, value);
-}
-
-inline fuchsia_driver_framework::BindRule MakeAcceptEnumBindRule(
-    const std::string_view key, cpp20::span<const std::string_view> values) {
-  return MakeEnumBindRule(key, fuchsia_driver_framework::Condition::kAccept, values);
-}
-
-inline fuchsia_driver_framework::BindRule MakeRejectEnumBindRule(const std::string_view key,
-                                                                 const std::string_view value) {
-  return MakeEnumBindRule(key, fuchsia_driver_framework::Condition::kReject, value);
-}
-
-inline fuchsia_driver_framework::BindRule MakeRejectEnumBindRule(
-    const std::string_view key, cpp20::span<const std::string_view> values) {
-  return MakeEnumBindRule(key, fuchsia_driver_framework::Condition::kReject, values);
-}
-
 }  // namespace driver
 
 #endif  // LIB_DRIVER_COMPONENT_CPP_DEVICE_GROUP_H_

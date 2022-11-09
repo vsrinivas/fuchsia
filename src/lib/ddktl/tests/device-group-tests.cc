@@ -41,7 +41,7 @@ TEST_F(DeviceGroupTest, CreateAcceptBindRules) {
   ASSERT_TRUE(bool_val_bind_rule.get().values[0].data.bool_value);
 
   auto enum_val_bind_rule =
-      ddk::MakeAcceptEnumBindRule("enum_based_val", "fuchsia.gpio.BIND_PROTOCOL.DEVICE");
+      ddk::MakeAcceptBindRule("enum_based_val", "fuchsia.gpio.BIND_PROTOCOL.DEVICE");
   ASSERT_STREQ("enum_based_val", enum_val_bind_rule.get().key.data.str_key);
   ASSERT_EQ(DEVICE_BIND_RULE_CONDITION_ACCEPT, enum_val_bind_rule.get().condition);
   ASSERT_EQ(1, enum_val_bind_rule.get().values_count);
@@ -72,7 +72,7 @@ TEST_F(DeviceGroupTest, CreateAcceptBindRulesGeneratedConstants) {
   ASSERT_EQ(bind_testlib::BOOL_PROP_VALUE, bool_val_bind_rule.get().values[0].data.bool_value);
 
   auto enum_val_bind_rule =
-      ddk::MakeAcceptEnumBindRule(bind_testlib::ENUM_PROP, bind_testlib::ENUM_PROP_VALUE);
+      ddk::MakeAcceptBindRule(bind_testlib::ENUM_PROP, bind_testlib::ENUM_PROP_VALUE);
   ASSERT_STREQ(bind_testlib::ENUM_PROP, enum_val_bind_rule.get().key.data.str_key);
   ASSERT_EQ(DEVICE_BIND_RULE_CONDITION_ACCEPT, enum_val_bind_rule.get().condition);
   ASSERT_EQ(1, enum_val_bind_rule.get().values_count);
@@ -105,7 +105,7 @@ TEST_F(DeviceGroupTest, CreateRejectBindRules) {
   ASSERT_TRUE(bool_val_bind_rule.get().values[0].data.bool_value);
 
   auto enum_val_bind_rule =
-      ddk::MakeRejectEnumBindRule("enum_based_val", "fuchsia.gpio.BIND_PROTOCOL.DEVICE");
+      ddk::MakeRejectBindRule("enum_based_val", "fuchsia.gpio.BIND_PROTOCOL.DEVICE");
   ASSERT_STREQ("enum_based_val", enum_val_bind_rule.get().key.data.str_key);
   ASSERT_EQ(DEVICE_BIND_RULE_CONDITION_REJECT, enum_val_bind_rule.get().condition);
   ASSERT_EQ(1, enum_val_bind_rule.get().values_count);
@@ -136,7 +136,7 @@ TEST_F(DeviceGroupTest, CreateRejectBindRulesGeneratedConstants) {
   ASSERT_EQ(bind_testlib::BOOL_PROP_VALUE, bool_val_bind_rule.get().values[0].data.bool_value);
 
   auto enum_val_bind_rule =
-      ddk::MakeRejectEnumBindRule(bind_testlib::ENUM_PROP, bind_testlib::ENUM_PROP_VALUE);
+      ddk::MakeRejectBindRule(bind_testlib::ENUM_PROP, bind_testlib::ENUM_PROP_VALUE);
   ASSERT_STREQ(bind_testlib::ENUM_PROP, enum_val_bind_rule.get().key.data.str_key);
   ASSERT_EQ(DEVICE_BIND_RULE_CONDITION_REJECT, enum_val_bind_rule.get().condition);
   ASSERT_EQ(1, enum_val_bind_rule.get().values_count);
@@ -171,8 +171,7 @@ TEST_F(DeviceGroupTest, CreateAcceptBindRuleList) {
 
   const char* enum_val_bind_rule_values[] = {"fuchsia.gpio.BIND_PROTOCOL.DEVICE",
                                              "fuchsia.gpio.BIND_PROTOCOL.IMPL"};
-  auto enum_val_bind_rule =
-      ddk::MakeAcceptEnumBindRuleList("enum_based_val", enum_val_bind_rule_values);
+  auto enum_val_bind_rule = ddk::BindRuleAcceptList("enum_based_val", enum_val_bind_rule_values);
   ASSERT_STREQ("enum_based_val", enum_val_bind_rule.get().key.data.str_key);
   ASSERT_EQ(DEVICE_BIND_RULE_CONDITION_ACCEPT, enum_val_bind_rule.get().condition);
   ASSERT_EQ(2, enum_val_bind_rule.get().values_count);
@@ -206,7 +205,7 @@ TEST_F(DeviceGroupTest, CreateAcceptBindRuleListWithConstants) {
   const char* enum_val_bind_rule_values[] = {bind_testlib::ENUM_PROP_VALUE.c_str(),
                                              bind_testlib::ENUM_PROP_VALUE_2.c_str()};
   auto enum_val_bind_rule =
-      ddk::MakeAcceptEnumBindRuleList(bind_testlib::ENUM_PROP, enum_val_bind_rule_values);
+      ddk::BindRuleAcceptList(bind_testlib::ENUM_PROP, enum_val_bind_rule_values);
   ASSERT_STREQ(bind_testlib::ENUM_PROP, enum_val_bind_rule.get().key.data.str_key);
   ASSERT_EQ(DEVICE_BIND_RULE_CONDITION_ACCEPT, enum_val_bind_rule.get().condition);
   ASSERT_EQ(2, enum_val_bind_rule.get().values_count);
@@ -276,7 +275,7 @@ TEST_F(DeviceGroupTest, CreateRejectBindRuleListWithConstants) {
   const char* enum_val_bind_rule_values[] = {bind_testlib::ENUM_PROP_VALUE.c_str(),
                                              bind_testlib::ENUM_PROP_VALUE_2.c_str()};
   auto enum_val_bind_rule =
-      ddk::MakeRejectEnumBindRuleList(bind_testlib::ENUM_PROP, enum_val_bind_rule_values);
+      ddk::BindRuleRejectList(bind_testlib::ENUM_PROP, enum_val_bind_rule_values);
   ASSERT_STREQ(bind_testlib::ENUM_PROP, enum_val_bind_rule.get().key.data.str_key);
   ASSERT_EQ(DEVICE_BIND_RULE_CONDITION_REJECT, enum_val_bind_rule.get().condition);
   ASSERT_EQ(2, enum_val_bind_rule.get().values_count);

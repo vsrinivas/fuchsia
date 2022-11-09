@@ -19,6 +19,7 @@ union value_t {
   uint32_t num_value;
   const char *str_value;
   bool bool_value;
+  const char *enum_value;
 };
 
 struct property_value_t {

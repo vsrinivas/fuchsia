@@ -252,7 +252,7 @@ const std::vector<MatchedDriver> DriverLoader::MatchDeviceDriverIndex(
         break;
       }
       case StrPropValueType::Enum: {
-        fidl_props[index++] = driver::MakeEnumProperty(
+        fidl_props[index++] = driver::MakeProperty(
             allocator, str_props[i].key, std::get<StrPropValueType::Enum>(str_props[i].value));
         break;
       }
