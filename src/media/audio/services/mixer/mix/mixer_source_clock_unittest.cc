@@ -21,6 +21,7 @@
 #include "src/media/audio/services/mixer/mix/ptr_decls.h"
 #include "src/media/audio/services/mixer/mix/simple_packet_queue_producer_stage.h"
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"
+#include "src/media/audio/services/mixer/mix/testing/fake_pipeline_thread.h"
 
 // The set of tests below validates how `MixerSource` handles clock synchronization.
 //
@@ -136,6 +137,7 @@ class MixerSourceClockTest : public testing::Test {
             .name = "packet_queue",
             .format = kDefaultFormat,
             .reference_clock = UnreadableClock(source_clock),
+            .initial_thread = std::make_shared<FakePipelineThread>(1),
         });
     packet_queue->UpdatePresentationTimeToFracFrame(
         direction_ == Direction::kRender ? client_ref_to_frac_frames_ : device_ref_to_frac_frames_);

@@ -9,7 +9,7 @@
 namespace media_audio {
 
 BaseConsumerStage::BaseConsumerStage(Args args)
-    : PipelineStage(args.name, args.format, args.reference_clock),
+    : PipelineStage(args.name, args.format, args.reference_clock, std::move(args.thread)),
       writer_(std::move(args.writer)) {}
 
 void BaseConsumerStage::AddSource(PipelineStagePtr source, AddSourceOptions options) {

@@ -63,7 +63,7 @@ MixerSource::MixerSource(PipelineStagePtr source, PipelineStage::AddSourceOption
                                 : nullptr),
       sampler_(std::move(options.sampler)),
       source_(std::make_unique<SilencePaddingStage>(
-          source->format(), source->reference_clock(),
+          source->format(), source->reference_clock(), source->thread(),
           sampler_->neg_filter_length() + sampler_->pos_filter_length(),
           /*round_down_fractional_frames=*/true)),
       source_gain_ids_(std::move(options.gain_ids)),

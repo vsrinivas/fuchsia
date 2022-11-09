@@ -28,6 +28,7 @@
 #include "src/media/audio/services/mixer/mix/ptr_decls.h"
 #include "src/media/audio/services/mixer/mix/simple_packet_queue_producer_stage.h"
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"
+#include "src/media/audio/services/mixer/mix/testing/fake_pipeline_thread.h"
 #include "src/media/audio/services/mixer/mix/testing/test_fence.h"
 
 namespace media_audio {
@@ -59,6 +60,7 @@ void TestAdvance(int64_t step_size = 1) {
           .name = "source",
           .format = kDefaultFormat,
           .reference_clock = UnreadableClock(source_clock),
+          .initial_thread = std::make_shared<FakePipelineThread>(1),
       });
   source->UpdatePresentationTimeToFracFrame(kDefaultPresentationTimeToFracFrame);
 
@@ -129,6 +131,7 @@ void TestMix(int64_t step_size = 1) {
           .name = "source",
           .format = kDefaultFormat,
           .reference_clock = UnreadableClock(source_clock),
+          .initial_thread = std::make_shared<FakePipelineThread>(1),
       });
   source->UpdatePresentationTimeToFracFrame(kDefaultPresentationTimeToFracFrame);
 

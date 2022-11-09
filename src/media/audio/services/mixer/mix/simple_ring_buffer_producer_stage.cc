@@ -14,12 +14,14 @@
 #include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/mix/mix_job_context.h"
 #include "src/media/audio/services/mixer/mix/pipeline_stage.h"
+#include "src/media/audio/services/mixer/mix/ptr_decls.h"
 
 namespace media_audio {
 
 SimpleRingBufferProducerStage::SimpleRingBufferProducerStage(std::string_view name,
-                                                             std::shared_ptr<RingBuffer> buffer)
-    : PipelineStage(name, buffer->format(), buffer->reference_clock()),
+                                                             std::shared_ptr<RingBuffer> buffer,
+                                                             PipelineThreadPtr initial_thread)
+    : PipelineStage(name, buffer->format(), buffer->reference_clock(), std::move(initial_thread)),
       buffer_(std::move(buffer)) {}
 
 void SimpleRingBufferProducerStage::UpdatePresentationTimeToFracFrame(

@@ -14,7 +14,10 @@
 
 #include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/mix/pipeline_stage.h"
+#include "src/media/audio/services/mixer/mix/pipeline_thread.h"
+#include "src/media/audio/services/mixer/mix/ptr_decls.h"
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"
+#include "src/media/audio/services/mixer/mix/testing/fake_pipeline_thread.h"
 
 namespace media_audio {
 
@@ -26,8 +29,9 @@ class FakePipelineStage : public PipelineStage {
  public:
   struct Args {
     std::string name;
-    std::optional<Format> format;                    // if unspecified, use an arbitrary default
-    std::optional<UnreadableClock> reference_clock;  // if unspecified, use an arbitrary default
+    std::optional<Format> format;                     // if unspecified, use an arbitrary default
+    std::optional<UnreadableClock> reference_clock;   // if unspecified, use an arbitrary default
+    std::optional<PipelineThreadPtr> initial_thread;  // if unspecified, use an arbitrary default
   };
   static FakePipelineStagePtr Create(Args args) {
     if (!args.format) {
@@ -36,8 +40,12 @@ class FakePipelineStage : public PipelineStage {
     if (!args.reference_clock) {
       args.reference_clock = DefaultUnreadableClock();
     }
-    return FakePipelineStagePtr(
-        new FakePipelineStage(args.name, *args.format, std::move(*args.reference_clock)));
+    if (!args.initial_thread) {
+      args.initial_thread = std::make_shared<FakePipelineThread>(1);
+    }
+    return FakePipelineStagePtr(new FakePipelineStage(args.name, *args.format,
+                                                      std::move(*args.reference_clock),
+                                                      std::move(*args.initial_thread)));
   }
 
   const std::unordered_set<PipelineStagePtr>& sources() const { return sources_; }
@@ -59,8 +67,9 @@ class FakePipelineStage : public PipelineStage {
   void SetPacketForRead(std::optional<PacketView> packet) { packet_ = packet; }
 
  private:
-  FakePipelineStage(std::string_view name, Format format, UnreadableClock reference_clock)
-      : PipelineStage(name, format, std::move(reference_clock)) {}
+  FakePipelineStage(std::string_view name, Format format, UnreadableClock reference_clock,
+                    PipelineThreadPtr initial_thread)
+      : PipelineStage(name, format, std::move(reference_clock), std::move(initial_thread)) {}
 
   // Implementation of PipelineStage.
   void AdvanceSelfImpl(Fixed frame) {}

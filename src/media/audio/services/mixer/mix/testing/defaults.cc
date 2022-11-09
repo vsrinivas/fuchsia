@@ -13,6 +13,7 @@
 #include "src/media/audio/lib/clock/synthetic_clock_realm.h"
 #include "src/media/audio/lib/clock/unreadable_clock.h"
 #include "src/media/audio/services/mixer/mix/mix_job_context.h"
+#include "src/media/audio/services/mixer/mix/testing/fake_pipeline_thread.h"
 
 namespace media_audio {
 
@@ -59,6 +60,7 @@ std::shared_ptr<SimplePacketQueueProducerStage> MakeDefaultPacketQueue(const For
       .name = name,
       .format = format,
       .reference_clock = DefaultUnreadableClock(),
+      .initial_thread = std::make_shared<FakePipelineThread>(1),
   });
 }
 

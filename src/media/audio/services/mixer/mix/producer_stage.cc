@@ -17,7 +17,7 @@
 namespace media_audio {
 
 ProducerStage::ProducerStage(Args args)
-    : PipelineStage(args.name, args.format, args.reference_clock),
+    : PipelineStage(args.name, args.format, args.reference_clock, args.internal_source->thread()),
       internal_source_(std::move(args.internal_source)),
       pending_start_stop_command_(std::move(args.pending_start_stop_command)),
       start_stop_control_(args.format, args.media_ticks_per_ns, args.reference_clock) {

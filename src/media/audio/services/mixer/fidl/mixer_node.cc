@@ -29,8 +29,8 @@ zx::duration DelayWithPadding(zx::duration delay) { return delay * 1002 / 1000; 
 
 std::shared_ptr<MixerNode> MixerNode::Create(Args args) {
   auto pipeline_stage = std::make_shared<MixerStage>(
-      args.name, args.format, UnreadableClock(args.reference_clock), args.dest_buffer_frame_count);
-  pipeline_stage->set_thread(args.detached_thread->pipeline_thread());
+      args.name, args.format, UnreadableClock(args.reference_clock),
+      args.detached_thread->pipeline_thread(), args.dest_buffer_frame_count);
 
   struct WithPublicCtor : public MixerNode {
    public:

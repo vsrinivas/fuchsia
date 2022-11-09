@@ -16,6 +16,7 @@
 #include "src/media/audio/services/mixer/common/memory_mapped_buffer.h"
 #include "src/media/audio/services/mixer/mix/mix_job_context.h"
 #include "src/media/audio/services/mixer/mix/pipeline_stage.h"
+#include "src/media/audio/services/mixer/mix/ptr_decls.h"
 #include "src/media/audio/services/mixer/mix/ring_buffer.h"
 
 namespace media_audio {
@@ -24,7 +25,8 @@ namespace media_audio {
 // Start or Stop commands. This is intended to be embedded within a ProducerStage.
 class SimpleRingBufferProducerStage : public PipelineStage {
  public:
-  SimpleRingBufferProducerStage(std::string_view name, std::shared_ptr<RingBuffer> buffer);
+  SimpleRingBufferProducerStage(std::string_view name, std::shared_ptr<RingBuffer> buffer,
+                                PipelineThreadPtr initial_thread);
 
   // Implements `PipelineStage`.
   void AddSource(PipelineStagePtr source, AddSourceOptions options) final {

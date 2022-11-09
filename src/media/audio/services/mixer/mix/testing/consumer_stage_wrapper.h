@@ -13,6 +13,7 @@
 #include "src/media/audio/services/mixer/mix/simple_packet_queue_producer_stage.h"
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"
 #include "src/media/audio/services/mixer/mix/testing/fake_consumer_stage_writer.h"
+#include "src/media/audio/services/mixer/mix/testing/fake_pipeline_thread.h"
 
 namespace media_audio {
 
@@ -30,6 +31,7 @@ struct ConsumerStageWrapper {
         .pipeline_direction = pipeline_direction,
         .format = format,
         .reference_clock = std::move(reference_clock),
+        .thread = std::make_shared<FakePipelineThread>(1),
         .media_ticks_per_ns = format.frames_per_ns(),
         .pending_start_stop_command = pending_start_stop_command,
         .writer = writer,

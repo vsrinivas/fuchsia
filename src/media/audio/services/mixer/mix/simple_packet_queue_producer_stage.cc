@@ -16,7 +16,8 @@
 namespace media_audio {
 
 SimplePacketQueueProducerStage::SimplePacketQueueProducerStage(Args args)
-    : PipelineStage(args.name, args.format, std::move(args.reference_clock)),
+    : PipelineStage(args.name, args.format, std::move(args.reference_clock),
+                    std::move(args.initial_thread)),
       pending_commands_(std::move(args.command_queue)),
       underflow_reporter_(std::move(args.underflow_reporter)) {}
 

@@ -16,6 +16,7 @@
 #include "src/media/audio/services/mixer/mix/packet_view.h"
 #include "src/media/audio/services/mixer/mix/simple_packet_queue_producer_stage.h"
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"
+#include "src/media/audio/services/mixer/mix/testing/fake_pipeline_thread.h"
 
 namespace media_audio {
 namespace {
@@ -28,7 +29,8 @@ std::shared_ptr<SilencePaddingStage> MakeSilencePaddingStage(
     Fixed silence_frame_count, bool round_down_fractional_frames,
     std::shared_ptr<PipelineStage> source) {
   auto stage = std::make_shared<SilencePaddingStage>(
-      kFormat, DefaultUnreadableClock(), silence_frame_count, round_down_fractional_frames);
+      kFormat, DefaultUnreadableClock(), std::make_shared<FakePipelineThread>(1),
+      silence_frame_count, round_down_fractional_frames);
   if (source) {
     stage->AddSource(source, /*options=*/{});
   }

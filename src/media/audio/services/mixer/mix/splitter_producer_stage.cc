@@ -12,7 +12,8 @@
 namespace media_audio {
 
 SplitterProducerStage::SplitterProducerStage(Args args)
-    : PipelineStage(args.name, args.format, std::move(args.reference_clock)),
+    : PipelineStage(args.name, args.format, std::move(args.reference_clock),
+                    std::move(args.initial_thread)),
       ring_buffer_(std::move(args.ring_buffer)),
       consumer_(std::move(args.consumer)) {}
 

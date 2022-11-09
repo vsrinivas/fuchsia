@@ -31,12 +31,11 @@ std::shared_ptr<ConsumerNode> ConsumerNode::Create(Args args) {
       .pipeline_direction = args.pipeline_direction,
       .format = args.format,
       .reference_clock = UnreadableClock(args.reference_clock),
+      .thread = args.thread->pipeline_thread(),
       .media_ticks_per_ns = args.media_ticks_per_ns,
       .pending_start_stop_command = pending_start_stop_command,
       .writer = std::move(args.writer),
   });
-  pipeline_stage->set_thread(args.thread->pipeline_thread());
-
   auto node = std::make_shared<WithPublicCtor>(
       args.name, std::move(args.reference_clock), args.pipeline_direction, pipeline_stage,
       args.format, std::move(pending_start_stop_command), args.thread, args.delay_watcher);

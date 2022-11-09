@@ -25,7 +25,7 @@ class GraphMixThread : public GraphThread {
   explicit GraphMixThread(PipelineMixThread::Args args);
 
   // Implements `GraphThread`.
-  std::shared_ptr<PipelineThread> pipeline_thread() const final { return thread_; }
+  PipelineThreadPtr pipeline_thread() const final { return thread_; }
   zx::duration mix_period() const final { return thread_->mix_period(); }
   void IncrementClockUsage(std::shared_ptr<Clock> clock) final;
   void DecrementClockUsage(std::shared_ptr<Clock> clock) final;

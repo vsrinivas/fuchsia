@@ -36,6 +36,9 @@ class SplitterConsumerStage : public BaseConsumerStage {
     // Reference clock used by this splitter.
     UnreadableClock reference_clock;
 
+    // Which thread the consumer is assigned to.
+    PipelineThreadPtr thread;
+
     // The splitter's buffer.
     std::shared_ptr<RingBuffer> ring_buffer;
   };

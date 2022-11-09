@@ -19,6 +19,7 @@
 #include "src/media/audio/services/mixer/mix/packet_view.h"
 #include "src/media/audio/services/mixer/mix/pipeline_detached_thread.h"
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"
+#include "src/media/audio/services/mixer/mix/testing/fake_pipeline_thread.h"
 
 namespace media_audio {
 namespace {
@@ -45,7 +46,8 @@ class FakeStage : public PipelineStage {
   };
 
   FakeStage(bool use_cache, std::vector<QueuedPacket>&& packets)
-      : PipelineStage("FakeStage", kFormat, DefaultUnreadableClock()),
+      : PipelineStage("FakeStage", kFormat, DefaultUnreadableClock(),
+                      std::make_shared<FakePipelineThread>(1)),
         use_cache_(use_cache),
         packets_(std::move(packets)) {}
 
@@ -121,7 +123,8 @@ class FakeStage : public PipelineStage {
 class PassthroughStage : public PipelineStage {
  public:
   explicit PassthroughStage()
-      : PipelineStage("PassthroughStage", kFormat, DefaultUnreadableClock()) {}
+      : PipelineStage("PassthroughStage", kFormat, DefaultUnreadableClock(),
+                      std::make_shared<FakePipelineThread>(1)) {}
 
   void AddSource(PipelineStagePtr source, AddSourceOptions options) override {
     FX_CHECK(!source_);

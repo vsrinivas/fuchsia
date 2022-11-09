@@ -87,7 +87,8 @@ namespace media_audio {
 // silence.
 class SilencePaddingStage : public PipelineStage {
  public:
-  SilencePaddingStage(Format format, UnreadableClock reference_clock, Fixed silence_frame_count,
+  SilencePaddingStage(Format format, UnreadableClock reference_clock,
+                      PipelineThreadPtr initial_thread, Fixed silence_frame_count,
                       bool round_down_fractional_frames);
 
   // Implements `PipelineStage`.

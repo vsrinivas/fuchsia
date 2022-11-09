@@ -41,10 +41,10 @@ class SplitterProducerStageTest : public ::testing::Test {
     consumer_ = std::make_shared<SplitterConsumerStage>(SplitterConsumerStage::Args{
         .format = kFormat,
         .reference_clock = DefaultUnreadableClock(),
+        .thread = thread_,
         .ring_buffer = ring_buffer_,
     });
     consumer_->AddSource(packet_queue_, {});
-    consumer_->set_thread(thread_);
   }
 
   SimplePacketQueueProducerStage& packet_queue() { return *packet_queue_; }
@@ -54,14 +54,13 @@ class SplitterProducerStageTest : public ::testing::Test {
   // Defaults to the same thread as the consumer.
   std::shared_ptr<SplitterProducerStage> MakeProducer(
       std::shared_ptr<FakePipelineThread> thread = nullptr) {
-    auto producer = std::make_shared<SplitterProducerStage>(SplitterProducerStage::Args{
+    return std::make_shared<SplitterProducerStage>(SplitterProducerStage::Args{
         .format = kFormat,
         .reference_clock = DefaultUnreadableClock(),
+        .initial_thread = thread ? std::move(thread) : thread_,
         .ring_buffer = ring_buffer_,
         .consumer = consumer_,
     });
-    producer->set_thread(thread ? std::move(thread) : thread_);
-    return producer;
   }
 
  private:

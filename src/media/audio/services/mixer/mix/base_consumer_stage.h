@@ -7,6 +7,7 @@
 
 #include <lib/zx/time.h>
 
+#include <memory>
 #include <string>
 
 #include "src/media/audio/lib/format2/fixed.h"
@@ -52,6 +53,9 @@ class BaseConsumerStage : public PipelineStage {
 
     // Reference clock used by this consumer.
     UnreadableClock reference_clock;
+
+    // Which thread the consumer is assigned to.
+    PipelineThreadPtr thread;
 
     // How to write all consumed packets.
     std::shared_ptr<Writer> writer;

@@ -41,6 +41,9 @@ class ConsumerStage : public BaseConsumerStage {
     // Reference clock used by this consumer.
     UnreadableClock reference_clock;
 
+    // Which thread the consumer is assigned to.
+    PipelineThreadPtr thread;
+
     // Ticks of media time per nanoseconds of reference time.
     TimelineRate media_ticks_per_ns;
 

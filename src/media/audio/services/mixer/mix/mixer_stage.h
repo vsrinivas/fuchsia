@@ -27,7 +27,7 @@ namespace media_audio {
 class MixerStage : public PipelineStage {
  public:
   MixerStage(std::string_view name, Format format, UnreadableClock reference_clock,
-             int64_t max_dest_frame_count_per_mix);
+             PipelineThreadPtr initial_thread, int64_t max_dest_frame_count_per_mix);
 
   // Implements `PipelineStage`.
   void AddSource(PipelineStagePtr source, AddSourceOptions options) final;

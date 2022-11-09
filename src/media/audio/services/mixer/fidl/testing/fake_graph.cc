@@ -36,12 +36,14 @@ Node::Type NodeTypeFromId(const std::unordered_map<NodeId, Node::Type>& types, N
 FakeNode::FakeNode(FakeGraph& graph, NodeId id, Type type, PipelineDirection pipeline_direction,
                    FakeNodePtr parent, const Format* format)
     : Node(type, std::string("Node") + std::to_string(id), DefaultClock(), pipeline_direction,
-           type == Node::Type::kMeta ? nullptr
-                                     : FakePipelineStage::Create({
-                                           .name = "PipelineStage" + std::to_string(id),
-                                           .format = *format,
-                                           .reference_clock = DefaultUnreadableClock(),
-                                       }),
+           type == Node::Type::kMeta
+               ? nullptr
+               : FakePipelineStage::Create({
+                     .name = "PipelineStage" + std::to_string(id),
+                     .format = *format,
+                     .reference_clock = DefaultUnreadableClock(),
+                     .initial_thread = graph.ctx().detached_thread->pipeline_thread(),
+                 }),
            std::move(parent)),
       graph_(graph) {}
 

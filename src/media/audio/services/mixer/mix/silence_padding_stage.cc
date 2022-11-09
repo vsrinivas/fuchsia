@@ -20,9 +20,11 @@
 namespace media_audio {
 
 SilencePaddingStage::SilencePaddingStage(Format format, UnreadableClock reference_clock,
+                                         PipelineThreadPtr initial_thread,
                                          Fixed silence_frame_count,
                                          bool round_down_fractional_frames)
-    : PipelineStage("SilencePaddingStage", format, std::move(reference_clock)),
+    : PipelineStage("SilencePaddingStage", format, std::move(reference_clock),
+                    std::move(initial_thread)),
       // Round up to generate an integer number of frames.
       silence_frame_count_(silence_frame_count.Ceiling()),
       round_down_fractional_frames_(round_down_fractional_frames),

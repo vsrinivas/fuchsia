@@ -53,6 +53,9 @@ class SimplePacketQueueProducerStage : public PipelineStage {
     // Reference clock of this stage's output stream.
     UnreadableClock reference_clock;
 
+    // Which thread the producer is initially assigned to.
+    PipelineThreadPtr initial_thread;
+
     // Message queue for pending commands. Will be drained by each call to Advance or Read. If this
     // field is nullptr, the queue can be driven by calls to `clear`, `empty`, and `push` -- this is
     // primarily useful in unit tests.

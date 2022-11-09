@@ -62,6 +62,9 @@ class CustomStage : public PipelineStage {
 
     // FIDL processor.
     fidl::WireSyncClient<fuchsia_audio_effects::Processor> processor;
+
+    // Which thread this stage is initially assigned to.
+    PipelineThreadPtr initial_thread;
   };
   explicit CustomStage(Args args);
 

@@ -19,6 +19,7 @@
 #include "src/media/audio/services/mixer/mix/simple_packet_queue_producer_stage.h"
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"
 #include "src/media/audio/services/mixer/mix/testing/fake_consumer_stage_writer.h"
+#include "src/media/audio/services/mixer/mix/testing/fake_pipeline_thread.h"
 
 namespace media_audio {
 namespace {
@@ -37,6 +38,7 @@ class BaseConsumerStageTest : public testing::Test {
     consumer_ = std::make_shared<BaseConsumerStage>(BaseConsumerStage::Args{
         .format = kFormat,
         .reference_clock = DefaultUnreadableClock(),
+        .thread = std::make_shared<FakePipelineThread>(1),
         .writer = writer_,
     });
     // Frame 0 is presented at time 0.

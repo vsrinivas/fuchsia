@@ -18,6 +18,7 @@
 #include "src/media/audio/services/mixer/mix/mix_job_context.h"
 #include "src/media/audio/services/mixer/mix/packet_view.h"
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"
+#include "src/media/audio/services/mixer/mix/testing/fake_pipeline_thread.h"
 #include "src/media/audio/services/mixer/mix/testing/test_fence.h"
 
 namespace media_audio {
@@ -34,6 +35,7 @@ class SimplePacketQueueProducerStageTest : public ::testing::Test {
       : packet_queue_producer_stage_({
             .format = kFormat,
             .reference_clock = DefaultUnreadableClock(),
+            .initial_thread = std::make_shared<FakePipelineThread>(1),
             .underflow_reporter = [this](auto duration) { ReportUnderflow(duration); },
         }) {
     packet_queue_producer_stage_.UpdatePresentationTimeToFracFrame(

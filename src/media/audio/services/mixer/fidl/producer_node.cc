@@ -50,6 +50,7 @@ std::shared_ptr<ProducerNode> ProducerNode::Create(Args args) {
             .name = args.name,
             .format = args.format,
             .reference_clock = UnreadableClock(args.reference_clock),
+            .initial_thread = args.detached_thread->pipeline_thread(),
             .command_queue = server->command_queue(),
         });
   } else {
@@ -58,7 +59,8 @@ std::shared_ptr<ProducerNode> ProducerNode::Create(Args args) {
     FX_CHECK(args.format == rb->format());
     FX_CHECK(args.reference_clock == rb->reference_clock());
 
-    internal_source = std::make_shared<SimpleRingBufferProducerStage>(args.name, rb);
+    internal_source = std::make_shared<SimpleRingBufferProducerStage>(
+        args.name, rb, args.detached_thread->pipeline_thread());
   }
 
   auto pipeline_stage = std::make_shared<ProducerStage>(ProducerStage::Args{
@@ -69,7 +71,6 @@ std::shared_ptr<ProducerNode> ProducerNode::Create(Args args) {
       .pending_start_stop_command = pending_start_stop_command,
       .internal_source = std::move(internal_source),
   });
-  pipeline_stage->set_thread(args.detached_thread->pipeline_thread());
 
   // In output pipelines, report downstream delay changes.
   std::shared_ptr<DelayWatcherServerGroup> delay_reporter;

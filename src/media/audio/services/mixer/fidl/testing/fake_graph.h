@@ -43,7 +43,7 @@ class FakeGraphThread : public GraphThread {
   void set_mix_period(zx::duration d) { mix_period_ = d; }
 
   // Implements `GraphThread`.
-  std::shared_ptr<PipelineThread> pipeline_thread() const final { return pipeline_thread_; }
+  PipelineThreadPtr pipeline_thread() const final { return pipeline_thread_; }
   zx::duration mix_period() const final { return mix_period_; }
 
   void IncrementClockUsage(std::shared_ptr<Clock> clock) final {
@@ -69,7 +69,7 @@ class FakeGraphThread : public GraphThread {
       : GraphThread(std::move(global_task_queue)),
         pipeline_thread_(std::make_shared<FakePipelineThread>(id)) {}
 
-  const std::shared_ptr<PipelineThread> pipeline_thread_;
+  const PipelineThreadPtr pipeline_thread_;
   zx::duration mix_period_;
   std::unordered_map<std::shared_ptr<Clock>, int> clock_usages_;
 };

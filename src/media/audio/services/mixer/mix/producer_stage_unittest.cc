@@ -20,6 +20,7 @@
 #include "src/media/audio/services/mixer/mix/simple_packet_queue_producer_stage.h"
 #include "src/media/audio/services/mixer/mix/simple_ring_buffer_producer_stage.h"
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"
+#include "src/media/audio/services/mixer/mix/testing/fake_pipeline_thread.h"
 #include "src/media/audio/services/mixer/mix/testing/test_fence.h"
 
 namespace media_audio {
@@ -48,6 +49,7 @@ class ProducerStageTestWithPacketQueue : public ::testing::Test {
                 SimplePacketQueueProducerStage::Args{
                     .format = kFormat,
                     .reference_clock = DefaultUnreadableClock(),
+                    .initial_thread = std::make_shared<FakePipelineThread>(1),
                     .command_queue = packet_command_queue_,
                 }),
         }) {
@@ -484,8 +486,8 @@ class ProducerStageTestWithRingBuffer : public ::testing::Test {
             .reference_clock = DefaultUnreadableClock(),
             .media_ticks_per_ns = kFormat.frames_per_ns(),
             .pending_start_stop_command = pending_start_stop_command_,
-            .internal_source =
-                std::make_shared<SimpleRingBufferProducerStage>("InternalSource", ring_buffer_),
+            .internal_source = std::make_shared<SimpleRingBufferProducerStage>(
+                "InternalSource", ring_buffer_, std::make_shared<FakePipelineThread>(1)),
         }) {
     producer_stage_.UpdatePresentationTimeToFracFrame(DefaultPresentationTimeToFracFrame(kFormat));
   }

@@ -40,13 +40,13 @@ std::shared_ptr<SplitterNode> SplitterNode::Create(Args args) {
           .name = consumer_name,
           .format = args.format,
           .reference_clock = UnreadableClock(args.reference_clock),
+          .thread = args.consumer_thread->pipeline_thread(),
           .ring_buffer = ring_buffer,
       }),
       .ring_buffer = ring_buffer,
       .ring_buffer_bytes = ring_buffer_bytes,
   });
   splitter->consumer_->set_thread(args.consumer_thread);
-  splitter->consumer_->pipeline_stage()->set_thread(args.consumer_thread->pipeline_thread());
   return splitter;
 }
 
@@ -75,13 +75,13 @@ NodePtr SplitterNode::CreateNewChildDest() {
           .name = producer_name,
           .format = format_,
           .reference_clock = UnreadableClock(reference_clock()),
+          .initial_thread = detached_thread_->pipeline_thread(),
           .ring_buffer = ring_buffer_,
           .consumer = consumer_->pipeline_stage(),
       }),
       .splitter_thread = consumer_->thread(),
   });
   producer->set_thread(detached_thread_);
-  producer->pipeline_stage()->set_thread(detached_thread_->pipeline_thread());
   return producer;
 }
 

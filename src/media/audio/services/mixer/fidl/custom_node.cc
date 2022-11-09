@@ -223,6 +223,7 @@ std::optional<CustomStage::Args> ValidateAndParseArgs(CustomNode::Args args) {
       .max_frames_per_call = static_cast<int64_t>(max_frames_per_call),
       .ring_out_frames = ring_out_frames,
       .processor = fidl::WireSyncClient(std::move(config.processor())),
+      .initial_thread = args.detached_thread->pipeline_thread(),
   };
 }
 
@@ -237,7 +238,7 @@ std::shared_ptr<CustomNode> CustomNode::Create(Args args) {
   };
   auto parent =
       std::make_shared<WithPublicCtor>(args.name, args.reference_clock, args.pipeline_direction);
-  auto detached_thread = std::move(args.detached_thread);
+  auto detached_thread = args.detached_thread;
 
   auto stage_args = ValidateAndParseArgs(std::move(args));
   if (!stage_args) {
@@ -251,11 +252,8 @@ std::shared_ptr<CustomNode> CustomNode::Create(Args args) {
           presentation_delay_frames, TimelineRate::RoundingMode::Ceiling));
   const auto source_format = stage_args->source_format;
 
-  auto pipeline_stage = std::make_shared<CustomStage>(std::move(*stage_args));
-  pipeline_stage->set_thread(detached_thread->pipeline_thread());
-
-  parent->InitializeChildNodes(std::move(pipeline_stage), parent, std::move(detached_thread),
-                               source_format, presentation_delay);
+  parent->InitializeChildNodes(std::make_shared<CustomStage>(std::move(*stage_args)), parent,
+                               std::move(detached_thread), source_format, presentation_delay);
   return parent;
 }
 

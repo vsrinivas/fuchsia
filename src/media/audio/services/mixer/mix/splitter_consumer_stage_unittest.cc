@@ -40,10 +40,10 @@ class SplitterConsumerStageTest : public ::testing::Test {
     consumer_ = std::make_shared<SplitterConsumerStage>(SplitterConsumerStage::Args{
         .format = kFormat,
         .reference_clock = DefaultUnreadableClock(),
+        .thread = thread_,
         .ring_buffer = ring_buffer_,
     });
     consumer_->AddSource(packet_queue_, {});
-    consumer_->set_thread(thread_);
   }
 
   SimplePacketQueueProducerStage& packet_queue() const { return *packet_queue_; }

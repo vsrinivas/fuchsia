@@ -32,6 +32,7 @@
 #include "src/media/audio/services/mixer/mix/ptr_decls.h"
 #include "src/media/audio/services/mixer/mix/simple_packet_queue_producer_stage.h"
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"
+#include "src/media/audio/services/mixer/mix/testing/fake_pipeline_thread.h"
 
 namespace media_audio {
 
@@ -205,6 +206,7 @@ PipelineStagePtr MakeCustomStage(ProcessorConfiguration config, PipelineStagePtr
       .max_frames_per_call = static_cast<int64_t>(config.max_frames_per_call()),
       .ring_out_frames = static_cast<int64_t>(config.outputs()[0].ring_out_frames()),
       .processor = fidl::WireSyncClient(std::move(config.processor())),
+      .initial_thread = std::make_shared<FakePipelineThread>(1),
   });
   custom_stage->set_thread(std::make_shared<PipelineDetachedThread>());
   ScopedThreadChecker checker(custom_stage->thread()->checker());

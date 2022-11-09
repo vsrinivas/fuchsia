@@ -17,6 +17,7 @@ SplitterConsumerStage::SplitterConsumerStage(Args args)
           .name = args.name,
           .format = args.format,
           .reference_clock = std::move(args.reference_clock),
+          .thread = std::move(args.thread),
           .writer = std::make_shared<RingBufferConsumerWriter>(std::move(args.ring_buffer)),
       }) {}
 

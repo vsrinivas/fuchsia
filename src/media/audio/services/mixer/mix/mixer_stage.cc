@@ -30,8 +30,8 @@ namespace media_audio {
 using ::fuchsia_audio::SampleType;
 
 MixerStage::MixerStage(std::string_view name, Format format, UnreadableClock reference_clock,
-                       int64_t max_dest_frame_count_per_mix)
-    : PipelineStage(name, format, std::move(reference_clock)),
+                       PipelineThreadPtr initial_thread, int64_t max_dest_frame_count_per_mix)
+    : PipelineStage(name, format, std::move(reference_clock), std::move(initial_thread)),
       max_dest_frame_count_per_mix_(max_dest_frame_count_per_mix),
       dest_buffer_(max_dest_frame_count_per_mix_ * format.channels(), 0.0f) {
   FX_CHECK(format.sample_type() == SampleType::kFloat32);

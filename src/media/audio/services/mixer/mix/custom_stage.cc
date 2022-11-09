@@ -26,7 +26,6 @@ namespace media_audio {
 
 namespace {
 
-using ::fuchsia_audio_effects::wire::ProcessorConfiguration;
 using ::fuchsia_mem::wire::Range;
 
 zx_koid_t GetKoid(const zx::vmo& vmo) {
@@ -40,13 +39,13 @@ zx_koid_t GetKoid(const zx::vmo& vmo) {
 }  // namespace
 
 CustomStage::CustomStage(Args args)
-    : PipelineStage(args.name, args.dest_format, args.reference_clock),
+    : PipelineStage(args.name, args.dest_format, args.reference_clock, args.initial_thread),
       block_size_frames_(args.block_size_frames),
       latency_frames_(args.latency_frames),
       max_frames_per_call_(args.max_frames_per_call),
       fidl_buffers_(args.source_buffer, args.dest_buffer),
       fidl_processor_(std::move(args.processor)),
-      source_(args.source_format, std::move(args.reference_clock),
+      source_(args.source_format, std::move(args.reference_clock), std::move(args.initial_thread),
               Fixed(args.latency_frames + args.ring_out_frames),
               /*round_down_fractional_frames=*/false),
       source_buffer_(source_.format(), args.max_frames_per_call) {

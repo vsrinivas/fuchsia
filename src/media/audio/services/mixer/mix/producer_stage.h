@@ -121,6 +121,8 @@ class ProducerStage : public PipelineStage {
   std::optional<Fixed> PresentationTimeToDownstreamFrame(zx::time t);
   std::optional<zx::time> DownstreamFrameToPresentationTime(Fixed downstream_frame);
 
+  // TODO(fxbug.dev/114648): Need to call `internal_source_->set_thread(thread())` when
+  // `PipelineStage::set_thread` is called for this stage to keep both threads in sync.
   const PipelineStagePtr internal_source_;  // uses internal frame time
   const std::shared_ptr<PendingStartStopCommand> pending_start_stop_command_;
   StartStopControl start_stop_control_;

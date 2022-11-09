@@ -33,6 +33,9 @@ class SplitterProducerStage : public PipelineStage {
     // Reference clock used by this splitter.
     UnreadableClock reference_clock;
 
+    // Which thread the producer is initially assigned to.
+    PipelineThreadPtr initial_thread;
+
     // The splitter's buffer.
     std::shared_ptr<RingBuffer> ring_buffer;
 

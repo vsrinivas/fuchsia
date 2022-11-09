@@ -20,6 +20,7 @@ ConsumerStage::ConsumerStage(Args args)
           .name = args.name,
           .format = args.format,
           .reference_clock = args.reference_clock,
+          .thread = std::move(args.thread),
           .writer = args.writer,
       }),
       pipeline_direction_(args.pipeline_direction),

@@ -210,12 +210,16 @@ class PipelineStage {
   virtual void UpdatePresentationTimeToFracFrame(std::optional<TimelineFunction> f) = 0;
 
  protected:
-  PipelineStage(std::string_view name, Format format, UnreadableClock reference_clock)
+  PipelineStage(std::string_view name, Format format, UnreadableClock reference_clock,
+                std::shared_ptr<PipelineThread> initial_thread)
       : name_(name),
         format_(format),
         reference_clock_(std::move(reference_clock)),
         advance_trace_name_(name_ + std::string("::Advance")),
-        read_trace_name_(name_ + std::string("::Read")) {}
+        read_trace_name_(name_ + std::string("::Read")),
+        thread_(std::move(initial_thread)) {
+    FX_CHECK(thread_);
+  }
 
   PipelineStage(const PipelineStage&) = delete;
   PipelineStage& operator=(const PipelineStage&) = delete;
@@ -324,10 +328,10 @@ class PipelineStage {
   // Denotes whether the stage stream is currently _locked_ or not.
   bool is_locked_ = false;
 
-  // This is atomic so that any thread can call thread()->checker().
+  // This is atomic so that any thread can call `thread()->checker()`.
   //
-  // TODO(fxbug.dev/111798): This must be accessed with atomic instructions (std::atomic_load and
-  // std::atomic_store). This can be std::atomic<std::shared_ptr<>> after C++20 is available.
+  // TODO(fxbug.dev/111798): This must be accessed with atomic instructions (`std::atomic_load` and
+  // `std::atomic_store`). This can be `std::atomic<std::shared_ptr<T>>` after C++20 is available.
   std::shared_ptr<PipelineThread> thread_;
 
   // Current translation from frame numbers to presentation timestamps.

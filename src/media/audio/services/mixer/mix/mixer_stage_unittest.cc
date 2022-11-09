@@ -4,19 +4,21 @@
 
 #include "src/media/audio/services/mixer/mix/mixer_stage.h"
 
+#include <fidl/fuchsia.mediastreams/cpp/wire_types.h>
+
 #include <memory>
 #include <string>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "fidl/fuchsia.mediastreams/cpp/wire_types.h"
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/lib/processing/gain.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/mix/packet_view.h"
 #include "src/media/audio/services/mixer/mix/simple_packet_queue_producer_stage.h"
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"
+#include "src/media/audio/services/mixer/mix/testing/fake_pipeline_thread.h"
 #include "src/media/audio/services/mixer/mix/testing/test_fence.h"
 
 namespace media_audio {
@@ -32,7 +34,8 @@ const auto kDefaultPresentationTimeToFracFrame =
     TimelineFunction(TimelineRate(kOneFrame.raw_value(), 1));
 
 TEST(MixerStageTest, Advance) {
-  MixerStage mixer_stage("mixer", kDefaultFormat, DefaultUnreadableClock(), 10);
+  MixerStage mixer_stage("mixer", kDefaultFormat, DefaultUnreadableClock(),
+                         std::make_shared<FakePipelineThread>(1), 10);
   mixer_stage.UpdatePresentationTimeToFracFrame(kDefaultPresentationTimeToFracFrame);
 
   // Add some sources.
@@ -94,7 +97,8 @@ TEST(MixerStageTest, Advance) {
 }
 
 TEST(MixerStageTest, Read) {
-  MixerStage mixer_stage("mixer", kDefaultFormat, DefaultUnreadableClock(), 5);
+  MixerStage mixer_stage("mixer", kDefaultFormat, DefaultUnreadableClock(),
+                         std::make_shared<FakePipelineThread>(1), 5);
   mixer_stage.UpdatePresentationTimeToFracFrame(kDefaultPresentationTimeToFracFrame);
 
   // Add two destination gain controls with constant gains, resulting in a scale of `10.0f`.
@@ -182,7 +186,8 @@ TEST(MixerStageTest, Read) {
 
 TEST(MixerStageTest, ReadMoreThanMaxFrameCount) {
   // Set maximum frame count to 5.
-  MixerStage mixer_stage("mixer", kDefaultFormat, DefaultUnreadableClock(), 5);
+  MixerStage mixer_stage("mixer", kDefaultFormat, DefaultUnreadableClock(),
+                         std::make_shared<FakePipelineThread>(1), 5);
   mixer_stage.UpdatePresentationTimeToFracFrame(kDefaultPresentationTimeToFracFrame);
 
   // Add two sources, and push packets to each source with a gap in-between.
@@ -259,7 +264,8 @@ TEST(MixerStageTest, ReadMoreThanMaxFrameCount) {
 }
 
 TEST(MixerStageTest, ReadSilent) {
-  MixerStage mixer_stage("mixer", kDefaultFormat, DefaultUnreadableClock(), 10);
+  MixerStage mixer_stage("mixer", kDefaultFormat, DefaultUnreadableClock(),
+                         std::make_shared<FakePipelineThread>(1), 10);
   mixer_stage.UpdatePresentationTimeToFracFrame(kDefaultPresentationTimeToFracFrame);
 
   // Mute destination gain.
@@ -297,13 +303,15 @@ TEST(MixerStageTest, ReadSilent) {
 }
 
 TEST(MixerStageTest, ReadNoInput) {
-  MixerStage mixer_stage("mixer", kDefaultFormat, DefaultUnreadableClock(), 10);
+  MixerStage mixer_stage("mixer", kDefaultFormat, DefaultUnreadableClock(),
+                         std::make_shared<FakePipelineThread>(1), 10);
   mixer_stage.UpdatePresentationTimeToFracFrame(kDefaultPresentationTimeToFracFrame);
   EXPECT_FALSE(mixer_stage.Read(DefaultCtx(), Fixed(0), 10).has_value());
 }
 
 TEST(MixerStageTest, SetDestGains) {
-  MixerStage mixer_stage("mixer", kDefaultFormat, DefaultUnreadableClock(), 1);
+  MixerStage mixer_stage("mixer", kDefaultFormat, DefaultUnreadableClock(),
+                         std::make_shared<FakePipelineThread>(1), 1);
   mixer_stage.UpdatePresentationTimeToFracFrame(kDefaultPresentationTimeToFracFrame);
   auto& gain_controls = mixer_stage.gain_controls();
 

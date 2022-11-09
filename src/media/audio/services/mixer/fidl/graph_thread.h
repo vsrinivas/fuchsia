@@ -31,7 +31,7 @@ class GraphThread {
   std::string_view name() const { return pipeline_thread()->name(); }
 
   // Returns the underlying PipelineThread.
-  virtual std::shared_ptr<PipelineThread> pipeline_thread() const = 0;
+  virtual PipelineThreadPtr pipeline_thread() const = 0;
 
   // Reports the thread's mix period, or zero if not a mix thread.
   virtual zx::duration mix_period() const = 0;
