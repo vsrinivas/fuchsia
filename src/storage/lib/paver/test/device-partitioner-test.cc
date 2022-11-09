@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
+#include <lib/abr/util.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/driver-integration-test/fixture.h>
@@ -41,6 +42,7 @@
 #include "src/storage/lib/paver/luis.h"
 #include "src/storage/lib/paver/nelson.h"
 #include "src/storage/lib/paver/pinecrest.h"
+#include "src/storage/lib/paver/pinecrest_abr_avbab_conversion.h"
 #include "src/storage/lib/paver/sherlock.h"
 #include "src/storage/lib/paver/test/test-utils.h"
 #include "src/storage/lib/paver/utils.h"
@@ -2223,6 +2225,153 @@ TEST_F(PinecrestPartitionerTests, SupportsPartition) {
   // Unsupported content type.
   EXPECT_FALSE(
       partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconA, "foo_type")));
+}
+
+struct TestAbrData {
+  AbrData data;
+
+  static bool ReadAbrMetaData(void* context, size_t size, uint8_t* buffer) {
+    memcpy(buffer, context, std::min(size, sizeof(AbrData)));
+    return true;
+  }
+
+  static bool WriteAbrMetaData(void* context, const uint8_t* buffer, size_t size) {
+    memcpy(context, buffer, std::min(size, sizeof(AbrData)));
+    return true;
+  }
+
+  AbrOps GetAbrOps() {
+    return AbrOps{
+        .context = &data,
+        .read_abr_metadata = ReadAbrMetaData,
+        .write_abr_metadata = WriteAbrMetaData,
+    };
+  }
+
+  AbrData GetAsAvbab() {
+    AbrData ret = data;
+    ret.crc32 = AbrBigEndianToHost(ret.crc32);
+    return ret;
+  }
+};
+
+TEST(PinecrestAbrAvbabConversionTest, AbrToAvbabCrcUpdated) {
+  TestAbrData abr_data;
+  AbrOps ops = abr_data.GetAbrOps();
+  // This will initialize abr data
+  AbrGetBootSlot(&ops, true, nullptr);
+  AbrData data = abr_data.data;
+  ASSERT_TRUE(abr_to_avbab(&data, kAbrSlotIndexA));
+  // Check that crc is little endian
+  ASSERT_EQ(AbrCrc32(&data, sizeof(data) - sizeof(uint32_t)), data.crc32);
+  // ab slot unbootable flag in reserve is not set.
+  ASSERT_EQ(abr_get_reserve2_ab_slot_unbootable(&data), 0);
+}
+
+TEST(PinecrestAbrAvbabConversionTest, AbrToAvbabUnbootableFlagUpdated) {
+  TestAbrData abr_data;
+  AbrOps ops = abr_data.GetAbrOps();
+  ASSERT_EQ(AbrMarkSlotUnbootable(&ops, kAbrSlotIndexA), kAbrResultOk);
+  ASSERT_EQ(AbrMarkSlotUnbootable(&ops, kAbrSlotIndexB), kAbrResultOk);
+
+  {
+    AbrData data = abr_data.data;
+    ASSERT_TRUE(abr_to_avbab(&data, kAbrSlotIndexA));
+    ASSERT_EQ(abr_get_reserve2_ab_slot_unbootable(&data), 1);
+    ASSERT_EQ(data.slot_data[kAbrSlotIndexA].successful_boot, 1);
+    ASSERT_EQ(AbrCrc32(&data, sizeof(data) - sizeof(uint32_t)), data.crc32);
+  }
+
+  {
+    AbrData data = abr_data.data;
+    ASSERT_TRUE(abr_to_avbab(&data, kAbrSlotIndexB));
+    ASSERT_EQ(abr_get_reserve2_ab_slot_unbootable(&data), 1);
+    ASSERT_EQ(data.slot_data[kAbrSlotIndexB].successful_boot, 1);
+    ASSERT_EQ(AbrCrc32(&data, sizeof(data) - sizeof(uint32_t)), data.crc32);
+  }
+}
+
+TEST(PinecrestAbrAvbabConversionTest, AbrToAvbabIgnoreInvalidAbr) {
+  TestAbrData abr_data;
+  AbrOps ops = abr_data.GetAbrOps();
+  AbrGetBootSlot(&ops, false, nullptr);
+
+  abr_data.data.crc32++;
+  AbrData data = abr_data.data;
+  ASSERT_TRUE(abr_to_avbab(&data, kAbrSlotIndexA));
+  // Data not changed
+  ASSERT_EQ(memcmp(&data, &abr_data.data, sizeof(data)), 0);
+}
+
+TEST(PinecrestAbrAvbabConversionTest, AvbabToAbrCrcUpdated) {
+  TestAbrData abr_data;
+  AbrOps ops = abr_data.GetAbrOps();
+  AbrGetBootSlot(&ops, true, nullptr);
+  AbrData avbab_data = abr_data.GetAsAvbab();
+  avbab_to_abr(&avbab_data);
+  ASSERT_EQ(avbab_data.crc32, abr_data.data.crc32);
+}
+
+TEST(PinecrestAbrAvbabConversionTest, AvbabToAbrABSlotUnbootable) {
+  TestAbrData abr_data;
+  AbrOps ops = abr_data.GetAbrOps();
+  ASSERT_EQ(AbrMarkSlotUnbootable(&ops, kAbrSlotIndexA), kAbrResultOk);
+  ASSERT_EQ(AbrMarkSlotUnbootable(&ops, kAbrSlotIndexB), kAbrResultOk);
+  AbrData data = abr_data.data;
+  ASSERT_TRUE(abr_to_avbab(&data, kAbrSlotIndexA));
+  avbab_to_abr(&data);
+  ASSERT_EQ(data.slot_data[kAbrSlotIndexA].tries_remaining, 0);
+  ASSERT_EQ(data.slot_data[kAbrSlotIndexA].successful_boot, 0);
+  ASSERT_EQ(data.slot_data[kAbrSlotIndexB].tries_remaining, 0);
+  ASSERT_EQ(data.slot_data[kAbrSlotIndexB].successful_boot, 0);
+}
+
+// A placeholder partition client backend for PinecrestAbrClient test.
+class TestPinecrestAbrClientBackend : public paver::PartitionClient {
+ public:
+  zx::result<size_t> GetBlockSize() { return zx::ok(1); }
+  zx::result<size_t> GetPartitionSize() { return zx::ok(1); }
+  zx::result<> Trim() { return zx::ok(); }
+  zx::result<> Flush() { return zx::ok(); }
+  fbl::unique_fd block_fd() { return {}; }
+  zx::result<> Read(const zx::vmo& vmo, size_t size) { return zx::ok(); }
+  zx::result<> Write(const zx::vmo& vmo, size_t vmo_size) { return zx::ok(); }
+};
+
+TEST(PinecrestAbrAvbabConversionTest, PinecrestAbrClient) {
+  fzl::OwnedVmoMapper mapper;
+  ASSERT_OK(mapper.CreateAndMap(sizeof(AbrData), "pinecrest-test"));
+  std::unique_ptr<paver::PartitionClient> partition(new TestPinecrestAbrClientBackend);
+  paver::PinecrestAbrClient client(std::move(partition), kAbrSlotIndexA);
+  EXPECT_TRUE(client.Read(mapper.vmo(), sizeof(AbrData)).is_ok());
+  EXPECT_TRUE(client.Write(mapper.vmo(), sizeof(AbrData)).is_ok());
+}
+
+TEST(PinecrestAbrAvbabConversionTest, PinecrestAbrClientFailsOnInvalidSize) {
+  fzl::OwnedVmoMapper mapper;
+  ASSERT_OK(mapper.CreateAndMap(sizeof(AbrData), "pinecrest-test"));
+  std::unique_ptr<paver::PartitionClient> partition(new TestPinecrestAbrClientBackend);
+  paver::PinecrestAbrClient client(std::move(partition), kAbrSlotIndexA);
+  EXPECT_TRUE(client.Read(mapper.vmo(), sizeof(AbrData) - 1).is_error());
+  EXPECT_TRUE(client.Write(mapper.vmo(), sizeof(AbrData) - 1).is_error());
+}
+
+TEST(PinecrestAbrAvbabConversionTest, PinecrestAbrClientWriteFailsConversionError) {
+  fzl::OwnedVmoMapper mapper;
+  ASSERT_OK(mapper.CreateAndMap(sizeof(AbrData), "pinecrest-test"));
+  std::unique_ptr<paver::PartitionClient> partition(new TestPinecrestAbrClientBackend);
+
+  // Create a A/B unbootable metadata state.
+  TestAbrData abr_data;
+  AbrOps ops = abr_data.GetAbrOps();
+  ASSERT_EQ(AbrMarkSlotUnbootable(&ops, kAbrSlotIndexA), kAbrResultOk);
+  ASSERT_EQ(AbrMarkSlotUnbootable(&ops, kAbrSlotIndexB), kAbrResultOk);
+  memcpy(mapper.start(), &abr_data, sizeof(abr_data));
+
+  // Give an R bootloader slot. This will trigger conversion error when it tries to
+  // mark the target bootloader slot successful.
+  paver::PinecrestAbrClient client(std::move(partition), kAbrSlotIndexR);
+  EXPECT_TRUE(client.Write(mapper.vmo(), sizeof(AbrData)).is_error());
 }
 
 class Vim3PartitionerTests : public GptDevicePartitionerTests {

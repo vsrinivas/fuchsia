@@ -14,18 +14,6 @@
 
 namespace paver {
 
-namespace {
-inline constexpr Arch GetCurrentArch() {
-#if defined(__x86_64__)
-  return Arch::kX64;
-#elif defined(__aarch64__)
-  return Arch::kArm64;
-#else
-#error "Unknown arch"
-#endif
-}
-}  // namespace
-
 void Sysconfig::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
                      fidl::ClientEnd<fuchsia_io::Directory> svc_root,
                      std::shared_ptr<Context> context,

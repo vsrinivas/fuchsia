@@ -45,17 +45,6 @@ using fuchsia_paver::wire::Configuration;
 using fuchsia_paver::wire::ConfigurationStatus;
 using fuchsia_paver::wire::WriteFirmwareResult;
 
-// Get the architecture of the currently running platform.
-inline constexpr Arch GetCurrentArch() {
-#if defined(__x86_64__)
-  return Arch::kX64;
-#elif defined(__aarch64__)
-  return Arch::kArm64;
-#else
-#error "Unknown arch"
-#endif
-}
-
 Partition PartitionType(Configuration configuration, Asset asset) {
   switch (asset) {
     case Asset::kKernel: {

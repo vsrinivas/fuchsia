@@ -63,6 +63,24 @@ class PinecrestAbrClientFactory : public abr::ClientFactory {
       std::shared_ptr<paver::Context> context) final;
 };
 
+class PinecrestAbrClient : public PartitionClient {
+ public:
+  PinecrestAbrClient(std::unique_ptr<paver::PartitionClient> client, AbrSlotIndex firmware_slot)
+      : client_(std::move(client)), firmware_slot_(firmware_slot) {}
+
+  zx::result<size_t> GetBlockSize() override { return client_->GetBlockSize(); }
+  zx::result<size_t> GetPartitionSize() override { return client_->GetPartitionSize(); }
+  zx::result<> Trim() override { return client_->Trim(); }
+  zx::result<> Flush() override { return client_->Flush(); }
+  fbl::unique_fd block_fd() override { return client_->block_fd(); }
+  zx::result<> Read(const zx::vmo& vmo, size_t size) override;
+  zx::result<> Write(const zx::vmo& vmo, size_t vmo_size) override;
+
+ private:
+  std::unique_ptr<paver::PartitionClient> client_;
+  AbrSlotIndex firmware_slot_;
+};
+
 }  // namespace paver
 
 #endif  // SRC_STORAGE_LIB_PAVER_PINECREST_H_

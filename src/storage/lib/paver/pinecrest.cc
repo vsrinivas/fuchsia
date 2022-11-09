@@ -4,6 +4,8 @@
 
 #include "src/storage/lib/paver/pinecrest.h"
 
+#include <fidl/fuchsia.boot/cpp/wire.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <lib/stdcompat/span.h>
 
 #include <algorithm>
@@ -14,12 +16,41 @@
 
 #include "src/lib/uuid/uuid.h"
 #include "src/storage/lib/paver/pave-logging.h"
+#include "src/storage/lib/paver/pinecrest_abr_avbab_conversion.h"
 #include "src/storage/lib/paver/utils.h"
 
 namespace paver {
 namespace {
 
 using uuid::Uuid;
+
+zx::result<AbrSlotIndex> QueryFirmwareSlot(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root) {
+  auto client_end = component::ConnectAt<fuchsia_boot::Arguments>(svc_root);
+  if (!client_end.is_ok()) {
+    ERROR("Failed to connect to boot argument service\n");
+    return client_end.take_error();
+  }
+  fidl::WireSyncClient client{std::move(*client_end)};
+
+  // Expect the bootloader to append a firmware slot item. Because CastOS only has A/B bootloader.
+  // We can be A/B slot bootloader but booting a R kernel slot, in which case we can't tell from
+  // libabr metadata.
+  auto result = client->GetString(fidl::StringView{"zvb.firmware_slot"});
+  if (!result.ok()) {
+    ERROR("Failed to get firmware slot\n");
+    return zx::error(result.status());
+  }
+
+  const auto response = result.Unwrap();
+  if (response->value.get() == "_a") {
+    return zx::ok(kAbrSlotIndexA);
+  } else if (response->value.get() == "_b") {
+    return zx::ok(kAbrSlotIndexB);
+  }
+
+  ERROR("Invalid firmware slot %s\n", response->value.data());
+  return zx::error(ZX_ERR_INTERNAL);
+}
 
 }  // namespace
 
@@ -182,21 +213,60 @@ zx::result<std::unique_ptr<DevicePartitioner>> PinecrestPartitionerFactory::New(
   return PinecrestPartitioner::Initialize(std::move(devfs_root), svc_root, block_device);
 }
 
+zx::result<> PinecrestAbrClient::Read(const zx::vmo& vmo, size_t size) {
+  if (size < sizeof(AbrData)) {
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+
+  auto res = client_->Read(vmo, size);
+  if (res.is_error()) {
+    return res;
+  }
+
+  fzl::VmoMapper mapper;
+  auto map_res = zx::make_result(mapper.Map(vmo));
+  if (map_res.is_error()) {
+    return map_res;
+  }
+
+  AbrData data;
+  memcpy(&data, mapper.start(), sizeof(data));
+  avbab_to_abr(&data);
+  memcpy(mapper.start(), &data, sizeof(data));
+  return zx::ok();
+}
+
+zx::result<> PinecrestAbrClient::Write(const zx::vmo& vmo, size_t vmo_size) {
+  if (vmo_size < sizeof(AbrData)) {
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+
+  fzl::VmoMapper mapper;
+  auto map_res = zx::make_result(mapper.Map(vmo));
+  if (map_res.is_error()) {
+    return map_res;
+  }
+
+  AbrData data;
+  memcpy(&data, mapper.start(), sizeof(data));
+  if (!abr_to_avbab(&data, firmware_slot_)) {
+    ERROR("Failed to convert libabr to avb ab\n");
+    return zx::error(ZX_ERR_INTERNAL);
+  }
+  memcpy(mapper.start(), &data, sizeof(data));
+  return client_->Write(vmo, vmo_size);
+}
+
 zx::result<std::unique_ptr<abr::Client>> PinecrestAbrClientFactory::New(
     fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
     std::shared_ptr<paver::Context> context) {
   fbl::unique_fd none;
   auto partitioner =
       PinecrestPartitioner::Initialize(std::move(devfs_root), std::move(svc_root), none);
-
   if (partitioner.is_error()) {
     return partitioner.take_error();
   }
 
-  // TODO(fxbug.dev/111512): Provide some translation to make sure that our libabr scheme is
-  // backward compatible. Instead of libabr, CastOS's earlier stage bootloader uses avb ab, which
-  // has the same meta data structure, but (1) uses little endian for crc, and (2) doesn't have the
-  // concept of a recovery slot (it will brick if both slots are marked unbootable).
   // ABR metadata has no need of a content type since it's always local rather
   // than provided in an update package, so just use the default content type.
   auto partition = partitioner->FindPartition(paver::PartitionSpec(paver::Partition::kAbrMeta));
@@ -204,7 +274,13 @@ zx::result<std::unique_ptr<abr::Client>> PinecrestAbrClientFactory::New(
     return partition.take_error();
   }
 
-  return abr::AbrPartitionClient::Create(std::move(partition.value()));
+  auto firmware_slot = QueryFirmwareSlot(svc_root);
+  if (firmware_slot.is_error()) {
+    return firmware_slot.take_error();
+  }
+
+  return abr::AbrPartitionClient::Create(
+      std::make_unique<PinecrestAbrClient>(std::move(partition.value()), *firmware_slot));
 }
 
 }  // namespace paver

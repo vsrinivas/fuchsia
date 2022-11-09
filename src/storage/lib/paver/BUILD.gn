@@ -185,10 +185,14 @@ source_set("luis") {
 }
 
 source_set("pinecrest") {
-  sources = [ "pinecrest.cc" ]
+  sources = [
+    "pinecrest.cc",
+    "pinecrest_abr_avbab_conversion.c",
+  ]
   deps = [
     ":gpt",
     ":paver-core",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp_wire",
     "//src/devices/lib/amlogic",
     "//src/lib/uuid",
     "//src/storage/gpt",

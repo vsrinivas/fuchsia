@@ -207,6 +207,17 @@ class DefaultPartitionerFactory : public DevicePartitionerFactory {
       std::shared_ptr<Context> context, const fbl::unique_fd& block_device) final;
 };
 
+// Get the architecture of the currently running platform.
+inline constexpr Arch GetCurrentArch() {
+#if defined(__x86_64__)
+  return Arch::kX64;
+#elif defined(__aarch64__)
+  return Arch::kArm64;
+#else
+#error "Unknown arch"
+#endif
+}
+
 }  // namespace paver
 
 #endif  // SRC_STORAGE_LIB_PAVER_DEVICE_PARTITIONER_H_

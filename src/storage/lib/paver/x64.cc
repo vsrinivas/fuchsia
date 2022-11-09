@@ -270,7 +270,7 @@ zx::result<std::unique_ptr<abr::Client>> X64AbrClientFactory::New(
     std::shared_ptr<paver::Context> context) {
   fbl::unique_fd none;
   auto partitioner = EfiDevicePartitioner::Initialize(std::move(devfs_root), std::move(svc_root),
-                                                      paver::Arch::kX64, none);
+                                                      GetCurrentArch(), none);
 
   if (partitioner.is_error()) {
     return partitioner.take_error();
