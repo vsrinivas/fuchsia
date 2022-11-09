@@ -602,16 +602,16 @@ template <bool IsRecursive>
 void WireEncodeEnvelope(size_t inline_size, EncodeFn<IsRecursive> encode_fn, WireEncoder* encoder,
                         fidl_envelope_v2_t* value, WirePosition position,
                         RecursionDepth<IsRecursive> recursion_depth) {
-  if (!encode_fn || *reinterpret_cast<void**>(value) == nullptr) {
-    // Unset or unknown envelope.
-    *position.As<fidl_envelope_v2_t>() = {};
-    return;
-  }
-
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
   if (inline_size <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+    if (!encode_fn || (value->flags & FIDL_ENVELOPE_FLAGS_INLINING_MASK) == 0) {
+      // Unset or unknown envelope.
+      *position.As<fidl_envelope_v2_t>() = {};
+      return;
+    }
+
     // Zero inline bytes (in case of padding).
     *position.As<uint32_t>() = 0;
 
@@ -620,6 +620,12 @@ void WireEncodeEnvelope(size_t inline_size, EncodeFn<IsRecursive> encode_fn, Wir
     fidl_envelope_v2_t* envelope = position.As<fidl_envelope_v2_t>();
     envelope->num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
     envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+    return;
+  }
+
+  if (!encode_fn || *reinterpret_cast<void**>(value) == nullptr) {
+    // Unset or unknown envelope.
+    *position.As<fidl_envelope_v2_t>() = {};
     return;
   }
 

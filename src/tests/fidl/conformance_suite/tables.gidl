@@ -86,6 +86,88 @@ success("TableFieldInlinedReserved") {
     },
 }
 
+// Unlike other inline-able table fields, the value portion of an unset flexible enum field is not
+// necessarily zero on instantiation, as either the compiler or the user (with an `@unknown`
+// override) is responible for picking a value to serve as a stand-in for the "default" case.
+// Because this kind of field is not zeroed by default, binding backends (especially wire-based
+// ones) need to take extra care during encoding when checking whether the field is unset.
+//
+// See fxbug.dev/114125 for a detailed description of this error case.
+success("TableFieldUnsetFlexibleEnumInlinedSigned") {
+    value = TableFieldUnsetFlexibleEnumInlinedStruct{
+        t: TableFieldUnsetFlexibleEnumInlined{
+            // `signed_enum` is purposely unset to test that it is properly zeroed in all cases.
+            unsigned_enum: 0x01,
+            always_set: false,
+        },
+    },
+    bytes = {
+        v1 = [
+            num(3):8, // max ordinal
+            repeat(0xff):8, // alloc present
+
+            num(0):8, // empty `signed_enum` envelope
+            num(0):8, // absent `signed_enum` pointer
+
+            num(8):8, // set 8-byte `unsigned_enum` envelope
+            repeat(0xff):8, // present `unsigned_enum` pointer
+
+            num(8):8, // set 8-byte `always_set` envelope
+            repeat(0xff):8, // present `always_set` pointer
+
+            num(1):8, // `unsigned_enum` out-of-line value
+
+            num(0):8, // `always_set` out-of-line value
+        ],
+        v2 = [
+            num(3):8, // max ordinal
+            repeat(0xff):8, // alloc present
+
+            num(0):8, // unset inlined `signed_enum`
+            num(1):6, num(1):2, // default inlined `unsigned_enum`
+            num(0):6, num(1):2, // inlined `always_set` bool, set to false
+        ],
+    },
+}
+
+// The same test as above, except this time it's the `unsigned_enum` field that is unset.
+success("TableFieldUnsetFlexibleEnumInlinedUnsigned") {
+    value = TableFieldUnsetFlexibleEnumInlinedStruct{
+        t: TableFieldUnsetFlexibleEnumInlined{
+            signed_enum: 0x01,
+            // `unsigned_enum` is purposely unset to test that it is properly zeroed in all cases.
+            always_set: false,
+        },
+    },
+    bytes = {
+        v1 = [
+            num(3):8, // max ordinal
+            repeat(0xff):8, // alloc present
+
+            num(8):8, // set 8-byte `signed_enum` envelope
+            repeat(0xff):8, // present `signed_enum` pointer
+
+            num(0):8, // empty `unsigned_enum` envelope
+            num(0):8, // absent `unsigned_enum` pointer
+
+            num(8):8, // set 8-byte `always_set` envelope
+            repeat(0xff):8, // present `always_set` pointer
+
+            num(1):8, // `signed_enum` out-of-line value
+
+            num(0):8, // `always_set` out-of-line value
+        ],
+        v2 = [
+            num(3):8, // max ordinal
+            repeat(0xff):8, // alloc present
+
+            num(1):6, num(1):2, // default inlined `signed_enum`
+            num(0):8, // unset inlined unsigned_enum
+            num(0):6, num(1):2, // inlined `always_set` bool, set to false
+        ],
+    },
+}
+
 // Tests tables whose fields are stored out of line in the wire format.
 success("TableFieldOutOfLine") {
     value = TableFieldOutOfLineStruct{

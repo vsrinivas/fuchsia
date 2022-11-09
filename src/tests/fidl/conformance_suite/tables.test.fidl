@@ -105,3 +105,19 @@ type TableFieldUnknownResource = resource table {};
 type TableFieldUnknownResourceStruct = resource struct {
     t TableFieldUnknownResource;
 };
+
+type TableFieldUnsetFlexibleEnumInlined = table {
+    1: signed_enum flexible enum : int32 {
+        DEFAULT = 1;
+    };
+    2: unsigned_enum flexible enum : uint16 {
+        DEFAULT = 1;
+    };
+    // This field is necessary to ensure that the `unsigned_enum` field is not truncated out of
+    // existence when unset.
+    3: always_set bool;
+};
+
+type TableFieldUnsetFlexibleEnumInlinedStruct = struct {
+    t TableFieldUnsetFlexibleEnumInlined;
+};
