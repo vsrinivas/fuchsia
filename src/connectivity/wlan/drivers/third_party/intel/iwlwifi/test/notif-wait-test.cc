@@ -41,12 +41,6 @@ enum FakeCommandId : uint16_t {
     },                     \
   }
 
-class NotifWaitTest : public ::zxtest::Test {
- public:
-  NotifWaitTest() {}
-  ~NotifWaitTest() {}
-};
-
 // Helper function to create a wait_data and a wait_entry to receive the fake cmd.
 static void helper_create_fake_cmd(struct iwl_notif_wait_data* wait_data,
                                    struct iwl_notification_wait* wait_entry, uint16_t fake_cmd) {
@@ -61,104 +55,98 @@ static void helper_test_case_init(struct iwl_notif_wait_data* wait_data,
   helper_create_fake_cmd(wait_data, wait_entry, FAKE_CMD_1);
 }
 
+class NotifWaitTest : public ::zxtest::Test {
+ public:
+  NotifWaitTest() {
+    helper_test_case_init(&wait_data_, &wait_entry_);
+  }
+  ~NotifWaitTest() { mtx_destroy(&wait_data_.notif_wait_lock); }
+
+ protected:
+  struct iwl_notif_wait_data wait_data_;     // A global wait data
+  struct iwl_notification_wait wait_entry_;  // A local wait entry used to wait for a specific event
+};
+
 // The normal case. Expect we can get the notification.
 TEST_F(NotifWaitTest, NormalCase) {
-  struct iwl_notif_wait_data wait_data;     // A global wait data
-  struct iwl_notification_wait wait_entry;  // A local wait entry used to wait for a specific event
-  helper_test_case_init(&wait_data, &wait_entry);
-
   // Here comes a packet. This will mark the notification has been triggered.
   struct iwl_rx_packet pkt = FAKE_PKT_1;
-  iwl_notification_wait_notify(&wait_data, &pkt);
+  iwl_notification_wait_notify(&wait_data_, &pkt);
 
   // Wait for the entry and expect success,
-  EXPECT_EQ(ZX_OK, iwl_wait_notification(&wait_data, &wait_entry, ZX_TIME_INFINITE_PAST));
+  EXPECT_EQ(ZX_OK, iwl_wait_notification(&wait_data_, &wait_entry_, ZX_TIME_INFINITE_PAST));
 }
 
 // Without a trigger, the second wait should time out.
 TEST_F(NotifWaitTest, SecondWaitWithoutTriggerShouldTimeOut) {
-  struct iwl_notif_wait_data wait_data;     // A global wait data
-  struct iwl_notification_wait wait_entry;  // A local wait entry used to wait for a specific event
-  helper_test_case_init(&wait_data, &wait_entry);
-
   // The first wait. Should be successful.
   struct iwl_rx_packet pkt = FAKE_PKT_1;
-  iwl_notification_wait_notify(&wait_data, &pkt);
-  EXPECT_EQ(ZX_OK, iwl_wait_notification(&wait_data, &wait_entry, ZX_TIME_INFINITE_PAST));
+  iwl_notification_wait_notify(&wait_data_, &pkt);
+  EXPECT_EQ(ZX_OK, iwl_wait_notification(&wait_data_, &wait_entry_, ZX_TIME_INFINITE_PAST));
 
   // The second wait should time out because it is not triggered.
-  helper_create_fake_cmd(&wait_data, &wait_entry, FAKE_CMD_1);
+  helper_create_fake_cmd(&wait_data_, &wait_entry_, FAKE_CMD_1);
   EXPECT_EQ(ZX_ERR_TIMED_OUT,
-            iwl_wait_notification(&wait_data, &wait_entry, ZX_TIME_INFINITE_PAST));
+            iwl_wait_notification(&wait_data_, &wait_entry_, ZX_TIME_INFINITE_PAST));
 }
 
 // Test 2 rounds of trigger/wait (same pkt). Expect both should be successful.
 TEST_F(NotifWaitTest, CanBeTriggeredAgain) {
-  struct iwl_notif_wait_data wait_data;     // A global wait data
-  struct iwl_notification_wait wait_entry;  // A local wait entry used to wait for a specific event
-  helper_test_case_init(&wait_data, &wait_entry);
-
   // The first wait. Should be successful.
   struct iwl_rx_packet pkt = FAKE_PKT_1;
-  iwl_notification_wait_notify(&wait_data, &pkt);
-  EXPECT_EQ(ZX_OK, iwl_wait_notification(&wait_data, &wait_entry, ZX_TIME_INFINITE_PAST));
+  iwl_notification_wait_notify(&wait_data_, &pkt);
+  EXPECT_EQ(ZX_OK, iwl_wait_notification(&wait_data_, &wait_entry_, ZX_TIME_INFINITE_PAST));
 
   // The second wait. Should be successful as well.
-  helper_create_fake_cmd(&wait_data, &wait_entry, FAKE_CMD_1);
-  iwl_notification_wait_notify(&wait_data, &pkt);
-  EXPECT_EQ(ZX_OK, iwl_wait_notification(&wait_data, &wait_entry, ZX_TIME_INFINITE_PAST));
+  helper_create_fake_cmd(&wait_data_, &wait_entry_, FAKE_CMD_1);
+  iwl_notification_wait_notify(&wait_data_, &pkt);
+  EXPECT_EQ(ZX_OK, iwl_wait_notification(&wait_data_, &wait_entry_, ZX_TIME_INFINITE_PAST));
 }
 
 // We expect one command, but only other command is notified.
 TEST_F(NotifWaitTest, TestNotInterestedCommand) {
-  struct iwl_notif_wait_data wait_data;     // A global wait data
-  struct iwl_notification_wait wait_entry;  // A local wait entry used to wait for a specific event
-  helper_test_case_init(&wait_data, &wait_entry);
-
   // Here comes a packet. But not what we are interested. Expect it will be ignored.
   struct iwl_rx_packet pkt = FAKE_PKT_2;
-  iwl_notification_wait_notify(&wait_data, &pkt);
+  iwl_notification_wait_notify(&wait_data_, &pkt);
 
   // Wait for the notification, but expect timeout.
   EXPECT_EQ(ZX_ERR_TIMED_OUT,
-            iwl_wait_notification(&wait_data, &wait_entry, ZX_TIME_INFINITE_PAST));
+            iwl_wait_notification(&wait_data_, &wait_entry_, ZX_TIME_INFINITE_PAST));
 }
 
 // Expect the waiting is aborted.
 TEST_F(NotifWaitTest, TestAbortion) {
-  struct iwl_notif_wait_data wait_data;     // A global wait data
-  struct iwl_notification_wait wait_entry;  // A local wait entry used to wait for a specific event
-  helper_test_case_init(&wait_data, &wait_entry);
-
   // Abort all.
-  iwl_abort_notification_waits(&wait_data);
+  iwl_abort_notification_waits(&wait_data_);
 
   // Expect aborted.
-  EXPECT_EQ(ZX_ERR_CANCELED, iwl_wait_notification(&wait_data, &wait_entry, ZX_TIME_INFINITE_PAST));
+  EXPECT_EQ(ZX_ERR_CANCELED, iwl_wait_notification(&wait_data_, &wait_entry_, ZX_TIME_INFINITE_PAST));
 }
 
 // Try to trigger it first, then abort it.
 TEST_F(NotifWaitTest, TestTriggeredThenAborted) {
-  struct iwl_notif_wait_data wait_data;     // A global wait data
-  struct iwl_notification_wait wait_entry;  // A local wait entry used to wait for a specific event
-  helper_test_case_init(&wait_data, &wait_entry);
-
   // Trigger
   struct iwl_rx_packet pkt = FAKE_PKT_1;
-  iwl_notification_wait_notify(&wait_data, &pkt);
+  iwl_notification_wait_notify(&wait_data_, &pkt);
 
   // Abort
-  iwl_abort_notification_waits(&wait_data);
+  iwl_abort_notification_waits(&wait_data_);
 
   // Expect aborted.
-  EXPECT_EQ(ZX_ERR_CANCELED, iwl_wait_notification(&wait_data, &wait_entry, ZX_TIME_INFINITE_PAST));
+  EXPECT_EQ(ZX_ERR_CANCELED, iwl_wait_notification(&wait_data_, &wait_entry_, ZX_TIME_INFINITE_PAST));
 }
+
+class NotificationWaitTest : public ::zxtest::Test {
+ public:
+  NotificationWaitTest() {}
+  ~NotificationWaitTest() {}
+};
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // Below tests only focus on iwl_notification_wait().
 
-TEST_F(NotifWaitTest, TestEmptyWaitList) {
+TEST_F(NotificationWaitTest, TestEmptyWaitList) {
   // A global wait data.
   struct iwl_notif_wait_data wait_data;
   iwl_notification_wait_init(&wait_data);
@@ -167,32 +155,25 @@ TEST_F(NotifWaitTest, TestEmptyWaitList) {
 
   struct iwl_rx_packet pkt = FAKE_PKT_1;
   EXPECT_FALSE(iwl_notification_wait(&wait_data, &pkt));
+  mtx_destroy(&wait_data.notif_wait_lock);
 }
 
 TEST_F(NotifWaitTest, TestAbortedThenTriggered) {
-  struct iwl_notif_wait_data wait_data;     // A global wait data
-  struct iwl_notification_wait wait_entry;  // A local wait entry used to wait for a specific event
-  helper_test_case_init(&wait_data, &wait_entry);
-
   // Abort
-  iwl_abort_notification_waits(&wait_data);
+  iwl_abort_notification_waits(&wait_data_);
 
   // Trigger it and expect we cannot find it.
   struct iwl_rx_packet pkt = FAKE_PKT_1;
-  EXPECT_FALSE(iwl_notification_wait(&wait_data, &pkt));
+  EXPECT_FALSE(iwl_notification_wait(&wait_data_, &pkt));
 }
 
 TEST_F(NotifWaitTest, TestRemove) {
-  struct iwl_notif_wait_data wait_data;     // A global wait data
-  struct iwl_notification_wait wait_entry;  // A local wait entry used to wait for a specific event
-  helper_test_case_init(&wait_data, &wait_entry);
-
   // Remove it
-  iwl_remove_notification(&wait_data, &wait_entry);
+  iwl_remove_notification(&wait_data_, &wait_entry_);
 
   // Trigger it and expect we cannot find it.
   struct iwl_rx_packet pkt = FAKE_PKT_1;
-  EXPECT_FALSE(iwl_notification_wait(&wait_data, &pkt));
+  EXPECT_FALSE(iwl_notification_wait(&wait_data_, &pkt));
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -225,7 +206,7 @@ static void helper_create_fn(struct iwl_notif_wait_data* wait_data,
   iwl_init_notification_wait(wait_data, wait_entry, cmds, std::size(cmds), fn, fn_data);
 }
 
-TEST_F(NotifWaitTest, FnReturnsTrue) {
+TEST_F(NotificationWaitTest, FnReturnsTrue) {
   struct iwl_notif_wait_data wait_data;     // A global wait data.
   struct iwl_notification_wait wait_entry;  // A local wait entry used to wait for a specific event
   bool fn_data = false;
@@ -235,9 +216,10 @@ TEST_F(NotifWaitTest, FnReturnsTrue) {
   struct iwl_rx_packet pkt = FAKE_PKT_1;
   EXPECT_TRUE(iwl_notification_wait(&wait_data, &pkt));
   EXPECT_TRUE(fn_data);
+  mtx_destroy(&wait_data.notif_wait_lock);
 }
 
-TEST_F(NotifWaitTest, FnReturnsFalse) {
+TEST_F(NotificationWaitTest, FnReturnsFalse) {
   struct iwl_notif_wait_data wait_data;     // A global wait data.
   struct iwl_notification_wait wait_entry;  // A local wait entry used to wait for a specific event
   bool fn_data = false;
@@ -247,6 +229,7 @@ TEST_F(NotifWaitTest, FnReturnsFalse) {
   struct iwl_rx_packet pkt = FAKE_PKT_1;
   EXPECT_FALSE(iwl_notification_wait(&wait_data, &pkt));
   EXPECT_FALSE(fn_data);
+  mtx_destroy(&wait_data.notif_wait_lock);
 }
 
 }  // namespace

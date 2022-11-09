@@ -1055,6 +1055,8 @@ static void iwl_op_mode_mvm_stop(struct iwl_op_mode* op_mode) {
   iwl_mvm_tof_clean(mvm);
 
   iwl_fw_runtime_free(&mvm->fwrt);
+
+  mtx_destroy(&mvm->notif_wait.notif_wait_lock);
   mtx_destroy(&mvm->mutex);
   mtx_destroy(&mvm->d0i3_suspend_mutex);
   mtx_destroy(&mvm->async_handlers_lock);
