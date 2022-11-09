@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {crate::errors::FxfsError, fuchsia_zircon::Status};
+use {
+    crate::{errors::FxfsError, log::*},
+    fuchsia_zircon::Status,
+};
 
 impl From<FxfsError> for Status {
     fn from(err: FxfsError) -> Status {
@@ -35,6 +38,8 @@ pub(super) fn map_to_status(err: anyhow::Error) -> Status {
     } else if let Some(fxfs_error) = err.root_cause().downcast_ref::<FxfsError>() {
         fxfs_error.clone().into()
     } else {
+        // Print the internal error if we re-map it because we will lose any context after this.
+        warn!("Internal error: {:?}", err);
         Status::INTERNAL
     }
 }
