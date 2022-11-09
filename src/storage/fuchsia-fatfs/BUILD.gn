@@ -122,10 +122,6 @@ test("fat_filename_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/fs_test",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 storage_driver_test_realm_v2_component("fatfs-fat-filename-tests") {

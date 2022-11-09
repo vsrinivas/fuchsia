@@ -55,8 +55,7 @@ StartupService::StartupService(async_dispatcher_t* dispatcher, ConfigureCallback
 
 void StartupService::Start(StartRequestView request, StartCompleter::Sync& completer) {
   std::unique_ptr<block_client::RemoteBlockDevice> device;
-  zx_status_t status =
-      block_client::RemoteBlockDevice::Create(request->device.TakeChannel(), &device);
+  zx_status_t status = block_client::RemoteBlockDevice::Create(std::move(request->device), &device);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Could not initialize block device";
     completer.ReplyError(status);
@@ -71,8 +70,8 @@ void StartupService::Start(StartRequestView request, StartCompleter::Sync& compl
   }
   auto [bcache, bcache_read_only] = *std::move(bcache_res);
 
-  zx::result<> res = configure_(std::move(bcache),
-                                ParseMountOptions(std::move(request->options), bcache_read_only));
+  zx::result<> res =
+      configure_(std::move(bcache), ParseMountOptions(request->options, bcache_read_only));
   if (res.is_error()) {
     completer.ReplyError(res.status_value());
     return;
@@ -82,8 +81,7 @@ void StartupService::Start(StartRequestView request, StartCompleter::Sync& compl
 
 void StartupService::Format(FormatRequestView request, FormatCompleter::Sync& completer) {
   std::unique_ptr<block_client::RemoteBlockDevice> device;
-  zx_status_t status =
-      block_client::RemoteBlockDevice::Create(request->device.TakeChannel(), &device);
+  zx_status_t status = block_client::RemoteBlockDevice::Create(std::move(request->device), &device);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Could not initialize block device: " << zx_status_get_string(status);
     completer.ReplyError(status);
@@ -103,7 +101,7 @@ void StartupService::Format(FormatRequestView request, FormatCompleter::Sync& co
     return;
   }
 
-  zx::result mkfs_res = Mkfs(ParseFormatOptions(std::move(request->options)), bcache.get());
+  zx::result mkfs_res = Mkfs(ParseFormatOptions(request->options), bcache.get());
   if (mkfs_res.is_error()) {
     FX_LOGS(ERROR) << "Failed to format minfs: " << mkfs_res.status_string();
     completer.ReplyError(mkfs_res.status_value());
@@ -114,8 +112,7 @@ void StartupService::Format(FormatRequestView request, FormatCompleter::Sync& co
 
 void StartupService::Check(CheckRequestView request, CheckCompleter::Sync& completer) {
   std::unique_ptr<block_client::RemoteBlockDevice> device;
-  zx_status_t status =
-      block_client::RemoteBlockDevice::Create(request->device.TakeChannel(), &device);
+  zx_status_t status = block_client::RemoteBlockDevice::Create(std::move(request->device), &device);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Could not initialize block device";
     completer.ReplyError(status);

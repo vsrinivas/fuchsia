@@ -9,7 +9,6 @@ executable("dd") {
     "//sdk/lib/fdio",
   ]
 
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
+  # TODO(https://fxbug.dev/114596): Remove.
   configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }

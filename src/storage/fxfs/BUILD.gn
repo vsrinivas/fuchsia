@@ -287,10 +287,6 @@ test("fxfs-interop-fs") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 storage_driver_test_realm_v2_component("fxfs-interop-fs-tests") {

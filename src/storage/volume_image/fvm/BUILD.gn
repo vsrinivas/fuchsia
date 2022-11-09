@@ -201,10 +201,6 @@ test("fvm_sparse_image_reader_test") {
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 storage_driver_test_realm_v2_component(

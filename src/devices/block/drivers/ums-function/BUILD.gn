@@ -43,8 +43,7 @@ fuchsia_driver("ums-function-driver") {
     "//zircon/system/ulib/sync",
   ]
 
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
+  # TODO(https://fxbug.dev/111342): Remove.
   configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 

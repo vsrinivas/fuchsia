@@ -124,9 +124,6 @@ static_library("minfs") {
       "vnode_allocation.cc",
     ]
     public_deps += [
-      # bcache.h includes fuchsia/hardware/block/c/fidl.h.
-      "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
-
       # fsck.h includes block-client/cpp/block-device.h
       "//src/lib/storage/block_client/cpp",
 
@@ -143,9 +140,7 @@ static_library("minfs") {
       "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_cpp_wire",
     ]
     deps += [
-      "//sdk/fidl/fuchsia.device:fuchsia.device_c",
       "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
-      "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
       "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
       "//sdk/lib/fidl",
       "//sdk/lib/inspect/service/cpp:cpp",
@@ -185,15 +180,6 @@ static_library("minfs") {
       "//src/zircon/lib/zircon:zircon-headers",
     ]
   }
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 group("tests") {

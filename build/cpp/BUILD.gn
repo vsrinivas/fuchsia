@@ -129,7 +129,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/media/audio/tools/audio-driver-ctl:bin",
     "//src/modular/lib/fidl:environment",
     "//src/power/shutdown-shim",
-    "//src/storage/minfs",
     "//src/sys/appmgr:appmgr_for_test",
     "//src/sys/appmgr:bin",
     "//src/sys/appmgr:lib",

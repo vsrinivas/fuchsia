@@ -42,10 +42,6 @@ source_set("minfs-partition") {
     "//src/storage/minfs",
     "//src/storage/volume_image/utils:block-utils",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 source_set("empty-partition") {
@@ -348,10 +344,6 @@ source_set("adapter-tests") {
   if (is_host) {
     deps += [ ":host-test-images" ]
   }
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("adapter-integration-test") {
@@ -376,10 +368,6 @@ test("adapter-integration-test") {
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/fdio-caller",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 storage_driver_test_realm_v2_component("adapter-integration-test-component") {

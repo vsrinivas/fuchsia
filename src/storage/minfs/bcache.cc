@@ -22,9 +22,7 @@
 #include <storage/buffer/vmo_buffer.h>
 #include <storage/operation/operation.h>
 
-#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/storage/minfs/format.h"
-#include "src/storage/minfs/minfs_private.h"
 
 namespace minfs {
 
@@ -75,29 +73,6 @@ zx::result<> Bcache::Sync() {
   block_fifo_request_t request = {};
   request.opcode = BLOCKIO_FLUSH;
   return zx::make_result(device_->FifoTransaction(&request, 1));
-}
-
-zx::result<std::unique_ptr<block_client::BlockDevice>> FdToBlockDevice(fbl::unique_fd& fd) {
-  zx::channel channel, server;
-  zx_status_t status = zx::channel::create(0, &channel, &server);
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-  fdio_cpp::UnownedFdioCaller caller(fd.get());
-  status = fidl::WireCall<fuchsia_io::Node>(zx::unowned_channel(caller.borrow_channel()))
-               ->Clone(fuchsia_io::wire::OpenFlags::kCloneSameRights, std::move(server))
-               .status();
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-  std::unique_ptr<block_client::RemoteBlockDevice> device;
-  status = block_client::RemoteBlockDevice::Create(std::move(channel), &device);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "cannot create block device: " << status;
-    return zx::error(status);
-  }
-
-  return zx::ok(std::move(device));
 }
 
 zx::result<std::unique_ptr<Bcache>> Bcache::Create(

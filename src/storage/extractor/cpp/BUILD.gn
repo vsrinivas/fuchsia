@@ -25,10 +25,6 @@ test("fvm_extractor_unit_test") {
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/fdio-caller",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("disk_extractor_unit_test") {
@@ -52,10 +48,6 @@ test("disk_extractor_unit_test") {
     "//zircon/third_party/ulib/cksum",
   ]
   data_deps = [ "//src/storage/bin/blobfs" ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_component("disk-extractor-unit-test-component") {
@@ -134,8 +126,4 @@ static_library("disk_extractor") {
   } else {
     sources += [ "blobfs_extractor_host.cc" ]
   }
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }

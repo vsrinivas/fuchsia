@@ -40,9 +40,6 @@ namespace minfs {
 
 #ifdef __Fuchsia__
 
-// A helper function for converting "fd" to "BlockDevice".
-zx::result<std::unique_ptr<block_client::BlockDevice>> FdToBlockDevice(fbl::unique_fd& fd);
-
 class Bcache : public fs::DeviceTransactionHandler, public storage::VmoidRegistry {
  public:
   // Not copyable or movable

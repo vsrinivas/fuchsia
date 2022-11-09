@@ -52,6 +52,7 @@
 #include "encrypted-volume.h"
 #include "extract-metadata.h"
 #include "src/devices/block/drivers/block-verity/verified-volume-client.h"
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/lib/storage/fs_management/cpp/admin.h"
 #include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
@@ -623,7 +624,7 @@ zx_status_t BlockDevice::CheckFilesystem() {
     case fs_management::kDiskFormatMinfs: {
       // With minfs, we can run the library directly without needing to start a new process.
       uint64_t device_size = info->block_size * info->block_count / minfs::kMinfsBlockSize;
-      auto device_or = minfs::FdToBlockDevice(fd_);
+      auto device_or = block_client::RemoteBlockDevice::Create(fd_.get());
       if (device_or.is_error()) {
         FX_LOGS(ERROR) << "Cannot convert fd to block device: " << device_or.error_value();
         return device_or.error_value();
@@ -692,7 +693,7 @@ zx_status_t BlockDevice::FormatFilesystem() {
       // With minfs, we can run the library directly without needing to start a new process.
       FX_LOGS(INFO) << "Formatting minfs.";
       uint64_t blocks = info->block_size * info->block_count / minfs::kMinfsBlockSize;
-      auto device_or = minfs::FdToBlockDevice(fd_);
+      auto device_or = block_client::RemoteBlockDevice::Create(fd_.get());
       if (device_or.is_error()) {
         FX_LOGS(ERROR) << "Cannot convert fd to block device: " << device_or.error_value();
         return device_or.status_value();

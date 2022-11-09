@@ -15,8 +15,6 @@ test("storage-metrics") {
   sources = [ "storage-metrics-test.cc" ]
   deps = [
     "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
-    "//sdk/fidl/fuchsia.storage.metrics:fuchsia.storage.metrics_c",
     "//sdk/lib/fdio",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/storage-metrics",

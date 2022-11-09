@@ -38,10 +38,6 @@ test("cli-option-validation-test") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/id_allocator",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_unittest_component("cli-option-validation-tests-component") {

@@ -4,6 +4,8 @@
 
 #include "src/storage/factory/factoryfs/format.h"
 
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
+
 #include <zxtest/zxtest.h>
 
 #include "src/lib/storage/block_client/cpp/fake_block_device.h"
@@ -28,7 +30,7 @@ zx_status_t CheckMountability(std::unique_ptr<BlockDevice> device) {
 // Formatting filesystems should fail on devices that cannot be written.
 TEST(FormatFilesystemTest, CannotFormatReadOnlyDevice) {
   auto device = std::make_unique<FakeBlockDevice>(1 << 20, 512);
-  device->SetInfoFlags(fuchsia_hardware_block_FLAG_READONLY);
+  device->SetInfoFlags(fuchsia_hardware_block::wire::kFlagReadonly);
   ASSERT_EQ(ZX_ERR_ACCESS_DENIED, FormatFilesystem(device.get()));
 }
 
