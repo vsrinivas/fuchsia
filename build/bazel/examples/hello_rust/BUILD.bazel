@@ -44,10 +44,8 @@ fuchsia_component(
 fuchsia_package(
     name = "pkg",
     package_name = "hello_rust",
+    components = [":component"],
     visibility = ["//visibility:public"],
-    deps = [
-        ":component",
-    ],
 )
 
 rust_doc(
