@@ -7,11 +7,11 @@ use {
     chrono::{TimeZone, Utc},
     fxfs::{
         crypt::Crypt,
-        filesystem::OpenFxFilesystem,
+        filesystem::{Filesystem, OpenFxFilesystem},
         fsck,
         object_handle::{GetProperties, ObjectHandle, ReadObjectHandle, WriteObjectHandle},
         object_store::{
-            directory::replace_child,
+            directory::{replace_child, ReplacedChild},
             transaction::{Options, TransactionHandler},
             volume::root_volume,
             Directory, HandleOptions, ObjectDescriptor, ObjectStore,
@@ -104,9 +104,15 @@ pub async fn unlink(
 ) -> Result<(), Error> {
     let dir = walk_dir(vol, path.parent().unwrap()).await?;
     let mut transaction = (*fs).clone().new_transaction(&[], Options::default()).await?;
-    replace_child(&mut transaction, None, (&dir, path.file_name().unwrap().to_str().unwrap()))
-        .await?;
+    let replaced_child =
+        replace_child(&mut transaction, None, (&dir, path.file_name().unwrap().to_str().unwrap()))
+            .await?;
     transaction.commit().await?;
+    // In FxFile, when a handle goes out of scope we'd deref and potentially tombstone
+    // it (delete it from graveyard). We don't refcount so we just manually queue tombstone here.
+    if let ReplacedChild::File(object_id) = replaced_child {
+        fs.graveyard().tombstone(dir.store().store_object_id(), object_id).await?;
+    }
     Ok(())
 }
 

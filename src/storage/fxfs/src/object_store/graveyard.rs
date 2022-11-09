@@ -191,7 +191,9 @@ impl Graveyard {
         receiver.await.unwrap();
     }
 
-    async fn tombstone(&self, store_id: u64, object_id: u64) -> Result<(), Error> {
+    /// Immediately tombstones (discards) an object in the graveyard.
+    /// NB: Code should generally use |queue_tombstone| instead.
+    pub async fn tombstone(&self, store_id: u64, object_id: u64) -> Result<(), Error> {
         let store = self
             .object_manager
             .store(store_id)

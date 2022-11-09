@@ -9,7 +9,6 @@ use {
     fxfs::{
         crypt::{insecure::InsecureCrypt, Crypt},
         filesystem::{mkfs_with_default, Filesystem, FxFilesystem, SyncOptions},
-        object_store::journal,
         serialized_types::LATEST_VERSION,
     },
     std::{
@@ -84,9 +83,9 @@ pub async fn create_image() -> Result<(), Error> {
     ops::put(&fs, &vol, &Path::new("some/file.txt"), EXPECTED_FILE_CONTENT.to_vec()).await?;
     ops::put(&fs, &vol, &Path::new("some/deleted.txt"), EXPECTED_FILE_CONTENT.to_vec()).await?;
     ops::unlink(&fs, &vol, &Path::new("some/deleted.txt")).await?;
-    // Write a bunch of stuff to the journal, forcing a journal reclaim.
-    // We write two journal blocks per iteration here. Aim for minimal required to ensure a reclaim.
-    let num_iters = (journal::DEFAULT_RECLAIM_SIZE / journal::BLOCK_SIZE / 2) + 1;
+    // Write enough stuff to the journal (journal::BLOCK_SIZE per sync) to ensure we would fill
+    // the disk without reclaim of both journal and file data.
+    let num_iters = 2000;
     let before_generation = fs.super_block().generation;
     for _i in 0..num_iters {
         ops::put(&fs, &vol, &Path::new("some/repeat.txt"), EXPECTED_FILE_CONTENT.to_vec()).await?;
@@ -94,6 +93,7 @@ pub async fn create_image() -> Result<(), Error> {
         ops::unlink(&fs, &vol, &Path::new("some/repeat.txt")).await?;
         fs.sync(SyncOptions { flush_device: true, precondition: None }).await?;
     }
+    // Ensure that we have reclaimed the journal at least once.
     assert_ne!(before_generation, fs.super_block().generation);
     fs.close().await?;
     save_device(device, &path).await?;
