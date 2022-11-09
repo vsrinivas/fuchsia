@@ -18,16 +18,24 @@ import("distribution_manifest.gni")
 #
 # Parameters
 #
-#   deps (optional)
-#     [list of labels] The targets to generate a manifest for.
-#     See `gn help` for more details.
+#   * deps, data_deps
+#     - Optional: The targets to generate a manifest for. See generated_file().
+#     - Default: []
+#     - Type: list(label)
 #
-#   data_deps, testonly, visibility, metadata (optional)
-#     See `gn help`.
+#   * outputs
+#     - Optional: Singleton list containing the path to the manifest file.
+#     - Default: [ "$target_gen_dir/$target_name.fini" ]
+#     - Type: list(path)
 #
-#   outputs (optional)
-#     Singleton list containing the path to the manifest file.
-#     Defaults to `[ "$target_gen_dir/$target_name.fini" ]`.
+#   * prefix
+#     - Optional: Path prefix for destination paths in the manifest.
+#       If this is not "", then it's prepended with a "/" separator.
+#     - Default: ""
+#     - Type: path
+#
+#   * testonly, visibility, metadata
+#     - Optional: See `gn help`.
 template("fini_manifest") {
   main_target = target_name
   generate_target = "${target_name}_dist"
@@ -54,6 +62,7 @@ template("fini_manifest") {
                              # any barrier it defines is properly reflected in
                              # the target's deps.
                              "metadata",
+                             "prefix",
                              "testonly",
                            ])
 

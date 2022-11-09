@@ -473,7 +473,7 @@ class BootfsView {
     using namespace std::literals;
 
     if (!name.empty() && name.back() == '/') {
-      name.remove_prefix(1);
+      name.remove_suffix(1);
     }
 
     BootfsView current_dir = *this;
@@ -493,7 +493,7 @@ class BootfsView {
         // associated dirent.
         const auto* dirent = reader_->DirentAt(it.dirent_offset());
         std::string_view full_name{dirent->name, dirent->name_len};
-        size_t subdir_prefix_size = directory().size() + name.size() + 1;  // Include trailing '/'.
+        size_t subdir_prefix_size = dir_prefix_.size() + name.size() + 1;  // Include trailing '/'.
         auto subdir_prefix = full_name.substr(0, subdir_prefix_size);
 
         current_dir.ignore_error();

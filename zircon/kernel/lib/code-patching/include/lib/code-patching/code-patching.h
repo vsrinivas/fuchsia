@@ -8,16 +8,18 @@
 #define ZIRCON_KERNEL_LIB_CODE_PATCHING_INCLUDE_LIB_CODE_PATCHING_CODE_PATCHING_H_
 
 #include <lib/arch/cache.h>
+#include <lib/fit/function.h>
 #include <lib/fit/result.h>
 #include <lib/zbitl/items/bootfs.h>
+#include <stddef.h>
 #include <stdio.h>
+#include <string.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 
-#include <cstddef>
-#include <cstring>
-
 #include <ktl/byte.h>
+#include <ktl/move.h>
+#include <ktl/optional.h>
 #include <ktl/span.h>
 #include <ktl/string_view.h>
 
@@ -51,9 +53,10 @@ static_assert(std::has_unique_object_representations_v<Directive>);
 //
 // Patcher provides methods for patching provided instruction ranges in the
 // supported ways (e.g., nop-fill or wholesale replacement by an alternative).
-// Instruction-cache coherence among the modified ranges is also managed by the
-// class: it will be effected on destruction or once Commit() is called.
 //
+// This just modifies code in memory and does no synchronization.
+// No synchronization is usually required when modifying code just
+// loaded into memory pages that have never been executed yet.
 class Patcher {
  public:
   using Bytes = ktl::span<ktl::byte>;
@@ -67,6 +70,8 @@ class Patcher {
 
   // A directory under which patch alternatives are found.
   static constexpr ktl::string_view kPatchAlternativeDir = "code-patches";
+
+  Patcher() = default;
 
   // Initializes the Patcher. The associated BOOTFS directory namespace must be
   // nonempty. Must be called before any other method. On initialization, the
@@ -84,22 +89,49 @@ class Patcher {
   // instructions.
   void NopFill(ktl::span<ktl::byte> instructions);
 
-  // Forces instruction-data cache consistency among the modified ranges since
-  // construction or when this method was last called. In general, it is not
-  // required that this method be called; consistency will also be reached upon
-  // destruction of Patcher.
-  void Commit() { sync_ctx_ = {}; }
+ protected:
+  using SyncFunction = fit::inline_function<void(ktl::span<ktl::byte>)>;
+
+  explicit Patcher(SyncFunction sync) : sync_(ktl::move(sync)) {}
 
  private:
   fit::result<Error, Bytes> GetPatchAlternative(ktl::string_view name);
 
-  void PrepareToSync(ktl::span<ktl::byte> instructions) {
+  BootfsDir bootfs_;
+  ktl::span<const Directive> patches_;
+  SyncFunction sync_{[](ktl::span<ktl::byte> instructions) {}};
+};
+
+// This is the same as code_patching::Patcher, but Instruction-cache coherence
+// among the modified ranges is also managed by the class: it will be effected
+// on destruction or each time Commit() is called.
+//
+// This should be used when the patches are being applied to code that has
+// already been loaded into pages that might have been executed.
+class PatcherWithGlobalCacheConsistency : public Patcher {
+ public:
+  PatcherWithGlobalCacheConsistency()
+      : Patcher([this](ktl::span<ktl::byte> instructions) { Sync(instructions); }) {}
+
+  // Forces instruction-data cache consistency among the modified ranges since
+  // construction or when this method was last called.  In general, it is not
+  // required that this method be called; consistency will also be reached upon
+  // destruction of the PatcherWithGlobalCacheConsistency object.
+  void Commit() {
+    // Destroying the old *sync_ctx_ object makes it synchronize the caches.
+    // The new identical object will synchronize again when *this is destroyed.
+    sync_ctx_.~SyncCtx();
+    new (&sync_ctx_) SyncCtx();
+  }
+
+ private:
+  using SyncCtx = arch::GlobalCacheConsistencyContext;
+
+  void Sync(ktl::span<ktl::byte> instructions) {
     sync_ctx_.SyncRange(reinterpret_cast<uintptr_t>(instructions.data()), instructions.size());
   }
 
-  BootfsDir bootfs_;
-  ktl::span<const Directive> patches_;
-  arch::GlobalCacheConsistencyContext sync_ctx_;
+  SyncCtx sync_ctx_;
 };
 
 void PrintPatcherError(const Patcher::Error& error, FILE* f = stdout);

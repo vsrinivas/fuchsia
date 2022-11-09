@@ -13,18 +13,22 @@ import("//build/zbi/zbi_input.gni")
 #
 # Parameters
 #
-#   deps
-#     Required: Dependencies to reach all `resource()` targets and
-#     and `kernel_package_entries` metadata.
-#     Type: list(label)
+#   * deps
+#     - Required: Dependencies to reach all `resource()` targets and the like.
+#       Note that this should *not* reach another kernel_package() target (or,
+#       equivalently, a zbi_input() with $prefix set) as the $target_name
+#       prefix would *not* compound the prefix on a target in this $deps list.
+#       Instead, distribution_manifest() targets with $prefix set can be used
+#       to "layer" the kernel-package prefix on a prefixed collection inside.
+#     - Type: list(label)
 #
 #   data_deps
-#     Optional: The usual GN meaning, though in this case no resource() targets
-#     in its graph will contribute to the dependent ZBI.
-#     Type: list(label)
+#     - Optional: The usual GN meaning, though in this case no resource()
+#     targets in its graph will contribute to the dependent ZBI.
+#     - Type: list(label)
 #
-#   testonly, visibility
-#     Optional: The usual GN meanings.
+#   metadata, testonly, visibility
+#     - Optional: The usual GN meanings.
 #
 template("kernel_package") {
   zbi_input(target_name) {
@@ -35,12 +39,18 @@ template("kernel_package") {
                              "testonly",
                              "visibility",
                            ])
-    prefix = target_name
     args = [
       # Package entries are relatively small and should compress quickly
       # enough.
       "--compressed=max",
       "--files-type=kernel",
     ]
+
+    # This prefix will apply in the zbi command line to the zbi_input_args
+    # elements that come directly from this zbi_input() target, i.e. via the
+    # implicit distribution_manifest() collection done here.  But it won't
+    # apply to the zbi_input_args metadata found in deps/data_deps, which
+    # appear *before* this target's zbi_input_args in the zbi() collection.
+    prefix = target_name
   }
 }

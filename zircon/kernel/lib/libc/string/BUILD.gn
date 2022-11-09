@@ -31,9 +31,11 @@ source_set("string") {
     "strtok.c",
     "strxfrm.c",
   ]
-  deps = [
-    "arch/$zircon_cpu",
-    "//zircon/kernel/lib/libc:ctype",
-    "//zircon/kernel/lib/libc:headers",
-  ]
+  if (is_kernel) {
+    deps = [
+      "arch/$zircon_cpu",
+      "//zircon/kernel/lib/libc:ctype",
+      "//zircon/kernel/lib/libc:headers",
+    ]
+  }
 }

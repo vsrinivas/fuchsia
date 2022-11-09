@@ -54,7 +54,7 @@ group("tests") {
 zbi_test("zbi-boot-shim-phys-unittests") {
   deps = [
     ":zbi-boot-shim",
-    "//zircon/kernel/phys/test:zbi-phys-unittests.zbi(//zircon/kernel/phys:kernel.phys_$current_cpu)",
+    "//zircon/kernel/phys/test:zbi-phys-unittests.zbi($phys_toolchain)",
   ]
 
   # Set a short timeout since the tests don't reliably reboot the machine.
@@ -117,7 +117,7 @@ turducken_zbi_test("zbi-debugdata-boot-shim-test") {
 zbi("zbi-hello-world-test") {
   visibility = [ ":*" ]
   testonly = true
-  deps = [ "//zircon/kernel/phys/test:zbi-hello-world-test.executable(//zircon/kernel/phys:kernel.phys_$current_cpu)" ]
+  deps = [ "//zircon/kernel/phys/test:zbi-hello-world-test.executable($phys_toolchain)" ]
 }
 
 # This is the duck inside the turkey below.  It checks for the debugdata item

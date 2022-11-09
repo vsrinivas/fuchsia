@@ -58,7 +58,7 @@ if (current_cpu == "x64") {
   qemu_boot_formats += [
     {
       name = "raw"
-      environment = "//zircon/kernel/phys:kernel.phys_$current_cpu"
+      environment = phys_toolchain
       deps = [ "//zircon/kernel/phys:qemu-header" ]
       timeout = qemu_short_timeout
     },
@@ -68,7 +68,7 @@ if (current_cpu == "arm64") {
   qemu_boot_formats += [
     {
       name = "linuxboot"
-      environment = "//zircon/kernel/phys:kernel.phys_$current_cpu"
+      environment = phys_toolchain
       deps = [ "//zircon/kernel/arch/arm64/phys:linuxboot" ]
       timeout = qemu_short_timeout
     },

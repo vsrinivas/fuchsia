@@ -45,6 +45,6 @@ kernel_zbi_test("early-boot-debugdata-kernel-zbi") {
 }
 
 turducken_cuckoo_test("early-boot-debugdata-zbi-test") {
-  boot_zbi = ":debugdata-provider-turducken-zbi.zbi(//zircon/kernel/phys:kernel.phys_$target_cpu)"
+  boot_zbi = ":debugdata-provider-turducken-zbi.zbi($phys_toolchain)"
   next_zbi = ":early-boot-debugdata-kernel-zbi.zbi"
 }

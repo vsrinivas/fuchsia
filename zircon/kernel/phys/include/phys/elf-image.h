@@ -59,18 +59,21 @@ class ElfImage {
 
   bool has_patches() const { return !patches().empty(); }
 
-  // The template parameter must be an `enum class Id : uint32_t` type.
-  // Calls the callback as fit::result<Error>(code_patching::Patcher&,
-  // Id, ktl::span<ktl::byte>) for each patch in the file.
+  // The template parameter must be an `enum class Id : uint32_t` type.  Calls
+  // the callback as fit::result<Error>(code_patching::Patcher&, Id,
+  // ktl::span<ktl::byte>) for each patch in the file.  The Allocation can be
+  // one returned by Load() to patch that copy of the file instead of patching
+  // the BOOTFS file image in place.  (Note Load() returns an empty Allocation
+  // if loading in place.)
   template <typename Id, typename Callback>
-  fit::result<Error> ForEachPatch(Callback&& callback) {
+  fit::result<Error> ForEachPatch(Callback&& callback, const Allocation& loaded = {}) {
     static_assert(ktl::is_enum_v<Id>);
     static_assert(ktl::is_same_v<uint32_t, ktl::underlying_type_t<Id>>);
     static_assert(ktl::is_invocable_r_v<fit::result<Error>, Callback, code_patching::Patcher&, Id,
                                         ktl::span<ktl::byte>>);
     for (const code_patching::Directive& patch : patches()) {
-      ktl::span<ktl::byte> bytes = GetBytesToPatch(patch);
-      auto result = callback(*patcher_, static_cast<Id>(patch.id), bytes);
+      ktl::span<ktl::byte> bytes = GetBytesToPatch(patch, loaded);
+      auto result = callback(patcher_, static_cast<Id>(patch.id), bytes);
       if (result.is_error()) {
         return result.take_error();
       }
@@ -100,7 +103,7 @@ class ElfImage {
   // Load in place if possible, or else copy into a new Allocation.
   // On return, SetLoadAddress has been called.
   // The Allocation returned is null if LoadInPlace was used.
-  Allocation Load();
+  Allocation Load(bool in_place_ok = true);
 
   // Apply relocations to the image in place after setting the load address.
   void Relocate();
@@ -125,14 +128,10 @@ class ElfImage {
   }
 
  private:
-  ktl::span<const code_patching::Directive> patches() const {
-    if (patcher_) {
-      return patcher_->patches();
-    }
-    return {};
-  }
+  ktl::span<const code_patching::Directive> patches() const { return patcher_.patches(); }
 
-  ktl::span<ktl::byte> GetBytesToPatch(const code_patching::Directive& patch);
+  ktl::span<ktl::byte> GetBytesToPatch(const code_patching::Directive& patch,
+                                       const Allocation& loaded);
 
   elfldltl::DirectMemory image_{{}};
   LoadInfo load_;
@@ -140,7 +139,7 @@ class ElfImage {
   ktl::span<const elfldltl::Elf<>::Dyn> dynamic_;
   ktl::optional<elfldltl::ElfNote> build_id_;
   ktl::optional<ktl::string_view> interp_;
-  ktl::optional<code_patching::Patcher> patcher_;
+  code_patching::Patcher patcher_;
   ktl::optional<uint64_t> load_bias_;
 };
 

@@ -18,19 +18,21 @@ library_headers("headers") {
     "lib/code-patching/code-patching.h",
   ]
 
-  public_deps = [
-    "//zircon/kernel/lib/ktl:headers",
+  if (is_kernel) {
+    public_deps = [
+      "//zircon/kernel/lib/ktl:headers",
 
-    # code-patches.h includes <lib/arch/cache.h>
-    # code-patching.h includes <lib/arch/nop.h>.
-    "//zircon/kernel/lib/arch:headers",
+      # code-patches.h includes <lib/arch/cache.h>
+      # code-patching.h includes <lib/arch/nop.h>.
+      "//zircon/kernel/lib/arch:headers",
 
-    # code-patches.h includes <lib/zbitl/items/bootfs.h>
-    "//src/lib/zbitl:headers",
+      # code-patches.h includes <lib/zbitl/items/bootfs.h>
+      "//src/lib/zbitl:headers",
 
-    # code-patches.h includes <lib/fit/result.h>
-    "//zircon/system/ulib/zxc:headers",
-  ]
+      # code-patches.h includes <lib/fit/result.h>
+      "//sdk/lib/fit:headers",
+    ]
+  }
 }
 
 config("hermetic-leaf.config") {

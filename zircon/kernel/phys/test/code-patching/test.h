@@ -43,6 +43,14 @@ constexpr size_t kAddOnePatchSize = PATCH_SIZE_ADD_ONE;
 constexpr uint32_t kMultiplyByFactorCaseId = CASE_ID_MULTIPLY_BY_FACTOR;
 constexpr size_t kMultiplyByFactorPatchSize = PATCH_SIZE_MULTIPLY_BY_FACTOR;
 
-#endif  // #ifndef __ASSEMBLER__
+using TestFn = uint64_t(uint64_t x);
+
+// Defined in add-one.S.
+extern "C" TestFn AddOne;
+
+// Defined via code_patching_hermetic_stub().
+extern "C" TestFn multiply_by_factor;
+
+#endif  // !__ASSEMBLER__
 
 #endif  // ZIRCON_KERNEL_PHYS_TEST_CODE_PATCHING_TEST_H_

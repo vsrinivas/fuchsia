@@ -73,8 +73,7 @@ fit::result<ElfImage::Error> ElfImage::Init(ElfImage::BootfsDir dir, ktl::string
     image_.set_image(it->data);
 
     // Now find the code patches.
-    patcher_.emplace();
-    if (auto result = patcher_->Init(subdir); result.is_error()) {
+    if (auto result = patcher_.Init(subdir); result.is_error()) {
       return result.take_error();
     }
 
@@ -129,8 +128,9 @@ fit::result<ElfImage::Error> ElfImage::Init(ElfImage::BootfsDir dir, ktl::string
   return fit::ok();
 }
 
-ktl::span<ktl::byte> ElfImage::GetBytesToPatch(const code_patching::Directive& patch) {
-  ktl::span<ktl::byte> file = image_.image();
+ktl::span<ktl::byte> ElfImage::GetBytesToPatch(const code_patching::Directive& patch,
+                                               const Allocation& loaded) {
+  ktl::span<ktl::byte> file = loaded ? loaded.data() : image_.image();
   ZX_ASSERT_MSG(patch.range_start >= image_.base() && file.size() >= patch.range_size &&
                     file.size() - patch.range_size >= patch.range_start - image_.base(),
                 "Patch ID %#" PRIx32 " range [%#" PRIx64 ", %#" PRIx64
@@ -140,10 +140,20 @@ ktl::span<ktl::byte> ElfImage::GetBytesToPatch(const code_patching::Directive& p
   return file.subspan(patch.range_start - image_.base(), patch.range_size);
 }
 
-Allocation ElfImage::Load() {
-  if (CanLoadInPlace()) {
+Allocation ElfImage::Load(bool in_place_ok) {
+  auto endof = [](const auto& last) { return last.offset() + last.filesz(); };
+  const uint64_t load_size = ktl::visit(endof, load_.segments().back());
+
+  if (in_place_ok && CanLoadInPlace()) {
     // TODO(fxbug.dev/113938): Could have a memalloc::Pool feature to
     // reclassify the memory range to the new type.
+
+    // The full vaddr_size() fits in the pages the BOOTFS file occupies.  If
+    // there is any bss (memsz > filesz), it may overlap with some nonzero file
+    // contents and not just the BOOTFS page-alignment padding.  Zero it all.
+    ZX_DEBUG_ASSERT(ZBI_BOOTFS_PAGE_ALIGN(image_.image().size_bytes()) >= load_.vaddr_size());
+    memset(image_.image().data() + load_size, 0, load_.vaddr_size() - load_size);
+
     LoadInPlace();
     return {};
   }
@@ -155,12 +165,17 @@ Allocation ElfImage::Load() {
     ZX_PANIC("cannot allocate phys ELF load image of %#zx bytes", load_.vaddr_size());
   }
 
-  auto endof = [](const auto& last) { return last.offset() + last.filesz(); };
-  const uint64_t load_size = ktl::visit(endof, load_.segments().back());
+  ZX_ASSERT_MSG(load_size <= image.size_bytes(), "load_size %#" PRIx64 " > allocation size %#zx",
+                load_size, image.size_bytes());
 
-  ZX_ASSERT(load_size <= image.size_bytes());
-  ZX_ASSERT(load_size <= image_.image().size_bytes());
-  memcpy(image.get(), image_.image().data(), load_size);
+  // Copy the full load image into the new allocation.  The load_size is
+  // page-rounded and thus can go past the formal end of the file, indicating
+  // how mapping from a file would work.  To get the equivalent effect, just
+  // fill the remainder of the allocated page with zero while zeroing any
+  // following bss (memsz > filesz).
+  const size_t copy = ktl::min<size_t>(load_size, image_.image().size_bytes());
+  memcpy(image.get(), image_.image().data(), copy);
+  memset(image.get() + copy, 0, load_.vaddr_size() - copy);
 
   SetLoadAddress(reinterpret_cast<uintptr_t>(image.get()));
 

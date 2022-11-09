@@ -1,0 +1,194 @@
+# Copyright 2022 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//zircon/kernel/lib/code-patching/code-patching.gni")
+
+# Pack an ELF image to be loaded with code-patching.
+#
+# There is no particular output file this target produces as its API.  Instead,
+# this target acts like a distribution_manifest() target such that having this
+# target in $deps of a kernel_package() ensures the package has a $output_name
+# singleton ELF file or an $output_name subdirectory containing these files:
+#  * `image.elf`
+#    - The fully-stripped ELF file for the target found in $deps.
+#  * `code-patches.bin`
+#    - The file produced by the code_patches() collection target.
+#  * alternatives...
+#    - The fragment files from code_patching_hermetic_alternative() targets,
+#      each named for its $target_name.
+#
+# Parameters
+#
+#   * deps
+#     - Required: Must reach exactly one linking target as per metadata
+#       barriers used by link_output_rspfile(), which see.  The code
+#       consuming the "code-patches.bin" file from the kernel package is
+#       expected to know what single ELF file the address constants in that
+#       file refer to, so it doesn't make sense to have more than one
+#       linkable target that might have ".code-patches" section data to
+#       extract.
+#     - Type: list(label)
+#
+#   * data_deps, metadata, testonly, visibility
+#     - See action().
+#
+#   * has_patches
+#     - Optional: This can be false if the $deps binary doesn't use any code
+#       patches.  Then just the stripped ELF file will be packed.  If it's true
+#       (or omitted), then the file will be packed along with its code-patching
+#       metadata.  If there are in fact no patches to collect, empty metadata
+#       will take up a harmless handful of bytes in the BOOTFS directory table.
+#     - Type: bool
+#     - Default: true
+#
+#   * output_name
+#     - Optional: Path for this image in the kernel package.
+#       This will become a single file's name if $has_patches is false,
+#       or the name of a subdirectory with standard layout if it's true.
+#     - Type: string
+#     - Default: "$target_name"
+#
+template("kernel_elf_image") {
+  if (defined(invoker.output_name)) {
+    image_name = invoker.output_name
+  } else {
+    image_name = target_name
+  }
+
+  main_target = target_name
+  rspfile_target = "_kernel_elf_image.rspfile.$target_name"
+  image_file = "$target_out_dir/$image_name.bin"
+  rspfile = "$target_gen_dir/$image_name.rsp"
+
+  has_patches = !defined(invoker.has_patches) || invoker.has_patches
+  if (has_patches) {
+    image_target = "$target_name.bin"
+    code_patches_target = "$target_name.code-patches"
+
+    # Collect the code-patches.bin file.  This has a metadata barrier so
+    # the any alternative payload won't be reached through its deps.
+    code_patches(code_patches_target) {
+      visibility = [ ":*" ]
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "testonly",
+                             ])
+    }
+
+    # Reify the collected image filesystem contents into a JSON manifest file
+    # with the image name applied as a path prefix.  This target now represents
+    # the whole subtree, and can roll up into a kernel_package() target that
+    # prepends another layer of prefix to the name, so the final path in the
+    # image looks like "package_name/image_name/code-patches.bin" et al.
+    distribution_manifest(main_target) {
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "data_deps",
+                               "visibility",
+                               "testonly",
+                             ])
+
+      # The forwarded deps reach any code-patching alternative payloads.  Add
+      # the collected code-patches.bin and the extracted image.elf to fill out
+      # the filesystem subtree for this image.
+      deps += [
+        ":$code_patches_target",
+        ":$image_target",
+      ]
+
+      prefix = image_name
+
+      outputs = [ "$target_gen_dir/$target_name.json" ]
+
+      # Supply the metadata to roll this prebaked manifest into yet another
+      # manifest target.
+      metadata = {
+        distribution_entries_files = []
+
+        if (defined(invoker.metadata)) {
+          forward_variables_from(invoker.metadata, "*")
+        }
+
+        distribution_entries_files += [
+          {
+            file = rebase_path(outputs[0], root_build_dir)
+            label = get_label_info(":$target_name", "label_with_toolchain")
+          },
+        ]
+      }
+    }
+
+    # The actual ELF image is just one file in the subdirectory.
+    image_name = "image.elf"
+  } else {
+    # The ELF file by itself is all that's needed, so it will just be a file
+    # rather than a subdirectory.
+    image_target = main_target
+  }
+
+  # This provides the indirect input to the image action.
+  link_output_rspfile(rspfile_target) {
+    visibility = [ ":$image_target" ]
+    outputs = [ rspfile ]
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+  }
+
+  # Strip the ELF image completely.  The toolchains for kernel images don't
+  # usually strip binaries in the linking target, so this needs to be done
+  # before packing.  This also provides an opportunity to inject the metadata
+  # for the image filesystem layout.
+  toolchain_utils_action(image_target) {
+    visibility = [ ":*" ]
+    forward_variables_from(invoker, [ "testonly" ])
+
+    outputs = [ image_file ]
+
+    utils = [ "objcopy" ]
+    script = true
+    if (is_gcc) {
+      args = [ "--strip-all" ]
+    } else {
+      args = [ "--strip-sections" ]
+    }
+
+    # Nothing prevents link_output_rspfile() from collecting multiple
+    # binary files here if $deps reaches more than one without barrier.
+    # This is verboten and will just make objcopy die from having too many
+    # positional arguments after @rspfile expansion, so there's no need to
+    # check for it otherwise (which would require a wrapper script).
+    deps = [ ":$rspfile_target" ]
+    sources = [ rspfile ]
+    args += [
+      "@" + rebase_path(rspfile, root_build_dir),
+      rebase_path(image_file, root_build_dir),
+    ]
+
+    metadata = {
+      # This target behaves like a resource() target, for aggregation within a
+      # kernel package.
+      distribution_entries_barrier = []
+      distribution_entries = []
+
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+
+      distribution_entries += [
+        {
+          source = rebase_path(image_file, root_build_dir)
+          destination = image_name
+          label = get_label_info(":$main_target", "label_with_toolchain")
+        },
+      ]
+    }
+  }
+}

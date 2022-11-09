@@ -16,6 +16,8 @@ _phys_linker_scripts = [
   "//zircon/kernel/phys/phys.ld",
 ]
 
+phys_toolchain = "//zircon/kernel/phys:kernel.phys_$current_cpu"
+
 # Build an executable for the phys environment.
 #
 # This defines one public target whose output is the raw binary image.
@@ -46,8 +48,7 @@ template("phys_executable") {
                                "testonly",
                                "visibility",
                              ])
-      public_deps =
-          [ ":$target_name(//zircon/kernel/phys:kernel.phys_$current_cpu)" ]
+      public_deps = [ ":$target_name($phys_toolchain)" ]
     }
     not_needed(invoker, "*")
   } else {

@@ -4,30 +4,39 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-import("//build/zircon/migrated_targets.gni")
+import("//build/cpp/library_headers.gni")
+import("//build/toolchain/toolchain_environment.gni")
 import("//zircon/system/ulib/hwreg/hwreg_asm_header.gni")
 
-zx_library("arm64") {
+library_headers("headers") {
   visibility = [ "../*" ]
+
+  headers = []
+  public_deps = [ "//zircon/system/ulib/hwreg" ]
+
+  public_deps += [ ":gen-arm64-system-asm" ]
+}
+
+static_library("arm64") {
+  visibility = [ "../*" ]
+
+  public_deps = [ ":headers" ]
 
   include_dirs = [
     "include",
     "../include",
   ]
 
-  sdk = "source"
-  sdk_headers = []
-  public_deps = [ "//zircon/system/ulib/hwreg:headers" ]
+  if (is_kernel) {
+    sources = [
+      "cache-ops.S",
+      "cache.cc",
+    ]
 
-  sources = [
-    "cache-ops.S",
-    "cache.cc",
-  ]
-
-  deps = [ ":gen-arm64-system-asm" ]
-
-  if (!is_host) {
-    deps += [ ":random" ]
+    deps = [
+      ":gen-arm64-system-asm",
+      ":random",
+    ]
   }
 }
 

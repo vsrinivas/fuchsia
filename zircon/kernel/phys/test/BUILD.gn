@@ -8,7 +8,7 @@ import("//build/dist/generated_resource.gni")
 import("//build/zbi/kernel_cmdline.gni")
 import("//build/zbi/zbi_input.gni")
 import("//src/bringup/lib/mexec/testing/zbi_test.gni")
-import("//src/bringup/lib/mexec/testing/zbi_test.gni")
+import("//zircon/kernel/lib/code-patching/code-patching.gni")
 import("//zircon/kernel/phys/efi/efi_executable.gni")
 import("//zircon/kernel/phys/qemu.gni")
 import("//zircon/kernel/phys/zbi_executable.gni")
@@ -395,7 +395,7 @@ if (current_toolchain != default_toolchain) {
             "zbi-decompress-test",
           ]) {
     mexec_zbi_test("mexec-$test") {
-      child_zbi = ":$test(//zircon/kernel/phys:kernel.phys_$current_cpu)"
+      child_zbi = ":$test($phys_toolchain)"
       child_zbi_file =
           get_label_info(child_zbi, "target_out_dir") + "/$test.zbi"
     }
@@ -406,7 +406,7 @@ if (current_toolchain != default_toolchain) {
   group("test") {
     testonly = true
     deps = [
-             ":test(//zircon/kernel/phys:kernel.phys_$current_cpu)",
+             ":test($phys_toolchain)",
 
              # Debug Data propagation to userspace.
              "debugdata-propagation:early-boot-debugdata-zbi-test",

@@ -22,14 +22,12 @@
 #include <phys/zbitl-allocation.h>
 
 #include "../test-main.h"
+#include "test.h"
 
 #include <ktl/enforce.h>
 
 // The BOOTFS namespace under which code patching blobs live.
 constexpr ktl::string_view kNamespace = "code-patches-test";
-
-// Defined in add-one.S.
-extern "C" uint64_t AddOne(uint64_t x);
 
 // Defined by //zircon/kernel/phys/test/code-patching:multiply_by_factor.
 extern "C" uint64_t multiply_by_factor(uint64_t x);
@@ -50,7 +48,8 @@ ktl::span<ktl::byte> GetInstructionRange(uint64_t range_start, size_t range_size
   return loaded_range.subspan(range_start, range_size);
 }
 
-int TestAddOnePatching(code_patching::Patcher& patcher, const code_patching::Directive& patch) {
+int TestAddOnePatching(code_patching::PatcherWithGlobalCacheConsistency& patcher,
+                       const code_patching::Directive& patch) {
   ZX_ASSERT_MSG(patch.range_size == kAddOnePatchSize,
                 "Expected patch case #%u to cover %zu bytes; got %u", kAddOneCaseId,
                 kAddOnePatchSize, patch.range_size);
@@ -73,7 +72,7 @@ int TestAddOnePatching(code_patching::Patcher& patcher, const code_patching::Dir
   return 0;
 }
 
-int TestMultiplyByFactorPatching(code_patching::Patcher& patcher,
+int TestMultiplyByFactorPatching(code_patching::PatcherWithGlobalCacheConsistency& patcher,
                                  const code_patching::Directive& patch) {
   ZX_ASSERT_MSG(patch.range_size == kMultiplyByFactorPatchSize,
                 "Expected patch case #%u to cover %zu bytes; got %u", kMultiplyByFactorCaseId,
@@ -172,7 +171,7 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks) {
     bootfs = ktl::move(result).value();
   }
 
-  code_patching::Patcher patcher;
+  code_patching::PatcherWithGlobalCacheConsistency patcher;
   if (auto result = patcher.Init(bootfs); result.is_error()) {
     printf("FAILED: Could not initialize code_patching::Patcher: ");
     zbitl::PrintBootfsError(result.error_value());

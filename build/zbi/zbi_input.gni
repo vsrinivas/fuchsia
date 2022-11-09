@@ -70,9 +70,10 @@ template("zbi_input") {
                            "*",
                            [
                              "args",
+                             "kernel_cmdline_args",
                              "metadata",
                              "sources",
-                             "kernel_cmdline_args",
+                             "type",
                            ])
 
     metadata = {
@@ -110,11 +111,8 @@ template("zbi_input") {
       }
 
       # An explicit type applies only to $sources and $args.
-      if (defined(type) && type != "") {
-        zbi_input_args += [ "--type=$type" ]
-      }
-      if (defined(prefix) && prefix != "") {
-        zbi_input_args += [ "--prefix=$prefix" ]
+      if (defined(invoker.type) && invoker.type != "") {
+        zbi_input_args += [ "--type=${invoker.type}" ]
       }
 
       # $args may also contain "--entry=..." payloads directly.

@@ -4,9 +4,10 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <test.h>
 #include <lib/arch/asm.h>
 #include <lib/code-patching/asm.h>
+
+#include "test.h"
 
 .text
 

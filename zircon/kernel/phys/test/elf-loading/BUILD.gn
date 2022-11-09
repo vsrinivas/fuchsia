@@ -61,7 +61,7 @@ kernel_package("basic-elf-loading-test-data") {
   visibility = [ ":*" ]
   testonly = true
 
-  deps = [ ":get-int" ]
+  deps = [ ":get-int($phys_toolchain)" ]
 }
 
 zbi_test("zbi-basic-elf-loading-test") {

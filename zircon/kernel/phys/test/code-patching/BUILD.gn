@@ -8,26 +8,31 @@ import("//build/testing/zbi_test.gni")
 import("//build/zbi/zbi_input.gni")
 import("//zircon/kernel/kernel_package.gni")
 import("//zircon/kernel/lib/code-patching/code-patching.gni")
+import("//zircon/kernel/phys/kernel_elf_image.gni")
+import("//zircon/kernel/phys/kernel_elf_interp.gni")
 import("//zircon/kernel/phys/zbi_executable.gni")
 
 code_patching_hermetic_alternative("multiply_by_two") {
-  testonly = true
   visibility = [ ":*" ]
+  testonly = true
+
   sources = [ "multiply_by_two.S" ]
-  deps = [ "//zircon/kernel/lib/arch:headers" ]
+  deps = [ "//zircon/kernel/lib/arch" ]
 }
 
 code_patching_hermetic_alternative("multiply_by_ten") {
-  testonly = true
   visibility = [ ":*" ]
+  testonly = true
+
   sources = [ "multiply_by_ten.S" ]
-  deps = [ "//zircon/kernel/lib/arch:headers" ]
+  deps = [ "//zircon/kernel/lib/arch" ]
 }
 
 code_patching_hermetic_stub("multiply_by_factor") {
-  case_id_header = "test.h"
-  testonly = true
   visibility = [ ":*" ]
+  testonly = true
+
+  case_id_header = "test.h"
   deps = [
     ":multiply_by_ten",
     ":multiply_by_two",
@@ -35,15 +40,38 @@ code_patching_hermetic_stub("multiply_by_factor") {
   include_dirs = [ "." ]
 }
 
+source_set("add-one") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  public_deps = [ ":test-api" ]
+  sources = [ "add-one.S" ]
+  deps = [
+    "//zircon/kernel/lib/arch",
+    "//zircon/kernel/lib/code-patching",
+  ]
+}
+
+source_set("test-api") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  public = [ "test.h" ]
+  public_deps = [
+    "//zircon/kernel/lib/ktl",
+    "//zircon/kernel/lib/libc",
+  ]
+}
+
 zbi_executable("zbi-code-patching-test.executable") {
   testonly = true
-  sources = [
-    "add-one.S",
-    "test.cc",
-  ]
+
+  sources = [ "test.cc" ]
 
   deps = [
+    ":add-one",
     ":multiply_by_factor",
+    ":test-api",
     "..:zbi-test-main",
     "//src/lib/zbitl",
     "//zircon/kernel/lib/code-patching",
@@ -62,6 +90,7 @@ zbi_executable("zbi-code-patching-test.executable") {
 
 code_patches("code-patches") {
   testonly = true
+
   deps = [ ":zbi-code-patching-test.executable" ]
 }
 
@@ -69,6 +98,7 @@ code_patches("code-patches") {
 # alternatives, as that is how they will be transported in production.
 kernel_package("code-patches-test") {
   testonly = true
+
   deps = [
     ":code-patches",
     ":multiply_by_ten",
@@ -90,7 +120,92 @@ zbi_test("zbi-code-patching-test") {
   ]
 }
 
+zbi_executable("elf-code-patching-test") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  sources = [ "elf-code-patching-test.cc" ]
+  deps = [
+    ":test-api",
+    "..:zbi-test-main",
+    "//src/lib/zbitl",
+    "//zircon/kernel/lib/ktl",
+    "//zircon/kernel/lib/libc",
+    "//zircon/kernel/phys:elf-image",
+    "//zircon/kernel/phys:kernel-package",
+    "//zircon/kernel/phys:symbolize",
+  ]
+}
+
+# This tags a test module with the PT_INTERP matching the test's build ID.
+kernel_elf_interp("elf-code-patching-test.interp") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  deps = [ ":elf-code-patching-test" ]
+}
+
+kernel_package("elf-code-patching-test-data") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  deps = [
+    ":elf-code-patching-test-add-one.image($phys_toolchain)",
+    ":elf-code-patching-test-multiply.image($phys_toolchain)",
+  ]
+}
+
+loadable_module("elf-code-patching-test-add-one") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  ldflags = [ "-Wl,-e,AddOne" ]
+  deps = [
+    ":add-one",
+    ":elf-code-patching-test.interp",
+  ]
+}
+
+kernel_elf_image("elf-code-patching-test-add-one.image") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  output_name = "add-one"
+  deps = [ ":elf-code-patching-test-add-one" ]
+}
+
+loadable_module("elf-code-patching-test-multiply") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  ldflags = [ "-Wl,-e,multiply_by_factor" ]
+  deps = [
+    ":elf-code-patching-test.interp",
+    ":multiply_by_factor",
+  ]
+}
+
+kernel_elf_image("elf-code-patching-test-multiply.image") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  output_name = "multiply_by_factor"
+  deps = [ ":elf-code-patching-test-multiply" ]
+}
+
+zbi_test("zbi-elf-code-patching-test") {
+  args = []
+  deps = [
+    ":elf-code-patching-test",
+    ":elf-code-patching-test-data",
+  ]
+}
+
 group("code-patching") {
   testonly = true
-  deps = [ ":zbi-code-patching-test" ]
+
+  deps = [
+    ":zbi-code-patching-test",
+    ":zbi-elf-code-patching-test",
+  ]
 }

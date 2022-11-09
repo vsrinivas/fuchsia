@@ -27,6 +27,10 @@ def main():
         help=
         'When used, only output the INPUTS_FILE which lists all inputs used ' +
         'by this command, instead of OUTPUT and DEPFILE.')
+    parser.add_argument(
+        '--prefix',
+        metavar='PREFIX',
+        help='Prepend PREFIX to each destination path')
     args = parser.parse_args()
 
     with open(args.input, 'r') as input_file:
@@ -38,6 +42,14 @@ def main():
     if error:
         print(error, file=sys.stderr)
         return 1
+
+    if args.prefix:
+        entries = [
+            distribution_manifest.Entry(
+                destination=args.prefix + entry.destination,
+                source=entry.source,
+                label=entry.label) for entry in entries
+        ]
 
     # NOTE: If --hermetic-inputs-file INPUTS_FILE is used, then
     # do not output the manifest file or a depfile, only generate an

@@ -4,25 +4,37 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("//build/cpp/library_headers.gni")
 import("//build/toolchain/toolchain_environment.gni")
-import("//build/zircon/zx_library.gni")
 import("//zircon/system/ulib/hwreg/hwreg_asm_header.gni")
 
-zx_library("x86") {
+library_headers("headers") {
   visibility = [ "../*" ]
-  sources = []
+
+  headers = []
   public_deps = [
     # <lib/arch/x86/boot-cpuid.h> has #include <lib/special-sections/special-sections.h>.
     "//zircon/kernel/lib/special-sections",
 
     # <lib/arch/x86/cpuid.h> has #include <hwreg/bitfields.h>.
-    "//zircon/system/ulib/hwreg:headers",
+    "//zircon/system/ulib/hwreg",
   ]
-  deps = [ "//zircon/system/ulib/hwreg" ]
-
-  include_dirs = [ "../include" ]
 
   public_deps += [ ":gen-cpuid-asm" ]
+}
+
+static_library("x86") {
+  visibility = [ "../*" ]
+
+  public_deps = [ ":headers" ]
+  sources = []
+  deps = [ "//zircon/system/ulib/hwreg" ]
+
+  include_dirs = [
+    "include",
+    "../include",
+  ]
+
   if (is_kernel) {
     sources += [
       "boot-cpuid.S",
@@ -31,6 +43,7 @@ zx_library("x86") {
       "standard-segments.cc",
     ]
     deps += [
+      ":gen-cpuid-asm",
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/libc",
       "//zircon/kernel/lib/special-sections",
@@ -42,9 +55,6 @@ zx_library("x86") {
       sources += [ "descriptor-regs.S" ]
     }
   }
-
-  sdk = "source"
-  sdk_headers = [ "lib/arch/intrin.h" ]
 }
 
 hwreg_asm_header("gen-cpuid-asm") {

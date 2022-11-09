@@ -38,6 +38,12 @@ class KernelStorage {
   // Unpacks the ZBI_TYPE_KERNEL_STORAGE item from the ZBI.
   void Init(Zbi zbi);
 
+  void Init(Zbi::storage_type storage) { Init(Zbi(storage)); }
+
+  void Init(zbi_header_t* zbi_hdr) {
+    Init(zbitl::StorageFromRawHeader<Zbi::storage_type>(zbi_hdr));
+  }
+
   Zbi& zbi() { return zbi_; }
   const Zbi& zbi() const { return zbi_; }
 

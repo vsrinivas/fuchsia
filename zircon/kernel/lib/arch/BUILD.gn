@@ -4,45 +4,59 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("//build/cpp/library_headers.gni")
 import("//build/zircon/zircon_cpu.gni")
-import("//build/zircon/zx_library.gni")
 import("//zircon/system/ulib/hwreg/hwreg_asm_header.gni")
 
-zx_library("arch") {
-  sdk = "source"
-  sdk_headers = [ "lib/arch/asm.h" ]
+group("headers") {
+  # The per-CPU subdirectory is a separate library target but it shares
+  # (and overrides) the <lib/arch/...> header name space and users of this
+  # library need never realize it's distinct.
+
+  if (is_host) {
+    public_deps = [ "host" ]
+  } else {
+    public_deps = [
+      "$zircon_cpu:headers",
+
+      # These would be circular dependencies on the host, since that's where
+      # the generator programs are built and they need the library's headers.
+      # Since these headers are meant to be used by assembly code, they should
+      # not be needed by any host-compatible code.
+      ":gen-arm64-sysreg-asm",
+      ":gen-x86-msr-asm",
+    ]
+  }
+
+  # This comes after the arch-specific one so arch-specific headers
+  # take precedence (and can use `#include_next`).
+  public_deps += [ ":common-headers" ]
+}
+
+library_headers("common-headers") {
+  visibility = [ ":*" ]
+
+  headers = []
+  public_deps = [ "//sdk/lib/stdcompat" ]
+
+  # <lib/arch/x86/cpuid.h> has #include <hwreg/bitfields.h>.
+  if (is_kernel) {
+    public_deps += [ "//zircon/system/ulib/hwreg:headers" ]
+  } else {
+    public_deps += [ "//zircon/system/ulib/hwreg" ]
+  }
+}
+
+static_library("arch") {
+  public_deps = [ ":headers" ]
 
   sources = [
     "cpuid.cc",
     "lbr.cc",
   ]
-  deps = []
 
-  public_deps = [
-    "//sdk/lib/stdcompat",
-
-    # <lib/arch/x86/cpuid.h> has #include <hwreg/bitfields.h>.
-    "//zircon/system/ulib/hwreg:headers",
-  ]
-
-  if (is_host) {
-    deps += [ "host" ]
-    public_deps += [ "host:headers" ]
-  } else {
-    # The per-CPU subdirectory is a separate library() target but it shares
-    # (and overrides) the <lib/arch/...> header name space and users of this
-    # library need never realize it's distinct.
+  if (is_kernel) {
     deps = [ zircon_cpu ]
-    if (zircon_toolchain != false) {
-      public_configs = [ "$zircon_cpu:headers.config" ]
-    } else {
-      public_configs = [ "$zircon_cpu:$zircon_cpu.config" ]
-    }
-    public_deps += [
-      ":gen-arm64-sysreg-asm",
-      ":gen-x86-msr-asm",
-      "$zircon_cpu:headers",
-    ]
   }
 }
 

@@ -11,10 +11,12 @@
 
 namespace ktl {
 
-using std::optional;
+using std::in_place;
+using std::in_place_t;
+using std::make_optional;
 using std::nullopt;
 using std::nullopt_t;
-using std::make_optional;
+using std::optional;
 
 }  // namespace ktl
 

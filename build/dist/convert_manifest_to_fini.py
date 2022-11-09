@@ -14,11 +14,17 @@ def main():
         '--input', help='Path to original manifest', required=True)
     parser.add_argument(
         '--output', help='Path to the formatted manifest', required=True)
+    parser.add_argument(
+        '--prefix',
+        help='Prefix prepended verbatim to destination paths',
+        default='')
     args = parser.parse_args()
 
     with open(args.input, 'r') as input_file:
         objects = json.load(input_file)
-    lines = sorted(o['destination'] + '=' + o['source'] + '\n' for o in objects)
+    lines = sorted(
+        args.prefix + o['destination'] + '=' + o['source'] + '\n'
+        for o in objects)
     with open(args.output, 'w') as output_file:
         output_file.writelines(lines)
 

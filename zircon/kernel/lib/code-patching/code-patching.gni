@@ -4,6 +4,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("//build/dist/distribution_manifest.gni")
 import("//build/zircon/c_utils.gni")
 import("//build/zircon/zircon_cpu.gni")
 
@@ -26,7 +27,6 @@ import("//build/zircon/zircon_cpu.gni")
 ##  # patching - filled with traps and just large enough to fit any of the
 ##  # associated alternatives.
 ##  code_patching_hermetic_stub("memset") {
-##
 ##    # Aggregates metadata on alternatives.
 ##    deps = [":memset_slow", ":memset_fast"]
 ##  }
@@ -68,16 +68,16 @@ template("code_patches") {
     outputs = [ rspfile ]
     forward_variables_from(invoker,
                            [
-                             "testonly",
                              "deps",
+                             "testonly",
                            ])
   }
 
   toolchain_utils_action(main_target) {
     forward_variables_from(invoker,
                            [
-                             "testonly",
                              "visibility",
+                             "testonly",
                            ])
     outputs = [ output_file ]
 
@@ -94,6 +94,7 @@ template("code_patches") {
       "/dev/null",
     ]
 
+    sources = [ rspfile ]
     deps = [ ":$rspfile_target" ]
 
     metadata = {
@@ -177,6 +178,10 @@ template("code_patching_hermetic_alternative") {
     configs -= [ "//build/config/zircon:static-pie-link" ]
 
     ldflags = [ "-Wl,-defsym,HERMETIC_LEAF_ENTRY=$entrypoint" ]
+
+    # This code should use the normal toolchain for its containing environment,
+    # kernel vs kernel.phys, etc.  But it cannot use any fancy variants.
+    exclude_toolchain_tags = [ "instrumented" ]
   }
 
   image_binary(image_target) {
@@ -272,24 +277,24 @@ template("code_patching_hermetic_stub") {
     forward_variables_from(invoker,
                            "*",
                            [
-                             "visibility",
-                             "testonly",
-                             "case_id_header",
-                             "output_name",
-                             "deps",
                              "aliases",
+                             "case_id_header",
+                             "deps",
+                             "output_name",
+                             "testonly",
+                             "visibility",
                            ])
     forward_variables_from(invoker,
                            [
-                             "visibility",
                              "testonly",
+                             "visibility",
                            ])
 
     sources = [ gen_file ]
     deps = [
       ":$gen_target",
       "//zircon/kernel/lib/arch:headers",
-      "//zircon/kernel/lib/code-patching:headers",
+      "//zircon/kernel/lib/code-patching",
     ]
   }
 
@@ -312,10 +317,10 @@ template("code_patching_hermetic_stub") {
     visibility = [ ":$main_target" ]
     forward_variables_from(invoker,
                            [
-                             "testonly",
-                             "output_name",
-                             "case_id_header",
                              "aliases",
+                             "case_id_header",
+                             "output_name",
+                             "testonly",
                            ])
     if (!defined(output_name)) {
       output_name = main_target

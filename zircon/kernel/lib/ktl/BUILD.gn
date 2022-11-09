@@ -4,23 +4,33 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-import("//build/zircon/migrated_targets.gni")
+import("//build/cpp/library_headers.gni")
 
-zx_library("ktl") {
-  sources = [
-    "align.cc",
-    "popcount.cc",
-    "stub-new.cc",
-  ]
+library_headers("headers") {
+  headers = []
 
-  deps = [
-    ":headers",  # Necessary to put ktl includes before libc.
-    "//sdk/lib/stdcompat",
-    "//zircon/kernel/lib/libc",
-  ]
+  # <ktl/bit.h> has #include <lib/stdcompat/bit.h>.
+  if (is_kernel) {
+    public_deps = [ "//sdk/lib/stdcompat:headers" ]
+  } else {
+    public_deps = [ "//sdk/lib/stdcompat" ]
+  }
+}
 
-  public_deps = [
-    # <ktl/bit.h> has #include <lib/stdcompat/bit.h>.
-    "//sdk/lib/stdcompat:headers",
-  ]
+static_library("ktl") {
+  public_deps = [ ":headers" ]
+
+  if (is_kernel) {
+    sources = [
+      "align.cc",
+      "popcount.cc",
+      "stub-new.cc",
+    ]
+
+    deps = [
+      ":headers",  # Necessary to put ktl includes before libc.
+      "//sdk/lib/stdcompat:headers",
+      "//zircon/kernel/lib/libc:headers",
+    ]
+  }
 }

@@ -299,7 +299,7 @@ group("tests") {
 }
 
 qemu_shim_test("phys-unittests") {
-  deps = [ "//zircon/kernel/phys/test:zbi-phys-unittests.zbi(//zircon/kernel/phys:kernel.phys_$current_cpu)" ]
+  deps = [ "//zircon/kernel/phys/test:zbi-phys-unittests.zbi($phys_toolchain)" ]
 }
 
 qemu_shim_test("core-tests") {

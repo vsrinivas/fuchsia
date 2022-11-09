@@ -45,25 +45,26 @@ fit::result<Patcher::Error> Patcher::Init(BootfsDir bootfs) {
 
 fit::result<Patcher::Error> Patcher::PatchWithAlternative(ktl::span<ktl::byte> instructions,
                                                           ktl::string_view alternative) {
-  auto result = GetPatchAlternative(alternative);
-  if (result.is_error()) {
+  Bytes bytes;
+  if (auto result = GetPatchAlternative(alternative); result.is_ok()) {
+    bytes = result.value();
+  } else {
     return result.take_error();
   }
 
-  Bytes bytes = ktl::move(result).value();
   ZX_ASSERT_MSG(
       instructions.size() >= bytes.size(),
       "instruction range (%zu bytes) is too small for patch alternative \"%.*s\" (%zu bytes)",
       instructions.size(), static_cast<int>(alternative.size()), alternative.data(), bytes.size());
 
   memcpy(instructions.data(), bytes.data(), bytes.size());
-  PrepareToSync(instructions);
+  sync_(instructions);
   return fit::ok();
 }
 
 void Patcher::NopFill(ktl::span<ktl::byte> instructions) {
   arch::NopFill(instructions);
-  PrepareToSync(instructions);
+  sync_(instructions);
 }
 
 fit::result<Patcher::Error, Patcher::Bytes> Patcher::GetPatchAlternative(ktl::string_view name) {

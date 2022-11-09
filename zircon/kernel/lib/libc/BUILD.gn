@@ -4,10 +4,22 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("//build/cpp/library_headers.gni")
 import("//build/toolchain/toolchain_environment.gni")
-import("//build/zircon/zx_library.gni")
 
-zx_library("libc") {
+library_headers("headers") {
+  headers = []
+  public_deps = [
+    # <stdio.h> has #include <ktl/string_view.h>.
+    "//zircon/kernel/lib/ktl:headers",
+  ]
+
+  public_configs = [ ":limits-stub" ]
+}
+
+static_library("libc") {
+  public_deps = [ ":headers" ]
+
   sources = [
     "abort.cc",
     "atomic.cc",
@@ -25,15 +37,10 @@ zx_library("libc") {
     ":ctype",
     "string",
   ]
-  public_deps = [
-    # <stdio.h> has #include <ktl/string_view.h>.
-    "//zircon/kernel/lib/ktl:headers",
-  ]
 
   if (toolchain_environment == "kernel") {
     deps += [ "//zircon/kernel/lib/heap" ]
   }
-  public_configs = [ ":limits-stub" ]
 }
 
 config("limits-stub") {
