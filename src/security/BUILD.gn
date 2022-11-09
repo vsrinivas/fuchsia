@@ -11,7 +11,6 @@ group("tests") {
   testonly = true
   deps = [
     "bin:tests",
-    "codelab:tests",
     "fcrypto:tests",
     "pkg_test/tests",
     "scrutiny:tests",
