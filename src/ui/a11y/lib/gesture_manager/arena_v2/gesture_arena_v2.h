@@ -38,7 +38,7 @@ namespace a11y {
 // interaction became closed. In this case, the interaction stays on hold until
 // the current contest is decided, at which point we fire a callback for that
 // interaction, and it is longer on hold.
-class InteractionTrackerV2 {
+class InteractionTracker {
  public:
   // The "decision status" of the current contest. If it's certain there will
   // eventually be a winner, the status is "accept". If all recognizers dropped
@@ -56,7 +56,7 @@ class InteractionTrackerV2 {
   using HeldInteractionCallback =
       fit::function<void(fuchsia::ui::pointer::TouchInteractionId id, ConsumptionStatus status)>;
 
-  explicit InteractionTrackerV2(HeldInteractionCallback callback);
+  explicit InteractionTracker(HeldInteractionCallback callback);
 
   // Resets the current contest's consumption status; should be called after a
   // contest ends.
@@ -157,7 +157,7 @@ class GestureArenaV2 {
   // closed before the contest's consumption status (accept or reject) was decided.
   //
   // See `InteractionTracker` for details.
-  explicit GestureArenaV2(InteractionTrackerV2::HeldInteractionCallback callback = [](auto...) {});
+  explicit GestureArenaV2(InteractionTracker::HeldInteractionCallback callback = [](auto...) {});
   virtual ~GestureArenaV2() = default;
 
   // Adds a new recognizer to the arena. The new recognizer starts participating in the next
@@ -168,11 +168,11 @@ class GestureArenaV2 {
   // recognizers.
   //
   // Virtual for testing; overridden by a mock.
-  virtual InteractionTrackerV2::ConsumptionStatus OnEvent(
+  virtual InteractionTracker::ConsumptionStatus OnEvent(
       const fuchsia::ui::pointer::augment::TouchEventWithLocalHit& event);
 
   // Return the consumption status of the current contest.
-  InteractionTrackerV2::ConsumptionStatus Status() { return interactions_.Status(); }
+  InteractionTracker::ConsumptionStatus Status() { return interactions_.Status(); }
 
  private:
   class ParticipationToken;
@@ -226,7 +226,7 @@ class GestureArenaV2 {
   // recognizers declared defeat, simply once all open interactions are closed.)
   void TryToResolve();
 
-  InteractionTrackerV2 interactions_;
+  InteractionTracker interactions_;
 
   std::list<RecognizerHandle> recognizers_;
 

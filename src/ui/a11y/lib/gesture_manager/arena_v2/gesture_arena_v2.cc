@@ -24,12 +24,12 @@ std::tuple<uint32_t, uint32_t, uint32_t> interactionToTriple(
 
 }  // namespace
 
-InteractionTrackerV2::InteractionTrackerV2(HeldInteractionCallback callback)
+InteractionTracker::InteractionTracker(HeldInteractionCallback callback)
     : callback_(std::move(callback)) {
   FX_DCHECK(callback_);
 }
 
-void InteractionTrackerV2::Reset() {
+void InteractionTracker::Reset() {
   FX_DCHECK(open_interactions_.empty());
   FX_DCHECK(held_interactions_.empty());
 
@@ -38,13 +38,13 @@ void InteractionTrackerV2::Reset() {
   held_interactions_.clear();
 }
 
-void InteractionTrackerV2::AcceptInteractions() {
+void InteractionTracker::AcceptInteractions() {
   FX_DCHECK(status_ == ConsumptionStatus::kUndecided);
   status_ = ConsumptionStatus::kAccept;
   NotifyHeldInteractions();
 }
 
-void InteractionTrackerV2::RejectInteractions() {
+void InteractionTracker::RejectInteractions() {
   FX_DCHECK(status_ == ConsumptionStatus::kUndecided);
   status_ = ConsumptionStatus::kReject;
   NotifyHeldInteractions();
@@ -57,7 +57,7 @@ void InteractionTrackerV2::RejectInteractions() {
   open_interactions_.clear();
 }
 
-void InteractionTrackerV2::OnEvent(
+void InteractionTracker::OnEvent(
     const fuchsia::ui::pointer::augment::TouchEventWithLocalHit& event) {
   FX_CHECK(event.touch_event.has_pointer_sample());
   const auto& sample = event.touch_event.pointer_sample();
@@ -85,12 +85,12 @@ void InteractionTrackerV2::OnEvent(
   }
 }
 
-InteractionTrackerV2::ConsumptionStatus InteractionTrackerV2::Status() { return status_; }
+InteractionTracker::ConsumptionStatus InteractionTracker::Status() { return status_; }
 
-bool InteractionTrackerV2::HasOpenInteractions() const { return !open_interactions_.empty(); }
+bool InteractionTracker::HasOpenInteractions() const { return !open_interactions_.empty(); }
 
-void InteractionTrackerV2::NotifyHeldInteractions() {
-  FX_DCHECK(status_ != InteractionTrackerV2::ConsumptionStatus::kUndecided);
+void InteractionTracker::NotifyHeldInteractions() {
+  FX_DCHECK(status_ != InteractionTracker::ConsumptionStatus::kUndecided);
 
   for (const auto interaction : held_interactions_) {
     callback_(interaction, status_);
@@ -129,7 +129,7 @@ class GestureArenaV2::ParticipationToken : public ParticipationTokenInterface {
 
       // Once the first recognizer accepts, we know that the interactions
       // in the current contest belong to us.
-      if (arena_->interactions_.Status() == InteractionTrackerV2::ConsumptionStatus::kUndecided) {
+      if (arena_->interactions_.Status() == InteractionTracker::ConsumptionStatus::kUndecided) {
         arena_->interactions_.AcceptInteractions();
       }
 
@@ -164,7 +164,7 @@ class GestureArenaV2::ParticipationToken : public ParticipationTokenInterface {
   fxl::WeakPtrFactory<ParticipationToken> weak_ptr_factory_;
 };
 
-GestureArenaV2::GestureArenaV2(InteractionTrackerV2::HeldInteractionCallback callback)
+GestureArenaV2::GestureArenaV2(InteractionTracker::HeldInteractionCallback callback)
     : interactions_(std::move(callback)), weak_ptr_factory_(this) {}
 
 void GestureArenaV2::Add(GestureRecognizerV2* recognizer) {
@@ -177,7 +177,7 @@ void GestureArenaV2::Add(GestureRecognizerV2* recognizer) {
 // Possible |Remove| implementation:
 // fxr/c/fuchsia/+/341227/11/src/ui/a11y/lib/gesture_manager/arena/gesture_arena.cc#151
 
-InteractionTrackerV2::ConsumptionStatus GestureArenaV2::OnEvent(
+InteractionTracker::ConsumptionStatus GestureArenaV2::OnEvent(
     const fuchsia::ui::pointer::augment::TouchEventWithLocalHit& event) {
   FX_CHECK(event.touch_event.has_pointer_sample());
   FX_CHECK(!recognizers_.empty()) << "The a11y Gesture arena is listening for pointer events "
