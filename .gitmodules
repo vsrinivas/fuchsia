@@ -706,3 +706,9 @@
 	name = third_party/bazel_rules_python
 	ignore = all
 	active = false
+[submodule "third_party/mobly/src"]
+	path = third_party/mobly/src
+	url = https://fuchsia.googlesource.com/third_party/github.com/google/mobly
+	name = third_party/github.com/google/mobly
+	ignore = all
+	active = false
