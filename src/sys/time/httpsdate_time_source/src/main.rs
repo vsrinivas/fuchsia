@@ -17,7 +17,9 @@ use {
     crate::sampler::{HttpsSampler, HttpsSamplerImpl},
     anyhow::{Context, Error},
     fidl_fuchsia_net_interfaces::StateMarker,
-    fidl_fuchsia_time_external::{PullSourceRequestStream, PushSourceRequestStream, Status},
+    fidl_fuchsia_time_external::{
+        PullSourceRequestStream, PushSourceRequestStream, Status, Urgency,
+    },
     fuchsia_component::server::{ServiceFs, ServiceObj},
     fuchsia_zircon as zx,
     futures::{
@@ -26,6 +28,7 @@ use {
     },
     pull_source::PullSource,
     push_source::PushSource,
+    std::collections::HashMap,
     tracing::warn,
 };
 
@@ -50,47 +53,68 @@ pub struct Config {
     standard_deviation_bound_percentage: u8,
     first_rtt_time_factor: u16,
     use_pull_api: bool,
+    sample_config_by_urgency: HashMap<Urgency, SampleConfig>,
+}
+
+pub struct SampleConfig {
+    max_attempts: u32,
+    num_polls: u32,
+    measure_offset: bool,
 }
 
 impl From<httpsdate_config::Config> for Config {
     fn from(source: httpsdate_config::Config) -> Self {
+        // TODO(fxb/114459): populate from httpsdate_config::Config.
+        let sample_config_by_urgency = HashMap::new();
         Config {
             https_timeout: zx::Duration::from_seconds(source.https_timeout_sec.into()),
             standard_deviation_bound_percentage: source.standard_deviation_bound_percentage,
             first_rtt_time_factor: source.first_rtt_time_factor,
             use_pull_api: source.use_pull_api,
+            sample_config_by_urgency,
         }
     }
 }
 
 /// Serves `PushSource` FIDL API.
 pub struct PushServer<
+    'a,
     S: HttpsSampler + Send + Sync,
     D: Diagnostics,
     N: Future<Output = Result<(), Error>> + Send,
 > {
-    push_source: PushSource<HttpsDateUpdateAlgorithm<S, D, N>>,
+    push_source: PushSource<HttpsDateUpdateAlgorithm<'a, S, D, N>>,
 }
 
-impl<S, D, N> PushServer<S, D, N>
+impl<'a, S, D, N> PushServer<'a, S, D, N>
 where
     S: HttpsSampler + Send + Sync,
     D: Diagnostics,
     N: Future<Output = Result<(), Error>> + Send,
 {
-    fn new(diagnostics: D, sampler: S, internet_reachable: N) -> Result<Self, Error> {
-        let update_algorithm =
-            HttpsDateUpdateAlgorithm::new(RETRY_STRATEGY, diagnostics, sampler, internet_reachable);
+    fn new(
+        diagnostics: D,
+        sampler: S,
+        internet_reachable: N,
+        config: &'a Config,
+    ) -> Result<Self, Error> {
+        let update_algorithm = HttpsDateUpdateAlgorithm::new(
+            RETRY_STRATEGY,
+            diagnostics,
+            sampler,
+            internet_reachable,
+            config,
+        );
         let push_source = PushSource::new(update_algorithm, Status::Initializing)?;
 
         Ok(PushServer { push_source })
     }
 
     /// Start serving `PushSource` FIDL API.
-    fn serve<'a>(
-        &'a self,
-        fs: &'a mut ServiceFs<ServiceObj<'static, PushSourceRequestStream>>,
-    ) -> Result<impl 'a + Future<Output = Result<(), anyhow::Error>>, Error> {
+    fn serve<'b>(
+        &'b self,
+        fs: &'b mut ServiceFs<ServiceObj<'static, PushSourceRequestStream>>,
+    ) -> Result<impl 'b + Future<Output = Result<(), anyhow::Error>>, Error> {
         let update_fut = self.push_source.poll_updates();
 
         fs.dir("svc").add_fidl_service(|stream: PushSourceRequestStream| stream);
@@ -114,32 +138,43 @@ async fn handle_push_source_request<T: push_source::UpdateAlgorithm>(
 
 /// Serves `PullSource` FIDL API.
 pub struct PullServer<
+    'a,
     S: HttpsSampler + Send + Sync,
     D: Diagnostics,
     N: Future<Output = Result<(), Error>> + Send,
 > {
-    pull_source: PullSource<HttpsDateUpdateAlgorithm<S, D, N>>,
+    pull_source: PullSource<HttpsDateUpdateAlgorithm<'a, S, D, N>>,
 }
 
-impl<S, D, N> PullServer<S, D, N>
+impl<'a, S, D, N> PullServer<'a, S, D, N>
 where
     S: HttpsSampler + Send + Sync,
     D: Diagnostics,
     N: Future<Output = Result<(), Error>> + Send,
 {
-    fn new(diagnostics: D, sampler: S, internet_reachable: N) -> Result<Self, Error> {
-        let update_algorithm =
-            HttpsDateUpdateAlgorithm::new(RETRY_STRATEGY, diagnostics, sampler, internet_reachable);
+    fn new(
+        diagnostics: D,
+        sampler: S,
+        internet_reachable: N,
+        config: &'a Config,
+    ) -> Result<Self, Error> {
+        let update_algorithm = HttpsDateUpdateAlgorithm::new(
+            RETRY_STRATEGY,
+            diagnostics,
+            sampler,
+            internet_reachable,
+            config,
+        );
         let pull_source = PullSource::new(update_algorithm)?;
 
         Ok(PullServer { pull_source })
     }
 
     /// Start serving `PullSource` FIDL API.
-    fn serve<'a>(
-        &'a self,
-        fs: &'a mut ServiceFs<ServiceObj<'static, PullSourceRequestStream>>,
-    ) -> Result<impl 'a + Future<Output = Result<(), anyhow::Error>>, Error> {
+    fn serve<'b>(
+        &'b self,
+        fs: &'b mut ServiceFs<ServiceObj<'static, PullSourceRequestStream>>,
+    ) -> Result<impl 'b + Future<Output = Result<(), anyhow::Error>>, Error> {
         fs.dir("svc").add_fidl_service(|stream: PullSourceRequestStream| stream);
         Ok(fs
             .for_each_concurrent(None, |stream| {
@@ -162,7 +197,7 @@ async fn handle_pull_source_request<T: pull_source::UpdateAlgorithm>(
 
 /// Serves FIDL interfaces provided by the component.
 async fn serve<S, D, N>(
-    _config: &Config,
+    config: &'_ Config,
     sampler: S,
     diagnostics: D,
     internet_reachable: N,
@@ -179,7 +214,7 @@ where
 
         fs.take_and_serve_directory_handle()?;
 
-        let server = PullServer::new(diagnostics, sampler, internet_reachable)?;
+        let server = PullServer::new(diagnostics, sampler, internet_reachable, config)?;
         let result = server.serve(&mut fs)?.await;
         result
     } else {
@@ -188,7 +223,7 @@ where
 
         fs.take_and_serve_directory_handle()?;
 
-        let server = PushServer::new(diagnostics, sampler, internet_reachable)?;
+        let server = PushServer::new(diagnostics, sampler, internet_reachable, config)?;
         let result = server.serve(&mut fs)?.await;
         result
     }

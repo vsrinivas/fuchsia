@@ -23,15 +23,20 @@ pub struct HttpsSample {
     pub polls: Vec<Poll>,
 }
 
-impl Into<Update> for HttpsSample {
-    fn into(self) -> Update {
+impl Into<TimeSample> for HttpsSample {
+    fn into(self) -> TimeSample {
         TimeSample {
             monotonic: Some(self.monotonic.into_nanos()),
             utc: Some(self.utc.into_nanos()),
             standard_deviation: Some(self.standard_deviation.into_nanos()),
             ..TimeSample::EMPTY
         }
-        .into()
+    }
+}
+
+impl Into<Update> for HttpsSample {
+    fn into(self) -> Update {
+        Into::<TimeSample>::into(self).into()
     }
 }
 

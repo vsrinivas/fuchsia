@@ -334,7 +334,10 @@ mod test {
     use crate::Config;
     use futures::{FutureExt, TryFutureExt};
     use lazy_static::lazy_static;
-    use std::{collections::VecDeque, iter::FromIterator};
+    use std::{
+        collections::{HashMap, VecDeque},
+        iter::FromIterator,
+    };
 
     lazy_static! {
         static ref TEST_URI: hyper::Uri = "https://localhost/".parse().unwrap();
@@ -365,6 +368,7 @@ mod test {
             standard_deviation_bound_percentage: 30,
             first_rtt_time_factor: 5,
             use_pull_api: false,
+            sample_config_by_urgency: HashMap::new(),
         }
     }
 

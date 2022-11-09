@@ -3,19 +3,22 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::{
-        CONVERGE_SAMPLES, INITIAL_SAMPLE_POLLS, MAX_TIME_BETWEEN_SAMPLES_RANDOMIZATION,
-        SAMPLE_POLLS,
+    crate::{
+        constants::{
+            CONVERGE_SAMPLES, INITIAL_SAMPLE_POLLS, MAX_TIME_BETWEEN_SAMPLES_RANDOMIZATION,
+            SAMPLE_POLLS,
+        },
+        datatypes::{HttpsSample, Phase},
+        diagnostics::{Diagnostics, Event},
+        sampler::HttpsSampler,
+        Config,
     },
-    crate::datatypes::Phase,
-    crate::diagnostics::{Diagnostics, Event},
-    crate::sampler::HttpsSampler,
     anyhow::Error,
     async_trait::async_trait,
     fidl_fuchsia_time_external::{Properties, Status, TimeSample, Urgency},
     fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::{channel::mpsc::Sender, lock::Mutex, Future, SinkExt},
-    httpdate_hyper::HttpsDateErrorType,
+    futures::{channel::mpsc::Sender, future::BoxFuture, lock::Mutex, Future, SinkExt},
+    httpdate_hyper::{HttpsDateError, HttpsDateErrorType},
     push_source::Update,
     rand::Rng,
     tracing::{error, info, warn},
@@ -44,6 +47,7 @@ impl RetryStrategy {
 /// An |UpdateAlgorithm| that uses an `HttpsSampler` to obtain time samples at a schedule
 /// dictated by a specified retry strategy.
 pub struct HttpsDateUpdateAlgorithm<
+    'a,
     S: HttpsSampler + Send + Sync,
     D: Diagnostics,
     N: Future<Output = Result<(), Error>> + Send,
@@ -57,10 +61,65 @@ pub struct HttpsDateUpdateAlgorithm<
     /// Future that completes when the network is available. A 'None' value indicates the network
     /// check has previously completed.
     network_available_fut: Mutex<Option<N>>,
+    /// HttpsDate config.
+    config: &'a Config,
+}
+
+impl<'a, S, D, N> HttpsDateUpdateAlgorithm<'a, S, D, N>
+where
+    S: HttpsSampler + Send + Sync,
+    D: Diagnostics,
+    N: Future<Output = Result<(), Error>> + Send,
+{
+    async fn handle_produce_sample(&self, sample_fut: BoxFuture<'_, HttpsSample>) -> HttpsSample {
+        let sample = sample_fut.await;
+        info!(
+            "Got a time sample - UTC {:?}, bound size {:?}, and polls {:?}",
+            sample.utc, sample.final_bound_size, sample.polls
+        );
+        self.diagnostics.record(Event::Success(&sample));
+        sample
+    }
+
+    // Returns `Some(new_status)` if the error changes the current status.
+    fn handle_sample_error(
+        &self,
+        http_error: HttpsDateError,
+        last_error_type: &mut Option<HttpsDateErrorType>,
+    ) -> Option<Status> {
+        let error_type = http_error.error_type();
+        self.diagnostics.record(Event::Failure(error_type));
+        if Some(error_type) != *last_error_type {
+            *last_error_type = Some(error_type);
+            let new_status = match error_type {
+                HttpsDateErrorType::InvalidHostname | HttpsDateErrorType::SchemeNotHttps => {
+                    // TODO(fxbug.dev/59771) - decide how to surface irrecoverable
+                    // errors to clients
+                    error!(
+                        "Got an unexpected error {:?}, which indicates a bad \
+                             configuration.",
+                        http_error
+                    );
+                    Status::UnknownUnhealthy
+                }
+                HttpsDateErrorType::NetworkError => {
+                    warn!("Failed to poll time: {:?}", http_error);
+                    Status::Network
+                }
+                _ => {
+                    warn!("Failed to poll time: {:?}", http_error);
+                    Status::Protocol
+                }
+            };
+            Some(new_status)
+        } else {
+            None
+        }
+    }
 }
 
 #[async_trait]
-impl<S, D, N> push_source::UpdateAlgorithm for HttpsDateUpdateAlgorithm<S, D, N>
+impl<'a, S, D, N> push_source::UpdateAlgorithm for HttpsDateUpdateAlgorithm<'a, S, D, N>
 where
     S: HttpsSampler + Send + Sync,
     D: Diagnostics,
@@ -117,7 +176,7 @@ where
 }
 
 #[async_trait]
-impl<S, D, N> pull_source::UpdateAlgorithm for HttpsDateUpdateAlgorithm<S, D, N>
+impl<'a, S, D, N> pull_source::UpdateAlgorithm for HttpsDateUpdateAlgorithm<'a, S, D, N>
 where
     S: HttpsSampler + Send + Sync,
     D: Diagnostics,
@@ -128,18 +187,61 @@ where
         // device properties yet.
     }
 
-    async fn sample(&self, _urgency: Urgency) -> Result<TimeSample, pull_source::SampleError> {
-        // TODO(fxb/105777): implement
-        todo!();
+    async fn sample(&self, urgency: Urgency) -> Result<TimeSample, pull_source::SampleError> {
+        let sample_config =
+            self.config.sample_config_by_urgency.get(&urgency).ok_or_else(|| {
+                error!("No config for urgency level {:?}", urgency);
+                pull_source::SampleError::Internal
+            })?;
+        let num_attempts = sample_config.max_attempts;
+        let num_polls: usize = sample_config.num_polls.try_into().map_err(|e| {
+            error!("num_polls numeric overflow: {:?}", e);
+            pull_source::SampleError::Internal
+        })?;
+        let measure_offset = sample_config.measure_offset;
+
+        let mut last_error_type = None;
+        let mut attempt_iter = 0u32..num_attempts;
+        loop {
+            let attempt = match attempt_iter.next() {
+                Some(a) => a,
+                None => match last_error_type {
+                    None => {
+                        warn!("Exhausted attempts to fetch a sample, empty last error type.");
+                        return Err(pull_source::SampleError::Internal);
+                    }
+                    Some(e) => {
+                        warn!("Exhausted attempts to fetch a sample, last error type {:?}.", e);
+                        match e {
+                            HttpsDateErrorType::InvalidHostname
+                            | HttpsDateErrorType::SchemeNotHttps => {
+                                return Err(pull_source::SampleError::Internal)
+                            }
+                            _ => return Err(pull_source::SampleError::Network),
+                        }
+                    }
+                },
+            };
+            match self.sampler.produce_sample(num_polls, measure_offset).await {
+                Ok(sample_fut) => {
+                    return Ok(self.handle_produce_sample(sample_fut).await.into());
+                }
+                Err(http_error) => {
+                    let _ = self.handle_sample_error(http_error, &mut last_error_type);
+                }
+            }
+            fasync::Timer::new(fasync::Time::after(self.retry_strategy.backoff_duration(attempt)))
+                .await;
+        }
     }
 
     async fn next_possible_sample_time(&self) -> zx::Time {
-        // TODO(fxb/105777): implement
-        todo!();
+        // TODO(fxb/113722): Implement rate limiting if required.
+        zx::Time::get_monotonic()
     }
 }
 
-impl<S, D, N> HttpsDateUpdateAlgorithm<S, D, N>
+impl<'a, S, D, N> HttpsDateUpdateAlgorithm<'a, S, D, N>
 where
     S: HttpsSampler + Send + Sync,
     D: Diagnostics,
@@ -150,12 +252,14 @@ where
         diagnostics: D,
         sampler: S,
         network_available_fut: N,
+        config: &'a Config,
     ) -> Self {
         Self {
             retry_strategy,
             sampler,
             diagnostics,
             network_available_fut: Mutex::new(Some(network_available_fut)),
+            config,
         }
     }
 
@@ -174,42 +278,15 @@ where
             match self.sampler.produce_sample(num_polls, measure_offset).await {
                 Ok(sample_fut) => {
                     sink.send(Status::Ok.into()).await?;
-                    let sample = sample_fut.await;
-                    info!(
-                        "Got a time sample - UTC {:?}, bound size {:?}, and polls {:?}",
-                        sample.utc, sample.final_bound_size, sample.polls
-                    );
-                    self.diagnostics.record(Event::Success(&sample));
+                    let sample = self.handle_produce_sample(sample_fut).await;
                     sink.send(sample.into()).await?;
                     return Ok(());
                 }
                 Err(http_error) => {
-                    let error_type = http_error.error_type();
-                    self.diagnostics.record(Event::Failure(error_type));
-                    if Some(error_type) != last_error_type {
-                        last_error_type = Some(error_type);
-                        let status = match error_type {
-                            HttpsDateErrorType::InvalidHostname
-                            | HttpsDateErrorType::SchemeNotHttps => {
-                                // TODO(fxbug.dev/59771) - decide how to surface irrecoverable
-                                // errors to clients
-                                error!(
-                                    "Got an unexpected error {:?}, which indicates a bad \
-                                    configuration.",
-                                    http_error
-                                );
-                                Status::UnknownUnhealthy
-                            }
-                            HttpsDateErrorType::NetworkError => {
-                                warn!("Failed to poll time: {:?}", http_error);
-                                Status::Network
-                            }
-                            _ => {
-                                warn!("Failed to poll time: {:?}", http_error);
-                                Status::Protocol
-                            }
-                        };
-                        sink.send(status.into()).await?;
+                    if let Some(new_status) =
+                        self.handle_sample_error(http_error, &mut last_error_type)
+                    {
+                        sink.send(new_status.into()).await?;
                     }
                 }
             }
@@ -226,18 +303,24 @@ fn mult_duration(duration: zx::Duration, factor: f32) -> zx::Duration {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::datatypes::{HttpsSample, Poll};
-    use crate::diagnostics::FakeDiagnostics;
-    use crate::sampler::FakeSampler;
-    use anyhow::format_err;
-    use assert_matches::assert_matches;
-    use fidl_fuchsia_time_external::TimeSample;
-    use futures::{channel::mpsc::channel, future::ready, stream::StreamExt, task::Poll as FPoll};
-    use httpdate_hyper::HttpsDateError;
-    use lazy_static::lazy_static;
-    use push_source::UpdateAlgorithm;
-    use std::sync::Arc;
+    use {
+        super::*,
+        crate::{
+            datatypes::{HttpsSample, Poll},
+            diagnostics::FakeDiagnostics,
+            sampler::FakeSampler,
+            SampleConfig,
+        },
+        anyhow::format_err,
+        assert_matches::assert_matches,
+        fidl_fuchsia_time_external::TimeSample,
+        futures::{channel::mpsc::channel, future::ready, stream::StreamExt, task::Poll as FPoll},
+        httpdate_hyper::HttpsDateError,
+        lazy_static::lazy_static,
+        pull_source::UpdateAlgorithm as _,
+        push_source::UpdateAlgorithm as _,
+        std::sync::Arc,
+    };
 
     /// Test retry strategy with minimal wait periods.
     const TEST_RETRY_STRATEGY: RetryStrategy = RetryStrategy {
@@ -268,13 +351,37 @@ mod test {
         };
     }
 
-    fn to_fidl_time_sample(sample: &HttpsSample) -> Arc<TimeSample> {
-        Arc::new(TimeSample {
+    fn to_fidl_time_sample(sample: &HttpsSample) -> TimeSample {
+        TimeSample {
             utc: Some(sample.utc.into_nanos()),
             monotonic: Some(sample.monotonic.into_nanos()),
             standard_deviation: Some(sample.standard_deviation.into_nanos()),
             ..TimeSample::EMPTY
-        })
+        }
+    }
+
+    fn to_fidl_time_sample_arc(sample: &HttpsSample) -> Arc<TimeSample> {
+        Arc::new(to_fidl_time_sample(sample))
+    }
+
+    fn make_test_config() -> Config {
+        let sample_config_by_urgency = [
+            (Urgency::Low, SampleConfig { max_attempts: 2, num_polls: 2, measure_offset: false }),
+            (
+                Urgency::Medium,
+                SampleConfig { max_attempts: 3, num_polls: 3, measure_offset: false },
+            ),
+            (Urgency::High, SampleConfig { max_attempts: 5, num_polls: 5, measure_offset: true }),
+        ]
+        .into_iter()
+        .collect();
+        Config {
+            https_timeout: zx::Duration::from_seconds(10),
+            standard_deviation_bound_percentage: 30,
+            first_rtt_time_factor: 5,
+            use_pull_api: false,
+            sample_config_by_urgency,
+        }
     }
 
     #[fuchsia::test]
@@ -310,8 +417,14 @@ mod test {
         let (sampler, _response_complete_fut) =
             FakeSampler::with_responses(vec![Ok(TEST_SAMPLE_1.clone()), Ok(TEST_SAMPLE_2.clone())]);
         let diagnostics = Arc::new(FakeDiagnostics::new());
-        let update_algorithm =
-            HttpsDateUpdateAlgorithm::new(TEST_RETRY_STRATEGY, diagnostics, sampler, ready(Ok(())));
+        let config = &make_test_config();
+        let update_algorithm = HttpsDateUpdateAlgorithm::new(
+            TEST_RETRY_STRATEGY,
+            diagnostics,
+            sampler,
+            ready(Ok(())),
+            config,
+        );
         let (sender, mut receiver) = channel(0);
         let mut update_fut = update_algorithm.generate_updates(sender);
 
@@ -345,16 +458,21 @@ mod test {
         let (sampler, response_complete_fut) =
             FakeSampler::with_responses(expected_samples.iter().map(|sample| Ok(sample.clone())));
         let diagnostics = Arc::new(FakeDiagnostics::new());
-        let update_algorithm = HttpsDateUpdateAlgorithm::new(
-            TEST_RETRY_STRATEGY,
-            Arc::clone(&diagnostics),
-            sampler,
-            ready(Ok(())),
-        );
-
         let (sender, receiver) = channel(0);
-        let _update_task =
-            fasync::Task::spawn(async move { update_algorithm.generate_updates(sender).await });
+        let _update_task = fasync::Task::spawn({
+            let diagnostics = Arc::clone(&diagnostics);
+            async move {
+                let config = make_test_config();
+                let update_algorithm = HttpsDateUpdateAlgorithm::new(
+                    TEST_RETRY_STRATEGY,
+                    diagnostics,
+                    sampler,
+                    ready(Ok(())),
+                    &config,
+                );
+                update_algorithm.generate_updates(sender).await
+            }
+        });
         let updates = receiver.take_until(response_complete_fut).collect::<Vec<_>>().await;
 
         // The first update should indicate status OK, and any subsequent status updates should
@@ -372,7 +490,10 @@ mod test {
                 Update::Status(_) => None,
             })
             .collect::<Vec<_>>();
-        assert_eq!(samples, expected_samples.iter().map(to_fidl_time_sample).collect::<Vec<_>>());
+        assert_eq!(
+            samples,
+            expected_samples.iter().map(to_fidl_time_sample_arc).collect::<Vec<_>>()
+        );
         let expected_events = vec![
             Event::NetworkCheckSuccessful,
             Event::Phase(Phase::Initial),
@@ -393,16 +514,21 @@ mod test {
         ];
         let (sampler, response_complete_fut) = FakeSampler::with_responses(injected_responses);
         let diagnostics = Arc::new(FakeDiagnostics::new());
-        let update_algorithm = HttpsDateUpdateAlgorithm::new(
-            TEST_RETRY_STRATEGY,
-            Arc::clone(&diagnostics),
-            sampler,
-            ready(Ok(())),
-        );
-
         let (sender, receiver) = channel(0);
-        let _update_task =
-            fasync::Task::spawn(async move { update_algorithm.generate_updates(sender).await });
+        let _update_task = fasync::Task::spawn({
+            let diagnostics = Arc::clone(&diagnostics);
+            async move {
+                let config = make_test_config();
+                let update_algorithm = HttpsDateUpdateAlgorithm::new(
+                    TEST_RETRY_STRATEGY,
+                    diagnostics,
+                    sampler,
+                    ready(Ok(())),
+                    &config,
+                );
+                update_algorithm.generate_updates(sender).await
+            }
+        });
         let updates = receiver.take_until(response_complete_fut).collect::<Vec<_>>().await;
 
         // The initial OK from the network check, and each injected status should be reported.
@@ -419,7 +545,7 @@ mod test {
         // Last update should be the new sample.
         let last_update = updates.iter().last().unwrap();
         match last_update {
-            Update::Sample(sample) => assert_eq!(*sample, to_fidl_time_sample(&*TEST_SAMPLE_1)),
+            Update::Sample(sample) => assert_eq!(*sample, to_fidl_time_sample_arc(&*TEST_SAMPLE_1)),
             Update::Status(_) => panic!("Expected a sample but got an update"),
         }
 
@@ -441,16 +567,21 @@ mod test {
         let injected_responses = vec![Ok(TEST_SAMPLE_1.clone())];
         let (sampler, response_complete_fut) = FakeSampler::with_responses(injected_responses);
         let diagnostics = Arc::new(FakeDiagnostics::new());
-        let update_algorithm = HttpsDateUpdateAlgorithm::new(
-            TEST_RETRY_STRATEGY,
-            Arc::clone(&diagnostics),
-            sampler,
-            ready(Err(format_err!("network check error"))),
-        );
-
         let (sender, receiver) = channel(0);
-        let _update_task =
-            fasync::Task::spawn(async move { update_algorithm.generate_updates(sender).await });
+        let _update_task = fasync::Task::spawn({
+            let diagnostics = Arc::clone(&diagnostics);
+            async move {
+                let config = make_test_config();
+                let update_algorithm = HttpsDateUpdateAlgorithm::new(
+                    TEST_RETRY_STRATEGY,
+                    diagnostics,
+                    sampler,
+                    ready(Err(format_err!("network check error"))),
+                    &config,
+                );
+                update_algorithm.generate_updates(sender).await
+            }
+        });
         let updates = receiver.take_until(response_complete_fut).collect::<Vec<_>>().await;
 
         // The initial error from the network check, and OK for the sample should be reported.
@@ -462,7 +593,7 @@ mod test {
         // Last update should be the new sample.
         let last_update = updates.iter().last().unwrap();
         match last_update {
-            Update::Sample(sample) => assert_eq!(*sample, to_fidl_time_sample(&*TEST_SAMPLE_1)),
+            Update::Sample(sample) => assert_eq!(*sample, to_fidl_time_sample_arc(&*TEST_SAMPLE_1)),
             Update::Status(_) => panic!("Expected a sample but got an update"),
         }
 
@@ -479,16 +610,22 @@ mod test {
             FakeSampler::with_responses(expected_samples.iter().map(|sample| Ok(sample.clone())));
         let sampler = Arc::new(sampler);
         let diagnostics = Arc::new(FakeDiagnostics::new());
-        let update_algorithm = HttpsDateUpdateAlgorithm::new(
-            TEST_RETRY_STRATEGY,
-            Arc::clone(&diagnostics),
-            Arc::clone(&sampler),
-            ready(Ok(())),
-        );
-
         let (sender, receiver) = channel(0);
-        let _update_task =
-            fasync::Task::spawn(async move { update_algorithm.generate_updates(sender).await });
+        let _update_task = fasync::Task::spawn({
+            let diagnostics = Arc::clone(&diagnostics);
+            let sampler = Arc::clone(&sampler);
+            async move {
+                let config = make_test_config();
+                let update_algorithm = HttpsDateUpdateAlgorithm::new(
+                    TEST_RETRY_STRATEGY,
+                    diagnostics,
+                    sampler,
+                    ready(Ok(())),
+                    &config,
+                );
+                update_algorithm.generate_updates(sender).await
+            }
+        });
         let updates = receiver.take_until(response_complete_fut).collect::<Vec<_>>().await;
 
         // All status updates should indicate OK.
@@ -516,6 +653,106 @@ mod test {
             vec![(INITIAL_SAMPLE_POLLS, false)],
             vec![(SAMPLE_POLLS, false); CONVERGE_SAMPLES],
             vec![(SAMPLE_POLLS, true)],
+        ]
+        .concat();
+        sampler.assert_produce_sample_requests(&expected_sample_requests).await;
+    }
+
+    #[fuchsia::test]
+    async fn test_pull_sample() {
+        let expected_num_samples = 1;
+        let expected_samples = vec![TEST_SAMPLE_1.clone(); expected_num_samples];
+
+        let (sampler, _response_complete_fut) =
+            FakeSampler::with_responses(expected_samples.iter().map(|sample| Ok(sample.clone())));
+        let diagnostics = Arc::new(FakeDiagnostics::new());
+        let config = make_test_config();
+        let update_algorithm = HttpsDateUpdateAlgorithm::new(
+            TEST_RETRY_STRATEGY,
+            diagnostics,
+            sampler,
+            ready(Ok(())),
+            &config,
+        );
+        let sample = update_algorithm.sample(Urgency::Medium).await;
+
+        assert_eq!(sample.unwrap(), to_fidl_time_sample(&*TEST_SAMPLE_1));
+    }
+
+    #[fuchsia::test]
+    async fn test_pull_retries_on_error() {
+        let injected_responses = vec![
+            Err(HttpsDateError::new(HttpsDateErrorType::NetworkError)),
+            Err(HttpsDateError::new(HttpsDateErrorType::NoCertificatesPresented)),
+            Ok(TEST_SAMPLE_1.clone()),
+        ];
+        let (sampler, _response_complete_fut) = FakeSampler::with_responses(injected_responses);
+        let diagnostics = Arc::new(FakeDiagnostics::new());
+        let config = make_test_config();
+
+        let update_algorithm = HttpsDateUpdateAlgorithm::new(
+            TEST_RETRY_STRATEGY,
+            diagnostics,
+            sampler,
+            ready(Ok(())),
+            &config,
+        );
+        let sample = update_algorithm.sample(Urgency::Medium).await;
+
+        assert_eq!(sample.unwrap(), to_fidl_time_sample(&*TEST_SAMPLE_1));
+    }
+
+    #[fuchsia::test]
+    async fn test_pull_exhausts_num_attempts() {
+        let injected_responses = vec![
+            Err(HttpsDateError::new(HttpsDateErrorType::NetworkError)),
+            Err(HttpsDateError::new(HttpsDateErrorType::NetworkError)),
+            Err(HttpsDateError::new(HttpsDateErrorType::NoCertificatesPresented)),
+            Ok(TEST_SAMPLE_1.clone()),
+        ];
+        let (sampler, _response_complete_fut) = FakeSampler::with_responses(injected_responses);
+        let diagnostics = Arc::new(FakeDiagnostics::new());
+        let config = make_test_config();
+
+        let update_algorithm = HttpsDateUpdateAlgorithm::new(
+            TEST_RETRY_STRATEGY,
+            diagnostics,
+            sampler,
+            ready(Ok(())),
+            &config,
+        );
+        let sample = update_algorithm.sample(Urgency::Medium).await;
+
+        assert_eq!(sample.unwrap_err(), pull_source::SampleError::Network);
+    }
+
+    #[fuchsia::test]
+    async fn test_pull_produce_sample_requests() {
+        let injected_responses =
+            vec![Ok(TEST_SAMPLE_1.clone()), Ok(TEST_SAMPLE_1.clone()), Ok(TEST_SAMPLE_1.clone())];
+        let (sampler, _response_complete_fut) = FakeSampler::with_responses(injected_responses);
+        let sampler = Arc::new(sampler);
+        let diagnostics = Arc::new(FakeDiagnostics::new());
+        let config = make_test_config();
+
+        let update_algorithm = HttpsDateUpdateAlgorithm::new(
+            TEST_RETRY_STRATEGY,
+            diagnostics,
+            Arc::clone(&sampler),
+            ready(Ok(())),
+            &config,
+        );
+        let _sample = update_algorithm.sample(Urgency::Low).await;
+        let _sample = update_algorithm.sample(Urgency::Medium).await;
+        let _sample = update_algorithm.sample(Urgency::High).await;
+
+        let sample_config_low = config.sample_config_by_urgency.get(&Urgency::Low).unwrap();
+        let sample_config_medium = config.sample_config_by_urgency.get(&Urgency::Medium).unwrap();
+        let sample_config_high = config.sample_config_by_urgency.get(&Urgency::High).unwrap();
+        let expected_sample_requests = vec![
+            vec![(sample_config_low.num_polls as usize, sample_config_low.measure_offset)],
+            vec![(sample_config_medium.num_polls as usize, sample_config_medium.measure_offset)],
+            vec![(sample_config_high.num_polls as usize, sample_config_high.measure_offset)],
         ]
         .concat();
         sampler.assert_produce_sample_requests(&expected_sample_requests).await;
