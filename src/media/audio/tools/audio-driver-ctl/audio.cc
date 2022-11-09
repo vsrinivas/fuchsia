@@ -75,8 +75,7 @@ static std::optional<uint32_t> GetUint32(const char* arg) {
   return {result};
 }
 
-// If you update this help text you should probably also update the reference
-// documentation at //docs/reference/hardware/tools/audio-driver-ctl.md
+// LINT.IfChange
 void usage(const char* prog_name, bool full_usage) {
   // clang-format off
   printf(
@@ -221,6 +220,7 @@ void usage(const char* prog_name, bool full_usage) {
     // clang-format on
   }
 }
+// LINT.ThenChange(//docs/reference/tools/hardware/audio-driver-ctl.md)
 
 void dump_formats(const audio::utils::AudioDeviceStream& stream) {
   stream.GetSupportedFormats([](const fuchsia_hardware_audio::wire::SupportedFormats& formats) {

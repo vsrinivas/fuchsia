@@ -1,5 +1,8 @@
-<!-- If you update this reference documentation you should probably also update
-     the help text at //src/devices/gpio/bin/gpioutil/main.cc -->
+<!--
+
+// LINT.IfChange
+
+-->
 
 # gpioutil
 
@@ -192,3 +195,9 @@ datasheet's name for the GPIO. See the `DECL_GPIO_PIN` statements in
 Source code for `gpioutil`: [`//src/devices/gpio/bin/gpioutil/`][src]
 
 [src]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/devices/gpio/bin/gpioutil/
+
+<!--
+
+// LINT.ThenChange(//src/devices/gpio/bin/gpioutil/main.cc)
+
+-->

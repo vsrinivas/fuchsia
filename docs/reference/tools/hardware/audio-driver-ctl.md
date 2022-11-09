@@ -1,5 +1,8 @@
-<!-- If you update this reference documentation you should probably also update
-     the help text at //src/media/audio/tools/audio-driver-ctl/audio.cc -->
+<!--
+
+// LINT.IfChange
+
+-->
 
 # audio-driver-ctl
 
@@ -299,3 +302,9 @@ Both commands should be run from your host, not the target Fuchsia device.
 Source code for `audio-driver-ctl`: [`//src/media/audio/tools/audio-driver-ctl/`][src]
 
 [src]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/media/audio/tools/audio-driver-ctl/
+
+<!--
+
+// LINT.ThenChange(//src/media/audio/tools/audio-driver-ctl/audio.cc)
+
+-->

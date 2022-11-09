@@ -16,8 +16,7 @@
 
 constexpr char kLightsDevicePath[] = "/dev/class/light/000";
 
-// If you update this help text you should probably also update the
-// reference documentation at //src/docs/reference/tools/hardware/lights-cli.md
+// LINT.IfChange
 constexpr char kUsageMessage[] = R"""(Usage:
   lights-cli print <id>
   lights-cli set <id> <brightness>
@@ -60,6 +59,7 @@ Examples:
 Notes:
   Source code for `lights-cli`: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/ui/light/bin/lights-cli/
 )""";
+// LINT.ThenChange(//src/ui/light/bin/lights-cli/main.cc)
 
 zx_status_t GetDeviceHandle(const char* path, zx::channel* handle) {
   fbl::unique_fd fd(open(path, O_RDWR));

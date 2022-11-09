@@ -1,5 +1,8 @@
-<!-- If you update this reference documentation you should probably also update
-     the help text at //src/ui/light/bin/lights-cli/main.cc -->
+<!--
+
+// LINT.IfChange
+
+-->
 
 # lights-cli
 
@@ -82,3 +85,9 @@ Value of AMBER_LED: 0.500000
 Source code for `lights-cli`: [`//src/ui/light/bin/lights-cli/`][src]
 
 [src]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/ui/light/bin/lights-cli/
+
+<!--
+
+// LINT.ThenChange(//src/ui/light/bin/lights-cli/main.cc)
+
+-->

@@ -21,8 +21,7 @@ constexpr size_t kArgDevice = 2;
 
 }  // namespace
 
-// If you update this help text you should probably also update
-// the reference documentation at //docs/reference/hardware/tools/gpioutil.md
+// LINT.IfChange
 static void usage() {
   printf(
       "Usage: gpioutil <command> [<name>] [<value>]\n\n"
@@ -70,6 +69,7 @@ static void usage() {
       "  $ gpioutil drive GPIO_HW_ID_3 500\n"
       "  Set drive strength to 500\n\n");
 }
+// LINT.ThenChange(//docs/reference/tools/hardware/gpioutil.md)
 
 int main(int argc, char** argv) {
   GpioFunc func;
