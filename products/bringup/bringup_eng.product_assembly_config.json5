@@ -1,0 +1,10 @@
+{
+    platform: {
+        feature_set_level: "bringup",
+        build_type: "eng",
+    },
+
+    // The bringup product can't specify anything in base/cache packages, as it
+    // doesn't have an fvm with blobfs.
+    product: {},
+}
