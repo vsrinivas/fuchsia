@@ -9,13 +9,6 @@ import("//build/images/custom_signing.gni")
 import("//build/images/fvm.gni")
 import("//build/product.gni")
 
-bazel_input_resource_directory("bazel_platform_aibs") {
-  testonly = true
-  source_dir = get_label_info("//bundles/assembly", "target_out_dir")
-  dest_dir = "fuchsia_platform_aibs"
-  deps = [ "//bundles/assembly" ]
-}
-
 zbi_only = use_bringup_assembly
 
 if (use_bringup_assembly) {

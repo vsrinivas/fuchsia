@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bazel/bazel_inputs.gni")
 import("//build/python/python_action.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
 
@@ -302,6 +303,8 @@ template("assembly_input_bundle") {
     # The assembly bundle package and archive labels
     assembly_input_bundle_package = "${target_name}.pkg"
     assembly_input_bundle_archive = "${target_name}.tgz"
+
+    bazel_inputs = "${target_name}_bazel_inputs"
   }
 
   files = {
@@ -568,12 +571,25 @@ template("assembly_input_bundle") {
     }
   }
 
+  # Make generated AIBs available to Bazel builds.
+  bazel_input_resource_directory(labels.bazel_inputs) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    source_dir = files.assembly_input_bundle_dir
+    dest_dir = rebase_path(files.assembly_input_bundle_dir, root_out_dir)
+    deps = [ ":${labels.assembly_input_bundle}" ]
+  }
+
   group(target_name) {
     forward_variables_from(invoker,
                            [
                              "testonly",
                              "visibility",
                            ])
+    deps = [ ":${labels.bazel_inputs}" ]
     public_deps = [ ":${labels.assembly_input_bundle}" ]
     if (create_aib_package) {
       public_deps += [ ":${labels.assembly_input_bundle_package}" ]

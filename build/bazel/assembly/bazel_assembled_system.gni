@@ -74,7 +74,6 @@ template("bazel_assembled_system") {
     bazel_targets = [ invoker.bazel_assembly_target ]
     bazel_inputs = [
       "//build/bazel:build_args_bazel_inputs",
-      "//build/bazel/assembly:bazel_platform_aibs",
       "//build/images/${invoker.gn_image_name}:${invoker.gn_image_name}.bazel_images_config_inputs",
       "//build/images/${invoker.gn_image_name}:${invoker.gn_image_name}.bazel_legacy_aib",
     ]

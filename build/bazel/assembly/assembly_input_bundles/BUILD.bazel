@@ -2,15 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-load("@rules_fuchsia//fuchsia:assembly.bzl", "assembly_bundle")
+load("@rules_fuchsia//fuchsia/private/assembly:assembly_bundle.bzl", "assembly_bundle")
+load("//build/bazel/assembly:platform_aib.bzl", "platform_aib")
+load("//build/bazel/assembly:platform_aibs.bzl", "platform_aibs")
 
 package(default_visibility = ["//build/bazel/assembly:__pkg__"])
-
-assembly_bundle(
-    name = "platform",
-    dir = "@legacy_ninja_build_outputs//:fuchsia_platform_aibs",
-    files = "@legacy_ninja_build_outputs//:bazel_platform_aibs",
-)
 
 assembly_bundle(
     name = "legacy_fuchsia",
@@ -22,4 +18,23 @@ assembly_bundle(
     name = "legacy_bringup",
     dir = "@legacy_ninja_build_outputs//:obj/build/images/bringup/bringup/bringup.bazel_legacy_aib",
     files = "@legacy_ninja_build_outputs//:bringup.bazel_legacy_aib",
+)
+
+platform_aib(
+    name = "bazel_migration",
+    base_packages = ["//build/bazel/examples/hello_fuchsia:hello_fuchsia_package"],
+)
+
+platform_aibs(
+    name = "platform",
+    aib_dirs = [
+        "@legacy_ninja_build_outputs//:obj/bundles/assembly/common_bringup",
+        "@legacy_ninja_build_outputs//:obj/bundles/assembly/common_bringup_eng",
+        "@legacy_ninja_build_outputs//:obj/bundles/assembly/common_minimal",
+        "@legacy_ninja_build_outputs//:obj/bundles/assembly/common_minimal_eng",
+        "@legacy_ninja_build_outputs//:obj/bundles/assembly/emulator_support",
+    ],
+    # NOTE: Including `bazel_migration` has no real effect because it's not
+    # recognized by `ffx assembly`. It's here to help development and debugging.
+    aibs = [":bazel_migration"],
 )
