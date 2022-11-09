@@ -798,7 +798,36 @@ void EventRing::HandleTransferInterrupt() {
   // indicates a bug in the driver.
   std::unique_ptr<TRBContext> context;
   zx_status_t status = ring->CompleteTRB(trb, &context);
-  ZX_ASSERT(status == ZX_OK);
+
+  // TODO(fxbug.dev/107934): Once we reliably keep track of TRBs, this error handling should be
+  // removed and replaced by: ZX_ASSERT(status == ZX_OK).
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Lost a TRB! Completion code is %u", transfer_event->CompletionCode());
+
+    auto completions = ring->TakePendingTRBs();
+    l.release();
+
+    // CompleteTRB already popped the head off the list, so complete it first.
+    if (context) {
+      context->request->Complete(ZX_ERR_IO, 0);
+    }
+
+    size_t index = 1;
+    bool found = false;
+    for (auto& completion : completions) {
+      if (completion.trb == trb) {
+        zxlogf(ERROR, "Current TRB was found at index %zd", index);
+        found = true;
+      }
+      completion.request->Complete(ZX_ERR_IO, 0);
+      index++;
+    }
+    if (!found) {
+      zxlogf(ERROR, "Current TRB was not found");
+    }
+
+    return;
+  }
 
   l.release();
 

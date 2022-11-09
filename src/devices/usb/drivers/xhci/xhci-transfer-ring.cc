@@ -350,11 +350,13 @@ TRB* TransferRing::PhysToVirtLocked(zx_paddr_t paddr) {
 zx_status_t TransferRing::CompleteTRB(TRB* trb, std::unique_ptr<TRBContext>* context) {
   fbl::AutoLock l(&mutex_);
   if (pending_trbs_.is_empty()) {
+    zxlogf(ERROR, "Pending TRB list is empty but we received a completion event");
     return ZX_ERR_CANCELED;
   }
   dequeue_trb_ = trb;
   *context = pending_trbs_.pop_front();
   if (trb != (*context)->trb) {
+    zxlogf(ERROR, "Lost a TRB! Expected %p but we received an event for %p", (*context)->trb, trb);
     return ZX_ERR_IO;
   }
   return ZX_OK;
