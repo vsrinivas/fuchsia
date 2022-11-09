@@ -18,7 +18,6 @@ source_set("testing") {
     "fake_packet_queue.cc",
     "fake_packet_queue.h",
     "fake_plug_detector.h",
-    "fake_profile_provider.h",
     "fake_stream.cc",
     "fake_stream.h",
     "matchers.h",

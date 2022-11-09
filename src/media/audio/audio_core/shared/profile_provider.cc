@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/v1/profile_provider.h"
+#include "src/media/audio/audio_core/shared/profile_provider.h"
 
 #include <lib/syslog/cpp/macros.h>
 
 #include <sstream>
 
 #include "src/media/audio/audio_core/shared/mix_profile_config.h"
-#include "src/media/audio/audio_core/v1/utils.h"
 
 namespace {
 

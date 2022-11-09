@@ -20,7 +20,6 @@
 
 #include <fbl/ref_counted.h>
 
-#include "src/media/audio/audio_core/shared/mix_profile_config.h"
 #include "src/media/audio/audio_core/shared/mixer/constants.h"
 
 namespace media::audio {
@@ -77,15 +76,6 @@ bool IsFormatInSupported(
 // A simple extension to the libfzl VmoMapper which mixes in ref counting state
 // to allow for shared VmoMapper semantics.
 class RefCountedVmoMapper : public fzl::VmoMapper, public fbl::RefCounted<fzl::VmoMapper> {};
-
-zx_status_t AcquireHighPriorityProfile(const MixProfileConfig& mix_profile_config,
-                                       zx::profile* profile);
-
-void AcquireAudioCoreImplProfile(sys::ComponentContext* context,
-                                 fit::function<void(zx_status_t, zx::profile)> callback);
-
-void AcquireRelativePriorityProfile(uint32_t priority, sys::ComponentContext* context,
-                                    fit::function<void(zx_status_t, zx::profile)> callback);
 
 }  // namespace media::audio
 

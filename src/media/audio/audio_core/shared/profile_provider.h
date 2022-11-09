@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_V1_PROFILE_PROVIDER_H_
-#define SRC_MEDIA_AUDIO_AUDIO_CORE_V1_PROFILE_PROVIDER_H_
+#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_SHARED_PROFILE_PROVIDER_H_
+#define SRC_MEDIA_AUDIO_AUDIO_CORE_SHARED_PROFILE_PROVIDER_H_
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
@@ -38,4 +38,4 @@ class ProfileProvider : public fuchsia::media::ProfileProvider {
 
 }  // namespace media::audio
 
-#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_V1_PROFILE_PROVIDER_H_
+#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_SHARED_PROFILE_PROVIDER_H_

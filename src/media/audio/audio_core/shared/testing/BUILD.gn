@@ -8,9 +8,14 @@ source_set("testing") {
   testonly = true
 
   sources = [
+    "fake_profile_provider.h",
     "null_audio_capturer.h",
     "null_audio_renderer.h",
   ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
+    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
+    "//src/lib/fidl/cpp",
+  ]
 }
