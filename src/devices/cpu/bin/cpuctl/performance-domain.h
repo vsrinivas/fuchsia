@@ -10,14 +10,13 @@
 
 #include <tuple>
 #include <utility>
-#include <variant>
 #include <vector>
 
 namespace cpuctrl = fuchsia_hardware_cpu_ctrl;
 
 class CpuPerformanceDomain {
  public:
-  static std::variant<zx_status_t, CpuPerformanceDomain> CreateFromPath(const std::string& path);
+  static zx::result<CpuPerformanceDomain> CreateFromPath(const std::string& path);
   std::pair<zx_status_t, uint64_t> GetNumLogicalCores();
   std::tuple<zx_status_t, uint64_t, cpuctrl::wire::CpuPerformanceStateInfo>
   GetCurrentPerformanceState();
@@ -26,10 +25,11 @@ class CpuPerformanceDomain {
 
  protected:
   // Don't allow explicit construction.
-  explicit CpuPerformanceDomain(fidl::WireSyncClient<cpuctrl::Device> cpu_client,
-                                fidl::WireSyncClient<fuchsia_device::Controller> device_client)
+  explicit CpuPerformanceDomain(fidl::ClientEnd<cpuctrl::Device> cpu_client,
+                                fidl::ClientEnd<fuchsia_device::Controller> device_client)
       : cpu_client_(std::move(cpu_client)), device_client_(std::move(device_client)) {}
 
+ private:
   fidl::WireSyncClient<cpuctrl::Device> cpu_client_;
   fidl::WireSyncClient<fuchsia_device::Controller> device_client_;
 

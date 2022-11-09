@@ -100,8 +100,8 @@ void FakeCpuDevice::GetCurrentPerformanceState(
 class TestCpuPerformanceDomain : public CpuPerformanceDomain {
  public:
   // Permit Explicit Construction
-  TestCpuPerformanceDomain(fidl::WireSyncClient<cpuctrl::Device> cpu_client,
-                           fidl::WireSyncClient<fuchsia_device::Controller> device_client)
+  TestCpuPerformanceDomain(fidl::ClientEnd<cpuctrl::Device> cpu_client,
+                           fidl::ClientEnd<fuchsia_device::Controller> device_client)
       : CpuPerformanceDomain(std::move(cpu_client), std::move(device_client)) {}
 };
 
@@ -129,10 +129,7 @@ void PerformanceDomainTest::SetUp() {
   fidl::BindServer(loop_.dispatcher(), std::move(device_endpoints->server),
                    static_cast<fidl::WireServer<fuchsia_device::Controller>*>(&cpu_));
 
-  fidl::WireSyncClient cpu_client(std::move(cpu_endpoints->client));
-  fidl::WireSyncClient device_client(std::move(device_endpoints->client));
-
-  pd_.emplace(std::move(cpu_client), std::move(device_client));
+  pd_.emplace(std::move(cpu_endpoints->client), std::move(device_endpoints->client));
   ASSERT_OK(loop_.StartThread("performance-domain-test-fidl-thread"));
 }
 

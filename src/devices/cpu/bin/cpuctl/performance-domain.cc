@@ -5,42 +5,22 @@
 #include "performance-domain.h"
 
 #include <fidl/fuchsia.device/cpp/wire.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fdio.h>
+#include <lib/component/cpp/incoming/service_client.h>
 
 #include <iostream>
 
 using fuchsia_device::wire::kMaxDevicePerformanceStates;
 
-std::variant<zx_status_t, CpuPerformanceDomain> CpuPerformanceDomain::CreateFromPath(
-    const std::string& path) {
-  // Obtain a channel to the service.
-  zx::channel cpu_local, cpu_remote, device_local, device_remote;
-  zx_status_t st = zx::channel::create(0, &cpu_local, &cpu_remote);
-  if (st != ZX_OK) {
-    return st;
+zx::result<CpuPerformanceDomain> CpuPerformanceDomain::CreateFromPath(const std::string& path) {
+  zx::result cpu = component::Connect<cpuctrl::Device>(path);
+  if (cpu.is_error()) {
+    return cpu.take_error();
   }
-
-  st = fdio_service_connect(path.c_str(), cpu_remote.release());
-  if (st != ZX_OK) {
-    return st;
+  zx::result device = component::Connect<fuchsia_device::Controller>(path);
+  if (device.is_error()) {
+    return device.take_error();
   }
-
-  st = zx::channel::create(0, &device_local, &device_remote);
-  if (st != ZX_OK) {
-    return st;
-  }
-
-  st = fdio_service_connect(path.c_str(), device_remote.release());
-  if (st != ZX_OK) {
-    return st;
-  }
-
-  fidl::WireSyncClient<cpuctrl::Device> cpu_client(std::move(cpu_local));
-  fidl::WireSyncClient<fuchsia_device::Controller> device_client(std::move(device_local));
-
-  CpuPerformanceDomain result(std::move(cpu_client), std::move(device_client));
-  return result;
+  return zx::ok(CpuPerformanceDomain(std::move(cpu.value()), std::move(device.value())));
 }
 
 std::pair<zx_status_t, uint64_t> CpuPerformanceDomain::GetNumLogicalCores() {

@@ -6,11 +6,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
-#include <fidl/fuchsia.hardware.cpu.ctrl/cpp/wire.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fdio.h>
 #include <lib/fit/defer.h>
-#include <lib/zx/channel.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -94,10 +90,10 @@ void usage(const char* cmd) {
   // clang-format on
 }
 
-constexpr long kBadParse = -1;
-long parse_positive_long(const char* number) {
+constexpr int64_t kBadParse = -1;
+int64_t parse_positive_long(const char* number) {
   char* end;
-  long result = strtol(number, &end, 10);
+  int64_t result = strtol(number, &end, 10);
   if (end == number || *end != '\0' || result < 0) {
     return kBadParse;
   }
@@ -106,7 +102,7 @@ long parse_positive_long(const char* number) {
 
 // Call `ListCb cb` with all the names of devices in kCpuDevicePath. Each of
 // these devices represent a single performance domain.
-zx_status_t list(ListCb cb) {
+zx_status_t list(const ListCb& cb) {
   DIR* dir = opendir(kCpuDevicePath);
   if (!dir) {
     fprintf(stderr, "Failed to open CPU device at '%s'\n", kCpuDevicePath);
@@ -138,17 +134,14 @@ void describe(const char* domain_name) {
   char path[kMaxPathLen];
   snprintf(path, kMaxPathLen, kCpuDeviceFormat, domain_name);
 
-  auto domain = CpuPerformanceDomain::CreateFromPath(path);
-
-  // If status is set, something went wrong.
-  zx_status_t* st = std::get_if<zx_status_t>(&domain);
-  if (st) {
+  zx::result domain = CpuPerformanceDomain::CreateFromPath(path);
+  if (domain.is_error()) {
     std::cerr << "Failed to connect to performance domain device '" << domain_name << "'"
-              << " st = " << *st << std::endl;
+              << " st = " << domain.status_string() << std::endl;
     return;
   }
 
-  auto client = std::move(std::get<CpuPerformanceDomain>(domain));
+  CpuPerformanceDomain& client = domain.value();
   const auto [core_count_status, core_count] = client.GetNumLogicalCores();
 
   std::cout << "Domain " << domain_name << std::endl;
@@ -171,7 +164,7 @@ void describe(const char* domain_name) {
 }
 
 void set_performance_state(const char* domain_name, const char* pstate) {
-  long desired_state_l = parse_positive_long(pstate);
+  int64_t desired_state_l = parse_positive_long(pstate);
   if (desired_state_l < 0 || desired_state_l > kMaxDevicePerformanceStates) {
     fprintf(stderr, "Bad pstate '%s', must be a positive integer between 0 and %u\n", pstate,
             kMaxDevicePerformanceStates);
@@ -182,17 +175,14 @@ void set_performance_state(const char* domain_name, const char* pstate) {
   char path[kMaxPathLen];
   snprintf(path, kMaxPathLen, kCpuDeviceFormat, domain_name);
 
-  auto domain = CpuPerformanceDomain::CreateFromPath(path);
-
-  zx_status_t* st = std::get_if<zx_status_t>(&domain);
-  if (st) {
+  zx::result domain = CpuPerformanceDomain::CreateFromPath(path);
+  if (domain.is_error()) {
     std::cerr << "Failed to connect to performance domain device '" << domain_name << "'"
-              << " st = " << *st << std::endl;
+              << " st = " << domain.status_string() << std::endl;
     return;
   }
 
-  auto client = std::move(std::get<CpuPerformanceDomain>(domain));
-
+  CpuPerformanceDomain& client = domain.value();
   zx_status_t status = client.SetPerformanceState(static_cast<uint32_t>(desired_state));
   if (status != ZX_OK) {
     std::cerr << "Failed to set performance state, st = " << status << std::endl;
@@ -217,18 +207,14 @@ void get_performance_state(const char* domain_name) {
   char path[kMaxPathLen];
   snprintf(path, kMaxPathLen, kCpuDeviceFormat, domain_name);
 
-  auto domain = CpuPerformanceDomain::CreateFromPath(path);
-
-  // If status is set, something went wrong.
-  zx_status_t* st = std::get_if<zx_status_t>(&domain);
-  if (st) {
+  zx::result domain = CpuPerformanceDomain::CreateFromPath(path);
+  if (domain.is_error()) {
     std::cerr << "Failed to connect to performance domain device '" << domain_name << "'"
-              << " st = " << *st << std::endl;
+              << " st = " << domain.status_string() << std::endl;
     return;
   }
 
-  auto client = std::move(std::get<CpuPerformanceDomain>(domain));
-
+  CpuPerformanceDomain& client = domain.value();
   const auto [status, ps_index, pstate] = client.GetCurrentPerformanceState();
 
   if (status != ZX_OK) {
@@ -260,16 +246,14 @@ void stress(std::vector<std::string> names, const size_t iterations, const uint6
   for (const auto& name : names) {
     std::string device_path = std::string(kCpuDevicePath) + std::string("/") + name;
 
-    auto domain = CpuPerformanceDomain::CreateFromPath(device_path.c_str());
-
-    zx_status_t* st = std::get_if<zx_status_t>(&domain);
-    if (st) {
+    zx::result domain = CpuPerformanceDomain::CreateFromPath(device_path);
+    if (domain.is_error()) {
       std::cerr << "Failed to connect to performance domain device '" << name << "'"
-                << " st = " << *st << std::endl;
+                << " st = " << domain.status_string() << std::endl;
       continue;
     }
 
-    domains.push_back(std::move(std::get<CpuPerformanceDomain>(domain)));
+    domains.push_back(std::move(domain.value()));
   }
 
   // Put things back the way they were before the test started.
@@ -340,16 +324,18 @@ int main(int argc, char* argv[]) {
   if (!strncmp(subcmd, "help", 4)) {
     usage(cmd);
     return 0;
-  } else if (!strncmp(subcmd, "list", 4)) {
+  }
+  if (!strncmp(subcmd, "list", 4)) {
     return list(print_performance_domain) == ZX_OK ? 0 : -1;
-  } else if (!strncmp(subcmd, "describe", 8)) {
+  }
+  if (!strncmp(subcmd, "describe", 8)) {
     if (argc >= 3) {
       describe(argv[2]);
       return 0;
-    } else {
-      return describe_all() == ZX_OK ? 0 : -1;
     }
-  } else if (!strncmp(subcmd, "pstate", 6)) {
+    return describe_all() == ZX_OK ? 0 : -1;
+  }
+  if (!strncmp(subcmd, "pstate", 6)) {
     if (argc == 4) {
       set_performance_state(argv[2], argv[3]);
     } else if (argc == 3) {
@@ -364,8 +350,8 @@ int main(int argc, char* argv[]) {
     char* iterations_c = get_option(argv, argc, std::string("-c"));
     char* domains_c = get_option(argv, argc, std::string("-d"));
 
-    long timeout = kDefaultStressTestTimeoutMs;
-    long iterations = kDefaultStressTestIterations;
+    int64_t timeout = kDefaultStressTestTimeoutMs;
+    int64_t iterations = kDefaultStressTestIterations;
 
     if (timeout_c != nullptr) {
       timeout = parse_positive_long(timeout_c);
