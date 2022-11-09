@@ -4,8 +4,8 @@
 
 #include <assert.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/block/c/fidl.h>
-#include <fuchsia/hardware/skipblock/c/fidl.h>
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
+#include <fidl/fuchsia.hardware.skipblock/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zircon-internal/xorshiftrand.h>
@@ -19,8 +19,10 @@
 #include <zircon/assert.h>
 #include <zircon/device/block.h>
 #include <zircon/process.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>
+#include <zircon/types.h>
 
 #include <atomic>
 #include <memory>
@@ -98,17 +100,17 @@ class ProgressBar {
 class WorkContext {
  public:
   explicit WorkContext(ProgressBar progress, bool okay) : progress(progress), okay_(okay) {}
-  ~WorkContext() {}
+  ~WorkContext() = default;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(WorkContext);
 
   // Implementation specific information.
   struct {
     std::unique_ptr<block_client::Client> client;
-    fuchsia_hardware_block_BlockInfo info = {};
+    fuchsia_hardware_block::wire::BlockInfo info = {};
   } block;
   struct {
-    fuchsia_hardware_skipblock_PartitionInfo info = {};
+    fuchsia_hardware_skipblock::wire::PartitionInfo info = {};
   } skip;
   // Connection to device being tested.
   fdio_cpp::FdioCaller caller;
@@ -133,7 +135,7 @@ class Checker {
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Checker);
 
  protected:
-  Checker(void* buffer) : buffer_(buffer) {}
+  explicit Checker(void* buffer) : buffer_(buffer) {}
 
   void GenerateBlockData(int block_idx, size_t length) const {
     // Block size should be a multiple of sizeof(uint64_t), but assert just to be safe
@@ -186,40 +188,44 @@ class Checker {
 
 class BlockChecker : public Checker {
  public:
-  static zx_status_t Initialize(fdio_cpp::FdioCaller& caller, fuchsia_hardware_block_BlockInfo info,
+  static zx_status_t Initialize(fdio_cpp::FdioCaller& caller,
+                                fuchsia_hardware_block::wire::BlockInfo info,
                                 block_client::Client& client, std::unique_ptr<Checker>* checker) {
     fzl::OwnedVmoMapper mapping;
-    zx_status_t status = mapping.CreateAndMap(block_size, "");
-    if (status != ZX_OK) {
-      printf("Failled to CreateAndMap Vmo\n");
+    if (zx_status_t status = mapping.CreateAndMap(block_size, ""); status != ZX_OK) {
+      printf("Failled to CreateAndMap Vmo: %s\n", zx_status_get_string(status));
       return status;
     }
 
     zx::vmo dup;
-    status = mapping.vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
-    if (status != ZX_OK) {
-      printf("cannot duplicate handle\n");
+    if (zx_status_t status = mapping.vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &dup); status != ZX_OK) {
+      printf("cannot duplicate handle: %s\n", zx_status_get_string(status));
       return status;
     }
 
-    fuchsia_hardware_block_VmoId vmoid;
-    zx_status_t io_status = fuchsia_hardware_block_BlockAttachVmo(caller.borrow_channel(),
-                                                                  dup.release(), &status, &vmoid);
-    if (io_status != ZX_OK || status != ZX_OK) {
-      printf("cannot attach vmo for init\n");
-      return ZX_ERR_IO;
+    const fidl::WireResult result =
+        fidl::WireCall(caller.borrow_as<fuchsia_hardware_block::Block>())
+            ->AttachVmo(std::move(dup));
+    if (!result.ok()) {
+      printf("cannot attach vmo for init: %s\n", result.FormatDescription().c_str());
+      return result.status();
+    }
+    const fidl::WireResponse response = result.value();
+    if (zx_status_t status = response.status; status != ZX_OK) {
+      printf("cannot attach vmo for init: %s\n", zx_status_get_string(status));
+      return status;
     }
 
     groupid_t group = next_txid_.fetch_add(1);
     ZX_ASSERT(group < MAX_TXN_GROUP_COUNT);
 
-    checker->reset(new BlockChecker(std::move(mapping), info, client, vmoid.id, group));
+    checker->reset(new BlockChecker(std::move(mapping), info, client, response.vmoid->id, group));
     return ZX_OK;
   }
 
   static void ResetAtomic() { next_txid_.store(0); }
 
-  virtual zx_status_t Fill(uint32_t start, uint32_t count) override {
+  zx_status_t Fill(uint32_t start, uint32_t count) override {
     for (uint32_t block_idx = start; block_idx < count; block_idx++) {
       uint64_t length = (info_.block_size * info_.block_count) - (block_idx * block_size);
       if (length > block_size) {
@@ -236,16 +242,15 @@ class BlockChecker : public Checker {
           .vmo_offset = 0,
           .dev_offset = (block_idx * block_size) / info_.block_size,
       };
-      zx_status_t st;
-      if ((st = client_.Transaction(&request, 1)) != ZX_OK) {
-        printf("write block_fifo_txn error %d\n", st);
-        return st;
+      if (zx_status_t status = client_.Transaction(&request, 1); status != ZX_OK) {
+        printf("write block_fifo_txn error %s\n", zx_status_get_string(status));
+        return status;
       }
     }
     return ZX_OK;
   }
 
-  virtual zx_status_t Check(uint32_t start, uint32_t count) override {
+  zx_status_t Check(uint32_t start, uint32_t count) override {
     for (uint32_t block_idx = start; block_idx < count; block_idx++) {
       uint64_t length = (info_.block_size * info_.block_count) - (block_idx * block_size);
       if (length > block_size) {
@@ -261,13 +266,12 @@ class BlockChecker : public Checker {
           .vmo_offset = 0,
           .dev_offset = (block_idx * block_size) / info_.block_size,
       };
-      zx_status_t st;
-      if ((st = client_.Transaction(&request, 1)) != ZX_OK) {
-        printf("read block_fifo_txn error %d\n", st);
-        return st;
+      if (zx_status_t status = client_.Transaction(&request, 1); status != ZX_OK) {
+        printf("read block_fifo_txn error %s\n", zx_status_get_string(status));
+        return status;
       }
-      if ((st = CheckBlockData(block_idx, length)) != ZX_OK) {
-        return st;
+      if (zx_status_t status = CheckBlockData(block_idx, length); status != ZX_OK) {
+        return status;
       }
     }
     return ZX_OK;
@@ -276,7 +280,7 @@ class BlockChecker : public Checker {
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(BlockChecker);
 
  private:
-  BlockChecker(fzl::OwnedVmoMapper mapper, fuchsia_hardware_block_BlockInfo info,
+  BlockChecker(fzl::OwnedVmoMapper mapper, fuchsia_hardware_block::wire::BlockInfo info,
                block_client::Client& client, vmoid_t vmoid, groupid_t group)
       : Checker(mapper.start()),
         mapper_(std::move(mapper)),
@@ -284,12 +288,12 @@ class BlockChecker : public Checker {
         client_(client),
         vmoid_(vmoid),
         group_(group) {}
-  ~BlockChecker() = default;
+  ~BlockChecker() override = default;
 
   static std::atomic<uint16_t> next_txid_;
 
   fzl::OwnedVmoMapper mapper_;
-  fuchsia_hardware_block_BlockInfo info_;
+  fuchsia_hardware_block::wire::BlockInfo info_;
   block_client::Client& client_;
   vmoid_t vmoid_;
   groupid_t group_;
@@ -300,13 +304,13 @@ std::atomic<uint16_t> BlockChecker::next_txid_;
 class SkipBlockChecker : public Checker {
  public:
   static zx_status_t Initialize(fdio_cpp::FdioCaller& caller,
-                                fuchsia_hardware_skipblock_PartitionInfo info,
+                                fuchsia_hardware_skipblock::wire::PartitionInfo info,
                                 std::unique_ptr<Checker>* checker) {
     fzl::VmoMapper mapping;
     zx::vmo vmo;
-    zx_status_t status =
-        mapping.CreateAndMap(block_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo);
-    if (status != ZX_OK) {
+    if (zx_status_t status =
+            mapping.CreateAndMap(block_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo);
+        status != ZX_OK) {
       printf("Failled to CreateAndMap Vmo\n");
       return status;
     }
@@ -315,7 +319,7 @@ class SkipBlockChecker : public Checker {
     return ZX_OK;
   }
 
-  virtual zx_status_t Fill(uint32_t start, uint32_t count) override {
+  zx_status_t Fill(uint32_t start, uint32_t count) override {
     for (uint32_t block_idx = start; block_idx < count; block_idx++) {
       uint64_t length =
           (info_.block_size_bytes * info_.partition_block_count) - (block_idx * block_size);
@@ -324,31 +328,34 @@ class SkipBlockChecker : public Checker {
       }
 
       zx::vmo dup;
-      zx_status_t st = vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
-      if (st != ZX_OK) {
-        printf("cannot duplicate handle\n");
-        return st;
+      if (zx_status_t status = vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup); status != ZX_OK) {
+        printf("cannot duplicate handle: %s\n", zx_status_get_string(status));
+        return status;
       }
 
       GenerateBlockData(block_idx, block_size);
-      fuchsia_hardware_skipblock_ReadWriteOperation request = {
-          .vmo = dup.release(),
-          .vmo_offset = 0,
-          .block = static_cast<uint32_t>((block_idx * block_size) / info_.block_size_bytes),
-          .block_count = static_cast<uint32_t>(length / info_.block_size_bytes),
-      };
-      bool bad_block_grown;
-      fuchsia_hardware_skipblock_SkipBlockWrite(caller_.borrow_channel(), &request, &st,
-                                                &bad_block_grown);
-      if (st != ZX_OK) {
-        printf("SkipBlockWrite error %d\n", st);
-        return st;
+      const fidl::WireResult result =
+          fidl::WireCall(caller_.borrow_as<fuchsia_hardware_skipblock::SkipBlock>())
+              ->Write({
+                  .vmo = std::move(dup),
+                  .vmo_offset = 0,
+                  .block = static_cast<uint32_t>((block_idx * block_size) / info_.block_size_bytes),
+                  .block_count = static_cast<uint32_t>(length / info_.block_size_bytes),
+              });
+      if (!result.ok()) {
+        printf("SkipBlockWrite error %s\n", result.FormatDescription().c_str());
+        return result.status();
+      }
+      const fidl::WireResponse response = result.value();
+      if (zx_status_t status = response.status; status != ZX_OK) {
+        printf("SkipBlockWrite error %s\n", zx_status_get_string(status));
+        return status;
       }
     }
     return ZX_OK;
   }
 
-  virtual zx_status_t Check(uint32_t start, uint32_t count) override {
+  zx_status_t Check(uint32_t start, uint32_t count) override {
     for (uint32_t block_idx = start; block_idx < count; block_idx++) {
       uint64_t length =
           (info_.block_size_bytes * info_.partition_block_count) - (block_idx * block_size);
@@ -357,25 +364,31 @@ class SkipBlockChecker : public Checker {
       }
 
       zx::vmo dup;
-      zx_status_t st = vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
-      if (st != ZX_OK) {
-        printf("cannot duplicate handle\n");
-        return st;
+      if (zx_status_t status = vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup); status != ZX_OK) {
+        printf("cannot duplicate handle: %s\n", zx_status_get_string(status));
+        return status;
       }
 
-      fuchsia_hardware_skipblock_ReadWriteOperation request = {
-          .vmo = dup.release(),
-          .vmo_offset = 0,
-          .block = static_cast<uint32_t>((block_idx * block_size) / info_.block_size_bytes),
-          .block_count = static_cast<uint32_t>(length / info_.block_size_bytes),
-      };
-      fuchsia_hardware_skipblock_SkipBlockRead(caller_.borrow_channel(), &request, &st);
-      if (st != ZX_OK) {
-        printf("SkipBlockRead error %d\n", st);
-        return st;
+      const fidl::WireResult result =
+          fidl::WireCall(caller_.borrow_as<fuchsia_hardware_skipblock::SkipBlock>())
+              ->Read({
+                  .vmo = std::move(dup),
+                  .vmo_offset = 0,
+                  .block = static_cast<uint32_t>((block_idx * block_size) / info_.block_size_bytes),
+                  .block_count = static_cast<uint32_t>(length / info_.block_size_bytes),
+              });
+      if (!result.ok()) {
+        printf("SkipBlockRead error %s\n", result.FormatDescription().c_str());
+        return result.status();
       }
-      if ((st = CheckBlockData(block_idx, length)) != ZX_OK) {
-        return st;
+      const fidl::WireResponse response = result.value();
+      if (zx_status_t status = response.status; status != ZX_OK) {
+        printf("SkipBlockRead error %s\n", zx_status_get_string(status));
+        return status;
+      }
+
+      if (zx_status_t status = CheckBlockData(block_idx, length); status != ZX_OK) {
+        return status;
       }
     }
     return ZX_OK;
@@ -385,18 +398,18 @@ class SkipBlockChecker : public Checker {
 
  private:
   SkipBlockChecker(fzl::VmoMapper mapper, zx::vmo vmo, fdio_cpp::FdioCaller& caller,
-                   fuchsia_hardware_skipblock_PartitionInfo info)
+                   fuchsia_hardware_skipblock::wire::PartitionInfo info)
       : Checker(mapper.start()),
         mapper_(std::move(mapper)),
         vmo_(std::move(vmo)),
         caller_(caller),
         info_(info) {}
-  ~SkipBlockChecker() = default;
+  ~SkipBlockChecker() override = default;
 
   fzl::VmoMapper mapper_;
   zx::vmo vmo_;
   fdio_cpp::FdioCaller& caller_;
-  fuchsia_hardware_skipblock_PartitionInfo info_;
+  fuchsia_hardware_skipblock::wire::PartitionInfo info_;
 };
 
 zx_status_t InitializeChecker(WorkContext& ctx, std::unique_ptr<Checker>* checker) {
@@ -406,24 +419,23 @@ zx_status_t InitializeChecker(WorkContext& ctx, std::unique_ptr<Checker>* checke
 
 zx_status_t InitializeDevice(WorkContext& ctx) {
   std::unique_ptr<Checker> checker;
-  zx_status_t status;
-  if ((status = InitializeChecker(ctx, &checker)) != ZX_OK) {
-    printf("Failed to alloc resources to init device\n");
+  if (zx_status_t status = InitializeChecker(ctx, &checker); status != ZX_OK) {
+    printf("Failed to alloc resources to init device: %s\n", zx_status_get_string(status));
     return status;
   }
 
   printf("writing test data to device...\n");
   fflush(stdout);
-  if ((status = checker->Fill(start_block, block_count)) != ZX_OK) {
-    printf("failed to write test data\n");
+  if (zx_status_t status = checker->Fill(start_block, block_count); status != ZX_OK) {
+    printf("failed to write test data: %s\n", zx_status_get_string(status));
     return status;
   }
   printf("done\n");
 
   printf("verifying test data...\n");
   fflush(stdout);
-  if ((status = checker->Check(start_block, block_count)) != ZX_OK) {
-    printf("failed to verify test data\n");
+  if (zx_status_t status = checker->Check(start_block, block_count); status != ZX_OK) {
+    printf("failed to verify test data: %s\n", zx_status_get_string(status));
     return status;
   }
   printf("done\n");
@@ -435,9 +447,8 @@ int DoWork(void* arg) {
   auto* ctx = static_cast<WorkContext*>(arg);
 
   std::unique_ptr<Checker> checker;
-  zx_status_t status;
-  if ((status = InitializeChecker(*ctx, &checker)) != ZX_OK) {
-    printf("Failed to alloc resources to init device\n");
+  if (zx_status_t status = InitializeChecker(*ctx, &checker); status != ZX_OK) {
+    printf("Failed to alloc resources to init device: %s\n", zx_status_get_string(status));
     return status;
   }
 
@@ -498,7 +509,7 @@ uint64_t Number(const char* str) {
   return m * n;
 }
 
-int Usage(void) {
+int Usage() {
   printf("%s\n", kUsageMessage);
   return -1;
 }
@@ -563,7 +574,8 @@ int iochk(int argc, char** argv) {
       }
       if (c == 'y' || c == 'Y') {
         break;
-      } else if (c == 'n' || c == 'N' || c == 27) {
+      }
+      if (c == 'n' || c == 'N' || c == 27) {
         return 0;
       }
     }
@@ -579,15 +591,21 @@ int iochk(int argc, char** argv) {
   ctx.caller.reset(std::move(fd));
   if (skip) {
     // Skip Block Device Setup.
-    zx_status_t status;
-    fuchsia_hardware_skipblock_PartitionInfo info;
-    fuchsia_hardware_skipblock_SkipBlockGetPartitionInfo(ctx.caller.borrow_channel(), &status,
-                                                         &info);
-    if (status != ZX_OK) {
-      printf("unable to get skip-block partition info: %d\n", status);
+    const fidl::WireResult result =
+        fidl::WireCall(ctx.caller.borrow_as<fuchsia_hardware_skipblock::SkipBlock>())
+            ->GetPartitionInfo();
+    if (!result.ok()) {
+      printf("unable to get skip-block partition info: %s\n", result.FormatDescription().c_str());
       printf("fd: %d\n", ctx.caller.release().get());
       return -1;
     }
+    const fidl::WireResponse response = result.value();
+    if (zx_status_t status = response.status; status != ZX_OK) {
+      printf("unable to get skip-block partition info: %s\n", zx_status_get_string(status));
+      printf("fd: %d\n", ctx.caller.release().get());
+      return -1;
+    }
+    const fuchsia_hardware_skipblock::wire::PartitionInfo& info = response.partition_info;
     printf("opened %s - block_size_bytes=%lu, partition_block_count=%u\n", device,
            info.block_size_bytes, info.partition_block_count);
 
@@ -617,14 +635,20 @@ int iochk(int argc, char** argv) {
     }
   } else {
     // Block Device Setup.
-    fuchsia_hardware_block_BlockInfo info;
-    zx_status_t status;
-    zx_status_t io_status =
-        fuchsia_hardware_block_BlockGetInfo(ctx.caller.borrow_channel(), &status, &info);
-    if (io_status != ZX_OK || status != ZX_OK) {
-      printf("unable to get block info\n");
+    const fidl::WireResult result =
+        fidl::WireCall(ctx.caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+    if (!result.ok()) {
+      printf("unable to get block info: %s\n", result.FormatDescription().c_str());
+      printf("fd: %d\n", ctx.caller.release().get());
       return -1;
     }
+    const fidl::WireResponse response = result.value();
+    if (zx_status_t status = response.status; status != ZX_OK) {
+      printf("unable to get block info: %s\n", zx_status_get_string(status));
+      printf("fd: %d\n", ctx.caller.release().get());
+      return -1;
+    }
+    const fuchsia_hardware_block::wire::BlockInfo& info = *response.info;
     printf("opened %s - block_size=%u, block_count=%lu\n", device, info.block_size,
            info.block_count);
 
@@ -658,16 +682,21 @@ int iochk(int argc, char** argv) {
       return -1;
     }
 
-    zx::fifo fifo;
-
-    io_status = fuchsia_hardware_block_BlockGetFifo(ctx.caller.borrow_channel(), &status,
-                                                    fifo.reset_and_get_address());
-    if (io_status != ZX_OK || status != ZX_OK) {
-      printf("cannot get fifo for device\n");
-      return -1;
+    {
+      fidl::WireResult result =
+          fidl::WireCall(ctx.caller.borrow_as<fuchsia_hardware_block::Block>())->GetFifo();
+      if (!result.ok()) {
+        printf("cannot get fifo for device: %s\n", result.FormatDescription().c_str());
+        return -1;
+      }
+      auto& response = result.value();
+      if (zx_status_t status = response.status; status != ZX_OK) {
+        printf("cannot get fifo for device: %s\n", zx_status_get_string(status));
+        return -1;
+      }
+      ctx.block.client = std::make_unique<block_client::Client>(std::move(response.fifo));
     }
 
-    ctx.block.client = std::make_unique<block_client::Client>(std::move(fifo));
     BlockChecker::ResetAtomic();
   }
 
@@ -711,9 +740,8 @@ int iochk(int argc, char** argv) {
     printf("re-verifying device...\n");
     fflush(stdout);
     std::unique_ptr<Checker> checker;
-    zx_status_t status;
-    if ((status = InitializeChecker(ctx, &checker)) != ZX_OK) {
-      printf("failed to initialize verification thread\n");
+    if (zx_status_t status = InitializeChecker(ctx, &checker); status != ZX_OK) {
+      printf("failed to initialize verification thread: %s\n", zx_status_get_string(status));
       return status;
     }
     if (checker->Check(start_block, block_count) != ZX_OK) {
@@ -727,10 +755,9 @@ int iochk(int argc, char** argv) {
   if (!ctx.iochk_failure) {
     printf("iochk completed successfully\n");
     return 0;
-  } else {
-    printf("iochk failed (seed was %ld)\n", base_seed);
-    return -1;
   }
+  printf("iochk failed (seed was %ld)\n", base_seed);
+  return -1;
 }
 
 int main(int argc, char** argv) {
