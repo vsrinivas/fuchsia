@@ -8,6 +8,7 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fpromise/bridge.h>
 #include <zircon/boot/image.h>
@@ -40,12 +41,11 @@ IntegrationTest::IntegrationTest() = default;
 void IntegrationTest::SetUp() {
   // We do this in SetUp() rather than the ctor, since gtest cannot assert in
   // ctors.
-
-  fdio_t* io = fdio_unsafe_fd_to_io(IntegrationTest::devmgr_.devfs_root().get());
-  zx::channel chan(fdio_service_clone(fdio_unsafe_borrow_channel(io)));
-  zx_status_t status = devfs_.Bind(std::move(chan), IntegrationTest::loop_.dispatcher());
-  fdio_unsafe_release(io);
-  ASSERT_EQ(status, ZX_OK) << "failed to connect to devfs";
+  zx::channel channel;
+  ASSERT_EQ(
+      fdio_fd_clone(IntegrationTest::devmgr_.devfs_root().get(), channel.reset_and_get_address()),
+      ZX_OK);
+  ASSERT_EQ(devfs_.Bind(std::move(channel), IntegrationTest::loop_.dispatcher()), ZX_OK);
 }
 
 IntegrationTest::~IntegrationTest() {

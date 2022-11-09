@@ -5,7 +5,7 @@
 use {
     anyhow::Result,
     direct_mode_vmm::{start, take_direct_vdso},
-    fdio::{clone_fd, Namespace},
+    fdio::{clone_fd, Namespace, NamespaceEntry},
     fuchsia_async as fasync,
     fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType},
     process_builder::StartupHandle,
@@ -24,23 +24,23 @@ async fn main() -> Result<()> {
     let mut paths = vec![];
     let mut handles = vec![
         StartupHandle {
-            handle: clone_fd(io::stdout())?,
+            handle: clone_fd(&io::stdout())?,
             info: HandleInfo::new(HandleType::FileDescriptor, 1),
         },
         StartupHandle {
-            handle: clone_fd(io::stderr())?,
+            handle: clone_fd(&io::stderr())?,
             info: HandleInfo::new(HandleType::FileDescriptor, 2),
         },
     ];
     if let Some(handle) = take_startup_handle(HandleType::DirectoryRequest.into()) {
-        handles.push(StartupHandle { handle: handle, info: HandleType::DirectoryRequest.into() })
+        handles.push(StartupHandle { handle, info: HandleType::DirectoryRequest.into() })
     }
     if let Some(handle) = take_startup_handle(HandleType::ComponentConfigVmo.into()) {
-        handles.push(StartupHandle { handle: handle, info: HandleType::ComponentConfigVmo.into() })
+        handles.push(StartupHandle { handle, info: HandleType::ComponentConfigVmo.into() })
     }
-    for entry in Namespace::installed()?.export()? {
-        paths.push(CString::new(entry.path)?);
-        handles.push(StartupHandle { handle: entry.handle, info: entry.info })
+    for NamespaceEntry { handle, info, path } in Namespace::installed()?.export()? {
+        paths.push(CString::new(path)?);
+        handles.push(StartupHandle { handle, info })
     }
     start(vdso_vmo, args, vars, paths, handles).await
 }

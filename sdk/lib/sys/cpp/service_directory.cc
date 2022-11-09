@@ -20,10 +20,11 @@ zx::channel OpenServiceRoot() {
 
 }  // namespace
 
-ServiceDirectory::ServiceDirectory(zx::channel directory) : directory_(std::move(directory)) {}
+ServiceDirectory::ServiceDirectory(zx::channel directory)
+    : ServiceDirectory(fidl::InterfaceHandle<fuchsia::io::Directory>(std::move(directory))) {}
 
 ServiceDirectory::ServiceDirectory(fidl::InterfaceHandle<fuchsia::io::Directory> directory)
-    : ServiceDirectory(directory.TakeChannel()) {}
+    : directory_(directory.BindSync()) {}
 
 ServiceDirectory::~ServiceDirectory() = default;
 
@@ -49,8 +50,9 @@ std::shared_ptr<ServiceDirectory> ServiceDirectory::CreateWithRequest(
 }
 
 zx_status_t ServiceDirectory::Connect(const std::string& interface_name,
-                                      zx::channel channel) const {
-  return fdio_service_connect_at(directory_.get(), interface_name.c_str(), channel.release());
+                                      zx::channel request) const {
+  return fdio_service_connect_at(directory_.unowned_channel()->get(), interface_name.c_str(),
+                                 request.release());
 }
 
 fidl::InterfaceHandle<fuchsia::io::Directory> ServiceDirectory::CloneChannel() const {
@@ -61,7 +63,11 @@ fidl::InterfaceHandle<fuchsia::io::Directory> ServiceDirectory::CloneChannel() c
 
 zx_status_t ServiceDirectory::CloneChannel(
     fidl::InterfaceRequest<fuchsia::io::Directory> dir) const {
-  return fdio_service_clone_to(directory_.get(), dir.TakeChannel().release());
+  if (!directory_.is_bound()) {
+    return ZX_ERR_BAD_HANDLE;
+  }
+  return directory_->Clone(fuchsia::io::OpenFlags::CLONE_SAME_RIGHTS,
+                           fidl::InterfaceRequest<fuchsia::io::Node>(dir.TakeChannel()));
 }
 
 }  // namespace sys

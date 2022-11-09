@@ -868,11 +868,8 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
 
   // We want two handles to the package, one to put in the component's namespace
   // and one to put in the hub.
+  zx::channel pkg_clone = fsl::CloneChannelFromFileDescriptor(pkg_fd.get());
   zx::channel pkg = fsl::TransferChannelFromFileDescriptor(std::move(pkg_fd));
-  zx::channel pkg_clone;
-  if (pkg.is_valid()) {
-    pkg_clone = zx::channel(fdio_service_clone(pkg.get()));
-  }
 
   // Note that |builder| is only used in the else block below. It is left here
   // because we would like to use it everywhere once fxbug.dev/28222 is fixed.
@@ -1101,8 +1098,10 @@ zx_status_t Realm::BindFirstNestedRealmSvc(fidl::InterfaceRequest<fuchsia::io::N
   if (parent_) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  return fdio_service_clone_to(first_nested_realm_svc_client_.channel().get(),
-                               node.TakeChannel().release());
+  fidl::SynchronousInterfacePtr ptr = first_nested_realm_svc_client_.BindSync();
+  zx_status_t status = ptr->Clone(fuchsia::io::OpenFlags::CLONE_SAME_RIGHTS, std::move(node));
+  first_nested_realm_svc_client_ = ptr.Unbind();
+  return status;
 }
 
 // A component instance's storage directory is in one of two places:

@@ -9,6 +9,7 @@
 #include <lib/async-loop/loop.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/wire/channel.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/result.h>
 
 #include <memory>
@@ -30,16 +31,7 @@ zx::result<std::unique_ptr<Memfs>> Memfs::Create() {
 }
 
 zx::result<fidl::ClientEnd<fuchsia_io::Directory>> Memfs::GetFilesystemRoot() const {
-  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
-  if (endpoints.is_error()) {
-    return endpoints.take_error();
-  }
-  if (zx_status_t status = fdio_service_clone_to(memfs_.root().channel().get(),
-                                                 endpoints->server.TakeChannel().release());
-      status != ZX_OK) {
-    return zx::error(status);
-  }
-  return zx::ok(std::move(endpoints->client));
+  return component::Clone(memfs_.root());
 }
 
 }  // namespace storage_benchmark

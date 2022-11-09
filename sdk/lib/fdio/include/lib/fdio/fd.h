@@ -17,8 +17,8 @@ __BEGIN_CDECLS
 // function. FDs can be created for certain other kernel object types by [fdio_handle_fd()] as long
 // as the returned file descriptor will only be used for waiting (rather than reading/writing).
 //
-// If the `zx_handle_t` is a channel, then the channel must implement the `fuchsia.io.Node`
-// protocol.
+// If the `zx_handle_t` is a channel, then the channel must implement the
+// `fuchsia.unknown/Queryable` protocol.
 //
 // For more precise control over which file descriptor is allocated, consider using [fdio_create()]
 // and [fdio_bind_to_fd()].
@@ -54,10 +54,10 @@ zx_status_t fdio_cwd_clone(zx_handle_t* out_handle) ZX_AVAILABLE_SINCE(1);
 // Clones a file descriptor.
 //
 // Upon success, `out_handle` contains a handle that represents the given file descriptor.
-// Internally, cloning creates a new distinct connection to the file or service (via the
-// fuchsia.io/Node.Clone FIDL interface) that can be transferred to another process without
-// affecting the connection associated with the `fd`. This is more heavyweight than transferring via
-// [fdio_fd_transfer()] but can be done in more cases. See also [fdio_fd_transfer_or_clone()].
+// Internally, cloning creates a new distinct connection to the backing object that can be
+// transferred to another process without affecting the connection associated with the `fd`. This is
+// more heavyweight than transferring via [fdio_fd_transfer()] but can be done in more cases. See
+// also [fdio_fd_transfer_or_clone()].
 //
 // `fd` is not modified by this function.
 //

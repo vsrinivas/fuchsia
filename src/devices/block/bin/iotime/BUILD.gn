@@ -6,6 +6,7 @@ executable("iotime") {
   sources = [ "iotime.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_cpp_wire",
+    "//sdk/lib/component/cpp/incoming",
     "//sdk/lib/fdio",
     "//src/lib/storage/block_client/cpp",
     "//src/lib/storage/ramdevice_client/cpp",

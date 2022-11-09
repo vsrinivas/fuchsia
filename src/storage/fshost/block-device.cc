@@ -323,10 +323,19 @@ const std::string& BlockDevice::partition_name() const {
   }
   // The block device might not support the partition protocol in which case the connection will
   // be closed, so clone the channel in case that happens.
+  //
+  // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+  //
+  // TODO(https://fxbug.dev/113512): Remove this.
   fdio_cpp::UnownedFdioCaller connection(fd_);
-  fidl::ClientEnd<fuchsia_hardware_block_partition::Partition> channel(
-      zx::channel(fdio_service_clone(connection.borrow_channel())));
-  const fidl::WireResult result = fidl::WireCall(channel)->GetName();
+  zx::result channel =
+      component::Clone(connection.borrow_as<fuchsia_hardware_block_partition::Partition>(),
+                       component::AssumeProtocolComposesNode);
+  if (channel.is_error()) {
+    FX_PLOGS(ERROR, channel.status_value()) << "Unable to clone partition channel";
+    return partition_name_;
+  }
+  const fidl::WireResult result = fidl::WireCall(channel.value())->GetName();
   if (!result.ok()) {
     FX_LOGS(ERROR) << "Unable to get partition name (fidl error): " << result.FormatDescription();
     return partition_name_;
@@ -363,11 +372,19 @@ const fuchsia_hardware_block_partition::wire::Guid& BlockDevice::GetInstanceGuid
   fuchsia_hardware_block_partition::wire::Guid& guid = instance_guid_.emplace();
   // The block device might not support the partition protocol in which case the connection will
   // be closed, so clone the channel in case that happens.
+  //
+  // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+  //
+  // TODO(https://fxbug.dev/113512): Remove this.
   fdio_cpp::UnownedFdioCaller connection(fd_);
-  const fidl::WireResult result =
-      fidl::WireCall(fidl::ClientEnd<fuchsia_hardware_block_partition::Partition>(
-                         zx::channel(fdio_service_clone(connection.borrow_channel()))))
-          ->GetInstanceGuid();
+  zx::result channel =
+      component::Clone(connection.borrow_as<fuchsia_hardware_block_partition::Partition>(),
+                       component::AssumeProtocolComposesNode);
+  if (channel.is_error()) {
+    FX_PLOGS(ERROR, channel.status_value()) << "Unable to clone partition channel";
+    return guid;
+  }
+  const fidl::WireResult result = fidl::WireCall(channel.value())->GetInstanceGuid();
   if (!result.ok()) {
     FX_LOGS(ERROR) << "Unable to get partition instance GUID (fidl error): "
                    << result.FormatDescription();
@@ -389,11 +406,19 @@ const fuchsia_hardware_block_partition::wire::Guid& BlockDevice::GetTypeGuid() c
   fuchsia_hardware_block_partition::wire::Guid& guid = type_guid_.emplace();
   // The block device might not support the partition protocol in which case the connection will
   // be closed, so clone the channel in case that happens.
+  //
+  // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+  //
+  // TODO(https://fxbug.dev/113512): Remove this.
   fdio_cpp::UnownedFdioCaller connection(fd_);
-  const fidl::WireResult result =
-      fidl::WireCall(fidl::ClientEnd<fuchsia_hardware_block_partition::Partition>(
-                         zx::channel(fdio_service_clone(connection.borrow_channel()))))
-          ->GetTypeGuid();
+  zx::result channel =
+      component::Clone(connection.borrow_as<fuchsia_hardware_block_partition::Partition>(),
+                       component::AssumeProtocolComposesNode);
+  if (channel.is_error()) {
+    FX_PLOGS(ERROR, channel.status_value()) << "Unable to clone partition channel";
+    return guid;
+  }
+  const fidl::WireResult result = fidl::WireCall(channel.value())->GetTypeGuid();
   if (!result.ok()) {
     FX_LOGS(ERROR) << "Unable to get partition type GUID (fidl error): "
                    << result.FormatDescription();
@@ -723,11 +748,12 @@ zx_status_t BlockDevice::MountFilesystem() {
   if (!fd_) {
     return ZX_ERR_BAD_HANDLE;
   }
-  zx::channel block_device;
-  {
-    fdio_cpp::UnownedFdioCaller disk_connection(fd_.get());
-    zx::unowned_channel channel(disk_connection.borrow_channel());
-    block_device.reset(fdio_service_clone(channel->get()));
+  // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+  zx::result block_device = [connection = fdio_cpp::UnownedFdioCaller(fd_)]() {
+    return component::Clone(connection.node());
+  }();
+  if (block_device.is_error()) {
+    return block_device.status_value();
   }
   switch (format_) {
     case fs_management::kDiskFormatFactoryfs: {
@@ -735,7 +761,7 @@ zx_status_t BlockDevice::MountFilesystem() {
       fs_management::MountOptions options;
       options.readonly = true;
 
-      zx_status_t status = mounter_->MountFactoryFs(std::move(block_device), options);
+      zx_status_t status = mounter_->MountFactoryFs(block_device.value().TakeChannel(), options);
       if (status != ZX_OK) {
         FX_LOGS(ERROR) << "Failed to mount factoryfs partition: " << zx_status_get_string(status)
                        << ".";
@@ -745,7 +771,7 @@ zx_status_t BlockDevice::MountFilesystem() {
     case fs_management::kDiskFormatBlobfs: {
       FX_LOGS(INFO) << "BlockDevice::MountFilesystem(blobfs)";
       if (zx_status_t status = mounter_->MountBlob(
-              std::move(block_device),
+              block_device.value().TakeChannel(),
               GetBlobfsMountOptions(*device_config_, mounter_->boot_args().get()));
           status != ZX_OK) {
         FX_PLOGS(ERROR, status) << "Failed to mount blobfs partition";
@@ -762,7 +788,8 @@ zx_status_t BlockDevice::MountFilesystem() {
       source_data_.reset();
 
       FX_LOGS(INFO) << "BlockDevice::MountFilesystem(data partition)";
-      if (zx_status_t status = MountData(options, std::move(copier), std::move(block_device));
+      if (zx_status_t status =
+              MountData(options, std::move(copier), block_device.value().TakeChannel());
           status != ZX_OK) {
         FX_LOGS(ERROR) << "Failed to mount data partition: " << zx_status_get_string(status) << ".";
         MaybeDumpMetadata(fd_.duplicate(), {.disk_format = format_});

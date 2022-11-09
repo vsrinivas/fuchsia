@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
+#include <lib/component/cpp/incoming/service_client.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -220,9 +221,15 @@ int main(int argc, char** argv) {
       goto done;
     }
     zx_handle_t handle = ramdisk_get_block_interface(ramdisk);
+    fidl::UnownedClientEnd<fuchsia_hardware_block::Block> block(handle);
     // TODO(https://fxbug.dev/112484): this relies on multiplexing.
-    zx_handle_t cloned = fdio_service_clone(handle);
-    if (zx_status_t status = fdio_fd_create(cloned, &fd); status != ZX_OK) {
+    zx::result cloned = component::Clone(block, component::AssumeProtocolComposesNode);
+    if (cloned.is_error()) {
+      fprintf(stderr, "error: cannot create ramdisk fd: %s\n", cloned.status_string());
+      goto done;
+    }
+    if (zx_status_t status = fdio_fd_create(cloned.value().TakeChannel().release(), &fd);
+        status != ZX_OK) {
       fprintf(stderr, "error: cannot create ramdisk fd: %s\n", zx_status_get_string(status));
       goto done;
     }

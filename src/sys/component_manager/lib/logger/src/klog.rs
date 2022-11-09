@@ -18,7 +18,7 @@ pub struct KernelLogger {
 impl KernelLogger {
     /// Make a new `KernelLogger` by cloning our stdout and extracting the debuglog handle from it.
     fn new() -> KernelLogger {
-        let debuglog = fdio::clone_fd(std::io::stdout()).expect("get handle from stdout");
+        let debuglog = fdio::clone_fd(&std::io::stdout()).expect("get handle from stdout");
         assert_eq!(debuglog.basic_info().unwrap().object_type, ObjectType::DEBUGLOG);
         KernelLogger { debuglog: debuglog.into() }
     }

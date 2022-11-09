@@ -725,8 +725,18 @@ zx_status_t Coordinator::PrepareFidlProxy(const fbl::RefPtr<Device>& dev,
     }
   }
   (*fidl_proxy_out)->set_host(std::move(target_driver_host));
+  fidl::ClientEnd<fio::Directory> outgoing_dir;
+  if (dev->has_outgoing_directory()) {
+    zx::result clone = dev->clone_outgoing_dir();
+    if (clone.is_error()) {
+      LOGF(ERROR, "Failed to clone device outgoing directory '%s': %s", dev->name().c_str(),
+           clone.status_string());
+      return clone.status_value();
+    }
+    outgoing_dir = std::move(clone.value());
+  }
   if (zx_status_t status = CreateFidlProxyDevice(*fidl_proxy_out, (*fidl_proxy_out)->host(),
-                                                 dev->clone_outgoing_dir());
+                                                 std::move(outgoing_dir));
       status != ZX_OK) {
     LOGF(ERROR, "Failed to create proxy device '%s' in driver_host '%s': %s", dev->name().c_str(),
          driver_hostname, zx_status_get_string(status));

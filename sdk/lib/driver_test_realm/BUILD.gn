@@ -47,6 +47,7 @@ executable("bin") {
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_cpp_wire",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_cpp_wire",
     "//sdk/fidl/fuchsia.power.manager:fuchsia.power.manager_cpp_wire",
+    "//sdk/lib/component/cpp/incoming",
     "//sdk/lib/svc",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",

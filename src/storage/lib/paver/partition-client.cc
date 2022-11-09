@@ -16,6 +16,7 @@
 #include <numeric>
 
 #include <fbl/algorithm.h>
+#include <fbl/unique_fd.h>
 
 #include "src/storage/lib/paver/pave-logging.h"
 
@@ -219,14 +220,22 @@ fidl::ClientEnd<fuchsia_hardware_block::Block> BlockPartitionClient::GetChannel(
 }
 
 fbl::unique_fd BlockPartitionClient::block_fd() {
-  zx::channel dup(fdio_service_clone(partition_.client_end().channel().get()));
-
-  int block_fd;
-  auto status = zx::make_result(fdio_fd_create(dup.release(), &block_fd));
-  if (status.is_error()) {
-    return fbl::unique_fd();
+  // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+  zx::result cloned =
+      component::Clone(partition_.client_end(), component::AssumeProtocolComposesNode);
+  if (cloned.is_error()) {
+    ERROR("Failed to clone partition client: %s\n", cloned.status_string());
+    return {};
   }
-  return fbl::unique_fd(block_fd);
+
+  fbl::unique_fd fd;
+  if (zx_status_t status =
+          fdio_fd_create(cloned.value().TakeChannel().release(), fd.reset_and_get_address());
+      status != ZX_OK) {
+    ERROR("Failed to create block fd: %s\n", zx_status_get_string(status));
+    return {};
+  }
+  return fd;
 }
 
 // The partition size does not account for the offset.

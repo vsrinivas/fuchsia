@@ -24,11 +24,10 @@ pub async fn get_pty(fd: &impl AsRawFd) -> Result<Option<(fpty::DeviceProxy, zx:
 
     // Clone the handle underlying this fd. Since we've already confirmed that fd is a Pty the
     // underlying handle should be channel speaking fuchsia.hardware.pty.Device
-    let cloned_handle =
-        fdio::clone_fd(fd.as_raw_fd()).context("Failed to clone underlying handle from fd")?;
-    let chan = fidl::handle::AsyncChannel::from_channel(cloned_handle.into())
+    let channel = fdio::clone_channel(fd).context("Failed to clone underlying handle from fd")?;
+    let channel = fidl::handle::AsyncChannel::from_channel(channel)
         .context("Failed to create AsyncChannel from cloned fd")?;
-    let device = fpty::DeviceProxy::new(chan);
+    let device = fpty::DeviceProxy::new(channel);
 
     let eventpair = device
         .describe()

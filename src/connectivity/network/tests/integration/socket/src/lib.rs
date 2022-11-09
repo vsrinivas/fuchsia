@@ -4,8 +4,6 @@
 
 #![cfg(test)]
 
-use std::{collections::HashMap, os::unix::io::AsRawFd as _};
-
 use anyhow::Context as _;
 use assert_matches::assert_matches;
 use fidl_fuchsia_hardware_network as fhardware_network;
@@ -1553,7 +1551,7 @@ async fn socket_clone_bind<N: Netstack>(name: &str, socket_type: SocketType) {
     // explicitly clone the underlying FD to get a new handle and transmogrify
     // that into a new Socket.
     let other_socket: socket2::Socket =
-        fdio::create_fd(fdio::clone_fd(socket.as_raw_fd()).expect("clone_fd failed"))
+        fdio::create_fd(fdio::clone_fd(&socket).expect("clone_fd failed"))
             .expect("create_fd failed");
 
     // Since both sockets refer to the same resource, binding one will affect
@@ -1903,7 +1901,7 @@ async fn get_bound_device_errors_after_device_deleted<N: Netstack, E: netemul::E
     let stream = fnet_interfaces_ext::event_stream_from_state(&interface_state)
         .expect("error getting interface state event stream");
     futures::pin_mut!(stream);
-    let mut state = HashMap::new();
+    let mut state = std::collections::HashMap::new();
 
     // Wait for the interface to be present.
     fnet_interfaces_ext::wait_interface(stream.by_ref(), &mut state, |interfaces| {

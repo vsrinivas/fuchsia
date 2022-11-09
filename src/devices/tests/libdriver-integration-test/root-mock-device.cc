@@ -124,16 +124,19 @@ zx_status_t RootMockDevice::CreateFromTestRoot(
   // handling around the blocking nature of fuchsia.device.Controller/Bind.  Needs to
   // happen before the bind(), since bind() will cause us to get blocked in the mock device
   // driver waiting for input on what to do.
+  //
+  // TODO(https://fxbug.dev/112484): this relies on multiplexing.
   fidl::InterfacePtr<fuchsia::device::test::Device> test_device;
   {
-    zx::channel test_dev_channel = test_dev.Unbind().TakeChannel();
-
-    status = test_device.Bind(zx::channel{fdio_service_clone(test_dev_channel.get())}, dispatcher);
-    if (status != ZX_OK) {
+    fidl::SynchronousInterfacePtr node =
+        fidl::InterfaceHandle<fuchsia::io::Node>(test_dev.Unbind().TakeChannel()).BindSync();
+    if (zx_status_t status = node->Clone(fuchsia::io::OpenFlags::CLONE_SAME_RIGHTS,
+                                         fidl::InterfaceRequest<fuchsia::io::Node>(
+                                             test_device.NewRequest(dispatcher).TakeChannel()));
+        status != ZX_OK) {
       return status;
     }
-
-    test_dev.Bind(std::move(test_dev_channel));
+    test_dev.Bind(node.Unbind().TakeChannel());
   }
 
   // Bind the mock device driver in a separate thread, since this call is

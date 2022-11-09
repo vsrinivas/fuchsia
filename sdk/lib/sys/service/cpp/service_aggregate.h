@@ -15,20 +15,20 @@ namespace sys {
 class ServiceAggregateBase {
  public:
   // Returns whether the underlying directory is valid.
-  bool is_valid() const { return dir_.is_valid(); }
+  bool is_valid() const { return dir_.is_bound(); }
 
-  // Returns the channel of the underlying directory.
-  const zx::channel& channel() const { return dir_.channel(); }
+  // Returns the underlying directory.
+  const fidl::SynchronousInterfacePtr<fuchsia::io::Directory>& proxy() const { return dir_; }
 
   // Lists all available instances of a service.
   std::vector<std::string> ListInstances() const;
 
  protected:
   explicit ServiceAggregateBase(fidl::InterfaceHandle<fuchsia::io::Directory> dir)
-      : dir_(std::move(dir)) {}
+      : dir_(dir.BindSync()) {}
 
  private:
-  const fidl::InterfaceHandle<fuchsia::io::Directory> dir_;
+  const fidl::SynchronousInterfacePtr<fuchsia::io::Directory> dir_;
 };
 
 // A service aggregate, containing zero or more instances of a service.

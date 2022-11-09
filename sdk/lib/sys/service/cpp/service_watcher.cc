@@ -11,12 +11,11 @@ namespace sys {
 zx_status_t ServiceWatcher::Begin(const ServiceAggregateBase& service_aggregate,
                                   async_dispatcher_t* dispatcher) {
   fidl::SynchronousInterfacePtr<fuchsia::io::DirectoryWatcher> watcher;
-  fidl::SynchronousInterfacePtr<fuchsia::io::Directory> dir;
-  dir.Bind(zx::channel(fdio_service_clone(service_aggregate.channel().get())));
   zx_status_t fidl_status;
-  zx_status_t status = dir->Watch(fuchsia::io::WatchMask::EXISTING | fuchsia::io::WatchMask::ADDED |
-                                      fuchsia::io::WatchMask::REMOVED,
-                                  0, watcher.NewRequest(), &fidl_status);
+  zx_status_t status = service_aggregate.proxy()->Watch(fuchsia::io::WatchMask::EXISTING |
+                                                            fuchsia::io::WatchMask::ADDED |
+                                                            fuchsia::io::WatchMask::REMOVED,
+                                                        0, watcher.NewRequest(), &fidl_status);
   if (status != ZX_OK) {
     return status;
   }

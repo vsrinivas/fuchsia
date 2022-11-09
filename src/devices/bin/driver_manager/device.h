@@ -296,9 +296,8 @@ class Device final
 
   bool has_outgoing_directory() { return outgoing_dir_.is_valid(); }
   fidl::ClientEnd<fio::Directory> take_outgoing_dir() { return std::move(outgoing_dir_); }
-  fidl::ClientEnd<fio::Directory> clone_outgoing_dir() {
-    return fidl::ClientEnd<fio::Directory>(
-        zx::channel(fdio_service_clone(outgoing_dir_.handle()->get())));
+  zx::result<fidl::ClientEnd<fio::Directory>> clone_outgoing_dir() {
+    return component::Clone(outgoing_dir_);
   }
 
   const fbl::String& name() const { return name_; }

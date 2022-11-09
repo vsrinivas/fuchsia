@@ -126,10 +126,10 @@ zx_status_t fdio_namespace::WalkLocked(fbl::RefPtr<LocalVnode>* in_out_vn,
 
 // Open |path| relative to |vn|.
 //
-// |flags| and |mode| are passed to |fuchsia.io.Directory/Open| as |flags| and |mode|, respectively.
+// |flags| and |mode| are passed to |fuchsia.io/Directory.Open| as |flags| and |mode|, respectively.
 //
 // If |flags| includes |fio::wire::OpenFlags::kDescribe|, this function reads the resulting
-// |fuchsia.io.Node/OnOpen| event from the newly created channel and creates an
+// |fuchsia.io/Node.OnOpen| event from the newly created channel and creates an
 // appropriate object to interact with the remote object.
 //
 // Otherwise, this function creates a generic "remote" object.

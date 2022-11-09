@@ -39,8 +39,8 @@ class ServiceDirectory final {
   ServiceDirectory& operator=(const ServiceDirectory&) = delete;
 
   // ServiceDirectory objects can be moved.
-  ServiceDirectory(ServiceDirectory&& other) : directory_(std::move(other.directory_)) {}
-  ServiceDirectory& operator=(ServiceDirectory&& other) {
+  ServiceDirectory(ServiceDirectory&& other) noexcept : directory_(std::move(other.directory_)) {}
+  ServiceDirectory& operator=(ServiceDirectory&& other) noexcept {
     directory_ = std::move(other.directory_);
     return *this;
   }
@@ -171,7 +171,7 @@ class ServiceDirectory final {
   // The directory to which connection requests are routed.
   //
   // Implements |fuchsia.io.Directory| protocol.
-  zx::channel directory_;
+  fidl::SynchronousInterfacePtr<fuchsia::io::Directory> directory_;
 };
 
 }  // namespace sys

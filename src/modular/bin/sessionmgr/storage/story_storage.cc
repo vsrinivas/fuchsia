@@ -22,8 +22,16 @@ fuchsia::modular::ModuleData CloneModuleData(const fuchsia::modular::ModuleData&
 
   if (module_data.has_additional_services() &&
       module_data.additional_services().host_directory.is_valid()) {
-    copy.mutable_additional_services()->host_directory.set_channel(zx::channel(
-        fdio_service_clone(module_data.additional_services().host_directory.channel().get())));
+    fidl::InterfaceHandle<fuchsia::io::Directory>& host_directory =
+        const_cast<fuchsia::modular::ModuleData&>(module_data)
+            .mutable_additional_services()
+            ->host_directory;
+    fidl::SynchronousInterfacePtr directory = host_directory.BindSync();
+    __UNUSED zx_status_t status = directory->Clone(
+        fuchsia::io::OpenFlags::CLONE_SAME_RIGHTS,
+        fidl::InterfaceRequest<fuchsia::io::Node>(
+            copy.mutable_additional_services()->host_directory.NewRequest().TakeChannel()));
+    host_directory = directory.Unbind();
   }
 
   return copy;

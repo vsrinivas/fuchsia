@@ -942,8 +942,12 @@ zx::result<std::shared_ptr<dfv2::Node>> Device::CreateDFv2Device() {
   // Create the DeviceServer for the driver.
   std::optional<compat::ServiceOffersV1> service_offers;
   if (has_outgoing_directory()) {
+    zx::result outgoing_dir = clone_outgoing_dir();
+    if (outgoing_dir.is_error()) {
+      return outgoing_dir.take_error();
+    }
     // TODO(fxbug.dev/109809): Connect the FIDL offers here.
-    service_offers.emplace(name, clone_outgoing_dir(), compat::FidlServiceOffers());
+    service_offers.emplace(name, std::move(outgoing_dir.value()), compat::FidlServiceOffers());
   }
   auto server = compat::DeviceServer(name, protocol_id_, topo_path, std::move(service_offers));
 

@@ -1,6 +1,6 @@
 {
   "pkg/sys_service_cpp/include/lib/sys/service/cpp/service.h": "024f1c6aa3e3a5f7b0da06cd37662127",
-  "pkg/sys_service_cpp/include/lib/sys/service/cpp/service_aggregate.h": "7f4b8466f8b5892a901f252823fa13e5",
+  "pkg/sys_service_cpp/include/lib/sys/service/cpp/service_aggregate.h": "6d4ec1e504f43138dbae6756d3ef57cb",
   "pkg/sys_service_cpp/include/lib/sys/service/cpp/service_handler.h": "c446aa5cb3a1e309245041492e0a4eb1",
   "pkg/sys_service_cpp/include/lib/sys/service/cpp/service_watcher.h": "f5f770806e94d671bc1ffb646f9efd1b"
 }

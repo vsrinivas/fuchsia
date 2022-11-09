@@ -19,6 +19,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/dispatcher.h>
+#include <lib/component/cpp/incoming/service_client.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl-async/bind.h>
@@ -285,9 +286,8 @@ class FakeBootResolver final : public fidl::WireServer<fuchsia_component_resolut
       completer.ReplyError(fuchsia_component_resolution::wire::ResolverError::kIo);
     }
 
-    fidl::ClientEnd<fuchsia_io::Directory> directory(
-        zx::channel(fdio_service_clone(pkg_dir_->client_end().channel()->get())));
-    if (!directory.is_valid()) {
+    zx::result directory = component::Clone(pkg_dir_->client_end());
+    if (directory.is_error()) {
       completer.ReplyError(fuchsia_component_resolution::wire::ResolverError::kInternal);
       return;
     }
@@ -295,7 +295,7 @@ class FakeBootResolver final : public fidl::WireServer<fuchsia_component_resolut
     fidl::Arena arena;
     fuchsia_component_resolution::wire::Package package(arena);
     package.set_url(arena, fidl::StringView::FromExternal(kPrefix));
-    package.set_directory(std::move(directory));
+    package.set_directory(std::move(directory.value()));
 
     fuchsia_component_resolution::wire::Component component(arena);
     component.set_url(arena, request->component_url);

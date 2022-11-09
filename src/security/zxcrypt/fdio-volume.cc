@@ -10,6 +10,7 @@
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <inttypes.h>
+#include <lib/component/cpp/incoming/service_client.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
@@ -166,10 +167,16 @@ zx_status_t FdioVolume::GetFvmSliceSize(uint64_t* out) {
   // a method from fuchsia.hardware.block.volume the FIDL channel will be
   // closed and we'll be unable to do other calls to it.  So before making
   // this call, we clone the channel.
-  zx::channel channel(fdio_service_clone(caller.borrow_channel()));
-  fidl::ClientEnd<fuchsia_hardware_block_volume::Volume> client_end{std::move(channel)};
-
-  const fidl::WireResult result = fidl::WireCall(client_end)->GetVolumeInfo();
+  //
+  // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+  //
+  // TODO(https://fxbug.dev/113512): Remove this.
+  zx::result cloned = component::Clone(caller.borrow_as<fuchsia_hardware_block_volume::Volume>(),
+                                       component::AssumeProtocolComposesNode);
+  if (cloned.is_error()) {
+    return cloned.status_value();
+  }
+  const fidl::WireResult result = fidl::WireCall(cloned.value())->GetVolumeInfo();
   if (!result.ok()) {
     if (result.is_peer_closed()) {
       // The channel being closed here means that the thing at the other

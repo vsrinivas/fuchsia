@@ -15,8 +15,15 @@ namespace sys {
 std::vector<std::string> ServiceAggregateBase::ListInstances() const {
   std::vector<std::string> instances;
 
+  fidl::InterfaceHandle<fuchsia::io::Node> handle;
+  if (zx_status_t status =
+          dir_->Clone(fuchsia::io::OpenFlags::CLONE_SAME_RIGHTS, handle.NewRequest());
+      status != ZX_OK) {
+    return instances;
+  }
+
   int fd;
-  zx_status_t status = fdio_fd_create(fdio_service_clone(dir_.channel().get()), &fd);
+  zx_status_t status = fdio_fd_create(handle.TakeChannel().release(), &fd);
   if (status != ZX_OK) {
     return instances;
   }

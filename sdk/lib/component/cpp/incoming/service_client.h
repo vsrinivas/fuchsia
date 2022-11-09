@@ -214,7 +214,7 @@ zx::result<> ConnectAt(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
 constexpr inline auto AssumeProtocolComposesNode =
     internal::AssumeProtocolComposesNodeTag::kAssumeProtocolComposesNode;
 
-// Typed channel wrapper around |fdio_service_clone| and |fdio_service_clone_to|.
+// Typed channel wrapper around |fuchsia.io/Node.Clone|.
 //
 // Given an unowned client end |node|, returns an owned clone as a new
 // connection using protocol request pipelining.
@@ -246,7 +246,7 @@ constexpr inline auto AssumeProtocolComposesNode =
 //     // stage when |clone| is actually used.
 //     auto clone = component::Clone(node, component::AssumeProtocolComposesNode);
 //
-// See documentation on |fdio_service_clone| for details.
+// See documentation on |fuchsia.io/Node.Clone| for details.
 template <typename Protocol, typename Tag = std::nullptr_t,
           typename = std::enable_if_t<
               std::disjunction_v<std::is_same<Tag, std::nullptr_t>,
@@ -270,7 +270,7 @@ zx::result<fidl::ClientEnd<Protocol>> Clone(const fidl::ClientEnd<Protocol>& nod
   return Clone(node.borrow(), tag);
 }
 
-// Typed channel wrapper around |fdio_service_clone| and |fdio_service_clone_to|.
+// Typed channel wrapper around |fuchsia.io/Node.Clone|.
 //
 // Different from |Clone|, this version swallows any synchronous error and will
 // return an invalid client-end in those cases. As such, |component::Clone| should

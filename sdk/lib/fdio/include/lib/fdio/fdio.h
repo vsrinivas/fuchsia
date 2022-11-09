@@ -23,7 +23,7 @@ typedef struct fdio fdio_t;
 // by this function.
 //
 // If the `zx_handle_t` is a channel, then the channel must implement the
-// `fuchsia.io.Node` protocol.
+// `fuchsia.unknown/Queryable` protocol.
 //
 // # Errors
 //

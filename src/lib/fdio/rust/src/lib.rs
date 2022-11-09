@@ -148,7 +148,7 @@ pub fn open_fd_at(dir: &File, path: &str, flags: fio::OpenFlags) -> Result<File,
 }
 
 /// Clones an object's underlying handle.
-pub fn clone_fd<F: AsRawFd>(f: F) -> Result<zx::Handle, zx::Status> {
+pub fn clone_fd(f: &impl AsRawFd) -> Result<zx::Handle, zx::Status> {
     let fd = f.as_raw_fd();
     // we expect fdio to initialize this to a legal value.
     let mut handle = MaybeUninit::new(zx::Handle::invalid().raw_handle());
@@ -164,7 +164,7 @@ pub fn clone_fd<F: AsRawFd>(f: F) -> Result<zx::Handle, zx::Status> {
 }
 
 /// Removes an object from the file descriptor table and returns its underlying handle.
-pub fn transfer_fd<F: AsRawFd>(f: F) -> Result<zx::Handle, zx::Status> {
+pub fn transfer_fd(f: impl AsRawFd) -> Result<zx::Handle, zx::Status> {
     let fd = f.as_raw_fd();
     // we expect fdio to initialize this to a legal value.
     let mut handle = MaybeUninit::new(zx::Handle::invalid().raw_handle());
@@ -229,19 +229,14 @@ pub fn bind_to_fd(handle: zx::Handle, fd: RawFd) -> Result<(), zx::Status> {
     Ok(())
 }
 
-/// Open a new connection to `f` by sending a request to open a new connection to the server.
+/// Clones an object's underlying handle and checks that it is a channel.
 pub fn clone_channel(f: &impl AsRawFd) -> Result<zx::Channel, zx::Status> {
-    let fd = f.as_raw_fd();
-    let fdio = unsafe { fdio_sys::fdio_unsafe_fd_to_io(fd) };
-    let handle = unsafe { fdio_sys::fdio_unsafe_borrow_channel(fdio) };
-    let handle = unsafe { fdio_sys::fdio_service_clone(handle) };
-    let () = unsafe { fdio_sys::fdio_unsafe_release(fdio) };
-    match handle {
-        zx::sys::ZX_HANDLE_INVALID => Err(zx::Status::NOT_SUPPORTED),
-        handle => {
-            let handle = unsafe { zx::Handle::from_raw(handle) };
-            Ok(zx::Channel::from(handle))
-        }
+    let handle = clone_fd(f)?;
+    let zx::HandleBasicInfo { object_type, .. } = handle.basic_info()?;
+    if object_type == zx::ObjectType::CHANNEL {
+        Ok(handle.into())
+    } else {
+        Err(zx::Status::WRONG_TYPE)
     }
 }
 

@@ -71,9 +71,12 @@ zx::result<zx::channel> CloneRaw(zx::unowned_channel&& node) {
 }
 
 zx::result<> CloneRaw(zx::unowned_channel&& node, zx::channel server_end) {
-  if (zx_status_t status = fdio_service_clone_to(node->get(), server_end.release());
-      status != ZX_OK) {
-    return zx::error(status);
+  const fidl::WireResult result =
+      fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io::Node>(node))
+          ->Clone(fuchsia_io::wire::OpenFlags::kCloneSameRights,
+                  fidl::ServerEnd<fuchsia_io::Node>(std::move(server_end)));
+  if (!result.ok()) {
+    return zx::error(result.status());
   }
   return zx::ok();
 }

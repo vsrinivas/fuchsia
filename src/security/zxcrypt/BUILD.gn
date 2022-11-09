@@ -56,6 +56,7 @@ shared_library("zxcrypt-fdio") {
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.block.encrypted:fuchsia.hardware.block.encrypted_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_cpp_wire",
+    "//sdk/lib/component/cpp/incoming",
     "//sdk/lib/fdio",
     "//third_party/boringssl",
     "//zircon/system/ulib/fbl",

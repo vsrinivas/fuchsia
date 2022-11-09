@@ -42,14 +42,11 @@ std::string PathToUrl(std::string_view path) {
 
 __EXPORT
 zx_status_t IsolatedDevmgr::AddDevfsToOutgoingDir(vfs::PseudoDir* outgoing_root_dir) {
-  zx::channel client, server;
-  auto status = zx::channel::create(0, &client, &server);
-  if (status != ZX_OK) {
+  zx::channel client;
+  if (zx_status_t status = fdio_fd_clone(devfs_root_.get(), client.reset_and_get_address());
+      status != ZX_OK) {
     return status;
   }
-  fdio_cpp::UnownedFdioCaller fd(devfs_root_.get());
-  fdio_service_clone_to(fd.borrow_channel(), server.release());
-
   // Add devfs to out directory.
   auto devfs_out = std::make_unique<vfs::RemoteDir>(std::move(client));
   outgoing_root_dir->AddEntry("dev", std::move(devfs_out));
