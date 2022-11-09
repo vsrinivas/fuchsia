@@ -198,13 +198,13 @@ rustc_binary("bin") {
     "//src/lib/fuchsia-runtime",
     "//src/lib/ui/carnelian",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/recovery/lib/recovery-ui",
     "//src/recovery/lib/recovery-util",
     "//src/sys/lib/stdout-to-debuglog/rust",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-channel",
     "//third_party/rust_crates:euclid",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:mockall",
     "//third_party/rust_crates:tracing",
   ]
   test_deps = [
@@ -218,14 +218,8 @@ rustc_binary("bin") {
     "http_setup_server",
   ]
   sources = [
-    "src/button.rs",
     "src/cobalt.rs",
-    "src/console.rs",
-    "src/font.rs",
-    "src/keyboard.rs",
-    "src/keys.rs",
     "src/main.rs",
-    "src/proxy_view_assistant.rs",
   ]
   if (enable_recovery_ui_v2) {
     features += [ "ota_ui" ]
@@ -328,18 +322,14 @@ rustc_binary("bin_fdr") {
     "//src/lib/fuchsia-component",
     "//src/lib/ui/carnelian",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/recovery/lib/recovery-ui",
     "//src/sys/lib/stdout-to-debuglog/rust",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:euclid",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:mockall",
   ]
   test_deps = [ "//src/lib/fuchsia" ]
-  sources = [
-    "src/font.rs",
-    "src/main.rs",
-    "src/proxy_view_assistant.rs",
-  ]
+  sources = [ "src/main.rs" ]
 }
 
 # Start system_recovery_fdr component TODO(fxbug.dev/105564)

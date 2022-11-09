@@ -2,21 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[cfg(feature = "http_setup_server")]
-mod button;
-#[cfg(feature = "http_setup_server")]
-mod cobalt;
-#[cfg(feature = "debug_console")]
-mod console;
-mod font;
-#[cfg(feature = "http_setup_server")]
-mod keyboard;
-#[cfg(feature = "http_setup_server")]
-mod keys;
-mod proxy_view_assistant;
-#[cfg(feature = "ota_ui")]
-mod ui_v2;
-
 use {
     anyhow::{format_err, Error},
     carnelian::{
@@ -49,6 +34,7 @@ use {
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon::{Duration, Event},
     futures::StreamExt,
+    recovery_ui::{font, proxy_view_assistant::ProxyViewAssistant},
     recovery_ui_config::Config as UiConfig,
     rive_rs::{self as rive},
     std::{
@@ -56,6 +42,11 @@ use {
         path::Path,
     },
 };
+
+#[cfg(feature = "http_setup_server")]
+mod cobalt;
+#[cfg(feature = "ota_ui")]
+mod ui_v2;
 
 #[cfg(feature = "http_setup_server")]
 use {
@@ -67,8 +58,16 @@ use {
     fuchsia_runtime::{take_startup_handle, HandleType},
     ota_lib::{ota, setup, OtaComponent, OtaManager, OtaStatus},
     recovery_metrics_registry::cobalt_registry as metrics,
+    recovery_ui::{
+        button::{Button, ButtonMessages},
+        keyboard::{KeyboardMessages, KeyboardViewAssistant},
+        proxy_view_assistant::ProxyMessages,
+    },
     std::sync::Arc,
 };
+
+#[cfg(feature = "debug_console")]
+use recovery_ui::console::{ConsoleMessages, ConsoleViewAssistant};
 
 // 11 seconds so it can count from 10 down to 0 while displaying each tick for 1 second
 const FACTORY_RESET_TIMER_IN_SECONDS: u8 = 11;
@@ -99,19 +98,8 @@ mod http_setup_server {
     pub(super) const UPDATE: &'static str = "Update";
 }
 
-use crate::proxy_view_assistant::ProxyViewAssistant;
-
 #[cfg(feature = "http_setup_server")]
-use crate::{
-    button::{Button, ButtonMessages},
-    http_setup_server::*,
-    keyboard::{KeyboardMessages, KeyboardViewAssistant},
-    proxy_view_assistant::ProxyMessages,
-    setup::SetupEvent,
-};
-
-#[cfg(feature = "debug_console")]
-use crate::console::{ConsoleMessages, ConsoleViewAssistant};
+use crate::{http_setup_server::*, setup::SetupEvent};
 
 fn raster_for_circle(center: Point, radius: Coord, render_context: &mut RenderContext) -> Raster {
     let path = path_for_circle(center, radius, render_context);
@@ -209,7 +197,10 @@ impl AppAssistant for RecoveryAppAssistant {
         let font_face = font::load_default_font_face()?;
 
         #[cfg(feature = "debug_console")]
-        let console_view_assistant_ptr = Box::new(ConsoleViewAssistant::new(font_face.clone())?);
+        let console_view_assistant_ptr: Option<ViewAssistantPtr> =
+            Some(Box::new(ConsoleViewAssistant::new(font_face.clone())?));
+        #[cfg(not(feature = "debug_console"))]
+        let console_view_assistant_ptr: Option<ViewAssistantPtr> = None;
 
         let view_assistant_ptr = Box::new(RecoveryViewAssistant::new(
             &self.app_sender,
@@ -225,11 +216,8 @@ impl AppAssistant for RecoveryAppAssistant {
 
         // ProxyView is a root view that conditionally displays the top View
         // from a stack (initialized with "RecoveryView"), or the Console.
-        let proxy_ptr = Box::new(ProxyViewAssistant::new(
-            #[cfg(feature = "debug_console")]
-            console_view_assistant_ptr,
-            view_assistant_ptr,
-        )?);
+        let proxy_ptr =
+            Box::new(ProxyViewAssistant::new(console_view_assistant_ptr, view_assistant_ptr)?);
         Ok(proxy_ptr)
     }
 

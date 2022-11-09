@@ -37,15 +37,13 @@ pub enum ButtonMessages {
     Pressed(&'static keys::Key, Time, String),
 }
 
-#[allow(unused)]
 pub enum KeyboardMessages {
     NoInput,
     // Result of input field name and entered text
     Result(&'static str, String),
 }
 
-#[allow(unused)]
-struct KeyButton {
+pub struct KeyButton {
     pub font_size: f32,
     pub padding: f32,
     bg_color: Color,
@@ -61,7 +59,6 @@ struct KeyButton {
     special_action: bool,
     key: &'static keys::Key,
     label_text: String,
-    font_face: FontFace,
     background: FacetId,
     label: FacetId,
 }
@@ -118,7 +115,6 @@ impl KeyButton {
             focused: false,
             special_action: false,
             label_text: text.to_string(),
-            font_face,
             background,
             label,
         };
@@ -263,7 +259,6 @@ impl Hash for KeyButton {
     }
 }
 
-#[allow(unused)]
 pub struct SceneDetails {
     buttons: VecDeque<KeyButton>,
     user_text: FacetId,
@@ -312,13 +307,11 @@ impl KeyboardViewAssistant {
         })
     }
 
-    #[allow(unused)]
-    pub(crate) fn set_field_name(&mut self, field_name: &'static str) {
+    pub fn set_field_name(&mut self, field_name: &'static str) {
         self.field_name = field_name;
     }
 
-    #[allow(unused)]
-    pub(crate) fn set_text_field(&mut self, text: String) {
+    pub fn set_text_field(&mut self, text: String) {
         self.user_text = text;
     }
 

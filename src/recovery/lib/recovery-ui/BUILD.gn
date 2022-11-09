@@ -18,8 +18,22 @@ rustc_library("recovery-ui") {
     "//third_party/rust_crates:num-traits",
   ]
   sources = [
+    "src/button.rs",
+    "src/console.rs",
+    "src/font.rs",
+    "src/keyboard.rs",
+    "src/keys.rs",
     "src/lib.rs",
     "src/progress_bar.rs",
+    "src/proxy_view_assistant.rs",
+  ]
+
+  # test_deps = [
+  #   "//third_party/rust_crates:mockall",
+  # ]
+  features = [
+    # b/255342472 Always enable debug_console until proxy_view_assistant supports a generic overlay ViewAssistantPtr
+    "debug_console",
   ]
 }
 

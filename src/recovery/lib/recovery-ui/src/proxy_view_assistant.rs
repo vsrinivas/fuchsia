@@ -3,28 +3,27 @@
 // found in the LICENSE file.
 
 #[cfg(feature = "debug_console")]
-use crate::ConsoleMessages;
+use crate::console::ConsoleMessages;
 
-use crate::input::{self};
+use carnelian::input::{self};
 use std::collections::VecDeque;
 
 use anyhow::Error;
 use carnelian::render::Context;
 use carnelian::{Message, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr};
 use fuchsia_zircon::Event;
-use mockall::predicate::*;
-use mockall::*;
+
+#[cfg(test)]
+use mockall::{predicate::*, *};
 
 pub enum ProxyMessages {
-    #[allow(unused)]
     NewViewAssistant(Option<ViewAssistantPtr>),
-    #[allow(unused)]
     PopViewAssistant,
 }
 
 pub struct ProxyViewAssistant {
     #[cfg(feature = "debug_console")]
-    console_view_assistant: ViewAssistantPtr,
+    console_view_assistant: Option<ViewAssistantPtr>,
     view_assistant_stack: VecDeque<ViewAssistantPtr>,
     first_call_after_switch: bool,
     #[cfg(feature = "debug_console")]
@@ -32,8 +31,10 @@ pub struct ProxyViewAssistant {
 }
 
 impl ProxyViewAssistant {
+    /// Creates a new ProxyViewAssistant with the provided view assistants.
+    /// Console is disabled if `console_view_assistant` is `None`.
     pub fn new(
-        #[cfg(feature = "debug_console")] console_view_assistant: ViewAssistantPtr,
+        #[cfg(feature = "debug_console")] console_view_assistant: Option<ViewAssistantPtr>,
         view_assistant_ptr: ViewAssistantPtr,
     ) -> Result<ProxyViewAssistant, Error> {
         let mut view_assistant_stack = VecDeque::new();
@@ -52,6 +53,9 @@ impl ProxyViewAssistant {
     /// Returns true if event should toggle display of Console (and consider the event consumed).
     #[cfg(feature = "debug_console")]
     fn should_console_toggle(&mut self, event: &input::Event) -> bool {
+        if self.console_view_assistant.is_none() {
+            return false;
+        }
         let mut toggle_requested = false;
 
         match &event.event_type {
@@ -76,7 +80,7 @@ impl ProxyViewAssistant {
     }
 }
 
-#[automock]
+#[cfg_attr(test, automock)]
 impl ViewAssistant for ProxyViewAssistant {
     fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
         self.view_assistant_stack.front_mut().unwrap().setup(context)
@@ -94,11 +98,11 @@ impl ViewAssistant for ProxyViewAssistant {
     ) -> Result<(), Error> {
         #[cfg(feature = "debug_console")]
         if self.console_active {
-            return self.console_view_assistant.as_mut().render(
-                render_context,
-                buffer_ready_event,
-                view_context,
-            );
+            if let Some(console) = self.console_view_assistant.as_mut() {
+                return console.render(render_context, buffer_ready_event, view_context);
+            } else {
+                eprintln!("Error: Console could not be found to render");
+            }
         }
 
         self.view_assistant_stack.front_mut().unwrap().render(
@@ -231,7 +235,11 @@ impl ViewAssistant for ProxyViewAssistant {
         if cfg!(feature = "debug_console") {
             #[cfg(feature = "debug_console")]
             if message.is::<ConsoleMessages>() {
-                self.console_view_assistant.as_mut().handle_message(message);
+                if let Some(console) = self.console_view_assistant.as_mut() {
+                    console.handle_message(message);
+                } else {
+                    eprintln!("Error: Unable to find console to pass ConsoleMessages");
+                }
                 return;
             }
         }

@@ -7,7 +7,6 @@ pub struct LetterKey {
     pub(crate) lower: &'static str,
     pub(crate) upper: &'static str,
     pub(crate) alt: &'static str,
-    #[allow(unused)]
     pub(crate) is_alt_accent: bool,
 }
 
@@ -99,7 +98,6 @@ const KEY_ENTER: Key = Key::Special(SpecialKey::ENTER, "enter");
 const KEY_SHIFT: Key = Key::Special(SpecialKey::SHIFT, "shift");
 const KEY_SPACE: Key = Key::Special(SpecialKey::SPACE, "space");
 
-#[allow(unused)]
 pub(crate) const ROW0: &'static [&Key] = &[
     &KEY_BACK_TICK,
     &KEY_1,
@@ -115,7 +113,6 @@ pub(crate) const ROW0: &'static [&Key] = &[
     &KEY_HYPHEN,
     &KEY_EQUALS,
 ];
-#[allow(unused)]
 pub(crate) const ROW1: &'static [&Key] = &[
     &KEY_Q,
     &KEY_W,
@@ -131,7 +128,6 @@ pub(crate) const ROW1: &'static [&Key] = &[
     &KEY_R_BRACKET,
     &KEY_BACKSLASH,
 ];
-#[allow(unused)]
 const ROW2: &'static [&Key] = &[
     &KEY_A,
     &KEY_S,
@@ -145,7 +141,6 @@ const ROW2: &'static [&Key] = &[
     &KEY_SEMICOLON,
     &KEY_QUOTE,
 ];
-#[allow(unused)]
 const ROW3: &'static [&Key] = &[
     &KEY_Z,
     &KEY_X,
@@ -158,13 +153,10 @@ const ROW3: &'static [&Key] = &[
     &KEY_FULL_STOP,
     &KEY_SLASH,
 ];
-#[allow(unused)]
 const SPECIAL_ROW: &'static [&Key] = &[&KEY_SHIFT, &KEY_ALT, &KEY_SPACE, &KEY_DEL, &KEY_ENTER];
 
-#[allow(unused)]
 pub const KEYBOARD: &'static [&'static [&Key]] = &[ROW0, ROW1, ROW2, ROW3, SPECIAL_ROW];
 
-#[allow(unused)]
 #[derive(Debug)]
 pub struct Accent {
     accent: &'static Key,
@@ -172,7 +164,6 @@ pub struct Accent {
     pub(crate) upper: &'static str,
 }
 
-#[allow(unused)]
 #[derive(Debug)]
 pub struct AccentKey {
     pub alt_key: &'static Key,

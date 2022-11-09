@@ -2,14 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{font, ConsoleViewAssistant, ProxyViewAssistant, UiConfig};
 use anyhow::Error;
 use carnelian::{
     app::Config, drawing::DisplayRotation, App, AppAssistant, AppAssistantPtr, AppSender,
     AssistantCreator, AssistantCreatorFunc, ViewAssistantPtr, ViewKey,
 };
+use recovery_ui::{font, proxy_view_assistant::ProxyViewAssistant};
+use recovery_ui_config::Config as UiConfig;
 use recovery_util::ota::controller::Controller;
 use recovery_util::ota::state_machine::{State, StateMachine};
+
+#[cfg(feature = "debug_console")]
+use recovery_ui::console::ConsoleViewAssistant;
 
 struct RecoveryAppAssistant {
     _app_sender: AppSender,
@@ -51,13 +55,13 @@ impl AppAssistant for RecoveryAppAssistant {
         let state_machine = Box::new(StateMachine::new(State::Home));
         let _controller = Controller::new(state_machine);
         let font_face = font::load_default_font_face()?;
+        #[cfg(feature = "debug_console")]
         let console_view_assistant_ptr = Box::new(ConsoleViewAssistant::new(font_face.clone())?);
+        #[cfg(not(feature = "debug_console"))]
+        let console_view_assistant_ptr = None;
         let first_screen = Box::new(ConsoleViewAssistant::new(font_face.clone())?);
-        let proxy_ptr = Box::new(ProxyViewAssistant::new(
-            #[cfg(feature = "debug_console")]
-            console_view_assistant_ptr,
-            first_screen,
-        )?);
+        let proxy_ptr =
+            Box::new(ProxyViewAssistant::new(Some(console_view_assistant_ptr), first_screen)?);
         Ok(proxy_ptr)
     }
 
