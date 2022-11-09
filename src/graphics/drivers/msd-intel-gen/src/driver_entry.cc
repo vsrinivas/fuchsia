@@ -25,7 +25,6 @@
 #include "magma_util/dlog.h"
 #include "msd_defs.h"
 #include "msd_intel_pci_device.h"
-#include "platform_trace.h"
 #include "platform_trace_provider.h"
 #include "platform_trace_provider_with_fdio.h"
 #include "src/graphics/lib/magma/src/magma_util/platform/zircon/magma_performance_counter_device.h"
@@ -48,12 +47,10 @@ using DeviceType = fuchsia_gpu_magma::CombinedDevice;
 
 class IntelDevice;
 
-using DdkDeviceType =
-    ddk::Device<IntelDevice, ddk::MessageableManual, ddk::Unbindable, ddk::Initializable>;
+using DdkDeviceType = ddk::Device<IntelDevice, ddk::Messageable<DeviceType>::Mixin, ddk::Unbindable,
+                                  ddk::Initializable>;
 
-class IntelDevice : public fidl::WireServer<DeviceType>,
-                    public DdkDeviceType,
-                    public ddk::EmptyProtocol<ZX_PROTOCOL_GPU> {
+class IntelDevice : public DdkDeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_GPU> {
  public:
   explicit IntelDevice(zx_device_t* parent_device) : DdkDeviceType(parent_device) {}
 
@@ -144,7 +141,7 @@ class IntelDevice : public fidl::WireServer<DeviceType>,
       if (item.support_flags & ICD_SUPPORT_FLAG_MEDIA_CODEC_FACTORY)
         flags |= fuchsia_gpu_magma::wire::IcdFlags::kSupportsMediaCodecFactory;
       icd_info.set_flags(flags);
-      icd_infos.push_back(std::move(icd_info));
+      icd_infos.push_back(icd_info);
     }
 
     completer.Reply(fidl::VectorView<fuchsia_gpu_magma::wire::IcdInfo>::FromExternal(icd_infos));
@@ -180,7 +177,6 @@ class IntelDevice : public fidl::WireServer<DeviceType>,
   }
 
   void DdkInit(ddk::InitTxn txn);
-  void DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn);
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
@@ -215,10 +211,6 @@ void IntelDevice::DdkUnbind(ddk::UnbindTxn txn) {
   // This will tear down client connections and cause them to return errors.
   MagmaStop();
   txn.Reply();
-}
-
-void IntelDevice::DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn) {
-  fidl::WireDispatch<DeviceType>(this, std::move(msg), &txn);
 }
 
 void IntelDevice::DdkRelease() {

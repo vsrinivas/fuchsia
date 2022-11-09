@@ -44,7 +44,6 @@ class Device : public DeviceType, public ddk::BtHciProtocol<Device, ddk::base_pr
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_proto);
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   zx_status_t BtHciOpenCommandChannel(zx::channel in);
   zx_status_t BtHciOpenAclDataChannel(zx::channel in);

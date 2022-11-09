@@ -22,10 +22,8 @@
 #include "magma_dependency_injection_device.h"
 #include "magma_performance_counter_device.h"
 #include "magma_util/macros.h"
-#include "platform_buffer.h"
 #include "platform_handle.h"
 #include "platform_logger.h"
-#include "platform_trace.h"
 #include "platform_trace_provider.h"
 #include "platform_trace_provider_with_fdio.h"
 #include "sys_driver/magma_driver.h"
@@ -42,11 +40,10 @@ using DeviceType = fuchsia_gpu_magma::CombinedDevice;
 
 class GpuDevice;
 
-using DdkDeviceType =
-    ddk::Device<GpuDevice, ddk::MessageableManual, ddk::Unbindable, ddk::Initializable>;
+using DdkDeviceType = ddk::Device<GpuDevice, ddk::Messageable<DeviceType>::Mixin, ddk::Unbindable,
+                                  ddk::Initializable>;
 
-class GpuDevice : public fidl::WireServer<DeviceType>,
-                  public magma::MagmaDependencyInjectionDevice::Owner,
+class GpuDevice : public magma::MagmaDependencyInjectionDevice::Owner,
                   public DdkDeviceType,
                   public ddk::EmptyProtocol<ZX_PROTOCOL_GPU> {
  public:
@@ -140,7 +137,7 @@ class GpuDevice : public fidl::WireServer<DeviceType>,
       if (item.support_flags & ICD_SUPPORT_FLAG_MEDIA_CODEC_FACTORY)
         flags |= fuchsia_gpu_magma::wire::IcdFlags::kSupportsMediaCodecFactory;
       icd_info.set_flags(flags);
-      icd_infos.push_back(std::move(icd_info));
+      icd_infos.push_back(icd_info);
     }
 
     completer.Reply(fidl::VectorView<fuchsia_gpu_magma::wire::IcdInfo>::FromExternal(icd_infos));
@@ -273,7 +270,7 @@ static zx_status_t driver_bind(void* context, zx_device_t* parent) {
     return status;
   }
   // DdkAdd in Init took ownership of device.
-  gpu.release();
+  __UNUSED GpuDevice* ptr = gpu.release();
   return ZX_OK;
 }
 

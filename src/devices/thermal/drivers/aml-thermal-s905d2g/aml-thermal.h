@@ -40,7 +40,6 @@ class AmlThermal : public DeviceType, public ddk::ThermalProtocol<AmlThermal, dd
 
   // Ddk Hooks
   void DdkRelease();
-  void DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn);
 
   // Implements ZX_PROTOCOL_THERMAL
   zx_status_t ThermalConnect(zx::channel ch);
