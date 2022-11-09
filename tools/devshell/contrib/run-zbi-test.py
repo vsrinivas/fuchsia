@@ -34,17 +34,13 @@ def main():
     modes = parser.add_mutually_exclusive_group()
     modes.add_argument(
         '--boot', '-b', action='store_true', help='Run via bootserver')
-    modes.add_argument(
-        '--emu', '-e', action='store_true', help='Run via fx emu')
-    modes.add_argument(
-        '--qemu', '-q', action='store_true', help='Run via fx qemu')
     parser.add_argument(
         '--args',
         '-a',
         metavar='RUNNER-ARG',
         action='append',
         default=[],
-        help='Pass RUNNER-ARG to bootserver/fx emu/fx qemu')
+        help='Pass RUNNER-ARG to bootserver/fx qemu')
     parser.add_argument(
         '-k',
         action='append_const',
@@ -149,17 +145,13 @@ def main():
         bootserver = find_bootserver(build_dir)
         cmd = [bootserver, '--boot'] + zbis + args.args
     else:
-        if args.emu:
-            cmd = ['fx', 'emu', '--headless', '--experiment-arm64']
-        else:
-            cmd = ['fx', 'qemu']
-        cmd += args.args
+        cmd = ['fx', 'qemu'] + args.args
 
         if zbis:
             cmd += ['-z'] + zbis
         else:
             [(kernel, zbi)] = qemus
-            cmd += ['-K' if args.emu else '-t', kernel, '-z', zbi]
+            cmd += ['-t', kernel, '-z', zbi]
 
     for arg in args.cmdline:
         cmd += ['-c', arg]
@@ -167,8 +159,6 @@ def main():
     # Prevents QEMU from boot-looping, as most ZBI tests do not have a means of
     # gracefully shutting down.
     if not args.boot:
-        if not args.emu:
-            cmd += ['--']
         cmd += ['-no-reboot']
 
     print('+ %s' % ' '.join(map(shlex.quote, cmd)))
