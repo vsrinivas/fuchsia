@@ -11,6 +11,7 @@ import("//build/rust/rustc_binary.gni")
 # Group added to enable easy building of both the
 # legacy Dart version and the Rust version.
 group("doc_checker") {
+  testonly = true
   deps = [
     ":doc_checker_darttool",
     ":doc_checker_host_tool($host_toolchain)",
@@ -37,6 +38,7 @@ if (is_host) {
     # TODO: Rename to doc-checker when migration is completed.
     output_name = "doc-checker-new"
     with_unit_tests = true
+    testonly = true
     sources = [
       "src/checker.rs",
       "src/link_checker.rs",
@@ -47,26 +49,47 @@ if (is_host) {
       "src/yaml/toc_checker.rs",
     ]
     deps = [
+      "//src/lib/fuchsia",
+      "//src/lib/fuchsia-hyper:fuchsia-hyper",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:async-trait",
       "//third_party/rust_crates:cfg-if",
+      "//third_party/rust_crates:futures",
       "//third_party/rust_crates:glob",
       "//third_party/rust_crates:http",
+      "//third_party/rust_crates:hyper",
       "//third_party/rust_crates:pulldown-cmark",
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_yaml",
       "//third_party/rust_crates:url",
     ]
-    test_deps = [
-      "//third_party/rust_crates:lazy_static",
-      "//third_party/rust_crates:mockall",
-    ]
+    test_deps = [ "//src/lib/fuchsia-async" ]
+
+    non_rust_deps = [ ":doc_checker_test_data($host_toolchain)" ]
   }
 
   install_host_tools("doc_checker_host_tool") {
+    testonly = true
     deps = [ ":doc_checker_bin($host_toolchain)" ]
 
     outputs = [ "doc-checker-new" ]
+  }
+
+  # Test data for doc_checker.
+  host_test_data("doc_checker_test_data") {
+    sources = [
+      "doc_checker_test_data/docs/README.md",
+      "doc_checker_test_data/docs/_toc.yaml",
+      "doc_checker_test_data/docs/images/fuchsia_icon_256x256.png",
+      "doc_checker_test_data/docs/no_readme/_toc.yaml",
+      "doc_checker_test_data/docs/no_readme/details.md",
+      "doc_checker_test_data/docs/path.md",
+      "doc_checker_test_data/docs/second.md",
+      "doc_checker_test_data/docs/unreachable.md",
+      "doc_checker_test_data/docs/unused/_toc.yaml",
+    ]
+    outputs = [ "${root_out_dir}/{{source_target_relative}}" ]
   }
 }
 

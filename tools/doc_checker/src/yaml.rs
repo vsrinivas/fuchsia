@@ -9,11 +9,13 @@ use {
     self::toc_checker::Toc,
     crate::{
         link_checker::{
-            do_check_link, do_in_tree_check, is_intree_link, LinkReference, PUBLISHED_DOCS_HOST,
+            check_external_links, do_check_link, do_in_tree_check, is_intree_link, LinkReference,
+            PUBLISHED_DOCS_HOST,
         },
         DocCheckError, DocCheckerArgs, DocLine, DocYamlCheck,
     },
     anyhow::Result,
+    async_trait::async_trait,
     serde::{de::DeserializeOwned, Deserialize},
     serde_yaml::{Mapping, Value},
     std::{
@@ -196,6 +198,7 @@ pub(crate) struct YamlChecker {
     check_external_links: bool,
 }
 
+#[async_trait]
 impl DocYamlCheck for YamlChecker {
     fn name(&self) -> &str {
         "DocYamlCheck"
@@ -242,7 +245,7 @@ impl DocYamlCheck for YamlChecker {
         }
     }
 
-    fn post_check(
+    async fn post_check(
         &self,
         _markdown_files: &[PathBuf],
         _yaml_files: &[PathBuf],
@@ -307,10 +310,11 @@ impl DocYamlCheck for YamlChecker {
                             if markdown_file_set.take(&file_path).is_none()
                                 && !visited.contains(&file_path)
                             {
-                                errors.push(DocCheckError {
-                                    doc_line: DocLine { line_num: 0, file_name: yaml_doc.clone() },
-                                    message: format!("Reference to missing file: {}", p),
-                                });
+                                errors.push(DocCheckError::new(
+                                    0,
+                                    yaml_doc.clone(),
+                                    &format!("Reference to missing file: {}", p),
+                                ));
                             } else {
                                 visited.insert(file_path);
                             }
@@ -326,10 +330,11 @@ impl DocYamlCheck for YamlChecker {
                     toc_stack.extend(additional_paths);
                 }
             } else if !visited.contains(&current_yaml) {
-                return Ok(Some(vec![DocCheckError {
-                    doc_line: DocLine { line_num: 0, file_name: current_yaml.clone() },
-                    message: format!("Cannot find {:?} at {:?}", &current_yaml, &yaml_file_set),
-                }]));
+                return Ok(Some(vec![DocCheckError::new(
+                    0,
+                    current_yaml.clone(),
+                    &format!("Cannot find {:?} at {:?}", &current_yaml, &yaml_file_set),
+                )]));
             }
         }
 
@@ -349,27 +354,27 @@ impl DocYamlCheck for YamlChecker {
             .filter(|p| !p.ends_with("gen/build_arguments.md"))
             .copied()
             .for_each(|f| {
-                errors.push(DocCheckError {
-                    doc_line: DocLine { line_num: 0, file_name: f.clone() },
-                    message: "File not referenced in any _toc.yaml files.".to_string(),
-                });
+                errors.push(DocCheckError::new(
+                    0,
+                    f.clone(),
+                    "File not referenced in any _toc.yaml files.",
+                ));
             });
 
         yaml_file_set.iter().filter(|f| f.ends_with("_toc.yaml")).for_each(|&f| {
-            errors.push(DocCheckError {
-                doc_line: DocLine { line_num: 0, file_name: f.clone() },
-                message: "File not reachable via _toc include references.".to_string(),
-            })
+            errors.push(DocCheckError::new(
+                0,
+                f.clone(),
+                "File not reachable via _toc include references.",
+            ))
         });
 
         if self.check_external_links {
-            /* Coming in next CL
             if let Some(link_errors) = check_external_links(&external_links).await {
                 for e in link_errors {
                     errors.push(e);
                 }
             }
-            */
         }
 
         if errors.is_empty() {
@@ -470,10 +475,11 @@ fn check_deprecated_docs(filename: &Path, yaml_value: &Value) -> Option<Vec<DocC
     //TODO(fxbug.dev/113636): Add a check that the to: doc exists.
     match result {
         Ok(_) => None,
-        Err(e) => Some(vec![DocCheckError {
-            doc_line: DocLine { line_num: 1, file_name: filename.to_path_buf() },
-            message: format!("invalid structure {}", e),
-        }]),
+        Err(e) => Some(vec![DocCheckError::new(
+            1,
+            filename.to_path_buf(),
+            &format!("invalid structure {}", e),
+        )]),
     }
 }
 
@@ -499,10 +505,11 @@ fn check_eng_council(filename: &Path, yaml_value: &Value) -> Option<Vec<DocCheck
     let result = serde_yaml::from_value::<EngCouncil>(yaml_value.clone());
     match result {
         Ok(_redirects) => None,
-        Err(e) => Some(vec![DocCheckError {
-            doc_line: DocLine { line_num: 1, file_name: filename.to_path_buf() },
-            message: format!("invalid structure for EngCouncil {}. Found {:?}", e, yaml_value),
-        }]),
+        Err(e) => Some(vec![DocCheckError::new(
+            1,
+            filename.to_path_buf(),
+            &format!("invalid structure for EngCouncil {}. Found {:?}", e, yaml_value),
+        )]),
     }
 }
 
@@ -517,10 +524,11 @@ fn check_metadata(filename: &Path, yaml_value: &Value) -> Option<Vec<DocCheckErr
     //TODO(fxbug.dev/113640): Add checks for metadata.
     match result {
         Ok(_redirects) => None,
-        Err(e) => Some(vec![DocCheckError {
-            doc_line: DocLine { line_num: 1, file_name: filename.to_path_buf() },
-            message: format!("invalid structure for _metadata {}. Data: {:?}", e, yaml_value),
-        }]),
+        Err(e) => Some(vec![DocCheckError::new(
+            1,
+            filename.to_path_buf(),
+            &format!("invalid structure for _metadata {}. Data: {:?}", e, yaml_value),
+        )]),
     }
 }
 
@@ -535,10 +543,11 @@ fn check_redirects(filename: &Path, yaml_value: &Value) -> Option<Vec<DocCheckEr
     //TODO(fxbug.dev/113642): add valication to redirects.
     match result {
         Ok(_) => None,
-        Err(e) => Some(vec![DocCheckError {
-            doc_line: DocLine { line_num: 1, file_name: filename.to_path_buf() },
-            message: format!("invalid structure {}", e),
-        }]),
+        Err(e) => Some(vec![DocCheckError::new(
+            1,
+            filename.to_path_buf(),
+            &format!("invalid structure {}", e),
+        )]),
     }
 }
 
@@ -562,13 +571,14 @@ fn check_supported_cpu_architecture(
     //TODO(fxbug.dev/113645): Add validation
     match result {
         Ok(_redirects) => None,
-        Err(e) => Some(vec![DocCheckError {
-            doc_line: DocLine { line_num: 1, file_name: filename.to_path_buf() },
-            message: format!(
+        Err(e) => Some(vec![DocCheckError::new(
+            1,
+            filename.to_path_buf(),
+            &format!(
                 "invalid structure for _supported_cpu_architecture {}. Data: {:?}",
                 e, yaml_value
             ),
-        }]),
+        )]),
     }
 }
 
@@ -594,13 +604,11 @@ fn parse_entries<T: DeserializeOwned>(
         if item_list.is_empty() {
             (
                 None,
-                Some(vec![DocCheckError {
-                    doc_line: DocLine { line_num: 1, file_name: filename.to_path_buf() },
-                    message: format!(
-                        "unexpected empty list for {:?} file, got {:?}",
-                        filename, yaml_value
-                    ),
-                }]),
+                Some(vec![DocCheckError::new(
+                    1,
+                    filename.to_path_buf(),
+                    &format!("unexpected empty list for {:?} file, got {:?}", filename, yaml_value),
+                )]),
             )
         } else {
             let mut errors: Vec<DocCheckError> = vec![];
@@ -611,13 +619,14 @@ fn parse_entries<T: DeserializeOwned>(
                 match result {
                     Ok(element) => items.push(element),
                     Err(e) => {
-                        errors.push(DocCheckError {
-                            doc_line: DocLine { line_num: 1, file_name: filename.to_path_buf() },
-                            message: format!(
+                        errors.push(DocCheckError::new(
+                            1,
+                            filename.to_path_buf(),
+                            &format!(
                                 "invalid structure for {:?} entry: {}. Data: {:?}",
                                 filename, e, item
                             ),
-                        });
+                        ));
                     }
                 };
             }
@@ -628,13 +637,14 @@ fn parse_entries<T: DeserializeOwned>(
     } else {
         (
             None,
-            Some(vec![DocCheckError {
-                doc_line: DocLine { line_num: 1, file_name: filename.to_path_buf() },
-                message: format!(
+            Some(vec![DocCheckError::new(
+                1,
+                filename.to_path_buf(),
+                &format!(
                     "unable to parse sequence for {:?} file, expected Sequence, got {:?}",
                     filename, yaml_value
                 ),
-            }]),
+            )]),
         )
     }
 }
@@ -654,10 +664,7 @@ pub fn register_yaml_checks(opt: &DocCheckerArgs) -> Result<Vec<Box<dyn DocYamlC
 #[cfg(test)]
 mod test {
 
-    use {
-        super::*,
-        crate::test::{get_lock, MTX},
-    };
+    use super::*;
 
     #[test]
     fn test_check_path() -> Result<()> {
@@ -666,29 +673,29 @@ mod test {
         let docs_folder = PathBuf::from("docs");
         let project = "fuchsia";
 
-        let test_data: [(&str, Option<DocCheckError>);7] = [
+        let test_data: [(&str, Option<DocCheckError>); 7] = [
             ("/CONTRIBUTING.md", None),
             ("/CODE_OF_CONDUCT.md", None),
-            ("/README.md", Some(DocCheckError { doc_line: DocLine { line_num: 1, file_name: PathBuf::from("test-check-path") }, message: "invalid path /README.md. Path must be in /docs (checked: \"/README.md\"".to_string() })),
+            (
+                "/README.md",
+                Some(DocCheckError::new(
+                    1,
+                    PathBuf::from("test-check-path"),
+                    "invalid path /README.md. Path must be in /docs (checked: \"/README.md\"",
+                )),
+            ),
             ("https://fuchsia.dev/reference/to/something-else.md", None),
             ("/docs/are-ok.md", None),
             ("https://somewhere.com/is-ok", None),
-            ("/src/main.cc", Some(DocCheckError { doc_line: DocLine { line_num: 1, file_name: PathBuf::from("test-check-path") }, message: "invalid path /src/main.cc. Path must be in /docs (checked: \"/src/main.cc\"".to_string() }))
+            (
+                "/src/main.cc",
+                Some(DocCheckError::new(
+                    1,
+                    PathBuf::from("test-check-path"),
+                    "invalid path /src/main.cc. Path must be in /docs (checked: \"/src/main.cc\"",
+                )),
+            ),
         ];
-
-        // get the lock for the mock, it is released when
-        // the test exits.
-        let _m = get_lock(&MTX);
-
-        let exists_ctx = path_helper::exists_context();
-        let is_dir_ctx = path_helper::is_dir_context();
-
-        // Make directories exist, and any files but README.md exist.
-        exists_ctx.expect().returning(|_| true);
-        is_dir_ctx.expect().returning(|p| {
-            let path_str = p.to_string_lossy();
-            !path_str.ends_with(".md")
-        });
 
         for (test_path, expected_result) in test_data {
             let actual_result = check_path(doc_line, &root_path, &docs_folder, project, test_path);

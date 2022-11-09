@@ -238,11 +238,7 @@ pub(crate) fn check_toc(
 
 #[cfg(test)]
 mod test {
-    use crate::mock_path_helper_module as path_helper;
-    use {
-        super::*,
-        crate::test::{get_lock, MTX},
-    };
+    use super::*;
 
     #[test]
     fn test_empty_toc() -> Result<()> {
@@ -269,20 +265,6 @@ mod test {
     }
     #[test]
     fn test_simple_section_toc() -> Result<()> {
-        // get the lock for the mock, it is released when
-        // the test exits.
-        let _m = get_lock(&MTX);
-
-        let exists_ctx = path_helper::exists_context();
-        let is_dir_ctx = path_helper::is_dir_context();
-
-        // Make directories exist, and any files but README.md exist.
-        exists_ctx.expect().returning(|_| true);
-        is_dir_ctx.expect().returning(|p| {
-            let path_str = p.to_string_lossy();
-            !path_str.ends_with(".md")
-        });
-        //     path_helper.expect_path_exists().returning(|_p| true);
         let root_dir = PathBuf::from("/some/root/dir");
         let filename = PathBuf::from("_toc.yaml");
         let project = "some_test_project";
@@ -313,6 +295,7 @@ mod test {
         }
         Ok(())
     }
+
     #[test]
     fn test_missing_path() -> Result<()> {
         //  path_helper.expect_path_exists().returning(|_p| false);
@@ -339,20 +322,6 @@ mod test {
             }],
         };
 
-        // get the lock for the mock, it is released when
-        // the test exits.
-        let _m = get_lock(&MTX);
-
-        let exists_ctx = path_helper::exists_context();
-        let is_dir_ctx = path_helper::is_dir_context();
-
-        // Make directories exist, and any files but README.md exist.
-        exists_ctx.expect().returning(|_| true);
-        is_dir_ctx.expect().returning(|p| {
-            let path_str = p.to_string_lossy();
-            !path_str.ends_with(".md")
-        });
-
         let yaml_value = serde_yaml::to_value(&toc)?;
         if let Some(result) = check_toc(&root_dir, &docs_folder, project, &filename, &yaml_value) {
             assert_eq!(result.len(), 1);
@@ -366,6 +335,7 @@ mod test {
         }
         Ok(())
     }
+
     #[test]
     fn test_external_path() -> Result<()> {
         let root_dir = PathBuf::from("/some/root/dir");
@@ -416,6 +386,7 @@ mod test {
         }
         Ok(())
     }
+
     #[test]
     fn test_path_patterns() -> Result<()> {
         let root_dir = PathBuf::from("/some/root/dir");
@@ -423,34 +394,6 @@ mod test {
         let filename = PathBuf::from("_toc.yaml");
         let project = "some_test_project";
 
-        // get the lock for the mock, it is released when
-        // the test exits.
-        let _m = get_lock(&MTX);
-
-        let exists_ctx = path_helper::exists_context();
-        let is_dir_ctx = path_helper::is_dir_context();
-
-        // Make directories exist, and any files but README.md exist.
-        exists_ctx.expect().returning(|p| {
-            p == PathBuf::from("/some/root/dir/CONTRIBUTING.md")
-                || p == PathBuf::from("/some/root/dir/CODE_OF_CONDUCT.md")
-                || (p.starts_with("/some/root/dir/docs") && !p.to_string_lossy().contains("/../"))
-        });
-        is_dir_ctx.expect().returning(|p| {
-            let path_str = p.to_string_lossy();
-            !path_str.ends_with(".md")
-        });
-        /*
-        path_helper.expect_path_exists().returning(|p| {
-            if p == PathBuf::from("/some/root/dir/CONTRIBUTING.md")
-                || p == PathBuf::from("/some/root/dir/CODE_OF_CONDUCT.md")
-            {
-                true
-            } else {
-                p.starts_with("/some/root/dir/docs") && !p.to_string_lossy().contains("/../")
-            }
-        });
-        */
         let toc = Toc {
             toc: vec![
                 TocEntry {

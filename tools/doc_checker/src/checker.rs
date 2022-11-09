@@ -8,6 +8,7 @@
 use {
     crate::md_element::Element,
     anyhow::Result,
+    async_trait::async_trait,
     serde_yaml::Value,
     std::{
         fmt::{Debug, Display},
@@ -20,6 +21,12 @@ use {
 pub struct DocCheckError {
     pub doc_line: DocLine,
     pub message: String,
+}
+
+impl DocCheckError {
+    pub fn new(line_num: usize, file_name: PathBuf, message: &str) -> Self {
+        DocCheckError { doc_line: DocLine { line_num, file_name }, message: message.to_string() }
+    }
 }
 
 /// A line within a file.
@@ -37,6 +44,7 @@ impl Display for DocLine {
 
 /// Trait for DocCheck. Implementations of this trait are collected into a list
 /// and check() is called for each event during parsing the markdown.
+#[async_trait]
 pub trait DocCheck {
     /// Name for this check. This name is used in error messages to identify the source
     /// of the problem.
@@ -52,11 +60,12 @@ pub trait DocCheck {
 
     /// Some checks require visiting all pages, the post_check method is called after all
     /// markdown has been parsed.
-    fn post_check(&self) -> Result<Option<Vec<DocCheckError>>>;
+    async fn post_check(&self) -> Result<Option<Vec<DocCheckError>>>;
 }
 
 /// Trait for DocCheck to use with yaml files. Implementations of this trait are collected
 /// into a list and check() is called for each event during parsing the yaml.
+#[async_trait]
 pub trait DocYamlCheck {
     /// Name for this check. This name is used in error messages to identify the source
     /// of the problem.
@@ -70,7 +79,7 @@ pub trait DocYamlCheck {
 
     /// Some checks require visiting all pages, the post_check method is called after all
     /// markdown has been parsed.
-    fn post_check(
+    async fn post_check(
         &self,
         markdown_files: &[PathBuf],
         yaml_files: &[PathBuf],

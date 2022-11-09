@@ -11,8 +11,12 @@ use {
         DocCheck, DocCheckError, DocCheckerArgs, DocLine,
     },
     anyhow::{bail, Result},
-    http::uri::Uri,
+    async_trait::async_trait,
+    fuchsia_hyper::{new_https_client_from_tcp_options, HttpsClient, TcpOptions},
+    http::{uri::Uri, Request, StatusCode},
+    hyper::Body,
     std::{
+        collections::{HashMap, HashSet},
         ffi::OsStr,
         path::{self, Path, PathBuf},
     },
@@ -75,9 +79,9 @@ const PUBLISHED_LINKS_ALLOWED: [&str; 3] = ["", "reference", "schema"];
 
 /// A link (URL, or file path) and it location in the markdown.
 #[derive(Debug, Eq, Hash, PartialEq)]
-pub(crate) struct LinkReference {
-    pub(crate) link: String,
-    pub(crate) location: DocLine,
+pub struct LinkReference {
+    pub link: String,
+    pub location: DocLine,
 }
 
 /// LinkChecker checks the links and images in markdown files.
@@ -157,6 +161,7 @@ impl LinkChecker {
     }
 }
 
+#[async_trait]
 impl DocCheck for LinkChecker {
     fn name(&self) -> &str {
         "LinkChecker"
@@ -243,9 +248,18 @@ impl DocCheck for LinkChecker {
     }
 
     /// At the end, check that the out of tree links work, if requested.
-    fn post_check(&self) -> Result<Option<Vec<DocCheckError>>> {
-        //TODO: Add checking external links.
-        Ok(None)
+    async fn post_check(&self) -> Result<Option<Vec<DocCheckError>>> {
+        let mut errors = vec![];
+
+        if let Some(link_errors) = check_external_links(&self.links).await {
+            errors.extend(link_errors);
+        }
+
+        if !errors.is_empty() {
+            Ok(Some(errors))
+        } else {
+            Ok(None)
+        }
     }
 }
 
@@ -548,15 +562,93 @@ fn normalize_intree_path(filepath: &str) -> Result<PathBuf> {
     Ok(normalized)
 }
 
+pub async fn check_external_links(links: &Vec<LinkReference>) -> Option<Vec<DocCheckError>> {
+    // sort the links to take advantage of keep alive
+    // HashMap is <authority, set<links>.
+    let mut domain_sorted_links = HashMap::<String, HashSet<&LinkReference>>::new();
+    let mut errors = vec![];
+    for link in links {
+        match link.link.parse::<Uri>() {
+            Ok(uri) => {
+                if let Some(authority) = uri.authority() {
+                    let key = authority.to_string();
+
+                    let set = domain_sorted_links.entry(key).or_default();
+                    set.insert(link);
+                }
+            }
+            Err(e) => errors.push(DocCheckError {
+                doc_line: link.location.clone(),
+                message: format!("Error parsing {}: {}", link.link, e),
+            }),
+        };
+    }
+
+    let client: HttpsClient = new_https_client_from_tcp_options(tcp_options());
+    for (authority, links) in domain_sorted_links {
+        let mut pending_requests = vec![];
+        println!("checking {authority} {link_count} links", link_count = links.len());
+        for link in links {
+            let p = check_url_link(client.clone(), link);
+            pending_requests.push(p);
+        }
+        let results = futures::future::join_all(pending_requests);
+        (results.await).into_iter().flatten().for_each(|e| errors.push(e));
+    }
+
+    if errors.is_empty() {
+        None
+    } else {
+        Some(errors)
+    }
+}
+
+/// Check that the URL is valid (200 or 301 or 302).
+async fn check_url_link(client: HttpsClient, link: &LinkReference) -> Option<DocCheckError> {
+    let request = match Request::get(&link.link).body(Body::from("")) {
+        Ok(request) => request,
+        Err(e) => {
+            return Some(DocCheckError {
+                doc_line: link.location.clone(),
+                message: format!("Error {} requesting {}", e, link.link),
+            })
+        }
+    };
+
+    match client.request(request).await {
+        Ok(response) => match response.status() {
+            StatusCode::OK | StatusCode::FOUND | StatusCode::MOVED_PERMANENTLY => None,
+            _ => Some(DocCheckError {
+                doc_line: link.location.clone(),
+                message: format!("Error response {} reading {}", response.status(), &link.link),
+            }),
+        },
+        Err(e) => Some(DocCheckError {
+            doc_line: link.location.clone(),
+            message: format!("Error {} reading {}", e, link.link),
+        }),
+    }
+}
+
+fn tcp_options() -> TcpOptions {
+    let mut options: TcpOptions = std::default::Default::default();
+
+    // Use TCP keepalive to notice stuck connections.
+    // After 60s with no data received send a probe every 15s.
+    options.keepalive_idle = Some(std::time::Duration::from_secs(60));
+    options.keepalive_interval = Some(std::time::Duration::from_secs(15));
+    // After 8 probes go unacknowledged treat the connection as dead.
+    options.keepalive_count = Some(8);
+
+    options
+}
+
 /// Called from main to register all the checks to preform which are implemented in this module.
 pub(crate) fn register_markdown_checks(opt: &DocCheckerArgs) -> Result<Vec<Box<dyn DocCheck>>> {
-    let root_dir = &opt.root;
-    let docs_dir = root_dir.join(&opt.docs_folder);
-
     let checker = LinkChecker {
-        root_dir: root_dir.clone(),
+        root_dir: opt.root.clone(),
         project: opt.project.clone(),
-        docs_folder: docs_dir,
+        docs_folder: opt.docs_folder.clone(),
         check_remote_links: !opt.local_links_only,
         links: vec![],
     };
@@ -565,13 +657,7 @@ pub(crate) fn register_markdown_checks(opt: &DocCheckerArgs) -> Result<Vec<Box<d
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        crate::{
-            test::{get_lock, MTX},
-            DocContext,
-        },
-    };
+    use {super::*, crate::DocContext};
 
     #[test]
     fn test_make_link_to_check() -> Result<()> {
@@ -689,34 +775,6 @@ mod tests {
             local_links_only: true,
         };
 
-        // get the lock for the mock, it is released when
-        // the test exits.
-        let _m = get_lock(&MTX);
-
-        let exists_ctx = path_helper::exists_context();
-        let is_dir_ctx = path_helper::is_dir_context();
-
-        // Make directories exist, and any files but README.md exist.
-        exists_ctx.expect().returning(|p| {
-            if let Some(extension) = p.extension() {
-                match extension.to_str() {
-                    Some("md") if p.file_stem() == Some(OsStr::new("README")) => false,
-                    Some("md") => true,
-                    _ => false,
-                }
-            } else {
-                // make a use case about URLs pass.
-                p.ends_with("OWNERS")
-            }
-        });
-        is_dir_ctx.expect().returning(|p| {
-            if let Some(extension) = p.extension() {
-                !matches!(extension.to_str(), Some("md"))
-            } else {
-                true
-            }
-        });
-
         let mut checks = register_markdown_checks(&opt)?;
         assert_eq!(checks.len(), 1);
 
@@ -734,41 +792,41 @@ mod tests {
                 "invalid image text ![](/docs/something.png)",
             ),
             Some(
-                [DocCheckError { doc_line: DocLine { line_num: 1, file_name: PathBuf::from("/docs/README.md")},
-                    message: "Invalid image alt text: \"\", cannot  be one of [\"\"]".to_string()}, 
-                 DocCheckError { doc_line: DocLine { line_num: 1, file_name: PathBuf::from("/docs/README.md") },
-                  message: "in-tree link to /docs/something.png could not be found at \"/path/to/fuchsia/docs/something.png\"".to_string()}].to_vec()),
+                [DocCheckError::new(1, PathBuf::from("/docs/README.md"),
+                    "Invalid image alt text: \"\", cannot  be one of [\"\"]"),
+                 DocCheckError::new(1,PathBuf::from("/docs/README.md"),
+                   "in-tree link to /docs/something.png could not be found at \"/path/to/fuchsia/docs/something.png\"")].to_vec()),
         ),
         (
             DocContext::new(
                 PathBuf::from("/docs/README.md"),
                 "invalid url [oops](https:///nowhere/something.md?xx)",
             ),
-            Some([DocCheckError { doc_line: DocLine { line_num: 1, file_name: PathBuf::from("/docs/README.md") },
-             message: "Invalid link https:///nowhere/something.md?xx : invalid format".to_string()}].to_vec())
+            Some([DocCheckError::new(1, PathBuf::from("/docs/README.md"),
+             "Invalid link https:///nowhere/something.md?xx : invalid format")].to_vec())
         ),
         (
             DocContext::new(
                 PathBuf::from("/docs/README.md"),
                 "relative path outside root  [oops](/docs/../../illegal.md)",
             ),
-            Some([DocCheckError { doc_line: DocLine { line_num: 1, file_name: PathBuf::from("/docs/README.md")  },
-             message: "Cannot normalize /docs/../../illegal.md, references parent beyond root.".to_string() }].to_vec())
+            Some([DocCheckError::new(1,PathBuf::from("/docs/README.md"),
+             "Cannot normalize /docs/../../illegal.md, references parent beyond root.")].to_vec())
         ),
         (
             DocContext::new(
                 PathBuf::from("/docs/README.md"),
                 "hl param is not allowed [hl](https://google.com/something?hl=en)",
             ),
-None,
+            None,
         ),
         (
             DocContext::new(
                 PathBuf::from("/docs/README.md"),
                 "invalid project link [garnet](https://fuchsia.googlesource.com/garnet/+/HEAD/src/file.cc)",
             ),
-            Some([DocCheckError { doc_line: DocLine { line_num: 1, file_name: PathBuf::from("/docs/README.md")},
-             message: "Obsolete or invalid project garnet: https://fuchsia.googlesource.com/garnet/+/HEAD/src/file.cc".to_string() }].to_vec())
+            Some([DocCheckError::new(1, PathBuf::from("/docs/README.md"),
+             "Obsolete or invalid project garnet: https://fuchsia.googlesource.com/garnet/+/HEAD/src/file.cc")].to_vec())
         ),
 
         (
@@ -776,8 +834,8 @@ None,
                 PathBuf::from("/docs/README.md"),
                 "non-master branch link to docs [old doc](https://fuchsia.googlesource.com/fuchsia/+/some-branch/docs/file.md)",
             ),
-            Some([DocCheckError { doc_line: DocLine { line_num: 1, file_name: PathBuf::from("/docs/README.md")},
-             message: "Invalid link to non-master branch: https://fuchsia.googlesource.com/fuchsia/+/some-branch/docs/file.md consider using https://fuchsia.googlesource.com/fuchsia/+/HEAD/docs/file.md".to_string()}].to_vec())
+            Some([DocCheckError::new(1,PathBuf::from("/docs/README.md"),
+              "Invalid link to non-master branch: https://fuchsia.googlesource.com/fuchsia/+/some-branch/docs/file.md consider using https://fuchsia.googlesource.com/fuchsia/+/HEAD/docs/file.md")].to_vec())
         ),
         (
             DocContext::new(
@@ -830,27 +888,11 @@ None,
         let root_dir = PathBuf::from("/path/to/fuchsia");
         let docs_folder = PathBuf::from("docs");
 
-        // get the lock for the mock, it is released when
-        // the test exits.
-        let _m = get_lock(&MTX);
-        let exists_ctx = path_helper::exists_context();
-        let is_dir_ctx = path_helper::is_dir_context();
-
-        // Make directories exist, and any files but README.md exist.
-        exists_ctx.expect().returning(|p| {
-            let path_str = p.to_string_lossy();
-            (!path_str.ends_with(".md")) || !path_str.ends_with("README.md")
-        });
-        is_dir_ctx.expect().returning(|p| {
-            let path_str = p.to_string_lossy();
-            !path_str.ends_with(".md")
-        });
-
         let test_data = [
-                   ("/docs/some_dir/something.md", "/docs/some_dir/something.md", None),
-               ("/docs/some_dir", "/docs/some_dir", Some(DocCheckError {
-                 doc_line: DocLine { line_num: 1, file_name: PathBuf::from("some/file.md") },
-                  message: "in-tree link to /docs/some_dir could not be found at \"/path/to/fuchsia/docs/some_dir\" or  \"/path/to/fuchsia/docs/some_dir/README.md\"".to_string() }))];
+                   ("/docs/exists/something.md", "/docs/exists/something.md", None),
+               ("/docs/no_readme", "/docs/no_readme", Some(DocCheckError::new(
+                 1, PathBuf::from("some/file.md"),
+                  "in-tree link to /docs/no_readme could not be found at \"/path/to/fuchsia/docs/no_readme\" or  \"/path/to/fuchsia/docs/no_readme/README.md\"")))];
 
         for (link_to_check, in_tree_path, expected_error) in test_data {
             let result = do_in_tree_check(

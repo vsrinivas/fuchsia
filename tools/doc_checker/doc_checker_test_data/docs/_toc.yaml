@@ -1,0 +1,10 @@
+toc:
+  - title: Home
+    path: /docs/README.md
+  - title: Path file
+    path: /docs/path.md
+  - title: Another file
+    path: /docs/second.md
+  - section:
+    name: more error cases
+    include: /docs/no_readme/_toc.yaml
