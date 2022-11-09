@@ -353,8 +353,15 @@ if (is_fuchsia) {
     deps = [
       ":fuchsia_assembly",
       ":partitions_config",
+      "//build/info:latest-commit-date",
       recovery_label,
     ]
+
+    update = {
+      version_file = build_info_files.version
+      epoch = "1"
+    }
+
     partitions = files.partitions_config
     system_a = files.images_json
     system_r = files.recovery_images_json

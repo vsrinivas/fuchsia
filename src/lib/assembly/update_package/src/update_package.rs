@@ -11,10 +11,20 @@ use assembly_tool::ToolProvider;
 use assembly_update_packages_manifest::UpdatePackagesManifest;
 use assembly_util::PathToStringExt;
 use epoch::EpochFile;
-use fuchsia_pkg::PackageBuilder;
+use fuchsia_merkle::Hash;
+use fuchsia_pkg::{PackageBuilder, PackageManifest};
 use fuchsia_url::{PinnedAbsolutePackageUrl, RepositoryUrl};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
+
+/// The result of the builder.
+pub struct UpdatePackage {
+    /// The merkle-root of the update package.
+    pub merkle: Hash,
+
+    /// The package manifests corresponding to all the packages built for the update.
+    pub package_manifests: Vec<PackageManifest>,
+}
 
 /// A builder that constructs update packages.
 pub struct UpdatePackageBuilder {
@@ -160,7 +170,10 @@ struct SubpackageBuilder {
 impl SubpackageBuilder {
     /// Build and publish an update package or one of its subpackages. Returns a merkle-pinned
     /// fuchsia-pkg:// URL for the package with the hostname set to "fuchsia.com".
-    fn build(self, blobfs_builder: &mut BlobFSBuilder) -> Result<PinnedAbsolutePackageUrl> {
+    fn build(
+        self,
+        blobfs_builder: &mut BlobFSBuilder,
+    ) -> Result<(PinnedAbsolutePackageUrl, PackageManifest)> {
         let SubpackageBuilder { package: builder, package_name, manifest_path, far_path, gendir } =
             self;
 
@@ -180,7 +193,7 @@ impl SubpackageBuilder {
             manifest.hash(),
         );
 
-        Ok(url)
+        Ok((url, manifest))
     }
 }
 
@@ -283,8 +296,11 @@ impl UpdatePackageBuilder {
     }
 
     /// Build the update package and associated update images packages.
-    pub fn build(self) -> Result<()> {
+    pub fn build(self) -> Result<UpdatePackage> {
         use serde_json::to_string;
+
+        // Keep track of all the packages that were built, so that they can be returned.
+        let mut package_manifests = vec![];
 
         let blobfs_tool = self.tool_provider.get_tool("blobfs")?;
         let mut blobfs_builder = BlobFSBuilder::new(blobfs_tool, "compact");
@@ -304,13 +320,15 @@ impl UpdatePackageBuilder {
                     .add_file_as_blob(&vbmeta.destination, vbmeta.source.path_to_string()?)?;
             }
 
-            let url = builder.build(&mut blobfs_builder)?;
+            let (url, manifest) = builder.build(&mut blobfs_builder)?;
+            package_manifests.push(manifest);
             assembly_manifest.fuchsia_package(
                 zbi.metadata(url.clone())?,
                 vbmeta.map(|vbmeta| vbmeta.metadata(url)).transpose()?,
             );
         } else {
-            builder.build(&mut blobfs_builder)?;
+            let (_, manifest) = builder.build(&mut blobfs_builder)?;
+            package_manifests.push(manifest);
         }
 
         // Generate the update_images_recovery package.
@@ -327,14 +345,16 @@ impl UpdatePackageBuilder {
                     .add_file_as_blob(&vbmeta.destination, vbmeta.source.path_to_string()?)?;
             }
 
-            let url = builder.build(&mut blobfs_builder)?;
+            let (url, manifest) = builder.build(&mut blobfs_builder)?;
+            package_manifests.push(manifest);
 
             assembly_manifest.recovery_package(
                 zbi.metadata(url.clone())?,
                 vbmeta.map(|vbmeta| vbmeta.metadata(url)).transpose()?,
             );
         } else {
-            builder.build(&mut blobfs_builder)?;
+            let (_, manifest) = builder.build(&mut blobfs_builder)?;
+            package_manifests.push(manifest);
         }
 
         // Generate the update_images_firmware package.
@@ -352,7 +372,8 @@ impl UpdatePackageBuilder {
                     .add_file_as_blob(destination, bootloader.image.path_to_string()?)?;
             }
 
-            let url = builder.build(&mut blobfs_builder)?;
+            let (url, manifest) = builder.build(&mut blobfs_builder)?;
+            package_manifests.push(manifest);
 
             for bootloader in &self.partitions.bootloader_partitions {
                 let destination = match bootloader.partition_type.as_str() {
@@ -368,7 +389,8 @@ impl UpdatePackageBuilder {
 
             assembly_manifest.firmware_package(firmware);
         } else {
-            builder.build(&mut blobfs_builder)?;
+            let (_, manifest) = builder.build(&mut blobfs_builder)?;
+            package_manifests.push(manifest);
         }
 
         let assembly_manifest = assembly_manifest.build();
@@ -412,7 +434,9 @@ impl UpdatePackageBuilder {
             };
             builder.package.add_file_as_blob(destination, bootloader.image.path_to_string()?)?;
         }
-        builder.build(&mut blobfs_builder)?;
+        let (_, manifest) = builder.build(&mut blobfs_builder)?;
+        let merkle = manifest.hash();
+        package_manifests.push(manifest);
 
         // Generate a blobfs with the generated update package and update images packages inside
         // it. This is useful for packaging up the blobs to use in adversarial tests. We do not
@@ -423,7 +447,7 @@ impl UpdatePackageBuilder {
             .build(self.gendir, update_blob_path)
             .context("Building blobfs for update package")?;
 
-        Ok(())
+        Ok(UpdatePackage { merkle, package_manifests })
     }
 }
 
@@ -659,7 +683,13 @@ mod tests {
             ],
         }));
 
-        builder.build().unwrap();
+        // Build and ensure the output is correct.
+        let update_package = builder.build().unwrap();
+        assert_eq!(
+            update_package.merkle,
+            "51d6f1a674d4e7c80ac60d44aebe1a60c2d046a16b263d39bae57592f8ac0ad0".parse().unwrap()
+        );
+        assert_eq!(update_package.package_manifests.len(), 4);
 
         // Ensure the blobfs tool was invoked correctly.
         let blob_blk_path = outdir.path().join("update.blob.blk");

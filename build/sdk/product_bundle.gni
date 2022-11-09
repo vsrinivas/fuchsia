@@ -41,6 +41,17 @@ import("//src/developer/ffx/build/ffx_action.gni")
 #     [list] A list of files referenced in the system_r config that will
 #     be copied into the outputs.
 #
+#   update (optional)
+#     [scope] If provided, an update package will be built. The scope has
+#     a couple required fields.
+#
+#       version_file (required)
+#         [path] A file containing the version to put in the update package.
+#
+#       epoch (required)
+#         [int] A 64-bit integer that sets an anti-rollback epoch for the
+#         update package. See:
+#         https://fuchsia.dev/fuchsia-src/concepts/packages/ota?hl=en#verify-epoch
 template("product_bundle") {
   assert(defined(invoker.partitions), "Need to define partitions")
 
@@ -172,6 +183,20 @@ template("product_bundle") {
       "${files.tuf_keys}/targets.json",
       "${files.tuf_keys}/timestamp.json",
     ]
+
+    if (defined(invoker.update)) {
+      update = invoker.update
+      assert(defined(update.version_file), "Need to define update.version_file")
+      assert(defined(update.epoch), "Need to define update.epoch")
+
+      args += [
+        "--update-package-version-file",
+        rebase_path(update.version_file, root_build_dir),
+        "--update-package-epoch",
+        update.epoch,
+      ]
+      inputs += [ update.version_file ]
+    }
 
     if (defined(invoker.system_a)) {
       args += [

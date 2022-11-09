@@ -8,7 +8,11 @@
 use anyhow::{Context, Result};
 use assembly_manifest::{AssemblyManifest, BlobfsContents, Image, PackagesMetadata};
 use assembly_partitions_config::PartitionsConfig;
+use assembly_tool::{SdkToolProvider, ToolProvider};
+use assembly_update_package::{Slot, UpdatePackageBuilder};
+use assembly_update_packages_manifest::UpdatePackagesManifest;
 use camino::Utf8Path;
+use epoch::EpochFile;
 use ffx_core::ffx_plugin;
 use ffx_product_create_args::CreateCommand;
 use fuchsia_pkg::PackageManifest;
@@ -18,10 +22,36 @@ use fuchsia_repo::{
 use sdk_metadata::{ProductBundle, ProductBundleV2, Repository};
 use std::fs::File;
 use std::path::{Path, PathBuf};
+use tempfile::TempDir;
 
 /// Create a product bundle.
 #[ffx_plugin("product.experimental")]
 pub async fn pb_create(cmd: CreateCommand) -> Result<()> {
+    let sdk_tools = SdkToolProvider::try_new().context("getting sdk tools")?;
+    pb_create_with_tools(cmd, Box::new(sdk_tools)).await
+}
+
+/// Create a product bundle using the provided `tools`.
+pub async fn pb_create_with_tools(cmd: CreateCommand, tools: Box<dyn ToolProvider>) -> Result<()> {
+    // We build an update package if `update_version_file` or `update_epoch` is provided.
+    // If we decide to build an update package, we need to ensure that both of them
+    // are provided.
+    let update_details =
+        if cmd.update_package_version_file.is_some() || cmd.update_package_epoch.is_some() {
+            if cmd.tuf_keys.is_none() {
+                anyhow::bail!("TUF keys must be provided to build an update package");
+            }
+            let version = cmd.update_package_version_file.ok_or(anyhow::anyhow!(
+                "A version file must be provided to build an update package"
+            ))?;
+            let epoch = cmd
+                .update_package_epoch
+                .ok_or(anyhow::anyhow!("A epoch must be provided to build an update package"))?;
+            Some((version, epoch))
+        } else {
+            None
+        };
+
     // Make sure `out_dir` is created and empty.
     if cmd.out_dir.exists() {
         std::fs::remove_dir_all(&cmd.out_dir).context("Deleting the out_dir")?;
@@ -36,6 +66,37 @@ pub async fn pb_create(cmd: CreateCommand) -> Result<()> {
     let (system_r, _packages_r) =
         load_assembly_manifest(&cmd.system_r, &cmd.out_dir.join("system_r"))?;
 
+    // Generate the update packages if necessary.
+    let (update_package_hash, update_packages) = if let Some((version, epoch)) = update_details {
+        let epoch: EpochFile = EpochFile::Version1 { epoch };
+        let abi_revision = None;
+        let gen_dir = TempDir::new().context("creating temporary directory")?;
+        let mut builder = UpdatePackageBuilder::new(
+            tools,
+            partitions.clone(),
+            partitions.hardware_revision.clone(),
+            version,
+            epoch,
+            abi_revision,
+            gen_dir,
+        );
+        let mut all_packages = UpdatePackagesManifest::default();
+        for package in &packages_a {
+            all_packages.add_by_manifest(package.clone())?;
+        }
+        builder.add_packages(all_packages);
+        if let Some(manifest) = &system_a {
+            builder.add_slot_images(Slot::Primary(manifest.clone()));
+        }
+        if let Some(manifest) = &system_r {
+            builder.add_slot_images(Slot::Recovery(manifest.clone()));
+        }
+        let update_package = builder.build()?;
+        (Some(update_package.merkle), update_package.package_manifests)
+    } else {
+        (None, vec![])
+    };
+
     let repositories = if let Some(tuf_keys) = &cmd.tuf_keys {
         let repo_path = Utf8Path::from_path(&cmd.out_dir).context("Creating repository path")?;
         let metadata_path = repo_path.join("repository");
@@ -46,6 +107,7 @@ pub async fn pb_create(cmd: CreateCommand) -> Result<()> {
         RepoBuilder::create(&repo, &repo_keys)
             .add_packages(packages_a.into_iter())?
             .add_packages(packages_b.into_iter())?
+            .add_packages(update_packages.into_iter())?
             .commit()
             .await
             .context("Building the repo")?;
@@ -55,7 +117,14 @@ pub async fn pb_create(cmd: CreateCommand) -> Result<()> {
         vec![]
     };
 
-    let product_bundle = ProductBundleV2 { partitions, system_a, system_b, system_r, repositories };
+    let product_bundle = ProductBundleV2 {
+        partitions,
+        system_a,
+        system_b,
+        system_r,
+        repositories,
+        update_package_hash,
+    };
     let product_bundle = ProductBundle::V2(product_bundle);
     product_bundle.write(&cmd.out_dir).context("writing product bundle")?;
     Ok(())
@@ -153,6 +222,7 @@ mod test {
     use super::*;
     use assembly_manifest::AssemblyManifest;
     use assembly_partitions_config::PartitionsConfig;
+    use assembly_tool::testing::FakeToolProvider;
     use camino::Utf8PathBuf;
     use fuchsia_repo::test_utils;
     use std::io::Write;
@@ -222,14 +292,20 @@ mod test {
         let partitions_file = File::create(&partitions_path).unwrap();
         serde_json::to_writer(&partitions_file, &PartitionsConfig::default()).unwrap();
 
-        pb_create(CreateCommand {
-            partitions: partitions_path,
-            system_a: None,
-            system_b: None,
-            system_r: None,
-            tuf_keys: None,
-            out_dir: pb_dir.clone(),
-        })
+        let tools = FakeToolProvider::default();
+        pb_create_with_tools(
+            CreateCommand {
+                partitions: partitions_path,
+                system_a: None,
+                system_b: None,
+                system_r: None,
+                tuf_keys: None,
+                update_package_version_file: None,
+                update_package_epoch: None,
+                out_dir: pb_dir.clone(),
+            },
+            Box::new(tools),
+        )
         .await
         .unwrap();
 
@@ -242,6 +318,7 @@ mod test {
                 system_b: None,
                 system_r: None,
                 repositories: vec![],
+                update_package_hash: None,
             })
         );
     }
@@ -259,14 +336,20 @@ mod test {
         let system_file = File::create(&system_path).unwrap();
         serde_json::to_writer(&system_file, &AssemblyManifest::default()).unwrap();
 
-        pb_create(CreateCommand {
-            partitions: partitions_path,
-            system_a: Some(system_path.clone()),
-            system_b: None,
-            system_r: Some(system_path.clone()),
-            tuf_keys: None,
-            out_dir: pb_dir.clone(),
-        })
+        let tools = FakeToolProvider::default();
+        pb_create_with_tools(
+            CreateCommand {
+                partitions: partitions_path,
+                system_a: Some(system_path.clone()),
+                system_b: None,
+                system_r: Some(system_path.clone()),
+                tuf_keys: None,
+                update_package_version_file: None,
+                update_package_epoch: None,
+                out_dir: pb_dir.clone(),
+            },
+            Box::new(tools),
+        )
         .await
         .unwrap();
 
@@ -279,6 +362,7 @@ mod test {
                 system_b: None,
                 system_r: Some(AssemblyManifest::default()),
                 repositories: vec![],
+                update_package_hash: None,
             })
         );
     }
@@ -300,14 +384,20 @@ mod test {
         let tuf_keys_path = Utf8Path::from_path(&tuf_keys).unwrap();
         test_utils::make_repo_keys_dir(&tuf_keys_path);
 
-        pb_create(CreateCommand {
-            partitions: partitions_path,
-            system_a: Some(system_path.clone()),
-            system_b: None,
-            system_r: Some(system_path.clone()),
-            tuf_keys: Some(tuf_keys),
-            out_dir: pb_dir.clone(),
-        })
+        let tools = FakeToolProvider::default();
+        pb_create_with_tools(
+            CreateCommand {
+                partitions: partitions_path,
+                system_a: Some(system_path.clone()),
+                system_b: None,
+                system_r: Some(system_path.clone()),
+                tuf_keys: Some(tuf_keys),
+                update_package_version_file: None,
+                update_package_epoch: None,
+                out_dir: pb_dir.clone(),
+            },
+            Box::new(tools),
+        )
         .await
         .unwrap();
 
@@ -324,6 +414,60 @@ mod test {
                     metadata_path: Utf8PathBuf::from_path_buf(pb_dir.join("repository")).unwrap(),
                     blobs_path: Utf8PathBuf::from_path_buf(pb_dir.join("blobs")).unwrap(),
                 }],
+                update_package_hash: None,
+            })
+        );
+    }
+
+    #[fuchsia::test]
+    async fn test_pb_create_with_update() {
+        let tempdir = TempDir::new().unwrap();
+        let pb_dir = tempdir.path().join("pb");
+
+        let partitions_path = tempdir.path().join("partitions.json");
+        let partitions_file = File::create(&partitions_path).unwrap();
+        serde_json::to_writer(&partitions_file, &PartitionsConfig::default()).unwrap();
+
+        let version_path = tempdir.path().join("version.txt");
+        std::fs::write(&version_path, "").unwrap();
+
+        let tuf_keys = tempdir.path().join("keys");
+        let tuf_keys_path = Utf8Path::from_path(&tuf_keys).unwrap();
+        test_utils::make_repo_keys_dir(&tuf_keys_path);
+
+        let tools = FakeToolProvider::default();
+        pb_create_with_tools(
+            CreateCommand {
+                partitions: partitions_path,
+                system_a: None,
+                system_b: None,
+                system_r: None,
+                tuf_keys: Some(tuf_keys),
+                update_package_version_file: Some(version_path),
+                update_package_epoch: Some(1),
+                out_dir: pb_dir.clone(),
+            },
+            Box::new(tools),
+        )
+        .await
+        .unwrap();
+
+        let expected_hash =
+            "502806d5763dbb6500983667e8e6466e9efd291a6080372c03570d7372dfbab0".parse().unwrap();
+        let pb = ProductBundle::try_load_from(&pb_dir).unwrap();
+        assert_eq!(
+            pb,
+            ProductBundle::V2(ProductBundleV2 {
+                partitions: PartitionsConfig::default(),
+                system_a: None,
+                system_b: None,
+                system_r: None,
+                repositories: vec![Repository {
+                    name: "fuchsia.com".into(),
+                    metadata_path: Utf8PathBuf::from_path_buf(pb_dir.join("repository")).unwrap(),
+                    blobs_path: Utf8PathBuf::from_path_buf(pb_dir.join("blobs")).unwrap(),
+                }],
+                update_package_hash: Some(expected_hash),
             })
         );
     }

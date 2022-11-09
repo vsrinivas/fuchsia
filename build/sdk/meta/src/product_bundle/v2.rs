@@ -22,6 +22,7 @@ use assembly_manifest::AssemblyManifest;
 use assembly_partitions_config::PartitionsConfig;
 use camino::Utf8PathBuf;
 use fidl_fuchsia_developer_ffx::ListFields;
+use fuchsia_merkle::Hash;
 use fuchsia_repo::{repo_client::RepoClient, repository::FileSystemRepository};
 use pathdiff::diff_paths;
 use serde::{Deserialize, Serialize};
@@ -50,6 +51,10 @@ pub struct ProductBundleV2 {
     /// The repositories that hold the TUF metadata, packages, and blobs.
     #[serde(default)]
     pub repositories: Vec<Repository>,
+
+    /// The merkle-root of the update package that is added to the repository.
+    #[serde(default)]
+    pub update_package_hash: Option<Hash>,
 }
 
 /// A repository that holds all the packages, blobs, and keys.
@@ -226,6 +231,7 @@ mod tests {
             system_b: None,
             system_r: None,
             repositories: vec![],
+            update_package_hash: None,
         };
         let result = pb.canonicalize_paths(&PathBuf::from("path/to/product_bundle"));
         assert!(result.is_ok());
@@ -278,6 +284,7 @@ mod tests {
             system_b: None,
             system_r: None,
             repositories: vec![],
+            update_package_hash: None,
         };
         let result = pb.canonicalize_paths(tempdir.path());
         assert!(result.is_ok());
@@ -297,6 +304,7 @@ mod tests {
             system_b: None,
             system_r: None,
             repositories: vec![],
+            update_package_hash: None,
         };
         let result = pb.relativize_paths(&PathBuf::from("path/to/product_bundle"));
         assert!(result.is_ok());
@@ -349,6 +357,7 @@ mod tests {
             system_b: None,
             system_r: None,
             repositories: vec![],
+            update_package_hash: None,
         };
         let result = pb.relativize_paths(tempdir.path());
         assert!(result.is_ok());
@@ -370,6 +379,7 @@ mod tests {
                 metadata_path: dir.join("repository"),
                 blobs_path: dir.join("repository").join("blobs"),
             }],
+            update_package_hash: None,
         };
 
         let expected = HashSet::from([
@@ -397,6 +407,7 @@ mod tests {
                 metadata_path: "repository".into(),
                 blobs_path: "blobs".into(),
             }],
+            update_package_hash: None,
         };
         assert_eq!("repository/targets.json", pb.repositories[0].targets_path());
     }

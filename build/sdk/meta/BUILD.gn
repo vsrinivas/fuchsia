@@ -119,6 +119,7 @@ if (is_host) {
       "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx_rust",
       "//src/lib/assembly/assembly_manifest",
       "//src/lib/assembly/partitions_config",
+      "//src/sys/pkg/lib/fuchsia-merkle",
       "//src/sys/pkg/lib/fuchsia-repo",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:camino",

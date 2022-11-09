@@ -252,6 +252,7 @@ mod tests {
                 metadata_path: utf8_pb_path.join("repository"),
                 blobs_path: utf8_pb_path.join("blobs"),
             }],
+            update_package_hash: None,
         });
         pb.write(&pb_path).unwrap();
 

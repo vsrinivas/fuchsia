@@ -33,6 +33,15 @@ pub struct CreateCommand {
     #[argh(option)]
     pub tuf_keys: Option<PathBuf>,
 
+    /// file containing the version of the Product to put in the update package.
+    #[argh(option)]
+    pub update_package_version_file: Option<PathBuf>,
+
+    /// backstop OTA version.
+    /// Fuchsia will reject updates with a lower epoch.
+    #[argh(option)]
+    pub update_package_epoch: Option<u64>,
+
     /// directory to write the product bundle.
     #[argh(option)]
     pub out_dir: PathBuf,

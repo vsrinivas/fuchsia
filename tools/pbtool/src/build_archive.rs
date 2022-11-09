@@ -118,6 +118,7 @@ mod tests {
             system_b: None,
             system_r: None,
             repositories: vec![],
+            update_package_hash: None,
         });
         let pb_path = tempdir.path().join("product_bundle");
         std::fs::create_dir_all(&pb_path).unwrap();

@@ -20,6 +20,7 @@ rustc_library("update_package") {
     "//src/lib/assembly/util",
     "//src/lib/fuchsia-url",
     "//src/sys/pkg/lib/epoch",
+    "//src/sys/pkg/lib/fuchsia-merkle",
     "//src/sys/pkg/lib/fuchsia-pkg",
     "//src/sys/pkg/lib/update-package",
     "//third_party/rust_crates:anyhow",
