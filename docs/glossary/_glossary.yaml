@@ -29,6 +29,30 @@
   related_guides: [""]
   area: ["System", "Zircon"]
 
+- term: "Assembly Config"
+  short_description: ""
+  full_description: "<p>The JSON file that the product owner writes in order to specify (1)
+  lists of product-specific packages, components, drivers, and configuration and (2) platform
+  features and configuration. This is the configuration that encapsulates both a Product Config and
+  a Platform Config.<p>"
+  see_also: ["<a href=\"/docs/glossary#product-owner\">Product Owner</a>",]
+  related_guides: [""]
+  area: ["Software Assembly", "Developer"]
+
+- term: "Assembly Input Bundle (AIB)"
+  short_description: ""
+  full_description: "<p>An Assembly Input Bundle is a self-contained directory of artifacts
+  with a manifest file in the root describing what is included. This bundle is used internally by
+  the Software Assembly tool. Fuchsia is composed of many packages, components, drivers, and
+  configuration data. These elements are grouped together inside Assembly Input Bundles (AIBs) for
+  inclusion together into the assembled product. All AIBs other than the Legacy AIBs are \"platform
+  AIBs\".<p>"
+  see_also: ["<a href=\"/docs/glossary#software-assembly\">Software Assembly</a>",
+  "<a href=\"legacy-assembly-input-bundle\">Legacy AIB</a>"
+  ]
+  related_guides: [""]
+  area: ["Software Assembly", "Developer"]
+
 - term: "Banjo"
   short_description: "Language for definition protocols that communicate between drivers."
   full_description: "Banjo is a language for defining protocols that are used to communicate between
@@ -782,6 +806,20 @@
   related_guides: [""]
   area: ["UI"]
 
+- term: "Images Config"
+  short_description: "This configuration file that tells the Software Assembly tooling which images
+  to generate and how to generate them."
+  full_description: "The Images Config is an internal contract between the two subsystems of
+  Software Assembly -- Product Assembly and Image Assembly. The structure and contents of this file
+  is subject to rapid iteration, as it is consumed only by the Software Assembly team."
+  see_also: [""]
+  related_guides: [
+  "<a href=
+  \"https://cs.opensource.google/fuchsia/fuchsia/+/main:src/developer/ffx/plugins/assembly/;l=1;\
+  drc=fdfc80d4f9295e3b078158b435054a5c497a9479?q=src%2Fdeveloper%2Fffx%2Fplugins%2Fassembly%2F&sq=&ss=fuchsia\"
+  >Product and Image Assembly</a>"]
+  area: ["Software Assembly"]
+
 - term: "In-tree"
   short_description: "Relating to or describing an action to be performed inside a Fuchsia checkout."
   full_description: "For instance, checking out the Fuchsia source code is a prerequisite for
@@ -914,6 +952,23 @@
   related_guides: [""]
   area: ["Zircon"]
 
+- term: "Legacy Assembly Input Bundle"
+  short_description: "The \"Legacy AIB\" is an AIB that includes both platform
+  and product artifacts that are specified via the GN build arguments such as base_product_labels
+  and bootfs_labels."
+  full_description: "<p>The Legacy Assembly Input Bundle (LAIB) is an AIB that includes both
+  platform and product artifacts that are specified via the GN build arguments such as
+  base_product_labels and bootfs_labels. Eventually, all the contents of the Legacy AIB will be
+  migrated to platform  AIBs or the Assembly Config, and it will be deleted entirely. As of
+  November 2022 (last time this definition was updated), Software Assembly is not feature-complete,
+  and products have not been fully migrated over to using Software Assembly. Many of the current
+  platform features and product code lack the support in Assembly to define them inside the Assembly
+  Config, therefore we invented a temporary solution.<p>"
+  see_also: ["<a href=\"/docs/glossary#assembly-input-bundle-(aib)\">Assembly Input Bundle (AIB)</a>",
+  "<a href=\"/docs/glossary#assembly-config\">Assembly Config</a>"]
+  related_guides: [""]
+  area: ["Software Assembly", "Developer"]
+
 - term: "LK"
   short_description: "Little Kernel (LK) is the embedded kernel that formed the core of the Zircon
   Kernel."
@@ -1027,6 +1082,26 @@
   related_guides: [""]
   area: ["System", "Component Framework"]
 
+- term: "Package URL (Absolute)"
+  short_description: ""
+  full_description: "Also known as the Fully-Qualified Package URL, a url with the \"fuchsia-pkg\"
+  scheme <code>(fuchsia-pkg://<domain>/<package>)</code> representing a fully qualified location for a fuchsia package. For example:
+    <code>fuchsia-pkg://fuchsia.com/package_name</code>"
+  see_also: ["<a href=\"/docs/glossary#fuchsia-pkg-url\">fuchsia-pkg URL</a>"]
+  related_guides: [""]
+  area: ["Software Assembly", "Developer"]
+
+- term: "Package URL (Pinned Absolute)"
+  short_description: ""
+  full_description: "A package URL with a URL parameter \"hash\" with value that is the merkle hash
+  of the package's meta.far <code>(fuchsia-pkg://<domain>/<package>?hash=<hash>)</code>. Pinning a
+  package is the act of uniquely identifying a version of a package, through the hash URL parameter.
+  For example:
+    <code>fuchsia-pkg://fuchsia.com/package_name?hash=716178364a3a0fc8be2850f88a7414f95ed895489bc0f74bc2d60d78d3682c65</code>"
+  see_also: ["<a href=\"/docs/glossary#fuchsia-pkg-url\">fuchsia-pkg URL</a>"]
+  related_guides: [""]
+  area: ["Software Assembly", "Developer"]
+
 - term: "Parent component instance"
   short_description: "A parent component instance is a component instance that
   owns other instances called
@@ -1072,14 +1147,17 @@
   related_guides: ["<a href=\"/docs/development/build/build_system/bringup.md\">Bringup Product Definition</a>"]
   area: ["System"]
 
-- term: "Product bundle"
-  short_description: "The set of artifacts that are needed to run a product, excluding tools and APIs found in the SDK."
-  full_description: "Artifacts include, but are not limited to, the product image and packages associated with it.  Metadata for the product bundle was originally specified in <a
-href=\"docs/contribute/governance/rfcs/0100_product_metadata\">RFC-0100</a>."
+- term: "Product Bundle"
+  short_description: "The set of artifacts representing a Fuchsia product which are needed to
+  emulate, flash, boot, or update the product on a Fuchsia target."
+  full_description: "A Product Bundle contains all the images required for an A/B/R Fuchsia target.
+  Artifacts include, but are not limited to, the product image and packages associated with it."
   see_also: ["<a href=\"/docs/glossary#product\">Product</a>",
-             "<a href=\"/docs/glossary#product-owner\">Product Owner</a>"]
-  related_guides: [""]
-  area: ["System"]
+             "<a href=\"/docs/glossary#product-owner\">Product Owner</a>",
+             "<a href=\"/docs/glossary#abr\">A/B/R</a>",
+  ]
+  related_guides: ["<a href=\"https://cs.opensource.google/fuchsia/fuchsia/+/main:src/developer/\ffx/plugins/assembly/;l=1;drc=fdfc80d4f9295e3b078158b435054a5c497a9479?q=src%2Fdeveloper%2Fffx%2Fplugins%2Fassembly%2F&sq=&ss=fuchsia\">Product and Image Assembly</a>"]
+  area: ["System", "Software Assembly", "Developer"]
 
 - term: "Product owner"
   short_description: "Whoever defines a product, and is responsible for its provenance and releases."
@@ -1241,6 +1319,18 @@ href=\"docs/contribute/governance/rfcs/0100_product_metadata\">RFC-0100</a>."
   see_also: []
   related_guides: [""]
   area: ["Session"]
+
+- term: "Software Assembly"
+  short_description: "The process of gathering compiled artifacts, configuration metadata, and other
+  information required to create a complete Product Bundle."
+  full_description: "The Software Assembly process is carried out by an ffx plugin which gathers
+  various targets declared in the Assembly Config, Legacy AIB, and Platform AIBs. The result of
+  Software Assembly is a Product Bundle."
+  see_also: ["<a href=\"/docs/glossary#product-bundle\">Product Bundle</a>",
+            "<a href=\"/docs/glossary#assembly-config\">Assembly Config</a>",
+            "<a href=\"assembly-input-bundle-(aib)\">Assembly Input Bundles (AIB)</a>",
+            "<a href=\"legacy-assembly-input-bundle\">Legacy AIB</a>"
+  ]
 
 - term: "Starnix"
   short_description: "A <a href=\"/docs/glossary#runner\">runner</a> that allows

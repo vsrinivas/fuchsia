@@ -307,6 +307,37 @@
   examples:
     - fidl: 'fuchsia.element'
 
+- name: 'Software Assembly'
+  api_primary: 'aaronwood@google.com'
+  api_secondary: 'awolter@google.com'
+  description: |
+    <p>
+      The Software Assembly team was put together to solve the problem of combining software from a
+      variety of sources into what we know of as the Fuchsia OS. The mission of Software Assembly is
+      to:
+      <ul>
+          <li>
+              Develop and ship software which assembles Fuchsia software and systems. That is,
+              software which takes a set of binaries and configuration and produces runnable,
+              flashable Fuchsia images for a specific product variant.</li>
+          <li>
+              Develop and maintain the assembly-time product/platform interface, which allows
+              product owners to specify how the platform should be configured for a particular
+              product.
+          </li>
+          <li>
+              Support the tools for platform contributors and SDK users. For the latter, we do this
+              with the longterm view of integrating with the Bazel SDK.
+          </li>
+          <li>
+              Define and maintain the contract for how assembly's input artifacts are specified to
+              the assembly tools which assemble the correct set of artifacts for a given product
+              build.
+          </li>
+      </ul>
+      This is all performed by the product assembly tool, which is an ffx plugin.
+    </p>
+
 - name: 'Software Delivery'
   api_primary: 'kevinwells@google.com'
   api_secondary: 'jsankey@google.com'
