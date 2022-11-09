@@ -32,7 +32,6 @@ class TestBase : public zxtest::Test {
   void SetUp() override;
   void TearDown() override;
 
-  Binder& ddk() { return tree_->ddk(); }
   Controller* controller() { return tree_->controller(); }
   fake_display::FakeDisplay* display() { return tree_->display(); }
   zx::unowned_channel sysmem_fidl();
