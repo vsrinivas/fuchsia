@@ -237,6 +237,8 @@ class Coordinator : public CompositeManagerBridge,
 
   component::OutgoingDirectory* outgoing() { return outgoing_; }
 
+  zx_status_t NewDriverHost(const char* name, fbl::RefPtr<DriverHost>* out);
+
  private:
   // CompositeManagerBridge interface
   void BindNodesForDeviceGroups() override;
@@ -260,8 +262,6 @@ class Coordinator : public CompositeManagerBridge,
   void UnregisterSystemStorageForShutdown(
       UnregisterSystemStorageForShutdownCompleter::Sync& completer) override;
   void SuspendWithoutExit(SuspendWithoutExitCompleter::Sync& completer) override;
-
-  zx_status_t NewDriverHost(const char* name, fbl::RefPtr<DriverHost>* out);
 
   // Creates a DFv2 component with a given `url` and attaches it to `dev`.
   zx_status_t CreateAndStartDFv2Component(const Dfv2Driver& driver, const fbl::RefPtr<Device>& dev);

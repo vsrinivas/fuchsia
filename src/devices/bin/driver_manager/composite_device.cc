@@ -239,15 +239,19 @@ zx_status_t CompositeDevice::TryAssemble() {
     }
   }
 
-  // Find the driver_host to put everything in, nullptr means "a new driver_host".
+  // Find or create the driver_host to put everything in.
+  Coordinator* coordinator = primary_fragment()->bound_device()->coordinator;
   fbl::RefPtr<DriverHost> driver_host;
   if (spawn_colocated_) {
     if (const CompositeDeviceFragment* fragment = primary_fragment(); fragment != nullptr) {
       driver_host = fragment->bound_device()->host();
     }
+  } else {
+    zx_status_t status = coordinator->NewDriverHost("driver_host:composite", &driver_host);
+    if (status != ZX_OK) {
+      return status;
+    }
   }
-
-  Coordinator* coordinator = nullptr;
 
   fidl::Arena allocator;
   fidl::VectorView<fdm::wire::Fragment> fragments(allocator, fragments_.size_slow());
@@ -300,12 +304,6 @@ zx_status_t CompositeDevice::TryAssemble() {
       }
 
       proxy = fragment_dev->proxy();
-    }
-
-    // If we hadn't picked a driver_host, use the one that was created just now.
-    if (driver_host == nullptr) {
-      driver_host = proxy->host();
-      ZX_ASSERT(driver_host != nullptr);
     }
 
     // Stash the local ID after the proxy has been created
