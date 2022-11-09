@@ -155,8 +155,9 @@ std::vector<std::pair<PointerParams, /*interaction_id=*/uint32_t>> tapEvents(
   };
 }
 
-a11y::ContestStatus SendPointerEvent(a11y::GestureArenaV2* arena, const PointerParams& event,
-                                     uint32_t interaction_id) {
+a11y::InteractionTrackerV2::ConsumptionStatus SendPointerEvent(a11y::GestureArenaV2* arena,
+                                                               const PointerParams& event,
+                                                               uint32_t interaction_id) {
   return arena->OnEvent(touchEvent(event, interaction_id, 0));
 }
 
@@ -281,9 +282,10 @@ TEST(GestureArenaTest, ReleasedCanWin) {
 // either because they are still undecided or they haven't released their token yet.
 TEST(GestureArenaTest, RoutePointerEvents) {
   std::optional<fuchsia::ui::pointer::TouchInteractionId> interaction_id;
-  std::optional<a11y::ContestStatus> consumption_status;
+  std::optional<a11y::InteractionTrackerV2::ConsumptionStatus> consumption_status;
   auto callback = [&interaction_id, &consumption_status](
-                      fuchsia::ui::pointer::TouchInteractionId id, a11y::ContestStatus status) {
+                      fuchsia::ui::pointer::TouchInteractionId id,
+                      a11y::InteractionTrackerV2::ConsumptionStatus status) {
     interaction_id = id;
     consumption_status = status;
   };
@@ -293,7 +295,7 @@ TEST(GestureArenaTest, RoutePointerEvents) {
   arena.Add(&recognizers[1]);
 
   auto status = SendPointerEvent(&arena, {1, Phase::ADD, {}}, 0);
-  EXPECT_EQ(status, a11y::ContestStatus::kUnresolved);
+  EXPECT_EQ(status, a11y::InteractionTrackerV2::ConsumptionStatus::kUndecided);
 
   // Both recognizers should receive the first event.
   EXPECT_EQ(recognizers[0].num_events(), 1u);
@@ -301,7 +303,7 @@ TEST(GestureArenaTest, RoutePointerEvents) {
 
   recognizers[0].participation_token()->Accept();
   status = arena.Status();
-  EXPECT_EQ(status, a11y::ContestStatus::kWinnerAssigned);
+  EXPECT_EQ(status, a11y::InteractionTrackerV2::ConsumptionStatus::kAccept);
 
   recognizers[1].participation_token()->Reject();
   // Recognizer 1 has been defeated, so it should no longer receive events.
@@ -310,7 +312,7 @@ TEST(GestureArenaTest, RoutePointerEvents) {
   // Recognizer 0 has been released, so it should no longer receive events.
 
   status = SendPointerEvent(&arena, {1, Phase::REMOVE, {}}, 0);
-  EXPECT_EQ(status, a11y::ContestStatus::kWinnerAssigned);
+  EXPECT_EQ(status, a11y::InteractionTrackerV2::ConsumptionStatus::kAccept);
 
   // Neither recognizer receives a second event.
   EXPECT_EQ(recognizers[0].num_events(), 1u);
@@ -326,9 +328,10 @@ TEST(GestureArenaTest, RoutePointerEvents) {
 // a callback fires for held events.
 TEST(GestureArenaTest, FireAcceptCallbackForHeldEvents) {
   std::optional<fuchsia::ui::pointer::TouchInteractionId> interaction_id;
-  std::optional<a11y::ContestStatus> consumption_status;
+  std::optional<a11y::InteractionTrackerV2::ConsumptionStatus> consumption_status;
   auto callback = [&interaction_id, &consumption_status](
-                      fuchsia::ui::pointer::TouchInteractionId id, a11y::ContestStatus status) {
+                      fuchsia::ui::pointer::TouchInteractionId id,
+                      a11y::InteractionTrackerV2::ConsumptionStatus status) {
     interaction_id = id;
     consumption_status = status;
   };
@@ -340,13 +343,13 @@ TEST(GestureArenaTest, FireAcceptCallbackForHeldEvents) {
   const uint32_t id = 42;
 
   auto status = SendPointerEvent(&arena, {1, Phase::ADD, {}}, id);
-  EXPECT_EQ(status, a11y::ContestStatus::kUnresolved);
+  EXPECT_EQ(status, a11y::InteractionTrackerV2::ConsumptionStatus::kUndecided);
 
   EXPECT_EQ(recognizers[0].num_events(), 1u);
   EXPECT_EQ(recognizers[1].num_events(), 1u);
 
   status = SendPointerEvent(&arena, {1, Phase::REMOVE, {}}, id);
-  EXPECT_EQ(status, a11y::ContestStatus::kUnresolved);
+  EXPECT_EQ(status, a11y::InteractionTrackerV2::ConsumptionStatus::kUndecided);
 
   EXPECT_EQ(recognizers[0].num_events(), 2u);
   EXPECT_EQ(recognizers[1].num_events(), 2u);
@@ -361,15 +364,16 @@ TEST(GestureArenaTest, FireAcceptCallbackForHeldEvents) {
   // Now the callback should fire, to notify that the previously "held"
   // interaction is now "accepted".
   EXPECT_EQ(interaction_id->interaction_id, id);
-  EXPECT_EQ(consumption_status, a11y::ContestStatus::kWinnerAssigned);
+  EXPECT_EQ(consumption_status, a11y::InteractionTrackerV2::ConsumptionStatus::kAccept);
 }
 
 // Similar to `FireAcceptCallbackForHeldEvents`, but rejecting instead.
 TEST(GestureArenaTest, FireRejectCallbackForHeldEvents) {
   std::optional<fuchsia::ui::pointer::TouchInteractionId> interaction_id;
-  std::optional<a11y::ContestStatus> consumption_status;
+  std::optional<a11y::InteractionTrackerV2::ConsumptionStatus> consumption_status;
   auto callback = [&interaction_id, &consumption_status](
-                      fuchsia::ui::pointer::TouchInteractionId id, a11y::ContestStatus status) {
+                      fuchsia::ui::pointer::TouchInteractionId id,
+                      a11y::InteractionTrackerV2::ConsumptionStatus status) {
     interaction_id = id;
     consumption_status = status;
   };
@@ -380,10 +384,10 @@ TEST(GestureArenaTest, FireRejectCallbackForHeldEvents) {
   const uint32_t id = 42;
 
   auto status = SendPointerEvent(&arena, {1, Phase::ADD, {}}, id);
-  EXPECT_EQ(status, a11y::ContestStatus::kUnresolved);
+  EXPECT_EQ(status, a11y::InteractionTrackerV2::ConsumptionStatus::kUndecided);
 
   status = SendPointerEvent(&arena, {1, Phase::REMOVE, {}}, id);
-  EXPECT_EQ(status, a11y::ContestStatus::kUnresolved);
+  EXPECT_EQ(status, a11y::InteractionTrackerV2::ConsumptionStatus::kUndecided);
 
   // The callback isn't fired yet, because the consumption status is
   // still undecided.
@@ -395,7 +399,7 @@ TEST(GestureArenaTest, FireRejectCallbackForHeldEvents) {
   // Now the callback should fire, to notify that the previously "held"
   // interaction is now "accepted".
   EXPECT_EQ(interaction_id->interaction_id, id);
-  EXPECT_EQ(consumption_status, a11y::ContestStatus::kAllLosers);
+  EXPECT_EQ(consumption_status, a11y::InteractionTrackerV2::ConsumptionStatus::kReject);
 }
 
 TEST(GestureArenaTest, HoldUnresolvedArena) {
@@ -440,10 +444,10 @@ TEST(GestureArenaTest, HoldResolvedArena) {
 // status properly.
 TEST(GestureArenaTest, ConsumeAfterInteraction) {
   std::optional<fuchsia::ui::pointer::TouchInteractionId> actual_interaction;
-  std::optional<a11y::ContestStatus> actual_status;
+  std::optional<a11y::InteractionTrackerV2::ConsumptionStatus> actual_status;
   a11y::GestureArenaV2 arena(
       [&actual_interaction, &actual_status](fuchsia::ui::pointer::TouchInteractionId interaction,
-                                            a11y::ContestStatus status) {
+                                            a11y::InteractionTrackerV2::ConsumptionStatus status) {
         actual_interaction = interaction;
         actual_status = status;
       });
@@ -453,7 +457,7 @@ TEST(GestureArenaTest, ConsumeAfterInteraction) {
   SendPointerEvents(&arena, tapEvents(1, {}, 0));
   recognizer.participation_token()->Accept();
 
-  EXPECT_EQ(actual_status, a11y::ContestStatus::kWinnerAssigned);
+  EXPECT_EQ(actual_status, a11y::InteractionTrackerV2::ConsumptionStatus::kAccept);
   EXPECT_EQ(actual_interaction->device_id, kDefaultDeviceID);
   EXPECT_EQ(actual_interaction->pointer_id, 1u);
 }

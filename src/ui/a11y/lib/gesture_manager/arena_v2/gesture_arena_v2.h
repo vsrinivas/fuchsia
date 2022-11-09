@@ -20,66 +20,76 @@
 
 namespace a11y {
 
-// Return value for |GestureArenaV2::OnEvent|, indicating the status of the current contest.
-enum class ContestStatus {
-  kUnresolved,
-  kWinnerAssigned,
-  kAllLosers,
-};
-
 // Helper class for |GestureArenaV2|.
 //
-// Tracks the status of the current contest, as well as any "open" interactions.
-// An interaction is considered open if it has no `REMOVE` or `CANCEL` event yet;
-// otherwise we say it is closed.
+// Tracks the "decision status" of the current contest -- meaning whether or not
+// the contest will eventually result in a unique winner, or in all losers.
+// * As soon as at least one recognizer tries to claim a win, the status is
+//   "accept".
+// * If all recognizers decide to reject, then the status is "reject".
+// (Note the subtle difference between this and the notion of a contest being
+// completely "resolved"!)
 //
-// This class also tracks interactions that are "on hold". We say that an
-// interaction is on hold if the current contest was unresolved when that
+// This also tracks "open" interactions.  An interaction is considered open if
+// it has no `REMOVE` or `CANCEL` event yet; otherwise we say it is closed.
+//
+// Lastly, this tracks interactions that are "on hold". We say that an
+// interaction is on hold if the current contest was undecided when that
 // interaction became closed. In this case, the interaction stays on hold until
-// the current contest resolves, at which point we fire a callback for that
+// the current contest is decided, at which point we fire a callback for that
 // interaction, and it is longer on hold.
 class InteractionTrackerV2 {
  public:
+  // The "decision status" of the current contest. If it's certain there will
+  // eventually be a winner, the status is "accept". If all recognizers dropped
+  // out, the status is "reject".
+  enum class ConsumptionStatus {
+    kUndecided,
+    kAccept,
+    kReject,
+  };
+
   // Callback fired once per interaction that was "on hold", once
-  // the current contest resolves.
+  // the current contest's consumption status is decided.
   //
-  // `status` will never be |ContestStatus::kUnresolved|.
+  // `status` will never be |ConsumptionStatus::kUndecided|.
   using HeldInteractionCallback =
-      fit::function<void(fuchsia::ui::pointer::TouchInteractionId id, ContestStatus status)>;
+      fit::function<void(fuchsia::ui::pointer::TouchInteractionId id, ConsumptionStatus status)>;
 
   explicit InteractionTrackerV2(HeldInteractionCallback callback);
 
-  // Resets the current contest status; should be called after a contest ends.
+  // Resets the current contest's consumption status; should be called after a
+  // contest ends.
   void Reset();
 
-  // Set the contest status to "winner assigned", and notify all interactions
-  // that were on hold.
+  // Set the consumption status to "accept", and notify all interactions that
+  // were on hold.
   void AcceptInteractions();
 
-  // Set the contest status to "all losers", and notify all interactions
-  // that were on hold.
+  // Set the consumption status to "reject", and notify all interactions that
+  // were on hold.
   void RejectInteractions();
 
-  // Handle a new touch event by keeping track of which interactions are "open"
-  // or "on hold".
+  // Handle a new touch event, keeping track of which interactions are "open" or
+  // "on hold".
   void OnEvent(const fuchsia::ui::pointer::augment::TouchEventWithLocalHit& event);
 
-  // What is the status of the current contest?
-  ContestStatus Status();
+  // What is the consumption status of the current contest?
+  ConsumptionStatus Status();
 
   // Are there any open interactions?
   bool HasOpenInteractions() const;
 
  private:
   // Notify all interactions that were on hold, telling them that the
-  // current contest has resolved.
+  // consumption status of the current contest has been decided.
   void NotifyHeldInteractions();
 
   // Callback fired once per interaction that was "on hold".
   HeldInteractionCallback callback_;
 
-  // The status of the current contest.
-  ContestStatus status_ = ContestStatus::kUnresolved;
+  // The consumption status of the current contest.
+  ConsumptionStatus status_ = ConsumptionStatus::kUndecided;
 
   // The set of currently open interactions.
   std::set<std::tuple<uint32_t, uint32_t, uint32_t>> open_interactions_;
@@ -104,7 +114,7 @@ class GestureRecognizerV2;
 // Recognizers continue to receive incoming pointer events until they release
 // their |ParticipationToken| or are defeated. After the winning recognizer
 // releases its |ParticipationToken|, the next interaction will begin a new
-// contest. (Or, if all recognziers reject, then the next interaction will begin
+// contest. (Or, if all recognizers reject, then the next interaction will begin
 // a new contest.)
 //
 // The order in which recognizers are added to the arena determines event dispatch order and win
@@ -144,7 +154,7 @@ class GestureRecognizerV2;
 class GestureArenaV2 {
  public:
   // The arena takes a callback, which is called on each interaction that became
-  // closed before the contest outcome (accept or reject) was decided.
+  // closed before the contest's consumption status (accept or reject) was decided.
   //
   // See `InteractionTracker` for details.
   explicit GestureArenaV2(InteractionTrackerV2::HeldInteractionCallback callback = [](auto...) {});
@@ -158,10 +168,11 @@ class GestureArenaV2 {
   // recognizers.
   //
   // Virtual for testing; overridden by a mock.
-  virtual ContestStatus OnEvent(const fuchsia::ui::pointer::augment::TouchEventWithLocalHit& event);
+  virtual InteractionTrackerV2::ConsumptionStatus OnEvent(
+      const fuchsia::ui::pointer::augment::TouchEventWithLocalHit& event);
 
   // Return the consumption status of the current contest.
-  ContestStatus Status() { return interactions_.Status(); }
+  InteractionTrackerV2::ConsumptionStatus Status() { return interactions_.Status(); }
 
  private:
   class ParticipationToken;

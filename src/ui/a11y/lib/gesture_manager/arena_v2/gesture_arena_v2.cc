@@ -33,20 +33,20 @@ void InteractionTrackerV2::Reset() {
   FX_DCHECK(open_interactions_.empty());
   FX_DCHECK(held_interactions_.empty());
 
-  status_ = ContestStatus::kUnresolved;
+  status_ = ConsumptionStatus::kUndecided;
   open_interactions_.clear();
   held_interactions_.clear();
 }
 
 void InteractionTrackerV2::AcceptInteractions() {
-  FX_DCHECK(status_ == ContestStatus::kUnresolved);
-  status_ = ContestStatus::kWinnerAssigned;
+  FX_DCHECK(status_ == ConsumptionStatus::kUndecided);
+  status_ = ConsumptionStatus::kAccept;
   NotifyHeldInteractions();
 }
 
 void InteractionTrackerV2::RejectInteractions() {
-  FX_DCHECK(status_ == ContestStatus::kUnresolved);
-  status_ = ContestStatus::kAllLosers;
+  FX_DCHECK(status_ == ConsumptionStatus::kUndecided);
+  status_ = ConsumptionStatus::kReject;
   NotifyHeldInteractions();
 
   // We must clear the open interactions, because Scenic may stop sending us
@@ -73,9 +73,10 @@ void InteractionTrackerV2::OnEvent(
       break;
     case fuchsia::ui::pointer::EventPhase::REMOVE:
     case fuchsia::ui::pointer::EventPhase::CANCEL:
-      // If the contest is unresolved, put this interaction "on hold", and
-      // fire a callback for it later, when the contest does resolve.
-      if (status_ == ContestStatus::kUnresolved) {
+      // If the consumption status of the current contest is undecided, put this
+      // interaction "on hold", and fire a callback for it later, when the
+      // status is decided.
+      if (status_ == ConsumptionStatus::kUndecided) {
         held_interactions_.push_back(interaction);
       }
 
@@ -84,12 +85,12 @@ void InteractionTrackerV2::OnEvent(
   }
 }
 
-ContestStatus InteractionTrackerV2::Status() { return status_; }
+InteractionTrackerV2::ConsumptionStatus InteractionTrackerV2::Status() { return status_; }
 
 bool InteractionTrackerV2::HasOpenInteractions() const { return !open_interactions_.empty(); }
 
 void InteractionTrackerV2::NotifyHeldInteractions() {
-  FX_DCHECK(status_ != ContestStatus::kUnresolved);
+  FX_DCHECK(status_ != InteractionTrackerV2::ConsumptionStatus::kUndecided);
 
   for (const auto interaction : held_interactions_) {
     callback_(interaction, status_);
@@ -128,7 +129,7 @@ class GestureArenaV2::ParticipationToken : public ParticipationTokenInterface {
 
       // Once the first recognizer accepts, we know that the interactions
       // in the current contest belong to us.
-      if (arena_->interactions_.Status() == ContestStatus::kUnresolved) {
+      if (arena_->interactions_.Status() == InteractionTrackerV2::ConsumptionStatus::kUndecided) {
         arena_->interactions_.AcceptInteractions();
       }
 
@@ -176,7 +177,7 @@ void GestureArenaV2::Add(GestureRecognizerV2* recognizer) {
 // Possible |Remove| implementation:
 // fxr/c/fuchsia/+/341227/11/src/ui/a11y/lib/gesture_manager/arena/gesture_arena.cc#151
 
-ContestStatus GestureArenaV2::OnEvent(
+InteractionTrackerV2::ConsumptionStatus GestureArenaV2::OnEvent(
     const fuchsia::ui::pointer::augment::TouchEventWithLocalHit& event) {
   FX_CHECK(event.touch_event.has_pointer_sample());
   FX_CHECK(!recognizers_.empty()) << "The a11y Gesture arena is listening for pointer events "
