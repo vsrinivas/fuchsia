@@ -8,6 +8,7 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/async/sequence_id.h>
 #include <lib/async/task.h>
+#include <lib/driver/component/cpp/outgoing_directory.h>
 #include <lib/fdf/arena.h>
 #include <lib/fdf/channel.h>
 #include <lib/fdf/cpp/channel_read.h>
@@ -3044,4 +3045,85 @@ TEST_F(DispatcherTest, ConcurrentDispatcherDestroy) {
 
   // Reset the number of threads to 1.
   driver_runtime::GetDispatcherCoordinator().Reset();
+}
+
+// Tests that the sequence id retrieved in the driver shutdown callback
+// matches that of the initial dispatcher.
+TEST_F(DispatcherTest, ShutdownCallbackSequenceId) {
+  auto fake_driver = CreateFakeDriver();
+
+  async_sequence_id_t initial_dispatcher_id;
+
+  auto dispatcher = fdf_env::DispatcherBuilder::CreateWithOwner(
+      fake_driver, 0, "dispatcher", [](fdf_dispatcher_t* dispatcher) {});
+
+  // We will create a second dispatcher while running on the initial dispatcher.
+  fdf::Dispatcher additional_dispatcher;
+
+  libsync::Completion completion;
+  ASSERT_OK(async::PostTask(dispatcher->async_dispatcher(), [&] {
+    // This needs to be retrieved when running on the dispatcher thread.
+    const char* error = nullptr;
+    ASSERT_OK(async_get_sequence_id(dispatcher->get(), &initial_dispatcher_id, &error));
+    ASSERT_NULL(error);
+
+    auto result = fdf::Dispatcher::Create(0, "", [&](fdf_dispatcher_t* dispatcher) {});
+    ASSERT_FALSE(result.is_error());
+    additional_dispatcher = std::move(*result);
+
+    completion.Signal();
+  }));
+
+  ASSERT_OK(completion.Wait());
+
+  fdf_env::DriverShutdown driver_shutdown;
+  libsync::Completion shutdown;
+  ASSERT_OK(driver_shutdown.Begin(fake_driver, [&](const void* driver) {
+    async_sequence_id_t shutdown_id;
+    const char* error = nullptr;
+    ASSERT_OK(async_get_sequence_id(dispatcher->get(), &shutdown_id, &error));
+    ASSERT_NULL(error);
+    ASSERT_EQ(shutdown_id.value, initial_dispatcher_id.value);
+    shutdown.Signal();
+  }));
+
+  ASSERT_OK(shutdown.Wait());
+}
+
+// Tests that the outgoing directory can be destructed on driver shutdown.
+TEST_F(DispatcherTest, OutgoingDirectoryDestructionOnShutdown) {
+  auto fake_driver = CreateFakeDriver();
+
+  std::shared_ptr<driver::OutgoingDirectory> outgoing;
+
+  auto dispatcher = fdf_env::DispatcherBuilder::CreateWithOwner(
+      fake_driver, 0, "dispatcher", [](fdf_dispatcher_t* dispatcher) {});
+
+  // We will create a second dispatcher while running on the initial dispatcher.
+  fdf::Dispatcher additional_dispatcher;
+
+  libsync::Completion completion;
+  ASSERT_OK(async::PostTask(dispatcher->async_dispatcher(), [&] {
+    outgoing = std::make_shared<driver::OutgoingDirectory>(
+        driver::OutgoingDirectory::Create(dispatcher->get()));
+
+    auto result = fdf::Dispatcher::Create(0, "", [&](fdf_dispatcher_t* dispatcher) {});
+    ASSERT_FALSE(result.is_error());
+    additional_dispatcher = std::move(*result);
+
+    completion.Signal();
+  }));
+
+  ASSERT_OK(completion.Wait());
+
+  fdf_env::DriverShutdown driver_shutdown;
+  libsync::Completion shutdown;
+  ASSERT_OK(driver_shutdown.Begin(fake_driver, [&](const void* driver) {
+    // The outgoing directory destructor will check that we are running on the
+    // initial dispatcher's thread.
+    outgoing.reset();
+    shutdown.Signal();
+  }));
+
+  ASSERT_OK(shutdown.Wait());
 }

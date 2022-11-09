@@ -76,11 +76,13 @@ test("driver_runtime_test") {
   ]
   deps = [
     ":driver_runtime_impl",
+    "//sdk/lib/driver/component/cpp",
     "//sdk/lib/driver/runtime:driver_runtime",
     "//sdk/lib/driver/runtime:driver_runtime_cpp",
     "//sdk/lib/driver/runtime:driver_runtime_env_cpp",
     "//sdk/lib/driver/runtime:testing",
     "//sdk/lib/fidl/cpp/wire",
+    "//sdk/lib/fidl_driver:fidl_driver_transport",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/sync:sync-cpp",

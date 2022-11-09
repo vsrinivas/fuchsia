@@ -621,6 +621,9 @@ class DispatcherCoordinator {
     const void* GetKey() const { return driver_; }
 
     void AddDispatcher(fbl::RefPtr<driver_runtime::Dispatcher> dispatcher) {
+      if (initial_dispatcher_ == nullptr) {
+        initial_dispatcher_ = dispatcher;
+      }
       dispatchers_.push_back(std::move(dispatcher));
     }
     void SetDispatcherShutdown(driver_runtime::Dispatcher& dispatcher) {
@@ -679,12 +682,16 @@ class DispatcherCoordinator {
       return observer;
     }
 
+    fbl::RefPtr<driver_runtime::Dispatcher> initial_dispatcher() { return initial_dispatcher_; }
+
    private:
     const void* driver_ = nullptr;
     // Dispatchers that have been shutdown.
     fbl::DoublyLinkedList<fbl::RefPtr<driver_runtime::Dispatcher>> shutdown_dispatchers_;
     // All other dispatchers owned by |driver|.
     fbl::DoublyLinkedList<fbl::RefPtr<driver_runtime::Dispatcher>> dispatchers_;
+    // The first dispatcher created for the driver.
+    fbl::RefPtr<driver_runtime::Dispatcher> initial_dispatcher_ = nullptr;
     // Whether the driver is in the process of shutting down.
     bool driver_shutting_down_ = false;
     // The observer which will be notified once shutdown completes.

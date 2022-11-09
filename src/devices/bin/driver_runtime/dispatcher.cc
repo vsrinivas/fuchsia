@@ -1448,6 +1448,7 @@ void DispatcherCoordinator::SetShutdown(Dispatcher& dispatcher) {
 
 void DispatcherCoordinator::NotifyShutdown(Dispatcher& dispatcher) {
   fdf_env_driver_shutdown_observer_t* observer = nullptr;
+  fbl::RefPtr<Dispatcher> initial_dispatcher;
   {
     fbl::AutoLock lock(&lock_);
 
@@ -1464,9 +1465,20 @@ void DispatcherCoordinator::NotifyShutdown(Dispatcher& dispatcher) {
       // are destroyed.
       return;
     }
+    initial_dispatcher = driver_state->initial_dispatcher();
   }
 
-  observer->handler(dispatcher.owner(), observer);
+  // There should always be an initial dispatcher, as the dispatcher is the one that calls
+  // |NotifyShutdown|.
+  ZX_ASSERT(initial_dispatcher != nullptr);
+  {
+    // Make sure the shutdown context looks like it is happening from the initial
+    // dispatcher's thread.
+    driver_context::PushDriver(initial_dispatcher->owner(), initial_dispatcher.get());
+    auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
+
+    observer->handler(initial_dispatcher->owner(), observer);
+  }
 
   fbl::AutoLock lock(&lock_);
 
