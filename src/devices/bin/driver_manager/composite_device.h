@@ -95,10 +95,20 @@ class CompositeDeviceFragment
   // Bind rules for the fragment.
   const fbl::Array<const zx_bind_inst_t> bind_rules_;
 
-  // If this fragment has been bound to a device, this points to that device.
+  // This is the device that the composite fragment has matched to.
+  // If this is null then this fragment does not have a device yet.
+  //
+  // Note that if this device needs to be Banjo proxied, then we will create
+  // `fragment_device_` to do the proxying.
   fbl::RefPtr<Device> bound_device_ = nullptr;
-  // Once the bound device has the fragment driver attach to it, this points
-  // to the device managed by the fragment driver.
+
+  // This is the device created by the fragment driver (fragment.so) that
+  // was bound to `bound_device_`.
+  //
+  // Note that this is fragment.so, not fragment.proxy.so, this device lives
+  // in the same driver host as `bound_device_`.
+  //
+  // This only exists if `bound_device_` needs to be Banjo proxied.
   fbl::RefPtr<Device> fragment_device_ = nullptr;
 };
 
