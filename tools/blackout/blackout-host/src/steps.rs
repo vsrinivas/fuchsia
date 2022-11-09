@@ -134,9 +134,8 @@ impl FfxRunner {
                 target,
                 "component",
                 "run",
-                "--name",
-                "blackout-target",
                 "--recreate",
+                "/core/ffx-laboratory:blackout-target",
                 &format!("fuchsia-pkg://fuchsia.com/{}#meta/{}.cm", self.package, self.component),
             ])
             .await?;

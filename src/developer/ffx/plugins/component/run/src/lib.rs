@@ -5,7 +5,7 @@
 use {
     anyhow::Result,
     errors::{ffx_bail, ffx_error},
-    ffx_component::{connect_to_lifecycle_controller, verify_fuchsia_pkg_cm_url},
+    ffx_component::connect_to_lifecycle_controller,
     ffx_component_run_args::RunComponentCommand,
     ffx_core::ffx_plugin,
     ffx_log::{log_impl, LogOpts},
@@ -15,55 +15,8 @@ use {
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
 };
 
-const DEFAULT_COLLECTION: &'static str = "/core/ffx-laboratory";
-
-fn get_deprecated_component_name(url: &String, name: &Option<String>) -> Result<String> {
-    let manifest_name = verify_fuchsia_pkg_cm_url(url.as_str())?;
-
-    let name = if let Some(name) = name {
-        // Use a custom name provided in the command line
-        name.clone()
-    } else {
-        // Attempt to use the manifest name as the instance name
-        manifest_name
-    };
-
-    Ok(name)
-}
-
-fn get_url_moniker_from_args(cmd: &RunComponentCommand) -> Result<(&String, AbsoluteMoniker)> {
-    // Check if the second positional arg (url) is None. If so, the user is
-    // executing the command with the deprecated form:
-    //   $ ffx component run <url>
-    // instead of:
-    //   $ ffx component run <moniker> <url>
-    let (url, moniker) = match &cmd.url {
-        Some(url) => {
-            // Check if `--name` was supplied. If so, it'll be ignored.
-            if cmd.name.is_some() {
-                eprintln!("NOTE: --name is ignored when a moniker is specified.");
-            }
-            (url, cmd.moniker.clone())
-        }
-        None => {
-            let url = &cmd.moniker;
-            let moniker = format!(
-                "{}:{}",
-                DEFAULT_COLLECTION,
-                get_deprecated_component_name(&cmd.moniker, &cmd.name)?
-            );
-            eprintln!(
-                "WARNING: No component moniker specified. Using value '{}'.
-The moniker arg will be required in the future. See fxbug.dev/104212",
-                moniker
-            );
-            (url, moniker)
-        }
-    };
-    let moniker = AbsoluteMoniker::parse_str(&moniker)
-        .map_err(|e| ffx_error!("Moniker could not be parsed: {}", e))?;
-    Ok((url, moniker))
-}
+static EXISTING_MONIKER_HELP: &'static str = "Use --recreate to destroy and recreate a new \
+instance, or use a different moniker to create a new instance with a different name.";
 
 #[ffx_plugin(DiagnosticsProxy = "daemon::protocol")]
 pub async fn run(
@@ -71,15 +24,15 @@ pub async fn run(
     rcs_proxy: rc::RemoteControlProxy,
     cmd: RunComponentCommand,
 ) -> Result<()> {
-    let (url, moniker) = get_url_moniker_from_args(&cmd)?;
-
+    let moniker = AbsoluteMoniker::parse_str(&cmd.moniker)
+        .map_err(|e| ffx_error!("Moniker could not be parsed: {}", e))?;
     let log_filter = moniker.to_string().strip_prefix("/").unwrap().to_string();
     // TODO(fxb/100844): Intgrate with Started event to get a start time for the logs.
     let log_cmd = LogCommand { filter: vec![log_filter], ..LogCommand::default() };
 
     let lifecycle_controller = connect_to_lifecycle_controller(&rcs_proxy).await?;
 
-    run_impl(lifecycle_controller, &url, moniker, cmd.recreate, &mut std::io::stdout()).await?;
+    run_impl(lifecycle_controller, &cmd.url, moniker, cmd.recreate, &mut std::io::stdout()).await?;
 
     if cmd.follow_logs {
         log_impl(
@@ -106,7 +59,7 @@ async fn run_impl<W: std::io::Write>(
     let if_exists = if recreate {
         ffx_component_create_lib::IfExists::Recreate
     } else {
-        ffx_component_create_lib::IfExists::Error("Use --recreate to destroy and recreate a new instance, or --name to create a new instance with a different name.".to_string())
+        ffx_component_create_lib::IfExists::Error(EXISTING_MONIKER_HELP.to_string())
     };
     ffx_component_create_lib::create_component(
         &lifecycle_controller,
@@ -120,7 +73,7 @@ async fn run_impl<W: std::io::Write>(
     writeln!(writer, "Starting component instance...")?;
 
     // LifecycleController accepts RelativeMonikers only
-    let relative_moniker = format!(".{}", moniker.to_string());
+    let relative_moniker = format!(".{}", moniker);
 
     let start_result = lifecycle_controller
         .start(&relative_moniker)
@@ -152,11 +105,8 @@ async fn run_impl<W: std::io::Write>(
 #[cfg(test)]
 mod test {
     use {
-        crate::get_deprecated_component_name,
-        crate::get_url_moniker_from_args,
         crate::run_impl,
         anyhow::Result,
-        ffx_component_run_args::RunComponentCommand,
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys,
         futures::TryStreamExt,
@@ -308,35 +258,6 @@ mod test {
         })
         .detach();
         lifecycle_controller
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_get_url_moniker_from_args() -> Result<()> {
-        let url: String = "fuchsia-pkg://fuchsia.com/test#meta/test.cm".to_string();
-        let name = get_deprecated_component_name(&url, &None).unwrap();
-        // Deprecated args, uses `name`.
-        assert_eq!(
-            get_url_moniker_from_args(&RunComponentCommand {
-                moniker: url.clone(),
-                url: None,
-                name: Some(name.clone()),
-                recreate: true,
-                follow_logs: false,
-            })?,
-            (&url, AbsoluteMoniker::parse_str(&format!("/core/ffx-laboratory:{}", name))?)
-        );
-        // Modern usage. Ignores `name` and `url`.
-        assert_eq!(
-            get_url_moniker_from_args(&RunComponentCommand {
-                moniker: "/some/place:foo".to_string(),
-                url: Some(url.clone()),
-                name: Some("bar".to_string()),
-                recreate: true,
-                follow_logs: false,
-            })?,
-            (&url, AbsoluteMoniker::parse_str("/some/place:foo")?)
-        );
-        Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

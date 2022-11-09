@@ -29,16 +29,8 @@ pub struct RunComponentCommand {
     pub moniker: String,
 
     #[argh(positional)]
-    // NOTE: this is optional to support the deprecated command:
-    // ffx component run <url>, in which case `moniker` above will be
-    // set with the URL.
     /// url of the component to create and then start.
-    pub url: Option<String>,
-
-    #[argh(option, short = 'n')]
-    /// deprecated. specify a name for the component instance.
-    /// if this flag is not set, the instance name is derived from the component URL.
-    pub name: Option<String>,
+    pub url: String,
 
     #[argh(switch, short = 'r')]
     /// destroy and recreate the component instance if it already exists
@@ -51,31 +43,26 @@ pub struct RunComponentCommand {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, assert_matches::assert_matches};
+
     const CMD_NAME: &'static [&'static str] = &["run"];
 
     #[test]
     fn test_command() {
         let url = "http://test.com";
-        let name = "test_instance";
-        let args = &[url, "--name", name, "--recreate"];
-        assert_eq!(
+        let args = &[url, "--recreate"];
+
+        assert_matches!(
             RunComponentCommand::from_args(CMD_NAME, args),
-            Ok(RunComponentCommand {
-                moniker: url.to_string(),
-                url: None,
-                name: Some(name.to_string()),
-                recreate: true,
-                follow_logs: false,
-            })
+            Err(argh::EarlyExit { .. })
         );
-        let args = &[url, "--name", name, "--recreate", "--follow-logs"];
+        let moniker = "/core/ffx-lab";
+        let args = &[moniker, url, "--recreate", "--follow-logs"];
         assert_eq!(
             RunComponentCommand::from_args(CMD_NAME, args),
             Ok(RunComponentCommand {
-                moniker: url.to_string(),
-                url: None,
-                name: Some(name.to_string()),
+                moniker: moniker.to_string(),
+                url: url.to_string(),
                 recreate: true,
                 follow_logs: true,
             })

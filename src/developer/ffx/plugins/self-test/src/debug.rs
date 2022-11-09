@@ -141,6 +141,7 @@ pub mod include_target {
                 "component",
                 "run",
                 "--recreate",
+                "/core/ffx-laboratory:cpp_crasher",
                 "fuchsia-pkg://fuchsia.com/crasher#meta/cpp_crasher.cm",
             ])
             .await?;

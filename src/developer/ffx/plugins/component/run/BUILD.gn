@@ -27,6 +27,7 @@ ffx_plugin("ffx_component_run") {
     "//third_party/rust_crates:futures",
   ]
 
+  args_test_deps = [ "//third_party/rust_crates:assert_matches" ]
   args_sources = [ "src/args.rs" ]
 
   sources = [ "src/lib.rs" ]
