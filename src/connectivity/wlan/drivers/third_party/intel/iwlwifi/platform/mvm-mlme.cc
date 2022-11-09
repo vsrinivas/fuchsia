@@ -242,7 +242,8 @@ void mac_query_security_support(wlan_common_wire::SecuritySupport* out_resp) {
 
 void mac_query_spectrum_management_support(wlan_common_wire::SpectrumManagementSupport* out_resp) {
   *out_resp = {};
-  // This driver does not set any spectrum management features at this time.
+  // TODO(43517): Better handling of driver features
+  out_resp->dfs.supported = true;
 }
 
 zx_status_t mac_start(void* ctx, void* ifc_dev, zx_handle_t* out_mlme_channel) {

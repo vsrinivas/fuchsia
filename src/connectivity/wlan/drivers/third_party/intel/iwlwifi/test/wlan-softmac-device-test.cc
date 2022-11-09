@@ -310,7 +310,7 @@ TEST_F(WlanSoftmacDeviceTest, SpectrumManagementFeatureQuery) {
   auto result = client_.sync().buffer(test_arena_)->QuerySpectrumManagementSupport();
   ASSERT_TRUE(result.ok());
   ASSERT_FALSE(result->is_error());
-  EXPECT_FALSE(result->value()->resp.dfs.supported);
+  EXPECT_TRUE(result->value()->resp.dfs.supported);
 }
 
 TEST_F(WlanSoftmacDeviceTest, MacStart) {
