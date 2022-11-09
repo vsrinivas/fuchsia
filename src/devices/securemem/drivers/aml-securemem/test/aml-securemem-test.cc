@@ -117,9 +117,11 @@ class AmlogicSecureMemTest : public zxtest::Test {
 
     fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[kNumBindFragments],
                                                   kNumBindFragments);
-    fragments[0] = pdev_.fragment();
-    fragments[1].name = "sysmem";
+    fragments[0].name = "pdev";
+    fragments[0].protocols.emplace_back(fake_ddk::ProtocolEntry{
+        ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())});
 
+    fragments[1].name = "sysmem";
     fragments[1].protocols.emplace_back(fake_ddk::ProtocolEntry{
         ZX_PROTOCOL_SYSMEM, *reinterpret_cast<const fake_ddk::Protocol*>(sysmem_.proto())});
     fragments[2].name = "tee";

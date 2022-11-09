@@ -9,14 +9,6 @@
 
 namespace fake_pdev {
 
-fake_ddk::FragmentEntry FakePDev::fragment() const {
-  return fake_ddk::FragmentEntry{
-      .name = "pdev",
-      .protocols = {fake_ddk::ProtocolEntry{ZX_PROTOCOL_PDEV,
-                                            *reinterpret_cast<const fake_ddk::Protocol*>(proto())}},
-  };
-}
-
 zx::unowned_interrupt FakePDev::CreateVirtualInterrupt(uint32_t idx) {
   fbl::AutoLock al(&lock_);
   zx::interrupt irq;

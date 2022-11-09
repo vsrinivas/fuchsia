@@ -52,7 +52,9 @@ class FakeDdkSpi : public fake_ddk::Bind {
     }
 
     ASSERT_TRUE(fragments);
-    fragments[0] = pdev_.fragment();
+    fragments[0].name = "pdev";
+    fragments[0].protocols.emplace_back(fake_ddk::ProtocolEntry{
+        ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())});
     fragments[1].name = "gpio-cs-2";
     fragments[1].protocols.emplace_back(
         fake_ddk::ProtocolEntry{ZX_PROTOCOL_GPIO, {gpio_.GetProto()->ops, &gpio_}});

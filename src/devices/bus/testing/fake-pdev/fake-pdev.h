@@ -5,7 +5,6 @@
 #define SRC_DEVICES_BUS_TESTING_FAKE_PDEV_FAKE_PDEV_H_
 
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
-#include <lib/fake_ddk/fake_ddk.h>
 
 #include <atomic>
 #include <map>
@@ -22,8 +21,6 @@ class FakePDev : public ddk::PDevProtocol<FakePDev> {
   FakePDev() : proto_({&pdev_protocol_ops_, this}) {}
 
   const pdev_protocol_t* proto() const { return &proto_; }
-
-  fake_ddk::FragmentEntry fragment() const;
 
   struct MmioInfo {
     zx::vmo vmo;

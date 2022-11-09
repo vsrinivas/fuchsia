@@ -96,7 +96,6 @@ zx_library("fake_ddk") {
     "//src/devices/board/drivers/x86/*",
     "//src/devices/bus/drivers/pci/test/*",
     "//src/devices/bus/lib/virtio/*",
-    "//src/devices/bus/testing/fake-pdev/*",
     "//src/devices/clock/drivers/as370-clk/*",
     "//src/devices/cpu/bin/cpuctl/*",
     "//src/devices/cpu/drivers/aml-cpu-legacy/*",
