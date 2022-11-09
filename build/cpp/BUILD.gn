@@ -190,7 +190,6 @@ config("fidl-llcpp-deprecated-wire-try-dispatch") {
   # and replace the contents of `visibility` with the script output.
   visibility = [
     "//src/devices/bin/driver_host:common",
-    "//src/devices/cpu/bin/cpuctl:cpuctl-test-bin",
     "//src/devices/misc/drivers/compat:lib",
     "//src/devices/rtc/drivers/intel-rtc:intel-rtc-driver",
     "//src/devices/rtc/drivers/intel-rtc:intel-rtc-test-bin",

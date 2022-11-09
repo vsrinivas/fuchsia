@@ -2,13 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.hardware.cpu.ctrl/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/fake_ddk/fidl-helper.h>
-#include <lib/fidl-async/cpp/bind.h>
+#include <lib/fidl/cpp/wire/channel.h>
 
-#include <ddktl/device.h>
 #include <zxtest/zxtest.h>
 
 #include "performance-domain.h"
@@ -27,30 +25,10 @@ constexpr uint32_t kNumLogicalCores = 4;
 
 constexpr uint64_t kLogicalCoreIds[kNumLogicalCores] = {1, 2, 3, 4};
 
-class FakeCpuDevice;
-using TestDeviceType = ddk::Device<FakeCpuDevice, ddk::MessageableManual, ddk::PerformanceTunable>;
-
-class FakeCpuDevice : TestDeviceType,
-                      fidl::WireServer<cpuctrl::Device>,
-                      fidl::WireServer<fuchsia_device::Controller> {
+class FakeCpuDevice : public fidl::WireServer<cpuctrl::Device>,
+                      public fidl::WireServer<fuchsia_device::Controller> {
  public:
-  FakeCpuDevice() : TestDeviceType(nullptr) {}
-  ~FakeCpuDevice() {}
-
   unsigned int PstateSetCount() const { return pstate_set_count_; }
-
-  // Manage the fake FIDL Loop
-  zx_status_t Init();
-  static zx_status_t MessageOp(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn);
-  zx::channel& GetMessengerChannel() { return messenger_.local(); }
-
-  void DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn);
-  void DdkRelease() {}
-
-  zx_status_t DdkSetPerformanceState(uint32_t requested_state, uint32_t* out_state) {
-    *out_state = requested_state;
-    return ZX_OK;
-  }
 
   // fidl::WireServer<fuchsia_device::Controller> methods
   // We only implement the following methods for now
@@ -71,35 +49,15 @@ class FakeCpuDevice : TestDeviceType,
                                SetMinDriverLogSeverityCompleter::Sync& _completer) override {}
 
  private:
-  virtual void GetPerformanceStateInfo(GetPerformanceStateInfoRequestView request,
-                                       GetPerformanceStateInfoCompleter::Sync& completer) override;
-  virtual void GetNumLogicalCores(GetNumLogicalCoresCompleter::Sync& completer) override;
-  virtual void GetLogicalCoreId(GetLogicalCoreIdRequestView request,
-                                GetLogicalCoreIdCompleter::Sync& completer) override;
-
-  fake_ddk::FidlMessenger messenger_;
+  void GetPerformanceStateInfo(GetPerformanceStateInfoRequestView request,
+                               GetPerformanceStateInfoCompleter::Sync& completer) override;
+  void GetNumLogicalCores(GetNumLogicalCoresCompleter::Sync& completer) override;
+  void GetLogicalCoreId(GetLogicalCoreIdRequestView request,
+                        GetLogicalCoreIdCompleter::Sync& completer) override;
 
   uint32_t current_pstate_ = kInitialPstate;
   unsigned int pstate_set_count_ = 0;
 };
-
-zx_status_t FakeCpuDevice::Init() {
-  return messenger_.SetMessageOp(this, FakeCpuDevice::MessageOp);
-}
-
-zx_status_t FakeCpuDevice::MessageOp(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  static_cast<FakeCpuDevice*>(ctx)->DdkMessage(
-      fidl::IncomingHeaderAndMessage::FromEncodedCMessage(msg), transaction);
-  return transaction.Status();
-}
-
-void FakeCpuDevice::DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn) {
-  if (fidl::WireTryDispatch<cpuctrl::Device>(this, msg, &txn) == ::fidl::DispatchResult::kFound) {
-    return;
-  }
-  fidl::WireDispatch<fuchsia_device::Controller>(this, std::move(msg), &txn);
-}
 
 void FakeCpuDevice::GetPerformanceStateInfo(GetPerformanceStateInfoRequestView request,
                                             GetPerformanceStateInfoCompleter::Sync& completer) {
@@ -151,34 +109,43 @@ class PerformanceDomainTest : public zxtest::Test {
  public:
   void SetUp() override;
 
- protected:
-  FakeCpuDevice cpu_;
+  FakeCpuDevice& cpu() { return cpu_; }
+  TestCpuPerformanceDomain& pd() { return pd_.value(); }
 
-  std::unique_ptr<TestCpuPerformanceDomain> pd_;
+ private:
+  FakeCpuDevice cpu_;
+  std::optional<TestCpuPerformanceDomain> pd_;
+  async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
 };
 
 void PerformanceDomainTest::SetUp() {
-  ASSERT_OK(cpu_.Init());
+  zx::result cpu_endpoints = fidl::CreateEndpoints<fuchsia_hardware_cpu_ctrl::Device>();
+  ASSERT_OK(cpu_endpoints);
+  fidl::BindServer(loop_.dispatcher(), std::move(cpu_endpoints->server),
+                   static_cast<fidl::WireServer<cpuctrl::Device>*>(&cpu_));
 
-  zx::channel cpu_client_channel(cpu_.GetMessengerChannel().get());
-  zx::channel device_client_channel(cpu_.GetMessengerChannel().get());
+  zx::result device_endpoints = fidl::CreateEndpoints<fuchsia_device::Controller>();
+  ASSERT_OK(device_endpoints);
+  fidl::BindServer(loop_.dispatcher(), std::move(device_endpoints->server),
+                   static_cast<fidl::WireServer<fuchsia_device::Controller>*>(&cpu_));
 
-  fidl::WireSyncClient<cpuctrl::Device> cpu_client(std::move(cpu_client_channel));
-  fidl::WireSyncClient<fuchsia_device::Controller> device_client(std::move(device_client_channel));
+  fidl::WireSyncClient cpu_client(std::move(cpu_endpoints->client));
+  fidl::WireSyncClient device_client(std::move(device_endpoints->client));
 
-  pd_ = std::make_unique<TestCpuPerformanceDomain>(std::move(cpu_client), std::move(device_client));
+  pd_.emplace(std::move(cpu_client), std::move(device_client));
+  ASSERT_OK(loop_.StartThread("performance-domain-test-fidl-thread"));
 }
 
 // Trivial Tests.
 TEST_F(PerformanceDomainTest, TestNumLogicalCores) {
-  const auto [core_count_status, core_count] = pd_->GetNumLogicalCores();
+  const auto [core_count_status, core_count] = pd().GetNumLogicalCores();
 
   EXPECT_OK(core_count_status);
   EXPECT_EQ(core_count, kNumLogicalCores);
 }
 
 TEST_F(PerformanceDomainTest, TestGetCurrentPerformanceState) {
-  const auto [st, pstate, pstate_info] = pd_->GetCurrentPerformanceState();
+  const auto [st, pstate, pstate_info] = pd().GetCurrentPerformanceState();
   EXPECT_OK(st);
   EXPECT_EQ(pstate, kInitialPstate);
   EXPECT_EQ(pstate_info.frequency_hz, kTestPstates[kInitialPstate].frequency_hz);
@@ -186,7 +153,7 @@ TEST_F(PerformanceDomainTest, TestGetCurrentPerformanceState) {
 }
 
 TEST_F(PerformanceDomainTest, TestGetPerformanceStates) {
-  const auto pstates = pd_->GetPerformanceStates();
+  const auto pstates = pd().GetPerformanceStates();
 
   ASSERT_EQ(pstates.size(), std::size(kTestPstates));
 
@@ -200,28 +167,28 @@ TEST_F(PerformanceDomainTest, TestSetPerformanceState) {
   // Just move to the next sequential pstate with wraparound.
   const uint32_t test_pstate = (kInitialPstate + 1) % std::size(kTestPstates);
   const uint32_t invalid_pstate = std::size(kTestPstates) + 1;
-  zx_status_t st = pd_->SetPerformanceState(test_pstate);
+  zx_status_t st = pd().SetPerformanceState(test_pstate);
 
   EXPECT_OK(st);
 
   {
-    const auto [res, new_pstate, info] = pd_->GetCurrentPerformanceState();
+    const auto [res, new_pstate, info] = pd().GetCurrentPerformanceState();
     EXPECT_OK(res);
     EXPECT_EQ(new_pstate, test_pstate);
   }
 
-  st = pd_->SetPerformanceState(invalid_pstate);
+  st = pd().SetPerformanceState(invalid_pstate);
   EXPECT_NOT_OK(st);
 
   {
     // Make sure the pstate hasn't changed.
-    const auto [res, new_pstate, info] = pd_->GetCurrentPerformanceState();
+    const auto [res, new_pstate, info] = pd().GetCurrentPerformanceState();
     EXPECT_OK(res);
     EXPECT_EQ(new_pstate, test_pstate);
   }
 
   // Make sure there was exactly one successful call to SetPerformanceState.
-  EXPECT_EQ(cpu_.PstateSetCount(), 1);
+  EXPECT_EQ(cpu().PstateSetCount(), 1);
 }
 
 }  // namespace
