@@ -30,9 +30,12 @@ bazel_inputs_manifest = "$root_build_dir/gen/build/bazel/legacy_ninja_build_outp
 #     experimental labels during local development.
 #
 gn_labels_for_bazel_inputs = [
-  "//build/bazel:build_args_bazel_inputs",
   "//build/bazel/tests/bazel_input_resource_directory:bazel_inputs",
   "//build/bazel/tests/build_action",
+  "//build/bazel:build_args_bazel_inputs",
+  "//products/core:core_product_config",
+  "//products/minimal:minimal_product_config",
+  "//products/workstation:workstation_product_config",
   "//sdk:core",
 ]
 

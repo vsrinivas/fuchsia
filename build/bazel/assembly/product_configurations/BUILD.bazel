@@ -11,10 +11,26 @@ load(
     "fuchsia_platform_input_configuration",
     "fuchsia_product_configuration",
 )
+load(
+    "//build/bazel/assembly/product_configurations:verify_product_configuration.bzl",
+    "verify_product_configuration",
+)
+load("@rules_python//python:defs.bzl", "py_binary")
 
 package(default_visibility = ["//build/bazel/assembly:__pkg__"])
 
+py_binary(
+    name = "diff_json",
+    srcs = ["diff_json.py"],
+)
+
 fuchsia_product_configuration(name = "bringup")
+
+verify_product_configuration(
+    name = "verify_bringup_product_configuration",
+    product_configuration_json = "//build/assembly:empty_product_config.json",
+    product_configuration_target = ":bringup",
+)
 
 fuchsia_platform_input_configuration(
     name = "button_touchscreen",
@@ -30,12 +46,24 @@ fuchsia_product_configuration(
     input = ":button_touchscreen",
 )
 
+verify_product_configuration(
+    name = "verify_minimal_product_configuration",
+    product_configuration_json = "@legacy_ninja_build_outputs//:products/minimal/minimal/product_assembly_config.json",
+    product_configuration_target = ":minimal",
+)
+
 fuchsia_product_configuration(
     name = "core",
     build_type = BUILD_TYPES.ENG,
     input = ":button_touchscreen",
 
     # TODO(https://fxbug.dev/103248): Add driver packages when they are available in Bazel.
+)
+
+verify_product_configuration(
+    name = "verify_core_product_configuration",
+    product_configuration_json = "@legacy_ninja_build_outputs//:products/core/core/product_assembly_config.json",
+    product_configuration_target = ":core",
 )
 
 fuchsia_platform_input_configuration(
@@ -58,6 +86,12 @@ fuchsia_product_configuration(
     identity = ":password_pinweaver_required",
     input = ":keyboard_mouse_touchscreen",
     session_url = "fuchsia-pkg://fuchsia.com/workstation_session#meta/workstation_routing.cm",
+)
+
+verify_product_configuration(
+    name = "verify_workstation_product_configuration",
+    product_configuration_json = "@legacy_ninja_build_outputs//:products/workstation/workstation/product_assembly_config.json",
+    product_configuration_target = ":workstation_eng",
 )
 
 # TODO(https://fxbug.dev/103248): Define targets for workstation_user and workstation_userdebug.

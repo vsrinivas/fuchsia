@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/assembly/product_assembly_configuration.gni")
+import("//build/bazel/bazel_inputs.gni")
 
 assert(
     is_fuchsia,
@@ -29,6 +30,12 @@ workstation_product_config = {
 product_assembly_configuration("workstation") {
   platform = workstation_platform_config
   product = workstation_product_config
+}
+
+bazel_input_resource("workstation_product_config") {
+  sources = [ "${target_out_dir}/workstation/product_assembly_config.json" ]
+  outputs = [ "products/workstation/workstation/product_assembly_config.json" ]
+  deps = [ ":workstation" ]
 }
 
 # TODO(https://fxbug.dev/107089) remove this product once workstation_eng can start paused
