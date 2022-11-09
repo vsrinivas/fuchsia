@@ -122,30 +122,75 @@ To prepare a bootable USB drive, do the following:
 Update your NUC's BIOS setup so that it can boot from
 a USB drive.
 
-To enable EFI (Extensible Firmware Interface) booting on your NUC,
-do the following:
+The steps are slightly different depending on which BIOS is included in your system:
 
-1. Reboot your NUC.
-1. To enter the BIOS setup, press `F2` while booting.
-1. In the **Boot Order** window on the left, click the **Legacy** tab.
-1. Uncheck **Legacy Boot**.
+* Visual BIOS:
 
-   <img width="40%" src="/docs/images/developing_on_nuc/bios.jpg"/>
-1. Click the **Advanced** button.
-1. Confirm the following boot configuration:
-    * Under the **Boot Priority** tab:
-       * **UEFI Boot** is checked.
-    * Under the **Boot Configuration** tab:
-       * In the **UEFI Boot** window:
+  <img src="images/visual_bios.png"/>
+
+* Aptio V BIOS:
+
+  <img src="images/aptio_v_bios.png"/>
+
+* {Visual BIOS}
+
+   To enable EFI (Extensible Firmware Interface) booting on your NUC,
+   do the following:
+
+   1. Reboot your NUC.
+   1. To enter the BIOS setup, press `F2` while booting.
+   1. Click the **Advanced** button.
+   1. Click the **Boot** tab.
+   1. Confirm the following boot configuration:
+      * Under the **Boot Priority** tab:
+         * **UEFI Boot** is checked.
+         * **Legacy Boot** is unchecked.
+
+         <img src="images/visual_bios_boot_priority.png"/>
+      * Under the **Boot Configuration** tab:
+         * In the **UEFI Boot** window:
+            * **Boot USB Devices First** is checked.
+            * **Boot Network Devices Last** is checked.
+            * **Unlimited Network Boot Attempts** is checked.
+         * In the **Boot Devices** window:
+            * **USB** is checked.
+            * **Network Boot** is set to **UEFI PXE & iSCSI**.
+
+         <img src="images/visual_bios_boot_configuration.png"/>
+      * Under the **Secure Boot** tab:
+         * **Secure Boot** is unchecked.
+
+         <img src="images/visual_bios_secure_boot.png"/>
+   1. To save and exit BIOS, press `F10` and click **Yes**.
+
+* {Aptio V BIOS}
+
+   To enable EFI (Extensible Firmware Interface) booting on your NUC,
+   do the following:
+
+   1. Reboot your NUC.
+   1. To enter the BIOS setup, press `F2` while booting.
+   1. Click the **Boot** tab.
+   1. Confirm the following boot configuration:
+      * In the **Secure Boot** section:
+         * **Secure Boot** is set to **Disabled**.
+
+         <img src="images/aptio_v_bios_secure_boot.png"/>
+      * In the **Boot Priority** section:
+         * **UEFI Boot** is checked.
+         * **Legacy Boot** is unchecked.
+
+         Note: If the above options don't appear, your system doesn't support legacy boot and those
+         steps can be skipped.
+
          * **Boot USB Devices First** is checked.
          * **Boot Network Devices Last** is checked.
-         * **Unlimited Network Boot Attempts** is checked.
-       * In the **Boot Devices** window:
+         * **Unlimited Boot to Network Attempts** is checked.
          * **USB** is checked.
          * **Network Boot** is set to **UEFI PXE & iSCSI**.
-    * Under the **Secure Boot** tab:
-       * **Secure Boot** is unchecked.
-1. To save and exit BIOS, press `F10` and click **Yes**.
+
+         <img src="images/aptio_v_bios_boot_priority.png"/>
+   1. To save and exit BIOS, press `F10` and click **Ok**.
 
 ## 5. Install Fuchsia on the NUC {#install-fuchsia}
 
