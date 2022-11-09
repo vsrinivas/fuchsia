@@ -122,8 +122,7 @@ zx::result<std::unique_ptr<PartitionClient>> PinecrestPartitioner::FindPartition
                                           ? PartitionScheme::kLegacy
                                           : PartitionScheme::kNew;
         const char* name = PartitionName(spec.partition, partition_scheme);
-        auto partition_type = GptPartitionType(spec.partition, partition_scheme);
-        return partition_type.is_ok() && FilterByTypeAndName(part, partition_type.value(), name);
+        return FilterByName(part, name);
       };
       break;
     case Partition::kFuchsiaVolumeManager:

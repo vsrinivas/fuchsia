@@ -2158,13 +2158,13 @@ TEST_F(PinecrestPartitionerTests, FindPartitionByName) {
   // The initial gpt partitions are randomly chosen and does not necessarily reflect the
   // actual gpt partition layout in product.
   const std::vector<PartitionDescription> kPinecrestNewPartitions = {
-      {GUID_ABR_META_NAME, kAbrMetaType, 0x10400, 0x10000},
-      {GPT_VBMETA_A_NAME, kVbMetaType, 0x20400, 0x10000},
-      {GPT_VBMETA_B_NAME, kVbMetaType, 0x30400, 0x10000},
-      {GPT_VBMETA_R_NAME, kVbMetaType, 0x40400, 0x10000},
-      {GPT_ZIRCON_A_NAME, kZirconType, 0x50400, 0x10000},
-      {GPT_ZIRCON_B_NAME, kZirconType, 0x60400, 0x10000},
-      {GPT_ZIRCON_R_NAME, kZirconType, 0x70400, 0x10000},
+      {GUID_ABR_META_NAME, kDummyType, 0x10400, 0x10000},
+      {GPT_VBMETA_A_NAME, kDummyType, 0x20400, 0x10000},
+      {GPT_VBMETA_B_NAME, kDummyType, 0x30400, 0x10000},
+      {GPT_VBMETA_R_NAME, kDummyType, 0x40400, 0x10000},
+      {GPT_ZIRCON_A_NAME, kDummyType, 0x50400, 0x10000},
+      {GPT_ZIRCON_B_NAME, kDummyType, 0x60400, 0x10000},
+      {GPT_ZIRCON_R_NAME, kDummyType, 0x70400, 0x10000},
       {GPT_FVM_NAME, kNewFvmType, 0x80400, 0x10000},
   };
   ASSERT_NO_FATAL_FAILURE(InitializeStartingGPTPartitions(gpt_dev.get(), kPinecrestNewPartitions));
