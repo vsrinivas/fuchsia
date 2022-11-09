@@ -30,6 +30,7 @@ if (is_host) {
       "//third_party/rust_crates:async-trait",
       "//third_party/rust_crates:cfg-if",
       "//third_party/rust_crates:handlebars",
+      "//third_party/rust_crates:nix",
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:shared_child",

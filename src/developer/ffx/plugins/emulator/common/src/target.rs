@@ -5,7 +5,7 @@
 use anyhow::Result;
 use fidl_fuchsia_developer_ffx as ffx;
 use fidl_fuchsia_net as net;
-use std::time::Duration;
+use std::{net::Ipv4Addr, time::Duration};
 use timeout::timeout;
 
 // This is the duration for which the FFX daemon's target collection will retain the manual entry
@@ -20,18 +20,28 @@ use timeout::timeout;
 // while also removing it promptly on failure.
 const TARGET_LIFETIME: Duration = Duration::from_secs(120);
 
-/// Equivalent to a call to `ffx target add`. This adds a target at `127.0.0.1:ssh_port`.
+/// Address of the target to work with.
+pub enum TargetAddress {
+    Loopback,
+    Ipv4(Ipv4Addr),
+}
+
+/// Equivalent to a call to `ffx target add`. This adds a target at `<local_addr>:ssh_port`.
 /// At this time, this is restricted to IPV4 only, as QEMU's DHCP server gets in the way of port
 /// mapping on IPV6.
 pub async fn add_target(
     proxy: &ffx::TargetCollectionProxy,
+    local_addr: TargetAddress,
     ssh_port: u16,
     lifetime: Duration,
 ) -> Result<()> {
+    let addr_ip = match local_addr {
+        TargetAddress::Loopback => Ipv4Addr::new(127, 0, 0, 1),
+        TargetAddress::Ipv4(addr) => addr,
+    };
+
     let mut addr = ffx::TargetAddrInfo::IpPort(ffx::TargetIpPort {
-        ip: net::IpAddress::Ipv4(net::Ipv4Address {
-            addr: "127.0.0.1".parse::<std::net::Ipv4Addr>().unwrap().octets().into(),
-        }),
+        ip: net::IpAddress::Ipv4(net::Ipv4Address { addr: addr_ip.octets() }),
         port: ssh_port,
         scope_id: 0,
     });
@@ -178,19 +188,19 @@ mod test {
                 addr,
                 ffx::TargetAddrInfo::IpPort(ffx::TargetIpPort {
                     ip: net::IpAddress::Ipv4(net::Ipv4Address {
-                        addr: "127.0.0.1".parse::<std::net::Ipv4Addr>().unwrap().octets().into(),
+                        addr: Ipv4Addr::new(127, 0, 0, 1).octets()
                     }),
                     port: ssh_port,
                     scope_id: 0,
                 }),
             )
         });
-        add_target(&server, ssh_port, TARGET_LIFETIME).await.unwrap();
+        add_target(&server, TargetAddress::Loopback, ssh_port, TARGET_LIFETIME).await.unwrap();
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_is_active() {
-        let server = setup_fake_target_server_open(|id| id == "target_id".to_owned());
+        let server = setup_fake_target_server_open(|id| id == *"target_id");
         // The "target" that we expect is "active".
         assert!(is_active(&server, "target_id").await);
         // The "target" that we don't expect is "inactive".

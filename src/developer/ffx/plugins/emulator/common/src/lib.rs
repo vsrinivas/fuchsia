@@ -6,7 +6,12 @@
 //! in this library may not depend on any other code within the plugin, with the exception of "args"
 //! libraries.
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
+use nix::{
+    ifaddrs::getifaddrs,
+    net::if_::InterfaceFlags,
+    sys::socket::{InetAddr, SockAddr},
+};
 use std::{
     fs::File,
     io::{BufRead, Write},
@@ -51,6 +56,28 @@ pub fn dump_log_to_out<W: Write>(log: &PathBuf, out: &mut W) -> Result<()> {
         out_handle.flush()?;
     }
     Ok(())
+}
+
+/// Returns the local network interface that is up, supports
+/// multicast, has an IPv4 address, and is not the loopback interface.
+pub fn get_local_network_interface() -> Result<Option<InetAddr>> {
+    Ok(getifaddrs()
+        .context("reading network interface information")?
+        .filter(|addr| {
+            addr.flags.contains(InterfaceFlags::IFF_UP)
+                && addr.flags.contains(InterfaceFlags::IFF_MULTICAST)
+                && !addr.flags.contains(InterfaceFlags::IFF_LOOPBACK)
+        })
+        .filter_map(
+            |addr| {
+                if let Some(SockAddr::Inet(inet)) = addr.address {
+                    Some(inet)
+                } else {
+                    None
+                }
+            },
+        )
+        .find(|inet| matches!(inet, &InetAddr::V4(_))))
 }
 
 #[cfg(test)]

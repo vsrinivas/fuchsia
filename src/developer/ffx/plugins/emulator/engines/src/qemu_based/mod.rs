@@ -20,15 +20,17 @@ use ffx_config::SshKeyFiles;
 use ffx_emulator_common::{
     config,
     config::EMU_START_TIMEOUT,
-    dump_log_to_out, host_is_mac, process,
-    target::{add_target, is_active, remove_target},
+    dump_log_to_out, get_local_network_interface, host_is_mac, process,
+    target::{add_target, is_active, remove_target, TargetAddress},
     tuntap::{tap_ready, TAP_INTERFACE_NAME},
 };
 use ffx_emulator_config::{
-    AccelerationMode, ConsoleType, DeviceConfig, EmulatorConfiguration, EmulatorEngine,
-    EngineConsoleType, GuestConfig, NetworkingMode, ShowDetail,
+    AccelerationMode, ConsoleType, EmulatorConfiguration, EmulatorEngine, EngineConsoleType,
+    GuestConfig, HostConfig, NetworkingMode, ShowDetail,
 };
 use fidl_fuchsia_developer_ffx as ffx;
+use nix::sys::socket::IpAddr;
+use serde::Serialize;
 use shared_child::SharedChild;
 use std::{
     env, fs,
@@ -36,7 +38,7 @@ use std::{
     io::{stderr, Write},
     net::Shutdown,
     ops::Sub,
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::Command,
     str,
     sync::{mpsc::channel, Arc},
@@ -69,9 +71,52 @@ pub(crate) mod comms;
 pub(crate) mod femu;
 pub(crate) mod qemu;
 
-const COMMAND_CONSOLE: &'static str = "./monitor";
-const MACHINE_CONSOLE: &'static str = "./qmp";
-const SERIAL_CONSOLE: &'static str = "./serial";
+const COMMAND_CONSOLE: &str = "./monitor";
+const MACHINE_CONSOLE: &str = "./qmp";
+const SERIAL_CONSOLE: &str = "./serial";
+
+/// MDNSInfo is the configuration data used by Fuchsia's mdns service.
+/// When using user mode networking, an instance of this configuration
+/// is added to the boot data so that the local address and port mappings
+/// are shared via mdns.
+#[derive(Serialize, Debug)]
+pub(crate) struct MDNSInfo {
+    publications: Vec<MDNSServiceInfo>,
+}
+
+#[derive(Serialize, Debug)]
+pub(crate) struct MDNSServiceInfo {
+    media: String,
+    perform_probe: bool,
+    port: u16,
+    service: String,
+    text: Vec<String>,
+}
+
+impl MDNSInfo {
+    fn new(host: &HostConfig, local_addr: &IpAddr) -> Self {
+        let mut info = MDNSInfo {
+            publications: vec![MDNSServiceInfo {
+                media: "wired".to_string(),
+                perform_probe: false,
+                port: 22,
+                service: "_fuchsia._udp.".to_string(),
+                text: vec![format!("host:{}", local_addr)],
+            }],
+        };
+
+        for (name, mapping) in &host.port_map {
+            if let Some(port) = mapping.host {
+                info.publications[0].text.push(format!("{}:{}", name, port));
+                if name == "ssh" {
+                    info.publications[0].port = port;
+                }
+            }
+        }
+
+        info
+    }
+}
 
 /// QemuBasedEngine collects the interface for
 /// emulator engine implementations that use
@@ -107,11 +152,11 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
     /// the instance paths.
     async fn stage_image_files(
         instance_name: &str,
-        guest_config: &GuestConfig,
-        device_config: &DeviceConfig,
+        emu_config: &EmulatorConfiguration,
+        mdns_info: &Option<MDNSInfo>,
         reuse: bool,
     ) -> Result<GuestConfig> {
-        let mut updated_guest = guest_config.clone();
+        let mut updated_guest = emu_config.guest.clone();
 
         // Create the data directory if needed.
         let mut instance_root: PathBuf =
@@ -119,19 +164,20 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
         instance_root.push(instance_name);
         fs::create_dir_all(&instance_root)?;
 
-        let kernel_name = guest_config.kernel_image.file_name().ok_or_else(|| {
-            anyhow!("cannot read kernel file name '{:?}'", guest_config.kernel_image)
+        let kernel_name = emu_config.guest.kernel_image.file_name().ok_or_else(|| {
+            anyhow!("cannot read kernel file name '{:?}'", emu_config.guest.kernel_image)
         });
         let kernel_path = instance_root.join(kernel_name?);
         if kernel_path.exists() && reuse {
             tracing::debug!("Using existing file for {:?}", kernel_path.file_name().unwrap());
         } else {
-            fs::copy(&guest_config.kernel_image, &kernel_path)
+            fs::copy(&emu_config.guest.kernel_image, &kernel_path)
                 .context("cannot stage kernel file")?;
         }
 
         let zbi_path = instance_root.join(
-            guest_config
+            emu_config
+                .guest
                 .zbi_image
                 .file_name()
                 .ok_or_else(|| anyhow!("cannot read zbi file name"))?,
@@ -139,15 +185,19 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
 
         if zbi_path.exists() && reuse {
             tracing::debug!("Using existing file for {:?}", zbi_path.file_name().unwrap());
+            // TODO(fxbug.dev/112577): Make a decision to reuse zbi with no modifications or not.
+            // There is the potential that the ssh keys have changed, or the ip address
+            // of the host interface has changed, which will cause the connection
+            // to the emulator instance to fail.
         } else {
             // Add the authorized public keys to the zbi image to enable SSH access to
             // the guest.
-            Self::embed_authorized_keys(&guest_config.zbi_image, &zbi_path)
+            Self::embed_boot_data(&emu_config.guest.zbi_image, &zbi_path, mdns_info)
                 .await
-                .context("cannot embed authorized keys")?;
+                .context("cannot embed boot data")?;
         }
 
-        let fvm_path = match &guest_config.fvm_image {
+        let fvm_path = match &emu_config.guest.fvm_image {
             Some(src_fvm) => {
                 let fvm_path = instance_root
                     .join(src_fvm.file_name().ok_or_else(|| anyhow!("cannot read fvm file name"))?);
@@ -159,8 +209,8 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
                     // Resize the fvm image if needed.
                     let image_size = format!(
                         "{}{}",
-                        device_config.storage.quantity,
-                        device_config.storage.units.abbreviate()
+                        emu_config.device.storage.quantity,
+                        emu_config.device.storage.units.abbreviate()
                     );
                     let fvm_tool = get_host_tool(config::FVM_HOST_TOOL)
                         .await
@@ -187,7 +237,14 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
         Ok(updated_guest)
     }
 
-    async fn embed_authorized_keys(src: &PathBuf, dest: &PathBuf) -> Result<()> {
+    /// embed_boot_data adds authorized_keys for ssh access to the zbi boot image file.
+    /// If mdns_info is Some(), it is also added. This mdns configuration is
+    /// read by Fuchsia mdns service and used instead of the default configuration.
+    async fn embed_boot_data(
+        src: &PathBuf,
+        dest: &PathBuf,
+        mdns_info: &Option<MDNSInfo>,
+    ) -> Result<()> {
         let zbi_tool = get_host_tool(config::ZBI_HOST_TOOL).await.context("ZBI tool is missing")?;
         let ssh_keys = SshKeyFiles::load().await.context("finding ssh authorized_keys file.")?;
         ssh_keys.create_keys_if_needed().context("create ssh keys if needed")?;
@@ -201,19 +258,29 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
 
         let replace_str = format!("data/ssh/authorized_keys={}", auth_keys);
 
-        let auth_keys_output = Command::new(zbi_tool)
-            .arg("-o")
-            .arg(dest)
-            .arg("--replace")
-            .arg(src)
-            .arg("-e")
-            .arg(replace_str)
-            .arg("--type=entropy:64")
-            .arg("/dev/urandom")
-            .output()?;
+        let mut zbi_command = Command::new(zbi_tool);
+        zbi_command.arg("-o").arg(dest).arg("--replace").arg(src).arg("-e").arg(replace_str);
 
-        if !auth_keys_output.status.success() {
-            bail!("Error embedding authorized_keys: {}", str::from_utf8(&auth_keys_output.stderr)?);
+        if let Some(info) = mdns_info {
+            // Save the mdns info to a file.
+            let parent = dest.parent().expect("parent dir of zbi should exist.");
+            let mdns_config = parent.join("fuchsia_udp.config");
+            let mut f = File::create(&mdns_config).context("getting zbi parent directory")?;
+            f.write_all(serde_json::to_string(info)?.as_bytes())?;
+
+            // Add it to the zbi command line.
+            let emu_svc_str = format!("data/mdns/emu.config={}", mdns_config.display());
+
+            zbi_command.arg("-e").arg(emu_svc_str);
+        }
+
+        // added last.
+        zbi_command.arg("--type=entropy:64").arg("/dev/urandom");
+
+        let zbi_command_output = zbi_command.output()?;
+
+        if !zbi_command_output.status.success() {
+            bail!("Error embedding boot data: {}", str::from_utf8(&zbi_command_output.stderr)?);
         }
         Ok(())
     }
@@ -257,11 +324,28 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
     }
 
     async fn stage(emu_config: &mut EmulatorConfiguration) -> Result<()> {
-        let name = &emu_config.runtime.name;
-        let guest = &emu_config.guest;
-        let device = &emu_config.device;
+        let name = emu_config.runtime.name.clone();
         let reuse = emu_config.runtime.reuse;
-        emu_config.guest = Self::stage_image_files(name, guest, device, reuse)
+
+        // Configure any port mappings before staging files so the
+        // port map can be shared with the zbi file.
+        let mut mdns_service_info: Option<MDNSInfo> = None;
+        if emu_config.host.networking == NetworkingMode::User {
+            finalize_port_mapping(emu_config).context("Problem with port mapping")?;
+
+            let local_v4_interface = get_local_network_interface()?;
+
+            if let Some(local_interface) = local_v4_interface {
+                emu_config.host.local_ip_addr = local_interface.ip().to_string();
+                mdns_service_info = Some(MDNSInfo::new(&emu_config.host, &local_interface.ip()));
+            } else {
+                // This really should not happen, so much leading up to
+                //this point requires network access.
+                bail!("Cannot find local network interface.")
+            }
+        }
+
+        emu_config.guest = Self::stage_image_files(&name, emu_config, &mdns_service_info, reuse)
             .await
             .context("could not stage image files")?;
 
@@ -269,12 +353,8 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
         // that are used by qemu. If the multiboot.bin file is in the current directory, it does
         // not start correctly. This probably could be temporary until we know the images loaded
         // do not have files directly in $sdk_root.
-        env::set_current_dir(&emu_config.runtime.instance_directory.parent().unwrap())
+        env::set_current_dir(emu_config.runtime.instance_directory.parent().unwrap())
             .context("problem changing directory to instance dir")?;
-
-        if emu_config.host.networking == NetworkingMode::User {
-            finalize_port_mapping(emu_config).context("Problem with port mapping")?;
-        }
 
         emu_config.flags = process_flag_template(emu_config)
             .context("Failed to process the flags template file.")?;
@@ -302,7 +382,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
             NetworkingMode::Tap => &self.emu_config().runtime.upscript,
             _ => &None,
         } {
-            let status = Command::new(&script)
+            let status = Command::new(script)
                 .arg(TAP_INTERFACE_NAME)
                 .status()
                 .context(format!("Problem running upscript '{}'", &script.display()))?;
@@ -329,7 +409,16 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
             // We only need to do this if we're running in user net mode.
             let timeout = self.emu_config().runtime.startup_timeout;
             if let Some(ssh_port) = ssh_port {
-                add_target(proxy, ssh_port, timeout)
+                let local_ip = if !self.emu_config().host.local_ip_addr.is_empty() {
+                    TargetAddress::Ipv4(
+                        self.emu_config().host.local_ip_addr.parse::<std::net::Ipv4Addr>()?,
+                    )
+                } else {
+                    TargetAddress::Loopback
+                };
+
+                // TODO(fxbug.dev/114597): Remove manually added target when obsolete.
+                add_target(proxy, local_ip, ssh_port, timeout)
                     .await
                     .context("Failed to add the emulator to the ffx target collection.")?;
             }
@@ -405,8 +494,16 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
                         if self.emu_config().host.networking == NetworkingMode::User {
                             // We only need to do this if we're running in user net mode.
                             if let Some(ssh_port) = ssh_port {
-                                if let Err(e) =
-                                    remove_target(proxy, &format!("127.0.0.1:{}", ssh_port)).await
+                                // TODO(fxbug.dev/114597): Remove manually added target when obsolete.
+                                if let Err(e) = remove_target(
+                                    proxy,
+                                    &format!(
+                                        "{}:{}",
+                                        self.emu_config().host.local_ip_addr,
+                                        ssh_port
+                                    ),
+                                )
+                                .await
                                 {
                                     // A failure here probably means it was never added.
                                     // Just log the error and quit.
@@ -489,25 +586,18 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
     fn show(&self, details: Vec<ShowDetail>) {
         if details.contains(&ShowDetail::Raw) {
             println!("{:#?}", self.emu_config());
-            return;
-        }
-        for segment in details {
-            match segment {
-                ShowDetail::All =>
-                /* already handled, just needed for completeness */
-                {
-                    ()
+        } else {
+            for segment in details {
+                match segment {
+                    ShowDetail::Cmd => println!("Command line:  {:#?}", self.build_emulator_cmd()),
+                    ShowDetail::Config => show_output::config(self.emu_config()),
+                    ShowDetail::Net => show_output::net(self.emu_config()),
+                    ShowDetail::Raw | ShowDetail::All =>
+                        /* already handled, just needed for completeness */
+                        {}
                 }
-                ShowDetail::Cmd => println!("Command line:  {:#?}", self.build_emulator_cmd()),
-                ShowDetail::Config => show_output::config(&self.emu_config()),
-                ShowDetail::Net => show_output::net(&self.emu_config()),
-                ShowDetail::Raw =>
-                /* already handled, just needed for completeness */
-                {
-                    ()
-                }
+                println!();
             }
-            println!("");
         }
     }
 
@@ -549,15 +639,15 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
     fn get_pid(&self) -> u32;
 
     /// Attach to emulator's console socket.
-    fn attach_to(&self, path: &PathBuf, console: EngineConsoleType) -> Result<()> {
+    fn attach_to(&self, path: &Path, console: EngineConsoleType) -> Result<()> {
         let console_path = self.get_path_for_console_type(path, console);
         let mut socket = QemuSocket::new(&console_path);
         socket.connect().context("Connecting to console.")?;
-        let stream = socket.stream().ok_or(anyhow!("No socket connected."))?;
+        let stream = socket.stream().ok_or_else(|| anyhow!("No socket connected."))?;
         let (tx, rx) = channel();
 
         let _t1 = spawn_pipe_thread(std::io::stdin(), stream.try_clone()?, tx.clone());
-        let _t2 = spawn_pipe_thread(stream.try_clone()?, std::io::stdout(), tx.clone());
+        let _t2 = spawn_pipe_thread(stream.try_clone()?, std::io::stdout(), tx);
 
         // Now that the threads are reading and writing, we wait for one to send back an error.
         let error = rx.recv()?;
@@ -566,7 +656,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
         Ok(())
     }
 
-    fn get_path_for_console_type(&self, path: &PathBuf, console: EngineConsoleType) -> PathBuf {
+    fn get_path_for_console_type(&self, path: &Path, console: EngineConsoleType) -> PathBuf {
         path.join(match console {
             EngineConsoleType::Command => COMMAND_CONSOLE,
             EngineConsoleType::Machine => MACHINE_CONSOLE,
@@ -724,10 +814,8 @@ mod tests {
         let _env = ffx_config::test_init().await?;
         let temp = tempdir().context("cannot get tempdir")?;
         let instance_name = "test-instance";
-        let mut guest = GuestConfig::default();
-        let device = DeviceConfig::default();
-
-        let root = setup(&mut guest, &temp).await?;
+        let mut emu_config = EmulatorConfiguration::default();
+        let root = setup(&mut emu_config.guest, &temp).await?;
 
         // get the lock for the mock, it is released when
         // the test exits.
@@ -736,15 +824,15 @@ mod tests {
         let ctx = mock_modules::get_host_tool_context();
         ctx.expect().returning(|_| Ok(PathBuf::from("echo")));
 
-        write_to(&guest.kernel_image, ORIGINAL)
+        write_to(&emu_config.guest.kernel_image, ORIGINAL)
             .context("cannot write original value to kernel file")?;
-        write_to(guest.fvm_image.as_ref().unwrap(), ORIGINAL)
+        write_to(emu_config.guest.fvm_image.as_ref().unwrap(), ORIGINAL)
             .context("cannot write original value to fvm file")?;
 
         let updated = <TestEngine as QemuBasedEngine>::stage_image_files(
             instance_name,
-            &guest,
-            &device,
+            &emu_config,
+            &None,
             false,
         )
         .await;
@@ -760,15 +848,15 @@ mod tests {
         assert_eq!(actual, expected);
 
         // Test no reuse when old files exist. The original files should be overwritten.
-        write_to(&guest.kernel_image, UPDATED)
+        write_to(&emu_config.guest.kernel_image, UPDATED)
             .context("cannot write updated value to kernel file")?;
-        write_to(guest.fvm_image.as_ref().unwrap(), UPDATED)
+        write_to(emu_config.guest.fvm_image.as_ref().unwrap(), UPDATED)
             .context("cannot write updated value to fvm file")?;
 
         let updated = <TestEngine as QemuBasedEngine>::stage_image_files(
             instance_name,
-            &guest,
-            &device,
+            &emu_config,
+            &None,
             false,
         )
         .await;
@@ -809,10 +897,9 @@ mod tests {
         let _env = ffx_config::test_init().await?;
         let temp = tempdir().context("cannot get tempdir")?;
         let instance_name = "test-instance";
-        let mut guest = GuestConfig::default();
-        let device = DeviceConfig::default();
+        let mut emu_config = EmulatorConfiguration::default();
 
-        let root = setup(&mut guest, &temp).await?;
+        let root = setup(&mut emu_config.guest, &temp).await?;
 
         // get the lock for the mock, it is released when
         // the test exits.
@@ -822,15 +909,15 @@ mod tests {
         ctx.expect().returning(|_| Ok(PathBuf::from("echo")));
 
         // This checks if --reuse is true, but the directory isn't there to reuse; should succeed.
-        write_to(&guest.kernel_image, ORIGINAL)
+        write_to(&emu_config.guest.kernel_image, ORIGINAL)
             .context("cannot write original value to kernel file")?;
-        write_to(guest.fvm_image.as_ref().unwrap(), ORIGINAL)
+        write_to(emu_config.guest.fvm_image.as_ref().unwrap(), ORIGINAL)
             .context("cannot write original value to fvm file")?;
 
         let updated: Result<GuestConfig> = <TestEngine as QemuBasedEngine>::stage_image_files(
             instance_name,
-            &guest,
-            &device,
+            &emu_config,
+            &None,
             true,
         )
         .await;
@@ -847,15 +934,15 @@ mod tests {
 
         // Test reuse. Note that the ZBI file isn't actually copied in the test, since we replace
         // the ZBI tool with an "echo" command.
-        write_to(&guest.kernel_image, UPDATED)
+        write_to(&emu_config.guest.kernel_image, UPDATED)
             .context("cannot write updated value to kernel file")?;
-        write_to(guest.fvm_image.as_ref().unwrap(), UPDATED)
+        write_to(emu_config.guest.fvm_image.as_ref().unwrap(), UPDATED)
             .context("cannot write updated value to fvm file")?;
 
         let updated = <TestEngine as QemuBasedEngine>::stage_image_files(
             instance_name,
-            &guest,
-            &device,
+            &emu_config,
+            &None,
             true,
         )
         .await;
@@ -886,6 +973,38 @@ mod tests {
 
         assert_eq!(kernel_contents, ORIGINAL);
         assert_eq!(fvm_contents, ORIGINAL);
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_embed_boot_data() -> Result<()> {
+        let _env = ffx_config::test_init().await?;
+        let temp = tempdir().context("cannot get tempdir")?;
+        let mut emu_config = EmulatorConfiguration::default();
+
+        let root = setup(&mut emu_config.guest, &temp).await?;
+
+        // get the lock for the mock, it is released when
+        // the test exits.
+        let _m = get_lock(&MTX);
+
+        let ctx = mock_modules::get_host_tool_context();
+        ctx.expect().returning(|_| Ok(PathBuf::from("echo")));
+
+        let src = emu_config.guest.zbi_image;
+        let dest = root.join("dest.zbi");
+        let mdns_info = MDNSInfo {
+            publications: vec![MDNSServiceInfo {
+                media: "wired".to_string(),
+                perform_probe: false,
+                port: 12345,
+                service: "_test._udp.".to_string(),
+                text: vec!["host:123.11.22.333".to_string(), "ssh:12345".to_string()],
+            }],
+        };
+
+        <TestEngine as QemuBasedEngine>::embed_boot_data(&src, &dest, &Some(mdns_info)).await?;
 
         Ok(())
     }

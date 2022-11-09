@@ -160,6 +160,10 @@ pub struct HostConfig {
     /// Determines the type of graphics acceleration, to improve rendering in the guest OS.
     pub gpu: GpuType,
 
+    /// Local IP address used to locate user mode networking emulators.
+    #[serde(default)]
+    pub local_ip_addr: String,
+
     /// Specifies the path to the emulator's log files.
     pub log: PathBuf,
 
