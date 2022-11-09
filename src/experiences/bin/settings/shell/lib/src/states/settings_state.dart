@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:flutter/material.dart' hide Action;
+import 'package:shell_settings/src/services/brightness_service.dart';
 import 'package:shell_settings/src/services/datetime_service.dart';
 import 'package:shell_settings/src/services/task_service.dart';
 import 'package:shell_settings/src/services/timezone_service.dart';
@@ -25,12 +26,17 @@ abstract class SettingsState implements TaskService {
   List<String> get timezones;
   // Datetime
   String get dateTime;
+  // Brightness
+  double? get brightnessLevel;
+  bool? get brightnessAuto;
+  IconData get brightnessIcon;
 
   factory SettingsState.fromEnv() {
     // ignore: unnecessary_cast
     return SettingsStateImpl(
       timezoneService: TimezoneService(),
       dateTimeService: DateTimeService(),
+      brightnessService: BrightnessService(),
     ) as SettingsState;
   }
 
@@ -38,4 +44,10 @@ abstract class SettingsState implements TaskService {
   // Timezone
   void updateTimezone(String tz);
   void showTimezoneSettings();
+  // Brightness
+  void setBrightnessLevel(double value);
+  void setBrightnessAuto();
+  // TODO(fxb/113485): add keyboard shortcuts for brightness
+  void increaseBrightness();
+  void decreaseBrightness();
 }

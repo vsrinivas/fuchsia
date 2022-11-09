@@ -13,6 +13,7 @@ import 'package:flutter/services.dart';
 import 'package:internationalization/strings.dart';
 import 'package:intl/intl.dart';
 import 'package:mobx/mobx.dart';
+import 'package:shell_settings/src/services/brightness_service.dart';
 import 'package:shell_settings/src/services/datetime_service.dart';
 import 'package:shell_settings/src/services/task_service.dart';
 import 'package:shell_settings/src/services/timezone_service.dart';
@@ -57,19 +58,45 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
       // Ex: Mon, Jun 7 2:25 AM
       DateFormat.MMMEd().add_jm().format(dateTimeNow.value)).asComputed();
 
+  // Brightness
+  @override
+  double? get brightnessLevel => _brightnessLevel.value;
+  set brightnessLevel(double? value) => _brightnessLevel.value = value;
+  final Observable<double?> _brightnessLevel = Observable<double?>(null);
+
+  @override
+  bool? get brightnessAuto => _brightnessAuto.value;
+  set brightnessAuto(bool? value) => _brightnessAuto.value = value;
+  final Observable<bool?> _brightnessAuto = Observable<bool?>(null);
+
+  @override
+  IconData get brightnessIcon => _brightnessIcon.value;
+  set brightnessIcon(IconData value) => _brightnessIcon.value = value;
+  final Observable<IconData> _brightnessIcon =
+      Icons.brightness_auto.asObservable();
+
   // Services
   final DateTimeService dateTimeService;
   final TimezoneService timezoneService;
+  final BrightnessService brightnessService;
 
   // Constructor
   SettingsStateImpl({
     required this.dateTimeService,
     required this.timezoneService,
+    required this.brightnessService,
   })  : _timezones = _loadTimezones(),
         _selectedTimezone = timezoneService.timezone.asObservable() {
     dateTimeService.onChanged = updateDateTime;
     timezoneService.onChanged =
         (timezone) => runInAction(() => selectedTimezone = timezone);
+    brightnessService.onChanged = () {
+      runInAction(() {
+        brightnessLevel = brightnessService.brightness;
+        brightnessAuto = brightnessService.auto;
+        brightnessIcon = brightnessService.icon;
+      });
+    };
 
     // We cannot load MaterialIcons font file from pubspec.yaml. So load it
     // explicitly.
@@ -89,6 +116,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     await Future.wait([
       dateTimeService.start(),
       timezoneService.start(),
+      brightnessService.start(),
     ]);
   }
 
@@ -97,6 +125,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     showAllSettings();
     await dateTimeService.stop();
     await timezoneService.stop();
+    await brightnessService.stop();
     _dateTimeNow = null;
   }
 
@@ -105,6 +134,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     super.dispose();
     dateTimeService.dispose();
     timezoneService.dispose();
+    brightnessService.dispose();
   }
 
   // All
@@ -136,4 +166,20 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   late final Action updateDateTime = () {
     dateTimeNow.value = DateTime.now();
   }.asAction();
+
+  // Brightness
+  @override
+  void setBrightnessLevel(double value) =>
+      runInAction(() => brightnessService.brightness = value);
+
+  @override
+  void increaseBrightness() =>
+      runInAction(brightnessService.increaseBrightness);
+
+  @override
+  void decreaseBrightness() =>
+      runInAction(brightnessService.decreaseBrightness);
+
+  @override
+  void setBrightnessAuto() => runInAction(() => brightnessService.auto = true);
 }

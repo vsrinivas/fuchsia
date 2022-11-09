@@ -121,8 +121,38 @@ class _ListSettings extends StatelessWidget {
           Expanded(
             child: ListView(
               children: [
+                // Brightness
+                Observer(builder: (_) {
+                  return ListTile(
+                    contentPadding: EdgeInsets.symmetric(horizontal: 24),
+                    leading: Icon(settingsState.brightnessIcon),
+                    title: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(Strings.brightness),
+                        Expanded(
+                          child: Slider(
+                            value:
+                                max(settingsState.brightnessLevel ?? 1, 0.05),
+                            onChanged: settingsState.setBrightnessLevel,
+                            min: 0.05,
+                          ),
+                        ),
+                      ],
+                    ),
+                    trailing: settingsState.brightnessAuto == true
+                        ? Text(Strings.auto.toUpperCase())
+                        : OutlinedButton(
+                            style: ErmineButtonStyle.outlinedButton(
+                                Theme.of(context)),
+                            onPressed: settingsState.setBrightnessAuto,
+                            child: Text(Strings.auto.toUpperCase()),
+                          ),
+                  );
+                }),
                 // Timezone
                 ListTile(
+                  contentPadding: EdgeInsets.symmetric(horizontal: 24),
                   leading: Icon(Icons.schedule),
                   title: Text(Strings.timezone),
                   trailing: Wrap(

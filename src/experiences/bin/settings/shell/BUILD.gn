@@ -14,6 +14,7 @@ dart_library("lib") {
   entrypoints = [ "main.dart" ]
 
   services = [
+    "src/services/brightness_service.dart",
     "src/services/datetime_service.dart",
     "src/services/task_service.dart",
     "src/services/timezone_service.dart",
@@ -38,6 +39,7 @@ dart_library("lib") {
     "//sdk/dart/fuchsia_services",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl_dart",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings_dart",
+    "//sdk/fidl/fuchsia.ui.brightness:fuchsia.ui.brightness_dart",
     "//src/experiences/session_shells/ermine/internationalization",
     "//src/experiences/session_shells/ermine/utils:ermine_utils",
     "//third_party/dart-pkg/git/flutter/packages/flutter",

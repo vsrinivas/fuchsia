@@ -18,6 +18,7 @@
                 "fuchsia.fonts.Provider",
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.settings.Intl",
+                "fuchsia.ui.brightness.Control",
             ],
         },
     ],
