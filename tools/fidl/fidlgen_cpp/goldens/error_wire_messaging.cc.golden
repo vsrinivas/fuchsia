@@ -117,7 +117,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_error::kExample_foo_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fit::result decoded = ::fidl::InplaceDecode<::test_error::wire::ExampleFooRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::InplaceDecode<::test_error::wire::ExampleFooRequest>(
+              std::move(msg), metadata);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }

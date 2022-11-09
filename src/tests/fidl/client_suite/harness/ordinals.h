@@ -23,6 +23,7 @@ namespace client_suite {
 
 // Closed Target Ordinals
 static const uint64_t kOrdinalTwoWayNoPayload = 8823160117673072416lu;
+static const uint64_t kOrdinalTwoWayStructPayload = 4197391242806919613lu;
 
 // Open Target Ordinals
 static const uint64_t kOrdinalStrictOneWay = 7904024199254697828lu;

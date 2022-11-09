@@ -114,6 +114,9 @@ func (*runnerImpl) IsTestEnabled(_ fidl.Context, test clientsuite.Test) (bool, e
 			return false
 		case clientsuite.TestUnknownFlexibleServerInitiatedTwoWay:
 			return false
+		case clientsuite.TestV1TwoWayNoPayload, clientsuite.TestV1TwoWayStructPayload:
+			// TODO(fxbug.dev/99738): Go bindings should reject V1 wire format.
+			return false
 		default:
 			return true
 		}
@@ -129,6 +132,14 @@ func (*runnerImpl) CallTwoWayNoPayload(ctx fidl.Context, target clientsuite.Clos
 		return clientsuite.EmptyResultClassificationWithFidlError(classifyErr(err)), nil
 	}
 	return clientsuite.EmptyResultClassificationWithSuccess(clientsuite.Empty{}), nil
+}
+
+func (*runnerImpl) CallTwoWayStructPayload(ctx fidl.Context, target clientsuite.ClosedTargetWithCtxInterface) (clientsuite.NonEmptyResultClassification, error) {
+	someField, err := target.TwoWayStructPayload(ctx)
+	if err != nil {
+		return clientsuite.NonEmptyResultClassificationWithFidlError(classifyErr(err)), nil
+	}
+	return clientsuite.NonEmptyResultClassificationWithSuccess(clientsuite.NonEmptyPayload{SomeField: someField}), nil
 }
 
 func (*runnerImpl) CallStrictOneWay(_ fidl.Context, target clientsuite.OpenTargetWithCtxInterface) (clientsuite.EmptyResultClassification, error) {

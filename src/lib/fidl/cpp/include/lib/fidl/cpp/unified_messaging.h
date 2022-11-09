@@ -18,6 +18,8 @@
 
 #include <cstdint>
 
+#include "lib/fidl/cpp/wire_format_metadata.h"
+
 namespace fidl {
 
 // |Request| is a type alias referencing the request body of a FIDL method,

@@ -67,24 +67,9 @@ fit::result<fidl::Error, WireEncoder::Result> WireEncode(
 fidl::Status WireDecode(::fidl::WireFormatMetadata metadata, bool contains_envelope,
                         size_t inline_size, TopLevelDecodeFn decode_fn,
                         ::fidl::EncodedMessage& message) {
-  if (unlikely(!metadata.is_valid())) {
+  if (fidl::Status status = EnsureSupportedWireFormat(metadata); !status.ok()) {
     std::move(message).CloseHandles();
-    return Status::DecodeError(ZX_ERR_INVALID_ARGS, kCodingErrorInvalidWireFormatMetadata);
-  }
-  // Old versions of the C bindings will send wire format V1 payloads that are compatible
-  // with wire format V2 (they don't contain envelopes). Confirm that V1 payloads don't
-  // contain envelopes and are compatible with V2.
-  // TODO(fxbug.dev/99738): Remove this logic.
-  if (unlikely(contains_envelope &&
-               metadata.wire_format_version() == fidl::internal::WireFormatVersion::kV1)) {
-    std::move(message).CloseHandles();
-    return Status::DecodeError(ZX_ERR_INVALID_ARGS, kCodingErrorDoesNotSupportV1Envelopes);
-  }
-  // TODO(fxbug.dev/99738): Drop "non-envelope V1" support.
-  if (unlikely(metadata.wire_format_version() != fidl::internal::WireFormatVersion::kV1 &&
-               metadata.wire_format_version() != fidl::internal::WireFormatVersion::kV2)) {
-    std::move(message).CloseHandles();
-    return Status::DecodeError(ZX_ERR_NOT_SUPPORTED, kCodingErrorUnsupportedWireFormatVersion);
+    return status;
   }
 
   uint8_t* bytes = message.bytes().data();
@@ -120,6 +105,20 @@ fidl::Status WireDecode(::fidl::WireFormatMetadata metadata, bool contains_envel
   std::move(message).ReleaseHandles();
   // Handles are closed in |Finish| in case of error.
   return decoder.Finish();
+}
+
+::fidl::Status EnsureSupportedWireFormat(::fidl::WireFormatMetadata metadata) {
+  if (unlikely(!metadata.is_valid())) {
+    return ::fidl::Status::DecodeError(ZX_ERR_INVALID_ARGS, kCodingErrorInvalidWireFormatMetadata);
+  }
+  if (unlikely(metadata.wire_format_version() == fidl::internal::WireFormatVersion::kV1)) {
+    return ::fidl::Status::DecodeError(ZX_ERR_INVALID_ARGS, kCodingErrorDoesNotSupportV1Envelopes);
+  }
+  if (unlikely(metadata.wire_format_version() != fidl::internal::WireFormatVersion::kV2)) {
+    return ::fidl::Error::DecodeError(ZX_ERR_NOT_SUPPORTED,
+                                      kCodingErrorUnsupportedWireFormatVersion);
+  }
+  return ::fidl::Status::Ok();
 }
 
 }  // namespace fidl::internal

@@ -100,6 +100,11 @@ class RunnerServer : public fidl::clientsuite::Runner {
 
   void IsTestEnabled(fidl::clientsuite::Test test, IsTestEnabledCallback callback) override {
     switch (test) {
+      case fidl::clientsuite::Test::V1_TWO_WAY_NO_PAYLOAD:
+      case fidl::clientsuite::Test::V1_TWO_WAY_STRUCT_PAYLOAD:
+        // TODO(fxbug.dev/99738): HLCPP bindings should reject V1 wire format.
+        callback(false);
+        return;
       default:
         callback(true);
         return;
@@ -117,6 +122,19 @@ class RunnerServer : public fidl::clientsuite::Runner {
     });
     client_callback.client()->TwoWayNoPayload([client_callback]() {
       client_callback(fidl::clientsuite::EmptyResultClassification::WithSuccess({}));
+    });
+  }
+
+  void CallTwoWayStructPayload(fidl::InterfaceHandle<fidl::clientsuite::ClosedTarget> target,
+                               CallTwoWayStructPayloadCallback callback) override {
+    SharedCallbackAndClient client_callback(target.Bind(), std::move(callback));
+    client_callback.client().set_error_handler([client_callback](auto status) {
+      client_callback(fidl::clientsuite::NonEmptyResultClassification::WithFidlError(
+          clienttest_util::ClassifyError(status)));
+    });
+    client_callback.client()->TwoWayStructPayload([client_callback](auto result) {
+      client_callback(fidl::clientsuite::NonEmptyResultClassification::WithSuccess(
+          fidl::clientsuite::NonEmptyPayload(result)));
     });
   }
 

@@ -242,6 +242,10 @@ async fn run_runner_server(stream: RunnerRequestStream) -> Result<(), Error> {
                         | Test::ServerSendsTooFewRights
                         | Test::ResponseExceedsByteLimit
                         | Test::ResponseExceedsHandleLimit => false,
+                        Test::V1TwoWayNoPayload | Test::V1TwoWayStructPayload => {
+                            // TODO(fxbug.dev/99738): Rust bindings should reject V1 wire format.
+                            false
+                        }
                         _ => true,
                     };
                     responder.send(enabled)?;

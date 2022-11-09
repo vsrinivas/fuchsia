@@ -563,7 +563,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fit::result decoded = ::fidl::InplaceDecode<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::InplaceDecode<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest>(
+              std::move(msg), metadata);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }
@@ -578,7 +579,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fit::result decoded = ::fidl::InplaceDecode<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::InplaceDecode<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest>(
+              std::move(msg), metadata);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }
@@ -593,7 +595,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fit::result decoded = ::fidl::InplaceDecode<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::InplaceDecode<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest>(
+              std::move(msg), metadata);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }
@@ -608,7 +611,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fit::result decoded = ::fidl::InplaceDecode<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::InplaceDecode<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest>(
+              std::move(msg), metadata);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }
@@ -623,7 +627,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fit::result decoded = ::fidl::InplaceDecode<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::InplaceDecode<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest>(
+              std::move(msg), metadata);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }
@@ -1232,7 +1237,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_bindingsdenylist::kImportsSameNameContext_Unattributed_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+              msg, metadata);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }
@@ -1246,7 +1252,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_bindingsdenylist::kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+              msg, metadata);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }

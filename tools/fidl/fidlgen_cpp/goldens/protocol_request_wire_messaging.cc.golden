@@ -383,7 +383,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_protocolrequest::kParent_GetChild_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+              msg, metadata);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }
@@ -397,7 +398,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_protocolrequest::kParent_GetChildRequest_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+              msg, metadata);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }
@@ -411,7 +413,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_protocolrequest::kParent_TakeChild_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fit::result decoded = ::fidl::InplaceDecode<::test_protocolrequest::wire::ParentTakeChildRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::InplaceDecode<::test_protocolrequest::wire::ParentTakeChildRequest>(
+              std::move(msg), metadata);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }
@@ -426,7 +429,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_protocolrequest::kParent_TakeChildRequest_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fit::result decoded = ::fidl::InplaceDecode<::test_protocolrequest::wire::ParentTakeChildRequestRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::InplaceDecode<::test_protocolrequest::wire::ParentTakeChildRequestRequest>(
+              std::move(msg), metadata);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }

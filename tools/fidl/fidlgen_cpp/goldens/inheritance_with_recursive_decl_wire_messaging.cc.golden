@@ -97,7 +97,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_inheritancewithrecursivedecl::kParent_First_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fit::result decoded = ::fidl::InplaceDecode<::test_inheritancewithrecursivedecl::wire::ParentFirstRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::InplaceDecode<::test_inheritancewithrecursivedecl::wire::ParentFirstRequest>(
+              std::move(msg), metadata);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }
@@ -306,7 +307,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_inheritancewithrecursivedecl::kChild_First_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fit::result decoded = ::fidl::InplaceDecode<::test_inheritancewithrecursivedecl::wire::ParentFirstRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::InplaceDecode<::test_inheritancewithrecursivedecl::wire::ParentFirstRequest>(
+              std::move(msg), metadata);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }
@@ -321,7 +323,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_inheritancewithrecursivedecl::kChild_Second_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fit::result decoded = ::fidl::InplaceDecode<::test_inheritancewithrecursivedecl::wire::ChildSecondRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::InplaceDecode<::test_inheritancewithrecursivedecl::wire::ChildSecondRequest>(
+              std::move(msg), metadata);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }

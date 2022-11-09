@@ -140,6 +140,11 @@ closed protocol Runner {
         target client_end:ClosedTarget;
     }) -> (EmptyResultClassification);
 
+    // Request that the client call the [`ClosedTarget.TwoWayStructPayload`] method.
+    strict CallTwoWayStructPayload(resource struct {
+        target client_end:ClosedTarget;
+    }) -> (NonEmptyResultClassification);
+
     // Calls on the open protocol.
 
     // Request that the client call the [`OpenTarget.StrictOneWay`] method.
@@ -248,6 +253,7 @@ closed protocol Runner {
 // assertions.
 closed protocol ClosedTarget {
     strict TwoWayNoPayload() -> ();
+    strict TwoWayStructPayload() -> (NonEmptyPayload);
 };
 
 // An event received in the [`ClosedTarget`]. Used to report the received event
@@ -329,6 +335,7 @@ type Test = flexible enum : uint32 {
 
     SETUP = 1;
     TWO_WAY_NO_PAYLOAD = 2;
+    TWO_WAY_STRUCT_PAYLOAD = 42;
     GRACEFUL_FAILURE_DURING_CALL_AFTER_PEER_CLOSE = 3;
 
     // ////////////////////////////////////////////////////////////////////////
@@ -375,5 +382,9 @@ type Test = flexible enum : uint32 {
     UNKNOWN_STRICT_SERVER_INITIATED_TWO_WAY = 36;
     UNKNOWN_FLEXIBLE_SERVER_INITIATED_TWO_WAY = 37;
 
-    // next available: 40
+    // coding_tests.cc
+    V1_TWO_WAY_NO_PAYLOAD = 40;
+    V1_TWO_WAY_STRUCT_PAYLOAD = 41;
+
+    // next available: 43
 };

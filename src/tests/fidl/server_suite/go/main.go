@@ -198,6 +198,11 @@ func (*runnerImpl) IsTestEnabled(_ fidl.Context, test serversuite.Test) (bool, e
 			return false
 		case serversuite.TestUnknownFlexibleTwoWayClosedProtocol:
 			return false
+
+		case serversuite.TestV1TwoWayNoPayload, serversuite.TestV1TwoWayStructPayload:
+			// TODO(fxbug.dev/99738): Go bindings should reject V1 wire format.
+			return false
+
 		default:
 			return true
 		}

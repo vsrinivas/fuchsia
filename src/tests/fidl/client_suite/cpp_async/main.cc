@@ -47,6 +47,21 @@ class RunnerServer : public fidl::Server<fidl_clientsuite::Runner> {
     });
   }
 
+  void CallTwoWayStructPayload(CallTwoWayStructPayloadRequest& request,
+                               CallTwoWayStructPayloadCompleter::Sync& completer) override {
+    auto client = fidl::SharedClient(std::move(request.target()), dispatcher_);
+    client->TwoWayStructPayload().ThenExactlyOnce(
+        [completer = completer.ToAsync(), client = client.Clone()](auto& result) mutable {
+          if (result.is_ok()) {
+            completer.Reply(
+                fidl_clientsuite::NonEmptyResultClassification::WithSuccess(result.value()));
+          } else {
+            completer.Reply(fidl_clientsuite::NonEmptyResultClassification::WithFidlError(
+                clienttest_util::ClassifyError(result.error_value())));
+          }
+        });
+  }
+
   void CallStrictOneWay(CallStrictOneWayRequest& request,
                         CallStrictOneWayCompleter::Sync& completer) override {
     auto client = fidl::SharedClient(std::move(request.target()), dispatcher_);

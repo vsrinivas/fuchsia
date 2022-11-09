@@ -225,6 +225,10 @@ class RunnerImpl extends Runner {
       //   have the rights specified in the handle dispositions list.
       case Test.serverSendsTooFewRights:
         return false;
+      case Test.v1TwoWayNoPayload:
+      case Test.v1TwoWayStructPayload:
+        // TODO(fxbug.dev/99738): Dart bindings should reject V1 wire format.
+        return false;
       default:
         return true;
     }

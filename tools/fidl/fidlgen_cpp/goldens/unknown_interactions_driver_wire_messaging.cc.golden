@@ -1248,7 +1248,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1265,7 +1266,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1282,7 +1284,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1299,7 +1302,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1316,7 +1320,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1333,7 +1338,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1350,7 +1356,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1367,7 +1374,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1384,7 +1392,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1401,7 +1410,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1418,7 +1428,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1435,7 +1446,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1452,7 +1464,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1469,7 +1482,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1486,7 +1500,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1503,7 +1518,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1520,7 +1536,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1537,7 +1554,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -2998,7 +3016,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -3015,7 +3034,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -3032,7 +3052,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -3049,7 +3070,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -3066,7 +3088,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -3083,7 +3106,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -3100,7 +3124,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -3117,7 +3142,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -3134,7 +3160,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -3151,7 +3178,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -4179,7 +4207,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -4196,7 +4225,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -4213,7 +4243,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -4230,7 +4261,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -4247,7 +4279,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -4264,7 +4297,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -4281,7 +4315,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -4298,7 +4333,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -4315,7 +4351,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }

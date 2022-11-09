@@ -11,7 +11,7 @@ use {
         EmptyResultClassification, EmptyResultWithErrorClassification, NonEmptyPayload,
         NonEmptyResultClassification, NonEmptyResultWithErrorClassification, OpenTargetEvent,
         OpenTargetEventReport, OpenTargetEventReporterSynchronousProxy, OpenTargetSynchronousProxy,
-        RunnerRequest, RunnerRequestStream, UnknownEvent,
+        RunnerRequest, RunnerRequestStream, Test, UnknownEvent,
     },
     fidl_zx as _,
     fuchsia_component::server::ServiceFs,
@@ -27,8 +27,15 @@ async fn run_runner_server(stream: RunnerRequestStream) -> Result<(), Error> {
         .try_for_each(|request| async move {
             match request {
                 // Test management methods
-                RunnerRequest::IsTestEnabled { responder, .. } => {
-                    responder.send(true).context("sending response failed")
+                RunnerRequest::IsTestEnabled { test, responder } => {
+                    let enabled = match test {
+                        Test::V1TwoWayNoPayload | Test::V1TwoWayStructPayload => {
+                            // TODO(fxbug.dev/99738): Rust bindings should reject V1 wire format.
+                            false
+                        }
+                        _ => true,
+                    };
+                    responder.send(enabled).context("sending response failed")
                 }
                 RunnerRequest::CheckAlive { responder } => {
                     responder.send().context("sending response failed")
@@ -42,6 +49,19 @@ async fn run_runner_server(stream: RunnerRequestStream) -> Result<(), Error> {
                             .context("sending response failed"),
                         Err(err) => responder
                             .send(&mut EmptyResultClassification::FidlError(classify_error(err)))
+                            .context("sending response failed"),
+                    }
+                }
+                RunnerRequest::CallTwoWayStructPayload { target, responder } => {
+                    let client = ClosedTargetSynchronousProxy::new(target.into_channel());
+                    match client.two_way_struct_payload(zx::Time::INFINITE) {
+                        Ok(some_field) => responder
+                            .send(&mut NonEmptyResultClassification::Success(NonEmptyPayload {
+                                some_field,
+                            }))
+                            .context("sending response failed"),
+                        Err(err) => responder
+                            .send(&mut NonEmptyResultClassification::FidlError(classify_error(err)))
                             .context("sending response failed"),
                     }
                 }

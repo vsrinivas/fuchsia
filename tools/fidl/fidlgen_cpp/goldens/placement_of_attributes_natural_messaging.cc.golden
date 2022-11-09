@@ -64,7 +64,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_placementofattributes::kExampleProtocol_Method_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fit::result decoded = ::fidl::Decode<::test_placementofattributes::ExampleProtocolMethodRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_placementofattributes::ExampleProtocolMethodRequest>(
+              std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }

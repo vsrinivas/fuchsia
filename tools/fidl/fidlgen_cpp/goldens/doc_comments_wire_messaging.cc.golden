@@ -122,7 +122,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_doccomments::kInterface_Method_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+              msg, metadata);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }

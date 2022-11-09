@@ -206,8 +206,6 @@ template <typename FidlType>
   static_assert(::fidl::IsFidlType<FidlType>::value, "Only FIDL types are supported");
   FidlType value{internal::DefaultConstructPossiblyInvalidObjectTag{}};
 
-  // Apart from V2, we only support non-envelop V1 format. In those cases, the
-  // V1 inline size is identical to V2.
   bool contains_envelope = TypeTraits<FidlType>::kHasEnvelope;
   const size_t inline_size =
       internal::NaturalCodingTraits<FidlType,

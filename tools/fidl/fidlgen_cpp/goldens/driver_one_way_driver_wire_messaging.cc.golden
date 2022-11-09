@@ -85,7 +85,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-          ::fit::result decoded = ::fidl::InplaceDecode<::test_driveroneway::wire::OneWaySendRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::InplaceDecode<::test_driveroneway::wire::OneWaySendRequest>(
+              std::move(msg), metadata);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }

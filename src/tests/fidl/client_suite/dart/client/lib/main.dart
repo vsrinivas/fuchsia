@@ -73,6 +73,10 @@ class RunnerImpl extends Runner {
       case Test.unknownStrictServerInitiatedTwoWay:
       case Test.unknownFlexibleServerInitiatedTwoWay:
         return false;
+      case Test.v1TwoWayNoPayload:
+      case Test.v1TwoWayStructPayload:
+        // TODO(fxbug.dev/99738): Dart bindings should reject V1 wire format.
+        return false;
       default:
         return true;
     }
@@ -89,6 +93,19 @@ class RunnerImpl extends Runner {
       return const EmptyResultClassification.withSuccess(Empty());
     } catch (e) {
       return EmptyResultClassification.withFidlError(classifyError(e));
+    }
+  }
+
+  Future<NonEmptyResultClassification> callTwoWayStructPayload(
+      InterfaceHandle<ClosedTarget> targetHandle) async {
+    var target = ClosedTargetProxy();
+    target.ctrl.bind(targetHandle);
+    try {
+      int result = await target.twoWayStructPayload();
+      return NonEmptyResultClassification.withSuccess(
+          NonEmptyPayload(someField: result));
+    } catch (e) {
+      return NonEmptyResultClassification.withFidlError(classifyError(e));
     }
   }
 

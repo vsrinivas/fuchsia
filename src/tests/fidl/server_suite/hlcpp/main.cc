@@ -249,6 +249,11 @@ class RunnerServer : public fidl::serversuite::Runner {
       case fidl::serversuite::Test::RESPONSE_EXCEEDS_HANDLE_LIMIT:
         callback(false);
         return;
+      case fidl::serversuite::Test::V1_TWO_WAY_NO_PAYLOAD:
+      case fidl::serversuite::Test::V1_TWO_WAY_STRUCT_PAYLOAD:
+        // TODO(fxbug.dev/99738): HLCPP bindings should reject V1 wire format.
+        callback(false);
+        return;
       default:
         callback(true);
         return;

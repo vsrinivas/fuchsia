@@ -57,7 +57,7 @@ CLOSED_SERVER_TEST(IgnoresUnrecognizedAtRestFlags) {
   Bytes bytes_in = {
       as_bytes(fidl_message_header_t{
           .txid = 123,
-          .at_rest_flags = {100, 200},
+          .at_rest_flags = {FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2 | 100, 200},
           .dynamic_flags = FIDL_MESSAGE_HEADER_DYNAMIC_FLAGS_STRICT_METHOD,
           .magic_number = kFidlWireFormatMagicNumberInitial,
           .ordinal = kOrdinalTwoWayNoPayload,

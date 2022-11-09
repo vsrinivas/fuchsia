@@ -64,7 +64,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_inheritancewithrecursivedecl::kParent_First_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fit::result decoded = ::fidl::Decode<::test_inheritancewithrecursivedecl::ParentFirstRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_inheritancewithrecursivedecl::ParentFirstRequest>(
+              std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -179,7 +180,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_inheritancewithrecursivedecl::kChild_First_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fit::result decoded = ::fidl::Decode<::test_inheritancewithrecursivedecl::ParentFirstRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_inheritancewithrecursivedecl::ParentFirstRequest>(
+              std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -194,7 +196,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_inheritancewithrecursivedecl::kChild_Second_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fit::result decoded = ::fidl::Decode<::test_inheritancewithrecursivedecl::ChildSecondRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_inheritancewithrecursivedecl::ChildSecondRequest>(
+              std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }

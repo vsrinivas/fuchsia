@@ -1615,7 +1615,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictOneWay_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -1629,7 +1630,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleOneWay_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -1643,7 +1645,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWay_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -1657,7 +1660,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayFields_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -1671,7 +1675,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayUnion_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -1685,7 +1690,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayTable_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -1699,7 +1705,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayErr_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -1713,7 +1720,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayFieldsErr_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -1727,7 +1735,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayUnionErr_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -1741,7 +1750,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayTableErr_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -1755,7 +1765,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWay_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -1769,7 +1780,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayFields_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -1783,7 +1795,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayUnion_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -1797,7 +1810,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayTable_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -1811,7 +1825,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayErr_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -1825,7 +1840,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -1839,7 +1855,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -1853,7 +1870,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayTableErr_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -3118,7 +3136,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictOneWay_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -3132,7 +3151,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleOneWay_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -3146,7 +3166,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWay_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -3160,7 +3181,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayFields_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -3174,7 +3196,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayUnion_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -3188,7 +3211,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayTable_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -3202,7 +3226,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -3216,7 +3241,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -3230,7 +3256,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -3244,7 +3271,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayTableErr_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -4116,7 +4144,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictOneWay_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -4130,7 +4159,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWay_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -4144,7 +4174,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayFields_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -4158,7 +4189,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayUnion_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -4172,7 +4204,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayTable_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -4186,7 +4219,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -4200,7 +4234,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -4214,7 +4249,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }
@@ -4228,7 +4264,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayTableErr_Ordinal,
       [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessageWithoutBody(
+            msg, metadata);
         if (decoded.is_error()) {
           return decoded.error_value();
         }

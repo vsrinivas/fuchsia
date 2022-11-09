@@ -6,6 +6,9 @@
 
 namespace fidl::internal {
 
+namespace {
+
+// Verifies that |body| has zero bytes and no handles.
 ::fit::result<::fidl::Error> VerifyBodyIsAbsent(const ::fidl::EncodedMessage& body) {
   if (unlikely(!body.bytes().empty())) {
     return ::fit::error(
@@ -18,6 +21,8 @@ namespace fidl::internal {
   return ::fit::ok();
 }
 
+}  // namespace
+
 ::fit::result<::fidl::Error> DecodeTransactionalMessageWithoutBody(
     ::fidl::IncomingHeaderAndMessage message) {
   if (!message.ok()) {
@@ -26,11 +31,15 @@ namespace fidl::internal {
   const fidl_message_header& header = *message.header();
   auto metadata = ::fidl::WireFormatMetadata::FromTransactionalHeader(header);
   fidl::EncodedMessage body_message = std::move(message).SkipTransactionHeader();
-  if (unlikely(!metadata.is_valid())) {
-    return ::fit::error(
-        ::fidl::Status::DecodeError(ZX_ERR_INVALID_ARGS, kCodingErrorInvalidWireFormatMetadata));
+  return DecodeTransactionalMessageWithoutBody(body_message, metadata);
+}
+
+::fit::result<::fidl::Error> DecodeTransactionalMessageWithoutBody(
+    const ::fidl::EncodedMessage& message, ::fidl::WireFormatMetadata metadata) {
+  if (fidl::Status status = EnsureSupportedWireFormat(metadata); !status.ok()) {
+    return fit::error(status);
   }
-  return VerifyBodyIsAbsent(body_message);
+  return VerifyBodyIsAbsent(message);
 }
 
 }  // namespace fidl::internal

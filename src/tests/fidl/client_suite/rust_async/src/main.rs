@@ -29,6 +29,8 @@ async fn run_runner_server(stream: RunnerRequestStream) -> Result<(), Error> {
                     // channel, so these tests are disabled.
                     Test::UnknownStrictServerInitiatedTwoWay
                     | Test::UnknownFlexibleServerInitiatedTwoWay => responder.send(false),
+                    // TODO(fxbug.dev/99738): Rust bindings should reject V1 wire format.
+                    Test::V1TwoWayNoPayload | Test::V1TwoWayStructPayload => responder.send(false),
                     _ => responder.send(true),
                 }
                 .context("sending response failed"),
@@ -44,6 +46,19 @@ async fn run_runner_server(stream: RunnerRequestStream) -> Result<(), Error> {
                             .context("sending response failed"),
                         Err(err) => responder
                             .send(&mut EmptyResultClassification::FidlError(classify_error(err)))
+                            .context("sending response failed"),
+                    }
+                }
+                RunnerRequest::CallTwoWayStructPayload { target, responder } => {
+                    let client = target.into_proxy().context("creating proxy failed")?;
+                    match client.two_way_struct_payload().await {
+                        Ok(some_field) => responder
+                            .send(&mut NonEmptyResultClassification::Success(NonEmptyPayload {
+                                some_field,
+                            }))
+                            .context("sending response failed"),
+                        Err(err) => responder
+                            .send(&mut NonEmptyResultClassification::FidlError(classify_error(err)))
                             .context("sending response failed"),
                     }
                 }

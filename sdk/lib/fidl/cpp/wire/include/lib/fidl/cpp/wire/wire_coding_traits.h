@@ -794,6 +794,9 @@ fidl::Status WireDecode(::fidl::WireFormatMetadata metadata, bool contains_envel
                         size_t inline_size, TopLevelDecodeFn decode_fn,
                         ::fidl::EncodedMessage& message);
 
+// Checks that the |metadata| is supported.
+fidl::Status EnsureSupportedWireFormat(::fidl::WireFormatMetadata metadata);
+
 }  // namespace fidl::internal
 
 #endif  // LIB_FIDL_CPP_WIRE_INCLUDE_LIB_FIDL_CPP_WIRE_WIRE_CODING_TRAITS_H_
