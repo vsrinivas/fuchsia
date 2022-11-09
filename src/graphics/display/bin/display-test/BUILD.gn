@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
+
 executable("display-test") {
   sources = [ "main.cc" ]
   deps = [
@@ -20,4 +22,23 @@ executable("display-test") {
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
   ]
+}
+
+fuchsia_component("display-test-cmp") {
+  component_name = "display-test"
+  deps = [ ":display-test" ]
+  manifest = "meta/display-test.cml"
+}
+
+fuchsia_test_package("display-test-test") {
+  test_components = [ ":display-test-cmp" ]
+  test_specs = {
+    # manual test
+    environments = []
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":display-test-test" ]
 }

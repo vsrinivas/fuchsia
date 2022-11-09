@@ -43,6 +43,7 @@ group("tests") {
   deps = [
     ":display-fuzzers",
     "bin/display-factory-test",
+    "bin/display-test:tests",
     "bin/display-tweak:tests",
     "drivers:tests",
     "lib:tests",
