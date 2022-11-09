@@ -1390,14 +1390,52 @@ TEST_F(PchEngineTest, KabyLakeSetPanelParameters) {
       {.address = kPpOffDelays, .value = 0x1388'07d0, .write = true},
       {.address = kPpDivisor, .value = 0x0004'af0a, .write = true},
       {.address = kPpControlOffset, .value = 0x02, .write = true},
-      {.address = kSblcPwmCtl1Offset, .value = 0x0000'0000, .write = true},
       {.address = kSblcPwmCtl2Offset, .value = 0x05dc'0000, .write = true},
+      {.address = kSblcPwmCtl1Offset, .value = 0x0000'0000, .write = true},
   }));
 
   PchEngine pch_engine(&mmio_buffer_, kAtlasGpuDeviceId);
   // The parameters are inspired from the eDP and SPWG standards, but are
   // tweaked so each delay is unique. This is intended to help catch bugs where
   // values are incorrectly mapped to register fields.
+  pch_engine.SetPanelParameters(PchPanelParameters{
+      .power_on_to_hpd_aux_ready_delay_micros = 90'000,    // eDP T1+T3 max
+      .power_on_to_backlight_on_delay_micros = 260'000,    // SPWG T1+T2+T5 max/min
+      .backlight_off_to_video_end_delay_micros = 200'000,  // SPWG T6 min
+      .video_end_to_power_off_delay_micros = 500'000,      // eDP T10 max
+      .power_cycle_delay_micros = 900'000,
+      .backlight_pwm_frequency_hz = 1'000,
+      .power_down_on_reset = true,
+      .backlight_pwm_inverted = false,
+  });
+}
+
+TEST_F(PchEngineTest, KabyLakeSetPanelParametersWhileBacklightPwmIsOn) {
+  mmio_range_.Expect(MockMmioRange::AccessList({
+      {.address = kSChicken1Offset, .value = 0},
+      {.address = kRawClkOffset, .value = kKabyLakeStandardRawClock},
+      {.address = kPpControlOffset, .value = 0},
+      {.address = kPpOnDelays, .value = 0},
+      {.address = kPpOffDelays, .value = 0},
+      {.address = kPpDivisor, .value = 0x0004'af00},
+      {.address = kSblcPwmCtl1Offset, .value = 0xa000'0000},
+      {.address = kSblcPwmCtl2Offset, .value = 0},
+  }));
+  mmio_range_.Expect(MockMmioRange::AccessList({
+      {.address = kPpOnDelays, .value = 0x0384'0a28, .write = true},
+      {.address = kPpOffDelays, .value = 0x1388'07d0, .write = true},
+      {.address = kPpDivisor, .value = 0x0004'af0a, .write = true},
+      {.address = kPpControlOffset, .value = 0x02, .write = true},
+
+      // The backlight PWM must be disabled before changing its frequency.
+      {.address = kSblcPwmCtl1Offset, .value = 0x2000'0000, .write = true},
+
+      {.address = kSblcPwmCtl2Offset, .value = 0x05dc'0000, .write = true},
+      {.address = kSblcPwmCtl1Offset, .value = 0x8000'0000, .write = true},
+  }));
+
+  PchEngine pch_engine(&mmio_buffer_, kAtlasGpuDeviceId);
+  // Parameters from PchEngineTest.KabyLakeSetPanelParameters above.
   pch_engine.SetPanelParameters(PchPanelParameters{
       .power_on_to_hpd_aux_ready_delay_micros = 90'000,    // eDP T1+T3 max
       .power_on_to_backlight_on_delay_micros = 260'000,    // SPWG T1+T2+T5 max/min
@@ -1445,8 +1483,8 @@ class PchEngineKabyLakeSetPanelParametersZerosTest : public PchEngineTest {
         {.address = kPpOffDelays, .value = 0, .write = true},
         {.address = kPpDivisor, .value = 0x0004'af01, .write = true},
         {.address = kPpControlOffset, .value = 0x08, .write = true},
-        {.address = kSblcPwmCtl1Offset, .value = 0x0000'0000, .write = true},
         {.address = kSblcPwmCtl2Offset, .value = 0x0001'0000, .write = true},
+        {.address = kSblcPwmCtl1Offset, .value = 0x0000'0000, .write = true},
     }));
   }
 };
@@ -1501,8 +1539,8 @@ class PchEngineKabyLakeSetPanelParametersOverflowTest : public PchEngineTest {
         {.address = kPpOffDelays, .value = 0x1fff'1fff, .write = true},
         {.address = kPpDivisor, .value = 0x0004'af1f, .write = true},
         {.address = kPpControlOffset, .value = 0x02, .write = true},
-        {.address = kSblcPwmCtl1Offset, .value = 0x2000'0000, .write = true},
         {.address = kSblcPwmCtl2Offset, .value = 0xffff'ffff, .write = true},
+        {.address = kSblcPwmCtl1Offset, .value = 0x2000'0000, .write = true},
     }));
   }
 };
@@ -1604,15 +1642,53 @@ TEST_F(PchEngineTest, TigerLakeSetPanelParameters) {
       {.address = kPpOnDelays, .value = 0x0384'0a28, .write = true},
       {.address = kPpOffDelays, .value = 0x1388'07d0, .write = true},
       {.address = kPpControlOffset, .value = 0x8a, .write = true},
-      {.address = kSblcPwmCtl1Offset, .value = 0, .write = true},
       {.address = kSblcPwmFreqOffset, .value = 0x4b00, .write = true},
       {.address = kSblcPwmDutyOffset, .value = 0, .write = true},
+      {.address = kSblcPwmCtl1Offset, .value = 0, .write = true},
   }));
 
   PchEngine pch_engine(&mmio_buffer_, kDell5420GpuDeviceId);
   // The parameters are inspired from the eDP and SPWG standards, but are
   // tweaked so each delay is unique. This is intended to help catch bugs where
   // values are incorrectly mapped to register fields.
+  pch_engine.SetPanelParameters(PchPanelParameters{
+      .power_on_to_hpd_aux_ready_delay_micros = 90'000,    // eDP T1+T3 max
+      .power_on_to_backlight_on_delay_micros = 260'000,    // SPWG T1+T2+T5 max/min
+      .backlight_off_to_video_end_delay_micros = 200'000,  // SPWG T6 min
+      .video_end_to_power_off_delay_micros = 500'000,      // eDP T10 max
+      .power_cycle_delay_micros = 700'000,
+      .backlight_pwm_frequency_hz = 1'000,
+      .power_down_on_reset = true,
+      .backlight_pwm_inverted = false,
+  });
+}
+
+TEST_F(PchEngineTest, TigerLakeSetPanelParametersWhileBacklightPwmIsOn) {
+  mmio_range_.Expect(MockMmioRange::AccessList({
+      {.address = kSChicken1Offset, .value = 0},
+      {.address = kRawClkOffset, .value = kTigerLakeStandardRawClock},
+      {.address = kPpControlOffset, .value = 0x08},
+      {.address = kPpOnDelays, .value = 0},
+      {.address = kPpOffDelays, .value = 0},
+      {.address = kSblcPwmCtl1Offset, .value = 0xa000'0000},
+      {.address = kSblcPwmFreqOffset, .value = 0},
+      {.address = kSblcPwmDutyOffset, .value = 0x0001},
+  }));
+  mmio_range_.Expect(MockMmioRange::AccessList({
+      {.address = kPpOnDelays, .value = 0x0384'0a28, .write = true},
+      {.address = kPpOffDelays, .value = 0x1388'07d0, .write = true},
+      {.address = kPpControlOffset, .value = 0x8a, .write = true},
+
+      // The backlight PWM must be disabled before changing its frequency.
+      {.address = kSblcPwmCtl1Offset, .value = 0x2000'0000, .write = true},
+
+      {.address = kSblcPwmFreqOffset, .value = 0x4b00, .write = true},
+      {.address = kSblcPwmDutyOffset, .value = 0, .write = true},
+      {.address = kSblcPwmCtl1Offset, .value = 0x8000'0000, .write = true},
+  }));
+
+  PchEngine pch_engine(&mmio_buffer_, kDell5420GpuDeviceId);
+  // Parameters from PchEngineTest.TigerLakeSetPanelParameters above.
   pch_engine.SetPanelParameters(PchPanelParameters{
       .power_on_to_hpd_aux_ready_delay_micros = 90'000,    // eDP T1+T3 max
       .power_on_to_backlight_on_delay_micros = 260'000,    // SPWG T1+T2+T5 max/min
@@ -1648,9 +1724,9 @@ TEST_F(PchEngineTest, TigerLakeSetPanelParametersAlternateRawClock) {
       {.address = kPpOnDelays, .value = 0x0384'0a28, .write = true},
       {.address = kPpOffDelays, .value = 0x1388'07d0, .write = true},
       {.address = kPpControlOffset, .value = 0x8a, .write = true},
-      {.address = kSblcPwmCtl1Offset, .value = 0, .write = true},
       {.address = kSblcPwmFreqOffset, .value = 0x5dc0, .write = true},
       {.address = kSblcPwmDutyOffset, .value = 0, .write = true},
+      {.address = kSblcPwmCtl1Offset, .value = 0, .write = true},
   }));
 
   PchEngine pch_engine(&mmio_buffer_, kDell5420GpuDeviceId);
@@ -1688,9 +1764,9 @@ class PchEngineTestTigerLakeSetPanelParametersZerosTest : public PchEngineTest {
         {.address = kPpOnDelays, .value = 0, .write = true},
         {.address = kPpOffDelays, .value = 0, .write = true},
         {.address = kPpControlOffset, .value = 0x18, .write = true},
-        {.address = kSblcPwmCtl1Offset, .value = 0, .write = true},
-        {.address = kSblcPwmDutyOffset, .value = 0, .write = true},
         {.address = kSblcPwmFreqOffset, .value = 0x0000'0001, .write = true},
+        {.address = kSblcPwmDutyOffset, .value = 0, .write = true},
+        {.address = kSblcPwmCtl1Offset, .value = 0, .write = true},
     }));
   }
 };
@@ -1731,9 +1807,9 @@ class PchEngineTigerLakeSetPanelParametersOverflowTest : public PchEngineTest {
         {.address = kPpOnDelays, .value = 0x1fff'1fff, .write = true},
         {.address = kPpOffDelays, .value = 0x1fff'1fff, .write = true},
         {.address = kPpControlOffset, .value = 0x01fa, .write = true},
-        {.address = kSblcPwmCtl1Offset, .value = 0x2000'0000, .write = true},
-        {.address = kSblcPwmDutyOffset, .value = 0x3d73'cfc0, .write = true},
         {.address = kSblcPwmFreqOffset, .value = 0x3d73'cfc0, .write = true},
+        {.address = kSblcPwmDutyOffset, .value = 0x3d73'cfc0, .write = true},
+        {.address = kSblcPwmCtl1Offset, .value = 0x2000'0000, .write = true},
     }));
   }
 };

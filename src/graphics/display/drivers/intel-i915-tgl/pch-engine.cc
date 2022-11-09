@@ -5,6 +5,7 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/pch-engine.h"
 
 #include <lib/ddk/debug.h>
+#include <lib/mmio/mmio-buffer.h>
 #include <lib/zx/time.h>
 #include <zircon/assert.h>
 
@@ -707,28 +708,50 @@ uint32_t ScaledPwmDutyCycle(uint32_t frequency_divider, uint32_t old_duty_cycle,
 void PchEngine::SetPanelBacklightPwmParameters(const PchPanelParameters& parameters) {
   ZX_ASSERT(parameters.backlight_pwm_frequency_hz > 0);
 
-  // There's no ordering requirement between writing to `backlight_control_` and
-  // writing to the PWM operating parameters, because this method doesn't modify
-  // the `pwm_counter_enabled` field.
+  // This implements the sections "Panel Power and Backlight" > "Backlight
+  // Enabling Sequence" and "Backlight Frequency Change Sequence" under  section
+  // in the display engine PRMs.
+  //
+  // Tiger Lake: IHD-OS-TGL-Vol 12-1.22-Rev2.0 pages 426-427
+  // DG1: IHD-OS-DG1-Vol 12-2.21 pages 349-350
+  // Ice Lake: IHD-OS-ICLLP-Vol 12-1.22-Rev2.0 pages 370-371
+
+  // The backlight PWM must be disabled while changing the PWM frequency. This
+  // is not a theoretical issue -- we observed a panel whose backlight remains
+  // off for minutes if we attempt to change the PWM frequency while the PWM
+  // remains enabled. We also want to avoid disabling and re-enabling the PWM if
+  // we're only going to change the duty cycle (brightness).
+  //
+  // To accomplish this, the SetPanelBacklightPwmParameters*() methods called
+  // below disable the PWM if necessary. `old_backlight_control` captures the
+  // PWM enablement state before we make any changes, so it is correctly
+  // restored before the end of the method.
+  //
+  // Disabling the brightness PWM while the panel backlight is enabled is
+  // supported, and results in well-defined behavior. The backlight goes to 100%
+  // brightness. (As an aside, this seems like the best failure mode we could
+  // have hoped for. A flicker of brightness seems better than a flicker of
+  // complete darkness, which is the other plausible alternative.)
   const uint32_t old_backlight_control = backlight_control_.reg_value();
-  backlight_control_.set_pwm_polarity_inverted(parameters.backlight_pwm_inverted);
-  if (backlight_control_.reg_value() != old_backlight_control) {
-    backlight_control_.WriteTo(mmio_buffer_);
-  }
 
   if (is_kbl(device_id_) || is_skl(device_id_)) {
     SetPanelBacklightPwmParametersKabyLake(parameters);
-    return;
-  }
-  if (is_tgl(device_id_)) {
+  } else if (is_tgl(device_id_)) {
     SetPanelBacklightPwmParametersTigerLake(parameters);
-    return;
-  }
-  if (is_test_device(device_id_)) {
+  } else if (is_test_device(device_id_)) {
     // Stubbed out for integration tests.
     return;
+  } else {
+    ZX_ASSERT_MSG(false, "Unsupported PCI device ID %d", device_id_);
   }
-  ZX_ASSERT_MSG(false, "Unsupported PCI device ID %d", device_id_);
+
+  // `set_reg_value()` undoes any changes that SetPanelBacklightPwmParameters*()
+  // might have applied.
+  backlight_control_.set_reg_value(old_backlight_control)
+      .set_pwm_polarity_inverted(parameters.backlight_pwm_inverted);
+  if (backlight_control_.reg_value() != old_backlight_control) {
+    backlight_control_.WriteTo(mmio_buffer_);
+  }
 }
 
 void PchEngine::SetPanelBacklightPwmParametersKabyLake(const PchPanelParameters& parameters) {
@@ -751,19 +774,29 @@ void PchEngine::SetPanelBacklightPwmParametersKabyLake(const PchPanelParameters&
   static constexpr int32_t kMaxRawField = (1 << 16) - 1;
 
   // The division will not cause UB because `pwm_divider` is positive. The Intel
-  // PRMs don't explicitly state that `raw_frequency_divider` shouldn't be zero.
-  // We assume this is a good idea.
-  const int32_t raw_frequency_divider =
+  // PRMs don't explicitly state that the PWM frequency divider shouldn't be
+  // zero. We assume this is a good idea.
+  const int32_t new_frequency_divider =
       std::max(1, std::min(RawClockHz() / pwm_divider, kMaxRawField));
+  ZX_DEBUG_ASSERT(new_frequency_divider > 0);
+  const uint32_t raw_frequency_divider = static_cast<uint32_t>(new_frequency_divider);
 
   // The cast does not cause UB because `raw_frequncy_divider` fits in 16 bits.
   const uint32_t raw_duty_cycle =
       ScaledPwmDutyCycle(static_cast<uint32_t>(raw_frequency_divider),
                          backlight_freq_duty_.duty_cycle(), backlight_freq_duty_.freq_divider());
-  ZX_ASSERT(raw_duty_cycle <= raw_duty_cycle);
+  ZX_ASSERT(raw_duty_cycle <= raw_frequency_divider);
   ZX_ASSERT(raw_duty_cycle <= kMaxRawField);  // Implied by the check above.
 
   const uint32_t old_backlight_freq_duty = backlight_freq_duty_.reg_value();
+  if (backlight_freq_duty_.freq_divider() != raw_frequency_divider) {
+    // The backlight PWM must be turned off while changing the frequency. The
+    // SetPanelBacklightPwmParameters() implementation has a deeper explanation.
+    if (backlight_control_.pwm_counter_enabled()) {
+      backlight_control_.set_pwm_counter_enabled(false).WriteTo(mmio_buffer_);
+    }
+  }
+
   backlight_freq_duty_.set_freq_divider(raw_frequency_divider);
   backlight_freq_duty_.set_duty_cycle(raw_duty_cycle);
   if (backlight_freq_duty_.reg_value() != old_backlight_freq_duty) {
@@ -782,31 +815,24 @@ void PchEngine::SetPanelBacklightPwmParametersTigerLake(const PchPanelParameters
   const uint32_t old_frequency_divider = backlight_pwm_freq_.divider();
   const uint32_t old_duty_cycle = backlight_pwm_duty_.value();
 
+  if (old_frequency_divider != raw_frequency_divider) {
+    // The backlight PWM must be turned off while changing the frequency. The
+    // SetPanelBacklightPwmParameters() implementation has a deeper explanation.
+    //
+    // Doing this here means we don't need to worry about possibly (briefly)
+    // breaking the invariant that the PWM duty cycle must not exceed the PWM
+    // frequency divider.
+    if (backlight_control_.pwm_counter_enabled()) {
+      backlight_control_.set_pwm_counter_enabled(false).WriteTo(mmio_buffer_);
+    }
+    backlight_pwm_freq_.set_divider(raw_frequency_divider).WriteTo(mmio_buffer_);
+  }
+
   const uint32_t raw_duty_cycle =
       ScaledPwmDutyCycle(raw_frequency_divider, old_duty_cycle, old_frequency_divider);
   ZX_ASSERT(raw_duty_cycle <= raw_frequency_divider);
-
   if (old_duty_cycle != raw_duty_cycle) {
-    // We skip the `raw_frequency_divider` / `old_frequnecy_divider` comparison,
-    // at the cost of rarely performing an unnecessary MMIO write.
-    //
-    // ScaledPwmDutyCycle() returns `old_duty_cycle` if `raw_frequency_divider`
-    // equals `old_frequency_divider`, if it doesn't have to do any capping (to
-    // compensate for an incorrect configuration).  So, a new duty cycle value
-    // implies a new frequency, in most cases.
-    backlight_pwm_freq_.set_divider(raw_frequency_divider);
-    backlight_pwm_duty_.set_value(raw_duty_cycle);
-
-    if (old_duty_cycle <= raw_frequency_divider) {
-      // Prefer to write the registers in ascending MMIO address order. This is
-      // safe, as long as we don't write a frequency divider that's smaller than
-      // the existing duty cycle.
-      backlight_pwm_freq_.WriteTo(mmio_buffer_);
-      backlight_pwm_duty_.WriteTo(mmio_buffer_);
-    } else {
-      backlight_pwm_duty_.WriteTo(mmio_buffer_);
-      backlight_pwm_freq_.WriteTo(mmio_buffer_);
-    }
+    backlight_pwm_duty_.set_value(raw_duty_cycle).WriteTo(mmio_buffer_);
   }
 }
 

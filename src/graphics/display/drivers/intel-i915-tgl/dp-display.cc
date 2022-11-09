@@ -569,18 +569,23 @@ bool DpDisplay::EnsureEdpPanelIsPoweredOn() {
     zxlogf(WARNING, "Incorrect PCH configuration for eDP panel. Re-configuring.");
   }
   pch_engine_->SetPanelParameters(fixed_panel_parameters);
+  zxlogf(TRACE, "Setting eDP backlight brightness to %f", backlight_brightness_);
   pch_engine_->SetPanelBrightness(backlight_brightness_);
   zxlogf(TRACE, "eDP panel configured.");
 
   // Power up the panel, if necessary.
+  PchPanelPowerTarget power_target = pch_engine_->PanelPowerTarget();
 
   // The boot firmware might have left `force_power_on` set to true. To avoid
   // turning the panel off and on (and get the associated HPD interrupts), we
   // need to leave `force_power_on` as-is while we perform PCH-managed panel
   // power sequencing. Once the PCH keeps the panel on, we can set
   // `force_power_on` to false.
-  PchPanelPowerTarget power_target = pch_engine_->PanelPowerTarget();
   power_target.power_on = true;
+
+  // At least one Tiger Lake laptop panel fails to light up if we don't keep the
+  // PWM counter disabled through the panel power sequence.
+  power_target.brightness_pwm_counter_on = false;
   pch_engine_->SetPanelPowerTarget(power_target);
 
   // The Atlas panel takes more time to power up than required in the eDP and

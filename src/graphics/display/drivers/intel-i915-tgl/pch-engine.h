@@ -402,8 +402,12 @@ class PchEngine {
   // SetPanelParameters() helper that covers the backlight PWM.
   void SetPanelBacklightPwmParameters(const PchPanelParameters& parameters);
   // Kaby Lake-specific logic for configuring the backlight PWM.
+  // If the PWM frequency is changed, the PWM will be disabled first. The caller
+  // is responsible for re-enabling the PWM.
   void SetPanelBacklightPwmParametersKabyLake(const PchPanelParameters& parameters);
   // Tiger Lake-specific logic for configuring the backlight PWM.
+  // If the PWM frequency is changed, the PWM will be disabled first. The caller
+  // is responsible for re-enabling the PWM.
   void SetPanelBacklightPwmParametersTigerLake(const PchPanelParameters& parameters);
 
   fdf::MmioBuffer* const mmio_buffer_;
