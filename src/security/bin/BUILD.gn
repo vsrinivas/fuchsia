@@ -7,5 +7,6 @@ group("tests") {
   deps = [
     "cr50_agent:tests",
     "credential_manager:tests",
+    "kms:tests",
   ]
 }

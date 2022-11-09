@@ -13,7 +13,6 @@ group("tests") {
     "bin:tests",
     "codelab:tests",
     "fcrypto:tests",
-    "kms:tests",
     "pkg_test/tests",
     "scrutiny:tests",
     "tee_manager:tests",
