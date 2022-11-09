@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 # TODO(fxbug.dev/110255): Remove when all bringup builder bots with DFv2 enabled
-# include //src/bundles/buildbot:bringup instead of :bringup  into their base
+# include //bundles/buildbot:bringup instead of :bringup  into their base
 # package set.
 group("bringup") {
   testonly = true
@@ -124,8 +124,8 @@ group("bringup") {
   }
 }
 
-# The dependencies of this group should be the same as //src/buildbot:core. If
-# there is a target in //src/buildbot:core's dependencies that is not in this
+# The dependencies of this group should be the same as //src/buildbot/core. If
+# there is a target in //src/buildbot/core's dependencies that is not in this
 # group then that either means the target includes a test that is failing and
 # has been explicitly omitted or a new target was added to core's deps and this
 # assign needs to be updated. Explicitly omitted targets may have been expanded
@@ -137,12 +137,11 @@ group("bringup") {
 group("core") {
   testonly = true
 
-  # Assign should contain all deps of //src/buildbot:core.
+  # Assign should contain all deps of //src/buildbot/core.
   # TODO(fxbug.dev/108563): Add //src to deps when all tests in //src pass with
   # DFv2 enabled.
-  # TODO(fxbug.dev/108563): Add //src/buildbot:core_no_e2e to deps when all
-  # tests in //src/buildbot:core_no_e2e pass with DFv2 enabled.
   deps = [
+    "//bundles/buildbot/core:no_e2e",
     "//bundles/fidl:tests",
     "//sdk:tests",
     "//tools",
@@ -151,211 +150,16 @@ group("core") {
   # Ensure paths to known e2e test libs are always up-to-date.
   deps += e2e_test_libs
 
-  # Add-assign should contain all deps of //src/buildbot:core_no_e2e.
-  # TODO(fxbug.dev/108563): Remove the following add-assign when all tests in
-  # //src/buildbot:core_no_e2e pass with DFv2 enabled.
-  # TODO(fxbug.dev/108563): Add //src/buildbot:no_e2e_dep to deps when all tests
-  # in //src/buildbot:no_e2e_dep pass with DFv2 enabled.
-  deps += e2e_lib_unit_tests
-
-  # Add-assign should contain all deps of //src/buildbot:no_e2e_dep.
-  # TODO(fxbug.dev/108563): Remove the following add-assign when all tests in
-  # //src/buildbot:no_e2e_dep pass with DFv2 enabled.
-  # TODO(fxbug.dev/108563): Add //src:src_no_e2e to this add-assign when all
-  # tests in //src:src_no_e2e pass with DFv2 enabled.
-  deps += [
-    "//build:tests",
-    "//bundles/fidl:tests_no_e2e",
-    "//bundles/packages/tests:all",
-    "//bundles/tools",
-    "//examples",
-    "//examples:tests",
-    "//scripts:tests",
-    "//scripts/sdk/gn:tests",
-    "//sdk:tests_no_e2e",
-    "//src/diagnostics:tests",
-    "//src/media/audio/bundles:virtual_audio_driver",
-    "//src/media/bundles:examples",
-    "//src/media/bundles:services",
-    "//src/media/bundles:tools",
-    "//third_party/go:tests",
-    "//tools",
-    "//tools:tests_no_e2e",
-  ]
-
   # Add-assign should contain all deps of //src.
   # TODO(fxbug.dev/108563): Remove the following add-assign when all tests in
   # //src pass with DFv2 enabled.
   # TODO(fxbug.dev/108563): Add //src:e2e_tests to this add-assign when all
   # tests in //src:e2e_tests pass with DFv2 enabled.
-  # TODO(fxbug.dev/108563): Add //src:src_no_e2e to this add-assign when all
-  # tests in //src:src_no_e2e pass with DFv2 enabled.
   # TODO(fxbug.dev/108563): Add //src/connectivity to this add-assign when all
   # tests in //src/connectivity pass with DFv2 enabled.
-  deps += [ "//src/recovery" ]
-
-  # Add-assign should contain all deps of //src:src_no_e2e.
-  # TODO(fxbug.dev/108563): Remove the following add-assign when all tests in
-  # //src:src_no_e2e pass with DFv2 enabled.
-  # TODO(fxbug.dev/108563): Add //src:tests_no_e2e to this add-assign when all
-  # tests in //src:tests_no_e2e pass with DFv2 enabled.
-  # TODO(fxbug.dev/108563): Add //src/connectivity:connectivity_no_e2e to this
-  # add-assign when all tests in //src/connectivity:connectivity_no_e2e pass
-  # with DFv2 enabled.
   deps += [
-    "//src/camera",
-    "//src/cast",
-    "//src/chromium",
-    "//src/cobalt",
-    "//src/dart",
-    "//src/developer",
-    "//src/devices",
-    "//src/diagnostics",
-    "//src/experiences",
-    "//src/factory",
-    "//src/flutter",
-    "//src/fonts",
-    "//src/graphics",
-    "//src/identity",
-    "//src/intl",
-    "//src/lib",
-    "//src/media",
-    "//src/modular",
-    "//src/power",
-    "//src/proc",
-    "//src/recovery:recovery_no_e2e",
-    "//src/security",
-    "//src/session",
-    "//src/settings",
-    "//src/storage",
-    "//src/sys",
-    "//src/testing",
-    "//src/ui",
-    "//src/virtualization",
-  ]
-
-  # Add-assign should contain all deps of
-  # //src/connectivity:connectivity_no_e2e.
-  # TODO(fxbug.dev/108563): Add //src/connectivity:tests_no_e2e to this
-  # add-assign when all tests in //src/connectivity:tests_no_e2e pass with DFv2
-  # enabled.
-  deps += [
-    "//src/connectivity/bluetooth",
-    "//src/connectivity/location",
-    "//src/connectivity/lowpan",
-    "//src/connectivity/overnet",
-    "//src/connectivity/ppp",
-    "//src/connectivity/weave",
-    "//src/connectivity/wlan",
-  ]
-
-  # Add-assign should contain all deps of //src:tests_no_e2e.
-  # TODO(fxbug.dev/108563): Remove the following add-assign when all tests in
-  # //src:tests_no_e2e pass with DFv2 enabled.
-  # TODO(fxbug.dev/108563): Add //src/developer:tests pass to this add-assign
-  # when all tests in //src/developer:tests pass with DFv2 enabled.
-  # TODO(fxbug.dev/108563): Add //src/connectivity:tests_no_e2e pass to this
-  # add-assign when all tests in //src/connectivity:tests_no_e2e pass with DFv2
-  # enabled.
-  deps += [
-    "//src/bringup:tests",
-    "//src/camera:tests",
-    "//src/chromium:tests",
-    "//src/cobalt:tests",
-    "//src/devices:tests",
-    "//src/diagnostics:tests",
-    "//src/experiences:tests",
-    "//src/factory:tests",
-    "//src/firmware:tests",
-    "//src/flutter:tests",
-    "//src/fonts:tests",
-    "//src/graphics:tests",
-    "//src/hwinfo:tests",
-    "//src/identity:tests",
-    "//src/intl:tests",
-    "//src/lib:tests",
-    "//src/media:tests",
-    "//src/modular:tests",
-    "//src/performance:tests",
-    "//src/power:tests",
-    "//src/proc:tests",
-    "//src/recovery:tests_no_e2e",
-    "//src/security:tests",
-    "//src/session:tests",
-    "//src/settings:tests",
-    "//src/storage:tests",
-    "//src/sys:tests",
-    "//src/testing:tests",
-    "//src/ui:tests",
-    "//src/virtualization:tests",
-    "//src/zircon:tests",
-  ]
-
-  # Add-assign should contain all deps of //src/connectivity:tests_no_e2e.
-  # TODO(fxbug.dev/108563): Remove the following add-assign when all tests in
-  # //src/connectivity:tests_no_e2e pass with DFv2 enabled.
-  # TODO(fxbug.dev/108563): Add //src/connectivity/network:tests to this
-  # add-assign when all tests in //src/connectivity/network:tests pass with DFv2
-  # enabled.
-  deps += [
-    "//src/connectivity/bluetooth:tests",
-    "//src/connectivity/ethernet:tests",
-    "//src/connectivity/lib:tests",
-    "//src/connectivity/location:tests",
-    "//src/connectivity/lowpan:tests",
-    "//src/connectivity/overnet:tests_no_e2e",
-    "//src/connectivity/ppp:tests",
-    "//src/connectivity/telephony:tests",
-    "//src/connectivity/weave:tests",
-    "//src/connectivity/wlan:tests",
-  ]
-
-  # Add-assign should contain all deps of //src/connectivity/network:tests.
-  # TODO(fxbug.dev/108563): Remove the following add-assign when all tests in
-  # //src/connectivity/network:tests pass with DFv2 enabled.
-  # TODO(fxbug.dev/108563): Add //src/connectivity/network/testing:tests to this
-  # add-assign when all tests in //src/connectivity/network/testing:tests pass
-  # with DFv2 enabled.
-  deps += [
-    "//src/connectivity/network/dhcpv4:tests",
-    "//src/connectivity/network/dhcpv6:tests",
-    "//src/connectivity/network/dns:tests",
-    "//src/connectivity/network/drivers:tests",
-    "//src/connectivity/network/http-client:tests",
-    "//src/connectivity/network/lib:tests",
-    "//src/connectivity/network/mdns:tests",
-    "//src/connectivity/network/net-cli:tests",
-    "//src/connectivity/network/netcfg:tests",
-    "//src/connectivity/network/netstack:component-with-tracing",
-    "//src/connectivity/network/netstack:tests",
-    "//src/connectivity/network/netstack3:tests",
-    "//src/connectivity/network/reachability:tests",
-    "//src/connectivity/network/tests",
-    "//src/connectivity/network/tools:tests",
-    "//src/connectivity/network/tun:tests",
-  ]
-
-  # Add-assign should contain all deps of
-  # //src/connectivity/network/testing:tests.
-  # TODO(fxbug.dev/108563): Remove the following add-assign when all tests in
-  # //src/connectivity/network/testing:tests pass with DFv2 enabled.
-  # TODO(fxbug.dev/108563): Add
-  # //src/connectivity/network/testing/conformance:tests to this add-assign when
-  # all tests in //src/connectivity/network/testing/conformance:tests pass with
-  # DFv2 enabled.
-  deps += [
-    "//src/connectivity/network/testing/netemul:tests",
-    "//src/connectivity/network/testing/network-test-realm:tests",
-  ]
-
-  # Add-assign should contain all deps of
-  # //src/connectivity/network/testing/conformance:tests
-  # TODO(fxbug.dev/108563): Remove the following add-assign when all tests in
-  # //src/connectivity/network/testing/conformance:tests pass with DFv2 enabled.
-  deps += [
-    "//src/connectivity/network/testing/conformance/emulator:tests",
-    "//src/connectivity/network/testing/conformance/expect:tests",
-    "//src/connectivity/network/testing/conformance/parseoutput:tests",
+    "//src:src_no_e2e",
+    "//src/recovery",
   ]
 
   # Add-assign should contain all deps of //src:e2e_tests.
@@ -451,8 +255,8 @@ group("workstation_host_tests") {
 # target that has been explicitly omitted should also have a TODO comment within
 # this group template invocation.
 # TODO(fxbug.dev/105182): Remove when all workstation builder bots with DFv2
-# enabled include //src/bundles/buildbot:workstation instead of :workstation
-# into their base package set.
+# enabled include //bundles/buildbot/workstation instead of :workstation into
+# their base package set.
 group("workstation") {
   testonly = true
   deps = [
