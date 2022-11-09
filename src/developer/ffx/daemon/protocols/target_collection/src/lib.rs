@@ -426,7 +426,8 @@ fn handle_fastboot_target(tc: &Rc<TargetCollection>, target: ffx::FastbootTarget
 }
 
 fn handle_mdns_event(tc: &Rc<TargetCollection>, t: ffx::TargetInfo) {
-    let t = TargetInfo {
+    let ssh_address = t.ssh_address;
+    let mut t = TargetInfo {
         nodename: t.nodename,
         addresses: t
             .addresses
@@ -443,6 +444,11 @@ fn handle_mdns_event(tc: &Rc<TargetCollection>, t: ffx::TargetInfo) {
         },
         ..Default::default()
     };
+
+    if let Some(ffx::TargetAddrInfo::IpPort(ssh_address)) = ssh_address {
+        t.ssh_port = Some(ssh_address.port);
+    }
+
     if t.fastboot_interface.is_some() {
         tracing::trace!(
             "Found new fastboot target via mdns: {}. Address: {:?}",

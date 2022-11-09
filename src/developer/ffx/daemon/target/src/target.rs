@@ -303,8 +303,8 @@ impl Target {
             Self::new_with_serial(&s)
         } else {
             let res = Self::new_with_addrs(t.nodename.take(), t.addresses.drain(..).collect());
-            *res.ssh_host_address.borrow_mut() =
-                t.ssh_host_address.take().map(|a| HostAddr::from(a));
+            *res.ssh_host_address.borrow_mut() = t.ssh_host_address.take().map(HostAddr::from);
+            *res.ssh_port.borrow_mut() = t.ssh_port;
             res
         }
     }

@@ -142,10 +142,10 @@ pub(crate) async fn discovery_loop(config: DiscoveryConfig) {
             // unanswerable queries.
             let mut to_delete = HashSet::<IpAddr>::new();
             for ip in socket_tasks.lock().await.keys() {
-                to_delete.insert(ip.clone());
+                to_delete.insert(*ip);
             }
 
-            for iface in get_mcast_interfaces().unwrap_or(Vec::new()) {
+            for iface in get_mcast_interfaces().unwrap_or_default() {
                 match iface.id() {
                     Ok(id) => {
                         if let Some(sock) = v6_listen_socket.upgrade() {
@@ -160,7 +160,7 @@ pub(crate) async fn discovery_loop(config: DiscoveryConfig) {
                 for addr in iface.addrs.iter() {
                     to_delete.remove(&addr.ip());
 
-                    let mut addr = addr.clone();
+                    let mut addr = *addr;
                     addr.set_port(0);
 
                     // TODO(raggi): remove duplicate joins, log unexpected errors
@@ -176,7 +176,7 @@ pub(crate) async fn discovery_loop(config: DiscoveryConfig) {
 
                     let sock = iface
                         .id()
-                        .map(|id| match make_sender_socket(id, addr.clone(), ttl) {
+                        .map(|id| match make_sender_socket(id, addr, ttl) {
                             Ok(sock) => Some(sock),
                             Err(err) => {
                                 tracing::info!("mdns: failed to bind {}: {}", &addr, err);
@@ -188,7 +188,7 @@ pub(crate) async fn discovery_loop(config: DiscoveryConfig) {
 
                     if sock.is_some() {
                         socket_tasks.lock().await.insert(
-                            addr.ip().clone(),
+                            addr.ip(),
                             Task::local(query_recv_loop(
                                 Rc::new(sock.unwrap()),
                                 mdns_protocol.clone(),
@@ -221,31 +221,72 @@ fn make_target<B: ByteSlice + Clone>(
 ) -> Option<(ffx::TargetInfo, u32)> {
     let mut nodename = String::new();
     let mut ttl = 0u32;
-    let src = ffx::TargetAddrInfo::Ip(ffx::TargetIp {
+    let mut ssh_port: u16 = 0;
+    let mut ssh_address = None;
+    let mut src = ffx::TargetAddrInfo::Ip(ffx::TargetIp {
         ip: match &src {
-            SocketAddr::V6(s) => IpAddress::Ipv6(Ipv6Address { addr: s.ip().octets().into() }),
-            SocketAddr::V4(s) => IpAddress::Ipv4(Ipv4Address { addr: s.ip().octets().into() }),
+            SocketAddr::V6(s) => IpAddress::Ipv6(Ipv6Address { addr: s.ip().octets() }),
+            SocketAddr::V4(s) => IpAddress::Ipv4(Ipv4Address { addr: s.ip().octets() }),
         },
         scope_id: if let SocketAddr::V6(s) = &src { s.scope_id() } else { 0 },
     });
     let fastboot_interface = is_fastboot_response(&msg);
+
     for record in msg.additional.iter() {
-        if record.rtype != dns::Type::A && record.rtype != dns::Type::Aaaa {
-            continue;
-        }
-        if nodename.len() == 0 {
-            write!(nodename, "{}", record.domain).unwrap();
-            nodename = nodename.trim_end_matches(".local").into();
-        }
-        if ttl == 0 {
-            ttl = record.ttl;
-        }
-        // The records here also have the IP addresses of
-        // the machine, however these could be different if behind a NAT
-        // (as with QEMU). Later it might be useful to store them in the
-        // Target struct.
+        match record.rtype {
+            // Emulator adds Txt records to share the user mode networking configuration. This information
+            // should override any A record information.
+            dns::Type::Txt => {
+                if let Some(data) = record.rdata.bytes() {
+                    let txt_lines: Vec<String> = decode_txt_rdata(data).unwrap_or_default();
+                    let mut ip_addr: Option<IpAddress> = None;
+                    for txt in &txt_lines {
+                        if let Some((name, value)) = txt.split_once(':') {
+                            match name {
+                                "host" => {
+                                    if let Ok(addr) = value.parse::<Ipv4Addr>() {
+                                        let ip =
+                                            IpAddress::Ipv4(Ipv4Address { addr: addr.octets() });
+                                        src = ffx::TargetAddrInfo::Ip(ffx::TargetIp {
+                                            ip,
+                                            scope_id: 0,
+                                        });
+                                        ip_addr = Some(ip);
+                                    }
+                                }
+                                "ssh" => {
+                                    ssh_port = value.parse().unwrap_or(22);
+                                }
+                                _ => {}
+                            };
+                        }
+                    }
+                    if let Some(ip) = ip_addr {
+                        ssh_address = Some(ffx::TargetAddrInfo::IpPort(ffx::TargetIpPort {
+                            ip,
+                            scope_id: 0,
+                            port: ssh_port,
+                        }));
+                    }
+                    tracing::info!("emulator mdns txt {:?} {:?}", &txt_lines, record.domain);
+                } else {
+                    tracing::debug!("no data in txt record {:?}", record.domain);
+                }
+            }
+            dns::Type::A | dns::Type::Aaaa => {
+                if nodename.is_empty() {
+                    write!(nodename, "{}", record.domain).unwrap();
+                    nodename = nodename.trim_end_matches(".local").into();
+                }
+                if ttl == 0 {
+                    ttl = record.ttl;
+                }
+            }
+            _ => {}
+        };
     }
-    if nodename.len() == 0 || ttl == 0 {
+
+    if nodename.is_empty() || ttl == 0 {
         return None;
     }
     Some((
@@ -254,10 +295,30 @@ fn make_target<B: ByteSlice + Clone>(
             addresses: Some(vec![src]),
             target_state: fastboot_interface.map(|_| ffx::TargetState::Fastboot),
             fastboot_interface,
+            ssh_address,
             ..ffx::TargetInfo::EMPTY
         },
         ttl,
     ))
+}
+
+/// Read the bytes from the txt record. These are encoded
+/// as <len><string> where len is u8. multiple strings
+/// can be in encoded.
+fn decode_txt_rdata(data: &[u8]) -> Result<Vec<String>> {
+    // Each text element is preceded by the length
+    let mut ret: Vec<String> = vec![];
+    let mut pos = 0;
+    while pos < data.len() {
+        let l: usize = data[pos].into();
+        if l == 0 {
+            break;
+        }
+        let s = std::str::from_utf8(&data[pos + 1..pos + l + 1])?;
+        ret.push(s.to_string());
+        pos = pos + l + 1;
+    }
+    Ok(ret)
 }
 
 // recv_loop reads packets from sock. If the packet is a Fuchsia mdns packet, a
@@ -270,7 +331,7 @@ async fn recv_loop(sock: Rc<UdpSocket>, mdns_protocol: Weak<MdnsProtocolInner>) 
 
     loop {
         let mut buf = &mut [0u8; 1500][..];
-        let addr = match sock.recv_from(&mut buf).await {
+        let addr = match sock.recv_from(buf).await {
             Ok((sz, addr)) => {
                 buf = &mut buf[..sz];
                 addr
@@ -301,10 +362,14 @@ async fn recv_loop(sock: Rc<UdpSocket>, mdns_protocol: Weak<MdnsProtocolInner>) 
             }
         };
 
+        // Only interested in fuchsia services or fastboot.
         if !is_fuchsia_response(&msg) && is_fastboot_response(&msg).is_none() {
             continue;
         }
-        if !contains_source_address(&addr, &msg) {
+        // Source addresses need to be present in the response, or be a TXT record which
+        // contains address information about user mode networking being used by an emulator
+        // instance.
+        if !contains_source_address(&addr, &msg) && !contains_txt_response(&msg) {
             continue;
         }
 
@@ -343,8 +408,8 @@ fn construct_query_buf(service: &str) -> &'static [u8] {
 lazy_static::lazy_static! {
     static ref QUERY_BUF: [&'static [u8]; 2] =
     [
-        &construct_query_buf("_fuchsia._udp.local"),
-        &construct_query_buf("_fastboot._tcp.local"),
+        (construct_query_buf("_fuchsia._udp.local")),
+        (construct_query_buf("_fastboot._tcp.local")),
     ];
 }
 
@@ -361,10 +426,12 @@ async fn query_loop(sock: Rc<UdpSocket>, interval: Duration) {
 
     loop {
         for query_buf in QUERY_BUF.iter() {
-            if let Err(err) = sock.send_to(&query_buf, to_addr).await {
+            if let Err(err) = sock.send_to(query_buf, to_addr).await {
                 tracing::info!(
                     "mdns query failed from {}: {}",
-                    sock.local_addr().map(|a| a.to_string()).unwrap_or("unknown".to_string()),
+                    sock.local_addr()
+                        .map(|a| a.to_string())
+                        .unwrap_or_else(|_| "unknown".to_string()),
                     err
                 );
                 return;
@@ -395,7 +462,7 @@ async fn query_recv_loop(
 
     tracing::info!("mdns: started query socket {}", &addr);
 
-    let _ = futures::select!(
+    futures::select!(
         _ = recv => {},
         _ = query => {},
     );
@@ -403,7 +470,9 @@ async fn query_recv_loop(
     drop(recv);
     drop(query);
 
-    tasks.lock().await.remove(&addr.ip()).map(drop);
+    if let Some(a) = tasks.lock().await.remove(&addr.ip()) {
+        drop(a)
+    }
     tracing::info!("mdns: shut down query socket {}", &addr);
 }
 
@@ -432,14 +501,17 @@ fn contains_source_address<B: zerocopy::ByteSlice + Clone>(
     false
 }
 
+fn contains_txt_response<B: zerocopy::ByteSlice + Clone>(m: &dns::Message<B>) -> bool {
+    m.answers.iter().any(|a| a.rtype == dns::Type::Txt)
+}
 fn is_fuchsia_response<B: zerocopy::ByteSlice + Clone>(m: &dns::Message<B>) -> bool {
-    m.answers.len() >= 1 && m.answers[0].domain == "_fuchsia._udp.local"
+    m.answers.iter().any(|a| a.domain == "_fuchsia._udp.local")
 }
 
 fn is_fastboot_response<B: zerocopy::ByteSlice + Clone>(
     m: &dns::Message<B>,
 ) -> Option<ffx::FastbootInterface> {
-    if m.answers.len() < 1 {
+    if m.answers.is_empty() {
         None
     } else if m.answers[0].domain == "_fastboot._udp.local" {
         Some(ffx::FastbootInterface::Udp)
@@ -510,7 +582,7 @@ fn make_sender_socket(interface_id: u32, addr: SocketAddr, ttl: u32) -> Result<U
             )
             .context("construct datagram socket")?;
             socket.set_ttl(ttl).context("set_ttl")?;
-            socket.set_multicast_if_v4(&saddr.ip()).context("set_multicast_if_v4")?;
+            socket.set_multicast_if_v4(saddr.ip()).context("set_multicast_if_v4")?;
             socket.set_multicast_ttl_v4(ttl).context("set_multicast_ttl_v4")?;
             socket.bind(&addr.into()).context("bind")?;
             socket
@@ -541,7 +613,10 @@ mod tests {
     use ::mdns::protocol::{
         Class, DomainBuilder, EmbeddedPacketBuilder, Message, MessageBuilder, RecordBuilder, Type,
     };
+    use fidl_fuchsia_developer_ffx::{TargetAddrInfo::IpPort, TargetIpPort};
+    use fidl_fuchsia_net::IpAddress::Ipv4;
     use packet::{InnerPacketBuilder, ParseBuffer, Serializer};
+    use std::io::Write;
 
     #[test]
     fn test_make_target() {
@@ -555,16 +630,59 @@ mod tests {
             .unwrap_or_else(|_| panic!("failed to serialize"));
         let parsed = msg_bytes.parse::<Message<_>>().expect("failed to parse");
         let addr: SocketAddr = (MDNS_MCAST_V4, 12).into();
-        let (t, ttl) = make_target(addr.clone(), parsed).unwrap();
+        let (t, ttl) = make_target(addr, parsed).unwrap();
         assert_eq!(ttl, 4500);
         assert_eq!(
             t.addresses.as_ref().unwrap()[0],
             ffx::TargetAddrInfo::Ip(ffx::TargetIp {
-                ip: IpAddress::Ipv4(Ipv4Address { addr: MDNS_MCAST_V4.octets().into() }),
+                ip: IpAddress::Ipv4(Ipv4Address { addr: MDNS_MCAST_V4.octets() }),
                 scope_id: 0
             })
         );
         assert_eq!(t.nodename.unwrap(), "foo._fuchsia._udp");
+    }
+
+    #[test]
+    fn test_make_target_from_txt() -> Result<()> {
+        let nodename = DomainBuilder::from_str("foo._fuchsia._udp.local").unwrap();
+        let mut emu_data: Vec<u8> = vec![];
+        let emu_strings = ["host:123.11.22.33", "ssh:54321", "debug:1111"];
+        for d in emu_strings {
+            emu_data.write_all(&[d.len() as u8])?;
+            emu_data.write_all(d.as_bytes())?;
+        }
+        let record =
+            RecordBuilder::new(nodename.clone(), Type::A, Class::Any, true, 4500, &[8, 8, 8, 8]);
+        let text_record =
+            RecordBuilder::new(nodename, Type::Txt, Class::Any, true, 4500, &emu_data);
+        let mut message = MessageBuilder::new(0, true);
+        message.add_additional(record);
+        message.add_additional(text_record);
+        let mut msg_bytes = message
+            .into_serializer()
+            .serialize_vec_outer()
+            .unwrap_or_else(|_| panic!("failed to serialize"));
+        let parsed = msg_bytes.parse::<Message<_>>().expect("failed to parse");
+        let addr: SocketAddr = (MDNS_MCAST_V4, 12).into();
+        let (t, ttl) = make_target(addr, parsed).unwrap();
+        assert_eq!(ttl, 4500);
+        assert_eq!(
+            t.addresses.as_ref().unwrap()[0],
+            ffx::TargetAddrInfo::Ip(ffx::TargetIp {
+                ip: IpAddress::Ipv4(Ipv4Address { addr: [123, 11, 22, 33] }),
+                scope_id: 0
+            })
+        );
+        assert_eq!(
+            t.ssh_address,
+            Some(IpPort(TargetIpPort {
+                ip: Ipv4(Ipv4Address { addr: [123, 11, 22, 33] }),
+                scope_id: 0,
+                port: 54321
+            }))
+        );
+        assert_eq!(t.nodename.unwrap(), "foo._fuchsia._udp");
+        Ok(())
     }
 
     #[test]
@@ -576,7 +694,7 @@ mod tests {
             Class::Any,
             true,
             4500,
-            &[0x03, 'f' as u8, 'o' as u8, 'o' as u8, 0],
+            &[0x03, b'f', b'o', b'o', 0],
         );
         let mut message = MessageBuilder::new(0, true);
         message.add_additional(record);
@@ -586,7 +704,7 @@ mod tests {
             .unwrap_or_else(|_| panic!("failed to serialize"));
         let parsed = msg_bytes.parse::<Message<_>>().expect("failed to parse");
         let addr: SocketAddr = (MDNS_MCAST_V4, 12).into();
-        assert!(make_target(addr.clone(), parsed).is_none());
+        assert!(make_target(addr, parsed).is_none());
     }
 
     /// Create an mdns advertisement packet as network bytes

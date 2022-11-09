@@ -152,7 +152,12 @@ impl TargetCollection {
             if let Some(new_name) = new_target.nodename() {
                 to_update.set_nodename(new_name);
             }
-
+            if let Some(ssh_port) = new_target.ssh_port() {
+                // Ony set the updated ssh port if it is None.
+                if to_update.ssh_port().is_none() {
+                    to_update.set_ssh_port(Some(ssh_port));
+                }
+            }
             to_update.update_last_response(new_target.last_response());
             let mut addrs = new_target.addrs.borrow().iter().cloned().collect::<Vec<_>>();
             addrs.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
