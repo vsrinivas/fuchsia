@@ -138,7 +138,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//src/sys/startup",
     "//src/ui/backlight/bin/backlight",
-    "//src/ui/backlight/drivers/ti-lp8556:ti-lp8556-test",
     "//src/ui/backlight/tests:backlight-test",
     "//src/ui/bin/hardware_display_controller_provider/fake:bin",
     "//src/ui/bin/hardware_display_controller_provider/fake:lib",
