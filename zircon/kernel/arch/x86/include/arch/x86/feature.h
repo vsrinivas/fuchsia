@@ -309,6 +309,7 @@ extern bool g_ssb_mitigated;
 extern bool g_l1d_flush_on_vmentry;
 extern bool g_md_clear_on_user_return;
 extern bool g_has_enhanced_ibrs;
+extern bool g_has_meltdown;
 
 static inline const x86_microarch_config_t* x86_get_microarch_config() {
   return x86_microarch_config;
@@ -331,6 +332,8 @@ static inline bool x86_cpu_should_l1d_flush_on_vmentry() { return g_l1d_flush_on
 static inline bool x86_cpu_should_md_clear_on_user_return() { return g_md_clear_on_user_return; }
 
 static inline bool x86_cpu_has_enhanced_ibrs() { return g_has_enhanced_ibrs; }
+
+static inline bool x86_cpu_has_meltdown() { return g_has_meltdown; }
 
 // Vendor-specific per-cpu init functions, in amd.cpp/intel.cpp
 void x86_amd_init_percpu();

@@ -107,10 +107,6 @@
 
 #include <arch/x86/page_tables/page_tables.h>
 
-extern int g_enable_isolation;
-
-static inline bool x86_kpti_is_enabled() { return g_enable_isolation == 1; }
-
 struct map_range {
   vaddr_t start_vaddr;
   paddr_t start_paddr; /* Physical address in the PAE mode is 32 bits wide */

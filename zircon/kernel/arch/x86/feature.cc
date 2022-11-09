@@ -447,7 +447,6 @@ void x86_feature_debug(void) {
   print_property("md_clear_user_return", g_md_clear_on_user_return);
   print_property("swapgs_bug", g_has_swapgs_bug);
   print_property("pcid_good", g_x86_feature_pcid_good);
-  print_property("pti_enabled", x86_kpti_is_enabled());
   print_property("spec_ctrl", g_has_spec_ctrl);
   print_property("ssb", g_has_ssb);
   print_property("ssbd", g_has_ssbd);

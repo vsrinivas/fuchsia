@@ -61,19 +61,6 @@ impact.
 *   If set to false, no flush is executed on structures.
 )""")
 
-DEFINE_OPTION("kernel.x86.pti.enable", uint32_t, x86_pti_enable, {2}, R"""(
-Page table isolation configures user page tables to not have kernel text or
-data mapped. This may impact performance negatively. This is a mitigation
-for Meltdown (AKA CVE-2017-5754).
-
-* If set to 1, this force-enables page table isolation.
-* If set to 0, this force-disables page table isolation. This may be insecure.
-* If set to 2 or unset (the default), this enables page table isolation on
-CPUs vulnerable to Meltdown.
-
-TODO(joshuaseaton): make this an enum instead of using magic integers.
-)""")
-
 DEFINE_OPTION("kernel.x86.spec_store_bypass_disable", bool, x86_spec_store_bypass_disable, {false},
               R"""(
 Spec-store-bypass (Spectre V4) is a speculative execution information leak

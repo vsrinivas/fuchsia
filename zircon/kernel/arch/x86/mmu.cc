@@ -10,7 +10,6 @@
 #include <lib/arch/sysreg.h>
 #include <lib/arch/x86/boot-cpuid.h>
 #include <lib/arch/x86/system.h>
-#include <lib/boot-options/boot-options.h>
 #include <lib/counters.h>
 #include <lib/zircon-internal/macros.h>
 #include <string.h>
@@ -50,9 +49,6 @@ KCOUNTER(ept_tlb_invalidations, "mmu.ept_tlb_invalidations")
  * newer versions fetched below */
 static uint8_t g_max_vaddr_width = 48;
 uint8_t g_max_paddr_width = 32;
-
-/* 1 if page table isolation should be used, 0 if not.  -1 if uninitialized. */
-int g_enable_isolation = -1;
 
 /* True if the system supports 1GB pages */
 static bool supports_huge_pages = false;
@@ -97,8 +93,6 @@ uint64_t kernel_relocated_base = 0xffffffff00000000;
 /* kernel base top level page table in physical space */
 static const paddr_t kernel_pt_phys =
     (vaddr_t)KERNEL_PT - (vaddr_t)__code_start + KERNEL_LOAD_OFFSET;
-
-extern bool g_has_meltdown;
 
 paddr_t x86_kernel_cr3(void) { return kernel_pt_phys; }
 
@@ -522,8 +516,6 @@ uint X86PageTableEpt::pt_flags_to_mmu_flags(PtFlags flags, PageTableLevel level)
   return mmu_flags;
 }
 
-static void disable_global_pages() { arch::X86Cr4::Read().set_pge(false).Write(); }
-
 void x86_mmu_early_init() {
   x86_mmu_percpu_init();
 
@@ -557,25 +549,11 @@ void x86_mmu_early_init() {
   LTRACEF("paddr_width %u vaddr_width %u\n", g_max_paddr_width, g_max_vaddr_width);
 }
 
-void x86_mmu_init(void) {
-  g_enable_isolation =
-      !gBootOptions->x86_disable_spec_mitigations &&
-      (gBootOptions->x86_pti_enable == 1 || (gBootOptions->x86_pti_enable == 2 && g_has_meltdown));
-  printf("Kernel PTI %s\n", g_enable_isolation ? "enabled" : "disabled");
-
+void x86_mmu_init() {
   ASSERT_MSG(g_max_vaddr_width >= kX86VAddrBits,
              "Maximum number of virtual address bits (%u) is less than the assumed number of bits"
              " being used (%u)\n",
              g_max_vaddr_width, kX86VAddrBits);
-
-  // TODO(crbug.com/fuchsia/31415): Currently KPTI disables Global pages; we might be able to do
-  // better, to use global pages for all user-pages, to avoid implicit TLB entry invalidations
-  // on user<->kernel transitions.
-  //
-  // All other CPUs will do this in x86_mmu_percpu_init
-  if (g_enable_isolation) {
-    disable_global_pages();
-  }
 }
 
 X86PageTableBase::X86PageTableBase() {}
@@ -819,12 +797,6 @@ void x86_mmu_percpu_init(void) {
   uint64_t efer_msr = read_msr(X86_MSR_IA32_EFER);
   efer_msr |= X86_EFER_NXE;
   write_msr(X86_MSR_IA32_EFER, efer_msr);
-
-  // Explicitly check that this is 1, since if this is CPU 0, this may not be
-  // initialized yet.
-  if (g_enable_isolation == 1) {
-    disable_global_pages();
-  }
 }
 
 X86ArchVmAspace::~X86ArchVmAspace() {
