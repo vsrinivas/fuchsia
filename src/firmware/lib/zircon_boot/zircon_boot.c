@@ -125,10 +125,35 @@ static ZirconBootResult LoadKernel(void* load_address, size_t load_address_size,
   return kBootResultOK;
 }
 
-static AbrSlotIndex GetBootSlot(AbrOps* abr_ops, ForceRecovery force_recovery,
-                                bool update_metadata) {
-  return force_recovery == kForceRecoveryOn ? kAbrSlotIndexR
-                                            : AbrGetBootSlot(abr_ops, update_metadata, NULL);
+static bool ReadAbrMetaDataCache(void* context, size_t size, uint8_t* buffer) {
+  assert(size <= sizeof(AbrData));
+  memcpy(buffer, context, size);
+  return true;
+}
+
+static bool WriteAbrMetaDataCache(void* context, const uint8_t* buffer, size_t size) {
+  assert(size <= sizeof(AbrData));
+  memcpy(context, buffer, size);
+  return true;
+}
+
+// TODO(b/258467776): We can't use AbrGetBootSlot(.. update_metadata = false, ..) to get the slot to
+// boot because it doesn't consider one shot recovery.
+AbrSlotIndex AbrPeekBootSlot(const AbrOps* abr_ops) {
+  // Load abr metadata into memory and simulate storage.
+  uint8_t cache[sizeof(AbrData)];
+  assert(abr_ops->read_abr_metadata);
+  if (!abr_ops->read_abr_metadata(abr_ops->context, sizeof(cache), cache)) {
+    return kAbrSlotIndexR;
+  }
+
+  AbrOps cache_ops;
+  memset(&cache_ops, 0, sizeof(AbrOps));
+  cache_ops.context = cache;
+  cache_ops.read_abr_metadata = ReadAbrMetaDataCache;
+  cache_ops.write_abr_metadata = WriteAbrMetaDataCache;
+  AbrSlotIndex ret = AbrGetBootSlot(&cache_ops, true, NULL);
+  return ret;
 }
 
 static ZirconBootResult LoadImage(ZirconBootOps* ops, void* load_address, size_t load_address_size,
@@ -139,7 +164,8 @@ static ZirconBootResult LoadImage(ZirconBootOps* ops, void* load_address, size_t
   do {
     if (ops->firmware_can_boot_kernel_slot) {
       // Get the target slot about to be booted
-      AbrSlotIndex target_slot = GetBootSlot(&abr_ops, force_recovery, false);
+      AbrSlotIndex target_slot =
+          force_recovery == kForceRecoveryOn ? kAbrSlotIndexR : AbrPeekBootSlot(&abr_ops);
       bool supported = false;
       if (!ZIRCON_BOOT_OPS_CALL(ops, firmware_can_boot_kernel_slot, target_slot, &supported)) {
         zircon_boot_dlog("Fail to check slot supported\n");
@@ -154,7 +180,8 @@ static ZirconBootResult LoadImage(ZirconBootOps* ops, void* load_address, size_t
       }
     }
 
-    cur_slot = GetBootSlot(&abr_ops, force_recovery, true);
+    cur_slot =
+        force_recovery == kForceRecoveryOn ? kAbrSlotIndexR : AbrGetBootSlot(&abr_ops, true, NULL);
     ret = LoadKernel(load_address, load_address_size, cur_slot, ops);
     if (ret != kBootResultOK) {
       zircon_boot_dlog("ABR: failed to load slot %d\n", cur_slot);

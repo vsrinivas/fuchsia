@@ -5,6 +5,8 @@
 #ifndef SRC_FIRMWARE_LIB_ZIRCON_BOOT_UTILS_H_
 #define SRC_FIRMWARE_LIB_ZIRCON_BOOT_UTILS_H_
 
+#include <lib/abr/abr.h>
+
 #define METHOD_CALL_ARGS(...) , ##__VA_ARGS__
 #define ZIRCON_BOOT_OPS_CALL(zircon_boot_ops, method, ...)                  \
   ({                                                                        \
@@ -18,6 +20,16 @@
 #define zircon_boot_dlog(...) printf("zircon_boot: " __VA_ARGS__)
 #else
 #define zircon_boot_dlog(...)
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+AbrSlotIndex AbrPeekBootSlot(const AbrOps* abr_ops);
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif  // SRC_FIRMWARE_LIB_ZIRCON_BOOT_UTILS_H_

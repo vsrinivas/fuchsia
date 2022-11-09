@@ -12,7 +12,6 @@ common_vars = {
     "lib/zircon_boot/zircon_boot.h",
   ]
   sources = [
-    "utils.h",
     "zbi_utils.c",
     "zircon_boot.c",
     "zircon_vboot.c",

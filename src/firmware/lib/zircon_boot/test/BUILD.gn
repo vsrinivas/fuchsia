@@ -18,6 +18,7 @@ group("test") {
 
 source_set("mock_zircon_boot_lib") {
   public = [ "../include/lib/zircon_boot/test/mock_zircon_boot_ops.h" ]
+  include_dirs = [ ".." ]
   sources = [ "mock_zircon_boot_ops.cc" ]
   deps = [
     "//src/firmware/lib/zbi:in_tree",

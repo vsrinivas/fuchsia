@@ -157,6 +157,19 @@ void TestOsAbrSuccessfulBoot(AbrSlotIndex initial_active_slot, AbrSlotIndex expe
   ASSERT_NO_FATAL_FAILURE(ValidateBootedSlot(dev.get(), expected_slot));
 }
 
+void TestOsAbrSuccessfulBootOneShotRecovery(ForceRecovery force_recovery) {
+  std::unique_ptr<MockZirconBootOps> dev;
+  ASSERT_NO_FATAL_FAILURE(CreateMockZirconBootOps(&dev));
+  ZirconBootOps zircon_boot_ops = dev->GetZirconBootOps();
+  zircon_boot_ops.firmware_can_boot_kernel_slot = nullptr;
+  AbrOps abr_ops = dev->GetAbrOps();
+  AbrSetOneShotRecovery(&abr_ops, true);
+  std::vector<uint8_t> buffer(kZirconPartitionSize);
+  ASSERT_EQ(LoadAndBoot(&zircon_boot_ops, buffer.data(), buffer.size(), force_recovery),
+            kBootResultBootReturn);
+  ASSERT_NO_FATAL_FAILURE(ValidateBootedSlot(dev.get(), kAbrSlotIndexR));
+}
+
 TEST(BootTests, TestSuccessfulBootOsAbr) {
   ASSERT_NO_FATAL_FAILURE(
       TestOsAbrSuccessfulBoot(kAbrSlotIndexA, kAbrSlotIndexA, kForceRecoveryOff));
@@ -164,12 +177,14 @@ TEST(BootTests, TestSuccessfulBootOsAbr) {
       TestOsAbrSuccessfulBoot(kAbrSlotIndexB, kAbrSlotIndexB, kForceRecoveryOff));
   ASSERT_NO_FATAL_FAILURE(
       TestOsAbrSuccessfulBoot(kAbrSlotIndexR, kAbrSlotIndexR, kForceRecoveryOff));
+  ASSERT_NO_FATAL_FAILURE(TestOsAbrSuccessfulBootOneShotRecovery(kForceRecoveryOff));
   ASSERT_NO_FATAL_FAILURE(
       TestOsAbrSuccessfulBoot(kAbrSlotIndexA, kAbrSlotIndexR, kForceRecoveryOn));
   ASSERT_NO_FATAL_FAILURE(
       TestOsAbrSuccessfulBoot(kAbrSlotIndexB, kAbrSlotIndexR, kForceRecoveryOn));
   ASSERT_NO_FATAL_FAILURE(
       TestOsAbrSuccessfulBoot(kAbrSlotIndexR, kAbrSlotIndexR, kForceRecoveryOn));
+  ASSERT_NO_FATAL_FAILURE(TestOsAbrSuccessfulBootOneShotRecovery(kForceRecoveryOn));
 }
 
 TEST(BootTests, SkipAddZbiItems) {
@@ -270,6 +285,26 @@ TEST(BootTests, LoadAndBootMatchingSlotBootSucessful) {
       TestFirmareAbrMatchingSlotBootSucessful(kAbrSlotIndexR, kAbrSlotIndexR, kForceRecoveryOn));
 }
 
+void TestFirmareAbrMatchingSlotBootSucessfulOneShotRecovery(AbrSlotIndex initial_active_slot) {
+  std::unique_ptr<MockZirconBootOps> dev;
+  ASSERT_NO_FATAL_FAILURE(CreateMockZirconBootOps(&dev));
+  ZirconBootOps zircon_boot_ops = dev->GetZirconBootOps();
+  dev->SetFirmwareSlot(kAbrSlotIndexR);
+  MarkSlotActive(dev.get(), initial_active_slot);
+  AbrOps abr_ops = dev->GetAbrOps();
+  AbrSetOneShotRecovery(&abr_ops, true);
+  std::vector<uint8_t> buffer(kZirconPartitionSize);
+  ASSERT_EQ(LoadAndBoot(&zircon_boot_ops, buffer.data(), buffer.size(), kForceRecoveryOff),
+            kBootResultBootReturn);
+  ASSERT_NO_FATAL_FAILURE(ValidateBootedSlot(dev.get(), kAbrSlotIndexR));
+}
+
+TEST(BootTests, LoadAndBootMatchingSlotBootSucessfulOneShotRecovery) {
+  ASSERT_NO_FATAL_FAILURE(TestFirmareAbrMatchingSlotBootSucessfulOneShotRecovery(kAbrSlotIndexA));
+  ASSERT_NO_FATAL_FAILURE(TestFirmareAbrMatchingSlotBootSucessfulOneShotRecovery(kAbrSlotIndexB));
+  ASSERT_NO_FATAL_FAILURE(TestFirmareAbrMatchingSlotBootSucessfulOneShotRecovery(kAbrSlotIndexR));
+}
+
 // Tests that device reboot if firmware slot doesn't matches the target slot to boot. i.e. either
 // ABR metadata doesn't match firmware slot or force_recovery is on but device is not in firmware R
 // slot.
@@ -306,6 +341,26 @@ TEST(BootTests, LoadAndBootMismatchedSlotTriggerReboot) {
                                                                 kAbrSlotIndexA, kForceRecoveryOff));
   ASSERT_NO_FATAL_FAILURE(TestFirmwareAbrRebootIfSlotMismatched(kAbrSlotIndexR, kAbrSlotIndexB,
                                                                 kAbrSlotIndexB, kForceRecoveryOff));
+}
+
+// Tests that in the case of one shot recovery, device reboots if firmware slot doesn't match R.
+void TestFirmwareAbrRebootIfSlotMismatchedOneShotRecovery(AbrSlotIndex current_firmware_slot) {
+  std::unique_ptr<MockZirconBootOps> dev;
+  ASSERT_NO_FATAL_FAILURE(CreateMockZirconBootOps(&dev));
+  ZirconBootOps zircon_boot_ops = dev->GetZirconBootOps();
+  dev->SetFirmwareSlot(current_firmware_slot);
+  AbrOps abr_ops = dev->GetAbrOps();
+  AbrSetOneShotRecovery(&abr_ops, true);
+  std::vector<uint8_t> buffer(kZirconPartitionSize);
+  ASSERT_EQ(LoadAndBoot(&zircon_boot_ops, buffer.data(), buffer.size(), kForceRecoveryOff),
+            kBootResultRebootReturn);
+  ASSERT_FALSE(dev->GetBootedSlot());
+  ASSERT_EQ(dev->GetFirmwareSlot(), kAbrSlotIndexR);
+}
+
+TEST(BootTests, LoadAndBootMismatchedSlotTriggerRebootOneShotRecovery) {
+  ASSERT_NO_FATAL_FAILURE(TestFirmwareAbrRebootIfSlotMismatchedOneShotRecovery(kAbrSlotIndexA));
+  ASSERT_NO_FATAL_FAILURE(TestFirmwareAbrRebootIfSlotMismatchedOneShotRecovery(kAbrSlotIndexB));
 }
 
 // Validate that a target slot is booted after successful kernel verification.
