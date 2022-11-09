@@ -8,6 +8,8 @@ use {
     fidl_fuchsia_virtualization::MemStat,
     fidl_fuchsia_virtualization_hardware::VirtioBalloonGetMemStatsResponder,
     fidl_fuchsia_virtualization_hardware::{VirtioBalloonRequest, VirtioBalloonRequestStream},
+    fuchsia_inspect as inspect,
+    fuchsia_inspect::NumericProperty,
     fuchsia_zircon::{self as zx},
     futures::channel::mpsc,
     futures::{StreamExt, TryStreamExt},
@@ -66,11 +68,15 @@ impl BalloonBackend for VmoMemoryBackend {
 
 pub struct BalloonDevice<B: BalloonBackend> {
     backend: B,
+    num_inflated_pages: inspect::IntProperty,
+    num_reported_free_pages: inspect::UintProperty,
 }
 
 impl<B: BalloonBackend> BalloonDevice<B> {
-    pub fn new(backend: B) -> Self {
-        Self { backend }
+    pub fn new(backend: B, inspect_node: &inspect::Node) -> Self {
+        let num_inflated_pages = inspect_node.create_int("num_inflated_pages", 0);
+        let num_reported_free_pages = inspect_node.create_uint("num_reported_free_pages", 0);
+        Self { backend, num_inflated_pages, num_reported_free_pages }
     }
 
     pub fn process_deflate_chain<'a, 'b, N: DriverNotify, M: DriverMem>(
@@ -80,7 +86,9 @@ impl<B: BalloonBackend> BalloonDevice<B> {
         match chain.remaining() {
             Ok(remaining) => {
                 // each PFN is LE32, so we divide the amount of memory in read chain by 4
-                tracing::trace!("Deflated {} KiB", remaining.bytes / 4 * PAGE_SIZE / 1024);
+                let num_deflated_pages = remaining.bytes / 4;
+                tracing::trace!("Deflated {} KiB", num_deflated_pages * PAGE_SIZE / 1024);
+                self.num_inflated_pages.subtract(num_deflated_pages as i64);
             }
             Err(_) => {}
         }
@@ -91,7 +99,7 @@ impl<B: BalloonBackend> BalloonDevice<B> {
         mut chain: ReadableChain<'a, 'b, N, M>,
     ) -> Result<(), Error> {
         // each PFN is LE32, so we divide the amount of memory in read chain by 4
-        let inflated_amount = chain.remaining()?.bytes / 4 * PAGE_SIZE;
+        let num_inflated_pages = chain.remaining()?.bytes / 4;
         let mut base = 0;
         let mut run = 0;
         // Normally Linux driver will send out descending list of PFNs
@@ -119,6 +127,7 @@ impl<B: BalloonBackend> BalloonDevice<B> {
                 }
                 tracing::trace!("inflate pfn range base={}, size={} dir={}", base, run, dir);
                 self.backend.decommit_range(base * PAGE_SIZE as u64, run * PAGE_SIZE as u64)?;
+                self.num_inflated_pages.add(run as i64);
             }
             base = pfn;
             run = 1;
@@ -132,8 +141,9 @@ impl<B: BalloonBackend> BalloonDevice<B> {
             }
             tracing::trace!("inflate pfn range base={}, size={} dir={}", base, run, dir);
             self.backend.decommit_range(base * PAGE_SIZE as u64, run * PAGE_SIZE as u64)?;
+            self.num_inflated_pages.add(run as i64);
         }
-        tracing::trace!("Inflated {} KiB", inflated_amount / 1024);
+        tracing::trace!("Inflated {} KiB", num_inflated_pages * PAGE_SIZE / 1024);
         Ok(())
     }
 
@@ -184,6 +194,7 @@ impl<B: BalloonBackend> BalloonDevice<B> {
             self.backend.decommit_range(range.0.start as u64, range.len() as u64)?;
         }
         tracing::trace!("Reclaimed {} MiB", total_len / 1024 / 1024);
+        self.num_reported_free_pages.add(total_len as u64 / PAGE_SIZE as u64);
         Ok(())
     }
 
@@ -275,6 +286,7 @@ mod tests {
     use {
         super::*,
         crate::wire::{LE16, LE64},
+        fuchsia_inspect::{assert_data_tree, Inspector},
         std::ops::Range,
         virtio_device::chain::{ReadableChain, WritableChain},
         virtio_device::fake_queue::{Chain, ChainBuilder, IdentityDriverMem, TestQueue},
@@ -304,6 +316,7 @@ mod tests {
     }
 
     fn inflate_and_validate(pfns: &[u32], expected_calls: &[Range<u64>]) {
+        let inspector = Inspector::new();
         let mem = IdentityDriverMem::new();
         let mut state = TestQueue::new(32, &mem);
         let vmo_size = (*pfns.iter().max().unwrap() as u64 + 1) * PAGE_SIZE as u64;
@@ -317,7 +330,10 @@ mod tests {
             vmo.write(&ones, i * PAGE_SIZE as u64).unwrap();
         }
         // Process the chain.
-        let device = BalloonDevice::new(TestBalloonBackend::new(Some(VmoMemoryBackend::new(vmo))));
+        let device = BalloonDevice::new(
+            TestBalloonBackend::new(Some(VmoMemoryBackend::new(vmo))),
+            inspector.root(),
+        );
 
         let prev_commited_bytes =
             device.backend.inner.as_ref().unwrap().vmo.info().unwrap().committed_bytes;
@@ -353,10 +369,13 @@ mod tests {
             .map(|x| x.start * PAGE_SIZE as u64..x.end * PAGE_SIZE as u64)
             .collect();
         assert_eq!(device.backend.calls.into_inner(), expected_calls);
+        assert_data_tree!(inspector, root: { num_inflated_pages:  pfns.len() as i64, num_reported_free_pages: 0u64 }
+        );
     }
 
     #[fuchsia::test]
     fn test_deflate_command() {
+        let inspector = Inspector::new();
         let mem = IdentityDriverMem::new();
         let mut state = TestQueue::new(32, &mem);
         let pfns: [u32; 4] = [3, 2, 1, 0];
@@ -365,10 +384,16 @@ mod tests {
 
         // Process the chain.
         let vmo = zx::Vmo::create(VMO_SIZE).unwrap();
-        let device = BalloonDevice::new(TestBalloonBackend::new(Some(VmoMemoryBackend::new(vmo))));
+        let device = BalloonDevice::new(
+            TestBalloonBackend::new(Some(VmoMemoryBackend::new(vmo))),
+            inspector.root(),
+        );
 
         // Process the request.
         device.process_deflate_chain(ReadableChain::new(state.queue.next_chain().unwrap(), &mem));
+
+        assert_data_tree!(inspector, root: { num_inflated_pages: -4i64, num_reported_free_pages: 0u64 }
+        );
     }
 
     #[fuchsia::test]
@@ -391,6 +416,7 @@ mod tests {
 
     #[fuchsia::test]
     fn test_inflate_command_out_of_bounds_pfn() {
+        let inspector = Inspector::new();
         let mem = IdentityDriverMem::new();
         let mut state = TestQueue::new(32, &mem);
         // 18 here is out of bounds of passed VMO and expected to trigger an error
@@ -399,11 +425,16 @@ mod tests {
         state.fake_queue.publish(ChainBuilder::new().readable(&pfns, &mem).build()).unwrap();
         let vmo = zx::Vmo::create(VMO_SIZE).unwrap();
         // Process the chain.
-        let device = BalloonDevice::new(TestBalloonBackend::new(Some(VmoMemoryBackend::new(vmo))));
+        let device = BalloonDevice::new(
+            TestBalloonBackend::new(Some(VmoMemoryBackend::new(vmo))),
+            inspector.root(),
+        );
         // Process the request.
         assert!(device
             .process_inflate_chain(ReadableChain::new(state.queue.next_chain().unwrap(), &mem))
             .is_err());
+        assert_data_tree!(inspector, root: { num_inflated_pages: 1i64, num_reported_free_pages: 0u64 }
+        );
     }
 
     #[fuchsia::test]
@@ -431,10 +462,11 @@ mod tests {
 
     #[fuchsia::test]
     fn test_free_page_reporting() {
+        let inspector = Inspector::new();
         let mem = IdentityDriverMem::new();
         let mut state = TestQueue::new(32, &mem);
 
-        let device = BalloonDevice::new(TestBalloonBackend::new(None));
+        let device = BalloonDevice::new(TestBalloonBackend::new(None), inspector.root());
 
         let range0 = mem.new_range(512 * PAGE_SIZE).unwrap();
         let range1 = mem.new_range(1024 * PAGE_SIZE).unwrap();
@@ -468,6 +500,8 @@ mod tests {
                 (range1.get().start as u64 - fake_vmo_range.start as u64
                     ..range1.get().end as u64 - fake_vmo_range.start as u64),
             ]
+        );
+        assert_data_tree!(inspector, root: { num_inflated_pages: 0i64, num_reported_free_pages: ((range0.len() + range1.len()) / PAGE_SIZE) as u64 }
         );
     }
 }

@@ -24,6 +24,8 @@ rustc_binary("virtio_balloon_bin") {
   deps = [
     "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization_rust",
     "//sdk/fidl/fuchsia.virtualization.hardware:fuchsia.virtualization.hardware_rust",
+    "//src/lib/diagnostics/inspect/runtime/rust",
+    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",

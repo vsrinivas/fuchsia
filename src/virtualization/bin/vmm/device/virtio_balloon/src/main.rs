@@ -11,6 +11,7 @@ use {
     fidl::endpoints::RequestStream,
     fidl_fuchsia_virtualization_hardware::VirtioBalloonRequestStream,
     fuchsia_component::server,
+    fuchsia_inspect as inspect,
     futures::channel::mpsc,
     futures::{future, StreamExt, TryFutureExt, TryStreamExt},
     machina_virtio_device::GuestBellTrap,
@@ -65,7 +66,8 @@ async fn run_virtio_balloon(
     };
 
     ready_responder.send()?;
-    let balloon_device = BalloonDevice::new(VmoMemoryBackend::new(vmo));
+    let balloon_device =
+        BalloonDevice::new(VmoMemoryBackend::new(vmo), inspect::component::inspector().root());
 
     let virtio_balloon_fidl: VirtioBalloonRequestStream = virtio_device_fidl.cast_stream();
     let bell = GuestBellTrap::complete_or_pending(device.take_bell_traps(), &device)
@@ -130,6 +132,7 @@ async fn run_virtio_balloon(
 #[fuchsia::main(logging = true, threads = 1)]
 async fn main() -> Result<(), anyhow::Error> {
     let mut fs = server::ServiceFs::new();
+    inspect_runtime::serve(inspect::component::inspector(), &mut fs)?;
     fs.dir("svc").add_fidl_service(|stream: VirtioBalloonRequestStream| stream);
     fs.take_and_serve_directory_handle().context("Error starting server")?;
     fs.for_each_concurrent(None, |stream| async {
