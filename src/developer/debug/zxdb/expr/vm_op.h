@@ -83,6 +83,22 @@ namespace zxdb {
 // memory address or a register. For debugger-local variables, we keep a refptr to the source of
 // the value. The LocalExprValue object is a refcounted container for local variables that can
 // have such references to them.
+//
+// Break
+// -----
+// The "break" keyword (e.g. for a loop) is weird and difficult. You need to execute the cleanup
+// code for every construct between the break and the loop, but not any of the remaining code in
+// them.
+//
+// Our break is implemented somewhat like an exception. At the top of a loop, the loop emits the
+// "PushBreak" opcode (like the "try" instruction of an exception handler). This sets the
+// destination stream address to jump to and saves the stack and local variable stack. The "break"
+// opcode jumps to the nearest "set break" destination (like a thrown exception), and pops the stack
+// and local variable stack size back to the values they were at the top of the loop (like exception
+// unwinding code).
+//
+// The bottom of the loop executes a "PopBreak" command which releases the registration of that
+// loop.
 struct VmOp {
   // Constant to default-initialize a jump destination to that's wrong.
   static constexpr uint32_t kBadJumpDest = static_cast<uint32_t>(-1);
@@ -148,6 +164,16 @@ struct VmOp {
                 .token = std::move(token),
                 .info = LocalInfo{.slot = entry_count}};
   }
+  static VmOp MakePushBreak(uint32_t dest = kBadJumpDest, ExprToken token = ExprToken()) {
+    return VmOp{
+        .op = VmOpType::kPushBreak, .token = std::move(token), .info = JumpInfo{.dest = dest}};
+  }
+  static VmOp MakePopBreak(ExprToken token = ExprToken()) {
+    return VmOp{.op = VmOpType::kPopBreak, .token = std::move(token)};
+  }
+  static VmOp MakeBreak(ExprToken token = ExprToken()) {
+    return VmOp{.op = VmOpType::kBreak, .token = std::move(token)};
+  }
   static VmOp MakeCallback0(Callback0 cb, ExprToken token = ExprToken()) {
     return VmOp{.op = VmOpType::kCallback0, .token = std::move(token), .info = std::move(cb)};
   }
@@ -185,7 +211,7 @@ struct VmOp {
     ExprValue value;  // Literal value to push on the stack.
   };
 
-  // For kJump and kJumpIfFalse.
+  // For kJump, kJumpIfFalse, and kPushBreak.
   struct JumpInfo {
     uint32_t dest = kBadJumpDest;  // Index of the destination of a jump operator.
   };

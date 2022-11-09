@@ -74,6 +74,14 @@ class VmBytecodeForwardJumpIfFalse : public VmBytecodeForwardJumper {
 
   void SetSource(VmStream* stream) { SetSourceAndOp(stream, VmOpType::kJumpIfFalse); }
 };
+class VmBytecodePushBreak : public VmBytecodeForwardJumper {
+ public:
+  VmBytecodePushBreak() = default;
+  explicit VmBytecodePushBreak(VmStream* stream)
+      : VmBytecodeForwardJumper(stream, VmOpType::kPushBreak) {}
+
+  void SetSource(VmStream* stream) { SetSourceAndOp(stream, VmOpType::kPushBreak); }
+};
 
 }  // namespace zxdb
 

@@ -1464,6 +1464,11 @@ TEST_F(ExprParserTest, CWhileLoop) {
   result = Parse("while (i;) j;");
   EXPECT_FALSE(result);
   EXPECT_EQ("Expected ')' to match.", parser().err().msg());
+
+  // Break outside of loop.
+  result = Parse("break;");
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Use of 'break' in this context is not allowed.", parser().err().msg());
 }
 
 TEST_F(ExprParserTest, RustWhileLoop) {
@@ -1507,8 +1512,9 @@ TEST_F(ExprParserTest, RustWhileLoop) {
       "   IDENTIFIER(\"i\")\n"
       "   BINARY_OP(+)\n"
       "    IDENTIFIER(\"i\")\n"
-      "    LITERAL(1)\n",
-      GetParseString("while (i) { print(i); i = i + 1 }", ExprLanguage::kRust));
+      "    LITERAL(1)\n"
+      "  BREAK\n",
+      GetParseString("while (i) { print(i); i = i + 1; break; }", ExprLanguage::kRust));
 
   // No loop body.
   auto result = Parse("while true", ExprLanguage::kRust);
@@ -1542,8 +1548,9 @@ TEST_F(ExprParserTest, RustLoop) {
       "   IDENTIFIER(\"i\")\n"
       "   BINARY_OP(-)\n"
       "    IDENTIFIER(\"i\")\n"
-      "    LITERAL(1)\n",
-      GetParseString("loop { i = i - 1; }", ExprLanguage::kRust));
+      "    LITERAL(1)\n"
+      "  BREAK\n",
+      GetParseString("loop { i = i - 1; break; }", ExprLanguage::kRust));
 
   // Extra expression.
   auto result = Parse("loop true {}", ExprLanguage::kRust);

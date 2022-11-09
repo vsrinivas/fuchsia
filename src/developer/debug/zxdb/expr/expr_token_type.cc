@@ -127,6 +127,7 @@ constexpr ExprTokenRecord kRecords[kNumExprTokenTypes] = {
     {ExprTokenType::kDo,               kLangC,    "do"},
     {ExprTokenType::kWhile,            kLangAll,  "while"},
     {ExprTokenType::kLoop,             kLangRust, "loop"},
+    {ExprTokenType::kBreak,            kLangAll,  "break"},
     {ExprTokenType::kOperator,         kLangC,    "operator"},
     {ExprTokenType::kNew,              kLangC,    "new"},
     {ExprTokenType::kDelete,           kLangC,    "delete"},

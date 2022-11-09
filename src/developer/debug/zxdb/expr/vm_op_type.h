@@ -41,6 +41,11 @@ enum class VmOpType {
   kSetLocal,   // Stores the top stack item to the given variable index.
   kPopLocals,  // Shrinks the size of the local variable array to the given size.
 
+  // The "break" keyword.
+  kPushBreak,  // Saves the destination address for subsequent break addresses.
+  kPopBreak,   // Restores the previous break state.
+  kBreak,      // Jumps to the current break state (see vm_op.h comment).
+
   // Custom callbacks for other functions.
   kCallback0,       // Calls the function to get a result.
   kCallback1,       // Pops one value and passes it to the function.

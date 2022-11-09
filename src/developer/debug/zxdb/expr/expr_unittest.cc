@@ -287,55 +287,82 @@ TEST_F(ExprTest, CForLoop) {
       "3: SetLocal(0)\n"        // Save the 0 to local var slot 0 (the "sum" variable").
       "4: Drop()\n"             // Discard the result of the declaration.
 
+      // Set up break destination.
+      "5: PushBreak(34)\n"      // "break" ops jump to the given address with the stack restored.
+
       // "int i = 0" (same as the above except for "i" in slot 1).
-      "5: Literal(int(0))\n"
-      "6: AsyncCallback1()\n"
-      "7: Dup()\n"
-      "8: SetLocal(1)\n"
-      "9: Drop()\n"
+      "6: Literal(int(0))\n"
+      "7: AsyncCallback1()\n"
+      "8: Dup()\n"
+      "9: SetLocal(1)\n"
+      "10: Drop()\n"
 
       // "i < 10"
-      "10: GetLocal(1)\n"       // Get "i".
-      "11: ExpandRef()\n"       // Make sure "i" isn't a reference (derefs the addr to its value).
-      "12: Literal(int(10))\n"  // "10"
-      "13: Binary(<)\n"
-      "14: JumpIfFalse(32)\n"   // End of loop is #32.
+      "11: GetLocal(1)\n"       // Get "i".
+      "12: ExpandRef()\n"       // Make sure "i" isn't a reference (derefs the addr to its value).
+      "13: Literal(int(10))\n"  // "10"
+      "14: Binary(<)\n"
+      "15: JumpIfFalse(33)\n"   // End of loop is the given address.
 
       // "sum = sum + i"
-      "15: GetLocal(0)\n"       // "sum" (for the left-side of the assignment).
-      "16: ExpandRef()\n"
-      "17: GetLocal(0)\n"       // "sum" (for adding to "i").
-      "18: ExpandRef()\n"
-      "19: GetLocal(1)\n"       // "i"
-      "20: Binary(+)\n"
-      "21: Binary(=)\n"
-      "22: Drop()\n"            // Discard the result of the assignment expression.
+      "16: GetLocal(0)\n"       // "sum" (for the left-side of the assignment).
+      "17: ExpandRef()\n"
+      "18: GetLocal(0)\n"       // "sum" (for adding to "i").
+      "19: ExpandRef()\n"
+      "20: GetLocal(1)\n"       // "i"
+      "21: Binary(+)\n"
+      "22: Binary(=)\n"
+      "23: Drop()\n"            // Discard the result of the assignment expression.
 
       // "i = i + 1"
-      "23: GetLocal(1)\n"       // "i" (for left side of assignment).
-      "24: ExpandRef()\n"
-      "25: GetLocal(1)\n"       // "i" (for adding to 1).
-      "26: ExpandRef()\n"
-      "27: Literal(int(1))\n"   // "1"
-      "28: Binary(+)\n"
-      "29: Binary(=)\n"
-      "30: Drop()\n"            // Discard the result of the increment expression.
+      "24: GetLocal(1)\n"       // "i" (for left side of assignment).
+      "25: ExpandRef()\n"
+      "26: GetLocal(1)\n"       // "i" (for adding to 1).
+      "27: ExpandRef()\n"
+      "28: Literal(int(1))\n"   // "1"
+      "29: Binary(+)\n"
+      "30: Binary(=)\n"
+      "31: Drop()\n"            // Discard the result of the increment expression.
 
-      // Loop back to the precondition on line 10.
-      "31: Jump(10)\n"
+      // Loop back to the precondition on the given line.
+      "32: Jump(11)\n"
 
       // Loop end cleanup.
-      "32: PopLocals(1)\n"      // Discard the "i" local variable, now only one ("sum") in scope.
-      "33: Literal({null ExprValue})\n"  // Result of loop expression (nothing).
-      "34: Drop()\n"            // Discard the result of the loop expression.
+      "33: PopLocals(1)\n"      // Discard the "i" local variable, now only one ("sum") in scope.
+      "34: PopBreak()\n"        // Restore previous break destination.
+      "35: Literal({null ExprValue})\n"  // Result of loop expression (nothing).
+      "36: Drop()\n"            // Discard the result of the loop expression.
 
       // "sum"
-      "35: GetLocal(0)\n"
+      "37: GetLocal(0)\n"
 
       // Clean up outer block state.
-      "36: PopLocals(0)\n",     // Discard "sum" variable.
+      "38: PopLocals(0)\n",     // Discard "sum" variable.
       VmStreamToString(stream));
   // clang-format on
+
+  // Try a loop with a break statement.
+  const char kCodeWithBreak[] = R"(
+  {
+    int sum = 0;
+    for (int i = 0; i < 10; i = i + 1) {
+      sum = sum + i;
+      if (i == 3)
+        break;
+    }
+    sum;  // The result of the program (since everything is an expression).
+  }
+  )";
+
+  called = false;
+  EvalExpression(kCodeWithBreak, fxl::MakeRefCounted<MockEvalContext>(), false,
+                 [&](ErrOrValue result) {
+                   called = true;
+                   ASSERT_TRUE(result.ok()) << result.err().msg();
+                   // 0+1+2+3 = 6
+                   EXPECT_EQ(result.value(), ExprValue(6, GetBuiltinType(ExprLanguage::kC, "int")));
+                 });
+  EXPECT_TRUE(called);
 }
 
 TEST_F(ExprTest, RustWhileLoop) {

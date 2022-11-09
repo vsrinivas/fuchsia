@@ -97,6 +97,7 @@ enum class ExprTokenType : size_t {
   kDo,               // do
   kWhile,            // while
   kLoop,             // loop (Rust)
+  kBreak,            // break
   kOperator,         // operator
   kNew,              // new
   kDelete,           // delete

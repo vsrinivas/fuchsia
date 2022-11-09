@@ -218,6 +218,14 @@ void BlockExprNode::Print(std::ostream& out, int indent) const {
     stmt->Print(out, indent + 1);
 }
 
+void BreakExprNode::EmitBytecode(VmStream& stream) const {
+  stream.push_back(VmOp::MakeBreak(token_));
+}
+
+void BreakExprNode::Print(std::ostream& out, int indent) const {
+  out << IndentFor(indent) << "BREAK\n";
+}
+
 void CastExprNode::EmitBytecode(VmStream& stream) const {
   from_->EmitBytecode(stream);
   // Uses the non-concrete type for the "to" type because the cast will internally get the
@@ -519,6 +527,8 @@ void LocalVarExprNode::Print(std::ostream& out, int indent) const {
 }
 
 void LoopExprNode::EmitBytecode(VmStream& stream) const {
+  VmBytecodePushBreak break_jumper(&stream);
+
   if (init_) {
     init_->EmitBytecode(stream);
     stream.push_back(VmOp::MakeDrop());  // The result of the initialization expression is ignored.
@@ -560,6 +570,11 @@ void LoopExprNode::EmitBytecode(VmStream& stream) const {
   // expression started. See "Local variables" in vm_op.h for more info.
   if (init_local_var_count_)
     stream.push_back(VmOp::MakePopLocals(*init_local_var_count_));
+
+  // Break commands will implicitly clean up the local variables (see vm_op.h). So the destination
+  // of any break commands should be here after restoring the local var count in the normal path.
+  break_jumper.JumpToHere();
+  stream.push_back(VmOp::MakePopBreak());
 
   // Push the result of the loop expression (no value).
   stream.push_back(VmOp::MakeLiteral(ExprValue()));

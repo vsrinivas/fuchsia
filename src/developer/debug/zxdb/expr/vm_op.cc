@@ -12,7 +12,7 @@
 namespace zxdb {
 
 void VmOp::SetJumpDest(uint32_t dest) {
-  FX_DCHECK(op == VmOpType::kJump || op == VmOpType::kJumpIfFalse);
+  FX_DCHECK(op == VmOpType::kJump || op == VmOpType::kJumpIfFalse || op == VmOpType::kPushBreak);
   std::get<JumpInfo>(info).dest = dest;
 }
 
@@ -34,6 +34,7 @@ std::ostream& operator<<(std::ostream& out, const VmOp& op) {
       break;
     case VmOpType::kJump:
     case VmOpType::kJumpIfFalse:
+    case VmOpType::kPushBreak:
       out << std::get<VmOp::JumpInfo>(op.info).dest;
       break;
     case VmOpType::kGetLocal:
@@ -41,6 +42,8 @@ std::ostream& operator<<(std::ostream& out, const VmOp& op) {
     case VmOpType::kPopLocals:
       out << std::get<VmOp::LocalInfo>(op.info).slot;
       break;
+    case VmOpType::kPopBreak:
+    case VmOpType::kBreak:
     case VmOpType::kCallback0:
     case VmOpType::kCallback1:
     case VmOpType::kCallback2:

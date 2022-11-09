@@ -194,6 +194,7 @@ class ExprParser {
   fxl::RefPtr<ExprNode> DoPrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> WhilePrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> LoopPrefix(const ExprToken& token);
+  fxl::RefPtr<ExprNode> BreakPrefix(const ExprToken& token);
 
   // Returns true if the next token is the given type.
   bool LookAhead(ExprTokenType type) const;
@@ -272,6 +273,9 @@ class ExprParser {
   // On error, the message and token where an error was encountered.
   Err err_;
   ExprToken error_token_;
+
+  // Set when parsing inside a construct like a loop that allows the "break" statement.
+  bool allow_break_ = false;
 
   // For local variable tracking.
   //

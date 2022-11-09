@@ -71,6 +71,13 @@ struct CallbackInfo {
   }
 };
 
+// Saved information for the kPushBreak instruction.
+struct BreakInfo {
+  size_t stack_size = 0;
+  size_t local_stack_size = 0;
+  uint32_t dest = VmOp::kBadJumpDest;
+};
+
 // Holds the machine state for a running bytecode program.
 //
 // This is a simple stack-based machine where the various operations operate on the value stack
@@ -100,6 +107,9 @@ class VmExecState : public fxl::RefCountedThreadSafe<VmExecState> {
   Completion ExecGetLocal(const VmOp& op);
   Completion ExecSetLocal(const VmOp& op);
   Completion ExecPopLocals(const VmOp& op);
+  Completion ExecPushBreak(const VmOp& op);
+  Completion ExecPopBreak(const VmOp& op);
+  Completion ExecBreak(const VmOp& op);
   Completion ExecCallback0(const VmOp& op);
   Completion ExecCallback1(const VmOp& op);
   Completion ExecCallback2(const VmOp& op);
@@ -134,6 +144,8 @@ class VmExecState : public fxl::RefCountedThreadSafe<VmExecState> {
   VmStream stream_;
   EvalCallback cb_;
 
+  // Indicates the NEXT instruction to execute. During processing of an instruction, the current
+  // instruction will be stream_index_ - 1.
   size_t stream_index_ = 0;
 
   std::vector<ExprValue> stack_;
@@ -141,6 +153,9 @@ class VmExecState : public fxl::RefCountedThreadSafe<VmExecState> {
   // The local variable "slots" in the Op::LocalInfo refer into this array. See the comment at the
   // top of vm_op.h for more on how this works.
   std::vector<fxl::RefPtr<LocalExprValue>> locals_;
+
+  // Stack used by the break instructions. See vm_op.h.
+  std::vector<BreakInfo> breaks_;
 };
 
 // static
@@ -190,6 +205,9 @@ Completion VmExecState::ExecOp(const VmOp& op) {
     case VmOpType::kGetLocal:       return ExecGetLocal(op);
     case VmOpType::kSetLocal:       return ExecSetLocal(op);
     case VmOpType::kPopLocals:      return ExecPopLocals(op);
+    case VmOpType::kPushBreak:      return ExecPushBreak(op);
+    case VmOpType::kPopBreak:       return ExecPopBreak(op);
+    case VmOpType::kBreak:          return ExecBreak(op);
     case VmOpType::kCallback0:      return ExecCallback0(op);
     case VmOpType::kCallback1:      return ExecCallback1(op);
     case VmOpType::kCallback2:      return ExecCallback2(op);
@@ -343,6 +361,41 @@ Completion VmExecState::ExecPopLocals(const VmOp& op) {
   return Completion::kSync;
 }
 
+Completion VmExecState::ExecPushBreak(const VmOp& op) {
+  const auto& jump_info = std::get<VmOp::JumpInfo>(op.info);
+  breaks_.push_back(BreakInfo{
+      .stack_size = stack_.size(), .local_stack_size = locals_.size(), .dest = jump_info.dest});
+  return Completion::kSync;
+}
+
+Completion VmExecState::ExecPopBreak(const VmOp& op) {
+  if (breaks_.empty())
+    return ReportError("PopBreak opcode executed outside of a loop context.");
+  breaks_.pop_back();
+  return Completion::kSync;
+}
+
+Completion VmExecState::ExecBreak(const VmOp& op) {
+  if (breaks_.empty())
+    return ReportError("'break' opcode executed outside of a loop context.");
+
+  const BreakInfo& info = breaks_.back();
+
+  // The stacks should never have shrunk within the scope of the break push/pop.
+  if (stack_.size() < info.stack_size || locals_.size() < info.local_stack_size)
+    return ReportError("Unexpected break stack state.");
+
+  // Restore the state.
+  stack_.resize(info.stack_size);
+  locals_.resize(info.local_stack_size);
+
+  // Jump to the given destination.
+  FX_DCHECK(info.dest != VmOp::kBadJumpDest);
+  stream_index_ = info.dest;
+
+  return Completion::kSync;
+}
+
 Completion VmExecState::ExecCallback0(const VmOp& op) {
   const auto& cb = std::get<VmOp::Callback0>(op.info);
 
@@ -462,7 +515,7 @@ void VmExecState::Push(ExprValue v) { stack_.push_back(std::move(v)); }
 Completion VmExecState::Pop(ExprValue* popped) {
   if (stack_.empty()) {
     // TODO report source of error.
-    return ReportError("Stack underflow");
+    return ReportError("Stack underflow at instruction " + std::to_string(stream_index_));
   }
   *popped = std::move(stack_.back());
   stack_.pop_back();

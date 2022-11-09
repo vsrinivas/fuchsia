@@ -30,6 +30,7 @@ class AddressOfExprNode;
 class ArrayAccessExprNode;
 class BinaryOpExprNode;
 class BlockExprNode;
+class BreakExprNode;
 class CastExprNode;
 class ConditionExprNode;
 class DereferenceExprNode;
@@ -51,6 +52,7 @@ class ExprNode : public fxl::RefCountedThreadSafe<ExprNode> {
   virtual const ArrayAccessExprNode* AsArrayAccess() const { return nullptr; }
   virtual const BinaryOpExprNode* AsBinaryOp() const { return nullptr; }
   virtual const BlockExprNode* AsBlock() const { return nullptr; }
+  virtual const BreakExprNode* AsBreak() const { return nullptr; }
   virtual const CastExprNode* AsCast() const { return nullptr; }
   virtual const ConditionExprNode* AsCondition() const { return nullptr; }
   virtual const DereferenceExprNode* AsDereference() const { return nullptr; }
@@ -183,6 +185,21 @@ class BlockExprNode : public ExprNode {
   // Nullopt means that there were no local variables used in the block so they don't have to be
   // popped.
   std::optional<uint32_t> entry_local_var_count_;
+};
+
+class BreakExprNode : public ExprNode {
+ public:
+  const BreakExprNode* AsBreak() const override { return this; }
+  void EmitBytecode(VmStream& stream) const override;
+  void Print(std::ostream& out, int indent) const override;
+
+ private:
+  FRIEND_REF_COUNTED_THREAD_SAFE(BreakExprNode);
+  FRIEND_MAKE_REF_COUNTED(BreakExprNode);
+
+  explicit BreakExprNode(const ExprToken& token) : token_(token) {}
+
+  ExprToken token_;
 };
 
 // Implements all types of casts.

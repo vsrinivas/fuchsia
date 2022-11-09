@@ -113,6 +113,22 @@ class LocalVarCounter {
   size_t init_var_count_;
 };
 
+// Sets a boolean for the duration of the lifetime of the object. Puts it back to the old value when
+// it goes out of scope.
+class ScopedBoolSetter {
+ public:
+  ScopedBoolSetter(bool* var, bool value) : var_(var), original_value_(*var_) {
+    *var = value;
+  }
+  ~ScopedBoolSetter() {
+    *var_ = original_value_;
+  }
+
+ private:
+  bool* var_;
+  bool original_value_;
+};
+
 }  // namespace
 
 struct ExprParser::DispatchInfo {
@@ -203,6 +219,7 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {&ExprParser::DoPrefix,          nullptr,                      -1},                             // kDo
     {&ExprParser::WhilePrefix,       nullptr,                      -1},                             // kWhile
     {&ExprParser::LoopPrefix,        nullptr,                      -1},                             // kLoop
+    {&ExprParser::BreakPrefix,       nullptr,                      -1},                             // kBreak
     {&ExprParser::NamePrefix,        nullptr,                      -1},                             // kOperator
     {&ExprParser::NamePrefix,        nullptr,                      -1},                             // kNew
     {&ExprParser::NamePrefix,        nullptr,                      -1},                             // kDelete
@@ -1523,9 +1540,15 @@ fxl::RefPtr<ExprNode> ExprParser::ForPrefix(const ExprToken& token) {
     return nullptr;
 
   // Loop contents.
-  auto contents = ParseExpression(0, EmptyExpression::kAllow, StatementEnd::kExplicit);
-  if (has_error())
-    return nullptr;
+  fxl::RefPtr<ExprNode> contents;
+  {
+    // Things inside of here support "break".
+    ScopedBoolSetter break_setter(&allow_break_, true);
+
+    contents = ParseExpression(0, EmptyExpression::kAllow, StatementEnd::kExplicit);
+    if (has_error())
+      return nullptr;
+  }
 
   return fxl::MakeRefCounted<LoopExprNode>(token, std::move(init), var_counter.GetExitVarCount(),
                                            std::move(term), nullptr, std::move(incr),
@@ -1534,10 +1557,15 @@ fxl::RefPtr<ExprNode> ExprParser::ForPrefix(const ExprToken& token) {
 
 fxl::RefPtr<ExprNode> ExprParser::DoPrefix(const ExprToken& token) {
   // Loop contents.
-  fxl::RefPtr<ExprNode> contents =
-      ParseExpression(0, EmptyExpression::kReject, StatementEnd::kNone);
-  if (has_error())
-    return nullptr;
+  fxl::RefPtr<ExprNode> contents;
+  {
+    // Things inside of here support "break".
+    ScopedBoolSetter break_setter(&allow_break_, true);
+
+    contents = ParseExpression(0, EmptyExpression::kReject, StatementEnd::kNone);
+    if (has_error())
+      return nullptr;
+  }
 
   // Terminating "while" statement.
   Consume(ExprTokenType::kWhile, "Expected 'while' for do-while loop.");
@@ -1588,15 +1616,20 @@ fxl::RefPtr<ExprNode> ExprParser::WhilePrefix(const ExprToken& token) {
 
   // Loop contents.
   fxl::RefPtr<ExprNode> contents;
-  if (language_ == ExprLanguage::kRust) {
-    // Rust loops require {}.
-    contents = ParseBlock(BlockDelimiter::kExplicit);
-  } else {
-    // C also allows statements without {}.
-    contents = ParseExpression(0, EmptyExpression::kAllow, StatementEnd::kExplicit);
+  {
+    // Things inside of here support "break".
+    ScopedBoolSetter break_setter(&allow_break_, true);
+
+    if (language_ == ExprLanguage::kRust) {
+      // Rust loops require {}.
+      contents = ParseBlock(BlockDelimiter::kExplicit);
+    } else {
+      // C also allows statements without {}.
+      contents = ParseExpression(0, EmptyExpression::kAllow, StatementEnd::kExplicit);
+    }
+    if (has_error())
+      return nullptr;
   }
-  if (has_error())
-    return nullptr;
 
   return fxl::MakeRefCounted<LoopExprNode>(token, nullptr, std::nullopt, std::move(expr), nullptr,
                                            nullptr, std::move(contents));
@@ -1605,11 +1638,22 @@ fxl::RefPtr<ExprNode> ExprParser::WhilePrefix(const ExprToken& token) {
 // Rust ininite loop:
 //   loop { ... }
 fxl::RefPtr<ExprNode> ExprParser::LoopPrefix(const ExprToken& token) {
+  // Things inside of here support "break".
+  ScopedBoolSetter break_setter(&allow_break_, true);
+
   fxl::RefPtr<ExprNode> contents = ParseBlock(BlockDelimiter::kExplicit);
   if (has_error())
     return nullptr;
   return fxl::MakeRefCounted<LoopExprNode>(token, nullptr, std::nullopt, nullptr, nullptr, nullptr,
                                            std::move(contents));
+}
+
+fxl::RefPtr<ExprNode> ExprParser::BreakPrefix(const ExprToken& token) {
+  if (!allow_break_) {
+    SetError(token, "Use of 'break' in this context is not allowed.");
+    return nullptr;
+  }
+  return fxl::MakeRefCounted<BreakExprNode>(token);
 }
 
 bool ExprParser::LookAhead(ExprTokenType type) const {
