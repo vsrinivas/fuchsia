@@ -154,6 +154,50 @@ def get_fx_build_dir(fuchsia_dir):
         return os.path.join(fuchsia_dir, build_dir)
 
 
+def get_reclient_config(fuchsia_dir):
+    """Return reclient configuration."""
+    reclient_config_path = os.path.join(
+        fuchsia_dir, 'build', 'rbe', 'fuchsia-re-client.cfg')
+
+    instance_prefix = "instance="
+    container_image_prefix = "platform=container-image="
+
+    instance_name = None
+    container_image = None
+
+    with open(reclient_config_path) as f:
+        for line in f:
+            line = line.strip()
+            if line.startswith(instance_prefix):
+                instance_name = line[len(instance_prefix):]
+            elif line.startswith(container_image_prefix):
+                container_image = line[len(container_image_prefix):]
+
+    if not instance_name:
+        print(
+            'ERROR: Missing instance name from %s' % config_file_path,
+            file=sys.stderr)
+        sys.exit(1)
+    if not container_image:
+        print(
+            'ERROR: Missing container image name from %s' % config_file_path,
+            file=sys.stderr)
+        sys.exit(1)
+
+    bazel_config_file = f'''# Auto-generated - DO NOT EDIT
+rbe_config = struct(
+    instance_name = "{instance_name}",
+    container_image = "{container_image}",
+)
+'''
+
+    return {
+        "instance_name": instance_name,
+        "container_iamge": container_image,
+        "bazel_config": bazel_config_file,
+    }
+
+
 class GeneratedFiles(object):
     """Models the content of a generated Bazel workspace."""
 
@@ -312,6 +356,7 @@ def main():
     logs_dir = os.path.join(topdir, 'logs')
 
     host_tag = get_host_tag()
+    host_tag_alt = host_tag.replace('-', '_')
 
     ninja_binary = os.path.join(
         fuchsia_dir, 'prebuilt', 'third_party', 'ninja', host_tag, 'ninja')
@@ -458,12 +503,20 @@ block *
         download_config,
     )
 
+    # Extract remote instance name from reclient configuration file.
+    # and store it in a .bzl file in the workspace.
+    rbe_config = get_reclient_config(fuchsia_dir)
+    generated.add_file(
+        'workspace/fuchsia_rbe_config.bzl', rbe_config["bazel_config"])
+
     # Generate the content of .bazelrc
     bazelrc_content = expand_template_file(
         'template.bazelrc',
-        default_platform=host_tag.replace('-', '_'),
+        default_platform=host_tag_alt,
+        host_platform=host_tag_alt,
         log_file=os.path.join(logs_dir, 'workspace-events.log'),
         config_file=os.path.join(topdir, 'download_config_file'),
+        remote_instance_name=rbe_config["instance_name"],
     )
     if args.use_bzlmod:
         bazelrc_content += '''

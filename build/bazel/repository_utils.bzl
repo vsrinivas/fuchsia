@@ -57,6 +57,8 @@ def get_fuchsia_host_arch(repo_ctx):
     return _FUCHSIA_HOST_ARCH_MAP.get(host_arch, host_arch)
 
 _TARGET_TRIPLE_MAP = {
+    "fuchsia-x64": "x64_64-unknown-fuchsia",
+    "fuchsia-arm64": "aarch64-unknown-fuchsia",
     "linux-x64": "x86_64-unknown-linux-gnu",
     "linux-arm64": "aarch64-unknown-linux-gnu",
     "mac-x64": "x86_64-apple-darwin",

@@ -6,7 +6,14 @@
 C++ toolchain definitions for Clang.
 """
 
-load("@bazel_tools//tools/cpp:cc_toolchain_config_lib.bzl", "tool_path")
+load("@bazel_tools//tools/build_defs/cc:action_names.bzl", "ACTION_NAMES")
+load(
+    "@bazel_tools//tools/cpp:cc_toolchain_config_lib.bzl",
+    "feature",
+    "flag_group",
+    "flag_set",
+    "tool_path",
+)
 load("@prebuilt_clang//:generated_constants.bzl", clang_constants = "constants")
 
 def _prebuilt_clang_cc_toolchain_config_impl(ctx):
@@ -30,11 +37,64 @@ def _prebuilt_clang_cc_toolchain_config_impl(ctx):
         tool_path(name = "llbm-profdata", path = clang_binprefix + "llvm-profdata"),
     ]
 
+    # Redefine the dependency_files feature in order to use -MMD instead of -MD
+    # which ensures that system headers files are not listed in the dependency file.
+    # Doing this allows remote builds to work with our prebuilt toolchain. Otherwise
+    # the paths in cxx_builtin_include_directories will not match the ones that are
+    # generated in the remote builder, resulting in an error like:
+    #
+    # ```
+    # ERROR: ..../workspace/build/bazel/tests/hello_world/BUILD.bazel:5:10: Compiling build/bazel/tests/hello_world/main.cc failed: undeclared inclusion(s) in rule '//build/bazel/tests/hello_world:hello_world':
+    # this rule is missing dependency declarations for the following files included by 'build/bazel/tests/hello_world/main.cc':
+    # '/b/f/w/external/prebuilt_clang/include/c++/v1/stdio.h'
+    # '/b/f/w/external/prebuilt_clang/include/c++/v1/__config'
+    # '/b/f/w/external/prebuilt_clang/include/x86_64-unknown-linux-gnu/c++/v1/__config_site'
+    # '/b/f/w/external/prebuilt_clang/include/c++/v1/stddef.h'
+    # '/b/f/w/external/prebuilt_clang/lib/clang/16.0.0/include/stddef.h'
+    # '/b/f/w/external/prebuilt_clang/include/c++/v1/wchar.h'
+    # '/b/f/w/external/prebuilt_clang/lib/clang/16.0.0/include/stdarg.h'
+    # Target //build/bazel/tests/hello_world:hello_world failed to build
+    # ```
+    # Where `/b/f/w/` is the path of the execroot in the remote builder.
+    #
+    # Note that trying to set paths relative to the execroot in cxx_builtin_include_directories
+    # does not work (Bazel resolves them to absolute paths before recording them and trying to launch
+    # remote builds).
+
+    # See https://cs.opensource.google/bazel/bazel/+/master:tools/cpp/unix_cc_toolchain_config.bzl;drc=ed03d3edc3bab62942f2f9fab51f342fc8280930;l=1009
+    # for the original feature() definition.
+    dependency_file_feature = feature(
+        name = "dependency_file",
+        enabled = True,
+        flag_sets = [
+            flag_set(
+                actions = [
+                    ACTION_NAMES.assemble,
+                    ACTION_NAMES.preprocess_assemble,
+                    ACTION_NAMES.c_compile,
+                    ACTION_NAMES.cpp_compile,
+                    ACTION_NAMES.cpp_module_compile,
+                    ACTION_NAMES.objc_compile,
+                    ACTION_NAMES.objcpp_compile,
+                    ACTION_NAMES.cpp_header_parsing,
+                    ACTION_NAMES.clif_match,
+                ],
+                flag_groups = [
+                    flag_group(
+                        flags = ["-MMD", "-MF", "%{dependency_file}"],
+                        expand_if_available = "dependency_file",
+                    ),
+                ],
+            ),
+        ],
+    )
+    features = [dependency_file_feature]
+
     return cc_common.create_cc_toolchain_config_info(
         ctx = ctx,
         toolchain_identifier = "prebuilt_clang",
         tool_paths = tool_paths,
-        features = [],
+        features = features,
         action_configs = [],
         cxx_builtin_include_directories = clang_constants.builtin_include_paths,
         builtin_sysroot = ctx.attr.sysroot,
@@ -96,8 +156,15 @@ def prebuilt_clang_cc_toolchain(
         sysroot = sysroot_path,
     )
 
-    common_compiler_files = ["@prebuilt_clang//:compiler_binaries"]
-    common_linker_files = ["@prebuilt_clang//:linker_binaries"]
+    common_compiler_files = [
+        "@prebuilt_clang//:compiler_binaries",
+        "@prebuilt_clang//:headers",
+    ]
+
+    common_linker_files = [
+        "@prebuilt_clang//:linker_binaries",
+        "@prebuilt_clang//:runtime_libraries",
+    ]
 
     native.filegroup(
         name = name + "_compiler_files",

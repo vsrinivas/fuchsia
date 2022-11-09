@@ -9,7 +9,8 @@
 build --incompatible_enable_cc_toolchain_resolution
 
 # Setup the default platform.
-build --platforms=//build/bazel/platforms:{default_platform}
+common --platforms=//build/bazel/platforms:{default_platform}
+common --host_platform=//build/bazel/platforms:{host_platform}
 
 # Save workspace rule events to a log file for later analysis.
 build --experimental_workspace_rules_log_file={log_file}
@@ -26,13 +27,8 @@ build --host_javabase=@embedded_jdk//:jdk
 build --javabase=@embedded_jdk//:jdk
 
 # Setup remote build
-build:remote --remote_instance_name=projects/rbe-fuchsia-prod/instances/default
+build:remote --remote_instance_name={remote_instance_name}
 build:remote --define=EXECUTOR=remote
 build:remote --remote_executor=grpcs://remotebuildexecution.googleapis.com
 build:remote --incompatible_strict_action_env=true
 build:remote --google_default_credentials=true
-
-# TODO(fxbug.dev/114100): use @prebuilt_clang//:host_clang_linux_x64_cc_toolchain
-build:remote --extra_toolchains=//build/rbe/bazel/config:cc-toolchain
-# TODO(fxbug.dev/114100): see if this can be removed or simplified
-build:remote --host_platform=//build/rbe/bazel/config:platform

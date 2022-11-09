@@ -10,6 +10,7 @@ load(
 )
 load(
     "//:build/bazel/repository_utils.bzl",
+    "get_clang_target_triple",
     "get_fuchsia_host_arch",
     "get_fuchsia_host_os",
     "workspace_root_path",
@@ -30,12 +31,19 @@ def _generate_prebuilt_toolchain_impl(repo_ctx):
     host_os = get_fuchsia_host_os(repo_ctx)
     host_arch = get_fuchsia_host_arch(repo_ctx)
 
+    target_triple = get_clang_target_triple(host_os, host_arch)
+
     # Copy the content of the clang installation directory into
     # the repository directory, using hard-links whenever possible.
     # This allows us to add Bazel-specific files in this location.
+
+    # Resolve full path of script before executing it, this ensures that the repository
+    # rule will be re-run everytime the invoked script is modified.
+    script_path = str(repo_ctx.path(Label("@//:build/bazel/scripts/hardlink-directory.py")))
+
     repo_ctx.execute(
         [
-            workspace_dir + "/build/bazel/scripts/symlink-directory.py",
+            script_path,
             repo_ctx.attr.clang_install_dir,
             ".",
         ],
@@ -74,11 +82,19 @@ constants = struct(
   host_arch = "{host_arch}",
   clang_long_version = "{long_version}",
   clang_short_version = "{short_version}",
+  target_triple = "{target_triple}",
   builtin_include_paths = [
 {builtin_paths}
   ],
 )
-'''.format(host_os = host_os, host_arch = host_arch, long_version = long_version, short_version = short_version, builtin_paths = builtin_include_paths_str))
+'''.format(
+        host_os = host_os,
+        host_arch = host_arch,
+        long_version = long_version,
+        short_version = short_version,
+        target_triple = target_triple,
+        builtin_paths = builtin_include_paths_str,
+    ))
 
     repo_ctx.symlink(
         workspace_dir + "/build/bazel/toolchains/clang/prebuilt_clang.BUILD.bazel",

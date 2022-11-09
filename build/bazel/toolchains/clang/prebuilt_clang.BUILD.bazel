@@ -66,7 +66,14 @@ filegroup(
 filegroup(
     name = "headers",
     srcs = glob(["lib/clang/" + constants.clang_long_version + "/include/**"]) +
-           glob(["include/c++/v1/**"]),
+           glob(["include/c++/v1/**"]) +
+           glob(["include/%s/c++/v1/**" % constants.target_triple]),
+)
+
+filegroup(
+    name = "runtime_libraries",
+    srcs = glob(["lib/%s/**" % constants.target_triple]) +
+           glob(["lib/clang/%s/lib/%s/libclang_rt.builtins.a" % (constants.clang_long_version, constants.target_triple)]),
 )
 
 exports_files(

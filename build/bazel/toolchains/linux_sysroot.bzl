@@ -32,11 +32,19 @@ def linux_sysroot(name, sysroot_arch, sysroot_path = _linux_sysroot):
         fail("The sysroot_arch parameter must be one of: %s" % _linux_sysroot_archs)
 
     glob_patterns = [
+        # This file is the dynamic linker configuration script. Not sure whether this is really required.
         sysroot_path + "/etc/ld.so.conf.d/{arch}-linux-gnu.conf",
+        # This directory contains low-level system libraries related to the C library and dynamic linker
         sysroot_path + "/lib/{arch}-linux-gnu/**",
+        # This directory contains crtbeginS.o and similar C runtime files. The 4.9 is hard-coded intentionally by Clang.
+        sysroot_path + "/usr/lib/gcc/{arch}-linux-gnu/4.9/**",
+        # This directory contains higher-level system libraries (e.g. libX11.so) and crt1.o / crti.o / crtn.o
         sysroot_path + "/usr/lib/{arch}-linux-gnu/**",
+        # This directory contains system headers.
         sysroot_path + "/usr/include/**",
     ]
+
+    # The location of the dynamic linker is different for x64 compared to other architectures.
     if sysroot_arch == "x86_64":
         glob_patterns.append(sysroot_path + "/lib64/ld-linux-x86_64.so.2")
     else:
