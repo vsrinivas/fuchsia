@@ -488,6 +488,7 @@ template("syscall_test_suite") {
 
 syscall_test_suite(generic_test_label) {
   use_expectations_framework = true
+  run_in_cq_with_ns3 = true
 }
 syscall_test_suite(loopback_test_label) {
 }
