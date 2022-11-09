@@ -116,35 +116,47 @@ TYPED_TEST(BalloonGuestTest, VirtioBalloonFreePageReporting) {
   const uint64_t starting_free_memory_mib =
       this->stats->GetMemoryStats()->stats().free_bytes().value() / 1024 / 1024;
 
-  // Allocate 128MiB or 60% of the free memory, whatever is the smallest. Asan
-  // builds can ran quite low on memory. We don't want to stress the system too
-  // much and cause memory pressure warning by allocating too much memory
-  const uint64_t max_alloc_amount_mib = 128;
+  // Allocate 256MiB or 50% of the free memory, whatever is the smallest.
+  // We don't want to cause the memory pressure warning by allocating too
+  // much memory
+  const uint64_t max_alloc_amount_mib = 256;
   const uint64_t alloc_amount_mib =
-      std::min(max_alloc_amount_mib, starting_free_memory_mib / 10 * 6);
+      std::min(max_alloc_amount_mib, starting_free_memory_mib / 10 * 5);
   this->PrintKernelMemoryStats("Before the guest alloc");
-  FX_LOGS(INFO) << fxl::StringPrintf("Allocate and release %lu MiB in the guest", alloc_amount_mib);
 
+  FX_LOGS(INFO) << fxl::StringPrintf("Allocate and release %lu MiB in the guest", alloc_amount_mib);
+  // This call will allocate and immediate release the specified amount of
+  // memory in the guest.
+  // From the guest perspective, memory is available once it got released.
+  // From the host perspective, memory is taken by the guest and not available
+  // until it will be reclaimed by the free page reporting.
   std::string result;
   ASSERT_EQ(this->RunUtil(
                 fxl::StringPrintf("memory_test_util alloc --size-mb 1 --num %lu", alloc_amount_mib),
                 {}, &result),
             ZX_OK);
 
-  this->PrintKernelMemoryStats("After the guest alloc");
+  this->PrintKernelMemoryStats("After the guest alloc and release");
 
-  // Wait until at least half of the allocated memory get reclaimed. We cannot
-  // wait for the free memory amount to get exactly the same or higher than the
-  // original amount of free memory when the test was started. Guest OS can decide
-  // to use some memory for multiple reasons. Waiting for half of the memory to
-  // get reclaimed allows to eliminate false positives and false negatives.
-  FX_LOGS(INFO) << "Waiting for the virtio balloon to reclaim memory";
-  while (starting_free_memory_mib - alloc_amount_mib / 2 >
-         this->stats->GetMemoryStats()->stats().free_bytes().value() / 1024 / 1024) {
+  // Require 10% of allocated memory to be reclaimed to detect free page reporting
+  // Requiring 50% was causing occasional flakes, especially when memory was low to begin with.
+  // TODO(fxb/112540) Remove added logging during the reclaim wait once flake is resolved
+  const uint64_t reclaim_success_threshold =
+      starting_free_memory_mib - alloc_amount_mib + alloc_amount_mib / 10;
+  FX_LOGS(INFO) << "Waiting for the virtio balloon to reclaim memory. reclaim_success_threshold="
+                << reclaim_success_threshold;
+  const zx::time deadline = zx::deadline_after(zx::sec(30));
+
+  while (zx::clock::get_monotonic() < deadline &&
+         reclaim_success_threshold >
+             this->stats->GetMemoryStats()->stats().free_bytes().value() / 1024 / 1024) {
     zx::nanosleep(zx::deadline_after(zx::msec(100)));
+    this->PrintKernelMemoryStats("Waiting for memory reclaim");
   }
-
   this->PrintKernelMemoryStats("After the memory reclaim");
+  // Prefer explicit fail instead of getting stuck in the loop above
+  // Fail the test with extra logging if host's free memory didn't get above the threshold
+  ZX_ASSERT(zx::clock::get_monotonic() < deadline);
 }
 
 }  // namespace

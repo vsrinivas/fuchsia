@@ -183,7 +183,7 @@ impl<B: BalloonBackend> BalloonDevice<B> {
             total_len += range.len();
             self.backend.decommit_range(range.0.start as u64, range.len() as u64)?;
         }
-        tracing::debug!("Reclaimed {} MiB", total_len / 1024 / 1024);
+        tracing::trace!("Reclaimed {} MiB", total_len / 1024 / 1024);
         Ok(())
     }
 
