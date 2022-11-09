@@ -50,6 +50,7 @@ dart_library("lib") {
     "src/widgets/password.dart",
     "src/widgets/ready.dart",
     "src/widgets/ssh_keys.dart",
+    "src/widgets/unlock.dart",
   ]
 
   sources = entrypoints + services + states + widgets

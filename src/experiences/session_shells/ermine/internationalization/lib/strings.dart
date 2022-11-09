@@ -1427,6 +1427,12 @@ class Strings {
         args: [level],
       );
 
+  static String get unlock => Intl.message(
+        'Unlock',
+        name: 'unlock',
+        desc: 'The label for "Unlock" text field.',
+      );
+
   /// Lookup message given it's name.
   static String? lookup(String name) {
     final _messages = <String, String>{
