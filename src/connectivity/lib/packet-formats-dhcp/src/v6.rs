@@ -343,12 +343,13 @@ pub enum TimeValue {
 
 impl TimeValue {
     /// Constructs a new `TimeValue`.
-    fn new(t: u32) -> TimeValue {
+    pub const fn new(t: u32) -> TimeValue {
         match t {
             0 => TimeValue::Zero,
             u32::MAX => TimeValue::NonZero(NonZeroTimeValue::Infinity),
             t => TimeValue::NonZero(NonZeroTimeValue::Finite(
-                NonZeroOrMaxU32::new(t).expect("should succeed for non zero or u32::MAX values"),
+                // should succeed for non zero or u32::MAX values
+                const_unwrap::const_unwrap_option(NonZeroOrMaxU32::new(t)),
             )),
         }
     }

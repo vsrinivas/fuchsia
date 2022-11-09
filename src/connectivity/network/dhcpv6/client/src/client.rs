@@ -252,6 +252,20 @@ impl<S: for<'a> AsyncSocket<'a>> Client<S> {
                     dhcpv6_core::client::Action::UpdateDnsServers(servers) => {
                         let () = client.maybe_send_dns_server_updates(servers)?;
                     }
+                    dhcpv6_core::client::Action::IaNaUpdates(_) => {
+                        // TODO(https://fxbug.dev/96684): add actions to
+                        // (re)schedule preferred and valid lifetime timers.
+                        // TODO(https://fxbug.dev/96674): Add
+                        // action to remove the previous address.
+                        // TODO(https://fxbug.dev/95265): Add action to add
+                        // the new address and cancel timers for old address.
+                    }
+                    dhcpv6_core::client::Action::IaPdUpdates(_) => {
+                        // TODO(https://fxbug.dev/113079): Add actions to
+                        // schedule timers for delegated prefix.
+                        // TODO(https://fxbug.dev/113080) Add actions to add the
+                        // new prefix.
+                    }
                 };
                 Ok(client)
             })

@@ -19,7 +19,7 @@ use std::{
     hash::Hash,
     time::{Duration, Instant},
 };
-use tracing::{debug, info, warn};
+use tracing::{info, warn};
 use zerocopy::ByteSlice;
 
 /// Initial Information-request timeout `INF_TIMEOUT` from [RFC 8415, Section 7.6].
@@ -238,6 +238,28 @@ pub enum Action {
     ScheduleTimer(ClientTimerType, Duration),
     CancelTimer(ClientTimerType),
     UpdateDnsServers(Vec<Ipv6Addr>),
+    /// The updates for IA_NA bindings.
+    ///
+    /// Only changes to an existing bindings is conveyed through this
+    /// variant. That is, an update missing for an (`IAID`, `Ipv6Addr`) means
+    /// no new change for the address.
+    ///
+    /// Updates include the preferred/valid lifetimes for an address and it
+    /// is up to the action-taker to deprecate/invalidate addresses after the
+    /// appropriate lifetimes. That is, there will be no dedicated update
+    /// for preferred/valid lifetime expiration.
+    IaNaUpdates(HashMap<v6::IAID, HashMap<Ipv6Addr, IaValueUpdateKind>>),
+    /// The updates for IA_PD bindings.
+    ///
+    /// Only changes to an existing bindings is conveyed through this
+    /// variant. That is, an update missing for an (`IAID`, `Subnet<Ipv6Addr>`)
+    /// means no new change for the prefix.
+    ///
+    /// Updates include the preferred/valid lifetimes for a prefix and it
+    /// is up to the action-taker to deprecate/invalidate prefixes after the
+    /// appropriate lifetimes. That is, there will be no dedicated update
+    /// for preferred/valid lifetime expiration.
+    IaPdUpdates(HashMap<v6::IAID, HashMap<Subnet<Ipv6Addr>, IaValueUpdateKind>>),
 }
 
 pub type Actions = Vec<Action>;
@@ -423,15 +445,6 @@ impl InformationReceived {
 enum IaKind {
     Address,
     Prefix,
-}
-
-impl IaKind {
-    fn name(&self) -> &'static str {
-        match self {
-            IaKind::Address => "address",
-            IaKind::Prefix => "prefix",
-        }
-    }
 }
 
 trait IaValue: Copy + Clone + Debug + PartialEq + Eq + Hash {
@@ -626,8 +639,9 @@ enum LifetimesError {
     PreferredLifetimeGreaterThanValidLifetime(Lifetimes),
 }
 
+/// The valid and preferred lifetimes.
 #[derive(Copy, Clone, Debug, PartialEq)]
-struct Lifetimes {
+pub struct Lifetimes {
     preferred_lifetime: v6::TimeValue,
     valid_lifetime: v6::NonZeroTimeValue,
 }
@@ -2336,23 +2350,6 @@ fn compute_t(min: v6::NonZeroTimeValue, ratio: Ratio<u32>) -> v6::NonZeroTimeVal
     }
 }
 
-fn discard_leases<V: IaValue>(entry: &IaEntry<V>) {
-    match entry {
-        IaEntry::Assigned(_) => {
-            // TODO(https://fxbug.dev/96674): Add action to remove the address.
-            // TODO(https://fxbug.dev/96684): add actions to cancel preferred
-            // and valid lifetime timers.
-            // TODO(https://fxbug.dev/113079): Add actions to cancel timers for
-            // delegated prefix.
-            // TODO(https://fxbug.dev/113080) Add actions to invalidate prefix.
-        }
-        IaEntry::ToRequest(_) => {
-            // If the address was not previously assigned, no additional
-            // action is needed.
-        }
-    }
-}
-
 #[derive(Debug, thiserror::Error)]
 enum ReplyWithLeasesError {
     #[error("option processing error")]
@@ -2621,6 +2618,7 @@ struct ComputeNewEntriesWithCurrentIasAndReplyResult<V: IaValue> {
     new_entries: HashMap<v6::IAID, IaEntry<V>>,
     go_to_requesting: bool,
     missing_ias_in_reply: bool,
+    updates: HashMap<v6::IAID, HashMap<V, IaValueUpdateKind>>,
 }
 
 fn compute_new_entries_with_current_ias_and_reply<V: IaValue>(
@@ -2630,6 +2628,31 @@ fn compute_new_entries_with_current_ias_and_reply<V: IaValue>(
     current_entries: &HashMap<v6::IAID, IaEntry<V>>,
 ) -> ComputeNewEntriesWithCurrentIasAndReplyResult<V> {
     let mut go_to_requesting = false;
+
+    // As per RFC 8415 section 18.2.10.1:
+    //
+    //   If the Reply was received in response to a Solicit (with a
+    //   Rapid Commit option), Request, Renew, or Rebind message, the
+    //   client updates the information it has recorded about IAs from
+    //   the IA options contained in the Reply message:
+    //
+    //   ...
+    //
+    //   -  Add any new leases in the IA option to the IA as recorded
+    //      by the client.
+    //
+    //   -  Update lifetimes for any leases in the IA option that the
+    //      client already has recorded in the IA.
+    //
+    //   -  Discard any leases from the IA, as recorded by the client,
+    //      that have a valid lifetime of 0 in the IA Address or IA
+    //      Prefix option.
+    //
+    //   -  Leave unchanged any information about leases the client has
+    //      recorded in the IA but that were not included in the IA from
+    //      the server
+    let mut updates = HashMap::new();
+
     let mut new_entries = ias_in_reply
         .into_iter()
         .map(|(iaid, ia)| {
@@ -2648,7 +2671,6 @@ fn compute_new_entries_with_current_ias_and_reply<V: IaValue>(
                             request_type, ia_name, iaid, error_code, msg
                         );
                     }
-                    discard_leases(&current_entry);
                     let error = process_ia_error_status(request_type, error_code, V::KIND);
                     let without_hints = match error {
                         IaStatusError::Retry { without_hints } => without_hints,
@@ -2664,6 +2686,26 @@ fn compute_new_entries_with_current_ias_and_reply<V: IaValue>(
                             false
                         }
                     };
+
+                    // Let bindings know that the previously assigned values
+                    // should no longer be used.
+                    match current_entry {
+                        IaEntry::Assigned(values) => {
+                            assert_matches!(
+                                updates.insert(
+                                    iaid,
+                                    values
+                                        .keys()
+                                        .cloned()
+                                        .map(|value| (value, IaValueUpdateKind::Removed))
+                                        .collect()
+                                ),
+                                None
+                            );
+                        },
+                        IaEntry::ToRequest(_) => {},
+                    }
+
                     return (iaid, current_entry.to_request(without_hints));
                 }
             };
@@ -2691,80 +2733,105 @@ fn compute_new_entries_with_current_ias_and_reply<V: IaValue>(
                 return (iaid, current_entry.clone());
             }
 
+            let mut inner_updates = HashMap::new();
             let ia_values = ia_values
                 .into_iter()
                 .filter_map(|(value, lifetimes)| {
                     match lifetimes {
-                        Ok(lifetimes) => Some((
-                            value,
-                            lifetimes,
-                        )),
-                        Err(e) => {
-                            warn!(
-                                "Reply to {}: {} with IAID {:?}: discarding leases: {}",
-                                request_type, ia_name, iaid, e
+                        // Let bindings know about the assigned lease in the
+                        // reply.
+                        Ok(lifetimes) => {
+                            assert_matches!(
+                                inner_updates.insert(
+                                    value,
+                                    match current_entry {
+                                        IaEntry::Assigned(values) => {
+                                            if values.contains_key(&value) {
+                                                IaValueUpdateKind::UpdatedLifetimes(lifetimes)
+                                            } else {
+                                                IaValueUpdateKind::Added(lifetimes)
+                                            }
+                                        },
+                                        IaEntry::ToRequest(_) => IaValueUpdateKind::Added(lifetimes),
+                                    },
+                                ),
+                                None
                             );
+
+                            Some((
+                                value,
+                                lifetimes,
+                            ))
+                        },
+                        Err(LifetimesError::PreferredLifetimeGreaterThanValidLifetime(Lifetimes {
+                            preferred_lifetime,
+                            valid_lifetime,
+                        })) => {
+                            // As per RFC 8415 section 21.6,
+                            //
+                            //   The client MUST discard any addresses for which
+                            //   the preferred lifetime is greater than the
+                            //   valid lifetime.
+                            //
+                            // As per RFC 8415 section 21.22,
+                            //
+                            //   The client MUST discard any prefixes for which
+                            //   the preferred lifetime is greater than the
+                            //   valid lifetime.
+                            warn!(
+                                "Reply to {}: {} with IAID {:?}: ignoring value={:?} because \
+                                 preferred lifetime={:?} greater than valid lifetime={:?}",
+                                request_type, ia_name, iaid, value, preferred_lifetime, valid_lifetime
+                            );
+
+                            None
+                        },
+                        Err(LifetimesError::ValidLifetimeZero) => {
+                            info!(
+                                "Reply to {}: {} with IAID {:?}: invalidating value={:?} \
+                                 with zero lifetime",
+                                request_type, ia_name, iaid, value
+                            );
+
+                            // Let bindings know when a previously assigned
+                            // value should be immediately invalidated when the
+                            // reply includes it with a zero valid lifetime.
+                            match current_entry {
+                                IaEntry::Assigned(values) => {
+                                    if values.contains_key(&value) {
+                                        assert_matches!(
+                                            inner_updates.insert(
+                                                value,
+                                                IaValueUpdateKind::Removed,
+                                            ),
+                                            None
+                                        );
+                                    }
+                                }
+                                IaEntry::ToRequest(_) => {},
+                            }
+
                             None
                         }
                     }
                 })
                 .collect::<HashMap<_, _>>();
 
+            assert_matches!(updates.insert(iaid, inner_updates), None);
 
             if ia_values.is_empty() {
-                discard_leases(&current_entry);
-                return (iaid, IaEntry::ToRequest(current_entry.value().collect()));
+                (iaid, IaEntry::ToRequest(current_entry.value().collect()))
+            } else {
+                // At this point we know the IA will be considered assigned.
+                //
+                // Any current values not in the replied IA should be left alone
+                // as per RFC 8415 section 18.2.10.1:
+                //
+                //   -  Leave unchanged any information about leases the client
+                //      has recorded in the IA but that were not included in the
+                //      IA from the server.
+                (iaid, IaEntry::Assigned(ia_values))
             }
-
-            // Per RFC 8415 section 21.13:
-            //
-            //    If the server finds that the client has included an
-            //    IA in the Request message for which the server already
-            //    has a binding that associates the IA with the client,
-            //    the server sends a Reply message with existing bindings,
-            //    possibly with updated lifetimes.  The server may update
-            //    the bindings according to its local policies.
-            match current_entry {
-                IaEntry::Assigned(ia) => {
-                    // If the returned address does not match the address recorded by the client
-                    // remove old address and add new one; otherwise, extend the lifetimes of
-                    // the existing address.
-                    // The lifetime was extended, update preferred and valid
-                    // lifetime timers.
-                    //
-                    // TODO(https://fxbug.dev/96684): add actions to
-                    // (re)schedule preferred and valid lifetime timers.
-                    // TODO(https://fxbug.dev/113079): Add actions to
-                    // schedule timers for delegated prefix.
-                    // TODO(https://fxbug.dev/96674): Add
-                    // action to remove the previous address.
-                    // TODO(https://fxbug.dev/95265): Add action to add
-                    // the new address.
-                    // new address and cancel timers for old address.
-                    // TODO(https://fxbug.dev/113079): Add actions to
-                    // schedule timers for delegated prefix.
-                    // TODO(https://fxbug.dev/113080) Add actions to add the
-                    // new prefix.
-                    debug!(
-                        "Reply to {}: {} with IAID {:?}: updated {} from {:?} to {:?}.",
-                        request_type, ia_name, iaid, V::KIND.name(), ia, ia_values,
-                    );
-                }
-                IaEntry::ToRequest(_) => {
-                    // TODO(https://fxbug.dev/95265): Add action to
-                    // add the new address/prefix.
-                    // TODO(https://fxbug.dev/113079): Add actions to
-                    // schedule timers for delegated prefix.
-                    // TODO(https://fxbug.dev/113080) Add actions to add the
-                    // new prefix.
-                }
-            }
-
-            // Add the entry as renewed by the server.
-            (
-                iaid,
-                IaEntry::Assigned(ia_values),
-            )
         })
         .collect::<HashMap<_, _>>();
 
@@ -2794,7 +2861,30 @@ fn compute_new_entries_with_current_ias_and_reply<V: IaValue>(
         new_entries,
         go_to_requesting,
         missing_ias_in_reply,
+        updates,
     }
+}
+
+/// An update for an IA value.
+#[derive(Debug, PartialEq, Clone)]
+pub struct IaValueUpdate<V> {
+    pub value: V,
+    pub kind: IaValueUpdateKind,
+}
+
+/// An IA Value's update kind.
+#[derive(Debug, PartialEq, Clone)]
+pub enum IaValueUpdateKind {
+    Added(Lifetimes),
+    UpdatedLifetimes(Lifetimes),
+    Removed,
+}
+
+/// An IA update.
+#[derive(Debug, PartialEq, Clone)]
+pub struct IaUpdate<V> {
+    pub iaid: v6::IAID,
+    pub values: Vec<IaValueUpdate<V>>,
 }
 
 // Processes a Reply to Solicit (with fast commit), Request, Renew, or Rebind.
@@ -2864,11 +2954,19 @@ fn process_reply_with_leases<B: ByteSlice>(
         }
     }
 
-    let (non_temporary_addresses, delegated_prefixes, go_to_requesting, missing_ias_in_reply) = {
+    let (
+        non_temporary_addresses,
+        ia_na_updates,
+        delegated_prefixes,
+        ia_pd_updates,
+        go_to_requesting,
+        missing_ias_in_reply,
+    ) = {
         let ComputeNewEntriesWithCurrentIasAndReplyResult {
             new_entries: non_temporary_addresses,
             go_to_requesting: go_to_requesting_iana,
             missing_ias_in_reply: missing_ias_in_reply_iana,
+            updates: ia_na_updates,
         } = compute_new_entries_with_current_ias_and_reply(
             IA_NA_NAME,
             request_type,
@@ -2879,6 +2977,7 @@ fn process_reply_with_leases<B: ByteSlice>(
             new_entries: delegated_prefixes,
             go_to_requesting: go_to_requesting_iapd,
             missing_ias_in_reply: missing_ias_in_reply_iapd,
+            updates: ia_pd_updates,
         } = compute_new_entries_with_current_ias_and_reply(
             IA_PD_NAME,
             request_type,
@@ -2887,7 +2986,9 @@ fn process_reply_with_leases<B: ByteSlice>(
         );
         (
             non_temporary_addresses,
+            ia_na_updates,
             delegated_prefixes,
+            ia_pd_updates,
             go_to_requesting_iana || go_to_requesting_iapd,
             missing_ias_in_reply_iana || missing_ias_in_reply_iapd,
         )
@@ -2953,7 +3054,7 @@ fn process_reply_with_leases<B: ByteSlice>(
     // delegated prefix.
     // TODO(https://fxbug.dev/113080) Add actions to discover/invalidate prefix.
     let actions = match next_state {
-        StateAfterReplyWithLeases::Assigned => {
+        StateAfterReplyWithLeases::Assigned => Some(
             std::iter::once(Action::CancelTimer(ClientTimerType::Retransmission))
                 .chain(dns_servers.clone().map(Action::UpdateDnsServers))
                 // Set timer to start renewing addresses, per RFC 8415, section
@@ -2993,13 +3094,17 @@ fn process_reply_with_leases<B: ByteSlice>(
                         Duration::from_secs(t2_val.get().into()),
                     )),
                     v6::NonZeroTimeValue::Infinity => None,
-                })
-                .collect::<Vec<_>>()
-        }
+                }),
+        ),
         StateAfterReplyWithLeases::RequestNextServer
         | StateAfterReplyWithLeases::StayRenewingRebinding
-        | StateAfterReplyWithLeases::Requesting => Vec::new(),
-    };
+        | StateAfterReplyWithLeases::Requesting => None,
+    }
+    .into_iter()
+    .flatten()
+    .chain((!ia_na_updates.is_empty()).then(|| Action::IaNaUpdates(ia_na_updates)))
+    .chain((!ia_pd_updates.is_empty()).then(|| Action::IaPdUpdates(ia_pd_updates)))
+    .collect();
 
     Ok(ProcessedReplyWithLeases {
         server_id: got_server_id,
@@ -3066,7 +3171,13 @@ impl Requesting {
             retrans_count: 0,
             solicit_max_rt,
         }
-        .send_and_reschedule_retransmission(transaction_id(), options_to_request, rng, now)
+        .send_and_reschedule_retransmission(
+            transaction_id(),
+            options_to_request,
+            rng,
+            now,
+            std::iter::empty(),
+        )
     }
 
     /// Calculates timeout for retransmitting requests using parameters
@@ -3091,9 +3202,16 @@ impl Requesting {
         options_to_request: &[v6::OptionCode],
         rng: &mut R,
         now: Instant,
+        initial_actions: impl Iterator<Item = Action>,
     ) -> Transition {
-        let Transition { state, actions: request_actions, transaction_id } =
-            self.send_and_schedule_retransmission(transaction_id, options_to_request, rng, now);
+        let Transition { state, actions: request_actions, transaction_id } = self
+            .send_and_schedule_retransmission(
+                transaction_id,
+                options_to_request,
+                rng,
+                now,
+                initial_actions,
+            );
         let actions = std::iter::once(Action::CancelTimer(ClientTimerType::Retransmission))
             .chain(request_actions.into_iter())
             .collect();
@@ -3112,6 +3230,7 @@ impl Requesting {
         options_to_request: &[v6::OptionCode],
         rng: &mut R,
         now: Instant,
+        initial_actions: impl Iterator<Item = Action>,
     ) -> Transition {
         let Self {
             client_id,
@@ -3188,10 +3307,12 @@ impl Requesting {
                 retrans_count,
                 solicit_max_rt,
             }),
-            actions: vec![
-                Action::SendMessage(buf),
-                Action::ScheduleTimer(ClientTimerType::Retransmission, retrans_timeout),
-            ],
+            actions: initial_actions
+                .chain([
+                    Action::SendMessage(buf),
+                    Action::ScheduleTimer(ClientTimerType::Retransmission, retrans_timeout),
+                ])
+                .collect(),
             transaction_id: Some(transaction_id),
         }
     }
@@ -3261,6 +3382,7 @@ impl Requesting {
                 options_to_request,
                 rng,
                 now,
+                std::iter::empty(),
             );
         }
         request_from_alternate_server_or_restart_server_discovery(
@@ -3285,7 +3407,7 @@ impl Requesting {
         let Self {
             client_id,
             non_temporary_addresses: mut current_non_temporary_addresses,
-            delegated_prefixes: current_delegated_prefixes,
+            delegated_prefixes: mut current_delegated_prefixes,
             server_id,
             collected_advertise,
             first_request_time,
@@ -3326,15 +3448,55 @@ impl Requesting {
                                 // The client reissues the message without specifying addresses,
                                 // leaving it up to the server to assign addresses appropriate
                                 // for the client's link.
-                                current_non_temporary_addresses.iter_mut().for_each(
-                                    |(_, current_address_entry)| {
-                                        // Discard all currently-assigned addresses.
-                                        discard_leases(current_address_entry);
 
-                                        *current_address_entry =
-                                            AddressEntry::ToRequest(Default::default());
-                                    },
+                                fn get_updates_and_reset_to_empty_request<V: IaValue>(
+                                    current: &mut HashMap<v6::IAID, IaEntry<V>>,
+                                ) -> HashMap<v6::IAID, HashMap<V, IaValueUpdateKind>>
+                                {
+                                    let mut updates = HashMap::new();
+                                    current.iter_mut().for_each(|(iaid, entry)| {
+                                        // Discard all currently-assigned values.
+                                        match entry {
+                                            IaEntry::Assigned(values) => {
+                                                assert_matches!(
+                                                    updates.insert(
+                                                        *iaid,
+                                                        values
+                                                            .keys()
+                                                            .cloned()
+                                                            .map(|value| (
+                                                                value,
+                                                                IaValueUpdateKind::Removed
+                                                            ),)
+                                                            .collect()
+                                                    ),
+                                                    None
+                                                );
+                                            }
+                                            IaEntry::ToRequest(_) => {}
+                                        };
+
+                                        *entry = IaEntry::ToRequest(Default::default());
+                                    });
+
+                                    updates
+                                }
+
+                                let ia_na_updates = get_updates_and_reset_to_empty_request(
+                                    &mut current_non_temporary_addresses,
                                 );
+                                let ia_pd_updates = get_updates_and_reset_to_empty_request(
+                                    &mut current_delegated_prefixes,
+                                );
+
+                                let initial_actions = (!ia_na_updates.is_empty())
+                                    .then(|| Action::IaNaUpdates(ia_na_updates))
+                                    .into_iter()
+                                    .chain(
+                                        (!ia_pd_updates.is_empty())
+                                            .then(|| Action::IaPdUpdates(ia_pd_updates)),
+                                    );
+
                                 // TODO(https://fxbug.dev/96674): append to actions to remove
                                 // assigned addresses.
                                 // TODO(https://fxbug.dev/96684): add actions to cancel
@@ -3360,6 +3522,7 @@ impl Requesting {
                                     options_to_request,
                                     rng,
                                     now,
+                                    initial_actions,
                                 );
                             }
                             // Per RFC 8415, section 18.2.10:
@@ -4657,6 +4820,16 @@ pub(crate) mod testutil {
             Lifetimes::new_finite(PREFERRED_LIFETIME, VALID_LIFETIME)
         }
 
+        pub(crate) fn new(preferred_lifetime: u32, non_zero_valid_lifetime: u32) -> Self {
+            Lifetimes {
+                preferred_lifetime: v6::TimeValue::new(preferred_lifetime),
+                valid_lifetime: assert_matches!(
+                    v6::TimeValue::new(non_zero_valid_lifetime),
+                    v6::TimeValue::NonZero(v) => v
+                ),
+            }
+        }
+
         pub(crate) const fn new_finite(
             preferred_lifetime: v6::NonZeroOrMaxU32,
             valid_lifetime: v6::NonZeroOrMaxU32,
@@ -5266,6 +5439,32 @@ pub(crate) mod testutil {
             } else {
                 (None, None)
             };
+        let iana_updates = (0..)
+            .map(v6::IAID::new)
+            .zip(non_temporary_addresses_to_assign.iter())
+            .map(|(iaid, TestIa { values, t1: _, t2: _ })| {
+                (
+                    iaid,
+                    values
+                        .iter()
+                        .map(|(value, lifetimes)| (*value, IaValueUpdateKind::Added(*lifetimes)))
+                        .collect(),
+                )
+            })
+            .collect::<HashMap<_, _>>();
+        let iapd_updates = (0..)
+            .map(v6::IAID::new)
+            .zip(delegated_prefixes_to_assign.iter())
+            .map(|(iaid, TestIa { values, t1: _, t2: _ })| {
+                (
+                    iaid,
+                    values
+                        .iter()
+                        .map(|(value, lifetimes)| (*value, IaValueUpdateKind::Added(*lifetimes)))
+                        .collect(),
+                )
+            })
+            .collect::<HashMap<_, _>>();
         let expected_actions = [Action::CancelTimer(ClientTimerType::Retransmission)]
             .into_iter()
             .chain(maybe_dns_server_action)
@@ -5279,6 +5478,8 @@ pub(crate) mod testutil {
                     Duration::from_secs(expected_t2_secs.get().into()),
                 ),
             ])
+            .chain((!iana_updates.is_empty()).then(|| Action::IaNaUpdates(iana_updates)))
+            .chain((!iapd_updates.is_empty()).then(|| Action::IaPdUpdates(iapd_updates)))
             .collect::<Vec<_>>();
         assert_eq!(actions, expected_actions);
 
@@ -7041,10 +7242,21 @@ mod tests {
             [
                 Action::CancelTimer(ClientTimerType::Retransmission),
                 Action::ScheduleTimer(ClientTimerType::Renew, t1),
-                Action::ScheduleTimer(ClientTimerType::Rebind, t2)
+                Action::ScheduleTimer(ClientTimerType::Rebind, t2),
+                Action::IaNaUpdates(iana_updates),
             ] => {
                 assert_eq!(*t1, Duration::from_secs(T1.get().into()));
                 assert_eq!(*t2, Duration::from_secs(T2.get().into()));
+                assert_eq!(
+                    iana_updates,
+                    &HashMap::from([(
+                        iaid2,
+                        HashMap::from([(
+                            CONFIGURED_NON_TEMPORARY_ADDRESSES[1],
+                            IaValueUpdateKind::Added(Lifetimes::new_default()),
+                        )]),
+                    )]),
+                );
             }
         );
         assert!(transaction_id.is_none());
@@ -7227,17 +7439,19 @@ mod tests {
                 ia2_valid_lifetime,
                 &[],
             ))];
+            let iaid1 = v6::IAID::new(0);
+            let iaid2 = v6::IAID::new(1);
             let options = [
                 v6::DhcpOption::ServerId(&SERVER_ID[0]),
                 v6::DhcpOption::ClientId(&CLIENT_ID),
                 v6::DhcpOption::Iana(v6::IanaSerializer::new(
-                    v6::IAID::new(0),
+                    iaid1,
                     ia1_t1,
                     ia1_t2,
                     &iana_options1,
                 )),
                 v6::DhcpOption::Iana(v6::IanaSerializer::new(
-                    v6::IAID::new(1),
+                    iaid2,
                     ia2_t1,
                     ia2_t2,
                     &iana_options2,
@@ -7262,35 +7476,72 @@ mod tests {
                 state,
                 ClientState::Assigned(assigned) => assigned
             );
+
+            let update_actions = [Action::IaNaUpdates(HashMap::from([
+                (
+                    iaid1,
+                    HashMap::from([(
+                        CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
+                        IaValueUpdateKind::Added(Lifetimes::new(
+                            ia1_preferred_lifetime,
+                            ia1_valid_lifetime,
+                        )),
+                    )]),
+                ),
+                (
+                    iaid2,
+                    HashMap::from([(
+                        CONFIGURED_NON_TEMPORARY_ADDRESSES[1],
+                        IaValueUpdateKind::Added(Lifetimes::new(
+                            ia2_preferred_lifetime,
+                            ia2_valid_lifetime,
+                        )),
+                    )]),
+                ),
+            ]))];
+
             match (expected_t1, expected_t2) {
                 (v6::NonZeroTimeValue::Finite(t1_val), v6::NonZeroTimeValue::Finite(t2_val)) => {
-                    assert_matches!(
-                        &actions[..],
+                    assert_eq!(
+                        actions,
                         [
                             Action::CancelTimer(ClientTimerType::Retransmission),
-                            Action::ScheduleTimer(ClientTimerType::Renew, t1),
-                            Action::ScheduleTimer(ClientTimerType::Rebind, t2)
-                        ] => {
-                            assert_eq!(*t1, Duration::from_secs(t1_val.get().into()));
-                            assert_eq!(*t2, Duration::from_secs(t2_val.get().into()));
-                        }
+                            Action::ScheduleTimer(
+                                ClientTimerType::Renew,
+                                Duration::from_secs(t1_val.get().into())
+                            ),
+                            Action::ScheduleTimer(
+                                ClientTimerType::Rebind,
+                                Duration::from_secs(t2_val.get().into())
+                            )
+                        ]
+                        .into_iter()
+                        .chain(update_actions)
+                        .collect::<Vec<_>>(),
                     );
                 }
                 (v6::NonZeroTimeValue::Finite(t1_val), v6::NonZeroTimeValue::Infinity) => {
-                    assert_matches!(
-                        &actions[..],
+                    assert_eq!(
+                        actions,
                         [
                             Action::CancelTimer(ClientTimerType::Retransmission),
-                            Action::ScheduleTimer(ClientTimerType::Renew, t1),
-                        ] => {
-                            assert_eq!(*t1, Duration::from_secs(t1_val.get().into()));
-                        }
+                            Action::ScheduleTimer(
+                                ClientTimerType::Renew,
+                                Duration::from_secs(t1_val.get().into())
+                            ),
+                        ]
+                        .into_iter()
+                        .chain(update_actions)
+                        .collect::<Vec<_>>()
                     );
                 }
                 (v6::NonZeroTimeValue::Infinity, v6::NonZeroTimeValue::Infinity) => {
-                    assert_matches!(
-                        &actions[..],
+                    assert_eq!(
+                        actions,
                         [Action::CancelTimer(ClientTimerType::Retransmission)]
+                            .into_iter()
+                            .chain(update_actions)
+                            .collect::<Vec<_>>()
                     );
                 }
                 (v6::NonZeroTimeValue::Infinity, v6::NonZeroTimeValue::Finite(t2_val)) => {
@@ -7702,10 +7953,32 @@ mod tests {
             [
                 Action::CancelTimer(ClientTimerType::Retransmission),
                 Action::ScheduleTimer(ClientTimerType::Renew, t1),
-                Action::ScheduleTimer(ClientTimerType::Rebind, t2)
+                Action::ScheduleTimer(ClientTimerType::Rebind, t2),
+                Action::IaNaUpdates(iana_updates),
+                Action::IaPdUpdates(iapd_updates),
             ] => {
                 assert_eq!(*t1, Duration::from_secs(T1.get().into()));
                 assert_eq!(*t2, Duration::from_secs(T2.get().into()));
+                assert_eq!(
+                    iana_updates,
+                    &(0..).map(v6::IAID::new)
+                        .zip(CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2].iter().cloned())
+                        .map(|(iaid, value)| (
+                            iaid,
+                            HashMap::from([(value, IaValueUpdateKind::Added(Lifetimes::new_default()))])
+                        ))
+                        .collect::<HashMap<_, _>>(),
+                );
+                assert_eq!(
+                    iapd_updates,
+                    &(0..).map(v6::IAID::new)
+                        .zip(CONFIGURED_DELEGATED_PREFIXES[0..2].iter().cloned())
+                        .map(|(iaid, value)| (
+                            iaid,
+                            HashMap::from([(value, IaValueUpdateKind::Added(Lifetimes::new_default()))])
+                        ))
+                        .collect::<HashMap<_, _>>(),
+                );
             }
         );
     }
@@ -7727,11 +8000,24 @@ mod tests {
                 Action::CancelTimer(ClientTimerType::Retransmission),
                 Action::UpdateDnsServers(dns_servers),
                 Action::ScheduleTimer(ClientTimerType::Renew, t1),
-                Action::ScheduleTimer(ClientTimerType::Rebind, t2)
+                Action::ScheduleTimer(ClientTimerType::Rebind, t2),
+                Action::IaNaUpdates(iana_updates),
             ] => {
                 assert_eq!(dns_servers[..], DNS_SERVERS);
                 assert_eq!(*t1, Duration::from_secs(T1.get().into()));
                 assert_eq!(*t2, Duration::from_secs(T2.get().into()));
+                assert_eq!(
+                    iana_updates,
+                    &HashMap::from([
+                        (
+                            v6::IAID::new(0),
+                            HashMap::from([(
+                                CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
+                                IaValueUpdateKind::Added(Lifetimes::new_default()),
+                            )]),
+                        ),
+                    ]),
+                );
             }
         );
         assert_eq!(client.get_dns_servers()[..], DNS_SERVERS);
@@ -8114,19 +8400,30 @@ mod tests {
             expected_timer_actions,
         }: ScheduleRenewAndRebindTimersAfterAssignmentTestCase,
     ) {
+        fn get_ia_and_updates<V: IaValue>(
+            t1: v6::TimeValue,
+            t2: v6::TimeValue,
+            value: V,
+        ) -> (TestIa<V>, HashMap<v6::IAID, HashMap<V, IaValueUpdateKind>>) {
+            (
+                TestIa { t1, t2, ..TestIa::new_default(value) },
+                HashMap::from([(
+                    v6::IAID::new(0),
+                    HashMap::from([(value, IaValueUpdateKind::Added(Lifetimes::new_default()))]),
+                )]),
+            )
+        }
+
+        let (iana, iana_updates) =
+            get_ia_and_updates(ia_na_t1, ia_na_t2, CONFIGURED_NON_TEMPORARY_ADDRESSES[0]);
+        let (iapd, iapd_updates) =
+            get_ia_and_updates(ia_pd_t1, ia_pd_t2, CONFIGURED_DELEGATED_PREFIXES[0]);
+
         let (client, actions) = testutil::assign_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            vec![TestIaNa {
-                t1: ia_na_t1,
-                t2: ia_na_t2,
-                ..TestIaNa::new_default(CONFIGURED_NON_TEMPORARY_ADDRESSES[0])
-            }],
-            vec![TestIaPd {
-                t1: ia_pd_t1,
-                t2: ia_pd_t2,
-                ..TestIaPd::new_default(CONFIGURED_DELEGATED_PREFIXES[0])
-            }],
+            vec![iana],
+            vec![iapd],
             &[],
             StepRng::new(std::u64::MAX / 2, 0),
             Instant::now(),
@@ -8150,6 +8447,8 @@ mod tests {
             [Action::CancelTimer(ClientTimerType::Retransmission)]
                 .into_iter()
                 .chain(expected_timer_actions.into_iter().flatten())
+                .chain((!iana_updates.is_empty()).then(|| Action::IaNaUpdates(iana_updates)))
+                .chain((!iapd_updates.is_empty()).then(|| Action::IaPdUpdates(iapd_updates)))
                 .collect::<Vec<_>>()
         );
     }
@@ -8394,17 +8693,17 @@ mod tests {
 
         let expected_non_temporary_addresses = (0..)
             .map(v6::IAID::new)
-            .zip(ia_nas.into_iter().map(|TestIa { values, t1: _, t2: _ }| {
+            .zip(ia_nas.iter().map(|TestIa { values, t1: _, t2: _ }| {
                 AddressEntry::Assigned(
-                    values.into_keys().map(|value| (value, Lifetimes::new_renewed())).collect(),
+                    values.keys().cloned().map(|value| (value, Lifetimes::new_renewed())).collect(),
                 )
             }))
             .collect();
         let expected_delegated_prefixes = (0..)
             .map(v6::IAID::new)
-            .zip(ia_pds.into_iter().map(|TestIa { values, t1: _, t2: _ }| {
+            .zip(ia_pds.iter().map(|TestIa { values, t1: _, t2: _ }| {
                 PrefixEntry::Assigned(
-                    values.into_keys().map(|value| (value, Lifetimes::new_renewed())).collect(),
+                    values.keys().cloned().map(|value| (value, Lifetimes::new_renewed())).collect(),
                 )
             }))
             .collect();
@@ -8431,10 +8730,29 @@ mod tests {
             [
                 Action::CancelTimer(ClientTimerType::Retransmission),
                 Action::ScheduleTimer(ClientTimerType::Renew, t1),
-                Action::ScheduleTimer(ClientTimerType::Rebind, t2)
+                Action::ScheduleTimer(ClientTimerType::Rebind, t2),
+                Action::IaNaUpdates(iana_updates),
+                Action::IaPdUpdates(iapd_updates),
             ] => {
                 assert_eq!(*t1, Duration::from_secs(RENEWED_T1.get().into()));
                 assert_eq!(*t2, Duration::from_secs(RENEWED_T2.get().into()));
+
+
+                fn get_updates<V: IaValue>(ias: Vec<TestIa<V>>) -> HashMap<v6::IAID, HashMap<V, IaValueUpdateKind>> {
+                    (0..).map(v6::IAID::new).zip(ias.into_iter().map(
+                        |TestIa { values, t1: _, t2: _ }| {
+                            values.into_keys()
+                                .map(|value| (
+                                    value,
+                                    IaValueUpdateKind::UpdatedLifetimes(Lifetimes::new_renewed())
+                                ))
+                                .collect()
+                        },
+                    )).collect()
+                }
+
+                assert_eq!(iana_updates, &get_updates(ia_nas));
+                assert_eq!(iapd_updates, &get_updates(ia_pds));
             }
         );
     }
@@ -8845,10 +9163,211 @@ mod tests {
             [
                 Action::CancelTimer(ClientTimerType::Retransmission),
                 Action::ScheduleTimer(ClientTimerType::Renew, t1),
-                Action::ScheduleTimer(ClientTimerType::Rebind, t2)
+                Action::ScheduleTimer(ClientTimerType::Rebind, t2),
+                Action::IaNaUpdates(iana_updates),
+                Action::IaPdUpdates(iapd_updates),
             ] => {
                 assert_eq!(*t1, Duration::from_secs(RENEWED_T1.get().into()));
                 assert_eq!(*t2, Duration::from_secs(RENEWED_T2.get().into()));
+
+                fn get_updates<V: IaValue>(values: &[V], omit_iaid: u32) -> HashMap<v6::IAID, HashMap<V, IaValueUpdateKind>> {
+                    (0..).map(v6::IAID::new)
+                        .zip(values.iter().cloned())
+                        .filter_map(|(iaid, value)| {
+                            (iaid.get() != omit_iaid).then(|| (
+                                iaid,
+                                HashMap::from([(value, IaValueUpdateKind::UpdatedLifetimes(Lifetimes::new_renewed()))])
+                            ))
+                        })
+                        .collect()
+                }
+                assert_eq!(
+                    iana_updates,
+                    &get_updates(&CONFIGURED_NON_TEMPORARY_ADDRESSES, IA_NA_WITHOUT_ADDRESS_IAID),
+                );
+                assert_eq!(
+                    iapd_updates,
+                    &get_updates(&CONFIGURED_DELEGATED_PREFIXES, IA_PD_WITHOUT_PREFIX_IAID),
+                );
+            }
+        );
+    }
+
+    #[test_case(RENEW_TEST)]
+    #[test_case(REBIND_TEST)]
+    fn receive_reply_with_zero_lifetime(
+        RenewRebindTest {
+            send_and_assert,
+            message_type: _,
+            expect_server_id: _,
+            with_state: _,
+            allow_response_from_any_server: _,
+        }: RenewRebindTest,
+    ) {
+        const IA_NA_ZERO_LIFETIMES_ADDRESS_IAID: u32 = 0;
+        const IA_PD_ZERO_LIFETIMES_PREFIX_IAID: u32 = 1;
+
+        let time = Instant::now();
+        let mut client = send_and_assert(
+            CLIENT_ID,
+            SERVER_ID[0],
+            CONFIGURED_NON_TEMPORARY_ADDRESSES.iter().copied().map(TestIaNa::new_default).collect(),
+            CONFIGURED_DELEGATED_PREFIXES.iter().copied().map(TestIaPd::new_default).collect(),
+            None,
+            T1,
+            T2,
+            StepRng::new(std::u64::MAX / 2, 0),
+            time,
+        );
+        let ClientStateMachine { transaction_id, options_to_request: _, state: _, rng: _ } =
+            &client;
+        // The server includes an IA Address/Prefix option in only one of the IAs.
+        let iaaddr_opts = (0..)
+            .map(v6::IAID::new)
+            .zip(CONFIGURED_NON_TEMPORARY_ADDRESSES)
+            .map(|(iaid, addr)| {
+                let (pl, vl) = if iaid.get() == IA_NA_ZERO_LIFETIMES_ADDRESS_IAID {
+                    (0, 0)
+                } else {
+                    (RENEWED_PREFERRED_LIFETIME.get(), RENEWED_VALID_LIFETIME.get())
+                };
+
+                (iaid, [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(addr, pl, vl, &[]))])
+            })
+            .collect::<HashMap<_, _>>();
+        let iaprefix_opts = (0..)
+            .map(v6::IAID::new)
+            .zip(CONFIGURED_DELEGATED_PREFIXES)
+            .map(|(iaid, prefix)| {
+                let (pl, vl) = if iaid.get() == IA_PD_ZERO_LIFETIMES_PREFIX_IAID {
+                    (0, 0)
+                } else {
+                    (RENEWED_PREFERRED_LIFETIME.get(), RENEWED_VALID_LIFETIME.get())
+                };
+
+                (iaid, [v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(pl, vl, prefix, &[]))])
+            })
+            .collect::<HashMap<_, _>>();
+        let options =
+            [v6::DhcpOption::ClientId(&CLIENT_ID), v6::DhcpOption::ServerId(&SERVER_ID[0])]
+                .into_iter()
+                .chain(iaaddr_opts.iter().map(|(iaid, iaaddr_opts)| {
+                    v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                        *iaid,
+                        RENEWED_T1.get(),
+                        RENEWED_T2.get(),
+                        iaaddr_opts.as_ref(),
+                    ))
+                }))
+                .chain(iaprefix_opts.iter().map(|(iaid, iaprefix_opts)| {
+                    v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
+                        *iaid,
+                        RENEWED_T1.get(),
+                        RENEWED_T2.get(),
+                        iaprefix_opts.as_ref(),
+                    ))
+                }))
+                .collect::<Vec<_>>();
+        let builder = v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        let actions = client.handle_message_receive(msg, time);
+        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
+            &client;
+        let expected_non_temporary_addresses = (0..)
+            .map(v6::IAID::new)
+            .zip(CONFIGURED_NON_TEMPORARY_ADDRESSES)
+            .map(|(iaid, addr)| {
+                (
+                    iaid,
+                    if iaid.get() == IA_NA_ZERO_LIFETIMES_ADDRESS_IAID {
+                        AddressEntry::ToRequest(HashSet::from([addr]))
+                    } else {
+                        AddressEntry::new_assigned(
+                            addr,
+                            RENEWED_PREFERRED_LIFETIME,
+                            RENEWED_VALID_LIFETIME,
+                        )
+                    },
+                )
+            })
+            .collect::<HashMap<_, _>>();
+        let expected_delegated_prefixes = (0..)
+            .map(v6::IAID::new)
+            .zip(CONFIGURED_DELEGATED_PREFIXES)
+            .map(|(iaid, prefix)| {
+                (
+                    iaid,
+                    if iaid.get() == IA_PD_ZERO_LIFETIMES_PREFIX_IAID {
+                        PrefixEntry::ToRequest(HashSet::from([prefix]))
+                    } else {
+                        PrefixEntry::new_assigned(
+                            prefix,
+                            RENEWED_PREFERRED_LIFETIME,
+                            RENEWED_VALID_LIFETIME,
+                        )
+                    },
+                )
+            })
+            .collect::<HashMap<_, _>>();
+        // Expect the client to transition to Assigned and only extend
+        // the lifetime for one IA.
+        assert_matches!(
+            &state,
+            Some(ClientState::Assigned(Assigned{
+                client_id,
+                non_temporary_addresses,
+                delegated_prefixes,
+                server_id,
+                dns_servers,
+                solicit_max_rt,
+            })) => {
+                assert_eq!(client_id, &CLIENT_ID);
+                assert_eq!(non_temporary_addresses, &expected_non_temporary_addresses);
+                assert_eq!(delegated_prefixes, &expected_delegated_prefixes);
+                assert_eq!(server_id.as_slice(), &SERVER_ID[0]);
+                assert_eq!(dns_servers.as_slice(), &[] as &[Ipv6Addr]);
+                assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
+            }
+        );
+        assert_matches!(
+            &actions[..],
+            [
+                Action::CancelTimer(ClientTimerType::Retransmission),
+                Action::ScheduleTimer(ClientTimerType::Renew, t1),
+                Action::ScheduleTimer(ClientTimerType::Rebind, t2),
+                Action::IaNaUpdates(iana_updates),
+                Action::IaPdUpdates(iapd_updates),
+            ] => {
+                assert_eq!(*t1, Duration::from_secs(RENEWED_T1.get().into()));
+                assert_eq!(*t2, Duration::from_secs(RENEWED_T2.get().into()));
+
+                fn get_updates<V: IaValue>(values: &[V], omit_iaid: u32) -> HashMap<v6::IAID, HashMap<V, IaValueUpdateKind>> {
+                    (0..).map(v6::IAID::new)
+                        .zip(values.iter().cloned())
+                        .map(|(iaid, value)| (
+                            iaid,
+                            HashMap::from([(
+                                value,
+                                if iaid.get() == omit_iaid {
+                                    IaValueUpdateKind::Removed
+                                } else {
+                                    IaValueUpdateKind::UpdatedLifetimes(Lifetimes::new_renewed())
+                                }
+                            )]),
+                        ))
+                        .collect()
+                }
+                assert_eq!(
+                    iana_updates,
+                    &get_updates(&CONFIGURED_NON_TEMPORARY_ADDRESSES, IA_NA_ZERO_LIFETIMES_ADDRESS_IAID),
+                );
+                assert_eq!(
+                    iapd_updates,
+                    &get_updates(&CONFIGURED_DELEGATED_PREFIXES, IA_PD_ZERO_LIFETIMES_PREFIX_IAID),
+                );
             }
         );
     }
@@ -8902,15 +9421,16 @@ mod tests {
         let actions = client.handle_message_receive(msg, time);
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
+        let iaid = v6::IAID::new(0);
         let expected_non_temporary_addresses = HashMap::from([(
-            v6::IAID::new(0),
+            iaid,
             AddressEntry::Assigned(HashMap::from([(
                 RENEW_NON_TEMPORARY_ADDRESSES[0],
                 Lifetimes::new_finite(RENEWED_PREFERRED_LIFETIME, RENEWED_VALID_LIFETIME),
             )])),
         )]);
         let expected_delegated_prefixes = HashMap::from([(
-            v6::IAID::new(0),
+            iaid,
             PrefixEntry::Assigned(HashMap::from([(
                 RENEW_DELEGATED_PREFIXES[0],
                 Lifetimes::new_finite(RENEWED_PREFERRED_LIFETIME, RENEWED_VALID_LIFETIME),
@@ -8941,13 +9461,44 @@ mod tests {
             [
                 Action::CancelTimer(ClientTimerType::Retransmission),
                 Action::ScheduleTimer(ClientTimerType::Renew, t1),
-                Action::ScheduleTimer(ClientTimerType::Rebind, t2)
-                // TODO(https://fxbug.dev/96674): expect initial address is
-                // removed.
-                // TODO(https://fxbug.dev/95265): expect new address is added.
+                Action::ScheduleTimer(ClientTimerType::Rebind, t2),
+                Action::IaNaUpdates(iana_updates),
+                Action::IaPdUpdates(iapd_updates),
             ] => {
                 assert_eq!(*t1, Duration::from_secs(RENEWED_T1.get().into()));
                 assert_eq!(*t2, Duration::from_secs(RENEWED_T2.get().into()));
+
+                fn get_updates<V: IaValue>(
+                    iaid: v6::IAID,
+                    new_value: V,
+                ) -> HashMap<v6::IAID, HashMap<V, IaValueUpdateKind>> {
+                    HashMap::from([
+                        (
+                            iaid,
+                            HashMap::from([
+                                (
+                                    new_value,
+                                    IaValueUpdateKind::Added(Lifetimes::new_renewed()),
+                                ),
+                            ])
+                        ),
+                    ])
+                }
+
+                assert_eq!(
+                    iana_updates,
+                    &get_updates(
+                        iaid,
+                        RENEW_NON_TEMPORARY_ADDRESSES[0],
+                    ),
+                );
+                assert_eq!(
+                    iapd_updates,
+                    &get_updates(
+                        iaid,
+                        RENEW_DELEGATED_PREFIXES[0],
+                    ),
+                );
             }
         );
     }
@@ -9363,17 +9914,20 @@ mod tests {
             v6::ErrorStatusCode::NoPrefixAvail.into(),
             "No prefixes available.",
         )];
+        let ok_iaid = v6::IAID::new(0);
+        let no_value_avail_iaid = v6::IAID::new(1);
+        let empty_values_iaid = v6::IAID::new(2);
         let options = vec![
             v6::DhcpOption::ClientId(&CLIENT_ID),
             v6::DhcpOption::ServerId(&SERVER_ID[0]),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(
-                v6::IAID::new(0),
+                ok_iaid,
                 ia_na_success_t1.get(),
                 ia_na_success_t2.get(),
                 &ia_addr,
             )),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(
-                v6::IAID::new(1),
+                no_value_avail_iaid,
                 // If the server returns an IA with status code indicating
                 // failure, the T1/T2 values for that IA should not be included
                 // in the T1/T2 calculation.
@@ -9382,7 +9936,7 @@ mod tests {
                 &ia_no_addrs_avail,
             )),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(
-                v6::IAID::new(2),
+                empty_values_iaid,
                 // If the server returns an IA_NA with no IA Address option, the
                 // T1/T2 values for that IA should not be included in the T1/T2
                 // calculation.
@@ -9391,13 +9945,13 @@ mod tests {
                 &[],
             )),
             v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
-                v6::IAID::new(0),
+                ok_iaid,
                 ia_pd_success_t1.get(),
                 ia_pd_success_t2.get(),
                 &ia_prefix,
             )),
             v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
-                v6::IAID::new(1),
+                no_value_avail_iaid,
                 // If the server returns an IA with status code indicating
                 // failure, the T1/T2 values for that IA should not be included
                 // in the T1/T2 calculation.
@@ -9406,7 +9960,7 @@ mod tests {
                 &ia_no_prefixes_avail,
             )),
             v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
-                v6::IAID::new(2),
+                empty_values_iaid,
                 // If the server returns an IA_PD with no IA Prefix option, the
                 // T1/T2 values for that IA should not be included in the T1/T2
                 // calculation.
@@ -9427,7 +9981,10 @@ mod tests {
             [
                 Action::CancelTimer(ClientTimerType::Retransmission),
                 Action::ScheduleTimer(ClientTimerType::Renew, t1),
-                Action::ScheduleTimer(ClientTimerType::Rebind, t2)
+                Action::ScheduleTimer(ClientTimerType::Rebind, t2),
+                Action::IaNaUpdates(iana_updates),
+                Action::IaPdUpdates(iapd_updates),
+
             ] => {
                 assert_eq!(
                     *t1,
@@ -9441,6 +9998,49 @@ mod tests {
                         ia_na_success_t2,
                         ia_pd_success_t2,
                     ).get().into()),
+                );
+
+                fn get_updates<V: IaValue>(
+                    ok_iaid: v6::IAID,
+                    ok_value: V,
+                    no_value_avail_iaid: v6::IAID,
+                    no_value_avail_value: V
+                ) -> HashMap<v6::IAID, HashMap<V, IaValueUpdateKind>> {
+                    HashMap::from([
+                        (
+                            ok_iaid,
+                            HashMap::from([(
+                                ok_value,
+                                IaValueUpdateKind::UpdatedLifetimes(Lifetimes::new_renewed()),
+                            )])
+                        ),
+                        (
+                            no_value_avail_iaid,
+                            HashMap::from([(
+                                no_value_avail_value,
+                                IaValueUpdateKind::Removed,
+                            )])
+                        ),
+                    ])
+                }
+
+                assert_eq!(
+                    iana_updates,
+                    &get_updates(
+                        ok_iaid,
+                        CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
+                        no_value_avail_iaid,
+                        CONFIGURED_NON_TEMPORARY_ADDRESSES[1],
+                    ),
+                );
+                assert_eq!(
+                    iapd_updates,
+                    &get_updates(
+                        ok_iaid,
+                        CONFIGURED_DELEGATED_PREFIXES[0],
+                        no_value_avail_iaid,
+                        CONFIGURED_DELEGATED_PREFIXES[1],
+                    ),
                 );
             }
         );

@@ -12,6 +12,7 @@ rustc_library("packet-formats-dhcp") {
   with_unit_tests = true
   deps = [
     "//src/connectivity/lib/net-types",
+    "//src/lib/const-unwrap",
     "//src/lib/mdns/rust:mdns",
     "//src/lib/network/packet",
     "//third_party/rust_crates:num-derive",
