@@ -516,73 +516,6 @@ uint X86PageTableEpt::pt_flags_to_mmu_flags(PtFlags flags, PageTableLevel level)
   return mmu_flags;
 }
 
-void x86_mmu_early_init() {
-  x86_mmu_percpu_init();
-
-  x86_mmu_mem_type_init();
-
-  // Unmap the lower identity mapping.
-  pml4[0] = 0;
-  // As we are still in early init code we cannot use the general page invalidation mechanisms,
-  // specifically ones that might use mp_sync_exec or kcounters, so just drop the entire tlb.
-  x86_tlb_global_invalidate();
-
-  /* get the address width from the CPU */
-  auto vaddr_width =
-      static_cast<uint8_t>(arch::BootCpuid<arch::CpuidAddressSizeInfo>().linear_addr_bits());
-  auto paddr_width =
-      static_cast<uint8_t>(arch::BootCpuid<arch::CpuidAddressSizeInfo>().phys_addr_bits());
-
-  supports_huge_pages = x86_feature_test(X86_FEATURE_HUGE_PAGE);
-
-  /* if we got something meaningful, override the defaults.
-   * some combinations of cpu on certain emulators seems to return
-   * nonsense paddr widths (1), so trim it. */
-  if (paddr_width > g_max_paddr_width) {
-    g_max_paddr_width = paddr_width;
-  }
-
-  if (vaddr_width > g_max_vaddr_width) {
-    g_max_vaddr_width = vaddr_width;
-  }
-
-  LTRACEF("paddr_width %u vaddr_width %u\n", g_max_paddr_width, g_max_vaddr_width);
-}
-
-void x86_mmu_init() {
-  ASSERT_MSG(g_max_vaddr_width >= kX86VAddrBits,
-             "Maximum number of virtual address bits (%u) is less than the assumed number of bits"
-             " being used (%u)\n",
-             g_max_vaddr_width, kX86VAddrBits);
-}
-
-X86PageTableBase::X86PageTableBase() {}
-
-X86PageTableBase::~X86PageTableBase() {
-  DEBUG_ASSERT_MSG(!phys_, "page table dtor called before Destroy()");
-}
-
-// We disable analysis due to the write to |pages_| tripping it up.  It is safe
-// to write to |pages_| since this is part of object construction.
-zx_status_t X86PageTableBase::Init(void* ctx,
-                                   page_alloc_fn_t test_paf) TA_NO_THREAD_SAFETY_ANALYSIS {
-  test_page_alloc_func_ = test_paf;
-
-  /* allocate a top level page table for the new address space */
-  virt_ = AllocatePageTable();
-  if (!virt_) {
-    TRACEF("error allocating top level page directory\n");
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  phys_ = physmap_to_paddr(virt_);
-  DEBUG_ASSERT(phys_ != 0);
-
-  ctx_ = ctx;
-  pages_ = 1;
-  return ZX_OK;
-}
-
 // We disable analysis due to the write to |pages_| tripping it up.  It is safe
 // to write to |pages_| since this is part of object construction.
 zx_status_t X86PageTableMmu::InitKernel(void* ctx,
@@ -655,6 +588,13 @@ zx_status_t X86ArchVmAspace::Init() {
   ktl::atomic_init(&active_cpus_, 0);
 
   return ZX_OK;
+}
+
+X86ArchVmAspace::~X86ArchVmAspace() {
+  if (pt_) {
+    pt_->~X86PageTableBase();
+  }
+  // TODO(fxbug.dev/30927): check that we've destroyed the aspace.
 }
 
 zx_status_t X86ArchVmAspace::Destroy() {
@@ -776,7 +716,55 @@ bool X86ArchVmAspace::ActiveSinceLastCheck(bool clear) {
   return previously_active;
 }
 
-void x86_mmu_percpu_init(void) {
+vaddr_t X86ArchVmAspace::PickSpot(vaddr_t base, vaddr_t end, vaddr_t align, size_t size,
+                                  uint mmu_flags) {
+  canary_.Assert();
+  return PAGE_ALIGN(base);
+}
+
+uint32_t arch_address_tagging_features() { return 0; }
+
+void x86_mmu_early_init() {
+  x86_mmu_percpu_init();
+
+  x86_mmu_mem_type_init();
+
+  // Unmap the lower identity mapping.
+  pml4[0] = 0;
+  // As we are still in early init code we cannot use the general page invalidation mechanisms,
+  // specifically ones that might use mp_sync_exec or kcounters, so just drop the entire tlb.
+  x86_tlb_global_invalidate();
+
+  /* get the address width from the CPU */
+  auto vaddr_width =
+      static_cast<uint8_t>(arch::BootCpuid<arch::CpuidAddressSizeInfo>().linear_addr_bits());
+  auto paddr_width =
+      static_cast<uint8_t>(arch::BootCpuid<arch::CpuidAddressSizeInfo>().phys_addr_bits());
+
+  supports_huge_pages = x86_feature_test(X86_FEATURE_HUGE_PAGE);
+
+  /* if we got something meaningful, override the defaults.
+   * some combinations of cpu on certain emulators seems to return
+   * nonsense paddr widths (1), so trim it. */
+  if (paddr_width > g_max_paddr_width) {
+    g_max_paddr_width = paddr_width;
+  }
+
+  if (vaddr_width > g_max_vaddr_width) {
+    g_max_vaddr_width = vaddr_width;
+  }
+
+  LTRACEF("paddr_width %u vaddr_width %u\n", g_max_paddr_width, g_max_vaddr_width);
+}
+
+void x86_mmu_init() {
+  ASSERT_MSG(g_max_vaddr_width >= kX86VAddrBits,
+             "Maximum number of virtual address bits (%u) is less than the assumed number of bits"
+             " being used (%u)\n",
+             g_max_vaddr_width, kX86VAddrBits);
+}
+
+void x86_mmu_percpu_init() {
   arch::X86Cr0::Read()
       .set_wp(true)   // Set write protect.
       .set_nw(false)  // Clear not-write-through.
@@ -798,18 +786,3 @@ void x86_mmu_percpu_init(void) {
   efer_msr |= X86_EFER_NXE;
   write_msr(X86_MSR_IA32_EFER, efer_msr);
 }
-
-X86ArchVmAspace::~X86ArchVmAspace() {
-  if (pt_) {
-    pt_->~X86PageTableBase();
-  }
-  // TODO(fxbug.dev/30927): check that we've destroyed the aspace.
-}
-
-vaddr_t X86ArchVmAspace::PickSpot(vaddr_t base, vaddr_t end, vaddr_t align, size_t size,
-                                  uint mmu_flags) {
-  canary_.Assert();
-  return PAGE_ALIGN(base);
-}
-
-uint32_t arch_address_tagging_features() { return 0; }

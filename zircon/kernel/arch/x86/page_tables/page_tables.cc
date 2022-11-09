@@ -345,6 +345,33 @@ class MappingCursor {
   size_t size_;
 };
 
+X86PageTableBase::X86PageTableBase() {}
+
+X86PageTableBase::~X86PageTableBase() {
+  DEBUG_ASSERT_MSG(!phys_, "page table dtor called before Destroy()");
+}
+
+// We disable analysis due to the write to |pages_| tripping it up.  It is safe
+// to write to |pages_| since this is part of object construction.
+zx_status_t X86PageTableBase::Init(void* ctx,
+                                   page_alloc_fn_t test_paf) TA_NO_THREAD_SAFETY_ANALYSIS {
+  test_page_alloc_func_ = test_paf;
+
+  /* allocate a top level page table for the new address space */
+  virt_ = AllocatePageTable();
+  if (!virt_) {
+    TRACEF("error allocating top level page directory\n");
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  phys_ = physmap_to_paddr(virt_);
+  DEBUG_ASSERT(phys_ != 0);
+
+  ctx_ = ctx;
+  pages_ = 1;
+  return ZX_OK;
+}
+
 void X86PageTableBase::UpdateEntry(ConsistencyManager* cm, PageTableLevel level, vaddr_t vaddr,
                                    volatile pt_entry_t* pte, paddr_t paddr, PtFlags flags,
                                    bool was_terminal, bool exact_flags) {
