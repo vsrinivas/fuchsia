@@ -17,6 +17,9 @@ static constexpr uint16_t kNumQueues = 3;
 static constexpr uint16_t kQueueSize = 16;
 
 class VirtioBalloonTest : public TestWithDevice {
+ public:
+  constexpr static auto kComponentName = "virtio_balloon";
+
  protected:
   VirtioBalloonTest()
       : inflate_queue_(phys_mem_, PAGE_SIZE * kNumQueues, kQueueSize),
@@ -31,7 +34,6 @@ class VirtioBalloonTest : public TestWithDevice {
     using component_testing::RealmRoot;
     using component_testing::Route;
 
-    constexpr auto kComponentName = "virtio_balloon";
     constexpr auto kVirtioBalloonUrl = "#meta/virtio_balloon.cm";
     // Add extra memory pages which we will be zero'ing inside of the inflate test
     // Not having extra memory will result in inflate test zero op stomping on its own inflate
@@ -80,6 +82,14 @@ class VirtioBalloonTest : public TestWithDevice {
     ASSERT_EQ(ZX_OK, status);
   }
 
+  template <typename T>
+  T InspectValue(std::string value_name) {
+    return GetInspect("realm_builder\\:" + realm_->GetChildName() + "/" + kComponentName + ":root",
+                      kComponentName)
+        .GetByPath({"root", std::move(value_name)})
+        .Get<T>();
+  }
+
  public:
   // Note: use of sync can be problematic here if the test environment needs to handle
   // some incoming FIDL requests.
@@ -94,6 +104,8 @@ class VirtioBalloonTest : public TestWithDevice {
 // Do not inflate pages which contain device queue to avoid zeroing out queue while it's being
 // processed
 TEST_F(VirtioBalloonTest, Inflate) {
+  ASSERT_EQ(InspectValue<int64_t>("num_inflated_pages"), 0);
+  // 22 is out of bounds, processing will get up to it and drop the rest of descriptor chain
   uint32_t pfns[] = {5, 6, 7, 22, 9};
   zx_status_t status =
       DescriptorChainBuilder(inflate_queue_).AppendReadableDescriptor(pfns, sizeof(pfns)).Build();
@@ -104,6 +116,8 @@ TEST_F(VirtioBalloonTest, Inflate) {
   status = WaitOnInterrupt();
   ASSERT_EQ(ZX_OK, status);
 
+  ASSERT_EQ(InspectValue<int64_t>("num_inflated_pages"), 3);
+
   uint32_t pfns2[] = {8, 10, 9};
   status =
       DescriptorChainBuilder(inflate_queue_).AppendReadableDescriptor(pfns2, sizeof(pfns2)).Build();
@@ -113,10 +127,11 @@ TEST_F(VirtioBalloonTest, Inflate) {
   ASSERT_EQ(ZX_OK, status);
   status = WaitOnInterrupt();
   ASSERT_EQ(ZX_OK, status);
+  ASSERT_EQ(InspectValue<int64_t>("num_inflated_pages"), 6);
 }
 
 TEST_F(VirtioBalloonTest, Deflate) {
-  uint32_t pfns[] = {3, 2, 1};
+  uint32_t pfns[] = {3, 2, 1, 6};
   zx_status_t status =
       DescriptorChainBuilder(deflate_queue_).AppendReadableDescriptor(pfns, sizeof(pfns)).Build();
   ASSERT_EQ(ZX_OK, status);
@@ -125,6 +140,7 @@ TEST_F(VirtioBalloonTest, Deflate) {
   ASSERT_EQ(ZX_OK, status);
   status = WaitOnInterrupt();
   ASSERT_EQ(ZX_OK, status);
+  ASSERT_EQ(InspectValue<int64_t>("num_inflated_pages"), -4);
 }
 
 TEST_F(VirtioBalloonTest, Stats) {

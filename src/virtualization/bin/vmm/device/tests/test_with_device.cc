@@ -4,6 +4,7 @@
 
 #include "src/virtualization/bin/vmm/device/tests/test_with_device.h"
 
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/channel.h>
 
 #include "src/virtualization/bin/vmm/device/config.h"
@@ -72,4 +73,24 @@ zx_status_t TestWithDevice::MakeStartInfo(
     return status;
   }
   return phys_mem_.Init(std::move(vmo));
+}
+
+inspect::contrib::DiagnosticsData TestWithDevice::GetInspect(const std::string& selector,
+                                                             const std::string& name) {
+  fuchsia::diagnostics::ArchiveAccessorPtr accessor;
+  auto svc = sys::ServiceDirectory::CreateFromNamespace();
+  svc->Connect(accessor.NewRequest());
+  inspect::contrib::ArchiveReader reader(std::move(accessor), {selector});
+  fpromise::result<std::vector<inspect::contrib::DiagnosticsData>, std::string> result;
+  async::Executor executor(dispatcher());
+  executor.schedule_task(reader.SnapshotInspectUntilPresent({name}).then(
+      [&](fpromise::result<std::vector<inspect::contrib::DiagnosticsData>, std::string>& rest) {
+        result = std::move(rest);
+      }));
+  RunLoopWithTimeoutOrUntil([&] { return result.is_ok() || result.is_error(); }, zx::sec(10),
+                            zx::msec(100));
+  EXPECT_EQ(result.is_error(), false) << "Error was " << result.error();
+  EXPECT_EQ(result.is_ok(), true) << "Result timed out";
+  EXPECT_EQ(result.value().size(), 1ul) << "Expected only one component";
+  return std::move(result.value()[0]);
 }
