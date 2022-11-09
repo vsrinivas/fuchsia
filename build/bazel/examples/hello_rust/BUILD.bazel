@@ -7,10 +7,12 @@ load(
     "fuchsia_component",
     "fuchsia_component_manifest",
     "fuchsia_package",
+    "fuchsia_test_component",
+    "fuchsia_test_package",
     "fuchsia_wrap_rust_binary",
     "if_fuchsia",
 )
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_doc")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_doc", "rust_test")
 
 rust_binary(
     name = "hello_rust_native",
@@ -45,6 +47,44 @@ fuchsia_package(
     name = "pkg",
     package_name = "hello_rust",
     components = [":component"],
+    visibility = ["//visibility:public"],
+)
+
+rust_test(
+    name = "hello_rust_test_native",
+    crate = ":hello_rust_native",
+    rustc_flags = [
+        "-Zpanic_abort_tests",
+        "-Cpanic=abort",
+    ],
+    deps = if_fuchsia(["@fuchsia_sdk//pkg/fdio"]),
+)
+
+fuchsia_wrap_rust_binary(
+    name = "hello_rust_test",
+    testonly = True,
+    native_binary = ":hello_rust_test_native",
+)
+
+fuchsia_component_manifest(
+    name = "test_manifest",
+    src = "meta/hello_rust_test.cml",
+    includes = [
+        "@fuchsia_sdk//pkg/sys/testing:elf_test_runner",
+        "@fuchsia_sdk//pkg/syslog:client",
+    ],
+)
+
+fuchsia_test_component(
+    name = "test_component",
+    manifest = ":test_manifest",
+    deps = [":hello_rust_test"],
+)
+
+fuchsia_test_package(
+    name = "test_pkg",
+    package_name = "hello_rust_test",
+    components = [":test_component"],
     visibility = ["//visibility:public"],
 )
 
