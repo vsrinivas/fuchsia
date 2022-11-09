@@ -121,9 +121,7 @@ pub(super) struct Virtualization<B: BridgeHandler> {
     // TODO(https://fxbug.dev/101224): Use this field as the allowed upstream
     // device classes when NAT is supported.
     _allowed_upstream_device_classes: HashSet<DeviceClass>,
-    allowed_bridge_upstream_device_classes: HashSet<DeviceClass>,
-    bridge_handler: B,
-    bridge_state: BridgeState,
+    bridge: Bridge<B>,
 }
 
 impl<B: BridgeHandler> Virtualization<B> {
@@ -136,21 +134,11 @@ impl<B: BridgeHandler> Virtualization<B> {
         Self {
             installer,
             _allowed_upstream_device_classes,
-            allowed_bridge_upstream_device_classes,
-            bridge_handler,
-            bridge_state: Default::default(),
-        }
-    }
-
-    fn is_device_class_allowed_for_bridge_upstream(
-        &self,
-        device_class: fnet_interfaces::DeviceClass,
-    ) -> bool {
-        match device_class {
-            fnet_interfaces::DeviceClass::Device(device_class) => {
-                self.allowed_bridge_upstream_device_classes.contains(&device_class.into())
-            }
-            fnet_interfaces::DeviceClass::Loopback(fnet_interfaces::Empty {}) => false,
+            bridge: Bridge {
+                allowed_bridge_upstream_device_classes,
+                bridge_handler,
+                bridge_state: Default::default(),
+            },
         }
     }
 
@@ -160,6 +148,7 @@ impl<B: BridgeHandler> Virtualization<B> {
         request: NetworkRequest,
         events: &mut futures::stream::SelectAll<EventStream>,
     ) -> Result<(), errors::Error> {
+        let Self { installer, bridge, _allowed_upstream_device_classes } = self;
         match request {
             NetworkRequest::Request(
                 fnet_virtualization::NetworkRequest::AddPort { port, interface, control_handle: _ },
@@ -184,7 +173,7 @@ impl<B: BridgeHandler> Virtualization<B> {
                     fidl::endpoints::create_proxy::<fnet_interfaces_admin::DeviceControlMarker>()
                         .context("create proxy")
                         .map_err(errors::Error::NonFatal)?;
-                self.installer
+                installer
                     .install_device(device, server_end)
                     .context("call install device")
                     .map_err(errors::Error::Fatal)?;
@@ -229,7 +218,10 @@ impl<B: BridgeHandler> Virtualization<B> {
                 match network_id {
                     NetworkId::Bridged => {
                         // Add this interface to the existing bridge, or create one if none exists.
-                        self.add_guest_to_bridge(id).await.context("adding interface to bridge")?;
+                        bridge
+                            .add_guest_to_bridge(id)
+                            .await
+                            .context("adding interface to bridge")?;
                     }
                 }
 
@@ -304,10 +296,30 @@ impl<B: BridgeHandler> Virtualization<B> {
         }
         Ok(())
     }
+}
+
+struct Bridge<B: BridgeHandler> {
+    allowed_bridge_upstream_device_classes: HashSet<DeviceClass>,
+    bridge_handler: B,
+    bridge_state: BridgeState,
+}
+
+impl<B: BridgeHandler> Bridge<B> {
+    fn is_device_class_allowed_for_bridge_upstream(
+        &self,
+        device_class: fnet_interfaces::DeviceClass,
+    ) -> bool {
+        match device_class {
+            fnet_interfaces::DeviceClass::Device(device_class) => {
+                self.allowed_bridge_upstream_device_classes.contains(&device_class.into())
+            }
+            fnet_interfaces::DeviceClass::Loopback(fnet_interfaces::Empty {}) => false,
+        }
+    }
 
     async fn add_guest_to_bridge(&mut self, id: u64) -> Result<(), errors::Error> {
         info!("got a request to add interface {} to bridge", id);
-        let Self { bridge_state, bridge_handler, .. } = self;
+        let Self { bridge_state, bridge_handler, allowed_bridge_upstream_device_classes: _ } = self;
         *bridge_state = match std::mem::take(bridge_state) {
             BridgeState::Init => BridgeState::WaitingForUpstream { guests: HashSet::from([id]) },
             // If a bridge doesn't exist, but we have an interface with upstream connectivity,
@@ -346,7 +358,7 @@ impl<B: BridgeHandler> Virtualization<B> {
 
     async fn remove_guest_from_bridge(&mut self, id: u64) -> Result<(), errors::Error> {
         info!("got a request to remove interface {} from bridge", id);
-        let Self { bridge_state, bridge_handler, .. } = self;
+        let Self { bridge_state, bridge_handler, allowed_bridge_upstream_device_classes: _ } = self;
         *bridge_state = match std::mem::take(bridge_state) {
             BridgeState::Init | BridgeState::WaitingForGuests { .. } => {
                 panic!("cannot remove guest interface {} since it was not previously added", id)
@@ -366,8 +378,7 @@ impl<B: BridgeHandler> Virtualization<B> {
                 if guests.is_empty() {
                     BridgeState::WaitingForGuests { upstream, upstream_candidates }
                 } else {
-                    let bridge_id = self
-                        .bridge_handler
+                    let bridge_id = bridge_handler
                         .build_bridge(guests.iter().copied(), upstream)
                         .await
                         .context("building bridge")?;
@@ -384,7 +395,7 @@ impl<B: BridgeHandler> Virtualization<B> {
         allowed_for_bridge_upstream: bool,
     ) -> Result<(), errors::Error> {
         info!("interface {} (allowed for upstream: {}) is online", id, allowed_for_bridge_upstream);
-        let Self { bridge_state, bridge_handler, .. } = self;
+        let Self { bridge_state, bridge_handler, allowed_bridge_upstream_device_classes: _ } = self;
         *bridge_state = match std::mem::take(bridge_state) {
             BridgeState::Init => {
                 if allowed_for_bridge_upstream {
@@ -459,7 +470,8 @@ impl<B: BridgeHandler> Virtualization<B> {
             "interface {} (allowed for upstream: {}) is offline",
             id, allowed_for_bridge_upstream
         );
-        let Self { bridge_state, .. } = self;
+        let Self { bridge_state, allowed_bridge_upstream_device_classes: _, bridge_handler: _ } =
+            self;
         *bridge_state = match std::mem::take(bridge_state) {
             BridgeState::Init => BridgeState::Init,
             BridgeState::WaitingForUpstream { guests } => {
@@ -504,7 +516,7 @@ impl<B: BridgeHandler> Virtualization<B> {
 
     async fn handle_interface_removed(&mut self, removed_id: u64) -> Result<(), errors::Error> {
         info!("interface {} removed", removed_id);
-        let Self { bridge_state, bridge_handler, .. } = self;
+        let Self { bridge_state, bridge_handler, allowed_bridge_upstream_device_classes: _ } = self;
         *bridge_state = match std::mem::take(bridge_state) {
             BridgeState::Init => BridgeState::Init,
             BridgeState::WaitingForUpstream { guests } => {
@@ -539,8 +551,7 @@ impl<B: BridgeHandler> Virtualization<B> {
                     // The bridge interface installed by netcfg should not be removed by any other
                     // entity.
                     error!("bridge interface {} removed; rebuilding", bridge_id);
-                    let bridge_id = self
-                        .bridge_handler
+                    let bridge_id = bridge_handler
                         .build_bridge(guests.iter().copied(), upstream)
                         .await
                         .context("building bridge")?;
@@ -549,8 +560,7 @@ impl<B: BridgeHandler> Virtualization<B> {
                     bridge_handler.destroy_bridge(bridge_id).await.context("destroying bridge")?;
                     match take_any(&mut upstream_candidates) {
                         Some(new_upstream_id) => {
-                            let bridge_id = self
-                                .bridge_handler
+                            let bridge_id = bridge_handler
                                 .build_bridge(guests.iter().copied(), new_upstream_id)
                                 .await
                                 .context("building bridge")?;
@@ -646,7 +656,8 @@ impl<B: BridgeHandler> Handler for Virtualization<B> {
                 match network_id {
                     NetworkId::Bridged => {
                         // Remove this interface from the existing bridge.
-                        self.remove_guest_from_bridge(id)
+                        self.bridge
+                            .remove_guest_from_bridge(id)
                             .await
                             .context("removing interface from bridge")?;
                     }
@@ -660,15 +671,17 @@ impl<B: BridgeHandler> Handler for Virtualization<B> {
         &mut self,
         update_result: &fnet_interfaces_ext::UpdateResult<'_>,
     ) -> Result<(), errors::Error> {
+        let Self { bridge, installer: _, _allowed_upstream_device_classes } = self;
         match update_result {
             fnet_interfaces_ext::UpdateResult::Added(properties)
             | fnet_interfaces_ext::UpdateResult::Existing(properties) => {
                 let fnet_interfaces_ext::Properties { id, online, device_class, .. } = **properties;
                 let allowed_for_bridge_upstream =
-                    self.is_device_class_allowed_for_bridge_upstream(device_class);
+                    bridge.is_device_class_allowed_for_bridge_upstream(device_class);
 
                 if online {
-                    self.handle_interface_online(id, allowed_for_bridge_upstream)
+                    bridge
+                        .handle_interface_online(id, allowed_for_bridge_upstream)
                         .await
                         .context("handle new interface online")?;
                 }
@@ -680,16 +693,18 @@ impl<B: BridgeHandler> Handler for Virtualization<B> {
                 let fnet_interfaces_ext::Properties { id, online, device_class, .. } =
                     **current_properties;
                 let allowed_for_bridge_upstream =
-                    self.is_device_class_allowed_for_bridge_upstream(device_class);
+                    bridge.is_device_class_allowed_for_bridge_upstream(device_class);
 
                 match (*previously_online, online) {
                     (Some(false), true) => {
-                        self.handle_interface_online(id, allowed_for_bridge_upstream)
+                        bridge
+                            .handle_interface_online(id, allowed_for_bridge_upstream)
                             .await
                             .context("handle interface online")?;
                     }
                     (Some(true), false) => {
-                        self.handle_interface_offline(id, allowed_for_bridge_upstream)
+                        bridge
+                            .handle_interface_offline(id, allowed_for_bridge_upstream)
                             .await
                             .context("handle interface offline")?;
                     }
@@ -705,7 +720,7 @@ impl<B: BridgeHandler> Handler for Virtualization<B> {
                 id,
                 ..
             }) => {
-                self.handle_interface_removed(*id).await.context("handle interface removed")?;
+                bridge.handle_interface_removed(*id).await.context("handle interface removed")?;
             }
             fnet_interfaces_ext::UpdateResult::NoChange => {}
         }
@@ -1156,41 +1171,37 @@ mod tests {
         // At most 2 events will need to be sent before the test can process them: in the case that
         // a bridge is modified, the bridge is destroyed and then built again.
         let (events_tx, mut events_rx) = mpsc::channel(2);
-        let (installer, _installer_server) =
-            fidl::endpoints::create_proxy::<fnet_interfaces_admin::InstallerMarker>()
-                .expect("create endpoints");
-        let mut handler = Virtualization::new(
-            HashSet::new(),
-            HashSet::new(),
-            BridgeHandlerTestImpl::new(events_tx),
-            installer,
-        );
+        let mut bridge = Bridge {
+            allowed_bridge_upstream_device_classes: Default::default(),
+            bridge_handler: BridgeHandlerTestImpl::new(events_tx),
+            bridge_state: Default::default(),
+        };
 
         for (action, expected_events) in steps {
             match action {
                 Action::AddGuest(guest) => {
-                    handler.add_guest_to_bridge(guest.id()).await.expect("add guest to bridge");
+                    bridge.add_guest_to_bridge(guest.id()).await.expect("add guest to bridge");
                 }
                 Action::RemoveGuest(guest) => {
-                    handler
+                    bridge
                         .remove_guest_from_bridge(guest.id())
                         .await
                         .expect("remove guest from bridge");
                 }
                 Action::UpstreamOnline(upstream) => {
-                    handler
+                    bridge
                         .handle_interface_online(upstream.id(), true)
                         .await
                         .expect("upstream interface online");
                 }
                 Action::UpstreamOffline(upstream) => {
-                    handler
+                    bridge
                         .handle_interface_offline(upstream.id(), true)
                         .await
                         .expect("upstream interface offline");
                 }
                 Action::RemoveUpstream(upstream) => {
-                    handler
+                    bridge
                         .handle_interface_removed(upstream.id())
                         .await
                         .expect("upstream interface removed");
