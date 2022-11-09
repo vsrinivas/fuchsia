@@ -31,7 +31,6 @@ group("packages") {
     "virtio_gpu",
     "virtio_input",
     "virtio_magma",
-    "virtio_net",
     "virtio_net_rs",
     "virtio_rng",
     "virtio_sound",
