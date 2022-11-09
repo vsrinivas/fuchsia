@@ -1,0 +1,37 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/test.gni")
+
+fidl("fuchsia.gizmo.protocol") {
+  sources = [ "protocol.test.fidl" ]
+}
+
+# Run the driver tests using DFv2
+test("transport_test_v2") {
+  sources = [ "test_v2.cc" ]
+  deps = [
+    ":fuchsia.gizmo.protocol_cpp",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_hlcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
+    "//sdk/lib/device-watcher/cpp",
+    "//sdk/lib/driver_test_realm/realm_builder/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+# Run the driver tests using DFv1
+test("transport_test_v1") {
+  sources = [ "test_v1.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_hlcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
+    "//sdk/lib/device-watcher/cpp",
+    "//sdk/lib/driver_test_realm/realm_builder/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/zxtest",
+  ]
+}

@@ -1,0 +1,9 @@
+{
+    "short_description": "Driver Framework example for the Zircon transport channel",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "DriverFramework"
+    ]
+}

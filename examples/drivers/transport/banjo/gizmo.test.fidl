@@ -1,0 +1,25 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.examples.gizmo;
+
+using zx;
+
+/// The protocol provides access to functions of the driver.
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
+protocol Misc {
+    /// Returns a unique identifier for this device.
+    GetHardwareId() -> (struct {
+        status zx.status;
+        response uint32;
+    });
+
+    /// Returns the current device firmware version
+    GetFirmwareVersion() -> (struct {
+        status zx.status;
+        major uint32;
+        minor uint32;
+    });
+};

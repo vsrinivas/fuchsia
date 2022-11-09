@@ -7,6 +7,7 @@ group("drivers") {
     "bindlib_codegen",
     "driver_test_realm/sample-driver",
     "fidl_bindlib_codegen",
+    "transport",
     "v2/demo-number:component",
     "v2/demo_driver_base:component",
   ]
@@ -16,6 +17,7 @@ group("tests") {
   testonly = true
   deps = [
     "driver_test_realm:tests",
+    "transport:tests",
     "v2/demo-number:tests",
     "v2/demo_driver_base:tests",
   ]

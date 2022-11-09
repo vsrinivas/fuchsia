@@ -1,0 +1,70 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/drivers.gni")
+import("//build/fidl/fidl.gni")
+
+group("banjo") {
+  deps = [
+    ":child_component",
+    ":parent_component",
+  ]
+}
+
+# Sample driver protocol using the Banjo transport
+fidl("fuchsia.examples.gizmo") {
+  sources = [ "gizmo.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
+}
+
+driver_bind_rules("parent_bind") {
+  rules = "parent-driver.bind"
+  header_output = "parent-driver-bind.h"
+  bind_output = "parent-driver.bindbc"
+  deps = [ "//src/devices/bind/fuchsia.test" ]
+}
+
+fuchsia_driver("parent_driver") {
+  output_name = "banjo_transport_parent"
+  sources = [ "parent-driver.cc" ]
+  deps = [
+    ":fuchsia.examples.gizmo_banjo_cpp",
+    ":fuchsia.examples.gizmo_bindlib_cpp",
+    ":parent_bind",
+    "//src/devices/lib/driver",
+    "//src/lib/ddktl",
+  ]
+}
+
+fuchsia_driver_component("parent_component") {
+  component_name = "banjo_transport_parent"
+  colocate = true
+  deps = [ ":parent_driver" ]
+  info = "component-info.json"
+}
+
+driver_bind_rules("child_bind") {
+  rules = "child-driver.bind"
+  header_output = "child-driver-bind.h"
+  bind_output = "child-driver.bindbc"
+  deps = [ "//src/devices/bind/fuchsia.misc" ]
+}
+
+fuchsia_driver("child_driver") {
+  output_name = "banjo_transport_child"
+  sources = [ "child-driver.cc" ]
+  deps = [
+    ":child_bind",
+    ":fuchsia.examples.gizmo_banjo_cpp",
+    "//src/devices/lib/driver",
+    "//src/lib/ddktl",
+  ]
+}
+
+fuchsia_driver_component("child_component") {
+  component_name = "banjo_transport_child"
+  colocate = true
+  deps = [ ":child_driver" ]
+  info = "component-info.json"
+}

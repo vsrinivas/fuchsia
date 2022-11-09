@@ -1,0 +1,62 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/drivers.gni")
+
+driver_bind_rules("parent_bind") {
+  rules = "parent-driver.bind"
+  header_output = "parent-driver-bind.h"
+  bind_output = "parent-driver.bindbc"
+  deps = [ "//src/devices/bind/fuchsia.test" ]
+}
+
+fuchsia_driver("parent_driver") {
+  output_name = "driver_transport_parent_v1"
+  sources = [ "parent-driver.cc" ]
+  deps = [
+    ":parent_bind",
+    "//examples/drivers/transport/driver:fuchsia.examples.gizmo_bindlib_cpp",
+    "//examples/drivers/transport/driver:fuchsia.examples.gizmo_cpp_driver",
+    "//sdk/lib/driver/component/cpp:cpp",
+    "//sdk/lib/driver/runtime:driver_runtime_cpp",
+    "//src/devices/lib/driver",
+    "//src/devices/lib/driver:driver_runtime",
+    "//src/lib/ddktl",
+  ]
+}
+
+fuchsia_driver_component("parent_component") {
+  component_name = "driver_transport_parent"
+  colocate = true
+  deps = [ ":parent_driver" ]
+  info = "component-info.json"
+}
+
+driver_bind_rules("child_bind") {
+  rules = "child-driver.bind"
+  header_output = "child-driver-bind.h"
+  bind_output = "child-driver.bindbc"
+  deps =
+      [ "//examples/drivers/transport/driver:fuchsia.examples.gizmo_bindlib" ]
+}
+
+fuchsia_driver("child_driver") {
+  output_name = "driver_transport_child_v1"
+  sources = [ "child-driver.cc" ]
+  deps = [
+    ":child_bind",
+    "//examples/drivers/transport/driver:fuchsia.examples.gizmo_cpp_driver",
+    "//sdk/lib/driver/runtime:driver_runtime_cpp",
+    "//src/devices/lib/driver",
+    "//src/devices/lib/driver:driver_runtime",
+    "//src/lib/ddktl",
+  ]
+}
+
+fuchsia_driver_component("child_component") {
+  component_name = "driver_transport_child"
+  colocate = true
+  deps = [ ":child_driver" ]
+  info = "component-info.json"
+}

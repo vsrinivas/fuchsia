@@ -1,0 +1,16 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.gizmo.protocol;
+
+@discoverable
+protocol TestingProtocol {
+    GetValue() -> (struct {
+        response uint32;
+    });
+};
+
+service Service {
+    testing client_end:TestingProtocol;
+};

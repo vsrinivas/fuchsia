@@ -1,0 +1,29 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ 'syslog/client.shard.cml' ],
+    program: {
+        runner: 'driver',
+        binary: 'driver/driver_transport_parent.so',
+        bind: 'meta/bind/parent-driver.bindbc',
+    },
+    capabilities: [
+        { service: 'fuchsia.driver.compat.Service' },
+        { service: 'fuchsia.examples.gizmo.Service' },
+    ],
+    use: [
+        { protocol: 'fuchsia.device.fs.Exporter' },
+        { service: 'fuchsia.driver.compat.Service' },
+    ],
+    expose: [
+        {
+            service: 'fuchsia.driver.compat.Service',
+            from: 'self',
+        },
+        {
+            service: 'fuchsia.examples.gizmo.Service',
+            from: 'self',
+        },
+    ],
+}

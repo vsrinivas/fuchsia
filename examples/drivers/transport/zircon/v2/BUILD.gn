@@ -1,0 +1,65 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/drivers.gni")
+
+driver_bind_rules("parent_bind") {
+  rules = "parent-driver.bind"
+  bind_output = "parent-driver.bindbc"
+  deps = [ "//src/devices/bind/fuchsia.test" ]
+}
+
+fuchsia_driver("parent_driver") {
+  output_name = "zircon_transport_parent"
+  sources = [ "parent-driver.cc" ]
+  deps = [
+    ":parent_bind",
+    "//examples/drivers/transport/tests:fuchsia.gizmo.protocol_cpp",
+    "//examples/drivers/transport/zircon:fuchsia.examples.gizmo_bindlib_cpp",
+    "//examples/drivers/transport/zircon:fuchsia.examples.gizmo_cpp",
+    "//sdk/fidl/fuchsia.device.fs:fuchsia.device.fs_cpp",
+    "//sdk/fidl/fuchsia.driver.compat:fuchsia.driver.compat_cpp",
+    "//sdk/lib/driver/compat/cpp",
+    "//sdk/lib/driver/compat/cpp:symbols",
+    "//sdk/lib/driver/component/cpp:cpp",
+    "//src/devices/lib/driver:driver_runtime",
+  ]
+}
+
+fuchsia_driver_component("parent_component") {
+  component_name = "zircon_transport_parent"
+  manifest = "meta/parent-driver.cml"
+  deps = [ ":parent_driver" ]
+  info = "component-info.json"
+}
+
+driver_bind_rules("child_bind") {
+  rules = "child-driver.bind"
+  bind_output = "child-driver.bindbc"
+  deps =
+      [ "//examples/drivers/transport/zircon:fuchsia.examples.gizmo_bindlib" ]
+}
+
+fuchsia_driver("child_driver") {
+  output_name = "zircon_transport_child"
+  sources = [ "child-driver.cc" ]
+  deps = [
+    ":child_bind",
+    "//examples/drivers/transport/tests:fuchsia.gizmo.protocol_cpp",
+    "//examples/drivers/transport/zircon:fuchsia.examples.gizmo_cpp",
+    "//sdk/fidl/fuchsia.device.fs:fuchsia.device.fs_cpp",
+    "//sdk/fidl/fuchsia.driver.compat:fuchsia.driver.compat_cpp",
+    "//sdk/lib/driver/compat/cpp",
+    "//sdk/lib/driver/compat/cpp:symbols",
+    "//sdk/lib/driver/component/cpp:cpp",
+    "//src/devices/lib/driver:driver_runtime",
+  ]
+}
+
+fuchsia_driver_component("child_component") {
+  component_name = "zircon_transport_child"
+  manifest = "meta/child-driver.cml"
+  deps = [ ":child_driver" ]
+  info = "component-info.json"
+}
