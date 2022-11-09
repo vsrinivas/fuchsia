@@ -12,6 +12,7 @@
 #include <cstring>
 #include <vector>
 
+#include <fbl/algorithm.h>
 #include <gtest/gtest.h>
 #include <vulkan/vulkan.h>
 
@@ -1098,6 +1099,37 @@ TEST_F(VulkanExtensionTest, ImportAliasing) {
 
 class VulkanFormatTest : public VulkanExtensionTest,
                          public ::testing::WithParamInterface<VkFormat> {};
+
+TEST(ByteOffsetCalculation, YTiling) {
+  // In pixels. 2 tiles by 2 tiles.
+  constexpr size_t kWidth = 256 / 4;
+  constexpr size_t kHeight = 64;
+  std::vector<uint32_t> tile_data(4096 * 2 * 2);
+  fuchsia::sysmem::BufferCollectionInfo_2 info;
+  info.settings.has_image_format_constraints = true;
+  auto &image_format_constraints = info.settings.image_format_constraints;
+  image_format_constraints.pixel_format.format_modifier.value =
+      fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED;
+  image_format_constraints.bytes_per_row_divisor = 256;
+  for (size_t y = 0; y < kHeight; y++) {
+    for (size_t x = 0; x < kWidth; x++) {
+      size_t offset = GetImageByteOffset(x, y, info, kWidth, kHeight);
+      EXPECT_EQ(offset % 4, 0u);
+      tile_data[offset]++;
+    }
+  }
+  // Every pixel should be returned once.
+  for (size_t i = 0; i < tile_data.size(); i += 4) {
+    EXPECT_EQ(tile_data[i], 1u);
+  }
+  EXPECT_EQ(0u, GetImageByteOffset(0, 0, info, kWidth, kHeight));
+  constexpr uint32_t kOWordSize = 16;
+  // Spot check that (0, 1) starts the next OWord after (0, 0).
+  EXPECT_EQ(kOWordSize, GetImageByteOffset(0, 1, info, kWidth, kHeight));
+  // Spot check that (4, 0) (the beginning of the next OWord horizontally) occurs after all 32 rows.
+  EXPECT_EQ(32u * kOWordSize, GetImageByteOffset(kOWordSize / 4, 0, info, kWidth, kHeight));
+}
+
 // Test that any fast clears are resolved by a foreign queue transition.
 TEST_P(VulkanFormatTest, FastClear) {
   ASSERT_TRUE(Initialize());
@@ -1321,10 +1353,21 @@ TEST_P(VulkanFormatTest, FastClear) {
 
   EXPECT_EQ(vk::Result::eSuccess, vulkan_context().queue().waitIdle());
 
-  // The image may be linear or y-tiled, but since all pixels are the same and
-  // the dimensions are a multiple of the tile size then pretending it's linear
-  // should be ok.
-  CheckLinearImage(memory.get(), src_is_coherent, kDefaultWidth, kDefaultHeight, 0xffffffff);
+  ASSERT_TRUE(sysmem_collection.settings.has_image_format_constraints);
+  {
+    void *addr;
+    vk::Result result = ctx_->device()->mapMemory(*memory, 0 /* offset */, VK_WHOLE_SIZE,
+                                                  vk::MemoryMapFlags{}, &addr);
+    ASSERT_EQ(vk::Result::eSuccess, result);
+
+    if (!src_is_coherent) {
+      auto range = vk::MappedMemoryRange().setMemory(*memory).setSize(VK_WHOLE_SIZE);
+      EXPECT_EQ(vk::Result::eSuccess, ctx_->device()->invalidateMappedMemoryRanges(1, &range));
+    }
+
+    CheckImageFill(kDefaultWidth, kDefaultHeight, addr, sysmem_collection, 0xffffffff);
+    ctx_->device()->unmapMemory(*memory);
+  }
 }
 
 // Test on UNORM and SRGB, because on older Intel devices UNORM supports CCS_E, but SRGB only

@@ -20,6 +20,11 @@ vk::ImageFormatConstraintsInfoFUCHSIA GetDefaultRgbImageFormatConstraintsInfo();
 vk::ImageFormatConstraintsInfoFUCHSIA GetDefaultYuvImageFormatConstraintsInfo();
 fuchsia::sysmem::ImageFormatConstraints GetDefaultSysmemImageFormatConstraints();
 
+size_t GetImageByteOffset(size_t x, size_t y, const fuchsia::sysmem::BufferCollectionInfo_2 &info,
+                          size_t width, size_t height);
+void CheckImageFill(size_t width, size_t height, void *addr,
+                    const fuchsia::sysmem::BufferCollectionInfo_2 &info, uint32_t fill);
+
 class VulkanExtensionTest : public testing::Test {
  public:
   ~VulkanExtensionTest();

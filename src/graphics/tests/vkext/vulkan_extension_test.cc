@@ -6,6 +6,8 @@
 
 #include <lib/fdio/directory.h>
 
+#include <fbl/algorithm.h>
+
 #include "src/graphics/tests/common/utils.h"
 #include "src/lib/fsl/handles/object_info.h"
 
@@ -563,4 +565,68 @@ void VulkanExtensionTest::CheckLinearImage(vk::DeviceMemory memory, bool is_cohe
   }
 
   ctx_->device()->unmapMemory(memory);
+}
+
+// Return the byte offset of a pixel in an image.
+size_t GetImageByteOffset(size_t x, size_t y, const fuchsia::sysmem::BufferCollectionInfo_2 &info,
+                          size_t width, size_t height) {
+  ZX_DEBUG_ASSERT(info.settings.has_image_format_constraints);
+  auto &image_format_constraints = info.settings.image_format_constraints;
+  constexpr uint32_t kBytesPerPixel = 4;
+  if (image_format_constraints.pixel_format.format_modifier.value ==
+      fuchsia::sysmem::FORMAT_MODIFIER_LINEAR) {
+    size_t bytes_per_row =
+        fbl::round_up(std::max(width * kBytesPerPixel,
+                               static_cast<size_t>(image_format_constraints.min_bytes_per_row)),
+                      image_format_constraints.bytes_per_row_divisor);
+    return y * bytes_per_row + x * kBytesPerPixel;
+  } else {
+    ZX_DEBUG_ASSERT(image_format_constraints.pixel_format.format_modifier.value ==
+                    fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED);
+    constexpr uint32_t kTileWidthBytes = 128u;
+    constexpr uint32_t kTileHeight = 32u;
+    constexpr uint32_t kTileSizeBytes = kTileWidthBytes * kTileHeight;
+    // Including padding.
+    size_t width_in_tiles =
+        fbl::round_up(std::max(width * kBytesPerPixel,
+                               static_cast<size_t>(image_format_constraints.min_bytes_per_row)),
+                      image_format_constraints.bytes_per_row_divisor) /
+        kTileWidthBytes;
+
+    size_t x_in_bytes = x * kBytesPerPixel;
+
+    size_t x_offset_in_tiles = x_in_bytes / kTileWidthBytes;
+    size_t y_offset_in_tiles = y / kTileHeight;
+    size_t x_offset_subtile = x_in_bytes % kTileWidthBytes;
+    size_t y_offset_subtile = y % kTileHeight;
+
+    size_t tile_index = y_offset_in_tiles * width_in_tiles + x_offset_in_tiles;
+    // OWord is 16 bytes.
+    constexpr uint32_t kSubtileColumnWidth = 16u;
+    size_t subtile_column_offset = (x_offset_subtile / kSubtileColumnWidth) * kTileHeight;
+    size_t subtile_line_offset = (subtile_column_offset + y_offset_subtile) * kSubtileColumnWidth;
+    return tile_index * kTileSizeBytes + subtile_line_offset + x_in_bytes % kSubtileColumnWidth;
+  }
+}
+
+// Check that entire 4 byte-per-pixel image is filled with a pattern.
+void CheckImageFill(size_t width, size_t height, void *addr,
+                    const fuchsia::sysmem::BufferCollectionInfo_2 &info, uint32_t fill) {
+  uint32_t error_count = 0;
+  constexpr uint32_t kMaxErrors = 10;
+  for (size_t y = 0; y < height; y++) {
+    for (size_t x = 0; x < width; x++) {
+      size_t byte_offset = GetImageByteOffset(x, y, info, width, height);
+      uint32_t *pixel_addr =
+          reinterpret_cast<uint32_t *>(reinterpret_cast<uint8_t *>(addr) + byte_offset);
+      EXPECT_EQ(fill, *pixel_addr) << "byte_offset " << byte_offset << " x " << x << " y " << y;
+      if (*pixel_addr != fill) {
+        error_count++;
+        if (error_count > kMaxErrors) {
+          printf("Skipping reporting remaining errors\n");
+          return;
+        }
+      }
+    }
+  }
 }
