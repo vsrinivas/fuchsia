@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/rtc/c/fidl.h>
 #include <librtc_c.h>
 #include <stdint.h>
 #include <string.h>
+#include <zircon/errors.h>
 
 #include <zxtest/zxtest.h>
 
-#include "fuchsia/hardware/rtc/c/fidl.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
-#include "zircon/errors.h"
+
 static fuchsia_hardware_rtc_Time make_rtc(uint16_t year, uint8_t month, uint8_t day, uint8_t hours,
                                           uint8_t minutes, uint8_t seconds) {
   return fuchsia_hardware_rtc_Time{seconds, minutes, hours, day, month, year};
@@ -30,16 +31,6 @@ enum months {
   NOVEMBER = 11,
   DECEMBER = 12
 };
-
-TEST(RTCLibTest, BCD) {
-  EXPECT_EQ(0x00, to_bcd(0));
-  EXPECT_EQ(0x16, to_bcd(16));
-  EXPECT_EQ(0x99, to_bcd(99));
-
-  EXPECT_EQ(0, from_bcd(0x00));
-  EXPECT_EQ(16, from_bcd(0x16));
-  EXPECT_EQ(99, from_bcd(0x99));
-}
 
 TEST(RTCLibTest, RTCYearsValid) {
   auto t0 = make_rtc(1999, 1, 1, 0, 0, 0);

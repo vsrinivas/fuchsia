@@ -23,6 +23,7 @@ fuchsia_driver("nxp-driver") {
     ":pcf8563_rtc_bind",
     "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
+    "//src/devices/rtc/lib/rtc",
     "//src/devices/rtc/lib/rtc:rtc_c",
     "//src/lib/ddk",
     "//src/lib/ddktl",

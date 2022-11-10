@@ -4,13 +4,14 @@
 
 #include "src/devices/rtc/drivers/intel-rtc/intel-rtc.h"
 
+#include <fidl/fuchsia.hardware.rtc/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <librtc_c.h>
+#include <librtc.h>
+#include <librtc_llcpp.h>
 
 #include <ddktl/device.h>
 #include <zxtest/zxtest.h>
 
-#include "fidl/fuchsia.hardware.rtc/cpp/wire.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
 class IntelRtcTest;

@@ -9,6 +9,13 @@ group("tests") {
   deps = [ "tests" ]
 }
 
+zx_library("rtc") {
+  sdk = "source"
+  sdk_headers = [ "librtc.h" ]
+  sources = [ "librtc.c" ]
+  public_deps = [ "//zircon/system/public" ]
+}
+
 zx_library("rtc_c") {
   sdk = "source"
   sdk_headers = [ "librtc_c.h" ]

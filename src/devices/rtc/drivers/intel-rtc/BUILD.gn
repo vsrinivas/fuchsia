@@ -22,11 +22,10 @@ driver_bind_rules("intel_rtc_bind") {
 common_deps = [
   ":intel_rtc_bind",
   "//sdk/fidl/fuchsia.hardware.nvram:fuchsia.hardware.nvram_cpp_wire",
-  "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_c",
   "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_cpp_wire",
   "//src/devices/lib/acpi",
   "//src/devices/lib/driver",
-  "//src/devices/rtc/lib/rtc:rtc_c",
+  "//src/devices/rtc/lib/rtc:rtc",
   "//src/devices/rtc/lib/rtc:rtc_llcpp",
   "//src/lib/ddk",
   "//src/lib/ddktl",
@@ -45,10 +44,6 @@ fuchsia_driver("intel-rtc-driver") {
   # Please remove ad-hoc composition of FIDL protocols and migrate to |fidl::WireDispatch|.
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-wire-try-dispatch" ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_driver_component("intel-rtc") {
@@ -79,10 +74,6 @@ test("intel-rtc-test-bin") {
   # Please remove ad-hoc composition of FIDL protocols and migrate to |fidl::WireDispatch|.
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-wire-try-dispatch" ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_unittest_package("intel-rtc-test") {

@@ -119,10 +119,6 @@ void seconds_to_rtc(uint64_t seconds, fuchsia_hardware_rtc_Time* rtc) {
   rtc->day = (uint8_t)(epoch + 1);
 }
 
-uint8_t to_bcd(uint8_t binary) { return (uint8_t)(((binary / 10) << 4) | (binary % 10)); }
-
-uint8_t from_bcd(uint8_t bcd) { return ((bcd >> 4) * 10) + (bcd & 0xf); }
-
 // If "clock.backstop" is set in the environment, it is parsed as seconds
 // since the Unix epoch and returned. If it is un-set, or parsing fails, 0 is
 // returned.

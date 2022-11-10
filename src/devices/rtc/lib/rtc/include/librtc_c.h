@@ -30,10 +30,6 @@ void sanitize_rtc(void* ctx, zx_device_t* device, fuchsia_hardware_rtc_Time* rtc
                   zx_status_t (*rtc_get)(void*, fuchsia_hardware_rtc_Time*),
                   zx_status_t (*rtc_set)(void*, const fuchsia_hardware_rtc_Time*));
 
-// Utility binary-coded-decimal routines.
-uint8_t to_bcd(uint8_t binary);
-uint8_t from_bcd(uint8_t bcd);
-
 __END_CDECLS
 
 #endif  // SRC_DEVICES_RTC_LIB_RTC_INCLUDE_LIBRTC_C_H_

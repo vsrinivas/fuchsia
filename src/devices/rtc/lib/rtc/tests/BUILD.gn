@@ -10,7 +10,21 @@ group("tests") {
   deps = [
     ":rtc-lib-c-test",
     ":rtc-lib-llcpp-test",
+    ":rtc-lib-test",
   ]
+}
+
+test("rtc-lib-test-bin") {
+  output_name = "rtc-lib-test"
+  sources = [ "rtc_unittest.cc" ]
+  deps = [
+    "//src/devices/rtc/lib/rtc",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("rtc-lib-test") {
+  deps = [ ":rtc-lib-test-bin" ]
 }
 
 test("rtc-lib-c-test-bin") {
