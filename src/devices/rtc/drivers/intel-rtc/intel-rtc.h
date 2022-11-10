@@ -5,8 +5,7 @@
 #ifndef SRC_DEVICES_RTC_DRIVERS_INTEL_RTC_INTEL_RTC_H_
 #define SRC_DEVICES_RTC_DRIVERS_INTEL_RTC_INTEL_RTC_H_
 
-#include <fidl/fuchsia.hardware.nvram/cpp/wire.h>
-#include <fidl/fuchsia.hardware.rtc/cpp/wire.h>
+#include <fidl/fuchsia.hardware.adhoc.intelrtc/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <librtc_llcpp.h>
 
@@ -46,14 +45,12 @@ enum RegisterB {
 };
 
 class RtcDevice;
-using DeviceType = ddk::Device<RtcDevice, ddk::MessageableManual>;
+using DeviceType =
+    ddk::Device<RtcDevice, ddk::Messageable<fuchsia_hardware_adhoc_intelrtc::Device>::Mixin>;
 
-class RtcDevice : public DeviceType,
-                  public fidl::WireServer<FidlRtc::Device>,
-                  public fidl::WireServer<fuchsia_hardware_nvram::Device> {
+class RtcDevice : public DeviceType {
  public:
   RtcDevice(zx_device_t* parent, zx::resource ioport, uint16_t port_base, uint16_t port_count);
-  void DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn);
   void DdkRelease() { delete this; }
 
   // fuchsia.hardware.rtc implementation.

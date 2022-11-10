@@ -4,7 +4,6 @@
 
 #include "src/devices/rtc/drivers/intel-rtc/intel-rtc.h"
 
-#include <fidl/fuchsia.hardware.rtc/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/hw/inout.h>
 #include <librtc.h>
@@ -229,13 +228,6 @@ void RtcDevice::Write(WriteRequestView request, WriteCompleter::Sync& completer)
     WriteNvramReg(request->offset + i, request->data[i]);
   }
   completer.ReplySuccess();
-}
-
-void RtcDevice::DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn) {
-  if (fidl::WireTryDispatch<FidlRtc::Device>(this, msg, &txn) == fidl::DispatchResult::kFound) {
-    return;
-  }
-  fidl::WireDispatch<fuchsia_hardware_nvram::Device>(this, std::move(msg), &txn);
 }
 
 zx_status_t Bind(void* ctx, zx_device_t* parent) {

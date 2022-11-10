@@ -189,8 +189,6 @@ config("fidl-llcpp-deprecated-wire-try-dispatch") {
   visibility = [
     "//src/devices/bin/driver_host:common",
     "//src/devices/misc/drivers/compat:lib",
-    "//src/devices/rtc/drivers/intel-rtc:intel-rtc-driver",
-    "//src/devices/rtc/drivers/intel-rtc:intel-rtc-test-bin",
     "//src/lib/storage/vfs/cpp",
   ]
 }

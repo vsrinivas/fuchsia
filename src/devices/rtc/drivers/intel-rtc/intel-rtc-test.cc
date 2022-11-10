@@ -4,7 +4,6 @@
 
 #include "src/devices/rtc/drivers/intel-rtc/intel-rtc.h"
 
-#include <fidl/fuchsia.hardware.rtc/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <librtc.h>
 #include <librtc_llcpp.h>
@@ -40,12 +39,10 @@ class IntelRtcTest : public zxtest::Test {
                                                      2 * banks);
   }
 
-  void ServeNvram(fidl::WireSyncClient<fuchsia_hardware_nvram::Device>* out) {
-    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_nvram::Device>();
-    ASSERT_OK(endpoints.status_value());
-    *out = fidl::WireSyncClient(std::move(endpoints->client));
-    fidl::BindServer<fidl::WireServer<fuchsia_hardware_nvram::Device>>(
-        loop_.dispatcher(), std::move(endpoints->server), device_.get());
+  void Serve(fidl::ClientEnd<fuchsia_hardware_adhoc_intelrtc::Device>& out) {
+    zx::result server = fidl::CreateEndpoints(&out);
+    ASSERT_OK(server.status_value());
+    fidl::BindServer(loop_.dispatcher(), std::move(server.value()), device_.get());
   }
 
   void TearDown() override { CUR_TEST = nullptr; }
@@ -263,21 +260,21 @@ TEST_F(IntelRtcTest, TestReadWaitsForUpdate) {
 
 TEST_F(IntelRtcTest, TestNvramGetSize) {
   CreateDevice(1);
-  fidl::WireSyncClient<fuchsia_hardware_nvram::Device> client;
-  ASSERT_NO_FATAL_FAILURE(ServeNvram(&client));
+  fidl::ClientEnd<fuchsia_hardware_adhoc_intelrtc::Device> client;
+  ASSERT_NO_FATAL_FAILURE(Serve(client));
 
-  auto result = client->GetSize();
+  auto result = fidl::WireCall(client)->GetSize();
   ASSERT_OK(result.status());
   ASSERT_EQ(result->size, 114);
 }
 
 TEST_F(IntelRtcTest, TestNvramWrite) {
   CreateDevice(1);
-  fidl::WireSyncClient<fuchsia_hardware_nvram::Device> client;
-  ASSERT_NO_FATAL_FAILURE(ServeNvram(&client));
+  fidl::ClientEnd<fuchsia_hardware_adhoc_intelrtc::Device> client;
+  ASSERT_NO_FATAL_FAILURE(Serve(client));
 
   std::vector<uint8_t> my_data = {1, 2, 3, 4};
-  auto result = client->Write(0, fidl::VectorView<uint8_t>::FromExternal(my_data));
+  auto result = fidl::WireCall(client)->Write(0, fidl::VectorView<uint8_t>::FromExternal(my_data));
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->is_error());
 
@@ -286,12 +283,13 @@ TEST_F(IntelRtcTest, TestNvramWrite) {
 
 TEST_F(IntelRtcTest, TestNvramRead) {
   CreateDevice(1);
-  fidl::WireSyncClient<fuchsia_hardware_nvram::Device> client;
-  ASSERT_NO_FATAL_FAILURE(ServeNvram(&client));
+  fidl::ClientEnd<fuchsia_hardware_adhoc_intelrtc::Device> client;
+  ASSERT_NO_FATAL_FAILURE(Serve(client));
+
   std::vector<uint8_t> my_data = {7, 8, 42, 10};
   memcpy(&registers_[kNvramStart + 30], my_data.data(), my_data.size());
 
-  auto result = client->Read(30, 4);
+  auto result = fidl::WireCall(client)->Read(30, 4);
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->is_error());
 
@@ -302,11 +300,12 @@ TEST_F(IntelRtcTest, TestNvramRead) {
 
 TEST_F(IntelRtcTest, TestNvramWriteAcrossBanks) {
   CreateDevice(2);
-  fidl::WireSyncClient<fuchsia_hardware_nvram::Device> client;
-  ASSERT_NO_FATAL_FAILURE(ServeNvram(&client));
+  fidl::ClientEnd<fuchsia_hardware_adhoc_intelrtc::Device> client;
+  ASSERT_NO_FATAL_FAILURE(Serve(client));
 
   std::vector<uint8_t> my_data = {1, 2, 3, 4};
-  auto result = client->Write(112, fidl::VectorView<uint8_t>::FromExternal(my_data));
+  auto result =
+      fidl::WireCall(client)->Write(112, fidl::VectorView<uint8_t>::FromExternal(my_data));
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->is_error());
 
@@ -315,12 +314,13 @@ TEST_F(IntelRtcTest, TestNvramWriteAcrossBanks) {
 
 TEST_F(IntelRtcTest, TestNvramReadAcrossBanks) {
   CreateDevice(2);
-  fidl::WireSyncClient<fuchsia_hardware_nvram::Device> client;
-  ASSERT_NO_FATAL_FAILURE(ServeNvram(&client));
+  fidl::ClientEnd<fuchsia_hardware_adhoc_intelrtc::Device> client;
+  ASSERT_NO_FATAL_FAILURE(Serve(client));
+
   std::vector<uint8_t> my_data = {7, 8, 42, 10};
   memcpy(&registers_[kNvramStart + 112], my_data.data(), my_data.size());
 
-  auto result = client->Read(112, 4);
+  auto result = fidl::WireCall(client)->Read(112, 4);
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->is_error());
 
@@ -331,17 +331,18 @@ TEST_F(IntelRtcTest, TestNvramReadAcrossBanks) {
 
 TEST_F(IntelRtcTest, TestNvramOutOfBounds) {
   CreateDevice(1);
-  fidl::WireSyncClient<fuchsia_hardware_nvram::Device> client;
-  ASSERT_NO_FATAL_FAILURE(ServeNvram(&client));
+  fidl::ClientEnd<fuchsia_hardware_adhoc_intelrtc::Device> client;
+  ASSERT_NO_FATAL_FAILURE(Serve(client));
 
   {
-    auto result = client->Read(400, 4);
+    auto result = fidl::WireCall(client)->Read(400, 4);
     ASSERT_OK(result.status());
     ASSERT_STATUS(result->error_value(), ZX_ERR_OUT_OF_RANGE);
   }
   {
     std::vector<uint8_t> my_data = {7, 8, 42, 10};
-    auto result = client->Write(400, fidl::VectorView<uint8_t>::FromExternal(my_data));
+    auto result =
+        fidl::WireCall(client)->Write(400, fidl::VectorView<uint8_t>::FromExternal(my_data));
     ASSERT_OK(result.status());
     ASSERT_STATUS(result->error_value(), ZX_ERR_OUT_OF_RANGE);
   }
