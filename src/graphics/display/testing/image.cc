@@ -197,14 +197,9 @@ Image* Image::Create(const fidl::WireSyncClient<fhd::Controller>& dc, uint32_t w
   zx::vmo vmo(std::move(buffer_collection_info.buffers[0].vmo));
 
   uint32_t minimum_row_bytes;
-  if (modifier == sysmem::wire::kFormatModifierLinear) {
-    bool result = ImageFormatMinimumRowBytes(
-        buffer_collection_info.settings.image_format_constraints, width, &minimum_row_bytes);
-    if (!result) {
-      fprintf(stderr, "Could not calculate minimum row byte\n");
-      return nullptr;
-    }
-  } else {
+  bool result = ImageFormatMinimumRowBytes(buffer_collection_info.settings.image_format_constraints,
+                                           width, &minimum_row_bytes);
+  if (!result) {
     minimum_row_bytes = buffer_collection_info.settings.image_format_constraints.min_bytes_per_row;
   }
 
@@ -342,16 +337,18 @@ void Image::RenderTiled(T pixel_generator, uint32_t start_y, uint32_t end_y) {
   uint32_t tile_pixel_width = 0u;
   uint32_t tile_pixel_height = 0u;
   uint8_t* body = nullptr;
+  uint32_t width_in_tiles = 0;
   switch (modifier_) {
     case sysmem::wire::kFormatModifierIntelI915YTiled: {
       tile_pixel_width = kIntelTilePixelWidth;
       tile_pixel_height = kIntelTilePixelHeight;
       body = static_cast<uint8_t*>(buf_);
+      width_in_tiles = (stride_ + tile_pixel_width - 1) / tile_pixel_width;
     } break;
     case sysmem::wire::kFormatModifierArmAfbc16X16: {
       tile_pixel_width = kAfbcTilePixelWidth;
       tile_pixel_height = kAfbcTilePixelHeight;
-      uint32_t width_in_tiles = (width_ + tile_pixel_width - 1) / tile_pixel_width;
+      width_in_tiles = (width_ + tile_pixel_width - 1) / tile_pixel_width;
       uint32_t height_in_tiles = (height_ + tile_pixel_height - 1) / tile_pixel_height;
       uint32_t tile_count = width_in_tiles * height_in_tiles;
       uint32_t body_offset =
@@ -366,7 +363,6 @@ void Image::RenderTiled(T pixel_generator, uint32_t start_y, uint32_t end_y) {
 
   uint32_t tile_num_bytes = tile_pixel_width * tile_pixel_height * kTileBytesPerPixel;
   uint32_t tile_num_pixels = tile_num_bytes / kTileBytesPerPixel;
-  uint32_t width_in_tiles = (width_ + tile_pixel_width - 1) / tile_pixel_width;
 
   for (unsigned y = start_y; y < end_y; y++) {
     for (unsigned x = 0; x < width_; x++) {
