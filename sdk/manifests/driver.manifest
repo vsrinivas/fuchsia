@@ -4,6 +4,7 @@ sdk://bind/fuchsia.i2c
 sdk://bind/fuchsia.pci
 sdk://bind/fuchsia.test
 sdk://bind/fuchsia.usb
+sdk://component_manifest/driver_component
 sdk://docs/metadata_schemas
 sdk://fidl/fuchsia.component
 sdk://fidl/fuchsia.component.decl

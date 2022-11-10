@@ -575,6 +575,7 @@ sdk("driver") {
     ":driver_fidl",
     ":driver_host_tools",
     "//sdk/lib/driver/compat/cpp:cpp_sdk",
+    "//sdk/lib/driver/component:driver_component",
     "//sdk/lib/driver/component/cpp:cpp_sdk",
     "//sdk/lib/driver/devfs/cpp:cpp_sdk",
     "//sdk/lib/driver/runtime:driver_runtime_cpp_sdk",
