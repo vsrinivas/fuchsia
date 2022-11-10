@@ -434,10 +434,9 @@ TEST_F(FlatlandViewIntegrationTest, GetViewRefTest) {
 
   flatland_display_->SetContent(std::move(display_viewport_token),
                                 parent_view_watcher.NewRequest());
-  BlockingPresent(parent);
 
   // Parent's ChildViewWatcher receives the view ref as it is now connected to the display.
-  ASSERT_TRUE(child_view_ref.has_value());
+  RunLoopUntil([&child_view_ref] { return child_view_ref.has_value(); });
   EXPECT_EQ(ExtractKoid(*child_view_ref), ExtractKoid(expected_child_view_ref));
 }
 
