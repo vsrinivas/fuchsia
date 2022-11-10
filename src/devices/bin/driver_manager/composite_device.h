@@ -22,6 +22,7 @@
 class CompositeDevice;
 class Coordinator;
 class Device;
+class DriverHost;
 
 // Tags used for container membership identification
 namespace internal {
@@ -38,8 +39,10 @@ struct StrProperty {
   StrPropertyValue value;
 };
 
-// A single device that is part of a composite device.
-// TODO(teisenbe): Should this just be an inner-class of CompositeDevice?
+// This class represents a fragment of a composite device.
+// It holds information like the bind instructions, and if a device has been
+// bound to the fragment.
+// It also helps create proxies for the composite.
 class CompositeDeviceFragment
     : public fbl::ContainableBaseClasses<
           fbl::TaggedDoublyLinkedListable<std::unique_ptr<CompositeDeviceFragment>,
@@ -73,13 +76,35 @@ class CompositeDeviceFragment
 
   bool IsBound() const { return bound_device_ != nullptr; }
 
+  // This is true if this fragment is ready for assembly. That means that it
+  // is bound and its fragment driver (or fidl proxy) is ready.
+  bool IsReady();
+
+  // Create a proxy for this fragment in the specific driver host.
+  // This may create a Banjo or FIDL proxy depending on the device bound to this
+  // fragment.
+  zx_status_t CreateProxy(fbl::RefPtr<DriverHost> driver_host);
+
   std::string_view name() const { return name_; }
   uint32_t index() const { return index_; }
   CompositeDevice* composite() const { return composite_; }
-  // If not nullptr, this fragment has been bound to this device
+
+  // This is the device that the fragment matches with.
   const fbl::RefPtr<Device>& bound_device() const { return bound_device_; }
 
+  // This is the device created by the fragment driver (fragment.so).
+  // It is the same driver host as `bound_device()`.
+  // This does only exists if `bound_device()` needs banjo proxying.
   const fbl::RefPtr<Device>& fragment_device() const { return fragment_device_; }
+
+  // This is the proxy device that lives in the driver host of the composite
+  // device.
+  // If `bound_device()` does banjo proxying this is a device from fragment.proxy.so.
+  // If `bound_device()` does FIDL proxying this is a fidl proxy.
+  // If `bound_device()` is the primary parent and the composite is colocated
+  // this the same as `bound_device()`.
+  const fbl::RefPtr<Device>& proxy_device() const { return proxy_device_; }
+
   // Registers (or unregisters) the fragment device (i.e. an instance of the
   // "fragment" driver) that bound to bound_device().
   void set_fragment_device(fbl::RefPtr<Device> device) { fragment_device_ = std::move(device); }
@@ -112,6 +137,11 @@ class CompositeDeviceFragment
   //
   // This only exists if `bound_device_` needs to be Banjo proxied.
   fbl::RefPtr<Device> fragment_device_ = nullptr;
+
+  // This is the device that lives in the driver_host of the final composite device.
+  // It may be a Banjo proxied device, it may be a FIDL proxied device, or it may
+  // be `bound_device_` if the composite is colocated.
+  fbl::RefPtr<Device> proxy_device_ = nullptr;
 };
 
 // A device composed of other devices.

@@ -227,14 +227,7 @@ zx_status_t CompositeDevice::TryAssemble() {
   ZX_ASSERT(device_ == nullptr);
 
   for (auto& fragment : fragments_) {
-    if (!fragment.IsBound()) {
-      return ZX_ERR_SHOULD_WAIT;
-    }
-
-    // Make sure the fragment driver has created its device
-    // or that it didn't need one.
-    if (fragment.fragment_device() == nullptr &&
-        !fragment.bound_device()->has_outgoing_directory()) {
+    if (!fragment.IsReady()) {
       return ZX_ERR_SHOULD_WAIT;
     }
   }
@@ -258,57 +251,13 @@ zx_status_t CompositeDevice::TryAssemble() {
 
   // Create all of the proxies for the fragment devices, in the same process
   for (auto& fragment : fragments_) {
-    const auto& fragment_dev = fragment.fragment_device();
-    auto bound_dev = fragment.bound_device();
-    coordinator = bound_dev->coordinator;
-
-    // If the device we're bound to is proxied, we care about its proxy
-    // rather than it, since that's the side that we communicate with.
-    if (bound_dev->proxy()) {
-      bound_dev = bound_dev->proxy();
+    zx_status_t status = fragment.CreateProxy(driver_host);
+    if (status != ZX_OK) {
+      return status;
     }
-
-    // Check if we need to use the proxy.  If not, share a reference to
-    // the instance of the fragment device.
-    // We always use a proxy when there is an outgoing directory involved.
-    if (bound_dev->host() == driver_host && !bound_dev->has_outgoing_directory()) {
-      fragments[fragment.index()].name = fidl::StringView::FromExternal(fragment.name());
-      fragments[fragment.index()].id = fragment_dev->local_id();
-      continue;
-    }
-
-    // We need to create it.  Double check that we haven't ended up in a state
-    // where the proxies would need to be in different processes.
-    fbl::RefPtr<Device> proxy;
-    zx_status_t status;
-    if (bound_dev->has_outgoing_directory()) {
-      VLOGF(1, "Preparing FIDL proxy for %s", bound_dev->name().data());
-      fbl::RefPtr<Device> fidl_proxy;
-      status = coordinator->PrepareFidlProxy(bound_dev, driver_host, &fidl_proxy);
-      if (status != ZX_OK) {
-        return status;
-      }
-      proxy = std::move(fidl_proxy);
-    } else {
-      if (driver_host != nullptr && fragment_dev != nullptr && fragment_dev->proxy() != nullptr &&
-          fragment_dev->proxy()->host() != nullptr &&
-          fragment_dev->proxy()->host() != driver_host) {
-        LOGF(ERROR, "Cannot create composite device, device proxies are in different driver_hosts");
-        return ZX_ERR_BAD_STATE;
-      }
-
-      VLOGF(1, "Preparing Banjo proxy for %s", fragment_dev->name().data());
-      status = coordinator->PrepareProxy(fragment_dev, driver_host);
-      if (status != ZX_OK) {
-        return status;
-      }
-
-      proxy = fragment_dev->proxy();
-    }
-
     // Stash the local ID after the proxy has been created
     fragments[fragment.index()].name = fidl::StringView::FromExternal(fragment.name());
-    fragments[fragment.index()].id = proxy->local_id();
+    fragments[fragment.index()].id = fragment.proxy_device()->local_id();
   }
 
   auto coordinator_endpoints = fidl::CreateEndpoints<fdm::Coordinator>();
@@ -439,11 +388,78 @@ zx_status_t CompositeDeviceFragment::Bind(const fbl::RefPtr<Device>& dev) {
   return ZX_OK;
 }
 
+bool CompositeDeviceFragment::IsReady() {
+  if (!IsBound()) {
+    return false;
+  }
+
+  return fragment_device() != nullptr || bound_device()->has_outgoing_directory();
+}
+
+zx_status_t CompositeDeviceFragment::CreateProxy(fbl::RefPtr<DriverHost> driver_host) {
+  if (!IsReady()) {
+    return ZX_ERR_SHOULD_WAIT;
+  }
+  // If we've already created one, then don't redo work.
+  if (proxy_device_) {
+    return ZX_OK;
+  }
+
+  fbl::RefPtr<Device> parent = bound_device();
+
+  // If the device we're bound to is proxied, we care about its proxy
+  // rather than it, since that's the side that we communicate with.
+  if (bound_device()->proxy()) {
+    parent = bound_device()->proxy();
+  }
+
+  // Check if we need to create a proxy. If not, share a reference to
+  // the instance of the fragment device.
+  // We always use a proxy when there is an outgoing directory involved.
+  if (parent->host() == driver_host && !parent->has_outgoing_directory()) {
+    proxy_device_ = fragment_device_;
+    return ZX_OK;
+  }
+
+  // Create a FIDL proxy.
+  if (parent->has_outgoing_directory()) {
+    VLOGF(1, "Preparing FIDL proxy for %s", parent->name().data());
+    fbl::RefPtr<Device> fidl_proxy;
+    zx_status_t status = parent->coordinator->PrepareFidlProxy(parent, driver_host, &fidl_proxy);
+    if (status != ZX_OK) {
+      return status;
+    }
+    proxy_device_ = fidl_proxy;
+    return ZX_OK;
+  }
+
+  // Create a Banjo proxy.
+
+  // Double check that we haven't ended up in a state
+  // where the proxies would need to be in different processes.
+  if (driver_host != nullptr && fragment_device() != nullptr &&
+      fragment_device()->proxy() != nullptr && fragment_device()->proxy()->host() != nullptr &&
+      fragment_device()->proxy()->host() != driver_host) {
+    LOGF(ERROR, "Cannot create composite device, device proxies are in different driver_hosts");
+    return ZX_ERR_BAD_STATE;
+  }
+
+  VLOGF(1, "Preparing Banjo proxy for %s", fragment_device()->name().data());
+  zx_status_t status = bound_device()->coordinator->PrepareProxy(fragment_device(), driver_host);
+  if (status != ZX_OK) {
+    return status;
+  }
+  proxy_device_ = fragment_device()->proxy();
+  return ZX_OK;
+}
+
 void CompositeDeviceFragment::Unbind() {
   ZX_ASSERT(bound_device_ != nullptr);
   composite_->UnbindFragment(this);
-  // Drop our reference to the device added by the fragment driver
+  // Drop our reference to any devices we've created.
+  proxy_device_ = nullptr;
   fragment_device_ = nullptr;
+
   bound_device_->disassociate_from_composite();
   bound_device_ = nullptr;
 }
