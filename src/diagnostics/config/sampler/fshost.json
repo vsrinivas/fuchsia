@@ -78,7 +78,7 @@
             ],
             "metric_id": 4008,
             "metric_type": "Occurrence",
-            "selector": "bootstrap/fshost:root/minfs/fs.fvm:out_of_space_events"
+            "selector": "bootstrap/fshost/minfs:root/minfs/fs.fvm:out_of_space_events"
         },
         {
             "event_codes": [
@@ -86,7 +86,7 @@
             ],
             "metric_id": 9004,
             "metric_type": "Occurrence",
-            "selector": "bootstrap/fshost:root/minfs/fs.detail:recovered_space_events"
+            "selector": "bootstrap/fshost/minfs:root/minfs/fs.detail:recovered_space_events"
         },
         {
             "event_codes": [
