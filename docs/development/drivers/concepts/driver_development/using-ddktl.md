@@ -28,7 +28,6 @@ Mixin class            | Function             | Purpose
 `ddk::PerformanceTunable` | **DdkSetPerformanceState()**   | to transition the performant state
 `ddk::AutoSuspendable`    | **DdkConfigureAutoSuspend()**   | to configure whether a driver can auto suspend the device
 `ddk::Rxrpcable`          | **DdkRxrpc()**       | remote messages for bus devices
-`ddk::MessageableManual`  | **DdkMessage()**     | for FIDL IPC messages
 
 For completeness, the following mixins are also provided, but have been deprecated:
 

@@ -73,10 +73,6 @@ BEGIN_SUCCESS_DEPRECATED_CASE(GetSizable)
 zx_off_t DdkGetSize() { return 0; }
 END_SUCCESS_CASE
 
-BEGIN_SUCCESS_CASE(MessageableManual)
-void DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn) {}
-END_SUCCESS_CASE
-
 class TestMessageable;
 using MessageableDevice =
     ddk::Device<TestMessageable, ddk::Messageable<fuchsia_examples::Echo>::Mixin>;
