@@ -379,11 +379,11 @@
             // TODO(fxbug.dev/105828): These additional `protocol` offers to the
             // `#session` collection are only required by the `terminal`
             // component. `terminal` is launched as a member of the `elements`
-            // collection of `#ermine_shell` (a descendent of the workstation
-            // session, which is launched as a member of the `#session`
-            // collection). If/when there is a way to route capabilities to
-            // specific descendents (and specific collection members), these
-            // protocols should be routed only to terminal.
+            // collection of the application shell (a descendent of the
+            // workstation session, which is launched as a member of the
+            // `#session` collection). If/when there is a way to route
+            // capabilities to specific descendents (and specific collection
+            // members), these protocols should be routed only to terminal.
             //
             // Other (current and future) components launched under the
             // `#session` collection should not `use` these protocols without
@@ -411,14 +411,14 @@
             availability: "same_as_target",
         },
         {
-            // TODO(fxbug.dev/105828): These additional `directory` offers to the
-            // `#session` collection are only required by the `terminal`
+            // TODO(fxbug.dev/105828): These additional `directory` offers to
+            // the `#session` collection are only required by the `terminal`
             // component. `terminal` is launched as a member of the `elements`
-            // collection of `#ermine_shell` (a descendent of the workstation
-            // session, which is launched as a member of the `#session`
-            // collection). If/when there is a way to route capabilities to
-            // specific descendents (and specific collection members), these
-            // directories should be routed only to terminal.
+            // collection of the application shell (a descendent of the
+            // workstation session, which is launched as a member of the
+            // `#session` collection). If/when there is a way to route
+            // capabilities to specific descendents (and specific collection
+            // members), these directories should be routed only to terminal.
             //
             // Other (current and future) components launched under the
             // `#session` collection should not `use` these directories without

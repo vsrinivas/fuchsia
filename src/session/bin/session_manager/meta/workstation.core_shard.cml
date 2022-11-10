@@ -95,32 +95,32 @@
         },
         {
             // TODO(fxbug.dev/105828): This additional `protocol` offer to
-            // `#session-manager` is only required by the `terminal`
-            // component. `terminal` is launched as a member of the `elements`
-            // collection of `#ermine_shell` (a descendent of
-            // `#session-manager`). If/when there is a way to route
-            // capabilities to specific descendents (and specific collection
-            // members), this protocol should be routed only to terminal.
+            // `#session-manager` is only required by the `terminal` component.
+            // `terminal` is launched as a member of the `elements` collection
+            // of the application shell (a descendent of `#session-manager`).
+            // If/when there is a way to route capabilities to specific
+            // descendents (and specific collection members), this protocol
+            // should be routed only to terminal.
             //
-            // Other (current and future) children of `#session-manager`
-            // should not `use` this protocol without first getting a security
-            // policy review.
+            // Other (current and future) children of `#session-manager` should
+            // not `use` this protocol without first getting a security policy
+            // review.
             protocol: "fuchsia.process.Resolver",
             from: "#process_resolver",
             to: "#session-manager",
         },
         {
             // TODO(fxbug.dev/105828): This additional `protocol` offer to
-            // `#session-manager` is only required by the `terminal`
-            // component. `terminal` is launched as a member of the `elements`
-            // collection of `#ermine_shell` (a descendent of
-            // `#session-manager`). If/when there is a way to route
-            // capabilities to specific descendents (and specific collection
-            // members), this protocol should be routed only to terminal.
+            // `#session-manager` is only required by the `terminal` component.
+            // `terminal` is launched as a member of the `elements` collection
+            // of the application shell (a descendent of `#session-manager`).
+            // If/when there is a way to route capabilities to specific
+            // descendents (and specific collection members), this protocol
+            // should be routed only to terminal.
             //
-            // Other (current and future) children of `#session-manager`
-            // should not `use` this protocol without first getting a security
-            // policy review.
+            // Other (current and future) children of `#session-manager` should
+            // not `use` this protocol without first getting a security policy
+            // review.
             //
             // from linux_runner.core_shard.cml
             protocol: "fuchsia.virtualization.LinuxManager",
@@ -210,17 +210,17 @@
             source_availability: "unknown",
         },
         {
-            // TODO(fxbug.dev/105828): This `bin` directory offered
-            // to `#session-manager` is only required by the `terminal`
-            // component. `terminal` is launched as a member of the `elements`
-            // collection of `#ermine_shell` (a descendent of
-            // `#session-manager`). If/when there is a way to route
-            // capabilities to specific descendents (and specific collection
-            // members), these directories should be routed only to terminal.
+            // TODO(fxbug.dev/105828): This `bin` directory offered to
+            // `#session-manager` is only required by the `terminal` component.
+            // `terminal` is launched as a member of the `elements` collection
+            // of the application shell (a descendent of `#session-manager`).
+            // If/when there is a way to route capabilities to specific
+            // descendents (and specific collection members), these directories
+            // should be routed only to terminal.
             //
-            // Other (current and future) children of `#session-manager`
-            // should not `use` these directories without first getting a
-            // security policy review.
+            // Other (current and future) children of `#session-manager` should
+            // not `use` these directories without first getting a security
+            // policy review.
             directory: "bin",
             from: "parent",
             to: "#session-manager",
