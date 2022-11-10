@@ -31,7 +31,9 @@ dart_library("lib") {
     "src/widgets/timezone_settings.dart",
   ]
 
-  sources = entrypoints + services + states + widgets
+  utils = [ "src/utils/themes.dart" ]
+
+  sources = entrypoints + services + states + widgets + utils
 
   # TODO(fxb/113485): address dep on ermine/internationalization and ermine/utils
   deps = [

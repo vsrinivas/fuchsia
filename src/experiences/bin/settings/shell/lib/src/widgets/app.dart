@@ -7,12 +7,13 @@
 
 import 'dart:math';
 
-import 'package:ermine_utils/ermine_utils.dart';
+import 'package:ermine_utils/ermine_utils.dart' show Strings;
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:internationalization/strings.dart';
 import 'package:mobx/mobx.dart';
 import 'package:shell_settings/src/states/settings_state.dart';
+import 'package:shell_settings/src/utils/themes.dart';
 import 'package:shell_settings/src/widgets/timezone_settings.dart';
 
 /// Defines a widget to display shell settings.
@@ -143,7 +144,7 @@ class _ListSettings extends StatelessWidget {
                     trailing: settingsState.brightnessAuto == true
                         ? Text(Strings.auto.toUpperCase())
                         : OutlinedButton(
-                            style: ErmineButtonStyle.outlinedButton(
+                            style: SettingsButtonStyle.outlinedButton(
                                 Theme.of(context)),
                             onPressed: settingsState.setBrightnessAuto,
                             child: Text(Strings.auto.toUpperCase()),

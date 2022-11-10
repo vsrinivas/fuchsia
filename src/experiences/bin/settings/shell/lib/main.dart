@@ -5,10 +5,11 @@
 // TODO(http://fxbug.dev/107480): Resolve lint issues and reenable analysis for file
 // ignore_for_file: deprecated_member_use
 
-import 'package:ermine_utils/ermine_utils.dart';
+import 'package:ermine_utils/ermine_utils.dart' show CrashReportingRunner;
 import 'package:flutter/material.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:shell_settings/src/states/settings_state.dart';
+import 'package:shell_settings/src/utils/themes.dart';
 import 'package:shell_settings/src/widgets/app.dart';
 
 /// Main entry point to the shell settings module
