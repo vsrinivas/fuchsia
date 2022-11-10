@@ -172,7 +172,7 @@ To update an external crate, do the following:
       for more information.
 
    1. Update OWNERS files for modified crates. See the
-      [OWNERS files][#owners_files] section for more information on updating
+      [OWNERS files](#owners_files) section for more information on updating
       OWNERS files.
 
    1. If/when you receive OSRB approval, upload the change for review to
