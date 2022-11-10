@@ -253,16 +253,16 @@ lipsum = "0.6.0"
 openat = "0.1.17"
 pretty = "0.5.2"
 proc-macro-nested = "0.1.7"
-rust_icu_common = { version = "2.0.2", default-features = false, features = ["renaming"] }
-rust_icu_sys = { version = "2.0.2", default-features = false, features = ["renaming", "icu_version_in_env", "icu_version_67_plus"] }
-rust_icu_ucal = { version = "2.0.2", default-features = false, features = ["renaming", "icu_version_in_env"] }
-rust_icu_uchar = { version = "2.0.2", default-features = false, features = ["renaming", "icu_version_in_env", "icu_version_67_plus"] }
-rust_icu_udat = { version = "2.0.2", default-features = false, features = ["renaming", "icu_version_in_env"] }
-rust_icu_udata = { version = "2.0.2", default-features = false, features = ["renaming", "icu_version_in_env"] }
-rust_icu_uenum = { version = "2.0.2", default-features = false, features = ["renaming", "icu_version_in_env"] }
-rust_icu_uloc = { version = "2.0.2", default-features = false, features = ["renaming", "icu_version_in_env", "icu_version_67_plus"] }
-rust_icu_unorm2 = { version = "2.0.2", default-features = false, features = ["renaming", "icu_version_in_env", "icu_version_67_plus"] }
-rust_icu_ustring = { version = "2.0.2", default-features = false, features = ["renaming", "icu_version_in_env"] }
+rust_icu_common = { version = "3.0.0", default-features = false, features = ["renaming"] }
+rust_icu_sys = { version = "3.0.0", default-features = false, features = ["renaming", "icu_version_in_env", "icu_version_67_plus"] }
+rust_icu_ucal = { version = "3.0.0", default-features = false, features = ["renaming", "icu_version_in_env"] }
+rust_icu_uchar = { version = "3.0.0", default-features = false, features = ["renaming", "icu_version_in_env", "icu_version_67_plus"] }
+rust_icu_udat = { version = "3.0.0", default-features = false, features = ["renaming", "icu_version_in_env"] }
+rust_icu_udata = { version = "3.0.0", default-features = false, features = ["renaming", "icu_version_in_env"] }
+rust_icu_uenum = { version = "3.0.0", default-features = false, features = ["renaming", "icu_version_in_env"] }
+rust_icu_uloc = { version = "3.0.0", default-features = false, features = ["renaming", "icu_version_in_env", "icu_version_67_plus"] }
+rust_icu_unorm2 = { version = "3.0.0", default-features = false, features = ["renaming", "icu_version_in_env", "icu_version_67_plus"] }
+rust_icu_ustring = { version = "3.0.0", default-features = false, features = ["renaming", "icu_version_in_env"] }
 tokio = { version = "1.19.2", default-features = false }
 tokio-rustls = "0.22.0"
 trust-dns-proto = { version = "0.22.0", default-features = false, features = ["testing"] }
@@ -676,25 +676,25 @@ configs = [ "//build/config/fuchsia:libunwind" ]
 # pest relies on this being set to find the grammar file
 env_vars = [ "CARGO_MANIFEST_DIR=../../third_party/rust_crates/vendor/handlebars-4.3.5" ]
 
-[gn.package.rust_icu_uchar."2.0.2"]
+[gn.package.rust_icu_uchar."3.0.0"]
 configs = [ "//src/lib/icu:version" ]
-[gn.package.rust_icu_common."2.0.2"]
+[gn.package.rust_icu_common."3.0.0"]
 configs = [ "//src/lib/icu:version" ]
-[gn.package.rust_icu_sys."2.0.2"]
+[gn.package.rust_icu_sys."3.0.0"]
 configs = [ "//src/lib/icu:version" ]
-[gn.package.rust_icu_ucal."2.0.2"]
+[gn.package.rust_icu_ucal."3.0.0"]
 configs = [ "//src/lib/icu:version" ]
-[gn.package.rust_icu_udat."2.0.2"]
+[gn.package.rust_icu_udat."3.0.0"]
 configs = [ "//src/lib/icu:version" ]
-[gn.package.rust_icu_udata."2.0.2"]
+[gn.package.rust_icu_udata."3.0.0"]
 configs = [ "//src/lib/icu:version" ]
-[gn.package.rust_icu_uenum."2.0.2"]
+[gn.package.rust_icu_uenum."3.0.0"]
 configs = [ "//src/lib/icu:version" ]
-[gn.package.rust_icu_uloc."2.0.2"]
+[gn.package.rust_icu_uloc."3.0.0"]
 configs = [ "//src/lib/icu:version" ]
-[gn.package.rust_icu_unorm2."2.0.2"]
+[gn.package.rust_icu_unorm2."3.0.0"]
 configs = [ "//src/lib/icu:version" ]
-[gn.package.rust_icu_ustring."2.0.2"]
+[gn.package.rust_icu_ustring."3.0.0"]
 configs = [ "//src/lib/icu:version" ]
 
 [gn.package.trust-dns-resolver."0.22.0"]
