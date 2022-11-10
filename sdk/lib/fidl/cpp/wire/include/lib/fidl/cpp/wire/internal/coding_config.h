@@ -23,10 +23,6 @@ struct HandleAttributes {
 // Options controlling FIDL encode and decode.
 // These are fixed and specified on the transport-level.
 struct CodingConfig {
-  // Max supported number of iovecs on the write path.
-  // Used to limit the number produced by encode_process_handle.
-  uint32_t max_iovecs_write;
-
   // In the handle metadata array, how many bytes does each element occupy.
   // This field may be set to zero if |encode_process_handle| and
   // |decode_process_handle| are both NULL.

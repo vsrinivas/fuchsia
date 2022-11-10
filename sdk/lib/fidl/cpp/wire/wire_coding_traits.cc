@@ -8,7 +8,6 @@
 namespace fidl::internal {
 
 const CodingConfig kNullCodingConfig = {
-    .max_iovecs_write = 1,
     .handle_metadata_stride = 0,
     .encode_process_handle = nullptr,
     .decode_process_handle = nullptr,

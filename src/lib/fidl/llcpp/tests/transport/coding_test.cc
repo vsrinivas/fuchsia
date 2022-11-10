@@ -45,7 +45,6 @@ struct TestTransport {
   using HandleMetadata = TestHandleMetadata;
   static constexpr uint32_t kNumIovecs = 1;
   static constexpr const fidl::internal::CodingConfig EncodingConfiguration = {
-      .max_iovecs_write = 256,
       .handle_metadata_stride = sizeof(TestHandleMetadata),
       .encode_process_handle = encode_process_handle,
       .decode_process_handle = decode_process_handle,

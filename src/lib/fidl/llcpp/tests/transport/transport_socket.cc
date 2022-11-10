@@ -96,7 +96,6 @@ void SocketWaiter::HandleWaitFinished(async_dispatcher_t* dispatcher, zx_status_
 }
 
 const CodingConfig SocketTransport::EncodingConfiguration = {
-    .max_iovecs_write = 1,
     .handle_metadata_stride = 0,
     .close = socket_close,
     .close_many = socket_close_many,

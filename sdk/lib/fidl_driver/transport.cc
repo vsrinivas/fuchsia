@@ -203,7 +203,6 @@ fidl::internal::DriverWaiter::CancellationResult DriverWaiter::Cancel() {
 }
 
 const CodingConfig DriverTransport::EncodingConfiguration = {
-    .max_iovecs_write = 1,
     .handle_metadata_stride = 0,
     .close = driver_close,
     .close_many = driver_close_many,
