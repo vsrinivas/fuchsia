@@ -70,6 +70,11 @@ group("tests") {
     "events:tests($host_toolchain)",
     "protocols:tests($host_toolchain)",
     "proxy:tests($host_toolchain)",
-    "target:tests($host_toolchain)",
   ]
+
+  # TODO(https://fxbug.dev/113700): Flaky test disabled on coverage.
+  # Please fix the flake and remove the condition below.
+  if (!is_coverage) {
+    deps += [ "target:tests($host_toolchain)" ]
+  }
 }
