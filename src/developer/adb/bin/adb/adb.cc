@@ -29,6 +29,7 @@ void Adb::ReceiveCallback(
 
   impl_->Receive().Then(fit::bind_member<&Adb::ReceiveCallback>(this));
   if (result->is_error()) {
+    FX_LOGS(ERROR) << "Failed result " << result->error_value();
     return;
   }
 
@@ -81,8 +82,8 @@ void Adb::ReceiveCallback(
 
     if (packet->msg.data_length) {
       packet->payload.resize(packet->msg.data_length);
-      if (packet->msg.data_length <= data_left) {
-        copy_len = packet->msg.data_length;
+      if (packet->msg.data_length - (write_len - sizeof(packet->msg)) <= data_left) {
+        copy_len = packet->msg.data_length - (write_len - sizeof(packet->msg));
         complete = true;
       } else {
         FX_LOGS(DEBUG) << "Short payload";
