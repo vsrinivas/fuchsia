@@ -80,7 +80,7 @@ protocol Controller {
         /// The token `id` for the device to be controlled.
         ///
         /// Required.
-        1: id token_id;
+        1: id TokenId;
 
         /// The server_end of the `Control` to be created.
         ///

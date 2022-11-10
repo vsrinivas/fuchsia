@@ -9,8 +9,8 @@ using fuchsia.hardware.audio.signalprocessing;
 using fuchsia.mediastreams;
 using zx;
 
-alias clock_domain = fuchsia.hardware.audio.clock_domain;
-alias token_id = uint64;
+alias ClockDomain = fuchsia.hardware.audio.ClockDomain;
+alias TokenId = uint64;
 
 /// Maximum number of audio devices in the system at any time.
 const MAX_COUNT_DEVICES uint32 = 256;
@@ -56,7 +56,7 @@ type Info = table {
     /// may change across reboots.
     ///
     /// Required.
-    1: id token_id;
+    1: id TokenId;
 
     /// Whether the device is an input (a source of audio) or an output
     /// (a destination for audio).
@@ -121,7 +121,7 @@ type Info = table {
     ///    other known clocks (even any other clocks in CLOCK_DOMAIN_EXTERNAL).
     ///
     /// Required.
-   10: clock_domain clock_domain;
+   10: clock_domain ClockDomain;
 };
 
 /// This table contains vectors representing three dimensions of device
@@ -263,7 +263,7 @@ protocol Registry {
     /// should immediately be re-called, in case other removals have occurred.
     WatchDeviceRemoved() -> (table {
         /// The token of the device least-recently removed.
-        1: id token_id;
+        1: id TokenId;
     }) error RegistrWatchDeviceRemovedyError;
 
     /// Request an `Observer` for the specified device.
@@ -271,7 +271,7 @@ protocol Registry {
         /// The token `id` for the device to be observed.
         ///
         /// Required.
-        1: id token_id;
+        1: id TokenId;
 
         /// The server end of the `Observer` that will be created.
         ///

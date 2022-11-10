@@ -110,7 +110,7 @@ type ReferenceClock = resource table {
     /// Domain of the clock, if known.
     ///
     /// Optional. If not specified, defaults to CLOCK_DOMAIN_EXTERNAL.
-    3: domain fuchsia.hardware.audio.clock_domain;
+    3: domain fuchsia.hardware.audio.ClockDomain;
 };
 
 /// Used to watch for changes in delay from an external source.

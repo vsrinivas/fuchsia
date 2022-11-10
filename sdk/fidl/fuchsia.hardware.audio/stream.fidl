@@ -17,9 +17,9 @@ const MAX_COUNT_SUPPORTED_BYTES_PER_SAMPLE uint32 = 8;
 const MAX_COUNT_SUPPORTED_VALID_BITS_PER_SAMPLE uint32 = 8;
 const MAX_COUNT_FORMATS uint32 = 64;
 
-alias clock_domain = uint32;
-const CLOCK_DOMAIN_MONOTONIC clock_domain = 0x00000000;
-const CLOCK_DOMAIN_EXTERNAL clock_domain = 0xFFFFFFFF;
+alias ClockDomain = uint32;
+const CLOCK_DOMAIN_MONOTONIC ClockDomain = 0x00000000;
+const CLOCK_DOMAIN_EXTERNAL ClockDomain = 0xFFFFFFFF;
 
 type SampleFormat = strict enum : uint8 {
     /// Signed Linear Pulse Code Modulation samples at the host endianness.
@@ -210,7 +210,7 @@ type StreamProperties = table {
     /// notification updates to recover the hardware's clock.
     ///
     /// Required.
-   11: clock_domain clock_domain;
+   11: clock_domain ClockDomain;
 };
 
 /// For an overview see

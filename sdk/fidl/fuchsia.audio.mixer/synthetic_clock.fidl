@@ -28,7 +28,7 @@ protocol SyntheticClockRealm {
         /// clock has the same rate as the system-wide monotonic clock.
         ///
         /// Required.
-        2: domain fuchsia.hardware.audio.clock_domain;
+        2: domain fuchsia.hardware.audio.ClockDomain;
 
         /// Whether the clock's rate can be adjusted via the `control` channel.
         ///

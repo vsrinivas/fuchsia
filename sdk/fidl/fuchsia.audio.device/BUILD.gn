@@ -17,6 +17,4 @@ fidl("fuchsia.audio.device") {
     "//sdk/fidl/fuchsia.hardware.audio",
     "//sdk/fidl/fuchsia.mediastreams",
   ]
-
-  excluded_checks = [ "invalid-case-for-decl-name" ]
 }
