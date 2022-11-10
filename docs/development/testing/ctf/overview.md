@@ -30,6 +30,6 @@ Note: TODO: Dashboards are currently internal-only
 [rfc15]: /docs/contribute/governance/rfcs/0015_cts.md
 [faq]: /docs/development/testing/ctf/faq.md
 [contributing]: /docs/development/testing/ctf/contributing_tests.md
-[cpp_echo_test]: /sdk/ctf/tests/examples/fidl/fuchsia.example/cc/
-[rust_echo_test]: /sdk/ctf/tests/examples/fidl/fuchsia.example/rust/
+[cpp_echo_test]: /sdk/ctf/tests/examples/fidl/fuchsia.examples/cc/
+[rust_echo_test]: /sdk/ctf/tests/examples/fidl/fuchsia.examples/rust/
 [existing_tests]: /sdk/ctf/tests/fidl/

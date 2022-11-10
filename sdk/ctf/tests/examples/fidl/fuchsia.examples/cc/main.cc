@@ -11,12 +11,12 @@
 
 #include <zxtest/zxtest.h>
 
-class FuchsiaExampleTest : public zxtest::Test {
+class FuchsiaExamplesTest : public zxtest::Test {
  public:
-  ~FuchsiaExampleTest() override = default;
+  ~FuchsiaExamplesTest() override = default;
 };
 
-TEST(FuchsiaExampleTest, Echo) {
+TEST(FuchsiaExamplesTest, Echo) {
   zx::result client_end = component::Connect<fuchsia_examples::Echo>();
 
   EXPECT_TRUE(client_end.is_ok(), "Synchronous error when connecting to the |Echo| protocol");
@@ -28,5 +28,4 @@ TEST(FuchsiaExampleTest, Echo) {
   const std::string& reply_string = result->response();
   FX_LOGS(INFO) << "Got response: " << reply_string;
 }
-
 // [END example]

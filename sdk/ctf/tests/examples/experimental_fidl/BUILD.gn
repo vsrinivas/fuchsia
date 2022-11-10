@@ -29,11 +29,14 @@ ctf_fuchsia_component("experimental") {
   deps = [ ":experimental-bin" ]
 }
 
+# [START norelease_example]
 ctf_fuchsia_test_package("experimental-pkg") {
   release_in_ctf = false
   package_name = "experimental-cts-pkg"
   test_components = [ ":experimental" ]
 }
+
+# [END norelease_example]
 
 group("tests") {
   testonly = true

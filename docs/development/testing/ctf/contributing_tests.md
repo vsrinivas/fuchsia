@@ -1,269 +1,218 @@
 # Contributing Tests to CTF
 
-This guide provides instructions on how to contribute a test to CTF.
+<!-- 
+TODO(113454): Turn this doc into an index of guides for writing CTF tests
+for different plasa elements (fidls, C++ libraries, tools, etc...)
+-->
 
-## How to write an ABI test
+This guide will walk you through the process of writing a CTF test for a FIDL API.
 
-An ABI test is a test that verifies the ABI or runtime behavior of an API in
-the SDK. These tests are distributed as Fuchsia packages containing test
-components and run entirely on the target device.
+{% set fidl_library = "fuchsia.examples" %}
+{% set fidl_service = "fuchsia.examples.Echo" %}
 
-### Prerequisites
+To test a FIDL API, we write a test that uses the API's client bindings in the SDK to
+interact with the FIDL service. For this guide we'll be testing an example FIDL service
+`{{ fidl_service }}` from the library `{{ fidl_library }}`. Throughout this guide, you
+can replace the library and service with your own values to match your use case.
 
-* Your test must be written in C, C++, or Rust.
-* This guide assumes the reader is familiar with Fuchsia [Packages],
-[Components] and [Component Manifests].
+The test will consist of two components: The first is a __test driver binary__ which
+implements the core test logic, and is the part of your test that will be released in CTF.
+The second is a __test realm__ which provides the capabilities and dependencies that we
+want to test, is always built from the sources at HEAD, and is not released as part of CTF.
 
+## Requirements
 
-### Step 1: Create a test directory
+* Tests must be written in C, C++, or Rust.
+* Tests must only depend on APIs, ABIs, and tools in partner facing SDKs.
 
-The structure of the `//sdk/ctf` directory mirrors the structure of SDK
-artifacts. Your test should go in the same directory as the interface under test
-is found in an SDK. For example:
+Note: Exceptions for dependencies are made by updating the allowlist [here][allow list].
 
-| Tests for... | Should go in... |
-|--------------|-----------------|
-| Host tools   | //sdk/ctf/tests/tools |
-| FIDL interfaces | //sdk/ctf/tests/fidl |
-| Libraries    | //sdk/ctf/tests/pkg |
+Note: The examples in this guide use synchronous FIDL clients, but this is not a requirement.
+Test authors can choose to use synchronous or asynchronous clients.
 
-See existing tests under `//sdk/ctf/tests` for examples.
+If you are writing a CTF test for a FIDL service whose `fidl` target is not in the partner
+SDK category, please see this section.
 
-### Step 2: Create your test executable
+## Concepts
 
-Note: The CTF build templates verify that dependencies are released in an SDK.
-If your test needs an exception, [file a bug] in `DeveloperExperience>CTF`. The
-allow list can be found [here][allow list]
+* [Components]
+* [Component Manifests]
+* [Packages]
+* [Test Components]
+* [Subpackages]
 
-In your test directory's `BUILD.gn` file, create a test executable using CTF
-build templates.
+## Steps
+
+### 1. Setup
+
+First create a directory for the test. The directory name should match the name of the 
+FIDL library. You can copy these commands to generate some scaffolding:
+
+{% set test_root = "sdk/ctf/tests/fidl/" + fidl_library %}
+{% set test_component_name = fidl_service|lower + "_test" %}
 
   * {C/C++}
 
-    ```gn
-    import("//sdk/ctf/build/ctf.gni")
-
-    ctf_executable("my_test_binary") {
-      deps = [ "//zircon/system/ulib/zxtest" ]
-      sources = [ "my_test.cc" ]
-      testonly = true
-    }
+    ```sh
+    mkdir {{ test_root }}
+    mkdir {{ test_root }}/meta/
+    touch {{ test_root }}/meta/{{ test_component_name }}.cml
+    touch {{ test_root }}/BUILD.gn
+    touch {{ test_root }}/main.cc
     ```
 
   * {Rust}
 
-  ```gn
-  import("//sdk/ctf/build/ctf.gni")
+    ```sh
+    mkdir {{ test_root }}
+    mkdir {{ test_root }}/meta/    
+    touch {{ test_root }}/meta/{{ test_component_name }}.cml
+    touch {{ test_root }}/BUILD.gn
+    touch {{ test_root }}/main.rs
+    ```
 
-  ctf_rustc_test("my_test_binary") {
-    edition = "2021"
-    source_root = "src/my_test.rs"
-    sources = [ "src/my_test.rs" ]
-  }
-  ```
+### 2. Create the test realm
 
-### Step 3: Create your test component
+Remember, the test realm provides the test's dependencies. For convenience, the test realm
+component can be defined anywhere in the source tree but we prefer if all realms are
+defined in `//sdk/ctf/test_realm/BUILD.gn.`
 
-Note: This section assumes familiarity with the concept of [Test Components].
+To create the realm, add contents like the following to `//sdk/ctf/test_realm/BUILD.gn`:
+
+```build
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="sdk/ctf/test_realm/BUILD.gn" region_tag="example" adjust_indentation="auto" %}
+```
+
+{% set test_realm_package = fidl_library + "_test_realm" %}
+
+Then create the test realm's component manifest at `//sdk/ctf/test_realm/meta/{{ test_realm_package }}.cml`:
 
 ```json5
-// my_test_component.cml
-{
-    include: [
-        // Select the appropriate test runner shard here:
-        // rust, elf, etc.
-        "//src/sys/test_runners/rust/default.shard.cml",
-        "//sdk/ctf/test_realm/meta/ctf.shard.cml",
-    ],
-    program: {
-        binary: "bin/my_test_binary",
-    },
-    ...
-}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="sdk/ctf/test_realm/meta/fuchsia.example_test_realm.cml" region_tag="example" adjust_indentation="auto" %}
 ```
 
-Wrap your executable as a Fuchsia component. CTF provides a special GN template
-for creating a component:
+Finally, add the realm's label to the list in `//sdk/ctf/build/ctf_test_realms.gni`.
+This will cause the build to include the test realm as a [subpackage][Subpackages] of your
+test. We'll explain this in more detail, later.
 
-```gn
-ctf_fuchsia_component("my_test_component") {
-  testonly = true
-  manifest = "meta/my_test_component.cml",
-  deps = [ ":my_test_binary" ]
-}
-```
+### 3. Write the BUILD.gn file
 
-### Step 4: Create your test package
+Add contents like the following to `//{{ test_root }}/BUILD.gn` to define an
+executable, test driver component, and package for your test. Be sure to add
+the `:tests` target as a dependency of `//sdk/ctf/tests/fidl:tests` in order
+to include the test in the build graph for CI and CQ builds.
 
-CTF also provides a special GN template for creating a test package:
+  * {C/C++}
 
-```gn
-ctf_fuchsia_test_package("my_test") {
-  package_name = "my_test"
-  test_components = [ ":my_test_component" ]
-}
-```
+    ```build
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="sdk/ctf/tests/examples/fidl/fuchsia.examples/cc/BUILD.gn" region_tag="build" adjust_indentation="auto" %}
+    ```
 
-### Step 5: Run the test
+  * {Rust}
+
+    ```build
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="sdk/ctf/tests/examples/fidl/fuchsia.examples/rust/BUILD.gn" region_tag="build" adjust_indentation="auto" %}
+    ```
+
+### 4. Implement the test driver
+
+This component implements the core logic for your test.
+
+First we need to create the component manifest. Add contents like the following
+to `{{ test_component_name }}.cml`:
+
+  * {C/C++}
+
+    ```json5
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="sdk/ctf/tests/examples/fidl/fuchsia.examples/cc/meta/fuchsia.examples.echo_test.cml" region_tag="example" adjust_indentation="auto" %}
+    ```
+
+  * {Rust}
+
+    ```json5
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="sdk/ctf/tests/examples/fidl/fuchsia.examples/rust/meta/fuchsia.examples.echo_test.cml" region_tag="example" adjust_indentation="auto" %}
+    ```
+
+The package URL `{{ test_realm_package }}#meta/default.cm` loads the test realm we created
+earlier from a subpackage. Every time this test runs it receives a new version of this
+subpackage which is built from the current commit, regardless of whether the test itself
+is built from the current commit or obtained as a prebuilt.
+
+Next we need to implement the executable. Add contents like the following to the test's
+source file:
+
+  * {C/C++}
+
+    ```C++
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="sdk/ctf/tests/examples/fidl/fuchsia.examples/cc/main.cc" region_tag="example" adjust_indentation="auto" %}
+    ```
+
+  * {Rust}
+
+    ```rust
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="sdk/ctf/tests/examples/fidl/fuchsia.examples/rust/main.rs" region_tag="example" adjust_indentation="auto" %}
+    ```
+
+### 5. Running the test
 
 These instructions require you to open several terminal tabs.
+Follow the insructions for each tab, from left to right:
 
-#### Tab 1: Start the Fuchsia package server
+  * {Build Fuchsia}
 
-```
-fx serve
-```
+    ```devsite-terminal
+    fx set core.x64 --with //{{ test_root }}:tests \
+        --args=full_resolver_enable_subpackages=true
+    fx build
+    ```
 
-#### Tab 2: Start the Fuchsia emulator
+  * {Run the emulator}
+  
+    ```devsite-terminal
+    ffx emu start --headless
+    ```
+  
+  * {Serve packages}
 
-```
-ffx emu start --headless
-```
+    ```devsite-terminal
+    fx serve
+    ```
 
-* `--headless` disables graphical output.
+  * {Stream logs}
 
-For more information on configuring the emulator, see [Start the Fuchsia Emulator].
+    ```devsite-terminal
+    ffx log
+    ```
 
-#### Tab 3: Stream the device logs
+  * {Run the tests}
 
-This step is useful for debugging your test.
+    ```devsite-terminal
+    fx test -v {{ test_component_name }}
+    # -v enables verbose output.
+    ```
 
-```
-ffx log
-```
+If you need additional help debugging at this step, please reach out to fuchsia-ctf-team@google.com.
 
-#### Tab 4: Run the test
+### 6. Submit the changes
 
-<pre class="prettyprint">
-<code class="devsite-terminal">fx set core.x64 --with <var>TARGET_LABEL</var> </code>
-<code class="devsite-terminal">fx test <var>TARGET_LABEL</var> # or fx test <var>TEST_NAME</var> </code>
-</pre>
+If the tests pass, send your changes for review. After submission the tests willji
+automatically be included in the next CTF release when the next milestone branch
+is cut.
+q
+## Testing experimental FIDL APIs
 
-* `-v` enables verbose output.
+You can follow this guide to write a CTF test for a FIDL API that is not in the partner
+SDK category, but you must not release the test in CTF until the API has been added to the
+partner category. To prevent the test from being released, set `release_in_ctf = false` on
+the test package:
 
-See the section about "Debugging tips" below.
-
-### Step 6. Verify your test passes as part of the CTF release
-
-This step involves building the CTF in the same way that our CI does when it is
-released, then running those CTF tests in your local checkout. It is necessary
-because upon release, we automatically rewrite each CTF test package's name to
-deduplicate it from the same package's name at HEAD (the build does not allow
-duplicate names) and we must verify that the test still passes after this
-rewrite.
-
-Follow the instructions in Step 4 to start an emulator and a package server,
-then launch a new terminal and run the following command:
-
-```
-$FUCHSIA_DIR/sdk/ctf/build/scripts/verify_release/verify_release.py
-```
-
-This command will build the CTF archive, release it to your
-`//prebuilt/cts/test/*` directory, and run the tests contained therein. After
-a brief pause, the test results will be printed to the terminal window.
-
-To learn more about that script, or to run the commands manually, please see
-[//sdk/ctf/build/scripts/verify_release/README.md](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/sdk/ctf/build/scripts/verify_release/README.md).
-
-Some common causes of test failure at this stage include:
-
-* The test launches one of its child components using an absolute component URL.
-  * **Explanation**: The URL is no longer correct because the test's package was
-  renamed.
-  * **Solution**: Use a [relative component URL] instead.
-* The test is missing a dependency.
-  * **Explanation**: It's possible that the Fuchsia system contained a different
-  set of packages when you built and ran your test at HEAD vs as part of the CTF
-  and that your test depended on some of those packages.
-  * **Solution**: Make sure your test's GN target explicitly lists all of its
-  direct dependencies as `deps`.
-
-If you need additional help debugging at this step, please reach out to the CTF
-team by filing a bug in the [CTF bug component].
-
-### Step 7. Make the test run on presubmit
-
-This step causes the version of your test from Fuchsia's HEAD commit to run as
-part of Fuchsia's presumbit queue.
-
-Add a "tests" group to your BUILD file:
-
-```
-group("tests") {
-  testonly = true
-  deps = [ ":my_test" ]
-}
+```build
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="sdk/ctf/tests/examples/experimental_fidl/BUILD.gn" region_tag="norelease_example" adjust_indentation="auto" %}
 ```
 
-Next add this target as a dependency to the closest ancestor `group("tests")`
-target. This will ensure that your test is added to the next CTF release.
+## See Also
 
-### Debugging Tips
-
-* If your test hangs, use `ffx component list -v` to inspect its current state.
-
-## How to write a test for experimental FIDL
-
-The CTF supports writing tests for FIDL interfaces that are not yet released in
-the SDK. This allows you to write CTF tests for your API while you are still
-developing it. Writing tests using the CTF framework while you develop your API
-ensures that your tests do not depend on any non-SDK targets.
-
-### Step 1. Ensure your FIDL is marked as experimental
-Your FIDL interface should be marked with `sdk_category = "experimental"`. If
-your interface is marked as `public` or `partner`, follow the steps above to
-write a CTF test.
-
-```
-fidl("fuchsia.interface") {
-  sdk_category = "experimental"
-  name = "fuchsia.interface"
-  sources = [ "interface.fidl" ]
-}
-```
-
-### Step 2. Add your FIDL to the CTF allow list
-The CTF verifies that its dependencies are in the SDK. To avoid build time
-errors, your FIDL must be added to the CTF [allow list].
-
-```
-# //sdk/ctf/build/internal/allowed_ctf_deps.gni
-ALLOWED_EXPERIMENTAL_FIDL = [
-  ...,
-  "//absolute/path/to/experimental:fidl"
-]
-```
-
-### Step 3. Follow the steps above to write an ABI test
-Follow the steps in the [How to write an ABI test](#how_to_write_an_abi_test)
-section to write an ABI test for your experimental FIDL.
-
-### Step 4. Mark your test package as experimental
-The CTF includes tests based on metadata generated by
-`ctf_fuchsia_test_package`. To avoid generating this metadata (and including
-your test in the CTF), mark your test package with `uses_experimental_fidl`.
-
-```
-ctf_fuchsia_test_package("my_experimental_test") {
-  uses_experimental_fidl = true
-  test_components = [ ":my_experimental_component" ]
-}
-```
-
-### Step 5. Release your CTF test
-When your FIDL interface is no longer experimental, release your CTF test!
-To release your CTF test, follow the steps in the
-[How to write an ABI test](#how_to_write_an_abi_test) section and delete the
-`uses_experimental_fidl` line from your `ctf_fuchsia_test_package`.
-
-## How to remove an ABI test
-
-Please see the FAQ section about [retiring tests].
-
-## How to disable your test
-
-Please see the FAQ section about [disabling tests].
+The FAQ sections about [retiring tests] and [disabling tests].
 
 [Component Manifests]: /docs/concepts/components/v2/component_manifests.md
 [Components]: /docs/concepts/components/v2
@@ -277,3 +226,4 @@ Please see the FAQ section about [disabling tests].
 [disabling tests]: /docs/development/testing/ctf/faq.md#disable-a-test
 [retiring tests]: /docs/development/testing/ctf/faq.md#retire-a-test
 [allow list]: /sdk/ctf/build/internal/allowed_ctf_deps.gni
+[Subpackages]: /docs/contribute/governance/rfcs/0154_subpackages.md

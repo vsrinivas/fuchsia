@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// [START manifest]
+// [START example]
 {
     include: [
         "//sdk/ctf/meta/test.shard.cml",
-        "//src/sys/test_runners/rust/default.shard.cml",
+        "sys/testing/elf_test_runner.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/fuchsia_example_echo_test_rust_main",
+        binary: "bin/fuchsia.examples.echo_test_main",
     },
     children: [
         {
@@ -26,4 +26,4 @@
     ],
 }
 
-// [END manifest]
+// [END example]
