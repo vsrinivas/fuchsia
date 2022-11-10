@@ -8,9 +8,14 @@
 #include "src/ui/lib/escher/mesh/indexed_triangle_mesh_upload.h"
 #include "src/ui/lib/escher/mesh/tessellation.h"
 #include "src/ui/lib/escher/renderer/render_funcs.h"
+#include "src/ui/lib/escher/third_party/granite/vk/render_pass.h"
 #include "src/ui/lib/escher/util/image_utils.h"
+#include "src/ui/lib/escher/vk/impl/render_pass_cache.h"
+#include "src/ui/lib/escher/vk/pipeline_builder.h"
 #include "src/ui/lib/escher/vk/shader_program.h"
 #include "src/ui/lib/escher/vk/texture.h"
+
+#include "vulkan/vulkan_enums.hpp"
 
 namespace escher {
 const vk::ImageUsageFlags RectangleCompositor::kRenderTargetUsageFlags =
@@ -100,12 +105,12 @@ bool SetupColorConversionDualPass(RenderPassInfo* rp, vk::Rect2D render_area,
   RenderPassInfo::AttachmentInfo depth_stencil_info;
   if (output_image) {
     if (!output_image->is_swapchain_image()) {
-      FX_LOGS(ERROR) << "RenderPassInfo::InitRenderPassInfo(): Output image doesn't have valid "
+      FX_LOGS(ERROR) << "SetupColorConversionDualPass(): Output image doesn't have valid "
                         "swapchain layout.";
       return false;
     }
     if (output_image->swapchain_layout() != output_image->layout()) {
-      FX_LOGS(ERROR) << "RenderPassInfo::InitRenderPassInfo(): Current layout of output image "
+      FX_LOGS(ERROR) << "SetupColorConversionDualPass(): Current layout of output image "
                         "does not match its swapchain layout.";
       return false;
     }
@@ -382,6 +387,147 @@ vk::ImageCreateInfo RectangleCompositor::GetDefaultImageConstraints(const vk::Fo
   create_info.sharingMode = vk::SharingMode::eExclusive;
   create_info.initialLayout = vk::ImageLayout::eUndefined;
   return create_info;
+}
+
+static impl::RenderPassPtr WarmColorConversionDualPass(
+    Escher* escher, vk::Format output_format, vk::ImageLayout output_swapchain_layout,
+    vk::Format depth_format, const std::vector<SamplerPtr>& immutable_samplers,
+    bool use_protected_memory) {
+  RenderPassInfo::AttachmentInfo output_info{
+      .format = output_format,
+      .swapchain_layout = output_swapchain_layout,
+      .sample_count = 1,
+      .is_transient = false,
+  };
+  // TODO(fxbug.dev/94252): Transient images are not supported on all GPUs, so this is going to be a
+  // regular image for now.
+  RenderPassInfo::AttachmentInfo transient_info{
+      .format = output_format,
+      .swapchain_layout = vk::ImageLayout::eUndefined,
+      .sample_count = 1,
+      .is_transient = false,
+
+  };
+  RenderPassInfo::AttachmentInfo depth_stencil_info{
+      .format = depth_format,
+      .sample_count = 1,
+      .is_transient = false,
+  };
+  RenderPassInfo render_pass_info;
+  InitRenderPassInfoHelper(&render_pass_info, transient_info, output_info, depth_stencil_info);
+
+  return escher->render_pass_cache()->ObtainRenderPass(render_pass_info,
+                                                       /*allow_render_pass_creation*/ true);
+}
+
+static impl::RenderPassPtr WarmSingleSubpass(Escher* escher, vk::Format output_format,
+                                             vk::ImageLayout output_swapchain_layout,
+                                             vk::Format depth_format,
+                                             const std::vector<SamplerPtr>& immutable_samplers,
+                                             bool use_protected_memory) {
+  RenderPassInfo::AttachmentInfo output_info{
+      .format = output_format,
+      .swapchain_layout = output_swapchain_layout,
+      .sample_count = 1,
+      .is_transient = false,
+  };
+  RenderPassInfo::AttachmentInfo depth_stencil_info{
+      .format = depth_format,
+      .sample_count = 1,
+      .is_transient = false,
+  };
+  RenderPassInfo render_pass_info;
+  RenderPassInfo::InitRenderPassInfo(&render_pass_info, output_info, depth_format,
+                                     vk::Format::eUndefined, /*sample_count=*/1,
+                                     // TODO(fxbug.dev/94252): Transient images are not supported on
+                                     // all GPUs, so this is going to be a regular image for now.
+                                     /*use_transient_depth_and_msaa=*/false);
+
+  return escher->render_pass_cache()->ObtainRenderPass(render_pass_info,
+                                                       /*allow_render_pass_creation*/ true);
+}
+
+// Generate pipelines for the specified shader program.  Variants pipelines are generated for each
+// "immutable sampler"; these are used for displaying various types of YUV video.  Static state for
+// the pipeline (e.g. stencil buffer state, etc.) is provided by |cbps|.
+static void WarmProgramHelper(impl::PipelineLayoutCache* pipeline_layout_cache,
+                              const ShaderProgramPtr& program, CommandBufferPipelineState* cbps,
+                              const std::vector<SamplerPtr>& immutable_samplers) {
+  TRACE_DURATION("gfx", "RectangleCompositor::WarmProgramHelper");
+
+  // Generate pipeline which doesn't require an immutable sampler.
+  PipelineLayoutPtr layout = program->ObtainPipelineLayout(pipeline_layout_cache, nullptr);
+  cbps->FlushGraphicsPipeline(layout.get(), program.get());
+
+  // Generate pipelines which require immutable samplers.
+  for (auto& sampler : immutable_samplers) {
+    PipelineLayoutPtr layout = program->ObtainPipelineLayout(pipeline_layout_cache, sampler);
+    cbps->FlushGraphicsPipeline(layout.get(), program.get());
+  }
+}
+
+void RectangleCompositor::WarmPipelineCache(vk::Format output_format,
+                                            vk::ImageLayout output_swapchain_layout,
+                                            vk::Format depth_format,
+                                            const std::vector<SamplerPtr>& immutable_samplers,
+                                            bool use_protected_memory) {
+  TRACE_DURATION("gfx", "RectangleCompositor::WarmPipelineCache");
+  auto escher = escher_.get();
+
+  // Check if a standard render pass (i.e. no color correction, etc.) is already cached, or a new
+  // one needs to be generated/cached.  Then check if the necessary pipelines are already cached, or
+  // if new ones need to be generated/cached.
+  {
+    auto standard_render_pass =
+        WarmSingleSubpass(escher, output_format, output_swapchain_layout, depth_format,
+                          immutable_samplers, use_protected_memory);
+    CommandBufferPipelineState cbps(escher_.get()->pipeline_builder()->GetWeakPtr());
+    cbps.set_render_pass(standard_render_pass.get());
+
+    cbps.SetToDefaultState(CommandBuffer::DefaultState::kOpaque);
+    cbps.SetDepthTestAndWrite(true, true);
+    WarmProgramHelper(escher->pipeline_layout_cache(), standard_program_, &cbps,
+                      immutable_samplers);
+
+    cbps.SetToDefaultState(CommandBuffer::DefaultState::kTranslucent);
+    cbps.SetDepthTestAndWrite(true, false);
+    WarmProgramHelper(escher->pipeline_layout_cache(), standard_program_, &cbps,
+                      immutable_samplers);
+  }
+
+  // Check if a "color correction" render pass is already cached, or a new one needs to be
+  // generated/cached.  Then check if the necessary pipelines are already cached, or if new ones
+  // need to be generated/cached.
+  //
+  // The "color correction" render pass consists of two subpasses:
+  // - standard pass for opaque and translucent client images
+  // - color correction subpass to adjust the pixels rendered by the first subpass.
+  {
+    auto color_conversion_render_pass =
+        WarmColorConversionDualPass(escher_.get(), output_format, output_swapchain_layout,
+                                    depth_format, immutable_samplers, use_protected_memory);
+
+    CommandBufferPipelineState cbps(escher_.get()->pipeline_builder()->GetWeakPtr());
+    cbps.set_render_pass(color_conversion_render_pass.get());
+
+    // Draw opaque rects.
+    cbps.SetToDefaultState(CommandBuffer::DefaultState::kOpaque);
+    cbps.SetDepthTestAndWrite(true, true);
+    WarmProgramHelper(escher->pipeline_layout_cache(), standard_program_, &cbps,
+                      immutable_samplers);
+
+    // Draw transluscent rects.
+    cbps.SetToDefaultState(CommandBuffer::DefaultState::kTranslucent);
+    cbps.SetDepthTestAndWrite(true, false);
+    WarmProgramHelper(escher->pipeline_layout_cache(), standard_program_, &cbps,
+                      immutable_samplers);
+
+    // Do full-screen color conversion.
+    cbps.IncrementSubpass();
+    cbps.SetToDefaultState(CommandBuffer::DefaultState::kOpaque);
+    cbps.SetDepthTestAndWrite(false, false);
+    WarmProgramHelper(escher->pipeline_layout_cache(), color_conversion_program_, &cbps, {});
+  }
 }
 
 }  // namespace escher

@@ -63,6 +63,7 @@ class Renderer : public allocation::BufferCollectionImporter {
 
   // Returns the pixel format that the renderer prefers to use for render targets.
   // TODO(fxbug.dev/71410): Remove all references to zx_pixel_format_t
+  // TODO(fxbug.dev/114033): Rename this to reflect that it's for a render target.
   virtual zx_pixel_format_t ChoosePreferredPixelFormat(
       const std::vector<zx_pixel_format_t>& available_formats) const = 0;
 
@@ -76,6 +77,10 @@ class Renderer : public allocation::BufferCollectionImporter {
   // Remove this after moving to prunable tokens in the callers.
   virtual bool RequiresRenderInProtected(
       const std::vector<allocation::ImageMetadata>& images) const = 0;
+
+  // Implementations which use Vulkan or similar should implement this by generating render passes
+  // and pipelines, so that there is no jank due to lazily generating them later.
+  virtual void WarmPipelineCache(zx_pixel_format_t) {}
 };
 
 }  // namespace flatland

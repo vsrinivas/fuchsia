@@ -28,6 +28,7 @@
 #include "src/ui/scenic/lib/gfx/resources/lights/point_light.h"
 #include "src/ui/scenic/lib/gfx/resources/renderers/renderer.h"
 #include "src/ui/scenic/lib/gfx/resources/stereo_camera.h"
+#include "src/ui/scenic/lib/utils/shader_warmup.h"
 
 // TODO(fxbug.dev/24320): Move this someplace.  PoseBufferLatchingShader assumes this,
 // but we can't put it there because it lives in a Zircon-ignorant part of
@@ -250,31 +251,7 @@ void EngineRenderer::WarmPipelineCache(std::set<vk::Format> framebuffer_formats)
   config.msaa_sample_count = 1;
   config.depth_stencil_format = depth_stencil_format_;
 
-  std::vector<escher::SamplerPtr> immutable_samplers;
-  if (escher_->allow_ycbcr()) {
-    // Generate the list of immutable samples for all of the YUV types that we expect to see.
-    const std::vector<vk::Format> immutable_sampler_formats{vk::Format::eG8B8G8R8422Unorm,
-                                                            vk::Format::eG8B8R82Plane420Unorm,
-                                                            vk::Format::eG8B8R83Plane420Unorm};
-    const std::vector<escher::ColorSpace> color_spaces{
-        escher::ColorSpace::kRec709,
-        escher::ColorSpace::kRec601Ntsc,
-    };
-    const auto vk_physical_device = escher_->vk_physical_device();
-    for (auto fmt : immutable_sampler_formats) {
-      for (auto color_space : color_spaces) {
-        if (escher::impl::IsYuvConversionSupported(vk_physical_device, fmt)) {
-          vk::Filter filter = vk::Filter::eNearest;
-          if (vk_physical_device.getFormatProperties(fmt).optimalTilingFeatures &
-              vk::FormatFeatureFlagBits::eSampledImageFilterLinear) {
-            filter = vk::Filter::eLinear;
-          }
-          immutable_samplers.push_back(
-              escher_->sampler_cache()->ObtainYuvSampler(fmt, filter, color_space));
-        }
-      }
-    }
-  }
+  auto immutable_samplers = utils::ImmutableSamplersForShaderWarmup(escher_, vk::Filter::eLinear);
 
   framebuffer_formats.insert(kIntermediateLayerFormat);
   for (auto fmt : framebuffer_formats) {

@@ -378,15 +378,17 @@ bool RenderPassInfo::InitRenderPassInfo(RenderPassInfo* rp,
   const bool has_msaa = sample_count != 1;
   FX_DCHECK(!has_msaa || (msaa_format != vk::Format::eUndefined));
 
-  RenderPassInfo::AttachmentInfo depth_stencil_info;
-  depth_stencil_info.format = depth_stencil_format;
-  depth_stencil_info.sample_count = sample_count;
-  depth_stencil_info.is_transient = use_transient_depth_and_msaa;
+  RenderPassInfo::AttachmentInfo depth_stencil_info{
+      .format = depth_stencil_format,
+      .sample_count = sample_count,
+      .is_transient = use_transient_depth_and_msaa,
+  };
 
-  RenderPassInfo::AttachmentInfo msaa_info;
-  msaa_info.format = msaa_format;
-  msaa_info.sample_count = sample_count;
-  msaa_info.is_transient = use_transient_depth_and_msaa;
+  RenderPassInfo::AttachmentInfo msaa_info{
+      .format = msaa_format,
+      .sample_count = sample_count,
+      .is_transient = use_transient_depth_and_msaa,
+  };
 
   InitRenderPassInfoHelper(rp, color_info, depth_stencil_info, has_msaa ? &msaa_info : nullptr);
   return true;

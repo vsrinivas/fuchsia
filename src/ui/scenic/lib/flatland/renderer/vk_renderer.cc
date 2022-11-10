@@ -24,6 +24,7 @@
 #include "src/ui/lib/escher/util/fuchsia_utils.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
+#include "src/ui/scenic/lib/utils/shader_warmup.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -33,10 +34,32 @@ namespace {
 
 using allocation::BufferCollectionUsage;
 
-// Highest priority format first.
-const std::vector<vk::Format> kPreferredImageFormats = {
+const std::vector<vk::Format> kSupportedClientImageFormats = {
     vk::Format::eR8G8B8A8Srgb, vk::Format::eB8G8R8A8Srgb, vk::Format::eG8B8R83Plane420Unorm,
     vk::Format::eG8B8R82Plane420Unorm};
+
+// TODO(fxbug.dev/78186): we don't want to "warm up" render passes and pipelines for multiple
+// framebuffer formats, so we allow only BGRA framebuffers.  This is supported by all current
+// platforms, including the emulator.
+const std::vector<vk::Format> kSupportedRenderTargetImageFormats = {vk::Format::eB8G8R8A8Srgb};
+
+const std::vector<vk::Format> kSupportedReadbackImageFormats = {vk::Format::eB8G8R8A8Srgb,
+                                                                vk::Format::eR8G8B8A8Srgb};
+
+const std::vector<vk::Format>& GetSupportedImageFormatsForBufferCollectionUsage(
+    BufferCollectionUsage usage) {
+  switch (usage) {
+    case BufferCollectionUsage::kClientImage:
+      return kSupportedClientImageFormats;
+      break;
+    case BufferCollectionUsage::kRenderTarget:
+      return kSupportedRenderTargetImageFormats;
+      break;
+    case BufferCollectionUsage::kReadback:
+      return kSupportedReadbackImageFormats;
+      break;
+  }
+}
 
 const vk::Filter kDefaultFilter = vk::Filter::eNearest;
 
@@ -250,7 +273,7 @@ bool VkRenderer::ImportBufferCollection(
   vk::BufferCollectionFUCHSIA collection;
   {
     std::vector<vk::ImageFormatConstraintsInfoFUCHSIA> create_infos;
-    for (const auto& format : kPreferredImageFormats) {
+    for (const auto& format : GetSupportedImageFormatsForBufferCollectionUsage(usage)) {
       vk::ImageCreateInfo create_info =
           escher::RectangleCompositor::GetDefaultImageConstraints(format, image_usage);
       if (size.has_value() && size.value().width && size.value().height) {
@@ -409,10 +432,10 @@ bool VkRenderer::ImportBufferImage(const allocation::ImageMetadata& metadata,
       const vk::ImageUsageFlags kRenderTargetAsReadbackSourceUsageFlags =
           escher::RectangleCompositor::kRenderTargetUsageFlags |
           vk::ImageUsageFlagBits::eTransferSrc;
-      auto image =
-          ExtractImage(metadata, collection_itr->second.vk_collection,
-                       needs_readback ? kRenderTargetAsReadbackSourceUsageFlags
-                                      : escher::RectangleCompositor::kRenderTargetUsageFlags);
+      auto image = ExtractImage(
+          metadata, BufferCollectionUsage::kRenderTarget, collection_itr->second.vk_collection,
+          needs_readback ? kRenderTargetAsReadbackSourceUsageFlags
+                         : escher::RectangleCompositor::kRenderTargetUsageFlags);
       if (!image) {
         FX_LOGS(ERROR) << "Could not extract render target.";
         return false;
@@ -436,9 +459,9 @@ bool VkRenderer::ImportBufferImage(const allocation::ImageMetadata& metadata,
         return false;
       }
 
-      escher::ImagePtr readback_image =
-          ExtractImage(metadata, readback_collection_itr->second.vk_collection,
-                       vk::ImageUsageFlagBits::eTransferDst);
+      escher::ImagePtr readback_image = ExtractImage(metadata, BufferCollectionUsage::kReadback,
+                                                     readback_collection_itr->second.vk_collection,
+                                                     vk::ImageUsageFlagBits::eTransferDst);
       if (!readback_image) {
         FX_LOGS(ERROR) << "Could not extract readback image.";
         return false;
@@ -477,6 +500,7 @@ void VkRenderer::ReleaseBufferImage(allocation::GlobalImageId image_id) {
 }
 
 escher::ImagePtr VkRenderer::ExtractImage(const allocation::ImageMetadata& metadata,
+                                          BufferCollectionUsage bc_usage,
                                           vk::BufferCollectionFUCHSIA collection,
                                           vk::ImageUsageFlags usage, bool readback) {
   TRACE_DURATION("gfx", "VkRenderer::ExtractImage");
@@ -514,8 +538,12 @@ escher::ImagePtr VkRenderer::ExtractImage(const allocation::ImageMetadata& metad
   collection_image_info.index = metadata.vmo_index;
 
   // Setup the create info.
-  FX_DCHECK(properties.createInfoIndex < std::size(kPreferredImageFormats));
-  auto pixel_format = kPreferredImageFormats[properties.createInfoIndex];
+  const auto& kSupportedImageFormats = GetSupportedImageFormatsForBufferCollectionUsage(bc_usage);
+
+  // The same list of formats was provided when specifying constraints in ImportBufferCollection();
+  // |createInfoIndex| is the index into the list, in the same order that it was provided.
+  FX_DCHECK(properties.createInfoIndex < std::size(kSupportedImageFormats));
+  auto pixel_format = kSupportedImageFormats[properties.createInfoIndex];
   vk::ImageCreateInfo create_info =
       escher::RectangleCompositor::GetDefaultImageConstraints(pixel_format, usage);
   create_info.extent = vk::Extent3D{metadata.width, metadata.height, 1};
@@ -588,7 +616,8 @@ escher::ImagePtr VkRenderer::ExtractImage(const allocation::ImageMetadata& metad
 
 escher::TexturePtr VkRenderer::ExtractTexture(const allocation::ImageMetadata& metadata,
                                               vk::BufferCollectionFUCHSIA collection) {
-  auto image = ExtractImage(metadata, collection, escher::RectangleCompositor::kTextureUsageFlags);
+  auto image = ExtractImage(metadata, BufferCollectionUsage::kClientImage, collection,
+                            escher::RectangleCompositor::kTextureUsageFlags);
   if (!image) {
     FX_LOGS(ERROR) << "Image for texture was nullptr.";
     return nullptr;
@@ -643,10 +672,13 @@ void VkRenderer::Render(const ImageMetadata& render_target,
       "flatland::VkRenderer", ++frame_number_, /*enable_gpu_logging=*/false,
       /*requested_type=*/escher::CommandBuffer::Type::kGraphics, render_in_protected_mode);
   auto command_buffer = frame->cmds();
+  if (disable_lazy_pipeline_creation_) {
+    command_buffer->DisableLazyPipelineCreation();
+  }
 
   // Transition pending images to their correct layout
   // TODO(fxbug.dev/52196): The way we are transitioning image layouts here and in the rest of
-  // scenic is incorrect for "external" images. It just happens to be working by luck on our current
+  // Scenic is incorrect for "external" images. It just happens to be working by luck on our current
   // hardware.
   for (auto texture_id : local_pending_textures) {
     FX_DCHECK(local_texture_map.find(texture_id) != local_texture_map.end());
@@ -787,7 +819,7 @@ void VkRenderer::SetColorConversionValues(const std::array<float, 9>& coefficien
 
 zx_pixel_format_t VkRenderer::ChoosePreferredPixelFormat(
     const std::vector<zx_pixel_format_t>& available_formats) const {
-  for (auto preferred_format : kPreferredImageFormats) {
+  for (auto preferred_format : kSupportedRenderTargetImageFormats) {
     for (zx_pixel_format_t format : available_formats) {
       vk::Format vk_format = ConvertToVkFormat(format);
       if (vk_format == preferred_format) {
@@ -817,6 +849,23 @@ bool VkRenderer::RequiresRenderInProtected(
 }
 
 bool VkRenderer::WaitIdle() { return escher_->vk_device().waitIdle() == vk::Result::eSuccess; }
+
+void VkRenderer::WarmPipelineCache(zx_pixel_format_t pixel_format) {
+  auto output_format = ConvertToVkFormat(pixel_format);
+  auto depth_format = escher_->device()->caps().GetMatchingDepthStencilFormat().value;
+
+  auto immutable_samplers = utils::ImmutableSamplersForShaderWarmup(escher_, kDefaultFilter);
+
+  // Depending on the memory types provided by the Vulkan implementation, separate versions of the
+  // render-passes (and therefore pipelines) may be required for protected/non-protected memory.
+  // Or not; if not, then the second call will simply use the ones that are already cached.
+  compositor_.WarmPipelineCache(output_format, vk::ImageLayout::eColorAttachmentOptimal,
+                                depth_format, immutable_samplers,
+                                /* use_protected_memory= */ true);
+  compositor_.WarmPipelineCache(output_format, vk::ImageLayout::eColorAttachmentOptimal,
+                                depth_format, immutable_samplers,
+                                /* use_protected_memory= */ false);
+}
 
 void VkRenderer::BlitRenderTarget(escher::CommandBuffer* command_buffer,
                                   escher::ImagePtr source_image,

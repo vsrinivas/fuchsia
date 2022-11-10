@@ -50,6 +50,7 @@ class Renderer;
 class RenderPass;
 struct RenderPassInfo;
 struct RenderQueueItem;
+class Sampler;
 class SamplerCache;
 class Semaphore;
 class ShaderProgram;
@@ -62,30 +63,31 @@ class ViewingVolume;
 struct VulkanContext;
 struct VulkanSwapchain;
 
-typedef fxl::RefPtr<BatchGpuUploader> BatchGpuUploaderPtr;
-typedef fxl::RefPtr<Buffer> BufferPtr;
-typedef fxl::RefPtr<CommandBuffer> CommandBufferPtr;
-typedef fxl::WeakPtr<Escher> EscherWeakPtr;
-typedef fxl::RefPtr<Frame> FramePtr;
-typedef fxl::RefPtr<Framebuffer> FramebufferPtr;
-typedef fxl::RefPtr<GpuMem> GpuMemPtr;
-typedef fxl::RefPtr<HackFilesystem> HackFilesystemPtr;
-typedef fxl::RefPtr<Image> ImagePtr;
-typedef fxl::RefPtr<ImageView> ImageViewPtr;
-typedef fxl::RefPtr<Material> MaterialPtr;
-typedef fxl::RefPtr<Mesh> MeshPtr;
-typedef fxl::RefPtr<MeshBuilder> MeshBuilderPtr;
-typedef fxl::RefPtr<PaperRenderer> PaperRendererPtr;
+using BatchGpuUploaderPtr = fxl::RefPtr<BatchGpuUploader>;
+using BufferPtr = fxl::RefPtr<Buffer>;
+using CommandBufferPtr = fxl::RefPtr<CommandBuffer>;
+using EscherWeakPtr = fxl::WeakPtr<Escher>;
+using FramePtr = fxl::RefPtr<Frame>;
+using FramebufferPtr = fxl::RefPtr<Framebuffer>;
+using GpuMemPtr = fxl::RefPtr<GpuMem>;
+using HackFilesystemPtr = fxl::RefPtr<HackFilesystem>;
+using ImagePtr = fxl::RefPtr<Image>;
+using ImageViewPtr = fxl::RefPtr<ImageView>;
+using MaterialPtr = fxl::RefPtr<Material>;
+using MeshPtr = fxl::RefPtr<Mesh>;
+using MeshBuilderPtr = fxl::RefPtr<MeshBuilder>;
+using PaperRendererPtr = fxl::RefPtr<PaperRenderer>;
 // TODO(fxbug.dev/7174): move to vk/impl.  Cannot do this yet because there is already
 // a PipelineLayout in impl/vk.
-typedef fxl::RefPtr<PipelineLayout> PipelineLayoutPtr;
-typedef fxl::RefPtr<Resource> ResourcePtr;
-typedef fxl::RefPtr<Renderer> RendererPtr;
-typedef fxl::RefPtr<RenderPass> RenderPassPtr;
-typedef fxl::RefPtr<Semaphore> SemaphorePtr;
-typedef fxl::RefPtr<ShaderProgram> ShaderProgramPtr;
-typedef fxl::RefPtr<Texture> TexturePtr;
-typedef fxl::RefPtr<TimestampProfiler> TimestampProfilerPtr;
+using PipelineLayoutPtr = fxl::RefPtr<PipelineLayout>;
+using ResourcePtr = fxl::RefPtr<Resource>;
+using RendererPtr = fxl::RefPtr<Renderer>;
+using RenderPassPtr = fxl::RefPtr<RenderPass>;
+using SamplerPtr = fxl::RefPtr<Sampler>;
+using SemaphorePtr = fxl::RefPtr<Semaphore>;
+using ShaderProgramPtr = fxl::RefPtr<ShaderProgram>;
+using TexturePtr = fxl::RefPtr<Texture>;
+using TimestampProfilerPtr = fxl::RefPtr<TimestampProfiler>;
 
 namespace hmd {
 class PoseBufferLatchingShader;
@@ -105,9 +107,9 @@ class ModelData;
 class Pipeline;
 class UniformBufferPool;
 
-typedef fxl::RefPtr<ModelData> ModelDataPtr;
-typedef fxl::RefPtr<Pipeline> PipelinePtr;
-typedef fxl::WeakPtr<UniformBufferPool> UniformBufferPoolWeakPtr;
+using ModelDataPtr = fxl::RefPtr<ModelData>;
+using PipelinePtr = fxl::RefPtr<Pipeline>;
+using UniformBufferPoolWeakPtr = fxl::WeakPtr<UniformBufferPool>;
 
 // From escher/vk/impl
 class DescriptorSetAllocator;
@@ -118,8 +120,8 @@ class PipelineLayoutCache;
 class RenderPass;
 class RenderPassCache;
 
-typedef fxl::RefPtr<Framebuffer> FramebufferPtr;
-typedef fxl::RefPtr<RenderPass> RenderPassPtr;
+using FramebufferPtr = fxl::RefPtr<Framebuffer>;
+using RenderPassPtr = fxl::RefPtr<RenderPass>;
 
 // From escher/third_party/granite
 struct DescriptorSetLayout;
