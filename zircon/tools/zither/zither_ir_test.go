@@ -970,9 +970,6 @@ library example;
 protocol Foo {
   /// This is the foo_bar syscall.
   Bar();
-
-  @internal
-  Baz();
 };
 
 /// This
@@ -988,6 +985,40 @@ protocol Arbitrary {
   /// fizz_buzz syscall.
   FizzBuzz();
 };
+
+@transport("Syscall")
+protocol Category {
+	@vdsocall
+	VdsoCall();
+
+	@const
+	@vdsocall
+	ConstVdsoCall();
+
+	@internal
+	Internal();
+
+    @next
+    Next();
+
+	@blocking
+	Blocking();
+
+	@noreturn
+	NoReturn();
+
+    @testonly
+    Test0();
+
+    @testonly
+    @test_category1
+    Test1();
+
+    @testonly
+    @test_category2
+    Test2();
+};
+
 `)
 	summaries, err := Summarize(ir, wd, SourceDeclOrder)
 	if err != nil {
@@ -1019,12 +1050,6 @@ protocol Arbitrary {
 						Comments: []string{" This is the foo_bar syscall."},
 					},
 				},
-				{
-					member: member{
-						Name: "FooBaz",
-					},
-					Category: SyscallCategoryInternal,
-				},
 			},
 		},
 		{
@@ -1038,6 +1063,50 @@ protocol Arbitrary {
 						Name:     "FizzBuzz",
 						Comments: []string{" This", " is", " the", " fizz_buzz syscall."},
 					},
+				},
+			},
+		},
+		{
+			decl: decl{Name: fidlgen.MustReadName("example/Category")},
+			Syscalls: []Syscall{
+				{
+					member:   member{Name: "CategoryBlocking"},
+					Blocking: true,
+				},
+				{
+					member:   member{Name: "CategoryConstVdsoCall"},
+					Category: SyscallCategoryVdsoCall,
+					Const:    true,
+				},
+				{
+					member:   member{Name: "CategoryInternal"},
+					Category: SyscallCategoryInternal,
+				},
+				{
+					member:   member{Name: "CategoryNext"},
+					Category: SyscallCategoryNext,
+				},
+				{
+					member:   member{Name: "CategoryNoReturn"},
+					NoReturn: true,
+				},
+				{
+					member:   member{Name: "CategoryTest0"},
+					Testonly: true,
+				},
+				{
+					member:   member{Name: "CategoryTest1"},
+					Category: SyscallCategoryTest1,
+					Testonly: true,
+				},
+				{
+					member:   member{Name: "CategoryTest2"},
+					Category: SyscallCategoryTest2,
+					Testonly: true,
+				},
+				{
+					member:   member{Name: "CategoryVdsoCall"},
+					Category: SyscallCategoryVdsoCall,
 				},
 			},
 		},

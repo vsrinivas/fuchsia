@@ -22,8 +22,8 @@ var templates embed.FS
 // template named "Generate-${file basename}".
 var includePaths = []string{
 	filepath.Join("lib", "syscalls", "zx-syscall-numbers.h"),
+	filepath.Join("lib", "syscalls", "category.inc"),
 	// TODO(fxbug.dev/110295):
-	// filepath.Join("lib", "syscalls", "category.inc"),
 	// filepath.Join("lib", "syscalls", "kernel-wrappers.inc"),
 	// filepath.Join("lib", "syscalls", "kernel.inc"),
 	// filepath.Join("lib", "syscalls", "syscalls.inc"),

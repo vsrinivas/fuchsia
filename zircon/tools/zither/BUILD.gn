@@ -227,9 +227,8 @@ template("zither_golden_test") {
         outputs = [ source ]
       }
 
-      # TODO(joshuaseaton): loadable_module() over source_set() to pass
-      # `-z defs` muster.
-      source_set(compilation_check_target) {
+      # loadable_module() over source_set() to pass `-z defs` muster.
+      loadable_module(compilation_check_target) {
         visibility = [ ":*" ]
         testonly = true
         sources = [ source ]
@@ -237,6 +236,16 @@ template("zither_golden_test") {
           ":$create_source_target",
           backend_label,
         ]
+
+        if (case.backend == "kernel") {
+          # The kernel backend creates .inc files that expect the following
+          # macros defined.
+          defines = [
+            "SYSCALL_CATEGORY_BEGIN(category)=enum class category##Syscalls {",
+            "SYSCALL_IN_CATEGORY(syscall)=syscall,",
+            "SYSCALL_CATEGORY_END(category)=};",
+          ]
+        }
       }
     } else if (case.backend == "go") {
       # We create a simple main file that imports the generated package, which
@@ -487,7 +496,10 @@ zither_golden_test("syscalls") {
     },
     {
       backend = "kernel"
-      files = [ "zx-syscall-numbers.h" ]
+      files = [
+        "category.inc",
+        "zx-syscall-numbers.h",
+      ]
     },
   ]
 }

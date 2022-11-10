@@ -8,6 +8,7 @@ go_library("kernel") {
   visibility = [ "../*" ]
   sources = [
     "kernel.go",
+    "templates/category.inc.tmpl",
     "templates/zx-syscall-numbers.h.tmpl",
   ]
   deps = [

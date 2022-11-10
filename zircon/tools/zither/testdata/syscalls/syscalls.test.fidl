@@ -6,6 +6,11 @@ library zither.syscalls;
 
 alias Time = uint64;
 
+type Status = enum : int32 {
+    OK = 0;
+    BAD = 1;
+};
+
 @transport("Syscall")
 @no_protocol_prefix
 protocol Clockfuncs {
@@ -21,6 +26,23 @@ protocol Clockfuncs {
 };
 
 @transport("Syscall")
+@no_protocol_prefix
+protocol Misc {
+    @blocking
+    Nanosleep(struct {
+        deadline Time;
+    }) -> () error Status;
+};
+
+@transport("Syscall")
+protocol Process {
+    @noreturn
+    Exit(struct {
+        retcode int64;
+    });
+};
+
+@transport("Syscall")
 protocol System {
     @const
     @vdsocall
@@ -31,6 +53,17 @@ protocol System {
 
 @transport("Syscall")
 protocol Syscall {
+    @next
+    Next();
+
     @testonly
     Test0();
+
+    @testonly
+    @test_category1
+    Test1();
+
+    @testonly
+    @test_category2
+    Test2();
 };

@@ -865,11 +865,27 @@ const (
 	// See the definition of @internal in //zircon/vdso/README.md.
 	SyscallCategoryInternal SyscallCategory = "internal"
 
-	// SyscallVCategoryVdsocall indicates that the syscall is not a true
+	// SyscallCategoryVdsocall indicates that the syscall is not a true
 	// syscall and is actually implemented within the vDSO.
 	//
 	// See the definition of @vdsocall in //zircon/vdso/README.md.
 	SyscallCategoryVdsoCall SyscallCategory = "vdsocall"
+
+	// SyscallCategoryNext indicates that the syscall is in the process of
+	// being stabilized and is not yet a part of public ABI.
+	//
+	// See the definition of @next in //zircon/vdso/README.md.
+	SyscallCategoryNext SyscallCategory = "next"
+
+	// SyscallCategoryTest1 is a category relevant only to testing.
+	//
+	// See the definition of @test_category1 in //zircon/vdso/README.md.
+	SyscallCategoryTest1 SyscallCategory = "test_category1"
+
+	// SyscallCategoryTest2 is a category relevant only to testing.
+	//
+	// See the definition of @test_category2 in //zircon/vdso/README.md.
+	SyscallCategoryTest2 SyscallCategory = "test_category2"
 )
 
 // Syscall corresponds to an individual syscall.
@@ -881,11 +897,35 @@ type Syscall struct {
 
 	// Category gives the syscall's category.
 	Category SyscallCategory
+
+	// Blocking indicates a blocking call.
+	//
+	// See the definition of @blocking in //zircon/vdso/README.md.
+	Blocking bool
+
+	// NoReturn indicates that the sycall does not return.
+	//
+	// See the definition of @noreturn in //zircon/vdso/README.md.
+	NoReturn bool
+
+	// Const, which only applies to SyscallCategoryVdsoCall syscalls, indicates
+	// that the function is "const" in the sense of
+	// `__attribute__((__const__))`.
+	//
+	// See the definition of @const in //zircon/vdso/README.md.
+	Const bool
+
+	// Whether the syscall is defined solely for tests.
+	//
+	// See the definition of @testonly in //zircon/vdso/README.md.
+	Testonly bool
 }
 
-func (syscall Syscall) IsInternal() bool { return syscall.Category == SyscallCategoryInternal }
-
-func (syscall Syscall) IsVdsoCall() bool { return syscall.Category == SyscallCategoryVdsoCall }
+func (syscall Syscall) IsInternal() bool      { return syscall.Category == SyscallCategoryInternal }
+func (syscall Syscall) IsVdsoCall() bool      { return syscall.Category == SyscallCategoryVdsoCall }
+func (syscall Syscall) IsNext() bool          { return syscall.Category == SyscallCategoryNext }
+func (syscall Syscall) IsTestCategory1() bool { return syscall.Category == SyscallCategoryTest1 }
+func (syscall Syscall) IsTestCategory2() bool { return syscall.Category == SyscallCategoryTest2 }
 
 func newSyscallFamily(protocol fidlgen.Protocol) (*SyscallFamily, error) {
 	if _, ok := protocol.Transports()["Syscall"]; !ok {
@@ -911,6 +951,9 @@ func newSyscallFamily(protocol fidlgen.Protocol) (*SyscallFamily, error) {
 		for _, cat := range []SyscallCategory{
 			SyscallCategoryInternal,
 			SyscallCategoryVdsoCall,
+			SyscallCategoryNext,
+			SyscallCategoryTest1,
+			SyscallCategoryTest2,
 		} {
 			if _, ok := method.LookupAttribute(fidlgen.Identifier(cat)); !ok {
 				continue
@@ -920,6 +963,22 @@ func newSyscallFamily(protocol fidlgen.Protocol) (*SyscallFamily, error) {
 			}
 			syscall.Category = cat
 		}
+
+		_, syscall.Blocking = method.LookupAttribute("blocking")
+		_, syscall.NoReturn = method.LookupAttribute("noreturn")
+		_, syscall.Const = method.LookupAttribute("const")
+		_, syscall.Testonly = method.LookupAttribute("testonly")
+
+		// @const must be paired with @vdsocall.
+		if syscall.Const && !syscall.IsVdsoCall() {
+			return nil, fmt.Errorf("annotation @const on syscall %s must be paired with @vdsocall", syscall.Name)
+		}
+
+		// @test_category{1,2} must be paired with @testonly
+		if (syscall.IsTestCategory1() || syscall.IsTestCategory2()) && !syscall.Testonly {
+			return nil, fmt.Errorf("annotation @%s on syscall %s must be paired with @testonly", syscall.Category, syscall.Name)
+		}
+
 		family.Syscalls = append(family.Syscalls, syscall)
 	}
 	return family, nil

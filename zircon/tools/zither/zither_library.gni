@@ -427,7 +427,10 @@ template("_zither_kernel_sources") {
                            "output_dir",
                            "output_subdir",
                          ])
-  generated_files = [ "$output_dir/${output_subdir}/zx-syscall-numbers.h" ]
+  generated_files = [
+    "$output_dir/${output_subdir}/category.inc",
+    "$output_dir/${output_subdir}/zx-syscall-numbers.h",
+  ]
 
   _zither(zither_target) {
     forward_variables_from(invoker,
@@ -492,7 +495,8 @@ template("_zither_kernel_sources") {
 #
 #   * kernel: ${target_name}.kernel
 #     A C++ library target for the kernel with the following headers:
-#       - <lib/syscalls/category.inc>: TODO(fxbug.dev/110295).
+#       - <lib/syscalls/category.inc>: a categorization of syscalls with macro
+#         helpers.
 #       - <lib/syscalls/kernel-wrappers.inc>: TODO(fxbug.dev/110295).
 #       - <lib/syscalls/kernel.inc>: TODO(fxbug.dev/110295).
 #       - <lib/syscalls/zx-syscall-numbers.h>: `#define`s of syscall numbers.

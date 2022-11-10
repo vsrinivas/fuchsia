@@ -1,0 +1,71 @@
+{{- define "Generate-category.inc" -}}
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// DO NOT EDIT. Generated from FIDL library zx by zither, a Fuchsia platform tool.
+
+#define HAVE_SYSCALL_CATEGORY_blocking 1
+SYSCALL_CATEGORY_BEGIN(blocking)
+{{- range . }}
+{{- if .Blocking }}
+SYSCALL_IN_CATEGORY({{ LowerCaseWithUnderscores . }})
+{{- end }}
+{{- end }}
+SYSCALL_CATEGORY_END(blocking)
+
+#define HAVE_SYSCALL_CATEGORY_const 1
+SYSCALL_CATEGORY_BEGIN(const)
+{{- range . }}
+{{- if .Const }}
+SYSCALL_IN_CATEGORY({{ LowerCaseWithUnderscores . }})
+{{- end }}
+{{- end }}
+SYSCALL_CATEGORY_END(const)
+
+#define HAVE_SYSCALL_CATEGORY_next 1
+SYSCALL_CATEGORY_BEGIN(next)
+{{- range . }}
+{{- if .IsNext }}
+SYSCALL_IN_CATEGORY({{ LowerCaseWithUnderscores . }})
+{{- end }}
+{{- end }}
+SYSCALL_CATEGORY_END(next)
+
+#define HAVE_SYSCALL_CATEGORY_noreturn 1
+SYSCALL_CATEGORY_BEGIN(noreturn)
+{{- range . }}
+{{- if .NoReturn }}
+SYSCALL_IN_CATEGORY({{ LowerCaseWithUnderscores . }})
+{{- end }}
+{{- end }}
+SYSCALL_CATEGORY_END(noreturn)
+
+#define HAVE_SYSCALL_CATEGORY_test_category1 1
+SYSCALL_CATEGORY_BEGIN(test_category1)
+{{- range . }}
+{{- if .IsTestCategory1 }}
+SYSCALL_IN_CATEGORY({{ LowerCaseWithUnderscores . }})
+{{- end }}
+{{- end }}
+SYSCALL_CATEGORY_END(test_category1)
+
+#define HAVE_SYSCALL_CATEGORY_test_category2 1
+SYSCALL_CATEGORY_BEGIN(test_category2)
+{{- range . }}
+{{- if .IsTestCategory2 }}
+SYSCALL_IN_CATEGORY({{ LowerCaseWithUnderscores . }})
+{{- end }}
+{{- end }}
+SYSCALL_CATEGORY_END(test_category2)
+
+#define HAVE_SYSCALL_CATEGORY_vdsocall 1
+SYSCALL_CATEGORY_BEGIN(vdsocall)
+{{- range . }}
+{{- if .IsVdsoCall }}
+SYSCALL_IN_CATEGORY({{ LowerCaseWithUnderscores . }})
+{{- end }}
+{{- end }}
+SYSCALL_CATEGORY_END(vdsocall)
+
+{{ end }}
