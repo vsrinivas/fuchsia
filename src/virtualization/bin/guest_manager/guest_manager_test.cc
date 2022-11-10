@@ -367,7 +367,7 @@ TEST_F(GuestManagerTest, LaunchAndGetInfo) {
     ASSERT_EQ(guest_descriptor.wayland(), finalized_config.has_wayland_device());
     ASSERT_EQ(guest_descriptor.magma(), finalized_config.has_magma_device());
 
-    ASSERT_EQ(guest_descriptor.network(),
+    ASSERT_EQ(guest_descriptor.has_networks() && !guest_descriptor.networks().empty(),
               finalized_config.has_default_net() && finalized_config.default_net());
     ASSERT_EQ(guest_descriptor.balloon(),
               finalized_config.has_virtio_balloon() && finalized_config.virtio_balloon());

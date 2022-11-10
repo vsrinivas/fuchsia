@@ -248,13 +248,16 @@ void GuestManager::SnapshotConfig(const fuchsia::virtualization::GuestConfig& co
   guest_descriptor_.set_wayland(config.has_wayland_device());
   guest_descriptor_.set_magma(config.has_magma_device());
 
-  guest_descriptor_.set_network(config.has_default_net() && config.default_net());
   guest_descriptor_.set_balloon(config.has_virtio_balloon() && config.virtio_balloon());
   guest_descriptor_.set_console(config.has_virtio_console() && config.virtio_console());
   guest_descriptor_.set_gpu(config.has_virtio_gpu() && config.virtio_gpu());
   guest_descriptor_.set_rng(config.has_virtio_rng() && config.virtio_rng());
   guest_descriptor_.set_vsock(config.has_virtio_vsock() && config.virtio_vsock());
   guest_descriptor_.set_sound(config.has_virtio_sound() && config.virtio_sound());
+
+  if (config.has_net_devices()) {
+    *guest_descriptor_.mutable_networks() = config.net_devices();
+  }
 }
 
 bool GuestManager::is_guest_started() const {

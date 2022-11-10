@@ -109,13 +109,21 @@ pub async fn get_detailed_information(
 
         add_to_table("wayland", config.wayland);
         add_to_table("magma", config.magma);
-        add_to_table("network", config.network);
         add_to_table("balloon", config.balloon);
         add_to_table("console", config.console);
         add_to_table("gpu", config.gpu);
         add_to_table("rng", config.rng);
         add_to_table("vsock", config.vsock);
         add_to_table("sound", config.sound);
+
+        match config.networks {
+            Some(network) if !network.is_empty() => active.add_row(row![format!(
+                "network ({} interface{})",
+                network.len(),
+                if network.len() > 1 { "s" } else { "" }
+            )]),
+            _ => inactive.add_row(row!["network"]),
+        };
 
         if active.len() == 0 {
             active.add_row(row!["None"]);
@@ -160,7 +168,10 @@ mod test {
     use {
         super::*,
         fidl::endpoints::create_proxy_and_stream,
-        fidl_fuchsia_virtualization::{GuestDescriptor, GuestError, GuestInfo, GuestManagerMarker},
+        fidl_fuchsia_hardware_ethernet::MacAddress,
+        fidl_fuchsia_virtualization::{
+            GuestDescriptor, GuestError, GuestInfo, GuestManagerMarker, NetSpec,
+        },
         fuchsia_async as fasync,
         futures::StreamExt,
     };
@@ -295,7 +306,13 @@ mod test {
                 guest_memory: Some(1073741824),
                 wayland: Some(false),
                 magma: Some(false),
-                network: Some(true),
+                networks: Some(vec![
+                    NetSpec {
+                        mac_address: MacAddress { octets: [0u8; 6] },
+                        enable_bridge: true,
+                    };
+                    2
+                ]),
                 balloon: Some(true),
                 console: Some(true),
                 gpu: Some(false),
@@ -316,11 +333,11 @@ mod test {
             " CPU count:         4 \n",
             " Guest memory:      1 GiB (1073741824 bytes) \n",
             "                     \n",
-            " Active devices:     network  \n",
-            "                     balloon  \n",
+            " Active devices:     balloon  \n",
             "                     console  \n",
             "                     rng  \n",
             "                     vsock  \n",
+            "                     network (2 interfaces)  \n",
             "                     \n",
             " Inactive devices:   wayland  \n",
             "                     magma  \n",

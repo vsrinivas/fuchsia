@@ -59,13 +59,16 @@ type GuestDescriptor = table {
     /// Whether the guest was started with the given virtual device.
     3: wayland bool;
     4: magma bool;
-    5: network bool;
-    6: balloon bool;
-    7: console bool;
-    8: gpu bool;
-    9: rng bool;
-   10: vsock bool;
-   11: sound bool;
+    5: balloon bool;
+    6: console bool;
+    7: gpu bool;
+    8: rng bool;
+    9: vsock bool;
+   10: sound bool;
+
+    /// The configs for each net device the guest was started with. If empty, there is no
+    /// virtual net device (and the guest will have no networking).
+   11: networks vector<NetSpec>:MAX_NET_DEVICES;
 };
 
 type GuestInfo = table {
