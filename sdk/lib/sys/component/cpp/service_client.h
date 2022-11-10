@@ -5,6 +5,6 @@
 #ifndef LIB_SYS_COMPONENT_CPP_SERVICE_CLIENT_H_
 #define LIB_SYS_COMPONENT_CPP_SERVICE_CLIENT_H_
 
-#include <lib/component/cpp/incoming/service_client.h>
+#include <lib/component/incoming/cpp/service_client.h>
 
 #endif  // LIB_SYS_COMPONENT_CPP_SERVICE_CLIENT_H_

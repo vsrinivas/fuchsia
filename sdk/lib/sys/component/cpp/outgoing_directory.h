@@ -9,7 +9,7 @@
 #include <lib/async/cpp/sequence_checker.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
-#include <lib/component/cpp/incoming/constants.h>
+#include <lib/component/incoming/cpp/constants.h>
 #include <lib/fidl/cpp/wire/traits.h>
 #include <lib/fit/function.h>
 #include <lib/stdcompat/string_view.h>

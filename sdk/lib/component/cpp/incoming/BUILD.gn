@@ -4,23 +4,17 @@
 
 import("//build/cpp/sdk_source_set.gni")
 
+# DO NOT USE! This library was moved to //sdk/lib/component/incoming/cpp.
+# It will be deleted.
+# TODO(http://fxbug.dev/113114): Delete this target.
 sdk_source_set("incoming") {
   category = "experimental"
-  sdk_name = "component_incoming_cpp"
+  sdk_name = "component_cpp_incoming"
   include_base = "//sdk"
 
-  sources = [
-    "constants.h",
-    "service_client.cc",
-    "service_client.h",
-  ]
+  sources = [ "service_client.h" ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
-    "//sdk/lib/fdio",
-    "//zircon/system/ulib/zx",
-    "//zircon/system/ulib/zxc",
-  ]
+  public_deps = [ "//sdk/lib/component/incoming/cpp" ]
 
   public_configs = [ "//sdk/config" ]
 }

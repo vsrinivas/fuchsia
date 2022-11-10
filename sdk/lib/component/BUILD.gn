@@ -3,5 +3,10 @@
 # found in the LICENSE file.
 
 group("component") {
-  deps = [ "cpp/incoming" ]
+  deps = [ "incoming/cpp" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ "tests" ]
 }

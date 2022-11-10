@@ -6,6 +6,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    "component:tests",
     "device-watcher:tests",
     "driver:tests",
     "driver_test_realm:tests",

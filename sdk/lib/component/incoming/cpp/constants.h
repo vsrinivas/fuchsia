@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_COMPONENT_CPP_INCOMING_CONSTANTS_H_
-#define LIB_COMPONENT_CPP_INCOMING_CONSTANTS_H_
+#ifndef LIB_COMPONENT_INCOMING_CPP_CONSTANTS_H_
+#define LIB_COMPONENT_INCOMING_CPP_CONSTANTS_H_
 
 namespace component {
 
@@ -22,4 +22,4 @@ constexpr const char kServiceDirectoryWithNoSlash[] = "svc";
 
 }  // namespace component
 
-#endif  // LIB_COMPONENT_CPP_INCOMING_CONSTANTS_H_
+#endif  // LIB_COMPONENT_INCOMING_CPP_CONSTANTS_H_

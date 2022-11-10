@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/component/cpp/incoming/constants.h>
+#include <lib/component/incoming/cpp/constants.h>
 #include <lib/svc/dir.h>
 #include <lib/sys/component/cpp/handlers.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>

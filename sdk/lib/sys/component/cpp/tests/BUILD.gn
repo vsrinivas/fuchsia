@@ -11,7 +11,7 @@ group("tests") {
 
   deps = [
     ":component_cpp_outgoing_directory_tests",
-    ":component_cpp_service_client_tests",
+    ":component_cpp_service_server_tests",
     ":component_cpp_testing_realm_builder_tests",
   ]
 }
@@ -248,6 +248,7 @@ executable("cpp_outgoing_directory_test_bin") {
   deps = [
     "//examples/fidl/fuchsia.examples:fuchsia.examples_cpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/sys/component/cpp",
     "//src/lib/fidl/cpp",
     "//src/lib/fxl/test:gtest_main",
@@ -302,19 +303,10 @@ fuchsia_test_package("component_cpp_outgoing_directory_tests") {
   deps = [ ":cpp_echo_service_server" ]
 }
 
-fidl("fidl.service.test") {
-  testonly = true
-  visibility = [ ":*" ]
-  sources = [ "test.test.fidl" ]
-}
-
-test("service_client_test") {
-  sources = [
-    "client_test.cc",
-    "server_test.cc",
-  ]
+test("service_server_test") {
+  sources = [ "server_test.cc" ]
   deps = [
-    ":fidl.service.test_cpp_wire",
+    "//sdk/lib/component/tests:fidl.service.test_cpp_wire",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/component/cpp",
     "//src/lib/storage/vfs/cpp",
@@ -326,6 +318,6 @@ test("service_client_test") {
   ]
 }
 
-fuchsia_unittest_package("component_cpp_service_client_tests") {
-  deps = [ ":service_client_test" ]
+fuchsia_unittest_package("component_cpp_service_server_tests") {
+  deps = [ ":service_server_test" ]
 }

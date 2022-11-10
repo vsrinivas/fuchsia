@@ -8,13 +8,12 @@
 #include <fidl/fuchsia.examples/cpp/fidl.h>
 #include <fidl/fuchsia.io/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/incoming/constants.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fidl/cpp/wire/client.h>
 #include <lib/sync/cpp/completion.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/handle.h>
 #include <unistd.h>
