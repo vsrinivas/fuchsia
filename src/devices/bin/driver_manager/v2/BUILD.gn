@@ -23,19 +23,26 @@ source_set("driver_runner") {
     "node.h",
     "parent_set_collector.cc",
     "parent_set_collector.h",
+    "shutdown_manager.cc",
+    "shutdown_manager.h",
   ]
 
   deps = [
     "//sdk/lib/driver/component/cpp:cpp",
     "//sdk/lib/sys/component/cpp",
+    "//src/bringup/lib/mexec",
     "//src/devices/bin/driver_manager:binding",
     "//src/devices/bin/driver_manager/device_group:lib",
     "//src/devices/lib/log",
+    "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/lib/zbitl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/zircon-internal",
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp_wire",
     "//sdk/fidl/fuchsia.component:fuchsia.component_cpp_wire",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_cpp",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_cpp_wire",
@@ -45,6 +52,9 @@ source_set("driver_runner") {
     "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development_cpp_wire",
     "//sdk/fidl/fuchsia.driver.host:fuchsia.driver.host_cpp_wire",
     "//sdk/fidl/fuchsia.driver.index:fuchsia.driver.index_cpp_wire",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_cpp_wire",
+    "//sdk/fidl/fuchsia.power.manager:fuchsia.power.manager_cpp_wire",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_cpp_wire",
     "//sdk/lib/inspect/component/cpp:inspect_component_cpp",
     "//src/lib/ddk",
     "//src/lib/storage/vfs/cpp",
