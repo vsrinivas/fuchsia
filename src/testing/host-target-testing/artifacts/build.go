@@ -463,8 +463,9 @@ func (b *ProductBundleDirBuild) GetFlashManifest(ctx context.Context) (string, e
 }
 
 func (b *ProductBundleDirBuild) GetPackageRepository(ctx context.Context, blobFetchMode BlobFetchMode) (*packages.Repository, error) {
-	// TOOD(lijiaming) We don't need this for reboot test. Revisit and see if upgrade test need this.
-	return nil, nil
+	// TODO (fxb/114760) Change to use ffx tool to start package server
+	blobFS := packages.NewDirBlobStore(filepath.Join(b.dir, "blobs"))
+	return packages.NewRepository(ctx, b.dir, blobFS)
 }
 
 func (b *ProductBundleDirBuild) GetPaverDir(ctx context.Context) (string, error) {
