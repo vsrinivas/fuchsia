@@ -11,14 +11,9 @@
 import argparse
 import json
 import os
-import re
 import shutil
 import subprocess
 import sys
-import tempfile
-
-# File extension of a component manifest for each Component Framework version
-MANIFEST_VERSION_EXTENSIONS = {"v1": ".cmx", "v2": ".cm"}
 
 
 def make_package_path(file_path, roots):
@@ -200,23 +195,20 @@ def _write_component_manifest(
     """
 
     for component_manifest in _get_component_manifests(component_info):
-        manifest_version = component_manifest.get('manifest_version')
-
-        if manifest_version not in MANIFEST_VERSION_EXTENSIONS:
-            raise Exception(
-                'Unknown manifest_version: {}'.format(manifest_version))
-
-        extension = MANIFEST_VERSION_EXTENSIONS.get(manifest_version)
+        manifest_source = component_manifest.get('source')
+        manifest_basename = os.path.basename(manifest_source)
+        if 'output_name' in component_manifest:
+            _, extension = os.path.splitext(manifest_basename)
+            manifest_basename = component_manifest.get('output_name') + \
+                                extension
 
         manifest_dest_file_path = os.path.join(
-            os.path.dirname(manifest_path),
-            component_manifest.get('output_name') + extension)
-        shutil.copy(component_manifest.get('source'), manifest_dest_file_path)
+            os.path.dirname(manifest_path), manifest_basename)
+        shutil.copy(manifest_source, manifest_dest_file_path)
 
-        manifest_entries[
-            'meta/%s' %
-            os.path.basename(manifest_dest_file_path)] = os.path.relpath(
-                manifest_dest_file_path, out_dir)
+        manifest_entry_key = os.path.join('meta', manifest_basename)
+        manifest_entries[manifest_entry_key] = os.path.relpath(
+            manifest_dest_file_path, out_dir)
     return manifest_dest_file_path
 
 

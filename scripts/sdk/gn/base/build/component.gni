@@ -9,6 +9,133 @@ declare_args() {
   fuchsia_code_coverage = false
 }
 
+# Defines a Fuchsia component's manifest.
+# See: https://fuchsia.dev/fuchsia-src/development/components/build
+#
+# Parameters
+#
+#   manifest [required]
+#     The component manifest.
+#     Type: path
+#
+#   component_name [optional]
+#     The name of the component.
+#     Type: string
+#     Default: target_name
+#
+#   check_includes [optional]
+#     Check against expect_includes() in deps.
+#     Warning: Do not disable this unless there is a good, documented reason.
+#     Type: boolean
+#     Default: true
+#
+#   restricted_features [optional]
+#     The set of restricted CML features to allow. Only applicable to v2 components.
+#     The set of features is allowlisted here: //tools/cmc/build/restricted_features/BUILD.gn
+#     where each feature name is represented by a group of the same name.
+#     Type: list of strings
+#     Default: []
+#
+#   experimental_force_runner [optional]
+#     Set the --experimental-force-runner flag to the given value.
+#     This flag is experimental and may be removed without warning.
+#     Type: string
+#
+#   data_deps
+#   deps
+#   testonly
+#   visibility
+template("fuchsia_component_manifest") {
+  assert(
+      defined(invoker.manifest),
+      "A `manifest` argument was missing when calling fuchsia_component_manifest($target_name)")
+
+  forward_variables_from(invoker, [ "manifest" ])
+
+  # Determine manifest_version from the `manifest` file extension.
+  _manifest_extension = get_path_info(manifest, "extension")
+  assert(_manifest_extension == "cmx" || _manifest_extension == "cml",
+         "Manifest file extension must be .cmx or .cml")
+  if (_manifest_extension == "cmx") {
+    _manifest_version = "v1"
+  } else if (_manifest_extension == "cml") {
+    _manifest_version = "v2"
+  }
+
+  if (fuchsia_code_coverage && _manifest_version == "v2") {
+    merged_manifest = "${target_name}-coverage.cml"
+    cmc_merge(merged_manifest) {
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "testonly",
+                             ])
+      sources = [
+        "${fuchsia_sdk}/build/enable_coverage_data.cml",
+        manifest,
+      ]
+      output_name = merged_manifest
+    }
+    manifest = "${target_out_dir}/${merged_manifest}"
+  }
+
+  if (_manifest_version == "v1") {
+    validated_target = "${target_name}_validated"
+    cmc_validate(validated_target) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      manifest = manifest
+      deps = []
+      if (defined(invoker.deps)) {
+        deps += invoker.deps
+      }
+      if (fuchsia_code_coverage) {
+        deps += [ ":${merged_manifest}" ]
+      }
+    }
+
+    copy(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      sources = [ manifest ]
+      outputs = [ "$target_gen_dir/$manifest" ]
+      deps = [ ":$validated_target" ]
+      if (defined(invoker.deps)) {
+        deps += invoker.deps
+      }
+      if (fuchsia_code_coverage) {
+        deps += [ ":${merged_manifest}" ]
+      }
+    }
+  } else if (_manifest_version == "v2") {
+    _manifest_name = get_path_info(manifest, "name")
+    cmc_compile(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      manifest = rebase_path(manifest)
+
+      # NOTE: must be kept in sync with path in structured_config.gni
+      config_values_package_path = "$_manifest_name.cvf"
+      deps = []
+      if (defined(invoker.deps)) {
+        deps += invoker.deps
+      }
+      if (fuchsia_code_coverage) {
+        deps += [ ":${merged_manifest}" ]
+      }
+    }
+  }
+}
+
 # Defines a Fuchsia component.
 # See: https://fuchsia.dev/fuchsia-src/glossary#component
 #
@@ -44,17 +171,17 @@ declare_args() {
 #
 # Parameters
 #
-#   manifest
-#     The source manifest file for this component. This can be either v1 (.cmx)
-#     or v2 (.cml) manifest.
-#
-#     Type: string (filepath)
-#
 #   data_deps
 #     The labels of targets that generate the files needed at runtime by the component.
 #     At minimum, this should include the label of the binary to include in the component.
 #
 #     Type: list of labels
+#
+#   manifest [optional]
+#     The source manifest file for this component. This can be either v1 (.cmx)
+#     or v2 (.cml) manifest.
+#
+#     Type: string (filepath)
 #
 #   manifest_output_name [optional]
 #     The name of the manifest file contained in the distribution that this
@@ -85,7 +212,16 @@ declare_args() {
 #
 #        dest (required) string (path) Location the resource will be placed within `data/`.
 #
+#   cm_label [optional]
+#     Use label of a fuchsia_component_manifest target instead of supplying the manifest source.
+#     Type: string, GN label e.g. `:my-manifest`
+#
+#   manifest_deps [optional]
+#     Dependencies for the component's manifest, in case it is generated by another target.
+#     Type: list of targets
+#
 #   Standard parameters:
+#     data_deps
 #     deps
 #     testonly
 #     visibility
@@ -104,77 +240,40 @@ declare_args() {
 #       dest: [type == resource] The package relative path of the resource.
 
 template("fuchsia_component") {
-  forward_variables_from(invoker,
-                         [
-                           "manifest",
-                           "manifest_output_name",
-                         ])
+  forward_variables_from(invoker, [ "manifest_output_name" ])
 
-  assert(defined(manifest), "manifest file required for this component")
+  _manifest_defined = defined(invoker.manifest)
+  _cm_label_defined = defined(invoker.cm_label)
+  assert(
+      (_manifest_defined && !_cm_label_defined) ||
+          (!_manifest_defined && _cm_label_defined),
+      "Exactly one of `manifest` or `cm_label` argument must be specified when calling fuchsia_component($target_name)")
 
-  if (!defined(manifest_output_name)) {
-    manifest_output_name = get_path_info(manifest, "name")
-  }
-
-  # Determine manifest_version from the `manifest` file extension.
-  _manifest_extension = get_path_info(manifest, "extension")
-  assert(_manifest_extension == "cmx" || _manifest_extension == "cml",
-         "Manifest file extension must be .cmx or .cml")
-  if (_manifest_extension == "cmx") {
-    _manifest_version = "v1"
-  } else if (_manifest_extension == "cml") {
-    _manifest_version = "v2"
-  }
-
-  if (fuchsia_code_coverage && _manifest_version == "v2") {
-    merged_manifest = "${target_name}-coverage.cml"
-    cmc_merge(merged_manifest) {
+  if (defined(invoker.manifest)) {
+    # Compile the manifest from source
+    cm_target = "${target_name}_manifest_compile"
+    fuchsia_component_manifest(cm_target) {
       forward_variables_from(invoker,
                              [
                                "deps",
+                               "manifest",
                                "testonly",
+                               "visibility",
                              ])
-      sources = [
-        "${fuchsia_sdk}/build/enable_coverage_data.cml",
-        manifest,
-      ]
-      output_name = merged_manifest
+      if (defined(invoker.manifest_deps)) {
+        if (!defined(deps)) {
+          deps = []
+        }
+        deps += invoker.manifest_deps
+      }
     }
-    manifest = "${target_out_dir}/${merged_manifest}"
+    cm_label = ":${cm_target}"
+  } else {
+    cm_label = invoker.cm_label
   }
 
-  # The component manifest validated using cmx_validation for v1,
-  # or cmc_compile for v2.
-  _cm_validation_target =
-      "${target_name}_validate_" + get_path_info(manifest, "file")
-
-  if (_manifest_version == "v1") {
-    cmc_validate(_cm_validation_target) {
-      forward_variables_from(invoker, [ "testonly" ])
-      manifest = manifest
-      deps = []
-      if (defined(invoker.deps)) {
-        deps += invoker.deps
-      }
-    }
-
-    _manifest_source = manifest
-  } else if (_manifest_version == "v2") {
-    cmc_compile(_cm_validation_target) {
-      forward_variables_from(invoker, [ "testonly" ])
-      manifest = rebase_path(manifest)
-      deps = []
-      if (defined(invoker.deps)) {
-        deps += invoker.deps
-      }
-      if (fuchsia_code_coverage) {
-        deps += [ ":${merged_manifest}" ]
-      }
-    }
-
-    _compiled_manifest_outputs = get_target_outputs(":$_cm_validation_target")
-    _manifest_source = _compiled_manifest_outputs[0]
-  }
+  _compiled_manifest_outputs = get_target_outputs(cm_label)
+  _manifest_source = _compiled_manifest_outputs[0]
 
   group(target_name) {
     forward_variables_from(invoker,
@@ -201,7 +300,7 @@ template("fuchsia_component") {
     if (!defined(deps)) {
       deps = []
     }
-    deps += [ ":$_cm_validation_target" ]
+    deps += [ cm_label ]
 
     # Create the component metadata entries. These capture the manifest information and
     # the resources parameter contents.  The metadata is intended for the fuchsia_package rule.
@@ -209,8 +308,9 @@ template("fuchsia_component") {
       {
         type = "manifest"
         source = rebase_path(_manifest_source)
-        output_name = manifest_output_name
-        manifest_version = _manifest_version
+        if (defined(manifest_output_name)) {
+          output_name = manifest_output_name
+        }
       },
     ]
     foreach(resource, resources) {

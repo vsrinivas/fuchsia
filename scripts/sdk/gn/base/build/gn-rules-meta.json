@@ -6,6 +6,7 @@
         "build/cmc.gni",
         "build/config/BUILD.gn",
         "build/config/config.gni",
+        "build/configc.gni",
         "build/enable_coverage_data.cml",
         "build/fuchsia_sdk_pkg.gni",
         "build/gn_run_binary.py",
@@ -17,6 +18,7 @@
         "build/prepare_cipd_package_definition.py",
         "build/prepare_package_inputs.py",
         "build/pm_tool.gni",
+        "build/structured_config.gni",
         "build/test_targets.gni",
         "build/test.gni"
     ],

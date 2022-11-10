@@ -25,6 +25,9 @@ import("config/config.gni")
 #     Optional: List of other fidl_library() targets that this
 #               FIDL library depends on.
 #
+#   non_fidl_deps
+#     Optional: List of other deps that aren't fidl_library targets.
+#
 #   experimental_flags
 #     Optional: List of experimental flags to pass to fidlc.
 #
@@ -104,6 +107,8 @@ template("fidl_library") {
       }
     }
 
+    deps = []
+
     if (defined(invoker.deps) || defined(invoker.public_deps)) {
       merged_deps = []
 
@@ -116,7 +121,6 @@ template("fidl_library") {
       }
 
       dep_libraries = []
-      deps = []
 
       foreach(dep, merged_deps) {
         gen_dir = get_label_info(dep, "target_gen_dir")
@@ -131,6 +135,10 @@ template("fidl_library") {
       inputs = dep_libraries
 
       args += [ "--dep-libraries" ] + rebase_path(dep_libraries, root_build_dir)
+    }
+
+    if (defined(invoker.non_fidl_deps)) {
+      deps += invoker.non_fidl_deps
     }
   }
 

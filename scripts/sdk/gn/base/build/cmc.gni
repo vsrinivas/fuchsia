@@ -102,7 +102,8 @@ template("_cmc_tool") {
 #   visibility
 #
 template("cmc_compile") {
-  output_name = target_name
+  assert(defined(invoker.manifest), "manifest file required")
+  output_name = get_path_info(invoker.manifest, "name")
   if (defined(invoker.output_name)) {
     output_name = invoker.output_name
   }
@@ -116,14 +117,15 @@ template("cmc_compile") {
                              "testonly",
                              "visibility",
                            ])
-    assert(defined(manifest), "manifest file required")
 
     inputs = [ manifest ]
 
-    output_file = "$target_out_dir/$output_name.cm"
+    # Output in a subdir with `target_name` to avoid collisions when a
+    # manifest file is re-used for multiple component targets.
+    output_file = "$target_gen_dir/$target_name/$output_name.cm"
     outputs = [ output_file ]
 
-    depfile = "$target_out_dir/$target_name.d"
+    depfile = "$target_gen_dir/$target_name/$target_name.d"
 
     args = [
       "compile",
@@ -137,6 +139,13 @@ template("cmc_compile") {
       "--depfile",
       rebase_path(depfile, root_build_dir),
     ]
+
+    if (defined(invoker.config_values_package_path)) {
+      args += [
+        "--config-package-path",
+        invoker.config_values_package_path,
+      ]
+    }
   }
 }
 
@@ -164,7 +173,11 @@ template("cmc_validate") {
                              "testonly",
                              "visibility",
                            ])
-    stamp_file = "$target_gen_dir/$target_name.verified"
+
+    # Use the manifest name here so that it can be inferred in
+    # prepare_package_inputs.py
+    _manifest_name = get_path_info(manifest, "name")
+    stamp_file = "$target_gen_dir/$_manifest_name.cmx.verified"
 
     assert(defined(manifest), "manifest file required")
 
