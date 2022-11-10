@@ -11,7 +11,7 @@ use std::sync::{Arc, Weak};
 use crate::auth::Credentials;
 use crate::device::terminal::*;
 use crate::lock::RwLock;
-use crate::logging::strace;
+use crate::logging::log_error;
 use crate::mutable_state::*;
 use crate::signals::syscalls::WaitingOptions;
 use crate::signals::*;
@@ -249,7 +249,7 @@ impl ThreadGroup {
 
         if task.id == state.leader() {
             let exit_status = task.read().exit_status.clone().unwrap_or_else(|| {
-                strace!(level = error, task, "Exiting without an exit code.");
+                log_error!(task, "Exiting without an exit code.");
                 ExitStatus::Exit(u8::MAX)
             });
             state.zombie_leader = Some(ZombieProcess {

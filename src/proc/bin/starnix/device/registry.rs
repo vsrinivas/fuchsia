@@ -5,6 +5,7 @@
 use crate::device::mem::*;
 use crate::fs::{FileOps, FsNode};
 use crate::lock::RwLock;
+use crate::logging::log_error;
 use crate::task::*;
 use crate::types::*;
 
@@ -87,7 +88,7 @@ impl DeviceRegistry {
                 Ok(())
             }
             Entry::Occupied(_) => {
-                tracing::error!("dev major {:?} is already registered", major);
+                log_error!("dev major {:?} is already registered", major);
                 error!(EINVAL)
             }
         }

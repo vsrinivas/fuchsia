@@ -9,7 +9,7 @@ use zerocopy::AsBytes;
 use super::*;
 use crate::fs::buffers::*;
 use crate::fs::*;
-use crate::logging::{not_implemented, strace};
+use crate::logging::{log_trace, not_implemented};
 use crate::mm::vmo::round_up_to_increment;
 use crate::mm::{MemoryAccessor, MemoryAccessorExt};
 use crate::task::*;
@@ -230,8 +230,8 @@ pub fn sys_connect(
     let peer = match address {
         SocketAddress::Unspecified => return error!(ECONNREFUSED),
         SocketAddress::Unix(ref name) => {
-            strace!(
-                &current_task,
+            log_trace!(
+                current_task,
                 "connect to unix socket named {:?}",
                 String::from_utf8_lossy(name)
             );
@@ -253,8 +253,8 @@ pub fn sys_connect(
         // Connect not available for AF_VSOCK
         SocketAddress::Vsock(_) => return error!(ENOSYS),
         SocketAddress::Inet(ref addr) | SocketAddress::Inet6(ref addr) => {
-            strace!(
-                &current_task,
+            log_trace!(
+                current_task,
                 "connect to inet socket named {:?}",
                 String::from_utf8_lossy(addr)
             );
@@ -342,7 +342,7 @@ pub fn sys_socketpair(
     let right_fd = current_task.files.add_with_flags(right, fd_flags)?;
 
     let fds = [left_fd, right_fd];
-    strace!(current_task, "socketpair -> [{:#x}, {:#x}]", fds[0].raw(), fds[1].raw());
+    log_trace!(current_task, "socketpair -> [{:#x}, {:#x}]", fds[0].raw(), fds[1].raw());
     current_task.mm.write_object(user_sockets, &fds)?;
 
     Ok(())

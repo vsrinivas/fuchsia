@@ -19,7 +19,7 @@ use zerocopy::AsBytes;
 use crate::fs::ext4::ExtFilesystem;
 use crate::fs::fuchsia::{create_file_from_handle, RemoteFs, SyslogFile};
 use crate::fs::*;
-use crate::logging::strace;
+use crate::logging::log_trace;
 use crate::mm::{DesiredAddress, MappingOptions, PAGE_SIZE};
 use crate::mm::{MemoryAccessorExt, MemoryManager};
 use crate::signals::dequeue_signal;
@@ -82,15 +82,15 @@ pub fn execute_syscall(
     // `orig_rax` should hold the original value loaded into `rax` by the userspace process.
     current_task.registers.orig_rax = syscall.decl.number;
 
-    strace!(current_task, "{:?}", syscall);
+    log_trace!(current_task, "{:?}", syscall);
     match dispatch_syscall(current_task, &syscall) {
         Ok(return_value) => {
-            strace!(current_task, "-> {:#x}", return_value.value(),);
+            log_trace!(current_task, "-> {:#x}", return_value.value(),);
             current_task.registers.rax = return_value.value();
             None
         }
         Err(errno) => {
-            strace!(current_task, "!-> {:?}", errno,);
+            log_trace!(current_task, "!-> {:?}", errno,);
             current_task.registers.rax = errno.return_value();
             Some(ErrorContext { error: errno, syscall })
         }
@@ -110,14 +110,14 @@ pub fn process_completed_syscall(
     }
 
     if let Some(exit_status) = current_task.read().exit_status.as_ref() {
-        tracing::debug!("{:?} exiting with status {:?}", current_task, exit_status);
+        log_trace!(current_task, "exiting with status {:?}", exit_status);
         if let Some(error_context) = error_context {
             match exit_status {
                 ExitStatus::Exit(value) if *value == 0 => {}
                 _ => {
-                    tracing::debug!(
-                        "{:?} last failing syscall before exit: {:?}, failed with {:?}",
+                    log_trace!(
                         current_task,
+                        "last failing syscall before exit: {:?}, failed with {:?}",
                         error_context.syscall,
                         error_context.error
                     );

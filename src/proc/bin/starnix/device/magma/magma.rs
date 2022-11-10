@@ -15,6 +15,7 @@ use vk_sys as vk;
 use zerocopy::{AsBytes, FromBytes};
 
 use crate::device::wayland::vulkan::*;
+use crate::logging::log_warn;
 use crate::mm::MemoryAccessorExt;
 use crate::task::CurrentTask;
 use crate::types::*;
@@ -307,7 +308,7 @@ pub fn get_image_info(
 ) -> Result<(zx::Vmo, magma_image_info_t), Errno> {
     let (_, mut collection_info) =
         buffer_collection.wait_for_buffers_allocated(zx::Time::INFINITE).map_err(|err| {
-            tracing::warn!("wait_for_buffers_allocated failed: {}", err);
+            log_warn!("wait_for_buffers_allocated failed: {}", err);
             errno!(EINVAL)
         })?;
     let _ = buffer_collection.close();

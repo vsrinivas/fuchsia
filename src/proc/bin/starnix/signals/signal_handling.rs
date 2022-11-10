@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::logging::strace;
+use crate::logging::{log_trace, log_warn};
 use crate::mm::MemoryAccessor;
 use crate::signals::*;
 use crate::syscalls::SyscallResult;
@@ -238,7 +238,7 @@ pub fn send_signal(task: &Task, siginfo: SignalInfo) {
 }
 
 pub fn force_signal(current_task: &CurrentTask, mut siginfo: SignalInfo) {
-    strace!(current_task, "forced signal {:?}", siginfo);
+    log_trace!(current_task, "forced signal {:?}", siginfo);
     siginfo.force = true;
     send_signal(current_task, siginfo)
 }
@@ -337,7 +337,7 @@ pub fn dequeue_signal(current_task: &mut CurrentTask) {
     if let Some(siginfo) = siginfo {
         let sigaction = task.thread_group.signal_actions.get(siginfo.signal);
         let action = action_for_signal(&siginfo, sigaction);
-        strace!(current_task, "handling signal {:?} with action {:?}", siginfo, action);
+        log_trace!(current_task, "handling signal {:?} with action {:?}", siginfo, action);
         match action {
             DeliveryAction::Ignore => {}
             DeliveryAction::CallHandler => {
@@ -372,7 +372,7 @@ pub fn sys_restart_syscall(current_task: &mut CurrentTask) -> Result<SyscallResu
             // This may indicate a bug where a syscall returns ERESTART_RESTARTBLOCK without
             // setting a restart func. But it can also be triggered by userspace, e.g. by directly
             // calling restart_syscall or injecting an ERESTART_RESTARTBLOCK error through ptrace.
-            strace!(level = warn, current_task, "restart_syscall called, but nothing to restart");
+            log_warn!(current_task, "restart_syscall called, but nothing to restart");
             error!(EINTR)
         }
     }

@@ -12,7 +12,7 @@ use std::ffi::CString;
 use std::sync::Arc;
 
 use super::shared::{execute_syscall, process_completed_syscall, TaskInfo};
-use crate::logging::{set_zx_name, strace};
+use crate::logging::{log_warn, set_zx_name};
 use crate::mm::MemoryManager;
 use crate::signals::{SignalActions, SignalInfo};
 use crate::syscalls::decls::SyscallDecl;
@@ -177,12 +177,7 @@ where
     std::thread::spawn(move || {
         let run_result = match run_task(&mut current_task) {
             Err(error) => {
-                strace!(
-                    level = warn,
-                    current_task,
-                    "Died unexpectedly from {:?}! treating as SIGKILL",
-                    error
-                );
+                log_warn!(current_task, "Died unexpectedly from {:?}! treating as SIGKILL", error);
                 let exit_status = ExitStatus::Kill(SignalInfo::default(SIGKILL));
                 current_task.write().exit_status = Some(exit_status.clone());
                 Ok(exit_status)

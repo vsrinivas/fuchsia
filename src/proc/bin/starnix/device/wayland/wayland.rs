@@ -23,6 +23,7 @@ use crate::device::wayland::BufferCollectionFile;
 use crate::fs::buffers::*;
 use crate::fs::socket::*;
 use crate::fs::*;
+use crate::logging::{log_error, log_warn};
 use crate::task::{CurrentTask, Kernel};
 use crate::types::*;
 
@@ -150,7 +151,7 @@ async fn serve_view_provider(
                         ) {
                             Ok(_) => {}
                             Err(e) => {
-                                tracing::error!("Got an error when creating view: {:?}", e);
+                                log_error!("Got an error when creating view: {:?}", e);
                             }
                         }
                     };
@@ -160,13 +161,13 @@ async fn serve_view_provider(
                         match view_provider.create_view2(args) {
                             Ok(_) => {}
                             Err(e) => {
-                                tracing::error!("Got an error when creating view: {:?}", e);
+                                log_error!("Got an error when creating view: {:?}", e);
                             }
                         }
                     };
                 }
                 r => {
-                    tracing::warn!("Got unexpected view provider request: {:?}", r);
+                    log_warn!("Got unexpected view provider request: {:?}", r);
                 }
             }
         }
@@ -210,17 +211,17 @@ fn handle_client_data(
                                     .expect("Failed to duplicate buffer collection import token.");
                                 handles.push(import_token);
                             } else {
-                                tracing::error!("No image file token.");
+                                log_error!("No image file token.");
                             }
                         } else {
-                            tracing::error!(
+                            log_error!(
                                 "Trying to parse buffre collection token from invalid file type."
                             );
                         }
                     }
                 }
                 _ => {
-                    tracing::error!("Got unexpected ancillary data.");
+                    log_error!("Got unexpected ancillary data.");
                     return;
                 }
             }
@@ -230,7 +231,7 @@ fn handle_client_data(
         match wayland_sender.unbounded_send(message_buf) {
             Ok(_) => {}
             Err(_) => {
-                tracing::error!("Failed to send data to wayland bridge.");
+                log_error!("Failed to send data to wayland bridge.");
                 return;
             }
         }

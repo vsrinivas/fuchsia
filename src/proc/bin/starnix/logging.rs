@@ -6,22 +6,68 @@ use fuchsia_zircon as zx;
 
 use crate::types::Errno;
 
-macro_rules! strace {
-    (level = $level:ident, tag = $tag:expr, $task:expr, $fmt:expr $(, $($arg:tt)*)?) => {
-        tracing::$level!(tag = $tag, concat!("{:?} ", $fmt), $task $(, $($arg)*)?);
+macro_rules! log {
+    (level = $level:ident, task = $task:expr, tag = $tag:expr, $fmt:expr $(, $($arg:tt)*)?) => {
+        if !cfg!(feature = "disable_logging") {
+          tracing::$level!(tag = $tag, concat!("{:?} ", $fmt), $task $(, $($arg)*)?);
+        }
     };
-    (level = $level:ident, $task:expr, $fmt:expr $(, $($arg:tt)*)?) => {
-        $crate::logging::strace!(level = $level, tag = "strace", $task, $fmt $(, $($arg)*)?)
+    (level = $level:ident, task = $task:expr, $fmt:expr $(, $($arg:tt)*)?) => {
+        if !cfg!(feature = "disable_logging") {
+          tracing::$level!(concat!("{:?} ", $fmt), $task $(, $($arg)*)?);
+        }
+    };
+    (level = $level:ident, tag = $tag:expr, $fmt:expr $(, $($arg:tt)*)?) => {
+        if !cfg!(feature = "disable_logging") {
+          tracing::$level!(tag = $tag, $fmt $(, $($arg)*)?);
+        }
+    };
+    (level = $level:ident, $fmt:expr $(, $($arg:tt)*)?) => {
+        if !cfg!(feature = "disable_logging") {
+          tracing::$level!($fmt $(, $($arg)*)?);
+        }
+    };
+}
 
+macro_rules! log_trace {
+    ($task:ident, $fmt:expr $(, $($arg:tt)*)?) => {
+        $crate::logging::log!(level = trace, task = $task, $fmt $(, $($arg)*)?)
     };
-    ($task:expr, $fmt:expr $(, $($arg:tt)*)?) => {
-        $crate::logging::strace!(level = trace, $task, $fmt $(, $($arg)*)?)
+    ($fmt:expr $(, $($arg:tt)*)?) => {
+        $crate::logging::log!(level = trace, $fmt $(, $($arg)*)?)
+    };
+}
+
+macro_rules! log_info {
+    ($task:ident, $fmt:expr $(, $($arg:tt)*)?) => {
+        $crate::logging::log!(level = info, task = $task, $fmt $(, $($arg)*)?)
+    };
+    ($fmt:expr $(, $($arg:tt)*)?) => {
+        $crate::logging::log!(level = info, $fmt $(, $($arg)*)?)
+    };
+}
+
+macro_rules! log_warn {
+    ($task:ident, $fmt:expr $(, $($arg:tt)*)?) => {
+        $crate::logging::log!(level = warn, task = $task, $fmt $(, $($arg)*)?)
+    };
+    ($fmt:expr $(, $($arg:tt)*)?) => {
+        $crate::logging::log!(level = warn, $fmt $(, $($arg)*)?)
+    };
+}
+
+macro_rules! log_error {
+    ($task:ident, $fmt:expr $(, $($arg:tt)*)?) => {
+        $crate::logging::log!(level = error, task = $task, $fmt $(, $($arg)*)?)
+    };
+    ($fmt:expr $(, $($arg:tt)*)?) => {
+        $crate::logging::log!(level = error, $fmt $(, $($arg)*)?)
     };
 }
 
 macro_rules! not_implemented {
     ($task:expr, $fmt:expr $(, $($arg:tt)*)?) => (
-        $crate::logging::strace!(level = warn, tag = "not_implemented", $task, $fmt $(, $($arg)*)?)
+        $crate::logging::log!(level = warn, task = $task, tag = "not_implemented", $fmt $(, $($arg)*)?)
     )
 }
 
@@ -37,9 +83,13 @@ macro_rules! not_implemented_log_once {
 }
 
 // Public re-export of macros allows them to be used like regular rust items.
+pub(crate) use log;
+pub(crate) use log_error;
+pub(crate) use log_info;
+pub(crate) use log_trace;
+pub(crate) use log_warn;
 pub(crate) use not_implemented;
 pub(crate) use not_implemented_log_once;
-pub(crate) use strace;
 
 // Call this when you get an error that should "never" happen, i.e. if it does that means the
 // kernel was updated to produce some other error after this match was written.

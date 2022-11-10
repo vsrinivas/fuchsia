@@ -207,7 +207,7 @@ pub fn sys_process_vm_readv(
     }
     let local_iov = task.mm.read_iovec(local_iov_addr, local_iov_count)?;
     let remote_iov = task.mm.read_iovec(remote_iov_addr, remote_iov_count)?;
-    strace!(
+    log_trace!(
         current_task,
         "process_vm_readv(pid={}, local_iov={:?}, remote_iov={:?})",
         pid,

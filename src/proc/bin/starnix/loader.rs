@@ -102,13 +102,13 @@ struct LoadedElf {
 
 // TODO: Improve the error reporting produced by this function by mapping ElfParseError to Errno more precisely.
 fn elf_parse_error_to_errno(err: elf_parse::ElfParseError) -> Errno {
-    tracing::warn!("elf parse error: {:?}", err);
+    log_warn!("elf parse error: {:?}", err);
     errno!(EINVAL)
 }
 
 // TODO: Improve the error reporting produced by this function by mapping ElfLoadError to Errno more precisely.
 fn elf_load_error_to_errno(err: elf_load::ElfLoadError) -> Errno {
-    tracing::warn!("elf load error: {:?}", err);
+    log_warn!("elf load error: {:?}", err);
     errno!(EINVAL)
 }
 
@@ -138,7 +138,7 @@ impl elf_load::Mapper for Mapper<'_> {
             )
             .map_err(|e| {
                 // TODO: Find a way to propagate this errno to the caller.
-                tracing::error!("elf map error: {:?}", e);
+                log_error!("elf map error: {:?}", e);
                 zx::Status::INVALID_ARGS
             })
             .map(|addr| addr.ptr())

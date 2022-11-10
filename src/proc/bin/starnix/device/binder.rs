@@ -14,7 +14,7 @@ use crate::fs::{
     NamespaceNode, SeekOrigin, SpecialNode, WaitAsyncOptions,
 };
 use crate::lock::{Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
-use crate::logging::{not_implemented, not_implemented_log_once};
+use crate::logging::{log_error, log_warn, not_implemented, not_implemented_log_once};
 use crate::mm::vmo::round_up_to_increment;
 use crate::mm::{
     DesiredAddress, MappedVmo, MappingOptions, MemoryAccessor, MemoryAccessorExt, UserMemoryCursor,
@@ -498,7 +498,7 @@ impl Drop for SharedMemory {
         match res {
             Ok(()) => {}
             Err(status) => {
-                tracing::error!("failed to unmap shared binder region from kernel: {:?}", status);
+                log_error!("failed to unmap shared binder region from kernel: {:?}", status);
             }
         }
     }
@@ -515,7 +515,7 @@ impl SharedMemory {
         let kernel_address = kernel_root_vmar
             .map(0, vmo, 0, length, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_WRITE)
             .map_err(|status| {
-                tracing::error!("failed to map shared binder region in kernel: {:?}", status);
+                log_error!("failed to map shared binder region in kernel: {:?}", status);
                 errno!(ENOMEM)
             })?;
         Ok(Self {
@@ -1763,7 +1763,7 @@ impl BinderDriver {
                 error!(EOPNOTSUPP)
             }
             _ => {
-                tracing::error!("binder received unknown ioctl request 0x{:08x}", request);
+                log_error!("binder received unknown ioctl request 0x{:08x}", request);
                 error!(EINVAL)
             }
         }
@@ -1856,7 +1856,7 @@ impl BinderDriver {
                     .or_else(|err| err.dispatch(binder_thread))
             }
             _ => {
-                tracing::error!("binder received unknown RW command: 0x{:08x}", command);
+                log_error!("binder received unknown RW command: 0x{:08x}", command);
                 error!(EINVAL)
             }
         }
@@ -2766,7 +2766,7 @@ impl SerializedBinderObject {
                 })
             }
             object_type => {
-                tracing::error!("unknown object type 0x{:08x}", object_type);
+                log_error!("unknown object type 0x{:08x}", object_type);
                 error!(EINVAL)
             }
         }
@@ -2856,7 +2856,7 @@ impl TransactionError {
     fn dispatch(self, binder_thread: &Arc<BinderThread>) -> Result<(), Errno> {
         binder_thread.write().enqueue_command(match self {
             TransactionError::Malformed(err) => {
-                tracing::warn!(
+                log_warn!(
                     "binder thread {} sent a malformed transaction: {:?}",
                     binder_thread.tid,
                     &err

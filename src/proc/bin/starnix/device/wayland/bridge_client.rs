@@ -7,6 +7,8 @@ use fidl_fuchsia_ui_app as fuiapp;
 use futures::channel::mpsc::UnboundedSender;
 use wayland_bridge::display::LocalViewProducerClient;
 
+use crate::logging::log_warn;
+
 /// `WaylandClient` exists to implement `LocalViewProducerClient`.
 ///
 /// The wayland bridge library will notify the `WaylandClient` implementation of any new view
@@ -26,7 +28,7 @@ impl LocalViewProducerClient for WaylandClient {
     }
 
     fn shutdown_view(&mut self, view_id: u32) {
-        tracing::warn!("Wayland bridge is attempting to shut down view_id: {:?}.", view_id);
+        log_warn!("Wayland bridge is attempting to shut down view_id: {:?}.", view_id);
     }
 }
 

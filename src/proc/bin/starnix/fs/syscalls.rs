@@ -12,7 +12,7 @@ use crate::fs::inotify::*;
 use crate::fs::pipe::*;
 use crate::fs::*;
 use crate::lock::Mutex;
-use crate::logging::{not_implemented, strace};
+use crate::logging::{log_trace, not_implemented};
 use crate::mm::{MemoryAccessor, MemoryAccessorExt};
 use crate::syscalls::*;
 use crate::task::*;
@@ -192,7 +192,7 @@ fn open_file_at(
 ) -> Result<FileHandle, Errno> {
     let mut buf = [0u8; PATH_MAX as usize];
     let path = current_task.mm.read_c_string(user_path, &mut buf)?;
-    strace!(
+    log_trace!(
         current_task,
         "open_file_at(dir_fd={}, path={:?})",
         dir_fd,
@@ -212,7 +212,7 @@ where
 {
     let mut buf = [0u8; PATH_MAX as usize];
     let path = current_task.mm.read_c_string(user_path, &mut buf)?;
-    strace!(
+    log_trace!(
         current_task,
         "lookup_parent_at(dir_fd={}, path={:?})",
         dir_fd,
@@ -269,7 +269,12 @@ fn lookup_at(
 ) -> Result<NamespaceNode, Errno> {
     let mut buf = [0u8; PATH_MAX as usize];
     let path = current_task.mm.read_c_string(user_path, &mut buf)?;
-    strace!(current_task, "lookup_at(dir_fd={}, path={:?})", dir_fd, String::from_utf8_lossy(path));
+    log_trace!(
+        current_task,
+        "lookup_at(dir_fd={}, path={:?})",
+        dir_fd,
+        String::from_utf8_lossy(path)
+    );
     if path.is_empty() {
         if options.allow_empty_path {
             let (node, _) = current_task.resolve_dir_fd(dir_fd, path)?;
@@ -1011,7 +1016,7 @@ pub fn sys_pipe2(
     let fd_flags = get_fd_flags(flags);
     let fd_read = current_task.files.add_with_flags(read, fd_flags)?;
     let fd_write = current_task.files.add_with_flags(write, fd_flags)?;
-    strace!(current_task, "pipe2 -> [{:#x}, {:#x}]", fd_read.raw(), fd_write.raw());
+    log_trace!(current_task, "pipe2 -> [{:#x}, {:#x}]", fd_read.raw(), fd_write.raw());
 
     current_task.mm.write_object(user_pipe, &fd_read)?;
     let user_pipe = user_pipe.next();
@@ -1151,7 +1156,7 @@ fn do_mount_bind(
     flags: MountFlags,
 ) -> Result<(), Errno> {
     let source = lookup_at(current_task, FdNumber::AT_FDCWD, source_addr, LookupFlags::default())?;
-    strace!(
+    log_trace!(
         current_task,
         "mount(source={:?}, target={:?}, flags={:?})",
         String::from_utf8_lossy(&source.path()),
@@ -1166,7 +1171,7 @@ fn do_mount_change_propagation_type(
     target: NamespaceNode,
     flags: MountFlags,
 ) -> Result<(), Errno> {
-    strace!(
+    log_trace!(
         current_task,
         "mount(target={:?}, flags={:?})",
         String::from_utf8_lossy(&target.path()),
@@ -1218,7 +1223,7 @@ fn do_mount_create(
     } else {
         current_task.mm.read_c_string(data_addr, &mut buf)?
     };
-    strace!(
+    log_trace!(
         current_task,
         "mount(source={:?}, target={:?}, type={:?}, data={:?})",
         String::from_utf8_lossy(source),

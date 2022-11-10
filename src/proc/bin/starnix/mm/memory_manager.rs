@@ -106,7 +106,7 @@ impl Mapping {
             return error!(EFAULT);
         }
         self.vmo.read(bytes, self.address_to_offset(addr)).map_err(|e| {
-            tracing::warn!("Got an error when reading from vmo: {:?}", e);
+            log_warn!("Got an error when reading from vmo: {:?}", e);
             errno!(EFAULT)
         })
     }

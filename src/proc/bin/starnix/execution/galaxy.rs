@@ -20,6 +20,7 @@ use crate::execution::*;
 use crate::fs::layeredfs::LayeredFs;
 use crate::fs::tmpfs::TmpFs;
 use crate::fs::*;
+use crate::logging::log_info;
 use crate::task::*;
 use crate::types::*;
 
@@ -132,7 +133,7 @@ pub async fn create_galaxy() -> Result<Galaxy, Error> {
             .collect::<Vec<_>>();
     init_task.exec(argv[0].clone(), argv.clone(), vec![])?;
     execute_task(init_task, |result| {
-        tracing::info!("Finished running init process: {:?}", result);
+        log_info!("Finished running init process: {:?}", result);
     });
     if let Some(startup_file_path) = startup_file_path {
         wait_for_init_file(&startup_file_path, &system_task).await?;

@@ -6,6 +6,7 @@ use fuchsia_zircon::cprng_draw;
 
 use crate::device::DeviceOps;
 use crate::fs::*;
+use crate::logging::{log, log_info};
 use crate::mm::MemoryAccessorExt;
 use crate::task::*;
 use crate::types::*;
@@ -23,11 +24,7 @@ impl FileOps for DevNull {
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
         current_task.mm.read_each(data, |bytes| {
-            tracing::info!(
-                "{:?} write to devnull: {:?}",
-                current_task,
-                String::from_utf8_lossy(bytes)
-            );
+            log_info!(current_task, "write to devnull: {:?}", String::from_utf8_lossy(bytes));
             Ok(Some(()))
         })?;
         UserBuffer::get_total_length(data)
@@ -163,7 +160,12 @@ impl FileOps for DevKmsg {
         let total = UserBuffer::get_total_length(data)?;
         let mut bytes = vec![0; total];
         current_task.mm.read_all(data, &mut bytes)?;
-        tracing::info!(tag = "kmsg", "{}", String::from_utf8_lossy(&bytes).trim_end_matches('\n'));
+        log!(
+            level = info,
+            tag = "kmsg",
+            "{}",
+            String::from_utf8_lossy(&bytes).trim_end_matches('\n')
+        );
         Ok(total)
     }
 }

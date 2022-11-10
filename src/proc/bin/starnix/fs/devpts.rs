@@ -8,6 +8,7 @@ use crate::auth::FsCred;
 use crate::device::terminal::*;
 use crate::device::DeviceOps;
 use crate::fs::*;
+use crate::logging::log_error;
 use crate::mm::MemoryAccessorExt;
 use crate::syscalls::*;
 use crate::task::*;
@@ -508,7 +509,7 @@ fn shared_ioctl(
             Ok(SUCCESS)
         }
         _ => {
-            tracing::error!(
+            log_error!(
                 "{} received unknown ioctl request 0x{:08x}",
                 if is_main { "ptmx" } else { "pts" },
                 request

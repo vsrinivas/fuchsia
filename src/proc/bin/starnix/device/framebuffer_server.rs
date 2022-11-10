@@ -10,8 +10,6 @@
 //! To display the `Framebuffer` as its view, a component must add the `framebuffer` feature to its
 //! `.cml`.
 
-use crate::types::*;
-
 use anyhow::anyhow;
 use fidl::{endpoints::create_proxy, HandleBased};
 use fidl_fuchsia_math as fmath;
@@ -29,6 +27,9 @@ use fuchsia_scenic::{BufferCollectionTokenPair, ViewRefPair};
 use fuchsia_zircon as zx;
 use futures::{StreamExt, TryStreamExt};
 use std::sync::{mpsc::channel, Arc};
+
+use crate::logging::log_warn;
+use crate::types::*;
 
 /// The width of the framebuffer image.
 pub const IMAGE_WIDTH: u32 = 720;
@@ -228,7 +229,7 @@ pub fn spawn_view_provider(
                             start_presenting(server.clone());
                         }
                         r => {
-                            tracing::warn!("Got unexpected view provider request: {:?}", r);
+                            log_warn!("Got unexpected view provider request: {:?}", r);
                         }
                     }
                 }

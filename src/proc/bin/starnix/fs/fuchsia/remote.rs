@@ -9,12 +9,11 @@ use syncio::{
     zxio, zxio::zxio_get_posix_mode, zxio_node_attributes_t, DirentIterator, Zxio, ZxioDirent,
     ZxioSignals,
 };
-use tracing::warn;
 
 use crate::auth::FsCred;
 use crate::fs::*;
 use crate::lock::{Mutex, RwLockReadGuard, RwLockWriteGuard};
-use crate::logging::impossible_error;
+use crate::logging::{impossible_error, log_warn};
 use crate::mm::MemoryAccessorExt;
 use crate::task::*;
 use crate::types::*;
@@ -162,11 +161,11 @@ impl FsNodeOps for RemoteNode {
         _owner: FsCred,
     ) -> Result<FsNodeHandle, Errno> {
         let name = std::str::from_utf8(name).map_err(|_| {
-            warn!("bad utf8 in pathname! remote filesystems can't handle this");
+            log_warn!("bad utf8 in pathname! remote filesystems can't handle this");
             errno!(EINVAL)
         })?;
         if !mode.is_reg() {
-            warn!("Can only create regular files in remotefs.");
+            log_warn!("Can only create regular files in remotefs.");
             return error!(EINVAL, name);
         }
 
@@ -197,7 +196,7 @@ impl FsNodeOps for RemoteNode {
         name: &FsStr,
     ) -> Result<FsNodeHandle, Errno> {
         let name = std::str::from_utf8(name).map_err(|_| {
-            warn!("bad utf8 in pathname! remote filesystems can't handle this");
+            log_warn!("bad utf8 in pathname! remote filesystems can't handle this");
             errno!(EINVAL)
         })?;
         let zxio =

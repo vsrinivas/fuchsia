@@ -7,11 +7,11 @@ use fuchsia_zircon as zx;
 use fuchsia_zircon::AsHandleRef;
 use std::ffi::CString;
 use std::sync::Arc;
-use tracing::info;
 use zerocopy::AsBytes;
 
 use crate::auth::{Credentials, SecureBits};
 use crate::execution::*;
+use crate::logging::{log, log_trace};
 use crate::mm::*;
 use crate::syscalls::*;
 use crate::task::*;
@@ -93,7 +93,7 @@ pub fn sys_execve(
     } else {
         read_c_string_vector(&current_task.mm, user_environ, &mut buf)?
     };
-    strace!(current_task, "execve({:?}, argv={:?}, environ={:?})", path, argv, environ);
+    log_trace!(current_task, "execve({:?}, argv={:?}, environ={:?})", path, argv, environ);
     current_task.exec(path, argv, environ)?;
     Ok(())
 }
@@ -279,7 +279,7 @@ pub fn sys_setresgid(
 }
 
 pub fn sys_exit(current_task: &CurrentTask, code: i32) -> Result<(), Errno> {
-    info!(target: "exit", "{:?} exit({})", current_task, code);
+    log!(level = info, task = current_task, tag = "exit", "exit({})", code);
     // Only change the current exit status if this has not been already set by exit_group, as
     // otherwise it has priority.
     current_task.write().exit_status.get_or_insert(ExitStatus::Exit(code as u8));
@@ -287,7 +287,7 @@ pub fn sys_exit(current_task: &CurrentTask, code: i32) -> Result<(), Errno> {
 }
 
 pub fn sys_exit_group(current_task: &CurrentTask, code: i32) -> Result<(), Errno> {
-    info!(target: "exit", "{:?} exit_group({})", current_task, code);
+    log!(level = info, task = current_task, tag = "exit", "exit_group({})", code);
     current_task.thread_group.exit(ExitStatus::Exit(code as u8));
     Ok(())
 }
@@ -809,7 +809,7 @@ pub fn sys_capset(
     // Permission checks. Copied out of TLPI section 39.7.
     let mut creds = target_task.creds();
     {
-        strace!(target_task, "Capabilities({{permitted={:?} from {:?}, effective={:?} from {:?}, inheritable={:?} from {:?}}}, bounding={:?})", new_permitted, creds.cap_permitted, new_effective, creds.cap_effective, new_inheritable, creds.cap_inheritable, creds.cap_bounding);
+        log_trace!(target_task, "Capabilities({{permitted={:?} from {:?}, effective={:?} from {:?}, inheritable={:?} from {:?}}}, bounding={:?})", new_permitted, creds.cap_permitted, new_effective, creds.cap_effective, new_inheritable, creds.cap_inheritable, creds.cap_bounding);
         if !creds.has_capability(CAP_SETPCAP)
             && !creds.cap_inheritable.union(creds.cap_permitted).contains(new_inheritable)
         {

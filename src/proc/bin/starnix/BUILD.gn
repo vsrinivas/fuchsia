@@ -13,6 +13,9 @@ declare_args() {
   starnix_wayland_protocol_logging = false
 
   starnix_restricted_mode = true
+
+  # Whether or not logging is disabled globally.
+  starnix_disable_logging = false
 }
 
 group("starnix") {
@@ -261,6 +264,9 @@ if (target_cpu == "x64" && !is_asan) {
     features = []
     if (starnix_restricted_mode) {
       features += [ "restricted_mode" ]
+    }
+    if (starnix_disable_logging) {
+      features = [ "disable_logging" ]
     }
     if (starnix_wayland_protocol_logging) {
       features += [ "wayland_protocol_logging" ]

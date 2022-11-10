@@ -17,7 +17,7 @@ use std::mem;
 use std::sync::Arc;
 
 use super::shared::*;
-use crate::logging::{set_zx_name, strace};
+use crate::logging::{log_trace, log_warn, set_zx_name};
 use crate::mm::MemoryManager;
 use crate::signals::*;
 use crate::syscalls::decls::SyscallDecl;
@@ -44,8 +44,7 @@ where
             // without having previous called sys_exit(), and that will swallow the actual error.
             match run_exception_loop(&mut current_task, exceptions) {
                 Err(error) => {
-                    strace!(
-                        level = warn,
+                    log_warn!(
                         current_task,
                         "Died unexpectedly from {:?}! treating as SIGKILL",
                         error
@@ -139,9 +138,9 @@ fn run_exception_loop(
             ZX_EXCP_FATAL_PAGE_FAULT => {
                 #[cfg(target_arch = "x86_64")]
                 let fault_addr = unsafe { report.context.arch.x86_64.cr2 };
-                tracing::debug!(
-                    "{:?} page fault, ip={:#x}, sp={:#x}, fault={:#x}",
+                log_trace!(
                     current_task,
+                    "page fault, ip={:#x}, sp={:#x}, fault={:#x}",
                     current_task.registers.rip,
                     current_task.registers.rsp,
                     fault_addr
@@ -150,7 +149,7 @@ fn run_exception_loop(
             }
 
             _ => {
-                strace!(level =warn, current_task, "unhandled exception. info={:?} report.header={:?} synth_code={:?} synth_data={:?}", info, report.header, report.context.synth_code, report.context.synth_data);
+                log_warn!(current_task, "unhandled exception. info={:?} report.header={:?} synth_code={:?} synth_data={:?}", info, report.header, report.context.synth_code, report.context.synth_data);
                 exception.set_exception_state(&ZX_EXCEPTION_STATE_TRY_NEXT)?;
                 continue;
             }

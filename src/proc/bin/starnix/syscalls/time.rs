@@ -92,7 +92,7 @@ pub fn sys_clock_nanosleep(
     }
 
     let request = current_task.mm.read_object(user_request)?;
-    strace!(current_task, "clock_nanosleep({}, {}, {:?})", which_clock, flags, request);
+    log_trace!(current_task, "clock_nanosleep({}, {}, {:?})", which_clock, flags, request);
 
     let deadline = if flags & TIMER_ABSTIME != 0 {
         time_from_timespec(request)?

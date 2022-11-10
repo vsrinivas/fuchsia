@@ -16,7 +16,7 @@ use zerocopy::{AsBytes, FromBytes};
 use super::*;
 use crate::auth::*;
 use crate::fs::{fileops_impl_directory, fs_node_impl_symlink};
-use crate::logging::{impossible_error, strace};
+use crate::logging::{impossible_error, log_error, log_warn};
 use crate::task::*;
 use crate::types::*;
 
@@ -100,12 +100,7 @@ impl FsNodeOps for ExtDirectory {
                 }
                 ext_structs::EntryType::SymLink => Box::new(ExtSymlink { inner: ext_node.clone() }),
                 _ => {
-                    strace!(
-                        level = warn,
-                        current_task,
-                        "unhandled ext entry type {:?}",
-                        entry_type
-                    );
+                    log_warn!(current_task, "unhandled ext entry type {:?}", entry_type);
                     Box::new(ExtFile::new(ext_node.clone(), name))
                 }
             };
@@ -232,7 +227,7 @@ fn directory_entry_type(entry_type: ext_structs::EntryType) -> DirectoryEntryTyp
 }
 
 fn ext_error(err: ext_structs::ParsingError) -> Errno {
-    tracing::error!("ext4 error: {:?}", err);
+    log_error!("ext4 error: {:?}", err);
     errno!(EIO)
 }
 

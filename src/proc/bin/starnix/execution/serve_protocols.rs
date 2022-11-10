@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::execution::Galaxy;
-use crate::types::errno;
 use anyhow::Error;
 use fidl::endpoints::ControlHandle;
 use fidl_fuchsia_component_runner as fcrunner;
@@ -12,9 +10,11 @@ use fidl_fuchsia_starnix_galaxy as fstargalaxy;
 use fuchsia_async::{self as fasync, DurationExt};
 use futures::TryStreamExt;
 use std::sync::Arc;
-use tracing::error;
 
+use crate::execution::Galaxy;
 use crate::fs::fuchsia::create_fuchsia_pipe;
+use crate::logging::log_error;
+use crate::types::errno;
 use crate::types::OpenFlags;
 
 use super::*;
@@ -29,7 +29,7 @@ pub async fn serve_component_runner(
                 let galaxy = galaxy.clone();
                 fasync::Task::local(async move {
                     if let Err(e) = start_component(start_info, controller, galaxy).await {
-                        error!("failed to start component: {:?}", e);
+                        log_error!("failed to start component: {:?}", e);
                     }
                 })
                 .detach();
@@ -47,7 +47,7 @@ pub async fn serve_galaxy_controller(
         match event {
             fstargalaxy::ControllerRequest::VsockConnect { port, bridge_socket, .. } => {
                 connect_to_vsock(port, bridge_socket, &galaxy).await.unwrap_or_else(|e| {
-                    tracing::error!("failed to connect to vsock {:?}", e);
+                    log_error!("failed to connect to vsock {:?}", e);
                 });
             }
         }

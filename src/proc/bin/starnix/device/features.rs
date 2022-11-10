@@ -7,7 +7,7 @@ use crate::device::{
     wayland::serve_wayland,
 };
 use crate::fs::{devtmpfs::dev_tmp_fs, SpecialNode};
-use crate::logging::strace;
+use crate::logging::log_warn;
 use crate::task::CurrentTask;
 use crate::types::*;
 
@@ -38,7 +38,7 @@ pub fn run_features<'a>(entries: &'a Vec<String>, current_task: &CurrentTask) ->
                     .register_chrdev_major(framebuffer.clone(), FB_MAJOR)?;
             }
             feature => {
-                strace!(level = warn, current_task, "Unsupported feature: {:?}", feature);
+                log_warn!(current_task, "Unsupported feature: {:?}", feature);
             }
         }
     }
@@ -80,7 +80,7 @@ pub fn run_component_features(
             "logd" => {}
             "selinux_enabled" => {}
             feature => {
-                strace!(level = warn, current_task, "Unsupported feature: {:?}", feature);
+                log_warn!(current_task, "Unsupported feature: {:?}", feature);
             }
         }
     }

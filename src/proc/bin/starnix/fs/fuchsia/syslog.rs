@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use tracing::info;
-
 use crate::fs::*;
+use crate::logging::log;
 use crate::mm::MemoryAccessorExt;
 use crate::syscalls::SyscallResult;
 use crate::task::*;
@@ -30,7 +29,7 @@ impl FileOps for SyslogFile {
     ) -> Result<usize, Errno> {
         let mut size = 0;
         current_task.mm.read_each(data, |bytes| {
-            info!(target: "stdio", "{}", String::from_utf8_lossy(bytes));
+            log!(level = info, tag = "stdio", "{}", String::from_utf8_lossy(bytes));
             size += bytes.len();
             Ok(Some(()))
         })?;

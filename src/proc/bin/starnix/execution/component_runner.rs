@@ -12,7 +12,6 @@ use fidl_fuchsia_io as fio;
 use fuchsia_zircon as zx;
 use std::ffi::CString;
 use std::sync::Arc;
-use tracing::info;
 
 use crate::auth::{Credentials, FsCred};
 use crate::execution::{
@@ -20,7 +19,7 @@ use crate::execution::{
     get_pkg_hash, parse_numbered_handles,
 };
 use crate::fs::*;
-use crate::logging::strace;
+use crate::logging::{log_error, log_info};
 use crate::task::*;
 use crate::types::*;
 
@@ -43,9 +42,11 @@ pub async fn start_component(
     galaxy: Arc<Galaxy>,
 ) -> Result<(), Error> {
     let url = start_info.resolved_url.clone().unwrap_or_else(|| "<unknown>".to_string());
-    info!(
+    log_info!(
         "start_component: {}\narguments: {:?}\nmanifest: {:?}",
-        url, start_info.numbered_handles, start_info.program,
+        url,
+        start_info.numbered_handles,
+        start_info.program,
     );
 
     let mut ns = start_info.ns.take().ok_or_else(|| anyhow!("Missing namespace"))?;
@@ -87,7 +88,7 @@ pub async fn start_component(
         .unwrap_or(Ok(vec![]))?;
     let component_features =
         get_program_strvec(&start_info, "features").cloned().unwrap_or_default();
-    info!("start_component environment: {:?}", environ);
+    log_info!("start_component environment: {:?}", environ);
 
     let binary_path = get_program_string(&start_info, "binary")
         .ok_or_else(|| anyhow!("Missing \"binary\" in manifest"))?;
@@ -124,13 +125,7 @@ pub async fn start_component(
 
     run_component_features(&component_features, &current_task, &mut start_info.outgoing_dir)
         .unwrap_or_else(|e| {
-            strace!(
-                level = error,
-                current_task,
-                "failed to set component features for {} - {:?}",
-                url,
-                e
-            );
+            log_error!(current_task, "failed to set component features for {} - {:?}", url, e);
         });
 
     execute_task(current_task, |result| {

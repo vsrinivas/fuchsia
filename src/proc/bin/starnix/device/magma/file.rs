@@ -15,7 +15,7 @@ use super::magma::*;
 use crate::device::wayland::image_file::*;
 use crate::fs::*;
 use crate::lock::Mutex;
-use crate::logging::impossible_error;
+use crate::logging::{impossible_error, log_error, log_warn};
 use crate::mm::MemoryAccessorExt;
 use crate::syscalls::*;
 use crate::task::CurrentTask;
@@ -191,12 +191,9 @@ impl FileOps for MagmaFile {
                         response.result_return = MAGMA_STATUS_OK as u64;
                     }
                     _ => {
-                        strace!(
-                            level = error,
-                            current_task,
-                            "No image info was found for buffer: {:?}",
-                            { control.image }
-                        );
+                        log_error!(current_task, "No image info was found for buffer: {:?}", {
+                            control.image
+                        });
                         response.result_return = MAGMA_STATUS_INVALID_ARGS as u64;
                     }
                 };
@@ -255,8 +252,7 @@ impl FileOps for MagmaFile {
                     match buffers.remove(&(control.buffer as u64)) {
                         Some(_) => release_buffer(control, &mut response),
                         _ => {
-                            strace!(
-                                level = error,
+                            log_error!(
                                 current_task,
                                 "Calling magma_release_buffer with an invalid buffer."
                             );
@@ -598,7 +594,7 @@ impl FileOps for MagmaFile {
                 current_task.mm.write_object(UserRef::new(response_address), &response)
             }
             t => {
-                strace!(level = warn, current_task, "Got unknown request: {:?}", t);
+                log_warn!(current_task, "Got unknown request: {:?}", t);
                 error!(ENOSYS)
             }
         }?;
