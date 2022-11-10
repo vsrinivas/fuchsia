@@ -83,10 +83,6 @@ fuchsia_structured_config_rust_lib("fastpair_provider_config") {
   cm_label = ":manifest"
 }
 
-fuchsia_package("bt-fastpair-provider") {
-  deps = [ ":component" ]
-}
-
 fuchsia_unittest_package("bt-fastpair-provider-tests") {
   manifest = "meta/bt-fastpair-provider-tests.cml"
   deps = [ ":bin_test" ]
