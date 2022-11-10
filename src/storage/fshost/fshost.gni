@@ -19,7 +19,6 @@ declare_args() {
 #             data_filesystem_format is mandatory.  The following options are also supported:
 #
 #     bootfs_only - if set, the blob and data partitions will not get mounted.
-#     use_rust_port - if set, use the rust port of fshost instead of the cpp version.
 #
 #   testonly - the component will only be used for testing
 template("fshost_cml") {
@@ -35,11 +34,6 @@ template("fshost_cml") {
       "//src/storage/fshost/meta/config.cml",
     ]
     options = invoker.options
-    if (defined(options.use_rust_port) && options.use_rust_port) {
-      sources += [ "//src/storage/fshost/meta/rust_fshost.cml" ]
-    } else {
-      sources += [ "//src/storage/fshost/meta/cpp_fshost.cml" ]
-    }
     if (!defined(options.bootfs_only) || !options.bootfs_only) {
       if (options.data_filesystem_format == "minfs") {
         sources += [ "//src/storage/fshost/meta/minfs_fshost.cml" ]
@@ -83,7 +77,9 @@ template("fshost_cml") {
 # Parameters:
 #
 #   options - same as for `fshost_cml` above, see that template's documentation
-#             for details.
+#             for details. The following options are also supported:
+#
+#     use_rust_port - if set, use the rust port of fshost instead of the cpp version.
 #
 #   component_name (optional; default: target_name)
 #     [string] The name to use for the fshost component (changes the name of the

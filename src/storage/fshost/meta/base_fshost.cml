@@ -7,6 +7,11 @@
         "inspect/client.shard.cml",
         "syslog/client.shard.cml",
     ],
+    program: {
+        runner: "elf",
+        binary: "bin/fshost",
+        lifecycle: { stop_event: "notify" },
+    },
     children: [
         {
             name: "tmpfs",

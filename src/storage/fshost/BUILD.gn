@@ -4,7 +4,6 @@
 
 import("//build/components.gni")
 import("//build/dist/component_manifest_resources.gni")
-import("//build/dist/renamed_binary.gni")
 import("//build/test.gni")
 import("//src/storage/fshost/fshost.gni")
 import("//tools/cmc/build/cmc.gni")

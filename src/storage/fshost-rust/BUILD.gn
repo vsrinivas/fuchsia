@@ -4,9 +4,10 @@
 
 import("//build/components/fuchsia_test_package.gni")
 import("//build/components/fuchsia_unittest_component.gni")
+import("//build/dist/renamed_binary.gni")
 import("//build/rust/rustc_binary.gni")
 
-rustc_binary("fshost-rust") {
+rustc_binary("bin") {
   output_name = "fshost_rust"
   edition = "2021"
   deps = [
@@ -68,9 +69,15 @@ rustc_binary("fshost-rust") {
   with_unit_tests = true
 }
 
+renamed_binary("fshost-rust") {
+  source = "$root_out_dir/fshost_rust"
+  source_deps = [ ":bin" ]
+  dest = "bin/fshost"
+}
+
 fuchsia_unittest_component("fshost_rust_tests_component") {
   component_name = "fshost_rust_tests"
-  deps = [ ":fshost-rust_test" ]
+  deps = [ ":bin_test" ]
 }
 
 fuchsia_test_package("fshost_rust_tests") {

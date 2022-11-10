@@ -279,7 +279,7 @@ fshost_integration_test(
   data_filesystem_format = "minfs"
 }
 
-fuchsia_test_package("fshost_integration_tests") {
+fuchsia_test_package("fshost_integration_tests_cpp") {
   # Currently required because the data_formatted test causes Fxfs to log:
   #   ERROR: ... handle_start failed error=Journal replay failed
   test_specs = {
@@ -291,16 +291,32 @@ fuchsia_test_package("fshost_integration_tests") {
     ":fshost-cpp-integration-test-fxfs",
     ":fshost-cpp-integration-test-minfs",
     ":fshost-cpp-integration-test-f2fs",
-    ":fshost-rust-integration-test-fxfs",
-    ":fshost-rust-integration-test-minfs",
-    ":fshost-rust-integration-test-f2fs",
     ":fshost-cpp-wipe-storage-integration-test-fxfs-recovery",
     ":fshost-cpp-wipe-storage-integration-test-minfs-recovery",
   ]
   deps = [ "//src/storage/testing:storage_driver_test_realm" ]
 }
 
+fuchsia_test_package("fshost_integration_tests_rust") {
+  # Currently required because the data_formatted test causes Fxfs to log:
+  #   ERROR: ... handle_start failed error=Journal replay failed
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+  test_components = [
+    ":fshost-rust-integration-test-fxfs",
+    ":fshost-rust-integration-test-minfs",
+    ":fshost-rust-integration-test-f2fs",
+  ]
+  deps = [ "//src/storage/testing:storage_driver_test_realm" ]
+}
+
 group("tests") {
   testonly = true
-  deps = [ ":fshost_integration_tests" ]
+  deps = [
+    ":fshost_integration_tests_cpp",
+    ":fshost_integration_tests_rust",
+  ]
 }
