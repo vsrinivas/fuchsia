@@ -222,6 +222,7 @@ executable("scenic_pixeltest_bin") {
     "//src/ui/scenic/lib/gfx/tests:gfx_tests_main",
     "//src/ui/scenic/lib/gfx/tests:testing_deps",
   ]
+  configs += [ ":vulkan_no_nodiscard" ]
 }
 
 fuchsia_test_component("scenic_pixeltest") {
