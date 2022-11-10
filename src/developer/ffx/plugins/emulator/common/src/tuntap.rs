@@ -9,7 +9,6 @@ use nix::{
     ifaddrs::{getifaddrs, InterfaceAddress, InterfaceAddressIterator},
     net::if_::InterfaceFlags,
 };
-use serde::Deserialize;
 
 // TODO(fxbug.dev/100022): Make this configurable.
 // The interface name, "qemu", provided here used to be provided by the qemu
@@ -19,15 +18,6 @@ use serde::Deserialize;
 // need to eventually be configurable to support running emulators on
 // multiple tap interfaces.
 pub const TAP_INTERFACE_NAME: &'static str = "qemu";
-
-// The following data structures are derived from the output of the "ip" command.
-// In both cases, there is additional data available in the output; but we don't
-// have a use for those fields at this time, so they are ignored/excluded during
-// deserialization.
-#[derive(Deserialize, Debug, Default, Eq, PartialEq)]
-pub(crate) struct LinkInfo {
-    info_kind: String,
-}
 
 pub(crate) mod tap {
     use super::*;
