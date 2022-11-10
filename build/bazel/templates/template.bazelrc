@@ -9,8 +9,8 @@
 build --incompatible_enable_cc_toolchain_resolution
 
 # Setup the default platform.
-common --platforms=//build/bazel/platforms:{default_platform}
-common --host_platform=//build/bazel/platforms:{host_platform}
+build --platforms=//build/bazel/platforms:{default_platform}
+build --host_platform=//build/bazel/platforms:{host_platform}
 
 # Save workspace rule events to a log file for later analysis.
 build --experimental_workspace_rules_log_file={log_file}
