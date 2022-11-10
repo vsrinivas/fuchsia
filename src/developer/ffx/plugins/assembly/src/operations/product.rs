@@ -56,7 +56,7 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
                 vec!["common_bringup"]
             }
             (FeatureSupportLevel::Minimal, _) => {
-                vec!["common_minimal"]
+                vec!["common_bringup", "common_minimal"]
             }
             _ => vec![],
         };
