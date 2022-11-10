@@ -4,6 +4,7 @@
 
 #include "tools/kazoo/writer.h"
 
+#include <stdarg.h>
 #include <zircon/assert.h>
 
 #include "tools/kazoo/string_util.h"
