@@ -120,6 +120,7 @@ sdk_source_set("wire") {
     "incoming_message.cc",
     "message.cc",
     "message_storage.cc",
+    "outgoing_message.cc",
     "status.cc",
     "transport.cc",
     "wire_coding_traits.cc",

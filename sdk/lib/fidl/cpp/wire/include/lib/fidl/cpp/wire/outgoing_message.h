@@ -178,24 +178,11 @@ class OutgoingMessage : public ::fidl::Status {
   // when interfacing with low-level channel operations which consume the handles.
   void ReleaseHandles() { iovec_message().num_handles = 0; }
 
-  // Encodes the data.
-  template <typename FidlType>
-  void Encode(FidlType* data) {
-    Encode(fidl::internal::WireFormatVersion::kV2, data);
-  }
-
-  template <typename FidlType>
-  void Encode(fidl::internal::WireFormatVersion wire_format_version, FidlType* data) {
-    is_transactional_ = fidl::IsFidlTransactionalMessage<FidlType>::value;
-
-    EncodeImpl(wire_format_version, data, internal::TopLevelCodingTraits<FidlType>::inline_size,
-               internal::MakeTopLevelEncodeFn<FidlType>());
-  }
-
-  // Various helper functions for writing to other channel-like types.
-
+  // Writes the message to the |transport|.
   void Write(internal::AnyUnownedTransport transport, WriteOptions options = {});
 
+  // Writes the message to the |transport|. This overload takes a concrete
+  // transport endpoint, such as a |zx::unowned_channel|.
   template <typename TransportObject>
   void Write(TransportObject&& transport, WriteOptions options = {}) {
     Write(internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport)),
@@ -214,7 +201,7 @@ class OutgoingMessage : public ::fidl::Status {
 
   bool is_transactional() const { return is_transactional_; }
 
- protected:
+ private:
   OutgoingMessage(fidl_outgoing_msg_t msg, uint32_t handle_capacity)
       : ::fidl::Status(::fidl::Status::Ok()), message_(msg), handle_capacity_(handle_capacity) {}
 
@@ -226,7 +213,6 @@ class OutgoingMessage : public ::fidl::Status {
   uint32_t backing_buffer_capacity() const { return backing_buffer_capacity_; }
   uint8_t* backing_buffer() const { return backing_buffer_; }
 
- private:
   friend ::fidl_testing::MessageChecker;
 
   explicit OutgoingMessage(InternalIovecConstructorArgs args);
