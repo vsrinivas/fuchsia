@@ -151,7 +151,6 @@ archivist_optimized_binary("bin") {
     ":lib",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/diagnostics/log/rust",
-    "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
