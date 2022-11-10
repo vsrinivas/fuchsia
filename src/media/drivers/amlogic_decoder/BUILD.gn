@@ -195,7 +195,7 @@ if (target_cpu == "arm64") {
       "//src/media/lib/internal_buffer",
       "//src/media/lib/memory_barriers",
       "//src/media/third_party/chromium_media",
-      "//src/security/tee/tee-client-api",
+      "//src/security/lib/tee/tee-client-api",
       "//zircon/system/ulib/async:async-cpp",
       "//zircon/system/ulib/async-loop:async-loop-cpp",
       "//zircon/system/ulib/async-loop:async-loop-default",
