@@ -202,10 +202,38 @@ mod test {
     use lazy_static::lazy_static;
 
     lazy_static! {
-        static ref STATES: Vec<State> = vec![State::Home,];
-        static ref EVENTS: Vec<Event> = vec![Event::Cancel,];
+        static ref STATES: Vec<State> = vec![
+            State::Connecting("Network".to_string(), "Password".to_string()),
+            State::ConnectionFailed("Network".to_string(), "Password".to_string()),
+            State::Done(Operation::Reinstall),
+            State::EnterPassword("Network".to_string()),
+            State::EnterWiFi,
+            State::ExecuteReinstall(0),
+            State::FactoryReset,
+            State::Failed(Operation::Reinstall, Some("Error message".to_string())),
+            State::GetWiFiNetworks,
+            State::Home,
+            State::Reinstall,
+            State::SelectWiFi(vec![]),
+            State::SetPrivacy(true),
+        ];
+        static ref EVENTS: Vec<Event> = vec![
+            Event::AddNetwork,
+            Event::Cancel,
+            Event::ChooseNetwork,
+            Event::Error("Error".to_string()),
+            Event::Progress(0),
+            Event::Networks(Vec::new()),
+            Event::Reinstall,
+            Event::SendReports(true),
+            Event::StartFactoryReset,
+            Event::TryAnotherWay,
+            Event::TryAgain,
+            Event::UserInput("User Input".to_string()),
+            Event::UserInputUnsecuredNetwork("Network".to_string()),
+            Event::WiFiConnected,
+        ];
     }
-
     // TODO(b/258049617): Enable this when variant_count is in the allowed features list
     // This will enable a check to make sure all events and states are used
     // #[test]
