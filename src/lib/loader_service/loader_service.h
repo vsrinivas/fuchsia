@@ -13,6 +13,7 @@
 #include <zircon/types.h>
 
 #include <memory>
+#include <utility>
 
 #include <fbl/macros.h>
 #include <fbl/unique_fd.h>
@@ -75,7 +76,8 @@ class LoaderServiceBase : public std::enable_shared_from_this<LoaderServiceBase>
 // the loader service alive as long as any open client connections exist.
 class LoaderConnection : public fidl::WireServer<fuchsia_ldsvc::Loader> {
  public:
-  LoaderConnection(std::shared_ptr<LoaderServiceBase> server) : server_(server) {}
+  explicit LoaderConnection(std::shared_ptr<LoaderServiceBase> server)
+      : server_(std::move(server)) {}
 
   // fidl::WireServer<fuchsia_ldsvc::Loader> implementation
   void Done(DoneCompleter::Sync& completer) override;
@@ -111,7 +113,7 @@ class LoaderService : public LoaderServiceBase {
  protected:
   LoaderService(async_dispatcher_t* dispatcher, fbl::unique_fd lib_dir, std::string name)
       : LoaderServiceBase(dispatcher, std::move(name)), dir_(std::move(lib_dir)) {}
-  virtual zx::result<zx::vmo> LoadObjectImpl(std::string path) override;
+  zx::result<zx::vmo> LoadObjectImpl(std::string path) override;
 
  private:
   fbl::unique_fd dir_;

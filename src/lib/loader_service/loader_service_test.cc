@@ -30,7 +30,7 @@ TEST_F(LoaderServiceTest, ConnectBindDone) {
   std::shared_ptr<LoaderService> loader;
   std::vector<TestDirectoryEntry> config;
   config.emplace_back("libfoo.so", "science", true);
-  ASSERT_NO_FATAL_FAILURE(CreateTestLoader(std::move(config), &loader));
+  ASSERT_NO_FATAL_FAILURE(CreateTestLoader(config, &loader));
 
   {
     auto status = loader->Connect();
@@ -58,7 +58,7 @@ TEST_F(LoaderServiceTest, OpenConnectionsKeepLoaderAlive) {
   fbl::unique_fd root_fd;
   std::vector<TestDirectoryEntry> config;
   config.emplace_back("libfoo.so", "science", true);
-  ASSERT_NO_FATAL_FAILURE(CreateTestDirectory(std::move(config), &root_fd));
+  ASSERT_NO_FATAL_FAILURE(CreateTestDirectory(config, &root_fd));
 
   // Grab the raw zx_handle_t for the root_fd's channel for use below.
   fdio_t* fdio = fdio_unsafe_fd_to_io(root_fd.get());
@@ -86,12 +86,13 @@ TEST_F(LoaderServiceTest, OpenConnectionsKeepLoaderAlive) {
   loader.reset();
 
   // Should still be able to Clone any open connection.
-  zx::channel client_chan, server_chan;
-  ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
-  auto result = client2->Clone(std::move(server_chan));
+  zx::result endpoints = fidl::CreateEndpoints<fldsvc::Loader>();
+  ASSERT_OK(endpoints.status_value());
+  auto& [client, server] = endpoints.value();
+  auto result = client2->Clone(std::move(server));
   ASSERT_TRUE(result.ok());
   ASSERT_OK(result->rv);
-  fidl::WireSyncClient<fldsvc::Loader> client3(std::move(client_chan));
+  fidl::WireSyncClient<fldsvc::Loader> client3(std::move(client));
 
   EXPECT_NO_FATAL_FAILURE(LoadObject(client1, "libfoo.so", zx::ok("science")));
   EXPECT_NO_FATAL_FAILURE(LoadObject(client2, "libfoo.so", zx::ok("science")));
@@ -123,7 +124,7 @@ TEST_F(LoaderServiceTest, LoadObject) {
   std::vector<TestDirectoryEntry> config;
   config.emplace_back("libfoo.so", "science", true);
   config.emplace_back("libnoexec.so", "rules", false);
-  ASSERT_NO_FATAL_FAILURE(CreateTestLoader(std::move(config), &loader));
+  ASSERT_NO_FATAL_FAILURE(CreateTestLoader(config, &loader));
 
   auto status = loader->Connect();
   ASSERT_TRUE(status.is_ok());
@@ -141,7 +142,7 @@ TEST_F(LoaderServiceTest, Config) {
   config.emplace_back("asan/libasan_only.so", "lives", true);
   config.emplace_back("libfoo.so", "must", true);
   config.emplace_back("libno_san.so", "matter", true);
-  ASSERT_NO_FATAL_FAILURE(CreateTestLoader(std::move(config), &loader));
+  ASSERT_NO_FATAL_FAILURE(CreateTestLoader(config, &loader));
 
   auto status = loader->Connect();
   ASSERT_TRUE(status.is_ok());
@@ -192,7 +193,7 @@ TEST_F(LoaderServiceTest, ClonedConnectionHasDefaultConfig) {
   config.emplace_back("asan/libfoo.so", "black", true);
   config.emplace_back("asan/libasan_only.so", "lives", true);
   config.emplace_back("libno_san.so", "matter", true);
-  ASSERT_NO_FATAL_FAILURE(CreateTestLoader(std::move(config), &loader));
+  ASSERT_NO_FATAL_FAILURE(CreateTestLoader(config, &loader));
 
   auto status = loader->Connect();
   ASSERT_TRUE(status.is_ok());
@@ -203,13 +204,14 @@ TEST_F(LoaderServiceTest, ClonedConnectionHasDefaultConfig) {
   EXPECT_NO_FATAL_FAILURE(LoadObject(client, "libasan_only.so", zx::ok("lives")));
   EXPECT_NO_FATAL_FAILURE(LoadObject(client, "libno_san.so", zx::ok("matter")));
 
-  zx::channel client_chan, server_chan;
-  ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
-  auto result = client->Clone(std::move(server_chan));
+  zx::result endpoints = fidl::CreateEndpoints<fldsvc::Loader>();
+  ASSERT_OK(endpoints.status_value());
+  auto& [client2, server] = endpoints.value();
+  auto result = client->Clone(std::move(server));
   ASSERT_TRUE(result.ok());
   ASSERT_OK(result->rv);
   {
-    fidl::WireSyncClient<fldsvc::Loader> client(std::move(client_chan));
+    fidl::WireSyncClient<fldsvc::Loader> client(std::move(client2));
     EXPECT_NO_FATAL_FAILURE(LoadObject(client, "libfoo.so", zx::error(ZX_ERR_NOT_FOUND)));
     EXPECT_NO_FATAL_FAILURE(LoadObject(client, "libasan_only.so", zx::error(ZX_ERR_NOT_FOUND)));
     EXPECT_NO_FATAL_FAILURE(LoadObject(client, "libno_san.so", zx::ok("matter")));
@@ -221,7 +223,7 @@ TEST_F(LoaderServiceTest, InvalidLoadObject) {
   std::vector<TestDirectoryEntry> config;
   config.emplace_back("libfoo.so", "science", true);
   config.emplace_back("asan/libfoo.so", "rules", true);
-  ASSERT_NO_FATAL_FAILURE(CreateTestLoader(std::move(config), &loader));
+  ASSERT_NO_FATAL_FAILURE(CreateTestLoader(config, &loader));
 
   auto status = loader->Connect();
   ASSERT_TRUE(status.is_ok());
@@ -235,7 +237,7 @@ TEST_F(LoaderServiceTest, InvalidLoadObject) {
 TEST_F(LoaderServiceTest, InvalidConfig) {
   std::shared_ptr<LoaderService> loader;
   std::vector<TestDirectoryEntry> config;
-  ASSERT_NO_FATAL_FAILURE(CreateTestLoader(std::move(config), &loader));
+  ASSERT_NO_FATAL_FAILURE(CreateTestLoader(config, &loader));
 
   auto status = loader->Connect();
   ASSERT_TRUE(status.is_ok());
@@ -286,7 +288,7 @@ TEST_F(LoaderServiceTest, InteropWithLdmsg_LoadObject) {
   std::vector<TestDirectoryEntry> config;
   config.emplace_back("libfoo.so", "science", true);
   config.emplace_back("libnoexec.so", "rules", false);
-  ASSERT_NO_FATAL_FAILURE(CreateTestLoader(std::move(config), &loader));
+  ASSERT_NO_FATAL_FAILURE(CreateTestLoader(config, &loader));
 
   auto status = loader->Connect();
   ASSERT_TRUE(status.is_ok());

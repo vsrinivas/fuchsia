@@ -17,10 +17,8 @@
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
-#include "src/lib/loader_service/loader_service.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/storage/memfs/memfs.h"
-#include "src/storage/memfs/vnode.h"
 #include "src/storage/memfs/vnode_dir.h"
 
 namespace loader {
@@ -41,14 +39,14 @@ class LoaderServiceTest : public gtest::RealLoopFixture {
       : fs_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
         loader_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
-  virtual void TearDown() override;
+  void TearDown() override;
 
   // Either this or CreateTestDirectory should only be called once per test case. This would be in
   // SetUp but we want to allow test defined directory contents.
   template <typename T>
-  void CreateTestLoader(std::vector<TestDirectoryEntry> config, std::shared_ptr<T>* loader) {
+  void CreateTestLoader(const std::vector<TestDirectoryEntry>& config, std::shared_ptr<T>* loader) {
     fbl::unique_fd root_fd;
-    ASSERT_NO_FATAL_FAILURE(CreateTestDirectory(std::move(config), &root_fd));
+    ASSERT_NO_FATAL_FAILURE(CreateTestDirectory(config, &root_fd));
     const ::testing::TestInfo* const test_info =
         ::testing::UnitTest::GetInstance()->current_test_info();
     *loader = T::Create(loader_loop_.dispatcher(), std::move(root_fd), test_info->name());
@@ -56,23 +54,23 @@ class LoaderServiceTest : public gtest::RealLoopFixture {
 
   // Either this or CreateTestLoader should only be called once per test case. This would be in
   // SetUp but we want to allow test defined directory contents.
-  void CreateTestDirectory(std::vector<TestDirectoryEntry> config, fbl::unique_fd* root_fd);
+  void CreateTestDirectory(const std::vector<TestDirectoryEntry>& config, fbl::unique_fd* root_fd);
 
   // Add a directory entry to the given VnodeDir. Can be used to add entries mid-test case using
   // root_dir() below.
-  void AddDirectoryEntry(const fbl::RefPtr<memfs::VnodeDir>& root, TestDirectoryEntry entry);
+  static void AddDirectoryEntry(const fbl::RefPtr<memfs::VnodeDir>& root, TestDirectoryEntry entry);
 
   // Exercise a LoadObject call and assert that the result matches `expected`.
   //
   // This takes a non-const reference because LLCPP SyncClient's generated methods are non-const.
-  void LoadObject(fidl::WireSyncClient<fuchsia_ldsvc::Loader>& client, std::string name,
-                  zx::result<std::string> expected);
+  static void LoadObject(fidl::WireSyncClient<fuchsia_ldsvc::Loader>& client,
+                         const std::string& name, zx::result<std::string> expected);
 
   // Exercise a Config call and assert that the result matches `expected`.
   //
   // This takes a non-const reference because LLCPP SyncClient's generated methods are non-const.
-  void Config(fidl::WireSyncClient<fuchsia_ldsvc::Loader>& client, std::string config,
-              zx::result<zx_status_t> expected);
+  static void Config(fidl::WireSyncClient<fuchsia_ldsvc::Loader>& client, const std::string& config,
+                     zx::result<zx_status_t> expected);
 
   // Helper function to interact with fuchsia.kernel.VmexResource
   static zx::result<zx::unowned_resource> GetVmexResource();

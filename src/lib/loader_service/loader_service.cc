@@ -18,7 +18,7 @@ namespace loader {
 
 namespace fio = fuchsia_io;
 
-LoaderServiceBase::~LoaderServiceBase() {}
+LoaderServiceBase::~LoaderServiceBase() = default;
 
 const std::string& LoaderServiceBase::log_prefix() {
   if (log_prefix_.empty()) {
@@ -44,7 +44,7 @@ void LoaderServiceBase::Bind(fidl::ServerEnd<fuchsia_ldsvc::Loader> channel) {
   auto conn = std::make_unique<LoaderConnection>(shared_from_this());
   // This returns a ServerBindingRef, but we don't need it since we don't currently need a way
   // to unbind connections from the server side. Dropping it does not automatically unbind.
-  (void)fidl::BindServer(
+  fidl::BindServer(
       dispatcher_, std::move(channel), std::move(conn),
       [](LoaderConnection* connection, fidl::UnbindInfo info,
          fidl::ServerEnd<fuchsia_ldsvc::Loader> server_end) {

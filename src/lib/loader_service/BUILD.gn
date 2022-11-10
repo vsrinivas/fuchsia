@@ -27,11 +27,6 @@ source_set("loader_service") {
     "//src/lib/files",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 # Subclasses of LoaderServiceBase can reuse the test fixture used here.
@@ -41,6 +36,7 @@ source_set("loader_service_test_fixture") {
 
   public_deps = [
     ":loader_service",
+    "//sdk/lib/component/cpp/incoming",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/storage/memfs:lib",
@@ -49,11 +45,6 @@ source_set("loader_service_test_fixture") {
     "//zircon/system/ulib/fbl",
   ]
   deps = [ "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_cpp_wire" ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 executable("loader_service_test") {
@@ -64,11 +55,6 @@ executable("loader_service_test") {
     ":loader_service_test_fixture",
     "//zircon/system/ulib/ldmsg",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 fuchsia_unittest_package("loader-service-test") {

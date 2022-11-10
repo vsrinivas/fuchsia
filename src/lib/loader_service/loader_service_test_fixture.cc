@@ -5,6 +5,7 @@
 #include "src/lib/loader_service/loader_service_test_fixture.h"
 
 #include <fidl/fuchsia.kernel/cpp/wire.h>
+#include <lib/component/cpp/incoming/service_client.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fidl/cpp/wire/string_view.h>
@@ -17,8 +18,10 @@
 
 #include <string_view>
 
-#define ASSERT_OK(expr) ASSERT_EQ(ZX_OK, expr)
-#define EXPECT_OK(expr) EXPECT_EQ(ZX_OK, expr)
+#include "lib/stdcompat/string_view.h"
+
+#define ASSERT_OK(expr) ASSERT_EQ(ZX_OK, expr) << zx_status_get_string(expr)
+#define EXPECT_OK(expr) EXPECT_EQ(ZX_OK, expr) << zx_status_get_string(expr)
 
 namespace loader {
 namespace test {
@@ -45,24 +48,25 @@ void LoaderServiceTest::TearDown() {
   }
 }
 
-void LoaderServiceTest::CreateTestDirectory(std::vector<TestDirectoryEntry> config,
+void LoaderServiceTest::CreateTestDirectory(const std::vector<TestDirectoryEntry>& config,
                                             fbl::unique_fd* root_fd) {
   ASSERT_FALSE(vfs_);
   ASSERT_FALSE(root_dir_);
 
   ASSERT_OK(memfs::Memfs::Create(fs_loop_.dispatcher(), "<tmp>", &vfs_, &root_dir_));
 
-  for (auto entry : config) {
+  for (const auto& entry : config) {
     ASSERT_NO_FATAL_FAILURE(AddDirectoryEntry(root_dir_, entry));
   }
 
-  zx::channel client, server;
-  ASSERT_OK(zx::channel::create(0, &client, &server));
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  ASSERT_OK(endpoints.status_value());
+  auto& [client, server] = endpoints.value();
   ASSERT_OK(vfs_->ServeDirectory(fbl::RefPtr(root_dir_), std::move(server)));
 
   // Must start fs_loop before fdio_fd_create, since that will attempt to Describe the directory.
   ASSERT_OK(fs_loop_.StartThread("fs_loop"));
-  ASSERT_OK(fdio_fd_create(client.release(), root_fd->reset_and_get_address()));
+  ASSERT_OK(fdio_fd_create(client.TakeChannel().release(), root_fd->reset_and_get_address()));
 
   // The loader needs a separate thread from the FS because it uses synchronous fd-based I/O.
   ASSERT_OK(loader_loop_.StartThread("loader_loop"));
@@ -70,7 +74,9 @@ void LoaderServiceTest::CreateTestDirectory(std::vector<TestDirectoryEntry> conf
 
 void LoaderServiceTest::AddDirectoryEntry(const fbl::RefPtr<memfs::VnodeDir>& root,
                                           TestDirectoryEntry entry) {
-  ASSERT_FALSE(entry.path.empty() || entry.path.front() == '/' || entry.path.back() == '/');
+  ASSERT_FALSE(entry.path.empty());
+  ASSERT_FALSE(cpp20::starts_with(std::string_view{entry.path}, '/'));
+  ASSERT_FALSE(cpp20::ends_with(std::string_view{entry.path}, '/'));
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(entry.file_contents.size(), 0, &vmo));
@@ -91,26 +97,25 @@ void LoaderServiceTest::AddDirectoryEntry(const fbl::RefPtr<memfs::VnodeDir>& ro
       ASSERT_FALSE(view.empty());
       ASSERT_OK(dir->CreateFromVmo(view, vmo.release(), 0, entry.file_contents.size()));
       return;
-    } else {
-      // Create subdirectory if it doesn't already exist.
-      std::string_view subdir(view.substr(0, next));
-      ASSERT_FALSE(subdir.empty());
-
-      fbl::RefPtr<fs::Vnode> out;
-      zx_status_t status = dir->Lookup(subdir, &out);
-      if (status == ZX_ERR_NOT_FOUND) {
-        status = dir->Create(subdir, S_IFDIR, &out);
-      }
-      ASSERT_OK(status);
-
-      dir = fbl::RefPtr<memfs::VnodeDir>::Downcast(std::move(out));
-      view.remove_prefix(next + 1);
     }
+    // Create subdirectory if it doesn't already exist.
+    std::string_view subdir(view.substr(0, next));
+    ASSERT_FALSE(subdir.empty());
+
+    fbl::RefPtr<fs::Vnode> out;
+    zx_status_t status = dir->Lookup(subdir, &out);
+    if (status == ZX_ERR_NOT_FOUND) {
+      status = dir->Create(subdir, S_IFDIR, &out);
+    }
+    ASSERT_OK(status);
+
+    dir = fbl::RefPtr<memfs::VnodeDir>::Downcast(std::move(out));
+    view.remove_prefix(next + 1);
   }
 }
 
-void LoaderServiceTest::LoadObject(fidl::WireSyncClient<fldsvc::Loader>& client, std::string name,
-                                   zx::result<std::string> expected) {
+void LoaderServiceTest::LoadObject(fidl::WireSyncClient<fldsvc::Loader>& client,
+                                   const std::string& name, zx::result<std::string> expected) {
   auto result = client->LoadObject(fidl::StringView::FromExternal(name));
   ASSERT_TRUE(result.ok());
   auto response = result.Unwrap();
@@ -132,8 +137,8 @@ void LoaderServiceTest::LoadObject(fidl::WireSyncClient<fldsvc::Loader>& client,
   }
 }
 
-void LoaderServiceTest::Config(fidl::WireSyncClient<fldsvc::Loader>& client, std::string config,
-                               zx::result<zx_status_t> expected) {
+void LoaderServiceTest::Config(fidl::WireSyncClient<fldsvc::Loader>& client,
+                               const std::string& config, zx::result<zx_status_t> expected) {
   auto result = client->Config(fidl::StringView::FromExternal(config));
   ASSERT_EQ(result.status(), expected.status_value());
   if (expected.is_ok()) {
@@ -145,18 +150,11 @@ void LoaderServiceTest::Config(fidl::WireSyncClient<fldsvc::Loader>& client, std
 zx::result<zx::unowned_resource> LoaderServiceTest::GetVmexResource() {
   static zx::resource vmex_resource;
   if (!vmex_resource.is_valid()) {
-    zx::channel client, server;
-    auto status = zx::make_result(zx::channel::create(0, &client, &server));
-    if (status.is_error()) {
-      return status.take_error();
+    zx::result client = component::Connect<fkernel::VmexResource>();
+    if (client.is_error()) {
+      return client.take_error();
     }
-    status = zx::make_result(fdio_service_connect(
-        fidl::DiscoverableProtocolDefaultPath<fkernel::VmexResource>, server.release()));
-    if (status.is_error()) {
-      return status.take_error();
-    }
-
-    auto result = fidl::WireCall<fkernel::VmexResource>(client.borrow())->Get();
+    fidl::WireResult result = fidl::WireCall(client.value())->Get();
     if (!result.ok()) {
       return zx::error(result.status());
     }
