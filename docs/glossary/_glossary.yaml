@@ -48,8 +48,7 @@
   inclusion together into the assembled product. All AIBs other than the Legacy AIBs are \"platform
   AIBs\".<p>"
   see_also: ["<a href=\"/docs/glossary#software-assembly\">Software Assembly</a>",
-  "<a href=\"legacy-assembly-input-bundle\">Legacy AIB</a>"
-  ]
+   "<a href=\"legacy-assembly-input-bundle\">Legacy AIB</a>"]
   related_guides: [""]
   area: ["Software Assembly", "Developer"]
 
@@ -814,10 +813,8 @@
   is subject to rapid iteration, as it is consumed only by the Software Assembly team."
   see_also: [""]
   related_guides: [
-  "<a href=
-  \"https://cs.opensource.google/fuchsia/fuchsia/+/main:src/developer/ffx/plugins/assembly/;l=1;\
-  drc=fdfc80d4f9295e3b078158b435054a5c497a9479?q=src%2Fdeveloper%2Fffx%2Fplugins%2Fassembly%2F&sq=&ss=fuchsia\"
-  >Product and Image Assembly</a>"]
+    "<a href=\"https://cs.opensource.google/fuchsia/fuchsia/+/main:src/developer/ffx/plugins/assembly\">
+    Product and Image Assembly</a>"]
   area: ["Software Assembly"]
 
 - term: "In-tree"
@@ -965,7 +962,7 @@
   platform features and product code lack the support in Assembly to define them inside the Assembly
   Config, therefore we invented a temporary solution.<p>"
   see_also: ["<a href=\"/docs/glossary#assembly-input-bundle-(aib)\">Assembly Input Bundle (AIB)</a>",
-  "<a href=\"/docs/glossary#assembly-config\">Assembly Config</a>"]
+   "<a href=\"/docs/glossary#assembly-config\">Assembly Config</a>"]
   related_guides: [""]
   area: ["Software Assembly", "Developer"]
 
@@ -1331,6 +1328,8 @@
             "<a href=\"assembly-input-bundle-(aib)\">Assembly Input Bundles (AIB)</a>",
             "<a href=\"legacy-assembly-input-bundle\">Legacy AIB</a>"
   ]
+  related_guides: [""]
+  area: [""]
 
 - term: "Starnix"
   short_description: "A <a href=\"/docs/glossary#runner\">runner</a> that allows
