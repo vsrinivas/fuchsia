@@ -286,7 +286,7 @@ impl DisplayMetrics {
     const GOOGLE_PIXELBOOK_DENSITY: f32 = 9.252;
 
     /// The display pixel density used for a Google Pixelbook Go with a 2K display.
-    const GOOGLE_PIXELBOOK_GO_2K_DENSITY: f32 = 6.5354;
+    const GOOGLE_PIXELBOOK_GO_2K_DENSITY: f32 = 4.1725;
 
     /// The display pixel density used for a Google Pixelbook Go with a 4K display.
     const GOOGLE_PIXELBOOK_GO_4K_DENSITY: f32 = 8.345;
@@ -334,6 +334,7 @@ impl DisplayMetrics {
         match (size_in_pixels.width as u32, size_in_pixels.height as u32) {
             DisplayMetrics::ACER_SWITCH_12_ALPHA_DIMENSIONS => ViewingDistance::Close,
             DisplayMetrics::GOOGLE_PIXELBOOK_DIMENSIONS => ViewingDistance::Close,
+            DisplayMetrics::GOOGLE_PIXELBOOK_GO_2K_DIMENSIONS => ViewingDistance::Near,
             DisplayMetrics::GOOGLE_PIXELBOOK_GO_4K_DIMENSIONS => ViewingDistance::Near,
             DisplayMetrics::MONITOR_24_IN_DIMENSIONS => ViewingDistance::Near,
             DisplayMetrics::MONITOR_27_IN_2K_DIMENSIONS => ViewingDistance::Near,
