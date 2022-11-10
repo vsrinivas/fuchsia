@@ -19,6 +19,7 @@ import (
 	"go.fuchsia.dev/fuchsia/zircon/tools/zither/asm"
 	"go.fuchsia.dev/fuchsia/zircon/tools/zither/c"
 	"go.fuchsia.dev/fuchsia/zircon/tools/zither/golang"
+	"go.fuchsia.dev/fuchsia/zircon/tools/zither/kernel"
 	"go.fuchsia.dev/fuchsia/zircon/tools/zither/zircon_ifs"
 )
 
@@ -27,9 +28,16 @@ const (
 	goBackend        string = "go"
 	asmBackend       string = "asm"
 	zirconIFSBackend string = "zircon_ifs"
+	kernelBackend    string = "kernel"
 )
 
-var supportedBackends = []string{cBackend, goBackend, asmBackend, zirconIFSBackend}
+var supportedBackends = []string{
+	cBackend,
+	goBackend,
+	asmBackend,
+	zirconIFSBackend,
+	kernelBackend,
+}
 
 // Flag values, grouped into a struct to be kept out of the global namespace.
 var flags struct {
@@ -74,6 +82,8 @@ func main() {
 		gen = golang.NewGenerator(f)
 	case zirconIFSBackend:
 		gen = zircon_ifs.NewGenerator(f)
+	case kernelBackend:
+		gen = kernel.NewInternalGenerator(f)
 	default:
 		logger.Errorf(ctx, "unrecognized `-backend` value: %q", flags.backend)
 		os.Exit(1)

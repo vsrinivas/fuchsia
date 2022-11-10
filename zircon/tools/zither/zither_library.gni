@@ -13,6 +13,7 @@ supported_zither_backends = [
   "c",  # C data layout bindings.
   "go",  # Go data layout bindings.
   "zircon_ifs",  # Syscall text ABI bindings.
+  "kernel",  # Internal kernel bindings.
 ]
 
 _clang_format = {
@@ -115,6 +116,18 @@ supported_zither_backend_info = {
     output_subdir = {
     }
     _library_template = "_zither_zircon_ifs_file"
+  }
+
+  kernel = {
+    formatter = _clang_format
+    output_subdir = {
+      prefix_parts = [
+        "lib",
+        "syscalls",
+      ]
+    }
+
+    _library_template = "_zither_kernel_sources"
   }
 }
 
@@ -401,6 +414,51 @@ template("_zither_zircon_ifs_file") {
   }
 }
 
+template("_zither_kernel_sources") {
+  assert(invoker.backend == "kernel")
+
+  main_target = target_name
+  zither_target = "$target_name.gen"
+
+  not_needed(invoker, [ "source_names" ])
+
+  forward_variables_from(invoker,
+                         [
+                           "output_dir",
+                           "output_subdir",
+                         ])
+  generated_files = [ "$output_dir/${output_subdir}/zx-syscall-numbers.h" ]
+
+  _zither(zither_target) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                             "deps",
+                             "backend",
+                             "fidl_ir_json",
+                             "fidl_ir_target",
+                             "generated_files",
+                             "formatter",
+                           ])
+  }
+
+  library_headers(main_target) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                             "generated_files",
+                           ])
+    include_dir = output_dir
+    headers = rebase_path(generated_files, include_dir)
+    deps = [
+      ":${zither_target}($default_toolchain)",
+      ":${zither_target}.check($default_toolchain)",
+    ]
+  }
+}
+
 # Define a full set of per-backend targets for a Zither library.
 #
 # `zither_library()` is meant to be instantiated within `fidl()`. It consumes
@@ -431,6 +489,14 @@ template("_zither_zircon_ifs_file") {
 #     A dependency generating a "zircon.ifs" (i.e., a text ABI specification of
 #     libzircon.so). The file is intended to be accessed via
 #     `zither_golden_files()` and checked in as source.
+#
+#   * kernel: ${target_name}.kernel
+#     A C++ library target for the kernel with the following headers:
+#       - <lib/syscalls/category.inc>: TODO(fxbug.dev/110295).
+#       - <lib/syscalls/kernel-wrappers.inc>: TODO(fxbug.dev/110295).
+#       - <lib/syscalls/kernel.inc>: TODO(fxbug.dev/110295).
+#       - <lib/syscalls/zx-syscall-numbers.h>: `#define`s of syscall numbers.
+#       - <lib/syscalls/syscalls.h>: TODO(fxbug.dev/110295).
 #
 # Parameters:
 #

@@ -50,6 +50,7 @@ if (is_host) {
       "asm",
       "c",
       "golang",
+      "kernel",
       "zircon_ifs",
       "//tools/fidl/lib/fidlgen",
       "//tools/lib/color",
@@ -198,12 +199,16 @@ template("zither_golden_test") {
     case_output_dir = "$target_gen_dir/${target_name}-${case.backend}"
 
     # Now verify that the bindings give valid code.
-    if (case.backend == "c" || case.backend == "asm") {
+    if (case.backend == "c" || case.backend == "asm" ||
+        case.backend == "kernel") {
       create_source_target = "${compilation_check_target}.create_source"
 
-      suffix = case.backend
-      if (case.backend == "asm") {
+      if (case.backend == "c") {
+        suffix = "c"
+      } else if (case.backend == "asm") {
         suffix = "S"
+      } else {
+        suffix = "cc"
       }
       source = "$case_output_dir/compile-check.$suffix"
       action(create_source_target) {
@@ -479,6 +484,10 @@ zither_golden_test("syscalls") {
     {
       backend = "zircon_ifs"
       files = [ "zircon.ifs" ]
+    },
+    {
+      backend = "kernel"
+      files = [ "zx-syscall-numbers.h" ]
     },
   ]
 }

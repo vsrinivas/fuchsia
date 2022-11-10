@@ -38,7 +38,7 @@ func (gen *Generator) Generate(summaries []zither.FileSummary, outputDir string)
 			}
 			family := decl.AsSyscallFamily()
 			for _, syscall := range family.Syscalls {
-				if syscall.Internal {
+				if syscall.IsInternal() {
 					continue
 				}
 				name := "zx_" + zither.LowerCaseWithUnderscores(syscall)

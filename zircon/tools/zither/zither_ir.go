@@ -851,6 +851,27 @@ type SyscallFamily struct {
 	Syscalls []Syscall
 }
 
+// SyscallCategory gives a categorization of syscalls.
+type SyscallCategory string
+
+const (
+	// SyscallCategoryBasic indicates the basic, unqualified category of
+	// syscalls (which is the majority).
+	SyscallCategoryBasic SyscallCategory = ""
+
+	// SyscallCategoryInternal indicates that the syscall is not part of public
+	// ABI.
+	//
+	// See the definition of @internal in //zircon/vdso/README.md.
+	SyscallCategoryInternal SyscallCategory = "internal"
+
+	// SyscallVCategoryVdsocall indicates that the syscall is not a true
+	// syscall and is actually implemented within the vDSO.
+	//
+	// See the definition of @vdsocall in //zircon/vdso/README.md.
+	SyscallCategoryVdsoCall SyscallCategory = "vdsocall"
+)
+
 // Syscall corresponds to an individual syscall.
 //
 // `Name` includes the family namespacing of the syscall (i.e., "PortWait"
@@ -858,10 +879,13 @@ type SyscallFamily struct {
 type Syscall struct {
 	member
 
-	// Internal gives whether the syscall is part of the public ABI.
-	// See the definition of @internal in //zircon/vdso/README.md.
-	Internal bool
+	// Category gives the syscall's category.
+	Category SyscallCategory
 }
+
+func (syscall Syscall) IsInternal() bool { return syscall.Category == SyscallCategoryInternal }
+
+func (syscall Syscall) IsVdsoCall() bool { return syscall.Category == SyscallCategoryVdsoCall }
 
 func newSyscallFamily(protocol fidlgen.Protocol) (*SyscallFamily, error) {
 	if _, ok := protocol.Transports()["Syscall"]; !ok {
@@ -876,13 +900,25 @@ func newSyscallFamily(protocol fidlgen.Protocol) (*SyscallFamily, error) {
 	// See @no_protocol_prefix in //zircon/vdso/README.md
 	_, noProtocolPrefix := protocol.LookupAttribute("no_protocol_prefix")
 	for _, method := range protocol.Methods {
-		_, internal := method.LookupAttribute("internal")
+
 		syscall := Syscall{
 			member:   newMember(method),
-			Internal: internal,
+			Category: SyscallCategoryBasic,
 		}
 		if !noProtocolPrefix {
 			syscall.member.Name = family.Name.DeclarationName() + syscall.member.Name
+		}
+		for _, cat := range []SyscallCategory{
+			SyscallCategoryInternal,
+			SyscallCategoryVdsoCall,
+		} {
+			if _, ok := method.LookupAttribute(fidlgen.Identifier(cat)); !ok {
+				continue
+			}
+			if syscall.Category != SyscallCategoryBasic {
+				return nil, fmt.Errorf("syscall %s cannot be annotated with both @%s and @%s", syscall.Name, syscall.Category, cat)
+			}
+			syscall.Category = cat
 		}
 		family.Syscalls = append(family.Syscalls, syscall)
 	}

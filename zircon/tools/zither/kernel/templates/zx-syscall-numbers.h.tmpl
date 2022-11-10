@@ -1,0 +1,22 @@
+{{- define "Generate-zx-syscall-numbers.h" -}}
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// DO NOT EDIT. Generated from FIDL library zx by zither, a Fuchsia platform tool.
+
+{{ $guard := "LIB_SYSCALLS_ZX_SYSCALL_NUMBERS_H_" }}
+#ifndef {{ $guard }}
+#define {{ $guard }}
+
+{{- $count := 0 }}
+{{ range . }}
+{{- if not .IsVdsoCall }}
+#define ZX_SYS_{{ LowerCaseWithUnderscores . }} {{ $count }}
+{{- $count = Increment $count }}
+{{- end }}
+{{- end }}
+#define ZX_SYS_COUNT {{ $count }}
+
+#endif  // {{ $guard }}
+{{ end }}

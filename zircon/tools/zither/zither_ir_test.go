@@ -1023,7 +1023,7 @@ protocol Arbitrary {
 					member: member{
 						Name: "FooBaz",
 					},
-					Internal: true,
+					Category: SyscallCategoryInternal,
 				},
 			},
 		},
