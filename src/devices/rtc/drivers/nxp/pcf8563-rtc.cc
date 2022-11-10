@@ -2,120 +2,131 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fuchsia.hardware.rtc/cpp/wire.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <librtc.h>
-#include <librtc_llcpp.h>
+#include <librtc_c.h>
 #include <stdlib.h>
-
-#include <ddktl/device.h>
+#include <zircon/assert.h>
 
 #include "src/devices/rtc/drivers/nxp/pcf8563_rtc_bind.h"
 
-namespace FidlRtc = rtc::FidlRtc;
+typedef struct {
+  ddk::I2cChannel i2c;
+} pcf8563_context;
 
-class pcf8563;
-using DeviceType = ddk::Device<pcf8563, ddk::Messageable<FidlRtc::Device>::Mixin>;
+static zx_status_t pcf8563_rtc_get(void* ctx, fuchsia_hardware_rtc_Time* rtc) {
+  ZX_DEBUG_ASSERT(ctx);
 
-class pcf8563 : public DeviceType {
- public:
-  pcf8563(zx_device_t* parent, ddk::I2cChannel i2c) : DeviceType(parent), i2c_(std::move(i2c)) {}
-  void DdkRelease() { delete this; }
-
-  zx::result<FidlRtc::wire::Time> Read() {
-    uint8_t write_buf[] = {0x02};
-    uint8_t read_buf[7];
-    if (zx_status_t status =
-            i2c_.WriteReadSync(write_buf, sizeof(write_buf), read_buf, sizeof(read_buf));
-        status != ZX_OK) {
-      return zx::error(status);
-    }
-    return zx::ok(FidlRtc::wire::Time{
-        .seconds = from_bcd(read_buf[0] & 0x7f),
-        .minutes = from_bcd(read_buf[1] & 0x7f),
-        .hours = from_bcd(read_buf[2] & 0x3f),
-        .day = from_bcd(read_buf[3] & 0x3f),
-        .month = from_bcd(read_buf[5] & 0x1f),
-        .year = static_cast<uint16_t>(((read_buf[5] & 0x80) ? 2000 : 1900) + from_bcd(read_buf[6])),
-    });
+  pcf8563_context* context = (pcf8563_context*)ctx;
+  uint8_t write_buf[] = {0x02};
+  uint8_t read_buf[7];
+  zx_status_t err =
+      context->i2c.WriteReadSync(write_buf, sizeof write_buf, read_buf, sizeof read_buf);
+  if (err) {
+    return err;
   }
 
-  void Get(GetCompleter::Sync& completer) override {
-    if (zx::result result = Read(); result.is_error()) {
-      completer.Close(result.status_value());
-    } else {
-      completer.Reply(result.value());
-    }
+  rtc->seconds = from_bcd(read_buf[0] & 0x7f);
+  rtc->minutes = from_bcd(read_buf[1] & 0x7f);
+  rtc->hours = from_bcd(read_buf[2] & 0x3f);
+  rtc->day = from_bcd(read_buf[3] & 0x3f);
+  rtc->month = from_bcd(read_buf[5] & 0x1f);
+  rtc->year = ((read_buf[5] & 0x80) ? 2000 : 1900) + from_bcd(read_buf[6]);
+
+  return ZX_OK;
+}
+
+static zx_status_t pcf8563_rtc_set(void* ctx, const fuchsia_hardware_rtc_Time* rtc) {
+  ZX_DEBUG_ASSERT(ctx);
+
+  // An invalid time was supplied.
+  if (rtc_is_invalid(rtc)) {
+    return ZX_ERR_OUT_OF_RANGE;
   }
 
-  zx::result<> Write(FidlRtc::wire::Time rtc) {
-    // An invalid time was supplied.
-    if (rtc::IsRtcValid(rtc)) {
-      return zx::error(ZX_ERR_OUT_OF_RANGE);
-    }
+  int year = rtc->year;
+  uint8_t century = (year < 2000) ? 0 : 0x80;
+  if (century) {
+    year -= 2000;
+  } else {
+    year -= 1900;
+  }
+  ZX_DEBUG_ASSERT(year < 100);
 
-    int year = rtc.year;
-    uint8_t century = (year < 2000) ? 0 : 0x80;
-    if (century) {
-      year -= 2000;
-    } else {
-      year -= 1900;
-    }
-    ZX_DEBUG_ASSERT(year < 100);
+  uint8_t write_buf[] = {0x02,
+                         to_bcd(rtc->seconds),
+                         to_bcd(rtc->minutes),
+                         to_bcd(rtc->hours),
+                         to_bcd(rtc->day),
+                         0,  // day of week
+                         (uint8_t)(century | to_bcd(rtc->month)),
+                         to_bcd((uint8_t)year)};
 
-    uint8_t write_buf[] = {
-        0x02,
-        to_bcd(rtc.seconds),
-        to_bcd(rtc.minutes),
-        to_bcd(rtc.hours),
-        to_bcd(rtc.day),
-        0,  // day of week
-        static_cast<uint8_t>(century | to_bcd(rtc.month)),
-        to_bcd(static_cast<uint8_t>(year)),
-    };
-
-    return zx::make_result(i2c_.WriteReadSync(write_buf, sizeof(write_buf), nullptr, 0));
+  pcf8563_context* context = (pcf8563_context*)ctx;
+  zx_status_t err = context->i2c.WriteReadSync(write_buf, sizeof write_buf, NULL, 0);
+  if (err) {
+    return err;
   }
 
-  void Set(SetRequestView request, SetCompleter::Sync& completer) override {
-    completer.Reply(Write(request->rtc).status_value());
-  }
+  return ZX_OK;
+}
 
- private:
-  ddk::I2cChannel i2c_;
+static zx_status_t fidl_Get(void* ctx, fidl_txn_t* txn) {
+  fuchsia_hardware_rtc_Time rtc;
+  pcf8563_rtc_get(ctx, &rtc);
+  return fuchsia_hardware_rtc_DeviceGet_reply(txn, &rtc);
+}
+
+static zx_status_t fidl_Set(void* ctx, const fuchsia_hardware_rtc_Time* rtc, fidl_txn_t* txn) {
+  zx_status_t status = pcf8563_rtc_set(ctx, rtc);
+  return fuchsia_hardware_rtc_DeviceSet_reply(txn, status);
+}
+
+static fuchsia_hardware_rtc_Device_ops_t fidl_ops = {
+    .Get = fidl_Get,
+    .Set = fidl_Set,
 };
 
-static zx_status_t pcf8563_bind(void* ctx, zx_device_t* parent) {
-  ddk::I2cChannel i2c(parent);
-  if (!i2c.is_valid()) {
-    zxlogf(ERROR, "%s: failed to acquire i2c", __FUNCTION__);
-    return ZX_ERR_NO_RESOURCES;
-  }
+static zx_status_t pcf8563_rtc_message(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
+  return fuchsia_hardware_rtc_Device_dispatch(ctx, txn, msg, &fidl_ops);
+}
 
-  std::unique_ptr rtc = std::make_unique<pcf8563>(parent, std::move(i2c));
-  if (rtc == nullptr) {
-    zxlogf(ERROR, "%s: failed to create device", __FUNCTION__);
+static zx_protocol_device_t pcf8563_rtc_device_proto = {.version = DEVICE_OPS_VERSION,
+                                                        .message = pcf8563_rtc_message};
+
+static zx_status_t pcf8563_bind(void* ctx, zx_device_t* parent) {
+  pcf8563_context* context = (pcf8563_context*)calloc(1, sizeof *context);
+  if (!context) {
+    zxlogf(ERROR, "%s: failed to create device context", __FUNCTION__);
     return ZX_ERR_NO_MEMORY;
   }
 
-  zx::result time = rtc->Read();
-  if (time.is_error()) {
-    zxlogf(ERROR, "%s: failed to read clock", __FUNCTION__);
-    return time.status_value();
-  }
-  if (zx::result result = rtc->Write(rtc::SanitizeRtc(parent, time.value())); result.is_error()) {
-    zxlogf(ERROR, "%s: failed to write clock", __FUNCTION__);
-    return result.status_value();
+  context->i2c = ddk::I2cChannel(parent);
+  if (!context->i2c.is_valid()) {
+    zxlogf(ERROR, "%s: failed to acquire i2c", __FUNCTION__);
+    free(context);
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  if (zx_status_t status = rtc->DdkAdd(ddk::DeviceAddArgs("rtc").set_proto_id(ZX_PROTOCOL_RTC));
-      status != ZX_OK) {
+  device_add_args_t args = {.version = DEVICE_ADD_ARGS_VERSION,
+                            .name = "rtc",
+                            .ctx = context,
+                            .ops = &pcf8563_rtc_device_proto,
+                            .proto_id = ZX_PROTOCOL_RTC};
+
+  zx_device_t* dev;
+  zx_status_t status = device_add(parent, &args, &dev);
+  if (status != ZX_OK) {
+    free(context);
     return status;
   }
 
-  // We've passed ownership to the framework.
-  __UNUSED pcf8563* ptr = rtc.release();
-
+  fuchsia_hardware_rtc_Time rtc;
+  sanitize_rtc(context, parent, &rtc, pcf8563_rtc_get, pcf8563_rtc_set);
   return ZX_OK;
 }
 
