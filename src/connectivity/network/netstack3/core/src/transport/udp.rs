@@ -583,6 +583,7 @@ impl<A: IpAddress, D: Clone + Debug> From<ConnAddr<A, D, NonZeroU16, NonZeroU16>
 
 /// Information associated with a UDP listener
 #[derive(GenericOverIp)]
+#[cfg_attr(test, derive(Debug, Eq, PartialEq))]
 pub struct UdpListenerInfo<A: IpAddress, D> {
     /// The local address associated with a UDP listener, or `None` for any
     /// address.
@@ -3499,6 +3500,46 @@ mod tests {
         assert_eq!(pkt.dst_ip, local_ip_b.get());
         assert_eq!(pkt.src_port.unwrap(), remote_port);
         assert_eq!(pkt.body, &body[..]);
+    }
+
+    #[ip_test]
+    #[test_case(nonzero!(u16::MAX), Ok(nonzero!(u16::MAX)); "ephemeral available")]
+    #[test_case(nonzero!(100u16), Err(LocalAddressError::FailedToAllocateLocalPort);
+        "no ephemeral available")]
+    fn test_bind_picked_port_all_others_taken<I: Ip + TestIpExt>(
+        available_port: NonZeroU16,
+        expected_result: Result<NonZeroU16, LocalAddressError>,
+    ) {
+        set_logger_for_test();
+        let UdpFakeDeviceCtx { mut sync_ctx, mut non_sync_ctx } =
+            UdpFakeDeviceCtx::with_sync_ctx(UdpFakeDeviceSyncCtx::<I>::default());
+
+        for port in 1..=u16::MAX {
+            let port = NonZeroU16::new(port).unwrap();
+            if port == available_port {
+                continue;
+            }
+            let unbound = UdpSocketHandler::create_udp_unbound(&mut sync_ctx);
+            let _listener = UdpSocketHandler::listen_udp(
+                &mut sync_ctx,
+                &mut non_sync_ctx,
+                unbound,
+                None,
+                Some(port),
+            )
+            .expect("uncontested bind");
+        }
+
+        // Now that all but the LOCAL_PORT are occupied, ask the stack to
+        // select a port.
+        let unbound = UdpSocketHandler::create_udp_unbound(&mut sync_ctx);
+        let result =
+            UdpSocketHandler::listen_udp(&mut sync_ctx, &mut non_sync_ctx, unbound, None, None)
+                .map(|listener| {
+                    UdpSocketHandler::get_udp_listener_info(&sync_ctx, &mut non_sync_ctx, listener)
+                        .local_port
+                });
+        assert_eq!(result, expected_result);
     }
 
     #[ip_test]

@@ -131,10 +131,12 @@ pub(crate) trait SocketMapStateSpec {
     type ConnSharingState: Clone + Debug;
 
     /// The state stored for a listener socket address.
-    type ListenerAddrState: Debug;
+    type ListenerAddrState: SocketMapAddrStateSpec<Id = Self::ListenerId, SharingState = Self::ListenerSharingState>
+        + Debug;
 
     /// The state stored for a connected socket address.
-    type ConnAddrState: Debug;
+    type ConnAddrState: SocketMapAddrStateSpec<Id = Self::ConnId, SharingState = Self::ConnSharingState>
+        + Debug;
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -158,6 +160,13 @@ pub(crate) trait SocketMapAddrStateSpec {
         &'b mut self,
         new_sharing_state: &'a Self::SharingState,
     ) -> Result<&'b mut Vec<Self::Id>, IncompatibleError>;
+
+    /// Returns `Ok` if an entry with the given sharing state could be added
+    /// to `self`.
+    ///
+    /// If this returns `Ok`, `try_get_dest` should succeed.
+    fn could_insert(&self, new_sharing_state: &Self::SharingState)
+        -> Result<(), IncompatibleError>;
 
     /// Removes the given socket from the existing state.
     ///
@@ -404,7 +413,7 @@ impl<
         State,
         SharingState,
         Addr: Debug,
-        AddrState: Debug,
+        AddrState: SocketMapAddrStateSpec<SharingState = SharingState> + Debug,
         Convert: ConvertSocketTypeState<A, S, Addr, AddrState>,
         A: SocketMapAddrSpec,
         S: SocketMapStateSpec,
@@ -441,7 +450,12 @@ where
 
     fn could_insert(self, addr: &Addr, sharing: &SharingState) -> Result<(), InsertError> {
         let Self(_, addr_to_state, _) = self;
-        S::check_for_conflicts(&sharing, &addr, &addr_to_state)
+        match self.get_by_addr(addr) {
+            Some(state) => {
+                state.could_insert(sharing).map_err(|IncompatibleError| InsertError::Exists)
+            }
+            None => S::check_for_conflicts(&sharing, &addr, &addr_to_state),
+        }
     }
 }
 
@@ -666,6 +680,8 @@ where
             <S as SocketMapStateSpec>::ListenerSharingState,
             A,
         >,
+        S::ListenerAddrState:
+            SocketMapAddrStateSpec<Id = S::ListenerId, SharingState = S::ListenerSharingState>,
     {
         let Self { listener_id_to_sock, conn_id_to_sock: _, addr_to_state } = self;
         Sockets::<_, _, S::ListenerId, S::ListenerAddrState, Self>(
@@ -717,6 +733,8 @@ where
             <S as SocketMapStateSpec>::ConnSharingState,
             A,
         >,
+        S::ConnAddrState:
+            SocketMapAddrStateSpec<Id = S::ConnId, SharingState = S::ConnSharingState>,
     {
         let Self { listener_id_to_sock: _, conn_id_to_sock, addr_to_state } = self;
         Sockets::<_, _, S::ConnId, S::ConnAddrState, Self>(
@@ -987,7 +1005,15 @@ mod tests {
             new_state: &'a char,
         ) -> Result<&'b mut Vec<I>, IncompatibleError> {
             let Self(c, v) = self;
-            (new_state == c).then(|| v).ok_or(IncompatibleError)
+            (new_state == c).then_some(v).ok_or(IncompatibleError)
+        }
+
+        fn could_insert(
+            &self,
+            new_sharing_state: &Self::SharingState,
+        ) -> Result<(), IncompatibleError> {
+            let Self(c, _) = self;
+            (new_sharing_state == c).then_some(()).ok_or(IncompatibleError)
         }
 
         fn remove_by_id(&mut self, id: I) -> RemoveResult {

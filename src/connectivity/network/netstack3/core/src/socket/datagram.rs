@@ -1667,6 +1667,12 @@ mod test {
         ) -> Result<&'b mut Vec<Self::Id>, IncompatibleError> {
             Err(IncompatibleError)
         }
+        fn could_insert(
+            &self,
+            _new_sharing_state: &Self::SharingState,
+        ) -> Result<(), IncompatibleError> {
+            Err(IncompatibleError)
+        }
         fn remove_by_id(&mut self, _id: Self::Id) -> RemoveResult {
             RemoveResult::IsLast
         }

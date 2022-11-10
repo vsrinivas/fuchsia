@@ -26,9 +26,9 @@ use crate::{
 /// [`SocketMapStateSpec`].
 pub(crate) trait PosixSocketStateSpec: Sized {
     /// An identifier for a listening socket.
-    type ListenerId: Clone + Into<usize> + From<usize> + Debug + PartialEq;
+    type ListenerId: Clone + Into<usize> + From<usize> + Debug + Eq;
     /// An identifier for a connected socket.
-    type ConnId: Clone + Into<usize> + From<usize> + Debug + PartialEq;
+    type ConnId: Clone + Into<usize> + From<usize> + Debug + Eq;
 
     /// The state for a listening socket.
     type ListenerState: Debug;
@@ -113,7 +113,7 @@ impl<A: SocketMapAddrSpec> IterShadows for AddrVec<A> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub(crate) enum PosixAddrState<T> {
     Exclusive(T),
     // TODO(https://fxbug.dev/97822): Remove this when Bindings support for setting this is added.
@@ -263,6 +263,19 @@ impl<I: Debug + Eq> SocketMapAddrStateSpec for PosixAddrState<I> {
             PosixAddrState::ReusePort(ids) => match new_sharing_state {
                 PosixSharingOptions::Exclusive => Err(IncompatibleError),
                 PosixSharingOptions::ReusePort => Ok(ids),
+            },
+        }
+    }
+
+    fn could_insert(
+        &self,
+        new_sharing_state: &Self::SharingState,
+    ) -> Result<(), IncompatibleError> {
+        match self {
+            PosixAddrState::Exclusive(_) => Err(IncompatibleError),
+            PosixAddrState::ReusePort(_) => match new_sharing_state {
+                PosixSharingOptions::Exclusive => Err(IncompatibleError),
+                PosixSharingOptions::ReusePort => Ok(()),
             },
         }
     }

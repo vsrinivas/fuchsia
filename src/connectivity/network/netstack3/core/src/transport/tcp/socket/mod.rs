@@ -307,7 +307,8 @@ impl<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext> PortAllocImpl
 
         // A port is free if there are no sockets currently using it, and if
         // there are no sockets that are shadowing it.
-        root_addr.iter_shadows().all(|a| match &a {
+
+        root_addr.iter_shadows().chain(core::iter::once(root_addr.clone())).all(|a| match &a {
             AddrVec::Listen(l) => self.listeners().get_by_addr(&l).is_none(),
             AddrVec::Conn(_c) => {
                 unreachable!("no connection shall be included in an iteration from a listener")
@@ -489,6 +490,13 @@ impl SocketMapAddrStateSpec for MaybeListenerId {
     ) -> Result<&'b mut Vec<MaybeListenerId>, IncompatibleError> {
         Err(IncompatibleError)
     }
+
+    fn could_insert(
+        &self,
+        _new_sharing_state: &Self::SharingState,
+    ) -> Result<(), IncompatibleError> {
+        Err(IncompatibleError)
+    }
 }
 
 impl SocketMapAddrStateSpec for MaybeClosedConnectionId {
@@ -508,6 +516,13 @@ impl SocketMapAddrStateSpec for MaybeClosedConnectionId {
         &'b mut self,
         (): &'a (),
     ) -> Result<&'b mut Vec<MaybeClosedConnectionId>, IncompatibleError> {
+        Err(IncompatibleError)
+    }
+
+    fn could_insert(
+        &self,
+        _new_sharing_state: &Self::SharingState,
+    ) -> Result<(), IncompatibleError> {
         Err(IncompatibleError)
     }
 }
@@ -975,6 +990,7 @@ where
 
 /// Possible errors for the bind operation.
 #[derive(Debug)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
 pub enum BindError {
     /// The local address does not belong to us.
     NoLocalAddr,
@@ -1926,6 +1942,51 @@ mod tests {
             Some(PORT_2),
         )
         .expect("able to rebind to a free address");
+    }
+    #[ip_test]
+    #[test_case(nonzero!(u16::MAX), Ok(nonzero!(u16::MAX)); "ephemeral available")]
+    #[test_case(nonzero!(100u16), Err(BindError::NoPort); "no ephemeral available")]
+    fn bind_picked_port_all_others_taken<I: Ip + TcpTestIpExt>(
+        available_port: NonZeroU16,
+        expected_result: Result<NonZeroU16, BindError>,
+    ) {
+        set_logger_for_test();
+        let TcpCtx { mut sync_ctx, mut non_sync_ctx } =
+            TcpCtx::<I>::with_sync_ctx(TcpSyncCtx::new(
+                I::FAKE_CONFIG.local_ip,
+                I::FAKE_CONFIG.local_ip,
+                I::FAKE_CONFIG.subnet.prefix(),
+            ));
+        for port in 1..=u16::MAX {
+            let port = NonZeroU16::new(port).unwrap();
+            if port == available_port {
+                continue;
+            }
+            let unbound = TcpSocketHandler::create_socket(&mut sync_ctx, &mut non_sync_ctx);
+            let bound = TcpSocketHandler::bind(
+                &mut sync_ctx,
+                &mut non_sync_ctx,
+                unbound,
+                I::UNSPECIFIED_ADDRESS,
+                Some(port),
+            )
+            .expect("uncontested bind");
+            let _listener =
+                TcpSocketHandler::listen(&mut sync_ctx, &mut non_sync_ctx, bound, nonzero!(1usize));
+        }
+
+        // Now that all but the LOCAL_PORT are occupied, ask the stack to
+        // select a port.
+        let unbound = TcpSocketHandler::create_socket(&mut sync_ctx, &mut non_sync_ctx);
+        let result = TcpSocketHandler::bind(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            unbound,
+            I::UNSPECIFIED_ADDRESS,
+            None,
+        )
+        .map(|bound| TcpSocketHandler::get_bound_info(&sync_ctx, bound).port);
+        assert_eq!(result, expected_result);
     }
 
     #[ip_test]
