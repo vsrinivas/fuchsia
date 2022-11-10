@@ -359,12 +359,16 @@ void FunctionCallExprNode::EmitBytecode(VmStream& stream) const {
         static_cast<int>(args_.size()),
         [fn_name = ident->ident()](const fxl::RefPtr<EvalContext>& eval_context,
                                    const std::vector<ExprValue>& params, EvalCallback cb) {
-          // If we support standalone function calls (either for builtin stuff or for calling
-          // functions in the program, that implementation goes here.
-          (void)fn_name;  // Will be needed when we implement more.
-          cb(
-              Err("Arbitrary function calls are not supported. Only certain built-in getters will "
-                  "work."));
+          // Check for builtins. We don't support calling functions in the target yet.
+          if (const EvalContext::BuiltinFuncCallback* impl =
+                  eval_context->GetBuiltinFunction(fn_name)) {
+            (*impl)(eval_context, params, std::move(cb));
+          } else {
+            cb(Err(
+                "Not a known built-in function.\n"
+                "Arbitrary function calls are not supported. Only certain built-in getters will "
+                "work."));
+          }
         }));
   } else {
     stream.push_back(VmOp::MakeError(Err("Unknown function call type.")));

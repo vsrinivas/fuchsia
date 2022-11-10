@@ -43,6 +43,9 @@ class MockEvalContext : public EvalContext {
   // Adds a location result for GetLocationForAddress().
   void AddLocation(uint64_t address, Location location);
 
+  // Adds a builtin function.
+  void AddBuiltinFunction(const ParsedIdentifier& name, BuiltinFuncCallback impl);
+
   // EvalContext implementation.
   ExprLanguage GetLanguage() const override { return language_; }
   const std::shared_ptr<Abi>& GetAbi() const override { return abi_; }
@@ -52,6 +55,7 @@ class MockEvalContext : public EvalContext {
   FindNameContext GetFindNameContext() const override;
   void GetNamedValue(const ParsedIdentifier& ident, EvalCallback cb) const override;
   void GetVariableValue(fxl::RefPtr<Value> variable, EvalCallback cb) const override;
+  const BuiltinFuncCallback* GetBuiltinFunction(const ParsedIdentifier& name) const override;
   const ProcessSymbols* GetProcessSymbols() const override;
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override;
   Location GetLocationForAddress(uint64_t address) const override;
@@ -76,6 +80,7 @@ class MockEvalContext : public EvalContext {
   std::map<std::string, ExprValue> values_by_name_;
   std::map<const Value*, ExprValue> values_by_symbol_;
   std::map<uint64_t, Location> locations_;
+  std::map<ParsedIdentifier, BuiltinFuncCallback> builtin_funcs_;
   ExprLanguage language_ = ExprLanguage::kC;
   PrettyTypeManager pretty_type_manager_;
   VectorRegisterFormat vector_register_format_ = VectorRegisterFormat::kDouble;

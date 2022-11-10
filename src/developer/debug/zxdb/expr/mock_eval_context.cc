@@ -47,6 +47,10 @@ void MockEvalContext::AddLocation(uint64_t address, Location location) {
   locations_[address] = std::move(location);
 }
 
+void MockEvalContext::AddBuiltinFunction(const ParsedIdentifier& name, BuiltinFuncCallback impl) {
+  builtin_funcs_[name] = std::move(impl);
+}
+
 void MockEvalContext::FindName(const FindNameOptions& options, const ParsedIdentifier& looking_for,
                                std::vector<FoundName>* results) const {
   // Check the mocks first.
@@ -80,6 +84,14 @@ void MockEvalContext::GetVariableValue(fxl::RefPtr<Value> variable, EvalCallback
     cb(Err("MockEvalContext::GetVariableValue '%s' not found.", variable->GetFullName().c_str()));
   else
     cb(found->second);
+}
+
+const EvalContext::BuiltinFuncCallback* MockEvalContext::GetBuiltinFunction(
+    const ParsedIdentifier& name) const {
+  auto found = builtin_funcs_.find(name);
+  if (found != builtin_funcs_.end())
+    return &found->second;
+  return nullptr;
 }
 
 const ProcessSymbols* MockEvalContext::GetProcessSymbols() const { return nullptr; }

@@ -48,6 +48,7 @@ class PrettyEvalContext : public EvalContext {
   void GetVariableValue(fxl::RefPtr<Value> variable, EvalCallback cb) const override {
     return impl_->GetVariableValue(std::move(variable), std::move(cb));
   }
+  BuiltinFuncCallback* GetBuiltinFunction(const ParsedIdentifier& name) const override;
   const ProcessSymbols* GetProcessSymbols() const override { return impl_->GetProcessSymbols(); }
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override { return impl_->GetDataProvider(); }
   Location GetLocationForAddress(uint64_t address) const override {
@@ -107,6 +108,11 @@ void PrettyEvalContext::GetNamedValue(const ParsedIdentifier& name, EvalCallback
                   // Fall back on regular name lookup.
                   impl->GetNamedValue(name, std::move(cb));
                 });
+}
+
+EvalContext::BuiltinFuncCallback* PrettyEvalContext::GetBuiltinFunction(
+    const ParsedIdentifier& name) const {
+  return nullptr;
 }
 
 // When doing multi-evaluation, we'll have a vector of values, any of which could have generated an

@@ -52,6 +52,7 @@ class EvalContextImpl : public EvalContext {
   FindNameContext GetFindNameContext() const override;
   void GetNamedValue(const ParsedIdentifier& name, EvalCallback cb) const override;
   void GetVariableValue(fxl::RefPtr<Value> variable, EvalCallback cb) const override;
+  const BuiltinFuncCallback* GetBuiltinFunction(const ParsedIdentifier& name) const override;
   const ProcessSymbols* GetProcessSymbols() const override;
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override;
   Location GetLocationForAddress(uint64_t address) const override;

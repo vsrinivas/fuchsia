@@ -38,6 +38,11 @@ class Variable;
 // automatically ref-ed when bound in a lambda.
 class EvalContext : public fxl::RefCountedThreadSafe<EvalContext> {
  public:
+  // Callback type used to implement builtin functions.
+  using BuiltinFuncCallback =
+      fit::function<void(const fxl::RefPtr<EvalContext>& eval_context,
+                         const std::vector<ExprValue>& params, EvalCallback cb)>;
+
   // Returns the language associated with the expression.
   virtual ExprLanguage GetLanguage() const = 0;
 
@@ -84,6 +89,10 @@ class EvalContext : public fxl::RefCountedThreadSafe<EvalContext> {
   // The value is normally a Variable but it can also be an extern DataMember (which will transform
   // into a Variable when the extern is resolved).
   virtual void GetVariableValue(fxl::RefPtr<Value> variable, EvalCallback cb) const = 0;
+
+  // Checks for a builtin function with the given name. If one exists, returns a pointer to the
+  // callback. Returns null if it doesn't exist.
+  virtual const BuiltinFuncCallback* GetBuiltinFunction(const ParsedIdentifier& name) const = 0;
 
   // Convenience wrappers around the toplevel GetConcreteType() that uses the FindNameContext()
   // from this class.

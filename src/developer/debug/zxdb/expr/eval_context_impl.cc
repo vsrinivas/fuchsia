@@ -257,6 +257,12 @@ void EvalContextImpl::GetVariableValue(fxl::RefPtr<Value> input_val, EvalCallbac
                    std::move(type), std::move(cb));
 }
 
+const EvalContext::BuiltinFuncCallback* EvalContextImpl::GetBuiltinFunction(
+    const ParsedIdentifier& name) const {
+  // This implementation doesn't support built-in functions.
+  return nullptr;
+}
+
 const ProcessSymbols* EvalContextImpl::GetProcessSymbols() const {
   if (!process_symbols_)
     return nullptr;

@@ -390,4 +390,40 @@ TEST_F(ExprTest, RustWhileLoop) {
   EXPECT_TRUE(called);
 }
 
+TEST_F(ExprTest, BuiltinFunctionCall) {
+  const char kCode[] = "1 + MyFunction(2, 3 * 4)";
+
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
+
+  ParsedIdentifier ident(ParsedIdentifierComponent("MyFunction"));
+  eval_context->AddBuiltinFunction(
+      ident, [](const fxl::RefPtr<EvalContext>& eval_context, const std::vector<ExprValue>& params,
+                EvalCallback cb) {
+        // Validate we got the expected parameters,
+        ASSERT_EQ(2u, params.size());
+
+        int64_t value = 0;
+        ASSERT_TRUE(params[0].PromoteTo64(&value).ok());
+        EXPECT_EQ(2, value);
+
+        ASSERT_TRUE(params[1].PromoteTo64(&value).ok());
+        EXPECT_EQ(12, value);
+
+        // This is the return value.
+        cb(ExprValue(999));
+      });
+
+  bool called = false;
+  EvalExpression(kCode, eval_context, false, [&](ErrOrValue result) {
+    called = true;
+    ASSERT_TRUE(result.ok()) << result.err().msg();
+
+    int64_t value = 0;
+    ASSERT_TRUE(result.value().PromoteTo64(&value).ok());
+    EXPECT_EQ(1000, value);
+  });
+
+  EXPECT_TRUE(called);
+}
+
 }  // namespace zxdb
