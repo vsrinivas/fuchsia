@@ -433,6 +433,20 @@ pub(crate) fn resolve_addr_with_device<A: IpAddress, D: PartialEq + Clone>(
     Ok((addr, device))
 }
 
+/// Wrapper for an occupied entry that implements Into::into by
+/// removing from the entry.
+struct TakeMemberships<'a, A: IpAddress, D, S>(
+    IdMapOccupied<'a, usize, UnboundSocketState<A, D, S>>,
+);
+
+impl<'a, A: IpAddress, D: Hash + Eq, S> From<TakeMemberships<'a, A, D, S>> for ListenerState<A, D> {
+    fn from(take: TakeMemberships<'a, A, D, S>) -> Self {
+        let TakeMemberships(entry) = take;
+        let UnboundSocketState { device: _, sharing: _, ip_options } = entry.remove();
+        ListenerState { ip_options }
+    }
+}
+
 pub(crate) fn listen<
     A: SocketMapAddrSpec,
     C: DatagramStateNonSyncContext<A>,
@@ -453,101 +467,87 @@ where
     S::ListenerSharingState: Default,
 {
     sync_ctx.with_sockets_mut(|sync_ctx, DatagramSockets { bound, unbound }, _allocator| {
-            let identifier = match local_id {
-                Some(local_id) => Ok(local_id),
-                None => {
-                    let addr = addr.clone().map(|addr| addr.into_addr_zone().0);
-                    let sharing_options = Default::default();
-                    ctx.try_alloc_listen_identifier(|identifier| {
-                        let check_addr =
-                            ListenerAddr { device: None, ip: ListenerIpAddr { identifier, addr } };
-                        bound.listeners().could_insert(&check_addr, &sharing_options).map_err(|e| {
-                            match e {
-                                InsertError::Exists
-                                | InsertError::IndirectConflict
-                                | InsertError::ShadowAddrExists
-                                | InsertError::ShadowerExists => InUseError,
-                            }
-                        })
+        let identifier = match local_id {
+            Some(local_id) => Ok(local_id),
+            None => {
+                let addr = addr.clone().map(|addr| addr.into_addr_zone().0);
+                let sharing_options = Default::default();
+                ctx.try_alloc_listen_identifier(|identifier| {
+                    let check_addr =
+                        ListenerAddr { device: None, ip: ListenerIpAddr { identifier, addr } };
+                    bound.listeners().could_insert(&check_addr, &sharing_options).map_err(|e| {
+                        match e {
+                            InsertError::Exists
+                            | InsertError::IndirectConflict
+                            | InsertError::ShadowAddrExists
+                            | InsertError::ShadowerExists => InUseError,
+                        }
                     })
-                }
-                .ok_or(LocalAddressError::FailedToAllocateLocalPort),
-            }?;
+                })
+            }
+            .ok_or(LocalAddressError::FailedToAllocateLocalPort),
+        }?;
 
-            let UnboundSocketState { device, sharing: _, ip_options: _ } = unbound
-                .get(id.clone().into())
-                .unwrap_or_else(|| panic!("unbound ID {:?} is invalid", id));
-            let (addr, device, identifier) = match addr {
-                Some(addr) => {
-                    // Extract the specified address and the device. The device
-                    // is either the one from the address or the one to which
-                    // the socket was previously bound.
-                    let (addr, device) = resolve_addr_with_device(addr, device.as_ref())?;
+        let UnboundSocketState { device, sharing: _, ip_options: _ } = unbound
+            .get(id.clone().into())
+            .unwrap_or_else(|| panic!("unbound ID {:?} is invalid", id));
+        let (addr, device, identifier) = match addr {
+            Some(addr) => {
+                // Extract the specified address and the device. The device
+                // is either the one from the address or the one to which
+                // the socket was previously bound.
+                let (addr, device) = resolve_addr_with_device(addr, device.as_ref())?;
 
-                    // Binding to multicast addresses is allowed regardless.
-                    // Other addresses can only be bound to if they are assigned
-                    // to the device.
-                    if !addr.is_multicast() {
-                        let mut assigned_to = sync_ctx
-                            .get_devices_with_assigned_addr(addr);
-                        if let Some(device) = &device {
-                            if !assigned_to.any(|d| &d == device) {
-                                return Err(LocalAddressError::AddressMismatch);
-                            }
-                        } else {
-                            if assigned_to.next() == None {
-                                return Err(LocalAddressError::CannotBindToAddress);
-                            }
-                            if assigned_to.next() != None {
-                                todo!("https://fxbug.dev/112584: handle multiple addresses")
-                            }
+                // Binding to multicast addresses is allowed regardless.
+                // Other addresses can only be bound to if they are assigned
+                // to the device.
+                if !addr.is_multicast() {
+                    let mut assigned_to = sync_ctx.get_devices_with_assigned_addr(addr);
+                    if let Some(device) = &device {
+                        if !assigned_to.any(|d| &d == device) {
+                            return Err(LocalAddressError::AddressMismatch);
+                        }
+                    } else {
+                        if assigned_to.next() == None {
+                            return Err(LocalAddressError::CannotBindToAddress);
+                        }
+                        if assigned_to.next() != None {
+                            todo!("https://fxbug.dev/112584: handle multiple addresses")
                         }
                     }
-                    (Some(addr), device, identifier)
                 }
-                None => (None, device.clone(), identifier),
-            };
-
-            let unbound_entry = match unbound.entry(id.clone().into()) {
-                IdMapEntry::Vacant(_) => panic!("unbound ID {:?} is invalid", id),
-                IdMapEntry::Occupied(o) => o,
-            };
-
-            /// Wrapper for an occupied entry that implements Into::into by
-            /// removing from the entry.
-            struct TakeMemberships<'a, A: IpAddress, D, S>(IdMapOccupied<'a, usize, UnboundSocketState<A, D, S>>, );
-
-            impl<'a, A: IpAddress, D: Hash + Eq, S> From<TakeMemberships<'a, A, D, S>> for ListenerState<A, D> {
-                fn from(TakeMemberships(entry): TakeMemberships<'a, A, D, S>) -> Self {
-                    let UnboundSocketState {device: _, sharing: _, ip_options} = entry.remove();
-                    ListenerState {ip_options}
-                }
+                (Some(addr), device, identifier)
             }
+            None => (None, device.clone(), identifier),
+        };
 
-            let UnboundSocketState { device: _, sharing, ip_options: _ } =
-                unbound_entry.get();
-                let sharing = sharing.clone();
-            match bound
-                .listeners_mut()
-                .try_insert(
-                    ListenerAddr { ip: ListenerIpAddr { addr, identifier }, device },
-                    // Passing TakeMemberships defers removal of unbound_entry
-                    // until try_insert is known to be able to succeed.
-                    TakeMemberships(unbound_entry),
-                    sharing.into(),
-                )
-                .map_err(|(e, state, _sharing): (_, _, S::ListenerSharingState)| (e, state))
-            {
-                Ok(entry) => Ok(entry.id()),
-                Err((e, TakeMemberships(entry))) => {
-                    // Drop the occupied entry, leaving it in the unbound socket
-                    // IdMap.
-                    let _: (InsertError, IdMapOccupied<'_, _, _>) = (e, entry);
-                    Err(LocalAddressError::AddressInUse)
-                }
+        let unbound_entry = match unbound.entry(id.clone().into()) {
+            IdMapEntry::Vacant(_) => panic!("unbound ID {:?} is invalid", id),
+            IdMapEntry::Occupied(o) => o,
+        };
+
+        let UnboundSocketState { device: _, sharing, ip_options: _ } = unbound_entry.get();
+        let sharing = sharing.clone();
+        match bound
+            .listeners_mut()
+            .try_insert(
+                ListenerAddr { ip: ListenerIpAddr { addr, identifier }, device },
+                // Passing TakeMemberships defers removal of unbound_entry
+                // until try_insert is known to be able to succeed.
+                TakeMemberships(unbound_entry),
+                sharing.into(),
+            )
+            .map_err(|(e, state, _sharing): (_, _, S::ListenerSharingState)| (e, state))
+        {
+            Ok(entry) => Ok(entry.id()),
+            Err((e, TakeMemberships(entry))) => {
+                // Drop the occupied entry, leaving it in the unbound socket
+                // IdMap.
+                let _: (InsertError, IdMapOccupied<'_, _, _>) = (e, entry);
+                Err(LocalAddressError::AddressInUse)
             }
-        },
-    )
+        }
+    })
 }
 
 /// An error when attempting to create a datagram socket.
