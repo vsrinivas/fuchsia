@@ -171,6 +171,10 @@ To update an external crate, do the following:
       [Importing a subset of files in a crate](#importing_a_subset_of_files_in_a_crate)
       for more information.
 
+   1. Update OWNERS files for modified crates. See the
+      [OWNERS files][#owners_files] section for more information on updating
+      OWNERS files.
+
    1. If/when you receive OSRB approval, upload the change for review to
       Gerrit. Include the OSRB Issue ID number in the change.
 
@@ -270,6 +274,11 @@ indicate who is responsible for their reviews and updates. These files are
 generated from a combination of build graph metadata and an explicit
 override file.
 
+The `update-rustc-third-party` tool makes a best effort to update these files
+with the limited data it has, but it can make mistakes. The `update-3p-owners`
+tool can do better by regenerating the OWNERS files directly from our build
+graph, but it tends to be very slow and still has a few issues.
+
 ### Running the tool
 
 The tool discovers which build targets depend on a given crate, which means it
@@ -281,7 +290,27 @@ needs the metadata from the completion of a maximal "kitchen sink" build:
    usually a good idea to limit the number of threads to 50% of available CPUs
    (see [#75382] for details).
 
+This tool can take a significant amount of time to run - upwards of 45 minutes
+in some cases.
+
 [#75382]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=75382
+
+### Manually updating OWNERS
+
+The OWNERS files for vendored third-party crates are built from two main
+sources:
+
+1. Targets that depend on third-party Rust crates have their OWNERS files
+   imported into the OWNERS for the crates they depend on. For example, if a
+   target like `src/lib/foo` depended on the `bar` crate, then the OWNERS file
+   for the `bar` crate would include `src/lib/foo/OWNERS`.
+2. Third-party Rust crates that depend on another third-party Rust crate import
+   their dependency's OWNERS file into their own. For example, if the `bar`
+   crate depended on the `baz` crate, then the OWNERS file for the `bar` crate
+   would include `third_party/rust_crates/vendor/bar-1.0.0/OWNERS`.
+
+For version bumps of existing crates, it's usually sufficient to update the
+include statements to the latest version of the updated crate.
 
 ### Adding overrides
 
