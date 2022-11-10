@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 //
-// This script updates //src/security/root_ssl_certificates/third_party/cert/cert.pem to point to
+// This script updates //src/security/bin/root_ssl_certificates/third_party/cert/cert.pem to point to
 // the current revision at:
 //   https://hg.mozilla.org/mozilla-central/raw-file/tip/security/nss/lib/ckfw/builtins/certdata.txt
 // The resulting cert.pem file is licensed under the third_party/cert/LICENSE.MPLv2 file

@@ -1,0 +1,16 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/dist/resource.gni")
+
+resource("root_ssl_certificates_pem") {
+  sources =
+      [ "//src/security/bin/root_ssl_certificates/third_party/cert/cert.pem" ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
+
+fuchsia_package("root_ssl_certificates") {
+  deps = [ ":root_ssl_certificates_pem" ]
+}

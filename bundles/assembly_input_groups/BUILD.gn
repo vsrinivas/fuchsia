@@ -215,7 +215,7 @@ assembly_input_groups("package-resolver") {
 assembly_input_groups("package-updates") {
   base_packages = [
     "//src/sys/pkg:tools",
-    "//src/security/root_ssl_certificates",
+    "//src/security/bin/root_ssl_certificates",
   ]
 }
 

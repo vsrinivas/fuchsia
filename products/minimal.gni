@@ -66,7 +66,7 @@ legacy_base_package_labels += [
   "//src/diagnostics/sampler",
   "//src/hwinfo:default_product_config",
   "//src/recovery/factory_reset",
-  "//src/security/root_ssl_certificates",
+  "//src/security/bin/root_ssl_certificates",
   "//src/sys/activity",
   "//src/sys/full-resolver",  # This seems needed to run the session manager
   "//src/sys/pkg:system-update-checker",

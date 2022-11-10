@@ -31,7 +31,7 @@ assembled_system("guest") {
     ":core",
     "//src/performance/trace",
     "//src/diagnostics/log-stats:package",
-    "//src/security/root_ssl_certificates",
+    "//src/security/bin/root_ssl_certificates",
     "//src/sys/appmgr:appmgr_scheme_config",
     "//src/sys/appmgr:component_id_index_no_restrict_storage",
     "//src/sys/appmgr:core_component_id_index",

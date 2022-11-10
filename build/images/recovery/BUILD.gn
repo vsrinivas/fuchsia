@@ -147,7 +147,7 @@ if (is_fuchsia) {
         "//src/devices/sysmem/bin/sysmem_connector",
         "//src/recovery/factory_reset",
         "//src/recovery/system:system_recovery",
-        "//src/security/root_ssl_certificates",
+        "//src/security/bin/root_ssl_certificates",
         "//src/sys/appmgr",
         "//src/sys/appmgr:appmgr_scheme_config",
         "//src/sys/appmgr:component_id_index_no_restrict_storage",

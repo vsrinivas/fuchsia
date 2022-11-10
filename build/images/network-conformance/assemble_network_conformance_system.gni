@@ -53,7 +53,7 @@ template("assemble_network_conformance_system") {
       "//src/connectivity/network/testing/network-test-realm/service:network-test-realm",
       "//src/developer/ffx:runtime",
       "//src/security/policy:appmgr_policy_eng",
-      "//src/security/root_ssl_certificates",
+      "//src/security/bin/root_ssl_certificates",
       "//src/sys/appmgr:appmgr_scheme_config",
       "//src/sys/appmgr",
       "//src/sys/pkg/bin/pkg-cache",
