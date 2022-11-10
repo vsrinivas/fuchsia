@@ -179,7 +179,9 @@ async fn closing_suite_controller_should_kill_test() {
     let builder_run_task = fasync::Task::spawn(async move { builder.run().await });
 
     // let the test start
-    let _initial_events = suite.controller().get_events().await.unwrap().unwrap();
+    // Drop events so that we are not holding on to logger channel else archivist will
+    // timeout during shutdown.
+    let _ = suite.controller().get_events().await.unwrap().unwrap();
     // drop suite, which should also close the suite channel
     drop(suite);
 
