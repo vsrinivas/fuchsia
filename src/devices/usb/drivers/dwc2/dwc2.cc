@@ -133,7 +133,15 @@ void Dwc2::HandleInEpInterrupt() {
   while (ep_bits) {
     if (ep_bits & 1) {
       auto diepint = DIEPINT::Get(ep_num).ReadFrom(mmio);
-      diepint.set_reg_value(diepint.reg_value() & DIEPMSK::Get().ReadFrom(mmio).reg_value());
+      auto diepmsk = DIEPMSK::Get().ReadFrom(mmio);
+
+      if (diepint.timeout()) {
+        // TODO(105382) remove logging once timeout recovery has stabilized.
+        zxlogf(ERROR, "(diepint.timeout) DIEPINT=0x%08x DIEPMSK=0x%08x",
+               diepint.reg_value(), diepmsk.reg_value());
+      }
+
+      diepint.set_reg_value(diepint.reg_value() & diepmsk.reg_value());
 
       if (diepint.xfercompl()) {
         if (timeout_recovering_) {
